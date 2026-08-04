@@ -5546,3 +5546,41 @@ fn cr_712_17_melded_permanent_leaves_as_both_cards() {
     assert!(names.contains(&"Fang, Fearless l'Cie"), "Fang in the graveyard");
     assert!(!names.contains(&"Ragnarok, Divine Deliverance"), "no melded ghost card");
 }
+
+/// Cloud's Limit Break's Omnislash tier ({3}{W}) destroys every tapped
+/// creature and spares the untapped ones.
+#[test]
+fn clouds_limit_break_omnislash_sweeps_tapped_creatures() {
+    let mut g = two_player_game();
+    let tapped = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let untapped = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.battlefield_find_mut(tapped).unwrap().tapped = true;
+    let id = g.add_card_to_hand(0, catalog::clouds_limit_break());
+    g.players[0].mana_pool.add(crabomination::mana::Color::White, 2);
+    g.players[0].mana_pool.add_colorless(4);
+    g.perform_action(GameAction::CastSpellSpree {
+        card_id: id, spree_modes: vec![2], target: None,
+        additional_targets: vec![], x_value: None,
+    }).expect("cast Omnislash");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(tapped).is_none(), "tapped creature destroyed");
+    assert!(g.battlefield_find(untapped).is_some(), "untapped creature spared");
+}
+
+/// Cloud's Cross-Slash tier ({0}) destroys one targeted tapped creature.
+#[test]
+fn clouds_limit_break_cross_slash_kills_one_tapped_creature() {
+    use crabomination::game::Target;
+    let mut g = two_player_game();
+    let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.battlefield_find_mut(victim).unwrap().tapped = true;
+    let id = g.add_card_to_hand(0, catalog::clouds_limit_break());
+    g.players[0].mana_pool.add(crabomination::mana::Color::White, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpellSpree {
+        card_id: id, spree_modes: vec![0], target: Some(Target::Permanent(victim)),
+        additional_targets: vec![], x_value: None,
+    }).expect("cast Cross-Slash");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(victim).is_none(), "the tapped creature died");
+}

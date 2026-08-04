@@ -2448,6 +2448,8 @@ pub enum GameEventWire {
         #[serde(default)]
         face: crate::game::CastFace,
     },
+    /// CR 115.7 — a spell's single target was redirected (Swerve, Misdirection).
+    SpellTargetChanged { card_id: CardId },
     AbilityActivated { source: CardId, #[serde(default)] exhaust: bool, #[serde(default)] adapt: bool, #[serde(default)] tap_cost: bool },
     ManaAdded { player: usize, color: Color, #[serde(default)] source: Option<CardId> },
     ColorlessManaAdded { player: usize, #[serde(default)] source: Option<CardId> },
@@ -2622,6 +2624,9 @@ impl From<&GameEvent> for GameEventWire {
                 card_id: *card_id,
                 face: *face,
             },
+            GameEvent::SpellTargetChanged { card_id, .. } => {
+                GameEventWire::SpellTargetChanged { card_id: *card_id }
+            }
             GameEvent::AbilityActivated { source, exhaust, adapt, tap_cost } => {
                 GameEventWire::AbilityActivated {
                     source: *source,
@@ -2981,6 +2986,7 @@ impl GameEventWire {
                 format!("{} {verb} {}", pn(*player), name(*card_id))
             }
             E::SpellCast { player, card_id, .. } => format!("{} cast {}", pn(*player), name(*card_id)),
+            E::SpellTargetChanged { card_id } => format!("{} was redirected", name(*card_id)),
             E::AbilityActivated { source, exhaust, adapt, .. } => format!(
                 "{} {} activated",
                 name(*source),

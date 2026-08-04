@@ -8861,6 +8861,43 @@ pub fn vincents_limit_break() -> CardDefinition {
     }
 }
 
+/// Cloud's Limit Break — {1}{W} Instant. Tiered: Cross-Slash {0} destroys a
+/// tapped creature, Blade Beam {1} destroys up to two, Omnislash {3}{W}
+/// destroys every tapped creature.
+pub fn clouds_limit_break() -> CardDefinition {
+    use crate::effect::SpreeMode;
+    let tapped = || SelectionRequirement::Creature.and(SelectionRequirement::Tapped);
+    CardDefinition {
+        name: "Cloud's Limit Break",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Tiered {
+            modes: vec![
+                SpreeMode {
+                    cost: cost(&[]),
+                    effect: Effect::Destroy { what: target_filtered(tapped()) },
+                },
+                // "Any number of target tapped creatures with different
+                // controllers" is capped at two — the two-player ceiling.
+                SpreeMode {
+                    cost: cost(&[generic(1)]),
+                    effect: Effect::ApplyToTargets {
+                        max_targets: 2,
+                        min_targets: 0,
+                        filter: tapped(),
+                        effect: Box::new(Effect::Destroy { what: Selector::Target(0) }),
+                    },
+                },
+                SpreeMode {
+                    cost: cost(&[generic(3), w()]),
+                    effect: Effect::Destroy { what: Selector::EachPermanent(tapped()) },
+                },
+            ],
+        },
+        ..Default::default()
+    }
+}
+
 /// Vayne's Treachery — {1}{B} Instant. Kicker—Sacrifice an artifact or
 /// creature. Target creature gets -2/-2 until end of turn; -6/-6 if kicked.
 pub fn vaynes_treachery() -> CardDefinition {

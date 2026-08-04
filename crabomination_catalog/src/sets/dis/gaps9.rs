@@ -182,3 +182,15 @@ pub fn experiment_kraj() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Swerve — {U}{R} Instant. Change the target of target spell with a single
+/// target (CR 115.7a/b).
+pub fn swerve() -> CardDefinition {
+    CardDefinition {
+        name: "Swerve",
+        cost: cost(&[u(), r()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::ChangeSpellTarget { what: target_filtered(R::IsSpellOnStack) },
+        ..Default::default()
+    }
+}

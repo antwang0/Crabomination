@@ -138,15 +138,14 @@ pub fn toski_bearer_of_secrets() -> CardDefinition {
 }
 
 /// Misdirection — {3}{U}{U} Instant. Pitch a blue card from hand instead of
-/// paying. Change the target of target spell. (The printed "with a single
-/// target" restriction is dropped.)
+/// paying. Change the target of target spell with a single target.
 pub fn misdirection() -> CardDefinition {
     use crate::card::AlternativeCost;
     CardDefinition {
         name: "Misdirection",
         cost: cost(&[generic(3), u(), u()]),
         card_types: vec![CardType::Instant],
-        effect: Effect::ChooseNewTargetsForSpell {
+        effect: Effect::ChangeSpellTarget {
             what: target_filtered(SelectionRequirement::IsSpellOnStack),
         },
         alternative_cost: Some(AlternativeCost {

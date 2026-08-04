@@ -20298,8 +20298,9 @@ pub fn urza_planeswalker() -> CardDefinition {
 }
 
 /// Tasigur, the Golden Fang — {5}{B} Creature 4/5 Legendary Human Shaman with
-/// Delve. Activated: {2}{G/U}: Mill 2, then return a nonland card from your
-/// graveyard to your hand.
+/// Delve. Activated: {2}{G/U}: Mill 2, then return a nonland card *of an
+/// opponent's choice* from your graveyard to your hand — untargeted, so the
+/// opponent hands back the cheapest match.
 ///
 /// The {G/U} pip in the activated cost is a real
 /// `ManaSymbol::Hybrid(Green, Blue)`, payable with either green or blue.
@@ -20327,9 +20328,8 @@ pub fn tasigur_the_golden_fang() -> CardDefinition {
                     who: Selector::You,
                     amount: Value::Const(2),
                 },
-                Effect::Move {
-                    what: target_filtered(SelectionRequirement::Nonland),
-                    to: ZoneDest::Hand(PlayerRef::You),
+                Effect::ReturnFromGraveyardOpponentChooses {
+                    filter: SelectionRequirement::Nonland,
                 },
             ]),
             once_per_turn: false,

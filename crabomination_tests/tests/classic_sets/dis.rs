@@ -2297,3 +2297,30 @@ fn experiment_kraj_borrows_countered_creatures_abilities() {
     drain_stack(&mut g);
     assert_eq!(g.players[1].life, 19);
 }
+
+/// CR 115.7a/b — Swerve redirects a single-target spell; the adversarial
+/// default aims it back at its own caster.
+#[test]
+fn swerve_redirects_a_single_target_spell() {
+    let mut g = two_player_game();
+    let mine = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.priority.player_with_priority = 1;
+    let their_life = g.players[1].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Permanent(mine)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("opponent bolts my Bear");
+    let swerve = g.add_card_to_hand(0, catalog::swerve());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell {
+        card_id: swerve, target: Some(Target::Permanent(bolt)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Swerve");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(mine).is_some(), "my Bear survived");
+    assert_eq!(g.players[1].life, their_life - 3, "the Bolt hit its own caster");
+}

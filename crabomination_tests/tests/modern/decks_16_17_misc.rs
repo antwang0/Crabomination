@@ -920,7 +920,7 @@ fn tasigur_activated_ability_mills() {
     for _ in 0..5 {
         g.add_card_to_library(0, catalog::forest());
     }
-    // Put a nonland card in graveyard for the Move half.
+    // Put a nonland card in graveyard for the return half.
     g.add_card_to_graveyard(0, catalog::lightning_bolt());
     let lib_before = g.players[0].library.len();
     g.players[0].mana_pool.add(Color::Green, 1);
@@ -935,6 +935,29 @@ fn tasigur_activated_ability_mills() {
 
     assert!(g.players[0].library.len() <= lib_before - 2,
         "should mill at least 2 cards");
+}
+
+/// Tasigur's return half is untargeted — an *opponent* picks the card, so the
+/// adversarial heuristic hands back the cheapest nonland match, not the best.
+#[test]
+fn tasigur_return_is_the_opponents_cheapest_pick() {
+    let mut g = two_player_game();
+    let tasigur = g.add_card_to_battlefield(0, catalog::tasigur_the_golden_fang());
+    g.clear_sickness(tasigur);
+    for _ in 0..5 {
+        g.add_card_to_library(0, catalog::forest());
+    }
+    let bolt = g.add_card_to_graveyard(0, catalog::lightning_bolt()); // MV 1
+    let cancel = g.add_card_to_graveyard(0, catalog::cancel()); // MV 3
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: tasigur, ability_index: 0, target: None,
+        additional_targets: Vec::new(), x_value: None, mode: None,
+    }).expect("Tasigur ability activates");
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == bolt), "cheapest match returned");
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == cancel), "the good card stayed");
 }
 
 #[test]

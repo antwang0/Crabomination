@@ -7066,6 +7066,12 @@ pub enum Effect {
         pick_to_battlefield: bool,
     },
 
+    /// "Return a card of an opponent's choice matching `filter` from your
+    /// graveyard to your hand" — untargeted (Tasigur, the Golden Fang). The
+    /// opponent's pick uses the same adversarial heuristic as
+    /// `RevealTopOpponentChoosesToHand`: hand back the lowest-mana-value match.
+    ReturnFromGraveyardOpponentChooses { filter: SelectionRequirement },
+
     /// Menacing Ogre — every player secretly picks a number up to `max`, the
     /// picks are revealed at once, and each player who named the highest loses
     /// that much life. `on_you_win` runs when the source's controller is among

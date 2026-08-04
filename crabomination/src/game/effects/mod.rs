@@ -21059,6 +21059,28 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::ReturnFromGraveyardOpponentChooses { filter } => {
+                let p = ctx.controller;
+                // The opponent hands back the least useful match (lowest MV).
+                let pick = self.players[p]
+                    .graveyard
+                    .iter()
+                    .filter(|c| {
+                        self.evaluate_requirement_static(
+                            filter,
+                            &Target::Permanent(c.id),
+                            p,
+                            ctx.source,
+                        )
+                    })
+                    .min_by_key(|c| c.definition.cost.cmc())
+                    .map(|c| c.id);
+                if let Some(id) = pick {
+                    self.move_card_to(id, &ZoneDest::Hand(PlayerRef::You), ctx, events);
+                }
+                Ok(())
+            }
+
             Effect::RevealTopOpponentChoosesToHand {
                 count,
                 counter,
@@ -24937,11 +24959,21 @@ impl GameState {
                     _ => None,
                 });
                 let Some((idx, def, current)) = found else { return Ok(()) };
-                let chosen = self.repoint_copy_target(&def, ctx.controller, &current);
+                // CR 115.7a — this *must* move the spell if any other legal
+                // target exists, so it goes through `retarget_spell` (which
+                // excludes the original) rather than the copy repointer
+                // (which offers the original first and so never moved it).
+                let chosen = self.retarget_spell(&def.effect, def.name, ctx.controller, &current);
                 if chosen != current
                     && let Some(StackItem::Spell { target, .. }) = self.stack.get_mut(idx)
                 {
-                    *target = chosen;
+                    *target = chosen.clone();
+                    if let Some(t) = chosen {
+                        events.push(GameEvent::SpellTargetChanged {
+                            card_id: spell_id,
+                            new_target: t,
+                        });
+                    }
                 }
                 Ok(())
             }

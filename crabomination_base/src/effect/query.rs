@@ -1180,6 +1180,7 @@ impl Effect {
                 player_has_target(who) || then.requires_target()
             }
             Effect::RevealTopOpponentChoosesToHand { .. }
+            | Effect::ReturnFromGraveyardOpponentChooses { .. }
             | Effect::ReturnFromExileWithCounter { .. } => false,
             Effect::BecomeMonarch { who } | Effect::Ascend { who } => player_has_target(who),
             Effect::BecomeDay | Effect::BecomeNight | Effect::EndTheTurn => false,

@@ -8637,6 +8637,7 @@ static DIS: &[Factory] = &[
     super::dis::odds_ends,
     super::dis::research_development,
     super::dis::experiment_kraj,
+    super::dis::swerve,
 ];
 static DRK: &[Factory] = &[
     super::drk::apprentice_wizard,
@@ -9246,6 +9247,7 @@ static FIN: &[Factory] = &[
     super::fin::summon_brynhildr,
     super::fin::stiltzkin_moogle_merchant,
     super::fin::vincents_limit_break,
+    super::fin::clouds_limit_break,
     super::fin::vaynes_treachery,
     super::fin::chocobo_kick,
     super::fin::sin_spiras_punishment,

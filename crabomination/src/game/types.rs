@@ -1861,6 +1861,8 @@ pub enum GameEvent {
     /// casts and flashback graveyard replays carry the right tag so
     /// replays can render the correct cost.
     SpellCast { player: usize, card_id: CardId, face: CastFace },
+    /// CR 115.7 — a spell on the stack had its single target redirected.
+    SpellTargetChanged { card_id: CardId, new_target: Target },
     /// `exhaust` is true when the activated ability carried CR 702.177 Exhaust
     /// (drives "whenever you activate an exhaust ability" — Adrenaline Jockey).
     /// `adapt` is true for CR 702.108 adapt abilities (drives "whenever you
