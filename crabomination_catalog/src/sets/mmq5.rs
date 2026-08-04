@@ -685,6 +685,7 @@ pub fn assembly_hall() -> CardDefinition {
                 who: PlayerRef::You,
                 subject: Selector::ChosenCardInHand(R::Creature),
                 to: ZoneDest::Hand(PlayerRef::You),
+                count: None,
             },
             ..Default::default()
         }],

@@ -7721,7 +7721,7 @@ impl GameState {
                 Ok(())
             }
 
-            Effect::SearchSameNameAs { who, subject, to } => {
+            Effect::SearchSameNameAs { who, subject, to, count } => {
                 let Some(p) = self.resolve_player(who, ctx) else { return Ok(()) };
                 let Some(name) = self
                     .resolve_selector(subject, ctx)
@@ -7736,15 +7736,17 @@ impl GameState {
                 else {
                     return Ok(());
                 };
-                self.run_effect(
-                    &Effect::Search {
+                let filter = crate::card::SelectionRequirement::HasName(name);
+                let inner = match count {
+                    Some(n) => Effect::SearchUpToN {
                         who: PlayerRef::Seat(p),
-                        filter: crate::card::SelectionRequirement::HasName(name),
+                        filter,
                         to: to.clone(),
+                        count: n.clone(),
                     },
-                    ctx,
-                    events,
-                )
+                    None => Effect::Search { who: PlayerRef::Seat(p), filter, to: to.clone() },
+                };
+                self.run_effect(&inner, ctx, events)
             }
 
             Effect::ChooseColorThenDiscardMatching { who } => {

@@ -4,12 +4,14 @@
 //! `classic_sets/cns`.
 
 use crate::card::{
-    CardDefinition, CardType, CreatureType, EventKind, EventScope, EventSpec, Keyword, Predicate,
-    SelectionRequirement as R, StaticAbility, Subtypes, TokenDefinition, TriggeredAbility,
+    ActivatedAbility, CardDefinition, CardType, CreatureType, EventKind, EventScope, EventSpec,
+    Keyword, Predicate, SelectionRequirement as R, StaticAbility, Subtypes, TokenDefinition,
+    TriggeredAbility,
 };
-use crate::effect::{Effect, PlayerRef, StaticEffect, Value};
+use crate::effect::{Duration, Effect, ManaPayload, PlayerRef, Selector, StaticEffect, Value, ZoneDest};
 use crate::game::types::TurnStep;
-use crate::mana::Color;
+use crate::effect::shortcut::target_filtered;
+use crate::mana::{Color, b, cost, g, generic, r, u, w};
 
 fn conspiracy(name: &'static str) -> CardDefinition {
     CardDefinition { name, card_types: vec![CardType::Conspiracy], ..Default::default() }
@@ -194,5 +196,335 @@ pub fn muzzios_preparations() -> CardDefinition {
             },
         }],
         ..conspiracy("Muzzio's Preparations")
+    }
+}
+
+/// The chosen-name creatures you control.
+fn chosen_creatures() -> R {
+    R::Creature.and(R::NamedBySource).and(R::ControlledByYou)
+}
+
+/// Incendiary Dissent — chosen-name creatures can pump themselves.
+pub fn incendiary_dissent() -> CardDefinition {
+    CardDefinition {
+        static_abilities: vec![StaticAbility {
+            description: "Creatures you control with the chosen name have \"{R}: +1/+0\".",
+            effect: StaticEffect::GrantActivatedAbility {
+                applies_to: Selector::EachPermanent(chosen_creatures()),
+                ability: ActivatedAbility {
+                    mana_cost: cost(&[r()]),
+                    effect: Effect::PumpPT {
+                        what: Selector::This,
+                        power: Value::ONE,
+                        toughness: Value::ZERO,
+                        duration: Duration::EndOfTurn,
+                    },
+                    ..Default::default()
+                },
+                condition: None,
+            },
+        }],
+        ..conspiracy("Incendiary Dissent")
+    }
+}
+
+/// Secrets of Paradise — chosen-name creatures tap for any colour.
+pub fn secrets_of_paradise() -> CardDefinition {
+    CardDefinition {
+        static_abilities: vec![StaticAbility {
+            description: "Creatures you control with the chosen name have \
+                          \"{T}: Add one mana of any color\".",
+            effect: StaticEffect::GrantActivatedAbility {
+                applies_to: Selector::EachPermanent(chosen_creatures()),
+                ability: ActivatedAbility {
+                    tap_cost: true,
+                    effect: Effect::AddMana {
+                        who: PlayerRef::You,
+                        pool: ManaPayload::AnyColors(Value::ONE),
+                    },
+                    ..Default::default()
+                },
+                condition: None,
+            },
+        }],
+        ..conspiracy("Secrets of Paradise")
+    }
+}
+
+/// Adriana's Valor — a chosen-name attacker can buy indestructible.
+pub fn adrianas_valor() -> CardDefinition {
+    CardDefinition {
+        static_abilities: vec![StaticAbility {
+            description: "Chosen-name attackers may pay {W} for indestructible.",
+            effect: StaticEffect::GrantTriggeredAbility {
+                filter: chosen_creatures(),
+                ability: Box::new(TriggeredAbility {
+                    event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+                    effect: Effect::MayPay {
+                        description: "Pay {W} for indestructible?".into(),
+                        mana_cost: cost(&[w()]),
+                        body: Box::new(Effect::GrantKeyword {
+                            what: Selector::This,
+                            keyword: Keyword::Indestructible,
+                            duration: Duration::EndOfTurn,
+                        }),
+                        else_: None,
+                    },
+                }),
+            },
+        }],
+        ..conspiracy("Adriana's Valor")
+    }
+}
+
+/// Hired Heist — chosen-name creatures cash their combat damage for a card.
+pub fn hired_heist() -> CardDefinition {
+    CardDefinition {
+        static_abilities: vec![StaticAbility {
+            description: "Chosen-name creatures may pay {U} on combat damage to draw.",
+            effect: StaticEffect::GrantTriggeredAbility {
+                filter: chosen_creatures(),
+                ability: Box::new(TriggeredAbility {
+                    event: EventSpec::new(
+                        EventKind::DealsCombatDamageToPlayer,
+                        EventScope::SelfSource,
+                    ),
+                    effect: Effect::MayPay {
+                        description: "Pay {U} to draw a card?".into(),
+                        mana_cost: cost(&[u()]),
+                        body: Box::new(Effect::Draw {
+                            who: Selector::You,
+                            amount: Value::ONE,
+                        }),
+                        else_: None,
+                    },
+                }),
+            },
+        }],
+        ..conspiracy("Hired Heist")
+    }
+}
+
+/// Assemble the Rank and Vile — chosen-name creatures leave a Zombie behind.
+pub fn assemble_the_rank_and_vile() -> CardDefinition {
+    CardDefinition {
+        static_abilities: vec![StaticAbility {
+            description: "Chosen-name creatures may pay {B} on death for a 2/2 Zombie.",
+            effect: StaticEffect::GrantTriggeredAbility {
+                filter: chosen_creatures(),
+                ability: Box::new(TriggeredAbility {
+                    event: EventSpec::new(EventKind::CreatureDied, EventScope::SelfSource),
+                    effect: Effect::MayPay {
+                        description: "Pay {B} for a 2/2 Zombie?".into(),
+                        mana_cost: cost(&[b()]),
+                        body: Box::new(Effect::Seq(vec![
+                            Effect::CreateToken {
+                                who: PlayerRef::You,
+                                count: Value::ONE,
+                                definition: token(
+                                    "Zombie",
+                                    2,
+                                    2,
+                                    CreatureType::Zombie,
+                                    vec![Color::Black],
+                                ),
+                            },
+                            Effect::Tap { what: Selector::LastCreatedToken },
+                        ])),
+                        else_: None,
+                    },
+                }),
+            },
+        }],
+        ..conspiracy("Assemble the Rank and Vile")
+    }
+}
+
+/// Natural Unity — chosen-name creatures grow each combat for {G}.
+pub fn natural_unity() -> CardDefinition {
+    CardDefinition {
+        static_abilities: vec![StaticAbility {
+            description: "Chosen-name creatures may pay {G} each combat for a +1/+1 counter.",
+            effect: StaticEffect::GrantTriggeredAbility {
+                filter: chosen_creatures(),
+                ability: Box::new(TriggeredAbility {
+                    event: EventSpec::new(
+                        EventKind::StepBegins(TurnStep::BeginCombat),
+                        EventScope::YourControl,
+                    ),
+                    effect: Effect::MayPay {
+                        description: "Pay {G} for a +1/+1 counter?".into(),
+                        mana_cost: cost(&[g()]),
+                        body: Box::new(Effect::AddCounter {
+                            what: Selector::This,
+                            kind: crate::card::CounterType::PlusOnePlusOne,
+                            amount: Value::ONE,
+                        }),
+                        else_: None,
+                    },
+                }),
+            },
+        }],
+        ..conspiracy("Natural Unity")
+    }
+}
+
+/// Double Stroke — the chosen instant or sorcery gets cast twice.
+pub fn double_stroke() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl).with_filter(
+                Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: R::HasCardType(CardType::Instant)
+                        .or(R::HasCardType(CardType::Sorcery))
+                        .and(R::NamedBySource),
+                },
+            ),
+            effect: Effect::CopySpellMayChooseTargets {
+                what: Selector::TriggerSource,
+                count: Value::ONE,
+            },
+        }],
+        ..conspiracy("Double Stroke")
+    }
+}
+
+/// Secret Summoning — the first chosen-name creature fetches the rest.
+pub fn secret_summoning() -> CardDefinition {
+    CardDefinition {
+        static_abilities: vec![StaticAbility {
+            description: "A chosen-name creature entering searches out its twins.",
+            effect: StaticEffect::GrantTriggeredAbility {
+                filter: chosen_creatures(),
+                ability: Box::new(TriggeredAbility {
+                    event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+                    effect: Effect::SearchSameNameAs {
+                        who: PlayerRef::You,
+                        subject: Selector::This,
+                        to: ZoneDest::Hand(PlayerRef::You),
+                        count: Some(Value::LibrarySizeOf(PlayerRef::You)),
+                    },
+                }),
+            },
+        }],
+        ..conspiracy("Secret Summoning")
+    }
+}
+
+/// Worldknit — your lands tap for any colour. (The printed card-pool gate is
+/// unconditional here: the engine has no card-pool concept.)
+pub fn worldknit() -> CardDefinition {
+    CardDefinition {
+        static_abilities: vec![StaticAbility {
+            description: "Lands you control have \"{T}: Add one mana of any color\".",
+            effect: StaticEffect::GrantActivatedAbility {
+                applies_to: Selector::EachPermanent(R::Land.and(R::ControlledByYou)),
+                ability: ActivatedAbility {
+                    tap_cost: true,
+                    effect: Effect::AddMana {
+                        who: PlayerRef::You,
+                        pool: ManaPayload::AnyColors(Value::ONE),
+                    },
+                    ..Default::default()
+                },
+                condition: None,
+            },
+        }],
+        ..conspiracy("Worldknit")
+    }
+}
+
+// ── Conspiracy's regular cards ─────────────────────────────────────────────
+
+/// Deathreap Ritual — morbid: a card at each end step something died.
+pub fn deathreap_ritual() -> CardDefinition {
+    CardDefinition {
+        name: "Deathreap Ritual",
+        cost: cost(&[generic(2), b(), g()]),
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(TurnStep::End), EventScope::AnyPlayer)
+                .with_filter(Predicate::CreaturesDiedThisTurnTotalAtLeast {
+                    at_least: Value::ONE,
+                }),
+            effect: Effect::MayDo {
+                description: "Draw a card?".into(),
+                body: Box::new(Effect::Draw { who: Selector::You, amount: Value::ONE }),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Brago, King Eternal — his combat damage blinks your board.
+pub fn brago_king_eternal() -> CardDefinition {
+    CardDefinition {
+        name: "Brago, King Eternal",
+        cost: cost(&[generic(2), w(), u()]),
+        card_types: vec![CardType::Creature],
+        supertypes: vec![crate::card::Supertype::Legendary],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit, CreatureType::Noble],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 4,
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
+            effect: Effect::ExileAndReturnToOwner {
+                what: Selector::ControlledBy {
+                    who: PlayerRef::You,
+                    filter: R::Not(Box::new(R::Land)).and(R::OtherThanSource),
+                },
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Canal Dredger — recycles your graveyard to the bottom of your library.
+/// (Its draft-time clause has no in-game effect.)
+pub fn canal_dredger() -> CardDefinition {
+    CardDefinition {
+        name: "Canal Dredger",
+        cost: cost(&[generic(4)]),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Construct],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 5,
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::Move {
+                what: target_filtered(R::InYourGraveyard),
+                to: ZoneDest::Library {
+                    who: PlayerRef::OwnerOfMoved,
+                    pos: crate::effect::LibraryPosition::Bottom,
+                },
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Cogwork Spy — a 2/1 flier. (Its draft-time peek has no in-game effect.)
+pub fn cogwork_spy() -> CardDefinition {
+    CardDefinition {
+        name: "Cogwork Spy",
+        cost: cost(&[generic(3)]),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Bird, CreatureType::Construct],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 1,
+        keywords: vec![Keyword::Flying],
+        ..Default::default()
     }
 }

@@ -579,6 +579,7 @@ pub fn bifurcate() -> CardDefinition {
             who: PlayerRef::You,
             subject: target_filtered(R::Creature.and(R::NotToken)),
             to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+            count: None,
         },
     )
 }

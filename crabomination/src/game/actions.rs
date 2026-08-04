@@ -11680,7 +11680,8 @@ impl GameState {
                 });
             }
         }
-        for src in &self.battlefield {
+        // CR 315.5 — a face-up conspiracy grants from the command zone too.
+        for src in self.all_static_sources() {
             for sa in &src.definition.static_abilities {
                 // CR 611.2 — a grant may sit under a duration/predicate
                 // wrapper ("Threshold — this creature has '…'"); unwrap it

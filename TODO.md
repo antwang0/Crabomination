@@ -8753,35 +8753,44 @@ Planeshift is at zero `set_gaps.py` gaps (86 cards this run); Invasion went
   ("the closest appropriate player to the left makes the choice when nobody in
   range can").
 
-## Arabian Nights — the last two
+## Noticed this run (modern_decks — ARN/DRK closure, CR 315 conspiracies)
 
-- **Aladdin's Lamp** wants a one-shot, turn-scoped draw replacement that digs
-  X and bottoms the rest. `StaticEffect::MayReplaceDrawWithRevealUntilKind` is
-  the closest shape but is a permanent static with no X and no bottoming.
-- **Shahrazad** needs subgames (CR 720). Out of scope until the engine can
-  nest a `GameState` and hand back a winner.
-
-## The Dark — the last six
-
-`set_gaps.py drk` is at 6. Each wants one primitive that doesn't exist yet:
-
-- **Dance of Many** — a token copy whose life is tied three ways (the
-  enchantment leaving exiles it, the token leaving sacrifices the
-  enchantment, and an upkeep {U}{U} keeps both). `Effect::CreateTokenCopyOf`
-  covers the mint; the two-way "when the *other* one leaves" link doesn't
-  exist.
-- **Fasting** — "If you would begin your draw step, you may skip that step
-  instead. If you do, you gain 2 life." `StaticEffect::ControllerSkipsDrawStep`
-  is unconditional; this needs an optional draw-step replacement.
-- **Frankenstein's Monster** — "As this enters, exile X creature cards from
-  your graveyard … for each, this enters with a +2/+0, +1/+1, or +0/+2 counter
-  on it." Needs a per-card counter-kind choice at ETB, and the
-  put-into-graveyard-instead fallback when the exile can't be paid.
-- **Nameless Race** — "pay any amount of life" bounded by a board count, with
-  a CDA reading the amount paid. Needs `Effect::PayAnyAmountOfLifeCapped` plus
-  a `DynamicPt` that reads the payment stamped at entry.
-- **Runesword** — a pump whose rider installs three separate turn-scoped
-  replacements on whatever the pumped creature damages.
-- **Sorrow's Path** — "if each of those creatures could block all creatures
-  the other is blocking, swap them." Needs a legality check over the block map
-  plus a re-block that doesn't re-trigger "becomes blocked".
+- **Grand Melee's turn markers (CR 807.4) are not modelled.**
+  `set_grand_melee_variant` ships the 807.2 default options and 807.3 random
+  seating, but several players taking turns simultaneously needs a turn-marker
+  ring in the turn loop, plus 807.4e–i's marker removal and extra-turn rules.
+- **Subgames are bot-only and bounded.** `GameState::play_subgame` (CR 729)
+  pilots the nest with `RandomBot` and caps it at 4 000 actions and two levels
+  of nesting; a `wants_ui` seat can't take priority inside a subgame, and a
+  stalled nest counts as a draw (so every player pays Shahrazad's toll). CR
+  729.4's "the subgame's ante/cards return" is modelled by never touching the
+  outer zones: the nest gets fresh instances and the outer libraries are
+  reshuffled on the way out.
+- **Sorrow's Path's re-block skips `becomes blocked`.** The swap reuses the
+  existing `block_map` entries, so CR 509.3a triggers don't fire a second
+  time. That matches the printed intent but isn't derived from the rules.
+- **Frankenstein's Monster's "instead of onto the battlefield" is post-hop.**
+  The as-enters effect routes the permanent to its owner's graveyard rather
+  than intercepting the zone change, so a leaves-the-battlefield watcher would
+  see it. Fixing it properly wants `apply_as_enters_effect` to be able to veto
+  the hop.
+- **Remaining Conspiracy (CNS/CN2) cards.** Six of 24 are unimplemented:
+  Advantageous Proclamation and Sovereign's Realm (deck-construction statics —
+  the format legality pass has no hook for "your minimum deck size is reduced
+  by five" or "your starting deck can't have basic lands"), Backup Plan (a
+  second opening hand, drawn before mulligans), Emissary's Ploy and Unexpected
+  Potential (both want a *filtered* spend-mana-as-any-color permission —
+  `relax_cost_colors_for` is global, with no handle on the spell being cast),
+  Echoing Boon (a copy trigger keyed on the spell's target) and Summoner's Bond
+  (double agenda — two named cards per conspiracy; `named_card` holds one).
+  Worldknit ships with its card-pool gate dropped: the engine has no card-pool
+  concept to read.
+- **Conspiracy (CNS) proper is untouched.** `sets::cns` is the conspiracy-card
+  sheet only; `set_gaps.py cns` still lists ~180 regular cards (the will-of-the-
+  council / council's-dilemma voting cycle, Dack Fayden, the Cogwork draft
+  matters shell). The voting mechanic (CR 701.32) is the prerequisite.
+- **`GameState::seat_static_sources` is the seat-scoped twin of
+  `all_static_sources`.** Controller-scoped statics that still walk
+  `self.battlefield` directly won't see a conspiracy; the two cast gates and
+  the ability-grant walks were converted, the rest were left alone. Convert
+  more as conspiracies need them.

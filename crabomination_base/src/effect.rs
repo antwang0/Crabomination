@@ -8290,7 +8290,15 @@ pub enum Effect {
     /// "Search `who`'s library for a card with the same name as `subject`,
     /// reveal it, put it into `to`, then shuffle" (Remembrance). The name is
     /// read at resolution from the (possibly already-dead) subject's LKI.
-    SearchSameNameAs { who: PlayerRef, subject: Selector, to: ZoneDest },
+    SearchSameNameAs {
+        who: PlayerRef,
+        subject: Selector,
+        to: ZoneDest,
+        /// "Search for **any number** of cards with that name" (Secret
+        /// Summoning). `None` searches out a single copy.
+        #[serde(default)]
+        count: Option<Value>,
+    },
 
     /// CR 615 — "Prevent the next `total` damage that would be dealt this turn
     /// to any number of targets, divided as you choose." The prevention-side

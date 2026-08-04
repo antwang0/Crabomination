@@ -2492,10 +2492,11 @@ Each a small targeted feature; sweep batch by batch.
 0. **Next set to close.** The Odyssey block, the Onslaught block (**ONS**,
    **LGN**, **SCG**), the Mirrodin block (**MRD**, **DST**, **5DN**), the
    Kamigawa block, **Mirrodin Besieged**, **New Phyrexia** (the Scars block
-   is closed), **Legends** (273 cards, `sets::leg`–`leg7`) and **Antiquities**
-   (64 cards, `sets::atq`) are all at zero. **Arabian Nights** is open at 2
-   (`sets::arn`, 62 cards) and **The Dark** at 6 (`sets::drk`/`drk2`,
-   91 cards).
+   is closed), **Legends** (273 cards, `sets::leg`–`leg7`), **Antiquities**
+   (64 cards, `sets::atq`), **Arabian Nights** (63 cards, `sets::arn`) and
+   **The Dark** (97 cards, `sets::drk`/`drk2`) are all at zero. **Conspiracy** (CNS)
+   is barely started: `sets::cns` holds 18 of the 24 *conspiracy cards* plus
+   four of the set's ~180 regular cards.
 1. **Replacement-effect framework** (Tier-1 #1) — highest-leverage primitive still
    open.
 2. **Card-zoom + stops/auto-yield + combat-math preview** (Tier-7 #1–3) — the trio
@@ -2511,97 +2512,40 @@ Each a small targeted feature; sweep batch by batch.
 
 ## Recently closed (this push)
 
-- **Antiquities closed** — `set_gaps.py atq` 9 → 0. New primitives:
-  `CounterType::PlusOnePlusZero`, `Effect::AddCounterCapped` (a printed
-  "can't raise the total above N" clamp), `Duration::UntilYourNextUpkeep` +
-  `EffectDuration::UntilYourNextUpkeep`,
-  `SelectionRequirement::OriginallyPrintedIn(OriginalSet)` over a static name
-  table, `Effect::{RemoveCountersToCreateTokens,
-  ExileTokensCreatedBySourceForCounters}` (Tetravus), `Effect::
-  TransmuteArtifact`, and `Effect::{CoffinExile, CoffinReturn}` (Tawnos's
-  Coffin — exile a creature plus its Auras, noting counters, returning on
-  leave-or-untap). `governing_modal` now looks through `Effect::Seq`, so a
-  modal step inside a sequence governs the activation's mode slot.
+- **Arabian Nights and The Dark closed** — both at zero. New primitives:
+  `Effect::PlaySubgame` + `game::subgame` (CR 729 — a bot-piloted nested game
+  using each library as its deck, depth- and action-capped; Shahrazad),
+  `StaticEffect::ControllerMaySkipDrawStepForLife` (CR 614's optional
+  draw-step replacement — Fasting), `Effect::PayAnyAmountOfLifeCapped` +
+  `DynamicPt::ChosenNumberAsEntered` + `Value::CardsInOpponentsGraveyardsMatching`
+  (Nameless Race), `Effect::EnterExilingGraveyardCreaturesForCounters` +
+  `CounterType::{PlusTwoPlusZero, PlusZeroPlusTwo}` (Frankenstein's Monster),
+  `Effect::{GrantDamageExilesVictimThisTurn,
+  GrantDamageDeniesRegenerationThisTurn, WhenTargetLeavesBattlefieldThisTurn}`
+  + `DelayedKind::WhenCardLeavesBattlefieldThisTurn` (Runesword),
+  `Effect::SwapBlockAssignments` (CR 509.1 — Sorrow's Path),
+  `LookTopKeepOneRestToGraveyard.rest_bottom_random` (Aladdin's Lamp).
+  Correctness: `as_enters_effect` reads the cast's own `{X}`; a queued draw
+  replacement replays the activation's X.
 
-- **Arabian Nights opened** — `set_gaps.py arn` 64 → 3 (`sets::arn::gaps`, 61
-  cards). New primitives: `Player.last_drawn_card` +
-  `Selector::LastCardYouDrew`, `PlayerRef::PlayerWithMostLife`,
-  `SelectionRequirement::PowerAtMostSourcePower`,
-  `Keyword::CantAttackUnlessDefenderControlsLandType`,
-  `StaticEffect::PlayersCantPlayMatching`, `CounterType::Wind` +
-  `Effect::PayPerCounterOrSacrifice`, `Effect::
-  OpponentChoosesTargetForDamage`, `Effect::MayPayRepeatedly`, and
-  `DelayedTriggerKind::TargetsNextDrawStep` +
-  `DelayedKind::PlayersNextDrawStep`. Correctness: `sacrifice_one` stamps
-  `sacrificed_card` (so `Selector::SacrificedCard` reads any sacrifice), and
-  `Selector::CreaturesInCombatWith` falls back to the turn's declared blocks
-  once the block map is torn down. Eye for an Eye added
-  `Effect::MirrorNextDamageToYouThisTurn`. Still open: Aladdin's Lamp (a
-  one-shot draw replacement that digs X) and Shahrazad (subgames).
+- **CR 315 conspiracies** — `CardType::Conspiracy`, `seat_conspiracy` /
+  `reveal_hidden_agenda`, and command-zone functioning for statics, triggers,
+  anthems, cost reduction, ability grants and enters-with-counter specs
+  (`all_static_sources` / `seat_static_sources` / `static_source` replace the
+  hard-coded `is_vanguard()` checks). CR 702.106 hidden agenda rides
+  `SelectionRequirement::resolve_named_by_source`. CR 315.7: the server hides a
+  face-down agenda from opponents and the client draws it as a card back.
+  New: `StaticEffect::{ControllerCantCastInstantsOrSorceries,
+  ControllerIsStartingPlayer, MatchingEntersWithExtraCounters}`,
+  `Value::TurnNumber`, `SearchSameNameAs.count`.
 
-- **The Dark at 6** — `set_gaps.py drk` 97 → 6 (`sets::drk` + `sets::drk2`,
-  91 cards). New primitives: `Keyword::{CantAttackUnlessPay,
-  DoesntUntapIfAttackedLastTurn, CantBeTargetedBySpellsUnlessAttackedOrBlocked,
-  AttackCostSacrifice}`, `DynamicPt::OnlyDuringYourTurn`,
-  `StaticEffect::LandsCantEnterTheBattlefield`, `WardCost::{ManaOrLife,
-  SacrificeAttachedHost}`, `Effect::{DiscardMatchingAtRandom,
-  ExileEachMatchingThenControllerDraws, CantAttackThisTurn,
-  YourLandsProduceColorThisTurn, EachPlayerMayDiscardUpToThenDamage,
-  PreventNextHalfDamageToYouThisTurn, RedirectCreatureDamageToYouThisTurn}`,
-  `CounterType::PlusZeroPlusOne`, `Selector::{CostExiledCards,
-  DamagedBySourceThisGame}`, `SelectionRequirement::PlayerAttackedThisTurn`,
-  and `CardInstance.damaged_{players,permanents}_this_game`. Correctness:
-  `Keyword::PreventDamageFromMatching` now covers **combat** damage via
-  `damage_from_source_prevented_by_keyword` (Uncle Istvan, Argothian
-  Treefolk); `Value::TotalManaValueOf` reads any zone, not just the
-  battlefield. The last six are logged in TODO.md.
+- **CR 807 Grand Melee** — `set_grand_melee_variant` + `shuffle_seating`
+  (807.2 defaults, 807.3 random seating). The 807.4 turn markers are open;
+  see TODO.md.
 
-- **Legends complete** — `set_gaps.py leg` 9 → 0 (`sets::leg7`, the set's last
-  nine cards). New primitives: `CardDefinition.exile_countdown` (a general
-  exile fuse ticked at the owner's upkeep by `process_exile_countdowns`, lit by
-  `Effect::ExileSelfWithCountdown` on the post-resolution disposal path — All
-  Hallow's Eve, `CounterType::Scream`),
-  `StaticEffect::ChainsOfMephistopheles` (a CR 121.2a draw replacement in
-  `draw_one` with a CR 614.5 reentrancy guard),
-  `StaticEffect::PlayersCantBeAttackedUnlessTheyActedLastTurn` +
-  `GameState.acted_on_own_turn` (Arboria — set on cast and on any nontoken
-  entry, reset at the player's untap),
-  `StaticEffect::OpponentLandsEnterThenSacrifice` (Land Equilibrium, applied in
-  the battlefield-entry funnel so it doesn't use the stack),
-  `Effect::RedirectSpellDamageToItsController` + `spell_damage_to_controller`
-  (Reverberation), `Value::HalfGreatestSorceryDamageThisTurn` +
-  `sorcery_damage_this_turn` and `R::CastSorceryThisTurn` (Backdraft),
-  `R::SpellWouldDestroyALandYouControl` (Equinox — a real walk of the spell's
-  effect tree, targeted vs. mass), and
-  `Predicate::SourceCoBlockersAllMatch` (Wall of Caltrops' banding
-  intervening-'if'). Tests in `classic_sets/leg7`.
-
-- **Cost-sacrifice batches (CR 602.5b)** — the whole batch (`sac_cost` +
-  `sac_other_picks` + `sac_all_matching_cost`) is threaded into
-  `Effect::WithSacrificedPt`, so `Value::Sacrificed{Count,TotalPower}` read
-  the batch and not the last permanent. `ActivatedAbility.sac_any_number_filter`
-  adds a real "…and any number of [filter] you control" cost (a `ChooseCards`
-  modal for hand-paying seats, zero legal), and
-  `Effect::ExileCostSacrificedBatch` exiles what it ate — Sword of the Ages.
-
-- **Resolution-scoped scratch survives nesting** — `GameState.resolution_depth`
-  guards `creatures_died_this_resolution` so a sweeper's own death triggers
-  can't zero the running count mid-sweep (`Value::CreaturesDiedThisResolution`,
-  Hellfire).
-
-- **Aura death LKI on every path (CR 603.10)** — the destroy/sacrifice funnel
-  records `auras_at_death` before the host leaves, so
-  `EventScope::EnchantedBySource` triggers fire off a sac outlet and not only
-  off the lethal-damage SBA (Puppet Master).
-
-- **Client / server** — `PermanentView.cant_attack_this_turn` surfaces a live
-  CR 508.1a turn ban and the counter tooltip explains it; the Scream and Doom
-  counters have names + reminders in the coin strip and tooltip.
-  `ClientView.attackable_players` now drops defenders no attacker could legally
-  be declared at (an unfiltered "creatures can't attack you", Arboria's
-  did-nothing-last-turn lock, a Web of Inertia turn ban), so the attack UI stops
-  offering illegal defenders — `player_cant_be_attacked_at_all`,
-  `cr_recent74::cr_508_1_attackable_players_drops_a_locked_out_defender`.
+- **Conspiracy's first regular cards** — Deathreap Ritual, Brago King Eternal,
+  Canal Dredger, Cogwork Spy. The set's will-of-the-council voting cycle
+  (CR 701.32) is the prerequisite for the rest; tracked in TODO.md.
 
 Only this push's entries are listed; earlier pushes are in `git log -p --
 FEATURE_ROADMAP.md`.

@@ -49,6 +49,7 @@ fn fetch_sibling() -> TriggeredAbility {
             who: PlayerRef::You,
             subject: Selector::This,
             to: ZoneDest::Hand(PlayerRef::You),
+            count: None,
         }),
     })
 }

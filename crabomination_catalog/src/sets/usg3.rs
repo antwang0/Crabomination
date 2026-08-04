@@ -902,6 +902,7 @@ pub fn remembrance() -> CardDefinition {
                     who: PlayerRef::You,
                     subject: Selector::TriggerSource,
                     to: ZoneDest::Hand(PlayerRef::You),
+                    count: None,
                 }),
             },
         }],

@@ -2,7 +2,7 @@
 
 use crabomination::card::{CardId, CounterType, Keyword};
 use crabomination::catalog;
-use crabomination::game::types::{GameAction, Target};
+use crabomination::game::types::{Attack, AttackTarget, GameAction, Target};
 use crabomination::game::*;
 use crabomination::mana::Color;
 
@@ -160,4 +160,195 @@ fn sentinel_dispatch_and_hold_the_perimeter_seed_the_first_upkeep() {
     upkeep(&mut g);
     assert_eq!(g.battlefield.iter().filter(|c| c.controller == 0 && c.is_token).count(), 2);
     assert_eq!(g.battlefield.iter().filter(|c| c.controller == 1 && c.is_token).count(), 1);
+}
+
+/// CR 315.5 — a granted activated ability reaches the battlefield from the
+/// command zone, and only the named creature gets it.
+#[test]
+fn incendiary_dissent_arms_only_the_named_creature() {
+    let mut g = main_phase();
+    let agenda = g.seat_conspiracy(0, catalog::incendiary_dissent(), Some("Grizzly Bears"));
+    g.reveal_hidden_agenda(0, agenda);
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let giant = g.add_card_to_battlefield(0, catalog::hill_giant());
+    assert_eq!(g.granted_abilities_for(bear).len(), 1);
+    assert!(g.granted_abilities_for(giant).is_empty());
+    mana(&mut g, 0);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: bear,
+        ability_index: 0,
+        target: None,
+        additional_targets: vec![],
+        x_value: None,
+        mode: None,
+    })
+    .expect("activate");
+    drain_stack(&mut g);
+    assert_eq!(g.computed_permanent(bear).expect("bear").power, 3);
+}
+
+#[test]
+fn secrets_of_paradise_taps_the_named_creature_for_any_colour() {
+    let mut g = main_phase();
+    let agenda = g.seat_conspiracy(0, catalog::secrets_of_paradise(), Some("Grizzly Bears"));
+    g.reveal_hidden_agenda(0, agenda);
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(bear);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: bear,
+        ability_index: 0,
+        target: None,
+        additional_targets: vec![],
+        x_value: None,
+        mode: None,
+    })
+    .expect("activate");
+    assert!(g.players[0].mana_pool.total() > 0);
+}
+
+/// The granted trigger fires on the named creature only, and the {W} rider
+/// is optional (the AutoDecider declines).
+#[test]
+fn adrianas_valor_offers_indestructible_on_attack() {
+    let mut g = main_phase();
+    let agenda = g.seat_conspiracy(0, catalog::adrianas_valor(), Some("Grizzly Bears"));
+    g.reveal_hidden_agenda(0, agenda);
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let giant = g.add_card_to_battlefield(0, catalog::hill_giant());
+    let bear_card = g.battlefield_find(bear).expect("bear").clone();
+    let giant_card = g.battlefield_find(giant).expect("giant").clone();
+    assert_eq!(g.statics_granted_triggers_for(&bear_card).len(), 1);
+    assert!(g.statics_granted_triggers_for(&giant_card).is_empty());
+}
+
+#[test]
+fn double_stroke_copies_the_named_spell() {
+    let mut g = main_phase();
+    let agenda = g.seat_conspiracy(0, catalog::double_stroke(), Some("Lightning Bolt"));
+    g.reveal_hidden_agenda(0, agenda);
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    cast(&mut g, 0, bolt, Some(Target::Player(1)));
+    assert_eq!(g.players[1].life, 14);
+}
+
+#[test]
+fn secret_summoning_fetches_the_named_creature() {
+    let mut g = main_phase();
+    let agenda = g.seat_conspiracy(0, catalog::secret_summoning(), Some("Grizzly Bears"));
+    g.reveal_hidden_agenda(0, agenda);
+    let twin = g.add_card_to_library(0, catalog::grizzly_bears());
+    let bear = g.add_card_to_hand(0, catalog::grizzly_bears());
+    g.decider = Box::new(crabomination::decision::ScriptedDecider::new(vec![
+        crabomination::decision::DecisionAnswer::Search(Some(twin)),
+    ]));
+    cast(&mut g, 0, bear, None);
+    assert!(g.players[0].hand.iter().any(|c| c.id == twin));
+}
+
+#[test]
+fn worldknit_makes_every_land_a_rainbow() {
+    let mut g = main_phase();
+    g.seat_conspiracy(0, catalog::worldknit(), None);
+    let mountain = g.add_card_to_battlefield(0, catalog::mountain());
+    // The printed mana ability plus the granted any-colour one.
+    assert_eq!(g.granted_abilities_for(mountain).len(), 1);
+}
+
+#[test]
+fn hired_heist_and_the_zombie_rider_reach_only_the_named_creature() {
+    let mut g = main_phase();
+    let heist = g.seat_conspiracy(0, catalog::hired_heist(), Some("Grizzly Bears"));
+    let vile = g.seat_conspiracy(0, catalog::assemble_the_rank_and_vile(), Some("Hill Giant"));
+    g.reveal_hidden_agenda(0, heist);
+    g.reveal_hidden_agenda(0, vile);
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let giant = g.add_card_to_battlefield(0, catalog::hill_giant());
+    let bear_card = g.battlefield_find(bear).expect("bear").clone();
+    let giant_card = g.battlefield_find(giant).expect("giant").clone();
+    assert_eq!(g.statics_granted_triggers_for(&bear_card).len(), 1);
+    assert_eq!(g.statics_granted_triggers_for(&giant_card).len(), 1);
+}
+
+#[test]
+fn natural_unity_offers_a_counter_each_combat() {
+    let mut g = main_phase();
+    let agenda = g.seat_conspiracy(0, catalog::natural_unity(), Some("Grizzly Bears"));
+    g.reveal_hidden_agenda(0, agenda);
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    mana(&mut g, 0);
+    g.step = TurnStep::BeginCombat;
+    g.decider = Box::new(crabomination::decision::ScriptedDecider::new(vec![
+        crabomination::decision::DecisionAnswer::Bool(true),
+    ]));
+    g.fire_step_triggers(TurnStep::BeginCombat);
+    drain_stack(&mut g);
+    assert_eq!(
+        g.battlefield_find(bear).expect("bear").counter_count(CounterType::PlusOnePlusOne),
+        1
+    );
+}
+
+#[test]
+fn deathreap_ritual_draws_only_after_a_death() {
+    let mut g = main_phase();
+    g.add_card_to_battlefield(0, catalog::deathreap_ritual());
+    let before = g.players[0].hand.len();
+    g.step = TurnStep::End;
+    g.decider = Box::new(crabomination::decision::ScriptedDecider::new(vec![
+        crabomination::decision::DecisionAnswer::Bool(true),
+    ]));
+    g.fire_step_triggers(TurnStep::End);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), before, "nothing died");
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let mut events = vec![];
+    g.destroy_permanent(bear, false, &mut events);
+    g.decider = Box::new(crabomination::decision::ScriptedDecider::new(vec![
+        crabomination::decision::DecisionAnswer::Bool(true),
+    ]));
+    g.fire_step_triggers(TurnStep::End);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), before + 1);
+}
+
+#[test]
+fn brago_blinks_your_board_on_connect() {
+    let mut g = main_phase();
+    let brago = g.add_card_to_battlefield(0, catalog::brago_king_eternal());
+    g.clear_sickness(brago);
+    let wall = g.add_card_to_battlefield(0, catalog::wall_of_omens());
+    let before = g.players[0].hand.len();
+    g.step = TurnStep::DeclareAttackers;
+    g.declare_attackers(vec![Attack { attacker: brago, target: AttackTarget::Player(1) }])
+        .expect("attack");
+    drain_stack(&mut g);
+    while g.step != TurnStep::EndCombat {
+        g.advance_step(Vec::new()).expect("advance");
+        drain_stack(&mut g);
+    }
+    // The Wall left and re-entered, firing its ETB draw; Brago stayed put.
+    assert!(g.battlefield_find(brago).is_some());
+    assert!(g.battlefield_find(wall).is_some());
+    assert_eq!(g.players[0].hand.len(), before + 1);
+}
+
+#[test]
+fn canal_dredger_bottoms_a_graveyard_card() {
+    let mut g = main_phase();
+    let dredger = g.add_card_to_battlefield(0, catalog::canal_dredger());
+    g.clear_sickness(dredger);
+    let bear = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: dredger,
+        ability_index: 0,
+        target: Some(Target::Permanent(bear)),
+        additional_targets: vec![],
+        x_value: None,
+        mode: None,
+    })
+    .expect("activate");
+    drain_stack(&mut g);
+    assert!(g.players[0].graveyard.is_empty());
+    assert_eq!(g.players[0].library.last().map(|c| c.id), Some(bear));
 }

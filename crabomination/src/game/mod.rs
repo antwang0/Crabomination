@@ -2529,7 +2529,8 @@ impl GameState {
         card: &CardInstance,
     ) -> Vec<crate::card::TriggeredAbility> {
         let mut out = Vec::new();
-        for src in &self.battlefield {
+        // CR 315.5 — a face-up conspiracy grants from the command zone too.
+        for src in self.all_static_sources() {
             for sa in &src.definition.static_abilities {
                 // Peel the gating wrappers (Threshold, "while your turn", …)
                 // so a conditionally granted trigger only surfaces while its
@@ -2539,7 +2540,7 @@ impl GameState {
                     ability,
                 }) = self.active_static(&sa.effect, src)
                     && self.evaluate_requirement_static(
-                        filter,
+                        &filter.resolve_named_by_source(src.named_card.as_deref()),
                         &Target::Permanent(card.id),
                         src.controller,
                         Some(src.id),
@@ -6844,7 +6845,7 @@ impl GameState {
                     match &mut e.affected {
                         AffectedPermanents::CardMatch { requirement, .. }
                         | AffectedPermanents::CardMatchPowerGated { requirement, .. } => {
-                            *requirement = Box::new(requirement.resolve_named_by_source(named));
+                            **requirement = requirement.resolve_named_by_source(named);
                         }
                         _ => {}
                     }

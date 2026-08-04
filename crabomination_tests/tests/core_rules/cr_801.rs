@@ -254,3 +254,39 @@ fn cr_811_2b_attack_left_hits_the_next_team_over() {
     g.priority.player_with_priority = 0;
     assert_eq!(g.attackable_players_for(0), vec![1]);
 }
+
+// ── CR 807 — Grand Melee ──────────────────────────────────────────────────
+
+/// CR 807.2 — the variant's default options: range 1, attack left, and
+/// neither attack-multiple-players nor deploy-creatures.
+#[test]
+fn cr_807_2_grand_melee_defaults() {
+    let mut g = multi_player_game(10);
+    g.set_grand_melee_variant();
+    assert_eq!(g.range_of_influence, Some(1));
+    assert_eq!(g.attack_option, AttackOption::AttackLeft);
+    assert!(!g.deploy_creatures);
+    assert!(!g.attack_adjacent_only);
+    g.active_player_idx = 0;
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    assert_eq!(g.attackable_players_for(0), vec![1]);
+}
+
+/// CR 807.3 — the players are seated at random; every seat is still occupied
+/// exactly once and each is its own team (807.1 is a Free-for-All).
+#[test]
+fn cr_807_3_players_are_seated_at_random() {
+    let mut g = multi_player_game(8);
+    let names: std::collections::HashSet<String> =
+        g.players.iter().map(|p| p.name.clone()).collect();
+    g.set_grand_melee_variant();
+    assert_eq!(g.players.len(), 8);
+    assert_eq!(g.players.iter().map(|p| p.name.clone()).collect::<std::collections::HashSet<_>>(), names);
+    for (seat, p) in g.players.iter().enumerate() {
+        assert_eq!(p.id.0, seat);
+    }
+    for seat in 0..8 {
+        assert_eq!(g.teammates(seat), Vec::<usize>::new());
+    }
+}
