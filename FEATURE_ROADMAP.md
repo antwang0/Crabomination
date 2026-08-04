@@ -2348,7 +2348,31 @@ Each a small targeted feature; sweep batch by batch.
   walker cashes out: when enemy board power covers its loyalty, the
   ability pick keeps only loyalty-spending finalists, so the bot takes
   the removal/ultimate now rather than plussing into a free kill.
-- 🟡 **Better sequencing** (land drops, hold-up, when to cast) — reactive
+- 🟡 **Sealed builder repaired** (`SimConfig::builder_v2`, the previous
+  builder kept as the control) — three defects found together while
+  investigating why a pool's bomb never appeared in a build: the card
+  scorer had **no body, keyword or ability terms at all** (it ranked a
+  {3}{U}{U} 5/5 flier with ward 2 *below* a vanilla {U}{U} two-drop),
+  splash candidates weren't pip-limited (so a double-pip bomb got
+  "splashed" off three sources), and basics were split by linear pip
+  demand (so double costs were under-served). Now: `draft::card_quality`
+  (body, evasion/deathtouch/lifelink/ward, and a `prepare_spell` bonus —
+  a preparation card is two cards in one slot), single-pip splashes, and
+  squared pip demand in the mana split. **Adopted**: 56.9 %
+  [54.1, 59.7] and 58.5 % [55.7, 61.3] on independent seeds over 1 200
+  head-to-head games each vs the builder it replaces, same pools and
+  pilots (`selfplay_train --gate-builder-v2`).
+- 🟡 **Land-drop sequencing** (`landseq` / `EvalWeights::land_urgency`) —
+  missing colors weighted by how cheap the cards demanding them are, and
+  a per-land check for whether *that* land turns on a cast this turn (so
+  a tapland is nearly free with no play and expensive otherwise).
+  **Measured and not adopted**: 50.3 % [49.6, 51.0] over 19 200 sealed
+  games. Two methodology notes worth more than the result: measured on
+  `--decks both` first it read 49.4 % and *could not have read anything
+  else* (those archetypes play basics, so tapland timing never fires),
+  and the sealed +1.4 at 4 800 games collapsed to +0.3 at 19 200 — the
+  third such evaporation after `blk` and `atk-race`.
+- 🟡 **Better sequencing** (hold-up, when to cast) — reactive
   deployment landed: the stack-response value bar drops 10 → 5 with 6+
   cards in hand so answers get spent instead of rotting in a clogged
   hand; instant-speed removal fires at a declared attacker during

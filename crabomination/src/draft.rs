@@ -265,6 +265,70 @@ pub fn score_card_for_seat(factory: CardFactory, seat_picks_so_far: &[CardFactor
 /// recommender builds whole decks at once) hoist `colors_of_picks` out of
 /// the loop — recomputing it per card invoked every factory in the pile
 /// per scored card, an O(n²) instantiation blow-up.
+/// What a card is worth *as a card*, ignoring which colors it costs:
+/// body size, evasion/combat keywords, and whether it brings a second
+/// spell along (SOS preparation).
+///
+/// [`score_card_with_colors`] deliberately has none of this — it prices
+/// color fit, card type and curve slot only, which means it ranks a
+/// {3}{U}{U} 5/5 flier with ward 2 *below* a vanilla {U}{U} two-drop.
+/// That blindness is why the sealed builder would splash a bomb it
+/// couldn't cast and leave real bombs on the bench; see
+/// [`score_card_quality`].
+///
+/// Magnitudes are deliberately comparable to, not larger than, the color
+/// term (6 per on-color pip): card quality should be able to outrank a
+/// pip of fit, not to overrule color discipline outright.
+pub(crate) fn card_quality(def: &crate::card::CardDefinition) -> i32 {
+    use crate::card::{CardType, Keyword};
+    let mut q = 0i32;
+    if def.card_types.contains(&CardType::Creature) {
+        // Halved and capped: a 5/5 is worth about a pip of color fit, a
+        // 7/7 not much more — limited games are decided by having a
+        // relevant body, not by the last point of stats.
+        q += ((def.power.max(0) + def.toughness.max(0)) / 2).min(5);
+        let p = def.power.max(0);
+        let has = |k: &Keyword| def.keywords.contains(k);
+        // Evasion is what turns a body into a clock; deathtouch and
+        // lifelink change how profitably it fights.
+        if has(&Keyword::Flying) || has(&Keyword::Shadow) || has(&Keyword::Unblockable) {
+            q += if p >= 2 { 3 } else { 2 };
+        } else if has(&Keyword::Menace) || has(&Keyword::Trample) {
+            q += 1;
+        }
+        if has(&Keyword::Deathtouch) {
+            q += 2;
+        }
+        if has(&Keyword::Lifelink) {
+            q += 1;
+        }
+        if has(&Keyword::Defender) {
+            q -= 2;
+        }
+        // Ward taxes the removal that would otherwise answer the body.
+        if def.keywords.iter().any(|k| matches!(k, Keyword::Ward(_))) {
+            q += 1;
+        }
+    }
+    // A preparation card is two cards in one slot (the creature plus the
+    // spell it casts off itself) — the single biggest thing the old
+    // scorer could not see about this set.
+    if def.prepare_spell.is_some() {
+        q += 3;
+    }
+    q
+}
+
+/// [`score_card_with_colors`] plus [`card_quality`] — the sealed
+/// builder's scorer when `SimConfig::builder_v2` is on. The legacy
+/// scorer is kept intact as the measurement control.
+pub(crate) fn score_card_quality(
+    factory: CardFactory,
+    seat_colors: &HashMap<Color, u32>,
+) -> i32 {
+    score_card_with_colors(factory, seat_colors) + card_quality(&factory())
+}
+
 pub(crate) fn score_card_with_colors(
     factory: CardFactory,
     seat_colors: &HashMap<Color, u32>,

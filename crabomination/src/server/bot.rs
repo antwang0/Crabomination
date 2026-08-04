@@ -142,6 +142,17 @@ pub struct EvalWeights {
     /// the position. A knob rather than a constant because the right
     /// loudness is a measurement (see the `net_eval_blend*` profiles).
     pub net_blend_scale: i32,
+    /// Sequence the land drop instead of taking the first land that
+    /// covers the most missing colors. Two additions:
+    ///
+    /// * **Urgency** — a missing color is worth more when the hand cards
+    ///   demanding it are cheap. Covering the color of a two-drop that
+    ///   could be cast next turn beats covering the color of a six-drop.
+    /// * **Tapped-land timing** — an enters-tapped land is free on a
+    ///   turn with nothing to cast and costs a whole turn's play
+    ///   otherwise, so it is preferred early and penalized when the
+    ///   untapped mana would actually be spent.
+    pub land_urgency: bool,
 }
 
 impl EvalWeights {
@@ -170,6 +181,7 @@ impl EvalWeights {
             attack_race_horizon: false,
             net_slot: 0,
             net_blend_scale: 0,
+            land_urgency: false,
         }
     }
 
@@ -224,6 +236,7 @@ impl EvalWeights {
             attack_race_horizon: false,
             net_slot: 0,
             net_blend_scale: 0,
+            land_urgency: false,
         }
     }
 
@@ -261,6 +274,7 @@ impl EvalWeights {
             attack_race_horizon: false,
             net_slot: 0,
             net_blend_scale: 0,
+            land_urgency: false,
         }
     }
 
@@ -482,6 +496,43 @@ impl EvalWeights {
     /// misses, and a ~125 k-parameter pooled encoder evidently carries
     /// little yet. Next levers, in order: capacity, richer object
     /// features, search-improved training targets.
+    /// The adopted default plus sequenced land drops
+    /// ([`land_urgency`](Self::land_urgency)).
+    ///
+    /// **Measured, and not adopted** — but the route there is worth more
+    /// than the result:
+    ///
+    /// | field | result | games |
+    /// |---|---|---|
+    /// | fixed + cube, seed 23 | 49.4 % [47.9 %, 50.8 %] | 4 800 |
+    /// | sealed, seed 23 | 51.4 % [50.0 %, 52.8 %] | 4 800 |
+    /// | **sealed, seed 29 (decider)** | **50.3 % [49.6 %, 51.0 %]** | **19 200** |
+    ///
+    /// The first row could not have read anything else: the fixed and
+    /// cube archetypes play basics almost exclusively, so the
+    /// tapland-timing half of this profile never fires there. A profile
+    /// can only be measured on decks containing the cards it reasons
+    /// about, and running it on the default field first was a wasted
+    /// 4 800 games.
+    ///
+    /// Moving to sealed — where the builder actually produces school
+    /// lands — read +1.4 with the lower bound exactly on 50.0, so the
+    /// 4× run was pre-registered as the decision rather than reported.
+    /// It came back +0.3. That is the third time this harness has seen
+    /// a promising sub-5 000-game result evaporate at 4× the sample
+    /// (see [`block_search`](Self::block_search) and
+    /// [`attack_search_race`](Self::attack_search_race)); the pattern is
+    /// now reliable enough to treat any 400-games-per-archetype edge as
+    /// a hypothesis, never a finding.
+    ///
+    /// Why it plausibly does nothing: the sealed builder gives most
+    /// decks two colors and a handful of duals, so the tapland decision
+    /// arises a few times a game and usually has one obvious answer the
+    /// old first-playable rule already stumbled into.
+    pub const fn land_sequencing() -> Self {
+        Self { land_urgency: true, ..Self::attack_search_sim() }
+    }
+
     pub const fn net_eval() -> Self {
         Self { net_slot: super::net_eval::SLOT_BEST, ..Self::attack_search_sim() }
     }
@@ -1567,7 +1618,17 @@ fn land_color_output(card: &CardDefinition) -> crate::mana::ColorSet {
 /// mana-fixing so a green hand doesn't strand its spells behind a Mountain.
 /// Falls back to the first playable land when nothing improves color
 /// coverage (or no land needs fixing).
-fn pick_land_to_play(state: &GameState, seat: usize) -> Option<CardId> {
+/// Does this land's own printed static say it enters tapped? (A
+/// `StaticEffect::EntersTapped` on the card itself — school lands, guild
+/// gates. Statics granted by *other* permanents aren't the land's
+/// property and aren't consulted.)
+fn land_enters_tapped(def: &crate::card::CardDefinition) -> bool {
+    def.static_abilities
+        .iter()
+        .any(|s| matches!(s.effect, crate::card::StaticEffect::EntersTapped { .. }))
+}
+
+fn pick_land_to_play(state: &GameState, seat: usize, w: &EvalWeights) -> Option<CardId> {
     use crate::mana::{Color, ColorSet};
     const WUBRG: [Color; 5] =
         [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green];
@@ -1589,17 +1650,80 @@ fn pick_land_to_play(state: &GameState, seat: usize) -> Option<CardId> {
     let needed: Vec<Color> =
         WUBRG.into_iter().filter(|&col| want.contains(col) && !have.contains(col)).collect();
 
-    let mut best: Option<(CardId, usize)> = None;
+    if !w.land_urgency {
+        let mut best: Option<(CardId, usize)> = None;
+        for c in state.players[seat].hand.iter().filter(|c| c.definition.is_land()) {
+            if !state.would_accept(GameAction::PlayLand(c.id)) {
+                continue;
+            }
+            let out = land_color_output(&c.definition);
+            let coverage = needed.iter().filter(|&&col| out.contains(col)).count();
+            // Higher coverage wins; the first playable land is the fallback (so a
+            // colorless/utility land still gets played when nothing needs fixing).
+            if best.is_none_or(|(_, s)| coverage > s) {
+                best = Some((c.id, coverage));
+            }
+        }
+        return best.map(|(id, _)| id);
+    }
+
+    // Per-color urgency: the cheapest hand card wanting that color sets
+    // how soon a source is needed. A {B} two-drop scores 6, a {B}
+    // six-drop 2 — both "missing", not equally missing.
+    let urgency = |col: Color| -> usize {
+        state.players[seat]
+            .hand
+            .iter()
+            .filter(|c| !c.definition.is_land() && c.definition.cost.colors().contains(&col))
+            .map(|c| 8usize.saturating_sub(c.definition.cost.cmc() as usize).max(1))
+            .max()
+            .unwrap_or(0)
+    };
+
+    // Whether a land buys a cast *this turn* is a property of that land,
+    // not of the turn: an untapped source adds mana and a color now, a
+    // tapped one adds neither until next turn. So the question is asked
+    // per candidate rather than once.
+    let untapped_now = state
+        .battlefield
+        .iter()
+        .filter(|c| c.controller == seat && c.definition.is_land() && !c.tapped)
+        .count();
+    let enables_a_cast = |out: ColorSet, tapped: bool| -> bool {
+        let mana = untapped_now + usize::from(!tapped);
+        let colors = if tapped { have } else { have.union(out) };
+        state.players[seat].hand.iter().any(|c| {
+            !c.definition.is_land()
+                && c.definition.cost.cmc() as usize <= mana
+                && c.definition.cost.colors().iter().all(|col| colors.contains(*col))
+        })
+    };
+
+    let mut best: Option<(CardId, i32)> = None;
     for c in state.players[seat].hand.iter().filter(|c| c.definition.is_land()) {
         if !state.would_accept(GameAction::PlayLand(c.id)) {
             continue;
         }
         let out = land_color_output(&c.definition);
-        let coverage = needed.iter().filter(|&&col| out.contains(col)).count();
-        // Higher coverage wins; the first playable land is the fallback (so a
-        // colorless/utility land still gets played when nothing needs fixing).
-        if best.is_none_or(|(_, s)| coverage > s) {
-            best = Some((c.id, coverage));
+        let mut score: i32 =
+            needed.iter().filter(|&&col| out.contains(col)).map(|&col| urgency(col) as i32).sum();
+        // Untapped sources the bot already has are worth a little on
+        // their own, so a second Forest still beats a dead utility land.
+        if !needed.is_empty() || out != ColorSet::empty() {
+            score += 1;
+        }
+        let tapped = land_enters_tapped(&c.definition);
+        // A land that turns on a spell this turn is worth more than the
+        // fixing it promises for later; a tapland that promises fixing
+        // costs almost nothing on a turn with no play.
+        if enables_a_cast(out, tapped) {
+            score += 4;
+        }
+        if tapped {
+            score -= 1;
+        }
+        if best.is_none_or(|(_, s)| score > s) {
+            best = Some((c.id, score));
         }
     }
     best.map(|(id, _)| id)
@@ -3607,7 +3731,7 @@ fn main_phase_action_with(
     // Exploration / Azusa-style ExtraLandPerTurn static lets the bot
     // play a second land in the same turn (CR 305.2).
     if state.can_player_play_land(seat)
-        && let Some(land_id) = pick_land_to_play(state, seat)
+        && let Some(land_id) = pick_land_to_play(state, seat, w)
     {
         let action = GameAction::PlayLand(land_id);
         if GameState::would_accept_on(&probe, action.clone()) {
@@ -8405,7 +8529,7 @@ pub(crate) fn main_phase_candidates_for_mcts(
     }
     // A land drop is a real option and is enumerated separately.
     if state.can_player_play_land(seat)
-        && let Some(land) = pick_land_to_play(state, seat)
+        && let Some(land) = pick_land_to_play(state, seat, w)
     {
         let action = GameAction::PlayLand(land);
         if GameState::would_accept_on(&probe, action.clone()) {
@@ -11928,8 +12052,38 @@ mod stack_response_tests {
         let _mountain = g.add_card_to_hand(0, catalog::mountain());
         let forest = g.add_card_to_hand(0, catalog::forest());
         g.add_card_to_hand(0, catalog::grizzly_bears()); // wants green
-        assert_eq!(pick_land_to_play(&g, 0), Some(forest),
+        assert_eq!(pick_land_to_play(&g, 0, &EvalWeights::default()), Some(forest),
             "fixes the missing green over the off-color Mountain");
+    }
+
+    /// `land_urgency` sequences the tapland: with nothing castable it is
+    /// the free drop, but once the untapped mana would actually be spent
+    /// this turn the basic wins.
+    #[test]
+    fn land_urgency_times_the_tapland() {
+        let w = EvalWeights::land_sequencing();
+        // Nothing to cast: the school land (enters tapped, fixes W and B)
+        // costs nothing now and fixes two colors later.
+        let mut g = two_player_game();
+        g.priority.player_with_priority = 0;
+        g.active_player_idx = 0;
+        let tapland = g.add_card_to_hand(0, catalog::forum_of_amity());
+        let _plains = g.add_card_to_hand(0, catalog::plains());
+        g.add_card_to_hand(0, catalog::serra_angel()); // {3}{W}{W}, uncastable now
+        g.add_card_to_hand(0, catalog::doom_blade()); // {1}{B} — the second color
+        assert_eq!(pick_land_to_play(&g, 0, &w), Some(tapland),
+            "no play this turn — take the tapped dual for the two colors it fixes");
+
+        // Same hand plus a one-drop the untapped land would actually
+        // cast: entering tapped now costs a real play.
+        let mut g2 = two_player_game();
+        g2.priority.player_with_priority = 0;
+        g2.active_player_idx = 0;
+        let _tap2 = g2.add_card_to_hand(0, catalog::forum_of_amity());
+        let plains2 = g2.add_card_to_hand(0, catalog::plains());
+        g2.add_card_to_hand(0, catalog::savannah_lions()); // {W}, castable off one Plains
+        assert_eq!(pick_land_to_play(&g2, 0, &w), Some(plains2),
+            "the untapped source buys a play this turn; the tapland doesn't");
     }
 
     /// A creature-only `{X}: deal X damage to target creature` spell caps X at

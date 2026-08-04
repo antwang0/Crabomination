@@ -27,6 +27,23 @@ Items are grouped by area and roughly ordered by impact within each group.
   `ReturnFromGraveyardOpponentChooses` pick the lowest-mana-value card rather
   than asking a UI seat. ⏳ Route through the decider when the choosing
   opponent `wants_ui`.
+## Recommender: two builder defects fixed, one lesson recorded
+
+Both were found by asking why Emeritus of Ideation never appeared in a
+build for a pool that contained it (2026-08-04). Fixed behind
+`SimConfig::builder_v2`; see FEATURE_ROADMAP Tier 13 for the measured
+adoption. Recorded here because the *consequence* outlived the fix:
+
+- Every recommendation produced before this — including per-card
+  attribution tables — came from a builder that could not see power,
+  toughness, keywords, or a card's attached preparation spell. Re-run
+  any archived recommendation before trusting its card rankings.
+- `recommend_pool`'s anchor lens (`per_card_attribution_within`) reports
+  over the *surviving* population only. A shape eliminated in racing
+  contributes no variants, so "0 variants play it" means "no survivor is
+  that color", not "the card is bad". The lens now matches anchor names
+  case-insensitively — an exact-match miss used to return an empty
+  subset silently, which reads identically to a real negative result.
 
 ## Missing: SOS Special Guests (SPG)
 

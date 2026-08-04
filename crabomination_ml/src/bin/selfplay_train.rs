@@ -76,6 +76,10 @@ struct Args {
     /// and race net-judged builds against static-judged builds of the
     /// same candidate sets on paired pools, N games per pool.
     gate_builder: Option<usize>,
+    /// Gate mode: race the repaired sealed builder (`builder_v2`)
+    /// against the one it replaces, same pools, same pilots, N games
+    /// per pool. No net involved — this measures the builder alone.
+    gate_builder_v2: Option<usize>,
 }
 
 fn parse_args() -> Args {
@@ -93,6 +97,7 @@ fn parse_args() -> Args {
         seed: 0x0505_ACAD,
         use_best: None,
         gate_builder: None,
+        gate_builder_v2: None,
     };
     let mut it = std::env::args().skip(1);
     while let Some(flag) = it.next() {
@@ -111,6 +116,9 @@ fn parse_args() -> Args {
             "--seed" => a.seed = val().parse().expect("--seed"),
             "--use-best" => a.use_best = Some(PathBuf::from(val())),
             "--gate-builder" => a.gate_builder = Some(val().parse().expect("--gate-builder")),
+            "--gate-builder-v2" => {
+                a.gate_builder_v2 = Some(val().parse().expect("--gate-builder-v2"))
+            }
             other => panic!("unknown flag {other} (see the module doc for usage)"),
         }
     }
@@ -267,9 +275,64 @@ fn gate_builder(args: &Args, vocab: &Vocab, games_per_pool: usize) {
     );
 }
 
+/// Race the repaired builder against the one it replaces: same pool,
+/// same pilots, same seeds — only the build differs.
+fn gate_builder_v2(args: &Args, games_per_pool: usize) {
+    use crabomination::recommend::{Pilot, simulate_match_games_piloted};
+    const POOLS: u64 = 12;
+    println!(
+        "builder gate: builder_v2 vs legacy builder, {games_per_pool} games x {POOLS} pools, seed {}",
+        args.seed
+    );
+    let (mut wins_v2, mut wins_old, mut undecided) = (0u32, 0u32, 0u32);
+    for i in 0..POOLS {
+        let salt = args.seed ^ i.wrapping_mul(0x9E37_79B9_7F4A_7C15).wrapping_add(0xB0111D);
+        let pool = sealed_pool(salt);
+        let v2 = crabomination::selfplay::heuristic_sealed_build_with(&pool, salt ^ 1, true);
+        let old = crabomination::selfplay::heuristic_sealed_build_with(&pool, salt ^ 1, false);
+        let tally = simulate_match_games_piloted(
+            &v2,
+            &old,
+            games_per_pool,
+            [Pilot::default(), Pilot::default()],
+            4_000,
+            Some(salt ^ 2),
+        );
+        println!(
+            "pool #{i}: v2 {} - {} legacy ({} n/d)",
+            tally.wins_a, tally.wins_b, tally.undecided
+        );
+        wins_v2 += tally.wins_a;
+        wins_old += tally.wins_b;
+        undecided += tally.undecided;
+    }
+    let decided = wins_v2 + wins_old;
+    let pct = 100.0 * wins_v2 as f64 / decided.max(1) as f64;
+    let (lo, hi) = wilson(wins_v2, decided);
+    println!(
+        "TOTAL: v2 {wins_v2} - {wins_old} legacy ({undecided} n/d) = {pct:.1}% [{:.1}%, {:.1}%]",
+        lo * 100.0,
+        hi * 100.0
+    );
+    println!(
+        "verdict: {}",
+        if lo > 0.5 {
+            "builder_v2 is stronger — the interval clears 50%"
+        } else if hi < 0.5 {
+            "the legacy builder is stronger — the interval is below 50%"
+        } else {
+            "inconclusive — the interval straddles 50%"
+        }
+    );
+}
+
 fn main() {
     let args = parse_args();
     let vocab = Vocab::sos_sealed();
+    if let Some(games) = args.gate_builder_v2 {
+        gate_builder_v2(&args, games);
+        return;
+    }
     if let Some(games) = args.gate_builder {
         gate_builder(&args, &vocab, games);
         return;

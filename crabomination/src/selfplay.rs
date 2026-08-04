@@ -37,7 +37,18 @@ pub fn sealed_pool(seed: u64) -> Vec<CardFactory> {
 /// (color-pair shapes, jittered picks). This is what generates training
 /// decks until the Phase C build net earns the job.
 pub fn heuristic_sealed_build(pool: &[CardFactory], seed: u64) -> Vec<CardFactory> {
-    let cfg = SimConfig::default();
+    heuristic_sealed_build_with(pool, seed, true)
+}
+
+/// [`heuristic_sealed_build`] with the builder generation selectable:
+/// `false` is the pre-`builder_v2` scorer/splash/mana model, kept so the
+/// repaired builder can be raced against what it replaced.
+pub fn heuristic_sealed_build_with(
+    pool: &[CardFactory],
+    seed: u64,
+    builder_v2: bool,
+) -> Vec<CardFactory> {
+    let cfg = SimConfig { builder_v2, ..SimConfig::default() };
     let mut rng = StdRng::seed_from_u64(seed);
     build_random_deck(pool, &cfg, &mut rng).cards
 }

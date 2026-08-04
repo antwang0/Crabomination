@@ -77,6 +77,16 @@ pub struct SimConfig {
     pub splash_max_cards: usize,
     /// Minimum static score for a card to be splash-worthy.
     pub splash_min_score: i32,
+    /// The repaired sealed builder: card-quality scoring
+    /// ([`draft::card_quality`]), splash candidates restricted to single
+    /// colored pips, and basic lands split by squared pip demand so a
+    /// double-pip card gets the sources it actually needs.
+    ///
+    /// A flag rather than a rewrite so the previous builder stays as the
+    /// measurement control — all three defects were found together (a
+    /// {3}{U}{U} bomb "splashed" off three Islands) and are fixed
+    /// together, so they are measured together.
+    pub builder_v2: bool,
     /// Gauntlet seed — a run with the same (set, seed) faces the same field.
     pub seed: u64,
     /// Worker threads; 0 = available cores minus one.
@@ -124,6 +134,7 @@ impl Default for SimConfig {
             candidate_cap: 8,
             racing: true,
             racing_confidence_z: 1.96,
+            builder_v2: true,
             build_temperature: 1.0,
             spell_count_range: (22, 24),
             land_count_range: (16, 18),
@@ -308,6 +319,7 @@ pub fn suggest_main_deck_in_colors<R: Rng>(
     target_spells: usize,
     noise: i32,
     rng: &mut R,
+    quality: bool,
 ) -> (Vec<CardFactory>, Vec<CardFactory>) {
     let allowed = |f: CardFactory| -> bool {
         let def = f();
@@ -347,7 +359,12 @@ pub fn suggest_main_deck_in_colors<R: Rng>(
             } else {
                 0
             };
-            scored.push((f, score_card_with_colors(f, &pick_colors) + jitter + fix));
+            let base = if quality {
+                crate::draft::score_card_quality(f, &pick_colors)
+            } else {
+                score_card_with_colors(f, &pick_colors)
+            };
+            scored.push((f, base + jitter + fix));
         } else {
             off.push(f);
         }
@@ -435,10 +452,25 @@ fn splash_cards(pool: &[CardFactory], pair: &[Color], third: Color, cfg: &SimCon
     let mut hits: Vec<(CardFactory, i32)> = pool
         .iter()
         .filter(|&&f| {
-            let cs = colors_of_cost(&f().cost);
-            cs.contains(&third) && cs.iter().all(|c| *c == third || pair.contains(c))
+            let def = f();
+            let cs = colors_of_cost(&def.cost);
+            if !(cs.contains(&third) && cs.iter().all(|c| *c == third || pair.contains(c))) {
+                return false;
+            }
+            // A splash is a handful of off-color sources, so it can only
+            // support ONE colored pip. Without this the builder splashed
+            // {3}{U}{U} Emeritus of Ideation off three Islands — a card
+            // it then measurably failed to cast.
+            !cfg.builder_v2 || colored_pip_count(&def.cost, third) <= 1
         })
-        .map(|&f| (f, score_card_with_colors(f, &pool_colors)))
+        .map(|&f| {
+            let s = if cfg.builder_v2 {
+                crate::draft::score_card_quality(f, &pool_colors)
+            } else {
+                score_card_with_colors(f, &pool_colors)
+            };
+            (f, s)
+        })
         .filter(|(_, s)| *s >= cfg.splash_min_score)
         .collect();
     hits.sort_by_key(|(_, s)| std::cmp::Reverse(*s));
@@ -451,7 +483,12 @@ fn splash_cards(pool: &[CardFactory], pair: &[Color], third: Color, cfg: &SimCon
 /// earliness — a {B} pip on a two-drop needs its source in the opening
 /// hand, a {B} pip on a six-drop can wait — so a splash of expensive
 /// cards leans on fewer sources than the raw pip count suggests.
-fn basic_split(main: &[CardFactory], colors: &[Color], total: u32) -> HashMap<Color, u32> {
+fn basic_split(
+    main: &[CardFactory],
+    colors: &[Color],
+    total: u32,
+    squared_pips: bool,
+) -> HashMap<Color, u32> {
     let weights: Vec<(Color, u32)> = colors
         .iter()
         .map(|&c| {
@@ -459,7 +496,14 @@ fn basic_split(main: &[CardFactory], colors: &[Color], total: u32) -> HashMap<Co
                 .iter()
                 .map(|&f| {
                     let def = f();
-                    colored_pip_count(&def.cost, c) * 7u32.saturating_sub(def.cost.cmc()).max(1)
+                    let pips = colored_pip_count(&def.cost, c);
+                    // Casting {U}{U} on curve needs roughly half again
+                    // the sources {U} does, not the same — a linear pip
+                    // count under-serves every double-pip card in the
+                    // deck. Squaring is the cheap standing-in for the
+                    // hypergeometric answer.
+                    let demand = if squared_pips { pips * pips } else { pips };
+                    demand * 7u32.saturating_sub(def.cost.cmc()).max(1)
                 })
                 .sum();
             (c, w)
@@ -525,6 +569,7 @@ fn assemble_lands(
     main: &[CardFactory],
     colors: &[Color],
     total: u32,
+    squared_pips: bool,
 ) -> (Vec<CardFactory>, HashMap<Color, u32>) {
     use crate::card::CardType;
     let mut duals: Vec<CardFactory> = Vec::new();
@@ -545,7 +590,7 @@ fn assemble_lands(
             true
         }
     });
-    let basics = basic_split(main, colors, total - duals.len() as u32);
+    let basics = basic_split(main, colors, total - duals.len() as u32, squared_pips);
     (duals, basics)
 }
 
@@ -591,7 +636,7 @@ fn build_shape<R: Rng>(
         return None;
     }
     let (main, mut leftovers) =
-        suggest_main_deck_in_colors(pool, colors, &splash, spells, noise, rng);
+        suggest_main_deck_in_colors(pool, colors, &splash, spells, noise, rng, cfg.builder_v2);
     if main.is_empty() {
         return None;
     }
@@ -605,7 +650,8 @@ fn build_shape<R: Rng>(
     // Legal-deck floor: when the pool can't fill the requested spell
     // count, pad lands so the deck still reaches 40 cards.
     let lands = lands.max(40u32.saturating_sub(main.len() as u32));
-    let (duals, basics) = assemble_lands(&mut leftovers, &main, &land_colors, lands);
+    let (duals, basics) =
+        assemble_lands(&mut leftovers, &main, &land_colors, lands, cfg.builder_v2);
     Some(CandidateBuild {
         static_score: static_build_score(&main, spells),
         label: candidate_label(colors, splash_colors),
@@ -1319,9 +1365,19 @@ pub fn per_card_attribution_within(
     anchor: &str,
     min_side: usize,
 ) -> (usize, Vec<CardAttribution>) {
+    // Case-insensitive: the anchor arrives from the CLI, and an exact
+    // compare silently returned an empty subset for "professor dellian
+    // fel" vs the printed "Professor Dellian Fel" — which then let a
+    // cross-archetype marginal attribution stand in for the conditional
+    // one. An empty-looking anchor should be loud, never a quiet no-op.
     let subset: Vec<(&CandidateBuild, f64)> = samples
         .iter()
-        .filter(|(c, _)| c.main.iter().chain(c.duals.iter()).any(|&f| f().name == anchor))
+        .filter(|(c, _)| {
+            c.main
+                .iter()
+                .chain(c.duals.iter())
+                .any(|&f| f().name.eq_ignore_ascii_case(anchor))
+        })
         .map(|(c, w)| (*c, *w))
         .collect();
     let n = subset.len();
@@ -1348,7 +1404,9 @@ fn swap_child(parent: &CandidateBuild, out_idx: usize, in_card: CardFactory, lab
         }
     }
     let basic_total: u32 = parent.basics.values().sum();
-    child.basics = basic_split(&child.main, &land_colors, basic_total);
+    // Swap children re-split the basics of a build that already exists;
+    // they inherit that build's mana model rather than re-deciding it.
+    child.basics = basic_split(&child.main, &land_colors, basic_total, true);
     child.static_score = static_build_score(&child.main, child.main.len());
     child.label = label;
     child
@@ -1687,7 +1745,8 @@ mod tests {
         push(catalog::white_knight, 4);
         push(catalog::benalish_hero, 3);
         push(catalog::serra_angel, 3);
-        push(catalog::craw_wurm, 1); // the green splash bait
+        push(catalog::ambush_viper, 1); // {1}{G} — splashable off a source or two
+        push(catalog::craw_wurm, 1); // {4}{G}{G} — NOT splashable, see below
         p
     }
 
@@ -1754,12 +1813,20 @@ mod tests {
             .find(|c| !c.splash.is_empty() && c.splash.contains(&Color::Green))
             .expect("a green-splash candidate exists");
         assert!(
-            splashy.main.iter().any(|&f| f as *const () == catalog::craw_wurm as *const ()),
-            "the splash candidate actually plays the green card",
+            splashy.main.iter().any(|&f| f as *const () == catalog::ambush_viper as *const ()),
+            "the splash candidate actually plays the splashable green card",
         );
         assert!(
             splashy.basics.get(&Color::Green).copied().unwrap_or(0) >= 1,
             "splash color gets at least one basic source",
+        );
+        // …and the double-green six-drop in the same pool is left out of
+        // it. A splash is a couple of off-color sources: it can support
+        // {1}{G}, never {4}{G}{G}. Leaving that distinction out is what
+        // put a {3}{U}{U} bomb in a deck with three Islands.
+        assert!(
+            !splashy.main.iter().any(|&f| f as *const () == catalog::craw_wurm as *const ()),
+            "a double-pip card is not splash material",
         );
     }
 
@@ -1943,10 +2010,33 @@ mod tests {
         for _ in 0..4 {
             main.push(catalog::serra_angel); // {3}{W}{W}, 8 raw W pips at cmc 5
         }
-        let split = basic_split(&main, &[Color::Red, Color::White], 10);
+        let split = basic_split(&main, &[Color::Red, Color::White], 10, false);
         assert!(
             split[&Color::Red] > split[&Color::White],
             "cheap red pips outweigh late white ones, got {split:?}",
+        );
+        assert_eq!(split.values().sum::<u32>(), 10);
+    }
+
+    /// `builder_v2`'s mana model: a double pip needs more than twice one
+    /// pip's sources, so four {3}{W}{W} bodies outweigh four one-mana
+    /// {R} spells even though the red pips are earlier. This is the
+    /// deliberate reversal of `basic_split_leans_on_cheap_pips` above —
+    /// the builder that produced three Islands for a {3}{U}{U} bomb was
+    /// counting pips linearly.
+    #[test]
+    fn squared_pips_serve_double_costs() {
+        let mut main: Vec<CardFactory> = Vec::new();
+        for _ in 0..4 {
+            main.push(catalog::lightning_bolt);
+        }
+        for _ in 0..4 {
+            main.push(catalog::serra_angel);
+        }
+        let split = basic_split(&main, &[Color::Red, Color::White], 10, true);
+        assert!(
+            split[&Color::White] > split[&Color::Red],
+            "double-white demands the sources, got {split:?}",
         );
         assert_eq!(split.values().sum::<u32>(), 10);
     }
