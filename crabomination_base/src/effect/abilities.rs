@@ -893,6 +893,11 @@ pub enum StaticEffect {
     /// source is the permanent carrying the static (Excruciator), unlike the
     /// global `DamageCantBePrevented`.
     SourceDamageCantBePrevented,
+    /// CR 615 — "As long as you control another creature, prevent all damage
+    /// that would be dealt to this creature by spells that target it"
+    /// (Bronze Horse). Read at the damage funnel against the resolution's own
+    /// target list.
+    PreventTargetingDamageWhileYouControlAnotherCreature,
     /// CR 614 — "If an opponent would lose life during your turn, they lose
     /// twice that much life instead." (Bloodletter of Aclazotz.) A life-loss
     /// doubling replacement scoped to the source controller's turn and their

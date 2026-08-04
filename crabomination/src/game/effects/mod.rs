@@ -1474,7 +1474,18 @@ impl GameState {
         self.named_card_this_resolution = None;
         self.names_this_resolution.clear();
         let mut events = vec![];
+        let prev_targets = std::mem::replace(
+            &mut self.resolution_targets,
+            ctx.targets
+                .iter()
+                .filter_map(|t| match t {
+                    Target::Permanent(id) => Some(*id),
+                    _ => None,
+                })
+                .collect(),
+        );
         let ran = self.run_effect(effect, ctx, &mut events);
+        self.resolution_targets = prev_targets;
         self.resolution_depth = self.resolution_depth.saturating_sub(1);
         ran?;
         // Quina — a resolution that minted one or more tokens under a
@@ -20518,6 +20529,18 @@ impl GameState {
                         indefinite: true,
                         output: LandManaOutput::Colorless,
                     });
+                }
+                Ok(())
+            }
+
+            Effect::PreventTargetingDamageThisTurn { what } => {
+                // CR 615 — Silhouette: for the rest of the turn, damage from
+                // any spell or ability targeting this creature is prevented.
+                for ent in self.resolve_selector(what, ctx) {
+                    let Some(id) = ent.as_permanent_id() else { continue };
+                    if !self.targeting_damage_prevented_this_turn.contains(&id) {
+                        self.targeting_damage_prevented_this_turn.push(id);
+                    }
                 }
                 Ok(())
             }

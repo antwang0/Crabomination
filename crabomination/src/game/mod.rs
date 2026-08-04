@@ -823,6 +823,16 @@ pub struct GameState {
     /// that must survive nested resolutions is reset once at the top.
     #[serde(skip)]
     pub(crate) resolution_depth: u32,
+    /// Permanents the resolution currently underway is targeting, so the
+    /// damage funnel can tell "damage from a spell or ability that targets
+    /// this" apart from incidental damage (CR 615 — Bronze Horse, Silhouette).
+    /// Saved and restored around each nested `resolve_effect`.
+    #[serde(skip)]
+    pub(crate) resolution_targets: Vec<CardId>,
+    /// Creatures under a turn-scoped "prevent damage from spells and abilities
+    /// that target this" shield (Silhouette). Cleared at cleanup.
+    #[serde(default)]
+    pub(crate) targeting_damage_prevented_this_turn: Vec<CardId>,
     /// Transient: the permanents sacrificed to pay the activation currently
     /// on the stack, so its body can exile them (Sword of the Ages). Stamped
     /// by `activate_ability`, consumed by `Effect::ExileCostSacrificedBatch`.
@@ -1810,6 +1820,10 @@ impl Clone for GameState {
             excess_damage_this_resolution: self.excess_damage_this_resolution,
             creatures_died_this_resolution: self.creatures_died_this_resolution,
             resolution_depth: self.resolution_depth,
+            resolution_targets: self.resolution_targets.clone(),
+            targeting_damage_prevented_this_turn: self
+                .targeting_damage_prevented_this_turn
+                .clone(),
             cost_sacrificed_batch: self.cost_sacrificed_batch.clone(),
             damage_dealt_this_resolution: self.damage_dealt_this_resolution,
             damaged_this_resolution: self.damaged_this_resolution.clone(),
@@ -2100,6 +2114,8 @@ impl GameState {
             excess_damage_this_resolution: 0,
             creatures_died_this_resolution: 0,
             resolution_depth: 0,
+            resolution_targets: Vec::new(),
+            targeting_damage_prevented_this_turn: Vec::new(),
             cost_sacrificed_batch: Vec::new(),
             damage_dealt_this_resolution: 0,
             damaged_this_resolution: Vec::new(),
@@ -18877,6 +18893,7 @@ fn static_effect_to_effects(
             | StaticEffect::DamageCantBePrevented
             // Excruciator — source-scoped, consulted in `apply_prevention_shields`.
             | StaticEffect::SourceDamageCantBePrevented
+            | StaticEffect::PreventTargetingDamageWhileYouControlAnotherCreature
             // Questing Beast — consulted directly in `apply_prevention_shields`;
             // no layer effect.
             | StaticEffect::ControllerCreaturesCombatDamageCantBePrevented

@@ -672,3 +672,31 @@ fn juxtapose_swaps_the_biggest_creatures() {
     assert_eq!(g.battlefield_find(theirs).unwrap().controller, 0);
     assert_eq!(g.battlefield_find(mine).unwrap().controller, 1);
 }
+
+/// Bronze Horse shrugs off a targeted burn spell while it has company.
+#[test]
+fn bronze_horse_ignores_targeted_burn_with_company() {
+    let mut g = main_phase();
+    let horse = g.add_card_to_battlefield(0, catalog::bronze_horse());
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    // Alone, the Bolt lands.
+    cast(&mut g, 1, bolt, Some(Target::Permanent(horse)));
+    assert_eq!(g.battlefield_find(horse).unwrap().damage, 3);
+    g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let bolt2 = g.add_card_to_hand(1, catalog::lightning_bolt());
+    cast(&mut g, 1, bolt2, Some(Target::Permanent(horse)));
+    assert_eq!(g.battlefield_find(horse).unwrap().damage, 3, "the second is prevented");
+}
+
+/// Silhouette blanks targeted damage on a creature for the turn.
+#[test]
+fn silhouette_prevents_targeted_damage() {
+    let mut g = main_phase();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let cover = g.add_card_to_hand(0, catalog::silhouette());
+    cast(&mut g, 0, cover, Some(Target::Permanent(bear)));
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    cast(&mut g, 1, bolt, Some(Target::Permanent(bear)));
+    assert!(g.battlefield_find(bear).is_some(), "still alive");
+    assert_eq!(g.battlefield_find(bear).unwrap().damage, 0);
+}

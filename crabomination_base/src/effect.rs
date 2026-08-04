@@ -4591,6 +4591,11 @@ pub enum Effect {
     /// CR 614 — "if target land is tapped for mana, it produces colorless
     /// mana instead of its usual type", indefinitely (Quarum Trench Gnomes).
     ReplaceTargetLandManaWithColorless { what: Selector },
+    /// CR 615 — "if a spell or ability that targets this creature would cause
+    /// a source to deal damage to it this turn, prevent that damage"
+    /// (Silhouette). Turn-scoped; read at the damage funnel against the
+    /// resolution's own target list.
+    PreventTargetingDamageThisTurn { what: Selector },
     /// "Choose a card name. Target opponent reveals `count` cards at random
     /// from their hand, then discards all cards with that name revealed this
     /// way." Nebuchadnezzar.

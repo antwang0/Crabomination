@@ -860,3 +860,27 @@ pub fn juxtapose() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Bronze Horse — spells that target it slide off while you have company.
+pub fn bronze_horse() -> CardDefinition {
+    CardDefinition {
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        keywords: vec![Keyword::Trample],
+        static_abilities: vec![StaticAbility {
+            description: "As long as you control another creature, prevent all damage that would be dealt to this creature by spells that target it.",
+            effect: StaticEffect::PreventTargetingDamageWhileYouControlAnotherCreature,
+        }],
+        ..creature("Bronze Horse", cost(&[generic(7)]), vec![CreatureType::Horse], 4, 4)
+    }
+}
+
+/// Silhouette — a turn's worth of cover from targeted burn.
+pub fn silhouette() -> CardDefinition {
+    CardDefinition {
+        name: "Silhouette",
+        cost: cost(&[generic(1), u()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::PreventTargetingDamageThisTurn { what: target_filtered(R::Creature) },
+        ..Default::default()
+    }
+}

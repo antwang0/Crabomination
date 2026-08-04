@@ -2479,8 +2479,8 @@ Each a small targeted feature; sweep batch by batch.
 0. **Next set to close.** The Odyssey block, the Onslaught block (**ONS**,
    **LGN**, **SCG**), the Mirrodin block (**MRD**, **DST**, **5DN**), the
    Kamigawa block, **Mirrodin Besieged** and **New Phyrexia** (the Scars block
-   is closed) are all at zero. **Legends** is open at 11 after seven waves
-   (262 cards, `sets::leg`–`leg6`).
+   is closed) are all at zero. **Legends** is open at 9 after seven waves
+   (264 cards, `sets::leg`–`leg6`).
 1. **Replacement-effect framework** (Tier-1 #1) — highest-leverage primitive still
    open.
 2. **Card-zoom + stops/auto-yield + combat-math preview** (Tier-7 #1–3) — the trio
@@ -2514,7 +2514,7 @@ Each a small targeted feature; sweep batch by batch.
   `EventScope::EnchantedBySource` triggers fire off a sac outlet and not only
   off the lethal-damage SBA (Puppet Master).
 
-- **Legends wave 7** — `set_gaps.py leg` 43 → 11 (`sets::leg6`, 32 cards).
+- **Legends wave 7** — `set_gaps.py leg` 43 → 9 (`sets::leg6`, 34 cards).
   New primitives: `Keyword::CantAttackIfAttackedLastTurn` with the
   `attacked_own_turn` / `attacked_last_turn` untap roll-over,
   `Effect::CantAttackNextTurn` + `AttackBan` (Wall of Dust),
@@ -2526,7 +2526,13 @@ Each a small targeted feature; sweep batch by batch.
   `CounterType::{Pupa, Dream, Pin}`, an indefinite per-land mana replacement
   (`Effect::ReplaceTargetLandManaWithColorless` — `LandManaReplacement` gains
   `land` + `indefinite`), `Effect::NameCardRevealRandomDiscardNamed`, and
-  `Selector::GreatestManaValueControlledMatching` (Juxtapose).
+  `Selector::GreatestManaValueControlledMatching` (Juxtapose), and a
+  targets-aware damage shield — `GameState.resolution_targets` lets the funnel
+  tell "damage from a spell or ability that targets this" apart from
+  incidental damage, powering `Effect::PreventTargetingDamageThisTurn`
+  (Silhouette) and
+  `StaticEffect::PreventTargetingDamageWhileYouControlAnotherCreature`
+  (Bronze Horse).
 
 - **Client / server** — `PermanentView.cant_attack_this_turn` surfaces a live
   CR 508.1a turn ban and the counter tooltip explains it.

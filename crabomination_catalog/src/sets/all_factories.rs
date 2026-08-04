@@ -10386,6 +10386,8 @@ static LEG6: &[Factory] = &[
     super::leg6::nebuchadnezzar,
     super::leg6::quarum_trench_gnomes,
     super::leg6::juxtapose,
+    super::leg6::bronze_horse,
+    super::leg6::silhouette,
 ];
 
 static LEG5: &[Factory] = &[

@@ -163,6 +163,35 @@ impl GameState {
         {
             return amount;
         }
+        // CR 615 — damage from a spell or ability that TARGETS the recipient
+        // (Silhouette's turn shield, Bronze Horse's static). The resolution's
+        // own target list is the discriminator.
+        if let (EntityRef::Permanent(tgt), Some(_)) = (ent, source)
+            && self.resolution_targets.contains(&tgt)
+        {
+            let shielded = self.targeting_damage_prevented_this_turn.contains(&tgt)
+                || self.battlefield_find(tgt).is_some_and(|c| {
+                    c.definition.static_abilities.iter().any(|sa| {
+                        matches!(
+                            sa.effect,
+                            crate::effect::StaticEffect::PreventTargetingDamageWhileYouControlAnotherCreature
+                        )
+                    }) && self
+                        .battlefield
+                        .iter()
+                        .any(|o| o.id != tgt && o.controller == c.controller && o.definition.is_creature())
+                });
+            if shielded {
+                if amount > 0 {
+                    events.push(GameEvent::DamagePrevented {
+                        amount,
+                        to_player: None,
+                        to_card: Some(tgt),
+                    });
+                }
+                return 0;
+            }
+        }
         // CR 615 — "prevent all damage that would be dealt to this creature by
         // creatures it's blocking" (Wall of Vapor). Combat and noncombat alike,
         // so it sits in the funnel rather than the combat resolver.

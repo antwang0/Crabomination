@@ -243,7 +243,8 @@ impl Effect {
             }
             Effect::Ante { what }
             | Effect::CantAttackNextTurn { what }
-            | Effect::ReplaceTargetLandManaWithColorless { what } => sel_has_target(what),
+            | Effect::ReplaceTargetLandManaWithColorless { what }
+            | Effect::PreventTargetingDamageThisTurn { what } => sel_has_target(what),
             Effect::NameCardRevealRandomDiscardNamed { who, .. } => player_has_target(who),
             Effect::AtYourNextUpkeep { body } => body.requires_target(),
             Effect::ReattachTargetAura { aura, to } => sel_has_target(aura) || sel_has_target(to),
@@ -2795,6 +2796,8 @@ impl Effect {
                 Effect::ReattachTargetAura { aura, to } => {
                     sel_find(aura, slot).or_else(|| sel_find(to, slot))
                 }
+                Effect::PreventTargetingDamageThisTurn { what }
+                | Effect::ReplaceTargetLandManaWithColorless { what } => sel_find(what, slot),
                 Effect::DealDamageExcessTo { to, amount, excess_to, .. } => sel_find(to, slot)
                     .or_else(|| val_find(amount, slot))
                     .or_else(|| sel_find(excess_to, slot)),

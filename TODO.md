@@ -202,8 +202,8 @@ general "any player may …, if no one does …" shape, with
 
 ## Legends — opened
 
-`set_gaps.py leg` is at **11** (277 → … → 64 → 43 → 11; `sets::leg`–`leg6`,
-262 cards, tests in `classic_sets/leg`–`leg6`). Wave 7 shipped the last
+`set_gaps.py leg` is at **9** (277 → … → 64 → 43 → 9; `sets::leg`–`leg6`,
+264 cards, tests in `classic_sets/leg`–`leg6`). Wave 7 shipped the last
 creatures, artifacts, Auras and spells; its primitives are listed in
 FEATURE_ROADMAP.md → "Recently closed".
 
@@ -217,9 +217,6 @@ Still open (each blocked on one primitive):
   attack restriction static.
 - **Backdraft** — half the damage dealt by *one specific sorcery spell* this
   turn; nothing tallies damage per spell object.
-- **Bronze Horse / Silhouette** — "prevent damage from spells (and abilities)
-  that target this": needs a per-permanent record of which sources targeted it
-  this turn, keyed at the `BecameTarget` emission.
 - **Chains of Mephistopheles** — a draw replacement scoped to "except the first
   draw in each of their draw steps", with a discard-then-draw / mill branch.
 - **Equinox** — grant a land "{T}: counter target spell **if it would destroy a
@@ -5608,9 +5605,6 @@ recover from `git log -p -- TODO.md`. A few rows carry a residual ⏳ gap inline
 - ⏳ **A "next spell only" spend permission.** North Star grants CR 609.4b for
   the whole turn (`Player.may_spend_any_color_this_turn`); the printed card
   scopes it to one spell.
-- ⏳ **A per-permanent "which sources targeted me this turn" record**, keyed at
-  the `BecameTarget` emission. Unblocks the "prevent damage from spells that
-  target this" family (Bronze Horse, Silhouette) in one go.
 - ⏳ **`Duration::UntilYourNextUpkeep`** — Halfdane, Gabriel Angelfire and the
   rest of the "until your next upkeep" wordings currently round to
   `Permanent` / `UntilYourNextUntap`.
@@ -5619,7 +5613,7 @@ recover from `git log -p -- TODO.md`. A few rows carry a residual ⏳ gap inline
   is at zero. Each landed its primitive: `Effect::ReplaceCreatureTypeText`,
   `Keyword::DividesCombatDamageAmongDefenders`, `Effect::EachPlayerChoosesNumberHighestLoses`,
   and `GameEvent::ControlChanged` + `EventKind::GainedControlOfThis`.
-- ⏳ **Legends is at 11 gaps** (`set_gaps.py leg`). Seven waves shipped 262
+- ⏳ **Legends is at 9 gaps** (`set_gaps.py leg`). Seven waves shipped 264
   cards; see "Legends — opened" above for what's left and why — each remaining
   card is blocked on one primitive.
 - ⏳ **The client can't declare attacking bands.** The engine action
