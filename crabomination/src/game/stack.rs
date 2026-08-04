@@ -472,6 +472,11 @@ impl GameState {
                 // Uvilda — hone counters tick down at the owner's upkeep.
                 let mut hone = self.process_hone();
                 events.append(&mut hone);
+                // CR 726.2 — "At the beginning of the upkeep of the player who
+                // has the initiative, that player ventures into Undercity."
+                if self.initiative == Some(self.active_player_idx) {
+                    self.push_undercity_venture(self.active_player_idx);
+                }
                 // All Hallow's Eve — exile fuses tick at the owner's upkeep.
                 let mut fuse = self.process_exile_countdowns();
                 events.append(&mut fuse);
@@ -3735,6 +3740,19 @@ impl GameState {
             };
             let mut events = vec![];
             self.return_monarch_guarded_exiles(self.monarch, &mut events);
+        }
+        // CR 726.4 — the same succession for the initiative.
+        if self.initiative == Some(p) {
+            self.initiative = if self.active_player_idx != p
+                && !self.players[self.active_player_idx].eliminated
+            {
+                Some(self.active_player_idx)
+            } else {
+                let n = self.players.len();
+                (1..n)
+                    .map(|off| (self.active_player_idx + off) % n)
+                    .find(|&q| q != p && !self.players[q].eliminated)
+            };
         }
     }
 

@@ -1126,6 +1126,12 @@ static CHK3: &[Factory] = &[
     super::chk3::struggle_for_sanity,
     super::chk3::swirl_the_mists,
 ];
+static CLB: &[Factory] = &[
+    super::clb::aarakocra_sneak,
+    super::clb::passageway_seer,
+    super::clb::caves_of_chaos_adventurer,
+    super::clb::undermountain_adventurer,
+];
 static CNS: &[Factory] = &[
     super::cns::power_play,
     super::cns::hymn_of_the_wilds,
@@ -20761,6 +20767,7 @@ static PER_SET: &[(&str, &[Factory])] = &[
     ("chk", CHK),
     ("chk2", CHK2),
     ("chk3", CHK3),
+    ("clb", CLB),
     ("cns", CNS),
     ("cns2", CNS2),
     ("curses", CURSES),

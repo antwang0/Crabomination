@@ -1300,6 +1300,8 @@ pub enum Predicate {
     DieResultAtLeast(u8),
     /// CR 725 — `who` is the monarch ("as long as you're the monarch, …").
     IsMonarch { who: PlayerRef },
+    /// CR 726 — `who` currently has the initiative.
+    HasInitiative { who: PlayerRef },
     /// CR 702.179 — `who`'s speed is at least `speed` (0–4). "Max speed —"
     /// abilities use `speed: 4`; "as long as your speed is N or higher" uses
     /// the listed threshold. Backed by `Player.speed`.
@@ -3890,6 +3892,12 @@ pub enum Effect {
     /// Resolving the final room completes the dungeon
     /// (`Player.dungeons_completed`, `EventKind::DungeonCompleted`).
     Venture,
+    /// CR 726.2 — "venture into `dungeon`": like [`Effect::Venture`] but the
+    /// dungeon is fixed rather than chosen (the initiative's Undercity). A
+    /// player already in a different dungeon is unaffected.
+    VentureInto { dungeon: String },
+    /// CR 726 — `who` takes the initiative.
+    TakeInitiative { who: PlayerRef },
     /// CR 701.29 — *fateseal N*: look at the top `amount` cards of each
     /// targeted opponent's library and put any number of them on the bottom
     /// (the rest stay on top). The library-side mirror of Scry. AutoDecider

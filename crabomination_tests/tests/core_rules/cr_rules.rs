@@ -4814,7 +4814,7 @@ fn cr_509_1b_can_block_only_flying_restriction() {
 /// A spell with "It becomes night" sets the day/night state to night from
 /// outside the upkeep transition.
 #[test]
-fn cr_726_spell_becomes_night() {
+fn cr_731_spell_becomes_night() {
     use crabomination::game::effects::EffectContext;
     use crabomination::game::types::DayNight;
     let mut g = two_player_game();

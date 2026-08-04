@@ -85,6 +85,7 @@ fn project_for_inner(state: &GameState, viewer: Option<usize>) -> ClientView {
                         devotion,
                         draw_cap: state.draw_cap_for(i),
                         is_monarch: state.monarch == Some(i),
+                        has_initiative: state.initiative == Some(i),
                         commander_damage_taken: commander_damage_taken(state, i),
                         team: state.team_of(i).0,
                         cannot_gain_life: state.player_cannot_gain_life_now(i),
@@ -586,6 +587,7 @@ struct SeatFacts {
     devotion: [u32; 5],
     draw_cap: Option<u32>,
     is_monarch: bool,
+    has_initiative: bool,
     commander_damage_taken: Vec<crate::net::CommanderDamageEntry>,
     team: usize,
     cannot_gain_life: bool,
@@ -608,6 +610,7 @@ fn project_player(
         devotion,
         draw_cap,
         is_monarch,
+        has_initiative,
         commander_damage_taken,
         team,
         cannot_gain_life,
@@ -865,6 +868,7 @@ fn project_player(
         hand_revealed_to_viewer: player_seat != viewer_seat
             && state.hand_visible_to(viewer_seat, player_seat),
         is_monarch,
+        has_initiative,
         // CR 303.4a — Auras enchanting this player (Curses, Psychic Possession).
         enchanted_by: state
             .battlefield

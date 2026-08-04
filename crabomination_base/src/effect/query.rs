@@ -253,6 +253,8 @@ impl Effect {
             | Effect::ExileSelfWithCountdown
             | Effect::WaiveShroudForPlayerThisTurn { .. }
             | Effect::DestroyEachUnlessPaysLife { .. }
+            | Effect::VentureInto { .. }
+            | Effect::TakeInitiative { .. }
             | Effect::WillOfTheCouncilOnCards { .. }
             | Effect::BottomCardToGraveyardThenDeploy { .. }
             | Effect::EachPlayerDestroysChosenFromLeftNeighbor { .. } => false,

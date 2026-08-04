@@ -89,6 +89,8 @@ fn stat_chip_style(kind: StatChipKind) -> (Color, Color) {
         StatChipKind::Storm => (Color::srgba(0.36, 0.18, 0.10, 1.0), theme::TEXT_PRIMARY),
         // Monarch (CR 724) — a regal gold crown badge.
         StatChipKind::Monarch => (Color::srgba(0.42, 0.34, 0.10, 1.0), theme::TEXT_PRIMARY),
+        // The initiative (CR 726) — a dungeon-torch amber, distinct from gold.
+        StatChipKind::Initiative => (Color::srgba(0.34, 0.20, 0.06, 1.0), theme::TEXT_PRIMARY),
         // City's blessing (CR 702.131 / 700.6) — an ascendant violet.
         StatChipKind::Blessing => (Color::srgba(0.28, 0.18, 0.40, 1.0), theme::TEXT_PRIMARY),
         // Day (CR 731) — a warm daylight amber.
@@ -195,6 +197,7 @@ pub(super) enum StatChipKind {
     DrawCap,
     Storm,
     Monarch,
+    Initiative,
     Blessing,
     Day,
     Night,
@@ -1015,6 +1018,13 @@ pub fn update_player_stats_chips(
         } else if let Some(king) = cv.players.iter().find(|q| q.is_monarch) {
             spawn_stat_chip(row, &ui_fonts, StatChipKind::Monarch, format!("👑 {}", king.name));
         }
+        // CR 726 the initiative — same treatment as the crown: whoever holds it
+        // is who you attack to take the Undercity off them.
+        if p.has_initiative {
+            spawn_stat_chip(row, &ui_fonts, StatChipKind::Initiative, "🗝 initiative".to_string());
+        } else if let Some(holder) = cv.players.iter().find(|q| q.has_initiative) {
+            spawn_stat_chip(row, &ui_fonts, StatChipKind::Initiative, format!("🗝 {}", holder.name));
+        }
         // CR 700.6 city's blessing — surfaced once the viewer is blessed.
         if p.has_city_blessing {
             spawn_stat_chip(row, &ui_fonts, StatChipKind::Blessing, "✦ blessed".to_string());
@@ -1554,6 +1564,10 @@ pub fn update_opponent_stats_rows(
                 // CR 724 monarch crown — show which opponent holds the crown.
                 if p.is_monarch {
                     spawn_stat_chip(row, &ui_fonts, StatChipKind::Monarch, "👑".to_string());
+                }
+                // CR 726 — which opponent has the initiative.
+                if p.has_initiative {
+                    spawn_stat_chip(row, &ui_fonts, StatChipKind::Initiative, "🗝".to_string());
                 }
                 // CR 303.4a — Curses stuck to this opponent.
                 if let Some(label) = cursed_chip_body(&p.enchanted_by) {

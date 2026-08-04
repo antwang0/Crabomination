@@ -24,17 +24,102 @@ pub struct DungeonDefinition {
     pub rooms: Vec<DungeonRoom>,
 }
 
-/// The three AFR dungeons, in venture-choice order.
+/// The three AFR dungeons, in venture-choice order. Undercity is excluded —
+/// CR 309.7 / its own text: you can only enter it by "venturing into Undercity"
+/// (the initiative, CR 726).
 pub fn dungeon_names() -> [&'static str; 3] {
     ["Lost Mine of Phandelver", "Dungeon of the Mad Mage", "Tomb of Annihilation"]
 }
+
+/// The name of the initiative's dungeon (CR 726.2).
+pub const UNDERCITY: &str = "Undercity";
 
 pub fn dungeon_by_name(name: &str) -> Option<DungeonDefinition> {
     match name {
         "Lost Mine of Phandelver" => Some(lost_mine_of_phandelver()),
         "Dungeon of the Mad Mage" => Some(dungeon_of_the_mad_mage()),
         "Tomb of Annihilation" => Some(tomb_of_annihilation()),
+        UNDERCITY => Some(undercity()),
         _ => None,
+    }
+}
+
+/// CR 726 — the initiative's dungeon (Baldur's Gate).
+pub fn undercity() -> DungeonDefinition {
+    DungeonDefinition {
+        name: UNDERCITY,
+        rooms: vec![
+            DungeonRoom {
+                name: "Secret Entrance",
+                effect: Effect::Search {
+                    who: PlayerRef::You,
+                    filter: R::IsBasicLand,
+                    to: crate::effect::ZoneDest::Hand(PlayerRef::You),
+                },
+                next: &[1, 2],
+            },
+            DungeonRoom {
+                name: "Forge",
+                effect: Effect::AddCounter {
+                    what: your_creature(),
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::Const(2),
+                },
+                next: &[3, 4],
+            },
+            DungeonRoom {
+                name: "Lost Well",
+                effect: Effect::Scry { who: PlayerRef::You, amount: Value::Const(2) },
+                next: &[4, 5],
+            },
+            DungeonRoom {
+                name: "Trap!",
+                effect: Effect::LoseLife {
+                    who: Selector::one_of(Selector::Player(PlayerRef::EachOpponent)),
+                    amount: Value::Const(5),
+                },
+                next: &[6],
+            },
+            DungeonRoom {
+                name: "Arena",
+                effect: Effect::Goad { what: opp_creature() },
+                next: &[6, 7],
+            },
+            DungeonRoom {
+                name: "Stash",
+                effect: crate::effect::shortcut::mint_treasures(1),
+                next: &[7],
+            },
+            DungeonRoom {
+                name: "Archives",
+                effect: Effect::Draw { who: Selector::You, amount: Value::ONE },
+                next: &[8],
+            },
+            DungeonRoom {
+                name: "Catacombs",
+                effect: mint(undercity_skeleton_token(), 1),
+                next: &[8],
+            },
+            DungeonRoom {
+                name: "Throne of the Dead Three",
+                effect: Effect::RevealTopNPutMatchingToBattlefield {
+                    who: PlayerRef::You,
+                    count: Value::Const(10),
+                    filter: R::Creature,
+                },
+                next: &[],
+            },
+        ],
+    }
+}
+
+/// Catacombs' 4/1 black Skeleton with menace.
+fn undercity_skeleton_token() -> TokenDefinition {
+    TokenDefinition {
+        power: 4,
+        toughness: 1,
+        keywords: vec![crate::card::Keyword::Menace],
+        ..skeleton_1_1_token()
     }
 }
 

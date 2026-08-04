@@ -946,6 +946,10 @@ pub struct PlayerView {
     /// snapshot back-compat.
     #[serde(default)]
     pub is_monarch: bool,
+    /// CR 726 — true when this player has the initiative. Surfaced so UIs can
+    /// badge whoever is running the Undercity. `#[serde(default)]`.
+    #[serde(default)]
+    pub has_initiative: bool,
     /// CR 700.6 — true when this player has the city's blessing (Ascend).
     /// Surfaced so UIs can show a "blessed" badge. `#[serde(default)]`.
     #[serde(default)]
@@ -2565,6 +2569,8 @@ pub enum GameEventWire {
     CaseSolved { case: CardId },
     PoisonAdded { player: usize, amount: u32 },
     MonarchChanged { player: usize },
+    /// Wire mirror of `GameEvent::InitiativeTaken` (CR 726).
+    InitiativeTaken { player: usize },
     CityBlessingGained { player: usize },
     RingTempted { player: usize, level: u32, bearer: Option<CardId> },
     DayNightChanged { is_day: bool },
@@ -2889,6 +2895,7 @@ impl From<&GameEvent> for GameEventWire {
                 amount: *amount,
             },
             GameEvent::MonarchChanged { player } => GameEventWire::MonarchChanged { player: *player },
+            GameEvent::InitiativeTaken { player } => GameEventWire::InitiativeTaken { player: *player },
             GameEvent::CityBlessingGained { player } => GameEventWire::CityBlessingGained { player: *player },
             GameEvent::RingTempted { player, level, bearer } => GameEventWire::RingTempted {
                 player: *player,
@@ -3160,6 +3167,7 @@ impl GameEventWire {
             E::CaseSolved { case } => format!("{} solved", name(*case)),
             E::PoisonAdded { player, amount } => format!("{} +{amount} poison", pn(*player)),
             E::MonarchChanged { player } => format!("{} becomes the monarch", pn(*player)),
+            E::InitiativeTaken { player } => format!("{} takes the initiative", pn(*player)),
             E::CityBlessingGained { player } => format!("{} gets the city's blessing", pn(*player)),
             E::RingTempted { player, level, .. } => {
                 format!("the Ring tempts {} (×{level})", pn(*player))

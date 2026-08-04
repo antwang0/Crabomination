@@ -330,6 +330,7 @@ pub mod usg3;
 pub mod cns;
 pub mod cns2;
 pub mod chk;
+pub mod clb;
 pub mod chk2;
 pub mod chk3;
 pub mod curses;

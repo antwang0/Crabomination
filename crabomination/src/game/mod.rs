@@ -1721,6 +1721,12 @@ pub struct GameState {
     /// (None = no monarch) for snapshot back-compat.
     #[serde(default)]
     pub monarch: Option<usize>,
+    /// CR 726 — the player with the initiative (if any). Ventures into
+    /// Undercity on taking it and at the beginning of their upkeep; combat
+    /// damage to them hands it over. `#[serde(default)]` for snapshot
+    /// back-compat.
+    #[serde(default)]
+    pub initiative: Option<usize>,
     /// CR 731 — the game's day/night designation (None = neither, the
     /// starting state). `#[serde(default)]` for snapshot back-compat.
     #[serde(default)]
@@ -2066,6 +2072,7 @@ impl Clone for GameState {
             triggered_once_per_turn_used: self.triggered_once_per_turn_used.clone(),
             per_subject_trigger_uses: self.per_subject_trigger_uses.clone(),
             monarch: self.monarch,
+            initiative: self.initiative,
             day_night: self.day_night,
             previous_turn_active: self.previous_turn_active,
             current_turn_is_extra: self.current_turn_is_extra,
@@ -2374,6 +2381,7 @@ impl GameState {
             triggered_once_per_turn_used: std::collections::HashSet::new(),
             per_subject_trigger_uses: std::collections::HashMap::new(),
             monarch: None,
+            initiative: None,
             day_night: None,
             previous_turn_active: None,
             current_turn_is_extra: false,
@@ -2391,6 +2399,31 @@ impl GameState {
         self.monarch = Some(player);
         events.push(GameEvent::MonarchChanged { player });
         self.return_monarch_guarded_exiles(Some(player), events);
+    }
+
+    /// CR 726 — `player` takes the initiative. CR 726.3 strips it from whoever
+    /// held it; CR 726.2/726.5 venture into Undercity either way, on the stack
+    /// as a sourceless trigger controlled by the new holder.
+    pub fn take_initiative(&mut self, player: usize, events: &mut Vec<GameEvent>) {
+        if self.initiative != Some(player) {
+            self.initiative = Some(player);
+            events.push(GameEvent::InitiativeTaken { player });
+        }
+        self.push_undercity_venture(player);
+    }
+
+    /// The CR 726.2 "venture into Undercity" trigger, pushed for `player`.
+    pub(crate) fn push_undercity_venture(&mut self, player: usize) {
+        self.stack.push(
+            crate::game::types::TriggerPush::new(
+                CardId(0),
+                player,
+                crate::effect::Effect::VentureInto {
+                    dungeon: crabomination_base::dungeons::UNDERCITY.to_string(),
+                },
+            )
+            .build(),
+        );
     }
 
     /// CR 701.54 — the Ring tempts `player`. Bumps their temptation level

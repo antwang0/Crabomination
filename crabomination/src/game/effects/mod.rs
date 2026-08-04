@@ -8655,12 +8655,28 @@ impl GameState {
                 Ok(())
             }
 
-            Effect::Venture => {
+            Effect::TakeInitiative { who } => {
+                if let Some(seat) = self.resolve_player(who, ctx) {
+                    self.take_initiative(seat, events);
+                }
+                Ok(())
+            }
+
+            Effect::Venture | Effect::VentureInto { .. } => {
                 use crate::decision::{Decision, DecisionAnswer};
                 let p = ctx.controller;
+                let forced = match effect {
+                    Effect::VentureInto { dungeon } => Some(dungeon.clone()),
+                    _ => None,
+                };
                 // Enter the first room of a chosen dungeon, or advance to a
                 // chosen next room; branch picks ride `Decision::ChooseMode`.
                 let (dungeon, room_idx) = match self.players[p].dungeon.clone() {
+                    // CR 726.2 — "venture into Undercity" enters that dungeon
+                    // specifically; a player mid-way through another dungeon
+                    // can't start it.
+                    None if forced.is_some() => (forced.clone().expect("forced"), 0u8),
+                    Some((name, _)) if forced.is_some_and(|f| f != name) => return Ok(()),
                     None => {
                         let names = crabomination_base::dungeons::dungeon_names();
                         let answer = self.decider.decide(&Decision::ChooseMode {

@@ -3773,6 +3773,15 @@ impl GameState {
                             self.set_monarch(ctrl, events);
                         }
                 }
+                // CR 726.2 — the same handover for the initiative.
+                if amount > 0 && self.initiative == Some(p) {
+                    let ctrl = self.battlefield.iter()
+                        .find(|c| c.id == atk.id).map(|c| c.controller);
+                    if let Some(ctrl) = ctrl
+                        && ctrl != p {
+                            self.take_initiative(ctrl, events);
+                        }
+                }
                 self.fire_combat_damage_to_player_triggers(atk.id, p, amount);
             }
             AttackTarget::Planeswalker(pw_id) => {

@@ -2102,6 +2102,8 @@ pub enum GameEvent {
     PoisonAdded { player: usize, amount: u32 },
     /// CR 725 — `player` became the monarch.
     MonarchChanged { player: usize },
+    /// CR 726 — `player` took the initiative.
+    InitiativeTaken { player: usize },
     /// CR 700.6 — `player` got the city's blessing (Ascend).
     CityBlessingGained { player: usize },
     /// CR 701.54 — the Ring tempted `player`; `level` is their new
