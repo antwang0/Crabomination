@@ -3180,6 +3180,15 @@ pub enum Effect {
     /// `Effect::MayPay` — Well of Lost Dreams ("pay {X} ≤ life gained, draw X").
     /// `AutoDecider` pays 0 (nothing unprompted).
     MayPayGenericUpTo { max: Value, body: Box<Effect> },
+    /// "You may pay `mana_cost` any number of times; `body` runs once per
+    /// payment" (Magnetic Mountain's per-creature untap toll). Loops while the
+    /// controller accepts and their floating pool can cover it.
+    MayPayRepeatedly {
+        who: PlayerRef,
+        description: String,
+        mana_cost: crate::mana::ManaCost,
+        body: Box<Effect>,
+    },
 
     /// Reflexive "when you do" payoff (CR 603.7). Wrap a *targeted* body that
     /// should choose its targets **after** the gating cost is paid — e.g. the
@@ -8416,6 +8425,10 @@ pub enum DelayedTriggerKind {
     /// "At the beginning of the end step of target player's next turn"
     /// (Suppress). `Effect::DelayUntil` reads the player from target slot 0.
     TargetsNextEndStep,
+    /// "At the beginning of [the damaged player]'s next draw step" (Nafs Asp).
+    /// Reads the player from the trigger's event subject, falling back to
+    /// target slot 0.
+    TargetsNextDrawStep,
     /// "At end of combat, …" — fires once at the current turn's end-of-combat
     /// step (Fortune, Loyal Steed's saddle blink).
     EndOfCombat,

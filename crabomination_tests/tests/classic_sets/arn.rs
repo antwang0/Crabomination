@@ -649,3 +649,98 @@ fn desert_nomads_walk_past_deserts_and_shrug_off_their_pings() {
     activate_n(&mut g, 1, des, 1, Some(Target::Permanent(nomads)));
     assert_eq!(g.battlefield_find(nomads).expect("nomads").damage, 0);
 }
+
+// ── Third wave ─────────────────────────────────────────────────────────────
+
+#[test]
+fn magnetic_mountain_pins_blue_creatures_down() {
+    let mut g = main_phase();
+    g.add_card_to_battlefield(0, catalog::magnetic_mountain());
+    let blue = g.add_card_to_battlefield(1, catalog::flying_men());
+    g.battlefield_find_mut(blue).expect("flier").tapped = true;
+    g.active_player_idx = 1;
+    g.do_untap();
+    assert!(g.battlefield_find(blue).expect("flier").tapped, "blue doesn't untap");
+    g.decider = Box::new(ScriptedDecider::new(vec![
+        DecisionAnswer::Bool(true),
+        DecisionAnswer::Bool(false),
+    ]));
+    g.players[1].mana_pool.add_colorless(4);
+    upkeep(&mut g);
+    assert!(!g.battlefield_find(blue).expect("flier").tapped, "four generic bought it back up");
+}
+
+#[test]
+fn guardian_beast_shields_your_artifacts_while_it_stands() {
+    let mut g = main_phase();
+    let beast = g.add_card_to_battlefield(0, catalog::guardian_beast());
+    let chalice = g.add_card_to_battlefield(0, catalog::urzas_chalice());
+    assert!(
+        g.computed_permanent(chalice)
+            .expect("chalice")
+            .keywords
+            .contains(&Keyword::Indestructible),
+    );
+    g.battlefield_find_mut(beast).expect("beast").tapped = true;
+    assert!(
+        !g.computed_permanent(chalice)
+            .expect("chalice")
+            .keywords
+            .contains(&Keyword::Indestructible),
+        "tapping the Beast drops the shield",
+    );
+}
+
+#[test]
+fn sandals_of_abdallah_break_with_their_wearer() {
+    let mut g = main_phase();
+    let sandals = g.add_card_to_battlefield(0, catalog::sandals_of_abdallah());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    activate(&mut g, 0, sandals, Some(Target::Permanent(bear)));
+    assert!(
+        g.computed_permanent(bear)
+            .expect("bear")
+            .keywords
+            .contains(&Keyword::Landwalk(crabomination::card::LandType::Island)),
+    );
+    let mut evs = Vec::new();
+    g.destroy_permanent(bear, false, &mut evs);
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(sandals).is_none());
+}
+
+#[test]
+fn nafs_asp_bills_the_victim_at_their_draw_step() {
+    let mut g = main_phase();
+    let asp = g.add_card_to_battlefield(0, catalog::nafs_asp());
+    g.clear_sickness(asp);
+    g.step = TurnStep::DeclareAttackers;
+    g.declare_attackers(vec![Attack { attacker: asp, target: AttackTarget::Player(1) }])
+        .expect("attack");
+    while g.turn_number == 1 {
+        let _ = g.advance_step(Vec::new());
+        drain_stack(&mut g);
+    }
+    while g.step != TurnStep::PreCombatMain {
+        let _ = g.advance_step(Vec::new());
+        drain_stack(&mut g);
+    }
+    assert_eq!(g.players[1].life, 20 - 1 - 1, "one from the bite, one from the venom");
+}
+
+#[test]
+fn jihad_swells_while_the_chosen_colour_is_out() {
+    let mut g = main_phase();
+    g.decider = Box::new(ScriptedDecider::new(vec![DecisionAnswer::Color(Color::Green)]));
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // green
+    let knight = g.add_card_to_battlefield(0, catalog::moorish_cavalry()); // white 3/3
+    let jihad = g.add_card_to_hand(0, catalog::jihad());
+    cast(&mut g, 0, jihad, None);
+    let cp = g.computed_permanent(knight).expect("knight");
+    assert_eq!((cp.power, cp.toughness), (5, 4));
+    g.destroy_permanent(bear, false, &mut Vec::new());
+    drain_stack(&mut g);
+    upkeep(&mut g);
+    assert!(g.battlefield_find(jihad).is_none(), "no green left, so it goes");
+}

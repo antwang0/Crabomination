@@ -4412,6 +4412,29 @@ impl GameState {
                 events,
             ),
 
+            Effect::MayPayRepeatedly { who, description, mana_cost, body } => {
+                let Some(seat) = self.resolve_player(who, ctx) else { return Ok(()) };
+                let sub = EffectContext { controller: seat, ..ctx.clone() };
+                let ctx = &sub;
+                let source = ctx.source.unwrap_or(CardId(0));
+                let mut cursor = 0;
+                // Bounded so a decider that always says yes can't spin; the
+                // pool runs out long before this in practice.
+                for _ in 0..32 {
+                    let Some(yes) =
+                        self.ask_seat_bool(&mut cursor, seat, description.clone(), source, effect)
+                    else {
+                        return Ok(());
+                    };
+                    if !yes || self.players[seat].mana_pool.pay(mana_cost).is_err() {
+                        break;
+                    }
+                    self.run_effect(body, ctx, events)?;
+                }
+                self.clear_answer_log();
+                Ok(())
+            }
+
             Effect::MayPayBy { who, description, mana_cost, body, else_ } => {
                 let Some(seat) = self.resolve_players(who, ctx).first().copied() else {
                     return Ok(());
@@ -23409,15 +23432,18 @@ impl GameState {
             Effect::DelayUntilWithCapture { kind, capture, body } => {
                 // The capture is resolved now, so the delayed body's
                 // `Selector::Target(0)` still names the right object later.
-                let target = self
-                    .resolve_selector(capture, ctx)
-                    .into_iter()
-                    .find_map(|e| e.as_card_id())
-                    .map(Target::Permanent);
+                let target = self.resolve_selector(capture, ctx).into_iter().find_map(|e| match e {
+                    EntityRef::Player(p) => Some(Target::Player(p)),
+                    other => other.as_card_id().map(Target::Permanent),
+                });
+                let captured_player = match target {
+                    Some(Target::Player(p)) => Some(p),
+                    _ => None,
+                };
                 self.delayed_triggers.push(DelayedTrigger {
                     controller: ctx.controller,
                     source: ctx.source.unwrap_or(crate::card::CardId(0)),
-                    kind: delayed_kind_from_effect(*kind, None, self.turn_number),
+                    kind: delayed_kind_from_effect(*kind, captured_player, self.turn_number),
                     effect: (**body).clone(),
                     target,
                     bound_token: self.last_created_token,

@@ -2196,8 +2196,14 @@ Each a small targeted feature; sweep batch by batch.
   the nearest living opponent in that direction (a dead neighbour means no
   legal attack at all). Surfaced as `ClientView.attackable_players` and honored
   by the client's attacker-pick highlight. Tests `cr_802_*` / `cr_803_*`.
-  Remaining ⏳: CR 801's limited range of influence and CR 807's rotating
-  Grand Melee ranges.
+  ✅ **CR 801 limited range of influence** — a per-seat `range_of_influence`
+  with a turn-start `range_matrix` snapshot (801.2/801.2c), enforced on
+  attacks (801.3), targeting (801.4), activation (801.6) and effect fan-out
+  (801.10); surfaced as `PlayerView.in_your_range`. ✅ **CR 809 Emperor**
+  (`set_emperor_variant` — seating, 2/1 ranges, deploy creatures,
+  adjacent-only attacks, a team falling with its emperor) and ✅ **CR 811
+  Alternating Teams** (`set_alternating_teams`). Remaining ⏳: CR 807's
+  rotating Grand Melee ranges.
 
 ## Tier 7 — UI / UX core (the Arena "feel" gap)
 
@@ -2486,8 +2492,9 @@ Each a small targeted feature; sweep batch by batch.
 0. **Next set to close.** The Odyssey block, the Onslaught block (**ONS**,
    **LGN**, **SCG**), the Mirrodin block (**MRD**, **DST**, **5DN**), the
    Kamigawa block, **Mirrodin Besieged**, **New Phyrexia** (the Scars block
-   is closed) and **Legends** (273 cards, `sets::leg`–`leg7`) are all at
-   zero. **Antiquities** is open at 9 (`sets::atq`, 55 cards).
+   is closed), **Legends** (273 cards, `sets::leg`–`leg7`) and **Antiquities**
+   (64 cards, `sets::atq`) are all at zero. **Arabian Nights** is open at 3
+   (`sets::arn`, 61 cards).
 1. **Replacement-effect framework** (Tier-1 #1) — highest-leverage primitive still
    open.
 2. **Card-zoom + stops/auto-yield + combat-math preview** (Tier-7 #1–3) — the trio
@@ -2503,25 +2510,32 @@ Each a small targeted feature; sweep batch by batch.
 
 ## Recently closed (this push)
 
-- **Antiquities opened** — `set_gaps.py atq` 64 → 9 (`sets::atq`, 55 cards).
-  New primitives: `Keyword::{PreventDamageFromMatching,
-  CantBeTargetedByAbilitiesFromMatching}` (Argothian Treefolk / Pixies,
-  Artifact Ward), `StaticEffect::{ChosenPlayerMaxHandSize (Cursed Rack),
-  RedirectArtifactDamageToSourceWhileUntapped (Martyrs of Korlis)}`,
-  `Value::ArtifactDamageToPlayerThisTurn` + a per-turn tally (Reverse
-  Polarity), `Effect::TapAndHoldWhileSourceTapped` (Phyrexian Gremlins),
-  `DynamicPt::BasePlusOpponentsMatching` (Gaea's Avenger),
-  `CounterType::Doom`, and `EventSpec.exclude_tap_cost_abilities` +
-  `GameEvent::AbilityActivated.tap_cost` so "becomes tapped **or** activates
-  an ability without {T}" fires exactly once (Haunting Wind, Powerleech,
-  Artifact Possession). Correctness: **CR 504.1** — "at the beginning of your
-  draw step" triggers now fire at all (`fire_step_triggers(TurnStep::Draw)`
-  was simply missing). A second wave added
-  `StaticEffect::{NoncreatureArtifactsLoseAbilities (Titania's Song's layer-6
-  half, paired with the existing March-of-the-Machines animation),
-  AttachedActivatedAbilitiesCostLess (Power Artifact, floored at one mana)}`
-  and Mishra's War Machine. Tests in `classic_sets/atq` (56). Still open: 9
-  cards needing bigger primitives (see TODO.md).
+- **Antiquities closed** — `set_gaps.py atq` 9 → 0. New primitives:
+  `CounterType::PlusOnePlusZero`, `Effect::AddCounterCapped` (a printed
+  "can't raise the total above N" clamp), `Duration::UntilYourNextUpkeep` +
+  `EffectDuration::UntilYourNextUpkeep`,
+  `SelectionRequirement::OriginallyPrintedIn(OriginalSet)` over a static name
+  table, `Effect::{RemoveCountersToCreateTokens,
+  ExileTokensCreatedBySourceForCounters}` (Tetravus), `Effect::
+  TransmuteArtifact`, and `Effect::{CoffinExile, CoffinReturn}` (Tawnos's
+  Coffin — exile a creature plus its Auras, noting counters, returning on
+  leave-or-untap). `governing_modal` now looks through `Effect::Seq`, so a
+  modal step inside a sequence governs the activation's mode slot.
+
+- **Arabian Nights opened** — `set_gaps.py arn` 64 → 3 (`sets::arn::gaps`, 61
+  cards). New primitives: `Player.last_drawn_card` +
+  `Selector::LastCardYouDrew`, `PlayerRef::PlayerWithMostLife`,
+  `SelectionRequirement::PowerAtMostSourcePower`,
+  `Keyword::CantAttackUnlessDefenderControlsLandType`,
+  `StaticEffect::PlayersCantPlayMatching`, `CounterType::Wind` +
+  `Effect::PayPerCounterOrSacrifice`, `Effect::
+  OpponentChoosesTargetForDamage`, `Effect::MayPayRepeatedly`, and
+  `DelayedTriggerKind::TargetsNextDrawStep` +
+  `DelayedKind::PlayersNextDrawStep`. Correctness: `sacrifice_one` stamps
+  `sacrificed_card` (so `Selector::SacrificedCard` reads any sacrifice), and
+  `Selector::CreaturesInCombatWith` falls back to the turn's declared blocks
+  once the block map is torn down. Still open: Aladdin's Lamp, Eye for an Eye,
+  Shahrazad (see TODO.md).
 
 - **Legends complete** — `set_gaps.py leg` 9 → 0 (`sets::leg7`, the set's last
   nine cards). New primitives: `CardDefinition.exile_countdown` (a general

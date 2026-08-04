@@ -9,7 +9,7 @@ use crate::effect::{
     shortcut::{target_any, target_filtered},
 };
 use crate::game::types::TurnStep;
-use crate::mana::{ManaCost, b, cost, g, generic, r, u, w};
+use crate::mana::{Color, ManaCost, b, cost, g, generic, r, u, w};
 
 fn creature(
     name: &'static str,
@@ -1147,6 +1147,148 @@ pub fn cyclone() -> CardDefinition {
                 ])),
             },
         ]))],
+        ..Default::default()
+    }
+}
+
+// ── Third wave ─────────────────────────────────────────────────────────────
+
+/// Magnetic Mountain — blue creatures stay down unless their controller pays.
+pub fn magnetic_mountain() -> CardDefinition {
+    CardDefinition {
+        name: "Magnetic Mountain",
+        cost: cost(&[generic(1), r(), r()]),
+        card_types: vec![CardType::Enchantment],
+        static_abilities: vec![crate::card::StaticAbility {
+            description: "Blue creatures don't untap during their controllers' untap steps.",
+            effect: crate::effect::StaticEffect::PreventUntap {
+                applies_to: Selector::EachPermanent(R::Creature.and(R::HasColor(Color::Blue))),
+            },
+        }],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::AnyPlayer),
+            effect: Effect::MayPayRepeatedly {
+                who: PlayerRef::ActivePlayer,
+                description: "Pay {4} to untap a tapped blue creature?".into(),
+                mana_cost: cost(&[generic(4)]),
+                body: Box::new(Effect::Untap {
+                    what: Selector::EachPermanent(
+                        R::Creature
+                            .and(R::HasColor(Color::Blue))
+                            .and(R::Tapped)
+                            
+                    ),
+                    up_to: Some(Value::ONE),
+                }),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Guardian Beast — while it stands, your noncreature artifacts are untouchable.
+pub fn guardian_beast() -> CardDefinition {
+    CardDefinition {
+        static_abilities: vec![crate::card::StaticAbility {
+            description: "While untapped, your noncreature artifacts are indestructible and can't be enchanted.",
+            effect: crate::effect::StaticEffect::AnthemForFilterIf {
+                filter: R::Artifact.and(R::Not(Box::new(R::Creature))),
+                power: 0,
+                toughness: 0,
+                keywords: vec![Keyword::Indestructible, Keyword::CantBeTargetedByAuras],
+                condition: Predicate::EntityMatches {
+                    what: Selector::This,
+                    filter: R::Untapped,
+                },
+                all_players: false,
+            },
+        }],
+        ..creature("Guardian Beast", cost(&[generic(3), b()]), vec![CreatureType::Beast], 2, 4)
+    }
+}
+
+/// Sandals of Abdallah — lends islandwalk, and breaks when the wearer dies.
+pub fn sandals_of_abdallah() -> CardDefinition {
+    artifact(
+        "Sandals of Abdallah",
+        cost(&[generic(4)]),
+        vec![ActivatedAbility {
+            mana_cost: cost(&[generic(2)]),
+            tap_cost: true,
+            effect: Effect::Seq(vec![
+                Effect::GrantKeyword {
+                    what: target_filtered(R::Creature),
+                    keyword: Keyword::Landwalk(LandType::Island),
+                    duration: Duration::EndOfTurn,
+                },
+                Effect::WhenTargetDiesThisTurn {
+                    body: Box::new(Effect::Destroy { what: Selector::This }),
+                    slot: 0,
+                    filter: None,
+                },
+            ]),
+            ..Default::default()
+        }],
+    )
+}
+
+/// Nafs Asp — its bite costs a life at the victim's next draw step, or {1}.
+pub fn nafs_asp() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
+            effect: Effect::DelayUntilWithCapture {
+                kind: crate::effect::DelayedTriggerKind::TargetsNextDrawStep,
+                capture: Selector::Player(PlayerRef::DefendingPlayer),
+                body: Box::new(Effect::MayPayBy {
+                    who: PlayerRef::Target(0),
+                    description: "Pay {1} to shake off the asp's venom?".into(),
+                    mana_cost: cost(&[generic(1)]),
+                    body: Box::new(Effect::Noop),
+                    else_: Some(Box::new(Effect::LoseLife {
+                        who: Selector::Player(PlayerRef::Target(0)),
+                        amount: Value::ONE,
+                    })),
+                }),
+            },
+        }],
+        ..creature("Nafs Asp", cost(&[g()]), vec![CreatureType::Snake], 1, 1)
+    }
+}
+
+/// Jihad — white creatures swell while an opponent still shows the chosen colour.
+pub fn jihad() -> CardDefinition {
+    let chosen_on_board = || {
+        Predicate::SelectorExists(Selector::EachPermanent(
+            R::HasChosenColorOfSource
+                .and(R::Not(Box::new(R::IsToken)))
+                .and(R::ControlledByOpponent),
+        ))
+    };
+    CardDefinition {
+        name: "Jihad",
+        cost: cost(&[w(), w(), w()]),
+        card_types: vec![CardType::Enchantment],
+        as_enters_effect: Some(Effect::ChooseColorForSelf),
+        static_abilities: vec![crate::card::StaticAbility {
+            description: "White creatures get +2/+1 while the chosen colour is on an opponent's board.",
+            effect: crate::effect::StaticEffect::AnthemForFilterIf {
+                filter: R::Creature.and(R::HasColor(Color::White)),
+                power: 2,
+                toughness: 1,
+                keywords: vec![],
+                condition: chosen_on_board(),
+                all_players: true,
+            },
+        }],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::AnyPlayer),
+            effect: Effect::If {
+                cond: Predicate::Not(Box::new(chosen_on_board())),
+                then: Box::new(Effect::SacrificeSource),
+                else_: Box::new(Effect::Noop),
+            },
+        }],
         ..Default::default()
     }
 }

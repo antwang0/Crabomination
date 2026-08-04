@@ -27,5 +27,9 @@ pub(crate) fn delayed_kind_from_effect(
             Some(player) => DelayedKind::PlayersNextEndStep { player, after_turn: turn },
             None => DelayedKind::NextEndStep,
         },
+        DelayedTriggerKind::TargetsNextDrawStep => match target_player {
+            Some(player) => DelayedKind::PlayersNextDrawStep { player, after_turn: turn - 1 },
+            None => DelayedKind::NextEndStep,
+        },
     }
 }

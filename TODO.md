@@ -8710,3 +8710,45 @@ Planeshift is at zero `set_gaps.py` gaps (86 cards this run); Invasion went
   thread the source into that evaluator, and have
   `Effect::ChooseColorForSelf` keep the pick in per-resolution scratch (a
   resolving *spell* has no battlefield permanent to stamp).
+
+## Noticed this run (modern_decks — Antiquities closure / Arabian Nights)
+
+- **Arabian Nights is at 3.** Each needs one primitive:
+  - Shahrazad — CR 729 subgames. `selfplay.rs` could host a bot-vs-bot nested
+    game using the players' libraries as decks, but nothing models a subgame's
+    zones, priority, or the "loses half their life, rounded up" payout yet.
+  - Eye for an Eye — "the next damage from a source of your choice is *still*
+    dealt to you and mirrored to that source's controller". `PreventionShield`
+    has `reflect` (Deflecting Palm), which *replaces* the damage; the mirror
+    wants a shield that passes the damage through and duplicates it, which
+    means threading a non-preventing branch through `apply_prevention`.
+  - Aladdin's Lamp — a one-shot draw replacement of the `DrawDig::LookN`
+    shape. That dig is a permanent-scoped static (`look_instead_of_drawing`);
+    there's no "replace your *next* draw this turn with a look-N".
+- **Guardian Beast's "other players can't gain control" is dropped.** The
+  indestructible + can't-be-enchanted halves ride `AnthemForFilterIf` with a
+  `CantBeTargetedByAuras` grant; there's no control-change prohibition keyword.
+- **Jihad chooses a colour but not an opponent.** The printed card names both;
+  the anthem gates on *any* opponent showing a nontoken permanent of the
+  chosen colour, which is strictly more permissive with three or more players.
+- **Magnetic Mountain's untap toll is one prompt per creature.**
+  `Effect::MayPayRepeatedly` loops the yes/no, so the printed "choose any
+  number, then pay {4} for each" is a sequence of single-creature buys — the
+  same total cost, but a bot that stops early leaves creatures down.
+- **`Effect::AddCounterCapped` ignores counter doublers.** The clamp is
+  applied against the target's live pool and then the counters are placed
+  directly, so a Doubling Season would not double them (and could not push the
+  total past the printed cap anyway). Correct for Clockwork Avian; revisit if
+  a capped-counter card ever wants the CR 614.16 interaction.
+- **Tawnos's Coffin notes counters on the exiled object itself.** The counter
+  map of a card in exile is otherwise unread, so `CoffinExile` re-stamps it
+  after the hop and `CoffinReturn` reads it back. A second effect that cared
+  about counters in exile would see them.
+- **CR 801.10 is enforced at the selector, not per-effect-clause.**
+  `resolve_selector` and `resolve_players` filter out-of-range entities, which
+  covers sweepers and "each player" fan-outs. CR 801.11 (a spell only *sees*
+  information inside its controller's range — Coat of Arms) is not modelled:
+  counting predicates still walk the whole board.
+- **CR 807's rotating Grand Melee ranges are still open**, as is CR 801.5c
+  ("the closest appropriate player to the left makes the choice when nobody in
+  range can").

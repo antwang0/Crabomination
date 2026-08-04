@@ -803,6 +803,9 @@ impl GameState {
                 (DelayedKind::PlayersNextEndStep { player, after_turn }, TurnStep::End) => {
                     *player == active && self.turn_number > *after_turn
                 }
+                (DelayedKind::PlayersNextDrawStep { player, after_turn }, TurnStep::Draw) => {
+                    *player == active && self.turn_number > *after_turn
+                }
                 (DelayedKind::NextCleanupStep, TurnStep::Cleanup) => true,
                 (DelayedKind::EachCombatThisTurn, TurnStep::BeginCombat) => {
                     dt.controller == active

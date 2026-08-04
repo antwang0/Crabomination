@@ -721,6 +721,9 @@ pub enum DelayedKind {
     /// on seat `player`'s End step, but only on a turn after `after_turn`
     /// (Suppress).
     PlayersNextEndStep { player: usize, after_turn: u32 },
+    /// "At the beginning of that player's next draw step" (Nafs Asp), gated on
+    /// a turn after `after_turn` so a same-turn registration waits.
+    PlayersNextDrawStep { player: usize, after_turn: u32 },
     /// At the beginning of the next cleanup step (Waylay). Fires after the end
     /// step, so the affected objects survive it.
     NextCleanupStep,
