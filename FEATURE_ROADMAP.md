@@ -2493,8 +2493,8 @@ Each a small targeted feature; sweep batch by batch.
    **LGN**, **SCG**), the Mirrodin block (**MRD**, **DST**, **5DN**), the
    Kamigawa block, **Mirrodin Besieged**, **New Phyrexia** (the Scars block
    is closed), **Legends** (273 cards, `sets::leg`–`leg7`) and **Antiquities**
-   (64 cards, `sets::atq`) are all at zero. **Arabian Nights** is open at 3
-   (`sets::arn`, 61 cards) and **The Dark** at 6 (`sets::drk`/`drk2`,
+   (64 cards, `sets::atq`) are all at zero. **Arabian Nights** is open at 2
+   (`sets::arn`, 62 cards) and **The Dark** at 6 (`sets::drk`/`drk2`,
    91 cards).
 1. **Replacement-effect framework** (Tier-1 #1) — highest-leverage primitive still
    open.
@@ -2535,8 +2535,9 @@ Each a small targeted feature; sweep batch by batch.
   `DelayedKind::PlayersNextDrawStep`. Correctness: `sacrifice_one` stamps
   `sacrificed_card` (so `Selector::SacrificedCard` reads any sacrifice), and
   `Selector::CreaturesInCombatWith` falls back to the turn's declared blocks
-  once the block map is torn down. Still open: Aladdin's Lamp, Eye for an Eye,
-  Shahrazad (see TODO.md).
+  once the block map is torn down. Eye for an Eye added
+  `Effect::MirrorNextDamageToYouThisTurn`. Still open: Aladdin's Lamp (a
+  one-shot draw replacement that digs X) and Shahrazad (subgames).
 
 - **The Dark at 6** — `set_gaps.py drk` 97 → 6 (`sets::drk` + `sets::drk2`,
   91 cards). New primitives: `Keyword::{CantAttackUnlessPay,

@@ -261,6 +261,7 @@ static ARN: &[Factory] = &[
     super::arn::sandals_of_abdallah,
     super::arn::nafs_asp,
     super::arn::jihad,
+    super::arn::eye_for_an_eye,
 ];
 static ATQ: &[Factory] = &[
     super::atq::amulet_of_kroog,

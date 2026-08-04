@@ -8753,6 +8753,14 @@ Planeshift is at zero `set_gaps.py` gaps (86 cards this run); Invasion went
   ("the closest appropriate player to the left makes the choice when nobody in
   range can").
 
+## Arabian Nights — the last two
+
+- **Aladdin's Lamp** wants a one-shot, turn-scoped draw replacement that digs
+  X and bottoms the rest. `StaticEffect::MayReplaceDrawWithRevealUntilKind` is
+  the closest shape but is a permanent static with no X and no bottoming.
+- **Shahrazad** needs subgames (CR 720). Out of scope until the engine can
+  nest a `GameState` and hand back a winner.
+
 ## The Dark — the last six
 
 `set_gaps.py drk` is at 6. Each wants one primitive that doesn't exist yet:

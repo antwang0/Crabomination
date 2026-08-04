@@ -8104,6 +8104,11 @@ pub enum Effect {
     /// CR 615 — "The next time a source of your choice would deal damage to
     /// you this turn, prevent half that damage, rounded down" (Dark Sphere).
     PreventNextHalfDamageToYouThisTurn,
+    /// CR 615 — "The next time a source of your choice would deal damage to
+    /// you this turn, that source deals it and this also deals that much to
+    /// the source's controller" (Eye for an Eye). The damage still lands; the
+    /// mirror rides alongside it.
+    MirrorNextDamageToYouThisTurn,
     /// CR 614.9 — "Until end of turn, if damage would be dealt to any
     /// creature, you may have that damage dealt to you instead" (Blood of the
     /// Martyr). Set on the effect's controller; cleared at end of turn.

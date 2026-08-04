@@ -1292,3 +1292,9 @@ pub fn jihad() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Eye for an Eye — the next source to hit you bleeds its controller for the
+/// same.
+pub fn eye_for_an_eye() -> CardDefinition {
+    instant("Eye for an Eye", cost(&[w(), w()]), Effect::MirrorNextDamageToYouThisTurn)
+}

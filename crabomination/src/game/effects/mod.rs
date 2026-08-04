@@ -8224,6 +8224,13 @@ impl GameState {
                 Ok(())
             }
 
+            // Eye for an Eye — the next hit you take is paid back in kind.
+            Effect::MirrorNextDamageToYouThisTurn => {
+                self.players[ctx.controller].damage_mirrors =
+                    self.players[ctx.controller].damage_mirrors.saturating_add(1);
+                Ok(())
+            }
+
             // Blood of the Martyr — creature damage may come to you instead.
             Effect::RedirectCreatureDamageToYouThisTurn => {
                 self.players[ctx.controller].creature_damage_to_you_this_turn = true;

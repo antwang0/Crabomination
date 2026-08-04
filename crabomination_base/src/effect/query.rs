@@ -239,6 +239,7 @@ impl Effect {
             | Effect::ExileEachMatchingThenControllerDraws { .. }
             | Effect::YourLandsProduceColorThisTurn(_)
             | Effect::PreventNextHalfDamageToYouThisTurn
+            | Effect::MirrorNextDamageToYouThisTurn
             | Effect::RedirectCreatureDamageToYouThisTurn
             | Effect::EachPlayerMayDiscardUpToThenDamage { .. }
             | Effect::CoffinReturn

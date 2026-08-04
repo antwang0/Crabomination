@@ -1092,6 +1092,19 @@ impl GameState {
                 // (combat or not, incl. infect→poison) marks them damaged
                 // this turn.
                 self.players[p].was_dealt_damage_this_turn = true;
+                // Eye for an Eye — pay the hit back to the source's
+                // controller. Guarded by `in_damage_redirect` so the mirror
+                // can't mirror itself.
+                if self.players[p].damage_mirrors > 0
+                    && !self.in_damage_redirect
+                    && let Some(dealer) = source.and_then(|s| self.damage_source_controller(s))
+                    && dealer != p
+                {
+                    self.players[p].damage_mirrors -= 1;
+                    self.in_damage_redirect = true;
+                    self.deal_damage_to_from(EntityRef::Player(dealer), amount, source, events);
+                    self.in_damage_redirect = false;
+                }
                 // The Fallen — the source remembers who it has bled, forever.
                 if let Some(src) = source
                     && let Some(c) = self.battlefield_find_mut(src)

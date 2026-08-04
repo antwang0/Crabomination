@@ -744,3 +744,19 @@ fn jihad_swells_while_the_chosen_colour_is_out() {
     upkeep(&mut g);
     assert!(g.battlefield_find(jihad).is_none(), "no green left, so it goes");
 }
+
+#[test]
+fn eye_for_an_eye_pays_the_next_hit_back() {
+    let mut g = main_phase();
+    let eye = g.add_card_to_hand(0, catalog::eye_for_an_eye());
+    cast(&mut g, 0, eye, None);
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    cast(&mut g, 1, bolt, Some(Target::Player(0)));
+    assert_eq!(g.players[0].life, 17);
+    assert_eq!(g.players[1].life, 17);
+    // One mirror, one hit.
+    let bolt2 = g.add_card_to_hand(1, catalog::lightning_bolt());
+    cast(&mut g, 1, bolt2, Some(Target::Player(0)));
+    assert_eq!(g.players[0].life, 14);
+    assert_eq!(g.players[1].life, 17);
+}

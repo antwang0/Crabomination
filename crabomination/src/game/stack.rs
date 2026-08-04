@@ -2965,6 +2965,7 @@ impl GameState {
         for pl in &mut self.players {
             pl.lands_produce_color_this_turn = None;
             pl.half_damage_shields = 0;
+            pl.damage_mirrors = 0;
             pl.creature_damage_to_you_this_turn = false;
         }
         // CR 702.108 — fire "becomes untapped" (Inspired) triggers for every
