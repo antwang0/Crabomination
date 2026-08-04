@@ -2960,9 +2960,12 @@ impl GameState {
         // Forbidding Spirit's "until your next turn" attack tax expires when
         // the taxed player's own turn begins.
         self.players[self.active_player_idx].attack_tax_until_your_turn = 0;
-        // Deep Water's colour override lasts only for the turn it was made in.
+        // Deep Water / Dark Sphere / Blood of the Martyr all expire with the
+        // turn they were made in.
         for pl in &mut self.players {
             pl.lands_produce_color_this_turn = None;
+            pl.half_damage_shields = 0;
+            pl.creature_damage_to_you_this_turn = false;
         }
         // CR 702.108 — fire "becomes untapped" (Inspired) triggers for every
         // permanent that flipped tapped→untapped this step.

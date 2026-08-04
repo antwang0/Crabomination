@@ -8216,6 +8216,20 @@ impl GameState {
             }
 
             // Festival — the ban is live for the turn it resolves in.
+            // Dark Sphere — a half-strength, rounded-down shield against the
+            // next damage from a chosen source.
+            Effect::PreventNextHalfDamageToYouThisTurn => {
+                self.players[ctx.controller].half_damage_shields =
+                    self.players[ctx.controller].half_damage_shields.saturating_add(1);
+                Ok(())
+            }
+
+            // Blood of the Martyr — creature damage may come to you instead.
+            Effect::RedirectCreatureDamageToYouThisTurn => {
+                self.players[ctx.controller].creature_damage_to_you_this_turn = true;
+                Ok(())
+            }
+
             Effect::CantAttackThisTurn { what } => {
                 for ent in self.resolve_selector(what, ctx) {
                     let Some(cid) = ent.as_permanent_id() else { continue };
@@ -29608,6 +29622,25 @@ impl GameState {
                     }
                 })
                 .collect(),
+            // The Fallen — every player and planeswalker this source has
+            // damaged this game (planeswalkers only while still on the field).
+            Selector::DamagedBySourceThisGame => {
+                let Some(src) = ctx.source.and_then(|s| self.battlefield_find(s)) else {
+                    return vec![];
+                };
+                let mut out: Vec<EntityRef> =
+                    src.damaged_players_this_game.iter().map(|&p| EntityRef::Player(p)).collect();
+                out.extend(
+                    src.damaged_permanents_this_game
+                        .iter()
+                        .filter(|id| {
+                            self.battlefield_find(**id)
+                                .is_some_and(|c| c.definition.is_planeswalker())
+                        })
+                        .map(|&id| EntityRef::Permanent(id)),
+                );
+                out
+            }
             Selector::CostExiledCards => {
                 self.cost_exiled_cards.iter().map(|&cid| EntityRef::Card(cid)).collect()
             }

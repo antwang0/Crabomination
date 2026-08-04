@@ -8599,6 +8599,14 @@ static DRK2: &[Factory] = &[
     super::drk2::psychic_allergy,
     super::drk2::scarwood_bandits,
     super::drk2::cleansing,
+    super::drk2::fire_and_brimstone,
+    super::drk2::the_fallen,
+    super::drk2::dark_sphere,
+    super::drk2::blood_of_the_martyr,
+    super::drk2::wand_of_ith,
+    super::drk2::mana_vortex,
+    super::drk2::reflecting_mirror,
+    super::drk2::preacher,
 ];
 static EOE: &[Factory] = &[
     super::eoe::camera_launcher,

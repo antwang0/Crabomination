@@ -271,6 +271,9 @@ pub enum Selector {
     /// The card(s) exiled from a graveyard to pay this activation's cost
     /// (Necropolis). Empty outside such an activation.
     CostExiledCards,
+    /// Every player and planeswalker the source has dealt damage to this
+    /// game (The Fallen).
+    DamagedBySourceThisGame,
 
     /// The chosen target slot (0-indexed) of the spell whose cast
     /// triggered this ability. Resolves against the topmost matching
@@ -8098,6 +8101,13 @@ pub enum Effect {
     /// `PreventNextDamage`: a floating shield keyed to the source, soaking the
     /// next N damage it deals to anything.
     PreventNextDamageFromSourceThisTurn { amount: Value },
+    /// CR 615 — "The next time a source of your choice would deal damage to
+    /// you this turn, prevent half that damage, rounded down" (Dark Sphere).
+    PreventNextHalfDamageToYouThisTurn,
+    /// CR 614.9 — "Until end of turn, if damage would be dealt to any
+    /// creature, you may have that damage dealt to you instead" (Blood of the
+    /// Martyr). Set on the effect's controller; cleared at end of turn.
+    RedirectCreatureDamageToYouThisTurn,
 
     /// "The next `amount` damage that would be dealt to `target` this turn is
     /// dealt to `to` instead." (CR 614.9 — Carom, Razia's redirect.) Pushes a

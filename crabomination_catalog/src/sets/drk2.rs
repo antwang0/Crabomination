@@ -1061,3 +1061,164 @@ pub fn cleansing() -> CardDefinition {
         },
     )
 }
+
+/// Fire and Brimstone — punishes whoever swung, and singes you for it.
+pub fn fire_and_brimstone() -> CardDefinition {
+    instant(
+        "Fire and Brimstone",
+        cost(&[generic(3), w(), w()]),
+        Effect::Seq(vec![
+            Effect::DealDamage {
+                to: target_filtered(R::Player.and(R::PlayerAttackedThisTurn)),
+                amount: Value::Const(4),
+            },
+            Effect::DealDamage { to: Selector::You, amount: Value::Const(4) },
+        ]),
+    )
+}
+
+/// The Fallen — everything it has ever bled keeps bleeding.
+pub fn the_fallen() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![upkeep(Effect::DealDamage {
+            to: Selector::DamagedBySourceThisGame,
+            amount: Value::ONE,
+        })],
+        ..creature("The Fallen", cost(&[generic(1), b(), b(), b()]), vec![CreatureType::Zombie], 2, 3)
+    }
+}
+
+/// Dark Sphere — halves the next hit you take, rounded in your favour.
+pub fn dark_sphere() -> CardDefinition {
+    artifact(
+        "Dark Sphere",
+        cost(&[]),
+        vec![ActivatedAbility {
+            tap_cost: true,
+            sac_cost: true,
+            effect: Effect::PreventNextHalfDamageToYouThisTurn,
+            ..Default::default()
+        }],
+    )
+}
+
+/// Blood of the Martyr — for a turn, every wound your creatures take is yours.
+pub fn blood_of_the_martyr() -> CardDefinition {
+    instant(
+        "Blood of the Martyr",
+        cost(&[w(), w(), w()]),
+        Effect::RedirectCreatureDamageToYouThisTurn,
+    )
+}
+
+/// Wand of Ith — a random card out of their hand, paid for in life or lost.
+pub fn wand_of_ith() -> CardDefinition {
+    artifact(
+        "Wand of Ith",
+        cost(&[generic(4)]),
+        vec![ActivatedAbility {
+            mana_cost: cost(&[generic(3)]),
+            tap_cost: true,
+            sorcery_speed: true,
+            effect: Effect::Seq(vec![
+                Effect::RevealRandomFromHand { who: Selector::Player(PlayerRef::Target(0)) },
+                Effect::PlayerMayPayLifeElse {
+                    who: PlayerRef::Target(0),
+                    life: Value::IfPred {
+                        pred: Box::new(Predicate::EntityMatches {
+                            what: Selector::LastRevealedCard,
+                            filter: R::Land,
+                        }),
+                        then: Box::new(Value::ONE),
+                        else_: Box::new(Value::LastRevealedManaValue),
+                    },
+                    else_: Box::new(Effect::Move {
+                        what: Selector::LastRevealedCard,
+                        to: ZoneDest::Graveyard,
+                    }),
+                },
+            ]),
+            ..Default::default()
+        }],
+    )
+}
+
+/// Mana Vortex — everyone's lands go, one a turn, until there are none left.
+pub fn mana_vortex() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![
+            crate::effect::shortcut::on_cast(Effect::UnlessPlayerPays {
+                who: PlayerRef::You,
+                cost: crate::card::WardCost::SacrificeMatching(Box::new(R::Land)),
+                then: Box::new(Effect::CounterSpell { what: Selector::This }),
+                if_paid: None,
+            }),
+            TriggeredAbility {
+                event: EventSpec::new(
+                    EventKind::StepBegins(TurnStep::Upkeep),
+                    EventScope::AnyPlayer,
+                ),
+                effect: Effect::Sacrifice {
+                    who: Selector::Player(PlayerRef::ActivePlayer),
+                    count: Value::ONE,
+                    filter: R::Land,
+                },
+            },
+        ],
+        state_trigger: Some(crate::effect::StateTriggeredAbility {
+            condition: Predicate::Not(Box::new(Predicate::SelectorExists(
+                Selector::EachPermanent(R::Land),
+            ))),
+            effect: Effect::SacrificeSource,
+        }),
+        ..enchantment("Mana Vortex", cost(&[generic(1), u(), u()]))
+    }
+}
+
+/// Reflecting Mirror — bounces a spell aimed at you onto another player.
+pub fn reflecting_mirror() -> CardDefinition {
+    artifact(
+        "Reflecting Mirror",
+        cost(&[generic(4)]),
+        vec![ActivatedAbility {
+            mana_cost: cost(&[x()]),
+            tap_cost: true,
+            condition: Some(Predicate::ValueAtLeast(
+                Value::XFromCost,
+                Value::Times(
+                    Box::new(Value::Const(2)),
+                    Box::new(Value::ManaValueOf(Box::new(Selector::Target(0)))),
+                ),
+            )),
+            effect: Effect::ChangeSpellTarget {
+                what: target_filtered(
+                    R::IsSpellOnStack
+                        .and(R::SpellWithSingleTarget)
+                        .and(R::SpellTargetsControllerOrControlled),
+                ),
+            },
+            ..Default::default()
+        }],
+    )
+}
+
+/// Preacher — stays tapped, and keeps whatever it took while it is.
+pub fn preacher() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::MayChooseNotToUntap],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::GainControlWhileSourceTapped {
+                what: target_filtered(R::Creature.and(R::ControlledByOpponent)),
+            },
+            ..Default::default()
+        }],
+        ..creature(
+            "Preacher",
+            cost(&[generic(1), w(), w()]),
+            vec![CreatureType::Human, CreatureType::Cleric],
+            1,
+            1,
+        )
+    }
+}

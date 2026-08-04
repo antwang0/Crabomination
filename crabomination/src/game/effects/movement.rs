@@ -130,6 +130,22 @@ impl GameState {
         if self.damage_cant_be_prevented_this_turn || self.damage_cant_be_prevented_now() {
             return amount;
         }
+        // Dark Sphere — "prevent half that damage, rounded down" from the next
+        // source to hit you this turn. One shield, one damage event.
+        if let EntityRef::Player(p) = ent
+            && self.players[p].half_damage_shields > 0
+        {
+            self.players[p].half_damage_shields -= 1;
+            let prevented = amount / 2;
+            if prevented > 0 {
+                events.push(GameEvent::DamagePrevented {
+                    amount: prevented,
+                    to_player: Some(p),
+                    to_card: None,
+                });
+            }
+            return self.apply_prevention_shields(ent, amount - prevented, source, events);
+        }
         // CR 615.12 (scoped) — Questing Beast: combat damage dealt by creatures
         // the controller controls can't be prevented. Bypass shields when the
         // damage source is a creature whose controller has the static.
@@ -743,6 +759,19 @@ impl GameState {
             self.in_damage_redirect = false;
             return;
         }
+        // CR 614.9 — Blood of the Martyr: damage to *any* creature may be
+        // dealt to the martyr instead. One redirect per event.
+        if !self.in_damage_redirect
+            && let EntityRef::Permanent(cid) = ent
+            && self.battlefield_find(cid).is_some_and(|c| c.definition.is_creature())
+            && let Some(martyr) =
+                (0..self.players.len()).find(|&p| self.players[p].creature_damage_to_you_this_turn)
+        {
+            self.in_damage_redirect = true;
+            self.deal_damage_to_from(EntityRef::Player(martyr), amount, source, events);
+            self.in_damage_redirect = false;
+            return;
+        }
         // CR 614.9 — redirect the whole event to a Palisade-Giant-style
         // permanent. One redirect per event (CR 614.5; the flag also stops
         // two redirectors ping-ponging).
@@ -1063,6 +1092,13 @@ impl GameState {
                 // (combat or not, incl. infect→poison) marks them damaged
                 // this turn.
                 self.players[p].was_dealt_damage_this_turn = true;
+                // The Fallen — the source remembers who it has bled, forever.
+                if let Some(src) = source
+                    && let Some(c) = self.battlefield_find_mut(src)
+                    && !c.damaged_players_this_game.contains(&p)
+                {
+                    c.damaged_players_this_game.push(p);
+                }
                 self.players[p].damage_taken_this_turn =
                     self.players[p].damage_taken_this_turn.saturating_add(amount);
                 // Record the damaging creature so "destroy target creature
@@ -1286,6 +1322,16 @@ impl GameState {
                     let source_name = source
                         .filter(|s| *s != cid)
                         .and_then(|s| self.find_card_anywhere(s).map(|c| c.definition.name));
+                    if let Some(src) = source
+                        && src != cid
+                        && self
+                            .battlefield_find(cid)
+                            .is_some_and(|c| c.definition.is_planeswalker())
+                        && let Some(c) = self.battlefield_find_mut(src)
+                        && !c.damaged_permanents_this_game.contains(&cid)
+                    {
+                        c.damaged_permanents_this_game.push(cid);
+                    }
                     if let Some(c) = self.battlefield_find_mut(cid) {
                     if c.definition.is_creature() {
                         c.dealt_damage_this_turn = true;

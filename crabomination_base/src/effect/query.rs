@@ -238,6 +238,8 @@ impl Effect {
             | Effect::ExileCostSacrificedBatch
             | Effect::ExileEachMatchingThenControllerDraws { .. }
             | Effect::YourLandsProduceColorThisTurn(_)
+            | Effect::PreventNextHalfDamageToYouThisTurn
+            | Effect::RedirectCreatureDamageToYouThisTurn
             | Effect::EachPlayerMayDiscardUpToThenDamage { .. }
             | Effect::CoffinReturn
             | Effect::TransmuteArtifact

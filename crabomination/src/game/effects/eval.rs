@@ -2759,6 +2759,10 @@ impl GameState {
         match req {
             R::Any => true,
             R::Player => matches!(target, Target::Player(_)),
+            // Fire and Brimstone — "target player who attacked this turn".
+            R::PlayerAttackedThisTurn => {
+                matches!(target, Target::Player(p) if self.players[*p].attacked_this_turn)
+            }
             R::OpponentPlayer => {
                 matches!(target, Target::Player(p) if !self.same_team(*p, controller))
             }
@@ -3694,7 +3698,7 @@ impl GameState {
             R::ManaValueEqualsTriggerAmount => {
                 card.definition.cost.cmc() == self.trigger_event_amount_scratch
             }
-            R::Player | R::OpponentPlayer => false,
+            R::Player | R::OpponentPlayer | R::PlayerAttackedThisTurn => false,
             R::And(a, b) => {
                 self.evaluate_requirement_on_card(a, card, controller)
                     && self.evaluate_requirement_on_card(b, card, controller)

@@ -714,6 +714,14 @@ pub struct Player {
     /// this colour instead of its own. Cleared at end of turn.
     #[serde(default)]
     pub lands_produce_color_this_turn: Option<crate::mana::Color>,
+    /// Dark Sphere — pending "prevent half the next damage dealt to you,
+    /// rounded down" shields. Cleared at end of turn.
+    #[serde(default)]
+    pub half_damage_shields: u32,
+    /// Blood of the Martyr — damage that would be dealt to any creature may
+    /// be dealt to this player instead. Cleared at end of turn.
+    #[serde(default)]
+    pub creature_damage_to_you_this_turn: bool,
     /// CR 502.3 sibling of `lands_dont_untap_next_untap` for creatures
     /// (Blinding Beam's "creatures don't untap during target player's next
     /// untap step"). Decremented and applied in `do_untap`.
@@ -1020,6 +1028,8 @@ impl Player {
             skip_next_combat: 0,
             lands_dont_untap_next_untap: 0,
             lands_produce_color_this_turn: None,
+            half_damage_shields: 0,
+            creature_damage_to_you_this_turn: false,
             creatures_dont_untap_next_untap: 0,
             firebending_kept_red: 0,
             extra_turns: 0,

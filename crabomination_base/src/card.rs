@@ -1923,6 +1923,9 @@ pub enum SelectionRequirement {
     /// (floating) mana — Glissa Sunseeker.
     ManaValueEqualsYourUnspentMana,
     IsBasicLand,
+    /// A player who attacked this turn (Fire and Brimstone). Only meaningful
+    /// against a player target.
+    PlayerAttackedThisTurn,
     /// The candidate is (one of) the colour the source permanent chose as it
     /// entered (`CardInstance.chosen_color` — Story Circle's Circle-of-
     /// Protection shield). False when the source never chose one.
@@ -5385,6 +5388,10 @@ pub struct CardInstance {
     /// intervening turns, and rolls into `attacked_last_turn` at its
     /// controller's untap step.
     pub attacked_own_turn: bool,
+    /// Seats this permanent has dealt damage to this *game*, and the
+    /// planeswalkers likewise (The Fallen). Never reset per turn.
+    pub damaged_players_this_game: Vec<usize>,
+    pub damaged_permanents_this_game: Vec<CardId>,
     /// Whether this creature attacked during its controller's *previous*
     /// turn, so `Keyword::CantAttackIfAttackedLastTurn` (Giant Turtle) can
     /// read it.
@@ -5732,6 +5739,8 @@ impl CardInstance {
             untap_locked_while_present: None,
             attacked_this_turn: false,
             attacked_own_turn: false,
+            damaged_players_this_game: Vec::new(),
+            damaged_permanents_this_game: Vec::new(),
             attacked_last_turn: false,
             attack_ban: AttackBan::None,
             damage_by_source_name_this_turn: Vec::new(),

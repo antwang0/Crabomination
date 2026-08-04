@@ -1057,3 +1057,104 @@ fn venom_kills_whatever_the_enchanted_creature_meets() {
     drain_stack(&mut g);
     assert!(g.battlefield_find(attacker).is_none());
 }
+
+#[test]
+fn fire_and_brimstone_only_hits_a_player_who_swung() {
+    let mut g = main_phase();
+    let bolt = g.add_card_to_hand(0, catalog::fire_and_brimstone());
+    mana(&mut g, 0);
+    g.priority.player_with_priority = 0;
+    assert!(
+        g.perform_action(GameAction::CastSpell {
+            card_id: bolt,
+            target: Some(Target::Player(1)),
+            additional_targets: vec![],
+            mode: None,
+            x_value: None,
+        })
+        .is_err(),
+        "seat 1 hasn't attacked",
+    );
+    g.players[1].attacked_this_turn = true;
+    cast(&mut g, 0, bolt, Some(Target::Player(1)));
+    assert_eq!(g.players[1].life, 16);
+    assert_eq!(g.players[0].life, 16);
+}
+
+#[test]
+fn the_fallen_keeps_bleeding_everyone_it_has_hit() {
+    let mut g = main_phase();
+    let fallen = g.add_card_to_battlefield(0, catalog::the_fallen());
+    g.deal_damage_to_from(
+        crabomination::game::effects::EntityRef::Player(1),
+        2,
+        Some(fallen),
+        &mut vec![],
+    );
+    assert_eq!(g.players[1].life, 18);
+    g.step = TurnStep::Upkeep;
+    g.fire_step_triggers(TurnStep::Upkeep);
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, 17);
+}
+
+#[test]
+fn dark_sphere_halves_the_next_hit_rounded_down() {
+    let mut g = main_phase();
+    let sphere = g.add_card_to_battlefield(0, catalog::dark_sphere());
+    activate(&mut g, 0, sphere, None);
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    cast(&mut g, 1, bolt, Some(Target::Player(0)));
+    // 3 damage, half rounded down (1) prevented.
+    assert_eq!(g.players[0].life, 18);
+}
+
+#[test]
+fn blood_of_the_martyr_takes_the_creatures_damage() {
+    let mut g = main_phase();
+    let blood = g.add_card_to_hand(0, catalog::blood_of_the_martyr());
+    cast(&mut g, 0, blood, None);
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    cast(&mut g, 1, bolt, Some(Target::Permanent(bear)));
+    assert!(g.battlefield_find(bear).is_some());
+    assert_eq!(g.players[0].life, 17);
+}
+
+#[test]
+fn wand_of_ith_bills_them_for_the_card_they_reveal() {
+    let mut g = main_phase();
+    let wand = g.add_card_to_battlefield(0, catalog::wand_of_ith());
+    g.add_card_to_hand(1, catalog::grizzly_bears()); // mv 2
+    activate(&mut g, 0, wand, Some(Target::Player(1)));
+    // The auto-decider declines the life, so the card is discarded.
+    assert!(g.players[1].hand.is_empty());
+    assert_eq!(g.players[1].graveyard.len(), 1);
+}
+
+#[test]
+fn mana_vortex_eats_a_land_each_upkeep_and_dies_with_the_last() {
+    let mut g = main_phase();
+    g.add_card_to_battlefield(0, catalog::mountain());
+    let vortex = g.add_card_to_battlefield(0, catalog::mana_vortex());
+    g.step = TurnStep::Upkeep;
+    g.fire_step_triggers(TurnStep::Upkeep);
+    drain_stack(&mut g);
+    assert!(!g.battlefield.iter().any(|c| c.definition.is_land()));
+    g.check_state_based_actions();
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(vortex).is_none());
+}
+
+#[test]
+fn preacher_holds_its_prize_while_it_stays_tapped() {
+    let mut g = main_phase();
+    let preacher = g.add_card_to_battlefield(0, catalog::preacher());
+    g.clear_sickness(preacher);
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    activate(&mut g, 0, preacher, Some(Target::Permanent(bear)));
+    assert_eq!(g.battlefield_find(bear).expect("bear").controller, 0);
+    g.battlefield_find_mut(preacher).expect("preacher").tapped = false;
+    g.check_state_based_actions();
+    assert_eq!(g.battlefield_find(bear).expect("bear").controller, 1);
+}
