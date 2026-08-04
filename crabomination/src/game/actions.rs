@@ -10865,7 +10865,7 @@ impl GameState {
         // CR 609.4b — Mycosynth Lattice's "players may spend mana as though it
         // were mana of any color": relax the coloured pips before anything
         // downstream (auto-tap, float protection, `pay_for_spell`) reads them.
-        let relaxed = self.relax_cost_colors_for(Some(payer), cost);
+        let relaxed = self.relax_cost_colors_for_spell(Some(payer), cost, kind.name);
         let cost = &relaxed;
         if forced_only {
             // "Keep my leftover floating mana": lift out only the *excess*

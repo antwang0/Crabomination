@@ -641,3 +641,61 @@ pub fn cogwork_tracker() -> CardDefinition {
         )
     }
 }
+
+// ── Conspiracies ────────────────────────────────────────────────────────────
+
+fn conspiracy(
+    name: &'static str,
+    description: &'static str,
+    effect: StaticEffect,
+) -> CardDefinition {
+    CardDefinition {
+        name,
+        card_types: vec![CardType::Conspiracy],
+        static_abilities: vec![StaticAbility { description, effect }],
+        ..Default::default()
+    }
+}
+
+/// Advantageous Proclamation — your minimum deck size drops by five.
+pub fn advantageous_proclamation() -> CardDefinition {
+    conspiracy(
+        "Advantageous Proclamation",
+        "Your minimum deck size is reduced by five.",
+        StaticEffect::ReduceMinimumDeckSize(5),
+    )
+}
+
+/// Backup Plan — an extra opening hand; all but one are shuffled back.
+pub fn backup_plan() -> CardDefinition {
+    conspiracy(
+        "Backup Plan",
+        "Draw an additional hand of seven cards as the game begins.",
+        StaticEffect::ExtraOpeningHand,
+    )
+}
+
+/// Unexpected Potential — hidden agenda; the named card casts off any colour.
+pub fn unexpected_potential() -> CardDefinition {
+    conspiracy(
+        "Unexpected Potential",
+        "You may spend mana as though it were mana of any color to cast spells \
+         with the chosen name.",
+        StaticEffect::MaySpendManaAsAnyColorForNamedSpells,
+    )
+}
+
+/// Deal Broker — the battlefield half; the post-draft trade is draft-time.
+pub fn deal_broker() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::Seq(vec![
+                Effect::Draw { who: Selector::You, amount: Value::ONE },
+                Effect::Discard { who: Selector::You, amount: Value::ONE, random: false },
+            ]),
+            ..Default::default()
+        }],
+        ..artifact_creature("Deal Broker", cost(&[generic(3)]), vec![CreatureType::Construct], 2, 3)
+    }
+}

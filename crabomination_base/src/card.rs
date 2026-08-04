@@ -4716,6 +4716,7 @@ impl CardDefinition {
             planeswalker: self.is_planeswalker(),
             legendary: self.supertypes.contains(&Supertype::Legendary),
             creature_mana_only: self.spend_only_creature_mana,
+            name: Some(self.name),
         }
     }
 

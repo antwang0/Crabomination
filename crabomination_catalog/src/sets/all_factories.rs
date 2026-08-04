@@ -1194,6 +1194,10 @@ static CNS2: &[Factory] = &[
     super::cns2::scourge_of_the_throne,
     super::cns2::split_decision,
     super::cns2::cogwork_tracker,
+    super::cns2::advantageous_proclamation,
+    super::cns2::backup_plan,
+    super::cns2::unexpected_potential,
+    super::cns2::deal_broker,
 ];
 static CURSES: &[Factory] = &[
     super::curses::psychic_possession,

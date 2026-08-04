@@ -617,6 +617,9 @@ pub struct SpellKind {
     /// (Myr Superion). Unlike every other field this *narrows* what may pay:
     /// [`ManaPool::pay_for_spell`] routes to [`ManaPool::pay_creature_only`].
     pub creature_mana_only: bool,
+    /// The name of the spell being cast, when there is one. Read by
+    /// name-restricted spend permissions (Unexpected Potential).
+    pub name: Option<&'static str>,
 }
 
 /// WUBRG index for a color — used to bucket restricted mana per color.

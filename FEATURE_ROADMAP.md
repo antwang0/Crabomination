@@ -2526,7 +2526,7 @@ Each a small targeted feature; sweep batch by batch.
 - ✅ **Rules-engine conformance suite** mapped to CR sections — `scripts/
   cr_coverage.py` generates `CR_COVERAGE.md` (section → title, subrules tested,
   test count, plus the untested-section gap list) from the `cr_<section>_` test
-  names. 97 sections covered, 50 numbered sections still untested.
+  names. Regenerate it after adding conformance tests; do not hand-edit.
 - ✅ **Operator telemetry endpoint** — `CRAB_STATUS_BIND` HTTP `/healthz` +
   `/status` (uptime, rolling match stats, slot accounting).
 
@@ -2539,13 +2539,12 @@ Each a small targeted feature; sweep batch by batch.
    Kamigawa block, **Mirrodin Besieged**, **New Phyrexia** (the Scars block
    is closed), **Legends** (273 cards, `sets::leg`–`leg7`), **Antiquities**
    (64 cards, `sets::atq`), **Arabian Nights** (63 cards, `sets::arn`) and
-   **The Dark** (97 cards, `sets::drk`/`drk2`) are all at zero. **Conspiracy** (CNS)
-   is opened, not closed: `sets::cns` holds 18 of the 24 *conspiracy cards*
-   plus 22 regular cards. The voting primitive shipped (CR 701.38); the
-   draft-matters shell is the bulk of what's left. **Homelands** is the other
-   open front, down to 12 (`sets::hml`, `sets::hml2`) — Autumn Willow, Chain
-   Stasis, Coral Reef, Giant Albatross, Giant Oyster, Dwarven Sea Clan, Jinx,
-   Marjhan, Orcish Mine, Retribution, Rysorian Badger, Broken Visage.
+   **The Dark** (97 cards, `sets::drk`/`drk2`) and **Homelands** (`sets::hml`–
+   `hml3`) are all at zero. **Conspiracy** (CNS) is down to **8**, all of them
+   draft-time: Aether Searcher, Agent of Acquisitions, Cogwork Grinder,
+   Cogwork Librarian, Lore Seeker, Lurking Automaton, Paliano the High City,
+   Whispergear Sneak. They need the CR 905.2b/2c draft shell (noted values +
+   face-up drafting) — see TODO.md → "Conspiracy: the draft-matters shell".
 1. **Replacement-effect framework** (Tier-1 #1) — highest-leverage primitive still
    open.
 2. **Card-zoom + stops/auto-yield + combat-math preview** (Tier-7 #1–3) — the trio

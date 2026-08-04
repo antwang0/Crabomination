@@ -804,3 +804,60 @@ fn split_decision_counters_on_denial() {
     cast(&mut g, 0, id, Some(Target::Permanent(bolt)));
     assert_eq!(g.players[0].life, 20, "the bolt was countered");
 }
+
+/// CR 100.2 — Advantageous Proclamation shaves five off the minimum deck size.
+#[test]
+fn advantageous_proclamation_shrinks_the_minimum_deck() {
+    use crabomination::format::{Deck, Format, validate_full_deck};
+    let main: Vec<_> = (0..55).map(|_| catalog::mountain()).collect();
+    let deck = Deck { main: main.clone(), sideboard: vec![], commanders: vec![] };
+    assert!(validate_full_deck(&deck, Format::Standard).is_err(), "55 is short");
+    let deck = Deck {
+        main,
+        sideboard: vec![catalog::advantageous_proclamation()],
+        commanders: vec![],
+    };
+    assert!(validate_full_deck(&deck, Format::Standard).is_ok(), "55 clears the reduced floor");
+}
+
+/// CR 103.4 — Backup Plan deals an extra opening hand and shuffles the rest back.
+#[test]
+fn backup_plan_deals_a_second_opening_hand() {
+    let mut g = main_phase();
+    g.seat_conspiracy(0, catalog::backup_plan(), None);
+    let library = g.players[0].library.len();
+    g.start_mulligan_phase();
+    assert_eq!(g.players[0].hand.len(), 7, "one hand kept");
+    assert_eq!(g.players[0].library.len(), library - 7, "the other hand went back");
+}
+
+/// Unexpected Potential's chosen name casts off any colour.
+#[test]
+fn unexpected_potential_pays_the_named_spell_off_colour() {
+    let mut g = main_phase();
+    let id = g.add_card_to_hand(0, catalog::grizzly_bears());
+    g.players[0].mana_pool.add(Color::Blue, 2);
+    let cast = |g: &mut GameState| {
+        g.priority.player_with_priority = 0;
+        g.perform_action(GameAction::CastSpell {
+            card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+        })
+    };
+    assert!(cast(&mut g).is_err(), "no green mana");
+    let agenda = g.seat_conspiracy(0, catalog::unexpected_potential(), Some("Grizzly Bears"));
+    assert!(cast(&mut g).is_err(), "face down does nothing");
+    g.reveal_hidden_agenda(0, agenda);
+    assert!(cast(&mut g).is_ok(), "blue mana pays the green pip");
+}
+
+/// Deal Broker loots.
+#[test]
+fn deal_broker_loots() {
+    let mut g = main_phase();
+    let broker = g.add_card_to_battlefield(0, catalog::deal_broker());
+    g.clear_sickness(broker);
+    let hand = g.players[0].hand.len();
+    activate_n(&mut g, 0, broker, 0, None);
+    assert_eq!(g.players[0].hand.len(), hand, "drew one, discarded one");
+    assert_eq!(g.players[0].graveyard.len(), 1);
+}

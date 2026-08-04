@@ -390,12 +390,34 @@ pub fn validate_deck(deck: &[CardDefinition], format: Format) -> Result<(), Vec<
 /// [`validate_deck`], the sideboard against the format's size limit, and the
 /// copy limit against **main + sideboard combined** (the printed rule counts
 /// both). Basic lands stay exempt.
+/// Total "your minimum deck size is reduced by N" across a deck's cards
+/// (Advantageous Proclamation lives in the sideboard / command zone).
+pub fn min_deck_size_reduction(deck: &Deck) -> u32 {
+    deck.main
+        .iter()
+        .chain(deck.sideboard.iter())
+        .flat_map(|c| c.static_abilities.iter())
+        .filter_map(|sa| match sa.effect {
+            crate::effect::StaticEffect::ReduceMinimumDeckSize(n) => Some(n),
+            _ => None,
+        })
+        .sum()
+}
+
 pub fn validate_full_deck(deck: &Deck, format: Format) -> Result<(), Vec<DeckError>> {
     let rules = format.rules();
     let mut errors = match validate_deck(&deck.main, format) {
         Ok(()) => Vec::new(),
         Err(e) => e,
     };
+    // CR 100.2 — Advantageous Proclamation and friends shrink the minimum.
+    // The reduction lives on cards outside the deck proper, so it can only be
+    // applied after `validate_deck` has counted.
+    let reduction = min_deck_size_reduction(deck);
+    if reduction > 0 {
+        let floor = rules.min_deck_size.saturating_sub(reduction);
+        errors.retain(|e| !matches!(e, DeckError::TooFewCards { found, .. } if *found >= floor));
+    }
 
     let side = deck.sideboard.len() as u32;
     match rules.sideboard_size {

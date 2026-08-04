@@ -1024,6 +1024,18 @@ pub enum StaticEffect {
     /// relaxes the cost's coloured pips to generic for every seat while any
     /// source of this static is on the battlefield.
     PlayersMaySpendManaAsAnyColor,
+    /// CR 609.4b, name-restricted — "You may spend mana as though it were mana
+    /// of any color to cast spells with the chosen name" (Unexpected
+    /// Potential). Reads the source's `named_card`; a face-down hidden agenda
+    /// has none, so nothing applies until it's turned face up.
+    MaySpendManaAsAnyColorForNamedSpells,
+    /// CR 100.2 — "Your minimum deck size is reduced by N" (Advantageous
+    /// Proclamation). Read by `format::validate_full_deck`, not the game loop.
+    ReduceMinimumDeckSize(u32),
+    /// CR 103.4 — "Draw an additional hand of seven cards as the game begins.
+    /// Before taking mulligans, shuffle all but one of your hands into your
+    /// library." (Backup Plan.) Each source grants one extra opening hand.
+    ExtraOpeningHand,
     /// Collector Ouphe / Karn-style lock: "Activated abilities of artifacts
     /// can't be activated unless they're mana abilities." Checked globally
     /// in `activate_ability` (affects every player). Mana abilities pass.

@@ -6325,11 +6325,64 @@ impl GameState {
         })
     }
 
+    /// The name-aware form: also true when `seat` controls a face-up
+    /// `MaySpendManaAsAnyColorForNamedSpells` source (Unexpected Potential)
+    /// whose chosen name matches the spell being cast.
+    pub fn spend_mana_as_any_color_for_spell(
+        &self,
+        seat: Option<usize>,
+        name: Option<&str>,
+    ) -> bool {
+        use crate::effect::StaticEffect;
+        if self.spend_mana_as_any_color_active_for(seat) {
+            return true;
+        }
+        let (Some(seat), Some(name)) = (seat, name) else { return false };
+        self.battlefield
+            .iter()
+            .chain(self.players[seat].command.iter())
+            .filter(|c| c.controller == seat && !c.face_down)
+            .any(|c| {
+                c.named_card.as_deref() == Some(name)
+                    && c.definition.static_abilities.iter().any(|sa| {
+                        matches!(sa.effect, StaticEffect::MaySpendManaAsAnyColorForNamedSpells)
+                    })
+            })
+    }
+
     /// The cost as it must actually be paid: with a Lattice-style
     /// spend-as-any-color permission active, every coloured pip becomes generic
     /// (`{C}` pips are unaffected — CR 609.4b speaks of colours only).
     pub fn relax_cost_colors(&self, cost: &crate::mana::ManaCost) -> crate::mana::ManaCost {
         self.relax_cost_colors_for(None, cost)
+    }
+
+    /// `relax_cost_colors_for`, but consulting the name-restricted permission
+    /// too (Unexpected Potential's chosen name).
+    pub fn relax_cost_colors_for_spell(
+        &self,
+        seat: Option<usize>,
+        cost: &crate::mana::ManaCost,
+        name: Option<&str>,
+    ) -> crate::mana::ManaCost {
+        use crate::mana::ManaSymbol;
+        if !self.spend_mana_as_any_color_for_spell(seat, name) {
+            return cost.clone();
+        }
+        let mut relaxed = 0;
+        let mut symbols: Vec<ManaSymbol> = Vec::with_capacity(cost.symbols.len());
+        for s in &cost.symbols {
+            match s {
+                ManaSymbol::Colored(_)
+                | ManaSymbol::Hybrid(..)
+                | ManaSymbol::MonoHybrid(..) => relaxed += 1,
+                other => symbols.push(*other),
+            }
+        }
+        if relaxed > 0 {
+            symbols.push(ManaSymbol::Generic(relaxed));
+        }
+        crate::mana::ManaCost::new(symbols)
     }
 
     /// The seat-aware form: also relaxes for a seat holding this turn's North
@@ -15988,9 +16041,54 @@ impl GameState {
     pub fn start_mulligan_phase(&mut self) {
         let n = self.players.len();
         for i in 0..n {
+            // CR 103.4 / Backup Plan — one extra seven-card hand per source;
+            // all but one are shuffled back before mulligans, so the seat keeps
+            // the best of them. The engine keeps the first hand it likes: the
+            // one with the most lands, then the most cards it could cast.
+            let extra = self.extra_opening_hands_for(i);
             self.deal_to_hand(i, 7);
+            for _ in 0..extra {
+                let kept = std::mem::take(&mut *self.players[i].hand);
+                self.deal_to_hand(i, 7);
+                let fresh = std::mem::replace(&mut *self.players[i].hand, kept);
+                if Self::opening_hand_score(&fresh) > Self::opening_hand_score(&self.players[i].hand) {
+                    let discarded = std::mem::replace(&mut *self.players[i].hand, fresh);
+                    self.players[i].library.extend(discarded);
+                } else {
+                    self.players[i].library.extend(fresh);
+                }
+                self.shuffle_library_silently(i);
+            }
         }
         self.set_mulligan_decision(0, 0, if n > 1 { Some(1) } else { None });
+    }
+
+    /// CR 103.4 — extra opening hands granted by cards outside the game
+    /// (Backup Plan in the command zone).
+    fn extra_opening_hands_for(&self, seat: usize) -> usize {
+        use crate::effect::StaticEffect;
+        self.players[seat]
+            .command
+            .iter()
+            .flat_map(|c| c.definition.static_abilities.iter())
+            .filter(|sa| matches!(sa.effect, StaticEffect::ExtraOpeningHand))
+            .count()
+    }
+
+    fn shuffle_library_silently(&mut self, seat: usize) {
+        use rand::seq::SliceRandom;
+        self.players[seat].library.shuffle(&mut rand::rng());
+    }
+
+    /// A crude keepability score for an opening hand: lands first (2–5 is the
+    /// sweet spot), then cheap spells. Drives Backup Plan's auto-pick.
+    fn opening_hand_score(hand: &[crate::card::CardInstance]) -> i32 {
+        let lands = hand.iter().filter(|c| c.definition.is_land()).count() as i32;
+        let cheap = hand
+            .iter()
+            .filter(|c| !c.definition.is_land() && c.definition.cost.cmc() <= 3)
+            .count() as i32;
+        cheap - (lands - 3).abs() * 2
     }
 
     fn deal_to_hand(&mut self, seat: usize, count: usize) {
@@ -19393,6 +19491,10 @@ fn static_effect_to_effects(
             // PlayersMaySpendManaAsAnyColor — read by the payment funnel via
             // `relax_cost_colors` (Mycosynth Lattice); no layer effect.
             | StaticEffect::PlayersMaySpendManaAsAnyColor
+            | StaticEffect::MaySpendManaAsAnyColorForNamedSpells
+            // Deck construction / pre-game only.
+            | StaticEffect::ReduceMinimumDeckSize(_)
+            | StaticEffect::ExtraOpeningHand
             // ReplaceControllerLossWithReset — read by the loss SBA via
             // `apply_loss_reset` (Lich's Mirror); no layer effect.
             | StaticEffect::ReplaceControllerLossWithReset

@@ -3,26 +3,35 @@
 Improvement opportunities for the engine, client, and tooling.
 Items are grouped by area and roughly ordered by impact within each group.
 
-## Noticed this run (CR 701.38 / Homelands pass)
+## Noticed this run (Homelands closed / Conspiracy + CR 726)
 
+- **Conspiracy: the draft-matters shell.** The last 8 CNS cards are all
+  draft-time (Aether Searcher, Agent of Acquisitions, Cogwork Grinder, Cogwork
+  Librarian, Lore Seeker, Lurking Automaton, Paliano the High City, Whispergear
+  Sneak). They need CR 905.2b/2c: a per-seat **draft note** table (name →
+  number / colour list) recorded during the draft and carried into
+  `build_draft_match_state`, plus face-up drafting and the pack-manipulation
+  hooks (draft a whole pack, draft an extra card, add a booster, peek at an
+  unopened pack). Once the note table exists, `Value::DraftNoteOfSource` makes
+  Cogwork Grinder / Lurking Automaton / Aether Searcher / Paliano one-liners. ⏳
 - **The bot has no ballot policy.** `Decision::ChooseOption` falls through to
   `AutoDecider`, which always votes for the first option — so every bot seat
   votes with the ballot's author. The option *effects* aren't visible at the
   decision layer; giving the bot a real vote needs either the effects on the
   decision or a per-card hint. ⏳
-- **Homelands, 12 left.** Autumn Willow (target-player shroud waiver), Chain
-  Stasis (pay-to-copy chain), Coral Reef and Giant Oyster (counter engines with
-  linked untap locks), Marjhan and Dwarven Sea Clan (Island-gated combat
-  riders), Orcish Mine (ore counters on a land Aura), Jinx (target land becomes
-  a chosen basic type), Retribution (two-target "that player sacrifices one"),
-  Rysorian Badger (unblocked → exile-from-defender's-graveyard, assigns no
-  damage), Broken Visage (destroy + token with the victim's P/T), Giant
-  Albatross (dies → punish everything that damaged it). Each needs one
-  primitive; none is blocked on more than that.
 - **`Effect::Vote` ties always go to the later option.** That matches every
   printed two-word ballot ("…or the vote is tied"), but a three-option ballot
   or one whose tie-break isn't the last choice would need the tie-winner
-  declared explicitly. ⏳
+  declared explicitly. `VoteTally::AllTied` covers the "each choice with the
+  most votes" wording (Council Guardian). ⏳
+- **Backup Plan's extra hand is auto-kept.** CR 103.4 lets the player pick
+  which of their hands to keep; `start_mulligan_phase` scores them
+  (`opening_hand_score`) and keeps the best. A UI pick is a follow-up. ⏳
+- **Deal Broker's post-draft trade is unimplemented** — only its `{T}:` loot
+  ships. Blocked on the same draft shell. ⏳
+- **Grenzo's Rebuttal auto-picks for every seat.** Each player's three choices
+  go through `Decision::ChooseTarget` on the shared decider rather than a
+  seat-routed suspend, so a UI opponent doesn't get asked. ⏳
 - **Tiered / Spree bot ranking is still shallow.** `castable_actions` now
   offers every tier plus the all-modes Spree combination, but the search picks
   among them by generic board eval — there's no cost/impact heuristic. ⏳
