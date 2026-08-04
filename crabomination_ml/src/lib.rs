@@ -24,8 +24,8 @@ use candle_nn::{
     linear,
 };
 use crabomination_nn::{
-    EMB_DIM, EncodedState, GLOBAL_FEATS, NUM_GROUPS, OBJ_FEATS, OBJ_HIDDEN, TRUNK_H1, TRUNK_H2,
-    TrainRow,
+    DeckRow, EMB_DIM, EncodedState, GLOBAL_FEATS, NUM_GROUPS, OBJ_FEATS, OBJ_HIDDEN, TRUNK_H1,
+    TRUNK_H2, TrainRow,
 };
 use rand::{Rng, RngExt};
 
@@ -237,6 +237,127 @@ impl Trainer {
     }
 }
 
+// ─────────────────────────────── deck net ───────────────────────────────
+
+/// Build-net dimensions. Small on purpose: the target is a 40-card
+/// multiset, not a game state.
+#[derive(Debug, Clone, Copy)]
+pub struct DeckNetConfig {
+    pub vocab: usize,
+    pub emb_dim: usize,
+    pub h1: usize,
+    pub h2: usize,
+}
+
+impl DeckNetConfig {
+    pub fn standard(vocab: usize) -> Self {
+        Self { vocab, emb_dim: 32, h1: 128, h2: 64 }
+    }
+}
+
+/// Candle mirror of `crabomination_nn::DeckNet` — pooled card embeddings
+/// (sum ×0.1, mean, max) ⊕ deck features → two relu layers → sigmoid.
+pub struct DeckModel {
+    emb: Embedding,
+    trunk1: Linear,
+    trunk2: Linear,
+    head: Linear,
+}
+
+pub fn build_deck_model(cfg: &DeckNetConfig, vb: VarBuilder) -> CResult<DeckModel> {
+    Ok(DeckModel {
+        emb: embedding(cfg.vocab, cfg.emb_dim, vb.pp("emb"))?,
+        trunk1: linear(3 * cfg.emb_dim + crabomination_nn::DECK_FEATS, cfg.h1, vb.pp("trunk1"))?,
+        trunk2: linear(cfg.h1, cfg.h2, vb.pp("trunk2"))?,
+        head: linear(cfg.h2, 1, vb.pp("head_win"))?,
+    })
+}
+
+impl DeckModel {
+    /// `ids` [B,N] u32 (padded), `mask` [B,N,1], `feats` [B,DECK_FEATS] →
+    /// win probability [B,1].
+    fn forward(&self, ids: &Tensor, mask: &Tensor, feats: &Tensor) -> CResult<Tensor> {
+        let e = self.emb.forward(ids)?; // [B,N,D]
+        let em = e.broadcast_mul(mask)?;
+        let count = mask.sum(1)?; // [B,1]
+        let raw_sum = em.sum(1)?; // [B,D]
+        let sum = raw_sum.affine(0.1, 0.0)?;
+        let mean = raw_sum.broadcast_div(&count.maximum(1f64)?)?;
+        let sink = mask.affine(1e9, -1e9)?;
+        let mx = em.broadcast_add(&sink)?.max(1)?.broadcast_mul(&count.minimum(1f64)?)?;
+        let t = Tensor::cat(&[&sum, &mean, &mx, feats], 1)?;
+        let t1 = self.trunk1.forward(&t)?.relu()?;
+        let t2 = self.trunk2.forward(&t1)?.relu()?;
+        candle_nn::ops::sigmoid(&self.head.forward(&t2)?)
+    }
+}
+
+/// Model + optimizer for the build net, mirroring [`Trainer`].
+pub struct DeckTrainer {
+    pub varmap: VarMap,
+    pub model: DeckModel,
+    opt: AdamW,
+    dev: Device,
+}
+
+impl DeckTrainer {
+    pub fn new(cfg: &DeckNetConfig, lr: f64) -> CResult<DeckTrainer> {
+        let dev = Device::cuda_if_available(0)?;
+        let varmap = VarMap::new();
+        let vb = VarBuilder::from_varmap(&varmap, DType::F32, &dev);
+        let model = build_deck_model(cfg, vb)?;
+        let opt = AdamW::new(varmap.all_vars(), ParamsAdamW { lr, ..Default::default() })?;
+        Ok(DeckTrainer { varmap, model, opt, dev })
+    }
+
+    fn batch(&self, rows: &[&DeckRow]) -> CResult<(Tensor, Tensor, Tensor, Tensor)> {
+        let b = rows.len();
+        let n = rows.iter().map(|r| r.cards.len()).max().unwrap_or(0).max(1);
+        let mut ids = vec![0u32; b * n];
+        let mut mask = vec![0f32; b * n];
+        let mut feats = vec![0f32; b * crabomination_nn::DECK_FEATS];
+        let mut win = vec![0f32; b];
+        for (ri, row) in rows.iter().enumerate() {
+            for (ci, &c) in row.cards.iter().enumerate() {
+                ids[ri * n + ci] = c as u32;
+                mask[ri * n + ci] = 1.0;
+            }
+            feats[ri * crabomination_nn::DECK_FEATS..][..crabomination_nn::DECK_FEATS]
+                .copy_from_slice(&row.feats);
+            win[ri] = row.win;
+        }
+        Ok((
+            Tensor::from_vec(ids, (b, n), &self.dev)?,
+            Tensor::from_vec(mask, (b, n, 1), &self.dev)?,
+            Tensor::from_vec(feats, (b, crabomination_nn::DECK_FEATS), &self.dev)?,
+            Tensor::from_vec(win, (b, 1), &self.dev)?,
+        ))
+    }
+
+    /// One SGD step; returns the win MSE.
+    pub fn train_step(&mut self, rows: &[&DeckRow]) -> CResult<f32> {
+        let (ids, mask, feats, win) = self.batch(rows)?;
+        let pred = self.model.forward(&ids, &mask, &feats)?;
+        let loss = candle_nn::loss::mse(&pred, &win)?;
+        self.opt.backward_step(&loss)?;
+        loss.to_scalar::<f32>()
+    }
+
+    pub fn predict(&self, row: &DeckRow) -> CResult<f32> {
+        let (ids, mask, feats, _) = self.batch(&[row])?;
+        let pred = self.model.forward(&ids, &mask, &feats)?;
+        pred.flatten_all()?.to_vec1::<f32>().map(|v| v[0])
+    }
+
+    pub fn save(&self, path: &std::path::Path) -> CResult<()> {
+        self.varmap.save(path)
+    }
+
+    pub fn load(&mut self, path: &std::path::Path) -> CResult<()> {
+        self.varmap.load(path)
+    }
+}
+
 /// Sliding window over recent training rows — the replay buffer. Uniform
 /// sampling, FIFO eviction; the caller grows `cap` over the run (the
 /// KataGo schedule) and throttles reads to cap sample reuse.
@@ -380,6 +501,69 @@ mod tests {
             }
         }
         assert!(correct >= 85, "only {correct}/100 fresh states classified");
+    }
+
+    fn random_deck_row<R: Rng>(rng: &mut R, vocab: usize) -> DeckRow {
+        let cards = (0..40).map(|_| rng.random_range(0..vocab as u16)).collect();
+        let mut feats = [0.0f32; crabomination_nn::DECK_FEATS];
+        for f in feats.iter_mut() {
+            *f = rng.random_range(0.0..1.0);
+        }
+        DeckRow { cards, feats, win: 0.0 }
+    }
+
+    /// Deck-net parity: candle export loads into the engine DeckNet and
+    /// the two agree on random decklists.
+    #[test]
+    fn deck_export_matches_engine_inference() {
+        let cfg = DeckNetConfig { vocab: 20, emb_dim: 8, h1: 32, h2: 16 };
+        let trainer = DeckTrainer::new(&cfg, 1e-3).expect("deck trainer");
+        let path =
+            std::env::temp_dir().join(format!("crab_deck_parity_{}.safetensors", std::process::id()));
+        trainer.save(&path).expect("save");
+        let bytes = std::fs::read(&path).expect("read");
+        let _ = std::fs::remove_file(&path);
+        let net = crabomination_nn::DeckNet::load(&bytes).expect("engine loads deck export");
+
+        let mut rng = StdRng::seed_from_u64(23);
+        for i in 0..8 {
+            let row = random_deck_row(&mut rng, cfg.vocab);
+            let want = trainer.predict(&row).expect("candle forward");
+            let got = net.forward(&row.cards, &row.feats);
+            assert!((got - want).abs() < 1e-4, "deck {i}: engine {got} vs candle {want}");
+        }
+    }
+
+    /// The deck net learns a synthetic build rule (low curve wins).
+    #[test]
+    fn deck_net_learns_a_synthetic_signal() {
+        let cfg = DeckNetConfig { vocab: 20, emb_dim: 8, h1: 32, h2: 16 };
+        let mut trainer = DeckTrainer::new(&cfg, 3e-3).expect("deck trainer");
+        let mut rng = StdRng::seed_from_u64(29);
+        let rows: Vec<DeckRow> = (0..512)
+            .map(|_| {
+                let mut r = random_deck_row(&mut rng, cfg.vocab);
+                r.win = if r.feats[0] + r.feats[1] > r.feats[5] + r.feats[6] { 1.0 } else { 0.0 };
+                r
+            })
+            .collect();
+        let mut last = f32::MAX;
+        for _ in 0..400 {
+            let batch: Vec<&DeckRow> =
+                (0..64).map(|_| &rows[rng.random_range(0..rows.len())]).collect();
+            last = trainer.train_step(&batch).expect("step");
+        }
+        assert!(last < 0.08, "deck loss failed to fall: {last}");
+        let mut correct = 0;
+        for _ in 0..100 {
+            let mut r = random_deck_row(&mut rng, cfg.vocab);
+            r.win = if r.feats[0] + r.feats[1] > r.feats[5] + r.feats[6] { 1.0 } else { 0.0 };
+            let p = trainer.predict(&r).expect("predict");
+            if (p > 0.5) == (r.win > 0.5) {
+                correct += 1;
+            }
+        }
+        assert!(correct >= 85, "only {correct}/100 fresh decks classified");
     }
 
     #[test]

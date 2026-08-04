@@ -18,6 +18,14 @@
 //!                [--lr F] [--reuse F] [--window N] [--min-window N]
 //!                [--checkpoint-every N] [--out DIR] [--seed N]
 //!                [--use-best WEIGHTS.safetensors]
+//!                [--gate-builder GAMES_PER_POOL]
+//!
+//! The build net (Phase C) trains alongside the play net from the same
+//! games — every decided game labels its two decklists — and checkpoints
+//! as `deck-latest.safetensors`. `--gate-builder N` skips training and
+//! races net-judged best-of-32 builds against static-judged best-of-32
+//! of the *same* candidate sets on paired pools: the judges differ, the
+//! candidates and pilots don't, so the result isolates the judge.
 //! ```
 //!
 //! With `--games`/`--steps` unset it runs until killed; the latest
@@ -38,14 +46,15 @@ use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::Instant;
 
 use crabomination::selfplay::{
-    heuristic_sealed_build, play_recorded_game, sealed_game_template, sealed_pool,
+    best_build_by, heuristic_sealed_build, play_recorded_game, sealed_game_template, sealed_pool,
+    static_deck_score,
 };
 use crabomination::server::bot::EvalWeights;
-use crabomination::server::encode::Vocab;
-use crabomination_ml::{NetConfig, SampleWindow, Trainer};
-use crabomination_nn::TrainRow;
-use rand::SeedableRng;
+use crabomination::server::encode::{Vocab, encode_deck};
+use crabomination_ml::{DeckNetConfig, DeckTrainer, NetConfig, SampleWindow, Trainer};
+use crabomination_nn::{DeckNet, DeckRow, TrainRow};
 use rand::rngs::StdRng;
+use rand::{RngExt, SeedableRng};
 
 struct Args {
     actors: usize,
@@ -63,6 +72,10 @@ struct Args {
     /// this is what closes the self-improvement loop. Unset, actors play
     /// the heuristic default (the bootstrap phase).
     use_best: Option<PathBuf>,
+    /// Gate mode: skip training, load `<out>/deck-latest.safetensors`,
+    /// and race net-judged builds against static-judged builds of the
+    /// same candidate sets on paired pools, N games per pool.
+    gate_builder: Option<usize>,
 }
 
 fn parse_args() -> Args {
@@ -79,6 +92,7 @@ fn parse_args() -> Args {
         out: PathBuf::from("nets"),
         seed: 0x0505_ACAD,
         use_best: None,
+        gate_builder: None,
     };
     let mut it = std::env::args().skip(1);
     while let Some(flag) = it.next() {
@@ -96,6 +110,7 @@ fn parse_args() -> Args {
             "--out" => a.out = PathBuf::from(val()),
             "--seed" => a.seed = val().parse().expect("--seed"),
             "--use-best" => a.use_best = Some(PathBuf::from(val())),
+            "--gate-builder" => a.gate_builder = Some(val().parse().expect("--gate-builder")),
             other => panic!("unknown flag {other} (see the module doc for usage)"),
         }
     }
@@ -104,6 +119,9 @@ fn parse_args() -> Args {
 
 struct Shared {
     window: Mutex<SampleWindow>,
+    /// Every game also labels its two decklists — the build net's stream.
+    /// Small (2 rows/game), so a plain capped deque suffices.
+    deck_window: Mutex<std::collections::VecDeque<DeckRow>>,
     /// Rows ever pushed (not evicted-adjusted) — the reuse cap's basis.
     rows_pushed: AtomicU64,
     /// Next self-play game index to claim — also the per-game seed salt.
@@ -112,6 +130,8 @@ struct Shared {
     stalls: AtomicU64,
     live_actors: AtomicU64,
 }
+
+const DECK_WINDOW_CAP: usize = 200_000;
 
 fn actor_loop(shared: &Shared, args: &Args, vocab: &Vocab) {
     loop {
@@ -141,9 +161,25 @@ fn actor_loop(shared: &Shared, args: &Args, vocab: &Vocab) {
             continue;
         }
         shared.rows_pushed.fetch_add(rec.rows.len() as u64, Ordering::Relaxed);
-        let mut w = shared.window.lock().unwrap();
-        for row in rec.rows {
-            w.push(row);
+        {
+            let mut w = shared.window.lock().unwrap();
+            for row in rec.rows {
+                w.push(row);
+            }
+        }
+        if let Some(winner) = rec.winner {
+            let mut dw = shared.deck_window.lock().unwrap();
+            for (seat, deck) in [&deck_a, &deck_b].into_iter().enumerate() {
+                let (cards, feats) = encode_deck(deck, vocab);
+                if dw.len() == DECK_WINDOW_CAP {
+                    dw.pop_front();
+                }
+                dw.push_back(DeckRow {
+                    cards,
+                    feats,
+                    win: if seat == winner { 1.0 } else { 0.0 },
+                });
+            }
         }
     }
     shared.live_actors.fetch_sub(1, Ordering::Relaxed);
@@ -154,16 +190,104 @@ fn sample_owned(shared: &Shared, n: usize, rng: &mut StdRng) -> Vec<TrainRow> {
     w.sample(n, rng).into_iter().cloned().collect()
 }
 
+/// Wilson score interval (z = 1.96), same construction as bot_ladder's.
+fn wilson(wins: u32, n: u32) -> (f64, f64) {
+    if n == 0 {
+        return (0.0, 1.0);
+    }
+    let z = 1.96f64;
+    let (n, p) = (n as f64, wins as f64 / n as f64);
+    let z2 = z * z;
+    let denom = 1.0 + z2 / n;
+    let center = (p + z2 / (2.0 * n)) / denom;
+    let half = (z / denom) * (p * (1.0 - p) / n + z2 / (4.0 * n * n)).sqrt();
+    ((center - half).max(0.0), (center + half).min(1.0))
+}
+
+/// The builder gate: over paired pools, both judges rank the *same*
+/// best-of-N candidate set — net win-prob vs the heuristic's static
+/// score — and their picks race with identical pilots. Whatever
+/// difference shows up is attributable to the judge alone.
+fn gate_builder(args: &Args, vocab: &Vocab, games_per_pool: usize) {
+    use crabomination::recommend::{Pilot, simulate_match_games_piloted};
+    let path = args.out.join("deck-latest.safetensors");
+    let bytes = std::fs::read(&path)
+        .unwrap_or_else(|e| panic!("{}: {e} (train a deck net first)", path.display()));
+    let net = DeckNet::load(&bytes).expect("deck net loads");
+    assert_eq!(net.vocab_size(), vocab.size(), "deck net vocab != encoder vocab");
+    const POOLS: u64 = 12;
+    const CANDS: usize = 32;
+    println!(
+        "builder gate: net-judged vs static-judged best-of-{CANDS}, {games_per_pool} games x {POOLS} pools, seed {}",
+        args.seed
+    );
+    let (mut wins_net, mut wins_static, mut undecided) = (0u32, 0u32, 0u32);
+    for i in 0..POOLS {
+        let salt = args.seed ^ i.wrapping_mul(0x9E37_79B9_7F4A_7C15).wrapping_add(0xB111D);
+        let pool = sealed_pool(salt);
+        let net_deck = best_build_by(&pool, CANDS, salt ^ 1, |d| {
+            let (cards, feats) = encode_deck(d, vocab);
+            net.forward(&cards, &feats) as f64
+        });
+        let static_deck =
+            best_build_by(&pool, CANDS, salt ^ 1, |d| static_deck_score(d) as f64);
+        let tally = simulate_match_games_piloted(
+            &net_deck,
+            &static_deck,
+            games_per_pool,
+            [Pilot::default(), Pilot::default()],
+            4_000,
+            Some(salt ^ 2),
+        );
+        println!(
+            "pool #{i}: net {} - {} static ({} n/d)",
+            tally.wins_a, tally.wins_b, tally.undecided
+        );
+        wins_net += tally.wins_a;
+        wins_static += tally.wins_b;
+        undecided += tally.undecided;
+    }
+    let decided = wins_net + wins_static;
+    let pct = 100.0 * wins_net as f64 / decided.max(1) as f64;
+    let (lo, hi) = wilson(wins_net, decided);
+    println!(
+        "TOTAL: net {wins_net} - {wins_static} static ({undecided} n/d) = {pct:.1}% [{:.1}%, {:.1}%]",
+        lo * 100.0,
+        hi * 100.0
+    );
+    println!(
+        "verdict: {}",
+        if lo > 0.5 {
+            "net-judged builds are stronger — the interval clears 50%"
+        } else if hi < 0.5 {
+            "static-judged builds are stronger — the interval is below 50%"
+        } else {
+            "inconclusive — the interval straddles 50%"
+        }
+    );
+}
+
 fn main() {
     let args = parse_args();
     let vocab = Vocab::sos_sealed();
+    if let Some(games) = args.gate_builder {
+        gate_builder(&args, &vocab, games);
+        return;
+    }
     let cfg = NetConfig::standard(vocab.size());
     let mut trainer = Trainer::new(&cfg, args.lr).expect("trainer init");
+    let mut deck_trainer =
+        DeckTrainer::new(&DeckNetConfig::standard(vocab.size()), args.lr).expect("deck trainer");
     std::fs::create_dir_all(&args.out).expect("create --out dir");
     let latest = args.out.join("latest.safetensors");
     if latest.exists() {
         trainer.load(&latest).expect("resume from latest.safetensors (delete it to start fresh)");
         eprintln!("resumed weights from {}", latest.display());
+    }
+    let deck_latest = args.out.join("deck-latest.safetensors");
+    if deck_latest.exists() {
+        deck_trainer.load(&deck_latest).expect("resume deck-latest.safetensors");
+        eprintln!("resumed deck weights from {}", deck_latest.display());
     }
     if let Some(best) = &args.use_best {
         crabomination::server::net_eval::load_slot(
@@ -176,6 +300,7 @@ fn main() {
 
     let shared = Shared {
         window: Mutex::new(SampleWindow::new(args.window)),
+        deck_window: Mutex::new(std::collections::VecDeque::new()),
         rows_pushed: AtomicU64::new(0),
         next_game: AtomicU64::new(0),
         games_done: AtomicU64::new(0),
@@ -209,6 +334,7 @@ fn main() {
         // EMAs of [total, win, life, len] — decomposed so a regime change
         // in one head (or in effective sample reuse) is visible.
         let mut loss_ema = [f32::NAN; 4];
+        let mut deck_loss_ema = f32::NAN;
         // (samples consumed when the actors finished, tail allowance).
         let mut tail_budget = None::<(u64, u64)>;
         let stats_path = args.out.join("stats.jsonl");
@@ -257,12 +383,56 @@ fn main() {
                 *ema = if ema.is_nan() { part } else { 0.99 * *ema + 0.01 * part };
             }
 
+            // The deck net rides along at a quarter cadence — its stream
+            // is 2 rows/game, so training it every step would just churn
+            // the same rows.
+            if step.is_multiple_of(4) {
+                let rows: Vec<DeckRow> = {
+                    let dw = shared.deck_window.lock().unwrap();
+                    if dw.len() < 4_000 {
+                        Vec::new()
+                    } else {
+                        (0..args.batch)
+                            .map(|_| dw[rng.random_range(0..dw.len())].clone())
+                            .collect()
+                    }
+                };
+                if !rows.is_empty() {
+                    let refs: Vec<&DeckRow> = rows.iter().collect();
+                    let dl = deck_trainer.train_step(&refs).expect("deck step");
+                    deck_loss_ema =
+                        if deck_loss_ema.is_nan() { dl } else { 0.99 * deck_loss_ema + 0.01 * dl };
+                }
+            }
+
             if step.is_multiple_of(args.checkpoint_every) {
-                checkpoint(&trainer, &args, &shared, step, consumed, loss_ema, start, &stats_path);
+                checkpoint(
+                    &trainer,
+                    &deck_trainer,
+                    deck_loss_ema,
+                    &args,
+                    &shared,
+                    step,
+                    consumed,
+                    loss_ema,
+                    start,
+                    &stats_path,
+                );
             }
         }
         if step > 0 && !step.is_multiple_of(args.checkpoint_every) {
-            checkpoint(&trainer, &args, &shared, step, consumed, loss_ema, start, &stats_path);
+            checkpoint(
+                &trainer,
+                &deck_trainer,
+                deck_loss_ema,
+                &args,
+                &shared,
+                step,
+                consumed,
+                loss_ema,
+                start,
+                &stats_path,
+            );
         }
         eprintln!(
             "learner done: {} steps, {} rows consumed; waiting for actors...",
@@ -287,6 +457,8 @@ fn main() {
 #[allow(clippy::too_many_arguments)]
 fn checkpoint(
     trainer: &Trainer,
+    deck_trainer: &DeckTrainer,
+    deck_loss: f32,
     args: &Args,
     shared: &Shared,
     step: u64,
@@ -298,13 +470,16 @@ fn checkpoint(
     let tmp = args.out.join("latest.safetensors.tmp");
     trainer.save(&tmp).expect("save checkpoint");
     std::fs::rename(&tmp, args.out.join("latest.safetensors")).expect("publish checkpoint");
+    let dtmp = args.out.join("deck-latest.safetensors.tmp");
+    deck_trainer.save(&dtmp).expect("save deck checkpoint");
+    std::fs::rename(&dtmp, args.out.join("deck-latest.safetensors")).expect("publish deck");
     let games = shared.games_done.load(Ordering::Relaxed);
     let rows = shared.rows_pushed.load(Ordering::Relaxed);
     let stalls = shared.stalls.load(Ordering::Relaxed);
     let secs = start.elapsed().as_secs_f64();
     let [total, win, life, len] = loss_ema;
     let line = format!(
-        "{{\"step\":{step},\"loss_ema\":{total:.5},\"loss_win\":{win:.5},\"loss_life\":{life:.5},\"loss_len\":{len:.5},\"rows_consumed\":{consumed},\"rows\":{rows},\"games\":{games},\"stalls\":{stalls},\"elapsed_s\":{secs:.0}}}\n"
+        "{{\"step\":{step},\"loss_ema\":{total:.5},\"loss_win\":{win:.5},\"loss_life\":{life:.5},\"loss_len\":{len:.5},\"loss_deck\":{deck_loss:.5},\"rows_consumed\":{consumed},\"rows\":{rows},\"games\":{games},\"stalls\":{stalls},\"elapsed_s\":{secs:.0}}}\n"
     );
     use std::io::Write;
     let mut f = std::fs::OpenOptions::new()

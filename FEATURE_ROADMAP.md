@@ -2430,8 +2430,15 @@ Each a small targeted feature; sweep batch by batch.
   managed 0.4 visits/row before the tail cap**, so capacity remains
   untested until the learner moves to the GPU (`pacman -S cuda`, then
   `--features cuda`). Next levers: GPU-scale training, search-improved
-  targets, and Phase C's build net — where there is no incumbent
-  perfect-model search to beat. Nothing adopted.
+  targets. **Phase C's build net passed its gate — the first learned
+  component to clear the house bar**: `DeckNet` (D(decklist)→win prob,
+  ~30 k params, trained free off the self-play stream's decklist
+  labels) judging best-of-32 builds beat the heuristic static judge
+  over the same candidate sets 61.7 % [58.9, 64.4] and 60.7 %
+  [57.9, 63.4] on independent seeds (1 200 games each,
+  `selfplay_train --gate-builder`). Remaining Phase C wiring: use the
+  net-judged builder for training-run decks and as `recommend_pool`'s
+  instant surrogate. Play-net replacement/blend still not adopted.
 - ⏳ **Difficulty levels**; optional **search-based AI** (MCTS over snapshots).
 
 ## Tier 14 — Replays, analysis & observability

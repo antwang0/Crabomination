@@ -405,7 +405,7 @@ pub(crate) fn is_fixing_card(def: &crate::card::CardDefinition) -> bool {
 /// the pool can't fill the target spell count in these colors, minus a
 /// consistency penalty on colored pips beyond the two heaviest colors
 /// (what a 3+-color build pays in mana reliability).
-fn static_build_score(main: &[CardFactory], target_spells: usize) -> i32 {
+pub(crate) fn static_build_score(main: &[CardFactory], target_spells: usize) -> i32 {
     let main_colors = colors_of_picks(main);
     let mut score: i32 = main.iter().map(|&f| score_card_with_colors(f, &main_colors)).sum();
     let shortfall = target_spells.saturating_sub(main.len()) as i32;

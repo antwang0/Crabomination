@@ -205,6 +205,131 @@ impl<'a> Reader<'a> {
     }
 }
 
+// ─────────────────────────────── deck net ───────────────────────────────
+
+/// Per-deck global feature count (curve buckets, land/creature counts,
+/// color pips — see the engine's `encode_deck`). Baked into deck rows.
+pub const DECK_FEATS: usize = 16;
+
+/// A labelled decklist for the build net: the 40 cards as vocab indices
+/// plus dense deck-level features, labelled with the game outcome. Every
+/// self-play game yields two of these for free — the winner's list and
+/// the loser's.
+#[derive(Debug, Clone, PartialEq)]
+pub struct DeckRow {
+    pub cards: Vec<u16>,
+    pub feats: [f32; DECK_FEATS],
+    pub win: f32,
+}
+
+/// The build-evaluation net `D(decklist) → win probability`. Deep-sets
+/// over the card multiset: embedding rows summed, meaned and maxed, then
+/// a two-layer trunk over `[pools ⊕ deck features]`. Lives in its own
+/// safetensors file (same tensor names as the play net's trunk — the
+/// files are separate, so there is no collision).
+///
+/// **First ML component to pass a house gate**: judging best-of-32
+/// sealed builds against the heuristic `static_build_score` over the
+/// same candidate sets (identical pilots and seeds — only the judge
+/// differs), net-judged builds won 61.7 % [58.9, 64.4] and, on a fresh
+/// seed, 60.7 % [57.9, 63.4] over 1 200 games each
+/// (`selfplay_train --gate-builder`). Trained from ~100 k self-play
+/// games' decklist labels riding along with a play-net run.
+#[derive(Debug, Clone)]
+pub struct DeckNet {
+    emb: Tensor2,      // [vocab, emb_dim]
+    trunk1_w: Tensor2, // [h1, 3*emb_dim + DECK_FEATS]
+    trunk1_b: Vec<f32>,
+    trunk2_w: Tensor2, // [h2, h1]
+    trunk2_b: Vec<f32>,
+    head_w: Tensor2, // [1, h2]
+    head_b: Vec<f32>,
+}
+
+impl DeckNet {
+    pub fn vocab_size(&self) -> usize {
+        self.emb.rows
+    }
+
+    pub fn load(bytes: &[u8]) -> Result<DeckNet, NnError> {
+        let st = safetensors::SafeTensors::deserialize(bytes)
+            .map_err(|e| NnError::BadFile(e.to_string()))?;
+        let get = |name: &'static str| get_tensor(&st, name);
+        let net = DeckNet {
+            emb: get("emb.weight")?,
+            trunk1_w: get("trunk1.weight")?,
+            trunk1_b: get("trunk1.bias")?.data,
+            trunk2_w: get("trunk2.weight")?,
+            trunk2_b: get("trunk2.bias")?.data,
+            head_w: get("head_win.weight")?,
+            head_b: get("head_win.bias")?.data,
+        };
+        if net.trunk1_w.cols != 3 * net.emb.cols + DECK_FEATS {
+            return Err(NnError::BadTensor(
+                "trunk1.weight",
+                format!("cols {} don't match 3×{} + {DECK_FEATS}", net.trunk1_w.cols, net.emb.cols),
+            ));
+        }
+        for (name, ok) in [
+            ("trunk1.bias", net.trunk1_b.len() == net.trunk1_w.rows),
+            ("trunk2.weight", net.trunk2_w.cols == net.trunk1_w.rows),
+            ("trunk2.bias", net.trunk2_b.len() == net.trunk2_w.rows),
+            ("head_win.weight", net.head_w.cols == net.trunk2_w.rows && net.head_w.rows == 1),
+            ("head_win.bias", net.head_b.len() == 1),
+        ] {
+            if !ok {
+                return Err(NnError::BadTensor(name, "shape inconsistent with the rest of the net".into()));
+            }
+        }
+        Ok(net)
+    }
+
+    /// Win probability the net predicts for this decklist.
+    pub fn forward(&self, cards: &[u16], feats: &[f32; DECK_FEATS]) -> f32 {
+        let d = self.emb.cols;
+        let mut trunk_in = vec![0.0f32; self.trunk1_w.cols];
+        let (sum, rest) = trunk_in[..3 * d].split_at_mut(d);
+        let (mean, max) = rest.split_at_mut(d);
+        max.fill(f32::NEG_INFINITY);
+        for &card in cards {
+            let c = (card as usize).min(self.emb.rows - 1);
+            let row = &self.emb.data[c * d..(c + 1) * d];
+            for ((s, r), mx) in sum.iter_mut().zip(row).zip(max.iter_mut()) {
+                *s += r;
+                *mx = mx.max(*r);
+            }
+        }
+        if cards.is_empty() {
+            max.fill(0.0);
+        } else {
+            let inv = 1.0 / cards.len() as f32;
+            for (m, s) in mean.iter_mut().zip(sum.iter()) {
+                *m = s * inv;
+            }
+        }
+        // Sum pool scaled down so a 40-card sum sits in the same numeric
+        // range as the mean/max pools.
+        for s in sum.iter_mut() {
+            *s *= 0.1;
+        }
+        trunk_in[3 * d..].copy_from_slice(feats);
+
+        let mut t1 = vec![0.0f32; self.trunk1_w.rows];
+        self.trunk1_w.matvec(&trunk_in, &mut t1);
+        for (v, b) in t1.iter_mut().zip(&self.trunk1_b) {
+            *v = (*v + b).max(0.0);
+        }
+        let mut t2 = vec![0.0f32; self.trunk2_w.rows];
+        self.trunk2_w.matvec(&t1, &mut t2);
+        for (v, b) in t2.iter_mut().zip(&self.trunk2_b) {
+            *v = (*v + b).max(0.0);
+        }
+        let mut logit = [0.0f32];
+        self.head_w.matvec(&t2, &mut logit);
+        1.0 / (1.0 + (-(logit[0] + self.head_b[0])).exp())
+    }
+}
+
 // ───────────────────────────── inference net ────────────────────────────
 
 /// Row-major dense matrix (`data[r * cols + c]`).
@@ -253,6 +378,28 @@ impl std::fmt::Display for NnError {
 
 impl std::error::Error for NnError {}
 
+/// Pull one f32 tensor out of a safetensors container as a [`Tensor2`]
+/// (rank-1 tensors become a single row).
+fn get_tensor(st: &safetensors::SafeTensors<'_>, name: &'static str) -> Result<Tensor2, NnError> {
+    let view = st.tensor(name).map_err(|_| NnError::Missing(name))?;
+    if view.dtype() != safetensors::Dtype::F32 {
+        return Err(NnError::BadTensor(name, format!("dtype {:?}, want F32", view.dtype())));
+    }
+    let shape = view.shape();
+    let (rows, cols) = match *shape {
+        [r, c] => (r, c),
+        [n] => (1, n),
+        _ => return Err(NnError::BadTensor(name, format!("rank {} shape", shape.len()))),
+    };
+    let raw = view.data();
+    if raw.len() != rows * cols * 4 {
+        return Err(NnError::BadTensor(name, "data length != shape".into()));
+    }
+    let data =
+        raw.chunks_exact(4).map(|c| f32::from_le_bytes(c.try_into().unwrap())).collect();
+    Ok(Tensor2 { rows, cols, data })
+}
+
 /// The value net, loaded from a trainer-exported safetensors file.
 #[derive(Debug, Clone)]
 pub struct PlayNet {
@@ -280,27 +427,7 @@ impl PlayNet {
     pub fn load(bytes: &[u8]) -> Result<PlayNet, NnError> {
         let st = safetensors::SafeTensors::deserialize(bytes)
             .map_err(|e| NnError::BadFile(e.to_string()))?;
-        let get = |name: &'static str| -> Result<Tensor2, NnError> {
-            let view = st.tensor(name).map_err(|_| NnError::Missing(name))?;
-            if view.dtype() != safetensors::Dtype::F32 {
-                return Err(NnError::BadTensor(name, format!("dtype {:?}, want F32", view.dtype())));
-            }
-            let shape = view.shape();
-            let (rows, cols) = match *shape {
-                [r, c] => (r, c),
-                [n] => (1, n),
-                _ => return Err(NnError::BadTensor(name, format!("rank {} shape", shape.len()))),
-            };
-            let raw = view.data();
-            if raw.len() != rows * cols * 4 {
-                return Err(NnError::BadTensor(name, "data length != shape".into()));
-            }
-            let data = raw
-                .chunks_exact(4)
-                .map(|c| f32::from_le_bytes(c.try_into().unwrap()))
-                .collect();
-            Ok(Tensor2 { rows, cols, data })
-        };
+        let get = |name: &'static str| get_tensor(&st, name);
 
         let net = PlayNet {
             emb: get("emb.weight")?,
@@ -504,6 +631,31 @@ mod tests {
         let want2 = 1.0 / (1.0 + (-4.75f32).exp());
         let got2 = net.forward(&s);
         assert!((got2 - want2).abs() < 1e-6, "got {got2}, want {want2}");
+    }
+
+    /// DeckNet forward against hand arithmetic: embedding 1, both trunk
+    /// layers 1×1 identity-ish. Cards [1, 1, 0] with emb [0.0, 2.0]:
+    /// sum = 4.0 (scaled ×0.1 → 0.4), mean = 4/3, max = 2.0; feats[0] =
+    /// 0.5 → trunk input sums to 0.4 + 4/3 + 2.0 + 0.5.
+    #[test]
+    fn deck_forward_matches_hand_computation() {
+        let trunk_in = 3 + DECK_FEATS;
+        let bytes = to_safetensors(&[
+            ("emb.weight", vec![2, 1], vec![0.0, 2.0]),
+            ("trunk1.weight", vec![1, trunk_in], vec![1.0; trunk_in]),
+            ("trunk1.bias", vec![1], vec![0.0]),
+            ("trunk2.weight", vec![1, 1], vec![1.0]),
+            ("trunk2.bias", vec![1], vec![0.0]),
+            ("head_win.weight", vec![1, 1], vec![1.0]),
+            ("head_win.bias", vec![1], vec![0.0]),
+        ]);
+        let net = DeckNet::load(&bytes).expect("loads");
+        let mut feats = [0.0f32; DECK_FEATS];
+        feats[0] = 0.5;
+        let z = 0.4f32 + 4.0 / 3.0 + 2.0 + 0.5;
+        let want = 1.0 / (1.0 + (-z).exp());
+        let got = net.forward(&[1, 1, 0], &feats);
+        assert!((got - want).abs() < 1e-6, "got {got}, want {want}");
     }
 
     #[test]

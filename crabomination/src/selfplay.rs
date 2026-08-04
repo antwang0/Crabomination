@@ -48,6 +48,46 @@ pub fn sealed_game_template(seat0: &[CardFactory], seat1: &[CardFactory]) -> Gam
     build_match_template(seat0, seat1)
 }
 
+/// `n` distinct noisy-greedy builds of the same pool — the candidate set
+/// a build judge picks from. Deterministic in `seed`.
+pub fn build_candidates(pool: &[CardFactory], n: usize, seed: u64) -> Vec<Vec<CardFactory>> {
+    let cfg = SimConfig::default();
+    (0..n as u64)
+        .map(|i| {
+            let mut rng =
+                StdRng::seed_from_u64(seed ^ i.wrapping_mul(0x9E37_79B9_7F4A_7C15).wrapping_add(7));
+            build_random_deck(pool, &cfg, &mut rng).cards
+        })
+        .collect()
+}
+
+/// Best of `n` candidate builds under an arbitrary judge (higher is
+/// better). The judge is a closure so the engine stays ignorant of what
+/// scores a deck — the build net, the static score, or anything else.
+pub fn best_build_by<F: FnMut(&[CardFactory]) -> f64>(
+    pool: &[CardFactory],
+    n: usize,
+    seed: u64,
+    mut judge: F,
+) -> Vec<CardFactory> {
+    build_candidates(pool, n, seed)
+        .into_iter()
+        .map(|d| (judge(&d), d))
+        .max_by(|a, b| a.0.total_cmp(&b.0))
+        .map(|(_, d)| d)
+        .expect("n > 0 builds")
+}
+
+/// The heuristic builder's own opinion of a finished deck, exposed so a
+/// gate can pit "static-score judge" against a learned judge over the
+/// *same* candidate set — the comparison that isolates the judge.
+/// (`static_build_score` scores the spell picks; lands are filtered out
+/// and no shortfall applies to a completed 40-card build.)
+pub fn static_deck_score(deck: &[CardFactory]) -> i32 {
+    let spells: Vec<CardFactory> = deck.iter().copied().filter(|f| !f().is_land()).collect();
+    crate::recommend::static_build_score(&spells, spells.len())
+}
+
 /// One finished self-play game's worth of labelled rows.
 pub struct RecordedGame {
     pub rows: Vec<TrainRow>,

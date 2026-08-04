@@ -130,6 +130,56 @@ pub fn encode_state(g: &GameState, seat: usize, vocab: &Vocab) -> EncodedState {
     s
 }
 
+/// Encode a decklist for the build net: vocab indices plus deck-level
+/// features (spell curve, land/creature counts, color pips). The factory
+/// list is the same shape the sealed builder and `recommend_pool` deal
+/// in, so both can score builds without touching a `GameState`.
+pub fn encode_deck(
+    deck: &[crate::cube::CardFactory],
+    vocab: &Vocab,
+) -> (Vec<u16>, [f32; crabomination_nn::DECK_FEATS]) {
+    use crate::mana::Color;
+    let mut cards = Vec::with_capacity(deck.len());
+    let mut feats = [0.0f32; crabomination_nn::DECK_FEATS];
+    let (mut lands, mut creatures, mut mv_sum, mut spells) = (0u32, 0u32, 0u32, 0u32);
+    let mut pips = [0u32; 5];
+    for f in deck {
+        let def = f();
+        cards.push(vocab.index_of(def.name));
+        if def.is_land() {
+            lands += 1;
+            continue;
+        }
+        spells += 1;
+        let mv = def.cost.cmc();
+        mv_sum += mv;
+        // Curve buckets 0..=6: mv ≤1, 2, 3, 4, 5, 6, 7+.
+        let bucket = (mv.max(1).min(7) - 1) as usize;
+        feats[bucket] += 1.0 / 8.0;
+        if def.is_creature() {
+            creatures += 1;
+        }
+        for c in def.cost.colored_symbols() {
+            let i = match c {
+                Color::White => 0,
+                Color::Blue => 1,
+                Color::Black => 2,
+                Color::Red => 3,
+                Color::Green => 4,
+            };
+            pips[i] += 1;
+        }
+    }
+    feats[7] = lands as f32 / 17.0;
+    feats[8] = creatures as f32 / 23.0;
+    for (i, p) in pips.iter().enumerate() {
+        feats[9 + i] = *p as f32 / 20.0;
+    }
+    feats[14] = pips.iter().filter(|&&p| p > 0).count() as f32 / 3.0;
+    feats[15] = if spells > 0 { mv_sum as f32 / spells as f32 / 4.0 } else { 0.0 };
+    (cards, feats)
+}
+
 /// Printed-card features shared by every zone (hand, graveyard, and the
 /// base of a battlefield object).
 fn encode_card_object(c: &CardInstance, vocab: &Vocab) -> EncodedObject {
