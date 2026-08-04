@@ -1363,3 +1363,183 @@ fn clockwork(name: &'static str, kind: CreatureType, evasion: Keyword) -> CardDe
         ..artifact_creature(name, cost(&[generic(4)]), vec![kind], 0, 3)
     }
 }
+
+// ── Third wave ─────────────────────────────────────────────────────────────
+
+/// "Activate only during combat."
+fn during_combat() -> Predicate {
+    Predicate::Any(
+        [
+            TurnStep::BeginCombat,
+            TurnStep::DeclareAttackers,
+            TurnStep::DeclareBlockers,
+            TurnStep::FirstStrikeDamage,
+            TurnStep::CombatDamage,
+            TurnStep::EndCombat,
+        ]
+        .into_iter()
+        .map(Predicate::CurrentStepIs)
+        .collect(),
+    )
+}
+
+/// Heart Wolf — lends a Dwarf its edge, and goes down with it.
+pub fn heart_wolf() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::FirstStrike],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            condition: Some(during_combat()),
+            effect: Effect::Seq(vec![
+                Effect::PumpPT {
+                    what: target_filtered(R::HasCreatureType(CreatureType::Dwarf)),
+                    power: Value::Const(2),
+                    toughness: Value::ZERO,
+                    duration: Duration::EndOfTurn,
+                },
+                Effect::GrantKeyword {
+                    what: Selector::Target(0),
+                    keyword: Keyword::FirstStrike,
+                    duration: Duration::EndOfTurn,
+                },
+                Effect::WhenTargetLeavesBattlefieldThisTurn {
+                    what: Selector::Target(0),
+                    body: Box::new(Effect::SacrificeSource),
+                },
+            ]),
+            ..Default::default()
+        }],
+        ..creature("Heart Wolf", cost(&[generic(3), r()]), vec![CreatureType::Wolf], 2, 2)
+    }
+}
+
+/// Joven's Tools — only Walls get in the way.
+pub fn jovens_tools() -> CardDefinition {
+    CardDefinition {
+        name: "Joven's Tools",
+        cost: cost(&[generic(6)]),
+        card_types: vec![CardType::Artifact],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(4)]),
+            tap_cost: true,
+            effect: Effect::GrantKeyword {
+                what: target_filtered(R::Creature),
+                keyword: Keyword::CantBeBlockedExceptBy(Box::new(R::HasCreatureType(
+                    CreatureType::Wall,
+                ))),
+                duration: Duration::EndOfTurn,
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Willow Priestess — drops Faeries in for free and shields the green team.
+pub fn willow_priestess() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![
+            ActivatedAbility {
+                tap_cost: true,
+                effect: Effect::MayDo {
+                    description: "Put a Faerie permanent card from your hand onto the battlefield"
+                        .into(),
+                    body: Box::new(Effect::PutFromHandOntoBattlefield {
+                        who: PlayerRef::You,
+                        filter: R::HasCreatureType(CreatureType::Faerie),
+                        count: Value::ONE,
+                        tapped: false,
+                        haste: false,
+                        sacrifice_eot: false,
+                        return_eot: false,
+                        then: None,
+                    }),
+                },
+                ..Default::default()
+            },
+            ActivatedAbility {
+                mana_cost: cost(&[generic(2), g()]),
+                effect: Effect::GrantKeyword {
+                    what: target_filtered(R::Creature.and(R::HasColor(Color::Green))),
+                    keyword: Keyword::Protection(Color::Black),
+                    duration: Duration::EndOfTurn,
+                },
+                ..Default::default()
+            },
+        ],
+        ..creature(
+            "Willow Priestess",
+            cost(&[generic(2), g(), g()]),
+            vec![CreatureType::Faerie, CreatureType::Druid],
+            2,
+            2,
+        )
+    }
+}
+
+/// Dark Maze — a wall that can charge once, then vanishes.
+pub fn dark_maze() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Defender],
+        activated_abilities: vec![ActivatedAbility {
+            effect: Effect::Seq(vec![
+                Effect::AttackDespiteDefenderThisTurn { what: Selector::This },
+                Effect::AtNextEndStep {
+                    body: Box::new(Effect::Move { what: Selector::This, to: ZoneDest::Exile }),
+                },
+            ]),
+            ..Default::default()
+        }],
+        ..creature("Dark Maze", cost(&[generic(4), u()]), vec![CreatureType::Wall], 4, 5)
+    }
+}
+
+/// Samite Alchemist — a shield that costs the shielded creature a turn.
+pub fn samite_alchemist() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[w(), w()]),
+            tap_cost: true,
+            effect: Effect::Seq(vec![
+                Effect::PreventNextDamage {
+                    target: target_filtered(R::Creature.and(R::ControlledByYou)),
+                    amount: Value::Const(4),
+                },
+                Effect::Tap { what: Selector::Target(0) },
+                Effect::SkipNextUntap { what: Selector::Target(0) },
+            ]),
+            ..Default::default()
+        }],
+        ..creature(
+            "Samite Alchemist",
+            cost(&[generic(3), w()]),
+            vec![CreatureType::Human, CreatureType::Cleric],
+            0,
+            2,
+        )
+    }
+}
+
+/// Joven's Ferrets — whatever stops it stays down a turn.
+pub fn jovens_ferrets() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+            effect: Effect::Seq(vec![
+                Effect::PumpPT {
+                    what: Selector::This,
+                    power: Value::ZERO,
+                    toughness: Value::Const(2),
+                    duration: Duration::EndOfTurn,
+                },
+                Effect::AtEndOfCombat {
+                    body: Box::new(Effect::Seq(vec![
+                        Effect::Tap { what: Selector::BlockingCreatures },
+                        Effect::SkipNextUntap { what: Selector::BlockingCreatures },
+                    ])),
+                },
+            ]),
+        }],
+        ..creature("Joven's Ferrets", cost(&[g()]), vec![CreatureType::Ferret], 1, 1)
+    }
+}

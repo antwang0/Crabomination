@@ -8799,6 +8799,25 @@ Planeshift is at zero `set_gaps.py` gaps (86 cards this run); Invasion went
   the ability-grant walks were converted, the rest were left alone. Convert
   more as conspiracies need them.
 
+## Homelands — open at 30
+
+`set_gaps.py hml` is at 30 (`sets::hml`, 70 cards). What's left needs real
+primitives rather than more of the same:
+
+- **Baron Sengir / Hazduhr / Daughter of Autumn** — a `+2/+2` counter kind and
+  an "the next N damage to target X is dealt to this instead" redirect.
+- **Coral Reef / Orcish Mine / Trade Caravan** — counters that are spent as
+  activation costs on an Aura or a creature with their own per-turn windows.
+- **Giant Oyster / Marjhan / Black Carriage** — "for as long as this remains
+  tapped" durations tied to an activation.
+- **Chain Stasis** — a copy chain each player may buy into.
+- **Baki's Curse** — damage scaled per Aura attached to each creature.
+- **Leeches** — poison-counter removal plus damage equal to the amount removed.
+- **Truce / Prophecy / Renewal / Headstone / Jinx** — the "draw a card at the
+  beginning of the next turn's upkeep" rider needs a `DelayedKind::NextUpkeep`
+  (the existing one is `YourNextUpkeep`).
+- **Timmerian Fiends** — ante.
+
 ## Planechase — shipped, with the corners left open
 
 CR 311 / 312 / 901 ship (`sets::ohop`, 15 cards). Deliberately not modelled:

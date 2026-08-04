@@ -2544,6 +2544,18 @@ Each a small targeted feature; sweep batch by batch.
 - **CR 807 Grand Melee** — `set_grand_melee_variant` + `shuffle_seating`
   (807.2 defaults, 807.3 random seating). The 807.4 turn markers are open;
   see TODO.md.
+- **Homelands opened** — `set_gaps.py hml` 100 → 30 (`sets::hml`, 70 cards):
+  the five city lands, the protection cycle, the Faerie / Bird lords, both
+  World enchantments, the Clockwork pair, and the set's removal and burn. New:
+  `ActivatedAbility.max_activations_per_turn` (CR 602.5f — the "no more than N
+  times each turn" generalization of `once_per_turn`),
+  `DynamicPt::PermanentsOnBattlefieldMatchingToughness`, and
+  `OriginalSet::Homelands`. Correctness: `EventScope::EnchantedBySource`
+  triggers now fire off the leaves-battlefield LKI for
+  `PermanentLeavesBattlefield` / `PermanentDied` too (the Aura is orphaned by
+  dispatch time). Tests in `classic_sets/hml`. What's left is logged in
+  TODO.md.
+
 - **Planechase ships** (CR 311 / 312 / 901) — `CardType::{Plane, Phenomenon}`,
   per-seat planar decks, `GameAction::RollPlanarDie` (the CR 901.9 special
   action with its per-turn surcharge), `set_starting_plane` / `planeswalk` /

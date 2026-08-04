@@ -637,3 +637,130 @@ fn serra_paladin_prevents_a_point_and_hands_out_vigilance() {
     cast(&mut g, 1, bolt, Some(Target::Player(0)));
     assert_eq!(g.players[0].life, 18, "one of the three was prevented");
 }
+
+#[test]
+fn heart_wolf_goes_down_with_the_dwarf_it_armed() {
+    let mut g = main_phase();
+    let wolf = g.add_card_to_battlefield(0, catalog::heart_wolf());
+    g.clear_sickness(wolf);
+    let dwarf = g.add_card_to_battlefield(0, catalog::dwarven_pony()); // not a Dwarf
+    let real = g.add_card_to_battlefield(0, catalog::reveka_wizard_savant()); // Dwarf Wizard
+    let _ = dwarf;
+    g.step = TurnStep::DeclareAttackers;
+    activate(&mut g, 0, wolf, Some(Target::Permanent(real)));
+    let cp = g.computed_permanent(real).expect("dwarf");
+    assert_eq!(cp.power, 2);
+    assert!(cp.keywords.contains(&Keyword::FirstStrike));
+    let mut evs = Vec::new();
+    g.destroy_permanent(real, false, &mut evs);
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(wolf).is_none());
+}
+
+#[test]
+fn heart_wolf_only_fires_during_combat() {
+    let mut g = main_phase();
+    let wolf = g.add_card_to_battlefield(0, catalog::heart_wolf());
+    g.clear_sickness(wolf);
+    let dwarf = g.add_card_to_battlefield(0, catalog::reveka_wizard_savant());
+    mana(&mut g, 0);
+    g.priority.player_with_priority = 0;
+    assert!(
+        g.perform_action(GameAction::ActivateAbility {
+            card_id: wolf,
+            ability_index: 0,
+            target: Some(Target::Permanent(dwarf)),
+            additional_targets: vec![],
+            x_value: None,
+            mode: None,
+        })
+        .is_err(),
+        "a main phase is not combat",
+    );
+}
+
+#[test]
+fn jovens_tools_leave_only_walls_in_the_way() {
+    let mut g = main_phase();
+    let tools = g.add_card_to_battlefield(0, catalog::jovens_tools());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(bear);
+    activate(&mut g, 0, tools, Some(Target::Permanent(bear)));
+    let blocker = g.add_card_to_battlefield(1, catalog::mogg_fanatic());
+    let wall = g.add_card_to_battlefield(1, catalog::cemetery_gate());
+    g.step = TurnStep::DeclareAttackers;
+    g.declare_attackers(vec![Attack { attacker: bear, target: AttackTarget::Player(1) }])
+        .expect("attack");
+    g.step = TurnStep::DeclareBlockers;
+    assert!(g.declare_blockers(vec![(blocker, bear)]).is_err());
+    assert!(g.declare_blockers(vec![(wall, bear)]).is_ok());
+}
+
+#[test]
+fn willow_priestess_drops_a_faerie_in_for_free() {
+    let mut g = main_phase();
+    let priestess = g.add_card_to_battlefield(0, catalog::willow_priestess());
+    g.clear_sickness(priestess);
+    let faerie = g.add_card_to_hand(0, catalog::willow_faerie());
+    g.decider = Box::new(ScriptedDecider::new([
+        DecisionAnswer::Bool(true),
+        DecisionAnswer::Cards(vec![faerie]),
+    ]));
+    activate(&mut g, 0, priestess, None);
+    assert!(g.battlefield_find(faerie).is_some());
+}
+
+#[test]
+fn dark_maze_charges_once_then_vanishes() {
+    let mut g = main_phase();
+    let maze = g.add_card_to_battlefield(0, catalog::dark_maze());
+    g.clear_sickness(maze);
+    activate(&mut g, 0, maze, None);
+    g.step = TurnStep::DeclareAttackers;
+    g.declare_attackers(vec![Attack { attacker: maze, target: AttackTarget::Player(1) }])
+        .expect("defender is ignored this turn");
+    g.step = TurnStep::End;
+    g.fire_step_triggers(TurnStep::End);
+    drain_stack(&mut g);
+    assert!(g.exile.iter().any(|c| c.id == maze));
+}
+
+#[test]
+fn samite_alchemist_shields_a_creature_at_the_cost_of_a_turn() {
+    let mut g = main_phase();
+    let alchemist = g.add_card_to_battlefield(0, catalog::samite_alchemist());
+    g.clear_sickness(alchemist);
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    activate(&mut g, 0, alchemist, Some(Target::Permanent(bear)));
+    assert!(g.battlefield_find(bear).expect("bear").tapped);
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    cast(&mut g, 1, bolt, Some(Target::Permanent(bear)));
+    g.check_state_based_actions();
+    assert!(g.battlefield_find(bear).is_some(), "the shield ate the bolt");
+    g.do_untap();
+    assert!(g.battlefield_find(bear).expect("bear").tapped, "and it stays down a turn");
+}
+
+#[test]
+fn jovens_ferrets_pin_whatever_blocked_them() {
+    let mut g = main_phase();
+    let ferrets = g.add_card_to_battlefield(0, catalog::jovens_ferrets());
+    g.clear_sickness(ferrets);
+    let blocker = g.add_card_to_battlefield(1, catalog::cemetery_gate()); // 0/5 survives
+    g.step = TurnStep::DeclareAttackers;
+    g.declare_attackers(vec![Attack { attacker: ferrets, target: AttackTarget::Player(1) }])
+        .expect("attack");
+    drain_stack(&mut g);
+    assert_eq!(g.computed_permanent(ferrets).expect("ferrets").toughness, 3);
+    g.step = TurnStep::DeclareBlockers;
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::DeclareBlockers(vec![(blocker, ferrets)])).expect("block");
+    drain_stack(&mut g);
+    g.fire_step_triggers(TurnStep::EndCombat);
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(blocker).expect("blocker").tapped);
+    g.active_player_idx = 1;
+    g.do_untap();
+    assert!(g.battlefield_find(blocker).expect("blocker").tapped, "and it stays down");
+}
