@@ -165,6 +165,7 @@ mod tests {
             step: TurnStep::PreCombatMain,
             turn: 1,
             extra_phase: false,
+            planar: None,
             attackable_players: Vec::new(),
             permanents_to_graveyard_this_turn: 0,
             damage_rewritten_this_turn: None,

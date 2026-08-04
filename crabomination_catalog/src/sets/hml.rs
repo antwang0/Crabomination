@@ -2,12 +2,12 @@
 
 use crate::card::{
     ActivatedAbility, CardDefinition, CardType, CounterType, CreatureType, EnchantmentSubtype,
-    EventKind, EventScope, EventSpec, Keyword, LandType,
+    EventKind, EventScope, EventSpec, Keyword, LandType, Predicate,
     SelectionRequirement as R, StaticAbility, Subtypes, TokenDefinition, TriggeredAbility,
 };
 use crate::effect::{
     Duration, Effect, ManaPayload, PlayerRef, Selector, StaticEffect, Value, ZoneDest,
-    shortcut::target_filtered,
+    shortcut::{target_any, target_filtered},
 };
 use crate::game::types::TurnStep;
 use crate::mana::{Color, ManaCost, b, cost, g, generic, r, u, w};
@@ -995,5 +995,371 @@ pub fn aether_storm() -> CardDefinition {
                 effect: StaticEffect::PlayersCantPlayMatching { filter: R::Creature },
             }],
         )
+    }
+}
+
+// ── Second wave ────────────────────────────────────────────────────────────
+
+/// An-Havva Constable — as tough as the green on the board.
+pub fn an_havva_constable() -> CardDefinition {
+    CardDefinition {
+        dynamic_pt: Some(crate::card::DynamicPt::PermanentsOnBattlefieldMatchingToughness {
+            base_p: 2,
+            base_t: 1,
+            filter: Box::new(R::Creature.and(R::HasColor(Color::Green))),
+        }),
+        ..creature("An-Havva Constable", cost(&[generic(1), g(), g()]), vec![CreatureType::Human], 2, 1)
+    }
+}
+
+/// Apocalypse Chime — unmakes Homelands.
+pub fn apocalypse_chime() -> CardDefinition {
+    CardDefinition {
+        name: "Apocalypse Chime",
+        cost: cost(&[generic(2)]),
+        card_types: vec![CardType::Artifact],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(2)]),
+            tap_cost: true,
+            sac_cost: true,
+            effect: Effect::DestroyNoRegen {
+                what: Selector::EachPermanent(
+                    R::IsToken
+                        .negate()
+                        .and(R::OriginallyPrintedIn(crate::card::OriginalSet::Homelands)),
+                ),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Beast Walkers — buys banding with green mana.
+pub fn beast_walkers() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[g()]),
+            effect: Effect::GrantKeyword {
+                what: Selector::This,
+                keyword: Keyword::Banding,
+                duration: Duration::EndOfTurn,
+            },
+            ..Default::default()
+        }],
+        ..creature(
+            "Beast Walkers",
+            cost(&[generic(1), w(), w()]),
+            vec![CreatureType::Human, CreatureType::Beast, CreatureType::Soldier],
+            2,
+            2,
+        )
+    }
+}
+
+/// Labyrinth Minotaur — whatever it stops stays down a turn.
+pub fn labyrinth_minotaur() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Blocks, EventScope::SelfSource),
+            effect: Effect::SkipNextUntap { what: Selector::BlockedAttacker },
+        }],
+        ..creature("Labyrinth Minotaur", cost(&[generic(3), u()]), vec![CreatureType::Minotaur], 1, 4)
+    }
+}
+
+/// Reveka, Wizard Savant — two damage, then a turn asleep.
+pub fn reveka_wizard_savant() -> CardDefinition {
+    CardDefinition {
+        supertypes: vec![crate::card::Supertype::Legendary],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::Seq(vec![
+                Effect::DealDamage { to: target_any(), amount: Value::Const(2) },
+                Effect::SkipNextUntap { what: Selector::This },
+            ]),
+            ..Default::default()
+        }],
+        ..creature(
+            "Reveka, Wizard Savant",
+            cost(&[generic(2), u(), u()]),
+            vec![CreatureType::Dwarf, CreatureType::Wizard],
+            0,
+            1,
+        )
+    }
+}
+
+/// Serra Paladin — a point of prevention, or vigilance for a friend.
+pub fn serra_paladin() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![
+            ActivatedAbility {
+                tap_cost: true,
+                effect: Effect::PreventNextDamage { target: target_any(), amount: Value::ONE },
+                ..Default::default()
+            },
+            ActivatedAbility {
+                mana_cost: cost(&[generic(1), w(), w()]),
+                tap_cost: true,
+                effect: Effect::GrantKeyword {
+                    what: target_filtered(R::Creature),
+                    keyword: Keyword::Vigilance,
+                    duration: Duration::EndOfTurn,
+                },
+                ..Default::default()
+            },
+        ],
+        ..creature(
+            "Serra Paladin",
+            cost(&[generic(2), w(), w()]),
+            vec![CreatureType::Human, CreatureType::Knight],
+            2,
+            2,
+        )
+    }
+}
+
+/// Sengir Bats — grows on every kill it helped with.
+pub fn sengir_bats() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CreatureDied, EventScope::AnyPlayer).with_filter(
+                Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: R::DamagedBySourceThisTurn,
+                },
+            ),
+            effect: Effect::AddCounter {
+                what: Selector::This,
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::ONE,
+            },
+        }],
+        ..creature("Sengir Bats", cost(&[generic(1), b(), b()]), vec![CreatureType::Bat], 1, 2)
+    }
+}
+
+/// Greater Werewolf — everything it meets in combat comes out smaller.
+pub fn greater_werewolf() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Blocks, EventScope::SelfSource),
+            effect: Effect::AtEndOfCombat {
+                body: Box::new(Effect::AddCounter {
+                    what: Selector::CreaturesInCombatWith(Box::new(Selector::This)),
+                    kind: CounterType::MinusZeroMinusTwo,
+                    amount: Value::ONE,
+                }),
+            },
+        },
+        TriggeredAbility {
+            event: EventSpec::new(EventKind::BecomesBlocked, EventScope::SelfSource),
+            effect: Effect::AtEndOfCombat {
+                body: Box::new(Effect::AddCounter {
+                    what: Selector::CreaturesInCombatWith(Box::new(Selector::This)),
+                    kind: CounterType::MinusZeroMinusTwo,
+                    amount: Value::ONE,
+                }),
+            },
+        }],
+        ..creature("Greater Werewolf", cost(&[generic(4), b()]), vec![CreatureType::Werewolf], 2, 4)
+    }
+}
+
+/// Funeral March — the host's controller pays a second body when it goes.
+pub fn funeral_march() -> CardDefinition {
+    CardDefinition {
+        name: "Funeral March",
+        cost: cost(&[generic(1), b(), b()]),
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes {
+            enchantment_subtypes: vec![EnchantmentSubtype::Aura],
+            ..Default::default()
+        },
+        effect: Effect::Attach { what: Selector::This, to: target_filtered(R::Creature) },
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(
+                EventKind::PermanentLeavesBattlefield,
+                EventScope::EnchantedBySource,
+            ),
+            effect: Effect::Sacrifice {
+                who: Selector::Player(PlayerRef::ControllerOf(Box::new(Selector::TriggerSource))),
+                count: Value::ONE,
+                filter: R::Creature,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Roots — pins a grounded creature to the floor.
+pub fn roots() -> CardDefinition {
+    CardDefinition {
+        name: "Roots",
+        cost: cost(&[generic(3), g()]),
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes {
+            enchantment_subtypes: vec![EnchantmentSubtype::Aura],
+            ..Default::default()
+        },
+        effect: Effect::Attach {
+            what: Selector::This,
+            to: target_filtered(R::Creature.and(R::HasKeyword(Keyword::Flying).negate())),
+        },
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::Tap { what: Selector::AttachedTo(Box::new(Selector::This)) },
+        }],
+        static_abilities: vec![StaticAbility {
+            description: "Enchanted creature doesn't untap during its controller's untap step.",
+            effect: StaticEffect::PreventUntap {
+                applies_to: Selector::AttachedTo(Box::new(Selector::This)),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Spectral Bears — three power that sulks when nobody's playing black.
+pub fn spectral_bears() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource).with_filter(
+                Predicate::Not(Box::new(Predicate::SelectorExists(Selector::ControlledBy {
+                    who: PlayerRef::EachOpponent,
+                    filter: R::HasColor(Color::Black).and(R::IsToken.negate()),
+                }))),
+            ),
+            effect: Effect::SkipNextUntap { what: Selector::This },
+        }],
+        ..creature(
+            "Spectral Bears",
+            cost(&[generic(1), g()]),
+            vec![CreatureType::Bear, CreatureType::Spirit],
+            3,
+            3,
+        )
+    }
+}
+
+/// Rashka the Slayer — bigger when it stops black.
+pub fn rashka_the_slayer() -> CardDefinition {
+    CardDefinition {
+        supertypes: vec![crate::card::Supertype::Legendary],
+        keywords: vec![Keyword::Reach],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Blocks, EventScope::SelfSource).with_filter(
+                Predicate::EntityMatches {
+                    what: Selector::BlockedAttacker,
+                    filter: R::HasColor(Color::Black),
+                },
+            ),
+            effect: Effect::PumpPT {
+                what: Selector::This,
+                power: Value::ONE,
+                toughness: Value::Const(2),
+                duration: Duration::EndOfTurn,
+            },
+        }],
+        ..creature(
+            "Rashka the Slayer",
+            cost(&[generic(3), w(), w()]),
+            vec![CreatureType::Human, CreatureType::Archer],
+            3,
+            3,
+        )
+    }
+}
+
+/// Serra Inquisitors — swells against black.
+pub fn serra_inquisitors() -> CardDefinition {
+    let pump = Effect::PumpPT {
+        what: Selector::This,
+        power: Value::Const(2),
+        toughness: Value::ZERO,
+        duration: Duration::EndOfTurn,
+    };
+    CardDefinition {
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::Blocks, EventScope::SelfSource).with_filter(
+                    Predicate::EntityMatches {
+                        what: Selector::BlockedAttacker,
+                        filter: R::HasColor(Color::Black),
+                    },
+                ),
+                effect: pump.clone(),
+            },
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::BecomesBlocked, EventScope::SelfSource)
+                    .with_filter(Predicate::EntityMatches {
+                        what: Selector::BlockingCreatures,
+                        filter: R::HasColor(Color::Black),
+                    }),
+                effect: pump,
+            },
+        ],
+        ..creature(
+            "Serra Inquisitors",
+            cost(&[generic(4), w()]),
+            vec![CreatureType::Human, CreatureType::Cleric],
+            3,
+            3,
+        )
+    }
+}
+
+/// Clockwork Steed — winds down as it fights, and winds back up at upkeep.
+pub fn clockwork_steed() -> CardDefinition {
+    clockwork("Clockwork Steed", CreatureType::Horse, Keyword::CantBeBlockedBy(Box::new(R::Artifact.and(R::Creature))))
+}
+
+/// Clockwork Swarm — the same engine, walled off instead.
+pub fn clockwork_swarm() -> CardDefinition {
+    clockwork(
+        "Clockwork Swarm",
+        CreatureType::Insect,
+        Keyword::CantBeBlockedByCreatureType(CreatureType::Wall),
+    )
+}
+
+/// The shared Clockwork body: four +1/+0 counters, one off at end of combat if
+/// it fought, and an upkeep-only rewind capped at four.
+fn clockwork(name: &'static str, kind: CreatureType, evasion: Keyword) -> CardDefinition {
+    let shed = Effect::AtEndOfCombat {
+        body: Box::new(Effect::RemoveCounter {
+            what: Selector::This,
+            kind: CounterType::PlusOnePlusZero,
+            amount: Value::ONE,
+        }),
+    };
+    CardDefinition {
+        keywords: vec![evasion],
+        enters_with_counters: Some((CounterType::PlusOnePlusZero, Value::Const(4))),
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+                effect: shed.clone(),
+            },
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::Blocks, EventScope::SelfSource),
+                effect: shed,
+            },
+        ],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[crate::mana::x()]),
+            tap_cost: true,
+            condition: Some(Predicate::CurrentStepIs(TurnStep::Upkeep)),
+            effect: Effect::AddCounterCapped {
+                what: Selector::This,
+                kind: CounterType::PlusOnePlusZero,
+                amount: Value::XFromCost,
+                cap: Value::Const(4),
+            },
+            ..Default::default()
+        }],
+        ..artifact_creature(name, cost(&[generic(4)]), vec![kind], 0, 3)
     }
 }

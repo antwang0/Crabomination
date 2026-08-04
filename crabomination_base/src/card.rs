@@ -3638,6 +3638,7 @@ pub struct EnterMode {
 pub enum OriginalSet {
     Antiquities,
     ArabianNights,
+    Homelands,
 }
 
 impl OriginalSet {
@@ -3647,6 +3648,7 @@ impl OriginalSet {
         match self {
             OriginalSet::Antiquities => ANTIQUITIES_NAMES.binary_search(&name).is_ok(),
             OriginalSet::ArabianNights => ARABIAN_NIGHTS_NAMES.binary_search(&name).is_ok(),
+            OriginalSet::Homelands => HOMELANDS_NAMES.binary_search(&name).is_ok(),
         }
     }
 }
@@ -3672,6 +3674,30 @@ static ANTIQUITIES_NAMES: [&str; 85] = [
     "Transmute Artifact", "Triskelion", "Urza's Avenger", "Urza's Chalice", "Urza's Mine",
     "Urza's Miter", "Urza's Power Plant", "Urza's Tower", "Wall of Spears", "Weakstone",
     "Xenic Poltergeist", "Yawgmoth Demon", "Yotian Soldier",
+];
+
+/// Homelands' 115 distinct card names, sorted for `binary_search`.
+static HOMELANDS_NAMES: [&str; 115] = [
+    "Abbey Gargoyles", "Abbey Matron", "Aether Storm", "Aliban's Tower", "Ambush", "Ambush Party",
+    "An-Havva Constable", "An-Havva Inn", "An-Havva Township", "An-Zerrin Ruins", "Anaba Ancestor",
+    "Anaba Bodyguard", "Anaba Shaman", "Anaba Spirit Crafter", "Apocalypse Chime", "Autumn Willow",
+    "Aysen Abbey", "Aysen Bureaucrats", "Aysen Crusader", "Aysen Highway", "Baki's Curse", "Baron Sengir",
+    "Beast Walkers", "Black Carriage", "Broken Visage", "Carapace", "Castle Sengir", "Cemetery Gate",
+    "Chain Stasis", "Chandler", "Clockwork Gnomes", "Clockwork Steed", "Clockwork Swarm", "Coral Reef",
+    "Dark Maze", "Daughter of Autumn", "Death Speakers", "Didgeridoo", "Drudge Spell", "Dry Spell",
+    "Dwarven Pony", "Dwarven Sea Clan", "Dwarven Trader", "Ebony Rhino", "Eron the Relentless",
+    "Evaporate", "Faerie Noble", "Feast of the Unicorn", "Feroz's Ban", "Folk of An-Havva", "Forget",
+    "Funeral March", "Ghost Hounds", "Giant Albatross", "Giant Oyster", "Grandmother Sengir",
+    "Greater Werewolf", "Hazduhr the Abbot", "Headstone", "Heart Wolf", "Hungry Mist", "Ihsan's Shade",
+    "Irini Sengir", "Ironclaw Curse", "Jinx", "Joven", "Joven's Ferrets", "Joven's Tools", "Koskun Falls",
+    "Koskun Keep", "Labyrinth Minotaur", "Leaping Lizard", "Leeches", "Mammoth Harness", "Marjhan",
+    "Memory Lapse", "Merchant Scroll", "Mesa Falcon", "Mystic Decree", "Narwhal", "Orcish Mine",
+    "Primal Order", "Prophecy", "Rashka the Slayer", "Reef Pirates", "Renewal", "Retribution",
+    "Reveka, Wizard Savant", "Root Spider", "Roots", "Roterothopter", "Rysorian Badger", "Samite Alchemist",
+    "Sea Sprite", "Sea Troll", "Sengir Autocrat", "Sengir Bats", "Serra Aviary", "Serra Bestiary",
+    "Serra Inquisitors", "Serra Paladin", "Serrated Arrows", "Shrink", "Soraya the Falconer",
+    "Spectral Bears", "Timmerian Fiends", "Torture", "Trade Caravan", "Truce", "Veldrane of Sengir",
+    "Wall of Kelp", "Willow Faerie", "Willow Priestess", "Winter Sky", "Wizards' School",
 ];
 
 /// Arabian Nights' 78 distinct card names, sorted for `binary_search`.
@@ -4117,6 +4143,15 @@ pub enum DynamicPt {
     /// permanents matching `filter` the controller controls. The `*`-toughness
     /// sibling of `PermanentsControlledMatching` (Treefolk Seedlings, `2/*`).
     PermanentsControlledMatchingToughness {
+        base_p: i32,
+        base_t: i32,
+        filter: Box<SelectionRequirement>,
+    },
+    /// Power is the fixed `base_p`; toughness = `base_t` + the number of
+    /// permanents matching `filter` on the battlefield, under **any** control
+    /// (An-Havva Constable, `2/1+*`). The board-wide sibling of
+    /// `PermanentsControlledMatchingToughness`.
+    PermanentsOnBattlefieldMatchingToughness {
         base_p: i32,
         base_t: i32,
         filter: Box<SelectionRequirement>,

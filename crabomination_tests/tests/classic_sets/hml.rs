@@ -417,3 +417,223 @@ fn ambush_gives_every_blocker_first_strike() {
         g.computed_permanent(blocker).expect("blocker").keywords.contains(&Keyword::FirstStrike)
     );
 }
+
+#[test]
+fn an_havva_constable_counts_every_green_body() {
+    let mut g = main_phase();
+    let constable = g.add_card_to_battlefield(0, catalog::an_havva_constable());
+    let cp = g.computed_permanent(constable).expect("constable");
+    assert_eq!((cp.power, cp.toughness), (2, 2), "it counts itself");
+    g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    assert_eq!(g.computed_permanent(constable).expect("constable").toughness, 3);
+}
+
+#[test]
+fn apocalypse_chime_unmakes_homelands_only() {
+    let mut g = main_phase();
+    let bats = g.add_card_to_battlefield(1, catalog::sengir_bats());
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let chime = g.add_card_to_battlefield(0, catalog::apocalypse_chime());
+    activate(&mut g, 0, chime, None);
+    g.check_state_based_actions();
+    assert!(g.battlefield_find(bats).is_none());
+    assert!(g.battlefield_find(bear).is_some());
+    assert!(g.battlefield_find(chime).is_none(), "it sacrifices itself as a cost");
+}
+
+#[test]
+fn labyrinth_minotaur_keeps_what_it_blocks_tapped() {
+    let mut g = main_phase();
+    let minotaur = g.add_card_to_battlefield(0, catalog::labyrinth_minotaur());
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.clear_sickness(bear);
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    g.step = TurnStep::DeclareAttackers;
+    g.declare_attackers(vec![Attack { attacker: bear, target: AttackTarget::Player(0) }])
+        .expect("attack");
+    g.step = TurnStep::DeclareBlockers;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::DeclareBlockers(vec![(minotaur, bear)])).expect("block");
+    drain_stack(&mut g);
+    g.battlefield_find_mut(bear).expect("bear").tapped = true;
+    g.do_untap();
+    assert!(g.battlefield_find(bear).expect("bear").tapped);
+}
+
+#[test]
+fn reveka_pays_a_turn_for_every_two_damage() {
+    let mut g = main_phase();
+    let reveka = g.add_card_to_battlefield(0, catalog::reveka_wizard_savant());
+    g.clear_sickness(reveka);
+    activate(&mut g, 0, reveka, Some(Target::Player(1)));
+    assert_eq!(g.players[1].life, 18);
+    g.do_untap();
+    assert!(g.battlefield_find(reveka).expect("reveka").tapped, "it sleeps one untap step off");
+}
+
+#[test]
+fn sengir_bats_grow_on_the_kills_they_helped_with() {
+    let mut g = main_phase();
+    let bats = g.add_card_to_battlefield(0, catalog::sengir_bats());
+    let victim = g.add_card_to_battlefield(1, catalog::mogg_fanatic()); // 1/1
+    let mut evs = Vec::new();
+    g.deal_damage_to_from(
+        crabomination::game::effects::EntityRef::Permanent(victim),
+        1,
+        Some(bats),
+        &mut evs,
+    );
+    let mut sba = g.check_state_based_actions();
+    evs.append(&mut sba);
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    assert_eq!(
+        g.battlefield_find(bats).expect("bats").counter_count(CounterType::PlusOnePlusOne),
+        1
+    );
+}
+
+#[test]
+fn greater_werewolf_shrinks_what_it_fought() {
+    let mut g = main_phase();
+    let wolf = g.add_card_to_battlefield(0, catalog::greater_werewolf());
+    let bear = g.add_card_to_battlefield(1, catalog::hill_giant()); // 3/3, survives
+    g.clear_sickness(bear);
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    g.step = TurnStep::DeclareAttackers;
+    g.declare_attackers(vec![Attack { attacker: bear, target: AttackTarget::Player(0) }])
+        .expect("attack");
+    g.step = TurnStep::DeclareBlockers;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::DeclareBlockers(vec![(wolf, bear)])).expect("block");
+    drain_stack(&mut g);
+    g.fire_step_triggers(TurnStep::EndCombat);
+    drain_stack(&mut g);
+    assert_eq!(
+        g.battlefield_find(bear).expect("bear").counter_count(CounterType::MinusZeroMinusTwo),
+        1
+    );
+}
+
+#[test]
+fn funeral_march_bills_the_host_controller_a_second_body() {
+    let mut g = main_phase();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let spare = g.add_card_to_battlefield(1, catalog::mogg_fanatic());
+    let march = g.add_card_to_hand(0, catalog::funeral_march());
+    cast(&mut g, 0, march, Some(Target::Permanent(bear)));
+    let mut evs = Vec::new();
+    g.destroy_permanent(bear, false, &mut evs);
+    let mut sba = g.check_state_based_actions();
+    evs.append(&mut sba);
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(spare).is_none(), "the only creature left is sacrificed");
+}
+
+#[test]
+fn roots_pins_a_grounded_creature() {
+    let mut g = main_phase();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let roots = g.add_card_to_hand(0, catalog::roots());
+    cast(&mut g, 0, roots, Some(Target::Permanent(bear)));
+    assert!(g.battlefield_find(bear).expect("bear").tapped, "it taps on arrival");
+    g.active_player_idx = 1;
+    g.do_untap();
+    assert!(g.battlefield_find(bear).expect("bear").tapped, "and stays down");
+}
+
+#[test]
+fn spectral_bears_sulk_without_black_across_the_table() {
+    let mut g = main_phase();
+    let bears = g.add_card_to_battlefield(0, catalog::spectral_bears());
+    g.clear_sickness(bears);
+    g.step = TurnStep::DeclareAttackers;
+    g.declare_attackers(vec![Attack { attacker: bears, target: AttackTarget::Player(1) }])
+        .expect("attack");
+    drain_stack(&mut g);
+    g.do_untap();
+    assert!(g.battlefield_find(bears).expect("bears").tapped);
+}
+
+#[test]
+fn rashka_swells_against_black() {
+    let mut g = main_phase();
+    let rashka = g.add_card_to_battlefield(0, catalog::rashka_the_slayer());
+    let shade = g.add_card_to_battlefield(1, catalog::greater_werewolf()); // black 2/4
+    g.clear_sickness(shade);
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    g.step = TurnStep::DeclareAttackers;
+    g.declare_attackers(vec![Attack { attacker: shade, target: AttackTarget::Player(0) }])
+        .expect("attack");
+    g.step = TurnStep::DeclareBlockers;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::DeclareBlockers(vec![(rashka, shade)])).expect("block");
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(rashka).expect("rashka");
+    assert_eq!((cp.power, cp.toughness), (4, 5));
+}
+
+#[test]
+fn clockwork_steed_winds_down_when_it_fights() {
+    let mut g = main_phase();
+    let steed = g.add_card_to_hand(0, catalog::clockwork_steed());
+    cast(&mut g, 0, steed, None);
+    assert_eq!(g.computed_permanent(steed).expect("steed").power, 4);
+    g.clear_sickness(steed);
+    g.step = TurnStep::DeclareAttackers;
+    g.declare_attackers(vec![Attack { attacker: steed, target: AttackTarget::Player(1) }])
+        .expect("attack");
+    drain_stack(&mut g);
+    g.fire_step_triggers(TurnStep::EndCombat);
+    drain_stack(&mut g);
+    assert_eq!(g.computed_permanent(steed).expect("steed").power, 3);
+}
+
+#[test]
+fn clockwork_swarm_rewinds_only_up_to_four() {
+    let mut g = main_phase();
+    let swarm = g.add_card_to_hand(0, catalog::clockwork_swarm());
+    cast(&mut g, 0, swarm, None);
+    g.clear_sickness(swarm);
+    g.step = TurnStep::Upkeep;
+    mana(&mut g, 0);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: swarm,
+        ability_index: 0,
+        target: None,
+        additional_targets: vec![],
+        x_value: Some(3),
+        mode: None,
+    })
+    .expect("activate");
+    drain_stack(&mut g);
+    assert_eq!(
+        g.battlefield_find(swarm).expect("swarm").counter_count(CounterType::PlusOnePlusZero),
+        4,
+        "the cap holds",
+    );
+}
+
+#[test]
+fn beast_walkers_buy_banding() {
+    let mut g = main_phase();
+    let walkers = g.add_card_to_battlefield(0, catalog::beast_walkers());
+    activate(&mut g, 0, walkers, None);
+    assert!(g.computed_permanent(walkers).expect("walkers").keywords.contains(&Keyword::Banding));
+}
+
+#[test]
+fn serra_paladin_prevents_a_point_and_hands_out_vigilance() {
+    let mut g = main_phase();
+    let paladin = g.add_card_to_battlefield(0, catalog::serra_paladin());
+    g.clear_sickness(paladin);
+    activate(&mut g, 0, paladin, Some(Target::Player(0)));
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    cast(&mut g, 1, bolt, Some(Target::Player(0)));
+    assert_eq!(g.players[0].life, 18, "one of the three was prevented");
+}

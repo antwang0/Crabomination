@@ -9156,6 +9156,18 @@ impl GameState {
                     }).count() as i32;
                     (base_p, base_t + n)
                 }
+                crate::card::DynamicPt::PermanentsOnBattlefieldMatchingToughness {
+                    base_p,
+                    base_t,
+                    ref filter,
+                } => {
+                    let n = self
+                        .battlefield
+                        .iter()
+                        .filter(|c| self.evaluate_requirement_on_card(filter, c, card.controller))
+                        .count() as i32;
+                    (base_p, base_t + n)
+                }
                 crate::card::DynamicPt::ControllerLife => {
                     let n = self.players[card.controller].life;
                     (n, n)
@@ -14509,6 +14521,8 @@ impl GameState {
                 let lki_enchanted = matches!(
                     ta.event.kind,
                     crate::effect::EventKind::CreatureDied
+                        | crate::effect::EventKind::PermanentDied
+                        | crate::effect::EventKind::PermanentLeavesBattlefield
                         | crate::effect::EventKind::CardExiled
                         | crate::effect::EventKind::DealtDamage
                 ) && ta.event.scope == crate::effect::EventScope::EnchantedBySource;
