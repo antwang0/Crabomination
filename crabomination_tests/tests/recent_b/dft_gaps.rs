@@ -287,3 +287,89 @@ fn oviya_grants_trample_to_attackers() {
         .expect("attack");
     assert!(g.computed_permanent(bears).unwrap().keywords.contains(&Keyword::Trample));
 }
+
+/// Lifecraft Engine makes your Vehicles the chosen type and pumps that type.
+#[test]
+fn lifecraft_engine_types_and_pumps_the_chosen_type() {
+    let mut g = main_phase();
+    g.decider = Box::new(ScriptedDecider::new(vec![DecisionAnswer::CreatureType(
+        crabomination::card::CreatureType::Bear,
+    )]));
+    let engine = g.add_card_to_battlefield(0, catalog::lifecraft_engine());
+    let name_it = catalog::lifecraft_engine().as_enters_effect.unwrap();
+    g.resolve_effect(&name_it, &EffectContext::for_ability(engine, 0, None)).unwrap();
+    let chariot = g.add_card_to_battlefield(0, catalog::skyseers_chariot());
+    assert!(
+        g.computed_permanent(chariot)
+            .unwrap()
+            .subtypes
+            .creature_types
+            .contains(&crabomination::card::CreatureType::Bear),
+        "the Vehicle joined the chosen type"
+    );
+    let bears = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    assert_eq!(g.computed_permanent(bears).unwrap().power, 3, "+1/+1 for the chosen type");
+}
+
+/// Cursecloth Wrappings hands a graveyard creature a usable embalm ability.
+#[test]
+fn cursecloth_wrappings_grants_embalm() {
+    let mut g = main_phase();
+    let wraps = g.add_card_to_battlefield(0, catalog::cursecloth_wrappings());
+    let bears = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: wraps,
+        ability_index: 0,
+        target: Some(Target::Permanent(bears)),
+        additional_targets: vec![],
+        x_value: None,
+        mode: None,
+    })
+    .expect("grant embalm");
+    drain_stack(&mut g);
+    // Index 0 is the granted ability — Grizzly Bears prints none.
+    flood(&mut g, 0);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: bears,
+        ability_index: 0,
+        target: None,
+        additional_targets: vec![],
+        x_value: None,
+        mode: None,
+    })
+    .expect("embalm it");
+    drain_stack(&mut g);
+    assert!(
+        g.battlefield.iter().any(|c| c.is_token && c.definition.name == "Grizzly Bears"),
+        "an embalm token was created"
+    );
+}
+
+/// Samut's anthem and discount both read your speed.
+#[test]
+fn samut_scales_with_your_speed() {
+    let mut g = main_phase();
+    etb(&mut g, catalog::samut_the_driving_force());
+    let bears = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    assert_eq!(g.computed_permanent(bears).unwrap().power, 3, "start your engines! → speed 1");
+    g.players[0].speed = 3;
+    assert_eq!(g.computed_permanent(bears).unwrap().power, 5, "+3/+0 at speed 3");
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    let card = g.find_card_anywhere(bolt).unwrap().clone();
+    assert_eq!(cost_reduction_for_spell(&g, 0, &card, None), 3, "noncreature discount");
+}
+
+/// Cycling Valor's Flagship for X mints X crew-boosting Pilots.
+#[test]
+fn valors_flagship_cycles_into_pilots() {
+    let mut g = main_phase();
+    let ship = g.add_card_to_hand(0, catalog::valors_flagship());
+    flood(&mut g, 0);
+    g.perform_action(GameAction::Cycle { card_id: ship, x_value: Some(2) }).expect("cycle");
+    drain_stack(&mut g);
+    let pilots: Vec<_> =
+        g.battlefield.iter().filter(|c| c.definition.name == "Pilot").map(|c| c.id).collect();
+    assert_eq!(pilots.len(), 2, "X = 2");
+    assert_eq!(g.crew_saddle_power_bonus(pilots[0]), 2, "crews as a 3-power creature");
+}

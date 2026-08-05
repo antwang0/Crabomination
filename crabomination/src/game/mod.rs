@@ -19237,6 +19237,21 @@ fn static_effect_to_effects(
                     None => vec![],
                 }
             }
+            StaticEffect::MatchingAreChosenTypeToo { filter } => match card.chosen_creature_type {
+                Some(ct) => vec![ContinuousEffect {
+                    timestamp,
+                    source,
+                    affected: AffectedPermanents::CardMatch {
+                        source_controller: card.controller,
+                        requirement: Box::new(filter.clone()),
+                    },
+                    layer: Layer::L4Type,
+                    sublayer: None,
+                    duration: EffectDuration::WhileSourceOnBattlefield,
+                    modification: Modification::AddCreatureType(ct),
+                }],
+                None => vec![],
+            },
             StaticEffect::LandsYouControlAreChosenType => {
                 // Realmwright — lands the source's controller controls are the
                 // chosen basic type in addition (layer-4 additive). No-op until

@@ -4,8 +4,8 @@
 use crate::card::{
     ActivatedAbility, AdditionalCastCost, ArtifactSubtype, CardDefinition, CardType, CounterType,
     CreatureType, DynamicPt, EventKind, EventScope, EventSpec, Keyword, Predicate,
-    SelectionRequirement as R, StaticAbility, StaticEffect, Subtypes, Supertype, TriggeredAbility,
-    Value, WardCost,
+    SelectionRequirement as R, StaticAbility, StaticEffect, Subtypes, Supertype, TokenDefinition,
+    TriggeredAbility, Value, WardCost,
 };
 use crate::effect::shortcut::{etb, on_attack};
 use crate::effect::{Duration, Effect, LibraryPosition, ManaPayload, PlayerRef, Selector, ZoneDest};
@@ -457,5 +457,157 @@ pub fn push_the_limit() -> CardDefinition {
             },
         ]),
         ..Default::default()
+    }
+}
+
+/// Lifecraft Engine — {3} 4/4 Vehicle. Names a creature type on the way in;
+/// your Vehicles join it, and everything else of that type grows.
+pub fn lifecraft_engine() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Crew(3)],
+        as_enters_effect: Some(Effect::NameCreatureType { what: Selector::This }),
+        static_abilities: vec![
+            StaticAbility {
+                // Scoped to your Vehicles rather than your *crewed* Vehicles:
+                // the layer walker reads printed types. Nothing is visible in
+                // play — the anthem below only reaches creatures anyway.
+                description: "Vehicle creatures you control are the chosen creature type in \
+                              addition to their other types.",
+                effect: StaticEffect::MatchingAreChosenTypeToo {
+                    filter: R::HasArtifactSubtype(ArtifactSubtype::Vehicle)
+                        .and(R::ControlledByYou),
+                },
+            },
+            StaticAbility {
+                description: "Each creature you control of the chosen type other than this \
+                              Vehicle gets +1/+1.",
+                effect: StaticEffect::AnthemForChosenType {
+                    power: 1,
+                    toughness: 1,
+                    exclude_source: true,
+                    opponents: false,
+                    all_players: false,
+                    per_counter: None,
+                },
+            },
+        ],
+        ..vehicle("Lifecraft Engine", cost(&[generic(3)]), 4, 4)
+    }
+}
+
+/// Cursecloth Wrappings — {2}{B}{B} Artifact. A Zombie anthem that hands your
+/// graveyard's creatures embalm at their own mana cost.
+pub fn cursecloth_wrappings() -> CardDefinition {
+    CardDefinition {
+        name: "Cursecloth Wrappings",
+        cost: cost(&[generic(2), b(), b()]),
+        card_types: vec![CardType::Artifact],
+        static_abilities: vec![StaticAbility {
+            description: "Zombies you control get +1/+1.",
+            effect: StaticEffect::AnthemForFilter {
+                filter: R::HasCreatureType(CreatureType::Zombie),
+                power: 1,
+                toughness: 1,
+                keywords: vec![],
+                opponents: false,
+                all_players: false,
+                only_your_turn: false,
+                scale_by_counters_on_self: None,
+            },
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::GrantEmbalmThisTurn {
+                what: Selector::TargetFiltered { slot: 0, filter: R::Creature },
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Samut, the Driving Force — {3}{R}{G}{W} 4/5. Your speed pumps the rest of
+/// the team and discounts your noncreature spells.
+pub fn samut_the_driving_force() -> CardDefinition {
+    let speed = || Value::PlayerSpeed(PlayerRef::You);
+    CardDefinition {
+        keywords: vec![
+            Keyword::FirstStrike,
+            Keyword::Vigilance,
+            Keyword::Haste,
+            Keyword::StartYourEngines,
+        ],
+        static_abilities: vec![
+            StaticAbility {
+                description: "Other creatures you control get +X/+0, where X is your speed.",
+                effect: StaticEffect::PumpPTByValue {
+                    applies_to: Selector::EachPermanent(
+                        R::Creature.and(R::ControlledByYou).and(R::OtherThanSource),
+                    ),
+                    power: speed(),
+                    toughness: Value::Const(0),
+                },
+            },
+            StaticAbility {
+                description: "Noncreature spells you cast cost {X} less to cast, where X is \
+                              your speed.",
+                effect: StaticEffect::CostReductionByValue {
+                    filter: R::Not(Box::new(R::Creature)),
+                    amount: speed(),
+                },
+            },
+        ],
+        ..legend(
+            "Samut, the Driving Force",
+            cost(&[generic(3), r(), g(), w()]),
+            vec![CreatureType::Human, CreatureType::Warrior, CreatureType::Cleric],
+            4,
+            5,
+        )
+    }
+}
+
+/// A 1/1 colorless Pilot that crews and saddles as though its power were 2
+/// greater — Aetherdrift's Pilot token.
+fn pilot_token() -> TokenDefinition {
+    TokenDefinition {
+        name: "Pilot".into(),
+        power: 1,
+        toughness: 1,
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Pilot],
+            ..Default::default()
+        },
+        static_abilities: vec![StaticAbility {
+            description: "This token saddles Mounts and crews Vehicles as though its power \
+                          were 2 greater.",
+            effect: StaticEffect::CrewSaddlePowerBonus { applies_to: Selector::This, amount: 2 },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Valor's Flagship — {4}{W}{W}{W} 7/7 Vehicle. Cycle it for {X}{2}{W} and X
+/// Pilots show up to crew whatever is left.
+pub fn valors_flagship() -> CardDefinition {
+    CardDefinition {
+        supertypes: vec![Supertype::Legendary],
+        keywords: vec![
+            Keyword::Flying,
+            Keyword::FirstStrike,
+            Keyword::Lifelink,
+            Keyword::Crew(3),
+            Keyword::Cycling(cost(&[x(), generic(2), w()])),
+        ],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CardCycled, EventScope::SelfSource),
+            effect: Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::TriggerEventAmount,
+                definition: pilot_token(),
+            },
+        }],
+        ..vehicle("Valor's Flagship", cost(&[generic(4), w(), w(), w()]), 7, 7)
     }
 }

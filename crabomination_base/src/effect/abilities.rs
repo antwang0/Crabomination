@@ -1479,6 +1479,11 @@ pub enum StaticEffect {
     /// No-op until a type is chosen. The printed rider covering creature
     /// spells and creature cards you own off the battlefield is not modeled.
     CreaturesYouControlAreChosenType,
+    /// CR 205.3 — "[filter] you control are the chosen creature type in
+    /// addition to their other types" (Lifecraft Engine's Vehicles). A layer-4
+    /// *additive* subtype grant keyed to the source's `chosen_creature_type`;
+    /// no-op until a type is chosen.
+    MatchingAreChosenTypeToo { filter: SelectionRequirement },
     /// CR 601.3 — "Players can't cast spells with the same name as a nontoken
     /// permanent" and can't play nonbasic lands sharing such a name (Cornered
     /// Market). Symmetric; checked at the cast and land-play gates.
