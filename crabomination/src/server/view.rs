@@ -1576,6 +1576,7 @@ fn project_permanent(
                 W::ManaAndLife(c, n) => format!("Ward—{{{}}}, pay {n} life", c.cmc()),
                 W::Life(n) => format!("Ward—pay {n} life"),
                 W::Discard(n) => format!("Ward—discard {n}"),
+                W::DiscardRandom(n) => format!("Ward—discard {n} at random"),
                 W::DiscardMatching(_, n) => format!("Ward—discard {n} matching card(s)"),
                 W::DiscardHand => "Ward—discard your hand".to_string(),
                 W::Blight(n) => format!("Ward—Blight {n}"),

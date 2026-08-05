@@ -1044,6 +1044,9 @@ pub(crate) fn keyword_label(kw: &crabomination::card::Keyword) -> String {
                 format!("Ward—{{X}} ({k:?} counters)")
             }
             crabomination::card::WardCost::Discard(n) => format!("Ward—Discard {n}"),
+            crabomination::card::WardCost::DiscardRandom(n) => {
+                format!("Ward—Discard {n} at random")
+            }
             crabomination::card::WardCost::DiscardMatching(_, n) => {
                 format!("Ward—Discard {n} matching")
             }

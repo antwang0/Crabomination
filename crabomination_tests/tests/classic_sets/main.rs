@@ -4,6 +4,7 @@
 #![allow(clippy::type_complexity)]
 
 mod afr;
+mod all2;
 mod apc;
 mod apc2;
 mod akh;

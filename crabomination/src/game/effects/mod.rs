@@ -32394,6 +32394,26 @@ impl GameState {
                             false
                         }
                     }
+                    WardCost::DiscardRandom(n) => {
+                        // "…discard N cards at random" — the random pick is
+                        // the whole point of the cost (Balduvian Horde).
+                        use rand::RngExt;
+                        let n = *n as usize;
+                        if self.players[payer].hand.len() < n {
+                            false
+                        } else {
+                            for _ in 0..n {
+                                let len = self.players[payer].hand.len();
+                                if len == 0 {
+                                    break;
+                                }
+                                let idx = rand::rng().random_range(0..len);
+                                let card_id = self.players[payer].hand[idx].id;
+                                self.discard_card(payer, card_id, events);
+                            }
+                            true
+                        }
+                    }
                     WardCost::DiscardHand => {
                         // "...unless its controller discards their hand."
                         // Always payable (even from empty). Discard through

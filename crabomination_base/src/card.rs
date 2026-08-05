@@ -713,6 +713,8 @@ pub enum WardCost {
     /// Hellraiser). Both halves must be paid or the spell/ability is countered.
     ManaAndLife(crate::mana::ManaCost, u32),
     Discard(u32),
+    /// "…unless you discard `0` cards at random" (Balduvian Horde).
+    DiscardRandom(u32),
     /// "…unless you discard a [filter] card" — the filtered sibling of
     /// `Discard` (Body Snatcher). Unpayable when the hand holds too few
     /// matching cards.
@@ -2006,6 +2008,10 @@ pub enum SelectionRequirement {
     /// this turn (`CardInstance.blocked_this_turn`) — for "creature that
     /// attacked or blocked this turn" filters (Gideon's Triumph).
     BlockedThisTurn,
+    /// The mirror of `BlockedThisTurn`: the candidate creature *was blocked*
+    /// this turn (read off `GameState.blocks_declared_this_turn`). Fyndhorn
+    /// Druid's "if it was blocked this turn".
+    WasBlockedThisTurn,
     /// CR 708 — true when the candidate permanent is face down (a manifested /
     /// morphed / cloaked / disguised permanent showing a 2/2 vanilla). Powers
     /// DSK "face-down permanent you control" matters (Cryptid Inspector).

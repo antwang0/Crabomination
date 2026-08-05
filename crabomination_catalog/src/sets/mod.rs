@@ -305,6 +305,7 @@ pub fn tri_land(name: &'static str, a: Color, b: Color, c: Color) -> CardDefinit
 
 pub mod akh;
 pub mod all;
+pub mod all2;
 pub mod all_factories;
 pub mod ap;
 pub mod arn;

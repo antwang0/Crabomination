@@ -3208,6 +3208,9 @@ impl GameState {
                     }),
                     R::AttackedThisTurn => card.attacked_this_turn,
                     R::BlockedThisTurn => card.blocked_this_turn,
+                    R::WasBlockedThisTurn => {
+                        self.blocks_declared_this_turn.iter().any(|(_, a)| *a == card.id)
+                    }
                     R::FaceDown => card.face_down,
                     // CR 603.4 — entered this turn (stamped on every ETB).
                     R::EnteredThisTurn => card.entered_turn == Some(self.turn_number),
@@ -4197,6 +4200,9 @@ impl GameState {
             // "{1} less for each creature that attacked this turn" affinity).
             R::AttackedThisTurn => card.attacked_this_turn,
             R::BlockedThisTurn => card.blocked_this_turn,
+            R::WasBlockedThisTurn => {
+                self.blocks_declared_this_turn.iter().any(|(_, a)| *a == card.id)
+            }
             // CR 701.60 — the suspected flag lives on the instance.
             R::IsSuspected => card.suspected,
             // Answerable off live state even for a card that has left the

@@ -29,6 +29,12 @@ Items are grouped by area and roughly ordered by impact within each group.
   (`opening_hand_score`) and keeps the best. A UI pick is a follow-up. ⏳
 - **Deal Broker's post-draft trade is unimplemented** — only its `{T}:` loot
   ships. Blocked on the same draft shell. ⏳
+- **Hand-card `CardDiscarded` / `SelfSource` triggers don't dispatch.** The
+  trigger walker doesn't reach cards in hand, so "when a spell or ability an
+  opponent controls causes you to discard this card, …" never fires (Guerrilla
+  Tactics, Alliances — left out of the catalog for that reason; Pure Intentions'
+  same-shaped trigger is likewise unexercised, its test covers only the cast
+  half). ⏳
 - **Grenzo's Rebuttal auto-picks for every seat.** Each player's three choices
   go through `Decision::ChooseTarget` on the shared decider rather than a
   seat-routed suspend, so a UI opponent doesn't get asked. ⏳

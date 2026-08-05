@@ -47,6 +47,24 @@ static AKH: &[Factory] = &[
 static ALL: &[Factory] = &[
     super::all::force_of_will,
 ];
+static ALL2: &[Factory] = &[
+    super::all2::agent_of_stromgald,
+    super::all2::arcane_denial,
+    super::all2::astrolabe,
+    super::all2::balduvian_horde,
+    super::all2::carrier_pigeons,
+    super::all2::enslaved_scout,
+    super::all2::errand_of_duty,
+    super::all2::feast_or_famine,
+    super::all2::fevered_strength,
+    super::all2::foresight,
+    super::all2::fyndhorn_druid,
+    super::all2::gift_of_the_woods,
+    super::all2::inheritance,
+    super::all2::insidious_bookworms,
+    super::all2::juniper_order_advocate,
+    super::all2::kaysa,
+];
 static ANTE: &[Factory] = &[
     super::ante::contract_from_below,
     super::ante::demonic_attorney,
@@ -20752,6 +20770,7 @@ static ZEN3: &[Factory] = &[
 static PER_SET: &[(&str, &[Factory])] = &[
     ("akh", AKH),
     ("all", ALL),
+    ("all2", ALL2),
     ("ante", ANTE),
     ("ap", AP),
     ("apc", APC),
