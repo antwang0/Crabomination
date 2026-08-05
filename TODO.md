@@ -101,6 +101,20 @@ needs rather than by a checked-in file.
   Cursed Recording (delayed "when you next cast an instant or sorcery, copy
   it"). ⏳
 
+## Aetherdrift (DFT) — 26 gaps, opened
+
+`set_gaps.py dft` is at 26 after Thunderous Velocipede (`decks::recent325`).
+The remainder are build-arounds, each blocked on one primitive: Ancient
+Vendetta (multi-zone named-card exile ×4), Rise from the Wreck (four
+differently-filtered optional graveyard slots), Wickerfolk Indomitable
+(graveyard cast with a life *and* sacrifice surcharge), Webstrike Elite
+(cycling with {X} plus an X-reading cycle trigger), Skyseer's Chariot
+(activated abilities of named sources cost more), Lifecraft Engine (Vehicle
+creatures gain the chosen type — the anthem half is `AnthemForChosenType`),
+Pit Automaton / Sita Varma (exhaust), Demonic Junker (per-player optional
+destroy slots), Push the Limit (return *all* matching graveyard cards to the
+battlefield), Cursecloth Wrappings (grant embalm at the card's own cost).
+
 ## Recommender: two builder defects fixed, one lesson recorded
 
 Both were found by asking why Emeritus of Ideation never appeared in a

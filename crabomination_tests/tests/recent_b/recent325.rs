@@ -311,3 +311,20 @@ fn leyline_of_mutation_starts_in_play() {
     assert!(g.battlefield_find(id).is_some());
     assert!(g.battlefield.iter().any(|c| c.definition.name == "Grizzly Bears"));
 }
+
+/// Thunderous Velocipede scales its bonus counters by the entrant's mana value.
+#[test]
+fn thunderous_velocipede_scales_by_mana_value() {
+    let mut g = two_player_game();
+    let velo = g.add_card_to_battlefield(0, catalog::thunderous_velocipede());
+    let cheap = g.add_card_to_hand(0, catalog::grizzly_bears());
+    cast(&mut g, cheap, None);
+    let dear = g.add_card_to_hand(0, catalog::miasma_demon());
+    cast(&mut g, dear, None);
+    let counters = |g: &GameState, id: CardId| {
+        g.battlefield_find(id).unwrap().counter_count(CounterType::PlusOnePlusOne)
+    };
+    assert_eq!(counters(&g, cheap), 1, "a 2-drop gets one");
+    assert_eq!(counters(&g, dear), 3, "a 6-drop gets three");
+    assert_eq!(counters(&g, velo), 0, "not itself");
+}

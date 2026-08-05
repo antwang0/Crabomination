@@ -1,5 +1,6 @@
-//! Duskmourn / Bloomburrow / Tarkir gap batch — Vehicles, Equipment, Auras,
-//! a Leyline and graveyard engines. Tests in `tests/recent_b/recent325.rs`.
+//! Duskmourn / Bloomburrow / Tarkir / Aetherdrift gap batch — Vehicles,
+//! Equipment, Auras, a Leyline and graveyard engines. Tests in
+//! `tests/recent_b/recent325.rs`.
 
 use crate::card::{
     ActivatedAbility, ArtifactSubtype, CardDefinition, CardType, CounterType, CreatureType,
@@ -574,5 +575,36 @@ pub fn silent_hallcreeper() -> CardDefinition {
             1,
             1,
         )
+    }
+}
+
+// ── Aetherdrift ──────────────────────────────────────────────────────────────
+
+/// Thunderous Velocipede — everything else you play arrives bigger, and the
+/// expensive things arrive much bigger.
+pub fn thunderous_velocipede() -> CardDefinition {
+    let others = R::Creature
+        .or(R::HasArtifactSubtype(ArtifactSubtype::Vehicle))
+        .and(R::ControlledByYou)
+        .and(R::Not(Box::new(R::IsSource)));
+    let extra = |cheap: bool, amount: u32| StaticAbility {
+        description: "Each other Vehicle and creature you control enters with an additional \
+                      +1/+1 counter on it if its mana value is 4 or less, otherwise three.",
+        effect: StaticEffect::MatchingEntersWithExtraCounters {
+            filter: if cheap {
+                others.clone().and(R::ManaValueAtMost(4))
+            } else {
+                others.clone().and(R::Not(Box::new(R::ManaValueAtMost(4))))
+            },
+            kind: CounterType::PlusOnePlusOne,
+            amount,
+        },
+    };
+    CardDefinition {
+        power: 5,
+        toughness: 5,
+        keywords: vec![Keyword::Trample, Keyword::Crew(3)],
+        static_abilities: vec![extra(true, 1), extra(false, 3)],
+        ..artifact("Thunderous Velocipede", cost(&[generic(1), g(), g()]), ArtifactSubtype::Vehicle)
     }
 }

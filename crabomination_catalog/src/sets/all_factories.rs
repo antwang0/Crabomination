@@ -6340,6 +6340,7 @@ static DECKS: &[Factory] = &[
     super::decks::rite_of_renewal,
     super::decks::dalkovan_encampment,
     super::decks::silent_hallcreeper,
+    super::decks::thunderous_velocipede,
     super::decks::gossips_talent,
     super::decks::hunters_talent,
     super::decks::scavengers_talent,
