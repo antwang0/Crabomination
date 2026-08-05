@@ -1697,6 +1697,12 @@ impl GameState {
                     if let Some(door) = room_door {
                         self.set_room_door_unlocked(card_id, door == 1, &mut events);
                     }
+                    // CR 614 — "As this permanent enters, [effect]" (Ixidron).
+                    // Before the first SBA sweep so a `*/*` body sized off the
+                    // effect never dies as a 0/0, and before the counter specs
+                    // below so an enters-with count can read what it did
+                    // (Mimeoplasm's three counters per card it exiled).
+                    self.apply_as_enters_effect(card_id);
                     // Collect the printed `enters_with_counters` spec and
                     // any active `ExtraEtbCountersForCreatureCasts` static
                     // effects controlled by the caster. The static fires
@@ -1837,10 +1843,6 @@ impl GameState {
                     // cost enters with N time counters (and isn't a creature
                     // until they tick off).
                     self.apply_impending_etb(card_id, &mut events);
-                    // CR 614 — "As this permanent enters, [effect]" (Ixidron).
-                    // Before the first SBA sweep so a `*/*` body sized off the
-                    // effect never dies as a 0/0.
-                    self.apply_as_enters_effect(card_id);
                     // CR 614 — "As this enters, it becomes your choice of …"
                     // (Corrupted Shapeshifter). Applied before SBA so a
                     // printed */* body never dies as a 0/0.
@@ -3271,6 +3273,7 @@ impl GameState {
         // powers Witherbloom "if a creature died under your control this
         // turn" end-step payoffs (Essenceknit Scholar).
         self.players[p].creatures_died_this_turn = 0;
+        self.creature_deaths_this_turn.clear();
         self.players[p].zuberas_died_this_turn = 0;
         self.players[p].escalating_resolutions_this_turn = 0;
         // Reset the Revolt (CR 702.139) "permanent left the battlefield under
@@ -4511,6 +4514,7 @@ impl GameState {
                     self.players[controller_idx].creatures_died_this_turn.saturating_add(1);
                 self.creatures_died_this_resolution =
                     self.creatures_died_this_resolution.saturating_add(1);
+                self.note_creature_death(id);
                 // Zubera cycle: count Zubera deaths separately (read off the
                 // still-present dying creature's subtypes).
                 if self.battlefield.iter().any(|c| c.id == id
@@ -5484,6 +5488,7 @@ impl GameState {
                 self.players[controller_idx].creatures_died_this_turn.saturating_add(1);
             self.creatures_died_this_resolution =
                 self.creatures_died_this_resolution.saturating_add(1);
+            self.note_creature_death(id);
             if self.battlefield.iter().any(|c| c.id == id
                 && c.definition.subtypes.creature_types.contains(&crate::card::CreatureType::Zubera))
             {

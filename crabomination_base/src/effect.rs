@@ -1257,6 +1257,10 @@ pub enum Predicate {
     ChoseModesAtLeast(u8),
     /// It's `who`'s turn.
     IsTurnOf(PlayerRef),
+    /// `who` resolves to a player who is an opponent of the source's
+    /// controller ("…deals combat damage to one of your opponents" —
+    /// Gonti, Night Minister). Teammates and the controller are false.
+    PlayerIsOpponent { who: PlayerRef },
     /// True during the controller's main phase (CR — RNA Addendum). Read at an
     /// instant's resolution, which for these cards is the same step it was cast
     /// in (the stack can't advance a step mid-resolution), so it faithfully
@@ -1594,6 +1598,10 @@ pub enum Predicate {
     /// Witherbloom "if a creature died under your control this turn, …"
     /// end-step payoffs (Essenceknit Scholar).
     CreaturesDiedThisTurnAtLeast { who: PlayerRef, at_least: Value },
+    /// A creature matching `filter` died this turn, under any controller
+    /// ("if a non-Zombie creature died this turn" — Undead Sprinter). Read
+    /// against the death-time definitions in `creature_deaths_this_turn`.
+    CreatureDiedThisTurnMatching { filter: SelectionRequirement },
     /// CR 122 — at least `at_least` *different kinds* of counters exist among
     /// the creatures `who` controls (Hundred-Battle Veteran's "three or more
     /// different kinds of counters among creatures you control"). Counts
@@ -1648,6 +1656,10 @@ pub enum Predicate {
     /// Evaluated against the topmost matching `StackItem::Spell`'s `target`
     /// slot.
     CastSpellTargetsMatch(SelectionRequirement),
+    /// The just-cast spell has exactly one target in total and it matches the
+    /// filter ("…that targets only a single creature you control" — Leyline
+    /// of Resonance). Counts slot 0 plus every additional target.
+    CastSpellTargetsOnlyOneMatching(SelectionRequirement),
     /// True if the just-cast spell (located via `ctx.trigger_source`) is
     /// itself a card matching `filter` — e.g. a noncreature spell (Sprite
     /// Dragon, Dragon's Rage Channeler) or an artifact spell. Evaluated
@@ -1729,6 +1741,11 @@ pub enum Predicate {
     /// opponent's zone. Evaluated against `ctx.trigger_source`'s
     /// `StackItem::Spell.card.owner`.
     CastSpellNotOwnedByYou,
+    /// The caster-relative sibling of [`Predicate::CastSpellNotOwnedByYou`]:
+    /// the just-cast spell's owner isn't the player who cast it, judged off
+    /// the stack item rather than the listener's controller ("whenever a
+    /// player casts a spell they don't own" — Gonti, Night Minister).
+    CastSpellNotOwnedByCaster,
     /// True if the just-cast spell (via `ctx.trigger_source`) was cast from
     /// exile — reads the `StackItem::Spell.card.cast_from_exile` flag.
     /// Nassari, Dean of Expression's "whenever you cast a spell from exile".
@@ -6668,6 +6685,25 @@ pub enum Effect {
     ExileTopLandTokenElseMayPlay {
         token: TokenDefinition,
     },
+
+    /// "Look at the top card of `library`'s library and exile it face down.
+    /// `grantee` may play it for as long as it remains exiled, and mana of
+    /// any type can be spent to cast it" (Gonti, Night Minister). The
+    /// any-type spend is the card's mana value as generic (CR 609.4b), the
+    /// same equivalence Gonti, Lord of Luxury uses.
+    ExileTopFaceDownGrantPlay { library: PlayerRef, grantee: PlayerRef },
+
+    /// CR 614 — "As this enters, exile up to `count` cards matching `filter`
+    /// from your graveyard." Each exiled card is stamped `exiled_with =
+    /// source`, so `Selector::CardExiledWithSource` and
+    /// `Value::CardsExiledWithSourceCount` see them (Mimeoplasm, Revered One).
+    AsEntersExileFromYourGraveyard { count: Value, filter: SelectionRequirement },
+
+    /// CR 707.2 — "this permanent becomes a copy of `what`, except it's
+    /// `base_pt` and has this ability." `what` picks a card exiled with the
+    /// source; the granting activated ability is re-appended so it can copy
+    /// again (Mimeoplasm, Revered One).
+    BecomeCopyOfExiledCard { what: Selector, base_pt: Option<(i32, i32)> },
 
     // ── Sacrifice ────────────────────────────────────────────────────────────
     Sacrifice { who: Selector, count: Value, filter: SelectionRequirement },

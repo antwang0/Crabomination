@@ -28316,6 +28316,103 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::ExileTopFaceDownGrantPlay { library, grantee } => {
+                // Gonti, Night Minister — the library and the player who gets
+                // to play the card are different seats (the damaged opponent
+                // and the damaging creature's controller).
+                let Some(lib) = self.resolve_player(library, ctx) else { return Ok(()) };
+                let Some(to) = self.resolve_player(grantee, ctx) else { return Ok(()) };
+                let Some(top_id) = self.players[lib].library.first().map(|c| c.id) else {
+                    return Ok(());
+                };
+                let mut card = Self::take_card(&mut self.players[lib].library, top_id)
+                    .expect("id read off the top of this library just above");
+                card.exiled_with = ctx.source;
+                card.face_down = true;
+                card.may_play_until = Some(crate::card::MayPlayPermission {
+                    player: to,
+                    granted_turn: self.turn_number,
+                    duration: crate::card::MayPlayDuration::WhileExiled,
+                    exile_after: false,
+                    miracle: false,
+                });
+                // CR 609.4b — "mana of any type can be spent": paying the
+                // mana value as generic is the same set of payments.
+                card.granted_alt_cast_cost_eot = Some(crate::mana::ManaCost::new(vec![
+                    crate::mana::generic(card.definition.cost.cmc()),
+                ]));
+                self.exile.push(card);
+                events.push(GameEvent::PermanentExiled { card_id: top_id });
+                Ok(())
+            }
+
+            Effect::AsEntersExileFromYourGraveyard { count, filter } => {
+                // Mimeoplasm, Revered One. "Up to X" — a shorter graveyard
+                // just exiles what's there. Cards are stamped `exiled_with`
+                // so the counter count and the copy target can find them.
+                let n = self.evaluate_value(count, ctx).max(0) as usize;
+                let p = ctx.controller;
+                let picks: Vec<CardId> = self.players[p]
+                    .graveyard
+                    .iter()
+                    .filter(|c| self.evaluate_requirement_on_card(filter, c, p))
+                    .map(|c| c.id)
+                    .take(n)
+                    .collect();
+                for id in picks {
+                    let Some(mut card) = Self::take_card(&mut self.players[p].graveyard, id) else {
+                        continue;
+                    };
+                    card.exiled_with = ctx.source;
+                    self.exile.push(card);
+                    self.players[p].cards_exiled_this_turn += 1;
+                    events.push(GameEvent::PermanentExiled { card_id: id });
+                    self.note_left_graveyard(p, id, events);
+                }
+                Ok(())
+            }
+
+            Effect::BecomeCopyOfExiledCard { what, base_pt } => {
+                // Mimeoplasm, Revered One — "except it's 0/0 and has this
+                // ability". The granting ability is re-appended so the
+                // permanent can copy again.
+                let Some(cid) = ctx.source else { return Ok(()) };
+                let own = self
+                    .battlefield_find(cid)
+                    .and_then(|c| c.definition.activated_abilities.first().cloned());
+                let Some(card_id) = self
+                    .resolve_selector(what, ctx)
+                    .into_iter()
+                    .find_map(|e| e.as_card_id())
+                else {
+                    return Ok(());
+                };
+                let Some(def) =
+                    self.exile.iter().find(|c| c.id == card_id).map(|c| c.definition.clone())
+                else {
+                    return Ok(());
+                };
+                let Some(c) = self.battlefield.iter_mut().find(|c| c.id == cid) else {
+                    return Ok(());
+                };
+                let mut new_def = (*def).clone();
+                if let Some((p, t)) = base_pt {
+                    new_def.power = *p;
+                    new_def.toughness = *t;
+                }
+                if let Some(a) = own {
+                    new_def.activated_abilities.push(a);
+                }
+                let original = std::mem::replace(&mut c.definition, std::sync::Arc::new(new_def));
+                self.temporary_copies.push(crate::game::TempCopy {
+                    card: cid,
+                    original_name: original.name.to_string(),
+                    original: Some(original),
+                    duration: crate::effect::Duration::Permanent,
+                });
+                Ok(())
+            }
+
             Effect::LookTopMayBottomAllElse { count, then, else_ } => {
                 self.run_look_top_may_bottom_all(count, then, else_, ctx, events, effect)
             }

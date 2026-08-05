@@ -3922,6 +3922,19 @@ fn main_phase_action_with(
         }
     }
 
+    // Impulse exile (Light Up the Stage, Gonti Night Minister): a land the
+    // seat has a may-play grant on is played from exile before it expires.
+    if state.can_player_play_land(seat)
+        && let Some(land) = state.exile.iter().find(|c| {
+            c.definition.is_land() && c.may_play_until.is_some_and(|perm| perm.player == seat)
+        })
+    {
+        let action = GameAction::PlayLand(land.id);
+        if GameState::would_accept_on(&probe, action.clone()) {
+            return action;
+        }
+    }
+
     if !pool.is_empty() {
         // Magecraft-aware bias: if the bot controls a permanent with a
         // magecraft trigger, prefer instants/sorceries so the trigger
@@ -5778,6 +5791,8 @@ pub fn pick_attacks(state: &GameState, seat: usize) -> Vec<Attack> {
             c.definition.is_planeswalker()
                 && c.controller != seat
                 && state.players[c.controller].is_alive()
+                // CR 506.2 — The Aetherspark while attached.
+                && !state.permanent_cant_be_attacked(c.id)
         })
         .map(|c| {
             let loyalty = c

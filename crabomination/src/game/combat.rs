@@ -241,6 +241,9 @@ impl GameState {
                         .battlefield_find(pw_id)
                         .ok_or(GameError::InvalidPlaneswalkerAttackTarget(pw_id))?;
                     if !pw.definition.is_planeswalker()
+                        // CR 506.2 — "can't be attacked" (The Aetherspark
+                        // while attached to a creature).
+                        || self.permanent_cant_be_attacked(pw_id)
                         || self.same_team(self.active_player_idx, pw.controller)
                         || !self.players[pw.controller].is_alive()
                         || seat_restriction.is_some_and(|only| only != Some(pw.controller))
@@ -259,6 +262,7 @@ impl GameState {
                         .ok_or(GameError::InvalidPlaneswalkerAttackTarget(b_id))?;
                     let protector = b.protected_by;
                     if !b.definition.is_battle()
+                        || self.permanent_cant_be_attacked(b_id)
                         || protector == Some(self.active_player_idx)
                         || protector.is_none_or(|pr| !self.players[pr].is_alive())
                     {
@@ -3372,6 +3376,13 @@ impl GameState {
         }
 
         Ok(events)
+    }
+
+    /// CR 506.2 — whether `id` carries a computed `Keyword::CantBeAttacked`,
+    /// so it can't be declared as an attack target (The Aetherspark).
+    pub(crate) fn permanent_cant_be_attacked(&self, id: CardId) -> bool {
+        self.computed_permanent(id)
+            .is_some_and(|cp| cp.keywords.contains(&Keyword::CantBeAttacked))
     }
 
     /// Apply `amount` damage from `atk` to its declared attack target. For

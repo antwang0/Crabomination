@@ -1283,6 +1283,10 @@ pub enum Keyword {
     /// Silence). Enforced from the *computed* keyword set in
     /// `declare_attackers`, so layer-granted variants are honored.
     CantAttack,
+    /// CR 506.2 restriction — "this permanent can't be attacked." Enforced
+    /// from the computed keyword set when a planeswalker or battle is named
+    /// as an attack target (The Aetherspark while attached).
+    CantBeAttacked,
     /// CR 602.5 restriction — "activated abilities with {T} in their costs
     /// can't be activated" (Serra Bestiary).
     CantActivateTapAbilities,

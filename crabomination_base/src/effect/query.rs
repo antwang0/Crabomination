@@ -250,6 +250,8 @@ impl Effect {
             | Effect::PayAnyAmountOfLifeCapped { .. }
             | Effect::PlaySubgame
             | Effect::EnterExilingGraveyardCreaturesForCounters { .. }
+            | Effect::ExileTopFaceDownGrantPlay { .. }
+            | Effect::AsEntersExileFromYourGraveyard { .. }
             | Effect::ExileSelfWithCountdown
             | Effect::WaiveShroudForPlayerThisTurn { .. }
             | Effect::DestroyEachUnlessPaysLife { .. }
@@ -1070,6 +1072,7 @@ impl Effect {
                 sel_has_target(who) || value_has_target(count)
             }
             Effect::ExileFromGraveyardBecomeCopy { what }
+            | Effect::BecomeCopyOfExiledCard { what, .. }
             | Effect::ReturnSameNameFromAllGraveyards { what } => sel_has_target(what),
             Effect::PutTopOnBottom { who }
             | Effect::LookAtHandCastFree { who } => sel_has_target(who),
@@ -1559,6 +1562,7 @@ impl Effect {
             | Effect::GrantKeywordWhileSourceTapped { what, .. }
             | Effect::SacrificeThenRevealUntilSharedType { what }
             | Effect::ExileFromGraveyardBecomeCopy { what }
+            | Effect::BecomeCopyOfExiledCard { what, .. }
             | Effect::ReturnSameNameFromAllGraveyards { what }
             | Effect::CounterAbilityAndDestroySource { what }
             | Effect::WeldArtifacts { what }
@@ -3109,6 +3113,7 @@ impl Effect {
                 | Effect::SearchOpponentLibraryForSameName { what }
                 | Effect::GainControlAndReattachAura { what } => sel_find(what, slot),
                 Effect::ExileFromGraveyardBecomeCopy { what }
+                | Effect::BecomeCopyOfExiledCard { what, .. }
                 | Effect::ReturnSameNameFromAllGraveyards { what } => sel_find(what, slot),
                 Effect::UnlessPlayerPays { then, .. } => eff_find(then, slot, mode, kicked),
                 Effect::ExilePlayerGraveyard { who, .. }

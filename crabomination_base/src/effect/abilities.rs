@@ -1432,6 +1432,12 @@ pub enum StaticEffect {
     /// hidden-zone card evaluator, so graveyard-scoped tribal filters
     /// (Patriarch's Bidding, Rally cards, soulshift) see it.
     YourGraveyardCreaturesHaveChosenType,
+    /// "…and the same is true for creature spells you control and creature
+    /// cards you own that aren't on the battlefield" — the any-zone sibling
+    /// of `YourGraveyardCreaturesHaveChosenType`, gated by `filter` (Leyline
+    /// of Transformation). Pairs with `MatchingAreChosenTypeToo` for the
+    /// battlefield half, which layers handle.
+    OwnedCardsOffBattlefieldAreChosenTypeToo { filter: SelectionRequirement },
     /// Six: during the controller's turn, nonland permanent cards in their
     /// graveyard have retrace (CR 702.55).
     GraveyardPermanentsHaveRetraceDuringYourTurn,

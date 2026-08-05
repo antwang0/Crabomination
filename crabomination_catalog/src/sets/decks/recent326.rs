@@ -816,8 +816,13 @@ pub fn the_aetherspark() -> CardDefinition {
             ..Default::default()
         },
         base_loyalty: 4,
-        // The "can't be attacked while attached" half needs a planeswalker
-        // attack restriction the engine doesn't model; everything else is here.
+        static_abilities: vec![StaticAbility {
+            description: "As long as this is attached to a creature, it can't be attacked.",
+            effect: StaticEffect::SelfHasKeywordWhile {
+                keyword: Keyword::CantBeAttacked,
+                condition: R::AttachedToSource,
+            },
+        }],
         equipped_bonus: Some(crate::card::EquipBonus {
             triggered_abilities: [
                 EventKind::DealsCombatDamageToPlayer,
@@ -931,5 +936,76 @@ pub fn pit_automaton() -> CardDefinition {
             },
         ],
         ..creature("Pit Automaton", cost(&[generic(2)]), vec![CreatureType::Construct], 0, 4)
+    }
+}
+
+/// Gonti, Night Minister — {2}{B}{B} 3/4. Casting a spell you don't own makes
+/// a Treasure; any creature connecting with one of your opponents impulses
+/// the top card of that opponent's library for its controller.
+pub fn gonti_night_minister() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::SpellCast, EventScope::AnyPlayer)
+                    .with_filter(Predicate::CastSpellNotOwnedByCaster),
+                effect: Effect::CreateToken {
+                    who: PlayerRef::Triggerer,
+                    count: Value::ONE,
+                    definition: crabomination_base::tokens::treasure_token(),
+                },
+            },
+            TriggeredAbility {
+                event: EventSpec::new(
+                    EventKind::DealsCombatDamageToPlayer,
+                    EventScope::AnyPlayer,
+                )
+                .with_filter(Predicate::PlayerIsOpponent { who: PlayerRef::Target(0) }),
+                effect: Effect::ExileTopFaceDownGrantPlay {
+                    library: PlayerRef::Target(0),
+                    grantee: PlayerRef::ControllerOf(Box::new(Selector::TriggerSource)),
+                },
+            },
+        ],
+        ..legend(
+            "Gonti, Night Minister",
+            cost(&[generic(2), b(), b()]),
+            vec![CreatureType::Aetherborn, CreatureType::Rogue],
+            3,
+            4,
+        )
+    }
+}
+
+/// Mimeoplasm, Revered One — {X}{B}{G}{U} 0/0 Ooze. Enters exiling up to X
+/// creature cards from your graveyard for three +1/+1 counters each; {2}
+/// makes it a 0/0 copy of one of them.
+pub fn mimeoplasm_revered_one() -> CardDefinition {
+    CardDefinition {
+        as_enters_effect: Some(Effect::AsEntersExileFromYourGraveyard {
+            count: Value::XFromCost,
+            filter: R::Creature,
+        }),
+        enters_with_counters: Some((
+            CounterType::PlusOnePlusOne,
+            Value::Times(
+                Box::new(Value::Const(3)),
+                Box::new(Value::CardsExiledWithSourceCount),
+            ),
+        )),
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(2)]),
+            effect: Effect::BecomeCopyOfExiledCard {
+                what: Selector::one_of(Selector::CardExiledWithSource),
+                base_pt: Some((0, 0)),
+            },
+            ..Default::default()
+        }],
+        ..legend(
+            "Mimeoplasm, Revered One",
+            cost(&[x(), b(), g(), u()]),
+            vec![CreatureType::Ooze],
+            0,
+            0,
+        )
     }
 }

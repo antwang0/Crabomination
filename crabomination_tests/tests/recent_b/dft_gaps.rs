@@ -582,3 +582,113 @@ fn pit_automaton_copies_your_next_exhaust_ability() {
         "the ability resolved twice"
     );
 }
+
+/// The Aetherspark can't be attacked while it's attached to a creature.
+#[test]
+fn the_aetherspark_cant_be_attacked_while_attached() {
+    let mut g = main_phase();
+    let spark = g.add_card_to_battlefield(1, catalog::the_aetherspark());
+    let attacker = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(attacker);
+    g.step = TurnStep::DeclareAttackers;
+    let swing = |g: &mut GameState| {
+        g.declare_attackers(vec![Attack {
+            attacker,
+            target: AttackTarget::Planeswalker(spark),
+        }])
+    };
+    assert!(swing(&mut g).is_ok(), "an unattached Aetherspark is a legal attack target");
+    g.attacking.clear();
+    let host = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.battlefield_find_mut(spark).unwrap().attached_to = Some(host);
+    assert!(swing(&mut g).is_err(), "attached, it can't be attacked");
+}
+
+/// Gonti, Night Minister impulses the top of the damaged opponent's library
+/// for the *damaging creature's* controller.
+#[test]
+fn gonti_night_minister_impulses_off_combat_damage() {
+    let mut g = main_phase();
+    etb(&mut g, catalog::gonti_night_minister());
+    let stolen = g.add_card_to_library(1, catalog::grizzly_bears());
+    let attacker = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    swing(&mut g, attacker);
+    let exiled = g.exile.iter().find(|c| c.id == stolen).expect("top card exiled");
+    assert!(exiled.face_down, "exiled face down");
+    assert_eq!(exiled.may_play_until.unwrap().player, 0, "the dealer's controller may play it");
+}
+
+/// Gonti's other half: casting a spell you don't own makes its caster a Treasure.
+#[test]
+fn gonti_night_minister_treasures_a_borrowed_cast() {
+    let mut g = main_phase();
+    etb(&mut g, catalog::gonti_night_minister());
+    let borrowed = g.add_card_to_hand(0, catalog::grizzly_bears());
+    g.find_card_anywhere_mut(borrowed).unwrap().owner = 1;
+    flood(&mut g, 0);
+    g.perform_action(GameAction::CastSpell {
+        card_id: borrowed,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast");
+    drain_stack(&mut g);
+    assert_eq!(
+        g.battlefield.iter().filter(|c| c.controller == 0 && c.definition.name == "Treasure").count(),
+        1,
+        "the caster got a Treasure"
+    );
+}
+
+/// Mimeoplasm enters exiling X creature cards for three counters apiece, then
+/// copies one of them as a 0/0.
+#[test]
+fn mimeoplasm_exiles_for_counters_then_copies() {
+    let mut g = main_phase();
+    let bear = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let ooze = g.add_card_to_hand(0, catalog::mimeoplasm_revered_one());
+    flood(&mut g, 0);
+    g.perform_action(GameAction::CastSpell {
+        card_id: ooze,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: Some(2),
+    })
+    .expect("cast for X=2");
+    drain_stack(&mut g);
+    assert_eq!(g.exile.iter().filter(|c| c.exiled_with == Some(ooze)).count(), 2);
+    assert_eq!(
+        g.battlefield_find(ooze).unwrap().counter_count(CounterType::PlusOnePlusOne),
+        6,
+        "three counters per exiled creature"
+    );
+    g.priority.player_with_priority = 0;
+    activate(&mut g, ooze, 0, None).expect("copy");
+    let copied = g.battlefield_find(ooze).unwrap();
+    assert_eq!(copied.definition.name, "Grizzly Bears");
+    assert_eq!(copied.definition.power, 0, "except it's 0/0");
+    assert!(!copied.definition.activated_abilities.is_empty(), "and it keeps this ability");
+    let _ = bear;
+}
+
+/// An impulse-exiled land can be played from exile (CR 118 "you may play it").
+#[test]
+fn a_may_play_grant_lets_you_play_an_exiled_land() {
+    let mut g = main_phase();
+    let land = g.add_card_to_exile(0, catalog::mountain());
+    g.find_card_anywhere_mut(land).unwrap().may_play_until =
+        Some(crabomination::card::MayPlayPermission {
+            player: 0,
+            granted_turn: g.turn_number,
+            duration: crabomination::card::MayPlayDuration::WhileExiled,
+            exile_after: false,
+            miracle: false,
+        });
+    g.perform_action(GameAction::PlayLand(land)).expect("play it from exile");
+    assert!(g.battlefield.iter().any(|c| c.id == land), "the land is on the battlefield");
+    assert!(!g.exile.iter().any(|c| c.id == land), "and no longer in exile");
+}

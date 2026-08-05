@@ -463,6 +463,13 @@ pub struct GameState {
     /// you control enters from exile"). Cleared at each turn's untap step.
     #[serde(default)]
     pub(crate) entered_from_exile_this_turn: std::collections::HashSet<CardId>,
+    /// Death-time snapshots of every creature that died this turn, in death
+    /// order. The typed sibling of `Player.creatures_died_this_turn`, which
+    /// is only a tally; read by `Predicate::CreatureDiedThisTurnMatching`
+    /// (Undead Sprinter's "if a non-Zombie creature died this turn").
+    /// Cleared at each turn's untap step.
+    #[serde(default)]
+    pub(crate) creature_deaths_this_turn: Vec<CardInstance>,
     /// Delayed triggered abilities registered by resolved spells/abilities
     /// (Pact upkeep cost, Goryo's exile-at-EOT, etc.). Fired by the step
     /// dispatcher when the matching event occurs.
@@ -1849,6 +1856,7 @@ impl Clone for GameState {
                 .clone(),
             entered_from_graveyard_this_turn: self.entered_from_graveyard_this_turn.clone(),
             entered_from_exile_this_turn: self.entered_from_exile_this_turn.clone(),
+            creature_deaths_this_turn: self.creature_deaths_this_turn.clone(),
             delayed_triggers: self.delayed_triggers.clone(),
             attacking_token_cleanup: self.attacking_token_cleanup.clone(),
             sacrificed_power: self.sacrificed_power,
@@ -2164,6 +2172,7 @@ impl GameState {
             graveyard_from_battlefield_this_turn: Default::default(),
             entered_from_graveyard_this_turn: std::collections::HashSet::new(),
             entered_from_exile_this_turn: std::collections::HashSet::new(),
+            creature_deaths_this_turn: Vec::new(),
             delayed_triggers: Vec::new(),
             attacking_token_cleanup: Vec::new(),
             sacrificed_power: None,
@@ -5805,24 +5814,33 @@ impl GameState {
         })
     }
 
-    /// Ashes of the Fallen — the creature types a card in its owner's
-    /// graveyard picks up from `YourGraveyardCreaturesHaveChosenType` grants
-    /// that owner controls. Empty for cards outside a graveyard.
+    /// The creature types a card picks up while it is *not* on the
+    /// battlefield: Ashes of the Fallen's graveyard-only
+    /// `YourGraveyardCreaturesHaveChosenType`, plus Leyline of
+    /// Transformation's `OwnedCardsOffBattlefieldAreChosenTypeToo`, which
+    /// covers every other zone (hand, library, exile, the stack). Layer
+    /// effects only reach permanents, so this is the off-battlefield
+    /// equivalent of `StaticEffect::MatchingAreChosenTypeToo`.
     pub(crate) fn graveyard_type_grants(
         &self,
         card: &crate::card::CardInstance,
     ) -> Vec<crate::card::CreatureType> {
         use crate::effect::StaticEffect;
-        let Some(owner) = self.players.get(card.owner) else { return Vec::new() };
-        if !owner.graveyard.iter().any(|c| c.id == card.id) {
+        if self.battlefield.iter().any(|c| c.id == card.id) {
             return Vec::new();
         }
+        let Some(owner) = self.players.get(card.owner) else { return Vec::new() };
+        let in_graveyard = owner.graveyard.iter().any(|c| c.id == card.id);
         self.battlefield
             .iter()
             .filter(|c| c.controller == card.owner)
             .filter(|c| {
-                c.definition.static_abilities.iter().any(|sa| {
-                    matches!(sa.effect, StaticEffect::YourGraveyardCreaturesHaveChosenType)
+                c.definition.static_abilities.iter().any(|sa| match &sa.effect {
+                    StaticEffect::YourGraveyardCreaturesHaveChosenType => in_graveyard,
+                    StaticEffect::OwnedCardsOffBattlefieldAreChosenTypeToo { filter } => {
+                        self.evaluate_requirement_on_card(filter, card, card.owner)
+                    }
+                    _ => false,
                 })
             })
             .filter_map(|c| c.chosen_creature_type)
@@ -6070,6 +6088,16 @@ impl GameState {
             self.in_token_replacement = false;
         }
         id
+    }
+
+    /// Record a dying creature's definition for the turn, so
+    /// `Predicate::CreatureDiedThisTurnMatching` can ask what *kind* of
+    /// creature died (Undead Sprinter's non-Zombie gate). Called from both
+    /// death funnels while the permanent is still on the battlefield.
+    pub(crate) fn note_creature_death(&mut self, id: CardId) {
+        if let Some(c) = self.battlefield.iter().find(|c| c.id == id).cloned() {
+            self.creature_deaths_this_turn.push(c);
+        }
     }
 
     /// Bookkeeping for a card leaving `p`'s graveyard: bumps the per-turn
@@ -19820,6 +19848,7 @@ fn static_effect_to_effects(
             // YourGraveyardCreaturesHaveChosenType — read by the hidden-zone
             // card evaluator (`graveyard_type_grants`); no layer effect.
             | StaticEffect::YourGraveyardCreaturesHaveChosenType
+            | StaticEffect::OwnedCardsOffBattlefieldAreChosenTypeToo { .. }
             | StaticEffect::GraveyardPermanentsHaveRetraceDuringYourTurn
             | StaticEffect::CollectsLeaverCounters
             | StaticEffect::OpponentsCantActivateArtifactAbilities

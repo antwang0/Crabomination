@@ -193,7 +193,7 @@ fn keyword_name(kw: &Keyword) -> Option<String> {
         | Keyword::CantBlockGreaterPowerThanSelf
         | Keyword::CanBlockAdditional(_)
         | Keyword::CanBlockAnyNumber
-        | Keyword::CantAttack | Keyword::CantActivateAbilities
+        | Keyword::CantAttack | Keyword::CantBeAttacked | Keyword::CantActivateAbilities
         | Keyword::MustBeBlocked | Keyword::AllMustBlock
         | Keyword::MustAttack | Keyword::MustBlock | Keyword::AssignsDamageAsThoughUnblocked
         | Keyword::CanAttackOnlyIfDefenderControls(_)

@@ -2320,6 +2320,18 @@ fn effect_produces_color(effect: &Effect, color: ManaColor) -> bool {
 impl GameState {
     // ── Play land ─────────────────────────────────────────────────────────────
 
+    /// Whether `p` holds an outstanding `may_play_until` permission on an
+    /// exiled `card_id`. The cast path reads the permission off the card
+    /// directly; land plays go through here so "you may play that card"
+    /// grants (impulse exile) cover lands as well as spells.
+    pub(crate) fn may_play_grant_for(&self, p: usize, card_id: CardId) -> bool {
+        self.exile
+            .iter()
+            .find(|c| c.id == card_id)
+            .and_then(|c| c.may_play_until)
+            .is_some_and(|perm| perm.player == p)
+    }
+
     pub(crate) fn play_land(&mut self, card_id: CardId) -> Result<Vec<GameEvent>, GameError> {
         self.play_land_with_face(card_id, /* back_face */ false)
     }
@@ -2361,20 +2373,38 @@ impl GameState {
         let from_top = !self.players[p].has_in_hand(card_id)
             && self.library_top_playable(p, card_id);
         let from_top_capped = from_top && self.library_top_cast_is_capped(p, card_id);
+        // CR 118.x — "you may play that card" grants cover lands too. An
+        // impulse-exiled land (Light Up the Stage, Gonti Night Minister,
+        // Chandra Torch of Defiance) is played from exile, not cast.
+        let from_exile = !from_top
+            && !self.players[p].has_in_hand(card_id)
+            && self.may_play_grant_for(p, card_id);
         let mut card = if from_top {
             self.players[p].library.remove(0)
         } else if self.players[p].has_in_hand(card_id) {
             self.players[p].remove_from_hand(card_id).unwrap()
+        } else if from_exile {
+            Self::take_card(&mut self.exile, card_id)
+                .ok_or(GameError::CardNotInHand(card_id))?
         } else {
             return Err(GameError::CardNotInHand(card_id));
         };
         let restore = |state: &mut Self, card: crate::card::CardInstance| {
             if from_top {
                 state.players[p].library.insert(0, card);
+            } else if from_exile {
+                state.exile.push(card);
             } else {
                 state.players[p].hand.push(card);
             }
         };
+        if from_exile {
+            // The permission is consumed by the play (CR 608.2 — a one-shot
+            // permission doesn't survive the card changing zones anyway).
+            card.may_play_until = None;
+            card.granted_alt_cast_cost_eot = None;
+            card.face_down = false;
+        }
         if back_face {
             // Swap to the back face's definition. Reject if there isn't one.
             let Some(back) = card.definition.back_face.clone() else {
@@ -8165,10 +8195,10 @@ impl GameState {
         let lier_cost = (card.effective_flashback().is_none() && !jumpstart && !mayhem && !gy_cast)
             .then(|| self.graveyard_flashback_grant(p, &card))
             .flatten();
-        // Conditional flashback (Viral Spawning's Corrupted gate).
-        if card.effective_flashback().is_some()
-            && let Some(cond) = &card.definition.flashback_condition
-        {
+        // Conditional graveyard casting (Viral Spawning's Corrupted gate;
+        // Undead Sprinter's "if a non-Zombie creature died this turn"). The
+        // gate applies to every graveyard-cast flavor, not just flashback.
+        if let Some(cond) = &card.definition.flashback_condition {
             let cctx = crate::game::effects::EffectContext::for_spell(p, None, 0, 0);
             if !self.evaluate_predicate(cond, &cctx) {
                 return Err(GameError::SorcerySpeedOnly);

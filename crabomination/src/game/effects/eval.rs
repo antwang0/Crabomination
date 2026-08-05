@@ -1475,6 +1475,9 @@ impl GameState {
                 .is_some_and(|p| self.players_sacrificed_this_resolution.contains(&p)),
             Predicate::ExcessDamageDealtThisResolution => self.excess_damage_this_resolution > 0,
             Predicate::IsTurnOf(pref) => self.resolve_player(pref, ctx) == Some(self.active_player_idx),
+            Predicate::PlayerIsOpponent { who } => self
+                .resolve_player(who, ctx)
+                .is_some_and(|p| !self.same_team(p, ctx.controller)),
             Predicate::YourMainPhase => {
                 self.step.is_main_phase() && self.active_player_idx == ctx.controller
             }
@@ -1910,6 +1913,10 @@ impl GameState {
                     .map(|p| self.players[p].creatures_died_this_turn >= n)
                     .unwrap_or(false)
             }
+            Predicate::CreatureDiedThisTurnMatching { filter } => self
+                .creature_deaths_this_turn
+                .iter()
+                .any(|c| self.evaluate_requirement_on_card(filter, c, ctx.controller)),
             Predicate::DistinctCounterKindsAmongCreaturesAtLeast { who, at_least } => {
                 let Some(p) = self.resolve_player(who, ctx) else { return false };
                 let mut kinds = std::collections::HashSet::new();
@@ -1991,6 +1998,25 @@ impl GameState {
                 });
                 match target {
                     Some(Some(t)) => self.evaluate_requirement_static(filter, &t, ctx.controller, ctx.source),
+                    _ => false,
+                }
+            }
+            Predicate::CastSpellTargetsOnlyOneMatching(filter) => {
+                let Some(EntityRef::Card(cid)) = ctx.trigger_source else {
+                    return false;
+                };
+                let Some((target, extra)) = self.stack.iter().find_map(|si| match si {
+                    StackItem::Spell { card, target, additional_targets, .. } if card.id == cid => {
+                        Some((target.clone(), additional_targets.clone()))
+                    }
+                    _ => None,
+                }) else {
+                    return false;
+                };
+                match (target, extra.is_empty()) {
+                    (Some(t), true) => {
+                        self.evaluate_requirement_static(filter, &t, ctx.controller, ctx.source)
+                    }
                     _ => false,
                 }
             }
@@ -2216,6 +2242,21 @@ impl GameState {
                 self.stack.iter().any(|si| match si {
                     StackItem::Spell { card, .. } if card.id == cid => {
                         card.owner != ctx.controller
+                    }
+                    _ => false,
+                })
+            }
+            Predicate::CastSpellNotOwnedByCaster => {
+                // The caster-relative sibling of `CastSpellNotOwnedByYou`:
+                // both sides are read off the stack item, so an `AnyPlayer`
+                // listener (Gonti, Night Minister) judges the real caster
+                // rather than its own controller.
+                let Some(EntityRef::Card(cid)) = ctx.trigger_source else {
+                    return false;
+                };
+                self.stack.iter().any(|si| match si {
+                    StackItem::Spell { card, caster, .. } if card.id == cid => {
+                        card.owner != *caster
                     }
                     _ => false,
                 })
