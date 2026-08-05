@@ -1171,6 +1171,40 @@ impl GameState {
                         self.players[p].creatures_that_damaged_me_this_turn.push(src);
                     }
                 }
+                // The Mindskinner — "if a source you control would deal damage
+                // to an opponent, prevent that damage and each opponent mills
+                // that many cards."
+                if amount > 0
+                    && let Some(src) = source
+                    && let Some(dealer) = self.battlefield_find(src).map(|c| c.controller)
+                    && !self.same_team(dealer, p)
+                    && self.battlefield.iter().any(|c| {
+                        c.controller == dealer
+                            && c.definition.static_abilities.iter().any(|sa| {
+                                matches!(
+                                    sa.effect,
+                                    crate::effect::StaticEffect::YourDamageToOpponentsBecomesMill
+                                )
+                            })
+                    })
+                {
+                    let victims: Vec<usize> = (0..self.players.len())
+                        .filter(|o| !self.same_team(*o, dealer))
+                        .collect();
+                    for o in victims {
+                        for _ in 0..amount {
+                            if self.players[o].library.is_empty() {
+                                break;
+                            }
+                            let card = self.players[o].library.remove(0);
+                            let cid = card.id;
+                            if !self.route_to_graveyard(card, events) {
+                                events.push(GameEvent::CardMilled { player: o, card_id: cid });
+                            }
+                        }
+                    }
+                    return;
+                }
                 // CR 614.1b — Crumbling Sanctuary: damage to a player becomes
                 // exiling that many cards off their library instead.
                 if self.battlefield.iter().any(|c| {

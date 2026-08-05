@@ -115,6 +115,7 @@ pub fn smugglers_surprise() -> CardDefinition {
                         amount: Value::Const(4),
                         filter: R::Creature.or(R::Land),
                         take: Value::Const(2),
+                        otherwise: None,
                     },
                 ),
                 spree_mode(

@@ -184,6 +184,7 @@ pub fn greenhouse_rickety_gazebo() -> CardDefinition {
                 amount: Value::Const(4),
                 filter: R::Permanent,
                 take: Value::Const(2),
+                otherwise: None,
             })],
             ..Default::default()
         },

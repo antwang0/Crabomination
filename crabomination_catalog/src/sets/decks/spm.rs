@@ -886,6 +886,7 @@ pub fn eerie_gravestone() -> CardDefinition {
                 amount: Value::Const(4),
                 filter: R::Creature,
                 take: Value::Const(1),
+                otherwise: None,
             },
             ..Default::default()
         }],
@@ -988,6 +989,7 @@ pub fn scout_the_city() -> CardDefinition {
                     amount: Value::Const(3),
                     filter: R::Permanent,
                     take: Value::Const(1),
+                    otherwise: None,
                 },
                 Effect::GainLife {
                     who: Selector::You,

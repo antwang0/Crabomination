@@ -672,6 +672,7 @@ pub fn ripples_of_undeath() -> CardDefinition {
                 amount: Value::Const(3),
                 filter: R::Any,
                 take: Value::Const(1),
+                otherwise: None,
             },
         }],
         ..Default::default()

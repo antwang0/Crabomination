@@ -1243,6 +1243,11 @@ pub enum StaticEffect {
     /// it's applied in the `deal_damage_to_from` funnel rather than
     /// `scale_damage_to`.
     DoubleNoncombatDamageToOpponents,
+    /// The Rollercrusher Ride — "if a source you control would deal noncombat
+    /// damage to a permanent or player while [condition], it deals double that
+    /// damage instead." Unlike `DoubleNoncombatDamageToOpponents` this also
+    /// doubles damage aimed at your own side.
+    DoubleYourNoncombatDamageWhile { condition: Predicate },
     /// "If a source you control would deal noncombat damage to an opponent or a
     /// permanent an opponent controls, it deals that much damage plus `amount`
     /// instead." The additive sibling of `DoubleNoncombatDamageToOpponents`,
@@ -2016,6 +2021,11 @@ pub enum StaticEffect {
     /// source). A self-only grant: only the permanent carrying this static
     /// gains the abilities.
     HasActivatedAbilitiesOfGraveyardCreatures,
+    /// Marvin, Murderous Mimic — "has all activated abilities of creatures you
+    /// control that don't have the same name as this creature." The
+    /// battlefield sibling of `HasActivatedAbilitiesOfGraveyardCreatures`;
+    /// also surfaced by `granted_abilities_for`.
+    HasActivatedAbilitiesOfOtherNamedControlledCreatures,
     /// CR 700.5 / Theros gods — "As long as your devotion to [colors] is
     /// less than `threshold`, this isn't a creature." Resolved at
     /// `gather_continuous_effects` time (which can read devotion via the
@@ -2083,6 +2093,10 @@ pub enum StaticEffect {
     /// Sanctuary). Symmetric; applied at the player branch of the damage
     /// funnel, after prevention shields.
     PlayerDamageBecomesExileFromLibrary,
+    /// The Mindskinner — "If a source you control would deal damage to an
+    /// opponent, prevent that damage and each opponent mills that many
+    /// cards." Read at the damage-to-player chokepoint.
+    YourDamageToOpponentsBecomesMill,
     /// CR 615 — "Prevent all noncombat damage that would be dealt to creatures
     /// you control." Mark of Asylum. Consulted at the shared (noncombat) damage
     /// funnel for creature targets; combat damage is marked on a separate path

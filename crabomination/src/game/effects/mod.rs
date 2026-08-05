@@ -7346,7 +7346,7 @@ impl GameState {
                 Ok(())
             }
 
-            Effect::MillThenToHandN { amount, filter, take } => {
+            Effect::MillThenToHandN { amount, filter, take, otherwise } => {
                 use crate::decision::{Decision, DecisionAnswer};
                 let p = ctx.controller;
                 let n = self.mill_count_for(p, self.evaluate_value(amount, ctx).max(0) as usize);
@@ -7365,9 +7365,6 @@ impl GameState {
                 // `take` is read *after* milling (Gather the Pack's spell mastery
                 // counts the just-milled instant/sorcery cards too, CR 700.11-ish).
                 let take = self.evaluate_value(take, ctx).max(0) as u32;
-                if take == 0 {
-                    return Ok(());
-                }
                 let cands: Vec<(CardId, String)> = self.players[p]
                     .graveyard
                     .iter()
@@ -7377,25 +7374,30 @@ impl GameState {
                     })
                     .map(|c| (c.id, c.definition.name.to_string()))
                     .collect();
-                if cands.is_empty() {
-                    return Ok(());
-                }
-                let source = ctx.source.unwrap_or(CardId(0));
-                let answer = self.decider.decide(&Decision::ChooseCards {
-                    source,
-                    prompt: "Put which cards milled this way into your hand?".to_string(),
-                    candidates: cands,
-                    min: 0,
-                    max: take,
-                });
-                if let DecisionAnswer::Cards(picked) = answer {
-                    for cid in picked.into_iter().take(take as usize) {
-                        if let Some(card) = Self::take_card(&mut self.players[p].graveyard, cid) {
-                            self.players[p].hand.push(card);
+                let mut taken = 0usize;
+                if take > 0 && !cands.is_empty() {
+                    let source = ctx.source.unwrap_or(CardId(0));
+                    let answer = self.decider.decide(&Decision::ChooseCards {
+                        source,
+                        prompt: "Put which cards milled this way into your hand?".to_string(),
+                        candidates: cands,
+                        min: 0,
+                        max: take,
+                    });
+                    if let DecisionAnswer::Cards(picked) = answer {
+                        for cid in picked.into_iter().take(take as usize) {
+                            if let Some(card) = Self::take_card(&mut self.players[p].graveyard, cid)
+                            {
+                                self.players[p].hand.push(card);
+                                taken += 1;
+                            }
                         }
                     }
                 }
-                Ok(())
+                match otherwise {
+                    Some(alt) if taken == 0 => self.run_effect(alt, ctx, events),
+                    _ => Ok(()),
+                }
             }
 
 
@@ -30657,6 +30659,26 @@ impl GameState {
                         continue; // already fully unlocked
                     };
                     self.set_room_door_unlocked(room, right, events);
+                }
+                Ok(())
+            }
+
+            Effect::LockOrUnlockRoomDoor { what } => {
+                let rooms: Vec<CardId> = self
+                    .resolve_selector(what, ctx)
+                    .into_iter()
+                    .filter_map(|e| e.as_card_id())
+                    .collect();
+                for room in rooms {
+                    let Some(c) = self.battlefield_find(room) else { continue };
+                    if c.definition.room.is_none() {
+                        continue;
+                    }
+                    match c.unlocked_doors {
+                        0b11 => self.relock_room_door(room, true),
+                        d if d & 0b01 == 0 => self.set_room_door_unlocked(room, false, events),
+                        _ => self.set_room_door_unlocked(room, true, events),
+                    }
                 }
                 Ok(())
             }

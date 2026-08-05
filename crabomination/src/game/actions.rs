@@ -2765,6 +2765,28 @@ impl GameState {
         false
     }
 
+    /// CR 603.4 evaluation context for a self-ETB trigger's condition: the
+    /// entering permanent's own cast flags (kicked, bargained, X, …), so
+    /// "if it was kicked" reads the cast that produced it.
+    fn etb_filter_context(
+        &self,
+        card_id: CardId,
+        controller: usize,
+    ) -> crate::game::effects::EffectContext {
+        let mut ctx =
+            crate::game::effects::EffectContext::for_ability(card_id, controller, None);
+        if let Some(c) = self.battlefield_find(card_id) {
+            ctx.x_value = c.cast_x_value;
+            ctx.kicked = c.kicked;
+            ctx.kicked_options = c.kicked_options.clone();
+            ctx.kick_count = c.kick_count;
+            ctx.bargained = c.bargained;
+            ctx.cast_from_hand = c.cast_from_hand;
+            ctx.mana_spent_by_color = c.cast_mana_spent_by_color.clone();
+        }
+        ctx
+    }
+
     pub fn fire_self_etb_triggers(&mut self, card_id: CardId, controller: usize) {
         // CR 614 — "enters under the control of an opponent of your choice"
         // (Captive Audience). A control-setting entry replacement, so it lands
@@ -2784,7 +2806,8 @@ impl GameState {
             self.players[controller].speed = 1;
         }
         use crate::effect::{EventKind, EventScope};
-        let etb_triggers: Vec<Effect> = self
+        #[allow(clippy::type_complexity)]
+        let etb_triggers: Vec<(Effect, Option<crate::effect::Predicate>)> = self
             .battlefield
             .iter()
             .find(|c| c.id == card_id)
@@ -2798,7 +2821,7 @@ impl GameState {
                     .chain(static_granted.iter())
                     .filter(|t| t.event.kind == EventKind::EntersBattlefield
                         && matches!(t.event.scope, EventScope::SelfSource))
-                    .map(|t| t.effect.clone())
+                    .map(|t| (t.effect.clone(), t.event.filter.clone()))
                     .collect()
             })
             .unwrap_or_default();
@@ -2820,7 +2843,16 @@ impl GameState {
             .find(|c| c.id == card_id)
             .map(|c| c.cast_x_value)
             .unwrap_or(0);
-        for effect in etb_triggers {
+        for (effect, filter) in etb_triggers {
+            // CR 603.4 — the trigger's own condition ("When this enters, if it
+            // was kicked / if delirium …") is read at fire time against the
+            // entering permanent's cast flags.
+            if let Some(predicate) = filter {
+                let ctx = self.etb_filter_context(card_id, controller);
+                if !self.evaluate_predicate(&predicate, &ctx) {
+                    continue;
+                }
+            }
             // Strict Proctor's CR 614 replacement: pay {2} or sacrifice
             // the source. Applied once per fire of the trigger.
             if !apply_etb_trigger_tax(self, card_id, controller) {
@@ -4506,6 +4538,19 @@ impl GameState {
                     .build(),
             );
         }
+    }
+
+    /// CR 709.5c — re-lock one door of a Room permanent, rebuilding its live
+    /// definition from the remaining unlocked designations.
+    pub(crate) fn relock_room_door(&mut self, card_id: CardId, right: bool) {
+        let Some(card) = self.battlefield_find_mut(card_id) else { return };
+        let bit = if right { 2u8 } else { 1u8 };
+        if card.definition.room.is_none() || card.unlocked_doors & bit == 0 {
+            return;
+        }
+        card.unlocked_doors &= !bit;
+        let doors = card.unlocked_doors;
+        card.definition = std::sync::Arc::new(card.definition.room_definition_with(doors));
     }
 
     /// CR 702.41 — cast a modal spell paying its Entwine cost; every mode
@@ -11872,6 +11917,27 @@ impl GameState {
                         out.push(ab.clone());
                     }
                 }
+            }
+        }
+        // Marvin, Murderous Mimic — every activated ability of each creature
+        // its controller controls whose name differs from Marvin's.
+        if let Some(me) = self.battlefield_find(card_id).filter(|c| {
+            c.definition.static_abilities.iter().any(|sa| {
+                matches!(
+                    sa.effect,
+                    StaticEffect::HasActivatedAbilitiesOfOtherNamedControlledCreatures
+                )
+            })
+        }) {
+            let (seat, name) = (me.controller, me.definition.name);
+            for other in &self.battlefield {
+                if other.controller != seat
+                    || other.definition.name == name
+                    || !other.definition.is_creature()
+                {
+                    continue;
+                }
+                out.extend(other.definition.activated_abilities.iter().cloned());
             }
         }
         // Experiment Kraj — every activated ability of each *other* creature

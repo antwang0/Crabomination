@@ -4952,21 +4952,23 @@ impl GameState {
             EntityRef::Card(_) => None,
         };
         let Some(target_player) = affected else { return 0 };
+        let hits_opponent = !self.same_team(src_ctrl, target_player);
         self.battlefield
             .iter()
-            .map(|c| {
-                if c.controller != src_ctrl || self.same_team(src_ctrl, target_player) {
-                    return 0;
-                }
-                c.definition
-                    .static_abilities
-                    .iter()
-                    .filter(|sa| {
-                        matches!(sa.effect, StaticEffect::DoubleNoncombatDamageToOpponents)
-                    })
-                    .count() as u32
+            .filter(|c| c.controller == src_ctrl)
+            .flat_map(|c| c.definition.static_abilities.iter().map(move |sa| (c.id, sa)))
+            .filter(|(cid, sa)| match &sa.effect {
+                StaticEffect::DoubleNoncombatDamageToOpponents => hits_opponent,
+                // The Rollercrusher Ride — any permanent or player, gated on a
+                // live predicate read with the static's own source as context.
+                StaticEffect::DoubleYourNoncombatDamageWhile { condition } => self
+                    .evaluate_predicate(
+                        condition,
+                        &crate::game::effects::EffectContext::for_ability(*cid, src_ctrl, None),
+                    ),
+                _ => false,
             })
-            .sum()
+            .count() as u32
     }
 
     /// Additive noncombat-damage bonus (Aether Revolt): sum of
@@ -19784,6 +19786,7 @@ fn static_effect_to_effects(
             | StaticEffect::DoubleDamageFromControlledCreatures
             | StaticEffect::DoubleYourSourcesDamageWhileHellbent
             | StaticEffect::DoubleNoncombatDamageToOpponents
+            | StaticEffect::DoubleYourNoncombatDamageWhile { .. }
             | StaticEffect::NoncombatDamageToOpponentsBonus { .. }
             | StaticEffect::HalveDamageToYou
             | StaticEffect::ReduceDamageToYouBy(_)
@@ -19960,6 +19963,7 @@ fn static_effect_to_effects(
             | StaticEffect::GrantActivatedAbility { .. }
             // Necrotic Ooze — surfaced via `granted_abilities_for`, not a layer.
             | StaticEffect::HasActivatedAbilitiesOfGraveyardCreatures
+            | StaticEffect::HasActivatedAbilitiesOfOtherNamedControlledCreatures
             | StaticEffect::HasActivatedAbilitiesOfGraveyardLands
             | StaticEffect::HasActivatedAbilitiesOfExiledWithSelf
             | StaticEffect::CostReductionPerCounterOnSource { .. }
@@ -20350,6 +20354,7 @@ fn static_effect_to_effects(
             // Crumbling Sanctuary — a CR 614.1b replacement read at the
             // player branch of the damage funnel; no layer effect.
             | StaticEffect::PlayerDamageBecomesExileFromLibrary
+            | StaticEffect::YourDamageToOpponentsBecomesMill
             | StaticEffect::PreventNoncombatDamageToYourCreatures
             | StaticEffect::PreventNoncombatDamageToYouAndYourPermanents
             | StaticEffect::PreventAllDamageToYourCreatureTokens

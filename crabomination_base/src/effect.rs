@@ -3865,7 +3865,15 @@ pub enum Effect {
     /// with game state — Gather the Pack's spell mastery ("put up to two
     /// creature cards instead of one if 2+ instant/sorcery cards are in your
     /// graveyard").
-    MillThenToHandN { amount: Value, filter: SelectionRequirement, take: Value },
+    MillThenToHandN {
+        amount: Value,
+        filter: SelectionRequirement,
+        take: Value,
+        /// Runs when no card was taken (Nashi's "if you put no cards into
+        /// your hand this way, put a +1/+1 counter on Nashi").
+        #[serde(default)]
+        otherwise: Option<Box<Effect>>,
+    },
     /// The controller mills one card, then runs a sub-effect keyed on the
     /// milled card's card type: `land` if it's a land, else `creature` if it's
     /// a creature, else `noncreature` (a nonland noncreature card). Old
@@ -4993,6 +5001,10 @@ pub enum Effect {
     /// Eerie `RoomFullyUnlocked` event. No-op for fully-unlocked Rooms.
     /// Ghostly Keybearer's combat-damage trigger.
     UnlockRoomDoor { what: Selector },
+    /// CR 709.5c — "Lock or unlock a door of target Room you control" (Marina
+    /// Vendrell). Unlocks a still-locked door when there is one; otherwise
+    /// re-locks the right door so it can be unlocked (and re-triggered) later.
+    LockOrUnlockRoomDoor { what: Selector },
     /// CR 702.93 — mark each matching permanent as renowned (sets
     /// `CardInstance.renowned`). Paired with the Renown counter add so the
     /// once-only gate keys off the real flag, not a counter heuristic.

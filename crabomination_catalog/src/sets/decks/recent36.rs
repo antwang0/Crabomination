@@ -165,6 +165,7 @@ pub fn gather_the_pack() -> CardDefinition {
                 then: Box::new(Value::Const(2)),
                 else_: Box::new(Value::Const(1)),
             },
+            otherwise: None,
         },
         ..Default::default()
     }

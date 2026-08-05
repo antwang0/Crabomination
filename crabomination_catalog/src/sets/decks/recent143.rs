@@ -227,6 +227,7 @@ pub fn picklock_prankster() -> CardDefinition {
                     .or(R::HasCardType(CardType::Sorcery))
                     .or(R::HasCreatureType(CreatureType::Faerie)),
                 take: Value::ONE,
+                otherwise: None,
             },
         })),
         ..Default::default()
