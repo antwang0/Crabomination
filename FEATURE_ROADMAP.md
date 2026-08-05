@@ -2538,8 +2538,8 @@ Each a small targeted feature; sweep batch by batch.
 
 0. **Next set to close.** Bloomburrow, Duskmourn, Outlaws of Thunder Junction
    and **Edge of Eternities** are all closed (`set_gaps.py blb dsk otj eoe` is
-   empty). **Final Fantasy** is down to **13**, every one a transforming DFC —
-   see TODO.md → "EOE/FIN closure" for the four primitives they need. The Odyssey
+   empty). **Final Fantasy** is down to **6**, every one a transforming DFC —
+   see TODO.md → "EOE/FIN closure" for the primitive each one needs. The Odyssey
    block, the Onslaught block (**ONS**,
    **LGN**, **SCG**), the Mirrodin block (**MRD**, **DST**, **5DN**), the
    Kamigawa block, **Mirrodin Besieged**, **New Phyrexia** (the Scars block
@@ -2582,6 +2582,11 @@ Each a small targeted feature; sweep batch by batch.
   **CR 614 correctness fix:** as-enters replacements now apply on every
   battlefield entry, not only spell resolution — Devour (CR 702.83) moved to
   that slot, so a printed 0/0 devourer no longer dies at 0 toughness.
+  `StaticEffect::FirstMatchingSpellEachTurnCostsLess`, and
+  `Effect::ExileSelfReturnFrontFace` (the FIN Dominants' reset).
+  **CR 714.2b fix:** a Saga entering by any path — reanimated, blinked, or
+  exiled-and-returned-transformed — now takes its first lore counter, not only
+  one cast from hand.
   CR conformance for 711 / 715 / 701.51 / 701.52 / 717.6 in
   `core_rules/cr_recent83` + `classic_sets/unf`.
 

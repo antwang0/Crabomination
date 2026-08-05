@@ -20217,6 +20217,7 @@ fn static_effect_to_effects(
             // MayPlayLandsFromGraveyard — consulted by the land-play paths
             // via `player_may_play_lands_from_graveyard`; no layer effect.
             | StaticEffect::MayPlayLandsFromGraveyard
+            | StaticEffect::FirstMatchingSpellEachTurnCostsLess { .. }
             | StaticEffect::PlayCardsFromGraveyardDuringYourTurn
             // MayReturnFromGraveyardInsteadOfLearn — consulted at the top of
             // `Effect::Learn` (Retriever Phoenix); no layer effect.

@@ -518,3 +518,61 @@ fn saga_creature_resets_itself_on_its_last_chapter() {
     assert_eq!(back.definition.name, "Jill, Shiva's Dominant", "reset front face up");
     assert_eq!(back.counter_count(CounterType::Lore), 0);
 }
+
+/// Serah's discount covers only the turn's first legendary creature spell.
+#[test]
+fn serah_farron_discounts_the_first_legend_each_turn() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::serah_farron());
+    let legend_a = g.add_card_to_hand(0, catalog::vincent_valentine());
+    let legend_b = g.add_card_to_hand(0, catalog::vincent_valentine());
+    // Vincent is {2}{B}{B}; the discount makes the first one {B}{B}.
+    g.players[0].mana_pool.add(Color::Black, 2);
+    cast(&mut g, legend_a, None);
+    assert!(g.battlefield_find(legend_a).is_some(), "the first legend was discounted");
+    g.players[0].mana_pool.add(Color::Black, 2);
+    assert!(
+        g.perform_action(GameAction::CastSpell {
+            card_id: legend_b,
+            target: None,
+            additional_targets: vec![],
+            mode: None,
+            x_value: None,
+        })
+        .is_err(),
+        "the discount is spent for the turn"
+    );
+}
+
+/// Crystallized Serah anthems your legends and keeps the discount.
+#[test]
+fn crystallized_serah_anthems_legends() {
+    let mut g = two_player_game();
+    let serah = g.add_card_to_battlefield(0, catalog::serah_farron());
+    let legend = g.add_card_to_battlefield(0, catalog::vincent_valentine());
+    let mut evs = vec![];
+    g.transform_permanent(serah, &mut evs);
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    let back = g.battlefield_find(serah).unwrap();
+    assert_eq!(back.definition.name, "Crystallized Serah");
+    assert_eq!(g.computed_permanent(legend).unwrap().power, 4, "2/2 plus the anthem");
+}
+
+/// Venat draws off your first legendary spell each turn, once.
+#[test]
+fn venat_draws_off_the_first_legendary_spell() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::venat_heart_of_hydaelyn());
+    for i in 0..6 {
+        g.players[0].library.push(CardInstance::new(CardId(600 + i), catalog::forest(), 0));
+    }
+    let a = g.add_card_to_hand(0, catalog::vincent_valentine());
+    let b = g.add_card_to_hand(0, catalog::vincent_valentine());
+    g.players[0].mana_pool.add(Color::Black, 8);
+    let hand = g.players[0].hand.len();
+    cast(&mut g, a, None);
+    assert_eq!(g.players[0].hand.len(), hand, "cast one, drew one");
+    cast(&mut g, b, None);
+    assert_eq!(g.players[0].hand.len(), hand - 1, "the second legend draws nothing");
+}

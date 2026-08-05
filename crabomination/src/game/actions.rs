@@ -685,6 +685,19 @@ pub fn cost_reduction_for_spell_full(
                 {
                     reduction += amount;
                 }
+                // "The first [filter] spell you cast each turn costs {N} less"
+                // — spent as soon as one matching spell has been cast.
+                StaticEffect::FirstMatchingSpellEachTurnCostsLess { filter, amount }
+                    if src.controller == caster
+                        && state.evaluate_requirement_on_card(filter, card, caster)
+                        && !state.players[caster].spell_ids_cast_this_turn.iter().any(|id| {
+                            state.find_card_anywhere(*id).is_some_and(|c| {
+                                state.evaluate_requirement_on_card(filter, c, caster)
+                            })
+                        }) =>
+                {
+                    reduction += amount;
+                }
                 // Battlefield Thaumaturge — {N} less per creature the
                 // instant/sorcery targets.
                 StaticEffect::YourISSpellsCostLessPerTargetCreature { amount }

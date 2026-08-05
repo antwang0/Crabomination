@@ -483,6 +483,11 @@ pub enum StaticEffect {
     /// spells you cast cost {X} less, where X is this creature's power").
     /// Generic-only; clamped at the generic pip.
     CostReductionBySourcePower { filter: SelectionRequirement },
+    /// "The first [filter] spell you cast each turn costs {N} less to cast"
+    /// (Serah Farron, Venat). Keyed on `Player.spell_ids_cast_this_turn`: the
+    /// discount lapses once a matching spell has already been cast this turn.
+    /// Generic-only, like every other flat reduction.
+    FirstMatchingSpellEachTurnCostsLess { filter: SelectionRequirement, amount: u32 },
     /// Like `CostReduction`, but applies only while `condition` holds for the
     /// controller (Gran-Gran — "Noncreature spells you cast cost {1} less as
     /// long as there are three or more Lesson cards in your graveyard"). The

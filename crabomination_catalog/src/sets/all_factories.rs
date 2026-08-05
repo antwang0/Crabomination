@@ -9395,6 +9395,8 @@ static FIN2: &[Factory] = &[
     super::fin2::jill_shivas_dominant,
     super::fin2::joshua_phoenixs_dominant,
     super::fin2::jecht_reluctant_guardian,
+    super::fin2::serah_farron,
+    super::fin2::venat_heart_of_hydaelyn,
 ];
 static GPT: &[Factory] = &[
     super::gpt::mourning_thrull,

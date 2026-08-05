@@ -5,23 +5,23 @@ Items are grouped by area and roughly ordered by impact within each group.
 
 ## Noticed this run (EOE/FIN closure + CR 717 Attractions)
 
-- **EOE is closed** (`set_gaps.py eoe` empty). FIN is down to **13** cards,
-  all of them transforming DFCs whose back face is a *Saga creature* (the
-  "Dominant" cycle — Clive, Dion, Jill, Joshua, Terra, Jecht; plus Crystal
-  Fragments and Esper Origins) or a bespoke rider (Serah Farron, Venat,
-  Zenos, Garland, Sephiroth). ⏳
-  - **Saga-creature back faces** need `saga_chapters` on a creature body plus
-    a lore counter on entry; the engine has both halves but never combines
-    them on one face. ⏳
+- **EOE is closed** (`set_gaps.py eoe` empty). FIN is down to **6** cards,
+  each blocked on one primitive:
   - **Sephiroth** wants an emblem minted *as* the transform happens
     (`EventKind::Transformed` fires after, so the emblem lands a beat late).
     `Effect::NthResolutionThisTurn` covers its "fourth time this turn". ⏳
   - **Zenos** needs a remembered chosen permanent whose *leave* transforms the
     source ("when the chosen creature leaves the battlefield"). ⏳
-  - **Serah Farron / Venat** need "the first [filter] spell you cast each turn
-    costs {N} less" as a static. ⏳
   - **Garland** needs "return this card from your graveyard to the battlefield
     transformed" plus "when this dies, put it on the bottom of its library". ⏳
+  - **Terra // Esper Terra** needs a token copy of a nonlegendary enchantment
+    that inherits up-to-three lore counters when it's a Saga. ⏳
+  - **Crystal Fragments** and **Esper Origins** are Equipment // Saga-creature
+    and Sorcery // Saga-creature: the *front* face isn't a permanent that can
+    transform, so both need a cast-side "return transformed" shape. ⏳
+- **Joshua's ETB loots for exactly two.** The printed "discard up to two cards,
+  then draw that many" has no up-to variant; the catalog ships the mandatory
+  two-for-two. ⏳
 - **`Effect::LookPickToHand` still spells out eleven fields at every call
   site** (~156 of them). Boxing the payload into a `LookPick` struct with
   `Default` would let card definitions use `..Default::default()` like the

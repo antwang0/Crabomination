@@ -1314,3 +1314,153 @@ pub fn jecht_reluctant_guardian() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Serah Farron // Crystallized Serah — {1}{G}{W} 2/2 that discounts your first
+/// legendary creature each turn; with two other legends out it may flip into an
+/// artifact that keeps the discount and anthems your legends.
+pub fn serah_farron() -> CardDefinition {
+    let discount = StaticAbility {
+        description: "The first legendary creature spell you cast each turn costs {2} less.",
+        effect: StaticEffect::FirstMatchingSpellEachTurnCostsLess {
+            filter: R::Creature.and(R::HasSupertype(Supertype::Legendary)),
+            amount: 2,
+        },
+    };
+    CardDefinition {
+        name: "Serah Farron",
+        cost: cost(&[generic(1), g(), w()]),
+        card_types: vec![CardType::Creature],
+        supertypes: vec![Supertype::Legendary],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Citizen],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        static_abilities: vec![discount.clone()],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(
+                EventKind::StepBegins(TurnStep::BeginCombat),
+                EventScope::YourControl,
+            )
+            .with_filter(Predicate::ValueAtLeast(
+                Value::PermanentCountControlledByMatching(
+                    PlayerRef::You,
+                    R::Creature
+                        .and(R::HasSupertype(Supertype::Legendary))
+                        .and(R::OtherThanSource),
+                ),
+                Value::Const(2),
+            )),
+            effect: Effect::MayDo {
+                description: "Transform Serah Farron?".into(),
+                body: Box::new(Effect::Transform { what: Selector::This }),
+            },
+        }],
+        back_face: Some(Box::new(CardDefinition {
+            name: "Crystallized Serah",
+            card_types: vec![CardType::Artifact],
+            supertypes: vec![Supertype::Legendary],
+            static_abilities: vec![
+                discount,
+                StaticAbility {
+                    description: "Legendary creatures you control get +2/+2.",
+                    effect: StaticEffect::AnthemForFilter {
+                        filter: R::Creature
+                            .and(R::HasSupertype(Supertype::Legendary))
+                            .and(R::ControlledByYou),
+                        power: 2,
+                        toughness: 2,
+                        keywords: vec![],
+                        opponents: false,
+                        all_players: false,
+                        only_your_turn: false,
+                        scale_by_counters_on_self: None,
+                    },
+                },
+            ],
+            ..Default::default()
+        })),
+        ..Default::default()
+    }
+}
+
+/// Venat, Heart of Hydaelyn // Hydaelyn, the Mothercrystal — {1}{W}{W} 3/3 that
+/// draws off your first legendary spell each turn and buys a flip with {7}; the
+/// back is an indestructible 4/4 that shields a creature each combat.
+pub fn venat_heart_of_hydaelyn() -> CardDefinition {
+    CardDefinition {
+        name: "Venat, Heart of Hydaelyn",
+        cost: cost(&[generic(1), w(), w()]),
+        card_types: vec![CardType::Creature],
+        supertypes: vec![Supertype::Legendary],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elder, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl)
+                .with_filter(Predicate::CastSpellFirstMatchingThisTurn(R::HasSupertype(
+                    Supertype::Legendary,
+                ))),
+            effect: draw(1),
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(7)]),
+            tap_cost: true,
+            sorcery_speed: true,
+            effect: Effect::Seq(vec![
+                Effect::Move {
+                    what: target_filtered(R::Nonland.and(R::Permanent)),
+                    to: ZoneDest::Exile,
+                },
+                Effect::Transform { what: Selector::This },
+            ]),
+            ..Default::default()
+        }],
+        back_face: Some(Box::new(CardDefinition {
+            name: "Hydaelyn, the Mothercrystal",
+            card_types: vec![CardType::Creature],
+            supertypes: vec![Supertype::Legendary],
+            subtypes: Subtypes {
+                creature_types: vec![CreatureType::God],
+                ..Default::default()
+            },
+            power: 4,
+            toughness: 4,
+            keywords: vec![Keyword::Indestructible],
+            triggered_abilities: vec![TriggeredAbility {
+                event: EventSpec::new(
+                    EventKind::StepBegins(TurnStep::BeginCombat),
+                    EventScope::YourControl,
+                ),
+                effect: Effect::Seq(vec![
+                    Effect::AddCounter {
+                        what: target_filtered(
+                            R::Creature.and(R::ControlledByYou).and(R::OtherThanSource),
+                        ),
+                        kind: CounterType::PlusOnePlusOne,
+                        amount: Value::ONE,
+                    },
+                    Effect::GrantKeyword {
+                        what: Selector::Target(0),
+                        keyword: Keyword::Indestructible,
+                        duration: Duration::UntilYourNextUpkeep,
+                    },
+                    Effect::If {
+                        cond: Predicate::EntityMatches {
+                            what: Selector::Target(0),
+                            filter: R::HasSupertype(Supertype::Legendary),
+                        },
+                        then: Box::new(draw(1)),
+                        else_: Box::new(Effect::Noop),
+                    },
+                ]),
+            }],
+            ..Default::default()
+        })),
+        ..Default::default()
+    }
+}
