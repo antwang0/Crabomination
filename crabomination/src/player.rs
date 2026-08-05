@@ -938,6 +938,16 @@ pub struct Player {
     /// auto-tap path was never reached.
     #[serde(default)]
     pub manual_mana: bool,
+    /// When true (the default), auto-tap spends the most *replaceable*
+    /// mana source that can cover each pip rather than the first one in
+    /// battlefield order — see `GameState::source_redundancy`.
+    ///
+    /// A per-player flag rather than a constant purely so the ladder can
+    /// measure it: the tapping happens inside the engine, so without this
+    /// both seats of a mirror would get the change and the comparison
+    /// would be structurally incapable of showing anything.
+    #[serde(default = "crate::player::default_true")]
+    pub smart_tap: bool,
     /// CR 705.3 — Krark's Thumb-style coin-flip advantage. When non-zero,
     /// every coin flip this player makes is replayed `coin_flip_advantage`
     /// extra times and they get to keep the result they prefer. Practically
@@ -955,6 +965,11 @@ pub struct Player {
     /// the value directly via the Thumb card body).
     #[serde(default)]
     pub coin_flip_advantage: u32,
+}
+
+/// Serde default for fields that are on unless a save says otherwise.
+pub(crate) fn default_true() -> bool {
+    true
 }
 
 impl Player {
@@ -1118,6 +1133,7 @@ impl Player {
             emblems: Vec::new(),
             cannot_gain_life: false,
             wants_ui: false,
+            smart_tap: true,
             manual_mana: false,
             coin_flip_advantage: 0,
         }

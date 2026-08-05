@@ -6,13 +6,55 @@
 //! state change, so a bot just needs to make *some* forward-progressing
 //! decision (including `PassPriority`) whenever it holds priority.
 
-use rand::{RngExt, rng};
+use rand::{RngExt, SeedableRng, rng};
+use rand::rngs::StdRng;
 
 use crate::card::{CardDefinition, CardId};
 use crate::decision::{AutoDecider, Decider};
 use crate::effect::{ActivatedAbility, Effect, ManaPayload};
 use crate::game::{Attack, AttackTarget, GameAction, GameState, Target, TurnStep};
 use crate::mana::{ManaCost, ManaPool};
+
+thread_local! {
+    /// Per-thread source for the scored bot's tie-break jitter, when a
+    /// caller has asked for a reproducible one. `None` = draw from the
+    /// thread RNG, which is the behaviour in a real server match.
+    static JITTER: std::cell::RefCell<Option<StdRng>> = const {
+        std::cell::RefCell::new(None)
+    };
+}
+
+/// Seed (or clear) this thread's tie-break jitter.
+///
+/// [`main_phase_action_with`] breaks exact score ties with a small random
+/// nudge, so two runs of the "same" game diverge even under a fixed
+/// shuffle seed. That is fine in a real match and actively unhelpful in
+/// measurement: it means `--seed` never made a ladder run reproducible,
+/// and — more expensively — it is the *only* thing that can decide a
+/// paired game under a true null, where both seats pilot the same
+/// profile. Measured on 2400 sealed pairs, that residual accounted for
+/// every one of the 368 non-split pairs and held the within-pair
+/// correlation at −0.69 instead of −1.
+///
+/// Seeding it identically for both games of an antithetic pair makes the
+/// two replays differ only where the *profiles* differ, which is the
+/// whole point of common random numbers. Real matches leave it `None`.
+pub fn set_jitter_seed(seed: Option<u64>) {
+    JITTER.with(|j| {
+        *j.borrow_mut() = seed.map(StdRng::seed_from_u64);
+    });
+}
+
+/// A jitter draw in `0..n`, from the seeded stream when one is installed.
+fn jitter_below(n: usize) -> usize {
+    if n <= 1 {
+        return 0;
+    }
+    JITTER.with(|j| match &mut *j.borrow_mut() {
+        Some(r) => r.random_range(0..n),
+        None => rng().random_range(0..n),
+    })
+}
 
 /// Drives one seat without a human client. Implementations see the full
 /// `GameState` and return the single next action they'd like to submit.
@@ -177,6 +219,41 @@ pub struct EvalWeights {
     /// [`simulate_block_outcome`] prices the blockers that die against
     /// the attacker that dies, and ties keep the greedy assignment.
     pub block_gang: bool,
+    /// Redeal the hidden zones before an attack/block simulation, and
+    /// average this many redeals; 0 (the historical behaviour) searches
+    /// the true state.
+    ///
+    /// The combat sims clone the real [`GameState`], so the rollout
+    /// opponent casts the cards they are actually holding and both seats
+    /// draw the real top of their library. The bot is therefore searching
+    /// with perfect information: it can decline an attack because it has
+    /// *seen* the trick, which is not a read, it is looking at the hand.
+    ///
+    /// Two separate reasons that matters, worth keeping apart:
+    ///
+    /// * Against a human in the client it is simply cheating, whatever it
+    ///   does to the win rate.
+    /// * The mirror ladder is structurally incapable of detecting it,
+    ///   because both seats cheat identically. No measurement this
+    ///   harness has ever run could have caught this, which is why it is
+    ///   a knob with a documented default rather than a silent fix.
+    ///
+    /// Averaging several redeals is the honest version: one sample
+    /// replaces perfect information with a *wrong* hand, which is its own
+    /// bias, while the mean over redeals approximates playing against the
+    /// distribution of hands consistent with what the seat can see.
+    pub determinize: u8,
+    /// Copied onto this seat's [`Player::smart_tap`] before the game
+    /// starts: spend the most replaceable mana source for each pip
+    /// instead of the first in battlefield order.
+    ///
+    /// The behaviour lives in the engine's auto-tap, so this field exists
+    /// only so the ladder can put one seat on each side of it. On by
+    /// default — the old order was not a decision anyone made, it was
+    /// whatever `battlefield` iteration produced.
+    ///
+    /// [`Player::smart_tap`]: crate::player::Player::smart_tap
+    pub smart_tap: bool,
 }
 
 impl EvalWeights {
@@ -208,6 +285,8 @@ impl EvalWeights {
             land_urgency: false,
             mull_quality: false,
             block_gang: false,
+            determinize: 0,
+            smart_tap: true,
         }
     }
 
@@ -265,6 +344,8 @@ impl EvalWeights {
             land_urgency: false,
             mull_quality: false,
             block_gang: false,
+            determinize: 0,
+            smart_tap: true,
         }
     }
 
@@ -305,6 +386,8 @@ impl EvalWeights {
             land_urgency: false,
             mull_quality: false,
             block_gang: false,
+            determinize: 0,
+            smart_tap: true,
         }
     }
 
@@ -608,6 +691,74 @@ impl EvalWeights {
     /// fewer creature".
     pub const fn block_gang_search() -> Self {
         Self { block_gang: true, block_search: 2, ..Self::attack_search_sim() }
+    }
+
+    // ── Re-measurement profiles ───────────────────────────────────────
+    //
+    // Four ideas were measured against `attack_search_sim` and dropped
+    // for reading ~50 %, and one (`lookahead1`) for reading 50.2 % over
+    // 8 000 games. Every one of those runs was unpaired, and the paired
+    // ladder puts the realized within-pair correlation at −0.74 on this
+    // field: those game counts carried roughly a quarter of the
+    // precision they appeared to. A null at that resolution is not
+    // evidence of a null, so each idea gets one honest re-test.
+    //
+    // They are rebased onto the *current* default rather than reusing
+    // the originals: `land_sequencing` and friends branch from
+    // `attack_search_sim`, and gang-blocking has been adopted since, so
+    // laddering them as written would measure "the idea, minus
+    // gang-blocking" and charge the difference to the idea.
+
+    /// [`land_sequencing`](Self::land_sequencing) rebased onto the
+    /// adopted default, for the paired re-test.
+    pub const fn land_sequencing_default() -> Self {
+        Self { land_urgency: true, ..Self::block_gang_search() }
+    }
+
+    /// [`mulligan_quality`](Self::mulligan_quality) rebased onto the
+    /// adopted default, for the paired re-test.
+    pub const fn mulligan_quality_default() -> Self {
+        Self { mull_quality: true, ..Self::block_gang_search() }
+    }
+
+    /// [`attack_search_race`](Self::attack_search_race) rebased onto the
+    /// adopted default, for the paired re-test.
+    pub const fn attack_race_default() -> Self {
+        Self { attack_race_horizon: true, ..Self::block_gang_search() }
+    }
+
+    /// [`lookahead1`](Self::lookahead1) rebased onto the adopted
+    /// default, for the paired re-test.
+    pub const fn lookahead1_default() -> Self {
+        Self { lookahead: 1, ..Self::block_gang_search() }
+    }
+
+    /// Two plies of sequence lookahead — the depth `lookahead1`'s doc
+    /// comment invites someone to measure. Forge searches three.
+    pub const fn lookahead2_default() -> Self {
+        Self { lookahead: 2, ..Self::block_gang_search() }
+    }
+
+    /// The default, searching a single redeal of the hidden zones
+    /// instead of the true state — see
+    /// [`determinize`](Self::determinize).
+    pub const fn determinized() -> Self {
+        Self { determinize: 1, ..Self::block_gang_search() }
+    }
+
+    /// The default with the historical mana tapping — the control for
+    /// [`smart_tap`](Self::smart_tap). Ladder this as B so a positive
+    /// result reads as "the new tapping is better".
+    pub const fn legacy_tap() -> Self {
+        Self { smart_tap: false, ..Self::block_gang_search() }
+    }
+
+    /// The default, averaging three redeals per candidate. Three times
+    /// the simulation cost, and the version that actually approximates
+    /// "play against the hands consistent with what I can see" rather
+    /// than "play against one specific wrong hand".
+    pub const fn determinized3() -> Self {
+        Self { determinize: 3, ..Self::block_gang_search() }
     }
 
     pub const fn net_eval() -> Self {
@@ -4044,7 +4195,6 @@ fn main_phase_action_with(
         let is_is_spell = |a: &GameAction| {
             matches!(a, GameAction::CastSpell { card_id, .. } if is_instant_or_sorcery_in_hand(state, seat, *card_id))
         };
-        let mut r = rng();
         if !scored {
             // Uniform baseline: validate everything (the historical
             // behavior) and sample.
@@ -4060,7 +4210,7 @@ fn main_phase_action_with(
                     Vec::new()
                 };
                 let pick = if only_is.is_empty() { &valid } else { &only_is };
-                return pick[r.random_range(0..pick.len())].clone();
+                return pick[jitter_below(pick.len())].clone();
             }
         } else {
             // Scored pick: rank by static score (+ jitter so exact ties
@@ -4096,7 +4246,7 @@ fn main_phase_action_with(
                 .into_iter()
                 .map(|(a, ok)| {
                     let mut s =
-                        score_candidate(state, seat, &a, w) * 4 + r.random_range(0..4) as i32;
+                        score_candidate(state, seat, &a, w) * 4 + jitter_below(4) as i32;
                     let spent = if has_opus || increment_bar.is_some() {
                         cast_mana_spent(state, seat, &a)
                     } else {
@@ -6078,7 +6228,28 @@ fn simulate_attack_outcome(
     attacks: &[Attack],
     w: &EvalWeights,
 ) -> Option<i32> {
-    let mut g = state.clone();
+    if w.determinize > 1 {
+        let mut total = 0i64;
+        let mut n = 0i64;
+        for k in 0..w.determinize {
+            if let Some(v) = simulate_attack_outcome_once(state, seat, attacks, w, k) {
+                total += v as i64;
+                n += 1;
+            }
+        }
+        return (n > 0).then(|| (total / n) as i32);
+    }
+    simulate_attack_outcome_once(state, seat, attacks, w, 0)
+}
+
+fn simulate_attack_outcome_once(
+    state: &GameState,
+    seat: usize,
+    attacks: &[Attack],
+    w: &EvalWeights,
+    k: u8,
+) -> Option<i32> {
+    let mut g = sim_start_state(state, seat, w, k);
     g.perform_action(GameAction::DeclareAttackers(attacks.to_vec())).ok()?;
     let start_turn = g.turn_number;
     // One turn cycle of pure priority passes is on the order of fifty
@@ -6337,13 +6508,93 @@ fn gang_block_candidates(
 /// `None` on a rejected declaration (a must-block creature we tried to hold
 /// back, an over-cap batch) or a combat that won't settle — an unfinished
 /// combat is scored not at all rather than scored wrong.
+/// Redeal everything `seat` cannot legitimately see: each opponent's hand
+/// goes back into their library, every library is shuffled, and the
+/// opponent redraws the same number of cards.
+///
+/// This is what turns the combat sims from perfect-information search
+/// into search under uncertainty — see
+/// [`determinize`](EvalWeights::determinize) for why that matters.
+///
+/// Two honest approximations, both in the direction of forgetting more
+/// than a real player would:
+///
+/// * Cards the seat has legitimately *seen* (a Duress reveal, a card
+///   played and bounced) are re-hidden. Modelling that properly needs a
+///   per-seat knowledge log the engine does not keep.
+/// * Face-down permanents keep their real identity. They are already on
+///   the battlefield and the sim reads them there.
+///
+/// Zones are permuted directly rather than through the engine's move
+/// paths deliberately: this is a redeal of hidden information before the
+/// simulation starts, not a game action, and routing it through
+/// `move_card` would fire zone-change triggers that never happened.
+fn determinize_hidden(g: &mut GameState, seat: usize, salt: u64) {
+    use rand::seq::SliceRandom;
+    let mut rng = StdRng::seed_from_u64(
+        salt ^ ((g.turn_number as u64) << 32) ^ ((seat as u64) << 16) ^ g.step as u64,
+    );
+    for p in 0..g.players.len() {
+        if p == seat {
+            // Our own library order is unknown to us too — a search that
+            // plans around the card it is about to draw is cheating just
+            // as much as one that reads the opponent's hand.
+            g.players[p].library.shuffle(&mut rng);
+            continue;
+        }
+        let n = g.players[p].hand.len();
+        let returned: Vec<_> = g.players[p].hand.drain(..).collect();
+        g.players[p].library.extend(returned);
+        g.players[p].library.shuffle(&mut rng);
+        let split = g.players[p].library.len().saturating_sub(n);
+        let redrawn: Vec<_> = g.players[p].library.split_off(split);
+        g.players[p].hand.extend(redrawn);
+    }
+}
+
+/// The state a simulation should start from: the real one, or a redeal of
+/// its hidden zones. `k` indexes the redeal so an averaging caller gets
+/// different hands each time.
+fn sim_start_state(state: &GameState, seat: usize, w: &EvalWeights, k: u8) -> GameState {
+    let mut g = state.clone();
+    if w.determinize > 0 {
+        determinize_hidden(&mut g, seat, 0x5EED_0000 ^ k as u64);
+    }
+    g
+}
+
 fn simulate_block_outcome(
     state: &GameState,
     seat: usize,
     blocks: &[(CardId, CardId)],
     w: &EvalWeights,
 ) -> Option<i32> {
-    let mut g = state.clone();
+    if w.determinize > 1 {
+        // Mean over redeals: one redeal only swaps perfect information
+        // for a specific wrong guess.
+        let mut total = 0i64;
+        let mut n = 0i64;
+        for k in 0..w.determinize {
+            if let Some(v) = simulate_block_outcome_once(state, seat, blocks, w, k) {
+                total += v as i64;
+                n += 1;
+            }
+        }
+        // Every redeal failing means the assignment is illegal, not
+        // merely unlucky — propagate that as before.
+        return (n > 0).then(|| (total / n) as i32);
+    }
+    simulate_block_outcome_once(state, seat, blocks, w, 0)
+}
+
+fn simulate_block_outcome_once(
+    state: &GameState,
+    seat: usize,
+    blocks: &[(CardId, CardId)],
+    w: &EvalWeights,
+    k: u8,
+) -> Option<i32> {
+    let mut g = sim_start_state(state, seat, w, k);
     g.perform_action(GameAction::DeclareBlockers(blocks.to_vec())).ok()?;
     let turn = g.turn_number;
     let mut fuel = 200u32;
@@ -8932,6 +9183,19 @@ pub(crate) fn eval_material_for_mcts(state: &GameState, seat: usize, w: &EvalWei
     eval_material(state, seat, w)
 }
 
+/// The heuristic board evaluation, exposed for measurement.
+///
+/// The value net is only worth its inference cost if it predicts the
+/// winner *better than this does*. Four gate rounds compared the two by
+/// playing thousands of games, which answers "is the bot stronger"
+/// expensively and says nothing about why; comparing their predictions on
+/// the same positions is minutes of compute and separates "the net has
+/// not learned" from "the net has learned and the integration wastes it".
+/// See `selfplay_train --calibrate`.
+pub fn eval_material_public(state: &GameState, seat: usize, w: &EvalWeights) -> i32 {
+    eval_material(state, seat, w)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -8964,6 +9228,74 @@ mod tests {
             }],
             ..Default::default()
         }
+    }
+
+    /// A redeal must preserve everything the searching seat can legally
+    /// see — hand sizes, the battlefield, both graveyards, and each
+    /// player's total card count — while replacing what it can't.
+    #[test]
+    fn determinize_preserves_public_information() {
+        let mut g = two_player_game();
+        for _ in 0..30 {
+            g.add_card_to_library(1, catalog::forest());
+        }
+        for _ in 0..5 {
+            g.add_card_to_library(1, catalog::shivan_dragon());
+        }
+        for _ in 0..20 {
+            g.add_card_to_library(0, catalog::island());
+        }
+        for _ in 0..4 {
+            g.add_card_to_hand(1, catalog::lightning_bolt());
+        }
+        g.add_card_to_hand(0, catalog::grizzly_bears());
+        g.add_card_to_battlefield(1, catalog::serra_angel());
+        let before = (
+            g.players[1].hand.len(),
+            g.players[1].library.len() + g.players[1].hand.len(),
+            g.players[0].library.len() + g.players[0].hand.len(),
+            g.battlefield.len(),
+        );
+
+        let mut d = g.clone();
+        determinize_hidden(&mut d, 0, 1);
+
+        assert_eq!(d.players[1].hand.len(), before.0, "opponent hand size is public");
+        assert_eq!(d.players[1].library.len() + d.players[1].hand.len(), before.1);
+        assert_eq!(d.players[0].library.len() + d.players[0].hand.len(), before.2);
+        assert_eq!(d.battlefield.len(), before.3, "the battlefield is public");
+        // Our own hand is ours to see and must survive the redeal intact.
+        assert_eq!(d.players[0].hand.len(), 1);
+        assert_eq!(d.players[0].hand[0].definition.name, "Grizzly Bears");
+    }
+
+    /// The point of the redeal: the opponent's hand is *resampled* from
+    /// their unseen cards, so a search can no longer plan around the
+    /// specific card they are holding. With four Bolts in hand and 35
+    /// other cards behind them, keeping all four is vanishingly unlikely.
+    #[test]
+    fn determinize_resamples_the_opponent_hand() {
+        let mut g = two_player_game();
+        for _ in 0..35 {
+            g.add_card_to_library(1, catalog::forest());
+        }
+        for _ in 0..4 {
+            g.add_card_to_hand(1, catalog::lightning_bolt());
+        }
+        let mut changed = 0;
+        for salt in 0..8 {
+            let mut d = g.clone();
+            determinize_hidden(&mut d, 0, salt);
+            let bolts = d.players[1]
+                .hand
+                .iter()
+                .filter(|c| c.definition.name == "Lightning Bolt")
+                .count();
+            if bolts < 4 {
+                changed += 1;
+            }
+        }
+        assert!(changed >= 7, "expected the redeal to move the hand, changed {changed}/8");
     }
 
     /// The bot names the creature type it controls the most of (not the stock

@@ -11678,6 +11678,56 @@ impl GameState {
         }
     }
 
+    /// The colors an untapped source can currently produce, read off its
+    /// *effective* abilities so a granted mana ability counts.
+    fn source_colors_now(&self, id: CardId) -> Vec<ManaColor> {
+        let abilities = self.effective_mana_abilities(id);
+        ManaColor::ALL
+            .into_iter()
+            .filter(|c| abilities.iter().any(|(_, a)| effect_produces_color(&a.effect, *c)))
+            .collect()
+    }
+
+    /// How replaceable a source is: for each color it makes, how many
+    /// *other* untapped sources this player controls also make that
+    /// color; the source scores the smallest such count. A colorless
+    /// source has no color to preserve and scores `u32::MAX`.
+    ///
+    /// This is what makes the generic portion of a cost stop eating the
+    /// splash. Paying `{2}{B}` off 8 Swamp / 6 Forest / 3 Island, the
+    /// engine reserved a Swamp for the `{B}` and then paid the `{2}` from
+    /// whatever came first in battlefield order — which is as likely to
+    /// be an Island as anything else, stranding the blue cards the three
+    /// Islands exist to cast. Tapping the most redundant source first
+    /// spends a Swamp (7 backups) before a Forest (5) before an Island
+    /// (2), and never changes *whether* the current cost can be paid —
+    /// only which of several interchangeable sources pays it.
+    fn source_redundancy(&self, player: usize, id: CardId, creature_only: bool) -> u32 {
+        let colors = self.source_colors_now(id);
+        if colors.is_empty() {
+            return u32::MAX;
+        }
+        colors
+            .iter()
+            .map(|&c| {
+                self.battlefield
+                    .iter()
+                    .filter(|o| {
+                        o.id != id
+                            && o.controller == player
+                            && !o.tapped
+                            && (!creature_only || self.permanent_is_creature(o.id))
+                            && self
+                                .effective_mana_abilities(o.id)
+                                .iter()
+                                .any(|(_, a)| effect_produces_color(&a.effect, c))
+                    })
+                    .count() as u32
+            })
+            .min()
+            .unwrap_or(u32::MAX)
+    }
+
     fn auto_tap_for_cost_inner(
         &mut self,
         player: usize,
@@ -11685,6 +11735,10 @@ impl GameState {
         creature_only: bool,
     ) -> Vec<GameEvent> {
         let mut events = Vec::new();
+        // Off, the two selection loops below fall back to "cheapest
+        // activation, then battlefield order" — the historical behaviour,
+        // kept as the ladder control.
+        let smart = self.players[player].smart_tap;
 
         // Deduct what the pool already covers before deciding what to tap.
         // We track a "virtual" pool snapshot so we don't mutate the real pool here.
@@ -11815,10 +11869,24 @@ impl GameState {
                 }
                 self.effective_mana_abilities(c.id).into_iter()
                     .find(|(_, a)| effect_produces_color(&a.effect, color))
-                    .map(|(idx, a)| (Self::mana_source_cost_rank(&a), c.id, idx))
-            // Cheapest source first; `min_by_key` keeps the first of equal
-            // ranks, so battlefield order still breaks ties as before.
-            }).min_by_key(|(rank, ..)| *rank).map(|(_, id, idx)| (id, idx));
+                    .map(|(idx, a)| {
+                        // Among sources that make this color, spend the
+                        // *least* flexible one: a Swamp pays {B} before a
+                        // Dimir dual does, leaving the dual free to cover
+                        // whichever colour comes up next. Same reasoning as
+                        // the "dedicated first" reservation in
+                        // `manual_tap_is_a_real_choice`.
+                        let breadth = if smart {
+                            self.source_colors_now(c.id).len()
+                        } else {
+                            0
+                        };
+                        (Self::mana_source_cost_rank(&a), breadth, c.id, idx)
+                    })
+            // Cheapest source first, then narrowest; `min_by_key` keeps the
+            // first of equal keys, so battlefield order still breaks
+            // remaining ties as before.
+            }).min_by_key(|&(rank, breadth, ..)| (rank, breadth)).map(|(_, _, id, idx)| (id, idx));
             if let Some((id, idx)) = source {
                 let scripted = crate::decision::ScriptedDecider::new([
                     crate::decision::DecisionAnswer::Color(color),
@@ -11843,7 +11911,10 @@ impl GameState {
             }
         }
 
-        // Tap any mana source for remaining generic pips.
+        // Tap any mana source for remaining generic pips, spending the
+        // most replaceable ones first — see `source_redundancy`.
+        // Recomputed each iteration because tapping one source changes
+        // how redundant the rest are.
         for _ in 0..generic_to_tap {
             // Same controller-vs-owner fix as the colored-pip loop.
             let source = self.battlefield.iter().filter_map(|c| {
@@ -11854,8 +11925,15 @@ impl GameState {
                     return None;
                 }
                 self.effective_mana_abilities(c.id).into_iter().next()
-                    .map(|(idx, a)| (Self::mana_source_cost_rank(&a), c.id, idx))
-            }).min_by_key(|(rank, ..)| *rank).map(|(_, id, idx)| (id, idx));
+                    .map(|(idx, a)| {
+                        let keep = if smart {
+                            self.source_redundancy(player, c.id, creature_only)
+                        } else {
+                            0
+                        };
+                        (Self::mana_source_cost_rank(&a), std::cmp::Reverse(keep), c.id, idx)
+                    })
+            }).min_by_key(|&(rank, keep, ..)| (rank, keep)).map(|(_, _, id, idx)| (id, idx));
             let Some((id, idx)) = source else { break };
             if let Ok(mut evs) = self.activate_ability(id, idx, None, Vec::new(), None, None) {
                 events.append(&mut evs);

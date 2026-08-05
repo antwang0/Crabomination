@@ -13,6 +13,7 @@
 //! draws from the thread RNG by design — which the training loop doesn't
 //! need; the jitter is the exploration noise that diversifies the data.
 
+use rand::RngExt;
 use rand::SeedableRng;
 use rand::rngs::StdRng;
 use rand::seq::SliceRandom;
@@ -116,11 +117,24 @@ pub fn static_deck_score(deck: &[CardFactory]) -> i32 {
 /// One finished self-play game's worth of labelled rows.
 pub struct RecordedGame {
     pub rows: Vec<TrainRow>,
+    /// The heuristic evaluation of each row's position, from that row's
+    /// seat — parallel to `rows` and in the same order.
+    ///
+    /// Not part of the shard format: this exists so the calibration
+    /// diagnostic can score the net and the heuristic as *predictors* on
+    /// identical positions, which is the cheap question the expensive
+    /// gate rounds were standing in for.
+    pub heur: Vec<i32>,
     /// Winning seat; `None` for a stall/draw (rows are empty then — an
     /// unlabelled position teaches nothing).
     pub winner: Option<usize>,
     pub turns: u32,
 }
+
+/// Upper bound on the randomised opening window, in actions. Each game
+/// draws its own length in `0..=EXPLORE_PLIES`, so a share of games are
+/// pure policy play and the distribution is widened rather than shifted.
+const EXPLORE_PLIES: usize = 12;
 
 /// Play one bot game from `template`, snapshotting along the way from both
 /// seats' perspectives, and stamp the outcome labels at the end.
@@ -147,11 +161,24 @@ pub fn play_recorded_game(
         g.players[seat].library.shuffle(&mut rng);
     }
     g.start_mulligan_phase();
-    let mut bots: Vec<Box<dyn Bot>> =
-        weights.into_iter().map(|w| Box::new(RandomBot::with_weights(w)) as Box<dyn Bot>).collect();
+    // Opening-move exploration. Both seats otherwise play the same
+    // deterministic policy, so the net only ever sees the narrow band of
+    // positions that policy reaches and learns to evaluate *those* — the
+    // classic self-play distribution collapse. Randomising the first few
+    // decisions of each game widens the state distribution for free; it
+    // is confined to the opening so the *outcome* still reflects
+    // competent play and the win labels stay meaningful.
+    let explore_plies = rng.random_range(0..=EXPLORE_PLIES);
+    let mut bots: Vec<Box<dyn Bot>> = weights
+        .into_iter()
+        .map(|w| Box::new(RandomBot::with_weights(w)) as Box<dyn Bot>)
+        .collect();
+    let mut explorers: Vec<Box<dyn Bot>> =
+        (0..2).map(|_| Box::new(RandomBot::uniform_baseline()) as Box<dyn Bot>).collect();
 
     // (turn, seat, encoded state) — labelled after the game decides.
     let mut snaps = Vec::new();
+    let mut heur: Vec<i32> = Vec::new();
     let mut last_turn = (0u32, usize::MAX);
     let mut last_step = crate::game::TurnStep::Untap;
     let mut last_pair: Option<[crabomination_nn::EncodedState; 2]> = None;
@@ -169,13 +196,21 @@ pub fn play_recorded_game(
             if last_pair.as_ref() != Some(&pair) {
                 for (seat, s) in pair.iter().enumerate() {
                     snaps.push((g.turn_number, seat, s.clone()));
+                    heur.push(crate::server::bot::eval_material_public(
+                        &g,
+                        seat,
+                        &EvalWeights::default(),
+                    ));
                 }
                 last_pair = Some(pair);
             }
         }
         last_step = g.step;
         let mut any = false;
-        for (s, bot) in bots.iter_mut().enumerate() {
+        // Uniform picks for the opening window, then the real policy.
+        let acting =
+            if actions < explore_plies { &mut explorers } else { &mut bots };
+        for (s, bot) in acting.iter_mut().enumerate() {
             let Some(a) = bot.next_action(&g, s) else { continue };
             if g.perform_action(a).is_ok() {
                 any = true;
@@ -190,19 +225,32 @@ pub fn play_recorded_game(
 
     let turns = g.turn_number;
     let Some(Some(winner)) = g.game_over else {
-        return RecordedGame { rows: Vec::new(), winner: None, turns };
+        return RecordedGame { rows: Vec::new(), heur: Vec::new(), winner: None, turns };
     };
     let life = [g.players[0].life, g.players[1].life];
+    // One trajectory per (game, seat): the two seats see different
+    // information and end on opposite results, so bootstrapping a row
+    // against the other seat's successor would be meaningless. `seed`
+    // identifies the game — actors already draw distinct seeds — and the
+    // low bit carries the seat.
+    let traj_base = (seed as u32) << 1;
+    let mut ply = [0u16, 0u16];
     let rows = snaps
         .into_iter()
-        .map(|(turn, seat, state)| TrainRow {
-            state,
-            win: if seat == winner { 1.0 } else { 0.0 },
-            life_diff: ((life[seat] - life[1 - seat]) as f32 / 20.0).clamp(-1.0, 1.0),
-            game_len: (turns.saturating_sub(turn)) as f32 / 15.0,
+        .map(|(turn, seat, state)| {
+            let p = ply[seat];
+            ply[seat] += 1;
+            TrainRow {
+                state,
+                win: if seat == winner { 1.0 } else { 0.0 },
+                life_diff: ((life[seat] - life[1 - seat]) as f32 / 20.0).clamp(-1.0, 1.0),
+                game_len: (turns.saturating_sub(turn)) as f32 / 15.0,
+                traj: traj_base | seat as u32,
+                ply: p,
+            }
         })
         .collect();
-    RecordedGame { rows, winner: Some(winner), turns }
+    RecordedGame { rows, heur, winner: Some(winner), turns }
 }
 
 #[cfg(test)]

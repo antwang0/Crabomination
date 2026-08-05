@@ -102,9 +102,21 @@ impl Default for EncodedObject {
 #[derive(Debug, Clone, PartialEq)]
 pub struct TrainRow {
     pub state: EncodedState,
+    /// The game's actual result from this seat: 1 win, 0 loss. This stays
+    /// the ground truth even when the trainer fits a bootstrapped target
+    /// derived from it (see `SampleWindow::relabel_lambda`).
     pub win: f32,
     pub life_diff: f32,
     pub game_len: f32,
+    /// Trajectory this row belongs to — one per (game, seat), since the
+    /// two seats see different information and are separate episodes.
+    /// Rows can only be bootstrapped against their own successors, so the
+    /// trainer needs to be able to reassemble trajectories from a shuffled
+    /// window.
+    pub traj: u32,
+    /// Position within the trajectory, ascending. Recorded rather than
+    /// inferred from row order because the window samples and evicts.
+    pub ply: u16,
 }
 
 // ───────────────────────────── shard format ─────────────────────────────
@@ -113,7 +125,7 @@ pub struct TrainRow {
 /// `OBJ_FEATS`, `GLOBAL_FEATS`, group order, or the row layout changes —
 /// stale shards must fail loudly, not decode as garbage.
 pub const SHARD_MAGIC: [u8; 4] = *b"CRML";
-pub const SHARD_VERSION: u32 = 2;
+pub const SHARD_VERSION: u32 = 3;
 
 /// Serialize rows into a self-describing shard (little-endian throughout).
 pub fn write_shard(rows: &[TrainRow]) -> Vec<u8> {
@@ -137,6 +149,8 @@ pub fn write_shard(rows: &[TrainRow]) -> Vec<u8> {
         for v in [row.win, row.life_diff, row.game_len] {
             out.extend_from_slice(&v.to_le_bytes());
         }
+        out.extend_from_slice(&row.traj.to_le_bytes());
+        out.extend_from_slice(&row.ply.to_le_bytes());
     }
     out
 }
@@ -174,7 +188,9 @@ pub fn read_shard(bytes: &[u8]) -> Option<Vec<TrainRow>> {
         let win = r.f32()?;
         let life_diff = r.f32()?;
         let game_len = r.f32()?;
-        rows.push(TrainRow { state, win, life_diff, game_len });
+        let traj = r.u32()?;
+        let ply = r.u16()?;
+        rows.push(TrainRow { state, win, life_diff, game_len, traj, ply });
     }
     // Trailing bytes mean the writer and reader disagree about the layout.
     if r.pos != bytes.len() {
@@ -568,12 +584,13 @@ mod tests {
         feats[OBJ_FEATS - 1] = 1.0;
         state.groups[G_BF_SELF].push(EncodedObject { card: 7, feats });
         state.groups[G_GY_OPP].push(EncodedObject { card: 0, feats: [0.25; OBJ_FEATS] });
-        TrainRow { state, win: 1.0, life_diff: 0.55, game_len: 0.2 }
+        TrainRow { state, win: 1.0, life_diff: 0.55, game_len: 0.2, traj: 42, ply: 3 }
     }
 
     #[test]
     fn shard_roundtrip_is_exact() {
-        let rows = vec![tiny_row(), TrainRow { win: 0.0, ..tiny_row() }];
+        let rows =
+            vec![tiny_row(), TrainRow { win: 0.0, traj: 42, ply: 4, ..tiny_row() }];
         let bytes = write_shard(&rows);
         assert_eq!(read_shard(&bytes).expect("decodes"), rows);
         // A truncated or version-bumped shard is rejected whole.

@@ -1244,6 +1244,60 @@ fn cast_one_u_with_two_tundras_auto_taps_correctly() {
     assert!(g.battlefield.iter().any(|c| c.id == id));
 }
 
+/// The generic portion of a cost must not eat a scarce colour.
+///
+/// A B/G deck splashing three Islands casts `{2}{B}`: the engine reserves
+/// a Swamp for the `{B}` and used to pay the `{2}` in battlefield order,
+/// which happily tapped Islands and stranded the blue cards the splash
+/// exists to cast. Generic pips now spend the most replaceable source
+/// first (`source_redundancy`).
+#[test]
+fn generic_pips_spend_redundant_sources_before_a_splash() {
+    use crabomination::mana::{ManaCost, ManaSymbol};
+    let mut g = two_player_game();
+    // Islands first, so battlefield order alone would tap them.
+    let islands: Vec<_> =
+        (0..3).map(|_| g.add_card_to_battlefield(0, catalog::island())).collect();
+    for _ in 0..8 {
+        g.add_card_to_battlefield(0, catalog::swamp());
+    }
+    for _ in 0..6 {
+        g.add_card_to_battlefield(0, catalog::forest());
+    }
+    let mut spell = catalog::grizzly_bears();
+    spell.cost = ManaCost {
+        symbols: vec![ManaSymbol::Generic(2), ManaSymbol::Colored(Color::Black)],
+    };
+    let id = g.add_card_to_hand(0, spell);
+    cast(&mut g, id);
+    assert!(g.battlefield.iter().any(|c| c.id == id), "the spell should resolve");
+    for i in islands {
+        assert!(
+            !g.battlefield.iter().find(|c| c.id == i).unwrap().tapped,
+            "an Island paid a generic pip while eight Swamps sat untapped"
+        );
+    }
+}
+
+/// The same preference on the colored half: pay a pip from the narrowest
+/// source that makes it, so duals stay available for whatever comes next.
+#[test]
+fn colored_pips_spend_a_basic_before_a_dual() {
+    use crabomination::mana::{ManaCost, ManaSymbol};
+    let mut g = two_player_game();
+    let tundra = g.add_card_to_battlefield(0, catalog::tundra());
+    g.add_card_to_battlefield(0, catalog::island());
+    let mut spell = catalog::grizzly_bears();
+    spell.cost = ManaCost { symbols: vec![ManaSymbol::Colored(Color::Blue)] };
+    let id = g.add_card_to_hand(0, spell);
+    cast(&mut g, id);
+    assert!(g.battlefield.iter().any(|c| c.id == id));
+    assert!(
+        !g.battlefield.iter().find(|c| c.id == tundra).unwrap().tapped,
+        "the Tundra paid {{U}} that a plain Island could have covered"
+    );
+}
+
 #[test]
 fn inquisition_of_kozilek_picks_low_cmc_nonland() {
     let mut g = two_player_game();

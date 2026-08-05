@@ -34,10 +34,18 @@ fn print_attribution(rec: &recommend::Recommendation) {
         .map(|(c, e)| (c, e.win_rate()))
         .collect();
     let rows = recommend::per_card_attribution(&samples, 3);
-    println!("\nper-card attribution (mean win rate with vs without; noisy — mind the counts):");
+    println!(
+        "\nper-card attribution (noisy — mind the counts).\n  \
+         `within` compares builds of the SAME colours and is the number to read; \
+         `raw` is the cross-archetype marginal and mostly measures the archetype."
+    );
     for r in rows {
+        let within = match r.stratified_delta {
+            Some(d) => format!("{:+5.1} ({} strata)", d * 100.0, r.strata),
+            None => "    —  (1 archetype)".to_string(),
+        };
         println!(
-            "  {:+5.1}  {:5.1}% (in {:>2})  vs {:5.1}% (out {:>2})  {}",
+            "  within {within}   raw {:+5.1}   {:5.1}% (in {:>2}) vs {:5.1}% (out {:>2})  {}",
             r.delta() * 100.0,
             r.mean_in * 100.0,
             r.n_in,
@@ -71,8 +79,12 @@ fn print_anchor_attribution(rec: &recommend::Recommendation, anchor: &str) {
          (build-around lens):"
     );
     for r in rows {
+        let within = match r.stratified_delta {
+            Some(d) => format!("{:+5.1}", d * 100.0),
+            None => "    —".to_string(),
+        };
         println!(
-            "  {:+5.1}  {:5.1}% (in {:>2})  vs {:5.1}% (out {:>2})  {}",
+            "  within {within}   raw {:+5.1}   {:5.1}% (in {:>2}) vs {:5.1}% (out {:>2})  {}",
             r.delta() * 100.0,
             r.mean_in * 100.0,
             r.n_in,

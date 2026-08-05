@@ -821,6 +821,16 @@ pub enum Pilot {
 }
 
 impl Pilot {
+    /// The evaluation profile this pilot plays, when it has one. Used to
+    /// push profile settings that the *engine* reads (rather than the
+    /// bot) onto the seat before the game starts.
+    fn weights(self) -> Option<EvalWeights> {
+        match self {
+            Pilot::Scored(w) => Some(w),
+            Pilot::Uniform | Pilot::Mcts(_) => None,
+        }
+    }
+
     fn build(self) -> Box<dyn Bot> {
         match self {
             Pilot::Scored(w) => Box::new(RandomBot::with_weights(w)),
@@ -909,7 +919,9 @@ pub fn simulate_match_games_piloted(
         // profile under test.
         let seated =
             if a_seat0 { [pilots[0], pilots[1]] } else { [pilots[1], pilots[0]] };
-        match play_one_game(template, seated, max_actions, shuffle_rng.as_mut()) {
+        // Unpaired games keep the unseeded jitter: this is the control
+        // arm, and seeding it here would quietly change what it measures.
+        match play_one_game(template, seated, max_actions, shuffle_rng.as_mut(), None) {
             Some(seat) => {
                 let a_won = (seat == 0) == a_seat0;
                 if a_won {
@@ -924,6 +936,97 @@ pub fn simulate_match_games_piloted(
                 tally.undecided += 1;
                 tally.outcomes.push(0);
             }
+        }
+    }
+    tally
+}
+
+/// A seat-swapped pair of games played on one shuffle: the unit of the
+/// paired ladder. `pairs[k]` is +1 when A took both games, −1 when B did,
+/// and 0 for a split (including a pair with an undecided game).
+pub struct PairedTally {
+    pub wins_a: u32,
+    pub wins_b: u32,
+    pub undecided: u32,
+    /// One entry per *fully decided* pair, in play order. A pair with an
+    /// undecided game is absent rather than recorded as a split: its games
+    /// still count in the unpaired totals above, but it carries no paired
+    /// evidence, and scoring it 0 would dilute the mean toward "even" with
+    /// games that never finished.
+    pub pairs: Vec<i8>,
+}
+
+/// [`simulate_match_games_piloted`] with **antithetic seat pairing**: each
+/// pair plays the same shuffle twice with the pilots swapped between the
+/// seats.
+///
+/// The ordinary ladder draws a fresh shuffle for every game and swaps
+/// seats on alternate games, so seat luck and deal luck are averaged away
+/// rather than cancelled. In a 40-card mirror most of the game-to-game
+/// variance *is* the deal — one pilot flooding while the other curves out
+/// says nothing about either. Playing both sides of one deal makes that
+/// noise cancel within the pair instead of across thousands of games:
+/// whoever was going to win on the strength of the cards wins their copy
+/// of it in each direction, and the pair splits. Only a genuine piloting
+/// edge produces sweeps.
+///
+/// Formally the pair score S ∈ {−1, 0, +1} has E[S] = 2p − 1 and
+/// Var(S) = 2p(1−p)(1 + ρ), where ρ is the within-pair correlation. A
+/// decisive-deal field drives ρ negative, and the variance of the win-rate
+/// estimate falls by exactly that (1 + ρ) factor versus the same number of
+/// unpaired games. `bot_ladder` measures ρ and reports the realized
+/// efficiency rather than asserting one.
+///
+/// This is only a variance reduction, not a change of estimand: the mean
+/// is the same win rate the unpaired ladder estimates, which is why the
+/// unpaired total is still reported alongside it as the control.
+///
+/// Both games of a pair take their shuffle from one `seed_base + k` stream,
+/// so a mirror deals seat 0 the identical library in both directions.
+pub fn simulate_match_pairs_piloted(
+    deck_a: &[CardFactory],
+    deck_b: &[CardFactory],
+    pairs: usize,
+    pilots: [Pilot; 2],
+    max_actions: usize,
+    seed_base: u64,
+) -> PairedTally {
+    let template_a0 = build_match_template(deck_a, deck_b);
+    let template_b0 = build_match_template(deck_b, deck_a);
+    let mut tally =
+        PairedTally { wins_a: 0, wins_b: 0, undecided: 0, pairs: Vec::with_capacity(pairs) };
+    for k in 0..pairs {
+        let seed = seed_base.wrapping_add((k as u64).wrapping_mul(0x9E37_79B9_7F4A_7C15));
+        let mut score = 0i8;
+        let mut decided_both = true;
+        for a_seat0 in [true, false] {
+            // Re-seeded per game, *not* carried across the pair: the second
+            // game has to draw the same shuffle as the first, which a shared
+            // generator would not do.
+            let mut shuffle_rng = StdRng::seed_from_u64(seed);
+            let template = if a_seat0 { &template_a0 } else { &template_b0 };
+            let seated = if a_seat0 { [pilots[0], pilots[1]] } else { [pilots[1], pilots[0]] };
+            // Both games of the pair get the *same* jitter stream, so the
+            // bots' tie-breaks replay identically and the only thing left
+            // that can separate the two games is the profiles themselves.
+            match play_one_game(template, seated, max_actions, Some(&mut shuffle_rng), Some(seed)) {
+                Some(seat) => {
+                    if (seat == 0) == a_seat0 {
+                        tally.wins_a += 1;
+                        score += 1;
+                    } else {
+                        tally.wins_b += 1;
+                        score -= 1;
+                    }
+                }
+                None => {
+                    tally.undecided += 1;
+                    decided_both = false;
+                }
+            }
+        }
+        if decided_both {
+            tally.pairs.push(score.signum());
         }
     }
     tally
@@ -965,8 +1068,19 @@ fn play_one_game(
     pilots: [Pilot; 2],
     max_actions: usize,
     shuffle_rng: Option<&mut StdRng>,
+    jitter_seed: Option<u64>,
 ) -> Option<usize> {
+    // Installed for the duration of this game and cleared after, so a
+    // seeded game can't leak its stream into whatever the worker plays
+    // next. See `bot::set_jitter_seed`.
+    crate::server::bot::set_jitter_seed(jitter_seed);
     let mut g = template.clone();
+    // Profile settings the engine reads off the seat, not the bot.
+    for (seat, pilot) in pilots.into_iter().enumerate() {
+        if let Some(w) = pilot.weights() {
+            g.players[seat].smart_tap = w.smart_tap;
+        }
+    }
     let mut seeded = shuffle_rng;
     for seat in 0..2 {
         match &mut seeded {
@@ -991,6 +1105,7 @@ fn play_one_game(
         }
         if any { stale = 0 } else { stale += 1 }
     }
+    crate::server::bot::set_jitter_seed(None);
     g.game_over.flatten()
 }
 
@@ -1310,11 +1425,35 @@ pub struct CardAttribution {
     pub n_in: usize,
     pub mean_out: f64,
     pub n_out: usize,
+    /// How many colour strata played *and* benched the card. Zero means
+    /// there is no within-archetype comparison at all and
+    /// [`delta`](Self::delta) is purely cross-archetype — see
+    /// [`stratified_delta`](Self::stratified_delta).
+    pub strata: usize,
+    /// Attribution with the archetype confound removed: the per-stratum
+    /// in-minus-out delta, pooled by inverse variance. `None` when no
+    /// stratum has the card on both sides.
+    pub stratified_delta: Option<f64>,
 }
 
 impl CardAttribution {
+    /// The raw in-minus-out delta.
+    ///
+    /// **This is a cross-archetype marginal, not a card grade**, and it
+    /// is the number that made Professor Dellian Fel read −2.4. A black
+    /// card is played by the black builds and benched by every white,
+    /// blue and red one, so its "out" group is a different deck rather
+    /// than the same deck without it — the delta measures the archetype.
+    /// Prefer [`stratified_delta`](Self::stratified_delta), which only
+    /// compares builds of the same colours.
     pub fn delta(&self) -> f64 {
         self.mean_in - self.mean_out
+    }
+
+    /// The best available attribution: within-archetype where the samples
+    /// support one, falling back to the raw marginal.
+    pub fn best_delta(&self) -> f64 {
+        self.stratified_delta.unwrap_or_else(|| self.delta())
     }
 }
 
@@ -1340,18 +1479,61 @@ pub fn per_card_attribution(
         }
     }
     let mean = |v: &[f64]| v.iter().sum::<f64>() / v.len().max(1) as f64;
+
+    // Within-archetype comparison, keyed by the build's colour identity.
+    // Splash is part of the key: "B/G" and "B/G + u" are different mana
+    // bases and a card can be right in one and wrong in the other.
+    let mut strata: HashMap<String, Vec<(&CandidateBuild, f64)>> = HashMap::new();
+    for (c, wr) in samples {
+        let mut key: Vec<String> = c.colors.iter().map(|x| format!("{x:?}")).collect();
+        key.sort();
+        let mut sp: Vec<String> = c.splash.iter().map(|x| format!("{x:?}")).collect();
+        sp.sort();
+        key.push(format!("+{}", sp.join("")));
+        strata.entry(key.join("")).or_default().push((*c, *wr));
+    }
+
     let mut rows: Vec<CardAttribution> = per
         .into_iter()
         .filter(|(_, (i, o))| i.len() >= min_side && o.len() >= min_side)
-        .map(|(name, (i, o))| CardAttribution {
-            name,
-            mean_in: mean(&i),
-            n_in: i.len(),
-            mean_out: mean(&o),
-            n_out: o.len(),
+        .map(|(name, (i, o))| {
+            // Pool the per-stratum deltas by inverse variance: a
+            // difference of means over n_in and n_out samples has
+            // variance proportional to 1/n_in + 1/n_out, so the weight is
+            // the harmonic term below.
+            let (mut num, mut den, mut used) = (0.0f64, 0.0f64, 0usize);
+            for group in strata.values() {
+                let (mut si, mut so) = (Vec::new(), Vec::new());
+                for (c, wr) in group {
+                    let plays =
+                        c.main.iter().chain(c.duals.iter()).any(|&f| f().name == name);
+                    if plays { si.push(*wr) } else { so.push(*wr) }
+                }
+                if si.len() < min_side || so.len() < min_side {
+                    continue;
+                }
+                let w = (si.len() * so.len()) as f64 / (si.len() + so.len()) as f64;
+                num += w * (mean(&si) - mean(&so));
+                den += w;
+                used += 1;
+            }
+            CardAttribution {
+                name,
+                mean_in: mean(&i),
+                n_in: i.len(),
+                mean_out: mean(&o),
+                n_out: o.len(),
+                strata: used,
+                stratified_delta: (den > 0.0).then(|| num / den),
+            }
         })
         .collect();
-    rows.sort_by(|a, b| b.delta().partial_cmp(&a.delta()).unwrap_or(std::cmp::Ordering::Equal));
+    // Ranked by the confound-free number where there is one, so a card
+    // can no longer top (or bottom) the list purely for being the colour
+    // the winning archetype happens to be.
+    rows.sort_by(|a, b| {
+        b.best_delta().partial_cmp(&a.best_delta()).unwrap_or(std::cmp::Ordering::Equal)
+    });
     rows
 }
 
@@ -1729,6 +1911,173 @@ impl Session {
 mod tests {
     use super::*;
     use crate::catalog;
+
+    /// Every pair is two games, and only fully decided pairs are scored.
+    /// The unpaired totals stay the ground truth for "how many games did
+    /// we actually play", which is what the ladder's control column reads.
+    #[test]
+    fn pairs_play_two_games_each_and_score_only_decided_pairs() {
+        let deck = deck_of(&[
+            (catalog::mountain as CardFactory, 17),
+            (catalog::lightning_bolt, 4),
+            (catalog::goblin_guide, 4),
+            (catalog::gray_ogre, 8),
+            (catalog::hill_giant, 7),
+        ]);
+        const PAIRS: usize = 6;
+        let t = simulate_match_pairs_piloted(
+            &deck,
+            &deck,
+            PAIRS,
+            [Pilot::default(), Pilot::default()],
+            50_000,
+            99,
+        );
+        assert_eq!(
+            t.wins_a + t.wins_b + t.undecided,
+            2 * PAIRS as u32,
+            "each pair must play exactly two games"
+        );
+        assert!(t.pairs.len() <= PAIRS, "a pair cannot be scored more than once");
+        assert!(t.pairs.iter().all(|&s| (-1..=1).contains(&s)));
+        // Every game of a scored pair was decided, so scored pairs can
+        // never claim more games than the run actually decided.
+        assert!(t.pairs.len() as u32 * 2 <= t.wins_a + t.wins_b);
+    }
+
+    /// Antithetic pairing is only worth its complexity if the two games of
+    /// a pair really are the same deal. They are unobservable from the
+    /// tally directly, so this asserts the consequence: a profile played
+    /// against *itself* splits its pairs far more often than independent
+    /// games would, because whichever side the deal favoured wins its copy
+    /// in each direction.
+    ///
+    /// Not asserted at 100%: the scored bot jitters ties from an unseeded
+    /// RNG (`main_phase_action_with`), so a pair can still diverge. That
+    /// residual is exactly why the ladder measures the realized rho
+    /// instead of assuming the ideal one.
+    #[test]
+    fn self_mirror_pairs_mostly_split() {
+        let deck = deck_of(&[
+            (catalog::mountain as CardFactory, 17),
+            (catalog::lightning_bolt, 4),
+            (catalog::goblin_guide, 4),
+            (catalog::gray_ogre, 8),
+            (catalog::hill_giant, 7),
+        ]);
+        const PAIRS: usize = 10;
+        let t = simulate_match_pairs_piloted(
+            &deck,
+            &deck,
+            PAIRS,
+            [Pilot::default(), Pilot::default()],
+            50_000,
+            7,
+        );
+        let splits = t.pairs.iter().filter(|&&s| s == 0).count();
+        assert!(
+            splits * 2 > t.pairs.len(),
+            "expected most of {} scored pairs to split, got {splits}",
+            t.pairs.len()
+        );
+    }
+
+    /// The Dellian Fel defect, reproduced in miniature.
+    ///
+    /// Two archetypes: a strong one (65 % base) and a weak one (45 %).
+    /// The card under test is genuinely *bad* — it costs 4 points
+    /// wherever it appears — but it only appears in the strong
+    /// archetype's builds. The raw marginal therefore reports it as a
+    /// star, because its "out" group is mostly the weak archetype. The
+    /// stratified delta, comparing only same-colour builds, sees the
+    /// truth.
+    #[test]
+    fn stratified_attribution_removes_the_archetype_confound() {
+        let mut samples_owned: Vec<(CandidateBuild, f64)> = Vec::new();
+        for i in 0..8 {
+            // Strong archetype; half of them play the card.
+            let plays = i % 2 == 0;
+            let mut main = vec![catalog::grizzly_bears as CardFactory; 20];
+            if plays {
+                main.push(catalog::craw_wurm);
+            }
+            let wr = 0.65 - if plays { 0.04 } else { 0.0 };
+            samples_owned.push((build_with(vec![Color::Red, Color::White], main), wr));
+        }
+        for _ in 0..8 {
+            // Weak archetype; never plays the card.
+            let main = vec![catalog::grizzly_bears as CardFactory; 20];
+            samples_owned.push((build_with(vec![Color::Blue, Color::Black], main), 0.45));
+        }
+        let samples: Vec<(&CandidateBuild, f64)> =
+            samples_owned.iter().map(|(c, w)| (c, *w)).collect();
+
+        let rows = per_card_attribution(&samples, 3);
+        let wurm = rows
+            .iter()
+            .find(|r| r.name == "Craw Wurm")
+            .expect("the card under test should be comparable");
+
+        assert!(
+            wurm.delta() > 0.0,
+            "the raw marginal should be fooled into liking it, got {:+.3}",
+            wurm.delta()
+        );
+        let within = wurm.stratified_delta.expect("one stratum plays and benches it");
+        assert!(
+            (within + 0.04).abs() < 1e-9,
+            "within-archetype delta should recover the true −4 points, got {within:+.3}"
+        );
+        assert_eq!(wurm.strata, 1, "only the R/W stratum has it on both sides");
+    }
+
+    /// A card no single archetype both plays and benches has no
+    /// within-archetype comparison at all, and must say so rather than
+    /// quietly reporting the marginal as if it were one.
+    #[test]
+    fn a_card_confined_to_one_archetype_reports_no_strata() {
+        let mut samples_owned: Vec<(CandidateBuild, f64)> = Vec::new();
+        for _ in 0..6 {
+            let mut main = vec![catalog::grizzly_bears as CardFactory; 20];
+            main.push(catalog::craw_wurm);
+            samples_owned.push((build_with(vec![Color::Green], main), 0.6));
+        }
+        for _ in 0..6 {
+            let main = vec![catalog::grizzly_bears as CardFactory; 20];
+            samples_owned.push((build_with(vec![Color::Blue], main), 0.4));
+        }
+        let samples: Vec<(&CandidateBuild, f64)> =
+            samples_owned.iter().map(|(c, w)| (c, *w)).collect();
+        let rows = per_card_attribution(&samples, 3);
+        let wurm = rows.iter().find(|r| r.name == "Craw Wurm").unwrap();
+        assert_eq!(wurm.strata, 0);
+        assert!(wurm.stratified_delta.is_none());
+        // ...and `best_delta` falls back rather than pretending.
+        assert!((wurm.best_delta() - wurm.delta()).abs() < 1e-12);
+    }
+
+    fn build_with(colors: Vec<Color>, main: Vec<CardFactory>) -> CandidateBuild {
+        CandidateBuild {
+            colors,
+            splash: Vec::new(),
+            main,
+            duals: Vec::new(),
+            basics: HashMap::new(),
+            leftovers: Vec::new(),
+            static_score: 0,
+            label: String::new(),
+        }
+    }
+
+    fn deck_of(spec: &[(CardFactory, usize)]) -> Vec<CardFactory> {
+        let mut d = Vec::new();
+        for &(f, n) in spec {
+            for _ in 0..n {
+                d.push(f);
+            }
+        }
+        d
+    }
 
     /// A W/R-heavy pool with one splash-worthy green bomb.
     fn wr_pool_with_green_bomb() -> Vec<CardFactory> {

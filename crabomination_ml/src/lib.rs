@@ -16,7 +16,7 @@
 //! a position lost the game (the KataGo ownership-target lesson at MTG
 //! scale).
 
-use std::collections::VecDeque;
+use std::collections::{HashMap, VecDeque};
 
 use candle_core::{DType, Device, Result as CResult, Tensor};
 use candle_nn::{
@@ -88,15 +88,24 @@ pub struct Batch {
     pub len_t: Tensor,  // [B, 1]
 }
 
+/// [`make_batch_with_targets`] fitting each row's own game result — the
+/// Monte Carlo target, and what every pre-λ gate round trained on.
 pub fn make_batch(rows: &[&TrainRow], dev: &Device) -> CResult<Batch> {
+    let with: Vec<(&TrainRow, f32)> = rows.iter().map(|r| (*r, r.win)).collect();
+    make_batch_with_targets(&with, dev)
+}
+
+/// Pack rows into tensors, fitting the supplied win target rather than the
+/// row's raw result — see [`SampleWindow::relabel_lambda`].
+pub fn make_batch_with_targets(rows: &[(&TrainRow, f32)], dev: &Device) -> CResult<Batch> {
     let b = rows.len();
     let (mut ids, mut feats, mut mask) = (Vec::new(), Vec::new(), Vec::new());
     for g in 0..NUM_GROUPS {
-        let n = rows.iter().map(|r| r.state.groups[g].len()).max().unwrap_or(0).max(1);
+        let n = rows.iter().map(|(r, _)| r.state.groups[g].len()).max().unwrap_or(0).max(1);
         let mut id_v = vec![0u32; b * n];
         let mut ft_v = vec![0f32; b * n * OBJ_FEATS];
         let mut mk_v = vec![0f32; b * n];
-        for (ri, row) in rows.iter().enumerate() {
+        for (ri, (row, _)) in rows.iter().enumerate() {
             for (oi, o) in row.state.groups[g].iter().enumerate() {
                 id_v[ri * n + oi] = o.card as u32;
                 ft_v[(ri * n + oi) * OBJ_FEATS..][..OBJ_FEATS].copy_from_slice(&o.feats);
@@ -109,9 +118,9 @@ pub fn make_batch(rows: &[&TrainRow], dev: &Device) -> CResult<Batch> {
     }
     let mut gl = vec![0f32; b * GLOBAL_FEATS];
     let (mut win, mut life, mut len_t) = (vec![0f32; b], vec![0f32; b], vec![0f32; b]);
-    for (ri, row) in rows.iter().enumerate() {
+    for (ri, (row, target)) in rows.iter().enumerate() {
         gl[ri * GLOBAL_FEATS..][..GLOBAL_FEATS].copy_from_slice(&row.state.global);
-        win[ri] = row.win;
+        win[ri] = *target;
         life[ri] = row.life_diff;
         len_t[ri] = row.game_len;
     }
@@ -199,7 +208,14 @@ impl Trainer {
     /// incomparable — different effective sample reuse — and there was no
     /// way to see whether the win head or the aux heads moved.
     pub fn train_step(&mut self, rows: &[&TrainRow]) -> CResult<LossParts> {
-        let batch = make_batch(rows, &self.dev)?;
+        let with: Vec<(&TrainRow, f32)> = rows.iter().map(|r| (*r, r.win)).collect();
+        self.train_step_with_targets(&with)
+    }
+
+    /// [`train_step`](Self::train_step) fitting supplied win targets — the
+    /// λ-return path (see [`SampleWindow::relabel_lambda`]).
+    pub fn train_step_with_targets(&mut self, rows: &[(&TrainRow, f32)]) -> CResult<LossParts> {
+        let batch = make_batch_with_targets(rows, &self.dev)?;
         let (win, life, len_p) = self.model.forward(&batch)?;
         let loss_win = candle_nn::loss::mse(&win, &batch.win)?;
         let loss_life = candle_nn::loss::mse(&life, &batch.life)?;
@@ -219,8 +235,23 @@ impl Trainer {
     /// Win probability for one encoded state — the trainer-side twin of
     /// `crabomination_nn::PlayNet::forward`, used by the parity test and
     /// for quick evaluation during training.
+    /// Win probability for a batch of rows in one forward pass — what
+    /// [`SampleWindow::relabel_lambda`] bootstraps through. Batched
+    /// because relabelling touches the whole window and one row at a time
+    /// would dominate the learner's step time.
+    pub fn predict_win_batch(&self, rows: &[&TrainRow], chunk: usize) -> CResult<Vec<f32>> {
+        let mut out = Vec::with_capacity(rows.len());
+        for part in rows.chunks(chunk.max(1)) {
+            let batch = make_batch(part, &self.dev)?;
+            let (win, _, _) = self.model.forward(&batch)?;
+            out.extend(win.flatten_all()?.to_vec1::<f32>()?);
+        }
+        Ok(out)
+    }
+
     pub fn predict_win(&self, s: &EncodedState) -> CResult<f32> {
-        let row = TrainRow { state: s.clone(), win: 0.0, life_diff: 0.0, game_len: 0.0 };
+        let row =
+            TrainRow { state: s.clone(), win: 0.0, life_diff: 0.0, game_len: 0.0, traj: 0, ply: 0 };
         let batch = make_batch(&[&row], &self.dev)?;
         let (win, _, _) = self.model.forward(&batch)?;
         win.flatten_all()?.to_vec1::<f32>().map(|v| v[0])
@@ -363,12 +394,20 @@ impl DeckTrainer {
 /// KataGo schedule) and throttles reads to cap sample reuse.
 pub struct SampleWindow {
     rows: VecDeque<TrainRow>,
+    /// Fit target per row, parallel to `rows`. Starts as the game result
+    /// and is replaced by a λ-return whenever
+    /// [`relabel_lambda`](Self::relabel_lambda) runs.
+    targets: VecDeque<f32>,
     cap: usize,
 }
 
 impl SampleWindow {
     pub fn new(cap: usize) -> Self {
-        Self { rows: VecDeque::with_capacity(cap.min(1 << 20)), cap }
+        Self {
+            rows: VecDeque::with_capacity(cap.min(1 << 20)),
+            targets: VecDeque::with_capacity(cap.min(1 << 20)),
+            cap,
+        }
     }
 
     pub fn len(&self) -> usize {
@@ -384,19 +423,97 @@ impl SampleWindow {
         self.cap = cap;
         while self.rows.len() > self.cap {
             self.rows.pop_front();
+            self.targets.pop_front();
         }
     }
 
     pub fn push(&mut self, row: TrainRow) {
         if self.rows.len() == self.cap {
             self.rows.pop_front();
+            self.targets.pop_front();
         }
+        self.targets.push_back(row.win);
         self.rows.push_back(row);
     }
 
     /// `n` rows sampled uniformly with replacement.
     pub fn sample<'a, R: Rng>(&'a self, n: usize, rng: &mut R) -> Vec<&'a TrainRow> {
         (0..n).map(|_| &self.rows[rng.random_range(0..self.rows.len())]).collect()
+    }
+
+    /// `n` (row, fit target) pairs sampled uniformly with replacement.
+    pub fn sample_with_targets<'a, R: Rng>(
+        &'a self,
+        n: usize,
+        rng: &mut R,
+    ) -> Vec<(&'a TrainRow, f32)> {
+        (0..n)
+            .map(|_| {
+                let i = rng.random_range(0..self.rows.len());
+                (&self.rows[i], self.targets[i])
+            })
+            .collect()
+    }
+
+    /// Replace every row's fit target with its **λ-return**, bootstrapped
+    /// through `value` (the current net's win probability).
+    ///
+    /// The problem this solves: labelling a turn-2 state with the eventual
+    /// winner of a twenty-turn game is mostly labelling noise. The result
+    /// is real, but almost none of it was determined at turn 2, so the net
+    /// spends capacity fitting variance. That is the standard Monte Carlo
+    /// target and it is what every gate round so far has trained on.
+    ///
+    /// For an episodic task whose only reward is terminal, the forward
+    /// view collapses to a backward recursion along each trajectory:
+    ///
+    /// ```text
+    /// G_T = z                                  (the actual result)
+    /// G_t = (1 − λ)·V(s_{t+1}) + λ·G_{t+1}
+    /// ```
+    ///
+    /// λ = 1 is exactly the current Monte Carlo behaviour, so this is a
+    /// strict generalisation and the old target stays reachable as a
+    /// control. λ = 0 is one-step TD. Between them the target trades the
+    /// variance of the result for the bias of the net's own estimate —
+    /// worth measuring, not assuming.
+    ///
+    /// Trajectories are reassembled by [`TrainRow::traj`] and ordered by
+    /// [`TrainRow::ply`]. A trajectory whose tail has already been evicted
+    /// from the window simply bootstraps from its last surviving row,
+    /// which is the correct thing to do: that row's own target is
+    /// whatever it was last assigned.
+    pub fn relabel_lambda(&mut self, lambda: f32, value: impl Fn(&[&TrainRow]) -> Vec<f32>) {
+        if self.rows.is_empty() {
+            return;
+        }
+        let preds = value(&self.rows.iter().collect::<Vec<_>>());
+        if preds.len() != self.rows.len() {
+            return; // a failed forward pass leaves the targets alone
+        }
+        // Group row indices by trajectory, then walk each backwards.
+        let mut by_traj: HashMap<u32, Vec<usize>> = HashMap::new();
+        for (i, r) in self.rows.iter().enumerate() {
+            by_traj.entry(r.traj).or_default().push(i);
+        }
+        for idxs in by_traj.values_mut() {
+            idxs.sort_by_key(|&i| self.rows[i].ply);
+            // The last surviving row of the trajectory keeps the result:
+            // either it really is terminal, or its successors are gone and
+            // there is nothing to bootstrap through.
+            let mut carried = self.rows[*idxs.last().unwrap()].win;
+            self.targets[*idxs.last().unwrap()] = carried;
+            for w in idxs.windows(2).rev() {
+                let (t, next) = (w[0], w[1]);
+                carried = (1.0 - lambda) * preds[next] + lambda * carried;
+                self.targets[t] = carried.clamp(0.0, 1.0);
+            }
+        }
+    }
+
+    /// Read-only view of the current fit targets, for tests and logging.
+    pub fn targets(&self) -> &VecDeque<f32> {
+        &self.targets
     }
 }
 
@@ -468,7 +585,7 @@ mod tests {
                 let s = random_state(&mut rng, cfg.vocab);
                 let win = if s.global[0] > s.global[1] { 1.0 } else { 0.0 };
                 let life_diff = (s.global[0] - s.global[1]).clamp(-1.0, 1.0);
-                TrainRow { state: s, win, life_diff, game_len: 0.5 }
+                TrainRow { state: s, win, life_diff, game_len: 0.5, traj: 0, ply: 0 }
             })
             .collect();
 
@@ -575,6 +692,8 @@ mod tests {
                 win: i as f32,
                 life_diff: 0.0,
                 game_len: 0.0,
+                traj: 0,
+                ply: i as u16,
             };
             row.state.global[0] = i as f32;
             w.push(row);
@@ -584,5 +703,75 @@ mod tests {
         assert!(w.sample(10, &mut rng).iter().all(|r| r.win >= 2.0));
         w.set_cap(1);
         assert_eq!(w.len(), 1);
+        assert_eq!(w.targets().len(), 1, "targets must track evictions");
+    }
+
+    fn traj_row(traj: u32, ply: u16, win: f32) -> TrainRow {
+        TrainRow {
+            state: EncodedState::default(),
+            win,
+            life_diff: 0.0,
+            game_len: 0.0,
+            traj,
+            ply,
+        }
+    }
+
+    /// lambda = 1 is pure Monte Carlo: every row in a trajectory keeps the
+    /// game result, whatever the net thinks. This is the pre-lambda
+    /// behaviour and has to stay bit-reachable, because every gate round
+    /// on record trained on it.
+    #[test]
+    fn lambda_one_is_the_monte_carlo_target() {
+        let mut w = SampleWindow::new(16);
+        for ply in 0..4 {
+            w.push(traj_row(7, ply, 1.0));
+        }
+        // A net that is confidently wrong at every step.
+        w.relabel_lambda(1.0, |rows| vec![0.0; rows.len()]);
+        assert!(w.targets().iter().all(|&t| t == 1.0), "{:?}", w.targets());
+    }
+
+    /// lambda = 0 is one-step TD: each row takes the net's estimate of the
+    /// *next* state, and only the terminal row keeps the result.
+    #[test]
+    fn lambda_zero_is_one_step_bootstrapping() {
+        let mut w = SampleWindow::new(16);
+        for ply in 0..4 {
+            w.push(traj_row(7, ply, 1.0));
+        }
+        // V(s_t) = 0.25 * t, so row t should take 0.25 * (t + 1).
+        w.relabel_lambda(0.0, |rows| rows.iter().map(|r| 0.25 * r.ply as f32).collect());
+        let got: Vec<f32> = w.targets().iter().copied().collect();
+        assert!((got[0] - 0.25).abs() < 1e-6, "{got:?}");
+        assert!((got[1] - 0.50).abs() < 1e-6, "{got:?}");
+        assert!((got[2] - 0.75).abs() < 1e-6, "{got:?}");
+        assert!((got[3] - 1.00).abs() < 1e-6, "terminal keeps the result: {got:?}");
+    }
+
+    /// Intermediate lambda interpolates, and the recursion must run along
+    /// each trajectory separately — a row can only bootstrap through its
+    /// own successors, never the other seat's.
+    #[test]
+    fn lambda_returns_do_not_cross_trajectories() {
+        let mut w = SampleWindow::new(16);
+        // Trajectory 1 won; trajectory 2 lost. Interleaved on push, as the
+        // recorder emits them.
+        for ply in 0..3 {
+            w.push(traj_row(1, ply, 1.0));
+            w.push(traj_row(2, ply, 0.0));
+        }
+        w.relabel_lambda(0.5, |rows| vec![0.5; rows.len()]);
+        let t: Vec<f32> = w.targets().iter().copied().collect();
+        // Winner's trajectory: terminal 1.0, then 0.5*0.5 + 0.5*1.0 = 0.75,
+        // then 0.5*0.5 + 0.5*0.75 = 0.625.
+        assert!((t[4] - 1.0).abs() < 1e-6, "{t:?}");
+        assert!((t[2] - 0.75).abs() < 1e-6, "{t:?}");
+        assert!((t[0] - 0.625).abs() < 1e-6, "{t:?}");
+        // Loser's: terminal 0.0, then 0.25, then 0.375 — never pulled
+        // toward the winner's 1.0.
+        assert!((t[5] - 0.0).abs() < 1e-6, "{t:?}");
+        assert!((t[3] - 0.25).abs() < 1e-6, "{t:?}");
+        assert!((t[1] - 0.375).abs() < 1e-6, "{t:?}");
     }
 }

@@ -15,7 +15,8 @@
 //!
 //! ```text
 //! selfplay_train [--actors N] [--games N] [--steps N] [--batch N]
-//!                [--lr F] [--reuse F] [--window N] [--min-window N]
+//!                [--lr F] [--reuse F] [--lambda F] [--relabel-every N]
+//!                [--window N] [--min-window N]
 //!                [--checkpoint-every N] [--out DIR] [--seed N]
 //!                [--use-best WEIGHTS.safetensors]
 //!                [--gate-builder GAMES_PER_POOL]
@@ -63,6 +64,17 @@ struct Args {
     batch: usize,
     lr: f64,
     reuse: f64,
+    /// TD(lambda) mixing for the win target. 1.0 (default) is the
+    /// historical pure Monte Carlo label — the row's own game result —
+    /// so every prior gate round is reproducible. Below 1.0 the target
+    /// bootstraps through the net's estimate of the next snapshot, which
+    /// trades the variance of a twenty-turn outcome for the bias of the
+    /// current net (see `SampleWindow::relabel_lambda`).
+    lambda: f32,
+    /// Learner steps between recomputing the lambda-returns. They are
+    /// functions of the net, so they drift as it trains; recomputing
+    /// costs one forward pass over the window. Ignored at lambda = 1.
+    relabel_every: u64,
     window: usize,
     min_window: u64,
     checkpoint_every: u64,
@@ -80,6 +92,20 @@ struct Args {
     /// against the one it replaces, same pools, same pilots, N games
     /// per pool. No net involved — this measures the builder alone.
     gate_builder_v2: Option<usize>,
+    /// Build training decks with the gate-passed deck net as the judge
+    /// (best-of-32 over the same noisy-greedy candidates the heuristic
+    /// picks from) instead of taking the heuristic builder's own pick.
+    ///
+    /// The deck net is the one learned component that has cleared the
+    /// house bar — twice, at 61.7 % and 60.7 % against the static judge —
+    /// so the decks the actors play should be its picks. Until this flag
+    /// the gate result had no consumer: every training game was still
+    /// played with heuristic builds.
+    use_deck_best: Option<PathBuf>,
+    /// Diagnostic mode: play N self-play games and score the value net
+    /// and the heuristic evaluation as *predictors of the winner* on the
+    /// same positions. Requires `--use-best`.
+    calibrate: Option<usize>,
 }
 
 fn parse_args() -> Args {
@@ -90,6 +116,8 @@ fn parse_args() -> Args {
         batch: 256,
         lr: 1e-3,
         reuse: 6.0,
+        lambda: 1.0,
+        relabel_every: 200,
         window: 250_000,
         min_window: 20_000,
         checkpoint_every: 2_000,
@@ -98,6 +126,8 @@ fn parse_args() -> Args {
         use_best: None,
         gate_builder: None,
         gate_builder_v2: None,
+        calibrate: None,
+        use_deck_best: None,
     };
     let mut it = std::env::args().skip(1);
     while let Some(flag) = it.next() {
@@ -109,12 +139,18 @@ fn parse_args() -> Args {
             "--batch" => a.batch = val().parse().expect("--batch"),
             "--lr" => a.lr = val().parse().expect("--lr"),
             "--reuse" => a.reuse = val().parse().expect("--reuse"),
+            "--lambda" => a.lambda = val().parse().expect("--lambda"),
+            "--relabel-every" => {
+                a.relabel_every = val().parse::<u64>().expect("--relabel-every").max(1)
+            }
             "--window" => a.window = val().parse().expect("--window"),
             "--min-window" => a.min_window = val().parse().expect("--min-window"),
             "--checkpoint-every" => a.checkpoint_every = val().parse().expect("--checkpoint-every"),
             "--out" => a.out = PathBuf::from(val()),
             "--seed" => a.seed = val().parse().expect("--seed"),
             "--use-best" => a.use_best = Some(PathBuf::from(val())),
+            "--calibrate" => a.calibrate = Some(val().parse().expect("--calibrate")),
+            "--use-deck-best" => a.use_deck_best = Some(PathBuf::from(val())),
             "--gate-builder" => a.gate_builder = Some(val().parse().expect("--gate-builder")),
             "--gate-builder-v2" => {
                 a.gate_builder_v2 = Some(val().parse().expect("--gate-builder-v2"))
@@ -141,7 +177,7 @@ struct Shared {
 
 const DECK_WINDOW_CAP: usize = 200_000;
 
-fn actor_loop(shared: &Shared, args: &Args, vocab: &Vocab) {
+fn actor_loop(shared: &Shared, args: &Args, vocab: &Vocab, deck_judge: Option<&DeckNet>) {
     loop {
         let n = shared.next_game.fetch_add(1, Ordering::Relaxed);
         if let Some(max) = args.games
@@ -154,8 +190,19 @@ fn actor_loop(shared: &Shared, args: &Args, vocab: &Vocab) {
         };
         let pool_a = sealed_pool(salt(1));
         let pool_b = sealed_pool(salt(2));
-        let deck_a = heuristic_sealed_build(&pool_a, salt(3));
-        let deck_b = heuristic_sealed_build(&pool_b, salt(4));
+        // Best-of-N under the gate-passed deck net when one is loaded,
+        // otherwise the heuristic builder's own pick. Same candidate
+        // generator either way, so only the judge differs.
+        const DECK_CANDS: usize = 32;
+        let build = |pool: &[crabomination::cube::CardFactory], seed: u64| match deck_judge {
+            Some(net) => best_build_by(pool, DECK_CANDS, seed, |d| {
+                let (cards, feats) = encode_deck(d, vocab);
+                net.forward(&cards, &feats) as f64
+            }),
+            None => heuristic_sealed_build(pool, seed),
+        };
+        let deck_a = build(&pool_a, salt(3));
+        let deck_b = build(&pool_b, salt(4));
         let template = sealed_game_template(&deck_a, &deck_b);
         let pilot = if args.use_best.is_some() {
             EvalWeights::net_eval()
@@ -193,9 +240,9 @@ fn actor_loop(shared: &Shared, args: &Args, vocab: &Vocab) {
     shared.live_actors.fetch_sub(1, Ordering::Relaxed);
 }
 
-fn sample_owned(shared: &Shared, n: usize, rng: &mut StdRng) -> Vec<TrainRow> {
+fn sample_owned(shared: &Shared, n: usize, rng: &mut StdRng) -> Vec<(TrainRow, f32)> {
     let w = shared.window.lock().unwrap();
-    w.sample(n, rng).into_iter().cloned().collect()
+    w.sample_with_targets(n, rng).into_iter().map(|(r, t)| (r.clone(), t)).collect()
 }
 
 /// Wilson score interval (z = 1.96), same construction as bot_ladder's.
@@ -337,6 +384,10 @@ fn main() {
         gate_builder(&args, &vocab, games);
         return;
     }
+    if let Some(games) = args.calibrate {
+        calibrate(&args, &vocab, games);
+        return;
+    }
     let cfg = NetConfig::standard(vocab.size());
     let mut trainer = Trainer::new(&cfg, args.lr).expect("trainer init");
     let mut deck_trainer =
@@ -352,6 +403,14 @@ fn main() {
         deck_trainer.load(&deck_latest).expect("resume deck-latest.safetensors");
         eprintln!("resumed deck weights from {}", deck_latest.display());
     }
+    // The gate-passed build net, if the run wants its decks judged.
+    let deck_judge: Option<DeckNet> = args.use_deck_best.as_ref().map(|p| {
+        let bytes = std::fs::read(p).unwrap_or_else(|e| panic!("{}: {e}", p.display()));
+        let net = DeckNet::load(&bytes).expect("deck net loads");
+        assert_eq!(net.vocab_size(), vocab.size(), "deck net vocab != encoder vocab");
+        eprintln!("actors build decks with the net from {}", p.display());
+        net
+    });
     if let Some(best) = &args.use_best {
         crabomination::server::net_eval::load_slot(
             crabomination::server::net_eval::SLOT_BEST,
@@ -386,7 +445,7 @@ fn main() {
             // the ladder's 32 MB workers.
             std::thread::Builder::new()
                 .stack_size(32 * 1024 * 1024)
-                .spawn_scoped(scope, || actor_loop(&shared, &args, &vocab))
+                .spawn_scoped(scope, || actor_loop(&shared, &args, &vocab, deck_judge.as_ref()))
                 .expect("spawn actor");
         }
 
@@ -434,9 +493,23 @@ fn main() {
                 std::thread::sleep(std::time::Duration::from_millis(200));
                 continue;
             }
+            // Refresh the λ-returns periodically: they are computed
+            // through the net, so they go stale as it learns. Every
+            // `relabel_every` steps is a compromise between staleness and
+            // the cost of a forward pass over the whole window — with
+            // λ = 1 the targets never change, so this is skipped entirely.
+            if args.lambda < 1.0
+                && step % args.relabel_every == 0
+                && shared.window.lock().unwrap().len() as u64 >= args.min_window
+            {
+                let mut w = shared.window.lock().unwrap();
+                w.relabel_lambda(args.lambda, |rows| {
+                    trainer.predict_win_batch(rows, 512).unwrap_or_default()
+                });
+            }
             let rows = sample_owned(&shared, args.batch, &mut rng);
-            let refs: Vec<&TrainRow> = rows.iter().collect();
-            let loss = trainer.train_step(&refs).expect("train step");
+            let refs: Vec<(&TrainRow, f32)> = rows.iter().map(|(r, t)| (r, *t)).collect();
+            let loss = trainer.train_step_with_targets(&refs).expect("train step");
             consumed += args.batch as u64;
             step += 1;
             for (ema, part) in loss_ema
@@ -555,4 +628,166 @@ fn checkpoint(
         "step {step}: loss {total:.4} (win {win:.4}), {games} games, {rows} rows ({:.1} games/s)",
         games as f64 / secs.max(0.001)
     );
+}
+
+// ────────────────────────────── calibration ──────────────────────────────
+
+/// Score the value net and the heuristic evaluation as *predictors of the
+/// winner* on identical self-play positions.
+///
+/// This exists because four gate rounds answered "is the net-piloted bot
+/// stronger" (42–45 % as a replacement, ~49 % blended) without ever
+/// answering "does the net know more than `eval_material` does". Those are
+/// different questions with different fixes:
+///
+/// * If the net's log-loss is no better than the heuristic's, the net has
+///   not learned and no amount of integration work will help.
+/// * If it *is* better and the bot still loses, the loss is in the
+///   integration — and the output histogram is the first place to look. A
+///   sigmoid that saturates near 0 and 1 hands the search a flat
+///   landscape in which every candidate line scores the same, which would
+///   make a better predictor into a worse player.
+///
+/// The heuristic is put on the same footing by fitting a one-parameter
+/// logistic to its score (`p = sigmoid(score / t)`, `t` chosen by scan),
+/// so it is scored as the best probability forecast that evaluation can
+/// support rather than penalised for not being calibrated.
+fn calibrate(args: &Args, vocab: &Vocab, games: usize) {
+    let best = args.use_best.as_ref().expect("--calibrate needs --use-best WEIGHTS");
+    let cfg = NetConfig::standard(vocab.size());
+    let mut trainer = Trainer::new(&cfg, args.lr).expect("trainer init");
+    trainer.load(best).expect("load weights for calibration");
+
+    // (net p, heuristic score, actual result)
+    let mut obs: Vec<(f32, f32, f32)> = Vec::new();
+    let mut rng = StdRng::seed_from_u64(args.seed ^ 0xCA11B);
+    for n in 0..games as u64 {
+        let salt =
+            |k: u64| args.seed ^ n.wrapping_mul(0x9E37_79B9_7F4A_7C15).wrapping_add(k * 0xCA1);
+        let pool_a = sealed_pool(salt(1));
+        let pool_b = sealed_pool(salt(2));
+        let deck_a = heuristic_sealed_build(&pool_a, salt(3));
+        let deck_b = heuristic_sealed_build(&pool_b, salt(4));
+        let template = sealed_game_template(&deck_a, &deck_b);
+        let rec = play_recorded_game(
+            &template,
+            [EvalWeights::default(), EvalWeights::default()],
+            rng.random_range(0..u64::MAX),
+            50_000,
+            vocab,
+        );
+        if rec.rows.is_empty() {
+            continue;
+        }
+        let refs: Vec<&TrainRow> = rec.rows.iter().collect();
+        let preds = trainer.predict_win_batch(&refs, 512).expect("forward");
+        for ((row, h), p) in rec.rows.iter().zip(&rec.heur).zip(preds) {
+            obs.push((p, *h as f32, row.win));
+        }
+    }
+    if obs.len() < 100 {
+        eprintln!("calibrate: only {} positions — not enough to say anything", obs.len());
+        return;
+    }
+
+    // Fit the heuristic's temperature by scanning: one parameter, and a
+    // scan cannot land in a bad local optimum the way a gradient step can.
+    let mut best_t = 1.0f32;
+    let mut best_ll = f32::INFINITY;
+    for k in 0..60 {
+        let t = 2.0f32.powf(k as f32 / 4.0);
+        let ll = log_loss(obs.iter().map(|&(_, h, y)| (sigmoid(h / t), y)));
+        if ll < best_ll {
+            best_ll = ll;
+            best_t = t;
+        }
+    }
+
+    let net_ll = log_loss(obs.iter().map(|&(p, _, y)| (p, y)));
+    let net_brier = brier(obs.iter().map(|&(p, _, y)| (p, y)));
+    let heur_brier = brier(obs.iter().map(|&(_, h, y)| (sigmoid(h / best_t), y)));
+    let net_auc = auc(obs.iter().map(|&(p, _, y)| (p, y)));
+    let heur_auc = auc(obs.iter().map(|&(_, h, y)| (h, y)));
+    // The constant predictor: what "knows nothing" scores, so the two
+    // numbers above have a floor to be read against.
+    let base = obs.iter().map(|&(_, _, y)| y).sum::<f32>() / obs.len() as f32;
+    let base_ll = log_loss(obs.iter().map(|&(_, _, y)| (base, y)));
+
+    println!("calibration on {} positions from {games} games", obs.len());
+    println!("  base rate {base:.3}  (log-loss {base_ll:.4} — the score of knowing nothing)");
+    println!("  net        log-loss {net_ll:.4}  Brier {net_brier:.4}  AUC {net_auc:.4}");
+    println!(
+        "  heuristic  log-loss {best_ll:.4}  Brier {heur_brier:.4}  AUC {heur_auc:.4}  (t={best_t:.1})"
+    );
+
+    // Output histogram: the saturation check.
+    let mut bins = [0usize; 10];
+    for &(p, _, _) in &obs {
+        bins[((p * 10.0) as usize).min(9)] += 1;
+    }
+    println!("  net output histogram (0.0..1.0 in tenths):");
+    for (i, c) in bins.iter().enumerate() {
+        let pct = 100.0 * *c as f64 / obs.len() as f64;
+        println!("    {:.1}-{:.1}  {:>6}  {:5.1}%  {}", i as f32 / 10.0, (i + 1) as f32 / 10.0, c, pct, "#".repeat((pct / 2.0) as usize));
+    }
+    let extreme = obs.iter().filter(|&&(p, _, _)| !(0.05..=0.95).contains(&p)).count();
+    println!(
+        "  {:.1}% of positions score outside [0.05, 0.95] — the search cannot rank lines \
+         inside a saturated band",
+        100.0 * extreme as f64 / obs.len() as f64
+    );
+}
+
+fn sigmoid(x: f32) -> f32 {
+    1.0 / (1.0 + (-x).exp())
+}
+
+fn log_loss(it: impl Iterator<Item = (f32, f32)>) -> f32 {
+    let (mut sum, mut n) = (0.0f32, 0usize);
+    for (p, y) in it {
+        let p = p.clamp(1e-6, 1.0 - 1e-6);
+        sum += -(y * p.ln() + (1.0 - y) * (1.0 - p).ln());
+        n += 1;
+    }
+    sum / n.max(1) as f32
+}
+
+fn brier(it: impl Iterator<Item = (f32, f32)>) -> f32 {
+    let (mut sum, mut n) = (0.0f32, 0usize);
+    for (p, y) in it {
+        sum += (p - y) * (p - y);
+        n += 1;
+    }
+    sum / n.max(1) as f32
+}
+
+/// Rank-based AUC. Scale-free, so the heuristic's raw score can be scored
+/// against the net's probability without fitting anything.
+fn auc(it: impl Iterator<Item = (f32, f32)>) -> f32 {
+    let mut v: Vec<(f32, f32)> = it.collect();
+    v.sort_by(|a, b| a.0.total_cmp(&b.0));
+    let (mut pos, mut neg, mut rank_sum) = (0.0f64, 0.0f64, 0.0f64);
+    // Ties share the mean rank, which is what keeps a constant predictor
+    // at exactly 0.5 instead of whatever the sort order happened to be.
+    let mut i = 0;
+    while i < v.len() {
+        let mut j = i;
+        while j < v.len() && v[j].0 == v[i].0 {
+            j += 1;
+        }
+        let mean_rank = (i + j + 1) as f64 / 2.0;
+        for item in &v[i..j] {
+            if item.1 > 0.5 {
+                pos += 1.0;
+                rank_sum += mean_rank;
+            } else {
+                neg += 1.0;
+            }
+        }
+        i = j;
+    }
+    if pos == 0.0 || neg == 0.0 {
+        return 0.5;
+    }
+    ((rank_sum - pos * (pos + 1.0) / 2.0) / (pos * neg)) as f32
 }

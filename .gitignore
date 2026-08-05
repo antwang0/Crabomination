@@ -57,3 +57,4 @@ scratch_*
 # Scratch gap-analysis dumps from scripts/fin_gaps.py.
 scripts/.*_missing.json
 web/dist/
+.ladder/
