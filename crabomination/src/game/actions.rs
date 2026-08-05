@@ -792,6 +792,18 @@ pub fn cost_reduction_for_spell_full(
                 {
                     reduction += amount;
                 }
+                StaticEffect::CostReductionFirstInstantOrSorceryPerValue { per }
+                    if src.controller == caster
+                        && state.players[caster].instants_or_sorceries_cast_this_turn == 0
+                        && (card.definition.is_instant() || card.definition.is_sorcery()) =>
+                {
+                    let ctx = crate::game::effects::EffectContext::for_ability(
+                        src.id,
+                        src.controller,
+                        None,
+                    );
+                    reduction += state.evaluate_value(per, &ctx).max(0) as u32;
+                }
                 StaticEffect::CostReductionTargetingFilter {
                     spell_filter,
                     target_filter,

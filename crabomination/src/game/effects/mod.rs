@@ -20635,16 +20635,39 @@ impl GameState {
                 Ok(())
             }
 
-            Effect::RevealTopTakeMatchingToHand { who, count, filter } => {
+            Effect::RevealTopTakeMatchingToHand { who, count, filter, distinct_powers } => {
                 let Some(p) = self.resolve_player(who, ctx) else { return Ok(()); };
                 let n = self.evaluate_value(count, ctx).max(0) as usize;
                 let revealed: Vec<crate::card::CardId> =
                     self.players[p].library.iter().take(n).map(|c| c.id).collect();
                 if revealed.is_empty() { return Ok(()); }
                 // Take every revealed card matching the filter into hand.
-                let taken: Vec<crate::card::CardId> = revealed.iter().copied().filter(|id| {
+                let mut taken: Vec<crate::card::CardId> = revealed.iter().copied().filter(|id| {
                     self.evaluate_requirement_static(filter, &Target::Permanent(*id), p, ctx.source)
                 }).collect();
+                // "…with different powers" (Rip, Spawn Hunter): keep one card
+                // per distinct printed power, biggest first.
+                if *distinct_powers {
+                    let mut by_power: Vec<(i32, crate::card::CardId)> = taken
+                        .iter()
+                        .filter_map(|id| {
+                            self.find_card_anywhere(*id).map(|c| (c.definition.power, *id))
+                        })
+                        .collect();
+                    by_power.sort_by(|a, b| b.0.cmp(&a.0));
+                    let mut seen: Vec<i32> = Vec::new();
+                    taken = by_power
+                        .into_iter()
+                        .filter(|(pw, _)| {
+                            let fresh = !seen.contains(pw);
+                            if fresh {
+                                seen.push(*pw);
+                            }
+                            fresh
+                        })
+                        .map(|(_, id)| id)
+                        .collect();
+                }
                 for id in &taken {
                     if let Some(card) = Self::take_card(&mut self.players[p].library, *id) {
                         self.players[p].hand.push(card);

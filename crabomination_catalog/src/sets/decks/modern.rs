@@ -18885,6 +18885,7 @@ pub fn thundertrap_trainer() -> CardDefinition {
                 who: PlayerRef::You,
                 count: Value::Const(4),
                 filter: SelectionRequirement::Noncreature.and(SelectionRequirement::Nonland),
+                distinct_powers: false,
             }),
         ],
         ..Default::default()
@@ -19860,6 +19861,7 @@ pub fn torsten_founder_of_benalia() -> CardDefinition {
                     who: PlayerRef::You,
                     count: Value::Const(7),
                     filter: SelectionRequirement::Creature.or(SelectionRequirement::Land),
+                    distinct_powers: false,
                 },
             },
             crate::effect::shortcut::on_dies(Effect::CreateToken {
@@ -37216,6 +37218,7 @@ pub fn goblin_ringleader() -> CardDefinition {
             who: PlayerRef::You,
             count: Value::Const(4),
             filter: SelectionRequirement::HasCreatureType(CreatureType::Goblin),
+            distinct_powers: false,
         })],
         ..Default::default()
     }

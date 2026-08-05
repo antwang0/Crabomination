@@ -66,6 +66,7 @@ pub fn domri_rade() -> CardDefinition {
                     who: PlayerRef::You,
                     count: Value::ONE,
                     filter: R::Creature,
+                    distinct_powers: false,
                 },
                 ..Default::default()
             },

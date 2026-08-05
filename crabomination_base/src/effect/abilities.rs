@@ -533,6 +533,9 @@ pub enum StaticEffect {
     /// instant/sorcery-spell count for the turn
     /// (`Player.instants_or_sorceries_cast_this_turn == 0`). Generic-only.
     CostReductionFirstInstantOrSorcery { amount: u32 },
+    /// The live-magnitude sibling: "the first instant or sorcery spell you cast
+    /// each turn costs {1} less for each [value]" (Eluge, the Shoreless Sea).
+    CostReductionFirstInstantOrSorceryPerValue { per: Value },
     /// Target-aware generic cost reduction for spells whose chosen target
     /// matches `target_filter`. Powers Killian, Ink Duelist's "spells you
     /// cast that target a creature cost {2} less to cast."

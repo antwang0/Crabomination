@@ -1528,6 +1528,17 @@ fn project_permanent(
         renowned: card.renowned,
         case_solved: card.definition.case.is_some().then_some(card.case_solved),
         class_level: card.definition.is_class().then_some(card.class_level),
+        room_doors: card
+            .definition
+            .room
+            .as_deref()
+            .map(|r| {
+                vec![
+                    (r.left.name.clone(), card.unlocked_doors & 0b01 != 0),
+                    (r.right.name.clone(), card.unlocked_doors & 0b10 != 0),
+                ]
+            })
+            .unwrap_or_default(),
         detained: card.detained_by.is_some(),
         untap_locked: card.untap_locked_by.is_some(),
         impending_counters: {

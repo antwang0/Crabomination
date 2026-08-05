@@ -19673,6 +19673,7 @@ fn static_effect_to_effects(
             | StaticEffect::CostReductionNthSpell { .. }
             | StaticEffect::CostReductionFirstCreatureSpell { .. }
             | StaticEffect::CostReductionFirstInstantOrSorcery { .. }
+            | StaticEffect::CostReductionFirstInstantOrSorceryPerValue { .. }
             | StaticEffect::CostReductionTargetingFilter { .. }
             | StaticEffect::AdditionalCostAfterFirstSpell { .. }
             | StaticEffect::AdditionalCost { .. }

@@ -299,6 +299,11 @@ impl GameState {
                     .count() as i32
             }
             Value::OpponentCount => self.opponents_of(ctx.controller).len() as i32,
+            Value::CreaturesExiledFromControlThisTurn(who) => self
+                .resolve_players(who, ctx)
+                .into_iter()
+                .map(|p| self.players[p].creatures_exiled_from_control_this_turn as i32)
+                .sum(),
             Value::UnlockedDoorsControlled(who) => self
                 .resolve_player(who, ctx)
                 .map(|p| {
@@ -4349,9 +4354,14 @@ impl GameState {
             // CR 301.5 — same reasoning for "equipped" (Rakdos Riteknife's
             // tap-an-equipped-creature cost).
             R::IsEquipped => self.attached_equipment_count(card.id) > 0,
+            // Counters live on the instance, so they read in any zone (a
+            // library/graveyard card simply has none) — Eluge's flood-counter
+            // land scope resolves through this path.
+            R::WithCounter(k) => card.counter_count(*k) > 0,
+            R::WithCounterAtLeast(k, n) => card.counter_count(*k) >= *n,
+            R::WithAnyCounter => card.counters.values().any(|&n| n > 0),
             // Battlefield-state predicates can't be evaluated for library cards.
-            R::Tapped | R::Untapped | R::WithCounter(_) | R::WithCounterAtLeast(..)
-            | R::WithAnyCounter
+            R::Tapped | R::Untapped
             | R::IsUnblocked | R::IsBlocked | R::IsBlocking | R::InCombatWithSource
             | R::IsAttackingAlone | R::IsBlockingAlone
             | R::FaceDown | R::HasAbilityOnStack

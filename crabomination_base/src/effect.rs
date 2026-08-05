@@ -605,6 +605,10 @@ pub enum Value {
     /// CR 709.5 — how many doors are unlocked among the Rooms `who` controls
     /// (Misty Salon's X/X Spirit).
     UnlockedDoorsControlled(PlayerRef),
+    /// Creatures exiled from under `who`'s control this turn — the **sum** over
+    /// the players `who` resolves to, so `EachOpponent` reads Vren, the
+    /// Relentless' "creatures that were exiled under your opponents' control".
+    CreaturesExiledFromControlThisTurn(PlayerRef),
     /// Life `who` has gained so far this turn (CR 119.3). Backed by
     /// `Player.life_gained_this_turn`. Used by Accomplished Alchemist's
     /// "{T}: Add X mana of any one color, where X is the amount of life
@@ -4534,7 +4538,15 @@ pub enum Effect {
     /// order (CR 401.4). "Put any number" is resolved as take-all-matching
     /// (the value-maximizing default). Torsten, Founder of Benalia's
     /// "reveal seven, take creatures and/or lands."
-    RevealTopTakeMatchingToHand { who: PlayerRef, count: Value, filter: SelectionRequirement },
+    RevealTopTakeMatchingToHand {
+        who: PlayerRef,
+        count: Value,
+        filter: SelectionRequirement,
+        /// "…with different powers" (Rip, Spawn Hunter): at most one card of
+        /// each printed power is taken, greediest-first.
+        #[serde(default)]
+        distinct_powers: bool,
+    },
     /// Reveal the top `count` cards of `who`'s library, put every card matching
     /// `filter` into their hand, and put the rest into their graveyard (CR 701).
     /// The graveyard-partition sibling of `RevealTopTakeMatchingToHand`.

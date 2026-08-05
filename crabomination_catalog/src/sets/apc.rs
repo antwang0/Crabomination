@@ -442,6 +442,7 @@ fn reveal_four_for(filter: R) -> TriggeredAbility {
         who: PlayerRef::You,
         count: Value::Const(4),
         filter,
+        distinct_powers: false,
     })
 }
 
@@ -1492,6 +1493,7 @@ pub fn brass_herald() -> CardDefinition {
             who: PlayerRef::You,
             count: Value::Const(4),
             filter: R::Creature.and(R::IsSourceChosenCreatureType),
+            distinct_powers: false,
         })],
         static_abilities: vec![StaticAbility {
             description: "Creatures of the chosen type get +1/+1.",

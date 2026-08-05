@@ -968,6 +968,7 @@ pub fn lead_the_stampede() -> CardDefinition {
             who: PlayerRef::You,
             count: Value::Const(5),
             filter: SelectionRequirement::Creature,
+            distinct_powers: false,
         },
         ..Default::default()
     }

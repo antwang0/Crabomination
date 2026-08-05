@@ -1835,6 +1835,13 @@ impl GameState {
             // CR 400.7 — "put into exile from the battlefield" (Ketramose).
             if matches!(resolved_dest, ZoneDest::Exile | ZoneDest::ExilePlotted) {
                 events.push(GameEvent::CardExiledFromPlayOrGraveyard { card_id: cid });
+                // Vren, the Relentless counts creatures exiled from under each
+                // player's control this turn.
+                if card.definition.is_creature() {
+                    let seat = card.controller;
+                    self.players[seat].creatures_exiled_from_control_this_turn =
+                        self.players[seat].creatures_exiled_from_control_this_turn.saturating_add(1);
+                }
             }
             self.place_card_in_dest(card, ctx.controller, &resolved_dest, events);
             self.on_left_battlefield(cid, events);

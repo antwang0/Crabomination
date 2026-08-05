@@ -1719,6 +1719,12 @@ pub struct PermanentView {
     /// `project_permanent`.
     #[serde(default)]
     pub class_level: Option<u8>,
+    /// CR 709.5c — a Room's doors as `(name, unlocked)`, left then right.
+    /// Empty for non-Rooms. Lets the client badge which doors are open (and
+    /// name the locked one it can still pay for) without decoding the
+    /// definition. Populated by `project_permanent`.
+    #[serde(default)]
+    pub room_doors: Vec<(String, bool)>,
     /// True when this permanent is detained (CR 701.35) — a UI hint so the
     /// client can badge it as "can't attack/block/activate." Populated by
     /// `project_permanent`.

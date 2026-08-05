@@ -234,3 +234,19 @@ fn tyvar_pumps_by_greatest_power() {
     let cp = g.computed_permanent(tyvar).unwrap();
     assert_eq!((cp.power, cp.toughness), (8, 8), "+5/+5 from the Dragon");
 }
+
+/// Rip's survival dig keeps one body per distinct power.
+#[test]
+fn rip_takes_one_body_per_power() {
+    let mut g = main_phase();
+    let rip = g.add_card_to_battlefield(0, catalog::rip_spawn_hunter());
+    g.battlefield_find_mut(rip).unwrap().tapped = true;
+    // Two 2/2s and a 5/5 in the top four, plus a land.
+    g.add_card_to_library(0, catalog::grizzly_bears());
+    g.add_card_to_library(0, catalog::grizzly_bears());
+    g.add_card_to_library(0, catalog::shivan_dragon());
+    g.add_card_to_library(0, catalog::island());
+    g.fire_step_triggers(TurnStep::PostCombatMain);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), 2, "a 5/5 and one of the two 2/2s");
+}

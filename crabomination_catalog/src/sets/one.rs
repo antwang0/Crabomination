@@ -1278,6 +1278,7 @@ pub fn karumonix_the_rat_king() -> CardDefinition {
             who: PlayerRef::You,
             count: Value::Const(5),
             filter: SelectionRequirement::HasCreatureType(CreatureType::Rat),
+            distinct_powers: false,
         })],
         ..Default::default()
     }

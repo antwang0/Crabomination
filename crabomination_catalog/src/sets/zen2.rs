@@ -1690,6 +1690,7 @@ pub fn merfolk_wayfinder() -> CardDefinition {
             who: PlayerRef::You,
             count: Value::Const(3),
             filter: R::HasLandType(LandType::Island),
+            distinct_powers: false,
         })],
         ..creature(
             "Merfolk Wayfinder",

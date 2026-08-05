@@ -75,6 +75,7 @@ pub fn marina_vendrell() -> CardDefinition {
             who: PlayerRef::You,
             count: Value::Const(7),
             filter: R::Enchantment,
+            distinct_powers: false,
         })],
         activated_abilities: vec![ActivatedAbility {
             tap_cost: true,
@@ -315,6 +316,36 @@ pub fn tyvar_the_pummeler() -> CardDefinition {
             vec![CreatureType::Elf, CreatureType::Warrior],
             3,
             3,
+        )
+    }
+}
+
+/// Rip, Spawn Hunter — {2}{G}{W} 4/4 Survivor. Survival digs its own power
+/// deep for bodies with different powers.
+pub fn rip_spawn_hunter() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(
+                EventKind::StepBegins(crabomination_base::turn_step::TurnStep::PostCombatMain),
+                EventScope::YourControl,
+            )
+            .with_filter(Predicate::EntityMatches {
+                what: Selector::This,
+                filter: R::Tapped,
+            }),
+            effect: Effect::RevealTopTakeMatchingToHand {
+                who: PlayerRef::You,
+                count: Value::PowerOf(Box::new(Selector::This)),
+                filter: R::Creature.or(R::HasArtifactSubtype(ArtifactSubtype::Vehicle)),
+                distinct_powers: true,
+            },
+        }],
+        ..legend(
+            "Rip, Spawn Hunter",
+            cost(&[generic(2), g(), w()]),
+            vec![CreatureType::Human, CreatureType::Survivor],
+            4,
+            4,
         )
     }
 }

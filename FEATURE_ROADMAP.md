@@ -2534,8 +2534,17 @@ Each a small targeted feature; sweep batch by batch.
 
 ## Suggested sequencing
 
-0. **Next set to close.** Bloomburrow is down to ~10 and Duskmourn to ~24 —
-   both are the easiest remaining pools (`set_gaps.py blb dsk`). The Odyssey
+0. **Next set to close.** Bloomburrow and Duskmourn are both down to 6, and
+   Outlaws of Thunder Junction to 1 — Eriette, the Beguiler, blocked on an
+   attach trigger that can reach both the Aura and its host (see TODO.md).
+   The remaining BLB/DSK cards each need one primitive: convoke on an
+   activated ability (Heirloom Epic), forage as a graveyard-cast cost
+   (Osteomancer Adept), a sacrifice-any-number additional cost (Rottenmouth
+   Viper), a reflexive counter-gated graveyard cast (Wishing Well), per-type
+   first-spell tracking (Alania), a per-card-type exile partition (Portent of
+   Calamity), a planeswalker with ninjutsu (Kaito), an Nth-resolution-this-turn
+   trigger (Victor), "copy them, you may cast the copies" (The Tale of Tamiyo),
+   a Shard-copy blink (Niko) and an opponent-graveyard exile lock (Valgavoth). The Odyssey
    block, the Onslaught block (**ONS**,
    **LGN**, **SCG**), the Mirrodin block (**MRD**, **DST**, **5DN**), the
    Kamigawa block, **Mirrodin Besieged**, **New Phyrexia** (the Scars block
@@ -2561,6 +2570,28 @@ Each a small targeted feature; sweep batch by batch.
 7. **Replays, spectator, social, accessibility** as the product matures.
 
 ## Recently closed (this push)
+
+- **Duskmourn down to 6, Bloomburrow to 6** — `set_gaps.py dsk blb` 21 + 10 →
+  6 + 6 (`decks::{dsk_rooms, dsk2, blb3}`, 19 cards): the whole remaining Room
+  cycle, the DSK legends and enchantment build-arounds, plus Ral, Eluge, Vren
+  and Ygra. New primitives: `Predicate::DistinctUnlockedDoorNamesAtLeast`,
+  `Value::{UnlockedDoorsControlled, CreaturesExiledFromControlThisTurn}`,
+  `SelectionRequirement::NameNotSharedWithYourPermanents`,
+  `SpendRestriction::RoomSpellsOrDoors` (+ `SpellKind.room_or_door`, honored by
+  the door-unlock payment), `Effect::LockOrUnlockRoomDoor`, an `otherwise` arm
+  on `Effect::MillThenToHandN`, and `StaticEffect::{
+  DoubleControllerPermanentTriggers, FreeExileCastOncePerTurn,
+  SetBasePtForFilterFromValue, HasActivatedAbilitiesOfOtherNamedControlledCreatures,
+  YourDamageToOpponentsBecomesMill, DoubleYourNoncombatDamageWhile,
+  CostReductionFirstInstantOrSorceryPerValue}`.
+  **Rules fixes this push.** CR 603.2 — "whenever you attack" triggers now read
+  their `EventSpec` filter at fire time and honor the attack/permanent trigger
+  doublers (the `YouAttack` path dropped both). CR 603.4 — a self-source ETB
+  trigger's intervening 'if' is evaluated against the entering permanent's cast
+  flags; it was silently ignored for all 35 such cards. CR 613.4 — counter-keyed
+  requirements resolve off the card instance, so a layer-7a land-count CDA sees
+  layer-4 grants (Eluge). Tests in `recent_b/{dsk_rooms, dsk2, blb3}` and
+  `core_rules/cr_recent81`.
 
 - **Aetherdrift is closed** — `set_gaps.py dft` 2 → 0. Gonti, Night Minister
   (`Effect::ExileTopFaceDownGrantPlay` — the library owner and the may-play

@@ -1534,6 +1534,7 @@ pub fn ashe_princess_of_dalmasca() -> CardDefinition {
                 who: PlayerRef::You,
                 count: Value::Const(5),
                 filter: SelectionRequirement::Artifact,
+                distinct_powers: false,
             },
         }],
         ..Default::default()

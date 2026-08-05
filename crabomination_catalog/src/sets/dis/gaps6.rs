@@ -45,6 +45,7 @@ pub fn momir_vig_simic_visionary() -> CardDefinition {
                     who: PlayerRef::You,
                     count: Value::ONE,
                     filter: R::Creature,
+                    distinct_powers: false,
                 },
             },
         ],

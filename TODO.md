@@ -3,6 +3,39 @@
 Improvement opportunities for the engine, client, and tooling.
 Items are grouped by area and roughly ordered by impact within each group.
 
+## Noticed this run (DSK/BLB gap wave — Rooms, legends, Ral)
+
+- **Convoke doesn't reach activated abilities.** Heirloom Epic ("for each mana
+  in this ability's activation cost, you may tap an untapped creature you
+  control rather than pay that mana") is convoke on an ability;
+  `GameAction::ActivateAbility` carries no convoke list, so the card is left
+  out. Needs an `ActivatedAbility.convoke` flag plus a tapped-creature list on
+  the action (and its wire form). ⏳
+- **Cards still open in BLB/DSK, one primitive each.** Alania (per-type
+  "first instant / first sorcery / first Otter spell this turn" counters),
+  Osteomancer Adept (forage as a graveyard-cast additional cost),
+  Portent of Calamity (reveal X, exile one card *per card type*),
+  Rottenmouth Viper (sacrifice-any-number additional cost with a per-permanent
+  reduction), Wishing Well (a reflexive counter-gated free graveyard cast),
+  Kaito Bane of Nightmares (ninjutsu on a planeswalker + a during-your-turn
+  creature-animation static), Niko Light of Hope (Shards become copies until
+  the next end step), Rip Spawn Hunter (reveal X, take any number with
+  *different powers*), The Tale of Tamiyo (exile any number, copy them, cast
+  the copies), Valgavoth (an opponent-graveyard exile lock plus play-from-exile
+  for life), Victor (an "Nth time this ability resolved this turn" trigger). ⏳
+- **`Effect::LockOrUnlockRoomDoor` picks for the controller.** Marina Vendrell's
+  "lock or unlock" opens a locked door when there is one and otherwise re-locks
+  the right door; a `wants_ui` seat should be asked which. ⏳
+- **`StaticEffect::FreeExileCastOncePerTurn` fires automatically.** Warped Space
+  waives the first exile cast's stamped cost with no prompt — strictly better
+  for the caster, but the printed "you may" is a choice. ⏳
+- **The Rat token's swarm bonus is a static, not the printed reminder.** Vren's
+  tokens carry `PumpSelfByControlledPermanents` rather than a copiable ability
+  string; a token-copy effect reproduces the bonus, which matches CR 707.2. ⏳
+- **`install-client-deps.sh` still doesn't fire in scheduled sessions** —
+  confirmed again; running it by hand fixed the `wayland-client` build failure
+  that otherwise breaks `cargo test --workspace`. ⏳
+
 ## Noticed this run (TDM + OTJ closed, BLB/DSK batch)
 
 - **The Aura's identity isn't reachable from an attach trigger.**
@@ -12,16 +45,9 @@ Items are grouped by area and roughly ordered by impact within each group.
   opponent controls with mana value ≤ that Aura's") can't be written — it needs
   both the Aura and the host in the trigger's context. Left out of the OTJ
   batch for that reason. ⏳
-- **Cards deferred from the BLB/DSK sweep, one primitive each.** Vren, the
-  Relentless (a per-turn tally of creatures exiled from under each opponent's
-  control, plus a token whose P/T counts other Rats), Ygra, Eater of All
-  ("other creatures are Food artifacts and have …"), Marvin, Murderous Mimic
-  ("has all activated abilities of creatures you control"), The Mindskinner
-  (damage-to-opponents replaced by a mill), Portent of Calamity (reveal X, one
-  exile per card type), Wishing Well (cast from your graveyard gated on a
-  counter count), Eluge (flood counters granting Island-ness plus a per-flooded
-  -land cost reduction), Dragonhawk (a delayed "for each of those still
-  exiled"). ⏳
+- **Cards deferred from the BLB/DSK sweep.** Vren, Ygra, Marvin, The
+  Mindskinner and Eluge shipped in the DSK/BLB gap wave; Portent of Calamity,
+  Wishing Well and Dragonhawk are still open (see that run's section above). ⏳
 - **`Selector::CardExiledWithSource` now spans both linkage styles.** It reads
   the plain `exiled_with` stamp *and* the CR 603.6e `exiled_by` return link. If
   a card ever wants only one of the two, the selector needs splitting. ⏳
@@ -5182,6 +5208,24 @@ was elided in a doc-compaction pass — recover it from
 picking an item up.
 
 ### Done (✅) — wired
+- ✅ **CR 603.2 — "whenever you attack" trigger conditions** — the `YouAttack`
+  dispatch in `combat.rs` now evaluates the ability's `EventSpec.filter` at fire
+  time and applies the attack / permanent trigger doublers, both of which the
+  path previously dropped (Military Intelligence, Dollmaker's Shop;
+  `cr_recent81::cr_603_2_*`).
+- ✅ **CR 603.4 — self-source ETB intervening 'if'** — `fire_self_etb_triggers`
+  reads the trigger's condition against the entering permanent's cast flags
+  (kicked / bargained / X / cast-from-hand). It was silently ignored for all 35
+  filtered self-ETB cards (`cr_recent81::cr_603_4_*`).
+- ✅ **CR 709.5c — Room door designations** — a re-locked door's abilities go
+  inert (`GameState::relock_room_door` rebuilds the live definition), the
+  distinct-name door count is a real predicate, and door-unlock payments carry
+  a `SpellKind` so Room-restricted mana can fund them
+  (`cr_recent81::cr_709_5c_*`).
+- ✅ **CR 613.4 — a layer-7a CDA sees layer-4 land types** — counter-keyed
+  requirements resolve off the card instance in every zone, so a `*/*`
+  land-count body counts lands granted a type this turn (Eluge;
+  `cr_recent81::cr_613_4_*`).
 - ✅ **CR 506.2 — "can't be attacked"** — `Keyword::CantBeAttacked` +
   `permanent_cant_be_attacked`, checked at the planeswalker and battle
   attack-target gates and by the bot's walker-redirect picker (The

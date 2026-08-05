@@ -733,6 +733,7 @@ pub fn enshrined_memories() -> CardDefinition {
             who: PlayerRef::You,
             count: Value::XFromCost,
             filter: R::Creature,
+            distinct_powers: false,
         },
     )
 }

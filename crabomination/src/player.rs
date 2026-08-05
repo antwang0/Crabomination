@@ -432,6 +432,10 @@ pub struct Player {
     /// exile". Reset at the turn boundary.
     #[serde(default)]
     pub free_exile_cast_used_this_turn: bool,
+    /// Creatures exiled from under this player's control this turn (Vren, the
+    /// Relentless' end-step Rat count). Reset at the turn boundary.
+    #[serde(default)]
+    pub creatures_exiled_from_control_this_turn: u32,
     /// Revel in Silence: this player can't cast spells or activate loyalty
     /// abilities for the rest of the turn. Reset at the turn boundary.
     #[serde(default)]
@@ -992,6 +996,7 @@ impl Player {
             committed_crime_this_turn: false,
             face_down_activity_this_turn: false,
             free_exile_cast_used_this_turn: false,
+            creatures_exiled_from_control_this_turn: 0,
             descended_this_turn: false,
             descend_count_this_turn: 0,
             silenced_this_turn: false,

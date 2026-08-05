@@ -3258,6 +3258,7 @@ impl GameState {
             pl.face_down_activity_this_turn = false;
             // Warped Space's once-per-turn free cast from exile.
             pl.free_exile_cast_used_this_turn = false;
+            pl.creatures_exiled_from_control_this_turn = 0;
             // CR 401.6 — turn-scoped play-from-top permission ends at cleanup.
             pl.play_from_top_this_turn = false;
             // Johann's once-per-turn top-of-library cast resets each turn.
@@ -5206,6 +5207,16 @@ impl GameState {
                 (&valentin_redirect, resolved)
             {
                 card.exiled_with = Some(*src_id);
+            }
+            // Vren, the Relentless counts creatures exiled from under each
+            // player's control this turn — including via a death replacement.
+            if matches!(resolved, crate::card::Zone::Exile)
+                && card.definition.is_creature()
+                && card.controller < self.players.len()
+            {
+                let seat = card.controller;
+                self.players[seat].creatures_exiled_from_control_this_turn =
+                    self.players[seat].creatures_exiled_from_control_this_turn.saturating_add(1);
             }
             self.place_card_at_resolved_zone(card, resolved);
             let mut events = Vec::new();
