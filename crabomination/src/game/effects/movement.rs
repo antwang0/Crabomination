@@ -2335,10 +2335,14 @@ impl GameState {
         }
         self.temporary_control = kept;
         // CR 400.7 — the card is a new object in its next zone: effects
-        // that granted abilities to the permanent don't follow it.
+        // that granted abilities to the permanent don't follow it, and
+        // per-object activation limits (CR 602.5f "only once each turn",
+        // CR 702.177a exhaust's "activate only once") start over.
         if let Some(c) = self.find_card_anywhere_mut(id) {
             c.granted_activated_abilities.clear();
             c.granted_activated_eot.clear();
+            c.exhausted_abilities.clear();
+            c.once_per_turn_used.clear();
         }
         // CR 611.2c — continuous effects aimed at this specific permanent
         // end with it (don't re-attach if the same card re-enters).
