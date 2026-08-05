@@ -48,8 +48,8 @@ Items are grouped by area and roughly ordered by impact within each group.
   existed had reported success, which is what hid them — re-run the build
   after the last edit, not just once mid-session. Note also that
   `cargo test -p crabomination_client` needs its own non-clippy Bevy build on
-  top of all that, so the client's unit tests are typically type-checked but
-  not executed in a scheduled run. ⏳
+  top of all that (~3 h more). It does finish — the 9 board-status unit tests
+  ran green this run — but only if it's started early. ⏳
 
 ## Noticed this run (TDM + OTJ closed, BLB/DSK batch)
 
