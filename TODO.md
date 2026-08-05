@@ -3,7 +3,7 @@
 Improvement opportunities for the engine, client, and tooling.
 Items are grouped by area and roughly ordered by impact within each group.
 
-## Noticed this run (DFT closed to 4 / CR 400.7)
+## Noticed this run (DFT closed to 2, TDM to 6 / CR 400.7)
 
 - **The client can't be compiled in the cloud container.** `wayland-sys`'s
   build script needs `wayland-client.pc`, which isn't installed, so
@@ -103,6 +103,23 @@ Items are grouped by area and roughly ordered by impact within each group.
   Viper (sacrifice-any-number additional cost with per-permanent reduction),
   Cursed Recording (delayed "when you next cast an instant or sorcery, copy
   it"). ⏳
+
+## Tarkir: Dragonstorm (TDM) — 6 gaps
+
+`set_gaps.py tdm` is at 6 after the `decks::tdm` gap batch (Jeskai Revelation,
+Sidisi, Thunder of Unity, Shiko). The rest, and the primitive each needs:
+
+- **Taigam, Master Opportunist** — flurry (second spell each turn) plus
+  "exile it with four time counters; if it doesn't have suspend, it gains
+  suspend". ⏳
+- **Mardu Siegebreaker** — a linked "exile until this leaves" whose exiled
+  card is copied as a tapped attacking token, one per opponent. ⏳
+- **Kotis, the Fangkeeper** — combat-damage impulse whose free-cast window is
+  gated on the damage amount (`ManaValueAtMost(X)` off the event). ⏳
+- **New Way Forward** — a chosen-source prevention shield whose reflexive
+  rider reads how much it prevented. ⏳
+- **Call the Spirit Dragons** / **Ugin, Eye of the Storms** — build-arounds,
+  unaudited. ⏳
 
 ## Aetherdrift (DFT) — 2 gaps
 

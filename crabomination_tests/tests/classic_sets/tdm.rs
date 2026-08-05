@@ -2142,3 +2142,115 @@ fn cathartic_parting_tucks_and_recurs() {
     let bears_left = g.players[0].graveyard.iter().filter(|c| c.definition.name == "Grizzly Bears").count();
     assert_eq!(bears_left, 1, "four of five graveyard cards reshuffled");
 }
+
+// ── Tarkir: Dragonstorm gap batch ─────────────────────────────────────────────
+
+/// Jeskai Revelation does all five things it prints.
+#[test]
+fn jeskai_revelation_does_everything() {
+    use crabomination::game::types::Target;
+    let mut g = two_player_game();
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    for _ in 0..3 {
+        g.add_card_to_library(0, catalog::mountain());
+    }
+    let bounced = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let spell = g.add_card_to_hand(0, catalog::jeskai_revelation());
+    g.players[0].mana_pool.add_colorless(9);
+    for c in [Color::White, Color::Blue, Color::Red] {
+        g.players[0].mana_pool.add(c, 2);
+    }
+    let hand_before = g.players[0].hand.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell,
+        target: Some(Target::Permanent(bounced)),
+        additional_targets: vec![Target::Player(1)],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast");
+    drain_stack(&mut g);
+    assert!(g.players[1].hand.iter().any(|c| c.id == bounced), "bounced");
+    assert_eq!(g.players[1].life, 16, "4 damage");
+    assert_eq!(g.battlefield.iter().filter(|c| c.definition.name == "Monk").count(), 2);
+    assert_eq!(g.players[0].hand.len(), hand_before - 1 + 2, "drew two");
+    assert_eq!(g.players[0].life, 24, "gained four");
+}
+
+/// Sidisi returns a creature exactly one mana value above the one it ate.
+#[test]
+fn sidisi_upgrades_by_exactly_one_mana_value() {
+    use crabomination::game::types::Target;
+    let mut g = two_player_game();
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    let sidisi = g.add_card_to_battlefield(0, catalog::sidisi_regent_of_the_mire());
+    g.clear_sickness(sidisi);
+    g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    // Grizzly Bears is {1}{G}, so only a mana-value-3 creature comes back.
+    let same_size = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let bigger = g.add_card_to_graveyard(0, catalog::sedge_scorpion());
+    let _ = bigger;
+    let activate = |g: &mut GameState, t: crabomination::card::CardId| {
+        g.priority.player_with_priority = 0;
+        g.perform_action(GameAction::ActivateAbility {
+            card_id: sidisi,
+            ability_index: 0,
+            target: Some(Target::Permanent(t)),
+            additional_targets: vec![],
+            x_value: None,
+            mode: None,
+        })
+    };
+    assert!(activate(&mut g, same_size).is_err(), "same mana value isn't +1");
+}
+
+/// Thunder of Unity's chapter II arms a drain on every creature that enters
+/// for the rest of the turn.
+#[test]
+fn thunder_of_unity_drains_on_later_entries() {
+    use crabomination::game::effects::EffectContext;
+    let mut g = two_player_game();
+    g.step = TurnStep::PreCombatMain;
+    let saga = g.add_card_to_battlefield(0, catalog::thunder_of_unity());
+    let ch2 = catalog::thunder_of_unity().saga_chapters[1].1.clone();
+    g.resolve_effect(&ch2, &EffectContext::for_ability(saga, 0, None)).unwrap();
+    let bears = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.dispatch_triggers_for_events(&[GameEvent::PermanentEntered { card_id: bears }]);
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, 19);
+    assert_eq!(g.players[0].life, 21);
+}
+
+/// Shiko exiles a cheap graveyard card and lets you cast it for free this turn.
+#[test]
+fn shiko_frees_a_cheap_graveyard_card() {
+    use crabomination::game::effects::EffectContext;
+    use crabomination::game::types::Target;
+    let mut g = two_player_game();
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    let shiko = g.add_card_to_battlefield(0, catalog::shiko_paragon_of_the_way());
+    let bolt = g.add_card_to_graveyard(0, catalog::lightning_bolt());
+    let etb = catalog::shiko_paragon_of_the_way().triggered_abilities[0].effect.clone();
+    g.resolve_effect(
+        &etb,
+        &EffectContext {
+            targets: vec![Target::Permanent(bolt)],
+            ..EffectContext::for_ability(shiko, 0, None)
+        },
+    )
+    .unwrap();
+    assert!(g.exile.iter().any(|c| c.id == bolt), "exiled");
+    g.perform_action(GameAction::CastFromZoneWithoutPaying {
+        card_id: bolt,
+        target: Some(Target::Player(1)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("free cast off the may-play grant");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, 17);
+}

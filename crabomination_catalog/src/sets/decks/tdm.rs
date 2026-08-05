@@ -2500,3 +2500,137 @@ pub fn cathartic_parting() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── Tarkir: Dragonstorm gap batch ─────────────────────────────────────────────
+
+/// Jeskai Revelation — {4}{U}{R}{W} Instant. Bounce, burn, two Monks, two
+/// cards and four life, all in one.
+pub fn jeskai_revelation() -> CardDefinition {
+    CardDefinition {
+        name: "Jeskai Revelation",
+        cost: cost(&[generic(4), u(), r(), w()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::Move {
+                what: Selector::TargetFiltered { slot: 0, filter: R::Any },
+                to: ZoneDest::Hand(PlayerRef::OwnerOfMoved),
+            },
+            Effect::DealDamage {
+                to: Selector::TargetFiltered { slot: 1, filter: R::Any },
+                amount: Value::Const(4),
+            },
+            Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(2),
+                definition: white_monk_prowess_token(),
+            },
+            Effect::Draw { who: Selector::You, amount: Value::Const(2) },
+            Effect::GainLife { who: Selector::You, amount: Value::Const(4) },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Sidisi, Regent of the Mire — {1}{B} 1/3. Trades a creature for one exactly
+/// a mana value bigger out of your graveyard.
+pub fn sidisi_regent_of_the_mire() -> CardDefinition {
+    CardDefinition {
+        name: "Sidisi, Regent of the Mire",
+        cost: cost(&[generic(1), b()]),
+        supertypes: vec![crate::card::Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![
+                CreatureType::Zombie,
+                CreatureType::Snake,
+                CreatureType::Warlock,
+            ],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 3,
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            sorcery_speed: true,
+            sac_other_filter: Some((R::Creature.and(R::ControlledByYou), 1)),
+            effect: Effect::Move {
+                what: Selector::TargetFiltered {
+                    slot: 0,
+                    filter: R::Creature.and(R::ManaValueEqualsSacrificedPlus(1)),
+                },
+                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Thunder of Unity — {R}{W}{B} Saga. I draws two for two life; II and III turn
+/// each creature that enters for the rest of the turn into a drain.
+pub fn thunder_of_unity() -> CardDefinition {
+    let drain_on_entry = || Effect::CreaturesYouControlEnteringThisTurn {
+        body: Box::new(Effect::Drain {
+            from: Selector::Player(PlayerRef::EachOpponent),
+            to: Selector::You,
+            amount: Value::ONE,
+        }),
+    };
+    CardDefinition {
+        name: "Thunder of Unity",
+        cost: cost(&[r(), w(), b()]),
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes {
+            enchantment_subtypes: vec![EnchantmentSubtype::Saga],
+            ..Default::default()
+        },
+        saga_chapters: vec![
+            (
+                1,
+                Effect::Seq(vec![
+                    Effect::Draw { who: Selector::You, amount: Value::Const(2) },
+                    Effect::LoseLife { who: Selector::You, amount: Value::Const(2) },
+                ]),
+            ),
+            (2, drain_on_entry()),
+            (3, drain_on_entry()),
+        ],
+        ..Default::default()
+    }
+}
+
+/// Shiko, Paragon of the Way — {2}{U}{R}{W} 4/5 flying vigilance. Its ETB
+/// flashes back a cheap card out of your graveyard for free.
+pub fn shiko_paragon_of_the_way() -> CardDefinition {
+    CardDefinition {
+        name: "Shiko, Paragon of the Way",
+        cost: cost(&[generic(2), u(), r(), w()]),
+        supertypes: vec![crate::card::Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit, CreatureType::Dragon],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 5,
+        keywords: vec![Keyword::Flying, Keyword::Vigilance],
+        triggered_abilities: vec![etb(Effect::Seq(vec![
+            Effect::Move {
+                what: Selector::TargetFiltered {
+                    slot: 0,
+                    filter: R::Not(Box::new(R::Land)).and(R::ManaValueAtMost(3)),
+                },
+                to: ZoneDest::Exile,
+            },
+            Effect::GrantMayPlay {
+                what: Selector::LastMoved,
+                duration: MayPlayDuration::EndOfThisTurn,
+                to_owner: false,
+                exile_after: true,
+                pay_own_cost: false,
+                any_color: false,
+            },
+        ]))],
+        ..Default::default()
+    }
+}
