@@ -9,6 +9,7 @@ use crate::card::{
 };
 use crate::effect::shortcut::{etb, on_attack};
 use crate::effect::{Duration, Effect, LibraryPosition, ManaPayload, PlayerRef, Selector, ZoneDest};
+use crate::game::types::TurnStep;
 use crate::mana::{ManaCost, SpendRestriction, b, cost, g, generic, r, u, w, x};
 
 fn creature(
@@ -609,5 +610,130 @@ pub fn valors_flagship() -> CardDefinition {
             },
         }],
         ..vehicle("Valor's Flagship", cost(&[generic(4), w(), w(), w()]), 7, 7)
+    }
+}
+
+/// A 3/2 colorless Vehicle with crew 1 — Chandra, Spark Hunter's 0.
+fn spark_hunter_vehicle_token() -> TokenDefinition {
+    TokenDefinition {
+        name: "Vehicle".into(),
+        power: 3,
+        toughness: 2,
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes {
+            artifact_subtypes: vec![ArtifactSubtype::Vehicle],
+            ..Default::default()
+        },
+        keywords: vec![Keyword::Crew(1)],
+        ..Default::default()
+    }
+}
+
+/// Chandra, Spark Hunter — {3}{R} loyalty 4. Crews for free each combat, +2
+/// rummages off an artifact or card, 0 builds a Vehicle, −7 turns artifacts
+/// into Bolts.
+pub fn chandra_spark_hunter() -> CardDefinition {
+    CardDefinition {
+        name: "Chandra, Spark Hunter",
+        cost: cost(&[generic(3), r()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Planeswalker],
+        subtypes: Subtypes {
+            planeswalker_subtypes: vec![crate::card::PlaneswalkerSubtype::Chandra],
+            ..Default::default()
+        },
+        base_loyalty: 4,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(
+                EventKind::StepBegins(TurnStep::BeginCombat),
+                EventScope::YourControl,
+            ),
+            effect: Effect::OptionalTargets {
+                min: 0,
+                body: Box::new(Effect::Seq(vec![
+                    Effect::AnimateAsCreature {
+                        what: Selector::TargetFiltered {
+                            slot: 0,
+                            filter: R::HasArtifactSubtype(ArtifactSubtype::Vehicle)
+                                .and(R::ControlledByYou),
+                        },
+                        duration: Duration::EndOfTurn,
+                    },
+                    Effect::GrantKeyword {
+                        what: Selector::Target(0),
+                        keyword: Keyword::Haste,
+                        duration: Duration::EndOfTurn,
+                    },
+                ])),
+            },
+        }],
+        loyalty_abilities: vec![
+            crate::card::LoyaltyAbility {
+                loyalty_cost: 2,
+                effect: Effect::MaySacrifice {
+                    description: "Sacrifice an artifact to draw a card?".into(),
+                    filter: R::Artifact.and(R::ControlledByYou),
+                    count: Value::ONE,
+                    then: Box::new(Effect::Draw { who: Selector::You, amount: Value::ONE }),
+                    else_: Some(Box::new(Effect::MayDo {
+                        description: "Discard a card to draw a card?".into(),
+                        body: Box::new(Effect::Seq(vec![
+                            Effect::Discard {
+                                who: Selector::You,
+                                amount: Value::ONE,
+                                random: false,
+                            },
+                            Effect::Draw { who: Selector::You, amount: Value::ONE },
+                        ])),
+                    })),
+                },
+                ..Default::default()
+            },
+            crate::card::LoyaltyAbility {
+                loyalty_cost: 0,
+                effect: Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::ONE,
+                    definition: spark_hunter_vehicle_token(),
+                },
+                ..Default::default()
+            },
+            crate::card::LoyaltyAbility {
+                loyalty_cost: -7,
+                effect: Effect::CreateEmblem {
+                    who: PlayerRef::You,
+                    name: "Chandra, Spark Hunter".into(),
+                    triggered: vec![TriggeredAbility {
+                        event: EventSpec::new(
+                            EventKind::EntersBattlefield,
+                            EventScope::YourControl,
+                        )
+                        .with_filter(Predicate::EntityMatches {
+                            what: Selector::TriggerSource,
+                            filter: R::Artifact,
+                        }),
+                        effect: Effect::DealDamage {
+                            to: Selector::TargetFiltered { slot: 0, filter: R::Any },
+                            amount: Value::Const(3),
+                        },
+                    }],
+                    statics: vec![],
+                },
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Ancient Vendetta — {3}{B} Sorcery. Name a card and strip four copies out of
+/// an opponent's graveyard, hand and library.
+pub fn ancient_vendetta() -> CardDefinition {
+    CardDefinition {
+        name: "Ancient Vendetta",
+        cost: cost(&[generic(3), b()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::NameCardThenExileFromZones { who: PlayerRef::Target(0), count: 4 },
+        ..Default::default()
     }
 }

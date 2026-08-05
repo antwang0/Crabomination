@@ -8018,6 +8018,11 @@ pub enum Effect {
     /// The Urza's Destiny name-hate cycle (Eradicate, Quash, Scour, Sowing Salt,
     /// Splinter). `what` may be a stack object (Quash counters it).
     ExileAllCopiesOfTargetName { what: Selector },
+    /// "Choose a card name. Search `who`'s graveyard, hand, and library for up
+    /// to `count` cards with that name and exile them. Then that player
+    /// shuffles." (Ancient Vendetta.) The name is chosen by the effect's
+    /// controller at resolution.
+    NameCardThenExileFromZones { who: PlayerRef, count: u32 },
     /// "Exile all tokens with the same name as `what`" (Dual Nature's leave
     /// trigger). Nontoken permanents sharing the name are untouched; `what`
     /// resolves off the death/leave LKI snapshot when it has already gone.

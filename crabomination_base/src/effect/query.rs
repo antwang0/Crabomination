@@ -524,6 +524,7 @@ impl Effect {
             Effect::CycleRecurFromGraveyard { .. } => false,
             Effect::ReturnGraveyardPermanentsDifferentNames
             | Effect::ReturnAllMatchingFromGraveyardToBattlefield { .. } => false,
+            Effect::NameCardThenExileFromZones { who, .. } => player_has_target(who),
             Effect::ReturnGraveyardCardsToHand { .. } => false,
             // Resolution-time ChooseCards by the affected player; untargeted.
             // A `who: PlayerRef::Target(n)` makes the affected player a
@@ -3106,6 +3107,7 @@ impl Effect {
                 | Effect::ExileLibraryCardsNamedLikeExiledThisResolution { who }
                 | Effect::ExileHand { who }
                 | Effect::ShuffleGraveyardCardsIntoLibrary { who, .. }
+                | Effect::NameCardThenExileFromZones { who, .. }
                 | Effect::RevealUntilFind { who, .. }
                 | Effect::RearrangeTop { who, .. }
                 | Effect::ShuffleHandsDrawSame { who }

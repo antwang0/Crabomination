@@ -19936,6 +19936,45 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::NameCardThenExileFromZones { who, count } => {
+                use crate::decision::Decision;
+                let Some(victim) = self.resolve_player(who, ctx) else { return Ok(()) };
+                // Feed the namer what they can already see plus the densest
+                // library stack — a bot naming blind still strips the deck's
+                // best four-of.
+                let suggestions = rank_names_by_frequency(
+                    self.players[victim]
+                        .graveyard
+                        .iter()
+                        .chain(self.players[victim].library.iter())
+                        .filter(|c| !c.definition.is_land())
+                        .map(|c| c.definition.name),
+                );
+                let answer = self.decider.decide(&Decision::NameCard {
+                    source: ctx.source.unwrap_or(crate::card::CardId(0)),
+                    source_name: ctx.source_name.unwrap_or_default().to_string(),
+                    suggestions,
+                    restriction: None,
+                });
+                let crate::decision::DecisionAnswer::NamedCard(name) = answer else {
+                    return Ok(());
+                };
+                let ids: Vec<CardId> = self.players[victim]
+                    .graveyard
+                    .iter()
+                    .chain(self.players[victim].hand.iter())
+                    .chain(self.players[victim].library.iter())
+                    .filter(|c| c.definition.name == name)
+                    .map(|c| c.id)
+                    .take(*count as usize)
+                    .collect();
+                for cid in ids {
+                    self.move_card_to(cid, &crate::effect::ZoneDest::Exile, ctx, events);
+                }
+                self.shuffle_library(victim, events);
+                Ok(())
+            }
+
             Effect::EachPlayerNamesCard { who } => {
                 use crate::decision::Decision;
                 let seats = self.resolve_players(who, ctx);

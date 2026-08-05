@@ -6358,6 +6358,8 @@ static DECKS: &[Factory] = &[
     super::decks::cursecloth_wrappings,
     super::decks::samut_the_driving_force,
     super::decks::valors_flagship,
+    super::decks::chandra_spark_hunter,
+    super::decks::ancient_vendetta,
     super::decks::gossips_talent,
     super::decks::hunters_talent,
     super::decks::scavengers_talent,

@@ -373,3 +373,61 @@ fn valors_flagship_cycles_into_pilots() {
     assert_eq!(pilots.len(), 2, "X = 2");
     assert_eq!(g.crew_saddle_power_bonus(pilots[0]), 2, "crews as a 3-power creature");
 }
+
+/// Ancient Vendetta strips every copy of the named card from an opponent's
+/// graveyard, hand and library — capped at four.
+#[test]
+fn ancient_vendetta_exiles_four_copies() {
+    let mut g = main_phase();
+    let mut ids = vec![];
+    for _ in 0..2 {
+        ids.push(g.add_card_to_graveyard(1, catalog::grizzly_bears()));
+        ids.push(g.add_card_to_hand(1, catalog::grizzly_bears()));
+        ids.push(g.add_card_to_library(1, catalog::grizzly_bears()));
+    }
+    g.decider = Box::new(ScriptedDecider::new(vec![DecisionAnswer::NamedCard(
+        "Grizzly Bears".to_string(),
+    )]));
+    let spell = g.add_card_to_hand(0, catalog::ancient_vendetta());
+    flood(&mut g, 0);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell,
+        target: Some(Target::Player(1)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast");
+    drain_stack(&mut g);
+    assert_eq!(g.exile.iter().filter(|c| c.definition.name == "Grizzly Bears").count(), 4);
+}
+
+/// Chandra's 0 builds a crewable Vehicle; her begin-combat trigger animates it.
+#[test]
+fn chandra_spark_hunter_builds_and_animates_a_vehicle() {
+    let mut g = main_phase();
+    let chandra = g.add_card_to_battlefield(0, catalog::chandra_spark_hunter());
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateLoyaltyAbility {
+        card_id: chandra,
+        ability_index: 1,
+        target: None,
+        x_value: None,
+    })
+    .expect("0 ability");
+    drain_stack(&mut g);
+    let token = g
+        .battlefield
+        .iter()
+        .find(|c| c.is_token && c.definition.name == "Vehicle")
+        .map(|c| c.id)
+        .expect("Vehicle token");
+    let animate = catalog::chandra_spark_hunter().triggered_abilities[0].effect.clone();
+    let ctx = EffectContext {
+        targets: vec![Target::Permanent(token)],
+        ..EffectContext::for_ability(chandra, 0, None)
+    };
+    g.resolve_effect(&animate, &ctx).unwrap();
+    let view = g.computed_permanent(token).unwrap();
+    assert!(view.card_types.contains(&CardType::Creature) && view.keywords.contains(&Keyword::Haste));
+}
