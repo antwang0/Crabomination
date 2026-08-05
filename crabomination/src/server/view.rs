@@ -804,6 +804,7 @@ fn project_player(
                 }
             })
             .collect(),
+        draft_notes: player.draft_notes.lines(),
         // CR 116.2j — only the controller learns which of their command-zone
         // cards are still face down, so this stays empty for other viewers.
         revealable_conspiracies: if player_seat == viewer_seat {

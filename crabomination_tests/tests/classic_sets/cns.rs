@@ -1057,3 +1057,18 @@ fn draft_notes_ride_into_the_match_state() {
     assert_eq!(state.players[0].draft_notes.max_number("Lurking Automaton"), 4);
     assert_eq!(state.players[1].draft_notes.max_number("Lurking Automaton"), 0);
 }
+
+/// CR 905.2b — noted information is public: the server view carries every
+/// seat's draft notes for every viewer.
+#[test]
+fn draft_notes_are_public_in_the_server_view() {
+    let mut g = main_phase();
+    g.players[1].draft_notes.note_number("Lurking Automaton", 4);
+    g.players[1].draft_notes.note_colors("Paliano, the High City", &[Color::Black, Color::Red]);
+    let view = crabomination::server::view::project(&g, 0);
+    assert_eq!(
+        view.players[1].draft_notes,
+        vec!["Lurking Automaton: 4", "Paliano, the High City: B, R"],
+    );
+    assert!(view.players[0].draft_notes.is_empty());
+}

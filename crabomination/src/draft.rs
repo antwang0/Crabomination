@@ -788,6 +788,24 @@ impl DraftNotes {
     pub fn sum_numbers(&self, source: &str) -> u32 {
         self.numbers.get(source).map(|v| v.iter().sum()).unwrap_or(0)
     }
+    /// One readable line per noting card, sorted by name so the projection is
+    /// stable across ticks (CR 905.2b — this information is public).
+    pub fn lines(&self) -> Vec<String> {
+        let mut out: Vec<String> = Vec::new();
+        for (name, ns) in &self.numbers {
+            out.push(format!("{name}: {}", ns.iter().map(|n| n.to_string()).collect::<Vec<_>>().join(", ")));
+        }
+        for (name, names) in &self.names {
+            out.push(format!("{name}: {}", names.join(", ")));
+        }
+        for (name, colors) in &self.colors {
+            let cs: Vec<String> = colors.iter().map(|c| c.short_name().to_string()).collect();
+            out.push(format!("{name}: {}", cs.join(", ")));
+        }
+        out.sort();
+        out
+    }
+
     pub fn has_name(&self, source: &str, name: &str) -> bool {
         self.names.get(source).is_some_and(|v| v.iter().any(|n| n == name))
     }

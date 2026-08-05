@@ -2595,6 +2595,8 @@ Each a small targeted feature; sweep batch by batch.
   client's `DraftSession` is now a thin UI shell over it with a draft-matters
   button row. CR 116.2j ships alongside as `GameAction::RevealConspiracy`.
   The last 8 CNS cards are in `sets::cns3`; tests in `classic_sets/cns`.
+  905.2b's "any player may look at noted information" ships as a public
+  `PlayerView.draft_notes` projection.
 - **CR 807 Grand Melee** — `set_grand_melee_variant` + `shuffle_seating`
   (807.2 defaults, 807.3 random seating). The 807.4 turn markers are open;
   see TODO.md.

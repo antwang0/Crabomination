@@ -884,6 +884,12 @@ pub struct PlayerView {
     /// snapshot back-compat.
     #[serde(default)]
     pub commander_casts: Vec<(String, u32)>,
+    /// CR 905.2b — this seat's draft notes, one readable line per noting card
+    /// ("Lurking Automaton: 4", "Paliano, the High City: B, R, G"). Public to
+    /// every viewer: 905.2b says any player may look at noted information at
+    /// any time. Empty in every non-drafted game.
+    #[serde(default)]
+    pub draft_notes: Vec<String>,
     /// CR 116.2j — face-down hidden-agenda conspiracies this player may turn
     /// face up (`GameAction::RevealConspiracy`). Only ever populated for the
     /// viewer's own seat; CR 315.7 keeps them secret from everyone else.
