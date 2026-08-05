@@ -981,15 +981,15 @@ mod tests {
     #[test]
     fn board_status_shows_case_solve_state() {
         // An unsolved Case reads "Case"; a solved one reads "Solved".
-        assert_eq!(board_status_strip(&[], false, false, false, false, Some(false), None, false, 0, 0, false), "Case");
-        assert_eq!(board_status_strip(&[], false, false, false, false, Some(true), None, false, 0, 0, false), "Solved");
+        assert_eq!(board_status_strip(&[], false, false, false, false, Some(false), None, &[], false, 0, 0, false), "Case");
+        assert_eq!(board_status_strip(&[], false, false, false, false, Some(true), None, &[], false, 0, 0, false), "Solved");
     }
 
     #[test]
     fn board_status_shows_class_level() {
         // A Class enchantment reads "Lvl N".
-        assert_eq!(board_status_strip(&[], false, false, false, false, None, Some(1), false, 0, 0, false), "Lvl 1");
-        assert_eq!(board_status_strip(&[], false, false, false, false, None, Some(3), false, 0, 0, false), "Lvl 3");
+        assert_eq!(board_status_strip(&[], false, false, false, false, None, Some(1), &[], false, 0, 0, false), "Lvl 1");
+        assert_eq!(board_status_strip(&[], false, false, false, false, None, Some(3), &[], false, 0, 0, false), "Lvl 3");
     }
 
     #[test]

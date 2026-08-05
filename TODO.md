@@ -35,18 +35,18 @@ Items are grouped by area and roughly ordered by impact within each group.
 - **`install-client-deps.sh` still doesn't fire in scheduled sessions** —
   confirmed again; running it by hand fixed the `wayland-client` build failure
   that otherwise breaks `cargo test --workspace`. ⏳
-- **A whole-workspace `cargo clippy` doesn't fit in a scheduled session.** The
-  `--all-targets` run over every crate needs a from-scratch Bevy compile under
-  clippy and filled the disk (the incremental tree reached 14 GB, leaving 4 GB
-  free on a 252 GB volume) before finishing. Scoping it to the five non-client
-  crates with `CARGO_INCREMENTAL=0` does complete — in ~5 h on this hardware.
-  **`crabomination_client`'s clippy is the part still unverified each run** —
-  and `-p crabomination_client` alone doesn't help, because it drags the
-  catalog and engine crates through clippy again behind Bevy (~5 h of Bevy,
-  then the same ~5 h). Its crate root already carries
-  `#![allow(clippy::too_many_arguments, clippy::type_complexity)]`, which
-  covers the usual offenders. Start clippy first, not last — and if only one
-  run fits, make it the scoped five-crate one. ⏳
+- **Clippy needs ~10 h of wall clock here, so start it first, not last.** A
+  whole-workspace `--all-targets` run filled the disk (the incremental tree
+  reached 14 GB, leaving 4 GB free on a 252 GB volume). What works:
+  `CARGO_INCREMENTAL=0` plus two scoped runs — the five non-client crates
+  (~5 h), then `-p crabomination_client` (~5 h more, most of it Bevy under
+  clippy). Both were clean this run, but only after the client run caught
+  **five compile errors in client test code that no other gate saw**: a
+  `PermanentView` literal missing a newly-added field and four
+  `board_status_strip` call sites missing a newly-added argument. A
+  `cargo build --workspace --all-targets` run started *before* those fields
+  existed had reported success, which is what hid them — re-run the build
+  after the last edit, not just once mid-session. ⏳
 
 ## Noticed this run (TDM + OTJ closed, BLB/DSK batch)
 
