@@ -1,25 +1,25 @@
+2 Fractal Mascot
 1 Ad Nauseam
 1 Adventurous Eater
 1 Arnyn, Deathbloom Botanist
-1 Ascendant Dustspeaker
-1 Elite Interceptor
-1 Emeritus of Truce
-2 Forum of Amity
-1 Hop to It
-1 Imperious Inkmage
-2 Inkling Mascot
-1 Inkshape Demonstrator
+1 Blech, Loafing Pest
+1 Efflorescence
+1 Environmental Scientist
+1 Follow the Lumarets
+1 Lecturing Scornmage
 1 Melancholic Poet
 1 Page, Loose Leaf
-8 Plains
-1 Poisoner's Apprentice
-1 Quill-Blade Laureate
+1 Pensive Professor
+1 Professor Dellian Fel
 1 Rancorous Archaic
-1 Rehearsed Debater
-1 Scolding Administrator
-1 Soaring Stoneglider
-1 Social Snub
-1 Stone Docent
+1 Send in the Pest
+1 Shopkeeper's Bane
+1 Snarl Song
+1 Spellbook Seeker
 1 Sundering Archaic
-7 Swamp
+1 Thornfist Striker
 1 Tragedy Feaster
+1 Wild Hypothesis
+8 Swamp
+6 Forest
+3 Island
