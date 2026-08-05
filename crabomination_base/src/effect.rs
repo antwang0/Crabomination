@@ -219,6 +219,9 @@ pub enum Selector {
     /// `CardInstance.blocked_attackers_this_turn` — so it still resolves after
     /// combat has been torn down (Defiant Vanguard's end-of-combat sweep).
     CreaturesBlockedBySourceThisTurn,
+    /// CR 702.171 — the creatures that saddled the source this turn
+    /// (`CardInstance.saddled_by`; Calamity, The Gitrog).
+    CreaturesThatSaddledSource,
     /// The same read, but scoped to whatever `Selector` resolves to rather
     /// than the effect's source — "creatures that were blocked by target Wall
     /// this turn" (the Legends Glyph cycle).
@@ -590,6 +593,9 @@ pub enum Value {
     /// cards in hand. Powers "draw an additional card for each opponent who
     /// has one or fewer cards in hand" (Bandit's Talent, level 3).
     OpponentsWithHandSizeAtMost(u32),
+    /// CR 700.2 — how many modes were chosen for the resolved spell (Riku of
+    /// Many Paths reads the triggering spell's mode count).
+    ModesChosenOf(Box<Selector>),
     /// The number of the source controller's opponents still in the game —
     /// "for each opponent, …" (Mardu Siegebreaker's token copies).
     OpponentCount,
@@ -2084,6 +2090,10 @@ pub enum Duration {
     /// Weaponry). The affected set is locked in at resolution; the SBA sweep
     /// drops the effect once the source untaps or leaves.
     WhileSourceTapped,
+    /// CR 611.2c — "for as long as this Equipment/Aura remains attached to it"
+    /// (Assimilation Aegis). The SBA sweep drops the effect once the source
+    /// stops being attached or leaves the battlefield.
+    WhileSourceAttached,
     /// Indefinite (for effects like "gain control" without a clause).
     Permanent,
 }
@@ -2425,6 +2435,11 @@ pub enum EventKind {
     /// noncombat damage" (Chandra's Spitfire). The amount rides in via
     /// `Value::TriggerEventAmount`.
     PlayerDealtNoncombatDamage,
+    /// A source the trigger's controller controls dealt noncombat damage to a
+    /// creature equal to that creature's toughness (Taii Wakeen, Perfect
+    /// Shot). Keyed on the damaged creature; the amount rides in via
+    /// `Value::TriggerEventAmount`.
+    YourSourceDealtNoncombatDamageEqualToToughness,
     /// A player was dealt damage (combat or not). Pair with
     /// `EventScope::YourSourceDamagedOpponent` for "whenever a source you
     /// control deals damage to an opponent" (Quest for Pure Flame).
@@ -3879,6 +3894,19 @@ pub enum Effect {
     /// without paying their mana costs" (Kotis, the Fangkeeper). The
     /// permission lasts for the turn and exiles the card once cast.
     ExileTopAndMayCastUpToMv { who: Selector, amount: Value, max_mv: Value },
+    /// "If a source you control would deal noncombat damage to a permanent or
+    /// player this turn, it deals that much damage plus `amount` instead"
+    /// (Taii Wakeen, Perfect Shot). Turn-scoped, stacking across activations.
+    YourNoncombatDamageBonusThisTurn { amount: Value },
+    /// CR 702.170 — "exile that spell instead of putting it into your graveyard
+    /// as it resolves; it becomes plotted" (Lilah, Undefeated Slickshot).
+    /// Stamps the resolving spell so its post-resolution route is
+    /// `ZoneDest::ExilePlotted`.
+    PlotSpellOnResolve { what: Selector },
+    /// "You may cast a permanent spell with mana value `max_mv` or less from
+    /// your hand without paying its mana cost. If you don't, `else_`"
+    /// (Kellan, the Kid).
+    MayCastPermanentFromHandFree { max_mv: Value, else_: Box<Effect> },
     /// Process (Battle for Zendikar / OGW) — "you may put up to `count` cards
     /// an opponent owns from exile into that player's graveyard. If you do,
     /// [`then`]." The controller is asked yes/no (`Decision::OptionalTrigger`);
@@ -7169,6 +7197,9 @@ pub enum Effect {
     /// battlefield tapped." Deploys as many lands as available (up to `count`),
     /// preferring the graveyard so hand lands stay playable. Worldsoul's Rage.
     DeployLandsFromHandAndGraveyard { count: Value },
+    /// "Put up to `count` land cards from your hand onto the battlefield
+    /// tapped" (The Gitrog, Ravenous Ride).
+    PutLandsFromHandOntoBattlefieldTapped { count: Value },
 
     /// CR 701.34 — Manifest: put the top `amount` cards of `who`'s library
     /// onto the battlefield face down as 2/2 creatures (the real card is

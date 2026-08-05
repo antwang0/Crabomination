@@ -982,6 +982,20 @@ impl GameState {
             let n = self.noncombat_damage_doublers_for(source, ent);
             amount.saturating_mul(1 << n.min(16))
         };
+        // Taii Wakeen's {X}, {T} — "it deals that much damage plus X instead",
+        // scoped to the activating seat's sources and to this turn.
+        let amount = if self.noncombat_damage_bonus_this_turn.is_empty() {
+            amount
+        } else {
+            let ctrl = source.and_then(|s| self.computed_permanent(s).map(|cp| cp.controller));
+            let bonus: u32 = self
+                .noncombat_damage_bonus_this_turn
+                .iter()
+                .filter(|(seat, _)| Some(*seat) == ctrl)
+                .map(|(_, n)| *n)
+                .sum();
+            amount.saturating_add(bonus)
+        };
         // CR 614 — Phytohydra: "If damage would be dealt to this creature, put
         // that many +1/+1 counters on it instead." A replacement (not
         // prevention), so it fires even when damage can't be prevented; grows

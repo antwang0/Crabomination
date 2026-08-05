@@ -64,6 +64,7 @@ pub(crate) fn map_effect_duration(
         | crate::effect::Duration::UntilYourNextUntap
         | crate::effect::Duration::UntilYourNextUpkeep => EffectDuration::UntilNextTurn,
         crate::effect::Duration::WhileSourceTapped => EffectDuration::WhileSourceTapped,
+        crate::effect::Duration::WhileSourceAttached => EffectDuration::WhileSourceAttached,
         crate::effect::Duration::Permanent => EffectDuration::Indefinite,
     }
 }
@@ -3570,6 +3571,131 @@ impl GameState {
                         copy: false,
                     };
                     self.run_effect(&cast, ctx, events)?;
+                }
+                Ok(())
+            }
+
+            // Taii Wakeen's {X}, {T} — a turn-scoped bump on every noncombat
+            // damage event a source this seat controls produces.
+            Effect::YourNoncombatDamageBonusThisTurn { amount } => {
+                let n = self.evaluate_value(amount, ctx).max(0) as u32;
+                if n > 0 {
+                    self.noncombat_damage_bonus_this_turn.push((ctx.controller, n));
+                }
+                Ok(())
+            }
+
+            // CR 702.170 — stamp the resolving spell so it exiles plotted.
+            Effect::PlotSpellOnResolve { what } => {
+                for cid in
+                    self.resolve_selector(what, ctx).into_iter().filter_map(|e| e.as_card_id())
+                {
+                    if let Some(StackItem::Spell { card, .. }) = self
+                        .stack
+                        .iter_mut()
+                        .find(|si| matches!(si, StackItem::Spell { card, .. } if card.id == cid))
+                    {
+                        card.plot_on_resolve = true;
+                    }
+                }
+                Ok(())
+            }
+
+            // Kellan, the Kid — free-cast a cheap permanent off your hand, or
+            // (if you decline / can't) drop a land instead.
+            Effect::MayCastPermanentFromHandFree { max_mv, else_ } => {
+                let cap = self.evaluate_value(max_mv, ctx).max(0) as u32;
+                let me = ctx.controller;
+                let candidates: Vec<(CardId, String)> = self.players[me]
+                    .hand
+                    .iter()
+                    .filter(|c| c.definition.is_permanent() && c.definition.cost.cmc() <= cap)
+                    .map(|c| (c.id, c.definition.name.to_string()))
+                    .collect();
+                let auto = candidates
+                    .iter()
+                    .max_by_key(|(id, _)| {
+                        self.players[me]
+                            .hand
+                            .iter()
+                            .find(|c| c.id == *id)
+                            .map(|c| c.definition.cost.cmc())
+                            .unwrap_or(0)
+                    })
+                    .map(|(id, _)| vec![*id])
+                    .unwrap_or_default();
+                let picked = if candidates.is_empty() {
+                    Vec::new()
+                } else {
+                    let Some(p) = self.choose_up_to_cards(
+                        me,
+                        "Cast a permanent spell for free?".into(),
+                        ctx.source.unwrap_or(CardId(0)),
+                        candidates,
+                        1,
+                        effect,
+                        auto,
+                    ) else {
+                        return Ok(());
+                    };
+                    p
+                };
+                if let Some(pick) = picked.first().copied() {
+                    return self.run_effect(
+                        &Effect::CastWithoutPayingImmediate {
+                            what: Selector::Target(0),
+                            source_zone: crate::card::Zone::Hand,
+                            exile_after: false,
+                            copy: false,
+                            reduce_generic: 0,
+                        },
+                        &EffectContext { targets: vec![Target::Permanent(pick)], ..ctx.clone() },
+                        events,
+                    );
+                }
+                self.run_effect(else_, ctx, events)
+            }
+
+            // The Gitrog — "put up to N land cards from your hand onto the
+            // battlefield tapped". The picker takes the cheapest lands first;
+            // any land is a land drop this effect doesn't count against.
+            Effect::PutLandsFromHandOntoBattlefieldTapped { count } => {
+                let n = self.evaluate_value(count, ctx).max(0) as u32;
+                if n == 0 {
+                    return Ok(());
+                }
+                let me = ctx.controller;
+                let candidates: Vec<(CardId, String)> = self.players[me]
+                    .hand
+                    .iter()
+                    .filter(|c| c.definition.card_types.contains(&crate::card::CardType::Land))
+                    .map(|c| (c.id, c.definition.name.to_string()))
+                    .collect();
+                if candidates.is_empty() {
+                    return Ok(());
+                }
+                let auto: Vec<CardId> =
+                    candidates.iter().map(|(id, _)| *id).take(n as usize).collect();
+                let Some(picked) = self.choose_up_to_cards(
+                    me,
+                    "Put which lands onto the battlefield tapped?".into(),
+                    ctx.source.unwrap_or(CardId(0)),
+                    candidates,
+                    n,
+                    effect,
+                    auto,
+                ) else {
+                    return Ok(());
+                };
+                let dest = ZoneDest::Battlefield {
+                    controller: crate::effect::PlayerRef::Seat(me),
+                    tapped: true,
+                };
+                for id in picked {
+                    if let Some(card) = Self::take_card(&mut self.players[me].hand, id) {
+                        self.place_card_in_dest(card, me, &dest, events);
+                        self.last_moved_cards.push(id);
+                    }
                 }
                 Ok(())
             }
@@ -14902,6 +15028,7 @@ impl GameState {
                     original_name: original.name.to_string(),
                     original: Some(original),
                     duration: crate::effect::Duration::Permanent,
+                    source: None,
                 });
                 Ok(())
             }
@@ -25477,6 +25604,7 @@ impl GameState {
                                 original_name: original.name.to_string(),
                                 original: Some(original),
                                 duration: crate::effect::Duration::Permanent,
+                                source: None,
                             });
                         }
                     }
@@ -25524,6 +25652,7 @@ impl GameState {
                         original_name: original.name.to_string(),
                         original: Some(original),
                         duration: *duration,
+                        source: ctx.source,
                     });
                 }
                 Ok(())
@@ -28700,6 +28829,7 @@ impl GameState {
                     original_name: original.name.to_string(),
                     original: Some(original),
                     duration: crate::effect::Duration::Permanent,
+                    source: None,
                 });
                 Ok(())
             }
@@ -30996,6 +31126,16 @@ impl GameState {
                     .iter()
                     .filter(|(b, _)| *b == src)
                     .map(|(_, a)| *a)
+                    .filter(|id| self.battlefield.iter().any(|c| c.id == *id))
+                    .map(EntityRef::Permanent)
+                    .collect()
+            }
+            Selector::CreaturesThatSaddledSource => {
+                let Some(src) = ctx.source else { return vec![] };
+                self.battlefield_find(src)
+                    .map(|c| c.saddled_by.clone())
+                    .unwrap_or_default()
+                    .into_iter()
                     .filter(|id| self.battlefield.iter().any(|c| c.id == *id))
                     .map(EntityRef::Permanent)
                     .collect()

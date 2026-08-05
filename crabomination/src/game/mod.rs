@@ -1755,6 +1755,10 @@ pub struct GameState {
     /// The sector picked by the `Effect::ChooseSector` currently resolving.
     #[serde(skip)]
     pub(crate) chosen_sector: Option<crate::card::Sector>,
+    /// Taii Wakeen — per-seat bonus added to noncombat damage a source that
+    /// seat controls deals this turn. Cleared at cleanup.
+    #[serde(default)]
+    pub(crate) noncombat_damage_bonus_this_turn: Vec<(usize, u32)>,
 }
 
 /// A pending control-reversion entry — see `GameState.temporary_control`.
@@ -1795,6 +1799,10 @@ pub struct TempCopy {
     pub(crate) original: Option<std::sync::Arc<crate::card::CardDefinition>>,
     pub(crate) original_name: String,
     pub(crate) duration: crate::effect::Duration,
+    /// The permanent whose continued attachment keeps the copy alive
+    /// (`Duration::WhileSourceAttached` — Assimilation Aegis).
+    #[serde(default)]
+    pub(crate) source: Option<CardId>,
 }
 
 impl TempCopy {
@@ -2086,6 +2094,7 @@ impl Clone for GameState {
             current_turn_is_extra: self.current_turn_is_extra,
             sector_block_lock_turn: self.sector_block_lock_turn,
             chosen_sector: self.chosen_sector,
+            noncombat_damage_bonus_this_turn: self.noncombat_damage_bonus_this_turn.clone(),
         }
     }
 }
@@ -2396,6 +2405,7 @@ impl GameState {
             current_turn_is_extra: false,
             sector_block_lock_turn: None,
             chosen_sector: None,
+            noncombat_damage_bonus_this_turn: Vec::new(),
         }
     }
 
@@ -18190,6 +18200,18 @@ impl GameState {
             self.players[caster].cards_exiled_this_turn =
                 self.players[caster].cards_exiled_this_turn.saturating_add(1);
             self.exile.push(card);
+            return Ok(events);
+        }
+        // CR 702.170 — Lilah, Undefeated Slickshot: exile the resolving spell
+        // plotted instead of routing it to the graveyard.
+        if card.plot_on_resolve {
+            let cid = card.id;
+            self.players[caster].cards_exiled_this_turn =
+                self.players[caster].cards_exiled_this_turn.saturating_add(1);
+            self.exile.push(card);
+            self.plotted_cards.insert(cid);
+            self.plotted_this_turn.insert(cid);
+            self.fire_becomes_plotted_triggers(cid, caster);
             return Ok(events);
         }
         // Feather, the Redeemed — exile the resolving I/S instead of the

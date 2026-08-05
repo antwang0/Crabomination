@@ -299,6 +299,23 @@ impl GameState {
                     .count() as i32
             }
             Value::OpponentCount => self.opponents_of(ctx.controller).len() as i32,
+            // CR 700.2 — how many modes the resolved spell chose. A plain
+            // `ChooseMode` spell records one; modal-cast spells record the set.
+            Value::ModesChosenOf(sel) => self
+                .resolve_selector(sel, ctx)
+                .into_iter()
+                .find_map(|e| e.as_card_id())
+                .and_then(|cid| {
+                    self.stack.iter().find_map(|si| match si {
+                        crate::game::types::StackItem::Spell { card, mode, .. }
+                            if card.id == cid =>
+                        {
+                            Some(card.modes_chosen.len().max(usize::from(mode.is_some())) as i32)
+                        }
+                        _ => None,
+                    })
+                })
+                .unwrap_or(0),
             Value::LifeGainedThisTurn(p) => self.resolve_player(p, ctx).map(|p| self.players[p].life_gained_this_turn as i32).unwrap_or(0),
             // Max over the resolved set, so `EachOpponent` reads "the most
             // life any opponent lost this turn" (Spinerock Knoll).
@@ -3420,6 +3437,9 @@ impl GameState {
                     }),
                     // Wash Away's base mode: a stack spell cast from
                     // anywhere but its owner's hand (CR 702.148 bracket).
+                    R::SaddledSourceThisTurn => source.is_some_and(|s| {
+                        self.battlefield_find(s).is_some_and(|m| m.saddled_by.contains(cid))
+                    }),
                     R::SpellNotCastFromHand => self.stack.iter().any(|si| matches!(
                         si,
                         StackItem::Spell { card: c, .. } if c.id == card.id && !c.cast_from_hand
@@ -4311,7 +4331,8 @@ impl GameState {
             | R::EquippedByAtLeast(_) | R::IsModified | R::DealtDamageThisTurn
             | R::DamagedBySourceThisTurn | R::DealtDamageToSourceThisTurn
             | R::BlockingOrBlockedBySource
-            | R::PlayerDamagedBySourceThisTurn => false,
+            | R::PlayerDamagedBySourceThisTurn
+            | R::SaddledSourceThisTurn => false,
         }
     }
 }

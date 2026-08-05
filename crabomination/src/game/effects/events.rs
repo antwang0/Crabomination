@@ -61,6 +61,24 @@ pub(crate) fn event_matches_spec(
             EventKind::PlayerDealtNoncombatDamage,
             GameEvent::DamageDealt { to_player: Some(_), combat: false, .. },
         ) => true,
+        // Taii Wakeen — a source the watcher controls dealt exactly lethal
+        // noncombat damage to a creature (CR 120: measured against the
+        // creature's computed toughness at damage time).
+        (
+            EventKind::YourSourceDealtNoncombatDamageEqualToToughness,
+            GameEvent::DamageDealt {
+                amount,
+                to_card: Some(victim),
+                combat: false,
+                from_controller: Some(dealer),
+                ..
+            },
+        ) => {
+            *dealer == source.controller
+                && state
+                    .computed_permanent(*victim)
+                    .is_some_and(|cp| cp.toughness > 0 && cp.toughness as u32 == *amount)
+        }
         // Any damage to a player, combat or not (Quest for Pure Flame).
         (EventKind::PlayerDamaged, GameEvent::DamageDealt { to_player: Some(_), .. }) => true,
         (EventKind::LifeGained, GameEvent::LifeGained { .. }) => true,

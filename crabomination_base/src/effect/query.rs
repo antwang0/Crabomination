@@ -308,6 +308,10 @@ impl Effect {
             | Effect::SearchEachBasicLandType { .. }
             | Effect::SearchAnyNumber { .. }
             | Effect::CounterOnMatchingOfEachColor { .. }
+            | Effect::YourNoncombatDamageBonusThisTurn { .. }
+            | Effect::PlotSpellOnResolve { .. }
+            | Effect::PutLandsFromHandOntoBattlefieldTapped { .. }
+            | Effect::MayCastPermanentFromHandFree { .. }
             | Effect::ExileTopAndMayCastUpToMv { .. }
             | Effect::PreventNextDamageToYouFromChosenSourceWithRider { .. }
             | Effect::SacrificeSourceUnlessReturn { .. }

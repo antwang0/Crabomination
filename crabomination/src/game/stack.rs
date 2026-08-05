@@ -3595,6 +3595,7 @@ impl GameState {
         self.artifact_damage_to_players_this_turn.clear();
         self.combat_damage_redirect_this_turn.clear();
         self.doubled_damage_sources_this_turn.clear();
+        self.noncombat_damage_bonus_this_turn.clear();
         self.damaged_creatures_die_this_turn = false;
         self.creature_deaths_drain_toughness_this_turn = false;
         self.no_search_this_turn = false;
@@ -4006,6 +4007,56 @@ impl GameState {
                 e.duration != crate::game::layers::EffectDuration::WhileSourceTapped
                     || still_tapped.contains(&e.source)
             });
+        }
+
+        // The continuous-effect side of the same clause: an effect installed
+        // `WhileSourceAttached` lapses once its source stops being attached.
+        if self
+            .continuous_effects
+            .iter()
+            .any(|e| e.duration == crate::game::layers::EffectDuration::WhileSourceAttached)
+        {
+            let attached: std::collections::HashSet<CardId> = self
+                .battlefield
+                .iter()
+                .filter(|c| c.attached_to.is_some())
+                .map(|c| c.id)
+                .collect();
+            self.continuous_effects.retain(|e| {
+                e.duration != crate::game::layers::EffectDuration::WhileSourceAttached
+                    || attached.contains(&e.source)
+            });
+        }
+        // CR 611.2c — "for as long as this remains attached to it"
+        // (Assimilation Aegis): the copy ends the moment the Equipment
+        // unattaches or leaves.
+        if self
+            .temporary_copies
+            .iter()
+            .any(|tc| tc.duration == crate::effect::Duration::WhileSourceAttached)
+        {
+            let lapsed: Vec<CardId> = self
+                .temporary_copies
+                .iter()
+                .filter(|tc| {
+                    tc.duration == crate::effect::Duration::WhileSourceAttached
+                        && !tc.source.is_some_and(|s| {
+                            self.battlefield_find(s)
+                                .is_some_and(|e| e.attached_to == Some(tc.card))
+                        })
+                })
+                .map(|tc| tc.card)
+                .collect();
+            for card in lapsed {
+                if let Some(pos) = self.temporary_copies.iter().position(|tc| tc.card == card)
+                    && let Some(def) = self.temporary_copies[pos].original_def()
+                {
+                    self.temporary_copies.remove(pos);
+                    if let Some(c) = self.battlefield.iter_mut().find(|c| c.id == card) {
+                        c.definition = def;
+                    }
+                }
+            }
         }
 
         // CR 603.8 state trigger — "When you control no other [filter],

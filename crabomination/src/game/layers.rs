@@ -53,6 +53,9 @@ pub enum EffectDuration {
     /// battlefield (Hisoka's Guard). Swept alongside the `while_source_tapped`
     /// control steals.
     WhileSourceTapped,
+    /// CR 611.2c — lasts while the source stays attached to a permanent
+    /// (Assimilation Aegis). Swept alongside `WhileSourceTapped`.
+    WhileSourceAttached,
     /// Indefinite (e.g. counters, "for as long as" effects).
     Indefinite,
 }

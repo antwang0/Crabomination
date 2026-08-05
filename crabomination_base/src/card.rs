@@ -2142,6 +2142,9 @@ pub enum SelectionRequirement {
     /// A stack spell that was NOT cast from its owner's hand (Wash Away's
     /// bracketed base mode — flashback/graveyard/exile casts qualify).
     SpellNotCastFromHand,
+    /// CR 702.171 — this creature saddled the evaluating source this turn
+    /// (`CardInstance.saddled_by`; The Gitrog's sacrifice filter).
+    SaddledSourceThisTurn,
     ManaValueAtMost(u32),
     /// MV at most the number of battlefield permanents matching the inner
     /// filter that the evaluating player controls (Spellstutter Sprite's
@@ -5370,6 +5373,10 @@ pub struct CardInstance {
     /// its return to the caster's hand at the next end step. Not serialized;
     /// cleared off the stack.
     pub feather_exile_return: bool,
+    /// Lilah, Undefeated Slickshot — when set on a stacked instant/sorcery, the
+    /// resolver exiles it plotted (CR 702.170) instead of routing it to the
+    /// graveyard. Not serialized; cleared off the stack.
+    pub plot_on_resolve: bool,
     /// CR 702.187 — true if this card was cast from a graveyard for its Mayhem
     /// cost. Read by `Predicate::SpellWasMayhem` so "if this spell's mayhem cost
     /// was paid" riders (Sandman's Quicksand) can branch. Cleared off the stack.
@@ -5868,6 +5875,7 @@ impl CardInstance {
             entered_by_cast: false,
             cast_via_flashback: false,
             feather_exile_return: false,
+            plot_on_resolve: false,
             cast_via_mayhem: false,
             cast_via_waterbend: false,
             cast_collected_evidence: false,
