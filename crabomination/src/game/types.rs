@@ -788,6 +788,10 @@ pub enum DelayedKind {
     /// "When you cast your next spell this turn, …" (CR 603.7e). Fires once
     /// on the controller's next spell cast, with the cast spell bound as the
     /// trigger source; expires at cleanup if no spell was cast. Codie.
+    /// CR 603.4 — "When you next activate an exhaust ability that isn't a mana
+    /// ability this turn, [body]" (Pit Automaton). Consumed by the first such
+    /// activation; expires at cleanup.
+    YourNextExhaustActivationThisTurn,
     YourNextSpellCastThisTurn,
     /// "When you next cast an instant or sorcery spell this turn, copy that
     /// spell" (Mercurial Spelldancer). Non-matching casts leave it armed.

@@ -24493,6 +24493,20 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::OnYourNextExhaustActivationThisTurn { body } => {
+                self.delayed_triggers.push(DelayedTrigger {
+                    controller: ctx.controller,
+                    source: ctx.source.unwrap_or(crate::card::CardId(0)),
+                    kind: crate::game::types::DelayedKind::YourNextExhaustActivationThisTurn,
+                    effect: (**body).clone(),
+                    target: None,
+                    bound_token: None,
+                    bound_subject: None,
+                    fires_once: true,
+                });
+                Ok(())
+            }
+
             Effect::OnYourNextSpellCastThisTurn { body } => {
                 let source = ctx.source.unwrap_or(crate::card::CardId(0));
                 self.delayed_triggers.push(DelayedTrigger {

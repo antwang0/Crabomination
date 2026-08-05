@@ -6363,6 +6363,8 @@ static DECKS: &[Factory] = &[
     super::decks::ketramose_the_new_dawn,
     super::decks::captain_howler_sea_scourge,
     super::decks::the_aetherspark,
+    super::decks::webstrike_elite,
+    super::decks::pit_automaton,
     super::decks::gossips_talent,
     super::decks::hunters_talent,
     super::decks::scavengers_talent,

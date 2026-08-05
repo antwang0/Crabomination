@@ -727,6 +727,7 @@ impl Effect {
             Effect::WithSacrificedPt { body, .. } => body.requires_target(),
             Effect::WithTappedPower { body, .. } => body.requires_target(),
             Effect::OnYourNextSpellCastThisTurn { body }
+            | Effect::OnYourNextExhaustActivationThisTurn { body }
             | Effect::OnYourNextInstantSorceryThisTurn { body }
             | Effect::OnYourNextNamedSpellThisTurn { body } => body.requires_target(),
             Effect::SearchSplitWithOpponent { .. } => false,
@@ -1739,6 +1740,7 @@ impl Effect {
             Effect::WithSacrificedPt { body, .. }
             | Effect::WithTappedPower { body, .. }
             | Effect::OnYourNextSpellCastThisTurn { body }
+            | Effect::OnYourNextExhaustActivationThisTurn { body }
             | Effect::OnYourNextInstantSorceryThisTurn { body }
             | Effect::OnYourNextNamedSpellThisTurn { body }
             | Effect::Repeat { body, .. }
@@ -3277,6 +3279,7 @@ impl Effect {
                 Effect::WithSacrificedPt { body, .. }
                 | Effect::WithTappedPower { body, .. }
                 | Effect::OnYourNextSpellCastThisTurn { body }
+                | Effect::OnYourNextExhaustActivationThisTurn { body }
                 | Effect::OnYourNextInstantSorceryThisTurn { body }
                 | Effect::OnYourNextNamedSpellThisTurn { body }
                 | Effect::OptionalTargets { body, .. }

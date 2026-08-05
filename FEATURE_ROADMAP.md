@@ -2560,8 +2560,8 @@ Each a small targeted feature; sweep batch by batch.
 
 ## Recently closed (this push)
 
-- **Aetherdrift down to 4** — `set_gaps.py dft` 26 → 4 (`decks::recent326`,
-  22 cards): the legends, the Vehicles, the exhaust/speed payoffs and both
+- **Aetherdrift down to 2** — `set_gaps.py dft` 26 → 2 (`decks::recent326`,
+  24 cards): the legends, the Vehicles, the exhaust/speed payoffs and both
   planeswalkers. New primitives: `Keyword::{GraveyardCast (cast from your
   graveyard for the printed cost plus the card's `flashback_additional_cost`
   riders, with no CR 702.34d exile tail — Wickerfolk Indomitable),
@@ -2571,8 +2571,11 @@ Each a small targeted feature; sweep batch by batch.
   WhenTargetDealsCombatDamageToPlayerThisTurn}`,
   `StaticEffect::{NamedSourcesActivationTax, MatchingAreChosenTypeToo}`,
   `SelectionRequirement::HasNoAbilities`,
-  `Predicate::CardsInExileAtLeast`, `DelayedKind::
-  SourceDealsCombatDamageToPlayerThisTurn`, and
+  `Predicate::CardsInExileAtLeast`, `DelayedKind::{
+  SourceDealsCombatDamageToPlayerThisTurn,
+  YourNextExhaustActivationThisTurn}` (+ its
+  `Effect::OnYourNextExhaustActivationThisTurn` installer — Pit Automaton
+  copies the next exhaust ability you activate), and
   `GameEvent`/`EventKind::CardExiledFromPlayOrGraveyard` (CR 400.7's origin
   distinction, emitted from `move_card_to`'s battlefield and graveyard
   branches — Ketramose). Correctness: CR 400.7 — a permanent that leaves the

@@ -104,18 +104,11 @@ Items are grouped by area and roughly ordered by impact within each group.
   Cursed Recording (delayed "when you next cast an instant or sorcery, copy
   it"). ⏳
 
-## Aetherdrift (DFT) — 4 gaps
+## Aetherdrift (DFT) — 2 gaps
 
-`set_gaps.py dft` is at 4 after `decks::recent326` (22 cards). Each of the
-remainder is blocked on one primitive:
+`set_gaps.py dft` is at 2 after `decks::recent326` (24 cards). Both remaining
+are blocked on one primitive:
 
-- **Webstrike Elite** — a cycling trigger whose target filter reads the
-  cycling `{X}`. `Value::TriggerEventAmount` already carries it; what's
-  missing is a `SelectionRequirement::ManaValueExactlyTriggerAmount` and the
-  resolve pass for it on the trigger's target walk. ⏳
-- **Pit Automaton** — "when you next activate an exhaust ability that isn't a
-  mana ability this turn, copy it": a delayed watcher on
-  `EventKind::ExhaustAbilityActivated` that copies the ability on the stack. ⏳
 - **Mimeoplasm, Revered One** — as-enters exile of up to X graveyard creature
   cards with the count feeding an enters-with-counters spec, plus "becomes a
   copy of a card exiled with it, except 0/0 and keeps this ability". ⏳

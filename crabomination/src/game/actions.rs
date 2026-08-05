@@ -13892,6 +13892,26 @@ impl GameState {
         if ability.once_per_turn && (source_in_hand || source_in_command) {
             self.triggered_once_per_turn_used.insert((card_id, ability_index));
         }
+        // CR 603.4 — "when you next activate an exhaust ability that isn't a
+        // mana ability this turn" (Pit Automaton). Claimed here so the
+        // activation consumes exactly one watcher; pushed after the ability
+        // itself lands on the stack so the copy resolves first.
+        let exhaust_watchers: Vec<crate::game::types::DelayedTrigger> =
+            if ability.exhaust && !is_mana_ability(&ability.effect) {
+                let (watchers, rest): (Vec<_>, Vec<_>) = std::mem::take(&mut self.delayed_triggers)
+                    .into_iter()
+                    .partition(|dt| {
+                        dt.controller == p
+                            && matches!(
+                                dt.kind,
+                                crate::game::types::DelayedKind::YourNextExhaustActivationThisTurn
+                            )
+                    });
+                self.delayed_triggers = rest;
+                watchers
+            } else {
+                Vec::new()
+            };
         // CR 702.177 — record the exhaust activation (never cleared this game).
         if (ability.exhaust || ability.activate_once)
             && !source_in_gy
@@ -14611,6 +14631,15 @@ impl GameState {
                     .build(),
             );
             self.randomize_single_target_on_stack();
+            // Pit Automaton — the claimed exhaust watchers go above the
+            // ability they copy, so each resolves before its original.
+            for dt in &exhaust_watchers {
+                self.stack.push(
+                    TriggerPush::new(dt.source, dt.controller, dt.effect.clone())
+                        .trigger_source(Some(crate::game::effects::EntityRef::Permanent(card_id)))
+                        .build(),
+                );
+            }
             // CR 702.21: Ward also fires on activated abilities targeting
             // an opp's Ward permanent (the "or ability" half of 702.21a).
             // Push Ward triggers above the just-queued ability so they

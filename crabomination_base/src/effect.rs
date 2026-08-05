@@ -7573,6 +7573,12 @@ pub enum Effect {
     OnYourNextSpellCastThisTurn {
         body: Box<Effect>,
     },
+    /// CR 603.4 — one-shot "when you next activate an exhaust ability that
+    /// isn't a mana ability this turn, [body]" (Pit Automaton). Expires at
+    /// cleanup.
+    OnYourNextExhaustActivationThisTurn {
+        body: Box<Effect>,
+    },
     /// One-shot "when you next cast an instant or sorcery spell this turn,
     /// [body]" — other casts leave it armed (Mercurial Spelldancer's copy).
     OnYourNextInstantSorceryThisTurn {

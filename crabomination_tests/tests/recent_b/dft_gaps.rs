@@ -545,3 +545,40 @@ fn the_aetherspark_equips_then_grows_on_damage() {
         "a 3-power hit adds three loyalty"
     );
 }
+
+/// Cycling Webstrike Elite for X blows up an artifact of exactly mana value X.
+#[test]
+fn webstrike_elite_cycles_into_an_mv_x_blowup() {
+    let mut g = main_phase();
+    let two_drop = g.add_card_to_battlefield(1, catalog::skyseers_chariot());
+    let six_drop = g.add_card_to_battlefield(1, catalog::radiant_lotus());
+    g.add_card_to_library(0, catalog::mountain());
+    let elite = g.add_card_to_hand(0, catalog::webstrike_elite());
+    flood(&mut g, 0);
+    g.perform_action(GameAction::Cycle { card_id: elite, x_value: Some(2) }).expect("cycle");
+    drain_stack(&mut g);
+    g.check_state_based_actions();
+    assert!(!g.battlefield.iter().any(|c| c.id == two_drop), "the two-drop artifact died");
+    assert!(g.battlefield.iter().any(|c| c.id == six_drop), "the six-drop artifact did not");
+}
+
+/// Pit Automaton copies the next exhaust ability you activate.
+#[test]
+fn pit_automaton_copies_your_next_exhaust_ability() {
+    let mut g = main_phase();
+    let automaton = g.add_card_to_battlefield(0, catalog::pit_automaton());
+    g.clear_sickness(automaton);
+    activate(&mut g, automaton, 1, None).expect("arm the copy");
+    let sita = g.add_card_to_battlefield(0, catalog::sita_varma_masked_racer());
+    g.clear_sickness(sita);
+    g.decider = Box::new(ScriptedDecider::new(vec![
+        DecisionAnswer::Bool(false),
+        DecisionAnswer::Bool(false),
+    ]));
+    activate(&mut g, sita, 0, Some(2)).expect("exhaust");
+    assert_eq!(
+        g.battlefield_find(sita).unwrap().counter_count(CounterType::PlusOnePlusOne),
+        4,
+        "the ability resolved twice"
+    );
+}

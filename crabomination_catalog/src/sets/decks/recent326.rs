@@ -873,3 +873,63 @@ pub fn the_aetherspark() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Webstrike Elite — {G}{G} 3/3 reach. Cycle it for {X}{G}{G} to blow up an
+/// artifact or enchantment with mana value X.
+pub fn webstrike_elite() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Reach, Keyword::Cycling(cost(&[x(), g(), g()]))],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CardCycled, EventScope::SelfSource),
+            effect: Effect::OptionalTargets {
+                min: 0,
+                body: Box::new(Effect::Destroy {
+                    what: Selector::TargetFiltered {
+                        slot: 0,
+                        filter: R::Artifact
+                            .or(R::Enchantment)
+                            .and(R::ManaValueEqualsTriggerAmount),
+                    },
+                }),
+            },
+        }],
+        ..creature(
+            "Webstrike Elite",
+            cost(&[g(), g()]),
+            vec![CreatureType::Insect, CreatureType::Archer],
+            3,
+            3,
+        )
+    }
+}
+
+/// Pit Automaton — {2} 0/4 defender. Taps for ability-only mana; {2},{T} arms
+/// a copy of your next exhaust activation.
+pub fn pit_automaton() -> CardDefinition {
+    CardDefinition {
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        keywords: vec![Keyword::Defender],
+        activated_abilities: vec![
+            ActivatedAbility {
+                tap_cost: true,
+                effect: Effect::AddMana {
+                    who: PlayerRef::You,
+                    pool: ManaPayload::Restricted(
+                        Box::new(ManaPayload::Colorless(Value::Const(2))),
+                        SpendRestriction::AbilitiesOnly,
+                    ),
+                },
+                ..Default::default()
+            },
+            ActivatedAbility {
+                mana_cost: cost(&[generic(2)]),
+                tap_cost: true,
+                effect: Effect::OnYourNextExhaustActivationThisTurn {
+                    body: Box::new(Effect::CopyActivatedAbilityMayChooseTargets),
+                },
+                ..Default::default()
+            },
+        ],
+        ..creature("Pit Automaton", cost(&[generic(2)]), vec![CreatureType::Construct], 0, 4)
+    }
+}
