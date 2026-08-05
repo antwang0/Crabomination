@@ -704,6 +704,11 @@ pub struct PlayerView {
     /// re-checking the threshold.
     #[serde(default)]
     pub at_max_speed: bool,
+    /// Bonus added to noncombat damage this player's sources deal for the rest
+    /// of the turn (Taii Wakeen's {X}). Surfaced so the HUD can show that burn
+    /// is running hot; `0` outside such a turn.
+    #[serde(default)]
+    pub noncombat_damage_bonus: u32,
     /// CR 122 rad counters this player has — each mills a card and may add a
     /// poison counter at the start of their turn. Surfaced for a HUD chip.
     #[serde(default)]

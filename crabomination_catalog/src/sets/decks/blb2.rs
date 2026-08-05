@@ -9,8 +9,8 @@ use crate::card::{
 };
 use crate::effect::shortcut::{etb, on_attack, target_filtered};
 use crate::effect::{
-    Duration, Effect, EventKind, EventScope, EventSpec, ManaPayload, PlayerRef, PlayerStaticTarget,
-    Predicate, Selector, ZoneDest,
+    Effect, EventKind, EventScope, EventSpec, ManaPayload, PlayerRef, PlayerStaticTarget, Predicate,
+    Selector, ZoneDest,
 };
 use crate::game::TurnStep;
 use crate::mana::{Color, ManaCost, b, cost, g, generic, r, u, w};

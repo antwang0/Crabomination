@@ -81,6 +81,8 @@ fn stat_chip_style(kind: StatChipKind) -> (Color, Color) {
         // Rad counters (CR 122) — a Phyrexian hazard green; a slow mill/poison
         // clock the player wants to keep an eye on.
         StatChipKind::Rad => (Color::srgba(0.14, 0.32, 0.12, 1.0), theme::TEXT_PRIMARY),
+        // Noncombat damage bonus — a hot ember: burn is bigger this turn.
+        StatChipKind::DamageBonus => (Color::srgba(0.45, 0.16, 0.06, 1.0), theme::TEXT_PRIMARY),
         // Draw cap (CR 121.2b) — a muted warning amber: drawing is locked.
         StatChipKind::DrawCap => (Color::srgba(0.36, 0.24, 0.10, 1.0), theme::TEXT_PRIMARY),
         // Storm/magecraft count (spells cast this turn) — an Izzet ember
@@ -194,6 +196,9 @@ pub(super) enum StatChipKind {
     Energy,
     Experience,
     Rad,
+    /// Taii Wakeen's {X} — this seat's noncombat damage is running hot for the
+    /// rest of the turn.
+    DamageBonus,
     DrawCap,
     Storm,
     Monarch,
@@ -878,6 +883,16 @@ pub fn update_player_stats_chips(
         // poison-mill clock).
         if p.rad_counters > 0 {
             spawn_stat_chip(row, &ui_fonts, StatChipKind::Rad, format!("☢ {}", p.rad_counters));
+        }
+        // A turn-scoped noncombat damage bump (Taii Wakeen) — it changes how
+        // every burn spell reads, so it belongs on the HUD.
+        if p.noncombat_damage_bonus > 0 {
+            spawn_stat_chip(
+                row,
+                &ui_fonts,
+                StatChipKind::DamageBonus,
+                format!("🔥 +{}", p.noncombat_damage_bonus),
+            );
         }
         // CR 702.26 phased-out permanents — named when few, counted when many.
         if !p.phased_out.is_empty() {

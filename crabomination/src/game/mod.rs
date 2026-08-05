@@ -5270,6 +5270,16 @@ impl GameState {
     /// `HalveDamageToYou` halves events hitting the controller's own side,
     /// CR 614.5), and the source-scoped additive bonus (Torbran —
     /// `AddDamageToOpponents`, applied before the multipliers).
+    /// Total turn-scoped bonus `seat`'s sources add to noncombat damage
+    /// (Taii Wakeen's {X}). Mirrored in the client view.
+    pub fn noncombat_damage_bonus_of_seat(&self, seat: usize) -> u32 {
+        self.noncombat_damage_bonus_this_turn
+            .iter()
+            .filter(|(s, _)| *s == seat)
+            .map(|(_, n)| *n)
+            .sum()
+    }
+
     pub fn scale_damage_to(
         &self,
         source: Option<CardId>,

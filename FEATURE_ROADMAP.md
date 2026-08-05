@@ -2562,6 +2562,7 @@ Each a small targeted feature; sweep batch by batch.
 
 ## Recently closed (this push)
 
+<<<<<<< HEAD
 - **Aetherdrift is closed** — `set_gaps.py dft` 2 → 0. Gonti, Night Minister
   (`Effect::ExileTopFaceDownGrantPlay` — the library owner and the may-play
   grantee are different seats; `Predicate::{PlayerIsOpponent,
@@ -2592,6 +2593,31 @@ Each a small targeted feature; sweep batch by batch.
   level-gated statics reach the cost-reduction scan. CR 603.7e —
   `DelayedTrigger.expires_after_turn` gives any delayed watcher an "until the
   end of your next turn" window. Tests in `core_rules/cr_recent79`.
+=======
+- **Tarkir: Dragonstorm and Outlaws of Thunder Junction closed** —
+  `set_gaps.py tdm otj` 6 + 9 → 0 (`decks::tdm2`, `decks::otj2`, minus Eriette;
+  see TODO.md), plus a Bloomburrow/Duskmourn batch (`decks::blb2`, 8 cards).
+  New primitives: `Effect::{SearchAnyNumber, CounterOnMatchingOfEachColor,
+  ExileTopAndMayCastUpToMv, PreventNextDamageToYouFromChosenSourceWithRider,
+  YourNoncombatDamageBonusThisTurn, PlotSpellOnResolve,
+  MayCastPermanentFromHandFree, PutLandsFromHandOntoBattlefieldTapped}`,
+  `Value::{OpponentCount, ModesChosenOf}`,
+  `Selector::CreaturesThatSaddledSource`,
+  `SelectionRequirement::SaddledSourceThisTurn`,
+  `Duration::WhileSourceAttached` (swept for temporary copies *and* continuous
+  effects), `Predicate::SamePlayer`, `PlayerStaticTarget::EnchantedPlayer`,
+  `EventKind::YourSourceDealtNoncombatDamageEqualToToughness`, and a
+  `PreventedSource` that can be scoped to one seat and carry a "when damage is
+  prevented this way" rider. Correctness: `Selector::CardExiledWithSource` sees
+  CR 603.6e return links; `Effect::OptionalTargets` forwards
+  `accepts_player_target` (an "up to one target permanent" slot no longer
+  auto-picks a player); `Effect::GrantSuspend` reaches a spell on the stack;
+  and a **permanent** spell cast with its Gift promised now resolves its
+  `gifted_effect` as it enters (CR 702.165 — previously instants/sorceries
+  only). Server: `PlayerView.noncombat_damage_bonus`; Client: a matching HUD
+  chip. Tests in `classic_sets/tdm2`, `recent_b/{otj_gaps2, blb2}`,
+  `core_rules/cr_recent79`.
+>>>>>>> 89d70864 (CR conformance tests, HUD damage-bonus chip, tracker updates)
 
 - **Tarkir: Dragonstorm down to 6** — `set_gaps.py tdm` 10 → 6 (`decks::tdm`):
   Jeskai Revelation, Sidisi Regent of the Mire (the

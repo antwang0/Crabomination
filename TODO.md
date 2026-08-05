@@ -3,6 +3,39 @@
 Improvement opportunities for the engine, client, and tooling.
 Items are grouped by area and roughly ordered by impact within each group.
 
+## Noticed this run (TDM + OTJ closed, BLB/DSK batch)
+
+- **The Aura's identity isn't reachable from an attach trigger.**
+  `EventKind::AuraAttached` binds the *host* as the subject and hardcodes
+  "a creature you control" as the host gate, so Eriette, the Beguiler
+  ("whenever an Aura you control becomes attached to a nonland permanent an
+  opponent controls with mana value ≤ that Aura's") can't be written — it needs
+  both the Aura and the host in the trigger's context. Left out of the OTJ
+  batch for that reason. ⏳
+- **BLB's pawprint cycle needs a paid-mode primitive.** The five Seasons
+  ("choose up to five {P} worth of modes; you may choose the same mode more
+  than once") are a Spree-shaped cost-per-mode with repeats. `ChooseModesCast`
+  has the repeats half; the per-mode price tag is missing. ⏳
+- **Cards deferred from the BLB/DSK sweep, one primitive each.** Vren, the
+  Relentless (a per-turn tally of creatures exiled from under each opponent's
+  control, plus a token whose P/T counts other Rats), Ygra, Eater of All
+  ("other creatures are Food artifacts and have …"), Marvin, Murderous Mimic
+  ("has all activated abilities of creatures you control"), The Mindskinner
+  (damage-to-opponents replaced by a mill), Portent of Calamity (reveal X, one
+  exile per card type), Wishing Well (cast from your graveyard gated on a
+  counter count), Eluge (flood counters granting Island-ness plus a per-flooded
+  -land cost reduction), Dragonhawk (a delayed "for each of those still
+  exiled"). ⏳
+- **`Selector::CardExiledWithSource` now spans both linkage styles.** It reads
+  the plain `exiled_with` stamp *and* the CR 603.6e `exiled_by` return link. If
+  a card ever wants only one of the two, the selector needs splitting. ⏳
+- **`MayCastPermanentFromHandFree`'s bot policy is "take the most expensive".**
+  Kellan, the Kid's free cast auto-picks the highest mana value in hand, which
+  is right for a bot but ignores board state. ⏳
+- **`Effect::CounterOnMatchingOfEachColor` spreads greedily.** Call the Spirit
+  Dragons' auto-pick prefers a Dragon that hasn't taken a counter yet, which
+  maximises the five-recipient win check but isn't a real evaluation. ⏳
+
 ## Noticed this run (DFT closed to 2, TDM to 6 / CR 400.7)
 
 - **`install-client-deps.sh` doesn't fire in scheduled sessions.** Confirmed

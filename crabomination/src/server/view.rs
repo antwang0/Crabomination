@@ -716,6 +716,7 @@ fn project_player(
         experience: player.experience,
         speed: player.speed,
         at_max_speed: player.speed >= 4,
+        noncombat_damage_bonus: state.noncombat_damage_bonus_of_seat(player_seat),
         rad_counters: player.rad_counters,
         mana_pool: player.mana_pool.clone(),
         kept_mana: player.kept_mana_this_turn.total(),

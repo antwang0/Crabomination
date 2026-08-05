@@ -189,6 +189,7 @@ mod tests {
                 phased_out: vec![],
                 energy: 0,
                 experience: 0,
+                noncombat_damage_bonus: 0,
                 rad_counters: 0,
                 mana_pool: ManaPool::default(),
                 kept_mana: 0,
