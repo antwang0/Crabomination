@@ -285,3 +285,74 @@ fn portent_of_calamity_exiles_one_per_card_type() {
     assert_eq!(g.players[0].graveyard.iter().filter(|c| c.definition.is_creature()).count(), 1);
     assert_eq!(g.players[0].hand.len(), 3, "the exiled cards end up in hand");
 }
+
+/// Niko blinks a creature and every Shard becomes a copy of it.
+#[test]
+fn niko_turns_shards_into_copies_of_the_blinked_creature() {
+    let mut g = main_phase();
+    let niko = g.add_card_to_hand(0, catalog::niko_light_of_hope());
+    flood_mana(&mut g, 0);
+    g.perform_action(GameAction::CastSpell {
+        card_id: niko,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast Niko");
+    drain_stack(&mut g);
+    g.battlefield_find_mut(niko).unwrap().summoning_sick = false;
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: niko,
+        ability_index: 0,
+        target: Some(Target::Permanent(bear)),
+        additional_targets: vec![],
+        x_value: None,
+        mode: None,
+    })
+    .expect("blink");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_none(), "the creature is exiled");
+    assert_eq!(
+        g.battlefield
+            .iter()
+            .filter(|c| c.controller == 0 && c.definition.name == "Grizzly Bears")
+            .count(),
+        2,
+        "both Shards copied it"
+    );
+}
+
+/// Wishing Well's coin counter sets the mana value it can free-cast.
+#[test]
+fn wishing_well_free_casts_at_the_coin_count() {
+    let mut g = main_phase();
+    let well = g.add_card_to_battlefield(0, catalog::wishing_well());
+    g.battlefield_find_mut(well).unwrap().summoning_sick = false;
+    // Lightning Bolt is mana value 1 — exactly one coin counter.
+    g.add_card_to_graveyard(0, catalog::lightning_bolt());
+    g.decider = Box::new(ScriptedDecider::new(vec![DecisionAnswer::Bool(true)]));
+    let life = g.players[1].life;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: well,
+        ability_index: 0,
+        target: None,
+        additional_targets: vec![],
+        x_value: None,
+        mode: None,
+    })
+    .expect("activate");
+    drain_stack(&mut g);
+    assert_eq!(
+        g.battlefield_find(well).unwrap().counter_count(CounterType::Coin),
+        1,
+        "a coin counter went on"
+    );
+    assert_eq!(g.players[1].life, life - 3, "the free Bolt resolved");
+    assert!(
+        g.exile.iter().any(|c| c.definition.name == "Lightning Bolt"),
+        "it was exiled instead of returning to the graveyard"
+    );
+}
+

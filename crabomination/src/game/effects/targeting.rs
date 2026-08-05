@@ -445,7 +445,20 @@ impl GameState {
         controller: usize,
         mode: Option<usize>,
     ) -> (Option<Target>, Vec<Target>) {
-        self.auto_targets_for_effect_all_slots_kicked(eff, controller, mode, false)
+        self.auto_targets_for_effect_all_slots_kicked(eff, controller, mode, false, None)
+    }
+
+    /// Source-aware variant: slot filters that read the ability's source
+    /// (`ManaValueEqualsCountersOnSource` — Wishing Well's coin count) need it
+    /// to resolve. Reflexive "when you do" bodies pass their `ctx.source`.
+    pub fn auto_targets_for_effect_all_slots_sourced(
+        &self,
+        eff: &Effect,
+        controller: usize,
+        mode: Option<usize>,
+        source: Option<CardId>,
+    ) -> (Option<Target>, Vec<Target>) {
+        self.auto_targets_for_effect_all_slots_kicked(eff, controller, mode, false, source)
     }
 
     /// Kicker-aware variant (CR 702.32): slot filters resolve to the
@@ -458,6 +471,7 @@ impl GameState {
         controller: usize,
         mode: Option<usize>,
         kicked: bool,
+        source: Option<CardId>,
     ) -> (Option<Target>, Vec<Target>) {
         // Slot 0 — if it carries its own numbered `TargetFiltered` filter
         // (Rabid Bite's friendly-creature power source lives in slot 0,
@@ -488,7 +502,7 @@ impl GameState {
                 .copied()
                 .unwrap_or((controller + 1) % self.players.len());
             let is_legal = |t: &Target| -> bool {
-                self.evaluate_requirement_static(&req, t, controller, None)
+                self.evaluate_requirement_static(&req, t, controller, source)
                     && self.check_target_legality(t, controller).is_ok()
             };
             let pick = {

@@ -498,7 +498,7 @@ impl GameState {
             let (target, additional_targets) = if *needs_target {
                 match effect {
                     Some(eff) => {
-                        self.auto_targets_for_effect_all_slots_kicked(eff, caster, None, true)
+                        self.auto_targets_for_effect_all_slots_kicked(eff, caster, None, true, None)
                     }
                     None => (None, Vec::new()),
                 }
@@ -542,7 +542,7 @@ impl GameState {
         let mut out = Vec::new();
         for (id, n, needs_target, effect) in &hand {
             let (target, additional_targets) = if *needs_target {
-                self.auto_targets_for_effect_all_slots_kicked(effect, caster, None, true)
+                self.auto_targets_for_effect_all_slots_kicked(effect, caster, None, true, None)
             } else {
                 (None, Vec::new())
             };

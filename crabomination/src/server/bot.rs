@@ -3351,7 +3351,7 @@ fn cast_candidates(
         let effect = &c.definition.effect;
         let (target, additional_targets) = if effect.requires_target() {
             let (t, extras) =
-                state.auto_targets_for_effect_all_slots_kicked(effect, seat, None, true);
+                state.auto_targets_for_effect_all_slots_kicked(effect, seat, None, true, None);
             if t.is_none() {
                 continue;
             }
@@ -3390,7 +3390,7 @@ fn cast_candidates(
         let effect = &c.definition.effect;
         let (target, additional_targets) = if effect.requires_target() {
             let (t, extras) =
-                state.auto_targets_for_effect_all_slots_kicked(effect, seat, None, true);
+                state.auto_targets_for_effect_all_slots_kicked(effect, seat, None, true, None);
             if t.is_none() {
                 continue;
             }
