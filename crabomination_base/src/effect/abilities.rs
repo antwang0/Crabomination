@@ -360,6 +360,15 @@ pub enum StaticEffect {
         power: i32,
         toughness: i32,
     },
+    /// The live-magnitude sibling of `SetBasePtForFilter` — "creatures you
+    /// control have base power and toughness each equal to [value]"
+    /// (Porcelain Gallery). Both `Value`s are evaluated with the static's
+    /// source as context on every layer pass.
+    SetBasePtForFilterFromValue {
+        applies_to: Selector,
+        power: Value,
+        toughness: Value,
+    },
     /// Graaz — "… and are Juggernauts in addition to their other creature
     /// types" (layer 4 additive creature type over a CardMatch filter).
     AddCreatureTypeToMatching {
@@ -1351,6 +1360,10 @@ pub enum StaticEffect {
     /// that ability triggers an additional time" (Annie Joins Up). The
     /// supertype-keyed sibling of `DoubleControllerTriggersOfType`.
     DoubleControllerLegendaryCreatureTriggers,
+    /// "If a triggered ability of a permanent you control triggers, that
+    /// ability triggers an additional time" (Fractured Realm) — the
+    /// unconditional sibling of the type/supertype-keyed doublers.
+    DoubleControllerPermanentTriggers,
     /// CR 614.x — "Creatures entering the battlefield don't cause triggered
     /// abilities to trigger." Torpor Orb, Tocatli Honor Guard. When any
     /// permanent with this static is in play, an entering **creature**
@@ -1963,6 +1976,11 @@ pub enum StaticEffect {
     /// spells you cast, where X is that spell's mana value" (Kentaro, the
     /// Smiling Cat). Read by `effective_alternative_cost`.
     GenericAlternativeCostForFilter { filter: SelectionRequirement },
+    /// CR 118.9 — "Once each turn, you may pay {0} rather than pay the mana
+    /// cost for a spell you cast from exile" (Warped Space). Waives the
+    /// pay-own-cost rider a `may_play_until` grant stamps on an exiled card;
+    /// tracked by `Player.free_exile_cast_used_this_turn`.
+    FreeExileCastOncePerTurn,
     /// CR 121.2a — "If you would draw a card, look at the top `count` cards of
     /// your library instead. Put one into your hand and the rest on the bottom
     /// in any order." (Tomorrow, Azami's Familiar.)

@@ -9754,6 +9754,39 @@ impl GameState {
                 });
             }
         }
+        // Porcelain Gallery — the live-magnitude `SetBasePtForFilter`: both
+        // sides are `Value`s evaluated against the static's source each pass.
+        for card in &self.battlefield {
+            for sa in &card.definition.static_abilities {
+                let crate::effect::StaticEffect::SetBasePtForFilterFromValue {
+                    applies_to,
+                    power,
+                    toughness,
+                } = &sa.effect
+                else {
+                    continue;
+                };
+                let Some(affected) = selector_to_affected(applies_to, card) else { continue };
+                let ctx = crate::game::effects::EffectContext::for_ability(
+                    card.id,
+                    card.controller,
+                    None,
+                );
+                let (p, t) = (
+                    self.evaluate_value(power, &ctx),
+                    self.evaluate_value(toughness, &ctx),
+                );
+                all_effects.push(ContinuousEffect {
+                    timestamp: card.object_timestamp(),
+                    source: card.id,
+                    affected,
+                    layer: Layer::L7PowerTough,
+                    sublayer: Some(PtSublayer::SetValue),
+                    duration: EffectDuration::WhileSourceOnBattlefield,
+                    modification: Modification::SetPowerToughness(p, t),
+                });
+            }
+        }
         for card in &self.battlefield {
             if card.definition.level_bands.is_empty() {
                 continue;
@@ -19793,6 +19826,7 @@ fn static_effect_to_effects(
             | StaticEffect::DoubleControllerAllyTriggers
             | StaticEffect::DoubleControllerTriggersOfType { .. }
             | StaticEffect::DoubleControllerLegendaryCreatureTriggers
+            | StaticEffect::DoubleControllerPermanentTriggers
             | StaticEffect::DoubleControllerDeathTriggers
             | StaticEffect::DoubleControllerAttackTriggers
             // SuppressCreatureEtbTriggers — read at trigger dispatch via
@@ -20035,6 +20069,7 @@ fn static_effect_to_effects(
             | StaticEffect::AnthemForColorSharedWithLibraryTop { .. }
             | StaticEffect::PumpPerBushido { .. }
             | StaticEffect::SelfBasePtFromValue { .. }
+            | StaticEffect::SetBasePtForFilterFromValue { .. }
             | StaticEffect::SelfHasKeywordIf { .. }
             | StaticEffect::SelfIsCreatureIf { .. }
             // GrantKeywordToChosenType — reads the source's live chosen type;
@@ -20172,6 +20207,8 @@ fn static_effect_to_effects(
             | StaticEffect::FiveColorAlternativeCost
             // Kentaro — consulted by `effective_alternative_cost`; no layer.
             | StaticEffect::GenericAlternativeCostForFilter { .. }
+            // Warped Space — consulted by the cast-from-exile path; no layer.
+            | StaticEffect::FreeExileCastOncePerTurn
             // Tomorrow, Azami's Familiar — a draw replacement consulted in
             // `draw_one`; no layer effect.
             | StaticEffect::ReplaceDrawWithLookN { .. }

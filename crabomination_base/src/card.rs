@@ -2263,6 +2263,10 @@ pub enum SelectionRequirement {
     /// Another permanent on the battlefield shares this permanent's name
     /// (Winnow). Never matches when the object is the only copy out.
     SharesNameWithAnotherPermanent,
+    /// No permanent the evaluating player controls shares this card's name
+    /// (Central Elevator's "a Room card that doesn't have the same name as a
+    /// Room you control").
+    NameNotSharedWithYourPermanents,
     /// Shares a colour with the most common colour among all permanents, or a
     /// colour tied for most common (Barrin's Unmaking, Tsabo's Assassin).
     /// Never matches a colourless object.
@@ -4785,6 +4789,7 @@ impl CardDefinition {
             planeswalker: self.is_planeswalker(),
             legendary: self.supertypes.contains(&Supertype::Legendary),
             creature_mana_only: self.spend_only_creature_mana,
+            room_or_door: self.subtypes.enchantment_subtypes.contains(&EnchantmentSubtype::Room),
             name: Some(self.name),
         }
     }

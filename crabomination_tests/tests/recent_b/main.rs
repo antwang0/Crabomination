@@ -3,6 +3,7 @@
 
 mod blb;
 mod blb2;
+mod dsk_rooms;
 mod recent_118_132;
 mod recent_133_147;
 mod recent_148_162;

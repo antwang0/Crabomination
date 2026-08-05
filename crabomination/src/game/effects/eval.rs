@@ -299,6 +299,16 @@ impl GameState {
                     .count() as i32
             }
             Value::OpponentCount => self.opponents_of(ctx.controller).len() as i32,
+            Value::UnlockedDoorsControlled(who) => self
+                .resolve_player(who, ctx)
+                .map(|p| {
+                    self.battlefield
+                        .iter()
+                        .filter(|c| c.controller == p && c.definition.room.is_some())
+                        .map(|c| c.unlocked_doors.count_ones() as i32)
+                        .sum()
+                })
+                .unwrap_or(0),
             // CR 700.2 — how many modes the resolved spell chose. A plain
             // `ChooseMode` spell records one; modal-cast spells record the set.
             Value::ModesChosenOf(sel) => self
@@ -2623,6 +2633,19 @@ impl GameState {
                     .sum();
                 total >= *count
             }
+            Predicate::DistinctUnlockedDoorNamesAtLeast { who, count } => {
+                let Some(p) = self.resolve_player(who, ctx) else { return false };
+                let mut names: Vec<&str> = Vec::new();
+                for c in self.battlefield.iter().filter(|c| c.controller == p) {
+                    let Some(doors) = c.definition.room.as_ref() else { continue };
+                    for (bit, door) in [(1u8, &doors.left), (2u8, &doors.right)] {
+                        if c.unlocked_doors & bit != 0 && !names.contains(&door.name.as_str()) {
+                            names.push(door.name.as_str());
+                        }
+                    }
+                }
+                names.len() as u32 >= *count
+            }
             Predicate::ControlsOutlaw { who } => {
                 let Some(p) = self.resolve_player(who, ctx) else { return false };
                 self.battlefield.iter().any(|c| c.controller == p && card_is_outlaw(c))
@@ -3569,6 +3592,9 @@ impl GameState {
                         .battlefield
                         .iter()
                         .any(|c| c.id != card.id && c.definition.name == card.definition.name),
+                    R::NameNotSharedWithYourPermanents => !self.battlefield.iter().any(|c| {
+                        c.controller == controller && c.definition.name == card.definition.name
+                    }),
                     // CR 702.114 — Devoid CDA: colorless despite colored pips.
                     R::Colorless => card.definition.keywords.contains(&crate::card::Keyword::Devoid)
                         || card.definition.cost.distinct_colors() == 0,
@@ -4199,6 +4225,9 @@ impl GameState {
                 .battlefield
                 .iter()
                 .any(|c| c.id != card.id && c.definition.name == card.definition.name),
+            R::NameNotSharedWithYourPermanents => !self.battlefield.iter().any(|c| {
+                c.controller == controller && c.definition.name == card.definition.name
+            }),
             // CR 702.114 — Devoid CDA: colorless despite colored pips.
             R::Colorless => card.definition.keywords.contains(&crate::card::Keyword::Devoid)
                 || card.definition.cost.distinct_colors() == 0,

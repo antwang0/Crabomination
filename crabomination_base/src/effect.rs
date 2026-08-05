@@ -602,6 +602,9 @@ pub enum Value {
     /// The number of the source controller's opponents still in the game —
     /// "for each opponent, …" (Mardu Siegebreaker's token copies).
     OpponentCount,
+    /// CR 709.5 — how many doors are unlocked among the Rooms `who` controls
+    /// (Misty Salon's X/X Spirit).
+    UnlockedDoorsControlled(PlayerRef),
     /// Life `who` has gained so far this turn (CR 119.3). Backed by
     /// `Player.life_gained_this_turn`. Used by Accomplished Alchemist's
     /// "{T}: Add X mana of any one color, where X is the amount of life
@@ -2007,6 +2010,10 @@ pub enum Predicate {
     /// statics (Rampaging Soulrager). Reads `CardInstance.unlocked_doors`
     /// (a per-door bitmask).
     UnlockedDoorsControlledAtLeast { who: PlayerRef, count: u32 },
+    /// CR 709.5 — `who` controls at least `count` unlocked doors with
+    /// **distinct names** (Promising Stairs' "eight or more different names
+    /// among unlocked doors of Rooms you control" win condition).
+    DistinctUnlockedDoorNamesAtLeast { who: PlayerRef, count: u32 },
     /// CR 700.12 — `who` controls an **outlaw**: a creature that is an
     /// Assassin, Mercenary, Pirate, Rogue, or Warlock. Powers "as long as you
     /// control an outlaw" / "if you control an outlaw" riders (Take the Fall).

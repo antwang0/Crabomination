@@ -1491,8 +1491,9 @@ pub(crate) fn creature_etb_triggers_suppressed(state: &crate::game::GameState) -
 /// controls a subtype-keyed trigger doubler: `DoubleControllerAllyTriggers`
 /// (Katara, the Fearless — Allies) or the general
 /// `DoubleControllerTriggersOfType` (Harmonic Prodigy — Shaman / another
-/// Wizard) or `DoubleControllerLegendaryCreatureTriggers` (Annie Joins Up).
-/// 0 unless the source is a matching creature `controller` controls.
+/// Wizard), `DoubleControllerLegendaryCreatureTriggers` (Annie Joins Up) or
+/// the unconditional `DoubleControllerPermanentTriggers` (Fractured Realm).
+/// 0 unless the source is a matching permanent `controller` controls.
 pub(crate) fn ally_trigger_extra_fires(
     state: &crate::game::GameState,
     controller: usize,
@@ -1524,6 +1525,7 @@ pub(crate) fn ally_trigger_extra_fires(
                             && types.iter().any(|t| source_types.contains(t))
                     }
                     StaticEffect::DoubleControllerLegendaryCreatureTriggers => legendary_creature,
+                    StaticEffect::DoubleControllerPermanentTriggers => true,
                     _ => false,
                 })
                 .count()
@@ -4455,7 +4457,9 @@ impl GameState {
             if right { room.right.cost.clone() } else { room.left.cost.clone() }
         };
         let forced_only = self.players[p].manual_mana;
-        let receipt = self.try_pay_with_auto_tap_mode(p, &cost, forced_only)?;
+        let kind =
+            crate::mana::SpellKind { room_or_door: true, ..crate::mana::SpellKind::default() };
+        let receipt = self.try_pay_with_auto_tap_kind(p, &cost, forced_only, &kind)?;
         let mut events = receipt.auto_events;
         self.pay_life_cost(p, receipt.side_effects.life_lost);
         self.set_room_door_unlocked(card_id, right, &mut events);
@@ -9088,7 +9092,20 @@ impl GameState {
         // Pay the miracle alt-cost up front, if any. Failure leaves the
         // permission intact so the controller can retry once they have the
         // mana.
-        if let Some(cost) = alt_cast_cost {
+        // Warped Space — once each turn, a cast from exile may pay {0}
+        // instead of the cost its may-play grant stamped on.
+        let waive = zone == crate::card::Zone::Exile
+            && alt_cast_cost.as_ref().is_some_and(|c| c.cmc() > 0)
+            && !self.players[p].free_exile_cast_used_this_turn
+            && self.battlefield.iter().any(|c| {
+                c.controller == p
+                    && c.definition.static_abilities.iter().any(|sa| {
+                        matches!(sa.effect, crate::effect::StaticEffect::FreeExileCastOncePerTurn)
+                    })
+            });
+        if waive {
+            self.players[p].free_exile_cast_used_this_turn = true;
+        } else if let Some(cost) = alt_cast_cost {
             let forced_only = self.players[p].manual_mana;
             let receipt = self.try_pay_with_auto_tap_mode(p, &cost, forced_only)?;
             self.pay_life_cost(p, receipt.side_effects.life_lost);

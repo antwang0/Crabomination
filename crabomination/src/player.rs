@@ -427,6 +427,11 @@ pub struct Player {
     /// face up this turn" discard-skip. Reset at the turn boundary.
     #[serde(default)]
     pub face_down_activity_this_turn: bool,
+    /// Warped Space — this player has already used their once-per-turn
+    /// "pay {0} rather than pay the mana cost for a spell you cast from
+    /// exile". Reset at the turn boundary.
+    #[serde(default)]
+    pub free_exile_cast_used_this_turn: bool,
     /// Revel in Silence: this player can't cast spells or activate loyalty
     /// abilities for the rest of the turn. Reset at the turn boundary.
     #[serde(default)]
@@ -986,6 +991,7 @@ impl Player {
             double_your_source_damage_this_turn: false,
             committed_crime_this_turn: false,
             face_down_activity_this_turn: false,
+            free_exile_cast_used_this_turn: false,
             descended_this_turn: false,
             descend_count_this_turn: 0,
             silenced_this_turn: false,

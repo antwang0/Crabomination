@@ -510,6 +510,9 @@ pub enum SpendRestriction {
     /// "Spend this mana only to cast legendary spells." (Untaidake, the Cloud
     /// Keeper.)
     LegendarySpell,
+    /// "Spend this mana only to cast Room spells and unlock doors." (Smoky
+    /// Lounge.)
+    RoomSpellsOrDoors,
     /// "If that mana is spent on a creature spell, it gains haste until end of
     /// turn." (Generator Servant.) Unrestricted spend; funding a creature
     /// stamps the pending-haste rider like `InstantSorceryUncounterable`.
@@ -551,6 +554,7 @@ impl SpendRestriction {
             SpendRestriction::MulticoloredSpell => kind.multicolored,
             SpendRestriction::PlaneswalkerSpellsOnly => kind.planeswalker,
             SpendRestriction::LegendarySpell => kind.legendary,
+            SpendRestriction::RoomSpellsOrDoors => kind.room_or_door,
             SpendRestriction::CreatureHaste => true,
         }
     }
@@ -617,6 +621,10 @@ pub struct SpellKind {
     /// (Myr Superion). Unlike every other field this *narrows* what may pay:
     /// [`ManaPool::pay_for_spell`] routes to [`ManaPool::pay_creature_only`].
     pub creature_mana_only: bool,
+    /// CR 709.5 — casting a Room spell, or paying to unlock a locked door
+    /// (Smoky Lounge's "spend this mana only to cast Room spells and unlock
+    /// doors").
+    pub room_or_door: bool,
     /// The name of the spell being cast, when there is one. Read by
     /// name-restricted spend permissions (Unexpected Potential).
     pub name: Option<&'static str>,

@@ -2562,7 +2562,6 @@ Each a small targeted feature; sweep batch by batch.
 
 ## Recently closed (this push)
 
-<<<<<<< HEAD
 - **Aetherdrift is closed** — `set_gaps.py dft` 2 → 0. Gonti, Night Minister
   (`Effect::ExileTopFaceDownGrantPlay` — the library owner and the may-play
   grantee are different seats; `Predicate::{PlayerIsOpponent,
@@ -2593,7 +2592,6 @@ Each a small targeted feature; sweep batch by batch.
   level-gated statics reach the cost-reduction scan. CR 603.7e —
   `DelayedTrigger.expires_after_turn` gives any delayed watcher an "until the
   end of your next turn" window. Tests in `core_rules/cr_recent79`.
-=======
 - **Tarkir: Dragonstorm and Outlaws of Thunder Junction closed** —
   `set_gaps.py tdm otj` 6 + 9 → 0 (`decks::tdm2`, `decks::otj2`, minus Eriette;
   see TODO.md), plus a Bloomburrow/Duskmourn batch (`decks::blb2`, 6 cards; Kotis, Muerra and Wick landed in the parallel
@@ -2618,7 +2616,6 @@ Each a small targeted feature; sweep batch by batch.
   only). Server: `PlayerView.noncombat_damage_bonus`; Client: a matching HUD
   chip. Tests in `classic_sets/tdm2`, `recent_b/{otj_gaps2, blb2}`,
   `core_rules/cr_recent79`.
->>>>>>> 89d70864 (CR conformance tests, HUD damage-bonus chip, tracker updates)
 
 - **Tarkir: Dragonstorm down to 6** — `set_gaps.py tdm` 10 → 6 (`decks::tdm`):
   Jeskai Revelation, Sidisi Regent of the Mire (the

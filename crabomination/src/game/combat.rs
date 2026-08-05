@@ -1215,7 +1215,9 @@ impl GameState {
                 self.auto_extra_targets_for(&effect, source, controller, auto_target.clone());
             // Isshin / Windcrag Siege (Mardu): a self-source attack trigger of a
             // permanent you control fires an additional time per doubler.
-            let fires = 1 + self.attack_trigger_extra_fires(controller);
+            let fires = 1
+                + self.attack_trigger_extra_fires(controller)
+                + crate::game::actions::ally_trigger_extra_fires(self, controller, source);
             for _ in 0..fires {
                 self.stack.push(
                     TriggerPush::new(source, controller, effect.clone())
@@ -1234,7 +1236,8 @@ impl GameState {
         // combat, with the ability's controller as the fired-for player.
         if any_attackers {
             let ap = self.active_player_idx;
-            let you_attack: Vec<(CardId, usize, Effect)> = self
+            #[allow(clippy::type_complexity)]
+            let you_attack: Vec<(CardId, usize, Effect, Option<crate::effect::Predicate>)> = self
                 .battlefield
                 .iter()
                 .flat_map(|c| {
@@ -1247,14 +1250,31 @@ impl GameState {
                                 && (ctrl == ap
                                     || t.event.scope == crate::effect::EventScope::AnyPlayer)
                         })
-                        .map(move |t| (c.id, ctrl, t.effect.clone()))
+                        .map(move |t| (c.id, ctrl, t.effect.clone(), t.event.filter.clone()))
                 })
                 .collect();
-            for (src, ctrl, effect) in you_attack {
+            for (src, ctrl, effect, filter) in you_attack {
+                // CR 603.2 — the "whenever you attack with …" rider is a
+                // trigger-time gate read off the finished attack declaration.
+                if let Some(predicate) = filter {
+                    let ctx = crate::game::effects::EffectContext::for_ability(src, ctrl, None);
+                    if !self.evaluate_predicate(&predicate, &ctx) {
+                        continue;
+                    }
+                }
                 let auto_target = self.auto_target_for_effect_avoiding(&effect, ctrl, Some(src));
-                self.stack.push(
-                    TriggerPush::new(src, ctrl, effect).target(auto_target).build(),
-                );
+                // Isshin / Fractured Realm: an attack-caused trigger of a
+                // permanent you control fires an additional time per doubler.
+                let fires = 1
+                    + self.attack_trigger_extra_fires(ctrl)
+                    + crate::game::actions::ally_trigger_extra_fires(self, ctrl, src);
+                for _ in 0..fires {
+                    self.stack.push(
+                        TriggerPush::new(src, ctrl, effect.clone())
+                            .target(auto_target.clone())
+                            .build(),
+                    );
+                }
             }
         }
 
