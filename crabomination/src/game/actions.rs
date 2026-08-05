@@ -12132,11 +12132,12 @@ impl GameState {
         out
     }
 
-    /// CR 701.67 — activate an ability whose cost includes "Waterbend {N}"
-    /// (`ActivatedAbility.waterbend`). Each `helper` (an untapped artifact or
-    /// creature the activator controls) taps for {1} of the generic, clamped to
-    /// the ability's generic pip total; the rest is paid from mana. Floats the
-    /// helper mana, then defers to `activate_ability` for the full payment.
+    /// Activate an ability whose cost accepts tapped helpers: CR 701.67
+    /// Waterbend (`ActivatedAbility.waterbend` — artifacts or creatures, each
+    /// paying {1} of the generic) or CR 702.51 convoke on the ability
+    /// (`.convoke` — creatures only, each paying one generic *or* one colored
+    /// pip of its own color). Floats the helper mana, then defers to
+    /// `activate_ability` for the full payment.
     pub(crate) fn activate_ability_waterbend(
         &mut self,
         card_id: CardId,
@@ -12150,6 +12151,9 @@ impl GameState {
         // The ability must exist on a battlefield source and be flagged
         // waterbend (artifacts or creatures help) or convoke (creatures only).
         let creatures_only;
+        // CR 702.51b — convoke helpers can pay colored pips too, so their cap
+        // is the whole cost; waterbend helpers only reach the generic.
+        let mut colored_pips: Vec<crate::mana::Color> = Vec::new();
         let generic_total = {
             let Some(c) = self.battlefield.iter().find(|c| c.id == card_id) else {
                 return Err(GameError::CardNotOnBattlefield(card_id));
@@ -12163,13 +12167,25 @@ impl GameState {
             creatures_only = ab.convoke;
             // For a "Waterbend {X}" ability the generic is the chosen X; otherwise
             // it's the printed generic pip total.
+            if ab.convoke {
+                colored_pips = ab
+                    .mana_cost
+                    .symbols
+                    .iter()
+                    .filter_map(|sym| match sym {
+                        crate::mana::ManaSymbol::Colored(c) => Some(*c),
+                        _ => None,
+                    })
+                    .collect();
+            }
             if ab.mana_cost.has_x() {
                 ab.mana_cost.with_x_value(x_value.unwrap_or(0)).generic_total()
             } else {
                 ab.mana_cost.generic_total()
             }
         };
-        if helpers.len() > generic_total as usize {
+        let helper_cap = generic_total + colored_pips.len() as u32;
+        if helpers.len() > helper_cap as usize {
             return Err(GameError::SelectionRequirementViolated); // too many helpers
         }
         // Validate helpers up front: untapped artifacts/creatures the activator
@@ -12191,10 +12207,23 @@ impl GameState {
         // prompt — the colorless was tapped expressly to pay this cost.
         let snapshot = self.snapshot_payment_state(p);
         for cid in helpers {
+            let colors = self
+                .battlefield_find(*cid)
+                .map(|c| c.definition.printed_colors())
+                .unwrap_or_default();
             if let Some(c) = self.battlefield.iter_mut().find(|c| c.id == *cid) {
                 c.tapped = true;
             }
-            self.players[p].mana_pool.add_colorless(1);
+            // Prefer a colored pip this creature can actually cover; generic
+            // otherwise (CR 702.51b lets the player choose — this takes the
+            // pip that would otherwise need coloured mana).
+            match colored_pips.iter().position(|c| colors.contains(c)) {
+                Some(i) => {
+                    let color = colored_pips.remove(i);
+                    self.players[p].mana_pool.add(color, 1);
+                }
+                None => self.players[p].mana_pool.add_colorless(1),
+            }
         }
         self.pending_cast_spend_float = Some(true);
         let r = self.activate_ability(card_id, ability_index, target, additional_targets, x_value, None);

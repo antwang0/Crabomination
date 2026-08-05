@@ -2477,12 +2477,20 @@ impl GameState {
                     .into_iter()
                     .filter_map(|e| e.as_permanent_id())
                     .collect();
+                // CR 706.2 — Pixie Guide's replacement applies to *any* die
+                // roll, stored results included: roll the extras, keep the
+                // highest `n`.
+                let ignored = if n > 0 { self.extra_dice_for(ctx.controller) } else { 0 };
                 for id in ids {
-                    for _ in 0..n {
-                        let face = self.roll_one_die(ctx.controller, sides);
-                        if let Some(c) = self.battlefield_find_mut(id) {
-                            c.stored_die_results.push(face);
-                        }
+                    let mut faces: Vec<u8> = (0..n as u32 + ignored)
+                        .map(|_| self.roll_one_die(ctx.controller, sides))
+                        .collect();
+                    if ignored > 0 {
+                        faces.sort_unstable_by(|a, b| b.cmp(a));
+                        faces.truncate(n as usize);
+                    }
+                    if let Some(c) = self.battlefield_find_mut(id) {
+                        c.stored_die_results.extend(faces);
                     }
                 }
                 Ok(())
