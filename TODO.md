@@ -5,12 +5,12 @@ Items are grouped by area and roughly ordered by impact within each group.
 
 ## Noticed this run (DFT closed to 2, TDM to 6 / CR 400.7)
 
-- **The client needs three system packages the container lacks.** Bevy's
-  `wayland-sys`, `alsa-sys` and `libudev-sys` build scripts each want a `.pc`
-  file, so a fresh container can't build `crabomination_client` at all.
-  `apt-get update && apt-get install -y libwayland-dev libasound2-dev
-  libudev-dev` fixes it; that belongs in a SessionStart hook so the client is
-  buildable (and clippy-able) from the first command. ⏳
+- **`install-client-deps.sh` didn't fire this session.** The SessionStart hook
+  that installs libwayland/alsa/libudev is present and correct, but the
+  container still had no `wayland-client.pc` at the first build, so
+  `crabomination_client` was unbuildable until the packages were installed by
+  hand. Worth checking whether SessionStart hooks run for scheduled/cron
+  sessions at all — if not, the install belongs in the environment image. ⏳
 - **`granted_abilities_for` now serves off-battlefield cards.** Instance grants
   on a graveyard/hand/exile card are surfaced so Cursecloth Wrappings' embalm
   activates. The *static*-granted lists (`GrantActivatedAbilityFromGraveyard`,
