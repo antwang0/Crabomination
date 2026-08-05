@@ -2596,7 +2596,8 @@ Each a small targeted feature; sweep batch by batch.
 =======
 - **Tarkir: Dragonstorm and Outlaws of Thunder Junction closed** —
   `set_gaps.py tdm otj` 6 + 9 → 0 (`decks::tdm2`, `decks::otj2`, minus Eriette;
-  see TODO.md), plus a Bloomburrow/Duskmourn batch (`decks::blb2`, 8 cards).
+  see TODO.md), plus a Bloomburrow/Duskmourn batch (`decks::blb2`, 6 cards; Kotis, Muerra and Wick landed in the parallel
+  `recent328` batch).
   New primitives: `Effect::{SearchAnyNumber, CounterOnMatchingOfEachColor,
   ExileTopAndMayCastUpToMv, PreventNextDamageToYouFromChosenSourceWithRider,
   YourNoncombatDamageBonusThisTurn, PlotSpellOnResolve,

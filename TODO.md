@@ -12,10 +12,6 @@ Items are grouped by area and roughly ordered by impact within each group.
   opponent controls with mana value ≤ that Aura's") can't be written — it needs
   both the Aura and the host in the trigger's context. Left out of the OTJ
   batch for that reason. ⏳
-- **BLB's pawprint cycle needs a paid-mode primitive.** The five Seasons
-  ("choose up to five {P} worth of modes; you may choose the same mode more
-  than once") are a Spree-shaped cost-per-mode with repeats. `ChooseModesCast`
-  has the repeats half; the per-mode price tag is missing. ⏳
 - **Cards deferred from the BLB/DSK sweep, one primitive each.** Vren, the
   Relentless (a per-turn tally of creatures exiled from under each opponent's
   control, plus a token whose P/T counts other Rats), Ygra, Eater of All

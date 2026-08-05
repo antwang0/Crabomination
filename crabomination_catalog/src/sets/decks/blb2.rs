@@ -1,5 +1,5 @@
-//! Bloomburrow and Duskmourn gap batch — the Gift artifacts and sorcery, the
-//! Rat/Bat/Bird legends and two Duskmourn build-arounds. Tests in
+//! Bloomburrow and Duskmourn gap batch — the Gift artifact and sorcery, the
+//! Bat/Bird legends, Grievous Wound and The Jolly Balloon Man. Tests in
 //! `tests/recent_b/blb2.rs`.
 
 use crate::card::{
@@ -9,11 +9,10 @@ use crate::card::{
 };
 use crate::effect::shortcut::{etb, on_attack, target_filtered};
 use crate::effect::{
-    Effect, EventKind, EventScope, EventSpec, ManaPayload, PlayerRef, PlayerStaticTarget, Predicate,
-    Selector, ZoneDest,
+    Effect, EventKind, EventScope, EventSpec, PlayerRef, PlayerStaticTarget, Predicate, Selector,
+    ZoneDest,
 };
-use crate::game::TurnStep;
-use crate::mana::{Color, ManaCost, b, cost, g, generic, r, u, w};
+use crate::mana::{Color, ManaCost, b, cost, generic, r, u, w};
 
 fn legend(
     name: &'static str,
@@ -193,124 +192,7 @@ pub fn the_jolly_balloon_man() -> CardDefinition {
     }
 }
 
-/// Muerra, Trash Tactician — {1}{R}{G} 2/4 Raccoon. Ramps off your Raccoons
-/// each main phase and pays out as you expend.
-pub fn muerra_trash_tactician() -> CardDefinition {
-    CardDefinition {
-        triggered_abilities: vec![
-            TriggeredAbility {
-                event: EventSpec::new(
-                    EventKind::StepBegins(TurnStep::PreCombatMain),
-                    EventScope::YourControl,
-                ),
-                effect: Effect::AddMana {
-                    who: PlayerRef::You,
-                    pool: ManaPayload::OfColors(
-                        vec![Color::Red, Color::Green],
-                        Value::CountOf(Box::new(Selector::EachPermanent(
-                            R::HasCreatureType(CreatureType::Raccoon).and(R::ControlledByYou),
-                        ))),
-                    ),
-                },
-            },
-            TriggeredAbility {
-                event: EventSpec::new(EventKind::Expend, EventScope::YourControl)
-                    .with_filter(Predicate::ExpendReached(4)),
-                effect: Effect::GainLife { who: Selector::You, amount: Value::Const(3) },
-            },
-            TriggeredAbility {
-                event: EventSpec::new(EventKind::Expend, EventScope::YourControl)
-                    .with_filter(Predicate::ExpendReached(8)),
-                effect: Effect::Seq(vec![
-                    Effect::ExileTopOfLibrary {
-                        who: Selector::You,
-                        amount: Value::Const(2),
-                        link_to_source: false,
-                        face_down: false,
-                    },
-                    Effect::GrantMayPlay {
-                        what: Selector::LastMoved,
-                        duration: crate::card::MayPlayDuration::EndOfControllersNextTurn,
-                        to_owner: false,
-                        exile_after: false,
-                        pay_own_cost: true,
-                        any_color: false,
-                    },
-                ]),
-            },
-        ],
-        ..legend(
-            "Muerra, Trash Tactician",
-            cost(&[generic(1), r(), g()]),
-            vec![CreatureType::Raccoon, CreatureType::Warrior],
-            2,
-            4,
-        )
-    }
-}
 
-/// Wick, the Whorled Mind — {3}{B} 2/4 Rat Warlock. Rats grow a Snail; the
-/// Snail cashes out as damage and cards.
-pub fn wick_the_whorled_mind() -> CardDefinition {
-    let snail = TokenDefinition {
-        name: "Snail".into(),
-        power: 1,
-        toughness: 1,
-        card_types: vec![CardType::Creature],
-        colors: vec![Color::Black],
-        subtypes: Subtypes {
-            creature_types: vec![CreatureType::Snail],
-            ..Default::default()
-        },
-        ..Default::default()
-    };
-    let my_snails =
-        || R::HasCreatureType(CreatureType::Snail).and(R::ControlledByYou);
-    CardDefinition {
-        triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::YourControl)
-                .with_filter(Predicate::EntityMatches {
-                    what: Selector::TriggerSource,
-                    filter: R::HasCreatureType(CreatureType::Rat),
-                }),
-            effect: Effect::If {
-                cond: Predicate::SelectorCountAtLeast {
-                    sel: Selector::EachPermanent(my_snails()),
-                    n: Value::ONE,
-                },
-                then: Box::new(Effect::AddCounter {
-                    what: Selector::GreatestPowerControlledMatching(my_snails()),
-                    kind: CounterType::PlusOnePlusOne,
-                    amount: Value::ONE,
-                }),
-                else_: Box::new(Effect::CreateToken {
-                    who: PlayerRef::You,
-                    count: Value::ONE,
-                    definition: snail,
-                }),
-            },
-        }],
-        activated_abilities: vec![ActivatedAbility {
-            mana_cost: cost(&[u(), b(), r()]),
-            sac_other_filter: Some((my_snails(), 1)),
-            effect: Effect::Seq(vec![
-                Effect::DealDamage {
-                    to: Selector::Player(PlayerRef::EachOpponent),
-                    amount: Value::SacrificedPower,
-                },
-                Effect::Draw { who: Selector::You, amount: Value::SacrificedPower },
-            ]),
-            ..Default::default()
-        }],
-        ..legend(
-            "Wick, the Whorled Mind",
-            cost(&[generic(3), b()]),
-            vec![CreatureType::Rat, CreatureType::Warlock],
-            2,
-            4,
-        )
-    }
-}
 
 /// Zoraline, Cosmos Caller — {1}{W}{B} 3/3 flying vigilance Bat Cleric. Bats
 /// drain, and she buys back a cheap permanent whenever she enters or attacks.

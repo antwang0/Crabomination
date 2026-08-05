@@ -30,14 +30,6 @@ fn etb(g: &mut GameState, def: CardDefinition) -> CardId {
     id
 }
 
-/// Enter a permanent through the shared "another permanent entered" dispatch
-/// so board-wide ETB watchers see it.
-fn etb_seen(g: &mut GameState, def: CardDefinition) -> CardId {
-    let id = g.add_card_to_battlefield(0, def);
-    g.dispatch_triggers_for_events(&[GameEvent::PermanentEntered { card_id: id }]);
-    drain_stack(g);
-    id
-}
 
 /// Starforged Sword's gift attaches it on entry and swaps +3/+3 for flying.
 #[test]
@@ -163,29 +155,6 @@ fn muerra_ramps_per_raccoon() {
     }
     drain_stack(&mut g);
     assert_eq!(g.players[0].mana_pool.total(), 1, "one mana for Muerra herself");
-}
-
-/// Wick creates a Snail on the first Rat and grows it afterwards.
-#[test]
-fn wick_creates_then_grows_a_snail() {
-    let mut g = main_phase();
-    let wick = etb_seen(&mut g, catalog::wick_the_whorled_mind());
-    let snail = g
-        .battlefield
-        .iter()
-        .find(|c| c.definition.name == "Snail")
-        .map(|c| c.id)
-        .expect("Snail minted by Wick's own entry");
-
-    // A second Rat grows the Snail instead of minting another — both Wicks
-    // see the entry, so it takes two counters.
-    let _ = etb_seen(&mut g, catalog::wick_the_whorled_mind());
-    assert_eq!(g.battlefield.iter().filter(|c| c.definition.name == "Snail").count(), 1);
-    assert_eq!(
-        g.battlefield_find(snail).unwrap().counter_count(CounterType::PlusOnePlusOne),
-        2
-    );
-    let _ = wick;
 }
 
 /// Zoraline's attack trigger reanimates a cheap permanent with a finality

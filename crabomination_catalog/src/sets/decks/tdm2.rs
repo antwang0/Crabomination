@@ -1,6 +1,6 @@
-//! Tarkir: Dragonstorm's last six gaps — the five-color Dragon enchantment,
-//! Kotis' free-cast combat damage, Mardu Siegebreaker's exiled-copy swings,
-//! New Way Forward's reflexive prevention, Taigam's flurry-suspend and Ugin.
+//! Tarkir: Dragonstorm gaps — the five-color Dragon enchantment, Mardu
+//! Siegebreaker's exiled-copy swings, New Way Forward's reflexive prevention,
+//! Taigam's flurry-suspend and Ugin.
 //! Tests in `tests/classic_sets/tdm2.rs`.
 
 use crate::card::{
@@ -42,37 +42,6 @@ pub fn call_the_spirit_dragons() -> CardDefinition {
                 filter: dragons_you_control(),
                 kind: CounterType::PlusOnePlusOne,
                 win_at: 5,
-            },
-        }],
-        ..Default::default()
-    }
-}
-
-/// Kotis, the Fangkeeper — {1}{B}{G}{U} 2/1 indestructible Zombie Warrior.
-/// Its combat damage exiles that many cards off the victim's library and lets
-/// you free-cast the ones that cheap.
-pub fn kotis_the_fangkeeper() -> CardDefinition {
-    CardDefinition {
-        name: "Kotis, the Fangkeeper",
-        cost: cost(&[generic(1), b(), g(), u()]),
-        supertypes: vec![Supertype::Legendary],
-        card_types: vec![CardType::Creature],
-        subtypes: Subtypes {
-            creature_types: vec![CreatureType::Zombie, CreatureType::Warrior],
-            ..Default::default()
-        },
-        power: 2,
-        toughness: 1,
-        keywords: vec![Keyword::Indestructible],
-        triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(
-                EventKind::DealsCombatDamageToPlayer,
-                EventScope::SelfSource,
-            ),
-            effect: Effect::ExileTopAndMayCastUpToMv {
-                who: Selector::Player(PlayerRef::TriggerEventPlayer),
-                amount: Value::TriggerEventAmount,
-                max_mv: Value::TriggerEventAmount,
             },
         }],
         ..Default::default()
