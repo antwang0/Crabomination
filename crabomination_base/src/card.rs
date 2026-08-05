@@ -2302,6 +2302,10 @@ pub enum SelectionRequirement {
     /// targeting filters it routes through `evaluate_requirement_*`
     /// which read the source id from the resolution context.
     OtherThanSource,
+    /// Excludes the permanent stamped on the source's `chosen_permanent` slot
+    /// — the "creatures other than this and the chosen creature" half of an
+    /// ETB choose-a-creature rider (Zenos yae Galvus).
+    NotSourcesChosenPermanent,
     /// The candidate was NOT sacrificed during this resolution — the printed
     /// "another permanent card" in a sacrifice-then-recur line (Deadly Brew).
     /// Backed by `GameState::cards_sacrificed_this_resolution`.

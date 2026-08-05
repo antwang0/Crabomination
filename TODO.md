@@ -13,6 +13,10 @@ Items are grouped by area and roughly ordered by impact within each group.
   path routes the card to the graveyard before an effect can claim it. ⏳
 - **The Attraction junkyard renders in the exile browser** (`V`), as a per-owner
   section below the exile piles. The pile tooltips still don't mention it. ⏳
+- **Shinryu's "when the chosen player loses the game, you win" is dropped.**
+  There's no player-loses event to hang it on, and the clause is redundant in a
+  two-player game (the survivor has already won). The choose-an-opponent half
+  ships via `Effect::RememberPlayerOnSource`. ⏳
 - **The bot now offers graveyard "return transformed" activations.**
   `effect_returns_self_to_battlefield` counts `ExileSelfReturnTransformed` /
   `ExileSelfReturnFrontFace`, so a bot can flip Garland back. It still has no
@@ -21,13 +25,11 @@ Items are grouped by area and roughly ordered by impact within each group.
 
 ## Noticed this run (EOE/FIN closure + CR 717 Attractions)
 
-- **EOE is closed** (`set_gaps.py eoe` empty). FIN is down to **4** cards,
+- **EOE is closed** (`set_gaps.py eoe` empty). FIN is down to **3** cards,
   each blocked on one primitive:
   - **Sephiroth** wants an emblem minted *as* the transform happens
     (`EventKind::Transformed` fires after, so the emblem lands a beat late).
     `Effect::NthResolutionThisTurn` covers its "fourth time this turn". ⏳
-  - **Zenos** needs a remembered chosen permanent whose *leave* transforms the
-    source ("when the chosen creature leaves the battlefield"). ⏳
   - **Terra // Esper Terra** needs a token copy of a nonlegendary enchantment
     that inherits up-to-three lore counters when it's a Saga. ⏳
   - **Esper Origins** is Sorcery // Saga-creature: the front face isn't a

@@ -641,3 +641,34 @@ fn crystal_fragments_flips_into_alexander() {
     assert_eq!(saga.definition.name, "Summon: Alexander");
     assert_eq!(saga.counter_count(CounterType::Lore), 1, "CR 714.2b first chapter");
 }
+
+/// Zenos spares his chosen creature from the sweep, then transforms when it
+/// leaves the battlefield.
+#[test]
+fn zenos_spares_the_chosen_creature_then_transforms() {
+    let mut g = two_player_game();
+    let chosen = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let bystander = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let zenos = g.move_card_to_battlefield_for_test(0, catalog::zenos_yae_galvus());
+    drain_stack(&mut g);
+    // The ETB picks one of the opponent's creatures; the other one dies to -2/-2.
+    let survivors: Vec<_> = [chosen, bystander]
+        .into_iter()
+        .filter(|id| g.battlefield_find(*id).is_some())
+        .collect();
+    assert_eq!(survivors.len(), 1, "the unchosen creature took -2/-2");
+    assert_eq!(
+        g.battlefield_find(zenos).unwrap().chosen_permanent,
+        Some(survivors[0]),
+        "the survivor is the remembered choice"
+    );
+    assert_eq!(g.computed_permanent(zenos).unwrap().power, 4, "Zenos spares himself");
+
+    let mut evs = vec![];
+    g.destroy_permanent(survivors[0], false, &mut evs);
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    let back = g.battlefield_find(zenos).expect("still around");
+    assert_eq!(back.definition.name, "Shinryu, Transcendent Rival");
+    assert!(back.definition.keywords.contains(&Keyword::Flying));
+}

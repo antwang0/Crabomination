@@ -3685,6 +3685,10 @@ impl GameState {
                         Some(src_id) => *cid != src_id,
                         None => true,
                     },
+                    R::NotSourcesChosenPermanent => source
+                        .and_then(|s| self.battlefield_find(s))
+                        .and_then(|s| s.chosen_permanent)
+                        .is_none_or(|chosen| *cid != chosen),
                     R::IsSource => source == Some(*cid),
                     R::NotSacrificedThisResolution => {
                         !self.cards_sacrificed_this_resolution.contains(cid)
@@ -4317,6 +4321,8 @@ impl GameState {
             // (a card in a graveyard search can't be the source on the
             // battlefield).
             R::OtherThanSource => true,
+            // Source-less path: no `chosen_permanent` slot to consult.
+            R::NotSourcesChosenPermanent => true,
             // A card in another zone is never the battlefield source.
             R::IsSource => false,
             R::NotSacrificedThisResolution => {

@@ -1517,3 +1517,65 @@ pub fn crystal_fragments() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Zenos yae Galvus // Shinryu, Transcendent Rival — {3}{B}{B} 4/4 whose ETB
+/// picks an opponent's creature, shrinks everything else, and transforms into
+/// an 8/8 flier when that creature leaves. (Shinryu's "when the chosen player
+/// loses the game, you win" is redundant in a two-player game and needs a
+/// player-loses event; the choose-an-opponent half is kept.)
+pub fn zenos_yae_galvus() -> CardDefinition {
+    CardDefinition {
+        name: "Zenos yae Galvus",
+        cost: cost(&[generic(3), b(), b()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![
+                CreatureType::Human,
+                CreatureType::Noble,
+                CreatureType::Warrior,
+            ],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 4,
+        triggered_abilities: vec![
+            etb(Effect::Seq(vec![
+                Effect::ChoosePermanentForSource {
+                    filter: R::Creature.and(R::ControlledByOpponent),
+                },
+                Effect::PumpPT {
+                    what: Selector::EachPermanent(
+                        R::Creature.and(R::OtherThanSource).and(R::NotSourcesChosenPermanent),
+                    ),
+                    power: Value::Const(-2),
+                    toughness: Value::Const(-2),
+                    duration: Duration::EndOfTurn,
+                },
+            ])),
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::PermanentLeavesBattlefield, EventScope::AnyPlayer)
+                    .with_filter(Predicate::TriggerSourceIsSourcesChosenPermanent),
+                effect: Effect::Transform { what: Selector::This },
+            },
+        ],
+        back_face: Some(Box::new(CardDefinition {
+            name: "Shinryu, Transcendent Rival",
+            supertypes: vec![Supertype::Legendary],
+            card_types: vec![CardType::Creature],
+            subtypes: Subtypes {
+                creature_types: vec![CreatureType::Dragon],
+                ..Default::default()
+            },
+            power: 8,
+            toughness: 8,
+            keywords: vec![Keyword::Flying],
+            triggered_abilities: vec![TriggeredAbility {
+                event: EventSpec::new(EventKind::Transformed, EventScope::SelfSource),
+                effect: Effect::RememberPlayerOnSource { who: PlayerRef::EachOpponent },
+            }],
+            ..Default::default()
+        })),
+        ..Default::default()
+    }
+}
