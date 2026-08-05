@@ -74,6 +74,15 @@ pub enum CardImage {
 }
 
 impl CardImage {
+    /// The card name this image is looked up by — the front face for an
+    /// MDFC back, since that is what Scryfall is asked for.
+    fn lookup_name(&self) -> &'static str {
+        match self {
+            CardImage::Front(n) | CardImage::Token { name: n } => n,
+            CardImage::MdfcBack { front, .. } => front,
+        }
+    }
+
     /// Display name for log messages.
     fn label(&self) -> String {
         match self {
@@ -208,6 +217,47 @@ pub fn reload_completed_images(
 #[cfg(not(target_arch = "wasm32"))]
 pub fn ensure_card_images(specs: &[CardImage], assets_dir: &Path) {
     ensure_card_images_with_progress(specs, assets_dir, &ImagePrefetch::default());
+}
+
+/// **TEMPORARY (see TODO.md → "Undo: sealed-pool image priority").**
+///
+/// Float the cards named in `decks/sealed_pool.txt` and
+/// `decks/sealed.txt` to the front of the prefetch queue, keeping
+/// everything else in catalog order behind them.
+///
+/// The prefetch walks a catalog of thousands of cards at Scryfall's rate
+/// limit, so the ~80 cards actually being playtested can otherwise sit
+/// behind an hour of unrelated art. This is a convenience for the
+/// current sealed testing, *not* a general policy — a real fix would
+/// prioritise by what the running match needs rather than by a file that
+/// happens to be checked in.
+///
+/// Silently does nothing when the deck files are absent, so a checkout
+/// without them behaves exactly as before.
+pub fn prioritize_pool_images(specs: &mut [CardImage], repo_deck_files: &[&Path]) {
+    let mut wanted: std::collections::HashSet<String> = std::collections::HashSet::new();
+    for path in repo_deck_files {
+        let Ok(text) = fs::read_to_string(path) else { continue };
+        for line in text.lines() {
+            let line = line.trim();
+            if line.is_empty() || line.starts_with('#') || line.starts_with("//") {
+                continue;
+            }
+            // "3 Island" / "1 Professor Dellian Fel" / bare name.
+            let name = line
+                .split_once(char::is_whitespace)
+                .filter(|(count, _)| count.chars().all(|c| c.is_ascii_digit()))
+                .map(|(_, rest)| rest)
+                .unwrap_or(line);
+            wanted.insert(name.trim().to_ascii_lowercase());
+        }
+    }
+    if wanted.is_empty() {
+        return;
+    }
+    // Stable partition: pool cards first, catalog order preserved within
+    // each half, so this only ever reorders — nothing is dropped.
+    specs.sort_by_key(|s| !wanted.contains(&s.lookup_name().to_ascii_lowercase()));
 }
 
 /// `ensure_card_images` with live progress reporting — run on a background
@@ -744,6 +794,38 @@ fn urlenccode(s: &str) -> String {
 
 #[cfg(test)]
 mod tests {
+    /// The pool cards float to the front of the prefetch queue;
+    /// everything else keeps catalog order behind them, and nothing is
+    /// dropped. (Temporary — see TODO.md "Undo: sealed-pool image
+    /// priority"; this test goes with the feature.)
+    #[test]
+    fn pool_cards_sort_to_the_front() {
+        use super::*;
+        let dir = std::env::temp_dir().join(format!("crab_pool_prio_{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let deck = dir.join("sealed.txt");
+        std::fs::write(&deck, "# comment\n2 Send in the Pest\nSundering Archaic\n").unwrap();
+
+        let mut specs = vec![
+            CardImage::Front("Lightning Bolt"),
+            CardImage::Front("Sundering Archaic"),
+            CardImage::Front("Grizzly Bears"),
+            CardImage::Front("Send in the Pest"),
+        ];
+        prioritize_pool_images(&mut specs, &[&deck]);
+        let names: Vec<&str> = specs.iter().map(|s| s.lookup_name()).collect();
+        assert_eq!(names.len(), 4, "reorder only, nothing dropped");
+        assert_eq!(&names[..2], &["Sundering Archaic", "Send in the Pest"],
+            "pool cards first, catalog order kept: {names:?}");
+        assert_eq!(&names[2..], &["Lightning Bolt", "Grizzly Bears"],
+            "the rest keep their order: {names:?}");
+
+        let mut same = vec![CardImage::Front("Lightning Bolt"), CardImage::Front("Grizzly Bears")];
+        prioritize_pool_images(&mut same, &[std::path::Path::new("/nonexistent/deck.txt")]);
+        assert_eq!(same[0].lookup_name(), "Lightning Bolt", "no deck files -> untouched");
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
     use super::*;
 
     #[test]

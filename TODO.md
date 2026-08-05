@@ -3,6 +3,27 @@
 Improvement opportunities for the engine, client, and tooling.
 Items are grouped by area and roughly ordered by impact within each group.
 
+## Undo: sealed-pool image priority (TEMPORARY)
+
+Added 2026-08-05 for hand-playtesting a sealed deck; **revert when that
+testing is done.** The card-art prefetch walks thousands of catalog
+cards at Scryfall's rate limit, so the ~80 cards actually in the pool
+could otherwise sit behind an hour of unrelated downloads.
+
+To undo, delete both halves:
+
+- `scryfall::prioritize_pool_images` (and `CardImage::lookup_name`, if
+  nothing else has started using it) in
+  `crabomination_client/src/scryfall.rs`.
+- The call site in `crabomination_client/src/main.rs` — the block that
+  shadows `specs` and reorders it before spawning the prefetch thread.
+
+It only ever *reorders* the queue (stable partition, nothing dropped)
+and no-ops when `decks/sealed*.txt` are absent, so leaving it in is
+harmless — it is just the wrong shape long-term. The general fix, if
+this itch returns, is to prioritise by what the running match actually
+needs rather than by a checked-in file.
+
 ## Noticed this run (Homelands closed / Conspiracy + CR 726)
 
 - **Conspiracy: the draft-matters shell.** The last 8 CNS cards are all
