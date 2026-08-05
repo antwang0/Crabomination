@@ -2430,8 +2430,11 @@ Each a small targeted feature; sweep batch by batch.
   rather than overturned, which is the useful outcome: those rejections
   were correct, not underpowered. `race2` 49.3 % [48.8, 49.9] is the one
   reversal, mildly *harmful* where the unpaired run read 50.2 %.
-  `look2` (two plies of sequence lookahead) 50.6 % [50.1, 51.1] clears
-  50 % on one seed; the replication was interrupted and is outstanding.
+  `look2` (two plies of sequence lookahead) read 50.6 % [50.1, 51.1] on
+  seed 43 and **did not replicate**: 50.1 % [49.6, 50.7] on seed 97,
+  pooling to 50.4 % [50.0, 50.7] over 28 800 games. Not adopted. Note
+  what the paired ladder bought even here — the first seed's edge was
+  identified as unreplicated at 14 400 games rather than 60 000.
 - 🟡 **Castability-aware mana payment** (`Player::smart_tap` /
   `GameState::source_redundancy`, `EvalWeights::legacy_tap` as the
   control) — auto-tap paid generic pips by activation-cost rank with
@@ -2441,13 +2444,32 @@ Each a small targeted feature; sweep batch by batch.
   source (a Swamp with 7 backups before an Island with 2) and coloured
   pips the narrowest one (a basic before a dual). It never changes
   whether the *current* cost can be paid, only which of several
-  interchangeable sources pays it. **50.9 % [50.4, 51.4]** over 14 400
-  sealed games vs `legacytap`; wants a second seed before adoption.
+  interchangeable sources pays it.
 
-  Note the flag exists purely for measurement: the behaviour lives in
-  the engine, so without a per-player switch both seats of a mirror
-  would get it and the ladder would be structurally unable to show
-  anything — the same blindness as the point below.
+  **Measured null.** 50.9 % [50.4, 51.4] on seed 43 did *not* replicate:
+  49.7 % [49.2, 50.3] on seed 97, pooling to 50.3 % [49.95, 50.68] over
+  28 800 paired games. The fifth "obvious" improvement in this series to
+  evaporate on replication.
+
+  The field is not the excuse. The natural defence — "generated sealed
+  builds don't run thin splashes, so the case never comes up" — was
+  checked and is false: 3 of 12 decks on seed 43 and 4 of 12 on seed 97
+  run a colour on ≤4 sources. The failure mode is present roughly a
+  third of the time and still doesn't move the win rate.
+
+  **Kept on by default anyway, on reasoning rather than measurement**,
+  and flagged as such: the change cannot make a cost unpayable, the
+  order it replaces was an accident of `battlefield` iteration rather
+  than a decision, and the client's human-facing auto-tap — where
+  stranding a splash is simply wrong, and which this ladder does not
+  measure at all — is the case that motivated it. `legacytap` restores
+  the old order. Reverse this if the house rule should be "never ship on
+  a null".
+
+  The flag exists purely for measurement: the behaviour lives in the
+  engine, so without a per-player switch both seats of a mirror would
+  get it and the ladder would be structurally unable to show anything —
+  the same blindness as the point below.
 - 🟡 **Determinized combat search** (`EvalWeights::determinize`,
   `det1`/`det3`) — `simulate_attack_outcome` and `simulate_block_outcome`
   clone the true `GameState`, so the rollout opponent casts the cards

@@ -392,6 +392,13 @@ fn main() {
     let mut trainer = Trainer::new(&cfg, args.lr).expect("trainer init");
     let mut deck_trainer =
         DeckTrainer::new(&DeckNetConfig::standard(vocab.size()), args.lr).expect("deck trainer");
+    eprintln!(
+        "learner device: {} (lambda {}, batch {}, lr {})",
+        trainer.device_label(),
+        args.lambda,
+        args.batch,
+        args.lr
+    );
     std::fs::create_dir_all(&args.out).expect("create --out dir");
     let latest = args.out.join("latest.safetensors");
     if latest.exists() {

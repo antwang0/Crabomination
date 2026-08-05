@@ -202,6 +202,17 @@ impl Trainer {
         Ok(Trainer { varmap, model, opt, dev })
     }
 
+    /// Which device the learner actually got.
+    ///
+    /// `Device::cuda_if_available` falls back to CPU silently — without
+    /// the `cuda` feature, without a driver, without a card. A long run
+    /// that quietly trained on CPU would look exactly like a legitimate
+    /// GPU capacity result and would be compared against one, so the
+    /// device is reported at startup rather than assumed.
+    pub fn device_label(&self) -> &'static str {
+        if self.dev.is_cuda() { "cuda" } else { "cpu" }
+    }
+
     /// One SGD step over `rows`; returns the (pre-step) loss, decomposed.
     /// The components exist because a single number hid a real regime
     /// change once already: the round-1/round-2 EMAs (0.22 vs 0.30) were
