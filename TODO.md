@@ -1559,12 +1559,13 @@ creatures — `evaluate_requirement_on_card` learned `R::IsAttacking`),
 **Maelstrom of the Spirit Dragon** (new `SpendRestriction::DragonOrOmenSpell`
 + `SpellKind.omen`, threaded through `cast_omen`), and **Neriv, Heart of the
 Storm** (new `StaticEffect::DoubleDamageFromCreaturesEnteredThisTurn` in
-`scale_damage_to`). Still open, each needing a new primitive:
-- **Reverberating Summons** — spell-count self-animate (3/3 Monk EOT) + the
-  discard-hand+sac activated ability (`discard_hand_cost` exists).
-- **Sidisi, Regent of the Mire** — a sacrificed-MV → target-MV+1 reanimate link.
-  (The Sibsig Ceremony shipped via new `Predicate::TriggerSourceEnteredByCast`
-  + `CardInstance.entered_by_cast`.)
+`scale_damage_to`). Reverberating Summons, Stillness in Motion, Rite of Renewal and Dalkovan
+Encampment shipped in `decks::recent325`. `set_gaps.py tdm` is down to 10, all
+of them multicolour rares/mythics (Call the Spirit Dragons, Jeskai Revelation,
+Kotis, Mardu Siegebreaker, New Way Forward, Shiko, Taigam, Thunder of Unity,
+Ugin Eye of the Storms) plus **Sidisi, Regent of the Mire**, which still needs
+a sacrificed-MV → target-MV+1 reanimate link. (The Sibsig Ceremony shipped via
+`Predicate::TriggerSourceEnteredByCast` + `CardInstance.entered_by_cast`.)
 
 ## Recent-set gaps (BLB / DSK / FDN) — good easy-card source
 
@@ -1573,16 +1574,19 @@ many are already implemented elsewhere in the catalog — **grep before adding**
 `decks::recent117-122` shipped several passes (threshold, landfall, first-lifegain,
 kicker, changeling gy-tuck, gy-recursion, reveal-until-land ramp, begin-combat
 pump, modal flash, punisher Aura, delirium fight/reanimate, delirium-discount
-removal, surveil, Fact-or-Fiction). Still open, each needing one new primitive:
-Come Back Wrong (steal-reanimate + sac-at-end-step), Cathartic Parting
-(shuffle-target-into-owner's-library), Darkstar Augur (Dark-Confidant reveal-top-
-lose-life), Feed the Cycle (forage-or-pay additional cost). Corpseberry Cultivator
-shipped via the new `EventKind::Foraged`.
+removal, surveil, Fact-or-Fiction). All four cards this section used to list as open (Come Back Wrong, Cathartic
+Parting, Darkstar Augur, Feed the Cycle) shipped in later runs, as did
+Corpseberry Cultivator via `EventKind::Foraged`. `decks::recent325` added
+Miasma Demon, Stay Hidden Stay Silent, Chainsaw, Dissection Tools, Unidentified
+Hovership, Leyline of Mutation, Silent Hallcreeper, Thornvault Forager,
+Hoarder's Overflow, Festival of Embers and Camellia. What's left in DSK/BLB is
+listed under "Noticed this run (recent325 gap batch)".
 
-**OTJ (`decks::recent124-126`)** is a rich remaining source — 176 gaps. Shipped
-this run: ward/toughness pump, flash -2/-2, mill, ping, off-turn discount,
-conditional Defender, Mounts (Saddle), outlaw Treasure, commit-crime drain, Plot.
-Next-up primitives to unblock more OTJ: a "committed a crime this turn" gate on
+**OTJ (`decks::recent124-126`)** is down to **10** (2026-08-05 `set_gaps.py
+otj`), all of them build-around legends: Another Round, Assimilation Aegis,
+Breeches, Calamity, Eriette the Beguiler, Kellan the Kid, Lilah, Riku of Many
+Paths, Taii Wakeen, The Gitrog Ravenous Ride. Next-up primitives to unblock
+them: a "committed a crime this turn" gate on
 activated abilities (Blood Hustler), and Spree-on-instant modal costs
 (Metamorphic Blast, Getaway Glamer). (`Value::OtherSpellsCastThisTurn` shipped —
 Thunder Salvo now uses it directly.)
