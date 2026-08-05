@@ -47,14 +47,16 @@ Items are grouped by area and roughly ordered by impact within each group.
   tokens carry `PumpSelfByControlledPermanents` rather than a copiable ability
   string; a token-copy effect reproduces the bonus, which matches CR 707.2. ⏳
 - **`install-client-deps.sh` still doesn't fire in scheduled sessions** —
-  confirmed again; running it by hand fixed the `wayland-client` build failure
-  that otherwise breaks `cargo test --workspace`. ⏳
-- **Clippy needs ~10 h of wall clock here, so start it first, not last.** A
-  whole-workspace `--all-targets` run filled the disk (the incremental tree
-  reached 14 GB, leaving 4 GB free on a 252 GB volume). What works:
-  `CARGO_INCREMENTAL=0` plus two scoped runs — the five non-client crates
-  (~5 h), then `-p crabomination_client` (~5 h more, most of it Bevy under
-  clippy). Both were clean this run, but only after the client run caught
+  confirmed again 2026-08-05: `-p crabomination_client` died in
+  `wayland-sys`'s build script until the hook was run by hand, after which it
+  builds clean. The install belongs in the environment image. ⏳
+- **Clippy is minutes, not hours, on a warm `target/`.** Corrected 2026-08-05:
+  `CARGO_INCREMENTAL=0 cargo clippy --all-targets` over the five non-client
+  crates finished in **4m31s** after a normal `cargo build` had already warmed
+  the tree, and the tree stayed at 7 GB. The old ~10 h figure was a cold
+  incremental run that also filled the disk. Still run the two scopes
+  separately — the non-client crates, then `-p crabomination_client` (Bevy
+  from scratch is the expensive half). The client run caught
   **five compile errors in client test code that no other gate saw**: a
   `PermanentView` literal missing a newly-added field and four
   `board_status_strip` call sites missing a newly-added argument. A
