@@ -70,6 +70,26 @@ pub const OBJ_HIDDEN: usize = 64;
 pub const TRUNK_H1: usize = 512;
 pub const TRUNK_H2: usize = 256;
 
+/// Attention heads in the optional interaction layer. Must divide
+/// [`OBJ_HIDDEN`].
+///
+/// Why the layer exists: mean/max pooling is permutation invariant *per
+/// group*, so the trunk only ever sees "how much is in this zone" and
+/// "what is the biggest thing in it". It cannot represent a relation
+/// between two objects in different zones — "my flier gets through
+/// because their board has no flier and no reach" needs my battlefield
+/// compared element-wise against theirs, and pooling has already
+/// discarded that by the time the trunk runs.
+///
+/// The calibration diagnostic made this concrete rather than theoretical:
+/// the pooled net scores AUC 0.746 at predicting the winner against
+/// `eval_material`'s 0.755 on identical positions. It learned the
+/// material heuristic and stopped, which is the ceiling of what the
+/// representation can express — and why quadrupling the trunk in round 4
+/// could not have helped. Widening a layer cannot recover information
+/// discarded before it.
+pub const ATTN_HEADS: usize = 4;
+
 /// One card object as the net sees it: a vocabulary index plus a small
 /// dense feature vector (effective P/T, tapped, counters, ...). Index 0 is
 /// reserved for unknown names — tokens and anything outside the vocab.
@@ -428,6 +448,27 @@ pub struct PlayNet {
     trunk2_b: Vec<f32>,
     head_win_w: Tensor2, // [1, h2]
     head_win_b: Vec<f32>,
+    /// Present only in weights trained with the interaction layer. Absent
+    /// means the pure deep-sets net, which stays loadable unchanged — the
+    /// two architectures are distinguished by which tensors the file
+    /// carries, not by a flag the caller has to remember.
+    attn: Option<Attn>,
+}
+
+/// Single pre-pool self-attention layer over every object on the board,
+/// with a residual. See [`ATTN_HEADS`].
+#[derive(Debug, Clone)]
+struct Attn {
+    /// Learned per-group tag, `[NUM_GROUPS, obj_hidden]`.
+    group: Tensor2,
+    q_w: Tensor2,
+    q_b: Vec<f32>,
+    k_w: Tensor2,
+    k_b: Vec<f32>,
+    v_w: Tensor2,
+    v_b: Vec<f32>,
+    o_w: Tensor2,
+    o_b: Vec<f32>,
 }
 
 impl PlayNet {
@@ -455,6 +496,48 @@ impl PlayNet {
             trunk2_b: get("trunk2.bias")?.data,
             head_win_w: get("head_win.weight")?,
             head_win_b: get("head_win.bias")?.data,
+            attn: None,
+        };
+
+        // The interaction layer is all-or-nothing. A file carrying some of
+        // its tensors is a trainer/inference mismatch, and silently
+        // ignoring the partial set would run the wrong architecture on
+        // weights trained for another — the exact class of bug the tensor
+        // naming contract exists to prevent.
+        const ATTN_NAMES: [&str; 9] = [
+            "attn.group.weight",
+            "attn.q.weight",
+            "attn.q.bias",
+            "attn.k.weight",
+            "attn.k.bias",
+            "attn.v.weight",
+            "attn.v.bias",
+            "attn.o.weight",
+            "attn.o.bias",
+        ];
+        let present = ATTN_NAMES.iter().filter(|n| st.tensor(n).is_ok()).count();
+        let net = if present == ATTN_NAMES.len() {
+            PlayNet {
+                attn: Some(Attn {
+                    group: get("attn.group.weight")?,
+                    q_w: get("attn.q.weight")?,
+                    q_b: get("attn.q.bias")?.data,
+                    k_w: get("attn.k.weight")?,
+                    k_b: get("attn.k.bias")?.data,
+                    v_w: get("attn.v.weight")?,
+                    v_b: get("attn.v.bias")?.data,
+                    o_w: get("attn.o.weight")?,
+                    o_b: get("attn.o.bias")?.data,
+                }),
+                ..net
+            }
+        } else if present == 0 {
+            net
+        } else {
+            return Err(NnError::BadTensor(
+                "attn.*",
+                format!("{present} of {} attention tensors present", ATTN_NAMES.len()),
+            ));
         };
 
         // Cross-check the shapes once here so forward() can trust them.
@@ -483,40 +566,187 @@ impl PlayNet {
                 return Err(NnError::BadTensor(name, "shape inconsistent with the rest of the net".into()));
             }
         }
+        if let Some(a) = &net.attn {
+            if h_obj % ATTN_HEADS != 0 {
+                return Err(NnError::BadTensor(
+                    "attn.q.weight",
+                    format!("obj_hidden {h_obj} not divisible by {ATTN_HEADS} heads"),
+                ));
+            }
+            for (name, t) in [
+                ("attn.q.weight", &a.q_w),
+                ("attn.k.weight", &a.k_w),
+                ("attn.v.weight", &a.v_w),
+                ("attn.o.weight", &a.o_w),
+            ] {
+                if t.rows != h_obj || t.cols != h_obj {
+                    return Err(NnError::BadTensor(
+                        name,
+                        format!("{}x{} != {h_obj}x{h_obj}", t.rows, t.cols),
+                    ));
+                }
+            }
+            if a.group.rows != NUM_GROUPS || a.group.cols != h_obj {
+                return Err(NnError::BadTensor(
+                    "attn.group.weight",
+                    format!("{}x{} != {NUM_GROUPS}x{h_obj}", a.group.rows, a.group.cols),
+                ));
+            }
+        }
         Ok(net)
     }
 
-    /// Win probability for the seat the state was encoded for, in [0, 1].
-    pub fn forward(&self, s: &EncodedState) -> f32 {
+    /// Per-object hidden vectors for every object on the board, flattened
+    /// across groups: `(hs [n, h_obj], group index per object)`.
+    fn encode_objects(&self, s: &EncodedState, h_obj: usize) -> (Vec<f32>, Vec<usize>) {
         let emb_dim = self.emb.cols;
-        let h_obj = self.obj_w.rows;
-        let mut trunk_in = vec![0.0f32; self.trunk1_w.cols];
-
+        let n: usize = s.groups.iter().map(|g| g.len()).sum();
+        let mut hs = vec![0.0f32; n * h_obj];
+        let mut owner = Vec::with_capacity(n);
         let mut x = vec![0.0f32; self.obj_w.cols];
-        let mut h = vec![0.0f32; h_obj];
+        let mut i = 0;
         for (gi, group) in s.groups.iter().enumerate() {
-            if group.is_empty() {
-                continue; // group slot stays zero — the net's "empty" signal
-            }
-            let base = gi * 2 * h_obj;
-            let (mean, rest) = trunk_in[base..base + 2 * h_obj].split_at_mut(h_obj);
-            let max = rest;
-            max.fill(f32::NEG_INFINITY);
             for o in group {
                 let card = (o.card as usize).min(self.emb.rows - 1);
                 x[..emb_dim].copy_from_slice(&self.emb.data[card * emb_dim..(card + 1) * emb_dim]);
                 x[emb_dim..].copy_from_slice(&o.feats);
-                self.obj_w.matvec(&x, &mut h);
-                for ((hv, b), (m, mx)) in
-                    h.iter_mut().zip(&self.obj_b).zip(mean.iter_mut().zip(max.iter_mut()))
-                {
-                    let v = (*hv + b).max(0.0);
-                    *m += v;
-                    *mx = mx.max(v);
+                self.obj_w.matvec(&x, &mut hs[i * h_obj..(i + 1) * h_obj]);
+                for (v, b) in hs[i * h_obj..(i + 1) * h_obj].iter_mut().zip(&self.obj_b) {
+                    *v = (*v + b).max(0.0);
+                }
+                owner.push(gi);
+                i += 1;
+            }
+        }
+        (hs, owner)
+    }
+
+    /// Multi-head self-attention over all objects, in place, with a
+    /// residual and a relu.
+    ///
+    /// Every object attends to every other regardless of zone, which is
+    /// the entire point: this is the first place in the network where a
+    /// creature on my battlefield can be compared against a creature on
+    /// theirs. A learned per-group tag is added to the input so a query
+    /// can tell whose object it is looking at.
+    ///
+    /// No layer norm and a single layer, deliberately. This is an
+    /// experiment testing whether interaction modelling buys anything at
+    /// all; a full pre-norm transformer is a lot more parity surface
+    /// between this hand-rolled forward and the candle mirror, and is
+    /// worth paying for only once there is a signal to justify it.
+    fn attend(&self, hs: &mut [f32], owner: &[usize], h_obj: usize) {
+        let Some(a) = &self.attn else { return };
+        let n = owner.len();
+        if n == 0 {
+            return;
+        }
+        let hd = h_obj / ATTN_HEADS;
+        let scale = 1.0 / (hd as f32).sqrt();
+
+        // Tagged input: h + group_embedding(group_of_object).
+        let mut xin = vec![0.0f32; n * h_obj];
+        for i in 0..n {
+            let tag = &a.group.data[owner[i] * h_obj..(owner[i] + 1) * h_obj];
+            for j in 0..h_obj {
+                xin[i * h_obj + j] = hs[i * h_obj + j] + tag[j];
+            }
+        }
+
+        let project = |w: &Tensor2, b: &[f32]| {
+            let mut out = vec![0.0f32; n * h_obj];
+            for i in 0..n {
+                w.matvec(&xin[i * h_obj..(i + 1) * h_obj], &mut out[i * h_obj..(i + 1) * h_obj]);
+                for (v, bb) in out[i * h_obj..(i + 1) * h_obj].iter_mut().zip(b) {
+                    *v += bb;
                 }
             }
-            let inv = 1.0 / group.len() as f32;
-            for m in mean.iter_mut() {
+            out
+        };
+        let q = project(&a.q_w, &a.q_b);
+        let k = project(&a.k_w, &a.k_b);
+        let v = project(&a.v_w, &a.v_b);
+
+        let mut ctx = vec![0.0f32; n * h_obj];
+        let mut scores = vec![0.0f32; n];
+        for head in 0..ATTN_HEADS {
+            let off = head * hd;
+            for i in 0..n {
+                let qi = &q[i * h_obj + off..i * h_obj + off + hd];
+                let mut max = f32::NEG_INFINITY;
+                for (j, sc) in scores.iter_mut().enumerate() {
+                    let kj = &k[j * h_obj + off..j * h_obj + off + hd];
+                    let dot: f32 = qi.iter().zip(kj).map(|(x, y)| x * y).sum();
+                    *sc = dot * scale;
+                    max = max.max(*sc);
+                }
+                // Softmax, max-subtracted so a wide score range can't
+                // overflow on a big board.
+                let mut sum = 0.0f32;
+                for sc in scores.iter_mut() {
+                    *sc = (*sc - max).exp();
+                    sum += *sc;
+                }
+                let inv = 1.0 / sum;
+                for (j, sc) in scores.iter().enumerate() {
+                    let w = sc * inv;
+                    let vj = &v[j * h_obj + off..j * h_obj + off + hd];
+                    let dst = &mut ctx[i * h_obj + off..i * h_obj + off + hd];
+                    for (d, sv) in dst.iter_mut().zip(vj) {
+                        *d += w * sv;
+                    }
+                }
+            }
+        }
+
+        // Output projection, residual against the pre-attention hidden
+        // state, relu.
+        let mut proj = vec![0.0f32; h_obj];
+        for i in 0..n {
+            a.o_w.matvec(&ctx[i * h_obj..(i + 1) * h_obj], &mut proj);
+            for j in 0..h_obj {
+                hs[i * h_obj + j] = (hs[i * h_obj + j] + proj[j] + a.o_b[j]).max(0.0);
+            }
+        }
+    }
+
+    /// Win probability for the seat the state was encoded for, in [0, 1].
+    pub fn forward(&self, s: &EncodedState) -> f32 {
+        let h_obj = self.obj_w.rows;
+        let mut trunk_in = vec![0.0f32; self.trunk1_w.cols];
+
+        // Encode every object, let them interact (no-op without the
+        // attention tensors), then pool per group exactly as before —
+        // pooling still supplies the fixed-width trunk input, it just
+        // pools representations that have already seen the whole board.
+        let (mut hs, owner) = self.encode_objects(s, h_obj);
+        self.attend(&mut hs, &owner, h_obj);
+
+        let mut counts = [0usize; NUM_GROUPS];
+        for gi in 0..NUM_GROUPS {
+            let base = gi * 2 * h_obj;
+            trunk_in[base + h_obj..base + 2 * h_obj].fill(f32::NEG_INFINITY);
+        }
+        for (i, &gi) in owner.iter().enumerate() {
+            let base = gi * 2 * h_obj;
+            counts[gi] += 1;
+            for j in 0..h_obj {
+                let v = hs[i * h_obj + j];
+                trunk_in[base + j] += v;
+                let mx = &mut trunk_in[base + h_obj + j];
+                *mx = mx.max(v);
+            }
+        }
+        for (gi, &n) in counts.iter().enumerate() {
+            let base = gi * 2 * h_obj;
+            if n == 0 {
+                // Empty group stays all-zero — the net's "nothing here"
+                // signal, and what the -inf max slots must collapse to.
+                trunk_in[base..base + 2 * h_obj].fill(0.0);
+                continue;
+            }
+            let inv = 1.0 / n as f32;
+            for m in trunk_in[base..base + h_obj].iter_mut() {
                 *m *= inv;
             }
         }

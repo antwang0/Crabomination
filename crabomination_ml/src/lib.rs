@@ -24,8 +24,8 @@ use candle_nn::{
     linear,
 };
 use crabomination_nn::{
-    DeckRow, EMB_DIM, EncodedState, GLOBAL_FEATS, NUM_GROUPS, OBJ_FEATS, OBJ_HIDDEN, TRUNK_H1,
-    TRUNK_H2, TrainRow,
+    ATTN_HEADS, DeckRow, EMB_DIM, EncodedState, GLOBAL_FEATS, NUM_GROUPS, OBJ_FEATS, OBJ_HIDDEN,
+    TRUNK_H1, TRUNK_H2, TrainRow,
 };
 use rand::{Rng, RngExt};
 
@@ -39,12 +39,27 @@ pub struct NetConfig {
     pub obj_hidden: usize,
     pub h1: usize,
     pub h2: usize,
+    /// Build the pre-pool interaction layer. Off reproduces the pure
+    /// deep-sets net bit-for-bit, so it stays the control.
+    pub attn: bool,
 }
 
 impl NetConfig {
     /// The standard configuration (`crabomination_nn` constants).
     pub fn standard(vocab: usize) -> Self {
-        Self { vocab, emb_dim: EMB_DIM, obj_hidden: OBJ_HIDDEN, h1: TRUNK_H1, h2: TRUNK_H2 }
+        Self {
+            vocab,
+            emb_dim: EMB_DIM,
+            obj_hidden: OBJ_HIDDEN,
+            h1: TRUNK_H1,
+            h2: TRUNK_H2,
+            attn: false,
+        }
+    }
+
+    /// [`standard`](Self::standard) plus the attention layer.
+    pub fn with_attention(vocab: usize) -> Self {
+        Self { attn: true, ..Self::standard(vocab) }
     }
 
     fn trunk_in(&self) -> usize {
@@ -56,6 +71,7 @@ impl NetConfig {
 pub struct PlayModel {
     emb: Embedding,
     obj: Linear,
+    attn: Option<AttnLayer>,
     trunk1: Linear,
     trunk2: Linear,
     head_win: Linear,
@@ -63,10 +79,33 @@ pub struct PlayModel {
     head_len: Linear,
 }
 
+/// Candle mirror of `crabomination_nn`'s `Attn`. Tensor names must match
+/// exactly (`attn.group.weight`, `attn.{q,k,v,o}.{weight,bias}`) — the
+/// parity test holds both sides to the same numbers.
+struct AttnLayer {
+    group: Embedding,
+    q: Linear,
+    k: Linear,
+    v: Linear,
+    o: Linear,
+}
+
 pub fn build_model(cfg: &NetConfig, vb: VarBuilder) -> CResult<PlayModel> {
     Ok(PlayModel {
         emb: embedding(cfg.vocab, cfg.emb_dim, vb.pp("emb"))?,
         obj: linear(cfg.emb_dim + OBJ_FEATS, cfg.obj_hidden, vb.pp("obj"))?,
+        attn: if cfg.attn {
+            let d = cfg.obj_hidden;
+            Some(AttnLayer {
+                group: embedding(NUM_GROUPS, d, vb.pp("attn.group"))?,
+                q: linear(d, d, vb.pp("attn.q"))?,
+                k: linear(d, d, vb.pp("attn.k"))?,
+                v: linear(d, d, vb.pp("attn.v"))?,
+                o: linear(d, d, vb.pp("attn.o"))?,
+            })
+        } else {
+            None
+        },
         trunk1: linear(cfg.trunk_in(), cfg.h1, vb.pp("trunk1"))?,
         trunk2: linear(cfg.h1, cfg.h2, vb.pp("trunk2"))?,
         head_win: linear(cfg.h2, 1, vb.pp("head_win"))?,
@@ -135,15 +174,94 @@ pub fn make_batch_with_targets(rows: &[(&TrainRow, f32)], dev: &Device) -> CResu
     })
 }
 
+impl AttnLayer {
+    /// Self-attention over every object in every group at once, returned
+    /// split back into the same per-group shapes.
+    ///
+    /// Concatenating the groups is the whole point — it is the only place
+    /// in the network where an object on my battlefield and one on the
+    /// opponent's are in the same tensor and can be compared. A learned
+    /// per-group tag is added first so a query can tell whose object it
+    /// is attending to; without it, concatenation would throw away zone
+    /// identity that the pooled trunk input otherwise carries positionally.
+    fn apply(&self, hs: &[Tensor], mask: &[Tensor]) -> CResult<Vec<Tensor>> {
+        let (b, _, d) = hs[0].dims3()?;
+        let dev = hs[0].device();
+        let sizes: Vec<usize> = hs.iter().map(|h| h.dim(1).unwrap()).collect();
+
+        // Tag each group's objects with its learned group embedding, then
+        // concatenate along the object axis.
+        let mut tagged: Vec<Tensor> = Vec::with_capacity(hs.len());
+        for (g, h) in hs.iter().enumerate() {
+            let ids = Tensor::full(g as u32, (b, sizes[g]), dev)?;
+            tagged.push(h.add(&self.group.forward(&ids)?)?);
+        }
+        let refs: Vec<&Tensor> = tagged.iter().collect();
+        let x = Tensor::cat(&refs, 1)?; // [B,N,D]
+        let mrefs: Vec<&Tensor> = mask.iter().collect();
+        let m = Tensor::cat(&mrefs, 1)?; // [B,N,1]
+        let n: usize = sizes.iter().sum();
+        let hd = d / ATTN_HEADS;
+        let scale = 1.0 / (hd as f64).sqrt();
+
+        // [B,N,D] -> [B,H,N,hd]
+        let split = |t: Tensor| -> CResult<Tensor> {
+            t.reshape((b, n, ATTN_HEADS, hd))?.transpose(1, 2)?.contiguous()
+        };
+        let q = split(self.q.forward(&x)?)?;
+        let k = split(self.k.forward(&x)?)?;
+        let v = split(self.v.forward(&x)?)?;
+
+        let scores = (q.matmul(&k.transpose(2, 3)?)? * scale)?; // [B,H,N,N]
+        // Padding keys get a large negative bias rather than -inf: with
+        // -inf, a batch row that happened to be all padding would softmax
+        // to NaN and poison the whole batch. -1e9 underflows to exactly
+        // zero weight against any real score, so the engine's
+        // "attend over real objects only" is reproduced exactly.
+        let keybias = ((m.reshape((b, 1, 1, n))? - 1.0)? * 1e9)?;
+        let scores = scores.broadcast_add(&keybias)?;
+        let attn = candle_nn::ops::softmax_last_dim(&scores)?;
+        let ctx = attn
+            .matmul(&v)? // [B,H,N,hd]
+            .transpose(1, 2)?
+            .contiguous()?
+            .reshape((b, n, d))?;
+
+        // Residual against the *pre-attention* hidden state (not the
+        // group-tagged input), then relu — matching the engine forward,
+        // where the tag exists only to inform the attention scores and
+        // must not leak into the pooled representation.
+        let residual = Tensor::cat(&hs.iter().collect::<Vec<_>>(), 1)?;
+        let out = residual.add(&self.o.forward(&ctx)?)?.relu()?;
+
+        let mut split_out = Vec::with_capacity(hs.len());
+        let mut off = 0;
+        for sz in sizes {
+            split_out.push(out.narrow(1, off, sz)?);
+            off += sz;
+        }
+        Ok(split_out)
+    }
+}
+
 impl PlayModel {
     /// Returns `(win probability, life-diff, game-len)` predictions,
     /// each `[B, 1]`.
     pub fn forward(&self, batch: &Batch) -> CResult<(Tensor, Tensor, Tensor)> {
-        let mut pooled: Vec<Tensor> = Vec::with_capacity(2 * NUM_GROUPS + 1);
+        // Per-object hidden states, one tensor per group.
+        let mut hs: Vec<Tensor> = Vec::with_capacity(NUM_GROUPS);
         for g in 0..NUM_GROUPS {
             let e = self.emb.forward(&batch.ids[g])?; // [B,N,E]
             let x = Tensor::cat(&[&e, &batch.feats[g]], 2)?;
-            let h = self.obj.forward(&x)?.relu()?; // [B,N,H]
+            hs.push(self.obj.forward(&x)?.relu()?); // [B,N,H]
+        }
+        if let Some(a) = &self.attn {
+            hs = a.apply(&hs, &batch.mask)?;
+        }
+
+        let mut pooled: Vec<Tensor> = Vec::with_capacity(2 * NUM_GROUPS + 1);
+        for g in 0..NUM_GROUPS {
+            let h = &hs[g];
             let hm = h.broadcast_mul(&batch.mask[g])?;
             let count = batch.mask[g].sum(1)?; // [B,1]
             // Mean over the real (unmasked) objects; zero for empty groups,
@@ -536,7 +654,11 @@ mod tests {
     use rand::rngs::StdRng;
 
     fn small_cfg() -> NetConfig {
-        NetConfig { vocab: 12, emb_dim: 4, obj_hidden: 8, h1: 32, h2: 16 }
+        NetConfig { vocab: 12, emb_dim: 4, obj_hidden: 8, h1: 32, h2: 16, attn: false }
+    }
+
+    fn small_attn_cfg() -> NetConfig {
+        NetConfig { attn: true, ..small_cfg() }
     }
 
     fn random_state<R: Rng>(rng: &mut R, vocab: usize) -> EncodedState {
@@ -581,6 +703,70 @@ mod tests {
                 "state {i}: engine {got} vs candle {want}"
             );
         }
+    }
+
+    /// The attention layer has to survive the same round trip as the rest
+    /// of the net: candle trains it, safetensors carries it, and the
+    /// hand-rolled engine forward has to reproduce the same numbers.
+    ///
+    /// This is the parity surface that matters most, because the two
+    /// implementations are structurally different — candle attends over a
+    /// padded `[B,N,N]` batch with a mask, the engine attends over exactly
+    /// the real objects with no padding at all. They agree only if the
+    /// masking underflows to precisely zero weight, which is the reason
+    /// the mask bias is -1e9 rather than -inf.
+    #[test]
+    fn attention_weights_match_engine_inference() {
+        let cfg = small_attn_cfg();
+        let trainer = Trainer::new(&cfg, 1e-3).expect("trainer");
+        let path = std::env::temp_dir()
+            .join(format!("crab_attn_parity_{}.safetensors", std::process::id()));
+        trainer.save(&path).expect("save");
+        let bytes = std::fs::read(&path).expect("read");
+        let _ = std::fs::remove_file(&path);
+        let net = PlayNet::load(&bytes).expect("engine loads attention export");
+
+        let mut rng = StdRng::seed_from_u64(23);
+        for i in 0..8 {
+            let s = random_state(&mut rng, cfg.vocab);
+            let want = trainer.predict_win(&s).expect("candle forward");
+            let got = net.forward(&s);
+            assert!(
+                (got - want).abs() < 1e-4,
+                "state {i}: engine {got} vs candle {want}"
+            );
+        }
+    }
+
+    /// A file carrying only some of the attention tensors is a
+    /// trainer/inference mismatch. Loading it as the pooled net would run
+    /// the wrong architecture on the right weights and silently produce
+    /// nonsense, so it must be an error rather than a quiet fallback.
+    #[test]
+    fn partial_attention_tensors_are_rejected() {
+        let (vocab, e, d, h1, h2) = (12usize, 4usize, 8usize, 32usize, 16usize);
+        let trunk_in = NUM_GROUPS * 2 * d + GLOBAL_FEATS;
+        let t = |n: usize| vec![0.01f32; n];
+        let mut tensors: Vec<(&str, Vec<usize>, Vec<f32>)> = vec![
+            ("emb.weight", vec![vocab, e], t(vocab * e)),
+            ("obj.weight", vec![d, e + OBJ_FEATS], t(d * (e + OBJ_FEATS))),
+            ("obj.bias", vec![d], t(d)),
+            ("trunk1.weight", vec![h1, trunk_in], t(h1 * trunk_in)),
+            ("trunk1.bias", vec![h1], t(h1)),
+            ("trunk2.weight", vec![h2, h1], t(h2 * h1)),
+            ("trunk2.bias", vec![h2], t(h2)),
+            ("head_win.weight", vec![1, h2], t(h2)),
+            ("head_win.bias", vec![1], t(1)),
+        ];
+        // Complete: loads as the pooled net.
+        assert!(PlayNet::load(&crabomination_nn::to_safetensors(&tensors)).is_ok());
+
+        // Add one lone attention tensor — neither architecture.
+        tensors.push(("attn.q.weight", vec![d, d], t(d * d)));
+        assert!(
+            PlayNet::load(&crabomination_nn::to_safetensors(&tensors)).is_err(),
+            "a half-present attention layer must not load as the pooled net"
+        );
     }
 
     /// End-to-end learning sanity: a synthetic signal (life lead wins,

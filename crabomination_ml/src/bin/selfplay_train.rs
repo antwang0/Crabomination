@@ -92,6 +92,9 @@ struct Args {
     /// against the one it replaces, same pools, same pilots, N games
     /// per pool. No net involved — this measures the builder alone.
     gate_builder_v2: Option<usize>,
+    /// Train the play net with the pre-pool attention layer — the
+    /// interaction model. Off is the pooled control.
+    attn: bool,
     /// Build training decks with the gate-passed deck net as the judge
     /// (best-of-32 over the same noisy-greedy candidates the heuristic
     /// picks from) instead of taking the heuristic builder's own pick.
@@ -128,6 +131,7 @@ fn parse_args() -> Args {
         gate_builder_v2: None,
         calibrate: None,
         use_deck_best: None,
+        attn: false,
     };
     let mut it = std::env::args().skip(1);
     while let Some(flag) = it.next() {
@@ -151,6 +155,10 @@ fn parse_args() -> Args {
             "--use-best" => a.use_best = Some(PathBuf::from(val())),
             "--calibrate" => a.calibrate = Some(val().parse().expect("--calibrate")),
             "--use-deck-best" => a.use_deck_best = Some(PathBuf::from(val())),
+            "--attn" => {
+                a.attn = true;
+                continue; // bare flag, consumes no value
+            }
             "--gate-builder" => a.gate_builder = Some(val().parse().expect("--gate-builder")),
             "--gate-builder-v2" => {
                 a.gate_builder_v2 = Some(val().parse().expect("--gate-builder-v2"))
@@ -388,16 +396,21 @@ fn main() {
         calibrate(&args, &vocab, games);
         return;
     }
-    let cfg = NetConfig::standard(vocab.size());
+    let cfg = if args.attn {
+        NetConfig::with_attention(vocab.size())
+    } else {
+        NetConfig::standard(vocab.size())
+    };
     let mut trainer = Trainer::new(&cfg, args.lr).expect("trainer init");
     let mut deck_trainer =
         DeckTrainer::new(&DeckNetConfig::standard(vocab.size()), args.lr).expect("deck trainer");
     eprintln!(
-        "learner device: {} (lambda {}, batch {}, lr {})",
+        "learner device: {} (lambda {}, batch {}, lr {}, {})",
         trainer.device_label(),
         args.lambda,
         args.batch,
-        args.lr
+        args.lr,
+        if args.attn { "attention" } else { "pooled" }
     );
     std::fs::create_dir_all(&args.out).expect("create --out dir");
     let latest = args.out.join("latest.safetensors");
@@ -661,9 +674,15 @@ fn checkpoint(
 /// support rather than penalised for not being calibrated.
 fn calibrate(args: &Args, vocab: &Vocab, games: usize) {
     let best = args.use_best.as_ref().expect("--calibrate needs --use-best WEIGHTS");
-    let cfg = NetConfig::standard(vocab.size());
+    let cfg = if args.attn {
+        NetConfig::with_attention(vocab.size())
+    } else {
+        NetConfig::standard(vocab.size())
+    };
     let mut trainer = Trainer::new(&cfg, args.lr).expect("trainer init");
-    trainer.load(best).expect("load weights for calibration");
+    trainer
+        .load(best)
+        .expect("load weights for calibration (add --attn if these are attention weights)");
 
     // (net p, heuristic score, actual result)
     let mut obs: Vec<(f32, f32, f32)> = Vec::new();
