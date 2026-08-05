@@ -2677,7 +2677,11 @@ impl From<&GameEvent> for GameEventWire {
             GameEvent::PermanentEntered { card_id } => {
                 GameEventWire::PermanentEntered { card_id: *card_id }
             }
-            GameEvent::PermanentExiled { card_id } => {
+            // The origin-scoped twin rides the same wire event — the client
+            // only needs "this card was exiled", which `PermanentExiled`
+            // already carries in the same batch.
+            GameEvent::PermanentExiled { card_id }
+            | GameEvent::CardExiledFromPlayOrGraveyard { card_id } => {
                 GameEventWire::PermanentExiled { card_id: *card_id }
             }
             GameEvent::DamageDealt { amount, to_player, to_card, .. } => GameEventWire::DamageDealt {

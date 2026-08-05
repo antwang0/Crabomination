@@ -9925,6 +9925,9 @@ impl GameState {
                                     self.players[ctx.controller].cards_exiled_this_turn.saturating_add(1);
                             }
                             events.push(GameEvent::PermanentExiled { card_id: cid });
+                            events.push(GameEvent::CardExiledFromPlayOrGraveyard {
+                                card_id: cid,
+                            });
                         }
                         EntityRef::Card(cid) => {
                             self.move_card_to(cid, &ZoneDest::Exile, ctx, events);

@@ -1760,6 +1760,10 @@ impl GameState {
             if matches!(resolved_dest, ZoneDest::Graveyard) {
                 self.graveyard_from_battlefield_this_turn.insert(cid);
             }
+            // CR 400.7 — "put into exile from the battlefield" (Ketramose).
+            if matches!(resolved_dest, ZoneDest::Exile | ZoneDest::ExilePlotted) {
+                events.push(GameEvent::CardExiledFromPlayOrGraveyard { card_id: cid });
+            }
             self.place_card_in_dest(card, ctx.controller, &resolved_dest, events);
             self.on_left_battlefield(cid, events);
             // "Whenever a permanent is returned to your hand" (Azorius
@@ -1784,6 +1788,10 @@ impl GameState {
                 self.players[p].cards_left_graveyard_this_turn =
                     self.players[p].cards_left_graveyard_this_turn.saturating_add(1);
                 events.push(GameEvent::CardLeftGraveyard { player: p, card_id: cid });
+                // CR 400.7 — "put into exile from a graveyard" (Ketramose).
+                if matches!(resolved_dest, ZoneDest::Exile | ZoneDest::ExilePlotted) {
+                    events.push(GameEvent::CardExiledFromPlayOrGraveyard { card_id: cid });
+                }
                 // Prized Amalgam's gate — record gy→battlefield entries.
                 if matches!(resolved_dest, ZoneDest::Battlefield { .. }) {
                     self.entered_from_graveyard_this_turn.insert(cid);

@@ -431,3 +431,48 @@ fn chandra_spark_hunter_builds_and_animates_a_vehicle() {
     let view = g.computed_permanent(token).unwrap();
     assert!(view.card_types.contains(&CardType::Creature) && view.keywords.contains(&Keyword::Haste));
 }
+
+/// Ketramose is combat-locked until exile is seven deep, and draws off exiles
+/// from graveyards and the battlefield on your turn.
+#[test]
+fn ketramose_gates_on_exile_and_draws_from_it() {
+    let mut g = main_phase();
+    let ket = etb(&mut g, catalog::ketramose_the_new_dawn());
+    g.clear_sickness(ket);
+    for _ in 0..3 {
+        g.add_card_to_library(0, catalog::mountain());
+    }
+    g.step = TurnStep::DeclareAttackers;
+    assert!(
+        g.declare_attackers(vec![Attack { attacker: ket, target: AttackTarget::Player(1) }])
+            .is_err(),
+        "fewer than seven cards in exile"
+    );
+    for _ in 0..7 {
+        let c = g.add_card_to_graveyard(0, catalog::mountain());
+        g.exile.push(g.players[0].graveyard.pop().unwrap());
+        let _ = c;
+    }
+    g.declare_attackers(vec![Attack { attacker: ket, target: AttackTarget::Player(1) }])
+        .expect("gate open");
+
+    // An exile straight off a graveyard draws; a library exile does not.
+    g.step = TurnStep::PostCombatMain;
+    let victim = g.add_card_to_graveyard(1, catalog::grizzly_bears());
+    let before = g.players[0].hand.len();
+    let events = g
+        .resolve_effect(
+            &crabomination::effect::Effect::Exile {
+                what: crabomination::effect::Selector::Target(0),
+            },
+            &EffectContext {
+                targets: vec![Target::Permanent(victim)],
+                ..EffectContext::for_ability(ket, 0, None)
+            },
+        )
+        .unwrap();
+    g.dispatch_triggers_for_events(&events);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), before + 1, "drew off the graveyard exile");
+    assert_eq!(g.players[0].life, 19);
+}

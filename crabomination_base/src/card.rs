@@ -1393,6 +1393,10 @@ pub enum Keyword {
     /// unless you have N or fewer cards in hand" (Hazoret the Fervent, the
     /// Amonkhet Gods). Enforced in `declare_attackers` / blocker legality
     /// against the controller's hand size.
+    /// CR 508.1a / 509.1b — "This creature can't attack or block unless there
+    /// are N or more cards in exile" (Ketramose, the New Dawn). Every owner's
+    /// exiled cards count.
+    CantAttackOrBlockUnlessCardsInExile(u32),
     CantAttackOrBlockUnlessHandSizeAtMost(u32),
     /// CR 508.1a / 509.1a restriction with a cost — "This creature can't
     /// attack or block unless its controller pays {N}" (Oppressive Rays,

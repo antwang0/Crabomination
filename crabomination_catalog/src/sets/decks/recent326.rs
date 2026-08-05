@@ -737,3 +737,35 @@ pub fn ancient_vendetta() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Ketramose, the New Dawn — {1}{W}{B} 4/4 God. Locked out of combat until
+/// exile is seven deep; every exile off a graveyard or the battlefield on your
+/// turn draws you a card.
+pub fn ketramose_the_new_dawn() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![
+            Keyword::Menace,
+            Keyword::Lifelink,
+            Keyword::Indestructible,
+            Keyword::CantAttackOrBlockUnlessCardsInExile(7),
+        ],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(
+                EventKind::CardExiledFromPlayOrGraveyard,
+                EventScope::AnyPlayer,
+            )
+            .with_filter(Predicate::IsTurnOf(PlayerRef::You)),
+            effect: Effect::Seq(vec![
+                Effect::Draw { who: Selector::You, amount: Value::ONE },
+                Effect::LoseLife { who: Selector::You, amount: Value::ONE },
+            ]),
+        }],
+        ..legend(
+            "Ketramose, the New Dawn",
+            cost(&[generic(1), w(), b()]),
+            vec![CreatureType::God],
+            4,
+            4,
+        )
+    }
+}

@@ -95,6 +95,10 @@ pub(crate) fn event_matches_spec(
         (EventKind::PutIntoGraveyard, GameEvent::CardMilled { .. }) => true,
         (EventKind::PutIntoHandFromGraveyard, GameEvent::CardPutIntoHandFromGraveyard { .. }) => true,
         (EventKind::CardExiled, GameEvent::PermanentExiled { .. }) => true,
+        (
+            EventKind::CardExiledFromPlayOrGraveyard,
+            GameEvent::CardExiledFromPlayOrGraveyard { .. },
+        ) => true,
         (EventKind::BecameTarget, GameEvent::BecameTarget { .. }) => true,
         (EventKind::ChoseTargets, GameEvent::ChoseTargets { .. }) => true,
         (EventKind::CardCycled, GameEvent::CardCycled { .. }) => true,

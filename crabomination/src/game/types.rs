@@ -1887,6 +1887,11 @@ pub enum GameEvent {
     ColorlessManaAdded { player: usize, source: Option<CardId> },
     PermanentEntered { card_id: CardId },
     PermanentExiled { card_id: CardId },
+    /// A card was put into exile **from a graveyard or the battlefield**
+    /// (CR 400.7 — the origin matters to Ketramose, the New Dawn). Emitted
+    /// alongside `PermanentExiled` by `move_card_to`, which is the only place
+    /// that still knows which zone the card came from.
+    CardExiledFromPlayOrGraveyard { card_id: CardId },
     /// `combat` is true for combat damage (CR 510), false for damage from
     /// spells/abilities (burn, pingers, Fight). Read by "whenever … is dealt
     /// *noncombat* damage" triggers (Chandra's Spitfire).

@@ -1943,6 +1943,7 @@ impl GameState {
                     .sum();
                 total >= n
             }
+            Predicate::CardsInExileAtLeast(n) => self.exile.len() as u32 >= *n,
             Predicate::CardsExiledThisTurnAtLeast { who, at_least } => {
                 let n = self.evaluate_value(at_least, ctx).max(0) as u32;
                 // `EachPlayer` = the player-agnostic printed wording ("if

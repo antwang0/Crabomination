@@ -11219,6 +11219,7 @@ impl GameState {
                 self.descend_count(owner) < *n as usize
             }
             Keyword::CantAttackOrBlockUnlessCityBlessing => !self.players[owner].city_blessing,
+            Keyword::CantAttackOrBlockUnlessCardsInExile(n) => (self.exile.len() as u32) < *n,
             // Branded Brawlers: your own untapped land locks the block.
             Keyword::CantBlockIfYouHaveUntappedLand => self
                 .battlefield

@@ -1619,6 +1619,9 @@ pub enum Predicate {
     /// "if one or more cards were put into exile this turn" payoffs
     /// (Ennis the Debate Moderator).
     CardsExiledThisTurnAtLeast { who: PlayerRef, at_least: Value },
+    /// "…if there are N or more cards in exile" (Ketramose's attack / block
+    /// gate). Counts every owner's exiled cards.
+    CardsInExileAtLeast(u32),
     /// `who` has cast at least `at_least` instant **or** sorcery spells on
     /// the current turn. Refines `SpellsCastThisTurnAtLeast` (which
     /// counts every spell type) for cards that explicitly gate on the
@@ -2517,6 +2520,11 @@ pub enum EventKind {
     /// `IsTurnOf(You)` for "whenever one or more cards are put into exile
     /// during your turn" (Stonebinder's Familiar).
     CardExiled,
+    /// "Whenever one or more cards are put into exile from graveyards and/or
+    /// the battlefield" (Ketramose, the New Dawn) — the origin-scoped sibling
+    /// of `CardExiled`. Fires per card off `move_card_to`'s battlefield and
+    /// graveyard branches.
+    CardExiledFromPlayOrGraveyard,
     /// A permanent became the target of a spell or activated ability.
     /// Fires once per Permanent target at announce-time (when the spell
     /// hits the stack or the activated ability is pushed). Multi-target

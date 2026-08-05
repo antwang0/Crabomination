@@ -641,6 +641,10 @@ impl GameState {
                     Keyword::CantAttackIfAttackedLastTurn => {
                         self.battlefield_find(id).is_some_and(|c| c.attacked_last_turn)
                     }
+                    // Ketramose — "unless there are seven or more cards in exile".
+                    Keyword::CantAttackOrBlockUnlessCardsInExile(n) => {
+                        (self.exile.len() as u32) < *n
+                    }
                     _ => false,
                 });
                 // CR 508.1a — Wall of Dust's ban, live for exactly this turn.
