@@ -229,8 +229,16 @@ impl GameState {
         // here rather than in `deal_damage_to_from` so the combat path — which
         // reaches this funnel directly — honours it too.
         if let Some(src) = source
-            && let Some(shield) =
-                self.damage_prevented_sources.iter().find(|sh| sh.source == src).cloned()
+            && let Some(shield) = self
+                .damage_prevented_sources
+                .iter()
+                .find(|sh| {
+                    sh.source == src
+                        // "…would deal damage to you" (New Way Forward) only
+                        // soaks damage aimed at the shield's owner.
+                        && sh.to_player.is_none_or(|p| ent == EntityRef::Player(p))
+                })
+                .cloned()
         {
             // CR 615.8 — a "next time it would deal damage" shield expires
             // after soaking one instance.
@@ -258,6 +266,22 @@ impl GameState {
                     let applied = self.adjust_life_applied(seat, amount as i32);
                     if applied > 0 {
                         events.push(GameEvent::LifeGained { player: seat, amount: applied as u32 });
+                    }
+                }
+                // "When damage is prevented this way, …" (New Way Forward) —
+                // a reflexive trigger reading how much was prevented.
+                if let Some(rider) = shield.rider.clone() {
+                    let mut rctx = crate::game::effects::EffectContext::for_spell(
+                        shield.rider_controller,
+                        None,
+                        0,
+                        0,
+                    );
+                    rctx.source = Some(src);
+                    rctx.trigger_source = Some(EntityRef::Permanent(src));
+                    rctx.event_amount = amount;
+                    if let Ok(mut sub) = self.resolve_effect(&rider, &rctx) {
+                        events.append(&mut sub);
                     }
                 }
             }

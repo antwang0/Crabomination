@@ -3976,9 +3976,25 @@ impl GameState {
                 let ids: Vec<crate::card::CardId> = self
                     .resolve_selector(what, ctx)
                     .iter()
-                    .filter_map(|e| e.as_permanent_id())
+                    .filter_map(|e| e.as_card_id())
                     .collect();
                 for cid in ids {
+                    // CR 702.62 on a spell — Taigam exiles the spell he
+                    // copied straight off the stack, so it never resolves.
+                    if let Some(pos) = self
+                        .stack
+                        .iter()
+                        .position(|si| matches!(si, StackItem::Spell { card, .. } if card.id == cid))
+                    {
+                        if let StackItem::Spell { card, .. } = self.stack.remove(pos) {
+                            let mut card = *card;
+                            card.granted_suspend = true;
+                            card.add_counters(crate::card::CounterType::Time, *time_counters);
+                            self.exile.push(card);
+                            events.push(GameEvent::PermanentExiled { card_id: cid });
+                        }
+                        continue;
+                    }
                     self.remove_from_battlefield_to_exile(cid);
                     events.push(GameEvent::PermanentExiled { card_id: cid });
                     if let Some(c) = self.exile.iter_mut().find(|c| c.id == cid) {
@@ -7280,6 +7296,46 @@ impl GameState {
                                 c.face_down = *face_down;
                             }
                         }
+                    }
+                }
+                Ok(())
+            }
+
+            // Kotis, the Fangkeeper — exile the top N of a library, then take
+            // free-cast permission on the ones cheap enough. The MV gate is
+            // applied here rather than in the selector because both bounds
+            // come from the same trigger amount.
+            Effect::ExileTopAndMayCastUpToMv { who, amount, max_mv } => {
+                let n = self.evaluate_value(amount, ctx).max(0) as usize;
+                let cap = self.evaluate_value(max_mv, ctx).max(0) as u32;
+                let mut exiled: Vec<CardId> = Vec::new();
+                for ent in self.resolve_selector(who, ctx) {
+                    if let EntityRef::Player(p) = ent {
+                        for _ in 0..n {
+                            if self.players[p].library.is_empty() {
+                                break;
+                            }
+                            let card = self.players[p].library.remove(0);
+                            let cid = card.id;
+                            let within = card.definition.cost.cmc() <= cap;
+                            self.place_card_in_dest(card, p, &ZoneDest::Exile, events);
+                            self.last_moved_cards.push(cid);
+                            if within {
+                                exiled.push(cid);
+                            }
+                        }
+                    }
+                }
+                let granted_turn = self.turn_number;
+                for cid in exiled {
+                    if let Some(card) = self.find_card_anywhere_mut(cid) {
+                        card.may_play_until = Some(crate::card::MayPlayPermission {
+                            player: ctx.controller,
+                            granted_turn,
+                            duration: crate::card::MayPlayDuration::EndOfThisTurn,
+                            exile_after: false,
+                            miracle: false,
+                        });
                     }
                 }
                 Ok(())
@@ -14007,6 +14063,102 @@ impl GameState {
                 Ok(())
             }
 
+            // Call the Spirit Dragons — one pick per color in WUBRG order; a
+            // multicolored permanent can be picked twice, so the win check
+            // counts distinct recipients.
+            Effect::CounterOnMatchingOfEachColor { filter, kind, win_at } => {
+                use crate::mana::Color;
+                if self.counters_locked() {
+                    return Ok(());
+                }
+                let me = ctx.controller;
+                let src = ctx.source.unwrap_or(CardId(0));
+                let mut cursor = 0usize;
+                let mut recipients: Vec<CardId> = Vec::new();
+                for color in
+                    [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green]
+                {
+                    let ids: Vec<CardId> = self
+                        .battlefield
+                        .iter()
+                        .map(|c| c.id)
+                        .filter(|id| {
+                            self.computed_permanent(*id)
+                                .is_some_and(|cp| cp.colors.contains(&color))
+                        })
+                        .filter(|id| {
+                            self.evaluate_requirement_static(
+                                filter,
+                                &crate::game::types::Target::Permanent(*id),
+                                me,
+                                ctx.source,
+                            )
+                        })
+                        .collect();
+                    if ids.is_empty() {
+                        continue;
+                    }
+                    let candidates: Vec<(CardId, String)> = ids
+                        .iter()
+                        .filter_map(|id| {
+                            self.battlefield_find(*id)
+                                .map(|c| (*id, c.definition.name.to_string()))
+                        })
+                        .collect();
+                    // Spread the counters: a fresh recipient moves the win
+                    // check along, a repeat never can.
+                    let auto: Vec<CardId> = ids
+                        .iter()
+                        .copied()
+                        .find(|id| !recipients.contains(id))
+                        .or_else(|| ids.first().copied())
+                        .into_iter()
+                        .collect();
+                    let Some(picked) = self.ask_seat_cards_logged(
+                        &mut cursor,
+                        me,
+                        format!("Put a {kind:?} counter on which {color:?} permanent?"),
+                        src,
+                        candidates,
+                        1,
+                        1,
+                        effect,
+                        auto,
+                    ) else {
+                        return Ok(());
+                    };
+                    for cid in picked {
+                        let n = self.scaled_counter_count_on(cid, *kind, 1);
+                        if n == 0 {
+                            continue;
+                        }
+                        if let Some(c) = self.battlefield_find_mut(cid) {
+                            c.add_counters(*kind, n);
+                        }
+                        events.push(GameEvent::CounterAdded {
+                            card_id: cid,
+                            counter_type: *kind,
+                            count: n,
+                        });
+                        self.permanents_gained_counter_this_turn.insert(cid);
+                        if !recipients.contains(&cid) {
+                            recipients.push(cid);
+                        }
+                    }
+                }
+                self.clear_answer_log();
+                if *win_at > 0 && recipients.len() as u32 >= *win_at {
+                    self.run_effect(
+                        &Effect::WinGame { who: crate::effect::PlayerRef::You },
+                        ctx,
+                        events,
+                    )?;
+                }
+                let mut sba = self.check_state_based_actions();
+                events.append(&mut sba);
+                Ok(())
+            }
+
             Effect::RemoveCounter { what, kind, amount } => {
                 let n = self.evaluate_value(amount, ctx).max(0) as u32;
                 if n == 0 { return Ok(()); }
@@ -18655,6 +18807,53 @@ impl GameState {
                         self.last_moved_cards.push(id);
                     }
                 }
+                self.shuffle_library(p, events);
+                Ok(())
+            }
+
+            // "Search your library for any number of [filter] cards" — one
+            // multi-pick over the whole legal set (Ugin, Eye of the Storms).
+            // A headless seat takes everything: the destinations these cards
+            // use (exile-and-may-cast, hand, battlefield) are pure upside.
+            Effect::SearchAnyNumber { who, filter, to } => {
+                let Some(p) = self.resolve_player(who, ctx) else { return Ok(()) };
+                if self.no_search_this_turn
+                    || self.player_search_locked_by_opponent(p)
+                    || !self.pay_search_tax(p)
+                {
+                    return Ok(());
+                }
+                self.players[p].searched_library_this_turn = true;
+                events.push(GameEvent::PlayerSearchedLibrary { player: p });
+                let limit = self.search_top_limit_for(p).unwrap_or(usize::MAX);
+                let filter = filter.resolve_x(ctx.x_value);
+                let candidates: Vec<(crate::card::CardId, String)> = self.players[p]
+                    .library
+                    .iter()
+                    .take(limit)
+                    .filter(|c| self.evaluate_requirement_on_card(&filter, c, p))
+                    .map(|c| (c.id, c.definition.name.to_string()))
+                    .collect();
+                let all: Vec<crate::card::CardId> = candidates.iter().map(|(id, _)| *id).collect();
+                let max = all.len() as u32;
+                let Some(picked) = self.choose_up_to_cards(
+                    p,
+                    "Search: take which cards?".into(),
+                    ctx.source.unwrap_or(crate::card::CardId(0)),
+                    candidates,
+                    max,
+                    effect,
+                    all,
+                ) else {
+                    return Ok(());
+                };
+                for id in picked {
+                    if let Some(card) = Self::take_card(&mut self.players[p].library, id) {
+                        self.place_card_in_dest(card, p, to, events);
+                        self.last_moved_cards.push(id);
+                    }
+                }
+                // CR 701.19c — the library is shuffled even on an empty pick.
                 self.shuffle_library(p, events);
                 Ok(())
             }
@@ -26898,6 +27097,21 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::PreventNextDamageToYouFromChosenSourceWithRider { filter, rider } => {
+                let Some(chosen) = self.choose_damage_prevention_source(filter, ctx) else {
+                    return Ok(());
+                };
+                self.damage_prevented_sources.retain(|sh| sh.source != chosen);
+                self.damage_prevented_sources.push(crate::game::types::PreventedSource {
+                    one_instance: true,
+                    to_player: Some(ctx.controller),
+                    rider: Some((**rider).clone()),
+                    rider_controller: ctx.controller,
+                    ..crate::game::types::PreventedSource::new(chosen)
+                });
+                Ok(())
+            }
+
             Effect::PreventAllDamageFromTargetThisTurn { what, gain_life, next_instance_only } => {
                 let beneficiary = gain_life.then_some(ctx.controller);
                 for ent in self.resolve_selector(what, ctx) {
@@ -30829,10 +31043,17 @@ impl GameState {
                     .map(EntityRef::Permanent)
                     .collect()
             }
+            // Both linkage styles count as "exiled with this": the plain
+            // `exiled_with` stamp and the CR 603.6e return link installed by
+            // `ExileUntilSourceLeaves` (Mardu Siegebreaker, Assimilation Aegis).
             Selector::CardExiledWithSource => self
                 .exile
                 .iter()
-                .filter(|c| ctx.source.is_some() && c.exiled_with == ctx.source)
+                .filter(|c| {
+                    ctx.source.is_some()
+                        && (c.exiled_with == ctx.source
+                            || c.exiled_by.as_ref().map(|l| l.source) == ctx.source)
+                })
                 .map(|c| EntityRef::Permanent(c.id))
                 .collect(),
             Selector::LastRevealedCard => self

@@ -1808,11 +1808,32 @@ pub struct PreventedSource {
     /// rider). Empty = no colour gate.
     #[serde(default)]
     pub gain_life_colors: Vec<crate::mana::Color>,
+    /// Restricts the shield to damage dealt to this seat ("would deal damage
+    /// **to you**" — New Way Forward). `None` prevents all damage the source
+    /// would deal (Hallow, Burrenton Forge-Tender).
+    #[serde(default)]
+    pub to_player: Option<usize>,
+    /// "When damage is prevented this way, [effect]" (New Way Forward). Runs
+    /// for `rider_controller` with the prevented amount bound to
+    /// `Value::TriggerEventAmount` and the shielded source as the trigger
+    /// source.
+    #[serde(default)]
+    pub rider: Option<crate::effect::Effect>,
+    #[serde(default)]
+    pub rider_controller: usize,
 }
 
 impl PreventedSource {
     pub fn new(source: CardId) -> Self {
-        Self { source, gain_life_to: None, one_instance: false, gain_life_colors: Vec::new() }
+        Self {
+            source,
+            gain_life_to: None,
+            one_instance: false,
+            gain_life_colors: Vec::new(),
+            to_player: None,
+            rider: None,
+            rider_controller: 0,
+        }
     }
 }
 

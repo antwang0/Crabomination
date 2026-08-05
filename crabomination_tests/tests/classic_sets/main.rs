@@ -74,6 +74,7 @@ mod rtr;
 mod spm;
 mod m15;
 mod tdm;
+mod tdm2;
 mod thb;
 mod tor;
 mod tor2;

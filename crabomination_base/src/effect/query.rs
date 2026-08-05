@@ -306,6 +306,10 @@ impl Effect {
             Effect::NextSpellCantBeCountered { .. } => false,
             Effect::Noop
             | Effect::SearchEachBasicLandType { .. }
+            | Effect::SearchAnyNumber { .. }
+            | Effect::CounterOnMatchingOfEachColor { .. }
+            | Effect::ExileTopAndMayCastUpToMv { .. }
+            | Effect::PreventNextDamageToYouFromChosenSourceWithRider { .. }
             | Effect::SacrificeSourceUnlessReturn { .. }
             | Effect::SacrificeSourceUnlessCost { .. }
             | Effect::ColoredManaBecomesThisTurn { .. }
@@ -2592,6 +2596,7 @@ impl Effect {
             | Effect::CapTargetsAtX { body }
             | Effect::TargetsExactlyX { body }
             | Effect::CapTargetsAt { body, .. }
+            | Effect::OptionalTargets { body, .. }
             | Effect::MayPayX { body, .. }
             | Effect::MayPay { body, .. }
             | Effect::MayPayBy { body, .. }

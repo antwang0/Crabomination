@@ -590,6 +590,9 @@ pub enum Value {
     /// cards in hand. Powers "draw an additional card for each opponent who
     /// has one or fewer cards in hand" (Bandit's Talent, level 3).
     OpponentsWithHandSizeAtMost(u32),
+    /// The number of the source controller's opponents still in the game —
+    /// "for each opponent, …" (Mardu Siegebreaker's token copies).
+    OpponentCount,
     /// Life `who` has gained so far this turn (CR 119.3). Backed by
     /// `Player.life_gained_this_turn`. Used by Accomplished Alchemist's
     /// "{T}: Add X mana of any one color, where X is the amount of life
@@ -3871,6 +3874,11 @@ pub enum Effect {
         #[serde(default)]
         face_down: bool,
     },
+    /// "Exile the top `amount` cards of `who`'s library. You may cast any
+    /// number of spells with mana value `max_mv` or less from among them
+    /// without paying their mana costs" (Kotis, the Fangkeeper). The
+    /// permission lasts for the turn and exiles the card once cast.
+    ExileTopAndMayCastUpToMv { who: Selector, amount: Value, max_mv: Value },
     /// Process (Battle for Zendikar / OGW) — "you may put up to `count` cards
     /// an opponent owns from exile into that player's graveyard. If you do,
     /// [`then`]." The controller is asked yes/no (`Decision::OptionalTrigger`);
@@ -4578,6 +4586,12 @@ pub enum Effect {
     PutIntoLibraryBeneathTop { what: Selector, count: Value },
     /// Search `who`'s library for a card matching `filter` and move to `to`.
     Search { who: PlayerRef, filter: SelectionRequirement, to: ZoneDest },
+    /// "Search your library for any number of cards matching `filter`, put
+    /// them into `to`, then shuffle" (Ugin, Eye of the Storms). The picker
+    /// keeps choosing until they decline; every moved card is visible to
+    /// `Selector::ExiledThisResolution` / `Selector::LastMoved` for a chained
+    /// rider. CR 701.19c — the library is shuffled even on an empty pick.
+    SearchAnyNumber { who: PlayerRef, filter: SelectionRequirement, to: ZoneDest },
     /// Transmute Artifact — search your library for an artifact card; if its
     /// mana value is at most the sacrificed artifact's it enters, otherwise
     /// you may pay the difference in generic mana to bring it in, and it goes
@@ -5614,6 +5628,16 @@ pub enum Effect {
     /// installing turn (Season of the Bold's three-point mode); the cast
     /// spell is bound as the body's `Selector::TriggerSource`.
     OnEachSpellYouCastUntilEndOfYourNextTurn { body: Box<Effect> },
+    /// "For each color, put a `kind` counter on a permanent matching `filter`
+    /// of that color. If you put counters on `win_at` permanents this way,
+    /// you win the game" (Call the Spirit Dragons). One pick per color in
+    /// WUBRG order; a multicolored permanent may be picked more than once,
+    /// so the win check counts *distinct* recipients.
+    CounterOnMatchingOfEachColor {
+        filter: SelectionRequirement,
+        kind: CounterType,
+        win_at: u32,
+    },
     /// CR 603.7e — "When you next cast a creature spell this turn, that
     /// creature enters with N additional counters of `kind`." Registers a
     /// one-shot rider on the controller (`Player.pending_creature_etb_counters`)
@@ -7973,6 +7997,16 @@ pub enum Effect {
     PreventAllDamageFromChosenSourceThisTurn {
         filter: crate::card::SelectionRequirement,
         gain_life_from_colors: Vec<crate::mana::Color>,
+    },
+    /// CR 615.8 — "The next time a source of your choice would deal damage to
+    /// you this turn, prevent that damage. When damage is prevented this way,
+    /// [rider]" (New Way Forward). The shield is scoped to the controller and
+    /// expires after one instance; `rider` runs for the controller with the
+    /// prevented amount bound to `Value::TriggerEventAmount` and the shielded
+    /// source bound as `Selector::Target(0)`.
+    PreventNextDamageToYouFromChosenSourceWithRider {
+        filter: crate::card::SelectionRequirement,
+        rider: Box<Effect>,
     },
     /// "Put `amount` +1/+1 counters *or* charge counters on a permanent
     /// matching `onto` you control" (Dismantle) — both the counter kind and the

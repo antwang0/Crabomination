@@ -298,6 +298,7 @@ impl GameState {
                     })
                     .count() as i32
             }
+            Value::OpponentCount => self.opponents_of(ctx.controller).len() as i32,
             Value::LifeGainedThisTurn(p) => self.resolve_player(p, ctx).map(|p| self.players[p].life_gained_this_turn as i32).unwrap_or(0),
             // Max over the resolved set, so `EachOpponent` reads "the most
             // life any opponent lost this turn" (Spinerock Knoll).
