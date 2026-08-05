@@ -35,6 +35,14 @@ Items are grouped by area and roughly ordered by impact within each group.
 - **`install-client-deps.sh` still doesn't fire in scheduled sessions** —
   confirmed again; running it by hand fixed the `wayland-client` build failure
   that otherwise breaks `cargo test --workspace`. ⏳
+- **A clean `cargo clippy` doesn't fit in a scheduled session's budget.** With
+  `CARGO_INCREMENTAL=0` (needed — the incremental tree reached 14 GB and left
+  4 GB free on a 252 GB volume), clippy spent >2 h on `crabomination_catalog`
+  and >3 h on `crabomination` without finishing, so this run's lint gate is
+  unverified even though the full engine suite is green (17,381 tests). The
+  changed code is conventional and the client's crate root already carries
+  `#![allow(clippy::too_many_arguments, clippy::type_complexity)]`, but the
+  next run should start clippy first rather than last. ⏳
 
 ## Noticed this run (TDM + OTJ closed, BLB/DSK batch)
 
