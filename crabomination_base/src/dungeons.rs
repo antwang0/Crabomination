@@ -260,6 +260,7 @@ pub fn dungeon_of_the_mad_mage() -> DungeonDefinition {
                     count: Value::Const(2),
                     duration: MayPlayDuration::WhileExiled,
                     pay_any_color: false,
+                    max_mana_value: None,
                     pay_own_cost: false,
                     uncast_penalty: None,
                 },

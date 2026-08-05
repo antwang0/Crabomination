@@ -83,6 +83,7 @@ pub fn caves_of_chaos_adventurer() -> CardDefinition {
         duration: MayPlayDuration::EndOfThisTurn,
         pay_own_cost: !free,
         pay_any_color: false,
+        max_mana_value: None,
         uncast_penalty: None,
     };
     CardDefinition {

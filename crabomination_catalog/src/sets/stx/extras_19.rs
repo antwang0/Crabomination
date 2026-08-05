@@ -323,6 +323,7 @@ fn nassari_dean_of_expression() -> CardDefinition {
                     count: Value::Const(1),
                     duration: MayPlayDuration::EndOfThisTurn,
                     pay_any_color: true,
+                    max_mana_value: None,
                     pay_own_cost: false,
                     uncast_penalty: None,
                 },

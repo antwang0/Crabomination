@@ -187,6 +187,7 @@ pub fn impossible_inferno() -> CardDefinition {
                     count: Value::ONE,
                     duration: crate::card::MayPlayDuration::EndOfControllersNextTurn,
                     pay_any_color: false,
+                    max_mana_value: None,
                     pay_own_cost: false,
                     uncast_penalty: None,
                 }),

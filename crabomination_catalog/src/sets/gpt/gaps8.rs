@@ -145,6 +145,7 @@ pub fn nivix_aerie_of_the_firemind() -> CardDefinition {
                     count: Value::ONE,
                     duration: MayPlayDuration::EndOfControllersNextTurn,
                     pay_any_color: false,
+                    max_mana_value: None,
                     pay_own_cost: true,
                     uncast_penalty: None,
                 },

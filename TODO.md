@@ -90,53 +90,51 @@ Items are grouped by area and roughly ordered by impact within each group.
   `ApplyToTargets`, so the targets are declared before the discard and merely
   truncated afterwards. A real reflexive-target primitive would fix this and
   several other "when you do, up to that many target …" cards. ⏳
-- **Cards dropped from this batch, each blocked on one primitive.** Undead
-  Sprinter (a conditional "you may cast this from your graveyard" — statics
-  don't function from the graveyard; `Keyword::Escape(cost, 0)` plus a
-  `Predicate` gate and a cast-this-way ETB counter would ship it), Hedge
-  Shredder ("whenever one or more land cards are put into your graveyard from
-  your library, put them onto the battlefield" — no milled-cards event),
-  Leyline of Resonance (copy your single-target spells), Leyline of
-  Transformation (chosen type applies to cards outside the battlefield),
-  Osteomancer Adept (forage-cast from the graveyard — the surcharge static is
-  life-only), Heirloom Epic (convoke on an activated ability), Rottenmouth
-  Viper (sacrifice-any-number additional cost with per-permanent reduction),
-  Cursed Recording (delayed "when you next cast an instant or sorcery, copy
-  it"). ⏳
+- **Cards dropped from this batch, each blocked on one primitive.** Shipped
+  since (`decks::recent327`): Undead Sprinter (`flashback_condition` now
+  gates every graveyard-cast flavor + `Predicate::CreatureDiedThisTurnMatching`),
+  Hedge Shredder (`CardMilled`/`YourControl` land filter), Leyline of
+  Resonance (`Predicate::CastSpellTargetsOnlyOneMatching`), Leyline of
+  Transformation (`StaticEffect::OwnedCardsOffBattlefieldAreChosenTypeToo`),
+  Cursed Recording. Still open: Osteomancer Adept (forage-cast from the
+  graveyard — the surcharge static is life-only), Heirloom Epic (convoke on
+  an activated ability), Rottenmouth Viper (sacrifice-any-number additional
+  cost with per-permanent reduction). ⏳
 
-## Tarkir: Dragonstorm (TDM) — 6 gaps (OTJ at 9)
+## Noticed this run (DFT closed / BLB Season cycle)
 
-`set_gaps.py tdm` is at 6 after the `decks::tdm` gap batch (Jeskai Revelation,
-Sidisi, Thunder of Unity, Shiko). The rest, and the primitive each needs:
-
-- **Taigam, Master Opportunist** — flurry (second spell each turn) plus
-  "exile it with four time counters; if it doesn't have suspend, it gains
-  suspend". ⏳
-- **Mardu Siegebreaker** — a linked "exile until this leaves" whose exiled
-  card is copied as a tapped attacking token, one per opponent. ⏳
-- **Kotis, the Fangkeeper** — combat-damage impulse whose free-cast window is
-  gated on the damage amount (`ManaValueAtMost(X)` off the event). ⏳
-- **New Way Forward** — a chosen-source prevention shield whose reflexive
-  rider reads how much it prevented. ⏳
-- **Call the Spirit Dragons** / **Ugin, Eye of the Storms** — build-arounds,
-  unaudited. ⏳
-
-## Aetherdrift (DFT) — 2 gaps
-
-`set_gaps.py dft` is at 2 after `decks::recent326` (24 cards). Both remaining
-are blocked on one primitive:
-
-- **Mimeoplasm, Revered One** — as-enters exile of up to X graveyard creature
-  cards with the count feeding an enters-with-counters spec, plus "becomes a
-  copy of a card exiled with it, except 0/0 and keeps this ability". ⏳
-- **Gonti, Night Minister** — "exile the top card of that opponent's library
-  face down; they may play it, spending mana as though it were mana of any
-  type". Needs a face-down impulse-exile grant scoped to the *damaged*
-  opponent's library. ⏳
-
-Also open on The Aetherspark: "as long as it's attached to a creature, it
-can't be attacked" needs a planeswalker attack restriction the engine
-doesn't model.
+- **Aetherdrift is at zero.** Gonti, Night Minister and Mimeoplasm, Revered
+  One shipped with `Effect::{ExileTopFaceDownGrantPlay,
+  AsEntersExileFromYourGraveyard, BecomeCopyOfExiledCard}`; The Aetherspark's
+  "can't be attacked" half is `Keyword::CantBeAttacked`.
+- **Six BLB/DSK cards were written and then cut** rather than shipped
+  half-wired — the definitions are in `git log -p` on this run's commits.
+  Each needs one thing:
+  - *Eluge, the Shoreless Sea* — `DynamicPt::BasePlusLandsOfTypeControlled`
+    now counts *computed* land types (`lands_of_computed_type`), but Eluge's
+    P/T still reads 1 with a flooded Mountain in play: the CDA path that
+    `computed_permanent` actually uses isn't the `game/mod.rs:9410` block the
+    fix landed in. Find the live CDA site first. ⏳
+  - *Ygra, Eater of All* — a `CreatureDied`/`AnyPlayer` trigger with a
+    `TriggerSource` filter never fires for an opponent's creature; the
+    granted Food subtype is also gone by trigger time (LKI). ⏳
+  - *Zoraline, Cosmos Caller* and *Kastral, the Windcrested* — same shape:
+    an `Attacks`/`DealsCombatDamageToPlayer` trigger scoped `YourControl`
+    with a `TriggerSource` creature-type filter didn't fire off the source
+    itself. Worth a focused test on the dispatcher rather than per-card
+    workarounds. ⏳
+  - *Wishing Well* — the `{T}` activation errored; the reflexive
+    `CastWithoutPayingImmediate` over a `ManaValueEqualsCountersOnSource`
+    target slot needs the target enumerator to see the new requirement. ⏳
+  - *Starforged Sword* — the gift-gated ETB `AttachSourceTo` left
+    `attached_to` unset. ⏳
+- **`Effect::ChooseModesByPoints`** (the Season cycle's "choose up to five
+  {P} worth of modes") shares Spree's cast plumbing; the bot offers each
+  single mode plus the all-modes combination when the prices fit. A
+  cost/impact ranking over point spends is still missing. ⏳
+- **`DelayedTrigger.expires_after_turn`** gives any delayed watcher an
+  "until the end of your next turn" window. Only Season of the Bold uses it
+  so far; several "until your next turn" cards could move onto it. ⏳
 
 ## Recommender: two builder defects fixed, one lesson recorded
 
@@ -5148,6 +5146,21 @@ was elided in a doc-compaction pass — recover it from
 picking an item up.
 
 ### Done (✅) — wired
+- ✅ **CR 506.2 — "can't be attacked"** — `Keyword::CantBeAttacked` +
+  `permanent_cant_be_attacked`, checked at the planeswalker and battle
+  attack-target gates and by the bot's walker-redirect picker (The
+  Aetherspark; `cr_recent79::cr_506_2_*`).
+- ✅ **CR 118 / 305 — playing a card from exile** — a `may_play_until` grant
+  now covers land plays, not just casts (`may_play_grant_for` + the
+  `play_land` exile branch; the bot spends impulse lands before they expire).
+  `cr_recent79::cr_118_*`.
+- ✅ **CR 614 — as-enters before enters-with-counters** — `as_enters_effect`
+  resolves ahead of the counter specs, so a count can read what it did
+  (Mimeoplasm's three counters per exiled creature;
+  `cr_recent79::cr_614_*`).
+- ✅ **CR 716.2 — Class-level statics reach the cost scan** —
+  `cost_reduction_for_spell` unwraps `WhileClassLevelAtLeast` (Artist's
+  Talent level 2; `cr_recent79::cr_716_2_*`).
 - ✅ **CR 407 — Ante** — `Zone::Ante` + `Player.ante` + `ZoneDest::Ante`;
   `GameState::begin_ante_game` does the 407.2 opening ante and
   `award_ante_to` the winner-takes-all (fired from the game-over SBA).

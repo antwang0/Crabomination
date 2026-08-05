@@ -4149,6 +4149,7 @@ pub fn vivien_champion_of_the_wilds() -> CardDefinition {
                     count: Value::ONE,
                     duration: crate::card::MayPlayDuration::WhileExiled,
                     pay_any_color: false,
+                    max_mana_value: None,
                     pay_own_cost: true,
                     uncast_penalty: None,
                 },
@@ -5205,6 +5206,7 @@ pub fn chandra_fire_artisan() -> CardDefinition {
         count: Value::Const(count),
         duration: crate::card::MayPlayDuration::EndOfThisTurn,
         pay_any_color: false,
+        max_mana_value: None,
         pay_own_cost: true,
         uncast_penalty: None,
     };

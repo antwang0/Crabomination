@@ -657,7 +657,18 @@ pub fn cost_reduction_for_spell_full(
     // zone (Hymn of the Wilds, Brago's Favor), so walk those too.
     for src in state.all_static_sources() {
         for sa in &src.definition.static_abilities {
-            match &sa.effect {
+            // CR 716.2 — a Class's higher-level statics only apply once the
+            // permanent has reached that level (Artist's Talent level 2).
+            let effect = match &sa.effect {
+                StaticEffect::WhileClassLevelAtLeast { n, inner }
+                    if src.class_level >= *n =>
+                {
+                    inner.as_ref()
+                }
+                StaticEffect::WhileClassLevelAtLeast { .. } => continue,
+                other => other,
+            };
+            match effect {
                 StaticEffect::GraveyardCastCostReduction { amount }
                     if from_graveyard && src.controller == caster =>
                 {
@@ -4330,18 +4341,27 @@ impl GameState {
         // - ChooseModesCast: `min..=max`, repeats iff `allow_repeats`
         //   (Choreographed Sparks "one or both"; Moment of Reckoning
         //   "up to four, same mode more than once").
-        let (mode_count, min_pick, max_pick, allow_repeats) = self.players[p]
+        // - ChooseModesByPoints (the BLB Season cycle): any picks whose
+        //   point prices total at most the printed budget, repeats allowed.
+        let (mode_count, min_pick, max_pick, allow_repeats, points) = self.players[p]
             .hand
             .iter()
             .find(|c| c.id == card_id)
             .and_then(|c| match &c.definition.effect {
                 crate::effect::Effect::Spree { modes } => {
-                    Some((modes.len(), 1usize, modes.len(), false))
+                    Some((modes.len(), 1usize, modes.len(), false, None))
                 }
-                crate::effect::Effect::Tiered { modes } => Some((modes.len(), 1, 1, false)),
+                crate::effect::Effect::Tiered { modes } => Some((modes.len(), 1, 1, false, None)),
                 crate::effect::Effect::ChooseModesCast { modes, min, max, allow_repeats } => {
-                    Some((modes.len(), *min as usize, *max as usize, *allow_repeats))
+                    Some((modes.len(), *min as usize, *max as usize, *allow_repeats, None))
                 }
+                crate::effect::Effect::ChooseModesByPoints { modes, points, budget } => Some((
+                    modes.len(),
+                    0,
+                    modes.len() * *budget as usize,
+                    true,
+                    Some((points.clone(), *budget)),
+                )),
                 _ => None,
             })
             .ok_or(GameError::CardNotInHand(card_id))?;
@@ -4356,6 +4376,13 @@ impl GameState {
         chosen.sort_unstable();
         if chosen.len() < min_pick || chosen.len() > max_pick {
             return Err(GameError::InvalidTarget);
+        }
+        if let Some((prices, budget)) = points {
+            let spent: u32 =
+                chosen.iter().map(|i| prices.get(*i as usize).copied().unwrap_or(0) as u32).sum();
+            if spent > budget as u32 {
+                return Err(GameError::InvalidTarget);
+            }
         }
         self.cast_atomically(|g| {
             g.pending_spree_modes = Some(chosen.clone());

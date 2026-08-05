@@ -912,6 +912,10 @@ pub enum Value {
     /// cards in the controller's graveyard (0 if none). Ambitious Dragonborn
     /// enters with X +1/+1 counters equal to this.
     GreatestPowerControlledAndGraveyard,
+    /// The greatest power among creatures `who` controls; 0 with no creatures
+    /// (Season of Gathering's "draw cards equal to the greatest power among
+    /// creatures you control").
+    GreatestPowerControlled { who: PlayerRef },
     /// Mana value (CMC) of the first card the selector resolves to.
     /// Looks the card up across the battlefield, graveyards, exile, and
     /// hands. Used by Wrath of the Skies (destroy each nonland with mana
@@ -3125,6 +3129,14 @@ pub enum Effect {
     /// `target`, then `additional_targets`). A plain `CastSpell { mode }`
     /// falls back to running that single mode (bot / back-compat path).
     ChooseModesCast { modes: Vec<Effect>, min: u8, max: u8, allow_repeats: bool },
+    /// BLB "Choose up to `budget` {P} worth of modes. You may choose the same
+    /// mode more than once." — the Season cycle. Each mode has a point price
+    /// in `points`; the picks must total at most `budget`. Shares
+    /// `ChooseModesCast`'s cast plumbing (`GameAction::CastSpellSpree` stamps
+    /// the validated picks onto `CardInstance.spree_modes`) and its
+    /// resolution: chosen instances run in printed order, each target-bearing
+    /// instance consuming the next target slot.
+    ChooseModesByPoints { modes: Vec<Effect>, points: Vec<u8>, budget: u8 },
     /// "Choose one that hasn't been chosen —" (Captive Audience). Picks a mode
     /// at RESOLUTION from the ones the source hasn't used yet, records it on
     /// `CardInstance.modes_chosen`, and runs it. Does nothing once every mode
@@ -5597,6 +5609,11 @@ pub enum Effect {
     /// Clamps per target against its current pool (Clockwork Avian).
     AddCounterCapped { what: Selector, kind: CounterType, amount: Value, cap: Value },
     RemoveCounter { what: Selector, kind: CounterType, amount: Value },
+    /// CR 603.7e — "Until the end of your next turn, whenever you cast a
+    /// spell, [body]." A repeating cast watcher whose window outlives the
+    /// installing turn (Season of the Bold's three-point mode); the cast
+    /// spell is bound as the body's `Selector::TriggerSource`.
+    OnEachSpellYouCastUntilEndOfYourNextTurn { body: Box<Effect> },
     /// CR 603.7e — "When you next cast a creature spell this turn, that
     /// creature enters with N additional counters of `kind`." Registers a
     /// one-shot rider on the controller (`Player.pending_creature_etb_counters`)
@@ -6665,6 +6682,11 @@ pub enum Effect {
         /// `false` keeps the free-cast grant (Robber of the Rich).
         #[serde(default)]
         pay_any_color: bool,
+        /// Only cards at or under this mana value get the permission — the
+        /// rest stay exiled with no grant (Kotis, the Fangkeeper's "spells
+        /// with mana value X or less"). `None` grants on every exiled card.
+        #[serde(default)]
+        max_mana_value: Option<Value>,
         /// "You may play them" *paying their own mana cost* — the plain
         /// impulse-draw grant (Light Up the Stage, Reckless Impulse,
         /// Wrenn's Resolve). Stamps the card's actual cost as its alt-cast

@@ -2534,7 +2534,9 @@ Each a small targeted feature; sweep batch by batch.
 
 ## Suggested sequencing
 
-0. **Next set to close.** The Odyssey block, the Onslaught block (**ONS**,
+0. **Next set to close.** Bloomburrow is down to ~10 and Duskmourn to ~24 —
+   both are the easiest remaining pools (`set_gaps.py blb dsk`). The Odyssey
+   block, the Onslaught block (**ONS**,
    **LGN**, **SCG**), the Mirrodin block (**MRD**, **DST**, **5DN**), the
    Kamigawa block, **Mirrodin Besieged**, **New Phyrexia** (the Scars block
    is closed), **Legends** (273 cards, `sets::leg`–`leg7`), **Antiquities**
@@ -2559,6 +2561,37 @@ Each a small targeted feature; sweep batch by batch.
 7. **Replays, spectator, social, accessibility** as the product matures.
 
 ## Recently closed (this push)
+
+- **Aetherdrift is closed** — `set_gaps.py dft` 2 → 0. Gonti, Night Minister
+  (`Effect::ExileTopFaceDownGrantPlay` — the library owner and the may-play
+  grantee are different seats; `Predicate::{PlayerIsOpponent,
+  CastSpellNotOwnedByCaster}`) and Mimeoplasm, Revered One
+  (`Effect::{AsEntersExileFromYourGraveyard, BecomeCopyOfExiledCard}`). The
+  Aetherspark's "can't be attacked while attached" ships as
+  `Keyword::CantBeAttacked`, enforced at the planeswalker/battle attack-target
+  gate and honored by the bot's redirect picker.
+
+- **Bloomburrow's Season cycle** — `Effect::ChooseModesByPoints` ("choose up
+  to five {P} worth of modes; you may choose the same mode more than once")
+  rides Spree's cast plumbing with a point-total check instead of a mode
+  count. All five Seasons plus Helga, Wick, The Infamous Cruelclaw, Muerra,
+  Dragonhawk, Kotis and Artist's Talent ship in `decks::recent328`.
+
+- **The one-primitive card backlog** (`decks::recent327`) — Cursed Recording,
+  Leyline of Resonance, Leyline of Transformation, Hedge Shredder and Undead
+  Sprinter, each unblocked by a small primitive:
+  `Predicate::{CastSpellTargetsOnlyOneMatching, CreatureDiedThisTurnMatching}`,
+  `StaticEffect::OwnedCardsOffBattlefieldAreChosenTypeToo`, and
+  `flashback_condition` gating every graveyard-cast flavor rather than only
+  printed flashback.
+
+- **Rules fixes this push.** CR 118/305 — a `may_play_until` grant now covers
+  *playing* an exiled land, not just casting spells (`may_play_grant_for`; the
+  bot spends impulse lands before they expire). CR 614 — `as_enters_effect`
+  resolves before the enters-with-counters specs. CR 716.2 — a Class's
+  level-gated statics reach the cost-reduction scan. CR 603.7e —
+  `DelayedTrigger.expires_after_turn` gives any delayed watcher an "until the
+  end of your next turn" window. Tests in `core_rules/cr_recent79`.
 
 - **Tarkir: Dragonstorm down to 6** — `set_gaps.py tdm` 10 → 6 (`decks::tdm`):
   Jeskai Revelation, Sidisi Regent of the Mire (the

@@ -188,6 +188,7 @@ pub fn painters_studio_defaced_gallery() -> CardDefinition {
                 count: Value::Const(2),
                 duration: MayPlayDuration::EndOfControllersNextTurn,
                 pay_any_color: false,
+                max_mana_value: None,
                 pay_own_cost: true,
                 uncast_penalty: None,
             })],

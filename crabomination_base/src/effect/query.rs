@@ -719,6 +719,7 @@ impl Effect {
             Effect::Spree { .. }
             | Effect::Tiered { .. }
             | Effect::ChooseModesCast { .. }
+            | Effect::ChooseModesByPoints { .. }
             | Effect::ChooseUnchosenMode { .. } => false,
             Effect::MayDo { body, .. } | Effect::MayDoBy { body, .. }
             | Effect::CapTargetsAtX { body }
@@ -731,6 +732,7 @@ impl Effect {
             Effect::OnYourNextSpellCastThisTurn { body }
             | Effect::OnYourNextExhaustActivationThisTurn { body }
             | Effect::OnYourNextInstantSorceryThisTurn { body }
+            | Effect::OnEachSpellYouCastUntilEndOfYourNextTurn { body }
             | Effect::OnYourNextNamedSpellThisTurn { body } => body.requires_target(),
             Effect::SearchSplitWithOpponent { .. } => false,
             Effect::FactOrFiction { .. } => false,
@@ -1746,6 +1748,7 @@ impl Effect {
             | Effect::OnYourNextSpellCastThisTurn { body }
             | Effect::OnYourNextExhaustActivationThisTurn { body }
             | Effect::OnYourNextInstantSorceryThisTurn { body }
+            | Effect::OnEachSpellYouCastUntilEndOfYourNextTurn { body }
             | Effect::OnYourNextNamedSpellThisTurn { body }
             | Effect::Repeat { body, .. }
             | Effect::ForEach { body, .. } => body.primary_target_filter(),
@@ -2043,6 +2046,9 @@ impl Effect {
             Effect::Tiered { .. } => "tiered (choose one additional cost)".into(),
             Effect::ChooseModesCast { min, max, .. } => {
                 format!("choose {min}-{max} modes")
+            }
+            Effect::ChooseModesByPoints { budget, .. } => {
+                format!("choose up to {budget} points of modes")
             }
             Effect::DestroyNoRegen { .. } => {
                 format!("destroy {} (can't be regenerated)", self.target_phrase())
@@ -2821,7 +2827,8 @@ impl Effect {
                 // multi-mode `CastSpellSpree` cast validates its per-instance
                 // targets at resolution (falling back to the first mode that
                 // surfaces the slot, mirroring ChooseN).
-                Effect::ChooseModesCast { modes, .. } => match mode {
+                Effect::ChooseModesCast { modes, .. }
+                | Effect::ChooseModesByPoints { modes, .. } => match mode {
                     Some(m) if m < modes.len() => eff_find(&modes[m], slot, None, kicked),
                     _ => modes.iter().find_map(|m| eff_find(m, slot, None, kicked)),
                 },
@@ -3286,6 +3293,7 @@ impl Effect {
                 | Effect::OnYourNextSpellCastThisTurn { body }
                 | Effect::OnYourNextExhaustActivationThisTurn { body }
                 | Effect::OnYourNextInstantSorceryThisTurn { body }
+                | Effect::OnEachSpellYouCastUntilEndOfYourNextTurn { body }
                 | Effect::OnYourNextNamedSpellThisTurn { body }
                 | Effect::OptionalTargets { body, .. }
                 | Effect::DelayUntilWithCapture { body, .. }

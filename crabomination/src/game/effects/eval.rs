@@ -797,6 +797,15 @@ impl GameState {
                 mvs.dedup();
                 mvs.len() as i32
             }
+            Value::GreatestPowerControlled { who } => {
+                let Some(p) = self.resolve_player(who, ctx) else { return 0 };
+                self.battlefield
+                    .iter()
+                    .filter(|c| c.controller == p && c.definition.is_creature())
+                    .filter_map(|c| self.computed_permanent(c.id).map(|cp| cp.power))
+                    .max()
+                    .unwrap_or(0)
+            }
             Value::GreatestPowerControlledAndGraveyard => {
                 let p = ctx.controller;
                 let bf = self
@@ -3491,6 +3500,10 @@ impl GameState {
                     R::ManaValueEqualsTriggerAmount => {
                         card.definition.cost.cmc() == self.trigger_event_amount_scratch
                     }
+                    R::ManaValueEqualsCountersOnSource(kind) => source.is_some_and(|s| {
+                        self.find_card_anywhere(s)
+                            .is_some_and(|src| card.definition.cost.cmc() == src.counter_count(*kind))
+                    }),
                     R::ManaValueParity { odd } => (card.definition.cost.cmc() % 2 == 1) == *odd,
                     R::ManaValueEqualsSacrificedPlus(off) => {
                         card.definition.cost.cmc()
@@ -3810,6 +3823,9 @@ impl GameState {
             R::ManaValueEqualsTriggerAmount => {
                 card.definition.cost.cmc() == self.trigger_event_amount_scratch
             }
+            // Source-less path: the counter count needs the ability's source,
+            // which only `evaluate_requirement_static` carries.
+            R::ManaValueEqualsCountersOnSource(_) => false,
             R::Player | R::OpponentPlayer | R::PlayerAttackedThisTurn => false,
             R::And(a, b) => {
                 self.evaluate_requirement_on_card(a, card, controller)

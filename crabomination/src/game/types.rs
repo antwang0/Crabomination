@@ -721,6 +721,13 @@ pub struct DelayedTrigger {
     pub bound_subject: Option<crate::game::effects::EntityRef>,
     /// True for one-shot triggers; removed after firing.
     pub fires_once: bool,
+    /// Absolute turn number this watcher survives *through*. `None` uses the
+    /// kind's own duration (most "this turn" kinds are swept at cleanup);
+    /// `Some(n)` keeps it alive until the cleanup step of turn `n`, which is
+    /// how "until the end of your next turn" riders outlive the turn they
+    /// were installed on (Season of the Bold).
+    #[serde(default)]
+    pub expires_after_turn: Option<u32>,
 }
 
 /// What kind of future event a delayed trigger waits for.

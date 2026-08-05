@@ -635,6 +635,7 @@ pub fn outrageous_robbery() -> CardDefinition {
             count: Value::XFromCost,
             duration: MayPlayDuration::WhileExiled,
             pay_any_color: true,
+            max_mana_value: None,
             pay_own_cost: false,
             uncast_penalty: None,
         },

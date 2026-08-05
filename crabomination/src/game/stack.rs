@@ -1670,6 +1670,7 @@ impl GameState {
                                 bound_token: None,
                                 bound_subject: None,
                                 fires_once: true,
+                                expires_after_turn: None,
                             });
                         }
                     }
@@ -1989,6 +1990,7 @@ impl GameState {
                             bound_token: None,
                             bound_subject: None,
                             fires_once: true,
+                            expires_after_turn: None,
                         });
                     }
 
@@ -2010,6 +2012,7 @@ impl GameState {
                             bound_token: None,
                             bound_subject: None,
                             fires_once: true,
+                            expires_after_turn: None,
                         });
                         self.delayed_triggers.push(crate::game::types::DelayedTrigger {
                             controller: caster,
@@ -2020,6 +2023,7 @@ impl GameState {
                             bound_token: None,
                             bound_subject: None,
                             fires_once: true,
+                            expires_after_turn: None,
                         });
                     }
 
@@ -2053,6 +2057,7 @@ impl GameState {
                             bound_token: None,
                             bound_subject: None,
                             fires_once: true,
+                            expires_after_turn: None,
                         });
                     }
 
@@ -3520,27 +3525,35 @@ impl GameState {
         self.damage_exiles_victim_eot.clear();
         self.damage_denies_regen_eot.clear();
         // Expire event-keyed "when [card] dies this turn" delayed triggers
-        // that never fired (CR 603.4 — the "this turn" window closes).
+        // that never fired (CR 603.4 — the "this turn" window closes). A
+        // watcher carrying an explicit `expires_after_turn` runs on its own
+        // clock instead ("until the end of your next turn").
+        let turn = self.turn_number;
+        self.delayed_triggers.retain(|dt| match dt.expires_after_turn {
+            Some(last) => turn < last,
+            None => true,
+        });
         self.delayed_triggers.retain(|dt| {
-            !matches!(
-                dt.kind,
-                crate::game::types::DelayedKind::WhenCardDies(_)
-                    | crate::game::types::DelayedKind::WhenCardLeavesBattlefieldThisTurn(_)
-                    | crate::game::types::DelayedKind::CreatureYouControlEntersThisTurn
-                    | crate::game::types::DelayedKind::CreatureYouControlDiesThisTurn
-                    | crate::game::types::DelayedKind::MatchingCreatureDiesThisTurn(_)
-                    | crate::game::types::DelayedKind::CreatureYouControlDealsCombatDamageThisTurn
-                    | crate::game::types::DelayedKind::YourNextSpellCastThisTurn
-                    | crate::game::types::DelayedKind::YourNextExhaustActivationThisTurn
-                    | crate::game::types::DelayedKind::YourNextInstantSorceryCastThisTurn
-                    | crate::game::types::DelayedKind::EachCombatThisTurn
-                    | crate::game::types::DelayedKind::MatchingCreatureAttacksThisTurn(_)
-                    | crate::game::types::DelayedKind::SourceDealsDamageThisTurn(_)
-                    | crate::game::types::DelayedKind::SourceDealsCombatDamageToPlayerThisTurn(_)
-                    | crate::game::types::DelayedKind::YouGainLifeThisTurn
-                    | crate::game::types::DelayedKind::CardEntersOpponentGraveyardThisTurn
-                    | crate::game::types::DelayedKind::OpponentCausesYouToDiscardThisTurn
-            )
+            dt.expires_after_turn.is_some()
+                || !matches!(
+                    dt.kind,
+                    crate::game::types::DelayedKind::WhenCardDies(_)
+                        | crate::game::types::DelayedKind::WhenCardLeavesBattlefieldThisTurn(_)
+                        | crate::game::types::DelayedKind::CreatureYouControlEntersThisTurn
+                        | crate::game::types::DelayedKind::CreatureYouControlDiesThisTurn
+                        | crate::game::types::DelayedKind::MatchingCreatureDiesThisTurn(_)
+                        | crate::game::types::DelayedKind::CreatureYouControlDealsCombatDamageThisTurn
+                        | crate::game::types::DelayedKind::YourNextSpellCastThisTurn
+                        | crate::game::types::DelayedKind::YourNextExhaustActivationThisTurn
+                        | crate::game::types::DelayedKind::YourNextInstantSorceryCastThisTurn
+                        | crate::game::types::DelayedKind::EachCombatThisTurn
+                        | crate::game::types::DelayedKind::MatchingCreatureAttacksThisTurn(_)
+                        | crate::game::types::DelayedKind::SourceDealsDamageThisTurn(_)
+                        | crate::game::types::DelayedKind::SourceDealsCombatDamageToPlayerThisTurn(_)
+                        | crate::game::types::DelayedKind::YouGainLifeThisTurn
+                        | crate::game::types::DelayedKind::CardEntersOpponentGraveyardThisTurn
+                        | crate::game::types::DelayedKind::OpponentCausesYouToDiscardThisTurn
+                )
         });
         // CR 514.2 / CR 615.1 — "this turn" combat damage prevention
         // (Owlin Shieldmage's ETB, Holy Day-style fogs) expires at

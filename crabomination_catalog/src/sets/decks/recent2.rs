@@ -1451,6 +1451,7 @@ pub fn experimental_synthesizer() -> CardDefinition {
         count: Value::Const(1),
         duration: MayPlayDuration::EndOfThisTurn,
         pay_any_color: false,
+        max_mana_value: None,
         pay_own_cost: false,
         uncast_penalty: None,
     };

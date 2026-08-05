@@ -2549,6 +2549,7 @@ impl GameState {
                         bound_token: None,
                         bound_subject: None,
                         fires_once: false,
+                        expires_after_turn: None,
                     });
                 }
                 Ok(())
@@ -3222,6 +3223,7 @@ impl GameState {
                         bound_token: Some(tid),
                         bound_subject: None,
                         fires_once: true,
+                        expires_after_turn: None,
                     });
                 }
                 Ok(())
@@ -4468,7 +4470,7 @@ impl GameState {
                 Ok(())
             }
 
-            Effect::ChooseModesCast { modes, .. } => {
+            Effect::ChooseModesCast { modes, .. } | Effect::ChooseModesByPoints { modes, .. } => {
                 // Cast-time multi-mode selection (Choreographed Sparks'
                 // "one or both", Moment of Reckoning's "up to four,
                 // repeats allowed") — the chosen instances were validated
@@ -7663,6 +7665,7 @@ impl GameState {
                         bound_token: None,
                         bound_subject: None,
                         fires_once: true,
+                        expires_after_turn: None,
                     });
                 }
                 Ok(())
@@ -10034,6 +10037,7 @@ impl GameState {
                         bound_token: None,
                         bound_subject: None,
                         fires_once: true,
+                        expires_after_turn: None,
                     });
                 }
                 Ok(())
@@ -10067,6 +10071,7 @@ impl GameState {
                         bound_token: None,
                         bound_subject: None,
                         fires_once: true,
+                        expires_after_turn: None,
                     });
                 }
                 Ok(())
@@ -10139,6 +10144,7 @@ impl GameState {
                     bound_token: None,
                     bound_subject: None,
                     fires_once: true,
+                    expires_after_turn: None,
                 });
                 Ok(())
             }
@@ -10178,6 +10184,7 @@ impl GameState {
                         bound_token: None,
                         bound_subject: None,
                         fires_once: true,
+                        expires_after_turn: None,
                     });
                 } else {
                     self.haunt_pending = Some((haunted, (**body).clone()));
@@ -11854,6 +11861,7 @@ impl GameState {
                             bound_token: None,
                             bound_subject: None,
                             fires_once: true,
+                            expires_after_turn: None,
                         });
                     }
                 }
@@ -13765,6 +13773,7 @@ impl GameState {
                     bound_token: None,
                     bound_subject: None,
                     fires_once: true,
+                    expires_after_turn: None,
                 });
                 Ok(())
             }
@@ -15353,6 +15362,7 @@ impl GameState {
                     bound_token: None,
                     bound_subject: None,
                     fires_once: true,
+                    expires_after_turn: None,
                 });
                 Ok(())
             }
@@ -16512,6 +16522,7 @@ impl GameState {
                         bound_token: None,
                         bound_subject: None,
                         fires_once: true,
+                        expires_after_turn: None,
                     });
                 }
                 Ok(())
@@ -17955,6 +17966,7 @@ impl GameState {
                             bound_token: None,
                             bound_subject: None,
                             fires_once: true,
+                            expires_after_turn: None,
                         });
                     }
                 }
@@ -17998,6 +18010,7 @@ impl GameState {
                         bound_token: Some(token_id),
                         bound_subject: None,
                         fires_once: true,
+                        expires_after_turn: None,
                     });
                 }
                 Ok(())
@@ -18087,6 +18100,7 @@ impl GameState {
                         bound_token: None,
                         bound_subject: None,
                         fires_once: true,
+                        expires_after_turn: None,
                     });
                 }
                 Ok(())
@@ -20421,6 +20435,7 @@ impl GameState {
                         bound_token: None,
                         bound_subject: None,
                         fires_once: true,
+                        expires_after_turn: None,
                     });
                 }
                 // Rest go to the bottom of the library (order not modeled).
@@ -20485,6 +20500,7 @@ impl GameState {
                         bound_token: None,
                         bound_subject: None,
                         fires_once: true,
+                        expires_after_turn: None,
                     });
                 }
                 Ok(())
@@ -20626,6 +20642,7 @@ impl GameState {
                     bound_token: None,
                     bound_subject: None,
                     fires_once: true,
+                    expires_after_turn: None,
                 });
                 Ok(())
             }
@@ -20822,6 +20839,7 @@ impl GameState {
                             bound_token: None,
                             bound_subject: None,
                             fires_once: true,
+                            expires_after_turn: None,
                         });
                     }
                 }
@@ -23589,6 +23607,7 @@ impl GameState {
                     bound_token: None,
                     bound_subject: None,
                     fires_once: false,
+                    expires_after_turn: None,
                 });
                 Ok(())
             }
@@ -23605,6 +23624,7 @@ impl GameState {
                     bound_token: None,
                     bound_subject: None,
                     fires_once: false,
+                    expires_after_turn: None,
                 });
                 Ok(())
             }
@@ -24174,6 +24194,7 @@ impl GameState {
                     bound_token: self.last_created_token,
                     bound_subject: None,
                     fires_once: true,
+                    expires_after_turn: None,
                 });
                 Ok(())
             }
@@ -24198,6 +24219,7 @@ impl GameState {
                     bound_token: self.last_created_token,
                     bound_subject: None,
                     fires_once: true,
+                    expires_after_turn: None,
                 });
                 Ok(())
             }
@@ -24229,6 +24251,7 @@ impl GameState {
                     bound_token: None,
                     bound_subject: None,
                     fires_once: true,
+                    expires_after_turn: None,
                 });
                 Ok(())
             }
@@ -24253,6 +24276,7 @@ impl GameState {
                         bound_token: Some(token),
                         bound_subject: None,
                         fires_once: true,
+                        expires_after_turn: None,
                     });
                 }
                 Ok(())
@@ -24276,6 +24300,7 @@ impl GameState {
                         bound_token: None,
                         bound_subject: None,
                         fires_once: true,
+                        expires_after_turn: None,
                     });
                 }
                 Ok(())
@@ -24292,6 +24317,7 @@ impl GameState {
                     bound_token: None,
                     bound_subject: None,
                     fires_once: false,
+                    expires_after_turn: None,
                 });
                 Ok(())
             }
@@ -24308,6 +24334,7 @@ impl GameState {
                         bound_token: None,
                         bound_subject: None,
                         fires_once: false,
+                        expires_after_turn: None,
                     });
                 }
                 Ok(())
@@ -24330,6 +24357,7 @@ impl GameState {
                         bound_token: None,
                         bound_subject: None,
                         fires_once: false,
+                        expires_after_turn: None,
                     });
                 }
                 Ok(())
@@ -24346,6 +24374,7 @@ impl GameState {
                     bound_token: None,
                     bound_subject: None,
                     fires_once: false,
+                    expires_after_turn: None,
                 });
                 Ok(())
             }
@@ -24363,6 +24392,7 @@ impl GameState {
                     bound_token: None,
                     bound_subject: None,
                     fires_once: false,
+                    expires_after_turn: None,
                 });
                 Ok(())
             }
@@ -24378,6 +24408,7 @@ impl GameState {
                     bound_token: None,
                     bound_subject: None,
                     fires_once: false,
+                    expires_after_turn: None,
                 });
                 Ok(())
             }
@@ -24393,6 +24424,7 @@ impl GameState {
                     bound_token: None,
                     bound_subject: None,
                     fires_once: false,
+                    expires_after_turn: None,
                 });
                 Ok(())
             }
@@ -24408,6 +24440,7 @@ impl GameState {
                     bound_token: None,
                     bound_subject: None,
                     fires_once: false,
+                    expires_after_turn: None,
                 });
                 Ok(())
             }
@@ -24423,6 +24456,7 @@ impl GameState {
                     bound_token: None,
                     bound_subject: None,
                     fires_once: false,
+                    expires_after_turn: None,
                 });
                 Ok(())
             }
@@ -24489,6 +24523,7 @@ impl GameState {
                     bound_token: None,
                     bound_subject: None,
                     fires_once: false,
+                    expires_after_turn: None,
                 });
                 Ok(())
             }
@@ -24503,6 +24538,7 @@ impl GameState {
                     bound_token: None,
                     bound_subject: None,
                     fires_once: true,
+                    expires_after_turn: None,
                 });
                 Ok(())
             }
@@ -24518,6 +24554,24 @@ impl GameState {
                     bound_token: None,
                     bound_subject: None,
                     fires_once: true,
+                    expires_after_turn: None,
+                });
+                Ok(())
+            }
+
+            Effect::OnEachSpellYouCastUntilEndOfYourNextTurn { body } => {
+                let source = ctx.source.unwrap_or(crate::card::CardId(0));
+                let expires = self.controllers_next_turn_number(ctx.controller);
+                self.delayed_triggers.push(DelayedTrigger {
+                    controller: ctx.controller,
+                    source,
+                    kind: crate::game::types::DelayedKind::YourNextSpellCastThisTurn,
+                    effect: (**body).clone(),
+                    target: None,
+                    bound_token: None,
+                    bound_subject: None,
+                    fires_once: false,
+                    expires_after_turn: Some(expires),
                 });
                 Ok(())
             }
@@ -24533,6 +24587,7 @@ impl GameState {
                     bound_token: None,
                     bound_subject: None,
                     fires_once: true,
+                    expires_after_turn: None,
                 });
                 Ok(())
             }
@@ -24873,6 +24928,7 @@ impl GameState {
                         bound_token: None,
                         bound_subject: None,
                         fires_once: true,
+                        expires_after_turn: None,
                     });
                 }
                 Ok(())
@@ -24891,6 +24947,7 @@ impl GameState {
                         bound_token: Some(tok),
                         bound_subject: None,
                         fires_once: true,
+                        expires_after_turn: None,
                     });
                 }
                 Ok(())
@@ -24907,6 +24964,7 @@ impl GameState {
                         bound_token: Some(tok),
                         bound_subject: None,
                         fires_once: true,
+                        expires_after_turn: None,
                     });
                 }
                 Ok(())
@@ -24923,6 +24981,7 @@ impl GameState {
                         bound_token: Some(tok),
                         bound_subject: None,
                         fires_once: true,
+                        expires_after_turn: None,
                     });
                 }
                 Ok(())
@@ -24939,6 +24998,7 @@ impl GameState {
                     bound_token: None,
                     bound_subject: None,
                     fires_once: true,
+                    expires_after_turn: None,
                 });
                 Ok(())
             }
@@ -26209,6 +26269,7 @@ impl GameState {
                         bound_token: None,
                         bound_subject: None,
                         fires_once: true,
+                        expires_after_turn: None,
                     });
                 }
                 Ok(())
@@ -26456,6 +26517,7 @@ impl GameState {
                     bound_token: None,
                     bound_subject: None,
                     fires_once: true,
+                    expires_after_turn: None,
                 });
                 Ok(())
             }
@@ -27559,6 +27621,7 @@ impl GameState {
                     bound_token: None,
                     bound_subject: None,
                     fires_once: true,
+                    expires_after_turn: None,
                 });
                 Ok(())
             }
@@ -28210,6 +28273,7 @@ impl GameState {
                 count,
                 duration,
                 pay_any_color,
+                max_mana_value,
                 pay_own_cost,
                 uncast_penalty,
             } => {
@@ -28231,6 +28295,18 @@ impl GameState {
                         let mut local_events = Vec::new();
                         self.move_card_to(top_id, &crate::effect::ZoneDest::Exile, ctx, &mut local_events);
                         events.extend(local_events);
+                        // "…with mana value X or less" — over-cap cards stay
+                        // exiled without a permission (Kotis).
+                        let cap = max_mana_value
+                            .as_ref()
+                            .map(|v| self.evaluate_value(v, ctx).max(0) as u32);
+                        let over_cap = cap.is_some_and(|cap| {
+                            self.find_card_anywhere(top_id)
+                                .is_some_and(|c| c.definition.cost.cmc() > cap)
+                        });
+                        if over_cap {
+                            continue;
+                        }
                         if let Some(card) = self.find_card_anywhere_mut(top_id) {
                             card.may_play_until = Some(crate::card::MayPlayPermission {
                                 player: ctx.controller,
@@ -28271,6 +28347,7 @@ impl GameState {
                                 bound_token: None,
                                 bound_subject: None,
                                 fires_once: true,
+                                expires_after_turn: None,
                             });
                         }
                     }
@@ -28463,6 +28540,7 @@ impl GameState {
                         bound_token: None,
                         bound_subject: None,
                         fires_once: true,
+                        expires_after_turn: None,
                     });
                 }
                 Ok(())
@@ -28478,6 +28556,7 @@ impl GameState {
                     bound_token: None,
                     bound_subject: None,
                     fires_once: true,
+                    expires_after_turn: None,
                 });
                 Ok(())
             }
@@ -28512,6 +28591,7 @@ impl GameState {
                     // "that card" still resolves at fire time (Shirei).
                     bound_subject: ctx.trigger_source,
                     fires_once: true,
+                    expires_after_turn: None,
                 });
                 Ok(())
             }
@@ -28551,6 +28631,7 @@ impl GameState {
                     bound_token: None,
                     bound_subject: None,
                     fires_once: true,
+                    expires_after_turn: None,
                 });
                 Ok(())
             }
@@ -28566,6 +28647,7 @@ impl GameState {
                     bound_token: None,
                     bound_subject: None,
                     fires_once: true,
+                    expires_after_turn: None,
                 });
                 Ok(())
             }
@@ -28582,6 +28664,7 @@ impl GameState {
                         bound_token: None,
                         bound_subject: None,
                         fires_once: true,
+                        expires_after_turn: None,
                     });
                 }
                 Ok(())
@@ -28619,6 +28702,7 @@ impl GameState {
                         bound_token: None,
                         bound_subject: None,
                         fires_once: true,
+                        expires_after_turn: None,
                     });
                 }
                 Ok(())
@@ -30013,6 +30097,7 @@ impl GameState {
                     bound_token: None,
                     bound_subject: None,
                     fires_once: false,
+                    expires_after_turn: None,
                 });
                 Ok(())
             }
@@ -30244,6 +30329,7 @@ impl GameState {
                     bound_token: None,
                     bound_subject: None,
                     fires_once: false,
+                    expires_after_turn: None,
                 });
                 Ok(())
             }

@@ -116,6 +116,7 @@ fn cr_513_2_end_step_does_not_back_up_for_a_new_delayed_trigger() {
         kind: DelayedKind::NextEndStep,
         target: None,
         fires_once: true,
+        expires_after_turn: None,
         bound_token: None,
         bound_subject: None,
     });

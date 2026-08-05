@@ -1461,6 +1461,7 @@ pub fn expressive_iteration() -> CardDefinition {
                 count: Value::Const(1),
                 duration: crate::card::MayPlayDuration::EndOfThisTurn,
                 pay_any_color: false,
+                max_mana_value: None,
                 pay_own_cost: true,
                 uncast_penalty: None,
             },

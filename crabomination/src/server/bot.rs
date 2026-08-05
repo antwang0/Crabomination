@@ -3167,6 +3167,11 @@ fn cast_candidates(
             Effect::Spree { modes } => (modes.iter().map(|m| &m.effect).collect(), true),
             Effect::Tiered { modes } => (modes.iter().map(|m| &m.effect).collect(), false),
             Effect::ChooseModesCast { modes, .. } => (modes.iter().collect(), false),
+            // The Season cycle: the budget makes "all modes once" a legal
+            // combination whenever the prices fit, so offer it too.
+            Effect::ChooseModesByPoints { modes, points, budget } => {
+                (modes.iter().collect(), points.iter().map(|p| *p as u32).sum::<u32>() <= *budget as u32)
+            }
             _ => continue,
         };
         // Each target-bearing mode consumes exactly one target slot at
@@ -7428,7 +7433,9 @@ fn modal_mode_count(eff: &Effect) -> Option<usize> {
         // Cast-time multi-mode spells (Choreographed Sparks, Moment of
         // Reckoning): the bot casts them single-mode via the plain
         // `CastSpell { mode }` back-compat path.
-        Effect::ChooseModesCast { modes, .. } => Some(modes.len()),
+        Effect::ChooseModesCast { modes, .. } | Effect::ChooseModesByPoints { modes, .. } => {
+            Some(modes.len())
+        }
         Effect::Seq(steps) => steps.iter().find_map(modal_mode_count),
         _ => None,
     }
@@ -7441,7 +7448,11 @@ fn modal_mode_count(eff: &Effect) -> Option<usize> {
 fn mode_branch(eff: &Effect, mode: Option<usize>) -> &Effect {
     match (eff, mode) {
         (Effect::ChooseMode(modes), Some(m)) if m < modes.len() => &modes[m],
-        (Effect::ChooseModesCast { modes, .. }, Some(m)) if m < modes.len() => &modes[m],
+        (Effect::ChooseModesCast { modes, .. } | Effect::ChooseModesByPoints { modes, .. }, Some(m))
+            if m < modes.len() =>
+        {
+            &modes[m]
+        }
         (Effect::Seq(steps), Some(_)) => steps
             .iter()
             .find(|s| matches!(s, Effect::ChooseMode(_)))

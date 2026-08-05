@@ -2713,6 +2713,7 @@ pub fn bonehoard_dracosaur() -> CardDefinition {
                     count: Value::Const(2),
                     duration: crate::card::MayPlayDuration::EndOfThisTurn,
                     pay_any_color: false,
+                    max_mana_value: None,
                     pay_own_cost: false,
                     uncast_penalty: None,
                 },

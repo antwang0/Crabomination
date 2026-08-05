@@ -8609,6 +8609,7 @@ pub fn ragavan_nimble_pilferer() -> CardDefinition {
                     count: Value::Const(1),
                     duration: MayPlayDuration::EndOfThisTurn,
                     pay_any_color: false,
+                    max_mana_value: None,
                     pay_own_cost: false,
                     uncast_penalty: None,
                 },
@@ -9378,6 +9379,7 @@ pub fn birgi_god_of_storytelling() -> CardDefinition {
                 count: Value::Const(2),
                 duration: MayPlayDuration::EndOfControllersNextTurn,
                 pay_any_color: false,
+                max_mana_value: None,
                 pay_own_cost: false,
                 uncast_penalty: None,
             },
@@ -9461,6 +9463,7 @@ pub fn chandra_torch_of_defiance() -> CardDefinition {
                     count: Value::Const(1),
                     duration: MayPlayDuration::EndOfThisTurn,
                     pay_any_color: true,
+                    max_mana_value: None,
                     pay_own_cost: false,
                     uncast_penalty: Some(Box::new(Effect::DealDamage {
                         to: Selector::Player(PlayerRef::EachOpponent),

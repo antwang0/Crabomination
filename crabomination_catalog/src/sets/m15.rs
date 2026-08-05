@@ -1527,6 +1527,7 @@ pub fn act_on_impulse() -> CardDefinition {
             count: Value::Const(3),
             duration: crate::card::MayPlayDuration::EndOfThisTurn,
             pay_any_color: false,
+            max_mana_value: None,
             pay_own_cost: true,
             uncast_penalty: None,
         },

@@ -369,6 +369,10 @@ pub enum StaticEffect {
     AddCardTypeToMatching {
         applies_to: Selector,
         card_type: crate::card::CardType,
+        /// Artifact subtype added alongside the type — "other creatures are
+        /// Food artifacts in addition to their other types" (Ygra).
+        #[serde(default)]
+        artifact_subtype: Option<crate::card::ArtifactSubtype>,
     },
     /// CR 613 — each other non-Aura enchantment becomes a creature (layer 4)
     /// with base power and toughness each equal to its mana value (layer 7b).

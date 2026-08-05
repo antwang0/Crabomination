@@ -3240,6 +3240,7 @@ pub fn zuko_exiled_prince() -> CardDefinition {
                 count: Value::ONE,
                 duration: crate::card::MayPlayDuration::EndOfThisTurn,
                 pay_any_color: false,
+                max_mana_value: None,
                 pay_own_cost: false,
                 uncast_penalty: None,
             },
@@ -5944,6 +5945,7 @@ pub fn toph_the_first_metalbender() -> CardDefinition {
                         .and(SelectionRequirement::ControlledByYou),
                 ),
                 card_type: CardType::Land,
+                    artifact_subtype: None,
             },
         }],
         triggered_abilities: vec![TriggeredAbility {

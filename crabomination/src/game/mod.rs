@@ -6090,6 +6090,55 @@ impl GameState {
         id
     }
 
+    /// The absolute turn number of `p`'s next turn — the current one when
+    /// it's already theirs is skipped, so "until the end of your next turn"
+    /// installed on your own turn spans the full rotation back to you.
+    /// Assumes turn order follows seat order, which `advance_turn` does.
+    pub(crate) fn controllers_next_turn_number(&self, p: usize) -> u32 {
+        let n = self.players.len().max(1);
+        let delta = (p + n - self.active_player_idx) % n;
+        self.turn_number + if delta == 0 { n as u32 } else { delta as u32 }
+    }
+
+    /// CR 613.2 — how many lands `p` controls whose *computed* subtypes
+    /// include `land_type` (so Urborg / flood-counter grants count).
+    pub(crate) fn lands_of_computed_type(
+        &self,
+        p: usize,
+        land_type: crate::card::LandType,
+    ) -> i32 {
+        use crate::effect::{Selector, StaticEffect};
+        // Walked directly rather than through `computed_permanent`: this runs
+        // *inside* the layer pass (a CDA's P/T), so re-entering it would recurse.
+        let granters: Vec<&SelectionRequirement> = self
+            .battlefield
+            .iter()
+            .flat_map(|src| src.definition.static_abilities.iter())
+            .filter_map(|sa| match &sa.effect {
+                StaticEffect::LandTypeChanger { applies_to, land_type: lt, .. }
+                | StaticEffect::LandTypeChangerWhileCounters { applies_to, land_type: lt, .. }
+                    if *lt == land_type =>
+                {
+                    match applies_to {
+                        Selector::EachPermanent(req) => Some(req),
+                        _ => None,
+                    }
+                }
+                _ => None,
+            })
+            .collect();
+        self.battlefield
+            .iter()
+            .filter(|c| c.controller == p && c.definition.is_land())
+            .filter(|c| {
+                c.definition.subtypes.land_types.contains(&land_type)
+                    || granters
+                        .iter()
+                        .any(|req| self.evaluate_requirement_on_card(req, c, c.controller))
+            })
+            .count() as i32
+    }
+
     /// Record a dying creature's definition for the turn, so
     /// `Predicate::CreatureDiedThisTurnMatching` can ask what *kind* of
     /// creature died (Undead Sprinter's non-Zombie gate). Called from both
@@ -9397,18 +9446,14 @@ impl GameState {
                     let n = seen.len() as i32;
                     (base_p + n, base_t + n)
                 }
+                // CR 613.2 — count the *computed* land types, so a granted
+                // type (Urborg, Eluge's flood counters) counts.
                 crate::card::DynamicPt::BasePlusLandsOfTypeControlled { land_type, base_p, base_t } => {
-                    let n = self.battlefield.iter().filter(|c| {
-                        c.controller == card.controller
-                            && c.definition.subtypes.land_types.contains(&land_type)
-                    }).count() as i32;
+                    let n = self.lands_of_computed_type(card.controller, land_type);
                     (base_p + n, base_t + n)
                 }
                 crate::card::DynamicPt::PowerPlusLandsOfTypeControlled { land_type, base_p, base_t } => {
-                    let n = self.battlefield.iter().filter(|c| {
-                        c.controller == card.controller
-                            && c.definition.subtypes.land_types.contains(&land_type)
-                    }).count() as i32;
+                    let n = self.lands_of_computed_type(card.controller, land_type);
                     (base_p + n, base_t)
                 }
                 crate::card::DynamicPt::BasePlusGreatestOtherArtifactMv { base_p, base_t } => {
@@ -16795,6 +16840,7 @@ impl GameState {
                             bound_token: None,
                             bound_subject: None,
                             fires_once: true,
+                            expires_after_turn: None,
                         });
                     }
                     crate::effect::OpeningHandEffect::MulliganHelper => {
@@ -18120,6 +18166,7 @@ impl GameState {
                 bound_token: None,
                 bound_subject: None,
                 fires_once: true,
+                expires_after_turn: None,
             });
             self.exile.push(card);
             return Ok(events);
@@ -18166,6 +18213,7 @@ impl GameState {
                 bound_token: None,
                 bound_subject: None,
                 fires_once: true,
+                expires_after_turn: None,
             });
             return Ok(events);
         }
@@ -18185,6 +18233,7 @@ impl GameState {
                 bound_token: None,
                 bound_subject: None,
                 fires_once: true,
+                expires_after_turn: None,
             });
             return Ok(events);
         }
@@ -19455,17 +19504,24 @@ fn static_effect_to_effects(
                     None => vec![],
                 }
             }
-            StaticEffect::AddCardTypeToMatching { applies_to, card_type } => {
+            StaticEffect::AddCardTypeToMatching { applies_to, card_type, artifact_subtype } => {
                 match selector_to_affected(applies_to, card) {
-                    Some(affected) => vec![ContinuousEffect {
-                        timestamp,
-                        source,
-                        affected,
-                        layer: Layer::L4Type,
-                        sublayer: None,
-                        duration: EffectDuration::WhileSourceOnBattlefield,
-                        modification: Modification::AddCardType(card_type.clone()),
-                    }],
+                    Some(affected) => {
+                        let mk = |m| ContinuousEffect {
+                            timestamp,
+                            source,
+                            affected: affected.clone(),
+                            layer: Layer::L4Type,
+                            sublayer: None,
+                            duration: EffectDuration::WhileSourceOnBattlefield,
+                            modification: m,
+                        };
+                        let mut fx = vec![mk(Modification::AddCardType(card_type.clone()))];
+                        if let Some(sub) = artifact_subtype {
+                            fx.push(mk(Modification::AddArtifactSubtype(*sub)));
+                        }
+                        fx
+                    }
                     None => vec![],
                 }
             }

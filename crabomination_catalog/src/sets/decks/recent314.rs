@@ -98,6 +98,7 @@ pub fn mycosynth_lattice() -> CardDefinition {
                 effect: StaticEffect::AddCardTypeToMatching {
                     applies_to: Selector::EachPermanent(R::Permanent),
                     card_type: CardType::Artifact,
+                    artifact_subtype: None,
                 },
             },
             StaticAbility {

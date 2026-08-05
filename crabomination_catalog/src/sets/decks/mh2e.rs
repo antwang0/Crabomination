@@ -111,6 +111,7 @@ pub fn breyas_apprentice() -> CardDefinition {
                     count: Value::ONE,
                     duration: MayPlayDuration::EndOfControllersNextTurn,
                     pay_any_color: false,
+                    max_mana_value: None,
                     pay_own_cost: false,
                     uncast_penalty: None,
                 },

@@ -1377,6 +1377,7 @@ fn exile_top_and_grant_may_play_takes_the_top_card_not_the_bottom() {
             count: Value::Const(1),
             duration: MayPlayDuration::EndOfThisTurn,
             pay_any_color: false,
+            max_mana_value: None,
             pay_own_cost: false,
             uncast_penalty: None,
         },
