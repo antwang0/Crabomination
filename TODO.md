@@ -5213,6 +5213,12 @@ picking an item up.
   time and applies the attack / permanent trigger doublers, both of which the
   path previously dropped (Military Intelligence, Dollmaker's Shop;
   `cr_recent81::cr_603_2_*`).
+- ✅ **CR 400.7 — cast provenance doesn't follow a card between zones** — the
+  leave-the-battlefield reset now clears `cast_from_hand` / `cast_from_exile` /
+  `cast_from_library` / `cast_via_flashback` / `cast_from_suspend` /
+  `cast_from_escape` alongside the granted-ability and per-object activation
+  limits, so a reanimated permanent isn't still "cast from your hand" (Phage
+  the Untouchable; `classic_sets/lgn::phage_only_survives_a_hand_cast`).
 - ✅ **CR 603.4 — self-source ETB intervening 'if'** — `fire_self_etb_triggers`
   reads the trigger's condition against the entering permanent's cast flags
   (kicked / bargained / X / cast-from-hand). It was silently ignored for all 35

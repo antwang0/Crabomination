@@ -2422,6 +2422,15 @@ impl GameState {
             c.granted_activated_eot.clear();
             c.exhausted_abilities.clear();
             c.once_per_turn_used.clear();
+            // …and so does how it got here: a reanimated permanent wasn't cast
+            // from anywhere, so "if you didn't cast it from your hand" riders
+            // see the new object (Phage the Untouchable).
+            c.cast_from_hand = false;
+            c.cast_from_exile = false;
+            c.cast_from_library = false;
+            c.cast_via_flashback = false;
+            c.cast_from_suspend = false;
+            c.cast_from_escape = false;
         }
         // CR 611.2c — continuous effects aimed at this specific permanent
         // end with it (don't re-attach if the same card re-enters).
