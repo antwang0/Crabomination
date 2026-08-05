@@ -361,6 +361,7 @@ impl Effect {
             | Effect::MarkExileReturnOnResolve { .. }
             | Effect::EachOpponentExilesHandCardOrPermanent
             | Effect::OpenAnAttraction
+            | Effect::ExileSelfReturnFrontFace
             | Effect::EachOpponentExilesHandCardMayPlay { .. }
             | Effect::EachOpponentExilesOwnCreature
             | Effect::EachOpponentWithoutLegendaryLoses

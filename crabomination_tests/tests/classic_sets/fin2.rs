@@ -440,3 +440,81 @@ fn ultimecia_transforms_into_an_extra_turn() {
     assert_eq!(g.battlefield_find(ulti).unwrap().definition.name, "Ultimecia, Omnipotent");
     assert!(g.players[0].extra_turns > 0, "Time Compression banked an extra turn");
 }
+
+// ── The Dominant cycle ──────────────────────────────────────────────────────
+
+/// Every Dominant is registered and carries a Saga-creature back face.
+#[test]
+fn dominants_are_registered_with_saga_creature_backs() {
+    let names: Vec<&str> = crabomination_catalog::sets::all_factories::all_catalog_card_factories()
+        .map(|f| f().name)
+        .collect();
+    for f in [
+        catalog::clive_ifrits_dominant as fn() -> crabomination::card::CardDefinition,
+        catalog::dion_bahamuts_dominant,
+        catalog::jill_shivas_dominant,
+        catalog::joshua_phoenixs_dominant,
+        catalog::jecht_reluctant_guardian,
+    ] {
+        let d = f();
+        assert!(names.contains(&d.name), "{} is not registered", d.name);
+        let back = d.back_face.as_ref().expect("back face");
+        assert!(!back.saga_chapters.is_empty(), "{} flips into a Saga", d.name);
+        assert!(back.is_creature(), "{} flips into a creature", d.name);
+    }
+}
+
+/// The flip line exiles and returns the front face transformed, and the Saga
+/// back enters with its first lore counter (CR 714.2b).
+#[test]
+fn dominant_flip_returns_a_saga_creature_with_a_lore_counter() {
+    let mut g = two_player_game();
+    let jill = g.add_card_to_battlefield(0, catalog::jill_shivas_dominant());
+    g.battlefield_find_mut(jill).unwrap().summoning_sick = false;
+    for _ in 0..5 {
+        g.add_card_to_battlefield(0, catalog::island());
+    }
+    g.players[0].mana_pool.add(Color::Blue, 5);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: jill, ability_index: 0,
+        target: None, additional_targets: vec![], x_value: None, mode: None,
+    })
+    .expect("flip Jill");
+    drain_stack(&mut g);
+    let shiva = g
+        .battlefield
+        .iter()
+        .find(|c| c.definition.name == "Shiva, Warden of Ice")
+        .expect("Shiva on the battlefield");
+    assert_eq!(shiva.counters.get(&CounterType::Lore).copied(), Some(1));
+    assert!(shiva.definition.is_creature() && !shiva.definition.saga_chapters.is_empty());
+}
+
+/// CR 714.4 — a Saga creature is still sacrificed at its final chapter, so the
+/// cycle's last chapter resets itself front face up instead.
+#[test]
+fn saga_creature_resets_itself_on_its_last_chapter() {
+    let mut g = two_player_game();
+    let jill = g.add_card_to_battlefield(0, catalog::jill_shivas_dominant());
+    g.battlefield_find_mut(jill).unwrap().summoning_sick = false;
+    for _ in 0..5 {
+        g.add_card_to_battlefield(0, catalog::island());
+    }
+    g.add_card_to_battlefield(1, catalog::island());
+    g.players[0].mana_pool.add(Color::Blue, 5);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: jill, ability_index: 0,
+        target: None, additional_targets: vec![], x_value: None, mode: None,
+    })
+    .expect("flip Jill");
+    drain_stack(&mut g);
+    // Push it to chapter III by hand — the turn-based lore counter only lands
+    // on the controller's own precombat main.
+    for _ in 0..2 {
+        g.saga_advance(jill);
+        drain_stack(&mut g);
+    }
+    let back = g.battlefield_find(jill).expect("survived chapter III");
+    assert_eq!(back.definition.name, "Jill, Shiva's Dominant", "reset front face up");
+    assert_eq!(back.counter_count(CounterType::Lore), 0);
+}

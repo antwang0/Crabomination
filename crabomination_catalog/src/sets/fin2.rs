@@ -949,3 +949,368 @@ pub fn ultimecia_time_sorceress() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── The "Dominant" cycle (Legendary Creature // Saga creature) ───────────────
+
+/// The shared front-face flip line: "{cost}, {T}: Exile this, then return it to
+/// the battlefield transformed under its owner's control. Sorcery only."
+fn dominant_flip(mana: crate::mana::ManaCost) -> ActivatedAbility {
+    ActivatedAbility {
+        mana_cost: mana,
+        tap_cost: true,
+        sorcery_speed: true,
+        effect: Effect::ExileSelfReturnTransformed,
+        ..Default::default()
+    }
+}
+
+/// Clive, Ifrit's Dominant // Ifrit, Warden of Inferno — {4}{R}{R} 5/5 that may
+/// refill off red devotion; the 9/9 Saga back fights, then rituals for {R}{R}{R}{R}
+/// and resets itself once it has three lore counters.
+pub fn clive_ifrits_dominant() -> CardDefinition {
+    let brimstone = Effect::Seq(vec![
+        Effect::AddMana {
+            who: PlayerRef::You,
+            pool: crate::effect::ManaPayload::OfColor(Color::Red, Value::Const(4)),
+        },
+        Effect::If {
+            cond: Predicate::SourceHasCountersAtLeast { counter: CounterType::Lore, n: 3 },
+            then: Box::new(Effect::ExileSelfReturnFrontFace),
+            else_: Box::new(Effect::Noop),
+        },
+    ]);
+    CardDefinition {
+        name: "Clive, Ifrit's Dominant",
+        cost: cost(&[generic(4), r(), r()]),
+        card_types: vec![CardType::Creature],
+        supertypes: vec![Supertype::Legendary],
+        subtypes: Subtypes {
+            creature_types: vec![
+                CreatureType::Human,
+                CreatureType::Noble,
+                CreatureType::Warrior,
+            ],
+            ..Default::default()
+        },
+        power: 5,
+        toughness: 5,
+        triggered_abilities: vec![etb(Effect::MayDo {
+            description: "Discard your hand and draw that many?".into(),
+            body: Box::new(Effect::Seq(vec![
+                Effect::DiscardHandDrawThatMany { who: Selector::You },
+                Effect::Draw {
+                    who: Selector::You,
+                    amount: Value::DevotionTo(vec![Color::Red]),
+                },
+            ])),
+        })],
+        activated_abilities: vec![dominant_flip(cost(&[generic(4), r(), r()]))],
+        back_face: Some(Box::new(CardDefinition {
+            name: "Ifrit, Warden of Inferno",
+            card_types: vec![CardType::Enchantment, CardType::Creature],
+            supertypes: vec![Supertype::Legendary],
+            subtypes: Subtypes {
+                creature_types: vec![CreatureType::Demon],
+                enchantment_subtypes: vec![crate::card::EnchantmentSubtype::Saga],
+                ..Default::default()
+            },
+            power: 9,
+            toughness: 9,
+            saga_chapters: vec![
+                (
+                    1,
+                    Effect::Fight {
+                        attacker: Selector::This,
+                        defender: target_filtered(R::Creature.and(R::OtherThanSource)),
+                    },
+                ),
+                (2, brimstone.clone()),
+                (3, brimstone),
+            ],
+            ..Default::default()
+        })),
+        ..Default::default()
+    }
+}
+
+/// Dion, Bahamut's Dominant // Bahamut, Warden of Light — {3}{W} 3/3 Knight lord
+/// whose 5/5 Saga back pumps the team, then destroys a permanent and resets.
+pub fn dion_bahamuts_dominant() -> CardDefinition {
+    let wings = Effect::Seq(vec![
+        Effect::AddCounter {
+            what: Selector::ControlledBy {
+                who: PlayerRef::You,
+                filter: R::Creature.and(R::OtherThanSource),
+            },
+            kind: CounterType::PlusOnePlusOne,
+            amount: Value::ONE,
+        },
+        Effect::GrantKeyword {
+            what: Selector::ControlledBy {
+                who: PlayerRef::You,
+                filter: R::Creature.and(R::OtherThanSource),
+            },
+            keyword: Keyword::Flying,
+            duration: Duration::EndOfTurn,
+        },
+    ]);
+    CardDefinition {
+        name: "Dion, Bahamut's Dominant",
+        cost: cost(&[generic(3), w()]),
+        card_types: vec![CardType::Creature],
+        supertypes: vec![Supertype::Legendary],
+        subtypes: Subtypes {
+            creature_types: vec![
+                CreatureType::Human,
+                CreatureType::Noble,
+                CreatureType::Knight,
+            ],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        static_abilities: vec![StaticAbility {
+            description: "Dragonfire Dive — During your turn, Dion and other Knights you \
+                          control have flying.",
+            effect: StaticEffect::AnthemForFilter {
+                filter: R::HasCreatureType(CreatureType::Knight).and(R::ControlledByYou),
+                power: 0,
+                toughness: 0,
+                keywords: vec![Keyword::Flying],
+                opponents: false,
+                all_players: false,
+                only_your_turn: true,
+                scale_by_counters_on_self: None,
+            },
+        }],
+        triggered_abilities: vec![etb(Effect::CreateToken {
+            who: PlayerRef::You,
+            count: Value::ONE,
+            definition: TokenDefinition {
+                name: "Knight".into(),
+                power: 2,
+                toughness: 2,
+                colors: vec![Color::White],
+                card_types: vec![CardType::Creature],
+                subtypes: Subtypes {
+                    creature_types: vec![CreatureType::Knight],
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+        })],
+        activated_abilities: vec![dominant_flip(cost(&[generic(4), w(), w()]))],
+        back_face: Some(Box::new(CardDefinition {
+            name: "Bahamut, Warden of Light",
+            card_types: vec![CardType::Enchantment, CardType::Creature],
+            supertypes: vec![Supertype::Legendary],
+            subtypes: Subtypes {
+                creature_types: vec![CreatureType::Dragon],
+                enchantment_subtypes: vec![crate::card::EnchantmentSubtype::Saga],
+                ..Default::default()
+            },
+            power: 5,
+            toughness: 5,
+            keywords: vec![Keyword::Flying],
+            saga_chapters: vec![
+                (1, wings.clone()),
+                (2, wings),
+                (
+                    3,
+                    Effect::Seq(vec![
+                        Effect::Destroy { what: target_filtered(R::Permanent) },
+                        Effect::ExileSelfReturnFrontFace,
+                    ]),
+                ),
+            ],
+            ..Default::default()
+        })),
+        ..Default::default()
+    }
+}
+
+/// Jill, Shiva's Dominant // Shiva, Warden of Ice — {2}{U} 2/2 bouncer whose
+/// 4/5 Saga back unblocks a creature twice, then freezes opposing lands.
+pub fn jill_shivas_dominant() -> CardDefinition {
+    let mesmerize = Effect::GrantKeyword {
+        what: target_filtered(R::Creature),
+        keyword: Keyword::Unblockable,
+        duration: Duration::EndOfTurn,
+    };
+    CardDefinition {
+        name: "Jill, Shiva's Dominant",
+        cost: cost(&[generic(2), u()]),
+        card_types: vec![CardType::Creature],
+        supertypes: vec![Supertype::Legendary],
+        subtypes: Subtypes {
+            creature_types: vec![
+                CreatureType::Human,
+                CreatureType::Noble,
+                CreatureType::Warrior,
+            ],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        triggered_abilities: vec![etb(Effect::OptionalTargets {
+            min: 0,
+            body: Box::new(Effect::Move {
+                what: target_filtered(R::Nonland.and(R::OtherThanSource)),
+                to: ZoneDest::Hand(PlayerRef::OwnerOfMoved),
+            }),
+        })],
+        activated_abilities: vec![dominant_flip(cost(&[generic(3), u(), u()]))],
+        back_face: Some(Box::new(CardDefinition {
+            name: "Shiva, Warden of Ice",
+            card_types: vec![CardType::Enchantment, CardType::Creature],
+            supertypes: vec![Supertype::Legendary],
+            subtypes: Subtypes {
+                creature_types: vec![CreatureType::Elemental],
+                enchantment_subtypes: vec![crate::card::EnchantmentSubtype::Saga],
+                ..Default::default()
+            },
+            power: 4,
+            toughness: 5,
+            saga_chapters: vec![
+                (1, mesmerize.clone()),
+                (2, mesmerize),
+                (
+                    3,
+                    Effect::Seq(vec![
+                        Effect::Tap {
+                            what: Selector::ControlledBy {
+                                who: PlayerRef::EachOpponent,
+                                filter: R::Land,
+                            },
+                        },
+                        Effect::ExileSelfReturnFrontFace,
+                    ]),
+                ),
+            ],
+            ..Default::default()
+        })),
+        ..Default::default()
+    }
+}
+
+/// Joshua, Phoenix's Dominant // Phoenix, Warden of Fire — {1}{R}{W} 3/4 looter
+/// whose 4/4 flying lifelinking Saga back burns opponents twice, then resets.
+pub fn joshua_phoenixs_dominant() -> CardDefinition {
+    let rising_flames = Effect::DealDamage {
+        to: Selector::Player(PlayerRef::EachOpponent),
+        amount: Value::Const(2),
+    };
+    CardDefinition {
+        name: "Joshua, Phoenix's Dominant",
+        cost: cost(&[generic(1), r(), w()]),
+        card_types: vec![CardType::Creature],
+        supertypes: vec![Supertype::Legendary],
+        subtypes: Subtypes {
+            creature_types: vec![
+                CreatureType::Human,
+                CreatureType::Noble,
+                CreatureType::Wizard,
+            ],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 4,
+        // "Discard up to two, then draw that many" — modeled as the mandatory
+        // two-for-two loot; declining a smaller discard isn't expressible yet.
+        triggered_abilities: vec![etb(Effect::Seq(vec![
+            discard(Selector::You, 2, false),
+            draw(2),
+        ]))],
+        activated_abilities: vec![dominant_flip(cost(&[generic(3), r(), w()]))],
+        back_face: Some(Box::new(CardDefinition {
+            name: "Phoenix, Warden of Fire",
+            card_types: vec![CardType::Enchantment, CardType::Creature],
+            supertypes: vec![Supertype::Legendary],
+            subtypes: Subtypes {
+                creature_types: vec![CreatureType::Phoenix],
+                enchantment_subtypes: vec![crate::card::EnchantmentSubtype::Saga],
+                ..Default::default()
+            },
+            power: 4,
+            toughness: 4,
+            keywords: vec![Keyword::Flying, Keyword::Lifelink],
+            saga_chapters: vec![
+                (1, rising_flames.clone()),
+                (2, rising_flames),
+                (
+                    3,
+                    Effect::Seq(vec![
+                        Effect::ReturnGraveyardCreaturesUpToTotalManaValue {
+                            max_total: Value::Const(6),
+                            max_count: Value::Const(99),
+                            counters: 0,
+                        },
+                        Effect::ExileSelfReturnFrontFace,
+                    ]),
+                ),
+            ],
+            ..Default::default()
+        })),
+        ..Default::default()
+    }
+}
+
+/// Jecht, Reluctant Guardian // Braska's Final Aeon — {3}{B} 4/3 menace that may
+/// flip on combat damage into a 7/7 Saga that strips hands, then edicts twice.
+pub fn jecht_reluctant_guardian() -> CardDefinition {
+    let jecht_beam = Effect::Seq(vec![
+        Effect::Discard {
+            who: Selector::Player(PlayerRef::EachOpponent),
+            amount: Value::ONE,
+            random: false,
+        },
+        draw(1),
+    ]);
+    CardDefinition {
+        name: "Jecht, Reluctant Guardian",
+        cost: cost(&[generic(3), b()]),
+        card_types: vec![CardType::Creature],
+        supertypes: vec![Supertype::Legendary],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Warrior],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 3,
+        keywords: vec![Keyword::Menace],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
+            effect: Effect::MayDo {
+                description: "Transform Jecht?".into(),
+                body: Box::new(Effect::ExileSelfReturnTransformed),
+            },
+        }],
+        back_face: Some(Box::new(CardDefinition {
+            name: "Braska's Final Aeon",
+            card_types: vec![CardType::Enchantment, CardType::Creature],
+            supertypes: vec![Supertype::Legendary],
+            subtypes: Subtypes {
+                creature_types: vec![CreatureType::Nightmare],
+                enchantment_subtypes: vec![crate::card::EnchantmentSubtype::Saga],
+                ..Default::default()
+            },
+            power: 7,
+            toughness: 7,
+            keywords: vec![Keyword::Menace],
+            saga_chapters: vec![
+                (1, jecht_beam.clone()),
+                (2, jecht_beam),
+                (
+                    3,
+                    Effect::Sacrifice {
+                        who: Selector::Player(PlayerRef::EachOpponent),
+                        count: Value::Const(2),
+                        filter: R::Creature,
+                    },
+                ),
+            ],
+            ..Default::default()
+        })),
+        ..Default::default()
+    }
+}

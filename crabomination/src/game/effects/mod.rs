@@ -28403,6 +28403,28 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::ExileSelfReturnFrontFace => {
+                // "Exile this, then return it to the battlefield (front face
+                // up)" — the reset half of the FIN Dominant flip cycle. A
+                // permanent already on its front face just blinks.
+                let Some(id) = ctx.source else { return Ok(()); };
+                let Some(mut card) = Self::take_card(&mut self.battlefield, id) else {
+                    return Ok(());
+                };
+                events.push(GameEvent::PermanentExiled { card_id: id });
+                if let Some(front) = card.front_face.take() {
+                    card.definition = front;
+                }
+                card.transformed = false;
+                self.place_card_in_dest(
+                    card,
+                    ctx.controller,
+                    &ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                    events,
+                );
+                Ok(())
+            }
+
             Effect::ExileSelfReturnTransformed => {
                 // CR 714.4 — exile this Saga, then return it transformed
                 // under its controller's control. Routed through

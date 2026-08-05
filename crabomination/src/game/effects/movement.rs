@@ -2372,6 +2372,16 @@ impl GameState {
                 }
                 // CR 702.32 / 702.62 — Fading / Vanishing enter-with-counters.
                 self.apply_fading_vanishing_etb(cid, events);
+                // CR 714.2b — a Saga entering from anywhere (reanimated,
+                // blinked, or a Dominant's exile-and-return-transformed) gets
+                // its first lore counter; the cast path does this itself.
+                if self
+                    .battlefield
+                    .iter()
+                    .any(|c| c.id == cid && !c.definition.saga_chapters.is_empty())
+                {
+                    self.saga_enter_advance(cid);
+                }
                 events.push(GameEvent::PermanentEntered { card_id: cid });
                 // Landfall reads "whenever a land you control **enters**", not
                 // "whenever you play a land" — a fetched, reanimated or

@@ -4383,7 +4383,10 @@ impl GameState {
         // Saga rule (CR 714.4 / 704.5x): a Saga whose lore counters have
         // reached its final chapter number is sacrificed — unless one of its
         // chapter abilities is still a trigger on the stack (so the last
-        // chapter resolves before the Saga leaves).
+        // chapter resolves before the Saga leaves). CR 714.4 has no creature
+        // exemption: FIN's "Legendary Enchantment Creature — Saga" back faces
+        // survive by exiling and re-entering front face up on their last
+        // chapter, which resets the lore count before the SBA can see it.
         let saga_victims: Vec<CardId> = self
             .battlefield
             .iter()

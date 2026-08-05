@@ -8341,6 +8341,10 @@ pub enum Effect {
     /// object: lore counters clear and the back face's ETB fires. Fable of
     /// the Mirror-Breaker chapter III.
     ExileSelfReturnTransformed,
+    /// The mirror of `ExileSelfReturnTransformed` — "exile this, then return it
+    /// to the battlefield (front face up)". Used by the FIN Dominants' Saga
+    /// chapter III to reset the flip cycle.
+    ExileSelfReturnFrontFace,
     /// CR 505.1b — "there is an additional combat phase after this one."
     /// Banks `count` onto `GameState.additional_combat_phases`; when the
     /// active player leaves the End of Combat step with the counter set, the

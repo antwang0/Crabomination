@@ -9390,6 +9390,11 @@ static FIN2: &[Factory] = &[
     super::fin2::the_emperor_of_palamecia,
     super::fin2::vincent_valentine,
     super::fin2::ultimecia_time_sorceress,
+    super::fin2::clive_ifrits_dominant,
+    super::fin2::dion_bahamuts_dominant,
+    super::fin2::jill_shivas_dominant,
+    super::fin2::joshua_phoenixs_dominant,
+    super::fin2::jecht_reluctant_guardian,
 ];
 static GPT: &[Factory] = &[
     super::gpt::mourning_thrull,
