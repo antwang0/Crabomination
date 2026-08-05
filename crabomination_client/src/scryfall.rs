@@ -74,15 +74,6 @@ pub enum CardImage {
 }
 
 impl CardImage {
-    /// The card name this image is looked up by — the front face for an
-    /// MDFC back, since that is what Scryfall is asked for.
-    fn lookup_name(&self) -> &'static str {
-        match self {
-            CardImage::Front(n) | CardImage::Token { name: n } => n,
-            CardImage::MdfcBack { front, .. } => front,
-        }
-    }
-
     /// Display name for log messages.
     fn label(&self) -> String {
         match self {
@@ -798,12 +789,13 @@ mod tests {
     #[test]
     fn rendering_a_card_jumps_its_download() {
         use super::*;
+        // Names no other test asks for — `REQUESTED_IMAGES` is process-wide.
         let pending = [
-            CardImage::Front("Lightning Bolt"),
-            CardImage::Front("Grizzly Bears"),
+            CardImage::Front("Prefetch Probe A"),
+            CardImage::Front("Prefetch Probe B"),
         ];
         let refs: Vec<&CardImage> = pending.iter().collect();
-        let _ = card_asset_path("Grizzly Bears");
+        let _ = card_asset_path("Prefetch Probe B");
         assert_eq!(next_requested(&refs), Some(1));
         assert_eq!(next_requested(&refs), None, "consumed, not re-jumped");
     }

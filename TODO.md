@@ -5,12 +5,12 @@ Items are grouped by area and roughly ordered by impact within each group.
 
 ## Noticed this run (DFT closed to 2, TDM to 6 / CR 400.7)
 
-- **The client can't be compiled in the cloud container.** `wayland-sys`'s
-  build script needs `wayland-client.pc`, which isn't installed, so
-  `cargo build -p crabomination_client` fails before touching our code. Engine,
-  catalog, server and tests all build; client edits ship unverified by the
-  compiler. Installing `libwayland-dev` (or turning off Bevy's wayland feature)
-  in the session-start hook would close this. ⏳
+- **The client needs three system packages the container lacks.** Bevy's
+  `wayland-sys`, `alsa-sys` and `libudev-sys` build scripts each want a `.pc`
+  file, so a fresh container can't build `crabomination_client` at all.
+  `apt-get update && apt-get install -y libwayland-dev libasound2-dev
+  libudev-dev` fixes it; that belongs in a SessionStart hook so the client is
+  buildable (and clippy-able) from the first command. ⏳
 - **`granted_abilities_for` now serves off-battlefield cards.** Instance grants
   on a graveyard/hand/exile card are surfaced so Cursecloth Wrappings' embalm
   activates. The *static*-granted lists (`GrantActivatedAbilityFromGraveyard`,
