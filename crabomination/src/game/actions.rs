@@ -4554,7 +4554,7 @@ impl GameState {
 
     /// CR 709.5c — re-lock one door of a Room permanent, rebuilding its live
     /// definition from the remaining unlocked designations.
-    pub(crate) fn relock_room_door(&mut self, card_id: CardId, right: bool) {
+    pub fn relock_room_door(&mut self, card_id: CardId, right: bool) {
         let Some(card) = self.battlefield_find_mut(card_id) else { return };
         let bit = if right { 2u8 } else { 1u8 };
         if card.definition.room.is_none() || card.unlocked_doors & bit == 0 {
