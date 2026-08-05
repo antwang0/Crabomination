@@ -63,7 +63,7 @@ pub fn heuristic_sealed_build_with(
 /// against, so the opponent has to come from the same generator.
 pub fn random_sealed_opponent(seed: u64) -> (Vec<CardFactory>, String) {
     let pool = sealed_pool(seed);
-    let deck = heuristic_sealed_build(&pool, seed ^ 0x5EA1_ED);
+    let deck = heuristic_sealed_build(&pool, seed ^ 0x005E_A1ED);
     (deck, format!("Sealed #{seed}"))
 }
 
