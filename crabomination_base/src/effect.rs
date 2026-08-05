@@ -148,6 +148,9 @@ pub enum PlayerStaticTarget {
     /// gain life), Stigma Lasher's "permanents you control share the
     /// no-lifegain rider" template.
     EachPlayer,
+    /// The player the source Aura enchants (`CardInstance.attached_to_player`
+    /// — Grievous Wound's "enchanted player can't gain life").
+    EnchantedPlayer,
 }
 
 /// A zone plus optional owner (for zones like Hand/Library/Graveyard that
@@ -1829,6 +1832,10 @@ pub enum Predicate {
     /// to `true`, so this predicate evaluates as `True` outside of
     /// spell-resolution context too.
     CastFromHand,
+    /// The two player refs resolve to the same seat — "whenever enchanted
+    /// player is dealt damage" is `SamePlayer(TriggerEventPlayer,
+    /// EnchantedPlayer)` (Grievous Wound).
+    SamePlayer(PlayerRef, PlayerRef),
     /// True while the current turn is in (or has only ever reached) its first
     /// combat phase — i.e. no extra combat has begun yet. Gates "if it's the
     /// first combat phase of the turn, …" attack riders (Genji Glove) so the

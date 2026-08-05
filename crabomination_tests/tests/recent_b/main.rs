@@ -2,6 +2,7 @@
 //! link time and `target/` size in check.
 
 mod blb;
+mod blb2;
 mod recent_118_132;
 mod recent_133_147;
 mod recent_148_162;

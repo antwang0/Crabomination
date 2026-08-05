@@ -1502,6 +1502,12 @@ impl GameState {
                 .is_some_and(|p| self.players_sacrificed_this_resolution.contains(&p)),
             Predicate::ExcessDamageDealtThisResolution => self.excess_damage_this_resolution > 0,
             Predicate::IsTurnOf(pref) => self.resolve_player(pref, ctx) == Some(self.active_player_idx),
+            Predicate::SamePlayer(a, b) => {
+                match (self.resolve_player(a, ctx), self.resolve_player(b, ctx)) {
+                    (Some(x), Some(y)) => x == y,
+                    _ => false,
+                }
+            }
             Predicate::PlayerIsOpponent { who } => self
                 .resolve_player(who, ctx)
                 .is_some_and(|p| !self.same_team(p, ctx.controller)),

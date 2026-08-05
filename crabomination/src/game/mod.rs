@@ -6318,6 +6318,9 @@ impl GameState {
                         PlayerStaticTarget::Controller => src.controller == seat,
                         PlayerStaticTarget::EachOpponent => src.controller != seat,
                         PlayerStaticTarget::EachPlayer => true,
+                        PlayerStaticTarget::EnchantedPlayer => {
+                            src.attached_to_player == Some(seat)
+                        }
                     }
                 } else {
                     false
@@ -6370,6 +6373,9 @@ impl GameState {
                         PlayerStaticTarget::Controller => src.controller == seat,
                         PlayerStaticTarget::EachOpponent => src.controller != seat,
                         PlayerStaticTarget::EachPlayer => true,
+                        PlayerStaticTarget::EnchantedPlayer => {
+                            src.attached_to_player == Some(seat)
+                        }
                     }
                 } else {
                     false
@@ -6656,6 +6662,9 @@ impl GameState {
                         PlayerStaticTarget::Controller => src.controller == seat,
                         PlayerStaticTarget::EachOpponent => src.controller != seat,
                         PlayerStaticTarget::EachPlayer => true,
+                        PlayerStaticTarget::EnchantedPlayer => {
+                            src.attached_to_player == Some(seat)
+                        }
                     }
                 } else {
                     false
@@ -6677,6 +6686,9 @@ impl GameState {
                         PlayerStaticTarget::Controller => src.controller == seat,
                         PlayerStaticTarget::EachOpponent => src.controller != seat,
                         PlayerStaticTarget::EachPlayer => true,
+                        PlayerStaticTarget::EnchantedPlayer => {
+                            src.attached_to_player == Some(seat)
+                        }
                     }
                 } else {
                     false
@@ -6713,6 +6725,9 @@ impl GameState {
                             PlayerStaticTarget::Controller => src.controller == seat,
                             PlayerStaticTarget::EachOpponent => src.controller != seat,
                             PlayerStaticTarget::EachPlayer => true,
+                            PlayerStaticTarget::EnchantedPlayer => {
+                                src.attached_to_player == Some(seat)
+                            }
                         };
                         hits.then_some(*amount)
                     } else {
@@ -6737,6 +6752,9 @@ impl GameState {
                             PlayerStaticTarget::Controller => src.controller == seat,
                             PlayerStaticTarget::EachOpponent => src.controller != seat,
                             PlayerStaticTarget::EachPlayer => true,
+                            PlayerStaticTarget::EnchantedPlayer => {
+                                src.attached_to_player == Some(seat)
+                            }
                         };
                         hits.then_some(*factor)
                     } else {
@@ -6773,6 +6791,9 @@ impl GameState {
                             PlayerStaticTarget::Controller => src.controller == seat,
                             PlayerStaticTarget::EachOpponent => src.controller != seat,
                             PlayerStaticTarget::EachPlayer => true,
+                            PlayerStaticTarget::EnchantedPlayer => {
+                                src.attached_to_player == Some(seat)
+                            }
                         };
                         hits.then_some(*max)
                     } else {

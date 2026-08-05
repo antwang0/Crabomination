@@ -1899,11 +1899,22 @@ impl GameState {
                     // CR 702.165 — a permanent spell cast with its Gift promised
                     // gives the gift as it enters. Emit once for "whenever you
                     // give a gift" payoffs (Jolly Gerbils).
-                    if self
-                        .battlefield_find(card_id)
-                        .is_some_and(|c| c.gift_promised && c.definition.gift.is_some())
-                    {
+                    if let Some(gifted) = self.battlefield_find(card_id).and_then(|c| {
+                        c.gift_promised
+                            .then(|| c.definition.gift.as_ref().map(|g| g.gifted_effect.clone()))
+                            .flatten()
+                    }) {
                         events.push(GameEvent::GiftGiven { player: caster });
+                        // The gifted half of a permanent's Gift ("when it
+                        // enters, they create …, then attach it") resolves as
+                        // it enters, with the permanent as the source.
+                        let mut ctx = crate::game::effects::EffectContext::for_spell(
+                            caster, target.clone(), 0, 0,
+                        );
+                        ctx.source = Some(card_id);
+                        if let Ok(mut sub) = self.resolve_effect(&gifted, &ctx) {
+                            events.append(&mut sub);
+                        }
                     }
 
                     // CR 702.146e — a daybound permanent entering while it's

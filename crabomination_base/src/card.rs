@@ -67,6 +67,7 @@ pub enum CreatureType {
     Armadillo, Nautilus,
     Bear, Ape, Rat, Fungus, Snail, Treefolk, Giant, Ogre, Orgg, Shaman, Druid,
     Monk, Archer, Berserker, Barbarian, Artificer, Pirate, Scout, Mongoose, Clown, Dalek, Nomad,
+    Balloon,
     Mystic,
     Doctor,
     Advisor, Assassin, Faerie, Skeleton, Spirit, Wall, Illusion,
