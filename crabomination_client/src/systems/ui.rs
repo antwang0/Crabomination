@@ -1524,6 +1524,9 @@ pub fn exile_browser(
                     None => format!("May play ({who})"),
                 });
             }
+            if let Some(life) = c.play_for_life {
+                badges.push(format!("Play for {life} life"));
+            }
             if c.plotted {
                 // CR 702.170d — free sorcery-speed cast on a later turn.
                 badges.push(if cv.castable_plotted.contains(&c.id) {

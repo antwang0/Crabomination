@@ -132,7 +132,7 @@ fn project_for_inner(state: &GameState, viewer: Option<usize>) -> ClientView {
         exile: state
             .exile
             .iter()
-            .map(|c| exile_entry(c, viewer, state.plotted_cards.contains(&c.id)))
+            .map(|c| exile_entry(state, c, viewer, state.plotted_cards.contains(&c.id)))
             .collect(),
         game_over: state.game_over,
         damage_cant_be_prevented_this_turn: state.damage_cant_be_prevented_this_turn,
@@ -441,7 +441,12 @@ fn combat_preview(state: &GameState) -> Option<crate::net::CombatPreview> {
     })
 }
 
-fn exile_entry(card: &CardInstance, viewer: Option<usize>, plotted: bool) -> ExileCardView {
+fn exile_entry(
+    state: &GameState,
+    card: &CardInstance,
+    viewer: Option<usize>,
+    plotted: bool,
+) -> ExileCardView {
     // CR 708 — a face-down exiled card (hideaway, foretell) is hidden from
     // everyone but its controller: mask the identity.
     let hidden = card.face_down && viewer != Some(card.controller);
@@ -458,6 +463,22 @@ fn exile_entry(card: &CardInstance, viewer: Option<usize>, plotted: bool) -> Exi
             .and(card.granted_alt_cast_cost_eot.as_ref())
             .map(|c| c.cmc()),
         mana_value: if hidden { 0 } else { card.definition.cost.cmc() },
+        // Valgavoth — the card is playable from exile for life equal to its
+        // mana value while its claiming source is on the battlefield.
+        play_for_life: (!hidden)
+            .then(|| card.exiled_with)
+            .flatten()
+            .filter(|src| {
+                state.battlefield_find(*src).is_some_and(|c| {
+                    c.definition.static_abilities.iter().any(|sa| {
+                        matches!(
+                            sa.effect,
+                            crate::effect::StaticEffect::PlayExiledWithSourceForLife
+                        )
+                    })
+                })
+            })
+            .map(|_| card.definition.cost.cmc()),
         is_token: card.is_token,
         exiled_by: card.exiled_by.map(|l| l.source),
         encoded_on: card.encoded_on,

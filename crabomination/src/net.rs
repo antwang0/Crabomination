@@ -1486,6 +1486,11 @@ pub struct ExileCardView {
     /// the card's own cost. `None` when the grant is a free cast.
     #[serde(default)]
     pub may_play_alt_cost: Option<u32>,
+    /// Life this card's owner-side controller pays to play it out of exile
+    /// under a `PlayExiledWithSourceForLife` grant (Valgavoth, Terror Eater).
+    /// `None` when no such grant covers it.
+    #[serde(default)]
+    pub play_for_life: Option<u32>,
     /// Card's mana value (CMC). Surfaced so the client can render the
     /// cost badge on exile-browser entries without needing the
     /// full CardDefinition. 0 for cards with no cost (lands).

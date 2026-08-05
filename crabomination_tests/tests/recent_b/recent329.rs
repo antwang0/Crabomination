@@ -489,3 +489,17 @@ fn kaito_ninjutsus_in_as_a_planeswalker() {
     assert!(g.attacking.iter().any(|a| a.attacker == kaito), "and attacking");
     assert!(g.players[0].hand.iter().any(|c| c.id == sneaker), "the attacker bounced");
 }
+
+/// The exile view tells the client what Valgavoth's pile costs to play.
+#[test]
+fn valgavoth_exile_view_shows_the_life_price() {
+    let mut g = main_phase();
+    g.add_card_to_battlefield(0, catalog::valgavoth_terror_eater());
+    let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let mut evs = Vec::new();
+    g.destroy_permanent(victim, false, &mut evs);
+    g.check_state_based_actions();
+    let view = crabomination::server::view::project(&g, 0);
+    let entry = view.exile.iter().find(|c| c.id == victim).expect("in exile");
+    assert_eq!(entry.play_for_life, Some(2), "Bears cost 2 life to play");
+}
