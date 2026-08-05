@@ -894,6 +894,14 @@ pub struct PlayerView {
     /// snapshot back-compat.
     #[serde(default)]
     pub commander_casts: Vec<(String, u32)>,
+    /// CR 717.2 — how many Attraction cards remain in this seat's Attraction
+    /// deck. 0 in every game without Attractions.
+    #[serde(default)]
+    pub attraction_deck_size: usize,
+    /// CR 717.6a — the names in this seat's face-up junkyard pile. Public
+    /// information; empty in every game without Attractions.
+    #[serde(default)]
+    pub attraction_junkyard: Vec<String>,
     /// CR 905.2b — this seat's draft notes, one readable line per noting card
     /// ("Lurking Automaton: 4", "Paliano, the High City: B, R, G"). Public to
     /// every viewer: 905.2b says any player may look at noted information at

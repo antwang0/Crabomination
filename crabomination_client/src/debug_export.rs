@@ -307,6 +307,7 @@ mod tests {
             plottable_hand: vec![],
             castable_plotted: vec![],
             adventurable_hand: vec![],
+            adventure_exile: vec![],
             omenable_hand: vec![],
             splittable_right_hand: vec![],
             prototypable_hand: vec![],

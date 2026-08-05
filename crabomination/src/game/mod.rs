@@ -3436,6 +3436,26 @@ impl GameState {
             .collect()
     }
 
+    /// CR 717.2 — give `seat` an Attraction deck (top card first) in the
+    /// command zone. Returns the new card ids in deck order.
+    pub fn seat_attraction_deck(
+        &mut self,
+        seat: usize,
+        attractions: Vec<crate::card::CardDefinition>,
+    ) -> Vec<crate::card::CardId> {
+        attractions
+            .into_iter()
+            .map(|def| {
+                let id = crate::card::CardId(self.next_id);
+                self.next_id = self.next_id.saturating_add(1);
+                self.players[seat]
+                    .attraction_deck
+                    .push(crate::card::CardInstance::new(id, def, seat));
+                id
+            })
+            .collect()
+    }
+
     /// The face-up scheme cards in `seat`'s command zone (CR 904.4).
     pub fn face_up_schemes(&self, seat: usize) -> Vec<&CardInstance> {
         self.players[seat].command.iter().filter(|c| c.definition.is_scheme()).collect()

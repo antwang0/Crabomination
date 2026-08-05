@@ -25,6 +25,9 @@ use crate::cube::CardFactory;
 pub struct DecklistParse {
     pub main: Vec<CardFactory>,
     pub sideboard: Vec<CardFactory>,
+    /// CR 717.2 — the supplementary Attraction deck. Attraction cards can't be
+    /// in a main deck or sideboard, so they're routed here from any section.
+    pub attractions: Vec<CardFactory>,
     /// `"4x Snapcaster Mage"`-style entries for names not in the catalog.
     pub unknown: Vec<String>,
 }
@@ -83,6 +86,7 @@ pub fn parse_decklist(text: &str) -> DecklistParse {
     let mut parse = DecklistParse {
         main: Vec::new(),
         sideboard: Vec::new(),
+        attractions: Vec::new(),
         unknown: Vec::new(),
     };
     let mut in_sideboard = false;
@@ -111,6 +115,13 @@ pub fn parse_decklist(text: &str) -> DecklistParse {
                 in_sideboard = true;
                 continue;
             }
+            // CR 717.2 — the Attraction deck is its own supplementary list.
+            // A header is optional: Attraction cards route there from any
+            // section, since they can't legally be anywhere else.
+            "attractions" | "attraction deck" => {
+                in_sideboard = false;
+                continue;
+            }
             // Commander / companion headers: the next line is still a card —
             // file it with the maindeck (no dedicated zone on import yet).
             "commander" | "companion" => {
@@ -132,7 +143,9 @@ pub fn parse_decklist(text: &str) -> DecklistParse {
         seen_cards = true;
         match by_name.get(&name.to_ascii_lowercase()) {
             Some(&factory) => {
-                let bucket = if line_is_sideboard {
+                let bucket = if !factory().attraction_lights.is_empty() {
+                    &mut parse.attractions
+                } else if line_is_sideboard {
                     &mut parse.sideboard
                 } else {
                     &mut parse.main
@@ -176,6 +189,19 @@ SB: 1 Grizzly Bears
             .filter(|f| f().name == "Lightning Bolt")
             .count();
         assert_eq!(bolts, 7);
+    }
+
+    /// CR 717.2 — Attraction cards route to the Attraction deck no matter
+    /// which section they were listed under.
+    #[test]
+    fn attractions_route_to_their_own_deck() {
+        let parsed = parse_decklist(
+            "Deck\n2 Lightning Bolt\n1 Information Booth\nSideboard\n1 Fortune Teller\n",
+        );
+        assert_eq!(parsed.main.len(), 2);
+        assert!(parsed.sideboard.is_empty());
+        assert_eq!(parsed.attractions.len(), 2);
+        assert!(parsed.attractions.iter().all(|f| !f().attraction_lights.is_empty()));
     }
 
     #[test]

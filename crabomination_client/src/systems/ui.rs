@@ -1535,6 +1535,14 @@ pub fn exile_browser(
                     "Plotted".to_string()
                 });
             }
+            if c.on_adventure {
+                // CR 715.3d — a land half is played, everything else is cast.
+                badges.push(if cv.adventure_exile.contains(&c.id) {
+                    "On an adventure — playable now".to_string()
+                } else {
+                    "On an adventure".to_string()
+                });
+            }
             if c.encoded_on.is_some() {
                 badges.push("Cipher: encoded".to_string());
             }

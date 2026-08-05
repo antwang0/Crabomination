@@ -193,3 +193,26 @@ fn kiddie_coaster_visit_pumps_your_creatures() {
     advance_to_your_main(&mut g);
     assert_eq!(g.computed_permanent(bear).unwrap().power, 3);
 }
+
+/// The Attraction deck and junkyard reach the client view (CR 717.2/717.6a).
+#[test]
+fn attraction_zones_are_surfaced_to_the_client() {
+    let mut g = two_player_game();
+    g.seat_attraction_deck(0, vec![catalog::information_booth(), catalog::fortune_teller()]);
+    let booth = g.add_card_to_battlefield(0, catalog::clown_extruder());
+    let naturalize = g.add_card_to_hand(0, catalog::naturalize());
+    g.players[0].mana_pool.add(Color::Green, 2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: naturalize,
+        target: Some(crabomination::game::types::Target::Permanent(booth)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast");
+    drain_stack(&mut g);
+    let view = crabomination::server::view::project(&g, 0);
+    let me = view.players.iter().find(|p| p.seat == 0).expect("seat 0");
+    assert_eq!(me.attraction_deck_size, 2);
+    assert_eq!(me.attraction_junkyard, vec!["Clown Extruder".to_string()]);
+}

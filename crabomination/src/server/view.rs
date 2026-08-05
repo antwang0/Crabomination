@@ -862,6 +862,12 @@ fn project_player(
                 (name, state.commander_cast_count.get(id).copied().unwrap_or(0))
             })
             .collect(),
+        attraction_deck_size: player.attraction_deck.len(),
+        attraction_junkyard: player
+            .attraction_junkyard
+            .iter()
+            .map(|c| c.definition.name.to_string())
+            .collect(),
         eliminated: player.eliminated,
         loss_reason: player.loss_cause.map(|c| {
             match c {
