@@ -262,6 +262,7 @@ pub fn uncovered_clues() -> CardDefinition {
         cost: cost(&[generic(2), u()]),
         card_types: vec![CardType::Sorcery],
         effect: Effect::LookPickToHand {
+            then_if_picked: None,
             who: PlayerRef::You,
             count: Value::Const(4),
             pick_filter: Some(

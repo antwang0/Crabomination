@@ -1330,6 +1330,7 @@ pub fn machinate() -> CardDefinition {
         cost(&[generic(1), u(), u()]),
         false,
         Effect::LookPickToHand {
+            then_if_picked: None,
             who: PlayerRef::You,
             count: Value::count(Selector::ControlledBy {
                 who: PlayerRef::You,

@@ -554,6 +554,7 @@ pub fn hero_of_leina_tower() -> CardDefinition {
 pub fn meletis_astronomer() -> CardDefinition {
     CardDefinition {
         triggered_abilities: vec![heroic(Effect::LookPickToHand {
+            then_if_picked: None,
             who: PlayerRef::You,
             count: Value::Const(3),
             rest_to_graveyard: false,

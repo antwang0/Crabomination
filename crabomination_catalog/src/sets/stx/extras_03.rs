@@ -771,6 +771,7 @@ pub fn quandrix_quickener() -> CardDefinition {
         card_types: vec![CardType::Instant],
         effect: Effect::Seq(vec![
             Effect::LookPickToHand {
+                then_if_picked: None,
                 who: PlayerRef::You,
                 count: Value::Const(3),
                 rest_to_graveyard: false,

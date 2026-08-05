@@ -280,6 +280,7 @@ pub fn creative_outburst() -> CardDefinition {
                 amount: Value::Const(5),
             },
             Effect::LookPickToHand {
+                then_if_picked: None,
                 who: PlayerRef::You,
                 count: Value::Const(5),
                 rest_to_graveyard: false,

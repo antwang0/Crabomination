@@ -2089,6 +2089,7 @@ pub fn augur_of_bolas() -> CardDefinition {
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::LookPickToHand {
+                then_if_picked: None,
                 who: PlayerRef::You,
                 count: Value::Const(3),
                 rest_to_graveyard: false,
@@ -2388,6 +2389,7 @@ pub fn sea_gate_oracle() -> CardDefinition {
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::LookPickToHand {
+                then_if_picked: None,
                 who: PlayerRef::You,
                 count: Value::Const(2),
                 rest_to_graveyard: false,

@@ -1323,6 +1323,7 @@ pub fn raven_familiar() -> CardDefinition {
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::LookPickToHand {
+                then_if_picked: None,
                 who: PlayerRef::You,
                 count: Value::Const(3),
                 rest_to_graveyard: false,

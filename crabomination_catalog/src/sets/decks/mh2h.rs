@@ -271,6 +271,7 @@ pub fn lonis_cryptozoologist() -> CardDefinition {
 /// planeswalker; your loyalty abilities cost an additional [+1].
 pub fn carth_the_lion() -> CardDefinition {
     let dig = Effect::LookPickToHand {
+        then_if_picked: None,
         who: PlayerRef::You,
         count: Value::Const(7),
         rest_to_graveyard: false,

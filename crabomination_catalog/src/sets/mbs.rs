@@ -1986,6 +1986,7 @@ pub fn mitotic_manipulation() -> CardDefinition {
         "Mitotic Manipulation",
         cost(&[generic(1), u(), u()]),
         Effect::LookPickToHand {
+            then_if_picked: None,
             who: PlayerRef::You,
             count: Value::Const(7),
             pick_filter: Some(R::SameNameAsAPermanent),

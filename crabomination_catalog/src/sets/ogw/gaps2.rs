@@ -130,6 +130,7 @@ pub fn spawnbinder_mage() -> CardDefinition {
 pub fn stoneforge_acolyte() -> CardDefinition {
     CardDefinition {
         activated_abilities: vec![cohort(Effect::LookPickToHand {
+            then_if_picked: None,
             who: PlayerRef::You,
             count: Value::Const(4),
             pick_filter: Some(R::HasArtifactSubtype(crate::card::ArtifactSubtype::Equipment)),

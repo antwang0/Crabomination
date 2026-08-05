@@ -347,6 +347,12 @@ impl GameState {
                 .iter()
                 .map(|&p| self.players[p].damage_taken_this_turn as i32)
                 .sum(),
+            Value::CombatDamageTakenThisTurn(p) => self
+                .resolve_players(p, ctx)
+                .iter()
+                .map(|&p| self.players[p].combat_damage_taken_this_turn as i32)
+                .max()
+                .unwrap_or(0),
             Value::DamageDealtToSourceThisTurn => ctx
                 .source
                 .and_then(|id| {

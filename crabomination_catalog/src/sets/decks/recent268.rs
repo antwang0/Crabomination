@@ -281,6 +281,7 @@ pub fn a_little_chat() -> CardDefinition {
         card_types: vec![CardType::Instant],
         keywords: vec![Keyword::Casualty(1)],
         effect: Effect::LookPickToHand {
+            then_if_picked: None,
             who: PlayerRef::You,
             count: Value::Const(2),
             rest_to_graveyard: false,

@@ -1257,6 +1257,40 @@ impl GameState {
             .collect()
     }
 
+    /// CR 715.3d — cards in `caster`'s adventure exile they can take off the
+    /// adventure right now: a land half is *played*, everything else is cast.
+    fn adventure_exile_playable_on(&self, template: &GameState, caster: usize) -> Vec<CardId> {
+        self.exile
+            .iter()
+            .filter(|c| c.owner == caster && c.on_adventure)
+            .filter_map(|c| {
+                let id = c.id;
+                if c.definition.is_land() {
+                    return Self::would_accept_on(template, GameAction::PlayLand(id))
+                        .then_some(id);
+                }
+                let (target, additional_targets) = if c.definition.effect.requires_target() {
+                    let (t, extras) = template.auto_targets_for_effect_all_slots(
+                        &c.definition.effect,
+                        caster,
+                        None,
+                    );
+                    t.as_ref()?;
+                    (t, extras)
+                } else {
+                    (None, vec![])
+                };
+                Self::would_accept_on(
+                    template,
+                    GameAction::CastAdventureCreature {
+                        card_id: id, target, additional_targets, mode: None, x_value: None,
+                    },
+                )
+                .then_some(id)
+            })
+            .collect()
+    }
+
     /// Cards in `caster`'s hand with an Omen half they could cast right now
     /// (CR 702.183). The probe auto-targets the omen effect.
     fn omenable_hand_cards_on(&self, template: &GameState, caster: usize) -> Vec<CardId> {
@@ -1389,6 +1423,7 @@ impl GameState {
             plottable: self.plottable_hand_cards_on(&template, seat),
             castable_plotted: self.castable_plotted_on(&template, seat),
             adventurable: self.adventurable_hand_cards_on(&template, seat),
+            adventure_exile: self.adventure_exile_playable_on(&template, seat),
             omenable: self.omenable_hand_cards_on(&template, seat),
             splittable_right: self.splittable_right_hand_cards_on(&template, seat),
             bargainable: self.bargainable_hand_cards_on(&template, seat),

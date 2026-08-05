@@ -2401,9 +2401,16 @@ impl GameState {
         // CR 118.x — "you may play that card" grants cover lands too. An
         // impulse-exiled land (Light Up the Stage, Gonti Night Minister,
         // Chandra Torch of Defiance) is played from exile, not cast.
+        // CR 715.3d — a card whose permanent half is a land is *played* out of
+        // adventure exile, not cast (the FIN Town // Adventure cycle).
+        let from_adventure = !from_top
+            && !self.players[p].has_in_hand(card_id)
+            && self.exile.iter().any(|c| {
+                c.id == card_id && c.on_adventure && c.owner == p && c.definition.is_land()
+            });
         let from_exile = !from_top
             && !self.players[p].has_in_hand(card_id)
-            && self.may_play_grant_for(p, card_id);
+            && (from_adventure || self.may_play_grant_for(p, card_id));
         let mut card = if from_top {
             self.players[p].library.remove(0)
         } else if self.players[p].has_in_hand(card_id) {
@@ -2423,13 +2430,6 @@ impl GameState {
                 state.players[p].hand.push(card);
             }
         };
-        if from_exile {
-            // The permission is consumed by the play (CR 608.2 — a one-shot
-            // permission doesn't survive the card changing zones anyway).
-            card.may_play_until = None;
-            card.granted_alt_cast_cost_eot = None;
-            card.face_down = false;
-        }
         if back_face {
             // Swap to the back face's definition. Reject if there isn't one.
             let Some(back) = card.definition.back_face.clone() else {
@@ -2448,6 +2448,17 @@ impl GameState {
         } else if !card.definition.is_land() {
             restore(self, card);
             return Err(GameError::NotALand(card_id));
+        }
+        if from_exile {
+            // The permission is consumed by the play (CR 608.2 — a one-shot
+            // permission doesn't survive the card changing zones anyway).
+            // Applied only once the play is accepted, so a rejected play
+            // restores the card unmodified.
+            card.may_play_until = None;
+            card.granted_alt_cast_cost_eot = None;
+            card.face_down = false;
+            card.on_adventure = false;
+            card.adventuring = false;
         }
         if from_top_capped {
             self.players[p].cast_from_library_top_this_turn = true;

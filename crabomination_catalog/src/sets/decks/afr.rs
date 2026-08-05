@@ -641,6 +641,7 @@ pub fn ellywick_tumblestrum() -> CardDefinition {
             LoyaltyAbility {
                 loyalty_cost: -2,
                 effect: Effect::LookPickToHand {
+                    then_if_picked: None,
                     who: PlayerRef::You,
                     count: Value::Const(6),
                     rest_to_graveyard: false,

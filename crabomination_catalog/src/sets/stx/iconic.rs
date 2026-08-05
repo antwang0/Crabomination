@@ -1415,6 +1415,7 @@ pub fn professor_onyx() -> CardDefinition {
                         amount: Value::Const(1),
                     },
                     Effect::LookPickToHand {
+                        then_if_picked: None,
                         who: PlayerRef::You,
                         count: Value::Const(3),
                         rest_to_graveyard: true,
@@ -1667,6 +1668,7 @@ pub fn adventurous_impulse() -> CardDefinition {
         cost: cost(&[crate::mana::g()]),
         card_types: vec![CardType::Sorcery],
         effect: Effect::LookPickToHand {
+            then_if_picked: None,
             who: PlayerRef::You,
             count: Value::Const(3),
             rest_to_graveyard: false,

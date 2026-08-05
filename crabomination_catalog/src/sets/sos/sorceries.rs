@@ -975,6 +975,7 @@ pub fn visionarys_dance() -> CardDefinition {
             from_hand: true,
             discard_self_cost: true,
             effect: Effect::LookPickToHand {
+                then_if_picked: None,
                 who: PlayerRef::You,
                 count: Value::Const(2),
                 rest_to_graveyard: true,
@@ -1824,6 +1825,7 @@ pub fn zimones_experiment() -> CardDefinition {
         cost: cost(&[generic(3), g()]),
         card_types: vec![CardType::Sorcery],
         effect: Effect::LookPickToHand {
+            then_if_picked: None,
             who: PlayerRef::You,
             count: Value::Const(5),
             rest_to_graveyard: false,
@@ -1875,6 +1877,7 @@ pub fn flow_state() -> CardDefinition {
                 }),
             ]),
             then: Box::new(Effect::LookPickToHand {
+                then_if_picked: None,
                 who: PlayerRef::You,
                 count: Value::Const(3),
                 rest_to_graveyard: false,
@@ -1889,6 +1892,7 @@ pub fn flow_state() -> CardDefinition {
                 rest_to_exile: false,
             }),
             else_: Box::new(Effect::LookPickToHand {
+                then_if_picked: None,
                 who: PlayerRef::You,
                 count: Value::Const(3),
                 rest_to_graveyard: false,
@@ -2066,6 +2070,7 @@ pub fn follow_the_lumarets() -> CardDefinition {
     use crate::mana::g;
     let creature_or_land = SelectionRequirement::Creature.or(SelectionRequirement::Land);
     let look = |take: i32| Effect::LookPickToHand {
+        then_if_picked: None,
         who: PlayerRef::You,
         count: Value::Const(4),
         rest_to_graveyard: false,

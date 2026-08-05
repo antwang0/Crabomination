@@ -510,6 +510,7 @@ pub fn muzzio_visionary_architect() -> CardDefinition {
             mana_cost: cost(&[generic(3), u()]),
             tap_cost: true,
             effect: Effect::LookPickToHand {
+                then_if_picked: None,
                 who: PlayerRef::You,
                 count: Value::GreatestManaValueAmongPermanents(PlayerRef::You),
                 pick_filter: Some(R::Artifact),

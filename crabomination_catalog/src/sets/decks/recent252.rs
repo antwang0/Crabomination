@@ -300,6 +300,7 @@ pub fn polygraph_orb() -> CardDefinition {
         card_types: vec![CardType::Artifact],
         triggered_abilities: vec![etb(Effect::Seq(vec![
             Effect::LookPickToHand {
+                then_if_picked: None,
                 who: PlayerRef::You,
                 count: Value::Const(4),
                 rest_to_graveyard: true,

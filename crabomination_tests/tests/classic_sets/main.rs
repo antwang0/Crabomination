@@ -31,6 +31,7 @@ mod ohop;
 mod hml;
 mod eoe;
 mod fin;
+mod fin2;
 mod dis;
 mod gpt;
 mod gtc;

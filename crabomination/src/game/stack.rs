@@ -3212,6 +3212,7 @@ impl GameState {
         for pl in &mut self.players {
             pl.was_dealt_damage_this_turn = false;
             pl.damage_taken_this_turn = 0;
+            pl.combat_damage_taken_this_turn = 0;
             pl.poison_capped_this_turn = false;
             pl.lost_life_this_turn = false;
             pl.life_lost_this_turn = 0;

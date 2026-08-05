@@ -1033,6 +1033,7 @@ pub fn vessel_of_nascency() -> CardDefinition {
             mana_cost: cost(&[generic(1), g()]),
             sac_cost: true,
             effect: Effect::LookPickToHand {
+                then_if_picked: None,
                 who: PlayerRef::You,
                 count: Value::Const(4),
                 rest_to_graveyard: true,

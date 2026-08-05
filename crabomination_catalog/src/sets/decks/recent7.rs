@@ -76,6 +76,7 @@ pub fn pieces_of_the_puzzle() -> CardDefinition {
         cost: cost(&[generic(2), u()]),
         card_types: vec![CardType::Sorcery],
         effect: Effect::LookPickToHand {
+            then_if_picked: None,
             who: PlayerRef::You,
             count: Value::Const(5),
             rest_to_graveyard: true,
@@ -106,6 +107,7 @@ pub fn ransack_the_lab() -> CardDefinition {
         cost: cost(&[generic(1), b()]),
         card_types: vec![CardType::Sorcery],
         effect: Effect::LookPickToHand {
+            then_if_picked: None,
             who: PlayerRef::You,
             count: Value::Const(3),
             rest_to_graveyard: true,

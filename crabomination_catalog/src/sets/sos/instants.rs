@@ -902,6 +902,7 @@ pub fn stress_dream() -> CardDefinition {
                 }),
             },
             Effect::LookPickToHand {
+                then_if_picked: None,
                 who: PlayerRef::You,
                 count: Value::Const(2),
                 rest_to_graveyard: false,

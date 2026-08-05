@@ -212,6 +212,7 @@ pub fn loot_exuberant_explorer() -> CardDefinition {
             mana_cost: cost(&[generic(4), g(), g()]),
             tap_cost: true,
             effect: Effect::LookPickToHand {
+                then_if_picked: None,
                 who: PlayerRef::You,
                 count: Value::Const(6),
                 rest_to_graveyard: false,
@@ -680,6 +681,7 @@ pub fn trail_of_crumbs() -> CardDefinition {
                     description: "Pay {1} to dig two for a permanent?".to_string(),
                     mana_cost: cost(&[generic(1)]),
                     body: Box::new(Effect::LookPickToHand {
+                        then_if_picked: None,
                         who: PlayerRef::You,
                         count: Value::Const(2),
                         rest_to_graveyard: false,

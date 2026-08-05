@@ -1592,6 +1592,7 @@ pub fn commune_with_evil() -> CardDefinition {
         card_types: vec![CardType::Sorcery],
         effect: Effect::Seq(vec![
             Effect::LookPickToHand {
+                then_if_picked: None,
                 who: PlayerRef::You,
                 count: Value::Const(4),
                 rest_to_graveyard: true,

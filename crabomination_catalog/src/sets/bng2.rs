@@ -1309,6 +1309,7 @@ pub fn heroes_podium() -> CardDefinition {
             tap_cost: true,
             mana_cost: cost(&[x()]),
             effect: Effect::LookPickToHand {
+                then_if_picked: None,
                 who: PlayerRef::You,
                 count: Value::XFromCost,
                 rest_to_graveyard: false,

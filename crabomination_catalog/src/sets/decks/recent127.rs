@@ -384,6 +384,7 @@ pub fn frontier_seeker() -> CardDefinition {
         power: 2,
         toughness: 1,
         triggered_abilities: vec![etb(Effect::LookPickToHand {
+            then_if_picked: None,
             who: PlayerRef::You,
             count: Value::Const(5),
             rest_to_graveyard: false,

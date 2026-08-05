@@ -180,6 +180,7 @@ fn project_for_inner(state: &GameState, viewer: Option<usize>) -> ClientView {
         plottable_hand: affordances.plottable,
         castable_plotted: affordances.castable_plotted,
         adventurable_hand: affordances.adventurable,
+        adventure_exile: affordances.adventure_exile,
         omenable_hand: affordances.omenable,
         prototypable_hand: affordances.prototypable,
         splittable_right_hand: affordances.splittable_right,
@@ -484,6 +485,7 @@ fn exile_entry(
         encoded_on: card.encoded_on,
         face_down: card.face_down,
         plotted,
+        on_adventure: card.on_adventure,
     }
 }
 

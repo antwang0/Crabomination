@@ -619,6 +619,7 @@ pub fn lupinflower_village() -> CardDefinition {
                 mana_cost: cost(&[generic(1), w()]),
                 sac_cost: true,
                 effect: Effect::LookPickToHand {
+                    then_if_picked: None,
                     who: PlayerRef::You,
                     count: Value::Const(6),
                     rest_to_graveyard: false,
@@ -763,6 +764,7 @@ pub fn whiskervale_forerunner() -> CardDefinition {
         power: 3,
         toughness: 4,
         triggered_abilities: vec![valiant(Effect::LookPickToHand {
+            then_if_picked: None,
             who: PlayerRef::You,
             count: Value::Const(5),
             rest_to_graveyard: false,

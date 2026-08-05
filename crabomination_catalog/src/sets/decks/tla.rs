@@ -1451,6 +1451,7 @@ pub fn master_piandao() -> CardDefinition {
         toughness: 4,
         keywords: vec![Keyword::FirstStrike],
         triggered_abilities: vec![on_attack(Effect::LookPickToHand {
+            then_if_picked: None,
             who: PlayerRef::You,
             count: Value::Const(4),
             rest_to_graveyard: false,
@@ -1938,6 +1939,7 @@ pub fn seismic_sense() -> CardDefinition {
         card_types: vec![CardType::Sorcery],
         subtypes: lesson(),
         effect: Effect::LookPickToHand {
+            then_if_picked: None,
             who: PlayerRef::You,
             count: Value::count(Selector::EachPermanent(
                 SelectionRequirement::Land.and(SelectionRequirement::ControlledByYou),
@@ -2968,6 +2970,7 @@ pub fn guru_pathik() -> CardDefinition {
         power: 2,
         toughness: 4,
         triggered_abilities: vec![etb(Effect::LookPickToHand {
+            then_if_picked: None,
             who: PlayerRef::You,
             count: Value::Const(5),
             rest_to_graveyard: false,
@@ -4642,6 +4645,7 @@ pub fn barrels_of_blasting_jelly() -> CardDefinition {
 /// into your hand (rest to bottom), or all three if you have 3+ Lessons in gy.
 pub fn accumulate_wisdom() -> CardDefinition {
     let dig = |take: Value| Effect::LookPickToHand {
+        then_if_picked: None,
         who: PlayerRef::You,
         count: Value::Const(3),
         rest_to_graveyard: false,

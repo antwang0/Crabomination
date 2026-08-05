@@ -903,6 +903,7 @@ pub fn commune_with_the_gods() -> CardDefinition {
         cost: cost(&[generic(1), g()]),
         card_types: vec![CardType::Sorcery],
         effect: Effect::LookPickToHand {
+            then_if_picked: None,
             who: PlayerRef::You,
             count: Value::Const(5),
             rest_to_graveyard: true,

@@ -297,6 +297,7 @@ pub fn vineshaper_prodigy() -> CardDefinition {
         triggered_abilities: vec![etb(Effect::If {
             cond: Predicate::SpellWasKicked,
             then: Box::new(Effect::LookPickToHand {
+                then_if_picked: None,
                 who: PlayerRef::You,
                 count: Value::Const(3),
                 rest_to_graveyard: false,

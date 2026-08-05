@@ -9363,6 +9363,19 @@ static FIN: &[Factory] = &[
     super::fin::stolen_uniform,
     super::fin::memories_returning,
 ];
+static FIN2: &[Factory] = &[
+    super::fin2::ishgard_the_holy_see,
+    super::fin2::jidoor_aristocratic_capital,
+    super::fin2::lindblum_industrial_regency,
+    super::fin2::midgar_city_of_mako,
+    super::fin2::zanarkand_ancient_metropolis,
+    super::fin2::balamb_garden_seed_academy,
+    super::fin2::sidequest_card_collection,
+    super::fin2::sidequest_catch_a_fish,
+    super::fin2::sidequest_hunt_the_mark,
+    super::fin2::sidequest_play_blitzball,
+    super::fin2::sidequest_raise_a_chocobo,
+];
 static GPT: &[Factory] = &[
     super::gpt::mourning_thrull,
     super::gpt::absolver_thrull,
@@ -20930,6 +20943,7 @@ static PER_SET: &[(&str, &[Factory])] = &[
     ("eoe", EOE),
     ("fem", FEM),
     ("fin", FIN),
+    ("fin2", FIN2),
     ("gpt", GPT),
     ("gtc", GTC),
     ("gtc10", GTC10),

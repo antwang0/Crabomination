@@ -840,6 +840,7 @@ pub fn stirring_honormancer() -> CardDefinition {
             // graveyard" (audit fix: was reveal-until-creature, which
             // both restricted the pick and took the first match).
             effect: Effect::LookPickToHand {
+                then_if_picked: None,
                 who: PlayerRef::You,
                 count: Value::CountOf(Box::new(Selector::EachPermanent(
                     SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
@@ -3159,6 +3160,7 @@ pub fn geometers_arthropod() -> CardDefinition {
         // (audit fix: the reveal-until-find stand-in always took the top
         // card).
         triggered_abilities: vec![cast_has_x_trigger(Effect::LookPickToHand {
+            then_if_picked: None,
             who: PlayerRef::You,
             count: Value::XFromCost,
             rest_to_graveyard: false,
@@ -4143,6 +4145,7 @@ pub fn paradox_surveyor() -> CardDefinition {
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::LookPickToHand {
+                then_if_picked: None,
                 who: PlayerRef::You,
                 count: Value::Const(5),
                 rest_to_graveyard: false,

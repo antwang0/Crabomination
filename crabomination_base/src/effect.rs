@@ -623,6 +623,11 @@ pub enum Value {
     /// "Bloodthirst X, where X is the damage dealt to your opponents this
     /// turn" (Petrified Wood-Kin). Sums across the resolved players.
     DamageTakenThisTurn(PlayerRef),
+    /// The combat-damage-only slice of `DamageTakenThisTurn`
+    /// (`Player.combat_damage_taken_this_turn`). Takes the MAX across the
+    /// resolved players, so `EachPlayer` reads "the most combat damage any one
+    /// player was dealt this turn" (Sidequest: Play Blitzball).
+    CombatDamageTakenThisTurn(PlayerRef),
     /// Total damage dealt to the ability's source permanent this turn
     /// (`CardInstance.damage_dealt_to_this_turn`) — "if 4 or more damage was
     /// dealt to it this turn" (Rushing-Tide Zubera). Reads death-time LKI so a
@@ -4196,6 +4201,10 @@ pub enum Effect {
         /// the fill either way so bot play is unchanged.
         #[serde(default)]
         optional: bool,
+        /// "If you put a card into your hand this way, [effect]" — runs once
+        /// after the picks land (Sidequest: Catch a Fish's Food + transform).
+        #[serde(default)]
+        then_if_picked: Option<Box<Effect>>,
         /// Typed routing (Zimone's Experiment): picked LAND cards go onto
         /// the battlefield tapped while other picks go to hand.
         #[serde(default)]

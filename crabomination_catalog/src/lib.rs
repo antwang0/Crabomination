@@ -92,6 +92,7 @@ pub use sets::dis::*;
 pub use sets::eoe::*;
 pub use sets::fem::*;
 pub use sets::fin::*;
+pub use sets::fin2::*;
 pub use sets::gpt::*;
 pub use sets::gtc::*;
 pub use sets::gtc2::*;

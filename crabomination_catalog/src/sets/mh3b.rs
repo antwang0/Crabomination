@@ -645,6 +645,7 @@ pub fn territory_culler() -> CardDefinition {
                     filter: R::Land,
                 }),
             effect: Effect::LookPickToHand {
+                then_if_picked: None,
                 who: PlayerRef::You,
                 count: Value::ONE,
                 rest_to_graveyard: true,

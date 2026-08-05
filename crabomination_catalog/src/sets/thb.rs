@@ -4023,6 +4023,7 @@ pub fn nessian_wanderer() -> CardDefinition {
         power: 1,
         toughness: 3,
         triggered_abilities: vec![constellation(Effect::LookPickToHand {
+            then_if_picked: None,
             who: PlayerRef::You,
             count: Value::Const(3),
             rest_to_graveyard: false,
@@ -5688,6 +5689,7 @@ pub fn thassas_intervention() -> CardDefinition {
         card_types: vec![CardType::Instant],
         effect: Effect::ChooseMode(vec![
             Effect::LookPickToHand {
+                then_if_picked: None,
                 who: PlayerRef::You,
                 count: Value::XFromCost,
                 rest_to_graveyard: false,
@@ -5724,6 +5726,7 @@ pub fn relentless_pursuit() -> CardDefinition {
         cost: cost(&[generic(2), g()]),
         card_types: vec![CardType::Sorcery],
         effect: Effect::LookPickToHand {
+            then_if_picked: None,
             who: PlayerRef::You,
             count: Value::Const(4),
             rest_to_graveyard: true,
@@ -6210,6 +6213,7 @@ pub fn calix_destinys_hand() -> CardDefinition {
             LoyaltyAbility {
                 loyalty_cost: 1,
                 effect: Effect::LookPickToHand {
+                    then_if_picked: None,
                     who: PlayerRef::You,
                     count: Value::Const(4),
                     rest_to_graveyard: false,
@@ -6848,6 +6852,7 @@ pub fn siona_captain_of_the_pyleas() -> CardDefinition {
         toughness: 2,
         triggered_abilities: vec![
             etb(Effect::LookPickToHand {
+                then_if_picked: None,
                 who: PlayerRef::You,
                 count: Value::Const(7),
                 rest_to_graveyard: false,

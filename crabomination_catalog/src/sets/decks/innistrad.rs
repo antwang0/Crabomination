@@ -1126,6 +1126,7 @@ pub fn organ_hoarder() -> CardDefinition {
         power: 3,
         toughness: 2,
         triggered_abilities: vec![etb(Effect::LookPickToHand {
+            then_if_picked: None,
             who: PlayerRef::You,
             count: Value::Const(3),
             rest_to_graveyard: true,
@@ -1167,6 +1168,7 @@ pub fn scattered_thoughts() -> CardDefinition {
         cost: cost(&[generic(3), u()]),
         card_types: vec![CardType::Instant],
         effect: Effect::LookPickToHand {
+            then_if_picked: None,
             who: PlayerRef::You,
             count: Value::Const(4),
             rest_to_graveyard: true,
@@ -2195,6 +2197,7 @@ pub fn mulch() -> CardDefinition {
         cost: cost(&[generic(1), g()]),
         card_types: vec![CardType::Sorcery],
         effect: Effect::LookPickToHand {
+            then_if_picked: None,
             who: PlayerRef::You,
             count: Value::Const(4),
             rest_to_graveyard: true,
@@ -2222,6 +2225,7 @@ pub fn tapping_at_the_window() -> CardDefinition {
         card_types: vec![CardType::Sorcery],
         keywords: vec![Keyword::Flashback(cost(&[generic(2), g()]))],
         effect: Effect::LookPickToHand {
+            then_if_picked: None,
             who: PlayerRef::You,
             count: Value::Const(3),
             rest_to_graveyard: true,
@@ -2986,6 +2990,7 @@ pub fn gavony_dawnguard() -> CardDefinition {
             TriggeredAbility {
                 event: EventSpec::new(EventKind::DayNightChanged, EventScope::AnyPlayer),
                 effect: Effect::LookPickToHand {
+                    then_if_picked: None,
                     who: PlayerRef::You,
                     count: Value::Const(4),
                     rest_to_graveyard: false,

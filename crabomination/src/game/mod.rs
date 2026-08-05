@@ -201,6 +201,9 @@ pub struct HandAffordances {
     /// CR 702.170d — plotted cards in exile castable for free right now.
     pub castable_plotted: Vec<CardId>,
     pub adventurable: Vec<CardId>,
+    /// CR 715.3d — cards in adventure exile playable right now: a land half is
+    /// played, any other half is cast.
+    pub adventure_exile: Vec<CardId>,
     /// CR 702.183 — hand cards with an Omen half castable right now.
     pub omenable: Vec<CardId>,
     /// CR 709 — split cards whose **right** half is castable right now.
@@ -13309,6 +13312,7 @@ impl GameState {
                 let Some(n) = self.look_instead_of_drawing(p) else { return false };
                 if let Ok(mut evs) = self.resolve_effect(
                     &crate::effect::Effect::LookPickToHand {
+                        then_if_picked: None,
                         who: crate::effect::PlayerRef::Seat(p),
                         count: crate::effect::Value::Const(n as i32),
                         rest_to_graveyard: false,
@@ -17156,7 +17160,7 @@ impl GameState {
                 }
                 Ok(events)
             }
-            PendingEffectState::ImpulsePending { player, revealed, rest_to_graveyard, eligible, take, to_battlefield, tapped, keep_on_top, gain_life_if_pick, gain_life_greatest_power_rest, optional, picked_lands_to_battlefield, rest_bottom_random, rest_to_exile } => {
+            PendingEffectState::ImpulsePending { player, revealed, rest_to_graveyard, eligible, take, to_battlefield, tapped, keep_on_top, gain_life_if_pick, gain_life_greatest_power_rest, optional, picked_lands_to_battlefield, rest_bottom_random, rest_to_exile, then_if_picked, source } => {
                 // `None` eligible means "any revealed card" (no filter).
                 let is_eligible = |id: &CardId| match &eligible {
                     None => true,
@@ -17292,6 +17296,20 @@ impl GameState {
                     use rand::seq::SliceRandom;
                     bottom_batch.shuffle(&mut rand::rng());
                     self.players[player].library.extend(bottom_batch);
+                }
+                // "If you put a card into your hand this way, …" — the rider
+                // fires once, only when at least one card was actually taken.
+                if let Some(then) = then_if_picked
+                    && !picks.is_empty()
+                {
+                    let ctx = crate::game::effects::EffectContext {
+                        controller: player,
+                        source,
+                        ..Default::default()
+                    };
+                    if let Ok(mut evs) = self.resolve_effect(&then, &ctx) {
+                        events.append(&mut evs);
+                    }
                 }
                 let rider_gain = pick_rider_life.map(|n| n as i32).unwrap_or(0)
                     + greatest_milled_power.unwrap_or(0).max(0);

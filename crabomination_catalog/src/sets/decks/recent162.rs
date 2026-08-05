@@ -239,6 +239,7 @@ pub fn squad_rallier() -> CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[generic(2), w()]),
             effect: Effect::LookPickToHand {
+                then_if_picked: None,
                 who: PlayerRef::You,
                 count: Value::Const(4),
                 rest_to_graveyard: false,

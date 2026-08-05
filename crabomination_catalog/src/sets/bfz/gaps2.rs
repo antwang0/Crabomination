@@ -726,6 +726,7 @@ pub fn kiora_master_of_the_depths() -> CardDefinition {
             LoyaltyAbility {
                 loyalty_cost: -2,
                 effect: Effect::LookPickToHand {
+                    then_if_picked: None,
                     who: PlayerRef::You,
                     count: Value::Const(4),
                     rest_to_graveyard: true,

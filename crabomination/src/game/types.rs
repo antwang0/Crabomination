@@ -1505,6 +1505,14 @@ pub enum PendingEffectState {
         /// of Destiny's opening-hand reveal). Overrides `rest_to_graveyard`.
         #[serde(default)]
         rest_to_exile: bool,
+        /// "If you put a card into your hand this way, [effect]" (Sidequest:
+        /// Catch a Fish). Runs once, after the picks land, with `source` as the
+        /// effect's source so `Selector::This` reaches the card that asked.
+        #[serde(default)]
+        then_if_picked: Option<Box<crate::effect::Effect>>,
+        /// Source of the originating `LookPickToHand`, for `then_if_picked`.
+        #[serde(default)]
+        source: Option<CardId>,
     },
     /// Suspended on a `SearchLibrary` pick for `Effect::PayLifeLookTake`
     /// (Plunge into Darkness mode 1): the chosen card goes to hand and the

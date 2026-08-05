@@ -136,6 +136,7 @@ pub fn seek_the_wilds() -> CardDefinition {
         cost(&[generic(1), g()]),
         CardType::Sorcery,
         Effect::LookPickToHand {
+            then_if_picked: None,
             who: PlayerRef::You,
             count: Value::Const(4),
             pick_filter: Some(R::Creature.or(R::Land)),

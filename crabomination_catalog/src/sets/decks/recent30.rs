@@ -469,6 +469,7 @@ pub fn dredgers_insight() -> CardDefinition {
         card_types: vec![CardType::Enchantment],
         triggered_abilities: vec![
             etb(Effect::LookPickToHand {
+                then_if_picked: None,
                 who: PlayerRef::You,
                 count: Value::Const(4),
                 rest_to_graveyard: true,

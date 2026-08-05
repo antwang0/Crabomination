@@ -1423,6 +1423,7 @@ pub fn kruphixs_insight() -> CardDefinition {
         cost(&[generic(2), g()]),
         CardType::Sorcery,
         Effect::LookPickToHand {
+            then_if_picked: None,
             who: PlayerRef::You,
             count: Value::Const(6),
             rest_to_graveyard: true,

@@ -134,6 +134,7 @@ pub fn commune_with_spirits() -> CardDefinition {
         cost: cost(&[g()]),
         card_types: vec![CardType::Sorcery],
         effect: Effect::LookPickToHand {
+            then_if_picked: None,
             who: PlayerRef::You,
             count: Value::Const(4),
             rest_to_graveyard: false,

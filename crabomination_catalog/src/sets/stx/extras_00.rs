@@ -1443,6 +1443,7 @@ pub fn expressive_iteration() -> CardDefinition {
         card_types: vec![CardType::Sorcery],
         effect: Effect::Seq(vec![
             Effect::LookPickToHand {
+                then_if_picked: None,
                 who: PlayerRef::You,
                 count: Value::Const(3),
                 rest_to_graveyard: false,
@@ -2352,6 +2353,7 @@ pub fn wandering_archaic() -> CardDefinition {
                 selector: Selector::Player(PlayerRef::EachPlayer),
                 body: Box::new(Effect::Seq(vec![
                     Effect::LookPickToHand {
+                        then_if_picked: None,
                         who: PlayerRef::Triggerer,
                         count: Value::Const(5),
                         rest_to_graveyard: false,

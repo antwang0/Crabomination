@@ -311,6 +311,7 @@ pub fn case_of_the_gateway_express() -> CardDefinition {
 /// enchantment card and put it into your hand, rest to the bottom at random.
 pub fn case_file_auditor() -> CardDefinition {
     let look_six = || Effect::LookPickToHand {
+        then_if_picked: None,
         who: PlayerRef::You,
         count: Value::Const(6),
         rest_to_graveyard: false,

@@ -269,6 +269,7 @@ pub fn beastrider_vanguard() -> CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[generic(4), g()]),
             effect: Effect::LookPickToHand {
+                then_if_picked: None,
                 who: PlayerRef::You,
                 count: Value::Const(3),
                 rest_to_graveyard: false,

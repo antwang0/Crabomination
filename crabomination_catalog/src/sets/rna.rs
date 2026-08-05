@@ -1919,6 +1919,7 @@ pub fn shimmer_of_possibility() -> CardDefinition {
         cost: cost(&[generic(1), u()]),
         card_types: vec![CardType::Sorcery],
         effect: Effect::LookPickToHand {
+            then_if_picked: None,
             who: PlayerRef::You,
             count: Value::Const(4),
             rest_to_graveyard: false,
@@ -3730,6 +3731,7 @@ pub fn incubation_incongruity() -> CardDefinition {
         cost: cost(&[hybrid(Color::Green, Color::Blue)]),
         card_types: vec![CardType::Sorcery],
         effect: Effect::LookPickToHand {
+            then_if_picked: None,
             who: PlayerRef::You,
             count: Value::Const(5),
             rest_to_graveyard: false,

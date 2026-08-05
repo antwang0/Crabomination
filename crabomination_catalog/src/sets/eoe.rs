@@ -385,6 +385,7 @@ pub fn codecracker_hound() -> CardDefinition {
         power: 2,
         toughness: 1,
         triggered_abilities: vec![etb(Effect::LookPickToHand {
+            then_if_picked: None,
             who: PlayerRef::You,
             count: Value::Const(2),
             rest_to_graveyard: true,
@@ -5646,6 +5647,7 @@ pub fn pulsar_squadron_ace() -> CardDefinition {
         power: 1,
         toughness: 2,
         triggered_abilities: vec![etb(Effect::LookPickToHand {
+            then_if_picked: None,
             who: PlayerRef::You,
             count: Value::Const(5),
             rest_to_graveyard: false,

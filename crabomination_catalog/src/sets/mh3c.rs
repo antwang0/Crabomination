@@ -883,6 +883,7 @@ pub fn monumental_henge() -> CardDefinition {
                 mana_cost: cost(&[generic(2), w(), w()]),
                 tap_cost: true,
                 effect: Effect::LookPickToHand {
+                    then_if_picked: None,
                     who: PlayerRef::You,
                     count: Value::Const(5),
                     rest_to_graveyard: false,
@@ -1394,6 +1395,7 @@ pub fn rosecot_knight() -> CardDefinition {
         toughness: 4,
         keywords: vec![Keyword::Vigilance],
         triggered_abilities: vec![etb(Effect::LookPickToHand {
+            then_if_picked: None,
             who: PlayerRef::You,
             count: Value::Const(6),
             rest_to_graveyard: false,

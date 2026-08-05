@@ -328,6 +328,7 @@ pub fn tezzeret_agent_of_bolas() -> CardDefinition {
             LoyaltyAbility {
                 loyalty_cost: 1,
                 effect: Effect::LookPickToHand {
+                    then_if_picked: None,
                     who: PlayerRef::You,
                     count: Value::Const(5),
                     rest_to_graveyard: false,

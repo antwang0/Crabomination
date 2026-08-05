@@ -330,6 +330,11 @@ pub struct Player {
     /// Wood-Kin). Cleared with `was_dealt_damage_this_turn` at turn start.
     #[serde(default)]
     pub damage_taken_this_turn: u32,
+    /// The combat-damage-only slice of `damage_taken_this_turn` ("if a player
+    /// was dealt 6 or more combat damage this turn" — Sidequest: Play
+    /// Blitzball). Cleared alongside it at the turn boundary.
+    #[serde(default)]
+    pub combat_damage_taken_this_turn: u32,
     /// True if this player has lost life this turn (damage or direct life
     /// loss). Set in `adjust_life` on a negative delta, reset at the active
     /// player's `do_untap`. Powers Spectacle (CR 702.111). Defaults to false
@@ -981,6 +986,7 @@ impl Player {
             permanent_left_battlefield_this_turn: false,
             was_dealt_damage_this_turn: false,
             damage_taken_this_turn: 0,
+            combat_damage_taken_this_turn: 0,
             lost_life_this_turn: false,
             graveyard_cast_types_this_turn: Vec::new(),
             play_from_top_this_turn: false,

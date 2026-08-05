@@ -277,6 +277,7 @@ pub fn rakshasas_bargain() -> CardDefinition {
         ]),
         card_types: vec![CardType::Instant],
         effect: Effect::LookPickToHand {
+            then_if_picked: None,
             who: PlayerRef::You,
             count: Value::Const(4),
             rest_to_graveyard: true,
@@ -983,6 +984,7 @@ pub fn commune_with_nature() -> CardDefinition {
         cost: cost(&[g()]),
         card_types: vec![CardType::Sorcery],
         effect: Effect::LookPickToHand {
+            then_if_picked: None,
             who: PlayerRef::You,
             count: Value::Const(5),
             rest_to_graveyard: false,

@@ -3764,6 +3764,8 @@ impl GameState {
                     self.players[p].was_dealt_damage_this_turn = true;
                     self.players[p].damage_taken_this_turn =
                         self.players[p].damage_taken_this_turn.saturating_add(amount);
+                    self.players[p].combat_damage_taken_this_turn =
+                        self.players[p].combat_damage_taken_this_turn.saturating_add(amount);
                     if !self.players[p].creatures_that_damaged_me_this_turn.contains(&atk.id) {
                         self.players[p].creatures_that_damaged_me_this_turn.push(atk.id);
                     }

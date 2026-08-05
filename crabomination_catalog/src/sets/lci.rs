@@ -2545,6 +2545,7 @@ pub fn staunch_crewmate() -> CardDefinition {
         power: 2,
         toughness: 1,
         triggered_abilities: vec![etb(Effect::LookPickToHand {
+            then_if_picked: None,
             who: PlayerRef::You,
             count: Value::Const(4),
             rest_to_graveyard: false,
@@ -4494,6 +4495,7 @@ pub fn confounding_riddle() -> CardDefinition {
         card_types: vec![CardType::Instant],
         effect: Effect::ChooseMode(vec![
             Effect::LookPickToHand {
+                then_if_picked: None,
                 who: PlayerRef::You,
                 count: Value::Const(4),
                 rest_to_graveyard: true,
@@ -4612,6 +4614,7 @@ pub fn in_the_presence_of_ages() -> CardDefinition {
         cost: cost(&[generic(2), g()]),
         card_types: vec![CardType::Instant],
         effect: Effect::LookPickToHand {
+            then_if_picked: None,
             who: PlayerRef::You,
             count: Value::Const(4),
             rest_to_graveyard: true,
@@ -5258,6 +5261,7 @@ pub fn sinuous_benthisaur() -> CardDefinition {
         power: 4,
         toughness: 4,
         triggered_abilities: vec![etb(Effect::LookPickToHand {
+            then_if_picked: None,
             who: PlayerRef::You,
             count: Value::Sum(vec![
                 Value::CountMatching {
@@ -5474,6 +5478,7 @@ pub fn orazca_puzzle_door() -> CardDefinition {
             tap_cost: true,
             sac_cost: true,
             effect: Effect::LookPickToHand {
+                then_if_picked: None,
                 who: PlayerRef::You,
                 count: Value::Const(2),
                 rest_to_graveyard: true,
@@ -5863,6 +5868,7 @@ pub fn akal_pakal_first_among_equals() -> CardDefinition {
                     who: PlayerRef::You,
                 }),
             effect: Effect::LookPickToHand {
+                then_if_picked: None,
                 who: PlayerRef::You,
                 count: Value::Const(2),
                 rest_to_graveyard: true,

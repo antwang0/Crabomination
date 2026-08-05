@@ -105,6 +105,7 @@ pub fn eye_of_yawgmoth() -> CardDefinition {
             tap_cost: true,
             sac_other_filter: Some((R::Creature, 1)),
             effect: Effect::LookPickToHand {
+                then_if_picked: None,
                 who: PlayerRef::You,
                 count: Value::SacrificedPower,
                 rest_to_exile: true,

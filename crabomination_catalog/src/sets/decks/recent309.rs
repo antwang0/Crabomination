@@ -1476,6 +1476,7 @@ pub fn bucolic_ranch() -> CardDefinition {
                 mana_cost: cost(&[generic(3)]),
                 tap_cost: true,
                 effect: Effect::LookPickToHand {
+                    then_if_picked: None,
                     who: PlayerRef::You,
                     count: Value::ONE,
                     rest_to_graveyard: false,

@@ -89,6 +89,7 @@ pub fn dovin_grand_arbiter() -> CardDefinition {
             LoyaltyAbility {
                 loyalty_cost: -7,
                 effect: Effect::LookPickToHand {
+                    then_if_picked: None,
                     who: PlayerRef::You,
                     count: Value::Const(10),
                     rest_to_graveyard: false,

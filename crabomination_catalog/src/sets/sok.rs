@@ -200,6 +200,7 @@ pub fn elder_pine_of_jukai() -> CardDefinition {
     CardDefinition {
         triggered_abilities: vec![
             spiritcraft(Effect::LookPickToHand {
+                then_if_picked: None,
                 who: PlayerRef::You,
                 count: Value::Const(3),
                 pick_filter: Some(R::Land),

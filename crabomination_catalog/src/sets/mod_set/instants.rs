@@ -796,6 +796,7 @@ pub fn dig_through_time() -> CardDefinition {
         card_types: vec![CardType::Instant],
         keywords: vec![Keyword::Delve],
         effect: Effect::LookPickToHand {
+            then_if_picked: None,
             who: PlayerRef::You,
             count: Value::Const(7),
             rest_to_graveyard: false,

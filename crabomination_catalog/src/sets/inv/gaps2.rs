@@ -631,6 +631,7 @@ pub fn worldly_counsel() -> CardDefinition {
         "Worldly Counsel",
         cost(&[generic(1), u()]),
         Effect::LookPickToHand {
+            then_if_picked: None,
             who: PlayerRef::You,
             count: domain(),
             rest_to_graveyard: false,
@@ -1653,6 +1654,7 @@ pub fn reviving_vapors() -> CardDefinition {
         cost(&[generic(2), w(), u()]),
         Effect::Seq(vec![
             Effect::LookPickToHand {
+                then_if_picked: None,
                 who: PlayerRef::You,
                 count: Value::Const(3),
                 rest_to_graveyard: true,

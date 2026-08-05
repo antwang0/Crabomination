@@ -31,6 +31,7 @@ pub fn ainok_wayfarer() -> CardDefinition {
         power: 1,
         toughness: 1,
         triggered_abilities: vec![etb(Effect::LookPickToHand {
+            then_if_picked: None,
             who: PlayerRef::You,
             count: Value::Const(3),
             rest_to_graveyard: true,

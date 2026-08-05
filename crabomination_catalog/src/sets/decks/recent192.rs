@@ -17,6 +17,7 @@ pub fn pillage_the_bog() -> CardDefinition {
         card_types: vec![CardType::Sorcery],
         plot_cost: Some(cost(&[generic(1), b(), g()])),
         effect: Effect::LookPickToHand {
+            then_if_picked: None,
             who: PlayerRef::You,
             count: Value::Times(
                 Box::new(Value::Const(2)),

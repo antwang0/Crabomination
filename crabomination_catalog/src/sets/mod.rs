@@ -342,6 +342,7 @@ pub mod dis;
 pub mod eoe;
 pub mod fem;
 pub mod fin;
+pub mod fin2;
 pub mod gpt;
 pub mod gtc;
 pub mod gtc10;

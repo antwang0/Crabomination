@@ -676,6 +676,7 @@ pub fn shrine_of_piercing_vision() -> CardDefinition {
             tap_cost: true,
             sac_cost: true,
             effect: Effect::LookPickToHand {
+                then_if_picked: None,
                 who: PlayerRef::You,
                 count: Value::CountersOn { what: Box::new(Selector::This), kind: CounterType::Charge },
                 rest_to_graveyard: false,

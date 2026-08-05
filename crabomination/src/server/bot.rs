@@ -3763,7 +3763,10 @@ fn cast_candidates(
     // creature half / a plotted card from exile. `would_accept` enforces the
     // later-turn + sorcery-speed timing, so this is only offered when legal.
     for c in state.exile.iter().filter(|c| c.owner == seat) {
-        let action = if c.on_adventure {
+        let action = if c.on_adventure && c.definition.is_land() {
+            // CR 715.3d — a land half is played, not cast (FIN's Town cycle).
+            GameAction::PlayLand(c.id)
+        } else if c.on_adventure {
             let (target, additional_targets) = if c.definition.effect.requires_target() {
                 state.auto_targets_for_effect_all_slots(&c.definition.effect, seat, None)
             } else {

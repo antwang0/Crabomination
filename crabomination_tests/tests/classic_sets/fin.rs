@@ -1758,8 +1758,11 @@ fn town_dual_is_typed_and_taps_for_two_colors() {
     let g = catalog::treno_dark_city();
     assert!(g.subtypes.land_types.contains(&LandType::Town), "typed as a Town");
     assert_eq!(g.activated_abilities.len(), 2, "two mana abilities");
-    // Enters tapped via its ETB trigger.
-    assert!(!g.triggered_abilities.is_empty(), "has an enters-tapped trigger");
+    // CR 614 — enters tapped as a replacement, not an ETB trigger.
+    assert!(g.static_abilities.iter().any(|sa| matches!(
+        sa.effect,
+        crabomination::effect::StaticEffect::EntersTapped { .. }
+    )));
 }
 
 /// Adventurer's Inn is a Town that gains 2 life on entry.

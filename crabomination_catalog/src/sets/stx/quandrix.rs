@@ -44,6 +44,7 @@ pub fn quandrix_apprentice() -> CardDefinition {
         power: 2,
         toughness: 2,
         triggered_abilities: vec![magecraft(Effect::LookPickToHand {
+            then_if_picked: None,
             who: PlayerRef::You,
             count: Value::Const(3),
             rest_to_graveyard: false,

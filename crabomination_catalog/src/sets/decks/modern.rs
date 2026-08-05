@@ -130,6 +130,7 @@ pub fn sleight_of_hand() -> CardDefinition {
         cost: cost(&[u()]),
         card_types: vec![CardType::Sorcery],
         effect: Effect::LookPickToHand {
+            then_if_picked: None,
             who: PlayerRef::You,
             count: Value::Const(2),
             rest_to_graveyard: false,
@@ -2920,6 +2921,7 @@ pub fn satyr_wayfinder() -> CardDefinition {
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::LookPickToHand {
+                then_if_picked: None,
                 who: PlayerRef::You,
                 count: Value::Const(4),
                 rest_to_graveyard: true,
@@ -5829,6 +5831,7 @@ pub fn anticipate() -> CardDefinition {
         cost: cost(&[generic(1), u()]),
         card_types: vec![CardType::Instant],
         effect: Effect::LookPickToHand {
+            then_if_picked: None,
             who: PlayerRef::You,
             count: Value::Const(3),
             rest_to_graveyard: false,
@@ -8438,6 +8441,7 @@ pub fn vivien_reid() -> CardDefinition {
                 x_cost: false,
                 loyalty_cost: 1,
                 effect: Effect::LookPickToHand {
+                    then_if_picked: None,
                     who: PlayerRef::You,
                     count: Value::Const(4),
                     rest_to_graveyard: false,
@@ -9131,6 +9135,7 @@ pub fn forbidden_alchemy() -> CardDefinition {
             symbols: vec![ManaSymbol::Generic(6), ManaSymbol::Colored(Color::Black)],
         })],
         effect: Effect::LookPickToHand {
+            then_if_picked: None,
             who: PlayerRef::You,
             count: Value::Const(4),
             rest_to_graveyard: true,
@@ -10010,6 +10015,7 @@ pub fn glint_nest_crane() -> CardDefinition {
         toughness: 3,
         keywords: vec![Keyword::Flying],
         triggered_abilities: vec![etb(Effect::LookPickToHand {
+            then_if_picked: None,
             who: PlayerRef::You,
             count: Value::Const(4),
             rest_to_graveyard: false,
@@ -11495,6 +11501,7 @@ pub fn strategic_planning() -> CardDefinition {
         cost: cost(&[generic(1), u()]),
         card_types: vec![CardType::Sorcery],
         effect: Effect::LookPickToHand {
+            then_if_picked: None,
             who: PlayerRef::You,
             count: Value::Const(3),
             rest_to_graveyard: true,
@@ -13665,6 +13672,7 @@ pub fn faerie_snoop() -> CardDefinition {
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::TurnedFaceUp, EventScope::SelfSource),
             effect: Effect::LookPickToHand {
+                then_if_picked: None,
                 who: PlayerRef::You,
                 count: Value::Const(2),
                 rest_to_graveyard: true,
@@ -25356,6 +25364,7 @@ pub fn impulse() -> CardDefinition {
         cost: cost(&[generic(1), u()]),
         card_types: vec![CardType::Instant],
         effect: Effect::LookPickToHand {
+            then_if_picked: None,
             who: PlayerRef::You,
             count: Value::Const(4),
             rest_to_graveyard: false,
@@ -26877,6 +26886,7 @@ pub fn leyline_of_the_guildpact() -> CardDefinition {
 /// your hand, and the rest on the bottom in a random order.
 pub fn consult_the_star_charts() -> CardDefinition {
     let look = |take: i32| Effect::LookPickToHand {
+        then_if_picked: None,
         who: PlayerRef::You,
         count: Value::CountOf(Box::new(Selector::EachPermanent(
             SelectionRequirement::Land.and(SelectionRequirement::ControlledByYou),
@@ -28744,6 +28754,7 @@ pub fn narset_parter_of_veils() -> CardDefinition {
             x_cost: false,
             loyalty_cost: -2,
             effect: Effect::LookPickToHand {
+                then_if_picked: None,
                 who: PlayerRef::You,
                 count: Value::Const(4),
                 rest_to_graveyard: false,
@@ -28986,6 +28997,7 @@ pub fn ancient_stirrings() -> CardDefinition {
         cost: cost(&[g()]),
         card_types: vec![CardType::Sorcery],
         effect: Effect::LookPickToHand {
+            then_if_picked: None,
             who: PlayerRef::You,
             count: Value::Const(5),
             rest_to_graveyard: false,
@@ -32075,6 +32087,7 @@ pub fn turntimber_symbiosis() -> CardDefinition {
         cost: cost(&[generic(4), g(), g(), g()]),
         card_types: vec![CardType::Sorcery],
         effect: Effect::LookPickToHand {
+            then_if_picked: None,
             who: PlayerRef::You,
             count: Value::Const(7),
             rest_to_graveyard: false,
@@ -32465,6 +32478,7 @@ pub fn adventure_awaits() -> CardDefinition {
         cost: cost(&[generic(1), g()]),
         card_types: vec![CardType::Sorcery],
         effect: Effect::LookPickToHand {
+            then_if_picked: None,
             who: PlayerRef::You,
             count: Value::Const(5),
             rest_to_graveyard: false,
@@ -33158,6 +33172,7 @@ pub fn search_for_azcanta() -> CardDefinition {
                 mana_cost: cost(&[generic(2), u()]),
                 tap_cost: true,
                 effect: Effect::LookPickToHand {
+                    then_if_picked: None,
                     who: PlayerRef::You,
                     count: Value::Const(4),
                     rest_to_graveyard: false,
@@ -33249,6 +33264,7 @@ pub fn growing_rites_of_itlimoc() -> CardDefinition {
             TriggeredAbility {
                 event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
                 effect: Effect::LookPickToHand {
+                    then_if_picked: None,
                     who: PlayerRef::You,
                     count: Value::Const(4),
                     rest_to_graveyard: false,
@@ -43159,6 +43175,7 @@ pub fn prophetic_bolt() -> CardDefinition {
                 amount: Value::Const(4),
             },
             Effect::LookPickToHand {
+                then_if_picked: None,
                 who: PlayerRef::You,
                 count: Value::Const(4),
                 rest_to_graveyard: false,
@@ -45172,6 +45189,7 @@ pub fn rediscover_the_way() -> CardDefinition {
     use crate::effect::{Duration, Predicate};
     fn dig() -> Effect {
         Effect::LookPickToHand {
+            then_if_picked: None,
             who: PlayerRef::You,
             count: Value::Const(3),
             rest_to_graveyard: false,
@@ -48818,6 +48836,7 @@ pub fn memory_deluge() -> CardDefinition {
         card_types: vec![CardType::Instant],
         keywords: vec![Keyword::Flashback(cost(&[generic(5), u(), u()]))],
         effect: Effect::LookPickToHand {
+            then_if_picked: None,
             who: PlayerRef::You,
             count: Value::CastSpellManaSpent,
             rest_to_graveyard: false,
@@ -49555,6 +49574,7 @@ pub fn collected_company() -> CardDefinition {
         cost: cost(&[generic(3), g()]),
         card_types: vec![CardType::Instant],
         effect: Effect::LookPickToHand {
+            then_if_picked: None,
             who: PlayerRef::You,
             count: Value::Const(6),
             rest_to_graveyard: false,
@@ -52192,6 +52212,7 @@ pub fn peer_through_depths() -> CardDefinition {
         cost: cost(&[generic(1), u()]),
         card_types: vec![CardType::Instant],
         effect: Effect::LookPickToHand {
+            then_if_picked: None,
             who: PlayerRef::You,
             count: Value::Const(5),
             rest_to_graveyard: false,
@@ -52221,6 +52242,7 @@ pub fn malevolent_rumble() -> CardDefinition {
         card_types: vec![CardType::Sorcery],
         effect: Effect::Seq(vec![
             Effect::LookPickToHand {
+                then_if_picked: None,
                 who: PlayerRef::You,
                 count: Value::Const(4),
                 rest_to_graveyard: true,
@@ -54477,6 +54499,7 @@ pub fn six() -> CardDefinition {
         toughness: 4,
         keywords: vec![Keyword::Reach],
         triggered_abilities: vec![on_attack(Effect::LookPickToHand {
+            then_if_picked: None,
             who: PlayerRef::You,
             count: Value::Const(3),
             rest_to_graveyard: true,
@@ -58524,6 +58547,7 @@ pub fn thieves_fortune() -> CardDefinition {
             vec![CreatureType::Rogue],
         )),
         effect: Effect::LookPickToHand {
+            then_if_picked: None,
             who: PlayerRef::You,
             count: Value::Const(4),
             rest_to_graveyard: false,
@@ -59930,6 +59954,7 @@ pub fn militia_bugler() -> CardDefinition {
         toughness: 3,
         keywords: vec![Keyword::Vigilance],
         triggered_abilities: vec![etb(Effect::LookPickToHand {
+            then_if_picked: None,
             who: PlayerRef::You,
             count: Value::Const(4),
             rest_to_graveyard: false,
@@ -63461,6 +63486,7 @@ pub fn glimpse_the_cosmos() -> CardDefinition {
         cost: cost(&[generic(1), u()]),
         card_types: vec![CardType::Sorcery],
         effect: Effect::LookPickToHand {
+            then_if_picked: None,
             who: PlayerRef::You,
             count: Value::Const(3),
             rest_to_graveyard: false,
@@ -63889,6 +63915,7 @@ pub fn dark_bargain() -> CardDefinition {
         card_types: vec![CardType::Instant],
         effect: Effect::Seq(vec![
             Effect::LookPickToHand {
+                then_if_picked: None,
                 who: PlayerRef::You,
                 count: Value::Const(3),
                 rest_to_graveyard: true,

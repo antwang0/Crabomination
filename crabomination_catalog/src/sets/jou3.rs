@@ -432,6 +432,7 @@ pub fn disciple_of_deceit() -> CardDefinition {
 pub fn nessian_game_warden() -> CardDefinition {
     CardDefinition {
         triggered_abilities: vec![etb(Effect::LookPickToHand {
+            then_if_picked: None,
             who: PlayerRef::You,
             count: Value::count(Selector::EachMatching {
                 zone: ZoneRef::Battlefield,
@@ -629,6 +630,7 @@ pub fn ajani_mentor_of_heroes() -> CardDefinition {
             LoyaltyAbility {
                 loyalty_cost: 1,
                 effect: Effect::LookPickToHand {
+                    then_if_picked: None,
                     who: PlayerRef::You,
                     count: Value::Const(4),
                     rest_to_graveyard: false,

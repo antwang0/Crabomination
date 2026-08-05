@@ -2711,6 +2711,7 @@ pub fn commune_with_beavers() -> CardDefinition {
         cost: cost(&[g()]),
         card_types: vec![CardType::Sorcery],
         effect: Effect::LookPickToHand {
+            then_if_picked: None,
             who: PlayerRef::You,
             count: Value::Const(3),
             rest_to_graveyard: false,
@@ -2909,6 +2910,15 @@ pub fn choco_comet() -> CardDefinition {
 
 // ── modern_decks FIN Town lands ──────────────────────────────────────────
 
+/// CR 614 — "This land enters tapped" as a replacement effect, not an ETB
+/// trigger: no window in which the land is untapped and can be tapped for mana.
+pub(crate) fn enters_tapped() -> StaticAbility {
+    StaticAbility {
+        description: "This land enters tapped.",
+        effect: StaticEffect::EntersTapped { applies_to: Selector::This },
+    }
+}
+
 /// A Final Fantasy "Land — Town" dual: enters tapped, taps for either of two
 /// colors. Powers the Towns-matter theme (Affinity for Towns, etc.).
 fn town_dual(name: &'static str, color_a: Color, color_b: Color) -> CardDefinition {
@@ -2921,7 +2931,7 @@ fn town_dual(name: &'static str, color_a: Color, color_b: Color) -> CardDefiniti
             ..Default::default()
         },
         activated_abilities: vec![super::tap_add(color_a), super::tap_add(color_b)],
-        triggered_abilities: vec![super::etb_tap()],
+        static_abilities: vec![enters_tapped()],
         ..Default::default()
     }
 }
@@ -3186,7 +3196,7 @@ pub fn starting_town() -> CardDefinition {
                 ..Default::default()
             },
         ],
-        triggered_abilities: vec![super::etb_tap()],
+        static_abilities: vec![enters_tapped()],
         ..Default::default()
     }
 }
@@ -4307,6 +4317,7 @@ pub fn resentful_revelation() -> CardDefinition {
         card_types: vec![CardType::Sorcery],
         keywords: vec![Keyword::Flashback(cost(&[generic(6), b()]))],
         effect: Effect::LookPickToHand {
+            then_if_picked: None,
             who: PlayerRef::You,
             count: Value::Const(3),
             rest_to_graveyard: true,

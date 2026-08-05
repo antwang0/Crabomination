@@ -558,6 +558,7 @@ pub fn water_tribe_rallier() -> CardDefinition {
             mana_cost: ManaCost::new(vec![ManaSymbol::Generic(5)]),
             waterbend: true,
             effect: Effect::LookPickToHand {
+                then_if_picked: None,
                 who: PlayerRef::You,
                 count: Value::Const(4),
                 rest_to_graveyard: false,

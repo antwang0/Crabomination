@@ -32,6 +32,7 @@ pub fn basic_conjuration() -> CardDefinition {
         },
         effect: Effect::Seq(vec![
             Effect::LookPickToHand {
+                then_if_picked: None,
                 who: PlayerRef::You,
                 count: Value::Const(6),
                 rest_to_graveyard: false,
@@ -588,6 +589,7 @@ pub fn bond_of_flourishing() -> CardDefinition {
         card_types: vec![CardType::Sorcery],
         effect: Effect::Seq(vec![
             Effect::LookPickToHand {
+                then_if_picked: None,
                 who: PlayerRef::You,
                 count: Value::Const(3),
                 rest_to_graveyard: false,
@@ -1307,6 +1309,7 @@ pub fn the_biblioplex() -> CardDefinition {
                     Predicate::ValueEquals(Value::HandSizeOf(PlayerRef::You), Value::Const(7)),
                 ])),
                 effect: Effect::LookPickToHand {
+                    then_if_picked: None,
                     who: PlayerRef::You,
                     count: Value::Const(1),
                     // Unpicked top card is binned (the "you may" collapses to bin).

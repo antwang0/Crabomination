@@ -76,6 +76,7 @@ pub fn chromescale_drake() -> CardDefinition {
     CardDefinition {
         affinity_filter: Some(R::Artifact.and(R::ControlledByYou)),
         triggered_abilities: vec![etb(Effect::LookPickToHand {
+            then_if_picked: None,
             who: PlayerRef::You,
             count: Value::Const(3),
             rest_to_graveyard: true,

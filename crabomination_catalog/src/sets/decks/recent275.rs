@@ -19,6 +19,7 @@ pub fn stargaze() -> CardDefinition {
         card_types: vec![CardType::Sorcery],
         effect: Effect::Seq(vec![
             Effect::LookPickToHand {
+                then_if_picked: None,
                 who: PlayerRef::You,
                 count: Value::Sum(vec![Value::XFromCost, Value::XFromCost]),
                 rest_to_graveyard: true,

@@ -496,6 +496,11 @@ pub struct ClientView {
     /// `#[serde(default)]` for snapshot back-compat.
     #[serde(default)]
     pub adventurable_hand: Vec<CardId>,
+    /// CR 715.3d — cards in the viewer's adventure exile playable right now. A
+    /// land half (the FIN Town // Adventure cycle) is played as the turn's land
+    /// drop; every other half is cast. Empty off-priority.
+    #[serde(default)]
+    pub adventure_exile: Vec<CardId>,
     /// CardIds in the viewer's hand with an Omen half they could cast right now
     /// (CR 702.183). Lets the client offer the "cast the Omen" affordance
     /// distinct from the plain creature cast. Empty off-priority.
@@ -1522,6 +1527,11 @@ pub struct ExileCardView {
     /// `ClientView.castable_plotted` for "castable right now".
     #[serde(default)]
     pub plotted: bool,
+    /// CR 715 — this card is in exile after its Adventure half resolved, so its
+    /// other half can be cast (or, for a land half, played) from here. Pair
+    /// with `ClientView.adventure_exile` for "playable right now".
+    #[serde(default)]
+    pub on_adventure: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

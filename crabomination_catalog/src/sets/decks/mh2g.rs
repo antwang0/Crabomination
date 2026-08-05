@@ -95,6 +95,7 @@ pub fn chrome_courier() -> CardDefinition {
         toughness: 1,
         keywords: vec![Keyword::Flying],
         triggered_abilities: vec![etb(Effect::LookPickToHand {
+            then_if_picked: None,
             who: PlayerRef::You,
             count: Value::Const(2),
             rest_to_graveyard: true,
@@ -120,6 +121,7 @@ pub fn discerning_taste() -> CardDefinition {
         cost: cost(&[generic(2), b()]),
         card_types: vec![CardType::Sorcery],
         effect: Effect::LookPickToHand {
+            then_if_picked: None,
             who: PlayerRef::You,
             count: Value::Const(4),
             rest_to_graveyard: true,

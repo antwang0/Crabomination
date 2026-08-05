@@ -262,6 +262,7 @@ pub fn marchesa_dealer_of_death() -> CardDefinition {
                 description: "Pay {1} to dig two (one to hand, one to graveyard)?".into(),
                 mana_cost: cost(&[generic(1)]),
                 body: Box::new(Effect::LookPickToHand {
+                    then_if_picked: None,
                     who: PlayerRef::You,
                     count: Value::Const(2),
                     rest_to_graveyard: true,

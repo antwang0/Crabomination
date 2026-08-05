@@ -86,7 +86,7 @@ pub(crate) fn rank_names_by_frequency<'a>(
 }
 
 /// Runtime context threaded through effect resolution.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct EffectContext {
     pub controller: usize,
     pub source: Option<CardId>,
@@ -19566,7 +19566,7 @@ impl GameState {
                 Ok(())
             }
 
-            Effect::LookPickToHand { who, count, rest_to_graveyard, pick_filter, take, to_battlefield, gain_life_if_pick, gain_life_greatest_power_rest, optional, picked_lands_to_battlefield, rest_bottom_random, rest_to_exile } => {
+            Effect::LookPickToHand { who, count, rest_to_graveyard, pick_filter, take, to_battlefield, gain_life_if_pick, gain_life_greatest_power_rest, optional, picked_lands_to_battlefield, rest_bottom_random, rest_to_exile, then_if_picked } => {
                 use crate::decision::Decision;
                 let Some(p) = self.resolve_player(who, ctx) else { return Ok(()); };
                 let n = self.evaluate_value(count, ctx).max(0) as usize;
@@ -19640,6 +19640,8 @@ impl GameState {
                     picked_lands_to_battlefield: *picked_lands_to_battlefield,
                     rest_bottom_random: *rest_bottom_random,
                     rest_to_exile: *rest_to_exile,
+                    then_if_picked: then_if_picked.clone(),
+                    source: ctx.source,
                 };
                 if self.players[p].wants_ui {
                     self.suspend_signal = Some((decision, pending, Effect::Noop));
@@ -19705,6 +19707,8 @@ impl GameState {
                     picked_lands_to_battlefield: false,
                     rest_bottom_random: false,
                     rest_to_exile: false,
+                    then_if_picked: None,
+                    source: ctx.source,
                 };
                 if self.players[p].wants_ui {
                     self.suspend_signal = Some((decision, pending, Effect::Noop));
@@ -19753,6 +19757,8 @@ impl GameState {
                     picked_lands_to_battlefield: false,
                     rest_bottom_random: *rest_bottom_random,
                     rest_to_exile: *exile_rest,
+                    then_if_picked: None,
+                    source: ctx.source,
                 };
                 if self.players[p].wants_ui {
                     self.suspend_signal = Some((decision, pending, Effect::Noop));

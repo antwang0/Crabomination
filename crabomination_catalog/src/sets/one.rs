@@ -2332,6 +2332,7 @@ pub fn experimental_augury() -> CardDefinition {
         card_types: vec![CardType::Instant],
         effect: Effect::Seq(vec![
             Effect::LookPickToHand {
+                then_if_picked: None,
                 who: PlayerRef::You,
                 count: Value::Const(3),
                 rest_to_graveyard: false,
@@ -4406,6 +4407,7 @@ pub fn testament_bearer() -> CardDefinition {
         power: 4,
         toughness: 1,
         triggered_abilities: vec![on_dies(Effect::LookPickToHand {
+            then_if_picked: None,
             who: PlayerRef::You,
             count: Value::Const(3),
             rest_to_graveyard: true,
@@ -6872,6 +6874,7 @@ pub fn green_suns_twilight() -> CardDefinition {
                 exile_rest: false,
             }),
             else_: Box::new(Effect::LookPickToHand {
+                then_if_picked: None,
                 who: PlayerRef::You,
                 count: x_plus_one(),
                 rest_to_graveyard: false,
@@ -7161,6 +7164,7 @@ pub fn noxious_assault() -> CardDefinition {
 pub fn contagious_vorrac() -> CardDefinition {
     let dig = |extra: Option<Effect>| {
         let look = Effect::LookPickToHand {
+            then_if_picked: None,
             who: PlayerRef::You,
             count: Value::Const(4),
             rest_to_graveyard: false,

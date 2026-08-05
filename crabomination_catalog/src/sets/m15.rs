@@ -1859,6 +1859,7 @@ pub fn genesis_hydra() -> CardDefinition {
     CardDefinition {
         enters_with_counters: Some((CounterType::PlusOnePlusOne, Value::XFromCost)),
         triggered_abilities: vec![crate::effect::shortcut::on_cast(Effect::LookPickToHand {
+            then_if_picked: None,
             who: PlayerRef::You,
             count: Value::XFromCost,
             rest_to_graveyard: false,

@@ -51,6 +51,7 @@ pub fn sigarda_champion_of_light() -> CardDefinition {
                 },
             ),
             effect: Effect::LookPickToHand {
+                then_if_picked: None,
                 who: PlayerRef::You,
                 count: Value::Const(5),
                 rest_to_graveyard: false,
@@ -3013,6 +3014,7 @@ pub fn star_charter() -> CardDefinition {
                 },
             ])),
             effect: Effect::LookPickToHand {
+                then_if_picked: None,
                 who: PlayerRef::You,
                 count: Value::Const(4),
                 rest_to_graveyard: false,
@@ -4374,6 +4376,7 @@ pub fn stock_up() -> CardDefinition {
         cost: cost(&[generic(2), u()]),
         card_types: vec![CardType::Sorcery],
         effect: Effect::LookPickToHand {
+            then_if_picked: None,
             who: PlayerRef::You,
             count: Value::Const(5),
             rest_to_graveyard: false,
@@ -6514,6 +6517,7 @@ pub fn gurmag_drowner() -> CardDefinition {
         power: 2,
         toughness: 4,
         triggered_abilities: vec![crate::effect::shortcut::exploit(Effect::LookPickToHand {
+            then_if_picked: None,
             who: PlayerRef::You,
             count: Value::Const(4),
             rest_to_graveyard: false,
@@ -10042,6 +10046,7 @@ pub fn corpse_appraiser() -> CardDefinition {
                 to: ZoneDest::Exile,
             },
             Effect::LookPickToHand {
+                then_if_picked: None,
                 who: PlayerRef::You,
                 count: Value::Const(3),
                 rest_to_graveyard: true,
@@ -12893,6 +12898,7 @@ pub fn recruitment_officer() -> CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[generic(3), w()]),
             effect: Effect::LookPickToHand {
+                then_if_picked: None,
                 who: PlayerRef::You,
                 count: Value::Const(4),
                 rest_to_graveyard: false,

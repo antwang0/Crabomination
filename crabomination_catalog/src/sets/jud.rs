@@ -318,6 +318,7 @@ pub fn flash_of_insight() -> CardDefinition {
             "Flash of Insight",
             cost(&[x(), generic(1), u()]),
             Effect::LookPickToHand {
+                then_if_picked: None,
                 who: PlayerRef::You,
                 count: Value::XFromCost,
                 rest_to_graveyard: false,
