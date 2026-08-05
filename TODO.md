@@ -56,9 +56,9 @@ Items are grouped by area and roughly ordered by impact within each group.
   the tree, and the tree stayed at 7 GB. The old ~10 h figure was a cold
   incremental run that also filled the disk. Still run the two scopes
   separately — the non-client crates, then `-p crabomination_client` (Bevy
-  from scratch is the expensive half; it was still compiling Bevy deps when
-  the 2026-08-05 session ended, so start it before the engine work, not
-  after). The client run caught
+  from scratch is the expensive half — ~25 min of dependency compiles on
+  2026-08-05, so start that scope early). Both were clean that run. The client
+  run caught
   **five compile errors in client test code that no other gate saw**: a
   `PermanentView` literal missing a newly-added field and four
   `board_status_strip` call sites missing a newly-added argument. A
