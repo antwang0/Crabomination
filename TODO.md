@@ -40,10 +40,13 @@ Items are grouped by area and roughly ordered by impact within each group.
   clippy and filled the disk (the incremental tree reached 14 GB, leaving 4 GB
   free on a 252 GB volume) before finishing. Scoping it to the five non-client
   crates with `CARGO_INCREMENTAL=0` does complete — in ~5 h on this hardware.
-  **`crabomination_client`'s clippy is the part still unverified each run**;
-  its crate root already carries
+  **`crabomination_client`'s clippy is the part still unverified each run** —
+  and `-p crabomination_client` alone doesn't help, because it drags the
+  catalog and engine crates through clippy again behind Bevy (~5 h of Bevy,
+  then the same ~5 h). Its crate root already carries
   `#![allow(clippy::too_many_arguments, clippy::type_complexity)]`, which
-  covers the usual offenders. Start clippy first, not last. ⏳
+  covers the usual offenders. Start clippy first, not last — and if only one
+  run fits, make it the scoped five-crate one. ⏳
 
 ## Noticed this run (TDM + OTJ closed, BLB/DSK batch)
 
