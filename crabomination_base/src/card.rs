@@ -609,6 +609,9 @@ pub enum CounterType {
     /// Stash counter — Tinybones, Bauble Burglar stamps exiled discarded cards;
     /// their owner isn't you, but you may play them from exile.
     Stash,
+    /// Rev counter — Chainsaw gains one whenever creatures die and pumps the
+    /// equipped creature by that many.
+    Rev,
     /// Divinity counter — the Myojin cycle enters with one if cast from hand;
     /// it grants indestructibility and fuels a one-shot activated ability.
     Divinity,

@@ -205,6 +205,7 @@ pub fn quandrix_command() -> CardDefinition {
                     who: PlayerRef::You,
                     filter: SelectionRequirement::Any,
                     max: Value::Const(3),
+                    to_top: false,
                 },
             ],
         },

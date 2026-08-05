@@ -555,6 +555,7 @@ pub fn bow_of_nylea() -> CardDefinition {
                         who: PlayerRef::You,
                         filter: R::Any,
                         max: Value::Const(4),
+                        to_top: false,
                     },
                 ],
                 min: 1,

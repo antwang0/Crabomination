@@ -9358,6 +9358,7 @@ fn cr_401_shuffle_graveyard_cards_into_library() {
             who: PlayerRef::You,
             filter: R::Any,
             max: Value::Const(4),
+            to_top: false,
         },
         &ctx,
     )

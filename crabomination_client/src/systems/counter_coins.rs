@@ -407,6 +407,7 @@ fn counter_token(kind: CounterType) -> &'static str {
         CounterType::Incubation => "Incubation",
         CounterType::Revival => "Revival",
         CounterType::Stash => "Stash",
+        CounterType::Rev => "Rev",
         CounterType::Divinity => "Divinity",
         CounterType::Devotion => "Devotion",
         CounterType::Aim => "Aim",

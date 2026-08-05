@@ -79,6 +79,28 @@ needs rather than by a checked-in file.
   spot check found 21 of 24 present. Re-run `scripts/set_gaps.py` (now a single
   pass over the catalog rather than a `grep -r` per card) before trusting them.
 
+## Noticed this run (recent325 gap batch)
+
+- **Miasma Demon's slot count is a static ceiling.** The printed card is a
+  reflexive trigger ("When you do, up to that many target creatures…"); the
+  catalog models it as `DiscardAnyNumber` + `CapTargetsAt` over a five-slot
+  `ApplyToTargets`, so the targets are declared before the discard and merely
+  truncated afterwards. A real reflexive-target primitive would fix this and
+  several other "when you do, up to that many target …" cards. ⏳
+- **Cards dropped from this batch, each blocked on one primitive.** Undead
+  Sprinter (a conditional "you may cast this from your graveyard" — statics
+  don't function from the graveyard; `Keyword::Escape(cost, 0)` plus a
+  `Predicate` gate and a cast-this-way ETB counter would ship it), Hedge
+  Shredder ("whenever one or more land cards are put into your graveyard from
+  your library, put them onto the battlefield" — no milled-cards event),
+  Leyline of Resonance (copy your single-target spells), Leyline of
+  Transformation (chosen type applies to cards outside the battlefield),
+  Osteomancer Adept (forage-cast from the graveyard — the surcharge static is
+  life-only), Heirloom Epic (convoke on an activated ability), Rottenmouth
+  Viper (sacrifice-any-number additional cost with per-permanent reduction),
+  Cursed Recording (delayed "when you next cast an instant or sorcery, copy
+  it"). ⏳
+
 ## Recommender: two builder defects fixed, one lesson recorded
 
 Both were found by asking why Emeritus of Ideation never appeared in a

@@ -2494,6 +2494,7 @@ pub fn cathartic_parting() -> CardDefinition {
                 who: PlayerRef::You,
                 filter: R::Any,
                 max: Value::Const(4),
+                to_top: false,
             },
         ]),
         ..Default::default()

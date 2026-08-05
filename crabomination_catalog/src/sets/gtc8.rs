@@ -162,6 +162,7 @@ pub fn serene_remembrance() -> CardDefinition {
             who: PlayerRef::Target(0),
             filter: R::Any,
             max: Value::Const(3),
+            to_top: false,
         },
         ..Default::default()
     }

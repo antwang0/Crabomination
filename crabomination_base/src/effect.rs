@@ -5994,7 +5994,15 @@ pub enum Effect {
     /// player (no targeting) — a graveyard-recursion / anti-mill rider
     /// (Cathartic Parting, Rite of Renewal). Mirror of
     /// `ReturnGraveyardCardsToHand` for the library destination.
-    ShuffleGraveyardCardsIntoLibrary { who: PlayerRef, filter: SelectionRequirement, max: Value },
+    ShuffleGraveyardCardsIntoLibrary {
+        who: PlayerRef,
+        filter: SelectionRequirement,
+        max: Value,
+        /// Put the chosen cards on top of the library in any order instead of
+        /// shuffling them in (Stillness in Motion).
+        #[serde(default)]
+        to_top: bool,
+    },
     /// Genesis Ultimatum — look at the top `count` cards of the controller's
     /// library; put any number of permanent cards among them onto the
     /// battlefield and the rest into hand. The controller picks the permanents

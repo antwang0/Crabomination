@@ -11852,7 +11852,7 @@ impl GameState {
                 Ok(())
             }
 
-            Effect::ShuffleGraveyardCardsIntoLibrary { who, filter, max } => {
+            Effect::ShuffleGraveyardCardsIntoLibrary { who, filter, max, to_top } => {
                 
                 use crate::effect::{LibraryPosition, ZoneDest};
                 let n = self.evaluate_value(max, ctx).max(0) as u32;
@@ -11873,7 +11873,11 @@ impl GameState {
                     let chosen: Vec<CardId> = if self.players[p].wants_ui {
                         let Some(ids) = self.ask_seat_cards(
                             p,
-                            format!("Shuffle up to {n} cards into your library"),
+                            if *to_top {
+                                format!("Put up to {n} cards on top of your library")
+                            } else {
+                                format!("Shuffle up to {n} cards into your library")
+                            },
                             ctx.source.unwrap_or(CardId(0)),
                             candidates.clone(),
                             0,
@@ -11893,7 +11897,8 @@ impl GameState {
                         matches.into_iter().take(n as usize).map(|c| c.id).collect()
                     };
                     if chosen.is_empty() { continue; }
-                    let dest = ZoneDest::Library { who: PlayerRef::Seat(p), pos: LibraryPosition::Shuffled };
+                    let pos = if *to_top { LibraryPosition::Top } else { LibraryPosition::Shuffled };
+                    let dest = ZoneDest::Library { who: PlayerRef::Seat(p), pos };
                     for cid in chosen {
                         self.move_card_to(cid, &dest, ctx, events);
                     }
