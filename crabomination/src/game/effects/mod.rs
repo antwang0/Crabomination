@@ -20654,7 +20654,7 @@ impl GameState {
                             self.find_card_anywhere(*id).map(|c| (c.definition.power, *id))
                         })
                         .collect();
-                    by_power.sort_by(|a, b| b.0.cmp(&a.0));
+                    by_power.sort_by_key(|(pw, _)| std::cmp::Reverse(*pw));
                     let mut seen: Vec<i32> = Vec::new();
                     taken = by_power
                         .into_iter()
