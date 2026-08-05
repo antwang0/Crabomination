@@ -217,9 +217,7 @@ fn rottenmouth_viper_costs_less_per_sacrifice() {
         g.add_card_to_battlefield(0, catalog::grizzly_bears());
     }
     // {5}{B} minus three sacrifices = {2}{B}.
-    for c in [Color::Black] {
-        g.players[0].mana_pool.add(c, 1);
-    }
+    g.players[0].mana_pool.add(Color::Black, 1);
     g.players[0].mana_pool.add_colorless(2);
     g.perform_action(GameAction::CastSpell {
         card_id: viper,

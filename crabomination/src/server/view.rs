@@ -466,7 +466,7 @@ fn exile_entry(
         // Valgavoth — the card is playable from exile for life equal to its
         // mana value while its claiming source is on the battlefield.
         play_for_life: (!hidden)
-            .then(|| card.exiled_with)
+            .then_some(card.exiled_with)
             .flatten()
             .filter(|src| {
                 state.battlefield_find(*src).is_some_and(|c| {

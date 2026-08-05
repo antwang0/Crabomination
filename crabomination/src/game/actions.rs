@@ -9171,7 +9171,7 @@ impl GameState {
         let mut miracle_window = false;
         // Valgavoth — "during your turn, you may play cards exiled with this,
         // paying life equal to the spell's mana value instead of its cost."
-        let valgavoth_toll = (zone == crate::card::Zone::Exile
+        let mut valgavoth_toll = (zone == crate::card::Zone::Exile
             && self.active_player_idx == p
             && card_ref.exiled_with.is_some_and(|src| {
                 self.battlefield.iter().any(|c| {
@@ -9191,6 +9191,9 @@ impl GameState {
                 if permission.player != p {
                     return Err(GameError::CardNotInHand(card_id));
                 }
+                // A real may-play grant drives this cast; don't also bill the
+                // Valgavoth life toll.
+                valgavoth_toll = None;
                 miracle_window = permission.miracle;
                 permission.exile_after
             }
