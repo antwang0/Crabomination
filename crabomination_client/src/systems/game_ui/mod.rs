@@ -12,7 +12,7 @@ mod popups;
 
 pub use buttons::{
     handle_audit_buttons, handle_auto_pass_toggle, handle_export_keypress,
-    handle_planar_die_keypress,
+    handle_planar_die_keypress, handle_reveal_conspiracy_keypress,
     handle_surrender_leave_buttons,
     poll_action_buttons, poll_player_chip_clicks, pulse_urgent_pass_button, sync_audit_buttons,
     update_attack_all_visibility, update_attack_button_label, update_pass_button,

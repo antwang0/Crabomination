@@ -5021,6 +5021,21 @@ impl GameState {
             .sum()
     }
 
+    /// CR 706.6 — how many extra dice `seat` rolls (and how many lowest rolls
+    /// they then ignore). Pixie Guide, Barbarian Class; instances stack.
+    pub fn extra_dice_for(&self, seat: usize) -> u32 {
+        use crate::effect::StaticEffect;
+        self.battlefield
+            .iter()
+            .filter(|c| c.controller == seat)
+            .flat_map(|c| c.definition.static_abilities.iter())
+            .filter_map(|sa| match sa.effect {
+                StaticEffect::RollExtraDiceIgnoreLowest(n) => Some(n),
+                _ => None,
+            })
+            .sum()
+    }
+
     /// CR 615 — true when `tgt` has a `PreventAllCombatDamageToThis` self-static
     /// (Fog Bank, Guard Gomazoa), so the combat-damage resolver blanks damage
     /// marked on it.
@@ -12080,6 +12095,14 @@ impl GameState {
             // the *sending* seat via `concede`, bypassing this path entirely.
             GameAction::Concede => Ok(self.concede(self.active_player_idx)),
             GameAction::RollPlanarDie => self.roll_planar_die(),
+            GameAction::RevealConspiracy { card_id } => {
+                let seat = self.priority.player_with_priority;
+                if self.reveal_hidden_agenda(seat, card_id) {
+                    Ok(Vec::new())
+                } else {
+                    Err(GameError::InvalidTarget)
+                }
+            }
         }?;
         let mut events = events;
         // CR 119.3c — life paid as a cost (Phyrexian pips, life costs) is a
@@ -19526,6 +19549,7 @@ fn static_effect_to_effects(
             // `scale_damage_to`; no layer effect.
             | StaticEffect::DoubleDamageDealt
             | StaticEffect::HalveDamageDealt
+            | StaticEffect::RollExtraDiceIgnoreLowest(_)
             | StaticEffect::PreventAllCombatDamageToThis
             | StaticEffect::PreventAllCombatDamageToAttached
             | StaticEffect::PreventAllCombatDamageToAndFromEnchanted

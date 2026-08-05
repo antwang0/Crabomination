@@ -771,3 +771,51 @@ pub fn innkeepers_talent() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Barbarian Class — {R} Enchantment — Class. L1: roll an extra die and ignore
+/// the lowest (CR 706.6). L2: a dice roll pumps a creature +2/+0 and gives it
+/// menace. L3: creatures you control have haste.
+pub fn barbarian_class() -> CardDefinition {
+    CardDefinition {
+        name: "Barbarian Class",
+        cost: cost(&[r()]),
+        card_types: vec![CardType::Enchantment],
+        subtypes: class_subtypes(),
+        static_abilities: vec![
+            StaticAbility {
+                description: "If you would roll one or more dice, instead roll that many dice \
+                              plus one and ignore the lowest roll.",
+                effect: StaticEffect::RollExtraDiceIgnoreLowest(1),
+            },
+            StaticAbility {
+                description: "Creatures you control have haste.",
+                effect: StaticEffect::WhileClassLevelAtLeast {
+                    n: 3,
+                    inner: Box::new(StaticEffect::GrantKeyword {
+                        applies_to: Selector::EachPermanent(R::Creature.and(R::ControlledByYou)),
+                        keyword: Keyword::Haste,
+                    }),
+                },
+            },
+        ],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::RolledDice, EventScope::YourControl)
+                .with_filter(Predicate::SourceClassLevelAtLeast(2)),
+            effect: Effect::Seq(vec![
+                Effect::PumpPT {
+                    what: Selector::Target(0),
+                    power: Value::Const(2),
+                    toughness: Value::ZERO,
+                    duration: Duration::EndOfTurn,
+                },
+                Effect::GrantKeyword {
+                    what: Selector::Target(0),
+                    keyword: Keyword::Menace,
+                    duration: Duration::EndOfTurn,
+                },
+            ]),
+        }],
+        activated_abilities: vec![level_up(&[generic(1), r()], 1), level_up(&[generic(2), r()], 2)],
+        ..Default::default()
+    }
+}

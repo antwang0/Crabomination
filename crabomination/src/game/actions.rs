@@ -1365,7 +1365,8 @@ fn payload_yields_multiple(pool: &crate::effect::ManaPayload) -> bool {
         | ManaPayload::AnyColorYouCouldProduce
         | ManaPayload::AnyTypeTriggerSourceProduces
         | ManaPayload::AnyColorAmongLegendaries
-        | ManaPayload::AnyColorAmongYourPermanents => true,
+        | ManaPayload::AnyColorAmongYourPermanents
+        | ManaPayload::DraftNotedColorOfSource => true,
         ManaPayload::Colors(cs) => cs.len() > 1,
         ManaPayload::OfColors(cs, _) => cs.len() > 1,
         ManaPayload::OfColor(_, _)
@@ -2297,6 +2298,9 @@ fn effect_produces_color(effect: &Effect, color: ManaColor) -> bool {
             // definition level), so it's not part of the static auto-tap
             // signature; the controller taps it deliberately.
             ManaPayload::ChosenColorOfSource => false,
+            // Same for a draft-noted palette (Paliano) — it depends on the
+            // seat's note table, not the printed card.
+            ManaPayload::DraftNotedColorOfSource => false,
             // Imprinted-card colors aren't known statically (depend on the
             // exiled card), so not auto-tapped; tapped deliberately.
             ManaPayload::ImprintedCardColor => false,

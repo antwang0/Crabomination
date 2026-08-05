@@ -515,6 +515,16 @@ impl GameState {
             Value::LibrarySizeOf(p) => self.resolve_player(p, ctx).map(|p| self.players[p].library.len() as i32).unwrap_or(0),
             Value::XFromCost => ctx.x_value as i32,
             Value::TurnNumber => self.turn_number as i32,
+            Value::DraftNoteNumber { agg } => {
+                let notes = &self.players[ctx.controller].draft_notes;
+                ctx.source
+                    .and_then(|id| self.find_card_anywhere(id))
+                    .map(|c| match agg {
+                        crate::effect::DraftNoteAgg::Max => notes.max_number(c.definition.name),
+                        crate::effect::DraftNoteAgg::Sum => notes.sum_numbers(c.definition.name),
+                    })
+                    .unwrap_or(0) as i32
+            }
             Value::TriggerEventAmount => ctx.event_amount as i32,
             Value::LastDieRoll => self.last_die_roll as i32,
             Value::StormCount => self.spells_cast_this_turn.saturating_sub(1) as i32,
@@ -3627,6 +3637,13 @@ impl GameState {
                         // fall back to the per-resolution scratchpad (Predict).
                         .or(self.named_card_this_resolution.as_deref())
                         .is_some_and(|n| n == card.definition.name),
+                    R::NameNotedForSource => source
+                        .and_then(|sid| self.find_card_anywhere(sid))
+                        .is_some_and(|s| {
+                            self.players[card.controller]
+                                .draft_notes
+                                .has_name(s.definition.name, card.definition.name)
+                        }),
                     R::IsSourceChosenCardType => source
                         .and_then(|sid| self.battlefield_find(sid))
                         .and_then(|s| s.chosen_card_type.clone())
@@ -4147,6 +4164,7 @@ impl GameState {
                 .as_deref()
                 .is_some_and(|n| n == card.definition.name),
             R::IsSourceChosenCardType => false,
+            R::NameNotedForSource => false,
             R::IsSourceChosenCreatureType => false,
             R::SameNameAsTarget | R::TargetsALandYouControl => false,
             // Count walks the battlefield for the evaluating controller's

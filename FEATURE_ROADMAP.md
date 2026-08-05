@@ -2587,6 +2587,14 @@ Each a small targeted feature; sweep batch by batch.
   ControllerIsStartingPlayer, MatchingEntersWithExtraCounters}`,
   `Value::TurnNumber`, `SearchSameNameAs.count`.
 
+- **CR 905 Conspiracy Draft** — `draft::DraftPod` owns pack circulation, bot
+  picks and the draft-time cards: notes (905.2b — `DraftNotes` on `Player`,
+  read by `Value::DraftNoteNumber`, `SelectionRequirement::NameNotedForSource`
+  and `ManaPayload::DraftNotedColorOfSource`), whole-pack drafting, extra
+  picks, removals from the draft, added boosters and pack peeks (905.2c). The
+  client's `DraftSession` is now a thin UI shell over it with a draft-matters
+  button row. CR 116.2j ships alongside as `GameAction::RevealConspiracy`.
+  The last 8 CNS cards are in `sets::cns3`; tests in `classic_sets/cns`.
 - **CR 807 Grand Melee** — `set_grand_melee_variant` + `shuffle_seating`
   (807.2 defaults, 807.3 random seating). The 807.4 turn markers are open;
   see TODO.md.

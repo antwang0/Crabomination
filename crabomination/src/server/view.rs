@@ -804,6 +804,18 @@ fn project_player(
                 }
             })
             .collect(),
+        // CR 116.2j — only the controller learns which of their command-zone
+        // cards are still face down, so this stays empty for other viewers.
+        revealable_conspiracies: if player_seat == viewer_seat {
+            player
+                .command
+                .iter()
+                .filter(|c| c.face_down && c.definition.is_conspiracy())
+                .map(|c| c.id)
+                .collect()
+        } else {
+            Vec::new()
+        },
         commanders: player.commanders.clone(),
         // Tax tally per commander (CR 903.8). Resolve each id to a name the
         // same way `commander_damage_taken` does: any tracked zone first,

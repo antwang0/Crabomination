@@ -95,6 +95,8 @@ pub struct DraftedDecks {
     pub player_deck: Vec<crabomination::cube::CardFactory>,
     pub opponent_deck: Vec<crabomination::cube::CardFactory>,
     pub opponent_label: String,
+    /// CR 905.2b — the two seats' draft notes, carried into the match.
+    pub notes: [crabomination::draft::DraftNotes; 2],
 }
 
 /// Filled in by the menu when the user picks an option; drained by
@@ -1367,12 +1369,16 @@ fn spawn_inprocess_bot(world: &mut World, format: MatchFormat) {
             "Bot".into(),
         )
     } else if let Some(decks) = drafted {
-        crabomination::draft::build_draft_match_state(
+        let mut state = crabomination::draft::build_draft_match_state(
             decks.player_deck,
             decks.opponent_deck,
             human_name,
             decks.opponent_label,
-        )
+        );
+        for (seat, notes) in decks.notes.into_iter().enumerate() {
+            state.players[seat].draft_notes = notes;
+        }
+        state
     } else {
         let mut state = match audit_card.as_deref() {
             Some(name) => crate::audit::build_audit_state(name).unwrap_or_else(|| {

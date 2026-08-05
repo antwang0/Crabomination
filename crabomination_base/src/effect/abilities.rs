@@ -1134,6 +1134,11 @@ pub enum StaticEffect {
     /// Innocent.) Read by `GameState::damage_halvers`; applied after any
     /// doublers at both damage funnels.
     HalveDamageDealt,
+    /// CR 706.6 — "If you would roll one or more dice, instead roll that many
+    /// dice plus N and ignore the lowest N rolls" (Pixie Guide, Barbarian
+    /// Class). Ignored rolls never happened: no results-table arm, no doubles,
+    /// no trigger. Read by `GameState::extra_dice_for`; instances stack.
+    RollExtraDiceIgnoreLowest(u32),
     /// CR 615 — "Prevent all combat damage that would be dealt to this." A
     /// self-static the combat-damage resolver honors (zeroing damage marked on
     /// the permanent) unless combat damage can't be prevented this turn (615.12).

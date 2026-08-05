@@ -850,3 +850,25 @@ pub fn dwarfhold_champion() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Pixie Guide — CR 706.6: your rolls take an extra die and drop the lowest.
+pub fn pixie_guide() -> CardDefinition {
+    CardDefinition {
+        name: "Pixie Guide",
+        cost: cost(&[generic(1), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Faerie],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 3,
+        keywords: vec![Keyword::Flying],
+        static_abilities: vec![StaticAbility {
+            description: "If you would roll one or more dice, instead roll that many dice \
+                          plus one and ignore the lowest roll.",
+            effect: StaticEffect::RollExtraDiceIgnoreLowest(1),
+        }],
+        ..Default::default()
+    }
+}

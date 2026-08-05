@@ -861,3 +861,199 @@ fn deal_broker_loots() {
     assert_eq!(g.players[0].hand.len(), hand, "drew one, discarded one");
     assert_eq!(g.players[0].graveyard.len(), 1);
 }
+
+// ── CR 905.2 draft-matters ───────────────────────────────────────────────────
+
+use crabomination::draft::{
+    self, DraftNotes, DraftPod, DraftPool, PickAction, POD_SIZE,
+};
+
+/// Activate a land's mana ability without the blanket `mana()` top-up, so the
+/// pool afterwards contains only what the land produced.
+fn tap_for_mana(g: &mut GameState, id: CardId) {
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: id,
+        ability_index: 0,
+        target: None,
+        additional_targets: vec![],
+        x_value: None,
+        mode: None,
+    })
+    .expect("tap for mana");
+    drain_stack(g);
+}
+
+/// A pod whose every pack is the same named card, so picks are predictable.
+fn pod_of(card: crabomination::cube::CardFactory) -> DraftPod {
+    DraftPod::with_pool(DraftPool::Cube, vec![card; crabomination::draft::PACK_SIZE])
+}
+
+/// Aether Searcher notes the next card drafted and free-casts it on ETB.
+#[test]
+fn aether_searcher_casts_the_card_it_noted() {
+    let mut g = main_phase();
+    g.players[0].draft_notes.note_name("Aether Searcher", "Grizzly Bears");
+    g.add_card_to_hand(0, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::aether_searcher());
+    cast(&mut g, 0, id, None);
+    assert!(
+        g.battlefield.iter().any(|c| c.definition.name == "Grizzly Bears"),
+        "the noted card was found in hand and cast for free",
+    );
+}
+
+/// With nothing noted, the search finds nothing and the trigger fizzles.
+#[test]
+fn aether_searcher_without_notes_finds_nothing() {
+    let mut g = main_phase();
+    g.add_card_to_hand(0, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::aether_searcher());
+    cast(&mut g, 0, id, None);
+    assert!(!g.battlefield.iter().any(|c| c.definition.name == "Grizzly Bears"));
+}
+
+/// Cogwork Grinder sums its notes; Lurking Automaton takes the highest.
+#[test]
+fn draft_note_counters_scale_the_constructs() {
+    let mut g = main_phase();
+    let notes = &mut g.players[0].draft_notes;
+    for _ in 0..3 {
+        notes.note_number("Cogwork Grinder", 1);
+    }
+    notes.note_number("Lurking Automaton", 2);
+    notes.note_number("Lurking Automaton", 9);
+    let grinder = g.add_card_to_hand(0, catalog::cogwork_grinder());
+    cast(&mut g, 0, grinder, None);
+    let automaton = g.add_card_to_hand(0, catalog::lurking_automaton());
+    cast(&mut g, 0, automaton, None);
+    let counters = |g: &GameState, id: CardId| {
+        g.battlefield_find(id).map(|c| c.counter_count(CounterType::PlusOnePlusOne)).unwrap_or(0)
+    };
+    assert_eq!(counters(&g, grinder), 3, "one per card removed from the draft");
+    assert_eq!(counters(&g, automaton), 9, "the highest number noted");
+}
+
+/// Paliano taps for one of the three colors chosen as it was drafted.
+#[test]
+fn paliano_taps_for_a_noted_color() {
+    let mut g = main_phase();
+    g.players[0].draft_notes.note_colors(
+        "Paliano, the High City",
+        &[Color::Black, Color::Red, Color::Green],
+    );
+    let id = g.add_card_to_battlefield(0, catalog::paliano_the_high_city());
+    tap_for_mana(&mut g, id);
+    let pool = &g.players[0].mana_pool;
+    assert!(
+        [Color::Black, Color::Red, Color::Green].iter().any(|c| pool.amount(*c) > 0),
+        "produced one of the noted colors",
+    );
+    assert_eq!(pool.amount(Color::White), 0, "not a color it noted");
+}
+
+/// Outside a drafted game Paliano still taps — for colorless.
+#[test]
+fn paliano_without_notes_taps_for_colorless() {
+    let mut g = main_phase();
+    let id = g.add_card_to_battlefield(0, catalog::paliano_the_high_city());
+    tap_for_mana(&mut g, id);
+    assert!(g.players[0].mana_pool.colorless_amount() > 0);
+}
+
+/// CR 905.2b — drafting Aether Searcher notes the *next* card's name.
+#[test]
+fn draft_pod_notes_the_card_after_aether_searcher() {
+    let mut pod = pod_of(catalog::aether_searcher);
+    pod.advance(0, PickAction::Take(0));
+    assert!(pod.notes[0].names.is_empty(), "nothing noted yet");
+    pod.advance(0, PickAction::Take(0));
+    assert!(
+        pod.notes[0].has_name(draft::AETHER_SEARCHER, "Aether Searcher"),
+        "the next card drafted was noted",
+    );
+}
+
+/// Lurking Automaton notes how many cards were drafted this round.
+#[test]
+fn draft_pod_notes_lurking_automatons_pick_number() {
+    let mut pod = pod_of(catalog::lurking_automaton);
+    for _ in 0..3 {
+        pod.advance(0, PickAction::Take(0));
+    }
+    assert_eq!(pod.notes[0].max_number(draft::LURKING_AUTOMATON), 3);
+}
+
+/// Cogwork Grinder's removals leave the pool and are noted one apiece.
+#[test]
+fn draft_pod_grinder_removes_cards_from_the_draft() {
+    let mut pod = pod_of(catalog::cogwork_grinder);
+    pod.advance(0, PickAction::Take(0));
+    pod.advance(0, PickAction::Remove(0));
+    pod.advance(0, PickAction::Remove(0));
+    assert_eq!(pod.picks[0].len(), 1, "removed cards aren't in the pool");
+    assert_eq!(pod.removed[0].len(), 2);
+    assert_eq!(pod.notes[0].sum_numbers(draft::COGWORK_GRINDER), 2);
+}
+
+/// Cogwork Librarian buys a second pick and goes back into the pack.
+#[test]
+fn draft_pod_librarian_trades_itself_for_an_extra_pick() {
+    let mut pod = pod_of(catalog::cogwork_librarian);
+    pod.advance(0, PickAction::Take(0));
+    let before = pod.pack(0).len();
+    pod.advance(0, PickAction::Librarian(0, 1));
+    assert_eq!(pod.picks[0].len(), 2, "two drafted, the Librarian handed back");
+    // Two cards left the pack, the Librarian re-entered it, then it passed on.
+    assert!(pod.picks[0].iter().all(|f| f().name == "Cogwork Librarian"));
+    assert!(before > 0);
+}
+
+/// Agent of Acquisitions takes the pack and locks the seat out of the round.
+#[test]
+fn draft_pod_agent_takes_the_whole_pack() {
+    let mut pod = pod_of(catalog::agent_of_acquisitions);
+    pod.advance(0, PickAction::Take(0));
+    let pack_size = pod.pack(0).len();
+    pod.advance(0, PickAction::TakePack);
+    assert_eq!(pod.picks[0].len(), 1 + pack_size);
+    assert!(pod.is_locked(0));
+    let held = pod.picks[0].len();
+    pod.advance(0, PickAction::Take(0));
+    assert_eq!(pod.picks[0].len(), held, "locked out for the rest of the round");
+}
+
+/// Lore Seeker's extra booster joins the rotation.
+#[test]
+fn draft_pod_lore_seeker_adds_a_booster() {
+    let mut pod = pod_of(catalog::lore_seeker);
+    pod.add_booster(0);
+    let packs: usize = pod.packs.iter().map(|q| q.len()).sum();
+    assert_eq!(packs, POD_SIZE + 1);
+}
+
+/// Whispergear Sneak peeks once per copy drafted.
+#[test]
+fn draft_pod_sneak_peeks_once_per_copy() {
+    let mut pod = pod_of(catalog::whispergear_sneak);
+    assert!(pod.peek_pack(0, 1).is_none(), "none drafted yet");
+    pod.advance(0, PickAction::Take(0));
+    assert!(pod.peek_pack(0, 1).is_some());
+    assert!(pod.peek_pack(0, 1).is_none(), "the Sneak is spent");
+}
+
+/// Notes survive the hop into the match state.
+#[test]
+fn draft_notes_ride_into_the_match_state() {
+    let mut notes = DraftNotes::default();
+    notes.note_number("Lurking Automaton", 4);
+    let mut state = draft::build_draft_match_state(
+        vec![catalog::mountain; 40],
+        vec![catalog::mountain; 40],
+        "You".into(),
+        "Bot".into(),
+    );
+    state.players[0].draft_notes = notes;
+    assert_eq!(state.players[0].draft_notes.max_number("Lurking Automaton"), 4);
+    assert_eq!(state.players[1].draft_notes.max_number("Lurking Automaton"), 0);
+}

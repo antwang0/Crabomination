@@ -4084,22 +4084,32 @@ impl GameState {
                         _ => (sides as u32).div_ceil(2) as u8,
                     }
                 };
+                // CR 706.6 — Pixie Guide et al. roll extra dice and ignore
+                // that many lowest results. Ignored rolls never happened, so
+                // they're dropped before any arm, doubles check or trigger.
+                let ignored = if n > 0 { self.extra_dice_for(ctx.controller) } else { 0 };
                 // CR 706.5 — track natural faces to detect "doubles".
                 let mut naturals: Vec<u8> = Vec::with_capacity(n as usize);
-                // Greatest modified result this roll, for result-gated triggers.
-                let mut high_rolled: u8 = 0;
-                for _ in 0..n {
+                for _ in 0..n as u32 + ignored {
                     let mut natural = roll_one(self);
                     // CR 706.2b — reroll a low natural result exactly once.
                     if *reroll_at_most > 0 && natural <= *reroll_at_most {
                         natural = roll_one(self);
                     }
                     naturals.push(natural);
+                }
+                if ignored > 0 {
+                    naturals.sort_unstable_by(|a, b| b.cmp(a));
+                    naturals.truncate(n as usize);
+                }
+                // Greatest modified result this roll, for result-gated triggers.
+                let mut high_rolled: u8 = 0;
+                for natural in &naturals {
                     // CR 706.2 — add the modifier, flooring the modified
                     // result at 1 (a die result is never reduced below 1).
                     // The result may exceed `sides`, letting a top "N+"
                     // arm catch boosted rolls.
-                    let rolled = (natural as i32 + modifier).max(1).min(u8::MAX as i32) as u8;
+                    let rolled = (*natural as i32 + modifier).max(1).min(u8::MAX as i32) as u8;
                     high_rolled = high_rolled.max(rolled);
                     // CR 706.3a — first matching arm fires. If no arm
                     // matches the roll, the die has no result-table
@@ -9387,6 +9397,42 @@ impl GameState {
                             };
                             add_one(self, p, color);
                             events.push(GameEvent::ManaAdded { player: p, color, source: ctx.source });
+                        }
+                    }
+                    ManaPayload::DraftNotedColorOfSource => {
+                        // Paliano, the High City — the three colors chosen as
+                        // this seat drafted cards with the source's name.
+                        // Colorless outside a drafted game.
+                        let legal: Vec<Color> = ctx
+                            .source
+                            .and_then(|id| self.find_card_anywhere(id))
+                            .and_then(|c| {
+                                self.players[p].draft_notes.colors.get(c.definition.name).cloned()
+                            })
+                            .unwrap_or_default();
+                        match legal.len() {
+                            0 => {
+                                self.players[p].mana_pool.add_colorless(mult);
+                                events.push(GameEvent::ColorlessManaAdded { player: p, source: ctx.source });
+                            }
+                            _ => {
+                                let color = if legal.len() == 1 {
+                                    legal[0]
+                                } else {
+                                    match self.decider.decide(
+                                        &crate::decision::Decision::ChooseColor {
+                                            source: ctx.source.unwrap_or(CardId(0)),
+                                            legal: legal.clone(),
+                                        },
+                                    ) {
+                                        crate::decision::DecisionAnswer::Color(c)
+                                            if legal.contains(&c) => c,
+                                        _ => legal[0],
+                                    }
+                                };
+                                add_one(self, p, color);
+                                events.push(GameEvent::ManaAdded { player: p, color, source: ctx.source });
+                            }
                         }
                     }
                     ManaPayload::AnyColorOpponentCouldProduce
@@ -15084,22 +15130,38 @@ impl GameState {
                 Ok(())
             }
 
-            Effect::SearchAndCastFree { filter } => {
+            Effect::SearchAndCastFree { filter, include_hand } => {
                 // Sunforger. The search is the usual auto-pick (highest mana
                 // value among matches); the cast rides the free-cast helper.
+                // Aether Searcher also searches the hand, and only a library
+                // search shuffles (CR 701.19c).
                 let p = ctx.controller;
-                let pick = self.players[p]
-                    .library
-                    .iter()
-                    .filter(|c| self.evaluate_requirement_on_card(filter, c, p))
-                    .max_by_key(|c| c.definition.cost.cmc())
-                    .map(|c| c.id);
+                let noted: Vec<String> = ctx
+                    .source
+                    .and_then(|id| self.find_card_anywhere(id))
+                    .and_then(|c| self.players[p].draft_notes.names.get(c.definition.name).cloned())
+                    .unwrap_or_default();
+                let filter = filter.resolve_noted_names(&noted);
+                let best = |cards: &[crate::card::CardInstance]| {
+                    cards
+                        .iter()
+                        .filter(|c| self.evaluate_requirement_on_card(&filter, c, p))
+                        .max_by_key(|c| c.definition.cost.cmc())
+                        .map(|c| c.id)
+                };
+                let from_hand = include_hand.then(|| best(&self.players[p].hand)).flatten();
+                let pick = from_hand.or_else(|| best(&self.players[p].library));
+                let zone = if from_hand.is_some() {
+                    crate::card::Zone::Hand
+                } else {
+                    crate::card::Zone::Library
+                };
                 if let Some(cid) = pick {
                     self.run_effect(
                         &Effect::CastWithoutPayingImmediate {
                             reduce_generic: 0,
                             what: Selector::Target(0),
-                            source_zone: crate::card::Zone::Library,
+                            source_zone: zone,
                             exile_after: false,
                             copy: false,
                         },
@@ -15107,7 +15169,9 @@ impl GameState {
                         events,
                     )?;
                 }
-                self.shuffle_library(p, events);
+                if zone == crate::card::Zone::Library {
+                    self.shuffle_library(p, events);
+                }
                 Ok(())
             }
 

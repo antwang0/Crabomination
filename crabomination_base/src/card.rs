@@ -2373,6 +2373,10 @@ pub enum SelectionRequirement {
     /// NamedBySource, .. }`. Falls back to "no match" when the source has
     /// not named a card.
     NamedBySource,
+    /// CR 905.2b — true when the candidate's name is one the evaluating
+    /// player noted as they drafted cards with the source's name
+    /// (Aether Searcher). No match outside a drafted game.
+    NameNotedForSource,
     /// True when the candidate's card types include the type the resolving
     /// source chose via `Effect::ChooseCardTypeForSource` (World Queller's
     /// "each player sacrifices a permanent of their choice of that type").
@@ -2458,6 +2462,29 @@ impl SelectionRequirement {
                 Box::new(b.resolve_named_by_source(name)),
             ),
             Self::Not(inner) => Self::Not(Box::new(inner.resolve_named_by_source(name))),
+            other => other.clone(),
+        }
+    }
+
+    /// Concretize `NameNotedForSource` against the names the controller
+    /// noted for the source (CR 905.2b) — an `Or` chain of `HasName`, or
+    /// "matches nothing" when no name was noted.
+    pub fn resolve_noted_names(&self, names: &[String]) -> Self {
+        match self {
+            Self::NameNotedForSource => names
+                .iter()
+                .map(|n| Self::HasName(n.clone()))
+                .reduce(|a, b| Self::Or(Box::new(a), Box::new(b)))
+                .unwrap_or_else(|| Self::Not(Box::new(Self::Any))),
+            Self::And(a, b) => Self::And(
+                Box::new(a.resolve_noted_names(names)),
+                Box::new(b.resolve_noted_names(names)),
+            ),
+            Self::Or(a, b) => Self::Or(
+                Box::new(a.resolve_noted_names(names)),
+                Box::new(b.resolve_noted_names(names)),
+            ),
+            Self::Not(inner) => Self::Not(Box::new(inner.resolve_noted_names(names))),
             other => other.clone(),
         }
     }

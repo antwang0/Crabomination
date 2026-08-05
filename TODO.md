@@ -26,15 +26,6 @@ needs rather than by a checked-in file.
 
 ## Noticed this run (Homelands closed / Conspiracy + CR 726)
 
-- **Conspiracy: the draft-matters shell.** The last 8 CNS cards are all
-  draft-time (Aether Searcher, Agent of Acquisitions, Cogwork Grinder, Cogwork
-  Librarian, Lore Seeker, Lurking Automaton, Paliano the High City, Whispergear
-  Sneak). They need CR 905.2b/2c: a per-seat **draft note** table (name →
-  number / colour list) recorded during the draft and carried into
-  `build_draft_match_state`, plus face-up drafting and the pack-manipulation
-  hooks (draft a whole pack, draft an extra card, add a booster, peek at an
-  unopened pack). Once the note table exists, `Value::DraftNoteOfSource` makes
-  Cogwork Grinder / Lurking Automaton / Aether Searcher / Paliano one-liners. ⏳
 - **The bot has no ballot policy.** `Decision::ChooseOption` falls through to
   `AutoDecider`, which always votes for the first option — so every bot seat
   votes with the ballot's author. The option *effects* aren't visible at the
@@ -49,7 +40,7 @@ needs rather than by a checked-in file.
   which of their hands to keep; `start_mulligan_phase` scores them
   (`opening_hand_score`) and keeps the best. A UI pick is a follow-up. ⏳
 - **Deal Broker's post-draft trade is unimplemented** — only its `{T}:` loot
-  ships. Blocked on the same draft shell. ⏳
+  ships. `DraftPod` has the pick loop it would hook into. ⏳
 - **Hand-card `CardDiscarded` / `SelfSource` triggers don't dispatch.** The
   trigger walker doesn't reach cards in hand, so "when a spell or ability an
   opponent controls causes you to discard this card, …" never fires (Guerrilla
@@ -65,6 +56,28 @@ needs rather than by a checked-in file.
 - **`FREE_ACTIVATION_REPEAT_CAP` is per (source, ability), not per loop.** A
   fragmented loop alternating between *two* free abilities still spins; the
   fingerprint would catch it but the key changes each activation. ⏳
+
+## Noticed this run (CNS draft shell / CR 706.6 / CR 116.2j)
+
+- **Draft-matters cards are single-seat.** `DraftPod` implements CR 905.2 for
+  the human seat and the mandatory notes for every seat, but bots never spend
+  Cogwork Grinder / Agent of Acquisitions / Whispergear Sneak / Lore Seeker
+  (they do use Cogwork Librarian, which is unambiguous value). Giving the bot a
+  policy needs a pick-EV estimate the greedy scorer doesn't have. ⏳
+- **Paliano's three colors are auto-chosen.** `DraftPod::paliano_colors` picks
+  each seat's strongest unchosen color rather than prompting the drafter or
+  their neighbours. ⏳
+- **`extra_dice_for` reads printed statics only.** A `RollExtraDiceIgnoreLowest`
+  wrapped in `WhileCondition` / `WhileClassLevelAtLeast` wouldn't be seen (no
+  printed card needs it — Pixie Guide and Barbarian Class L1 are both
+  unconditional). Same shape as `damage_halvers`. ⏳
+- **The bot reveals hidden agendas immediately.** `GameAction::RevealConspiracy`
+  is taken at the bot's first main phase because the agenda is already named at
+  seating time; a bot that could *choose* the name later would want to wait. ⏳
+- **TODO gap lists rot.** Most of the "still open, needs one primitive" card
+  lists under the recent-set sections were already shipped by later runs — a
+  spot check found 21 of 24 present. Re-run `scripts/set_gaps.py` (now a single
+  pass over the catalog rather than a `grep -r` per card) before trusting them.
 
 ## Recommender: two builder defects fixed, one lesson recorded
 

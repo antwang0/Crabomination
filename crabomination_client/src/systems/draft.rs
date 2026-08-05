@@ -30,7 +30,7 @@ use bevy::prelude::*;
 
 use crabomination::cube::CardFactory;
 use crabomination::draft::{
-    DraftPool, PACKS_PER_SEAT, PACK_SIZE, POD_SIZE, basic_land_factory, bot_pick,
+    DraftPod, DraftPool, PACKS_PER_SEAT, PACK_SIZE, POD_SIZE, PickAction, basic_land_factory,
     enforce_copy_cap, suggest_basic_split, suggest_main_deck, top_two_colors,
 };
 // Bevy's `Color` lives in the prelude (`use bevy::prelude::*` above).
@@ -141,9 +141,22 @@ impl PackSort {
 /// removed `OnExit`. Owns the per-seat pack + pick piles for the
 /// drafting phase and the staged main / sideboard / basics during
 /// deckbuilding.
+/// How the next pack click resolves. `Pick` is the normal one-card
+/// draft; the others spend a CR 905.2 draft-matters card in the pool.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]
+pub enum PickMode {
+    #[default]
+    Pick,
+    /// Cogwork Grinder — remove the clicked card from the draft.
+    Grind,
+    /// Cogwork Librarian — the click arms a second pick from this pack.
+    Librarian,
+}
+
 #[derive(Resource)]
 pub struct DraftSession {
-    pub pool: Vec<CardFactory>,
+    /// Rules-side draft: packs, bot picks, and the CR 905.2 note table.
+    pub pod: DraftPod,
     /// Which format the draft is for. Determines both the pool the
     /// packs sample from (see `DraftSession::new`) and the label shown
     /// in the draft header.
@@ -152,10 +165,6 @@ pub struct DraftSession {
 
     // Drafting state
     pub user_seat: usize,
-    pub pack_round: u32,
-    pub pick_in_round: u32,
-    pub packs: Vec<Vec<CardFactory>>,
-    pub picks: Vec<Vec<CardFactory>>,
     pub current_tab: DraftTab,
     /// Display-only sort applied to the current user pack. Stored on
     /// the session so it persists across picks within the same draft.
@@ -179,6 +188,16 @@ pub struct DraftSession {
     /// irreversible (all 7 bots advance), so a single misclick shouldn't
     /// burn one. Cleared on pick, tab switch, and every new pack.
     pub pending_pick: Option<usize>,
+
+    /// How the next pack click resolves (CR 905.2 draft-matters cards).
+    pub pick_mode: PickMode,
+    /// First half of a Cogwork Librarian double pick.
+    pub librarian_first: Option<usize>,
+    /// Lore Seekers drafted whose "add a booster pack" offer is still open.
+    pub boosters_offered: u32,
+    /// Line under the pack grid reporting the last draft-matters action
+    /// (a Whispergear Sneak peek, an added booster, …).
+    pub draft_status: Option<String>,
 }
 
 impl DraftSession {
@@ -186,22 +205,11 @@ impl DraftSession {
     /// and Sos are draftable — other formats fall back to the Cube pool
     /// since they don't have a curated draft set yet.
     pub fn new(format: MatchFormat) -> Self {
-        let mut rng = rand::rng();
-        let pool_kind = pool_for_format(format);
-        let pool = pool_kind.factories();
-        let packs: Vec<Vec<CardFactory>> = (0..POD_SIZE)
-            .map(|_| pool_kind.generate_pack(&pool, &mut rng))
-            .collect();
-        let picks: Vec<Vec<CardFactory>> = (0..POD_SIZE).map(|_| Vec::new()).collect();
         Self {
-            pool,
+            pod: DraftPod::new(pool_for_format(format)),
             format,
             phase: DraftPhase::Drafting,
             user_seat: 0,
-            pack_round: 1,
-            pick_in_round: 1,
-            packs,
-            picks,
             current_tab: DraftTab::Pack,
             pack_sort: PackSort::default(),
             main: Vec::new(),
@@ -211,6 +219,10 @@ impl DraftSession {
             chosen_opponent: None,
             save_status: None,
             pending_pick: None,
+            pick_mode: PickMode::default(),
+            librarian_first: None,
+            boosters_offered: 0,
+            draft_status: None,
         }
     }
 
@@ -250,81 +262,83 @@ impl DraftSession {
     }
 
     pub fn user_pack(&self) -> &[CardFactory] {
-        &self.packs[self.user_seat]
+        self.pod.pack(self.user_seat)
     }
 
-    /// Advance one pick: user picks `user_pack_index`, all 7 bots
-    /// auto-pick from their packs, then packs pass according to the
-    /// current round's direction. If packs empty out, opens the next
-    /// round of packs (or transitions phases on round 4).
+    /// The user's own picks so far.
+    pub fn user_picks(&self) -> &[CardFactory] {
+        &self.pod.picks[self.user_seat]
+    }
+
+    /// Advance one pick: the user takes `user_pack_index` in the current
+    /// `pick_mode`, all 7 bots auto-pick, packs pass, and rounds roll over.
+    /// A Librarian pick needs two clicks and only advances on the second.
     pub fn process_user_pick(&mut self, user_pack_index: usize) {
         self.pending_pick = None;
-        if user_pack_index >= self.packs[self.user_seat].len() {
+        if user_pack_index >= self.user_pack().len() {
             return;
         }
-        // 1. User picks.
-        let card = self.packs[self.user_seat].remove(user_pack_index);
-        self.picks[self.user_seat].push(card);
+        let action = match (self.pick_mode, self.librarian_first) {
+            (PickMode::Grind, _) => PickAction::Remove(user_pack_index),
+            (PickMode::Librarian, None) => {
+                self.librarian_first = Some(user_pack_index);
+                self.draft_status = Some("Cogwork Librarian: pick a second card".into());
+                return;
+            }
+            (PickMode::Librarian, Some(first)) if first != user_pack_index => {
+                PickAction::Librarian(first, user_pack_index)
+            }
+            _ => PickAction::Take(user_pack_index),
+        };
+        self.advance(action);
+    }
 
-        // 2. Each bot auto-picks from its current pack.
-        for seat in 0..POD_SIZE {
-            if seat == self.user_seat {
-                continue;
-            }
-            let pack = &self.packs[seat];
-            if let Some(idx) = bot_pick(pack, &self.picks[seat]) {
-                let card = self.packs[seat].remove(idx);
-                self.picks[seat].push(card);
-            }
-        }
-
-        // 3. Pass packs (left for rounds 1 + 3, right for round 2),
-        //    or open new packs if all packs are empty.
-        let any_card_left = self.packs.iter().any(|p| !p.is_empty());
-        if any_card_left {
-            self.pass_packs();
-            self.pick_in_round += 1;
-        } else {
-            // Round complete.
-            self.pack_round += 1;
-            self.pick_in_round = 1;
-            if self.pack_round > PACKS_PER_SEAT {
-                self.transition_to_deckbuilding();
-            } else {
-                self.open_new_round();
-            }
+    /// Run one pod pick and fold in the results the UI cares about.
+    pub fn advance(&mut self, action: PickAction) {
+        let before = self.pod.picks[self.user_seat].len();
+        let still_drafting = self.pod.advance(self.user_seat, action);
+        self.librarian_first = None;
+        self.pick_mode = PickMode::Pick;
+        self.draft_status = None;
+        // CR 905.2b — Lore Seeker's booster offer stays open until used.
+        self.boosters_offered += self.pod.picks[self.user_seat][before..]
+            .iter()
+            .filter(|f| f().name == crabomination::draft::LORE_SEEKER)
+            .count() as u32;
+        if !still_drafting {
+            self.transition_to_deckbuilding();
         }
     }
 
-    fn pass_packs(&mut self) {
-        // Round 1 + 3: pass left  (seat N → seat N-1).
-        // Round 2: pass right     (seat N → seat N+1).
-        // Indexing-wise, "pass left" means seat N's pack moves to
-        // seat N-1's hands, so we rotate the `packs` vec right (the
-        // pack that was at index N ends up at index N-1).
-        let pass_left = self.pack_round != 2;
-        if pass_left {
-            self.packs.rotate_left(1);
-        } else {
-            self.packs.rotate_right(1);
-        }
+    /// Whispergear Sneak — peek at the pack of the seat to the user's left.
+    pub fn peek_next_pack(&mut self) {
+        let at = (self.user_seat + 1) % POD_SIZE;
+        self.draft_status = match self.pod.peek_pack(self.user_seat, at) {
+            Some(pack) => {
+                let names: Vec<&str> = pack.iter().map(|f| f().name).collect();
+                Some(format!("Peeked at P{}: {}", at + 1, names.join(", ")))
+            }
+            None => Some("No unused Whispergear Sneak".into()),
+        };
     }
 
-    fn open_new_round(&mut self) {
-        let mut rng = rand::rng();
-        let pool_kind = pool_for_format(self.format);
-        for pack in self.packs.iter_mut() {
-            *pack = pool_kind.generate_pack(&self.pool, &mut rng);
+    /// Lore Seeker — add the offered booster to the draft.
+    pub fn take_offered_booster(&mut self) {
+        if self.boosters_offered == 0 {
+            return;
         }
+        self.boosters_offered -= 1;
+        self.pod.add_booster(self.user_seat);
+        self.draft_status = Some("Lore Seeker: added a booster pack".into());
     }
 
     fn transition_to_deckbuilding(&mut self) {
         // Auto-suggest main + sideboard split from the user's picks.
-        let user_picks = self.picks[self.user_seat].clone();
+        let user_picks = self.pod.picks[self.user_seat].clone();
         let (suggested_main, suggested_sb) = suggest_main_deck(&user_picks, 23);
         self.main = suggested_main;
         self.sideboard = suggested_sb;
-        self.player_colors = top_two_colors(&self.picks[self.user_seat]);
+        self.player_colors = top_two_colors(&self.pod.picks[self.user_seat]);
         self.basics = suggest_basic_split(&self.main, self.player_colors, 17);
         self.phase = DraftPhase::Deckbuilding;
     }
@@ -391,7 +405,7 @@ impl DraftSession {
     /// pipeline used for the player's initial main split, but applied
     /// to the bot's own picks.
     pub fn build_opponent_deck(&self, seat: usize) -> (Vec<CardFactory>, [ManaColor; 2]) {
-        let picks = &self.picks[seat];
+        let picks = &self.pod.picks[seat];
         let (main, _sb) = suggest_main_deck(picks, 23);
         let colors = top_two_colors(picks);
         let basics = suggest_basic_split(&main, colors, 17);
@@ -421,6 +435,24 @@ struct DraftTabButton(DraftTab);
 
 #[derive(Component, Clone, Copy)]
 struct PackSortButton(PackSort);
+
+/// One CR 905.2 draft-time action offered by the draft-matters bar.
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum DraftMatters {
+    /// Agent of Acquisitions — draft the whole pack.
+    TakePack,
+    /// Cogwork Librarian — arm a two-card pick.
+    Librarian,
+    /// Cogwork Grinder — arm a remove-from-draft pick.
+    Grind,
+    /// Whispergear Sneak — look at the next seat's pack.
+    Peek,
+    /// Lore Seeker — add the offered booster.
+    AddBooster,
+}
+
+#[derive(Component, Clone, Copy)]
+struct DraftMattersButton(DraftMatters);
 
 #[derive(Component, Clone, Copy)]
 struct DeckbuildCardButton {
@@ -490,6 +522,7 @@ impl Plugin for DraftPlugin {
                     handle_pack_clicks,
                     handle_tab_clicks,
                     handle_sort_clicks,
+                    handle_draft_matters_clicks,
                     handle_deckbuild_clicks,
                     handle_basic_buttons,
                     handle_confirm_deck,
@@ -667,7 +700,7 @@ fn spawn_drafting_screen(
     window_size: Vec2,
 ) {
     let root = spawn_root(commands);
-    let user_picks = &session.picks[session.user_seat];
+    let user_picks = session.user_picks();
     commands
         .entity(root)
         .with_children(|root| {
@@ -699,9 +732,9 @@ fn spawn_drafting_screen(
                         Text::new(format!(
                             "{} Draft — Pack {}/{}, Pick {}/{}",
                             format_label(session.format),
-                            session.pack_round,
+                            session.pod.pack_round,
                             PACKS_PER_SEAT,
-                            session.pick_in_round,
+                            session.pod.pick_in_round,
                             PACK_SIZE,
                         )),
                         ui_fonts.tf(22.0),
@@ -776,6 +809,9 @@ fn spawn_drafting_screen(
                 });
             });
 
+            // ── Draft-matters bar: CR 905.2 cards already in the pool ──
+            spawn_draft_matters_bar(root, ui_fonts, session);
+
             // ── Body: scrollable, fills remaining vertical space ──
             // No `Pickable::IGNORE` here — the scroll-wheel handler
             // needs to find this node by cursor position. Children
@@ -839,7 +875,7 @@ fn spawn_pack_grid(
     let card_w = compute_pack_card_width(window_size, pack.len());
     // Build a display order over the *original* pack indices so the
     // PackCardButton.pack_index attached to each tile still maps to
-    // the right slot in `session.packs[user_seat]`. Sorting is a view
+    // the right slot in the user's pod pack. Sorting is a view
     // transform, not a data transform.
     let order = sorted_pack_indices(pack, session.pack_sort);
     body.spawn((
@@ -1105,6 +1141,88 @@ fn spawn_sort_button(
                 Pickable::IGNORE,
             ));
         });
+}
+
+/// CR 905.2 draft-matters controls: one row of toggles/buttons for the
+/// draft-time cards the user has already drafted, plus the status line
+/// reporting what the last one did. Nothing is spawned when the pool has
+/// no such card and no booster is on offer.
+fn spawn_draft_matters_bar(
+    root: &mut ChildSpawnerCommands,
+    ui_fonts: &UiFonts,
+    session: &DraftSession,
+) {
+    let mut actions: Vec<(DraftMatters, String, bool)> = Vec::new();
+    for name in session.pod.special_actions(session.user_seat) {
+        match name {
+            crabomination::draft::AGENT_OF_ACQUISITIONS => actions.push((
+                DraftMatters::TakePack,
+                "Agent: take whole pack".into(),
+                false,
+            )),
+            crabomination::draft::COGWORK_LIBRARIAN => actions.push((
+                DraftMatters::Librarian,
+                "Librarian: pick two".into(),
+                session.pick_mode == PickMode::Librarian,
+            )),
+            crabomination::draft::COGWORK_GRINDER => actions.push((
+                DraftMatters::Grind,
+                "Grinder: remove from draft".into(),
+                session.pick_mode == PickMode::Grind,
+            )),
+            crabomination::draft::WHISPERGEAR_SNEAK => {
+                actions.push((DraftMatters::Peek, "Sneak: peek next pack".into(), false))
+            }
+            _ => {}
+        }
+    }
+    if session.boosters_offered > 0 {
+        actions.push((DraftMatters::AddBooster, "Lore Seeker: add a booster".into(), false));
+    }
+    if actions.is_empty() && session.draft_status.is_none() {
+        return;
+    }
+    root.spawn((
+        Node {
+            width: Val::Percent(100.0),
+            padding: UiRect::axes(Val::Px(20.0), Val::Px(6.0)),
+            flex_direction: FlexDirection::Row,
+            align_items: AlignItems::Center,
+            column_gap: Val::Px(8.0),
+            ..default()
+        },
+        BackgroundColor(theme::PANEL_BG),
+        Pickable::IGNORE,
+    ))
+    .with_children(|bar| {
+        for (action, label, on) in actions {
+            bar.spawn((
+                Button,
+                Node {
+                    padding: UiRect::axes(Val::Px(10.0), Val::Px(4.0)),
+                    ..default()
+                },
+                BackgroundColor(if on { theme::BUTTON_WARN_BG } else { theme::FIELD_BG }),
+                DraftMattersButton(action),
+            ))
+            .with_children(|b| {
+                b.spawn((
+                    Text::new(label),
+                    ui_fonts.tf(12.0),
+                    TextColor(if on { theme::TEXT_PRIMARY } else { theme::TEXT_BODY }),
+                    Pickable::IGNORE,
+                ));
+            });
+        }
+        if let Some(status) = &session.draft_status {
+            bar.spawn((
+                Text::new(status.clone()),
+                ui_fonts.tf(12.0),
+                TextColor(theme::ACCENT_GOLD),
+                Pickable::IGNORE,
+            ));
+        }
+    });
 }
 
 fn spawn_pack_card_tile(
@@ -1830,12 +1948,12 @@ fn spawn_opponent_select_screen(
                     if seat == session.user_seat {
                         continue;
                     }
-                    let colors = top_two_colors(&session.picks[seat]);
+                    let colors = top_two_colors(&session.pod.picks[seat]);
                     let label = format!(
                         "Bot {seat}\n{}{}\n{} picks",
                         color_short(colors[0]),
                         color_short(colors[1]),
-                        session.picks[seat].len()
+                        session.pod.picks[seat].len()
                     );
                     grid.spawn((
                         Button,
@@ -1864,7 +1982,7 @@ fn spawn_opponent_select_screen(
 
             // Selected-opponent confirmation row + Play button.
             if let Some(seat) = session.chosen_opponent {
-                let colors = top_two_colors(&session.picks[seat]);
+                let colors = top_two_colors(&session.pod.picks[seat]);
                 root.spawn((
                     Node {
                         flex_direction: FlexDirection::Column,
@@ -2000,6 +2118,43 @@ fn handle_sort_clicks(
             session.pack_sort = btn.0;
             return;
         }
+    }
+}
+
+fn handle_draft_matters_clicks(
+    mut session: Option<ResMut<DraftSession>>,
+    buttons: Query<(&Interaction, &DraftMattersButton), Changed<Interaction>>,
+) {
+    let Some(session) = session.as_mut() else { return };
+    if !matches!(session.phase, DraftPhase::Drafting) {
+        return;
+    }
+    for (interaction, btn) in &buttons {
+        if *interaction != Interaction::Pressed {
+            continue;
+        }
+        session.pending_pick = None;
+        match btn.0 {
+            DraftMatters::TakePack => session.advance(PickAction::TakePack),
+            DraftMatters::Librarian => {
+                session.librarian_first = None;
+                session.pick_mode = if session.pick_mode == PickMode::Librarian {
+                    PickMode::Pick
+                } else {
+                    PickMode::Librarian
+                };
+            }
+            DraftMatters::Grind => {
+                session.pick_mode = if session.pick_mode == PickMode::Grind {
+                    PickMode::Pick
+                } else {
+                    PickMode::Grind
+                };
+            }
+            DraftMatters::Peek => session.peek_next_pack(),
+            DraftMatters::AddBooster => session.take_offered_booster(),
+        }
+        return;
     }
 }
 
@@ -2151,6 +2306,10 @@ fn handle_play_match(
                 player_deck,
                 opponent_deck: opp_deck,
                 opponent_label,
+                notes: [
+                    session.pod.notes[session.user_seat].clone(),
+                    session.pod.notes[opp_seat].clone(),
+                ],
             });
             next_state.set(AppState::InGame);
             return;

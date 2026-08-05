@@ -671,6 +671,10 @@ pub enum GameAction {
     /// phase, and it costs {N} where N is the number of times they have
     /// already taken it this turn.
     RollPlanarDie,
+    /// CR 116.2j / 702.106b — turn a face-down hidden-agenda conspiracy in
+    /// your command zone face up. A special action: legal any time the
+    /// player holding priority controls the card.
+    RevealConspiracy { card_id: CardId },
 }
 
 /// CR 901.3a — the three distinct faces of the planar die.

@@ -245,6 +245,7 @@ pub fn sunforger() -> CardDefinition {
                 filter: R::HasCardType(CardType::Instant)
                     .and(R::HasColor(Color::Red).or(R::HasColor(Color::White)))
                     .and(R::ManaValueAtMost(4)),
+                include_hand: false,
             },
             ..Default::default()
         }],

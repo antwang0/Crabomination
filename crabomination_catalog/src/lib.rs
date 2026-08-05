@@ -161,6 +161,7 @@ pub use sets::atq::*;
 pub use sets::clb::*;
 pub use sets::cns::*;
 pub use sets::cns2::*;
+pub use sets::cns3::*;
 pub use sets::drk::*;
 pub use sets::drk2::*;
 pub use sets::ohop::*;

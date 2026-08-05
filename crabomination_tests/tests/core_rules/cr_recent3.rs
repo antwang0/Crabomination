@@ -1,7 +1,8 @@
 //! Comprehensive-Rules conformance for behaviours touched this batch:
 //! CR 704.5n (Equipment unattaches from an illegal permanent, stays in play),
-//! CR 706.5 / 706.2b (die-roll doubles clause + low-result reroll), and
-//! CR 611.2 (turn-gated static abilities via `StaticEffect::WhileYourTurn`).
+//! CR 706.5 / 706.2b (die-roll doubles clause + low-result reroll), CR 706.6
+//! (ignored rolls never happened), CR 116.2j (revealing a hidden agenda is a
+//! special action), and CR 611.2 (turn-gated statics).
 
 use crabomination::card::{CardDefinition, CardType, Keyword, SelectionRequirement as R};
 use crabomination::decision::{DecisionAnswer, ScriptedDecider};
@@ -105,4 +106,74 @@ fn cr_611_2_while_your_turn_gates_anthem() {
     assert!(has_trample(&g), "granted on the controller's turn");
     g.active_player_idx = 1;
     assert!(!has_trample(&g), "not granted on the opponent's turn (CR 611.2)");
+}
+
+/// CR 706.6 — Pixie Guide rolls an extra die and ignores the lowest result:
+/// the ignored roll never happened, so its results-table arm never fires.
+#[test]
+fn cr_706_6_pixie_guide_ignores_the_lowest_roll() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, crabomination::catalog::pixie_guide());
+    // One die requested → two rolled; the 1 is dropped, the 6 survives.
+    g.decider = Box::new(ScriptedDecider::new(vec![
+        DecisionAnswer::DieRoll(1),
+        DecisionAnswer::DieRoll(6),
+    ]));
+    let start = g.players[0].life;
+    let roll = Effect::RollDie {
+        sides: 6,
+        count: Value::ONE,
+        modifier: Value::ZERO,
+        reroll_at_most: 0,
+        results: vec![
+            (1, 1, Effect::LoseLife { who: Selector::Player(PlayerRef::You), amount: Value::Const(5) }),
+            (6, 6, Effect::GainLife { who: Selector::Player(PlayerRef::You), amount: Value::Const(3) }),
+        ],
+        on_doubles: None,
+    };
+    let ctx = EffectContext::for_spell(0, None, 0, 0);
+    g.resolve_effect(&roll, &ctx).unwrap();
+    assert_eq!(g.players[0].life, start + 3, "only the surviving roll resolved an arm");
+}
+
+/// Without the static, both faces would be single rolls — the guard against
+/// the test above passing for the wrong reason.
+#[test]
+fn cr_706_6_without_the_static_the_low_roll_resolves() {
+    let mut g = two_player_game();
+    g.decider = Box::new(ScriptedDecider::new(vec![DecisionAnswer::DieRoll(1)]));
+    let start = g.players[0].life;
+    let roll = Effect::RollDie {
+        sides: 6,
+        count: Value::ONE,
+        modifier: Value::ZERO,
+        reroll_at_most: 0,
+        results: vec![(
+            1,
+            1,
+            Effect::LoseLife { who: Selector::Player(PlayerRef::You), amount: Value::Const(5) },
+        )],
+        on_doubles: None,
+    };
+    let ctx = EffectContext::for_spell(0, None, 0, 0);
+    g.resolve_effect(&roll, &ctx).unwrap();
+    assert_eq!(g.players[0].life, start - 5);
+}
+
+/// CR 116.2j — turning a face-down conspiracy face up is a special action the
+/// player holding priority takes; it doesn't use the stack.
+#[test]
+fn cr_116_2j_reveal_conspiracy_is_a_special_action() {
+    use crabomination::game::types::GameAction;
+    let mut g = two_player_game();
+    let id = g.seat_conspiracy(0, crabomination::catalog::unexpected_potential(), Some("Ornithopter"));
+    g.priority.player_with_priority = 1;
+    assert!(
+        g.perform_action(GameAction::RevealConspiracy { card_id: id }).is_err(),
+        "another seat can't reveal it",
+    );
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::RevealConspiracy { card_id: id }).expect("reveal");
+    assert!(g.stack.is_empty(), "special actions don't use the stack");
+    assert!(!g.players[0].command[0].face_down);
 }

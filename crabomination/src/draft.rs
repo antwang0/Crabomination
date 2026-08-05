@@ -757,6 +757,364 @@ impl DraftPool {
     }
 }
 
+// ── CR 905.2 draft-matters shell ─────────────────────────────────────────────
+
+/// CR 905.2b — the values a player noted as they drafted cards with a
+/// given name, keyed by that card's name. Carried out of the draft on
+/// `Player.draft_notes` so Aether Searcher, Lurking Automaton, Cogwork
+/// Grinder and Paliano can read them in the game that follows.
+#[derive(Debug, Clone, Default, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+pub struct DraftNotes {
+    pub numbers: HashMap<String, Vec<u32>>,
+    pub names: HashMap<String, Vec<String>>,
+    pub colors: HashMap<String, Vec<Color>>,
+}
+
+impl DraftNotes {
+    pub fn note_number(&mut self, source: &str, n: u32) {
+        self.numbers.entry(source.to_string()).or_default().push(n);
+    }
+    pub fn note_name(&mut self, source: &str, name: &str) {
+        self.names.entry(source.to_string()).or_default().push(name.to_string());
+    }
+    pub fn note_colors(&mut self, source: &str, colors: &[Color]) {
+        self.colors.entry(source.to_string()).or_default().extend_from_slice(colors);
+    }
+    /// Highest number noted for `source`, or 0.
+    pub fn max_number(&self, source: &str) -> u32 {
+        self.numbers.get(source).and_then(|v| v.iter().copied().max()).unwrap_or(0)
+    }
+    /// Sum of every number noted for `source`.
+    pub fn sum_numbers(&self, source: &str) -> u32 {
+        self.numbers.get(source).map(|v| v.iter().sum()).unwrap_or(0)
+    }
+    pub fn has_name(&self, source: &str, name: &str) -> bool {
+        self.names.get(source).is_some_and(|v| v.iter().any(|n| n == name))
+    }
+}
+
+/// Card names whose draft-time text this shell implements. Kept as a
+/// table so the pod, the bots and the client agree on what a card can do.
+pub const AETHER_SEARCHER: &str = "Aether Searcher";
+pub const AGENT_OF_ACQUISITIONS: &str = "Agent of Acquisitions";
+pub const COGWORK_GRINDER: &str = "Cogwork Grinder";
+pub const COGWORK_LIBRARIAN: &str = "Cogwork Librarian";
+pub const LORE_SEEKER: &str = "Lore Seeker";
+pub const LURKING_AUTOMATON: &str = "Lurking Automaton";
+pub const PALIANO: &str = "Paliano, the High City";
+pub const WHISPERGEAR_SNEAK: &str = "Whispergear Sneak";
+
+/// What a seat does with its pick this round.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum PickAction {
+    /// Draft the card at this pack index into the seat's pool.
+    Take(usize),
+    /// Cogwork Grinder — draft it and remove it from the draft face down;
+    /// it never joins the pool (CR 905.2c).
+    Remove(usize),
+    /// Cogwork Librarian — draft two cards from this pack, putting a
+    /// Librarian already in the pool back into it.
+    Librarian(usize, usize),
+    /// Agent of Acquisitions — draft the whole pack; the seat can't draft
+    /// again this round.
+    TakePack,
+}
+
+/// One 8-seat booster draft, rules-side. The client owns presentation;
+/// this owns pack circulation, bot picks, CR 905.2 draft-time card
+/// behavior and the note table that survives into the match.
+#[derive(Debug, Clone)]
+pub struct DraftPod {
+    pub pool: Vec<CardFactory>,
+    pub pool_kind: DraftPool,
+    pub pack_round: u32,
+    pub pick_in_round: u32,
+    /// Packs queued in front of each seat; a seat drafts from index 0.
+    /// Normally one each — Lore Seeker's extra booster makes a seat
+    /// briefly hold two.
+    pub packs: Vec<Vec<Vec<CardFactory>>>,
+    pub picks: Vec<Vec<CardFactory>>,
+    pub notes: Vec<DraftNotes>,
+    /// Cards removed from the draft face down, per seat.
+    pub removed: Vec<Vec<CardFactory>>,
+    /// Seats locked out of drafting for the rest of the round (Agent of
+    /// Acquisitions).
+    locked: Vec<bool>,
+    /// Seats owing an Aether Searcher name note on their next pick — one
+    /// entry per Searcher drafted, so two Searchers note two names.
+    owed_name_notes: Vec<u32>,
+    /// Picks a seat has made this draft round (Lurking Automaton's note).
+    round_picks: Vec<u32>,
+    /// Whispergear Sneaks a seat has turned face down; each one buys a peek.
+    sneaks_used: Vec<u32>,
+}
+
+impl DraftPod {
+    pub fn new(pool_kind: DraftPool) -> Self {
+        let pool = pool_kind.factories();
+        Self::with_pool(pool_kind, pool)
+    }
+
+    pub fn with_pool(pool_kind: DraftPool, pool: Vec<CardFactory>) -> Self {
+        let mut rng = rand::rng();
+        let packs = (0..POD_SIZE)
+            .map(|_| vec![pool_kind.generate_pack(&pool, &mut rng)])
+            .collect();
+        Self {
+            pool,
+            pool_kind,
+            pack_round: 1,
+            pick_in_round: 1,
+            packs,
+            picks: vec![Vec::new(); POD_SIZE],
+            notes: vec![DraftNotes::default(); POD_SIZE],
+            removed: vec![Vec::new(); POD_SIZE],
+            locked: vec![false; POD_SIZE],
+            owed_name_notes: vec![0; POD_SIZE],
+            round_picks: vec![0; POD_SIZE],
+            sneaks_used: vec![0; POD_SIZE],
+        }
+    }
+
+    /// The pack `seat` is currently drafting from (empty when the seat
+    /// holds none).
+    pub fn pack(&self, seat: usize) -> &[CardFactory] {
+        self.packs[seat].first().map(|p| p.as_slice()).unwrap_or(&[])
+    }
+
+    /// True once every pack in the pod is exhausted.
+    pub fn round_over(&self) -> bool {
+        self.packs.iter().flatten().all(|p| p.is_empty())
+    }
+
+    /// True while `seat` is locked out by Agent of Acquisitions.
+    pub fn is_locked(&self, seat: usize) -> bool {
+        self.locked[seat]
+    }
+
+    /// How many copies of `name` are in `seat`'s pool.
+    pub fn owns(&self, seat: usize, name: &str) -> usize {
+        self.picks[seat].iter().filter(|f| f().name == name).count()
+    }
+
+    /// Draft actions `seat` may legally take beyond the plain `Take`,
+    /// given the cards already in its pool. Drives the client's
+    /// draft-matters buttons.
+    pub fn special_actions(&self, seat: usize) -> Vec<&'static str> {
+        let mut out = Vec::new();
+        if self.owns(seat, AGENT_OF_ACQUISITIONS) > 0 && !self.locked[seat] {
+            out.push(AGENT_OF_ACQUISITIONS);
+        }
+        if self.owns(seat, COGWORK_LIBRARIAN) > 0 && self.pack(seat).len() >= 2 {
+            out.push(COGWORK_LIBRARIAN);
+        }
+        if self.owns(seat, COGWORK_GRINDER) > 0 {
+            out.push(COGWORK_GRINDER);
+        }
+        if self.owns(seat, WHISPERGEAR_SNEAK) as u32 > self.sneaks_used[seat] {
+            out.push(WHISPERGEAR_SNEAK);
+        }
+        out
+    }
+
+    /// Whispergear Sneak — turn one face down to look at another seat's
+    /// pack. Returns the peeked contents, or `None` when the seat has no
+    /// unused Sneak.
+    pub fn peek_pack(&mut self, seat: usize, at: usize) -> Option<Vec<CardFactory>> {
+        if self.owns(seat, WHISPERGEAR_SNEAK) as u32 <= self.sneaks_used[seat] {
+            return None;
+        }
+        self.sneaks_used[seat] += 1;
+        Some(self.packs.get(at)?.first()?.clone())
+    }
+
+    /// Lore Seeker — add a fresh booster to the draft, queued in front of
+    /// `seat` so their next pick comes from it.
+    pub fn add_booster(&mut self, seat: usize) {
+        let mut rng = rand::rng();
+        let pack = self.pool_kind.generate_pack(&self.pool, &mut rng);
+        self.packs[seat].insert(0, pack);
+    }
+
+    /// Run one full pick: `seat` takes `action`, every other seat bot-picks,
+    /// then packs pass. Opens the next round (or reports the draft done)
+    /// when every pack empties. Returns false once all rounds are drafted.
+    pub fn advance(&mut self, seat: usize, action: PickAction) -> bool {
+        self.apply(seat, action);
+        for other in 0..POD_SIZE {
+            if other == seat {
+                continue;
+            }
+            if let Some(a) = self.bot_action(other) {
+                self.apply(other, a);
+            }
+        }
+        if !self.round_over() {
+            self.pass_packs();
+            self.pick_in_round += 1;
+            return true;
+        }
+        self.pack_round += 1;
+        self.pick_in_round = 1;
+        self.locked.iter_mut().for_each(|l| *l = false);
+        self.round_picks.iter_mut().for_each(|n| *n = 0);
+        if self.pack_round > PACKS_PER_SEAT {
+            return false;
+        }
+        let mut rng = rand::rng();
+        for seat_packs in self.packs.iter_mut() {
+            *seat_packs = vec![self.pool_kind.generate_pack(&self.pool, &mut rng)];
+        }
+        true
+    }
+
+    /// The action a bot seat takes. Bots draft greedily and use only the
+    /// mandatory draft-time text; the optional abilities (removing cards
+    /// from the draft, taking a whole pack) stay with the human seat.
+    fn bot_action(&self, seat: usize) -> Option<PickAction> {
+        if self.locked[seat] {
+            return None;
+        }
+        let pack = self.pack(seat);
+        // A Librarian in the pool is pure value: two cards for one pick.
+        if self.owns(seat, COGWORK_LIBRARIAN) > 0 && pack.len() >= 2 {
+            let a = bot_pick(pack, &self.picks[seat])?;
+            let mut rest: Vec<CardFactory> = pack.to_vec();
+            rest.remove(a);
+            let b = bot_pick(&rest, &self.picks[seat])?;
+            return Some(PickAction::Librarian(a, if b >= a { b + 1 } else { b }));
+        }
+        bot_pick(pack, &self.picks[seat]).map(PickAction::Take)
+    }
+
+    fn apply(&mut self, seat: usize, action: PickAction) {
+        if self.locked[seat] || self.packs[seat].is_empty() {
+            return;
+        }
+        match action {
+            PickAction::Take(i) => {
+                if let Some(card) = self.draw_from_pack(seat, i) {
+                    self.record_pick(seat, card);
+                }
+            }
+            PickAction::Remove(i) => {
+                if self.owns(seat, COGWORK_GRINDER) == 0 {
+                    return self.apply(seat, PickAction::Take(i));
+                }
+                if let Some(card) = self.draw_from_pack(seat, i) {
+                    self.round_picks[seat] += 1;
+                    self.removed[seat].push(card);
+                    self.notes[seat].note_number(COGWORK_GRINDER, 1);
+                }
+            }
+            PickAction::Librarian(a, b) => {
+                let librarian = self
+                    .picks[seat]
+                    .iter()
+                    .position(|f| f().name == COGWORK_LIBRARIAN);
+                let Some(pos) = librarian else {
+                    return self.apply(seat, PickAction::Take(a));
+                };
+                let (hi, lo) = if a > b { (a, b) } else { (b, a) };
+                if hi == lo || self.pack(seat).len() <= hi {
+                    return self.apply(seat, PickAction::Take(a));
+                }
+                let first = self.draw_from_pack(seat, hi);
+                let second = self.draw_from_pack(seat, lo);
+                for card in first.into_iter().chain(second) {
+                    self.record_pick(seat, card);
+                }
+                let card = self.picks[seat].remove(pos);
+                if let Some(pack) = self.packs[seat].first_mut() {
+                    pack.push(card);
+                }
+            }
+            PickAction::TakePack => {
+                if self.owns(seat, AGENT_OF_ACQUISITIONS) == 0 {
+                    return self.apply(seat, PickAction::Take(0));
+                }
+                let pack = std::mem::take(&mut self.packs[seat][0]);
+                for card in pack {
+                    self.record_pick(seat, card);
+                }
+                self.locked[seat] = true;
+            }
+        }
+    }
+
+    fn draw_from_pack(&mut self, seat: usize, index: usize) -> Option<CardFactory> {
+        let pack = self.packs[seat].first_mut()?;
+        (index < pack.len()).then(|| pack.remove(index))
+    }
+
+    /// Put a drafted card in the seat's pool, applying the "reveal this card
+    /// as you draft it" notes (CR 905.2b).
+    fn record_pick(&mut self, seat: usize, card: CardFactory) {
+        self.round_picks[seat] += 1;
+        let name = card().name;
+        if self.owed_name_notes[seat] > 0 {
+            self.owed_name_notes[seat] -= 1;
+            self.notes[seat].note_name(AETHER_SEARCHER, name);
+        }
+        match name {
+            AETHER_SEARCHER => self.owed_name_notes[seat] += 1,
+            LURKING_AUTOMATON => {
+                let n = self.round_picks[seat];
+                self.notes[seat].note_number(LURKING_AUTOMATON, n);
+            }
+            PALIANO => {
+                let colors = self.paliano_colors(seat);
+                self.notes[seat].note_colors(PALIANO, &colors);
+            }
+            _ => {}
+        }
+        self.picks[seat].push(card);
+    }
+
+    /// Paliano's three colors: the seat to the drafter's right picks first,
+    /// then the drafter, then the seat to their left — each taking the
+    /// strongest color still unchosen in their own pool.
+    fn paliano_colors(&self, seat: usize) -> Vec<Color> {
+        let order = [
+            (seat + POD_SIZE - 1) % POD_SIZE,
+            seat,
+            (seat + 1) % POD_SIZE,
+        ];
+        let mut chosen: Vec<Color> = Vec::with_capacity(3);
+        for who in order {
+            let weights = colors_of_picks(&self.picks[who]);
+            let pick = Color::ALL
+                .into_iter()
+                .filter(|c| !chosen.contains(c))
+                .max_by_key(|c| weights.get(c).copied().unwrap_or(0))
+                .expect("five colors, at most two chosen");
+            chosen.push(pick);
+        }
+        chosen
+    }
+
+    fn pass_packs(&mut self) {
+        // Rounds 1 and 3 pass left, round 2 passes right. A seat's front
+        // pack moves on; any extra booster it is holding shuffles up.
+        let moving: Vec<Vec<CardFactory>> = self
+            .packs
+            .iter_mut()
+            .map(|q| if q.is_empty() { Vec::new() } else { q.remove(0) })
+            .collect();
+        for (i, pack) in moving.into_iter().enumerate() {
+            if pack.is_empty() {
+                continue;
+            }
+            let to = if self.pack_round != 2 {
+                (i + POD_SIZE - 1) % POD_SIZE
+            } else {
+                (i + 1) % POD_SIZE
+            };
+            self.packs[to].push(pack);
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

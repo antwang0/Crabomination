@@ -1058,6 +1058,15 @@ impl Bot for RandomBot {
                 {
                     return Some(a);
                 }
+                // CR 116.2j — the agenda is already named, so turning it face
+                // up is pure upside; do it at the first opportunity.
+                if let Some(c) = state.players[seat]
+                    .command
+                    .iter()
+                    .find(|c| c.face_down && c.definition.is_conspiracy())
+                {
+                    return Some(GameAction::RevealConspiracy { card_id: c.id });
+                }
                 // CR 901.9 — take the turn's one free planar-die roll before
                 // spending mana. Later rolls cost {N} and compete with real
                 // plays, so the bot stops after the free one. Inert outside a
@@ -2739,6 +2748,7 @@ fn accumulate_payload_colors(pool: &ManaPayload, set: &mut crate::mana::ColorSet
         // Could produce any single color the rock was set to — treat as
         // potentially any color for the bot's mana-base reasoning.
         ManaPayload::ChosenColorOfSource
+        | ManaPayload::DraftNotedColorOfSource
         | ManaPayload::ImprintedCardColor
         | ManaPayload::AnyColorAmongLegendaries
         | ManaPayload::AnyColorAmongYourPermanents => *set = crate::mana::ColorSet::all(),

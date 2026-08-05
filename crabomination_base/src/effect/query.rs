@@ -948,7 +948,8 @@ impl Effect {
                     | ManaPayload::ImprintedCardColor
                     | ManaPayload::AnyColorOpponentCouldProduce
                     | ManaPayload::AnyColorYouCouldProduce
-                    | ManaPayload::AnyColorAmongLegendaries => false,
+                    | ManaPayload::AnyColorAmongLegendaries
+                    | ManaPayload::DraftNotedColorOfSource => false,
                 }
             }
             Effect::Destroy { what }

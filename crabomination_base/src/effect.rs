@@ -515,6 +515,15 @@ impl Selector {
 
 // ── Value ────────────────────────────────────────────────────────────────────
 
+/// How `Value::DraftNoteNumber` folds a card name's draft notes.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum DraftNoteAgg {
+    /// Highest note (Lurking Automaton).
+    Max,
+    /// Sum of every note (Cogwork Grinder).
+    Sum,
+}
+
 /// A numeric expression evaluated at effect-time.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum Value {
@@ -668,6 +677,10 @@ pub enum Value {
     /// The game's current turn number (CR 500 — the first turn is 1). Powers
     /// "the first upkeep" gates (Sentinel Dispatch).
     TurnNumber,
+    /// CR 905.2b — a number the controller noted as they drafted cards with
+    /// this source's name. `Max` takes the highest note (Lurking Automaton),
+    /// `Sum` totals them (Cogwork Grinder). Zero outside a drafted game.
+    DraftNoteNumber { agg: DraftNoteAgg },
     GraveyardSizeOf(PlayerRef),
     /// Number of cards in `who`'s graveyard matching `filter`. Powers
     /// "equal to the number of Arcane cards in your graveyard" (Ire of
@@ -2225,6 +2238,10 @@ pub enum ManaPayload {
     /// (Coldsteel Heart, choose-a-color rocks). Falls back to colorless when
     /// no color was chosen.
     ChosenColorOfSource,
+    /// CR 905.2b — add one mana of any color chosen as the controller drafted
+    /// cards with the source's name (Paliano, the High City). Falls back to
+    /// colorless outside a drafted game.
+    DraftNotedColorOfSource,
 }
 
 // ── Event specification (triggers) ───────────────────────────────────────────
@@ -5015,7 +5032,13 @@ pub enum Effect {
     TokenUnlessOpponentLetsYouDraw { token: TokenDefinition, times: u32 },
     /// Sunforger — search the controller's library for a card matching
     /// `filter`, cast it without paying its mana cost, then shuffle.
-    SearchAndCastFree { filter: SelectionRequirement },
+    /// With `include_hand`, the hand is searched too and only a library
+    /// find shuffles (Aether Searcher).
+    SearchAndCastFree {
+        filter: SelectionRequirement,
+        #[serde(default)]
+        include_hand: bool,
+    },
     /// Tawnos's Coffin — exile [what] and every Aura attached to it, stamped
     /// `exiled_with = source`, keeping the creature's counters noted on the
     /// exiled object (CR 122.2 otherwise drops them).

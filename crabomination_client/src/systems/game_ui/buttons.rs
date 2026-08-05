@@ -335,6 +335,34 @@ pub fn handle_planar_die_keypress(
     }
 }
 
+// ── Hidden agenda ────────────────────────────────────────────────────────────
+
+/// CR 116.2j — pressing `G` turns a face-down hidden-agenda conspiracy in your
+/// command zone face up. A special action, so it needs no target UI; the key is
+/// inert when nothing of yours is still face down.
+pub fn handle_reveal_conspiracy_keypress(
+    keyboard: Res<ButtonInput<KeyCode>>,
+    view: Res<CurrentView>,
+    outbox: Option<Res<NetOutbox>>,
+    debug_console: Res<crate::systems::debug_console::DebugConsoleState>,
+    chat: Res<crate::systems::chat::ChatInputState>,
+) {
+    if debug_console.card_input_focused || chat.open || !keyboard.just_pressed(KeyCode::KeyG) {
+        return;
+    }
+    let Some(outbox) = &outbox else { return };
+    let Some(cv) = view.0.as_ref() else { return };
+    if let Some(card_id) = cv
+        .players
+        .iter()
+        .flat_map(|p| p.revealable_conspiracies.iter())
+        .copied()
+        .next()
+    {
+        outbox.submit(GameAction::RevealConspiracy { card_id });
+    }
+}
+
 // ── Surrender / Leave ──────────────────────────────────────────────────────────
 
 /// Drive the two match-exit buttons:

@@ -884,6 +884,11 @@ pub struct PlayerView {
     /// snapshot back-compat.
     #[serde(default)]
     pub commander_casts: Vec<(String, u32)>,
+    /// CR 116.2j — face-down hidden-agenda conspiracies this player may turn
+    /// face up (`GameAction::RevealConspiracy`). Only ever populated for the
+    /// viewer's own seat; CR 315.7 keeps them secret from everyone else.
+    #[serde(default)]
+    pub revealable_conspiracies: Vec<CardId>,
     /// True when this player has lost the game (life ≤ 0, drew from empty
     /// library, Pact fail, etc.). Surfaced so UIs can grey out eliminated
     /// players' portraits and skip them in turn order display.

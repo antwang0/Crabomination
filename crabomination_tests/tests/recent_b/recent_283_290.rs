@@ -653,6 +653,43 @@ mod recent286 {
             "1 existing + doubled 1 (=2) = 3",
         );
     }
+
+    /// Barbarian Class L1 rolls an extra die and ignores the lowest (CR 706.6);
+    /// at L3 your creatures have haste.
+    #[test]
+    fn barbarian_class_boosts_rolls_then_grants_haste() {
+        use crabomination::card::Keyword;
+        use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+        use crabomination::effect::{Effect, PlayerRef, Selector, Value};
+        use crabomination::game::effects::EffectContext;
+        let mut g = two_player_game();
+        let class = g.move_card_to_battlefield_for_test(0, crabomination::catalog::barbarian_class());
+        let bear = g.add_card_to_battlefield(0, crabomination::catalog::grizzly_bears());
+        assert!(!g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Haste));
+        g.decider = Box::new(ScriptedDecider::new(vec![
+            DecisionAnswer::DieRoll(2),
+            DecisionAnswer::DieRoll(6),
+        ]));
+        let start = g.players[0].life;
+        g.resolve_effect(
+            &Effect::RollDie {
+                sides: 6,
+                count: Value::ONE,
+                modifier: Value::ZERO,
+                reroll_at_most: 0,
+                results: vec![(6, 6, Effect::GainLife {
+                    who: Selector::Player(PlayerRef::You),
+                    amount: Value::Const(4),
+                })],
+                on_doubles: None,
+            },
+            &EffectContext::for_spell(0, None, 0, 0),
+        )
+        .unwrap();
+        assert_eq!(g.players[0].life, start + 4, "the 2 was ignored, the 6 hit its arm");
+        g.battlefield.iter_mut().find(|c| c.id == class).unwrap().class_level = 3;
+        assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Haste));
+    }
 }
 
 mod recent287 {

@@ -221,6 +221,7 @@ mod tests {
                 command: vec![],
                 commanders: vec![],
                 commander_casts: vec![],
+                revealable_conspiracies: vec![],
                 emblems: vec![],
                 eliminated: false,
                 loss_reason: None,
