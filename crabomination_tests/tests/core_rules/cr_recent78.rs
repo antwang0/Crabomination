@@ -104,3 +104,35 @@ fn cr_111_8_a_dead_token_cant_come_back() {
     );
     assert!(!g.battlefield.iter().any(|c| c.id == token), "CR 111.8 — it can't return");
 }
+
+/// CR 702.177a — the server view marks a spent exhaust ability, so the client
+/// greys the row out instead of offering an activation that must fail.
+#[test]
+fn cr_702_177a_view_marks_a_spent_exhaust_ability() {
+    let mut g = two_player_game();
+    g.step = TurnStep::PreCombatMain;
+    let sita = g.add_card_to_battlefield(0, catalog::sita_varma_masked_racer());
+    g.clear_sickness(sita);
+    let spent = |g: &GameState| {
+        crabomination::server::view::project(g, 0)
+            .battlefield
+            .iter()
+            .find(|p| p.id == sita)
+            .and_then(|p| p.abilities.first().map(|a| a.spent))
+            .expect("Sita's exhaust ability")
+    };
+    assert!(!spent(&g), "unused");
+    mana(&mut g, 0);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: sita,
+        ability_index: 0,
+        target: None,
+        additional_targets: vec![],
+        x_value: Some(1),
+        mode: None,
+    })
+    .expect("activate");
+    drain_stack(&mut g);
+    assert!(spent(&g), "the view reports the exhaust as used up");
+}

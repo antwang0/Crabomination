@@ -3,26 +3,29 @@
 Improvement opportunities for the engine, client, and tooling.
 Items are grouped by area and roughly ordered by impact within each group.
 
-## Undo: sealed-pool image priority (TEMPORARY)
+## Noticed this run (DFT closed to 4 / CR 400.7)
 
-Added 2026-08-05 for hand-playtesting a sealed deck; **revert when that
-testing is done.** The card-art prefetch walks thousands of catalog
-cards at Scryfall's rate limit, so the ~80 cards actually in the pool
-could otherwise sit behind an hour of unrelated downloads.
-
-To undo, delete both halves:
-
-- `scryfall::prioritize_pool_images` (and `CardImage::lookup_name`, if
-  nothing else has started using it) in
-  `crabomination_client/src/scryfall.rs`.
-- The call site in `crabomination_client/src/main.rs` — the block that
-  shadows `specs` and reorders it before spawning the prefetch thread.
-
-It only ever *reorders* the queue (stable partition, nothing dropped)
-and no-ops when `decks/sealed*.txt` are absent, so leaving it in is
-harmless — it is just the wrong shape long-term. The general fix, if
-this itch returns, is to prioritise by what the running match actually
-needs rather than by a checked-in file.
+- **The client can't be compiled in the cloud container.** `wayland-sys`'s
+  build script needs `wayland-client.pc`, which isn't installed, so
+  `cargo build -p crabomination_client` fails before touching our code. Engine,
+  catalog, server and tests all build; client edits ship unverified by the
+  compiler. Installing `libwayland-dev` (or turning off Bevy's wayland feature)
+  in the session-start hook would close this. ⏳
+- **`granted_abilities_for` now serves off-battlefield cards.** Instance grants
+  on a graveyard/hand/exile card are surfaced so Cursecloth Wrappings' embalm
+  activates. The *static*-granted lists (`GrantActivatedAbilityFromGraveyard`,
+  Necrotic Ooze) still early-return for those zones, which is correct today but
+  is the seam to widen if a card ever grants abilities into an opponent's
+  graveyard. ⏳
+- **Demonic Junker and Riptide Gearhulk are heads-up shaped.** "For each
+  player, destroy up to one target creature that player controls" is two
+  filtered `OptionalTargets` slots (yours, theirs). A three-player game gets
+  one slot per *side*, not per opponent — a per-opponent target multiplier is
+  the general fix. ⏳
+- **Skyseer's Chariot's tax also hits mana abilities.** That matches the
+  printed wording ("activated abilities of sources with the chosen name"), but
+  it is the only `ActivationTax`-family static that isn't gated on
+  `!is_mana_ability`; re-check if a later card wants the narrower scope. ⏳
 
 ## Noticed this run (Homelands closed / Conspiracy + CR 726)
 
@@ -101,19 +104,29 @@ needs rather than by a checked-in file.
   Cursed Recording (delayed "when you next cast an instant or sorcery, copy
   it"). ⏳
 
-## Aetherdrift (DFT) — 26 gaps, opened
+## Aetherdrift (DFT) — 4 gaps
 
-`set_gaps.py dft` is at 26 after Thunderous Velocipede (`decks::recent325`).
-The remainder are build-arounds, each blocked on one primitive: Ancient
-Vendetta (multi-zone named-card exile ×4), Rise from the Wreck (four
-differently-filtered optional graveyard slots), Wickerfolk Indomitable
-(graveyard cast with a life *and* sacrifice surcharge), Webstrike Elite
-(cycling with {X} plus an X-reading cycle trigger), Skyseer's Chariot
-(activated abilities of named sources cost more), Lifecraft Engine (Vehicle
-creatures gain the chosen type — the anthem half is `AnthemForChosenType`),
-Pit Automaton / Sita Varma (exhaust), Demonic Junker (per-player optional
-destroy slots), Push the Limit (return *all* matching graveyard cards to the
-battlefield), Cursecloth Wrappings (grant embalm at the card's own cost).
+`set_gaps.py dft` is at 4 after `decks::recent326` (22 cards). Each of the
+remainder is blocked on one primitive:
+
+- **Webstrike Elite** — a cycling trigger whose target filter reads the
+  cycling `{X}`. `Value::TriggerEventAmount` already carries it; what's
+  missing is a `SelectionRequirement::ManaValueExactlyTriggerAmount` and the
+  resolve pass for it on the trigger's target walk. ⏳
+- **Pit Automaton** — "when you next activate an exhaust ability that isn't a
+  mana ability this turn, copy it": a delayed watcher on
+  `EventKind::ExhaustAbilityActivated` that copies the ability on the stack. ⏳
+- **Mimeoplasm, Revered One** — as-enters exile of up to X graveyard creature
+  cards with the count feeding an enters-with-counters spec, plus "becomes a
+  copy of a card exiled with it, except 0/0 and keeps this ability". ⏳
+- **Gonti, Night Minister** — "exile the top card of that opponent's library
+  face down; they may play it, spending mana as though it were mana of any
+  type". Needs a face-down impulse-exile grant scoped to the *damaged*
+  opponent's library. ⏳
+
+Also open on The Aetherspark: "as long as it's attached to a creature, it
+can't be attacked" needs a planeswalker attack restriction the engine
+doesn't model.
 
 ## Recommender: two builder defects fixed, one lesson recorded
 

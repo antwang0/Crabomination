@@ -2560,6 +2560,32 @@ Each a small targeted feature; sweep batch by batch.
 
 ## Recently closed (this push)
 
+- **Aetherdrift down to 4** — `set_gaps.py dft` 26 → 4 (`decks::recent326`,
+  22 cards): the legends, the Vehicles, the exhaust/speed payoffs and both
+  planeswalkers. New primitives: `Keyword::{GraveyardCast (cast from your
+  graveyard for the printed cost plus the card's `flashback_additional_cost`
+  riders, with no CR 702.34d exile tail — Wickerfolk Indomitable),
+  CantAttackOrBlockUnlessCardsInExile}`, `Effect::{
+  ReturnAllMatchingFromGraveyardToBattlefield, GrantEmbalmThisTurn,
+  NameCardThenExileFromZones, AttachSourceTo,
+  WhenTargetDealsCombatDamageToPlayerThisTurn}`,
+  `StaticEffect::{NamedSourcesActivationTax, MatchingAreChosenTypeToo}`,
+  `SelectionRequirement::HasNoAbilities`,
+  `Predicate::CardsInExileAtLeast`, `DelayedKind::
+  SourceDealsCombatDamageToPlayerThisTurn`, and
+  `GameEvent`/`EventKind::CardExiledFromPlayOrGraveyard` (CR 400.7's origin
+  distinction, emitted from `move_card_to`'s battlefield and graveyard
+  branches — Ketramose). Correctness: CR 400.7 — a permanent that leaves the
+  battlefield is a new object, so `exhausted_abilities` (CR 702.177a) and
+  `once_per_turn_used` (CR 602.5f) now reset; instance-granted activated
+  abilities are surfaced for cards outside the battlefield; a
+  put-from-hand entrant is exposed on `Selector::LastMoved`. Server:
+  `AbilityView.spent` marks a used-up exhaust / at-cap ability so the client
+  greys the row. Client: the card-art prefetch reprioritises live around what
+  the app renders (`scryfall::card_asset_path` notes each request), replacing
+  the temporary sealed-pool file hack. Tests in `recent_b/dft_gaps`,
+  `core_rules/cr_recent78`.
+
 - **Arabian Nights and The Dark closed** — both at zero. New primitives:
   `Effect::PlaySubgame` + `game::subgame` (CR 729 — a bot-piloted nested game
   using each library as its deck, depth- and action-capped; Shahrazad),

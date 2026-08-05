@@ -1335,6 +1335,12 @@ pub struct AbilityView {
     /// out the button. Defaults to `false` for older clients.
     #[serde(default)]
     pub once_per_turn_used: bool,
+    /// CR 702.177a — this is an exhaust ability and it has already been
+    /// activated on this object, so it can never be activated again. Also set
+    /// once a `max_activations_per_turn` ability has hit its cap this turn.
+    /// Defaults to `false` for older clients.
+    #[serde(default)]
+    pub spent: bool,
     /// True if this ability carries an `ActivatedAbility.condition` gate
     /// (printed "Activate only if …" rider). Clients can show a hint
     /// icon next to the activator. The string is a short human-readable

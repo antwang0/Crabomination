@@ -73,10 +73,11 @@ pub fn spawn_ability_menu(
                 && ((a.opponents_only && viewer_controls)
                     || (!a.opponents_only && !viewer_controls)
                     || a.once_per_turn_used
+                    || a.spent
                     || a.gate_blocked);
             // "Activate only if …" — show the printed condition, and mark it
             // when the board doesn't satisfy it right now.
-            let suffix = if a.once_per_turn_used {
+            let suffix = if a.once_per_turn_used || a.spent {
                 " (used)".to_string()
             } else if a.gate_label.is_empty() {
                 String::new()

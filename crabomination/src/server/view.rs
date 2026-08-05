@@ -2122,6 +2122,10 @@ fn project_abilities_with_granted(
                 needs_target: cursor_needs_target(&a.effect),
                 is_mana: is_mana_ability(&a.effect),
                 once_per_turn_used: a.once_per_turn && card.once_per_turn_used.contains(&i),
+                spent: (a.exhaust && card.exhausted_abilities.contains(&i))
+                    || a.max_activations_per_turn.is_some_and(|cap| {
+                        card.once_per_turn_used.iter().filter(|u| **u == i).count() as u32 >= cap
+                    }),
                 gate_label,
                 gate_blocked,
                 opponents_only: a.opponents_only,
