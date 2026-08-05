@@ -2,12 +2,12 @@
 //! single engine primitive. Tests in `tests/recent_b/recent329.rs`.
 
 use crate::card::{
-    ActivatedAbility, ArtifactSubtype, CardDefinition, CardType, CreatureType, Keyword,
-    SelectionRequirement as R, Subtypes, Supertype, TriggeredAbility,
+    ActivatedAbility, AdditionalCastCost, ArtifactSubtype, CardDefinition, CardType, CounterType,
+    CreatureType, Keyword, SelectionRequirement as R, Subtypes, Supertype, TriggeredAbility,
 };
-use crate::effect::shortcut::eerie;
+use crate::effect::shortcut::{eerie, etb, on_attack};
 use crate::effect::{Effect, EventKind, EventScope, EventSpec, PlayerRef, Predicate, Selector, Value};
-use crate::mana::{cost, b, generic, r, u, w};
+use crate::mana::{cost, b, generic, r, u, w, x};
 
 fn legend(
     name: &'static str,
@@ -133,5 +133,74 @@ pub fn eriette_the_beguiler() -> CardDefinition {
             4,
             4,
         )
+    }
+}
+
+/// Rottenmouth Viper — {5}{B} 6/6. Sacrificing on the way down makes it cheap;
+/// each blight counter then squeezes every opponent.
+pub fn rottenmouth_viper() -> CardDefinition {
+    let squeeze = Effect::EachPlayerDoes {
+        who: PlayerRef::EachOpponent,
+        body: Box::new(Effect::MaySacrifice {
+            description: "Sacrifice a nonland permanent to Rottenmouth Viper?".into(),
+            filter: R::Nonland.and(R::ControlledByYou),
+            count: Value::ONE,
+            then: Box::new(Effect::Noop),
+            else_: Some(Box::new(Effect::MayDiscard {
+                description: "Discard a card instead?".into(),
+                count: Value::ONE,
+                then: Box::new(Effect::Noop),
+                else_: Some(Box::new(Effect::LoseLife {
+                    who: Selector::You,
+                    amount: Value::Const(4),
+                })),
+            })),
+        }),
+    };
+    let body = || {
+        Effect::Seq(vec![
+            Effect::AddCounter {
+                what: Selector::This,
+                kind: CounterType::Blight,
+                amount: Value::ONE,
+            },
+            Effect::Repeat {
+                count: Value::CountersOn {
+                    what: Box::new(Selector::This),
+                    kind: CounterType::Blight,
+                },
+                body: Box::new(squeeze.clone()),
+            },
+        ])
+    };
+    CardDefinition {
+        name: "Rottenmouth Viper",
+        cost: cost(&[generic(5), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elemental, CreatureType::Snake],
+            ..Default::default()
+        },
+        power: 6,
+        toughness: 6,
+        additional_cast_cost: vec![AdditionalCastCost::SacrificeAnyNumber { filter: R::Nonland }],
+        self_cost_reduction_per_sacrificed: true,
+        triggered_abilities: vec![etb(body()), on_attack(body())],
+        ..Default::default()
+    }
+}
+
+/// Portent of Calamity — {X}{U} sorcery. Reveal X, keep one card of each type,
+/// and cast one for free if you kept four.
+pub fn portent_of_calamity() -> CardDefinition {
+    CardDefinition {
+        name: "Portent of Calamity",
+        cost: cost(&[x(), u()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::RevealTopExileOnePerCardType {
+            count: Value::XFromCost,
+            free_cast_at: 4,
+        },
+        ..Default::default()
     }
 }

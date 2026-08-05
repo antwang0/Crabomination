@@ -7232,6 +7232,8 @@ static DECKS: &[Factory] = &[
     super::decks::alania_divergent_storm,
     super::decks::heirloom_epic,
     super::decks::eriette_the_beguiler,
+    super::decks::rottenmouth_viper,
+    super::decks::portent_of_calamity,
     super::decks::endless_cockroaches,
     super::decks::poison_tip_archer,
     super::decks::altar_of_dementia,

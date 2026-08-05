@@ -6518,7 +6518,12 @@ impl GameState {
         // Apply static cost-reduction effects (Killian's "spells that target
         // a creature cost {2} less"). Tax is applied first so reductions
         // never make the spell free of its tax.
-        let reduction = cost_reduction_for_spell(self, p, &card, target.as_ref());
+        let mut reduction = cost_reduction_for_spell(self, p, &card, target.as_ref());
+        // "…costs {1} less for each permanent sacrificed this way" — the
+        // announced sacrifice count rides the cast's X (Rottenmouth Viper).
+        if card.definition.self_cost_reduction_per_sacrificed {
+            reduction = reduction.saturating_add(x_value.unwrap_or(0));
+        }
         if reduction > 0 {
             cost.reduce_generic(reduction);
         }

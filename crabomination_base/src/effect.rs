@@ -3022,6 +3022,11 @@ pub enum Effect {
     ForEach { selector: Selector, body: Box<Effect> },
     /// Execute `body` `count` times.
     Repeat { count: Value, body: Box<Effect> },
+    /// Run `body` once per player `who` resolves to, each time with that player
+    /// as the effect's controller, in APNAP order (CR 101.4). The general form
+    /// of the "each opponent does X of their choice" clauses (Rottenmouth
+    /// Viper's pay-or-sacrifice-or-discard).
+    EachPlayerDoes { who: PlayerRef, body: Box<Effect> },
     /// CR 705 — flip a coin `count` times. For each flip, asks the
     /// controller's decider for `Decision::CoinFlip` (heads = true,
     /// tails = false), then runs `on_heads` or `on_tails`. Used by
@@ -4574,6 +4579,13 @@ pub enum Effect {
     /// of your library; put every card of the chosen type into your hand and
     /// the rest into your graveyard.
     ChooseTypeRevealTopPartition { count: Value },
+    /// "Reveal the top `count` cards of your library. For each card type, you
+    /// may exile a card of that type from among them. Put the rest into your
+    /// graveyard. You may cast a spell from among the exiled cards without
+    /// paying its mana cost if you exiled `free_cast_at` or more cards this
+    /// way. Then put the rest of the exiled cards into your hand."
+    /// (Portent of Calamity.) Each exiled card is exiled *for* one card type.
+    RevealTopExileOnePerCardType { count: Value, free_cast_at: u32 },
     /// Fertile Imagination: choose a card type; target opponent reveals their
     /// hand; create `per` 1/1 green Saproling tokens for each card of the
     /// chosen type revealed this way.

@@ -3189,6 +3189,11 @@ pub struct CardDefinition {
     /// `Player.cards_drawn_this_turn`. Defaults to `false`.
     #[serde(default)]
     pub self_cost_reduction_per_cards_drawn: bool,
+    /// "This spell costs {1} less to cast for each permanent sacrificed this
+    /// way" — the companion clause of a `SacrificeAnyNumber` additional cost
+    /// (Rottenmouth Viper). Generic-only, clamped by the caller.
+    #[serde(default)]
+    pub self_cost_reduction_per_sacrificed: bool,
     /// "This spell costs `{amount}` less to cast if you've cast another spell
     /// this turn" (Rally the Monastery). Generic-only, clamped by the caller.
     /// Reads `Player.spells_cast_this_turn`, which does not yet count the

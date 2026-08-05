@@ -1,9 +1,9 @@
 //! The one-primitive backlog batch (`decks::recent329`).
 
-use crabomination::card::CardType;
+use crabomination::card::{CardType, CounterType};
 use crabomination::catalog;
 use crabomination::decision::{DecisionAnswer, ScriptedDecider};
-use crabomination::game::types::{GameAction, TurnStep};
+use crabomination::game::types::{Attack, AttackTarget, GameAction, TurnStep};
 use crabomination::game::*;
 use crabomination::mana::Color;
 
@@ -207,3 +207,81 @@ fn eriette_ignores_a_host_above_the_auras_mana_value() {
     assert_eq!(g.battlefield_find(victim).unwrap().controller, 1, "too expensive to steal");
 }
 
+
+/// Sacrificing to Rottenmouth Viper's additional cost discounts it {1} apiece.
+#[test]
+fn rottenmouth_viper_costs_less_per_sacrifice() {
+    let mut g = main_phase();
+    let viper = g.add_card_to_hand(0, catalog::rottenmouth_viper());
+    for _ in 0..3 {
+        g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    }
+    // {5}{B} minus three sacrifices = {2}{B}.
+    for c in [Color::Black] {
+        g.players[0].mana_pool.add(c, 1);
+    }
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: viper,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: Some(3),
+    })
+    .expect("cast at the discounted price");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(viper).is_some(), "the Viper resolved");
+    assert_eq!(
+        g.battlefield.iter().filter(|c| c.definition.name == "Grizzly Bears").count(),
+        0,
+        "all three were sacrificed"
+    );
+}
+
+/// Each blight counter squeezes the opponent once; with no permanents and no
+/// hand they pay the life.
+#[test]
+fn rottenmouth_viper_squeezes_once_per_blight_counter() {
+    let mut g = main_phase();
+    let viper = g.add_card_to_battlefield(0, catalog::rottenmouth_viper());
+    g.battlefield_find_mut(viper).unwrap().summoning_sick = false;
+    g.battlefield_find_mut(viper).unwrap().add_counters(CounterType::Blight, 1);
+    g.players[1].hand.clear();
+    g.players[1].life = 20;
+    // The attack trigger adds a second counter, so two squeezes land.
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: viper,
+        target: AttackTarget::Player(1),
+    }]))
+    .expect("attack");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, 12, "two blight counters, 4 life each");
+}
+
+/// Portent of Calamity exiles at most one card per card type and hands the
+/// rest back.
+#[test]
+fn portent_of_calamity_exiles_one_per_card_type() {
+    let mut g = main_phase();
+    let portent = g.add_card_to_hand(0, catalog::portent_of_calamity());
+    // Two creatures, an instant and a land on top.
+    g.add_card_to_library(0, catalog::forest());
+    g.add_card_to_library(0, catalog::lightning_bolt());
+    g.add_card_to_library(0, catalog::grizzly_bears());
+    g.add_card_to_library(0, catalog::colossal_dreadmaw());
+    flood_mana(&mut g, 0);
+    g.perform_action(GameAction::CastSpell {
+        card_id: portent,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: Some(4),
+    })
+    .expect("cast");
+    drain_stack(&mut g);
+    // Creature + instant + land = three types, so one Bears-or-Dreadmaw goes
+    // to the graveyard.
+    assert_eq!(g.players[0].graveyard.iter().filter(|c| c.definition.is_creature()).count(), 1);
+    assert_eq!(g.players[0].hand.len(), 3, "the exiled cards end up in hand");
+}

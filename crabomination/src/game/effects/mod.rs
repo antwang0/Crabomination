@@ -3126,6 +3126,14 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::EachPlayerDoes { who, body } => {
+                for p in self.apnap_sort(self.resolve_players(who, ctx)) {
+                    let sub = EffectContext { controller: p, ..ctx.clone() };
+                    self.run_effect(body, &sub, events)?;
+                }
+                Ok(())
+            }
+
             Effect::Repeat { count, body } => {
                 let n = self.evaluate_value(count, ctx).max(0);
                 for _ in 0..n {
@@ -21135,6 +21143,130 @@ impl GameState {
                     )
                     .map(|mut evs| events.append(&mut evs))
                     .ok();
+                }
+                Ok(())
+            }
+
+            Effect::RevealTopExileOnePerCardType { count, free_cast_at } => {
+                let p = ctx.controller;
+                let n = self.evaluate_value(count, ctx).max(0) as usize;
+                let revealed: Vec<CardId> =
+                    self.players[p].library.iter().take(n).map(|c| c.id).collect();
+                if revealed.is_empty() {
+                    return Ok(());
+                }
+                let types_of = |st: &Self, id: CardId| -> Vec<crate::card::CardType> {
+                    st.players[p]
+                        .library
+                        .iter()
+                        .find(|c| c.id == id)
+                        .map(|c| c.definition.card_types.clone())
+                        .unwrap_or_default()
+                };
+                let distinct: usize = {
+                    let mut seen: Vec<crate::card::CardType> = Vec::new();
+                    for id in &revealed {
+                        for t in types_of(self, *id) {
+                            if !seen.contains(&t) {
+                                seen.push(t);
+                            }
+                        }
+                    }
+                    seen.len()
+                };
+                // One prompt for the whole partition; the per-type cap is
+                // enforced below by claiming a fresh type for each pick.
+                let picks: Vec<CardId> = if self.players[p].wants_ui {
+                    let candidates: Vec<(CardId, String)> = revealed
+                        .iter()
+                        .filter_map(|id| {
+                            self.players[p]
+                                .library
+                                .iter()
+                                .find(|c| c.id == *id)
+                                .map(|c| (*id, c.definition.name.to_string()))
+                        })
+                        .collect();
+                    match self.ask_seat_cards(
+                        p,
+                        "Exile one revealed card per card type".to_string(),
+                        ctx.source.unwrap_or(CardId(0)),
+                        candidates,
+                        0,
+                        distinct as u32,
+                        effect,
+                    ) {
+                        Some(v) => v,
+                        None => return Ok(()),
+                    }
+                } else {
+                    let mut ranked = revealed.clone();
+                    ranked.sort_by_key(|id| {
+                        std::cmp::Reverse(
+                            self.players[p]
+                                .library
+                                .iter()
+                                .find(|c| c.id == *id)
+                                .map(|c| c.definition.cost.cmc())
+                                .unwrap_or(0),
+                        )
+                    });
+                    ranked
+                };
+                let mut claimed: Vec<crate::card::CardType> = Vec::new();
+                let mut exiled: Vec<CardId> = Vec::new();
+                for id in picks {
+                    if !revealed.contains(&id) || exiled.contains(&id) {
+                        continue;
+                    }
+                    if let Some(t) = types_of(self, id).into_iter().find(|t| !claimed.contains(t)) {
+                        claimed.push(t);
+                        exiled.push(id);
+                    }
+                }
+                for id in revealed.iter().copied().filter(|id| !exiled.contains(id)) {
+                    if let Some(card) = Self::take_card(&mut self.players[p].library, id) {
+                        self.route_to_graveyard(card, events);
+                    }
+                }
+                for id in &exiled {
+                    self.move_card_to(*id, &crate::effect::ZoneDest::Exile, ctx, events);
+                }
+                if exiled.len() >= *free_cast_at as usize
+                    && let Some(pick) = exiled
+                        .iter()
+                        .copied()
+                        .filter(|id| {
+                            self.exile
+                                .iter()
+                                .any(|c| c.id == *id && !c.definition.is_land())
+                        })
+                        .max_by_key(|id| {
+                            self.exile
+                                .iter()
+                                .find(|c| c.id == *id)
+                                .map(|c| c.definition.cost.cmc())
+                                .unwrap_or(0)
+                        })
+                {
+                    self.run_effect(
+                        &Effect::CastWithoutPayingImmediate {
+                            what: Selector::Target(0),
+                            source_zone: crate::card::Zone::Exile,
+                            exile_after: false,
+                            copy: false,
+                            reduce_generic: 0,
+                        },
+                        &EffectContext { targets: vec![Target::Permanent(pick)], ..ctx.clone() },
+                        events,
+                    )?;
+                }
+                for id in exiled {
+                    if self.exile.iter().any(|c| c.id == id)
+                        && let Some(card) = Self::take_card(&mut self.exile, id)
+                    {
+                        self.players[p].hand.push(card);
+                    }
                 }
                 Ok(())
             }

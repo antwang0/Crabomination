@@ -537,7 +537,9 @@ impl Effect {
             Effect::NameCardThenExileFromZones { who, .. } => player_has_target(who),
             Effect::ReturnGraveyardCardsToHand { .. }
             | Effect::PutGraveyardCardOntoBattlefield { .. }
+            | Effect::RevealTopExileOnePerCardType { .. }
             | Effect::GainControlWhileTriggerAuraAttached => false,
+            Effect::EachPlayerDoes { body, .. } => body.requires_target(),
             // Resolution-time ChooseCards by the affected player; untargeted.
             // A `who: PlayerRef::Target(n)` makes the affected player a
             // real cast-time target (Quandrix Command mode 3).
