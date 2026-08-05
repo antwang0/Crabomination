@@ -2367,6 +2367,35 @@ Each a small targeted feature; sweep batch by batch.
   walker cashes out: when enemy board power covers its loyalty, the
   ability pick keeps only loyalty-spending finalists, so the bot takes
   the removal/ultimate now rather than plussing into a free kill.
+- 🟡 **Per-card attribution is now within-archetype**
+  (`CardAttribution::stratified_delta`). The raw in-minus-out delta is a
+  *cross-archetype marginal*, not a card grade: a black card is played by
+  the black builds and benched by every white, blue and red one, so its
+  "out" group is a different deck rather than the same deck without it.
+  That is what made Professor Dellian Fel read −2.4. Attribution is now
+  pooled across colour-identity strata by inverse variance, and a card no
+  stratum both plays and benches reports **no** within-archetype number
+  rather than passing the marginal off as one. `recommend_pool` prints
+  `within` first and labels `raw` as the confound.
+- 🟡 **Value-net rework** — three changes, none yet gate-measured:
+  bootstrapped **λ-returns** (`SampleWindow::relabel_lambda`, shard v3
+  carries trajectory + ply; λ = 1 reproduces the historical Monte Carlo
+  target exactly, so every prior gate round stays reachable), because
+  labelling a turn-2 state with the winner of a twenty-turn game is
+  mostly labelling noise; **opening-move exploration** in
+  `play_recorded_game`, because both seats played the same deterministic
+  policy and the net only ever saw the band of positions that policy
+  reaches; and `--calibrate`, which scores the net and `eval_material` as
+  *predictors* (log-loss / Brier / AUC, plus an output histogram) on
+  identical positions. Four gate rounds answered "is the net-piloted bot
+  stronger" expensively without ever answering "does the net know more
+  than the heuristic does" — and those have different fixes. A saturated
+  sigmoid would make a better predictor into a worse player by handing
+  the search a flat landscape, which the histogram is there to catch.
+- 🟡 **Build net has a consumer** (`selfplay_train --use-deck-best`). The
+  deck net cleared the house bar twice (61.7 %, 60.7 %) and nothing read
+  the result back: every training game was still played with heuristic
+  builds. Actors can now judge best-of-32 candidates with it.
 - 🟡 **Sealed builder repaired** (`SimConfig::builder_v2`, the previous
   builder kept as the control) — three defects found together while
   investigating why a pool's bomb never appeared in a build: the card
@@ -2381,6 +2410,60 @@ Each a small targeted feature; sweep batch by batch.
   [54.1, 59.7] and 58.5 % [55.7, 61.3] on independent seeds over 1 200
   head-to-head games each vs the builder it replaces, same pools and
   pilots (`selfplay_train --gate-builder-v2`).
+- 🟢 **Paired ladder sampling** (`bot_ladder --paired`, the default;
+  `--unpaired` is the control). Each shuffle is played twice with the
+  seats swapped, so deal luck *cancels within the pair* instead of being
+  averaged away across thousands of games. Under a true null 2 032 of
+  2 400 sealed pairs split — a direct measurement that only ~13 % of this
+  ladder's games were ever decided by anything a profile could influence.
+  Realized within-pair correlation −0.63 … −0.74, so 14 400 paired games
+  carry the precision of ~35 000–40 000 unpaired ones; the efficiency is
+  measured and printed, not assumed. Also seeds the bot's tie-break
+  jitter (`bot::set_jitter_seed`) — `--seed` never made a run
+  reproducible before, and under a null that jitter was the only thing
+  that could break a pair (rho −0.694 → −0.735). The residual is
+  engine-level randomness inside card effects.
+
+  Re-measured at ~4× resolution against the current default, 14 400
+  games each (seed 43): `landseq2` 50.4 % [49.9, 50.9], `mull2` 49.8 %
+  [49.3, 50.3], `look1` 50.4 % [49.9, 50.9] — three nulls **confirmed**
+  rather than overturned, which is the useful outcome: those rejections
+  were correct, not underpowered. `race2` 49.3 % [48.8, 49.9] is the one
+  reversal, mildly *harmful* where the unpaired run read 50.2 %.
+  `look2` (two plies of sequence lookahead) 50.6 % [50.1, 51.1] clears
+  50 % on one seed; the replication was interrupted and is outstanding.
+- 🟡 **Castability-aware mana payment** (`Player::smart_tap` /
+  `GameState::source_redundancy`, `EvalWeights::legacy_tap` as the
+  control) — auto-tap paid generic pips by activation-cost rank with
+  *battlefield order* as the tiebreak, so casting `{2}{B}` off 8 Swamp /
+  6 Forest / 3 Island would tap an Island and strand the blue cards the
+  splash exists to cast. Generic pips now spend the most replaceable
+  source (a Swamp with 7 backups before an Island with 2) and coloured
+  pips the narrowest one (a basic before a dual). It never changes
+  whether the *current* cost can be paid, only which of several
+  interchangeable sources pays it. **50.9 % [50.4, 51.4]** over 14 400
+  sealed games vs `legacytap`; wants a second seed before adoption.
+
+  Note the flag exists purely for measurement: the behaviour lives in
+  the engine, so without a per-player switch both seats of a mirror
+  would get it and the ladder would be structurally unable to show
+  anything — the same blindness as the point below.
+- 🟡 **Determinized combat search** (`EvalWeights::determinize`,
+  `det1`/`det3`) — `simulate_attack_outcome` and `simulate_block_outcome`
+  clone the true `GameState`, so the rollout opponent casts the cards
+  they are actually holding and both seats draw the real top of library.
+  The bot has been searching with perfect information. Redealing the
+  hidden zones first costs **48.9 % [48.4, 49.4]** at one redeal and
+  **49.4 % [48.9, 49.9]** averaged over three.
+
+  Read that as the price of honesty, not a verdict on the idea. Both
+  arms are mirror bots and the *control cheats*; taking information away
+  from one side and not the other is expected to cost win rate. The
+  mirror ladder cannot measure this fairly — it never could, which is
+  why nothing before now had caught it. Against a human in the client
+  the cheating is indefensible whatever the number says, so the open
+  question is which default the client ships, not whether the search
+  should be able to read a hand.
 - 🟡 **Land-drop sequencing** (`landseq` / `EvalWeights::land_urgency`) —
   missing colors weighted by how cheap the cards demanding them are, and
   a per-land check for whether *that* land turns on a cast this turn (so
