@@ -3,26 +3,40 @@
 Improvement opportunities for the engine, client, and tooling.
 Items are grouped by area and roughly ordered by impact within each group.
 
+## Noticed this run (one-primitive backlog; BLB/DSK/OTJ closed)
+
+- **`Effect::RevealTopExileOnePerCardType` asks once, not per type.** Portent
+  of Calamity's "for each card type, you may exile a card of that type" is one
+  `ChooseCards` prompt capped at the distinct-type count, with the per-type cap
+  enforced by claiming a fresh type per pick. The printed wording is a sequence
+  of per-type choices; a card that cares about the difference would need the
+  cursor-driven multi-ask. ⏳
+- **Its free cast auto-picks the priciest exiled nonland.** "You may cast a
+  spell from among the exiled cards" isn't offered as a choice of which. ⏳
+- **`Effect::EachPlayerDoes` bodies fall to `AutoDecider` for opponents.**
+  Rottenmouth Viper's "unless that player sacrifices … or discards" therefore
+  reads as "the opponent always pays the 4 life" for non-UI seats — the
+  conservative default, but not a real evaluation. ⏳
+- **`PlayExiledWithSourceForLife` covers casts, not land plays.** Valgavoth's
+  "you may play cards exiled with this" shares the engine-wide may-play land
+  gap; an exiled land in his pile can't be played. ⏳
+- **Nothing offers Valgavoth's exile plays to a bot.** The affordance and bot
+  candidate generators don't walk `exiled_with` grants, so only a UI seat (via
+  the new `ExileCardView.play_for_life` badge) can use the pile. ⏳
+- **`Predicate::CastSpellFirstMatchingThisTurn` resolves cast ids through
+  `find_card_anywhere`.** A cast card that has ceased to exist (a copy) simply
+  doesn't count, which is right today but would need a stored snapshot if a
+  card ever asks about copies. ⏳
+
 ## Noticed this run (DSK/BLB gap wave — Rooms, legends, Ral)
 
-- **Convoke doesn't reach activated abilities.** Heirloom Epic ("for each mana
-  in this ability's activation cost, you may tap an untapped creature you
-  control rather than pay that mana") is convoke on an ability;
-  `GameAction::ActivateAbility` carries no convoke list, so the card is left
-  out. Needs an `ActivatedAbility.convoke` flag plus a tapped-creature list on
-  the action (and its wire form). ⏳
-- **Cards still open in BLB/DSK, one primitive each.** Alania (per-type
-  "first instant / first sorcery / first Otter spell this turn" counters),
-  Osteomancer Adept (forage as a graveyard-cast additional cost),
-  Portent of Calamity (reveal X, exile one card *per card type*),
-  Rottenmouth Viper (sacrifice-any-number additional cost with a per-permanent
-  reduction), Wishing Well (a reflexive counter-gated free graveyard cast),
-  Kaito Bane of Nightmares (ninjutsu on a planeswalker + a during-your-turn
-  creature-animation static), Niko Light of Hope (Shards become copies until
-  the next end step), Rip Spawn Hunter (reveal X, take any number with
-  *different powers*), The Tale of Tamiyo (exile any number, copy them, cast
-  the copies), Valgavoth (an opponent-graveyard exile lock plus play-from-exile
-  for life), Victor (an "Nth time this ability resolved this turn" trigger). ⏳
+- **Convoke reaches activated abilities** — `ActivatedAbility.convoke` rides
+  the waterbend helper slot on `GameAction::ActivateAbilityWaterbend`, and a
+  helper pays a coloured pip of its own colour (CR 702.51b) or generic
+  (Heirloom Epic). ✅ Residual: the helper→pip assignment is greedy rather than
+  a real player choice; no printed card can tell the difference today. ⏳
+- **BLB / DSK / OTJ are closed** (`set_gaps.py blb dsk otj` is empty). The
+  thirteen one-primitive cards all shipped in `decks::recent329`. ✅
 - **`Effect::LockOrUnlockRoomDoor` picks for the controller.** Marina Vendrell's
   "lock or unlock" opens a locked door when there is one and otherwise re-locks
   the right door; a `wants_ui` seat should be asked which. ⏳
@@ -53,13 +67,9 @@ Items are grouped by area and roughly ordered by impact within each group.
 
 ## Noticed this run (TDM + OTJ closed, BLB/DSK batch)
 
-- **The Aura's identity isn't reachable from an attach trigger.**
-  `EventKind::AuraAttached` binds the *host* as the subject and hardcodes
-  "a creature you control" as the host gate, so Eriette, the Beguiler
-  ("whenever an Aura you control becomes attached to a nonland permanent an
-  opponent controls with mana value ≤ that Aura's") can't be written — it needs
-  both the Aura and the host in the trigger's context. Left out of the OTJ
-  batch for that reason. ⏳
+- **The Aura's identity is reachable from an attach trigger** —
+  `EventKind::AuraAttachedToAny` binds the *Aura* as the subject with no host
+  gate, so a body can read both objects (Eriette, the Beguiler). ✅
 - **Cards deferred from the BLB/DSK sweep.** Vren, Ygra, Marvin, The
   Mindskinner and Eluge shipped in the DSK/BLB gap wave; Portent of Calamity,
   Wishing Well and Dragonhawk are still open (see that run's section above). ⏳
@@ -5777,7 +5787,9 @@ recover from `git log -p -- TODO.md`. A few rows carry a residual ⏳ gap inline
   Daya, Mystic Forge). Remaining: the mid-cast "new top stays hidden until
   the spell finishes" timing nuance (401.5 second sentence); multi-card
   same-position picker (401.4). (401.7 `LibraryPosition::FromTop` ✅.)
-- 🟡 **CR 706 — Rolling a Die** — ignore-roll riders. Stored rolls (706.8) ✅
+- 🟡 **CR 706 — Rolling a Die** — ignore-roll riders (the roll-extra-and-
+  ignore-lowest replacement now also covers `Effect::RollAndStoreDice`, CR
+  706.2 — `cr_recent82::cr_706_2_*`). Stored rolls (706.8) ✅
   (`CardInstance.stored_die_results`, `Effect::{RollAndStoreDice,
   RerollStoredResults}`, `Value::GreatestSameStoredResult` — Centaur of
   Attention; `cr_706_8_*`). Roll trigger (706.6) ✅ — `EventKind::RolledDice`/`GameEvent::DiceRolled { player, count, high }` fires once per roll instruction ("whenever you roll one or more dice"). Result-referencing effects ✅ via `Value::LastDieRoll` (706.4 — Ancient Copper Dragon). **Result-gated triggers ✅** — `Predicate::DieResultAtLeast(n)` filters a roll trigger on the roll's greatest result (Ground Pounder's "roll a 5+ → trample"), reading `DiceRolled.high` through `event_amount`. (modifier / reroll-at-most / doubles ✅.) Remaining ⏳: ignore/reroll-replacement riders; the CR 706.8b reroll is auto-chosen (keep the most common face, reroll the rest) rather than prompting per result.

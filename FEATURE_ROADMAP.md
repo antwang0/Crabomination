@@ -2534,17 +2534,8 @@ Each a small targeted feature; sweep batch by batch.
 
 ## Suggested sequencing
 
-0. **Next set to close.** Bloomburrow and Duskmourn are both down to 6, and
-   Outlaws of Thunder Junction to 1 — Eriette, the Beguiler, blocked on an
-   attach trigger that can reach both the Aura and its host (see TODO.md).
-   The remaining BLB/DSK cards each need one primitive: convoke on an
-   activated ability (Heirloom Epic), forage as a graveyard-cast cost
-   (Osteomancer Adept), a sacrifice-any-number additional cost (Rottenmouth
-   Viper), a reflexive counter-gated graveyard cast (Wishing Well), per-type
-   first-spell tracking (Alania), a per-card-type exile partition (Portent of
-   Calamity), a planeswalker with ninjutsu (Kaito), an Nth-resolution-this-turn
-   trigger (Victor), "copy them, you may cast the copies" (The Tale of Tamiyo),
-   a Shard-copy blink (Niko) and an opponent-graveyard exile lock (Valgavoth). The Odyssey
+0. **Next set to close.** Bloomburrow, Duskmourn and Outlaws of Thunder
+   Junction are all closed (`set_gaps.py blb dsk otj` is empty). The Odyssey
    block, the Onslaught block (**ONS**,
    **LGN**, **SCG**), the Mirrodin block (**MRD**, **DST**, **5DN**), the
    Kamigawa block, **Mirrodin Besieged**, **New Phyrexia** (the Scars block
@@ -2571,194 +2562,21 @@ Each a small targeted feature; sweep batch by batch.
 
 ## Recently closed (this push)
 
-- **Duskmourn down to 6, Bloomburrow to 6** — `set_gaps.py dsk blb` 21 + 10 →
-  6 + 6 (`decks::{dsk_rooms, dsk2, blb3}`, 19 cards): the whole remaining Room
-  cycle, the DSK legends and enchantment build-arounds, plus Ral, Eluge, Vren
-  and Ygra. New primitives: `Predicate::DistinctUnlockedDoorNamesAtLeast`,
-  `Value::{UnlockedDoorsControlled, CreaturesExiledFromControlThisTurn}`,
-  `SelectionRequirement::NameNotSharedWithYourPermanents`,
-  `SpendRestriction::RoomSpellsOrDoors` (+ `SpellKind.room_or_door`, honored by
-  the door-unlock payment), `Effect::LockOrUnlockRoomDoor`, an `otherwise` arm
-  on `Effect::MillThenToHandN`, and `StaticEffect::{
-  DoubleControllerPermanentTriggers, FreeExileCastOncePerTurn,
-  SetBasePtForFilterFromValue, HasActivatedAbilitiesOfOtherNamedControlledCreatures,
-  YourDamageToOpponentsBecomesMill, DoubleYourNoncombatDamageWhile,
-  CostReductionFirstInstantOrSorceryPerValue}`.
-  **Rules fixes this push.** CR 603.2 — "whenever you attack" triggers now read
-  their `EventSpec` filter at fire time and honor the attack/permanent trigger
-  doublers (the `YouAttack` path dropped both). CR 603.4 — a self-source ETB
-  trigger's intervening 'if' is evaluated against the entering permanent's cast
-  flags; it was silently ignored for all 35 such cards. CR 613.4 — counter-keyed
-  requirements resolve off the card instance, so a layer-7a land-count CDA sees
-  layer-4 grants (Eluge). Tests in `recent_b/{dsk_rooms, dsk2, blb3}` and
-  `core_rules/cr_recent81`.
+- **BLB / DSK / OTJ closed** — the thirteen one-primitive cards ship in
+  `decks::recent329` (tests `recent_b/recent329`): Victor, Alania, Heirloom
+  Epic, Eriette, Rottenmouth Viper, Portent of Calamity, Niko, Wishing Well,
+  Valgavoth, Osteomancer Adept, The Tale of Tamiyo, Kaito (Rip shipped
+  earlier). New primitives: source-keyed `Effect::NthResolutionThisTurn`,
+  `Effect::{PutGraveyardCardOntoBattlefield, EachPlayerDoes,
+  RevealTopExileOnePerCardType, GrantForageGraveyardCreatureCastsThisTurn,
+  GainControlWhileTriggerAuraAttached, MillTwoRepeatSharing}`,
+  `Predicate::{CastSpellFirstMatchingThisTurn, AuraHostIsCheaperOpponentPermanent}`,
+  `EventKind::AuraAttachedToAny`, `StaticEffect::PlayExiledWithSourceForLife`,
+  `ActivatedAbility.convoke`, `CardDefinition.self_cost_reduction_per_sacrificed`,
+  `CastWithoutPayingImmediate.pay_own_cost`, `SelfIsCreatureIf.creature_types`,
+  `Value::OpponentsWhoLostLifeThisTurn`, `TempControl.while_source_attached`,
+  and `ExileCardsBoundForGraveyard.stamp_source`.
+  CR conformance for 611.2c / 702.51b / 706.2 / 603 in `core_rules/cr_recent82`.
 
-- **Aetherdrift is closed** — `set_gaps.py dft` 2 → 0. Gonti, Night Minister
-  (`Effect::ExileTopFaceDownGrantPlay` — the library owner and the may-play
-  grantee are different seats; `Predicate::{PlayerIsOpponent,
-  CastSpellNotOwnedByCaster}`) and Mimeoplasm, Revered One
-  (`Effect::{AsEntersExileFromYourGraveyard, BecomeCopyOfExiledCard}`). The
-  Aetherspark's "can't be attacked while attached" ships as
-  `Keyword::CantBeAttacked`, enforced at the planeswalker/battle attack-target
-  gate and honored by the bot's redirect picker.
-
-- **Bloomburrow's Season cycle** — `Effect::ChooseModesByPoints` ("choose up
-  to five {P} worth of modes; you may choose the same mode more than once")
-  rides Spree's cast plumbing with a point-total check instead of a mode
-  count. All five Seasons plus Helga, Wick, The Infamous Cruelclaw, Muerra,
-  Dragonhawk, Kotis and Artist's Talent ship in `decks::recent328`.
-
-- **The one-primitive card backlog** (`decks::recent327`) — Cursed Recording,
-  Leyline of Resonance, Leyline of Transformation, Hedge Shredder and Undead
-  Sprinter, each unblocked by a small primitive:
-  `Predicate::{CastSpellTargetsOnlyOneMatching, CreatureDiedThisTurnMatching}`,
-  `StaticEffect::OwnedCardsOffBattlefieldAreChosenTypeToo`, and
-  `flashback_condition` gating every graveyard-cast flavor rather than only
-  printed flashback.
-
-- **Rules fixes this push.** CR 118/305 — a `may_play_until` grant now covers
-  *playing* an exiled land, not just casting spells (`may_play_grant_for`; the
-  bot spends impulse lands before they expire). CR 614 — `as_enters_effect`
-  resolves before the enters-with-counters specs. CR 716.2 — a Class's
-  level-gated statics reach the cost-reduction scan. CR 603.7e —
-  `DelayedTrigger.expires_after_turn` gives any delayed watcher an "until the
-  end of your next turn" window. Tests in `core_rules/cr_recent79`.
-- **Tarkir: Dragonstorm and Outlaws of Thunder Junction closed** —
-  `set_gaps.py tdm otj` 6 + 9 → 0 (`decks::tdm2`, `decks::otj2`, minus Eriette;
-  see TODO.md), plus a Bloomburrow/Duskmourn batch (`decks::blb2`, 6 cards; Kotis, Muerra and Wick landed in the parallel
-  `recent328` batch).
-  New primitives: `Effect::{SearchAnyNumber, CounterOnMatchingOfEachColor,
-  ExileTopAndMayCastUpToMv, PreventNextDamageToYouFromChosenSourceWithRider,
-  YourNoncombatDamageBonusThisTurn, PlotSpellOnResolve,
-  MayCastPermanentFromHandFree, PutLandsFromHandOntoBattlefieldTapped}`,
-  `Value::{OpponentCount, ModesChosenOf}`,
-  `Selector::CreaturesThatSaddledSource`,
-  `SelectionRequirement::SaddledSourceThisTurn`,
-  `Duration::WhileSourceAttached` (swept for temporary copies *and* continuous
-  effects), `Predicate::SamePlayer`, `PlayerStaticTarget::EnchantedPlayer`,
-  `EventKind::YourSourceDealtNoncombatDamageEqualToToughness`, and a
-  `PreventedSource` that can be scoped to one seat and carry a "when damage is
-  prevented this way" rider. Correctness: `Selector::CardExiledWithSource` sees
-  CR 603.6e return links; `Effect::OptionalTargets` forwards
-  `accepts_player_target` (an "up to one target permanent" slot no longer
-  auto-picks a player); `Effect::GrantSuspend` reaches a spell on the stack;
-  and a **permanent** spell cast with its Gift promised now resolves its
-  `gifted_effect` as it enters (CR 702.165 — previously instants/sorceries
-  only). Server: `PlayerView.noncombat_damage_bonus`; Client: a matching HUD
-  chip. Tests in `classic_sets/tdm2`, `recent_b/{otj_gaps2, blb2}`,
-  `core_rules/cr_recent79`.
-
-- **Tarkir: Dragonstorm down to 6** — `set_gaps.py tdm` 10 → 6 (`decks::tdm`):
-  Jeskai Revelation, Sidisi Regent of the Mire (the
-  `ManaValueEqualsSacrificedPlus` upgrade), Thunder of Unity (chapters II/III
-  arm `Effect::CreaturesYouControlEnteringThisTurn`) and Shiko, Paragon of the
-  Way, plus OTJ's Another Round (`Repeat` over an `ExileAndReturnToOwner`
-  blink). No new primitives — all five fell out of the existing set. Tests in
-  `classic_sets/tdm`.
-
-- **Aetherdrift down to 2** — `set_gaps.py dft` 26 → 2 (`decks::recent326`,
-  24 cards): the legends, the Vehicles, the exhaust/speed payoffs and both
-  planeswalkers. New primitives: `Keyword::{GraveyardCast (cast from your
-  graveyard for the printed cost plus the card's `flashback_additional_cost`
-  riders, with no CR 702.34d exile tail — Wickerfolk Indomitable),
-  CantAttackOrBlockUnlessCardsInExile}`, `Effect::{
-  ReturnAllMatchingFromGraveyardToBattlefield, GrantEmbalmThisTurn,
-  NameCardThenExileFromZones, AttachSourceTo,
-  WhenTargetDealsCombatDamageToPlayerThisTurn}`,
-  `StaticEffect::{NamedSourcesActivationTax, MatchingAreChosenTypeToo}`,
-  `SelectionRequirement::HasNoAbilities`,
-  `Predicate::CardsInExileAtLeast`, `DelayedKind::{
-  SourceDealsCombatDamageToPlayerThisTurn,
-  YourNextExhaustActivationThisTurn}` (+ its
-  `Effect::OnYourNextExhaustActivationThisTurn` installer — Pit Automaton
-  copies the next exhaust ability you activate), and
-  `GameEvent`/`EventKind::CardExiledFromPlayOrGraveyard` (CR 400.7's origin
-  distinction, emitted from `move_card_to`'s battlefield and graveyard
-  branches — Ketramose). Correctness: CR 400.7 — a permanent that leaves the
-  battlefield is a new object, so `exhausted_abilities` (CR 702.177a) and
-  `once_per_turn_used` (CR 602.5f) now reset; instance-granted activated
-  abilities are surfaced for cards outside the battlefield; a
-  put-from-hand entrant is exposed on `Selector::LastMoved`. Server:
-  `AbilityView.spent` marks a used-up exhaust / at-cap ability so the client
-  greys the row. Client: the card-art prefetch reprioritises live around what
-  the app renders (`scryfall::card_asset_path` notes each request), replacing
-  the temporary sealed-pool file hack. Tests in `recent_b/dft_gaps`,
-  `core_rules/cr_recent78`.
-
-- **Arabian Nights and The Dark closed** — both at zero. New primitives:
-  `Effect::PlaySubgame` + `game::subgame` (CR 729 — a bot-piloted nested game
-  using each library as its deck, depth- and action-capped; Shahrazad),
-  `StaticEffect::ControllerMaySkipDrawStepForLife` (CR 614's optional
-  draw-step replacement — Fasting), `Effect::PayAnyAmountOfLifeCapped` +
-  `DynamicPt::ChosenNumberAsEntered` + `Value::CardsInOpponentsGraveyardsMatching`
-  (Nameless Race), `Effect::EnterExilingGraveyardCreaturesForCounters` +
-  `CounterType::{PlusTwoPlusZero, PlusZeroPlusTwo}` (Frankenstein's Monster),
-  `Effect::{GrantDamageExilesVictimThisTurn,
-  GrantDamageDeniesRegenerationThisTurn, WhenTargetLeavesBattlefieldThisTurn}`
-  + `DelayedKind::WhenCardLeavesBattlefieldThisTurn` (Runesword),
-  `Effect::SwapBlockAssignments` (CR 509.1 — Sorrow's Path),
-  `LookTopKeepOneRestToGraveyard.rest_bottom_random` (Aladdin's Lamp).
-  Correctness: `as_enters_effect` reads the cast's own `{X}`; a queued draw
-  replacement replays the activation's X.
-
-- **CR 315 conspiracies** — `CardType::Conspiracy`, `seat_conspiracy` /
-  `reveal_hidden_agenda`, and command-zone functioning for statics, triggers,
-  anthems, cost reduction, ability grants and enters-with-counter specs
-  (`all_static_sources` / `seat_static_sources` / `static_source` replace the
-  hard-coded `is_vanguard()` checks). CR 702.106 hidden agenda rides
-  `SelectionRequirement::resolve_named_by_source`. CR 315.7: the server hides a
-  face-down agenda from opponents and the client draws it as a card back.
-  New: `StaticEffect::{ControllerCantCastInstantsOrSorceries,
-  ControllerIsStartingPlayer, MatchingEntersWithExtraCounters}`,
-  `Value::TurnNumber`, `SearchSameNameAs.count`.
-
-- **CR 905 Conspiracy Draft** — `draft::DraftPod` owns pack circulation, bot
-  picks and the draft-time cards: notes (905.2b — `DraftNotes` on `Player`,
-  read by `Value::DraftNoteNumber`, `SelectionRequirement::NameNotedForSource`
-  and `ManaPayload::DraftNotedColorOfSource`), whole-pack drafting, extra
-  picks, removals from the draft, added boosters and pack peeks (905.2c). The
-  client's `DraftSession` is now a thin UI shell over it with a draft-matters
-  button row. CR 116.2j ships alongside as `GameAction::RevealConspiracy`.
-  The last 8 CNS cards are in `sets::cns3`; tests in `classic_sets/cns`.
-  905.2b's "any player may look at noted information" ships as a public
-  `PlayerView.draft_notes` projection.
-- **CR 807 Grand Melee** — `set_grand_melee_variant` + `shuffle_seating`
-  (807.2 defaults, 807.3 random seating). The 807.4 turn markers are open;
-  see TODO.md.
-- **Homelands opened** — `set_gaps.py hml` 100 → 30 (`sets::hml`, 70 cards):
-  the five city lands, the protection cycle, the Faerie / Bird lords, both
-  World enchantments, the Clockwork pair, and the set's removal and burn. New:
-  `ActivatedAbility.max_activations_per_turn` (CR 602.5f — the "no more than N
-  times each turn" generalization of `once_per_turn`),
-  `DynamicPt::PermanentsOnBattlefieldMatchingToughness`, and
-  `OriginalSet::Homelands`. Correctness: `EventScope::EnchantedBySource`
-  triggers now fire off the leaves-battlefield LKI for
-  `PermanentLeavesBattlefield` / `PermanentDied` too (the Aura is orphaned by
-  dispatch time). Tests in `classic_sets/hml`. What's left is logged in
-  TODO.md.
-
-- **Planechase ships** (CR 311 / 312 / 901) — `CardType::{Plane, Phenomenon}`,
-  per-seat planar decks, `GameAction::RollPlanarDie` (the CR 901.9 special
-  action with its per-turn surcharge), `set_starting_plane` / `planeswalk` /
-  `chaos_ensues` / `sweep_finished_phenomena`, and
-  `EventKind::{ChaosEnsues, PlaneswalkedAwayFrom, Encountered}`. Planes'
-  statics, step triggers and event triggers function from the command zone
-  under the planar controller, and counters can land on a face-up plane. The
-  server projects `PlanarView` (deck size, roll cost, legality, face-up
-  names), the client shows a planar HUD chip and rolls on `P`, and the bot
-  takes its one free roll each turn. 15 cards in `sets::ohop`; tests in
-  `classic_sets/ohop`.
-
-- **Conspiracy's regular cards opened** — 16 of ~180: Deathreap Ritual, Brago
-  King Eternal, Canal Dredger, Cogwork Spy, the graveyard/hand-sized
-  counter creatures (Academy Elite, Drakestown Forgotten, Realm Seekers), the
-  dethrone shell (Marchesa's Emissary / Infiltrator, Treasonous Ogre) and the
-  **parley** cycle behind a new `Effect::Parley` (each player reveals their
-  top card, the nonland count is published as
-  `Value::CardsRevealedThisEffect` for the body, then everyone draws) —
-  Rousing of Souls, Selvala's Charge, Selvala's Enforcer, Selvala Explorer
-  Returned, Woodvine Elemental. The voting cycle (CR 701.32) is the
-  prerequisite for the rest; tracked in TODO.md.
-
-Only this push's entries are listed; earlier pushes are in `git log -p --
-FEATURE_ROADMAP.md`.
+Older per-push entries are elided — `git log -p -- FEATURE_ROADMAP.md` is
+the record.
