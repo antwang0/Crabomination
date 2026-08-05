@@ -2538,7 +2538,7 @@ Each a small targeted feature; sweep batch by batch.
 
 0. **Next set to close.** Bloomburrow, Duskmourn, Outlaws of Thunder Junction
    and **Edge of Eternities** are all closed (`set_gaps.py blb dsk otj eoe` is
-   empty). **Final Fantasy** is down to **6**, every one a transforming DFC —
+   empty). **Final Fantasy** is down to **3**, every one a transforming DFC —
    see TODO.md → "EOE/FIN closure" for the primitive each one needs. The Odyssey
    block, the Onslaught block (**ONS**,
    **LGN**, **SCG**), the Mirrodin block (**MRD**, **DST**, **5DN**), the
