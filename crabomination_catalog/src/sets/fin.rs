@@ -9620,3 +9620,59 @@ pub fn memories_returning() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Garland, Knight of Cornelia — {B}{R} 3/2 Human Knight. Surveils on each
+/// noncreature spell; {3}{B}{B}{R}{R} from your graveyard returns him
+/// transformed into Chaos, the Endless, a 5/5 flier that bottoms itself on death.
+pub fn garland_knight_of_cornelia() -> CardDefinition {
+    let chaos = CardDefinition {
+        name: "Chaos, the Endless",
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Demon], ..Default::default() },
+        power: 5,
+        toughness: 5,
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CreatureDied, EventScope::SelfSource),
+            effect: Effect::Move {
+                what: Selector::This,
+                to: ZoneDest::Library {
+                    who: PlayerRef::You,
+                    pos: crate::effect::LibraryPosition::Bottom,
+                },
+            },
+        }],
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Garland, Knight of Cornelia",
+        cost: cost(&[b(), r()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Knight],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 2,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl).with_filter(
+                Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: SelectionRequirement::Noncreature,
+                },
+            ),
+            effect: Effect::Surveil { who: PlayerRef::You, amount: Value::ONE },
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(3), b(), b(), r(), r()]),
+            from_graveyard: true,
+            sorcery_speed: true,
+            effect: Effect::ExileSelfReturnTransformed,
+            ..Default::default()
+        }],
+        back_face: Some(Box::new(chaos)),
+        ..Default::default()
+    }
+}

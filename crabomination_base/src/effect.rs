@@ -8339,7 +8339,9 @@ pub enum Effect {
     /// CR 714.4 (DFC sagas) — "Exile this Saga, then return it to the
     /// battlefield transformed under your control." The return is a new
     /// object: lore counters clear and the back face's ETB fires. Fable of
-    /// the Mirror-Breaker chapter III.
+    /// the Mirror-Breaker chapter III. A `from_graveyard` ability uses the
+    /// same effect to return the card transformed from a graveyard (Garland,
+    /// Knight of Cornelia).
     ExileSelfReturnTransformed,
     /// The mirror of `ExileSelfReturnTransformed` — "exile this, then return it
     /// to the battlefield (front face up)". Used by the FIN Dominants' Saga

@@ -1464,3 +1464,56 @@ pub fn venat_heart_of_hydaelyn() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Crystal Fragments // Summon: Alexander — {W} Equipment (+1/+1, Equip {1})
+/// that flips for {5}{W}{W} into a 4/3 flying Saga Construct: I/II fog your
+/// creatures, III taps your opponents' board.
+pub fn crystal_fragments() -> CardDefinition {
+    let fog = Effect::PreventAllDamageThisTurn {
+        target: Selector::ControlledBy { who: PlayerRef::You, filter: R::Creature },
+        redirect_to: None,
+    };
+    CardDefinition {
+        name: "Crystal Fragments",
+        cost: cost(&[w()]),
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes {
+            artifact_subtypes: vec![ArtifactSubtype::Equipment],
+            ..Default::default()
+        },
+        keywords: vec![Keyword::Equip(cost(&[generic(1)]))],
+        equipped_bonus: Some(EquipBonus { power: 1, toughness: 1, ..Default::default() }),
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(5), w(), w()]),
+            sorcery_speed: true,
+            effect: Effect::ExileSelfReturnTransformed,
+            ..Default::default()
+        }],
+        back_face: Some(Box::new(CardDefinition {
+            name: "Summon: Alexander",
+            card_types: vec![CardType::Enchantment, CardType::Creature],
+            subtypes: Subtypes {
+                creature_types: vec![CreatureType::Construct],
+                enchantment_subtypes: vec![crate::card::EnchantmentSubtype::Saga],
+                ..Default::default()
+            },
+            power: 4,
+            toughness: 3,
+            keywords: vec![Keyword::Flying],
+            saga_chapters: vec![
+                (1, fog.clone()),
+                (2, fog),
+                (
+                    3,
+                    Effect::Tap {
+                        what: Selector::EachPermanent(
+                            R::Creature.and(R::ControlledByOpponent),
+                        ),
+                    },
+                ),
+            ],
+            ..Default::default()
+        })),
+        ..Default::default()
+    }
+}

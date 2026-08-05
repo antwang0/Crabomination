@@ -1704,6 +1704,61 @@ pub fn exile_browser(
                 });
             }
         }
+        // CR 717.4 — the Attraction junkyard is its own out-of-play pile.
+        // It rides the exile browser rather than a fourth overlay: both are
+        // "cards that left play and aren't coming back on their own".
+        for p in &cv.players {
+            if p.attraction_junkyard.is_empty() {
+                continue;
+            }
+            panel.spawn((
+                Text::new(format!(
+                    "{} — junkyard ({})",
+                    owner_label(p.seat),
+                    p.attraction_junkyard.len()
+                )),
+                ui_fonts.tf(14.0),
+                TextColor(theme::TEXT_BODY),
+                Pickable::IGNORE,
+            ));
+            panel
+                .spawn((
+                    Node {
+                        flex_direction: FlexDirection::Row,
+                        flex_wrap: FlexWrap::Wrap,
+                        column_gap: Val::Px(8.0),
+                        row_gap: Val::Px(8.0),
+                        ..default()
+                    },
+                    Pickable::IGNORE,
+                ))
+                .with_children(|grid| {
+                    for name in p.attraction_junkyard.iter() {
+                        let texture: Handle<Image> =
+                            asset_server.load(scryfall::card_asset_path(name));
+                        grid.spawn((
+                            Button,
+                            Node {
+                                width: Val::Px(BROWSER_CARD_WIDTH),
+                                height: Val::Px(BROWSER_CARD_HEIGHT),
+                                ..default()
+                            },
+                            GraveyardCardItem { name: name.clone(), recast: None },
+                        ))
+                        .with_children(|tile| {
+                            tile.spawn((
+                                ImageNode { image: texture, ..default() },
+                                Node {
+                                    width: Val::Percent(100.0),
+                                    height: Val::Percent(100.0),
+                                    ..default()
+                                },
+                                Pickable::IGNORE,
+                            ));
+                        });
+                    }
+                });
+        }
         panel.spawn((
             Text::new("Press V or Esc, or click outside to close"),
             ui_fonts.tf(11.0),

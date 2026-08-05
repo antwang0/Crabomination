@@ -3,22 +3,39 @@
 Improvement opportunities for the engine, client, and tooling.
 Items are grouped by area and roughly ordered by impact within each group.
 
+## Noticed this run (FIN transform closure)
+
+- **`ExileSelfReturnTransformed` now reaches the graveyard.** The handler used
+  to require a battlefield permanent; it now also lifts the source out of a
+  graveyard, which is what a `from_graveyard` activated ability needs (Garland,
+  Knight of Cornelia). The stack case (a *resolving spell* that puts itself onto
+  the battlefield transformed — Esper Origins) is still open: the resolution
+  path routes the card to the graveyard before an effect can claim it. ⏳
+- **The Attraction junkyard renders in the exile browser** (`V`), as a per-owner
+  section below the exile piles. The pile tooltips still don't mention it. ⏳
+- **The bot now offers graveyard "return transformed" activations.**
+  `effect_returns_self_to_battlefield` counts `ExileSelfReturnTransformed` /
+  `ExileSelfReturnFrontFace`, so a bot can flip Garland back. It still has no
+  evaluation of *whether* the back face is worth the mana — the gate is purely
+  "can this replay itself". ⏳
+
 ## Noticed this run (EOE/FIN closure + CR 717 Attractions)
 
-- **EOE is closed** (`set_gaps.py eoe` empty). FIN is down to **6** cards,
+- **EOE is closed** (`set_gaps.py eoe` empty). FIN is down to **4** cards,
   each blocked on one primitive:
   - **Sephiroth** wants an emblem minted *as* the transform happens
     (`EventKind::Transformed` fires after, so the emblem lands a beat late).
     `Effect::NthResolutionThisTurn` covers its "fourth time this turn". ⏳
   - **Zenos** needs a remembered chosen permanent whose *leave* transforms the
     source ("when the chosen creature leaves the battlefield"). ⏳
-  - **Garland** needs "return this card from your graveyard to the battlefield
-    transformed" plus "when this dies, put it on the bottom of its library". ⏳
   - **Terra // Esper Terra** needs a token copy of a nonlegendary enchantment
     that inherits up-to-three lore counters when it's a Saga. ⏳
-  - **Crystal Fragments** and **Esper Origins** are Equipment // Saga-creature
-    and Sorcery // Saga-creature: the *front* face isn't a permanent that can
-    transform, so both need a cast-side "return transformed" shape. ⏳
+  - **Esper Origins** is Sorcery // Saga-creature: the front face isn't a
+    permanent, so "exile it, then put it onto the battlefield transformed" has
+    to run against the *resolving spell* rather than a battlefield object —
+    the resolution path routes the card to the graveyard before an effect can
+    claim it. ⏳ (Crystal Fragments needed no new shape: its Equipment front
+    face is a permanent, so it flips with `ExileSelfReturnTransformed`.)
 - **Joshua's ETB loots for exactly two.** The printed "discard up to two cards,
   then draw that many" has no up-to variant; the catalog ships the mandatory
   two-for-two. ⏳
@@ -32,9 +49,6 @@ Items are grouped by area and roughly ordered by impact within each group.
 - **`Effect::OpenAnAttraction` doesn't shuffle at game start.** CR 717.2 wants
   the Attraction deck shuffled with the library; `seat_attraction_deck` keeps
   the given order (deterministic for tests). ⏳
-- **The junkyard has no client surface.** `PlayerView.attraction_junkyard` is
-  populated but nothing renders it; the exile/graveyard browsers would be the
-  natural home. ⏳
 - **The dexterity / sticker Attractions are unimplemented** — Cover the Spot,
   Dart Throw, Guess Your Fate, Scavenger Hunt, Squirrel Stack, The
   Superlatorium, Trivia Contest need CR 123 stickers and out-of-game physical

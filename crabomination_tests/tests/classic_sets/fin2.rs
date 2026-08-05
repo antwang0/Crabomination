@@ -576,3 +576,68 @@ fn venat_draws_off_the_first_legendary_spell() {
     cast(&mut g, b, None);
     assert_eq!(g.players[0].hand.len(), hand - 1, "the second legend draws nothing");
 }
+
+/// Garland returns from the graveyard transformed into Chaos, and Chaos bottoms
+/// itself when it dies.
+#[test]
+fn garland_returns_transformed_and_chaos_bottoms_itself() {
+    let mut g = two_player_game();
+    let garland = g.add_card_to_graveyard(0, catalog::garland_knight_of_cornelia());
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Black, 2);
+    g.players[0].mana_pool.add(Color::Red, 2);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: garland,
+        ability_index: 0,
+        target: None,
+        additional_targets: vec![],
+        x_value: None,
+        mode: None,
+    })
+    .expect("return Garland transformed");
+    drain_stack(&mut g);
+    let chaos = g.battlefield_find(garland).expect("back on the battlefield");
+    assert_eq!(chaos.definition.name, "Chaos, the Endless");
+    assert!(chaos.definition.keywords.contains(&Keyword::Flying));
+
+    let mut evs = vec![];
+    g.destroy_permanent(garland, false, &mut evs);
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    assert_eq!(
+        g.players[0].library.last().map(|c| c.id),
+        Some(garland),
+        "Chaos went to the bottom of its owner's library"
+    );
+}
+
+/// Crystal Fragments equips for +1/+1, then flips into the Saga creature with
+/// its first lore counter.
+#[test]
+fn crystal_fragments_flips_into_alexander() {
+    let mut g = two_player_game();
+    let gear = g.add_card_to_battlefield(0, catalog::crystal_fragments());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.battlefield_find_mut(gear).unwrap().attached_to = Some(bear);
+    assert_eq!(g.computed_permanent(bear).unwrap().power, 3, "2/2 plus the Equipment");
+
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::White, 2);
+    g.players[0].mana_pool.add_colorless(5);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: gear,
+        ability_index: 0,
+        target: None,
+        additional_targets: vec![],
+        x_value: None,
+        mode: None,
+    })
+    .expect("flip Crystal Fragments");
+    drain_stack(&mut g);
+    let saga = g.battlefield_find(gear).expect("returned transformed");
+    assert_eq!(saga.definition.name, "Summon: Alexander");
+    assert_eq!(saga.counter_count(CounterType::Lore), 1, "CR 714.2b first chapter");
+}

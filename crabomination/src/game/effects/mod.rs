@@ -28426,23 +28426,35 @@ impl GameState {
             }
 
             Effect::ExileSelfReturnTransformed => {
-                // CR 714.4 — exile this Saga, then return it transformed
-                // under its controller's control. Routed through
-                // `place_card_in_dest` so new-object state (counters clear,
-                // summoning sickness) and the back face's ETB fire normally.
+                // CR 714.4 — exile this Saga (or lift the card out of a
+                // graveyard), then return it transformed under its
+                // controller's control. Routed through `place_card_in_dest`
+                // so new-object state (counters clear, summoning sickness)
+                // and the back face's ETB fire normally.
                 let Some(id) = ctx.source else { return Ok(()); };
-                if self
-                    .battlefield
-                    .iter()
-                    .find(|c| c.id == id)
-                    .is_none_or(|c| c.definition.back_face.is_none())
-                {
+                // The source is usually a battlefield permanent (the Saga
+                // chapter), but a graveyard-activated ability can also return
+                // the card transformed (Garland's "return this card from your
+                // graveyard to the battlefield transformed").
+                let on_bf = self.battlefield.iter().any(|c| c.id == id);
+                let has_back = self
+                    .find_card_anywhere(id)
+                    .is_some_and(|c| c.definition.back_face.is_some());
+                if !has_back {
                     return Ok(());
                 }
-                let Some(mut card) = Self::take_card(&mut self.battlefield, id) else {
-                    return Ok(());
+                let taken = if on_bf {
+                    let c = Self::take_card(&mut self.battlefield, id);
+                    if c.is_some() {
+                        events.push(GameEvent::PermanentExiled { card_id: id });
+                    }
+                    c
+                } else {
+                    self.players.iter_mut().find_map(|p| {
+                        p.graveyard.iter().position(|c| c.id == id).map(|i| p.graveyard.remove(i))
+                    })
                 };
-                events.push(GameEvent::PermanentExiled { card_id: id });
+                let Some(mut card) = taken else { return Ok(()) };
                 let back = card.definition.back_face.as_ref().map(|b| (**b).clone()).unwrap();
                 card.front_face = Some(card.definition.clone());
                 card.definition = std::sync::Arc::new(back);

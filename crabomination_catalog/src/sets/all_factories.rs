@@ -9371,6 +9371,8 @@ static FIN: &[Factory] = &[
     super::fin::firion_wild_rose_warrior,
     super::fin::stolen_uniform,
     super::fin::memories_returning,
+    super::fin::garland_knight_of_cornelia,
+    super::fin2::crystal_fragments,
 ];
 static FIN2: &[Factory] = &[
     super::fin2::ishgard_the_holy_see,

@@ -4985,6 +4985,10 @@ fn effect_returns_self_to_battlefield(eff: &Effect) -> bool {
     use crate::effect::ZoneDest;
     match eff {
         Effect::Move { what: crate::card::Selector::This, to: ZoneDest::Battlefield { .. } } => true,
+        // "Return this card from your graveyard to the battlefield transformed"
+        // (Garland, Knight of Cornelia) — a self-reanimation like the plain
+        // Move, just landing on the back face.
+        Effect::ExileSelfReturnTransformed | Effect::ExileSelfReturnFrontFace => true,
         Effect::Seq(v) => v.iter().any(effect_returns_self_to_battlefield),
         _ => false,
     }
