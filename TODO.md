@@ -46,7 +46,10 @@ Items are grouped by area and roughly ordered by impact within each group.
   `board_status_strip` call sites missing a newly-added argument. A
   `cargo build --workspace --all-targets` run started *before* those fields
   existed had reported success, which is what hid them — re-run the build
-  after the last edit, not just once mid-session. ⏳
+  after the last edit, not just once mid-session. Note also that
+  `cargo test -p crabomination_client` needs its own non-clippy Bevy build on
+  top of all that, so the client's unit tests are typically type-checked but
+  not executed in a scheduled run. ⏳
 
 ## Noticed this run (TDM + OTJ closed, BLB/DSK batch)
 
