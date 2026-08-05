@@ -170,6 +170,8 @@ mod tests {
             permanents_to_graveyard_this_turn: 0,
             damage_rewritten_this_turn: None,
             players: vec![PlayerView {
+                attraction_deck_size: 0,
+                attraction_junkyard: vec![],
                 locked_cast_colors: vec![],
                 locked_cast_kinds: vec![],
                 uncounterable_next: vec![],

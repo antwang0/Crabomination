@@ -3,6 +3,48 @@
 Improvement opportunities for the engine, client, and tooling.
 Items are grouped by area and roughly ordered by impact within each group.
 
+## Noticed this run (EOE/FIN closure + CR 717 Attractions)
+
+- **EOE is closed** (`set_gaps.py eoe` empty). FIN is down to **13** cards,
+  all of them transforming DFCs whose back face is a *Saga creature* (the
+  "Dominant" cycle — Clive, Dion, Jill, Joshua, Terra, Jecht; plus Crystal
+  Fragments and Esper Origins) or a bespoke rider (Serah Farron, Venat,
+  Zenos, Garland, Sephiroth). ⏳
+  - **Saga-creature back faces** need `saga_chapters` on a creature body plus
+    a lore counter on entry; the engine has both halves but never combines
+    them on one face. ⏳
+  - **Sephiroth** wants an emblem minted *as* the transform happens
+    (`EventKind::Transformed` fires after, so the emblem lands a beat late).
+    `Effect::NthResolutionThisTurn` covers its "fourth time this turn". ⏳
+  - **Zenos** needs a remembered chosen permanent whose *leave* transforms the
+    source ("when the chosen creature leaves the battlefield"). ⏳
+  - **Serah Farron / Venat** need "the first [filter] spell you cast each turn
+    costs {N} less" as a static. ⏳
+  - **Garland** needs "return this card from your graveyard to the battlefield
+    transformed" plus "when this dies, put it on the bottom of its library". ⏳
+- **`Effect::LookPickToHand` still spells out eleven fields at every call
+  site** (~156 of them). Boxing the payload into a `LookPick` struct with
+  `Default` would let card definitions use `..Default::default()` like the
+  rest of the catalog. ⏳
+- **Attraction lights are one canonical set per card.** CR 717.1 says the same
+  Attraction can print different light combinations; the catalog ships the
+  Scryfall-canonical set, so two copies of one Attraction are identical. ⏳
+- **`Effect::OpenAnAttraction` doesn't shuffle at game start.** CR 717.2 wants
+  the Attraction deck shuffled with the library; `seat_attraction_deck` keeps
+  the given order (deterministic for tests). ⏳
+- **The junkyard has no client surface.** `PlayerView.attraction_junkyard` is
+  populated but nothing renders it; the exile/graveyard browsers would be the
+  natural home. ⏳
+- **The dexterity / sticker Attractions are unimplemented** — Cover the Spot,
+  Dart Throw, Guess Your Fate, Scavenger Hunt, Squirrel Stack, The
+  Superlatorium, Trivia Contest need CR 123 stickers and out-of-game physical
+  actions. CR 123 is the last big untested rules section. ⏳
+- **`MayPlayPermission` has no surcharge field.** Lightstall Inquisitor stamps
+  `granted_alt_cast_cost_eot = printed cost + {1}`, which is exact for a fixed
+  cost but stamps X = 0 on an `{X}` card. ⏳
+- **"Each land played this way enters tapped"** (Lightstall Inquisitor) rides
+  the engine-wide may-play land gap and is dropped. ⏳
+
 ## Noticed this run (one-primitive backlog; BLB/DSK/OTJ closed)
 
 - **`Effect::RevealTopExileOnePerCardType` asks once, not per type.** Portent

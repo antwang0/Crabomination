@@ -1989,8 +1989,10 @@ Each unblocks a large swath of cards.
   / ManifestDread + `TurnFaceUp`; Morph/Megamorph cast-face-down ✅. Remaining:
   Disguise/Cloak edge cases (both core paths ship — see Tier 4).
 - 🟡 **Ante / conspiracy / sticker / attraction** zones. Ante ✅ (CR 407 — see
-  "Recently closed"); dungeons ✅ (CR 309). Remaining: conspiracy, sticker,
-  attraction.
+  "Recently closed"); dungeons ✅ (CR 309); **attractions ✅** (CR 717 — the
+  command-zone Attraction deck + junkyard, `Effect::OpenAnAttraction`, the
+  precombat-main roll-to-visit turn-based action, and Visit triggers keyed to
+  each card's lit-up numbers). Remaining: conspiracy, sticker (CR 123).
 - ✅ **Emblems** as command-zone objects — `Player.emblems` + `CreateEmblem`,
   carrying both triggered and **static (anthem) abilities** (Vivien Reid's −8;
   synthesized into continuous effects in `gather_continuous_effects`).
@@ -2534,8 +2536,10 @@ Each a small targeted feature; sweep batch by batch.
 
 ## Suggested sequencing
 
-0. **Next set to close.** Bloomburrow, Duskmourn and Outlaws of Thunder
-   Junction are all closed (`set_gaps.py blb dsk otj` is empty). The Odyssey
+0. **Next set to close.** Bloomburrow, Duskmourn, Outlaws of Thunder Junction
+   and **Edge of Eternities** are all closed (`set_gaps.py blb dsk otj eoe` is
+   empty). **Final Fantasy** is down to **13**, every one a transforming DFC —
+   see TODO.md → "EOE/FIN closure" for the four primitives they need. The Odyssey
    block, the Onslaught block (**ONS**,
    **LGN**, **SCG**), the Mirrodin block (**MRD**, **DST**, **5DN**), the
    Kamigawa block, **Mirrodin Besieged**, **New Phyrexia** (the Scars block
@@ -2562,21 +2566,24 @@ Each a small targeted feature; sweep batch by batch.
 
 ## Recently closed (this push)
 
-- **BLB / DSK / OTJ closed** — the thirteen one-primitive cards ship in
-  `decks::recent329` (tests `recent_b/recent329`): Victor, Alania, Heirloom
-  Epic, Eriette, Rottenmouth Viper, Portent of Calamity, Niko, Wishing Well,
-  Valgavoth, Osteomancer Adept, The Tale of Tamiyo, Kaito (Rip shipped
-  earlier). New primitives: source-keyed `Effect::NthResolutionThisTurn`,
-  `Effect::{PutGraveyardCardOntoBattlefield, EachPlayerDoes,
-  RevealTopExileOnePerCardType, GrantForageGraveyardCreatureCastsThisTurn,
-  GainControlWhileTriggerAuraAttached, MillTwoRepeatSharing}`,
-  `Predicate::{CastSpellFirstMatchingThisTurn, AuraHostIsCheaperOpponentPermanent}`,
-  `EventKind::AuraAttachedToAny`, `StaticEffect::PlayExiledWithSourceForLife`,
-  `ActivatedAbility.convoke`, `CardDefinition.self_cost_reduction_per_sacrificed`,
-  `CastWithoutPayingImmediate.pay_own_cost`, `SelfIsCreatureIf.creature_types`,
-  `Value::OpponentsWhoLostLifeThisTurn`, `TempControl.while_source_attached`,
-  and `ExileCardsBoundForGraveyard.stamp_source`.
-  CR conformance for 611.2c / 702.51b / 706.2 / 603 in `core_rules/cr_recent82`.
+- **EOE closed; FIN down to 13; CR 717 Attractions shipped.** New primitives:
+  playing a land half out of adventure exile (CR 715.3d) with a
+  `ClientView.adventure_exile` affordance covering the whole pile;
+  `LookPickToHand.then_if_picked`; `Value::CombatDamageTakenThisTurn`;
+  `SelectionRequirement::OwnedByDefendingPlayer`;
+  `Effect::{EachOpponentExilesOwnCreature, EachOpponentExilesHandCardMayPlay,
+  OpenAnAttraction}`; `Predicate::AnyPlayerControlsNoCreatures`;
+  `StaticEffect::{FirstTokensEachTurnBecomeCopiesOfAttached,
+  PlayCardsFromGraveyardDuringYourTurn, DoubleDamageFromControlledMatching}`;
+  `ActivatedAbility::{exile_attachment_cost, cost_reduction_per_equipped_power}`;
+  `SpendRestriction::NoncreatureSpellsOnly`;
+  `CardDefinition.attraction_lights` + `ArtifactSubtype::Attraction` +
+  `Player::{attraction_deck, attraction_junkyard}`.
+  **CR 614 correctness fix:** as-enters replacements now apply on every
+  battlefield entry, not only spell resolution — Devour (CR 702.83) moved to
+  that slot, so a printed 0/0 devourer no longer dies at 0 toughness.
+  CR conformance for 711 / 715 / 701.51 / 701.52 / 717.6 in
+  `core_rules/cr_recent83` + `classic_sets/unf`.
 
 Older per-push entries are elided — `git log -p -- FEATURE_ROADMAP.md` is
 the record.
