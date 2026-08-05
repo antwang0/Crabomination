@@ -9534,6 +9534,7 @@ pub fn dauthi_voidwalker() -> CardDefinition {
                 colors: None,
                 card_types: None,
                 void_counter: true,
+                stamp_source: false,
             },
         }],
         activated_abilities: vec![ActivatedAbility {

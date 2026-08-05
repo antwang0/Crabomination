@@ -1597,6 +1597,12 @@ pub enum StaticEffect {
     /// permanent type from your graveyard." Muldrotha, the Gravetide
     /// (checked in `cast_spell`; per-type-per-turn tally on the player).
     MayCastPermanentsFromGraveyard,
+    /// "During your turn, you may play cards exiled with this. If you cast a
+    /// spell this way, pay life equal to its mana value rather than pay its
+    /// mana cost." (Valgavoth, Terror Eater.) Read by
+    /// `cast_from_zone_without_paying`; land plays through the grant share the
+    /// engine-wide may-play land gap.
+    PlayExiledWithSourceForLife,
     /// "You may cast [filter] spells from your graveyard by paying `life`
     /// life in addition to paying their other costs. If you cast a spell this
     /// way, it enters with a finality counter." Noctis, Prince of Lucis
@@ -2341,6 +2347,11 @@ pub enum StaticEffect {
         /// (Dauthi Voidwalker — its sac ability frees one for a free play).
         #[serde(default)]
         void_counter: bool,
+        /// Link each exiled card back to this static's source
+        /// (`exiled_with`), so "you may play cards exiled with this" can find
+        /// them (Valgavoth, Terror Eater).
+        #[serde(default)]
+        stamp_source: bool,
     },
     /// CR 614 — "If [a matching permanent] would be put into a graveyard,
     /// put it on top of its owner's library instead." Consulted in

@@ -5567,14 +5567,14 @@ impl GameState {
         self.graveyard_exile_redirects(card).0
     }
 
-    /// `(redirects, void_counter)` for `card`: whether some
-    /// `ExileCardsBoundForGraveyard` static redirects it to exile, and
-    /// whether any applicable redirect stamps a void counter on it
-    /// (Dauthi Voidwalker).
+    /// `(redirects, void_counter, stamped_by)` for `card`: whether some
+    /// `ExileCardsBoundForGraveyard` static redirects it to exile, whether any
+    /// applicable redirect stamps a void counter on it (Dauthi Voidwalker), and
+    /// which source claims it via `exiled_with` (Valgavoth, Terror Eater).
     pub(crate) fn graveyard_exile_redirects(
         &self,
         card: &crate::card::CardInstance,
-    ) -> (bool, bool) {
+    ) -> (bool, bool, Option<CardId>) {
         use crate::effect::StaticEffect;
         let owner = card.owner;
         // Gaea's Will — the owner's graveyard-bound cards exile this turn.
@@ -5583,6 +5583,7 @@ impl GameState {
             .get(owner)
             .is_some_and(|pl| pl.graveyard_bound_exiled_this_turn);
         let mut void = false;
+        let mut stamped_by = None;
         for c in &self.battlefield {
             for sa in &c.definition.static_abilities {
                 if let StaticEffect::ExileCardsBoundForGraveyard {
@@ -5591,6 +5592,7 @@ impl GameState {
                     colors,
                     card_types,
                     void_counter,
+                    stamp_source,
                 } = &sa.effect
                 {
                     let applies = (!opponents_only || c.controller != owner)
@@ -5604,11 +5606,14 @@ impl GameState {
                     if applies {
                         redirects = true;
                         void |= void_counter;
+                        if *stamp_source {
+                            stamped_by = Some(c.id);
+                        }
                     }
                 }
             }
         }
-        (redirects, void)
+        (redirects, void, stamped_by)
     }
 
     /// CR 614.5 — the actual mill count for `p` after doubling replacements
@@ -6276,8 +6281,12 @@ impl GameState {
         if self.graveyard_exiled_for(&card) || card.disturb_back_exiles() {
             let cid = card.id;
             let mut card = card;
-            if self.graveyard_exile_redirects(&card).1 {
+            let (_, void, stamped_by) = self.graveyard_exile_redirects(&card);
+            if void {
                 card.add_counters(crate::card::CounterType::Void, 1);
+            }
+            if let Some(src) = stamped_by {
+                card.exiled_with = Some(src);
             }
             self.exile.push(card);
             events.push(crate::game::GameEvent::PermanentExiled { card_id: cid });
@@ -19976,6 +19985,7 @@ fn static_effect_to_effects(
             | StaticEffect::HasActivatedAbilitiesOfLibraryTop { .. }
             | StaticEffect::CounteredCreaturesHaveAbilitiesOfExiledWithSource
             | StaticEffect::MayCastPermanentsFromGraveyard
+            | StaticEffect::PlayExiledWithSourceForLife
             | StaticEffect::GraveyardCastWithLifeSurcharge { .. }
             | StaticEffect::ActivationCostReduction { .. }
             | StaticEffect::YourCreatureActivatedAbilitiesCostLess { .. }

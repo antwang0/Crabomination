@@ -356,3 +356,30 @@ fn wishing_well_free_casts_at_the_coin_count() {
     );
 }
 
+
+/// Valgavoth eats an opponent's dying creature and lets you cast it for life.
+#[test]
+fn valgavoth_exiles_then_sells_back_for_life() {
+    let mut g = main_phase();
+    g.add_card_to_battlefield(0, catalog::valgavoth_terror_eater());
+    let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let mut evs = Vec::new();
+    g.destroy_permanent(victim, false, &mut evs);
+    g.check_state_based_actions();
+    assert!(
+        g.exile.iter().any(|c| c.id == victim),
+        "it was exiled instead of hitting the graveyard"
+    );
+    let life = g.players[0].life;
+    g.perform_action(GameAction::CastFromZoneWithoutPaying {
+        card_id: victim,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast off Valgavoth");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life - 2, "paid the Bears' mana value in life");
+    assert_eq!(g.battlefield_find(victim).unwrap().controller, 0, "it's yours now");
+}

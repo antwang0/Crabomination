@@ -5347,7 +5347,8 @@ impl GameState {
         // face, CR 614.6 / 702.146e) and its void-counter rider read the back
         // face, so capture them *before* the CR 712.4 front-face revert.
         let exile_on_graveyard = self.graveyard_exiled_for(&card) || card.disturb_back_exiles();
-        let void_counter_on_exile = self.graveyard_exile_redirects(&card).1;
+        let (_, void_counter_on_exile, exile_stamped_by) =
+            self.graveyard_exile_redirects(&card);
         // CR 710.4 / 712.4 — flip cards and transformed DFCs revert to their
         // unflipped / front face off the battlefield.
         card.revert_flip();
@@ -5377,6 +5378,9 @@ impl GameState {
                 let mut card = card;
                 if void_counter_on_exile {
                     card.add_counters(crate::card::CounterType::Void, 1);
+                }
+                if let Some(src) = exile_stamped_by {
+                    card.exiled_with = Some(src);
                 }
                 self.exile.push(card)
             }

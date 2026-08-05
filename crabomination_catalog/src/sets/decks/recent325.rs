@@ -347,6 +347,7 @@ pub fn festival_of_embers() -> CardDefinition {
                     colors: None,
                     card_types: None,
                     void_counter: false,
+                stamp_source: false,
                 },
             },
         ],

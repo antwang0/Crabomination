@@ -3,13 +3,13 @@
 
 use crate::card::{
     ActivatedAbility, AdditionalCastCost, ArtifactSubtype, CardDefinition, CardType, CounterType,
-    CreatureType, Keyword, SelectionRequirement as R, Subtypes, Supertype, TokenDefinition,
-    TriggeredAbility,
+    CreatureType, Keyword, SelectionRequirement as R, StaticAbility, Subtypes, Supertype,
+    TokenDefinition, TriggeredAbility, WardCost,
 };
 use crate::effect::shortcut::{eerie, etb, on_attack, target_filtered};
 use crate::effect::{
     DelayedTriggerKind, Duration, Effect, EventKind, EventScope, EventSpec, PlayerRef, Predicate,
-    Selector, Value, ZoneDest,
+    Selector, StaticEffect, Value, ZoneDest,
 };
 use crate::mana::{cost, b, generic, r, u, w, x};
 
@@ -313,5 +313,41 @@ pub fn wishing_well() -> CardDefinition {
             ..Default::default()
         }],
         ..Default::default()
+    }
+}
+
+/// Valgavoth, Terror Eater — {6}{B}{B}{B} 9/9. Opponents' cards go to his
+/// exile pile instead of their graveyards, and you can play them for life.
+pub fn valgavoth_terror_eater() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![
+            Keyword::Flying,
+            Keyword::Lifelink,
+            Keyword::Ward(WardCost::SacrificeMatchingN(Box::new(R::Nonland), 3)),
+        ],
+        static_abilities: vec![
+            StaticAbility {
+                description: "If a card you didn't control would be put into an opponent's graveyard from anywhere, exile it instead.",
+                effect: StaticEffect::ExileCardsBoundForGraveyard {
+                    opponents_only: true,
+                    own_only: false,
+                    colors: None,
+                    card_types: None,
+                    void_counter: false,
+                    stamp_source: true,
+                },
+            },
+            StaticAbility {
+                description: "During your turn, you may play cards exiled with this. If you cast a spell this way, pay life equal to its mana value rather than pay its mana cost.",
+                effect: StaticEffect::PlayExiledWithSourceForLife,
+            },
+        ],
+        ..legend(
+            "Valgavoth, Terror Eater",
+            cost(&[generic(6), b(), b(), b()]),
+            vec![CreatureType::Elder, CreatureType::Demon],
+            9,
+            9,
+        )
     }
 }

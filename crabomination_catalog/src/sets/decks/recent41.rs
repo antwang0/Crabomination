@@ -49,6 +49,7 @@ pub fn dryad_militant() -> CardDefinition {
                 colors: None,
                 card_types: Some(vec![CardType::Instant, CardType::Sorcery]),
                 void_counter: false,
+                stamp_source: false,
             },
         }],
         ..Default::default()

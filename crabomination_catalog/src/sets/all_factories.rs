@@ -7236,6 +7236,7 @@ static DECKS: &[Factory] = &[
     super::decks::portent_of_calamity,
     super::decks::niko_light_of_hope,
     super::decks::wishing_well,
+    super::decks::valgavoth_terror_eater,
     super::decks::endless_cockroaches,
     super::decks::poison_tip_archer,
     super::decks::altar_of_dementia,

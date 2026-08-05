@@ -9120,6 +9120,23 @@ impl GameState {
         // sorcery-speed gate below is relaxed for that path only.
         let mut aluren_flash = false;
         let mut miracle_window = false;
+        // Valgavoth — "during your turn, you may play cards exiled with this,
+        // paying life equal to the spell's mana value instead of its cost."
+        let valgavoth_toll = (zone == crate::card::Zone::Exile
+            && self.active_player_idx == p
+            && card_ref.exiled_with.is_some_and(|src| {
+                self.battlefield.iter().any(|c| {
+                    c.id == src
+                        && c.controller == p
+                        && c.definition.static_abilities.iter().any(|sa| {
+                            matches!(
+                                sa.effect,
+                                crate::effect::StaticEffect::PlayExiledWithSourceForLife
+                            )
+                        })
+                })
+            }))
+        .then(|| card_ref.definition.cost.cmc());
         let exile_after = match card_ref.may_play_until {
             Some(permission) => {
                 if permission.player != p {
@@ -9135,6 +9152,8 @@ impl GameState {
                     // Omniscience path — no timing relaxation.
                 } else if from_own_hand && self.player_casts_cheap_creature_free(&card_ref.definition) {
                     aluren_flash = true;
+                } else if valgavoth_toll.is_some() {
+                    // The life toll below stands in for the mana cost.
                 } else {
                     return Err(GameError::CardNotInHand(card_id));
                 }
@@ -9166,6 +9185,12 @@ impl GameState {
                         matches!(sa.effect, crate::effect::StaticEffect::FreeExileCastOncePerTurn)
                     })
             });
+        if let Some(life) = valgavoth_toll {
+            if self.players[p].life < life as i32 {
+                return Err(GameError::InsufficientLife);
+            }
+            self.pay_life_cost(p, life);
+        }
         if waive {
             self.players[p].free_exile_cast_used_this_turn = true;
         } else if let Some(cost) = alt_cast_cost {

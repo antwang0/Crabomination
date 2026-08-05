@@ -495,6 +495,7 @@ pub fn yawgmoths_agenda() -> CardDefinition {
                     colors: None,
                     card_types: None,
                     void_counter: false,
+                stamp_source: false,
                 },
             },
         ],

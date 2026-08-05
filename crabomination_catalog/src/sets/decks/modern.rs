@@ -24266,6 +24266,7 @@ pub fn rest_in_peace() -> CardDefinition {
                 colors: None,
                 card_types: None,
                 void_counter: false,
+                stamp_source: false,
             },
         }],
         ..Default::default()
@@ -24290,6 +24291,7 @@ pub fn leyline_of_the_void() -> CardDefinition {
                 colors: None,
                 card_types: None,
                 void_counter: false,
+                stamp_source: false,
             },
         }],
         ..Default::default()
@@ -47125,6 +47127,7 @@ pub fn sanctifier_en_vec() -> CardDefinition {
                 colors: Some(vec![Color::Black, Color::Red]),
                 card_types: None,
                 void_counter: false,
+                stamp_source: false,
             },
         }],
         ..Default::default()
@@ -53011,6 +53014,7 @@ pub fn necrodominance() -> CardDefinition {
                     colors: None,
                     card_types: None,
                     void_counter: false,
+                stamp_source: false,
                 },
             },
         ],
