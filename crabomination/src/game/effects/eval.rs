@@ -2079,6 +2079,40 @@ impl GameState {
                     _ => false,
                 })
             }
+            Predicate::CastSpellFirstMatchingThisTurn(filter) => {
+                let Some(EntityRef::Card(cid)) = ctx.trigger_source else {
+                    return false;
+                };
+                let caster = self
+                    .stack
+                    .iter()
+                    .find_map(|si| match si {
+                        StackItem::Spell { card, .. } if card.id == cid => Some(card.controller),
+                        _ => None,
+                    })
+                    .unwrap_or(ctx.controller);
+                self.players[caster]
+                    .spell_ids_cast_this_turn
+                    .iter()
+                    .find(|id| {
+                        self.find_card_anywhere(**id).is_some_and(|c| {
+                            self.evaluate_requirement_on_card(filter, c, caster)
+                        })
+                    })
+                    == Some(&cid)
+            }
+            Predicate::AuraHostIsCheaperOpponentPermanent => {
+                let Some(EntityRef::Permanent(aura_id)) = ctx.trigger_source else {
+                    return false;
+                };
+                let Some(aura) = self.battlefield_find(aura_id) else { return false };
+                let Some(host) = aura.attached_to.and_then(|h| self.battlefield_find(h)) else {
+                    return false;
+                };
+                !host.definition.is_land()
+                    && self.opponents_of(ctx.controller).contains(&host.controller)
+                    && host.definition.cost.cmc() <= aura.definition.cost.cmc()
+            }
             Predicate::CastSpellIsAdventure => {
                 let Some(EntityRef::Card(cid)) = ctx.trigger_source else {
                     return false;

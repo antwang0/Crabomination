@@ -535,7 +535,9 @@ impl Effect {
             Effect::ReturnGraveyardPermanentsDifferentNames
             | Effect::ReturnAllMatchingFromGraveyardToBattlefield { .. } => false,
             Effect::NameCardThenExileFromZones { who, .. } => player_has_target(who),
-            Effect::ReturnGraveyardCardsToHand { .. } => false,
+            Effect::ReturnGraveyardCardsToHand { .. }
+            | Effect::PutGraveyardCardOntoBattlefield { .. }
+            | Effect::GainControlWhileTriggerAuraAttached => false,
             // Resolution-time ChooseCards by the affected player; untargeted.
             // A `who: PlayerRef::Target(n)` makes the affected player a
             // real cast-time target (Quandrix Command mode 3).

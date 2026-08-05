@@ -164,7 +164,8 @@ pub(crate) fn event_matches_spec(
         (EventKind::VotingFinished, GameEvent::VotingFinished) => true,
         (EventKind::LostCoinFlip, GameEvent::CoinFlipLost { .. }) => true,
         (EventKind::RolledDice, GameEvent::DiceRolled { .. }) => true,
-        (EventKind::AuraAttached, GameEvent::AuraAttached { .. }) => true,
+        (EventKind::AuraAttached, GameEvent::AuraAttached { .. })
+        | (EventKind::AuraAttachedToAny, GameEvent::AuraAttached { .. }) => true,
         (
             EventKind::BecameAttached,
             GameEvent::AttachmentMoved { attached_to: Some(_), .. },
@@ -884,8 +885,11 @@ pub(crate) fn event_subject(event: &GameEvent, kind: &EventKind) -> Option<Entit
         // player — Flamescroll Celebrant's "that player").
         GameEvent::AbilityActivated { source, .. } => Some(EntityRef::Permanent(*source)),
         // Bind TriggerSource to the host the Aura attached to (the "creature
-        // you control" in Siona's payoff).
-        GameEvent::AuraAttached { attached_to, .. } => Some(EntityRef::Permanent(*attached_to)),
+        // you control" in Siona's payoff); the `ToAny` flavour binds the Aura
+        // instead, so a body can read both objects (Eriette, the Beguiler).
+        GameEvent::AuraAttached { aura, attached_to } => Some(EntityRef::Permanent(
+            if matches!(kind, EventKind::AuraAttachedToAny) { *aura } else { *attached_to },
+        )),
         // BecameAttached binds the host, so "that creature" reads it.
         GameEvent::AttachmentMoved { attached_to: Some(host), .. } => {
             Some(EntityRef::Permanent(*host))

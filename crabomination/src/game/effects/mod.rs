@@ -12052,6 +12052,58 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::PutGraveyardCardOntoBattlefield { filter } => {
+                use crate::effect::ZoneDest;
+                let p = ctx.controller;
+                let candidates: Vec<(CardId, String)> = self
+                    .players
+                    .iter()
+                    .flat_map(|pl| pl.graveyard.iter())
+                    .filter(|c| {
+                        self.evaluate_requirement_static(
+                            filter,
+                            &Target::Permanent(c.id),
+                            p,
+                            ctx.source,
+                        )
+                    })
+                    .map(|c| (c.id, c.definition.name.to_string()))
+                    .collect();
+                if candidates.is_empty() {
+                    return Ok(());
+                }
+                let chosen = if self.players[p].wants_ui {
+                    self.ask_seat_cards(
+                        p,
+                        "Put a card from a graveyard onto the battlefield".to_string(),
+                        ctx.source.unwrap_or(CardId(0)),
+                        candidates.clone(),
+                        1,
+                        1,
+                        effect,
+                    )
+                    .and_then(|ids| ids.first().copied())
+                } else {
+                    candidates
+                        .iter()
+                        .max_by_key(|(id, _)| {
+                            self.find_card_anywhere(*id)
+                                .map(|c| c.definition.cost.cmc())
+                                .unwrap_or(0)
+                        })
+                        .map(|(id, _)| *id)
+                };
+                if let Some(cid) = chosen {
+                    self.move_card_to(
+                        cid,
+                        &ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                        ctx,
+                        events,
+                    );
+                }
+                Ok(())
+            }
+
             Effect::ReturnGraveyardCardsToHand { filter, max } => {
                 
                 use crate::effect::ZoneDest;
@@ -14795,6 +14847,7 @@ impl GameState {
                             duration: *duration,
                             source: None,
                             while_source_tapped: false,
+                            while_source_attached: false,
                         });
                     }
                 }
@@ -14817,8 +14870,33 @@ impl GameState {
                             duration: crate::effect::Duration::Permanent,
                             source: Some(src),
                             while_source_tapped: false,
+                            while_source_attached: false,
                         });
                     }
+                }
+                Ok(())
+            }
+
+            Effect::GainControlWhileTriggerAuraAttached => {
+                // CR 611.2c — the Aura that just attached is the trigger
+                // subject; it holds the steal for as long as it stays on.
+                let Some(EntityRef::Permanent(aura)) = ctx.trigger_source else {
+                    return Ok(());
+                };
+                let Some(host) = self.battlefield_find(aura).and_then(|c| c.attached_to) else {
+                    return Ok(());
+                };
+                if let Some(prev) = self.change_control(host, ctx.controller)
+                    && !self.temporary_control.iter().any(|t| t.card == host)
+                {
+                    self.temporary_control.push(crate::game::TempControl {
+                        card: host,
+                        original_controller: prev,
+                        duration: crate::effect::Duration::Permanent,
+                        source: Some(aura),
+                        while_source_tapped: false,
+                        while_source_attached: true,
+                    });
                 }
                 Ok(())
             }
@@ -14839,6 +14917,7 @@ impl GameState {
                             duration: crate::effect::Duration::Permanent,
                             source: Some(src),
                             while_source_tapped: true,
+                            while_source_attached: false,
                         });
                     }
                 }
@@ -21692,6 +21771,7 @@ impl GameState {
                             duration: *duration,
                             source: None,
                             while_source_tapped: false,
+                            while_source_attached: false,
                         });
                     }
                     if let Some(c) = self.battlefield_find_mut(*cid) {
@@ -22363,10 +22443,11 @@ impl GameState {
             }
 
             Effect::NthResolutionThisTurn { branches } => {
-                let p = ctx.controller;
-                let n = self.players[p].escalating_resolutions_this_turn as usize;
-                self.players[p].escalating_resolutions_this_turn =
-                    self.players[p].escalating_resolutions_this_turn.saturating_add(1);
+                // "this ability" (CR 603), so the tally is per source object —
+                // two copies of Omnath don't share a count.
+                let key = ctx.source.unwrap_or(CardId(0));
+                let n = *self.ability_resolutions_this_turn.get(&key).unwrap_or(&0) as usize;
+                *self.ability_resolutions_this_turn.entry(key).or_insert(0) += 1;
                 if let Some(branch) = branches.get(n) {
                     let branch = branch.clone();
                     self.run_effect(&branch, ctx, events)?;

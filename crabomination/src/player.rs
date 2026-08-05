@@ -297,12 +297,6 @@ pub struct Player {
     /// CR 701.49d — dungeons this player has completed this game.
     #[serde(default)]
     pub dungeons_completed: u32,
-    /// Number of times an "Nth time this turn" landfall ability this player
-    /// controls has resolved this turn (Omnath, Locus of Creation). Bumped by
-    /// `Effect::NthResolutionThisTurn`, reset at the player's `do_untap`.
-    /// Defaults to 0 for snapshot back-compat.
-    #[serde(default)]
-    pub escalating_resolutions_this_turn: u32,
     /// CR 603.7e — pending "your next creature spell this turn enters with N
     /// extra counters of this kind" riders (the FIN "Summon" saga chapters —
     /// Fenrir II "Heavenward Howl", Brynhildr). Each entry is drained onto the
@@ -704,6 +698,12 @@ pub struct Player {
     /// Cleared at untap.
     #[serde(default)]
     pub spell_names_cast_this_turn: Vec<String>,
+    /// Card ids of the spells this player has cast this turn, in cast order —
+    /// "the first instant spell … you've cast this turn" (Alania, Divergent
+    /// Storm) resolves each id through `find_card_anywhere`. Cleared with
+    /// `spell_names_cast_this_turn`.
+    #[serde(default)]
+    pub spell_ids_cast_this_turn: Vec<crate::card::CardId>,
     /// CR 502.3 — number of this player's upcoming untap steps to skip
     /// (Yosei, the Morning Star; Frost Titan-style locks). Decremented when
     /// their untap step would run; while > 0 their permanents don't untap.
@@ -972,7 +972,6 @@ impl Player {
             channel_life_for_mana: false,
             dungeon: None,
             dungeons_completed: 0,
-            escalating_resolutions_this_turn: 0,
             pending_creature_etb_counters: Vec::new(),
             pending_creature_etb_keywords: Vec::new(),
             permanent_left_battlefield_this_turn: false,
@@ -1056,6 +1055,7 @@ impl Player {
             damage_floor_this_turn: false,
             attack_tax_until_your_turn: 0,
             spell_names_cast_this_turn: Vec::new(),
+            spell_ids_cast_this_turn: Vec::new(),
             skip_turns: 0,
             skip_next_untap_step: 0,
             skip_next_draw_step: 0,

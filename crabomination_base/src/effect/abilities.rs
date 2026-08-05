@@ -3063,6 +3063,12 @@ pub struct ActivatedAbility {
     /// Defaults to false.
     #[serde(default)]
     pub waterbend: bool,
+    /// CR 702.51 — convoke on the *ability*: "for each mana in this ability's
+    /// activation cost, you may tap an untapped creature you control rather
+    /// than pay that mana" (Heirloom Epic). Shares waterbend's helper slot on
+    /// `GameAction::ActivateAbilityWaterbend`, but only creatures qualify.
+    #[serde(default)]
+    pub convoke: bool,
     /// CR 701.59 — "Collect evidence N" as part of this ability's cost
     /// ("{T}, Collect evidence N: …"). Exiles the cheapest set of graveyard
     /// cards whose total mana value is ≥ N and emits `EvidenceCollected`.

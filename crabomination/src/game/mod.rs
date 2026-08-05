@@ -1776,6 +1776,10 @@ pub(crate) struct TempControl {
     /// The SBA sweep reverts it once the source untaps or leaves.
     #[serde(default)]
     pub(crate) while_source_tapped: bool,
+    /// Eriette, the Beguiler: the steal holds only while `source` (the Aura)
+    /// stays attached to `card`. Swept alongside `while_source_tapped`.
+    #[serde(default)]
+    pub(crate) while_source_attached: bool,
 }
 
 /// A turn-scoped spell tax — see `GameState.turn_scoped_spell_taxes`.

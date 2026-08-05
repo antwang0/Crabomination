@@ -7580,6 +7580,7 @@ impl GameState {
         self.players[p]
             .spell_names_cast_this_turn
             .push(card.definition.name.to_string());
+        self.players[p].spell_ids_cast_this_turn.push(card.id);
         // "First noncreature spell of a turn" tally (Nullstone Gargoyle). An
         // Adventure/Omen half cast is a noncreature spell regardless of the
         // card's front face.
@@ -12116,7 +12117,9 @@ impl GameState {
         helpers: &[CardId],
     ) -> Result<Vec<GameEvent>, GameError> {
         let p = self.priority.player_with_priority;
-        // The ability must exist on a battlefield source and be flagged waterbend.
+        // The ability must exist on a battlefield source and be flagged
+        // waterbend (artifacts or creatures help) or convoke (creatures only).
+        let creatures_only;
         let generic_total = {
             let Some(c) = self.battlefield.iter().find(|c| c.id == card_id) else {
                 return Err(GameError::CardNotOnBattlefield(card_id));
@@ -12124,9 +12127,10 @@ impl GameState {
             let Some(ab) = c.definition.activated_abilities.get(ability_index) else {
                 return Err(GameError::AbilityIndexOutOfBounds);
             };
-            if !ab.waterbend {
-                return Err(GameError::AbilityIndexOutOfBounds); // reuse: not a waterbend ability
+            if !ab.waterbend && !ab.convoke {
+                return Err(GameError::AbilityIndexOutOfBounds); // no helper-paid cost
             }
+            creatures_only = ab.convoke;
             // For a "Waterbend {X}" ability the generic is the chosen X; otherwise
             // it's the printed generic pip total.
             if ab.mana_cost.has_x() {
@@ -12145,7 +12149,8 @@ impl GameState {
                 c.id == *cid
                     && c.controller == p
                     && !c.tapped
-                    && (c.definition.is_creature() || c.definition.is_artifact())
+                    && (c.definition.is_creature()
+                        || (!creatures_only && c.definition.is_artifact()))
             });
             if !ok {
                 return Err(GameError::CardNotOnBattlefield(*cid));

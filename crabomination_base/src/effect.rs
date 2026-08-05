@@ -1688,6 +1688,15 @@ pub enum Predicate {
     /// Dragon, Dragon's Rage Channeler) or an artifact spell. Evaluated
     /// against the topmost matching `StackItem::Spell`'s card definition.
     CastSpellMatches(SelectionRequirement),
+    /// The just-cast spell matches `filter` **and** is the first such spell its
+    /// caster has cast this turn ("if it's the first instant spell … you've
+    /// cast this turn" — Alania, Divergent Storm). Reads
+    /// `Player.spell_ids_cast_this_turn`, which already includes this cast.
+    CastSpellFirstMatchingThisTurn(SelectionRequirement),
+    /// On an `AuraAttachedToAny` trigger: the Aura (`ctx.trigger_source`) is
+    /// attached to a nonland permanent an opponent controls whose mana value is
+    /// at most the Aura's (Eriette, the Beguiler).
+    AuraHostIsCheaperOpponentPermanent,
     /// True if the just-cast spell (located via `ctx.trigger_source`) was cast
     /// as an Adventure (CR 715 — its `adventuring` flag is set). Powers
     /// Chancellor of Tales' "whenever you cast an Adventure spell".
@@ -2684,6 +2693,11 @@ pub enum EventKind {
     /// control). The attached-to permanent is the event subject. Matched to
     /// `GameEvent::AuraAttached`. Siona, Captain of the Pyleas.
     AuraAttached,
+    /// Same event, but the *Aura* is the trigger subject and the host is
+    /// unrestricted — "whenever an Aura you control becomes attached to a
+    /// nonland permanent an opponent controls …" (Eriette, the Beguiler), where
+    /// the body has to reach both objects.
+    AuraAttachedToAny,
     /// This Equipment became attached to a permanent (Blade of Shared Souls;
     /// fires off `GameEvent::AttachmentMoved` with a live host).
     BecameAttached,
@@ -5956,6 +5970,10 @@ pub enum Effect {
     /// sweep once the source untaps or leaves; while it holds something the
     /// source skips its own untap step ("you may choose not to untap").
     GainControlWhileSourceTapped { what: Selector },
+    /// CR 611.2c — "gain control of that permanent for as long as that Aura is
+    /// attached to it" (Eriette, the Beguiler). The Aura is
+    /// `ctx.trigger_source`; the stolen permanent is whatever it's attached to.
+    GainControlWhileTriggerAuraAttached,
     /// CR 611.2c sibling — the resolved permanents gain `keyword` for as long
     /// as the effect's source stays tapped on the battlefield (Hisoka's Guard's
     /// shroud grant). Unwound by the same SBA sweep.
@@ -6141,6 +6159,11 @@ pub enum Effect {
     /// (Mythos of Brokkos). Resolution-time `Decision::ChooseCards` pick (no
     /// targeting); reusable for any choose-as-resolves graveyard recursion.
     ReturnGraveyardCardsToHand { filter: SelectionRequirement, max: Value },
+    /// "Put a `filter` card from a graveyard onto the battlefield under your
+    /// control" (Victor, Valgavoth's Seneschal). Untargeted: a resolution-time
+    /// `Decision::ChooseCards` over *every* graveyard, auto-picking the highest
+    /// mana value for a non-UI seat.
+    PutGraveyardCardOntoBattlefield { filter: SelectionRequirement },
     /// "`who` shuffles up to `max` `filter` cards from their graveyard into
     /// their library." Resolution-time `Decision::ChooseCards` by the affected
     /// player (no targeting) — a graveyard-recursion / anti-mill rider
@@ -7410,9 +7433,9 @@ pub enum Effect {
     CastUpToNFromOpponentsExile { count: Value },
 
     /// Omnath, Locus of Creation — run `branches[n]` where `n` is the number
-    /// of times an escalating ability the controller owns has already resolved
-    /// this turn (0-indexed), then bump that count. Past the last branch it
-    /// does nothing. Backed by `Player.escalating_resolutions_this_turn`.
+    /// of times *this ability* has already resolved this turn (0-indexed), then
+    /// bump that count. Past the last branch it does nothing. The sibling of
+    /// `EscalatingThisTurn`, which repeats its last branch instead.
     NthResolutionThisTurn { branches: Vec<Effect> },
 
     /// Scholarship Sponsor — each player controlling fewer lands than the

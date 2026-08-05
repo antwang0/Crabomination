@@ -591,6 +591,7 @@ impl GameState {
                     pl.nonartifact_spells_cast_this_game_turn = 0;
                     pl.multicolored_spells_cast_this_turn = 0;
                     pl.spell_names_cast_this_turn.clear();
+                    pl.spell_ids_cast_this_turn.clear();
                     pl.spells_cast_from_hand_this_turn = 0;
                     pl.oil_activity_this_turn = false;
                     pl.channel_life_for_mana = false;
@@ -3294,7 +3295,6 @@ impl GameState {
         self.players[p].creatures_died_this_turn = 0;
         self.creature_deaths_this_turn.clear();
         self.players[p].zuberas_died_this_turn = 0;
-        self.players[p].escalating_resolutions_this_turn = 0;
         // Reset the Revolt (CR 702.139) "permanent left the battlefield under
         // your control this turn" flag for the active player.
         self.players[p].permanent_left_battlefield_this_turn = false;
@@ -3992,13 +3992,19 @@ impl GameState {
             }
         }
 
-        // CR 611.2c — "for as long as this artifact remains tapped" steals
-        // (Vedalken Shackles) end the moment the source untaps or leaves.
-        if self.temporary_control.iter().any(|tc| tc.while_source_tapped) {
+        // CR 611.2c — "for as long as this artifact remains tapped" (Vedalken
+        // Shackles) / "for as long as that Aura is attached to it" (Eriette)
+        // steals end the moment the source stops meeting the clause.
+        if self.temporary_control.iter().any(|tc| tc.while_source_tapped || tc.while_source_attached)
+        {
             let mut kept = Vec::new();
             for tc in std::mem::take(&mut self.temporary_control) {
-                let holds = !tc.while_source_tapped
-                    || tc.source.and_then(|s| self.battlefield_find(s)).is_some_and(|c| c.tapped);
+                let holds = (!tc.while_source_tapped
+                    || tc.source.and_then(|s| self.battlefield_find(s)).is_some_and(|c| c.tapped))
+                    && (!tc.while_source_attached
+                        || tc.source.and_then(|s| self.battlefield_find(s)).is_some_and(|c| {
+                            c.attached_to == Some(tc.card)
+                        }));
                 if holds {
                     kept.push(tc);
                 } else {

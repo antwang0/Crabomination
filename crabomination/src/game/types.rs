@@ -492,10 +492,11 @@ pub enum GameAction {
         #[serde(default)]
         mode: Option<usize>,
     },
-    /// CR 701.67 — activate an ability whose cost includes "Waterbend {N}",
-    /// tapping each artifact/creature in `helpers` for {1} of the generic
-    /// (clamped to N; the rest from mana). The ability must be flagged
-    /// `ActivatedAbility.waterbend`.
+    /// Activate an ability whose generic mana can be paid by tapping helpers:
+    /// CR 701.67 Waterbend {N} (artifacts or creatures) or CR 702.51 convoke on
+    /// the ability (creatures only — Heirloom Epic). Each helper pays {1},
+    /// clamped to the generic total; the rest comes from mana. The ability must
+    /// be flagged `ActivatedAbility.waterbend` or `.convoke`.
     ActivateAbilityWaterbend {
         card_id: CardId,
         ability_index: usize,
