@@ -1,0 +1,461 @@
+//! Aetherdrift (DFT) build-around gaps — the legends, the Vehicles and the
+//! exhaust/speed payoffs. Tests in `tests/recent_b/recent326.rs`.
+
+use crate::card::{
+    ActivatedAbility, AdditionalCastCost, ArtifactSubtype, CardDefinition, CardType, CounterType,
+    CreatureType, DynamicPt, EventKind, EventScope, EventSpec, Keyword, Predicate,
+    SelectionRequirement as R, StaticAbility, StaticEffect, Subtypes, Supertype, TriggeredAbility,
+    Value, WardCost,
+};
+use crate::effect::shortcut::{etb, on_attack};
+use crate::effect::{Duration, Effect, LibraryPosition, ManaPayload, PlayerRef, Selector, ZoneDest};
+use crate::mana::{ManaCost, SpendRestriction, b, cost, g, generic, r, u, w, x};
+
+fn creature(
+    name: &'static str,
+    c: ManaCost,
+    types: Vec<CreatureType>,
+    p: i32,
+    t: i32,
+) -> CardDefinition {
+    CardDefinition {
+        name,
+        cost: c,
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: types, ..Default::default() },
+        power: p,
+        toughness: t,
+        ..Default::default()
+    }
+}
+
+fn legend(
+    name: &'static str,
+    c: ManaCost,
+    types: Vec<CreatureType>,
+    p: i32,
+    t: i32,
+) -> CardDefinition {
+    CardDefinition {
+        supertypes: vec![Supertype::Legendary],
+        ..creature(name, c, types, p, t)
+    }
+}
+
+fn vehicle(name: &'static str, c: ManaCost, p: i32, t: i32) -> CardDefinition {
+    CardDefinition {
+        name,
+        cost: c,
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes {
+            artifact_subtypes: vec![ArtifactSubtype::Vehicle],
+            ..Default::default()
+        },
+        power: p,
+        toughness: t,
+        ..Default::default()
+    }
+}
+
+/// Wickerfolk Indomitable — {3}{B} 4/3 Scarecrow that keeps coming back: cast
+/// it from your graveyard for 2 life plus an artifact or creature.
+pub fn wickerfolk_indomitable() -> CardDefinition {
+    CardDefinition {
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        keywords: vec![Keyword::GraveyardCast],
+        flashback_additional_cost: vec![
+            AdditionalCastCost::PayLife { amount: 2 },
+            AdditionalCastCost::SacrificePermanent {
+                filter: R::Artifact.or(R::Creature).and(R::ControlledByYou),
+                count: 1,
+            },
+        ],
+        ..creature(
+            "Wickerfolk Indomitable",
+            cost(&[generic(3), b()]),
+            vec![CreatureType::Scarecrow],
+            4,
+            3,
+        )
+    }
+}
+
+/// Daretti, Rocketeer Engineer — {4}{R} */5 whose power is your biggest
+/// artifact; entering or attacking rebuys one from the graveyard for another.
+pub fn daretti_rocketeer_engineer() -> CardDefinition {
+    let rebuy = || Effect::MaySacrifice {
+        description: "Sacrifice an artifact to return the chosen card?".into(),
+        filter: R::Artifact.and(R::ControlledByYou),
+        count: Value::ONE,
+        then: Box::new(Effect::Move {
+            what: Selector::TargetFiltered { slot: 0, filter: R::Artifact },
+            to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+        }),
+        else_: None,
+    };
+    CardDefinition {
+        dynamic_pt: Some(DynamicPt::BasePlusGreatestOtherArtifactMv { base_p: 0, base_t: 5 }),
+        triggered_abilities: vec![etb(rebuy()), on_attack(rebuy())],
+        ..legend(
+            "Daretti, Rocketeer Engineer",
+            cost(&[generic(4), r()]),
+            vec![CreatureType::Goblin, CreatureType::Artificer],
+            0,
+            5,
+        )
+    }
+}
+
+/// Mendicant Core, Guidelight — {W}{U} */3 Robot; at max speed your artifact
+/// spells can be copied for {1}.
+pub fn mendicant_core_guidelight() -> CardDefinition {
+    CardDefinition {
+        dynamic_pt: Some(DynamicPt::ArtifactsControlledPower { base_p: 0, base_t: 3 }),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        keywords: vec![Keyword::StartYourEngines],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl).with_filter(
+                Predicate::All(vec![
+                    Predicate::EntityMatches {
+                        what: Selector::TriggerSource,
+                        filter: R::Artifact,
+                    },
+                    Predicate::SpeedAtLeast { who: PlayerRef::You, speed: 4 },
+                ]),
+            ),
+            effect: Effect::MayPay {
+                description: "Pay {1} to copy that artifact spell?".into(),
+                mana_cost: cost(&[generic(1)]),
+                body: Box::new(Effect::CopySpell {
+                    what: Selector::TriggerSource,
+                    count: Value::ONE,
+                }),
+                else_: None,
+            },
+        }],
+        ..legend(
+            "Mendicant Core, Guidelight",
+            cost(&[w(), u()]),
+            vec![CreatureType::Robot],
+            0,
+            3,
+        )
+    }
+}
+
+/// Oviya, Automech Artisan — {3}{G} 1/2; your attackers trample and {G},{T}
+/// drops a creature or Vehicle from hand (artifacts arrive with two counters).
+pub fn oviya_automech_artisan() -> CardDefinition {
+    CardDefinition {
+        static_abilities: vec![StaticAbility {
+            description: "Each creature that's attacking one of your opponents has trample.",
+            effect: StaticEffect::GrantKeywordToAttackers { keyword: Keyword::Trample },
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[g()]),
+            tap_cost: true,
+            effect: Effect::PutFromHandOntoBattlefield {
+                who: PlayerRef::You,
+                filter: R::Creature.or(R::HasArtifactSubtype(ArtifactSubtype::Vehicle)),
+                count: Value::ONE,
+                tapped: false,
+                haste: false,
+                sacrifice_eot: false,
+                return_eot: false,
+                then: Some(Box::new(Effect::AddCounter {
+                    what: Selector::MatchingAmong {
+                        inner: Box::new(Selector::LastMoved),
+                        filter: R::Artifact,
+                    },
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::Const(2),
+                })),
+            },
+            ..Default::default()
+        }],
+        ..legend(
+            "Oviya, Automech Artisan",
+            cost(&[generic(3), g()]),
+            vec![CreatureType::Human, CreatureType::Artificer],
+            1,
+            2,
+        )
+    }
+}
+
+/// Sita Varma, Masked Racer — {G}{U} 2/3. Exhaust: grow by X, then optionally
+/// flatten every other creature you control to her power.
+pub fn sita_varma_masked_racer() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[x(), g(), g(), u()]),
+            exhaust: true,
+            effect: Effect::Seq(vec![
+                Effect::AddCounter {
+                    what: Selector::This,
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::XFromCost,
+                },
+                Effect::MayDo {
+                    description: "Set your other creatures' base P/T to Sita Varma's power?".into(),
+                    body: Box::new(Effect::SetBasePT {
+                        what: Selector::EachPermanent(
+                            R::Creature.and(R::ControlledByYou).and(R::Not(Box::new(R::IsSource))),
+                        ),
+                        power: Value::PowerOf(Box::new(Selector::This)),
+                        toughness: Value::PowerOf(Box::new(Selector::This)),
+                        duration: Duration::EndOfTurn,
+                    }),
+                },
+            ]),
+            ..Default::default()
+        }],
+        ..legend(
+            "Sita Varma, Masked Racer",
+            cost(&[g(), u()]),
+            vec![CreatureType::Human, CreatureType::Rogue],
+            2,
+            3,
+        )
+    }
+}
+
+/// Winter, Cursed Rider — {U}{B} 3/2. Ward—Pay 2 life, shared with your
+/// artifacts; exhaust exiles artifacts from your graveyard for a board sweep.
+pub fn winter_cursed_rider() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Ward(WardCost::Life(2))],
+        static_abilities: vec![StaticAbility {
+            description: "Artifacts you control have \"Ward—Pay 2 life.\"",
+            effect: StaticEffect::GrantKeyword {
+                applies_to: Selector::EachPermanent(R::Artifact.and(R::ControlledByYou)),
+                keyword: Keyword::Ward(WardCost::Life(2)),
+            },
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(2), u(), b()]),
+            tap_cost: true,
+            exhaust: true,
+            exile_other_filter: Some((R::Artifact, 1)),
+            exile_other_x: true,
+            effect: Effect::PumpPT {
+                what: Selector::EachPermanent(
+                    R::Creature
+                        .and(R::Not(Box::new(R::Artifact)))
+                        .and(R::Not(Box::new(R::IsSource))),
+                ),
+                power: Value::Negate(Box::new(Value::XFromCost)),
+                toughness: Value::Negate(Box::new(Value::XFromCost)),
+                duration: Duration::EndOfTurn,
+            },
+            ..Default::default()
+        }],
+        ..legend(
+            "Winter, Cursed Rider",
+            cost(&[u(), b()]),
+            vec![CreatureType::Human, CreatureType::Warlock],
+            3,
+            2,
+        )
+    }
+}
+
+/// Redshift, Rocketeer Chief — {R}{G} 2/3 vigilance. Taps for power-many
+/// ability mana; exhaust dumps your hand's permanents onto the battlefield.
+pub fn redshift_rocketeer_chief() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Vigilance],
+        activated_abilities: vec![
+            ActivatedAbility {
+                tap_cost: true,
+                effect: Effect::AddMana {
+                    who: PlayerRef::You,
+                    pool: ManaPayload::Restricted(
+                        Box::new(ManaPayload::AnyOneColor(Value::PowerOf(Box::new(
+                            Selector::This,
+                        )))),
+                        SpendRestriction::AbilitiesOnly,
+                    ),
+                },
+                ..Default::default()
+            },
+            ActivatedAbility {
+                mana_cost: cost(&[generic(10), r(), g()]),
+                exhaust: true,
+                effect: Effect::PutFromHandOntoBattlefield {
+                    who: PlayerRef::You,
+                    filter: R::Permanent,
+                    count: Value::Const(99),
+                    tapped: false,
+                    haste: false,
+                    sacrifice_eot: false,
+                    return_eot: false,
+                    then: None,
+                },
+                ..Default::default()
+            },
+        ],
+        ..legend(
+            "Redshift, Rocketeer Chief",
+            cost(&[r(), g()]),
+            vec![CreatureType::Goblin, CreatureType::Pilot],
+            2,
+            3,
+        )
+    }
+}
+
+/// Demonic Junker — {6}{B} 4/3 Vehicle with affinity for artifacts; its ETB
+/// sweeps one creature per player and grows on your own casualty.
+pub fn demonic_junker() -> CardDefinition {
+    let mine = Selector::TargetFiltered { slot: 0, filter: R::Creature.and(R::ControlledByYou) };
+    let theirs =
+        Selector::TargetFiltered { slot: 1, filter: R::Creature.and(R::ControlledByOpponent) };
+    CardDefinition {
+        affinity_filter: Some(R::Artifact.and(R::ControlledByYou)),
+        keywords: vec![Keyword::Crew(2)],
+        triggered_abilities: vec![etb(Effect::OptionalTargets {
+            min: 0,
+            body: Box::new(Effect::Seq(vec![
+                Effect::Destroy { what: theirs },
+                Effect::If {
+                    cond: Predicate::SelectorExists(mine.clone()),
+                    then: Box::new(Effect::Seq(vec![
+                        Effect::Destroy { what: mine },
+                        Effect::AddCounter {
+                            what: Selector::This,
+                            kind: CounterType::PlusOnePlusOne,
+                            amount: Value::Const(2),
+                        },
+                    ])),
+                    else_: Box::new(Effect::Noop),
+                },
+            ])),
+        })],
+        ..vehicle("Demonic Junker", cost(&[generic(6), b()]), 4, 3)
+    }
+}
+
+/// Rise from the Wreck — {2}{G} Sorcery. Four separately-filtered graveyard
+/// slots, each optional.
+pub fn rise_from_the_wreck() -> CardDefinition {
+    let slot = |n: u8, filter: R| Effect::Move {
+        what: Selector::TargetFiltered { slot: n, filter },
+        to: ZoneDest::Hand(PlayerRef::You),
+    };
+    CardDefinition {
+        name: "Rise from the Wreck",
+        cost: cost(&[generic(2), g()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::OptionalTargets {
+            min: 0,
+            body: Box::new(Effect::Seq(vec![
+                slot(0, R::Creature),
+                slot(1, R::HasCreatureType(CreatureType::Mount)),
+                slot(2, R::HasArtifactSubtype(ArtifactSubtype::Vehicle)),
+                slot(3, R::Creature.and(R::HasNoAbilities)),
+            ])),
+        },
+        ..Default::default()
+    }
+}
+
+/// Riptide Gearhulk — {1}{W}{W}{U}{U} 2/5 double strike prowess; its ETB
+/// buries one nonland permanent per opponent third from the top.
+pub fn riptide_gearhulk() -> CardDefinition {
+    CardDefinition {
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        keywords: vec![Keyword::DoubleStrike, Keyword::Prowess],
+        triggered_abilities: vec![etb(Effect::OptionalTargets {
+            min: 0,
+            body: Box::new(Effect::Move {
+                what: Selector::TargetFiltered {
+                    slot: 0,
+                    filter: R::Not(Box::new(R::Land)).and(R::ControlledByOpponent),
+                },
+                to: ZoneDest::Library {
+                    who: PlayerRef::OwnerOfMoved,
+                    pos: LibraryPosition::FromTop(2),
+                },
+            }),
+        })],
+        ..creature(
+            "Riptide Gearhulk",
+            cost(&[generic(1), w(), w(), u(), u()]),
+            vec![CreatureType::Construct],
+            2,
+            5,
+        )
+    }
+}
+
+/// Radiant Lotus — {6} Artifact. Sacrifice artifacts to hand a player three
+/// mana of one color for each.
+pub fn radiant_lotus() -> CardDefinition {
+    CardDefinition {
+        name: "Radiant Lotus",
+        cost: cost(&[generic(6)]),
+        card_types: vec![CardType::Artifact],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            sac_any_number_filter: Some(R::Artifact.and(R::ControlledByYou)),
+            effect: Effect::AddMana {
+                who: PlayerRef::Target(0),
+                pool: ManaPayload::AnyOneColor(Value::Times(
+                    Box::new(Value::SacrificedCount),
+                    Box::new(Value::Const(3)),
+                )),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Skyseer's Chariot — {1}{W} 3/3 flying Vehicle that taxes every activated
+/// ability of the card name it names on the way in.
+pub fn skyseers_chariot() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flying, Keyword::Crew(2)],
+        as_enters_effect: Some(Effect::NameCard {
+            what: Selector::This,
+            restrict_to: Some(R::Not(Box::new(R::Land))),
+        }),
+        static_abilities: vec![StaticAbility {
+            description: "Activated abilities of sources with the chosen name cost {2} more to \
+                          activate.",
+            effect: StaticEffect::NamedSourcesActivationTax { amount: 2 },
+        }],
+        ..vehicle("Skyseer's Chariot", cost(&[generic(1), w()]), 3, 3)
+    }
+}
+
+/// Push the Limit — {5}{R}{R} Sorcery. Every Mount and Vehicle in your
+/// graveyard comes back hasty for one attack.
+pub fn push_the_limit() -> CardDefinition {
+    CardDefinition {
+        name: "Push the Limit",
+        cost: cost(&[generic(5), r(), r()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::ReturnAllMatchingFromGraveyardToBattlefield {
+                who: PlayerRef::You,
+                filter: R::HasCreatureType(CreatureType::Mount)
+                    .or(R::HasArtifactSubtype(ArtifactSubtype::Vehicle)),
+                sacrifice_eot: true,
+            },
+            Effect::AnimateAsCreature {
+                what: Selector::EachPermanent(
+                    R::HasArtifactSubtype(ArtifactSubtype::Vehicle).and(R::ControlledByYou),
+                ),
+                duration: Duration::EndOfTurn,
+            },
+            Effect::GrantKeyword {
+                what: Selector::EachPermanent(R::Creature.and(R::ControlledByYou)),
+                keyword: Keyword::Haste,
+                duration: Duration::EndOfTurn,
+            },
+        ]),
+        ..Default::default()
+    }
+}

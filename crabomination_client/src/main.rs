@@ -224,16 +224,8 @@ fn main() {
     {
         let progress = image_prefetch.clone();
         let dir = asset_dir.clone();
-        // TEMPORARY — see TODO.md → "Undo: sealed-pool image priority".
-        // Download the cards being playtested before the rest of the
-        // catalog; delete this line (and `prioritize_pool_images`) to
-        // restore plain catalog order.
-        let mut specs = specs;
-        // Anchored at the repo, not the working directory — the same
-        // resolution the Sealed mode uses to find your deck.
-        let deck = menu::sealed_deck_path();
-        let pool = deck.with_file_name("sealed_pool.txt");
-        scryfall::prioritize_pool_images(&mut specs, &[&pool, &deck]);
+        // Cards the app renders jump this queue as they are asked for
+        // (`scryfall::card_asset_path`), so a match never waits on unrelated art.
         std::thread::spawn(move || {
             scryfall::ensure_card_images_with_progress(&specs, &dir, &progress);
         });

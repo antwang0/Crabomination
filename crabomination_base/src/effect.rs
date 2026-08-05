@@ -4817,6 +4817,12 @@ pub enum Effect {
     /// normal flashback path (pay the cost, exile on resolve). Used by the
     /// SOS "Flashback" instant.
     GrantFlashbackThisTurn { what: Selector },
+    /// "Target creature card in your graveyard gains embalm until end of turn.
+    /// The embalm cost is equal to its mana cost." (CR 702.88 — Cursecloth
+    /// Wrappings.) Pushes a real embalm activation onto the card's
+    /// `granted_activated_eot`, so it activates through the normal
+    /// graveyard-ability path and is cleared at cleanup.
+    GrantEmbalmThisTurn { what: Selector },
     /// "Target instant/sorcery card in your graveyard gains harmonize until
     /// end of turn; its harmonize cost equals its mana cost" (Songcrafter
     /// Mage). Stamps an until-end-of-turn `granted_harmonize_eot` (= the
@@ -5985,6 +5991,16 @@ pub enum Effect {
     /// picks at resolution (`Decision::ChooseCards`); duplicate names are
     /// dropped so each returned card has a distinct name.
     ReturnGraveyardPermanentsDifferentNames,
+    /// "Return all [filter] cards from `who`'s graveyard to the battlefield"
+    /// (Push the Limit). No pick — every match comes back under the effect's
+    /// controller. With `sacrifice_eot` each returns is sacrificed at the
+    /// beginning of the next end step.
+    ReturnAllMatchingFromGraveyardToBattlefield {
+        who: PlayerRef,
+        filter: SelectionRequirement,
+        #[serde(default)]
+        sacrifice_eot: bool,
+    },
     /// "Return up to `max` `filter` cards from your graveyard to your hand"
     /// (Mythos of Brokkos). Resolution-time `Decision::ChooseCards` pick (no
     /// targeting); reusable for any choose-as-resolves graveyard recursion.

@@ -1750,6 +1750,10 @@ impl crate::game::GameState {
     ) -> Vec<crate::effect::ActivatedAbility> {
         use crate::effect::StaticEffect;
         let mut out = Vec::new();
+        // Instance grants first (Cursecloth Wrappings' until-EOT embalm), so
+        // their indices match `granted_abilities_for`'s off-battlefield order.
+        out.extend(card.granted_activated_abilities.iter().cloned());
+        out.extend(card.granted_activated_eot.iter().cloned());
         // Varolz — scavenge on creature cards, unless the card prints its own.
         if card.definition.is_creature()
             && !card
@@ -8150,9 +8154,15 @@ impl GameState {
         let mayhem = card.effective_flashback().is_none()
             && !jumpstart
             && card.definition.mayhem_cost().is_some();
+        // "You may cast this card from your graveyard …" — own cost plus the
+        // card's additional-cost riders, and no exile tail.
+        let gy_cast = card.effective_flashback().is_none()
+            && !jumpstart
+            && !mayhem
+            && card.definition.keywords.contains(&Keyword::GraveyardCast);
         // Lier — battlefield static grants flashback (= mana cost) to I/S in
         // the graveyard when nothing else applies.
-        let lier_cost = (card.effective_flashback().is_none() && !jumpstart && !mayhem)
+        let lier_cost = (card.effective_flashback().is_none() && !jumpstart && !mayhem && !gy_cast)
             .then(|| self.graveyard_flashback_grant(p, &card))
             .flatten();
         // Conditional flashback (Viral Spawning's Corrupted gate).
@@ -8166,7 +8176,7 @@ impl GameState {
         }
         let flashback_cost = match card.effective_flashback() {
             Some(c) => c.clone(),
-            None if jumpstart => card.definition.cost.clone(),
+            None if jumpstart || gy_cast => card.definition.cost.clone(),
             None if mayhem => {
                 if !self.players[p].discarded_this_turn.contains(&card_id) {
                     return Err(GameError::SorcerySpeedOnly);
@@ -8360,6 +8370,7 @@ impl GameState {
             x_value.unwrap_or(0),
             mana_spent,
             mayhem,
+            gy_cast,
         )?;
         // Sacrifice/discard events precede the cast events in the log.
         cost_events.append(&mut events);
@@ -8460,6 +8471,7 @@ impl GameState {
             x_value.unwrap_or(0),
             0,
             false,
+            false,
         )
     }
 
@@ -8467,7 +8479,8 @@ impl GameState {
     /// remove the card from its owner's graveyard, mark it
     /// `cast_via_flashback` so the resolver exiles it (CR 702.34d),
     /// emit `CardLeftGraveyard` + `SpellCast{Flashback}`, and thread the
-    /// rest through `finalize_cast`.
+    /// rest through `finalize_cast`. `plain_graveyard_cast` suppresses the
+    /// exile rider for a card that merely permits a graveyard cast.
     #[allow(clippy::too_many_arguments)]
     fn finalize_flashback_cast(
         &mut self,
@@ -8479,6 +8492,7 @@ impl GameState {
         x_value: u32,
         mana_spent: u32,
         via_mayhem: bool,
+        plain_graveyard_cast: bool,
     ) -> Result<Vec<GameEvent>, GameError> {
         // Re-locate by id at removal time: cost payments run before this and
         // can reshuffle the graveyard, so a stored index would be stale.
@@ -8486,7 +8500,7 @@ impl GameState {
             .take_from_playable_graveyard(p, card_id)
             .ok_or(GameError::CardNotInHand(card_id))?;
         self.entered_from_graveyard_this_turn.insert(card_id);
-        card.cast_via_flashback = true;
+        card.cast_via_flashback = !plain_graveyard_cast;
         // CR 702.187 — a Mayhem cast stamps the spell so "if the mayhem cost
         // was paid" riders can branch at resolution (Sandman's Quicksand).
         card.cast_via_mayhem = via_mayhem;
@@ -8793,6 +8807,7 @@ impl GameState {
             mode,
             x_value.unwrap_or(0),
             0,
+            false,
             false,
         )
     }
@@ -11635,7 +11650,7 @@ impl GameState {
                     .and_then(|c| c.definition.activated_abilities.get(*ability_index).cloned());
                 let ability = printed.or_else(|| {
                     let printed_count = self
-                        .battlefield_find(*card_id)
+                        .find_card_anywhere(*card_id)
                         .map(|c| c.definition.activated_abilities.len())?;
                     self.granted_abilities_for(*card_id)
                         .into_iter()
@@ -11652,11 +11667,17 @@ impl GameState {
         card_id: CardId,
     ) -> Vec<crate::effect::ActivatedAbility> {
         use crate::effect::{Selector, StaticEffect};
-        if self.battlefield_find(card_id).is_none() {
-            return vec![];
-        }
         let tgt = Target::Permanent(card_id);
         let mut out = Vec::new();
+        if self.battlefield_find(card_id).is_none() {
+            // A card outside the battlefield can still carry an instance grant
+            // — Cursecloth Wrappings hands a graveyard creature card embalm.
+            if let Some(c) = self.find_card_anywhere(card_id) {
+                out.extend(c.granted_activated_abilities.iter().cloned());
+                out.extend(c.granted_activated_eot.iter().cloned());
+            }
+            return out;
+        }
         // Instance-granted abilities first (Urza's Saga chapters) — the
         // client view lists printed + instance-granted in this order, so
         // their indices must come before the battlefield-static grants.
@@ -13626,6 +13647,24 @@ impl GameState {
                 effective_mana_cost.reduce_generic(total.min(max_cut));
             }
         }
+        // Skyseer's Chariot — abilities of sources with the named card name
+        // cost {N} more. Unlike the taxes below this one covers mana abilities.
+        if let Some(name) = self.battlefield_find(card_id).map(|c| c.definition.name) {
+            let tax: u32 = self
+                .battlefield
+                .iter()
+                .filter(|c| c.named_card.as_deref() == Some(name))
+                .flat_map(|c| c.definition.static_abilities.iter())
+                .map(|sa| match sa.effect {
+                    crate::effect::StaticEffect::NamedSourcesActivationTax { amount } => amount,
+                    _ => 0,
+                })
+                .sum();
+            if tax > 0 {
+                effective_mana_cost.symbols.push(crate::mana::ManaSymbol::Generic(tax));
+            }
+        }
+
         // Suppression Field — non-mana activated abilities cost {N} more,
         // for every player's activations. Tithe Taker adds the same tax but
         // only to opponents' activations on its controller's turn.

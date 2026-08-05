@@ -1529,6 +1529,11 @@ pub enum StaticEffect {
     /// unless they're mana abilities." Applies to every player's
     /// activations (Suppression Field).
     ActivationTax { amount: u32 },
+    /// "Activated abilities of sources with the chosen name cost {N} more to
+    /// activate" (Skyseer's Chariot). The name comes from the static source's
+    /// `named_card` (CR 201.3, stamped by `Effect::NameCard`); mana abilities
+    /// are taxed too, matching the printed wording's lack of an exclusion.
+    NamedSourcesActivationTax { amount: u32 },
     /// CR 602.5 / 614 — "Activated abilities of enchanted/equipped creature
     /// cost {N} more to activate" (Oppressive Rays). Applies only to
     /// activations whose source is the permanent this Aura is attached to.

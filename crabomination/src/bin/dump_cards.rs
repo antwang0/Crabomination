@@ -127,6 +127,7 @@ fn keyword_name(kw: &Keyword) -> Option<String> {
         Keyword::Flashback(_) => "Flashback",
         Keyword::FlashbackTap { .. } => "Flashback",
         Keyword::JumpStart => "Jump-start",
+        Keyword::GraveyardCast => return None,
         Keyword::Kicker(_) => "Kicker",
         Keyword::Multikicker(_) => "Multikicker",
         Keyword::Buyback(_) => "Buyback",

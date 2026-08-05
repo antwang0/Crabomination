@@ -1320,10 +1320,9 @@ fn graveyard_entry(
             .has_flashback()
             .cloned()
             .or_else(|| {
-                card.definition
-                    .keywords
-                    .contains(&crate::card::Keyword::JumpStart)
-                    .then(|| card.definition.cost.clone())
+                (card.definition.keywords.contains(&crate::card::Keyword::JumpStart)
+                    || card.definition.keywords.contains(&crate::card::Keyword::GraveyardCast))
+                .then(|| card.definition.cost.clone())
             })
             .or_else(|| state.graveyard_flashback_grant(seat, card))
             .map(|mut c| {

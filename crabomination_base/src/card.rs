@@ -1035,6 +1035,11 @@ pub enum Keyword {
     /// mana cost plus discarding a card; exiles after resolving (rides the
     /// flashback cast path). Chemister's Insight, Radical Idea.
     JumpStart,
+    /// "You may cast this card from your graveyard [surcharge] in addition to
+    /// paying its other costs" — the card's own mana cost plus its
+    /// `flashback_additional_cost` riders, with **no** exile-after tail
+    /// (Wickerfolk Indomitable). Rides the flashback cast path.
+    GraveyardCast,
     Kicker(crate::mana::ManaCost),
     /// CR 702.33c — Multikicker: a kicker cost that may be paid any number
     /// of times. `CardInstance.kick_count` records how many times;
@@ -1808,6 +1813,9 @@ pub enum SelectionRequirement {
     HasCyclingAbility,
     /// Has a Morph / Megamorph / Disguise ability (Backslide).
     HasMorphAbility,
+    /// "…with no abilities" (Rise from the Wreck) — no printed keywords,
+    /// static, triggered or activated abilities.
+    HasNoAbilities,
     /// The card has Disturb (CR 702.146), regardless of its cost (Shipwreck
     /// Sifters' "Spirit card or a card with disturb" discard payoff).
     HasDisturb,
@@ -4634,6 +4642,15 @@ impl CardDefinition {
     /// CR 904.11 — an "Ongoing Scheme", exempt from the 904.10 sweep.
     pub fn is_ongoing_scheme(&self) -> bool {
         self.is_scheme() && self.supertypes.contains(&Supertype::Ongoing)
+    }
+    /// "…with no abilities" — no printed keywords and no static, triggered,
+    /// activated or state-triggered ability (Rise from the Wreck).
+    pub fn has_no_abilities(&self) -> bool {
+        self.keywords.is_empty()
+            && self.static_abilities.is_empty()
+            && self.triggered_abilities.is_empty()
+            && self.activated_abilities.is_empty()
+            && self.state_trigger.is_none()
     }
     pub fn is_permanent(&self) -> bool {
         self.card_types.iter().any(|t| {

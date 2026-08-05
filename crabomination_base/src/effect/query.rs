@@ -522,7 +522,8 @@ impl Effect {
             // target, but it's chosen at resolution.
             Effect::Vote { options, .. } => options.iter().any(|o| o.effect.requires_target()),
             Effect::CycleRecurFromGraveyard { .. } => false,
-            Effect::ReturnGraveyardPermanentsDifferentNames => false,
+            Effect::ReturnGraveyardPermanentsDifferentNames
+            | Effect::ReturnAllMatchingFromGraveyardToBattlefield { .. } => false,
             Effect::ReturnGraveyardCardsToHand { .. } => false,
             // Resolution-time ChooseCards by the affected player; untargeted.
             // A `who: PlayerRef::Target(n)` makes the affected player a
@@ -963,6 +964,7 @@ impl Effect {
             | Effect::WhenTargetLeavesBattlefieldThisTurn { what, .. }
             | Effect::SwapBlockAssignments { a: what, .. }
             | Effect::GrantFlashbackThisTurn { what }
+            | Effect::GrantEmbalmThisTurn { what }
             | Effect::GrantHarmonizeThisTurn { what }
             | Effect::GrantMiracle { what, .. }
             | Effect::Exile { what }
@@ -1511,6 +1513,7 @@ impl Effect {
             | Effect::WhenTargetLeavesBattlefieldThisTurn { what, .. }
             | Effect::SwapBlockAssignments { a: what, .. }
             | Effect::GrantFlashbackThisTurn { what }
+            | Effect::GrantEmbalmThisTurn { what }
             | Effect::GrantHarmonizeThisTurn { what }
             | Effect::GrantMiracle { what, .. }
             | Effect::Exile { what }
@@ -1971,7 +1974,9 @@ impl Effect {
             }
             // Granting flashback to a card always targets one in a graveyard
             // (Snapcaster Mage, Slickshot Lockpicker).
-            Effect::GrantFlashbackThisTurn { .. } | Effect::GrantHarmonizeThisTurn { .. } => true,
+            Effect::GrantFlashbackThisTurn { .. }
+            | Effect::GrantEmbalmThisTurn { .. }
+            | Effect::GrantHarmonizeThisTurn { .. } => true,
             _ => false,
         }
     }
@@ -3042,6 +3047,7 @@ impl Effect {
                 | Effect::WhenTargetLeavesBattlefieldThisTurn { what, .. }
                 | Effect::SwapBlockAssignments { a: what, .. }
                 | Effect::GrantFlashbackThisTurn { what }
+                | Effect::GrantEmbalmThisTurn { what }
                 | Effect::GrantMiracle { what, .. }
                 | Effect::Exile { what }
                 | Effect::ChangeSpellTarget { what }

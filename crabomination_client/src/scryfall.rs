@@ -219,45 +219,34 @@ pub fn ensure_card_images(specs: &[CardImage], assets_dir: &Path) {
     ensure_card_images_with_progress(specs, assets_dir, &ImagePrefetch::default());
 }
 
-/// **TEMPORARY (see TODO.md → "Undo: sealed-pool image priority").**
-///
-/// Float the cards named in `decks/sealed_pool.txt` and
-/// `decks/sealed.txt` to the front of the prefetch queue, keeping
-/// everything else in catalog order behind them.
-///
-/// The prefetch walks a catalog of thousands of cards at Scryfall's rate
-/// limit, so the ~80 cards actually being playtested can otherwise sit
-/// behind an hour of unrelated art. This is a convenience for the
-/// current sealed testing, *not* a general policy — a real fix would
-/// prioritise by what the running match needs rather than by a file that
-/// happens to be checked in.
-///
-/// Silently does nothing when the deck files are absent, so a checkout
-/// without them behaves exactly as before.
-pub fn prioritize_pool_images(specs: &mut [CardImage], repo_deck_files: &[&Path]) {
-    let mut wanted: std::collections::HashSet<String> = std::collections::HashSet::new();
-    for path in repo_deck_files {
-        let Ok(text) = fs::read_to_string(path) else { continue };
-        for line in text.lines() {
-            let line = line.trim();
-            if line.is_empty() || line.starts_with('#') || line.starts_with("//") {
-                continue;
-            }
-            // "3 Island" / "1 Professor Dellian Fel" / bare name.
-            let name = line
-                .split_once(char::is_whitespace)
-                .filter(|(count, _)| count.chars().all(|c| c.is_ascii_digit()))
-                .map(|(_, rest)| rest)
-                .unwrap_or(line);
-            wanted.insert(name.trim().to_ascii_lowercase());
-        }
+/// Image filenames the running app has actually asked to render, recorded
+/// by [`card_asset_path`] / [`card_back_face_asset_path`] and drained by
+/// the prefetch loop. The catalog is thousands of cards deep at Scryfall's
+/// rate limit, so a card on the table would otherwise wait behind an hour
+/// of art nobody is looking at.
+static REQUESTED_IMAGES: std::sync::Mutex<Option<std::collections::HashSet<String>>> =
+    std::sync::Mutex::new(None);
+
+/// Note that `filename` is wanted on screen now, so the prefetch queue can
+/// jump it ahead of the rest of the catalog.
+fn note_image_requested(filename: String) {
+    if let Ok(mut set) = REQUESTED_IMAGES.lock() {
+        set.get_or_insert_with(Default::default).insert(filename);
     }
+}
+
+/// Index into `pending` of the first spec the app has asked to render, if
+/// any. Consumed entries are dropped so a name is only jumped once.
+#[cfg(not(target_arch = "wasm32"))]
+fn next_requested(pending: &[&CardImage]) -> Option<usize> {
+    let mut guard = REQUESTED_IMAGES.lock().ok()?;
+    let wanted = guard.as_mut()?;
     if wanted.is_empty() {
-        return;
+        return None;
     }
-    // Stable partition: pool cards first, catalog order preserved within
-    // each half, so this only ever reorders — nothing is dropped.
-    specs.sort_by_key(|s| !wanted.contains(&s.lookup_name().to_ascii_lowercase()));
+    let i = pending.iter().position(|s| wanted.contains(&s.filename()))?;
+    wanted.remove(&pending[i].filename());
+    Some(i)
 }
 
 /// `ensure_card_images` with live progress reporting — run on a background
@@ -299,20 +288,12 @@ pub fn ensure_card_images_with_progress(
     let mut fictional = 0u32;
     let mut unavailable = 0u32;
 
-    // Progress denominator: the genuinely fetchable, genuinely missing set.
-    let missing: Vec<&CardImage> = specs
-        .iter()
-        .filter(|spec| {
-            !cards_dir.join(spec.filename()).exists()
-                && !spec.is_fictional()
-                && !unavailable_set.contains(&spec.filename())
-        })
-        .collect();
-    progress.total.store(missing.len(), Ordering::Relaxed);
-
+    // Work queue: the genuinely fetchable, genuinely missing set, and the
+    // progress denominator. The skipped classes are tallied here rather than
+    // inside the download loop so that loop is free to reorder.
+    let mut pending: Vec<&CardImage> = Vec::new();
     for spec in specs {
-        let path = cards_dir.join(spec.filename());
-        if path.exists() {
+        if cards_dir.join(spec.filename()).exists() {
             continue;
         }
         if spec.is_fictional() {
@@ -327,6 +308,20 @@ pub fn ensure_card_images_with_progress(
             unavailable += 1;
             continue;
         }
+        pending.push(spec);
+    }
+    progress.total.store(pending.len(), Ordering::Relaxed);
+
+    let mut next = 0;
+    while next < pending.len() {
+        // Anything the app has put on screen jumps the queue; a swap keeps
+        // the rest in catalog order and never drops a spec.
+        if let Some(i) = next_requested(&pending[next..]) {
+            pending.swap(next, next + i);
+        }
+        let spec = pending[next];
+        next += 1;
+        let path = cards_dir.join(spec.filename());
 
         println!("Downloading card image: {}...", spec.label());
         match download_card_image(spec) {
@@ -570,12 +565,16 @@ fn sanitize_name(name: &str) -> String {
 
 /// Asset path relative to the assets/ root, for use with Bevy's AssetServer.
 pub fn card_asset_path(name: &str) -> String {
-    format!("cards/{}", card_filename(name))
+    let file = card_filename(name);
+    note_image_requested(file.clone());
+    format!("cards/{file}")
 }
 
 /// Asset path for an MDFC back-face image.
 pub fn card_back_face_asset_path(name: &str) -> String {
-    format!("cards/{}", card_back_face_filename(name))
+    let file = card_back_face_filename(name);
+    note_image_requested(file.clone());
+    format!("cards/{file}")
 }
 
 /// The name to query Scryfall with, stripped of a trailing deck-variant
@@ -794,36 +793,19 @@ fn urlenccode(s: &str) -> String {
 
 #[cfg(test)]
 mod tests {
-    /// The pool cards float to the front of the prefetch queue;
-    /// everything else keeps catalog order behind them, and nothing is
-    /// dropped. (Temporary — see TODO.md "Undo: sealed-pool image
-    /// priority"; this test goes with the feature.)
+    /// Asking for a card's art marks it for the prefetch queue, and each
+    /// request is honoured once.
     #[test]
-    fn pool_cards_sort_to_the_front() {
+    fn rendering_a_card_jumps_its_download() {
         use super::*;
-        let dir = std::env::temp_dir().join(format!("crab_pool_prio_{}", std::process::id()));
-        std::fs::create_dir_all(&dir).unwrap();
-        let deck = dir.join("sealed.txt");
-        std::fs::write(&deck, "# comment\n2 Send in the Pest\nSundering Archaic\n").unwrap();
-
-        let mut specs = vec![
+        let pending = [
             CardImage::Front("Lightning Bolt"),
-            CardImage::Front("Sundering Archaic"),
             CardImage::Front("Grizzly Bears"),
-            CardImage::Front("Send in the Pest"),
         ];
-        prioritize_pool_images(&mut specs, &[&deck]);
-        let names: Vec<&str> = specs.iter().map(|s| s.lookup_name()).collect();
-        assert_eq!(names.len(), 4, "reorder only, nothing dropped");
-        assert_eq!(&names[..2], &["Sundering Archaic", "Send in the Pest"],
-            "pool cards first, catalog order kept: {names:?}");
-        assert_eq!(&names[2..], &["Lightning Bolt", "Grizzly Bears"],
-            "the rest keep their order: {names:?}");
-
-        let mut same = vec![CardImage::Front("Lightning Bolt"), CardImage::Front("Grizzly Bears")];
-        prioritize_pool_images(&mut same, &[std::path::Path::new("/nonexistent/deck.txt")]);
-        assert_eq!(same[0].lookup_name(), "Lightning Bolt", "no deck files -> untouched");
-        let _ = std::fs::remove_dir_all(&dir);
+        let refs: Vec<&CardImage> = pending.iter().collect();
+        let _ = card_asset_path("Grizzly Bears");
+        assert_eq!(next_requested(&refs), Some(1));
+        assert_eq!(next_requested(&refs), None, "consumed, not re-jumped");
     }
 
     use super::*;

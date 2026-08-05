@@ -19972,6 +19972,7 @@ fn static_effect_to_effects(
             // Cost reductions read in `cost_reduction_for_spell`; no layer.
             | StaticEffect::YourISSpellsCostLessPerTargetCreature { .. }
             | StaticEffect::ActivationTax { .. }
+            | StaticEffect::NamedSourcesActivationTax { .. }
             // AttachedActivationTax (Oppressive Rays) — same funnel, scoped
             // to the Aura's host.
             | StaticEffect::AttachedActivationTax { .. }

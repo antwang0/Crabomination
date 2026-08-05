@@ -3092,6 +3092,7 @@ impl GameState {
                             | crate::card::Keyword::Megamorph(_)
                             | crate::card::Keyword::Disguise(_)
                     )),
+                    R::HasNoAbilities => card.definition.has_no_abilities(),
                     R::HasCyclingAbility => card.definition.keywords.iter().any(|k| matches!(
                         k,
                         crate::card::Keyword::Cycling(_)
@@ -3837,6 +3838,7 @@ impl GameState {
                     | crate::card::Keyword::Megamorph(_)
                     | crate::card::Keyword::Disguise(_)
             )),
+            R::HasNoAbilities => card.definition.has_no_abilities(),
             R::HasCyclingAbility => card.definition.keywords.iter().any(|k| matches!(
                 k,
                 crate::card::Keyword::Cycling(_)

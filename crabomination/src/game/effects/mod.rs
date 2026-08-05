@@ -9869,6 +9869,19 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::GrantEmbalmThisTurn { what } => {
+                for ent in self.resolve_selector(what, ctx) {
+                    if let Some(cid) = ent.as_card_id()
+                        && let Some(card) = self.find_card_anywhere_mut(cid)
+                    {
+                        let ability =
+                            crate::effect::shortcut::embalm(card.definition.cost.clone());
+                        card.granted_activated_eot.push(ability);
+                    }
+                }
+                Ok(())
+            }
+
             Effect::GrantHarmonizeThisTurn { what } => {
                 // Grant until-end-of-turn Harmonize (cost = the card's own mana
                 // cost) to each resolved graveyard card (Songcrafter Mage), so
@@ -11801,6 +11814,45 @@ impl GameState {
                     if seen.contains(&name) { continue; }
                     seen.push(name);
                     self.move_card_to(cid, &ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false }, ctx, events);
+                }
+                Ok(())
+            }
+
+            Effect::ReturnAllMatchingFromGraveyardToBattlefield { who, filter, sacrifice_eot } => {
+                use crate::effect::ZoneDest;
+                let Some(p) = self.resolve_player(who, ctx) else { return Ok(()) };
+                let ids: Vec<CardId> = self.players[p]
+                    .graveyard
+                    .iter()
+                    .filter(|c| {
+                        self.evaluate_requirement_static(
+                            filter,
+                            &Target::Permanent(c.id),
+                            ctx.controller,
+                            ctx.source,
+                        )
+                    })
+                    .map(|c| c.id)
+                    .collect();
+                for cid in ids {
+                    self.move_card_to(
+                        cid,
+                        &ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                        ctx,
+                        events,
+                    );
+                    if *sacrifice_eot {
+                        self.delayed_triggers.push(crate::game::types::DelayedTrigger {
+                            controller: ctx.controller,
+                            source: cid,
+                            kind: crate::game::types::DelayedKind::NextEndStep,
+                            effect: Effect::SacrificeSource,
+                            target: None,
+                            bound_token: None,
+                            bound_subject: None,
+                            fires_once: true,
+                        });
+                    }
                 }
                 Ok(())
             }
@@ -17876,6 +17928,9 @@ impl GameState {
                     // Only move cards that are still in the hand and match.
                     if !self.players[p].hand.iter().any(|c| c.id == cid) { continue; }
                     self.move_card_to(cid, &dest, ctx, events);
+                    // Expose the entrant on `Selector::LastMoved` so the
+                    // "if you do" rider can reach it (Oviya's counters).
+                    self.last_moved_cards.push(cid);
                     put_any = true;
                     if *haste {
                         self.grant_keyword_eot(cid, Keyword::Haste);

@@ -3605,7 +3605,8 @@ fn cast_candidates(
     for c in state.players[seat].graveyard.iter() {
         use crate::card::Keyword;
         let recastable = c.effective_flashback().is_some()
-            || c.definition.keywords.contains(&Keyword::JumpStart);
+            || c.definition.keywords.contains(&Keyword::JumpStart)
+            || c.definition.keywords.contains(&Keyword::GraveyardCast);
         if recastable {
             let (target, additional_targets) = if c.definition.effect.requires_target() {
                 let (t, extras) =
