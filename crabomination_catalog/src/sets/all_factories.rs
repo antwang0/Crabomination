@@ -9088,6 +9088,15 @@ static EOE: &[Factory] = &[
     super::eoe::devastating_onslaught,
     super::eoe::unravel,
 ];
+static EOE2: &[Factory] = &[
+    super::eoe2::chorale_of_the_void,
+    super::eoe2::famished_worldsire,
+    super::eoe2::lightstall_inquisitor,
+    super::eoe2::requiem_monolith,
+    super::eoe2::sothera_the_supervoid,
+    super::eoe2::the_dominion_bracelet,
+    super::eoe2::moonlit_meditation,
+];
 static FEM: &[Factory] = &[
     super::fem::hymn_to_tourach,
 ];
@@ -20941,6 +20950,7 @@ static PER_SET: &[(&str, &[Factory])] = &[
     ("drk", DRK),
     ("drk2", DRK2),
     ("eoe", EOE),
+    ("eoe2", EOE2),
     ("fem", FEM),
     ("fin", FIN),
     ("fin2", FIN2),

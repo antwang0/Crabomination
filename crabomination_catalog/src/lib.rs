@@ -90,6 +90,7 @@ pub use sets::decks::*;
 pub use sets::dgm::*;
 pub use sets::dis::*;
 pub use sets::eoe::*;
+pub use sets::eoe2::*;
 pub use sets::fem::*;
 pub use sets::fin::*;
 pub use sets::fin2::*;

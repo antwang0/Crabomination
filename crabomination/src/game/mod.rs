@@ -3717,6 +3717,25 @@ impl GameState {
             .sum()
     }
 
+    /// CR 614 — the host of `seat`'s live
+    /// `FirstTokensEachTurnBecomeCopiesOfAttached` Aura (Moonlit Meditation),
+    /// or `None` when the replacement is spent, absent, or unattached.
+    pub fn first_token_copy_host_for(&self, seat: usize) -> Option<CardId> {
+        use crate::effect::StaticEffect;
+        if self.players[seat].token_copy_replacement_used_this_turn {
+            return None;
+        }
+        self.battlefield
+            .iter()
+            .filter(|c| c.controller == seat)
+            .find(|c| {
+                c.definition.static_abilities.iter().any(|sa| {
+                    matches!(sa.effect, StaticEffect::FirstTokensEachTurnBecomeCopiesOfAttached)
+                })
+            })
+            .and_then(|c| c.attached_to)
+    }
+
     /// Number of `StaticEffect::DoubleCounters` permanents `seat` controls
     /// on the battlefield. Used by `Effect::AddCounter` to scale the counter
     /// count by `2^n` per CR 614.16's "if one or more counters would be put
@@ -19766,6 +19785,7 @@ fn static_effect_to_effects(
             // DoubleTokens — read at `Effect::CreateToken` resolution time
             // via `GameState::token_doublers_for(seat)`; no layer effect.
             | StaticEffect::DoubleTokens
+            | StaticEffect::FirstTokensEachTurnBecomeCopiesOfAttached
             // DoubleCounters / ExtraPlusOneCounters — read at counter-add
             // resolution via `GameState::scaled_counter_count`; no layer effect.
             | StaticEffect::DoubleCounters

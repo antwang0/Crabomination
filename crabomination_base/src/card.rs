@@ -1877,6 +1877,11 @@ pub enum SelectionRequirement {
     /// CR 108.3 — the object's owner is you (regardless of who controls it).
     /// Gruul Charm's "gain control of all permanents you own".
     OwnedByYou,
+    /// CR 506.2 — owned by the player being attacked by the effect's source
+    /// (or, for an Aura/Equipment source, by its host). "Target creature card
+    /// from defending player's graveyard" — Chorale of the Void. False outside
+    /// combat or when the source isn't attacking.
+    OwnedByDefendingPlayer,
     HasSupertype(Supertype),
     HasCreatureType(CreatureType),
     /// CR 700.12 — the object is an **outlaw**: a creature that is an Assassin,

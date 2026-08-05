@@ -11058,7 +11058,7 @@ pub fn witherbloom_devourer_b209() -> CardDefinition {
         },
         power: 3,
         toughness: 3,
-        triggered_abilities: vec![devour(1)],
+        as_enters_effect: Some(devour(1)),
         ..Default::default()
     }
 }

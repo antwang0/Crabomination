@@ -360,6 +360,8 @@ impl Effect {
             | Effect::NivMizzetReveal
             | Effect::MarkExileReturnOnResolve { .. }
             | Effect::EachOpponentExilesHandCardOrPermanent
+            | Effect::EachOpponentExilesHandCardMayPlay { .. }
+            | Effect::EachOpponentExilesOwnCreature
             | Effect::EachOpponentWithoutLegendaryLoses
             | Effect::UnexpectedResults
             | Effect::PayLifeRevealExileFromHand { .. }

@@ -340,6 +340,7 @@ pub mod decks;
 pub mod dgm;
 pub mod dis;
 pub mod eoe;
+pub mod eoe2;
 pub mod fem;
 pub mod fin;
 pub mod fin2;

@@ -2308,6 +2308,12 @@ impl GameState {
                     card.class_level = 1;
                 }
                 self.battlefield.push(card);
+                // CR 614 — "As this permanent enters, [effect]" applies on
+                // EVERY battlefield entry (reanimation, blink, put-onto-the-
+                // battlefield), not just spell resolution. Runs before the
+                // first SBA sweep and before the enters-with-counters spec, so
+                // a printed 0/0 devourer never dies at 0 toughness.
+                self.apply_as_enters_effect(cid);
                 // CR 122.1 — Solemnity drops the enters-with-counters too.
                 let mut counter_specs: Vec<(crate::card::CounterType, crate::effect::Value)> =
                     Vec::new();

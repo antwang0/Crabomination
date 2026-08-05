@@ -2157,20 +2157,26 @@ pub fn exploit(payoff: Effect) -> TriggeredAbility {
 
 /// Devour N (CR 702.83): "As this creature enters, you may sacrifice any
 /// number of creatures. It enters with N +1/+1 counters on it for each
-/// creature sacrificed this way." Modeled as an ETB `SacrificeAnyNumber`
-/// over other creatures, each sacrifice dropping N +1/+1 counters on the
-/// devourer (`Selector::This`). AutoDecider sacrifices none.
-pub fn devour(n: i32) -> TriggeredAbility {
+/// creature sacrificed this way." Goes in `CardDefinition.as_enters_effect`
+/// so a printed 0/0 devourer never faces SBAs at 0 toughness. AutoDecider
+/// sacrifices none.
+pub fn devour(n: i32) -> Effect {
+    devour_filter(n, SelectionRequirement::Creature)
+}
+
+/// Typed Devour — "Devour land N" (Famished Worldsire) sacrifices `filter`
+/// permanents instead of creatures. Same counter math as [`devour`].
+pub fn devour_filter(n: i32, filter: SelectionRequirement) -> Effect {
     use crate::card::CounterType;
-    etb(Effect::SacrificeAnyNumber {
+    Effect::SacrificeAnyNumber {
         who: PlayerRef::You,
-        filter: SelectionRequirement::Creature.and(SelectionRequirement::OtherThanSource),
+        filter: filter.and(SelectionRequirement::OtherThanSource),
         per_each: Box::new(Effect::AddCounter {
             what: Selector::This,
             kind: CounterType::PlusOnePlusOne,
             amount: Value::Const(n),
         }),
-    })
+    }
 }
 
 /// Riot (CR 702.137): "This creature enters the battlefield with

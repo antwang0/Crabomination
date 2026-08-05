@@ -1462,6 +1462,9 @@ pub enum Predicate {
     /// Backed by `GameState.nonland_permanent_left_bf_this_turn` +
     /// `Player.warped_spell_this_turn`.
     VoidActive { who: PlayerRef },
+    /// True while at least one player controls no creatures (Sothera, the
+    /// Supervoid's end-step cash-in).
+    AnyPlayerControlsNoCreatures,
     /// True if the effect's source permanent is currently saddled (CR
     /// 702.171). Backed by `CardInstance.saddled`; gates "whenever this
     /// attacks while saddled" triggers on Mounts.
@@ -4838,6 +4841,17 @@ pub enum Effect {
     /// their hand or a permanent they control." Each opponent chooses one
     /// object among their hand cards and permanents to exile.
     EachOpponentExilesHandCardOrPermanent,
+    /// "Each opponent exiles a card from their hand and may play that card for
+    /// as long as it remains exiled. Each spell cast this way costs
+    /// `surcharge` more" (Lightstall Inquisitor). The permission is stamped on
+    /// the exiled card with the card's own cost plus the surcharge as the
+    /// alternative cast cost; an `{X}` card stamps X = 0.
+    EachOpponentExilesHandCardMayPlay { surcharge: u32 },
+    /// "Each opponent chooses a creature they control and exiles it" — the
+    /// exiles are stamped `exiled_with = source`, so a later
+    /// `Selector::CardExiledWithSource` can cash them back in (Sothera, the
+    /// Supervoid). Auto-picks the weakest creature for a non-UI seat.
+    EachOpponentExilesOwnCreature,
     /// Nicol Bolas, Dragon-God's −8 — "Each opponent who doesn't control a
     /// legendary creature or planeswalker loses the game" (CR 104.3a).
     EachOpponentWithoutLegendaryLoses,

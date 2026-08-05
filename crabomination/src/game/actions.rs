@@ -13834,6 +13834,17 @@ impl GameState {
                 effective_mana_cost.reduce_generic(count);
             }
         }
+        // "Costs {X} less to activate, where X is this creature's power"
+        // (The Dominion Bracelet, granted to its bearer).
+        if ability.cost_reduction_per_equipped_power {
+            let power = self
+                .computed_permanent(card_id)
+                .map(|c| c.power.max(0) as u32)
+                .unwrap_or(0);
+            if power > 0 {
+                effective_mana_cost.reduce_generic(power);
+            }
+        }
         // "Costs {1} less for each [filter] card in your graveyard"
         // (Battlefield Butcher).
         if let Some(filter) = &ability.cost_reduction_per_graveyard {
@@ -14248,6 +14259,24 @@ impl GameState {
                 Some(c) => c.attached_to = None,
                 None => return Err(GameError::SelectionRequirementViolated),
             }
+        }
+        // "Exile [this Equipment]" as a cost on an ability the Equipment grants
+        // its bearer: the cost exiles the granter, not the payer.
+        if ability.exile_attachment_cost {
+            let granter = self
+                .battlefield
+                .iter()
+                .find(|c| {
+                    c.attached_to == Some(card_id)
+                        && c.definition
+                            .equipped_bonus
+                            .as_ref()
+                            .is_some_and(|b| !b.activated_abilities.is_empty())
+                })
+                .map(|c| c.id)
+                .ok_or(GameError::SelectionRequirementViolated)?;
+            self.remove_from_battlefield_to_exile(granter);
+            events.push(GameEvent::PermanentExiled { card_id: granter });
         }
         // "Return a [filter] you control to its owner's hand" as a cost
         // (Floodbringer). Bounce the cheapest match so a bot doesn't throw

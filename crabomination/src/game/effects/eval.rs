@@ -2703,6 +2703,9 @@ impl GameState {
             Predicate::RevoltActive { who } => self
                 .resolve_player(who, ctx)
                 .is_some_and(|p| self.players[p].permanent_left_battlefield_this_turn),
+            Predicate::AnyPlayerControlsNoCreatures => (0..self.players.len()).any(|seat| {
+                !self.battlefield.iter().any(|c| c.controller == seat && c.definition.is_creature())
+            }),
             Predicate::VoidActive { who } => {
                 self.nonland_permanent_left_bf_this_turn
                     || self
@@ -3023,6 +3026,27 @@ impl GameState {
                         .or_else(|| self.find_card_anywhere(*cid).map(|c| c.owner))
                         .is_some_and(|ctrl| ctrl == who),
                     Target::Player(p) => *p == who,
+                }
+            }
+            R::OwnedByDefendingPlayer => {
+                // The source may be the attacker itself or an Aura/Equipment
+                // riding one, so fall through to the attachment host.
+                let attacker = source.filter(|id| self.attack_for(*id).is_some()).or_else(|| {
+                    source
+                        .and_then(|id| self.battlefield_find(id))
+                        .and_then(|c| c.attached_to)
+                        .filter(|id| self.attack_for(*id).is_some())
+                });
+                let Some(defender) =
+                    attacker.and_then(|id| self.attack_for(id)).and_then(|a| self.defender_for(a.target))
+                else {
+                    return false;
+                };
+                match target {
+                    Target::Permanent(cid) => {
+                        self.find_card_anywhere(*cid).is_some_and(|c| c.owner == defender)
+                    }
+                    Target::Player(p) => *p == defender,
                 }
             }
             R::OwnedByYou => match target {
@@ -3949,6 +3973,9 @@ impl GameState {
                 self.trigger_event_player_scratch == Some(card.controller)
             }
             R::OwnedByYou => card.owner == controller,
+            // Source-less path: the defending player needs the ability's
+            // source, which only `evaluate_requirement_static` carries.
+            R::OwnedByDefendingPlayer => false,
             R::Creature => {
                 // CR 604.3 — Grist is a creature everywhere but the battlefield.
                 card.definition.is_creature()

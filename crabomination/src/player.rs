@@ -335,6 +335,10 @@ pub struct Player {
     /// Blitzball). Cleared alongside it at the turn boundary.
     #[serde(default)]
     pub combat_damage_taken_this_turn: u32,
+    /// Moonlit Meditation — the once-per-turn "first token batch becomes
+    /// copies" replacement has already fired this turn.
+    #[serde(default)]
+    pub token_copy_replacement_used_this_turn: bool,
     /// True if this player has lost life this turn (damage or direct life
     /// loss). Set in `adjust_life` on a negative delta, reset at the active
     /// player's `do_untap`. Powers Spectacle (CR 702.111). Defaults to false
@@ -987,6 +991,7 @@ impl Player {
             was_dealt_damage_this_turn: false,
             damage_taken_this_turn: 0,
             combat_damage_taken_this_turn: 0,
+            token_copy_replacement_used_this_turn: false,
             lost_life_this_turn: false,
             graveyard_cast_types_this_turn: Vec::new(),
             play_from_top_this_turn: false,

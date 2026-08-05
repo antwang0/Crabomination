@@ -16481,6 +16481,36 @@ impl GameState {
                     for _ in 0..doublers {
                         n = n.saturating_mul(2);
                     }
+                    // Moonlit Meditation — the turn's first token batch may
+                    // instead be that many copies of the Aura's host.
+                    if n > 0
+                        && let Some(host) = self.first_token_copy_host_for(p)
+                    {
+                        self.players[p].token_copy_replacement_used_this_turn = true;
+                        self.run_effect(
+                            &Effect::CreateTokenCopyOf {
+                                who: PlayerRef::Seat(p),
+                                count: crate::effect::Value::Const(n as i32),
+                                source: Selector::Target(0),
+                                extra_creature_types: vec![],
+                                extra_card_types: vec![],
+                                override_pt: None,
+                                override_colors: None,
+                                enters_tapped: false,
+                                non_legendary: false,
+                                legendary: false,
+                                extra_keywords: vec![],
+                            },
+                            &EffectContext {
+                                controller: p,
+                                source: ctx.source,
+                                targets: vec![crate::game::types::Target::Permanent(host)],
+                                ..Default::default()
+                            },
+                            events,
+                        )?;
+                        continue;
+                    }
                     for _ in 0..n {
                         let mut def = token_to_card_definition(definition);
                         if let Some((pw, tn)) = dyn_pt {
@@ -21657,6 +21687,99 @@ impl GameState {
                     if let Some(card) = Self::take_card(&mut self.players[p].graveyard, *id) {
                         self.players[p].hand.push(card);
                     }
+                }
+                Ok(())
+            }
+
+            Effect::EachOpponentExilesOwnCreature => {
+                use crate::decision::{Decision, DecisionAnswer};
+                let p = ctx.controller;
+                let source = ctx.source.unwrap_or(CardId(0));
+                for opp in self.opponents_of(p) {
+                    let mut cands: Vec<(CardId, String)> = self
+                        .battlefield
+                        .iter()
+                        .filter(|c| c.controller == opp && c.definition.is_creature())
+                        .map(|c| (c.id, c.definition.name.to_string()))
+                        .collect();
+                    if cands.is_empty() {
+                        continue;
+                    }
+                    // Auto-pick the weakest for a non-UI seat.
+                    cands.sort_by_key(|(id, _)| {
+                        self.battlefield_find(*id).map(|c| c.definition.power).unwrap_or(0)
+                    });
+                    let answer = self.decider.decide(&Decision::ChooseCards {
+                        source,
+                        prompt: "Choose a creature you control to exile".to_string(),
+                        candidates: cands.clone(),
+                        min: 1,
+                        max: 1,
+                    });
+                    let pick = match answer {
+                        DecisionAnswer::Cards(ids) => {
+                            ids.into_iter().find(|id| cands.iter().any(|(c, _)| c == id))
+                        }
+                        _ => None,
+                    }
+                    .or_else(|| cands.first().map(|(id, _)| *id));
+                    if let Some(id) = pick {
+                        self.remove_from_battlefield_to_exile(id);
+                        events.push(GameEvent::PermanentExiled { card_id: id });
+                        if let Some(c) = self.exile.iter_mut().find(|c| c.id == id) {
+                            c.exiled_with = Some(source);
+                        }
+                    }
+                }
+                Ok(())
+            }
+
+            Effect::EachOpponentExilesHandCardMayPlay { surcharge } => {
+                use crate::decision::{Decision, DecisionAnswer};
+                let p = ctx.controller;
+                let source = ctx.source.unwrap_or(CardId(0));
+                let turn = self.turn_number;
+                for opp in self.opponents_of(p) {
+                    let cands: Vec<(CardId, String)> = self.players[opp]
+                        .hand
+                        .iter()
+                        .map(|c| (c.id, c.definition.name.to_string()))
+                        .collect();
+                    if cands.is_empty() {
+                        continue;
+                    }
+                    let answer = self.decider.decide(&Decision::ChooseCards {
+                        source,
+                        prompt: "Exile a card from your hand".to_string(),
+                        candidates: cands.clone(),
+                        min: 1,
+                        max: 1,
+                    });
+                    let pick = match answer {
+                        DecisionAnswer::Cards(ids) => {
+                            ids.into_iter().find(|id| cands.iter().any(|(c, _)| c == id))
+                        }
+                        _ => None,
+                    }
+                    .or_else(|| cands.first().map(|(id, _)| *id));
+                    let Some(id) = pick else { continue };
+                    let Some(mut card) = Self::take_card(&mut self.players[opp].hand, id) else {
+                        continue;
+                    };
+                    let mut cost = card.definition.cost.clone();
+                    if *surcharge > 0 {
+                        cost.symbols.push(crate::mana::generic(*surcharge));
+                    }
+                    card.granted_alt_cast_cost_eot = Some(cost);
+                    card.may_play_until = Some(crate::card::MayPlayPermission {
+                        player: opp,
+                        granted_turn: turn,
+                        duration: crate::card::MayPlayDuration::WhileExiled,
+                        exile_after: false,
+                        miracle: false,
+                    });
+                    card.exiled_with = Some(source);
+                    self.exile.push(card);
                 }
                 Ok(())
             }

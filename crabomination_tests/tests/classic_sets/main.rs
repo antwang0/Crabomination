@@ -30,6 +30,7 @@ mod drk;
 mod ohop;
 mod hml;
 mod eoe;
+mod eoe2;
 mod fin;
 mod fin2;
 mod dis;

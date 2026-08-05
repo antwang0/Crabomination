@@ -1098,6 +1098,11 @@ pub enum StaticEffect {
     /// token count (2 doublers → 4×, 3 → 8×, …). CR 614.13 framing —
     /// the effect is a replacement that scales the create-token event.
     DoubleTokens,
+    /// "The first time you would create one or more tokens each turn, you may
+    /// instead create that many tokens that are copies of enchanted permanent"
+    /// (Moonlit Meditation). A once-per-turn CR 614 replacement on the token
+    /// batch, keyed off the Aura's host; declines when the Aura is unattached.
+    FirstTokensEachTurnBecomeCopiesOfAttached,
     /// "If one or more counters would be put on a permanent you control,
     /// twice that many of those counters are put on that permanent instead."
     /// The counter-half of CR 614.16, matching Doubling Season / Branching
@@ -2679,6 +2684,15 @@ pub struct ActivatedAbility {
     /// (Sunforger). Paid alongside `sac_cost` in `activate_ability`.
     #[serde(default)]
     pub unattach_cost: bool,
+    /// "Exile [this Equipment]" as an activation cost, for an ability the
+    /// Equipment *grants to its bearer* — the cost exiles the attachment, not
+    /// the creature paying it (The Dominion Bracelet).
+    #[serde(default)]
+    pub exile_attachment_cost: bool,
+    /// "This ability costs {X} less to activate, where X is this creature's
+    /// power" (The Dominion Bracelet). Reduces generic mana only.
+    #[serde(default)]
+    pub cost_reduction_per_equipped_power: bool,
     /// CR 902.5 — this ability functions while its source is in the command
     /// zone (a Vanguard avatar).
     #[serde(default)]
