@@ -6369,6 +6369,7 @@ static DECKS: &[Factory] = &[
     super::decks::sidisi_regent_of_the_mire,
     super::decks::thunder_of_unity,
     super::decks::shiko_paragon_of_the_way,
+    super::decks::another_round,
     super::decks::gossips_talent,
     super::decks::hunters_talent,
     super::decks::scavengers_talent,

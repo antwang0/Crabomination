@@ -2254,3 +2254,29 @@ fn shiko_frees_a_cheap_graveyard_card() {
     drain_stack(&mut g);
     assert_eq!(g.players[1].life, 17);
 }
+
+/// Another Round blinks your creatures X + 1 times, so an ETB fires that often.
+#[test]
+fn another_round_blinks_x_plus_one_times() {
+    use crabomination::game::types::Target;
+    let mut g = two_player_game();
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    let drainer = g.add_card_to_battlefield(0, catalog::gray_merchant_of_asphodel());
+    let _ = drainer;
+    let spell = g.add_card_to_hand(0, catalog::another_round());
+    g.players[0].mana_pool.add_colorless(10);
+    g.players[0].mana_pool.add(Color::White, 2);
+    let life_before = g.players[1].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: Some(1),
+    })
+    .expect("cast for X=1");
+    drain_stack(&mut g);
+    let _ = Target::Player(1);
+    assert!(g.players[1].life < life_before, "the ETB fired on each blink");
+}

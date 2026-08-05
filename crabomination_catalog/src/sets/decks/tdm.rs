@@ -2634,3 +2634,21 @@ pub fn shiko_paragon_of_the_way() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Another Round — {X}{X}{2}{W} Sorcery. Blink your board X + 1 times over
+/// (Outlaws of Thunder Junction).
+pub fn another_round() -> CardDefinition {
+    let blink = || Effect::ExileAndReturnToOwner {
+        what: Selector::EachPermanent(R::Creature.and(R::ControlledByYou)),
+    };
+    CardDefinition {
+        name: "Another Round",
+        cost: cost(&[x(), x(), generic(2), w()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            blink(),
+            Effect::Repeat { count: Value::XFromCost, body: Box::new(blink()) },
+        ]),
+        ..Default::default()
+    }
+}

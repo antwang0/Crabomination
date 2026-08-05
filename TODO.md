@@ -104,7 +104,7 @@ Items are grouped by area and roughly ordered by impact within each group.
   Cursed Recording (delayed "when you next cast an instant or sorcery, copy
   it"). ⏳
 
-## Tarkir: Dragonstorm (TDM) — 6 gaps
+## Tarkir: Dragonstorm (TDM) — 6 gaps (OTJ at 9)
 
 `set_gaps.py tdm` is at 6 after the `decks::tdm` gap batch (Jeskai Revelation,
 Sidisi, Thunder of Unity, Shiko). The rest, and the primitive each needs:

@@ -2564,7 +2564,8 @@ Each a small targeted feature; sweep batch by batch.
   Jeskai Revelation, Sidisi Regent of the Mire (the
   `ManaValueEqualsSacrificedPlus` upgrade), Thunder of Unity (chapters II/III
   arm `Effect::CreaturesYouControlEnteringThisTurn`) and Shiko, Paragon of the
-  Way. No new primitives — all four fell out of the existing set. Tests in
+  Way, plus OTJ's Another Round (`Repeat` over an `ExileAndReturnToOwner`
+  blink). No new primitives — all five fell out of the existing set. Tests in
   `classic_sets/tdm`.
 
 - **Aetherdrift down to 2** — `set_gaps.py dft` 26 → 2 (`decks::recent326`,
