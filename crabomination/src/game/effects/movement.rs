@@ -2032,6 +2032,24 @@ impl GameState {
             self.place_card_at_resolved_zone(card, resolved);
             return;
         }
+        // CR 717.6 — a card with an Astrotorium back headed anywhere but the
+        // battlefield, exile, or the command zone is put into its owner's
+        // face-up "junkyard" pile in the command zone instead.
+        if !card.definition.attraction_lights.is_empty()
+            && matches!(
+                intended,
+                crate::card::Zone::Hand
+                    | crate::card::Zone::Library
+                    | crate::card::Zone::Graveyard
+            )
+        {
+            card.counters.clear();
+            card.keyword_counters.clear();
+            let owner = card.owner;
+            card.controller = owner;
+            self.players[owner].attraction_junkyard.push(card);
+            return;
+        }
         // CR 122.2 — counters are not retained when an object changes
         // zones; they cease to exist. Cleared for every destination (the
         // battlefield arm additionally re-seeds planeswalker loyalty).

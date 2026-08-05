@@ -286,6 +286,8 @@ pub enum ArtifactSubtype {
     Spacecraft, Lander,
     // Final Fantasy: Book (grimoire equipment).
     Book,
+    // Unfinity: Attraction (CR 717) — lives in the Attraction deck, not the deck.
+    Attraction,
 }
 
 /// Enchantment subtypes.
@@ -2856,6 +2858,11 @@ pub struct CardDefinition {
     /// non-leveler cards.
     #[serde(default)]
     pub level_bands: Vec<LevelBand>,
+    /// CR 717.1 — the numbers lit up on this Attraction card. A visit ability
+    /// triggers when the controller's roll-to-visit result is one of these.
+    /// Empty for every non-Attraction card.
+    #[serde(default)]
+    pub attraction_lights: Vec<u8>,
     /// CR 721 — Station-card striations (`{N+}` symbols), ordered by `min`.
     /// Empty for non-station cards. Cards with any station band always carry
     /// the Station ability (CR 721.4); add it via `shortcut::station()`.

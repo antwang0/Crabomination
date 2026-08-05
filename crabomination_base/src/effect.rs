@@ -2716,6 +2716,10 @@ pub enum EventKind {
     /// the transforming permanent is the event subject (`EventScope::SelfSource`
     /// for "when this transforms"). Matched to `GameEvent::Transformed`.
     Transformed,
+    /// CR 702.159a — "Visit — [effect]": the controller rolled to visit their
+    /// Attractions and the result matched one of this Attraction's lit-up
+    /// numbers. Dispatched per visited Attraction with `EventScope::SelfSource`.
+    VisitedAttraction,
     /// CR 702.140f — a creature mutated ("Whenever this creature mutates").
     /// Fires once per mutate onto the merged host (`EventScope::SelfSource`
     /// for the cards in the merged pile). Matched to `GameEvent::Mutated`.
@@ -4841,6 +4845,10 @@ pub enum Effect {
     /// their hand or a permanent they control." Each opponent chooses one
     /// object among their hand cards and permanents to exile.
     EachOpponentExilesHandCardOrPermanent,
+    /// CR 701.51 — "Open an Attraction": move the top card of your Attraction
+    /// deck onto the battlefield under your control, face up. No-op when the
+    /// Attraction deck is empty.
+    OpenAnAttraction,
     /// "Each opponent exiles a card from their hand and may play that card for
     /// as long as it remains exiled. Each spell cast this way costs
     /// `surcharge` more" (Lightstall Inquisitor). The permission is stamped on

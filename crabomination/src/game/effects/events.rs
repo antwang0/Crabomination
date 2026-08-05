@@ -145,6 +145,7 @@ pub(crate) fn event_matches_spec(
         (EventKind::Discovered, GameEvent::Discovered { .. }) => true,
         (EventKind::BecameMonstrous, GameEvent::BecameMonstrous { .. }) => true,
         (EventKind::Transformed, GameEvent::Transformed { .. }) => true,
+        (EventKind::VisitedAttraction, GameEvent::AttractionVisited { .. }) => true,
         (EventKind::Mutated, GameEvent::Mutated { .. }) => true,
         (EventKind::TurnedFaceUp, GameEvent::TurnedFaceUp { .. }) => true,
         (EventKind::TokenCreated, GameEvent::TokenCreated { .. }) => true,
@@ -274,6 +275,11 @@ pub(crate) fn event_matches_spec(
             // LKI off the exiled card itself (God-Eternal Kefnet/Bontu recur).
             event,
             GameEvent::PermanentExiled { card_id } if *card_id == source.id
+        ) || matches!(
+            // CR 717.5 — the visit ability belongs to the Attraction that was
+            // visited, so only that object's trigger fires.
+            event,
+            GameEvent::AttractionVisited { card_id } if *card_id == source.id
         ) || (
             // `Blocks` vs `BecomesBlocked` look at different sides of
             // the same BlockerDeclared event:

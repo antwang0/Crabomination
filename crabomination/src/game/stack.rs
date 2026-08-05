@@ -513,6 +513,10 @@ impl GameState {
                 for id in sagas {
                     self.saga_advance(id);
                 }
+                // CR 703.4g / 717.4 — right after the lore counters, an active
+                // player who controls an Attraction rolls to visit them.
+                let mut visits = self.roll_to_visit_attractions(self.active_player_idx);
+                events.append(&mut visits);
                 // CR 904.9 — immediately after the archenemy's precombat main
                 // phase begins, they set the top scheme in motion. A turn-based
                 // action, so it precedes the step triggers.
@@ -2461,6 +2465,32 @@ impl GameState {
     /// player begins their precombat main phase, if they have any rad
     /// counters they mill that many cards; for each *nonland* card milled
     /// this way they lose 1 life and remove one rad counter.
+    /// CR 701.52a — roll a d6; every Attraction `p` controls with that number
+    /// lit up is visited, firing its visit ability (CR 717.5). A turn-based
+    /// action: it doesn't use the stack, but the visit triggers do.
+    pub(crate) fn roll_to_visit_attractions(&mut self, p: usize) -> Vec<GameEvent> {
+        let attractions: Vec<CardId> = self
+            .battlefield
+            .iter()
+            .filter(|c| c.controller == p && !c.definition.attraction_lights.is_empty())
+            .map(|c| c.id)
+            .collect();
+        if attractions.is_empty() {
+            return Vec::new();
+        }
+        let result = self.roll_one_die(p, 6);
+        let mut events = vec![GameEvent::RolledToVisitAttractions { player: p, result }];
+        for id in attractions {
+            let lit = self
+                .battlefield_find(id)
+                .is_some_and(|c| c.definition.attraction_lights.contains(&result));
+            if lit {
+                events.push(GameEvent::AttractionVisited { card_id: id });
+            }
+        }
+        events
+    }
+
     pub(crate) fn do_rad_counters(&mut self) -> Vec<GameEvent> {
         use crate::card::CardType;
         let p = self.active_player_idx;
@@ -5365,6 +5395,18 @@ impl GameState {
         card.reset_case();
         // CR 707 — a temporary copy reverts as it leaves.
         self.revert_copy_on_leave(&mut card);
+        // CR 717.6 — an Astrotorium-backed Attraction card bound for anywhere
+        // but the battlefield, exile, or the command zone goes to its owner's
+        // face-up junkyard pile instead.
+        if !card.definition.attraction_lights.is_empty()
+            && matches!(zone, Zone::Hand | Zone::Library | Zone::Graveyard)
+        {
+            card.counters.clear();
+            card.keyword_counters.clear();
+            card.controller = owner;
+            self.players[owner].attraction_junkyard.push(card);
+            return;
+        }
         match zone {
             // CR 614.6 — "shuffle into its owner's library instead"
             // (Darksteel Colossus); the card never touches the graveyard.

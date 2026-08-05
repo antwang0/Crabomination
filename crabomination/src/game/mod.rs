@@ -6291,6 +6291,14 @@ impl GameState {
             return any_exiled;
         }
         let owner = card.owner;
+        // CR 717.6 — an Astrotorium-backed Attraction card never reaches a
+        // graveyard; it goes to its owner's face-up junkyard pile instead.
+        if !card.definition.attraction_lights.is_empty() {
+            let mut card = card;
+            card.controller = owner;
+            self.players[owner].attraction_junkyard.push(card);
+            return false;
+        }
         // CR 614.6 — "shuffle into its owner's library instead" (Darksteel
         // Colossus). The card never touches the graveyard.
         if card.definition.shuffles_into_library_instead {

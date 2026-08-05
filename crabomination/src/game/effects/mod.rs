@@ -21691,6 +21691,23 @@ impl GameState {
                 Ok(())
             }
 
+            // CR 701.51b — move the top card of your Attraction deck onto the
+            // battlefield under your control, face up.
+            Effect::OpenAnAttraction => {
+                let p = ctx.controller;
+                if self.players[p].attraction_deck.is_empty() {
+                    return Ok(());
+                }
+                let card = self.players[p].attraction_deck.remove(0);
+                self.place_card_in_dest(
+                    card,
+                    p,
+                    &ZoneDest::Battlefield { controller: PlayerRef::Seat(p), tapped: false },
+                    events,
+                );
+                Ok(())
+            }
+
             Effect::EachOpponentExilesOwnCreature => {
                 use crate::decision::{Decision, DecisionAnswer};
                 let p = ctx.controller;

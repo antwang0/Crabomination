@@ -1932,6 +1932,11 @@ pub enum GameEvent {
     ColorlessManaAdded { player: usize, source: Option<CardId> },
     PermanentEntered { card_id: CardId },
     PermanentExiled { card_id: CardId },
+    /// CR 701.52a — a player rolled the d6 to visit their Attractions.
+    RolledToVisitAttractions { player: usize, result: u8 },
+    /// CR 717.5 — one Attraction's lit-up numbers matched the roll, so its
+    /// visit ability triggers.
+    AttractionVisited { card_id: CardId },
     /// A card was put into exile **from a graveyard or the battlefield**
     /// (CR 400.7 — the origin matters to Ketramose, the New Dawn). Emitted
     /// alongside `PermanentExiled` by `move_card_to`, which is the only place

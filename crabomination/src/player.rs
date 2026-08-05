@@ -121,6 +121,15 @@ pub struct Player {
     /// bottom. `#[serde(default)]` for snapshot back-compat.
     #[serde(default)]
     pub planar_deck: CowBox<Vec<CardInstance>>,
+    /// CR 717.2 — this player's face-down Attraction deck, in the command
+    /// zone. Cards leave it only by being opened onto the battlefield
+    /// (CR 701.51b). `#[serde(default)]` for snapshot back-compat.
+    #[serde(default)]
+    pub attraction_deck: CowBox<Vec<CardInstance>>,
+    /// CR 717.6a — the face-up "junkyard" pile of Attraction cards that would
+    /// have gone anywhere but the battlefield, exile, or the command zone.
+    #[serde(default)]
+    pub attraction_junkyard: CowBox<Vec<CardInstance>>,
     /// CR 901.9 — how many times this player has taken the roll-the-planar-die
     /// special action this turn; the next roll costs that much generic mana.
     /// Reset at the turn boundary.
@@ -950,6 +959,8 @@ impl Player {
             ante: CowBox::default(),
             scheme_deck: CowBox::default(),
             planar_deck: CowBox::default(),
+            attraction_deck: CowBox::default(),
+            attraction_junkyard: CowBox::default(),
             planar_die_rolls_this_turn: 0,
             opponent_cast_spell_since_your_turn: false,
             sideboard: CowBox::default(),

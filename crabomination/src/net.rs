@@ -2653,12 +2653,22 @@ pub enum GameEventWire {
     GameOver { winner: Option<usize> },
     /// Wire mirror of `GameEvent::GameRestarted` (CR 727.1) — Karn Liberated.
     GameRestarted { starter: usize },
+    /// Wire mirror of `GameEvent::RolledToVisitAttractions` (CR 701.52a).
+    RolledToVisitAttractions { player: usize, result: u8 },
+    /// Wire mirror of `GameEvent::AttractionVisited` (CR 717.5).
+    AttractionVisited { card_id: CardId },
 }
 
 impl From<&GameEvent> for GameEventWire {
     fn from(e: &GameEvent) -> Self {
         match e {
             GameEvent::StepChanged(s) => GameEventWire::StepChanged(*s),
+            GameEvent::RolledToVisitAttractions { player, result } => {
+                GameEventWire::RolledToVisitAttractions { player: *player, result: *result }
+            }
+            GameEvent::AttractionVisited { card_id } => {
+                GameEventWire::AttractionVisited { card_id: *card_id }
+            }
             GameEvent::TurnStarted { player, turn } => GameEventWire::TurnStarted {
                 player: *player,
                 turn: *turn,
@@ -3048,6 +3058,10 @@ impl GameEventWire {
         use GameEventWire as E;
         match self {
             E::StepChanged(s) => format!("Step → {s:?}"),
+            E::RolledToVisitAttractions { player, result } => {
+                format!("{} rolled a {result} to visit their Attractions", pn(*player))
+            }
+            E::AttractionVisited { card_id } => format!("{} was visited", name(*card_id)),
             E::TurnStarted { player, turn } => format!("Turn {turn} — {}", pn(*player)),
             E::CardDrawn { player, card_id } => format!("{} drew {}", pn(*player), name(*card_id)),
             E::CardDiscarded { player, card_id } => {
