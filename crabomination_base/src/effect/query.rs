@@ -1218,7 +1218,8 @@ impl Effect {
             // Needs a creature to watch for death (the watched target).
             Effect::WhenTargetDiesThisTurn { .. } => true,
             // Needs a creature to watch for damage (Paladin's Forecast).
-            Effect::GainLifeWhenTargetDealsDamageThisTurn { .. } => true,
+            Effect::GainLifeWhenTargetDealsDamageThisTurn { .. }
+            | Effect::WhenTargetDealsCombatDamageToPlayerThisTurn { .. } => true,
             // Registers a turn-scoped delayed trigger; no cast-time target.
             Effect::CreaturesYouControlEnteringThisTurn { .. } => false,
             Effect::EachPlayerReanimateCreatureMaxMv { .. } => false,
@@ -1381,6 +1382,7 @@ impl Effect {
             | Effect::ExtraManaOnLandTapThisTurn { .. } => false,
             Effect::GuessColorCountInHand { who, .. } => player_has_target(who),
             Effect::MayExileSelfThen { body } => body.requires_target(),
+            Effect::AttachSourceTo { host } => sel_has_target(host),
             Effect::AttachAuraFromGraveyardTo { aura, host } => {
                 sel_has_target(aura) || sel_has_target(host)
             }
@@ -1698,7 +1700,8 @@ impl Effect {
             Effect::WhenTargetDiesThisTurn { filter, .. } => {
                 filter.as_ref().or(Some(&SelectionRequirement::Creature))
             }
-            Effect::GainLifeWhenTargetDealsDamageThisTurn { .. } => {
+            Effect::GainLifeWhenTargetDealsDamageThisTurn { .. }
+            | Effect::WhenTargetDealsCombatDamageToPlayerThisTurn { .. } => {
                 Some(&SelectionRequirement::Creature)
             }
             // Modal cards: surface the first mode's filter as the
@@ -2750,7 +2753,10 @@ impl Effect {
                     slot: s,
                     ..
                 } if *s as u8 == slot => Some(f),
-                Effect::GainLifeWhenTargetDealsDamageThisTurn { slot: s } if *s as u8 == slot => {
+                Effect::GainLifeWhenTargetDealsDamageThisTurn { slot: s }
+                | Effect::WhenTargetDealsCombatDamageToPlayerThisTurn { slot: s, .. }
+                    if *s as u8 == slot =>
+                {
                     Some(&SelectionRequirement::Creature)
                 }
                 Effect::ForEach { selector, body } => {

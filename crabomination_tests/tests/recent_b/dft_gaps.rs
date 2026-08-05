@@ -33,6 +33,22 @@ fn etb(g: &mut GameState, def: CardDefinition) -> CardId {
     id
 }
 
+/// Deal combat damage to seat 1 with `attacker` (already on the battlefield).
+fn swing(g: &mut GameState, attacker: CardId) {
+    g.clear_sickness(attacker);
+    g.active_player_idx = 0;
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.declare_attackers(vec![Attack { attacker, target: AttackTarget::Player(1) }])
+        .expect("attack");
+    g.step = TurnStep::DeclareBlockers;
+    g.perform_action(GameAction::DeclareBlockers(vec![])).expect("no blocks");
+    while g.step != TurnStep::EndCombat {
+        let _ = g.advance_step(Vec::new());
+        drain_stack(g);
+    }
+}
+
 fn activate(g: &mut GameState, id: CardId, index: usize, x: Option<u32>) -> Result<(), GameError> {
     flood(g, 0);
     g.priority.player_with_priority = 0;
@@ -475,4 +491,57 @@ fn ketramose_gates_on_exile_and_draws_from_it() {
     drain_stack(&mut g);
     assert_eq!(g.players[0].hand.len(), before + 1, "drew off the graveyard exile");
     assert_eq!(g.players[0].life, 19);
+}
+
+/// Captain Howler pumps by two per discarded card and hangs a cantrip on the
+/// creature's next connection.
+#[test]
+fn captain_howler_pumps_then_cantrips() {
+    let mut g = main_phase();
+    let howler = etb(&mut g, catalog::captain_howler_sea_scourge());
+    let bears = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    for _ in 0..2 {
+        g.add_card_to_library(0, catalog::mountain());
+    }
+    let pitch = g.add_card_to_hand(0, catalog::mountain());
+    let trig = catalog::captain_howler_sea_scourge().triggered_abilities[0].effect.clone();
+    let mut ctx = EffectContext {
+        targets: vec![Target::Permanent(bears)],
+        ..EffectContext::for_ability(howler, 0, None)
+    };
+    ctx.event_amount = 1;
+    g.resolve_effect(&trig, &ctx).unwrap();
+    let _ = pitch;
+    assert_eq!(g.computed_permanent(bears).unwrap().power, 4, "+2/+0 for one discard");
+    let before = g.players[0].hand.len();
+    g.clear_sickness(bears);
+    swing(&mut g, bears);
+    assert_eq!(g.players[0].hand.len(), before + 1, "the connection drew");
+}
+
+/// The Aetherspark's +1 equips itself and counters up the creature; the
+/// equipped creature's combat damage feeds it loyalty.
+#[test]
+fn the_aetherspark_equips_then_grows_on_damage() {
+    let mut g = main_phase();
+    let spark = g.add_card_to_battlefield(0, catalog::the_aetherspark());
+    let bears = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateLoyaltyAbility {
+        card_id: spark,
+        ability_index: 0,
+        target: Some(Target::Permanent(bears)),
+        x_value: None,
+    })
+    .expect("+1");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(spark).unwrap().attached_to, Some(bears));
+    assert_eq!(g.battlefield_find(bears).unwrap().counter_count(CounterType::PlusOnePlusOne), 1);
+    let loyalty = g.battlefield_find(spark).unwrap().counter_count(CounterType::Loyalty);
+    swing(&mut g, bears);
+    assert_eq!(
+        g.battlefield_find(spark).unwrap().counter_count(CounterType::Loyalty),
+        loyalty + 3,
+        "a 3-power hit adds three loyalty"
+    );
 }

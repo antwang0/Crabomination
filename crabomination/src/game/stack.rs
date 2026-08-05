@@ -3532,6 +3532,7 @@ impl GameState {
                     | crate::game::types::DelayedKind::EachCombatThisTurn
                     | crate::game::types::DelayedKind::MatchingCreatureAttacksThisTurn(_)
                     | crate::game::types::DelayedKind::SourceDealsDamageThisTurn(_)
+                    | crate::game::types::DelayedKind::SourceDealsCombatDamageToPlayerThisTurn(_)
                     | crate::game::types::DelayedKind::YouGainLifeThisTurn
                     | crate::game::types::DelayedKind::CardEntersOpponentGraveyardThisTurn
                     | crate::game::types::DelayedKind::OpponentCausesYouToDiscardThisTurn

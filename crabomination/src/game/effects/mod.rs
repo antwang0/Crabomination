@@ -24296,6 +24296,23 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::WhenTargetDealsCombatDamageToPlayerThisTurn { slot, body } => {
+                if let Some(crate::game::Target::Permanent(cid)) = ctx.targets.get(*slot).cloned() {
+                    self.delayed_triggers.push(DelayedTrigger {
+                        controller: ctx.controller,
+                        source: ctx.source.unwrap_or(crate::card::CardId(0)),
+                        kind: crate::game::types::DelayedKind::
+                            SourceDealsCombatDamageToPlayerThisTurn(cid),
+                        effect: (**body).clone(),
+                        target: None,
+                        bound_token: None,
+                        bound_subject: None,
+                        fires_once: false,
+                    });
+                }
+                Ok(())
+            }
+
             Effect::GainLifeWhenTargetDealsDamageThisTurn { slot } => {
                 // Watch the targeted creature; each time it deals damage this
                 // turn the ability's controller gains that much life.
@@ -27312,6 +27329,23 @@ impl GameState {
                     return Ok(());
                 }
                 self.run_effect(body, ctx, events)
+            }
+
+            Effect::AttachSourceTo { host } => {
+                let Some(src) = ctx.source else { return Ok(()) };
+                let Some(host_id) =
+                    self.resolve_selector(host, ctx).iter().find_map(|e| e.as_permanent_id())
+                else {
+                    return Ok(());
+                };
+                if let Some(c) = self.battlefield_find_mut(src) {
+                    c.attached_to = Some(host_id);
+                }
+                events.push(GameEvent::AttachmentMoved {
+                    attachment: src,
+                    attached_to: Some(host_id),
+                });
+                Ok(())
             }
 
             Effect::AttachAuraFromGraveyardTo { aura, host } => {

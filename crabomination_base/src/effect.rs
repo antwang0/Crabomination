@@ -5207,6 +5207,10 @@ pub enum Effect {
     /// "Attach target Aura card from a graveyard to this creature" — the Aura
     /// returns to the battlefield already attached (Iridescent Drake).
     AttachAuraFromGraveyardTo { aura: Selector, host: Selector },
+    /// CR 701.3 — "Attach [this] to `host`" (The Aetherspark's +1). Moves the
+    /// source's attachment without paying an equip cost; a `host` that resolves
+    /// to nothing leaves it where it is.
+    AttachSourceTo { host: Selector },
     /// "Until end of turn, whenever a player taps a `land` for mana, that
     /// player adds an additional `extra`" (Bubbling Muck). The turn-scoped
     /// sibling of `StaticEffect::ExtraManaOnLandTap`.
@@ -7500,6 +7504,15 @@ pub enum Effect {
     GainLifeWhenTargetDealsDamageThisTurn {
         #[serde(default)]
         slot: usize,
+    },
+
+    /// CR 603.4 — "Whenever [the creature in target slot `slot`] deals combat
+    /// damage to a player this turn, [body]" (Captain Howler). Expires at
+    /// cleanup; the amount rides in via `Value::TriggerEventAmount`.
+    WhenTargetDealsCombatDamageToPlayerThisTurn {
+        #[serde(default)]
+        slot: usize,
+        body: Box<Effect>,
     },
 
     /// "Until end of turn, whenever a creature you control dies, [body]."

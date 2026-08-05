@@ -833,6 +833,10 @@ pub enum DelayedKind {
     /// `Value::TriggerEventAmount`; the body runs for `DelayedTrigger.controller`.
     /// Expires at cleanup. Paladin of Prahv's Forecast rider.
     SourceDealsDamageThisTurn(crate::card::CardId),
+    /// "Until end of turn, whenever [the watched creature] deals combat damage
+    /// to a player, [body]" (CR 603.4 — Captain Howler's pumped creature). The
+    /// combat-and-player-scoped sibling of `SourceDealsDamageThisTurn`.
+    SourceDealsCombatDamageToPlayerThisTurn(crate::card::CardId),
     /// "Until end of turn, whenever you gain life, [body]" (CR 603.4). Fires per
     /// `LifeGained` event whose recipient is `DelayedTrigger.controller`, with
     /// the amount bound via `Value::TriggerEventAmount`. Expires at cleanup.

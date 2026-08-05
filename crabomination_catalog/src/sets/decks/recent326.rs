@@ -769,3 +769,107 @@ pub fn ketramose_the_new_dawn() -> CardDefinition {
         )
     }
 }
+
+/// Captain Howler, Sea Scourge — {2}{U}{R} 5/4. Ward—{2}, Pay 2 life. Every
+/// discard pumps a creature and turns it into a cantrip on connection.
+pub fn captain_howler_sea_scourge() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Ward(WardCost::ManaAndLife(cost(&[generic(2)]), 2))],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CardDiscarded, EventScope::YourControl),
+            effect: Effect::Seq(vec![
+                Effect::PumpPT {
+                    what: Selector::TargetFiltered { slot: 0, filter: R::Creature },
+                    power: Value::Times(
+                        Box::new(Value::TriggerEventAmount),
+                        Box::new(Value::Const(2)),
+                    ),
+                    toughness: Value::Const(0),
+                    duration: Duration::EndOfTurn,
+                },
+                Effect::WhenTargetDealsCombatDamageToPlayerThisTurn {
+                    slot: 0,
+                    body: Box::new(Effect::Draw { who: Selector::You, amount: Value::ONE }),
+                },
+            ]),
+        }],
+        ..legend(
+            "Captain Howler, Sea Scourge",
+            cost(&[generic(2), u(), r()]),
+            vec![CreatureType::Shark, CreatureType::Pirate],
+            5,
+            4,
+        )
+    }
+}
+
+/// The Aetherspark — {4} legendary Equipment planeswalker, loyalty 4. It
+/// equips itself off the +1, grows on combat damage, and ultimates into mana.
+pub fn the_aetherspark() -> CardDefinition {
+    CardDefinition {
+        name: "The Aetherspark",
+        cost: cost(&[generic(4)]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Artifact, CardType::Planeswalker],
+        subtypes: Subtypes {
+            artifact_subtypes: vec![ArtifactSubtype::Equipment],
+            ..Default::default()
+        },
+        base_loyalty: 4,
+        // The "can't be attacked while attached" half needs a planeswalker
+        // attack restriction the engine doesn't model; everything else is here.
+        equipped_bonus: Some(crate::card::EquipBonus {
+            triggered_abilities: [
+                EventKind::DealsCombatDamageToPlayer,
+                EventKind::DealsCombatDamageToCreature,
+            ]
+            .map(|kind| TriggeredAbility {
+                event: EventSpec::new(kind, EventScope::SelfSource)
+                    .with_filter(Predicate::IsTurnOf(PlayerRef::You)),
+                effect: Effect::AddCounter {
+                    what: Selector::AttachmentGranting,
+                    kind: CounterType::Loyalty,
+                    amount: Value::TriggerEventAmount,
+                },
+            })
+            .to_vec(),
+            ..Default::default()
+        }),
+        loyalty_abilities: vec![
+            crate::card::LoyaltyAbility {
+                loyalty_cost: 1,
+                effect: Effect::OptionalTargets {
+                    min: 0,
+                    body: Box::new(Effect::Seq(vec![
+                        Effect::AttachSourceTo {
+                            host: Selector::TargetFiltered {
+                                slot: 0,
+                                filter: R::Creature.and(R::ControlledByYou),
+                            },
+                        },
+                        Effect::AddCounter {
+                            what: Selector::Target(0),
+                            kind: CounterType::PlusOnePlusOne,
+                            amount: Value::ONE,
+                        },
+                    ])),
+                },
+                ..Default::default()
+            },
+            crate::card::LoyaltyAbility {
+                loyalty_cost: -5,
+                effect: Effect::Draw { who: Selector::You, amount: Value::Const(2) },
+                ..Default::default()
+            },
+            crate::card::LoyaltyAbility {
+                loyalty_cost: -10,
+                effect: Effect::AddMana {
+                    who: PlayerRef::You,
+                    pool: ManaPayload::AnyOneColor(Value::Const(10)),
+                },
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+}

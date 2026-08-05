@@ -3995,6 +3995,7 @@ impl GameState {
             }
         }
         self.fire_source_dealt_damage_watchers(source, damage_amount);
+        self.fire_source_combat_damage_to_player_watchers(source, damage_amount);
         self.fire_combat_damage_triggers(
             source,
             EventKind::DealsCombatDamageToPlayer,
@@ -4056,6 +4057,38 @@ impl GameState {
             .iter()
             .filter(|dt| {
                 matches!(dt.kind, crate::game::types::DelayedKind::SourceDealsDamageThisTurn(id) if id == source)
+            })
+            .cloned()
+            .collect();
+        for dt in watchers {
+            self.stack.push(
+                TriggerPush::new(dt.source, dt.controller, dt.effect.clone())
+                    .trigger_source(Some(crate::game::effects::EntityRef::Permanent(source)))
+                    .event_amount(amount)
+                    .build(),
+            );
+        }
+    }
+
+    /// CR 603.4 — fire any `SourceDealsCombatDamageToPlayerThisTurn` delayed
+    /// triggers watching `source` (Captain Howler's pumped creature).
+    pub(crate) fn fire_source_combat_damage_to_player_watchers(
+        &mut self,
+        source: CardId,
+        amount: u32,
+    ) {
+        if amount == 0 {
+            return;
+        }
+        let watchers: Vec<crate::game::types::DelayedTrigger> = self
+            .delayed_triggers
+            .iter()
+            .filter(|dt| {
+                matches!(
+                    dt.kind,
+                    crate::game::types::DelayedKind::SourceDealsCombatDamageToPlayerThisTurn(id)
+                        if id == source
+                )
             })
             .cloned()
             .collect();
