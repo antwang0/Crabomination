@@ -5,12 +5,16 @@ Items are grouped by area and roughly ordered by impact within each group.
 
 ## Noticed this run (DFT closed to 2, TDM to 6 / CR 400.7)
 
-- **`install-client-deps.sh` didn't fire this session.** The SessionStart hook
-  that installs libwayland/alsa/libudev is present and correct, but the
-  container still had no `wayland-client.pc` at the first build, so
-  `crabomination_client` was unbuildable until the packages were installed by
-  hand. Worth checking whether SessionStart hooks run for scheduled/cron
-  sessions at all — if not, the install belongs in the environment image. ⏳
+- **`install-client-deps.sh` doesn't fire in scheduled sessions.** Confirmed
+  again this run: the hook is present and correct (running it by hand
+  installs libwayland/alsa/libudev and the client then builds clean), but the
+  container had no `wayland-client.pc` at the first build. Scheduled/cron
+  sessions evidently skip SessionStart hooks — the install belongs in the
+  environment image, or the build should shell out to the script itself. ⏳
+- **`target/` fills the container's 252 GB disk.** A full
+  `cargo build --workspace --all-targets` plus a `cargo clippy` run reached
+  29 GB and hit ENOSPC mid-run; deleting `target/debug/incremental` freed
+  16 GB. Worth setting `CARGO_INCREMENTAL=0` for CI-shaped runs. ⏳
 - **`granted_abilities_for` now serves off-battlefield cards.** Instance grants
   on a graveyard/hand/exile card are surfaced so Cursecloth Wrappings' embalm
   activates. The *static*-granted lists (`GrantActivatedAbilityFromGraveyard`,
