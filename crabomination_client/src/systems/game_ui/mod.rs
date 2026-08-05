@@ -3606,8 +3606,14 @@ pub fn handle_game_input(
                             consumed = true;
                         }
                     } else {
+                        // CR 506.2 — a "can't be attacked" walker (The
+                        // Aetherspark while attached) isn't a legal redirect,
+                        // so the click shouldn't arm a doomed declaration.
                         let is_pw = bf
-                            .map(|c| c.card_types.contains(&CardType::Planeswalker))
+                            .map(|c| {
+                                c.card_types.contains(&CardType::Planeswalker)
+                                    && !c.keywords.contains(&Keyword::CantBeAttacked)
+                            })
                             .unwrap_or(false);
                         if is_pw
                             && attacking.set_target_for_last_added(

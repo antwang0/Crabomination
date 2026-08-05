@@ -135,6 +135,9 @@ Items are grouped by area and roughly ordered by impact within each group.
 - **`DelayedTrigger.expires_after_turn`** gives any delayed watcher an
   "until the end of your next turn" window. Only Season of the Bold uses it
   so far; several "until your next turn" cards could move onto it. ⏳
+- **Client: `Keyword::CantBeAttacked` is honored at the attack-redirect
+  click** and has tooltip text, but there's no *visual* tell that a walker
+  can't be attacked (no greyed frame or cursor change). ⏳
 
 ## Recommender: two builder defects fixed, one lesson recorded
 

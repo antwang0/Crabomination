@@ -850,6 +850,7 @@ pub(crate) fn keyword_reminder(kw: &crabomination::card::Keyword) -> Option<&'st
         }
         K::CantBlock => "Can't block.",
         K::CantAttack => "Can't attack.",
+        K::CantBeAttacked => "Can't be attacked.",
         K::MustAttack => "Attacks each combat if able.",
         // Three distinct block requirements (CR 509.1c) — split so the tooltip
         // says which one, instead of one vague "forced into combat" line.
@@ -1110,6 +1111,7 @@ pub(crate) fn keyword_label(kw: &crabomination::card::Keyword) -> String {
         // `{:?}` debug shape — give them printed-Oracle phrasing.
         K::CantBlock => "Can't block".into(),
         K::CantAttack => "Can't attack".into(),
+        K::CantBeAttacked => "Can't be attacked".into(),
         K::CantActivateAbilities => "Activated abilities can't be activated".into(),
         K::AttacksAlone => "Attacks only alone".into(),
         K::CantAttackAlone => "Can't attack alone".into(),
