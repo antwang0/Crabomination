@@ -507,6 +507,10 @@ pub enum SpendRestriction {
     MulticoloredSpell,
     /// "Spend this mana only to cast planeswalker spells." (Interplanar Beacon.)
     PlaneswalkerSpellsOnly,
+    /// "Spend this mana only to cast a noncreature spell." (The Emperor of
+    /// Palamecia.) The complement of `CreatureOnly`; an ability activation
+    /// isn't a spell, so it doesn't qualify either.
+    NoncreatureSpellsOnly,
     /// "Spend this mana only to cast legendary spells." (Untaidake, the Cloud
     /// Keeper.)
     LegendarySpell,
@@ -532,6 +536,9 @@ impl SpendRestriction {
                 kind.changeling || kind.creature_types.contains(&t)
             }
             SpendRestriction::CreatureOnly => kind.creature,
+            SpendRestriction::NoncreatureSpellsOnly => {
+                !kind.creature && !kind.activating_ability
+            }
             SpendRestriction::CreatureSpellsOrAbilities => {
                 kind.creature || kind.creature_ability
             }

@@ -3,13 +3,13 @@
 
 use crate::card::{
     ActivatedAbility, Adventure, ArtifactSubtype, CardDefinition, CardType, CounterType,
-    CreatureType, EquipBonus, EventKind, EventScope, EventSpec, Keyword,
-    LandType, Predicate, SelectionRequirement as R, Subtypes, Supertype, TokenDefinition,
-    TriggeredAbility,
+    CreatureType, DynamicPt, EquipBonus, EventKind, EventScope, EventSpec, Keyword, LandType,
+    Predicate, SelectionRequirement as R, StaticAbility, Subtypes, Supertype,
+    TokenDefinition, TriggeredAbility,
 };
 use crate::effect::{
-    Duration, Effect, PlayerRef, Selector, Value, ZoneDest,
-    shortcut::{discard, draw, etb, target_filtered},
+    Duration, Effect, PlayerRef, Selector, StaticEffect, Value, ZoneDest,
+    shortcut::{discard, draw, etb, on_attack, on_dies, target_filtered},
 };
 use crate::game::TurnStep;
 use crate::mana::{Color, b, cost, g, generic, r, u, w};
@@ -45,7 +45,7 @@ pub fn ishgard_the_holy_see() -> CardDefinition {
         "Ishgard, the Holy See",
         Color::White,
         Adventure {
-            name: "Faith & Grief".into(),
+            name: "Faith & Grief",
             cost: cost(&[generic(3), w(), w()]),
             card_types: vec![CardType::Sorcery],
             effect: Effect::ApplyToTargets {
@@ -68,7 +68,7 @@ pub fn jidoor_aristocratic_capital() -> CardDefinition {
         "Jidoor, Aristocratic Capital",
         Color::Blue,
         Adventure {
-            name: "Overture".into(),
+            name: "Overture",
             cost: cost(&[generic(4), u(), u()]),
             card_types: vec![CardType::Sorcery],
             effect: Effect::MillHalf {
@@ -106,7 +106,7 @@ pub fn lindblum_industrial_regency() -> CardDefinition {
         "Lindblum, Industrial Regency",
         Color::Red,
         Adventure {
-            name: "Mage Siege".into(),
+            name: "Mage Siege",
             cost: cost(&[generic(2), r()]),
             card_types: vec![CardType::Instant],
             effect: Effect::CreateToken {
@@ -125,7 +125,7 @@ pub fn midgar_city_of_mako() -> CardDefinition {
         "Midgar, City of Mako",
         Color::Black,
         Adventure {
-            name: "Reactor Raid".into(),
+            name: "Reactor Raid",
             cost: cost(&[generic(2), b()]),
             card_types: vec![CardType::Sorcery],
             effect: Effect::MaySacrifice {
@@ -146,7 +146,7 @@ pub fn zanarkand_ancient_metropolis() -> CardDefinition {
         "Zanarkand, Ancient Metropolis",
         Color::Green,
         Adventure {
-            name: "Lasting Fayth".into(),
+            name: "Lasting Fayth",
             cost: cost(&[generic(4), g(), g()]),
             card_types: vec![CardType::Sorcery],
             effect: Effect::Seq(vec![
@@ -549,4 +549,403 @@ pub fn sidequest_raise_a_chocobo() -> CardDefinition {
             ..Default::default()
         },
     )
+}
+
+// ── Transforming legends ────────────────────────────────────────────────────
+
+/// Exdeath, Void Warlock // Neo Exdeath, Dimension's End — {1}{B}{G} 3/3 that
+/// gains 3 life on entry and flips at your end step on six permanent cards in
+/// your graveyard into a trampling */3 sized by that pile.
+pub fn exdeath_void_warlock() -> CardDefinition {
+    CardDefinition {
+        name: "Exdeath, Void Warlock",
+        cost: cost(&[generic(1), b(), g()]),
+        card_types: vec![CardType::Creature],
+        supertypes: vec![Supertype::Legendary],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit, CreatureType::Warlock],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        triggered_abilities: vec![
+            etb(Effect::GainLife { who: Selector::You, amount: Value::Const(3) }),
+            transform_when(
+                TurnStep::End,
+                Predicate::ValueAtLeast(
+                    Value::CardsInGraveyardMatching {
+                        who: PlayerRef::You,
+                        filter: R::PermanentCard,
+                    },
+                    Value::Const(6),
+                ),
+                Effect::Noop,
+            ),
+        ],
+        back_face: Some(Box::new(CardDefinition {
+            name: "Neo Exdeath, Dimension's End",
+            card_types: vec![CardType::Creature],
+            supertypes: vec![Supertype::Legendary],
+            subtypes: Subtypes {
+                creature_types: vec![CreatureType::Spirit, CreatureType::Avatar],
+                ..Default::default()
+            },
+            power: 0,
+            toughness: 3,
+            keywords: vec![Keyword::Trample],
+            dynamic_pt: Some(DynamicPt::PermanentCardsInControllerGraveyard {
+                base_p: 0,
+                base_t: 3,
+            }),
+            ..Default::default()
+        })),
+        ..Default::default()
+    }
+}
+
+/// Emet-Selch, Unsundered // Hades, Sorcerer of Eld — {1}{U}{B} 2/4 looter that
+/// flips on a fourteen-card graveyard into a 6/6 that plays out of the
+/// graveyard and exiles everything bound for it.
+pub fn emet_selch_unsundered() -> CardDefinition {
+    CardDefinition {
+        name: "Emet-Selch, Unsundered",
+        cost: cost(&[generic(1), u(), b()]),
+        card_types: vec![CardType::Creature],
+        supertypes: vec![Supertype::Legendary],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elder, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 4,
+        keywords: vec![Keyword::Vigilance],
+        triggered_abilities: vec![
+            etb(Effect::Seq(vec![draw(1), discard(Selector::You, 1, false)])),
+            on_attack(Effect::Seq(vec![draw(1), discard(Selector::You, 1, false)])),
+            TriggeredAbility {
+                event: EventSpec::new(
+                    EventKind::StepBegins(TurnStep::Upkeep),
+                    EventScope::YourControl,
+                )
+                .with_filter(Predicate::ValueAtLeast(
+                    Value::GraveyardSizeOf(PlayerRef::You),
+                    Value::Const(14),
+                )),
+                effect: Effect::MayDo {
+                    description: "Transform Emet-Selch?".into(),
+                    body: Box::new(Effect::Transform { what: Selector::This }),
+                },
+            },
+        ],
+        back_face: Some(Box::new(CardDefinition {
+            name: "Hades, Sorcerer of Eld",
+            card_types: vec![CardType::Creature],
+            supertypes: vec![Supertype::Legendary],
+            subtypes: Subtypes {
+                creature_types: vec![CreatureType::Avatar],
+                ..Default::default()
+            },
+            power: 6,
+            toughness: 6,
+            keywords: vec![Keyword::Vigilance],
+            static_abilities: vec![
+                StaticAbility {
+                    description: "During your turn, you may play cards from your graveyard.",
+                    effect: StaticEffect::PlayCardsFromGraveyardDuringYourTurn,
+                },
+                StaticAbility {
+                    description: "If a card or token would be put into your graveyard from \
+                                  anywhere, exile it instead.",
+                    effect: StaticEffect::ExileCardsBoundForGraveyard {
+                        opponents_only: false,
+                        own_only: true,
+                        colors: None,
+                        card_types: None,
+                        void_counter: false,
+                        stamp_source: false,
+                    },
+                },
+            ],
+            ..Default::default()
+        })),
+        ..Default::default()
+    }
+}
+
+/// Kuja, Genome Sorcerer // Trance Kuja, Fate Defied — {2}{B}{R} 3/4 that mints
+/// a pinging Wizard each end step and flips on four Wizards into a 4/6 that
+/// doubles your Wizards' damage.
+pub fn kuja_genome_sorcerer() -> CardDefinition {
+    let wizard = TokenDefinition {
+        name: "Wizard".into(),
+        power: 0,
+        toughness: 1,
+        colors: vec![Color::Black],
+        card_types: vec![CardType::Creature],
+        tapped: true,
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Wizard],
+            ..Default::default()
+        },
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl)
+                .with_filter(Predicate::CastSpellMatches(R::Noncreature)),
+            effect: Effect::DealDamage {
+                to: Selector::Player(PlayerRef::EachOpponent),
+                amount: Value::ONE,
+            },
+        }],
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Kuja, Genome Sorcerer",
+        cost: cost(&[generic(2), b(), r()]),
+        card_types: vec![CardType::Creature],
+        supertypes: vec![Supertype::Legendary],
+        subtypes: Subtypes {
+            creature_types: vec![
+                CreatureType::Human,
+                CreatureType::Mutant,
+                CreatureType::Wizard,
+            ],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 4,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(TurnStep::End), EventScope::YourControl),
+            effect: Effect::Seq(vec![
+                Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::ONE,
+                    definition: wizard,
+                },
+                Effect::If {
+                    cond: Predicate::ValueAtLeast(
+                        Value::PermanentCountControlledByMatching(
+                            PlayerRef::You,
+                            R::HasCreatureType(CreatureType::Wizard),
+                        ),
+                        Value::Const(4),
+                    ),
+                    then: Box::new(Effect::Transform { what: Selector::This }),
+                    else_: Box::new(Effect::Noop),
+                },
+            ]),
+        }],
+        back_face: Some(Box::new(CardDefinition {
+            name: "Trance Kuja, Fate Defied",
+            card_types: vec![CardType::Creature],
+            supertypes: vec![Supertype::Legendary],
+            subtypes: Subtypes {
+                creature_types: vec![CreatureType::Avatar, CreatureType::Wizard],
+                ..Default::default()
+            },
+            power: 4,
+            toughness: 6,
+            static_abilities: vec![StaticAbility {
+                description: "Flare Star — If a Wizard you control would deal damage to a \
+                              permanent or player, it deals double that damage instead.",
+                effect: StaticEffect::DoubleDamageFromControlledMatching {
+                    filter: R::HasCreatureType(CreatureType::Wizard),
+                },
+            }],
+            ..Default::default()
+        })),
+        ..Default::default()
+    }
+}
+
+/// The Emperor of Palamecia // The Lord Master of Hell — {U}{R} 2/2 that taps
+/// for noncreature-only mana and grows on big noncreature casts, flipping at
+/// three counters into a 3/3 that burns for your graveyard's spell count.
+pub fn the_emperor_of_palamecia() -> CardDefinition {
+    CardDefinition {
+        name: "The Emperor of Palamecia",
+        cost: cost(&[u(), r()]),
+        card_types: vec![CardType::Creature],
+        supertypes: vec![Supertype::Legendary],
+        subtypes: Subtypes {
+            creature_types: vec![
+                CreatureType::Human,
+                CreatureType::Noble,
+                CreatureType::Wizard,
+            ],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::AddMana {
+                who: PlayerRef::You,
+                pool: crate::effect::ManaPayload::Restricted(
+                    Box::new(crate::effect::ManaPayload::OfColors(
+                        vec![Color::Blue, Color::Red],
+                        Value::ONE,
+                    )),
+                    crate::mana::SpendRestriction::NoncreatureSpellsOnly,
+                ),
+            },
+            ..Default::default()
+        }],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl)
+                .with_filter(Predicate::All(vec![
+                    Predicate::CastSpellMatches(R::Noncreature),
+                    Predicate::CastSpellManaSpentAtLeast(4),
+                ])),
+            effect: Effect::Seq(vec![
+                Effect::AddCounter {
+                    what: Selector::This,
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::ONE,
+                },
+                Effect::If {
+                    cond: Predicate::SourceHasCountersAtLeast {
+                        counter: CounterType::PlusOnePlusOne,
+                        n: 3,
+                    },
+                    then: Box::new(Effect::Transform { what: Selector::This }),
+                    else_: Box::new(Effect::Noop),
+                },
+            ]),
+        }],
+        back_face: Some(Box::new(CardDefinition {
+            name: "The Lord Master of Hell",
+            card_types: vec![CardType::Creature],
+            supertypes: vec![Supertype::Legendary],
+            subtypes: Subtypes {
+                creature_types: vec![
+                    CreatureType::Demon,
+                    CreatureType::Noble,
+                    CreatureType::Wizard,
+                ],
+                ..Default::default()
+            },
+            power: 3,
+            toughness: 3,
+            triggered_abilities: vec![on_attack(Effect::DealDamage {
+                to: Selector::Player(PlayerRef::EachOpponent),
+                amount: Value::CardsInGraveyardMatching {
+                    who: PlayerRef::You,
+                    filter: R::Noncreature.and(R::Nonland),
+                },
+            })],
+            ..Default::default()
+        })),
+        ..Default::default()
+    }
+}
+
+/// Vincent Valentine // Galian Beast — {2}{B}{B} 2/2 that eats the power of
+/// dying opponent creatures and may flip when it attacks into a trampling
+/// lifelinker that comes back tapped, front face up.
+pub fn vincent_valentine() -> CardDefinition {
+    CardDefinition {
+        name: "Vincent Valentine",
+        cost: cost(&[generic(2), b(), b()]),
+        card_types: vec![CardType::Creature],
+        supertypes: vec![Supertype::Legendary],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Assassin],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::CreatureDied, EventScope::OpponentControl),
+                effect: Effect::AddCounter {
+                    what: Selector::This,
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::PowerOf(Box::new(Selector::TriggerSource)),
+                },
+            },
+            on_attack(Effect::MayDo {
+                description: "Transform Vincent Valentine?".into(),
+                body: Box::new(Effect::Transform { what: Selector::This }),
+            }),
+        ],
+        back_face: Some(Box::new(CardDefinition {
+            name: "Galian Beast",
+            card_types: vec![CardType::Creature],
+            supertypes: vec![Supertype::Legendary],
+            subtypes: Subtypes {
+                creature_types: vec![CreatureType::Werewolf, CreatureType::Beast],
+                ..Default::default()
+            },
+            power: 3,
+            toughness: 2,
+            keywords: vec![Keyword::Trample, Keyword::Lifelink],
+            triggered_abilities: vec![on_dies(Effect::ReturnSelfTapped)],
+            ..Default::default()
+        })),
+        ..Default::default()
+    }
+}
+
+/// Ultimecia, Time Sorceress // Ultimecia, Omnipotent — {3}{U}{B} 4/5 surveiller
+/// that buys its flip at your end step with {4}{U}{U}{B}{B} and eight graveyard
+/// cards, becoming a 7/7 menace that takes an extra turn.
+pub fn ultimecia_time_sorceress() -> CardDefinition {
+    CardDefinition {
+        name: "Ultimecia, Time Sorceress",
+        cost: cost(&[generic(3), u(), b()]),
+        card_types: vec![CardType::Creature],
+        supertypes: vec![Supertype::Legendary],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Warlock],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 5,
+        triggered_abilities: vec![
+            etb(Effect::Surveil { who: PlayerRef::You, amount: Value::Const(2) }),
+            on_attack(Effect::Surveil { who: PlayerRef::You, amount: Value::Const(2) }),
+            TriggeredAbility {
+                event: EventSpec::new(
+                    EventKind::StepBegins(TurnStep::End),
+                    EventScope::YourControl,
+                ),
+                effect: Effect::MayPay {
+                    description: "Pay {4}{U}{U}{B}{B} and exile eight graveyard cards?".into(),
+                    mana_cost: cost(&[generic(4), u(), u(), b(), b()]),
+                    body: Box::new(Effect::Seq(vec![
+                        Effect::Move {
+                            what: Selector::Take {
+                                inner: Box::new(Selector::CardsInZone {
+                                    who: PlayerRef::You,
+                                    zone: crate::card::Zone::Graveyard,
+                                    filter: R::Any,
+                                }),
+                                count: Box::new(Value::Const(8)),
+                            },
+                            to: ZoneDest::Exile,
+                        },
+                        Effect::Transform { what: Selector::This },
+                    ])),
+                    else_: None,
+                },
+            },
+        ],
+        back_face: Some(Box::new(CardDefinition {
+            name: "Ultimecia, Omnipotent",
+            card_types: vec![CardType::Creature],
+            supertypes: vec![Supertype::Legendary],
+            subtypes: Subtypes {
+                creature_types: vec![CreatureType::Nightmare, CreatureType::Warlock],
+                ..Default::default()
+            },
+            power: 7,
+            toughness: 7,
+            keywords: vec![Keyword::Menace],
+            triggered_abilities: vec![TriggeredAbility {
+                event: EventSpec::new(EventKind::Transformed, EventScope::SelfSource),
+                effect: Effect::TakeExtraTurn { who: PlayerRef::You, count: Value::ONE },
+            }],
+            ..Default::default()
+        })),
+        ..Default::default()
+    }
 }

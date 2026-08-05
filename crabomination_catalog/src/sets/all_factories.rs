@@ -9384,6 +9384,12 @@ static FIN2: &[Factory] = &[
     super::fin2::sidequest_hunt_the_mark,
     super::fin2::sidequest_play_blitzball,
     super::fin2::sidequest_raise_a_chocobo,
+    super::fin2::exdeath_void_warlock,
+    super::fin2::emet_selch_unsundered,
+    super::fin2::kuja_genome_sorcerer,
+    super::fin2::the_emperor_of_palamecia,
+    super::fin2::vincent_valentine,
+    super::fin2::ultimecia_time_sorceress,
 ];
 static GPT: &[Factory] = &[
     super::gpt::mourning_thrull,

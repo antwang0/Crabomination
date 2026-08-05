@@ -292,3 +292,151 @@ fn sidequest_raise_a_chocobo_transforms_on_four_birds() {
     advance_to_your(&mut g, TurnStep::PreCombatMain);
     assert_eq!(g.battlefield_find(quest).unwrap().definition.name, "Black Chocobo");
 }
+
+// ── Transforming legends ────────────────────────────────────────────────────
+
+/// Every transforming-legend factory is registered.
+#[test]
+fn fin2_transformers_are_registered() {
+    let names: Vec<&str> = crabomination_catalog::sets::all_factories::all_catalog_card_factories()
+        .map(|f| f().name)
+        .collect();
+    for f in [
+        catalog::exdeath_void_warlock as fn() -> crabomination::card::CardDefinition,
+        catalog::emet_selch_unsundered,
+        catalog::kuja_genome_sorcerer,
+        catalog::the_emperor_of_palamecia,
+        catalog::vincent_valentine,
+        catalog::ultimecia_time_sorceress,
+    ] {
+        let name = f().name;
+        assert!(names.contains(&name), "{name} is not registered");
+    }
+}
+
+/// Exdeath flips on six permanent cards in the graveyard; Neo Exdeath's power
+/// reads that pile.
+#[test]
+fn exdeath_transforms_and_scales_off_the_graveyard() {
+    let mut g = two_player_game();
+    let ex = g.add_card_to_battlefield(0, catalog::exdeath_void_warlock());
+    for _ in 0..6 {
+        g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    }
+    advance_to(&mut g, TurnStep::End);
+    let neo = g.battlefield_find(ex).expect("still around");
+    assert_eq!(neo.definition.name, "Neo Exdeath, Dimension's End");
+    assert_eq!(g.computed_permanent(ex).unwrap().power, 6);
+}
+
+/// Five permanent cards isn't enough.
+#[test]
+fn exdeath_waits_for_six_permanent_cards() {
+    let mut g = two_player_game();
+    let ex = g.add_card_to_battlefield(0, catalog::exdeath_void_warlock());
+    for _ in 0..5 {
+        g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    }
+    advance_to(&mut g, TurnStep::End);
+    assert_eq!(g.battlefield_find(ex).unwrap().definition.name, "Exdeath, Void Warlock");
+}
+
+/// Hades exiles what would hit your graveyard and lets you cast out of it.
+#[test]
+fn hades_exiles_your_graveyard_and_opens_it_up() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let hades = g.add_card_to_battlefield(0, catalog::emet_selch_unsundered());
+    let mut evs = vec![];
+    g.transform_permanent(hades, &mut evs);
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(hades).unwrap().definition.name, "Hades, Sorcerer of Eld");
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    cast(&mut g, bolt, Some(Target::Permanent(bear)));
+    assert!(g.players[0].graveyard.is_empty(), "the Bear and the Bolt were exiled instead");
+}
+
+/// Kuja's end-step Wizard flips him once you have four.
+#[test]
+fn kuja_transforms_on_four_wizards() {
+    let mut g = two_player_game();
+    let kuja = g.add_card_to_battlefield(0, catalog::kuja_genome_sorcerer());
+    for _ in 0..2 {
+        g.add_card_to_battlefield(0, catalog::snapcaster_mage());
+    }
+    advance_to(&mut g, TurnStep::End);
+    assert_eq!(g.battlefield_find(kuja).unwrap().definition.name, "Trance Kuja, Fate Defied");
+}
+
+/// Trance Kuja doubles a Wizard's combat damage but not anyone else's.
+#[test]
+fn trance_kuja_doubles_only_wizard_damage() {
+    use crabomination::game::types::{Attack, AttackTarget};
+    let mut g = two_player_game();
+    let kuja = g.add_card_to_battlefield(0, catalog::kuja_genome_sorcerer());
+    let mut evs = vec![];
+    g.transform_permanent(kuja, &mut evs);
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    let wizard = g.add_card_to_battlefield(0, catalog::snapcaster_mage()); // 2/1 Wizard
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // 2/2, no Wizard
+    for id in [wizard, bear] {
+        g.battlefield_find_mut(id).unwrap().summoning_sick = false;
+    }
+    advance_to(&mut g, TurnStep::DeclareAttackers);
+    g.perform_action(GameAction::DeclareAttackers(vec![
+        Attack { attacker: wizard, target: AttackTarget::Player(1) },
+        Attack { attacker: bear, target: AttackTarget::Player(1) },
+    ]))
+    .expect("attack");
+    advance_to(&mut g, TurnStep::PostCombatMain);
+    // 2 (Bear) + 2×2 (Wizard) = 6.
+    assert_eq!(g.players[1].life, 14);
+}
+
+/// Vincent grows by the power of a dying opponent creature.
+#[test]
+fn vincent_valentine_eats_the_power_of_the_dead() {
+    let mut g = two_player_game();
+    let vincent = g.add_card_to_battlefield(0, catalog::vincent_valentine());
+    let angel = g.add_card_to_battlefield(1, catalog::serra_angel());
+    let wrath = g.add_card_to_hand(0, catalog::murder());
+    g.players[0].mana_pool.add(Color::Black, 3);
+    cast(&mut g, wrath, Some(Target::Permanent(angel)));
+    assert_eq!(
+        g.battlefield_find(vincent).unwrap().counters.get(&CounterType::PlusOnePlusOne).copied(),
+        Some(4),
+        "Serra Angel's power"
+    );
+}
+
+/// The Emperor's mana only funds noncreature spells.
+#[test]
+fn the_emperor_taps_for_noncreature_only_mana() {
+    let d = catalog::the_emperor_of_palamecia();
+    assert_eq!(d.activated_abilities.len(), 1);
+    assert!(matches!(
+        d.activated_abilities[0].effect,
+        crabomination::effect::Effect::AddMana {
+            pool: crabomination::effect::ManaPayload::Restricted(_, _),
+            ..
+        }
+    ));
+    let back = d.back_face.as_ref().expect("back face");
+    assert_eq!(back.name, "The Lord Master of Hell");
+}
+
+/// Ultimecia's flip takes an extra turn.
+#[test]
+fn ultimecia_transforms_into_an_extra_turn() {
+    let mut g = two_player_game();
+    let ulti = g.add_card_to_battlefield(0, catalog::ultimecia_time_sorceress());
+    let mut evs = vec![];
+    g.transform_permanent(ulti, &mut evs);
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(ulti).unwrap().definition.name, "Ultimecia, Omnipotent");
+    assert!(g.players[0].extra_turns > 0, "Time Compression banked an extra turn");
+}

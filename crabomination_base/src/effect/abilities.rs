@@ -1239,6 +1239,10 @@ pub enum StaticEffect {
     /// Source-controller-restricted (unlike the global `DoubleDamageDealt`);
     /// combat and noncombat alike; consulted by `scale_damage_to`.
     DoubleDamageFromControlledCreatures,
+    /// The filtered sibling of `DoubleDamageFromControlledCreatures` — only
+    /// sources you control matching `filter` deal double damage (Trance Kuja's
+    /// Wizards). Same funnel (`scale_damage_to`).
+    DoubleDamageFromControlledMatching { filter: SelectionRequirement },
     /// CR 614.5 Hellbent — "As long as you have no cards in hand, if a source you
     /// control would deal damage to a permanent or player, it deals double that
     /// damage instead." (Anthem of Rakdos.) Any source (not just creatures),
@@ -2273,6 +2277,10 @@ pub enum StaticEffect {
     /// `PlayLandFromGraveyard` action: a land in the controller's graveyard
     /// becomes a legal land play (still bound by the one-land-per-turn cap).
     MayPlayLandsFromGraveyard,
+    /// "During your turn, you may play cards from your graveyard" (Hades,
+    /// Sorcerer of Eld). The broad sibling of `MayPlayLandsFromGraveyard`:
+    /// covers casts as well as land plays, and only on the controller's turn.
+    PlayCardsFromGraveyardDuringYourTurn,
     /// "As long as this card is in your graveyard, if you would learn, you may
     /// instead return this card to the battlefield." Consulted at the top of
     /// `Effect::Learn`; no layer effect. — Retriever Phoenix.

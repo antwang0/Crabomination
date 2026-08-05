@@ -5536,6 +5536,24 @@ impl GameState {
                 .filter(|sa| matches!(sa.effect, StaticEffect::DoubleDamageFromControlledCreatures))
                 .count() as u32;
         }
+        // Trance Kuja — the filtered sibling: only sources you control that
+        // match the filter (Wizards) deal double damage.
+        if let Some(src) = source
+            && let Some(sc) = self.battlefield_find(src)
+        {
+            let ctrl = sc.controller;
+            d += self
+                .battlefield
+                .iter()
+                .filter(|c| c.controller == ctrl)
+                .flat_map(|c| &c.definition.static_abilities)
+                .filter(|sa| match &sa.effect {
+                    StaticEffect::DoubleDamageFromControlledMatching { filter } => self
+                        .evaluate_requirement_static(filter, &Target::Permanent(src), ctrl, None),
+                    _ => false,
+                })
+                .count() as u32;
+        }
         // Anthem of Rakdos (Hellbent) — while the static's controller has an
         // empty hand, any source they control deals double damage (CR 614.5).
         if let Some((src_ctrl, _)) = &source_info
@@ -19876,6 +19894,7 @@ fn static_effect_to_effects(
             | StaticEffect::DoubleDamageToOpponents
             | StaticEffect::DoubleDamageFromCreaturesEnteredThisTurn
             | StaticEffect::DoubleDamageFromControlledCreatures
+            | StaticEffect::DoubleDamageFromControlledMatching { .. }
             | StaticEffect::DoubleYourSourcesDamageWhileHellbent
             | StaticEffect::DoubleNoncombatDamageToOpponents
             | StaticEffect::DoubleYourNoncombatDamageWhile { .. }
@@ -20198,6 +20217,7 @@ fn static_effect_to_effects(
             // MayPlayLandsFromGraveyard — consulted by the land-play paths
             // via `player_may_play_lands_from_graveyard`; no layer effect.
             | StaticEffect::MayPlayLandsFromGraveyard
+            | StaticEffect::PlayCardsFromGraveyardDuringYourTurn
             // MayReturnFromGraveyardInsteadOfLearn — consulted at the top of
             // `Effect::Learn` (Retriever Phoenix); no layer effect.
             | StaticEffect::MayReturnFromGraveyardInsteadOfLearn

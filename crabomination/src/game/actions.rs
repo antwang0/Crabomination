@@ -2030,7 +2030,14 @@ impl crate::game::GameState {
                 && c.definition
                     .static_abilities
                     .iter()
-                    .any(|sa| matches!(sa.effect, StaticEffect::MayPlayLandsFromGraveyard))
+                    .any(|sa| {
+                        matches!(sa.effect, StaticEffect::MayPlayLandsFromGraveyard)
+                            || (self.active_player_idx == player
+                                && matches!(
+                                    sa.effect,
+                                    StaticEffect::PlayCardsFromGraveyardDuringYourTurn
+                                ))
+                    })
         })
     }
 
@@ -3491,7 +3498,9 @@ impl GameState {
                     }
                 }
                 Ok(_) => {
-                    self.players[p].graveyard_cast_types_this_turn.push(used_type);
+                    if let Some(t) = used_type {
+                        self.players[p].graveyard_cast_types_this_turn.push(t);
+                    }
                     self.entered_from_graveyard_this_turn.insert(card_id);
                 }
             }
@@ -3623,21 +3632,30 @@ impl GameState {
         self.cast_spell_with_convoke(card_id, target, additional_targets, mode, x_value, &[], &[], CastFlags::default())
     }
 
-    /// Muldrotha — when `card_id` sits in `p`'s graveyard, it's `p`'s turn,
-    /// a `MayCastPermanentsFromGraveyard` permission is active, and the card
-    /// has a nonland permanent type not yet cast from the graveyard this
-    /// turn, return that type.
+    /// When `card_id` sits in `p`'s graveyard on `p`'s turn and a
+    /// graveyard-cast permission is active, say whether it can be cast:
+    /// `Some(None)` for an unlimited permission (Hades, Sorcerer of Eld —
+    /// nothing is consumed), `Some(Some(type))` for Muldrotha's one-per-
+    /// permanent-type budget, `None` when no permission covers it.
     pub(crate) fn graveyard_cast_type_available(
         &self,
         p: usize,
         card_id: CardId,
-    ) -> Option<crate::card::CardType> {
+    ) -> Option<Option<crate::card::CardType>> {
         use crate::card::CardType;
         use crate::effect::StaticEffect;
         if self.active_player_idx != p {
             return None;
         }
         let card = self.players[p].graveyard.iter().find(|c| c.id == card_id)?;
+        if self.battlefield.iter().any(|c| {
+            c.controller == p
+                && c.definition.static_abilities.iter().any(|sa| {
+                    matches!(sa.effect, StaticEffect::PlayCardsFromGraveyardDuringYourTurn)
+                })
+        }) {
+            return Some(None);
+        }
         let permission = self.battlefield.iter().any(|c| {
             c.controller == p
                 && c.definition.static_abilities.iter().any(|sa| {
@@ -3662,6 +3680,7 @@ impl GameState {
                     && !self.players[p].graveyard_cast_types_this_turn.contains(t)
             })
             .cloned()
+            .map(Some)
     }
 
     /// CR 701.61 — pay the forage cost for `p`: exile three graveyard cards,
