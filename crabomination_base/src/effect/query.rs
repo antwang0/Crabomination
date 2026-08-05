@@ -538,6 +538,7 @@ impl Effect {
             Effect::ReturnGraveyardCardsToHand { .. }
             | Effect::PutGraveyardCardOntoBattlefield { .. }
             | Effect::RevealTopExileOnePerCardType { .. }
+            | Effect::GrantForageGraveyardCreatureCastsThisTurn
             | Effect::GainControlWhileTriggerAuraAttached => false,
             Effect::EachPlayerDoes { body, .. } => body.requires_target(),
             // Resolution-time ChooseCards by the affected player; untargeted.
@@ -846,7 +847,7 @@ impl Effect {
             | Effect::ExileTopMintPerChosenColor { who, amount, .. } => {
                 sel_has_target(who) || value_has_target(amount)
             }
-            Effect::MillTwoRepeatSharedColor { who } => sel_has_target(who),
+            Effect::MillTwoRepeatSharing { who, .. } => sel_has_target(who),
             Effect::MillThenToHand { amount, .. } => value_has_target(amount),
             Effect::MillThenToHandN { amount, take, .. } => {
                 value_has_target(amount) || value_has_target(take)
@@ -1672,7 +1673,7 @@ impl Effect {
             | Effect::Draw { who, .. }
             | Effect::Mill { who, .. }
             | Effect::MillUntilLands { who, .. }
-            | Effect::MillTwoRepeatSharedColor { who }
+            | Effect::MillTwoRepeatSharing { who, .. }
             | Effect::ExileTopOfLibrary { who, .. } => sel_filter(who),
             Effect::ExileTopMintPerChosenColor { who, .. } => {
                 sel_filter(who).or_else(|| implicit_player_if_bare_player_target(who))
@@ -2236,7 +2237,7 @@ impl Effect {
                 _ => "mill".into(),
             },
             Effect::MillUntilLands { .. } => "mill until lands".into(),
-            Effect::MillTwoRepeatSharedColor { .. } => "mill two, maybe repeat".into(),
+            Effect::MillTwoRepeatSharing { .. } => "mill two, maybe repeat".into(),
             Effect::ExileTopOfLibrary { amount, .. } => match amount {
                 Value::Const(n) => format!("exile top {n} of library"),
                 _ => "exile top of library".into(),
@@ -2462,7 +2463,7 @@ impl Effect {
             | Effect::Draw { .. }
             | Effect::Mill { .. }
             | Effect::MillUntilLands { .. }
-            | Effect::MillTwoRepeatSharedColor { .. }
+            | Effect::MillTwoRepeatSharing { .. }
             | Effect::ExileTopOfLibrary { .. }
             | Effect::ExileTopMintPerChosenColor { .. }
             | Effect::MillHalf { .. }
@@ -3046,7 +3047,7 @@ impl Effect {
                 | Effect::ExileTopOfLibrary { who, amount, .. } => {
                     sel_find(who, slot).or_else(|| val_find(amount, slot))
                 }
-                Effect::MillUntilLands { who, .. } | Effect::MillTwoRepeatSharedColor { who } => {
+                Effect::MillUntilLands { who, .. } | Effect::MillTwoRepeatSharing { who, .. } => {
                     sel_find(who, slot)
                 }
                 Effect::ExileTopMintPerChosenColor { who, .. } => {

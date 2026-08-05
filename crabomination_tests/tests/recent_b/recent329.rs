@@ -383,3 +383,109 @@ fn valgavoth_exiles_then_sells_back_for_life() {
     assert_eq!(g.players[0].life, life - 2, "paid the Bears' mana value in life");
     assert_eq!(g.battlefield_find(victim).unwrap().controller, 0, "it's yours now");
 }
+
+/// Osteomancer Adept turns the graveyard's creatures into forage-cast spells
+/// that arrive with a finality counter.
+#[test]
+fn osteomancer_adept_casts_creatures_by_foraging() {
+    let mut g = main_phase();
+    let adept = g.add_card_to_battlefield(0, catalog::osteomancer_adept());
+    g.battlefield_find_mut(adept).unwrap().summoning_sick = false;
+    let bear = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    for _ in 0..3 {
+        g.add_card_to_graveyard(0, catalog::island());
+    }
+    flood_mana(&mut g, 0);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: adept,
+        ability_index: 0,
+        target: None,
+        additional_targets: vec![],
+        x_value: None,
+        mode: None,
+    })
+    .expect("grant");
+    drain_stack(&mut g);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bear,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("graveyard cast");
+    drain_stack(&mut g);
+    assert_eq!(
+        g.battlefield_find(bear).unwrap().counter_count(CounterType::Finality),
+        1,
+        "it entered with a finality counter"
+    );
+    assert_eq!(g.exile.len(), 3, "three graveyard cards were foraged away");
+}
+
+/// The Tale of Tamiyo's chapter mills two and repeats (drawing) while the pair
+/// shares a card type.
+#[test]
+fn tale_of_tamiyo_repeats_on_a_shared_card_type() {
+    let mut g = main_phase();
+    // Two Islands share a type → repeat and draw; the next pair is a land and
+    // an instant, which stops it.
+    g.add_card_to_library(0, catalog::island());
+    g.add_card_to_library(0, catalog::island());
+    g.add_card_to_library(0, catalog::lightning_bolt());
+    g.add_card_to_library(0, catalog::island());
+    g.add_card_to_library(0, catalog::island());
+    let saga = g.add_card_to_hand(0, catalog::the_tale_of_tamiyo());
+    flood_mana(&mut g, 0);
+    let hand_before = g.players[0].hand.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: saga,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("saga");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].graveyard.len(), 4, "two pairs milled");
+    assert_eq!(g.players[0].hand.len(), hand_before - 1 + 1, "one repeat drew one card");
+}
+
+/// Kaito animates into a hexproof 3/4 Ninja on your turn while he has loyalty.
+#[test]
+fn kaito_is_a_ninja_on_your_turn() {
+    use crabomination::card::Keyword;
+    let mut g = main_phase();
+    let kaito = g.add_card_to_battlefield(0, catalog::kaito_bane_of_nightmares());
+    g.battlefield_find_mut(kaito).unwrap().add_counters(CounterType::Loyalty, 4);
+    let cp = g.computed_permanent(kaito).unwrap();
+    assert!(cp.card_types.contains(&CardType::Creature), "animated");
+    assert_eq!((cp.power, cp.toughness), (3, 4));
+    assert!(cp.keywords.contains(&Keyword::Hexproof));
+
+    g.active_player_idx = 1;
+    let cp = g.computed_permanent(kaito).unwrap();
+    assert!(!cp.card_types.contains(&CardType::Creature), "inert on the opponent's turn");
+}
+
+/// Ninjutsu puts Kaito in tapped and attacking off an unblocked attacker.
+#[test]
+fn kaito_ninjutsus_in_as_a_planeswalker() {
+    let mut g = main_phase();
+    let sneaker = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.battlefield_find_mut(sneaker).unwrap().summoning_sick = false;
+    let kaito = g.add_card_to_hand(0, catalog::kaito_bane_of_nightmares());
+    flood_mana(&mut g, 0);
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: sneaker,
+        target: AttackTarget::Player(1),
+    }]))
+    .expect("attack");
+    g.step = TurnStep::DeclareBlockers;
+    g.perform_action(GameAction::Ninjutsu { ninja: kaito, returning: sneaker })
+        .expect("ninjutsu");
+    assert!(g.battlefield_find(kaito).unwrap().tapped, "entered tapped");
+    assert!(g.attacking.iter().any(|a| a.attacker == kaito), "and attacking");
+    assert!(g.players[0].hand.iter().any(|c| c.id == sneaker), "the attacker bounced");
+}

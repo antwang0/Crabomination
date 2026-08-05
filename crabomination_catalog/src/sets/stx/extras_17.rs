@@ -35,6 +35,7 @@ pub fn efreet_flamepainter() -> CardDefinition {
             event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
             effect: Effect::CastWithoutPayingImmediate {
                 reduce_generic: 0,
+                                pay_own_cost: false,
                 what: target_filtered(
                     SelectionRequirement::InGraveyard.and(
                         SelectionRequirement::HasCardType(CardType::Instant)

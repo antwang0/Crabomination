@@ -545,6 +545,7 @@ pub fn shelldock_isle() -> CardDefinition {
                 }),
                 effect: Effect::CastWithoutPayingImmediate {
                     reduce_generic: 0,
+                                pay_own_cost: false,
                     what: Selector::CardExiledWithSource,
                     source_zone: crate::card::Zone::Exile,
                     exile_after: false,
@@ -586,6 +587,7 @@ fn lorwyn_hideaway_land(
                 condition: Some(gate),
                 effect: Effect::CastWithoutPayingImmediate {
                     reduce_generic: 0,
+                                pay_own_cost: false,
                     what: Selector::CardExiledWithSource,
                     source_zone: crate::card::Zone::Exile,
                     exile_after: false,

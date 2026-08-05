@@ -170,6 +170,7 @@ pub fn mizzixs_mastery() -> CardDefinition {
     // stays in exile; the copy is cast without paying its mana cost.
     let free_cast = |what| Effect::CastWithoutPayingImmediate {
         reduce_generic: 0,
+                                pay_own_cost: false,
         what,
         source_zone: Zone::Exile,
         exile_after: false,

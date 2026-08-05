@@ -2040,6 +2040,7 @@ pub fn galvanoth() -> CardDefinition {
                 source_zone: crate::card::Zone::Library,
                 exile_after: false,
                 copy: false,
+                pay_own_cost: false,
                 reduce_generic: 0,
             },
         }],

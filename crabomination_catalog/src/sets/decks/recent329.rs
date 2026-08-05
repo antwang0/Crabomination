@@ -3,13 +3,14 @@
 
 use crate::card::{
     ActivatedAbility, AdditionalCastCost, ArtifactSubtype, CardDefinition, CardType, CounterType,
-    CreatureType, Keyword, SelectionRequirement as R, StaticAbility, Subtypes, Supertype,
-    TokenDefinition, TriggeredAbility, WardCost,
+    LoyaltyAbility,
+    CreatureType, Keyword, PlaneswalkerSubtype, SelectionRequirement as R, StaticAbility,
+    Subtypes, Supertype, TokenDefinition, TriggeredAbility, WardCost,
 };
 use crate::effect::shortcut::{eerie, etb, on_attack, target_filtered};
 use crate::effect::{
-    DelayedTriggerKind, Duration, Effect, EventKind, EventScope, EventSpec, PlayerRef, Predicate,
-    Selector, StaticEffect, Value, ZoneDest,
+    DelayedTriggerKind, Duration, Effect, EventKind, EventScope, EventSpec, MillShareAxis,
+    PlayerRef, Predicate, Selector, StaticEffect, Value, ZoneDest,
 };
 use crate::mana::{cost, b, generic, r, u, w, x};
 
@@ -307,6 +308,7 @@ pub fn wishing_well() -> CardDefinition {
                         exile_after: true,
                         copy: false,
                         reduce_generic: 0,
+                                pay_own_cost: false,
                     }),
                 },
             ]),
@@ -349,5 +351,163 @@ pub fn valgavoth_terror_eater() -> CardDefinition {
             9,
             9,
         )
+    }
+}
+
+/// Osteomancer Adept — {1}{B} 2/2 deathtouch. Tap it and your graveyard's
+/// creatures become castable for a forage, arriving with a finality counter.
+pub fn osteomancer_adept() -> CardDefinition {
+    CardDefinition {
+        name: "Osteomancer Adept",
+        cost: cost(&[generic(1), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Squirrel, CreatureType::Warlock],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Deathtouch],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::GrantForageGraveyardCreatureCastsThisTurn,
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// The Tale of Tamiyo — {2}{U} Saga. Three chapters of type-matched milling,
+/// then a graveyard flashback of instants, sorceries and Tamiyos.
+pub fn the_tale_of_tamiyo() -> CardDefinition {
+    let mill = Effect::MillTwoRepeatSharing {
+        who: Selector::You,
+        axis: MillShareAxis::CardType,
+        draw_on_repeat: true,
+    };
+    CardDefinition {
+        name: "The Tale of Tamiyo",
+        cost: cost(&[generic(2), u()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes {
+            enchantment_subtypes: vec![crate::card::EnchantmentSubtype::Saga],
+            ..Default::default()
+        },
+        saga_chapters: vec![
+            (1, mill.clone()),
+            (2, mill.clone()),
+            (3, mill),
+            (
+                4,
+                Effect::ApplyToTargets {
+                    max_targets: 4,
+                    min_targets: 0,
+                    filter: R::InYourGraveyard.and(
+                        R::HasCardType(CardType::Instant)
+                            .or(R::HasCardType(CardType::Sorcery))
+                            .or(R::HasPlaneswalkerType(PlaneswalkerSubtype::Tamiyo)),
+                    ),
+                    effect: Box::new(Effect::CastWithoutPayingImmediate {
+                        what: Selector::Target(0),
+                        source_zone: crate::card::Zone::Graveyard,
+                        exile_after: false,
+                        copy: true,
+                        reduce_generic: 0,
+                        pay_own_cost: true,
+                    }),
+                },
+            ),
+        ],
+        ..Default::default()
+    }
+}
+
+/// Kaito, Bane of Nightmares — {2}{U}{B} Kaito with ninjutsu; on your turn he
+/// is a hexproof 3/4 Ninja while he still has loyalty.
+pub fn kaito_bane_of_nightmares() -> CardDefinition {
+    let live = Predicate::All(vec![
+        Predicate::IsTurnOf(PlayerRef::You),
+        Predicate::SourceHasCountersAtLeast { counter: CounterType::Loyalty, n: 1 },
+    ]);
+    CardDefinition {
+        name: "Kaito, Bane of Nightmares",
+        cost: cost(&[generic(2), u(), b()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Planeswalker],
+        subtypes: Subtypes {
+            planeswalker_subtypes: vec![PlaneswalkerSubtype::Kaito],
+            ..Default::default()
+        },
+        base_loyalty: 4,
+        keywords: vec![Keyword::Ninjutsu(cost(&[generic(1), u(), b()]))],
+        static_abilities: vec![
+            StaticAbility {
+                description: "During your turn, as long as Kaito has one or more loyalty counters on him, he's a 3/4 Ninja creature and has hexproof.",
+                effect: StaticEffect::SelfIsCreatureIf {
+                    condition: live.clone(),
+                    creature_types: vec![CreatureType::Ninja],
+                },
+            },
+            StaticAbility {
+                description: "…he's 3/4…",
+                effect: StaticEffect::SetBasePtIf { condition: live.clone(), power: 3, toughness: 4 },
+            },
+            StaticAbility {
+                description: "…and has hexproof.",
+                effect: StaticEffect::SelfHasKeywordIf {
+                    keyword: Keyword::Hexproof,
+                    condition: live,
+                },
+            },
+        ],
+        loyalty_abilities: vec![
+            LoyaltyAbility {
+                loyalty_cost: 1,
+                effect: Effect::CreateEmblem {
+                    who: PlayerRef::You,
+                    name: "Kaito, Bane of Nightmares".into(),
+                    triggered: vec![],
+                    statics: vec![StaticAbility {
+                        description: "Ninjas you control get +1/+1.",
+                        effect: StaticEffect::AnthemForFilter {
+                            filter: R::Creature.and(R::HasCreatureType(CreatureType::Ninja)),
+                            power: 1,
+                            toughness: 1,
+                            keywords: vec![],
+                            opponents: false,
+                            all_players: false,
+                            only_your_turn: false,
+                            scale_by_counters_on_self: None,
+                        },
+                    }],
+                },
+                ..Default::default()
+            },
+            LoyaltyAbility {
+                loyalty_cost: 0,
+                effect: Effect::Seq(vec![
+                    Effect::Surveil { who: PlayerRef::You, amount: Value::Const(2) },
+                    Effect::Draw {
+                        who: Selector::You,
+                        amount: Value::OpponentsWhoLostLifeThisTurn,
+                    },
+                ]),
+                ..Default::default()
+            },
+            LoyaltyAbility {
+                loyalty_cost: -2,
+                effect: Effect::Seq(vec![
+                    Effect::Tap { what: target_filtered(R::Creature) },
+                    Effect::AddCounter {
+                        what: Selector::Target(0),
+                        kind: CounterType::Stun,
+                        amount: Value::Const(2),
+                    },
+                ]),
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
     }
 }

@@ -41,6 +41,7 @@ fn cast_free_copy_of_imprint() -> Effect {
         description: "Copy the exiled card and cast the copy without paying its mana cost".into(),
         body: Box::new(Effect::CastWithoutPayingImmediate {
             reduce_generic: 0,
+                                pay_own_cost: false,
             what: Selector::CardExiledWithSource,
             source_zone: Zone::Exile,
             copy: true,

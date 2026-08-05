@@ -1618,6 +1618,7 @@ pub fn isochron_scepter() -> CardDefinition {
             // is the relevant one in practice); no explicit target needed.
             effect: Effect::CastWithoutPayingImmediate {
                 reduce_generic: 0,
+                                pay_own_cost: false,
                 what: Selector::CardsInZone {
                     who: PlayerRef::You,
                     zone: Zone::Exile,

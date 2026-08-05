@@ -704,6 +704,10 @@ pub struct Player {
     /// `spell_names_cast_this_turn`.
     #[serde(default)]
     pub spell_ids_cast_this_turn: Vec<crate::card::CardId>,
+    /// Turn number through which this player may cast creature spells from
+    /// their graveyard by foraging (Osteomancer Adept). Cleared at cleanup.
+    #[serde(default)]
+    pub forage_graveyard_casts_turn: Option<u32>,
     /// CR 502.3 — number of this player's upcoming untap steps to skip
     /// (Yosei, the Morning Star; Frost Titan-style locks). Decremented when
     /// their untap step would run; while > 0 their permanents don't untap.
@@ -1056,6 +1060,7 @@ impl Player {
             attack_tax_until_your_turn: 0,
             spell_names_cast_this_turn: Vec::new(),
             spell_ids_cast_this_turn: Vec::new(),
+            forage_graveyard_casts_turn: None,
             skip_turns: 0,
             skip_next_untap_step: 0,
             skip_next_draw_step: 0,

@@ -3517,6 +3517,40 @@ impl GameState {
             }
             return r;
         }
+        // Osteomancer Adept — cast a creature spell from your graveyard by
+        // foraging in addition to its other costs; it enters with a finality
+        // counter. Same hop-into-hand shape as the Noctis branch above.
+        if !self.players[p].hand.iter().any(|c| c.id == card_id)
+            && self.players[p].forage_graveyard_casts_turn == Some(self.turn_number)
+            && self.can_forage(p)
+            && self.players[p].graveyard.iter().any(|c| {
+                c.id == card_id
+                    && c.definition.is_creature()
+                    && !self.cast_from_zone_blocked(p, &c.definition, crate::card::Zone::Graveyard)
+            })
+        {
+            let mut card = Self::take_card(&mut self.players[p].graveyard, card_id)
+                .ok_or(GameError::CardNotInHand(card_id))?;
+            card.pending_etb_counters.push((crate::card::CounterType::Finality, 1));
+            self.players[p].hand.push(card);
+            let r = self.cast_spell_with_convoke(
+                card_id, target, additional_targets, mode, x_value, &[], &[], CastFlags::default(),
+            );
+            match r {
+                Err(e) => {
+                    if let Some(mut card) = Self::take_card(&mut self.players[p].hand, card_id) {
+                        card.pending_etb_counters.clear();
+                        self.players[p].send_to_graveyard(card);
+                    }
+                    return Err(e);
+                }
+                Ok(mut evs) => {
+                    evs.append(&mut self.pay_forage(p));
+                    self.entered_from_graveyard_this_turn.insert(card_id);
+                    return Ok(evs);
+                }
+            }
+        }
         // Bolas's Citadel — cast a spell off the library top paying life equal
         // to its mana value instead of its mana cost. Hop to hand, pay life,
         // and free-cast; restore the card to the top on failure.
@@ -3617,6 +3651,39 @@ impl GameState {
                     && !self.players[p].graveyard_cast_types_this_turn.contains(t)
             })
             .cloned()
+    }
+
+    /// CR 701.61 — pay the forage cost for `p`: exile three graveyard cards,
+    /// or sacrifice a Food when the graveyard is too small. Emits `Foraged`.
+    /// Shared by the `ForageOrPay` additional cost and Osteomancer Adept's
+    /// graveyard-cast grant.
+    pub(crate) fn pay_forage(&mut self, p: usize) -> Vec<GameEvent> {
+        let mut events = Vec::new();
+        let gy_ids: Vec<CardId> =
+            self.players[p].graveyard.iter().take(3).map(|c| c.id).collect();
+        if gy_ids.len() >= 3 {
+            let ctx = EffectContext::for_spell(p, None, 0, 0);
+            for id in gy_ids {
+                self.move_card_to(id, &crate::effect::ZoneDest::Exile, &ctx, &mut events);
+            }
+        } else if let Some(fid) = self
+            .battlefield
+            .iter()
+            .find(|c| {
+                c.controller == p
+                    && c.definition
+                        .subtypes
+                        .artifact_subtypes
+                        .contains(&crate::card::ArtifactSubtype::Food)
+            })
+            .map(|c| c.id)
+        {
+            events.push(GameEvent::PermanentSacrificed { card_id: fid, who: p });
+            let mut die = self.remove_to_graveyard_with_triggers(fid);
+            events.append(&mut die);
+        }
+        events.push(GameEvent::Foraged { player: p });
+        events
     }
 
     /// Noctis — when `card_id` sits in `p`'s graveyard, a
@@ -7471,29 +7538,11 @@ impl GameState {
                     }
                 }
                 A::ForageOrPay { .. } => {
-                    // With forage material, forage (exile three graveyard cards,
-                    // else sacrifice a Food) and fire the Foraged event; else the
-                    // pay half was folded into the cost.
+                    // With forage material, forage; else the pay half was
+                    // already folded into the cost.
                     if self.can_forage(p) {
-                        let gy_ids: Vec<CardId> =
-                            self.players[p].graveyard.iter().take(3).map(|c| c.id).collect();
-                        if gy_ids.len() >= 3 {
-                            let ctx = EffectContext::for_spell(p, None, 0, 0);
-                            for id in gy_ids {
-                                self.move_card_to(id, &crate::effect::ZoneDest::Exile, &ctx, &mut events);
-                            }
-                        } else if let Some(fid) = self.battlefield.iter().find(|c| {
-                            c.controller == p
-                                && c.definition
-                                    .subtypes
-                                    .artifact_subtypes
-                                    .contains(&crate::card::ArtifactSubtype::Food)
-                        }).map(|c| c.id) {
-                            events.push(GameEvent::PermanentSacrificed { card_id: fid, who: p });
-                            let mut die = self.remove_to_graveyard_with_triggers(fid);
-                            events.append(&mut die);
-                        }
-                        events.push(GameEvent::Foraged { player: p });
+                        let mut forage = self.pay_forage(p);
+                        events.append(&mut forage);
                     }
                 }
                 A::CollectEvidence { amount, .. } => {

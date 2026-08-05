@@ -9127,7 +9127,8 @@ impl GameState {
         // Midnight Mangler is an artifact creature during turns other than yours.
         for card in &self.battlefield {
             for sa in &card.definition.static_abilities {
-                let crate::effect::StaticEffect::SelfIsCreatureIf { condition } = &sa.effect
+                let crate::effect::StaticEffect::SelfIsCreatureIf { condition, creature_types } =
+                    &sa.effect
                 else {
                     continue;
                 };
@@ -9148,6 +9149,17 @@ impl GameState {
                     duration: EffectDuration::WhileSourceOnBattlefield,
                     modification: Modification::AddCardType(CardType::Creature),
                 });
+                for ct in creature_types {
+                    all_effects.push(ContinuousEffect {
+                        timestamp: card.object_timestamp(),
+                        source: card.id,
+                        affected: AffectedPermanents::Source,
+                        layer: Layer::L4Type,
+                        sublayer: None,
+                        duration: EffectDuration::WhileSourceOnBattlefield,
+                        modification: Modification::AddCreatureType(*ct),
+                    });
+                }
             }
         }
         // CR 604.3 — characteristic-defining dynamic P/T injection. The

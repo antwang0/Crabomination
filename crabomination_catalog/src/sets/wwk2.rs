@@ -723,6 +723,7 @@ pub fn wrexial_the_risen_deep() -> crate::card::CardDefinition {
             event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
             effect: Effect::CastWithoutPayingImmediate {
                 reduce_generic: 0,
+                                pay_own_cost: false,
                 what: target_filtered(
                     (R::HasCardType(CardType::Instant).or(R::HasCardType(CardType::Sorcery)))
                         .and(R::InGraveyard)

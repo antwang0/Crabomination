@@ -1066,6 +1066,9 @@ pub enum Value {
     /// The player's poison counters (Vraska's −9 "counters equal to the
     /// difference" top-up).
     PoisonCountersOf(PlayerRef),
+    /// How many of the controller's opponents lost life this turn (Kaito,
+    /// Bane of Nightmares' 0).
+    OpponentsWhoLostLifeThisTurn,
     /// Multicolored spells the player has cast this turn (Zenith Chronicler).
     MulticoloredSpellsCastThisTurn(PlayerRef),
     /// The greatest total toxic value among creatures the player controls
@@ -3008,6 +3011,16 @@ pub enum AttackingTokenCleanup {
 }
 
 #[allow(clippy::large_enum_variant)]
+/// What two milled cards must share for a `MillTwoRepeatSharing` loop to run
+/// again.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum MillShareAxis {
+    /// A colour, counting nonland cards only (Sphinx's Tutelage).
+    NonlandColor,
+    /// A card type (The Tale of Tamiyo).
+    CardType,
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum Effect {
     // ── Combinators ──────────────────────────────────────────────────────────
@@ -3916,10 +3929,16 @@ pub enum Effect {
     /// `lands` land cards are revealed, then put all revealed cards into
     /// that player's graveyard (Mind Grind, Consuming Aberration's trigger).
     MillUntilLands { who: Selector, lands: Value },
-    /// CR 701.13 with a repeat rider — the resolved player mills two cards;
-    /// if two nonland cards sharing a color were milled this way, repeat
-    /// (Sphinx's Tutelage).
-    MillTwoRepeatSharedColor { who: Selector },
+    /// CR 701.13 with a repeat rider — the resolved player mills two cards; if
+    /// the two milled cards share `axis`, repeat. Sphinx's Tutelage shares a
+    /// colour (nonland cards only); The Tale of Tamiyo shares a card type and
+    /// draws on each repeat.
+    MillTwoRepeatSharing {
+        who: Selector,
+        axis: MillShareAxis,
+        #[serde(default)]
+        draw_on_repeat: bool,
+    },
     /// Each player the selector resolves to exiles the top `amount` cards of
     /// their own library (CR 702.115 Ingest, processed-card exile, etc.).
     /// Mirrors `Mill` but routes to the exile zone instead of the graveyard.
@@ -6171,6 +6190,10 @@ pub enum Effect {
     /// (Mythos of Brokkos). Resolution-time `Decision::ChooseCards` pick (no
     /// targeting); reusable for any choose-as-resolves graveyard recursion.
     ReturnGraveyardCardsToHand { filter: SelectionRequirement, max: Value },
+    /// "Until end of turn, you may cast creature spells from your graveyard by
+    /// foraging in addition to paying their other costs; a creature cast this
+    /// way enters with a finality counter" (Osteomancer Adept, CR 701.61).
+    GrantForageGraveyardCreatureCastsThisTurn,
     /// "Put a `filter` card from a graveyard onto the battlefield under your
     /// control" (Victor, Valgavoth's Seneschal). Untargeted: a resolution-time
     /// `Decision::ChooseCards` over *every* graveyard, auto-picking the highest
@@ -6710,6 +6733,11 @@ pub enum Effect {
         /// pay, skips the cast.
         #[serde(default)]
         reduce_generic: u32,
+        /// The cast isn't free at all — the controller pays the card's own
+        /// cost (minus `reduce_generic`). "Copy them. You may cast any number
+        /// of the copies" (The Tale of Tamiyo IV).
+        #[serde(default)]
+        pay_own_cost: bool,
     },
     /// "You may cast any number of spells from among them without paying
     /// their mana costs" — repeatedly offers the remaining castable cards

@@ -7505,6 +7505,7 @@ pub fn roving_actuator() -> CardDefinition {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::CastWithoutPayingImmediate {
                 reduce_generic: 0,
+                                pay_own_cost: false,
                 what: target_filtered(
                     SelectionRequirement::InYourGraveyard
                         .and(SelectionRequirement::ManaValueAtMost(2))

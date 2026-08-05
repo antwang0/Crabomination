@@ -3581,6 +3581,7 @@ impl GameState {
                     // declining leaves it on top.
                     let cast = Effect::CastWithoutPayingImmediate {
                         reduce_generic: 0,
+                                pay_own_cost: false,
                         what: top_sel,
                         source_zone: crate::card::Zone::Library,
                         exile_after: false,
@@ -3664,6 +3665,7 @@ impl GameState {
                             exile_after: false,
                             copy: false,
                             reduce_generic: 0,
+                                pay_own_cost: false,
                         },
                         &EffectContext { targets: vec![Target::Permanent(pick)], ..ctx.clone() },
                         events,
@@ -7421,7 +7423,9 @@ impl GameState {
             }
 
 
-            Effect::MillTwoRepeatSharedColor { who } => self.resolve_mill_two_repeat_shared_color(who, ctx, events),
+            Effect::MillTwoRepeatSharing { who, axis, draw_on_repeat } => {
+                self.resolve_mill_two_repeat_sharing(who, *axis, *draw_on_repeat, ctx, events)
+            }
 
 
             Effect::ExileTopOfLibrary { who, amount, link_to_source, face_down } => {
@@ -11284,6 +11288,7 @@ impl GameState {
                         exile_after: false,
                         copy: false,
                         reduce_generic: 0,
+                                pay_own_cost: false,
                     },
                     &EffectContext { targets: vec![Target::Permanent(pick)], ..ctx.clone() },
                     events,
@@ -12069,6 +12074,11 @@ impl GameState {
                         });
                     }
                 }
+                Ok(())
+            }
+
+            Effect::GrantForageGraveyardCreatureCastsThisTurn => {
+                self.players[ctx.controller].forage_graveyard_casts_turn = Some(self.turn_number);
                 Ok(())
             }
 
@@ -15260,6 +15270,7 @@ impl GameState {
                 self.run_effect(
                     &Effect::CastWithoutPayingImmediate {
                         reduce_generic: 0,
+                                pay_own_cost: false,
                         what: Selector::Target(0),
                         source_zone: crate::card::Zone::Hand,
                         exile_after: false,
@@ -15609,6 +15620,7 @@ impl GameState {
                     self.run_effect(
                         &Effect::CastWithoutPayingImmediate {
                             reduce_generic: 0,
+                                pay_own_cost: false,
                             what: Selector::Target(0),
                             source_zone: zone,
                             exile_after: false,
@@ -15869,6 +15881,7 @@ impl GameState {
                     self.run_effect(
                         &Effect::CastWithoutPayingImmediate {
                             reduce_generic: 0,
+                                pay_own_cost: false,
                             what: Selector::Target(0),
                             source_zone: crate::card::Zone::Exile,
                             exile_after: false,
@@ -20240,6 +20253,7 @@ impl GameState {
                 self.run_effect(
                     &Effect::CastWithoutPayingImmediate {
                         reduce_generic: 0,
+                                pay_own_cost: false,
                         what: Selector::Target(0),
                         source_zone: crate::card::Zone::Exile,
                         exile_after: false,
@@ -20626,6 +20640,7 @@ impl GameState {
                 self.run_effect(
                     &Effect::CastWithoutPayingImmediate {
                         reduce_generic: 0,
+                                pay_own_cost: false,
                         what: Selector::Take {
                             inner: Box::new(Selector::CardsInZone {
                                 who: crate::effect::PlayerRef::Seat(ctx.controller),
@@ -21268,6 +21283,7 @@ impl GameState {
                             exile_after: false,
                             copy: false,
                             reduce_generic: 0,
+                                pay_own_cost: false,
                         },
                         &EffectContext { targets: vec![Target::Permanent(pick)], ..ctx.clone() },
                         events,
@@ -30323,6 +30339,7 @@ impl GameState {
                 what,
                 source_zone,
                 exile_after,
+                pay_own_cost,
                 copy,
                 reduce_generic,
             } => {
@@ -30366,7 +30383,9 @@ impl GameState {
                     _ => matches!(
                         self.decider.decide(&Decision::OptionalTrigger {
                             source: source_for_ask,
-                            description: if *reduce_generic > 0 {
+                            description: if *pay_own_cost {
+                                "Cast the copy for its cost?".to_string()
+                            } else if *reduce_generic > 0 {
                                 format!("Cast for {{{reduce_generic}}} less?")
                             } else {
                                 "Cast without paying?".to_string()
@@ -30406,7 +30425,7 @@ impl GameState {
                 };
                 // "That copy costs {N} less to cast" — pay the discounted
                 // cost up front; an unaffordable discount declines the cast.
-                if *reduce_generic > 0 {
+                if *reduce_generic > 0 || *pay_own_cost {
                     let mut discounted = card_def.cost.clone();
                     discounted.reduce_generic(*reduce_generic);
                     let forced_only = self.players[ctx.controller].wants_ui;
@@ -32824,42 +32843,54 @@ impl GameState {
 
 
     #[inline(never)]
-    fn resolve_mill_two_repeat_shared_color(
+    fn resolve_mill_two_repeat_sharing(
         &mut self,
         who: &crate::effect::Selector,
+        axis: crate::effect::MillShareAxis,
+        draw_on_repeat: bool,
         ctx: &EffectContext,
         events: &mut Vec<GameEvent>,
     ) -> Result<(), GameError> {
-                // Mill two; repeat while two nonland milled cards share a
-                // color (Sphinx's Tutelage). Capped at the library size so a
-                // degenerate loop always terminates.
-                for ent in self.resolve_selector(who, ctx) {
-                    if let EntityRef::Player(p) = ent {
-                        loop {
-                            let mut milled_colors: Vec<Vec<crate::mana::Color>> = Vec::new();
-                            for _ in 0..2 {
-                                if self.players[p].library.is_empty() {
-                                    break;
-                                }
-                                let card = self.players[p].library.remove(0);
-                                if !card.definition.is_land() {
-                                    milled_colors.push(card.definition.cost.colors());
-                                }
-                                let cid = card.id;
-                                if !self.route_to_graveyard(card, events) {
-                                    events.push(GameEvent::CardMilled { player: p, card_id: cid });
-                                }
-                            }
-                            let repeat = milled_colors.len() == 2
-                                && milled_colors[0].iter().any(|c| milled_colors[1].contains(c));
-                            if !repeat || self.players[p].library.is_empty() {
-                                break;
-                            }
-                        }
+        use crate::effect::MillShareAxis;
+        // Mill two; repeat while the pair shares the axis. Capped at the
+        // library size so a degenerate loop always terminates.
+        for ent in self.resolve_selector(who, ctx) {
+            let EntityRef::Player(p) = ent else { continue };
+            loop {
+                let mut colors: Vec<Vec<crate::mana::Color>> = Vec::new();
+                let mut types: Vec<Vec<crate::card::CardType>> = Vec::new();
+                for _ in 0..2 {
+                    if self.players[p].library.is_empty() {
+                        break;
+                    }
+                    let card = self.players[p].library.remove(0);
+                    if !card.definition.is_land() {
+                        colors.push(card.definition.cost.colors());
+                    }
+                    types.push(card.definition.card_types.clone());
+                    let cid = card.id;
+                    if !self.route_to_graveyard(card, events) {
+                        events.push(GameEvent::CardMilled { player: p, card_id: cid });
                     }
                 }
-                Ok(())
+                let repeat = match axis {
+                    MillShareAxis::NonlandColor => {
+                        colors.len() == 2 && colors[0].iter().any(|c| colors[1].contains(c))
+                    }
+                    MillShareAxis::CardType => {
+                        types.len() == 2 && types[0].iter().any(|t| types[1].contains(t))
+                    }
+                };
+                if repeat && draw_on_repeat {
+                    self.draw_one(p, events);
+                }
+                if !repeat || self.players[p].library.is_empty() {
+                    break;
+                }
             }
+        }
+        Ok(())
+    }
 
 
     #[inline(never)]

@@ -1359,6 +1359,7 @@ pub fn kaervek_the_punisher() -> CardDefinition {
             effect: Effect::Seq(vec![
                 Effect::CastWithoutPayingImmediate {
                     reduce_generic: 0,
+                                pay_own_cost: false,
                     what: target_filtered(R::InYourGraveyard.and(R::HasColor(Color::Black))),
                     source_zone: crate::card::Zone::Graveyard,
                     exile_after: true,
@@ -1391,6 +1392,7 @@ pub fn tinybones_the_pickpocket() -> CardDefinition {
             event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
             effect: Effect::CastWithoutPayingImmediate {
                 reduce_generic: 0,
+                                pay_own_cost: false,
                 what: target_filtered(
                     R::PermanentCard
                         .and(R::Not(Box::new(R::Land)))

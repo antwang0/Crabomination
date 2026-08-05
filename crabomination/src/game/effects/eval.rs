@@ -1225,6 +1225,11 @@ impl GameState {
                 .resolve_player(p, ctx)
                 .map(|p| self.players[p].poison_counters as i32)
                 .unwrap_or(0),
+            Value::OpponentsWhoLostLifeThisTurn => self
+                .opponents_of(ctx.controller)
+                .into_iter()
+                .filter(|p| self.players[*p].lost_life_this_turn)
+                .count() as i32,
             Value::MulticoloredSpellsCastThisTurn(p) => self
                 .resolve_player(p, ctx)
                 .map(|p| self.players[p].multicolored_spells_cast_this_turn as i32)

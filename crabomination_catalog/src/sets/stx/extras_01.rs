@@ -541,6 +541,7 @@ pub fn plargg_dean_of_chaos() -> CardDefinition {
                     },
                     Effect::CastWithoutPayingImmediate {
                         reduce_generic: 0,
+                                pay_own_cost: false,
                         what: Selector::LastMoved,
                         source_zone: crate::card::Zone::Exile,
                         exile_after: false,

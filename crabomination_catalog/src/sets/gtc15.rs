@@ -145,6 +145,7 @@ pub fn diluvian_primordial() -> CardDefinition {
                 .and(R::InOpponentGraveyard),
             effect: Box::new(Effect::CastWithoutPayingImmediate {
                 reduce_generic: 0,
+                                pay_own_cost: false,
                 what: Selector::Target(0),
                 source_zone: crate::card::Zone::Graveyard,
                 exile_after: true,

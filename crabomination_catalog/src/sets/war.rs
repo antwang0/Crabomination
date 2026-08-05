@@ -4537,6 +4537,7 @@ pub fn gideon_blackblade() -> CardDefinition {
             StaticAbility {
                 description: "During your turn, Gideon Blackblade is a 4/4 Human Soldier creature that's still a planeswalker.",
                 effect: StaticEffect::SelfIsCreatureIf {
+                creature_types: vec![],
                     condition: your_turn.clone(),
                 },
             },
@@ -5607,6 +5608,7 @@ pub fn god_eternal_kefnet() -> CardDefinition {
                     exile_after: false,
                     copy: true,
                     reduce_generic: 2,
+                                pay_own_cost: false,
                 },
             },
             dies,

@@ -1718,7 +1718,13 @@ pub enum StaticEffect {
     /// self-effect while the predicate holds (Midnight Mangler — a Vehicle that
     /// is a creature during turns other than its controller's; the printed P/T
     /// already carry the stats). Read via live game state.
-    SelfIsCreatureIf { condition: Predicate },
+    SelfIsCreatureIf {
+        condition: Predicate,
+        /// Creature types the animated body gains (Kaito's Ninja). Empty keeps
+        /// the printed subtypes (Midnight Mangler).
+        #[serde(default)]
+        creature_types: Vec<crate::card::CreatureType>,
+    },
     /// "You and creatures you control have protection from the chosen card
     /// type" (Serra's Emissary). The type is the source's
     /// `chosen_card_type`; grants `Keyword::ProtectionFromCardType` to the

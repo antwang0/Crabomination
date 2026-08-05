@@ -1103,6 +1103,7 @@ pub fn jadzi_oracle_of_arcavios() -> CardDefinition {
                 mana_cost: cost(&[generic(1)]),
                 body: Box::new(Effect::CastWithoutPayingImmediate {
                     reduce_generic: 0,
+                                pay_own_cost: false,
                     what: top(),
                     source_zone: Zone::Library,
                     exile_after: false,

@@ -2248,6 +2248,7 @@ pub fn chancellor_of_the_spires() -> CardDefinition {
             exile_after: false,
             copy: false,
             reduce_generic: 0,
+                                pay_own_cost: false,
         })],
         ..creature(
             "Chancellor of the Spires",

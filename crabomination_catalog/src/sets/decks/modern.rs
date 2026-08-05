@@ -34640,6 +34640,7 @@ pub fn daring_waverider() -> CardDefinition {
         toughness: 4,
         triggered_abilities: vec![etb(Effect::CastWithoutPayingImmediate {
             reduce_generic: 0,
+                                pay_own_cost: false,
             what: target_filtered(
                 SelectionRequirement::HasCardType(CardType::Instant)
                     .or(SelectionRequirement::HasCardType(CardType::Sorcery))
@@ -54354,7 +54355,9 @@ pub fn sphinxs_tutelage() -> CardDefinition {
         card_types: vec![CardType::Enchantment],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::CardDrawn, EventScope::YourControl),
-            effect: Effect::MillTwoRepeatSharedColor {
+            effect: Effect::MillTwoRepeatSharing {
+                axis: crate::effect::MillShareAxis::NonlandColor,
+                draw_on_repeat: false,
                 who: target_filtered(SelectionRequirement::OpponentPlayer),
             },
         }],
@@ -56798,6 +56801,7 @@ pub fn bring_to_light() -> CardDefinition {
             },
             Effect::CastWithoutPayingImmediate {
                 reduce_generic: 0,
+                                pay_own_cost: false,
                 what: Selector::LastMoved,
                 source_zone: crate::card::Zone::Exile,
                 exile_after: false,
@@ -61977,6 +61981,7 @@ pub fn vadrok_apex_of_thunder() -> CardDefinition {
         ])),
         triggered_abilities: vec![on_mutate(Effect::CastWithoutPayingImmediate {
             reduce_generic: 0,
+                                pay_own_cost: false,
             what: target_filtered(
                 SelectionRequirement::InYourGraveyard
                     .and(SelectionRequirement::Not(Box::new(

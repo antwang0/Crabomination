@@ -62,6 +62,7 @@ pub fn midnight_mangler() -> CardDefinition {
         static_abilities: vec![StaticAbility {
             description: "During turns other than yours, this Vehicle is an artifact creature.",
             effect: StaticEffect::SelfIsCreatureIf {
+                creature_types: vec![],
                 condition: Predicate::Not(Box::new(Predicate::IsTurnOf(PlayerRef::You))),
             },
         }],
