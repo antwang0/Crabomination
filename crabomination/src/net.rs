@@ -2018,6 +2018,13 @@ pub struct PermanentView {
     /// `CastPrepareSpell`. `false` when there is no prepare spell.
     #[serde(default)]
     pub prepare_needs_target: bool,
+    /// CR 708.7 — pre-rendered turn-up cost for a face-down permanent the
+    /// viewer controls (its Morph / Megamorph / Disguise cost, or a
+    /// manifested creature card's own cost, with every surcharge and
+    /// discount already folded in). `None` when the permanent isn't the
+    /// viewer's face-down permanent, or can't be turned face up at all.
+    #[serde(default)]
+    pub turn_up_cost_label: Option<String>,
     /// Computed creature subtypes after layer effects (so a creature turned
     /// into a 0/1 Fish by Ichthyomorphosis shows as a Fish, and a granted
     /// Changeling shows every type). Empty for noncreatures. `#[serde(default)]`

@@ -26460,6 +26460,13 @@ impl GameState {
                                     .activated_abilities
                                     .extend(c.definition.activated_abilities.iter().cloned());
                             }
+                            // CR 708.10 — a face-down permanent that becomes a
+                            // copy keeps the face-down characteristics; only its
+                            // copiable values (what it turns up as) change.
+                            if c.face_down {
+                                c.face_up_def = Some(std::sync::Arc::new(new_def));
+                                continue;
+                            }
                             let original =
                                 std::mem::replace(&mut c.definition, std::sync::Arc::new(new_def));
                             // CR 400.7 — in its next zone the object is its

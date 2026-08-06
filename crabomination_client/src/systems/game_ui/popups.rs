@@ -36,6 +36,13 @@ pub struct PrepareCastMenuItem {
     pub needs_target: bool,
 }
 
+/// The "Turn face up" entry on a face-down permanent's menu (CR 708.7).
+/// Submits `GameAction::TurnFaceUp`.
+#[derive(Component)]
+pub struct TurnFaceUpMenuItem {
+    pub card_id: CardId,
+}
+
 /// Spawn or despawn the floating ability context menu based on `AbilityMenuState`.
 pub fn spawn_ability_menu(
     mut commands: Commands,
@@ -120,7 +127,15 @@ pub fn spawn_ability_menu(
         )),
         _ => None,
     };
-    if abilities.is_empty() && prepare_entry.is_none() { return; }
+    // CR 708.7 — a face-down permanent the viewer controls offers
+    // "Turn face up {cost}". Greyed when the engine says the cost isn't
+    // payable right now; clicks still go through and the server reports why.
+    let turn_up_entry: Option<(String, bool)> = pv
+        .turn_up_cost_label
+        .as_ref()
+        .filter(|_| viewer_controls)
+        .map(|label| (format!("Turn face up {label}"), cv.turn_up_able.contains(&pv.id)));
+    if abilities.is_empty() && prepare_entry.is_none() && turn_up_entry.is_none() { return; }
     let card_name = pv.name.clone();
 
     let pos = menu_state.spawn_pos;
@@ -178,6 +193,30 @@ pub fn spawn_ability_menu(
                     ));
                 });
             }
+            if let Some((label, payable)) = turn_up_entry {
+                let (bg, fg) = if payable {
+                    (theme::BUTTON_NEUTRAL_BG, theme::TEXT_PRIMARY)
+                } else {
+                    (theme::PANEL_BG_RAISED, theme::TEXT_MUTED)
+                };
+                menu.spawn((
+                    Button,
+                    Node {
+                        padding: UiRect::axes(Val::Px(10.0), Val::Px(6.0)),
+                        ..default()
+                    },
+                    BackgroundColor(bg),
+                    TurnFaceUpMenuItem { card_id },
+                ))
+                .with_children(|b| {
+                    b.spawn((
+                        Text::new(label),
+                        ui_fonts.tf(13.0),
+                        TextColor(fg),
+                        Pickable::IGNORE,
+                    ));
+                });
+            }
             if let Some((label, castable, needs_target)) = prepare_entry {
                 let (bg, fg) = if castable {
                     (theme::BUTTON_NEUTRAL_BG, theme::TEXT_PRIMARY)
@@ -213,7 +252,17 @@ pub fn handle_ability_menu(
     mut menu_state: ResMut<AbilityMenuState>,
     query: Query<(&Interaction, &AbilityMenuItem), Changed<Interaction>>,
     prepare_query: Query<(&Interaction, &PrepareCastMenuItem), Changed<Interaction>>,
+    turn_up_query: Query<(&Interaction, &TurnFaceUpMenuItem), Changed<Interaction>>,
 ) {
+    // CR 708.7 — unmask a face-down permanent. A special action: no stack and
+    // no target, so it submits straight through.
+    for (interaction, item) in &turn_up_query {
+        if *interaction != Interaction::Pressed { continue; }
+        if let Some(ob) = &outbox {
+            ob.submit(GameAction::TurnFaceUp { card_id: item.card_id });
+        }
+        menu_state.card_id = None;
+    }
     // SOS Prepare — "Cast <spell>" entry. Targeted spells arm the same
     // in-scene targeting cursor abilities use; the picked target resolves
     // through `CastPrepareSpell` (see `handle_game_input`'s targeting

@@ -4867,6 +4867,61 @@ impl GameState {
         self.turn_face_up_for_x(card_id, 0)
     }
 
+    /// CR 702.36b / 708.7 — the mana cost `seat` must pay to turn their
+    /// face-down permanent `card_id` face up, with `x_value` substituted into
+    /// any `{X}`: the Morph / Megamorph / Disguise cost (plus every Exiled
+    /// Doomsayer surcharge, less any `disguise_cost_reduction_per`), or a
+    /// manifested creature card's own mana cost. `None` when the permanent
+    /// isn't a face-down permanent `seat` controls, or can't be turned up at
+    /// all (a manifested noncreature). Shared by the action path and the
+    /// `PermanentView.turn_up_cost_label` projection.
+    pub fn turn_up_mana_cost(
+        &self,
+        seat: usize,
+        card_id: CardId,
+        x_value: u32,
+    ) -> Option<crate::mana::ManaCost> {
+        let c = self
+            .battlefield
+            .iter()
+            .find(|c| c.id == card_id && c.controller == seat && c.face_down)?;
+        let real = c.face_up_def.as_ref()?;
+        // Morph / Megamorph / Disguise takes precedence; otherwise a
+        // manifested creature card turns up for its mana cost.
+        let morph_cost = real.keywords.iter().find_map(|kw| match kw {
+            Keyword::Morph(mc) | Keyword::Megamorph(mc) | Keyword::Disguise(mc) => Some(mc.clone()),
+            _ => None,
+        });
+        // CR 702.36b — Exiled Doomsayer taxes every turn-up cost.
+        let morph_tax: u32 = self
+            .battlefield
+            .iter()
+            .flat_map(|c| c.definition.static_abilities.iter())
+            .filter_map(|sa| match sa.effect {
+                crate::effect::StaticEffect::MorphCostsMore { amount } => Some(amount),
+                _ => None,
+            })
+            .sum();
+        // "This cost is reduced by {1} for each …" (Fugitive Codebreaker).
+        let morph_discount = real
+            .disguise_cost_reduction_per
+            .as_ref()
+            .map(|v| {
+                let ctx = crate::game::effects::EffectContext::for_ability(card_id, seat, None);
+                self.evaluate_value(v, &ctx).max(0) as u32
+            })
+            .unwrap_or(0);
+        match morph_cost {
+            Some(mc) => {
+                let mut c = mc.with_x_value(x_value).plus_generic(morph_tax);
+                c.reduce_generic(morph_discount);
+                Some(c)
+            }
+            None if real.is_creature() => Some(real.cost.clone()),
+            None => None,
+        }
+    }
+
     /// [`turn_face_up_action`] paying `x_value` into an `{X}` in the morph cost
     /// (CR 702.36b — Warbreak Trumpeter). The paid X is stamped on the
     /// permanent so the turn-up trigger can read it via `Value::XFromCost`.
@@ -4905,52 +4960,9 @@ impl GameState {
             events.push(GameEvent::TurnedFaceUp { card_id });
             return Ok(events);
         }
-        // Locate the face-down permanent and derive its turn-up cost from the
-        // stashed real definition.
-        let cost = {
-            let c = self
-                .battlefield
-                .iter()
-                .find(|c| c.id == card_id && c.controller == p && c.face_down)
-                .ok_or(GameError::CardNotOnBattlefield(card_id))?;
-            let real = c.face_up_def.as_ref().ok_or(GameError::InvalidTarget)?;
-            // Morph / Megamorph turn-up cost takes precedence; otherwise a
-            // manifested creature card turns up for its mana cost.
-            let morph_cost = real.keywords.iter().find_map(|kw| match kw {
-                Keyword::Morph(mc) | Keyword::Megamorph(mc) | Keyword::Disguise(mc) => Some(mc.clone()),
-                _ => None,
-            });
-            // CR 702.36b — Exiled Doomsayer taxes every turn-up cost.
-            let morph_tax: u32 = self
-                .battlefield
-                .iter()
-                .flat_map(|c| c.definition.static_abilities.iter())
-                .filter_map(|sa| match sa.effect {
-                    crate::effect::StaticEffect::MorphCostsMore { amount } => Some(amount),
-                    _ => None,
-                })
-                .sum();
-            // "This cost is reduced by {1} for each …" (Fugitive Codebreaker).
-            let morph_discount = real
-                .disguise_cost_reduction_per
-                .as_ref()
-                .map(|v| {
-                    let ctx = crate::game::effects::EffectContext::for_ability(card_id, p, None);
-                    self.evaluate_value(v, &ctx).max(0) as u32
-                })
-                .unwrap_or(0);
-            match morph_cost {
-                Some(mc) => {
-                    let mut c = mc.with_x_value(x_value).plus_generic(morph_tax);
-                    c.reduce_generic(morph_discount);
-                    c
-                }
-                None if real.is_creature() => real.cost.clone(),
-                // A face-down noncreature (manifested land/spell) can't be
-                // turned face up.
-                None => return Err(GameError::InvalidTarget),
-            }
-        };
+        let cost = self
+            .turn_up_mana_cost(p, card_id, x_value)
+            .ok_or(GameError::InvalidTarget)?;
         // CR 702.36e — Megamorph turns the permanent up with a +1/+1 counter.
         let megamorph = self
             .battlefield

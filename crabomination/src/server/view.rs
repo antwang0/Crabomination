@@ -1789,6 +1789,14 @@ fn project_permanent(
             .prepare_spell
             .as_ref()
             .is_some_and(|p| cursor_needs_target(&p.effect)),
+        // CR 708.7 — what it costs the viewer to unmask this permanent.
+        turn_up_cost_label: (card.face_down && card.controller == viewer_seat)
+            .then(|| state.turn_up_mana_cost(viewer_seat, card.id, 0))
+            .flatten()
+            .map(|c| {
+                let label = format_mana_cost_for_label(&c);
+                if label.is_empty() { "{0}".to_string() } else { label }
+            }),
         creature_subtypes: cp
             .map(|c| c.subtypes.creature_types.clone())
             .unwrap_or_else(|| card.definition.subtypes.creature_types.clone()),
@@ -3370,6 +3378,33 @@ mod tests {
             v.players[0].restricted_mana,
             vec![("{R}".to_string(), 2, "only creature spells".to_string())],
         );
+    }
+
+    /// CR 708.7 — the turn-up price rides the controller's own view (with the
+    /// per-graveyard disguise discount folded in) and never the opponent's.
+    #[test]
+    fn turn_up_cost_label_is_controller_only_and_discounted() {
+        let mut state = two_player_game();
+        state.step = crate::TurnStep::PreCombatMain;
+        let hidden = state.add_card_to_hand(0, catalog::fugitive_codebreaker());
+        state.players[0].mana_pool.add_colorless(3);
+        state
+            .perform_action(crate::game::types::GameAction::CastFaceDown { card_id: hidden })
+            .expect("cast face down");
+        crate::game::drain_stack(&mut state);
+        let label = |s: &GameState, seat: usize| {
+            project(s, seat)
+                .battlefield
+                .iter()
+                .find(|p| p.id == hidden)
+                .and_then(|p| p.turn_up_cost_label.clone())
+        };
+        assert_eq!(label(&state, 0).as_deref(), Some("{5}{R}"), "printed disguise cost");
+        assert_eq!(label(&state, 1), None, "the opponent isn't told");
+        for _ in 0..4 {
+            state.add_card_to_graveyard(0, catalog::lightning_bolt());
+        }
+        assert_eq!(label(&state, 0).as_deref(), Some("{1}{R}"), "four instants shave four");
     }
 
     #[test]

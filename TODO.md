@@ -57,6 +57,15 @@ Items are grouped by area and roughly ordered by impact within each group.
   `ScriptedDecider` `Target` answer doesn't reach the trigger-target picker, so
   Unyielding Gatekeeper's regression drives the effect directly with a stamped
   `ctx.targets` instead of going through `TurnFaceUp`. ⏳
+- **Turning face up for {X} has no client prompt.** The new "Turn face up
+  {cost}" menu entry submits `TurnFaceUp` (X = 0); Aurelia's Vindicator and
+  Warbreak Trumpeter need a `ChooseAmount` before `TurnFaceUpForX`. ⏳
+- **CR 401.4 is unimplemented.** When an effect puts two or more cards in the
+  same library position at once, their owner should get to order them; the
+  engine places them one at a time in iteration order. ⏳
+- **No per-card graveyard-arrival stamp.** "Put there from anywhere this
+  turn" filters (Reenact the Crime) have nothing to read; a `graveyard_turn`
+  on `CardInstance`, stamped in `Player::send_to_graveyard`, would close it. ⏳
 - **Spire Phantasm's draft-time guess is a heuristic.** The pod notes a hit
   only when the pack it names from has one card left; a real guess wants the
   drafter to name a card and the next drafter to reveal. ⏳
@@ -6107,8 +6116,12 @@ recover from `git log -p -- TODO.md`. A few rows carry a residual ⏳ gap inline
   seat's decider.
 - ⏳ **Bot matches aren't reproducible.** `RandomBot` draws from the global
   RNG, so `bot_vs_bot_commander_demo_terminates` varies 0.5s–15s+ run to run
-  and occasionally blew its old 120s ceiling. The ceiling is now 600s; the
-  real fix is a seeded RNG on `RandomBot` (and a seed printed on failure).
+  and occasionally blew its old 120s ceiling. The ceiling is now 600s, but
+  it's a *wall-clock* budget inside a test binary that runs 450 other tests
+  in parallel: under a loaded `cargo test --workspace` the binary takes ~620s
+  and the assertion trips even though the same test finishes in ~50s alone.
+  The real fix is a seeded RNG on `RandomBot` (with the seed printed on
+  failure) and an action-count ceiling instead of a clock.
 - ⏳ **`Effect::EachPlayerChoosesCreatureTypeThen` asks the synchronous
   decider for every seat**, so a UI player isn't prompted for their own
   Harsh Mercy / Patriarch's Bidding pick (same gap as `TemptingOffer`). The
