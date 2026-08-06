@@ -1575,6 +1575,10 @@ pub enum StaticEffect {
     /// Biomancer's Familiar / Training Grounds-style (generic-only). Applies
     /// when the ability's source is a creature the static's controller controls.
     YourCreatureActivatedAbilitiesCostLess { amount: u32 },
+    /// CR 702.27b — "Buyback costs cost {N} less" (Memory Crystal). Reduces
+    /// the generic part of the buyback surcharge only, and only for its
+    /// controller's casts.
+    BuybackCostsLess { amount: u32 },
     /// DFT — "Exhaust abilities of other permanents you control cost {N} less
     /// to activate" (Boom Scholar). Generic-only, never below one mana; applies
     /// only to CR 702.177 exhaust abilities of the controller's *other*

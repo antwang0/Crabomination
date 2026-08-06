@@ -6688,8 +6688,24 @@ impl GameState {
                 }
             }
         }
-        // CR 702.27b — fold the optional buyback cost into the total cost.
+        // CR 702.27b — fold the optional buyback cost into the total cost,
+        // less any "buyback costs cost {N} less" the caster controls
+        // (Memory Crystal).
         if buyback && let Some(bb) = card.definition.has_buyback() {
+            let mut bb = bb.clone();
+            let discount: u32 = self
+                .battlefield
+                .iter()
+                .filter(|c| c.controller == p)
+                .flat_map(|c| c.definition.static_abilities.iter())
+                .filter_map(|sa| match sa.effect {
+                    crate::effect::StaticEffect::BuybackCostsLess { amount } => Some(amount),
+                    _ => None,
+                })
+                .sum();
+            if discount > 0 {
+                bb.reduce_generic(discount);
+            }
             cost.symbols.extend(bb.symbols.iter().cloned());
         }
         // CR 702.41b — fold the optional entwine cost into the total cost.

@@ -4355,6 +4355,15 @@ pub enum DynamicPt {
         base_t: i32,
         filter: Box<SelectionRequirement>,
     },
+    /// Power = `base_p` + the number of permanents matching `filter` on the
+    /// battlefield under **any** control; toughness is the fixed `base_t`
+    /// (Dauthi Warlord, `*/1`). The power sibling of
+    /// `PermanentsOnBattlefieldMatchingToughness`.
+    PermanentsOnBattlefieldMatching {
+        base_p: i32,
+        base_t: i32,
+        filter: Box<SelectionRequirement>,
+    },
     /// `base_p`/`base_t` plus the number of permanents matching `filter` the
     /// controller's *opponents* control (Gaea's Avenger).
     BasePlusOpponentsMatching {

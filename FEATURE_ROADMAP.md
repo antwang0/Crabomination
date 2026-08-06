@@ -2550,7 +2550,7 @@ Each a small targeted feature; sweep batch by batch.
    **The Dark** (97 cards, `sets::drk`/`drk2`) and **Homelands** (`sets::hml`–
    `hml3`), **Conspiracy: Take the Crown** (CN2), **Murders at Karlov
    Manor** (MKM) and **Stronghold** (STH) are all at zero. The rest of the
-   Tempest block is the live front: `set_gaps.py tmp exo` is ~240 and ~119.
+   Tempest block is the live front: `set_gaps.py tmp exo` is ~240 and 74.
 1. **Replacement-effect framework** (Tier-1 #1) — highest-leverage primitive still
    open.
 2. **Card-zoom + stops/auto-yield + combat-math preview** (Tier-7 #1–3) — the trio
@@ -2611,6 +2611,11 @@ Each a small targeted feature; sweep batch by batch.
 - **Client**: a "FREE" chip (`systems::free_cast_badge`) over hand cards a
   standing static casts for nothing — the shared cyan alt-cast border can't
   say *which* alternative applies, let alone that it costs zero.
+- **Exodus opened** — `sets::exo` ships 45 cards (`set_gaps.py exo` 119 → 74),
+  tests in `classic_sets/exo`. New primitives:
+  `StaticEffect::BuybackCostsLess` (Memory Crystal) and
+  `DynamicPt::PermanentsOnBattlefieldMatching` (the power sibling of the
+  existing toughness variant — Dauthi Warlord).
 - **Block chooser end to end** — `ClientView.block_chooser` mirrors
   `GameState::block_chooser`, so `declares_blocks` reaches the Invasion Plans
   case, and `bot::forced_blocks` submits only the CR 509.1c-forced blocks when

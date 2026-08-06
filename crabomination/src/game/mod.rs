@@ -9665,6 +9665,18 @@ impl GameState {
                         .count() as i32;
                     (base_p, base_t + n)
                 }
+                crate::card::DynamicPt::PermanentsOnBattlefieldMatching {
+                    base_p,
+                    base_t,
+                    ref filter,
+                } => {
+                    let n = self
+                        .battlefield
+                        .iter()
+                        .filter(|c| self.evaluate_requirement_on_card(filter, c, card.controller))
+                        .count() as i32;
+                    (base_p + n, base_t)
+                }
                 crate::card::DynamicPt::ControllerLife => {
                     let n = self.players[card.controller].life;
                     (n, n)
@@ -20570,6 +20582,8 @@ fn static_effect_to_effects(
             // Kentaro / Dream Halls — consulted by `effective_alternative_cost`.
             | StaticEffect::GenericAlternativeCostForFilter { .. }
             | StaticEffect::DiscardColorSharingCardAlternativeCost
+            // Memory Crystal — read by the cast path's buyback fold.
+            | StaticEffect::BuybackCostsLess { .. }
             // Invasion Plans — read by `block_chooser` at declare-blockers.
             | StaticEffect::AttackingPlayerChoosesBlocks
             // Warped Space — consulted by the cast-from-exile path; no layer.

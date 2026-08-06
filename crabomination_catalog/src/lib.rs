@@ -148,6 +148,7 @@ pub use sets::rna2::*;
 pub use sets::rtr::*;
 pub use sets::shm::*;
 pub use sets::sos::*;
+pub use sets::exo::*;
 pub use sets::sth::*;
 pub use sets::stx::*;
 pub use sets::thb::*;
