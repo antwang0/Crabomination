@@ -1337,6 +1337,23 @@ impl crate::game::GameState {
         })
     }
 
+    /// Conspiracy Unraveler — the smallest collect-evidence amount `player`
+    /// can substitute for a spell's mana cost, if they control such a static
+    /// and their graveyard can actually pay it.
+    pub(crate) fn player_casts_spells_for_evidence(&self, player: usize) -> Option<u32> {
+        use crate::effect::StaticEffect;
+        self.battlefield
+            .iter()
+            .filter(|c| c.controller == player)
+            .flat_map(|c| c.definition.static_abilities.iter())
+            .filter_map(|sa| match sa.effect {
+                StaticEffect::CastHandSpellsForCollectEvidence { amount } => Some(amount),
+                _ => None,
+            })
+            .filter(|n| self.graveyard_can_collect_evidence(player, *n))
+            .min()
+    }
+
     /// Aluren — true if some battlefield permanent grants "any player may
     /// cast creature spells with mana value N or less for free", and `def`
     /// qualifies (a creature within the MV cap). The grant is global, so the
@@ -9274,6 +9291,8 @@ impl GameState {
                 })
             }))
         .then(|| card_ref.definition.cost.cmc());
+        // Conspiracy Unraveler — collect evidence N instead of the mana cost.
+        let mut evidence_toll = None;
         let exile_after = match card_ref.may_play_until {
             Some(permission) => {
                 if permission.player != p {
@@ -9292,6 +9311,10 @@ impl GameState {
                     // Omniscience path — no timing relaxation.
                 } else if from_own_hand && self.player_casts_cheap_creature_free(&card_ref.definition) {
                     aluren_flash = true;
+                } else if from_own_hand
+                    && let Some(n) = self.player_casts_spells_for_evidence(p)
+                {
+                    evidence_toll = Some(n);
                 } else if valgavoth_toll.is_some() {
                     // The life toll below stands in for the mana cost.
                 } else {
@@ -9338,7 +9361,11 @@ impl GameState {
             let receipt = self.try_pay_with_auto_tap_mode(p, &cost, forced_only)?;
             self.pay_life_cost(p, receipt.side_effects.life_lost);
         }
-        self.cast_card_for_free(
+        let mut events = match evidence_toll {
+            Some(n) => self.collect_evidence_from_graveyard(p, n),
+            None => Vec::new(),
+        };
+        events.extend(self.cast_card_for_free(
             p,
             card_id,
             zone,
@@ -9347,7 +9374,8 @@ impl GameState {
             mode,
             x_value,
             exile_after,
-        )
+        )?);
+        Ok(events)
     }
 
     /// Cast a spell using its `alternative_cost` (a "pitch" cost) instead of

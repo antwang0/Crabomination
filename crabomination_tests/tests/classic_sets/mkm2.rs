@@ -804,3 +804,97 @@ fn etrata_grants_flip_up_and_cloaks_on_damage() {
         "the top of their library is cloaked"
     );
 }
+
+/// A cloaked noncreature card can't be turned face up, so Etrata's granted
+/// ability exiles it and casts it for free instead.
+#[test]
+fn etrata_flip_up_falls_back_to_exile_and_free_cast() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::etrata_deadly_fugitive());
+    let hidden = g.add_card_to_battlefield(0, catalog::lightning_bolt());
+    g.battlefield_find_mut(hidden).unwrap().turn_face_down();
+    let ability = g.granted_abilities_for(hidden).remove(0);
+
+    let ctx = crabomination::game::effects::EffectContext::for_ability(hidden, 0, None);
+    g.resolve_effect(&ability.effect, &ctx).expect("flip-up attempt");
+    drain_stack(&mut g);
+
+    assert!(g.battlefield_find(hidden).is_none(), "it left the battlefield");
+    assert_eq!(g.players[1].life, 17, "and the free Bolt resolved");
+}
+
+/// A Killer Among Us mints its three suspects and secretly names one; the
+/// sacrifice only pumps a token of that type.
+#[test]
+fn a_killer_among_us_pumps_only_the_named_suspect() {
+    let mut g = two_player_game();
+    let src = g.add_card_to_battlefield(0, catalog::a_killer_among_us());
+    let def = catalog::a_killer_among_us();
+    let ctx = crabomination::game::effects::EffectContext::for_ability(src, 0, None);
+    g.resolve_effect(&def.triggered_abilities[0].effect, &ctx).expect("etb");
+
+    let token = |name: &str| {
+        g.battlefield.iter().find(|c| c.definition.name == name).map(|c| c.id).unwrap()
+    };
+    let (human, goblin) = (token("Human"), token("Goblin"));
+    // The choice is clamped to the printed three (AutoDecider's Demon isn't
+    // on the list), and the opposing seat can't see it.
+    assert_eq!(
+        g.battlefield_find(src).unwrap().chosen_creature_type,
+        Some(crabomination::card::CreatureType::Human)
+    );
+
+    for (id, want) in [(goblin, 0), (human, 3)] {
+        let ctx = crabomination::game::effects::EffectContext {
+            targets: vec![Target::Permanent(id)],
+            ..crabomination::game::effects::EffectContext::for_ability(src, 0, None)
+        };
+        g.resolve_effect(&def.activated_abilities[0].effect, &ctx).expect("reveal");
+        assert_eq!(g.battlefield_find(id).unwrap().counter_count(CounterType::PlusOnePlusOne), want);
+    }
+}
+
+/// Conspiracy Unraveler lets a hand spell be cast for collect evidence 10.
+#[test]
+fn conspiracy_unraveler_swaps_evidence_for_the_mana_cost() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::conspiracy_unraveler());
+    for _ in 0..4 {
+        g.add_card_to_graveyard(0, catalog::wrath_of_god());
+    }
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.priority.player_with_priority = 0;
+
+    g.perform_action(GameAction::CastFromZoneWithoutPaying {
+        card_id: bolt,
+        target: Some(Target::Player(1)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("evidence cast");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, 17);
+    assert_eq!(g.players[0].graveyard.iter().filter(|c| c.id != bolt).count(), 1, "3 of 4 exiled");
+}
+
+/// Kaya's exile trigger turns one of your tokens into a copy of the exiled
+/// creature, with flying on top.
+#[test]
+fn kaya_spirits_justice_copies_the_exiled_creature_onto_a_token() {
+    let mut g = two_player_game();
+    let kaya = g.add_card_to_battlefield(0, catalog::kaya_spirits_justice());
+    let token = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.battlefield_find_mut(token).unwrap().is_token = true;
+    let victim = g.add_card_to_graveyard(0, catalog::serra_angel());
+
+    let mut ctx = crabomination::game::effects::EffectContext::for_ability(kaya, 0, None);
+    ctx.trigger_source = Some(crabomination::game::effects::EntityRef::Card(victim));
+    ctx.targets = vec![Target::Permanent(token)];
+    let def = catalog::kaya_spirits_justice();
+    g.resolve_effect(&def.triggered_abilities[0].effect, &ctx).expect("exile trigger");
+
+    let cp = g.computed_permanent(token).expect("token still there");
+    assert_eq!((cp.power, cp.toughness), (4, 4), "it is a Serra Angel");
+    assert!(cp.keywords.contains(&Keyword::Flying));
+}

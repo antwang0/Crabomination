@@ -1607,7 +1607,14 @@ pub enum PendingEffectState {
     /// Suspended on a `ChooseCreatureType` decision for `Effect::NameCreatureType`
     /// (Cavern of Souls). The chooser picks a creature type and the engine
     /// stamps it onto `target_id.chosen_creature_type`.
-    ChooseCreatureTypePending { target_id: CardId },
+    /// When `options` is non-empty the printed effect offers a closed list
+    /// (A Killer Among Us — Human, Merfolk or Goblin); an answer outside it
+    /// is clamped to the first option.
+    ChooseCreatureTypePending {
+        target_id: CardId,
+        #[serde(default)]
+        options: Vec<crate::card::CreatureType>,
+    },
     /// CR 612.1 — suspended on a `ChooseCreatureTypePair` for
     /// `Effect::ReplaceCreatureTypeText`; the answer rewrites `target_id`'s
     /// definition in place (Artificial Evolution).

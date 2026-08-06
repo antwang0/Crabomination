@@ -3,18 +3,21 @@
 Improvement opportunities for the engine, client, and tooling.
 Items are grouped by area and roughly ordered by impact within each group.
 
-## Noticed this run (MKM down to three)
+## Noticed this run (MKM closed)
 
-- **Three MKM cards remain**, each stalled on one primitive: A Killer Among Us
-  (a secret creature-type choice revealed as an activation cost), Conspiracy
-  Unraveler (`AlternativeCost` carries no collect-evidence field, so a static
-  can't grant "collect evidence 10 rather than pay the mana cost") and Kaya,
-  Spirits' Justice (an exile-batch trigger that turns a token into a copy of
-  one of the exiled cards, plus a flying rider `BecomeCopyOf` has no slot
-  for). ⏳
-- **Etrata's granted ability stops at the flip-up half.** The printed "If you
-  can't, exile it, then you may cast the exiled card without paying its mana
-  cost" needs a can't-flip fallback branch on `Effect::TurnFaceUpFree`. ⏳
+- **Kaya, Spirits' Justice picks the first exiled creature card, not a
+  chosen one.** The exile trigger fires once per batch (the event kind isn't
+  in the fan-out list) and `Selector::TriggerSource` binds the first matching
+  card; the printed "choose a creature card from among them" would want the
+  whole batch published to the effect. ⏳
+- **Conspiracy Unraveler's evidence alt-cost is hand-only.** The printed line
+  covers spells you cast from anywhere;
+  `StaticEffect::CastHandSpellsForCollectEvidence` is read only on the
+  own-hand branch of `cast_from_zone_without_paying`. ⏳
+- **`castable_hand_cards` never probes the free-cast action.** Omniscience,
+  Aluren and Conspiracy Unraveler make hand cards playable without paying,
+  but the affordance walk only dry-runs `GameAction::CastSpell`, so the
+  client highlights nothing. ⏳
 - **A card's name is worth greping before writing it.** Magnifying Glass and
   Thinking Cap were already in `decks::recent247`/`recent245`; `set_gaps.py`
   correctly omitted them, but a duplicate got written anyway and glob
@@ -38,7 +41,7 @@ Items are grouped by area and roughly ordered by impact within each group.
   large X under-delivers. ⏳
 - **Doppelgang caps at six target permanents** for the same reason. ⏳
 - **`AnthemForFilter` still spells out eight fields at every call site**
-  (~hundreds). `LookPickToHand` got the boxing treatment this run; this one
+  (~hundreds). `LookPickToHand` got the boxing treatment; this one
   is the remaining offender. ⏳
 - **`Effect::SacrificeAtNextEndStep` resolves its selector eagerly.** That is
   right for Pull (the reanimated permanents are known then) but a caller

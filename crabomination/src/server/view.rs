@@ -1718,7 +1718,12 @@ fn project_permanent(
         },
         named_card: card.named_card.clone(),
         chosen_color: card.chosen_color,
-        chosen_creature_type: card.chosen_creature_type.map(|ct| format!("{ct:?}")),
+        // "Secretly choose …" stays hidden from everyone but its controller
+        // until the card's own reveal cost is paid.
+        chosen_creature_type: card
+            .chosen_creature_type
+            .filter(|_| !card.definition.secret_chosen_type || card.controller == viewer_seat)
+            .map(|ct| format!("{ct:?}")),
         // CR 614 — the Siege-cycle mode label, read from the definition's
         // `enter_modes` by the recorded index.
         chosen_mode_label: card.chosen_mode.and_then(|i| {
@@ -2697,7 +2702,9 @@ fn ability_effect_label(effect: &Effect) -> &'static str {
         Effect::BecomeBasicLand { .. } => "Become basic land",
         Effect::Attach { .. } => "Attach",
         Effect::GrantSorceriesAsFlash { .. } => "Sorceries as flash",
-        Effect::NameCreatureType { .. } | Effect::NameCreatureTypeBy { .. } => {
+        Effect::NameCreatureType { .. }
+        | Effect::NameCreatureTypeBy { .. }
+        | Effect::NameCreatureTypeAmong { .. } => {
             "Name creature type"
         }
         Effect::GrantTriggeredAbility { .. } => "Grant ability",

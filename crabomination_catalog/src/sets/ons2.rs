@@ -2246,6 +2246,7 @@ pub fn break_open() -> CardDefinition {
         card_types: vec![CardType::Instant],
         effect: Effect::TurnFaceUpFree {
             what: target_filtered(R::Creature.and(R::FaceDown).and(R::ControlledByOpponent)),
+            if_cant: None,
         },
         ..Default::default()
     }
@@ -2268,6 +2269,7 @@ pub fn ixidor_reality_sculptor() -> CardDefinition {
             mana_cost: cost(&[generic(2), u()]),
             effect: Effect::TurnFaceUpFree {
                 what: target_filtered(R::Creature.and(R::FaceDown)),
+                if_cant: None,
             },
             ..Default::default()
         }],

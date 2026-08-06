@@ -3338,6 +3338,11 @@ pub struct CardDefinition {
     /// `equip` before the regular `Keyword::Equip` cost.
     #[serde(default)]
     pub equip_filtered_cost: Option<(SelectionRequirement, crate::mana::ManaCost)>,
+    /// "Secretly choose …" (A Killer Among Us) — the server view withholds
+    /// this permanent's `chosen_creature_type` from every seat but its
+    /// controller.
+    #[serde(default)]
+    pub secret_chosen_type: bool,
     /// CR 301.5c — "This Equipment can be attached only to a [filter]"
     /// (Konda's Banner). Gates `equip` and the CR 704.5n unattach sweep, so a
     /// host that stops matching sheds the Equipment.

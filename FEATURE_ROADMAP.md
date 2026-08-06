@@ -2548,10 +2548,8 @@ Each a small targeted feature; sweep batch by batch.
    is closed), **Legends** (273 cards, `sets::leg`–`leg7`), **Antiquities**
    (64 cards, `sets::atq`), **Arabian Nights** (63 cards, `sets::arn`) and
    **The Dark** (97 cards, `sets::drk`/`drk2`) and **Homelands** (`sets::hml`–
-   `hml3`) are all at zero. **Conspiracy: Take the Crown** (CN2) is the live
-   front at **12** — see TODO.md → "Noticed this run (FIN closed; CN2 opened)"
-   for the three things the CR 905.2b shell still lacks. **MKM** is the live
-   front at **3**.
+   `hml3`), **Conspiracy: Take the Crown** (CN2) and **Murders at Karlov
+   Manor** (MKM) are all at zero. Pick the next front from `set_gaps.py`.
 1. **Replacement-effect framework** (Tier-1 #1) — highest-leverage primitive still
    open.
 2. **Card-zoom + stops/auto-yield + combat-math preview** (Tier-7 #1–3) — the trio
@@ -2567,35 +2565,17 @@ Each a small targeted feature; sweep batch by batch.
 
 ## Recently closed (this push)
 
-- **MKM down to three** — `set_gaps.py mkm` 37 → 3 across 34 cards
-  (`sets::mkm2`, tests in `classic_sets/mkm2`). New primitives:
-  `Effect::{FaceDownSpellsCostLessThisTurn, GrantKeywordsToSpell,
-  SacrificeAtNextEndStep}`, `SpendRestriction::FaceDownSpellsOrTurnFaceUp`
-  with `SpellKind.face_down` / `.turning_face_up`,
-  `Value::DistinctTwoColorPairsControlled`,
-  `Predicate::{CreatureCardsToGraveyardThisTurnAtLeast,
-  SourcesYouControlledDealtDamageThisTurnAtLeast}`,
-  `Keyword::{HexproofFromMulticolored, MustAttackOrBlock,
-  CantBlockCreatureType}`, `CounterType::{Impostor, Bloodstain}`,
-  `ConditionalEquipBonus.set_base_pt`, `CastAnyOrderWithoutPaying.cap`,
-  `Effect::{DeployExiledCreature, CopyCardAndCastFree}`,
-  `Value::ArtifactsToGraveyardFromBattlefieldThisTurn`,
-  `SelectionRequirement::PutIntoGraveyardThisTurn`, and
-  `CardDefinition.equip_filtered_cost` — which also closes Thinking Cap's
-  documented "Equip Detective {1}" approximation. Etrata's face-down grant
-  and Expedited Inheritance's exile-and-play window close the wave.
-- **`Effect::LookPickToHand` is boxed** into a `LookPick` struct with a
-  `Default` impl, so its ~160 call sites set only what differs (the
-  long-standing TODO). Two new fields ride it —
-  `picked_matching_to_battlefield` / `battlefield_haste` (Break Out).
-- **Server**: `PlayerView.restricted_mana` projects spend-restricted floating
-  mana as `(pip, amount, clause)` via the new `SpendRestriction::label()`;
-  `mana_pool.total()` excludes it, so it was previously invisible.
-- **Client**: a chosen-name chip over command-zone hidden-agenda conspiracies
-  (`systems::agenda_badge`), and the mana row now shows restricted mana with
-  the clause that limits it.
-- CR conformance: `core_rules/cr_recent86` covers CR 708.4, CR 613.7b/7d,
-  CR 606.5 and CR 106.6.
+- **MKM closed** — the last three cards ship (`sets::mkm2`): A Killer Among Us,
+  Conspiracy Unraveler and Kaya, Spirits' Justice. New primitives:
+  `Effect::NameCreatureTypeAmong` (a closed-list creature-type choice, clamped
+  at the pending-answer), `CardDefinition.secret_chosen_type` (the server view
+  withholds a secret choice from other seats), and
+  `StaticEffect::CastHandSpellsForCollectEvidence` (collect evidence N in
+  place of a spell's mana cost, billed in `cast_from_zone_without_paying`).
+- **`Effect::TurnFaceUpFree` grew an `if_cant` branch** — a face-down permanent
+  whose face-up side isn't a creature card can't flip, so Etrata, Deadly
+  Fugitive's "exile it, then you may cast the exiled card without paying its
+  mana cost" now runs.
 
 Older per-push entries are elided — `git log -p -- FEATURE_ROADMAP.md` is
 the record.

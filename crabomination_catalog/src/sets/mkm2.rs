@@ -415,6 +415,7 @@ pub fn hustle_bustle() -> CardDefinition {
                     },
                     Effect::TurnFaceUpFree {
                         what: Selector::ControlledBy { who: PlayerRef::You, filter: R::FaceDown },
+                        if_cant: None,
                     },
                 ]),
             },
@@ -496,7 +497,7 @@ pub fn yarus_roar_of_the_old_gods() -> CardDefinition {
                             tapped: false,
                         },
                     },
-                    Effect::TurnFaceUpFree { what: Selector::LastMoved },
+                    Effect::TurnFaceUpFree { what: Selector::LastMoved, if_cant: None },
                 ]),
             },
         ],
@@ -938,7 +939,10 @@ pub fn expose_the_culprit() -> CardDefinition {
         cost: cost(&[generic(1), r()]),
         card_types: vec![CardType::Instant],
         effect: Effect::ChooseMode(vec![
-            Effect::TurnFaceUpFree { what: target_filtered(R::Creature.and(R::FaceDown)) },
+            Effect::TurnFaceUpFree {
+                what: target_filtered(R::Creature.and(R::FaceDown)),
+                if_cant: None,
+            },
             Effect::Seq(vec![
                 Effect::Exile {
                     what: Selector::ControlledBy {
@@ -1217,7 +1221,20 @@ pub fn etrata_deadly_fugitive() -> CardDefinition {
                 ),
                 ability: ActivatedAbility {
                     mana_cost: cost(&[generic(2), u(), b()]),
-                    effect: Effect::TurnFaceUpFree { what: Selector::This },
+                    effect: Effect::TurnFaceUpFree {
+                        what: Selector::This,
+                        if_cant: Some(Box::new(Effect::Seq(vec![
+                            Effect::Exile { what: Selector::Target(0) },
+                            Effect::CastWithoutPayingImmediate {
+                                what: Selector::Target(0),
+                                source_zone: crate::card::Zone::Exile,
+                                exile_after: false,
+                                pay_own_cost: false,
+                                copy: false,
+                                reduce_generic: 0,
+                            },
+                        ]))),
+                    },
                     ..Default::default()
                 },
                 condition: None,
@@ -1242,5 +1259,192 @@ pub fn etrata_deadly_fugitive() -> CardDefinition {
             1,
             4,
         )
+    }
+}
+
+fn attacking_token() -> Selector {
+    Selector::TargetFiltered { slot: 0, filter: R::Creature.and(R::IsToken).and(R::IsAttacking) }
+}
+
+fn suspect_token(name: &'static str, colors: Vec<Color>, ct: CreatureType) -> TokenDefinition {
+    TokenDefinition {
+        name: name.into(),
+        colors,
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![ct], ..Default::default() },
+        power: 1,
+        toughness: 1,
+        ..Default::default()
+    }
+}
+
+/// A Killer Among Us — {4}{G} Enchantment. ETB mints a Human, a Merfolk and a
+/// Goblin, then secretly names one of the three; sacrificing it to reveal the
+/// name pumps an attacking token of that type.
+pub fn a_killer_among_us() -> CardDefinition {
+    CardDefinition {
+        name: "A Killer Among Us",
+        cost: cost(&[generic(4), g()]),
+        card_types: vec![CardType::Enchantment],
+        secret_chosen_type: true,
+        triggered_abilities: vec![etb(Effect::Seq(vec![
+            Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::ONE,
+                definition: suspect_token("Human", vec![Color::White], CreatureType::Human),
+            },
+            Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::ONE,
+                definition: suspect_token("Merfolk", vec![Color::Blue], CreatureType::Merfolk),
+            },
+            Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::ONE,
+                definition: suspect_token("Goblin", vec![Color::Red], CreatureType::Goblin),
+            },
+            Effect::NameCreatureTypeAmong {
+                what: Selector::This,
+                options: vec![CreatureType::Human, CreatureType::Merfolk, CreatureType::Goblin],
+            },
+        ]))],
+        activated_abilities: vec![ActivatedAbility {
+            sac_cost: true,
+            effect: Effect::If {
+                cond: Predicate::EntityMatches {
+                    what: target_n(0),
+                    filter: R::IsSourceChosenCreatureType,
+                },
+                then: Box::new(Effect::Seq(vec![
+                    Effect::AddCounter {
+                        what: attacking_token(),
+                        kind: CounterType::PlusOnePlusOne,
+                        amount: Value::Const(3),
+                    },
+                    Effect::GrantKeyword {
+                        what: attacking_token(),
+                        keyword: Keyword::Deathtouch,
+                        duration: Duration::EndOfTurn,
+                    },
+                ])),
+                else_: Box::new(Effect::Noop),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Conspiracy Unraveler — {5}{U}{U} 6/6 flier. Collect evidence 10 instead of
+/// paying a spell's mana cost.
+pub fn conspiracy_unraveler() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flying],
+        static_abilities: vec![StaticAbility {
+            description: "You may collect evidence 10 rather than pay the mana \
+                          cost for spells you cast.",
+            effect: StaticEffect::CastHandSpellsForCollectEvidence { amount: 10 },
+        }],
+        ..creature(
+            "Conspiracy Unraveler",
+            cost(&[generic(5), u(), u()]),
+            vec![CreatureType::Sphinx, CreatureType::Detective],
+            6,
+            6,
+        )
+    }
+}
+
+/// Kaya, Spirits' Justice — {2}{W}{B} walker. Exiled creatures re-cast one of
+/// your tokens in their image (with flying), and her minus exiles a creature
+/// from every player.
+pub fn kaya_spirits_justice() -> CardDefinition {
+    let mine_token = R::Creature.and(R::IsToken).and(R::ControlledByYou);
+    CardDefinition {
+        name: "Kaya, Spirits' Justice",
+        cost: cost(&[generic(2), w(), b()]),
+        card_types: vec![CardType::Planeswalker],
+        supertypes: vec![Supertype::Legendary],
+        subtypes: Subtypes {
+            planeswalker_subtypes: vec![crate::card::PlaneswalkerSubtype::Kaya],
+            ..Default::default()
+        },
+        base_loyalty: 3,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(
+                EventKind::CardExiledFromPlayOrGraveyard,
+                EventScope::AnyPlayer,
+            )
+            .with_filter(Predicate::EntityMatches {
+                what: Selector::TriggerSource,
+                filter: R::Creature.and(R::OwnedByYou),
+            }),
+            effect: Effect::Seq(vec![
+                Effect::BecomeCopyOfFor {
+                    what: Selector::TargetFiltered { slot: 0, filter: mine_token.clone() },
+                    source: Selector::TriggerSource,
+                    duration: Duration::EndOfTurn,
+                    non_legendary: false,
+                },
+                Effect::GrantKeyword {
+                    what: Selector::TargetFiltered { slot: 0, filter: mine_token },
+                    keyword: Keyword::Flying,
+                    duration: Duration::EndOfTurn,
+                },
+            ]),
+        }],
+        loyalty_abilities: vec![
+            crate::card::LoyaltyAbility {
+                loyalty_cost: 2,
+                effect: Effect::Seq(vec![
+                    Effect::Surveil { who: PlayerRef::You, amount: Value::Const(2) },
+                    Effect::Exile { what: target_filtered(R::InGraveyard) },
+                ]),
+                ..Default::default()
+            },
+            crate::card::LoyaltyAbility {
+                loyalty_cost: 1,
+                effect: Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::ONE,
+                    definition: TokenDefinition {
+                        name: "Spirit".into(),
+                        colors: vec![Color::White, Color::Black],
+                        card_types: vec![CardType::Creature],
+                        subtypes: Subtypes {
+                            creature_types: vec![CreatureType::Spirit],
+                            ..Default::default()
+                        },
+                        power: 1,
+                        toughness: 1,
+                        keywords: vec![Keyword::Flying],
+                        ..Default::default()
+                    },
+                },
+                ..Default::default()
+            },
+            crate::card::LoyaltyAbility {
+                loyalty_cost: -2,
+                effect: Effect::OptionalTargets {
+                    min: 1,
+                    body: Box::new(Effect::Seq(vec![
+                        Effect::Exile {
+                            what: Selector::TargetFiltered {
+                                slot: 0,
+                                filter: R::Creature.and(R::ControlledByYou),
+                            },
+                        },
+                        Effect::Exile {
+                            what: Selector::TargetFiltered {
+                                slot: 1,
+                                filter: R::Creature.and(R::ControlledByOpponent),
+                            },
+                        },
+                    ])),
+                },
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
     }
 }

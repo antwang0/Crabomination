@@ -4306,8 +4306,11 @@ pub enum Effect {
     ReplaceYourNextDrawThisTurn { body: Box<Effect> },
     /// CR 707.9 — turn each face-down permanent the selector picks face up
     /// *without* paying its morph cost (Break Open, Ixidor, Reality
-    /// Sculptor). Non-face-down picks are skipped.
-    TurnFaceUpFree { what: Selector },
+    /// Sculptor). Non-face-down picks are skipped. A pick whose face-up side
+    /// isn't a creature card (a cloaked land) *can't* be turned up; `if_cant`
+    /// then runs with that permanent stamped as target 0 — Etrata, Deadly
+    /// Fugitive's "exile it, then you may cast the exiled card for free".
+    TurnFaceUpFree { what: Selector, if_cant: Option<Box<Effect>> },
     /// "Creatures you control gain each of `keywords` until end of turn if a
     /// creature you control already has it" (Concerted Effort's upkeep sweep).
     /// Reads the controller's *computed* keywords once, then grants the union
@@ -8054,6 +8057,12 @@ pub enum Effect {
     /// As [`Effect::NameCreatureType`], but a named player makes the choice
     /// (Callous Oppressor — "an opponent chooses a creature type").
     NameCreatureTypeBy { what: Selector, who: PlayerRef },
+
+    /// As [`Effect::NameCreatureType`], but the choice is limited to a closed
+    /// list — A Killer Among Us's "secretly choose Human, Merfolk, or
+    /// Goblin". Only `options` are offered, and an answer outside them is
+    /// clamped to the first.
+    NameCreatureTypeAmong { what: Selector, options: Vec<crate::card::CreatureType> },
 
     /// CR 201.3 — "As [this] enters, choose a card name." Pithing Needle,
     /// Phyrexian Revoker. Asks the controller via the `NameCard` decision and

@@ -1993,6 +1993,7 @@ pub fn skirk_alarmist() -> CardDefinition {
             effect: Effect::Seq(vec![
                 Effect::TurnFaceUpFree {
                     what: target_filtered(R::Creature.and(R::FaceDown).and(R::ControlledByYou)),
+                    if_cant: None,
                 },
                 Effect::AtNextEndStep {
                     body: Box::new(Effect::SacrificePermanent { what: Selector::Target(0) }),

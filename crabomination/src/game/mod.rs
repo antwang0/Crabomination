@@ -17834,9 +17834,13 @@ impl GameState {
                 }
                 Ok(events)
             }
-            PendingEffectState::ChooseCreatureTypePending { target_id } => {
+            PendingEffectState::ChooseCreatureTypePending { target_id, options } => {
                 let DecisionAnswer::CreatureType(ct) = answer else {
                     return Err(GameError::DecisionAnswerMismatch);
+                };
+                let ct = match options.first() {
+                    Some(first) if !options.contains(ct) => first,
+                    _ => ct,
                 };
                 if let Some(card) = self.find_card_anywhere_mut(target_id) {
                     card.chosen_creature_type = Some(*ct);
@@ -20243,6 +20247,7 @@ fn static_effect_to_effects(
             // action via `player_casts_hand_spells_free`; no layer effect.
             | StaticEffect::CastHandSpellsFree
             | StaticEffect::CastFilteredSpellsFree { .. }
+            | StaticEffect::CastHandSpellsForCollectEvidence { .. }
             // AnyoneCastsCheapCreaturesFree (Aluren) — read by the free-cast
             // action via `player_casts_cheap_creature_free`; no layer effect.
             | StaticEffect::AnyoneCastsCheapCreaturesFree { .. }

@@ -7586,13 +7586,25 @@ impl GameState {
                 Ok(())
             }
 
-            Effect::TurnFaceUpFree { what } => {
+            Effect::TurnFaceUpFree { what, if_cant } => {
                 // CR 707.9 — turned up without paying the morph cost; the
                 // megamorph +1/+1 counter still applies (CR 702.36e).
                 for ent in self.resolve_selector(what, ctx) {
                     let Some(cid) = ent.as_permanent_id() else { continue };
                     let Some(c) = self.battlefield_find_mut(cid) else { continue };
                     if !c.face_down {
+                        continue;
+                    }
+                    // CR 701.36c — a face-down permanent can only be turned up
+                    // to a creature card; a cloaked land takes `if_cant`.
+                    if !c.face_up_def.as_ref().is_some_and(|d| d.is_creature()) {
+                        if let Some(alt) = if_cant {
+                            let sub = EffectContext {
+                                targets: vec![Target::Permanent(cid)],
+                                ..ctx.clone()
+                            };
+                            self.run_effect(alt, &sub, events)?;
+                        }
                         continue;
                     }
                     let megamorph = c
@@ -27220,7 +27232,8 @@ impl GameState {
             }
 
             Effect::NameCreatureType { what }
-            | Effect::NameCreatureTypeBy { what, who: _ } => {
+            | Effect::NameCreatureTypeBy { what, who: _ }
+            | Effect::NameCreatureTypeAmong { what, options: _ } => {
                 // Cavern of Souls "as it enters, choose a creature type".
                 // The chooser is the source's controller unless the card
                 // names one (Callous Oppressor's opponent). Suspend with a
@@ -27245,13 +27258,21 @@ impl GameState {
                     }
                     _ => ctx.controller,
                 };
+                let options = match effect {
+                    Effect::NameCreatureTypeAmong { options, .. } => options.clone(),
+                    _ => Vec::new(),
+                };
                 let decision = Decision::ChooseCreatureType {
                     excluded: Vec::new(),
                     source: target_id,
-                    suggestions: self.creature_type_suggestions(chooser),
+                    suggestions: if options.is_empty() {
+                        self.creature_type_suggestions(chooser)
+                    } else {
+                        options.clone()
+                    },
                 };
                 let pending =
-                    PendingEffectState::ChooseCreatureTypePending { target_id };
+                    PendingEffectState::ChooseCreatureTypePending { target_id, options };
                 if self.players[chooser].wants_ui {
                     self.suspend_signal = Some((decision, pending, Effect::Noop));
                     return Ok(());

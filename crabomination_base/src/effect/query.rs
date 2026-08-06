@@ -1027,7 +1027,7 @@ impl Effect {
             | Effect::BecomeBlocked { what }
             | Effect::RememberPermanentOnSource { what }
             | Effect::PutAuraFromHandAttachedTo { host: what }
-            | Effect::TurnFaceUpFree { what }
+            | Effect::TurnFaceUpFree { what, .. }
             | Effect::Tap { what }
             | Effect::TapAndUntapLock { what }
             | Effect::TapAndLockWhileSourcePresent { what }
@@ -1313,7 +1313,8 @@ impl Effect {
                 sel_has_target(from) || value_has_target(count)
             }
             Effect::NameCreatureType { what }
-            | Effect::NameCreatureTypeBy { what, .. } => sel_has_target(what),
+            | Effect::NameCreatureTypeBy { what, .. }
+            | Effect::NameCreatureTypeAmong { what, .. } => sel_has_target(what),
             Effect::NameCard { what, .. } => sel_has_target(what),
             Effect::LockTargetNameUntilYourNextTurn { what } => sel_has_target(what),
             Effect::NameOpponentCastLock => false,
@@ -3179,7 +3180,7 @@ impl Effect {
                 | Effect::GrantSuspend { what, .. }
                 | Effect::ModularCounters { what }
                 | Effect::BecomeBlocked { what }
-                | Effect::TurnFaceUpFree { what }
+                | Effect::TurnFaceUpFree { what, .. }
                 | Effect::Tap { what }
                 | Effect::SetSaddled { what }
                 | Effect::TapAndUntapLock { what }

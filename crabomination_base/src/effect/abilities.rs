@@ -1960,6 +1960,11 @@ pub enum StaticEffect {
     /// `filter` — "You may cast Dragon spells without paying their mana costs"
     /// (Dracogenesis). Consulted by `player_casts_hand_spells_free`.
     CastFilteredSpellsFree { filter: crate::card::SelectionRequirement },
+    /// CR 701.59 — "You may collect evidence N rather than pay the mana cost
+    /// for spells you cast" (Conspiracy Unraveler). Read by
+    /// `cast_from_zone_without_paying`, which bills the evidence instead of
+    /// the mana; scoped to the caster's own hand.
+    CastHandSpellsForCollectEvidence { amount: u32 },
     /// Aluren (CR 601 alt-timing) — "Any player may cast creature spells
     /// with mana value `max_mv` or less without paying their mana cost and
     /// as though they had flash." Read by
