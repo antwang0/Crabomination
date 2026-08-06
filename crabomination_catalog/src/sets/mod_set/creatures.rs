@@ -7,7 +7,7 @@ use crate::card::{
     Supertype, TriggeredAbility, Value,
 };
 use crate::effect::shortcut::target_filtered;
-use crate::effect::{DelayedTriggerKind, ManaPayload, PlayerRef, StaticEffect, ZoneDest};
+use crate::effect::{LookPick, DelayedTriggerKind, ManaPayload, PlayerRef, StaticEffect, ZoneDest};
 use crate::game::types::TurnStep;
 use crate::mana::{Color, ManaCost, b, cost, g, generic, hybrid, phyrexian, r, u, w, x};
 
@@ -2088,24 +2088,16 @@ pub fn augur_of_bolas() -> CardDefinition {
         toughness: 3,
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-            effect: Effect::LookPickToHand {
-                then_if_picked: None,
+            effect: Effect::LookPickToHand(Box::new(LookPick {
                 who: PlayerRef::You,
                 count: Value::Const(3),
-                rest_to_graveyard: false,
                 pick_filter: Some(
                     SelectionRequirement::HasCardType(CardType::Instant)
                         .or(SelectionRequirement::HasCardType(CardType::Sorcery)),
                 ),
-                take: None,
-                to_battlefield: false,
-                gain_life_if_pick: None,
-                gain_life_greatest_power_rest: false,
                 optional: true,
-                picked_lands_to_battlefield: false,
-                rest_bottom_random: false,
-                rest_to_exile: false,
-            },
+    ..Default::default()
+})),
         }],
         ..Default::default()
     }
@@ -2388,22 +2380,11 @@ pub fn sea_gate_oracle() -> CardDefinition {
         toughness: 3,
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-            effect: Effect::LookPickToHand {
-                then_if_picked: None,
+            effect: Effect::LookPickToHand(Box::new(LookPick {
                 who: PlayerRef::You,
                 count: Value::Const(2),
-                rest_to_graveyard: false,
-                pick_filter: None,
-
-                take: None,
-                to_battlefield: false,
-                gain_life_if_pick: None,
-                gain_life_greatest_power_rest: false,
-                optional: false,
-                picked_lands_to_battlefield: false,
-                rest_bottom_random: false,
-                rest_to_exile: false,
-            },
+    ..Default::default()
+})),
         }],
         ..Default::default()
     }

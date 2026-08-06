@@ -8,7 +8,7 @@ use crate::card::{
     Subtypes, TokenDefinition, TriggeredAbility,
 };
 use crate::effect::shortcut::{adapt, drain, etb, on_attack, on_cast, target_filtered, unearth};
-use crate::effect::{Duration, Effect, PlayerRef, Selector, StaticEffect, Value, ZoneDest};
+use crate::effect::{LookPick, Duration, Effect, PlayerRef, Selector, StaticEffect, Value, ZoneDest};
 use crate::mana::{Color, b, colorless, cost, g, generic, r, u, w};
 
 fn germ() -> TokenDefinition {
@@ -644,21 +644,14 @@ pub fn territory_culler() -> CardDefinition {
                     what: Selector::TriggerSource,
                     filter: R::Land,
                 }),
-            effect: Effect::LookPickToHand {
-                then_if_picked: None,
+            effect: Effect::LookPickToHand(Box::new(LookPick {
                 who: PlayerRef::You,
                 count: Value::ONE,
                 rest_to_graveyard: true,
                 pick_filter: Some(R::Creature),
-                take: None,
-                to_battlefield: false,
-                gain_life_if_pick: None,
-                gain_life_greatest_power_rest: false,
                 optional: true,
-                picked_lands_to_battlefield: false,
-                rest_bottom_random: false,
-                rest_to_exile: false,
-            },
+    ..Default::default()
+})),
         }],
         ..Default::default()
     }

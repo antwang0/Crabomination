@@ -8,7 +8,7 @@ use crate::card::{
     TriggeredAbility, Value,
 };
 use crate::effect::shortcut::{etb, target_any, target_filtered};
-use crate::effect::{Duration, Effect, PlayerRef, Predicate, ZoneDest};
+use crate::effect::{LookPick, Duration, Effect, PlayerRef, Predicate, ZoneDest};
 use crate::mana::{Color, b, cost, g, generic, r, u, w, x};
 
 /// Ashiok's Erasure — {2}{U}{U} Flash Enchantment. ETB exile target spell;
@@ -4023,21 +4023,13 @@ pub fn nessian_wanderer() -> CardDefinition {
         },
         power: 1,
         toughness: 3,
-        triggered_abilities: vec![constellation(Effect::LookPickToHand {
-            then_if_picked: None,
+        triggered_abilities: vec![constellation(Effect::LookPickToHand(Box::new(LookPick {
             who: PlayerRef::You,
             count: Value::Const(3),
-            rest_to_graveyard: false,
             pick_filter: Some(SelectionRequirement::Land),
-            take: None,
-            to_battlefield: false,
-            gain_life_if_pick: None,
-            gain_life_greatest_power_rest: false,
             optional: true,
-            picked_lands_to_battlefield: false,
-            rest_bottom_random: false,
-            rest_to_exile: false,
-        })],
+    ..Default::default()
+})))],
         ..Default::default()
     }
 }
@@ -5689,21 +5681,12 @@ pub fn thassas_intervention() -> CardDefinition {
         cost: cost(&[x(), u(), u()]),
         card_types: vec![CardType::Instant],
         effect: Effect::ChooseMode(vec![
-            Effect::LookPickToHand {
-                then_if_picked: None,
+            Effect::LookPickToHand(Box::new(LookPick {
                 who: PlayerRef::You,
                 count: Value::XFromCost,
-                rest_to_graveyard: false,
-                pick_filter: None,
                 take: Some(Value::Const(2)),
-                to_battlefield: false,
-                gain_life_if_pick: None,
-                gain_life_greatest_power_rest: false,
-                optional: false,
-                picked_lands_to_battlefield: false,
-                rest_bottom_random: false,
-                rest_to_exile: false,
-            },
+    ..Default::default()
+})),
             Effect::CounterUnlessPaid {
                 what: target_filtered(SelectionRequirement::IsSpellOnStack),
                 mana_cost: crate::mana::ManaCost::default(),
@@ -5726,21 +5709,14 @@ pub fn relentless_pursuit() -> CardDefinition {
         name: "Relentless Pursuit",
         cost: cost(&[generic(2), g()]),
         card_types: vec![CardType::Sorcery],
-        effect: Effect::LookPickToHand {
-            then_if_picked: None,
+        effect: Effect::LookPickToHand(Box::new(LookPick {
             who: PlayerRef::You,
             count: Value::Const(4),
             rest_to_graveyard: true,
             pick_filter: Some(SelectionRequirement::Creature.or(SelectionRequirement::Land)),
             take: Some(Value::Const(2)),
-            to_battlefield: false,
-            gain_life_if_pick: None,
-            gain_life_greatest_power_rest: false,
-            optional: false,
-            picked_lands_to_battlefield: false,
-            rest_bottom_random: false,
-            rest_to_exile: false,
-        },
+    ..Default::default()
+})),
         ..Default::default()
     }
 }
@@ -6213,21 +6189,12 @@ pub fn calix_destinys_hand() -> CardDefinition {
         loyalty_abilities: vec![
             LoyaltyAbility {
                 loyalty_cost: 1,
-                effect: Effect::LookPickToHand {
-                    then_if_picked: None,
+                effect: Effect::LookPickToHand(Box::new(LookPick {
                     who: PlayerRef::You,
                     count: Value::Const(4),
-                    rest_to_graveyard: false,
                     pick_filter: Some(SelectionRequirement::Enchantment),
-                    take: None,
-                    to_battlefield: false,
-                    gain_life_if_pick: None,
-                    gain_life_greatest_power_rest: false,
-                    optional: false,
-                    picked_lands_to_battlefield: false,
-                    rest_bottom_random: false,
-                    rest_to_exile: false,
-                },
+    ..Default::default()
+})),
                 ..Default::default()
             },
             LoyaltyAbility {
@@ -6852,23 +6819,15 @@ pub fn siona_captain_of_the_pyleas() -> CardDefinition {
         power: 2,
         toughness: 2,
         triggered_abilities: vec![
-            etb(Effect::LookPickToHand {
-                then_if_picked: None,
+            etb(Effect::LookPickToHand(Box::new(LookPick {
                 who: PlayerRef::You,
                 count: Value::Const(7),
-                rest_to_graveyard: false,
                 pick_filter: Some(SelectionRequirement::HasEnchantmentSubtype(
                     EnchantmentSubtype::Aura,
                 )),
-                take: None,
-                to_battlefield: false,
-                gain_life_if_pick: None,
-                gain_life_greatest_power_rest: false,
                 optional: true,
-                picked_lands_to_battlefield: false,
-                rest_bottom_random: false,
-                rest_to_exile: false,
-            }),
+    ..Default::default()
+}))),
             TriggeredAbility {
                 event: EventSpec::new(EventKind::AuraAttached, EventScope::YourControl),
                 effect: Effect::CreateToken {

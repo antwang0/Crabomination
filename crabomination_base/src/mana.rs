@@ -517,6 +517,9 @@ pub enum SpendRestriction {
     /// "Spend this mana only to cast Room spells and unlock doors." (Smoky
     /// Lounge.)
     RoomSpellsOrDoors,
+    /// "Spend this mana only to cast face-down spells or to turn creatures
+    /// face up." (Tin Street Gossip.)
+    FaceDownSpellsOrTurnFaceUp,
     /// "If that mana is spent on a creature spell, it gains haste until end of
     /// turn." (Generator Servant.) Unrestricted spend; funding a creature
     /// stamps the pending-haste rider like `InstantSorceryUncounterable`.
@@ -562,6 +565,9 @@ impl SpendRestriction {
             SpendRestriction::PlaneswalkerSpellsOnly => kind.planeswalker,
             SpendRestriction::LegendarySpell => kind.legendary,
             SpendRestriction::RoomSpellsOrDoors => kind.room_or_door,
+            SpendRestriction::FaceDownSpellsOrTurnFaceUp => {
+                kind.face_down || kind.turning_face_up
+            }
             SpendRestriction::CreatureHaste => true,
         }
     }
@@ -635,6 +641,12 @@ pub struct SpellKind {
     /// The name of the spell being cast, when there is one. Read by
     /// name-restricted spend permissions (Unexpected Potential).
     pub name: Option<&'static str>,
+    /// CR 702.36b — casting a spell face down (morph / disguise / cloak).
+    /// Set only on the face-down cast path (Tin Street Gossip).
+    pub face_down: bool,
+    /// CR 708.5 — paying to turn a face-down permanent face up (Tin Street
+    /// Gossip's second half).
+    pub turning_face_up: bool,
 }
 
 /// WUBRG index for a color — used to bucket restricted mana per color.

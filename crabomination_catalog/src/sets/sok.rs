@@ -5,7 +5,7 @@ use crate::card::{
     EquipBonus, EventKind, EventScope, EventSpec, Keyword, Predicate,
     SelectionRequirement as R, Subtypes, TokenDefinition, TriggeredAbility, Value,
 };
-use crate::effect::{
+use crate::effect::{LookPick, 
     Duration, Effect, PlayerRef, Selector, StaticEffect, ZoneDest,
     shortcut::{soulshift, spiritcraft, target_any, target_filtered},
 };
@@ -199,21 +199,13 @@ pub fn dreamcatcher() -> CardDefinition {
 pub fn elder_pine_of_jukai() -> CardDefinition {
     CardDefinition {
         triggered_abilities: vec![
-            spiritcraft(Effect::LookPickToHand {
-                then_if_picked: None,
+            spiritcraft(Effect::LookPickToHand(Box::new(LookPick {
                 who: PlayerRef::You,
                 count: Value::Const(3),
                 pick_filter: Some(R::Land),
                 take: Some(Value::Const(3)),
-                rest_to_graveyard: false,
-                to_battlefield: false,
-                gain_life_if_pick: None,
-                gain_life_greatest_power_rest: false,
-                optional: false,
-                picked_lands_to_battlefield: false,
-                rest_bottom_random: false,
-                rest_to_exile: false,
-            }),
+    ..Default::default()
+}))),
             soulshift(2),
         ],
         ..creature(

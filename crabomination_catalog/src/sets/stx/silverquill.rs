@@ -28,7 +28,7 @@ use crate::effect::shortcut::{
     magecraft, magecraft_drain_each_opp, magecraft_gain_life, magecraft_scry, magecraft_self_pump,
     on_attack_drain, on_attack_gain_life, on_other_dies, target_filtered,
 };
-use crate::effect::{Duration, PlayerRef, StaticAbility, StaticEffect, ZoneDest};
+use crate::effect::{LookPick, Duration, PlayerRef, StaticAbility, StaticEffect, ZoneDest};
 use crate::mana::{Color, ManaCost, b, cost, g, generic, hybrid, u, w};
 
 // ── Spirited Companion ──────────────────────────────────────────────────────
@@ -3191,22 +3191,11 @@ pub fn silverquill_scrivener_b30() -> CardDefinition {
         toughness: 3,
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-            effect: Effect::LookPickToHand {
-                then_if_picked: None,
+            effect: Effect::LookPickToHand(Box::new(LookPick {
                 who: PlayerRef::You,
                 count: Value::Const(3),
-                rest_to_graveyard: false,
-                pick_filter: None,
-
-                take: None,
-                to_battlefield: false,
-                gain_life_if_pick: None,
-                gain_life_greatest_power_rest: false,
-                optional: false,
-                picked_lands_to_battlefield: false,
-                rest_bottom_random: false,
-                rest_to_exile: false,
-            },
+    ..Default::default()
+})),
         }],
         ..Default::default()
     }

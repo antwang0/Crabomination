@@ -13542,6 +13542,28 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::FaceDownSpellsCostLessThisTurn { amount } => {
+                self.players[ctx.controller].face_down_discount_this_turn += *amount;
+                Ok(())
+            }
+
+            Effect::GrantKeywordsToSpell { what, keywords } => {
+                for ent in self.resolve_selector(what, ctx) {
+                    let Some(cid) = ent.as_card_id() else { continue };
+                    let on_stack = self
+                        .stack
+                        .iter()
+                        .any(|it| matches!(it, StackItem::Spell { card, .. } if card.id == cid));
+                    if !on_stack {
+                        continue;
+                    }
+                    for kw in keywords {
+                        self.spell_keyword_grants.push((cid, kw.clone()));
+                    }
+                }
+                Ok(())
+            }
+
             Effect::BecomeChosenColor { what, duration } => {
                 use crate::decision::{Decision, DecisionAnswer};
                 use crate::mana::Color;
@@ -19896,8 +19918,25 @@ impl GameState {
                 Ok(())
             }
 
-            Effect::LookPickToHand { who, count, rest_to_graveyard, pick_filter, take, to_battlefield, gain_life_if_pick, gain_life_greatest_power_rest, optional, picked_lands_to_battlefield, rest_bottom_random, rest_to_exile, then_if_picked } => {
+            Effect::LookPickToHand(lp) => {
                 use crate::decision::Decision;
+                let crate::effect::LookPick {
+                    who,
+                    count,
+                    rest_to_graveyard,
+                    pick_filter,
+                    take,
+                    to_battlefield,
+                    gain_life_if_pick,
+                    gain_life_greatest_power_rest,
+                    optional,
+                    picked_lands_to_battlefield,
+                    rest_bottom_random,
+                    rest_to_exile,
+                    then_if_picked,
+                    picked_matching_to_battlefield,
+                    battlefield_haste,
+                } = &**lp;
                 let Some(p) = self.resolve_player(who, ctx) else { return Ok(()); };
                 let n = self.evaluate_value(count, ctx).max(0) as usize;
                 let take = take
@@ -19971,6 +20010,8 @@ impl GameState {
                     rest_bottom_random: *rest_bottom_random,
                     rest_to_exile: *rest_to_exile,
                     then_if_picked: then_if_picked.clone(),
+                    picked_matching_to_battlefield: picked_matching_to_battlefield.clone(),
+                    battlefield_haste: *battlefield_haste,
                     source: ctx.source,
                 };
                 if self.players[p].wants_ui {
@@ -20038,6 +20079,8 @@ impl GameState {
                     rest_bottom_random: false,
                     rest_to_exile: false,
                     then_if_picked: None,
+                    picked_matching_to_battlefield: None,
+                    battlefield_haste: false,
                     source: ctx.source,
                 };
                 if self.players[p].wants_ui {
@@ -20088,6 +20131,8 @@ impl GameState {
                     rest_bottom_random: *rest_bottom_random,
                     rest_to_exile: *exile_rest,
                     then_if_picked: None,
+                    picked_matching_to_battlefield: None,
+                    battlefield_haste: false,
                     source: ctx.source,
                 };
                 if self.players[p].wants_ui {
@@ -29771,6 +29816,24 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::SacrificeAtNextEndStep { what } => {
+                for ent in self.resolve_selector(what, ctx) {
+                    let Some(id) = ent.as_permanent_id() else { continue };
+                    self.delayed_triggers.push(crate::game::types::DelayedTrigger {
+                        controller: ctx.controller,
+                        source: id,
+                        kind: crate::game::types::DelayedKind::NextEndStep,
+                        effect: Effect::SacrificeSource,
+                        target: None,
+                        bound_token: None,
+                        bound_subject: None,
+                        fires_once: true,
+                        expires_after_turn: None,
+                    });
+                }
+                Ok(())
+            }
+
             Effect::SacrificeAtNextUpkeep { what } => {
                 for ent in self.resolve_selector(what, ctx) {
                     let Some(id) = ent.as_permanent_id() else { continue };
@@ -30984,7 +31047,7 @@ impl GameState {
                 Ok(())
             }
 
-            Effect::CastAnyOrderWithoutPaying { what, source_zone, filter } => {
+            Effect::CastAnyOrderWithoutPaying { what, source_zone, filter, cap } => {
                 // "Cast any number ... without paying" with CONTROLLER-CHOSEN
                 // ORDER: offer each remaining castable card; after any accept,
                 // re-offer the declined ones (so declining A to cast B first,
@@ -31000,7 +31063,16 @@ impl GameState {
                     })
                     .collect();
                 let source_for_ask = ctx.source.unwrap_or(CardId(0));
+                // "A spell from each opponent's graveyard" (Jetsam) — a cap on
+                // how many of `remaining` may actually be cast.
+                let mut budget = cap
+                    .as_ref()
+                    .map(|v| self.evaluate_value(v, ctx).max(0) as usize)
+                    .unwrap_or(usize::MAX);
                 loop {
+                    if budget == 0 {
+                        break;
+                    }
                     let mut progressed = false;
                     for cid in remaining.clone() {
                         if self.find_card_zone(cid) != Some(*source_zone) {
@@ -31069,8 +31141,12 @@ impl GameState {
                         events.extend(cast_events);
                         remaining.retain(|c| *c != cid);
                         progressed = true;
+                        budget -= 1;
+                        if budget == 0 {
+                            break;
+                        }
                     }
-                    if !progressed || remaining.is_empty() {
+                    if budget == 0 || !progressed || remaining.is_empty() {
                         break;
                     }
                 }

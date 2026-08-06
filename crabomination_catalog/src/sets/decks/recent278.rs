@@ -8,7 +8,7 @@ use crate::card::{
 };
 use crate::card::{EventKind, EventScope, EventSpec, Predicate};
 use crate::effect::shortcut::{etb, on_you_attack, target_filtered};
-use crate::effect::{Duration, Effect, PlayerRef, Selector, Value, ZoneDest};
+use crate::effect::{LookPick, Duration, Effect, PlayerRef, Selector, Value, ZoneDest};
 use crate::mana::{b, cost, g, generic, r, u, w};
 
 /// Bog Badger — {2}{G} 3/3 Badger, kicker {B}. When it enters, if it was
@@ -133,21 +133,15 @@ pub fn commune_with_spirits() -> CardDefinition {
         name: "Commune with Spirits",
         cost: cost(&[g()]),
         card_types: vec![CardType::Sorcery],
-        effect: Effect::LookPickToHand {
-            then_if_picked: None,
+        effect: Effect::LookPickToHand(Box::new(LookPick {
             who: PlayerRef::You,
             count: Value::Const(4),
-            rest_to_graveyard: false,
             pick_filter: Some(R::Enchantment.or(R::Land)),
             take: Some(Value::ONE),
-            to_battlefield: false,
-            gain_life_if_pick: None,
-            gain_life_greatest_power_rest: false,
             optional: true,
-            picked_lands_to_battlefield: false,
             rest_bottom_random: true,
-            rest_to_exile: false,
-        },
+    ..Default::default()
+})),
         ..Default::default()
     }
 }

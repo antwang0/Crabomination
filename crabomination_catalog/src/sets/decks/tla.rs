@@ -11,7 +11,7 @@ use crate::card::{
 use crate::effect::shortcut::{
     etb, investigate, on_attack, on_dies, raid_etb, target_any, target_filtered,
 };
-use crate::effect::{Duration, ManaPayload, PlayerRef, ZoneDest};
+use crate::effect::{LookPick, Duration, ManaPayload, PlayerRef, ZoneDest};
 use crate::game::TurnStep;
 use crate::mana::{
     Color, ManaCost, ManaSymbol, SpendRestriction, b, cost, g, generic, hybrid, r, u, w, x,
@@ -1450,11 +1450,9 @@ pub fn master_piandao() -> CardDefinition {
         power: 4,
         toughness: 4,
         keywords: vec![Keyword::FirstStrike],
-        triggered_abilities: vec![on_attack(Effect::LookPickToHand {
-            then_if_picked: None,
+        triggered_abilities: vec![on_attack(Effect::LookPickToHand(Box::new(LookPick {
             who: PlayerRef::You,
             count: Value::Const(4),
-            rest_to_graveyard: false,
             pick_filter: Some(
                 SelectionRequirement::HasCreatureType(CreatureType::Ally)
                     .or(SelectionRequirement::HasArtifactSubtype(
@@ -1462,15 +1460,9 @@ pub fn master_piandao() -> CardDefinition {
                     ))
                     .or(SelectionRequirement::HasSpellSubtype(SpellSubtype::Lesson)),
             ),
-            take: None,
-            to_battlefield: false,
-            gain_life_if_pick: None,
-            gain_life_greatest_power_rest: false,
             optional: true,
-            picked_lands_to_battlefield: false,
-            rest_bottom_random: false,
-            rest_to_exile: false,
-        })],
+    ..Default::default()
+})))],
         ..Default::default()
     }
 }
@@ -1938,23 +1930,15 @@ pub fn seismic_sense() -> CardDefinition {
         cost: cost(&[g()]),
         card_types: vec![CardType::Sorcery],
         subtypes: lesson(),
-        effect: Effect::LookPickToHand {
-            then_if_picked: None,
+        effect: Effect::LookPickToHand(Box::new(LookPick {
             who: PlayerRef::You,
             count: Value::count(Selector::EachPermanent(
                 SelectionRequirement::Land.and(SelectionRequirement::ControlledByYou),
             )),
-            rest_to_graveyard: false,
             pick_filter: Some(SelectionRequirement::Creature.or(SelectionRequirement::Land)),
-            take: None,
-            to_battlefield: false,
-            gain_life_if_pick: None,
-            gain_life_greatest_power_rest: false,
             optional: true,
-            picked_lands_to_battlefield: false,
-            rest_bottom_random: false,
-            rest_to_exile: false,
-        },
+    ..Default::default()
+})),
         ..Default::default()
     }
 }
@@ -2969,11 +2953,9 @@ pub fn guru_pathik() -> CardDefinition {
         subtypes: ally(&[CreatureType::Human, CreatureType::Monk, CreatureType::Ally]),
         power: 2,
         toughness: 4,
-        triggered_abilities: vec![etb(Effect::LookPickToHand {
-            then_if_picked: None,
+        triggered_abilities: vec![etb(Effect::LookPickToHand(Box::new(LookPick {
             who: PlayerRef::You,
             count: Value::Const(5),
-            rest_to_graveyard: false,
             pick_filter: Some(
                 SelectionRequirement::HasSpellSubtype(SpellSubtype::Lesson)
                     .or(SelectionRequirement::HasEnchantmentSubtype(
@@ -2983,15 +2965,9 @@ pub fn guru_pathik() -> CardDefinition {
                         EnchantmentSubtype::Shrine,
                     )),
             ),
-            take: None,
-            to_battlefield: false,
-            gain_life_if_pick: None,
-            gain_life_greatest_power_rest: false,
             optional: true,
-            picked_lands_to_battlefield: false,
-            rest_bottom_random: false,
-            rest_to_exile: false,
-        })],
+    ..Default::default()
+})))],
         ..Default::default()
     }
 }
@@ -4644,21 +4620,12 @@ pub fn barrels_of_blasting_jelly() -> CardDefinition {
 /// Accumulate Wisdom — {1}{U} Instant — Lesson. Look at the top three; put one
 /// into your hand (rest to bottom), or all three if you have 3+ Lessons in gy.
 pub fn accumulate_wisdom() -> CardDefinition {
-    let dig = |take: Value| Effect::LookPickToHand {
-        then_if_picked: None,
+    let dig = |take: Value| Effect::LookPickToHand(Box::new(LookPick {
         who: PlayerRef::You,
         count: Value::Const(3),
-        rest_to_graveyard: false,
-        pick_filter: None,
         take: Some(take),
-        to_battlefield: false,
-        gain_life_if_pick: None,
-        gain_life_greatest_power_rest: false,
-        optional: false,
-        picked_lands_to_battlefield: false,
-        rest_bottom_random: false,
-        rest_to_exile: false,
-    };
+    ..Default::default()
+}));
     CardDefinition {
         name: "Accumulate Wisdom",
         cost: cost(&[generic(1), u()]),

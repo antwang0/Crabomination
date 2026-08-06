@@ -6,7 +6,7 @@ use crate::card::{
     Keyword, LandType, SelectionRequirement as R, Subtypes, TokenDefinition,
 };
 use crate::effect::shortcut::{etb, target_filtered};
-use crate::effect::{
+use crate::effect::{LookPick, 
     Effect, EventKind, EventScope, EventSpec, PlayerRef, Selector, TriggeredAbility, Value,
     ZoneDest,
 };
@@ -299,21 +299,13 @@ pub fn polygraph_orb() -> CardDefinition {
         cost: cost(&[generic(4), b()]),
         card_types: vec![CardType::Artifact],
         triggered_abilities: vec![etb(Effect::Seq(vec![
-            Effect::LookPickToHand {
-                then_if_picked: None,
+            Effect::LookPickToHand(Box::new(LookPick {
                 who: PlayerRef::You,
                 count: Value::Const(4),
                 rest_to_graveyard: true,
-                pick_filter: None,
                 take: Some(Value::Const(2)),
-                to_battlefield: false,
-                gain_life_if_pick: None,
-                gain_life_greatest_power_rest: false,
-                optional: false,
-                picked_lands_to_battlefield: false,
-                rest_bottom_random: false,
-                rest_to_exile: false,
-            },
+    ..Default::default()
+})),
             Effect::LoseLife {
                 who: Selector::You,
                 amount: Value::Const(2),

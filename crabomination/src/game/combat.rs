@@ -446,6 +446,7 @@ impl GameState {
                 // (Juggernaut) or is goaded (CR 701.38 — "attacks each
                 // combat if able").
                 let must = computed_kw(c.id).contains(&Keyword::MustAttack)
+                    || computed_kw(c.id).contains(&Keyword::MustAttackOrBlock)
                     || !c.goaded_by.is_empty();
                 if c.controller != p || !must {
                     continue;
@@ -1396,6 +1397,15 @@ impl GameState {
                 return Err(GameError::CannotBlock(blocker_id));
             }
 
+            // CR 509.1b — "can't block [creature type]s" (Burden of Proof).
+            if let Some(a) = self.computed_permanent(attacker_id)
+                && kws_of(blocker_id).iter().any(|k| {
+                    matches!(k, Keyword::CantBlockCreatureType(t) if a.subtypes.creature_types.contains(t))
+                })
+            {
+                return Err(GameError::CannotBlock(blocker_id));
+            }
+
             // CR 509.1b — "can't block creatures with power equal to or
             // greater than this creature's toughness" (Ironclaw Curse).
             if kws_of(blocker_id).contains(&Keyword::CantBlockPowerAtLeastOwnToughness)
@@ -1953,7 +1963,8 @@ impl GameState {
         for b in &self.battlefield {
             let b_is_creature = cp_of(b.id)
                 .is_some_and(|c| c.card_types.contains(&crate::card::CardType::Creature));
-            if !kws_of(b.id).contains(&Keyword::MustBlock)
+            if !(kws_of(b.id).contains(&Keyword::MustBlock)
+                || kws_of(b.id).contains(&Keyword::MustAttackOrBlock))
                 || !b_is_creature
                 || b.tapped
                 || kws_of(b.id).contains(&Keyword::CantBlock)

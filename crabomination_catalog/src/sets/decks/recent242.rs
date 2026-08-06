@@ -8,7 +8,7 @@ use crate::card::{
     EventScope, EventSpec, Keyword, SelectionRequirement as R, Subtypes, TriggeredAbility, Zone,
 };
 use crate::effect::shortcut::{etb, investigate, target_filtered};
-use crate::effect::{Duration, Effect, PlayerRef, Predicate, Selector, Value, ZoneDest};
+use crate::effect::{LookPick, Duration, Effect, PlayerRef, Predicate, Selector, Value, ZoneDest};
 use crate::game::types::TurnStep;
 use crate::mana::{cost, g, generic, r, u, w};
 
@@ -310,21 +310,14 @@ pub fn case_of_the_gateway_express() -> CardDefinition {
 /// whenever you solve a Case, look at the top six cards; you may reveal an
 /// enchantment card and put it into your hand, rest to the bottom at random.
 pub fn case_file_auditor() -> CardDefinition {
-    let look_six = || Effect::LookPickToHand {
-        then_if_picked: None,
+    let look_six = || Effect::LookPickToHand(Box::new(LookPick {
         who: PlayerRef::You,
         count: Value::Const(6),
-        rest_to_graveyard: false,
         pick_filter: Some(R::Enchantment),
-        take: None,
-        to_battlefield: false,
-        gain_life_if_pick: None,
-        gain_life_greatest_power_rest: false,
         optional: true,
-        picked_lands_to_battlefield: false,
         rest_bottom_random: true,
-        rest_to_exile: false,
-    };
+    ..Default::default()
+}));
     CardDefinition {
         name: "Case File Auditor",
         cost: cost(&[generic(2), w()]),

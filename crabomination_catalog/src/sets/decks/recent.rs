@@ -8,7 +8,7 @@ use crate::card::{
     TriggeredAbility, Value,
 };
 use crate::effect::shortcut::{etb, on_dies, recover, target_filtered};
-use crate::effect::{Duration, PlayerRef, ZoneDest};
+use crate::effect::{LookPick, Duration, PlayerRef, ZoneDest};
 use crate::mana::{b, colorless, cost, g, generic, r, u, w, x};
 
 // === Innistrad: Midnight Hunt — Coven (control 3+ creatures with different
@@ -50,24 +50,16 @@ pub fn sigarda_champion_of_light() -> CardDefinition {
                     who: PlayerRef::You,
                 },
             ),
-            effect: Effect::LookPickToHand {
-                then_if_picked: None,
+            effect: Effect::LookPickToHand(Box::new(LookPick {
                 who: PlayerRef::You,
                 count: Value::Const(5),
-                rest_to_graveyard: false,
                 pick_filter: Some(
                     SelectionRequirement::Creature
                         .and(SelectionRequirement::HasCreatureType(CreatureType::Human)),
                 ),
                 take: Some(Value::Const(1)),
-                to_battlefield: false,
-                gain_life_if_pick: None,
-                gain_life_greatest_power_rest: false,
-                optional: false,
-                picked_lands_to_battlefield: false,
-                rest_bottom_random: false,
-                rest_to_exile: false,
-            },
+    ..Default::default()
+})),
         }],
         ..Default::default()
     }
@@ -3013,23 +3005,15 @@ pub fn star_charter() -> CardDefinition {
                     who: PlayerRef::You,
                 },
             ])),
-            effect: Effect::LookPickToHand {
-                then_if_picked: None,
+            effect: Effect::LookPickToHand(Box::new(LookPick {
                 who: PlayerRef::You,
                 count: Value::Const(4),
-                rest_to_graveyard: false,
                 pick_filter: Some(
                     SelectionRequirement::Creature.and(SelectionRequirement::PowerAtMost(3)),
                 ),
-                take: None,
-                to_battlefield: false,
-                gain_life_if_pick: None,
-                gain_life_greatest_power_rest: false,
                 optional: true,
-                picked_lands_to_battlefield: false,
-                rest_bottom_random: false,
-                rest_to_exile: false,
-            },
+    ..Default::default()
+})),
         }],
         ..Default::default()
     }
@@ -4375,21 +4359,12 @@ pub fn stock_up() -> CardDefinition {
         name: "Stock Up",
         cost: cost(&[generic(2), u()]),
         card_types: vec![CardType::Sorcery],
-        effect: Effect::LookPickToHand {
-            then_if_picked: None,
+        effect: Effect::LookPickToHand(Box::new(LookPick {
             who: PlayerRef::You,
             count: Value::Const(5),
-            rest_to_graveyard: false,
-            pick_filter: None,
             take: Some(Value::Const(2)),
-            to_battlefield: false,
-            gain_life_if_pick: None,
-            gain_life_greatest_power_rest: false,
-            optional: false,
-            picked_lands_to_battlefield: false,
-            rest_bottom_random: false,
-            rest_to_exile: false,
-        },
+    ..Default::default()
+})),
         ..Default::default()
     }
 }
@@ -6516,21 +6491,11 @@ pub fn gurmag_drowner() -> CardDefinition {
         },
         power: 2,
         toughness: 4,
-        triggered_abilities: vec![crate::effect::shortcut::exploit(Effect::LookPickToHand {
-            then_if_picked: None,
+        triggered_abilities: vec![crate::effect::shortcut::exploit(Effect::LookPickToHand(Box::new(LookPick {
             who: PlayerRef::You,
             count: Value::Const(4),
-            rest_to_graveyard: false,
-            pick_filter: None,
-            take: None,
-            to_battlefield: false,
-            gain_life_if_pick: None,
-            gain_life_greatest_power_rest: false,
-            optional: false,
-            picked_lands_to_battlefield: false,
-            rest_bottom_random: false,
-            rest_to_exile: false,
-        })],
+    ..Default::default()
+})))],
         ..Default::default()
     }
 }
@@ -10045,21 +10010,12 @@ pub fn corpse_appraiser() -> CardDefinition {
                 }),
                 to: ZoneDest::Exile,
             },
-            Effect::LookPickToHand {
-                then_if_picked: None,
+            Effect::LookPickToHand(Box::new(LookPick {
                 who: PlayerRef::You,
                 count: Value::Const(3),
                 rest_to_graveyard: true,
-                pick_filter: None,
-                take: None,
-                to_battlefield: false,
-                gain_life_if_pick: None,
-                gain_life_greatest_power_rest: false,
-                optional: false,
-                picked_lands_to_battlefield: false,
-                rest_bottom_random: false,
-                rest_to_exile: false,
-            },
+    ..Default::default()
+})),
         ]))],
         ..Default::default()
     }
@@ -12897,23 +12853,16 @@ pub fn recruitment_officer() -> CardDefinition {
         toughness: 1,
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[generic(3), w()]),
-            effect: Effect::LookPickToHand {
-                then_if_picked: None,
+            effect: Effect::LookPickToHand(Box::new(LookPick {
                 who: PlayerRef::You,
                 count: Value::Const(4),
-                rest_to_graveyard: false,
                 pick_filter: Some(
                     SelectionRequirement::Creature.and(SelectionRequirement::ManaValueAtMost(3)),
                 ),
                 take: Some(Value::Const(1)),
-                to_battlefield: false,
-                gain_life_if_pick: None,
-                gain_life_greatest_power_rest: false,
                 optional: true,
-                picked_lands_to_battlefield: false,
-                rest_bottom_random: false,
-                rest_to_exile: false,
-            },
+    ..Default::default()
+})),
             ..Default::default()
         }],
         ..Default::default()

@@ -7,7 +7,7 @@ use crate::card::{
     StaticEffect, Subtypes, TokenDefinition, TriggeredAbility, Value,
 };
 use crate::effect::shortcut::{heroic, target_filtered, tribute};
-use crate::effect::{Duration, Effect, PlayerRef, Predicate, Selector, ZoneDest};
+use crate::effect::{LookPick, Duration, Effect, PlayerRef, Predicate, Selector, ZoneDest};
 use crate::mana::{Color, ManaCost, b, cost, g, generic, r, u, w};
 
 fn creature(
@@ -553,21 +553,13 @@ pub fn hero_of_leina_tower() -> CardDefinition {
 /// Meletis Astronomer — {1}{U} 1/3. Heroic: dig three for an enchantment.
 pub fn meletis_astronomer() -> CardDefinition {
     CardDefinition {
-        triggered_abilities: vec![heroic(Effect::LookPickToHand {
-            then_if_picked: None,
+        triggered_abilities: vec![heroic(Effect::LookPickToHand(Box::new(LookPick {
             who: PlayerRef::You,
             count: Value::Const(3),
-            rest_to_graveyard: false,
             pick_filter: Some(R::Enchantment),
-            take: None,
-            to_battlefield: false,
-            gain_life_if_pick: None,
-            gain_life_greatest_power_rest: false,
             optional: true,
-            picked_lands_to_battlefield: false,
-            rest_bottom_random: false,
-            rest_to_exile: false,
-        })],
+    ..Default::default()
+})))],
         ..creature(
             "Meletis Astronomer",
             cost(&[generic(1), u()]),

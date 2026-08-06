@@ -131,6 +131,7 @@ pub use sets::mh3c::*;
 pub use sets::mh3d::*;
 pub use sets::mh3e::*;
 pub use sets::mkm::*;
+pub use sets::mkm2::*;
 pub use sets::mod_set::*;
 pub use sets::bfz::*;
 pub use sets::zen2::*;

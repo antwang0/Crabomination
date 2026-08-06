@@ -7,7 +7,7 @@ use crate::card::{
     Value,
 };
 use crate::effect::shortcut::{etb, target_filtered};
-use crate::effect::{Duration, PlayerRef};
+use crate::effect::{LookPick, Duration, PlayerRef};
 use crate::game::types::TurnStep;
 use crate::mana::{cost, g, generic, w};
 
@@ -122,21 +122,12 @@ pub fn tajuru_paragon() -> CardDefinition {
         keywords: vec![Keyword::Kicker(cost(&[generic(3)]))],
         triggered_abilities: vec![etb(Effect::If {
             cond: Predicate::SpellWasKicked,
-            then: Box::new(Effect::LookPickToHand {
-                then_if_picked: None,
+            then: Box::new(Effect::LookPickToHand(Box::new(LookPick {
                 who: PlayerRef::You,
                 count: Value::Const(6),
-                rest_to_graveyard: false,
                 pick_filter: Some(R::Creature),
-                take: None,
-                to_battlefield: false,
-                gain_life_if_pick: None,
-                gain_life_greatest_power_rest: false,
-                optional: false,
-                picked_lands_to_battlefield: false,
-                rest_bottom_random: false,
-                rest_to_exile: false,
-            }),
+    ..Default::default()
+}))),
             else_: Box::new(Effect::Noop),
         })],
         ..Default::default()

@@ -459,6 +459,10 @@ pub enum CounterType {
     Experience,
     Stun,
     Verse,
+    /// Impostor counter — Illicit Masquerade marks the creatures it exiles.
+    Impostor,
+    /// Bloodstain counter — Blood Spatter Analysis's five-death fuse.
+    Bloodstain,
     /// Omen counter — Celestial Convergence's seven-turn fuse.
     Omen,
     /// Azor's Elocutors — a slow win condition (5 filibuster counters).
@@ -1000,6 +1004,10 @@ pub enum Keyword {
     /// exactly-one-color spells or abilities opponents control (General
     /// Ferrous Rokiric).
     HexproofFromMonocolored,
+    /// CR 702.11f — "hexproof from multicolored": can't be the target of
+    /// two-or-more-color spells or abilities opponents control (Niv-Mizzet,
+    /// Guildpact).
+    HexproofFromMulticolored,
     /// "Can't be the target of nongreen spells opponents control or abilities
     /// from nongreen sources opponents control" and its siblings (Thrun,
     /// Breaker of Silence). Blocks an opponent's spell/ability whose source
@@ -1272,6 +1280,8 @@ pub enum Keyword {
     /// greater" (Ironclaw Orcs, Ironclaw Buzzardiers). Enforced against the
     /// attacker's *computed* power in `can_block_attacker_computed`.
     CantBlockPowerAtLeast(u32),
+    /// "Can't block [creature type]s" (Burden of Proof's Detectives).
+    CantBlockCreatureType(CreatureType),
     /// CR 509.1b — "This creature can't block creatures with power greater
     /// than this creature's power" (Spitfire Handler). The self-relative
     /// sibling of `CantBlockPowerAtLeast`; both powers are the computed ones.
@@ -1494,6 +1504,10 @@ pub enum Keyword {
     /// requirements (Goad targeting rules, can't-attack overrides) is
     /// approximated by the per-creature gate. Juggernaut, goaded creatures.
     MustAttack,
+    /// "Attacks or blocks this turn if able" (Hustle). Satisfied by either;
+    /// enforced as `MustAttack` on the bearer's controller's turn and as
+    /// `MustBlock` otherwise.
+    MustAttackOrBlock,
     /// "This creature can't attack unless the defending player controls a
     /// [filter]." Enforced in `declare_attackers` against the attack's
     /// defending player (the `SelectionRequirement` is matched among that
@@ -4178,6 +4192,10 @@ pub struct ConditionalEquipBonus {
     /// Evaluated against the bonus source's controller each layer pass.
     #[serde(default)]
     pub condition: Option<crate::effect::Predicate>,
+    /// "Otherwise, it has base power and toughness 1/1" (Burden of Proof) —
+    /// a layer-7b set applied only while `host_filter` matches.
+    #[serde(default)]
+    pub set_base_pt: Option<(i32, i32)>,
     /// Activated abilities the host gains only while `host_filter` matches
     /// ("as long as enchanted creature is a Wizard, it has …" — Lavamancer's
     /// Skill). Surfaced alongside `EquipBonus.activated_abilities`.
@@ -4863,6 +4881,8 @@ impl CardDefinition {
             creature_mana_only: self.spend_only_creature_mana,
             room_or_door: self.subtypes.enchantment_subtypes.contains(&EnchantmentSubtype::Room),
             name: Some(self.name),
+            face_down: false,
+            turning_face_up: false,
         }
     }
 

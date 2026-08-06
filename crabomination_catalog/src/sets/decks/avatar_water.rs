@@ -16,7 +16,7 @@ use crate::card::{
     WardCost, Waterbend,
 };
 use crate::effect::shortcut::{draw, etb, target_filtered};
-use crate::effect::{Duration, Effect, LibraryPosition, PlayerRef, ZoneDest};
+use crate::effect::{LookPick, Duration, Effect, LibraryPosition, PlayerRef, ZoneDest};
 use crate::game::TurnStep;
 use crate::mana::{Color, ManaCost, ManaSymbol, b, cost, g, generic, u, w};
 
@@ -557,23 +557,15 @@ pub fn water_tribe_rallier() -> CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             mana_cost: ManaCost::new(vec![ManaSymbol::Generic(5)]),
             waterbend: true,
-            effect: Effect::LookPickToHand {
-                then_if_picked: None,
+            effect: Effect::LookPickToHand(Box::new(LookPick {
                 who: PlayerRef::You,
                 count: Value::Const(4),
-                rest_to_graveyard: false,
                 pick_filter: Some(
                     SelectionRequirement::Creature.and(SelectionRequirement::PowerAtMost(3)),
                 ),
-                take: None,
-                to_battlefield: false,
-                gain_life_if_pick: None,
-                gain_life_greatest_power_rest: false,
                 optional: true,
-                picked_lands_to_battlefield: false,
-                rest_bottom_random: false,
-                rest_to_exile: false,
-            },
+    ..Default::default()
+})),
             ..Default::default()
         }],
         ..Default::default()

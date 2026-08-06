@@ -8,7 +8,7 @@ use crate::card::{
     Selector, Subtypes, TokenDefinition, TriggeredAbility, Value,
 };
 use crate::effect::shortcut::{on_dies, target_any, target_filtered};
-use crate::effect::{
+use crate::effect::{LookPick, 
     Duration, Effect, ManaPayload, PlayerRef, Predicate, StaticAbility, StaticEffect, ZoneDest,
 };
 use crate::mana::{Color, ManaCost, SpendRestriction, b, cost, g, generic, r, u, w};
@@ -1329,24 +1329,14 @@ pub fn machinate() -> CardDefinition {
         "Machinate",
         cost(&[generic(1), u(), u()]),
         false,
-        Effect::LookPickToHand {
-            then_if_picked: None,
+        Effect::LookPickToHand(Box::new(LookPick {
             who: PlayerRef::You,
             count: Value::count(Selector::ControlledBy {
                 who: PlayerRef::You,
                 filter: R::Artifact,
             }),
-            rest_to_graveyard: false,
-            pick_filter: None,
-            take: None,
-            to_battlefield: false,
-            gain_life_if_pick: None,
-            gain_life_greatest_power_rest: false,
-            optional: false,
-            rest_bottom_random: false,
-            picked_lands_to_battlefield: false,
-            rest_to_exile: false,
-        },
+    ..Default::default()
+})),
     )
 }
 

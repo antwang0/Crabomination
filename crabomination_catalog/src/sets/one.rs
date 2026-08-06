@@ -11,7 +11,7 @@ use crate::card::{
 use crate::effect::shortcut::{
     deal, drain, draw, etb, gain_life, on_attack, on_dies, target_any, target_filtered,
 };
-use crate::effect::{Duration, Effect, PlayerRef, Selector, Value, ZoneDest};
+use crate::effect::{LookPick, Duration, Effect, PlayerRef, Selector, Value, ZoneDest};
 use crate::game::types::TurnStep;
 use crate::mana::{Color, b, cost, g, generic, phyrexian, r, u, w};
 
@@ -2331,21 +2331,11 @@ pub fn experimental_augury() -> CardDefinition {
         cost: cost(&[generic(1), u()]),
         card_types: vec![CardType::Instant],
         effect: Effect::Seq(vec![
-            Effect::LookPickToHand {
-                then_if_picked: None,
+            Effect::LookPickToHand(Box::new(LookPick {
                 who: PlayerRef::You,
                 count: Value::Const(3),
-                rest_to_graveyard: false,
-                pick_filter: None,
-                take: None,
-                to_battlefield: false,
-                gain_life_if_pick: None,
-                gain_life_greatest_power_rest: false,
-                optional: false,
-                picked_lands_to_battlefield: false,
-                rest_bottom_random: false,
-                rest_to_exile: false,
-            },
+    ..Default::default()
+})),
             Effect::Proliferate,
         ]),
         ..Default::default()
@@ -4406,21 +4396,12 @@ pub fn testament_bearer() -> CardDefinition {
         },
         power: 4,
         toughness: 1,
-        triggered_abilities: vec![on_dies(Effect::LookPickToHand {
-            then_if_picked: None,
+        triggered_abilities: vec![on_dies(Effect::LookPickToHand(Box::new(LookPick {
             who: PlayerRef::You,
             count: Value::Const(3),
             rest_to_graveyard: true,
-            pick_filter: None,
-            take: None,
-            to_battlefield: false,
-            gain_life_if_pick: None,
-            gain_life_greatest_power_rest: false,
-            optional: false,
-            picked_lands_to_battlefield: false,
-            rest_bottom_random: false,
-            rest_to_exile: false,
-        })],
+    ..Default::default()
+})))],
         ..Default::default()
     }
 }
@@ -6873,21 +6854,13 @@ pub fn green_suns_twilight() -> CardDefinition {
                 tapped: false,
                 exile_rest: false,
             }),
-            else_: Box::new(Effect::LookPickToHand {
-                then_if_picked: None,
+            else_: Box::new(Effect::LookPickToHand(Box::new(LookPick {
                 who: PlayerRef::You,
                 count: x_plus_one(),
-                rest_to_graveyard: false,
                 pick_filter: Some(dig_filter()),
                 take: Some(Value::Const(2)),
-                to_battlefield: false,
-                gain_life_if_pick: None,
-                gain_life_greatest_power_rest: false,
-                optional: false,
-                picked_lands_to_battlefield: false,
-                rest_bottom_random: false,
-                rest_to_exile: false,
-            }),
+    ..Default::default()
+}))),
         },
         ..Default::default()
     }
@@ -7163,21 +7136,12 @@ pub fn noxious_assault() -> CardDefinition {
 /// none, proliferate. (Taking a found land is assumed.)
 pub fn contagious_vorrac() -> CardDefinition {
     let dig = |extra: Option<Effect>| {
-        let look = Effect::LookPickToHand {
-            then_if_picked: None,
+        let look = Effect::LookPickToHand(Box::new(LookPick {
             who: PlayerRef::You,
             count: Value::Const(4),
-            rest_to_graveyard: false,
             pick_filter: Some(SelectionRequirement::Land),
-            take: None,
-            to_battlefield: false,
-            gain_life_if_pick: None,
-            gain_life_greatest_power_rest: false,
-            optional: false,
-            picked_lands_to_battlefield: false,
-            rest_bottom_random: false,
-            rest_to_exile: false,
-        };
+    ..Default::default()
+}));
         match extra {
             Some(e) => Effect::Seq(vec![look, e]),
             None => look,

@@ -9,7 +9,7 @@ use crate::card::{
     TriggeredAbility, Value, WardCost,
 };
 use crate::effect::shortcut::{eerie, etb, on_attack, on_dies, target_any, target_filtered};
-use crate::effect::{Duration, PlayerRef};
+use crate::effect::{LookPick, Duration, PlayerRef};
 use crate::mana::{b, cost, g, generic, r, u, w};
 
 /// Card types for the "Fear of …" Nightmare enchantment-creature cycle.
@@ -303,23 +303,15 @@ pub fn living_phone() -> CardDefinition {
         },
         power: 2,
         toughness: 1,
-        triggered_abilities: vec![on_dies(Effect::LookPickToHand {
-            then_if_picked: None,
+        triggered_abilities: vec![on_dies(Effect::LookPickToHand(Box::new(LookPick {
             who: PlayerRef::You,
             count: Value::Const(5),
-            rest_to_graveyard: false,
             pick_filter: Some(
                 SelectionRequirement::Creature.and(SelectionRequirement::PowerAtMost(2)),
             ),
-            take: None,
-            to_battlefield: false,
-            gain_life_if_pick: None,
-            gain_life_greatest_power_rest: false,
             optional: true,
-            picked_lands_to_battlefield: false,
-            rest_bottom_random: false,
-            rest_to_exile: false,
-        })],
+    ..Default::default()
+})))],
         ..Default::default()
     }
 }

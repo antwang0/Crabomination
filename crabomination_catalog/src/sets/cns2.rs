@@ -7,7 +7,7 @@ use crate::card::{
     SelectionRequirement as R, StaticAbility, Subtypes, Supertype, TokenDefinition,
     TriggeredAbility,
 };
-use crate::effect::{
+use crate::effect::{LookPick, 
     Duration, Effect, PlayerRef, Selector, StaticEffect, Value, VoteOption, VoteTally, ZoneDest,
     shortcut::{dethrone, target_filtered},
 };
@@ -509,21 +509,14 @@ pub fn muzzio_visionary_architect() -> CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[generic(3), u()]),
             tap_cost: true,
-            effect: Effect::LookPickToHand {
-                then_if_picked: None,
+            effect: Effect::LookPickToHand(Box::new(LookPick {
                 who: PlayerRef::You,
                 count: Value::GreatestManaValueAmongPermanents(PlayerRef::You),
                 pick_filter: Some(R::Artifact),
                 to_battlefield: true,
                 optional: true,
-                rest_to_graveyard: false,
-                take: None,
-                gain_life_if_pick: None,
-                gain_life_greatest_power_rest: false,
-                picked_lands_to_battlefield: false,
-                rest_bottom_random: false,
-                rest_to_exile: false,
-            },
+    ..Default::default()
+})),
             ..Default::default()
         }],
         ..creature(

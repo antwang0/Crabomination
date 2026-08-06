@@ -10,7 +10,7 @@ use crate::effect::shortcut::{
     cast_is_instant_or_sorcery, drain, each_your_creature, etb, gain_life, landfall, pump_target,
     rally, target_filtered,
 };
-use crate::effect::{Duration, Effect, PlayerRef, Selector, StaticEffect, ZoneDest};
+use crate::effect::{LookPick, Duration, Effect, PlayerRef, Selector, StaticEffect, ZoneDest};
 use crate::mana::{b, cost, g, generic, r, u, w, Color};
 use crabomination_base::tokens::eldrazi_scion_token;
 
@@ -725,21 +725,15 @@ pub fn kiora_master_of_the_depths() -> CardDefinition {
             },
             LoyaltyAbility {
                 loyalty_cost: -2,
-                effect: Effect::LookPickToHand {
-                    then_if_picked: None,
+                effect: Effect::LookPickToHand(Box::new(LookPick {
                     who: PlayerRef::You,
                     count: Value::Const(4),
                     rest_to_graveyard: true,
                     pick_filter: Some(R::Creature.or(R::Land)),
                     take: Some(Value::Const(2)),
-                    to_battlefield: false,
-                    gain_life_if_pick: None,
-                    gain_life_greatest_power_rest: false,
                     optional: true,
-                    picked_lands_to_battlefield: false,
-                    rest_bottom_random: false,
-                    rest_to_exile: false,
-                },
+    ..Default::default()
+})),
                 ..Default::default()
             },
             LoyaltyAbility {

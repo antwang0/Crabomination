@@ -9,7 +9,7 @@ use crate::card::{
     Supertype, TokenDefinition, TriggeredAbility, Value, WardCost,
 };
 use crate::effect::shortcut::{deal, etb, on_attack, target_any, target_filtered};
-use crate::effect::{Duration, Effect, PlayerRef, Predicate, ZoneDest};
+use crate::effect::{LookPick, Duration, Effect, PlayerRef, Predicate, ZoneDest};
 use crate::game::effects::treasure_token;
 use crate::mana::{Color, b, cost, g, generic, r, u, w};
 
@@ -261,21 +261,13 @@ pub fn marchesa_dealer_of_death() -> CardDefinition {
             effect: Effect::MayPay {
                 description: "Pay {1} to dig two (one to hand, one to graveyard)?".into(),
                 mana_cost: cost(&[generic(1)]),
-                body: Box::new(Effect::LookPickToHand {
-                    then_if_picked: None,
+                body: Box::new(Effect::LookPickToHand(Box::new(LookPick {
                     who: PlayerRef::You,
                     count: Value::Const(2),
                     rest_to_graveyard: true,
-                    pick_filter: None,
                     take: Some(Value::Const(1)),
-                    to_battlefield: false,
-                    gain_life_if_pick: None,
-                    gain_life_greatest_power_rest: false,
-                    optional: false,
-                    picked_lands_to_battlefield: false,
-                    rest_bottom_random: false,
-                    rest_to_exile: false,
-                }),
+    ..Default::default()
+}))),
                 else_: None,
             },
         }],

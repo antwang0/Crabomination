@@ -5,7 +5,7 @@ use crate::card::{
     EventSpec, Keyword, SelectionRequirement, Subtypes, TriggeredAbility,
 };
 use crate::effect::shortcut::etb_gain_life;
-use crate::effect::{Duration, PlayerRef, Predicate, Selector, StaticAbility, StaticEffect, Value};
+use crate::effect::{LookPick, Duration, PlayerRef, Predicate, Selector, StaticAbility, StaticEffect, Value};
 use crate::mana::{Color, ManaCost, b, cost, generic, hybrid, w};
 
 // ── Strixhaven token helpers ────────────────────────────────────────────────
@@ -839,23 +839,14 @@ pub fn stirring_honormancer() -> CardDefinition {
             // card, your pick) into your hand and the rest into your
             // graveyard" (audit fix: was reveal-until-creature, which
             // both restricted the pick and took the first match).
-            effect: Effect::LookPickToHand {
-                then_if_picked: None,
+            effect: Effect::LookPickToHand(Box::new(LookPick {
                 who: PlayerRef::You,
                 count: Value::CountOf(Box::new(Selector::EachPermanent(
                     SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
                 ))),
                 rest_to_graveyard: true,
-                pick_filter: None,
-                take: None,
-                to_battlefield: false,
-                gain_life_if_pick: None,
-                gain_life_greatest_power_rest: false,
-                optional: false,
-                picked_lands_to_battlefield: false,
-                rest_bottom_random: false,
-                rest_to_exile: false,
-            },
+    ..Default::default()
+})),
         }],
         ..Default::default()
     }
@@ -3159,21 +3150,12 @@ pub fn geometers_arthropod() -> CardDefinition {
         // the rest on the bottom in a random order" — a real look-and-pick
         // (audit fix: the reveal-until-find stand-in always took the top
         // card).
-        triggered_abilities: vec![cast_has_x_trigger(Effect::LookPickToHand {
-            then_if_picked: None,
+        triggered_abilities: vec![cast_has_x_trigger(Effect::LookPickToHand(Box::new(LookPick {
             who: PlayerRef::You,
             count: Value::XFromCost,
-            rest_to_graveyard: false,
-            pick_filter: None,
-            take: None,
-            to_battlefield: false,
-            gain_life_if_pick: None,
-            gain_life_greatest_power_rest: false,
-            optional: false,
-            picked_lands_to_battlefield: false,
             rest_bottom_random: true,
-            rest_to_exile: false,
-        })],
+    ..Default::default()
+})))],
         ..Default::default()
     }
 }
@@ -4144,21 +4126,13 @@ pub fn paradox_surveyor() -> CardDefinition {
         keywords: vec![Keyword::Reach],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-            effect: Effect::LookPickToHand {
-                then_if_picked: None,
+            effect: Effect::LookPickToHand(Box::new(LookPick {
                 who: PlayerRef::You,
                 count: Value::Const(5),
-                rest_to_graveyard: false,
                 pick_filter: Some(SelectionRequirement::Land.or(SelectionRequirement::HasXInCost)),
-                take: None,
-                to_battlefield: false,
-                gain_life_if_pick: None,
-                gain_life_greatest_power_rest: false,
                 optional: true,
-                picked_lands_to_battlefield: false,
-                rest_bottom_random: false,
-                rest_to_exile: false,
-            },
+    ..Default::default()
+})),
         }],
         ..Default::default()
     }

@@ -7,7 +7,7 @@ use crate::card::{
     Keyword, LandType, Predicate, SelectionRequirement as R, StaticAbility, Subtypes, Supertype,
     TokenDefinition, TriggeredAbility,
 };
-use crate::effect::{
+use crate::effect::{LookPick, 
     Duration, Effect, ManaPayload, PlayerRef, Selector, StaticEffect, Value, ZoneDest,
     shortcut::{discard, draw, etb, on_attack, on_dies, target_filtered},
 };
@@ -294,7 +294,7 @@ pub fn sidequest_catch_a_fish() -> CardDefinition {
         cost(&[generic(2), w()]),
         vec![TriggeredAbility {
             event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::YourControl),
-            effect: Effect::LookPickToHand {
+            effect: Effect::LookPickToHand(Box::new(LookPick {
                 who: PlayerRef::You,
                 count: Value::ONE,
                 pick_filter: Some(R::Artifact.or(R::Creature)),
@@ -307,15 +307,8 @@ pub fn sidequest_catch_a_fish() -> CardDefinition {
                     },
                     Effect::Transform { what: Selector::This },
                 ]))),
-                rest_to_graveyard: false,
-                take: None,
-                to_battlefield: false,
-                gain_life_if_pick: None,
-                gain_life_greatest_power_rest: false,
-                picked_lands_to_battlefield: false,
-                rest_bottom_random: false,
-                rest_to_exile: false,
-            },
+    ..Default::default()
+})),
         }],
         CardDefinition {
             name: "Cooking Campsite",

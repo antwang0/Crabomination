@@ -9,7 +9,7 @@ use crate::card::{
 use crate::effect::shortcut::{
     draw, etb, investigate, mint_treasures, target_any, target_filtered,
 };
-use crate::effect::{
+use crate::effect::{LookPick, 
     Duration, Effect, ManaPayload, PlayerRef, Predicate, StaticEffect, ZoneDest, ZoneRef,
 };
 use crate::game::TurnStep;
@@ -548,21 +548,11 @@ pub fn prophetic_titan() -> CardDefinition {
         amount: Value::Const(4),
         to: target_any(),
     };
-    let dig = Effect::LookPickToHand {
-        then_if_picked: None,
+    let dig = Effect::LookPickToHand(Box::new(LookPick {
         who: PlayerRef::You,
         count: Value::Const(4),
-        rest_to_graveyard: false,
-        pick_filter: None,
-        take: None,
-        to_battlefield: false,
-        gain_life_if_pick: None,
-        gain_life_greatest_power_rest: false,
-        optional: false,
-        picked_lands_to_battlefield: false,
-        rest_bottom_random: false,
-        rest_to_exile: false,
-    };
+    ..Default::default()
+}));
     CardDefinition {
         name: "Prophetic Titan",
         cost: cost(&[generic(4), u(), r()]),

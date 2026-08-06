@@ -12,7 +12,7 @@ use crate::card::{
 };
 use crate::card::{EventKind, EventScope, EventSpec};
 use crate::effect::shortcut::{etb, gain_life, on_dies, target, target_filtered};
-use crate::effect::{Duration, ManaPayload, PlayerRef, StaticEffect, ZoneDest};
+use crate::effect::{LookPick, Duration, ManaPayload, PlayerRef, StaticEffect, ZoneDest};
 use crate::mana::{Color, b, cost, g, generic, hybrid, r, u, w, x};
 
 // ── Lessons ──────────────────────────────────────────────────────────────────
@@ -31,21 +31,14 @@ pub fn basic_conjuration() -> CardDefinition {
             ..Default::default()
         },
         effect: Effect::Seq(vec![
-            Effect::LookPickToHand {
-                then_if_picked: None,
+            Effect::LookPickToHand(Box::new(LookPick {
                 who: PlayerRef::You,
                 count: Value::Const(6),
-                rest_to_graveyard: false,
                 pick_filter: Some(SelectionRequirement::Creature),
-                take: None,
-                to_battlefield: false,
-                gain_life_if_pick: None,
-                gain_life_greatest_power_rest: false,
                 optional: true,
-                picked_lands_to_battlefield: false,
                 rest_bottom_random: true,
-                rest_to_exile: false,
-            },
+    ..Default::default()
+})),
             gain_life(3),
         ]),
         ..Default::default()
@@ -588,21 +581,13 @@ pub fn bond_of_flourishing() -> CardDefinition {
         cost: cost(&[generic(1), g()]),
         card_types: vec![CardType::Sorcery],
         effect: Effect::Seq(vec![
-            Effect::LookPickToHand {
-                then_if_picked: None,
+            Effect::LookPickToHand(Box::new(LookPick {
                 who: PlayerRef::You,
                 count: Value::Const(3),
-                rest_to_graveyard: false,
                 pick_filter: Some(SelectionRequirement::Permanent),
-                take: None,
-                to_battlefield: false,
-                gain_life_if_pick: None,
-                gain_life_greatest_power_rest: false,
                 optional: true,
-                picked_lands_to_battlefield: false,
-                rest_bottom_random: false,
-                rest_to_exile: false,
-            },
+    ..Default::default()
+})),
             gain_life(3),
         ]),
         ..Default::default()
@@ -1308,8 +1293,7 @@ pub fn the_biblioplex() -> CardDefinition {
                     Predicate::ValueEquals(Value::HandSizeOf(PlayerRef::You), Value::Const(0)),
                     Predicate::ValueEquals(Value::HandSizeOf(PlayerRef::You), Value::Const(7)),
                 ])),
-                effect: Effect::LookPickToHand {
-                    then_if_picked: None,
+                effect: Effect::LookPickToHand(Box::new(LookPick {
                     who: PlayerRef::You,
                     count: Value::Const(1),
                     // Unpicked top card is binned (the "you may" collapses to bin).
@@ -1318,15 +1302,9 @@ pub fn the_biblioplex() -> CardDefinition {
                         SelectionRequirement::HasCardType(CardType::Instant)
                             .or(SelectionRequirement::HasCardType(CardType::Sorcery)),
                     ),
-                    take: None,
-                    to_battlefield: false,
-                    gain_life_if_pick: None,
-                    gain_life_greatest_power_rest: false,
                     optional: true,
-                    picked_lands_to_battlefield: false,
-                    rest_bottom_random: false,
-                    rest_to_exile: false,
-                },
+    ..Default::default()
+})),
                 ..Default::default()
             },
         ],

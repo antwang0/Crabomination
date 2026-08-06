@@ -17,7 +17,7 @@ use crate::effect::shortcut::{
     etb, etb_drain, etb_gain_life, magecraft, magecraft_drain_each_opp, magecraft_self_pump,
     target_filtered,
 };
-use crate::effect::{Duration, ManaPayload, PlayerRef, StaticAbility, StaticEffect, ZoneDest};
+use crate::effect::{LookPick, Duration, ManaPayload, PlayerRef, StaticAbility, StaticEffect, ZoneDest};
 use crate::mana::{Color, ManaCost, b, cost, g, generic, r, u, w};
 
 // ── Bookwurm ────────────────────────────────────────────────────────────────
@@ -770,22 +770,11 @@ pub fn quandrix_quickener() -> CardDefinition {
         cost: cost(&[g(), u()]),
         card_types: vec![CardType::Instant],
         effect: Effect::Seq(vec![
-            Effect::LookPickToHand {
-                then_if_picked: None,
+            Effect::LookPickToHand(Box::new(LookPick {
                 who: PlayerRef::You,
                 count: Value::Const(3),
-                rest_to_graveyard: false,
-                pick_filter: None,
-
-                take: None,
-                to_battlefield: false,
-                gain_life_if_pick: None,
-                gain_life_greatest_power_rest: false,
-                optional: false,
-                picked_lands_to_battlefield: false,
-                rest_bottom_random: false,
-                rest_to_exile: false,
-            },
+    ..Default::default()
+})),
             Effect::Untap {
                 what: target_filtered(
                     SelectionRequirement::Land.and(SelectionRequirement::ControlledByYou),

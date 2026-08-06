@@ -7,7 +7,7 @@ use crate::card::{
     StaticAbility, StaticEffect, Subtypes, TokenDefinition, TriggeredAbility, Value,
 };
 use crate::effect::shortcut::{etb, on_attack, on_dies, target_any, target_filtered};
-use crate::effect::{
+use crate::effect::{LookPick, 
     Duration, Effect, EventKind, EventScope, EventSpec, PlayerRef, Predicate, Selector, ZoneDest,
     ZoneRef,
 };
@@ -1858,21 +1858,16 @@ pub fn sliver_hive() -> CardDefinition {
 pub fn genesis_hydra() -> CardDefinition {
     CardDefinition {
         enters_with_counters: Some((CounterType::PlusOnePlusOne, Value::XFromCost)),
-        triggered_abilities: vec![crate::effect::shortcut::on_cast(Effect::LookPickToHand {
-            then_if_picked: None,
+        triggered_abilities: vec![crate::effect::shortcut::on_cast(Effect::LookPickToHand(Box::new(LookPick {
             who: PlayerRef::You,
             count: Value::XFromCost,
-            rest_to_graveyard: false,
             pick_filter: Some(R::Nonland.and(R::ManaValueAtMostXFromCost)),
             take: Some(Value::Const(1)),
             to_battlefield: true,
-            gain_life_if_pick: None,
-            gain_life_greatest_power_rest: false,
             optional: true,
-            picked_lands_to_battlefield: false,
             rest_bottom_random: true,
-            rest_to_exile: false,
-        })],
+    ..Default::default()
+})))],
         ..creature(
             "Genesis Hydra",
             cost(&[x(), g(), g()]),

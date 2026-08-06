@@ -8,7 +8,7 @@ use crate::card::{
     TokenDefinition, TriggeredAbility, Value,
 };
 use crate::effect::shortcut::{etb, investigate, modular_dies, outlast, target_filtered};
-use crate::effect::{
+use crate::effect::{LookPick, 
     Duration, Effect, LibraryPosition, PlayerRef, Predicate, StaticEffect, ZoneDest,
 };
 use crate::mana::{Color, b, cost, g, generic, hybrid, r, u, w};
@@ -270,21 +270,12 @@ pub fn lonis_cryptozoologist() -> CardDefinition {
 /// Carth the Lion — {2}{B}{G} 3/5. ETB / your planeswalker dies: dig 7 for a
 /// planeswalker; your loyalty abilities cost an additional [+1].
 pub fn carth_the_lion() -> CardDefinition {
-    let dig = Effect::LookPickToHand {
-        then_if_picked: None,
+    let dig = Effect::LookPickToHand(Box::new(LookPick {
         who: PlayerRef::You,
         count: Value::Const(7),
-        rest_to_graveyard: false,
         pick_filter: Some(R::Planeswalker),
-        take: None,
-        to_battlefield: false,
-        gain_life_if_pick: None,
-        gain_life_greatest_power_rest: false,
-        optional: false,
-        picked_lands_to_battlefield: false,
-        rest_bottom_random: false,
-        rest_to_exile: false,
-    };
+    ..Default::default()
+}));
     CardDefinition {
         name: "Carth the Lion",
         cost: cost(&[generic(2), b(), g()]),

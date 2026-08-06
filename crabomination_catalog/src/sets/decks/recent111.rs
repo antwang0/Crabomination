@@ -5,7 +5,7 @@ use crate::card::{
     ActivatedAbility, CardDefinition, CardType, CreatureType, EventKind, EventScope, EventSpec,
     Keyword, Predicate, SelectionRequirement, StaticAbility, Subtypes, Supertype, TriggeredAbility,
 };
-use crate::effect::{
+use crate::effect::{LookPick, 
     Duration, Effect, ManaPayload, PlayerRef, Selector, StaticEffect, Value, ZoneDest,
 };
 use crate::mana::{Color, SpendRestriction, b, cost, g, generic, r, u};
@@ -340,24 +340,16 @@ pub fn harald_king_of_skemfar() -> CardDefinition {
         keywords: vec![Keyword::Menace],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-            effect: Effect::LookPickToHand {
-                then_if_picked: None,
+            effect: Effect::LookPickToHand(Box::new(LookPick {
                 who: PlayerRef::You,
                 count: Value::Const(5),
-                rest_to_graveyard: false,
                 pick_filter: Some(
                     SelectionRequirement::HasCreatureType(CreatureType::Elf)
                         .or(SelectionRequirement::HasCreatureType(CreatureType::Warrior)),
                 ),
                 take: Some(Value::Const(1)),
-                to_battlefield: false,
-                gain_life_if_pick: None,
-                gain_life_greatest_power_rest: false,
-                optional: false,
-                picked_lands_to_battlefield: false,
-                rest_bottom_random: false,
-                rest_to_exile: false,
-            },
+    ..Default::default()
+})),
         }],
         ..Default::default()
     }
@@ -480,25 +472,17 @@ pub fn oath_of_nissa() -> CardDefinition {
         supertypes: vec![Supertype::Legendary],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-            effect: Effect::LookPickToHand {
-                then_if_picked: None,
+            effect: Effect::LookPickToHand(Box::new(LookPick {
                 who: PlayerRef::You,
                 count: Value::Const(3),
-                rest_to_graveyard: false,
                 pick_filter: Some(
                     SelectionRequirement::Creature
                         .or(SelectionRequirement::Land)
                         .or(SelectionRequirement::Planeswalker),
                 ),
                 take: Some(Value::Const(1)),
-                to_battlefield: false,
-                gain_life_if_pick: None,
-                gain_life_greatest_power_rest: false,
-                optional: false,
-                picked_lands_to_battlefield: false,
-                rest_bottom_random: false,
-                rest_to_exile: false,
-            },
+    ..Default::default()
+})),
         }],
         ..Default::default()
     }

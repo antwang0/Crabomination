@@ -556,6 +556,9 @@ pub enum Value {
     /// The greatest mana value among cards in exile (Ulamog, the Defiler's
     /// enters-with-counters count).
     GreatestManaValueInExile,
+    /// "The number of different color pairs among permanents you control that
+    /// are exactly two colors" (Niv-Mizzet, Guildpact).
+    DistinctTwoColorPairsControlled(PlayerRef),
     /// The greatest mana value among cards in `who`'s graveyard (Wick's Patrol's
     /// `-X/-X` where X is the greatest MV in your graveyard). 0 if empty.
     GreatestManaValueInGraveyard(PlayerRef),
@@ -1613,6 +1616,12 @@ pub enum Predicate {
     /// `Player.cards_to_graveyard_this_turn`). Ravenous Trap's free
     /// alt-cost gate.
     CardsToGraveyardThisTurnAtLeast { who: PlayerRef, at_least: u32 },
+    /// "[N] or more creature cards were put into graveyards from anywhere this
+    /// turn" (Case of the Gorgon's Kiss). Counts every player's tally.
+    CreatureCardsToGraveyardThisTurnAtLeast(u32),
+    /// "[N] or more sources you controlled dealt damage this turn" (Case of
+    /// the Burning Masks). Counts distinct sources per controller-at-the-time.
+    SourcesYouControlledDealtDamageThisTurnAtLeast(u32),
     /// `who` has cast at least `at_least` spells on the current turn.
     /// Backed by `Player.spells_cast_this_turn`. Used by Burrog Barrage
     /// ("if you've cast another instant or sorcery spell this turn, …")
@@ -4202,56 +4211,7 @@ pub enum Effect {
     /// (Satyr Wayfinder — "you may put a *land* card into your hand"); the
     /// rest (including non-eligible cards) follow `rest_to_graveyard`.
     /// `None` means any revealed card is eligible.
-    LookPickToHand {
-        who: PlayerRef,
-        count: Value,
-        #[serde(default)]
-        rest_to_graveyard: bool,
-        #[serde(default)]
-        pick_filter: Option<SelectionRequirement>,
-        /// How many cards to put into hand (default 1). When >1 the controller
-        /// picks the first via the decision and the rest auto-fill from the
-        /// remaining eligible revealed cards. Consult the Star Charts kicked.
-        #[serde(default)]
-        take: Option<Value>,
-        /// Picks go onto the battlefield instead of to hand (Collected
-        /// Company's "put them onto the battlefield").
-        #[serde(default)]
-        to_battlefield: bool,
-        /// "If you put a [filter] card into your hand this way, you gain N
-        /// life" (Chrome Courier's artifact rider).
-        #[serde(default)]
-        gain_life_if_pick: Option<(SelectionRequirement, u32)>,
-        /// "You gain life equal to the greatest power among creature cards
-        /// put into your graveyard this way" (Discerning Taste). Only
-        /// meaningful with `rest_to_graveyard`.
-        #[serde(default)]
-        gain_life_greatest_power_rest: bool,
-        /// Printed "you MAY put ... into your hand": an explicit empty pick
-        /// from a UI player is honored as a decline (the whole revealed set
-        /// follows the rest-routing), and a partial pick (fewer than `take`)
-        /// is respected rather than topped up. Mandatory picks (`false`)
-        /// auto-fill top-down as before, and the AutoDecider harness keeps
-        /// the fill either way so bot play is unchanged.
-        #[serde(default)]
-        optional: bool,
-        /// "If you put a card into your hand this way, [effect]" — runs once
-        /// after the picks land (Sidequest: Catch a Fish's Food + transform).
-        #[serde(default)]
-        then_if_picked: Option<Box<Effect>>,
-        /// Typed routing (Zimone's Experiment): picked LAND cards go onto
-        /// the battlefield tapped while other picks go to hand.
-        #[serde(default)]
-        picked_lands_to_battlefield: bool,
-        /// The non-picked rest is bottomed in a genuinely RANDOM order
-        /// (printed "in a random order") instead of revealed order.
-        #[serde(default)]
-        rest_bottom_random: bool,
-        /// "Put one into your hand and exile the rest" (Eye of Yawgmoth).
-        /// Takes precedence over `rest_to_graveyard`.
-        #[serde(default)]
-        rest_to_exile: bool,
-    },
+    LookPickToHand(Box<LookPick>),
     /// "Look at the top `count` cards; put one back on top and the rest into
     /// your graveyard" (Sage of Days). The controller (via the `SearchLibrary`
     /// picker) keeps one revealed card on top; the rest are milled. Shares the
@@ -4557,6 +4517,10 @@ pub enum Effect {
     /// Register a delayed trigger sacrificing each resolved permanent at the
     /// beginning of the controller's next upkeep (Firion's copy token).
     SacrificeAtNextUpkeep { what: Selector },
+    /// "Sacrifice them at the beginning of the next end step" (Pull). The
+    /// selector is resolved now; each hit gets its own CR 603.7a delayed
+    /// trigger.
+    SacrificeAtNextEndStep { what: Selector },
     /// CR 603.7a — "At the beginning of your next upkeep, `body`." A general
     /// one-shot delayed trigger bound to the resolving source (Giant Slug,
     /// Hazezon Tamar).
@@ -5155,6 +5119,14 @@ pub enum Effect {
     /// Pushed onto `Player.turn_spell_discounts`, consulted by
     /// `cost_reduction_for_spell`, cleared at cleanup (CR 514.2).
     SpellsCostLessThisTurn { filter: SelectionRequirement, amount: u32 },
+    /// "Face-down spells you cast this turn cost {amount} less to cast"
+    /// (Goblin Maskmaker). Bumps `Player.face_down_discount_this_turn`, read
+    /// by `face_down_cast_cost` and cleared at cleanup (CR 514.2).
+    FaceDownSpellsCostLessThisTurn { amount: u32 },
+    /// "That spell gains [keywords]" — grants keywords to a spell on the
+    /// stack for as long as it's there (Judith, Carnage Connoisseur).
+    /// Recorded in `GameState.spell_keyword_grants`.
+    GrantKeywordsToSpell { what: Selector, keywords: Vec<Keyword> },
     /// "Exile target [permanent], then search its owner's graveyard, hand,
     /// and library for any number of cards with the same name as that
     /// [permanent] and exile them. Then that player shuffles." Crumble to
@@ -6853,6 +6825,10 @@ pub enum Effect {
         source_zone: crate::card::Zone,
         #[serde(default)]
         filter: Option<SelectionRequirement>,
+        /// Cap on how many may be cast ("a spell from each opponent's
+        /// graveyard" — Jetsam). `None` is the printed "any number".
+        #[serde(default)]
+        cap: Option<Value>,
     },
     /// "You may cast a [filter] spell from your hand without paying its
     /// mana cost" (Maelstrom Archangel; Oracle of Bones restricts to
@@ -9171,3 +9147,90 @@ pub mod shortcut;
 #[cfg(test)]
 #[path = "tests/effect_query.rs"]
 mod tests;
+
+/// Payload for [`Effect::LookPickToHand`] — boxed so the ~160 card call sites
+/// set only the fields that differ from [`LookPick::default`].
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(bound = "")]
+pub struct LookPick {
+    pub who: PlayerRef,
+    pub count: Value,
+    #[serde(default)]
+    pub rest_to_graveyard: bool,
+    #[serde(default)]
+    pub pick_filter: Option<SelectionRequirement>,
+    /// How many cards to put into hand (default 1). When >1 the controller
+    /// picks the first via the decision and the rest auto-fill from the
+    /// remaining eligible revealed cards. Consult the Star Charts kicked.
+    #[serde(default)]
+    pub take: Option<Value>,
+    /// Picks go onto the battlefield instead of to hand (Collected
+    /// Company's "put them onto the battlefield").
+    #[serde(default)]
+    pub to_battlefield: bool,
+    /// "If you put a [filter] card into your hand this way, you gain N
+    /// life" (Chrome Courier's artifact rider).
+    #[serde(default)]
+    pub gain_life_if_pick: Option<(SelectionRequirement, u32)>,
+    /// "You gain life equal to the greatest power among creature cards
+    /// put into your graveyard this way" (Discerning Taste). Only
+    /// meaningful with `rest_to_graveyard`.
+    #[serde(default)]
+    pub gain_life_greatest_power_rest: bool,
+    /// Printed "you MAY put ... into your hand": an explicit empty pick
+    /// from a UI player is honored as a decline (the whole revealed set
+    /// follows the rest-routing), and a partial pick (fewer than `take`)
+    /// is respected rather than topped up. Mandatory picks (`false`)
+    /// auto-fill top-down as before, and the AutoDecider harness keeps
+    /// the fill either way so bot play is unchanged.
+    #[serde(default)]
+    pub optional: bool,
+    /// "If you put a card into your hand this way, [effect]" — runs once
+    /// after the picks land (Sidequest: Catch a Fish's Food + transform).
+    #[serde(default)]
+    pub then_if_picked: Option<Box<Effect>>,
+    /// Typed routing (Zimone's Experiment): picked LAND cards go onto
+    /// the battlefield tapped while other picks go to hand.
+    #[serde(default)]
+    pub picked_lands_to_battlefield: bool,
+    /// The non-picked rest is bottomed in a genuinely RANDOM order
+    /// (printed "in a random order") instead of revealed order.
+    #[serde(default)]
+    pub rest_bottom_random: bool,
+    /// "Put one into your hand and exile the rest" (Eye of Yawgmoth).
+    /// Takes precedence over `rest_to_graveyard`.
+    #[serde(default)]
+    pub rest_to_exile: bool,
+
+    /// Picks matching this filter go onto the battlefield instead of to hand
+    /// (Break Out's mana-value-2-or-less creature). Applied per pick, after
+    /// `to_battlefield` and `picked_lands_to_battlefield`.
+    #[serde(default)]
+    pub picked_matching_to_battlefield: Option<SelectionRequirement>,
+    /// Picks routed to the battlefield gain haste until end of turn
+    /// (Break Out).
+    #[serde(default)]
+    pub battlefield_haste: bool,
+}
+
+impl Default for LookPick {
+    fn default() -> Self {
+        Self {
+            who: PlayerRef::You,
+            count: Value::ONE,
+            rest_to_graveyard: false,
+            pick_filter: None,
+            take: None,
+            to_battlefield: false,
+            gain_life_if_pick: None,
+            gain_life_greatest_power_rest: false,
+            optional: false,
+            then_if_picked: None,
+            picked_lands_to_battlefield: false,
+            rest_bottom_random: false,
+            rest_to_exile: false,
+            picked_matching_to_battlefield: None,
+            battlefield_haste: false,
+        }
+    }
+}

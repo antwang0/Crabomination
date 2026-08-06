@@ -15,7 +15,7 @@ use crate::effect::shortcut::{
     deal, drain, draw, each_opponent, eerie, etb, gain_life, on_attack, pump_target,
     target_filtered,
 };
-use crate::effect::{Duration, PlayerRef, ZoneDest};
+use crate::effect::{LookPick, Duration, PlayerRef, ZoneDest};
 use crate::mana::{Color, b, cost, g, generic, r, u, w, x};
 
 /// "target creature or Vehicle" target filter.
@@ -1591,21 +1591,12 @@ pub fn commune_with_evil() -> CardDefinition {
         cost: cost(&[generic(2), b()]),
         card_types: vec![CardType::Sorcery],
         effect: Effect::Seq(vec![
-            Effect::LookPickToHand {
-                then_if_picked: None,
+            Effect::LookPickToHand(Box::new(LookPick {
                 who: PlayerRef::You,
                 count: Value::Const(4),
                 rest_to_graveyard: true,
-                pick_filter: None,
-                take: None,
-                to_battlefield: false,
-                gain_life_if_pick: None,
-                gain_life_greatest_power_rest: false,
-                optional: false,
-                picked_lands_to_battlefield: false,
-                rest_bottom_random: false,
-                rest_to_exile: false,
-            },
+    ..Default::default()
+})),
             gain_life(3),
         ]),
         ..Default::default()

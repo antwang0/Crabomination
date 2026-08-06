@@ -7,7 +7,7 @@ use crate::card::{
     TriggeredAbility, Value,
 };
 use crate::effect::shortcut::{etb, heroic, target_any, target_filtered};
-use crate::effect::{
+use crate::effect::{LookPick, 
     Duration, Effect, LibraryPosition, ManaPayload, PlayerRef, Selector, ZoneDest,
 };
 use crate::mana::{Color, ManaCost, b, cost, g, generic, r, u, w, x};
@@ -1308,21 +1308,14 @@ pub fn heroes_podium() -> CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             tap_cost: true,
             mana_cost: cost(&[x()]),
-            effect: Effect::LookPickToHand {
-                then_if_picked: None,
+            effect: Effect::LookPickToHand(Box::new(LookPick {
                 who: PlayerRef::You,
                 count: Value::XFromCost,
-                rest_to_graveyard: false,
                 pick_filter: Some(R::Creature.and(R::HasSupertype(Supertype::Legendary))),
-                take: None,
-                to_battlefield: false,
-                gain_life_if_pick: None,
-                gain_life_greatest_power_rest: false,
                 optional: true,
-                picked_lands_to_battlefield: false,
                 rest_bottom_random: true,
-                rest_to_exile: false,
-            },
+    ..Default::default()
+})),
             ..Default::default()
         }],
         ..Default::default()

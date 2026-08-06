@@ -1510,6 +1510,12 @@ pub enum PendingEffectState {
         /// effect's source so `Selector::This` reaches the card that asked.
         #[serde(default)]
         then_if_picked: Option<Box<crate::effect::Effect>>,
+        /// Picks matching this filter route to the battlefield (Break Out).
+        #[serde(default)]
+        picked_matching_to_battlefield: Option<crate::card::SelectionRequirement>,
+        /// Battlefield-routed picks gain haste until end of turn (Break Out).
+        #[serde(default)]
+        battlefield_haste: bool,
         /// Source of the originating `LookPickToHand`, for `then_if_picked`.
         #[serde(default)]
         source: Option<CardId>,

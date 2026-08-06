@@ -6,7 +6,7 @@ use crate::card::{
     SelectionRequirement as R, StaticAbility, StaticEffect, Subtypes, TriggeredAbility, Value,
 };
 use crate::effect::shortcut::etb;
-use crate::effect::{Effect, PlayerRef, Selector, ZoneDest};
+use crate::effect::{LookPick, Effect, PlayerRef, Selector, ZoneDest};
 use crate::mana::{b, cost, g, generic, r, u, w};
 
 /// "You've completed a dungeon" (CR 701.49d).
@@ -640,21 +640,12 @@ pub fn ellywick_tumblestrum() -> CardDefinition {
             },
             LoyaltyAbility {
                 loyalty_cost: -2,
-                effect: Effect::LookPickToHand {
-                    then_if_picked: None,
+                effect: Effect::LookPickToHand(Box::new(LookPick {
                     who: PlayerRef::You,
                     count: Value::Const(6),
-                    rest_to_graveyard: false,
                     pick_filter: Some(R::Creature),
-                    take: None,
-                    to_battlefield: false,
-                    gain_life_if_pick: None,
-                    gain_life_greatest_power_rest: false,
-                    optional: false,
-                    picked_lands_to_battlefield: false,
-                    rest_bottom_random: false,
-                    rest_to_exile: false,
-                },
+    ..Default::default()
+})),
                 ..Default::default()
             },
             LoyaltyAbility {

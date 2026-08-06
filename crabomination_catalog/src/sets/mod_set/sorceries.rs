@@ -4,7 +4,7 @@ use crate::card::{
     CardDefinition, CardType, Effect, Keyword, LandType, SelectionRequirement, Subtypes,
 };
 use crate::effect::shortcut::target_filtered;
-use crate::effect::{Duration, PlayerRef, Selector, Value, ZoneDest};
+use crate::effect::{LookPick, Duration, PlayerRef, Selector, Value, ZoneDest};
 use crate::game::effects::treasure_token;
 use crate::mana::{ManaCost, b, cost, g, generic, r, u, w, x};
 
@@ -276,21 +276,13 @@ pub fn rakshasas_bargain() -> CardDefinition {
             mono_hybrid(2, Color::Blue),
         ]),
         card_types: vec![CardType::Instant],
-        effect: Effect::LookPickToHand {
-            then_if_picked: None,
+        effect: Effect::LookPickToHand(Box::new(LookPick {
             who: PlayerRef::You,
             count: Value::Const(4),
             rest_to_graveyard: true,
-            pick_filter: None,
             take: Some(Value::Const(2)),
-            to_battlefield: false,
-            gain_life_if_pick: None,
-            gain_life_greatest_power_rest: false,
-            optional: false,
-            picked_lands_to_battlefield: false,
-            rest_bottom_random: false,
-            rest_to_exile: false,
-        },
+    ..Default::default()
+})),
         ..Default::default()
     }
 }
@@ -983,21 +975,13 @@ pub fn commune_with_nature() -> CardDefinition {
         name: "Commune with Nature",
         cost: cost(&[g()]),
         card_types: vec![CardType::Sorcery],
-        effect: Effect::LookPickToHand {
-            then_if_picked: None,
+        effect: Effect::LookPickToHand(Box::new(LookPick {
             who: PlayerRef::You,
             count: Value::Const(5),
-            rest_to_graveyard: false,
             pick_filter: Some(SelectionRequirement::Creature),
-            take: None,
-            to_battlefield: false,
-            gain_life_if_pick: None,
-            gain_life_greatest_power_rest: false,
             optional: true,
-            picked_lands_to_battlefield: false,
-            rest_bottom_random: false,
-            rest_to_exile: false,
-        },
+    ..Default::default()
+})),
         ..Default::default()
     }
 }

@@ -59,7 +59,7 @@ fn keyword_name(kw: &Keyword) -> Option<String> {
         Keyword::Indestructible => "Indestructible",
         Keyword::Hexproof => "Hexproof",
         Keyword::HexproofFromColor(_) => "Hexproof from",
-        Keyword::HexproofFromMonocolored => "Hexproof from",
+        Keyword::HexproofFromMonocolored | Keyword::HexproofFromMulticolored => "Hexproof from",
         Keyword::HexproofExceptColors(_) => "Hexproof except",
         Keyword::HexproofFromAbilities => "Hexproof from abilities",
         Keyword::Shroud => "Shroud",
@@ -195,7 +195,9 @@ fn keyword_name(kw: &Keyword) -> Option<String> {
         | Keyword::CanBlockAnyNumber
         | Keyword::CantAttack | Keyword::CantBeAttacked | Keyword::CantActivateAbilities
         | Keyword::MustBeBlocked | Keyword::AllMustBlock
-        | Keyword::MustAttack | Keyword::MustBlock | Keyword::AssignsDamageAsThoughUnblocked
+        | Keyword::MustAttack | Keyword::MustBlock | Keyword::MustAttackOrBlock
+        | Keyword::CantBlockCreatureType(_)
+        | Keyword::AssignsDamageAsThoughUnblocked
         | Keyword::CantAttackUnlessDefenderIsMonarch
         | Keyword::CanAttackOnlyIfDefenderControls(_)
         | Keyword::CanAttackOnlyIfYouControl(_)

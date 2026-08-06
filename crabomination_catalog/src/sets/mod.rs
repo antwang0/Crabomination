@@ -385,6 +385,7 @@ pub mod mh3c;
 pub mod mh3d;
 pub mod mh3e;
 pub mod mkm;
+pub mod mkm2;
 pub mod mmq;
 pub mod mmq2;
 pub mod mmq3;

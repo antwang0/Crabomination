@@ -8,7 +8,7 @@ use crate::card::{
     StaticEffect, Subtypes, TokenDefinition, TriggeredAbility, Value,
 };
 use crate::effect::shortcut::{etb, heroic, monstrosity, on_becomes_monstrous, target_filtered};
-use crate::effect::{
+use crate::effect::{LookPick, 
     AttackingTokenCleanup, Duration, Effect, EventKind, EventScope, EventSpec, ExtraManaKind,
     PlayerRef, Predicate, Selector, ZoneDest, ZoneRef,
 };
@@ -1422,21 +1422,15 @@ pub fn kruphixs_insight() -> CardDefinition {
         "Kruphix's Insight",
         cost(&[generic(2), g()]),
         CardType::Sorcery,
-        Effect::LookPickToHand {
-            then_if_picked: None,
+        Effect::LookPickToHand(Box::new(LookPick {
             who: PlayerRef::You,
             count: Value::Const(6),
             rest_to_graveyard: true,
             pick_filter: Some(R::Enchantment),
             take: Some(Value::Const(3)),
-            to_battlefield: false,
-            gain_life_if_pick: None,
-            gain_life_greatest_power_rest: false,
             optional: true,
-            picked_lands_to_battlefield: false,
-            rest_bottom_random: false,
-            rest_to_exile: false,
-        },
+    ..Default::default()
+})),
     )
 }
 

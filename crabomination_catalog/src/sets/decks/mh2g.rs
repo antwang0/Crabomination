@@ -8,7 +8,7 @@ use crate::card::{
     TriggeredAbility, Value,
 };
 use crate::effect::shortcut::{draw, etb, target_filtered};
-use crate::effect::{Duration, Effect, PlayerRef, StaticEffect};
+use crate::effect::{LookPick, Duration, Effect, PlayerRef, StaticEffect};
 use crate::mana::{b, cost, g, generic, r, u, x};
 
 use SelectionRequirement as R;
@@ -94,21 +94,13 @@ pub fn chrome_courier() -> CardDefinition {
         power: 1,
         toughness: 1,
         keywords: vec![Keyword::Flying],
-        triggered_abilities: vec![etb(Effect::LookPickToHand {
-            then_if_picked: None,
+        triggered_abilities: vec![etb(Effect::LookPickToHand(Box::new(LookPick {
             who: PlayerRef::You,
             count: Value::Const(2),
             rest_to_graveyard: true,
-            pick_filter: None,
-            take: None,
-            to_battlefield: false,
             gain_life_if_pick: Some((R::Artifact, 3)),
-            gain_life_greatest_power_rest: false,
-            optional: false,
-            picked_lands_to_battlefield: false,
-            rest_bottom_random: false,
-            rest_to_exile: false,
-        })],
+    ..Default::default()
+})))],
         ..Default::default()
     }
 }
@@ -120,21 +112,13 @@ pub fn discerning_taste() -> CardDefinition {
         name: "Discerning Taste",
         cost: cost(&[generic(2), b()]),
         card_types: vec![CardType::Sorcery],
-        effect: Effect::LookPickToHand {
-            then_if_picked: None,
+        effect: Effect::LookPickToHand(Box::new(LookPick {
             who: PlayerRef::You,
             count: Value::Const(4),
             rest_to_graveyard: true,
-            pick_filter: None,
-            take: None,
-            to_battlefield: false,
-            gain_life_if_pick: None,
             gain_life_greatest_power_rest: true,
-            optional: false,
-            picked_lands_to_battlefield: false,
-            rest_bottom_random: false,
-            rest_to_exile: false,
-        },
+    ..Default::default()
+})),
         ..Default::default()
     }
 }

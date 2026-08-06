@@ -8,7 +8,7 @@ use crate::card::{
     TokenDefinition, TriggeredAbility, Value,
 };
 use crate::effect::shortcut::{cast_is_noncreature, etb};
-use crate::effect::{Duration, PlayerRef};
+use crate::effect::{LookPick, Duration, PlayerRef};
 use crate::mana::{Color, ManaCost, ManaSymbol, cost, generic, hybrid, r, u, w};
 
 fn thopter_token() -> TokenDefinition {
@@ -109,21 +109,13 @@ pub fn ingenious_smith() -> CardDefinition {
         power: 1,
         toughness: 1,
         triggered_abilities: vec![
-            etb(Effect::LookPickToHand {
-                then_if_picked: None,
+            etb(Effect::LookPickToHand(Box::new(LookPick {
                 who: PlayerRef::You,
                 count: Value::Const(4),
-                rest_to_graveyard: false,
                 pick_filter: Some(R::Artifact),
-                take: None,
-                to_battlefield: false,
-                gain_life_if_pick: None,
-                gain_life_greatest_power_rest: false,
                 optional: true,
-                picked_lands_to_battlefield: false,
-                rest_bottom_random: false,
-                rest_to_exile: false,
-            }),
+    ..Default::default()
+}))),
             TriggeredAbility {
                 event: EventSpec::new(EventKind::EntersBattlefield, EventScope::AnotherOfYours)
                     .with_filter(Predicate::EntityMatches {

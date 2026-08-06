@@ -11,7 +11,7 @@ use crate::effect::shortcut::{
     adapt, battle_cry, etb, evolve, exalted, on_attack, on_cast, on_dies, target_any,
     target_filtered,
 };
-use crate::effect::{
+use crate::effect::{LookPick, 
     Duration, Effect, ManaPayload, PlayerRef, Selector, StaticEffect, Value, ZoneDest,
 };
 use crate::mana::{Color, b, colorless, cost, g, generic, hybrid, r, u, w};
@@ -882,21 +882,12 @@ pub fn monumental_henge() -> CardDefinition {
             ActivatedAbility {
                 mana_cost: cost(&[generic(2), w(), w()]),
                 tap_cost: true,
-                effect: Effect::LookPickToHand {
-                    then_if_picked: None,
+                effect: Effect::LookPickToHand(Box::new(LookPick {
                     who: PlayerRef::You,
                     count: Value::Const(5),
-                    rest_to_graveyard: false,
                     pick_filter: Some(historic()),
-                    take: None,
-                    to_battlefield: false,
-                    gain_life_if_pick: None,
-                    gain_life_greatest_power_rest: false,
-                    optional: false,
-                    picked_lands_to_battlefield: false,
-                    rest_bottom_random: false,
-                    rest_to_exile: false,
-                },
+    ..Default::default()
+})),
                 ..Default::default()
             },
         ],
@@ -1394,21 +1385,12 @@ pub fn rosecot_knight() -> CardDefinition {
         power: 3,
         toughness: 4,
         keywords: vec![Keyword::Vigilance],
-        triggered_abilities: vec![etb(Effect::LookPickToHand {
-            then_if_picked: None,
+        triggered_abilities: vec![etb(Effect::LookPickToHand(Box::new(LookPick {
             who: PlayerRef::You,
             count: Value::Const(6),
-            rest_to_graveyard: false,
             pick_filter: Some(R::Artifact.or(R::Enchantment)),
-            take: None,
-            to_battlefield: false,
-            gain_life_if_pick: None,
-            gain_life_greatest_power_rest: false,
-            optional: false,
-            picked_lands_to_battlefield: false,
-            rest_bottom_random: false,
-            rest_to_exile: false,
-        })],
+    ..Default::default()
+})))],
         ..Default::default()
     }
 }

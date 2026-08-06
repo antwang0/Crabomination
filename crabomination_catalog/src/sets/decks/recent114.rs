@@ -10,7 +10,7 @@ use crate::card::{
     SelectionRequirement, StaticAbility, Subtypes, Supertype, TokenDefinition, TriggeredAbility,
 };
 use crate::effect::shortcut::target_filtered;
-use crate::effect::{Duration, Effect, PlayerRef, Selector, StaticEffect, Value, ZoneDest};
+use crate::effect::{LookPick, Duration, Effect, PlayerRef, Selector, StaticEffect, Value, ZoneDest};
 use crate::game::TurnStep;
 use crate::mana::{Color, ManaCost, b, cost, g, generic, hybrid, w};
 
@@ -902,21 +902,13 @@ pub fn commune_with_the_gods() -> CardDefinition {
         name: "Commune with the Gods",
         cost: cost(&[generic(1), g()]),
         card_types: vec![CardType::Sorcery],
-        effect: Effect::LookPickToHand {
-            then_if_picked: None,
+        effect: Effect::LookPickToHand(Box::new(LookPick {
             who: PlayerRef::You,
             count: Value::Const(5),
             rest_to_graveyard: true,
             pick_filter: Some(SelectionRequirement::Creature.or(SelectionRequirement::Enchantment)),
-            take: None,
-            to_battlefield: false,
-            gain_life_if_pick: None,
-            gain_life_greatest_power_rest: false,
-            optional: false,
-            picked_lands_to_battlefield: false,
-            rest_bottom_random: false,
-            rest_to_exile: false,
-        },
+    ..Default::default()
+})),
         ..Default::default()
     }
 }

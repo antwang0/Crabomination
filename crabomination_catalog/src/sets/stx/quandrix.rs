@@ -17,7 +17,7 @@ use crate::effect::shortcut::{
     enrage, etb, magecraft, magecraft_draw, magecraft_loot, magecraft_scry, magecraft_self_pump,
     target_filtered,
 };
-use crate::effect::{Duration, PlayerRef, ZoneDest};
+use crate::effect::{LookPick, Duration, PlayerRef, ZoneDest};
 use crate::mana::{Color, ManaCost, cost, g, generic, hybrid, u, x};
 
 // ── Quandrix Apprentice ─────────────────────────────────────────────────────
@@ -43,21 +43,13 @@ pub fn quandrix_apprentice() -> CardDefinition {
         },
         power: 2,
         toughness: 2,
-        triggered_abilities: vec![magecraft(Effect::LookPickToHand {
-            then_if_picked: None,
+        triggered_abilities: vec![magecraft(Effect::LookPickToHand(Box::new(LookPick {
             who: PlayerRef::You,
             count: Value::Const(3),
-            rest_to_graveyard: false,
             pick_filter: Some(SelectionRequirement::Land),
-            take: None,
-            to_battlefield: false,
-            gain_life_if_pick: None,
-            gain_life_greatest_power_rest: false,
             optional: true,
-            picked_lands_to_battlefield: false,
-            rest_bottom_random: false,
-            rest_to_exile: false,
-        })],
+    ..Default::default()
+})))],
         ..Default::default()
     }
 }

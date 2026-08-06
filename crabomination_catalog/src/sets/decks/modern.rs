@@ -18,7 +18,7 @@ use crate::effect::shortcut::{
     each_your_creature, etb, etb_explore, explore, investigate, on_attack, on_dies, on_mutate,
     target_filtered,
 };
-use crate::effect::{Duration, ManaPayload, PlayerRef, Predicate, ZoneDest};
+use crate::effect::{LookPick, Duration, ManaPayload, PlayerRef, Predicate, ZoneDest};
 use crate::mana::{
     Color, ManaCost, ManaSymbol, b, colorless, cost, g, generic, hybrid, phyrexian, r, u, w, x,
 };
@@ -129,21 +129,12 @@ pub fn sleight_of_hand() -> CardDefinition {
         name: "Sleight of Hand",
         cost: cost(&[u()]),
         card_types: vec![CardType::Sorcery],
-        effect: Effect::LookPickToHand {
-            then_if_picked: None,
+        effect: Effect::LookPickToHand(Box::new(LookPick {
             who: PlayerRef::You,
             count: Value::Const(2),
-            rest_to_graveyard: false,
-            pick_filter: None,
-            take: None,
-            to_battlefield: false,
-            gain_life_if_pick: None,
-            gain_life_greatest_power_rest: false,
-            optional: false,
-            picked_lands_to_battlefield: false,
             rest_bottom_random: true,
-            rest_to_exile: false,
-        },
+    ..Default::default()
+})),
         ..Default::default()
     }
 }
@@ -2920,22 +2911,14 @@ pub fn satyr_wayfinder() -> CardDefinition {
         toughness: 1,
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-            effect: Effect::LookPickToHand {
-                then_if_picked: None,
+            effect: Effect::LookPickToHand(Box::new(LookPick {
                 who: PlayerRef::You,
                 count: Value::Const(4),
                 rest_to_graveyard: true,
                 pick_filter: Some(SelectionRequirement::Land),
-
-                take: None,
-                to_battlefield: false,
-                gain_life_if_pick: None,
-                gain_life_greatest_power_rest: false,
                 optional: true,
-                picked_lands_to_battlefield: false,
-                rest_bottom_random: false,
-                rest_to_exile: false,
-            },
+    ..Default::default()
+})),
         }],
         ..Default::default()
     }
@@ -5830,22 +5813,11 @@ pub fn anticipate() -> CardDefinition {
         name: "Anticipate",
         cost: cost(&[generic(1), u()]),
         card_types: vec![CardType::Instant],
-        effect: Effect::LookPickToHand {
-            then_if_picked: None,
+        effect: Effect::LookPickToHand(Box::new(LookPick {
             who: PlayerRef::You,
             count: Value::Const(3),
-            rest_to_graveyard: false,
-            pick_filter: None,
-
-            take: None,
-            to_battlefield: false,
-            gain_life_if_pick: None,
-            gain_life_greatest_power_rest: false,
-            optional: false,
-            picked_lands_to_battlefield: false,
-            rest_bottom_random: false,
-            rest_to_exile: false,
-        },
+    ..Default::default()
+})),
         ..Default::default()
     }
 }
@@ -8440,23 +8412,15 @@ pub fn vivien_reid() -> CardDefinition {
             LoyaltyAbility {
                 x_cost: false,
                 loyalty_cost: 1,
-                effect: Effect::LookPickToHand {
-                    then_if_picked: None,
+                effect: Effect::LookPickToHand(Box::new(LookPick {
                     who: PlayerRef::You,
                     count: Value::Const(4),
-                    rest_to_graveyard: false,
                     pick_filter: Some(
                         SelectionRequirement::Creature.or(SelectionRequirement::Land),
                     ),
-                    take: None,
-                    to_battlefield: false,
-                    gain_life_if_pick: None,
-                    gain_life_greatest_power_rest: false,
                     optional: true,
-                    picked_lands_to_battlefield: false,
-                    rest_bottom_random: false,
-                    rest_to_exile: false,
-                },
+    ..Default::default()
+})),
             },
             LoyaltyAbility {
                 x_cost: false,
@@ -9134,22 +9098,12 @@ pub fn forbidden_alchemy() -> CardDefinition {
         keywords: vec![Keyword::Flashback(ManaCost {
             symbols: vec![ManaSymbol::Generic(6), ManaSymbol::Colored(Color::Black)],
         })],
-        effect: Effect::LookPickToHand {
-            then_if_picked: None,
+        effect: Effect::LookPickToHand(Box::new(LookPick {
             who: PlayerRef::You,
             count: Value::Const(4),
             rest_to_graveyard: true,
-            pick_filter: None,
-
-            take: None,
-            to_battlefield: false,
-            gain_life_if_pick: None,
-            gain_life_greatest_power_rest: false,
-            optional: false,
-            picked_lands_to_battlefield: false,
-            rest_bottom_random: false,
-            rest_to_exile: false,
-        },
+    ..Default::default()
+})),
         ..Default::default()
     }
 }
@@ -10014,22 +9968,12 @@ pub fn glint_nest_crane() -> CardDefinition {
         power: 1,
         toughness: 3,
         keywords: vec![Keyword::Flying],
-        triggered_abilities: vec![etb(Effect::LookPickToHand {
-            then_if_picked: None,
+        triggered_abilities: vec![etb(Effect::LookPickToHand(Box::new(LookPick {
             who: PlayerRef::You,
             count: Value::Const(4),
-            rest_to_graveyard: false,
             pick_filter: Some(SelectionRequirement::Artifact),
-
-            take: None,
-            to_battlefield: false,
-            gain_life_if_pick: None,
-            gain_life_greatest_power_rest: false,
-            optional: false,
-            picked_lands_to_battlefield: false,
-            rest_bottom_random: false,
-            rest_to_exile: false,
-        })],
+    ..Default::default()
+})))],
         ..Default::default()
     }
 }
@@ -11500,22 +11444,12 @@ pub fn strategic_planning() -> CardDefinition {
         name: "Strategic Planning",
         cost: cost(&[generic(1), u()]),
         card_types: vec![CardType::Sorcery],
-        effect: Effect::LookPickToHand {
-            then_if_picked: None,
+        effect: Effect::LookPickToHand(Box::new(LookPick {
             who: PlayerRef::You,
             count: Value::Const(3),
             rest_to_graveyard: true,
-            pick_filter: None,
-
-            take: None,
-            to_battlefield: false,
-            gain_life_if_pick: None,
-            gain_life_greatest_power_rest: false,
-            optional: false,
-            picked_lands_to_battlefield: false,
-            rest_bottom_random: false,
-            rest_to_exile: false,
-        },
+    ..Default::default()
+})),
         ..Default::default()
     }
 }
@@ -13671,21 +13605,12 @@ pub fn faerie_snoop() -> CardDefinition {
         ],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::TurnedFaceUp, EventScope::SelfSource),
-            effect: Effect::LookPickToHand {
-                then_if_picked: None,
+            effect: Effect::LookPickToHand(Box::new(LookPick {
                 who: PlayerRef::You,
                 count: Value::Const(2),
                 rest_to_graveyard: true,
-                pick_filter: None,
-                take: None,
-                to_battlefield: false,
-                gain_life_if_pick: None,
-                gain_life_greatest_power_rest: false,
-                optional: false,
-                picked_lands_to_battlefield: false,
-                rest_bottom_random: false,
-                rest_to_exile: false,
-            },
+    ..Default::default()
+})),
         }],
         ..Default::default()
     }
@@ -25364,22 +25289,11 @@ pub fn impulse() -> CardDefinition {
         name: "Impulse",
         cost: cost(&[generic(1), u()]),
         card_types: vec![CardType::Instant],
-        effect: Effect::LookPickToHand {
-            then_if_picked: None,
+        effect: Effect::LookPickToHand(Box::new(LookPick {
             who: PlayerRef::You,
             count: Value::Const(4),
-            rest_to_graveyard: false,
-            pick_filter: None,
-
-            take: None,
-            to_battlefield: false,
-            gain_life_if_pick: None,
-            gain_life_greatest_power_rest: false,
-            optional: false,
-            picked_lands_to_battlefield: false,
-            rest_bottom_random: false,
-            rest_to_exile: false,
-        },
+    ..Default::default()
+})),
         ..Default::default()
     }
 }
@@ -26886,23 +26800,14 @@ pub fn leyline_of_the_guildpact() -> CardDefinition {
 /// cards of your library (X = lands you control), put one (two if kicked) into
 /// your hand, and the rest on the bottom in a random order.
 pub fn consult_the_star_charts() -> CardDefinition {
-    let look = |take: i32| Effect::LookPickToHand {
-        then_if_picked: None,
+    let look = |take: i32| Effect::LookPickToHand(Box::new(LookPick {
         who: PlayerRef::You,
         count: Value::CountOf(Box::new(Selector::EachPermanent(
             SelectionRequirement::Land.and(SelectionRequirement::ControlledByYou),
         ))),
-        rest_to_graveyard: false,
-        pick_filter: None,
         take: Some(Value::Const(take)),
-        to_battlefield: false,
-        gain_life_if_pick: None,
-        gain_life_greatest_power_rest: false,
-        optional: false,
-        picked_lands_to_battlefield: false,
-        rest_bottom_random: false,
-        rest_to_exile: false,
-    };
+    ..Default::default()
+}));
     CardDefinition {
         name: "Consult the Star Charts",
         cost: cost(&[generic(1), u()]),
@@ -28754,23 +28659,15 @@ pub fn narset_parter_of_veils() -> CardDefinition {
         loyalty_abilities: vec![LoyaltyAbility {
             x_cost: false,
             loyalty_cost: -2,
-            effect: Effect::LookPickToHand {
-                then_if_picked: None,
+            effect: Effect::LookPickToHand(Box::new(LookPick {
                 who: PlayerRef::You,
                 count: Value::Const(4),
-                rest_to_graveyard: false,
                 pick_filter: Some(
                     SelectionRequirement::Noncreature.and(SelectionRequirement::Nonland),
                 ),
-                take: None,
-                to_battlefield: false,
-                gain_life_if_pick: None,
-                gain_life_greatest_power_rest: false,
                 optional: true,
-                picked_lands_to_battlefield: false,
-                rest_bottom_random: false,
-                rest_to_exile: false,
-            },
+    ..Default::default()
+})),
         }],
         ..Default::default()
     }
@@ -28997,21 +28894,13 @@ pub fn ancient_stirrings() -> CardDefinition {
         name: "Ancient Stirrings",
         cost: cost(&[g()]),
         card_types: vec![CardType::Sorcery],
-        effect: Effect::LookPickToHand {
-            then_if_picked: None,
+        effect: Effect::LookPickToHand(Box::new(LookPick {
             who: PlayerRef::You,
             count: Value::Const(5),
-            rest_to_graveyard: false,
             pick_filter: Some(SelectionRequirement::Colorless),
-            take: None,
-            to_battlefield: false,
-            gain_life_if_pick: None,
-            gain_life_greatest_power_rest: false,
             optional: true,
-            picked_lands_to_battlefield: false,
-            rest_bottom_random: false,
-            rest_to_exile: false,
-        },
+    ..Default::default()
+})),
         ..Default::default()
     }
 }
@@ -32087,21 +31976,13 @@ pub fn turntimber_symbiosis() -> CardDefinition {
         name: "Turntimber Symbiosis",
         cost: cost(&[generic(4), g(), g(), g()]),
         card_types: vec![CardType::Sorcery],
-        effect: Effect::LookPickToHand {
-            then_if_picked: None,
+        effect: Effect::LookPickToHand(Box::new(LookPick {
             who: PlayerRef::You,
             count: Value::Const(7),
-            rest_to_graveyard: false,
             pick_filter: Some(SelectionRequirement::Creature),
-            take: None,
             to_battlefield: true,
-            gain_life_if_pick: None,
-            gain_life_greatest_power_rest: false,
-            optional: false,
-            picked_lands_to_battlefield: false,
-            rest_bottom_random: false,
-            rest_to_exile: false,
-        },
+    ..Default::default()
+})),
         back_face: Some(Box::new(znr_painland_back(
             "Turntimber, Serpentine Wood",
             Color::Green,
@@ -32478,21 +32359,12 @@ pub fn adventure_awaits() -> CardDefinition {
         name: "Adventure Awaits",
         cost: cost(&[generic(1), g()]),
         card_types: vec![CardType::Sorcery],
-        effect: Effect::LookPickToHand {
-            then_if_picked: None,
+        effect: Effect::LookPickToHand(Box::new(LookPick {
             who: PlayerRef::You,
             count: Value::Const(5),
-            rest_to_graveyard: false,
             pick_filter: Some(SelectionRequirement::Creature),
-            take: None,
-            to_battlefield: false,
-            gain_life_if_pick: None,
-            gain_life_greatest_power_rest: false,
-            optional: false,
-            picked_lands_to_battlefield: false,
-            rest_bottom_random: false,
-            rest_to_exile: false,
-        },
+    ..Default::default()
+})),
         ..Default::default()
     }
 }
@@ -33172,25 +33044,16 @@ pub fn search_for_azcanta() -> CardDefinition {
             ActivatedAbility {
                 mana_cost: cost(&[generic(2), u()]),
                 tap_cost: true,
-                effect: Effect::LookPickToHand {
-                    then_if_picked: None,
+                effect: Effect::LookPickToHand(Box::new(LookPick {
                     who: PlayerRef::You,
                     count: Value::Const(4),
-                    rest_to_graveyard: false,
                     pick_filter: Some(
                         SelectionRequirement::Creature
                             .negate()
                             .and(SelectionRequirement::Nonland),
                     ),
-                    take: None,
-                    to_battlefield: false,
-                    gain_life_if_pick: None,
-                    gain_life_greatest_power_rest: false,
-                    optional: false,
-                    picked_lands_to_battlefield: false,
-                    rest_bottom_random: false,
-                    rest_to_exile: false,
-                },
+    ..Default::default()
+})),
                 ..Default::default()
             },
         ],
@@ -33264,21 +33127,12 @@ pub fn growing_rites_of_itlimoc() -> CardDefinition {
         triggered_abilities: vec![
             TriggeredAbility {
                 event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-                effect: Effect::LookPickToHand {
-                    then_if_picked: None,
+                effect: Effect::LookPickToHand(Box::new(LookPick {
                     who: PlayerRef::You,
                     count: Value::Const(4),
-                    rest_to_graveyard: false,
                     pick_filter: Some(SelectionRequirement::Creature),
-                    take: None,
-                    to_battlefield: false,
-                    gain_life_if_pick: None,
-                    gain_life_greatest_power_rest: false,
-                    optional: false,
-                    picked_lands_to_battlefield: false,
-                    rest_bottom_random: false,
-                    rest_to_exile: false,
-                },
+    ..Default::default()
+})),
             },
             TriggeredAbility {
                 event: EventSpec::new(
@@ -43175,21 +43029,11 @@ pub fn prophetic_bolt() -> CardDefinition {
                 ),
                 amount: Value::Const(4),
             },
-            Effect::LookPickToHand {
-                then_if_picked: None,
+            Effect::LookPickToHand(Box::new(LookPick {
                 who: PlayerRef::You,
                 count: Value::Const(4),
-                rest_to_graveyard: false,
-                pick_filter: None,
-                take: None,
-                to_battlefield: false,
-                gain_life_if_pick: None,
-                gain_life_greatest_power_rest: false,
-                optional: false,
-                picked_lands_to_battlefield: false,
-                rest_bottom_random: false,
-                rest_to_exile: false,
-            },
+    ..Default::default()
+})),
         ]),
         ..Default::default()
     }
@@ -45189,21 +45033,11 @@ pub fn mutated_cultist() -> CardDefinition {
 pub fn rediscover_the_way() -> CardDefinition {
     use crate::effect::{Duration, Predicate};
     fn dig() -> Effect {
-        Effect::LookPickToHand {
-            then_if_picked: None,
+        Effect::LookPickToHand(Box::new(LookPick {
             who: PlayerRef::You,
             count: Value::Const(3),
-            rest_to_graveyard: false,
-            pick_filter: None,
-            take: None,
-            to_battlefield: false,
-            gain_life_if_pick: None,
-            gain_life_greatest_power_rest: false,
-            optional: false,
-            picked_lands_to_battlefield: false,
-            rest_bottom_random: false,
-            rest_to_exile: false,
-        }
+    ..Default::default()
+}))
     }
     CardDefinition {
         name: "Rediscover the Way",
@@ -48836,21 +48670,12 @@ pub fn memory_deluge() -> CardDefinition {
         cost: cost(&[generic(2), u(), u()]),
         card_types: vec![CardType::Instant],
         keywords: vec![Keyword::Flashback(cost(&[generic(5), u(), u()]))],
-        effect: Effect::LookPickToHand {
-            then_if_picked: None,
+        effect: Effect::LookPickToHand(Box::new(LookPick {
             who: PlayerRef::You,
             count: Value::CastSpellManaSpent,
-            rest_to_graveyard: false,
-            pick_filter: None,
             take: Some(Value::Const(2)),
-            to_battlefield: false,
-            gain_life_if_pick: None,
-            gain_life_greatest_power_rest: false,
-            optional: false,
-            picked_lands_to_battlefield: false,
-            rest_bottom_random: false,
-            rest_to_exile: false,
-        },
+    ..Default::default()
+})),
         ..Default::default()
     }
 }
@@ -49574,23 +49399,16 @@ pub fn collected_company() -> CardDefinition {
         name: "Collected Company",
         cost: cost(&[generic(3), g()]),
         card_types: vec![CardType::Instant],
-        effect: Effect::LookPickToHand {
-            then_if_picked: None,
+        effect: Effect::LookPickToHand(Box::new(LookPick {
             who: PlayerRef::You,
             count: Value::Const(6),
-            rest_to_graveyard: false,
             pick_filter: Some(
                 SelectionRequirement::Creature.and(SelectionRequirement::ManaValueAtMost(3)),
             ),
             take: Some(Value::Const(2)),
             to_battlefield: true,
-            gain_life_if_pick: None,
-            gain_life_greatest_power_rest: false,
-            optional: false,
-            picked_lands_to_battlefield: false,
-            rest_bottom_random: false,
-            rest_to_exile: false,
-        },
+    ..Default::default()
+})),
         ..Default::default()
     }
 }
@@ -52212,24 +52030,15 @@ pub fn peer_through_depths() -> CardDefinition {
         name: "Peer Through Depths",
         cost: cost(&[generic(1), u()]),
         card_types: vec![CardType::Instant],
-        effect: Effect::LookPickToHand {
-            then_if_picked: None,
+        effect: Effect::LookPickToHand(Box::new(LookPick {
             who: PlayerRef::You,
             count: Value::Const(5),
-            rest_to_graveyard: false,
             pick_filter: Some(
                 SelectionRequirement::HasCardType(CardType::Instant)
                     .or(SelectionRequirement::HasCardType(CardType::Sorcery)),
             ),
-            take: None,
-            to_battlefield: false,
-            gain_life_if_pick: None,
-            gain_life_greatest_power_rest: false,
-            optional: false,
-            picked_lands_to_battlefield: false,
-            rest_bottom_random: false,
-            rest_to_exile: false,
-        },
+    ..Default::default()
+})),
         ..Default::default()
     }
 }
@@ -52242,8 +52051,7 @@ pub fn malevolent_rumble() -> CardDefinition {
         cost: cost(&[generic(1), g()]),
         card_types: vec![CardType::Sorcery],
         effect: Effect::Seq(vec![
-            Effect::LookPickToHand {
-                then_if_picked: None,
+            Effect::LookPickToHand(Box::new(LookPick {
                 who: PlayerRef::You,
                 count: Value::Const(4),
                 rest_to_graveyard: true,
@@ -52255,15 +52063,8 @@ pub fn malevolent_rumble() -> CardDefinition {
                         .or(SelectionRequirement::Enchantment)
                         .or(SelectionRequirement::Planeswalker),
                 ),
-                take: None,
-                to_battlefield: false,
-                gain_life_if_pick: None,
-                gain_life_greatest_power_rest: false,
-                optional: false,
-                picked_lands_to_battlefield: false,
-                rest_bottom_random: false,
-                rest_to_exile: false,
-            },
+    ..Default::default()
+})),
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
@@ -54499,21 +54300,14 @@ pub fn six() -> CardDefinition {
         power: 2,
         toughness: 4,
         keywords: vec![Keyword::Reach],
-        triggered_abilities: vec![on_attack(Effect::LookPickToHand {
-            then_if_picked: None,
+        triggered_abilities: vec![on_attack(Effect::LookPickToHand(Box::new(LookPick {
             who: PlayerRef::You,
             count: Value::Const(3),
             rest_to_graveyard: true,
             pick_filter: Some(SelectionRequirement::Land),
-            take: None,
-            to_battlefield: false,
-            gain_life_if_pick: None,
-            gain_life_greatest_power_rest: false,
             optional: true,
-            picked_lands_to_battlefield: false,
-            rest_bottom_random: false,
-            rest_to_exile: false,
-        })],
+    ..Default::default()
+})))],
         static_abilities: vec![StaticAbility {
             description: "During your turn, nonland permanent cards in your graveyard have retrace.",
             effect: StaticEffect::GraveyardPermanentsHaveRetraceDuringYourTurn,
@@ -58547,21 +58341,11 @@ pub fn thieves_fortune() -> CardDefinition {
             cost(&[u()]),
             vec![CreatureType::Rogue],
         )),
-        effect: Effect::LookPickToHand {
-            then_if_picked: None,
+        effect: Effect::LookPickToHand(Box::new(LookPick {
             who: PlayerRef::You,
             count: Value::Const(4),
-            rest_to_graveyard: false,
-            pick_filter: None,
-            take: None,
-            to_battlefield: false,
-            gain_life_if_pick: None,
-            gain_life_greatest_power_rest: false,
-            optional: false,
-            picked_lands_to_battlefield: false,
-            rest_bottom_random: false,
-            rest_to_exile: false,
-        },
+    ..Default::default()
+})),
         ..Default::default()
     }
 }
@@ -59954,23 +59738,14 @@ pub fn militia_bugler() -> CardDefinition {
         power: 2,
         toughness: 3,
         keywords: vec![Keyword::Vigilance],
-        triggered_abilities: vec![etb(Effect::LookPickToHand {
-            then_if_picked: None,
+        triggered_abilities: vec![etb(Effect::LookPickToHand(Box::new(LookPick {
             who: PlayerRef::You,
             count: Value::Const(4),
-            rest_to_graveyard: false,
             pick_filter: Some(
                 SelectionRequirement::Creature.and(SelectionRequirement::PowerAtMost(2)),
             ),
-            take: None,
-            to_battlefield: false,
-            gain_life_if_pick: None,
-            gain_life_greatest_power_rest: false,
-            optional: false,
-            picked_lands_to_battlefield: false,
-            rest_bottom_random: false,
-            rest_to_exile: false,
-        })],
+    ..Default::default()
+})))],
         ..Default::default()
     }
 }
@@ -63486,21 +63261,12 @@ pub fn glimpse_the_cosmos() -> CardDefinition {
         name: "Glimpse the Cosmos",
         cost: cost(&[generic(1), u()]),
         card_types: vec![CardType::Sorcery],
-        effect: Effect::LookPickToHand {
-            then_if_picked: None,
+        effect: Effect::LookPickToHand(Box::new(LookPick {
             who: PlayerRef::You,
             count: Value::Const(3),
-            rest_to_graveyard: false,
-            pick_filter: None,
             take: Some(Value::Const(1)),
-            to_battlefield: false,
-            gain_life_if_pick: None,
-            gain_life_greatest_power_rest: false,
-            optional: false,
-            picked_lands_to_battlefield: false,
-            rest_bottom_random: false,
-            rest_to_exile: false,
-        },
+    ..Default::default()
+})),
         ..Default::default()
     }
 }
@@ -63915,21 +63681,13 @@ pub fn dark_bargain() -> CardDefinition {
         cost: cost(&[generic(3), b()]),
         card_types: vec![CardType::Instant],
         effect: Effect::Seq(vec![
-            Effect::LookPickToHand {
-                then_if_picked: None,
+            Effect::LookPickToHand(Box::new(LookPick {
                 who: PlayerRef::You,
                 count: Value::Const(3),
                 rest_to_graveyard: true,
-                pick_filter: None,
                 take: Some(Value::Const(2)),
-                to_battlefield: false,
-                gain_life_if_pick: None,
-                gain_life_greatest_power_rest: false,
-                optional: false,
-                picked_lands_to_battlefield: false,
-                rest_bottom_random: false,
-                rest_to_exile: false,
-            },
+    ..Default::default()
+})),
             Effect::DealDamage {
                 to: Selector::Player(PlayerRef::You),
                 amount: Value::Const(2),

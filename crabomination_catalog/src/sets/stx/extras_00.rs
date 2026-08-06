@@ -17,7 +17,7 @@ use crate::effect::shortcut::{
     etb_drain, etb_gain_life, magecraft, magecraft_drain_each_opp, magecraft_self_pump,
     target_filtered,
 };
-use crate::effect::{Duration, ManaPayload, PlayerRef, StaticAbility, StaticEffect, ZoneDest};
+use crate::effect::{LookPick, Duration, ManaPayload, PlayerRef, StaticAbility, StaticEffect, ZoneDest};
 use crate::mana::{
     Color, ManaCost, b, colorless, cost, g, generic, hybrid, mono_hybrid, phyrexian, r, u, w, x,
 };
@@ -474,8 +474,8 @@ pub fn curate() -> CardDefinition {
 //
 // Strategic Planning is wired in
 // `catalog::sets::decks::modern::strategic_planning` as the faithful
-// `Effect::LookPickToHand { count: 3, rest_to_graveyard: true, rest_to_exile: false }` — look at
-// the top three, put your pick into your hand, rest to the graveyard.
+// `Effect::LookPickToHand` (count 3, rest to graveyard) — look at the top
+// three, put your pick into your hand, rest to the graveyard.
 
 // ── Solve the Equation ─────────────────────────────────────────────────────
 
@@ -1442,21 +1442,11 @@ pub fn expressive_iteration() -> CardDefinition {
         cost: cost(&[u(), r()]),
         card_types: vec![CardType::Sorcery],
         effect: Effect::Seq(vec![
-            Effect::LookPickToHand {
-                then_if_picked: None,
+            Effect::LookPickToHand(Box::new(LookPick {
                 who: PlayerRef::You,
                 count: Value::Const(3),
-                rest_to_graveyard: false,
-                pick_filter: None,
-                take: None,
-                to_battlefield: false,
-                gain_life_if_pick: None,
-                gain_life_greatest_power_rest: false,
-                optional: false,
-                picked_lands_to_battlefield: false,
-                rest_bottom_random: false,
-                rest_to_exile: false,
-            },
+    ..Default::default()
+})),
             Effect::ExileTopAndGrantMayPlay {
                 who: PlayerRef::You,
                 count: Value::Const(1),
@@ -2352,25 +2342,19 @@ pub fn wandering_archaic() -> CardDefinition {
             effect: Effect::ForEach {
                 selector: Selector::Player(PlayerRef::EachPlayer),
                 body: Box::new(Effect::Seq(vec![
-                    Effect::LookPickToHand {
-                        then_if_picked: None,
+                    Effect::LookPickToHand(Box::new(LookPick {
                         who: PlayerRef::Triggerer,
                         count: Value::Const(5),
-                        rest_to_graveyard: false,
                         pick_filter: Some(
                             SelectionRequirement::HasCardType(CardType::Land)
                                 .or(SelectionRequirement::HasCardType(CardType::Instant))
                                 .or(SelectionRequirement::HasCardType(CardType::Sorcery)),
                         ),
                         take: Some(Value::Const(2)),
-                        to_battlefield: false,
-                        gain_life_if_pick: None,
-                        gain_life_greatest_power_rest: false,
                         optional: true,
-                        picked_lands_to_battlefield: false,
                         rest_bottom_random: true,
-                        rest_to_exile: false,
-                    },
+    ..Default::default()
+})),
                     Effect::GainLife {
                         who: Selector::Player(PlayerRef::Triggerer),
                         amount: Value::Const(3),

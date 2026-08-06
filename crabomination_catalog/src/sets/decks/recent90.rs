@@ -12,7 +12,7 @@ use crate::card::{
 use crate::effect::shortcut::{
     cast_is_instant_or_sorcery, deal, draw, etb, on_dies, target_any, you,
 };
-use crate::effect::{Duration, LibraryPosition, ManaPayload, PlayerRef, ZoneDest};
+use crate::effect::{LookPick, Duration, LibraryPosition, ManaPayload, PlayerRef, ZoneDest};
 use crate::mana::{Color, b, cost, g, generic, r, u, x};
 
 /// Trigger on "whenever you cast an instant or sorcery spell you control."
@@ -1032,21 +1032,13 @@ pub fn vessel_of_nascency() -> CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[generic(1), g()]),
             sac_cost: true,
-            effect: Effect::LookPickToHand {
-                then_if_picked: None,
+            effect: Effect::LookPickToHand(Box::new(LookPick {
                 who: PlayerRef::You,
                 count: Value::Const(4),
                 rest_to_graveyard: true,
-                pick_filter: None,
                 take: Some(Value::Const(1)),
-                to_battlefield: false,
-                gain_life_if_pick: None,
-                gain_life_greatest_power_rest: false,
-                optional: false,
-                picked_lands_to_battlefield: false,
-                rest_bottom_random: false,
-                rest_to_exile: false,
-            },
+    ..Default::default()
+})),
             ..Default::default()
         }],
         ..Default::default()

@@ -9,7 +9,7 @@ use crate::card::{
     Selector, StaticAbility, StaticEffect, Subtypes, TokenDefinition, TriggeredAbility, Value,
 };
 use crate::effect::shortcut::{attacks_while_saddled, deal, etb, target_any, target_filtered};
-use crate::effect::{Duration, ManaPayload, PlayerRef, ZoneDest};
+use crate::effect::{LookPick, Duration, ManaPayload, PlayerRef, ZoneDest};
 use crate::game::types::TurnStep;
 use crate::mana::{Color, b, cost, g, generic, r, u, w};
 
@@ -468,8 +468,7 @@ pub fn dredgers_insight() -> CardDefinition {
         cost: cost(&[generic(1), g()]),
         card_types: vec![CardType::Enchantment],
         triggered_abilities: vec![
-            etb(Effect::LookPickToHand {
-                then_if_picked: None,
+            etb(Effect::LookPickToHand(Box::new(LookPick {
                 who: PlayerRef::You,
                 count: Value::Const(4),
                 rest_to_graveyard: true,
@@ -478,15 +477,8 @@ pub fn dredgers_insight() -> CardDefinition {
                         .or(SelectionRequirement::Creature)
                         .or(SelectionRequirement::Land),
                 ),
-                take: None,
-                to_battlefield: false,
-                gain_life_if_pick: None,
-                gain_life_greatest_power_rest: false,
-                optional: false,
-                picked_lands_to_battlefield: false,
-                rest_bottom_random: false,
-                rest_to_exile: false,
-            }),
+    ..Default::default()
+}))),
             TriggeredAbility {
                 event: EventSpec::new(EventKind::CardLeftGraveyard, EventScope::YourControl)
                     .with_filter(Predicate::EntityMatches {

@@ -7,7 +7,7 @@ use crate::card::{
     EventSpec, Predicate, SelectionRequirement as R, Subtypes, TriggeredAbility,
 };
 use crate::effect::shortcut::{mint_treasures, on_dies, target_filtered};
-use crate::effect::{Duration, Effect, PlayerRef, Selector, Value};
+use crate::effect::{LookPick, Duration, Effect, PlayerRef, Selector, Value};
 use crate::mana::{b, cost, generic, r, w, x};
 
 /// Stargaze — {X}{B}{B} Sorcery. Look at 2X cards from the top of your library,
@@ -18,21 +18,13 @@ pub fn stargaze() -> CardDefinition {
         cost: cost(&[x(), b(), b()]),
         card_types: vec![CardType::Sorcery],
         effect: Effect::Seq(vec![
-            Effect::LookPickToHand {
-                then_if_picked: None,
+            Effect::LookPickToHand(Box::new(LookPick {
                 who: PlayerRef::You,
                 count: Value::Sum(vec![Value::XFromCost, Value::XFromCost]),
                 rest_to_graveyard: true,
-                pick_filter: None,
                 take: Some(Value::XFromCost),
-                to_battlefield: false,
-                gain_life_if_pick: None,
-                gain_life_greatest_power_rest: false,
-                optional: false,
-                picked_lands_to_battlefield: false,
-                rest_bottom_random: false,
-                rest_to_exile: false,
-            },
+    ..Default::default()
+})),
             Effect::LoseLife {
                 who: Selector::You,
                 amount: Value::XFromCost,

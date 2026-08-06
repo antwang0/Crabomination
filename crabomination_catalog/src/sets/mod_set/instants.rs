@@ -5,7 +5,7 @@ use crate::card::{
     TokenDefinition,
 };
 use crate::effect::shortcut::target_filtered;
-use crate::effect::{
+use crate::effect::{LookPick, 
     DelayedTriggerKind, Duration, PlayerRef, Predicate, Selector, Value, ZoneDest,
 };
 use crate::mana::{Color, ManaCost, b, cost, g, generic, r, u, w};
@@ -795,21 +795,12 @@ pub fn dig_through_time() -> CardDefinition {
         cost: cost(&[generic(6), u(), u()]),
         card_types: vec![CardType::Instant],
         keywords: vec![Keyword::Delve],
-        effect: Effect::LookPickToHand {
-            then_if_picked: None,
+        effect: Effect::LookPickToHand(Box::new(LookPick {
             who: PlayerRef::You,
             count: Value::Const(7),
-            rest_to_graveyard: false,
-            pick_filter: None,
             take: Some(Value::Const(2)),
-            to_battlefield: false,
-            gain_life_if_pick: None,
-            gain_life_greatest_power_rest: false,
-            optional: false,
-            picked_lands_to_battlefield: false,
-            rest_bottom_random: false,
-            rest_to_exile: false,
-        },
+    ..Default::default()
+})),
         ..Default::default()
     }
 }

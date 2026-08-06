@@ -14,7 +14,7 @@ use crate::effect::shortcut::{
     each_opponent_creature, etb, magecraft_self_pump, on_attack, on_dies, on_other_dies,
     target_filtered,
 };
-use crate::effect::{Duration, PlayerRef, ZoneDest};
+use crate::effect::{LookPick, Duration, PlayerRef, ZoneDest};
 use crate::mana::{Color, b, cost, g, generic, r, u, w};
 
 // ── MID/VOW Daybound werewolf DFCs, disturb spirits, and supporting spells ───
@@ -1125,21 +1125,13 @@ pub fn organ_hoarder() -> CardDefinition {
         },
         power: 3,
         toughness: 2,
-        triggered_abilities: vec![etb(Effect::LookPickToHand {
-            then_if_picked: None,
+        triggered_abilities: vec![etb(Effect::LookPickToHand(Box::new(LookPick {
             who: PlayerRef::You,
             count: Value::Const(3),
             rest_to_graveyard: true,
-            pick_filter: None,
             take: Some(Value::Const(1)),
-            to_battlefield: false,
-            gain_life_if_pick: None,
-            gain_life_greatest_power_rest: false,
-            optional: false,
-            picked_lands_to_battlefield: false,
-            rest_bottom_random: false,
-            rest_to_exile: false,
-        })],
+    ..Default::default()
+})))],
         ..Default::default()
     }
 }
@@ -1167,21 +1159,13 @@ pub fn scattered_thoughts() -> CardDefinition {
         name: "Scattered Thoughts",
         cost: cost(&[generic(3), u()]),
         card_types: vec![CardType::Instant],
-        effect: Effect::LookPickToHand {
-            then_if_picked: None,
+        effect: Effect::LookPickToHand(Box::new(LookPick {
             who: PlayerRef::You,
             count: Value::Const(4),
             rest_to_graveyard: true,
-            pick_filter: None,
             take: Some(Value::Const(2)),
-            to_battlefield: false,
-            gain_life_if_pick: None,
-            gain_life_greatest_power_rest: false,
-            optional: false,
-            picked_lands_to_battlefield: false,
-            rest_bottom_random: false,
-            rest_to_exile: false,
-        },
+    ..Default::default()
+})),
         ..Default::default()
     }
 }
@@ -2196,21 +2180,13 @@ pub fn mulch() -> CardDefinition {
         name: "Mulch",
         cost: cost(&[generic(1), g()]),
         card_types: vec![CardType::Sorcery],
-        effect: Effect::LookPickToHand {
-            then_if_picked: None,
+        effect: Effect::LookPickToHand(Box::new(LookPick {
             who: PlayerRef::You,
             count: Value::Const(4),
             rest_to_graveyard: true,
             pick_filter: Some(SelectionRequirement::Land),
-            take: None,
-            to_battlefield: false,
-            gain_life_if_pick: None,
-            gain_life_greatest_power_rest: false,
-            optional: false,
-            picked_lands_to_battlefield: false,
-            rest_bottom_random: false,
-            rest_to_exile: false,
-        },
+    ..Default::default()
+})),
         ..Default::default()
     }
 }
@@ -2224,21 +2200,15 @@ pub fn tapping_at_the_window() -> CardDefinition {
         cost: cost(&[generic(1), g()]),
         card_types: vec![CardType::Sorcery],
         keywords: vec![Keyword::Flashback(cost(&[generic(2), g()]))],
-        effect: Effect::LookPickToHand {
-            then_if_picked: None,
+        effect: Effect::LookPickToHand(Box::new(LookPick {
             who: PlayerRef::You,
             count: Value::Const(3),
             rest_to_graveyard: true,
             pick_filter: Some(SelectionRequirement::Creature),
             take: Some(Value::Const(1)),
-            to_battlefield: false,
-            gain_life_if_pick: None,
-            gain_life_greatest_power_rest: false,
             optional: true,
-            picked_lands_to_battlefield: false,
-            rest_bottom_random: false,
-            rest_to_exile: false,
-        },
+    ..Default::default()
+})),
         ..Default::default()
     }
 }
@@ -2989,21 +2959,14 @@ pub fn gavony_dawnguard() -> CardDefinition {
             }),
             TriggeredAbility {
                 event: EventSpec::new(EventKind::DayNightChanged, EventScope::AnyPlayer),
-                effect: Effect::LookPickToHand {
-                    then_if_picked: None,
+                effect: Effect::LookPickToHand(Box::new(LookPick {
                     who: PlayerRef::You,
                     count: Value::Const(4),
-                    rest_to_graveyard: false,
                     pick_filter: Some(SelectionRequirement::Creature),
                     take: Some(Value::Const(1)),
-                    to_battlefield: false,
-                    gain_life_if_pick: None,
-                    gain_life_greatest_power_rest: false,
                     optional: true,
-                    picked_lands_to_battlefield: false,
-                    rest_bottom_random: false,
-                    rest_to_exile: false,
-                },
+    ..Default::default()
+})),
             },
         ],
         ..Default::default()

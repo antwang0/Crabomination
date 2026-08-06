@@ -7,7 +7,7 @@ use crate::card::{
     EventSpec, Keyword, LandType, Predicate, SelectionRequirement as R, StaticAbility, StaticEffect,
     Subtypes, Supertype, TriggeredAbility, Value,
 };
-use crate::effect::{
+use crate::effect::{LookPick, 
     Duration, Effect, ManaPayload, PlayerRef, Selector, ZoneDest,
     shortcut::{draw, etb, on_dies, target_filtered},
 };
@@ -630,21 +630,11 @@ pub fn worldly_counsel() -> CardDefinition {
     instant(
         "Worldly Counsel",
         cost(&[generic(1), u()]),
-        Effect::LookPickToHand {
-            then_if_picked: None,
+        Effect::LookPickToHand(Box::new(LookPick {
             who: PlayerRef::You,
             count: domain(),
-            rest_to_graveyard: false,
-            pick_filter: None,
-            take: None,
-            to_battlefield: false,
-            gain_life_if_pick: None,
-            gain_life_greatest_power_rest: false,
-            optional: false,
-            picked_lands_to_battlefield: false,
-            rest_bottom_random: false,
-            rest_to_exile: false,
-        },
+    ..Default::default()
+})),
     )
 }
 
@@ -1653,21 +1643,12 @@ pub fn reviving_vapors() -> CardDefinition {
         "Reviving Vapors",
         cost(&[generic(2), w(), u()]),
         Effect::Seq(vec![
-            Effect::LookPickToHand {
-                then_if_picked: None,
+            Effect::LookPickToHand(Box::new(LookPick {
                 who: PlayerRef::You,
                 count: Value::Const(3),
                 rest_to_graveyard: true,
-                pick_filter: None,
-                take: None,
-                to_battlefield: false,
-                gain_life_if_pick: None,
-                gain_life_greatest_power_rest: false,
-                optional: false,
-                picked_lands_to_battlefield: false,
-                rest_bottom_random: false,
-                rest_to_exile: false,
-            },
+    ..Default::default()
+})),
             Effect::GainLife { who: Selector::You, amount: Value::ManaValueOf(Box::new(Selector::LastMoved)) },
         ]),
     )

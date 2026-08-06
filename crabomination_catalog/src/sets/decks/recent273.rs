@@ -7,7 +7,7 @@ use crate::card::{
     Subtypes, TriggeredAbility,
 };
 use crate::card::{EventKind, EventScope, EventSpec};
-use crate::effect::{Effect, PlayerRef, Selector, Value};
+use crate::effect::{LookPick, Effect, PlayerRef, Selector, Value};
 use crate::mana::{cost, g, generic, r, u, w};
 
 /// Academy Wall — {2}{U} 0/5 Wall. Defender. Whenever you cast an instant or
@@ -101,21 +101,14 @@ pub fn brazen_upstart() -> CardDefinition {
         keywords: vec![Keyword::Vigilance],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::CreatureDied, EventScope::SelfSource),
-            effect: Effect::LookPickToHand {
-                then_if_picked: None,
+            effect: Effect::LookPickToHand(Box::new(LookPick {
                 who: PlayerRef::You,
                 count: Value::Const(5),
-                rest_to_graveyard: false,
                 pick_filter: Some(R::Creature),
-                take: None,
-                to_battlefield: false,
-                gain_life_if_pick: None,
-                gain_life_greatest_power_rest: false,
                 optional: true,
-                picked_lands_to_battlefield: false,
                 rest_bottom_random: true,
-                rest_to_exile: false,
-            },
+    ..Default::default()
+})),
         }],
         ..Default::default()
     }

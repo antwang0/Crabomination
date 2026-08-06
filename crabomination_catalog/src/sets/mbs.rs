@@ -8,7 +8,7 @@ use crate::card::{
     SelectionRequirement as R, StaticAbility, Subtypes, Supertype, TokenDefinition,
     TriggeredAbility,
 };
-use crate::effect::{
+use crate::effect::{LookPick, 
     Duration, Effect, EventKind, EventScope, EventSpec, LibraryPosition, PlayerRef, Selector,
     StaticEffect, Value, ZoneDest,
     shortcut::{battle_cry, draw, etb, target_any, target_filtered},
@@ -1986,21 +1986,14 @@ pub fn mitotic_manipulation() -> CardDefinition {
     sorcery(
         "Mitotic Manipulation",
         cost(&[generic(1), u(), u()]),
-        Effect::LookPickToHand {
-            then_if_picked: None,
+        Effect::LookPickToHand(Box::new(LookPick {
             who: PlayerRef::You,
             count: Value::Const(7),
             pick_filter: Some(R::SameNameAsAPermanent),
             to_battlefield: true,
             optional: true,
-            rest_to_graveyard: false,
-            take: None,
-            gain_life_if_pick: None,
-            gain_life_greatest_power_rest: false,
-            picked_lands_to_battlefield: false,
-            rest_bottom_random: false,
-            rest_to_exile: false,
-        },
+    ..Default::default()
+})),
     )
 }
 

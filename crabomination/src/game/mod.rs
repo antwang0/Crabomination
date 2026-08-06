@@ -1370,6 +1370,11 @@ pub struct GameState {
     /// (CR 614.2, applied in `scale_damage_to`). Cleared at cleanup.
     #[serde(default)]
     pub(crate) doubled_damage_sources_this_turn: Vec<CardId>,
+    /// Distinct (controller, source) pairs that have dealt damage this turn.
+    /// Powers `Predicate::SourcesYouControlledDealtDamageThisTurnAtLeast`
+    /// (Case of the Burning Masks). Cleared at the turn boundary.
+    #[serde(default)]
+    pub(crate) damage_sources_this_turn: Vec<(usize, CardId)>,
     /// Single Combat's lock — `(registerer, registration_turn)`: no player may
     /// cast a creature or planeswalker spell until the end of the registerer's
     /// next turn. Cleared in `cleanup_wear_off` at the end of the registerer's
@@ -1661,6 +1666,11 @@ pub struct GameState {
     /// cleared after; read in `deal_damage_to_from`. Transient.
     #[serde(skip)]
     pub(crate) resolving_spell_deathtouch_seat: Option<usize>,
+    /// "That spell gains [keywords]" grants onto spells still on the stack
+    /// (Judith, Carnage Connoisseur). Consulted when a spell starts resolving
+    /// and dropped once it leaves the stack.
+    #[serde(default)]
+    pub(crate) spell_keyword_grants: Vec<(CardId, crate::card::Keyword)>,
     /// One-shot guard so a spell dealing damage to several objects at once
     /// fires the "your instant or sorcery deals damage" trigger a single time.
     #[serde(skip)]
@@ -2049,6 +2059,7 @@ impl Clone for GameState {
             monarch_at_turn_start: self.monarch_at_turn_start,
             staggered_damage_players: self.staggered_damage_players.clone(),
             doubled_damage_sources_this_turn: self.doubled_damage_sources_this_turn.clone(),
+            damage_sources_this_turn: self.damage_sources_this_turn.clone(),
             creature_pw_cast_locks: self.creature_pw_cast_locks.clone(),
             damage_prevented_sources: self.damage_prevented_sources.clone(),
             land_mana_replacements_this_turn: self.land_mana_replacements_this_turn.clone(),
@@ -2108,6 +2119,7 @@ impl Clone for GameState {
             resolving_spell_caster: self.resolving_spell_caster,
             resolving_spell_snapshot: self.resolving_spell_snapshot.clone(),
             resolving_spell_deathtouch_seat: self.resolving_spell_deathtouch_seat,
+            spell_keyword_grants: self.spell_keyword_grants.clone(),
             spell_damage_trigger_fired: self.spell_damage_trigger_fired,
             in_draw_double: self.in_draw_double,
             in_turn_based_draw: self.in_turn_based_draw,
@@ -2367,6 +2379,7 @@ impl GameState {
             monarch_at_turn_start: None,
             staggered_damage_players: Vec::new(),
             doubled_damage_sources_this_turn: Vec::new(),
+            damage_sources_this_turn: Vec::new(),
             creature_pw_cast_locks: Vec::new(),
             damage_prevented_sources: Vec::new(),
             land_mana_replacements_this_turn: Vec::new(),
@@ -2424,6 +2437,7 @@ impl GameState {
             resolving_spell_caster: None,
             resolving_spell_snapshot: None,
             resolving_spell_deathtouch_seat: None,
+            spell_keyword_grants: Vec::new(),
             spell_damage_trigger_fired: false,
             in_draw_double: false,
             in_turn_based_draw: false,
@@ -7720,6 +7734,17 @@ impl GameState {
                         sublayer: None,
                         duration: EffectDuration::WhileSourceOnBattlefield,
                         modification: Modification::AddKeyword(kw.clone()),
+                    });
+                }
+                if let Some((p, t)) = cond.set_base_pt {
+                    all_effects.push(ContinuousEffect {
+                        timestamp: card.object_timestamp(),
+                        source: card.id,
+                        affected: AffectedPermanents::Specific(vec![target]),
+                        layer: Layer::L7PowerTough,
+                        sublayer: Some(PtSublayer::SetValue),
+                        duration: EffectDuration::WhileSourceOnBattlefield,
+                        modification: Modification::SetPowerToughness(p, t),
                     });
                 }
             }
@@ -13488,21 +13513,11 @@ impl GameState {
             DrawDig::LookN => {
                 let Some(n) = self.look_instead_of_drawing(p) else { return false };
                 if let Ok(mut evs) = self.resolve_effect(
-                    &crate::effect::Effect::LookPickToHand {
-                        then_if_picked: None,
+                    &crate::effect::Effect::LookPickToHand(Box::new(crate::effect::LookPick {
                         who: crate::effect::PlayerRef::Seat(p),
                         count: crate::effect::Value::Const(n as i32),
-                        rest_to_graveyard: false,
-                        pick_filter: None,
-                        take: None,
-                        to_battlefield: false,
-                        gain_life_if_pick: None,
-                        gain_life_greatest_power_rest: false,
-                        optional: false,
-                        picked_lands_to_battlefield: false,
-                        rest_bottom_random: false,
-                        rest_to_exile: false,
-                    },
+    ..Default::default()
+})),
                     &ctx,
                 ) {
                     events.append(&mut evs);
@@ -17353,7 +17368,7 @@ impl GameState {
                 }
                 Ok(events)
             }
-            PendingEffectState::ImpulsePending { player, revealed, rest_to_graveyard, eligible, take, to_battlefield, tapped, keep_on_top, gain_life_if_pick, gain_life_greatest_power_rest, optional, picked_lands_to_battlefield, rest_bottom_random, rest_to_exile, then_if_picked, source } => {
+            PendingEffectState::ImpulsePending { player, revealed, rest_to_graveyard, eligible, take, to_battlefield, tapped, keep_on_top, gain_life_if_pick, gain_life_greatest_power_rest, optional, picked_lands_to_battlefield, rest_bottom_random, rest_to_exile, then_if_picked, picked_matching_to_battlefield, battlefield_haste, source } => {
                 // `None` eligible means "any revealed card" (no filter).
                 let is_eligible = |id: &CardId| match &eligible {
                     None => true,
@@ -17432,7 +17447,14 @@ impl GameState {
                         // to hand.
                         let land_to_bf = picked_lands_to_battlefield
                             && card.definition.is_land();
-                        if to_battlefield || land_to_bf {
+                        // Break Out — only picks matching the filter deploy.
+                        let match_to_bf = picked_matching_to_battlefield
+                            .as_ref()
+                            .is_some_and(|f| {
+                                self.definition_matches_requirement(&card.definition, f, player)
+                            });
+                        if to_battlefield || land_to_bf || match_to_bf {
+                            let cid = card.id;
                             // Collected Company — picks enter the battlefield
                             // (ETBs fire through the shared placement funnel).
                             self.place_card_in_dest(
@@ -17444,6 +17466,9 @@ impl GameState {
                                 },
                                 &mut events,
                             );
+                            if battlefield_haste {
+                                self.grant_keyword_eot(cid, crate::card::Keyword::Haste);
+                            }
                         } else {
                             // CR 121.5 — putting a card into hand this way
                             // is NOT a draw: no CardDrawn event, no

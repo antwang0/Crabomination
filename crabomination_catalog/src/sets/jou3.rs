@@ -7,7 +7,7 @@ use crate::card::{
     StaticAbility, StaticEffect, Subtypes, Supertype, TriggeredAbility, Value,
 };
 use crate::effect::shortcut::{etb, heroic, target_filtered};
-use crate::effect::{
+use crate::effect::{LookPick, 
     Duration, Effect, EventKind, EventScope, EventSpec, ExtraManaKind, LoyaltyAbility, PlayerRef,
     Selector, ZoneDest, ZoneRef,
 };
@@ -431,24 +431,17 @@ pub fn disciple_of_deceit() -> CardDefinition {
 /// Forests you control), take a creature card.
 pub fn nessian_game_warden() -> CardDefinition {
     CardDefinition {
-        triggered_abilities: vec![etb(Effect::LookPickToHand {
-            then_if_picked: None,
+        triggered_abilities: vec![etb(Effect::LookPickToHand(Box::new(LookPick {
             who: PlayerRef::You,
             count: Value::count(Selector::EachMatching {
                 zone: ZoneRef::Battlefield,
                 filter: R::HasLandType(crate::card::LandType::Forest).and(R::ControlledByYou),
             }),
-            rest_to_graveyard: false,
             pick_filter: Some(R::Creature),
             take: Some(Value::Const(1)),
-            to_battlefield: false,
-            gain_life_if_pick: None,
-            gain_life_greatest_power_rest: false,
             optional: true,
-            picked_lands_to_battlefield: false,
-            rest_bottom_random: false,
-            rest_to_exile: false,
-        })],
+    ..Default::default()
+})))],
         ..creature(
             "Nessian Game Warden",
             cost(&[generic(3), g(), g()]),
@@ -629,25 +622,18 @@ pub fn ajani_mentor_of_heroes() -> CardDefinition {
             },
             LoyaltyAbility {
                 loyalty_cost: 1,
-                effect: Effect::LookPickToHand {
-                    then_if_picked: None,
+                effect: Effect::LookPickToHand(Box::new(LookPick {
                     who: PlayerRef::You,
                     count: Value::Const(4),
-                    rest_to_graveyard: false,
                     pick_filter: Some(
                         R::Creature
                             .or(R::Planeswalker)
                             .or(R::HasEnchantmentSubtype(EnchantmentSubtype::Aura)),
                     ),
                     take: Some(Value::Const(1)),
-                    to_battlefield: false,
-                    gain_life_if_pick: None,
-                    gain_life_greatest_power_rest: false,
                     optional: true,
-                    picked_lands_to_battlefield: false,
-                    rest_bottom_random: false,
-                    rest_to_exile: false,
-                },
+    ..Default::default()
+})),
                 ..Default::default()
             },
             LoyaltyAbility {

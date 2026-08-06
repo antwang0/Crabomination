@@ -7,7 +7,7 @@ use crate::card::{
     Predicate, SelectionRequirement as R, StaticAbility, Subtypes, Supertype, TokenDefinition,
     TriggeredAbility,
 };
-use crate::effect::{
+use crate::effect::{LookPick, 
     Duration, Effect, LibraryPosition, ManaPayload, PlayerRef, Selector, StaticEffect, Value,
     ZoneDest,
     shortcut::{draw, etb, target_any, target_filtered},
@@ -675,21 +675,11 @@ pub fn shrine_of_piercing_vision() -> CardDefinition {
         ActivatedAbility {
             tap_cost: true,
             sac_cost: true,
-            effect: Effect::LookPickToHand {
-                then_if_picked: None,
+            effect: Effect::LookPickToHand(Box::new(LookPick {
                 who: PlayerRef::You,
                 count: Value::CountersOn { what: Box::new(Selector::This), kind: CounterType::Charge },
-                rest_to_graveyard: false,
-                pick_filter: None,
-                take: None,
-                to_battlefield: false,
-                gain_life_if_pick: None,
-                gain_life_greatest_power_rest: false,
-                optional: false,
-                picked_lands_to_battlefield: false,
-                rest_bottom_random: false,
-                rest_to_exile: false,
-            },
+    ..Default::default()
+})),
             ..Default::default()
         },
     )

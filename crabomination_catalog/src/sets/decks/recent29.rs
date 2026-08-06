@@ -13,7 +13,7 @@ use crate::effect::shortcut::{
     count, deal, draw, etb, etb_loot, gain_life, mint_treasures, on_attack, on_dies, on_other_dies,
     on_you_attack, prowess, target_filtered,
 };
-use crate::effect::{Duration, LibraryPosition, ManaPayload, PlayerRef, ZoneDest};
+use crate::effect::{LookPick, Duration, LibraryPosition, ManaPayload, PlayerRef, ZoneDest};
 use crate::game::types::TurnStep;
 use crate::mana::{Color, b, cost, g, generic, mono_hybrid, r, u, w};
 
@@ -30,21 +30,13 @@ pub fn ainok_wayfarer() -> CardDefinition {
         },
         power: 1,
         toughness: 1,
-        triggered_abilities: vec![etb(Effect::LookPickToHand {
-            then_if_picked: None,
+        triggered_abilities: vec![etb(Effect::LookPickToHand(Box::new(LookPick {
             who: PlayerRef::You,
             count: Value::Const(3),
             rest_to_graveyard: true,
             pick_filter: Some(SelectionRequirement::Land),
-            take: None,
-            to_battlefield: false,
-            gain_life_if_pick: None,
-            gain_life_greatest_power_rest: false,
-            optional: false,
-            picked_lands_to_battlefield: false,
-            rest_bottom_random: false,
-            rest_to_exile: false,
-        })],
+    ..Default::default()
+})))],
         ..Default::default()
     }
 }

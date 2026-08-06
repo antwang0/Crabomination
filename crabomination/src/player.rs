@@ -499,6 +499,11 @@ pub struct Player {
     /// Trap's free alt cost).
     #[serde(default)]
     pub cards_to_graveyard_this_turn: u32,
+    /// Creature cards put into this player's graveyard from anywhere this
+    /// turn. Powers `Predicate::CreatureCardsToGraveyardThisTurnAtLeast`
+    /// (Case of the Gorgon's Kiss).
+    #[serde(default)]
+    pub creature_cards_to_graveyard_this_turn: u32,
     /// CR 700.11 — true if a *permanent* card was put into this player's
     /// graveyard from anywhere this turn ("you descended this turn"). Set in
     /// `send_to_graveyard`, reset at untap. Gates "if you descended this turn"
@@ -577,6 +582,11 @@ pub struct Player {
     /// turn; cleared in `finish_cleanup` (CR 514.2).
     #[serde(default)]
     pub turn_spell_discounts: Vec<(crate::card::SelectionRequirement, u32)>,
+    /// "Face-down spells you cast this turn cost {N} less to cast" (Goblin
+    /// Maskmaker). Summed into `face_down_cast_cost`; cleared in
+    /// `finish_cleanup` alongside `turn_spell_discounts`.
+    #[serde(default)]
+    pub face_down_discount_this_turn: u32,
     /// Number of creature spells this player has cast on the current
     /// turn. Reset to 0 in `do_untap`. Powers creature-cast magecraft
     /// payoffs ("if you've cast a creature spell this turn, …") and
@@ -1031,6 +1041,7 @@ impl Player {
             protected_from_everything: false,
             cards_exiled_this_turn: 0,
             cards_to_graveyard_this_turn: 0,
+            creature_cards_to_graveyard_this_turn: 0,
             instants_or_sorceries_cast_this_turn: 0,
             spells_cast_from_hand_this_turn: 0,
             extra_plus_one_counters_this_turn: 0,
@@ -1038,6 +1049,7 @@ impl Player {
             pending_is_discounts: Vec::new(),
             pending_spell_discounts: Vec::new(),
             turn_spell_discounts: Vec::new(),
+            face_down_discount_this_turn: 0,
             cards_discarded_this_turn: 0,
             discarded_this_turn: std::collections::HashSet::new(),
             permanents_sacrificed_this_turn: 0,
@@ -1160,6 +1172,9 @@ impl Player {
         card.counters.clear();
         card.keyword_counters.clear();
         self.cards_to_graveyard_this_turn += 1;
+        if card.definition.is_creature() {
+            self.creature_cards_to_graveyard_this_turn += 1;
+        }
         // CR 700.11 — descending requires a *permanent* card hitting the gy.
         if card.definition.is_permanent() {
             self.descended_this_turn = true;

@@ -108,6 +108,24 @@ impl GameState {
                 .resolve_player(who, ctx)
                 .map(|p| (self.players[p].life.max(0) + 1) / 2)
                 .unwrap_or(0),
+            // CR 105.4 — a permanent that is exactly two colors contributes
+            // its unordered pair; count the distinct pairs (Niv-Mizzet).
+            Value::DistinctTwoColorPairsControlled(who) => {
+                let Some(p) = self.resolve_player(who, ctx) else { return 0 };
+                let mut pairs: Vec<Vec<crate::mana::Color>> = Vec::new();
+                for c in self.battlefield.iter().filter(|c| c.controller == p) {
+                    let Some(cp) = self.computed_permanent(c.id) else { continue };
+                    if cp.colors.len() != 2 {
+                        continue;
+                    }
+                    let mut pair = cp.colors.clone();
+                    pair.sort_by_key(|c| *c as u8);
+                    if !pairs.contains(&pair) {
+                        pairs.push(pair);
+                    }
+                }
+                pairs.len() as i32
+            }
             Value::GreatestManaValueInExile => self
                 .exile
                 .iter()
@@ -1950,6 +1968,17 @@ impl GameState {
                 let pl = &self.players[ctx.controller];
                 pl.prowl_any_type_this_turn
                     || types.iter().any(|t| pl.prowl_types_this_turn.contains(t))
+            }
+            Predicate::CreatureCardsToGraveyardThisTurnAtLeast(n) => {
+                self.players.iter().map(|p| p.creature_cards_to_graveyard_this_turn).sum::<u32>()
+                    >= *n
+            }
+            Predicate::SourcesYouControlledDealtDamageThisTurnAtLeast(n) => {
+                self.damage_sources_this_turn
+                    .iter()
+                    .filter(|(seat, _)| *seat == ctx.controller)
+                    .count() as u32
+                    >= *n
             }
             Predicate::CardsToGraveyardThisTurnAtLeast { who, at_least } => self
                 .resolve_players(who, ctx)

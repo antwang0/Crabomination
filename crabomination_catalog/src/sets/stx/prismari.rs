@@ -16,7 +16,7 @@ use crate::effect::shortcut::{
     magecraft, magecraft_loot, magecraft_ping_each_opp, magecraft_scry, magecraft_self_pump,
     magecraft_treasure, target_filtered,
 };
-use crate::effect::{Duration, PlayerRef, ZoneDest};
+use crate::effect::{LookPick, Duration, PlayerRef, ZoneDest};
 use crate::mana::{Color, cost, generic, hybrid, r, u};
 
 // ── Prismari Pledgemage ─────────────────────────────────────────────────────
@@ -279,22 +279,12 @@ pub fn creative_outburst() -> CardDefinition {
                 to: target_filtered(SelectionRequirement::Any),
                 amount: Value::Const(5),
             },
-            Effect::LookPickToHand {
-                then_if_picked: None,
+            Effect::LookPickToHand(Box::new(LookPick {
                 who: PlayerRef::You,
                 count: Value::Const(5),
-                rest_to_graveyard: false,
-                pick_filter: None,
-
-                take: None,
-                to_battlefield: false,
-                gain_life_if_pick: None,
-                gain_life_greatest_power_rest: false,
-                optional: false,
-                picked_lands_to_battlefield: false,
                 rest_bottom_random: true,
-                rest_to_exile: false,
-            },
+    ..Default::default()
+})),
         ]),
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[

@@ -506,7 +506,9 @@ impl Effect {
             Effect::MillDeployCreaturesUntilEndStep { .. } => false,
             Effect::ExileEachTopFreePlayLesser => false,
             Effect::LookTopTakeOneDeployLandsRestGraveyard { .. } => false,
-            Effect::ReduceEquipCost { .. } | Effect::SacrificeAtNextUpkeep { .. } => false,
+            Effect::ReduceEquipCost { .. }
+            | Effect::SacrificeAtNextUpkeep { .. }
+            | Effect::SacrificeAtNextEndStep { .. } => false,
             Effect::Unattach { what } => sel_has_target(what),
             Effect::SetSaddled { what } => sel_has_target(what),
             Effect::AtNextEndStep { body } | Effect::AtEndOfCombat { body } => {
@@ -692,6 +694,8 @@ impl Effect {
             Effect::Flip { what } => sel_has_target(what),
             Effect::Meld { .. } => false,
             Effect::SpellsCostLessThisTurn { .. } => false,
+            Effect::FaceDownSpellsCostLessThisTurn { .. } => false,
+            Effect::GrantKeywordsToSpell { what, .. } => sel_has_target(what),
             Effect::CastFromHandWithoutPaying { .. } => false,
             Effect::PreventNextDamageFromChosenSource { .. } => false,
             Effect::RevealTopPayOrTake { .. } => false,
@@ -891,8 +895,10 @@ impl Effect {
             | Effect::RearrangeTop { who, amount } => {
                 player_has_target(who) || value_has_target(amount)
             }
-            Effect::LookPickToHand { who, count, .. }
-            | Effect::LookTopKeepMatchingOnTop { who, count, .. } => {
+            Effect::LookPickToHand(lp) => {
+                player_has_target(&lp.who) || value_has_target(&lp.count)
+            }
+            Effect::LookTopKeepMatchingOnTop { who, count, .. } => {
                 player_has_target(who) || value_has_target(count)
             }
             Effect::RevealTopTakeOnePerType { who, count } => {

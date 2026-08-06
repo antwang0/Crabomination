@@ -10,7 +10,7 @@ use crate::card::{
 use crate::effect::shortcut::{
     dies_mint_token, etb, flurry, mobilize, mobilize_value, on_attack, target_any, target_filtered,
 };
-use crate::effect::{Duration, LibraryPosition, ManaPayload, PlayerRef, StaticEffect, ZoneDest};
+use crate::effect::{LookPick, Duration, LibraryPosition, ManaPayload, PlayerRef, StaticEffect, ZoneDest};
 use crate::mana::{Color, b, cost, g, generic, mono_hybrid, r, u, w};
 
 /// Sarkhan's Resolve — {1}{G} Instant. Choose one — target creature gets +3/+3
@@ -69,21 +69,12 @@ pub fn sibsig_appraiser() -> CardDefinition {
         },
         power: 2,
         toughness: 1,
-        triggered_abilities: vec![etb(Effect::LookPickToHand {
-            then_if_picked: None,
+        triggered_abilities: vec![etb(Effect::LookPickToHand(Box::new(LookPick {
             who: PlayerRef::You,
             count: Value::Const(2),
             rest_to_graveyard: true,
-            pick_filter: None,
-            take: None,
-            to_battlefield: false,
-            gain_life_if_pick: None,
-            gain_life_greatest_power_rest: false,
-            optional: false,
-            picked_lands_to_battlefield: false,
-            rest_bottom_random: false,
-            rest_to_exile: false,
-        })],
+    ..Default::default()
+})))],
         ..Default::default()
     }
 }
@@ -2381,25 +2372,17 @@ pub fn dragonologist() -> CardDefinition {
         },
         power: 1,
         toughness: 3,
-        triggered_abilities: vec![etb(Effect::LookPickToHand {
-            then_if_picked: None,
+        triggered_abilities: vec![etb(Effect::LookPickToHand(Box::new(LookPick {
             who: PlayerRef::You,
             count: Value::Const(6),
-            rest_to_graveyard: false,
             pick_filter: Some(
                 SelectionRequirement::HasCardType(CardType::Instant)
                     .or(SelectionRequirement::HasCardType(CardType::Sorcery))
                     .or(SelectionRequirement::HasCreatureType(CreatureType::Dragon)),
             ),
-            take: None,
-            to_battlefield: false,
-            gain_life_if_pick: None,
-            gain_life_greatest_power_rest: false,
             optional: true,
-            picked_lands_to_battlefield: false,
-            rest_bottom_random: false,
-            rest_to_exile: false,
-        })],
+    ..Default::default()
+})))],
         static_abilities: vec![StaticAbility {
             description: "Untapped Dragons you control have hexproof.",
             effect: StaticEffect::GrantKeyword {

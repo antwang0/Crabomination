@@ -4,7 +4,7 @@
 
 use crate::card::{CardDefinition, CardType, SelectionRequirement as R, Selector, Value};
 use crate::effect::shortcut::target_filtered;
-use crate::effect::{Effect, PlayerRef};
+use crate::effect::{LookPick, Effect, PlayerRef};
 use crate::mana::{b, cost, g, generic, r, x};
 
 /// Pillage the Bog — {B}{G} Sorcery. Look at the top X cards of your library,
@@ -16,8 +16,7 @@ pub fn pillage_the_bog() -> CardDefinition {
         cost: cost(&[b(), g()]),
         card_types: vec![CardType::Sorcery],
         plot_cost: Some(cost(&[generic(1), b(), g()])),
-        effect: Effect::LookPickToHand {
-            then_if_picked: None,
+        effect: Effect::LookPickToHand(Box::new(LookPick {
             who: PlayerRef::You,
             count: Value::Times(
                 Box::new(Value::Const(2)),
@@ -25,17 +24,8 @@ pub fn pillage_the_bog() -> CardDefinition {
                     R::Land.and(R::ControlledByYou),
                 )))),
             ),
-            rest_to_graveyard: false,
-            pick_filter: None,
-            take: None,
-            to_battlefield: false,
-            gain_life_if_pick: None,
-            gain_life_greatest_power_rest: false,
-            optional: false,
-            picked_lands_to_battlefield: false,
-            rest_bottom_random: false,
-            rest_to_exile: false,
-        },
+    ..Default::default()
+})),
         ..Default::default()
     }
 }

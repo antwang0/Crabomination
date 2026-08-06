@@ -653,8 +653,10 @@ mod recent239 {
         let ab = &def.activated_abilities[2];
         assert!(ab.tap_cost && ab.sac_cost);
         match &ab.effect {
-            Effect::LookPickToHand { count, pick_filter: Some(_), rest_bottom_random: true, optional: true, .. } => {
-                assert!(matches!(count, crabomination::effect::Value::Const(6)));
+            Effect::LookPickToHand(lp)
+                if lp.pick_filter.is_some() && lp.rest_bottom_random && lp.optional =>
+            {
+                assert!(matches!(lp.count, crabomination::effect::Value::Const(6)));
             }
             _ => panic!("not a six-deep kindred dig"),
         }
@@ -703,8 +705,10 @@ mod recent239 {
         assert_eq!(t.event.kind, EventKind::BecameTarget);
         assert!(t.event.once_per_turn, "first time each turn");
         match &t.effect {
-            Effect::LookPickToHand { count, pick_filter: Some(_), to_battlefield: true, rest_bottom_random: true, .. } => {
-                assert!(matches!(count, crabomination::effect::Value::Const(5)));
+            Effect::LookPickToHand(lp)
+                if lp.pick_filter.is_some() && lp.to_battlefield && lp.rest_bottom_random =>
+            {
+                assert!(matches!(lp.count, crabomination::effect::Value::Const(5)));
             }
             _ => panic!("not a five-deep creature dig"),
         }

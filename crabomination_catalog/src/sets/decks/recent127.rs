@@ -10,7 +10,7 @@ use crate::card::{
     StaticAbility, StaticEffect, Subtypes, TriggeredAbility, Value, WardCost,
 };
 use crate::effect::shortcut::{drain, etb, target_filtered};
-use crate::effect::{Duration, Effect, PlayerRef, ZoneDest};
+use crate::effect::{LookPick, Duration, Effect, PlayerRef, ZoneDest};
 use crate::game::effects::treasure_token;
 use crate::mana::{Color, b, cost, g, generic, r, u, w};
 
@@ -383,23 +383,15 @@ pub fn frontier_seeker() -> CardDefinition {
         },
         power: 2,
         toughness: 1,
-        triggered_abilities: vec![etb(Effect::LookPickToHand {
-            then_if_picked: None,
+        triggered_abilities: vec![etb(Effect::LookPickToHand(Box::new(LookPick {
             who: PlayerRef::You,
             count: Value::Const(5),
-            rest_to_graveyard: false,
             pick_filter: Some(
                 R::HasCreatureType(CreatureType::Mount).or(R::HasLandType(LandType::Plains)),
             ),
-            take: None,
-            to_battlefield: false,
-            gain_life_if_pick: None,
-            gain_life_greatest_power_rest: false,
             optional: true,
-            picked_lands_to_battlefield: false,
-            rest_bottom_random: false,
-            rest_to_exile: false,
-        })],
+    ..Default::default()
+})))],
         ..Default::default()
     }
 }

@@ -7,7 +7,7 @@ use crate::card::{
     Value,
 };
 use crate::effect::shortcut::{etb, target_filtered};
-use crate::effect::{Duration, PlayerRef, Selector, StaticEffect, ZoneDest};
+use crate::effect::{LookPick, Duration, PlayerRef, Selector, StaticEffect, ZoneDest};
 use crate::mana::{Color, b, cost, g, generic, r, u, w};
 
 fn aura(name: &'static str, mc: crate::mana::ManaCost, enchant: R) -> CardDefinition {
@@ -261,8 +261,7 @@ pub fn uncovered_clues() -> CardDefinition {
         name: "Uncovered Clues",
         cost: cost(&[generic(2), u()]),
         card_types: vec![CardType::Sorcery],
-        effect: Effect::LookPickToHand {
-            then_if_picked: None,
+        effect: Effect::LookPickToHand(Box::new(LookPick {
             who: PlayerRef::You,
             count: Value::Const(4),
             pick_filter: Some(
@@ -270,14 +269,8 @@ pub fn uncovered_clues() -> CardDefinition {
             ),
             take: Some(Value::Const(2)),
             optional: true,
-            rest_to_graveyard: false,
-            to_battlefield: false,
-            gain_life_if_pick: None,
-            gain_life_greatest_power_rest: false,
-            picked_lands_to_battlefield: false,
-            rest_bottom_random: false,
-            rest_to_exile: false,
-        },
+    ..Default::default()
+})),
         ..Default::default()
     }
 }

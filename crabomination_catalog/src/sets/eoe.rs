@@ -11,7 +11,7 @@ use crate::card::{
 use crate::effect::shortcut::{
     etb, flurry, on_attack, on_dies, station, target, target_any, target_filtered, warp,
 };
-use crate::effect::{Duration, Effect, PlayerRef, Selector, StaticEffect, Value, ZoneDest};
+use crate::effect::{LookPick, Duration, Effect, PlayerRef, Selector, StaticEffect, Value, ZoneDest};
 use crate::mana::{b, cost, g, generic, r, u, w, x};
 use crabomination_base::tokens::lander_token;
 
@@ -384,21 +384,13 @@ pub fn codecracker_hound() -> CardDefinition {
         },
         power: 2,
         toughness: 1,
-        triggered_abilities: vec![etb(Effect::LookPickToHand {
-            then_if_picked: None,
+        triggered_abilities: vec![etb(Effect::LookPickToHand(Box::new(LookPick {
             who: PlayerRef::You,
             count: Value::Const(2),
             rest_to_graveyard: true,
-            pick_filter: None,
             take: Some(Value::Const(1)),
-            to_battlefield: false,
-            gain_life_if_pick: None,
-            gain_life_greatest_power_rest: false,
-            optional: false,
-            picked_lands_to_battlefield: false,
-            rest_bottom_random: false,
-            rest_to_exile: false,
-        })],
+    ..Default::default()
+})))],
         alternative_cost: Some(warp(cost(&[generic(2), u()]))),
         ..Default::default()
     }
@@ -5646,23 +5638,15 @@ pub fn pulsar_squadron_ace() -> CardDefinition {
         },
         power: 1,
         toughness: 2,
-        triggered_abilities: vec![etb(Effect::LookPickToHand {
-            then_if_picked: None,
+        triggered_abilities: vec![etb(Effect::LookPickToHand(Box::new(LookPick {
             who: PlayerRef::You,
             count: Value::Const(5),
-            rest_to_graveyard: false,
             pick_filter: Some(SelectionRequirement::HasArtifactSubtype(
                 ArtifactSubtype::Spacecraft,
             )),
-            take: None,
-            to_battlefield: false,
-            gain_life_if_pick: None,
-            gain_life_greatest_power_rest: false,
             optional: true,
-            picked_lands_to_battlefield: false,
-            rest_bottom_random: false,
-            rest_to_exile: false,
-        })],
+    ..Default::default()
+})))],
         ..Default::default()
     }
 }

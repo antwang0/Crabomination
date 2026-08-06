@@ -8,7 +8,7 @@ use crate::card::{
     Subtypes, Supertype, TriggeredAbility, Value,
 };
 use crate::effect::shortcut::{etb, target_filtered};
-use crate::effect::{Duration, ManaPayload, PlayerRef, Predicate, ZoneDest};
+use crate::effect::{LookPick, Duration, ManaPayload, PlayerRef, Predicate, ZoneDest};
 use crate::mana::{Color, b, cost, g, generic, u, w};
 
 // ── White ────────────────────────────────────────────────────────────────
@@ -75,8 +75,7 @@ pub fn pieces_of_the_puzzle() -> CardDefinition {
         name: "Pieces of the Puzzle",
         cost: cost(&[generic(2), u()]),
         card_types: vec![CardType::Sorcery],
-        effect: Effect::LookPickToHand {
-            then_if_picked: None,
+        effect: Effect::LookPickToHand(Box::new(LookPick {
             who: PlayerRef::You,
             count: Value::Const(5),
             rest_to_graveyard: true,
@@ -85,14 +84,8 @@ pub fn pieces_of_the_puzzle() -> CardDefinition {
                     .or(SelectionRequirement::HasCardType(CardType::Sorcery)),
             ),
             take: Some(Value::Const(2)),
-            to_battlefield: false,
-            gain_life_if_pick: None,
-            gain_life_greatest_power_rest: false,
-            optional: false,
-            picked_lands_to_battlefield: false,
-            rest_bottom_random: false,
-            rest_to_exile: false,
-        },
+    ..Default::default()
+})),
         ..Default::default()
     }
 }
@@ -106,21 +99,13 @@ pub fn ransack_the_lab() -> CardDefinition {
         name: "Ransack the Lab",
         cost: cost(&[generic(1), b()]),
         card_types: vec![CardType::Sorcery],
-        effect: Effect::LookPickToHand {
-            then_if_picked: None,
+        effect: Effect::LookPickToHand(Box::new(LookPick {
             who: PlayerRef::You,
             count: Value::Const(3),
             rest_to_graveyard: true,
-            pick_filter: None,
             take: Some(Value::ONE),
-            to_battlefield: false,
-            gain_life_if_pick: None,
-            gain_life_greatest_power_rest: false,
-            optional: false,
-            picked_lands_to_battlefield: false,
-            rest_bottom_random: false,
-            rest_to_exile: false,
-        },
+    ..Default::default()
+})),
         ..Default::default()
     }
 }

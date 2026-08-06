@@ -11,7 +11,7 @@ use crate::card::{
 use crate::effect::shortcut::{
     etb, etb_mint_token, etb_surveil, grant_tap_for_any_color, mint_treasures, target_filtered,
 };
-use crate::effect::{Duration, ManaPayload, PlayerRef, StaticEffect, ZoneDest, ZoneRef};
+use crate::effect::{LookPick, Duration, ManaPayload, PlayerRef, StaticEffect, ZoneDest, ZoneRef};
 use crate::game::types::TurnStep;
 use crate::mana::{Color, SpendRestriction, b, cost, g, generic, r, u, w, x};
 
@@ -2710,25 +2710,16 @@ pub fn commune_with_beavers() -> CardDefinition {
         name: "Commune with Beavers",
         cost: cost(&[g()]),
         card_types: vec![CardType::Sorcery],
-        effect: Effect::LookPickToHand {
-            then_if_picked: None,
+        effect: Effect::LookPickToHand(Box::new(LookPick {
             who: PlayerRef::You,
             count: Value::Const(3),
-            rest_to_graveyard: false,
             pick_filter: Some(
                 SelectionRequirement::Artifact
                     .or(SelectionRequirement::Creature)
                     .or(SelectionRequirement::Land),
             ),
-            take: None,
-            to_battlefield: false,
-            gain_life_if_pick: None,
-            gain_life_greatest_power_rest: false,
-            optional: false,
-            picked_lands_to_battlefield: false,
-            rest_bottom_random: false,
-            rest_to_exile: false,
-        },
+    ..Default::default()
+})),
         ..Default::default()
     }
 }
@@ -4316,21 +4307,12 @@ pub fn resentful_revelation() -> CardDefinition {
         cost: cost(&[generic(1), b()]),
         card_types: vec![CardType::Sorcery],
         keywords: vec![Keyword::Flashback(cost(&[generic(6), b()]))],
-        effect: Effect::LookPickToHand {
-            then_if_picked: None,
+        effect: Effect::LookPickToHand(Box::new(LookPick {
             who: PlayerRef::You,
             count: Value::Const(3),
             rest_to_graveyard: true,
-            pick_filter: None,
-            take: None,
-            to_battlefield: false,
-            gain_life_if_pick: None,
-            gain_life_greatest_power_rest: false,
-            optional: false,
-            picked_lands_to_battlefield: false,
-            rest_bottom_random: false,
-            rest_to_exile: false,
-        },
+    ..Default::default()
+})),
         ..Default::default()
     }
 }

@@ -6,7 +6,7 @@ use crate::card::{
     EventKind, EventScope, EventSpec, Keyword, LandType, Predicate, SelectionRequirement as R,
     StaticAbility, StaticEffect, Subtypes, TokenDefinition, TriggeredAbility, Value,
 };
-use crate::effect::{
+use crate::effect::{LookPick, 
     Duration, Effect, ManaPayload, PlayerRef, Selector, ZoneDest, shortcut::target_filtered,
 };
 use crate::game::TurnStep;
@@ -104,21 +104,12 @@ pub fn eye_of_yawgmoth() -> CardDefinition {
             mana_cost: cost(&[generic(3)]),
             tap_cost: true,
             sac_other_filter: Some((R::Creature, 1)),
-            effect: Effect::LookPickToHand {
-                then_if_picked: None,
+            effect: Effect::LookPickToHand(Box::new(LookPick {
                 who: PlayerRef::You,
                 count: Value::SacrificedPower,
                 rest_to_exile: true,
-                rest_to_graveyard: false,
-                pick_filter: None,
-                take: None,
-                to_battlefield: false,
-                gain_life_if_pick: None,
-                gain_life_greatest_power_rest: false,
-                optional: false,
-                picked_lands_to_battlefield: false,
-                rest_bottom_random: false,
-            },
+    ..Default::default()
+})),
             ..Default::default()
         }],
         ..artifact("Eye of Yawgmoth", cost(&[generic(3)]))

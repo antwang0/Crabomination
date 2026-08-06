@@ -10,7 +10,7 @@ use crate::card::{
 use crate::effect::shortcut::{
     craft, drain, etb, on_attack, on_dies, pump_target, target_filtered,
 };
-use crate::effect::{Duration, Effect, ManaPayload, PlayerRef, Predicate, ZoneDest};
+use crate::effect::{LookPick, Duration, Effect, ManaPayload, PlayerRef, Predicate, ZoneDest};
 use crate::game::effects::{map_token, treasure_token};
 use crate::game::types::TurnStep;
 use crate::mana::{Color, ManaCost, b, cost, g, generic, r, u, w, x};
@@ -2544,24 +2544,16 @@ pub fn staunch_crewmate() -> CardDefinition {
         },
         power: 2,
         toughness: 1,
-        triggered_abilities: vec![etb(Effect::LookPickToHand {
-            then_if_picked: None,
+        triggered_abilities: vec![etb(Effect::LookPickToHand(Box::new(LookPick {
             who: PlayerRef::You,
             count: Value::Const(4),
-            rest_to_graveyard: false,
             pick_filter: Some(
                 SelectionRequirement::Artifact
                     .or(SelectionRequirement::HasCreatureType(CreatureType::Pirate)),
             ),
-            take: None,
-            to_battlefield: false,
-            gain_life_if_pick: None,
-            gain_life_greatest_power_rest: false,
             optional: true,
-            picked_lands_to_battlefield: false,
-            rest_bottom_random: false,
-            rest_to_exile: false,
-        })],
+    ..Default::default()
+})))],
         ..Default::default()
     }
 }
@@ -4494,21 +4486,12 @@ pub fn confounding_riddle() -> CardDefinition {
         cost: cost(&[generic(2), u()]),
         card_types: vec![CardType::Instant],
         effect: Effect::ChooseMode(vec![
-            Effect::LookPickToHand {
-                then_if_picked: None,
+            Effect::LookPickToHand(Box::new(LookPick {
                 who: PlayerRef::You,
                 count: Value::Const(4),
                 rest_to_graveyard: true,
-                pick_filter: None,
-                take: None,
-                to_battlefield: false,
-                gain_life_if_pick: None,
-                gain_life_greatest_power_rest: false,
-                optional: false,
-                picked_lands_to_battlefield: false,
-                rest_bottom_random: false,
-                rest_to_exile: false,
-            },
+    ..Default::default()
+})),
             Effect::CounterUnlessPaid {
                 what: crate::effect::shortcut::target(),
                 mana_cost: cost(&[generic(4)]),
@@ -4613,21 +4596,14 @@ pub fn in_the_presence_of_ages() -> CardDefinition {
         name: "In the Presence of Ages",
         cost: cost(&[generic(2), g()]),
         card_types: vec![CardType::Instant],
-        effect: Effect::LookPickToHand {
-            then_if_picked: None,
+        effect: Effect::LookPickToHand(Box::new(LookPick {
             who: PlayerRef::You,
             count: Value::Const(4),
             rest_to_graveyard: true,
             pick_filter: Some(SelectionRequirement::Creature.or(SelectionRequirement::Land)),
             take: Some(Value::Const(2)),
-            to_battlefield: false,
-            gain_life_if_pick: None,
-            gain_life_greatest_power_rest: false,
-            optional: false,
-            picked_lands_to_battlefield: false,
-            rest_bottom_random: false,
-            rest_to_exile: false,
-        },
+    ..Default::default()
+})),
         ..Default::default()
     }
 }
@@ -5260,8 +5236,7 @@ pub fn sinuous_benthisaur() -> CardDefinition {
         },
         power: 4,
         toughness: 4,
-        triggered_abilities: vec![etb(Effect::LookPickToHand {
-            then_if_picked: None,
+        triggered_abilities: vec![etb(Effect::LookPickToHand(Box::new(LookPick {
             who: PlayerRef::You,
             count: Value::Sum(vec![
                 Value::CountMatching {
@@ -5277,16 +5252,9 @@ pub fn sinuous_benthisaur() -> CardDefinition {
                 },
             ]),
             rest_to_graveyard: true,
-            pick_filter: None,
             take: Some(Value::Const(2)),
-            to_battlefield: false,
-            gain_life_if_pick: None,
-            gain_life_greatest_power_rest: false,
-            optional: false,
-            picked_lands_to_battlefield: false,
-            rest_bottom_random: false,
-            rest_to_exile: false,
-        })],
+    ..Default::default()
+})))],
         ..Default::default()
     }
 }
@@ -5477,21 +5445,13 @@ pub fn orazca_puzzle_door() -> CardDefinition {
             mana_cost: cost(&[generic(1)]),
             tap_cost: true,
             sac_cost: true,
-            effect: Effect::LookPickToHand {
-                then_if_picked: None,
+            effect: Effect::LookPickToHand(Box::new(LookPick {
                 who: PlayerRef::You,
                 count: Value::Const(2),
                 rest_to_graveyard: true,
-                pick_filter: None,
                 take: Some(Value::Const(1)),
-                to_battlefield: false,
-                gain_life_if_pick: None,
-                gain_life_greatest_power_rest: false,
-                optional: false,
-                picked_lands_to_battlefield: false,
-                rest_bottom_random: false,
-                rest_to_exile: false,
-            },
+    ..Default::default()
+})),
             ..Default::default()
         }],
         ..Default::default()
@@ -5867,21 +5827,13 @@ pub fn akal_pakal_first_among_equals() -> CardDefinition {
                 .with_filter(Predicate::ArtifactEnteredThisTurn {
                     who: PlayerRef::You,
                 }),
-            effect: Effect::LookPickToHand {
-                then_if_picked: None,
+            effect: Effect::LookPickToHand(Box::new(LookPick {
                 who: PlayerRef::You,
                 count: Value::Const(2),
                 rest_to_graveyard: true,
-                pick_filter: None,
                 take: Some(Value::Const(1)),
-                to_battlefield: false,
-                gain_life_if_pick: None,
-                gain_life_greatest_power_rest: false,
-                optional: false,
-                picked_lands_to_battlefield: false,
-                rest_bottom_random: false,
-                rest_to_exile: false,
-            },
+    ..Default::default()
+})),
         }],
         ..Default::default()
     }

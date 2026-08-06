@@ -7,7 +7,7 @@ use crate::card::{
     StaticEffect, Subtypes, TriggeredAbility, Value, WardCost, Zone,
 };
 use crate::effect::shortcut::{on_attack, target_filtered};
-use crate::effect::{Duration, Effect, PlayerRef};
+use crate::effect::{LookPick, Duration, Effect, PlayerRef};
 use crate::game::TurnStep;
 use crate::mana::{cost, g, generic, r, u, w};
 
@@ -238,21 +238,13 @@ pub fn squad_rallier() -> CardDefinition {
         toughness: 4,
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[generic(2), w()]),
-            effect: Effect::LookPickToHand {
-                then_if_picked: None,
+            effect: Effect::LookPickToHand(Box::new(LookPick {
                 who: PlayerRef::You,
                 count: Value::Const(4),
-                rest_to_graveyard: false,
                 pick_filter: Some(R::Creature.and(R::PowerAtMost(2))),
-                take: None,
-                to_battlefield: false,
-                gain_life_if_pick: None,
-                gain_life_greatest_power_rest: false,
                 optional: true,
-                picked_lands_to_battlefield: false,
-                rest_bottom_random: false,
-                rest_to_exile: false,
-            },
+    ..Default::default()
+})),
             ..Default::default()
         }],
         ..Default::default()

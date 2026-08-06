@@ -11,7 +11,7 @@ use crate::effect::shortcut::{
     adapt, afterlife, deal, draw, each_creature, each_your_creature, etb, etb_scry, on_attack,
     riot, spectacle, target_any, target_filtered,
 };
-use crate::effect::{
+use crate::effect::{LookPick, 
     Duration, Effect, LibraryPosition, ManaPayload, PlayerRef, Predicate, RevealMissDest, Selector,
     StaticEffect, ZoneDest, ZoneRef,
 };
@@ -1918,21 +1918,12 @@ pub fn shimmer_of_possibility() -> CardDefinition {
         name: "Shimmer of Possibility",
         cost: cost(&[generic(1), u()]),
         card_types: vec![CardType::Sorcery],
-        effect: Effect::LookPickToHand {
-            then_if_picked: None,
+        effect: Effect::LookPickToHand(Box::new(LookPick {
             who: PlayerRef::You,
             count: Value::Const(4),
-            rest_to_graveyard: false,
-            pick_filter: None,
-            take: None,
-            to_battlefield: false,
-            gain_life_if_pick: None,
-            gain_life_greatest_power_rest: false,
-            optional: false,
-            picked_lands_to_battlefield: false,
             rest_bottom_random: true,
-            rest_to_exile: false,
-        },
+    ..Default::default()
+})),
         ..Default::default()
     }
 }
@@ -3730,21 +3721,14 @@ pub fn incubation_incongruity() -> CardDefinition {
         name: "Incubation // Incongruity",
         cost: cost(&[hybrid(Color::Green, Color::Blue)]),
         card_types: vec![CardType::Sorcery],
-        effect: Effect::LookPickToHand {
-            then_if_picked: None,
+        effect: Effect::LookPickToHand(Box::new(LookPick {
             who: PlayerRef::You,
             count: Value::Const(5),
-            rest_to_graveyard: false,
             pick_filter: Some(R::Creature),
-            take: None,
-            to_battlefield: false,
-            gain_life_if_pick: None,
-            gain_life_greatest_power_rest: false,
             optional: true,
-            picked_lands_to_battlefield: false,
             rest_bottom_random: true,
-            rest_to_exile: false,
-        },
+    ..Default::default()
+})),
         split: Some(Box::new(crate::card::SplitCard {
             right: crate::card::SplitHalf {
                 cost: cost(&[generic(1), g(), u()]),

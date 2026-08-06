@@ -7,7 +7,7 @@ use crate::card::{
 };
 use crate::card::{EventKind, EventScope, EventSpec};
 use crate::effect::shortcut::target_filtered;
-use crate::effect::{Duration, Effect, PlayerRef};
+use crate::effect::{LookPick, Duration, Effect, PlayerRef};
 use crate::mana::{ManaCost, b, cost, g, generic, u, w, x};
 
 // ── Golgari ─────────────────────────────────────────────────────────────────
@@ -94,21 +94,11 @@ pub fn court_hussar() -> CardDefinition {
         keywords: vec![Keyword::Vigilance],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-            effect: Effect::LookPickToHand {
-                then_if_picked: None,
+            effect: Effect::LookPickToHand(Box::new(LookPick {
                 who: PlayerRef::You,
                 count: Value::Const(3),
-                rest_to_graveyard: false,
-                pick_filter: None,
-                take: None,
-                to_battlefield: false,
-                gain_life_if_pick: None,
-                gain_life_greatest_power_rest: false,
-                optional: false,
-                picked_lands_to_battlefield: false,
-                rest_bottom_random: false,
-                rest_to_exile: false,
-            },
+    ..Default::default()
+})),
         }],
         ..Default::default()
     }

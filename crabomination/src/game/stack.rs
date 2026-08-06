@@ -2241,12 +2241,19 @@ impl GameState {
                     let is_is = card.definition.card_types.iter().any(|t| {
                         matches!(t, crate::card::CardType::Instant | crate::card::CardType::Sorcery)
                     });
-                    self.resolving_spell_lifelink_seat =
-                        (is_is && self.controller_grants_spell_lifelink(caster)).then_some(caster);
+                    // Judith, Carnage Connoisseur — a per-spell grant onto this
+                    // stack item counts the same as the blanket static.
+                    let granted_ll = self.spell_granted_keyword(card.id, &Keyword::Lifelink);
+                    let granted_dt = self.spell_granted_keyword(card.id, &Keyword::Deathtouch);
+                    self.spell_keyword_grants.retain(|(id, _)| *id != card.id);
+                    self.resolving_spell_lifelink_seat = (is_is
+                        && (granted_ll || self.controller_grants_spell_lifelink(caster)))
+                    .then_some(caster);
                     // Pestilent Spirit — the resolving I/S has deathtouch while
                     // its controller has the granting static.
-                    self.resolving_spell_deathtouch_seat =
-                        (is_is && self.controller_grants_spell_deathtouch(caster)).then_some(caster);
+                    self.resolving_spell_deathtouch_seat = (is_is
+                        && (granted_dt || self.controller_grants_spell_deathtouch(caster)))
+                    .then_some(caster);
                     // Track the I/S caster so damage the spell deals can fire
                     // "whenever an instant or sorcery you control deals damage"
                     // (Blaze Commando), once per resolution.
@@ -3277,6 +3284,7 @@ impl GameState {
             pl.searched_library_this_turn = false;
             pl.shroud_this_turn = false;
             pl.cards_to_graveyard_this_turn = 0;
+            pl.creature_cards_to_graveyard_this_turn = 0;
             pl.descended_this_turn = false;
             pl.descend_count_this_turn = 0;
             pl.discarded_this_turn.clear();
@@ -3512,6 +3520,7 @@ impl GameState {
             }
             // "[Filter] spells cost {N} less this turn" grants end (CR 514.2).
             player.turn_spell_discounts.clear();
+            player.face_down_discount_this_turn = 0;
             // "Until end of turn" +1/+1 counter bonus (Prairie Dog) ends.
             player.extra_plus_one_counters_this_turn = 0;
             player.extra_etb_p1p1_counters_this_turn = 0;
@@ -3646,6 +3655,7 @@ impl GameState {
         self.artifact_damage_to_players_this_turn.clear();
         self.combat_damage_redirect_this_turn.clear();
         self.doubled_damage_sources_this_turn.clear();
+        self.damage_sources_this_turn.clear();
         self.noncombat_damage_bonus_this_turn.clear();
         self.damaged_creatures_die_this_turn = false;
         self.creature_deaths_drain_toughness_this_turn = false;

@@ -8,7 +8,7 @@ use crate::card::{
     TokenDefinition, TriggeredAbility, Value, WardCost,
 };
 use crate::effect::shortcut::{investigate, target_filtered};
-use crate::effect::{Duration, ManaPayload, PlayerRef, ZoneDest};
+use crate::effect::{LookPick, Duration, ManaPayload, PlayerRef, ZoneDest};
 use crate::mana::{Color, SpendRestriction, b, cost, g, generic, r, u};
 
 /// Nethergoyf — {B} Lhurgoyf */1+*. Power = card types among cards in your
@@ -211,21 +211,14 @@ pub fn loot_exuberant_explorer() -> CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[generic(4), g(), g()]),
             tap_cost: true,
-            effect: Effect::LookPickToHand {
-                then_if_picked: None,
+            effect: Effect::LookPickToHand(Box::new(LookPick {
                 who: PlayerRef::You,
                 count: Value::Const(6),
-                rest_to_graveyard: false,
                 pick_filter: Some(R::Creature.and(R::ManaValueAtMostYourCount(Box::new(R::Land)))),
-                take: None,
                 to_battlefield: true,
-                gain_life_if_pick: None,
-                gain_life_greatest_power_rest: false,
                 optional: true,
-                picked_lands_to_battlefield: false,
-                rest_bottom_random: false,
-                rest_to_exile: false,
-            },
+    ..Default::default()
+})),
             ..Default::default()
         }],
         ..Default::default()
@@ -680,21 +673,12 @@ pub fn trail_of_crumbs() -> CardDefinition {
                 effect: Effect::MayPay {
                     description: "Pay {1} to dig two for a permanent?".to_string(),
                     mana_cost: cost(&[generic(1)]),
-                    body: Box::new(Effect::LookPickToHand {
-                        then_if_picked: None,
+                    body: Box::new(Effect::LookPickToHand(Box::new(LookPick {
                         who: PlayerRef::You,
                         count: Value::Const(2),
-                        rest_to_graveyard: false,
                         pick_filter: Some(R::PermanentCard),
-                        take: None,
-                        to_battlefield: false,
-                        gain_life_if_pick: None,
-                        gain_life_greatest_power_rest: false,
-                        optional: false,
-                        picked_lands_to_battlefield: false,
-                        rest_bottom_random: false,
-                        rest_to_exile: false,
-                    }),
+    ..Default::default()
+}))),
                     else_: None,
                 },
             },

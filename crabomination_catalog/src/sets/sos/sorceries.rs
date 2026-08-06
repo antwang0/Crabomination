@@ -7,6 +7,7 @@ use crate::card::{
 use crate::effect::shortcut::target_filtered;
 use crate::effect::{Duration, PlayerRef, Selector, Value};
 use crate::mana::{Color, b, cost, g, generic, w};
+use crate::effect::LookPick;
 
 /// 1/1 black-and-green Pest creature token. Used by Witherbloom-leaning
 /// SOS cards (Send in the Pest, Pest Mascot's payoff cycle, etc.).
@@ -974,21 +975,12 @@ pub fn visionarys_dance() -> CardDefinition {
             mana_cost: cost(&[generic(2)]),
             from_hand: true,
             discard_self_cost: true,
-            effect: Effect::LookPickToHand {
-                then_if_picked: None,
+            effect: Effect::LookPickToHand(Box::new(LookPick {
                 who: PlayerRef::You,
                 count: Value::Const(2),
                 rest_to_graveyard: true,
-                pick_filter: None,
-                take: None,
-                to_battlefield: false,
-                gain_life_if_pick: None,
-                gain_life_greatest_power_rest: false,
-                optional: false,
-                picked_lands_to_battlefield: false,
-                rest_bottom_random: false,
-                rest_to_exile: false,
-            },
+    ..Default::default()
+})),
             ..Default::default()
         }],
         ..Default::default()
@@ -1824,24 +1816,19 @@ pub fn zimones_experiment() -> CardDefinition {
         name: "Zimone's Experiment",
         cost: cost(&[generic(3), g()]),
         card_types: vec![CardType::Sorcery],
-        effect: Effect::LookPickToHand {
-            then_if_picked: None,
+        effect: Effect::LookPickToHand(Box::new(LookPick {
             who: PlayerRef::You,
             count: Value::Const(5),
-            rest_to_graveyard: false,
             pick_filter: Some(
                 SelectionRequirement::Creature
                     .or(SelectionRequirement::HasCardType(CardType::Land)),
             ),
             take: Some(Value::Const(2)),
-            to_battlefield: false,
-            gain_life_if_pick: None,
-            gain_life_greatest_power_rest: false,
             optional: true,
             picked_lands_to_battlefield: true,
             rest_bottom_random: true,
-            rest_to_exile: false,
-        },
+    ..Default::default()
+})),
         ..Default::default()
     }
 }
@@ -1876,37 +1863,18 @@ pub fn flow_state() -> CardDefinition {
                     filter: SelectionRequirement::HasCardType(CardType::Sorcery),
                 }),
             ]),
-            then: Box::new(Effect::LookPickToHand {
-                then_if_picked: None,
+            then: Box::new(Effect::LookPickToHand(Box::new(LookPick {
                 who: PlayerRef::You,
                 count: Value::Const(3),
-                rest_to_graveyard: false,
-                pick_filter: None,
                 take: Some(Value::Const(2)),
-                to_battlefield: false,
-                gain_life_if_pick: None,
-                gain_life_greatest_power_rest: false,
-                optional: false,
-                picked_lands_to_battlefield: false,
                 rest_bottom_random: true,
-                rest_to_exile: false,
-            }),
-            else_: Box::new(Effect::LookPickToHand {
-                then_if_picked: None,
+    ..Default::default()
+}))),
+            else_: Box::new(Effect::LookPickToHand(Box::new(LookPick {
                 who: PlayerRef::You,
                 count: Value::Const(3),
-                rest_to_graveyard: false,
-                pick_filter: None,
-
-                take: None,
-                to_battlefield: false,
-                gain_life_if_pick: None,
-                gain_life_greatest_power_rest: false,
-                optional: false,
-                picked_lands_to_battlefield: false,
-                rest_bottom_random: false,
-                rest_to_exile: false,
-            }),
+    ..Default::default()
+}))),
         },
         ..Default::default()
     }
@@ -2069,21 +2037,15 @@ pub fn follow_the_lumarets() -> CardDefinition {
     use crate::effect::Predicate;
     use crate::mana::g;
     let creature_or_land = SelectionRequirement::Creature.or(SelectionRequirement::Land);
-    let look = |take: i32| Effect::LookPickToHand {
-        then_if_picked: None,
+    let look = |take: i32| Effect::LookPickToHand(Box::new(LookPick {
         who: PlayerRef::You,
         count: Value::Const(4),
-        rest_to_graveyard: false,
         pick_filter: Some(creature_or_land.clone()),
         take: Some(Value::Const(take)),
-        to_battlefield: false,
-        gain_life_if_pick: None,
-        gain_life_greatest_power_rest: false,
         optional: true,
-        picked_lands_to_battlefield: false,
         rest_bottom_random: true,
-        rest_to_exile: false,
-    };
+    ..Default::default()
+}));
     CardDefinition {
         name: "Follow the Lumarets",
         cost: cost(&[generic(1), g()]),
@@ -2260,6 +2222,7 @@ pub fn improvisation_capstone() -> CardDefinition {
                 filter: None,
                 what: Selector::LastMoved,
                 source_zone: Zone::Exile,
+                cap: None,
             },
             Effect::RegisterParadigm,
         ]),

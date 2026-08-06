@@ -5,7 +5,7 @@ use crate::card::{
     EnchantmentSubtype, EquipBonus, EventKind, EventScope, EventSpec, Keyword, LandType, Predicate,
     SelectionRequirement as R, StaticAbility, Subtypes, Supertype, TriggeredAbility, Value,
 };
-use crate::effect::{
+use crate::effect::{LookPick, 
     Duration, Effect, PlayerRef, Selector, StaticEffect, ZoneDest,
     shortcut::{deal, on_dies, target_any, target_filtered},
 };
@@ -1322,21 +1322,11 @@ pub fn raven_familiar() -> CardDefinition {
         keywords: vec![Keyword::Flying, Keyword::Echo(cost(&[generic(2), u()]))],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-            effect: Effect::LookPickToHand {
-                then_if_picked: None,
+            effect: Effect::LookPickToHand(Box::new(LookPick {
                 who: PlayerRef::You,
                 count: Value::Const(3),
-                rest_to_graveyard: false,
-                pick_filter: None,
-                take: None,
-                to_battlefield: false,
-                gain_life_if_pick: None,
-                gain_life_greatest_power_rest: false,
-                optional: false,
-                picked_lands_to_battlefield: false,
-                rest_bottom_random: false,
-                rest_to_exile: false,
-            },
+    ..Default::default()
+})),
         }],
         ..creature("Raven Familiar", cost(&[generic(2), u()]), vec![CreatureType::Bird], 1, 2)
     }

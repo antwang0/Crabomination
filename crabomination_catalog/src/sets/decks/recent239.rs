@@ -8,7 +8,7 @@ use crate::card::{
     TokenDefinition, TriggeredAbility,
 };
 use crate::effect::shortcut::{animate_land, deal, target_filtered, valiant};
-use crate::effect::{
+use crate::effect::{LookPick, 
     DelayedTriggerKind, Duration, Effect, EventKind, EventScope, EventSpec, ManaPayload,
     OpeningHandEffect, PlayerRef, PlayerStaticTarget, Predicate, Selector, SpreeMode, StaticEffect,
     Value, ZoneDest,
@@ -618,21 +618,14 @@ pub fn lupinflower_village() -> CardDefinition {
                 tap_cost: true,
                 mana_cost: cost(&[generic(1), w()]),
                 sac_cost: true,
-                effect: Effect::LookPickToHand {
-                    then_if_picked: None,
+                effect: Effect::LookPickToHand(Box::new(LookPick {
                     who: PlayerRef::You,
                     count: Value::Const(6),
-                    rest_to_graveyard: false,
                     pick_filter: Some(kindred),
-                    take: None,
-                    to_battlefield: false,
-                    gain_life_if_pick: None,
-                    gain_life_greatest_power_rest: false,
                     optional: true,
-                    picked_lands_to_battlefield: false,
                     rest_bottom_random: true,
-                    rest_to_exile: false,
-                },
+    ..Default::default()
+})),
                 ..Default::default()
             },
         ],
@@ -763,21 +756,15 @@ pub fn whiskervale_forerunner() -> CardDefinition {
         },
         power: 3,
         toughness: 4,
-        triggered_abilities: vec![valiant(Effect::LookPickToHand {
-            then_if_picked: None,
+        triggered_abilities: vec![valiant(Effect::LookPickToHand(Box::new(LookPick {
             who: PlayerRef::You,
             count: Value::Const(5),
-            rest_to_graveyard: false,
             pick_filter: Some(R::Creature.and(R::ManaValueAtMost(3))),
-            take: None,
             to_battlefield: true,
-            gain_life_if_pick: None,
-            gain_life_greatest_power_rest: false,
             optional: true,
-            picked_lands_to_battlefield: false,
             rest_bottom_random: true,
-            rest_to_exile: false,
-        })],
+    ..Default::default()
+})))],
         ..Default::default()
     }
 }

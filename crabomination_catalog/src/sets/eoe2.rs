@@ -5,7 +5,7 @@ use crate::card::{
     EnchantmentSubtype, EquipBonus, EventKind, EventScope, EventSpec, Keyword, Predicate,
     SelectionRequirement as R, StaticAbility, Subtypes, Supertype, TriggeredAbility, WardCost,
 };
-use crate::effect::{
+use crate::effect::{LookPick, 
     Duration, Effect, PlayerRef, Selector, StaticEffect, Value, ZoneDest,
     shortcut::{etb, on_attack, target_filtered},
 };
@@ -73,21 +73,15 @@ pub fn famished_worldsire() -> CardDefinition {
         keywords: vec![Keyword::Ward(WardCost::Mana(cost(&[generic(3)])))],
         as_enters_effect: Some(crate::effect::shortcut::devour_filter(3, R::Land)),
         triggered_abilities: vec![
-            etb(Effect::LookPickToHand {
+            etb(Effect::LookPickToHand(Box::new(LookPick {
                 who: PlayerRef::You,
                 count: Value::PowerOf(Box::new(Selector::This)),
                 pick_filter: Some(R::Land),
                 take: Some(Value::PowerOf(Box::new(Selector::This))),
                 to_battlefield: true,
                 optional: true,
-                rest_to_graveyard: false,
-                gain_life_if_pick: None,
-                gain_life_greatest_power_rest: false,
-                picked_lands_to_battlefield: false,
-                rest_bottom_random: false,
-                rest_to_exile: false,
-                then_if_picked: None,
-            }),
+    ..Default::default()
+}))),
         ],
         ..Default::default()
     }

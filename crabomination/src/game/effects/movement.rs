@@ -1069,6 +1069,13 @@ impl GameState {
         if amount == 0 {
             return;
         }
+        // Case of the Burning Masks — tally the distinct sources each seat
+        // controlled that have dealt damage this turn.
+        if let (Some(src), Some(seat)) = (source, from_controller)
+            && !self.damage_sources_this_turn.contains(&(seat, src))
+        {
+            self.damage_sources_this_turn.push((seat, src));
+        }
         // Reverse Polarity — tally artifact damage dealt to each player.
         if let (EntityRef::Player(victim), Some(src)) = (ent, source)
             && self.source_is_artifact(src)
@@ -1642,6 +1649,16 @@ impl GameState {
         // The currently-resolving instant/sorcery whose controller grants
         // spells lifelink (stamped in `resolve_top_of_stack`).
         self.resolving_spell_lifelink_seat
+    }
+
+    /// True if a "that spell gains [keyword]" grant is riding the stack item
+    /// for `spell` (Judith, Carnage Connoisseur).
+    pub(crate) fn spell_granted_keyword(
+        &self,
+        spell: CardId,
+        kw: &crate::card::Keyword,
+    ) -> bool {
+        self.spell_keyword_grants.iter().any(|(id, k)| *id == spell && k == kw)
     }
 
     /// True if `seat` controls a permanent granting

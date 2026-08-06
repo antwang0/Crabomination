@@ -14,6 +14,7 @@ use crate::effect::shortcut::{
     etb_drain, etb_gain_life, magecraft, magecraft_drain_each_opp, target_filtered,
 };
 use crate::mana::{b, cost, g, generic, r, u, w};
+use crate::effect::LookPick;
 
 // ── Strict Proctor ──────────────────────────────────────────────────────────
 
@@ -1414,21 +1415,12 @@ pub fn professor_onyx() -> CardDefinition {
                         who: Selector::You,
                         amount: Value::Const(1),
                     },
-                    Effect::LookPickToHand {
-                        then_if_picked: None,
+                    Effect::LookPickToHand(Box::new(LookPick {
                         who: PlayerRef::You,
                         count: Value::Const(3),
                         rest_to_graveyard: true,
-                        pick_filter: None,
-                        take: None,
-                        to_battlefield: false,
-                        gain_life_if_pick: None,
-                        gain_life_greatest_power_rest: false,
-                        optional: false,
-                        picked_lands_to_battlefield: false,
-                        rest_bottom_random: false,
-                        rest_to_exile: false,
-                    },
+    ..Default::default()
+})),
                 ]),
             },
             // −3: "Each opponent sacrifices a creature with the greatest
@@ -1667,22 +1659,12 @@ pub fn adventurous_impulse() -> CardDefinition {
         name: "Adventurous Impulse",
         cost: cost(&[crate::mana::g()]),
         card_types: vec![CardType::Sorcery],
-        effect: Effect::LookPickToHand {
-            then_if_picked: None,
+        effect: Effect::LookPickToHand(Box::new(LookPick {
             who: PlayerRef::You,
             count: Value::Const(3),
-            rest_to_graveyard: false,
             pick_filter: Some(SelectionRequirement::Creature.or(SelectionRequirement::Land)),
-
-            take: None,
-            to_battlefield: false,
-            gain_life_if_pick: None,
-            gain_life_greatest_power_rest: false,
-            optional: false,
-            picked_lands_to_battlefield: false,
-            rest_bottom_random: false,
-            rest_to_exile: false,
-        },
+    ..Default::default()
+})),
         ..Default::default()
     }
 }

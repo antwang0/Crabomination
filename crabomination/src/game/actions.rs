@@ -4784,7 +4784,8 @@ impl GameState {
     /// battlefield face down; turn it up later for its Morph cost.
     /// CR 702.36b — the generic mana a face-down cast costs `seat`: the flat
     /// {3}, less every `FaceDownSpellsCostLess` static they control (Dream
-    /// Chisel). Surfaced as `PlayerView.face_down_cast_cost`.
+    /// Chisel) and any turn-scoped grant (Goblin Maskmaker). Surfaced as
+    /// `PlayerView.face_down_cast_cost`.
     pub fn face_down_cast_cost(&self, seat: usize) -> u32 {
         let reduction: u32 = self
             .battlefield
@@ -4796,7 +4797,10 @@ impl GameState {
                 _ => None,
             })
             .sum();
-        3u32.saturating_sub(reduction)
+        // `seat` can be the spectator sentinel, which indexes no player.
+        let turn_grant =
+            self.players.get(seat).map_or(0, |p| p.face_down_discount_this_turn);
+        3u32.saturating_sub(reduction + turn_grant)
     }
 
     pub(crate) fn cast_face_down(&mut self, card_id: CardId) -> Result<Vec<GameEvent>, GameError> {
@@ -4829,7 +4833,14 @@ impl GameState {
             symbols: vec![crate::mana::ManaSymbol::Generic(self.face_down_cast_cost(p))],
         };
         let forced_only = self.players[p].manual_mana;
-        let receipt = self.try_pay_with_auto_tap_mode(p, &cost, forced_only)?;
+        let kind = crate::mana::SpellKind {
+            creature: true,
+            casting_nonartifact_spell: true,
+            colorless: true,
+            face_down: true,
+            ..Default::default()
+        };
+        let receipt = self.try_pay_with_auto_tap_kind(p, &cost, forced_only, &kind)?;
         let mana_spent = receipt
             .pool_before
             .total()
@@ -4949,7 +4960,8 @@ impl GameState {
             .map(|d| d.keywords.iter().any(|k| matches!(k, Keyword::Megamorph(_))))
             .unwrap_or(false);
         let forced_only = self.players[p].manual_mana;
-        let receipt = self.try_pay_with_auto_tap_mode(p, &cost, forced_only)?;
+        let kind = crate::mana::SpellKind { turning_face_up: true, ..Default::default() };
+        let receipt = self.try_pay_with_auto_tap_kind(p, &cost, forced_only, &kind)?;
         let mut events = receipt.auto_events;
         self.pay_life_cost(p, receipt.side_effects.life_lost);
         if let Some(c) = self.battlefield.iter_mut().find(|c| c.id == card_id) {
@@ -6364,6 +6376,7 @@ impl GameState {
                             Keyword::HexproofFromColor(c) => spell_colors.contains(c),
                             // CR 702.11f — exactly one color on the spell.
                             Keyword::HexproofFromMonocolored => spell_colors.len() == 1,
+                            Keyword::HexproofFromMulticolored => spell_colors.len() >= 2,
                             _ => false,
                         });
                     printed
@@ -10493,7 +10506,9 @@ impl GameState {
         let printed_hexproof_color = tgt.keywords.iter().any(|kw| {
             matches!(
                 kw,
-                Keyword::HexproofFromColor(_) | Keyword::HexproofFromMonocolored
+                Keyword::HexproofFromColor(_)
+                    | Keyword::HexproofFromMonocolored
+                    | Keyword::HexproofFromMulticolored
             )
         });
         let turn_hexproof_color = !self.players[tgt_controller]
@@ -10541,6 +10556,7 @@ impl GameState {
                 Keyword::HexproofFromColor(c) => src.colors.contains(c),
                 // CR 702.11f — an exactly-one-color source.
                 Keyword::HexproofFromMonocolored => src.colors.len() == 1,
+                Keyword::HexproofFromMulticolored => src.colors.len() >= 2,
                 _ => false,
             }) {
                 return true;

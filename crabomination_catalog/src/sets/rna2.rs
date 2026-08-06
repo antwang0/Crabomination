@@ -6,7 +6,7 @@ use crate::card::{
     LoyaltyAbility, PlaneswalkerSubtype, SelectionRequirement as R, StaticAbility, Subtypes,
     Supertype, TokenDefinition, TriggeredAbility, Value,
 };
-use crate::effect::{Duration, Effect, PlayerRef, Predicate, Selector, StaticEffect};
+use crate::effect::{LookPick, Duration, Effect, PlayerRef, Predicate, Selector, StaticEffect};
 use crate::mana::{Color, b, cost, generic, r, u, w, x};
 
 fn creatures(t: Vec<CreatureType>) -> Subtypes {
@@ -88,21 +88,13 @@ pub fn dovin_grand_arbiter() -> CardDefinition {
             },
             LoyaltyAbility {
                 loyalty_cost: -7,
-                effect: Effect::LookPickToHand {
-                    then_if_picked: None,
+                effect: Effect::LookPickToHand(Box::new(LookPick {
                     who: PlayerRef::You,
                     count: Value::Const(10),
-                    rest_to_graveyard: false,
-                    pick_filter: None,
                     take: Some(Value::Const(3)),
-                    to_battlefield: false,
-                    gain_life_if_pick: None,
-                    gain_life_greatest_power_rest: false,
-                    optional: false,
-                    picked_lands_to_battlefield: false,
                     rest_bottom_random: true,
-                    rest_to_exile: false,
-                },
+    ..Default::default()
+})),
                 ..Default::default()
             },
         ],

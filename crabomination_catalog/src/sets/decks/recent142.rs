@@ -9,7 +9,7 @@ use crate::card::{
     Supertype, TriggeredAbility, Value,
 };
 use crate::effect::shortcut::{draw, etb, lose_life, target_filtered};
-use crate::effect::{
+use crate::effect::{LookPick, 
     Duration, Effect, EventKind, EventScope, EventSpec, ManaPayload, PlayerRef, ZoneDest,
 };
 use crate::game::effects::food_token;
@@ -328,21 +328,12 @@ pub fn solitary_sanctuary() -> CardDefinition {
 /// Farsight Ritual — {2}{U}{U} Instant with Bargain. Dig four (eight if
 /// bargained); put two into your hand and the rest on the bottom.
 pub fn farsight_ritual() -> CardDefinition {
-    let dig = |count: i32| Effect::LookPickToHand {
-        then_if_picked: None,
+    let dig = |count: i32| Effect::LookPickToHand(Box::new(LookPick {
         who: PlayerRef::You,
         count: Value::Const(count),
-        rest_to_graveyard: false,
-        pick_filter: None,
         take: Some(Value::Const(2)),
-        to_battlefield: false,
-        gain_life_if_pick: None,
-        gain_life_greatest_power_rest: false,
-        optional: false,
-        picked_lands_to_battlefield: false,
-        rest_bottom_random: false,
-        rest_to_exile: false,
-    };
+    ..Default::default()
+}));
     CardDefinition {
         name: "Farsight Ritual",
         cost: cost(&[generic(2), u(), u()]),

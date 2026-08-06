@@ -8,7 +8,7 @@ use crate::card::{
     Subtypes, Supertype, TokenDefinition, TriggeredAbility, Value,
 };
 use crate::effect::shortcut::{etb, on_attack, target_any, target_filtered};
-use crate::effect::{Duration, Effect, PlayerRef, Predicate, StaticAbility, StaticEffect};
+use crate::effect::{LookPick, Duration, Effect, PlayerRef, Predicate, StaticAbility, StaticEffect};
 use crate::mana::{Color, ManaCost, b, cost, g, generic, r, u, w, x};
 
 fn artifact(name: &'static str, mana: ManaCost) -> CardDefinition {
@@ -75,21 +75,14 @@ fn equipment(name: &'static str, mana: ManaCost, equip: ManaCost) -> CardDefinit
 pub fn chromescale_drake() -> CardDefinition {
     CardDefinition {
         affinity_filter: Some(R::Artifact.and(R::ControlledByYou)),
-        triggered_abilities: vec![etb(Effect::LookPickToHand {
-            then_if_picked: None,
+        triggered_abilities: vec![etb(Effect::LookPickToHand(Box::new(LookPick {
             who: PlayerRef::You,
             count: Value::Const(3),
             rest_to_graveyard: true,
             pick_filter: Some(R::Artifact),
             take: Some(Value::Const(3)),
-            to_battlefield: false,
-            gain_life_if_pick: None,
-            gain_life_greatest_power_rest: false,
-            optional: false,
-            rest_bottom_random: false,
-            picked_lands_to_battlefield: false,
-            rest_to_exile: false,
-        })],
+    ..Default::default()
+})))],
         ..creature(
             "Chromescale Drake",
             cost(&[generic(6), u(), u(), u()]),

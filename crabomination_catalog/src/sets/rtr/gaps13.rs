@@ -58,6 +58,7 @@ pub fn epic_experiment() -> CardDefinition {
                         .or(R::HasCardType(CardType::Sorcery))
                         .and(R::ManaValueAtMostXFromCost),
                 ),
+                cap: None,
             },
             Effect::Move {
                 what: Selector::CardExiledWithSource,
@@ -111,6 +112,7 @@ pub fn jace_architect_of_thought() -> CardDefinition {
                         what: Selector::LastMoved,
                         source_zone: Zone::Exile,
                         filter: None,
+                        cap: None,
                     },
                 ]),
                 ..Default::default()

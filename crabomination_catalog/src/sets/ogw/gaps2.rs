@@ -6,7 +6,7 @@ use crate::card::{
     SelectionRequirement as R, StaticAbility, Subtypes, Value,
 };
 use crate::effect::shortcut::{deal, draw, etb, target_filtered};
-use crate::effect::{
+use crate::effect::{LookPick, 
     Duration, Effect, EventKind, EventScope, EventSpec, PlayerRef, Selector, StaticEffect,
     TriggeredAbility, ZoneDest,
 };
@@ -129,21 +129,13 @@ pub fn spawnbinder_mage() -> CardDefinition {
 /// Equipment.
 pub fn stoneforge_acolyte() -> CardDefinition {
     CardDefinition {
-        activated_abilities: vec![cohort(Effect::LookPickToHand {
-            then_if_picked: None,
+        activated_abilities: vec![cohort(Effect::LookPickToHand(Box::new(LookPick {
             who: PlayerRef::You,
             count: Value::Const(4),
             pick_filter: Some(R::HasArtifactSubtype(crate::card::ArtifactSubtype::Equipment)),
             optional: true,
-            rest_to_graveyard: false,
-            take: None,
-            to_battlefield: false,
-            gain_life_if_pick: None,
-            gain_life_greatest_power_rest: false,
-            picked_lands_to_battlefield: false,
-            rest_bottom_random: false,
-            rest_to_exile: false,
-        })],
+    ..Default::default()
+})))],
         ..ally(
             "Stoneforge Acolyte",
             cost(&[w()]),
