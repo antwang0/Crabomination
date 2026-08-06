@@ -689,6 +689,12 @@ fn main() {
             crate::systems::free_cast_badge::sync_free_cast_badges
                 .run_if(in_state(AppState::InGame)),
         )
+        // CR 701.19 — shield chip over permanents that can regenerate.
+        .add_systems(
+            Update,
+            crate::systems::regen_badge::sync_regen_badges
+                .run_if(in_state(AppState::InGame)),
+        )
         // Clarity batch: hover-preview for UI tiles (stack panel / log
         // lines), pulsing ring on the pending decision's source, and the
         // low-life danger frame.

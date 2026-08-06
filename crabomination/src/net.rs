@@ -325,6 +325,11 @@ pub struct ClientView {
     /// turn instead of the active/defending player. `None` in normal combat.
     #[serde(default)]
     pub combat_chooser: Option<usize>,
+    /// The seat that submits this combat's *block* declaration, if it isn't
+    /// the defending players: `combat_chooser`, else the attacking player
+    /// while an `AttackingPlayerChoosesBlocks` static is out (Invasion Plans).
+    #[serde(default)]
+    pub block_chooser: Option<usize>,
     #[serde(default)]
     pub max_attackers_per_combat: Option<u32>,
     #[serde(default)]
@@ -606,9 +611,9 @@ impl ClientView {
     }
 
     /// Does `seat` submit this turn's block declaration? Any defending player,
-    /// unless a `combat_chooser` took the job.
+    /// unless a `block_chooser` (Master Warcraft, Invasion Plans) took the job.
     pub fn declares_blocks(&self, seat: usize) -> bool {
-        match self.combat_chooser {
+        match self.block_chooser.or(self.combat_chooser) {
             Some(chooser) => chooser == seat,
             None => self.active_player != seat,
         }

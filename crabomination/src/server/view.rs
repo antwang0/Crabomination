@@ -146,6 +146,7 @@ fn project_for_inner(state: &GameState, viewer: Option<usize>) -> ClientView {
         turn_effects: state.turn_effect_notes(),
         block_tax_this_turn: state.block_tax_this_turn,
         combat_chooser: state.combat_chooser,
+        block_chooser: state.block_chooser(),
         planar: viewer.and_then(|seat| planar_view(state, seat)),
         max_attackers_per_combat: state.combat_participation_cap(false),
         max_blockers_per_combat: state.combat_participation_cap(true),

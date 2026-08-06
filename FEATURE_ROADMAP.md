@@ -2611,6 +2611,15 @@ Each a small targeted feature; sweep batch by batch.
 - **Client**: a "FREE" chip (`systems::free_cast_badge`) over hand cards a
   standing static casts for nothing — the shared cyan alt-cast border can't
   say *which* alternative applies, let alone that it costs zero.
+- **Block chooser end to end** — `ClientView.block_chooser` mirrors
+  `GameState::block_chooser`, so `declares_blocks` reaches the Invasion Plans
+  case, and `bot::forced_blocks` submits only the CR 509.1c-forced blocks when
+  the attacking seat is the chooser (it used to decline everything, which the
+  engine rejects on a MustBlock board).
+- **Client**: a regeneration-shield chip (`systems::regen_badge`) over
+  permanents with live shields — the tooltip was the only tell.
+- CR conformance: `core_rules/cr_recent89` covers CR 701.19a, CR 604.4,
+  CR 611.2c and CR 509.1c's forced-block declaration.
 - CR conformance: `core_rules/cr_recent87` covers CR 707.4, CR 116.2b/116.3
   and CR 717.2/717.4/717.5.
 

@@ -9,11 +9,6 @@ Items are grouped by area and roughly ordered by impact within each group.
   swap when the current definition's name already equals the target's, so two
   same-named creature cards on top of the graveyard are indistinguishable.
   Harmless in practice, wrong in principle. ⏳
-- **`StaticEffect::AttackingPlayerChoosesBlocks` doesn't reach the bot.**
-  `block_chooser` moves the *submitter* and the affordance walk follows it,
-  but `bot.rs` still builds its block plan from the defending seat's point of
-  view — an Invasion Plans board makes the attacking bot pick blocks that help
-  its opponent. ⏳
 - **The repo is not `cargo fmt` clean.** Running `cargo fmt --all` rewrites
   ~700 files. Format new code by hand; don't run it across the workspace. ⏳
 - **`StaticEffect::PreventUntapGlobal`'s untap-preview path is quadratic.**

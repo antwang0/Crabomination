@@ -281,6 +281,7 @@ mod tests {
             turn_effects: Vec::new(),
             block_tax_this_turn: 0,
             combat_chooser: None,
+            block_chooser: None,
             max_attackers_per_combat: None,
             max_blockers_per_combat: None,
             face_down_cast_cost: 3,

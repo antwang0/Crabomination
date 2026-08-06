@@ -21,6 +21,7 @@ pub mod phase_bar;
 pub mod pt_label;
 pub mod agenda_badge;
 pub mod free_cast_badge;
+pub mod regen_badge;
 pub mod token_badge;
 pub mod quality;
 pub mod settings_menu;

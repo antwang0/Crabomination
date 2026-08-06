@@ -998,10 +998,12 @@ impl Bot for RandomBot {
                         return Some(a);
                     }
                     self.blocks_declared = true;
-                    // Master Warcraft on our own turn: we're choosing the
-                    // *defender's* blocks, so decline them all.
+                    // On our own turn we're choosing the *defender's* blocks
+                    // (Master Warcraft, Invasion Plans), so submit only what
+                    // CR 509.1c forces — and aim each forced blocker at the
+                    // attacker most likely to kill it.
                     let blocks = if is_active {
-                        Vec::new()
+                        forced_blocks(state)
                     } else {
                         pick_blocks_scored(state, seat, &self.weights)
                     };
@@ -1359,6 +1361,91 @@ fn forced_attacks(state: &GameState) -> Vec<Attack> {
             continue;
         };
         out.push(Attack { attacker: c.id, target: AttackTarget::Player(target) });
+    }
+    out
+}
+
+/// The block declaration to submit when the *attacking* seat is the block
+/// chooser (Invasion Plans): satisfy only what CR 509.1c forces — every
+/// `MustBlock`/`MustAttackOrBlock` defender, and enough blockers for each
+/// `AllMustBlock` attacker — and send each forced blocker into the attacker
+/// most likely to eat it. Anything not required stays home.
+fn forced_blocks(state: &GameState) -> Vec<(CardId, CardId)> {
+    use crate::card::Keyword;
+    let computed = state.compute_battlefield();
+    let kws = |id: CardId| {
+        computed.iter().find(|p| p.id == id).map(|p| p.keywords.as_slice()).unwrap_or(&[])
+    };
+    let mut out: Vec<(CardId, CardId)> = Vec::new();
+    let mut used: Vec<CardId> = state.block_map.keys().copied().collect();
+    // Best attacker for `blocker` to run into: the one that kills it and
+    // survives, else the biggest.
+    let best_attacker = |blocker: &crate::card::CardInstance| {
+        let mut cands: Vec<(CardId, i32, bool)> = state
+            .attacking
+            .iter()
+            .filter(|atk| {
+                state.defender_for(atk.target).is_some_and(|d| state.same_team(blocker.controller, d))
+                    && state.blocker_can_block_attacker(blocker.id, atk.attacker)
+            })
+            .map(|atk| {
+                let dmg = attacker_damage_value(state, atk.attacker);
+                let lethal = state
+                    .computed_permanent(blocker.id)
+                    .is_some_and(|b| dmg >= b.toughness);
+                (atk.attacker, dmg, lethal)
+            })
+            .collect();
+        cands.sort_by_key(|(_, dmg, lethal)| (!*lethal, -*dmg));
+        cands.first().map(|(id, ..)| *id)
+    };
+    let force = |blocker_id: CardId, out: &mut Vec<(CardId, CardId)>, used: &mut Vec<CardId>| {
+        if used.contains(&blocker_id) {
+            return;
+        }
+        let Some(b) = state.battlefield_find(blocker_id) else { return };
+        if b.tapped || kws(blocker_id).contains(&Keyword::CantBlock) {
+            return;
+        }
+        if let Some(atk) = best_attacker(b) {
+            used.push(blocker_id);
+            out.push((blocker_id, atk));
+        }
+    };
+    // CR 509.1c — "blocks each combat if able".
+    let must: Vec<CardId> = state
+        .battlefield
+        .iter()
+        .filter(|c| {
+            kws(c.id).contains(&Keyword::MustBlock) || kws(c.id).contains(&Keyword::MustAttackOrBlock)
+        })
+        .map(|c| c.id)
+        .collect();
+    for id in must {
+        force(id, &mut out, &mut used);
+    }
+    // CR 509.1c — "all creatures able to block this creature do so" / "must be
+    // blocked if able": every idle defender that can block such an attacker.
+    for atk in &state.attacking {
+        let a_kws = kws(atk.attacker);
+        let all = a_kws.contains(&Keyword::AllMustBlock);
+        if !all && !a_kws.contains(&Keyword::MustBeBlocked) {
+            continue;
+        }
+        let candidates: Vec<CardId> = state
+            .battlefield
+            .iter()
+            .filter(|c| {
+                state.defender_for(atk.target).is_some_and(|d| state.same_team(c.controller, d))
+                    && !used.contains(&c.id)
+                    && state.blocker_can_block_attacker(c.id, atk.attacker)
+            })
+            .map(|c| c.id)
+            .collect();
+        for id in candidates.into_iter().take(if all { usize::MAX } else { 1 }) {
+            used.push(id);
+            out.push((id, atk.attacker));
+        }
     }
     out
 }
@@ -5449,6 +5536,12 @@ fn pick_loyalty_ability(state: &GameState, seat: usize, w: &EvalWeights) -> Opti
         }
     }
     None
+}
+
+/// Test-visible wrapper for `forced_blocks` — the declaration an attacking
+/// block chooser (Invasion Plans) submits.
+pub fn forced_blocks_for_test(state: &GameState) -> Vec<(CardId, CardId)> {
+    forced_blocks(state)
 }
 
 /// Test-visible wrapper for `pick_blocks` so external tests can exercise
