@@ -3,7 +3,35 @@
 Improvement opportunities for the engine, client, and tooling.
 Items are grouped by area and roughly ordered by impact within each group.
 
-## Noticed this run (Stronghold closed)
+## Noticed this run (Tempest opened)
+
+- **`crabomination_client` cannot be compiled in the cloud session.**
+  `wayland-sys`'s build script needs `wayland-client.pc`, which isn't
+  installed, so `cargo check -p crabomination_client` fails before touching
+  our code. Client edits from a cloud run are therefore only type-checked by
+  eye — keep them to the mechanical shape of their neighbours (new
+  `CounterType` / `Keyword` match arms), and verify locally. ⏳
+- **Tempest's last 48 cards each want one primitive.** Grouped by what they
+  need: a repeat-until-no-progress loop (Grindstone); "choose a card name,
+  reveal at random from hand" (Cursed Scroll, Booby Trap); exile-with-linked
+  return (Cold Storage, Coffin Queen, Helm of Possession); a delayed
+  re-cast off exile (Ertai's Meddling); face-down hand/exile swaps (Duplicity,
+  Scroll Rack); attack-compulsion with an end-step punish (Maddening Imp,
+  Oracle en-Vec); an as-enters "pay any amount of life"/"sacrifice any number"
+  CDA (Minion of the Wastes, Dracoplasm); a per-untap-step cap (Static Orb);
+  and the three riderful Licids (Leeching, Nurturing, Stinging), whose Aura
+  halves need a granted triggered/activated ability rather than an
+  `equipped_bonus`. ⏳
+- **`PowerAtMostSourceCounters` is source-only.** The `evaluate_requirement_on_card`
+  path has no source in scope, so it answers `false` there; only the
+  `evaluate_requirement_static` path (targeting, the one that matters) reads
+  the counters. Same shape as `ManaValueEqualsCountersOnSource`. ⏳
+- **Precognition scries the opponent's library.** The printed card gives *you*
+  the look-and-bottom decision; `Effect::Scry { who: Target(0) }` hands it to
+  the library's owner. Wants a "look at target player's top card, you decide"
+  effect. ⏳
+
+## Noticed last run (Stronghold closed)
 
 - **`copies_top_graveyard_creature` re-syncs by name.** The SBA pass skips the
   swap when the current definition's name already equals the target's, so two

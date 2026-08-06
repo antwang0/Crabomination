@@ -2550,7 +2550,7 @@ Each a small targeted feature; sweep batch by batch.
    **The Dark** (97 cards, `sets::drk`/`drk2`) and **Homelands** (`sets::hml`–
    `hml3`), **Conspiracy: Take the Crown** (CN2), **Murders at Karlov
    Manor** (MKM) and **Stronghold** (STH) are all at zero. The rest of the
-   Tempest block is the live front: `set_gaps.py tmp exo` is 83 and 69.
+   Tempest block is the live front: `set_gaps.py tmp exo` is 48 and 69.
 1. **Replacement-effect framework** (Tier-1 #1) — highest-leverage primitive still
    open.
 2. **Card-zoom + stops/auto-yield + combat-math preview** (Tier-7 #1–3) — the trio
@@ -2566,6 +2566,20 @@ Each a small targeted feature; sweep batch by batch.
 
 ## Recently closed (this push)
 
+- **Tempest opened** — 193 cards (`set_gaps.py tmp` 241 -> 48), tests in
+  `classic_sets/tmp`. New primitives: `EventSpec::causer_filter` (+ a `by`
+  field on `GameEvent::BecameTarget`) so "becomes the target of a [filter]
+  spell or ability" gates on the *targeting object*, not just its controller;
+  `ActivatedAbility::remove_all_counters_cost` + `Value::CountersRemovedAsCost`
+  ("Remove all [kind] counters from this:" as a real cost the body scales off);
+  `Keyword::CanBlockShadow`; `SelectionRequirement::PowerAtMostSourceCounters`
+  (with a CR 608.2b LKI fallback for a source that paid itself as the cost);
+  `RevealMissDest::Exile`; and `CounterType::{Elixir, Pain}`.
+- **CR 613.11 fix** — `effective_max_hand_size` folded set-to-N caps with
+  `min`; game-rule-modifying continuous effects apply in *timestamp* order, so
+  the newest cap wins. The live combat-anthem `PumpPT` pass now also peels
+  `While*` gates through `active_static`, so a gated anthem (Watchdog) reaches
+  live combat state instead of dropping to the pure walk.
 - **MKM closed** — A Killer Among Us, Conspiracy Unraveler and Kaya, Spirits'
   Justice. New primitives: `Effect::NameCreatureTypeAmong` (a closed-list
   creature-type choice, clamped at the pending-answer),
