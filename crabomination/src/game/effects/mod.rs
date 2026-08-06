@@ -24024,6 +24024,8 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::TargetPlayerThen { then, .. } => self.run_effect(then, ctx, events),
+
             Effect::PutOnLibraryFromHand { who, count } => {
                 use crate::decision::Decision;
                 let Some(p) = self.resolve_player(who, ctx) else { return Ok(()); };

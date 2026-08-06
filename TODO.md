@@ -9,12 +9,14 @@ Items are grouped by area and roughly ordered by impact within each group.
   swap when the current definition's name already equals the target's, so two
   same-named creature cards on top of the graveyard are indistinguishable.
   Harmless in practice, wrong in principle. ⏳
-- **Exodus is opened, not closed** (`set_gaps.py exo` = 74). What's left
-  clusters on: the Oath / Keeper cycles (both want "choose target opponent who
-  <compares worse/better than you> as you activate", a cast-time comparison
-  target restriction), coin-flip combat effects (Fighting Chance, Mogg
-  Assassin), Cataclysm / Limited Resources / Fade Away (per-player keep-N
-  sacrifices), and Mind Over Matter / Null Brooch / Reconnaissance. ⏳
+- **Exodus is opened, not closed** (`set_gaps.py exo` = 69). The Keeper cycle
+  shipped; the **Oath cycle** still wants the same comparison on an "at the
+  beginning of each player's upkeep, THAT player chooses target player …"
+  trigger, which needs the trigger to run once per seat with that seat as the
+  controller. What else is left clusters on: coin-flip combat effects
+  (Fighting Chance, Mogg Assassin), Cataclysm / Limited Resources / Fade Away
+  (per-player keep-N sacrifices), and Mind Over Matter / Null Brooch /
+  Reconnaissance. ⏳
 - **`dispatch_triggers_for_events(&[PermanentEntered { .. }])` does not fire an
   ETB trigger** for a permanent put down with `add_card_to_battlefield`, so
   tests for ETB cards must resolve `def.triggered_abilities[0].effect`

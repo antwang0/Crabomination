@@ -3028,6 +3028,40 @@ impl GameState {
             R::OpponentPlayer => {
                 matches!(target, Target::Player(p) if !self.same_team(*p, controller))
             }
+            R::OpponentTallyDiffers { what, by, fewer } => {
+                let Target::Player(p) = target else { return false };
+                if self.same_team(*p, controller) {
+                    return false;
+                }
+                let tally = |seat: usize| -> i64 {
+                    use crate::card::PlayerTally;
+                    match what {
+                        PlayerTally::Life => self.players[seat].life as i64,
+                        PlayerTally::CardsInHand => self.players[seat].hand.len() as i64,
+                        PlayerTally::CreaturesControlled => self
+                            .battlefield
+                            .iter()
+                            .filter(|c| c.controller == seat && c.definition.is_creature())
+                            .count() as i64,
+                        PlayerTally::LandsControlled => self
+                            .battlefield
+                            .iter()
+                            .filter(|c| c.controller == seat && c.definition.is_land())
+                            .count() as i64,
+                        PlayerTally::CreatureCardsInGraveyard => self.players[seat]
+                            .graveyard
+                            .iter()
+                            .filter(|c| c.definition.is_creature())
+                            .count() as i64,
+                    }
+                };
+                let diff = if *fewer {
+                    tally(controller) - tally(*p)
+                } else {
+                    tally(*p) - tally(controller)
+                };
+                diff >= *by as i64
+            }
             R::And(a, b) => self.evaluate_requirement_static(a, target, controller, source)
                 && self.evaluate_requirement_static(b, target, controller, source),
             R::Or(a, b) => self.evaluate_requirement_static(a, target, controller, source)
@@ -4093,7 +4127,10 @@ impl GameState {
             // Source-less path: the counter count needs the ability's source,
             // which only `evaluate_requirement_static` carries.
             R::ManaValueEqualsCountersOnSource(_) => false,
-            R::Player | R::OpponentPlayer | R::PlayerAttackedThisTurn => false,
+            R::Player
+            | R::OpponentPlayer
+            | R::OpponentTallyDiffers { .. }
+            | R::PlayerAttackedThisTurn => false,
             R::And(a, b) => {
                 self.evaluate_requirement_on_card(a, card, controller)
                     && self.evaluate_requirement_on_card(b, card, controller)

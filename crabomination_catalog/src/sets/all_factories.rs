@@ -9197,6 +9197,11 @@ static EXO: &[Factory] = &[
     super::exo::convalescence,
     super::exo::onslaught,
     super::exo::mana_breach,
+    super::exo::keeper_of_the_beasts,
+    super::exo::keeper_of_the_dead,
+    super::exo::keeper_of_the_flame,
+    super::exo::keeper_of_the_light,
+    super::exo::keeper_of_the_mind,
 ];
 static FEM: &[Factory] = &[
     super::fem::hymn_to_tourach,

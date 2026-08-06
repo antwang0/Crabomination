@@ -441,3 +441,70 @@ fn the_exodus_vanilla_bodies_match_their_printings() {
         }
     }
 }
+
+/// The Keeper cycle only fires while the chosen opponent is actually ahead.
+#[test]
+fn the_keeper_cycle_needs_an_opponent_who_is_ahead() {
+    let mut g = two_player_game();
+    let keeper = g.add_card_to_battlefield(0, catalog::keeper_of_the_flame());
+    g.clear_sickness(keeper);
+    g.step = TurnStep::PreCombatMain;
+    g.players[0].mana_pool.add(Color::Red, 1);
+    assert!(
+        activate(&mut g, keeper, 0, Some(Target::Player(1))).is_err(),
+        "life totals are level"
+    );
+
+    g.players[1].life = 25;
+    activate(&mut g, keeper, 0, Some(Target::Player(1))).expect("burn the leader");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, 23);
+}
+
+/// Keeper of the Mind wants a two-card hand gap, not just one.
+#[test]
+fn keeper_of_the_mind_wants_a_two_card_gap() {
+    let mut g = two_player_game();
+    let keeper = g.add_card_to_battlefield(0, catalog::keeper_of_the_mind());
+    g.clear_sickness(keeper);
+    g.add_card_to_library(0, catalog::forest());
+    g.add_card_to_hand(1, catalog::forest());
+    g.step = TurnStep::PreCombatMain;
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    assert!(activate(&mut g, keeper, 0, Some(Target::Player(1))).is_err(), "only one card up");
+
+    g.add_card_to_hand(1, catalog::forest());
+    activate(&mut g, keeper, 0, Some(Target::Player(1))).expect("draw");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), 1);
+}
+
+/// Keeper of the Dead reads the comparison the other way round.
+#[test]
+fn keeper_of_the_dead_wants_their_graveyard_to_trail_yours() {
+    let mut g = two_player_game();
+    let keeper = g.add_card_to_battlefield(0, catalog::keeper_of_the_dead());
+    let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.clear_sickness(keeper);
+    g.step = TurnStep::PreCombatMain;
+    g.players[0].mana_pool.add(Color::Black, 1);
+    let pick = |g: &mut GameState| {
+        g.priority.player_with_priority = 0;
+        g.perform_action(GameAction::ActivateAbility {
+            card_id: keeper,
+            ability_index: 0,
+            target: Some(Target::Player(1)),
+            additional_targets: vec![Target::Permanent(victim)],
+            mode: None,
+            x_value: None,
+        })
+    };
+    assert!(pick(&mut g).is_err(), "graveyards are level");
+
+    for _ in 0..2 {
+        g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    }
+    pick(&mut g).expect("kill it");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(victim).is_none());
+}

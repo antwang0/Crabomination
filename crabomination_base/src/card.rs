@@ -1796,6 +1796,17 @@ pub struct StationBand {
 
 /// Composable filter for valid targets of a spell or ability.
 /// `Default` is the match-anything `Any`.
+/// A per-player quantity two players can be compared on
+/// (`SelectionRequirement::OpponentTallyDiffers`).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum PlayerTally {
+    Life,
+    CardsInHand,
+    CreaturesControlled,
+    LandsControlled,
+    CreatureCardsInGraveyard,
+}
+
 #[derive(Debug, Clone, Default, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum SelectionRequirement {
     #[default]
@@ -1804,6 +1815,10 @@ pub enum SelectionRequirement {
     /// A player who is an opponent of the effect's controller ("target
     /// opponent").
     OpponentPlayer,
+    /// "Target opponent who has/controls at least `by` more (or `fewer`)
+    /// `what` than you do" — the EXO Keeper and Oath cycles' catch-up
+    /// restriction, checked as the target is chosen.
+    OpponentTallyDiffers { what: PlayerTally, by: u32, fewer: bool },
     Creature,
     Artifact,
     Enchantment,

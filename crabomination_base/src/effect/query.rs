@@ -1193,6 +1193,7 @@ impl Effect {
                 sel_has_target(what) || sel_has_target(source)
             }
             Effect::Attach { what, to } => sel_has_target(what) || sel_has_target(to),
+            Effect::TargetPlayerThen { .. } => true,
             Effect::CopySpell { what, count }
             | Effect::CopySpellWithRiders { what, count, .. }
             | Effect::CopySpellMayChooseTargets { what, count } => {
@@ -1631,6 +1632,7 @@ impl Effect {
                 Some(&F)
             }
             Effect::Attach { what, to } => sel_filter(what).or_else(|| sel_filter(to)),
+            Effect::TargetPlayerThen { filter, .. } => Some(filter),
             // "Tap all lands target player controls" surfaces the implicit
             // Player filter (Mistbind Clique); plain selectors keep theirs.
             Effect::PhaseOut { what, .. }
@@ -3251,6 +3253,9 @@ impl Effect {
                 Effect::RevealUntilLandDamage { to, .. }
                 | Effect::RevealUntilNonlandDamage { to } => sel_find(to, slot),
                 Effect::Attach { what, to } => sel_find(what, slot).or_else(|| sel_find(to, slot)),
+                Effect::TargetPlayerThen { filter, then } => (slot == 0)
+                    .then_some(filter)
+                    .or_else(|| eff_find(then, slot, mode, kicked)),
                 Effect::CreateTokenAttachedTo { target, .. }
                 | Effect::CreateTokenAttachedToEach { target, .. } => sel_find(target, slot),
                 Effect::CopySpell { what, .. }

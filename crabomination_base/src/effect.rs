@@ -6564,6 +6564,11 @@ pub enum Effect {
         creature_types: Vec<crate::card::CreatureType>,
         duration: Duration,
     },
+    /// "Choose target player matching `filter`, then `then`." A player target
+    /// slot 0 with an explicit restriction, for bodies that don't reference
+    /// the target themselves — the EXO Keeper cycle's "choose target opponent
+    /// who <trails you> as you activate this ability".
+    TargetPlayerThen { filter: crate::card::SelectionRequirement, then: Box<Effect> },
     /// Attach `what` (Aura/Equipment) to `to`.
     Attach { what: Selector, to: Selector },
     /// Licid (Stronghold) — "This creature loses this ability and becomes an

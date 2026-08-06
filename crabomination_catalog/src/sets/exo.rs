@@ -4,7 +4,7 @@
 
 use crate::card::{
     ActivatedAbility, AdditionalCastCost, CardDefinition, CardType, CounterType, CreatureType,
-    DynamicPt, EquipBonus, EventKind, EventScope, EventSpec, Keyword, LandType,
+    DynamicPt, EquipBonus, EventKind, EventScope, EventSpec, Keyword, LandType, PlayerTally,
     SelectionRequirement as R, Subtypes, TokenDefinition, TriggeredAbility,
 };
 use crate::effect::shortcut::{deal, draw, gain_life, target_any, target_filtered};
@@ -803,4 +803,104 @@ pub fn mana_breach() -> CardDefinition {
         }],
         ..enchantment("Mana Breach", cost(&[generic(2), u()]))
     }
+}
+
+// ── The Keeper cycle ────────────────────────────────────────────────────────
+
+/// "{C}, {T}: Choose target opponent who <trails you> as you activate this
+/// ability. <effect>" — the catch-up restriction rides the target filter.
+fn keeper(
+    name: &'static str,
+    color: ManaCost,
+    what: PlayerTally,
+    by: u32,
+    fewer: bool,
+    effect: Effect,
+) -> CardDefinition {
+    let sym = color.symbols[0];
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: color,
+            tap_cost: true,
+            effect: Effect::TargetPlayerThen {
+                filter: R::OpponentTallyDiffers { what, by, fewer },
+                then: Box::new(effect),
+            },
+            ..Default::default()
+        }],
+        ..creature(
+            name,
+            cost(&[sym, sym]),
+            vec![CreatureType::Human, CreatureType::Wizard],
+            1,
+            2,
+        )
+    }
+}
+
+/// Keeper of the Beasts — {G}{G} 1/2. Beast token while an opponent out-bodies
+/// you.
+pub fn keeper_of_the_beasts() -> CardDefinition {
+    keeper(
+        "Keeper of the Beasts",
+        cost(&[g()]),
+        PlayerTally::CreaturesControlled,
+        1,
+        false,
+        Effect::CreateToken {
+            who: PlayerRef::You,
+            count: Value::ONE,
+            definition: TokenDefinition {
+                name: "Beast".to_string(),
+                power: 2,
+                toughness: 2,
+                colors: vec![Color::Green],
+                subtypes: Subtypes {
+                    creature_types: vec![CreatureType::Beast],
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+        },
+    )
+}
+
+/// Keeper of the Dead — {B}{B} 1/2. Kills a nonblack creature an opponent
+/// controls while their graveyard trails yours by two creature cards.
+pub fn keeper_of_the_dead() -> CardDefinition {
+    keeper(
+        "Keeper of the Dead",
+        cost(&[b()]),
+        PlayerTally::CreatureCardsInGraveyard,
+        2,
+        true,
+        Effect::Destroy {
+            what: Selector::TargetFiltered {
+                slot: 1,
+                filter: R::Creature.and(R::HasColor(Color::Black).negate()),
+            },
+        },
+    )
+}
+
+/// Keeper of the Flame — {R}{R} 1/2. Two damage to an opponent who's ahead.
+pub fn keeper_of_the_flame() -> CardDefinition {
+    keeper(
+        "Keeper of the Flame",
+        cost(&[r()]),
+        PlayerTally::Life,
+        1,
+        false,
+        deal(2, Selector::Player(PlayerRef::Target(0))),
+    )
+}
+
+/// Keeper of the Light — {W}{W} 1/2. Gain 3 while an opponent is ahead on life.
+pub fn keeper_of_the_light() -> CardDefinition {
+    keeper("Keeper of the Light", cost(&[w()]), PlayerTally::Life, 1, false, gain_life(3))
+}
+
+/// Keeper of the Mind — {U}{U} 1/2. Draw while an opponent is two cards up.
+pub fn keeper_of_the_mind() -> CardDefinition {
+    keeper("Keeper of the Mind", cost(&[u()]), PlayerTally::CardsInHand, 2, false, draw(1))
 }
