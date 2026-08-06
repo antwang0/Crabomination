@@ -294,6 +294,11 @@ pub struct ClientView {
     /// can warn that every damage number on the board is a lie this turn.
     #[serde(default)]
     pub damage_rewritten_this_turn: Option<(u32, u32)>,
+    /// CR 701.38 — the seat answering every ballot this turn (Illusion of
+    /// Choice). Surfaced so a UI can warn a player that their vote is being
+    /// cast for them before the ballot appears.
+    #[serde(default)]
+    pub vote_controller: Option<usize>,
     /// CR 609.4b — true while any permanent lets every player spend mana as
     /// though it were mana of any colour (Mycosynth Lattice). Surfaced so UIs
     /// can stop rendering coloured pips as hard requirements.

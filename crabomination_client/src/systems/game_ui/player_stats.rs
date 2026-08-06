@@ -1033,6 +1033,19 @@ pub fn update_player_stats_chips(
         } else if let Some(king) = cv.players.iter().find(|q| q.is_monarch) {
             spawn_stat_chip(row, &ui_fonts, StatChipKind::Monarch, format!("👑 {}", king.name));
         }
+        // CR 701.38 — a vote-control grant (Illusion of Choice) means someone
+        // else answers this seat's ballots for the rest of the turn.
+        if let Some(voter) = cv.vote_controller
+            && voter != p.seat
+        {
+            let name = cv
+                .players
+                .iter()
+                .find(|q| q.seat == voter)
+                .map(|q| q.name.as_str())
+                .unwrap_or("?");
+            spawn_stat_chip(row, &ui_fonts, StatChipKind::Monarch, format!("🗳 {name}"));
+        }
         // CR 726 the initiative — same treatment as the crown: whoever holds it
         // is who you attack to take the Undercity off them.
         if p.has_initiative {

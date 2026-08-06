@@ -38,3 +38,24 @@ fn cr_701_28_as_transforms_effect_runs_inside_the_flip() {
     assert_eq!(g.players[0].emblems.len(), 1, "emblem minted during the flip");
     assert!(evs.iter().any(|e| matches!(e, GameEvent::Transformed { .. })));
 }
+
+/// CR 309.4c — a room ability uses the stack; CR 309.6 — the finished dungeon
+/// leaves the game only once that ability has resolved.
+#[test]
+fn cr_309_6_dungeon_leaves_the_game_after_its_last_room_resolves() {
+    let mut g = two_player_game();
+    let sword = g.add_card_to_battlefield(0, catalog::shortcut_seeker());
+    g.add_card_to_library(0, catalog::grizzly_bears()); // the Temple's draw
+    g.players[0].dungeon = Some(("Lost Mine of Phandelver".into(), 5));
+    let mut ctx = crabomination::game::effects::EffectContext::for_spell(0, None, 0, 0);
+    ctx.source = Some(sword);
+
+    let evs = g.resolve_effect(&crabomination::effect::Effect::Venture, &ctx).unwrap();
+    g.dispatch_triggers_for_events(&evs);
+    assert!(!g.stack.is_empty(), "the room ability went on the stack");
+    assert!(g.players[0].dungeon.is_some(), "still in the dungeon while it resolves");
+
+    drain_stack(&mut g);
+    assert!(g.players[0].dungeon.is_none(), "the dungeon left the game");
+    assert_eq!(g.players[0].dungeons_completed, 1);
+}

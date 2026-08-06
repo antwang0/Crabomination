@@ -2129,8 +2129,10 @@ Each a small targeted feature; sweep batch by batch.
 - ✅ **Typed spend restrictions / provenance riders** — `SpellKind` +
   `SpendRestriction` (Cavern of Souls, Power Depot). Remaining ⏳: per-source
   restrictions beyond these (filter lands).
-- ⏳ **Minimum-cost floor** (Trinisphere) and **cost-increase statics** beyond the
-  first-spell tax. (Note: Trinisphere floor actually ships — see CUBE_FEATURES.)
+- ✅ **Minimum-cost floor** (`StaticEffect::SpellCostFloor` via
+  `apply_spell_cost_floor`, applied after every reduction — Trinisphere) and
+  **cost-increase statics** (`extra_cost_for_spell` walks nine flavours plus
+  `ColoredSpellTax` and the turn-scoped pool).
 - 🟡 **Conditional / additional costs** as a general modal layer. Card-intrinsic
   target-conditional reduction ships (`self_cost_reduction_if_target` — Ride's
   End's "{3} less if it targets a tapped permanent", generic-only / colored-pip
@@ -2145,7 +2147,8 @@ Each a small targeted feature; sweep batch by batch.
 - ✅ **{X} in activated abilities** — `activate_ability` pays
   `mana_cost.with_x_value(x)` (Necropolis Fiend, Kasmina's `-X`). Remaining ⏳:
   **delve/convoke colored** contribution.
-- ⏳ **Snow-mana-only** and **mana-value-X** cost gates.
+- ✅ **Snow-mana-only** (`ManaSymbol::Snow`, paid from the snow pool with
+  `ManaError::InsufficientSnow`). Remaining ⏳: **mana-value-X** cost gates.
 
 ## Tier 6 — Combat fidelity
 
@@ -2536,10 +2539,11 @@ Each a small targeted feature; sweep batch by batch.
 
 ## Suggested sequencing
 
-0. **Next set to close.** Bloomburrow, Duskmourn, Outlaws of Thunder Junction
-   and **Edge of Eternities** are all closed (`set_gaps.py blb dsk otj eoe` is
-   empty). **Final Fantasy** is down to **3**, every one a transforming DFC —
-   see TODO.md → "EOE/FIN closure" for the primitive each one needs. The Odyssey
+0. **Next set to close.** Bloomburrow, Duskmourn, Outlaws of Thunder Junction,
+   **Edge of Eternities** and **Final Fantasy** are all closed
+   (`set_gaps.py blb dsk otj eoe fin` is empty). **Conspiracy: Take the Crown**
+   (CN2) is the live front at **26**, all of them draft-time cards that want
+   the same CR 905.2b shell as CNS's eight. The Odyssey
    block, the Onslaught block (**ONS**,
    **LGN**, **SCG**), the Mirrodin block (**MRD**, **DST**, **5DN**), the
    Kamigawa block, **Mirrodin Besieged**, **New Phyrexia** (the Scars block
@@ -2566,29 +2570,27 @@ Each a small targeted feature; sweep batch by batch.
 
 ## Recently closed (this push)
 
-- **EOE closed; FIN down to 13; CR 717 Attractions shipped.** New primitives:
-  playing a land half out of adventure exile (CR 715.3d) with a
-  `ClientView.adventure_exile` affordance covering the whole pile;
-  `LookPickToHand.then_if_picked`; `Value::CombatDamageTakenThisTurn`;
-  `SelectionRequirement::OwnedByDefendingPlayer`;
-  `Effect::{EachOpponentExilesOwnCreature, EachOpponentExilesHandCardMayPlay,
-  OpenAnAttraction}`; `Predicate::AnyPlayerControlsNoCreatures`;
-  `StaticEffect::{FirstTokensEachTurnBecomeCopiesOfAttached,
-  PlayCardsFromGraveyardDuringYourTurn, DoubleDamageFromControlledMatching}`;
-  `ActivatedAbility::{exile_attachment_cost, cost_reduction_per_equipped_power}`;
-  `SpendRestriction::NoncreatureSpellsOnly`;
-  `CardDefinition.attraction_lights` + `ArtifactSubtype::Attraction` +
-  `Player::{attraction_deck, attraction_junkyard}`.
-  **CR 614 correctness fix:** as-enters replacements now apply on every
-  battlefield entry, not only spell resolution — Devour (CR 702.83) moved to
-  that slot, so a printed 0/0 devourer no longer dies at 0 toughness.
-  `StaticEffect::FirstMatchingSpellEachTurnCostsLess`, and
-  `Effect::ExileSelfReturnFrontFace` (the FIN Dominants' reset).
-  **CR 714.2b fix:** a Saga entering by any path — reanimated, blinked, or
-  exiled-and-returned-transformed — now takes its first lore counter, not only
-  one cast from hand.
-  CR conformance for 711 / 715 / 701.51 / 701.52 / 717.6 in
-  `core_rules/cr_recent83` + `classic_sets/unf`.
+- **Final Fantasy closed** (`set_gaps.py fin` empty) — Sephiroth,
+  Terra // Esper Terra and Esper Origins, the last three transforming DFCs.
+  New: `CardDefinition.as_transforms_effect` (CR 701.28 — resolved inside the
+  face swap), `Effect::PutResolvingSpellOnBattlefieldTransformed` (a sorcery
+  front face claiming itself off the resolution routing, ahead of the
+  flashback exile), and `Effect::AddCountersUpTo` (with the CR 714.2b chapter
+  thresholds it crosses). CR 712.9/712.10/712.13a: a face swap onto an
+  instant/sorcery face does nothing.
+- **Conspiracy: Take the Crown opened** — `set_gaps.py cn2` 52 → 26 (the rest
+  are draft-time cards awaiting the CR 905.2b shell). New:
+  `Effect::ControlVotesThisTurn` (CR 701.38 — Illusion of Choice, surfaced as
+  `ClientView.vote_controller` and a HUD chip), `EventKind::BecameMonarch` +
+  `Predicate::WasMonarchAtTurnStart`, `Keyword::
+  CantAttackUnlessDefenderIsMonarch`, `SelectionRequirement::
+  ManaValueAtMostOpponentsAttackedThisCombat`, `PlayerRef::
+  EachOpponentExceptTriggerer`, `CounterType::Plot`.
+- **CR 309.4c/309.6** — dungeon room abilities now use the stack, and the
+  finished dungeon leaves the game as that ability resolves rather than a beat
+  early. Tests in `core_rules/cr_recent84`.
+- **Bot**: the crown and the initiative are priced into `eval_material` as
+  recurring resources instead of being invisible.
 
 Older per-push entries are elided — `git log -p -- FEATURE_ROADMAP.md` is
 the record.

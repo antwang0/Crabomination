@@ -4069,6 +4069,10 @@ pub enum Effect {
     /// next room; room abilities resolve inline (`base::dungeons`).
     /// Resolving the final room completes the dungeon
     /// (`Player.dungeons_completed`, `EventKind::DungeonCompleted`).
+    /// CR 309.5b/309.6 — the dungeon a player finished leaves the game. Tail
+    /// of the bottommost room's ability so the removal happens as that ability
+    /// finishes resolving, not while it's still on the stack.
+    CompleteDungeon,
     Venture,
     /// CR 726.2 — "venture into `dungeon`": like [`Effect::Venture`] but the
     /// dungeon is fixed rather than chosen (the initiative's Undercity). A

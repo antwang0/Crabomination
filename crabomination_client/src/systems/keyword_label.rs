@@ -222,6 +222,9 @@ fn keyword_tag(kw: &Keyword) -> Option<&'static str> {
         CanAttackOnlyIfDefenderControls(_) => "Atk?",
         // "Can attack only if you control a [permanent]" (the you-side mirror).
         CanAttackOnlyIfYouControl(_) => "Atk?",
+        // CR 725 — "can't attack unless defending player is the monarch"
+        // (Crown-Hunter Hireling): the crown decides whether it can swing.
+        CantAttackUnlessDefenderIsMonarch => "Atk👑",
         // "Can't attack/block unless you control N or more [filter]" (Topiary
         // Stomper, Lambholt Pacifist, Olog-hai Crusher) — surface which side is
         // gated so the player sees why it can't be declared.

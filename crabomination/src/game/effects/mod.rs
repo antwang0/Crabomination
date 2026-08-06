@@ -8904,6 +8904,17 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::CompleteDungeon => {
+                // CR 309.5b/309.6 — the dungeon leaves the game and the
+                // venture marker comes off with it.
+                let p = ctx.controller;
+                if self.players[p].dungeon.take().is_some() {
+                    self.players[p].dungeons_completed += 1;
+                    events.push(GameEvent::DungeonCompleted { player: p });
+                }
+                Ok(())
+            }
+
             Effect::Venture | Effect::VentureInto { .. } => {
                 use crate::decision::{Decision, DecisionAnswer};
                 let p = ctx.controller;
@@ -8968,17 +8979,26 @@ impl GameState {
                     dungeon: dungeon.clone(),
                     room: room.name.to_string(),
                 });
-                // Resolve the room ability inline (the stack round-trip is
-                // elided — see `base::dungeons`).
-                let room_effect = room.effect.clone();
-                let final_room = room.next.is_empty();
-                let sub = EffectContext { targets: vec![], ..ctx.clone() };
-                self.run_effect(&room_effect, &sub, events)?;
-                if final_room {
-                    self.players[p].dungeons_completed += 1;
-                    self.players[p].dungeon = None;
-                    events.push(GameEvent::DungeonCompleted { player: p });
+                // CR 309.4c — the room ability is a triggered ability and uses
+                // the stack. CR 309.6 — the dungeon leaves the game once its
+                // bottommost room's ability is done resolving, so the removal
+                // rides the same stack item rather than firing a beat early.
+                let mut room_effect = room.effect.clone();
+                if room.next.is_empty() {
+                    room_effect = Effect::Seq(vec![room_effect, Effect::CompleteDungeon]);
                 }
+                let mode = self.pick_trigger_mode(&room_effect, ctx.source.unwrap_or(CardId(0)), p);
+                self.drain_trigger_queue(vec![crate::game::types::PendingTriggerPush {
+                    from_mana_ability: false,
+                    actor: None,
+                    source: ctx.source.unwrap_or(CardId(0)),
+                    controller: p,
+                    effect: room_effect,
+                    subject: None,
+                    event_amount: 0,
+                    mode,
+                    intervening_if: None,
+                }]);
                 Ok(())
             }
 

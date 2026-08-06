@@ -169,6 +169,7 @@ mod tests {
             attackable_players: Vec::new(),
             permanents_to_graveyard_this_turn: 0,
             damage_rewritten_this_turn: None,
+            vote_controller: None,
             players: vec![PlayerView {
                 attraction_deck_size: 0,
                 attraction_junkyard: vec![],

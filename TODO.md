@@ -3,41 +3,42 @@
 Improvement opportunities for the engine, client, and tooling.
 Items are grouped by area and roughly ordered by impact within each group.
 
-## Noticed this run (FIN transform closure)
+## Noticed this run (FIN closed; CN2 opened)
 
-- **`ExileSelfReturnTransformed` now reaches the graveyard.** The handler used
-  to require a battlefield permanent; it now also lifts the source out of a
-  graveyard, which is what a `from_graveyard` activated ability needs (Garland,
-  Knight of Cornelia). The stack case (a *resolving spell* that puts itself onto
-  the battlefield transformed — Esper Origins) is still open: the resolution
-  path routes the card to the graveyard before an effect can claim it. ⏳
-- **The Attraction junkyard renders in the exile browser** (`V`), as a per-owner
-  section below the exile piles. The pile tooltips still don't mention it. ⏳
+- **CN2 is down to 26**, every one a draft-matters card (note-a-name,
+  draft-face-up, guess-the-pick) that wants the same CR 905.2b shell as
+  Conspiracy's remaining eight. Closing that shell would close both sets at
+  once. ⏳
+- **Canal Courier's "attack different players" unblockable clause is
+  dropped**, and Expropriate / Selvala's Stampede are unimplemented: all three
+  are multiplayer-shaped council effects that need a per-vote "choose a
+  permanent owned by the voter" slot. ⏳
+- **`Effect::AddCountersUpTo` asks once for the whole selector.** "Put up to N
+  counters on each" would want a per-target ask; no printed card needs it yet,
+  and non-UI seats take the maximum (it's pure upside). ⏳
+- **Spectral Grasp's block half is a flat `CantBlock`** — exact at two players,
+  too wide in multiplayer, where it should only stop blocks against the Aura
+  controller's creatures. Wants a filtered can't-block static. ⏳
+- **Grenzo, Havoc Raiser's exile mode grants a free cast, not the printed
+  any-color pay.** `ExileTopAndGrantMayPlay { pay_any_color: true }` covers the
+  spend-as-any-color half but the card is still cast for free. ⏳
+- **`Effect::ExileSelfReturnTransformed` on the stack** (a resolving spell that
+  puts itself onto the battlefield transformed) now ships as its own routing
+  claim, `PutResolvingSpellOnBattlefieldTransformed`, rather than by teaching
+  the effect to reach the stack. A future card wanting the same shape mid-
+  resolution (not at end of resolution) would still need the reach. ⏳
 - **Shinryu's "when the chosen player loses the game, you win" is dropped.**
   There's no player-loses event to hang it on, and the clause is redundant in a
-  two-player game (the survivor has already won). The choose-an-opponent half
-  ships via `Effect::RememberPlayerOnSource`. ⏳
-- **The bot now offers graveyard "return transformed" activations.**
-  `effect_returns_self_to_battlefield` counts `ExileSelfReturnTransformed` /
-  `ExileSelfReturnFrontFace`, so a bot can flip Garland back. It still has no
+  two-player game. The choose-an-opponent half ships via
+  `Effect::RememberPlayerOnSource`. ⏳
+- **The Attraction junkyard renders in the exile browser** (`V`), as a per-owner
+  section below the exile piles. The pile tooltips still don't mention it. ⏳
+- **The bot now offers graveyard "return transformed" activations**, but has no
   evaluation of *whether* the back face is worth the mana — the gate is purely
   "can this replay itself". ⏳
 
 ## Noticed this run (EOE/FIN closure + CR 717 Attractions)
 
-- **EOE is closed** (`set_gaps.py eoe` empty). FIN is down to **3** cards,
-  each blocked on one primitive:
-  - **Sephiroth** wants an emblem minted *as* the transform happens
-    (`EventKind::Transformed` fires after, so the emblem lands a beat late).
-    `Effect::NthResolutionThisTurn` covers its "fourth time this turn". ⏳
-  - **Terra // Esper Terra** needs a token copy of a nonlegendary enchantment
-    that inherits up-to-three lore counters when it's a Saga. ⏳
-  - **Esper Origins** is Sorcery // Saga-creature: the front face isn't a
-    permanent, so "exile it, then put it onto the battlefield transformed" has
-    to run against the *resolving spell* rather than a battlefield object —
-    the resolution path routes the card to the graveyard before an effect can
-    claim it. ⏳ (Crystal Fragments needed no new shape: its Equipment front
-    face is a permanent, so it flips with `ExileSelfReturnTransformed`.)
 - **Joshua's ETB loots for exactly two.** The printed "discard up to two cards,
   then draw that many" has no up-to variant; the catalog ships the mandatory
   two-for-two. ⏳
@@ -5733,7 +5734,9 @@ recover from `git log -p -- TODO.md`. A few rows carry a residual ⏳ gap inline
   replacement" ✅ (704.7 — `StaticEffect::ReplaceControllerLossWithReset` +
   `GameState::apply_loss_reset`; Lich's Mirror replaces a life *and* poison
   loss once, and covers the draw-from-empty loss too; `cr_recent42::cr_704_7_*`).
-  Dungeon SBA remains.
+  Dungeon removal ✅ (CR 309.6 — room abilities use the stack and the
+  finished dungeon leaves the game as the last one resolves;
+  `cr_recent84::cr_309_6_*`).
 - 🟡 **CR 613 — Interaction of Continuous Effects** — 613.7 timestamps ✅ (object timestamps stamped on entry/attach/face-up/transform from the shared effect counter; statics order by `object_timestamp()`; tests `cr_613_7_*`). Remaining: no dependency analyzer (613.8); CDA-first pre-pass (613.3). (EOT keyword grants now join the walk timestamped — audit P1 row closed. Static keyword-grant scopes now route a `ToughnessGreaterThanPower` leaf through the `CardMatch` dynamic path — read against printed P/T + counters per the `CardMatchPowerGated` approximation — so Tapestry Warden / Ancient Lumberknot grant their keyword only to your T>P creatures.) Layer-4 additive card-type static ✅ (`StaticEffect::AddCardTypeToMatching` — "nontoken artifacts you control are lands in addition to their other types", Toph, the First Metalbender; `toph_metalbender_artifacts_are_lands_and_end_step_earthbend`). **CR 613.2 computed-subtype consistency ✅** — `HasArtifactSubtype`/`HasLandType`/`HasSupertype` requirements now read a battlefield permanent's *computed* (post-layer) subtypes/supertypes, matching card-type and creature-type checks, so continuous subtype grants (Sugar Coat's Food, Vraska's Treasure, Song of the Dryads' Forest, the Ring-bearer's Legendary) are seen by aura-legality SBAs and filters (`blb::sugar_coat_makes_a_food`; fixed the Alpine Moon test that had leaned on the printed-subtype read). `EquipBonus.set_artifact_types` installs the layer-4 artifact-subtype override.
 - 🟡 **CR 208 — Power/Toughness** — base-P/T-only checks (208.4b). 208.3 noncreature P/T now observable for `*`-power Vehicles: `DynamicPt::LandsControlledPower` sets power off a count while toughness stays printed, `computed_permanent()` reports it on a non-crewed (noncreature) Vehicle (Lumbering Worldwagon `*`/4; test `lumbering_worldwagon_power_tracks_lands`). Conditional base-P/T set ✅ (`StaticEffect::SetBasePtIf` — live layer-7b SetPowerToughness gated on a predicate; counters/+N stack on top per 613.7c/f — Snowmelt Stag "5/2 during your turn"; `snowmelt_stag_*`). CR 604.3 CDAs: `DynamicPt::LandsControlledPlusLandsInControllerGraveyard` (Multani, Yavimaya's Avatar), `DynamicPt::CardTypesInOpponentsGraveyards` (Nighthawk Scavenger), `DynamicPt::InstantsSorceriesInControllerGraveyard` (Enigma Drake), `DynamicPt::CreaturesControlledPower` (Suki `*`/4), `DynamicPt::PlusCountersOnLandsControlledPower` (Toph `*`/3), `DynamicPt::NoncreatureNonlandCardsInControllerGraveyard` (Dragonfly Swarm `*`/3), `DynamicPt::ColorsAmongAlliesControlledPower` (Earthen Ally `*`/2), `DynamicPt::EnchantmentsInPlay` (Yavimaya Enchantress `2/2`, +1/+1 per enchantment in play — `tests/recent72.rs`), `DynamicPt::ForestsInPlay` (Traproot Kami `0/*`, toughness = Forests on the battlefield — `tests/recent100.rs`), all live-recomputed by `computed_permanent()`; `tests/recent47.rs`, `tests/recent50.rs`, `tests/tla.rs`.
 - 🟡 **CR 119 — Life** — 119.7 set-to-lowest ✅ (`Value::LowestLifeTotal` + Repay in Kind); exchange-life-totals ✅ (Soul Conduit, Mirror Universe, Magus of the Mirror); life-gain→loss replacement ✅ (`StaticEffect::LifeGainBecomesLoss`, Tainted Remedy); life-gain **bonus** replacement ✅ (119.10 — `StaticEffect::LifeGainBonus { target, amount }` folded into `adjust_life` via `life_gain_bonus_now`; Honor Troll's "gain that much plus 1"). 119.7 rest-of-game lifegain lock ✅ (`Effect::LifeGainLockGame` sets the permanent `Player.cannot_gain_life` flag, distinct from the turn-scoped lock — Screaming Nemesis via `Selector::Target(0)`; test `screaming_nemesis_redirects_damage`). Life-total-threshold statics ✅ (`Predicate::PlayerLifeAtLeast` gates a live self-anthem — Angel of Vitality's +2/+2 at 25+ life; `cr_119_*`, `tests/recent17.rs`). Life-vs-*starting*-total statics ✅ (`Predicate::PlayerLifeAtLeastAboveStarting` gates tiered self-pumps — Elenda, Saint of Dusk +1/+1/menace above starting, +5/+5 more at 10+ above; `elenda_scales_with_life`). Exact-life gate ✅ (`Predicate::PlayerLifeExactly` — Hidetsugu's Second Rite deals 10 only if the targeted player is at exactly 10; `hidetsugus_second_rite_needs_exactly_ten`). Redistribute-life-totals (119.7) is exact at two players — Reverse the Sands rides `ExchangeLifeTotals`, `reverse_the_sands_swaps_life_totals`; a true multiplayer redistribution (each player picks which total they get back) is still open. Remaining: per-source life-gain replacement breadth. (Audit follow-up closed: every `LifeGained` emitter now uses `adjust_life_applied`, and `SetLifeTotal`/`ExchangeLifeTotals` route through the funnel — so a can't-gain-life lock on the player who would gain blocks their half of an exchange while the other still loses; test `cr_119_7_exchange_life_totals_respects_cant_gain_life`.)

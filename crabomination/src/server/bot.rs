@@ -8026,8 +8026,14 @@ fn eval_material_inner(
         // "draw a card" beats "gain 3 life" (a card is a future play;
         // three life at a healthy total is nearly nothing).
         let emblems: i32 = p.emblems.iter().map(|e| emblem_value(state, i, e)).sum();
-        let material =
-            (4 * p.hand.len() as i32 + emblems) * w.unit + life_value(state.effective_life(i), w);
+        // CR 725 / 726 — the crown and the initiative are recurring resources,
+        // not one-shots: the monarch draws at each of their end steps and the
+        // initiative-holder ventures on top of that. Priced above a single
+        // hand card (4) because they keep paying until someone takes them.
+        let crown = i32::from(state.monarch == Some(i)) * 7
+            + i32::from(state.initiative == Some(i)) * 9;
+        let material = (4 * p.hand.len() as i32 + emblems + crown) * w.unit
+            + life_value(state.effective_life(i), w);
         if i == seat {
             v += material;
         } else if !state.same_team(i, seat) {
@@ -12266,6 +12272,19 @@ mod monarch_tests {
     use super::*;
     use crate::catalog;
     use crate::player::Player;
+
+    /// CR 725/726 — the crown and the initiative are recurring resources, so
+    /// the material eval prices holding them (and an opponent holding them).
+    #[test]
+    fn eval_material_prices_the_crown() {
+        let mut g = crate::game::two_player_game();
+        let w = EvalWeights::baseline();
+        let before = eval_material(&g, 0, &w);
+        g.monarch = Some(0);
+        assert!(eval_material(&g, 0, &w) > before);
+        g.monarch = Some(1);
+        assert!(eval_material(&g, 0, &w) < before);
+    }
 
     #[test]
     fn bot_attacks_the_monarch_over_the_next_seat() {

@@ -399,6 +399,7 @@ impl Effect {
             | Effect::PutResolvingSpellInLibraryFromTop(_)
             | Effect::PutResolvingSpellOnBattlefieldTransformed { .. }
             | Effect::ControlVotesThisTurn { .. }
+            | Effect::CompleteDungeon
             // Group / each-player effects with no cast-time target slot.
             | Effect::EachPlayerPutsHandCardOnTop { .. }
             | Effect::ChooseBasicLandTypeForSource

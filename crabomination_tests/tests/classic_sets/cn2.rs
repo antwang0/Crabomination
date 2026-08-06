@@ -347,3 +347,4 @@ fn besmirch_borrows_and_goads() {
     assert!(!stolen.tapped, "untapped");
     assert!(!stolen.goaded_by.is_empty(), "and goaded");
 }
+
