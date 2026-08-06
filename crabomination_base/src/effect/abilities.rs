@@ -1940,6 +1940,16 @@ pub enum StaticEffect {
     PreventUntap {
         applies_to: Selector,
     },
+    /// CR 502.4 — like [`StaticEffect::PreventUntap`], but it reaches every
+    /// seat's untap step rather than only the static's controller's, and can
+    /// be gated on `condition` (evaluated from the source). Intruder Alarm
+    /// ("creatures don't untap"), Walking Dream ("doesn't untap if an
+    /// opponent controls two or more creatures").
+    PreventUntapGlobal {
+        applies_to: Selector,
+        #[serde(default)]
+        condition: Option<crate::effect::Predicate>,
+    },
     /// CR 701.38 — "While voting, you get `0` additional votes" (Brago's
     /// Representative). Read by the `Effect::Vote` ballot loop, which gives the
     /// source's controller that many extra picks.

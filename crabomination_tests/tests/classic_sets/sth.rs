@@ -2,13 +2,19 @@
 
 use crabomination::card::{CardId, CounterType, Keyword};
 use crabomination::catalog;
+use crabomination::decision::{DecisionAnswer, ScriptedDecider};
 use crabomination::game::effects::EffectContext;
 use crabomination::game::types::{GameAction, Target, TurnStep};
 use crabomination::game::*;
 use crabomination::game::{drain_stack, two_player_game};
 use crabomination::mana::Color;
 
-fn activate(g: &mut GameState, id: CardId, index: usize, target: Option<Target>) -> Result<(), ()> {
+fn activate(
+    g: &mut GameState,
+    id: CardId,
+    index: usize,
+    target: Option<Target>,
+) -> Result<(), crabomination::game::GameError> {
     g.priority.player_with_priority = 0;
     g.perform_action(GameAction::ActivateAbility {
         card_id: id,
@@ -19,7 +25,6 @@ fn activate(g: &mut GameState, id: CardId, index: usize, target: Option<Target>)
         x_value: None,
     })
     .map(|_| ())
-    .map_err(|_| ())
 }
 
 /// Flowstone Mauler's {R} trades toughness for power, repeatedly.
@@ -328,4 +333,177 @@ fn hermit_druid_mills_to_the_first_basic() {
     drain_stack(&mut g);
     assert!(g.players[0].hand.iter().any(|c| c.id == basic));
     assert_eq!(g.players[0].graveyard.len(), 3);
+}
+
+/// An en-Kor shifts the damage aimed at it onto another of your creatures.
+#[test]
+fn nomads_en_kor_shifts_damage_to_another_creature() {
+    let mut g = two_player_game();
+    let kor = g.add_card_to_battlefield(0, catalog::nomads_en_kor());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.step = TurnStep::PreCombatMain;
+    activate(&mut g, kor, 0, Some(Target::Permanent(bear))).expect("shield");
+    drain_stack(&mut g);
+
+    let mut events = vec![];
+    g.deal_damage_to_from(
+        crabomination::game::effects::EntityRef::Permanent(kor),
+        1,
+        None,
+        &mut events,
+    );
+    assert_eq!(g.battlefield_find(kor).unwrap().damage, 0, "the Kor took none");
+    assert_eq!(g.battlefield_find(bear).unwrap().damage, 1, "the Bear took it");
+}
+
+/// Crovax eats a creature to grow, and shrinks on the turns he doesn't.
+#[test]
+fn crovax_grows_or_shrinks_each_upkeep() {
+    let mut g = two_player_game();
+    let crovax = g.move_card_to_battlefield_for_test(0, catalog::crovax_the_cursed());
+    drain_stack(&mut g);
+    assert_eq!(
+        g.battlefield_find(crovax).unwrap().counter_count(CounterType::PlusOnePlusOne),
+        4
+    );
+    let def = catalog::crovax_the_cursed();
+    let ctx = EffectContext::for_ability(crovax, 0, None);
+    // Nothing else to eat: he wastes away.
+    g.resolve_effect(&def.triggered_abilities[0].effect, &ctx).expect("upkeep");
+    drain_stack(&mut g);
+    assert_eq!(
+        g.battlefield_find(crovax).unwrap().counter_count(CounterType::PlusOnePlusOne),
+        3
+    );
+    // With a snack he'll take, he grows.
+    g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    g.resolve_effect(&def.triggered_abilities[0].effect, &ctx).expect("upkeep");
+    drain_stack(&mut g);
+    assert_eq!(
+        g.battlefield_find(crovax).unwrap().counter_count(CounterType::PlusOnePlusOne),
+        4
+    );
+}
+
+/// Endangered Armodon bails as soon as you control anything fragile.
+#[test]
+fn endangered_armodon_flees_a_fragile_board() {
+    let mut g = two_player_game();
+    let armodon = g.add_card_to_battlefield(0, catalog::endangered_armodon());
+    g.check_state_based_actions();
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(armodon).is_some(), "4/5 alone is fine");
+
+    g.add_card_to_battlefield(0, catalog::nomads_en_kor()); // 1/1
+    g.check_state_based_actions();
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(armodon).is_none());
+}
+
+/// Walking Dream stays tapped while an opponent has two creatures.
+#[test]
+fn walking_dream_stays_tapped_against_a_real_board() {
+    let mut g = two_player_game();
+    let dream = g.add_card_to_battlefield(0, catalog::walking_dream());
+    g.battlefield_find_mut(dream).unwrap().tapped = true;
+    assert!(!g.untap_prevented_by_static(dream));
+    for _ in 0..2 {
+        g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    }
+    assert!(g.untap_prevented_by_static(dream));
+}
+
+/// Intruder Alarm locks every seat's untap step, not just its controller's.
+#[test]
+fn intruder_alarm_locks_both_seats() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::intruder_alarm());
+    let theirs = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let mine = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    assert!(g.untap_prevented_by_static(theirs));
+    assert!(g.untap_prevented_by_static(mine));
+}
+
+/// Volrath's Laboratory names a colour and a type on entry, then prints them.
+#[test]
+fn volraths_laboratory_prints_the_chosen_type() {
+    let mut g = two_player_game();
+    let lab = g.add_card_to_battlefield(0, catalog::volraths_laboratory());
+    let ctx = EffectContext::for_ability(lab, 0, None);
+    g.resolve_effect(&catalog::volraths_laboratory().triggered_abilities[0].effect, &ctx)
+        .expect("etb");
+    let chosen = g.battlefield_find(lab).unwrap().chosen_creature_type;
+    assert!(chosen.is_some(), "a creature type was named");
+
+    g.clear_sickness(lab);
+    g.step = TurnStep::PreCombatMain;
+    g.players[0].mana_pool.add_colorless(5);
+    activate(&mut g, lab, 0, None).expect("mint");
+    drain_stack(&mut g);
+    let token = g.battlefield.iter().find(|c| c.is_token).expect("token");
+    assert_eq!((token.definition.power, token.definition.toughness), (2, 2));
+    assert_eq!(token.definition.subtypes.creature_types.first().copied(), chosen);
+}
+
+/// Portcullis swallows the third creature and gives it back when it leaves.
+#[test]
+fn portcullis_holds_the_third_creature() {
+    let mut g = two_player_game();
+    let gate = g.add_card_to_battlefield(0, catalog::portcullis());
+    g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let third = g.add_card_to_battlefield(1, catalog::serra_angel());
+    g.dispatch_triggers_for_events(&[GameEvent::PermanentEntered { card_id: third }]);
+    drain_stack(&mut g);
+    assert!(g.exile.iter().any(|c| c.id == third), "the third is held");
+
+    let mut events = vec![];
+    g.destroy_permanent(gate, false, &mut events);
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(third).is_some(), "and released");
+}
+
+/// Hesitation eats itself to counter the next spell anyone casts.
+#[test]
+fn hesitation_counters_the_next_spell() {
+    let mut g = two_player_game();
+    let hes = g.add_card_to_battlefield(0, catalog::hesitation());
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 1;
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt,
+        target: Some(Target::Player(0)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(hes).is_none(), "it sacrificed itself");
+    assert_eq!(g.players[0].life, 20, "the Bolt was countered");
+    assert!(g.players[1].graveyard.iter().any(|c| c.id == bolt));
+}
+
+/// Shard Phoenix sweeps the ground and buys itself back from the graveyard.
+#[test]
+fn shard_phoenix_sweeps_then_returns() {
+    let mut g = two_player_game();
+    let phoenix = g.add_card_to_battlefield(0, catalog::shard_phoenix());
+    let ground = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let flier = g.add_card_to_battlefield(1, catalog::serra_angel());
+    g.step = TurnStep::PreCombatMain;
+    activate(&mut g, phoenix, 0, None).expect("sweep");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(ground).is_none());
+    assert!(g.battlefield_find(flier).is_some(), "fliers are spared");
+
+    g.step = TurnStep::Upkeep;
+    g.active_player_idx = 0;
+    g.players[0].mana_pool.add(Color::Red, 3);
+    activate(&mut g, phoenix, 1, None).expect("return");
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == phoenix));
 }

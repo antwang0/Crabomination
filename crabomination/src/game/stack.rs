@@ -2663,6 +2663,27 @@ impl GameState {
                             card.controller,
                         )
                 }
+                StaticEffect::PreventUntapGlobal { applies_to, condition } => {
+                    let hits = match applies_to {
+                        Selector::This => c.id == card_id,
+                        Selector::EachPermanent(req) => self.evaluate_requirement(
+                            req,
+                            &crate::game::types::Target::Permanent(card_id),
+                            c.controller,
+                        ),
+                        _ => false,
+                    };
+                    hits && condition.as_ref().is_none_or(|p| {
+                        self.evaluate_predicate(
+                            p,
+                            &crate::game::effects::EffectContext::for_ability(
+                                c.id,
+                                c.controller,
+                                None,
+                            ),
+                        )
+                    })
+                }
                 _ => false,
             })
         })
@@ -2848,6 +2869,7 @@ impl GameState {
             // blocks the static's own source (Basalt/Grim Monolith);
             // `EachPermanent(req)` blocks every matching permanent.
             let mut prevent_filters: Vec<SelectionRequirement> = Vec::new();
+            let mut global_prevent = false;
             for c in &self.battlefield {
                 for sa in &c.definition.static_abilities {
                     match &sa.effect {
@@ -2859,6 +2881,9 @@ impl GameState {
                         StaticEffect::PreventUntap {
                             applies_to: crate::effect::Selector::EachPermanent(req),
                         } => prevent_filters.push(req.clone()),
+                        // The global sibling reaches every seat and can be
+                        // gated, so defer to the per-permanent walk.
+                        StaticEffect::PreventUntapGlobal { .. } => global_prevent = true,
                         // Aura-anchored prevention ("enchanted creature doesn't
                         // untap" — Claustrophobia): block the permanent this
                         // source is attached to.
@@ -2870,6 +2895,13 @@ impl GameState {
                             }
                         }
                         _ => {}
+                    }
+                }
+            }
+            if global_prevent {
+                for id in self.battlefield.iter().map(|c| c.id).collect::<Vec<_>>() {
+                    if self.untap_prevented_by_static(id) {
+                        blocked.insert(id);
                     }
                 }
             }

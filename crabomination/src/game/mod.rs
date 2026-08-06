@@ -20258,6 +20258,7 @@ fn static_effect_to_effects(
             // effect since it gates a turn-based action rather than a
             // characteristic.
             | StaticEffect::PreventUntap { .. }
+            | StaticEffect::PreventUntapGlobal { .. }
             // SpellCostFloor (Trinisphere) — read at cast time by
             // `apply_spell_cost_floor`; no layer effect.
             | StaticEffect::SpellCostFloor { .. }

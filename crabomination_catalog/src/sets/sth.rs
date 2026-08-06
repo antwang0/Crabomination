@@ -1320,3 +1320,585 @@ pub fn ransack() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── The en-Kor damage shifters ──────────────────────────────────────────────
+
+/// "{0}: The next 1 damage that would be dealt to this creature this turn is
+/// dealt to target creature you control instead."
+fn en_kor_shield() -> ActivatedAbility {
+    ActivatedAbility {
+        effect: Effect::RedirectNextDamage {
+            target: Selector::This,
+            to: target_filtered(R::Creature.and(R::ControlledByYou)),
+            amount: Value::ONE,
+        },
+        ..Default::default()
+    }
+}
+
+/// Nomads en-Kor — {W} 1/1 that shrugs damage onto your other creatures.
+pub fn nomads_en_kor() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![en_kor_shield()],
+        ..creature(
+            "Nomads en-Kor",
+            cost(&[w()]),
+            vec![CreatureType::Kor, CreatureType::Nomad, CreatureType::Soldier],
+            1,
+            1,
+        )
+    }
+}
+
+/// Warrior en-Kor — {W}{W} 2/2 with the en-Kor shield.
+pub fn warrior_en_kor() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![en_kor_shield()],
+        ..creature(
+            "Warrior en-Kor",
+            cost(&[w(), w()]),
+            vec![CreatureType::Kor, CreatureType::Warrior, CreatureType::Knight],
+            2,
+            2,
+        )
+    }
+}
+
+/// Spirit en-Kor — {3}{W} 2/2 flier with the en-Kor shield.
+pub fn spirit_en_kor() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flying],
+        activated_abilities: vec![en_kor_shield()],
+        ..creature(
+            "Spirit en-Kor",
+            cost(&[generic(3), w()]),
+            vec![CreatureType::Kor, CreatureType::Spirit],
+            2,
+            2,
+        )
+    }
+}
+
+/// Lancers en-Kor — {3}{W}{W} 3/3 trampler with the en-Kor shield.
+pub fn lancers_en_kor() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Trample],
+        activated_abilities: vec![en_kor_shield()],
+        ..creature(
+            "Lancers en-Kor",
+            cost(&[generic(3), w(), w()]),
+            vec![CreatureType::Kor, CreatureType::Soldier],
+            3,
+            3,
+        )
+    }
+}
+
+/// Shaman en-Kor — {1}{W} 1/2 that both sheds damage and soaks it up.
+pub fn shaman_en_kor() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![
+            en_kor_shield(),
+            ActivatedAbility {
+                mana_cost: cost(&[generic(1), w()]),
+                effect: Effect::RedirectNextDamage {
+                    target: target_filtered(R::Creature),
+                    to: Selector::This,
+                    amount: Value::ONE,
+                },
+                ..Default::default()
+            },
+        ],
+        ..creature(
+            "Shaman en-Kor",
+            cost(&[generic(1), w()]),
+            vec![CreatureType::Kor, CreatureType::Cleric, CreatureType::Shaman],
+            1,
+            2,
+        )
+    }
+}
+
+// ── The rest of the creatures ───────────────────────────────────────────────
+
+/// Crovax the Cursed — {2}{B}{B} 0/0 legend that eats a creature each upkeep
+/// or wastes away.
+pub fn crovax_the_cursed() -> CardDefinition {
+    CardDefinition {
+        supertypes: vec![Supertype::Legendary],
+        enters_with_counters: Some((CounterType::PlusOnePlusOne, Value::Const(4))),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::YourControl),
+            effect: Effect::MaySacrifice {
+                description: "Sacrifice a creature to grow Crovax?".to_string(),
+                filter: R::Creature.and(R::ControlledByYou),
+                count: Value::ONE,
+                then: Box::new(Effect::AddCounter {
+                    what: Selector::This,
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::ONE,
+                }),
+                else_: Some(Box::new(Effect::RemoveCounter {
+                    what: Selector::This,
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::ONE,
+                })),
+            },
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[b()]),
+            effect: Effect::GrantKeyword {
+                what: Selector::This,
+                keyword: Keyword::Flying,
+                duration: Duration::EndOfTurn,
+            },
+            ..Default::default()
+        }],
+        ..creature(
+            "Crovax the Cursed",
+            cost(&[generic(2), b(), b()]),
+            vec![CreatureType::Vampire, CreatureType::Noble],
+            0,
+            0,
+        )
+    }
+}
+
+/// Endangered Armodon — {2}{G}{G} 4/5 that bolts the moment you control
+/// anything fragile.
+pub fn endangered_armodon() -> CardDefinition {
+    CardDefinition {
+        state_trigger: Some(crate::card::StateTriggeredAbility {
+            condition: Predicate::SelectorExists(Selector::ControlledBy {
+                who: PlayerRef::You,
+                filter: R::Creature.and(R::ToughnessAtMost(2)),
+            }),
+            effect: Effect::SacrificeSource,
+        }),
+        ..creature(
+            "Endangered Armodon",
+            cost(&[generic(2), g(), g()]),
+            vec![CreatureType::Elephant],
+            4,
+            5,
+        )
+    }
+}
+
+/// Lowland Basilisk — {2}{G} 1/3 whose bites are lethal at end of combat.
+pub fn lowland_basilisk() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::DealsDamageToCreature, EventScope::SelfSource),
+            effect: Effect::AtEndOfCombat {
+                body: Box::new(Effect::Destroy { what: Selector::TriggerSource }),
+            },
+        }],
+        ..creature(
+            "Lowland Basilisk",
+            cost(&[generic(2), g()]),
+            vec![CreatureType::Basilisk],
+            1,
+            3,
+        )
+    }
+}
+
+/// Walking Dream — {3}{U} 3/3 unblockable that stays tapped while an opponent
+/// has a real board.
+pub fn walking_dream() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Unblockable],
+        static_abilities: vec![StaticAbility {
+            description: "This creature doesn't untap during your untap step if an \
+                          opponent controls two or more creatures.",
+            effect: StaticEffect::PreventUntapGlobal {
+                applies_to: Selector::This,
+                condition: Some(Predicate::SelectorCountAtLeast {
+                    sel: Selector::ControlledBy {
+                        who: PlayerRef::EachOpponent,
+                        filter: R::Creature,
+                    },
+                    n: Value::Const(2),
+                }),
+            },
+        }],
+        ..creature("Walking Dream", cost(&[generic(3), u()]), vec![CreatureType::Illusion], 3, 3)
+    }
+}
+
+/// Shard Phoenix — {4}{R} 2/2 flier that sweeps the ground and comes back.
+pub fn shard_phoenix() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flying],
+        activated_abilities: vec![
+            ActivatedAbility {
+                sac_cost: true,
+                effect: Effect::DealDamage {
+                    to: Selector::EachPermanent(
+                        R::Creature.and(R::HasKeyword(Keyword::Flying).negate()),
+                    ),
+                    amount: Value::Const(2),
+                },
+                ..Default::default()
+            },
+            ActivatedAbility {
+                mana_cost: cost(&[r(), r(), r()]),
+                from_graveyard: true,
+                condition: Some(Predicate::All(vec![
+                    Predicate::IsTurnOf(PlayerRef::You),
+                    Predicate::CurrentStepIs(TurnStep::Upkeep),
+                ])),
+                effect: Effect::Move {
+                    what: Selector::This,
+                    to: ZoneDest::Hand(PlayerRef::You),
+                },
+                ..Default::default()
+            },
+        ],
+        ..creature("Shard Phoenix", cost(&[generic(4), r()]), vec![CreatureType::Phoenix], 2, 2)
+    }
+}
+
+/// Silver Wyvern — {3}{U}{U} 4/3 flier that shrugs off anything aimed at it.
+pub fn silver_wyvern() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flying],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[u()]),
+            effect: Effect::ChangeSpellTarget {
+                what: target_filtered(R::IsSpellOnStack.and(R::SpellTargetsOnlySource)),
+            },
+            ..Default::default()
+        }],
+        ..creature("Silver Wyvern", cost(&[generic(3), u(), u()]), vec![CreatureType::Drake], 4, 3)
+    }
+}
+
+/// Victual Sliver — {G}{W} 2/2 giving every Sliver a life-gain sacrifice.
+pub fn victual_sliver() -> CardDefinition {
+    CardDefinition {
+        static_abilities: vec![StaticAbility {
+            description: "All Slivers have \"{2}, Sacrifice this permanent: You gain 4 life.\"",
+            effect: StaticEffect::GrantActivatedAbility {
+                applies_to: Selector::EachPermanent(R::HasCreatureType(CreatureType::Sliver)),
+                ability: ActivatedAbility {
+                    mana_cost: cost(&[generic(2)]),
+                    sac_cost: true,
+                    effect: Effect::GainLife { who: Selector::You, amount: Value::Const(4) },
+                    ..Default::default()
+                },
+                condition: None,
+            },
+        }],
+        ..creature("Victual Sliver", cost(&[g(), w()]), vec![CreatureType::Sliver], 2, 2)
+    }
+}
+
+// ── Artifacts / lands ───────────────────────────────────────────────────────
+
+/// Volrath's Stronghold — legendary land that recurs a creature card.
+pub fn volraths_stronghold() -> CardDefinition {
+    CardDefinition {
+        name: "Volrath's Stronghold",
+        card_types: vec![CardType::Land],
+        supertypes: vec![Supertype::Legendary],
+        activated_abilities: vec![
+            ActivatedAbility {
+                tap_cost: true,
+                effect: Effect::AddMana {
+                    who: PlayerRef::You,
+                    pool: ManaPayload::Colorless(Value::ONE),
+                },
+                ..Default::default()
+            },
+            ActivatedAbility {
+                mana_cost: cost(&[generic(1), b()]),
+                tap_cost: true,
+                effect: Effect::Move {
+                    what: target_filtered(R::Creature.and(R::InGraveyard)),
+                    to: ZoneDest::Library {
+                        who: PlayerRef::OwnerOf(Box::new(target_n(0))),
+                        pos: crate::effect::LibraryPosition::Top,
+                    },
+                },
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Volrath's Laboratory — {5} Artifact. Names a colour and a creature type on
+/// entry, then prints 2/2s of it.
+pub fn volraths_laboratory() -> CardDefinition {
+    CardDefinition {
+        name: "Volrath's Laboratory",
+        cost: cost(&[generic(5)]),
+        card_types: vec![CardType::Artifact],
+        triggered_abilities: vec![crate::effect::shortcut::etb(Effect::Seq(vec![
+            Effect::ChooseColorForSelf,
+            Effect::NameCreatureType { what: Selector::This },
+        ]))],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(5)]),
+            tap_cost: true,
+            effect: Effect::CreateTokenOfChosenColorAndType { pt: Value::Const(2) },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Hornet Cannon — {4} Artifact. {3}, {T}: a Hornet that lives for one turn.
+pub fn hornet_cannon() -> CardDefinition {
+    CardDefinition {
+        name: "Hornet Cannon",
+        cost: cost(&[generic(4)]),
+        card_types: vec![CardType::Artifact],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(3)]),
+            tap_cost: true,
+            effect: Effect::Seq(vec![
+                Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::ONE,
+                    definition: TokenDefinition {
+                        name: "Hornet".into(),
+                        card_types: vec![CardType::Artifact, CardType::Creature],
+                        subtypes: Subtypes {
+                            creature_types: vec![CreatureType::Insect],
+                            ..Default::default()
+                        },
+                        power: 1,
+                        toughness: 1,
+                        keywords: vec![Keyword::Flying, Keyword::Haste],
+                        ..Default::default()
+                    },
+                },
+                Effect::AtNextEndStep {
+                    body: Box::new(Effect::Destroy { what: Selector::LastMoved }),
+                },
+            ]),
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Portcullis — {4} Artifact. A crowded board swallows the next arrival until
+/// the Portcullis goes.
+pub fn portcullis() -> CardDefinition {
+    CardDefinition {
+        name: "Portcullis",
+        cost: cost(&[generic(4)]),
+        card_types: vec![CardType::Artifact],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::AnyPlayer)
+                .with_filter(Predicate::All(vec![
+                    Predicate::EntityMatches {
+                        what: Selector::TriggerSource,
+                        filter: R::Creature,
+                    },
+                    Predicate::SelectorCountAtLeast {
+                        sel: Selector::EachPermanent(R::Creature),
+                        n: Value::Const(3),
+                    },
+                ])),
+            effect: Effect::ExileUntilSourceLeaves {
+                what: Selector::TriggerSource,
+                return_to: crate::card::ExileReturnZone::Battlefield,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+// ── Enchantments ────────────────────────────────────────────────────────────
+
+/// Awakening — {2}{G}{G} Enchantment. Everyone's creatures and lands untap on
+/// every upkeep.
+pub fn awakening() -> CardDefinition {
+    CardDefinition {
+        name: "Awakening",
+        cost: cost(&[generic(2), g(), g()]),
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::AnyPlayer),
+            effect: Effect::Untap {
+                what: Selector::EachPermanent(R::Creature.or(R::Land)),
+                up_to: None,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Intruder Alarm — {2}{U} Enchantment. Nothing untaps normally; every
+/// creature entering untaps the whole board.
+pub fn intruder_alarm() -> CardDefinition {
+    CardDefinition {
+        name: "Intruder Alarm",
+        cost: cost(&[generic(2), u()]),
+        card_types: vec![CardType::Enchantment],
+        static_abilities: vec![StaticAbility {
+            description: "Creatures don't untap during their controllers' untap steps.",
+            effect: StaticEffect::PreventUntapGlobal {
+                applies_to: Selector::EachPermanent(R::Creature),
+                condition: None,
+            },
+        }],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::AnyPlayer)
+                .with_filter(Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: R::Creature,
+                }),
+            effect: Effect::Untap { what: Selector::EachPermanent(R::Creature), up_to: None },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Amok — {1}{R} Enchantment. Random discards buy +1/+1 counters.
+pub fn amok() -> CardDefinition {
+    CardDefinition {
+        name: "Amok",
+        cost: cost(&[generic(1), r()]),
+        card_types: vec![CardType::Enchantment],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1)]),
+            discard_cost: Some((R::Any, 1)),
+            discard_cost_random: true,
+            effect: Effect::AddCounter {
+                what: target_filtered(R::Creature),
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::ONE,
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Hesitation — {1}{U} Enchantment. The next spell anyone casts eats it.
+pub fn hesitation() -> CardDefinition {
+    CardDefinition {
+        name: "Hesitation",
+        cost: cost(&[generic(1), u()]),
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::AnyPlayer),
+            effect: Effect::Seq(vec![
+                Effect::SacrificePermanent { what: Selector::This },
+                Effect::CounterSpell { what: Selector::TriggerSource },
+            ]),
+        }],
+        ..Default::default()
+    }
+}
+
+/// Volrath's Gardens — {1}{G} Enchantment. Tap a creature for 2 life, at
+/// sorcery speed.
+pub fn volraths_gardens() -> CardDefinition {
+    CardDefinition {
+        name: "Volrath's Gardens",
+        cost: cost(&[generic(1), g()]),
+        card_types: vec![CardType::Enchantment],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(2)]),
+            tap_other_filter: Some(R::Creature.and(R::ControlledByYou)),
+            sorcery_speed: true,
+            effect: Effect::GainLife { who: Selector::You, amount: Value::Const(2) },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Flowstone Blade — {R} Aura. {R}: the host gets +1/-1.
+pub fn flowstone_blade() -> CardDefinition {
+    CardDefinition {
+        name: "Flowstone Blade",
+        cost: cost(&[r()]),
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes {
+            enchantment_subtypes: vec![crate::card::EnchantmentSubtype::Aura],
+            ..Default::default()
+        },
+        effect: Effect::Attach { what: Selector::This, to: target_filtered(R::Creature) },
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[r()]),
+            effect: Effect::PumpPT {
+                what: Selector::attached_to(Selector::This),
+                power: Value::ONE,
+                toughness: Value::Const(-1),
+                duration: Duration::EndOfTurn,
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+// ── Spells ──────────────────────────────────────────────────────────────────
+
+/// Bandage — {W} Instant. Prevent 1, then draw.
+pub fn bandage() -> CardDefinition {
+    CardDefinition {
+        name: "Bandage",
+        cost: cost(&[w()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::PreventNextDamage {
+                target: target_filtered(R::Creature.or(R::Player).or(R::Planeswalker)),
+                amount: Value::ONE,
+            },
+            draw(1),
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Rebound — {1}{U} Instant. Point a player-targeting spell somewhere else.
+pub fn rebound() -> CardDefinition {
+    CardDefinition {
+        name: "Rebound",
+        cost: cost(&[generic(1), u()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::ChangeSpellTarget { what: target_filtered(R::IsSpellOnStack) },
+        ..Default::default()
+    }
+}
+
+/// Reins of Power — {2}{U}{U} Instant. Swap armies with an opponent for the
+/// turn, untapped and hasty.
+pub fn reins_of_power() -> CardDefinition {
+    CardDefinition {
+        name: "Reins of Power",
+        cost: cost(&[generic(2), u(), u()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::Untap {
+                what: Selector::EachPermanent(R::Creature),
+                up_to: None,
+            },
+            Effect::GainControl {
+                what: Selector::ControlledBy { who: PlayerRef::Target(0), filter: R::Creature },
+                to: Some(PlayerRef::You),
+                duration: Duration::EndOfTurn,
+            },
+            Effect::GainControl {
+                what: Selector::ControlledBy { who: PlayerRef::You, filter: R::Creature },
+                to: Some(PlayerRef::Target(0)),
+                duration: Duration::EndOfTurn,
+            },
+            Effect::GrantKeyword {
+                what: Selector::EachPermanent(R::Creature),
+                keyword: Keyword::Haste,
+                duration: Duration::EndOfTurn,
+            },
+        ]),
+        ..Default::default()
+    }
+}
