@@ -92,6 +92,20 @@ struct Args {
     /// against the one it replaces, same pools, same pilots, N games
     /// per pool. No net involved — this measures the builder alone.
     gate_builder_v2: Option<usize>,
+    /// Fraction of trajectories held out of training and scored at every
+    /// checkpoint. 0 disables.
+    ///
+    /// This exists because its absence cost six gate rounds. `stats.jsonl`
+    /// reported training loss only, and training loss here is a
+    /// memorisation reading: at lambda=1 the net hit 0.017 MSE on the
+    /// window while its out-of-sample log-loss was 1.12 — *worse than
+    /// predicting 0.5 every time*. Nothing in the loop could see that, so
+    /// the overfit was diagnosed only after thousands of gate games.
+    ///
+    /// Split by trajectory, not by row: consecutive snapshots of one game
+    /// are near-duplicates, so a row-level split leaks the answer across
+    /// it and the validation number comes back reassuringly good.
+    holdout: f64,
     /// Train the play net with the pre-pool attention layer — the
     /// interaction model. Off is the pooled control.
     attn: bool,
@@ -132,6 +146,7 @@ fn parse_args() -> Args {
         calibrate: None,
         use_deck_best: None,
         attn: false,
+        holdout: 0.05,
     };
     let mut it = std::env::args().skip(1);
     while let Some(flag) = it.next() {
@@ -155,6 +170,7 @@ fn parse_args() -> Args {
             "--use-best" => a.use_best = Some(PathBuf::from(val())),
             "--calibrate" => a.calibrate = Some(val().parse().expect("--calibrate")),
             "--use-deck-best" => a.use_deck_best = Some(PathBuf::from(val())),
+            "--holdout" => a.holdout = val().parse().expect("--holdout"),
             "--attn" => {
                 a.attn = true;
                 continue; // bare flag, consumes no value
@@ -169,8 +185,25 @@ fn parse_args() -> Args {
     a
 }
 
+/// True when this trajectory belongs to the held-out set. A hash of the
+/// id rather than a counter, so actors decide independently and the same
+/// game always lands on the same side of the split.
+fn is_holdout(traj: u32, frac: f64) -> bool {
+    if frac <= 0.0 {
+        return false;
+    }
+    let mut h = (traj as u64).wrapping_mul(0x9E37_79B9_7F4A_7C15);
+    h ^= h >> 29;
+    h = h.wrapping_mul(0xBF58_476D_1CE4_E5B9);
+    h ^= h >> 32;
+    ((h >> 11) as f64 / (1u64 << 53) as f64) < frac
+}
+
 struct Shared {
     window: Mutex<SampleWindow>,
+    /// Held-out rows, never trained on. Capped so a long run can't grow
+    /// it without bound.
+    val: Mutex<Vec<TrainRow>>,
     /// Every game also labels its two decklists — the build net's stream.
     /// Small (2 rows/game), so a plain capped deque suffices.
     deck_window: Mutex<std::collections::VecDeque<DeckRow>>,
@@ -223,10 +256,23 @@ fn actor_loop(shared: &Shared, args: &Args, vocab: &Vocab, deck_judge: Option<&D
             shared.stalls.fetch_add(1, Ordering::Relaxed);
             continue;
         }
-        shared.rows_pushed.fetch_add(rec.rows.len() as u64, Ordering::Relaxed);
+        // A whole game's rows share a trajectory pair, so the split is
+        // decided per row by trajectory id and stays consistent.
+        let (val_rows, train_rows): (Vec<TrainRow>, Vec<TrainRow>) =
+            rec.rows.into_iter().partition(|r| is_holdout(r.traj, args.holdout));
+        if !val_rows.is_empty() {
+            const VAL_CAP: usize = 20_000;
+            let mut v = shared.val.lock().unwrap();
+            for row in val_rows {
+                if v.len() < VAL_CAP {
+                    v.push(row);
+                }
+            }
+        }
+        shared.rows_pushed.fetch_add(train_rows.len() as u64, Ordering::Relaxed);
         {
             let mut w = shared.window.lock().unwrap();
-            for row in rec.rows {
+            for row in train_rows {
                 w.push(row);
             }
         }
@@ -442,6 +488,7 @@ fn main() {
 
     let shared = Shared {
         window: Mutex::new(SampleWindow::new(args.window)),
+        val: Mutex::new(Vec::new()),
         deck_window: Mutex::new(std::collections::VecDeque::new()),
         rows_pushed: AtomicU64::new(0),
         next_game: AtomicU64::new(0),
@@ -634,8 +681,40 @@ fn checkpoint(
     let stalls = shared.stalls.load(Ordering::Relaxed);
     let secs = start.elapsed().as_secs_f64();
     let [total, win, life, len] = loss_ema;
+    // Held-out scoring. `val_win` is directly comparable to `loss_win`
+    // (same MSE, different rows), so the gap between them *is* the
+    // overfit, visible while the run is happening instead of afterwards.
+    // `val_auc` is the one that says whether the net knows anything —
+    // MSE can improve while ranking does not.
+    let (val_n, val_win, val_ll, val_auc) = {
+        let v = shared.val.lock().unwrap();
+        if v.len() < 200 {
+            (0usize, f32::NAN, f32::NAN, f32::NAN)
+        } else {
+            let refs: Vec<&TrainRow> = v.iter().collect();
+            match trainer.predict_win_batch(&refs, 512) {
+                Ok(p) => {
+                    let mse = p
+                        .iter()
+                        .zip(&refs)
+                        .map(|(q, r)| (q - r.win) * (q - r.win))
+                        .sum::<f32>()
+                        / p.len() as f32;
+                    let pairs: Vec<(f32, f32)> =
+                        p.iter().zip(&refs).map(|(q, r)| (*q, r.win)).collect();
+                    (
+                        v.len(),
+                        mse,
+                        log_loss(pairs.iter().copied()),
+                        auc(pairs.iter().copied()),
+                    )
+                }
+                Err(_) => (0, f32::NAN, f32::NAN, f32::NAN),
+            }
+        }
+    };
     let line = format!(
-        "{{\"step\":{step},\"loss_ema\":{total:.5},\"loss_win\":{win:.5},\"loss_life\":{life:.5},\"loss_len\":{len:.5},\"loss_deck\":{deck_loss:.5},\"rows_consumed\":{consumed},\"rows\":{rows},\"games\":{games},\"stalls\":{stalls},\"elapsed_s\":{secs:.0}}}\n"
+        "{{\"step\":{step},\"loss_ema\":{total:.5},\"loss_win\":{win:.5},\"loss_life\":{life:.5},\"loss_len\":{len:.5},\"loss_deck\":{deck_loss:.5},\"val_n\":{val_n},\"val_win\":{val_win:.5},\"val_logloss\":{val_ll:.5},\"val_auc\":{val_auc:.5},\"rows_consumed\":{consumed},\"rows\":{rows},\"games\":{games},\"stalls\":{stalls},\"elapsed_s\":{secs:.0}}}\n"
     );
     use std::io::Write;
     let mut f = std::fs::OpenOptions::new()
@@ -644,8 +723,13 @@ fn checkpoint(
         .open(stats_path)
         .expect("stats.jsonl");
     f.write_all(line.as_bytes()).expect("stats write");
+    let val_note = if val_n > 0 {
+        format!(" | val win {val_win:.4} auc {val_auc:.4} (n={val_n})")
+    } else {
+        String::new()
+    };
     eprintln!(
-        "step {step}: loss {total:.4} (win {win:.4}), {games} games, {rows} rows ({:.1} games/s)",
+        "step {step}: loss {total:.4} (win {win:.4}){val_note}, {games} games, {rows} rows ({:.1} games/s)",
         games as f64 / secs.max(0.001)
     );
 }

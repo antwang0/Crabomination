@@ -182,6 +182,20 @@ fn main() {
         pool
     };
 
+    // Instant ranking with the gate-passed build net: no simulation at
+    // all, just the net's opinion of a few hundred candidate builds.
+    //
+    // The deck net is the one learned component that has cleared the
+    // house bar (61.7 %, 60.7 % against the static judge), and until now
+    // nothing outside the training loop consumed it. A full simulated
+    // recommendation is minutes-to-hours; this is seconds, which makes it
+    // the right first look at a pool even when the simulation is going to
+    // run afterwards anyway.
+    if std::env::var("CRAB_DECKNET").is_ok() {
+        net_rank(&pool, seed);
+        return;
+    }
+
     let cfg = SimConfig {
         seed,
         games_per_pairing: games,
@@ -316,4 +330,68 @@ fn main() {
     let pin_arg =
         if pins.is_empty() { String::new() } else { format!(" \"{}\"", pins.join(",")) };
     println!("\nreproduce with: recommend_pool {path} {seed} {games} {cap}{pin_arg}");
+}
+
+/// Rank noisy-greedy candidate builds by the build net alone.
+///
+/// Deliberately reuses `selfplay::build_candidates` — the same generator
+/// the training loop and the builder gate use — so "what the net picks"
+/// here means the same thing it means there.
+fn net_rank(pool: &[crabomination::cube::CardFactory], seed: u64) {
+    use crabomination::server::encode::{Vocab, encode_deck};
+    let path = std::env::var("CRAB_DECKNET").expect("checked by caller");
+    let bytes = std::fs::read(&path).unwrap_or_else(|e| {
+        eprintln!("cannot read {path}: {e}");
+        std::process::exit(2);
+    });
+    let net = crabomination_nn::DeckNet::load(&bytes).unwrap_or_else(|e| {
+        eprintln!("{path}: {e:?}");
+        std::process::exit(2);
+    });
+    let vocab = Vocab::sos_sealed();
+    if net.vocab_size() != vocab.size() {
+        eprintln!(
+            "deck net vocab {} != encoder vocab {} — the net was trained against a \
+             different card set and its indices mean the wrong cards",
+            net.vocab_size(),
+            vocab.size()
+        );
+        std::process::exit(2);
+    }
+
+    const CANDS: usize = 512;
+    let started = std::time::Instant::now();
+    let mut scored: Vec<(f32, Vec<crabomination::cube::CardFactory>)> =
+        crabomination::selfplay::build_candidates(pool, CANDS, seed)
+            .into_iter()
+            .map(|d| {
+                let (cards, feats) = encode_deck(&d, &vocab);
+                (net.forward(&cards, &feats), d)
+            })
+            .collect();
+    scored.sort_by(|a, b| b.0.total_cmp(&a.0));
+
+    println!(
+        "build net ranking of {CANDS} candidates from {} ({:.2}s, no games played)",
+        path,
+        started.elapsed().as_secs_f64()
+    );
+    println!(
+        "\nNOTE: this is the net's predicted win rate, not a measured one. It gates at\n\
+         ~61 % against the static judge over the SAME candidate set, which makes it a\n\
+         good *ranker*; the absolute numbers are not calibrated win rates.\n"
+    );
+    for (rank, (score, deck)) in scored.iter().take(5).enumerate() {
+        let mut names: Vec<&str> = deck.iter().map(|f| f().name).collect();
+        names.sort_unstable();
+        let mut counts: std::collections::BTreeMap<&str, usize> = Default::default();
+        for n in names {
+            *counts.entry(n).or_default() += 1;
+        }
+        println!("#{} — net score {:.4}", rank + 1, score);
+        for (name, n) in &counts {
+            println!("  {n} {name}");
+        }
+        println!();
+    }
 }
