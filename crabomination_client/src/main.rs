@@ -695,6 +695,13 @@ fn main() {
             crate::systems::regen_badge::sync_regen_badges
                 .run_if(in_state(AppState::InGame)),
         )
+        // Interdict / Hand to Hand — chip over permanents whose activated
+        // abilities are switched off.
+        .add_systems(
+            Update,
+            crate::systems::lock_badge::sync_lock_badges
+                .run_if(in_state(AppState::InGame)),
+        )
         // Clarity batch: hover-preview for UI tiles (stack panel / log
         // lines), pulsing ring on the pending decision's source, and the
         // low-life danger frame.

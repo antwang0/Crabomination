@@ -156,7 +156,7 @@ pub fn is_mana_ability_public(effect: &Effect) -> bool {
     is_mana_ability(effect)
 }
 
-fn is_mana_ability(effect: &Effect) -> bool {
+pub(crate) fn is_mana_ability(effect: &Effect) -> bool {
     // CR 605.1a — a mana ability could add mana, isn't a loyalty ability,
     // doesn't target, and doesn't have an illegal trigger. It may still carry
     // incidental non-stack riders (Altar of the Pantheon's "gain 1 life").

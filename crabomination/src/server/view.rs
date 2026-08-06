@@ -1697,6 +1697,11 @@ fn project_permanent(
         stun_counter_count: card.counter_count(crate::card::CounterType::Stun),
         finality_counter_count: card.counter_count(crate::card::CounterType::Finality),
         regeneration_shields: card.regeneration_shields,
+        abilities_locked: state.abilities_locked_this_turn.contains(&card.id)
+            || (state.combat_spell_lock_active()
+                && card.definition.activated_abilities.iter().any(|a| {
+                    !crate::game::actions::is_mana_ability(&a.effect)
+                })),
         cant_regenerate: card.cant_regenerate_this_turn,
         is_flagbearer: cp
             .map(|c| c.subtypes.creature_types.as_slice())
@@ -2190,7 +2195,7 @@ fn project_abilities_with_granted(
         .map(|(i, a)| {
             // The "activate only if …" gate, described for the tooltip and
             // evaluated live so the client can grey the row out.
-            let (gate_label, gate_blocked) = match &a.condition {
+            let (mut gate_label, mut gate_blocked) = match &a.condition {
                 Some(p) => {
                     let blocked = state.is_some_and(|st| {
                         let ctx = crate::game::effects::EffectContext::for_ability(
@@ -2204,6 +2209,19 @@ fn project_abilities_with_granted(
                 }
                 None => (String::new(), false),
             };
+            // A source-level lock (Interdict, Hand to Hand, Pithing Needle)
+            // rejects every non-mana activation, so grey the row the same way
+            // a failed printed gate does — clicking it would only bounce.
+            if !is_mana_ability(&a.effect)
+                && let Some(st) = state
+                && (st.abilities_locked_this_turn.contains(&card.id)
+                    || st.combat_spell_lock_active())
+            {
+                gate_blocked = true;
+                if gate_label.is_empty() {
+                    gate_label = "abilities locked".to_string();
+                }
+            }
             AbilityView {
                 index: i,
                 cost_label: ability_cost_label(a),
@@ -4267,6 +4285,24 @@ mod tests {
             .expect("Mindful Biomancer projects a non-mana pump ability");
         assert!(pump.once_per_turn_used,
             "the pump ability is once-per-turn and the engine flagged it as used");
+    }
+
+    /// A source-level lock (Interdict) greys every non-mana ability on the
+    /// locked permanent and surfaces `abilities_locked` on the permanent.
+    #[test]
+    fn interdict_lock_greys_the_ability_row() {
+        let mut state = two_player_game();
+        let scroll = state.add_card_to_battlefield(0, catalog::cursed_scroll());
+        let before = project(&state, 0);
+        let row = |v: &crate::net::ClientView| {
+            let p = v.battlefield.iter().find(|p| p.id == scroll).unwrap();
+            (p.abilities_locked, p.abilities.iter().find(|a| !a.is_mana).unwrap().gate_blocked)
+        };
+        assert_eq!(row(&before), (false, false));
+
+        state.abilities_locked_this_turn.push(scroll);
+        let after = project(&state, 0);
+        assert_eq!(row(&after), (true, true));
     }
 
     /// Resonating Lute's gated draw ability should surface its

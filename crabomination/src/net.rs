@@ -1394,7 +1394,8 @@ pub struct AbilityView {
     #[serde(default)]
     pub gate_label: String,
     /// True if the ability has a printed gate AND the gate currently
-    /// rejects activation. `false` means either no gate (always
+    /// rejects activation, or a source-level lock (Interdict, Hand to Hand,
+    /// Pithing Needle) is suppressing every non-mana activation. `false` means either no gate (always
     /// activatable on cost grounds) or gate currently passes. The
     /// client can grey out the button when this is `true`. Note: this
     /// is a snapshot at view-projection time; the gate can flip between
@@ -1886,6 +1887,12 @@ pub struct PermanentView {
     /// so the client doesn't promise a save the shield can no longer make.
     #[serde(default)]
     pub cant_regenerate: bool,
+    /// This permanent's activated abilities can't be activated for the rest of
+    /// the turn (Interdict), or at all right now because a combat-wide lock is
+    /// up (Hand to Hand). Surfaced so the client can grey the ability menu out
+    /// instead of letting a click bounce off the server.
+    #[serde(default)]
+    pub abilities_locked: bool,
     /// CR 601.2c — this permanent is a Flagbearer, so an opponent choosing
     /// targets must choose it if able (Standard Bearer, Coalition Flag).
     /// Surfaced so the client can explain a rejected target.
