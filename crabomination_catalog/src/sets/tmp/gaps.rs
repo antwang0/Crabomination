@@ -911,3 +911,99 @@ pub fn echo_chamber() -> CardDefinition {
         }],
     )
 }
+
+// ── Wave 4 ──────────────────────────────────────────────────────────────────
+
+/// Whim of Volrath — {U} Instant, buyback {2}. Rewrite one colour word or one
+/// basic land type on a permanent for the turn.
+pub fn whim_of_volrath() -> CardDefinition {
+    let what = || target_filtered(R::Permanent);
+    CardDefinition {
+        name: "Whim of Volrath",
+        cost: cost(&[u()]),
+        card_types: vec![CardType::Instant],
+        keywords: vec![Keyword::Buyback(cost(&[generic(2)]))],
+        effect: Effect::ChooseMode(vec![
+            Effect::ReplaceColorWord { what: what(), duration: Duration::EndOfTurn },
+            Effect::ReplaceBasicLandType { what: what(), duration: Duration::EndOfTurn },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Magnetic Web — {2}. Magnet counters lock their bearers into attacking and
+/// blocking together.
+pub fn magnetic_web() -> CardDefinition {
+    use crate::card::{EventKind, EventScope, EventSpec, StaticAbility};
+    use crate::effect::StaticEffect;
+    let magnets = || R::Creature.and(R::WithCounter(CounterType::Magnet));
+    CardDefinition {
+        static_abilities: vec![StaticAbility {
+            description: "Creatures with magnet counters attack together.",
+            effect: StaticEffect::AttackTogether { filter: magnets() },
+        }],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Attacks, EventScope::AnyPlayer).with_filter(
+                Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: R::WithCounter(CounterType::Magnet),
+                },
+            ),
+            effect: Effect::GrantKeyword {
+                what: Selector::EachPermanent(magnets().and(R::Not(Box::new(R::IsAttacking)))),
+                keyword: Keyword::MustBlock,
+                duration: Duration::EndOfTurn,
+            },
+        }],
+        ..artifact(
+            "Magnetic Web",
+            cost(&[generic(2)]),
+            vec![ActivatedAbility {
+                mana_cost: cost(&[generic(1)]),
+                tap_cost: true,
+                effect: Effect::AddCounter {
+                    what: target_filtered(R::Creature),
+                    kind: CounterType::Magnet,
+                    amount: Value::ONE,
+                },
+                ..Default::default()
+            }],
+        )
+    }
+}
+
+/// Booby Trap — {6}. Name a card as it enters; when the chosen opponent draws
+/// it, the Trap goes off for 10.
+pub fn booby_trap() -> CardDefinition {
+    use crate::card::{EventKind, EventScope, EventSpec, StaticAbility};
+    use crate::effect::StaticEffect;
+    CardDefinition {
+        as_enters_effect: Some(Effect::Seq(vec![
+            Effect::RememberPlayerOnSource { who: PlayerRef::EachOpponent },
+            Effect::NameCard {
+                what: Selector::This,
+                restrict_to: Some(R::Not(Box::new(R::Land.and(R::IsBasicLand)))),
+            },
+        ])),
+        static_abilities: vec![StaticAbility {
+            description: "The chosen player reveals each card they draw.",
+            effect: StaticEffect::OpponentsPlayWithHandsRevealed,
+        }],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CardDrawn, EventScope::OpponentControl).with_filter(
+                Predicate::EntityMatchesAny {
+                    what: Selector::TriggerSource,
+                    filter: R::NamedBySource,
+                },
+            ),
+            effect: Effect::Seq(vec![
+                Effect::SacrificeSelected { what: Selector::This },
+                Effect::DealDamage {
+                    to: Selector::Player(PlayerRef::ChosenPlayerOfSource),
+                    amount: Value::Const(10),
+                },
+            ]),
+        }],
+        ..artifact("Booby Trap", cost(&[generic(6)]), vec![])
+    }
+}

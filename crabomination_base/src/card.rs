@@ -446,6 +446,8 @@ pub enum CounterType {
     /// Carrion counter — Osai Vultures' end-step tally of dead creatures;
     /// remove two to pump.
     Carrion,
+    /// Magnet counter — Magnetic Web's lure/compulsion pair.
+    Magnet,
     /// Delay counter — Delaying Shield banks damage dealt to its controller
     /// here and cashes it in at upkeep.
     Delay,

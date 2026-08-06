@@ -2494,6 +2494,10 @@ pub enum StaticEffect {
     /// Orb, which wraps it in a `WhileCondition` gate on its own untapped
     /// state).
     MaxUntapsPerStep { filter: SelectionRequirement, max: u32 },
+    /// CR 508.1d — "If a [`filter`] creature attacks, all [`filter`] creatures
+    /// attack if able" (Magnetic Web). Checked against the *declared* batch in
+    /// `declare_attackers`, so it costs nothing when none of them attacks.
+    AttackTogether { filter: SelectionRequirement },
     /// CR 506 — "During combat, players can't cast instant spells or activate
     /// abilities that aren't mana abilities" (Hand to Hand). Global; mana
     /// abilities and sorcery-speed activations outside combat are unaffected.

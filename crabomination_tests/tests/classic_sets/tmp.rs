@@ -1439,3 +1439,78 @@ fn echo_chamber_rents_a_creature() {
     assert_eq!(token.definition.name, "Serra Angel");
     assert!(g.computed_permanent(token.id).unwrap().keywords.contains(&Keyword::Haste));
 }
+
+/// Whim of Volrath rewrites a colour word for the turn and buys itself back.
+#[test]
+fn whim_of_volrath_rewrites_and_returns() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let whim = g.add_card_to_hand(0, catalog::whim_of_volrath());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpellBuyback {
+        card_id: whim,
+        target: Some(Target::Permanent(bear)),
+        additional_targets: vec![],
+        mode: Some(0),
+        x_value: None,
+    })
+    .expect("cast with buyback");
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == whim), "buyback returned it");
+}
+
+/// Magnetic Web drags every magnet-countered creature into the attack.
+#[test]
+fn magnetic_web_locks_magnets_into_combat() {
+    let mut g = two_player_game();
+    let web = ready(&mut g, 0, catalog::magnetic_web());
+    let a = ready(&mut g, 0, catalog::grizzly_bears());
+    let b = ready(&mut g, 0, catalog::grizzly_bears());
+    g.step = TurnStep::PreCombatMain;
+    for id in [a, b] {
+        g.battlefield_find_mut(web).unwrap().tapped = false;
+        g.players[0].mana_pool.add_colorless(1);
+        activate(&mut g, web, 0, Some(Target::Permanent(id))).expect("magnetize");
+        drain_stack(&mut g);
+    }
+    advance_to(&mut g, TurnStep::DeclareAttackers);
+    g.priority.player_with_priority = 0;
+    assert!(
+        g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+            attacker: a,
+            target: AttackTarget::Player(1),
+        }]))
+        .is_err(),
+        "the other magnet has to come too"
+    );
+    g.perform_action(GameAction::DeclareAttackers(vec![
+        Attack { attacker: a, target: AttackTarget::Player(1) },
+        Attack { attacker: b, target: AttackTarget::Player(1) },
+    ]))
+    .expect("both attack");
+}
+
+/// Booby Trap detonates on the named draw.
+#[test]
+fn booby_trap_goes_off_on_the_named_draw() {
+    let mut g = two_player_game();
+    g.add_card_to_library(1, catalog::grizzly_bears());
+    g.add_card_to_library(1, catalog::forest());
+    let trap = g.add_card_to_hand(0, catalog::booby_trap());
+    g.players[0].mana_pool.add_colorless(6);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::NamedCard(
+        "Grizzly Bears".into(),
+    )]));
+    cast(&mut g, trap, None).expect("cast");
+    drain_stack(&mut g);
+
+    let mut events = vec![];
+    g.draw_one(1, &mut events); // Grizzly Bears
+    g.dispatch_triggers_for_events(&events);
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, 10, "the trap fired");
+    assert!(g.battlefield_find(trap).is_none(), "and sacrificed itself");
+}

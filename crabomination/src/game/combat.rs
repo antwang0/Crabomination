@@ -481,6 +481,42 @@ impl GameState {
                     return Err(GameError::CannotAttack(c.id));
                 }
             }
+            // CR 508.1d — Magnetic Web: once one of the group attacks, every
+            // able member of the group has to join it.
+            let groups: Vec<crate::card::SelectionRequirement> = self
+                .battlefield
+                .iter()
+                .flat_map(|c| c.definition.static_abilities.iter().map(move |sa| (c, sa)))
+                .filter_map(|(c, sa)| match self.active_static(&sa.effect, c) {
+                    Some(crate::effect::StaticEffect::AttackTogether { filter }) => {
+                        Some(filter.clone())
+                    }
+                    _ => None,
+                })
+                .collect();
+            for filter in groups {
+                let matches = |id: CardId| {
+                    self.evaluate_requirement_static(&filter, &Target::Permanent(id), p, None)
+                };
+                if !attacks.iter().any(|atk| matches(atk.attacker)) {
+                    continue;
+                }
+                for c in &self.battlefield {
+                    if c.controller != p || !matches(c.id) {
+                        continue;
+                    }
+                    let kws = computed_kw(c.id);
+                    let able = c.definition.is_creature()
+                        && !c.tapped
+                        && (!kws.contains(&Keyword::Defender)
+                            || self.ignores_defender_for_attack(c))
+                        && !kws.contains(&Keyword::CantAttack)
+                        && (!c.summoning_sick || kws.contains(&Keyword::Haste));
+                    if able && !attacks.iter().any(|atk| atk.attacker == c.id) {
+                        return Err(GameError::CannotAttack(c.id));
+                    }
+                }
+            }
         }
 
         // CR 601.2h-style atomicity: validate the entire declaration before
