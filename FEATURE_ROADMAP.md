@@ -2377,6 +2377,44 @@ Each a small targeted feature; sweep batch by batch.
   stratum both plays and benches reports **no** within-archetype number
   rather than passing the marginal off as one. `recommend_pool` prints
   `within` first and labels `raw` as the confound.
+- 🟢 **Value net finally beats the heuristic as a predictor** — and the
+  reason six gate rounds failed was **overfitting, not architecture**.
+
+  `selfplay_train --calibrate N` scores the net and `eval_material` as
+  *predictors of the winner* on identical fresh positions (log-loss /
+  Brier / AUC, plus an output histogram). It answered in minutes what
+  thousands of gate games never did:
+
+  | | pooled λ0.7 3.7M rows | pooled λ0.7 9.1M rows | **attention** 9.1M rows | `eval_material` |
+  |---|---|---|---|---|
+  | AUC | 0.7369 | 0.7805 | **0.7978** | ~0.753–0.761 |
+  | log-loss | 0.7473 | 0.5912 | **0.5505** | ~0.571–0.574 |
+  | Brier | 0.2384 | 0.2007 | **0.1859** | ~0.196–0.197 |
+  | outside [.05,.95] | — | 16.1 % | **9.8 %** | — |
+
+  Decomposed: **data volume + lower window reuse is worth +0.044 AUC**
+  (2.5× more fresh games at 1.68× reuse instead of 4.16×), and
+  **attention adds +0.017 on top**. Overfitting was the dominant effect
+  and the architecture the smaller half — the reverse of the working
+  hypothesis.
+
+  This retro-invalidates the earlier gates: all six trained a ~481 k-param
+  net on a memorised 250 k window at 4.2× reuse, so the 42–45 %
+  replacement results measured an overfit net, and round 4's "capacity is
+  the bottleneck" conclusion came from a run that could not have shown a
+  capacity effect. **Training MSE is not progress here** — 0.017 at λ=1
+  was memorisation, and out-of-sample log-loss was *worse than predicting
+  0.5 every time* (1.1210 vs 0.6933).
+
+  Two failures, separately fixed. *Calibration*: MSE on hard 0/1 targets
+  rewards large logits, pinning 70 % of positions in the extreme bins and
+  handing the search a flat landscape where every candidate line scores
+  the same — a better ranker made into a worse player by the shape of its
+  output. Soft TD(λ) targets plus more data cut that to 9.8 %.
+  *Knowledge*: fixed by data volume first, attention second.
+
+  Caveats before anyone invests: single seed (replication running), and
+  AUC is not win rate — better prediction still has to survive the ladder.
 - 🟡 **Value-net rework** — three changes, none yet gate-measured:
   bootstrapped **λ-returns** (`SampleWindow::relabel_lambda`, shard v3
   carries trajectory + ply; λ = 1 reproduces the historical Monte Carlo
