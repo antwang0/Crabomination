@@ -527,6 +527,43 @@ pub enum SpendRestriction {
 }
 
 impl SpendRestriction {
+    /// Short human-readable clause for the client's floated-mana HUD
+    /// ("only creature spells"). Riders that don't actually restrict spending
+    /// return `None`.
+    pub fn label(self) -> Option<&'static str> {
+        Some(match self {
+            SpendRestriction::InstantSorceryOnly => "only instants and sorceries",
+            SpendRestriction::ArtifactOnly => "only artifacts",
+            SpendRestriction::CreatureOfTypeUncounterable(_) | SpendRestriction::CreatureOfType(_) => {
+                "only creatures of the chosen type"
+            }
+            SpendRestriction::LandAbilitiesOnly => "only abilities of lands",
+            SpendRestriction::CreatureOnly => "only creature spells",
+            SpendRestriction::CreatureSpellsOrAbilities => "only creatures and their abilities",
+            SpendRestriction::NoNonartifactSpells => "not on nonartifact spells",
+            SpendRestriction::AbilitiesOnly => "only activated abilities",
+            SpendRestriction::LessonSpellsOnly => "only Lesson spells",
+            SpendRestriction::DevoidSpellsOnly => "only devoid spells",
+            SpendRestriction::EquipmentOnly => "only Equipment",
+            SpendRestriction::ColorlessSpellsOrAbilities => "only colorless spells or abilities",
+            SpendRestriction::HighMvOrX => "only mana value 5+ or {X} spells",
+            SpendRestriction::DragonOrOmenSpell => "only Dragon or Omen spells",
+            SpendRestriction::EnchantmentSpell => "only enchantment spells",
+            SpendRestriction::MulticoloredSpell => "only multicolored spells",
+            SpendRestriction::PlaneswalkerSpellsOnly => "only planeswalker spells",
+            SpendRestriction::NoncreatureSpellsOnly => "only noncreature spells",
+            SpendRestriction::LegendarySpell => "only legendary spells",
+            SpendRestriction::RoomSpellsOrDoors => "only Room spells and doors",
+            SpendRestriction::FaceDownSpellsOrTurnFaceUp => {
+                "only face-down casts or turning face up"
+            }
+            // Riders, not restrictions — the mana spends freely.
+            SpendRestriction::InstantSorceryUncounterable | SpendRestriction::CreatureHaste => {
+                return None;
+            }
+        })
+    }
+
     /// True iff mana under this restriction may fund a payment of `kind`.
     pub fn allows(self, kind: &SpellKind) -> bool {
         match self {
@@ -870,6 +907,17 @@ impl ManaPool {
     /// Total spend-restricted mana floating in the pool (any color/
     /// restriction). Exposed for UI/debug surfaces that show floated mana;
     /// `total()` deliberately excludes it since it isn't freely spendable.
+    /// Per-bucket breakdown of the restricted pool: `(pip label, amount,
+    /// restriction)`. Powers the client's floated-mana HUD, which otherwise
+    /// shows a bare count the player can't spend and can't explain.
+    pub fn restricted_breakdown(&self) -> Vec<(String, u32, SpendRestriction)> {
+        self.restricted
+            .iter()
+            .map(|(c, n, r)| (format!("{{{}}}", color_pip_letter(*c)), *n, *r))
+            .chain(self.restricted_colorless.iter().map(|(n, r)| ("{C}".to_string(), *n, *r)))
+            .collect()
+    }
+
     pub fn restricted_total(&self) -> u32 {
         self.restricted.iter().map(|(_, n, _)| *n).sum::<u32>()
             + self.restricted_colorless.iter().map(|(n, _)| *n).sum::<u32>()

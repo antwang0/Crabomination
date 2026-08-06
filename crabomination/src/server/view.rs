@@ -743,6 +743,12 @@ fn project_player(
         noncombat_damage_bonus: state.noncombat_damage_bonus_of_seat(player_seat),
         rad_counters: player.rad_counters,
         mana_pool: player.mana_pool.clone(),
+        restricted_mana: player
+            .mana_pool
+            .restricted_breakdown()
+            .into_iter()
+            .filter_map(|(pip, n, r)| r.label().map(|l| (pip, n, l.to_string())))
+            .collect(),
         kept_mana: player.kept_mana_this_turn.total(),
         library: LibraryView {
             size: player.library.len(),
@@ -3346,6 +3352,24 @@ mod tests {
         state.add_card_to_battlefield(0, catalog::dream_chisel());
         assert_eq!(project(&state, 0).face_down_cast_cost, 2, "Dream Chisel shaves one generic");
         assert_eq!(project(&state, 1).face_down_cast_cost, 3, "the opponent pays full");
+    }
+
+    /// CR 106.6 — restricted floating mana is projected with the clause that
+    /// limits it, since `mana_pool.total()` leaves it out.
+    #[test]
+    fn restricted_mana_is_projected_with_its_clause() {
+        let mut state = two_player_game();
+        state.players[0].mana_pool.add_restricted(
+            crate::mana::Color::Red,
+            2,
+            crate::mana::SpendRestriction::CreatureOnly,
+        );
+        let v = project(&state, 0);
+        assert_eq!(v.players[0].mana_pool.total(), 0, "restricted mana isn't freely spendable");
+        assert_eq!(
+            v.players[0].restricted_mana,
+            vec![("{R}".to_string(), 2, "only creature spells".to_string())],
+        );
     }
 
     #[test]

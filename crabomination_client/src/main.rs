@@ -677,6 +677,12 @@ fn main() {
             crate::systems::token_badge::sync_token_pile_badges
                 .run_if(in_state(AppState::InGame)),
         )
+        // CR 702.106 — the name a hidden-agenda conspiracy chose.
+        .add_systems(
+            Update,
+            crate::systems::agenda_badge::sync_agenda_badges
+                .run_if(in_state(AppState::InGame)),
+        )
         // Clarity batch: hover-preview for UI tiles (stack panel / log
         // lines), pulsing ring on the pending decision's source, and the
         // low-life danger frame.

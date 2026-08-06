@@ -19,6 +19,7 @@ pub mod legal_target_filter;
 pub mod lobby_ui;
 pub mod phase_bar;
 pub mod pt_label;
+pub mod agenda_badge;
 pub mod token_badge;
 pub mod quality;
 pub mod settings_menu;

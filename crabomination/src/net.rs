@@ -729,6 +729,12 @@ pub struct PlayerView {
     /// the HUD can flag persistent mana. `#[serde(default)]`.
     #[serde(default)]
     pub kept_mana: u32,
+    /// CR 106.6 — floated mana that can only pay for particular things
+    /// (Cavern of Souls, Tin Street Gossip), as `(pip, amount, clause)`.
+    /// `mana_pool.total()` deliberately excludes it, so without this the HUD
+    /// can neither show it nor say why it can't be spent.
+    #[serde(default)]
+    pub restricted_mana: Vec<(String, u32, String)>,
     pub library: LibraryView,
     pub graveyard: Vec<GraveyardCardView>,
     /// CR 407.2 — cards this player owns in the ante zone. Public knowledge

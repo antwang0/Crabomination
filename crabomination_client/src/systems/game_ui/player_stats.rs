@@ -1419,6 +1419,15 @@ pub fn update_mana_pips(
                 TextColor(theme::TEXT_MUTED),
             ));
         }
+        // CR 106.6 — spend-restricted mana is excluded from `mana_pool`, so
+        // show it separately with the clause that limits it.
+        for (pip, n, clause) in &p.restricted_mana {
+            row.spawn((
+                Text::new(format!("{pip}{n} ({clause})")),
+                ui_fonts.tf(11.0),
+                TextColor(theme::TEXT_MUTED),
+            ));
+        }
     });
 }
 

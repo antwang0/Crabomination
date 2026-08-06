@@ -196,6 +196,7 @@ mod tests {
                 rad_counters: 0,
                 mana_pool: ManaPool::default(),
                 kept_mana: 0,
+                restricted_mana: vec![],
                 library: LibraryView::default(),
                 graveyard: vec![],
                 hand: vec![],
