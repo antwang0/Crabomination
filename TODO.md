@@ -29,11 +29,6 @@ Items are grouped by area and roughly ordered by impact within each group.
   `untap_prevented_by_static` for every battlefield permanent instead of
   intersecting filter sets the way `PreventUntap` does. Fine at real board
   sizes; worth folding together if it ever shows up. ⏳
-- **`server::tests::bot_vs_bot_random_cube_decks_terminate` is wall-clock
-  flaky.** Five random cube games, each with a 30 s `recv_timeout`; under a
-  loaded machine (a parallel `cargo test --workspace`) a trial can blow the
-  budget and fail. It uses the curated cube pool, so it isn't a catalog
-  regression — the timeout wants to be generous or the bot seeded. ⏳
 - **Heartstone reduces only *your* creatures' activated abilities.** The
   printed line is global; `StaticEffect::YourCreatureActivatedAbilitiesCostLess`
   is the closest existing static. ⏳

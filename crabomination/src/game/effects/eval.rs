@@ -3708,6 +3708,25 @@ impl GameState {
                                 .unwrap_or_else(|| card.power())
                                 < n
                     }
+                    R::PowerAtMostSourceCounters(kind) => {
+                        // CR 608.2b — the source may have paid itself as the
+                        // ability's cost (Legacy's Allure sacrifices itself),
+                        // so fall back to its last-known battlefield counters.
+                        let n = source
+                            .and_then(|sid| {
+                                self.battlefield_find(sid)
+                                    .or_else(|| self.died_card_snapshots.get(&sid))
+                                    .or_else(|| self.leaves_bf_lki.get(&sid))
+                            })
+                            .map(|c| c.counter_count(*kind))
+                            .unwrap_or(0) as i32;
+                        card.definition.is_creature()
+                            && self
+                                .computed_permanent(card.id)
+                                .map(|cp| cp.power)
+                                .unwrap_or_else(|| card.power())
+                                <= n
+                    }
                     R::PowerAtMostYourCount(inner) => {
                         let n = self
                             .battlefield
@@ -4126,7 +4145,7 @@ impl GameState {
             }
             // Source-less path: the counter count needs the ability's source,
             // which only `evaluate_requirement_static` carries.
-            R::ManaValueEqualsCountersOnSource(_) => false,
+            R::ManaValueEqualsCountersOnSource(_) | R::PowerAtMostSourceCounters(_) => false,
             R::Player
             | R::OpponentPlayer
             | R::OpponentTallyDiffers { .. }

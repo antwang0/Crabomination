@@ -792,6 +792,7 @@ pub(crate) fn keyword_reminder(kw: &crabomination::card::Keyword) -> Option<&'st
         K::Intimidate => "Can only be blocked by artifacts and creatures sharing a color.",
         K::Skulk => "Can't be blocked by creatures with greater power.",
         K::Shadow => "Can only block or be blocked by creatures with shadow.",
+        K::CanBlockShadow => "Can block creatures with shadow as though it had shadow.",
         K::Horsemanship => "Can only be blocked by creatures with horsemanship.",
         K::Landwalk(_) | K::LandwalkFiltered(_) => "Can't be blocked if the defending player controls a land of the named type.",
         K::Unblockable => "Can't be blocked.",

@@ -672,3 +672,154 @@ pub fn recycle() -> CardDefinition {
         ..enchantment("Recycle", cost(&[generic(4), g(), g()]), vec![])
     }
 }
+
+/// Circle of Protection: Shadow — {1}{W}. {1}: shield yourself from one shadow
+/// creature's next hit.
+pub fn circle_of_protection_shadow() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1)]),
+            effect: Effect::PreventNextDamageFromChosenSource {
+                filter: R::Creature.and(R::HasKeyword(Keyword::Shadow)),
+                reflect: false,
+                to: None,
+                gain_life: false,
+                redirect_to: None,
+                whole_turn: false,
+            },
+            ..Default::default()
+        }],
+        ..enchantment("Circle of Protection: Shadow", cost(&[generic(1), w()]), vec![])
+    }
+}
+
+/// Safeguard — {3}{W}{W}. {2}{W}: blank one creature's combat damage.
+pub fn safeguard() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(2), w()]),
+            effect: Effect::PreventAllCombatDamageInvolving {
+                target: target_filtered(R::Creature),
+            },
+            ..Default::default()
+        }],
+        ..enchantment("Safeguard", cost(&[generic(3), w(), w()]), vec![])
+    }
+}
+
+/// Legacy's Allure — {U}{U}. Bank treasure counters, then trade the whole
+/// enchantment for a creature small enough.
+pub fn legacys_allure() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::SelfSource),
+            effect: Effect::MayDo {
+                description: "Put a treasure counter on Legacy's Allure".to_string(),
+                body: Box::new(Effect::AddCounter {
+                    what: Selector::This,
+                    kind: CounterType::Currency,
+                    amount: Value::ONE,
+                }),
+            },
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            sac_cost: true,
+            effect: Effect::GainControl {
+                what: Selector::TargetFiltered {
+                    slot: 0,
+                    filter: R::Creature.and(R::PowerAtMostSourceCounters(CounterType::Currency)),
+                },
+                to: None,
+                duration: Duration::Permanent,
+            },
+            ..Default::default()
+        }],
+        ..enchantment("Legacy's Allure", cost(&[u(), u()]), vec![])
+    }
+}
+
+/// Spirit Mirror — {2}{W}{W}. Keeps exactly one 2/2 Reflection around.
+pub fn spirit_mirror() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::SelfSource)
+                .with_filter(Predicate::Not(Box::new(Predicate::SelectorCountAtLeast {
+                    sel: Selector::EachPermanent(R::HasCreatureType(CreatureType::Reflection)),
+                    n: Value::ONE,
+                }))),
+            effect: Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::ONE,
+                definition: TokenDefinition {
+                    name: "Reflection".to_string(),
+                    power: 2,
+                    toughness: 2,
+                    card_types: vec![CardType::Creature],
+                    colors: vec![Color::White],
+                    subtypes: Subtypes {
+                        creature_types: vec![CreatureType::Reflection],
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                },
+            },
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            effect: Effect::Destroy {
+                what: target_filtered(R::HasCreatureType(CreatureType::Reflection)),
+            },
+            ..Default::default()
+        }],
+        ..enchantment("Spirit Mirror", cost(&[generic(2), w(), w()]), vec![])
+    }
+}
+
+/// Tahngarth's Rage — {R} Aura. A big bonus while attacking, a penalty at rest.
+pub fn tahngarths_rage() -> CardDefinition {
+    CardDefinition {
+        static_abilities: vec![
+            StaticAbility {
+                description: "Enchanted creature gets +3/+0 as long as it's attacking.",
+                effect: StaticEffect::PumpPT {
+                    applies_to: Selector::MatchingAmong {
+                        inner: Box::new(Selector::AttachedTo(Box::new(Selector::This))),
+                        filter: R::IsAttacking,
+                    },
+                    power: 3,
+                    toughness: 0,
+                },
+            },
+            StaticAbility {
+                description: "Otherwise, it gets -2/-1.",
+                effect: StaticEffect::PumpPT {
+                    applies_to: Selector::MatchingAmong {
+                        inner: Box::new(Selector::AttachedTo(Box::new(Selector::This))),
+                        filter: R::Not(Box::new(R::IsAttacking)),
+                    },
+                    power: -2,
+                    toughness: -1,
+                },
+            },
+        ],
+        ..aura("Tahngarth's Rage", cost(&[r()]), R::Creature)
+    }
+}
+
+/// Precognition — {4}{U}. Peek at an opponent's top card each upkeep and may
+/// bury it. (Modelled as a scry on their library, so the bury decision is
+/// theirs rather than yours.)
+pub fn precognition() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::SelfSource),
+            effect: Effect::MayDo {
+                description: "Look at an opponent's top card and maybe bottom it".to_string(),
+                body: Box::new(Effect::Scry {
+                    who: PlayerRef::Target(0),
+                    amount: Value::ONE,
+                }),
+            },
+        }],
+        ..enchantment("Precognition", cost(&[generic(4), u()]), vec![])
+    }
+}

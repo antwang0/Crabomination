@@ -2217,6 +2217,11 @@ mod tests {
     /// the timeout. Repeated five times to shake out target-selection
     /// freezes (Vandalblast → lone artifact, Counterspell → lone creature,
     /// etc.) that only show up under specific runtime card combinations.
+    ///
+    /// The budget guards against a *freeze*, which never finishes at any
+    /// deadline, so it is deliberately far above a healthy trial (~2s solo).
+    /// A tight bound turned this into a wall-clock flake whenever the full
+    /// suite ran the other test binaries alongside it.
     #[test]
     fn bot_vs_bot_random_cube_decks_terminate() {
         use crate::cube::build_cube_state;
@@ -2234,7 +2239,7 @@ mod tests {
                 let _ = done_tx.send(());
             });
             done_rx
-                .recv_timeout(Duration::from_secs(30))
+                .recv_timeout(Duration::from_secs(180))
                 .unwrap_or_else(|_| panic!("cube bot-vs-bot trial {trial} did not terminate"));
             handle.join().unwrap();
         }

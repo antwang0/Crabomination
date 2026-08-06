@@ -2225,6 +2225,9 @@ pub enum RevealMissDest {
     /// Misses are shuffled into the controller's library after the find
     /// resolves (Transmogrify, Indomitable Creativity).
     ShuffleIntoLibrary,
+    /// Misses are exiled — "put that card into your hand and exile all other
+    /// cards revealed this way" (Sacred Guide).
+    Exile,
     /// Misses join the found card in its destination — "reveal cards from the
     /// top of your library until you reveal a nonland card, then put all cards
     /// revealed this way into your hand" (Treasure Hunt).

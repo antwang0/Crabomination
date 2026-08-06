@@ -44,6 +44,12 @@ fn cast(
     .map(|_| ())
 }
 
+fn advance_to(g: &mut GameState, step: TurnStep) {
+    while g.step != step {
+        g.perform_action(GameAction::PassPriority).expect("pass priority");
+    }
+}
+
 /// Put `def` on the battlefield ready to attack.
 fn ready(g: &mut GameState, seat: usize, def: CardDefinition) -> CardId {
     let id = g.add_card_to_battlefield(seat, def);
@@ -463,4 +469,112 @@ fn ghost_town_bounces_only_off_turn() {
     activate(&mut g, town, 1, None).expect("bounce");
     drain_stack(&mut g);
     assert!(g.battlefield_find(town).is_none(), "back to hand");
+}
+
+// ── Second batch ────────────────────────────────────────────────────────────
+
+/// `Keyword::CanBlockShadow` lifts only the attacker-side half of CR 702.28:
+/// the Dryad catches a Soltari and still blocks ordinary creatures.
+#[test]
+fn can_block_shadow_catches_shadow_without_becoming_shadow() {
+    let mut g = two_player_game();
+    let dryad = ready(&mut g, 0, catalog::heartwood_dryad());
+    let soltari = ready(&mut g, 1, catalog::soltari_foot_soldier());
+    let bear = ready(&mut g, 1, catalog::grizzly_bears());
+    assert!(g.blocker_can_block_attacker(dryad, soltari), "it can catch shadow");
+    assert!(g.blocker_can_block_attacker(dryad, bear), "and still blocks normally");
+}
+
+/// `PowerAtMostSourceCounters` — Legacy's Allure only reaches creatures its own
+/// treasure pile can pay for.
+#[test]
+fn legacys_allure_steals_only_within_its_counters() {
+    let mut g = two_player_game();
+    let allure = ready(&mut g, 0, catalog::legacys_allure());
+    let big = g.add_card_to_battlefield(1, catalog::serra_angel()); // 4/4
+    let small = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
+    g.battlefield_find_mut(allure).unwrap().add_counters(CounterType::Currency, 2);
+    g.step = TurnStep::PreCombatMain;
+
+    assert!(activate(&mut g, allure, 0, Some(Target::Permanent(big))).is_err(), "4 power is out of reach");
+    activate(&mut g, allure, 0, Some(Target::Permanent(small))).expect("steal");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(small).unwrap().controller, 0);
+}
+
+/// `RevealMissDest::Exile` — Sacred Guide keeps the white card and exiles the
+/// cards it dug past.
+#[test]
+fn sacred_guide_exiles_everything_it_digs_past() {
+    let mut g = two_player_game();
+    // Library top-down: two nonwhite, then a white card.
+    let plains = catalog::serra_angel();
+    for def in [catalog::grizzly_bears(), catalog::llanowar_elves()] {
+        g.add_card_to_library(0, def);
+    }
+    g.add_card_to_library(0, plains);
+    let guide = ready(&mut g, 0, catalog::sacred_guide());
+    g.step = TurnStep::PreCombatMain;
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    activate(&mut g, guide, 0, None).expect("dig");
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.definition.name == "Serra Angel"), "the white card");
+    assert_eq!(g.exile.iter().filter(|c| c.owner == 0).count(), 2, "the misses are exiled");
+}
+
+/// Kezzerdrix only bites when the other side of the board is empty.
+#[test]
+fn kezzerdrix_bites_an_empty_board() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::kezzerdrix());
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.active_player_idx = 0;
+    g.step = TurnStep::Untap;
+    advance_to(&mut g, TurnStep::Upkeep);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, 20, "an opposing creature keeps it calm");
+
+    let mut events = vec![];
+    g.destroy_permanent(bear, false, &mut events);
+    drain_stack(&mut g);
+    g.step = TurnStep::Untap;
+    advance_to(&mut g, TurnStep::Upkeep);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, 16);
+}
+
+/// Mnemonic Sliver's sac-for-a-card reaches every Sliver, not just itself.
+#[test]
+fn mnemonic_sliver_arms_the_whole_hive() {
+    let mut g = two_player_game();
+    for _ in 0..3 {
+        g.add_card_to_library(0, catalog::forest());
+    }
+    g.add_card_to_battlefield(0, catalog::mnemonic_sliver());
+    let metallic = ready(&mut g, 0, catalog::metallic_sliver());
+    g.step = TurnStep::PreCombatMain;
+    g.players[0].mana_pool.add_colorless(2);
+    let before = g.players[0].hand.len();
+    // Index 0 is the granted ability (Metallic Sliver prints none).
+    activate(&mut g, metallic, 0, None).expect("sac for a card");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(metallic).is_none(), "it ate itself");
+    assert_eq!(g.players[0].hand.len(), before + 1);
+}
+
+/// Watchdog dulls the attack only while it is untapped.
+#[test]
+fn watchdog_softens_attackers_while_untapped() {
+    let mut g = two_player_game();
+    let dog = g.add_card_to_battlefield(0, catalog::watchdog());
+    let bear = ready(&mut g, 1, catalog::grizzly_bears());
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    g.step = TurnStep::DeclareAttackers;
+    g.declare_attackers(vec![Attack { attacker: bear, target: AttackTarget::Player(0) }])
+        .expect("attack");
+    assert_eq!(g.computed_permanent(bear).unwrap().power, 1, "-1/-0 while the dog is up");
+    g.battlefield_find_mut(dog).unwrap().tapped = true;
+    assert_eq!(g.computed_permanent(bear).unwrap().power, 2, "tapped, so no longer");
 }

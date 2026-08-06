@@ -1244,3 +1244,515 @@ pub fn orim_samite_healer() -> CardDefinition {
         )
     }
 }
+
+// ── Licids (CR-adjacent: the STH mechanic, TMP's five 1/1 cycle) ────────────
+
+/// "{cost}, {T}: this becomes an Aura with enchant creature; pay {color} to
+/// end it." The TMP Licids are {1}{color} 1/1s.
+fn tmp_licid(
+    name: &'static str,
+    color: crate::mana::ManaSymbol,
+    attach_cost: ManaCost,
+    bonus: crate::card::EquipBonus,
+) -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: attach_cost,
+            tap_cost: true,
+            effect: Effect::LicidAttach {
+                host: target_filtered(R::Creature),
+                end_cost: cost(&[color]),
+            },
+            ..Default::default()
+        }],
+        equipped_bonus: Some(bonus),
+        ..creature(name, cost(&[generic(1), color]), vec![CreatureType::Licid], 1, 1)
+    }
+}
+
+/// Enraging Licid — {1}{R}. As an Aura, the host has haste.
+pub fn enraging_licid() -> CardDefinition {
+    tmp_licid(
+        "Enraging Licid",
+        r(),
+        cost(&[r()]),
+        crate::card::EquipBonus { keywords: vec![Keyword::Haste], ..Default::default() },
+    )
+}
+
+/// Quickening Licid — {1}{W}. As an Aura, the host has first strike.
+pub fn quickening_licid() -> CardDefinition {
+    tmp_licid(
+        "Quickening Licid",
+        w(),
+        cost(&[generic(1), w()]),
+        crate::card::EquipBonus { keywords: vec![Keyword::FirstStrike], ..Default::default() },
+    )
+}
+
+// ── The rest of the creatures ───────────────────────────────────────────────
+
+/// Heartwood Dryad — {1}{G} 2/1 that can catch a shadow creature.
+pub fn heartwood_dryad() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::CanBlockShadow],
+        ..creature("Heartwood Dryad", cost(&[generic(1), g()]), vec![CreatureType::Dryad], 2, 1)
+    }
+}
+
+/// Wall of Diffusion — {1}{R} 0/5 defender that also catches shadow.
+pub fn wall_of_diffusion() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Defender, Keyword::CanBlockShadow],
+        ..creature("Wall of Diffusion", cost(&[generic(1), r()]), vec![CreatureType::Wall], 0, 5)
+    }
+}
+
+/// Heartwood Giant — {3}{G}{G} 4/4 that burns Forests for reach.
+pub fn heartwood_giant() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            sac_other_filter: Some((R::HasLandType(LandType::Forest), 1)),
+            effect: deal(2, target_filtered(R::Player.or(R::Planeswalker))),
+            ..Default::default()
+        }],
+        ..creature(
+            "Heartwood Giant",
+            cost(&[generic(3), g(), g()]),
+            vec![CreatureType::Giant],
+            4,
+            4,
+        )
+    }
+}
+
+/// Marsh Lurker — {3}{B} 3/2 that eats a Swamp for fear.
+pub fn marsh_lurker() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            sac_other_filter: Some((R::HasLandType(LandType::Swamp), 1)),
+            effect: Effect::GrantKeyword {
+                what: Selector::This,
+                keyword: Keyword::Fear,
+                duration: Duration::EndOfTurn,
+            },
+            ..Default::default()
+        }],
+        ..creature("Marsh Lurker", cost(&[generic(3), b()]), vec![CreatureType::Beast], 3, 2)
+    }
+}
+
+/// Rats of Rath — {1}{B} 2/1 that can eat your own permanents.
+pub fn rats_of_rath() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[b()]),
+            effect: Effect::Destroy {
+                what: Selector::TargetFiltered {
+                    slot: 0,
+                    filter: R::Artifact.or(R::Creature).or(R::Land).and(R::ControlledByYou),
+                },
+            },
+            ..Default::default()
+        }],
+        ..creature("Rats of Rath", cost(&[generic(1), b()]), vec![CreatureType::Rat], 2, 1)
+    }
+}
+
+/// Rootwater Diver — {U} 1/1 that trades itself for an artifact in the yard.
+pub fn rootwater_diver() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            sac_cost: true,
+            effect: Effect::Move {
+                what: target_filtered(R::Artifact.and(R::InYourGraveyard)),
+                to: ZoneDest::Hand(PlayerRef::You),
+            },
+            ..Default::default()
+        }],
+        ..creature("Rootwater Diver", cost(&[u()]), vec![CreatureType::Merfolk], 1, 1)
+    }
+}
+
+/// Kezzerdrix — {2}{B}{B} 4/4 first striker that turns on you when the board
+/// across the table is empty.
+pub fn kezzerdrix() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::FirstStrike],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(
+                EventKind::StepBegins(crate::game::TurnStep::Upkeep),
+                EventScope::SelfSource,
+            )
+            .with_filter(Predicate::Not(Box::new(Predicate::SelectorCountAtLeast {
+                sel: Selector::ControlledBy { who: PlayerRef::EachOpponent, filter: R::Creature },
+                n: Value::ONE,
+            }))),
+            effect: deal(4, Selector::Player(PlayerRef::You)),
+        }],
+        ..creature(
+            "Kezzerdrix",
+            cost(&[generic(2), b(), b()]),
+            vec![CreatureType::Rabbit, CreatureType::Beast],
+            4,
+            4,
+        )
+    }
+}
+
+/// Bellowing Fiend — {4}{B} 3/3 flier whose hits scorch both controllers.
+pub fn bellowing_fiend() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::DealtDamage, EventScope::AnyPlayer)
+                .dealt_by(R::IsSource),
+            effect: Effect::Seq(vec![
+                deal(3, Selector::Player(PlayerRef::ControllerOf(Box::new(Selector::TriggerSource)))),
+                deal(3, Selector::Player(PlayerRef::You)),
+            ]),
+        }],
+        ..creature("Bellowing Fiend", cost(&[generic(4), b()]), vec![CreatureType::Spirit], 3, 3)
+    }
+}
+
+/// Opportunist — {2}{R} 2/2 that finishes off something already wounded.
+pub fn opportunist() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: deal(1, target_filtered(R::Creature.and(R::DealtDamageThisTurn))),
+            ..Default::default()
+        }],
+        ..creature(
+            "Opportunist",
+            cost(&[generic(2), r()]),
+            vec![CreatureType::Human, CreatureType::Soldier],
+            2,
+            2,
+        )
+    }
+}
+
+/// Rathi Dragon — {2}{R}{R} 5/5 flier that wants two Mountains on arrival.
+pub fn rathi_dragon() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![etb(Effect::SacrificeSourceUnlessSacrifice {
+            filter: R::HasLandType(LandType::Mountain),
+        })],
+        ..creature("Rathi Dragon", cost(&[generic(2), r(), r()]), vec![CreatureType::Dragon], 5, 5)
+    }
+}
+
+/// Wild Wurm — {3}{R} 5/4 that bounces itself on a lost flip.
+pub fn wild_wurm() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![etb(Effect::FlipCoin {
+            count: Value::ONE,
+            on_heads: Box::new(Effect::Noop),
+            on_tails: Box::new(Effect::Move {
+                what: Selector::This,
+                to: ZoneDest::Hand(PlayerRef::OwnerOfMoved),
+            }),
+        })],
+        ..creature("Wild Wurm", cost(&[generic(3), r()]), vec![CreatureType::Wurm], 5, 4)
+    }
+}
+
+/// Chaotic Goo — {2}{R}{R} 0/0 whose counters ride on a coin flip.
+pub fn chaotic_goo() -> CardDefinition {
+    CardDefinition {
+        enters_with_counters: Some((CounterType::PlusOnePlusOne, Value::Const(3))),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(
+                EventKind::StepBegins(crate::game::TurnStep::Upkeep),
+                EventScope::SelfSource,
+            ),
+            effect: Effect::MayDo {
+                description: "Flip a coin for a +1/+1 counter".to_string(),
+                body: Box::new(Effect::FlipCoin {
+                    count: Value::ONE,
+                    on_heads: Box::new(Effect::AddCounter {
+                        what: Selector::This,
+                        kind: CounterType::PlusOnePlusOne,
+                        amount: Value::ONE,
+                    }),
+                    on_tails: Box::new(Effect::RemoveCounter {
+                        what: Selector::This,
+                        kind: CounterType::PlusOnePlusOne,
+                        amount: Value::ONE,
+                    }),
+                }),
+            },
+        }],
+        ..creature("Chaotic Goo", cost(&[generic(2), r(), r()]), vec![CreatureType::Ooze], 0, 0)
+    }
+}
+
+/// Crazed Armodon — {2}{G}{G} 3/3 that can go berserk once a turn.
+pub fn crazed_armodon() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[g()]),
+            once_per_turn: true,
+            effect: Effect::Seq(vec![
+                Effect::PumpPT {
+                    what: Selector::This,
+                    power: Value::Const(3),
+                    toughness: Value::ZERO,
+                    duration: Duration::EndOfTurn,
+                },
+                Effect::GrantKeyword {
+                    what: Selector::This,
+                    keyword: Keyword::Trample,
+                    duration: Duration::EndOfTurn,
+                },
+                Effect::AtNextEndStep {
+                    body: Box::new(Effect::Destroy { what: Selector::This }),
+                },
+            ]),
+            ..Default::default()
+        }],
+        ..creature("Crazed Armodon", cost(&[generic(2), g(), g()]), vec![CreatureType::Elephant], 3, 3)
+    }
+}
+
+/// Skyshroud Ranger — {G} 1/1 that drops an extra land.
+pub fn skyshroud_ranger() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            sorcery_speed: true,
+            effect: Effect::MayDo {
+                description: "Put a land from your hand onto the battlefield".to_string(),
+                body: Box::new(Effect::Move {
+                    what: Selector::ChosenCardInHand(R::Land),
+                    to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                }),
+            },
+            ..Default::default()
+        }],
+        ..creature(
+            "Skyshroud Ranger",
+            cost(&[g()]),
+            vec![CreatureType::Elf, CreatureType::Ranger],
+            1,
+            1,
+        )
+    }
+}
+
+/// Tradewind Rider — {3}{U} 1/4 flier that taps a crew to bounce anything.
+pub fn tradewind_rider() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flying],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            tap_others_cost: Some((R::Creature, 2)),
+            effect: Effect::Move {
+                what: target_filtered(R::Permanent),
+                to: ZoneDest::Hand(PlayerRef::OwnerOfMoved),
+            },
+            ..Default::default()
+        }],
+        ..creature("Tradewind Rider", cost(&[generic(3), u()]), vec![CreatureType::Spirit], 1, 4)
+    }
+}
+
+/// Vhati il-Dal — {2}{B}{G} 3/3 that shaves a creature to 1 in one dimension.
+pub fn vhati_il_dal() -> CardDefinition {
+    CardDefinition {
+        supertypes: vec![Supertype::Legendary],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::ChooseMode(vec![
+                Effect::SetBasePower {
+                    what: target_filtered(R::Creature),
+                    power: Value::ONE,
+                    duration: Duration::EndOfTurn,
+                },
+                Effect::SetBasePT {
+                    what: target_filtered(R::Creature),
+                    power: Value::PowerOf(Box::new(Selector::Target(0))),
+                    toughness: Value::ONE,
+                    duration: Duration::EndOfTurn,
+                },
+            ]),
+            ..Default::default()
+        }],
+        ..creature(
+            "Vhati il-Dal",
+            cost(&[generic(2), b(), g()]),
+            vec![CreatureType::Human, CreatureType::Warrior],
+            3,
+            3,
+        )
+    }
+}
+
+/// Rootwater Matriarch — {2}{U}{U} 2/3 that steals whatever is enchanted.
+pub fn rootwater_matriarch() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::GainControl {
+                what: target_filtered(R::Creature.and(R::IsEnchanted)),
+                to: None,
+                duration: Duration::Permanent,
+            },
+            ..Default::default()
+        }],
+        ..creature(
+            "Rootwater Matriarch",
+            cost(&[generic(2), u(), u()]),
+            vec![CreatureType::Merfolk],
+            2,
+            3,
+        )
+    }
+}
+
+/// Mogg Conscripts — {R} 2/2 that needs a creature spell cast this turn.
+pub fn mogg_conscripts() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::CantAttackUnlessCastCreatureThisTurn],
+        ..creature("Mogg Conscripts", cost(&[r()]), vec![CreatureType::Goblin], 2, 2)
+    }
+}
+
+/// Skyshroud Condor — {1}{U} 2/2 flier castable only after another spell.
+pub fn skyshroud_condor() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flying],
+        cast_condition: Some(Predicate::ValueAtLeast(
+            Value::SpellsCastThisTurn(PlayerRef::You),
+            Value::ONE,
+        )),
+        ..creature("Skyshroud Condor", cost(&[generic(1), u()]), vec![CreatureType::Bird], 2, 2)
+    }
+}
+
+/// Trumpeting Armodon — {3}{G} 3/3 that drags a blocker in front of it.
+pub fn trumpeting_armodon() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1), g()]),
+            effect: Effect::MustBlockSource { what: target_filtered(R::Creature) },
+            ..Default::default()
+        }],
+        ..creature("Trumpeting Armodon", cost(&[generic(3), g()]), vec![CreatureType::Elephant], 3, 3)
+    }
+}
+
+/// Elven Warhounds — {3}{G} 2/2 that binds its blocker onto the library.
+pub fn elven_warhounds() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::BecomesBlocked, EventScope::SelfSource),
+            effect: Effect::Move {
+                what: Selector::BlockingCreatures,
+                to: ZoneDest::Library { who: PlayerRef::OwnerOfMoved, pos: LibraryPosition::Top },
+            },
+        }],
+        ..creature("Elven Warhounds", cost(&[generic(3), g()]), vec![CreatureType::Dog], 2, 2)
+    }
+}
+
+/// Flailing Drake — {3}{G} 2/3 flier that pumps whatever it meets in combat.
+pub fn flailing_drake() -> CardDefinition {
+    let pump = || Effect::PumpPT {
+        what: Selector::CreaturesInCombatWith(Box::new(Selector::This)),
+        power: Value::ONE,
+        toughness: Value::ONE,
+        duration: Duration::EndOfTurn,
+    };
+    CardDefinition {
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![
+            crate::effect::shortcut::blocks(pump()),
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::BecomesBlocked, EventScope::SelfSource),
+                effect: pump(),
+            },
+        ],
+        ..creature("Flailing Drake", cost(&[generic(3), g()]), vec![CreatureType::Drake], 2, 3)
+    }
+}
+
+/// Sacred Guide — {W} 1/1 that digs for the next white card.
+pub fn sacred_guide() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1), w()]),
+            sac_cost: true,
+            effect: Effect::RevealUntilFind {
+                who: PlayerRef::You,
+                find: R::HasColor(Color::White),
+                to: ZoneDest::Hand(PlayerRef::You),
+                cap: Value::Const(60),
+                life_per_revealed: 0,
+                miss_dest: crate::effect::RevealMissDest::Exile,
+            },
+            ..Default::default()
+        }],
+        ..creature(
+            "Sacred Guide",
+            cost(&[w()]),
+            vec![CreatureType::Human, CreatureType::Cleric],
+            1,
+            1,
+        )
+    }
+}
+
+// ── Sliver lords that hand out a sac ability ────────────────────────────────
+
+fn sliver_sac_lord(name: &'static str, c: ManaCost, ability: ActivatedAbility) -> CardDefinition {
+    CardDefinition {
+        static_abilities: vec![StaticAbility {
+            description: "All Slivers have this permanent's sacrifice ability.",
+            effect: StaticEffect::GrantActivatedAbility {
+                applies_to: Selector::EachPermanent(R::HasCreatureType(CreatureType::Sliver)),
+                ability,
+                condition: None,
+            },
+        }],
+        ..creature(name, c, vec![CreatureType::Sliver], 2, 2)
+    }
+}
+
+/// Mnemonic Sliver — {2}{U} 2/2. Every Sliver can eat itself for a card.
+pub fn mnemonic_sliver() -> CardDefinition {
+    sliver_sac_lord(
+        "Mnemonic Sliver",
+        cost(&[generic(2), u()]),
+        ActivatedAbility {
+            mana_cost: cost(&[generic(2)]),
+            sac_cost: true,
+            effect: draw(1),
+            ..Default::default()
+        },
+    )
+}
+
+/// Mindwhip Sliver — {2}{B} 2/2. Every Sliver can eat itself for a discard.
+pub fn mindwhip_sliver() -> CardDefinition {
+    sliver_sac_lord(
+        "Mindwhip Sliver",
+        cost(&[generic(2), b()]),
+        ActivatedAbility {
+            mana_cost: cost(&[generic(2)]),
+            sac_cost: true,
+            sorcery_speed: true,
+            effect: Effect::Discard {
+                who: Selector::Player(PlayerRef::Target(0)),
+                amount: Value::ONE,
+                random: true,
+            },
+            ..Default::default()
+        },
+    )
+}

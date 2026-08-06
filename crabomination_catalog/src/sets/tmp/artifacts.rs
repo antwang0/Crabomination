@@ -2,11 +2,11 @@
 
 use crate::card::{
     ActivatedAbility, ArtifactSubtype, CardDefinition, CardType, CounterType, CreatureType,
-    EventKind, EventScope, EventSpec, Keyword, SelectionRequirement as R, Subtypes,
+    EventKind, EventScope, EventSpec, Keyword, SelectionRequirement as R, StaticAbility, Subtypes,
     TriggeredAbility,
 };
 use crate::effect::shortcut::target_filtered;
-use crate::effect::{Duration, Effect, PlayerRef, Predicate, Selector, Value};
+use crate::effect::{Duration, Effect, PlayerRef, Predicate, Selector, StaticEffect, Value};
 use crate::game::TurnStep;
 use crate::mana::{ManaCost, cost, generic};
 
@@ -334,5 +334,29 @@ pub fn telethopter() -> CardDefinition {
                 ..Default::default()
             }],
         )
+    }
+}
+
+/// Watchdog — {3} 1/2 that always blocks and dulls the whole attack while
+/// untapped.
+pub fn watchdog() -> CardDefinition {
+    CardDefinition {
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Dog], ..Default::default() },
+        power: 1,
+        toughness: 2,
+        keywords: vec![Keyword::MustBlock],
+        static_abilities: vec![StaticAbility {
+            description: "While untapped, creatures attacking you get -1/-0.",
+            effect: StaticEffect::WhileCondition {
+                condition: Predicate::EntityMatches { what: Selector::This, filter: R::Untapped },
+                inner: Box::new(StaticEffect::PumpPT {
+                    applies_to: Selector::EachPermanent(R::Creature.and(R::IsAttacking)),
+                    power: -1,
+                    toughness: 0,
+                }),
+            },
+        }],
+        ..artifact("Watchdog", cost(&[generic(3)]), vec![])
     }
 }

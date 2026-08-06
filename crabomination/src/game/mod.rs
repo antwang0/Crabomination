@@ -7899,8 +7899,10 @@ impl GameState {
         // them on the static path, so there's no double application.
         for card in &self.battlefield {
             for sa in &card.definition.static_abilities {
-                let crate::effect::StaticEffect::PumpPT { applies_to, power, toughness } =
-                    &sa.effect
+                // CR 611.2 — peel any `While*` gate first, so a gated combat
+                // anthem (Watchdog's untapped rider) still resolves live.
+                let Some(crate::effect::StaticEffect::PumpPT { applies_to, power, toughness }) =
+                    self.active_static(&sa.effect, card)
                 else {
                     continue;
                 };
@@ -21154,7 +21156,10 @@ pub fn can_block_attacker_computed(
         return false;
     }
     // Shadow: can only block/be blocked by other shadow creatures.
-    if attacker_kws.contains(&Keyword::Shadow) && !blocker_kws.contains(&Keyword::Shadow) {
+    if attacker_kws.contains(&Keyword::Shadow)
+        && !blocker_kws.contains(&Keyword::Shadow)
+        && !blocker_kws.contains(&Keyword::CanBlockShadow)
+    {
         return false;
     }
     if blocker_kws.contains(&Keyword::Shadow) && !attacker_kws.contains(&Keyword::Shadow) {

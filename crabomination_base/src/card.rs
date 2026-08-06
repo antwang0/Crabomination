@@ -1710,6 +1710,11 @@ pub enum Keyword {
     /// can't be declared as a blocker for an attacker that lacks Flying.
     /// Enforced in `can_block_attacker_computed` (Wanderlight Spirit).
     CanBlockOnlyFlying,
+    /// "This creature can block creatures with shadow as though it had
+    /// shadow." Lifts only the attacker-side half of CR 702.28's restriction —
+    /// the bearer still isn't a shadow creature, so nonshadow attackers can
+    /// still be blocked by it (Heartwood Dryad, Wall of Diffusion).
+    CanBlockShadow,
     /// CR 702.95 — Soulbond. A marker keyword; when this or another creature
     /// enters while either is unpaired, its controller may pair them. The
     /// pairing rides `CardInstance.soulbond_partner`, and the bonus each
@@ -1896,6 +1901,10 @@ pub enum SelectionRequirement {
     /// (Vedalken Shackles' Islands) — the power-side mirror of
     /// `ToughnessAtMostYourCount`.
     PowerAtMostYourCount(Box<SelectionRequirement>),
+    /// "…with power less than or equal to the number of [kind] counters on
+    /// this" (Legacy's Allure). Reads the *source's* counters, not the
+    /// candidate's.
+    PowerAtMostSourceCounters(CounterType),
     WithCounter(CounterType),
     /// "…with N or more [kind] counters on it" (Bomb Squad's fuse check).
     WithCounterAtLeast(CounterType, u32),

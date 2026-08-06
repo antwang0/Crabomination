@@ -26383,6 +26383,9 @@ impl GameState {
                             // Re-shuffled below once the find is placed.
                             self.players[p].library.push(card);
                         }
+                        crate::effect::RevealMissDest::Exile => {
+                            self.place_card_in_dest(card, p, &ZoneDest::Exile, events);
+                        }
                         crate::effect::RevealMissDest::WithFind => {
                             let cid = card.id;
                             self.place_card_in_dest(card, p, &resolved_dest, events);
