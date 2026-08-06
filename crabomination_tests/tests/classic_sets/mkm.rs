@@ -593,18 +593,16 @@ fn teysa_mints_one_spirit_per_turn() {
     g.add_card_to_battlefield(0, catalog::teysa_opulent_oligarch());
     drain_stack(&mut g);
     for _ in 0..2 {
-        let mut evs = vec![];
         let ctx = crabomination::game::effects::EffectContext::for_spell(0, None, 0, 0);
-        evs = g
-            .resolve_effect(
-                &crabomination::effect::Effect::CreateToken {
-                    who: crabomination::effect::PlayerRef::You,
-                    count: crabomination::card::Value::ONE,
-                    definition: crabomination::game::effects::clue_token(),
-                },
-                &ctx,
-            )
-            .expect("mint a Clue");
+        g.resolve_effect(
+            &crabomination::effect::Effect::CreateToken {
+                who: crabomination::effect::PlayerRef::You,
+                count: crabomination::card::Value::ONE,
+                definition: crabomination::game::effects::clue_token(),
+            },
+            &ctx,
+        )
+        .expect("mint a Clue");
         let clue = g
             .battlefield
             .iter()
