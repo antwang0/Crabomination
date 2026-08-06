@@ -12610,6 +12610,20 @@ impl GameState {
         }
 
         let is_land = !was_nonland;
+        // CR 614 — Library of Leng: the discard still happens, but the card
+        // goes on top of the library instead of into the graveyard.
+        if madness.is_none()
+            && self.battlefield.iter().any(|c| {
+                c.controller == p
+                    && c.definition.static_abilities.iter().any(|sa| {
+                        matches!(sa.effect, crate::effect::StaticEffect::DiscardToLibraryTop)
+                    })
+            })
+        {
+            self.players[p].library.insert(0, card);
+            self.fire_opponent_forced_discard_watchers(p, card_id);
+            return true;
+        }
         match madness {
             None => {
                 // CR 614.6 — through the graveyard funnel so Rest in Peace /
@@ -20417,6 +20431,8 @@ fn static_effect_to_effects(
             // NoMaximumHandSize / OpponentsMaxHandSizeReduced — consulted
             // at cleanup via `effective_max_hand_size`; no layer effect.
             | StaticEffect::NoMaximumHandSize
+            // DiscardToLibraryTop (Library of Leng) — read by `discard_card`.
+            | StaticEffect::DiscardToLibraryTop
             // TappedCreaturesCanBlock — consulted at block declaration via
             // `tapped_creatures_can_block`; no layer effect.
             | StaticEffect::TappedCreaturesCanBlock

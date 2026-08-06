@@ -17,6 +17,7 @@ mod lands;
 mod mdfcs;
 mod soa;
 mod sorceries;
+mod spg;
 
 pub use artifacts::*;
 pub use creatures::*;
@@ -26,3 +27,4 @@ pub use lands::*;
 pub use mdfcs::*;
 pub use soa::*;
 pub use sorceries::*;
+pub use spg::*;

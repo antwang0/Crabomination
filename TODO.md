@@ -368,23 +368,19 @@ adoption. Recorded here because the *consequence* outlived the fix:
   case-insensitively — an exact-match miss used to return an empty
   subset silently, which reads identically to a real negative result.
 
-## Missing: SOS Special Guests (SPG)
+## SOS Special Guests (SPG)
 
-The Secrets of Strixhaven **Special Guests (SPG) sheet is not implemented
-at all**: no catalog module, and no SPG slot in `generate_sos_pack`, so
-SOS sealed pools and drafts never contain them. Work items:
+Shipped: `sos_mode::sos_special_guests()` names the eleven-card sheet (nine
+were already catalogued for other sets; Magus of the Library and Library of
+Leng are new in `sets::sos::spg`), `all_sos_cards` includes it, and
+`generate_sos_pack` collates it on its own slot at the printed
+`SOS_SPECIAL_GUEST_RATE` (1 in 64) rather than through the colour buckets.
 
-- Catalog the SPG card list (audit against Scryfall, same as the SOS base
-  set) in a `catalog::sets::sos` submodule or sibling.
-- Booster collation: add the SPG slot to `generate_sos_pack` at the
-  printed rarity/rate so sealed pools are honest.
-- Downstream: `sos_draft_pool()` feeds the ML vocabulary
-  (`Vocab::sos_sealed`, `server/encode.rs`) — adding SPG cards grows the
-  vocab, which **invalidates previously trained value nets** (embedding
-  rows are index-pinned; the loader's vocab-size check will refuse old
-  weights, which is the correct failure). Retrain after the sheet lands.
-- `recommend_pool` and the sealed ladder mirrors pick the change up for
-  free once the pack generator is right.
+- Adding the sheet grew `Vocab::sos_sealed`, which **invalidates previously
+  trained value nets** (embedding rows are index-pinned). Retrain. ⏳
+- **Library of Leng always takes the "may"** — a forced discard goes to the
+  top of the library, never to the graveyard, so a self-mill deck can't
+  decline. ⏳
 
 ## Client / UI follow-ups (M15 run)
 

@@ -85,6 +85,11 @@ enum SosBucket {
 /// (10) + 3 multicolor (college pairs) + 2 colorless/land = 15. The
 /// recipe is symmetric — every pack looks roughly the same shape, so
 /// drafters see a consistent signal across the table.
+/// One booster in this many carries a card off the Special Guests sheet
+/// (`sos_mode::sos_special_guests`), matching the printed rate. An eight-seat
+/// pod opens 24 packs, so most pods see none — that is the real economics.
+pub const SOS_SPECIAL_GUEST_RATE: u32 = 64;
+
 const SOS_PACK_RECIPE: &[(SosBucket, usize)] = &[
     (SosBucket::Mono(Color::White), 2),
     (SosBucket::Mono(Color::Blue), 2),
@@ -154,11 +159,27 @@ pub fn generate_sos_pack<R: Rng>(pool: &[CardFactory], rng: &mut R) -> Vec<CardF
     if pool.is_empty() {
         return Vec::new();
     }
+    // The Special Guests sheet is collated separately (see
+    // `SOS_SPECIAL_GUEST_RATE`), so keep it out of the colour buckets.
+    let guests: Vec<usize> = {
+        let sheet: std::collections::HashSet<usize> = crate::sos_mode::sos_special_guests()
+            .into_iter()
+            .map(|f| f as usize)
+            .collect();
+        pool.iter()
+            .enumerate()
+            .filter(|(_, f)| sheet.contains(&(**f as usize)))
+            .map(|(i, _)| i)
+            .collect()
+    };
     // Pre-bucket every card in the pool. The bucket function is pure,
     // so caching once amortizes across the pack roll.
     let mut by_bucket: std::collections::HashMap<SosBucket, Vec<usize>> =
         std::collections::HashMap::new();
     for (i, factory) in pool.iter().enumerate() {
+        if guests.contains(&i) {
+            continue;
+        }
         let def = factory();
         by_bucket.entry(sos_bucket_of(&def)).or_default().push(i);
     }
@@ -212,6 +233,14 @@ pub fn generate_sos_pack<R: Rng>(pool: &[CardFactory], rng: &mut R) -> Vec<CardF
         if used.insert(idx) {
             pack.push(pool[idx]);
         }
+    }
+    // The Special Guest, when it shows, replaces the pack's last slot.
+    if !guests.is_empty()
+        && !pack.is_empty()
+        && rng.random_range(0..SOS_SPECIAL_GUEST_RATE) == 0
+    {
+        let last = pack.len() - 1;
+        pack[last] = pool[guests[rng.random_range(0..guests.len())]];
     }
     pack
 }
@@ -1465,6 +1494,32 @@ mod tests {
         assert_eq!(state.players[1].library.len(), 40);
         assert!(state.players[0].wants_ui);
         assert!(state.players[1].wants_ui);
+    }
+
+    /// The Special Guests sheet is collated on its own slot: never in the
+    /// colour buckets, and roughly one pack in `SOS_SPECIAL_GUEST_RATE`.
+    #[test]
+    fn sos_packs_collate_special_guests_on_their_own_slot() {
+        let pool = sos_draft_pool();
+        let sheet: std::collections::HashSet<usize> = crate::sos_mode::sos_special_guests()
+            .into_iter()
+            .map(|f| f as usize)
+            .collect();
+        assert!(pool.iter().any(|f| sheet.contains(&(*f as usize))), "the sheet is in the pool");
+
+        let mut rng = fixed_rng();
+        let (packs, mut with_guest) = (4000, 0);
+        for _ in 0..packs {
+            let pack = generate_sos_pack(&pool, &mut rng);
+            let n = pack.iter().filter(|f| sheet.contains(&(**f as usize))).count();
+            assert!(n <= 1, "at most one Special Guest per pack");
+            with_guest += n;
+        }
+        let expected = packs / SOS_SPECIAL_GUEST_RATE as usize;
+        assert!(
+            (expected / 2..expected * 2).contains(&with_guest),
+            "{with_guest} guests in {packs} packs, expected around {expected}"
+        );
     }
 
     #[test]

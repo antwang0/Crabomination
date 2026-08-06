@@ -11717,6 +11717,8 @@ static MKM: &[Factory] = &[
     super::mkm2::a_killer_among_us,
     super::mkm2::conspiracy_unraveler,
     super::mkm2::kaya_spirits_justice,
+    super::sos::magus_of_the_library,
+    super::sos::library_of_leng,
 ];
 static MMQ: &[Factory] = &[
     super::mmq::ramosian_sergeant,

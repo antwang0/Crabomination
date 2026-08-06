@@ -2238,6 +2238,11 @@ pub enum StaticEffect {
     /// skipped entirely. Read by `effective_max_hand_size`; Reliquary Tower,
     /// Thought Vessel, Spellbook, Library of Leng-adjacent statics.
     NoMaximumHandSize,
+    /// CR 614 — "If an effect causes you to discard a card, discard it, but
+    /// you may put it on top of your library instead of into your graveyard"
+    /// (Library of Leng). Read by `discard_card`; keeping the card is always
+    /// taken, so the "may" is not offered.
+    DiscardToLibraryTop,
     /// CR 509.1a — "Tapped creatures you control can block as though they were
     /// untapped." While the controller has a permanent carrying this static, a
     /// tapped creature they control is a legal blocker (Masako the Humorless).

@@ -336,12 +336,33 @@ fn sample_with_cap<R: Rng>(
     }
 }
 
+/// CR 717-adjacent bookkeeping: the SOS Special Guests (SPG) sheet, an
+/// eleven-card bonus sheet that isn't part of the main set but shares its
+/// boosters. Nine were already catalogued for other sets; the sheet is
+/// listed once here so the pack generator and the ML vocabulary see it.
+pub fn sos_special_guests() -> Vec<CardFactory> {
+    vec![
+        archaeomancer,
+        archmage_emeritus,
+        murmuring_mystic,
+        grim_haruspex,
+        dualcaster_mage,
+        magus_of_the_library,
+        sylvan_library,
+        adrix_and_nev_twincasters,
+        codie_vociferous_codex,
+        library_of_leng,
+        library_of_alexandria,
+    ]
+}
+
 /// Every card factory that can appear in any SoS deck. Used by the client
 /// at startup to prefetch Scryfall art for the full SoS card universe (the
 /// per-match deck is randomly rolled after assets are loaded).
 pub fn all_sos_cards() -> Vec<CardFactory> {
     use std::collections::HashSet;
     let mut all: Vec<CardFactory> = vec![plains, island, swamp, mountain, forest];
+    all.extend(sos_special_guests());
     for college in [
         College::Lorehold,
         College::Prismari,
