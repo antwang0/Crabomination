@@ -14,10 +14,6 @@ Items are grouped by area and roughly ordered by impact within each group.
   covers spells you cast from anywhere;
   `StaticEffect::CastHandSpellsForCollectEvidence` is read only on the
   own-hand branch of `cast_from_zone_without_paying`. ⏳
-- **`castable_hand_cards` never probes the free-cast action.** Omniscience,
-  Aluren and Conspiracy Unraveler make hand cards playable without paying,
-  but the affordance walk only dry-runs `GameAction::CastSpell`, so the
-  client highlights nothing. ⏳
 - **A card's name is worth greping before writing it.** Magnifying Glass and
   Thinking Cap were already in `decks::recent247`/`recent245`; `set_gaps.py`
   correctly omitted them, but a duplicate got written anyway and glob

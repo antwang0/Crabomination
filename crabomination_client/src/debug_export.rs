@@ -296,6 +296,7 @@ mod tests {
             buyback_hand: vec![],
             bestowable_hand: vec![],
             miracle_hand: vec![],
+            free_castable_hand: vec![],
             bargainable_hand: vec![],
             squadable_hand: vec![],
             spreeable_hand: vec![],

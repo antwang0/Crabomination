@@ -423,6 +423,11 @@ pub struct ClientView {
     /// snapshot back-compat.
     #[serde(default)]
     pub miracle_hand: Vec<CardId>,
+    /// CardIds in the viewer's hand a standing static (Omniscience, Aluren,
+    /// Conspiracy Unraveler) lets them cast without paying the mana cost
+    /// right now. `#[serde(default)]` for snapshot back-compat.
+    #[serde(default)]
+    pub free_castable_hand: Vec<CardId>,
     /// CardIds in the viewer's hand with Bargain they could cast right now
     /// (CR 702.176), so the client can offer a "sacrifice for Bargain?"
     /// toggle. `#[serde(default)]` for snapshot back-compat.

@@ -587,6 +587,45 @@ impl GameState {
             .collect()
     }
 
+    /// Hand cards a standing static lets `caster` cast without paying their
+    /// mana cost right now — Omniscience, Aluren, Conspiracy Unraveler's
+    /// collect-evidence swap. Miracle and other per-card `may_play_until`
+    /// grants are reported by `miracle_hand_cards` instead, so this stays a
+    /// pure "the board makes this free" list.
+    fn free_castable_hand_cards_on(&self, template: &GameState, caster: usize) -> Vec<CardId> {
+        let hand: Vec<(CardId, Option<Effect>)> = self.players[caster]
+            .hand
+            .iter()
+            .filter(|c| {
+                c.may_play_until.is_none()
+                    && !c.definition.is_land()
+                    && (self.player_casts_hand_spells_free(caster, c)
+                        || self.player_casts_cheap_creature_free(&c.definition)
+                        || self.player_casts_spells_for_evidence(caster).is_some())
+            })
+            .map(|c| {
+                let eff = &c.definition.effect;
+                (c.id, eff.requires_target().then(|| eff.clone()))
+            })
+            .collect();
+        hand.iter()
+            .filter(|(id, targeted)| {
+                let (target, additional_targets) = match targeted {
+                    Some(eff) => self.auto_targets_for_effect_all_slots(eff, caster, None),
+                    None => (None, Vec::new()),
+                };
+                Self::would_accept_on(template, GameAction::CastFromZoneWithoutPaying {
+                    card_id: *id,
+                    target,
+                    additional_targets,
+                    mode: None,
+                    x_value: None,
+                })
+            })
+            .map(|(id, _)| *id)
+            .collect()
+    }
+
     /// CardIds in the caster's hand they could cast right now paying the
     /// optional Buyback cost (CR 702.27). Mirrors `kickable_hand_cards`.
     pub fn buyback_hand_cards(&self, caster: usize) -> Vec<CardId> {
@@ -1437,6 +1476,7 @@ impl GameState {
             multikickable: self.multikickable_hand_cards_on(&template, seat),
             convokable: self.convokable_hand_cards_on(&template, seat),
             miracle: self.miracle_hand_cards(seat),
+            free_castable: self.free_castable_hand_cards_on(&template, seat),
             activatable_permanents: self.activatable_permanents_on(&template, seat),
             hand_activatable: self.hand_activatable_cards(seat),
             morphable: self.morphable_hand_cards_on(&template, seat),

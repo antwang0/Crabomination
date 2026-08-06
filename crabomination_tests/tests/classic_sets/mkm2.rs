@@ -898,3 +898,20 @@ fn kaya_spirits_justice_copies_the_exiled_creature_onto_a_token() {
     assert_eq!((cp.power, cp.toughness), (4, 4), "it is a Serra Angel");
     assert!(cp.keywords.contains(&Keyword::Flying));
 }
+
+/// The free-cast affordance surfaces the hand cards Conspiracy Unraveler's
+/// evidence swap makes playable, and drops them once the graveyard is short.
+#[test]
+fn conspiracy_unraveler_surfaces_a_free_cast_affordance() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::conspiracy_unraveler());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    assert!(g.compute_hand_affordances(0).free_castable.is_empty(), "no evidence yet");
+
+    for _ in 0..4 {
+        g.add_card_to_graveyard(0, catalog::wrath_of_god());
+    }
+    assert_eq!(g.compute_hand_affordances(0).free_castable, vec![bolt]);
+}

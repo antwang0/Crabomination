@@ -125,7 +125,8 @@ pub fn highlight_hovered_cards(
 /// alternative path — Dash, Blitz, pitch/exile, kicker, Suspend, or a live
 /// Miracle window
 /// (`dashable_hand` / `blitzable_hand` / `pitchable_hand` / `kickable_hand` /
-/// `suspendable_hand` / `miracle_hand`, minus anything already hard-castable). All are computed server-side via the engine's
+/// `suspendable_hand` / `miracle_hand` / `free_castable_hand`, minus anything
+/// already hard-castable). All are computed server-side via the engine's
 /// `would_accept` dry-run, so they already reflect timing, mana, taxes,
 /// and target availability. Mirrors the hover-border / put-on-library
 /// highlight pattern.
@@ -198,6 +199,7 @@ pub fn update_castable_highlights(
             .chain(cv.omenable_hand.iter())
             .chain(cv.splittable_right_hand.iter())
             .chain(cv.miracle_hand.iter())
+            .chain(cv.free_castable_hand.iter())
             .chain(cv.morphable_hand.iter())
             .chain(cv.reinforceable_hand.iter())
             .chain(cv.discard_activatable_hand.iter())

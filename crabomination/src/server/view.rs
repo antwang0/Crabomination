@@ -166,6 +166,7 @@ fn project_for_inner(state: &GameState, viewer: Option<usize>) -> ClientView {
         buyback_hand: affordances.buyback,
         bestowable_hand: affordances.bestowable,
         miracle_hand: affordances.miracle,
+        free_castable_hand: affordances.free_castable,
         bargainable_hand: affordances.bargainable,
         squadable_hand: affordances.squadable,
         spreeable_hand: affordances.spreeable,

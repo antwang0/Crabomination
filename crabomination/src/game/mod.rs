@@ -235,6 +235,10 @@ pub struct HandAffordances {
     /// turn's first draw): castable for the cheaper miracle cost via
     /// `GameAction::CastFromZoneWithoutPaying`.
     pub miracle: Vec<CardId>,
+    /// Hand cards a standing static (Omniscience, Aluren, Conspiracy
+    /// Unraveler) lets the seat cast without paying their mana cost right
+    /// now, via `GameAction::CastFromZoneWithoutPaying`.
+    pub free_castable: Vec<CardId>,
     pub activatable_permanents: Vec<CardId>,
     /// Hand cards carrying at least one `from_hand` activated ability (Talon
     /// Gates of Madara's `{4}: put this onto the battlefield`, the Spirit
