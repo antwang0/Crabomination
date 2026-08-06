@@ -1978,6 +1978,21 @@ fn trigger_event_label(event: &crate::card::EventSpec) -> &'static str {
             SpellCastKind::Other => "Spell cast",
         };
     }
+    // "Whenever this becomes the target of a [filter] spell or ability" — the
+    // plain "Becomes target" label hides the restriction that decides whether
+    // the trigger fires at all (Fugitive Druid's Aura spells).
+    if matches!(event.kind, EventKind::BecameTarget)
+        && let Some(causer) = event.causer_filter.as_ref()
+    {
+        use crate::card::{EnchantmentSubtype, SelectionRequirement as R};
+        return match causer {
+            R::HasEnchantmentSubtype(EnchantmentSubtype::Aura) => "Targeted by Aura",
+            R::Creature => "Targeted by creature",
+            R::Artifact => "Targeted by artifact",
+            R::Enchantment => "Targeted by enchantment",
+            _ => "Targeted (filtered)",
+        };
+    }
     match (&event.kind, event.scope) {
         (EventKind::EntersBattlefield, EventScope::SelfSource) => "ETB",
         (EventKind::EntersBattlefield, EventScope::AnotherOfYours) => "Another ETB",
@@ -2418,6 +2433,13 @@ fn ability_cost_label(ability: &crate::effect::ActivatedAbility) -> String {
             parts.push(format!("Remove {n}{sep}{label} counters"));
         }
     }
+    // Remove-ALL-counters-as-cost (Essence Bottle, Torture Chamber) — the
+    // payoff scales off the tally, so the cost line has to say it's the pile.
+    if let Some(kind) = ability.remove_all_counters_cost.as_ref() {
+        let label = counter_kind_label(kind);
+        let sep = if label.is_empty() { "" } else { " " };
+        parts.push(format!("Remove all{sep}{label} counters"));
+    }
     // Return-self-as-cost (Grinning Ignus, Rootha) — "Return this to hand"
     // so the tooltip shows the bounce rider rather than looking free for
     // mana alone.
@@ -2531,9 +2553,10 @@ fn requirement_noun(req: &crate::card::SelectionRequirement) -> &'static str {
         R::Enchantment => "enchantment",
         R::Land => "land",
         R::Planeswalker => "planeswalker",
-        // Peel a leading And to read the primary type (e.g. Creature ∧
+        R::HasEnchantmentSubtype(_) => "enchantment",
+        // Peel a leading And/Or to read the primary type (e.g. Creature ∧
         // ControlledByYou → "creature").
-        R::And(a, _) => requirement_noun(a),
+        R::And(a, _) | R::Or(a, _) => requirement_noun(a),
         _ => "permanent",
     }
 }
@@ -2553,6 +2576,8 @@ fn counter_kind_label(kind: &crate::card::CounterType) -> &'static str {
         C::Fade => "fade",
         C::Fuse => "fuse",
         C::Stun => "stun",
+        C::Elixir => "elixir",
+        C::Pain => "pain",
         _ => "",
     }
 }

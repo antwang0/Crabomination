@@ -2048,21 +2048,23 @@ impl crate::game::GameState {
                 })
                 .sum::<usize>();
         // Set-to-N overrides (Necrodominance) plus Cursed Rack's chosen-player
-        // cap — smallest wins.
+        // cap. CR 613.11 — game-rule-modifying effects apply in timestamp
+        // order, so the most recently established cap wins, not the smallest.
         let set_to: Option<usize> = self
             .battlefield
             .iter()
             .flat_map(|c| c.definition.static_abilities.iter().map(move |sa| (c, sa)))
             .filter_map(|(c, sa)| match sa.effect {
                 StaticEffect::ControllerMaxHandSize(n) if c.controller == player => {
-                    Some(n as usize)
+                    Some((c.battlefield_timestamp, n as usize))
                 }
                 StaticEffect::ChosenPlayerMaxHandSize(n) if c.chosen_player == Some(player) => {
-                    Some(n as usize)
+                    Some((c.battlefield_timestamp, n as usize))
                 }
                 _ => None,
             })
-            .min();
+            .max_by_key(|(ts, _)| *ts)
+            .map(|(_, n)| n);
         // Minamo Scrollkeeper / Trusted Advisor — "your maximum hand size is
         // increased by N"; copies stack, applied after any set-to override.
         let increase: usize = self

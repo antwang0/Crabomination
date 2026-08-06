@@ -644,3 +644,31 @@ pub fn steal_enchantment() -> CardDefinition {
         ..aura("Steal Enchantment", cost(&[u(), u()]), R::Enchantment)
     }
 }
+
+/// Recycle — {4}{G}{G}. No draw step, but every card you play replaces itself;
+/// your hand caps at two (CR 613.11 — the newest cap wins).
+pub fn recycle() -> CardDefinition {
+    CardDefinition {
+        static_abilities: vec![
+            StaticAbility {
+                description: "Skip your draw step.",
+                effect: StaticEffect::ControllerSkipsDrawStep,
+            },
+            StaticAbility {
+                description: "Your maximum hand size is two.",
+                effect: StaticEffect::ControllerMaxHandSize(2),
+            },
+        ],
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl),
+                effect: draw(1),
+            },
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::LandPlayed, EventScope::YourControl),
+                effect: draw(1),
+            },
+        ],
+        ..enchantment("Recycle", cost(&[generic(4), g(), g()]), vec![])
+    }
+}

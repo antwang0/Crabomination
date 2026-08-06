@@ -20201,6 +20201,7 @@ static TMP: &[Factory] = &[
     super::tmp::shimmering_wings,
     super::tmp::spinal_graft,
     super::tmp::steal_enchantment,
+    super::tmp::recycle,
     super::tmp::caldera_lake,
     super::tmp::pine_barrens,
     super::tmp::cinder_marsh,
