@@ -779,3 +779,32 @@ fn spy_kit_grants_every_nonlegendary_creature_name() {
     assert!(named(&g, "Savannah Lions"), "another nonlegendary creature's name matches");
     assert!(!named(&g, "Forest"), "a land's name doesn't");
 }
+
+/// Grenzo's exile mode grants a cast that still costs the card's mana value,
+/// payable in any color (CR 609.4b) — not a free cast.
+#[test]
+fn grenzo_exile_mode_charges_the_mana_value() {
+    let mut g = two_player_game();
+    let top = g.add_card_to_library(1, catalog::grizzly_bears());
+    let grenzo = g.move_card_to_battlefield_for_test(0, catalog::grenzo_havoc_raiser());
+    let ctx = crabomination::game::effects::EffectContext::for_ability(grenzo, 0, None);
+    g.resolve_effect(
+        &crabomination::effect::Effect::ExileTopAndGrantMayPlay {
+            who: crabomination::effect::PlayerRef::Seat(1),
+            count: crabomination::card::Value::ONE,
+            duration: crabomination::card::MayPlayDuration::EndOfThisTurn,
+            pay_any_color: true,
+            max_mana_value: None,
+            pay_own_cost: false,
+            uncast_penalty: None,
+        },
+        &ctx,
+    )
+    .expect("Grenzo's exile mode");
+    let exiled = g.exile.iter().find(|c| c.id == top).expect("exiled off the top");
+    assert_eq!(
+        exiled.granted_alt_cast_cost_eot.as_ref().map(|c| c.cmc()),
+        Some(2),
+        "the grant charges the mana value, not nothing"
+    );
+}

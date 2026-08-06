@@ -1343,6 +1343,11 @@ pub struct KnownCard {
     /// `ActivateAbility` rather than a cast.
     #[serde(default)]
     pub zone_abilities: Vec<AbilityView>,
+    /// CR 702.106 — the name(s) a hidden-agenda conspiracy secretly chose.
+    /// Sent only to its controller while it is face down (CR 315.7), and to
+    /// everyone once it is face up. Empty for every other card.
+    #[serde(default)]
+    pub agenda_names: Vec<String>,
 }
 
 /// One activated ability as projected for the client.

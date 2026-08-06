@@ -1075,20 +1075,31 @@ fn known_card_in(card: &CardInstance, state: Option<&crate::game::GameState>) ->
     let alt_cost = state
         .and_then(|st| st.effective_alternative_cost(card.owner, card.id))
         .or_else(|| card.definition.alternative_cost.clone());
-    // CR 902.5 — a Vanguard's command-zone abilities travel with the card
-    // view so the client can activate them where they live.
-    let zone_abilities: Vec<AbilityView> = if card.definition.is_vanguard() {
-        project_abilities(card).into_iter().filter(|a| {
-            card.definition
-                .activated_abilities
-                .get(a.index)
-                .is_some_and(|ab| ab.from_command_zone)
-        }).collect()
-    } else {
+    // CR 902.5 / 315.5 — command-zone abilities travel with the card view so
+    // the client can activate them where they live: a Vanguard avatar's, and a
+    // face-up conspiracy's (Sovereign's Realm's exile-a-card line).
+    let zone_abilities: Vec<AbilityView> = if card.face_down {
         Vec::new()
+    } else {
+        project_abilities(card)
+            .into_iter()
+            .filter(|a| {
+                card.definition
+                    .activated_abilities
+                    .get(a.index)
+                    .is_some_and(|ab| ab.from_command_zone)
+            })
+            .collect()
     };
     KnownCard {
         zone_abilities,
+        // Visibility is the caller's job — a face-down conspiracy is already
+        // projected as `Hidden` to everyone but its controller (CR 315.7).
+        agenda_names: [card.named_card.as_deref(), card.named_card_2.as_deref()]
+            .into_iter()
+            .flatten()
+            .map(str::to_string)
+            .collect(),
         id: card.id,
         name: card.definition.name.to_string(),
         cost: card.definition.cost.clone(),

@@ -3,39 +3,37 @@
 Improvement opportunities for the engine, client, and tooling.
 Items are grouped by area and roughly ordered by impact within each group.
 
-## Noticed this run (FIN closed; CN2 opened)
+## Noticed this run (CN2 closed)
 
-- **CN2 is down to 12.** CNS is closed; what's left in CN2 needs three things
-  the CR 905.2b shell doesn't have yet: noted **creature types** (Paliano
-  Vanguard) and **keywords** (Animus of Predation); a pre-game "exile a card
-  you drafted that isn't in your deck" pile (Arcane Savant, Caller of the
-  Untamed, Volatile Chimera); and the four Conspiracies' hidden/double agenda
-  + start-of-game rules (Echoing Boon, Emissary's Ploy, Sovereign's Realm,
-  Summoner's Bond). Spy Kit wants a text-changing "has all names" grant. ⏳
 - **Spire Phantasm's draft-time guess is a heuristic.** The pod notes a hit
   only when the pack it names from has one card left; a real guess wants the
   drafter to name a card and the next drafter to reveal. ⏳
-- **Expropriate and Selvala's Stampede are unimplemented.** Both are
-  council's-dilemma sorceries whose per-vote bodies need a "choose a permanent
-  owned by the voter" slot / a you-only put-permanent-from-hand. ⏳
 - **Regicide's color restriction is a resolution-time gate, not a targeting
   one.** Cast-time target validation looks the source up by id, and a spell
   mid-cast is in neither hand nor stack, so `HasDraftNotedColorOfSource` can't
   see its own name there. A `source_name` on the validation path would close
   it. ⏳
 - **Canal Courier's "attack different players" unblockable clause is
-  dropped**, and Expropriate / Selvala's Stampede are unimplemented: all three
-  are multiplayer-shaped council effects that need a per-vote "choose a
-  permanent owned by the voter" slot. ⏳
+  dropped** — a multiplayer-shaped restriction with no engine hook yet. ⏳
+- **Sovereign's Realm's "play basic lands from outside the game" is a fetch.**
+  `Effect::BasicLandFromOutsideGameToHand` puts one basic of a chosen color in
+  hand; the printed line is a turn-scoped *play* permission, so the fetched
+  land survives the turn and can be played later. ⏳
+- **Spy Kit's name grant bypasses the layer system.** `has_all_creature_names`
+  scans the battlefield for the Equipment instead of emitting a layer-3
+  text-changing effect (CR 613.1c), because a computed lookup inside an anthem
+  filter recurses. Same reason `HasDraftNotedCreatureTypeOfSource` reads
+  *printed* creature types. ⏳
+- **`AnthemForFilter` spells out eight fields at every call site** (~hundreds).
+  Boxing the payload into a struct with `Default` would let card definitions
+  use `..Default::default()`. `token_copy_of` did this for
+  `CreateTokenCopyOf`'s eleven; the 88 existing call sites are unconverted. ⏳
 - **`Effect::AddCountersUpTo` asks once for the whole selector.** "Put up to N
   counters on each" would want a per-target ask; no printed card needs it yet,
   and non-UI seats take the maximum (it's pure upside). ⏳
 - **Spectral Grasp's block half is a flat `CantBlock`** — exact at two players,
   too wide in multiplayer, where it should only stop blocks against the Aura
   controller's creatures. Wants a filtered can't-block static. ⏳
-- **Grenzo, Havoc Raiser's exile mode grants a free cast, not the printed
-  any-color pay.** `ExileTopAndGrantMayPlay { pay_any_color: true }` covers the
-  spend-as-any-color half but the card is still cast for free. ⏳
 - **`Effect::ExileSelfReturnTransformed` on the stack** (a resolving spell that
   puts itself onto the battlefield transformed) now ships as its own routing
   claim, `PutResolvingSpellOnBattlefieldTransformed`, rather than by teaching

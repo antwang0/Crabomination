@@ -2566,27 +2566,25 @@ Each a small targeted feature; sweep batch by batch.
 
 ## Recently closed (this push)
 
-- **Final Fantasy closed** (`set_gaps.py fin` empty) — Sephiroth,
-  Terra // Esper Terra and Esper Origins, the last three transforming DFCs.
-  New: `CardDefinition.as_transforms_effect` (CR 701.28 — resolved inside the
-  face swap), `Effect::PutResolvingSpellOnBattlefieldTransformed` (a sorcery
-  front face claiming itself off the resolution routing, ahead of the
-  flashback exile), and `Effect::AddCountersUpTo` (with the CR 714.2b chapter
-  thresholds it crosses). CR 712.9/712.10/712.13a: a face swap onto an
-  instant/sorcery face does nothing.
-- **Conspiracy: Take the Crown opened** — `set_gaps.py cn2` 52 → 12, with the
-  CR 905.2b note table extended to CN2's noting cards. New:
-  `Effect::ControlVotesThisTurn` (CR 701.38 — Illusion of Choice, surfaced as
-  `ClientView.vote_controller` and a HUD chip), `EventKind::BecameMonarch` +
-  `Predicate::WasMonarchAtTurnStart`, `Keyword::
-  CantAttackUnlessDefenderIsMonarch`, `SelectionRequirement::
-  ManaValueAtMostOpponentsAttackedThisCombat`, `PlayerRef::
-  EachOpponentExceptTriggerer`, `CounterType::Plot`.
-- **CR 309.4c/309.6** — dungeon room abilities now use the stack, and the
-  finished dungeon leaves the game as that ability resolves rather than a beat
-  early. Tests in `core_rules/cr_recent84`.
-- **Bot**: the crown and the initiative are priced into `eval_material` as
-  recurring resources instead of being invisible.
+- **Conspiracy: Take the Crown closed** (`set_gaps.py cn2` empty) — the last
+  twelve: Animus of Predation, Paliano Vanguard, Arcane Savant, Caller of the
+  Untamed, Volatile Chimera, Expropriate, Selvala's Stampede, Echoing Boon,
+  Emissary's Ploy, Summoner's Bond, Sovereign's Realm and Spy Kit. New:
+  `DraftNotes` keyword/creature-type notes plus `PickAction::TakeRevealed`
+  (CR 905.2b), `GameState::seat_draft_exile` (CR 905.4), `PlayerRef::
+  CurrentVoter` (a CR 701.38 dilemma body can name its own voter),
+  `Selector::{RandomOf, OwnedBy}`, `SelectionRequirement::{SpellTargetsMatching,
+  HasDraftNotedCreatureTypeOfSource, NamedByEitherAgendaOfSource}`,
+  `CardInstance.named_card_2` + `seat_double_agenda` (CR 702.106b double
+  agenda), and four command-zone statics (all-names grant, chosen-MV any-color
+  spend, starting hand size, no-basics deck rule).
+- **Server**: command-zone activated abilities now project for *any* face-up
+  command-zone card, not just Vanguard avatars (Sovereign's Realm), and a
+  conspiracy's chosen agenda names ride the card view.
+- **Client**: the draft-matters bar offers Animus of Predation's
+  remove-from-draft and Paliano Vanguard's reveal-and-note.
+- CR conformance: `core_rules/cr_recent85` covers CR 315.1/315.5b, CR 701.38,
+  CR 905.2b/905.4 and CR 613.1c.
 
 Older per-push entries are elided — `git log -p -- FEATURE_ROADMAP.md` is
 the record.
