@@ -747,3 +747,70 @@ fn public_thoroughfare_enters_tapped_and_taxes_you() {
     assert!(g.battlefield_find(road).is_some(), "the Forest paid the toll");
     assert!(g.battlefield.iter().any(|c| c.definition.name == "Forest" && c.tapped));
 }
+
+/// Manifest `def` face down for seat 0 and hand back its id.
+fn manifest_for(g: &mut GameState, def: crabomination::card::CardDefinition) -> CardId {
+    let id = g.next_id();
+    g.players[0].library.insert(0, crabomination::card::CardInstance::new(id, def, 0));
+    let ctx = crabomination::game::effects::EffectContext::for_ability(id, 0, None);
+    let mut evs = vec![];
+    g.manifest_card(id, 0, &ctx, &mut evs);
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    id
+}
+
+/// Fugitive Codebreaker's disguise cost drops per instant/sorcery in your
+/// graveyard, and unmasking it refills your hand.
+#[test]
+fn fugitive_codebreaker_discounts_its_own_unmasking() {
+    let mut g = two_player_game();
+    for _ in 0..3 {
+        g.add_card_to_graveyard(0, catalog::lightning_bolt());
+    }
+    for _ in 0..4 {
+        g.add_card_to_library(0, catalog::forest());
+    }
+    let stale = g.add_card_to_hand(0, catalog::grizzly_bears());
+    let id = manifest_for(&mut g, catalog::fugitive_codebreaker());
+    // {5}{R} less {3} = {2}{R}.
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::TurnFaceUp { card_id: id }).expect("unmask");
+    drain_stack(&mut g);
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == stale), "the old hand is gone");
+    assert_eq!(g.players[0].hand.len(), 3, "and replaced with three fresh cards");
+}
+
+/// Unyielding Gatekeeper's unmasking exiles someone else's permanent and pays
+/// them a Detective; your own comes back tapped instead.
+#[test]
+fn unyielding_gatekeeper_blinks_yours_and_pays_for_theirs() {
+    let mut g = two_player_game();
+    let gate = g.add_card_to_battlefield(0, catalog::unyielding_gatekeeper());
+    let theirs = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let mine = g.add_card_to_battlefield(0, catalog::savannah_lions());
+    let run = |g: &mut GameState, victim| {
+        let mut ctx = crabomination::game::effects::EffectContext::for_ability(gate, 0, None);
+        ctx.targets = vec![Target::Permanent(victim)];
+        g.resolve_effect(
+            &catalog::unyielding_gatekeeper().triggered_abilities[0].effect,
+            &ctx,
+        )
+        .expect("unmasking trigger");
+    };
+
+    run(&mut g, theirs);
+    assert!(g.battlefield_find(theirs).is_none(), "their creature is exiled");
+    assert_eq!(
+        g.battlefield
+            .iter()
+            .filter(|c| c.definition.name == "Detective" && c.controller == 1)
+            .count(),
+        1,
+        "and they get a Detective for it"
+    );
+
+    run(&mut g, mine);
+    assert!(g.battlefield_find(mine).unwrap().tapped, "your own blinks back tapped");
+}

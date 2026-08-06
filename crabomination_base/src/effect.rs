@@ -7477,6 +7477,11 @@ pub enum Effect {
     /// "Shuffle up to `max` cards you own matching `filter` from outside the
     /// game into your library" (Research // Development's left half).
     WishToLibrary { filter: SelectionRequirement, max: Value },
+    /// "Exile another target nonland permanent. If you controlled it, return it
+    /// to the battlefield tapped. Otherwise, its controller [does something]"
+    /// (Unyielding Gatekeeper). The branch reads the exiled permanent's
+    /// controller at the moment it left.
+    ExileThenBranchByController { what: Selector, theirs: Box<Effect> },
     /// CR 702.106b — search your library for a creature card with the OTHER of
     /// the source's two chosen names (the one the trigger's spell isn't),
     /// reveal it, put it into your hand, then shuffle (Summoner's Bond).

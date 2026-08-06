@@ -18906,6 +18906,29 @@ impl GameState {
 
             Effect::WishToHand { filter } => self.resolve_wish_to_hand(filter, ctx, events),
 
+            Effect::ExileThenBranchByController { what, theirs } => {
+                let Some(id) =
+                    self.resolve_selector(what, ctx).into_iter().find_map(|e| e.as_permanent_id())
+                else {
+                    return Ok(());
+                };
+                let owned_by_you =
+                    self.battlefield_find(id).is_some_and(|c| c.controller == ctx.controller);
+                let victim = self.battlefield_find(id).map(|c| c.controller);
+                self.move_card_to(id, &ZoneDest::Exile, ctx, events);
+                if owned_by_you {
+                    self.move_card_to(
+                        id,
+                        &ZoneDest::Battlefield { controller: PlayerRef::You, tapped: true },
+                        ctx,
+                        events,
+                    );
+                    return Ok(());
+                }
+                let Some(seat) = victim else { return Ok(()) };
+                self.run_effect(theirs, &EffectContext { controller: seat, ..ctx.clone() }, events)
+            }
+
             Effect::SearchForOtherChosenName => {
                 // The trigger's spell wears one of the two agenda names; go
                 // fetch the other.

@@ -4919,8 +4919,21 @@ impl GameState {
                     _ => None,
                 })
                 .sum();
+            // "This cost is reduced by {1} for each …" (Fugitive Codebreaker).
+            let morph_discount = real
+                .disguise_cost_reduction_per
+                .as_ref()
+                .map(|v| {
+                    let ctx = crate::game::effects::EffectContext::for_ability(card_id, p, None);
+                    self.evaluate_value(v, &ctx).max(0) as u32
+                })
+                .unwrap_or(0);
             match morph_cost {
-                Some(mc) => mc.with_x_value(x_value).plus_generic(morph_tax),
+                Some(mc) => {
+                    let mut c = mc.with_x_value(x_value).plus_generic(morph_tax);
+                    c.reduce_generic(morph_discount);
+                    c
+                }
                 None if real.is_creature() => real.cost.clone(),
                 // A face-down noncreature (manifested land/spell) can't be
                 // turned face up.

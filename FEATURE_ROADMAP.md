@@ -2583,7 +2583,9 @@ Each a small targeted feature; sweep batch by batch.
   conspiracy's chosen agenda names ride the card view.
 - **Client**: the draft-matters bar offers Animus of Predation's
   remove-from-draft and Paliano Vanguard's reveal-and-note.
-- **MKM opened** — `set_gaps.py mkm` 53 → 39 across fourteen cards, with
+- **MKM opened** — `set_gaps.py mkm` 53 → 37 across sixteen cards, with
+  `CardDefinition.disguise_cost_reduction_per` (Fugitive Codebreaker),
+  `Effect::{ExileThenBranchByController, SacrificeSourceUnlessTapMatching}`,
   `StaticEffect::DoubleControllerTriggersMatching` (Delney), a from-hand
   Cloak (Vannifar) and `Keyword::AttacksAsThoughNoDefender`.
 - CR conformance: `core_rules/cr_recent85` covers CR 315.1/315.5b, CR 701.38,

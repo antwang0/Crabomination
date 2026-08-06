@@ -5,15 +5,16 @@ Items are grouped by area and roughly ordered by impact within each group.
 
 ## Noticed this run (CN2 closed; MKM opened)
 
-- **MKM is the live front at 39.** Four of its gaps stalled on one primitive
-  each and were left out rather than shipped half-wired: Fugitive Codebreaker
-  (a disguise cost reduced per instant/sorcery in your graveyard), Unyielding
-  Gatekeeper (exile-then-branch on who controlled it), Goblin Maskmaker (a
-  turn-scoped face-down-spell discount) and Tin Street Gossip (a
-  `SpendRestriction` for face-down spells / turning face up — `SpellKind`
-  carries no face-down flag). Judith, Carnage Connoisseur wants an
-  "that spell gains deathtouch and lifelink" grant onto a spell on the
-  stack. ⏳
+- **MKM is the live front at 37.** Two of its gaps still stall on one
+  primitive each: Goblin Maskmaker (a turn-scoped face-down-spell discount)
+  and Tin Street Gossip (a `SpendRestriction` for face-down spells / turning
+  face up — `SpellKind` carries no face-down flag). Judith, Carnage
+  Connoisseur wants a "that spell gains deathtouch and lifelink" grant onto a
+  spell on the stack. ⏳
+- **A triggered ability's declared target isn't scriptable from a test.** A
+  `ScriptedDecider` `Target` answer doesn't reach the trigger-target picker, so
+  Unyielding Gatekeeper's regression drives the effect directly with a stamped
+  `ctx.targets` instead of going through `TurnFaceUp`. ⏳
 - **Spire Phantasm's draft-time guess is a heuristic.** The pod notes a hit
   only when the pack it names from has one card left; a real guess wants the
   drafter to name a card and the next drafter to reveal. ⏳

@@ -973,3 +973,73 @@ pub fn intrude_on_the_mind() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Fugitive Codebreaker — {1}{R} 2/1 prowess haste; unmasking it refills your
+/// hand, and its disguise cost shrinks per instant/sorcery in your graveyard.
+pub fn fugitive_codebreaker() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![
+            Keyword::Prowess,
+            Keyword::Haste,
+            Keyword::Disguise(cost(&[generic(5), r()])),
+        ],
+        disguise_cost_reduction_per: Some(Value::CountMatching {
+            sel: Box::new(Selector::CardsInZone {
+                who: PlayerRef::You,
+                zone: crate::card::Zone::Graveyard,
+                filter: SelectionRequirement::Any,
+            }),
+            filter: SelectionRequirement::HasCardType(CardType::Instant)
+                .or(SelectionRequirement::HasCardType(CardType::Sorcery)),
+        }),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::TurnedFaceUp, EventScope::SelfSource),
+            effect: Effect::Seq(vec![
+                Effect::Discard {
+                    who: Selector::You,
+                    amount: Value::CardsInHandMatching {
+                        who: PlayerRef::You,
+                        filter: SelectionRequirement::Any,
+                    },
+                    random: false,
+                },
+                draw(3),
+            ]),
+        }],
+        ..creature(
+            "Fugitive Codebreaker",
+            cost(&[generic(1), r()]),
+            vec![CreatureType::Goblin, CreatureType::Rogue],
+            2,
+            1,
+        )
+    }
+}
+
+/// Unyielding Gatekeeper — {1}{W} 3/2 disguise; unmasking it blinks your own
+/// permanent or exiles theirs for a Detective.
+pub fn unyielding_gatekeeper() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Disguise(cost(&[generic(1), w()]))],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::TurnedFaceUp, EventScope::SelfSource),
+            effect: Effect::ExileThenBranchByController {
+                what: target_filtered(
+                    SelectionRequirement::Nonland.and(SelectionRequirement::OtherThanSource),
+                ),
+                theirs: Box::new(Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::ONE,
+                    definition: crate::game::effects::detective_token(),
+                }),
+            },
+        }],
+        ..creature(
+            "Unyielding Gatekeeper",
+            cost(&[generic(1), w()]),
+            vec![CreatureType::Elephant, CreatureType::Cleric],
+            3,
+            2,
+        )
+    }
+}

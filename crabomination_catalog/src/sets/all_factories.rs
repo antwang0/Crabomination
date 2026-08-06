@@ -11678,6 +11678,8 @@ static MKM: &[Factory] = &[
     super::mkm::public_thoroughfare,
     super::mkm::officious_interrogation,
     super::mkm::intrude_on_the_mind,
+    super::mkm::fugitive_codebreaker,
+    super::mkm::unyielding_gatekeeper,
 ];
 static MMQ: &[Factory] = &[
     super::mmq::ramosian_sergeant,

@@ -3282,6 +3282,11 @@ pub struct CardDefinition {
     /// caster's seat with no source or target.
     #[serde(default)]
     pub self_cost_reduction_per: Option<(crate::effect::Value, u32)>,
+    /// "This cost is reduced by {1} for each [Value]" on the *disguise / morph
+    /// turn-up* cost, not the cast cost (Fugitive Codebreaker). Generic-only,
+    /// clamped by the caller.
+    #[serde(default)]
+    pub disguise_cost_reduction_per: Option<crate::effect::Value>,
     /// "Equipped creature gets +P/+T and has [keywords]." Read by
     /// `compute_battlefield` for any Equipment whose `attached_to` points at
     /// a creature on the battlefield — the bonus is emitted as layer-7 (P/T)

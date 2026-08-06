@@ -244,6 +244,7 @@ impl Effect {
             | Effect::EachPlayerMayDiscardUpToThenDamage { .. }
             | Effect::CoffinReturn
             | Effect::TransmuteArtifact
+            | Effect::ExileThenBranchByController { .. }
             | Effect::SacrificeSourceUnlessTapMatching { .. }
             | Effect::SearchForOtherChosenName
             | Effect::BasicLandFromOutsideGameToHand
