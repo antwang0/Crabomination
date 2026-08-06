@@ -2821,6 +2821,149 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::MoveChosenKeyword { options, from, to } => {
+                use crate::decision::{Decision, DecisionAnswer};
+                let Some(loser) =
+                    self.resolve_selector(from, ctx).into_iter().find_map(|e| e.as_permanent_id())
+                else {
+                    return Ok(());
+                };
+                let gainer =
+                    self.resolve_selector(to, ctx).into_iter().find_map(|e| e.as_permanent_id());
+                // Offer only keywords the `from` creature actually has, so an
+                // auto-decider's first pick is always a legal move.
+                let live: Vec<Keyword> = self
+                    .computed_permanent(loser)
+                    .map(|c| {
+                        options.iter().filter(|k| c.keywords.contains(k)).cloned().collect()
+                    })
+                    .unwrap_or_default();
+                let Some(first) = live.first().cloned() else { return Ok(()) };
+                let idx = match self.decider.decide(&Decision::ChooseOption {
+                    source: ctx.source.unwrap_or(CardId(0)),
+                    prompt: "Choose an ability to move".to_string(),
+                    options: live.iter().map(|k| format!("{k:?}")).collect(),
+                }) {
+                    DecisionAnswer::Amount(n) => (n as usize).min(live.len() - 1),
+                    _ => 0,
+                };
+                let kw = live.get(idx).cloned().unwrap_or(first);
+                self.run_effect(
+                    &Effect::LoseKeyword {
+                        what: from.clone(),
+                        keyword: kw.clone(),
+                        duration: crate::effect::Duration::EndOfTurn,
+                    },
+                    ctx,
+                    events,
+                )?;
+                if gainer.is_some() {
+                    self.run_effect(
+                        &Effect::GrantKeyword {
+                            what: to.clone(),
+                            keyword: kw,
+                            duration: crate::effect::Duration::EndOfTurn,
+                        },
+                        ctx,
+                        events,
+                    )?;
+                }
+                Ok(())
+            }
+
+            Effect::ScrollRack => {
+                let p = ctx.controller;
+                let source = ctx.source.unwrap_or(CardId(0));
+                let hand: Vec<(CardId, String)> = self.players[p]
+                    .hand
+                    .iter()
+                    .map(|c| (c.id, c.definition.name.to_string()))
+                    .collect();
+                let picks = match self.ask_seat_cards(
+                    p,
+                    "Exile any number of cards from your hand".into(),
+                    source,
+                    hand,
+                    0,
+                    self.players[p].hand.len() as u32,
+                    effect,
+                ) {
+                    Some(v) => v,
+                    None => return Ok(()),
+                };
+                let mut stashed = Vec::new();
+                for id in &picks {
+                    if let Some(i) = self.players[p].hand.iter().position(|c| c.id == *id) {
+                        stashed.push(self.players[p].hand.remove(i));
+                    }
+                }
+                for _ in 0..stashed.len() {
+                    self.draw_one(p, events);
+                }
+                // The order the picks came back in is the order they go back
+                // on top (a UI seat's `ChooseCards` answer is ordered).
+                for card in stashed.into_iter().rev() {
+                    self.players[p].library.insert(0, card);
+                }
+                Ok(())
+            }
+
+            Effect::TokenCopyOfOpponentChoice { who } => {
+                let Some(seat) = self.resolve_player(who, ctx) else { return Ok(()) };
+                let cands: Vec<(CardId, String)> = self
+                    .battlefield
+                    .iter()
+                    .filter(|c| c.controller == seat && c.definition.is_creature())
+                    .map(|c| (c.id, c.definition.name.to_string()))
+                    .collect();
+                if cands.is_empty() {
+                    return Ok(());
+                }
+                let picks = match self.ask_seat_cards(
+                    seat,
+                    "Choose a creature you control".into(),
+                    ctx.source.unwrap_or(CardId(0)),
+                    cands.clone(),
+                    1,
+                    1,
+                    effect,
+                ) {
+                    Some(v) => v,
+                    None => return Ok(()),
+                };
+                let chosen = picks.first().copied().unwrap_or(cands[0].0);
+                if let Some(src) = ctx.source.and_then(|s| self.battlefield_find_mut(s)) {
+                    src.chosen_permanent = Some(chosen);
+                }
+                self.run_effect(
+                    &Effect::CreateTokenCopyOf {
+                        who: PlayerRef::You,
+                        count: crate::effect::Value::ONE,
+                        source: Selector::ChosenPermanentOfSource,
+                        extra_creature_types: vec![],
+                        extra_card_types: vec![],
+                        override_pt: None,
+                        override_colors: None,
+                        enters_tapped: false,
+                        non_legendary: false,
+                        extra_keywords: vec![],
+                        legendary: false,
+                    },
+                    ctx,
+                    events,
+                )?;
+                self.run_effect(
+                    &Effect::GrantKeyword {
+                        what: Selector::LastCreatedToken,
+                        keyword: Keyword::Haste,
+                        duration: crate::effect::Duration::EndOfTurn,
+                    },
+                    ctx,
+                    events,
+                )?;
+                self.run_effect(&Effect::ExileLastCreatedTokensAtNextEndStep, ctx, events)
+            }
+
             Effect::DestroyBlockPairWeakerSide { attacker_side } => {
                 // No Quarter — the trigger's subject is the attacker on a
                 // `BecomesBlocked` and the blocker on a `Blocks`.

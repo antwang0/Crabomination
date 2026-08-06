@@ -1921,6 +1921,8 @@ pub enum SelectionRequirement {
     NameDiffersFromLastMoved,
     ControlledByYou,
     ControlledByOpponent,
+    /// Controlled by the active player (Maddening Imp's attack compulsion).
+    ControlledByActivePlayer,
     /// The object is controlled by the player bound as the firing event's
     /// subject — "target creature *that player* controls" on a triggered
     /// ability (Satyr Firedancer). Reads

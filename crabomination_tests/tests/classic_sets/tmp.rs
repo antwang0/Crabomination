@@ -1278,3 +1278,164 @@ fn stinging_licid_punishes_tapping() {
     drain_stack(&mut g);
     assert_eq!(g.players[1].life, 18);
 }
+
+/// Thalakos Dreamsower pins a creature for as long as it stays tapped.
+#[test]
+fn thalakos_dreamsower_pins_a_creature() {
+    let mut g = two_player_game();
+    let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let sower = ready(&mut g, 0, catalog::thalakos_dreamsower());
+    advance_to(&mut g, TurnStep::DeclareAttackers);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: sower,
+        target: AttackTarget::Player(1),
+    }]))
+    .expect("attack");
+    advance_to(&mut g, TurnStep::End);
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, 19, "shadow got through");
+    assert!(g.battlefield_find(victim).unwrap().tapped, "the trigger tapped it");
+
+    g.active_player_idx = 1;
+    g.do_untap();
+    assert!(g.battlefield_find(victim).unwrap().tapped, "and holds it down");
+}
+
+/// Volrath's Curse shuts a creature off until its controller pays a permanent.
+#[test]
+fn volraths_curse_can_be_shrugged_off() {
+    let mut g = two_player_game();
+    let victim = ready(&mut g, 1, catalog::grizzly_bears());
+    let curse = g.add_card_to_hand(0, catalog::volraths_curse());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    cast(&mut g, curse, Some(Target::Permanent(victim))).expect("enchant");
+    drain_stack(&mut g);
+    assert!(g.computed_permanent(victim).unwrap().keywords.contains(&Keyword::CantAttack));
+
+    g.add_card_to_battlefield(1, catalog::forest());
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: curse,
+        ability_index: 0,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("shrug it off");
+    drain_stack(&mut g);
+    assert!(
+        !g.computed_permanent(victim).unwrap().keywords.contains(&Keyword::CantAttack),
+        "the pass holds for the turn"
+    );
+}
+
+/// Coffin Queen's loan is called in the moment she untaps.
+#[test]
+fn coffin_queen_exiles_on_untap() {
+    let mut g = two_player_game();
+    let queen = ready(&mut g, 0, catalog::coffin_queen());
+    let corpse = g.add_card_to_graveyard(1, catalog::grizzly_bears());
+    g.step = TurnStep::PreCombatMain;
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    activate(&mut g, queen, 0, Some(Target::Permanent(corpse))).expect("reanimate");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(corpse).unwrap().controller, 0);
+
+    g.do_untap();
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(corpse).is_none(), "untapping exiles the loan");
+}
+
+/// Maddening Imp forces the active player's board into combat and kills the
+/// holdouts.
+#[test]
+fn maddening_imp_drags_everyone_into_combat() {
+    let mut g = two_player_game();
+    let imp = ready(&mut g, 1, catalog::maddening_imp());
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: imp,
+        ability_index: 0,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("madden");
+    drain_stack(&mut g);
+    assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::MustAttack));
+    advance_to(&mut g, TurnStep::DeclareAttackers);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::DeclareAttackers(vec![])).expect_err("must attack");
+}
+
+/// Phyrexian Splicer moves an evasion keyword from one creature to another.
+#[test]
+fn phyrexian_splicer_moves_a_keyword() {
+    let mut g = two_player_game();
+    let splicer = ready(&mut g, 0, catalog::phyrexian_splicer());
+    let angel = g.add_card_to_battlefield(1, catalog::serra_angel()); // flying
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.step = TurnStep::PreCombatMain;
+    g.players[0].mana_pool.add_colorless(2);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: splicer,
+        ability_index: 0,
+        target: Some(Target::Permanent(angel)),
+        additional_targets: vec![Target::Permanent(bear)],
+        mode: None,
+        x_value: None,
+    })
+    .expect("splice");
+    drain_stack(&mut g);
+    assert!(!g.computed_permanent(angel).unwrap().keywords.contains(&Keyword::Flying));
+    assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Flying));
+}
+
+/// Scroll Rack swaps hand cards for the top of the library and stacks the
+/// exiled ones back on top.
+#[test]
+fn scroll_rack_swaps_hand_for_top() {
+    let mut g = two_player_game();
+    let rack = ready(&mut g, 0, catalog::scroll_rack());
+    let junk = g.add_card_to_hand(0, catalog::grizzly_bears());
+    for _ in 0..3 {
+        g.add_card_to_library(0, catalog::forest());
+    }
+    g.step = TurnStep::PreCombatMain;
+    g.players[0].mana_pool.add_colorless(1);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Cards(vec![junk])]));
+    activate(&mut g, rack, 0, None).expect("rack");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), 1);
+    assert_eq!(g.players[0].hand[0].definition.name, "Forest", "drew off the top");
+    assert_eq!(g.players[0].library[0].id, junk, "the exiled card is back on top");
+}
+
+/// Echo Chamber rents an opponent's creature for the turn.
+#[test]
+fn echo_chamber_rents_a_creature() {
+    let mut g = two_player_game();
+    let chamber = ready(&mut g, 0, catalog::echo_chamber());
+    let angel = g.add_card_to_battlefield(1, catalog::serra_angel());
+    g.step = TurnStep::PreCombatMain;
+    g.players[0].mana_pool.add_colorless(4);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Cards(vec![angel])]));
+    activate(&mut g, chamber, 0, None).expect("echo");
+    drain_stack(&mut g);
+    let token = g
+        .battlefield
+        .iter()
+        .find(|c| c.is_token && c.controller == 0)
+        .expect("a token copy");
+    assert_eq!(token.definition.name, "Serra Angel");
+    assert!(g.computed_permanent(token.id).unwrap().keywords.contains(&Keyword::Haste));
+}

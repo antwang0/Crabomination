@@ -7451,7 +7451,10 @@ impl GameState {
             let Some(bonus) = &card.definition.equipped_bonus else { continue };
             let Some(target) = card.attached_to else { continue };
             // Only apply while the target is still a creature on the bf.
-            if !self.battlefield.iter().any(|c| c.id == target) {
+            let Some(host) = self.battlefield.iter().find(|c| c.id == target) else { continue };
+            // Volrath's Curse — the host's controller bought a pass out of this
+            // source's effect for the turn.
+            if self.players[host.controller].statics_ignored_this_turn.contains(&card.id) {
                 continue;
             }
             // Flat bonus plus optional board-scaled bonus (Nettlecyst: +1/+1

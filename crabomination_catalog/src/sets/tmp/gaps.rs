@@ -712,3 +712,202 @@ pub fn stinging_licid() -> CardDefinition {
         }],
     )
 }
+
+// ── Wave 3 ──────────────────────────────────────────────────────────────────
+
+/// Thalakos Dreamsower — {2}{U} 1/1 shadow. Its damage taps a creature and
+/// pins it while the Dreamsower stays tapped.
+pub fn thalakos_dreamsower() -> CardDefinition {
+    use crate::card::{EventKind, EventScope, EventSpec};
+    CardDefinition {
+        keywords: vec![Keyword::Shadow, Keyword::MayChooseNotToUntap],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::PlayerDamaged, EventScope::SelfSource),
+            effect: Effect::TapAndHoldWhileSourceTapped {
+                what: target_filtered(R::Creature),
+            },
+        }],
+        ..creature(
+            "Thalakos Dreamsower",
+            cost(&[generic(2), u()]),
+            vec![CreatureType::Thalakos, CreatureType::Wizard],
+            1,
+            1,
+        )
+    }
+}
+
+/// Volrath's Curse — {1}{U} Aura. The host is shut off until its controller
+/// sacrifices a permanent to shrug the Curse off for the turn.
+pub fn volraths_curse() -> CardDefinition {
+    use crate::card::{EnchantmentSubtype, EquipBonus};
+    CardDefinition {
+        name: "Volrath's Curse",
+        cost: cost(&[generic(1), u()]),
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes {
+            enchantment_subtypes: vec![EnchantmentSubtype::Aura],
+            ..Default::default()
+        },
+        effect: Effect::Attach { what: Selector::This, to: target_filtered(R::Creature) },
+        equipped_bonus: Some(EquipBonus {
+            keywords: vec![
+                Keyword::CantAttack,
+                Keyword::CantBlock,
+                Keyword::CantActivateAbilities,
+            ],
+            ..Default::default()
+        }),
+        activated_abilities: vec![
+            ActivatedAbility {
+                // The printed line is a special action for the host's
+                // controller; modeled as an any-player sacrifice activation.
+                any_player: true,
+                sac_other_filter: Some((R::Any, 1)),
+                effect: Effect::IgnoreStaticFromSourceThisTurn,
+                ..Default::default()
+            },
+            ActivatedAbility {
+                mana_cost: cost(&[generic(1), u()]),
+                effect: Effect::Move {
+                    what: Selector::This,
+                    to: ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(Selector::This))),
+                },
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Coffin Queen — {2}{B} 1/1. Reanimates out of any graveyard, and the loan is
+/// called in the moment she untaps.
+pub fn coffin_queen() -> CardDefinition {
+    use crate::card::{EventKind, EventScope, EventSpec};
+    let recall = |event| TriggeredAbility {
+        event,
+        effect: Effect::Exile { what: Selector::ChosenPermanentOfSource },
+    };
+    CardDefinition {
+        keywords: vec![Keyword::MayChooseNotToUntap],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(2), b()]),
+            tap_cost: true,
+            effect: Effect::Seq(vec![
+                Effect::Move {
+                    what: target_filtered(R::Creature.and(R::InGraveyard)),
+                    to: ZoneDest::Battlefield {
+                        controller: PlayerRef::You,
+                        tapped: false,
+                    },
+                },
+                Effect::RememberPermanentOnSource { what: Selector::LastMoved },
+            ]),
+            ..Default::default()
+        }],
+        triggered_abilities: vec![
+            recall(EventSpec::new(EventKind::BecomesUntapped, EventScope::SelfSource)),
+            recall(EventSpec::new(
+                EventKind::PermanentLeavesBattlefield,
+                EventScope::SelfSource,
+            )),
+        ],
+        ..creature(
+            "Coffin Queen",
+            cost(&[generic(2), b()]),
+            vec![CreatureType::Zombie, CreatureType::Wizard],
+            1,
+            1,
+        )
+    }
+}
+
+/// Maddening Imp — {2}{B} 1/1 flier. Forces the active player's non-Walls into
+/// combat and kills the ones that stay home.
+pub fn maddening_imp() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flying],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            condition: Some(Predicate::Not(Box::new(Predicate::IsTurnOf(PlayerRef::You)))),
+            effect: Effect::Seq(vec![
+                Effect::GrantKeyword {
+                    what: Selector::ControlledBy {
+                        who: PlayerRef::ActivePlayer,
+                        filter: R::Creature
+                            .and(R::Not(Box::new(R::HasCreatureType(CreatureType::Wall)))),
+                    },
+                    keyword: Keyword::MustAttack,
+                    duration: Duration::EndOfTurn,
+                },
+                Effect::AtNextEndStep {
+                    body: Box::new(Effect::Destroy {
+                        what: Selector::EachPermanent(
+                            R::Creature
+                                .and(R::ControlledByActivePlayer)
+                                .and(R::Not(Box::new(R::HasCreatureType(CreatureType::Wall))))
+                                .and(R::Not(Box::new(R::AttackedThisTurn))),
+                        ),
+                    }),
+                },
+            ]),
+            ..Default::default()
+        }],
+        ..creature("Maddening Imp", cost(&[generic(2), b()]), vec![CreatureType::Imp], 1, 1)
+    }
+}
+
+/// Phyrexian Splicer — {2}. {2}, {T}: move one of four evasion keywords from
+/// one creature to another for the turn.
+pub fn phyrexian_splicer() -> CardDefinition {
+    artifact(
+        "Phyrexian Splicer",
+        cost(&[generic(2)]),
+        vec![ActivatedAbility {
+            mana_cost: cost(&[generic(2)]),
+            tap_cost: true,
+            effect: Effect::MoveChosenKeyword {
+                options: vec![
+                    Keyword::Flying,
+                    Keyword::FirstStrike,
+                    Keyword::Trample,
+                    Keyword::Shadow,
+                ],
+                from: Selector::Target(0),
+                to: Selector::Target(1),
+            },
+            ..Default::default()
+        }],
+    )
+}
+
+/// Scroll Rack — {2}. {1}, {T}: swap any number of cards from your hand for the
+/// same number off the top, then stack the exiled ones back on top.
+pub fn scroll_rack() -> CardDefinition {
+    artifact(
+        "Scroll Rack",
+        cost(&[generic(2)]),
+        vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1)]),
+            tap_cost: true,
+            effect: Effect::ScrollRack,
+            ..Default::default()
+        }],
+    )
+}
+
+/// Echo Chamber — {4}. {4}, {T}: an opponent picks one of their creatures and
+/// you get a hasty token copy until the end step. Sorcery speed only.
+pub fn echo_chamber() -> CardDefinition {
+    artifact(
+        "Echo Chamber",
+        cost(&[generic(4)]),
+        vec![ActivatedAbility {
+            mana_cost: cost(&[generic(4)]),
+            tap_cost: true,
+            sorcery_speed: true,
+            effect: Effect::TokenCopyOfOpponentChoice { who: PlayerRef::EachOpponent },
+            ..Default::default()
+        }],
+    )
+}

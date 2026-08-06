@@ -527,7 +527,12 @@ impl Effect {
                 sel_has_target(what) || sel_has_target(to)
             }
             Effect::GrantSacrificedLandTypesLandwalk { what, .. } => sel_has_target(what),
-            Effect::DestroyBlockPairWeakerSide { .. } => false,
+            Effect::DestroyBlockPairWeakerSide { .. }
+            | Effect::ScrollRack
+            | Effect::TokenCopyOfOpponentChoice { .. } => false,
+            Effect::MoveChosenKeyword { from, to, .. } => {
+                sel_has_target(from) || sel_has_target(to)
+            }
             Effect::LockActivatedAbilitiesThisTurn { what } => sel_has_target(what),
             Effect::RevealFiveDraftAgainstOpponent => false,
             Effect::EncoreTokens => false,
@@ -1503,6 +1508,10 @@ impl Effect {
         }
         match self {
             Effect::MayDealPowerThenNoCombatDamage { to, .. } => sel_filter(to),
+            Effect::TapAndHoldWhileSourceTapped { what }
+            | Effect::GrantSacrificedLandTypesLandwalk { what, .. } => sel_filter(what),
+            Effect::RedirectNextCombatDamageTo { to, .. } => sel_filter(to),
+            Effect::MoveChosenKeyword { from, .. } => sel_filter(from),
             // Prefer the damage target's own filter; fall back to a filter
             // hidden in the damage amount (Rabid Bite: `PowerOf(slot 0)`).
             Effect::DealDamage { to, amount }
@@ -2571,6 +2580,10 @@ impl Effect {
             }
             // Targets a card to recast (graveyard/exile), not a player.
             Effect::CastWithoutPayingImmediate { .. } => false,
+            Effect::TapAndHoldWhileSourceTapped { .. }
+            | Effect::MoveChosenKeyword { .. }
+            | Effect::RedirectNextCombatDamageTo { .. }
+            | Effect::GrantSacrificedLandTypesLandwalk { .. } => false,
             // "Tap all lands target player controls" takes a player
             // (Mistbind Clique); the plain selector forms don't.
             Effect::PhaseOut { what, .. }

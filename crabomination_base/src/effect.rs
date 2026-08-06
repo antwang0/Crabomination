@@ -7375,6 +7375,22 @@ pub enum Effect {
     /// activation's sacrificed permanent; a no-op when none was paid.
     GrantSacrificedLandTypesLandwalk { what: Selector, duration: Duration },
 
+    /// Phyrexian Splicer — "choose one of `options`: until end of turn, target
+    /// creature with the chosen ability loses it and another target creature
+    /// gains it." The controller picks the keyword at resolution; a `from`
+    /// that doesn't have it makes the whole thing a no-op.
+    MoveChosenKeyword { options: Vec<Keyword>, from: Selector, to: Selector },
+
+    /// Scroll Rack — "Exile any number of cards from your hand face down. Put
+    /// that many cards from the top of your library into your hand. Then look
+    /// at the exiled cards and put them on top of your library in any order."
+    ScrollRack,
+
+    /// Echo Chamber — `who` chooses a creature they control; its controller's
+    /// opponent (the effect's controller) gets a hasty token copy that is
+    /// exiled at the beginning of the next end step.
+    TokenCopyOfOpponentChoice { who: PlayerRef },
+
     /// No Quarter — on a `BecomesBlocked` / `Blocks` trigger, destroy the
     /// weaker half of the pair. `attacker_side` picks which one dies: `false`
     /// destroys the blocker when the attacker outclasses it, `true` destroys

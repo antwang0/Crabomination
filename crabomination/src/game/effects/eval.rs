@@ -3113,6 +3113,12 @@ impl GameState {
             // spells this turn".
             R::CastSorceryThisTurn => matches!(target, Target::Player(p)
                 if self.players.get(*p).is_some_and(|pl| pl.sorceries_cast_this_turn > 0)),
+            R::ControlledByActivePlayer => match target {
+                Target::Permanent(cid) => {
+                    self.battlefield_find(*cid).is_some_and(|c| c.controller == self.active_player_idx)
+                }
+                Target::Player(p) => *p == self.active_player_idx,
+            },
             R::ControlledByOpponent => match target {
                 Target::Permanent(cid) => self
                     .battlefield_find(*cid)
@@ -4171,6 +4177,7 @@ impl GameState {
             R::Not(inner) => !self.evaluate_requirement_on_card(inner, card, controller),
             R::ControlledByYou => card.controller == controller,
             R::ControlledByOpponent => !self.same_team(card.controller, controller),
+            R::ControlledByActivePlayer => card.controller == self.active_player_idx,
             R::HasAwaken => card.definition.alternative_cost.as_ref().is_some_and(|a| a.awaken),
             R::PutIntoGraveyardFromBattlefieldThisTurn => {
                 self.graveyard_from_battlefield_this_turn.contains(&card.id)

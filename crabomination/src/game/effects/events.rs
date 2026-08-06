@@ -326,6 +326,13 @@ pub(crate) fn event_matches_spec(
             event,
             GameEvent::DamageDealt { to_card: Some(cid), .. } if *cid == source.id
         ) || matches!(
+            // "Whenever this creature deals damage to a player" (Shocker,
+            // Thalakos Dreamsower) — the source is the *dealer* here, not the
+            // damaged object.
+            event,
+            GameEvent::DamageDealt { to_player: Some(_), from_card: Some(f), .. }
+                if matches!(spec.kind, EventKind::PlayerDamaged) && *f == source.id
+        ) || matches!(
             // CR 702.29c — "When you cycle this card" triggers fire
             // with the cycled card as the trigger source. The card is
             // in the graveyard by the time triggers dispatch (per
