@@ -1393,6 +1393,25 @@ impl GameState {
         let _ = self.resolve_effect(&effect, &ctx);
     }
 
+    /// CR 701.28 — resolve the face a permanent just turned to's
+    /// `as_transforms_effect`, inside the face swap. Uses `run_effect` (not
+    /// `resolve_effect`) because the flip usually happens mid-resolution and
+    /// the outer resolution's scratch must survive. Sephiroth's Super Nova.
+    pub(crate) fn apply_as_transforms_effect(
+        &mut self,
+        card_id: CardId,
+        events: &mut Vec<GameEvent>,
+    ) {
+        let Some((effect, controller)) = self
+            .battlefield_find(card_id)
+            .and_then(|c| c.definition.as_transforms_effect.clone().map(|e| (e, c.controller)))
+        else {
+            return;
+        };
+        let ctx = EffectContext::for_ability(card_id, controller, None);
+        let _ = self.run_effect(&effect, &ctx, events);
+    }
+
     pub(crate) fn apply_enters_as_choice(&mut self, card_id: CardId) -> bool {
         let modes = self
             .battlefield
@@ -14100,6 +14119,65 @@ impl GameState {
                 events.append(&mut sba);
                 Ok(())
             }
+            Effect::AddCountersUpTo { what, kind, max, filter } => {
+                if self.counters_locked() { return Ok(()); }
+                let targets: Vec<CardId> = self
+                    .resolve_selector(what, ctx)
+                    .into_iter()
+                    .filter_map(|e| e.as_permanent_id())
+                    .filter(|id| {
+                        filter.as_ref().is_none_or(|f| {
+                            self.evaluate_requirement_static(
+                                f,
+                                &Target::Permanent(*id),
+                                ctx.controller,
+                                ctx.source,
+                            )
+                        })
+                    })
+                    .collect();
+                if targets.is_empty() { return Ok(()); }
+                let cap = self.evaluate_value(max, ctx).max(0) as u32;
+                if cap == 0 { return Ok(()); }
+                // "Up to" is pure upside, so a non-interactive seat takes the
+                // maximum rather than the AutoDecider's conservative zero.
+                let n = if self.players[ctx.controller].wants_ui {
+                    let source = ctx.source.unwrap_or(CardId(0));
+                    let Some(n) = self.ask_seat_amount(
+                        &mut 0,
+                        ctx.controller,
+                        format!("Put up to {cap} {kind:?} counters"),
+                        source,
+                        cap,
+                        effect,
+                    ) else {
+                        return Ok(());
+                    };
+                    n
+                } else {
+                    cap
+                };
+                if n == 0 { return Ok(()); }
+                for cid in targets {
+                    let scaled = self.scaled_counter_count_on(cid, *kind, n);
+                    let Some(c) = self.battlefield_find_mut(cid) else { continue };
+                    let before = c.counter_count(*kind);
+                    c.add_counters(*kind, scaled);
+                    events.push(GameEvent::CounterAdded {
+                        card_id: cid,
+                        counter_type: *kind,
+                        count: scaled,
+                    });
+                    // CR 714.2b — lore counters fire every threshold crossed.
+                    if *kind == CounterType::Lore {
+                        self.saga_chapters_crossed(cid, before, before + scaled);
+                    }
+                    self.permanents_gained_counter_this_turn.insert(cid);
+                }
+                let mut sba = self.check_state_based_actions();
+                events.append(&mut sba);
+                Ok(())
+            }
             Effect::AddCounter { what, kind, amount } => {
                 let base = self.evaluate_value(amount, ctx).max(0) as u32;
                 if base == 0 { return Ok(()); }
@@ -22293,6 +22371,12 @@ impl GameState {
                 // Approach of the Second Sun — consumed by the post-resolution
                 // routing instead of the graveyard trip.
                 self.resolving_spell_library_from_top = Some(*n);
+                Ok(())
+            }
+
+            Effect::PutResolvingSpellOnBattlefieldTransformed { counter } => {
+                // Esper Origins — same shape, battlefield-bound and flipped.
+                self.resolving_spell_to_battlefield_transformed = Some(*counter);
                 Ok(())
             }
 

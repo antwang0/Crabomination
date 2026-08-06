@@ -2979,6 +2979,12 @@ pub struct CardDefinition {
     /// the stack and can be responded to.
     #[serde(default)]
     pub as_enters_effect: Option<crate::effect::Effect>,
+    /// CR 701.28 — "As this permanent transforms into [this face], [effect]."
+    /// Held on the *back* face and resolved inside the face swap, before the
+    /// `Transformed` event, so nothing can happen between the flip and the
+    /// effect (Sephiroth, One-Winged Angel's Super Nova emblem).
+    #[serde(default)]
+    pub as_transforms_effect: Option<crate::effect::Effect>,
     /// CR 603.8 state trigger — "When [condition], sacrifice this permanent."
     /// Checked once per state-based-action pass against the permanent's
     /// controller; the sacrifice happens immediately (no stack), which matches

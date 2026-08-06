@@ -266,6 +266,9 @@ impl Effect {
             Effect::AddCounterCapped { what, amount, cap, .. } => {
                 sel_has_target(what) || value_has_target(amount) || value_has_target(cap)
             }
+            Effect::AddCountersUpTo { what, max, .. } => {
+                sel_has_target(what) || value_has_target(max)
+            }
             Effect::RedirectSpellDamageToItsController { what }
             | Effect::TapAndHoldWhileSourceTapped { what } => sel_has_target(what),
             Effect::AnteTopOfLibrary { who, then, else_, .. } => {
@@ -394,6 +397,7 @@ impl Effect {
             // pushed (CR 603.7d), not at the containing cast/activation.
             | Effect::ReflexiveTrigger { .. }
             | Effect::PutResolvingSpellInLibraryFromTop(_)
+            | Effect::PutResolvingSpellOnBattlefieldTransformed { .. }
             // Group / each-player effects with no cast-time target slot.
             | Effect::EachPlayerPutsHandCardOnTop { .. }
             | Effect::ChooseBasicLandTypeForSource

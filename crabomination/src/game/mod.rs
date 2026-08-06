@@ -773,6 +773,11 @@ pub struct GameState {
     /// (Approach of the Second Sun's seventh-from-the-top).
     #[serde(skip)]
     pub(crate) resolving_spell_library_from_top: Option<u32>,
+    /// `Effect::PutResolvingSpellOnBattlefieldTransformed` — the resolving
+    /// spell enters the battlefield transformed under its owner's control,
+    /// with the given counter on it (Esper Origins). Cleared once consumed.
+    #[serde(skip)]
+    pub(crate) resolving_spell_to_battlefield_transformed: Option<Option<crate::card::CounterType>>,
     /// Transient: players whose `gained_life_earlier_this_turn` flag should
     /// flip once the current trigger-dispatch batch finishes filter
     /// evaluation (drained at the end of `push_ordered_trigger_candidates`,
@@ -1928,6 +1933,8 @@ impl Clone for GameState {
             exile_resolving_spell: self.exile_resolving_spell,
             gy_combat_trigger_fired_this_step: self.gy_combat_trigger_fired_this_step.clone(),
             resolving_spell_library_from_top: self.resolving_spell_library_from_top,
+            resolving_spell_to_battlefield_transformed: self
+                .resolving_spell_to_battlefield_transformed,
             life_gain_flag_pending: self.life_gain_flag_pending.clone(),
             end_turn_requested: self.end_turn_requested,
             cipher_encode_pending: self.cipher_encode_pending,
@@ -2245,6 +2252,7 @@ impl GameState {
             exile_resolving_spell: false,
             gy_combat_trigger_fired_this_step: Vec::new(),
             resolving_spell_library_from_top: None,
+            resolving_spell_to_battlefield_transformed: None,
             life_gain_flag_pending: Vec::new(),
             end_turn_requested: false,
             cipher_encode_pending: None,
@@ -2498,18 +2506,28 @@ impl GameState {
     /// `DayNightChanged` on a real change.
     /// CR 712 — flip one DFC permanent to its other face in place. The object
     /// is unchanged (counters/tapped/attachments persist); fires `Transformed`.
+    /// CR 712.9/712.10 — nothing happens if the permanent isn't a DFC, or if
+    /// the face it would turn to is an instant or sorcery face.
     pub fn transform_permanent(&mut self, id: CardId, events: &mut Vec<GameEvent>) {
         let Some(c) = self.battlefield_find_mut(id) else { return };
         if !c.transformed {
             let Some(back) = c.definition.back_face.as_ref().map(|b| (**b).clone()) else { return };
+            if back.is_instant() || back.is_sorcery() {
+                return;
+            }
             c.front_face = Some(c.definition.clone());
             c.definition = std::sync::Arc::new(back);
             c.transformed = true;
         } else {
-            let Some(front) = c.front_face.take() else { return };
+            let Some(front) = c.front_face.clone() else { return };
+            if front.is_instant() || front.is_sorcery() {
+                return;
+            }
+            c.front_face = None;
             c.definition = front;
             c.transformed = false;
         }
+        self.apply_as_transforms_effect(id, events);
         events.push(GameEvent::Transformed { card_id: id });
     }
 
@@ -18330,6 +18348,42 @@ impl GameState {
                 mode: Some(mode),
                 x_value,
             });
+        }
+        // Esper Origins — "exile it, then put it onto the battlefield
+        // transformed under its owner's control". The front face is a sorcery,
+        // so the flip happens on the card the routing already owns.
+        // CR 712.13a — an instant/sorcery back face can't enter, so the card
+        // falls through to the graveyard.
+        if let Some(counter) = self.resolving_spell_to_battlefield_transformed.take()
+            && card
+                .definition
+                .back_face
+                .as_ref()
+                .is_some_and(|b| !b.is_instant() && !b.is_sorcery())
+        {
+            let (owner, cid) = (card.owner, card.id);
+            let mut card = card;
+            let back = card.definition.back_face.as_ref().map(|b| (**b).clone()).unwrap();
+            card.front_face = Some(card.definition.clone());
+            card.definition = std::sync::Arc::new(back);
+            card.transformed = true;
+            events.push(GameEvent::Transformed { card_id: cid });
+            self.place_card_in_dest(
+                card,
+                owner,
+                &crate::effect::ZoneDest::Battlefield {
+                    controller: crate::effect::PlayerRef::Seat(owner),
+                    tapped: false,
+                },
+                &mut events,
+            );
+            if let Some(kind) = counter
+                && let Some(c) = self.battlefield_find_mut(cid)
+            {
+                c.add_counters(kind, 1);
+                events.push(GameEvent::CounterAdded { card_id: cid, counter_type: kind, count: 1 });
+            }
+            return Ok(events);
         }
         // Rebound: if this card has Keyword::Rebound and was cast from
         // hand, exile it instead of sending it to the graveyard, and

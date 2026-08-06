@@ -3,12 +3,12 @@
 
 use crate::card::{
     ActivatedAbility, Adventure, ArtifactSubtype, CardDefinition, CardType, CounterType,
-    CreatureType, DynamicPt, EquipBonus, EventKind, EventScope, EventSpec, Keyword, LandType,
-    Predicate, SelectionRequirement as R, StaticAbility, Subtypes, Supertype,
+    CreatureType, DynamicPt, EnchantmentSubtype, EquipBonus, EventKind, EventScope, EventSpec,
+    Keyword, LandType, Predicate, SelectionRequirement as R, StaticAbility, Subtypes, Supertype,
     TokenDefinition, TriggeredAbility,
 };
 use crate::effect::{
-    Duration, Effect, PlayerRef, Selector, StaticEffect, Value, ZoneDest,
+    Duration, Effect, ManaPayload, PlayerRef, Selector, StaticEffect, Value, ZoneDest,
     shortcut::{discard, draw, etb, on_attack, on_dies, target_filtered},
 };
 use crate::game::TurnStep;
@@ -1574,6 +1574,269 @@ pub fn zenos_yae_galvus() -> CardDefinition {
                 event: EventSpec::new(EventKind::Transformed, EventScope::SelfSource),
                 effect: Effect::RememberPlayerOnSource { who: PlayerRef::EachOpponent },
             }],
+            ..Default::default()
+        })),
+        ..Default::default()
+    }
+}
+
+// ── The last three FIN transforming DFCs ──────────────────────────────────
+
+/// Sephiroth, Fabled SOLDIER // Sephiroth, One-Winged Angel — {2}{B} 3/3 that
+/// loots off sacrifices and drains on every other creature's death; the fourth
+/// drain each turn flips him into a 5/5 flier whose Super Nova emblem keeps the
+/// drain going.
+pub fn sephiroth_fabled_soldier() -> CardDefinition {
+    let drain = || {
+        Effect::Seq(vec![
+            Effect::LoseLife {
+                who: target_filtered(R::OpponentPlayer),
+                amount: Value::ONE,
+            },
+            Effect::GainLife { who: Selector::You, amount: Value::ONE },
+        ])
+    };
+    let sac_to_draw = || Effect::MaySacrifice {
+        description: "Sacrifice another creature to draw a card".to_string(),
+        filter: R::Creature.and(R::OtherThanSource).and(R::ControlledByYou),
+        count: Value::ONE,
+        then: Box::new(draw(1)),
+        else_: None,
+    };
+    CardDefinition {
+        name: "Sephiroth, Fabled SOLDIER",
+        cost: cost(&[generic(2), b()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![
+                CreatureType::Human,
+                CreatureType::Avatar,
+                CreatureType::Soldier,
+            ],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        triggered_abilities: vec![
+            etb(sac_to_draw()),
+            on_attack(sac_to_draw()),
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::CreatureDied, EventScope::AnyPlayer)
+                    .with_filter(Predicate::Not(Box::new(Predicate::TriggerSourceIsSelf))),
+                effect: Effect::Seq(vec![
+                    drain(),
+                    // "If this is the fourth time this ability has resolved
+                    // this turn, transform Sephiroth."
+                    Effect::NthResolutionThisTurn {
+                        branches: vec![
+                            Effect::Noop,
+                            Effect::Noop,
+                            Effect::Noop,
+                            Effect::Transform { what: Selector::This },
+                        ],
+                    },
+                ]),
+            },
+        ],
+        back_face: Some(Box::new(CardDefinition {
+            name: "Sephiroth, One-Winged Angel",
+            supertypes: vec![Supertype::Legendary],
+            card_types: vec![CardType::Creature],
+            subtypes: Subtypes {
+                creature_types: vec![
+                    CreatureType::Angel,
+                    CreatureType::Nightmare,
+                    CreatureType::Avatar,
+                ],
+                ..Default::default()
+            },
+            power: 5,
+            toughness: 5,
+            keywords: vec![Keyword::Flying],
+            as_transforms_effect: Some(Effect::CreateEmblem {
+                who: PlayerRef::You,
+                name: "Super Nova".to_string(),
+                triggered: vec![TriggeredAbility {
+                    event: EventSpec::new(EventKind::CreatureDied, EventScope::AnyPlayer),
+                    effect: drain(),
+                }],
+                statics: vec![],
+            }),
+            triggered_abilities: vec![on_attack(Effect::SacrificeAnyNumber {
+                who: PlayerRef::You,
+                filter: R::Creature.and(R::OtherThanSource).and(R::ControlledByYou),
+                per_each: Box::new(draw(1)),
+            })],
+            ..Default::default()
+        })),
+        ..Default::default()
+    }
+}
+
+/// Terra, Magical Adept // Esper Terra — {1}{R}{G} 4/2 that mills five for an
+/// enchantment and flips for {4}{R}{G} into a 6/6 flying Saga whose first three
+/// chapters each copy one of your nonlegendary enchantments.
+pub fn terra_magical_adept() -> CardDefinition {
+    let copy_chapter = || {
+        Effect::Seq(vec![
+            Effect::CreateTokenCopiesHasteSac {
+                who: PlayerRef::You,
+                count: Value::ONE,
+                source: target_filtered(
+                    R::Enchantment
+                        .and(R::ControlledByYou)
+                        .and(R::Not(Box::new(R::HasSupertype(Supertype::Legendary)))),
+                ),
+            },
+            Effect::AddCountersUpTo {
+                what: Selector::LastCreatedTokens,
+                kind: CounterType::Lore,
+                max: Value::Const(3),
+                filter: Some(R::HasEnchantmentSubtype(EnchantmentSubtype::Saga)),
+            },
+        ])
+    };
+    CardDefinition {
+        name: "Terra, Magical Adept",
+        cost: cost(&[generic(1), r(), g()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![
+                CreatureType::Human,
+                CreatureType::Wizard,
+                CreatureType::Warrior,
+            ],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 2,
+        triggered_abilities: vec![etb(Effect::MillThenToHandN {
+            amount: Value::Const(5),
+            filter: R::Enchantment,
+            take: Value::ONE,
+            otherwise: None,
+        })],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(4), r(), g()]),
+            tap_cost: true,
+            sorcery_speed: true,
+            effect: Effect::ExileSelfReturnTransformed,
+            ..Default::default()
+        }],
+        back_face: Some(Box::new(CardDefinition {
+            name: "Esper Terra",
+            supertypes: vec![Supertype::Legendary],
+            card_types: vec![CardType::Enchantment, CardType::Creature],
+            subtypes: Subtypes {
+                creature_types: vec![CreatureType::Wizard],
+                enchantment_subtypes: vec![EnchantmentSubtype::Saga],
+                ..Default::default()
+            },
+            power: 6,
+            toughness: 6,
+            keywords: vec![Keyword::Flying],
+            saga_chapters: vec![
+                (1, copy_chapter()),
+                (2, copy_chapter()),
+                (3, copy_chapter()),
+                (
+                    4,
+                    Effect::Seq(vec![
+                        Effect::AddMana {
+                            who: PlayerRef::You,
+                            pool: ManaPayload::Colors(vec![
+                                Color::White,
+                                Color::White,
+                                Color::Blue,
+                                Color::Blue,
+                                Color::Black,
+                                Color::Black,
+                                Color::Red,
+                                Color::Red,
+                                Color::Green,
+                                Color::Green,
+                            ]),
+                        },
+                        Effect::ExileSelfReturnFrontFace,
+                    ]),
+                ),
+            ],
+            ..Default::default()
+        })),
+        ..Default::default()
+    }
+}
+
+/// Esper Origins // Summon: Esper Maduin — {1}{G} sorcery that surveils and
+/// gains 2 life; cast from the graveyard (via its own flashback) it instead
+/// returns transformed as a 4/4 Saga with a finality counter.
+pub fn esper_origins() -> CardDefinition {
+    CardDefinition {
+        name: "Esper Origins",
+        cost: cost(&[generic(1), g()]),
+        card_types: vec![CardType::Sorcery],
+        keywords: vec![Keyword::Flashback(cost(&[generic(3), g()]))],
+        effect: Effect::Seq(vec![
+            Effect::Surveil { who: PlayerRef::You, amount: Value::Const(2) },
+            Effect::GainLife { who: Selector::You, amount: Value::Const(2) },
+            Effect::If {
+                cond: Predicate::CastFromGraveyard,
+                then: Box::new(Effect::PutResolvingSpellOnBattlefieldTransformed {
+                    counter: Some(CounterType::Finality),
+                }),
+                else_: Box::new(Effect::Noop),
+            },
+        ]),
+        back_face: Some(Box::new(CardDefinition {
+            name: "Summon: Esper Maduin",
+            card_types: vec![CardType::Enchantment, CardType::Creature],
+            subtypes: Subtypes {
+                creature_types: vec![CreatureType::Elemental],
+                enchantment_subtypes: vec![EnchantmentSubtype::Saga],
+                ..Default::default()
+            },
+            power: 4,
+            toughness: 4,
+            saga_chapters: vec![
+                (
+                    1,
+                    Effect::RevealTopTakeMatchingToHand {
+                        who: PlayerRef::You,
+                        count: Value::ONE,
+                        filter: R::PermanentCard,
+                        distinct_powers: false,
+                    },
+                ),
+                (
+                    2,
+                    Effect::AddMana {
+                        who: PlayerRef::You,
+                        pool: ManaPayload::Colors(vec![Color::Green, Color::Green]),
+                    },
+                ),
+                (
+                    3,
+                    Effect::Seq(vec![
+                        Effect::PumpPT {
+                            what: Selector::EachPermanent(
+                                R::Creature.and(R::ControlledByYou).and(R::OtherThanSource),
+                            ),
+                            power: Value::Const(2),
+                            toughness: Value::Const(2),
+                            duration: Duration::EndOfTurn,
+                        },
+                        Effect::GrantKeyword {
+                            what: Selector::EachPermanent(
+                                R::Creature.and(R::ControlledByYou).and(R::OtherThanSource),
+                            ),
+                            keyword: Keyword::Trample,
+                            duration: Duration::EndOfTurn,
+                        },
+                    ]),
+                ),
+            ],
             ..Default::default()
         })),
         ..Default::default()

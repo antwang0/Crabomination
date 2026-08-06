@@ -4916,6 +4916,15 @@ pub enum Effect {
     /// post-resolution routing instead of the graveyard trip; `from_top`
     /// is clamped to the library size.
     PutResolvingSpellInLibraryFromTop(u32),
+    /// "Exile this spell, then put it onto the battlefield transformed under
+    /// its owner's control" for the RESOLVING spell — the front face isn't a
+    /// permanent, so the card is claimed by the post-resolution routing rather
+    /// than by an effect reaching for a battlefield object (Esper Origins).
+    /// `counter` is placed on the permanent as it arrives.
+    PutResolvingSpellOnBattlefieldTransformed {
+        #[serde(default)]
+        counter: Option<crate::card::CounterType>,
+    },
     /// Revel in Silence: each resolved player can't cast spells or activate
     /// loyalty abilities for the rest of the turn
     /// (`Player.silenced_this_turn`).
@@ -5764,6 +5773,17 @@ pub enum Effect {
     /// the total number of `kind` counters on it to be greater than `cap`."
     /// Clamps per target against its current pool (Clockwork Avian).
     AddCounterCapped { what: Selector, kind: CounterType, amount: Value, cap: Value },
+    /// "Put up to `max` `kind` counters on [what]" — the controller picks the
+    /// count once and it applies to every resolved permanent (Esper Terra's
+    /// "if it's a Saga, put up to three lore counters on it"). `filter`, when
+    /// set, narrows the resolved permanents (the Saga check).
+    AddCountersUpTo {
+        what: Selector,
+        kind: CounterType,
+        max: Value,
+        #[serde(default)]
+        filter: Option<SelectionRequirement>,
+    },
     RemoveCounter { what: Selector, kind: CounterType, amount: Value },
     /// CR 603.7e — "Until the end of your next turn, whenever you cast a
     /// spell, [body]." A repeating cast watcher whose window outlives the

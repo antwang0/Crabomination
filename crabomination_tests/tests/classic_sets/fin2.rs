@@ -672,3 +672,99 @@ fn zenos_spares_the_chosen_creature_then_transforms() {
     assert_eq!(back.definition.name, "Shinryu, Transcendent Rival");
     assert!(back.definition.keywords.contains(&Keyword::Flying));
 }
+
+/// The fourth "another creature dies" drain flips Sephiroth and mints the
+/// Super Nova emblem, which keeps draining afterwards.
+#[test]
+fn sephiroth_transforms_on_the_fourth_drain() {
+    let mut g = two_player_game();
+    let seph = g.add_card_to_battlefield(0, catalog::sephiroth_fabled_soldier());
+    let fodder: Vec<_> =
+        (0..5).map(|_| g.add_card_to_battlefield(1, catalog::grizzly_bears())).collect();
+    for (i, id) in fodder.iter().enumerate() {
+        let mut evs = vec![];
+        g.destroy_permanent(*id, false, &mut evs);
+        g.dispatch_triggers_for_events(&evs);
+        drain_stack(&mut g);
+        let flipped = g.battlefield_find(seph).unwrap().transformed;
+        assert_eq!(flipped, i >= 3, "flips on the fourth death, not before");
+    }
+    assert_eq!(
+        g.battlefield_find(seph).unwrap().definition.name,
+        "Sephiroth, One-Winged Angel"
+    );
+    assert_eq!(g.players[0].emblems.len(), 1, "Super Nova landed with the flip");
+    // Four front-face drains plus the emblem's on the fifth death.
+    assert_eq!(g.players[1].life, 20 - 5);
+    assert_eq!(g.players[0].life, 20 + 5);
+}
+
+/// Terra flips into the Saga, whose chapter copies a nonlegendary enchantment
+/// and hands the copy three lore counters when it's a Saga.
+#[test]
+fn esper_terra_copies_a_saga_with_lore_counters() {
+    let mut g = two_player_game();
+    let terra = g.add_card_to_battlefield(0, catalog::terra_magical_adept());
+    g.battlefield_find_mut(terra).unwrap().summoning_sick = false;
+    let saga = g.add_card_to_battlefield(0, catalog::crystal_fragments());
+    let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    // Flip the Equipment to its Saga back face so there's a legal copy target.
+    let mut evs = vec![];
+    g.transform_permanent(saga, &mut evs);
+    drain_stack(&mut g);
+
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(4);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: terra,
+        ability_index: 0,
+        target: None,
+        additional_targets: vec![],
+        x_value: None,
+        mode: None,
+    })
+    .expect("Trance");
+    drain_stack(&mut g);
+    let back = g.battlefield_find(terra).expect("returned transformed");
+    assert_eq!(back.definition.name, "Esper Terra");
+    // Chapter I minted a hasty copy of the Saga with three lore counters, so
+    // the copy ran all three of its own chapters (III taps the opponent's
+    // board) and was sacrificed to CR 714.4 on the way out.
+    assert!(g.battlefield_find(victim).unwrap().tapped, "the copy's chapter III fired");
+    assert!(
+        !g.battlefield.iter().any(|c| c.is_token && c.definition.name == "Summon: Alexander"),
+        "the copy finished its final chapter and was sacrificed"
+    );
+}
+
+/// Esper Origins is a plain surveil-and-gain from hand; flashed back from the
+/// graveyard it returns as the Saga creature with a finality counter.
+#[test]
+fn esper_origins_returns_transformed_from_the_graveyard() {
+    let mut g = two_player_game();
+    let card = g.add_card_to_graveyard(0, catalog::esper_origins());
+    for i in 0..6 {
+        g.players[0].library.push(CardInstance::new(CardId(7100 + i), catalog::forest(), 0));
+    }
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastFlashback {
+        card_id: card,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("flashback");
+    drain_stack(&mut g);
+    let maduin = g.battlefield_find(card).expect("on the battlefield, not exiled");
+    assert_eq!(maduin.definition.name, "Summon: Esper Maduin");
+    assert_eq!(maduin.counter_count(CounterType::Finality), 1);
+    assert_eq!(maduin.counter_count(CounterType::Lore), 1, "CR 714.2b first chapter");
+    assert_eq!(g.players[0].life, 22);
+}
