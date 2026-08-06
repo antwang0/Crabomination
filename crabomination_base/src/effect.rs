@@ -1877,10 +1877,11 @@ pub enum Predicate {
     /// instead") and Antiquities on the Loose's "cast from anywhere
     /// other than your hand" rider.
     CastFromGraveyard,
-    /// True while the discard being processed was caused by a spell or ability
-    /// an opponent of the trigger's controller controls (Pure Intentions'
-    /// self-return rider). Reads `GameState.discard_causer`.
-    DiscardCausedByOpponent,
+    /// True while the resolving spell or ability is controlled by an opponent
+    /// of the evaluating controller (Pure Intentions' discard rider, Sacred
+    /// Ground's land destruction). Reads `GameState.resolution_causer`.
+    #[serde(alias = "DiscardCausedByOpponent")]
+    CausedByOpponentSpellOrAbility,
     /// True when the resolving spell was cast from its caster's hand
     /// (the typical case). Inverse of `CastFromGraveyard`. Reserved for
     /// "if you cast this spell from your hand, …" rider patterns —
@@ -2414,7 +2415,7 @@ pub enum EventKind {
     /// A card was discarded.
     CardDiscarded,
     /// A spell or ability an opponent controls caused a player to discard a
-    /// card (CR 701.9 + `GameState.discard_causer`). Keyed on the *discarding*
+    /// card (CR 701.9 + `GameState.resolution_causer`). Keyed on the *discarding*
     /// player, so `EventScope::YourControl` reads "causes you to discard"
     /// (Spiritual Focus). Emitted alongside `CardDiscarded`.
     OpponentCausedYouToDiscard,
@@ -2447,6 +2448,10 @@ pub enum EventKind {
     /// CR 509.3e — the attacker-side mirror: "whenever this creature becomes
     /// blocked by N or more creatures".
     BecomesBlockedByNOrMore(u32),
+    /// CR 701.15 — "whenever this creature regenerates" (Skeleton
+    /// Scavengers' counter rider). Fires whenever a regeneration shield is
+    /// applied, whatever granted it.
+    Regenerated,
     /// An attacking creature finished the declare-blockers step
     /// without any blockers assigned to it (CR 509.3g — "Whenever
     /// [creature] attacks and isn't blocked"). Fires once per

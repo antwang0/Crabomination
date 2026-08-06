@@ -129,7 +129,7 @@ pub fn pure_intentions() -> CardDefinition {
     CardDefinition {
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::CardDiscarded, EventScope::SelfSource)
-                .with_filter(Predicate::DiscardCausedByOpponent),
+                .with_filter(Predicate::CausedByOpponentSpellOrAbility),
             effect: Effect::AtNextEndStep {
                 body: Box::new(Effect::Move {
                     what: Selector::This,

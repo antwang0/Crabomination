@@ -1776,9 +1776,12 @@ impl Effect {
             | Effect::CapTargetsAt { body, .. } => body.primary_target_filter(),
             Effect::MayPay { body, .. }
             | Effect::MayPayBy { body, .. }
-            | Effect::MayPayLife { body, .. } => {
-                body.primary_target_filter()
-            }
+            | Effect::MayPayLife { body, .. }
+            | Effect::MaySacrifice { then: body, .. }
+            | Effect::MaySacrificeSource { then: body, .. }
+            | Effect::MayTap { then: body, .. }
+            | Effect::MayDiscard { then: body, .. }
+            | Effect::MayDiscardMatching { then: body, .. } => body.primary_target_filter(),
             Effect::PayEnergy { then, .. }
             | Effect::PayEnergyValue { then, .. }
             | Effect::PayAnyEnergy { then } => then.primary_target_filter(),
@@ -2021,6 +2024,11 @@ impl Effect {
             | Effect::MayPayX { body, .. }
             | Effect::MayPay { body, .. }
             | Effect::MayPayBy { body, .. }
+            | Effect::MaySacrifice { then: body, .. }
+            | Effect::MaySacrificeSource { then: body, .. }
+            | Effect::MayTap { then: body, .. }
+            | Effect::MayDiscard { then: body, .. }
+            | Effect::MayDiscardMatching { then: body, .. }
             | Effect::MayPayLife { body, .. } => body.prefers_graveyard_target(),
             Effect::Process { then, .. } => then.prefers_graveyard_target(),
             // Recasting a target card *from the graveyard* (Efreet Flamepainter,
@@ -2382,6 +2390,11 @@ impl Effect {
             | Effect::DelayUntil { body, .. }
             | Effect::Repeat { body, .. }
             | Effect::Reflexive { body }
+            | Effect::MaySacrifice { then: body, .. }
+            | Effect::MaySacrificeSource { then: body, .. }
+            | Effect::MayTap { then: body, .. }
+            | Effect::MayDiscard { then: body, .. }
+            | Effect::MayDiscardMatching { then: body, .. }
             | Effect::ForEach { body, .. } => body.effect_short_text(),
             Effect::Process { then, .. } => then.effect_short_text(),
             // Library tutor / dig — surfaced so modal pickers (Glimpse the Core,
@@ -2639,6 +2652,11 @@ impl Effect {
             | Effect::MayPayX { body, .. }
             | Effect::MayPay { body, .. }
             | Effect::MayPayBy { body, .. }
+            | Effect::MaySacrifice { then: body, .. }
+            | Effect::MaySacrificeSource { then: body, .. }
+            | Effect::MayTap { then: body, .. }
+            | Effect::MayDiscard { then: body, .. }
+            | Effect::MayDiscardMatching { then: body, .. }
             | Effect::MayPayLife { body, .. } => body.accepts_player_target(),
             Effect::Process { then, .. } => then.accepts_player_target(),
             Effect::ChooseMode(modes) => modes.iter().any(|e| e.accepts_player_target()),
@@ -2884,6 +2902,11 @@ impl Effect {
                 | Effect::CapTargetsAt { body, .. }
                 | Effect::MayPayX { body, .. }
                 | Effect::MayPay { body, .. }
+                | Effect::MaySacrifice { then: body, .. }
+                | Effect::MaySacrificeSource { then: body, .. }
+                | Effect::MayTap { then: body, .. }
+                | Effect::MayDiscard { then: body, .. }
+                | Effect::MayDiscardMatching { then: body, .. }
             | Effect::MayPayBy { body, .. }
                 | Effect::MayPayLife { body, .. } => eff_find(body, slot, mode, kicked),
                 Effect::CollectEvidence { then, .. } | Effect::CollectEvidenceX { then } => {
@@ -3418,6 +3441,11 @@ impl Effect {
             | Effect::MayPayX { body, .. }
             | Effect::MayPay { body, .. }
             | Effect::MayPayBy { body, .. }
+            | Effect::MaySacrifice { then: body, .. }
+            | Effect::MaySacrificeSource { then: body, .. }
+            | Effect::MayTap { then: body, .. }
+            | Effect::MayDiscard { then: body, .. }
+            | Effect::MayDiscardMatching { then: body, .. }
             | Effect::MayPayLife { body, .. } => body.min_targets_in_mode(mode),
             _ => None,
         }
@@ -3441,6 +3469,11 @@ impl Effect {
             | Effect::MayPayX { body, .. }
             | Effect::MayPay { body, .. }
             | Effect::MayPayBy { body, .. }
+            | Effect::MaySacrifice { then: body, .. }
+            | Effect::MaySacrificeSource { then: body, .. }
+            | Effect::MayTap { then: body, .. }
+            | Effect::MayDiscard { then: body, .. }
+            | Effect::MayDiscardMatching { then: body, .. }
             | Effect::MayPayLife { body, .. } => body.target_slot_optional_x(slot, mode, x),
             Effect::ChooseMode(modes) => match mode {
                 Some(m) => modes
@@ -3484,6 +3517,11 @@ impl Effect {
             | Effect::MayPayX { body, .. }
             | Effect::MayPay { body, .. }
             | Effect::MayPayBy { body, .. }
+            | Effect::MaySacrifice { then: body, .. }
+            | Effect::MaySacrificeSource { then: body, .. }
+            | Effect::MayTap { then: body, .. }
+            | Effect::MayDiscard { then: body, .. }
+            | Effect::MayDiscardMatching { then: body, .. }
             | Effect::MayPayLife { body, .. } => body.distinct_target_count(mode),
             _ => None,
         }

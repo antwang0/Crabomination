@@ -3055,6 +3055,12 @@ pub struct CardDefinition {
     /// board state rather than an event (Hidden Predators, Veiled Crocodile).
     #[serde(default)]
     pub state_trigger: Option<StateTriggeredAbility>,
+    /// CR 613 layer 1 — "As long as the top card of your graveyard is a
+    /// creature card, this has that card's full text" (Volrath's
+    /// Shapeshifter). Re-evaluated each state-based-action pass; the printed
+    /// definition's activated abilities ride along on the copy.
+    #[serde(default)]
+    pub copies_top_graveyard_creature: bool,
     /// An exile fuse: the card exiles itself with `count` counters
     /// (`Effect::ExileSelfWithCountdown`), one comes off at each of the
     /// owner's upkeeps, and when the last is removed the engine puts the card

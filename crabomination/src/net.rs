@@ -2619,6 +2619,8 @@ pub enum GameEventWire {
     CounterRemoved { card_id: CardId, counter_type: CounterType, count: u32 },
     PermanentTapped { card_id: CardId },
     PermanentUntapped { card_id: CardId },
+    /// Wire mirror of `GameEvent::Regenerated` (CR 701.15).
+    Regenerated { card_id: CardId },
     PermanentPhasedOut { card_id: CardId },
     PermanentPhasedIn { card_id: CardId },
     ControlChanged { card_id: CardId, from: usize, to: usize },
@@ -2883,6 +2885,7 @@ impl From<&GameEvent> for GameEventWire {
             GameEvent::PermanentUntapped { card_id } => {
                 GameEventWire::PermanentUntapped { card_id: *card_id }
             }
+            GameEvent::Regenerated { card_id } => GameEventWire::Regenerated { card_id: *card_id },
             GameEvent::PermanentPhasedOut { card_id } => {
                 GameEventWire::PermanentPhasedOut { card_id: *card_id }
             }
@@ -3209,6 +3212,7 @@ impl GameEventWire {
             } => format!("−{count} {counter_type:?} on {}", name(*card_id)),
             E::PermanentTapped { card_id, .. } => format!("{} tapped", name(*card_id)),
             E::PermanentUntapped { card_id } => format!("{} untapped", name(*card_id)),
+            E::Regenerated { card_id } => format!("{} regenerated", name(*card_id)),
             E::PermanentPhasedOut { card_id } => format!("{} phased out", name(*card_id)),
             E::PermanentPhasedIn { card_id } => format!("{} phased in", name(*card_id)),
             E::ControlChanged { card_id, to, .. } => {

@@ -3,21 +3,19 @@
 Improvement opportunities for the engine, client, and tooling.
 Items are grouped by area and roughly ordered by impact within each group.
 
-## Noticed this run (MKM closed; Stronghold opened)
+## Noticed this run (Stronghold closed)
 
-- **Seven Stronghold cards remain** (`set_gaps.py sth`), each on one
-  primitive: Skeleton Scavengers ("pay {1} for each +1/+1 counter" — a
-  counter-scaled activation cost), Dream Halls (discard-a-colour-sharing-card
-  as an alternative cost for every spell), Sacred Ground (a
-  land-destroyed-by-an-opponent watcher), Hidden Retreat and Samite Blessing
-  (prevent-all-damage-from-a-chosen-source shields), Invasion Plans (the
-  attacker choosing blocks) and Volrath's Shapeshifter (full text copy of the
-  graveyard's top card). ⏳
-- **A Licid that stops being attached isn't put into a graveyard.**
-  `Effect::LicidDetach` restores the creature, which is right for the printed
-  "end this effect", but a Licid whose host leaves while it is still an Aura
-  relies on the generic unattached-Aura SBA — it dies rather than reverting,
-  which matches CR 704.5m but loses the card. ⏳
+- **`copies_top_graveyard_creature` re-syncs by name.** The SBA pass skips the
+  swap when the current definition's name already equals the target's, so two
+  same-named creature cards on top of the graveyard are indistinguishable.
+  Harmless in practice, wrong in principle. ⏳
+- **`StaticEffect::AttackingPlayerChoosesBlocks` doesn't reach the bot.**
+  `block_chooser` moves the *submitter* and the affordance walk follows it,
+  but `bot.rs` still builds its block plan from the defending seat's point of
+  view — an Invasion Plans board makes the attacking bot pick blocks that help
+  its opponent. ⏳
+- **The repo is not `cargo fmt` clean.** Running `cargo fmt --all` rewrites
+  ~700 files. Format new code by hand; don't run it across the workspace. ⏳
 - **`StaticEffect::PreventUntapGlobal`'s untap-preview path is quadratic.**
   When any global prevent is live, `do_untap`'s preview re-walks
   `untap_prevented_by_static` for every battlefield permanent instead of

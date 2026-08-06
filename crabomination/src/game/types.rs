@@ -862,7 +862,7 @@ pub enum DelayedKind {
     CardEntersOpponentGraveyardThisTurn,
     /// "Whenever a spell or ability an opponent controls causes you to
     /// discard cards this turn, [body]" (CR 603.4). Fires per card discarded
-    /// by `DelayedTrigger.controller` while `GameState.discard_causer` is one
+    /// by `DelayedTrigger.controller` while `GameState.resolution_causer` is one
     /// of their opponents; the discarded card is the trigger source. Expires
     /// at cleanup. Pure Intentions.
     OpponentCausesYouToDiscardThisTurn,
@@ -1909,7 +1909,7 @@ pub enum GameEvent {
     FirstCardDrawnThisTurn { player: usize, card_id: CardId },
     CardDiscarded { player: usize, card_id: CardId },
     /// A spell or ability an opponent of `player` controls caused that
-    /// discard (`GameState.discard_causer`). Spiritual Focus.
+    /// discard (`GameState.resolution_causer`). Spiritual Focus.
     OpponentCausedYouToDiscard { player: usize, card_id: CardId },
     /// CR 701.9 batch — a player discarded one or more cards in a single
     /// effect resolution. Fired once per resolution alongside the per-card
@@ -2222,6 +2222,10 @@ pub enum GameEvent {
     /// specific triggers ("When you cycle this card", "Whenever a
     /// player cycles a card") see a distinct event from regular hand
     /// discards.
+    /// CR 701.15 — a regeneration shield was applied to this permanent.
+    Regenerated {
+        card_id: CardId,
+    },
     CardCycled {
         player: usize,
         card_id: CardId,

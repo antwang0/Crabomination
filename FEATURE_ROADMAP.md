@@ -2548,11 +2548,9 @@ Each a small targeted feature; sweep batch by batch.
    is closed), **Legends** (273 cards, `sets::leg`–`leg7`), **Antiquities**
    (64 cards, `sets::atq`), **Arabian Nights** (63 cards, `sets::arn`) and
    **The Dark** (97 cards, `sets::drk`/`drk2`) and **Homelands** (`sets::hml`–
-   `hml3`), **Conspiracy: Take the Crown** (CN2) and **Murders at Karlov
-   Manor** (MKM) are all at zero. **Stronghold** (STH, `sets::sth`) is the
-   live front at **7** — seven cards on one primitive each
-   (TODO.md → "Noticed this run (MKM closed; Stronghold opened)"). The rest
-   of the Tempest block is wide open: `set_gaps.py tmp exo` is ~240 and ~119.
+   `hml3`), **Conspiracy: Take the Crown** (CN2), **Murders at Karlov
+   Manor** (MKM) and **Stronghold** (STH) are all at zero. The rest of the
+   Tempest block is the live front: `set_gaps.py tmp exo` is ~240 and ~119.
 1. **Replacement-effect framework** (Tier-1 #1) — highest-leverage primitive still
    open.
 2. **Card-zoom + stops/auto-yield + combat-math preview** (Tier-7 #1–3) — the trio
@@ -2575,8 +2573,8 @@ Each a small targeted feature; sweep batch by batch.
   choice from other seats), `StaticEffect::CastHandSpellsForCollectEvidence`
   (collect evidence N in place of a spell's mana cost), and an `if_cant`
   branch on `Effect::TurnFaceUpFree` (Etrata's exile-and-free-cast fallback).
-- **Stronghold at 7** — `sets::sth` ships 103 cards (`set_gaps.py sth`
-  112 → 7), tests in `classic_sets/sth`. New primitives:
+- **Stronghold closed** — `set_gaps.py sth` is empty (110 cards), tests in
+  `classic_sets/sth`. New primitives:
   `CardDefinition.buyback_additional_cost` ("Buyback—Sacrifice a land"),
   `StaticEffect::PreventUntapGlobal` (a prevent-untap that reaches every
   seat's untap step, optionally predicate-gated — Intruder Alarm, Walking
@@ -2584,6 +2582,22 @@ Each a small targeted feature; sweep batch by batch.
   (`Effect::LicidAttach`/`LicidDetach` + `CardInstance::make_licid_aura`,
   which stashes the creature definition and rewrites the live one to
   Enchantment — Aura; the aura riders ride the printed `equipped_bonus`).
+  The last seven cards added `EventKind::Regenerated` (CR 701.15),
+  `ActivatedAbility.mana_cost_per_self_counter` and `.put_hand_on_library_cost`,
+  `CardDefinition.copies_top_graveyard_creature` (a layer-1 copy re-synced
+  each SBA pass — Volrath's Shapeshifter),
+  `StaticEffect::DiscardColorSharingCardAlternativeCost` (Dream Halls) and
+  `StaticEffect::AttackingPlayerChoosesBlocks` + `GameState::block_chooser`
+  (Invasion Plans).
+- **`resolution_causer`** — `discard_causer` generalized to "the controller of
+  the resolving spell or ability", held for the whole outermost resolution and
+  replayed over the batched `PermanentDied` dispatch, so
+  `Predicate::CausedByOpponentSpellOrAbility` (was `DiscardCausedByOpponent`)
+  reaches non-discard riders (Sacred Ground).
+- **Reflexive-cost target walking** — `MaySacrifice` / `MaySacrificeSource` /
+  `MayTap` / `MayDiscard` / `MayDiscardMatching` now recurse in every
+  target-query walker, not just `requires_target`, so a targeted `then`
+  branch actually gets a target slot.
 - **SOS Special Guests** — `sos_mode::sos_special_guests` names the
   eleven-card SPG sheet (Magus of the Library and Library of Leng were the
   two not already catalogued, the latter on a new

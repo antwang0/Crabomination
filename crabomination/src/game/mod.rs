@@ -923,12 +923,13 @@ pub struct GameState {
     /// (Choice of Damnations), read by `Value::ChosenNumber`.
     #[serde(default)]
     pub chosen_number_this_resolution: u32,
-    /// The controller of the spell/ability currently causing discards, set by
-    /// the `Effect::Discard` family and consulted by `discard_card` for
-    /// "a spell or ability an opponent controls causes you to discard"
-    /// (Pure Intentions). `None` for game-driven discards (CR 514 cleanup).
-    #[serde(default)]
-    pub discard_causer: Option<usize>,
+    /// The controller of the spell or ability currently resolving, held for
+    /// the whole outermost resolution. Backs "a spell or ability an opponent
+    /// controls causes …" riders (Pure Intentions' discard, Sacred Ground's
+    /// land destruction). `None` outside a resolution, so game-driven events
+    /// (CR 514 cleanup discards, cost payments) have no causer.
+    #[serde(default, alias = "resolution_causer")]
+    pub resolution_causer: Option<usize>,
     /// Nonland cards exiled by the innermost
     /// `Effect::ExileTopBatchesUntilLandLast`, read by
     /// `Value::NonlandCardsExiledThisEffect` (Rally the Horde).
@@ -1134,14 +1135,17 @@ pub struct GameState {
     pub(crate) pending_cost_events: Vec<GameEvent>,
     /// CR 700.4 — permanents that hit a graveyard from the battlefield since
     /// the last trigger dispatch: `(card_id, last_controller, is_creature,
-    /// is_artifact)`. Populated at the single raw removal chokepoint
+    /// is_artifact, causer)`. `causer` is the `resolution_causer` at the time
+    /// of death, replayed over the dispatch so
+    /// `Predicate::CausedByOpponentSpellOrAbility` sees it (Sacred Ground).
+    /// Populated at the single raw removal chokepoint
     /// (`remove_from_battlefield_to_graveyard_raw`); drained by
     /// `dispatch_triggers_for_events` into `GameEvent::PermanentDied` so
     /// "whenever a creature or artifact you control dies" triggers
     /// (Judge Magister Gabranth, G'raha Tia) fire on non-creature deaths that
     /// no `CreatureDied` event covers.
     #[serde(skip, default)]
-    pub(crate) pending_permanent_deaths: Vec<(CardId, usize, bool, bool)>,
+    pub(crate) pending_permanent_deaths: Vec<(CardId, usize, bool, bool, Option<usize>)>,
     /// Control changes since the last trigger dispatch: `(card_id, from, to)`.
     /// Recorded at the single `change_control` chokepoint and drained by
     /// `dispatch_triggers_for_events` into `GameEvent::ControlChanged`, so
@@ -1850,6 +1854,11 @@ pub struct TempCopy {
     /// (`Duration::WhileSourceAttached` — Assimilation Aegis).
     #[serde(default)]
     pub(crate) source: Option<CardId>,
+    /// True for the standing copy a `copies_top_graveyard_creature` permanent
+    /// keeps (Volrath's Shapeshifter): the entry exists to remember the
+    /// printed definition, not to schedule a revert.
+    #[serde(default)]
+    pub(crate) shapeshifter: bool,
 }
 
 impl TempCopy {
@@ -1994,7 +2003,7 @@ impl Clone for GameState {
             countered_spell_mana_spent: self.countered_spell_mana_spent,
             countered_spell_mana_value: self.countered_spell_mana_value,
             chosen_number_this_resolution: self.chosen_number_this_resolution,
-            discard_causer: self.discard_causer,
+            resolution_causer: self.resolution_causer,
             nonland_cards_exiled_this_effect: self.nonland_cards_exiled_this_effect,
             countered_spell_controller: self.countered_spell_controller,
             accepting_player: self.accepting_player,
@@ -2316,7 +2325,7 @@ impl GameState {
             countered_spell_mana_spent: 0,
             countered_spell_mana_value: 0,
             chosen_number_this_resolution: 0,
-            discard_causer: None,
+            resolution_causer: None,
             nonland_cards_exiled_this_effect: 0,
             countered_spell_controller: None,
             accepting_player: None,
@@ -12557,8 +12566,8 @@ impl GameState {
         events.push(GameEvent::CardDiscarded { player: p, card_id });
         // "Whenever a spell or ability an opponent controls causes you to
         // discard a card" (Spiritual Focus) — the causing seat is stamped on
-        // `discard_causer` for the duration of the resolution.
-        if self.discard_causer.is_some_and(|c| self.opponents_of(p).contains(&c)) {
+        // `resolution_causer` for the duration of the resolution.
+        if self.resolution_causer.is_some_and(|c| self.opponents_of(p).contains(&c)) {
             events.push(GameEvent::OpponentCausedYouToDiscard { player: p, card_id });
         }
         self.players[p].cards_discarded_this_turn =
@@ -12592,7 +12601,7 @@ impl GameState {
         // binning it. Checked before Madness (the card never reaches a
         // graveyard, so neither replacement can also apply).
         if let Some((kind, n)) = card.definition.opponent_discard_deploys
-            && self.discard_causer.is_some_and(|c| self.opponents_of(p).contains(&c))
+            && self.resolution_causer.is_some_and(|c| self.opponents_of(p).contains(&c))
         {
             self.place_card_in_dest(
                 card,
@@ -12660,7 +12669,7 @@ impl GameState {
         player: usize,
         card_id: crate::card::CardId,
     ) {
-        let Some(causer) = self.discard_causer else { return };
+        let Some(causer) = self.resolution_causer else { return };
         if !self.opponents_of(player).contains(&causer) {
             return;
         }
@@ -14353,6 +14362,11 @@ impl GameState {
         // non-creature deaths (which emit no `CreatureDied`) still reach
         // "creature or artifact you control dies" triggers.
         let deaths = std::mem::take(&mut self.pending_permanent_deaths);
+        // Replay the deaths' causing spell/ability over the dispatch: the
+        // batch is synthesized after the resolution that killed them ended.
+        if let Some(causer) = deaths.iter().find_map(|(.., causer)| *causer) {
+            self.resolution_causer = Some(causer);
+        }
         // CR 800.4 — control changes recorded at the `change_control`
         // chokepoint since the last dispatch (Risky Move's hand-off).
         let control_changes = std::mem::take(&mut self.pending_control_changes);
@@ -14362,7 +14376,7 @@ impl GameState {
             // Peace, void counters, Kalitas, Pulmonic Sliver) never happened;
             // skip it, mirroring the `CreatureDied` guard below.
             .filter(|(card_id, ..)| !self.death_was_replaced(*card_id))
-            .map(|(card_id, controller, is_creature, is_artifact)| GameEvent::PermanentDied {
+            .map(|(card_id, controller, is_creature, is_artifact, _)| GameEvent::PermanentDied {
                 card_id,
                 controller,
                 is_creature,
@@ -20553,8 +20567,11 @@ fn static_effect_to_effects(
             // Fist of Suns — consulted by `effective_alternative_cost` at cast
             // time; no layer effect.
             | StaticEffect::FiveColorAlternativeCost
-            // Kentaro — consulted by `effective_alternative_cost`; no layer.
+            // Kentaro / Dream Halls — consulted by `effective_alternative_cost`.
             | StaticEffect::GenericAlternativeCostForFilter { .. }
+            | StaticEffect::DiscardColorSharingCardAlternativeCost
+            // Invasion Plans — read by `block_chooser` at declare-blockers.
+            | StaticEffect::AttackingPlayerChoosesBlocks
             // Warped Space — consulted by the cast-from-exile path; no layer.
             | StaticEffect::FreeExileCastOncePerTurn
             // Tomorrow, Azami's Familiar — a draw replacement consulted in

@@ -1653,9 +1653,9 @@ impl GameState {
         self.last_discarded_mana_value = None;
         self.last_revealed_from_hand = None;
         self.tapped_for_cost_power = None;
-        // Every discard from this resolution is caused by this spell/ability
-        // (Pure Intentions' "a spell or ability an opponent controls").
-        self.discard_causer = Some(ctx.controller);
+        // Everything this resolution causes is caused by this spell/ability
+        // (Pure Intentions' discard, Sacred Ground's land destruction).
+        self.resolution_causer = Some(ctx.controller);
         self.source_name_scratch = ctx.source_name;
         // Reset last-created-token scratch — `Selector::LastCreatedToken`
         // (singular) and `Selector::LastCreatedTokens` (plural) only refer
@@ -1721,6 +1721,11 @@ impl GameState {
         let ran = self.run_effect(effect, ctx, &mut events);
         self.resolution_targets = prev_targets;
         self.resolution_depth = self.resolution_depth.saturating_sub(1);
+        // Events outside a resolution (CR 514.3 cleanup discards, cost
+        // payments) have no causing spell or ability.
+        if self.resolution_depth == 0 {
+            self.resolution_causer = None;
+        }
         ran?;
         // Quina — a resolution that minted one or more tokens under a
         // player's control mints one extra rider token per
@@ -1786,9 +1791,6 @@ impl GameState {
                 events.push(GameEvent::DiscardedBatch { player, count });
             }
         }
-        // Discards outside a resolution (CR 514.3 cleanup, cost payments)
-        // have no causing spell or ability.
-        self.discard_causer = None;
         Ok(events)
     }
 
@@ -1953,7 +1955,7 @@ impl GameState {
                 .map(|c| c.regeneration_shields > 0 && !c.cant_regenerate_this_turn)
                 .unwrap_or(false)
         {
-            self.apply_regeneration(cid);
+            self.apply_regeneration(cid, events);
             return false;
         }
         // CR 702.89 — umbra armor replaces destruction.
@@ -15369,6 +15371,7 @@ impl GameState {
                 }
                 let original = std::mem::replace(&mut c.definition, std::sync::Arc::new(new_def));
                 self.temporary_copies.push(crate::game::TempCopy {
+                    shapeshifter: false,
                     card: cid,
                     original_name: original.name.to_string(),
                     original: Some(original),
@@ -26513,6 +26516,7 @@ impl GameState {
                             // restores this (a dead Clone is a Clone in the
                             // graveyard, so Vizier's embalm stays available).
                             self.temporary_copies.push(crate::game::TempCopy {
+                    shapeshifter: false,
                                 card: cid,
                                 original_name: original.name.to_string(),
                                 original: Some(original),
@@ -26561,6 +26565,7 @@ impl GameState {
                     };
                     let original = std::mem::replace(&mut c.definition, copy_def.clone());
                     self.temporary_copies.push(crate::game::TempCopy {
+                    shapeshifter: false,
                         card: cid,
                         original_name: original.name.to_string(),
                         original: Some(original),
@@ -29796,6 +29801,7 @@ impl GameState {
                 }
                 let original = std::mem::replace(&mut c.definition, std::sync::Arc::new(new_def));
                 self.temporary_copies.push(crate::game::TempCopy {
+                    shapeshifter: false,
                     card: cid,
                     original_name: original.name.to_string(),
                     original: Some(original),

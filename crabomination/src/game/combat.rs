@@ -165,11 +165,31 @@ impl GameState {
         self.combat_chooser.unwrap_or(self.active_player_idx)
     }
 
+    /// The single seat that must submit the block declaration, if any:
+    /// Master Warcraft's one-shot `combat_chooser`, else the active player
+    /// while an `AttackingPlayerChoosesBlocks` static is out (Invasion Plans).
+    pub fn block_chooser(&self) -> Option<usize> {
+        if let Some(chooser) = self.combat_chooser {
+            return Some(chooser);
+        }
+        self.battlefield
+            .iter()
+            .any(|c| {
+                c.definition.static_abilities.iter().any(|sa| {
+                    matches!(
+                        sa.effect,
+                        crate::effect::StaticEffect::AttackingPlayerChoosesBlocks
+                    )
+                })
+            })
+            .then_some(self.active_player_idx)
+    }
+
     /// May `seat` submit the block declaration? Normally any non-active seat
-    /// (a defending player declares its own blocks); with a `combat_chooser`
+    /// (a defending player declares its own blocks); with a `block_chooser`
     /// set, only that seat.
     pub fn may_declare_blocks(&self, seat: usize) -> bool {
-        match self.combat_chooser {
+        match self.block_chooser() {
             Some(chooser) => chooser == seat,
             None => seat != self.active_player_idx,
         }
@@ -1299,10 +1319,10 @@ impl GameState {
         if self.step != TurnStep::DeclareBlockers {
             return Err(GameError::WrongStep { actual: self.step });
         }
-        // Master Warcraft — only the chooser may submit. (Without one the
-        // engine keeps trusting the caller; blocker ownership is validated
-        // per assignment below.)
-        if let Some(chooser) = self.combat_chooser
+        // Master Warcraft / Invasion Plans — only the chooser may submit.
+        // (Without one the engine keeps trusting the caller; blocker
+        // ownership is validated per assignment below.)
+        if let Some(chooser) = self.block_chooser()
             && self.priority.player_with_priority != chooser
         {
             return Err(GameError::NotYourPriority);

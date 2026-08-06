@@ -4,10 +4,16 @@ use crabomination::card::{CardId, CounterType, Keyword};
 use crabomination::catalog;
 use crabomination::decision::{DecisionAnswer, ScriptedDecider};
 use crabomination::game::effects::EffectContext;
-use crabomination::game::types::{GameAction, Target, TurnStep};
+use crabomination::game::types::{Attack, AttackTarget, GameAction, Target, TurnStep};
 use crabomination::game::*;
 use crabomination::game::{drain_stack, two_player_game};
 use crabomination::mana::Color;
+
+fn advance_to(g: &mut GameState, step: TurnStep) {
+    while g.step != step {
+        g.perform_action(GameAction::PassPriority).expect("pass priority");
+    }
+}
 
 fn activate(
     g: &mut GameState,
@@ -587,4 +593,206 @@ fn jinxed_ring_pings_its_controller() {
     g.dispatch_triggers_for_events(&events);
     drain_stack(&mut g);
     assert_eq!(g.players[0].life, 19);
+}
+
+/// Volrath's Shapeshifter wears the top creature card of your graveyard and
+/// reverts once a noncreature card covers it.
+#[test]
+fn volraths_shapeshifter_wears_the_graveyard_top() {
+    let mut g = two_player_game();
+    let shifter = g.add_card_to_battlefield(0, catalog::volraths_shapeshifter());
+    g.add_card_to_graveyard(0, catalog::serra_angel());
+    g.check_state_based_actions();
+    let cp = g.computed_permanent(shifter).unwrap();
+    assert_eq!((cp.power, cp.toughness), (4, 4));
+    assert!(cp.keywords.contains(&Keyword::Flying));
+    // Its own "{2}: Discard a card" rides along on the copy.
+    assert_eq!(
+        g.battlefield_find(shifter)
+            .unwrap()
+            .definition
+            .activated_abilities
+            .len(),
+        1
+    );
+
+    g.add_card_to_graveyard(0, catalog::lightning_bolt());
+    g.check_state_based_actions();
+    let cp = g.computed_permanent(shifter).unwrap();
+    assert_eq!((cp.power, cp.toughness), (0, 1), "back to its printed self");
+}
+
+/// Skeleton Scavengers' regeneration costs {1} per counter and grows it.
+#[test]
+fn skeleton_scavengers_grows_as_it_regenerates() {
+    let mut g = two_player_game();
+    let skel = g.add_card_to_battlefield_with_counters(0, catalog::skeleton_scavengers());
+    g.check_state_based_actions();
+    assert_eq!(
+        g.battlefield_find(skel)
+            .unwrap()
+            .counter_count(CounterType::PlusOnePlusOne),
+        1
+    );
+
+    g.step = TurnStep::PreCombatMain;
+    assert!(
+        activate(&mut g, skel, 0, None).is_err(),
+        "{{1}} for the one counter is unpaid"
+    );
+    g.players[0].mana_pool.add_colorless(1);
+    activate(&mut g, skel, 0, None).expect("regenerate");
+    drain_stack(&mut g);
+    // The shield resolves on the next destruction, and the rider grows it.
+    let mut events = vec![];
+    g.destroy_permanent(skel, false, &mut events);
+    events.extend(g.check_state_based_actions());
+    g.dispatch_triggers_for_events(&events);
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(skel).is_some(), "regenerated");
+    assert_eq!(
+        g.battlefield_find(skel)
+            .unwrap()
+            .counter_count(CounterType::PlusOnePlusOne),
+        2
+    );
+}
+
+/// Sacred Ground returns a land an opponent's spell destroyed.
+#[test]
+fn sacred_ground_returns_an_opponents_land_kill() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::sacred_ground());
+    let land = g.add_card_to_battlefield(0, catalog::forest());
+    let rain = g.add_card_to_hand(1, catalog::stone_rain());
+    g.active_player_idx = 1;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 1;
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.players[1].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: rain,
+        target: Some(Target::Permanent(land)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast");
+    drain_stack(&mut g);
+    assert!(
+        g.battlefield_find(land).is_some(),
+        "Sacred Ground put it back"
+    );
+}
+
+/// Hidden Retreat banks a card off your hand to blank a burn spell.
+#[test]
+fn hidden_retreat_blanks_a_burn_spell() {
+    let mut g = two_player_game();
+    let retreat = g.add_card_to_battlefield(0, catalog::hidden_retreat());
+    g.add_card_to_hand(0, catalog::grizzly_bears());
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.active_player_idx = 1;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 1;
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt,
+        target: Some(Target::Player(0)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast");
+    let library = g.players[0].library.len();
+    activate(&mut g, retreat, 0, Some(Target::Permanent(bolt))).expect("prevent");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, 20, "the Bolt dealt nothing");
+    assert_eq!(
+        g.players[0].library.len(),
+        library + 1,
+        "a card paid the cost"
+    );
+}
+
+/// Samite Blessing lends the enchanted creature a damage-prevention tap.
+#[test]
+fn samite_blessing_grants_a_prevention_tap() {
+    let mut g = two_player_game();
+    let healer = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let aura = g.add_card_to_battlefield(0, catalog::samite_blessing());
+    g.battlefield_find_mut(aura).unwrap().attached_to = Some(healer);
+    g.clear_sickness(healer);
+    let ward = g.add_card_to_battlefield(0, catalog::serra_angel());
+    g.step = TurnStep::PreCombatMain;
+    let granted = g.granted_abilities_for(healer);
+    assert_eq!(granted.len(), 1, "the Aura lends exactly one ability");
+    let printed = g
+        .battlefield_find(healer)
+        .unwrap()
+        .definition
+        .activated_abilities
+        .len();
+    activate(&mut g, healer, printed, Some(Target::Permanent(ward))).expect("prevent");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(healer).unwrap().tapped);
+}
+
+/// Dream Halls lets any spell be paid for by discarding a colour-sharing card.
+#[test]
+fn dream_halls_trades_a_discard_for_the_mana_cost() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(1, catalog::dream_halls());
+    let angel = g.add_card_to_hand(0, catalog::serra_angel());
+    let pitch = g.add_card_to_hand(0, catalog::pacifism());
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpellAlternative {
+        card_id: angel,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+        pitch_card: None,
+    })
+    .expect("cast off Dream Halls");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(angel).is_some());
+    assert!(
+        g.players[0].graveyard.iter().any(|c| c.id == pitch),
+        "a white card paid for it"
+    );
+}
+
+/// Invasion Plans makes every creature block and hands the declaration to the
+/// attacking player.
+#[test]
+fn invasion_plans_moves_the_block_declaration_to_the_attacker() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::invasion_plans());
+    let attacker = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let blocker = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.clear_sickness(attacker);
+    assert!(
+        g.computed_permanent(blocker)
+            .unwrap()
+            .keywords
+            .contains(&Keyword::MustBlock)
+    );
+    advance_to(&mut g, TurnStep::DeclareAttackers);
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker,
+        target: AttackTarget::Player(1),
+    }]))
+    .expect("attack");
+    drain_stack(&mut g);
+    advance_to(&mut g, TurnStep::DeclareBlockers);
+    assert_eq!(g.block_chooser(), Some(0));
+    assert!(g.may_declare_blocks(0) && !g.may_declare_blocks(1));
+    g.perform_action(GameAction::DeclareBlockers(vec![(blocker, attacker)]))
+        .expect("blocks");
+    assert_eq!(
+        g.block_map.get(&blocker).map(|v| v.as_slice()),
+        Some(&[attacker][..])
+    );
 }

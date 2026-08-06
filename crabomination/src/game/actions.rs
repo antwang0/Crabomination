@@ -94,10 +94,35 @@ impl GameState {
                     _ => false,
                 })
         });
-        generic_alt.then(|| crate::card::AlternativeCost {
-            mana_cost: crate::mana::cost(&[crate::mana::generic(card.definition.cost.cmc())]),
-            ..Default::default()
-        })
+        if generic_alt {
+            return Some(crate::card::AlternativeCost {
+                mana_cost: crate::mana::cost(&[crate::mana::generic(card.definition.cost.cmc())]),
+                ..Default::default()
+            });
+        }
+        // Dream Halls — every seat may discard a card sharing a colour with
+        // the spell instead of paying for it. Colourless spells share no
+        // colour, so they get no discount.
+        let dream_halls = self.battlefield.iter().any(|c| {
+            c.definition.static_abilities.iter().any(|sa| {
+                matches!(
+                    sa.effect,
+                    crate::effect::StaticEffect::DiscardColorSharingCardAlternativeCost
+                )
+            })
+        });
+        if dream_halls {
+            let colors = card.definition.printed_colors();
+            let filter = colors
+                .into_iter()
+                .map(crate::card::SelectionRequirement::HasColor)
+                .reduce(|a, b| a.or(b))?;
+            return Some(crate::card::AlternativeCost {
+                discard_filters: vec![(filter, 1)],
+                ..Default::default()
+            });
+        }
+        None
     }
 }
 
@@ -13663,6 +13688,22 @@ impl GameState {
             Vec::new()
         };
 
+        // Pre-flight "put a card from your hand on top of your library" gate
+        // (CR 602.5b — Hidden Retreat). Lowest mana value, like discard costs.
+        let library_top_pick: Option<CardId> = if ability.put_hand_on_library_cost {
+            match self.players[p]
+                .hand
+                .iter()
+                .filter(|c| c.id != card_id)
+                .min_by_key(|c| c.definition.cost.cmc())
+            {
+                Some(c) => Some(c.id),
+                None => return Err(GameError::SelectionRequirementViolated),
+            }
+        } else {
+            None
+        };
+
         // Pre-flight discard-cost gate (CR 602.5b "Discard a [filter] card:").
         // Confirm `count` matching cards in the activator's hand; pick the
         // lowest-CMC matches so higher-value cards stay. Discarded after
@@ -13902,6 +13943,16 @@ impl GameState {
             let count = src.counter_count(kind);
             if count > 0 {
                 effective_mana_cost.reduce_generic(count);
+            }
+        }
+        // "Pay {1} for each [kind] counter on this creature" (Skeleton
+        // Scavengers) — the surcharge mirror of the reduction above.
+        if let Some(kind) = ability.mana_cost_per_self_counter
+            && let Some(src) = self.battlefield_find(card_id)
+        {
+            let count = src.counter_count(kind);
+            if count > 0 {
+                effective_mana_cost.add_generic(count);
             }
         }
         // "Costs {1} less for each [kind] counter on [filter] you control"
@@ -14958,6 +15009,14 @@ impl GameState {
         {
             let ctx = crate::game::effects::EffectContext::for_spell(owner, None, 0, 0);
             self.move_card_to(card_id, &crate::effect::ZoneDest::Exile, &ctx, &mut events);
+        }
+
+        // Put-a-card-on-top-as-cost: the pre-flight pick leaves the hand once
+        // the rest of the cost is paid.
+        if let Some(cid) = library_top_pick
+            && let Some(card) = Self::take_card(&mut self.players[p].hand, cid)
+        {
+            self.players[p].library.insert(0, card);
         }
 
         // Discard-self-as-cost (hand activations): the "Discard this card:"

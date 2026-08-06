@@ -4,9 +4,8 @@
 
 use crate::card::{
     ActivatedAbility, CardDefinition, CardType, CounterType, CreatureType, DynamicPt, EquipBonus,
-    EventKind,
-    EventScope, EventSpec, Keyword, LandType, SelectionRequirement as R, StaticAbility, Subtypes,
-    Supertype, TokenDefinition, TriggeredAbility,
+    EventKind, EventScope, EventSpec, Keyword, LandType, SelectionRequirement as R, StaticAbility,
+    Subtypes, Supertype, TokenDefinition, TriggeredAbility,
 };
 use crate::effect::shortcut::{deal, draw, target_filtered, target_n};
 use crate::effect::{
@@ -1711,6 +1710,185 @@ pub fn portcullis() -> CardDefinition {
                 return_to: crate::card::ExileReturnZone::Battlefield,
             },
         }],
+        ..Default::default()
+    }
+}
+
+/// Volrath's Shapeshifter — {1}{U}{U} 0/1 that wears the top creature card of
+/// your graveyard, plus its own discard outlet.
+pub fn volraths_shapeshifter() -> CardDefinition {
+    CardDefinition {
+        copies_top_graveyard_creature: true,
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(2)]),
+            effect: Effect::Discard {
+                who: Selector::You,
+                amount: Value::ONE,
+                random: false,
+            },
+            ..Default::default()
+        }],
+        ..creature(
+            "Volrath's Shapeshifter",
+            cost(&[generic(1), u(), u()]),
+            vec![CreatureType::Phyrexian, CreatureType::Shapeshifter],
+            0,
+            1,
+        )
+    }
+}
+
+/// Skeleton Scavengers — {2}{B} 0/0 Skeleton that enters with a +1/+1
+/// counter. Its regeneration costs {1} per counter and grows it each time.
+pub fn skeleton_scavengers() -> CardDefinition {
+    CardDefinition {
+        enters_with_counters: Some((CounterType::PlusOnePlusOne, Value::ONE)),
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost_per_self_counter: Some(CounterType::PlusOnePlusOne),
+            effect: Effect::Regenerate {
+                what: Selector::This,
+            },
+            ..Default::default()
+        }],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Regenerated, EventScope::SelfSource),
+            effect: Effect::AddCounter {
+                what: Selector::This,
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::ONE,
+            },
+        }],
+        ..creature(
+            "Skeleton Scavengers",
+            cost(&[generic(2), b()]),
+            vec![CreatureType::Skeleton],
+            0,
+            0,
+        )
+    }
+}
+
+/// Sacred Ground — {1}{W} Enchantment. Lands an opponent's spell or ability
+/// puts into your graveyard come straight back.
+pub fn sacred_ground() -> CardDefinition {
+    CardDefinition {
+        name: "Sacred Ground",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::PermanentDied, EventScope::YourControl).with_filter(
+                Predicate::All(vec![
+                    Predicate::EntityMatches {
+                        what: Selector::TriggerSource,
+                        filter: R::Land,
+                    },
+                    Predicate::CausedByOpponentSpellOrAbility,
+                ]),
+            ),
+            effect: Effect::Move {
+                what: Selector::TriggerSource,
+                to: ZoneDest::Battlefield {
+                    controller: PlayerRef::You,
+                    tapped: false,
+                },
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Hidden Retreat — {2}{W} Enchantment. Bank a card off your hand to blank a
+/// burn spell.
+pub fn hidden_retreat() -> CardDefinition {
+    CardDefinition {
+        name: "Hidden Retreat",
+        cost: cost(&[generic(2), w()]),
+        card_types: vec![CardType::Enchantment],
+        activated_abilities: vec![ActivatedAbility {
+            put_hand_on_library_cost: true,
+            effect: Effect::PreventAllDamageByTargetThisTurn {
+                target: target_filtered(
+                    R::IsSpellOnStack.and(
+                        R::HasCardType(CardType::Instant).or(R::HasCardType(CardType::Sorcery)),
+                    ),
+                ),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Samite Blessing — {W} Aura granting the enchanted creature a Samite
+/// Healer's damage-prevention tap.
+pub fn samite_blessing() -> CardDefinition {
+    CardDefinition {
+        name: "Samite Blessing",
+        cost: cost(&[w()]),
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes {
+            enchantment_subtypes: vec![crate::card::EnchantmentSubtype::Aura],
+            ..Default::default()
+        },
+        effect: Effect::Attach {
+            what: Selector::This,
+            to: target_filtered(R::Creature),
+        },
+        equipped_bonus: Some(EquipBonus {
+            activated_abilities: vec![ActivatedAbility {
+                tap_cost: true,
+                effect: Effect::PreventNextDamageFromChosenSource {
+                    filter: R::Any,
+                    reflect: false,
+                    to: Some(target_filtered(R::Creature)),
+                    gain_life: false,
+                    redirect_to: None,
+                    whole_turn: false,
+                },
+                ..Default::default()
+            }],
+            ..Default::default()
+        }),
+        ..Default::default()
+    }
+}
+
+/// Dream Halls — {3}{U}{U} Enchantment. Every spell can be paid for by
+/// discarding a card that shares a color with it.
+pub fn dream_halls() -> CardDefinition {
+    CardDefinition {
+        name: "Dream Halls",
+        cost: cost(&[generic(3), u(), u()]),
+        card_types: vec![CardType::Enchantment],
+        static_abilities: vec![StaticAbility {
+            description: "Rather than pay the mana cost for a spell, its controller may \
+                          discard a card that shares a color with that spell.",
+            effect: StaticEffect::DiscardColorSharingCardAlternativeCost,
+        }],
+        ..Default::default()
+    }
+}
+
+/// Invasion Plans — {2}{R} Enchantment. Everything blocks, and the attacker
+/// decides how.
+pub fn invasion_plans() -> CardDefinition {
+    CardDefinition {
+        name: "Invasion Plans",
+        cost: cost(&[generic(2), r()]),
+        card_types: vec![CardType::Enchantment],
+        static_abilities: vec![
+            StaticAbility {
+                description: "All creatures block each combat if able.",
+                effect: StaticEffect::GrantKeyword {
+                    applies_to: Selector::EachPermanent(R::Creature),
+                    keyword: Keyword::MustBlock,
+                },
+            },
+            StaticAbility {
+                description: "The attacking player chooses how each creature blocks each combat.",
+                effect: StaticEffect::AttackingPlayerChoosesBlocks,
+            },
+        ],
         ..Default::default()
     }
 }

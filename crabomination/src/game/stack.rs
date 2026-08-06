@@ -583,6 +583,9 @@ impl GameState {
                 // permanents-died tally. Snapshot the turn's total first so
                 // the classic werewolf "no spells cast last turn" check (read
                 // at the next upkeep) sees it.
+                // CR 514.3 — the cleanup discard has no causing spell or
+                // ability, so no earlier resolution may be attributed to it.
+                self.resolution_causer = None;
                 self.spells_cast_last_turn = self.spells_cast_this_turn;
                 self.spells_cast_this_turn = 0;
                 self.last_cast_spell_colors.clear();
@@ -632,10 +635,14 @@ impl GameState {
             // Master Warcraft — the declaration steps hand priority to the
             // outside chooser so it, not the active/defending player, submits
             // the declaration. Without a chooser these behave like `_`.
-            TurnStep::DeclareAttackers | TurnStep::DeclareBlockers
-                if self.combat_chooser.is_some() =>
-            {
-                self.priority.player_with_priority = self.combat_chooser.unwrap_or(self.active_player_idx);
+            TurnStep::DeclareAttackers if self.combat_chooser.is_some() => {
+                self.priority.player_with_priority =
+                    self.combat_chooser.unwrap_or(self.active_player_idx);
+                self.priority.consecutive_passes = 0;
+            }
+            TurnStep::DeclareBlockers if self.block_chooser().is_some() => {
+                self.priority.player_with_priority =
+                    self.block_chooser().unwrap_or(self.active_player_idx);
                 self.priority.consecutive_passes = 0;
             }
             _ => {
@@ -3794,7 +3801,7 @@ impl GameState {
     /// CR 701.15 — apply a regeneration shield: remove one shield, tap the
     /// permanent, remove it from combat (as both attacker and blocker), and
     /// heal all marked damage. The permanent stays on the battlefield.
-    pub(crate) fn apply_regeneration(&mut self, id: CardId) {
+    pub(crate) fn apply_regeneration(&mut self, id: CardId, events: &mut Vec<GameEvent>) {
         if let Some(c) = self.battlefield_find_mut(id) {
             c.regeneration_shields = c.regeneration_shields.saturating_sub(1);
             c.tapped = true;
@@ -3803,6 +3810,7 @@ impl GameState {
         }
         // Remove from combat: drop it as a declared attacker and as a blocker.
         self.remove_permanent_from_combat(id);
+        events.push(GameEvent::Regenerated { card_id: id });
     }
 
     /// CR 506.4 — remove a permanent from combat: it stops being a declared
@@ -3920,6 +3928,84 @@ impl GameState {
         }
     }
 
+    /// CR 613 layer 1 — keep every `copies_top_graveyard_creature` permanent
+    /// (Volrath's Shapeshifter) matched to the top creature card of its
+    /// controller's graveyard, reverting to its printed self when the top card
+    /// isn't a creature. The printed definition lives on a `shapeshifter`
+    /// `TempCopy` entry, so a snapshot round-trip recovers it by name.
+    fn sync_graveyard_shapeshifters(&mut self) {
+        let ids: Vec<CardId> = self
+            .battlefield
+            .iter()
+            .filter(|c| {
+                c.definition.copies_top_graveyard_creature
+                    || self
+                        .temporary_copies
+                        .iter()
+                        .any(|tc| tc.card == c.id && tc.shapeshifter)
+            })
+            .map(|c| c.id)
+            .collect();
+        for id in ids {
+            let printed = match self
+                .temporary_copies
+                .iter()
+                .find(|tc| tc.card == id && tc.shapeshifter)
+                .and_then(|tc| tc.original_def())
+            {
+                Some(d) => d,
+                None => match self.battlefield_find(id) {
+                    Some(c) => c.definition.clone(),
+                    None => continue,
+                },
+            };
+            if !printed.copies_top_graveyard_creature {
+                continue;
+            }
+            let Some(controller) = self.battlefield_find(id).map(|c| c.controller) else {
+                continue;
+            };
+            let want = self.players[controller]
+                .graveyard
+                .last()
+                .filter(|c| c.definition.is_creature())
+                .map(|c| c.definition.clone());
+            let target = match want {
+                Some(top) => {
+                    // The printed card's own abilities ride along on the copy
+                    // ("… and has '{2}: Discard a card.'").
+                    let mut d = (*top).clone();
+                    d.copies_top_graveyard_creature = false;
+                    d.activated_abilities
+                        .extend(printed.activated_abilities.iter().cloned());
+                    std::sync::Arc::new(d)
+                }
+                None => printed.clone(),
+            };
+            let Some(card) = self.battlefield_find_mut(id) else {
+                continue;
+            };
+            if card.definition.name == target.name {
+                continue;
+            }
+            card.definition = target;
+            if !self
+                .temporary_copies
+                .iter()
+                .any(|tc| tc.card == id && tc.shapeshifter)
+            {
+                self.temporary_copies.push(crate::game::TempCopy {
+                    card: id,
+                    original: Some(printed.clone()),
+                    original_name: printed.name.to_string(),
+                    duration: crate::effect::Duration::Permanent,
+                    source: None,
+                    shapeshifter: true,
+                });
+            }
+        }
+    }
+
     pub fn check_state_based_actions(&mut self) -> Vec<GameEvent> {
         let mut events = vec![];
 
@@ -3931,6 +4017,8 @@ impl GameState {
         // CR 704.6f — a face-up phenomenon whose encounter trigger has left the
         // stack makes its controller planeswalk.
         self.sweep_finished_phenomena();
+
+        self.sync_graveyard_shapeshifters();
 
         // CR 603.8 — state-triggered flip (Student of Elements: "When this
         // creature has flying, flip it"). Cheap guard so the common board pays
@@ -4556,7 +4644,7 @@ impl GameState {
                 .map(|c| c.regeneration_shields > 0 && !c.cant_regenerate_this_turn)
                 .unwrap_or(false);
             if has_regen && !dies_by_lethal_toughness {
-                self.apply_regeneration(id);
+                self.apply_regeneration(id, &mut events);
                 continue;
             }
             // CR 702.89 — umbra armor replaces destruction (not the
@@ -5279,6 +5367,7 @@ impl GameState {
                     card.controller,
                     card.definition.is_creature(),
                     card.definition.card_types.contains(&crate::card::CardType::Artifact),
+                    self.resolution_causer,
                 ));
             }
             // CR 702.139 — Revolt: a permanent left the battlefield under its

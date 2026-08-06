@@ -2461,8 +2461,8 @@ impl GameState {
                 };
                 count >= n
             }
-            Predicate::DiscardCausedByOpponent => self
-                .discard_causer
+            Predicate::CausedByOpponentSpellOrAbility => self
+                .resolution_causer
                 .is_some_and(|c| self.opponents_of(ctx.controller).contains(&c)),
             Predicate::CastFromGraveyard => {
                 // Read directly off the resolution context. Stamped by

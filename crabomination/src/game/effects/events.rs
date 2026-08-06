@@ -49,6 +49,7 @@ pub(crate) fn event_matches_spec(
         (EventKind::BlocksNOrMore(_), GameEvent::BlockerDeclared { .. }) => true,
         (EventKind::BecomesBlockedByNOrMore(_), GameEvent::BlockerDeclared { .. }) => true,
         (EventKind::AttacksAndIsntBlocked, GameEvent::AttackerWentUnblocked { .. }) => true,
+        (EventKind::Regenerated, GameEvent::Regenerated { .. }) => true,
         // Enrage (CR 702.130): keyed on the damaged permanent, so we only
         // match `DamageDealt` events that hit a card (not a player).
         (EventKind::DealtDamage, GameEvent::DamageDealt { to_card: Some(_), .. }) => true,
@@ -421,6 +422,10 @@ pub(crate) fn event_matches_spec(
             // Move). The kind arm above already pinned the new controller.
             event,
             GameEvent::ControlChanged { card_id, .. } if *card_id == source.id
+        ) || matches!(
+            // CR 701.15 — "Whenever this creature regenerates."
+            event,
+            GameEvent::Regenerated { card_id } if *card_id == source.id
         ) || matches!(
             // "Whenever this permanent activates an ability" — the equipped
             // creature's own activations (Illusionist's Bracers, CR 706.10).
@@ -971,6 +976,7 @@ fn event_card(event: &GameEvent) -> Option<CardId> {
         | GameEvent::PermanentTapped { card_id, .. }
         | GameEvent::TappedForMana { card_id, .. }
         | GameEvent::PermanentUntapped { card_id }
+        | GameEvent::Regenerated { card_id }
         | GameEvent::PermanentPhasedIn { card_id }
         | GameEvent::Explored { card_id, .. }
         | GameEvent::BecameMonstrous { card_id, .. }

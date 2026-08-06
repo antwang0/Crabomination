@@ -2367,6 +2367,16 @@ pub enum StaticEffect {
     HasActivatedAbilitiesOfGraveyardLands,
     /// Phyrexian Vindicator — "If damage would be dealt to this creature,
     /// prevent it. When damage is prevented this way, this creature deals
+    /// CR 118.9 — "Rather than pay the mana cost for a spell, its controller
+    /// may discard a card that shares a color with that spell" (Dream Halls).
+    /// Applies to every seat; read by `effective_alternative_cost`, which
+    /// concretizes the colour clause against the spell being cast.
+    DiscardColorSharingCardAlternativeCost,
+    /// "The attacking player chooses how each creature blocks each combat"
+    /// (Invasion Plans) — the block declaration is submitted by the active
+    /// player. Read via `GameState::block_chooser`, the standing sibling of
+    /// Master Warcraft's one-shot `combat_chooser`.
+    AttackingPlayerChoosesBlocks,
     /// that much damage to any other target" (auto-picked, preferring an
     /// opposing creature, then the opponent).
     PreventDamageToThisRedirect,
@@ -2877,6 +2887,11 @@ pub struct ActivatedAbility {
     /// Defaults to None via `#[serde(default)]`.
     #[serde(default)]
     pub self_counter_cost_reduction: Option<crate::card::CounterType>,
+    /// "Pay {1} for each [kind] counter on this creature" — the surcharge
+    /// mirror of `self_counter_cost_reduction`, added to the generic cost at
+    /// payment time (Skeleton Scavengers). Defaults to None.
+    #[serde(default)]
+    pub mana_cost_per_self_counter: Option<crate::card::CounterType>,
     /// "This ability costs {1} less to activate for each [filter] you
     /// control" — generic-only reduction counted off the activator's
     /// battlefield at payment time (the Kamigawa channel lands' legendary
@@ -3120,6 +3135,11 @@ pub struct ActivatedAbility {
     /// Treasure`. Defaults to false.
     #[serde(default)]
     pub discard_self_cost: bool,
+    /// CR 602.5b — "Put a card from your hand on top of your library:" as an
+    /// activation cost (Hidden Retreat). Gated on a non-empty hand; the
+    /// lowest-mana-value card is auto-picked, like `discard_cost`.
+    #[serde(default)]
+    pub put_hand_on_library_cost: bool,
     /// CR 702.177 — Exhaust: this activated ability can be activated only
     /// once (per game, not per turn). Tracked per-permanent-instance in
     /// `CardInstance.exhausted_abilities`, which — unlike `once_per_turn_used`
