@@ -428,3 +428,197 @@ fn niv_mizzet_guildpact_counts_pairs_and_dodges_gold_removal() {
     assert_eq!(g.players[0].life, 21, "one pair → one life");
     assert_eq!(g.players[1].life, 19, "and one damage");
 }
+
+// ── batch 2 ───────────────────────────────────────────────────────────────
+
+/// Tail the Suspect makes a Clue and unlocks a second land drop.
+#[test]
+fn tail_the_suspect_investigates_and_adds_a_land_drop() {
+    let mut g = two_player_game();
+    let adv = catalog::kellan_inquisitive_prodigy().adventure.as_ref().unwrap().effect.clone();
+    let ctx = crabomination::game::effects::EffectContext::for_ability(CardId(0), 0, None);
+    g.resolve_effect(&adv, &ctx).expect("Tail the Suspect");
+    assert!(g.battlefield.iter().any(|c| c.definition.name == "Clue"));
+    assert_eq!(g.players[0].extra_land_plays, 1);
+}
+
+/// Kellan's attack blows up an artifact and only draws when it was yours.
+#[test]
+fn kellan_draws_only_off_his_own_artifact() {
+    let mut g = two_player_game();
+    let kellan = g.add_card_to_battlefield(0, catalog::kellan_inquisitive_prodigy());
+    let theirs = g.add_card_to_battlefield(1, catalog::sol_ring());
+    let trigger = catalog::kellan_inquisitive_prodigy().triggered_abilities[0].effect.clone();
+    let ctx = crabomination::game::effects::EffectContext {
+        targets: vec![Target::Permanent(theirs)],
+        ..crabomination::game::effects::EffectContext::for_ability(kellan, 0, None)
+    };
+    let before = g.players[0].hand.len();
+    g.resolve_effect(&trigger, &ctx).expect("attack trigger");
+    assert!(g.battlefield_find(theirs).is_none(), "their Sol Ring is gone");
+    assert_eq!(g.players[0].hand.len(), before, "no draw off their artifact");
+}
+
+/// Aurelia's Vindicator exiles on unmask and hands the exiles back when it
+/// leaves.
+#[test]
+fn aurelias_vindicator_exiles_then_refunds() {
+    let mut g = two_player_game();
+    let angel = g.add_card_to_battlefield(0, catalog::aurelias_vindicator());
+    let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let def = catalog::aurelias_vindicator();
+    let ctx = crabomination::game::effects::EffectContext {
+        targets: vec![Target::Permanent(victim)],
+        x_value: 1,
+        ..crabomination::game::effects::EffectContext::for_ability(angel, 0, None)
+    };
+    g.resolve_effect(&def.triggered_abilities[0].effect, &ctx).expect("unmask");
+    assert!(g.exile.iter().any(|c| c.id == victim), "exiled by the Angel");
+    g.resolve_effect(&def.triggered_abilities[1].effect, &ctx).expect("leaves");
+    assert!(g.players[1].hand.iter().any(|c| c.id == victim), "returned to its owner's hand");
+}
+
+/// Branch of Vitu-Ghazi's unmask adds two mana that survives the phase.
+#[test]
+fn branch_of_vitu_ghazi_banks_two_mana() {
+    let mut g = two_player_game();
+    let land = g.add_card_to_battlefield(0, catalog::branch_of_vitu_ghazi());
+    let ctx = crabomination::game::effects::EffectContext::for_ability(land, 0, None);
+    g.resolve_effect(&catalog::branch_of_vitu_ghazi().triggered_abilities[0].effect, &ctx)
+        .expect("turn face up");
+    assert_eq!(g.players[0].mana_pool.total(), 2);
+    assert_eq!(g.players[0].kept_mana_this_turn.total(), 2, "the mana survives the phase");
+}
+
+/// Tenth District Hero grows into a Detective, then into Mileva, whose
+/// indestructible anthem only switches on at 5/5.
+#[test]
+fn tenth_district_hero_levels_into_mileva() {
+    let mut g = two_player_game();
+    let hero = g.add_card_to_battlefield(0, catalog::tenth_district_hero());
+    let ally = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let def = catalog::tenth_district_hero();
+    let ctx = crabomination::game::effects::EffectContext::for_ability(hero, 0, None);
+    g.resolve_effect(&def.activated_abilities[0].effect, &ctx).expect("become a Detective");
+    let cp = g.computed_permanent(hero).unwrap();
+    assert_eq!((cp.power, cp.toughness), (4, 4));
+    assert!(cp.subtypes.creature_types.contains(&crabomination::card::CreatureType::Detective));
+    assert!(!g.computed_permanent(ally).unwrap().keywords.contains(&Keyword::Indestructible));
+
+    g.resolve_effect(&def.activated_abilities[1].effect, &ctx).expect("become Mileva");
+    assert_eq!(g.computed_permanent(hero).unwrap().power, 5);
+    assert!(
+        g.computed_permanent(ally).unwrap().keywords.contains(&Keyword::Indestructible),
+        "Mileva shields the rest of the team"
+    );
+}
+
+/// Urgent Necropsy collects evidence equal to the targets' total mana value,
+/// then destroys one of each type.
+#[test]
+fn urgent_necropsy_sweeps_four_types() {
+    let mut g = two_player_game();
+    for _ in 0..4 {
+        g.add_card_to_graveyard(0, catalog::serra_angel()); // MV 5 each
+    }
+    let ring = g.add_card_to_battlefield(1, catalog::sol_ring());
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let ctx = crabomination::game::effects::EffectContext {
+        targets: vec![Target::Permanent(ring), Target::Permanent(bear)],
+        ..crabomination::game::effects::EffectContext::for_ability(CardId(0), 0, None)
+    };
+    g.resolve_effect(&catalog::urgent_necropsy().effect, &ctx).expect("Necropsy");
+    assert!(g.battlefield_find(ring).is_none());
+    assert!(g.battlefield_find(bear).is_none());
+    assert!(g.players[0].graveyard.len() < 4, "evidence was collected");
+}
+
+/// Deadly Cover-Up wraths, and with evidence collected strips every copy of a
+/// named card out of an opponent's zones.
+#[test]
+fn deadly_cover_up_wraths_and_name_strips() {
+    let mut g = two_player_game();
+    let mine = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let theirs = g.add_card_to_battlefield(1, catalog::serra_angel());
+    let marked = g.add_card_to_graveyard(1, catalog::lightning_bolt());
+    g.add_card_to_library(1, catalog::lightning_bolt());
+    let mut ctx = crabomination::game::effects::EffectContext {
+        targets: vec![Target::Permanent(marked)],
+        ..crabomination::game::effects::EffectContext::for_ability(CardId(0), 0, None)
+    };
+    ctx.cast_collected_evidence = true;
+    g.resolve_effect(&catalog::deadly_cover_up().effect, &ctx).expect("Cover-Up");
+    assert!(g.battlefield_find(mine).is_none() && g.battlefield_find(theirs).is_none());
+    assert_eq!(
+        g.players[1].library.iter().filter(|c| c.definition.name == "Lightning Bolt").count(),
+        0,
+        "the library copy is gone too"
+    );
+}
+
+/// Expose the Culprit's first mode flips a face-down creature up.
+#[test]
+fn expose_the_culprit_unmasks() {
+    let mut g = two_player_game();
+    let hidden = g.add_card_to_battlefield(0, catalog::exalted_angel());
+    g.battlefield_find_mut(hidden).unwrap().turn_face_down();
+    let ctx = crabomination::game::effects::EffectContext {
+        targets: vec![Target::Permanent(hidden)],
+        mode: 0,
+        ..crabomination::game::effects::EffectContext::for_ability(CardId(0), 0, None)
+    };
+    g.resolve_effect(&catalog::expose_the_culprit().effect, &ctx).expect("Expose");
+    assert!(!g.battlefield_find(hidden).unwrap().face_down);
+}
+
+/// Hedge Whisperer animates a land as a 5/5 hasty Plant Boar.
+#[test]
+fn hedge_whisperer_animates_a_land() {
+    let mut g = two_player_game();
+    let whisperer = g.add_card_to_battlefield(0, catalog::hedge_whisperer());
+    g.battlefield_find_mut(whisperer).unwrap().tapped = true;
+    let land = g.add_card_to_battlefield(0, catalog::forest());
+    let ctx = crabomination::game::effects::EffectContext {
+        targets: vec![Target::Permanent(land)],
+        ..crabomination::game::effects::EffectContext::for_ability(whisperer, 0, None)
+    };
+    g.resolve_effect(&catalog::hedge_whisperer().activated_abilities[0].effect, &ctx)
+        .expect("animate");
+    let cp = g.computed_permanent(land).unwrap();
+    assert_eq!((cp.power, cp.toughness), (5, 5));
+    assert!(cp.keywords.contains(&Keyword::Haste));
+    assert!(cp.card_types.contains(&crabomination::card::CardType::Land), "it's still a land");
+}
+
+/// Doppelgang at X=2 makes two copies of each of two permanents.
+#[test]
+fn doppelgang_squares_the_board() {
+    let mut g = two_player_game();
+    let a = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let b = g.add_card_to_battlefield(0, catalog::serra_angel());
+    let ctx = crabomination::game::effects::EffectContext {
+        targets: vec![Target::Permanent(a), Target::Permanent(b)],
+        x_value: 2,
+        ..crabomination::game::effects::EffectContext::for_ability(CardId(0), 0, None)
+    };
+    g.resolve_effect(&catalog::doppelgang().effect, &ctx).expect("Doppelgang");
+    assert_eq!(g.battlefield.iter().filter(|c| c.definition.name == "Grizzly Bears").count(), 3);
+    assert_eq!(g.battlefield.iter().filter(|c| c.definition.name == "Serra Angel").count(), 3);
+}
+
+/// Kylox eats the team, exiles that much library, and free-casts the spells.
+#[test]
+fn kylox_converts_power_into_free_spells() {
+    let mut g = two_player_game();
+    let kylox = g.add_card_to_battlefield(0, catalog::kylox_visionary_inventor());
+    g.add_card_to_battlefield(0, catalog::serra_angel()); // 4 power
+    g.add_card_to_library(0, catalog::lightning_bolt());
+    for _ in 0..4 {
+        g.add_card_to_library(0, catalog::forest());
+    }
+    let ctx = crabomination::game::effects::EffectContext::for_ability(kylox, 0, None);
+    g.resolve_effect(&catalog::kylox_visionary_inventor().triggered_abilities[0].effect, &ctx)
+        .expect("attack trigger");
+    assert_eq!(g.exile.len() + g.stack.len(), 4, "four power exiled four cards");
+    assert_eq!(g.stack.len(), 1, "and the Bolt among them is cast free");
+}

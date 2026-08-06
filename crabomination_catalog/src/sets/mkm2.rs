@@ -694,3 +694,364 @@ pub fn niv_mizzet_guildpact() -> CardDefinition {
         )
     }
 }
+
+// ── 2026-08 gap wave, batch 2 ─────────────────────────────────────────────
+
+/// Kellan, Inquisitive Prodigy // Tail the Suspect — {2}{G}{U} 3/4 flying
+/// vigilance whose attacks blow up an artifact (drawing when it was yours);
+/// the Adventure investigates and unlocks an extra land drop.
+pub fn kellan_inquisitive_prodigy() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flying, Keyword::Vigilance],
+        triggered_abilities: vec![on_attack(Effect::ApplyToTargets {
+            min_targets: 0,
+            max_targets: 1,
+            filter: R::Artifact,
+            effect: Box::new(Effect::Seq(vec![
+                Effect::Destroy { what: target_n(0) },
+                Effect::If {
+                    cond: Predicate::EntityMatches {
+                        what: target_n(0),
+                        filter: R::ControlledByYou,
+                    },
+                    then: Box::new(draw(1)),
+                    else_: Box::new(Effect::Noop),
+                },
+            ])),
+        })],
+        adventure: Some(Box::new(crate::card::Adventure {
+            name: "Tail the Suspect".into(),
+            cost: cost(&[g(), u()]),
+            card_types: vec![CardType::Sorcery],
+            effect: Effect::Seq(vec![
+                investigate(1),
+                Effect::GrantExtraLandPlay { who: PlayerRef::You, count: Value::ONE },
+            ]),
+        })),
+        ..legend(
+            "Kellan, Inquisitive Prodigy",
+            cost(&[generic(2), g(), u()]),
+            vec![CreatureType::Human, CreatureType::Faerie, CreatureType::Detective],
+            3,
+            4,
+        )
+    }
+}
+
+/// Aurelia's Vindicator — {2}{W}{W} 4/2 flying lifelink ward {2}, disguise
+/// {X}{3}{W}. Unmasking exiles up to X creatures and graveyard creature cards;
+/// they come back to hand when the Angel leaves.
+pub fn aurelias_vindicator() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![
+            Keyword::Flying,
+            Keyword::Lifelink,
+            Keyword::Ward(crate::card::WardCost::Mana(cost(&[generic(2)]))),
+            Keyword::Disguise(cost(&[crate::mana::x(), generic(3), w()])),
+        ],
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::TurnedFaceUp, EventScope::SelfSource),
+                effect: Effect::TargetsExactlyX {
+                    body: Box::new(Effect::ApplyToTargets {
+                        min_targets: 0,
+                        max_targets: 5,
+                        filter: R::Creature
+                            .and(R::OtherThanSource)
+                            .or(R::Creature.and(R::InGraveyard)),
+                        effect: Box::new(Effect::ExileWithSource { what: target_n(0) }),
+                    }),
+                },
+            },
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::PermanentLeavesBattlefield, EventScope::SelfSource),
+                effect: Effect::Move {
+                    what: Selector::CardExiledWithSource,
+                    to: ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(
+                        Selector::CardExiledWithSource,
+                    ))),
+                },
+            },
+        ],
+        ..creature(
+            "Aurelia's Vindicator",
+            cost(&[generic(2), w(), w()]),
+            vec![CreatureType::Angel],
+            4,
+            2,
+        )
+    }
+}
+
+/// Branch of Vitu-Ghazi — a {C} land with disguise {3}; unmasking it adds two
+/// mana of one color that survives the phase.
+pub fn branch_of_vitu_ghazi() -> CardDefinition {
+    CardDefinition {
+        name: "Branch of Vitu-Ghazi",
+        card_types: vec![CardType::Land],
+        keywords: vec![Keyword::Disguise(cost(&[generic(3)]))],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::AddMana {
+                who: PlayerRef::You,
+                pool: ManaPayload::Colorless(Value::ONE),
+            },
+            ..Default::default()
+        }],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::TurnedFaceUp, EventScope::SelfSource),
+            effect: Effect::AddManaKeptThisTurn {
+                who: PlayerRef::You,
+                colors: vec![Color::White, Color::White],
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Tenth District Hero — {1}{W} 2/3 that collects evidence to become a 4/4
+/// vigilant Detective, then Mileva with an indestructible-granting anthem.
+pub fn tenth_district_hero() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![
+            ActivatedAbility {
+                mana_cost: cost(&[generic(1), w()]),
+                collect_evidence_cost: Some(2),
+                effect: Effect::Seq(vec![
+                    Effect::AddCreatureTypes {
+                        what: Selector::This,
+                        creature_types: vec![CreatureType::Detective],
+                        duration: Duration::Permanent,
+                    },
+                    Effect::SetBasePT {
+                        what: Selector::This,
+                        power: Value::Const(4),
+                        toughness: Value::Const(4),
+                        duration: Duration::Permanent,
+                    },
+                    Effect::GrantKeyword {
+                        what: Selector::This,
+                        keyword: Keyword::Vigilance,
+                        duration: Duration::Permanent,
+                    },
+                ]),
+                ..Default::default()
+            },
+            ActivatedAbility {
+                mana_cost: cost(&[generic(2), w()]),
+                collect_evidence_cost: Some(4),
+                condition: Some(Predicate::EntityMatches {
+                    what: Selector::This,
+                    filter: R::HasCreatureType(CreatureType::Detective),
+                }),
+                effect: Effect::Seq(vec![
+                    Effect::SetBasePT {
+                        what: Selector::This,
+                        power: Value::Const(5),
+                        toughness: Value::Const(5),
+                        duration: Duration::Permanent,
+                    },
+                    Effect::AddCounter {
+                        what: Selector::This,
+                        kind: CounterType::Level,
+                        amount: Value::ONE,
+                    },
+                ]),
+                ..Default::default()
+            },
+        ],
+        static_abilities: vec![StaticAbility {
+            description: "Mileva — other creatures you control have indestructible.",
+            effect: StaticEffect::AnthemForFilterIf {
+                filter: R::Creature.and(R::OtherThanSource),
+                power: 0,
+                toughness: 0,
+                keywords: vec![Keyword::Indestructible],
+                condition: Predicate::SourceHasCountersAtLeast {
+                    counter: CounterType::Level,
+                    n: 1,
+                },
+                all_players: false,
+            },
+        }],
+        ..creature("Tenth District Hero", cost(&[generic(1), w()]), vec![CreatureType::Human], 2, 3)
+    }
+}
+
+/// Urgent Necropsy — {2}{B}{G} Instant. Collect evidence equal to the targets'
+/// total mana value, then destroy one each of artifact, creature, enchantment,
+/// and planeswalker.
+pub fn urgent_necropsy() -> CardDefinition {
+    let slot = |n: u8, f: R| Effect::ApplyToTargets {
+        min_targets: 0,
+        max_targets: 1,
+        filter: f,
+        effect: Box::new(Effect::Destroy { what: target_n(n) }),
+    };
+    CardDefinition {
+        name: "Urgent Necropsy",
+        cost: cost(&[generic(2), b(), g()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::CollectEvidenceX {
+            then: Box::new(Effect::Seq(vec![
+                slot(0, R::Artifact),
+                slot(1, R::Creature),
+                slot(2, R::Enchantment),
+                slot(3, R::Planeswalker),
+            ])),
+        },
+        ..Default::default()
+    }
+}
+
+/// Deadly Cover-Up — {3}{B}{B} Sorcery. Optionally collect evidence 6, wrath
+/// the board, and — if evidence was collected — name-strip a card out of an
+/// opponent's graveyard from every zone.
+pub fn deadly_cover_up() -> CardDefinition {
+    CardDefinition {
+        name: "Deadly Cover-Up",
+        cost: cost(&[generic(3), b(), b()]),
+        card_types: vec![CardType::Sorcery],
+        additional_cast_cost: vec![crate::card::AdditionalCastCost::CollectEvidence {
+            amount: 6,
+            optional: true,
+        }],
+        effect: Effect::Seq(vec![
+            Effect::Destroy { what: crate::effect::shortcut::each_creature() },
+            Effect::If {
+                cond: Predicate::SpellCollectedEvidence,
+                then: Box::new(Effect::ExileSameNameAsTarget {
+                    what: target_filtered(R::InOpponentGraveyard),
+                }),
+                else_: Box::new(Effect::Noop),
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Expose the Culprit — {1}{R} Instant. Turn a face-down creature face up
+/// and/or shuffle your face-up disguise creatures back down as cloaked 2/2s.
+pub fn expose_the_culprit() -> CardDefinition {
+    CardDefinition {
+        name: "Expose the Culprit",
+        cost: cost(&[generic(1), r()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::ChooseMode(vec![
+            Effect::TurnFaceUpFree { what: target_filtered(R::Creature.and(R::FaceDown)) },
+            Effect::Seq(vec![
+                Effect::Exile {
+                    what: Selector::ControlledBy {
+                        who: PlayerRef::You,
+                        filter: R::Creature.and(R::HasKeyword(Keyword::Disguise(
+                            crate::mana::ManaCost::default(),
+                        ))),
+                    },
+                },
+                Effect::Cloak {
+                    who: PlayerRef::You,
+                    amount: Value::CountOf(Box::new(Selector::LastMoved)),
+                    from_hand: false,
+                },
+            ]),
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Hedge Whisperer — {G} 0/3 that can stay tapped; collecting evidence 4 turns
+/// one of your lands into a 5/5 hasty Plant Boar for as long as she's tapped.
+pub fn hedge_whisperer() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::MayChooseNotToUntap],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(3), g()]),
+            tap_cost: true,
+            collect_evidence_cost: Some(4),
+            sorcery_speed: true,
+            effect: Effect::BecomeCreature {
+                what: target_filtered(R::Land.and(R::ControlledByYou)),
+                power: Value::Const(5),
+                toughness: Value::Const(5),
+                creature_types: vec![CreatureType::Plant, CreatureType::Boar],
+                keywords: vec![Keyword::Haste],
+                duration: Duration::WhileSourceTapped,
+            },
+            ..Default::default()
+        }],
+        ..creature(
+            "Hedge Whisperer",
+            cost(&[g()]),
+            vec![CreatureType::Elf, CreatureType::Druid, CreatureType::Detective],
+            0,
+            3,
+        )
+    }
+}
+
+/// Doppelgang — {X}{X}{X}{G}{U} Sorcery. For each of X target permanents,
+/// create X token copies of it.
+pub fn doppelgang() -> CardDefinition {
+    CardDefinition {
+        name: "Doppelgang",
+        cost: cost(&[crate::mana::x(), crate::mana::x(), crate::mana::x(), g(), u()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::TargetsExactlyX {
+            body: Box::new(Effect::ApplyToTargets {
+                min_targets: 0,
+                max_targets: 6,
+                filter: R::Permanent,
+                effect: Box::new(crate::effect::shortcut::token_copy_of(
+                    PlayerRef::You,
+                    Value::XFromCost,
+                    target_n(0),
+                )),
+            }),
+        },
+        ..Default::default()
+    }
+}
+
+/// Kylox, Visionary Inventor — {5}{U}{R} 4/4 menace ward {2} haste. Attacking
+/// eats your other creatures to exile that much library and cast the instants
+/// and sorceries among them for free.
+pub fn kylox_visionary_inventor() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![
+            Keyword::Menace,
+            Keyword::Ward(crate::card::WardCost::Mana(cost(&[generic(2)]))),
+            Keyword::Haste,
+        ],
+        triggered_abilities: vec![on_attack(Effect::Seq(vec![
+            Effect::Sacrifice {
+                who: Selector::You,
+                count: Value::CountMatching {
+                    sel: Box::new(each_your_creature()),
+                    filter: R::OtherThanSource,
+                },
+                filter: R::Creature.and(R::OtherThanSource),
+            },
+            Effect::ExileTopOfLibrary {
+                who: Selector::You,
+                amount: Value::SacrificedTotalPower,
+                link_to_source: true,
+                face_down: false,
+            },
+            Effect::CastAnyOrderWithoutPaying {
+                what: Selector::CardExiledWithSource,
+                source_zone: crate::card::Zone::Exile,
+                filter: Some(
+                    R::HasCardType(CardType::Instant).or(R::HasCardType(CardType::Sorcery)),
+                ),
+                cap: None,
+            },
+        ]))],
+        ..legend(
+            "Kylox, Visionary Inventor",
+            cost(&[generic(5), u(), r()]),
+            vec![CreatureType::Lizard, CreatureType::Artificer],
+            4,
+            4,
+        )
+    }
+}

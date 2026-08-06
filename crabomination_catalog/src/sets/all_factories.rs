@@ -11698,6 +11698,16 @@ static MKM: &[Factory] = &[
     super::mkm2::connecting_the_dots,
     super::mkm2::lazav_wearer_of_faces,
     super::mkm2::niv_mizzet_guildpact,
+    super::mkm2::kellan_inquisitive_prodigy,
+    super::mkm2::aurelias_vindicator,
+    super::mkm2::branch_of_vitu_ghazi,
+    super::mkm2::tenth_district_hero,
+    super::mkm2::urgent_necropsy,
+    super::mkm2::deadly_cover_up,
+    super::mkm2::expose_the_culprit,
+    super::mkm2::hedge_whisperer,
+    super::mkm2::doppelgang,
+    super::mkm2::kylox_visionary_inventor,
 ];
 static MMQ: &[Factory] = &[
     super::mmq::ramosian_sergeant,
