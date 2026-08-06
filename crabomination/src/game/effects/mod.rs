@@ -2822,7 +2822,6 @@ impl GameState {
             }
 
             Effect::MoveChosenKeyword { options, from, to } => {
-                use crate::decision::{Decision, DecisionAnswer};
                 let Some(loser) =
                     self.resolve_selector(from, ctx).into_iter().find_map(|e| e.as_permanent_id())
                 else {
@@ -2839,13 +2838,17 @@ impl GameState {
                     })
                     .unwrap_or_default();
                 let Some(first) = live.first().cloned() else { return Ok(()) };
-                let idx = match self.decider.decide(&Decision::ChooseOption {
-                    source: ctx.source.unwrap_or(CardId(0)),
-                    prompt: "Choose an ability to move".to_string(),
-                    options: live.iter().map(|k| format!("{k:?}")).collect(),
-                }) {
-                    DecisionAnswer::Amount(n) => (n as usize).min(live.len() - 1),
-                    _ => 0,
+                let mut cursor = 0;
+                let idx = match self.ask_seat_option(
+                    &mut cursor,
+                    ctx.controller,
+                    "Choose an ability to move".to_string(),
+                    ctx.source.unwrap_or(CardId(0)),
+                    live.iter().map(|k| format!("{k:?}")).collect(),
+                    effect,
+                ) {
+                    Some(n) => n.min(live.len() - 1),
+                    None => return Ok(()),
                 };
                 let kw = live.get(idx).cloned().unwrap_or(first);
                 self.run_effect(
