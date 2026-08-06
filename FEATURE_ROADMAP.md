@@ -2377,6 +2377,53 @@ Each a small targeted feature; sweep batch by batch.
   stratum both plays and benches reports **no** within-archetype number
   rather than passing the marginal off as one. `recommend_pool` prints
   `within` first and labels `raw` as the confound.
+- 🔴 **Play net as an evaluator: documented dead end.** Ten gate rounds
+  across every lever available, and it has never won. Recorded here so
+  the next person does not re-derive it.
+
+  The strange part is that it is now the *better predictor* and still the
+  worse player. On identical fresh positions the attention net scores AUC
+  0.798 / log-loss 0.551 against `eval_material`'s 0.760 / 0.574, and it
+  replicates on a second seed (0.761 vs 0.747). Then:
+
+  | profile | win rate vs `gang` |
+  |---|---|
+  | `net` (replacement) | 44.8 % [43.7, 45.9] |
+  | `net-blend` | 48.8 % [47.8, 49.8] |
+  | `net-q10` / `net-q20` | 44.4 % / 44.4 % |
+  | `netb-q10` / `netb-q20` | 48.0 % / 48.9 % |
+
+  **Three explanations proposed, two tested, both refuted:**
+
+  1. *"AUC is global, the search needs local discrimination, so the net
+     must be worse locally."* `--pairwise` says no — on adjacent same-game
+     snapshots the net orders 54.3 % of separated pairs correctly against
+     the heuristic's 51.7 %. It is slightly **better** locally.
+  2. *"The net manufactures differences: it separates 100 % of adjacent
+     pairs where `eval_material` ties on 46.9 %, so an argmax search
+     follows its noise."* Quantising the output onto a 0.1 / 0.05 grid
+     makes it tie exactly like the heuristic — and moves the win rate by
+     less than a point in either direction. Refuted.
+  3. *Untested:* **distribution mismatch.** Every diagnostic samples the
+     snapshot cadence (turn start / postcombat main / end step), but the
+     search evaluates *simulated leaves* inside `simulate_attack_outcome`
+     — a distribution the net is neither trained on nor measured at. A
+     net better on snapshots and worse on sim leaves would produce
+     exactly this pattern, and every instrument built so far would show
+     the former while the gate measures the latter. Testable by pulling
+     calibration positions from inside the search.
+
+  Levers already exhausted: data volume, window reuse, capacity (round 4),
+  snapshot coverage, target shape (MC → TD(λ)), architecture (pooling →
+  attention), and output shaping (quantisation). Making the net a
+  strictly better predictor did not make it a better player at any point.
+
+  **Where the evidence points instead:** the *deck* net, which clears the
+  house bar (61.7 %, 60.7 %) and is under-exploited. A decklist genuinely
+  is an unordered set, so bag-of-cards is the right prior; a board state
+  is a set of matchups, so it is the wrong one. Same architecture,
+  opposite verdicts — see [`selfplay_train --use-deck-best`] and
+  `CRAB_DECKNET=… recommend_pool`.
 - 🟢 **Value net finally beats the heuristic as a predictor** — and the
   reason six gate rounds failed was **overfitting, not architecture**.
 

@@ -254,6 +254,29 @@ pub struct EvalWeights {
     ///
     /// [`Player::smart_tap`]: crate::player::Player::smart_tap
     pub smart_tap: bool,
+    /// Quantize the net's win probability onto a grid of this many
+    /// levels before the search consumes it; 0 is off (continuous).
+    ///
+    /// The point is to let the net *tie*. `--pairwise` measured the two
+    /// evaluators on adjacent same-game snapshots: both are barely above
+    /// chance at ordering them (net 54.3 %, heuristic 51.7 %), but
+    /// `eval_material` declines to separate 46.9 % of such pairs while
+    /// the net separates 100 % of them, asserting a mean 5.5 points of
+    /// win probability between boards one turn apart.
+    ///
+    /// In an argmax search over candidate lines that are genuinely
+    /// near-equal, an evaluator that always has an opinion follows its
+    /// own noise; one that ties falls through to criteria that carry
+    /// real information. The heuristic's coarseness looks like a
+    /// limitation and behaves like a feature. Rounding the net onto a
+    /// grid buys the same property: two positions within one grid step
+    /// score identically, so the net only overrides when it has a large
+    /// opinion rather than a noisy one.
+    ///
+    /// With mean adjacent separation 0.055, a 10-level grid (0.1 steps)
+    /// ties most adjacent pairs and a 20-level grid (0.05) ties roughly
+    /// half — about where the heuristic sits.
+    pub net_quantize: u32,
 }
 
 impl EvalWeights {
@@ -287,6 +310,7 @@ impl EvalWeights {
             block_gang: false,
             determinize: 0,
             smart_tap: true,
+            net_quantize: 0,
         }
     }
 
@@ -346,6 +370,7 @@ impl EvalWeights {
             block_gang: false,
             determinize: 0,
             smart_tap: true,
+            net_quantize: 0,
         }
     }
 
@@ -388,6 +413,7 @@ impl EvalWeights {
             block_gang: false,
             determinize: 0,
             smart_tap: true,
+            net_quantize: 0,
         }
     }
 
@@ -744,6 +770,27 @@ impl EvalWeights {
     /// [`determinize`](Self::determinize).
     pub const fn determinized() -> Self {
         Self { determinize: 1, ..Self::block_gang_search() }
+    }
+
+    /// [`net_eval`](Self::net_eval) on a 10-level grid — see
+    /// [`net_quantize`](Self::net_quantize).
+    pub const fn net_eval_q10() -> Self {
+        Self { net_quantize: 10, ..Self::net_eval() }
+    }
+
+    /// [`net_eval`](Self::net_eval) on a 20-level grid.
+    pub const fn net_eval_q20() -> Self {
+        Self { net_quantize: 20, ..Self::net_eval() }
+    }
+
+    /// [`net_eval_blend`](Self::net_eval_blend) on a 10-level grid.
+    pub const fn net_blend_q10() -> Self {
+        Self { net_quantize: 10, ..Self::net_eval_blend() }
+    }
+
+    /// [`net_eval_blend`](Self::net_eval_blend) on a 20-level grid.
+    pub const fn net_blend_q20() -> Self {
+        Self { net_quantize: 20, ..Self::net_eval_blend() }
     }
 
     /// The default with the historical mana tapping — the control for
@@ -8291,6 +8338,14 @@ fn eval_material(state: &GameState, seat: usize, w: &EvalWeights) -> i32 {
         && state.game_over.is_none()
         && let Some(p) = super::net_eval::win_prob(state, seat, w.net_slot)
     {
+        // Snap onto the grid *before* anything downstream sees it, so
+        // both the replacement and blend paths inherit the tie.
+        let p = if w.net_quantize > 0 {
+            let q = w.net_quantize as f32;
+            (p * q).round() / q
+        } else {
+            p
+        };
         if w.net_blend_scale > 0 {
             let bias = ((p - 0.5) * (w.net_blend_scale * w.unit) as f32) as i32;
             return eval_material_inner(state, seat, w, false) + bias;

@@ -237,6 +237,10 @@ fn parse_profile(name: &str) -> Option<Pilot> {
         "net" => Some(Pilot::Scored(EvalWeights::net_eval())),
         "net-blend" => Some(Pilot::Scored(EvalWeights::net_eval_blend())),
         "net-blend300" => Some(Pilot::Scored(EvalWeights::net_eval_blend300())),
+        "net-q10" => Some(Pilot::Scored(EvalWeights::net_eval_q10())),
+        "net-q20" => Some(Pilot::Scored(EvalWeights::net_eval_q20())),
+        "netb-q10" => Some(Pilot::Scored(EvalWeights::net_blend_q10())),
+        "netb-q20" => Some(Pilot::Scored(EvalWeights::net_blend_q20())),
         "v2" => Some(Pilot::Scored(EvalWeights::v2())),
         "pretap" => Some(Pilot::Scored(EvalWeights::legacy_mana())),
         "combat" => Some(Pilot::Scored(EvalWeights::combat_aware())),
@@ -277,7 +281,7 @@ fn parse_profile(name: &str) -> Option<Pilot> {
 }
 
 /// Profile names accepted by `--a` / `--b`, for the help text and errors.
-const PROFILES: &str = "baseline, combat, holdsick, holdsick+combat, atk, atk-cheap, atk-hold, atk-sim, atk-race, atk-life, dflt-life, blk, lookahead, holdinst, mcts, mcts-heur, mcts-deep, planner, v2+combat, pretap, scaled, keywords, kw25, base, base+kw, life, power, v2, uniform, landseq, mull, gang, landseq2, mull2, race2, look1, look2, det1, det3, net, net-blend, net-blend300 (net* need CRAB_NET=<weights.safetensors>)";
+const PROFILES: &str = "baseline, combat, holdsick, holdsick+combat, atk, atk-cheap, atk-hold, atk-sim, atk-race, atk-life, dflt-life, blk, lookahead, holdinst, mcts, mcts-heur, mcts-deep, planner, v2+combat, pretap, scaled, keywords, kw25, base, base+kw, life, power, v2, uniform, landseq, mull, gang, landseq2, mull2, race2, look1, look2, det1, det3, net, net-blend, net-blend300, net-q10, net-q20, netb-q10, netb-q20 (net* need CRAB_NET=<weights.safetensors>)";
 
 /// Wilson score interval for `wins` out of `n` at `z`. Chosen over the
 /// normal approximation because it stays sane at small n and at p̂ = 0 or 1,
