@@ -534,3 +534,57 @@ fn gliding_licid_becomes_an_aura_and_back() {
     assert_eq!(back.attached_to, None);
     assert!(!g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Flying));
 }
+
+/// Contempt sends the attacker and itself home at end of combat.
+#[test]
+fn contempt_bounces_the_attacker_it_enchants() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let aura = g.add_card_to_battlefield(0, catalog::contempt());
+    g.battlefield_find_mut(aura).unwrap().attached_to = Some(bear);
+    g.clear_sickness(bear);
+    g.active_player_idx = 0;
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: bear,
+        target: AttackTarget::Player(1),
+    }]))
+    .expect("attack");
+    drain_stack(&mut g);
+    while g.step != TurnStep::PostCombatMain {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == bear), "the attacker went home");
+    assert!(g.players[0].hand.iter().any(|c| c.id == aura), "and so did Contempt");
+}
+
+/// Thalakos Deceiver trades itself for a creature when it connects.
+#[test]
+fn thalakos_deceiver_trades_itself_for_a_creature() {
+    let mut g = two_player_game();
+    let deceiver = g.add_card_to_battlefield(0, catalog::thalakos_deceiver());
+    let prize = g.add_card_to_battlefield(1, catalog::serra_angel());
+    let mut ctx = EffectContext::for_ability(deceiver, 0, None);
+    ctx.targets = vec![Target::Permanent(prize)];
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    g.resolve_effect(&catalog::thalakos_deceiver().triggered_abilities[0].effect, &ctx)
+        .expect("unblocked");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(deceiver).is_none(), "it sacrificed itself");
+    assert_eq!(g.battlefield_find(prize).unwrap().controller, 0);
+}
+
+/// Jinxed Ring pings its controller for every nontoken permanent they lose.
+#[test]
+fn jinxed_ring_pings_its_controller() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::jinxed_ring());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let mut events = vec![];
+    g.destroy_permanent(bear, false, &mut events);
+    g.dispatch_triggers_for_events(&events);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, 19);
+}

@@ -82,7 +82,7 @@ pub enum CreatureType {
     Sheep, Trilobite, Beaver, Beeble, Sponge, Oyster,
     Basilisk, Cockatrice,
     Elephant, Rhino, Hippo, Mammoth, Whale, Leviathan, Kraken, Elk, Egg, Weasel,
-    Lion, Kavu, Lhurgoyf, Atog, Noggle, Vedalken, Kor, Ally, Kobold, Surrakar, Licid,
+    Lion, Kavu, Lhurgoyf, Atog, Noggle, Vedalken, Kor, Ally, Kobold, Surrakar, Licid, Thalakos,
     Avatar, Phyrexian, Praetor, Incarnation, Mercenary, Rebel, Monger, Archon, Aetherborn,
     Construct, Golem, Myr, Robot, Hellion, Scarecrow, Dreadnought, Sable,
     Ooze, Plant, Saproling,

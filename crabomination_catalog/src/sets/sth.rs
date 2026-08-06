@@ -1969,3 +1969,92 @@ pub fn tempting_licid() -> CardDefinition {
         EquipBonus { keywords: vec![Keyword::AllMustBlock], ..Default::default() },
     )
 }
+
+/// Contempt — {1}{U} Aura. The host bounces itself (and the Aura) the moment
+/// it attacks.
+pub fn contempt() -> CardDefinition {
+    CardDefinition {
+        name: "Contempt",
+        cost: cost(&[generic(1), u()]),
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes {
+            enchantment_subtypes: vec![crate::card::EnchantmentSubtype::Aura],
+            ..Default::default()
+        },
+        effect: Effect::Attach { what: Selector::This, to: target_filtered(R::Creature) },
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Attacks, EventScope::EnchantedBySource),
+            effect: Effect::AtEndOfCombat {
+                body: Box::new(Effect::Seq(vec![
+                    Effect::Move {
+                        what: Selector::attached_to(Selector::This),
+                        to: ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(Selector::attached_to(
+                            Selector::This,
+                        )))),
+                    },
+                    Effect::Move {
+                        what: Selector::This,
+                        to: ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(Selector::This))),
+                    },
+                ])),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Thalakos Deceiver — {3}{U} 1/1 with shadow that trades itself for a
+/// creature when it connects.
+pub fn thalakos_deceiver() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Shadow],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::AttacksAndIsntBlocked, EventScope::SelfSource),
+            effect: Effect::MaySacrificeSource {
+                description: "Sacrifice the Deceiver to steal a creature?".to_string(),
+                then: Box::new(Effect::GainControl {
+                    what: target_filtered(R::Creature),
+                    to: Some(PlayerRef::You),
+                    duration: Duration::Permanent,
+                }),
+                else_: None,
+            },
+        }],
+        ..creature(
+            "Thalakos Deceiver",
+            cost(&[generic(3), u()]),
+            vec![CreatureType::Thalakos, CreatureType::Wizard],
+            1,
+            1,
+        )
+    }
+}
+
+/// Jinxed Ring — {2} Artifact. It pings you for every nontoken permanent you
+/// lose, and a sacrificed creature hands it to an opponent.
+pub fn jinxed_ring() -> CardDefinition {
+    CardDefinition {
+        name: "Jinxed Ring",
+        cost: cost(&[generic(2)]),
+        card_types: vec![CardType::Artifact],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::PermanentDied, EventScope::YourControl).with_filter(
+                Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: R::IsToken.negate(),
+                },
+            ),
+            effect: Effect::DealDamage { to: Selector::You, amount: Value::ONE },
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            sac_other_filter: Some((R::Creature, 1)),
+            effect: Effect::GainControl {
+                what: Selector::This,
+                to: Some(PlayerRef::Target(0)),
+                duration: Duration::Permanent,
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
