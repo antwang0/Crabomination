@@ -2550,7 +2550,7 @@ Each a small targeted feature; sweep batch by batch.
    **The Dark** (97 cards, `sets::drk`/`drk2`) and **Homelands** (`sets::hml`–
    `hml3`), **Conspiracy: Take the Crown** (CN2), **Murders at Karlov
    Manor** (MKM) and **Stronghold** (STH) are all at zero. The rest of the
-   Tempest block is the live front: `set_gaps.py tmp exo` is ~240 and 69.
+   Tempest block is the live front: `set_gaps.py tmp exo` is 83 and 69.
 1. **Replacement-effect framework** (Tier-1 #1) — highest-leverage primitive still
    open.
 2. **Card-zoom + stops/auto-yield + combat-math preview** (Tier-7 #1–3) — the trio
