@@ -634,3 +634,116 @@ fn the_pride_of_hull_clade_discounts_by_toughness() {
         "two toughness on board shaves the cost by 2"
     );
 }
+
+/// Soul Search strips a cheap card and leaves a Spirit; a pricier one doesn't.
+#[test]
+fn soul_search_leaves_a_spirit_only_for_cheap_cards() {
+    let mut g = two_player_game();
+    let bears = g.add_card_to_hand(1, catalog::grizzly_bears()); // MV 2
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Discard(vec![bears])]));
+    cast_at_player(&mut g, catalog::soul_search());
+    assert!(g.exile.iter().any(|c| c.id == bears), "the card is exiled");
+    assert!(
+        !g.battlefield.iter().any(|c| c.definition.name == "Spirit"),
+        "MV 2 is too expensive for the Spirit rider"
+    );
+
+    let lions = g.add_card_to_hand(1, catalog::savannah_lions()); // MV 1
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Discard(vec![lions])]));
+    cast_at_player(&mut g, catalog::soul_search());
+    assert!(
+        g.battlefield.iter().any(|c| c.definition.name == "Spirit"),
+        "MV 1 mints the Spirit"
+    );
+}
+
+/// Cast `def` from hand with free mana, aimed at the opponent.
+fn cast_at_player(g: &mut GameState, def: crabomination::card::CardDefinition) {
+    let id = g.add_card_to_hand(0, def);
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add_colorless(8);
+    for c in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] {
+        g.players[0].mana_pool.add(c, 2);
+    }
+    g.perform_action(GameAction::CastSpell {
+        card_id: id,
+        target: Some(Target::Player(1)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast");
+    drain_stack(g);
+}
+
+/// Tolsimir brings Voja along.
+#[test]
+fn tolsimir_brings_voja() {
+    let mut g = two_player_game();
+    g.move_card_to_battlefield_for_test(0, catalog::tolsimir_midnights_light());
+    drain_stack(&mut g);
+    let voja = g
+        .battlefield
+        .iter()
+        .find(|c| c.definition.name == "Voja Fenstalker")
+        .expect("Voja");
+    assert_eq!((voja.definition.power, voja.definition.toughness), (5, 5));
+    assert!(voja.definition.keywords.contains(&Keyword::Trample));
+}
+
+/// Officious Interrogation investigates once per creature the target controls.
+#[test]
+fn officious_interrogation_scales_with_their_board() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.add_card_to_battlefield(1, catalog::savannah_lions());
+    cast_at_player(&mut g, catalog::officious_interrogation());
+    assert_eq!(
+        g.battlefield.iter().filter(|c| c.definition.name == "Clue").count(),
+        2,
+        "one Clue per creature"
+    );
+}
+
+/// Vannifar's colorless mode grows only colorless creatures.
+#[test]
+fn vannifar_pumps_only_colorless_creatures() {
+    let mut g = two_player_game();
+    g.move_card_to_battlefield_for_test(0, catalog::vannifar_evolved_enigma());
+    let bears = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let ring = g.add_card_to_battlefield(0, catalog::ornithopter());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Mode(1)]));
+    while g.step != TurnStep::BeginCombat {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(ring).unwrap().counter_count(CounterType::PlusOnePlusOne), 1);
+    assert_eq!(g.battlefield_find(bears).unwrap().counter_count(CounterType::PlusOnePlusOne), 0);
+}
+
+/// Tomik gets cheaper per planeswalker you control.
+#[test]
+fn tomik_has_affinity_for_planeswalkers() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::liliana_of_the_veil());
+    drain_stack(&mut g);
+    let id = g.add_card_to_hand(0, catalog::tomik_wielder_of_law());
+    let card = g.players[0].hand.iter().find(|c| c.id == id).unwrap().clone();
+    assert_eq!(
+        crabomination::game::actions::cost_reduction_for_spell(&g, 0, &card, None),
+        1,
+        "one planeswalker shaves one generic"
+    );
+}
+
+/// Public Thoroughfare comes down tapped and demands a tap to stay.
+#[test]
+fn public_thoroughfare_enters_tapped_and_taxes_you() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::forest());
+    let road = g.move_card_to_battlefield_for_test(0, catalog::public_thoroughfare());
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(road).is_some(), "the Forest paid the toll");
+    assert!(g.battlefield.iter().any(|c| c.definition.name == "Forest" && c.tapped));
+}

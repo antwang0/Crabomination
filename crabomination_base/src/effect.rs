@@ -4457,6 +4457,10 @@ pub enum Effect {
     /// control" (Koskun Falls). The tap is a real cost paid on resolution;
     /// declining, or controlling no untapped creature, sacrifices the source.
     SacrificeSourceUnlessTapCreature,
+    /// The filtered sibling — "sacrifice this unless you tap an untapped
+    /// permanent you control matching `filter`" (Public Thoroughfare's
+    /// artifact-or-land toll).
+    SacrificeSourceUnlessTapMatching { filter: SelectionRequirement },
     /// "Each player may draw up to `max` cards. For each card less than `max`
     /// a player draws this way, that player gains `life_per_card` life."
     /// (Truce.) Asked in APNAP order.

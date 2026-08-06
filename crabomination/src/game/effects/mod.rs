@@ -28314,14 +28314,29 @@ impl GameState {
                 Ok(())
             }
 
-            Effect::SacrificeSourceUnlessTapCreature => {
+            Effect::SacrificeSourceUnlessTapCreature
+            | Effect::SacrificeSourceUnlessTapMatching { .. } => {
                 let Some(src) = ctx.source else { return Ok(()) };
                 let p = ctx.controller;
+                let filter = match effect {
+                    Effect::SacrificeSourceUnlessTapMatching { filter } => Some(filter),
+                    _ => None,
+                };
                 let candidates: Vec<(CardId, String)> = self
                     .battlefield
                     .iter()
                     .filter(|c| {
-                        c.controller == p && !c.tapped && self.permanent_is_creature(c.id)
+                        c.controller == p
+                            && !c.tapped
+                            && match filter {
+                                Some(f) => self.evaluate_requirement_static(
+                                    f,
+                                    &Target::Permanent(c.id),
+                                    p,
+                                    ctx.source,
+                                ),
+                                None => self.permanent_is_creature(c.id),
+                            }
                     })
                     .map(|c| (c.id, c.definition.name.to_string()))
                     .collect();

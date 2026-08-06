@@ -508,7 +508,7 @@ pub fn soul_search() -> CardDefinition {
             },
             Effect::If {
                 cond: Predicate::ValueAtMost(
-                    Value::LastExiledManaValue,
+                    Value::ManaValueOf(Box::new(Selector::LastMoved)),
                     Value::ONE,
                 ),
                 then: Box::new(Effect::CreateToken {
@@ -888,7 +888,9 @@ pub fn public_thoroughfare() -> CardDefinition {
             description: "This land enters tapped.",
             effect: crate::effect::StaticEffect::EntersTapped { applies_to: Selector::This },
         }],
-        triggered_abilities: vec![etb(Effect::SacrificeSourceUnlessTapCreature)],
+        triggered_abilities: vec![etb(Effect::SacrificeSourceUnlessTapMatching {
+            filter: SelectionRequirement::Artifact.or(SelectionRequirement::Land),
+        })],
         activated_abilities: vec![ActivatedAbility {
             tap_cost: true,
             effect: Effect::AddMana {
