@@ -622,3 +622,129 @@ fn kylox_converts_power_into_free_spells() {
     assert_eq!(g.exile.len() + g.stack.len(), 4, "four power exiled four cards");
     assert_eq!(g.stack.len(), 1, "and the Bolt among them is cast free");
 }
+
+/// Kylox's Voltstrider animates off evidence and casts one exiled spell on
+/// attack.
+#[test]
+fn kyloxs_voltstrider_animates_then_casts_one() {
+    let mut g = two_player_game();
+    let vehicle = g.add_card_to_battlefield(0, catalog::kyloxs_voltstrider());
+    let def = catalog::kyloxs_voltstrider();
+    let ctx = crabomination::game::effects::EffectContext::for_ability(vehicle, 0, None);
+    g.resolve_effect(&def.activated_abilities[0].effect, &ctx).expect("animate");
+    assert!(
+        g.computed_permanent(vehicle)
+            .unwrap()
+            .card_types
+            .contains(&crabomination::card::CardType::Creature)
+    );
+    for _ in 0..2 {
+        let bolt = g.add_card_to_library(0, catalog::lightning_bolt());
+        g.players[0].library.retain(|c| c.id != bolt);
+        let mut inst = crabomination::card::CardInstance::new(bolt, catalog::lightning_bolt(), 0);
+        inst.exiled_with = Some(vehicle);
+        g.exile.push(inst);
+    }
+    g.resolve_effect(&def.triggered_abilities[0].effect, &ctx).expect("attack trigger");
+    assert_eq!(g.stack.len(), 1, "the cap is one spell per attack");
+}
+
+/// Reenact the Crime copies a card that hit a graveyard this turn and casts
+/// the copy for free.
+#[test]
+fn reenact_the_crime_copies_a_fresh_corpse() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let mut evs = vec![];
+    g.destroy_permanent(bear, false, &mut evs);
+    let ctx = crabomination::game::effects::EffectContext {
+        targets: vec![Target::Permanent(bear)],
+        ..crabomination::game::effects::EffectContext::for_ability(CardId(0), 0, None)
+    };
+    g.resolve_effect(&catalog::reenact_the_crime().effect, &ctx).expect("Reenact");
+    assert!(g.exile.iter().any(|c| c.id == bear), "the original is exiled");
+    assert_eq!(g.stack.len(), 1, "and a free copy is on the stack");
+}
+
+/// Anzrag's Rampage wrecks their artifacts and digs as deep as the turn's
+/// artifact deaths.
+#[test]
+fn anzrags_rampage_digs_per_dead_artifact() {
+    let mut g = two_player_game();
+    let mut evs = vec![];
+    for _ in 0..2 {
+        let ring = g.add_card_to_battlefield(0, catalog::sol_ring());
+        g.destroy_permanent(ring, false, &mut evs);
+    }
+    let theirs = g.add_card_to_battlefield(1, catalog::sol_ring());
+    let angel = g.add_card_to_library(0, catalog::serra_angel());
+    g.add_card_to_library(0, catalog::forest());
+    let ctx = crabomination::game::effects::EffectContext::for_ability(CardId(0), 0, None);
+    g.resolve_effect(&catalog::anzrags_rampage().effect, &ctx).expect("Rampage");
+    assert!(g.battlefield_find(theirs).is_none(), "their artifact is destroyed");
+    let cp = g.computed_permanent(angel).expect("the Angel was slammed");
+    assert!(cp.keywords.contains(&Keyword::Haste));
+    assert_eq!(g.delayed_triggers.len(), 1, "and is scheduled back to hand");
+}
+
+/// Agency Outfitter fetches both gadgets straight onto the battlefield.
+#[test]
+fn agency_outfitter_fetches_both_gadgets() {
+    let mut g = two_player_game();
+    let glass = g.add_card_to_library(0, catalog::magnifying_glass());
+    let cap = g.add_card_to_graveyard(0, catalog::thinking_cap());
+    let id = g.add_card_to_battlefield(0, catalog::agency_outfitter());
+    g.decider = Box::new(ScriptedDecider::new([
+        DecisionAnswer::Search(Some(glass)),
+        DecisionAnswer::Search(Some(cap)),
+    ]));
+    let ctx = crabomination::game::effects::EffectContext::for_ability(id, 0, None);
+    g.resolve_effect(&catalog::agency_outfitter().triggered_abilities[0].effect, &ctx)
+        .expect("ETB");
+    for name in ["Magnifying Glass", "Thinking Cap"] {
+        assert!(g.battlefield.iter().any(|c| c.definition.name == name), "{name} fetched");
+    }
+}
+
+/// Thinking Cap equips a Detective for {1} and anyone else for {3}.
+#[test]
+fn thinking_cap_equips_detectives_cheaply() {
+    let mut g = two_player_game();
+    let cap = g.add_card_to_battlefield(0, catalog::thinking_cap());
+    let sleuth = g.add_card_to_battlefield(0, catalog::novice_inspector());
+    g.step = TurnStep::PreCombatMain;
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::Equip { equipment: cap, target: sleuth }).expect("equip for {1}");
+    let cp = g.computed_permanent(sleuth).unwrap();
+    assert_eq!((cp.power, cp.toughness), (2, 4), "+1/+2 from the Cap");
+
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.players[0].mana_pool.add_colorless(1);
+    assert!(
+        g.perform_action(GameAction::Equip { equipment: cap, target: bear }).is_err(),
+        "a non-Detective still pays {{3}}"
+    );
+}
+
+/// Thinking Cap's printed "Equip Detective {1}" now applies (it used to ship
+/// as the flat Equip {3}).
+#[test]
+fn thinking_cap_equips_a_detective_for_one() {
+    let mut g = two_player_game();
+    let cap = g.add_card_to_battlefield(0, catalog::thinking_cap());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.step = TurnStep::PreCombatMain;
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add_colorless(1);
+    assert!(
+        g.perform_action(GameAction::Equip { equipment: cap, target: bear }).is_err(),
+        "a non-Detective pays the flat {{3}}"
+    );
+    let sleuth = g.add_card_to_battlefield(0, catalog::novice_inspector());
+    g.perform_action(GameAction::Equip { equipment: cap, target: sleuth }).expect("equip for {1}");
+    let cp = g.computed_permanent(sleuth).unwrap();
+    assert_eq!((cp.power, cp.toughness), (2, 4), "+1/+2 from the Cap");
+}

@@ -121,8 +121,8 @@ pub fn candlestick() -> CardDefinition {
     )
 }
 
-/// Thinking Cap — {1} Equipment. Equipped creature gets +1/+2. Equip {3}
-/// (the "Equip Detective {1}" discount is approximated by the flat Equip {3}).
+/// Thinking Cap — {1} Equipment. Equipped creature gets +1/+2, Equip
+/// Detective {1}, Equip {3}.
 pub fn thinking_cap() -> CardDefinition {
     CardDefinition {
         name: "Thinking Cap",
@@ -133,6 +133,12 @@ pub fn thinking_cap() -> CardDefinition {
             ..Default::default()
         },
         keywords: vec![Keyword::Equip(cost(&[generic(3)]))],
+        equip_filtered_cost: Some((
+            crate::card::SelectionRequirement::HasCreatureType(
+                crate::card::CreatureType::Detective,
+            ),
+            cost(&[generic(1)]),
+        )),
         equipped_bonus: Some(EquipBonus {
             power: 1,
             toughness: 2,

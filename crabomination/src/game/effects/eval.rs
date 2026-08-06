@@ -126,6 +126,15 @@ impl GameState {
                 }
                 pairs.len() as i32
             }
+            Value::ArtifactsToGraveyardFromBattlefieldThisTurn => self
+                .players
+                .iter()
+                .flat_map(|p| p.graveyard.iter())
+                .filter(|c| {
+                    c.definition.is_artifact()
+                        && self.graveyard_from_battlefield_this_turn.contains(&c.id)
+                })
+                .count() as i32,
             Value::GreatestManaValueInExile => self
                 .exile
                 .iter()
@@ -3450,6 +3459,9 @@ impl GameState {
                         self.blocks_declared_this_turn.iter().any(|(_, a)| *a == card.id)
                     }
                     R::FaceDown => card.face_down,
+                    R::PutIntoGraveyardThisTurn => {
+                        self.players.iter().any(|p| p.graveyard_ids_this_turn.contains(cid))
+                    }
                     // CR 603.4 — entered this turn (stamped on every ETB).
                     R::EnteredThisTurn => card.entered_turn == Some(self.turn_number),
                     R::EnteredFromGraveyardThisTurn => {
@@ -4095,6 +4107,9 @@ impl GameState {
             R::HasAwaken => card.definition.alternative_cost.as_ref().is_some_and(|a| a.awaken),
             R::PutIntoGraveyardFromBattlefieldThisTurn => {
                 self.graveyard_from_battlefield_this_turn.contains(&card.id)
+            }
+            R::PutIntoGraveyardThisTurn => {
+                self.players.iter().any(|p| p.graveyard_ids_this_turn.contains(&card.id))
             }
             R::ControlledByTriggerPlayer => {
                 self.trigger_event_player_scratch == Some(card.controller)

@@ -3,17 +3,53 @@
 Improvement opportunities for the engine, client, and tooling.
 Items are grouped by area and roughly ordered by impact within each group.
 
+## Noticed this run (MKM down to five)
+
+- **Five MKM cards remain**, each stalled on one primitive: A Killer Among Us
+  (a secret creature-type choice revealed as an activation cost), Conspiracy
+  Unraveler (a collect-evidence alternative cost granted by a static), Etrata
+  (granting a turn-face-up-or-exile-and-free-cast ability to face-down
+  creatures), Expedited Inheritance (a per-damage-event exile-and-play-until-
+  next-turn) and Kaya, Spirits' Justice (an exile-batch trigger that recasts a
+  token as a copy). ⏳
+- **A card's name is worth greping before writing it.** Magnifying Glass and
+  Thinking Cap were already in `decks::recent247`/`recent245`; `set_gaps.py`
+  correctly omitted them, but a duplicate got written anyway and glob
+  re-export silently shadowed it. Check `set_gaps.py` output, not the set
+  list. ⏳
+- **`Effect::CopyCardAndCastFree` routes the copy through hand.** It mints the
+  copy as a token in the caster's hand and free-casts it from there, so a
+  "cast from graveyard/exile" watcher doesn't see the real zone. ⏳
+- **`Effect::DeployExiledCreature` always takes the "may".** The printed line
+  is optional; free upside, so the engine deploys whenever a creature card is
+  among the exiles. ⏳
+- **`Effect::GrantKeywordsToSpell` only reaches lifelink and deathtouch.**
+  The grant is recorded per stack item and read where `resolving_spell_*_seat`
+  is stamped; other keywords on a spell would need their own read sites. ⏳
+- **Coveted Falcon's unmask hands permanents to `EachOpponent`**, not to a
+  chosen target opponent — the printed line pairs one player slot with any
+  number of permanent slots, which the multi-kind target machinery can express
+  but `ApplyToTargets` can't thread through. ⏳
+- **Aurelia's Vindicator caps its exile at five slots.** `TargetsExactlyX`
+  truncates to the paid X, but the static slot ceiling is a constant; a very
+  large X under-delivers. ⏳
+- **Doppelgang caps at six target permanents** for the same reason. ⏳
+- **`AnthemForFilter` still spells out eight fields at every call site**
+  (~hundreds). `LookPickToHand` got the boxing treatment this run; this one
+  is the remaining offender. ⏳
+- **`Effect::SacrificeAtNextEndStep` resolves its selector eagerly.** That is
+  right for Pull (the reanimated permanents are known then) but a caller
+  wanting "sacrifice whatever matches at end of step" would need a filter
+  variant. ⏳
+- **Tenth District Hero's Mileva anthem is gated on a Level counter**, not on
+  the printed "if this creature is named Mileva" — a name-change layer would
+  be the faithful wiring. ⏳
+- **Jetsam's free cast is capped at one per opponent by count**, not by
+  "one from each opponent's graveyard": in multiplayer the caps are the same
+  number but could all come from one graveyard. ⏳
+
 ## Noticed this run (CN2 closed; MKM opened)
 
-- **MKM is the live front at 37.** Two of its gaps still stall on one
-  primitive each: Goblin Maskmaker (a turn-scoped face-down-spell discount)
-  and Tin Street Gossip (a `SpendRestriction` for face-down spells / turning
-  face up — `SpellKind` carries no face-down flag). Judith, Carnage
-  Connoisseur wants a "that spell gains deathtouch and lifelink" grant onto a
-  spell on the stack. ⏳
-- **`KnownCard.agenda_names` isn't rendered yet.** The server now ships a
-  hidden-agenda conspiracy's chosen name(s) to its controller (and to everyone
-  once face up); the client's command-zone card still shows only the name. ⏳
 - **A triggered ability's declared target isn't scriptable from a test.** A
   `ScriptedDecider` `Target` answer doesn't reach the trigger-target picker, so
   Unyielding Gatekeeper's regression drives the effect directly with a stamped
@@ -37,10 +73,6 @@ Items are grouped by area and roughly ordered by impact within each group.
   text-changing effect (CR 613.1c), because a computed lookup inside an anthem
   filter recurses. Same reason `HasDraftNotedCreatureTypeOfSource` reads
   *printed* creature types. ⏳
-- **`AnthemForFilter` spells out eight fields at every call site** (~hundreds).
-  Boxing the payload into a struct with `Default` would let card definitions
-  use `..Default::default()`. `token_copy_of` did this for
-  `CreateTokenCopyOf`'s eleven; the 88 existing call sites are unconverted. ⏳
 - **`Effect::AddCountersUpTo` asks once for the whole selector.** "Put up to N
   counters on each" would want a per-target ask; no printed card needs it yet,
   and non-UI seats take the maximum (it's pure upside). ⏳
@@ -67,10 +99,6 @@ Items are grouped by area and roughly ordered by impact within each group.
 - **Joshua's ETB loots for exactly two.** The printed "discard up to two cards,
   then draw that many" has no up-to variant; the catalog ships the mandatory
   two-for-two. ⏳
-- **`Effect::LookPickToHand` still spells out eleven fields at every call
-  site** (~156 of them). Boxing the payload into a `LookPick` struct with
-  `Default` would let card definitions use `..Default::default()` like the
-  rest of the catalog. ⏳
 - **Attraction lights are one canonical set per card.** CR 717.1 says the same
   Attraction can print different light combinations; the catalog ships the
   Scryfall-canonical set, so two copies of one Attraction are identical. ⏳

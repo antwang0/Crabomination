@@ -13817,6 +13817,15 @@ impl GameState {
         {
             equip_cost = tok_cost.clone();
         }
+        // "Equip [quality] {N}" (Thinking Cap's Detective discount) — same
+        // strictly-cheaper logic, gated on the host matching the filter.
+        if fortify.is_none()
+            && let Some((filter, alt)) =
+                self.battlefield[equip_pos].definition.equip_filtered_cost.clone()
+            && self.evaluate_requirement_static(&filter, &Target::Permanent(target), p, None)
+        {
+            equip_cost = alt;
+        }
         // CR 702.6 — "Equip costs you pay cost {N} less" (Auriok Steelshaper).
         let reduction = self.equip_cost_reduction_for(p);
         if reduction > 0 {

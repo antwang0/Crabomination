@@ -556,6 +556,9 @@ pub enum Value {
     /// The greatest mana value among cards in exile (Ulamog, the Defiler's
     /// enters-with-counters count).
     GreatestManaValueInExile,
+    /// "The number of artifacts that were put into graveyards from the
+    /// battlefield this turn" (Anzrag's Rampage).
+    ArtifactsToGraveyardFromBattlefieldThisTurn,
     /// "The number of different color pairs among permanents you control that
     /// are exactly two colors" (Niv-Mizzet, Guildpact).
     DistinctTwoColorPairsControlled(PlayerRef),
@@ -4459,6 +4462,14 @@ pub enum Effect {
     /// onto the battlefield under your control. That creature is a Nightmare
     /// in addition to its other types." Ashiok, Nightmare Weaver −X.
     PutExiledCreatureOntoBattlefield { mv: Value },
+    /// "You may put a creature card exiled this way onto the battlefield"
+    /// (Anzrag's Rampage). Deploys one creature card among `what`, optionally
+    /// with haste and a next-end-step return to its owner's hand.
+    DeployExiledCreature { what: Selector, haste: bool, return_to_hand_eot: bool },
+    /// "Copy it. You may cast the copy without paying its mana cost"
+    /// (Reenact the Crime) — mints a token copy of the card `what` resolves to
+    /// and offers a free cast of it.
+    CopyCardAndCastFree { what: Selector },
     /// Imprint payoff: turn the card exiled face down with this source face up
     /// and, if it's a creature card, put it onto the battlefield under the
     /// source's controller (Summoner's Egg). Non-creature cards stay exiled

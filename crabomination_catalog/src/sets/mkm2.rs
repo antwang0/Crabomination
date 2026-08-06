@@ -720,7 +720,7 @@ pub fn kellan_inquisitive_prodigy() -> CardDefinition {
             ])),
         })],
         adventure: Some(Box::new(crate::card::Adventure {
-            name: "Tail the Suspect".into(),
+            name: "Tail the Suspect",
             cost: cost(&[g(), u()]),
             card_types: vec![CardType::Sorcery],
             effect: Effect::Seq(vec![
@@ -1052,6 +1052,115 @@ pub fn kylox_visionary_inventor() -> CardDefinition {
             vec![CreatureType::Lizard, CreatureType::Artificer],
             4,
             4,
+        )
+    }
+}
+
+/// Kylox's Voltstrider — {1}{U}{R} 4/4 Vehicle, crew 2. Collect evidence 6 to
+/// animate it; attacking lets you cast an instant or sorcery out of the cards
+/// exiled with it.
+pub fn kyloxs_voltstrider() -> CardDefinition {
+    CardDefinition {
+        name: "Kylox's Voltstrider",
+        cost: cost(&[generic(1), u(), r()]),
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes {
+            artifact_subtypes: vec![crate::card::ArtifactSubtype::Vehicle],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 4,
+        keywords: vec![Keyword::Crew(2)],
+        activated_abilities: vec![ActivatedAbility {
+            collect_evidence_cost: Some(6),
+            effect: Effect::AnimateAsCreature {
+                what: Selector::This,
+                duration: Duration::EndOfTurn,
+            },
+            ..Default::default()
+        }],
+        triggered_abilities: vec![on_attack(Effect::CastAnyOrderWithoutPaying {
+            what: Selector::CardExiledWithSource,
+            source_zone: crate::card::Zone::Exile,
+            filter: Some(R::HasCardType(CardType::Instant).or(R::HasCardType(CardType::Sorcery))),
+            cap: Some(Value::ONE),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Reenact the Crime — {1}{U}{U}{U} Instant. Exile a nonland card that reached
+/// a graveyard this turn and cast a free copy of it.
+pub fn reenact_the_crime() -> CardDefinition {
+    CardDefinition {
+        name: "Reenact the Crime",
+        cost: cost(&[generic(1), u(), u(), u()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::ExileWithSource {
+                what: target_filtered(
+                    R::Nonland.and(R::InGraveyard).and(R::PutIntoGraveyardThisTurn),
+                ),
+            },
+            Effect::CopyCardAndCastFree { what: Selector::CardExiledWithSource },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Anzrag's Rampage — {3}{R}{R} Sorcery. Blow up their artifacts, then dig as
+/// deep as the turn's artifact deaths and slam a creature from the pile.
+pub fn anzrags_rampage() -> CardDefinition {
+    CardDefinition {
+        name: "Anzrag's Rampage",
+        cost: cost(&[generic(3), r(), r()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::Destroy {
+                what: Selector::EachPermanent(R::Artifact.and(R::ControlledByOpponent)),
+            },
+            Effect::ExileTopOfLibrary {
+                who: Selector::You,
+                amount: Value::ArtifactsToGraveyardFromBattlefieldThisTurn,
+                link_to_source: true,
+                face_down: false,
+            },
+            Effect::DeployExiledCreature {
+                what: Selector::CardExiledWithSource,
+                haste: true,
+                return_to_hand_eot: true,
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Agency Outfitter — {4}{U}{U} 4/3 flier that tutors its two gadgets onto the
+/// battlefield from anywhere.
+pub fn agency_outfitter() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![etb(Effect::Seq(
+            ["Magnifying Glass", "Thinking Cap"]
+                .into_iter()
+                .map(|n| Effect::SearchZones {
+                    who: PlayerRef::You,
+                    zones: vec![
+                        crate::card::Zone::Graveyard,
+                        crate::card::Zone::Hand,
+                        crate::card::Zone::Library,
+                    ],
+                    filter: R::HasName(n.into()),
+                    to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                })
+                .collect(),
+        ))],
+        ..creature(
+            "Agency Outfitter",
+            cost(&[generic(4), u(), u()]),
+            vec![CreatureType::Sphinx, CreatureType::Detective],
+            4,
+            3,
         )
     }
 }

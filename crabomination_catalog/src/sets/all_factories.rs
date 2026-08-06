@@ -11708,6 +11708,10 @@ static MKM: &[Factory] = &[
     super::mkm2::hedge_whisperer,
     super::mkm2::doppelgang,
     super::mkm2::kylox_visionary_inventor,
+    super::mkm2::kyloxs_voltstrider,
+    super::mkm2::reenact_the_crime,
+    super::mkm2::anzrags_rampage,
+    super::mkm2::agency_outfitter,
 ];
 static MMQ: &[Factory] = &[
     super::mmq::ramosian_sergeant,

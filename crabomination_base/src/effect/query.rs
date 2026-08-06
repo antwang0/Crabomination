@@ -599,6 +599,8 @@ impl Effect {
             Effect::PlayersMayAccept { otherwise, .. } => otherwise.requires_target(),
             Effect::OnEachSpellCastThisTurn { .. } => false,
             Effect::PutExiledCreatureOntoBattlefield { .. } => false,
+            Effect::DeployExiledCreature { what, .. } => sel_has_target(what),
+            Effect::CopyCardAndCastFree { what } => sel_has_target(what),
             Effect::ExileHand { who }
             | Effect::PlayerReturnsPermanentUnlessPaysLife { who, .. }
             | Effect::ChooseColorThenDiscardMatching { who }

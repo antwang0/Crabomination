@@ -2093,6 +2093,9 @@ pub enum SelectionRequirement {
     /// "all creature cards in your graveyard that were put there from the
     /// battlefield this turn".
     PutIntoGraveyardFromBattlefieldThisTurn,
+    /// The card reached a graveyard from *anywhere* this turn (Reenact the
+    /// Crime). Backed by `Player.graveyard_ids_this_turn`.
+    PutIntoGraveyardThisTurn,
     /// True when the candidate permanent has an Equipment attached
     /// (CR 301.5 "equipped"). Battlefield-only. Kor Duelist.
     IsEquipped,
@@ -3330,6 +3333,11 @@ pub struct CardDefinition {
     /// regular `Keyword::Equip` cost. Defaults to `None`.
     #[serde(default)]
     pub equip_token_cost: Option<crate::mana::ManaCost>,
+    /// "Equip [quality] {cost}" — a cheaper equip cost usable when the host
+    /// matches `filter` (Thinking Cap's "Equip Detective {1}"). Consulted in
+    /// `equip` before the regular `Keyword::Equip` cost.
+    #[serde(default)]
+    pub equip_filtered_cost: Option<(SelectionRequirement, crate::mana::ManaCost)>,
     /// CR 301.5c — "This Equipment can be attached only to a [filter]"
     /// (Konda's Banner). Gates `equip` and the CR 704.5n unattach sweep, so a
     /// host that stops matching sheds the Equipment.

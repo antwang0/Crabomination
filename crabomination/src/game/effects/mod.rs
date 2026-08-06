@@ -20938,6 +20938,102 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::DeployExiledCreature { what, haste, return_to_hand_eot } => {
+                // Anzrag's Rampage — "you MAY put a creature card exiled this
+                // way onto the battlefield"; free upside, so it always takes.
+                let pick = self
+                    .resolve_selector(what, ctx)
+                    .into_iter()
+                    .filter_map(|e| e.as_card_id())
+                    .find(|id| {
+                        self.exile
+                            .iter()
+                            .any(|c| c.id == *id && c.definition.is_creature())
+                    });
+                let Some(id) = pick else { return Ok(()) };
+                let dest = ZoneDest::Battlefield {
+                    controller: crate::effect::PlayerRef::Seat(ctx.controller),
+                    tapped: false,
+                };
+                self.move_card_to(id, &dest, ctx, events);
+                if *haste {
+                    self.grant_keyword_eot(id, crate::card::Keyword::Haste);
+                }
+                if *return_to_hand_eot {
+                    self.delayed_triggers.push(crate::game::types::DelayedTrigger {
+                        controller: ctx.controller,
+                        source: id,
+                        kind: crate::game::types::DelayedKind::NextEndStep,
+                        effect: Effect::Move {
+                            what: Selector::This,
+                            to: ZoneDest::Hand(crate::effect::PlayerRef::OwnerOf(Box::new(
+                                Selector::This,
+                            ))),
+                        },
+                        target: None,
+                        bound_token: None,
+                        bound_subject: None,
+                        fires_once: true,
+                        expires_after_turn: None,
+                    });
+                }
+                Ok(())
+            }
+
+            Effect::CopyCardAndCastFree { what } => {
+                // Reenact the Crime — copy the card wherever it now is and
+                // offer the copy as a free cast (CR 707.12).
+                let Some(id) = self
+                    .resolve_selector(what, ctx)
+                    .into_iter()
+                    .filter_map(|e| e.as_card_id())
+                    .next()
+                else {
+                    return Ok(());
+                };
+                let Some(def) = self.find_card_anywhere(id).map(|c| c.definition.clone()) else {
+                    return Ok(());
+                };
+                if def.is_land() {
+                    return Ok(());
+                }
+                let copy = self.next_id();
+                self.players[ctx.controller]
+                    .hand
+                    .push(crate::card::CardInstance::new(copy, def, ctx.controller));
+                if let Some(c) = self.players[ctx.controller].hand.iter_mut().find(|c| c.id == copy)
+                {
+                    c.is_token = true;
+                }
+                let auto = self.auto_target_for_effect_avoiding(
+                    &self.players[ctx.controller]
+                        .hand
+                        .iter()
+                        .find(|c| c.id == copy)
+                        .map(|c| c.definition.effect.clone())
+                        .unwrap_or(Effect::Noop),
+                    ctx.controller,
+                    Some(copy),
+                );
+                let cast = self.cast_card_for_free(
+                    ctx.controller,
+                    copy,
+                    crate::card::Zone::Hand,
+                    auto,
+                    vec![],
+                    None,
+                    None,
+                    false,
+                );
+                match cast {
+                    Ok(mut evs) => events.append(&mut evs),
+                    Err(_) => {
+                        self.players[ctx.controller].hand.retain(|c| c.id != copy);
+                    }
+                }
+                Ok(())
+            }
+
             Effect::RevealImprintDeployCreature => {
                 // Summoner's Egg — turn the face-down imprinted card face up;
                 // a creature card enters under the source's controller.

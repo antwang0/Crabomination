@@ -2550,7 +2550,8 @@ Each a small targeted feature; sweep batch by batch.
    **The Dark** (97 cards, `sets::drk`/`drk2`) and **Homelands** (`sets::hml`–
    `hml3`) are all at zero. **Conspiracy: Take the Crown** (CN2) is the live
    front at **12** — see TODO.md → "Noticed this run (FIN closed; CN2 opened)"
-   for the three things the CR 905.2b shell still lacks.
+   for the three things the CR 905.2b shell still lacks. **MKM** is the live
+   front at **5**.
 1. **Replacement-effect framework** (Tier-1 #1) — highest-leverage primitive still
    open.
 2. **Card-zoom + stops/auto-yield + combat-math preview** (Tier-7 #1–3) — the trio
@@ -2566,30 +2567,34 @@ Each a small targeted feature; sweep batch by batch.
 
 ## Recently closed (this push)
 
-- **Conspiracy: Take the Crown closed** (`set_gaps.py cn2` empty) — the last
-  twelve: Animus of Predation, Paliano Vanguard, Arcane Savant, Caller of the
-  Untamed, Volatile Chimera, Expropriate, Selvala's Stampede, Echoing Boon,
-  Emissary's Ploy, Summoner's Bond, Sovereign's Realm and Spy Kit. New:
-  `DraftNotes` keyword/creature-type notes plus `PickAction::TakeRevealed`
-  (CR 905.2b), `GameState::seat_draft_exile` (CR 905.4), `PlayerRef::
-  CurrentVoter` (a CR 701.38 dilemma body can name its own voter),
-  `Selector::{RandomOf, OwnedBy}`, `SelectionRequirement::{SpellTargetsMatching,
-  HasDraftNotedCreatureTypeOfSource, NamedByEitherAgendaOfSource}`,
-  `CardInstance.named_card_2` + `seat_double_agenda` (CR 702.106b double
-  agenda), and four command-zone statics (all-names grant, chosen-MV any-color
-  spend, starting hand size, no-basics deck rule).
-- **Server**: command-zone activated abilities now project for *any* face-up
-  command-zone card, not just Vanguard avatars (Sovereign's Realm), and a
-  conspiracy's chosen agenda names ride the card view.
-- **Client**: the draft-matters bar offers Animus of Predation's
-  remove-from-draft and Paliano Vanguard's reveal-and-note.
-- **MKM opened** — `set_gaps.py mkm` 53 → 37 across sixteen cards, with
-  `CardDefinition.disguise_cost_reduction_per` (Fugitive Codebreaker),
-  `Effect::{ExileThenBranchByController, SacrificeSourceUnlessTapMatching}`,
-  `StaticEffect::DoubleControllerTriggersMatching` (Delney), a from-hand
-  Cloak (Vannifar) and `Keyword::AttacksAsThoughNoDefender`.
-- CR conformance: `core_rules/cr_recent85` covers CR 315.1/315.5b, CR 701.38,
-  CR 905.2b/905.4 and CR 613.1c.
+- **MKM down to five** — `set_gaps.py mkm` 37 → 5 across 32 cards
+  (`sets::mkm2`, tests in `classic_sets/mkm2`). New primitives:
+  `Effect::{FaceDownSpellsCostLessThisTurn, GrantKeywordsToSpell,
+  SacrificeAtNextEndStep}`, `SpendRestriction::FaceDownSpellsOrTurnFaceUp`
+  with `SpellKind.face_down` / `.turning_face_up`,
+  `Value::DistinctTwoColorPairsControlled`,
+  `Predicate::{CreatureCardsToGraveyardThisTurnAtLeast,
+  SourcesYouControlledDealtDamageThisTurnAtLeast}`,
+  `Keyword::{HexproofFromMulticolored, MustAttackOrBlock,
+  CantBlockCreatureType}`, `CounterType::{Impostor, Bloodstain}`,
+  `ConditionalEquipBonus.set_base_pt`, `CastAnyOrderWithoutPaying.cap`,
+  `Effect::{DeployExiledCreature, CopyCardAndCastFree}`,
+  `Value::ArtifactsToGraveyardFromBattlefieldThisTurn`,
+  `SelectionRequirement::PutIntoGraveyardThisTurn`, and
+  `CardDefinition.equip_filtered_cost` — which also closes Thinking Cap's
+  documented "Equip Detective {1}" approximation.
+- **`Effect::LookPickToHand` is boxed** into a `LookPick` struct with a
+  `Default` impl, so its ~160 call sites set only what differs (the
+  long-standing TODO). Two new fields ride it —
+  `picked_matching_to_battlefield` / `battlefield_haste` (Break Out).
+- **Server**: `PlayerView.restricted_mana` projects spend-restricted floating
+  mana as `(pip, amount, clause)` via the new `SpendRestriction::label()`;
+  `mana_pool.total()` excludes it, so it was previously invisible.
+- **Client**: a chosen-name chip over command-zone hidden-agenda conspiracies
+  (`systems::agenda_badge`), and the mana row now shows restricted mana with
+  the clause that limits it.
+- CR conformance: `core_rules/cr_recent86` covers CR 708.4, CR 613.7b/7d,
+  CR 606.5 and CR 106.6.
 
 Older per-push entries are elided — `git log -p -- FEATURE_ROADMAP.md` is
 the record.

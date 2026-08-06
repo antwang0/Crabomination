@@ -3285,6 +3285,7 @@ impl GameState {
             pl.shroud_this_turn = false;
             pl.cards_to_graveyard_this_turn = 0;
             pl.creature_cards_to_graveyard_this_turn = 0;
+            pl.graveyard_ids_this_turn.clear();
             pl.descended_this_turn = false;
             pl.descend_count_this_turn = 0;
             pl.discarded_this_turn.clear();

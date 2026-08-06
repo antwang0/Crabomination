@@ -504,6 +504,11 @@ pub struct Player {
     /// (Case of the Gorgon's Kiss).
     #[serde(default)]
     pub creature_cards_to_graveyard_this_turn: u32,
+    /// Ids of the cards that reached this graveyard from anywhere this turn.
+    /// Backs `SelectionRequirement::PutIntoGraveyardThisTurn` (Reenact the
+    /// Crime).
+    #[serde(default)]
+    pub graveyard_ids_this_turn: std::collections::HashSet<CardId>,
     /// CR 700.11 — true if a *permanent* card was put into this player's
     /// graveyard from anywhere this turn ("you descended this turn"). Set in
     /// `send_to_graveyard`, reset at untap. Gates "if you descended this turn"
@@ -1042,6 +1047,7 @@ impl Player {
             cards_exiled_this_turn: 0,
             cards_to_graveyard_this_turn: 0,
             creature_cards_to_graveyard_this_turn: 0,
+            graveyard_ids_this_turn: std::collections::HashSet::new(),
             instants_or_sorceries_cast_this_turn: 0,
             spells_cast_from_hand_this_turn: 0,
             extra_plus_one_counters_this_turn: 0,
@@ -1175,6 +1181,7 @@ impl Player {
         if card.definition.is_creature() {
             self.creature_cards_to_graveyard_this_turn += 1;
         }
+        self.graveyard_ids_this_turn.insert(card.id);
         // CR 700.11 — descending requires a *permanent* card hitting the gy.
         if card.definition.is_permanent() {
             self.descended_this_turn = true;
