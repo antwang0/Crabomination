@@ -9,7 +9,8 @@ use crate::card::{
     Supertype, TokenDefinition, TriggeredAbility,
 };
 use crate::effect::{
-    Duration, Effect, ManaPayload, PlayerRef, Selector, StaticEffect, Value, VoteOption, VoteTally,
+    DraftNoteAgg, Duration, Effect, ManaPayload, PlayerRef, Selector, StaticEffect, Value,
+    VoteOption, VoteTally,
     shortcut::{draw, etb, on_attack, target_filtered},
 };
 use crate::game::TurnStep;
@@ -653,5 +654,320 @@ pub fn selvala_heart_of_the_wilds() -> CardDefinition {
             2,
             3,
         )
+    }
+}
+
+// ── Draft-matters (CR 905.2b) — the half that functions in the game ───────
+
+/// Archdemon of Paliano — {2}{B}{B} 5/4 flier; its draft clause (random picks
+/// while face up) lives in `crabomination::draft::DraftPod`.
+pub fn archdemon_of_paliano() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flying],
+        ..creature("Archdemon of Paliano", cost(&[generic(2), b(), b()]), vec![CreatureType::Demon], 5, 4)
+    }
+}
+
+/// Illusionary Informant — {1}{U} 1/3 flier; the peek is a draft-time action.
+pub fn illusionary_informant() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flying],
+        ..creature(
+            "Illusionary Informant",
+            cost(&[generic(1), u()]),
+            vec![CreatureType::Bird, CreatureType::Illusion],
+            1,
+            3,
+        )
+    }
+}
+
+/// Leovold's Operative — {2}{G} 3/2; the extra pick is a draft-time action.
+pub fn leovolds_operative() -> CardDefinition {
+    creature(
+        "Leovold's Operative",
+        cost(&[generic(2), g()]),
+        vec![CreatureType::Elf, CreatureType::Rogue],
+        3,
+        2,
+    )
+}
+
+/// Garbage Fire — {2}{R} instant that burns for the highest pick number noted
+/// for Garbage Fire during the draft.
+pub fn garbage_fire() -> CardDefinition {
+    CardDefinition {
+        name: "Garbage Fire",
+        cost: cost(&[generic(2), r()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::DealDamage {
+            to: target_filtered(R::Creature),
+            amount: Value::DraftNoteNumber { agg: DraftNoteAgg::Max },
+        },
+        ..Default::default()
+    }
+}
+
+/// Pyretic Hunter — {4}{R} 0/0 with menace, sized by its highest noted pick.
+pub fn pyretic_hunter() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Menace],
+        enters_with_counters: Some((
+            CounterType::PlusOnePlusOne,
+            Value::DraftNoteNumber { agg: DraftNoteAgg::Max },
+        )),
+        ..creature(
+            "Pyretic Hunter",
+            cost(&[generic(4), r()]),
+            vec![CreatureType::Elemental, CreatureType::Cat],
+            0,
+            0,
+        )
+    }
+}
+
+/// Custodi Peacekeeper — {2}{W} 2/3 that taps anything up to its noted pick
+/// number.
+pub fn custodi_peacekeeper() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[w()]),
+            tap_cost: true,
+            effect: Effect::Tap {
+                what: target_filtered(R::Creature.and(R::PowerAtMostDraftNoteMax)),
+            },
+            ..Default::default()
+        }],
+        ..creature(
+            "Custodi Peacekeeper",
+            cost(&[generic(2), w()]),
+            vec![CreatureType::Human, CreatureType::Cleric],
+            2,
+            3,
+        )
+    }
+}
+
+/// Smuggler Captain — {3}{B} 2/2 that tutors up whatever name it noted.
+pub fn smuggler_captain() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![etb(Effect::Search {
+            who: PlayerRef::You,
+            filter: R::NameNotedForSource,
+            to: crate::effect::ZoneDest::Hand(PlayerRef::You),
+        })],
+        ..creature(
+            "Smuggler Captain",
+            cost(&[generic(3), b()]),
+            vec![CreatureType::Human, CreatureType::Pirate],
+            2,
+            2,
+        )
+    }
+}
+
+/// Noble Banneret — {2}{W}{W} 3/3 that anthems itself and every creature
+/// sharing a name it noted during the draft.
+pub fn noble_banneret() -> CardDefinition {
+    let band = || R::NameNotedForSource.or(R::IsSource);
+    CardDefinition {
+        static_abilities: vec![
+            StaticAbility {
+                description: "This creature and creatures with a noted name get +1/+1.",
+                effect: StaticEffect::PumpPT {
+                    applies_to: Selector::ControlledBy {
+                        who: PlayerRef::You,
+                        filter: R::Creature.and(band()),
+                    },
+                    power: 1,
+                    toughness: 1,
+                },
+            },
+            StaticAbility {
+                description: "…and have lifelink.",
+                effect: StaticEffect::GrantKeyword {
+                    applies_to: Selector::ControlledBy {
+                        who: PlayerRef::You,
+                        filter: R::Creature.and(band()),
+                    },
+                    keyword: Keyword::Lifelink,
+                },
+            },
+        ],
+        ..creature(
+            "Noble Banneret",
+            cost(&[generic(2), w(), w()]),
+            vec![CreatureType::Human, CreatureType::Knight],
+            3,
+            3,
+        )
+    }
+}
+
+/// Regicide — {B} instant that kills anything wearing one of the three colors
+/// chosen as you drafted it. (The color check is a resolution-time gate rather
+/// than a targeting restriction: the notes are keyed by the spell's name,
+/// which isn't reachable during cast-time target validation.)
+pub fn regicide() -> CardDefinition {
+    CardDefinition {
+        name: "Regicide",
+        cost: cost(&[b()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::ApplyToTargets {
+            max_targets: 1,
+            min_targets: 1,
+            filter: R::Creature,
+            effect: Box::new(Effect::If {
+                cond: Predicate::EntityMatches {
+                    what: Selector::Target(0),
+                    filter: R::HasDraftNotedColorOfSource,
+                },
+                then: Box::new(Effect::Destroy { what: Selector::Target(0) }),
+                else_: Box::new(Effect::Noop),
+            }),
+        },
+        ..Default::default()
+    }
+}
+
+// ── The rest ──────────────────────────────────────────────────────────────
+
+/// Canal Courier — {5}{U} 3/5 that crowns you. (Its "attacking different
+/// players" unblockable rider is multiplayer-only and dropped.)
+pub fn canal_courier() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![etb_monarch()],
+        ..creature(
+            "Canal Courier",
+            cost(&[generic(5), u()]),
+            vec![CreatureType::Human, CreatureType::Rogue],
+            3,
+            5,
+        )
+    }
+}
+
+/// Daretti, Ingenious Iconoclast — {1}{B}{R} walker: Construct chumps, an
+/// artifact-fuelled kill, and a triple copy of any artifact.
+pub fn daretti_ingenious_iconoclast() -> CardDefinition {
+    CardDefinition {
+        name: "Daretti, Ingenious Iconoclast",
+        cost: cost(&[generic(1), b(), r()]),
+        card_types: vec![CardType::Planeswalker],
+        supertypes: vec![Supertype::Legendary],
+        subtypes: Subtypes {
+            planeswalker_subtypes: vec![crate::card::PlaneswalkerSubtype::Daretti],
+            ..Default::default()
+        },
+        base_loyalty: 3,
+        loyalty_abilities: vec![
+            crate::card::LoyaltyAbility {
+                loyalty_cost: 1,
+                effect: Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::ONE,
+                    definition: TokenDefinition {
+                        name: "Construct".to_string(),
+                        power: 1,
+                        toughness: 1,
+                        card_types: vec![CardType::Artifact, CardType::Creature],
+                        subtypes: Subtypes {
+                            creature_types: vec![CreatureType::Construct],
+                            ..Default::default()
+                        },
+                        keywords: vec![Keyword::Defender],
+                        ..Default::default()
+                    },
+                },
+                ..Default::default()
+            },
+            crate::card::LoyaltyAbility {
+                loyalty_cost: -1,
+                effect: Effect::MaySacrifice {
+                    description: "Sacrifice an artifact to destroy target artifact or creature"
+                        .to_string(),
+                    filter: R::Artifact.and(R::ControlledByYou),
+                    count: Value::ONE,
+                    then: Box::new(Effect::Destroy {
+                        what: target_filtered(R::Artifact.or(R::Creature)),
+                    }),
+                    else_: None,
+                },
+                ..Default::default()
+            },
+            crate::card::LoyaltyAbility {
+                loyalty_cost: -6,
+                effect: Effect::CreateTokenCopyOf {
+                    who: PlayerRef::You,
+                    count: Value::Const(3),
+                    source: target_filtered(R::Artifact),
+                    extra_creature_types: vec![],
+                    extra_card_types: vec![],
+                    override_pt: None,
+                    override_colors: None,
+                    enters_tapped: false,
+                    non_legendary: false,
+                    legendary: false,
+                    extra_keywords: vec![],
+                },
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Kaya, Ghost Assassin — {2}{W}{B} walker: blink at the cost of 2 life,
+/// drain, or a symmetrical discard-for-a-draw.
+pub fn kaya_ghost_assassin() -> CardDefinition {
+    CardDefinition {
+        name: "Kaya, Ghost Assassin",
+        cost: cost(&[generic(2), w(), b()]),
+        card_types: vec![CardType::Planeswalker],
+        supertypes: vec![Supertype::Legendary],
+        subtypes: Subtypes {
+            planeswalker_subtypes: vec![crate::card::PlaneswalkerSubtype::Kaya],
+            ..Default::default()
+        },
+        base_loyalty: 5,
+        loyalty_abilities: vec![
+            crate::card::LoyaltyAbility {
+                loyalty_cost: 0,
+                effect: Effect::Seq(vec![
+                    Effect::ChooseMode(vec![
+                        Effect::ExileReturnAtYourNextUpkeep { what: Selector::This },
+                        Effect::ExileReturnAtYourNextUpkeep {
+                            what: target_filtered(R::Creature),
+                        },
+                    ]),
+                    Effect::LoseLife { who: Selector::You, amount: Value::Const(2) },
+                ]),
+                ..Default::default()
+            },
+            crate::card::LoyaltyAbility {
+                loyalty_cost: -1,
+                effect: Effect::Seq(vec![
+                    Effect::LoseLife {
+                        who: Selector::Player(PlayerRef::EachOpponent),
+                        amount: Value::Const(2),
+                    },
+                    Effect::GainLife { who: Selector::You, amount: Value::Const(2) },
+                ]),
+                ..Default::default()
+            },
+            crate::card::LoyaltyAbility {
+                loyalty_cost: -2,
+                effect: Effect::Seq(vec![
+                    Effect::Discard {
+                        who: Selector::Player(PlayerRef::EachOpponent),
+                        amount: Value::ONE,
+                        random: false,
+                    },
+                    draw(1),
+                ]),
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
     }
 }

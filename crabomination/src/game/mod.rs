@@ -1310,6 +1310,12 @@ pub struct GameState {
     /// turn boundary.
     #[serde(default)]
     pub vote_controller_this_turn: Option<usize>,
+    /// Transient: the resolving spell/ability's source card name, stamped from
+    /// `EffectContext.source_name`. Source-blind requirement evaluation reads
+    /// it when the object itself is unfindable (a resolving instant is already
+    /// off the stack) — `HasDraftNotedColorOfSource`.
+    #[serde(skip)]
+    pub(crate) source_name_scratch: Option<&'static str>,
     /// CR 725 — who the monarch was as the current turn began. Snapshotted at
     /// the untap step so `Predicate::WasMonarchAtTurnStart` survives a
     /// mid-turn crown change.
@@ -2035,6 +2041,7 @@ impl Clone for GameState {
             search_tax_paid_this_turn: self.search_tax_paid_this_turn.clone(),
             turn_scoped_spell_taxes: self.turn_scoped_spell_taxes.clone(),
             vote_controller_this_turn: self.vote_controller_this_turn,
+            source_name_scratch: self.source_name_scratch,
             monarch_at_turn_start: self.monarch_at_turn_start,
             staggered_damage_players: self.staggered_damage_players.clone(),
             doubled_damage_sources_this_turn: self.doubled_damage_sources_this_turn.clone(),
@@ -2351,6 +2358,7 @@ impl GameState {
             search_tax_paid_this_turn: Vec::new(),
             turn_scoped_spell_taxes: Vec::new(),
             vote_controller_this_turn: None,
+            source_name_scratch: None,
             monarch_at_turn_start: None,
             staggered_damage_players: Vec::new(),
             doubled_damage_sources_this_turn: Vec::new(),
@@ -2523,6 +2531,47 @@ impl GameState {
     /// is unchanged (counters/tapped/attachments persist); fires `Transformed`.
     /// CR 712.9/712.10 — nothing happens if the permanent isn't a DFC, or if
     /// the face it would turn to is an instant or sorcery face.
+    /// The permanents a layer-static's `applies_to` selector covers, resolved
+    /// eagerly against the live battlefield. `None` means "leave it to the
+    /// printed-characteristics walker" — an `EachPermanent` filter that
+    /// doesn't need live state already routes through `selector_to_affected`,
+    /// so resolving it here too would double-apply. `ControlledBy` has no
+    /// static path at all, so it always resolves here.
+    fn eager_static_targets(
+        &self,
+        source: &CardInstance,
+        applies_to: &crate::effect::Selector,
+    ) -> Option<Vec<CardId>> {
+        let matches = |req: &SelectionRequirement, c: &CardInstance| {
+            self.evaluate_requirement_static(
+                req,
+                &Target::Permanent(c.id),
+                source.controller,
+                Some(source.id),
+            )
+        };
+        match applies_to {
+            crate::effect::Selector::EachPermanent(req)
+                if requirement_needs_live_resolution(req) =>
+            {
+                Some(self.battlefield.iter().filter(|c| matches(req, c)).map(|c| c.id).collect())
+            }
+            crate::effect::Selector::ControlledBy { who, filter } => {
+                let ctx =
+                    crate::game::effects::EffectContext::for_ability(source.id, source.controller, None);
+                let seat = self.resolve_player(who, &ctx)?;
+                Some(
+                    self.battlefield
+                        .iter()
+                        .filter(|c| c.controller == seat && matches(filter, c))
+                        .map(|c| c.id)
+                        .collect(),
+                )
+            }
+            _ => None,
+        }
+    }
+
     pub fn transform_permanent(&mut self, id: CardId, events: &mut Vec<GameEvent>) {
         let Some(c) = self.battlefield_find_mut(id) else { return };
         if !c.transformed {
@@ -7720,23 +7769,7 @@ impl GameState {
                 else {
                     continue;
                 };
-                let crate::effect::Selector::EachPermanent(req) = applies_to else { continue };
-                if !requirement_needs_live_resolution(req) {
-                    continue;
-                }
-                let ids: Vec<CardId> = self
-                    .battlefield
-                    .iter()
-                    .filter(|c| {
-                        self.evaluate_requirement_static(
-                            req,
-                            &Target::Permanent(c.id),
-                            card.controller,
-                            Some(card.id),
-                        )
-                    })
-                    .map(|c| c.id)
-                    .collect();
+                let Some(ids) = self.eager_static_targets(card, applies_to) else { continue };
                 if ids.is_empty() {
                     continue;
                 }
@@ -7767,47 +7800,7 @@ impl GameState {
                 // CR 303.4a — a player-scoped anthem ("creatures enchanted
                 // player controls get -1/-1", Curse of Death's Hold) resolves
                 // here too: the seat is live `attached_to_player` state.
-                let ids: Vec<CardId> = match applies_to {
-                    crate::effect::Selector::EachPermanent(req) => {
-                        if !requirement_needs_live_resolution(req) {
-                            continue;
-                        }
-                        self.battlefield
-                            .iter()
-                            .filter(|c| {
-                                self.evaluate_requirement_static(
-                                    req,
-                                    &Target::Permanent(c.id),
-                                    card.controller,
-                                    Some(card.id),
-                                )
-                            })
-                            .map(|c| c.id)
-                            .collect()
-                    }
-                    crate::effect::Selector::ControlledBy { who, filter } => {
-                        let ctx = crate::game::effects::EffectContext::for_ability(
-                            card.id,
-                            card.controller,
-                            None,
-                        );
-                        let Some(seat) = self.resolve_player(who, &ctx) else { continue };
-                        self.battlefield
-                            .iter()
-                            .filter(|c| c.controller == seat)
-                            .filter(|c| {
-                                self.evaluate_requirement_static(
-                                    filter,
-                                    &Target::Permanent(c.id),
-                                    card.controller,
-                                    Some(card.id),
-                                )
-                            })
-                            .map(|c| c.id)
-                            .collect()
-                    }
-                    _ => continue,
-                };
+                let Some(ids) = self.eager_static_targets(card, applies_to) else { continue };
                 if ids.is_empty() {
                     continue;
                 }

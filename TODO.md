@@ -5,10 +5,21 @@ Items are grouped by area and roughly ordered by impact within each group.
 
 ## Noticed this run (FIN closed; CN2 opened)
 
-- **CN2 is down to 26**, every one a draft-matters card (note-a-name,
-  draft-face-up, guess-the-pick) that wants the same CR 905.2b shell as
-  Conspiracy's remaining eight. Closing that shell would close both sets at
-  once. ⏳
+- **CN2 is down to 14.** CNS is closed; what's left in CN2 needs three things
+  the CR 905.2b shell doesn't have yet: noted **creature types** (Paliano
+  Vanguard) and **keywords** (Animus of Predation); a pre-game "exile a card
+  you drafted that isn't in your deck" pile (Arcane Savant, Caller of the
+  Untamed, Volatile Chimera); and the four Conspiracies' hidden/double agenda
+  + start-of-game rules (Echoing Boon, Emissary's Ploy, Sovereign's Realm,
+  Summoner's Bond). Spy Kit wants a text-changing "has all names" grant. ⏳
+- **Expropriate and Selvala's Stampede are unimplemented.** Both are
+  council's-dilemma sorceries whose per-vote bodies need a "choose a permanent
+  owned by the voter" slot / a you-only put-permanent-from-hand. ⏳
+- **Regicide's color restriction is a resolution-time gate, not a targeting
+  one.** Cast-time target validation looks the source up by id, and a spell
+  mid-cast is in neither hand nor stack, so `HasDraftNotedColorOfSource` can't
+  see its own name there. A `source_name` on the validation path would close
+  it. ⏳
 - **Canal Courier's "attack different players" unblockable clause is
   dropped**, and Expropriate / Selvala's Stampede are unimplemented: all three
   are multiplayer-shaped council effects that need a per-vote "choose a

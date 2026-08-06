@@ -1655,6 +1655,7 @@ impl GameState {
         // Every discard from this resolution is caused by this spell/ability
         // (Pure Intentions' "a spell or ability an opponent controls").
         self.discard_causer = Some(ctx.controller);
+        self.source_name_scratch = ctx.source_name;
         // Reset last-created-token scratch — `Selector::LastCreatedToken`
         // (singular) and `Selector::LastCreatedTokens` (plural) only refer
         // to tokens created by *this* resolution.
@@ -10282,6 +10283,36 @@ impl GameState {
                         source,
                         kind: DelayedKind::NextEndStep,
                         effect: body,
+                        target: Some(Target::Permanent(cid)),
+                        bound_token: None,
+                        bound_subject: None,
+                        fires_once: true,
+                        expires_after_turn: None,
+                    });
+                }
+                Ok(())
+            }
+
+            Effect::ExileReturnAtYourNextUpkeep { what } => {
+                use crate::game::types::{DelayedKind, DelayedTrigger};
+                let source = ctx.source.unwrap_or(CardId(0));
+                for ent in self.resolve_selector(what, ctx) {
+                    let EntityRef::Permanent(cid) = ent else { continue };
+                    self.remove_from_battlefield_to_exile(cid);
+                    self.players[ctx.controller].cards_exiled_this_turn =
+                        self.players[ctx.controller].cards_exiled_this_turn.saturating_add(1);
+                    events.push(GameEvent::PermanentExiled { card_id: cid });
+                    self.delayed_triggers.push(DelayedTrigger {
+                        controller: ctx.controller,
+                        source,
+                        kind: DelayedKind::YourNextUpkeep,
+                        effect: Effect::Move {
+                            what: Selector::Target(0),
+                            to: ZoneDest::Battlefield {
+                                controller: PlayerRef::OwnerOf(Box::new(Selector::Target(0))),
+                                tapped: false,
+                            },
+                        },
                         target: Some(Target::Permanent(cid)),
                         bound_token: None,
                         bound_subject: None,
@@ -19028,6 +19059,23 @@ impl GameState {
                     _ => unreachable!(),
                 };
                 let Some(p) = self.resolve_player(who, ctx) else { return Ok(()); };
+                // CR 905.2b — resolve any "a name you noted" leaf against the
+                // controller's draft notes before the search runs; the search
+                // matcher is source-blind (Smuggler Captain).
+                let noted: Vec<String> = ctx
+                    .source
+                    .and_then(|id| self.find_card_anywhere(id))
+                    .map(|c| c.definition.name)
+                    .or(ctx.source_name)
+                    .and_then(|name| self.players[ctx.controller].draft_notes.names.get(name).cloned())
+                    .unwrap_or_default();
+                let resolved_filter;
+                let filter = if filter.mentions_noted_names() {
+                    resolved_filter = filter.resolve_noted_names(&noted);
+                    &resolved_filter
+                } else {
+                    filter
+                };
                 // The library-search prohibitions only bite when a library is
                 // actually being searched; a hand/graveyard-only search
                 // (Dark Supplicant with an empty library clause) goes ahead.

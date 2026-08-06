@@ -821,6 +821,18 @@ pub const LORE_SEEKER: &str = "Lore Seeker";
 pub const LURKING_AUTOMATON: &str = "Lurking Automaton";
 pub const PALIANO: &str = "Paliano, the High City";
 pub const WHISPERGEAR_SNEAK: &str = "Whispergear Sneak";
+// CN2's draft-matters cards ride the same note table.
+pub const CUSTODI_PEACEKEEPER: &str = "Custodi Peacekeeper";
+pub const GARBAGE_FIRE: &str = "Garbage Fire";
+pub const PYRETIC_HUNTER: &str = "Pyretic Hunter";
+pub const NOBLE_BANNERET: &str = "Noble Banneret";
+pub const SMUGGLER_CAPTAIN: &str = "Smuggler Captain";
+pub const REGICIDE: &str = "Regicide";
+
+/// CN2's "reveal this card as you draft it and note how many cards you've
+/// drafted this draft round" cycle — the same note Lurking Automaton takes.
+const ROUND_PICK_NOTERS: [&str; 4] =
+    [LURKING_AUTOMATON, CUSTODI_PEACEKEEPER, GARBAGE_FIRE, PYRETIC_HUNTER];
 
 /// What a seat does with its pick this round.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -858,9 +870,10 @@ pub struct DraftPod {
     /// Seats locked out of drafting for the rest of the round (Agent of
     /// Acquisitions).
     locked: Vec<bool>,
-    /// Seats owing an Aether Searcher name note on their next pick — one
-    /// entry per Searcher drafted, so two Searchers note two names.
-    owed_name_notes: Vec<u32>,
+    /// Seats owing a name note on their next pick, one entry per noting card
+    /// drafted (Aether Searcher, Smuggler Captain, Noble Banneret), tagged
+    /// with which card is owed the note.
+    owed_name_notes: Vec<Vec<&'static str>>,
     /// Picks a seat has made this draft round (Lurking Automaton's note).
     round_picks: Vec<u32>,
     /// Whispergear Sneaks a seat has turned face down; each one buys a peek.
@@ -888,7 +901,7 @@ impl DraftPod {
             notes: vec![DraftNotes::default(); POD_SIZE],
             removed: vec![Vec::new(); POD_SIZE],
             locked: vec![false; POD_SIZE],
-            owed_name_notes: vec![0; POD_SIZE],
+            owed_name_notes: vec![Vec::new(); POD_SIZE],
             round_picks: vec![0; POD_SIZE],
             sneaks_used: vec![0; POD_SIZE],
         }
@@ -1069,20 +1082,39 @@ impl DraftPod {
     /// as you draft it" notes (CR 905.2b).
     fn record_pick(&mut self, seat: usize, card: CardFactory) {
         self.round_picks[seat] += 1;
-        let name = card().name;
-        if self.owed_name_notes[seat] > 0 {
-            self.owed_name_notes[seat] -= 1;
-            self.notes[seat].note_name(AETHER_SEARCHER, name);
+        let def = card();
+        let name = def.name;
+        // Noble Banneret only notes creature cards; the others take any pick.
+        let owed = std::mem::take(&mut self.owed_name_notes[seat]);
+        for noter in owed {
+            if noter == NOBLE_BANNERET && !def.is_creature() {
+                self.owed_name_notes[seat].push(noter);
+                continue;
+            }
+            self.notes[seat].note_name(noter, name);
         }
         match name {
-            AETHER_SEARCHER => self.owed_name_notes[seat] += 1,
-            LURKING_AUTOMATON => {
-                let n = self.round_picks[seat];
-                self.notes[seat].note_number(LURKING_AUTOMATON, n);
+            AETHER_SEARCHER | SMUGGLER_CAPTAIN | NOBLE_BANNERET => {
+                self.owed_name_notes[seat].push(match name {
+                    SMUGGLER_CAPTAIN => SMUGGLER_CAPTAIN,
+                    NOBLE_BANNERET => NOBLE_BANNERET,
+                    _ => AETHER_SEARCHER,
+                });
+            }
+            n if ROUND_PICK_NOTERS.contains(&n) => {
+                let picks = self.round_picks[seat];
+                self.notes[seat].note_number(n, picks);
             }
             PALIANO => {
                 let colors = self.paliano_colors(seat);
                 self.notes[seat].note_colors(PALIANO, &colors);
+            }
+            // "The player to your right chooses a color, you choose another,
+            // then the player to your left chooses a third" — the same
+            // three-seat walk Paliano uses.
+            REGICIDE => {
+                let colors = self.paliano_colors(seat);
+                self.notes[seat].note_colors(REGICIDE, &colors);
             }
             _ => {}
         }

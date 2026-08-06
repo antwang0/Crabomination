@@ -556,11 +556,15 @@ impl GameState {
             Value::TurnNumber => self.turn_number as i32,
             Value::DraftNoteNumber { agg } => {
                 let notes = &self.players[ctx.controller].draft_notes;
+                // A resolving instant/sorcery is already off the stack, so
+                // fall back to the cast's stamped name.
                 ctx.source
                     .and_then(|id| self.find_card_anywhere(id))
-                    .map(|c| match agg {
-                        crate::effect::DraftNoteAgg::Max => notes.max_number(c.definition.name),
-                        crate::effect::DraftNoteAgg::Sum => notes.sum_numbers(c.definition.name),
+                    .map(|c| c.definition.name)
+                    .or(ctx.source_name)
+                    .map(|name| match agg {
+                        crate::effect::DraftNoteAgg::Max => notes.max_number(name),
+                        crate::effect::DraftNoteAgg::Sum => notes.sum_numbers(name),
                     })
                     .unwrap_or(0) as i32
             }
@@ -3856,6 +3860,35 @@ impl GameState {
                                 .draft_notes
                                 .has_name(s.definition.name, card.definition.name)
                         }),
+                    R::PowerAtMostDraftNoteMax => source
+                        .and_then(|sid| self.find_card_anywhere(sid))
+                        .is_some_and(|s| {
+                            let cap = self.players[controller]
+                                .draft_notes
+                                .max_number(s.definition.name);
+                            self.computed_permanent(card.id)
+                                .map(|c| c.power)
+                                .unwrap_or(card.definition.power)
+                                <= cap as i32
+                        }),
+                    // The source is looked up by name, so a resolving spell
+                    // (already off the stack) falls back to its stamped name.
+                    R::HasDraftNotedColorOfSource => {
+                        let name = source
+                            .and_then(|sid| self.find_card_anywhere(sid))
+                            .map(|s| s.definition.name)
+                            .or(self.source_name_scratch);
+                        name.is_some_and(|name| {
+                            let noted = self
+                                .players[controller]
+                                .draft_notes
+                                .colors
+                                .get(name)
+                                .cloned()
+                                .unwrap_or_default();
+                            card.definition.printed_colors().iter().any(|c| noted.contains(c))
+                        })
+                    }
                     R::IsSourceChosenCardType => source
                         .and_then(|sid| self.battlefield_find(sid))
                         .and_then(|s| s.chosen_card_type.clone())
@@ -4392,6 +4425,7 @@ impl GameState {
                 .is_some_and(|n| n == card.definition.name),
             R::IsSourceChosenCardType => false,
             R::NameNotedForSource => false,
+            R::PowerAtMostDraftNoteMax | R::HasDraftNotedColorOfSource => false,
             R::IsSourceChosenCreatureType => false,
             R::SameNameAsTarget | R::TargetsALandYouControl => false,
             // Count walks the battlefield for the evaluating controller's

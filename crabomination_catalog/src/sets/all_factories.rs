@@ -1244,6 +1244,18 @@ static CN2: &[Factory] = &[
     super::cn2::deadly_designs,
     super::cn2::spectral_grasp,
     super::cn2::selvala_heart_of_the_wilds,
+    super::cn2::archdemon_of_paliano,
+    super::cn2::illusionary_informant,
+    super::cn2::leovolds_operative,
+    super::cn2::garbage_fire,
+    super::cn2::pyretic_hunter,
+    super::cn2::custodi_peacekeeper,
+    super::cn2::smuggler_captain,
+    super::cn2::noble_banneret,
+    super::cn2::regicide,
+    super::cn2::canal_courier,
+    super::cn2::daretti_ingenious_iconoclast,
+    super::cn2::kaya_ghost_assassin,
 ];
 static CNS3: &[Factory] = &[
     super::cns3::aether_searcher,

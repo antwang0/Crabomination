@@ -348,3 +348,156 @@ fn besmirch_borrows_and_goads() {
     assert!(!stolen.goaded_by.is_empty(), "and goaded");
 }
 
+
+/// The CN2 draft-matters cards note their pick number / a name / three colors
+/// as they're drafted (CR 905.2b), and the game halves read those notes.
+#[test]
+fn cn2_draft_notes_feed_the_game_halves() {
+    use crabomination::draft::{DraftNotes, GARBAGE_FIRE, REGICIDE, SMUGGLER_CAPTAIN};
+    let mut g = two_player_game();
+    let mut notes = DraftNotes::default();
+    notes.note_number(GARBAGE_FIRE, 4);
+    notes.note_name(SMUGGLER_CAPTAIN, "Grizzly Bears");
+    notes.note_colors(REGICIDE, &[Color::Green]);
+    g.players[0].draft_notes = notes;
+
+    // Garbage Fire burns for the highest noted pick.
+    let victim = g.add_card_to_battlefield(1, catalog::craw_wurm()); // 6/4
+    let fire = g.add_card_to_hand(0, catalog::garbage_fire());
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: fire,
+        target: Some(Target::Permanent(victim)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast Garbage Fire");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(victim).is_none(), "4 damage is lethal to a 6/4");
+
+    // Smuggler Captain tutors the noted name.
+    let bears_id = g.add_card_to_library(0, catalog::grizzly_bears());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Search(Some(bears_id))]));
+    g.move_card_to_battlefield_for_test(0, catalog::smuggler_captain());
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == bears_id), "the noted name was findable");
+    g.decider = Box::new(crabomination::decision::AutoDecider);
+
+    // Regicide only kills something wearing a noted color.
+    let bears = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // green
+    let kill = g.add_card_to_hand(0, catalog::regicide());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: kill,
+        target: Some(Target::Permanent(bears)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast Regicide");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bears).is_none());
+}
+
+/// Pyretic Hunter arrives sized by its noted pick; Custodi Peacekeeper's tap
+/// is capped by the same number.
+#[test]
+fn draft_note_number_sizes_pyretic_hunter_and_caps_the_peacekeeper() {
+    use crabomination::draft::{CUSTODI_PEACEKEEPER, DraftNotes, PYRETIC_HUNTER};
+    let mut g = two_player_game();
+    let mut notes = DraftNotes::default();
+    notes.note_number(PYRETIC_HUNTER, 3);
+    notes.note_number(CUSTODI_PEACEKEEPER, 3);
+    g.players[0].draft_notes = notes;
+
+    let hunter = g.move_card_to_battlefield_for_test(0, catalog::pyretic_hunter());
+    drain_stack(&mut g);
+    assert_eq!(g.computed_permanent(hunter).unwrap().power, 3);
+
+    let keeper = g.add_card_to_battlefield(0, catalog::custodi_peacekeeper());
+    g.clear_sickness(keeper);
+    let wurm = g.add_card_to_battlefield(1, catalog::craw_wurm()); // 6/4, over the cap
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::White, 1);
+    assert!(
+        g.perform_action(GameAction::ActivateAbility {
+            card_id: keeper,
+            ability_index: 0,
+            target: Some(Target::Permanent(wurm)),
+            additional_targets: vec![],
+            x_value: None,
+            mode: None,
+        })
+        .is_err(),
+        "power 6 is over the noted 3"
+    );
+}
+
+/// Noble Banneret anthems itself and every creature sharing a noted name.
+#[test]
+fn noble_banneret_anthems_its_noted_names() {
+    use crabomination::draft::{DraftNotes, NOBLE_BANNERET};
+    let mut g = two_player_game();
+    let mut notes = DraftNotes::default();
+    notes.note_name(NOBLE_BANNERET, "Grizzly Bears");
+    g.players[0].draft_notes = notes;
+
+    let banneret = g.add_card_to_battlefield(0, catalog::noble_banneret());
+    let bears = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let wurm = g.add_card_to_battlefield(0, catalog::craw_wurm());
+    assert_eq!(g.computed_permanent(banneret).unwrap().power, 4, "anthems itself");
+    let pumped = g.computed_permanent(bears).unwrap();
+    assert_eq!((pumped.power, pumped.toughness), (3, 3));
+    assert!(pumped.keywords.contains(&Keyword::Lifelink));
+    assert_eq!(g.computed_permanent(wurm).unwrap().power, 6, "an unnoted name is untouched");
+}
+
+/// Kaya's 0 blinks its subject away until your next upkeep, for 2 life.
+#[test]
+fn kaya_blinks_until_your_next_upkeep() {
+    let mut g = two_player_game();
+    let kaya = g.add_card_to_battlefield(0, catalog::kaya_ghost_assassin());
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateLoyaltyAbility {
+        card_id: kaya,
+        ability_index: 0,
+        target: None,
+        x_value: None,
+    })
+    .expect("Kaya's 0");
+    drain_stack(&mut g);
+    // Mode 0 is "exile Kaya"; she comes back at your next upkeep.
+    assert!(g.battlefield_find(kaya).is_none(), "exiled herself");
+    assert!(g.exile.iter().any(|c| c.id == kaya));
+    assert_eq!(g.players[0].life, 18);
+}
+
+/// Daretti's +1 leaves a Construct wall behind.
+#[test]
+fn daretti_makes_a_defender_construct() {
+    let mut g = two_player_game();
+    let daretti = g.add_card_to_battlefield(0, catalog::daretti_ingenious_iconoclast());
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateLoyaltyAbility {
+        card_id: daretti,
+        ability_index: 0,
+        target: None,
+        x_value: None,
+    })
+    .expect("Daretti's +1");
+    drain_stack(&mut g);
+    let construct = g
+        .battlefield
+        .iter()
+        .find(|c| c.definition.name == "Construct")
+        .expect("Construct token");
+    assert!(construct.definition.keywords.contains(&Keyword::Defender));
+    assert_eq!(g.battlefield_find(daretti).unwrap().counter_count(CounterType::Loyalty), 4);
+}

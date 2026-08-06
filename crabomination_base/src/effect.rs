@@ -5400,6 +5400,11 @@ pub enum Effect {
     /// its **owner's** control at the beginning of the next end step, with no
     /// extra counter. The plain-flicker sibling of `ExileReturnNextEndStep`
     /// (Voidwalk, Voyager Staff — "return it under its owner's control").
+    /// Exile each resolved permanent, returning it under its owner's control
+    /// at the beginning of the controller's next upkeep (Kaya, Ghost
+    /// Assassin's 0). The upkeep-timed sibling of
+    /// `ExileReturnToOwnerNextEndStep`.
+    ExileReturnAtYourNextUpkeep { what: Selector },
     ExileReturnToOwnerNextEndStep {
         what: Selector,
         /// The permanent returns tapped (Mystifying Maze).

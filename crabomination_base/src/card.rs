@@ -319,8 +319,8 @@ pub enum PlaneswalkerSubtype {
     // Modern_decks cube expansion (Saheeli Rai, Tamiyo Collector of Tales,
     // Geyadrone Dihada, Urza Chief Artificer).
     Saheeli, Tamiyo, Dihada, Urza,
-    // CNS (Dack Fayden).
-    Dack,
+    // CNS (Dack Fayden) / CN2 (Daretti, Ingenious Iconoclast).
+    Dack, Daretti,
     // THB walker.
     Calix,
     // THS walker.
@@ -2162,6 +2162,12 @@ pub enum SelectionRequirement {
     /// "…with mana value X or less, where X is the number of players you
     /// attacked this combat" (Custodi Soulcaller).
     ManaValueAtMostOpponentsAttackedThisCombat,
+    /// CR 905.2b — power at most the highest number the controller noted for
+    /// the ability's source card name (Custodi Peacekeeper).
+    PowerAtMostDraftNoteMax,
+    /// CR 905.2b — the object is one or more of the colors the controller
+    /// noted for the ability's source card name (Regicide).
+    HasDraftNotedColorOfSource,
     /// MV at most the number of battlefield permanents matching the inner
     /// filter that the evaluating player controls (Spellstutter Sprite's
     /// "mana value X or less, where X is the number of Faeries you control").
@@ -2519,6 +2525,19 @@ impl SelectionRequirement {
     /// Concretize `NameNotedForSource` against the names the controller
     /// noted for the source (CR 905.2b) — an `Or` chain of `HasName`, or
     /// "matches nothing" when no name was noted.
+    /// True when this requirement tree has a `NameNotedForSource` leaf, so a
+    /// source-blind matcher knows it must resolve the notes first.
+    pub fn mentions_noted_names(&self) -> bool {
+        match self {
+            Self::NameNotedForSource => true,
+            Self::And(a, b) | Self::Or(a, b) => {
+                a.mentions_noted_names() || b.mentions_noted_names()
+            }
+            Self::Not(inner) => inner.mentions_noted_names(),
+            _ => false,
+        }
+    }
+
     pub fn resolve_noted_names(&self, names: &[String]) -> Self {
         match self {
             Self::NameNotedForSource => names
