@@ -244,6 +244,8 @@ impl Effect {
             | Effect::EachPlayerMayDiscardUpToThenDamage { .. }
             | Effect::CoffinReturn
             | Effect::TransmuteArtifact
+            | Effect::SearchForOtherChosenName
+            | Effect::BasicLandFromOutsideGameToHand
             | Effect::ExileTokensCreatedBySourceForCounters { .. }
             | Effect::RemoveCountersToCreateTokens { .. }
             | Effect::OpponentChoosesTargetForDamage { .. }

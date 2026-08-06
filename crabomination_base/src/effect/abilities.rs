@@ -1050,9 +1050,22 @@ pub enum StaticEffect {
     /// Potential). Reads the source's `named_card`; a face-down hidden agenda
     /// has none, so nothing applies until it's turned face up.
     MaySpendManaAsAnyColorForNamedSpells,
+    /// CR 613.1c — "equipped creature has all names of nonlegendary creature
+    /// cards in addition to its name" (Spy Kit). Read by name matching, not by
+    /// the layer walk.
+    GrantsAllNonlegendaryCreatureNames,
+    /// "You may spend mana as though it were mana of any color to cast creature
+    /// spells with mana value equal to the chosen number" — Emissary's Ploy.
+    /// Reads the source's `chosen_number`.
+    MaySpendManaAsAnyColorForCreaturesWithChosenMv,
     /// CR 100.2 — "Your minimum deck size is reduced by N" (Advantageous
     /// Proclamation). Read by `format::validate_full_deck`, not the game loop.
     ReduceMinimumDeckSize(u32),
+    /// "Your starting hand size is reduced by N" (Sovereign's Realm's five).
+    StartingHandSizeReduced(u32),
+    /// "Your starting deck can't have basic land cards" (Sovereign's Realm).
+    /// Enforced by `format::validate_full_deck`, not by the engine.
+    StartingDeckCantHaveBasicLands,
     /// CR 103.4 — "Draw an additional hand of seven cards as the game begins.
     /// Before taking mulligans, shuffle all but one of your hands into your
     /// library." (Backup Plan.) Each source grants one extra opening hand.

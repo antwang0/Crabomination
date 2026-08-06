@@ -10842,11 +10842,23 @@ impl GameState {
                         }
                     }
                     VoteTally::PerVote => {
-                        for (opt, count) in options.iter().zip(votes) {
-                            for _ in 0..count {
-                                self.run_effect(&opt.effect, ctx, events)?;
+                        // One run per vote, in cast order within each option, so
+                        // `PlayerRef::CurrentVoter` names the seat that cast it.
+                        let outer = self.current_voter;
+                        for (idx, opt) in options.iter().enumerate() {
+                            for (seat, pick) in self.last_vote.clone() {
+                                if pick != idx {
+                                    continue;
+                                }
+                                self.current_voter = Some(seat);
+                                let r = self.run_effect(&opt.effect, ctx, events);
+                                if r.is_err() {
+                                    self.current_voter = outer;
+                                    return r;
+                                }
                             }
                         }
+                        self.current_voter = outer;
                     }
                 }
                 Ok(())
@@ -18893,6 +18905,60 @@ impl GameState {
 
 
             Effect::WishToHand { filter } => self.resolve_wish_to_hand(filter, ctx, events),
+
+            Effect::SearchForOtherChosenName => {
+                // The trigger's spell wears one of the two agenda names; go
+                // fetch the other.
+                let names = ctx
+                    .source
+                    .and_then(|id| self.static_source(id))
+                    .map(|c| (c.named_card.clone(), c.named_card_2.clone()));
+                let Some((Some(a), Some(b))) = names else { return Ok(()) };
+                // The spell is still on the stack when the trigger resolves.
+                let cast = ctx.trigger_source.and_then(|e| e.as_card_id()).and_then(|id| {
+                    self.stack
+                        .iter()
+                        .find_map(|si| match si {
+                            StackItem::Spell { card, .. } if card.id == id => {
+                                Some(card.definition.name.to_string())
+                            }
+                            _ => None,
+                        })
+                        .or_else(|| {
+                            self.find_card_anywhere(id).map(|c| c.definition.name.to_string())
+                        })
+                });
+                let want = if cast.as_deref() == Some(a.as_str()) { b } else { a };
+                self.run_effect(
+                    &Effect::Search {
+                        who: PlayerRef::You,
+                        filter: crate::card::SelectionRequirement::Creature
+                            .and(crate::card::SelectionRequirement::HasName(want)),
+                        to: ZoneDest::Hand(PlayerRef::You),
+                    },
+                    ctx,
+                    events,
+                )
+            }
+
+            Effect::BasicLandFromOutsideGameToHand => {
+                use crate::decision::{Decision, DecisionAnswer};
+                use crate::mana::Color;
+                let source = ctx.source.unwrap_or(CardId(0));
+                let legal =
+                    vec![Color::White, Color::Blue, Color::Black, Color::Red, Color::Green];
+                let color = match self.decider.decide(&Decision::ChooseColor { source, legal }) {
+                    DecisionAnswer::Color(c) => c,
+                    _ => Color::Green,
+                };
+                let def = crate::draft::basic_land_factory(color)();
+                let id = CardId(self.next_id);
+                self.next_id = self.next_id.saturating_add(1);
+                self.players[ctx.controller]
+                    .hand
+                    .push(crate::card::CardInstance::new(id, def, ctx.controller));
+                Ok(())
+            }
 
             Effect::WishToLibrary { filter, max } => {
                 // Research — the sideboard half of a Wish, shuffled in rather
@@ -32169,6 +32235,16 @@ impl GameState {
                     .collect()
             }
 
+            Selector::OwnedBy { who, filter } => {
+                let Some(p) = self.resolve_player(who, ctx) else { return vec![]; };
+                self.battlefield
+                    .iter()
+                    .filter(|c| c.owner == p)
+                    .filter(|c| self.evaluate_requirement_static(filter, &Target::Permanent(c.id), ctx.controller, ctx.source))
+                    .map(|c| EntityRef::Permanent(c.id))
+                    .collect()
+            }
+
             Selector::OtherCreaturesControlledByControllerOf(subject) => {
                 let Some(EntityRef::Permanent(subj)) =
                     self.resolve_selector(subject, ctx).into_iter().next()
@@ -32635,6 +32711,7 @@ impl GameState {
 
     fn resolve_players_unranged(&self, pref: &PlayerRef, ctx: &EffectContext) -> Vec<usize> {
         match pref {
+            PlayerRef::CurrentVoter => vec![self.current_voter.unwrap_or(ctx.controller)],
             // CR 101.4 / 121.2c — "each player"/"each opponent" fan-outs
             // resolve in APNAP order (active player first, then turn order),
             // not raw seat index.
@@ -32758,6 +32835,7 @@ impl GameState {
     pub(crate) fn resolve_player(&self, pref: &PlayerRef, ctx: &EffectContext) -> Option<usize> {
         match pref {
             PlayerRef::You => Some(ctx.controller),
+            PlayerRef::CurrentVoter => Some(self.current_voter.unwrap_or(ctx.controller)),
             PlayerRef::Seat(p) => Some(*p),
             PlayerRef::ActivePlayer => Some(self.active_player_idx),
             PlayerRef::PlayerWithMostLife => {

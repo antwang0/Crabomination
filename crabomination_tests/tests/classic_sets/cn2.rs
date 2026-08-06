@@ -15,6 +15,26 @@ fn advance_to(g: &mut GameState, step: TurnStep) {
     drain_stack(g);
 }
 
+/// Cast `def` from hand with free mana and let it resolve.
+fn resolve_sorcery(g: &mut GameState, def: crabomination::card::CardDefinition) {
+    let id = g.add_card_to_hand(0, def);
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add_colorless(12);
+    for c in [Color::Blue, Color::Green] {
+        g.players[0].mana_pool.add(c, 2);
+    }
+    g.perform_action(GameAction::CastSpell {
+        card_id: id,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast");
+    drain_stack(g);
+}
+
 fn swing(g: &mut GameState, id: CardId) {
     g.clear_sickness(id);
     advance_to(g, TurnStep::DeclareAttackers);
@@ -636,4 +656,126 @@ fn caller_of_the_untamed_mints_the_x_cost_creature() {
         g.battlefield.iter().any(|c| c.definition.name == "Grizzly Bears" && c.is_token),
         "a token copy of the MV-2 exiled creature"
     );
+}
+
+/// Expropriate hands the caster a permanent owned by each "money" voter and
+/// an extra turn per "time" vote, then exiles itself.
+#[test]
+fn expropriate_takes_a_permanent_from_each_money_voter() {
+    let mut g = two_player_game();
+    let mine = g.move_card_to_battlefield_for_test(0, catalog::grizzly_bears());
+    let theirs = g.move_card_to_battlefield_for_test(1, catalog::savannah_lions());
+    // You vote Time, the opponent votes Money on their own Lions.
+    g.decider = Box::new(ScriptedDecider::new([
+        DecisionAnswer::Amount(0),
+        DecisionAnswer::Amount(1),
+        DecisionAnswer::Cards(vec![theirs]),
+    ]));
+    resolve_sorcery(&mut g, catalog::expropriate());
+    assert_eq!(g.battlefield_find(theirs).unwrap().controller, 0, "the Lions changed hands");
+    assert_eq!(g.battlefield_find(mine).unwrap().controller, 0, "your own bear is untouched");
+    assert_eq!(g.players[0].extra_turns, 1, "the Time vote banked a turn");
+    assert!(
+        g.exile.iter().any(|c| c.definition.name == "Expropriate"),
+        "Expropriate exiles itself"
+    );
+}
+
+/// Selvala's Stampede digs a creature out per "wild" vote.
+#[test]
+fn selvalas_stampede_digs_out_a_creature_per_wild_vote() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::grizzly_bears());
+    g.add_card_to_library(0, catalog::forest());
+    g.decider = Box::new(ScriptedDecider::new([
+        DecisionAnswer::Amount(0),
+        DecisionAnswer::Amount(0),
+    ]));
+    resolve_sorcery(&mut g, catalog::selvalas_stampede());
+    assert!(
+        g.battlefield.iter().any(|c| c.definition.name == "Grizzly Bears"),
+        "the wild votes dug the Bears out"
+    );
+}
+
+/// Emissary's Ploy lets creature spells at the chosen mana value be cast off
+/// any color, and leaves other mana values alone.
+#[test]
+fn emissarys_ploy_fixes_the_chosen_mana_value() {
+    let mut g = two_player_game();
+    let id = g.seat_conspiracy(0, catalog::emissarys_ploy(), None);
+    g.players[0].command.iter_mut().find(|c| c.id == id).unwrap().chosen_number = Some(2);
+    let bears = g.add_card_to_hand(0, catalog::grizzly_bears());
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::White, 2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bears,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("{G}{G} Bears paid with white mana");
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.definition.name == "Grizzly Bears"));
+}
+
+/// Summoner's Bond fetches the other named creature when you cast the first.
+#[test]
+fn summoners_bond_tutors_the_other_name() {
+    let mut g = two_player_game();
+    let bond = g.seat_double_agenda(0, catalog::summoners_bond(), "Grizzly Bears", "Savannah Lions");
+    assert!(g.reveal_hidden_agenda(0, bond), "turn the agenda face up (CR 702.106b)");
+    let lions = g.add_card_to_library(0, catalog::savannah_lions());
+    let bears = g.add_card_to_hand(0, catalog::grizzly_bears());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Search(Some(lions))]));
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Green, 2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bears,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast the Bears");
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == lions), "the other name is tutored up");
+}
+
+/// Sovereign's Realm cuts the opening hand to five and turns basics into
+/// any-color sources.
+#[test]
+fn sovereigns_realm_shrinks_the_grip_and_fixes_basics() {
+    let mut g = two_player_game();
+    g.seat_conspiracy(0, catalog::sovereigns_realm(), None);
+    assert_eq!(g.starting_hand_size(0), 5, "five cards, not seven");
+    assert_eq!(g.starting_hand_size(1), 7, "the other seat is unaffected");
+    let forest = g.move_card_to_battlefield_for_test(0, catalog::forest());
+    let abilities = g.granted_abilities_for(forest);
+    assert!(!abilities.is_empty(), "the Forest picked up an any-color tap ability");
+}
+
+/// Spy Kit makes the equipped creature answer to any nonlegendary creature
+/// card's name.
+#[test]
+fn spy_kit_grants_every_nonlegendary_creature_name() {
+    use crabomination::card::SelectionRequirement as R;
+    use crabomination::game::types::Target;
+    let mut g = two_player_game();
+    let bear = g.move_card_to_battlefield_for_test(0, catalog::grizzly_bears());
+    let kit = g.move_card_to_battlefield_for_test(0, catalog::spy_kit());
+    g.battlefield_find_mut(kit).unwrap().attached_to = Some(bear);
+    let named = |g: &GameState, n: &str| {
+        g.evaluate_requirement_static(
+            &R::HasName(n.to_string()),
+            &Target::Permanent(bear),
+            0,
+            None,
+        )
+    };
+    assert!(named(&g, "Savannah Lions"), "another nonlegendary creature's name matches");
+    assert!(!named(&g, "Forest"), "a land's name doesn't");
 }

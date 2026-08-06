@@ -1263,6 +1263,13 @@ static CN2: &[Factory] = &[
     super::cn2::arcane_savant,
     super::cn2::caller_of_the_untamed,
     super::cn2::volatile_chimera,
+    super::cn2::expropriate,
+    super::cn2::selvalas_stampede,
+    super::cn2::echoing_boon,
+    super::cn2::emissarys_ploy,
+    super::cn2::summoners_bond,
+    super::cn2::sovereigns_realm,
+    super::cn2::spy_kit,
 ];
 static CNS3: &[Factory] = &[
     super::cns3::aether_searcher,

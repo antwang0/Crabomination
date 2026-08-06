@@ -1475,6 +1475,10 @@ pub struct GameState {
     /// recent ballot, read by `PlayerRef::OpponentsWhoVotedDifferently`.
     #[serde(default)]
     pub last_vote: Vec<(usize, usize)>,
+    /// CR 701.38 — the seat whose vote the running `VoteTally::PerVote` body
+    /// belongs to; read by `PlayerRef::CurrentVoter` (Expropriate).
+    #[serde(default, skip)]
+    pub current_voter: Option<usize>,
     /// CR 500.8 — steps/phases a player skips for the rest of this turn
     /// (Fatespinner). `(seat, step)`; cleared at cleanup.
     #[serde(default)]
@@ -2077,6 +2081,7 @@ impl Clone for GameState {
             face_down_revealed_to: self.face_down_revealed_to.clone(),
             shroud_waivers: self.shroud_waivers.clone(),
             last_vote: self.last_vote.clone(),
+            current_voter: self.current_voter,
             skipped_steps_this_turn: self.skipped_steps_this_turn.clone(),
             cant_attack_player_this_turn: self.cant_attack_player_this_turn.clone(),
             graveyard_play_pooled_for: self.graveyard_play_pooled_for,
@@ -2392,6 +2397,7 @@ impl GameState {
             face_down_revealed_to: Vec::new(),
             shroud_waivers: Vec::new(),
             last_vote: Vec::new(),
+            current_voter: None,
             skipped_steps_this_turn: Vec::new(),
             cant_attack_player_this_turn: Vec::new(),
             graveyard_play_pooled_for: None,
@@ -3645,6 +3651,40 @@ impl GameState {
         }
         self.players[seat].command.push(card);
         id
+    }
+
+    /// CR 702.106b double agenda — seat a face-down conspiracy with two
+    /// secretly chosen names (Summoner's Bond).
+    pub fn seat_double_agenda(
+        &mut self,
+        seat: usize,
+        def: crate::card::CardDefinition,
+        first: &str,
+        second: &str,
+    ) -> CardId {
+        let id = self.seat_conspiracy(seat, def, Some(first));
+        if let Some(c) = self.players[seat].command.iter_mut().find(|c| c.id == id) {
+            c.named_card_2 = Some(second.to_string());
+        }
+        id
+    }
+
+    /// CR 613.1c — true when `id` wears a `GrantsAllNonlegendaryCreatureNames`
+    /// permanent (Spy Kit) and `name` is a nonlegendary creature card's name.
+    pub fn has_all_creature_names(&self, id: CardId, name: &str) -> bool {
+        let granted = self.battlefield.iter().any(|c| {
+            c.attached_to == Some(id)
+                && c.definition.static_abilities.iter().any(|sa| {
+                    matches!(
+                        sa.effect,
+                        crate::effect::StaticEffect::GrantsAllNonlegendaryCreatureNames
+                    )
+                })
+        });
+        granted
+            && crate::card_registry::lookup_by_name(name).is_some_and(|d| {
+                d.is_creature() && !d.supertypes.contains(&crate::card::Supertype::Legendary)
+            })
     }
 
     /// CR 905.4 — "before you shuffle your deck to start the game, exile a
@@ -6626,28 +6666,33 @@ impl GameState {
         })
     }
 
-    /// The name-aware form: also true when `seat` controls a face-up
-    /// `MaySpendManaAsAnyColorForNamedSpells` source (Unexpected Potential)
-    /// whose chosen name matches the spell being cast.
+    /// The spell-aware form: also true when `seat` controls a face-up source
+    /// whose permission covers this particular spell — Unexpected Potential's
+    /// chosen name, Emissary's Ploy's chosen mana value.
     pub fn spend_mana_as_any_color_for_spell(
         &self,
         seat: Option<usize>,
-        name: Option<&str>,
+        kind: &crate::mana::SpellKind,
     ) -> bool {
         use crate::effect::StaticEffect;
         if self.spend_mana_as_any_color_active_for(seat) {
             return true;
         }
-        let (Some(seat), Some(name)) = (seat, name) else { return false };
+        let Some(seat) = seat else { return false };
         self.battlefield
             .iter()
             .chain(self.players[seat].command.iter())
             .filter(|c| c.controller == seat && !c.face_down)
             .any(|c| {
-                c.named_card.as_deref() == Some(name)
-                    && c.definition.static_abilities.iter().any(|sa| {
-                        matches!(sa.effect, StaticEffect::MaySpendManaAsAnyColorForNamedSpells)
-                    })
+                c.definition.static_abilities.iter().any(|sa| match sa.effect {
+                    StaticEffect::MaySpendManaAsAnyColorForNamedSpells => {
+                        kind.name.is_some() && c.named_card.as_deref() == kind.name
+                    }
+                    StaticEffect::MaySpendManaAsAnyColorForCreaturesWithChosenMv => {
+                        kind.creature && c.chosen_number == Some(kind.mana_value)
+                    }
+                    _ => false,
+                })
             })
     }
 
@@ -6664,10 +6709,10 @@ impl GameState {
         &self,
         seat: Option<usize>,
         cost: &crate::mana::ManaCost,
-        name: Option<&str>,
+        kind: &crate::mana::SpellKind,
     ) -> crate::mana::ManaCost {
         use crate::mana::ManaSymbol;
-        if !self.spend_mana_as_any_color_for_spell(seat, name) {
+        if !self.spend_mana_as_any_color_for_spell(seat, kind) {
             return cost.clone();
         }
         let mut relaxed = 0;
@@ -11266,7 +11311,7 @@ impl GameState {
         // CR 103.4 — opening hands. 727.3: a player short of seven cards will
         // lose to the empty-library SBA, which the normal draw path enforces.
         for p in 0..self.players.len() {
-            for _ in 0..7 {
+            for _ in 0..self.starting_hand_size(p) {
                 self.draw_one(p, events);
             }
         }
@@ -16397,6 +16442,22 @@ impl GameState {
         self.set_mulligan_decision(0, 0, if n > 1 { Some(1) } else { None });
     }
 
+    /// CR 103.4 — seven, less any command-zone reduction (Sovereign's Realm's
+    /// "your starting hand size is five").
+    pub fn starting_hand_size(&self, seat: usize) -> u32 {
+        use crate::effect::StaticEffect;
+        let cut: u32 = self.players[seat]
+            .command
+            .iter()
+            .flat_map(|c| c.definition.static_abilities.iter())
+            .filter_map(|sa| match sa.effect {
+                StaticEffect::StartingHandSizeReduced(n) => Some(n),
+                _ => None,
+            })
+            .sum();
+        7u32.saturating_sub(cut)
+    }
+
     /// CR 103.4 — extra opening hands granted by cards outside the game
     /// (Backup Plan in the command zone).
     fn extra_opening_hands_for(&self, seat: usize) -> usize {
@@ -19915,6 +19976,10 @@ fn static_effect_to_effects(
             // `relax_cost_colors` (Mycosynth Lattice); no layer effect.
             | StaticEffect::PlayersMaySpendManaAsAnyColor
             | StaticEffect::MaySpendManaAsAnyColorForNamedSpells
+            | StaticEffect::MaySpendManaAsAnyColorForCreaturesWithChosenMv
+            | StaticEffect::GrantsAllNonlegendaryCreatureNames
+            | StaticEffect::StartingHandSizeReduced(_)
+            | StaticEffect::StartingDeckCantHaveBasicLands
             // Deck construction / pre-game only.
             | StaticEffect::ReduceMinimumDeckSize(_)
             | StaticEffect::ExtraOpeningHand

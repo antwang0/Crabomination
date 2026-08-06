@@ -3492,6 +3492,13 @@ impl GameState {
                                     if self.battlefield.iter().any(|o| o.id == *id && o.definition.is_creature()))
                             })
                     }),
+                    R::SpellTargetsMatching(inner) => self.stack.iter().any(|si| {
+                        let StackItem::Spell { card: c, target, additional_targets, .. } = si else { return false };
+                        c.id == card.id
+                            && target.iter().chain(additional_targets.iter()).any(|t| {
+                                self.evaluate_requirement_static(inner, t, controller, source)
+                            })
+                    }),
                     // Equinox — a stack spell whose effect destroys lands, and
                     // that either sweeps them or points at one of yours.
                     R::SpellWouldDestroyALandYouControl => self.stack.iter().any(|si| {
@@ -3816,7 +3823,10 @@ impl GameState {
                                 && other.power() > cand_pow
                         })
                     }
-                    R::HasName(name) => card.definition.name == name.as_str(),
+                    R::HasName(name) => {
+                        card.definition.name == name.as_str()
+                            || self.has_all_creature_names(card.id, name)
+                    }
                     R::OriginallyPrintedIn(set) => set.contains(card.definition.name),
                     R::ManaValueAtMostControllerHand => {
                         card.definition.cost.cmc() as usize <= self.players[controller].hand.len()
@@ -3853,6 +3863,14 @@ impl GameState {
                         // fall back to the per-resolution scratchpad (Predict).
                         .or(self.named_card_this_resolution.as_deref())
                         .is_some_and(|n| n == card.definition.name),
+                    R::NamedByEitherAgendaOfSource => source
+                        .and_then(|sid| self.static_source(sid))
+                        .is_some_and(|s| {
+                            [s.named_card.as_deref(), s.named_card_2.as_deref()]
+                                .iter()
+                                .flatten()
+                                .any(|n| *n == card.definition.name)
+                        }),
                     R::NameNotedForSource => source
                         .and_then(|sid| self.find_card_anywhere(sid))
                         .is_some_and(|s| {
@@ -4442,7 +4460,7 @@ impl GameState {
                 .as_deref()
                 .is_some_and(|n| n == card.definition.name),
             R::IsSourceChosenCardType => false,
-            R::NameNotedForSource => false,
+            R::NameNotedForSource | R::NamedByEitherAgendaOfSource => false,
             R::PowerAtMostDraftNoteMax
             | R::HasDraftNotedColorOfSource
             | R::HasDraftNotedCreatureTypeOfSource => false,
@@ -4528,6 +4546,7 @@ impl GameState {
             | R::IsSpellOnStack | R::SpellNotCastFromHand
             | R::SpellTargetsControllerOrControlled
             | R::SpellTargetsCreature
+            | R::SpellTargetsMatching(_)
             | R::SpellWouldDestroyALandYouControl
             | R::CastSorceryThisTurn
             | R::SpellTargetsOnlySource

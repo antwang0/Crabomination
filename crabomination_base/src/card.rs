@@ -2136,6 +2136,10 @@ pub enum SelectionRequirement {
     SpellTargetsControllerOrControlled,
     /// A stack spell that targets at least one creature (Intervene).
     SpellTargetsCreature,
+    /// A stack spell at least one of whose targets is a permanent matching the
+    /// inner filter (Echoing Boon's "targets a creature you control with the
+    /// chosen name").
+    SpellTargetsMatching(Box<SelectionRequirement>),
     /// A stack spell whose effect would destroy a land the evaluating player
     /// controls — either a mass destroy whose filter can catch one, or a
     /// targeted destroy pointed at one (Equinox).
@@ -2432,6 +2436,9 @@ pub enum SelectionRequirement {
     /// NamedBySource, .. }`. Falls back to "no match" when the source has
     /// not named a card.
     NamedBySource,
+    /// CR 702.106b — the candidate's name is either of the source's two
+    /// secretly chosen names (Summoner's Bond's double agenda).
+    NamedByEitherAgendaOfSource,
     /// CR 905.2b — true when the candidate's name is one the evaluating
     /// player noted as they drafted cards with the source's name
     /// (Aether Searcher). No match outside a drafted game.
@@ -5719,6 +5726,9 @@ pub struct CardInstance {
     /// activated abilities of sources with the chosen name. `None` for the
     /// vast majority of permanents that never name a card.
     pub named_card: Option<String>,
+    /// CR 702.106b double agenda — the second of two secretly chosen names
+    /// (Summoner's Bond). `None` for every single-name namer.
+    pub named_card_2: Option<String>,
     /// A color chosen as this permanent entered (CR 614/107.4 — Coldsteel
     /// Heart, choose-a-color mana rocks). Read by `ManaPayload::
     /// ChosenColorOfSource` so a `{T}: Add the chosen color` ability taps for
@@ -5997,6 +6007,7 @@ impl CardInstance {
             granted_alt_cast_cost_eot: None,
             granted_cast_surcharge_eot: None,
             named_card: None,
+            named_card_2: None,
             chosen_color: None,
             kicked_options: Vec::new(),
             chosen_colors: Vec::new(),
@@ -6680,6 +6691,8 @@ struct CardInstanceWire {
     /// state; `#[serde(default)]` so older snapshots load as `None`.
     #[serde(default)]
     named_card: Option<String>,
+    #[serde(default)]
+    named_card_2: Option<String>,
     /// Chosen color (Coldsteel Heart-style mana rocks). `#[serde(default)]`
     /// so older snapshots load as `None`.
     #[serde(default)]
@@ -6886,6 +6899,7 @@ impl serde::Serialize for CardInstance {
             granted_alt_cast_cost_eot: self.granted_alt_cast_cost_eot.clone(),
             granted_cast_surcharge_eot: self.granted_cast_surcharge_eot.clone(),
             named_card: self.named_card.clone(),
+            named_card_2: self.named_card_2.clone(),
             chosen_color: self.chosen_color,
             chosen_colors: self.chosen_colors.clone(),
             goaded_by: self.goaded_by.clone(),
@@ -7045,6 +7059,7 @@ impl<'de> serde::Deserialize<'de> for CardInstance {
         c.granted_alt_cast_cost_eot = wire.granted_alt_cast_cost_eot;
         c.granted_cast_surcharge_eot = wire.granted_cast_surcharge_eot;
         c.named_card = wire.named_card;
+        c.named_card_2 = wire.named_card_2;
         c.chosen_color = wire.chosen_color;
         c.chosen_colors = wire.chosen_colors;
         c.goaded_by = wire.goaded_by;

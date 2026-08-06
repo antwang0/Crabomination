@@ -6,11 +6,11 @@
 use crate::card::{
     ActivatedAbility, CardDefinition, CardType, CounterType, CreatureType, EquipBonus, EventKind,
     EventScope, EventSpec, Keyword, Predicate, SelectionRequirement as R, StaticAbility, Subtypes,
-    Supertype, TokenDefinition, TriggeredAbility,
+    ArtifactSubtype, Supertype, TokenDefinition, TriggeredAbility,
 };
 use crate::effect::{
-    DraftNoteAgg, Duration, Effect, ManaPayload, PlayerRef, Selector, StaticEffect, Value,
-    VoteOption, VoteTally,
+    DraftNoteAgg, Duration, Effect, ManaPayload, PlayerRef, RevealMissDest, Selector,
+    StaticEffect, Value, VoteOption, VoteTally, ZoneDest,
     shortcut::{draw, etb, on_attack, target_filtered, token_copy_of},
 };
 use crate::game::TurnStep;
@@ -1139,5 +1139,211 @@ pub fn volatile_chimera() -> CardDefinition {
             3,
             2,
         )
+    }
+}
+
+/// Expropriate — {7}{U}{U} council's dilemma: extra turns per "time" vote,
+/// and a permanent owned by each "money" voter.
+pub fn expropriate() -> CardDefinition {
+    CardDefinition {
+        name: "Expropriate",
+        cost: cost(&[generic(7), u(), u()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::Vote {
+                options: vec![
+                    VoteOption::new(
+                        "Time",
+                        Effect::TakeExtraTurn { who: PlayerRef::You, count: Value::ONE },
+                    ),
+                    VoteOption::new(
+                        "Money",
+                        Effect::ChooseOneAmong {
+                            what: Selector::OwnedBy {
+                                who: PlayerRef::CurrentVoter,
+                                filter: R::Any,
+                            },
+                            chooser: PlayerRef::You,
+                            chosen: Box::new(Effect::GainControl {
+                                what: Selector::SeparatedPile { chosen: true },
+                                to: Some(PlayerRef::You),
+                                duration: Duration::Permanent,
+                            }),
+                            other: Box::new(Effect::Noop),
+                        },
+                    ),
+                ],
+                tally: VoteTally::PerVote,
+            },
+            Effect::ExileResolvingSpell,
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Selvala's Stampede — {4}{G}{G} council's dilemma: dig out a creature per
+/// "wild" vote, drop a permanent from hand per "free" vote.
+pub fn selvalas_stampede() -> CardDefinition {
+    CardDefinition {
+        name: "Selvala's Stampede",
+        cost: cost(&[generic(4), g(), g()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Vote {
+            options: vec![
+                VoteOption::new(
+                    "Wild",
+                    Effect::RevealUntilFind {
+                        who: PlayerRef::You,
+                        find: R::Creature,
+                        to: ZoneDest::Battlefield {
+                            controller: PlayerRef::You,
+                            tapped: false,
+                        },
+                        cap: Value::Const(500),
+                        life_per_revealed: 0,
+                        miss_dest: RevealMissDest::ShuffleIntoLibrary,
+                    },
+                ),
+                VoteOption::new(
+                    "Free",
+                    Effect::PutFromHandOntoBattlefield {
+                        who: PlayerRef::You,
+                        filter: R::Permanent,
+                        count: Value::ONE,
+                        tapped: false,
+                        haste: false,
+                        sacrifice_eot: false,
+                        return_eot: false,
+                        then: None,
+                    },
+                ),
+            ],
+            tally: VoteTally::PerVote,
+        },
+        ..Default::default()
+    }
+}
+
+// ── Conspiracies & Spy Kit ────────────────────────────────────────────────
+
+fn conspiracy(name: &'static str) -> CardDefinition {
+    CardDefinition { name, card_types: vec![CardType::Conspiracy], ..Default::default() }
+}
+
+/// Echoing Boon — hidden agenda; your instants and sorceries aimed at a
+/// creature with the chosen name get copied.
+pub fn echoing_boon() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl).with_filter(
+                Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: R::HasCardType(CardType::Instant)
+                        .or(R::HasCardType(CardType::Sorcery))
+                        .and(R::SpellTargetsMatching(Box::new(
+                            R::Creature.and(R::ControlledByYou).and(R::NamedBySource),
+                        ))),
+                },
+            ),
+            effect: Effect::MayDo {
+                description: "Copy that spell?".to_string(),
+                body: Box::new(Effect::CopySpellMayChooseTargets {
+                    what: Selector::TriggerSource,
+                    count: Value::ONE,
+                }),
+            },
+        }],
+        ..conspiracy("Echoing Boon")
+    }
+}
+
+/// Emissary's Ploy — creature spells at the chosen mana value cast off any
+/// color. The 1/2/3 pick lands on the conspiracy's `chosen_number`.
+pub fn emissarys_ploy() -> CardDefinition {
+    CardDefinition {
+        static_abilities: vec![StaticAbility {
+            description: "You may spend mana as though it were mana of any color to cast \
+                          creature spells with mana value equal to the chosen number.",
+            effect: StaticEffect::MaySpendManaAsAnyColorForCreaturesWithChosenMv,
+        }],
+        ..conspiracy("Emissary's Ploy")
+    }
+}
+
+/// Summoner's Bond — double agenda; casting one named creature tutors the
+/// other.
+pub fn summoners_bond() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl).with_filter(
+                Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: R::Creature.and(R::NamedByEitherAgendaOfSource),
+                },
+            ),
+            effect: Effect::SearchForOtherChosenName,
+        }],
+        ..conspiracy("Summoner's Bond")
+    }
+}
+
+/// Sovereign's Realm — no basics in your deck and a five-card grip, but your
+/// basics tap for anything and you can pull more out of thin air.
+pub fn sovereigns_realm() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            exile_from_hand_cost: Some(R::Any),
+            from_command_zone: true,
+            effect: Effect::BasicLandFromOutsideGameToHand,
+            ..Default::default()
+        }],
+        static_abilities: vec![
+            StaticAbility {
+                description: "Your starting deck can't have basic land cards.",
+                effect: StaticEffect::StartingDeckCantHaveBasicLands,
+            },
+            StaticAbility {
+                description: "Your starting hand size is five.",
+                effect: StaticEffect::StartingHandSizeReduced(2),
+            },
+            StaticAbility {
+                description: "Basic lands you control have \"{T}: Add one mana of any color.\"",
+                effect: StaticEffect::GrantActivatedAbility {
+                    applies_to: Selector::EachPermanent(R::IsBasicLand.and(R::ControlledByYou)),
+                    ability: ActivatedAbility {
+                        tap_cost: true,
+                        effect: Effect::AddMana {
+                            who: PlayerRef::You,
+                            pool: ManaPayload::AnyColors(Value::ONE),
+                        },
+                        ..Default::default()
+                    },
+                    condition: None,
+                },
+            },
+        ],
+        ..conspiracy("Sovereign's Realm")
+    }
+}
+
+/// Spy Kit — the equipped creature answers to every nonlegendary creature
+/// card's name.
+pub fn spy_kit() -> CardDefinition {
+    CardDefinition {
+        name: "Spy Kit",
+        cost: cost(&[generic(2)]),
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes {
+            artifact_subtypes: vec![ArtifactSubtype::Equipment],
+            ..Default::default()
+        },
+        keywords: vec![Keyword::Equip(cost(&[generic(2)]))],
+        equipped_bonus: Some(EquipBonus { power: 1, toughness: 1, ..Default::default() }),
+        static_abilities: vec![StaticAbility {
+            description: "Equipped creature has all names of nonlegendary creature cards in \
+                          addition to its name.",
+            effect: StaticEffect::GrantsAllNonlegendaryCreatureNames,
+        }],
+        ..Default::default()
     }
 }

@@ -33,6 +33,10 @@ pub enum PlayerRef {
     /// offer (the punisher family's "have this deal damage to *them*").
     /// Resolves to `GameState.accepting_player`.
     AcceptingPlayer,
+    /// CR 701.38 — the player who cast the vote a `VoteTally::PerVote` body is
+    /// running for ("choose a permanent owned by the voter" — Expropriate).
+    /// Falls back to the controller outside a ballot.
+    CurrentVoter,
     /// The controller of the ability/spell.
     You,
     /// A specific chosen target slot (must resolve to a player).
@@ -325,6 +329,10 @@ pub enum Selector {
     /// touch every permanent a *targeted* player controls (Sleep: tap +
     /// stun all creatures target player controls).
     ControlledBy { who: PlayerRef, filter: SelectionRequirement },
+    /// All battlefield permanents *owned* by `who` matching `filter` — the
+    /// ownership twin of `ControlledBy` ("a permanent owned by the voter" —
+    /// Expropriate), so a stolen permanent still answers to its owner.
+    OwnedBy { who: PlayerRef, filter: SelectionRequirement },
     /// Every creature controlled by the controller of `subject`, **except**
     /// `subject` itself ("other creatures that player controls" — Mark for
     /// Death). Empty if `subject` resolves to nothing.
@@ -7465,6 +7473,14 @@ pub enum Effect {
     /// "Shuffle up to `max` cards you own matching `filter` from outside the
     /// game into your library" (Research // Development's left half).
     WishToLibrary { filter: SelectionRequirement, max: Value },
+    /// CR 702.106b — search your library for a creature card with the OTHER of
+    /// the source's two chosen names (the one the trigger's spell isn't),
+    /// reveal it, put it into your hand, then shuffle (Summoner's Bond).
+    SearchForOtherChosenName,
+    /// "You may play basic lands from outside the game" (Sovereign's Realm),
+    /// modeled as fetching one basic of a chosen color into your hand — the
+    /// land drop itself then runs the normal path.
+    BasicLandFromOutsideGameToHand,
 
     /// CR 702.166 — Manifest dread: look at the top two cards of `who`'s
     /// library, put one onto the battlefield face down as a 2/2 creature, and

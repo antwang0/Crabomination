@@ -267,6 +267,8 @@ pub enum DeckError {
     SideboardNotAllowed { found: u32 },
     /// CR 407.3 — an ante-only card in a deck that isn't playing for ante.
     AnteCardOutsideAnteGame { card_name: &'static str },
+    /// Sovereign's Realm — "your starting deck can't have basic land cards".
+    BasicLandsForbidden { card_name: &'static str },
 }
 
 impl std::fmt::Display for DeckError {
@@ -298,6 +300,9 @@ impl std::fmt::Display for DeckError {
             }
             DeckError::AnteCardOutsideAnteGame { card_name } => {
                 write!(f, "{card_name} may only be played in a game played for ante")
+            }
+            DeckError::BasicLandsForbidden { card_name } => {
+                write!(f, "{card_name}: your starting deck can't have basic land cards")
             }
         }
     }
@@ -417,6 +422,15 @@ pub fn validate_full_deck(deck: &Deck, format: Format) -> Result<(), Vec<DeckErr
     if reduction > 0 {
         let floor = rules.min_deck_size.saturating_sub(reduction);
         errors.retain(|e| !matches!(e, DeckError::TooFewCards { found, .. } if *found >= floor));
+    }
+
+    // Sovereign's Realm — a command-zone conspiracy can forbid basics outright.
+    if deck.sideboard.iter().flat_map(|c| c.static_abilities.iter()).any(|sa| {
+        matches!(sa.effect, crate::effect::StaticEffect::StartingDeckCantHaveBasicLands)
+    }) {
+        for card in deck.main.iter().filter(|c| is_basic_land(c)) {
+            errors.push(DeckError::BasicLandsForbidden { card_name: card.name });
+        }
     }
 
     let side = deck.sideboard.len() as u32;
