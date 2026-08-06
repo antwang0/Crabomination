@@ -20107,6 +20107,7 @@ fn static_effect_to_effects(
             // `ally_trigger_extra_fires`; no layer effect.
             | StaticEffect::DoubleControllerAllyTriggers
             | StaticEffect::DoubleControllerTriggersOfType { .. }
+            | StaticEffect::DoubleControllerTriggersMatching { .. }
             | StaticEffect::DoubleControllerLegendaryCreatureTriggers
             | StaticEffect::DoubleControllerPermanentTriggers
             | StaticEffect::DoubleControllerDeathTriggers

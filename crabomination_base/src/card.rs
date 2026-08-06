@@ -1656,6 +1656,9 @@ pub enum Keyword {
     /// the blocker's computed power being `>= N`. Enforced in
     /// `can_block_attacker_computed`.
     CantBeBlockedByPowerAtLeast(u32),
+    /// "…and can attack as though it didn't have defender" (The Pride of Hull
+    /// Clade). Granted, never printed.
+    AttacksAsThoughNoDefender,
     /// "This creature can't be blocked if you've cast N or more spells this
     /// turn" (Illvoi Infiltrator — N=2). Game-state-dependent, so it's enforced
     /// in the stateful block-declaration path (`declare_blockers`) rather than
@@ -6359,7 +6362,8 @@ impl CardInstance {
     pub fn can_attack(&self) -> bool {
         self.definition.is_creature()
             && !self.tapped
-            && !self.has_keyword(&Keyword::Defender)
+            && (!self.has_keyword(&Keyword::Defender)
+                || self.has_keyword(&Keyword::AttacksAsThoughNoDefender))
             && !self.has_keyword(&Keyword::CantAttack)
             && (!self.summoning_sick || self.has_keyword(&Keyword::Haste))
     }

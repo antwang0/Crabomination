@@ -1386,6 +1386,11 @@ pub enum StaticEffect {
     /// dispatch off the `triggered_by_attack` candidate flag (and the
     /// self-source attack path in `combat.rs`).
     DoubleControllerAttackTriggers,
+    /// CR 603.x — the filter-based sibling of `DoubleControllerTriggersOfType`:
+    /// "If a triggered ability of a creature you control matching `filter`
+    /// triggers, that ability triggers an additional time" (Delney, Streetwise
+    /// Lookout's power-2-or-less clause).
+    DoubleControllerTriggersMatching { filter: crate::card::SelectionRequirement },
     DoubleControllerTriggersOfType {
         types: Vec<crate::card::CreatureType>,
         #[serde(default)]

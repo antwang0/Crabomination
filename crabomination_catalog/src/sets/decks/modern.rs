@@ -13990,6 +13990,7 @@ pub fn hide_in_plain_sight() -> CardDefinition {
         effect: Effect::Cloak {
             who: PlayerRef::You,
             amount: Value::Const(2),
+            from_hand: false,
         },
         ..Default::default()
     }

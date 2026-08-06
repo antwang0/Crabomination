@@ -493,3 +493,146 @@ fn slimy_dualleech_buffs_small_creature_at_combat() {
     });
     assert!(buffed, "a small creature gained deathtouch from Slimy Dualleech");
 }
+
+// ── 2026-08 gap wave ────────────────────────────────────────────────────────
+
+/// Delney doubles a small creature's trigger and leaves a big one alone.
+#[test]
+fn delney_doubles_small_creature_triggers() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::delney_streetwise_lookout());
+    for _ in 0..4 {
+        g.add_card_to_library(0, catalog::forest());
+    }
+    drain_stack(&mut g);
+    let before = g.players[0].hand.len();
+    // Novice Inspector (1/1) investigates on entry — Delney fires it twice.
+    g.move_card_to_battlefield_for_test(0, catalog::novice_inspector());
+    drain_stack(&mut g);
+    let clues = g.battlefield.iter().filter(|c| c.definition.name == "Clue").count();
+    assert_eq!(clues, 2, "the power-1 body's ETB triggered an additional time");
+    assert_eq!(g.players[0].hand.len(), before, "no draws, just Clues");
+}
+
+/// Delney's other half keeps big blockers off your small creatures.
+#[test]
+fn delney_walls_off_big_blockers() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::delney_streetwise_lookout());
+    let lions = g.add_card_to_battlefield(0, catalog::savannah_lions());
+    drain_stack(&mut g);
+    assert!(
+        g.computed_permanent(lions)
+            .unwrap()
+            .keywords
+            .contains(&Keyword::CantBeBlockedByPowerAtLeast(3)),
+        "power-2 creatures dodge power-3 blockers"
+    );
+}
+
+/// Lost in the Maze freezes the creatures it taps and hides your tapped ones.
+#[test]
+fn lost_in_the_maze_stuns_and_hides() {
+    let mut g = two_player_game();
+    let mine = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let theirs = g.add_card_to_battlefield(1, catalog::savannah_lions());
+    let maze = g.add_card_to_hand(0, catalog::lost_in_the_maze());
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Blue, 2);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: maze,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: Some(2),
+    })
+    .expect("cast Lost in the Maze");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(theirs).unwrap().tapped, "X=2 taps both creatures");
+    assert!(g.battlefield_find(mine).unwrap().tapped);
+    assert!(
+        g.computed_permanent(mine).unwrap().keywords.contains(&Keyword::Hexproof),
+        "your tapped creature has hexproof"
+    );
+}
+
+/// Relive the Past brings an artifact back as a 5/5 Elemental.
+#[test]
+fn relive_the_past_reanimates_as_an_elemental() {
+    let mut g = two_player_game();
+    let ring = g.add_card_to_graveyard(0, catalog::sol_ring());
+    let spell = g.add_card_to_hand(0, catalog::relive_the_past());
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(5);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell,
+        target: Some(Target::Permanent(ring)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast Relive the Past");
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(ring).expect("back on the battlefield");
+    assert_eq!((cp.power, cp.toughness), (5, 5));
+    assert!(
+        cp.card_types.contains(&crabomination::card::CardType::Artifact),
+        "still an artifact"
+    );
+}
+
+/// Teysa turns a spent Clue into a Spirit, but only once a turn.
+#[test]
+fn teysa_mints_one_spirit_per_turn() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::teysa_opulent_oligarch());
+    drain_stack(&mut g);
+    for _ in 0..2 {
+        let mut evs = vec![];
+        let ctx = crabomination::game::effects::EffectContext::for_spell(0, None, 0, 0);
+        evs = g
+            .resolve_effect(
+                &crabomination::effect::Effect::CreateToken {
+                    who: crabomination::effect::PlayerRef::You,
+                    count: crabomination::card::Value::ONE,
+                    definition: crabomination::game::effects::clue_token(),
+                },
+                &ctx,
+            )
+            .expect("mint a Clue");
+        let clue = g
+            .battlefield
+            .iter()
+            .find(|c| c.definition.name == "Clue")
+            .map(|c| c.id)
+            .expect("a Clue");
+        let mut evs = vec![];
+        g.sacrifice_one(clue, 0, &mut evs);
+        g.dispatch_triggers_for_events(&evs);
+        drain_stack(&mut g);
+    }
+    let spirits = g.battlefield.iter().filter(|c| c.definition.name == "Spirit").count();
+    assert_eq!(spirits, 1, "the Clue trigger is once each turn");
+}
+
+/// The Pride of Hull Clade gets cheaper behind a wall of toughness.
+#[test]
+fn the_pride_of_hull_clade_discounts_by_toughness() {
+    let mut g = two_player_game();
+    let def = catalog::the_pride_of_hull_clade();
+    assert_eq!(def.cost.cmc(), 11);
+    g.add_card_to_battlefield(0, catalog::grizzly_bears()); // toughness 2
+    drain_stack(&mut g);
+    let id = g.add_card_to_hand(0, catalog::the_pride_of_hull_clade());
+    let card = g.players[0].hand.iter().find(|c| c.id == id).unwrap().clone();
+    assert_eq!(
+        crabomination::game::actions::cost_reduction_for_spell(&g, 0, &card, None),
+        2,
+        "two toughness on board shaves the cost by 2"
+    );
+}

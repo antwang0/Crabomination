@@ -7496,7 +7496,14 @@ pub enum Effect {
     /// CR 702.182 — Cloak: put the top `amount` cards of `who`'s library onto
     /// the battlefield face down as 2/2 creatures with ward {2}. Each can be
     /// turned face up for its mana cost if it's a creature card.
-    Cloak { who: PlayerRef, amount: Value },
+    Cloak {
+        who: PlayerRef,
+        amount: Value,
+        /// Cloak cards from `who`'s hand instead of off the top of their
+        /// library (Vannifar, Evolved Enigma).
+        #[serde(default)]
+        from_hand: bool,
+    },
 
     /// Reveal the top `count` cards of the controller's library; an opponent
     /// chooses one of them, which goes to the controller's hand. Each

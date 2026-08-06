@@ -603,6 +603,7 @@ pub fn cryptic_coat() -> CardDefinition {
             Effect::Cloak {
                 who: PlayerRef::You,
                 amount: Value::ONE,
+                from_hand: false,
             },
             Effect::Attach {
                 what: Selector::This,

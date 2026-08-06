@@ -1549,6 +1549,13 @@ pub(crate) fn ally_trigger_extra_fires(
                         (!*exclude_source || c.id != source)
                             && types.iter().any(|t| source_types.contains(t))
                     }
+                    StaticEffect::DoubleControllerTriggersMatching { filter } => state
+                        .evaluate_requirement_static(
+                            filter,
+                            &Target::Permanent(source),
+                            controller,
+                            Some(c.id),
+                        ),
                     StaticEffect::DoubleControllerLegendaryCreatureTriggers => legendary_creature,
                     StaticEffect::DoubleControllerPermanentTriggers => true,
                     _ => false,

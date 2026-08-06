@@ -19019,7 +19019,7 @@ impl GameState {
                 Ok(())
             }
 
-            Effect::Cloak { who, amount } => {
+            Effect::Cloak { who, amount, from_hand } => {
                 let Some(p) = self.resolve_player(who, ctx) else { return Ok(()); };
                 let n = self.evaluate_value(amount, ctx).max(0) as u32;
                 // Expose the cloaked permanents on `Selector::LastMoved` so a
@@ -19027,8 +19027,14 @@ impl GameState {
                 // reference them, mirroring ManifestDread.
                 let mut cloaked = Vec::new();
                 for _ in 0..n {
-                    let Some(top_id) = self.players[p].library.first().map(|c| c.id) else { break };
-                    if let Some(c) = self.players[p].library.iter_mut().find(|c| c.id == top_id) {
+                    // Vannifar cloaks out of hand; everything else off the top.
+                    let zone = if *from_hand {
+                        &mut self.players[p].hand
+                    } else {
+                        &mut self.players[p].library
+                    };
+                    let Some(top_id) = zone.first().map(|c| c.id) else { break };
+                    if let Some(c) = zone.iter_mut().find(|c| c.id == top_id) {
                         c.cloaked = true;
                     }
                     self.manifest_card(top_id, p, ctx, events);
