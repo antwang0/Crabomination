@@ -3387,6 +3387,11 @@ pub struct CardDefinition {
     /// entwined cast, alongside (or instead of) `Keyword::Entwine`'s mana.
     #[serde(default)]
     pub entwine_additional_cost: Option<AdditionalCastCost>,
+    /// CR 702.27 — the non-mana half of a Buyback cost ("Buyback—Sacrifice a
+    /// land", Constant Mists). Paid alongside `Keyword::Buyback`'s mana on a
+    /// bought-back cast.
+    #[serde(default)]
+    pub buyback_additional_cost: Option<AdditionalCastCost>,
     /// CR 702.47 — a non-mana Splice cost ("Splice onto Arcane—Sacrifice two
     /// Mountains" — Torrent of Stone). Paid alongside `Keyword::Splice`'s mana
     /// when this card is spliced onto a spell.

@@ -6560,6 +6560,10 @@ impl GameState {
         if entwine && let Some(ec) = &card.definition.entwine_additional_cost {
             additional_costs.push(ec.clone());
         }
+        // CR 702.27 — "Buyback—Sacrifice a land" (Constant Mists).
+        if buyback && let Some(bc) = &card.definition.buyback_additional_cost {
+            additional_costs.push(bc.clone());
+        }
         // CR 702.32b — a paid action kicker ("Kicker—Sacrifice an artifact")
         // is an additional cost of the kicked cast.
         if kicked && let Some(kc) = &card.definition.kicker_action_cost {
