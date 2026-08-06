@@ -1025,3 +1025,256 @@ fn reap_scales_off_the_opponents_black_board() {
     drain_stack(&mut g);
     assert_eq!(g.players[0].hand.len(), 2, "two black permanents, two cards back");
 }
+
+/// Static Orb caps every player's untap step at two permanents.
+#[test]
+fn static_orb_caps_untaps_at_two() {
+    let mut g = two_player_game();
+    let orb = g.add_card_to_battlefield(0, catalog::static_orb());
+    let lands: Vec<CardId> =
+        (0..4).map(|_| g.add_card_to_battlefield(0, catalog::forest())).collect();
+    for id in &lands {
+        g.battlefield_find_mut(*id).unwrap().tapped = true;
+    }
+    g.do_untap();
+    assert_eq!(lands.iter().filter(|id| !g.battlefield_find(**id).unwrap().tapped).count(), 2);
+
+    // Tapping the Orb lifts the cap.
+    for id in &lands {
+        g.battlefield_find_mut(*id).unwrap().tapped = true;
+    }
+    g.battlefield_find_mut(orb).unwrap().tapped = true;
+    g.do_untap();
+    assert_eq!(lands.iter().filter(|id| !g.battlefield_find(**id).unwrap().tapped).count(), 4);
+}
+
+/// Hand to Hand shuts instants and non-mana abilities off during combat only.
+#[test]
+fn hand_to_hand_locks_combat_tricks() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::hand_to_hand());
+    let scroll = ready(&mut g, 0, catalog::cursed_scroll());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+
+    g.step = TurnStep::DeclareBlockers;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    assert!(
+        g.perform_action(GameAction::CastSpell {
+            card_id: bolt,
+            target: Some(Target::Player(1)),
+            additional_targets: vec![],
+            mode: None,
+            x_value: None,
+        })
+        .is_err(),
+        "no instants during combat"
+    );
+    assert!(activate(&mut g, scroll, 0, Some(Target::Player(1))).is_err(), "no abilities either");
+
+    g.step = TurnStep::PostCombatMain;
+    g.priority.player_with_priority = 0;
+    activate(&mut g, scroll, 0, Some(Target::Player(1))).expect("fine outside combat");
+}
+
+/// Pallimud's power tracks the chosen opponent's tapped lands.
+#[test]
+fn pallimud_counts_tapped_lands() {
+    let mut g = two_player_game();
+    let lands: Vec<CardId> =
+        (0..3).map(|_| g.add_card_to_battlefield(1, catalog::forest())).collect();
+    let mud = g.add_card_to_hand(0, catalog::pallimud());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    cast(&mut g, mud, None).expect("cast");
+    drain_stack(&mut g);
+    assert_eq!(g.computed_permanent(mud).unwrap().power, 0);
+    for id in &lands {
+        g.battlefield_find_mut(*id).unwrap().tapped = true;
+    }
+    let live = g.computed_permanent(mud).unwrap();
+    assert_eq!((live.power, live.toughness), (3, 3));
+}
+
+/// Dracoplasm enters as the sum of what it ate.
+#[test]
+fn dracoplasm_sums_its_sacrifices() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // 2/2
+    let angel = g.add_card_to_battlefield(0, catalog::serra_angel()); // 4/4
+    let plasm = g.add_card_to_hand(0, catalog::dracoplasm());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Cards(vec![bear, angel])]));
+    cast(&mut g, plasm, None).expect("cast");
+    drain_stack(&mut g);
+    let live = g.computed_permanent(plasm).unwrap();
+    assert_eq!((live.power, live.toughness), (6, 6));
+}
+
+/// Escaped Shapeshifter picks up keywords from across the table.
+#[test]
+fn escaped_shapeshifter_mirrors_opposing_keywords() {
+    let mut g = two_player_game();
+    let shifter = g.add_card_to_battlefield(0, catalog::escaped_shapeshifter());
+    let has = |g: &GameState, kw| g.computed_permanent(shifter).unwrap().keywords.contains(&kw);
+    assert!(!has(&g, Keyword::Flying));
+    g.add_card_to_battlefield(0, catalog::serra_angel()); // yours doesn't count
+    assert!(!has(&g, Keyword::Flying));
+    let angel = g.add_card_to_battlefield(1, catalog::serra_angel());
+    assert!(has(&g, Keyword::Flying), "an opponent's flier lends its wings");
+    g.destroy_permanent(angel, false, &mut vec![]);
+    assert!(!has(&g, Keyword::Flying));
+}
+
+/// Flowstone Sculpture's mode 2 buys first strike permanently.
+#[test]
+fn flowstone_sculpture_buys_keywords() {
+    let mut g = two_player_game();
+    let sculpt = g.add_card_to_battlefield(0, catalog::flowstone_sculpture());
+    g.add_card_to_hand(0, catalog::forest());
+    g.step = TurnStep::PreCombatMain;
+    g.players[0].mana_pool.add_colorless(2);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: sculpt,
+        ability_index: 0,
+        target: None,
+        additional_targets: vec![],
+        mode: Some(2),
+        x_value: None,
+    })
+    .expect("activate");
+    drain_stack(&mut g);
+    assert!(
+        g.computed_permanent(sculpt).unwrap().keywords.contains(&Keyword::FirstStrike),
+        "the grant sticks"
+    );
+    assert!(g.players[0].hand.is_empty(), "the discard was paid");
+}
+
+/// Excavator hands over the sacrificed land's landwalk.
+#[test]
+fn excavator_grants_the_sacrificed_lands_walk() {
+    let mut g = two_player_game();
+    let digger = ready(&mut g, 0, catalog::excavator());
+    g.add_card_to_battlefield(0, catalog::forest());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.step = TurnStep::PreCombatMain;
+    activate(&mut g, digger, 0, Some(Target::Permanent(bear))).expect("dig");
+    drain_stack(&mut g);
+    assert!(
+        g.computed_permanent(bear)
+            .unwrap()
+            .keywords
+            .contains(&Keyword::Landwalk(crabomination::card::LandType::Forest))
+    );
+}
+
+/// Soltari Guerrillas points its unblocked damage at a creature instead.
+#[test]
+fn soltari_guerrillas_redirects_to_a_creature() {
+    let mut g = two_player_game();
+    let guerrillas = ready(&mut g, 0, catalog::soltari_guerrillas());
+    let victim = g.add_card_to_battlefield(1, catalog::serra_angel()); // 4/4
+    g.step = TurnStep::PreCombatMain;
+    activate(&mut g, guerrillas, 0, Some(Target::Permanent(victim))).expect("arm");
+    drain_stack(&mut g);
+    advance_to(&mut g, TurnStep::DeclareAttackers);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: guerrillas,
+        target: AttackTarget::Player(1),
+    }]))
+    .expect("attack");
+    advance_to(&mut g, TurnStep::End);
+    assert_eq!(g.players[1].life, 20, "the player took nothing");
+    assert_eq!(g.battlefield_find(victim).unwrap().damage, 3);
+}
+
+/// No Quarter kills whichever half of a block is outclassed.
+#[test]
+fn no_quarter_kills_the_weaker_half() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::no_quarter());
+    let big = ready(&mut g, 0, catalog::hulking_cyclops()); // 5/5, no evasion
+    let chump = ready(&mut g, 1, catalog::grizzly_bears()); // 2/2
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: big,
+        target: AttackTarget::Player(1),
+    }]))
+    .expect("attack");
+    advance_to(&mut g, TurnStep::DeclareBlockers);
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::DeclareBlockers(vec![(chump, big)])).expect("block");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(chump).is_none(), "the weaker blocker is destroyed");
+    assert!(g.battlefield_find(big).is_some(), "the attacker survives");
+}
+
+/// Nurturing Licid keeps its regenerate ability once it becomes an Aura.
+#[test]
+fn nurturing_licid_regenerates_as_an_aura() {
+    let mut g = two_player_game();
+    let licid = ready(&mut g, 0, catalog::nurturing_licid());
+    let host = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.step = TurnStep::PreCombatMain;
+    g.players[0].mana_pool.add(Color::Green, 1);
+    activate(&mut g, licid, 0, Some(Target::Permanent(host))).expect("attach");
+    drain_stack(&mut g);
+    let live = g.battlefield_find(licid).unwrap();
+    assert_eq!(live.attached_to, Some(host));
+    assert_eq!(live.definition.activated_abilities.len(), 2, "detach + regenerate");
+
+    g.players[0].mana_pool.add(Color::Green, 1);
+    activate(&mut g, licid, 1, None).expect("regenerate");
+    drain_stack(&mut g);
+    g.destroy_permanent(host, false, &mut vec![]);
+    assert!(g.battlefield_find(host).is_some(), "the shield soaked the kill");
+}
+
+/// Leeching Licid drains the host's controller each of their upkeeps.
+#[test]
+fn leeching_licid_pings_the_hosts_controller() {
+    let mut g = two_player_game();
+    let licid = ready(&mut g, 0, catalog::leeching_licid());
+    let host = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.step = TurnStep::PreCombatMain;
+    g.players[0].mana_pool.add(Color::Black, 1);
+    activate(&mut g, licid, 0, Some(Target::Permanent(host))).expect("attach");
+    drain_stack(&mut g);
+
+    g.active_player_idx = 0;
+    g.fire_step_triggers(TurnStep::Upkeep);
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, 20, "not on your upkeep");
+    g.active_player_idx = 1;
+    g.fire_step_triggers(TurnStep::Upkeep);
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, 19);
+}
+
+/// Stinging Licid shocks the host's controller when the host taps.
+#[test]
+fn stinging_licid_punishes_tapping() {
+    let mut g = two_player_game();
+    let licid = ready(&mut g, 0, catalog::stinging_licid());
+    let host = ready(&mut g, 1, catalog::grizzly_bears());
+    g.step = TurnStep::PreCombatMain;
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    activate(&mut g, licid, 0, Some(Target::Permanent(host))).expect("attach");
+    drain_stack(&mut g);
+
+    g.battlefield_find_mut(host).unwrap().tapped = true;
+    g.dispatch_triggers_for_events(&[GameEvent::PermanentTapped {
+        card_id: host,
+        actor: None,
+        as_attacker: false,
+    }]);
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, 18);
+}

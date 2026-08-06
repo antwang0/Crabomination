@@ -4404,6 +4404,12 @@ pub enum DynamicPt {
     /// Power = toughness = the number stamped on this permanent as it entered
     /// (`CardInstance.chosen_number`) — Nameless Race's paid life.
     ChosenNumberAsEntered,
+    /// Power = the number stamped as this entered, toughness = the number it
+    /// remembered (`Effect::AsEntersSacrificeForTotalPt` writes both).
+    /// Dracoplasm.
+    EnteredTotals,
+    /// Power = tapped lands the source's remembered player controls (Pallimud).
+    TappedLandsChosenPlayerControls { base_t: i32 },
     /// `inner` during the controller's turn, `base_p`/`base_t` on every other
     /// turn (Angry Mob).
     OnlyDuringYourTurn { inner: Box<DynamicPt>, base_p: i32, base_t: i32 },
@@ -6366,11 +6372,18 @@ impl CardInstance {
         def.subtypes.enchantment_subtypes = vec![EnchantmentSubtype::Aura];
         def.power = 0;
         def.toughness = 0;
-        def.activated_abilities = vec![crate::effect::ActivatedAbility {
-            mana_cost: end_cost,
-            effect: Effect::LicidDetach,
-            ..Default::default()
-        }];
+        // The attach ability is what's lost; any other printed activation
+        // (Nurturing Licid's regenerate) rides along on the Aura.
+        def.activated_abilities
+            .retain(|a| !matches!(a.effect, Effect::LicidAttach { .. }));
+        def.activated_abilities.insert(
+            0,
+            crate::effect::ActivatedAbility {
+                mana_cost: end_cost,
+                effect: Effect::LicidDetach,
+                ..Default::default()
+            },
+        );
         self.licid_creature_def = Some(self.definition.clone());
         self.definition = Arc::new(def);
         true

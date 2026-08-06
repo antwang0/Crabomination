@@ -1736,6 +1736,16 @@ impl GameState {
                     _ => false,
                 }
             }
+            Predicate::TriggerSourceIsSourceHost => {
+                let host = ctx
+                    .source
+                    .and_then(|s| self.battlefield_find(s))
+                    .and_then(|c| c.attached_to);
+                match (host, ctx.trigger_source) {
+                    (Some(want), Some(e)) => e.as_card_id() == Some(want),
+                    _ => false,
+                }
+            }
             Predicate::TriggerSourceIsSourcesChosenPermanent => {
                 let stamped = ctx
                     .source

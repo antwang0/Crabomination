@@ -1442,6 +1442,9 @@ pub enum Predicate {
     /// The triggering object *is* this ability's own source — the gate behind
     /// "a permanent **other than** this one" triggers (Last Laugh).
     TriggerSourceIsSelf,
+    /// The trigger's subject is the permanent the effect's source is attached
+    /// to — "whenever enchanted creature becomes tapped" (Stinging Licid).
+    TriggerSourceIsSourceHost,
     /// True if the effect's source creature attacked this turn (CR 702.142
     /// Boast gate). Backed by `CardInstance.attacked_this_turn`.
     SourceAttackedThisTurn,
@@ -7363,6 +7366,21 @@ pub enum Effect {
     /// deals that damage to its controller instead" (Goblin Psychopath).
     RedirectNextCombatDamageToController { what: Selector },
 
+    /// CR 614 — "The next time `what` would deal combat damage to an opponent
+    /// this turn, it deals that damage to `to` instead" (Soltari Guerrillas).
+    RedirectNextCombatDamageTo { what: Selector, to: Selector },
+
+    /// CR 702.15 — "Target creature gains landwalk of each of the land types
+    /// of the land sacrificed to activate this ability" (Excavator). Reads the
+    /// activation's sacrificed permanent; a no-op when none was paid.
+    GrantSacrificedLandTypesLandwalk { what: Selector, duration: Duration },
+
+    /// No Quarter — on a `BecomesBlocked` / `Blocks` trigger, destroy the
+    /// weaker half of the pair. `attacker_side` picks which one dies: `false`
+    /// destroys the blocker when the attacker outclasses it, `true` destroys
+    /// the attacker when the blocker does.
+    DestroyBlockPairWeakerSide { attacker_side: bool },
+
     /// CR 614.9 — "All damage that would be dealt this turn by target spell is
     /// dealt to that spell's controller instead" (Reverberation). Keyed on the
     /// spell's card id, so it keeps redirecting after the spell has resolved.
@@ -8918,6 +8936,13 @@ pub enum Effect {
     /// twin of [`Effect::RememberPermanentOnSource`]. Backs the Torment
     /// Nightmare Horrors' "that player gains N life" leave trigger.
     RememberPlayerOnSource { who: PlayerRef },
+
+    /// CR 614 — "As this enters, sacrifice any number of creatures. This
+    /// creature's power becomes their total power and its toughness their
+    /// total toughness" (Dracoplasm). The totals are stamped on the source's
+    /// `chosen_number` / `remembered_amount`, read back by
+    /// `DynamicPt::EnteredTotals`.
+    AsEntersSacrificeForTotalPt,
 
     /// "Any player may exile `count` cards from their graveyard. If a player
     /// does, `then`." Walks the seats in turn order starting with the

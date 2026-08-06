@@ -2489,6 +2489,15 @@ pub enum StaticEffect {
     /// player, not just the controller. Multiple copies each cap their own
     /// filter independently.
     MaxOneUntapPerStep { filter: SelectionRequirement },
+    /// CR 502.3 — the `n`-permanent sibling of `MaxOneUntapPerStep`: "players
+    /// can't untap more than `max` `filter` during their untap steps" (Static
+    /// Orb, which wraps it in a `WhileCondition` gate on its own untapped
+    /// state).
+    MaxUntapsPerStep { filter: SelectionRequirement, max: u32 },
+    /// CR 506 — "During combat, players can't cast instant spells or activate
+    /// abilities that aren't mana abilities" (Hand to Hand). Global; mana
+    /// abilities and sorcery-speed activations outside combat are unaffected.
+    NoInstantsOrAbilitiesDuringCombat,
     /// CR 121.2a — "If a player would draw a card, that player skips that draw
     /// instead" (Possessed Portal). Global draw replacement consulted in
     /// `draw_one`.

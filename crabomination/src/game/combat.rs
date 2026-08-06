@@ -3037,6 +3037,27 @@ impl GameState {
             // Goblin Psychopath — the charge armed by a lost coin flip sends
             // this attacker's whole combat-damage assignment at its
             // controller instead (CR 614.9).
+            // Soltari Guerrillas — the armed charge sends this attacker's
+            // damage at a chosen creature instead of the defending player.
+            if blocker_ids.is_empty()
+                && free_targets.is_empty()
+                && matches!(atk.target, AttackTarget::Player(_))
+                && let Some(i) =
+                    self.next_combat_damage_redirect.iter().position(|(a, _)| *a == atk.id)
+            {
+                let (_, victim) = self.next_combat_damage_redirect.remove(i);
+                if self.battlefield_find(victim).is_some() {
+                    let raw = if prevent_combat_damage { 0 } else { atk.power.max(0) as u32 };
+                    self.deal_damage_to_from(
+                        crate::game::effects::EntityRef::Permanent(victim),
+                        raw,
+                        Some(atk.id),
+                        &mut events,
+                    );
+                    continue;
+                }
+            }
+
             if let Some(seat) = self.take_combat_damage_diversion(atk.id) {
                 let raw = if prevent_combat_damage { 0 } else { atk.power.max(0) as u32 };
                 self.deal_damage_to_from(

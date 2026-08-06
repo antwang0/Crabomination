@@ -2774,6 +2774,90 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::RedirectNextCombatDamageTo { what, to } => {
+                let Some(victim) = self
+                    .resolve_selector(to, ctx)
+                    .into_iter()
+                    .find_map(|e| e.as_permanent_id())
+                else {
+                    return Ok(());
+                };
+                for ent in self.resolve_selector(what, ctx) {
+                    if let Some(cid) = ent.as_permanent_id()
+                        && !self.next_combat_damage_redirect.iter().any(|(a, _)| *a == cid)
+                    {
+                        self.next_combat_damage_redirect.push((cid, victim));
+                    }
+                }
+                Ok(())
+            }
+
+            Effect::GrantSacrificedLandTypesLandwalk { what, duration } => {
+                // The land is already off the battlefield when the ability
+                // resolves, so read its types off the death snapshot.
+                let types: Vec<crate::card::LandType> = self
+                    .cost_sacrificed_batch
+                    .iter()
+
+                    .filter_map(|id| {
+                        self.died_card_snapshots
+                            .get(id)
+                            .or_else(|| self.leaves_bf_lki.get(id))
+                            .or_else(|| self.find_card_anywhere(*id))
+                    })
+                    .flat_map(|c| c.definition.subtypes.land_types.clone())
+                    .collect();
+                for lt in types {
+                    self.run_effect(
+                        &Effect::GrantKeyword {
+                            what: what.clone(),
+                            keyword: crate::card::Keyword::Landwalk(lt),
+                            duration: *duration,
+                        },
+                        ctx,
+                        events,
+                    )?;
+                }
+                Ok(())
+            }
+
+            Effect::DestroyBlockPairWeakerSide { attacker_side } => {
+                // No Quarter — the trigger's subject is the attacker on a
+                // `BecomesBlocked` and the blocker on a `Blocks`.
+                let Some(subject) = ctx.trigger_source.and_then(|e| e.as_permanent_id()) else {
+                    return Ok(());
+                };
+                let pairs: Vec<(CardId, CardId)> = self
+                    .block_map
+                    .iter()
+                    .flat_map(|(blocker, attackers)| {
+                        attackers.iter().map(move |a| (*a, *blocker))
+                    })
+                    .collect();
+                let power = |g: &Self, id: CardId| {
+                    g.computed_permanent(id).map(|c| c.power).unwrap_or(0)
+                };
+                let mut doomed: Vec<CardId> = Vec::new();
+                for (atk, blk) in pairs {
+                    let relevant = if *attacker_side { blk == subject } else { atk == subject };
+                    if !relevant {
+                        continue;
+                    }
+                    if *attacker_side {
+                        // "blocks a creature with lesser power" — kill the attacker.
+                        if power(self, blk) > power(self, atk) {
+                            doomed.push(atk);
+                        }
+                    } else if power(self, atk) > power(self, blk) {
+                        doomed.push(blk);
+                    }
+                }
+                for id in doomed {
+                    self.destroy_permanent(id, false, events);
+                }
+                Ok(())
+            }
+
             Effect::RedirectSpellDamageToItsController { what } => {
                 for ent in self.resolve_selector(what, ctx) {
                     let Some(cid) = ent.as_card_id() else { continue };
@@ -27621,6 +27705,52 @@ impl GameState {
                 }
                 if let Some(c) = self.battlefield_find_mut(source) {
                     c.chosen_number = Some(n);
+                }
+                Ok(())
+            }
+
+            Effect::AsEntersSacrificeForTotalPt => {
+                // Dracoplasm — an as-enters choice, so it goes straight to the
+                // installed decider (it can't suspend). AutoDecider sacrifices
+                // nothing.
+                use crate::decision::{Decision, DecisionAnswer};
+                let Some(source) = ctx.source else { return Ok(()) };
+                let cands: Vec<(CardId, String)> = self
+                    .battlefield
+                    .iter()
+                    .filter(|c| {
+                        c.id != source
+                            && c.controller == ctx.controller
+                            && c.definition.is_creature()
+                    })
+                    .map(|c| (c.id, c.definition.name.to_string()))
+                    .collect();
+                let picks = match self.decider.decide(&Decision::ChooseCards {
+                    source,
+                    prompt: "Sacrifice any number of creatures".to_string(),
+                    candidates: cands.clone(),
+                    min: 0,
+                    max: cands.len() as u32,
+                }) {
+                    DecisionAnswer::Cards(ids) => {
+                        ids.into_iter().filter(|id| cands.iter().any(|(c, _)| c == id)).collect()
+                    }
+                    _ => Vec::new(),
+                };
+                let (mut power, mut toughness) = (0, 0);
+                for id in &picks {
+                    if let Some(cp) = self.computed_permanent(*id) {
+                        power += cp.power;
+                        toughness += cp.toughness;
+                    }
+                }
+                let controller = ctx.controller;
+                for id in picks {
+                    self.sacrifice_one(id, controller, events);
+                }
+                if let Some(c) = self.battlefield_find_mut(source) {
+                    c.chosen_number = Some(power.max(0) as u32);
+                    c.remembered_amount = Some(toughness);
                 }
                 Ok(())
             }

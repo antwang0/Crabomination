@@ -252,6 +252,7 @@ impl Effect {
             | Effect::RemoveCountersToCreateTokens { .. }
             | Effect::OpponentChoosesTargetForDamage { .. }
             | Effect::PayAnyAmountOfLifeCapped { .. }
+            | Effect::AsEntersSacrificeForTotalPt
             | Effect::PlaySubgame
             | Effect::EnterExilingGraveyardCreaturesForCounters { .. }
             | Effect::ExileTopFaceDownGrantPlay { .. }
@@ -522,6 +523,11 @@ impl Effect {
             Effect::ReturnEachUnlessPays { .. }
             | Effect::CreateTokenReturnSelfWhenItDies { .. } => false,
             Effect::TopTwoGraveyardOpponentSplits { who } => sel_has_target(who),
+            Effect::RedirectNextCombatDamageTo { what, to } => {
+                sel_has_target(what) || sel_has_target(to)
+            }
+            Effect::GrantSacrificedLandTypesLandwalk { what, .. } => sel_has_target(what),
+            Effect::DestroyBlockPairWeakerSide { .. } => false,
             Effect::LockActivatedAbilitiesThisTurn { what } => sel_has_target(what),
             Effect::RevealFiveDraftAgainstOpponent => false,
             Effect::EncoreTokens => false,

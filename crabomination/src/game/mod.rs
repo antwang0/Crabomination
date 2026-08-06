@@ -1452,6 +1452,11 @@ pub struct GameState {
     /// their own controller instead (Goblin Psychopath). Cleared at cleanup.
     #[serde(default)]
     pub next_combat_damage_to_controller: Vec<CardId>,
+    /// CR 614 — "the next time this would deal combat damage to an opponent
+    /// this turn, it deals that damage to [creature] instead" (Soltari
+    /// Guerrillas). Consumed on the first unblocked hit; cleared at cleanup.
+    #[serde(default)]
+    pub next_combat_damage_redirect: Vec<(CardId, CardId)>,
     /// CR 614.9 — `(spell card id, that spell's controller)`: all damage the
     /// spell would deal this turn goes to its controller instead
     /// (Reverberation). Cleared at cleanup.
@@ -2101,6 +2106,7 @@ impl Clone for GameState {
             next_damage_redirect: self.next_damage_redirect.clone(),
             turn_damage_redirect: self.turn_damage_redirect.clone(),
             next_combat_damage_to_controller: self.next_combat_damage_to_controller.clone(),
+            next_combat_damage_redirect: self.next_combat_damage_redirect.clone(),
             spell_damage_to_controller: self.spell_damage_to_controller.clone(),
             sorcery_damage_this_turn: self.sorcery_damage_this_turn.clone(),
             artifact_damage_to_players_this_turn: self
@@ -2423,6 +2429,7 @@ impl GameState {
             next_damage_redirect: Vec::new(),
             turn_damage_redirect: Vec::new(),
             next_combat_damage_to_controller: Vec::new(),
+            next_combat_damage_redirect: Vec::new(),
             spell_damage_to_controller: Vec::new(),
             sorcery_damage_this_turn: Vec::new(),
             artifact_damage_to_players_this_turn: Vec::new(),
@@ -9699,6 +9706,24 @@ impl GameState {
                 crate::card::DynamicPt::ChosenNumberAsEntered => {
                     let n = card.chosen_number.unwrap_or(0) as i32;
                     (n, n)
+                }
+                crate::card::DynamicPt::EnteredTotals => (
+                    card.chosen_number.unwrap_or(0) as i32,
+                    card.remembered_amount.unwrap_or(0),
+                ),
+                crate::card::DynamicPt::TappedLandsChosenPlayerControls { base_t } => {
+                    let n = card
+                        .chosen_player
+                        .map(|seat| {
+                            self.battlefield
+                                .iter()
+                                .filter(|c| {
+                                    c.controller == seat && c.tapped && c.definition.is_land()
+                                })
+                                .count() as i32
+                        })
+                        .unwrap_or(0);
+                    (n, base_t)
                 }
                 crate::card::DynamicPt::BasePlusOpponentsMatching { base_p, base_t, filter } => {
                     let n = self
@@ -20587,6 +20612,9 @@ fn static_effect_to_effects(
             // MaxOneUntapPerStep (Winter Moon, Imi Statue) — consulted by
             // `do_untap`; no layer effect.
             | StaticEffect::MaxOneUntapPerStep { .. }
+            | StaticEffect::MaxUntapsPerStep { .. }
+            // Hand to Hand — consulted by the cast / activate gates.
+            | StaticEffect::NoInstantsOrAbilitiesDuringCombat
             // Silent Arbiter's combat caps — consulted by `declare_attackers` /
             // `declare_blockers`; no layer effect.
             | StaticEffect::MaxAttackersPerCombat(_)

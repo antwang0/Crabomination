@@ -415,3 +415,300 @@ pub fn interdict() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── Wave 2 ──────────────────────────────────────────────────────────────────
+
+/// Static Orb — {3}. While untapped, nobody untaps more than two permanents
+/// per untap step.
+pub fn static_orb() -> CardDefinition {
+    use crate::card::StaticAbility;
+    use crate::effect::StaticEffect;
+    CardDefinition {
+        static_abilities: vec![StaticAbility {
+            description: "Players can't untap more than two permanents during their untap steps.",
+            effect: StaticEffect::WhileCondition {
+                condition: Predicate::EntityMatches {
+                    what: Selector::This,
+                    filter: R::Untapped,
+                },
+                inner: Box::new(StaticEffect::MaxUntapsPerStep { filter: R::Any, max: 2 }),
+            },
+        }],
+        ..artifact("Static Orb", cost(&[generic(3)]), vec![])
+    }
+}
+
+/// Hand to Hand — {2}{R}. During combat nobody casts instants or activates
+/// non-mana abilities.
+pub fn hand_to_hand() -> CardDefinition {
+    use crate::card::StaticAbility;
+    use crate::effect::StaticEffect;
+    CardDefinition {
+        name: "Hand to Hand",
+        cost: cost(&[generic(2), r()]),
+        card_types: vec![CardType::Enchantment],
+        static_abilities: vec![StaticAbility {
+            description: "During combat, players can't cast instants or activate non-mana abilities.",
+            effect: StaticEffect::NoInstantsOrAbilitiesDuringCombat,
+        }],
+        ..Default::default()
+    }
+}
+
+/// Pallimud — {2}{R} */3 whose power is the tapped lands of the opponent
+/// chosen as it entered.
+pub fn pallimud() -> CardDefinition {
+    CardDefinition {
+        as_enters_effect: Some(Effect::RememberPlayerOnSource {
+            who: PlayerRef::EachOpponent,
+        }),
+        dynamic_pt: Some(crate::card::DynamicPt::TappedLandsChosenPlayerControls { base_t: 3 }),
+        ..creature("Pallimud", cost(&[generic(2), r()]), vec![CreatureType::Beast], 0, 3)
+    }
+}
+
+/// Dracoplasm — {U}{R} flier that enters as the sum of the creatures
+/// sacrificed for it.
+pub fn dracoplasm() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flying],
+        as_enters_effect: Some(Effect::AsEntersSacrificeForTotalPt),
+        dynamic_pt: Some(crate::card::DynamicPt::EnteredTotals),
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[r()]),
+            effect: Effect::PumpPT {
+                what: Selector::This,
+                power: Value::ONE,
+                toughness: Value::Const(0),
+                duration: Duration::EndOfTurn,
+            },
+            ..Default::default()
+        }],
+        ..creature("Dracoplasm", cost(&[u(), r()]), vec![CreatureType::Shapeshifter], 0, 0)
+    }
+}
+
+/// Escaped Shapeshifter — {3}{U}{U} 3/4 that mirrors the keywords on
+/// opponents' creatures.
+pub fn escaped_shapeshifter() -> CardDefinition {
+    use crate::card::StaticAbility;
+    use crate::effect::StaticEffect;
+    let mirror = |kw: Keyword| StaticAbility {
+        description: "Mirrors a keyword an opponent's creature has.",
+        effect: StaticEffect::WhileCondition {
+            condition: Predicate::SelectorCountAtLeast {
+                sel: Selector::EachPermanent(
+                    R::Creature
+                        .and(R::ControlledByOpponent)
+                        .and(R::HasKeyword(kw.clone()))
+                        .and(R::Not(Box::new(R::HasName("Escaped Shapeshifter".into())))),
+                ),
+                n: Value::ONE,
+            },
+            inner: Box::new(StaticEffect::GrantKeyword {
+                applies_to: Selector::This,
+                keyword: kw,
+            }),
+        },
+    };
+    CardDefinition {
+        static_abilities: [Keyword::Flying, Keyword::FirstStrike, Keyword::Trample]
+            .into_iter()
+            .map(mirror)
+            .collect(),
+        ..creature(
+            "Escaped Shapeshifter",
+            cost(&[generic(3), u(), u()]),
+            vec![CreatureType::Shapeshifter],
+            3,
+            4,
+        )
+    }
+}
+
+/// Flowstone Sculpture — {6} 4/4. {2}, Discard a card: grow, or gain flying,
+/// first strike or trample for good.
+pub fn flowstone_sculpture() -> CardDefinition {
+    use crate::effect::Duration;
+    let grant = |kw: Keyword| Effect::GrantKeyword {
+        what: Selector::This,
+        keyword: kw,
+        duration: Duration::Permanent,
+    };
+    CardDefinition {
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(2)]),
+            discard_cost: Some((R::Any, 1)),
+            effect: Effect::ChooseMode(vec![
+                Effect::AddCounter {
+                    what: Selector::This,
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::ONE,
+                },
+                grant(Keyword::Flying),
+                grant(Keyword::FirstStrike),
+                grant(Keyword::Trample),
+            ]),
+            ..Default::default()
+        }],
+        ..creature(
+            "Flowstone Sculpture",
+            cost(&[generic(6)]),
+            vec![CreatureType::Shapeshifter],
+            4,
+            4,
+        )
+    }
+}
+
+/// Excavator — {2}. {T}, Sacrifice a basic land: target creature gains that
+/// land's landwalk until end of turn.
+pub fn excavator() -> CardDefinition {
+    artifact(
+        "Excavator",
+        cost(&[generic(2)]),
+        vec![ActivatedAbility {
+            tap_cost: true,
+            sac_other_filter: Some((R::Land.and(R::IsBasicLand), 1)),
+            effect: Effect::GrantSacrificedLandTypesLandwalk {
+                what: target_filtered(R::Creature),
+                duration: Duration::EndOfTurn,
+            },
+            ..Default::default()
+        }],
+    )
+}
+
+/// Soltari Guerrillas — {2}{R}{W} 3/2 shadow. {0}: redirect its next combat
+/// damage to a creature.
+pub fn soltari_guerrillas() -> CardDefinition {
+    use crate::mana::w;
+    CardDefinition {
+        keywords: vec![Keyword::Shadow],
+        activated_abilities: vec![ActivatedAbility {
+            effect: Effect::RedirectNextCombatDamageTo {
+                what: Selector::This,
+                to: target_filtered(R::Creature),
+            },
+            ..Default::default()
+        }],
+        ..creature(
+            "Soltari Guerrillas",
+            cost(&[generic(2), r(), w()]),
+            vec![CreatureType::Soltari, CreatureType::Soldier],
+            3,
+            2,
+        )
+    }
+}
+
+/// No Quarter — {3}{R}. A creature blocked by something weaker kills it, and a
+/// blocker that bites off more than it can chew dies too.
+pub fn no_quarter() -> CardDefinition {
+    use crate::card::{EventKind, EventScope, EventSpec};
+    CardDefinition {
+        name: "No Quarter",
+        cost: cost(&[generic(3), r()]),
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::BecomesBlocked, EventScope::AnyPlayer),
+                effect: Effect::DestroyBlockPairWeakerSide { attacker_side: false },
+            },
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::Blocks, EventScope::AnyPlayer),
+                effect: Effect::DestroyBlockPairWeakerSide { attacker_side: true },
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+// ── Licids with riders ──────────────────────────────────────────────────────
+
+fn rider_licid(
+    name: &'static str,
+    color: crate::mana::ManaSymbol,
+    attach_cost: ManaCost,
+    extra: Vec<ActivatedAbility>,
+    triggers: Vec<TriggeredAbility>,
+) -> CardDefinition {
+    let mut abilities = vec![ActivatedAbility {
+        mana_cost: attach_cost,
+        tap_cost: true,
+        effect: Effect::LicidAttach {
+            host: target_filtered(R::Creature),
+            end_cost: cost(&[color]),
+        },
+        ..Default::default()
+    }];
+    abilities.extend(extra);
+    CardDefinition {
+        activated_abilities: abilities,
+        triggered_abilities: triggers,
+        ..creature(name, cost(&[generic(1), color]), vec![CreatureType::Licid], 1, 1)
+    }
+}
+
+/// Leeching Licid — {1}{B}. As an Aura it pings the host's controller each of
+/// their upkeeps.
+pub fn leeching_licid() -> CardDefinition {
+    use crate::card::{EventKind, EventScope, EventSpec};
+    use crate::game::TurnStep;
+    let host = || Selector::AttachedTo(Box::new(Selector::This));
+    rider_licid(
+        "Leeching Licid",
+        b(),
+        cost(&[b()]),
+        vec![],
+        vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::AnyPlayer)
+                .with_filter(Predicate::IsTurnOf(PlayerRef::ControllerOf(Box::new(host())))),
+            effect: Effect::DealDamage {
+                to: Selector::Player(PlayerRef::ControllerOf(Box::new(host()))),
+                amount: Value::ONE,
+            },
+        }],
+    )
+}
+
+/// Nurturing Licid — {1}{G}. As an Aura, {G} regenerates the host.
+pub fn nurturing_licid() -> CardDefinition {
+    use crate::mana::g;
+    rider_licid(
+        "Nurturing Licid",
+        g(),
+        cost(&[g()]),
+        vec![ActivatedAbility {
+            mana_cost: cost(&[g()]),
+            effect: Effect::Regenerate {
+                what: Selector::AttachedTo(Box::new(Selector::This)),
+            },
+            ..Default::default()
+        }],
+        vec![],
+    )
+}
+
+/// Stinging Licid — {1}{U}. As an Aura it shocks the host's controller
+/// whenever the host taps.
+pub fn stinging_licid() -> CardDefinition {
+    use crate::card::{EventKind, EventScope, EventSpec};
+    rider_licid(
+        "Stinging Licid",
+        u(),
+        cost(&[generic(1), u()]),
+        vec![],
+        vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Tapped, EventScope::AnyPlayer)
+                .with_filter(Predicate::TriggerSourceIsSourceHost),
+            effect: Effect::DealDamage {
+                to: Selector::Player(PlayerRef::ControllerOf(Box::new(Selector::AttachedTo(
+                    Box::new(Selector::This),
+                )))),
+                amount: Value::Const(2),
+            },
+        }],
+    )
+}

@@ -2983,16 +2983,18 @@ impl GameState {
         // untap steps" (Winter Moon, Imi Statue). Pre-resolve each cap's
         // matching permanents (the untap loop below borrows the battlefield
         // mutably), then let each player untap at most one per cap.
-        let untap_caps: Vec<std::collections::HashSet<crate::card::CardId>> = self
+        let untap_caps: Vec<(std::collections::HashSet<crate::card::CardId>, u32)> = self
             .battlefield
             .iter()
-            .flat_map(|c| c.definition.static_abilities.iter())
-            .filter_map(|sa| match &sa.effect {
-                StaticEffect::MaxOneUntapPerStep { filter } => Some(filter),
+            .flat_map(|c| c.definition.static_abilities.iter().map(move |sa| (c, sa)))
+            .filter_map(|(c, sa)| match self.active_static(&sa.effect, c) {
+                Some(StaticEffect::MaxOneUntapPerStep { filter }) => Some((filter, 1)),
+                Some(StaticEffect::MaxUntapsPerStep { filter, max }) => Some((filter, *max)),
                 _ => None,
             })
-            .map(|filter| {
-                self.battlefield
+            .map(|(filter, max)| {
+                let set = self
+                    .battlefield
                     .iter()
                     .filter(|c| {
                         self.evaluate_requirement_static(
@@ -3003,7 +3005,8 @@ impl GameState {
                         )
                     })
                     .map(|c| c.id)
-                    .collect()
+                    .collect();
+                (set, max)
             })
             .collect();
         let mut capped_untaps: std::collections::HashMap<(usize, usize), u32> =
@@ -3150,10 +3153,10 @@ impl GameState {
                 // CR 502.3 — a tapped permanent beyond the first this player
                 // untaps under any active cap stays tapped.
                 if card.tapped
-                    && let Some(i) = untap_caps.iter().position(|s| s.contains(&card.id))
+                    && let Some(i) = untap_caps.iter().position(|(s, _)| s.contains(&card.id))
                 {
                     let n = capped_untaps.entry((i, card.controller)).or_insert(0);
-                    if *n >= 1 {
+                    if *n >= untap_caps[i].1 {
                         if active {
                             card.summoning_sick = false;
                         }
@@ -3691,6 +3694,7 @@ impl GameState {
         self.next_damage_redirect.clear();
         self.turn_damage_redirect.clear();
         self.next_combat_damage_to_controller.clear();
+        self.next_combat_damage_redirect.clear();
         self.spell_damage_to_controller.clear();
         self.sorcery_damage_this_turn.clear();
         self.artifact_damage_to_players_this_turn.clear();

@@ -6168,6 +6168,12 @@ impl GameState {
             return Err(GameError::CantCastNoncreature);
         }
 
+        // Hand to Hand — nobody casts instants during combat.
+        if card.definition.is_instant() && self.combat_spell_lock_active() {
+            self.players[p].hand.push(card);
+            return Err(GameError::CantCastNoncreature);
+        }
+
         // Grid Monitor — its controller can't cast creature spells.
         if card.definition.is_creature() && self.player_cant_cast_creature_spells(p) {
             self.players[p].hand.push(card);
@@ -10526,6 +10532,22 @@ impl GameState {
         })
     }
 
+    /// CR 506 — Hand to Hand: while any copy is in play and the turn is in a
+    /// combat step, instants can't be cast and non-mana abilities can't be
+    /// activated.
+    pub(crate) fn combat_spell_lock_active(&self) -> bool {
+        use crate::effect::StaticEffect;
+        self.step.is_combat_phase()
+            && self.battlefield.iter().any(|c| {
+                c.definition.static_abilities.iter().any(|sa| {
+                    matches!(
+                        self.active_static(&sa.effect, c),
+                        Some(StaticEffect::NoInstantsOrAbilitiesDuringCombat)
+                    )
+                })
+            })
+    }
+
     /// True when an opponent of `player` controls an
     /// `OpponentsCantCastMatching` static whose filter matches `card`
     /// (Llawan, Cephalid Empress — "your opponents can't cast blue creature
@@ -12861,6 +12883,11 @@ impl GameState {
             {
                 return Err(GameError::AbilitySuppressedByNamedCard);
             }
+        }
+
+        // Hand to Hand — no non-mana activations during combat.
+        if !is_mana_ability(&ability.effect) && self.combat_spell_lock_active() {
+            return Err(GameError::AbilitySuppressedByNamedCard);
         }
 
         // Interdict — "that permanent's activated abilities can't be
