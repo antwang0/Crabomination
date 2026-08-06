@@ -11,6 +11,9 @@ Items are grouped by area and roughly ordered by impact within each group.
   face up — `SpellKind` carries no face-down flag). Judith, Carnage
   Connoisseur wants a "that spell gains deathtouch and lifelink" grant onto a
   spell on the stack. ⏳
+- **`KnownCard.agenda_names` isn't rendered yet.** The server now ships a
+  hidden-agenda conspiracy's chosen name(s) to its controller (and to everyone
+  once face up); the client's command-zone card still shows only the name. ⏳
 - **A triggered ability's declared target isn't scriptable from a test.** A
   `ScriptedDecider` `Target` answer doesn't reach the trigger-target picker, so
   Unyielding Gatekeeper's regression drives the effect directly with a stamped
