@@ -1164,3 +1164,83 @@ pub fn agency_outfitter() -> CardDefinition {
         )
     }
 }
+
+/// Expedited Inheritance — {R}{R} Enchantment. Whenever a creature is dealt
+/// damage, its controller may exile that many cards off the top and play them
+/// until the end of their next turn.
+pub fn expedited_inheritance() -> CardDefinition {
+    CardDefinition {
+        name: "Expedited Inheritance",
+        cost: cost(&[r(), r()]),
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::DealtDamage, EventScope::AnyPlayer),
+            effect: Effect::MayDoBy {
+                who: PlayerRef::ControllerOf(Box::new(Selector::TriggerSource)),
+                description: "Exile that many cards from the top of your library".into(),
+                body: Box::new(Effect::Seq(vec![
+                    Effect::ExileTopOfLibrary {
+                        who: Selector::You,
+                        amount: Value::TriggerEventAmount,
+                        link_to_source: false,
+                        face_down: false,
+                    },
+                    Effect::GrantMayPlay {
+                        what: Selector::LastMoved,
+                        duration: crate::card::MayPlayDuration::EndOfControllersNextTurn,
+                        to_owner: true,
+                        exile_after: false,
+                        pay_own_cost: true,
+                        any_color: false,
+                    },
+                ])),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Etrata, Deadly Fugitive — {1}{U}{B} 1/4 deathtouch. Your face-down
+/// creatures can pay {2}{U}{B} to flip up — or, failing that, exile themselves
+/// and be cast free; and your Assassins' hits cloak the top of that library.
+pub fn etrata_deadly_fugitive() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Deathtouch],
+        static_abilities: vec![StaticAbility {
+            description: "Face-down creatures you control have \
+                          \"{2}{U}{B}: Turn this creature face up. If you can't, \
+                          exile it, then you may cast the exiled card without \
+                          paying its mana cost.\"",
+            effect: StaticEffect::GrantActivatedAbility {
+                applies_to: Selector::EachPermanent(
+                    R::Creature.and(R::FaceDown).and(R::ControlledByYou),
+                ),
+                ability: ActivatedAbility {
+                    mana_cost: cost(&[generic(2), u(), b()]),
+                    effect: Effect::TurnFaceUpFree { what: Selector::This },
+                    ..Default::default()
+                },
+                condition: None,
+            },
+        }],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::YourControl)
+                .with_filter(Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: R::HasCreatureType(CreatureType::Assassin),
+                }),
+            effect: Effect::Cloak {
+                who: PlayerRef::TriggerEventPlayer,
+                amount: Value::ONE,
+                from_hand: false,
+            },
+        }],
+        ..legend(
+            "Etrata, Deadly Fugitive",
+            cost(&[generic(1), u(), b()]),
+            vec![CreatureType::Vampire, CreatureType::Assassin],
+            1,
+            4,
+        )
+    }
+}

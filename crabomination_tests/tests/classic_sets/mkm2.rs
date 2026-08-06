@@ -22,6 +22,12 @@ fn attack_with(g: &mut GameState, id: CardId) {
     drain_stack(g);
 }
 
+fn advance_to(g: &mut GameState, step: TurnStep) {
+    while g.step != step {
+        g.perform_action(GameAction::PassPriority).expect("pass priority");
+    }
+}
+
 fn solve_now(g: &mut GameState) {
     let mut evs = vec![];
     g.process_case_solves(&mut evs);
@@ -747,4 +753,54 @@ fn thinking_cap_equips_a_detective_for_one() {
     g.perform_action(GameAction::Equip { equipment: cap, target: sleuth }).expect("equip for {1}");
     let cp = g.computed_permanent(sleuth).unwrap();
     assert_eq!((cp.power, cp.toughness), (2, 4), "+1/+2 from the Cap");
+}
+
+/// Expedited Inheritance turns damage into an exile-and-play window for the
+/// damaged creature's controller.
+#[test]
+fn expedited_inheritance_pays_out_the_damaged_controller() {
+    let mut g = two_player_game();
+    let ench = g.add_card_to_battlefield(0, catalog::expedited_inheritance());
+    let victim = g.add_card_to_battlefield(1, catalog::serra_angel());
+    for _ in 0..4 {
+        g.add_card_to_library(1, catalog::forest());
+    }
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    let mut ctx = crabomination::game::effects::EffectContext::for_ability(ench, 0, None);
+    ctx.trigger_source = Some(crabomination::game::effects::EntityRef::Permanent(victim));
+    ctx.event_amount = 3;
+    g.resolve_effect(&catalog::expedited_inheritance().triggered_abilities[0].effect, &ctx)
+        .expect("damage trigger");
+    assert_eq!(g.exile.len(), 3, "three cards exiled off their library");
+    assert!(
+        g.exile.iter().all(|c| c.may_play_until.is_some()),
+        "and all of them are playable"
+    );
+}
+
+/// Etrata hands your face-down creatures a flip-up ability and cloaks on an
+/// Assassin's hit.
+#[test]
+fn etrata_grants_flip_up_and_cloaks_on_damage() {
+    let mut g = two_player_game();
+    let etrata = g.add_card_to_battlefield(0, catalog::etrata_deadly_fugitive());
+    let hidden = g.add_card_to_battlefield(0, catalog::exalted_angel());
+    g.battlefield_find_mut(hidden).unwrap().turn_face_down();
+    assert_eq!(
+        g.granted_abilities_for(hidden).len(),
+        1,
+        "a face-down creature you control gains Etrata's ability"
+    );
+
+    // Etrata is herself an Assassin: connect and the defender's top card cloaks.
+    g.add_card_to_library(1, catalog::grizzly_bears());
+    attack_with(&mut g, etrata);
+    advance_to(&mut g, TurnStep::DeclareBlockers);
+    g.perform_action(GameAction::DeclareBlockers(vec![])).expect("no blocks");
+    advance_to(&mut g, TurnStep::CombatDamage);
+    drain_stack(&mut g);
+    assert!(
+        g.battlefield.iter().any(|c| c.controller == 1 && c.face_down),
+        "the top of their library is cloaked"
+    );
 }

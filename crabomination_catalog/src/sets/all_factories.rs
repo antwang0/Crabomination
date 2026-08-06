@@ -11712,6 +11712,8 @@ static MKM: &[Factory] = &[
     super::mkm2::reenact_the_crime,
     super::mkm2::anzrags_rampage,
     super::mkm2::agency_outfitter,
+    super::mkm2::expedited_inheritance,
+    super::mkm2::etrata_deadly_fugitive,
 ];
 static MMQ: &[Factory] = &[
     super::mmq::ramosian_sergeant,

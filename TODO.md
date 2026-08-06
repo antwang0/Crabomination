@@ -3,15 +3,18 @@
 Improvement opportunities for the engine, client, and tooling.
 Items are grouped by area and roughly ordered by impact within each group.
 
-## Noticed this run (MKM down to five)
+## Noticed this run (MKM down to three)
 
-- **Five MKM cards remain**, each stalled on one primitive: A Killer Among Us
+- **Three MKM cards remain**, each stalled on one primitive: A Killer Among Us
   (a secret creature-type choice revealed as an activation cost), Conspiracy
-  Unraveler (a collect-evidence alternative cost granted by a static), Etrata
-  (granting a turn-face-up-or-exile-and-free-cast ability to face-down
-  creatures), Expedited Inheritance (a per-damage-event exile-and-play-until-
-  next-turn) and Kaya, Spirits' Justice (an exile-batch trigger that recasts a
-  token as a copy). ⏳
+  Unraveler (`AlternativeCost` carries no collect-evidence field, so a static
+  can't grant "collect evidence 10 rather than pay the mana cost") and Kaya,
+  Spirits' Justice (an exile-batch trigger that turns a token into a copy of
+  one of the exiled cards, plus a flying rider `BecomeCopyOf` has no slot
+  for). ⏳
+- **Etrata's granted ability stops at the flip-up half.** The printed "If you
+  can't, exile it, then you may cast the exiled card without paying its mana
+  cost" needs a can't-flip fallback branch on `Effect::TurnFaceUpFree`. ⏳
 - **A card's name is worth greping before writing it.** Magnifying Glass and
   Thinking Cap were already in `decks::recent247`/`recent245`; `set_gaps.py`
   correctly omitted them, but a duplicate got written anyway and glob

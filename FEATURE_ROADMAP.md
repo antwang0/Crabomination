@@ -2551,7 +2551,7 @@ Each a small targeted feature; sweep batch by batch.
    `hml3`) are all at zero. **Conspiracy: Take the Crown** (CN2) is the live
    front at **12** — see TODO.md → "Noticed this run (FIN closed; CN2 opened)"
    for the three things the CR 905.2b shell still lacks. **MKM** is the live
-   front at **5**.
+   front at **3**.
 1. **Replacement-effect framework** (Tier-1 #1) — highest-leverage primitive still
    open.
 2. **Card-zoom + stops/auto-yield + combat-math preview** (Tier-7 #1–3) — the trio
@@ -2567,7 +2567,7 @@ Each a small targeted feature; sweep batch by batch.
 
 ## Recently closed (this push)
 
-- **MKM down to five** — `set_gaps.py mkm` 37 → 5 across 32 cards
+- **MKM down to three** — `set_gaps.py mkm` 37 → 3 across 34 cards
   (`sets::mkm2`, tests in `classic_sets/mkm2`). New primitives:
   `Effect::{FaceDownSpellsCostLessThisTurn, GrantKeywordsToSpell,
   SacrificeAtNextEndStep}`, `SpendRestriction::FaceDownSpellsOrTurnFaceUp`
@@ -2582,7 +2582,8 @@ Each a small targeted feature; sweep batch by batch.
   `Value::ArtifactsToGraveyardFromBattlefieldThisTurn`,
   `SelectionRequirement::PutIntoGraveyardThisTurn`, and
   `CardDefinition.equip_filtered_cost` — which also closes Thinking Cap's
-  documented "Equip Detective {1}" approximation.
+  documented "Equip Detective {1}" approximation. Etrata's face-down grant
+  and Expedited Inheritance's exile-and-play window close the wave.
 - **`Effect::LookPickToHand` is boxed** into a `LookPick` struct with a
   `Default` impl, so its ~160 call sites set only what differs (the
   long-standing TODO). Two new fields ride it —
