@@ -119,6 +119,9 @@ struct Args {
     /// the gate result had no consumer: every training game was still
     /// played with heuristic builds.
     use_deck_best: Option<PathBuf>,
+    /// Diagnostic mode: local-discrimination test over N games. See
+    /// `pairwise`.
+    pairwise: Option<usize>,
     /// Diagnostic mode: play N self-play games and score the value net
     /// and the heuristic evaluation as *predictors of the winner* on the
     /// same positions. Requires `--use-best`.
@@ -144,6 +147,7 @@ fn parse_args() -> Args {
         gate_builder: None,
         gate_builder_v2: None,
         calibrate: None,
+        pairwise: None,
         use_deck_best: None,
         attn: false,
         holdout: 0.05,
@@ -169,6 +173,7 @@ fn parse_args() -> Args {
             "--seed" => a.seed = val().parse().expect("--seed"),
             "--use-best" => a.use_best = Some(PathBuf::from(val())),
             "--calibrate" => a.calibrate = Some(val().parse().expect("--calibrate")),
+            "--pairwise" => a.pairwise = Some(val().parse().expect("--pairwise")),
             "--use-deck-best" => a.use_deck_best = Some(PathBuf::from(val())),
             "--holdout" => a.holdout = val().parse().expect("--holdout"),
             "--attn" => {
@@ -440,6 +445,10 @@ fn main() {
     }
     if let Some(games) = args.calibrate {
         calibrate(&args, &vocab, games);
+        return;
+    }
+    if let Some(games) = args.pairwise {
+        pairwise(&args, &vocab, games);
         return;
     }
     let cfg = if args.attn {
@@ -900,4 +909,128 @@ fn auc(it: impl Iterator<Item = (f32, f32)>) -> f32 {
         return 0.5;
     }
     ((rank_sum - pos * (pos + 1.0) / 2.0) / (pos * neg)) as f32
+}
+
+// ───────────────────────── local discrimination ──────────────────────────
+
+/// Can the evaluator order two *adjacent* positions from the same game?
+///
+/// This exists because `--calibrate` measured the wrong thing for the
+/// question that matters. AUC is a *global* ranking statistic: it asks
+/// whether a winning board outscores a losing one across a diverse pool of
+/// positions. The attention net wins that comparison against
+/// `eval_material` (0.798 vs 0.760 on seed 43, replicated 0.761 vs 0.747
+/// on seed 97) — and then loses the gate outright, 44.8 % as a
+/// replacement and 48.8 % blended.
+///
+/// The reconciliation is that the search never asks the global question.
+/// It compares *near-identical* boards — the same position differing by
+/// one attack or one block — dozens of times per decision, and picks the
+/// argmax. An evaluator can be excellent at "who is winning" and useless
+/// at "which of these two almost-identical lines is better", and only the
+/// second is consumed inside a resolved simulation.
+///
+/// Adjacent snapshots of one trajectory are the cheapest available proxy
+/// for that: one turn apart, same deck, same seat, overwhelmingly similar
+/// boards. Ground truth is the trajectory's direction — a winner's
+/// position tends toward 1 and a loser's toward 0. That is imperfect per
+/// pair (a winner's board does not improve monotonically) but it is
+/// exactly the assumption the value target already makes, and it is
+/// applied identically to both evaluators, so the *comparison* is fair
+/// even where the label is noisy.
+///
+/// Also reported: mean separation. An evaluator that orders pairs
+/// correctly but by a hair is still useless to a search whose candidates
+/// differ by less than its own noise.
+fn pairwise(args: &Args, vocab: &Vocab, games: usize) {
+    let best = args.use_best.as_ref().expect("--pairwise needs --use-best WEIGHTS");
+    let cfg = if args.attn {
+        NetConfig::with_attention(vocab.size())
+    } else {
+        NetConfig::standard(vocab.size())
+    };
+    let mut trainer = Trainer::new(&cfg, args.lr).expect("trainer init");
+    trainer.load(best).expect("load weights (add --attn for attention weights)");
+
+    let (mut net_ok, mut heur_ok, mut net_tie, mut heur_tie, mut n) = (0usize, 0usize, 0usize, 0usize, 0usize);
+    let (mut net_sep, mut heur_sep) = (0.0f64, 0.0f64);
+    let mut rng = StdRng::seed_from_u64(args.seed ^ 0x9A1D);
+    for g in 0..games as u64 {
+        let salt = |k: u64| args.seed ^ g.wrapping_mul(0x9E37_79B9_7F4A_7C15).wrapping_add(k * 0x9A1);
+        let pool_a = sealed_pool(salt(1));
+        let pool_b = sealed_pool(salt(2));
+        let deck_a = heuristic_sealed_build(&pool_a, salt(3));
+        let deck_b = heuristic_sealed_build(&pool_b, salt(4));
+        let template = sealed_game_template(&deck_a, &deck_b);
+        let rec = play_recorded_game(
+            &template,
+            [EvalWeights::default(), EvalWeights::default()],
+            rng.random_range(0..u64::MAX),
+            50_000,
+            vocab,
+        );
+        if rec.rows.len() < 4 {
+            continue;
+        }
+        let refs: Vec<&TrainRow> = rec.rows.iter().collect();
+        let preds = trainer.predict_win_batch(&refs, 512).expect("forward");
+
+        // Group row indices by trajectory, ordered by ply.
+        let mut by_traj: std::collections::HashMap<u32, Vec<usize>> = Default::default();
+        for (i, r) in rec.rows.iter().enumerate() {
+            by_traj.entry(r.traj).or_default().push(i);
+        }
+        for idxs in by_traj.values_mut() {
+            idxs.sort_by_key(|&i| rec.rows[i].ply);
+            for w in idxs.windows(2) {
+                let (a, b) = (w[0], w[1]);
+                // +1 when this seat won: later snapshots should score
+                // higher. -1 when it lost.
+                let dir = if rec.rows[a].win > 0.5 { 1.0f64 } else { -1.0 };
+                let dn = (preds[b] - preds[a]) as f64;
+                // Heuristic scores are unbounded ints; normalise by the
+                // pair's own scale so "separation" is comparable to the
+                // net's [0,1] output rather than a raw material delta.
+                let dh = (rec.heur[b] - rec.heur[a]) as f64 / 1000.0;
+                n += 1;
+                if dn == 0.0 { net_tie += 1 } else if dn * dir > 0.0 { net_ok += 1 }
+                if dh == 0.0 { heur_tie += 1 } else if dh * dir > 0.0 { heur_ok += 1 }
+                net_sep += dn.abs();
+                heur_sep += dh.abs();
+            }
+        }
+    }
+    if n == 0 {
+        eprintln!("pairwise: no usable adjacent pairs");
+        return;
+    }
+    // Report the correct-rate among pairs the evaluator actually
+    // *separates*, alongside the tie rate. Scoring ties as wrong would
+    // punish an evaluator for honestly declining to distinguish two
+    // equal positions, which is the opposite of what we want to measure —
+    // and mixing the two into one percentage hides the tie rate, which is
+    // the interesting number here.
+    //
+    // Separations are NOT compared across evaluators: the heuristic is an
+    // unbounded integer score and the net is a probability, so any shared
+    // normalisation would be arbitrary. Each is reported against its own
+    // scale only.
+    let rate = |ok: usize, ties: usize| {
+        let decided = n - ties;
+        if decided == 0 { f64::NAN } else { 100.0 * ok as f64 / decided as f64 }
+    };
+    println!("local discrimination on {n} adjacent same-game pairs from {games} games");
+    println!("  (chance is 50 %; this is the question the SEARCH asks, unlike AUC)");
+    println!(
+        "  net        {:.1}% of separated pairs ordered right   ties {:.1}%   mean |delta| {:.4} (prob scale)",
+        rate(net_ok, net_tie),
+        100.0 * net_tie as f64 / n as f64,
+        net_sep / (n - net_tie).max(1) as f64
+    );
+    println!(
+        "  heuristic  {:.1}% of separated pairs ordered right   ties {:.1}%   mean |delta| {:.1} (eval units)",
+        rate(heur_ok, heur_tie),
+        100.0 * heur_tie as f64 / n as f64,
+        heur_sep * 1000.0 / (n - heur_tie).max(1) as f64
+    );
 }
