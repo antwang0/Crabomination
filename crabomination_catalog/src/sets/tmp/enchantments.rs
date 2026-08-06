@@ -823,3 +823,18 @@ pub fn precognition() -> CardDefinition {
         ..enchantment("Precognition", cost(&[generic(4), u()]), vec![])
     }
 }
+
+/// Earthcraft — {1}{G}. Tap a creature to untap a basic land.
+pub fn earthcraft() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            tap_others_cost: Some((R::Creature, 1)),
+            effect: Effect::Untap {
+                what: target_filtered(R::Land.and(R::IsBasicLand)),
+                up_to: None,
+            },
+            ..Default::default()
+        }],
+        ..enchantment("Earthcraft", cost(&[generic(1), g()]), vec![])
+    }
+}

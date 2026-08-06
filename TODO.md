@@ -11,7 +11,7 @@ Items are grouped by area and roughly ordered by impact within each group.
   our code. Client edits from a cloud run are therefore only type-checked by
   eye — keep them to the mechanical shape of their neighbours (new
   `CounterType` / `Keyword` match arms), and verify locally. ⏳
-- **Tempest's last 48 cards each want one primitive.** Grouped by what they
+- **Tempest's last 40 cards each want one primitive.** Grouped by what they
   need: a repeat-until-no-progress loop (Grindstone); "choose a card name,
   reveal at random from hand" (Cursed Scroll, Booby Trap); exile-with-linked
   return (Cold Storage, Coffin Queen, Helm of Possession); a delayed

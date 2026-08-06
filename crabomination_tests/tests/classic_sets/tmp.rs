@@ -578,3 +578,64 @@ fn watchdog_softens_attackers_while_untapped() {
     g.battlefield_find_mut(dog).unwrap().tapped = true;
     assert_eq!(g.computed_permanent(bear).unwrap().power, 2, "tapped, so no longer");
 }
+
+// ── Third batch ─────────────────────────────────────────────────────────────
+
+/// Mogg Squad shrinks for every other creature, itself excluded.
+#[test]
+fn mogg_squad_shrinks_with_the_board() {
+    let mut g = two_player_game();
+    let squad = g.add_card_to_battlefield(0, catalog::mogg_squad());
+    assert_eq!(g.computed_permanent(squad).unwrap().power, 3, "alone it's a 3/3");
+    g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let cp = g.computed_permanent(squad).unwrap();
+    assert_eq!((cp.power, cp.toughness), (1, 1), "both sides count");
+}
+
+/// Bounty Hunter has to mark a creature before it can kill one, and the mark
+/// only lands on nonblack creatures.
+#[test]
+fn bounty_hunter_marks_then_collects() {
+    let mut g = two_player_game();
+    let hunter = ready(&mut g, 0, catalog::bounty_hunter());
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.step = TurnStep::PreCombatMain;
+
+    assert!(
+        activate(&mut g, hunter, 1, Some(Target::Permanent(bear))).is_err(),
+        "no bounty counter yet"
+    );
+    activate(&mut g, hunter, 0, Some(Target::Permanent(bear))).expect("mark");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(bear).unwrap().counter_count(CounterType::Bounty), 1);
+
+    g.battlefield_find_mut(hunter).unwrap().tapped = false;
+    activate(&mut g, hunter, 1, Some(Target::Permanent(bear))).expect("collect");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_none());
+}
+
+/// Deadshot taps one creature and fires its power at another.
+#[test]
+fn deadshot_turns_a_creature_into_a_gun() {
+    let mut g = two_player_game();
+    let gun = g.add_card_to_battlefield(1, catalog::serra_angel()); // 4/4
+    let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
+    let shot = g.add_card_to_hand(0, catalog::deadshot());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell {
+        card_id: shot,
+        target: Some(Target::Permanent(gun)),
+        additional_targets: vec![Target::Permanent(victim)],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(gun).unwrap().tapped, "the gun is tapped");
+    assert!(g.battlefield_find(victim).is_none(), "4 damage kills the 2/2");
+}

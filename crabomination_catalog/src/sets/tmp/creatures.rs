@@ -1756,3 +1756,87 @@ pub fn mindwhip_sliver() -> CardDefinition {
         },
     )
 }
+
+/// Mogg Squad — {1}{R} 3/3 that shrinks for every other creature out.
+pub fn mogg_squad() -> CardDefinition {
+    CardDefinition {
+        static_abilities: vec![StaticAbility {
+            description: "This creature gets -1/-1 for each other creature on the battlefield.",
+            effect: StaticEffect::PumpPTByValue {
+                applies_to: Selector::This,
+                power: Value::Negate(Box::new(Value::count(Selector::EachPermanent(
+                    R::Creature.and(R::OtherThanSource),
+                )))),
+                toughness: Value::Negate(Box::new(Value::count(Selector::EachPermanent(
+                    R::Creature.and(R::OtherThanSource),
+                )))),
+            },
+        }],
+        ..creature("Mogg Squad", cost(&[generic(1), r()]), vec![CreatureType::Goblin], 3, 3)
+    }
+}
+
+/// Bounty Hunter — {2}{B}{B} 2/2 that marks a target, then collects.
+pub fn bounty_hunter() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![
+            ActivatedAbility {
+                tap_cost: true,
+                effect: Effect::AddCounter {
+                    what: target_filtered(
+                        R::Creature.and(R::Not(Box::new(R::HasColor(Color::Black)))),
+                    ),
+                    kind: CounterType::Bounty,
+                    amount: Value::ONE,
+                },
+                ..Default::default()
+            },
+            ActivatedAbility {
+                tap_cost: true,
+                effect: Effect::Destroy {
+                    what: target_filtered(R::Creature.and(R::WithCounter(CounterType::Bounty))),
+                },
+                ..Default::default()
+            },
+        ],
+        ..creature(
+            "Bounty Hunter",
+            cost(&[generic(2), b(), b()]),
+            vec![CreatureType::Human, CreatureType::Archer, CreatureType::Minion],
+            2,
+            2,
+        )
+    }
+}
+
+/// Rootwater Shaman — {2}{U} 2/2. Your creature Auras get flash.
+pub fn rootwater_shaman() -> CardDefinition {
+    CardDefinition {
+        static_abilities: vec![StaticAbility {
+            description: "You may cast Aura spells with enchant creature as though they had flash.",
+            effect: StaticEffect::ControllerSpellsHaveFlash {
+                filter: R::HasEnchantmentSubtype(crate::card::EnchantmentSubtype::Aura),
+            },
+        }],
+        ..creature(
+            "Rootwater Shaman",
+            cost(&[generic(2), u()]),
+            vec![CreatureType::Merfolk, CreatureType::Shaman],
+            2,
+            2,
+        )
+    }
+}
+
+/// Shocker — {1}{R} 1/1 that makes the player it hits reshuffle their hand.
+pub fn shocker() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::PlayerDamaged, EventScope::SelfSource),
+            effect: Effect::DiscardHandDrawThatMany {
+                who: Selector::Player(PlayerRef::TriggerEventPlayer),
+            },
+        }],
+        ..creature("Shocker", cost(&[generic(1), r()]), vec![CreatureType::Insect], 1, 1)
+    }
+}

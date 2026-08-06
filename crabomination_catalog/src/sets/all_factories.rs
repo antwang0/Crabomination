@@ -20202,6 +20202,10 @@ static TMP: &[Factory] = &[
     super::tmp::sacred_guide,
     super::tmp::mnemonic_sliver,
     super::tmp::mindwhip_sliver,
+    super::tmp::mogg_squad,
+    super::tmp::bounty_hunter,
+    super::tmp::rootwater_shaman,
+    super::tmp::shocker,
     super::tmp::chill,
     super::tmp::dread_of_night,
     super::tmp::hannas_custody,
@@ -20241,6 +20245,7 @@ static TMP: &[Factory] = &[
     super::tmp::spirit_mirror,
     super::tmp::tahngarths_rage,
     super::tmp::precognition,
+    super::tmp::earthcraft,
     super::tmp::caldera_lake,
     super::tmp::pine_barrens,
     super::tmp::cinder_marsh,
@@ -20285,6 +20290,9 @@ static TMP: &[Factory] = &[
     super::tmp::verdigris,
     super::tmp::serene_offering,
     super::tmp::spontaneous_combustion,
+    super::tmp::deadshot,
+    super::tmp::scorched_earth,
+    super::tmp::lobotomy,
 ];
 static TOR: &[Factory] = &[
     super::tor::accelerate,

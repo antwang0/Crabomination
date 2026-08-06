@@ -504,3 +504,47 @@ pub fn spontaneous_combustion() -> CardDefinition {
         )
     }
 }
+
+/// Deadshot — {3}{R} sorcery. Tap a creature and fire its power at another.
+pub fn deadshot() -> CardDefinition {
+    sorcery(
+        "Deadshot",
+        cost(&[generic(3), r()]),
+        Effect::Seq(vec![
+            Effect::Tap { what: target_filtered(R::Creature) },
+            Effect::DealDamage {
+                to: Selector::TargetFiltered { slot: 1, filter: R::Creature },
+                amount: Value::PowerOf(Box::new(Selector::Target(0))),
+            },
+        ]),
+    )
+}
+
+/// Scorched Earth — {X}{R} sorcery. Discard X lands to blow up X of theirs.
+pub fn scorched_earth() -> CardDefinition {
+    CardDefinition {
+        additional_cast_cost: vec![crate::card::AdditionalCastCost::DiscardXFromCost],
+        ..sorcery(
+            "Scorched Earth",
+            cost(&[x(), r()]),
+            Effect::TargetsExactlyX {
+                body: Box::new(Effect::ApplyToTargets {
+                    max_targets: 8,
+                    min_targets: 0,
+                    filter: R::Land,
+                    effect: Box::new(Effect::Destroy { what: Selector::Target(0) }),
+                }),
+            },
+        )
+    }
+}
+
+/// Lobotomy — {2}{U}{B} sorcery. Name a card off their hand and strip every
+/// copy from all their zones.
+pub fn lobotomy() -> CardDefinition {
+    sorcery(
+        "Lobotomy",
+        cost(&[generic(2), u(), b()]),
+        Effect::NameCardExileMatchingAllZones,
+    )
+}
