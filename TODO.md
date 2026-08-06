@@ -5,13 +5,16 @@ Items are grouped by area and roughly ordered by impact within each group.
 
 ## Noticed this run (FIN closed; CN2 opened)
 
-- **CN2 is down to 14.** CNS is closed; what's left in CN2 needs three things
+- **CN2 is down to 12.** CNS is closed; what's left in CN2 needs three things
   the CR 905.2b shell doesn't have yet: noted **creature types** (Paliano
   Vanguard) and **keywords** (Animus of Predation); a pre-game "exile a card
   you drafted that isn't in your deck" pile (Arcane Savant, Caller of the
   Untamed, Volatile Chimera); and the four Conspiracies' hidden/double agenda
   + start-of-game rules (Echoing Boon, Emissary's Ploy, Sovereign's Realm,
   Summoner's Bond). Spy Kit wants a text-changing "has all names" grant. ⏳
+- **Spire Phantasm's draft-time guess is a heuristic.** The pod notes a hit
+  only when the pack it names from has one card left; a real guess wants the
+  drafter to name a card and the next drafter to reveal. ⏳
 - **Expropriate and Selvala's Stampede are unimplemented.** Both are
   council's-dilemma sorceries whose per-vote bodies need a "choose a permanent
   owned by the voter" slot / a you-only put-permanent-from-hand. ⏳

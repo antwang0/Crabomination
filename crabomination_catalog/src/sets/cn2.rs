@@ -971,3 +971,41 @@ pub fn kaya_ghost_assassin() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Borderland Explorer — {1}{G} 3/1 that offers everyone a rummage into a
+/// basic land.
+pub fn borderland_explorer() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![etb(Effect::EachPlayerMayDiscardThenTutorBasic)],
+        ..creature(
+            "Borderland Explorer",
+            cost(&[generic(1), g()]),
+            vec![CreatureType::Elf, CreatureType::Scout],
+            3,
+            1,
+        )
+    }
+}
+
+/// Spire Phantasm — {2}{U}{U} 3/2 flier that draws if its draft-time guess at
+/// the next pick out of its own pack was right (noted as a 1).
+pub fn spire_phantasm() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![etb(Effect::If {
+            cond: Predicate::ValueAtLeast(
+                Value::DraftNoteNumber { agg: DraftNoteAgg::Max },
+                Value::ONE,
+            ),
+            then: Box::new(draw(1)),
+            else_: Box::new(Effect::Noop),
+        })],
+        ..creature(
+            "Spire Phantasm",
+            cost(&[generic(2), u(), u()]),
+            vec![CreatureType::Gargoyle, CreatureType::Illusion],
+            3,
+            2,
+        )
+    }
+}

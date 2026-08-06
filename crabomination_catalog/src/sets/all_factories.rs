@@ -1256,6 +1256,8 @@ static CN2: &[Factory] = &[
     super::cn2::canal_courier,
     super::cn2::daretti_ingenious_iconoclast,
     super::cn2::kaya_ghost_assassin,
+    super::cn2::borderland_explorer,
+    super::cn2::spire_phantasm,
 ];
 static CNS3: &[Factory] = &[
     super::cns3::aether_searcher,

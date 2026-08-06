@@ -828,6 +828,7 @@ pub const PYRETIC_HUNTER: &str = "Pyretic Hunter";
 pub const NOBLE_BANNERET: &str = "Noble Banneret";
 pub const SMUGGLER_CAPTAIN: &str = "Smuggler Captain";
 pub const REGICIDE: &str = "Regicide";
+pub const SPIRE_PHANTASM: &str = "Spire Phantasm";
 
 /// CN2's "reveal this card as you draft it and note how many cards you've
 /// drafted this draft round" cycle — the same note Lurking Automaton takes.
@@ -1115,6 +1116,11 @@ impl DraftPod {
             REGICIDE => {
                 let colors = self.paliano_colors(seat);
                 self.notes[seat].note_colors(REGICIDE, &colors);
+            }
+            // "Guess that card's name, then that player reveals it" — the
+            // guess lands when only one card is left to name (CR 905.2b).
+            SPIRE_PHANTASM if self.pack(seat).len() == 1 => {
+                self.notes[seat].note_number(SPIRE_PHANTASM, 1);
             }
             _ => {}
         }

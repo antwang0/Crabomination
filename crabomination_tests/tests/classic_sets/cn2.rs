@@ -501,3 +501,36 @@ fn daretti_makes_a_defender_construct() {
     assert!(construct.definition.keywords.contains(&Keyword::Defender));
     assert_eq!(g.battlefield_find(daretti).unwrap().counter_count(CounterType::Loyalty), 4);
 }
+
+/// Spire Phantasm draws only when its draft-time guess landed.
+#[test]
+fn spire_phantasm_draws_on_a_correct_guess() {
+    use crabomination::draft::{DraftNotes, SPIRE_PHANTASM};
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::grizzly_bears());
+    g.move_card_to_battlefield_for_test(0, catalog::spire_phantasm());
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.is_empty(), "no note, no draw");
+
+    let mut notes = DraftNotes::default();
+    notes.note_number(SPIRE_PHANTASM, 1);
+    g.players[1].draft_notes = notes;
+    g.add_card_to_library(1, catalog::grizzly_bears());
+    g.move_card_to_battlefield_for_test(1, catalog::spire_phantasm());
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].hand.len(), 1, "a correct guess draws");
+}
+
+/// Borderland Explorer trades a discard for a basic land, for anyone who takes
+/// the deal.
+#[test]
+fn borderland_explorer_rummages_for_a_basic() {
+    let mut g = two_player_game();
+    let pitch = g.add_card_to_hand(0, catalog::grizzly_bears());
+    let forest = g.add_card_to_library(0, catalog::forest());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Cards(vec![pitch])]));
+    g.move_card_to_battlefield_for_test(0, catalog::borderland_explorer());
+    drain_stack(&mut g);
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == pitch), "discarded");
+    assert!(g.players[0].hand.iter().any(|c| c.id == forest), "and fetched a basic");
+}

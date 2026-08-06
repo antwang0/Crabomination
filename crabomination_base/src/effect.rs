@@ -5524,6 +5524,11 @@ pub enum Effect {
     /// "Each player may discard up to `max` cards. This deals damage to each
     /// player equal to `max` minus the number they discarded" (Mind Bomb).
     EachPlayerMayDiscardUpToThenDamage { max: u32 },
+    /// "Each player may discard a card. Each player who discarded a card this
+    /// way may search their library for a basic land card, reveal it, put it
+    /// into their hand, then shuffle" (Borderland Explorer). APNAP order; a
+    /// seat that declines the discard is skipped.
+    EachPlayerMayDiscardThenTutorBasic,
     /// CR 701.3c — "attach target Aura attached to a [type] to another
     /// permanent of that type" (Enchantment Alteration). Moves the *targeted*
     /// Aura rather than the source; the new host must satisfy the Aura's own

@@ -400,6 +400,7 @@ impl Effect {
             | Effect::PutResolvingSpellOnBattlefieldTransformed { .. }
             | Effect::ControlVotesThisTurn { .. }
             | Effect::CompleteDungeon
+            | Effect::EachPlayerMayDiscardThenTutorBasic
             // Group / each-player effects with no cast-time target slot.
             | Effect::EachPlayerPutsHandCardOnTop { .. }
             | Effect::ChooseBasicLandTypeForSource

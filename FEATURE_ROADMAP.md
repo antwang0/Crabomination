@@ -2540,21 +2540,17 @@ Each a small targeted feature; sweep batch by batch.
 ## Suggested sequencing
 
 0. **Next set to close.** Bloomburrow, Duskmourn, Outlaws of Thunder Junction,
-   **Edge of Eternities** and **Final Fantasy** are all closed
-   (`set_gaps.py blb dsk otj eoe fin` is empty). **Conspiracy: Take the Crown**
-   (CN2) is the live front at **26**, all of them draft-time cards that want
-   the same CR 905.2b shell as CNS's eight. The Odyssey
+   **Edge of Eternities**, **Final Fantasy** and **Conspiracy** (CNS) are all
+   closed (`set_gaps.py blb dsk otj eoe fin cns` is empty). The Odyssey
    block, the Onslaught block (**ONS**,
    **LGN**, **SCG**), the Mirrodin block (**MRD**, **DST**, **5DN**), the
    Kamigawa block, **Mirrodin Besieged**, **New Phyrexia** (the Scars block
    is closed), **Legends** (273 cards, `sets::leg`–`leg7`), **Antiquities**
    (64 cards, `sets::atq`), **Arabian Nights** (63 cards, `sets::arn`) and
    **The Dark** (97 cards, `sets::drk`/`drk2`) and **Homelands** (`sets::hml`–
-   `hml3`) are all at zero. **Conspiracy** (CNS) is down to **8**, all of them
-   draft-time: Aether Searcher, Agent of Acquisitions, Cogwork Grinder,
-   Cogwork Librarian, Lore Seeker, Lurking Automaton, Paliano the High City,
-   Whispergear Sneak. They need the CR 905.2b/2c draft shell (noted values +
-   face-up drafting) — see TODO.md → "Conspiracy: the draft-matters shell".
+   `hml3`) are all at zero. **Conspiracy: Take the Crown** (CN2) is the live
+   front at **12** — see TODO.md → "Noticed this run (FIN closed; CN2 opened)"
+   for the three things the CR 905.2b shell still lacks.
 1. **Replacement-effect framework** (Tier-1 #1) — highest-leverage primitive still
    open.
 2. **Card-zoom + stops/auto-yield + combat-math preview** (Tier-7 #1–3) — the trio
@@ -2578,8 +2574,8 @@ Each a small targeted feature; sweep batch by batch.
   flashback exile), and `Effect::AddCountersUpTo` (with the CR 714.2b chapter
   thresholds it crosses). CR 712.9/712.10/712.13a: a face swap onto an
   instant/sorcery face does nothing.
-- **Conspiracy: Take the Crown opened** — `set_gaps.py cn2` 52 → 26 (the rest
-  are draft-time cards awaiting the CR 905.2b shell). New:
+- **Conspiracy: Take the Crown opened** — `set_gaps.py cn2` 52 → 12, with the
+  CR 905.2b note table extended to CN2's noting cards. New:
   `Effect::ControlVotesThisTurn` (CR 701.38 — Illusion of Choice, surfaced as
   `ClientView.vote_controller` and a HUD chip), `EventKind::BecameMonarch` +
   `Predicate::WasMonarchAtTurnStart`, `Keyword::

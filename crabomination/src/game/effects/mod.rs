@@ -8751,6 +8751,52 @@ impl GameState {
             }
 
             // Mind Bomb — each player trades cards for damage.
+            Effect::EachPlayerMayDiscardThenTutorBasic => {
+                use crate::card::Supertype;
+                use crate::decision::{Decision, DecisionAnswer};
+                let source = ctx.source.unwrap_or(CardId(0));
+                for p in self.apnap_sort((0..self.players.len()).collect()) {
+                    let hand: Vec<(CardId, String)> = self.players[p]
+                        .hand
+                        .iter()
+                        .map(|c| (c.id, c.definition.name.to_string()))
+                        .collect();
+                    if hand.is_empty() {
+                        continue;
+                    }
+                    let picked = match self.decider.decide(&Decision::ChooseCards {
+                        source,
+                        prompt: "Discard a card to search for a basic land?".to_string(),
+                        candidates: hand,
+                        min: 0,
+                        max: 1,
+                    }) {
+                        DecisionAnswer::Cards(ids) => ids,
+                        _ => vec![],
+                    };
+                    let Some(cid) = picked.first().copied() else { continue };
+                    self.discard_card(p, cid, events);
+                    let basic = self.players[p]
+                        .library
+                        .iter()
+                        .find(|c| {
+                            c.definition.is_land()
+                                && c.definition.supertypes.contains(&Supertype::Basic)
+                        })
+                        .map(|c| c.id);
+                    if let Some(land) = basic {
+                        self.move_card_to(
+                            land,
+                            &ZoneDest::Hand(PlayerRef::Seat(p)),
+                            ctx,
+                            events,
+                        );
+                    }
+                    self.shuffle_library(p, events);
+                }
+                Ok(())
+            }
+
             Effect::EachPlayerMayDiscardUpToThenDamage { max } => {
                 use crate::decision::{Decision, DecisionAnswer};
                 let source = ctx.source.unwrap_or(CardId(0));
