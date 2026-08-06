@@ -283,6 +283,7 @@ impl Effect {
             Effect::Ante { what }
             | Effect::CantAttackNextTurn { what }
             | Effect::CantAttackThisTurn { what }
+            | Effect::LicidAttach { host: what, .. }
             | Effect::ReplaceTargetLandManaWithColorless { what }
             | Effect::PreventTargetingDamageThisTurn { what } => sel_has_target(what),
             Effect::NameCardRevealRandomDiscardNamed { who, .. } => player_has_target(who),
@@ -312,6 +313,7 @@ impl Effect {
             | Effect::EachPlayerChoosesCreatureTypeThen { then } => then.requires_target(),
             Effect::NextSpellCantBeCountered { .. } => false,
             Effect::Noop
+            | Effect::LicidDetach
             | Effect::SearchEachBasicLandType { .. }
             | Effect::SearchAnyNumber { .. }
             | Effect::CounterOnMatchingOfEachColor { .. }

@@ -23994,6 +23994,33 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::LicidAttach { host, .. } => {
+                let Some(src) = ctx.source else { return Ok(()) };
+                let Some(anchor) =
+                    self.resolve_selector(host, ctx).iter().find_map(|e| e.as_permanent_id())
+                else {
+                    return Ok(());
+                };
+                if let Some(c) = self.battlefield_find_mut(src) {
+                    c.make_licid_aura();
+                    c.attached_to = Some(anchor);
+                }
+                events.push(GameEvent::AttachmentMoved {
+                    attachment: src,
+                    attached_to: Some(anchor),
+                });
+                Ok(())
+            }
+
+            Effect::LicidDetach => {
+                let Some(src) = ctx.source else { return Ok(()) };
+                if let Some(c) = self.battlefield_find_mut(src) {
+                    c.undo_licid_aura();
+                }
+                events.push(GameEvent::AttachmentMoved { attachment: src, attached_to: None });
+                Ok(())
+            }
+
             Effect::PutOnLibraryFromHand { who, count } => {
                 use crate::decision::Decision;
                 let Some(p) = self.resolve_player(who, ctx) else { return Ok(()); };

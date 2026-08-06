@@ -5,22 +5,18 @@ Items are grouped by area and roughly ordered by impact within each group.
 
 ## Noticed this run (MKM closed; Stronghold opened)
 
-- **The five Stronghold Licids are unimplemented.** "{C}, {T}: This creature
-  loses this ability and becomes an Aura enchantment with enchant creature.
-  Attach it to target creature. You may pay {C} to end this effect." The
-  cheap wiring is an `Effect::LicidAttach { end_cost }` that stashes the
-  creature definition on the instance, rewrites `card_types` to
-  Enchantment — Aura, attaches, and swaps the printed ability for a
-  `LicidDetach`; the aura riders can already ride `equipped_bonus` on the
-  creature definition. The snapshot wire needs a `licid_attached` flag that
-  re-applies the transform on load. ⏳
-- **Ten more Stronghold cards remain** (`set_gaps.py sth`), each on one
+- **Ten Stronghold cards remain** (`set_gaps.py sth`), each on one
   primitive: Skeleton Scavengers ("pay {1} for each +1/+1 counter" — a
   counter-scaled activation cost), Dream Halls (discard-a-colour-sharing-card
   as an alternative cost for every spell), Sacred Ground (a
   land-destroyed-by-an-opponent watcher), Jinxed Ring, Contempt, Hidden
   Retreat, Invasion Plans, Samite Blessing, Thalakos Deceiver, Volrath's
   Shapeshifter. ⏳
+- **A Licid that stops being attached isn't put into a graveyard.**
+  `Effect::LicidDetach` restores the creature, which is right for the printed
+  "end this effect", but a Licid whose host leaves while it is still an Aura
+  relies on the generic unattached-Aura SBA — it dies rather than reverting,
+  which matches CR 704.5m but loses the card. ⏳
 - **`StaticEffect::PreventUntapGlobal`'s untap-preview path is quadratic.**
   When any global prevent is live, `do_untap`'s preview re-walks
   `untap_prevented_by_static` for every battlefield permanent instead of

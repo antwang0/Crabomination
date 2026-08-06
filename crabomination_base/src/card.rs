@@ -82,7 +82,7 @@ pub enum CreatureType {
     Sheep, Trilobite, Beaver, Beeble, Sponge, Oyster,
     Basilisk, Cockatrice,
     Elephant, Rhino, Hippo, Mammoth, Whale, Leviathan, Kraken, Elk, Egg, Weasel,
-    Lion, Kavu, Lhurgoyf, Atog, Noggle, Vedalken, Kor, Ally, Kobold, Surrakar,
+    Lion, Kavu, Lhurgoyf, Atog, Noggle, Vedalken, Kor, Ally, Kobold, Surrakar, Licid,
     Avatar, Phyrexian, Praetor, Incarnation, Mercenary, Rebel, Monger, Archon, Aetherborn,
     Construct, Golem, Myr, Robot, Hellion, Scarecrow, Dreadnought, Sable,
     Ooze, Plant, Saproling,
@@ -5406,6 +5406,10 @@ pub struct CardInstance {
     /// only: the serde wire stores the real name + a `face_down_permanent`
     /// flag and rebuilds this on load.
     pub face_up_def: Option<Arc<CardDefinition>>,
+    /// Licid — while this permanent is an Aura, its creature definition waits
+    /// here. In-memory only: the wire carries `licid_attached` and
+    /// `make_licid_aura` re-derives from the freshly-resolved printed card.
+    pub licid_creature_def: Option<Arc<CardDefinition>>,
     /// CR 702.182 — true while this permanent is face down because it was
     /// Cloaked (so its 2/2 face-down body has ward {2}, like Disguise). The
     /// real card carries no keyword to re-derive this, so it's tracked here and
@@ -5977,6 +5981,7 @@ impl CardInstance {
             case_solved: false,
             class_level: 0,
             face_up_def: None,
+            licid_creature_def: None,
             cloaked: false,
             is_token: false,
             loyalty_uses_this_turn: 0,
@@ -6294,6 +6299,49 @@ impl CardInstance {
         self.unlocked_doors |= bit;
         self.definition = Arc::new(self.definition.room_definition_with(self.unlocked_doors));
         true
+    }
+
+    /// Licid (Stronghold) — stash the creature definition and rewrite the
+    /// live one to an Aura enchantment whose only ability is the `end_cost`
+    /// detach. Returns false if it is already an Aura or the card carries no
+    /// `Effect::LicidAttach` ability.
+    pub fn make_licid_aura(&mut self) -> bool {
+        use crate::effect::Effect;
+        if self.licid_creature_def.is_some() {
+            return false;
+        }
+        let Some(end_cost) = self.definition.activated_abilities.iter().find_map(|a| match &a.effect
+        {
+            Effect::LicidAttach { end_cost, .. } => Some(end_cost.clone()),
+            _ => None,
+        }) else {
+            return false;
+        };
+        let mut def = (*self.definition).clone();
+        def.card_types = vec![CardType::Enchantment];
+        def.subtypes.creature_types.clear();
+        def.subtypes.enchantment_subtypes = vec![EnchantmentSubtype::Aura];
+        def.power = 0;
+        def.toughness = 0;
+        def.activated_abilities = vec![crate::effect::ActivatedAbility {
+            mana_cost: end_cost,
+            effect: Effect::LicidDetach,
+            ..Default::default()
+        }];
+        self.licid_creature_def = Some(self.definition.clone());
+        self.definition = Arc::new(def);
+        true
+    }
+
+    /// Undo [`make_licid_aura`]: the permanent unattaches and is a creature
+    /// again.
+    ///
+    /// [`make_licid_aura`]: Self::make_licid_aura
+    pub fn undo_licid_aura(&mut self) {
+        if let Some(def) = self.licid_creature_def.take() {
+            self.definition = def;
+            self.attached_to = None;
+        }
     }
 
     pub fn turn_face_up(&mut self) -> Option<&'static str> {
@@ -6738,6 +6786,10 @@ struct CardInstanceWire {
     /// state; `#[serde(default)]` so older snapshots load as `None`.
     #[serde(default)]
     named_card: Option<String>,
+    /// Licid — true while this permanent is an Aura. The restore re-applies
+    /// `make_licid_aura` to the freshly-resolved printed card.
+    #[serde(default)]
+    licid_attached: bool,
     #[serde(default)]
     named_card_2: Option<String>,
     /// Chosen color (Coldsteel Heart-style mana rocks). `#[serde(default)]`
@@ -6895,6 +6947,7 @@ impl serde::Serialize for CardInstance {
             case_solved: self.case_solved,
             class_level: self.class_level,
             face_down_permanent: self.face_up_def.is_some(),
+            licid_attached: self.licid_creature_def.is_some(),
             cloaked: self.cloaked,
             transformed: self.transformed,
             flipped: self.flipped,
@@ -7106,6 +7159,9 @@ impl<'de> serde::Deserialize<'de> for CardInstance {
         c.granted_alt_cast_cost_eot = wire.granted_alt_cast_cost_eot;
         c.granted_cast_surcharge_eot = wire.granted_cast_surcharge_eot;
         c.named_card = wire.named_card;
+        if wire.licid_attached {
+            c.make_licid_aura();
+        }
         c.named_card_2 = wire.named_card_2;
         c.chosen_color = wire.chosen_color;
         c.chosen_colors = wire.chosen_colors;

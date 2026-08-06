@@ -6543,6 +6543,16 @@ pub enum Effect {
     },
     /// Attach `what` (Aura/Equipment) to `to`.
     Attach { what: Selector, to: Selector },
+    /// Licid (Stronghold) — "This creature loses this ability and becomes an
+    /// Aura enchantment with enchant creature. Attach it to `host`. You may
+    /// pay `end_cost` to end this effect." The source's creature definition
+    /// is stashed on the instance and its live one is rewritten to
+    /// Enchantment — Aura with a single `LicidDetach` ability; the aura
+    /// riders ride the printed `equipped_bonus`, inert until attached.
+    LicidAttach { host: Selector, end_cost: crate::mana::ManaCost },
+    /// The `end_cost` half of [`Effect::LicidAttach`] — the source unattaches
+    /// and goes back to being a creature.
+    LicidDetach,
 
     // ── Stack interaction ────────────────────────────────────────────────────
     /// Counter target spell (removes from stack; sends to owner's graveyard).

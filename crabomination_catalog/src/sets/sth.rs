@@ -3,7 +3,8 @@
 //! artifacts. Tests in `classic_sets/sth`.
 
 use crate::card::{
-    ActivatedAbility, CardDefinition, CardType, CounterType, CreatureType, DynamicPt, EventKind,
+    ActivatedAbility, CardDefinition, CardType, CounterType, CreatureType, DynamicPt, EquipBonus,
+    EventKind,
     EventScope, EventSpec, Keyword, LandType, SelectionRequirement as R, StaticAbility, Subtypes,
     Supertype, TokenDefinition, TriggeredAbility,
 };
@@ -1901,4 +1902,70 @@ pub fn reins_of_power() -> CardDefinition {
         ]),
         ..Default::default()
     }
+}
+
+// ── Licids ──────────────────────────────────────────────────────────────────
+
+/// A Licid: a 2/2 that can pay `c` and tap to become an Aura granting
+/// `bonus`, and pay `c` again to go back to being a creature.
+fn licid(name: &'static str, color: crate::mana::ManaSymbol, bonus: EquipBonus) -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[color]),
+            tap_cost: true,
+            effect: Effect::LicidAttach {
+                host: target_filtered(R::Creature),
+                end_cost: cost(&[color]),
+            },
+            ..Default::default()
+        }],
+        equipped_bonus: Some(bonus),
+        ..creature(name, cost(&[generic(2), color]), vec![CreatureType::Licid], 2, 2)
+    }
+}
+
+/// Calming Licid — {2}{W}. As an Aura, the host can't attack.
+pub fn calming_licid() -> CardDefinition {
+    licid(
+        "Calming Licid",
+        w(),
+        EquipBonus { keywords: vec![Keyword::CantAttack], ..Default::default() },
+    )
+}
+
+/// Gliding Licid — {2}{U}. As an Aura, the host flies.
+pub fn gliding_licid() -> CardDefinition {
+    licid(
+        "Gliding Licid",
+        u(),
+        EquipBonus { keywords: vec![Keyword::Flying], ..Default::default() },
+    )
+}
+
+/// Corrupting Licid — {2}{B}. As an Aura, the host has fear.
+pub fn corrupting_licid() -> CardDefinition {
+    licid(
+        "Corrupting Licid",
+        b(),
+        EquipBonus { keywords: vec![Keyword::Fear], ..Default::default() },
+    )
+}
+
+/// Convulsing Licid — {2}{R}. As an Aura, the host can't block.
+pub fn convulsing_licid() -> CardDefinition {
+    licid(
+        "Convulsing Licid",
+        r(),
+        EquipBonus { keywords: vec![Keyword::CantBlock], ..Default::default() },
+    )
+}
+
+/// Tempting Licid — {2}{G}. As an Aura, everything able to block the host
+/// does so.
+pub fn tempting_licid() -> CardDefinition {
+    licid(
+        "Tempting Licid",
+        g(),
+        EquipBonus { keywords: vec![Keyword::AllMustBlock], ..Default::default() },
+    )
 }

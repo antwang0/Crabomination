@@ -2550,7 +2550,7 @@ Each a small targeted feature; sweep batch by batch.
    **The Dark** (97 cards, `sets::drk`/`drk2`) and **Homelands** (`sets::hml`–
    `hml3`), **Conspiracy: Take the Crown** (CN2) and **Murders at Karlov
    Manor** (MKM) are all at zero. **Stronghold** (STH, `sets::sth`) is the
-   live front at **15** — five Licids plus ten cards on one primitive each
+   live front at **10** — ten cards on one primitive each
    (TODO.md → "Noticed this run (MKM closed; Stronghold opened)"). The rest
    of the Tempest block is wide open: `set_gaps.py tmp exo` is ~240 and ~119.
 1. **Replacement-effect framework** (Tier-1 #1) — highest-leverage primitive still
@@ -2575,12 +2575,15 @@ Each a small targeted feature; sweep batch by batch.
   choice from other seats), `StaticEffect::CastHandSpellsForCollectEvidence`
   (collect evidence N in place of a spell's mana cost), and an `if_cant`
   branch on `Effect::TurnFaceUpFree` (Etrata's exile-and-free-cast fallback).
-- **Stronghold at 15** — `sets::sth` ships 95 cards (`set_gaps.py sth`
-  112 → 15), tests in `classic_sets/sth`. New primitives:
-  `CardDefinition.buyback_additional_cost` ("Buyback—Sacrifice a land") and
+- **Stronghold at 10** — `sets::sth` ships 100 cards (`set_gaps.py sth`
+  112 → 10), tests in `classic_sets/sth`. New primitives:
+  `CardDefinition.buyback_additional_cost` ("Buyback—Sacrifice a land"),
   `StaticEffect::PreventUntapGlobal` (a prevent-untap that reaches every
   seat's untap step, optionally predicate-gated — Intruder Alarm, Walking
-  Dream).
+  Dream), and the **Licid** mechanic
+  (`Effect::LicidAttach`/`LicidDetach` + `CardInstance::make_licid_aura`,
+  which stashes the creature definition and rewrites the live one to
+  Enchantment — Aura; the aura riders ride the printed `equipped_bonus`).
 - **SOS Special Guests** — `sos_mode::sos_special_guests` names the
   eleven-card SPG sheet (Magus of the Library and Library of Leng were the
   two not already catalogued, the latter on a new

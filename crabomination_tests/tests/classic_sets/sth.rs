@@ -507,3 +507,30 @@ fn shard_phoenix_sweeps_then_returns() {
     drain_stack(&mut g);
     assert!(g.players[0].hand.iter().any(|c| c.id == phoenix));
 }
+
+/// A Licid pays to become an Aura granting its rider, and pays again to go
+/// back to being a 2/2.
+#[test]
+fn gliding_licid_becomes_an_aura_and_back() {
+    let mut g = two_player_game();
+    let licid = g.add_card_to_battlefield(0, catalog::gliding_licid());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(licid);
+    g.step = TurnStep::PreCombatMain;
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    activate(&mut g, licid, 0, Some(Target::Permanent(bear))).expect("licid");
+    drain_stack(&mut g);
+
+    let aura = g.battlefield_find(licid).unwrap();
+    assert!(!aura.definition.is_creature(), "it is an enchantment now");
+    assert_eq!(aura.attached_to, Some(bear));
+    assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Flying));
+
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    activate(&mut g, licid, 0, None).expect("end it");
+    drain_stack(&mut g);
+    let back = g.battlefield_find(licid).unwrap();
+    assert!(back.definition.is_creature(), "a 2/2 again");
+    assert_eq!(back.attached_to, None);
+    assert!(!g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Flying));
+}
