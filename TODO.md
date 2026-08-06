@@ -3,25 +3,46 @@
 Improvement opportunities for the engine, client, and tooling.
 Items are grouped by area and roughly ordered by impact within each group.
 
-## Noticed this run (Tempest opened)
+## Noticed this run (Tempest closed to 3)
 
+- **CR 123 (Stickers) is the last untested CR section** and the only one the
+  engine doesn't model at all — no sticker sheets, no `{TK}` tickets, no
+  name/ability/P-T/art stickers. `CR_COVERAGE.md` is otherwise at 145/146.
+  Scoping note: name stickers are a text-changing effect (CR 613.1c) and P/T
+  stickers are layer 7b, so both could ride the existing layer machinery; the
+  sheet/ticket economy in CR 123.2–123.3 is the bulk of the work. ⏳
+- **Tempest's last three cards.** `set_gaps.py tmp` is 3: **Duplicity**
+  (face-down hand↔exile swap each upkeep), **Ertai's Meddling** (exile a
+  *stack* spell with X delay counters, tick at the owner's upkeeps, then put
+  it back on the stack as a copy — the suspend loop in `process_suspend` is
+  the closest existing machinery, keyed on `CounterType::Time`; a `Delay`
+  branch plus a stack-object exile is the shape), and **Oracle en-Vec**
+  ("during that player's *next* turn the chosen creatures attack if able and
+  others can't" — wants a per-seat next-turn attack mandate, which
+  `StaticEffect::AttackTogether` does not cover). ⏳
+- **Booby Trap's reveal clause is board-wide.** The printed line is "the
+  chosen player reveals each card they draw";
+  `StaticEffect::OpponentsPlayWithHandsRevealed` reveals every opponent's
+  whole hand. Exact in 1v1 for the *trigger*, loose for the reveal. ⏳
+- **`PlayerRef::EachOpponent` stands in for "choose an opponent"** on Pallimud
+  and Booby Trap — exact in 1v1, first-opponent in multiplayer. A real
+  `Effect::ChooseOpponentForSource` (a `ChooseOption` over the opponent seats,
+  stamped on `chosen_player`) would close both. ⏳
+- **Volrath's Curse's shrug-off is an `any_player` activation.** The printed
+  clause is a special action for the *host's* controller; modeled as an
+  activated ability anyone may pay, so a third player could also buy the pass
+  in multiplayer. The `statics_ignored_this_turn` check now covers equipped
+  bonuses, not just the Damping-Engine cost tax. ⏳
 - **`crabomination_client` cannot be compiled in the cloud session.**
   `wayland-sys`'s build script needs `wayland-client.pc`, which isn't
   installed, so `cargo check -p crabomination_client` fails before touching
-  our code. Client edits from a cloud run are therefore only type-checked by
-  eye — keep them to the mechanical shape of their neighbours (new
-  `CounterType` / `Keyword` match arms), and verify locally. ⏳
-- **Tempest's last 40 cards each want one primitive.** Grouped by what they
-  need: a repeat-until-no-progress loop (Grindstone); "choose a card name,
-  reveal at random from hand" (Cursed Scroll, Booby Trap); exile-with-linked
-  return (Cold Storage, Coffin Queen, Helm of Possession); a delayed
-  re-cast off exile (Ertai's Meddling); face-down hand/exile swaps (Duplicity,
-  Scroll Rack); attack-compulsion with an end-step punish (Maddening Imp,
-  Oracle en-Vec); an as-enters "pay any amount of life"/"sacrifice any number"
-  CDA (Minion of the Wastes, Dracoplasm); a per-untap-step cap (Static Orb);
-  and the three riderful Licids (Leeching, Nurturing, Stinging), whose Aura
-  halves need a granted triggered/activated ability rather than an
-  `equipped_bonus`. ⏳
+  our code. Fix worth trying: depend on bevy with
+  `default-features = false` plus `default_platform`'s list minus `wayland`,
+  and re-add it behind a default-on `wayland` feature of our own — then
+  `cargo check -p crabomination_client --no-default-features` type-checks in
+  the cloud while local builds are unchanged. Until then, client edits from a
+  cloud run are only type-checked by eye — keep them to the mechanical shape
+  of their neighbours, and verify locally. ⏳
 - **`PowerAtMostSourceCounters` is source-only.** The `evaluate_requirement_on_card`
   path has no source in scope, so it answers `false` there; only the
   `evaluate_requirement_static` path (targeting, the one that matters) reads

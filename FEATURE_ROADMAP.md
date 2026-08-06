@@ -2747,7 +2747,7 @@ Each a small targeted feature; sweep batch by batch.
    **The Dark** (97 cards, `sets::drk`/`drk2`) and **Homelands** (`sets::hml`–
    `hml3`), **Conspiracy: Take the Crown** (CN2), **Murders at Karlov
    Manor** (MKM) and **Stronghold** (STH) are all at zero. The rest of the
-   Tempest block is the live front: `set_gaps.py tmp exo` is 40 and 69.
+   Tempest block is the live front: `set_gaps.py tmp exo` is **3** and 69.
 1. **Replacement-effect framework** (Tier-1 #1) — highest-leverage primitive still
    open.
 2. **Card-zoom + stops/auto-yield + combat-math preview** (Tier-7 #1–3) — the trio
@@ -2763,6 +2763,30 @@ Each a small targeted feature; sweep batch by batch.
 
 ## Recently closed (this push)
 
+- **Tempest all but closed** — 37 more cards (`set_gaps.py tmp` 40 -> 3;
+  only Duplicity, Ertai's Meddling and Oracle en-Vec remain, each tracked in
+  TODO.md with the primitive it wants). Tests in `classic_sets/tmp`. New
+  primitives, by wave: `MillShareAxis::AnyColor`,
+  `Effect::{TopTwoGraveyardOpponentSplits, LockActivatedAbilitiesThisTurn}`
+  (backed by `GameState.abilities_locked_this_turn`, enforced in
+  `activate_ability`); then `StaticEffect::{MaxUntapsPerStep,
+  NoInstantsOrAbilitiesDuringCombat, AttackTogether}` (CR 502.3 / 506 /
+  508.1d), `DynamicPt::{EnteredTotals, TappedLandsChosenPlayerControls}` with
+  `Effect::AsEntersSacrificeForTotalPt`,
+  `Effect::{RedirectNextCombatDamageTo, GrantSacrificedLandTypesLandwalk,
+  DestroyBlockPairWeakerSide, MoveChosenKeyword, ScrollRack,
+  TokenCopyOfOpponentChoice}`,
+  `Predicate::TriggerSourceIsSourceHost`,
+  `SelectionRequirement::ControlledByActivePlayer` and
+  `CounterType::Magnet`. `CardInstance::make_licid_aura` now keeps a Licid's
+  non-attach activated abilities, so the riderful Licids work as Auras.
+  Correctness: an `EventKind::PlayerDamaged` + `SelfSource` trigger matches the
+  source as the *dealer* (it previously only matched damage dealt TO the
+  source, so Shocker and Thalakos Dreamsower never fired); an equipped bonus is
+  skipped for a host whose controller holds an `IgnoreStaticFromSourceThisTurn`
+  pass. UI/server: `PermanentView.abilities_locked` +
+  `AbilityView.gate_blocked` fold in source-level ability locks, and
+  `systems::lock_badge` chips the locked permanent.
 - **Tempest opened** — 201 cards (`set_gaps.py tmp` 241 -> 40), tests in
   `classic_sets/tmp`. New primitives: `EventSpec::causer_filter` (+ a `by`
   field on `GameEvent::BecameTarget`) so "becomes the target of a [filter]
