@@ -231,7 +231,7 @@ fn parse_profile(name: &str) -> Option<Pilot> {
         "race2" => Some(Pilot::Scored(EvalWeights::attack_race_default())),
         "look1" => Some(Pilot::Scored(EvalWeights::lookahead1_default())),
         "look2" => Some(Pilot::Scored(EvalWeights::lookahead2_default())),
-        "legacytap" => Some(Pilot::Scored(EvalWeights::legacy_tap())),
+        "smarttap" => Some(Pilot::Scored(EvalWeights::smart_tap_on())),
         "det1" => Some(Pilot::Scored(EvalWeights::determinized())),
         "det3" => Some(Pilot::Scored(EvalWeights::determinized3())),
         "net" => Some(Pilot::Scored(EvalWeights::net_eval())),
@@ -281,7 +281,7 @@ fn parse_profile(name: &str) -> Option<Pilot> {
 }
 
 /// Profile names accepted by `--a` / `--b`, for the help text and errors.
-const PROFILES: &str = "baseline, combat, holdsick, holdsick+combat, atk, atk-cheap, atk-hold, atk-sim, atk-race, atk-life, dflt-life, blk, lookahead, holdinst, mcts, mcts-heur, mcts-deep, planner, v2+combat, pretap, scaled, keywords, kw25, base, base+kw, life, power, v2, uniform, landseq, mull, gang, landseq2, mull2, race2, look1, look2, det1, det3, net, net-blend, net-blend300, net-q10, net-q20, netb-q10, netb-q20 (net* need CRAB_NET=<weights.safetensors>)";
+const PROFILES: &str = "baseline, combat, holdsick, holdsick+combat, atk, atk-cheap, atk-hold, atk-sim, atk-race, atk-life, dflt-life, blk, lookahead, holdinst, mcts, mcts-heur, mcts-deep, planner, v2+combat, pretap, scaled, keywords, kw25, base, base+kw, life, power, v2, uniform, landseq, mull, gang, landseq2, mull2, race2, look1, look2, smarttap, det1, det3, net, net-blend, net-blend300, net-q10, net-q20, netb-q10, netb-q20 (net* need CRAB_NET=<weights.safetensors>)";
 
 /// Wilson score interval for `wins` out of `n` at `z`. Chosen over the
 /// normal approximation because it stays sane at small n and at p̂ = 0 or 1,

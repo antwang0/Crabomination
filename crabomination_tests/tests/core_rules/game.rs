@@ -1255,6 +1255,10 @@ fn cast_one_u_with_two_tundras_auto_taps_correctly() {
 fn generic_pips_spend_redundant_sources_before_a_splash() {
     use crabomination::mana::{ManaCost, ManaSymbol};
     let mut g = two_player_game();
+    // Opt in: replaceability-aware tapping is off by default (it measured
+    // null over 28 800 paired games). These assert the behaviour is
+    // *correct when enabled*, not that it ships.
+    g.players[0].smart_tap = true;
     // Islands first, so battlefield order alone would tap them.
     let islands: Vec<_> =
         (0..3).map(|_| g.add_card_to_battlefield(0, catalog::island())).collect();
@@ -1285,6 +1289,10 @@ fn generic_pips_spend_redundant_sources_before_a_splash() {
 fn colored_pips_spend_a_basic_before_a_dual() {
     use crabomination::mana::{ManaCost, ManaSymbol};
     let mut g = two_player_game();
+    // Opt in: replaceability-aware tapping is off by default (it measured
+    // null over 28 800 paired games). These assert the behaviour is
+    // *correct when enabled*, not that it ships.
+    g.players[0].smart_tap = true;
     let tundra = g.add_card_to_battlefield(0, catalog::tundra());
     g.add_card_to_battlefield(0, catalog::island());
     let mut spell = catalog::grizzly_bears();

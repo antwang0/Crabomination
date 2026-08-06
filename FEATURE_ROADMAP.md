@@ -2542,14 +2542,21 @@ Each a small targeted feature; sweep batch by batch.
   run a colour on ≤4 sources. The failure mode is present roughly a
   third of the time and still doesn't move the win rate.
 
-  **Kept on by default anyway, on reasoning rather than measurement**,
-  and flagged as such: the change cannot make a cost unpayable, the
-  order it replaces was an accident of `battlefield` iteration rather
-  than a decision, and the client's human-facing auto-tap — where
-  stranding a splash is simply wrong, and which this ladder does not
-  measure at all — is the case that motivated it. `legacytap` restores
-  the old order. Reverse this if the house rule should be "never ship on
-  a null".
+  **Off by default** (`smarttap` opts in). It was briefly left on for
+  the reasoning — the change cannot make a cost unpayable, the order it
+  replaces was an accident of `battlefield` iteration rather than a
+  decision, and the client's human-facing auto-tap is the case that
+  motivated it — and then turned off to match how every other null in
+  this tier was handled. The code and the profile stay so it can be
+  re-measured, ideally on a field built to stress thin splashes.
+
+  It also carried a **quadratic regression**: the selection called
+  `effective_mana_abilities` per candidate per colour *inside the
+  per-pip loop*, invisible in a two-player 40-card game and fatal in
+  4-player Commander (`bot_vs_bot_commander_demo_terminates` went from
+  seconds to past its 600 s timeout). Fixed by building the source
+  table once per auto-tap — 600 s → 0.78 s. Worth remembering as the
+  cost side of shipping a null on reasoning.
 
   The flag exists purely for measurement: the behaviour lives in the
   engine, so without a per-player switch both seats of a mirror would

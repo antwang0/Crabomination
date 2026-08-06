@@ -248,9 +248,9 @@ pub struct EvalWeights {
     /// instead of the first in battlefield order.
     ///
     /// The behaviour lives in the engine's auto-tap, so this field exists
-    /// only so the ladder can put one seat on each side of it. On by
-    /// default — the old order was not a decision anyone made, it was
-    /// whatever `battlefield` iteration produced.
+    /// only so the ladder can put one seat on each side of it. **Off by
+    /// default** — it measured null over 28 800 paired games (see
+    /// [`Player::smart_tap`]).
     ///
     /// [`Player::smart_tap`]: crate::player::Player::smart_tap
     pub smart_tap: bool,
@@ -309,7 +309,7 @@ impl EvalWeights {
             mull_quality: false,
             block_gang: false,
             determinize: 0,
-            smart_tap: true,
+            smart_tap: false,
             net_quantize: 0,
         }
     }
@@ -369,7 +369,7 @@ impl EvalWeights {
             mull_quality: false,
             block_gang: false,
             determinize: 0,
-            smart_tap: true,
+            smart_tap: false,
             net_quantize: 0,
         }
     }
@@ -412,7 +412,7 @@ impl EvalWeights {
             mull_quality: false,
             block_gang: false,
             determinize: 0,
-            smart_tap: true,
+            smart_tap: false,
             net_quantize: 0,
         }
     }
@@ -793,11 +793,11 @@ impl EvalWeights {
         Self { net_quantize: 20, ..Self::net_eval_blend() }
     }
 
-    /// The default with the historical mana tapping — the control for
-    /// [`smart_tap`](Self::smart_tap). Ladder this as B so a positive
-    /// result reads as "the new tapping is better".
-    pub const fn legacy_tap() -> Self {
-        Self { smart_tap: false, ..Self::block_gang_search() }
+    /// The default plus replaceability-aware mana tapping — the opt-in
+    /// for [`smart_tap`](Self::smart_tap), which is off by default after
+    /// measuring null. Ladder this as A against the default.
+    pub const fn smart_tap_on() -> Self {
+        Self { smart_tap: true, ..Self::block_gang_search() }
     }
 
     /// The default, averaging three redeals per candidate. Three times

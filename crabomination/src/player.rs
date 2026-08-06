@@ -938,15 +938,24 @@ pub struct Player {
     /// auto-tap path was never reached.
     #[serde(default)]
     pub manual_mana: bool,
-    /// When true (the default), auto-tap spends the most *replaceable*
-    /// mana source that can cover each pip rather than the first one in
-    /// battlefield order — see `GameState::source_redundancy`.
+    /// When true, auto-tap spends the most *replaceable* mana source that
+    /// can cover each pip rather than the first one in battlefield order
+    /// — see `ManaSourceInfo::redundancy`.
     ///
-    /// A per-player flag rather than a constant purely so the ladder can
-    /// measure it: the tapping happens inside the engine, so without this
-    /// both seats of a mirror would get the change and the comparison
-    /// would be structurally incapable of showing anything.
-    #[serde(default = "crate::player::default_true")]
+    /// **Off by default.** It is the obviously-correct-looking change that
+    /// measured null: 50.9 % on one seed, 49.7 % on the next, pooling to
+    /// 50.3 % [49.95, 50.68] over 28 800 paired games — and the field
+    /// does contain the case it targets (3/12 and 4/12 sealed decks run a
+    /// colour on ≤4 sources), so that is a real null rather than an
+    /// unmeasurable one. It also carried a quadratic regression that took
+    /// the Commander bot test past its 600 s timeout. Kept, off, ready to
+    /// re-measure.
+    ///
+    /// A per-player flag rather than a constant so the ladder can measure
+    /// it at all: the tapping happens inside the engine, so applied to
+    /// both seats of a mirror the comparison is structurally incapable of
+    /// showing anything.
+    #[serde(default)]
     pub smart_tap: bool,
     /// CR 705.3 — Krark's Thumb-style coin-flip advantage. When non-zero,
     /// every coin flip this player makes is replayed `coin_flip_advantage`
@@ -965,11 +974,6 @@ pub struct Player {
     /// the value directly via the Thumb card body).
     #[serde(default)]
     pub coin_flip_advantage: u32,
-}
-
-/// Serde default for fields that are on unless a save says otherwise.
-pub(crate) fn default_true() -> bool {
-    true
 }
 
 impl Player {
@@ -1133,7 +1137,7 @@ impl Player {
             emblems: Vec::new(),
             cannot_gain_life: false,
             wants_ui: false,
-            smart_tap: true,
+            smart_tap: false,
             manual_mana: false,
             coin_flip_advantage: 0,
         }
