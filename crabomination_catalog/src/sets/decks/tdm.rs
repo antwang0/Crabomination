@@ -836,6 +836,7 @@ pub fn kheru_goldkeeper() -> CardDefinition {
                 exclude_attacker_taps: false,
                 exclude_tap_cost_abilities: false,
                 dealer_filter: None,
+                causer_filter: None,
             },
             effect: Effect::CreateToken {
                 who: PlayerRef::You,

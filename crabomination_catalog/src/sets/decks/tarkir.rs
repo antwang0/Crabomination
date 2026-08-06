@@ -241,6 +241,7 @@ pub fn kishla_skimmer() -> CardDefinition {
                 exclude_attacker_taps: false,
                 exclude_tap_cost_abilities: false,
                 dealer_filter: None,
+                causer_filter: None,
             },
             effect: Effect::Draw {
                 who: Selector::You,

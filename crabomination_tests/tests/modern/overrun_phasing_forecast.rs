@@ -1279,11 +1279,11 @@ fn heartfire_hero_valiant_grows_once_per_turn() {
     let mut g = two_player_game();
     let hero = g.add_card_to_battlefield(0, catalog::heartfire_hero());
     // First friendly target this turn → +1/+1.
-    g.dispatch_triggers_for_events(&[GameEvent::BecameTarget { target: hero, caster: 0 }]);
+    g.dispatch_triggers_for_events(&[GameEvent::BecameTarget { target: hero, caster: 0 , by: None }]);
     drain_stack(&mut g);
     assert_eq!(g.computed_permanent(hero).unwrap().power, 2, "Valiant added a counter");
     // Second friendly target same turn → no additional counter.
-    g.dispatch_triggers_for_events(&[GameEvent::BecameTarget { target: hero, caster: 0 }]);
+    g.dispatch_triggers_for_events(&[GameEvent::BecameTarget { target: hero, caster: 0 , by: None }]);
     drain_stack(&mut g);
     assert_eq!(g.computed_permanent(hero).unwrap().power, 2, "Valiant only fires once per turn");
 }

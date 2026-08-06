@@ -2984,7 +2984,7 @@ impl GameState {
                 became.extend(auto_target.iter().chain(additional.iter()).filter_map(|t| {
                     match t {
                         Target::Permanent(id) if self.battlefield_find(*id).is_some() => {
-                            Some(GameEvent::BecameTarget { target: *id, caster: controller })
+                            Some(GameEvent::BecameTarget { target: *id, caster: controller, by: Some(card_id) })
                         }
                         _ => None,
                     }
@@ -8093,7 +8093,9 @@ impl GameState {
         // plus the per-object `BecameTarget`s.
         let mut events = vec![GameEvent::ChoseTargets { chooser: caster, object: cast_card_id }];
         events.extend(slots.into_iter().filter_map(|t| match t {
-            Target::Permanent(id) => Some(GameEvent::BecameTarget { target: id, caster }),
+            Target::Permanent(id) => {
+                Some(GameEvent::BecameTarget { target: id, caster, by: Some(cast_card_id) })
+            }
             _ => None,
         }));
         self.dispatch_triggers_for_events(&events);
@@ -13839,6 +13841,14 @@ impl GameState {
             }
         }
 
+        // Pre-flight remove-ALL-counters gate: "Remove all [kind] counters
+        // from this:" needs at least one to pay with (Essence Bottle).
+        if let Some(kind) = ability.remove_all_counters_cost.as_ref()
+            && self.battlefield_find(card_id).map(|c| c.counter_count(*kind)).unwrap_or(0) == 0
+        {
+            return Err(GameError::SelectionRequirementViolated);
+        }
+
         // Pre-flight tap-permanents gate (CR 602.5b "Tap N untapped [filter]
         // you control:" — Lullmage Mentor). The tap is paid below, after mana.
         let tap_cost_picks: Vec<CardId> = match ability.tap_permanents_cost.as_ref() {
@@ -14713,6 +14723,17 @@ impl GameState {
             }
         }
 
+        // Remove-ALL-counters-as-cost: strip them and stamp the tally so the
+        // body's `Value::CountersRemovedAsCost` can scale off it.
+        self.counters_removed_as_cost = 0;
+        if let Some(kind) = ability.remove_all_counters_cost
+            && let Some(c) = self.battlefield.iter_mut().find(|c| c.id == card_id)
+        {
+            let had = c.counter_count(kind);
+            c.remove_counters(kind, had);
+            self.counters_removed_as_cost = had;
+        }
+
         // Tap-permanents-as-cost (CR 602.5b): tap the pre-flight picks now that
         // tap/mana/counter payments have succeeded (Lullmage Mentor).
         for id in &tap_cost_picks {
@@ -15144,7 +15165,8 @@ impl GameState {
             // chose (CR 603.x). The unified dispatcher handles APNAP and
             // the trigger filter.
             if let Some(Target::Permanent(target_id)) = &ability_target {
-                let evs = vec![GameEvent::BecameTarget { target: *target_id, caster: p }];
+                let evs =
+                    vec![GameEvent::BecameTarget { target: *target_id, caster: p, by: Some(card_id) }];
                 self.dispatch_triggers_for_events(&evs);
             }
             // CR 601.2c — one "chose targets" event per activation. Queued

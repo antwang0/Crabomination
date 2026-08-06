@@ -17,6 +17,7 @@ mod bok2;
 mod sok;
 mod sok2;
 mod sok3;
+mod tmp;
 mod ulg;
 mod unf;
 mod usg2;

@@ -3052,7 +3052,7 @@ impl From<&GameEvent> for GameEventWire {
                     card_id: *card_id,
                 }
             }
-            GameEvent::BecameTarget { target, caster } => GameEventWire::BecameTarget {
+            GameEvent::BecameTarget { target, caster, .. } => GameEventWire::BecameTarget {
                 target: *target,
                 caster: *caster,
             },

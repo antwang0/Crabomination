@@ -2211,7 +2211,10 @@ pub enum GameEvent {
     /// announce-time (immediately after the spell hits the stack or the
     /// ability is pushed). Used by SOS Tenured Concocter and any future
     /// "whenever this becomes the target of …" trigger.
-    BecameTarget { target: CardId, caster: usize },
+    /// `by` is the object that declared the target — the spell, activated
+    /// ability's source, or triggered ability's source. Gates
+    /// `EventSpec::causer_filter` ("becomes the target of an Aura spell").
+    BecameTarget { target: CardId, caster: usize, by: Option<CardId> },
     /// CR 601.2c / 602.2b — `chooser` finished choosing targets for a single
     /// spell or ability (`object`). Fires ONCE per targeting decision, unlike
     /// the per-object `BecameTarget` (Psychic Battle).

@@ -855,11 +855,11 @@ mod recent156 {
     fn seedglaive_mentor_valiant_grows() {
         let mut g = two_player_game();
         let m = g.add_card_to_battlefield(0, catalog::seedglaive_mentor());
-        g.dispatch_triggers_for_events(&[GameEvent::BecameTarget { target: m, caster: 0 }]);
+        g.dispatch_triggers_for_events(&[GameEvent::BecameTarget { target: m, caster: 0, by: None }]);
         drain_stack(&mut g);
         assert_eq!(g.computed_permanent(m).unwrap().power, 4, "Valiant added a +1/+1 counter");
         // Only once per turn.
-        g.dispatch_triggers_for_events(&[GameEvent::BecameTarget { target: m, caster: 0 }]);
+        g.dispatch_triggers_for_events(&[GameEvent::BecameTarget { target: m, caster: 0, by: None }]);
         drain_stack(&mut g);
         assert_eq!(g.computed_permanent(m).unwrap().power, 4, "fires only once per turn");
     }
@@ -870,7 +870,7 @@ mod recent156 {
         let mut g = two_player_game();
         let trapper = g.add_card_to_battlefield(0, catalog::mouse_trapper());
         let foe = g.add_card_to_battlefield(1, catalog::grizzly_bears());
-        g.dispatch_triggers_for_events(&[GameEvent::BecameTarget { target: trapper, caster: 0 }]);
+        g.dispatch_triggers_for_events(&[GameEvent::BecameTarget { target: trapper, caster: 0, by: None }]);
         drain_stack(&mut g);
         assert!(g.battlefield_find(foe).unwrap().tapped, "Valiant tapped the opponent's creature");
     }
@@ -881,7 +881,7 @@ mod recent156 {
         let mut g = two_player_game();
         let master = g.add_card_to_battlefield(0, catalog::flowerfoot_swordmaster());
         let other = g.add_card_to_battlefield(0, catalog::seedglaive_mentor());
-        g.dispatch_triggers_for_events(&[GameEvent::BecameTarget { target: master, caster: 0 }]);
+        g.dispatch_triggers_for_events(&[GameEvent::BecameTarget { target: master, caster: 0, by: None }]);
         drain_stack(&mut g);
         assert_eq!(g.computed_permanent(master).unwrap().power, 2, "self pumped +1/+0");
         assert_eq!(g.computed_permanent(other).unwrap().power, 4, "other Mouse pumped +1/+0");
@@ -895,7 +895,7 @@ mod recent156 {
         g.add_card_to_hand(0, catalog::grizzly_bears());
         g.add_card_to_library(0, catalog::forest());
         g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
-        g.dispatch_triggers_for_events(&[GameEvent::BecameTarget { target: scribe, caster: 0 }]);
+        g.dispatch_triggers_for_events(&[GameEvent::BecameTarget { target: scribe, caster: 0, by: None }]);
         drain_stack(&mut g);
         assert_eq!(g.players[0].graveyard.len(), 1, "discarded a card");
         assert!(g.players[0].library.is_empty(), "drew the top of library");
@@ -1138,7 +1138,7 @@ mod recent158 {
         let cact = g.add_card_to_battlefield(0, catalog::cactarantula());
         g.add_card_to_library(0, catalog::forest());
         let hand = g.players[0].hand.len();
-        g.dispatch_triggers_for_events(&[GameEvent::BecameTarget { target: cact, caster: 1 }]);
+        g.dispatch_triggers_for_events(&[GameEvent::BecameTarget { target: cact, caster: 1, by: None }]);
         drain_stack(&mut g);
         assert_eq!(g.players[0].hand.len(), hand + 1, "drew off an opponent's target");
     }

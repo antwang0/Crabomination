@@ -1487,6 +1487,8 @@ fn counter_label(kind: CounterType) -> &'static str {
         CounterType::Winch => "Winch",
         CounterType::Wind => "Wind",
         CounterType::Hunger => "Hunger",
+        CounterType::Elixir => "Elixir",
+        CounterType::Pain => "Pain",
     }
 }
 
@@ -1495,6 +1497,8 @@ fn counter_label(kind: CounterType) -> &'static str {
 /// tooltip stays compact.
 fn counter_reminder(kind: CounterType) -> Option<&'static str> {
     Some(match kind {
+        CounterType::Elixir => "Essence Bottle's stored life — cash them all in for 2 life each.",
+        CounterType::Pain => "Torture Chamber's tally — it bites you each end step until you spend them.",
         CounterType::Stun => "Skips its next untap (remove instead of untapping).",
         CounterType::Finality => "If it would die, exile it instead.",
         CounterType::Shield => "Remove to prevent the next damage/destruction.",

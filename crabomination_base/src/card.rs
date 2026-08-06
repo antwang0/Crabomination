@@ -487,6 +487,10 @@ pub enum CounterType {
     /// Scream counter — All Hallow's Eve's exile fuse; one comes off each of
     /// the owner's upkeeps and the card cashes in when the last is removed.
     Scream,
+    /// Essence Bottle's stored life (TMP).
+    Elixir,
+    /// Torture Chamber's accumulating damage (TMP).
+    Pain,
     /// Doom counter — Armageddon Clock's upkeep tally; it burns everyone for
     /// that much each draw step.
     Doom,

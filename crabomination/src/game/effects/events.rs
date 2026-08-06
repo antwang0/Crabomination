@@ -196,6 +196,21 @@ pub(crate) fn event_matches_spec(
         }
     }
 
+    // "Whenever [this] becomes the target of a [filter] spell or ability" —
+    // the event binds the TARGETED permanent to `TriggerSource`, so the
+    // targeting object is gated here (Fugitive Druid's Aura spells).
+    if let Some(causer) = &spec.causer_filter {
+        let GameEvent::BecameTarget { by: Some(by), .. } = event else { return false };
+        if !state.evaluate_requirement_static(
+            causer,
+            &crate::game::types::Target::Permanent(*by),
+            source.controller,
+            Some(source.id),
+        ) {
+            return false;
+        }
+    }
+
     // "…activates an ability without {T} in its activation cost" (Haunting
     // Wind) — a tap-cost activation is left to the companion tap trigger.
     if spec.exclude_tap_cost_abilities
@@ -524,7 +539,7 @@ pub(crate) fn event_matches_spec(
         EventScope::YourPermanentTargetedByOpponent => {
             // The targeted permanent must be controlled by the trigger's
             // controller, and the caster must be an opponent. Battle Mammoth.
-            if let GameEvent::BecameTarget { target, caster } = event {
+            if let GameEvent::BecameTarget { target, caster, .. } = event {
                 let target_ctrl = state.battlefield_find(*target).map(|c| c.controller);
                 target_ctrl == Some(source.controller)
                     && !state.same_team(*caster, source.controller)

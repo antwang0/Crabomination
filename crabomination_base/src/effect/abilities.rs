@@ -3063,6 +3063,11 @@ pub struct ActivatedAbility {
     /// source lacks enough counters. Defaults to None via `#[serde(default)]`.
     #[serde(default)]
     pub remove_counter_cost: Option<(crate::card::CounterType, u32)>,
+    /// Optional cost: "Remove all [kind] counters from this:" (Essence
+    /// Bottle). At least one counter is required; the tally paid is stamped on
+    /// the state for `Value::CountersRemovedAsCost` to read at resolution.
+    #[serde(default)]
+    pub remove_all_counters_cost: Option<crate::card::CounterType>,
     /// Optional cost: tap `count` untapped permanents matching the filter
     /// (Lullmage Mentor's "Tap seven untapped Merfolk you control:"). The
     /// source itself is eligible when it matches. Rejected before any other

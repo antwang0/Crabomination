@@ -965,6 +965,10 @@ pub struct GameState {
     /// resolution. Read by `Value::CountersRemovedThisEffect` (Hex Parasite).
     #[serde(skip)]
     pub counters_removed_this_effect: u32,
+    /// Counters stripped by the activation's `remove_all_counters_cost`, read
+    /// at resolution by `Value::CountersRemovedAsCost` (Essence Bottle).
+    #[serde(skip)]
+    pub counters_removed_as_cost: u32,
     /// Transient: seats that sacrificed at least one permanent during the
     /// current resolution. Read by `Predicate::PlayerSacrificedThisResolution`
     /// so a follow-up step can gate on "if you sacrificed a permanent this way"
@@ -2012,6 +2016,7 @@ impl Clone for GameState {
             archenemy: self.archenemy,
             permanents_enter_tapped_this_turn: self.permanents_enter_tapped_this_turn,
             counters_removed_this_effect: self.counters_removed_this_effect,
+            counters_removed_as_cost: self.counters_removed_as_cost,
             players_sacrificed_this_resolution: self.players_sacrificed_this_resolution.clone(),
             cards_sacrificed_this_resolution: self.cards_sacrificed_this_resolution.clone(),
             chosen_creature_type_scratch: self.chosen_creature_type_scratch,
@@ -2334,6 +2339,7 @@ impl GameState {
             archenemy: None,
             permanents_enter_tapped_this_turn: false,
             counters_removed_this_effect: 0,
+            counters_removed_as_cost: 0,
             players_sacrificed_this_resolution: std::collections::HashSet::new(),
             cards_sacrificed_this_resolution: Vec::new(),
             chosen_creature_type_scratch: None,
@@ -16077,7 +16083,7 @@ impl GameState {
                 vec![GameEvent::ChoseTargets { chooser: controller, object: source }];
             became.extend(target_slots.iter().filter_map(|t| match t {
                 Target::Permanent(id) if self.battlefield_find(*id).is_some() => {
-                    Some(GameEvent::BecameTarget { target: *id, caster: controller })
+                    Some(GameEvent::BecameTarget { target: *id, caster: controller, by: Some(source) })
                 }
                 _ => None,
             }));

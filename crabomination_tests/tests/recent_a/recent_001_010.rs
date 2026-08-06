@@ -608,7 +608,7 @@ mod recent {
         let ember = g.add_card_to_battlefield(0, catalog::emberheart_challenger());
         g.add_card_to_library(0, catalog::mountain());
         let exile_before = g.exile.len();
-        g.dispatch_triggers_for_events(&[GameEvent::BecameTarget { target: ember, caster: 0 }]);
+        g.dispatch_triggers_for_events(&[GameEvent::BecameTarget { target: ember, caster: 0 , by: None }]);
         drain_stack(&mut g);
         assert!(g.exile.len() > exile_before, "Valiant exiled the top card");
     }

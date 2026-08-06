@@ -843,6 +843,10 @@ pub enum Value {
     /// `Effect::RemoveCountersUpTo` — "for each counter removed this way"
     /// (Hex Parasite). Reset between independent resolutions.
     CountersRemovedThisEffect,
+    /// How many counters the current activation's `remove_all_counters_cost`
+    /// paid — "for each counter removed this way" where the removal was a COST
+    /// rather than part of the resolution (Essence Bottle).
+    CountersRemovedAsCost,
     /// The arithmetic negation of `inner` — "all creatures get -X/-X, where X
     /// is …" (Ichor Explosion) without a bespoke variant per source value.
     Negate(Box<Value>),
@@ -2966,6 +2970,13 @@ pub struct EventSpec {
     /// can't be reached through `filter`. Only meaningful for damage kinds.
     #[serde(default)]
     pub dealer_filter: Option<crate::card::SelectionRequirement>,
+    /// Restricts a targeting event by the object that *declared* the target —
+    /// "whenever this creature becomes the target of an Aura spell" (Fugitive
+    /// Druid). `Selector::TriggerSource` binds the targeted permanent on those
+    /// events, so the targeting spell/ability source can't be reached through
+    /// `filter`. Only meaningful for `EventKind::BecameTarget`.
+    #[serde(default)]
+    pub causer_filter: Option<crate::card::SelectionRequirement>,
 }
 
 impl EventSpec {
@@ -2980,6 +2991,7 @@ impl EventSpec {
             exclude_attacker_taps: false,
             exclude_tap_cost_abilities: false,
             dealer_filter: None,
+            causer_filter: None,
         }
     }
     /// "…becomes tapped, if it isn't being declared as an attacker" (Verity Circle).
@@ -2999,6 +3011,12 @@ impl EventSpec {
     /// "Whenever a [filter] deals damage …" — gate on the damage's dealer.
     pub fn dealt_by(mut self, f: crate::card::SelectionRequirement) -> Self {
         self.dealer_filter = Some(f);
+        self
+    }
+    /// "Whenever [this] becomes the target of a [filter] spell or ability …"
+    /// — gate on the object that declared the target.
+    pub fn caused_by(mut self, f: crate::card::SelectionRequirement) -> Self {
+        self.causer_filter = Some(f);
         self
     }
     /// Require the triggering event's actor to be an opponent.

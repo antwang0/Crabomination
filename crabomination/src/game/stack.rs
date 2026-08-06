@@ -2204,7 +2204,7 @@ impl GameState {
                             {
                                 let evs = vec![
                                     GameEvent::ChoseTargets { chooser: caster, object: card_id },
-                                    GameEvent::BecameTarget { target: *tid, caster },
+                                    GameEvent::BecameTarget { target: *tid, caster, by: Some(card_id) },
                                 ];
                                 self.dispatch_triggers_for_events(&evs);
                             }

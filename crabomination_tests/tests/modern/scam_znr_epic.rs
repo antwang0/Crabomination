@@ -1675,7 +1675,7 @@ fn nadu_reveals_on_target_capped_per_creature() {
     let lands_before = g.battlefield.iter().filter(|c| c.definition.is_land()).count();
     // Target the bear three times: only the first two fire.
     for _ in 0..3 {
-        g.dispatch_triggers_for_events(&[GameEvent::BecameTarget { target: bear, caster: 0 }]);
+        g.dispatch_triggers_for_events(&[GameEvent::BecameTarget { target: bear, caster: 0 , by: None }]);
         drain_stack(&mut g);
     }
     let lands_after = g.battlefield.iter().filter(|c| c.definition.is_land()).count();

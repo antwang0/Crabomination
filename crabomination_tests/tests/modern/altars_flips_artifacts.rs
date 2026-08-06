@@ -476,7 +476,7 @@ fn jaces_phantasm_grows_with_opponent_graveyard() {
 fn phantasmal_bear_sacrifices_when_targeted() {
     let mut g = two_player_game();
     let bear = g.add_card_to_battlefield(0, catalog::phantasmal_bear());
-    g.dispatch_triggers_for_events(&[GameEvent::BecameTarget { target: bear, caster: 1 }]);
+    g.dispatch_triggers_for_events(&[GameEvent::BecameTarget { target: bear, caster: 1 , by: None }]);
     drain_stack(&mut g);
     assert!(g.battlefield.iter().all(|c| c.id != bear), "sacrificed when it became a target");
     assert!(g.players[0].graveyard.iter().any(|c| c.id == bear), "in its owner's graveyard");

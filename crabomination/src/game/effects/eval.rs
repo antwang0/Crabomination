@@ -735,6 +735,7 @@ impl GameState {
             Value::SacrificedPower => self.sacrificed_power.unwrap_or(0),
             Value::Negate(inner) => -self.evaluate_value(inner, ctx),
             Value::CountersRemovedThisEffect => self.counters_removed_this_effect as i32,
+            Value::CountersRemovedAsCost => self.counters_removed_as_cost as i32,
             Value::ExiledForCostManaValue => self.exiled_for_cost_mana_value.unwrap_or(0),
             Value::CardsNamedLikeSourceInAllGraveyards => {
                 let Some(name) = ctx
