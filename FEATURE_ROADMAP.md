@@ -2549,7 +2549,10 @@ Each a small targeted feature; sweep batch by batch.
    (64 cards, `sets::atq`), **Arabian Nights** (63 cards, `sets::arn`) and
    **The Dark** (97 cards, `sets::drk`/`drk2`) and **Homelands** (`sets::hml`–
    `hml3`), **Conspiracy: Take the Crown** (CN2) and **Murders at Karlov
-   Manor** (MKM) are all at zero. Pick the next front from `set_gaps.py`.
+   Manor** (MKM) are all at zero. **Stronghold** (STH, `sets::sth`) is the
+   live front at **15** — five Licids plus ten cards on one primitive each
+   (TODO.md → "Noticed this run (MKM closed; Stronghold opened)"). The rest
+   of the Tempest block is wide open: `set_gaps.py tmp exo` is ~240 and ~119.
 1. **Replacement-effect framework** (Tier-1 #1) — highest-leverage primitive still
    open.
 2. **Card-zoom + stops/auto-yield + combat-math preview** (Tier-7 #1–3) — the trio
@@ -2565,17 +2568,34 @@ Each a small targeted feature; sweep batch by batch.
 
 ## Recently closed (this push)
 
-- **MKM closed** — the last three cards ship (`sets::mkm2`): A Killer Among Us,
-  Conspiracy Unraveler and Kaya, Spirits' Justice. New primitives:
-  `Effect::NameCreatureTypeAmong` (a closed-list creature-type choice, clamped
-  at the pending-answer), `CardDefinition.secret_chosen_type` (the server view
-  withholds a secret choice from other seats), and
-  `StaticEffect::CastHandSpellsForCollectEvidence` (collect evidence N in
-  place of a spell's mana cost, billed in `cast_from_zone_without_paying`).
-- **`Effect::TurnFaceUpFree` grew an `if_cant` branch** — a face-down permanent
-  whose face-up side isn't a creature card can't flip, so Etrata, Deadly
-  Fugitive's "exile it, then you may cast the exiled card without paying its
-  mana cost" now runs.
+- **MKM closed** — A Killer Among Us, Conspiracy Unraveler and Kaya, Spirits'
+  Justice. New primitives: `Effect::NameCreatureTypeAmong` (a closed-list
+  creature-type choice, clamped at the pending-answer),
+  `CardDefinition.secret_chosen_type` (the server view withholds a secret
+  choice from other seats), `StaticEffect::CastHandSpellsForCollectEvidence`
+  (collect evidence N in place of a spell's mana cost), and an `if_cant`
+  branch on `Effect::TurnFaceUpFree` (Etrata's exile-and-free-cast fallback).
+- **Stronghold at 15** — `sets::sth` ships 95 cards (`set_gaps.py sth`
+  112 → 15), tests in `classic_sets/sth`. New primitives:
+  `CardDefinition.buyback_additional_cost` ("Buyback—Sacrifice a land") and
+  `StaticEffect::PreventUntapGlobal` (a prevent-untap that reaches every
+  seat's untap step, optionally predicate-gated — Intruder Alarm, Walking
+  Dream).
+- **SOS Special Guests** — `sos_mode::sos_special_guests` names the
+  eleven-card SPG sheet (Magus of the Library and Library of Leng were the
+  two not already catalogued, the latter on a new
+  `StaticEffect::DiscardToLibraryTop`), and `generate_sos_pack` collates it
+  on its own slot at the printed `SOS_SPECIAL_GUEST_RATE` (1 in 64) instead
+  of through the colour buckets.
+- **Free-cast hand affordance** — `HandAffordances.free_castable` dry-runs
+  `CastFromZoneWithoutPaying` over the hand, projected as
+  `PlayerView.free_castable_hand`, so Omniscience / Aluren / Conspiracy
+  Unraveler cards finally get the client's alt-cast border.
+- **Client**: a "FREE" chip (`systems::free_cast_badge`) over hand cards a
+  standing static casts for nothing — the shared cyan alt-cast border can't
+  say *which* alternative applies, let alone that it costs zero.
+- CR conformance: `core_rules/cr_recent87` covers CR 707.4, CR 116.2b/116.3
+  and CR 717.2/717.4/717.5.
 
 Older per-push entries are elided — `git log -p -- FEATURE_ROADMAP.md` is
 the record.

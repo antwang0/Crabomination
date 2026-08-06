@@ -3180,6 +3180,7 @@ impl Effect {
                 | Effect::GrantSuspend { what, .. }
                 | Effect::ModularCounters { what }
                 | Effect::BecomeBlocked { what }
+                | Effect::CantAttackThisTurn { what }
                 | Effect::TurnFaceUpFree { what, .. }
                 | Effect::Tap { what }
                 | Effect::SetSaddled { what }

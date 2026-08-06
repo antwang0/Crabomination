@@ -683,6 +683,12 @@ fn main() {
             crate::systems::agenda_badge::sync_agenda_badges
                 .run_if(in_state(AppState::InGame)),
         )
+        // "FREE" chip over hand cards a standing static casts for nothing.
+        .add_systems(
+            Update,
+            crate::systems::free_cast_badge::sync_free_cast_badges
+                .run_if(in_state(AppState::InGame)),
+        )
         // Clarity batch: hover-preview for UI tiles (stack panel / log
         // lines), pulsing ring on the pending decision's source, and the
         // low-life danger frame.
