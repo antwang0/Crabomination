@@ -474,6 +474,8 @@ pub enum CounterType {
     /// up on instant/sorcery cast and discounts the host's activated
     /// ability one for one. The counter-scaled cost reduction itself is
     /// not yet wired (see TODO.md), but counters tick up correctly.
+    /// CN2 Deadly Designs — the shared "plot" counter anyone can add.
+    Plot,
     Page,
     /// Winch counter — Mercadian Lift's crank; remove X to deploy a creature
     /// with mana value X from hand.
@@ -1497,6 +1499,9 @@ pub enum Keyword {
     /// defending player (the `SelectionRequirement` is matched among that
     /// player's controlled permanents). Dandân ("can't attack unless
     /// defending player controls an Island").
+    /// CR 725 — "can't attack unless defending player is the monarch"
+    /// (Crown-Hunter Hireling).
+    CantAttackUnlessDefenderIsMonarch,
     CanAttackOnlyIfDefenderControls(Box<SelectionRequirement>),
     /// "This creature can't attack unless you control a [filter]." Mirror of
     /// `CanAttackOnlyIfDefenderControls`, enforced against the attacking
@@ -2154,6 +2159,9 @@ pub enum SelectionRequirement {
     /// (`CardInstance.saddled_by`; The Gitrog's sacrifice filter).
     SaddledSourceThisTurn,
     ManaValueAtMost(u32),
+    /// "…with mana value X or less, where X is the number of players you
+    /// attacked this combat" (Custodi Soulcaller).
+    ManaValueAtMostOpponentsAttackedThisCombat,
     /// MV at most the number of battlefield permanents matching the inner
     /// filter that the evaluating player controls (Spellstutter Sprite's
     /// "mana value X or less, where X is the number of Faeries you control").

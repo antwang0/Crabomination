@@ -75,6 +75,9 @@ pub enum PlayerRef {
     /// per-player body name "one of *their* opponents" (Bend or Break).
     OpponentOf(Box<PlayerRef>),
     /// The player who triggered the event (for triggered abilities).
+    /// Every opponent other than the trigger's own player — "each other
+    /// opponent" on a trigger whose player is one of them (Grenzo's Ruffians).
+    EachOpponentExceptTriggerer,
     Triggerer,
     /// The seat that *caused* the firing event — the caster for a
     /// `BecameTarget`, the damaged seat for a combat-damage trigger. Reads
@@ -1348,6 +1351,11 @@ pub enum Predicate {
     DieResultAtLeast(u8),
     /// CR 725 — `who` is the monarch ("as long as you're the monarch, …").
     IsMonarch { who: PlayerRef },
+    /// CR 725 — `who` was the monarch as the current turn began. Reads the
+    /// turn-start snapshot, so a mid-turn monarch change doesn't rewrite it
+    /// (Knights of the Black Rose's "if you were the monarch as the turn
+    /// began").
+    WasMonarchAtTurnStart { who: PlayerRef },
     /// CR 726 — `who` currently has the initiative.
     HasInitiative { who: PlayerRef },
     /// CR 702.179 — `who`'s speed is at least `speed` (0–4). "Max speed —"
@@ -2804,6 +2812,10 @@ pub enum EventKind {
     /// `EventScope::YourControl` reads "a spell or ability you control counters
     /// a spell" — Lullmage Mentor); the subject is the countered spell's card.
     SpellCountered,
+    /// CR 725.3 — a player became the monarch. The event's player is the
+    /// new monarch, so `EventScope::OpponentControl` reads "an opponent
+    /// becomes the monarch" (Knights of the Black Rose).
+    BecameMonarch,
 }
 
 /// Whose events does this trigger listen for?
@@ -5301,6 +5313,10 @@ pub enum Effect {
     /// in turn order, each player votes for one of `options`; how the tally is
     /// spent is `tally`'s business. Untargeted, so it ignores hexproof/shroud.
     Vote { options: Vec<VoteOption>, tally: VoteTally },
+    /// CR 701.38 — "you choose how each player votes this turn" (Illusion of
+    /// Choice). Sets `GameState.vote_controller_this_turn` to the resolved
+    /// player; each vote this turn is answered by them on the voter's behalf.
+    ControlVotesThisTurn { who: PlayerRef },
     /// CR 701.31 — "Will of the council." Starting with the controller, each
     /// player votes for one permanent matching `filter` (evaluated relative to
     /// the controller, so Council's Judgment's "a nonland permanent you don't

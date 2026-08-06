@@ -592,12 +592,14 @@ impl GameState {
         let legal: Vec<Target> = candidates.iter().map(|id| Target::Permanent(*id)).collect();
         let mut tally: std::collections::HashMap<CardId, u32> = std::collections::HashMap::new();
         for seat in seats {
+            // CR 701.38 — a vote-control grant answers every ballot.
+            let asked = self.vote_controller_this_turn.unwrap_or(seat);
             let answer = self.decider.decide(&crate::decision::Decision::ChooseTarget {
                 optional: false,
                 source: ctx.source.unwrap_or(CardId(0)),
                 legal: legal.clone(),
                 source_name: ctx.source_name.unwrap_or("").to_string(),
-                description: format!("P{seat}: vote for a card"),
+                description: format!("P{asked}: vote for a card on P{seat}'s behalf"),
             });
             let voted = match answer {
                 DecisionAnswer::Target(Target::Permanent(id)) if candidates.contains(&id) => id,
@@ -10676,6 +10678,13 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::ControlVotesThisTurn { who } => {
+                if let Some(p) = self.resolve_player(who, ctx) {
+                    self.vote_controller_this_turn = Some(p);
+                }
+                Ok(())
+            }
+
             Effect::Vote { options, tally } => {
                 use crate::effect::VoteTally;
                 if options.is_empty() {
@@ -10692,10 +10701,13 @@ impl GameState {
                 for i in 0..n {
                     let seat = (ctx.controller + i) % n;
                     // CR 701.38 — Brago's Representative-style extra votes.
+                    // CR 701.38 — Illusion of Choice answers on the voter's
+                    // behalf; the vote is still cast by `seat`.
+                    let asked = self.vote_controller_this_turn.unwrap_or(seat);
                     for _ in 0..1 + self.additional_votes_for(seat) {
                         let Some(pick) = self.ask_seat_option(
                             &mut cursor,
-                            seat,
+                            asked,
                             "Vote".to_string(),
                             source,
                             ballot.clone(),
@@ -32487,6 +32499,15 @@ impl GameState {
                     .filter(|i| self.players[*i].is_alive())
                     .collect(),
             ),
+            PlayerRef::EachOpponentExceptTriggerer => {
+                let skip = self.resolve_player(&PlayerRef::Triggerer, ctx);
+                self.apnap_sort(
+                    self.opponents_of(ctx.controller)
+                        .into_iter()
+                        .filter(|i| self.players[*i].is_alive() && Some(*i) != skip)
+                        .collect(),
+                )
+            }
             // CR 701.38 — Grudge Keeper: opponents none of whose votes matched
             // any of the controller's on the most recent ballot.
             PlayerRef::OpponentsWhoVotedDifferently => {
@@ -32713,6 +32734,10 @@ impl GameState {
                 self.opponents_of(ctx.controller)
                     .into_iter()
                     .find(|i| self.players[*i].is_alive())
+            }
+            PlayerRef::EachOpponentExceptTriggerer => {
+                // Singular fallback — `resolve_players` returns the full set.
+                self.resolve_players(pref, ctx).first().copied()
             }
             PlayerRef::OpponentsWhoVotedDifferently => {
                 // Singular fallback — `resolve_players` returns the full set.

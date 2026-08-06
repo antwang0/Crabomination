@@ -398,6 +398,7 @@ impl Effect {
             | Effect::ReflexiveTrigger { .. }
             | Effect::PutResolvingSpellInLibraryFromTop(_)
             | Effect::PutResolvingSpellOnBattlefieldTransformed { .. }
+            | Effect::ControlVotesThisTurn { .. }
             // Group / each-player effects with no cast-time target slot.
             | Effect::EachPlayerPutsHandCardOnTop { .. }
             | Effect::ChooseBasicLandTypeForSource

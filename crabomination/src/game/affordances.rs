@@ -335,6 +335,9 @@ impl GameState {
                     return false;
                 }
                 kws.iter().all(|kw| match kw {
+                    Keyword::CantAttackUnlessDefenderIsMonarch => {
+                        self.monarch.is_some_and(|m| m != seat && self.players[m].is_alive())
+                    }
                     Keyword::CanAttackOnlyIfDefenderControls(req) => {
                         // Legal if at least one alive opponent's board satisfies
                         // the filter (they could be chosen as the defender).

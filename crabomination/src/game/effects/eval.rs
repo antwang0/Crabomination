@@ -1609,6 +1609,10 @@ impl GameState {
                 .resolve_players(who, ctx)
                 .into_iter()
                 .any(|p| self.monarch == Some(p)),
+            Predicate::WasMonarchAtTurnStart { who } => self
+                .resolve_players(who, ctx)
+                .into_iter()
+                .any(|p| self.monarch_at_turn_start == Some(p)),
             Predicate::HasInitiative { who } => self
                 .resolve_players(who, ctx)
                 .into_iter()
@@ -2945,6 +2949,24 @@ impl GameState {
             .any(|c| c.controller == seat && c.definition.subtypes.land_types.contains(&lt))
     }
 
+    /// CR 702.121 — how many distinct players are being attacked this combat.
+    /// Shared by melee's pump and Custodi Soulcaller's mana-value gate.
+    pub(crate) fn opponents_attacked_this_combat(&self) -> u32 {
+        use crate::game::types::AttackTarget;
+        let mut seats = std::collections::HashSet::new();
+        for atk in &self.attacking {
+            let defender = match atk.target {
+                AttackTarget::Player(p) => Some(p),
+                AttackTarget::Planeswalker(id) => self.battlefield_find(id).map(|c| c.controller),
+                AttackTarget::Battle(id) => self.battlefield_find(id).and_then(|c| c.protected_by),
+            };
+            if let Some(seat) = defender {
+                seats.insert(seat);
+            }
+        }
+        seats.len() as u32
+    }
+
     pub fn evaluate_requirement_static(
         &self,
         req: &SelectionRequirement,
@@ -3552,6 +3574,9 @@ impl GameState {
                         StackItem::Trigger { source, .. } if *source == card.id
                     )),
                     R::ManaValueAtMost(n) => card.definition.cost.cmc() <= *n,
+                    R::ManaValueAtMostOpponentsAttackedThisCombat => {
+                        card.definition.cost.cmc() <= self.opponents_attacked_this_combat()
+                    }
                     R::ManaValueAtMostDevotion(color) => {
                         card.definition.cost.cmc() <= self.devotion_to(controller, &[*color]).max(0) as u32
                     }
@@ -4108,6 +4133,9 @@ impl GameState {
             R::ProducesColorless => card.definition.produces_colorless(),
             R::IsSnow => card.definition.is_snow(),
             R::ManaValueAtMost(n) => card.definition.cost.cmc() <= *n,
+            R::ManaValueAtMostOpponentsAttackedThisCombat => {
+                card.definition.cost.cmc() <= self.opponents_attacked_this_combat()
+            }
             // Need the ability's source or the live trigger context, which
             // only the static walker carries.
             R::HasChosenColorOfSource

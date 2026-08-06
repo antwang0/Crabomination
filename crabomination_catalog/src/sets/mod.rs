@@ -329,6 +329,7 @@ pub mod uds;
 pub mod usg;
 pub mod usg2;
 pub mod usg3;
+pub mod cn2;
 pub mod cns;
 pub mod cns2;
 pub mod cns3;

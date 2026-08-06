@@ -33,6 +33,7 @@ mod hml;
 mod eoe;
 mod eoe2;
 mod fin;
+mod cn2;
 mod fin2;
 mod dis;
 mod gpt;

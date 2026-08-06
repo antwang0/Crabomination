@@ -30,6 +30,7 @@ pub(crate) fn event_matches_spec(
             EventKind::CreatureLeavesBattlefieldNotDying,
             GameEvent::CreatureLeftWithoutDying { .. },
         ) => true,
+        (EventKind::BecameMonarch, GameEvent::MonarchChanged { .. }) => true,
         (EventKind::CardDrawn, GameEvent::CardDrawn { .. }) => true,
         (EventKind::FirstCardDrawnThisTurn, GameEvent::FirstCardDrawnThisTurn { .. }) => true,
         (EventKind::CardDiscarded, GameEvent::CardDiscarded { .. }) => true,
@@ -705,6 +706,7 @@ fn event_player(event: &GameEvent) -> Option<usize> {
         | GameEvent::CardLeftGraveyard { player, .. }
         | GameEvent::CardPutIntoGraveyard { player, .. }
         | GameEvent::CardPutIntoHandFromGraveyard { player, .. }
+        | GameEvent::MonarchChanged { player }
         | GameEvent::CardCycled { player, .. }
         | GameEvent::EnergyGained { player, .. }
         | GameEvent::Discovered { player, .. }
@@ -862,6 +864,7 @@ pub(crate) fn event_subject(event: &GameEvent, kind: &EventKind) -> Option<Entit
         | GameEvent::LibraryShuffled { player }
         | GameEvent::ColorlessManaAdded { player, .. }
         | GameEvent::DungeonCompleted { player }
+        | GameEvent::MonarchChanged { player }
         | GameEvent::PoisonAdded { player, .. } => Some(EntityRef::Player(*player)),
         GameEvent::CardLeftGraveyard { card_id, .. } => Some(EntityRef::Card(*card_id)),
         GameEvent::CardPutIntoGraveyard { card_id, .. } => Some(EntityRef::Card(*card_id)),

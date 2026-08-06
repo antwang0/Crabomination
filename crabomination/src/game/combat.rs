@@ -508,6 +508,13 @@ impl GameState {
                         return Err(GameError::CannotAttack(id));
                     }
                 }
+                // CR 725 — Crown-Hunter Hireling: only the monarch can be
+                // attacked.
+                if computed_kw(id).contains(&Keyword::CantAttackUnlessDefenderIsMonarch)
+                    && self.defender_for(atk.target) != self.monarch
+                {
+                    return Err(GameError::CannotAttack(id));
+                }
                 // CR 508.1a — Merchant Ship: the defending player must control
                 // a land of the named type.
                 if let Some(lt) = computed_kw(id).iter().find_map(|k| match k {

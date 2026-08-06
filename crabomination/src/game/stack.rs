@@ -3237,6 +3237,10 @@ impl GameState {
         self.players[p].spells_cast_this_turn = 0;
         self.players[p].spells_cast_from_hand_this_turn = 0;
         // Reset the Bloodthirst "damaged this turn" flag for *every* player
+        // CR 701.38 — a vote-control grant lasts only for its own turn.
+        self.vote_controller_this_turn = None;
+        // CR 725 — snapshot the crown for "…as the turn began" riders.
+        self.monarch_at_turn_start = self.monarch;
         // at the turn boundary (not just the active player) so a creature
         // cast on your turn reads damage dealt since this turn began.
         for pl in &mut self.players {

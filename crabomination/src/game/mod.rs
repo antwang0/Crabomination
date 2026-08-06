@@ -1304,6 +1304,17 @@ pub struct GameState {
     /// opponents of `controller`; cleared at `controller`'s untap.
     #[serde(default)]
     pub turn_scoped_spell_taxes: Vec<TurnScopedSpellTax>,
+    /// CR 701.38 — "you choose how each player votes this turn" (Illusion of
+    /// Choice). Every vote this turn is answered by this seat on the voter's
+    /// behalf; the votes are still *cast* by their own players. Cleared at the
+    /// turn boundary.
+    #[serde(default)]
+    pub vote_controller_this_turn: Option<usize>,
+    /// CR 725 — who the monarch was as the current turn began. Snapshotted at
+    /// the untap step so `Predicate::WasMonarchAtTurnStart` survives a
+    /// mid-turn crown change.
+    #[serde(default)]
+    pub monarch_at_turn_start: Option<usize>,
     /// CR 615.7 — sources whose damage is prevented this turn (Burrenton
     /// Forge-Tender's chosen source, Hallow's life refund, Awe Strike's single
     /// instance per CR 615.8). Cleared at cleanup.
@@ -2023,6 +2034,8 @@ impl Clone for GameState {
             creature_etb_steal_this_turn: self.creature_etb_steal_this_turn.clone(),
             search_tax_paid_this_turn: self.search_tax_paid_this_turn.clone(),
             turn_scoped_spell_taxes: self.turn_scoped_spell_taxes.clone(),
+            vote_controller_this_turn: self.vote_controller_this_turn,
+            monarch_at_turn_start: self.monarch_at_turn_start,
             staggered_damage_players: self.staggered_damage_players.clone(),
             doubled_damage_sources_this_turn: self.doubled_damage_sources_this_turn.clone(),
             creature_pw_cast_locks: self.creature_pw_cast_locks.clone(),
@@ -2337,6 +2350,8 @@ impl GameState {
             creature_etb_steal_this_turn: Vec::new(),
             search_tax_paid_this_turn: Vec::new(),
             turn_scoped_spell_taxes: Vec::new(),
+            vote_controller_this_turn: None,
+            monarch_at_turn_start: None,
             staggered_damage_players: Vec::new(),
             doubled_damage_sources_this_turn: Vec::new(),
             creature_pw_cast_locks: Vec::new(),

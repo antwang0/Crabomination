@@ -196,6 +196,7 @@ fn keyword_name(kw: &Keyword) -> Option<String> {
         | Keyword::CantAttack | Keyword::CantBeAttacked | Keyword::CantActivateAbilities
         | Keyword::MustBeBlocked | Keyword::AllMustBlock
         | Keyword::MustAttack | Keyword::MustBlock | Keyword::AssignsDamageAsThoughUnblocked
+        | Keyword::CantAttackUnlessDefenderIsMonarch
         | Keyword::CanAttackOnlyIfDefenderControls(_)
         | Keyword::CanAttackOnlyIfYouControl(_)
         | Keyword::CantAttackOrBlockUnlessYouControlCount { .. }
