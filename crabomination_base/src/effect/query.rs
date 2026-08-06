@@ -521,6 +521,8 @@ impl Effect {
             }
             Effect::ReturnEachUnlessPays { .. }
             | Effect::CreateTokenReturnSelfWhenItDies { .. } => false,
+            Effect::TopTwoGraveyardOpponentSplits { who } => sel_has_target(who),
+            Effect::LockActivatedAbilitiesThisTurn { what } => sel_has_target(what),
             Effect::RevealFiveDraftAgainstOpponent => false,
             Effect::EncoreTokens => false,
             // Targets an opponent, but resolution auto-binds slot 0 / the

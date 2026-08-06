@@ -29824,6 +29824,71 @@ impl GameState {
                 self.run_return_each_unless_pays(filter, cost, ctx, events, effect)
             }
 
+            Effect::TopTwoGraveyardOpponentSplits { who } => {
+                let owner = ctx.controller;
+                let top: Vec<(CardId, String)> = self.players[owner]
+                    .graveyard
+                    .iter()
+                    .rev()
+                    .take(2)
+                    .map(|c| (c.id, c.definition.name.to_string()))
+                    .collect();
+                let Some(&(first, _)) = top.first() else { return Ok(()) };
+                // A single card has nothing to split — it just comes back.
+                let (exiled, to_hand) = match top.get(1) {
+                    None => (None, first),
+                    Some(&(second, _)) => {
+                        let chooser = self
+                            .resolve_selector(who, ctx)
+                            .into_iter()
+                            .find_map(|e| match e {
+                                EntityRef::Player(p) => Some(p),
+                                _ => None,
+                            })
+                            .unwrap_or(owner);
+                        let picks = match self.ask_seat_cards(
+                            chooser,
+                            "Choose a card to exile".into(),
+                            ctx.source.unwrap_or(CardId(0)),
+                            top.clone(),
+                            1,
+                            1,
+                            effect,
+                        ) {
+                            Some(p) => p,
+                            None => return Ok(()),
+                        };
+                        let pick = picks.first().copied().unwrap_or(first);
+                        if pick == second { (Some(second), first) } else { (Some(first), second) }
+                    }
+                };
+                for (id, dest) in [
+                    (exiled, crate::effect::ZoneDest::Exile),
+                    (Some(to_hand), crate::effect::ZoneDest::Hand(PlayerRef::You)),
+                ] {
+                    let Some(id) = id else { continue };
+                    let Some(pos) =
+                        self.players[owner].graveyard.iter().position(|c| c.id == id)
+                    else {
+                        continue;
+                    };
+                    let card = self.players[owner].graveyard.remove(pos);
+                    self.place_card_in_dest(card, ctx.controller, &dest, events);
+                }
+                Ok(())
+            }
+
+            Effect::LockActivatedAbilitiesThisTurn { what } => {
+                for ent in self.resolve_selector(what, ctx) {
+                    if let Some(id) = ent.as_card_id()
+                        && !self.abilities_locked_this_turn.contains(&id)
+                    {
+                        self.abilities_locked_this_turn.push(id);
+                    }
+                }
+                Ok(())
+            }
+
             Effect::DestroyEachUnlessPaysLife { filter, life, no_regen } => self
                 .run_destroy_each_unless_pays_life(filter, *life, *no_regen, ctx, events, effect),
 
@@ -33658,7 +33723,7 @@ impl GameState {
                         break;
                     }
                     let card = self.players[p].library.remove(0);
-                    if !card.definition.is_land() {
+                    if !card.definition.is_land() || axis == MillShareAxis::AnyColor {
                         colors.push(card.definition.cost.colors());
                     }
                     types.push(card.definition.card_types.clone());
@@ -33668,7 +33733,7 @@ impl GameState {
                     }
                 }
                 let repeat = match axis {
-                    MillShareAxis::NonlandColor => {
+                    MillShareAxis::NonlandColor | MillShareAxis::AnyColor => {
                         colors.len() == 2 && colors[0].iter().any(|c| colors[1].contains(c))
                     }
                     MillShareAxis::CardType => {

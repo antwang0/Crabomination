@@ -1488,6 +1488,11 @@ pub struct GameState {
     /// cleanup.
     #[serde(default)]
     pub shroud_waivers: Vec<(CardId, usize)>,
+    /// Permanents whose activated abilities can't be activated this turn
+    /// (Interdict). Non-mana activations from these sources are rejected
+    /// until cleanup.
+    #[serde(default)]
+    pub abilities_locked_this_turn: Vec<CardId>,
     /// CR 701.38 — `(seat, option index)` for every vote cast on the most
     /// recent ballot, read by `PlayerRef::OpponentsWhoVotedDifferently`.
     #[serde(default)]
@@ -2109,6 +2114,7 @@ impl Clone for GameState {
             hands_revealed_to: self.hands_revealed_to.clone(),
             face_down_revealed_to: self.face_down_revealed_to.clone(),
             shroud_waivers: self.shroud_waivers.clone(),
+            abilities_locked_this_turn: self.abilities_locked_this_turn.clone(),
             last_vote: self.last_vote.clone(),
             current_voter: self.current_voter,
             skipped_steps_this_turn: self.skipped_steps_this_turn.clone(),
@@ -2428,6 +2434,7 @@ impl GameState {
             hands_revealed_to: Vec::new(),
             face_down_revealed_to: Vec::new(),
             shroud_waivers: Vec::new(),
+            abilities_locked_this_turn: Vec::new(),
             last_vote: Vec::new(),
             current_voter: None,
             skipped_steps_this_turn: Vec::new(),

@@ -12863,6 +12863,12 @@ impl GameState {
             }
         }
 
+        // Interdict — "that permanent's activated abilities can't be
+        // activated this turn". Mana abilities are unaffected.
+        if !is_mana_ability(&ability.effect) && self.abilities_locked_this_turn.contains(&card_id) {
+            return Err(GameError::AbilitySuppressedByNamedCard);
+        }
+
         // Collector Ouphe / Karn lock: non-mana activated abilities of
         // artifacts can't be activated while a `ArtifactActivatedAbilitiesLocked`
         // static is in play (global — affects every player). A source on the

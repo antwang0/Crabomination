@@ -3,7 +3,7 @@
 use crabomination::card::{CardDefinition, CardId, CounterType, Keyword};
 use crabomination::catalog;
 use crabomination::decision::{DecisionAnswer, ScriptedDecider};
-use crabomination::game::effects::EntityRef;
+use crabomination::game::effects::{EffectContext, EntityRef};
 use crabomination::game::types::{Attack, AttackTarget, GameAction, Target, TurnStep};
 use crabomination::game::*;
 use crabomination::game::{drain_stack, two_player_game};
@@ -638,4 +638,390 @@ fn deadshot_turns_a_creature_into_a_gun() {
     drain_stack(&mut g);
     assert!(g.battlefield_find(gun).unwrap().tapped, "the gun is tapped");
     assert!(g.battlefield_find(victim).is_none(), "4 damage kills the 2/2");
+}
+
+// ── Set-closing wave ────────────────────────────────────────────────────────
+
+/// Grindstone keeps milling while the pair shares a colour and stops on the
+/// first mismatched pair.
+#[test]
+fn grindstone_repeats_while_colors_match() {
+    let mut g = two_player_game();
+    // Top-down: a blue pair repeats into a red/green pair, which stops it.
+    for def in [
+        catalog::counterspell(),   // blue
+        catalog::counterspell(),   // blue
+        catalog::lightning_bolt(), // red
+        catalog::grizzly_bears(),  // green
+    ] {
+        g.add_card_to_library(1, def);
+    }
+    let stone = ready(&mut g, 0, catalog::grindstone());
+    g.step = TurnStep::PreCombatMain;
+    g.players[0].mana_pool.add_colorless(3);
+    activate(&mut g, stone, 0, Some(Target::Player(1))).expect("grind");
+    drain_stack(&mut g);
+    // Blue+blue repeats; red+green stops it. All four are gone.
+    assert_eq!(g.players[1].graveyard.len(), 4);
+    assert!(g.players[1].library.is_empty());
+}
+
+/// Cursed Scroll only fires when the random reveal matches the named card.
+#[test]
+fn cursed_scroll_needs_the_named_card() {
+    let mut g = two_player_game();
+    let scroll = ready(&mut g, 0, catalog::cursed_scroll());
+    g.add_card_to_hand(0, catalog::grizzly_bears());
+    g.step = TurnStep::PreCombatMain;
+
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::NamedCard(
+        "Lightning Bolt".into(),
+    )]));
+    g.players[0].mana_pool.add_colorless(3);
+    activate(&mut g, scroll, 0, Some(Target::Player(1))).expect("miss");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, 20, "a miss deals nothing");
+
+    g.battlefield_find_mut(scroll).unwrap().tapped = false;
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::NamedCard(
+        "Grizzly Bears".into(),
+    )]));
+    g.players[0].mana_pool.add_colorless(3);
+    activate(&mut g, scroll, 0, Some(Target::Player(1))).expect("hit");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, 18, "a match deals 2");
+}
+
+/// Cold Storage banks a creature and gives it back when it's sacrificed.
+#[test]
+fn cold_storage_returns_its_whole_stash() {
+    let mut g = two_player_game();
+    let storage = g.add_card_to_battlefield(0, catalog::cold_storage());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.step = TurnStep::PreCombatMain;
+    g.players[0].mana_pool.add_colorless(3);
+    activate(&mut g, storage, 0, Some(Target::Permanent(bear))).expect("bank");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_none(), "the bear is exiled");
+
+    activate(&mut g, storage, 1, None).expect("cash out");
+    drain_stack(&mut g);
+    assert!(
+        g.battlefield.iter().any(|c| c.definition.name == "Grizzly Bears" && c.controller == 0),
+        "the bear comes back under your control"
+    );
+}
+
+/// Helm of Possession holds a stolen creature only while it stays tapped.
+#[test]
+fn helm_of_possession_steal_unwinds_on_untap() {
+    let mut g = two_player_game();
+    let helm = ready(&mut g, 0, catalog::helm_of_possession());
+    g.add_card_to_battlefield(0, catalog::grizzly_bears()); // the sacrifice
+    let prize = g.add_card_to_battlefield(1, catalog::serra_angel());
+    g.step = TurnStep::PreCombatMain;
+    g.players[0].mana_pool.add_colorless(2);
+    activate(&mut g, helm, 0, Some(Target::Permanent(prize))).expect("possess");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(prize).unwrap().controller, 0);
+
+    g.battlefield_find_mut(helm).unwrap().tapped = false;
+    g.check_state_based_actions();
+    assert_eq!(g.battlefield_find(prize).unwrap().controller, 1, "untapping hands it back");
+}
+
+/// Minion of the Wastes is as big as the life paid for it.
+#[test]
+fn minion_of_the_wastes_sizes_to_the_life_paid() {
+    let mut g = two_player_game();
+    let minion = g.add_card_to_hand(0, catalog::minion_of_the_wastes());
+    g.players[0].mana_pool.add(Color::Black, 3);
+    g.players[0].mana_pool.add_colorless(3);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Amount(7)]));
+    cast(&mut g, minion, None).expect("cast");
+    drain_stack(&mut g);
+    let live = g.computed_permanent(minion).expect("on the battlefield");
+    assert_eq!((live.power, live.toughness), (7, 7));
+    assert_eq!(g.players[0].life, 13);
+}
+
+/// Unstable Shapeshifter copies each creature that enters and keeps copying.
+#[test]
+fn unstable_shapeshifter_keeps_its_own_trigger() {
+    let mut g = two_player_game();
+    let shifter = g.add_card_to_battlefield(0, catalog::unstable_shapeshifter());
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.dispatch_triggers_for_events(&[GameEvent::PermanentEntered { card_id: bear }]);
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(shifter).unwrap().definition.name, "Grizzly Bears");
+
+    let angel = g.add_card_to_battlefield(1, catalog::serra_angel());
+    g.dispatch_triggers_for_events(&[GameEvent::PermanentEntered { card_id: angel }]);
+    drain_stack(&mut g);
+    assert_eq!(
+        g.battlefield_find(shifter).unwrap().definition.name,
+        "Serra Angel",
+        "the kept trigger fires again"
+    );
+}
+
+/// Carrionette's graveyard ability exiles both bodies when the tax goes
+/// unpaid, and neither when it's paid.
+#[test]
+fn carrionette_exiles_unless_the_tax_is_paid() {
+    let mut g = two_player_game();
+    let victim = g.add_card_to_battlefield(1, catalog::serra_angel());
+    let carrionette = g.add_card_to_graveyard(0, catalog::carrionette());
+    g.step = TurnStep::PreCombatMain;
+
+    // Paid: nothing happens.
+    g.players[1].mana_pool.add_colorless(2);
+    g.players[0].mana_pool.add(Color::Black, 2);
+    g.players[0].mana_pool.add_colorless(2);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    activate(&mut g, carrionette, 0, Some(Target::Permanent(victim))).expect("activate");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(victim).is_some(), "the tax saved it");
+
+    // Declined: both go.
+    g.players[0].mana_pool.add(Color::Black, 2);
+    g.players[0].mana_pool.add_colorless(2);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(false)]));
+    activate(&mut g, carrionette, 0, Some(Target::Permanent(victim))).expect("activate");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(victim).is_none(), "the creature is exiled");
+    assert!(
+        !g.players[0].graveyard.iter().any(|c| c.id == carrionette),
+        "Carrionette exiles itself too"
+    );
+}
+
+/// Starke of Rath hands himself to whoever owned what he killed.
+#[test]
+fn starke_of_rath_changes_hands_after_killing() {
+    let mut g = two_player_game();
+    let starke = ready(&mut g, 0, catalog::starke_of_rath());
+    let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.step = TurnStep::PreCombatMain;
+    activate(&mut g, starke, 0, Some(Target::Permanent(victim))).expect("kill");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(victim).is_none());
+    assert_eq!(g.battlefield_find(starke).unwrap().controller, 1, "Starke defects");
+}
+
+/// Magmasaur eats a counter each upkeep, or blows up for the rest.
+#[test]
+fn magmasaur_detonates_when_you_stop_feeding_it() {
+    let mut g = two_player_game();
+    let saur = g.add_card_to_hand(0, catalog::magmasaur());
+    g.players[0].mana_pool.add(Color::Red, 2);
+    g.players[0].mana_pool.add_colorless(3);
+    cast(&mut g, saur, None).expect("cast");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(saur).unwrap().counter_count(CounterType::PlusOnePlusOne), 5);
+    let def = catalog::magmasaur();
+    let ctx = EffectContext::for_ability(saur, 0, None);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    g.resolve_effect(&def.triggered_abilities[0].effect, &ctx).expect("fed");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(saur).unwrap().counter_count(CounterType::PlusOnePlusOne), 4);
+
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(false)]));
+    g.resolve_effect(&def.triggered_abilities[0].effect, &ctx).expect("starved");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(saur).is_none(), "it sacrifices itself");
+    assert!(g.battlefield_find(bear).is_none(), "4 damage sweeps the ground");
+    assert_eq!(g.players[1].life, 16);
+}
+
+/// Wood Sage takes every copy of the named creature and bins the rest.
+#[test]
+fn wood_sage_takes_the_named_creatures() {
+    let mut g = two_player_game();
+    for def in [
+        catalog::grizzly_bears(),
+        catalog::forest(),
+        catalog::grizzly_bears(),
+        catalog::lightning_bolt(),
+    ] {
+        g.add_card_to_library(0, def);
+    }
+    let sage = ready(&mut g, 0, catalog::wood_sage());
+    g.step = TurnStep::PreCombatMain;
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::NamedCard("Grizzly Bears".into())]));
+    activate(&mut g, sage, 0, None).expect("sage");
+    drain_stack(&mut g);
+    assert_eq!(
+        g.players[0].hand.iter().filter(|c| c.definition.name == "Grizzly Bears").count(),
+        2
+    );
+    assert_eq!(g.players[0].graveyard.len(), 2, "the rest is binned");
+}
+
+/// Abandon Hope discards X as a cost, then strips X cards out of the
+/// opponent's hand.
+#[test]
+fn abandon_hope_trades_x_for_x() {
+    let mut g = two_player_game();
+    let hope = g.add_card_to_hand(0, catalog::abandon_hope());
+    for _ in 0..2 {
+        g.add_card_to_hand(0, catalog::forest());
+    }
+    for _ in 0..3 {
+        g.add_card_to_hand(1, catalog::grizzly_bears());
+    }
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell {
+        card_id: hope,
+        target: Some(Target::Player(1)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: Some(2),
+    })
+    .expect("cast");
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.is_empty(), "both lands were discarded as the cost");
+    assert_eq!(g.players[1].hand.len(), 1, "two of the three are gone");
+}
+
+/// Interdict counters an activated ability and locks the source for the turn.
+#[test]
+fn interdict_locks_the_permanent_it_answers() {
+    let mut g = two_player_game();
+    let scroll = ready(&mut g, 1, catalog::cursed_scroll());
+    let interdict = g.add_card_to_hand(0, catalog::interdict());
+    g.add_card_to_library(0, catalog::forest());
+    g.step = TurnStep::PreCombatMain;
+    g.players[1].mana_pool.add_colorless(3);
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: scroll,
+        ability_index: 0,
+        target: Some(Target::Player(0)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("activate");
+
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell {
+        card_id: interdict,
+        target: Some(Target::Permanent(scroll)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, 20, "the ability was countered");
+
+    g.battlefield_find_mut(scroll).unwrap().tapped = false;
+    g.players[1].mana_pool.add_colorless(3);
+    g.priority.player_with_priority = 1;
+    assert!(
+        g.perform_action(GameAction::ActivateAbility {
+            card_id: scroll,
+            ability_index: 0,
+            target: Some(Target::Player(0)),
+            additional_targets: vec![],
+            mode: None,
+            x_value: None,
+        })
+        .is_err(),
+        "the lock holds for the rest of the turn"
+    );
+}
+
+/// Phyrexian Grimoire lets the opponent pick which of your top two graveyard
+/// cards is exiled; the other comes back.
+#[test]
+fn phyrexian_grimoire_splits_the_top_two() {
+    let mut g = two_player_game();
+    g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let bolt = g.add_card_to_graveyard(0, catalog::lightning_bolt());
+    let angel = g.add_card_to_graveyard(0, catalog::serra_angel());
+    let grimoire = ready(&mut g, 0, catalog::phyrexian_grimoire());
+    g.step = TurnStep::PreCombatMain;
+    g.players[0].mana_pool.add_colorless(4);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Cards(vec![angel])]));
+    activate(&mut g, grimoire, 0, Some(Target::Player(1))).expect("split");
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == bolt), "the unpicked card goes to hand");
+    assert!(
+        g.exile.iter().any(|c| c.id == angel),
+        "the opponent's pick is exiled"
+    );
+}
+
+/// Maze of Shadows unties an attacking shadow creature and fogs it both ways.
+#[test]
+fn maze_of_shadows_only_answers_shadow() {
+    let mut g = two_player_game();
+    let maze = ready(&mut g, 1, catalog::maze_of_shadows());
+    let shadow = ready(&mut g, 0, catalog::dauthi_marauder());
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::DeclareAttackers(vec![
+        Attack { attacker: shadow, target: AttackTarget::Player(1) },
+        Attack { attacker: bear, target: AttackTarget::Player(1) },
+    ]))
+    .expect("attack");
+    assert!(
+        activate(&mut g, maze, 1, Some(Target::Permanent(bear))).is_err(),
+        "the nonshadow attacker isn't a legal target"
+    );
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: maze,
+        ability_index: 1,
+        target: Some(Target::Permanent(shadow)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("maze");
+    drain_stack(&mut g);
+    assert!(!g.battlefield_find(shadow).unwrap().tapped, "it untapped");
+    advance_to(&mut g, TurnStep::End);
+    assert_eq!(g.players[1].life, 18, "only the bear connected");
+}
+
+/// Reap returns as many graveyard cards as the target opponent has black
+/// permanents.
+#[test]
+fn reap_scales_off_the_opponents_black_board() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let bolt = g.add_card_to_graveyard(0, catalog::lightning_bolt());
+    let spare = g.add_card_to_graveyard(0, catalog::counterspell());
+    g.add_card_to_battlefield(1, catalog::dauthi_marauder()); // black
+    g.add_card_to_battlefield(1, catalog::dauthi_slayer()); // black
+    g.add_card_to_battlefield(1, catalog::grizzly_bears()); // green — doesn't count
+    let reap = g.add_card_to_hand(0, catalog::reap());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell {
+        card_id: reap,
+        target: Some(Target::Player(1)),
+        additional_targets: vec![
+            Target::Permanent(bear),
+            Target::Permanent(bolt),
+            Target::Permanent(spare),
+        ],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), 2, "two black permanents, two cards back");
 }

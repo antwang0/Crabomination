@@ -3090,6 +3090,8 @@ pub enum AttackingTokenCleanup {
 pub enum MillShareAxis {
     /// A colour, counting nonland cards only (Sphinx's Tutelage).
     NonlandColor,
+    /// A colour, counting every milled card (Grindstone).
+    AnyColor,
     /// A card type (The Tale of Tamiyo).
     CardType,
 }
@@ -4546,6 +4548,16 @@ pub enum Effect {
     /// controller pays `cost`." Cut the Tethers — one pay-or-bounce decision per
     /// permanent, asked of its controller.
     ReturnEachUnlessPays { filter: SelectionRequirement, cost: crate::mana::ManaCost },
+    /// "Target opponent chooses one of the top two cards of your graveyard.
+    /// Exile that card and put the other one into your hand" (Phyrexian
+    /// Grimoire). `who` is the choosing player; the graveyard is the effect
+    /// controller's. A one-card graveyard goes straight to hand.
+    TopTwoGraveyardOpponentSplits { who: Selector },
+    /// "That permanent's activated abilities can't be activated this turn"
+    /// (Interdict). Records each resolved permanent in
+    /// `GameState.abilities_locked_this_turn`; `activate_ability` rejects
+    /// non-mana activations from a locked source until cleanup.
+    LockActivatedAbilitiesThisTurn { what: Selector },
     /// "Create `definition`. Return this card to the battlefield under its
     /// owner's control when that token dies." Tatsumasa, the Dragon's Fang —
     /// pairs with an `exile_self_cost` activation, so the source is in exile
