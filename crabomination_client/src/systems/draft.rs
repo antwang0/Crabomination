@@ -147,10 +147,13 @@ impl PackSort {
 pub enum PickMode {
     #[default]
     Pick,
-    /// Cogwork Grinder — remove the clicked card from the draft.
+    /// Cogwork Grinder / Animus of Predation — remove the clicked card from
+    /// the draft.
     Grind,
     /// Cogwork Librarian — the click arms a second pick from this pack.
     Librarian,
+    /// Paliano Vanguard — reveal the clicked card and note its creature types.
+    Reveal,
 }
 
 #[derive(Resource)]
@@ -280,6 +283,7 @@ impl DraftSession {
         }
         let action = match (self.pick_mode, self.librarian_first) {
             (PickMode::Grind, _) => PickAction::Remove(user_pack_index),
+            (PickMode::Reveal, _) => PickAction::TakeRevealed(user_pack_index),
             (PickMode::Librarian, None) => {
                 self.librarian_first = Some(user_pack_index);
                 self.draft_status = Some("Cogwork Librarian: pick a second card".into());
@@ -443,8 +447,10 @@ enum DraftMatters {
     TakePack,
     /// Cogwork Librarian — arm a two-card pick.
     Librarian,
-    /// Cogwork Grinder — arm a remove-from-draft pick.
+    /// Cogwork Grinder / Animus of Predation — arm a remove-from-draft pick.
     Grind,
+    /// Paliano Vanguard — arm a reveal-and-note pick.
+    Reveal,
     /// Whispergear Sneak — look at the next seat's pack.
     Peek,
     /// Lore Seeker — add the offered booster.
@@ -1170,12 +1176,24 @@ fn spawn_draft_matters_bar(
                 "Grinder: remove from draft".into(),
                 session.pick_mode == PickMode::Grind,
             )),
+            crabomination::draft::ANIMUS_OF_PREDATION => actions.push((
+                DraftMatters::Grind,
+                "Animus: remove from draft".into(),
+                session.pick_mode == PickMode::Grind,
+            )),
+            crabomination::draft::PALIANO_VANGUARD => actions.push((
+                DraftMatters::Reveal,
+                "Vanguard: reveal and note types".into(),
+                session.pick_mode == PickMode::Reveal,
+            )),
             crabomination::draft::WHISPERGEAR_SNEAK => {
                 actions.push((DraftMatters::Peek, "Sneak: peek next pack".into(), false))
             }
             _ => {}
         }
     }
+    // Grinder and Animus arm the same remove-from-draft mode; one button.
+    actions.dedup_by_key(|(a, ..)| *a);
     if session.boosters_offered > 0 {
         actions.push((DraftMatters::AddBooster, "Lore Seeker: add a booster".into(), false));
     }
@@ -2149,6 +2167,13 @@ fn handle_draft_matters_clicks(
                     PickMode::Pick
                 } else {
                     PickMode::Grind
+                };
+            }
+            DraftMatters::Reveal => {
+                session.pick_mode = if session.pick_mode == PickMode::Reveal {
+                    PickMode::Pick
+                } else {
+                    PickMode::Reveal
                 };
             }
             DraftMatters::Peek => session.peek_next_pack(),

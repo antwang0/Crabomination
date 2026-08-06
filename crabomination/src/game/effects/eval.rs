@@ -3889,6 +3889,24 @@ impl GameState {
                             card.definition.printed_colors().iter().any(|c| noted.contains(c))
                         })
                     }
+                    R::HasDraftNotedCreatureTypeOfSource => {
+                        let name = source
+                            .and_then(|sid| self.find_card_anywhere(sid))
+                            .map(|s| s.definition.name)
+                            .or(self.source_name_scratch);
+                        name.is_some_and(|name| {
+                            let noted =
+                                self.players[controller].draft_notes.noted_creature_types(name);
+                            // Printed types — the anthem this gates is gathered
+                            // inside the layer walk, so a computed lookup here
+                            // would recurse.
+                            card.definition
+                                .subtypes
+                                .creature_types
+                                .iter()
+                                .any(|t| noted.contains(t))
+                        })
+                    }
                     R::IsSourceChosenCardType => source
                         .and_then(|sid| self.battlefield_find(sid))
                         .and_then(|s| s.chosen_card_type.clone())
@@ -4425,7 +4443,9 @@ impl GameState {
                 .is_some_and(|n| n == card.definition.name),
             R::IsSourceChosenCardType => false,
             R::NameNotedForSource => false,
-            R::PowerAtMostDraftNoteMax | R::HasDraftNotedColorOfSource => false,
+            R::PowerAtMostDraftNoteMax
+            | R::HasDraftNotedColorOfSource
+            | R::HasDraftNotedCreatureTypeOfSource => false,
             R::IsSourceChosenCreatureType => false,
             R::SameNameAsTarget | R::TargetsALandYouControl => false,
             // Count walks the battlefield for the evaluating controller's

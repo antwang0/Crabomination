@@ -2168,6 +2168,9 @@ pub enum SelectionRequirement {
     /// CR 905.2b — the object is one or more of the colors the controller
     /// noted for the ability's source card name (Regicide).
     HasDraftNotedColorOfSource,
+    /// CR 905.2b — the object has one of the creature types the controller
+    /// noted for the ability's source card name (Paliano Vanguard).
+    HasDraftNotedCreatureTypeOfSource,
     /// MV at most the number of battlefield permanents matching the inner
     /// filter that the evaluating player controls (Spellstutter Sprite's
     /// "mana value X or less, where X is the number of Faeries you control").

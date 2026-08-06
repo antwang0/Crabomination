@@ -11,7 +11,7 @@ use crate::card::{
 use crate::effect::{
     DraftNoteAgg, Duration, Effect, ManaPayload, PlayerRef, Selector, StaticEffect, Value,
     VoteOption, VoteTally,
-    shortcut::{draw, etb, on_attack, target_filtered},
+    shortcut::{draw, etb, on_attack, target_filtered, token_copy_of},
 };
 use crate::game::TurnStep;
 use crate::mana::{Color, ManaCost, b, cost, g, generic, r, u, w, x};
@@ -1004,6 +1004,138 @@ pub fn spire_phantasm() -> CardDefinition {
             "Spire Phantasm",
             cost(&[generic(2), u(), u()]),
             vec![CreatureType::Gargoyle, CreatureType::Illusion],
+            3,
+            2,
+        )
+    }
+}
+
+/// Animus of Predation — {4}{G} 4/4 that wears the keywords of every card it
+/// removed from the draft (CR 905.2b notes taken by `PickAction::Remove`).
+pub fn animus_of_predation() -> CardDefinition {
+    CardDefinition {
+        static_abilities: vec![StaticAbility {
+            description: "This creature has each keyword ability noted for cards named \
+                          Animus of Predation.",
+            effect: StaticEffect::SelfHasDraftNotedKeywords,
+        }],
+        ..creature(
+            "Animus of Predation",
+            cost(&[generic(4), g()]),
+            vec![CreatureType::Avatar],
+            4,
+            4,
+        )
+    }
+}
+
+/// Paliano Vanguard — {1}{W} 2/2; other creatures of a creature type it noted
+/// during the draft get +1/+1.
+pub fn paliano_vanguard() -> CardDefinition {
+    CardDefinition {
+        static_abilities: vec![StaticAbility {
+            description: "Other creatures you control of a type noted for cards named \
+                          Paliano Vanguard get +1/+1.",
+            effect: StaticEffect::AnthemForFilter {
+                filter: R::OtherThanSource
+                    .and(R::Creature)
+                    .and(R::HasDraftNotedCreatureTypeOfSource),
+                power: 1,
+                toughness: 1,
+                keywords: vec![],
+                opponents: false,
+                all_players: false,
+                only_your_turn: false,
+                scale_by_counters_on_self: None,
+            },
+        }],
+        ..creature(
+            "Paliano Vanguard",
+            cost(&[generic(1), w()]),
+            vec![CreatureType::Human, CreatureType::Soldier],
+            2,
+            2,
+        )
+    }
+}
+
+/// Cards this seat exiled before the game with cards sharing the source's
+/// name (`GameState::seat_draft_exile` notes them under that name).
+fn draft_exiled(filter: R) -> Selector {
+    Selector::CardsInZone {
+        who: PlayerRef::You,
+        zone: crate::card::Zone::Exile,
+        filter: R::NameNotedForSource.and(filter),
+    }
+}
+
+/// Arcane Savant — {3}{U}{U} 3/3; its ETB copies an instant or sorcery it
+/// exiled before the game and lets you cast the copy for free.
+pub fn arcane_savant() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![etb(Effect::CastWithoutPayingImmediate {
+            what: draft_exiled(
+                R::HasCardType(CardType::Instant).or(R::HasCardType(CardType::Sorcery)),
+            ),
+            source_zone: crate::card::Zone::Exile,
+            exile_after: false,
+            copy: true,
+            reduce_generic: 0,
+            pay_own_cost: false,
+        })],
+        ..creature(
+            "Arcane Savant",
+            cost(&[generic(3), u(), u()]),
+            vec![CreatureType::Human, CreatureType::Wizard],
+            3,
+            3,
+        )
+    }
+}
+
+/// Caller of the Untamed — {3}{G} 2/4; {X}, {T} mints a token copy of a
+/// creature it exiled before the game whose mana value is X.
+pub fn caller_of_the_untamed() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[x()]),
+            tap_cost: true,
+            effect: token_copy_of(
+                PlayerRef::You,
+                Value::ONE,
+                draft_exiled(R::Creature.and(R::ManaValueExactlyXFromCost)),
+            ),
+            ..Default::default()
+        }],
+        ..creature(
+            "Caller of the Untamed",
+            cost(&[generic(3), g()]),
+            vec![CreatureType::Elf, CreatureType::Shaman],
+            2,
+            4,
+        )
+    }
+}
+
+/// Volatile Chimera — {2}{R} 3/2; {1}{R} turns it into a random creature it
+/// exiled before the game, keeping the ability so it can shift again.
+pub fn volatile_chimera() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1), r()]),
+            effect: Effect::BecomeCopyOf {
+                what: Selector::This,
+                source: Selector::RandomOf(Box::new(draft_exiled(R::Creature))),
+                extra_creature_types: vec![],
+                keep_own_triggered: false,
+                keep_own_activated: true,
+            },
+            ..Default::default()
+        }],
+        ..creature(
+            "Volatile Chimera",
+            cost(&[generic(2), r()]),
+            vec![CreatureType::Elemental, CreatureType::Chimera],
             3,
             2,
         )

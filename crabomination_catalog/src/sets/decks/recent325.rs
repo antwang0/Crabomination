@@ -566,6 +566,7 @@ pub fn silent_hallcreeper() -> CardDefinition {
                     source: target_filtered(R::Creature.and(R::ControlledByYou)),
                     extra_creature_types: vec![],
                     keep_own_triggered: false,
+                    keep_own_activated: false,
                 },
             ] },
         }],

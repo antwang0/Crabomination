@@ -1727,6 +1727,10 @@ pub enum StaticEffect {
     /// (a `SelectionRequirement` over the source's own characteristics) this
     /// reads game state via the `Predicate` machinery.
     SelfHasKeywordIf { keyword: Keyword, condition: Predicate },
+    /// CR 905.2b — the source has every keyword its controller noted while
+    /// drafting cards with the source's name (Animus of Predation). No
+    /// keywords outside a drafted game.
+    SelfHasDraftNotedKeywords,
     /// "As long as [condition], this is an artifact creature" — the type-line
     /// analogue of `SelfHasKeywordIf`. Emits a layer-4 `AddCardType(Creature)`
     /// self-effect while the predicate holds (Midnight Mangler — a Vehicle that

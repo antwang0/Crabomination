@@ -192,6 +192,9 @@ pub enum Selector {
     /// Upgrade ("distribute counters among 1–3 creatures, then double the
     /// counters on each of those creatures").
     AllTargets,
+    /// "…a card at random from among them" — resolve the inner selector and
+    /// keep one entity chosen uniformly at random (Volatile Chimera).
+    RandomOf(Box<Selector>),
     /// The object that caused this trigger (attacker, dying creature, etc).
     TriggerSource,
     /// The permanent the source chose and remembered as it entered — the
@@ -6477,6 +6480,10 @@ pub enum Effect {
         /// copy again (Artisan of Forms).
         #[serde(default)]
         keep_own_triggered: bool,
+        /// The activated-ability twin of `keep_own_triggered` — Volatile
+        /// Chimera's "except it has this ability", so it can shift again.
+        #[serde(default)]
+        keep_own_activated: bool,
     },
     /// CR 707.2 — continuous (layer-1) sibling of `BecomeCopyOf`: each
     /// `what` becomes a copy of `source` for `duration`, via a

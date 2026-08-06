@@ -1258,6 +1258,11 @@ static CN2: &[Factory] = &[
     super::cn2::kaya_ghost_assassin,
     super::cn2::borderland_explorer,
     super::cn2::spire_phantasm,
+    super::cn2::animus_of_predation,
+    super::cn2::paliano_vanguard,
+    super::cn2::arcane_savant,
+    super::cn2::caller_of_the_untamed,
+    super::cn2::volatile_chimera,
 ];
 static CNS3: &[Factory] = &[
     super::cns3::aether_searcher,

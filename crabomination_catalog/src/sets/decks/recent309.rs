@@ -1164,6 +1164,7 @@ pub fn lazav_familiar_stranger() -> CardDefinition {
                             source: Selector::LastMoved,
                             extra_creature_types: vec![],
                             keep_own_triggered: false,
+                            keep_own_activated: false,
                         },
                     ])),
                 },

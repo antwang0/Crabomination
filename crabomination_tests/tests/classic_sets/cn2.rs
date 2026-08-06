@@ -534,3 +534,106 @@ fn borderland_explorer_rummages_for_a_basic() {
     assert!(g.players[0].graveyard.iter().any(|c| c.id == pitch), "discarded");
     assert!(g.players[0].hand.iter().any(|c| c.id == forest), "and fetched a basic");
 }
+
+/// Animus of Predation wears every keyword it noted while removing cards from
+/// the draft, and nothing it didn't.
+#[test]
+fn animus_of_predation_wears_its_noted_keywords() {
+    use crabomination::draft::{ANIMUS_OF_PREDATION, DraftNotes};
+    let mut g = two_player_game();
+    let mut notes = DraftNotes::default();
+    notes.note_keywords(ANIMUS_OF_PREDATION, &[Keyword::Flying, Keyword::Trample]);
+    g.players[0].draft_notes = notes;
+    let animus = g.move_card_to_battlefield_for_test(0, catalog::animus_of_predation());
+    drain_stack(&mut g);
+    let kws = g.computed_permanent(animus).expect("on battlefield").keywords;
+    assert!(kws.contains(&Keyword::Flying), "noted flying is granted");
+    assert!(!kws.contains(&Keyword::Trample), "trample isn't on the printed list");
+}
+
+/// Paliano Vanguard pumps other creatures sharing a noted type, not itself.
+#[test]
+fn paliano_vanguard_pumps_noted_types_only() {
+    use crabomination::card::CreatureType;
+    use crabomination::draft::{DraftNotes, PALIANO_VANGUARD};
+    let mut g = two_player_game();
+    let mut notes = DraftNotes::default();
+    notes.note_creature_types(PALIANO_VANGUARD, &[CreatureType::Bear]);
+    g.players[0].draft_notes = notes;
+    let vanguard = g.move_card_to_battlefield_for_test(0, catalog::paliano_vanguard());
+    let bear = g.move_card_to_battlefield_for_test(0, catalog::grizzly_bears());
+    let other = g.move_card_to_battlefield_for_test(0, catalog::savannah_lions());
+    drain_stack(&mut g);
+    assert_eq!(g.computed_permanent(bear).unwrap().power, 3, "a noted Bear is pumped");
+    assert_eq!(g.computed_permanent(other).unwrap().power, 2, "an unnoted type isn't");
+    assert_eq!(g.computed_permanent(vanguard).unwrap().power, 2, "and not the Vanguard");
+}
+
+/// Arcane Savant copies a pre-game exiled sorcery and casts the copy free.
+#[test]
+fn arcane_savant_casts_a_copy_of_its_exiled_spell() {
+    let mut g = two_player_game();
+    let div = g.seat_draft_exile(0, "Arcane Savant", catalog::divination());
+    for _ in 0..3 {
+        g.add_card_to_library(0, catalog::grizzly_bears());
+    }
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    g.move_card_to_battlefield_for_test(0, catalog::arcane_savant());
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), 2, "the free copy drew two");
+    assert!(g.exile.iter().any(|c| c.id == div), "the original stays exiled");
+}
+
+/// Volatile Chimera becomes one of the creatures it exiled before the game.
+#[test]
+fn volatile_chimera_becomes_an_exiled_creature() {
+    let mut g = two_player_game();
+    g.seat_draft_exile(0, "Volatile Chimera", catalog::grizzly_bears());
+    let chimera = g.move_card_to_battlefield_for_test(0, catalog::volatile_chimera());
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: chimera,
+        ability_index: 0,
+        target: None,
+        additional_targets: vec![],
+        x_value: None,
+        mode: None,
+    })
+    .expect("shapeshift");
+    drain_stack(&mut g);
+    assert_eq!(
+        g.battlefield_find(chimera).unwrap().definition.name,
+        "Grizzly Bears",
+        "the only exiled creature is the only roll"
+    );
+}
+
+/// Caller of the Untamed mints a token copy of an exiled creature whose mana
+/// value matches the X it paid.
+#[test]
+fn caller_of_the_untamed_mints_the_x_cost_creature() {
+    let mut g = two_player_game();
+    g.seat_draft_exile(0, "Caller of the Untamed", catalog::grizzly_bears());
+    let caller = g.move_card_to_battlefield_for_test(0, catalog::caller_of_the_untamed());
+    g.clear_sickness(caller);
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: caller,
+        ability_index: 0,
+        target: None,
+        additional_targets: vec![],
+        x_value: Some(2),
+        mode: None,
+    })
+    .expect("call the Bears");
+    drain_stack(&mut g);
+    assert!(
+        g.battlefield.iter().any(|c| c.definition.name == "Grizzly Bears" && c.is_token),
+        "a token copy of the MV-2 exiled creature"
+    );
+}

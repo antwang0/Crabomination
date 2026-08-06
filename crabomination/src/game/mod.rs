@@ -3647,6 +3647,24 @@ impl GameState {
         id
     }
 
+    /// CR 905.4 — "before you shuffle your deck to start the game, exile a
+    /// card you drafted that isn't in your deck". The card goes to exile and
+    /// its name is noted under `noter`, so `Selector::CardsInZone` with
+    /// `NameNotedForSource` finds it again (Arcane Savant, Caller of the
+    /// Untamed, Volatile Chimera).
+    pub fn seat_draft_exile(
+        &mut self,
+        seat: usize,
+        noter: &str,
+        def: crate::card::CardDefinition,
+    ) -> CardId {
+        let id = CardId(self.next_id);
+        self.next_id = self.next_id.saturating_add(1);
+        self.players[seat].draft_notes.note_name(noter, def.name);
+        self.exile.push(CardInstance::new(id, def, seat));
+        id
+    }
+
     /// CR 702.106b — turn a face-down hidden-agenda conspiracy face up,
     /// revealing the named card. Its abilities start functioning immediately
     /// (CR 315.5). Returns false when `id` isn't a face-down conspiracy.
@@ -9206,6 +9224,29 @@ impl GameState {
                 if !self.evaluate_predicate(condition, &ctx) {
                     continue;
                 }
+                all_effects.push(ContinuousEffect {
+                    timestamp: card.object_timestamp(),
+                    source: card.id,
+                    affected: AffectedPermanents::Source,
+                    layer: Layer::L6Ability,
+                    sublayer: None,
+                    duration: EffectDuration::WhileSourceOnBattlefield,
+                    modification: Modification::AddKeyword(keyword.clone()),
+                });
+            }
+        }
+        // CR 905.2b draft-noted keywords (`StaticEffect::SelfHasDraftNotedKeywords`)
+        // — Animus of Predation wears whatever it removed from the draft.
+        for card in &self.battlefield {
+            if !card.definition.static_abilities.iter().any(|sa| {
+                matches!(sa.effect, crate::effect::StaticEffect::SelfHasDraftNotedKeywords)
+            }) {
+                continue;
+            }
+            for keyword in self.players[card.controller]
+                .draft_notes
+                .noted_keywords(card.definition.name)
+            {
                 all_effects.push(ContinuousEffect {
                     timestamp: card.object_timestamp(),
                     source: card.id,
@@ -20249,6 +20290,7 @@ fn static_effect_to_effects(
             | StaticEffect::SelfBasePtFromValue { .. }
             | StaticEffect::SetBasePtForFilterFromValue { .. }
             | StaticEffect::SelfHasKeywordIf { .. }
+            | StaticEffect::SelfHasDraftNotedKeywords
             | StaticEffect::SelfIsCreatureIf { .. }
             // GrantKeywordToChosenType — reads the source's live chosen type;
             // resolved in `gather_continuous_effects`.

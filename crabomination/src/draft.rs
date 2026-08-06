@@ -27,7 +27,7 @@ use std::collections::HashMap;
 use rand::{Rng, RngExt};
 use rand::seq::SliceRandom;
 
-use crate::card::CardType;
+use crate::card::{CardType, CreatureType, Keyword};
 use crate::cube::{CardFactory, all_cube_cards};
 use crate::game::GameState;
 use crate::mana::{Color, ManaSymbol};
@@ -768,6 +768,10 @@ pub struct DraftNotes {
     pub numbers: HashMap<String, Vec<u32>>,
     pub names: HashMap<String, Vec<String>>,
     pub colors: HashMap<String, Vec<Color>>,
+    #[serde(default)]
+    pub keywords: HashMap<String, Vec<Keyword>>,
+    #[serde(default)]
+    pub creature_types: HashMap<String, Vec<CreatureType>>,
 }
 
 impl DraftNotes {
@@ -779,6 +783,29 @@ impl DraftNotes {
     }
     pub fn note_colors(&mut self, source: &str, colors: &[Color]) {
         self.colors.entry(source.to_string()).or_default().extend_from_slice(colors);
+    }
+    /// Animus of Predation notes only the ten keywords it lists.
+    pub fn note_keywords(&mut self, source: &str, keywords: &[Keyword]) {
+        let noted = self.keywords.entry(source.to_string()).or_default();
+        for kw in keywords.iter().filter(|k| ANIMUS_KEYWORDS.contains(k)) {
+            if !noted.contains(kw) {
+                noted.push(kw.clone());
+            }
+        }
+    }
+    pub fn note_creature_types(&mut self, source: &str, types: &[CreatureType]) {
+        let noted = self.creature_types.entry(source.to_string()).or_default();
+        for ct in types {
+            if !noted.contains(ct) {
+                noted.push(*ct);
+            }
+        }
+    }
+    pub fn noted_keywords(&self, source: &str) -> &[Keyword] {
+        self.keywords.get(source).map(|v| v.as_slice()).unwrap_or(&[])
+    }
+    pub fn noted_creature_types(&self, source: &str) -> &[CreatureType] {
+        self.creature_types.get(source).map(|v| v.as_slice()).unwrap_or(&[])
     }
     /// Highest number noted for `source`, or 0.
     pub fn max_number(&self, source: &str) -> u32 {
@@ -801,6 +828,14 @@ impl DraftNotes {
         for (name, colors) in &self.colors {
             let cs: Vec<String> = colors.iter().map(|c| c.short_name().to_string()).collect();
             out.push(format!("{name}: {}", cs.join(", ")));
+        }
+        for (name, kws) in &self.keywords {
+            let ks: Vec<String> = kws.iter().map(|k| format!("{k:?}")).collect();
+            out.push(format!("{name}: {}", ks.join(", ")));
+        }
+        for (name, cts) in &self.creature_types {
+            let ts: Vec<String> = cts.iter().map(|t| format!("{t:?}")).collect();
+            out.push(format!("{name}: {}", ts.join(", ")));
         }
         out.sort();
         out
@@ -829,6 +864,23 @@ pub const NOBLE_BANNERET: &str = "Noble Banneret";
 pub const SMUGGLER_CAPTAIN: &str = "Smuggler Captain";
 pub const REGICIDE: &str = "Regicide";
 pub const SPIRE_PHANTASM: &str = "Spire Phantasm";
+pub const ANIMUS_OF_PREDATION: &str = "Animus of Predation";
+pub const PALIANO_VANGUARD: &str = "Paliano Vanguard";
+
+/// The eleven keywords Animus of Predation lists; nothing else is noted.
+pub const ANIMUS_KEYWORDS: [Keyword; 11] = [
+    Keyword::Flying,
+    Keyword::FirstStrike,
+    Keyword::DoubleStrike,
+    Keyword::Deathtouch,
+    Keyword::Haste,
+    Keyword::Hexproof,
+    Keyword::Indestructible,
+    Keyword::Lifelink,
+    Keyword::Menace,
+    Keyword::Reach,
+    Keyword::Vigilance,
+];
 
 /// CN2's "reveal this card as you draft it and note how many cards you've
 /// drafted this draft round" cycle — the same note Lurking Automaton takes.
@@ -840,9 +892,13 @@ const ROUND_PICK_NOTERS: [&str; 4] =
 pub enum PickAction {
     /// Draft the card at this pack index into the seat's pool.
     Take(usize),
-    /// Cogwork Grinder — draft it and remove it from the draft face down;
-    /// it never joins the pool (CR 905.2c).
+    /// Cogwork Grinder / Animus of Predation — draft it and remove it from
+    /// the draft; it never joins the pool (CR 905.2c). Every remover in the
+    /// pool takes its note.
     Remove(usize),
+    /// Paliano Vanguard — draft the card and reveal it, noting its creature
+    /// types and turning one face-up Vanguard face down.
+    TakeRevealed(usize),
     /// Cogwork Librarian — draft two cards from this pack, putting a
     /// Librarian already in the pool back into it.
     Librarian(usize, usize),
@@ -879,6 +935,9 @@ pub struct DraftPod {
     round_picks: Vec<u32>,
     /// Whispergear Sneaks a seat has turned face down; each one buys a peek.
     sneaks_used: Vec<u32>,
+    /// Paliano Vanguards a seat has turned face down; each one buys one
+    /// creature-type note.
+    vanguards_used: Vec<u32>,
 }
 
 impl DraftPod {
@@ -905,6 +964,7 @@ impl DraftPod {
             owed_name_notes: vec![Vec::new(); POD_SIZE],
             round_picks: vec![0; POD_SIZE],
             sneaks_used: vec![0; POD_SIZE],
+            vanguards_used: vec![0; POD_SIZE],
         }
     }
 
@@ -943,8 +1003,14 @@ impl DraftPod {
         if self.owns(seat, COGWORK_GRINDER) > 0 {
             out.push(COGWORK_GRINDER);
         }
+        if self.owns(seat, ANIMUS_OF_PREDATION) > 0 {
+            out.push(ANIMUS_OF_PREDATION);
+        }
         if self.owns(seat, WHISPERGEAR_SNEAK) as u32 > self.sneaks_used[seat] {
             out.push(WHISPERGEAR_SNEAK);
+        }
+        if self.owns(seat, PALIANO_VANGUARD) as u32 > self.vanguards_used[seat] {
+            out.push(PALIANO_VANGUARD);
         }
         out
     }
@@ -1030,14 +1096,36 @@ impl DraftPod {
                 }
             }
             PickAction::Remove(i) => {
-                if self.owns(seat, COGWORK_GRINDER) == 0 {
+                let grinders = self.owns(seat, COGWORK_GRINDER);
+                let animi = self.owns(seat, ANIMUS_OF_PREDATION);
+                if grinders == 0 && animi == 0 {
                     return self.apply(seat, PickAction::Take(i));
                 }
                 if let Some(card) = self.draw_from_pack(seat, i) {
                     self.round_picks[seat] += 1;
+                    if grinders > 0 {
+                        self.notes[seat].note_number(COGWORK_GRINDER, 1);
+                    }
+                    if animi > 0 {
+                        let def = card();
+                        self.notes[seat].note_keywords(ANIMUS_OF_PREDATION, &def.keywords);
+                    }
                     self.removed[seat].push(card);
-                    self.notes[seat].note_number(COGWORK_GRINDER, 1);
                 }
+            }
+            PickAction::TakeRevealed(i) => {
+                if self.owns(seat, PALIANO_VANGUARD) as u32 <= self.vanguards_used[seat] {
+                    return self.apply(seat, PickAction::Take(i));
+                }
+                let Some(card) = self.draw_from_pack(seat, i) else { return };
+                let def = card();
+                if !def.is_creature() {
+                    return self.record_pick(seat, card);
+                }
+                self.vanguards_used[seat] += 1;
+                self.notes[seat]
+                    .note_creature_types(PALIANO_VANGUARD, &def.subtypes.creature_types);
+                self.record_pick(seat, card);
             }
             PickAction::Librarian(a, b) => {
                 let librarian = self

@@ -1329,6 +1329,7 @@ impl GameState {
                 source: crate::effect::Selector::Target(0),
                 extra_creature_types: spec.extra_creature_types.clone(),
                 keep_own_triggered: false,
+                keep_own_activated: false,
             },
             &ctx,
         ) {
@@ -26188,17 +26189,20 @@ impl GameState {
                 source,
                 extra_creature_types,
                 keep_own_triggered,
+                keep_own_activated,
             } => {
                 // CR 707.2 — `what` becomes a copy of `source`'s copiable
                 // characteristics. One-shot definition rewrite: clone the
                 // source's current definition Arc and stamp it onto each
                 // resolved `what`, preserving instance state. Locked in at
                 // resolution; later changes to the source don't propagate.
+                // The source is usually a permanent, but "a copy of a card you
+                // exiled" (Volatile Chimera) copies a card in another zone.
                 let src_def = self
                     .resolve_selector(source, ctx)
                     .into_iter()
-                    .find_map(|e| e.as_permanent_id())
-                    .and_then(|id| self.battlefield.iter().find(|c| c.id == id))
+                    .find_map(|e| e.as_card_id())
+                    .and_then(|id| self.find_card_anywhere(id))
                     .map(|c| c.definition.clone());
                 if let Some(src_def) = src_def {
                     for ent in self.resolve_selector(what, ctx) {
@@ -26214,6 +26218,11 @@ impl GameState {
                                 new_def
                                     .triggered_abilities
                                     .extend(c.definition.triggered_abilities.iter().cloned());
+                            }
+                            if *keep_own_activated {
+                                new_def
+                                    .activated_abilities
+                                    .extend(c.definition.activated_abilities.iter().cloned());
                             }
                             let original =
                                 std::mem::replace(&mut c.definition, std::sync::Arc::new(new_def));
@@ -31675,6 +31684,14 @@ impl GameState {
                     _ => None,
                 })
                 .collect(),
+            Selector::RandomOf(inner) => {
+                use rand::seq::IteratorRandom;
+                self.resolve_selector_inner(inner, ctx)
+                    .into_iter()
+                    .choose(&mut rand::rng())
+                    .into_iter()
+                    .collect()
+            }
             Selector::TriggerSource => ctx.trigger_source.into_iter().collect(),
             Selector::ChosenPermanentOfSource => ctx
                 .source
@@ -32358,7 +32375,21 @@ impl GameState {
                     // A resolving instant/sorcery is already off the stack, so
                     // its pick lives in the resolution scratch instead.
                     .or(self.chosen_creature_type_scratch);
-                let filter = &filter.resolve_x(ctx.x_value).resolve_chosen_creature_type(chosen);
+                let mut filter = filter.resolve_x(ctx.x_value).resolve_chosen_creature_type(chosen);
+                // CR 905.2b — the hidden-zone evaluator is source-blind, so
+                // concretize "a name you noted" against the draft notes first
+                // (Arcane Savant's pre-game exile pile).
+                if filter.mentions_noted_names() {
+                    let noted: Vec<String> = ctx
+                        .source
+                        .and_then(|id| self.find_card_anywhere(id))
+                        .map(|c| c.definition.name)
+                        .or(ctx.source_name)
+                        .and_then(|n| self.players[ctx.controller].draft_notes.names.get(n).cloned())
+                        .unwrap_or_default();
+                    filter = filter.resolve_noted_names(&noted);
+                }
+                let filter = &filter;
                 let players = self.resolve_players(who, ctx);
                 let mut out: Vec<EntityRef> = Vec::new();
                 for p in players {

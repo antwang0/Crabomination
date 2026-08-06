@@ -3228,3 +3228,22 @@ pub fn rally_grant(keyword: Keyword) -> TriggeredAbility {
         duration: Duration::EndOfTurn,
     })
 }
+
+/// "Create a token that's a copy of `source`" — the plain CR 707.2 shape, no
+/// riders. The rider-bearing printings still spell `Effect::CreateTokenCopyOf`
+/// out.
+pub fn token_copy_of(who: PlayerRef, count: Value, source: Selector) -> Effect {
+    Effect::CreateTokenCopyOf {
+        who,
+        count,
+        source,
+        extra_creature_types: vec![],
+        extra_card_types: vec![],
+        override_pt: None,
+        override_colors: None,
+        enters_tapped: false,
+        non_legendary: false,
+        legendary: false,
+        extra_keywords: vec![],
+    }
+}
