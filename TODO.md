@@ -24,7 +24,26 @@ Items are grouped by area and roughly ordered by impact within each group.
   Option<usize>` stamped by every control change, which would also give
   CR 800.4a's revert step a precise rule instead of "revert everything". ⏳
 
-## Noticed this run (Weatherlight closed)
+## Noticed this run (Visions opened)
+
+- **`StaticEffect::CostReduction` has no scope knob.** It is controller-only,
+  so Helm of Awakening needed a whole sibling variant
+  (`AllPlayersSpellsCostLess`). The `AnthemFor*` family has the same problem
+  (TODO below) — worth one shared `Scope { You, Opponents, AllPlayers }` enum
+  across the reduction, tax and anthem families. ⏳
+- **Ward-cost filters are evaluated three different ways.** `SacrificeMatchingN`
+  and `ReturnMatchingToHand` now use `evaluate_requirement_static` with the
+  source; the other filtered arms (`DiscardMatching`, `SacrificeMatching`,
+  `ExileTopFromGraveyardMatching`, …) still use the source-blind
+  `evaluate_requirement_on_card`, so `OtherThanSource` / `IsSource` silently
+  read wrong there. Worth one pass over `try_pay_ward_cost`. ⏳
+- **Remaining Visions gaps (76) cluster on four shapes:** the phasing
+  mass-effects (Equipoise, Teferi's Realm, Katabatic Winds), the Chimera
+  sacrifice cycle (a `+2/+2` counter *plus* an indefinite keyword grant), the
+  world enchantments (Elkin Lair, Eye of Singularity), and the
+  "pay-per-attacker" pseudo-fog cycle (Elephant Grass, Heat Wave). ⏳
+
+## Noticed last run (Weatherlight closed)
 
 - **`Effect::AtEndOfCombat` carries one target, and now one subject.** It
   captures `ctx.targets.first()` and `ctx.trigger_source`; a body that needs a
