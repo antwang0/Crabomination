@@ -1090,3 +1090,217 @@ pub fn shimmering_efreet() -> CardDefinition {
         ..creature("Shimmering Efreet", cost(&[generic(2), u()]), vec![CreatureType::Efreet], 2, 2)
     }
 }
+
+/// Python — {1}{B}{B} 3/2 Snake.
+pub fn python() -> CardDefinition {
+    creature("Python", cost(&[generic(1), b(), b()]), vec![CreatureType::Snake], 3, 2)
+}
+
+/// Raging Gorilla — {2}{R} 2/3 that swings to +2/-2 whenever it blocks or
+/// becomes blocked.
+pub fn raging_gorilla() -> CardDefinition {
+    let swing = || Effect::PumpPT {
+        what: Selector::This,
+        power: Value::Const(2),
+        toughness: Value::Const(-2),
+        duration: Duration::EndOfTurn,
+    };
+    CardDefinition {
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::Blocks, EventScope::SelfSource),
+                effect: swing(),
+            },
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::BecomesBlocked, EventScope::SelfSource),
+                effect: swing(),
+            },
+        ],
+        ..creature("Raging Gorilla", cost(&[generic(2), r()]), vec![CreatureType::Ape], 2, 3)
+    }
+}
+
+/// Suq'Ata Assassin — {1}{B}{B} 1/1 with fear that poisons on an unblocked
+/// attack.
+pub fn suqata_assassin() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Fear],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::AttacksAndIsntBlocked, EventScope::SelfSource),
+            effect: Effect::AddPoison {
+                who: Selector::Player(PlayerRef::DefendingPlayer),
+                amount: Value::Const(1),
+            },
+        }],
+        ..creature(
+            "Suq'Ata Assassin",
+            cost(&[generic(1), b(), b()]),
+            vec![CreatureType::Human, CreatureType::Assassin],
+            1,
+            1,
+        )
+    }
+}
+
+/// Talruum Piper — {4}{R} 3/3 that every flier able to block must block.
+pub fn talruum_piper() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::AllMustBlock],
+        ..creature("Talruum Piper", cost(&[generic(4), r()]), vec![CreatureType::Minotaur], 3, 3)
+    }
+}
+
+/// Waterspout Djinn — {2}{U}{U} 4/4 flier; each upkeep you bounce an untapped
+/// Island or sacrifice it.
+pub fn waterspout_djinn() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![TriggeredAbility {
+            event: your_upkeep(),
+            effect: Effect::SacrificeSourceUnlessCost {
+                cost: WardCost::ReturnMatchingToHand(Box::new(
+                    R::HasLandType(LandType::Island).and(R::Untapped),
+                )),
+            },
+        }],
+        ..creature("Waterspout Djinn", cost(&[generic(2), u(), u()]), vec![CreatureType::Djinn], 4, 4)
+    }
+}
+
+/// Giant Caterpillar — {3}{G} 3/3; sacrifice it for a 1/1 flying Butterfly at
+/// the next end step.
+pub fn giant_caterpillar() -> CardDefinition {
+    let butterfly = crate::card::TokenDefinition {
+        name: "Butterfly".into(),
+        power: 1,
+        toughness: 1,
+        colors: vec![Color::Green],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Insect], ..Default::default() },
+        keywords: vec![Keyword::Flying],
+        ..Default::default()
+    };
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[g()]),
+            sac_cost: true,
+            effect: Effect::DelayUntil {
+                kind: crate::effect::DelayedTriggerKind::NextEndStep,
+                body: Box::new(Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::ONE,
+                    definition: butterfly,
+                }),
+            },
+            ..Default::default()
+        }],
+        ..creature("Giant Caterpillar", cost(&[generic(3), g()]), vec![CreatureType::Insect], 3, 3)
+    }
+}
+
+/// Kyscu Drake — {3}{G} 2/2 flier that can pump its toughness once a turn.
+/// (The Viashivan Dragon assembly ability is dropped.)
+pub fn kyscu_drake() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flying],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[g()]),
+            once_per_turn: true,
+            effect: Effect::PumpPT {
+                what: Selector::This,
+                power: Value::ZERO,
+                toughness: Value::ONE,
+                duration: Duration::EndOfTurn,
+            },
+            ..Default::default()
+        }],
+        ..creature("Kyscu Drake", cost(&[generic(3), g()]), vec![CreatureType::Drake], 2, 2)
+    }
+}
+
+/// Necrosavant — {3}{B}{B}{B} 5/5 that buys itself back out of the graveyard
+/// during your upkeep by eating a creature.
+pub fn necrosavant() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(3), b(), b()]),
+            from_graveyard: true,
+            sac_other_filter: Some((R::Creature, 1)),
+            condition: Some(Predicate::CurrentStepIs(TurnStep::Upkeep)),
+            effect: Effect::Move {
+                what: Selector::This,
+                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+            },
+            ..Default::default()
+        }],
+        ..creature(
+            "Necrosavant",
+            cost(&[generic(3), b(), b(), b()]),
+            vec![CreatureType::Zombie, CreatureType::Giant],
+            5,
+            5,
+        )
+    }
+}
+
+/// Parapet — {1}{W} Enchantment. Creatures you control get +0/+1.
+pub fn parapet() -> CardDefinition {
+    CardDefinition {
+        static_abilities: vec![StaticAbility {
+            description: "Creatures you control get +0/+1.",
+            effect: StaticEffect::PumpPT {
+                applies_to: Selector::EachPermanent(R::Creature.and(R::ControlledByYou)),
+                power: 0,
+                toughness: 1,
+            },
+        }],
+        ..enchantment("Parapet", cost(&[generic(1), w()]))
+    }
+}
+
+/// Mortal Wound — {G} Aura. When enchanted creature is dealt damage, destroy it.
+pub fn mortal_wound() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::DealtDamage, EventScope::EnchantedBySource),
+            effect: Effect::Destroy { what: Selector::AttachedTo(Box::new(Selector::This)) },
+        }],
+        ..aura("Mortal Wound", cost(&[g()]), EquipBonus::default())
+    }
+}
+
+/// Mystic Veil — {1}{U} Aura granting shroud.
+pub fn mystic_veil() -> CardDefinition {
+    aura(
+        "Mystic Veil",
+        cost(&[generic(1), u()]),
+        EquipBonus { keywords: vec![Keyword::Shroud], ..Default::default() },
+    )
+}
+
+/// Relic Ward — {1}{W} Aura on an artifact, granting it shroud.
+pub fn relic_ward() -> CardDefinition {
+    CardDefinition {
+        effect: Effect::Attach { what: Selector::This, to: target_filtered(R::Artifact) },
+        ..aura(
+            "Relic Ward",
+            cost(&[generic(1), w()]),
+            EquipBonus { keywords: vec![Keyword::Shroud], ..Default::default() },
+        )
+    }
+}
+
+/// Betrayal — {U} Aura on an opponent's creature; you draw whenever it taps.
+pub fn betrayal() -> CardDefinition {
+    CardDefinition {
+        effect: Effect::Attach {
+            what: Selector::This,
+            to: target_filtered(R::Creature.and(R::ControlledByOpponent)),
+        },
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Tapped, EventScope::EnchantedBySource),
+            effect: draw(1),
+        }],
+        ..aura("Betrayal", cost(&[u()]), EquipBonus::default())
+    }
+}

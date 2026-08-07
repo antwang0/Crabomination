@@ -31,13 +31,12 @@ Items are grouped by area and roughly ordered by impact within each group.
   (`AllPlayersSpellsCostLess`). The `AnthemFor*` family has the same problem
   (TODO below) — worth one shared `Scope { You, Opponents, AllPlayers }` enum
   across the reduction, tax and anthem families. ⏳
-- **Ward-cost filters are evaluated three different ways.** `SacrificeMatchingN`
-  and `ReturnMatchingToHand` now use `evaluate_requirement_static` with the
-  source; the other filtered arms (`DiscardMatching`, `SacrificeMatching`,
-  `ExileTopFromGraveyardMatching`, …) still use the source-blind
-  `evaluate_requirement_on_card`, so `OtherThanSource` / `IsSource` silently
-  read wrong there. Worth one pass over `try_pay_ward_cost`. ⏳
-- **Remaining Visions gaps (76) cluster on four shapes:** the phasing
+- ✅ **Ward-cost filters are evaluated one way.** Every filtered `WardCost` arm
+  (`DiscardMatching`, `SacrificeMatching`, `ExileTopFromGraveyardMatching`,
+  `ReturnMatchingFromGraveyardToHand`, alongside the two that already did) now
+  goes through `evaluate_requirement_static` with `ctx.source`, so
+  `OtherThanSource` / `IsSource` read right in all of them.
+- **Remaining Visions gaps (63) cluster on four shapes:** the phasing
   mass-effects (Equipoise, Teferi's Realm, Katabatic Winds), the Chimera
   sacrifice cycle (a `+2/+2` counter *plus* an indefinite keyword grant), the
   world enchantments (Elkin Lair, Eye of Singularity), and the

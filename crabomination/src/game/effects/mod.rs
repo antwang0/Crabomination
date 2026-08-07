@@ -35012,10 +35012,11 @@ impl GameState {
                         let picks: Vec<CardId> = hand
                             .iter()
                             .filter(|c| {
-                                self.evaluate_requirement_on_card(
+                                self.evaluate_requirement_static(
                                     filter,
-                                    c,
+                                    &Target::Permanent(c.id),
                                     payer,
+                                    ctx.source,
                                 )
                             })
                             .take(n)
@@ -35202,7 +35203,14 @@ impl GameState {
                             .graveyard
                             .iter()
                             .rev()
-                            .find(|c| self.evaluate_requirement_on_card(filter, c, payer))
+                            .find(|c| {
+                                self.evaluate_requirement_static(
+                                    filter,
+                                    &Target::Permanent(c.id),
+                                    payer,
+                                    ctx.source,
+                                )
+                            })
                             .map(|c| c.id);
                         match pick {
                             None => false,
@@ -35223,7 +35231,14 @@ impl GameState {
                         let pick = self.players[payer]
                             .graveyard
                             .iter()
-                            .filter(|c| self.evaluate_requirement_on_card(filter, c, payer))
+                            .filter(|c| {
+                                self.evaluate_requirement_static(
+                                    filter,
+                                    &Target::Permanent(c.id),
+                                    payer,
+                                    ctx.source,
+                                )
+                            })
                             .min_by_key(|c| c.definition.cost.cmc())
                             .map(|c| c.id);
                         match pick {
@@ -35265,10 +35280,15 @@ impl GameState {
                         }
                     }
                     WardCost::SacrificeCreature | WardCost::SacrificeMatching(_) => {
+                        // Source-aware like `SacrificeMatchingN`, so
+                        // `OtherThanSource` / `IsSource` read right.
                         let matches = |g: &Self, c: &crate::card::CardInstance| match cost {
-                            WardCost::SacrificeMatching(f) => {
-                                g.evaluate_requirement_on_card(f, c, payer)
-                            }
+                            WardCost::SacrificeMatching(f) => g.evaluate_requirement_static(
+                                f,
+                                &Target::Permanent(c.id),
+                                payer,
+                                ctx.source,
+                            ),
                             _ => c.definition.is_creature(),
                         };
                         let pick = self

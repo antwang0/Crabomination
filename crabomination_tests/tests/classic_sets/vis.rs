@@ -308,3 +308,212 @@ fn vis_stat_lines_match_print() {
     assert!(catalog::fallen_askari().keywords.contains(&Keyword::CantBlock));
     assert!(catalog::shimmering_efreet().keywords.contains(&Keyword::Phasing));
 }
+
+/// Raging Gorilla swings to 4/1 when it becomes blocked.
+#[test]
+fn raging_gorilla_swings_when_blocked() {
+    let mut g = two_player_game();
+    let ape = ready(&mut g, 0, catalog::raging_gorilla());
+    let wall = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    while g.step != TurnStep::DeclareAttackers {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: ape,
+        target: AttackTarget::Player(1),
+    }]))
+    .expect("attack");
+    drain_stack(&mut g);
+    while g.step != TurnStep::DeclareBlockers {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    g.perform_action(GameAction::DeclareBlockers(vec![(wall, ape)])).expect("block");
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(ape).expect("still there");
+    assert_eq!((cp.power, cp.toughness), (4, 1), "+2/-2 on becoming blocked");
+}
+
+/// Suq'Ata Assassin poisons the defender when it gets through.
+#[test]
+fn suqata_assassin_poisons_on_unblocked_attack() {
+    let mut g = two_player_game();
+    let assassin = ready(&mut g, 0, catalog::suqata_assassin());
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    while g.step != TurnStep::DeclareAttackers {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: assassin,
+        target: AttackTarget::Player(1),
+    }]))
+    .expect("attack");
+    drain_stack(&mut g);
+    while g.step != TurnStep::DeclareBlockers {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    g.perform_action(GameAction::DeclareBlockers(vec![])).expect("no blocks");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].poison_counters, 1, "unblocked attack poisoned the defender");
+}
+
+/// Waterspout Djinn eats itself at upkeep with no untapped Island to bounce.
+#[test]
+fn waterspout_djinn_sacrifices_without_an_island() {
+    let mut g = two_player_game();
+    let djinn = g.add_card_to_battlefield(0, catalog::waterspout_djinn());
+    g.active_player_idx = 0;
+    g.fire_step_triggers(TurnStep::Upkeep);
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(djinn).is_none(), "no Island to return");
+
+    let mut g = two_player_game();
+    let djinn = g.add_card_to_battlefield(0, catalog::waterspout_djinn());
+    let island = g.add_card_to_battlefield(0, catalog::island());
+    g.active_player_idx = 0;
+    g.fire_step_triggers(TurnStep::Upkeep);
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(djinn).is_some(), "the Island paid for it");
+    assert!(g.battlefield_find(island).is_none(), "and went back to hand");
+}
+
+/// Mortal Wound kills its host the moment the host takes any damage.
+#[test]
+fn mortal_wound_destroys_on_damage() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let aura = g.add_card_to_hand(0, catalog::mortal_wound());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    cast(&mut g, aura, Some(Target::Permanent(bear))).expect("cast");
+    drain_stack(&mut g);
+    let mut evs = Vec::new();
+    g.deal_damage_to_from(
+        crabomination::game::effects::EntityRef::Permanent(bear),
+        1,
+        None,
+        &mut evs,
+    );
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_none(), "one damage destroyed it");
+}
+
+/// Betrayal draws its controller a card whenever the enchanted creature taps.
+#[test]
+fn betrayal_draws_when_the_host_taps() {
+    let mut g = two_player_game();
+    let theirs = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    for _ in 0..3 {
+        g.add_card_to_library(0, catalog::forest());
+    }
+    let aura = g.add_card_to_hand(0, catalog::betrayal());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    cast(&mut g, aura, Some(Target::Permanent(theirs))).expect("cast");
+    drain_stack(&mut g);
+    let hand = g.players[0].hand.len();
+    g.battlefield_find_mut(theirs).unwrap().tapped = true;
+    g.dispatch_triggers_for_events(&[crabomination::game::types::GameEvent::PermanentTapped {
+        card_id: theirs,
+        actor: None,
+        as_attacker: false,
+    }]);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand + 1, "the tap drew a card");
+}
+
+/// Parapet is a +0/+1 anthem for your creatures only.
+#[test]
+fn parapet_toughens_your_team() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::parapet());
+    let mine = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let theirs = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    assert_eq!(g.computed_permanent(mine).unwrap().toughness, 3);
+    assert_eq!(g.computed_permanent(theirs).unwrap().toughness, 2);
+}
+
+/// Mystic Veil and Relic Ward both hand out shroud, on a creature and an
+/// artifact respectively.
+#[test]
+fn shroud_auras_protect_their_hosts() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let veil = g.add_card_to_hand(0, catalog::mystic_veil());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    cast(&mut g, veil, Some(Target::Permanent(bear))).expect("cast");
+    drain_stack(&mut g);
+    assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Shroud));
+    assert_eq!(
+        catalog::relic_ward().aura_enchant_filter(),
+        Some(&crabomination::card::SelectionRequirement::Artifact),
+        "Relic Ward enchants an artifact"
+    );
+}
+
+/// Giant Caterpillar's sacrifice pays off at the next end step.
+#[test]
+fn giant_caterpillar_leaves_a_butterfly() {
+    let mut g = two_player_game();
+    let bug = ready(&mut g, 0, catalog::giant_caterpillar());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    activate(&mut g, bug, 0, None).expect("sacrifice");
+    drain_stack(&mut g);
+    assert!(!g.battlefield.iter().any(|c| c.definition.name == "Butterfly"), "not yet");
+    while g.step != TurnStep::End {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    drain_stack(&mut g);
+    assert!(
+        g.battlefield.iter().any(|c| c.definition.name == "Butterfly"),
+        "the Butterfly arrived at the end step"
+    );
+}
+
+/// Necrosavant crawls back during your upkeep by eating another creature.
+#[test]
+fn necrosavant_reanimates_itself_at_upkeep() {
+    let mut g = two_player_game();
+    let savant = g.add_card_to_graveyard(0, catalog::necrosavant());
+    let fodder = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.players[0].mana_pool.add(Color::Black, 2);
+    g.players[0].mana_pool.add_colorless(3);
+    g.active_player_idx = 0;
+    g.step = TurnStep::Upkeep;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: savant,
+        ability_index: 0,
+        target: None,
+        additional_targets: vec![],
+        x_value: None,
+        mode: None,
+    })
+    .expect("reanimate");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(savant).is_some(), "back on the battlefield");
+    assert!(g.battlefield_find(fodder).is_none(), "ate a creature for it");
+}
+
+/// The wave's plain bodies match print.
+#[test]
+fn vis_wave_two_stat_lines_match_print() {
+    for (def, p, t) in [
+        (catalog::python(), 3, 2),
+        (catalog::raging_gorilla(), 2, 3),
+        (catalog::suqata_assassin(), 1, 1),
+        (catalog::talruum_piper(), 3, 3),
+        (catalog::waterspout_djinn(), 4, 4),
+        (catalog::giant_caterpillar(), 3, 3),
+        (catalog::kyscu_drake(), 2, 2),
+        (catalog::necrosavant(), 5, 5),
+    ] {
+        assert_eq!((def.power, def.toughness), (p, t), "{}", def.name);
+    }
+    assert!(catalog::suqata_assassin().keywords.contains(&Keyword::Fear));
+    assert!(catalog::talruum_piper().keywords.contains(&Keyword::AllMustBlock));
+}
