@@ -235,6 +235,7 @@ impl Effect {
         }
         match self {
             Effect::DestroyAllNoRegenGainControllerLifePerManaValue { .. }
+            | Effect::RevealHandDiscardMatchingUnlessPayLife { .. }
             | Effect::EachPlayerCreatesTokenPerControlled { .. }
             | Effect::AbandonThisScheme | Effect::GameIsADraw
             | Effect::PumpAttackersThisTurn { .. }

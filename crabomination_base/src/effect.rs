@@ -4476,6 +4476,15 @@ pub enum Effect {
     /// (Trapfinder's Trick). The reveal is knowledge-only; every match is
     /// discarded through the normal discard path so discard triggers fire.
     RevealHandDiscardAllMatching { who: PlayerRef, filter: SelectionRequirement },
+    /// "Target player reveals their hand. For each [`filter`] card revealed
+    /// this way, that player discards it unless they pay `life` life"
+    /// (Sirocco). The revealing player is asked per card, in hand order, and
+    /// a payment they can't afford counts as a decline.
+    RevealHandDiscardMatchingUnlessPayLife {
+        who: PlayerRef,
+        filter: SelectionRequirement,
+        life: u32,
+    },
     /// "Target player reveals their hand" (Darigaaz, the Igniter). Knowledge
     /// only: the hand becomes visible to the resolving controller for the rest
     /// of the game via `hands_revealed_to`.

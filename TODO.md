@@ -38,10 +38,6 @@ Items are grouped by area and roughly ordered by impact within each group.
   (retarget-another), Flash and Lure of Prey (cast-condition put-onto-
   battlefield), Illicit Auction (a life-bidding subgame), Polymorph and
   Natural Balance. ⏳
-- **Sirocco is approximated.** The printed card discards each revealed blue
-  instant *unless its controller pays 4 life*; the shipped body uses
-  `RevealHandDiscardAllMatching`, which skips the payment window. Wants a
-  `RevealHandDiscardMatchingUnlessPayLife`. ⏳
 - **Suq'Ata Firewalker uses `HexproofFromColor`.** The printed line is a
   shroud-from-red (its controller's red spells can't target it either);
   `HexproofFromColor` only stops opponents. ⏳

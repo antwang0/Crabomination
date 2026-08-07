@@ -909,9 +909,10 @@ pub fn sirocco() -> CardDefinition {
     instant(
         "Sirocco",
         cost(&[generic(1), r()]),
-        Effect::RevealHandDiscardAllMatching {
+        Effect::RevealHandDiscardMatchingUnlessPayLife {
             who: PlayerRef::Target(0),
             filter: R::HasColor(Color::Blue).and(R::HasCardType(CardType::Instant)),
+            life: 4,
         },
     )
 }

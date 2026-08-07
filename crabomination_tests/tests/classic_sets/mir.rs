@@ -1366,3 +1366,22 @@ fn zirilan_borrows_a_dragon() {
     drain_stack(&mut g);
     assert!(g.battlefield_find(dragon).is_none(), "exiled at the end step");
 }
+
+/// Sirocco makes each revealed blue instant cost 4 life to keep.
+#[test]
+fn sirocco_bills_four_life_per_blue_instant() {
+    for (pay, expect_life, expect_hand) in [(true, 16, 1), (false, 20, 0)] {
+        let mut g = two_player_game();
+        g.add_card_to_hand(1, catalog::jolt());
+        let spell = g.add_card_to_hand(0, catalog::sirocco());
+        g.players[0].mana_pool.add(Color::Red, 1);
+        g.players[0].mana_pool.add_colorless(1);
+        g.decider = Box::new(crabomination::decision::ScriptedDecider::new([
+            crabomination::decision::DecisionAnswer::Bool(pay),
+        ]));
+        cast(&mut g, spell, Some(Target::Player(1))).expect("cast");
+        drain_stack(&mut g);
+        assert_eq!(g.players[1].life, expect_life, "pay={pay}");
+        assert_eq!(g.players[1].hand.len(), expect_hand, "pay={pay}");
+    }
+}

@@ -21485,6 +21485,54 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::RevealHandDiscardMatchingUnlessPayLife { who, filter, life } => {
+                // Sirocco — the reveal is public, then each hit is a separate
+                // "pay or pitch" ask routed to the card's owner.
+                let Some(seat) = self.resolve_player(who, ctx) else { return Ok(()) };
+                if !self.hands_revealed_to.contains(&(ctx.controller, seat)) {
+                    self.hands_revealed_to.push((ctx.controller, seat));
+                }
+                let hits: Vec<crate::card::CardId> = self.players[seat]
+                    .hand
+                    .iter()
+                    .filter(|c| self.evaluate_requirement_on_card(filter, c, seat))
+                    .map(|c| c.id)
+                    .collect();
+                let source = ctx.source.unwrap_or(CardId(0));
+                let mut cursor = 0;
+                for id in hits {
+                    let name = self.players[seat]
+                        .hand
+                        .iter()
+                        .find(|c| c.id == id)
+                        .map(|c| c.definition.name.to_string())
+                        .unwrap_or_default();
+                    let Some(pay) = self.ask_seat_bool(
+                        &mut cursor,
+                        seat,
+                        format!("Pay {life} life to keep {name}?"),
+                        source,
+                        effect,
+                    ) else {
+                        return Ok(());
+                    };
+                    let payable = self.players[seat].life >= *life as i32;
+                    if pay && payable {
+                        let applied = self.adjust_life_applied(seat, -(*life as i32));
+                        if applied < 0 {
+                            events.push(GameEvent::LifeLost {
+                                player: seat,
+                                amount: (-applied) as u32,
+                            });
+                        }
+                    } else {
+                        self.discard_card(seat, id, events);
+                    }
+                }
+                self.clear_answer_log();
+                Ok(())
+            }
+
             Effect::RevealHand { who } => {
                 let Some(seat) = self.resolve_player(who, ctx) else { return Ok(()) };
                 if !self.hands_revealed_to.contains(&(ctx.controller, seat)) {
