@@ -273,6 +273,10 @@ fn run_lobby_server(listener: &TcpListener, slots: &SlotManager) -> ! {
     thread::spawn(move || serve_lobbies(conn_rx, on_match_end));
 
     let mut next_id: u64 = 0;
+    // A connection flood refuses once per accept; logging every one turns the
+    // flood into log spam. Emit at most one refusal line per second and carry
+    // the suppressed count on the next line that does print.
+    let mut refusal_log = RefusalLog::default();
     loop {
         let (stream, peer) = match accept_with_backoff(listener) {
             Some(p) => p,
@@ -281,12 +285,19 @@ fn run_lobby_server(listener: &TcpListener, slots: &SlotManager) -> ! {
         let guard = match slots.try_acquire(peer.ip()) {
             Ok(g) => g,
             Err(reason) => {
-                let s = slots.snapshot();
-                eprintln!(
-                    "refusing {peer}: {reason:?} (occupancy {}/peak {}, refused {}g/{}ip @ {rate}% of attempts, {ips} distinct IPs, max {max}/peak {pmax}/IP)",
-                    s.current, s.peak, s.refused_global, s.refused_per_ip,
-                    rate = s.refusal_rate_pct(), ips = s.distinct_ips, max = s.max_per_ip, pmax = s.peak_per_ip,
-                );
+                if let Some(suppressed) = refusal_log.should_log(Instant::now()) {
+                    let s = slots.snapshot();
+                    let skipped = if suppressed > 0 {
+                        format!(" [+{suppressed} suppressed]")
+                    } else {
+                        String::new()
+                    };
+                    eprintln!(
+                        "refusing {peer}: {reason:?} (occupancy {}/peak {}, refused {}g/{}ip @ {rate}% of attempts, {ips} distinct IPs, max {max}/peak {pmax}/IP){skipped}",
+                        s.current, s.peak, s.refused_global, s.refused_per_ip,
+                        rate = s.refusal_rate_pct(), ips = s.distinct_ips, max = s.max_per_ip, pmax = s.peak_per_ip,
+                    );
+                }
                 let _ = stream.shutdown(std::net::Shutdown::Both);
                 continue;
             }
@@ -305,6 +316,26 @@ fn run_lobby_server(listener: &TcpListener, slots: &SlotManager) -> ! {
             eprintln!("lobby driver exited; stopping accept loop");
             std::process::exit(1);
         }
+    }
+}
+
+/// One-line-per-second gate for the connection-refusal log.
+#[derive(Default)]
+struct RefusalLog {
+    last: Option<Instant>,
+    suppressed: u64,
+}
+
+impl RefusalLog {
+    /// Returns `Some(suppressed_since_last_line)` when this refusal should be
+    /// logged, or `None` when it falls inside the current 1s window.
+    fn should_log(&mut self, now: Instant) -> Option<u64> {
+        if self.last.is_some_and(|t| now.duration_since(t) < Duration::from_secs(1)) {
+            self.suppressed += 1;
+            return None;
+        }
+        self.last = Some(now);
+        Some(std::mem::take(&mut self.suppressed))
     }
 }
 
@@ -595,6 +626,22 @@ mod tests {
 
     pub(crate) fn ip(s: &str) -> IpAddr {
         s.parse().expect("parse ip")
+    }
+
+    #[test]
+    pub(crate) fn refusal_log_throttles_to_one_line_per_second() {
+        use super::RefusalLog;
+        let t0 = Instant::now();
+        let mut gate = RefusalLog::default();
+        assert_eq!(gate.should_log(t0), Some(0), "first refusal always logs");
+        assert_eq!(gate.should_log(t0 + Duration::from_millis(100)), None);
+        assert_eq!(gate.should_log(t0 + Duration::from_millis(500)), None);
+        assert_eq!(
+            gate.should_log(t0 + Duration::from_millis(1100)),
+            Some(2),
+            "the next line carries the suppressed count and resets it"
+        );
+        assert_eq!(gate.should_log(t0 + Duration::from_secs(3)), Some(0));
     }
 
     #[test]
