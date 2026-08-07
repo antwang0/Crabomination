@@ -35,10 +35,6 @@ Items are grouped by area and roughly ordered by impact within each group.
 - **`Effect::OathCatchUp` auto-picks the biggest lead in multiplayer.** The
   printed wording is "that player chooses target player who …", a real target
   choice by the upkeep player. Exact in 1v1. ⏳
-- **Crashing Boars picks the blocker itself.** The printed line is "defending
-  player chooses an untapped creature they control"; the engine takes the
-  first match via `Selector::one_of`. Wants a `ChooseBy`-style selector that
-  routes the pick to a named seat. ⏳
 - **Volrath's Dungeon's buy-off is an `any_player` activation** gated on
   `IsTurnOf(You)`, which reads the *activating* seat, so the "only during
   their turn" clause is right but a third player in multiplayer can also buy
@@ -51,14 +47,6 @@ Items are grouped by area and roughly ordered by impact within each group.
   and modes; `process_delayed_spells` re-casts it from exile with an
   auto-picked target instead. Wants the delayed trigger to carry the original
   cast's target/mode/X stamp. ⏳
-- **Oracle en-Vec's mandate doesn't survive a control change.**
-  `GameState.attack_mandates` keys on the seat, so a creature that changes
-  controller between the activation and the mandated turn is still on the
-  list. Also: `AttackMandate` is per-seat, so a second Oracle activation
-  replaces the first rather than stacking. ⏳
-- **Duplicity's LTB clause is `PermanentLeavesBattlefield`, not "lose
-  control".** A control change with the enchantment still on the battlefield
-  won't bin the pile. Wants a `LostControl` event kind. ⏳
 
 ## Noticed last run (Tempest down to 3)
 

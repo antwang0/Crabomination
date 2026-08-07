@@ -1303,7 +1303,7 @@ pub fn provoke() -> CardDefinition {
                 what: target_filtered(R::Creature.and(R::ControlledByOpponent)),
                 up_to: None,
             },
-            Effect::MustBlockSource { what: target_n(0) },
+            Effect::MustBlockSource { what: target_n(0), chooser: None },
             draw(1),
         ]),
         ..Default::default()

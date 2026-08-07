@@ -462,8 +462,7 @@ impl GameState {
             .any(|(i, pl)| !self.same_team(p, i) && pl.is_alive());
         // CR 508.1a/d — Oracle en-Vec's mandate: only the chosen creatures may
         // attack, and each of them that can attack must.
-        if let Some(m) = self.attack_mandates.iter().find(|m| m.seat == p && m.armed) {
-            let chosen = m.chosen.clone();
+        if let Some(chosen) = self.armed_attack_mandate_for(p) {
             if let Some(bad) = attacks.iter().find(|a| !chosen.contains(&a.attacker)) {
                 return Err(GameError::CannotAttack(bad.attacker));
             }

@@ -9520,12 +9520,44 @@ impl GameState {
                 Ok(())
             }
 
-            Effect::MustBlockSource { what } => {
+            Effect::MustBlockSource { what, chooser } => {
                 // CR 509.1c — force the target to block the source this turn
                 // if able (no untap, unlike Provoke). Matsu-Tribe Decoy.
                 let source = ctx.source;
-                for ent in self.resolve_selector(what, ctx) {
-                    let Some(cid) = ent.as_permanent_id() else { continue };
+                let mut picks: Vec<CardId> = self
+                    .resolve_selector(what, ctx)
+                    .into_iter()
+                    .filter_map(|e| e.as_permanent_id())
+                    .collect();
+                // Crashing Boars — the defending player names which of their
+                // untapped creatures is conscripted.
+                if let Some(who) = chooser
+                    && let Some(seat) = self.resolve_player(who, ctx)
+                    && picks.len() > 1
+                {
+                    let candidates: Vec<(CardId, String)> = picks
+                        .iter()
+                        .filter_map(|id| {
+                            self.battlefield_find(*id)
+                                .map(|c| (*id, c.definition.name.to_string()))
+                        })
+                        .collect();
+                    let fallback = candidates[0].0;
+                    let picked = self
+                        .ask_seat_cards(
+                            seat,
+                            "Choose a creature to block with".into(),
+                            source.unwrap_or(CardId(0)),
+                            candidates,
+                            1,
+                            1,
+                            effect,
+                        )
+                        .and_then(|v| v.first().copied())
+                        .unwrap_or(fallback);
+                    picks = vec![picked];
+                }
+                for cid in picks {
                     if let Some(c) = self.battlefield_find_mut(cid)
                         && c.definition.is_creature()
                     {
@@ -15457,7 +15489,9 @@ impl GameState {
                     return Ok(());
                 };
                 self.clear_answer_log();
-                self.attack_mandates.retain(|m| m.seat != seat);
+                // CR 508.1a — a second mandate on the same seat stacks with
+                // the first rather than replacing it: the union must attack,
+                // and everything outside the union still can't.
                 self.attack_mandates.push(crate::game::AttackMandate {
                     seat,
                     chosen,

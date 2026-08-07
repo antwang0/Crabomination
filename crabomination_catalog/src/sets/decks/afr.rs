@@ -545,7 +545,7 @@ pub fn shessra_deaths_whisper() -> CardDefinition {
         toughness: 3,
         triggered_abilities: vec![
             etb(Effect::MustBlockSource {
-                what: target_filtered(R::Creature),
+                what: target_filtered(R::Creature),                chooser: None,
             }),
             TriggeredAbility {
                 event: EventSpec::new(

@@ -143,6 +143,12 @@ pub(crate) fn event_matches_spec(
         (EventKind::GainedControlOfThis, GameEvent::ControlChanged { card_id, to, .. }) => {
             *card_id == source.id && *to == source.controller
         }
+        // CR 800.4 — the losing half. `from != to` is guaranteed by the
+        // emitter; `dispatch_triggers_for_events` re-points the trigger's
+        // controller at `from`, which is no longer the source's controller.
+        (EventKind::LostControlOfThis, GameEvent::ControlChanged { card_id, from, to }) => {
+            *card_id == source.id && from != to
+        }
         (EventKind::Explored, GameEvent::Explored { .. }) => true,
         (EventKind::Discovered, GameEvent::Discovered { .. }) => true,
         (EventKind::BecameMonstrous, GameEvent::BecameMonstrous { .. }) => true,

@@ -295,7 +295,7 @@ pub fn burning_tree_bloodscale() -> CardDefinition {
             ActivatedAbility {
                 mana_cost: cost(&[generic(2), g()]),
                 effect: Effect::MustBlockSource {
-                    what: target_filtered(R::Creature),
+                    what: target_filtered(R::Creature),                    chooser: None,
                 },
                 ..Default::default()
             },

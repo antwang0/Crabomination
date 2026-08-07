@@ -1061,7 +1061,7 @@ impl Effect {
             | Effect::RemoveFromCombat { what }
             | Effect::Untap { what, .. }
             | Effect::Provoke { what }
-            | Effect::MustBlockSource { what }
+            | Effect::MustBlockSource { what, .. }
             | Effect::ChangeSpellTarget { what }
             | Effect::CounterSpell { what }
             | Effect::CounterSpellIfNameExiledWithSource { what }
@@ -1609,7 +1609,7 @@ impl Effect {
             | Effect::ExileReturnAtYourNextUpkeep { what }
             | Effect::ExileReturnToOwnerNextEndStep { what, .. }
             | Effect::Provoke { what }
-            | Effect::MustBlockSource { what }
+            | Effect::MustBlockSource { what, .. }
             | Effect::DestroyThenVictimControllersMakeToken { what, .. }
             | Effect::Suspect { what }
             | Effect::ClearSuspected { what }
@@ -3323,7 +3323,7 @@ impl Effect {
                 | Effect::Goad { what }
                 | Effect::Detain { what }
                 | Effect::Provoke { what }
-                | Effect::MustBlockSource { what }
+                | Effect::MustBlockSource { what, .. }
                 | Effect::DestroyThenVictimControllersMakeToken { what, .. }
                 | Effect::Transform { what }
                 | Effect::Flip { what }

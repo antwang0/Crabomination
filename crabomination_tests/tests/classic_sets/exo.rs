@@ -1159,3 +1159,25 @@ fn penance_shields_against_a_red_source() {
     assert!(g.players[0].hand.is_empty(), "the card went on top of the library");
     assert_eq!(g.players[0].life, 20, "prevented");
 }
+
+/// Crashing Boars' conscript is chosen by the defending player, not by the
+/// engine's first match.
+#[test]
+fn crashing_boars_lets_the_defender_pick() {
+    let mut g = two_player_game();
+    let boars = g.add_card_to_battlefield(0, catalog::crashing_boars());
+    g.clear_sickness(boars);
+    let first = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let second = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Cards(vec![second])]));
+    advance_to(&mut g, TurnStep::DeclareAttackers);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: boars,
+        target: AttackTarget::Player(1),
+    }]))
+    .expect("attack");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(second).unwrap().must_block, Some(boars));
+    assert_eq!(g.battlefield_find(first).unwrap().must_block, None, "the other stays free");
+}

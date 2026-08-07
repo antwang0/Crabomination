@@ -2712,6 +2712,10 @@ pub enum EventKind {
     /// player" (Risky Move). `SelfSource`; the trigger's controller must be
     /// the *new* controller, so it fires once for whoever just took it.
     GainedControlOfThis,
+    /// CR 800.4 — "When you lose control of this permanent" (Duplicity). The
+    /// trigger is controlled by the seat that *lost* control, not by the
+    /// permanent's new controller.
+    LostControlOfThis,
     /// CR 701.40 — a permanent explored (Wildgrowth Walker, Tishana's
     /// Wayfinder payoffs). The exploring permanent is the event subject;
     /// matched to `GameEvent::Explored`.
@@ -8759,7 +8763,14 @@ pub enum Effect {
     /// CR 509.1c — "Target creature blocks `source` this turn if able."
     /// Sets the target's `must_block` to the ability source (like Provoke
     /// but without untapping the target). Matsu-Tribe Decoy.
-    MustBlockSource { what: Selector },
+    MustBlockSource {
+        what: Selector,
+        /// "Defending player chooses …" (Crashing Boars) — the named seat
+        /// picks one of `what`'s matches instead of the engine taking the
+        /// first. `None` forces every match, the Matsu-Tribe Decoy shape.
+        #[serde(default)]
+        chooser: Option<PlayerRef>,
+    },
 
     /// CR 509.1c — the two-slot sibling: "`blocker` blocks `attacker` this
     /// turn if able", where the attacker is itself chosen (Feral Contest).

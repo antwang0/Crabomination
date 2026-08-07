@@ -1640,7 +1640,7 @@ pub fn trumpeting_armodon() -> CardDefinition {
     CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[generic(1), g()]),
-            effect: Effect::MustBlockSource { what: target_filtered(R::Creature) },
+            effect: Effect::MustBlockSource { what: target_filtered(R::Creature), chooser: None },
             ..Default::default()
         }],
         ..creature("Trumpeting Armodon", cost(&[generic(3), g()]), vec![CreatureType::Elephant], 3, 3)

@@ -557,13 +557,12 @@ impl GameState {
                 // Oracle en-Vec — the mandate's payoff: every chosen creature
                 // that sat out is destroyed, then the mandate expires.
                 let seat = self.active_player_idx;
-                if let Some(i) = self.attack_mandates.iter().position(|m| m.seat == seat && m.armed)
-                {
-                    let m = self.attack_mandates.remove(i);
-                    for id in m.chosen {
+                if let Some(chosen) = self.armed_attack_mandate_for(seat) {
+                    self.attack_mandates.retain(|m| !(m.seat == seat && m.armed));
+                    for id in chosen {
                         if self
                             .battlefield_find(id)
-                            .is_some_and(|c| c.controller == seat && !c.attacked_this_turn)
+                            .is_some_and(|c| !c.attacked_this_turn)
                         {
                             self.destroy_permanent(id, false, &mut events);
                         }

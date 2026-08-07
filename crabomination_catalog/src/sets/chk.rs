@@ -1328,7 +1328,7 @@ pub fn matsu_tribe_decoy() -> CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[generic(2), g()]),
             effect: Effect::MustBlockSource {
-                what: target_filtered(SelectionRequirement::Creature),
+                what: target_filtered(SelectionRequirement::Creature),                chooser: None,
             },
             ..Default::default()
         }],

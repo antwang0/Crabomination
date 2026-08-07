@@ -1014,6 +1014,16 @@ pub fn booby_trap() -> CardDefinition {
 /// with each upkeep, paid for with a card every end step.
 pub fn duplicity() -> CardDefinition {
     use crate::card::{EventKind, EventScope, EventSpec};
+    fn bin_the_pile() -> Effect {
+        Effect::Move {
+            what: Selector::CardsInZone {
+                who: PlayerRef::You,
+                zone: crate::card::Zone::Exile,
+                filter: R::ExiledWithSource,
+            },
+            to: ZoneDest::Graveyard,
+        }
+    }
     CardDefinition {
         name: "Duplicity",
         cost: cost(&[generic(3), u(), u()]),
@@ -1046,16 +1056,15 @@ pub fn duplicity() -> CardDefinition {
                     random: false,
                 },
             },
+            // "When you lose control of this" — both ways to lose it: the
+            // permanent leaving, and a control change with it still in play.
             TriggeredAbility {
                 event: EventSpec::new(EventKind::PermanentLeavesBattlefield, EventScope::SelfSource),
-                effect: Effect::Move {
-                    what: Selector::CardsInZone {
-                        who: PlayerRef::You,
-                        zone: crate::card::Zone::Exile,
-                        filter: R::ExiledWithSource,
-                    },
-                    to: ZoneDest::Graveyard,
-                },
+                effect: bin_the_pile(),
+            },
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::LostControlOfThis, EventScope::SelfSource),
+                effect: bin_the_pile(),
             },
         ],
         ..Default::default()

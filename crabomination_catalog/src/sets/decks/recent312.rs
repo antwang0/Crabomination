@@ -536,7 +536,7 @@ pub fn auriok_siege_sled() -> CardDefinition {
             ActivatedAbility {
                 mana_cost: cost(&[generic(1)]),
                 effect: Effect::MustBlockSource {
-                    what: target_filtered(R::Artifact.and(R::Creature)),
+                    what: target_filtered(R::Artifact.and(R::Creature)),                    chooser: None,
                 },
                 ..Default::default()
             },

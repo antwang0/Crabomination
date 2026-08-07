@@ -4802,11 +4802,44 @@ impl GameState {
         events
     }
 
-    /// The creatures a pending attack mandate names for `seat`, if any (Oracle
-    /// en-Vec). Read by the server view so the client can badge both the
-    /// named attackers and the benched rest.
-    pub fn attack_mandate_for(&self, seat: usize) -> Option<&[CardId]> {
-        self.attack_mandates.iter().find(|m| m.seat == seat).map(|m| m.chosen.as_slice())
+    /// The creatures pending attack mandates name for `seat` (Oracle en-Vec),
+    /// unioned across every mandate on that seat and filtered to creatures
+    /// `seat` still controls — a chosen creature that changed hands is no
+    /// longer compelled (CR 508.1a reads the current controller). `None` when
+    /// the seat is under no mandate at all. Read by the server view so the
+    /// client can badge both the named attackers and the benched rest.
+    pub fn attack_mandate_for(&self, seat: usize) -> Option<Vec<CardId>> {
+        let mut out: Vec<CardId> = Vec::new();
+        let mut any = false;
+        for m in self.attack_mandates.iter().filter(|m| m.seat == seat) {
+            any = true;
+            for id in &m.chosen {
+                if !out.contains(id)
+                    && self.battlefield_find(*id).is_some_and(|c| c.controller == seat)
+                {
+                    out.push(*id);
+                }
+            }
+        }
+        any.then_some(out)
+    }
+
+    /// The armed half of [`attack_mandate_for`] — what `declare_attackers` and
+    /// the end-step sweep enforce.
+    pub(crate) fn armed_attack_mandate_for(&self, seat: usize) -> Option<Vec<CardId>> {
+        let mut out: Vec<CardId> = Vec::new();
+        let mut any = false;
+        for m in self.attack_mandates.iter().filter(|m| m.seat == seat && m.armed) {
+            any = true;
+            for id in &m.chosen {
+                if !out.contains(id)
+                    && self.battlefield_find(*id).is_some_and(|c| c.controller == seat)
+                {
+                    out.push(*id);
+                }
+            }
+        }
+        any.then_some(out)
     }
 
     /// Ertai's Meddling — at the beginning of each of the delaying player's
@@ -15131,10 +15164,20 @@ impl GameState {
                             }
                             capped_fired_this_batch.push(key);
                         }
+                        // CR 800.4 — a "when you lose control of this" trigger
+                        // belongs to the seat that lost it, which is no longer
+                        // the permanent's controller by dispatch time.
+                        let controller = match (&ta.event.kind, ev) {
+                            (
+                                crate::effect::EventKind::LostControlOfThis,
+                                GameEvent::ControlChanged { from, .. },
+                            ) => *from,
+                            _ => card.controller,
+                        };
                         candidates.push(TriggerCandidate {
                             source: card.id,
                             effect: ta.effect.clone(),
-                            controller: card.controller,
+                            controller,
                             filter: ta.event.filter.clone(),
                             subject,
                             event_amount: self.event_amount_for(ev),

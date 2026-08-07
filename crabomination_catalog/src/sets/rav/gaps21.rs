@@ -206,7 +206,7 @@ pub fn sisters_of_stone_death() -> CardDefinition {
             ActivatedAbility {
                 mana_cost: cost(&[g()]),
                 effect: Effect::MustBlockSource {
-                    what: target_filtered(R::Creature),
+                    what: target_filtered(R::Creature),                    chooser: None,
                 },
                 ..Default::default()
             },

@@ -1632,3 +1632,50 @@ fn ertais_meddling_delays_a_spell_by_x_upkeeps() {
     drain_stack(&mut g);
     assert_eq!(g.players[0].life, 17, "the bolt came back");
 }
+
+/// A second Oracle mandate stacks with the first, and a creature that changes
+/// hands drops off the list it was named on.
+#[test]
+fn oracle_en_vec_mandates_stack_and_track_control() {
+    let mut g = two_player_game();
+    let a = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let b = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    for (i, id) in [a, b].into_iter().enumerate() {
+        let oracle = g.add_card_to_battlefield(0, catalog::oracle_en_vec());
+        g.clear_sickness(oracle);
+        g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Cards(vec![id])]));
+        g.step = TurnStep::PreCombatMain;
+        activate(&mut g, oracle, 0, Some(Target::Player(1))).unwrap_or_else(|e| {
+            panic!("activation {i} failed: {e:?}");
+        });
+        drain_stack(&mut g);
+    }
+    let named = g.attack_mandate_for(1).expect("a mandate is pending");
+    assert_eq!(named.len(), 2, "the second mandate joined the first");
+
+    // Steal one of them: it's no longer a creature seat 1 controls, so it
+    // drops off seat 1's mandate.
+    g.battlefield_find_mut(a).unwrap().controller = 0;
+    assert_eq!(g.attack_mandate_for(1).expect("still pending"), vec![b]);
+}
+
+/// Duplicity's pile is binned when its controller loses it — including a
+/// control change that leaves it on the battlefield.
+#[test]
+fn duplicity_bins_its_pile_on_a_control_change() {
+    let mut g = two_player_game();
+    for _ in 0..5 {
+        g.add_card_to_library(0, catalog::forest());
+    }
+    let dup = g.add_card_to_battlefield(0, catalog::duplicity());
+    let etb = catalog::duplicity().triggered_abilities[0].effect.clone();
+    let ctx = EffectContext::for_ability(dup, 0, None);
+    g.resolve_effect(&etb, &ctx).expect("bank five");
+    assert_eq!(g.exile.iter().filter(|c| c.exiled_with == Some(dup)).count(), 5);
+
+    g.battlefield_find_mut(dup).unwrap().controller = 1;
+    g.dispatch_triggers_for_events(&[GameEvent::ControlChanged { card_id: dup, from: 0, to: 1 }]);
+    drain_stack(&mut g);
+    assert!(g.exile.iter().all(|c| c.exiled_with != Some(dup)), "the pile left exile");
+    assert_eq!(g.players[0].graveyard.len(), 5, "and landed in its owner's graveyard");
+}

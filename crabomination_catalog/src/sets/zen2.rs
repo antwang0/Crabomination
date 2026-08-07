@@ -1466,7 +1466,7 @@ pub fn grappling_hook() -> CardDefinition {
                 effect: Effect::MayDo {
                     description: "Target creature blocks this creature if able".into(),
                     body: Box::new(Effect::MustBlockSource {
-                        what: target_filtered(R::Creature),
+                        what: target_filtered(R::Creature),                        chooser: None,
                     }),
                 },
             }],

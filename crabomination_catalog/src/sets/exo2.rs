@@ -1020,10 +1020,11 @@ pub fn crashing_boars() -> CardDefinition {
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
             effect: Effect::MustBlockSource {
-                what: Selector::one_of(Selector::ControlledBy {
+                what: Selector::ControlledBy {
                     who: PlayerRef::DefendingPlayer,
                     filter: R::Creature.and(R::Untapped),
-                }),
+                },
+                chooser: Some(PlayerRef::DefendingPlayer),
             },
         }],
         ..creature("Crashing Boars", cost(&[generic(3), g(), g()]), vec![CreatureType::Boar], 4, 4)

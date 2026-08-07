@@ -501,7 +501,7 @@ pub fn mortipede() -> CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[generic(2), g()]),
             effect: Effect::MustBlockSource {
-                what: Selector::EachPermanent(R::Creature.and(R::ControlledByOpponent)),
+                what: Selector::EachPermanent(R::Creature.and(R::ControlledByOpponent)),                chooser: None,
             },
             ..Default::default()
         }],
