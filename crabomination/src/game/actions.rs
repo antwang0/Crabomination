@@ -7182,8 +7182,24 @@ impl GameState {
         // fire from non-caster permanents (Wandering Archaic etc.). The
         // ability's effective controller is its own permanent's controller,
         // *not* the spell-caster's index.
+        // Statics-granted (Kataki-style) and Equipment-granted (CR 702.6e —
+        // Red Mage's Rapier's "equipped creature has 'whenever you cast a
+        // noncreature spell, …'") listeners fire off the permanent they're
+        // granted to, exactly like printed ones. Indexed past the printed
+        // abilities so the once-per-turn key stays unique.
+        let granted: Vec<(CardId, usize, Vec<crate::card::TriggeredAbility>)> = self
+            .battlefield
+            .iter()
+            .filter(|c| !stripped.contains(&c.id))
+            .map(|c| {
+                let mut abilities = self.statics_granted_triggers_for(c);
+                abilities.extend(self.equip_granted_triggers_for(c));
+                (c.id, c.controller, abilities)
+            })
+            .filter(|(_, _, a)| !a.is_empty())
+            .collect();
         #[allow(clippy::type_complexity)]
-        let candidates: Vec<(CardId, usize, Effect, Option<crate::effect::Predicate>, usize, bool)> = self
+        let mut candidates: Vec<(CardId, usize, Effect, Option<crate::effect::Predicate>, usize, bool)> = self
             .battlefield
             .iter()
             .filter(|c| !stripped.contains(&c.id))
@@ -7216,6 +7232,27 @@ impl GameState {
                     })
             })
             .collect();
+        for (cid, c_controller, abilities) in granted {
+            let base = self
+                .battlefield_find(cid)
+                .map(|c| c.definition.triggered_abilities.len())
+                .unwrap_or(0);
+            for (i, t) in abilities.into_iter().enumerate() {
+                if t.event.kind != EventKind::SpellCast {
+                    continue;
+                }
+                let applies = match t.event.scope {
+                    EventScope::YourControl => c_controller == controller,
+                    EventScope::OpponentControl => c_controller != controller,
+                    EventScope::AnyPlayer => true,
+                    _ => false,
+                };
+                if applies {
+                    let once = t.event.once_per_turn;
+                    candidates.push((cid, c_controller, t.effect, t.event.filter, base + i, once));
+                }
+            }
+        }
 
         for (source, listener_controller, effect, filter, trig_idx, once_per_turn) in candidates {
             // CR 603.3d — "This ability triggers only once each turn"

@@ -2515,7 +2515,7 @@ fn excalibur_ii_charges_on_lifegain() {
 #[test]
 fn dragoons_lance_flying_only_on_your_turn() {
     let mut g = two_player_game();
-    let lance = g.move_card_to_battlefield_for_test(0, catalog::dragoons_lance());
+    g.move_card_to_battlefield_for_test(0, catalog::dragoons_lance());
     drain_stack(&mut g);
     let hero = g.battlefield.iter().find(|c| c.is_token).map(|c| c.id).expect("Hero token");
     g.active_player_idx = 0;
@@ -2549,4 +2549,118 @@ fn delivery_moogle_searches_graveyard() {
     g.move_card_to_battlefield_for_test(0, catalog::delivery_moogle());
     drain_stack(&mut g);
     assert!(g.players[0].hand.iter().any(|c| c.id == relic), "found Sol Ring in the graveyard");
+}
+
+/// Combat Tutorial's "up to one target creature" slot may be left empty.
+#[test]
+fn combat_tutorial_optional_creature_slot() {
+    use crate::card::CounterType;
+    let cast = |g: &mut GameState, extra: Vec<Target>| {
+        let spell = g.add_card_to_hand(0, catalog::combat_tutorial());
+        g.players[0].mana_pool.add(crate::mana::Color::Blue, 1);
+        g.players[0].mana_pool.add_colorless(2);
+        g.active_player_idx = 0;
+        g.step = TurnStep::PreCombatMain;
+        g.priority.player_with_priority = 0;
+        g.perform_action(GameAction::CastSpell {
+            card_id: spell, target: Some(Target::Player(0)),
+            additional_targets: extra, mode: None, x_value: None,
+        })
+    };
+    // With a creature: both halves apply.
+    let mut g = two_player_game();
+    for _ in 0..4 { g.add_card_to_library(0, catalog::grizzly_bears()); }
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let hand_before = g.players[0].hand.len();
+    cast(&mut g, vec![Target::Permanent(bear)]).expect("cast with a creature");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand_before + 2, "drew two cards");
+    assert_eq!(g.battlefield_find(bear).unwrap().counter_count(CounterType::PlusOnePlusOne), 1);
+
+    // With no creature on board: the spell still casts and resolves.
+    let mut g = two_player_game();
+    for _ in 0..4 { g.add_card_to_library(0, catalog::grizzly_bears()); }
+    let hand_before = g.players[0].hand.len();
+    cast(&mut g, vec![]).expect("cast with the optional slot empty");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand_before + 2, "still drew two");
+}
+
+// ── Job select Equipment cycle ────────────────────────────────────────────────
+
+/// Job select mints a Hero and attaches; Samurai's Katana then makes it a
+/// 3/3 trampling, hasty Samurai.
+#[test]
+fn samurais_katana_job_select() {
+    let mut g = two_player_game();
+    g.move_card_to_battlefield_for_test(0, catalog::samurais_katana());
+    drain_stack(&mut g);
+    let hero = g.battlefield.iter().find(|c| c.is_token).map(|c| c.id).expect("Hero token");
+    let cp = g.computed_permanent(hero).unwrap();
+    assert_eq!((cp.power, cp.toughness), (3, 3));
+    assert!(cp.keywords.contains(&Keyword::Trample) && cp.keywords.contains(&Keyword::Haste));
+    assert!(cp.subtypes.creature_types.contains(&crate::card::CreatureType::Samurai));
+}
+
+/// Thief's Knife grants the equipped creature a combat-damage draw trigger.
+#[test]
+fn thiefs_knife_draws_on_combat_damage() {
+    use crate::game::types::{Attack, AttackTarget};
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::grizzly_bears());
+    g.move_card_to_battlefield_for_test(0, catalog::thiefs_knife());
+    drain_stack(&mut g);
+    let hero = g.battlefield.iter().find(|c| c.is_token).map(|c| c.id).expect("Hero token");
+    g.clear_sickness(hero);
+    g.active_player_idx = 0;
+    let hand_before = g.players[0].hand.len();
+    advance_to(&mut g, TurnStep::DeclareAttackers);
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: hero, target: AttackTarget::Player(1),
+    }])).expect("attack");
+    advance_to(&mut g, TurnStep::PostCombatMain);
+    assert_eq!(g.players[0].hand.len(), hand_before + 1, "granted trigger drew");
+}
+
+/// Black Mage's Rod pings each opponent whenever its bearer's controller casts
+/// a noncreature spell.
+#[test]
+fn black_mages_rod_pings_on_noncreature_spell() {
+    let mut g = two_player_game();
+    g.move_card_to_battlefield_for_test(0, catalog::black_mages_rod());
+    drain_stack(&mut g);
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(crate::mana::Color::Red, 1);
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    let life_before = g.players[1].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Bolt");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, life_before - 4, "1 from the Rod + 3 from Bolt");
+}
+
+/// Ninja's Blades drains for the discarded card's mana value.
+#[test]
+fn ninjas_blades_drains_for_discard_mv() {
+    use crate::game::types::{Attack, AttackTarget};
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::grizzly_bears()); // drawn by the trigger
+    g.add_card_to_hand(0, catalog::sol_ring()); // {1} — the only discard option
+    g.move_card_to_battlefield_for_test(0, catalog::ninjas_blades());
+    drain_stack(&mut g);
+    let hero = g.battlefield.iter().find(|c| c.is_token).map(|c| c.id).expect("Hero token");
+    g.clear_sickness(hero);
+    g.active_player_idx = 0;
+    let life_before = g.players[1].life;
+    advance_to(&mut g, TurnStep::DeclareAttackers);
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: hero, target: AttackTarget::Player(1),
+    }])).expect("attack");
+    advance_to(&mut g, TurnStep::PostCombatMain);
+    // 2 combat damage from the 2/2 Hero, then 1 life for Sol Ring's mana value.
+    assert_eq!(g.players[1].life, life_before - 3);
 }

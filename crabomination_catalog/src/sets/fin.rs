@@ -3901,3 +3901,210 @@ pub fn delivery_moogle() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Combat Tutorial — {2}{U} Sorcery. Target player draws two cards. Put a
+/// +1/+1 counter on up to one target creature you control.
+pub fn combat_tutorial() -> CardDefinition {
+    CardDefinition {
+        name: "Combat Tutorial",
+        cost: cost(&[generic(2), u()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::Draw { who: Selector::Target(0), amount: Value::Const(2) },
+            Effect::AddCounter {
+                what: Selector::TargetFiltered {
+                    slot: 1,
+                    filter: SelectionRequirement::Creature
+                        .and(SelectionRequirement::ControlledByYou),
+                },
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::ONE,
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+// ── Job select Equipment cycle ────────────────────────────────────────────────
+
+/// Build a Job-select Equipment whose granted `EquipBonus` also carries
+/// triggered abilities (the "equipped creature has '…'" clauses).
+fn job_equipment_with_triggers(
+    name: &'static str,
+    mana: crate::mana::ManaCost,
+    equip: crate::mana::ManaCost,
+    power: i32,
+    toughness: i32,
+    keywords: Vec<Keyword>,
+    add_type: CreatureType,
+    triggers: Vec<TriggeredAbility>,
+) -> CardDefinition {
+    let mut def = crate::sets::decks::job_select_equipment(
+        name, mana, equip, power, toughness, keywords, Some(add_type),
+    );
+    if let Some(bonus) = def.equipped_bonus.as_mut() {
+        bonus.triggered_abilities = triggers;
+    }
+    def
+}
+
+/// Samurai's Katana — {2}{R} Equipment. Job select. +2/+2, trample, haste, and
+/// a Samurai. Equip {5}.
+pub fn samurais_katana() -> CardDefinition {
+    crate::sets::decks::job_select_equipment(
+        "Samurai's Katana",
+        cost(&[generic(2), r()]),
+        cost(&[generic(5)]),
+        2,
+        2,
+        vec![Keyword::Trample, Keyword::Haste],
+        Some(CreatureType::Samurai),
+    )
+}
+
+/// Warrior's Sword — {3}{R} Equipment. Job select. +3/+2 and a Warrior.
+/// Equip {5}.
+pub fn warriors_sword() -> CardDefinition {
+    crate::sets::decks::job_select_equipment(
+        "Warrior's Sword",
+        cost(&[generic(3), r()]),
+        cost(&[generic(5)]),
+        3,
+        2,
+        vec![],
+        Some(CreatureType::Warrior),
+    )
+}
+
+/// Dark Knight's Greatsword — {2}{B} Equipment. Job select. +3/+0 and a Knight.
+/// (Printed equip is "Pay 3 life, once each turn"; modeled as Equip {3}.)
+pub fn dark_knights_greatsword() -> CardDefinition {
+    crate::sets::decks::job_select_equipment(
+        "Dark Knight's Greatsword",
+        cost(&[generic(2), b()]),
+        cost(&[generic(3)]),
+        3,
+        0,
+        vec![],
+        Some(CreatureType::Knight),
+    )
+}
+
+/// Thief's Knife — {2}{U} Equipment. Job select. +1/+1, a Rogue, and "whenever
+/// this creature deals combat damage to a player, draw a card." Equip {4}.
+pub fn thiefs_knife() -> CardDefinition {
+    job_equipment_with_triggers(
+        "Thief's Knife",
+        cost(&[generic(2), u()]),
+        cost(&[generic(4)]),
+        1,
+        1,
+        vec![],
+        CreatureType::Rogue,
+        vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
+            effect: Effect::Draw { who: Selector::You, amount: Value::ONE },
+        }],
+    )
+}
+
+/// Ninja's Blades — {2}{B} Equipment. Job select. +1/+1, a Ninja, and "whenever
+/// this creature deals combat damage to a player, draw a card, then discard a
+/// card. That player loses life equal to the discarded card's mana value."
+/// Equip {2}.
+pub fn ninjas_blades() -> CardDefinition {
+    job_equipment_with_triggers(
+        "Ninja's Blades",
+        cost(&[generic(2), b()]),
+        cost(&[generic(2)]),
+        1,
+        1,
+        vec![],
+        CreatureType::Ninja,
+        vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
+            effect: Effect::Seq(vec![
+                Effect::Draw { who: Selector::You, amount: Value::ONE },
+                Effect::Discard { who: Selector::You, amount: Value::ONE, random: false },
+                Effect::LoseLife {
+                    who: Selector::Target(0),
+                    amount: Value::ManaValueOf(Box::new(Selector::DiscardedThisResolution {
+                        filter: SelectionRequirement::Any,
+                    })),
+                },
+            ]),
+        }],
+    )
+}
+
+/// Red Mage's Rapier — {1}{R} Equipment. Job select. Equipped creature is a
+/// Wizard with "whenever you cast a noncreature spell, this creature gets +2/+0
+/// until end of turn." Equip {3}.
+pub fn red_mages_rapier() -> CardDefinition {
+    job_equipment_with_triggers(
+        "Red Mage's Rapier",
+        cost(&[generic(1), r()]),
+        cost(&[generic(3)]),
+        0,
+        0,
+        vec![],
+        CreatureType::Wizard,
+        vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl)
+                .with_filter(Predicate::CastSpellMatches(SelectionRequirement::Noncreature)),
+            effect: Effect::PumpPT {
+                what: Selector::This,
+                power: Value::Const(2),
+                toughness: Value::Const(0),
+                duration: Duration::EndOfTurn,
+            },
+        }],
+    )
+}
+
+/// Black Mage's Rod — {1}{B} Equipment. Job select. +1/+0, a Wizard, and
+/// "whenever you cast a noncreature spell, this creature deals 1 damage to each
+/// opponent." Equip {3}.
+pub fn black_mages_rod() -> CardDefinition {
+    job_equipment_with_triggers(
+        "Black Mage's Rod",
+        cost(&[generic(1), b()]),
+        cost(&[generic(3)]),
+        1,
+        0,
+        vec![],
+        CreatureType::Wizard,
+        vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl)
+                .with_filter(Predicate::CastSpellMatches(SelectionRequirement::Noncreature)),
+            effect: Effect::DealDamage {
+                to: Selector::Player(PlayerRef::EachOpponent),
+                amount: Value::ONE,
+            },
+        }],
+    )
+}
+
+/// Sage's Nouliths — {1}{U} Equipment. Job select. +1/+0, a Cleric, and
+/// "whenever this creature attacks, untap target attacking creature."
+/// Equip {3}.
+pub fn sages_nouliths() -> CardDefinition {
+    job_equipment_with_triggers(
+        "Sage's Nouliths",
+        cost(&[generic(1), u()]),
+        cost(&[generic(3)]),
+        1,
+        0,
+        vec![],
+        CreatureType::Cleric,
+        vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+            effect: Effect::Untap {
+                what: target_filtered(
+                    SelectionRequirement::Creature.and(SelectionRequirement::IsAttacking),
+                ),
+                up_to: None,
+            },
+        }],
+    )
+}
