@@ -1026,6 +1026,7 @@ impl Effect {
             | Effect::DestroyAndRemember { what }
             | Effect::DestroyNoRegen { what }
             | Effect::Regenerate { what }
+            | Effect::RegenerateThenGainControl { what }
             | Effect::CantBeRegeneratedThisTurn { what }
             | Effect::ExileIfWouldDieThisTurn { what }
             | Effect::GrantDamageExilesVictimThisTurn { what }
@@ -1587,6 +1588,7 @@ impl Effect {
             | Effect::DestroyAndRemember { what }
             | Effect::DestroyNoRegen { what }
             | Effect::Regenerate { what }
+            | Effect::RegenerateThenGainControl { what }
             | Effect::CantBeRegeneratedThisTurn { what }
             | Effect::ExileIfWouldDieThisTurn { what }
             | Effect::GrantDamageExilesVictimThisTurn { what }
@@ -3310,6 +3312,7 @@ impl Effect {
                 // `requires_target` / `primary_target_filter` — the
                 // `targeted_effects_carry_slot_filters` test guards this set.
                 Effect::Regenerate { what }
+                | Effect::RegenerateThenGainControl { what }
                 | Effect::CantBeRegeneratedThisTurn { what }
                 | Effect::ExileWithSource { what }
                 | Effect::ExileSameNameAsTarget { what }

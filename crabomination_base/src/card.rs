@@ -5761,6 +5761,10 @@ pub struct CardInstance {
     /// the permanent stop applying and new ones do nothing. Transient, cleared
     /// at cleanup like `regeneration_shields`, so it isn't serialized.
     pub cant_regenerate_this_turn: bool,
+    /// "You gain control of that creature if it regenerates this way" (Debt of
+    /// Loyalty) — the seat a consumed regeneration shield hands control to.
+    /// Transient alongside `regeneration_shields`, so it isn't serialized.
+    pub regeneration_control_grant: Option<usize>,
     /// CR 702.83 — Exert. When this creature attacks and is exerted, it
     /// won't untap during its controller's next untap step. Set at attack
     /// time; consumed (and the untap skipped) by `do_untap`. Transient —
@@ -6132,6 +6136,7 @@ impl CardInstance {
             damaged_by_this_turn: Vec::new(),
             combat_damager_controller: None,
             regeneration_shields: 0,
+            regeneration_control_grant: None,
             cant_regenerate_this_turn: false,
             skip_next_untap: false,
             untap_locked_by: None,
@@ -6633,6 +6638,7 @@ impl CardInstance {
         // CR 701.15g — unused regeneration shields expire at end of turn,
         // and so does the "can't be regenerated this turn" lock.
         self.regeneration_shields = 0;
+        self.regeneration_control_grant = None;
         self.cant_regenerate_this_turn = false;
         self.damage_prevention_off_eot = false;
         // CR 702.171 — "saddled until end of turn" ends here.

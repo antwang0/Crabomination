@@ -519,7 +519,15 @@ impl Decider for AutoDecider {
             Decision::Discard { hand, count, .. } => DecisionAnswer::Discard(
                 hand.iter().take(*count as usize).map(|(id, _)| *id).collect(),
             ),
-            Decision::SearchLibrary { .. } => DecisionAnswer::Search(None),
+            // A search names what it's looking for, so taking the first
+            // eligible hit is the play pattern; declining (the old default)
+            // silently blanked every tutor a headless seat resolved.
+            Decision::SearchLibrary { candidates, eligible, .. } => DecisionAnswer::Search(
+                match eligible {
+                    Some(ok) => ok.first().copied(),
+                    None => candidates.first().map(|(id, _)| *id),
+                },
+            ),
             Decision::OptionalTrigger { .. } => DecisionAnswer::Bool(false),
             // Default to redirecting — saving the commander matches
             // the typical printed-play pattern. Tests that need the

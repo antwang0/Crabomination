@@ -3826,11 +3826,18 @@ impl GameState {
     /// permanent, remove it from combat (as both attacker and blocker), and
     /// heal all marked damage. The permanent stays on the battlefield.
     pub(crate) fn apply_regeneration(&mut self, id: CardId, events: &mut Vec<GameEvent>) {
+        let mut grant = None;
         if let Some(c) = self.battlefield_find_mut(id) {
             c.regeneration_shields = c.regeneration_shields.saturating_sub(1);
             c.tapped = true;
             c.damage = 0;
             c.dealt_deathtouch_damage = false;
+            grant = c.regeneration_control_grant.take();
+        }
+        // Debt of Loyalty — "you gain control of that creature if it
+        // regenerates this way": the grant rides the spent shield.
+        if let Some(seat) = grant {
+            self.change_control(id, seat);
         }
         // Remove from combat: drop it as a declared attacker and as a blocker.
         self.remove_permanent_from_combat(id);

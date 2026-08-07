@@ -472,11 +472,13 @@ fn etb_mill_two() {
 // ── Table: no-target smoke casts (body lands; optional keyword check) ──────
 #[test]
 fn no_target_smoke_casts() {
-    for (def, kws) in [
-        (catalog::strixhaven_scry_wizard(), &[][..]),
-        (catalog::strixhaven_researcher(), &[][..]),
-        (catalog::prismari_tideforger(), &[Keyword::Flash][..]),
-        (catalog::quandrix_geomancer_b30(), &[][..]),
+    // `lib_delta`: scry alone doesn't change library size; the Geomancer's ETB
+    // tutors a basic land out of it.
+    for (def, kws, lib_delta) in [
+        (catalog::strixhaven_scry_wizard(), &[][..], 0),
+        (catalog::strixhaven_researcher(), &[][..], 0),
+        (catalog::prismari_tideforger(), &[Keyword::Flash][..], 0),
+        (catalog::quandrix_geomancer_b30(), &[][..], 1),
     ] {
         let name = def.name;
         let mut g = two_player_game();
@@ -492,8 +494,7 @@ fn no_target_smoke_casts() {
         for kw in kws {
             assert!(body.has_keyword(kw), "{name}: keyword {kw:?}");
         }
-        // Scry doesn't change library size by itself.
-        assert_eq!(g.players[0].library.len(), lib_before, "{name}: library size");
+        assert_eq!(g.players[0].library.len(), lib_before - lib_delta, "{name}: library size");
     }
 }
 

@@ -2,8 +2,9 @@
 
 use crate::card::{
     ActivatedAbility, CardDefinition, CardType, CounterType, CreatureType, CumulativeUpkeepCost,
-    EventKind, EventScope, EventSpec, Keyword, LandType, SelectionRequirement as R, StaticAbility,
-    Subtypes, TriggeredAbility, WardCost,
+    EnchantmentSubtype, EquipBonus, EventKind, EventScope, EventSpec, Keyword, LandType,
+    SelectionRequirement as R, StaticAbility, StateTriggeredAbility, Subtypes, TriggeredAbility,
+    WardCost, Zone,
 };
 use crate::effect::shortcut::{deal, draw, etb, etb_draw, etb_loot, target_filtered};
 use crate::effect::{
@@ -1021,4 +1022,555 @@ pub fn well_of_knowledge() -> CardDefinition {
             ..Default::default()
         }],
     )
+}
+
+// ── Wave 3: Auras, combat tricks, graveyard value ───────────────────────────
+
+fn aura(name: &'static str, c: ManaCost, bonus: EquipBonus) -> CardDefinition {
+    CardDefinition {
+        subtypes: Subtypes {
+            enchantment_subtypes: vec![EnchantmentSubtype::Aura],
+            ..Default::default()
+        },
+        effect: Effect::Attach { what: Selector::This, to: target_filtered(R::Creature) },
+        equipped_bonus: Some(bonus),
+        ..enchantment(name, c)
+    }
+}
+
+fn enchanted() -> Selector {
+    Selector::AttachedTo(Box::new(Selector::This))
+}
+
+/// Abduction — {2}{U}{U} Aura. You keep the creature, and its owner gets it
+/// back on the battlefield when it dies.
+pub fn abduction() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![
+            etb(Effect::Seq(vec![
+                Effect::Untap { what: enchanted(), up_to: None },
+                Effect::GainControlWhileSourceRemains { what: enchanted() },
+            ])),
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::CreatureDied, EventScope::EnchantedBySource),
+                effect: Effect::Move {
+                    what: Selector::TriggerSource,
+                    to: ZoneDest::Battlefield {
+                        controller: PlayerRef::OwnerOf(Box::new(Selector::TriggerSource)),
+                        tapped: false,
+                    },
+                },
+            },
+        ],
+        ..aura("Abduction", cost(&[generic(2), u(), u()]), EquipBonus::default())
+    }
+}
+
+/// Apathy — {U} Aura. The creature stays tapped unless its controller pitches
+/// a card at random.
+pub fn apathy() -> CardDefinition {
+    CardDefinition {
+        static_abilities: vec![StaticAbility {
+            description: "Enchanted creature doesn't untap during its controller's untap step.",
+            effect: StaticEffect::PreventUntap { applies_to: enchanted() },
+        }],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::AnyPlayer)
+                .with_filter(Predicate::IsTurnOf(PlayerRef::ControllerOf(Box::new(enchanted())))),
+            effect: Effect::MayDoBy {
+                who: PlayerRef::ControllerOf(Box::new(enchanted())),
+                description: "Discard a card at random to untap the enchanted creature?"
+                    .to_string(),
+                body: Box::new(Effect::Seq(vec![
+                    Effect::Discard { who: Selector::You, amount: Value::ONE, random: true },
+                    Effect::Untap { what: enchanted(), up_to: None },
+                ])),
+            },
+        }],
+        ..aura("Apathy", cost(&[u()]), EquipBonus::default())
+    }
+}
+
+/// Mana Chains — {U} Aura that saddles the creature with cumulative upkeep {1}.
+pub fn mana_chains() -> CardDefinition {
+    aura(
+        "Mana Chains",
+        cost(&[u()]),
+        EquipBonus {
+            keywords: vec![cu(CumulativeUpkeepCost::Mana(cost(&[generic(1)])))],
+            ..Default::default()
+        },
+    )
+}
+
+/// Kithkin Armor — {W} Aura. Big blockers bounce off, and it can be cashed in
+/// as a damage shield.
+pub fn kithkin_armor() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            sac_cost: true,
+            effect: Effect::PreventNextDamageFromChosenSource {
+                filter: R::Any,
+                reflect: false,
+                to: Some(enchanted()),
+                gain_life: false,
+                redirect_to: None,
+                whole_turn: false,
+            },
+            ..Default::default()
+        }],
+        ..aura(
+            "Kithkin Armor",
+            cost(&[w()]),
+            EquipBonus {
+                keywords: vec![Keyword::CantBeBlockedByPowerAtLeast(3)],
+                ..Default::default()
+            },
+        )
+    }
+}
+
+/// Betrothed of Fire — {1}{R} Aura. Feed it creatures for a pump, or cash the
+/// host in for a team pump.
+pub fn betrothed_of_fire() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![
+            ActivatedAbility {
+                sac_other_filter: Some((R::Creature.and(R::ControlledByYou).and(R::Untapped), 1)),
+                effect: Effect::PumpPT {
+                    what: enchanted(),
+                    power: Value::Const(2),
+                    toughness: Value::ZERO,
+                    duration: Duration::EndOfTurn,
+                },
+                ..Default::default()
+            },
+            ActivatedAbility {
+                sac_other_filter: Some((R::AttachedToSource, 1)),
+                effect: Effect::PumpPT {
+                    what: Selector::EachPermanent(R::Creature.and(R::ControlledByYou)),
+                    power: Value::Const(2),
+                    toughness: Value::ZERO,
+                    duration: Duration::EndOfTurn,
+                },
+                ..Default::default()
+            },
+        ],
+        ..aura("Betrothed of Fire", cost(&[generic(1), r()]), EquipBonus::default())
+    }
+}
+
+/// Nature's Kiss — {1}{G} Aura. Buys pump with graveyard cards.
+pub fn natures_kiss() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1)]),
+            exile_other_filter: Some((R::InYourGraveyard, 1)),
+            exile_other_top: true,
+            effect: Effect::PumpPT {
+                what: enchanted(),
+                power: Value::ONE,
+                toughness: Value::ONE,
+                duration: Duration::EndOfTurn,
+            },
+            ..Default::default()
+        }],
+        ..aura("Nature's Kiss", cost(&[generic(1), g()]), EquipBonus::default())
+    }
+}
+
+/// Alms — {W}. Buys damage prevention with graveyard cards.
+pub fn alms() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1)]),
+            exile_other_filter: Some((R::InYourGraveyard, 1)),
+            exile_other_top: true,
+            effect: Effect::PreventNextDamage {
+                target: target_filtered(R::Creature),
+                amount: Value::ONE,
+            },
+            ..Default::default()
+        }],
+        ..enchantment("Alms", cost(&[w()]))
+    }
+}
+
+/// Teferi's Veil — {1}{U}. Your attackers blink out of range after combat.
+pub fn teferis_veil() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Attacks, EventScope::YourControl),
+            effect: Effect::AtEndOfCombat {
+                body: Box::new(Effect::PhaseOut {
+                    what: Selector::TriggerSource,
+                    until_source_leaves: false,
+                }),
+            },
+        }],
+        ..enchantment("Teferi's Veil", cost(&[generic(1), u()]))
+    }
+}
+
+// ── Wave 3 creatures ────────────────────────────────────────────────────────
+
+/// Bone Dancer — {1}{B}{B} 2/2 that raids the defender's graveyard when it
+/// gets through.
+pub fn bone_dancer() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![crate::effect::shortcut::on_unblocked(Effect::MayDo {
+            description: "Reanimate the top creature card of defending player's graveyard?"
+                .to_string(),
+            body: Box::new(Effect::Seq(vec![
+                Effect::Move {
+                    what: Selector::one_of(Selector::CardsInZone {
+                        who: PlayerRef::DefendingPlayer,
+                        zone: Zone::Graveyard,
+                        filter: R::Creature,
+                    }),
+                    to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                },
+                Effect::GrantKeyword {
+                    what: Selector::This,
+                    keyword: Keyword::DealsNoCombatDamage,
+                    duration: Duration::EndOfTurn,
+                },
+            ])),
+        })],
+        ..creature("Bone Dancer", cost(&[generic(1), b(), b()]), vec![CreatureType::Zombie], 2, 2)
+    }
+}
+
+/// Goblin Vandal — {R} 1/1 that trades its damage for an artifact.
+pub fn goblin_vandal() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![crate::effect::shortcut::on_unblocked(Effect::MayPay {
+            description: "Pay {R} to destroy an artifact the defending player controls?".to_string(),
+            mana_cost: cost(&[r()]),
+            else_: None,
+            body: Box::new(Effect::Seq(vec![
+                Effect::Destroy {
+                    what: target_filtered(
+                        R::Artifact.and(R::ControlledByYou.negate()),
+                    ),
+                },
+                Effect::GrantKeyword {
+                    what: Selector::This,
+                    keyword: Keyword::DealsNoCombatDamage,
+                    duration: Duration::EndOfTurn,
+                },
+            ])),
+        })],
+        ..creature(
+            "Goblin Vandal",
+            cost(&[r()]),
+            vec![CreatureType::Goblin, CreatureType::Rogue],
+            1,
+            1,
+        )
+    }
+}
+
+/// Goblin Grenadiers — {3}{R} 2/2 that cashes itself in for a creature and a
+/// land when it connects.
+pub fn goblin_grenadiers() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![crate::effect::shortcut::on_unblocked(Effect::MayDo {
+            description: "Sacrifice Goblin Grenadiers to destroy a creature and a land?"
+                .to_string(),
+            body: Box::new(Effect::Seq(vec![
+                Effect::SacrificeSource,
+                Effect::Destroy { what: target_filtered(R::Creature) },
+                Effect::Destroy { what: Selector::TargetFiltered { slot: 1, filter: R::Land } },
+            ])),
+        })],
+        ..creature("Goblin Grenadiers", cost(&[generic(3), r()]), vec![CreatureType::Goblin], 2, 2)
+    }
+}
+
+/// Sawtooth Ogre — {2}{R}{R} 3/3 that gets one last lick in after combat.
+pub fn sawtooth_ogre() -> CardDefinition {
+    let strike_back = || Effect::AtEndOfCombat {
+        body: Box::new(deal(1, Selector::CreaturesInCombatWith(Box::new(Selector::This)))),
+    };
+    CardDefinition {
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::Blocks, EventScope::SelfSource),
+                effect: strike_back(),
+            },
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::BecomesBlocked, EventScope::SelfSource),
+                effect: strike_back(),
+            },
+        ],
+        ..creature("Sawtooth Ogre", cost(&[generic(2), r(), r()]), vec![CreatureType::Ogre], 3, 3)
+    }
+}
+
+/// Tolarian Entrancer — {1}{U} 1/1 that keeps whatever blocks it.
+pub fn tolarian_entrancer() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::BecomesBlocked, EventScope::SelfSource),
+            effect: Effect::AtEndOfCombat {
+                body: Box::new(Effect::GainControl {
+                    what: Selector::TriggerSource,
+                    to: None,
+                    duration: Duration::Permanent,
+                }),
+            },
+        }],
+        ..creature(
+            "Tolarian Entrancer",
+            cost(&[generic(1), u()]),
+            vec![CreatureType::Human, CreatureType::Wizard],
+            1,
+            1,
+        )
+    }
+}
+
+/// Veteran Explorer — {G} 1/1 whose death ramps the whole table.
+pub fn veteran_explorer() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![crate::effect::shortcut::on_dies(Effect::EachPlayerDoes {
+            who: PlayerRef::EachPlayer,
+            body: Box::new(Effect::SearchUpToN {
+                who: PlayerRef::You,
+                filter: R::IsBasicLand,
+                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                count: Value::Const(2),
+            }),
+        })],
+        ..creature(
+            "Veteran Explorer",
+            cost(&[g()]),
+            vec![CreatureType::Human, CreatureType::Soldier, CreatureType::Scout],
+            1,
+            1,
+        )
+    }
+}
+
+/// Noble Benefactor — {2}{U} 2/2 whose death tutors for everyone.
+pub fn noble_benefactor() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![crate::effect::shortcut::on_dies(Effect::EachPlayerDoes {
+            who: PlayerRef::EachPlayer,
+            body: Box::new(Effect::MayDo {
+                description: "Search your library for a card?".to_string(),
+                body: Box::new(Effect::Search {
+                    who: PlayerRef::You,
+                    filter: R::Any,
+                    to: ZoneDest::Hand(PlayerRef::You),
+                }),
+            }),
+        })],
+        ..creature(
+            "Noble Benefactor",
+            cost(&[generic(2), u()]),
+            vec![CreatureType::Human, CreatureType::Cleric],
+            2,
+            2,
+        )
+    }
+}
+
+/// Urborg Stalker — {3}{B} 2/4 that punishes anyone playing off-colour.
+pub fn urborg_stalker() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::AnyPlayer)
+                .with_filter(Predicate::SelectorExists(Selector::EachPermanent(
+                    R::Nonland
+                        .and(R::HasColor(Color::Black).negate())
+                        .and(R::ControlledByActivePlayer),
+                ))),
+            effect: deal(1, Selector::Player(PlayerRef::ActivePlayer)),
+        }],
+        ..creature("Urborg Stalker", cost(&[generic(3), b()]), vec![CreatureType::Horror], 2, 4)
+    }
+}
+
+/// Manta Ray — {1}{U}{U} 3/3 that only works in an Islands matchup.
+pub fn manta_ray() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![
+            Keyword::CantAttackUnlessDefenderControlsLandType(LandType::Island),
+            Keyword::CantBeBlockedExceptBy(Box::new(R::HasColor(Color::Blue))),
+        ],
+        state_trigger: Some(StateTriggeredAbility {
+            condition: Predicate::Not(Box::new(Predicate::SelectorExists(
+                Selector::EachPermanent(R::HasLandType(LandType::Island).and(R::ControlledByYou)),
+            ))),
+            effect: Effect::SacrificeSource,
+        }),
+        ..creature("Manta Ray", cost(&[generic(1), u(), u()]), vec![CreatureType::Fish], 3, 3)
+    }
+}
+
+/// Llanowar Sentinel — {2}{G} 2/3 that calls in its twin.
+pub fn llanowar_sentinel() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![etb(Effect::MayPay {
+            description: "Pay {1}{G} to search for another Llanowar Sentinel?".to_string(),
+            mana_cost: cost(&[generic(1), g()]),
+            else_: None,
+            body: Box::new(Effect::SearchSameNameToBattlefield {
+                who: PlayerRef::You,
+                what: Selector::This,
+            }),
+        })],
+        ..creature("Llanowar Sentinel", cost(&[generic(2), g()]), vec![CreatureType::Elf], 2, 3)
+    }
+}
+
+/// Fungus Elemental — {3}{G} 3/3 that can eat Forests the turn it lands.
+pub fn fungus_elemental() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[g()]),
+            sac_other_filter: Some((R::HasLandType(LandType::Forest), 1)),
+            condition: Some(Predicate::EntityMatches {
+                what: Selector::This,
+                filter: R::EnteredThisTurn,
+            }),
+            effect: Effect::AddCounter {
+                what: Selector::This,
+                kind: CounterType::PlusTwoPlusTwo,
+                amount: Value::ONE,
+            },
+            ..Default::default()
+        }],
+        ..creature(
+            "Fungus Elemental",
+            cost(&[generic(3), g()]),
+            vec![CreatureType::Fungus, CreatureType::Elemental],
+            3,
+            3,
+        )
+    }
+}
+
+/// Benalish Missionary — {W} 1/1 that blanks a blocked attacker's damage.
+pub fn benalish_missionary() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1), w()]),
+            tap_cost: true,
+            effect: Effect::PreventCombatDamageByTargetThisTurn {
+                target: target_filtered(R::Creature.and(R::IsBlocked)),
+            },
+            ..Default::default()
+        }],
+        ..creature(
+            "Benalish Missionary",
+            cost(&[w()]),
+            vec![CreatureType::Human, CreatureType::Cleric],
+            1,
+            1,
+        )
+    }
+}
+
+// ── Wave 3 spells ───────────────────────────────────────────────────────────
+
+/// Debt of Loyalty — {1}{W}{W}. Regenerate it, then keep it.
+pub fn debt_of_loyalty() -> CardDefinition {
+    instant(
+        "Debt of Loyalty",
+        cost(&[generic(1), w(), w()]),
+        Effect::RegenerateThenGainControl { what: target_filtered(R::Creature) },
+    )
+}
+
+/// Gaea's Blessing — {1}{G}. Shuffles cards back and reshuffles the graveyard
+/// if it's milled.
+pub fn gaeas_blessing() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CardMilled, EventScope::SelfSource),
+            effect: Effect::ShuffleGraveyardIntoLibrary { who: PlayerRef::You },
+        }],
+        ..sorcery(
+            "Gaea's Blessing",
+            cost(&[generic(1), g()]),
+            Effect::Seq(vec![
+                Effect::ApplyToTargets {
+                    max_targets: 3,
+                    min_targets: 0,
+                    filter: R::InGraveyard,
+                    effect: Box::new(Effect::Move {
+                        what: Selector::Target(0),
+                        to: ZoneDest::Library {
+                            who: PlayerRef::OwnerOf(Box::new(Selector::Target(0))),
+                            pos: crate::effect::LibraryPosition::Shuffled,
+                        },
+                    }),
+                },
+                draw(1),
+            ]),
+        )
+    }
+}
+
+/// Paradigm Shift — {1}{U}. Trade your library for your graveyard.
+pub fn paradigm_shift() -> CardDefinition {
+    sorcery(
+        "Paradigm Shift",
+        cost(&[generic(1), u()]),
+        Effect::Seq(vec![
+            Effect::ExileLibraryExceptBottom { who: PlayerRef::You, keep: Value::ZERO },
+            Effect::ShuffleGraveyardIntoLibrary { who: PlayerRef::You },
+        ]),
+    )
+}
+
+/// Urborg Justice — {B}{B}. An edict for each of your own dead.
+pub fn urborg_justice() -> CardDefinition {
+    instant(
+        "Urborg Justice",
+        cost(&[b(), b()]),
+        Effect::Sacrifice {
+            who: Selector::Player(PlayerRef::Target(0)),
+            count: Value::CreaturesDiedThisTurn(PlayerRef::You),
+            filter: R::Creature,
+        },
+    )
+}
+
+/// Liege of the Hollows — {2}{G}{G} 3/4 whose death mints Squirrels for
+/// however much mana each player wants to sink.
+pub fn liege_of_the_hollows() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![crate::effect::shortcut::on_dies(Effect::EachPlayerDoes {
+            who: PlayerRef::EachPlayer,
+            body: Box::new(Effect::MayPayGenericUpTo {
+                max: Value::Const(10),
+                body: Box::new(crate::effect::shortcut::mint_token(
+                    crate::card::TokenDefinition {
+                        name: "Squirrel".into(),
+                        power: 1,
+                        toughness: 1,
+                        card_types: vec![CardType::Creature],
+                        colors: vec![Color::Green],
+                        subtypes: Subtypes {
+                            creature_types: vec![CreatureType::Squirrel],
+                            ..Default::default()
+                        },
+                        ..Default::default()
+                    },
+                    1,
+                )),
+            }),
+        })],
+        ..creature(
+            "Liege of the Hollows",
+            cost(&[generic(2), g(), g()]),
+            vec![CreatureType::Spirit],
+            3,
+            4,
+        )
+    }
 }

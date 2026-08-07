@@ -4771,6 +4771,8 @@ fn summon_fenrir_chapter_three_draws_on_greatest_power() {
     let mut g = two_player_game();
     let fenrir = g.add_card_to_battlefield(0, catalog::summon_fenrir()); // 3/2
     g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2 — smaller
+    // Two: chapter II's search takes one, chapter III draws the other.
+    g.add_card_to_library(0, catalog::forest());
     g.add_card_to_library(0, catalog::forest());
     let hand0 = g.players[0].hand.len();
     g.saga_advance(fenrir); // I

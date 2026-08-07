@@ -10436,6 +10436,21 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::RegenerateThenGainControl { what } => {
+                // Debt of Loyalty — the shield remembers who gets the creature
+                // if (and only if) it is actually spent.
+                let who = ctx.controller;
+                for ent in self.resolve_selector(what, ctx) {
+                    if let Some(cid) = ent.as_permanent_id()
+                        && let Some(c) = self.battlefield_find_mut(cid)
+                    {
+                        c.regeneration_shields = c.regeneration_shields.saturating_add(1);
+                        c.regeneration_control_grant = Some(who);
+                    }
+                }
+                Ok(())
+            }
+
             Effect::CantBeRegeneratedThisTurn { what } => {
                 for ent in self.resolve_selector(what, ctx) {
                     if let Some(cid) = ent.as_permanent_id()
@@ -30442,7 +30457,10 @@ impl GameState {
                     effect: (**body).clone(),
                     target: ctx.targets.first().cloned(),
                     bound_token: None,
-                    bound_subject: None,
+                    // Carry the triggering object so a body that reads
+                    // `Selector::TriggerSource` still sees it at end of combat
+                    // (Teferi's Veil's attacker, Sawtooth Ogre's blocker).
+                    bound_subject: ctx.trigger_source,
                     fires_once: true,
                     expires_after_turn: None,
                 });

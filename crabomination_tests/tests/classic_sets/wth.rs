@@ -257,6 +257,13 @@ fn downdraft_grounds_then_sweeps() {
 use crabomination::card::{CounterType, CumulativeUpkeepCost};
 
 /// Step the game to the given seat's upkeep so the turn-based actions run.
+/// Pass priority once so state-based actions (and the CR 603.8 state
+/// triggers they arm) run, then resolve whatever that put on the stack.
+fn settle(g: &mut GameState) {
+    let _ = g.check_state_based_actions();
+    drain_stack(g);
+}
+
 fn to_upkeep(g: &mut GameState, seat: usize) {
     g.active_player_idx = seat;
     g.step = TurnStep::Untap;
@@ -623,4 +630,212 @@ fn wth2_stat_lines_match_print() {
         catalog::volunteer_reserves().keywords[1],
         Keyword::CumulativeUpkeep(CumulativeUpkeepCost::Mana(_))
     ));
+}
+
+/// Abduction takes the creature, and gives it back to its owner when it dies.
+#[test]
+fn abduction_steals_then_returns_the_body() {
+    let mut g = two_player_game();
+    let bear = ready(&mut g, 1, catalog::grizzly_bears());
+    g.battlefield_find_mut(bear).unwrap().tapped = true;
+    let aura = g.add_card_to_battlefield(0, catalog::abduction());
+    g.battlefield_find_mut(aura).unwrap().attached_to = Some(bear);
+    let etb = catalog::abduction().triggered_abilities[0].effect.clone();
+    let ctx = crabomination::game::effects::EffectContext::for_ability(aura, 0, None);
+    let events = g.resolve_effect(&etb, &ctx).expect("etb");
+    g.dispatch_triggers_for_events(&events);
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(bear).unwrap().controller, 0);
+    assert!(!g.battlefield_find(bear).unwrap().tapped);
+
+    let mut events = Vec::new();
+    g.destroy_permanent(bear, false, &mut events);
+    g.dispatch_triggers_for_events(&events);
+    drain_stack(&mut g);
+    let back = g.battlefield.iter().find(|c| c.definition.name == "Grizzly Bears").expect("back");
+    assert_eq!(back.controller, 1, "its owner gets it");
+}
+
+/// Mana Chains' granted cumulative upkeep ticks on the host, not the Aura.
+#[test]
+fn mana_chains_grants_a_real_cumulative_upkeep() {
+    let mut g = two_player_game();
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    let chains = g.add_card_to_battlefield(0, catalog::mana_chains());
+    g.battlefield_find_mut(chains).unwrap().attached_to = Some(bear);
+    to_upkeep(&mut g, 0);
+    assert!(g.battlefield_find(bear).is_none(), "no mana for the granted upkeep");
+}
+
+/// Debt of Loyalty only steals the creature if the shield is actually used.
+#[test]
+fn debt_of_loyalty_steals_only_on_a_real_regeneration() {
+    let mut g = two_player_game();
+    let bear = ready(&mut g, 1, catalog::grizzly_bears());
+    let debt = g.add_card_to_hand(0, catalog::debt_of_loyalty());
+    g.players[0].mana_pool.add(Color::White, 3);
+    cast(&mut g, debt, Some(Target::Permanent(bear))).expect("cast");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(bear).unwrap().controller, 1, "still theirs");
+
+    let mut events = Vec::new();
+    g.destroy_permanent(bear, false, &mut events);
+    drain_stack(&mut g);
+    let bear_now = g.battlefield_find(bear).expect("regenerated");
+    assert_eq!(bear_now.controller, 0);
+    assert!(bear_now.tapped);
+}
+
+/// Teferi's Veil phases your attacker out once combat ends.
+#[test]
+fn teferis_veil_phases_out_your_attackers() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::teferis_veil());
+    let attacker = ready(&mut g, 0, catalog::grizzly_bears());
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker,
+        target: AttackTarget::Player(1),
+    }]))
+    .expect("attack");
+    advance_to(&mut g, TurnStep::PostCombatMain);
+    assert!(g.battlefield_find(attacker).is_none());
+    assert!(g.phased_out.iter().any(|c| c.id == attacker));
+}
+
+/// Manta Ray's state trigger eats it the moment you control no Island.
+#[test]
+fn manta_ray_needs_an_island() {
+    let mut g = two_player_game();
+    let island = ready(&mut g, 0, catalog::island());
+    let ray = ready(&mut g, 0, catalog::manta_ray());
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(ray).is_some());
+    let mut events = Vec::new();
+    g.destroy_permanent(island, false, &mut events);
+    settle(&mut g);
+    assert!(g.battlefield_find(ray).is_none());
+}
+
+/// Veteran Explorer ramps every player, not just its controller.
+#[test]
+fn veteran_explorer_ramps_the_table() {
+    let mut g = two_player_game();
+    let explorer = ready(&mut g, 0, catalog::veteran_explorer());
+    for seat in 0..2 {
+        for _ in 0..3 {
+            g.add_card_to_library(seat, catalog::forest());
+        }
+    }
+    let mut events = Vec::new();
+    g.destroy_permanent(explorer, false, &mut events);
+    drain_stack(&mut g);
+    for seat in 0..2 {
+        let lands = g.battlefield.iter().filter(|c| c.controller == seat && c.definition.is_land()).count();
+        assert_eq!(lands, 2, "seat {seat}");
+    }
+}
+
+/// Urborg Justice scales with how many of your creatures died this turn.
+#[test]
+fn urborg_justice_edicts_once_per_dead_creature() {
+    let mut g = two_player_game();
+    for _ in 0..2 {
+        let mine = ready(&mut g, 0, catalog::grizzly_bears());
+        let mut events = Vec::new();
+        g.destroy_permanent(mine, false, &mut events);
+    }
+    drain_stack(&mut g);
+    let a = ready(&mut g, 1, catalog::grizzly_bears());
+    let b = ready(&mut g, 1, catalog::cinder_wall());
+    let c = ready(&mut g, 1, catalog::cloud_djinn());
+    let justice = g.add_card_to_hand(0, catalog::urborg_justice());
+    g.players[0].mana_pool.add(Color::Black, 2);
+    cast(&mut g, justice, Some(Target::Player(1))).expect("cast");
+    drain_stack(&mut g);
+    let left = [a, b, c].iter().filter(|&&id| g.battlefield_find(id).is_some()).count();
+    assert_eq!(left, 1, "two sacrifices for two dead creatures");
+}
+
+/// Sawtooth Ogre gets its lick in at end of combat, after damage.
+#[test]
+fn sawtooth_ogre_burns_its_blocker_after_combat() {
+    let mut g = two_player_game();
+    let ogre = ready(&mut g, 1, catalog::sawtooth_ogre());
+    let attacker = ready(&mut g, 0, catalog::volunteer_reserves());
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker,
+        target: AttackTarget::Player(1),
+    }]))
+    .expect("attack");
+    advance_to(&mut g, TurnStep::DeclareBlockers);
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::DeclareBlockers(vec![(ogre, attacker)])).expect("block");
+    advance_to(&mut g, TurnStep::PostCombatMain);
+    assert!(g.battlefield_find(attacker).is_none(), "3 combat + 1 after = dead 2/4");
+}
+
+/// Gaea's Blessing reshuffles the graveyard when it is milled.
+#[test]
+fn gaeas_blessing_reshuffles_when_milled() {
+    let mut g = two_player_game();
+    g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    g.add_card_to_library(0, catalog::gaeas_blessing());
+    let ctx = crabomination::game::effects::EffectContext::for_ability(
+        g.add_card_to_battlefield(0, catalog::forest()),
+        0,
+        None,
+    );
+    let events = g
+        .resolve_effect(
+            &crabomination::effect::Effect::Mill {
+                who: crabomination::effect::Selector::You,
+                amount: crabomination::effect::Value::ONE,
+            },
+            &ctx,
+        )
+        .expect("mill");
+    g.dispatch_triggers_for_events(&events);
+    drain_stack(&mut g);
+    assert!(g.players[0].graveyard.is_empty(), "the graveyard went back in");
+}
+
+/// Paradigm Shift swaps your library for your graveyard.
+#[test]
+fn paradigm_shift_swaps_library_for_graveyard() {
+    let mut g = two_player_game();
+    for _ in 0..3 {
+        g.add_card_to_library(0, catalog::forest());
+    }
+    for _ in 0..2 {
+        g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    }
+    let shift = g.add_card_to_hand(0, catalog::paradigm_shift());
+    g.players[0].mana_pool.add(Color::Blue, 2);
+    cast(&mut g, shift, None).expect("cast");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].library.len(), 2);
+    assert_eq!(g.players[0].graveyard.len(), 1, "only Paradigm Shift itself");
+}
+
+/// Fungus Elemental's Forest-eating ability only works the turn it lands.
+#[test]
+fn fungus_elemental_is_summoning_turn_only() {
+    let mut g = two_player_game();
+    let elemental = ready(&mut g, 0, catalog::fungus_elemental());
+    ready(&mut g, 0, catalog::forest());
+    ready(&mut g, 0, catalog::forest());
+    g.step = TurnStep::PreCombatMain;
+    g.players[0].mana_pool.add(Color::Green, 2);
+    g.battlefield_find_mut(elemental).unwrap().entered_turn = None;
+    assert!(activate(&mut g, elemental, 0, None).is_err(), "not the turn it entered");
+    let turn = g.turn_number;
+    g.battlefield_find_mut(elemental).unwrap().entered_turn = Some(turn);
+    activate(&mut g, elemental, 0, None).expect("eat a Forest");
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(elemental).unwrap();
+    assert_eq!((cp.power, cp.toughness), (5, 5));
 }

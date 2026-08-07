@@ -5067,6 +5067,11 @@ pub enum Effect {
     /// heal damage instead of dying). Powers "{cost}: Regenerate this
     /// creature" activated abilities (Drudge Skeletons, River Boa, Korlash).
     Regenerate { what: Selector },
+    /// CR 701.15 — "Regenerate `what`. You gain control of that creature if it
+    /// regenerates this way" (Debt of Loyalty). The shield carries the
+    /// resolving controller in `CardInstance.regeneration_control_grant`; the
+    /// control change happens when — and only when — the shield is consumed.
+    RegenerateThenGainControl { what: Selector },
     /// CR 701.15g — "it can't be regenerated this turn": existing shields stop
     /// applying and new ones do nothing for the rest of the turn. Rage of
     /// Purphoros, the Terror-style removal riders.
