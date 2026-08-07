@@ -452,6 +452,7 @@ fn board_status_strip(
     wont_untap: bool,
     attack_mandated: bool,
     attack_benched: bool,
+    must_block: bool,
 ) -> String {
     let mut parts: Vec<String> = Vec::new();
     // CR 716 Class: show the current level. Leads the strip so the level reads
@@ -491,6 +492,11 @@ fn board_status_strip(
         parts.push("Must!".to_string());
     } else if attack_benched {
         parts.push("Benched".to_string());
+    }
+    // CR 509.1c — conscripted into blocking one specific attacker this turn.
+    // The same opponent-imposed-combat family as Goad and the mandate.
+    if must_block {
+        parts.push("Blk!".to_string());
     }
     // CR 701.35 — a detained permanent can't attack/block and its abilities
     // can't be activated until the detainer's next turn. An opponent-imposed
@@ -603,6 +609,7 @@ pub fn sync_keyword_labels(
                 p.wont_untap,
                 p.attack_mandated,
                 p.attack_benched,
+                p.must_block,
             );
             if !strip.is_empty() {
                 desired_cache.insert(p.id, strip);
@@ -931,23 +938,23 @@ mod tests {
     fn board_status_prefixes_suspected_and_sick() {
         // A suspected creature shows "Susp" ahead of its (injected) Men/NoBlk.
         assert_eq!(
-            board_status_strip(&[Keyword::Menace, Keyword::CantBlock], false, true, false, false, None, None, &[], false, 0, 0, false, false, false),
+            board_status_strip(&[Keyword::Menace, Keyword::CantBlock], false, true, false, false, None, None, &[], false, 0, 0, false, false, false, false),
             "Susp Men NoBlk",
         );
         // Summoning sickness tags "Zzz"; Haste suppresses it.
-        assert_eq!(board_status_strip(&[], true, false, false, false, None, None, &[], false, 0, 0, false, false, false), "Zzz");
-        assert_eq!(board_status_strip(&[Keyword::Haste], true, false, false, false, None, None, &[], false, 0, 0, false, false, false), "Hst");
+        assert_eq!(board_status_strip(&[], true, false, false, false, None, None, &[], false, 0, 0, false, false, false, false), "Zzz");
+        assert_eq!(board_status_strip(&[Keyword::Haste], true, false, false, false, None, None, &[], false, 0, 0, false, false, false, false), "Hst");
         // Both statuses stack, suspected first.
-        assert_eq!(board_status_strip(&[], true, true, false, false, None, None, &[], false, 0, 0, false, false, false), "Susp Zzz");
-        assert_eq!(board_status_strip(&[], false, false, false, false, None, None, &[], false, 0, 0, false, false, false), "");
+        assert_eq!(board_status_strip(&[], true, true, false, false, None, None, &[], false, 0, 0, false, false, false, false), "Susp Zzz");
+        assert_eq!(board_status_strip(&[], false, false, false, false, None, None, &[], false, 0, 0, false, false, false, false), "");
     }
 
     #[test]
     fn board_status_surfaces_goaded() {
         // A goaded creature flags "Goad" after suspected, before its keywords.
-        assert_eq!(board_status_strip(&[], false, false, true, false, None, None, &[], false, 0, 0, false, false, false), "Goad");
+        assert_eq!(board_status_strip(&[], false, false, true, false, None, None, &[], false, 0, 0, false, false, false, false), "Goad");
         assert_eq!(
-            board_status_strip(&[Keyword::Menace], false, true, true, false, None, None, &[], false, 0, 0, false, false, false),
+            board_status_strip(&[Keyword::Menace], false, true, true, false, None, None, &[], false, 0, 0, false, false, false, false),
             "Susp Goad Men",
         );
     }
@@ -971,6 +978,7 @@ mod tests {
                 false,
                 false,
                 false,
+                false,
             ),
             "Doors 1/2",
         );
@@ -980,9 +988,9 @@ mod tests {
     fn board_status_surfaces_detained() {
         // A detained permanent flags "Detain" after Goad (both are opponent-
         // imposed combat locks).
-        assert_eq!(board_status_strip(&[], false, false, false, true, None, None, &[], false, 0, 0, false, false, false), "Detain");
+        assert_eq!(board_status_strip(&[], false, false, false, true, None, None, &[], false, 0, 0, false, false, false, false), "Detain");
         assert_eq!(
-            board_status_strip(&[Keyword::Flying], false, false, true, true, None, None, &[], false, 0, 0, false, false, false),
+            board_status_strip(&[Keyword::Flying], false, false, true, true, None, None, &[], false, 0, 0, false, false, false, false),
             "Goad Detain Fly",
         );
     }
@@ -991,9 +999,9 @@ mod tests {
     fn board_status_surfaces_saddled() {
         // A saddled Mount flags "Sdl✓" (active state) after Goad, distinct from
         // the "Sdl N" cost chip that comes from its Saddle keyword.
-        assert_eq!(board_status_strip(&[], false, false, false, false, None, None, &[], true, 0, 0, false, false, false), "Sdl✓");
+        assert_eq!(board_status_strip(&[], false, false, false, false, None, None, &[], true, 0, 0, false, false, false, false), "Sdl✓");
         assert_eq!(
-            board_status_strip(&[Keyword::Saddle(3)], false, false, false, false, None, None, &[], true, 0, 0, false, false, false),
+            board_status_strip(&[Keyword::Saddle(3)], false, false, false, false, None, None, &[], true, 0, 0, false, false, false, false),
             "Sdl✓ Sdl3",
         );
     }
@@ -1001,33 +1009,33 @@ mod tests {
     #[test]
     fn board_status_shows_case_solve_state() {
         // An unsolved Case reads "Case"; a solved one reads "Solved".
-        assert_eq!(board_status_strip(&[], false, false, false, false, Some(false), None, &[], false, 0, 0, false, false, false), "Case");
-        assert_eq!(board_status_strip(&[], false, false, false, false, Some(true), None, &[], false, 0, 0, false, false, false), "Solved");
+        assert_eq!(board_status_strip(&[], false, false, false, false, Some(false), None, &[], false, 0, 0, false, false, false, false), "Case");
+        assert_eq!(board_status_strip(&[], false, false, false, false, Some(true), None, &[], false, 0, 0, false, false, false, false), "Solved");
     }
 
     #[test]
     fn board_status_shows_class_level() {
         // A Class enchantment reads "Lvl N".
-        assert_eq!(board_status_strip(&[], false, false, false, false, None, Some(1), &[], false, 0, 0, false, false, false), "Lvl 1");
-        assert_eq!(board_status_strip(&[], false, false, false, false, None, Some(3), &[], false, 0, 0, false, false, false), "Lvl 3");
+        assert_eq!(board_status_strip(&[], false, false, false, false, None, Some(1), &[], false, 0, 0, false, false, false, false), "Lvl 1");
+        assert_eq!(board_status_strip(&[], false, false, false, false, None, Some(3), &[], false, 0, 0, false, false, false, false), "Lvl 3");
     }
 
     #[test]
     fn board_status_shows_crew_count() {
         // A Vehicle crewed by two creatures this turn reads "Crew×2".
-        assert_eq!(board_status_strip(&[], false, false, false, false, None, None, &[], false, 2, 0, false, false, false), "Crew×2");
+        assert_eq!(board_status_strip(&[], false, false, false, false, None, None, &[], false, 2, 0, false, false, false, false), "Crew×2");
         // No crewers → no badge.
-        assert_eq!(board_status_strip(&[], false, false, false, false, None, None, &[], false, 0, 0, false, false, false), "");
+        assert_eq!(board_status_strip(&[], false, false, false, false, None, None, &[], false, 0, 0, false, false, false, false), "");
     }
 
     #[test]
     fn board_status_shows_stun_counters() {
         // Stun counters (CR 122.1c — skip that many untaps) read as "Stun N",
         // sitting before the "Zzz" summoning-sickness tag.
-        assert_eq!(board_status_strip(&[], false, false, false, false, None, None, &[], false, 0, 2, false, false, false), "Stun 2");
-        assert_eq!(board_status_strip(&[], true, false, false, false, None, None, &[], false, 0, 1, false, false, false), "Stun 1 Zzz");
+        assert_eq!(board_status_strip(&[], false, false, false, false, None, None, &[], false, 0, 2, false, false, false, false), "Stun 2");
+        assert_eq!(board_status_strip(&[], true, false, false, false, None, None, &[], false, 0, 1, false, false, false, false), "Stun 1 Zzz");
         // No stun → no badge.
-        assert_eq!(board_status_strip(&[], false, false, false, false, None, None, &[], false, 0, 0, false, false, false), "");
+        assert_eq!(board_status_strip(&[], false, false, false, false, None, None, &[], false, 0, 0, false, false, false, false), "");
     }
 
     #[test]

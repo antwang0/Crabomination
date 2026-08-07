@@ -1597,6 +1597,7 @@ mod tests {
 
     fn make_permanent_view(damage: u32, toughness: i32) -> PermanentView {
         PermanentView {
+            must_block: false,
             abilities_locked: false,
             attack_mandated: false,
             attack_benched: false,

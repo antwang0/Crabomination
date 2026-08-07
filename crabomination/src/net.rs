@@ -1755,6 +1755,11 @@ pub struct PermanentView {
     /// name it — it simply can't attack on that turn.
     #[serde(default)]
     pub attack_benched: bool,
+    /// CR 509.1c — this creature has been conscripted to block a specific
+    /// attacker this turn (Crashing Boars, Matsu-Tribe Decoy). A UI hint so
+    /// the declare-blockers step shows *why* a block is being forced.
+    #[serde(default)]
+    pub must_block: bool,
     /// True when this permanent is monstrous (CR 701.31). Populated by
     /// `project_permanent`.
     #[serde(default)]

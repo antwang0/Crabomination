@@ -6342,6 +6342,10 @@ impl GameState {
         events: &mut Vec<crate::game::GameEvent>,
     ) -> CardId {
         let id = self.next_id();
+        // CR 800.4b — no token is created under a departed player's control.
+        if !self.players.get(controller).is_some_and(|p| p.is_alive()) {
+            return id;
+        }
         let mut inst = crate::card::CardInstance::new_token(id, def, controller);
         // CR 111.2 — a token's owner is the player under whose control it
         // actually entered, so a stolen mint belongs to the thief.
@@ -11611,6 +11615,13 @@ impl GameState {
 
     /// The creatures blocking `attacker`, in ascending id order (the
     /// declaration-order proxy used as the damage-order default).
+    /// CR 509.1h — is `attacker` a *blocked* creature? Stays true after every
+    /// blocker leaves combat, which is why this is separate from
+    /// `blockers_of(..).is_empty()`.
+    pub fn attacker_is_blocked(&self, attacker: CardId) -> bool {
+        self.blocked_attackers.contains(&attacker)
+    }
+
     pub fn blockers_of(&self, attacker: CardId) -> Vec<CardId> {
         let mut ids: Vec<CardId> = self
             .block_map
@@ -19181,6 +19192,11 @@ impl GameState {
     /// (CR 702.29b — echo is owed again once it "came under your control").
     /// Returns the previous controller when control actually changed.
     pub(crate) fn change_control(&mut self, id: CardId, new_ctrl: usize) -> Option<usize> {
+        // CR 800.4b — an object never changes to the control of a player who
+        // has left the game.
+        if !self.players.get(new_ctrl).is_some_and(|p| p.is_alive()) {
+            return None;
+        }
         let c = self.battlefield_find_mut(id)?;
         if c.controller == new_ctrl {
             return None;

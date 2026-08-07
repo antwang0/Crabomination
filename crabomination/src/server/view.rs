@@ -1572,6 +1572,7 @@ fn project_permanent(
         damage_prevented_as_source: state.source_damage_fully_prevented(card.id),
         doomed_next_damage,
         goaded: !card.goaded_by.is_empty(),
+        must_block: card.must_block.is_some(),
         attack_mandated: state
             .attack_mandate_for(card.controller)
             .is_some_and(|chosen| chosen.contains(&card.id)),

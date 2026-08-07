@@ -3,6 +3,20 @@
 Improvement opportunities for the engine, client, and tooling.
 Items are grouped by area and roughly ordered by impact within each group.
 
+## Noticed this run (CR follow-ups)
+
+- **`Effect::MustBlockSource.chooser` asks even when the pick is forced.**
+  The seat is only consulted when more than one candidate matches, but a
+  `wants_ui` seat with two identical creatures still gets a modal for a choice
+  that changes nothing. Cheap to skip when every candidate is equivalent. ⏳
+- **CR 800.4b's third clause is unmodelled.** "If an object would be put onto
+  the battlefield or onto the stack under the control of a player who has left
+  the game, that object remains in its current zone" — only the token and
+  control-change halves are gated. ⏳
+- **CR 800.4a's exile clause is unmodelled.** Objects a departed player still
+  controls after their own objects leave and control effects end (a Bribery'd
+  creature) should be exiled; today they revert to their owner. ⏳
+
 ## Noticed this run (Tempest block closed; Weatherlight opened)
 
 - **Weatherlight (WTH) is the live front** — `set_gaps.py wth` is 103 after
