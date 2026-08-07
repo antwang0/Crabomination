@@ -1470,3 +1470,151 @@ pub fn snake_basket() -> CardDefinition {
         }],
     )
 }
+
+/// Righteous War — {1}{W}{B} Enchantment. Your white creatures have protection
+/// from black and your black creatures have protection from white.
+pub fn righteous_war() -> CardDefinition {
+    let grant = |have: Color, from: Color| StaticAbility {
+        description: "Righteous War grants protection along the colour line.",
+        effect: StaticEffect::GrantKeyword {
+            applies_to: Selector::EachPermanent(
+                R::Creature.and(R::ControlledByYou).and(R::HasColor(have)),
+            ),
+            keyword: Keyword::Protection(from),
+        },
+    };
+    CardDefinition {
+        static_abilities: vec![
+            grant(Color::White, Color::Black),
+            grant(Color::Black, Color::White),
+        ],
+        ..enchantment("Righteous War", cost(&[generic(1), w(), b()]))
+    }
+}
+
+/// Suleiman's Legacy — {R}{W} Enchantment. Wipes Djinns and Efreets on entry
+/// and kills each one that enters afterwards.
+pub fn suleimans_legacy() -> CardDefinition {
+    let djinn_or_efreet = || {
+        R::HasCreatureType(CreatureType::Djinn).or(R::HasCreatureType(CreatureType::Efreet))
+    };
+    CardDefinition {
+        triggered_abilities: vec![
+            etb(Effect::DestroyNoRegen {
+                what: Selector::EachPermanent(djinn_or_efreet()),
+            }),
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::EntersBattlefield, EventScope::AnyPlayer)
+                    .with_filter(Predicate::EntityMatches {
+                        what: Selector::TriggerSource,
+                        filter: djinn_or_efreet(),
+                    }),
+                effect: Effect::DestroyNoRegen { what: Selector::TriggerSource },
+            },
+        ],
+        ..enchantment("Suleiman's Legacy", cost(&[r(), w()]))
+    }
+}
+
+/// Vanishing — {U} Aura. {U}{U}: the enchanted creature phases out.
+pub fn vanishing() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[u(), u()]),
+            effect: Effect::PhaseOut {
+                what: Selector::AttachedTo(Box::new(Selector::This)),
+                until_source_leaves: false,
+            },
+            ..Default::default()
+        }],
+        ..aura("Vanishing", cost(&[u()]), EquipBonus::default())
+    }
+}
+
+/// Death Watch — {B} Aura. When the enchanted creature dies its controller
+/// loses life equal to its power and you gain life equal to its toughness.
+pub fn death_watch() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CreatureDied, EventScope::EnchantedBySource),
+            effect: Effect::Seq(vec![
+                Effect::LoseLife {
+                    who: Selector::Player(PlayerRef::ControllerOf(Box::new(
+                        Selector::TriggerSource,
+                    ))),
+                    amount: Value::PowerOf(Box::new(Selector::TriggerSource)),
+                },
+                Effect::GainLife {
+                    who: Selector::You,
+                    amount: Value::ToughnessOf(Box::new(Selector::TriggerSource)),
+                },
+            ]),
+        }],
+        ..aura("Death Watch", cost(&[b()]), EquipBonus::default())
+    }
+}
+
+/// Flooded Shoreline — {U}{U} Enchantment. {U}{U}, return two Islands you
+/// control to hand: bounce target creature.
+pub fn flooded_shoreline() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[u(), u()]),
+            bounce_other_filter: Some((R::HasLandType(LandType::Island), 2)),
+            effect: Effect::Move {
+                what: target_filtered(R::Creature),
+                to: ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(Selector::Target(0)))),
+            },
+            ..Default::default()
+        }],
+        ..enchantment("Flooded Shoreline", cost(&[u(), u()]))
+    }
+}
+
+/// Righteous Aura — {1}{W} Enchantment. {W}, pay 2 life: prevent the next
+/// damage a source of your choice would deal to you this turn.
+pub fn righteous_aura() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[w()]),
+            life_cost: 2,
+            effect: Effect::PreventNextDamageFromChosenSource {
+                filter: R::Any,
+                reflect: false,
+                to: None,
+                gain_life: false,
+                redirect_to: None,
+                whole_turn: false,
+            },
+            ..Default::default()
+        }],
+        ..enchantment("Righteous Aura", cost(&[generic(1), w()]))
+    }
+}
+
+/// Quirion Druid — {2}{G} 1/2. {G}, {T}: a land becomes a 2/2 green creature
+/// that's still a land.
+pub fn quirion_druid() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[g()]),
+            tap_cost: true,
+            effect: Effect::BecomeCreature {
+                what: target_filtered(R::Land),
+                power: Value::Const(2),
+                toughness: Value::Const(2),
+                creature_types: vec![],
+                keywords: vec![],
+                duration: Duration::Permanent,
+            },
+            ..Default::default()
+        }],
+        ..creature(
+            "Quirion Druid",
+            cost(&[generic(2), g()]),
+            vec![CreatureType::Elf, CreatureType::Druid],
+            1,
+            2,
+        )
+    }
+}

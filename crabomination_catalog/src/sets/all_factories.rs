@@ -21153,6 +21153,13 @@ static VIS: &[Factory] = &[
     super::vis::griffin_canyon,
     super::vis::magma_mine,
     super::vis::snake_basket,
+    super::vis::righteous_war,
+    super::vis::suleimans_legacy,
+    super::vis::vanishing,
+    super::vis::death_watch,
+    super::vis::flooded_shoreline,
+    super::vis::righteous_aura,
+    super::vis::quirion_druid,
 ];
 static WAR: &[Factory] = &[
     super::war::ironclad_krovod,

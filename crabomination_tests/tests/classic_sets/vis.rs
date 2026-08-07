@@ -633,3 +633,131 @@ fn scalebanes_elite_has_pro_black() {
     assert_eq!((d.power, d.toughness), (4, 4));
     assert!(d.keywords.contains(&Keyword::Protection(Color::Black)));
 }
+
+/// Righteous War hands protection out along the colour line.
+#[test]
+fn righteous_war_protects_both_halves() {
+    use crabomination::card::Keyword as K;
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::righteous_war());
+    let white = g.add_card_to_battlefield(0, catalog::savannah_lions());
+    let black = g.add_card_to_battlefield(0, catalog::python());
+    assert!(
+        g.computed_permanent(white).unwrap().keywords.contains(&K::Protection(Color::Black)),
+        "white creature gets pro-black"
+    );
+    assert!(
+        g.computed_permanent(black).unwrap().keywords.contains(&K::Protection(Color::White)),
+        "black creature gets pro-white"
+    );
+}
+
+/// Suleiman's Legacy wipes the Djinns on entry and kills the next one too.
+#[test]
+fn suleimans_legacy_hates_djinns() {
+    let mut g = two_player_game();
+    let djinn = g.add_card_to_battlefield(1, catalog::waterspout_djinn());
+    g.move_card_to_battlefield_for_test(0, catalog::suleimans_legacy());
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(djinn).is_none(), "the sweep got it");
+    let later = g.add_card_to_battlefield(1, catalog::waterspout_djinn());
+    g.dispatch_triggers_for_events(&[crabomination::game::types::GameEvent::PermanentEntered {
+        card_id: later,
+    }]);
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(later).is_none(), "and the next one");
+}
+
+/// Death Watch drains the dead creature's controller for its power and gains
+/// you its toughness.
+#[test]
+fn death_watch_drains_on_death() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let aura = g.add_card_to_hand(0, catalog::death_watch());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    cast(&mut g, aura, Some(Target::Permanent(bear))).expect("cast");
+    drain_stack(&mut g);
+    g.battlefield_find_mut(bear).unwrap().damage = 99;
+    let evs = g.check_state_based_actions();
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, 18, "lost life equal to its power");
+    assert_eq!(g.players[0].life, 22, "gained life equal to its toughness");
+}
+
+/// Vanishing phases its host out.
+#[test]
+fn vanishing_phases_out_its_host() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let aura = g.add_card_to_hand(0, catalog::vanishing());
+    g.players[0].mana_pool.add(Color::Blue, 3);
+    cast(&mut g, aura, Some(Target::Permanent(bear))).expect("cast");
+    drain_stack(&mut g);
+    let aura_id = g
+        .battlefield
+        .iter()
+        .find(|c| c.definition.name == "Vanishing")
+        .expect("attached")
+        .id;
+    activate(&mut g, aura_id, 0, None).expect("phase it out");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_none(), "phased out of the battlefield");
+}
+
+/// Flooded Shoreline bounces a creature for two Islands.
+#[test]
+fn flooded_shoreline_bounces_for_two_islands() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::flooded_shoreline());
+    let shore = g
+        .battlefield
+        .iter()
+        .find(|c| c.definition.name == "Flooded Shoreline")
+        .unwrap()
+        .id;
+    let i1 = g.add_card_to_battlefield(0, catalog::island());
+    let i2 = g.add_card_to_battlefield(0, catalog::island());
+    let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.players[0].mana_pool.add(Color::Blue, 2);
+    activate(&mut g, shore, 0, Some(Target::Permanent(victim))).expect("bounce");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(victim).is_none(), "creature bounced");
+    assert!(g.battlefield_find(i1).is_none() && g.battlefield_find(i2).is_none(), "both Islands paid");
+}
+
+/// Righteous Aura buys a damage-prevention shield for {W} and 2 life.
+#[test]
+fn righteous_aura_prevents_the_next_hit() {
+    let mut g = two_player_game();
+    let ra = ready(&mut g, 0, catalog::righteous_aura());
+    let src = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.players[0].mana_pool.add(Color::White, 1);
+    activate(&mut g, ra, 0, None).expect("buy a shield");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, 18, "paid 2 life");
+    let mut evs = Vec::new();
+    g.deal_damage_to_from(
+        crabomination::game::effects::EntityRef::Player(0),
+        3,
+        Some(src),
+        &mut evs,
+    );
+    assert_eq!(g.players[0].life, 18, "the shield ate the damage");
+}
+
+/// Quirion Druid animates a land into a 2/2 that stays a land.
+#[test]
+fn quirion_druid_animates_a_land() {
+    use crabomination::card::CardType;
+    let mut g = two_player_game();
+    let druid = ready(&mut g, 0, catalog::quirion_druid());
+    let land = g.add_card_to_battlefield(0, catalog::forest());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    activate(&mut g, druid, 0, Some(Target::Permanent(land))).expect("animate");
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(land).expect("still there");
+    assert_eq!((cp.power, cp.toughness), (2, 2));
+    assert!(cp.card_types.contains(&CardType::Creature) && cp.card_types.contains(&CardType::Land));
+}

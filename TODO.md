@@ -43,7 +43,7 @@ Items are grouped by area and roughly ordered by impact within each group.
   time combat comes around. Wants a `Value::Const`-substituting capture on
   `Effect::AtEachCombatThisTurn` (or a general "freeze this Value now"
   wrapper); the card is held back until then. ⏳
-- **Remaining Visions gaps (64) cluster on four shapes:** the phasing
+- **Remaining Visions gaps (57) cluster on four shapes:** the phasing
   mass-effects (Equipoise, Teferi's Realm, Katabatic Winds), the Chimera
   sacrifice cycle (a `+2/+2` counter *plus* an indefinite keyword grant), the
   world enchantments (Elkin Lair, Eye of Singularity), and the
