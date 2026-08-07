@@ -10447,7 +10447,7 @@ impl GameState {
         // resolution (per-mode), not through this single-`mode` fizzle path;
         // the chosen modes aren't encoded in `mode`, so a slot-0 filter here
         // could belong to an unchosen mode. Skip the blanket fizzle for Spree.
-        let is_spree = matches!(effect, Effect::Spree { .. });
+        let is_spree = matches!(effect, Effect::Spree { .. } | Effect::Tiered { .. });
         if !is_spree
             && additional_targets.is_empty()
             && let Some(t) = &target

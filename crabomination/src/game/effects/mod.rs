@@ -1361,7 +1361,7 @@ impl GameState {
                 Ok(())
             }
 
-            Effect::Spree { modes } => {
+            Effect::Spree { modes } | Effect::Tiered { modes } => {
                 // CR 702.172 — the chosen modes were picked (and paid for) at
                 // cast time and stamped onto `ctx.spree_modes`. Run them in
                 // printed order; each target-bearing mode consumes the next

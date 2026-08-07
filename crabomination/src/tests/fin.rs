@@ -2664,3 +2664,103 @@ fn ninjas_blades_drains_for_discard_mv() {
     // 2 combat damage from the 2/2 Hero, then 1 life for Sol Ring's mana value.
     assert_eq!(g.players[1].life, life_before - 3);
 }
+
+// ── Tiered (choose exactly one additional cost) ───────────────────────────────
+
+fn tiered(card_id: CardId, tier: u8, target: Option<Target>) -> GameAction {
+    GameAction::CastSpellSpree {
+        card_id,
+        spree_modes: vec![tier],
+        target,
+        additional_targets: vec![],
+        x_value: None,
+    }
+}
+
+/// Thunder Magic's chosen tier sets both the extra cost and the damage.
+#[test]
+fn thunder_magic_tier_scales_damage() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
+    let angel = g.add_card_to_battlefield(1, catalog::serra_angel()); // 4/4
+    let cheap = g.add_card_to_hand(0, catalog::thunder_magic());
+    g.players[0].mana_pool.add(crate::mana::Color::Red, 1);
+    g.perform_action(tiered(cheap, 0, Some(Target::Permanent(bear)))).expect("Thunder");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_none(), "2 damage killed the 2/2");
+
+    let big = g.add_card_to_hand(0, catalog::thunder_magic());
+    g.players[0].mana_pool.add(crate::mana::Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(tiered(big, 1, Some(Target::Permanent(angel)))).expect("Thundara");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(angel).is_none(), "4 damage killed the 4/4");
+}
+
+/// A Tiered spell rejects a cast that picks more than one tier.
+#[test]
+fn tiered_rejects_multiple_tiers() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::thunder_magic());
+    g.players[0].mana_pool.add(crate::mana::Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    assert!(g.perform_action(GameAction::CastSpellSpree {
+        card_id: id, spree_modes: vec![0, 1],
+        target: Some(Target::Permanent(bear)), additional_targets: vec![], x_value: None,
+    }).is_err(), "Tiered takes exactly one tier");
+}
+
+/// Tifa's Limit Break at Meteor Strikes doubles the creature's power/toughness.
+#[test]
+fn tifas_limit_break_doubles() {
+    let mut g = two_player_game();
+    let angel = g.add_card_to_battlefield(0, catalog::serra_angel()); // 4/4
+    let id = g.add_card_to_hand(0, catalog::tifas_limit_break());
+    g.players[0].mana_pool.add(crate::mana::Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(tiered(id, 1, Some(Target::Permanent(angel)))).expect("Meteor Strikes");
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(angel).unwrap();
+    assert_eq!((cp.power, cp.toughness), (8, 8));
+}
+
+/// Ice Magic's cheapest tier bounces; the pricey tier shuffles the creature in.
+#[test]
+fn ice_magic_tiers_bounce_and_shuffle() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::ice_magic());
+    g.players[0].mana_pool.add(crate::mana::Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(tiered(id, 0, Some(Target::Permanent(bear)))).expect("Blizzard");
+    drain_stack(&mut g);
+    assert!(g.players[1].hand.iter().any(|c| c.id == bear), "bounced to owner's hand");
+
+    let bear2 = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id2 = g.add_card_to_hand(0, catalog::ice_magic());
+    g.players[0].mana_pool.add(crate::mana::Color::Blue, 2);
+    g.players[0].mana_pool.add_colorless(6);
+    g.perform_action(tiered(id2, 2, Some(Target::Permanent(bear2)))).expect("Blizzaga");
+    drain_stack(&mut g);
+    assert!(g.players[1].library.iter().any(|c| c.id == bear2), "shuffled into the library");
+}
+
+/// Fire Magic's tier scales the board sweep.
+#[test]
+fn fire_magic_tier_scales_sweep() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
+    let id = g.add_card_to_hand(0, catalog::fire_magic());
+    g.players[0].mana_pool.add(crate::mana::Color::Red, 1);
+    g.perform_action(tiered(id, 0, None)).expect("Fire");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_some(), "1 damage doesn't kill a 2/2");
+
+    let id2 = g.add_card_to_hand(0, catalog::fire_magic());
+    g.players[0].mana_pool.add(crate::mana::Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(tiered(id2, 1, None)).expect("Fira");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_none(), "another 2 finished it off");
+}

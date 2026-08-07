@@ -5563,6 +5563,10 @@ static FIN: &[Factory] = &[
     super::fin::red_mages_rapier,
     super::fin::black_mages_rod,
     super::fin::sages_nouliths,
+    super::fin::fire_magic,
+    super::fin::thunder_magic,
+    super::fin::ice_magic,
+    super::fin::tifas_limit_break,
 ];
 static GPT: &[Factory] = &[
     super::gpt::mourning_thrull,

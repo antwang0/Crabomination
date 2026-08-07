@@ -4108,3 +4108,128 @@ pub fn sages_nouliths() -> CardDefinition {
         }],
     )
 }
+
+// ── Tiered spells ─────────────────────────────────────────────────────────────
+
+/// Fire Magic — {R} Instant. Tiered: Fire {0} / Fira {2} / Firaga {5} deal
+/// 1 / 2 / 3 damage to each creature.
+pub fn fire_magic() -> CardDefinition {
+    use crate::effect::SpreeMode;
+    let sweep = |n: i32| Effect::DealDamage {
+        to: Selector::EachPermanent(SelectionRequirement::Creature),
+        amount: Value::Const(n),
+    };
+    CardDefinition {
+        name: "Fire Magic",
+        cost: cost(&[r()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Tiered {
+            modes: vec![
+                SpreeMode { cost: cost(&[]), effect: sweep(1) },
+                SpreeMode { cost: cost(&[generic(2)]), effect: sweep(2) },
+                SpreeMode { cost: cost(&[generic(5)]), effect: sweep(3) },
+            ],
+        },
+        ..Default::default()
+    }
+}
+
+/// Thunder Magic — {R} Instant. Tiered: Thunder {0} / Thundara {3} /
+/// Thundaga {5}{R} deal 2 / 4 / 8 damage to target creature.
+pub fn thunder_magic() -> CardDefinition {
+    use crate::effect::SpreeMode;
+    let bolt = |n: i32| Effect::DealDamage {
+        to: target_filtered(SelectionRequirement::Creature),
+        amount: Value::Const(n),
+    };
+    CardDefinition {
+        name: "Thunder Magic",
+        cost: cost(&[r()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Tiered {
+            modes: vec![
+                SpreeMode { cost: cost(&[]), effect: bolt(2) },
+                SpreeMode { cost: cost(&[generic(3)]), effect: bolt(4) },
+                SpreeMode { cost: cost(&[generic(5), r()]), effect: bolt(8) },
+            ],
+        },
+        ..Default::default()
+    }
+}
+
+/// Ice Magic — {1}{U} Instant. Tiered: Blizzard {0} bounces, Blizzara {2} puts
+/// on top or bottom, Blizzaga {5}{U} shuffles the creature away.
+pub fn ice_magic() -> CardDefinition {
+    use crate::effect::{LibraryPosition, SpreeMode};
+    let owner = || PlayerRef::OwnerOf(Box::new(Selector::Target(0)));
+    let move_to = |to: ZoneDest| Effect::Move {
+        what: target_filtered(SelectionRequirement::Creature),
+        to,
+    };
+    CardDefinition {
+        name: "Ice Magic",
+        cost: cost(&[generic(1), u()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Tiered {
+            modes: vec![
+                SpreeMode { cost: cost(&[]), effect: move_to(ZoneDest::Hand(owner())) },
+                SpreeMode {
+                    cost: cost(&[generic(2)]),
+                    effect: move_to(ZoneDest::Library {
+                        who: owner(),
+                        pos: LibraryPosition::OwnerChoice,
+                    }),
+                },
+                SpreeMode {
+                    cost: cost(&[generic(5), u()]),
+                    effect: move_to(ZoneDest::Library {
+                        who: owner(),
+                        pos: LibraryPosition::Shuffled,
+                    }),
+                },
+            ],
+        },
+        ..Default::default()
+    }
+}
+
+/// Tifa's Limit Break — {G} Instant. Tiered: Somersault {0} gives +2/+2,
+/// Meteor Strikes {2} doubles P/T, Final Heaven {6}{G} triples it.
+pub fn tifas_limit_break() -> CardDefinition {
+    use crate::effect::SpreeMode;
+    let target = || target_filtered(SelectionRequirement::Creature);
+    // "Double" adds the creature's current P/T once; "triple" adds it twice.
+    let scale = |mult: i32| Effect::PumpPT {
+        what: target(),
+        power: Value::Times(
+            Box::new(Value::Const(mult)),
+            Box::new(Value::PowerOf(Box::new(Selector::Target(0)))),
+        ),
+        toughness: Value::Times(
+            Box::new(Value::Const(mult)),
+            Box::new(Value::ToughnessOf(Box::new(Selector::Target(0)))),
+        ),
+        duration: Duration::EndOfTurn,
+    };
+    CardDefinition {
+        name: "Tifa's Limit Break",
+        cost: cost(&[g()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Tiered {
+            modes: vec![
+                SpreeMode {
+                    cost: cost(&[]),
+                    effect: Effect::PumpPT {
+                        what: target(),
+                        power: Value::Const(2),
+                        toughness: Value::Const(2),
+                        duration: Duration::EndOfTurn,
+                    },
+                },
+                SpreeMode { cost: cost(&[generic(2)]), effect: scale(1) },
+                SpreeMode { cost: cost(&[generic(6), g()]), effect: scale(2) },
+            ],
+        },
+        ..Default::default()
+    }
+}

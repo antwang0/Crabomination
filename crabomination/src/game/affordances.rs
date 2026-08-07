@@ -510,7 +510,9 @@ impl GameState {
             .hand
             .iter()
             .filter_map(|c| match &c.definition.effect {
-                crate::effect::Effect::Spree { modes } if !modes.is_empty() => {
+                crate::effect::Effect::Spree { modes } | crate::effect::Effect::Tiered { modes }
+                    if !modes.is_empty() =>
+                {
                     // Probe the cheapest single mode (by total mana value) so a
                     // castable-with-some-mode card is offered even when the
                     // priciest mode is unaffordable.
@@ -527,7 +529,9 @@ impl GameState {
         let mut out = Vec::new();
         for (id, mode) in candidates {
             let effect = self.players[caster].hand.iter().find(|c| c.id == id).map(|c| {
-                if let crate::effect::Effect::Spree { modes } = &c.definition.effect {
+                if let crate::effect::Effect::Spree { modes }
+                | crate::effect::Effect::Tiered { modes } = &c.definition.effect
+                {
                     modes[mode].effect.clone()
                 } else {
                     crate::effect::Effect::Noop

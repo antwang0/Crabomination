@@ -1904,6 +1904,10 @@ pub enum Effect {
     /// the next target slot (slot 0 = `target`, then `additional_targets`).
     /// Targets are validated at resolution, not cast time.
     Spree { modes: Vec<SpreeMode> },
+    /// Tiered (Final Fantasy) — "Choose one additional cost." Same shape as
+    /// [`Effect::Spree`] but exactly one mode is chosen; it shares the
+    /// `GameAction::CastSpellSpree` cast path and `CardInstance.spree_modes`.
+    Tiered { modes: Vec<SpreeMode> },
     /// "You may [body]" — emit a yes/no decision via
     /// `Decision::OptionalTrigger`. Run `body` only on `Bool(true)`. The
     /// `description` string is shown to the player (and serialized into

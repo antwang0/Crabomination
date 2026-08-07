@@ -2723,10 +2723,12 @@ impl GameState {
             .iter()
             .find(|c| c.id == card_id)
             .and_then(|c| match &c.definition.effect {
-                crate::effect::Effect::Spree { modes } => Some(modes.len()),
+                crate::effect::Effect::Spree { modes } => Some((modes.len(), false)),
+                crate::effect::Effect::Tiered { modes } => Some((modes.len(), true)),
                 _ => None,
             })
             .ok_or(GameError::CardNotInHand(card_id))?;
+        let (mode_count, tiered) = mode_count;
         // Distinct, in range, at least one (CR 702.172a — "one or more"),
         // kept in printed order so target slots line up with resolution.
         let mut chosen: Vec<u8> = Vec::new();
@@ -2736,7 +2738,8 @@ impl GameState {
             }
         }
         chosen.sort_unstable();
-        if chosen.is_empty() {
+        // Spree takes one or more (CR 702.172a); Tiered takes exactly one.
+        if chosen.is_empty() || (tiered && chosen.len() != 1) {
             return Err(GameError::InvalidTarget);
         }
         self.cast_atomically(|g| {
@@ -4210,7 +4213,8 @@ impl GameState {
         }
         // CR 702.172 — fold each chosen Spree mode's mana cost into the total.
         if !spree_modes.is_empty()
-            && let crate::effect::Effect::Spree { modes } = &card.definition.effect
+            && let crate::effect::Effect::Spree { modes }
+            | crate::effect::Effect::Tiered { modes } = &card.definition.effect
         {
             for &i in &spree_modes {
                 if let Some(m) = modes.get(i as usize) {
