@@ -758,6 +758,10 @@ pub fn cost_reduction_for_spell_full(
                 {
                     reduction += amount;
                 }
+                // Helm of Awakening — table-wide, so no controller gate.
+                StaticEffect::AllPlayersSpellsCostLess { amount } => {
+                    reduction += amount;
+                }
                 // "The first [filter] spell you cast each turn costs {N} less"
                 // — spent as soon as one matching spell has been cast.
                 StaticEffect::FirstMatchingSpellEachTurnCostsLess { filter, amount }

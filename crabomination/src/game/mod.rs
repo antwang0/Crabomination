@@ -20258,6 +20258,7 @@ fn static_effect_to_effects(
             | StaticEffect::LethalDamageByPower { .. }
             | StaticEffect::ExtraLandPerTurn
             | StaticEffect::CostReduction { .. }
+            | StaticEffect::AllPlayersSpellsCostLess { .. }
             | StaticEffect::ColoredCostReduction { .. }
             | StaticEffect::ColoredSpellTax { .. }
             | StaticEffect::NamedSpellCostReduction { .. }

@@ -1185,6 +1185,10 @@ pub enum Keyword {
     /// than shroud — abilities still reach it, and it isn't protection, so
     /// damage/enchant/block are unaffected.
     CantBeTargetedBySpells,
+    /// "If damage would be dealt to this creature, put that many -1/-1
+    /// counters on it instead" (Lichenthrope). The receiver-side twin of
+    /// Wither — checked on the *victim* in the damage funnel.
+    DamageBecomesMinusCounters,
     /// CR 702.14 — legendary landwalk: unblockable while the defending player
     /// controls a legendary land (Livonya Silone). A supertype-scoped walk, so
     /// it can't ride `Landwalk(LandType)`.

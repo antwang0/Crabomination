@@ -35313,12 +35313,19 @@ impl GameState {
                         true
                     }
                     WardCost::ReturnMatchingToHand(filter) => {
+                        // Source-aware, so `OtherThanSource` reads right (the
+                        // Karoo lands can't bounce themselves).
                         let pick = self
                             .battlefield
                             .iter()
                             .filter(|c| {
                                 c.controller == payer
-                                    && self.evaluate_requirement_on_card(filter, c, payer)
+                                    && self.evaluate_requirement_static(
+                                        filter,
+                                        &Target::Permanent(c.id),
+                                        payer,
+                                        ctx.source,
+                                    )
                             })
                             .min_by_key(|c| c.definition.cost.cmc())
                             .map(|c| c.id);

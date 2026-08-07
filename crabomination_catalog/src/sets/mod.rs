@@ -441,6 +441,7 @@ pub mod shm;
 pub mod sos;
 pub mod exo;
 pub mod exo2;
+pub mod vis;
 pub mod wth;
 pub mod wth2;
 pub mod sth;

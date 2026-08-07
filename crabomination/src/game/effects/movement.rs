@@ -1442,6 +1442,11 @@ impl GameState {
                     {
                         c.damaged_permanents_this_game.push(cid);
                     }
+                    // Lichenthrope — the victim itself converts damage to
+                    // -1/-1 counters, whatever the source is.
+                    let victim_converts = self.computed_permanent(cid).is_some_and(|cp| {
+                        cp.keywords.contains(&crate::card::Keyword::DamageBecomesMinusCounters)
+                    });
                     if let Some(c) = self.battlefield_find_mut(cid) {
                     if c.definition.is_creature() {
                         c.dealt_damage_this_turn = true;
@@ -1453,7 +1458,7 @@ impl GameState {
                             c.record_damage_from_named(name, amount);
                         }
                     }
-                    if source_has_wither && c.definition.is_creature() {
+                    if (source_has_wither || victim_converts) && c.definition.is_creature() {
                         c.add_counters(CounterType::MinusOneMinusOne, amount);
                         events.push(GameEvent::CounterAdded {
                             card_id: cid,
