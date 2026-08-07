@@ -2766,6 +2766,16 @@ Each a small targeted feature; sweep batch by batch.
 
 ## Recently closed (this push)
 
+- **Tempest/Exodus follow-ups + CR conformance** — `EventKind::
+  LostControlOfThis` (CR 800.4, with the trigger re-pointed at the seat that
+  *lost* control, since the permanent already belongs to someone else by
+  dispatch time — Duplicity's pile now bins on a control change too); attack
+  mandates stack and drop creatures whose controller changed;
+  `Effect::MustBlockSource.chooser` routes "defending player chooses" to a real
+  seat (Crashing Boars); CR 800.4b gates on token creation and control
+  changes to a departed player; CR 101.4 APNAP ordering for
+  each-player-unless-pays taxes. UI/server: `PermanentView.must_block` badges
+  a CR 509.1c conscription as "Blk!".
 - **Tempest block closed** — TMP, STH and EXO all report zero gaps. The three
   Tempest closers: **Duplicity** (`ExileHandThenReclaimLinked` + a linked
   five-card face-down reserve), **Oracle en-Vec** (`Effect::
