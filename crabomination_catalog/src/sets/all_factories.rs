@@ -5549,6 +5549,11 @@ static FIN: &[Factory] = &[
     super::fin::sorceresss_schemes,
     super::fin::rinoa_heartilly,
     super::fin::the_regalia,
+    super::fin::dragoons_lance,
+    super::fin::aettir_and_priwen,
+    super::fin::excalibur_ii,
+    super::fin::a_realm_reborn,
+    super::fin::delivery_moogle,
 ];
 static GPT: &[Factory] = &[
     super::gpt::mourning_thrull,

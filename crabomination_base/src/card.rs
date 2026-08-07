@@ -2425,6 +2425,12 @@ pub struct EquipBonus {
     /// untouched (the common stat-bonus Equipment/Aura case).
     #[serde(default)]
     pub set_base_pt: Option<(i32, i32)>,
+    /// Dynamic base P/T: the host's base power *and* toughness both become the
+    /// evaluated count ("equipped creature has base power and toughness X/X,
+    /// where X is your life total" — Aettir and Priwen). Takes precedence over
+    /// `set_base_pt` when both are set.
+    #[serde(default)]
+    pub set_base_pt_dynamic: Option<EquipDynamicValue>,
     #[serde(default)]
     pub set_card_types: Option<Vec<CardType>>,
     #[serde(default)]
@@ -2456,6 +2462,21 @@ pub struct ConditionalEquipBonus {
     pub toughness: i32,
     #[serde(default)]
     pub keywords: Vec<Keyword>,
+    /// Extra game-state gate on top of `host_filter` ("During your turn,
+    /// equipped creature has flying" — Dragoon's Lance, via
+    /// `Predicate::IsTurnOf(You)`). Evaluated from the Equipment's controller.
+    #[serde(default)]
+    pub predicate: Option<crate::effect::Predicate>,
+}
+
+/// A count an [`EquipBonus`] reads off game state rather than the board
+/// (`EquipScale` handles the board-count cases).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub enum EquipDynamicValue {
+    /// The Equipment controller's life total (Aettir and Priwen).
+    ControllerLife,
+    /// Counters of this kind on the Equipment itself.
+    CountersOnSource(CounterType),
 }
 
 /// CR 702.95 — the bonus each member of a Soulbond pair gains while paired.

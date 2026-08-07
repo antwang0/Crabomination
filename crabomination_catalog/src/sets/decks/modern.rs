@@ -26397,16 +26397,16 @@ fn for_mirrodin_equipment(
 
 /// CR 702.182 — Job Select. Build an Equipment that, on ETB, mints a 1/1
 /// colorless Hero token and attaches itself to it, then carries a plain
-/// `equipped_bonus` (P/T + keywords) and an equip cost. (The "equipped creature
-/// is also a [class]" type-add rider is dropped — `EquipBonus` only overrides
-/// types, not adds them.)
-fn job_select_equipment(
+/// `equipped_bonus` (P/T + keywords + the "is a [class] in addition to its
+/// other types" rider) and an equip cost.
+pub(crate) fn job_select_equipment(
     name: &'static str,
     mana: crate::mana::ManaCost,
     equip: crate::mana::ManaCost,
     power: i32,
     toughness: i32,
     keywords: Vec<Keyword>,
+    add_type: Option<CreatureType>,
 ) -> CardDefinition {
     use crate::card::{ArtifactSubtype, EquipBonus};
     use crate::effect::shortcut::etb;
@@ -26432,6 +26432,7 @@ fn job_select_equipment(
             power,
             toughness,
             keywords,
+            add_creature_types: add_type.into_iter().collect(),
             ..Default::default()
         }),
         triggered_abilities: vec![etb(Effect::Seq(vec![
@@ -26442,26 +26443,31 @@ fn job_select_equipment(
     }
 }
 
-/// Monk's Fist — {2} Equipment. Job select. Equipped creature gets +1/+0.
-/// Equip {2}.
+/// Monk's Fist — {2} Equipment. Job select. Equipped creature gets +1/+0 and is
+/// a Monk. Equip {2}.
 pub fn monks_fist() -> CardDefinition {
-    job_select_equipment("Monk's Fist", cost(&[generic(2)]), cost(&[generic(2)]), 1, 0, vec![])
-}
-
-/// Bard's Bow — {2}{G} Equipment. Job select. Equipped creature gets +2/+2 and
-/// has reach. Equip {6}.
-pub fn bards_bow() -> CardDefinition {
     job_select_equipment(
-        "Bard's Bow", cost(&[generic(2), g()]), cost(&[generic(6)]), 2, 2, vec![Keyword::Reach],
+        "Monk's Fist", cost(&[generic(2)]), cost(&[generic(2)]), 1, 0, vec![],
+        Some(CreatureType::Monk),
     )
 }
 
-/// Paladin's Arms — {2}{W} Equipment. Job select. Equipped creature gets +2/+1
-/// and has ward {1}. Equip {4}. (The "is a Knight" type-add is dropped.)
+/// Bard's Bow — {2}{G} Equipment. Job select. Equipped creature gets +2/+2, has
+/// reach, and is a Bard. Equip {6}.
+pub fn bards_bow() -> CardDefinition {
+    job_select_equipment(
+        "Bard's Bow", cost(&[generic(2), g()]), cost(&[generic(6)]), 2, 2, vec![Keyword::Reach],
+        Some(CreatureType::Bard),
+    )
+}
+
+/// Paladin's Arms — {2}{W} Equipment. Job select. Equipped creature gets +2/+1,
+/// has ward {1}, and is a Knight. Equip {4}.
 pub fn paladins_arms() -> CardDefinition {
     job_select_equipment(
         "Paladin's Arms", cost(&[generic(2), w()]), cost(&[generic(4)]), 2, 1,
         vec![Keyword::Ward(crate::card::WardCost::generic(1))],
+        Some(CreatureType::Knight),
     )
 }
 
@@ -51880,12 +51886,14 @@ pub fn shield_of_the_oversoul() -> CardDefinition {
                     power: 1,
                     toughness: 1,
                     keywords: vec![Keyword::Indestructible],
+                    predicate: None,
                 },
                 ConditionalEquipBonus {
                     host_filter: SelectionRequirement::HasColor(Color::White),
                     power: 1,
                     toughness: 1,
                     keywords: vec![Keyword::Flying],
+                    predicate: None,
                 },
             ],
             ..Default::default()
@@ -51917,12 +51925,14 @@ pub fn steel_of_the_godhead() -> CardDefinition {
                     power: 1,
                     toughness: 1,
                     keywords: vec![Keyword::Lifelink],
+                    predicate: None,
                 },
                 ConditionalEquipBonus {
                     host_filter: SelectionRequirement::HasColor(Color::Blue),
                     power: 1,
                     toughness: 1,
                     keywords: vec![Keyword::Unblockable],
+                    predicate: None,
                 },
             ],
             ..Default::default()

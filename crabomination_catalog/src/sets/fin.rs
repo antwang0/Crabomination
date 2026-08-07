@@ -3784,3 +3784,120 @@ pub fn the_regalia() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Dragoon's Lance — {1}{W} Equipment. Job select. Equipped creature gets +1/+0,
+/// is a Knight, and has flying during your turn. Equip {4}.
+pub fn dragoons_lance() -> CardDefinition {
+    let mut def = crate::sets::decks::job_select_equipment(
+        "Dragoon's Lance",
+        cost(&[generic(1), w()]),
+        cost(&[generic(4)]),
+        1,
+        0,
+        vec![],
+        Some(CreatureType::Knight),
+    );
+    if let Some(bonus) = def.equipped_bonus.as_mut() {
+        bonus.conditional.push(crate::card::ConditionalEquipBonus {
+            host_filter: SelectionRequirement::Creature,
+            power: 0,
+            toughness: 0,
+            keywords: vec![Keyword::Flying],
+            predicate: Some(Predicate::IsTurnOf(PlayerRef::You)),
+        });
+    }
+    def
+}
+
+/// Aettir and Priwen — {6} Legendary Equipment. Equipped creature has base
+/// power and toughness X/X, where X is your life total. Equip {5}.
+pub fn aettir_and_priwen() -> CardDefinition {
+    CardDefinition {
+        name: "Aettir and Priwen",
+        cost: cost(&[generic(6)]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes {
+            artifact_subtypes: vec![ArtifactSubtype::Equipment],
+            ..Default::default()
+        },
+        keywords: vec![Keyword::Equip(cost(&[generic(5)]))],
+        equipped_bonus: Some(EquipBonus {
+            set_base_pt_dynamic: Some(crate::card::EquipDynamicValue::ControllerLife),
+            ..Default::default()
+        }),
+        ..Default::default()
+    }
+}
+
+/// Excalibur II — {1} Legendary Equipment. Whenever you gain life, put a charge
+/// counter on it; equipped creature gets +1/+1 per charge counter. Equip {3}.
+pub fn excalibur_ii() -> CardDefinition {
+    CardDefinition {
+        name: "Excalibur II",
+        cost: cost(&[generic(1)]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes {
+            artifact_subtypes: vec![ArtifactSubtype::Equipment],
+            ..Default::default()
+        },
+        keywords: vec![Keyword::Equip(cost(&[generic(3)]))],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::LifeGained, EventScope::YourControl),
+            effect: Effect::AddCounter {
+                what: Selector::This,
+                kind: CounterType::Charge,
+                amount: Value::ONE,
+            },
+        }],
+        equipped_bonus: Some(EquipBonus {
+            scale: Some(crate::card::EquipScale {
+                filter: SelectionRequirement::Any,
+                per_power: 1,
+                per_toughness: 1,
+                count_self_counters: Some(CounterType::Charge),
+                count_graveyard: None,
+                count_all_graveyards: None,
+            }),
+            ..Default::default()
+        }),
+        ..Default::default()
+    }
+}
+
+/// A Realm Reborn — {4}{G}{G} Enchantment. Other permanents you control have
+/// "{T}: Add one mana of any color."
+pub fn a_realm_reborn() -> CardDefinition {
+    CardDefinition {
+        name: "A Realm Reborn",
+        cost: cost(&[generic(4), g(), g()]),
+        card_types: vec![CardType::Enchantment],
+        static_abilities: vec![crate::effect::shortcut::grant_tap_for_any_color(
+            SelectionRequirement::ControlledByYou.and(SelectionRequirement::OtherThanSource),
+        )],
+        ..Default::default()
+    }
+}
+
+/// Delivery Moogle — {3}{W} 3/2 Moogle with flying. ETB: search your library
+/// and/or graveyard for an artifact card with mana value 2 or less and put it
+/// into your hand.
+pub fn delivery_moogle() -> CardDefinition {
+    CardDefinition {
+        name: "Delivery Moogle",
+        cost: cost(&[generic(3), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Moogle], ..Default::default() },
+        power: 3,
+        toughness: 2,
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![etb(Effect::SearchLibraryOrGraveyard {
+            who: PlayerRef::You,
+            filter: SelectionRequirement::Artifact
+                .and(SelectionRequirement::ManaValueAtMost(2)),
+            to: ZoneDest::Hand(PlayerRef::You),
+        })],
+        ..Default::default()
+    }
+}

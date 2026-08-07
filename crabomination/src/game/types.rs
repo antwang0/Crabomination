@@ -1154,6 +1154,10 @@ pub enum PendingEffectState {
         /// names" across sequential searches).
         #[serde(default)]
         eligible: Option<Vec<crate::card::CardId>>,
+        /// The candidate set also spans `player`'s graveyard (Delivery
+        /// Moogle's "library and/or graveyard").
+        #[serde(default)]
+        include_graveyard: bool,
     },
     /// Dakkon −6: the picked hand/graveyard card enters the battlefield.
     PutFromZonesPending { player: usize },

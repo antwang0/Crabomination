@@ -2465,3 +2465,88 @@ fn the_regalia_lands_on_attack() {
     assert_eq!(lands_after, lands_before + 1, "revealed and dropped a land");
     assert!(g.battlefield_find(land).map(|c| c.tapped).unwrap_or(false), "it entered tapped");
 }
+
+// ── modern_decks batch 5: Equipment primitives ────────────────────────────────
+
+/// Aettir and Priwen sets the equipped creature's base P/T to the controller's
+/// life total, and tracks it as life changes.
+#[test]
+fn aettir_and_priwen_base_pt_tracks_life() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let eq = g.add_card_to_battlefield(0, catalog::aettir_and_priwen());
+    g.players[0].mana_pool.add_colorless(5);
+    g.step = TurnStep::PreCombatMain;
+    g.perform_action(GameAction::Equip { equipment: eq, target: bear }).expect("equip");
+    drain_stack(&mut g);
+    let life = g.players[0].life;
+    let cp = g.computed_permanent(bear).unwrap();
+    assert_eq!((cp.power, cp.toughness), (life, life));
+    g.players[0].life -= 5;
+    let cp = g.computed_permanent(bear).unwrap();
+    assert_eq!((cp.power, cp.toughness), (life - 5, life - 5));
+}
+
+/// Excalibur II banks a charge counter per life-gain event and pumps by it.
+#[test]
+fn excalibur_ii_charges_on_lifegain() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let eq = g.add_card_to_battlefield(0, catalog::excalibur_ii());
+    g.players[0].mana_pool.add_colorless(3);
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::Equip { equipment: eq, target: bear }).expect("equip");
+    drain_stack(&mut g);
+    g.add_card_to_library(0, catalog::grizzly_bears());
+    let revit = g.add_card_to_hand(0, catalog::revitalize());
+    g.players[0].mana_pool.add(crate::mana::Color::White, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: revit, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Revitalize");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(eq).unwrap().counter_count(CounterType::Charge), 1);
+    let cp = g.computed_permanent(bear).unwrap();
+    assert_eq!((cp.power, cp.toughness), (3, 3), "2/2 + one charge counter");
+}
+
+/// Dragoon's Lance grants flying only during its controller's turn.
+#[test]
+fn dragoons_lance_flying_only_on_your_turn() {
+    let mut g = two_player_game();
+    let lance = g.move_card_to_battlefield_for_test(0, catalog::dragoons_lance());
+    drain_stack(&mut g);
+    let hero = g.battlefield.iter().find(|c| c.is_token).map(|c| c.id).expect("Hero token");
+    g.active_player_idx = 0;
+    let cp = g.computed_permanent(hero).unwrap();
+    assert_eq!(cp.power, 2, "+1/+0");
+    assert!(cp.subtypes.creature_types.contains(&crate::card::CreatureType::Knight), "is a Knight");
+    assert!(cp.keywords.contains(&Keyword::Flying), "flying on your turn");
+    g.active_player_idx = 1;
+    assert!(!g.computed_permanent(hero).unwrap().keywords.contains(&Keyword::Flying),
+        "no flying on the opponent's turn");
+}
+
+/// A Realm Reborn turns every *other* permanent you control into a mana source.
+#[test]
+fn a_realm_reborn_grants_mana_ability_to_others() {
+    let mut g = two_player_game();
+    let realm = g.add_card_to_battlefield(0, catalog::a_realm_reborn());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    assert_eq!(g.granted_abilities_for(bear).len(), 1, "bear taps for mana");
+    assert!(g.granted_abilities_for(realm).is_empty(), "the source itself is excluded");
+}
+
+/// Delivery Moogle's ETB can pull a cheap artifact out of the graveyard.
+#[test]
+fn delivery_moogle_searches_graveyard() {
+    let mut g = two_player_game();
+    let relic = g.add_card_to_graveyard(0, catalog::sol_ring());
+    g.decider = Box::new(crate::decision::ScriptedDecider::new(vec![
+        crate::decision::DecisionAnswer::Search(Some(relic)),
+    ]));
+    g.move_card_to_battlefield_for_test(0, catalog::delivery_moogle());
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == relic), "found Sol Ring in the graveyard");
+}

@@ -2546,6 +2546,10 @@ pub enum Effect {
     /// Deathbellow War Cry (Minotaurs → battlefield). The "different names"
     /// rider is not enforced.
     SearchUpToN { who: PlayerRef, filter: SelectionRequirement, to: ZoneDest, count: Value },
+    /// "Search your library **and/or graveyard** for a card matching `filter`
+    /// …" (Delivery Moogle). One pick across both zones; the library is only
+    /// shuffled when the found card came from it (CR 701.19b).
+    SearchLibraryOrGraveyard { who: PlayerRef, filter: SelectionRequirement, to: ZoneDest },
     /// CR 701.19a — `picker` searches `who`'s library: the pick decision
     /// routes to `picker`'s seat, not the library's owner (Hide // Seek's
     /// "search target opponent's library ... exile that card").

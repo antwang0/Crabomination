@@ -4296,7 +4296,19 @@ impl GameState {
                     modification: m,
                 });
             };
-            if let Some((p, t)) = bonus.set_base_pt {
+            // Dynamic base P/T wins over the flat override when both are set.
+            if let Some(dyn_val) = &bonus.set_base_pt_dynamic {
+                let n = match dyn_val {
+                    crate::card::EquipDynamicValue::ControllerLife => {
+                        self.players[card.controller].life
+                    }
+                    crate::card::EquipDynamicValue::CountersOnSource(kind) => {
+                        card.counter_count(*kind) as i32
+                    }
+                };
+                push_mod(&mut all_effects, Layer::L7PowerTough, Some(PtSublayer::SetValue),
+                    Modification::SetPowerToughness(n, n));
+            } else if let Some((p, t)) = bonus.set_base_pt {
                 push_mod(&mut all_effects, Layer::L7PowerTough, Some(PtSublayer::SetValue),
                     Modification::SetPowerToughness(p, t));
             }
@@ -4333,6 +4345,13 @@ impl GameState {
                     });
                 if !host_matches {
                     continue;
+                }
+                // Optional game-state gate ("During your turn, …").
+                if let Some(pred) = &cond.predicate {
+                    let ctx = EffectContext::for_ability(card.id, card.controller, None);
+                    if !self.evaluate_predicate(pred, &ctx) {
+                        continue;
+                    }
                 }
                 if cond.power != 0 || cond.toughness != 0 {
                     all_effects.push(ContinuousEffect {
@@ -9767,11 +9786,25 @@ impl GameState {
                 self.apply_learn_choice(player, choice.clone(), &mut events);
                 Ok(events)
             }
-            PendingEffectState::SearchPending { player, to, eligible } => {
+            PendingEffectState::SearchPending { player, to, eligible, include_graveyard } => {
                 let DecisionAnswer::Search(chosen_id) = answer else {
                     return Err(GameError::DecisionAnswerMismatch);
                 };
                 let mut events = vec![];
+                // Dual-zone search (Delivery Moogle): a pick that isn't in the
+                // library comes from the graveyard instead.
+                if include_graveyard
+                    && let Some(card_id) = chosen_id
+                    && eligible.as_ref().is_none_or(|e| e.contains(card_id))
+                    && !self.players[player].library.iter().any(|c| c.id == *card_id)
+                {
+                    if let Some(card) = Self::take_card(&mut self.players[player].graveyard, *card_id)
+                    {
+                        self.place_card_in_dest(card, player, &to, &mut events);
+                        self.last_moved_cards.push(*card_id);
+                    }
+                    return Ok(events);
+                }
                 if let Some(card_id) = chosen_id
                     && eligible.as_ref().is_none_or(|e| e.contains(card_id))
                     && let Some(pos) = self.players[player].library.iter().position(|c| c.id == *card_id) {
