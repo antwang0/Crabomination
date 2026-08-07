@@ -2888,3 +2888,235 @@ fn valkyrie_affinity_for_artifacts() {
         card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
     }).expect("affinity discount applied");
 }
+
+// ── FIN batch: spells, vehicles, artifacts ────────────────────────────────────
+
+/// Suplex mode 0 burns and exiles the creature instead of letting it die.
+#[test]
+fn suplex_exiles_what_it_kills() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::suplex());
+    g.players[0].mana_pool.add(crate::mana::Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: Some(0), x_value: None,
+    }).expect("cast Suplex");
+    drain_stack(&mut g);
+    assert!(g.exile.iter().any(|c| c.id == bear), "exiled instead of dying");
+}
+
+/// Qutrub Forayer's ETB mode 0 destroys a damaged creature.
+#[test]
+fn qutrub_forayer_destroys_a_damaged_creature() {
+    let mut g = two_player_game();
+    let angel = g.add_card_to_battlefield(1, catalog::serra_angel());
+    g.battlefield_find_mut(angel).unwrap().damage = 1;
+    g.battlefield_find_mut(angel).unwrap().dealt_damage_this_turn = true;
+    g.decider = Box::new(crate::decision::ScriptedDecider::new(vec![
+        crate::decision::DecisionAnswer::Mode(0),
+    ]));
+    g.move_card_to_battlefield_for_test(0, catalog::qutrub_forayer());
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(angel).is_none(), "destroyed the damaged creature");
+}
+
+/// Elixir recycles the graveyard and pays out life per nonland card.
+#[test]
+fn elixir_recycles_graveyard_for_life() {
+    let mut g = two_player_game();
+    for _ in 0..3 { g.add_card_to_graveyard(0, catalog::grizzly_bears()); }
+    g.add_card_to_graveyard(0, catalog::forest());
+    let elixir = g.add_card_to_battlefield(0, catalog::elixir());
+    g.clear_sickness(elixir);
+    g.players[0].mana_pool.add_colorless(5);
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    let life = g.players[0].life;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: elixir, ability_index: 0, target: None,
+        additional_targets: vec![], x_value: None,
+    }).expect("activate Elixir");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life + 3, "3 nonland cards");
+    assert!(g.players[0].graveyard.is_empty(), "graveyard shuffled away");
+}
+
+/// Relentless X-ATM092 climbs back out of the graveyard with a finality counter.
+#[test]
+fn relentless_x_atm092_returns_from_graveyard() {
+    let mut g = two_player_game();
+    let bot = g.add_card_to_graveyard(0, catalog::relentless_x_atm092());
+    g.players[0].mana_pool.add_colorless(8);
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: bot, ability_index: 0, target: None,
+        additional_targets: vec![], x_value: None,
+    }).expect("reanimate from the graveyard");
+    drain_stack(&mut g);
+    let c = g.battlefield_find(bot).expect("back on the battlefield");
+    assert!(c.tapped, "returns tapped");
+    assert_eq!(c.counter_count(CounterType::Finality), 1);
+}
+
+/// Stuck in Summoner's Sanctum taps its host and locks it down.
+#[test]
+fn stuck_in_summoners_sanctum_locks_the_host() {
+    let mut g = two_player_game();
+    let sol = g.add_card_to_battlefield(1, catalog::sol_ring());
+    let aura = g.add_card_to_hand(0, catalog::stuck_in_summoners_sanctum());
+    g.players[0].mana_pool.add(crate::mana::Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell {
+        card_id: aura, target: Some(Target::Permanent(sol)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast the Aura");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(sol).unwrap().tapped, "ETB tapped the host");
+    assert!(g.computed_permanent(sol).unwrap().keywords.contains(&Keyword::CantActivateAbilities));
+}
+
+/// Ultima wraths artifacts and creatures, then ends the turn.
+#[test]
+fn ultima_wraths_and_ends_the_turn() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let sol = g.add_card_to_battlefield(1, catalog::sol_ring());
+    let land = g.add_card_to_battlefield(1, catalog::forest());
+    let id = g.add_card_to_hand(0, catalog::ultima());
+    g.players[0].mana_pool.add(crate::mana::Color::White, 2);
+    g.players[0].mana_pool.add_colorless(3);
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Ultima");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_none() && g.battlefield_find(sol).is_none());
+    assert!(g.battlefield_find(land).is_some(), "lands survive");
+}
+
+/// Swallowed by Leviathan's counter tax scales with your graveyard.
+#[test]
+fn swallowed_by_leviathan_taxes_by_graveyard() {
+    let mut g = two_player_game();
+    for _ in 0..4 { g.add_card_to_graveyard(0, catalog::grizzly_bears()); }
+    g.add_card_to_library(0, catalog::forest());
+    g.add_card_to_library(0, catalog::forest());
+    let bears = g.add_card_to_hand(1, catalog::grizzly_bears());
+    g.players[1].mana_pool.add(crate::mana::Color::Green, 1);
+    g.players[1].mana_pool.add_colorless(1);
+    g.active_player_idx = 1;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bears, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("opponent casts a creature");
+    let id = g.add_card_to_hand(0, catalog::swallowed_by_leviathan());
+    g.players[0].mana_pool.add(crate::mana::Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(bears)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast the counter");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bears).is_none(), "unpaid 4-generic tax countered it");
+}
+
+/// From Father to Son tutors a Vehicle to hand.
+#[test]
+fn from_father_to_son_finds_a_vehicle() {
+    let mut g = two_player_game();
+    let ship = g.add_card_to_library(0, catalog::cargo_ship());
+    g.decider = Box::new(crate::decision::ScriptedDecider::new(vec![
+        crate::decision::DecisionAnswer::Search(Some(ship)),
+    ]));
+    let id = g.add_card_to_hand(0, catalog::from_father_to_son());
+    g.players[0].mana_pool.add(crate::mana::Color::White, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast the tutor");
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == ship), "Vehicle in hand");
+}
+
+/// Giott loots when an Equipment you control enters.
+#[test]
+fn giott_loots_on_equipment_etb() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::forest());
+    g.add_card_to_hand(0, catalog::grizzly_bears()); // the discard
+    g.add_card_to_battlefield(0, catalog::giott_king_of_the_dwarves());
+    g.decider = Box::new(crate::decision::ScriptedDecider::new(vec![
+        crate::decision::DecisionAnswer::Bool(true),
+    ]));
+    let hand_before = g.players[0].hand.len();
+    let katana = g.add_card_to_battlefield(0, catalog::samurais_katana());
+    g.dispatch_triggers_for_events(&[GameEvent::PermanentEntered { card_id: katana }]);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand_before, "discarded one, drew one");
+    assert!(g.players[0].graveyard.iter().any(|c| c.definition.name == "Grizzly Bears"));
+}
+
+/// Golbez surveils whenever one of your artifacts enters.
+#[test]
+fn golbez_surveils_on_artifact_etb() {
+    let mut g = two_player_game();
+    let top = g.add_card_to_library(0, catalog::grizzly_bears());
+    g.add_card_to_battlefield(0, catalog::golbez_crystal_collector());
+    g.decider = Box::new(crate::decision::ScriptedDecider::new(vec![
+        crate::decision::DecisionAnswer::ScryOrder { kept_top: vec![], bottom: vec![top] },
+    ]));
+    let sol = g.add_card_to_battlefield(0, catalog::sol_ring());
+    g.dispatch_triggers_for_events(&[GameEvent::PermanentEntered { card_id: sol }]);
+    drain_stack(&mut g);
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == top), "surveiled the top card away");
+}
+
+/// Cargo Ship's mana is artifact-only.
+#[test]
+fn cargo_ship_taps_for_artifact_only_mana() {
+    let mut g = two_player_game();
+    let ship = g.add_card_to_battlefield(0, catalog::cargo_ship());
+    g.clear_sickness(ship);
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: ship, ability_index: 0, target: None,
+        additional_targets: vec![], x_value: None,
+    }).expect("tap for mana");
+    let sol = g.add_card_to_hand(0, catalog::sol_ring());
+    g.active_player_idx = 0;
+    g.perform_action(GameAction::CastSpell {
+        card_id: sol, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("artifact-only mana casts Sol Ring");
+}
+
+/// Traveling Chocobo lets you cast Birds off the top of your library.
+#[test]
+fn traveling_chocobo_plays_birds_off_the_top() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::traveling_chocobo());
+    let top = g.add_card_to_library(0, catalog::sazhs_chocobo()); // {G} Bird
+    g.players[0].mana_pool.add(crate::mana::Color::Green, 1);
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell {
+        card_id: top, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast the Bird off the top");
+}

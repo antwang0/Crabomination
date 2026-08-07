@@ -5574,6 +5574,18 @@ static FIN: &[Factory] = &[
     super::fin::valkyrie_aerial_unit,
     super::fin::town_greeter,
     super::fin::vaynes_treachery,
+    super::fin::suplex,
+    super::fin::qutrub_forayer,
+    super::fin::elixir,
+    super::fin::cargo_ship,
+    super::fin::relentless_x_atm092,
+    super::fin::stuck_in_summoners_sanctum,
+    super::fin::ultima,
+    super::fin::swallowed_by_leviathan,
+    super::fin::from_father_to_son,
+    super::fin::giott_king_of_the_dwarves,
+    super::fin::golbez_crystal_collector,
+    super::fin::traveling_chocobo,
 ];
 static GPT: &[Factory] = &[
     super::gpt::mourning_thrull,

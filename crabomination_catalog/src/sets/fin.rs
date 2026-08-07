@@ -4409,3 +4409,323 @@ pub fn vaynes_treachery() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── FIN batch: spells, vehicles, artifacts ────────────────────────────────────
+
+/// Suplex — {1}{R} Sorcery. Choose one — 3 damage to target creature and exile
+/// it if it would die this turn; or exile target artifact.
+pub fn suplex() -> CardDefinition {
+    CardDefinition {
+        name: "Suplex",
+        cost: cost(&[generic(1), r()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::ChooseMode(vec![
+            Effect::Seq(vec![
+                Effect::ExileIfWouldDieThisTurn {
+                    what: target_filtered(SelectionRequirement::Creature),
+                },
+                Effect::DealDamage { to: Selector::Target(0), amount: Value::Const(3) },
+            ]),
+            Effect::Move {
+                what: target_filtered(SelectionRequirement::Artifact),
+                to: ZoneDest::Exile,
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Qutrub Forayer — {2}{B} 3/2 Zombie Horror. ETB: destroy a creature dealt
+/// damage this turn, or exile cards from graveyards.
+pub fn qutrub_forayer() -> CardDefinition {
+    CardDefinition {
+        name: "Qutrub Forayer",
+        cost: cost(&[generic(2), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Zombie, CreatureType::Horror],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 2,
+        triggered_abilities: vec![etb(Effect::ChooseMode(vec![
+            Effect::Destroy {
+                what: target_filtered(
+                    SelectionRequirement::Creature.and(SelectionRequirement::DealtDamageThisTurn),
+                ),
+            },
+            Effect::ExileAnyNumberFromGraveyards { filter: SelectionRequirement::Any },
+        ]))],
+        ..Default::default()
+    }
+}
+
+/// Elixir — {1} Artifact, enters tapped. {5}, {T}, exile it: shuffle your
+/// graveyard into your library and gain life per nonland card shuffled.
+pub fn elixir() -> CardDefinition {
+    CardDefinition {
+        name: "Elixir",
+        cost: cost(&[generic(1)]),
+        card_types: vec![CardType::Artifact],
+        static_abilities: vec![StaticAbility {
+            description: "This artifact enters tapped.",
+            effect: StaticEffect::EntersTapped { applies_to: Selector::This },
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            mana_cost: cost(&[generic(5)]),
+            exile_self_cost: true,
+            effect: Effect::Seq(vec![
+                Effect::GainLife {
+                    who: Selector::You,
+                    amount: Value::CardsInGraveyardMatching {
+                        who: PlayerRef::You,
+                        filter: SelectionRequirement::Not(Box::new(SelectionRequirement::Land)),
+                    },
+                },
+                Effect::ShuffleGraveyardIntoLibrary { who: PlayerRef::You },
+            ]),
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Cargo Ship — {1}{U} 2/3 Vehicle with flying and vigilance. {T}: add {C},
+/// spendable only on artifacts. Crew 1.
+pub fn cargo_ship() -> CardDefinition {
+    CardDefinition {
+        name: "Cargo Ship",
+        cost: cost(&[generic(1), u()]),
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes {
+            artifact_subtypes: vec![ArtifactSubtype::Vehicle],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![Keyword::Flying, Keyword::Vigilance, Keyword::Crew(1)],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::AddMana {
+                who: PlayerRef::You,
+                pool: ManaPayload::Restricted(
+                    Box::new(ManaPayload::Colorless(Value::ONE)),
+                    crate::mana::SpendRestriction::ArtifactOnly,
+                ),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Relentless X-ATM092 — {6} 6/5 Robot Spider that can't be blocked except by
+/// three or more creatures. {8} from the graveyard: return it tapped with a
+/// finality counter.
+pub fn relentless_x_atm092() -> CardDefinition {
+    CardDefinition {
+        name: "Relentless X-ATM092",
+        cost: cost(&[generic(6)]),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Robot, CreatureType::Spider],
+            ..Default::default()
+        },
+        power: 6,
+        toughness: 5,
+        keywords: vec![Keyword::CantBeBlockedExceptByN(3)],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(8)]),
+            from_graveyard: true,
+            effect: Effect::Seq(vec![
+                Effect::Move {
+                    what: Selector::This,
+                    to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: true },
+                },
+                Effect::AddCounter {
+                    what: Selector::This,
+                    kind: CounterType::Finality,
+                    amount: Value::ONE,
+                },
+            ]),
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Stuck in Summoner's Sanctum — {2}{U} Aura with flash. ETB taps the enchanted
+/// permanent, which then can't untap or activate abilities.
+pub fn stuck_in_summoners_sanctum() -> CardDefinition {
+    CardDefinition {
+        name: "Stuck in Summoner's Sanctum",
+        cost: cost(&[generic(2), u()]),
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes {
+            enchantment_subtypes: vec![EnchantmentSubtype::Aura],
+            ..Default::default()
+        },
+        keywords: vec![Keyword::Flash],
+        effect: Effect::Attach {
+            what: Selector::This,
+            to: target_filtered(
+                SelectionRequirement::Artifact.or(SelectionRequirement::Creature),
+            ),
+        },
+        triggered_abilities: vec![etb(Effect::TapAndUntapLock {
+            what: Selector::AttachedTo(Box::new(Selector::This)),
+        })],
+        equipped_bonus: Some(EquipBonus {
+            keywords: vec![Keyword::CantActivateAbilities],
+            ..Default::default()
+        }),
+        ..Default::default()
+    }
+}
+
+/// Ultima — {3}{W}{W} Sorcery. Destroy all artifacts and creatures, then end
+/// the turn (CR 728).
+pub fn ultima() -> CardDefinition {
+    CardDefinition {
+        name: "Ultima",
+        cost: cost(&[generic(3), w(), w()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::Destroy {
+                what: Selector::EachPermanent(
+                    SelectionRequirement::Artifact.or(SelectionRequirement::Creature),
+                ),
+            },
+            Effect::EndTheTurn,
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Swallowed by Leviathan — {2}{U} Instant. Surveil 2, then counter target
+/// spell unless its controller pays {1} for each card in your graveyard.
+pub fn swallowed_by_leviathan() -> CardDefinition {
+    CardDefinition {
+        name: "Swallowed by Leviathan",
+        cost: cost(&[generic(2), u()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::Surveil { who: PlayerRef::You, amount: Value::Const(2) },
+            Effect::CounterUnlessPaid {
+                what: target_filtered(SelectionRequirement::IsSpellOnStack),
+                mana_cost: cost(&[]),
+                exile: false,
+                extra_generic: Some(Value::GraveyardSizeOf(PlayerRef::You)),
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// From Father to Son — {1}{W} Sorcery. Search your library for a Vehicle card
+/// and put it into your hand. Flashback {4}{W}{W}{W}.
+pub fn from_father_to_son() -> CardDefinition {
+    CardDefinition {
+        name: "From Father to Son",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Sorcery],
+        keywords: vec![Keyword::Flashback(cost(&[generic(4), w(), w(), w()]))],
+        effect: Effect::Search {
+            who: PlayerRef::You,
+            filter: SelectionRequirement::HasArtifactSubtype(ArtifactSubtype::Vehicle),
+            to: ZoneDest::Hand(PlayerRef::You),
+        },
+        ..Default::default()
+    }
+}
+
+/// Giott, King of the Dwarves — {R}{W} 1/1 Dwarf Noble with double strike.
+/// Whenever a Dwarf or an Equipment you control enters, you may loot.
+pub fn giott_king_of_the_dwarves() -> CardDefinition {
+    let loot = || Effect::MayDiscard {
+        description: "Discard a card to draw a card?".into(),
+        count: Value::ONE,
+        then: Box::new(Effect::Draw { who: Selector::You, amount: Value::ONE }),
+        else_: None,
+    };
+    CardDefinition {
+        name: "Giott, King of the Dwarves",
+        cost: cost(&[r(), w()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Dwarf, CreatureType::Noble],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::DoubleStrike],
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::EntersBattlefield, EventScope::YourControl)
+                    .with_filter(Predicate::EntityMatches {
+                        what: Selector::TriggerSource,
+                        filter: SelectionRequirement::HasCreatureType(CreatureType::Dwarf),
+                    }),
+                effect: loot(),
+            },
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::EntersBattlefield, EventScope::YourControl)
+                    .with_filter(Predicate::EntityMatches {
+                        what: Selector::TriggerSource,
+                        filter: SelectionRequirement::HasArtifactSubtype(ArtifactSubtype::Equipment),
+                    }),
+                effect: loot(),
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Golbez, Crystal Collector — {U}{B} 1/4 Wizard. Whenever an artifact you
+/// control enters, surveil 1.
+pub fn golbez_crystal_collector() -> CardDefinition {
+    CardDefinition {
+        name: "Golbez, Crystal Collector",
+        cost: cost(&[u(), b()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 4,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::YourControl)
+                .with_filter(Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: SelectionRequirement::Artifact,
+                }),
+            effect: Effect::Surveil { who: PlayerRef::You, amount: Value::ONE },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Traveling Chocobo — {2}{G} 3/2 Bird. You may look at the top card of your
+/// library and play lands and Bird spells from it.
+pub fn traveling_chocobo() -> CardDefinition {
+    CardDefinition {
+        name: "Traveling Chocobo",
+        cost: cost(&[generic(2), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Bird], ..Default::default() },
+        power: 3,
+        toughness: 2,
+        static_abilities: vec![StaticAbility {
+            description: "You may play lands and cast Bird spells from the top of your library.",
+            effect: StaticEffect::PlayFromLibraryTop {
+                filter: SelectionRequirement::Land
+                    .or(SelectionRequirement::HasCreatureType(CreatureType::Bird)),
+            },
+        }],
+        ..Default::default()
+    }
+}
