@@ -95,6 +95,21 @@ exercising each) was elided in a compaction pass; recover it from
   toughness — Akiri, Line-Slinger); `PermanentView.attached_to_name` surfaces an
   Aura/Equipment's host so the client tooltip shows "Equipping/Enchanting: …"
   without a battlefield scan.
+- **Equipment / attachment (modern_decks):** `EquipBonus.set_base_pt_dynamic`
+  (base P/T from life total or counters on the source — Aettir and Priwen),
+  `ConditionalEquipBonus.predicate` (a rider gated on game state — Dragoon's
+  Lance's during-your-turn flying), the `job_select_equipment` helper's
+  "is a [class] in addition to its other types" rider, `Keyword::Fortify`
+  (CR 702.67 — routed through the equip action; Darksteel Garrison), and
+  `SpendRestriction::EquipmentSpellsOrEquip` with equip costs now paid via the
+  spend-restriction path. `fire_spell_cast_triggers` also walks statics- and
+  Equipment-granted listeners, so a granted "whenever you cast a noncreature
+  spell" clause fires (Red Mage's Rapier, Black Mage's Rod).
+- **Cast-mode / cost (modern_decks):** `Effect::Tiered` ("choose one additional
+  cost", sharing the Spree cast path — the FIN Magic cycle),
+  `CardDefinition.kicker_additional_cost` (non-mana kicker — Vayne's
+  Treachery), `Effect::MayPayLife`, `Effect::SearchLibraryOrGraveyard`
+  (dual-zone tutor — Delivery Moogle), `SelectionRequirement::ControllersTurn`.
 - **Selectors/filters:** `Selector::BlockingCreatures` (every creature blocking
   the source attacker — Grasping Giant), `SelectionRequirement::HasPlaneswalkerType`
   (Sunlit Hoplite / Swimmer's Elspeth/Ashiok riders),
@@ -258,8 +273,12 @@ Each unblocks a large swath of cards.
   time" activation riders.
 - 🟡 **State-based action coverage:** ±1/±1 annihilation ✅, counter caps ✅,
   legend rule ✅, saga sacrifice ✅, world rule ✅, illegally-attached Aura ✅
-  (704.5n — host fails the printed enchant filter). Remaining: Battle/Dungeon
-  SBAs.
+  (704.5n — host fails the printed enchant filter). Equipment/Fortification
+  attachment legality now reads the *computed* view (CR 301.5c/301.6): an
+  Equipment falls off a host that stopped being a creature, a self-animated
+  Equipment without Reconfigure unattaches, and a Fortification requires a
+  land host. CR 506.4 ✅ — an attacker/blocker that stops being a creature is
+  removed from combat. Remaining: Battle/Dungeon SBAs.
 
 ## Tier 3 — Object model & zones
 

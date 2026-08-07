@@ -51,4 +51,12 @@ share Kasmina's loyalty abilities" static
   still synthesized** — correct stats ≠ faithful card. See TODO.md → "Fabricated
   real-name STX cards".
 
+## Cross-set note (modern_decks)
+
+Recent engine work driven by the Final Fantasy catalog also lands on STX/SOS
+cards: `fire_spell_cast_triggers` now dispatches statics- and Equipment-granted
+"whenever you cast …" listeners, and Equipment/Fortification attachment
+legality is checked against the computed view (CR 301.5c/301.6), so a Song of
+the Dryads'd host drops its Equipment.
+
 Full per-card history: `git log -- crabomination_catalog/src/sets/{stx,sos}/`.

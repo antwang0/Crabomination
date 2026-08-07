@@ -64,15 +64,51 @@ spell's mana value); Cloud, Ex-SOLDIER rides `Effect::Attach` + `CountMatching`
 over equipped attackers. Cloud's "up to one target Equipment" ETB is a required
 target (fizzles with no Equipment).
 
-Remaining short FIN cards blocked on one primitive each (build the primitive to
-unblock a card + a roadmap item at once):
-- **Combat Tutorial** — needs the per-slot *optional* "up to one target creature
-  you control" alongside a required player target (the multi-kind-slot spell).
-- **A Realm Reborn** — needs a "other permanents you control gain '{T}: Add one
-  mana of any color'" grant-an-activated-mana-ability-to-others static.
-- **Aettir and Priwen / Excalibur II** — equip bonus scaled by life total /
-  charge counters on the Equipment (`EquipScale` only counts controlled
-  permanents; add counter-on-source + dynamic-value equip scaling).
+Shipped since (modern_decks): the "up to one target" slot needed no new
+primitive — additional slots are already optional at cast time (Combat
+Tutorial). A Realm Reborn rides `grant_tap_for_any_color` +
+`SelectionRequirement::OtherThanSource`. Equipment primitives:
+`EquipBonus.set_base_pt_dynamic` (Aettir and Priwen's life-total base P/T),
+`ConditionalEquipBonus.predicate` (Dragoon's Lance's during-your-turn flying),
+`Effect::SearchLibraryOrGraveyard` (Delivery Moogle), `Effect::MayPayLife`,
+`CardDefinition.kicker_additional_cost` (non-mana kicker — Vayne's Treachery),
+`SelectionRequirement::ControllersTurn` (Jump), `SpendRestriction::
+EquipmentSpellsOrEquip` (Freya Crescent; equip costs now route through the
+spend-restriction payment path), `Effect::Tiered` (CR-style "choose one
+additional cost", sharing the Spree cast path — Fire/Thunder/Ice Magic, Tifa's
+and Restoration Magic), and `Keyword::Fortify` (CR 702.67 — Darksteel Garrison).
+
+Still blocked on a primitive each:
+- **Absolute Virtue** — "you have protection from each of your opponents"
+  (player-level protection: damage prevention + targeting gate).
+- **Ancient Adamantoise** — "damage isn't removed during cleanup" plus the
+  Palisade-Giant-style redirect of all damage to you and your other permanents.
+- **Nibelheim Aflame** — "each *other* creature" needs an
+  other-than-a-chosen-target filter for a board-wide damage selector.
+- **Vincent's Limit Break** — a Tiered spell that grants a base P/T *and* a
+  death-return triggered ability for the turn.
+- **Gilgamesh, Master-at-Arms** — dig-N, put Equipment onto the battlefield,
+  reflexive attach.
+
+## Suggested next-up (modern_decks)
+
+Noticed this run but deliberately not tackled:
+- **Player-level protection** (`StaticEffect::ControllerHasProtectionFromOpponents`)
+  — gates targeting by opponents' spells/abilities and prevents their damage.
+  Unblocks Absolute Virtue.
+- **"Damage isn't removed during cleanup"** + a Palisade-Giant-style redirect of
+  all damage to you and your other permanents (Ancient Adamantoise).
+- **Other-than-a-chosen-target filter** for board-wide selectors ("each *other*
+  creature" relative to `Target(0)` — Nibelheim Aflame, Bartz and Boko).
+- **Granted base-P/T + granted death trigger for a turn** (Vincent's Limit
+  Break); `Effect::Tiered` already carries the mode/cost half.
+- **Tiered UI:** Tiered spells ride `PlayerView.spreeable_hand`, so the client
+  offers them through the Spree mode picker. A dedicated `tiered_hand` list
+  would let the picker say "choose one tier" instead of "one or more modes".
+- **`requirement_matches_card` gaps:** the printed-characteristics walker
+  (`layers.rs`) has no game state, so state-dependent leaves
+  (`ControllersTurn`, tapped, …) silently read `false` there. Callers that need
+  them must use `evaluate_requirement_static`.
 
 ## Environment note
 
@@ -2892,7 +2928,17 @@ recover from `git log -p -- TODO.md`. A few rows carry a residual ⏳ gap inline
 - ✅ CR 702.103 — Jump-start
 - ✅ CR 707.2 — continuous copies
 - ✅ CR 702.43 — Domain
-- ✅ CR 702.6e — Equipment-granted triggered abilities
+- ✅ CR 702.6e — Equipment-granted triggered abilities (now also dispatched
+  from the spell-cast path, so a granted "whenever you cast a noncreature
+  spell" clause fires — Red Mage's Rapier, Black Mage's Rod)
+- ✅ CR 702.67 — Fortify (`Keyword::Fortify` routed through the equip action;
+  Darksteel Garrison. `cr_702_67_fortify_attaches_to_a_land`)
+- ✅ CR 301.5c / 301.6 — attachment legality against the computed view: an
+  Equipment unattaches from a host that stopped being a creature, a
+  self-animated Equipment without Reconfigure unattaches, and a
+  Fortification requires a land host (`cr_301_5c_*`, `cr_301_6_*`)
+- ✅ CR 506.4 — an attacker/blocker that stops being a creature is removed
+  from combat (`cr_506_4_attacker_that_stops_being_a_creature_leaves_combat`)
 - ✅ CR 702.6 — Equip ability fidelity: sorcery-speed gate, equip-at-instant
   (`ControllerEquipAtInstantSpeed` — Leonin Shikari), equip-cost reduction
   (`EquipCostReduction` — Auriok Steelshaper), protection-gated attach
