@@ -4729,3 +4729,406 @@ pub fn traveling_chocobo() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── FIN batch: Tiered, Job select, and mana-spent payoffs ─────────────────────
+
+/// Restoration Magic — {W} Instant. Tiered: Cure {0} / Cura {1} protect one
+/// permanent (Cura also gains 3 life); Curaga {3}{W} protects your board and
+/// gains 6.
+pub fn restoration_magic() -> CardDefinition {
+    use crate::effect::SpreeMode;
+    let shield = |what: Selector| {
+        Effect::Seq(vec![
+            Effect::GrantKeyword {
+                what: what.clone(),
+                keyword: Keyword::Hexproof,
+                duration: Duration::EndOfTurn,
+            },
+            Effect::GrantKeyword {
+                what,
+                keyword: Keyword::Indestructible,
+                duration: Duration::EndOfTurn,
+            },
+        ])
+    };
+    CardDefinition {
+        name: "Restoration Magic",
+        cost: cost(&[w()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Tiered {
+            modes: vec![
+                SpreeMode {
+                    cost: cost(&[]),
+                    effect: shield(target_filtered(SelectionRequirement::Permanent)),
+                },
+                SpreeMode {
+                    cost: cost(&[generic(1)]),
+                    effect: Effect::Seq(vec![
+                        shield(target_filtered(SelectionRequirement::Permanent)),
+                        Effect::GainLife { who: Selector::You, amount: Value::Const(3) },
+                    ]),
+                },
+                SpreeMode {
+                    cost: cost(&[generic(3), w()]),
+                    effect: Effect::Seq(vec![
+                        shield(Selector::EachPermanent(
+                            SelectionRequirement::Permanent
+                                .and(SelectionRequirement::ControlledByYou),
+                        )),
+                        Effect::GainLife { who: Selector::You, amount: Value::Const(6) },
+                    ]),
+                },
+            ],
+        },
+        ..Default::default()
+    }
+}
+
+/// Ice Flan — {4}{U}{U} 5/4 Elemental Ooze. ETB: tap an opposing artifact or
+/// creature and stun it. Islandcycling {2}.
+pub fn ice_flan() -> CardDefinition {
+    CardDefinition {
+        name: "Ice Flan",
+        cost: cost(&[generic(4), u(), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elemental, CreatureType::Ooze],
+            ..Default::default()
+        },
+        power: 5,
+        toughness: 4,
+        keywords: vec![Keyword::Landcycling(cost(&[generic(2)]), crate::card::LandType::Island)],
+        triggered_abilities: vec![etb(Effect::Seq(vec![
+            Effect::Tap {
+                what: target_filtered(
+                    SelectionRequirement::Artifact
+                        .or(SelectionRequirement::Creature)
+                        .and(SelectionRequirement::ControlledByOpponent),
+                ),
+            },
+            Effect::AddCounter {
+                what: Selector::Target(0),
+                kind: CounterType::Stun,
+                amount: Value::ONE,
+            },
+        ]))],
+        ..Default::default()
+    }
+}
+
+/// Namazu Trader — {3}{B} 3/4 Fish Citizen. ETB: lose 1 life, make a Treasure.
+/// Attacks: you may sacrifice another creature or artifact to surveil 2.
+pub fn namazu_trader() -> CardDefinition {
+    CardDefinition {
+        name: "Namazu Trader",
+        cost: cost(&[generic(3), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Fish, CreatureType::Citizen],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 4,
+        triggered_abilities: vec![
+            etb(Effect::Seq(vec![
+                Effect::LoseLife { who: Selector::You, amount: Value::ONE },
+                crate::effect::shortcut::mint_treasures(1),
+            ])),
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+                effect: Effect::MaySacrifice {
+                    description: "Sacrifice another creature or artifact to surveil 2?".into(),
+                    filter: SelectionRequirement::Creature
+                        .or(SelectionRequirement::Artifact)
+                        .and(SelectionRequirement::OtherThanSource),
+                    count: Value::ONE,
+                    then: Box::new(Effect::Surveil {
+                        who: PlayerRef::You,
+                        amount: Value::Const(2),
+                    }),
+                    else_: None,
+                },
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Machinist's Arsenal — {4}{W} Equipment. Job select. Equipped creature gets
+/// +2/+2 for each artifact you control and is an Artificer. Equip {4}.
+pub fn machinists_arsenal() -> CardDefinition {
+    let mut def = crate::sets::decks::job_select_equipment(
+        "Machinist's Arsenal",
+        cost(&[generic(4), w()]),
+        cost(&[generic(4)]),
+        0,
+        0,
+        vec![],
+        Some(CreatureType::Artificer),
+    );
+    if let Some(bonus) = def.equipped_bonus.as_mut() {
+        bonus.scale = Some(crate::card::EquipScale {
+            filter: SelectionRequirement::Artifact,
+            per_power: 2,
+            per_toughness: 2,
+            count_self_counters: None,
+            count_graveyard: None,
+            count_all_graveyards: None,
+        });
+    }
+    def
+}
+
+/// Astrologian's Planisphere — {1}{U} Equipment. Job select. Equipped creature
+/// is a Wizard that grows on each noncreature spell you cast and on your third
+/// draw each turn. Equip {2}.
+pub fn astrologians_planisphere() -> CardDefinition {
+    let grow = || Effect::AddCounter {
+        what: Selector::This,
+        kind: CounterType::PlusOnePlusOne,
+        amount: Value::ONE,
+    };
+    job_equipment_with_triggers(
+        "Astrologian's Planisphere",
+        cost(&[generic(1), u()]),
+        cost(&[generic(2)]),
+        0,
+        0,
+        vec![],
+        CreatureType::Wizard,
+        vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl)
+                    .with_filter(Predicate::CastSpellMatches(SelectionRequirement::Noncreature)),
+                effect: grow(),
+            },
+            TriggeredAbility {
+                event: EventSpec {
+                    once_per_turn: true,
+                    ..EventSpec::new(EventKind::CardDrawn, EventScope::YourControl).with_filter(
+                        Predicate::PlayerDrewAtLeastThisTurn { who: PlayerRef::You, n: 3 },
+                    )
+                },
+                effect: grow(),
+            },
+        ],
+    )
+}
+
+/// Call the Mountain Chocobo — {3}{R} Sorcery. Tutor a Mountain to hand and
+/// make a landfall-growing Bird. Flashback {5}{R}.
+pub fn call_the_mountain_chocobo() -> CardDefinition {
+    let chocobo = TokenDefinition {
+        name: "Bird".into(),
+        power: 2,
+        toughness: 2,
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::Green],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Bird], ..Default::default() },
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::LandPlayed, EventScope::YourControl),
+            effect: Effect::PumpPT {
+                what: Selector::This,
+                power: Value::ONE,
+                toughness: Value::Const(0),
+                duration: Duration::EndOfTurn,
+            },
+        }],
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Call the Mountain Chocobo",
+        cost: cost(&[generic(3), r()]),
+        card_types: vec![CardType::Sorcery],
+        keywords: vec![Keyword::Flashback(cost(&[generic(5), r()]))],
+        effect: Effect::Seq(vec![
+            Effect::Search {
+                who: PlayerRef::You,
+                filter: SelectionRequirement::HasLandType(crate::card::LandType::Mountain),
+                to: ZoneDest::Hand(PlayerRef::You),
+            },
+            Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::ONE,
+                definition: chocobo,
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// The Final Days — {2}{B}{B} Sorcery. Two tapped 2/2 Horrors, or one per
+/// creature card in your graveyard when cast from there. Flashback {4}{B}{B}.
+pub fn the_final_days() -> CardDefinition {
+    let horror = TokenDefinition {
+        name: "Horror".into(),
+        power: 2,
+        toughness: 2,
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::Black],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Horror], ..Default::default() },
+        ..Default::default()
+    };
+    let mint = |count: Value| {
+        Effect::Seq(vec![
+            Effect::CreateToken { who: PlayerRef::You, count, definition: horror.clone() },
+            Effect::Tap { what: Selector::LastCreatedTokens },
+        ])
+    };
+    CardDefinition {
+        name: "The Final Days",
+        cost: cost(&[generic(2), b(), b()]),
+        card_types: vec![CardType::Sorcery],
+        keywords: vec![Keyword::Flashback(cost(&[generic(4), b(), b()]))],
+        effect: Effect::If {
+            cond: Predicate::CastFromGraveyard,
+            then: Box::new(mint(Value::CardsInGraveyardMatching {
+                who: PlayerRef::You,
+                filter: SelectionRequirement::Creature,
+            })),
+            else_: Box::new(mint(Value::Const(2))),
+        },
+        ..Default::default()
+    }
+}
+
+/// The Prima Vista — {4}{U} 5/3 Vehicle with flying and crew 2. A noncreature
+/// spell cast for four or more mana animates it until end of turn.
+pub fn the_prima_vista() -> CardDefinition {
+    CardDefinition {
+        name: "The Prima Vista",
+        cost: cost(&[generic(4), u()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes {
+            artifact_subtypes: vec![ArtifactSubtype::Vehicle],
+            ..Default::default()
+        },
+        power: 5,
+        toughness: 3,
+        keywords: vec![Keyword::Flying, Keyword::Crew(2)],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl).with_filter(
+                Predicate::All(vec![
+                    Predicate::CastSpellMatches(SelectionRequirement::Noncreature),
+                    Predicate::ValueAtLeast(Value::CastSpellManaSpent, Value::Const(4)),
+                ]),
+            ),
+            effect: Effect::BecomeCreature {
+                what: Selector::This,
+                power: Value::Const(5),
+                toughness: Value::Const(3),
+                creature_types: vec![],
+                keywords: vec![],
+                duration: Duration::EndOfTurn,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Ultros, Obnoxious Octopus — {1}{U} 2/1. A four-mana noncreature spell stuns
+/// an opposing creature; an eight-mana one grows Ultros by eight counters.
+pub fn ultros_obnoxious_octopus() -> CardDefinition {
+    let gated = |mana: i32, effect: Effect| TriggeredAbility {
+        event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl).with_filter(
+            Predicate::All(vec![
+                Predicate::CastSpellMatches(SelectionRequirement::Noncreature),
+                Predicate::ValueAtLeast(Value::CastSpellManaSpent, Value::Const(mana)),
+            ]),
+        ),
+        effect,
+    };
+    CardDefinition {
+        name: "Ultros, Obnoxious Octopus",
+        cost: cost(&[generic(1), u()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Octopus], ..Default::default() },
+        power: 2,
+        toughness: 1,
+        triggered_abilities: vec![
+            gated(
+                4,
+                Effect::Seq(vec![
+                    Effect::Tap {
+                        what: target_filtered(
+                            SelectionRequirement::Creature
+                                .and(SelectionRequirement::ControlledByOpponent),
+                        ),
+                    },
+                    Effect::AddCounter {
+                        what: Selector::Target(0),
+                        kind: CounterType::Stun,
+                        amount: Value::ONE,
+                    },
+                ]),
+            ),
+            gated(
+                8,
+                Effect::AddCounter {
+                    what: Selector::This,
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::Const(8),
+                },
+            ),
+        ],
+        ..Default::default()
+    }
+}
+
+/// Yuna, Hope of Spira — {3}{G}{W} 3/5 Cleric. During your turn your
+/// enchantment creatures gain trample, lifelink, and ward {2}; at your end step
+/// reanimate an enchantment with a finality counter.
+pub fn yuna_hope_of_spira() -> CardDefinition {
+    CardDefinition {
+        name: "Yuna, Hope of Spira",
+        cost: cost(&[generic(3), g(), w()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 5,
+        static_abilities: vec![StaticAbility {
+            description: "During your turn, Yuna and enchantment creatures you control have \
+                          trample, lifelink, and ward {2}.",
+            effect: StaticEffect::GrantPumpSelfIf {
+                filter: SelectionRequirement::Creature
+                    .and(SelectionRequirement::ControlledByYou)
+                    .and(
+                        SelectionRequirement::Enchantment
+                            .or(SelectionRequirement::HasName("Yuna, Hope of Spira".to_string())),
+                    ),
+                condition: Predicate::IsTurnOf(PlayerRef::You),
+                power: 0,
+                toughness: 0,
+                keywords: vec![
+                    Keyword::Trample,
+                    Keyword::Lifelink,
+                    Keyword::Ward(crate::card::WardCost::generic(2)),
+                ],
+            },
+        }],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(TurnStep::End), EventScope::YourControl),
+            effect: Effect::Seq(vec![
+                Effect::Move {
+                    what: target_filtered(
+                        SelectionRequirement::Enchantment
+                            .and(SelectionRequirement::InGraveyard),
+                    ),
+                    to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                },
+                Effect::AddCounter {
+                    what: Selector::Target(0),
+                    kind: CounterType::Finality,
+                    amount: Value::ONE,
+                },
+            ]),
+        }],
+        ..Default::default()
+    }
+}

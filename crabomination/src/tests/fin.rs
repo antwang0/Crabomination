@@ -3120,3 +3120,168 @@ fn traveling_chocobo_plays_birds_off_the_top() {
         card_id: top, target: None, additional_targets: vec![], mode: None, x_value: None,
     }).expect("cast the Bird off the top");
 }
+
+// ── FIN batch: Tiered, Job select, and mana-spent payoffs ─────────────────────
+
+/// Restoration Magic's top tier shields your whole board and gains 6.
+#[test]
+fn restoration_magic_curaga_shields_the_board() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::restoration_magic());
+    g.players[0].mana_pool.add(crate::mana::Color::White, 2);
+    g.players[0].mana_pool.add_colorless(3);
+    let life = g.players[0].life;
+    g.perform_action(tiered(id, 2, None)).expect("Curaga");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life + 6);
+    let cp = g.computed_permanent(bear).unwrap();
+    assert!(cp.keywords.contains(&Keyword::Indestructible) && cp.keywords.contains(&Keyword::Hexproof));
+}
+
+/// Ice Flan taps and stuns an opposing permanent on ETB.
+#[test]
+fn ice_flan_stuns_on_etb() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.move_card_to_battlefield_for_test(0, catalog::ice_flan());
+    drain_stack(&mut g);
+    let c = g.battlefield_find(bear).unwrap();
+    assert!(c.tapped && c.counter_count(CounterType::Stun) == 1);
+}
+
+/// Machinist's Arsenal scales the Hero by your artifact count.
+#[test]
+fn machinists_arsenal_scales_with_artifacts() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::sol_ring());
+    g.move_card_to_battlefield_for_test(0, catalog::machinists_arsenal());
+    drain_stack(&mut g);
+    let hero = g.battlefield.iter().find(|c| c.is_token).map(|c| c.id).expect("Hero token");
+    // 1/1 Hero + 2/+2 per artifact (Sol Ring + the Arsenal itself).
+    let cp = g.computed_permanent(hero).unwrap();
+    assert_eq!((cp.power, cp.toughness), (5, 5));
+}
+
+/// Astrologian's Planisphere grows its bearer on a noncreature spell.
+#[test]
+fn astrologians_planisphere_grows_on_noncreature_spell() {
+    let mut g = two_player_game();
+    g.move_card_to_battlefield_for_test(0, catalog::astrologians_planisphere());
+    drain_stack(&mut g);
+    let hero = g.battlefield.iter().find(|c| c.is_token).map(|c| c.id).expect("Hero token");
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(crate::mana::Color::Red, 1);
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Bolt");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(hero).unwrap().counter_count(CounterType::PlusOnePlusOne), 1);
+}
+
+/// The Final Days makes two tapped Horrors from hand.
+#[test]
+fn the_final_days_makes_two_tapped_horrors() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::the_final_days());
+    g.players[0].mana_pool.add(crate::mana::Color::Black, 2);
+    g.players[0].mana_pool.add_colorless(2);
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast The Final Days");
+    drain_stack(&mut g);
+    let horrors: Vec<_> = g.battlefield.iter().filter(|c| c.definition.name == "Horror").collect();
+    assert_eq!(horrors.len(), 2);
+    assert!(horrors.iter().all(|c| c.tapped), "they enter tapped");
+}
+
+/// The Prima Vista animates itself off a four-mana noncreature spell.
+#[test]
+fn the_prima_vista_animates_on_a_big_spell() {
+    let mut g = two_player_game();
+    let ship = g.add_card_to_battlefield(0, catalog::the_prima_vista());
+    let spell = g.add_card_to_hand(0, catalog::a_realm_reborn()); // {4}{G}{G}
+    g.players[0].mana_pool.add(crate::mana::Color::Green, 2);
+    g.players[0].mana_pool.add_colorless(4);
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    assert!(!g.computed_permanent(ship).unwrap().card_types.contains(&crate::card::CardType::Creature));
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast a six-mana enchantment");
+    drain_stack(&mut g);
+    assert!(g.computed_permanent(ship).unwrap().card_types.contains(&crate::card::CardType::Creature),
+        "animated until end of turn");
+}
+
+/// Ultros stuns on a four-mana noncreature spell.
+#[test]
+fn ultros_stuns_on_a_four_mana_spell() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::ultros_obnoxious_octopus());
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let spell = g.add_card_to_hand(0, catalog::a_realm_reborn()); // {4}{G}{G}
+    g.players[0].mana_pool.add(crate::mana::Color::Green, 2);
+    g.players[0].mana_pool.add_colorless(4);
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast a six-mana enchantment");
+    drain_stack(&mut g);
+    let c = g.battlefield_find(bear).unwrap();
+    assert!(c.tapped && c.counter_count(CounterType::Stun) == 1);
+}
+
+/// Yuna's grant is live only on her controller's turn.
+#[test]
+fn yuna_grants_only_on_your_turn() {
+    let mut g = two_player_game();
+    let yuna = g.add_card_to_battlefield(0, catalog::yuna_hope_of_spira());
+    g.active_player_idx = 0;
+    assert!(g.computed_permanent(yuna).unwrap().keywords.contains(&Keyword::Lifelink));
+    g.active_player_idx = 1;
+    assert!(!g.computed_permanent(yuna).unwrap().keywords.contains(&Keyword::Lifelink));
+}
+
+/// Namazu Trader drains for a Treasure on ETB.
+#[test]
+fn namazu_trader_etb_treasure() {
+    let mut g = two_player_game();
+    let life = g.players[0].life;
+    g.move_card_to_battlefield_for_test(0, catalog::namazu_trader());
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life - 1);
+    assert!(g.battlefield.iter().any(|c| c.definition.name == "Treasure"));
+}
+
+/// Call the Mountain Chocobo tutors a Mountain and leaves a Bird behind.
+#[test]
+fn call_the_mountain_chocobo_finds_a_mountain() {
+    let mut g = two_player_game();
+    let mtn = g.add_card_to_library(0, catalog::mountain());
+    g.decider = Box::new(crate::decision::ScriptedDecider::new(vec![
+        crate::decision::DecisionAnswer::Search(Some(mtn)),
+    ]));
+    let id = g.add_card_to_hand(0, catalog::call_the_mountain_chocobo());
+    g.players[0].mana_pool.add(crate::mana::Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast it");
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == mtn));
+    assert!(g.battlefield.iter().any(|c| c.is_token && c.definition.name == "Bird"));
+}

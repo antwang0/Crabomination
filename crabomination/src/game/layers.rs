@@ -784,6 +784,7 @@ pub(crate) fn requirement_matches_card(
                 || requirement_matches_card(b, card, source_controller)
         }
         R::Not(inner) => !requirement_matches_card(inner, card, source_controller),
+        R::HasName(n) => def.name == n.as_str(),
         // Source exclusion is enforced in `affects()` (source id known there);
         // treat as always-matching for the printed-characteristics walk.
         R::OtherThanSource => true,

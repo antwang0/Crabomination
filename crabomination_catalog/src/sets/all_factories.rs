@@ -5586,6 +5586,16 @@ static FIN: &[Factory] = &[
     super::fin::giott_king_of_the_dwarves,
     super::fin::golbez_crystal_collector,
     super::fin::traveling_chocobo,
+    super::fin::restoration_magic,
+    super::fin::ice_flan,
+    super::fin::namazu_trader,
+    super::fin::machinists_arsenal,
+    super::fin::astrologians_planisphere,
+    super::fin::call_the_mountain_chocobo,
+    super::fin::the_final_days,
+    super::fin::the_prima_vista,
+    super::fin::ultros_obnoxious_octopus,
+    super::fin::yuna_hope_of_spira,
 ];
 static GPT: &[Factory] = &[
     super::gpt::mourning_thrull,
