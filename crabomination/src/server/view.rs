@@ -698,6 +698,13 @@ fn project_player(
                 .iter()
                 .any(|c| c.definition.static_abilities.iter().any(|sa| pred(&sa.effect)))
         };
+        let opponent_act_lock = |pred: &dyn Fn(&StaticEffect) -> bool| {
+            state.battlefield.iter().any(|c| {
+                c.controller == state.active_player_idx
+                    && !state.same_team(player_seat, state.active_player_idx)
+                    && c.definition.static_abilities.iter().any(|sa| pred(&sa.effect))
+            })
+        };
         crate::net::SpellCastLock {
             any_reached: player.spells_cast_this_game_turn >= 1
                 && any_static(&|e| matches!(e, StaticEffect::OneSpellPerTurn)),
@@ -707,17 +714,23 @@ fn project_player(
                 && any_static(&|e| matches!(e, StaticEffect::OneNonartifactSpellPerTurn)),
             creature_pw_locked: !state.creature_pw_cast_locks.is_empty(),
             off_turn_locked: player_seat != state.active_player_idx
-                && (any_static(&|e| matches!(e, StaticEffect::PlayersCastOnlyOnOwnTurn))
-                    || state.battlefield.iter().any(|c| {
-                        c.controller == state.active_player_idx
-                            && !state.same_team(player_seat, state.active_player_idx)
-                            && c.definition.static_abilities.iter().any(|sa| {
-                                matches!(
-                                    sa.effect,
-                                    StaticEffect::OpponentsCantCastDuringYourTurn
-                                        | StaticEffect::OpponentsCantActDuringYourTurn
-                                )
-                            })
+                && (any_static(&|e| {
+                    matches!(
+                        e,
+                        StaticEffect::PlayersCastOnlyOnOwnTurn
+                            | StaticEffect::PlayersActOnlyOnTheirOwnTurn
+                    )
+                }) || opponent_act_lock(&|e| {
+                    matches!(
+                        e,
+                        StaticEffect::OpponentsCantCastDuringYourTurn
+                            | StaticEffect::OpponentsCantActDuringYourTurn
+                    )
+                })),
+            off_turn_abilities_locked: player_seat != state.active_player_idx
+                && (any_static(&|e| matches!(e, StaticEffect::PlayersActOnlyOnTheirOwnTurn))
+                    || opponent_act_lock(&|e| {
+                        matches!(e, StaticEffect::OpponentsCantActDuringYourTurn)
                     })),
         }
     };

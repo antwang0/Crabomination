@@ -964,9 +964,15 @@ pub fn update_player_stats_chips(
             if lock.creature_pw_locked {
                 spawn_stat_chip(row, &ui_fonts, StatChipKind::SpellLock, "⊘ creature/pw".to_string());
             }
-            // Dosan / Voice of Victory — this seat can't cast off-turn at all.
-            if lock.off_turn_locked {
-                spawn_stat_chip(row, &ui_fonts, StatChipKind::SpellLock, "⊘ off-turn".to_string());
+            // Dosan / City of Solitude / Voice of Victory — this seat is shut
+            // out off-turn; the wider label also covers activated abilities.
+            if lock.off_turn_locked || lock.off_turn_abilities_locked {
+                let label = if lock.off_turn_abilities_locked {
+                    "⊘ off-turn (+abilities)"
+                } else {
+                    "⊘ off-turn"
+                };
+                spawn_stat_chip(row, &ui_fonts, StatChipKind::SpellLock, label.to_string());
             }
         }
         // CR 601.3e — Void Winnower locks this player's even-mana-value casts.

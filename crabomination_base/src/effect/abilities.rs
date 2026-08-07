@@ -2390,9 +2390,9 @@ pub enum StaticEffect {
     /// that much damage to any other target" (auto-picked, preferring an
     /// opposing creature, then the opponent).
     PreventDamageToThisRedirect,
-    /// CR 117.1a — "Players can cast spells and activate abilities only during
-    /// their own turns" (City of Solitude). A global timing lock checked at
-    /// cast and activation; mana abilities are exempt.
+    /// "Players can cast spells and activate abilities only during their own
+    /// turns" (City of Solitude). Symmetric, and mana abilities are not
+    /// exempt. The broader sibling of `PlayersCastOnlyOnOwnTurn` (Dosan).
     PlayersActOnlyOnTheirOwnTurn,
     /// Cursed Totem / Damping Matrix — "Activated abilities of creatures
     /// can't be activated unless they're mana abilities." Global lock

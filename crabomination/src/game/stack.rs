@@ -5108,10 +5108,9 @@ impl GameState {
             .filter(|c| c.definition.is_equipment())
             .filter_map(|c| {
                 let attached = c.attached_to?;
-                let is_still_legal = self
-                    .battlefield
-                    .iter()
-                    .any(|b| b.id == attached && b.definition.is_creature())
+                // Layer-aware: an animated land (Quirion Druid) is a legal
+                // host, and a creature that lost the type stops being one.
+                let is_still_legal = self.permanent_is_creature(attached)
                     // CR 301.5c — the printed "only to a [filter]" restriction
                     // is checked continuously (Konda's Banner).
                     && c.definition.attach_only_filter.as_ref().is_none_or(|f| {

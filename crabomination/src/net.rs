@@ -682,6 +682,10 @@ pub struct SpellCastLock {
     /// Voice of Victory / Grand Abolisher.
     #[serde(default)]
     pub off_turn_locked: bool,
+    /// The same window, for *activated abilities*: City of Solitude
+    /// (symmetric, mana abilities included) or Grand Abolisher.
+    #[serde(default)]
+    pub off_turn_abilities_locked: bool,
 }
 
 fn default_poison_threshold() -> u32 {
