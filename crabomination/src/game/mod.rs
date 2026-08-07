@@ -3323,27 +3323,34 @@ impl GameState {
         (redirects, void)
     }
 
-    /// CR 614.5 — the actual mill count for `p` after doubling replacements
-    /// (Bruvac the Grandiloquent: an opponent's mill is doubled, once per
-    /// active static). 0 stays 0 (no event to replace).
+    /// CR 614.5 — the actual mill count for `p` after mill replacements: the
+    /// additive bonuses (The Water Crystal's "plus four") then the doublers
+    /// (Bruvac the Grandiloquent), once per active static. 0 stays 0 (no
+    /// event to replace).
     pub(crate) fn mill_count_for(&self, p: usize, n: usize) -> usize {
         use crate::effect::StaticEffect;
         if n == 0 {
             return 0;
         }
-        let doublers = self
-            .battlefield
-            .iter()
-            .filter(|c| {
-                !self.same_team(c.controller, p)
-                    && c.definition
-                        .static_abilities
-                        .iter()
-                        .any(|sa| matches!(sa.effect, StaticEffect::OpponentMillDoubled))
+        let opposing = || {
+            self.battlefield
+                .iter()
+                .filter(|c| !self.same_team(c.controller, p))
+                .flat_map(|c| c.definition.static_abilities.iter())
+        };
+        // Additive bonuses apply before the doublers (CR 616 lets the affected
+        // player order them; this is the standard "plus N, then double" read).
+        let bonus: u32 = opposing()
+            .filter_map(|sa| match sa.effect {
+                StaticEffect::OpponentMillBonus { amount } => Some(amount),
+                _ => None,
             })
+            .sum();
+        let doublers = opposing()
+            .filter(|sa| matches!(sa.effect, StaticEffect::OpponentMillDoubled))
             .count()
             .min(16);
-        n << doublers
+        n.saturating_add(bonus as usize) << doublers
     }
 
     /// CR 701.19c (Aven Mindcensor) — the number of cards from the top of
@@ -11447,6 +11454,7 @@ fn static_effect_to_effects(
             | StaticEffect::AddDamageToOpponentsPerCounter { .. }
             | StaticEffect::AddDamageFromColorToPlayers { .. }
             | StaticEffect::OpponentMillDoubled
+            | StaticEffect::OpponentMillBonus { .. }
             // GrantAffinityToISSpells — read at cast time by
             // `cost_reduction_for_spell` directly; no layer effect.
             | StaticEffect::GrantAffinityToISSpells { .. }

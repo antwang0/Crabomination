@@ -3285,3 +3285,130 @@ fn call_the_mountain_chocobo_finds_a_mountain() {
     assert!(g.players[0].hand.iter().any(|c| c.id == mtn));
     assert!(g.battlefield.iter().any(|c| c.is_token && c.definition.name == "Bird"));
 }
+
+// ── The Crystal cycle + odds and ends ─────────────────────────────────────────
+
+/// The Wind Crystal discounts white spells.
+#[test]
+fn the_wind_crystal_discounts_white() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::the_wind_crystal());
+    let id = g.add_card_to_hand(0, catalog::ultima()); // {3}{W}{W}
+    g.players[0].mana_pool.add(crate::mana::Color::White, 2);
+    g.players[0].mana_pool.add_colorless(2); // {3} reduced to {2}
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("white spell costs {{1}} less");
+}
+
+/// The Wind Crystal doubles the life you gain.
+#[test]
+fn the_wind_crystal_doubles_lifegain() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::the_wind_crystal());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let restore = g.add_card_to_hand(0, catalog::restoration_magic());
+    g.players[0].mana_pool.add(crate::mana::Color::White, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    let life = g.players[0].life;
+    g.perform_action(tiered(restore, 1, Some(Target::Permanent(bear)))).expect("Cura");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life + 6, "3 life gain doubled");
+}
+
+/// The Water Crystal makes an opponent's mill four cards deeper.
+#[test]
+fn the_water_crystal_adds_four_to_opponent_mills() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::the_water_crystal());
+    for _ in 0..10 { g.add_card_to_library(1, catalog::grizzly_bears()); }
+    assert_eq!(g.mill_count_for(1, 2), 6, "2 + 4");
+    assert_eq!(g.mill_count_for(0, 2), 2, "your own mill is untouched");
+    assert_eq!(g.mill_count_for(1, 0), 0, "a zero mill stays zero");
+}
+
+/// The Earth Crystal doubles counters and can hand two out at instant speed.
+#[test]
+fn the_earth_crystal_doubles_counters() {
+    let mut g = two_player_game();
+    let crystal = g.add_card_to_battlefield(0, catalog::the_earth_crystal());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let bear2 = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(crystal);
+    g.players[0].mana_pool.add(crate::mana::Color::Green, 2);
+    g.players[0].mana_pool.add_colorless(4);
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: crystal, ability_index: 0, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![Target::Permanent(bear2)], x_value: None,
+    }).expect("distribute counters");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).unwrap().counter_count(CounterType::PlusOnePlusOne) >= 2,
+        "counters land and are doubled");
+}
+
+/// The Fire Crystal gives your creatures haste.
+#[test]
+fn the_fire_crystal_grants_haste() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::the_fire_crystal());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Haste));
+}
+
+/// Seifer Almasy gives a lone attacker double strike.
+#[test]
+fn seifer_almasy_pumps_a_lone_attacker() {
+    use crate::game::types::{Attack, AttackTarget};
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::seifer_almasy());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(bear);
+    g.active_player_idx = 0;
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: bear, target: AttackTarget::Player(1),
+    }])).expect("attack alone");
+    drain_stack(&mut g);
+    assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::DoubleStrike));
+}
+
+/// Zack Fair hands his counters (and indestructible) to another creature.
+#[test]
+fn zack_fair_passes_his_counters_on() {
+    let mut g = two_player_game();
+    let zack = g.move_card_to_battlefield_for_test(0, catalog::zack_fair());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(zack).unwrap().counter_count(CounterType::PlusOnePlusOne), 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: zack, ability_index: 0, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], x_value: None,
+    }).expect("sac Zack");
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(bear).unwrap();
+    assert!(cp.keywords.contains(&Keyword::Indestructible));
+    assert_eq!(g.battlefield_find(bear).unwrap().counter_count(CounterType::PlusOnePlusOne), 1);
+}
+
+/// Weapons Vendor draws on ETB.
+#[test]
+fn weapons_vendor_draws_on_etb() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::forest());
+    let hand_before = g.players[0].hand.len();
+    g.move_card_to_battlefield_for_test(0, catalog::weapons_vendor());
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand_before + 1);
+}

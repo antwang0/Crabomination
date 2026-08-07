@@ -5596,6 +5596,13 @@ static FIN: &[Factory] = &[
     super::fin::the_prima_vista,
     super::fin::ultros_obnoxious_octopus,
     super::fin::yuna_hope_of_spira,
+    super::fin::the_wind_crystal,
+    super::fin::the_fire_crystal,
+    super::fin::the_water_crystal,
+    super::fin::the_earth_crystal,
+    super::fin::seifer_almasy,
+    super::fin::zack_fair,
+    super::fin::weapons_vendor,
 ];
 static GPT: &[Factory] = &[
     super::gpt::mourning_thrull,

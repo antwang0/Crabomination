@@ -5125,3 +5125,260 @@ pub fn yuna_hope_of_spira() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── The Crystal cycle + odds and ends ─────────────────────────────────────────
+
+/// One Crystal's shared frame: a legendary artifact whose colored spells cost
+/// {1} less, plus a static payoff and a tap-activated ability.
+fn crystal(
+    name: &'static str,
+    mana: crate::mana::ManaCost,
+    color: Color,
+    payoff: StaticAbility,
+    ability: ActivatedAbility,
+) -> CardDefinition {
+    CardDefinition {
+        name,
+        cost: mana,
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Artifact],
+        static_abilities: vec![
+            StaticAbility {
+                description: "Spells of this Crystal's color cost {1} less to cast.",
+                effect: StaticEffect::CostReduction {
+                    filter: SelectionRequirement::HasColor(color),
+                    amount: 1,
+                },
+            },
+            payoff,
+        ],
+        activated_abilities: vec![ability],
+        ..Default::default()
+    }
+}
+
+/// The Wind Crystal — {2}{W}{W}. White spells cost {1} less; your life gain is
+/// doubled. {4}{W}{W}, {T}: your creatures gain flying and lifelink.
+pub fn the_wind_crystal() -> CardDefinition {
+    crystal(
+        "The Wind Crystal",
+        cost(&[generic(2), w(), w()]),
+        Color::White,
+        StaticAbility {
+            description: "If you would gain life, you gain twice that much life instead.",
+            effect: StaticEffect::LifeGainMultiplier {
+                target: crate::effect::PlayerStaticTarget::Controller,
+                factor: 2,
+            },
+        },
+        ActivatedAbility {
+            tap_cost: true,
+            mana_cost: cost(&[generic(4), w(), w()]),
+            effect: Effect::Seq(vec![
+                Effect::GrantKeyword {
+                    what: Selector::EachPermanent(
+                        SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                    ),
+                    keyword: Keyword::Flying,
+                    duration: Duration::EndOfTurn,
+                },
+                Effect::GrantKeyword {
+                    what: Selector::EachPermanent(
+                        SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                    ),
+                    keyword: Keyword::Lifelink,
+                    duration: Duration::EndOfTurn,
+                },
+            ]),
+            ..Default::default()
+        },
+    )
+}
+
+/// The Fire Crystal — {2}{R}{R}. Red spells cost {1} less; your creatures have
+/// haste. {4}{R}{R}, {T}: transient token copy of a creature you control.
+pub fn the_fire_crystal() -> CardDefinition {
+    crystal(
+        "The Fire Crystal",
+        cost(&[generic(2), r(), r()]),
+        Color::Red,
+        StaticAbility {
+            description: "Creatures you control have haste.",
+            effect: StaticEffect::GrantKeyword {
+                applies_to: Selector::EachPermanent(
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                ),
+                keyword: Keyword::Haste,
+            },
+        },
+        ActivatedAbility {
+            tap_cost: true,
+            mana_cost: cost(&[generic(4), r(), r()]),
+            effect: Effect::CreateTokenCopiesHasteSac {
+                who: PlayerRef::You,
+                count: Value::ONE,
+                source: target_filtered(
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                ),
+            },
+            ..Default::default()
+        },
+    )
+}
+
+/// The Water Crystal — {2}{U}{U}. Blue spells cost {1} less; opponents mill
+/// four extra. {4}{U}{U}, {T}: each opponent mills your hand size.
+pub fn the_water_crystal() -> CardDefinition {
+    crystal(
+        "The Water Crystal",
+        cost(&[generic(2), u(), u()]),
+        Color::Blue,
+        StaticAbility {
+            description: "If an opponent would mill one or more cards, they mill four more.",
+            effect: StaticEffect::OpponentMillBonus { amount: 4 },
+        },
+        ActivatedAbility {
+            tap_cost: true,
+            mana_cost: cost(&[generic(4), u(), u()]),
+            effect: Effect::Mill {
+                who: Selector::Player(PlayerRef::EachOpponent),
+                amount: Value::HandSizeOf(PlayerRef::You),
+            },
+            ..Default::default()
+        },
+    )
+}
+
+/// The Earth Crystal — {2}{G}{G}. Green spells cost {1} less; counters you put
+/// on your permanents are doubled. {4}{G}{G}, {T}: distribute two +1/+1
+/// counters among one or two creatures you control.
+pub fn the_earth_crystal() -> CardDefinition {
+    crystal(
+        "The Earth Crystal",
+        cost(&[generic(2), g(), g()]),
+        Color::Green,
+        StaticAbility {
+            description: "Counters put on permanents you control are doubled.",
+            effect: StaticEffect::DoubleCounters,
+        },
+        ActivatedAbility {
+            tap_cost: true,
+            mana_cost: cost(&[generic(4), g(), g()]),
+            effect: Effect::DistributeCounters {
+                total: Value::Const(2),
+                counter: CounterType::PlusOnePlusOne,
+                filter: SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                max_targets: 2,
+            },
+            ..Default::default()
+        },
+    )
+}
+
+/// Seifer Almasy — {3}{R} 3/4 Knight. Whenever a creature you control attacks
+/// alone, it gains double strike until end of turn.
+pub fn seifer_almasy() -> CardDefinition {
+    CardDefinition {
+        name: "Seifer Almasy",
+        cost: cost(&[generic(3), r()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Knight],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 4,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Attacks, EventScope::YourControl).with_filter(
+                Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: SelectionRequirement::IsAttackingAlone,
+                },
+            ),
+            effect: Effect::GrantKeyword {
+                what: Selector::TriggerSource,
+                keyword: Keyword::DoubleStrike,
+                duration: Duration::EndOfTurn,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Zack Fair — {W} 0/1 Soldier that enters with a +1/+1 counter. {1}, Sacrifice
+/// it: target creature you control gains indestructible and takes his counters.
+pub fn zack_fair() -> CardDefinition {
+    CardDefinition {
+        name: "Zack Fair",
+        cost: cost(&[w()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 0,
+        toughness: 1,
+        enters_with_counters: Some((CounterType::PlusOnePlusOne, Value::ONE)),
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1)]),
+            sac_cost: true,
+            effect: Effect::Seq(vec![
+                Effect::GrantKeyword {
+                    what: target_filtered(
+                        SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                    ),
+                    keyword: Keyword::Indestructible,
+                    duration: Duration::EndOfTurn,
+                },
+                Effect::MoveAllCounters { from: Selector::This, to: Selector::Target(0) },
+            ]),
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Weapons Vendor — {3}{W} 2/2 Artificer. ETB: draw a card. At combat, you may
+/// pay {1} to attach an Equipment you control to a creature you control.
+pub fn weapons_vendor() -> CardDefinition {
+    CardDefinition {
+        name: "Weapons Vendor",
+        cost: cost(&[generic(3), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Artificer],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        triggered_abilities: vec![
+            etb(Effect::Draw { who: Selector::You, amount: Value::ONE }),
+            TriggeredAbility {
+                event: EventSpec::new(
+                    EventKind::StepBegins(TurnStep::BeginCombat),
+                    EventScope::YourControl,
+                ),
+                effect: Effect::MayPay {
+                    description: "Pay {1} to move an Equipment?".into(),
+                    mana_cost: cost(&[generic(1)]),
+                    body: Box::new(Effect::Reflexive {
+                        body: Box::new(Effect::Attach {
+                            what: target_filtered(SelectionRequirement::HasArtifactSubtype(
+                                ArtifactSubtype::Equipment,
+                            )),
+                            to: Selector::TargetFiltered {
+                                slot: 1,
+                                filter: SelectionRequirement::Creature
+                                    .and(SelectionRequirement::ControlledByYou),
+                            },
+                        }),
+                    }),
+                    else_: None,
+                },
+            },
+        ],
+        ..Default::default()
+    }
+}
