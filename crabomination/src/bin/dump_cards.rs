@@ -225,6 +225,8 @@ fn keyword_name(kw: &Keyword) -> Option<String> {
         | Keyword::CantAttackUnlessDefenderControlsLandType(_)
         | Keyword::CantAttackUnlessLandCount(_, _)
         | Keyword::CantAttackUnlessOpponentDamaged
+        | Keyword::CantAttackUnlessMoreLandsThanDefender
+        | Keyword::CantBlockUnlessMoreLandsThanAttacker
         | Keyword::CantAttackUnlessGreaterPowerAttacks
         | Keyword::CantBlockUnlessGreaterPowerBlocks
         | Keyword::CantAttackIfDefenderHasUntappedLand

@@ -4184,7 +4184,7 @@ pub fn sokka_bold_boomeranger() -> CardDefinition {
         triggered_abilities: vec![
             // "Discard up to two" approximated as discard any number, draw that many.
             etb(Effect::Seq(vec![
-                Effect::DiscardAnyNumber { who: Selector::You },
+                Effect::DiscardAnyNumber { who: Selector::You, filter: SelectionRequirement::Any },
                 Effect::Draw {
                     who: Selector::You,
                     amount: Value::CardsDiscardedThisEffect,

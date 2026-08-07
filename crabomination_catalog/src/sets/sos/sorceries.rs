@@ -1523,6 +1523,7 @@ pub fn steal_the_show() -> CardDefinition {
                 Effect::Seq(vec![
                     Effect::DiscardAnyNumber {
                         who: target_filtered(SelectionRequirement::Player),
+                        filter: SelectionRequirement::Any,
                     },
                     Effect::Draw {
                         who: Selector::Target(0),

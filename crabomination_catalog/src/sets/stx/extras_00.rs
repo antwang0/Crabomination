@@ -2443,6 +2443,7 @@ pub fn fervent_mastery() -> CardDefinition {
     let opponent_loot = vec![
         Effect::DiscardAnyNumber {
             who: Selector::Player(PlayerRef::EachOpponent),
+            filter: SelectionRequirement::Any,
         },
         Effect::Draw {
             who: Selector::Player(PlayerRef::EachOpponent),
@@ -2481,7 +2482,7 @@ pub fn illuminate_history() -> CardDefinition {
         // Discard any number, then draw that many. Then if 7+ cards in your
         // graveyard, create a 3/2 red-and-white Spirit.
         effect: Effect::Seq(vec![
-            Effect::DiscardAnyNumber { who: Selector::You },
+            Effect::DiscardAnyNumber { who: Selector::You, filter: SelectionRequirement::Any },
             Effect::Draw {
                 who: Selector::You,
                 amount: Value::CountOf(Box::new(Selector::DiscardedThisResolution {

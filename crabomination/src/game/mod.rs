@@ -7714,6 +7714,10 @@ impl GameState {
                 push_mod(&mut all_effects, Layer::L4Type, None,
                     Modification::AddCreatureType(*ct));
             }
+            for ct in &bonus.add_card_types {
+                push_mod(&mut all_effects, Layer::L4Type, None,
+                    Modification::AddCardType(ct.clone()));
+            }
             if let Some(types) = &bonus.set_land_types {
                 push_mod(&mut all_effects, Layer::L4Type, None,
                     Modification::SetLandTypes(types.clone()));
@@ -9714,6 +9718,11 @@ impl GameState {
                     card.chosen_number.unwrap_or(0) as i32,
                     card.remembered_amount.unwrap_or(0),
                 ),
+                crate::card::DynamicPt::ChosenPlayerTally { base_p, base_t, what, power_only } => {
+                    let n =
+                        card.chosen_player.map(|seat| self.player_tally(seat, what) as i32).unwrap_or(0);
+                    if power_only { (base_p + n, base_t) } else { (base_p + n, base_t + n) }
+                }
                 crate::card::DynamicPt::TappedLandsChosenPlayerControls { base_t } => {
                     let n = card
                         .chosen_player

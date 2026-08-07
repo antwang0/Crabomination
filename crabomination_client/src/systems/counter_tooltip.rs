@@ -941,6 +941,8 @@ pub(crate) fn keyword_reminder(kw: &crabomination::card::Keyword) -> Option<&'st
         K::CantAttackOrBlockUnlessDelirium => "Can't attack or block unless you have delirium (four or more card types among cards in your graveyard).",
         K::CantAttackUnlessLandCount(_, _) => "Can't attack unless that many lands of the named type are on the battlefield (anyone's count).",
         K::CantAttackUnlessOpponentDamaged => "Can't attack unless an opponent has been dealt damage this turn.",
+        K::CantAttackUnlessMoreLandsThanDefender => "Can't attack unless you control more lands than the defending player.",
+        K::CantBlockUnlessMoreLandsThanAttacker => "Can't block unless you control more lands than the attacking player.",
         K::CantAttackUnlessMoreCreaturesThanDefender => "Can't attack unless you control more creatures than the defending player.",
         K::CantBlockUnlessMoreCreaturesThanAttacker => "Can't block unless you control more creatures than the attacking player.",
         K::CantAttackOrBlockUnlessPay(_) => "Can't attack or block unless its controller pays the listed mana. The cost is charged as attackers or blockers are declared.",
@@ -1490,6 +1492,7 @@ fn counter_label(kind: CounterType) -> &'static str {
         CounterType::Hunger => "Hunger",
         CounterType::Elixir => "Elixir",
         CounterType::Pain => "Pain",
+        CounterType::Magnet => "Magnet",
     }
 }
 
@@ -1500,6 +1503,7 @@ fn counter_reminder(kind: CounterType) -> Option<&'static str> {
     Some(match kind {
         CounterType::Elixir => "Essence Bottle's stored life — cash them all in for 2 life each.",
         CounterType::Pain => "Torture Chamber's tally — it bites you each end step until you spend them.",
+        CounterType::Magnet => "Magnetic Web: creatures with magnet counters attack and block together.",
         CounterType::Stun => "Skips its next untap (remove instead of untapping).",
         CounterType::Finality => "If it would die, exile it instead.",
         CounterType::Shield => "Remove to prevent the next damage/destruction.",

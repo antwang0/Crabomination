@@ -943,7 +943,7 @@ pub fn rites_of_spring() -> CardDefinition {
         "Rites of Spring",
         cost(&[generic(1), g()]),
         Effect::Seq(vec![
-            Effect::DiscardAnyNumber { who: Selector::You },
+            Effect::DiscardAnyNumber { who: Selector::You, filter: crate::card::SelectionRequirement::Any },
             Effect::Repeat {
                 count: Value::CardsDiscardedThisEffect,
                 body: Box::new(Effect::Search {

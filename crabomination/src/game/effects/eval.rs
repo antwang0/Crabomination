@@ -61,6 +61,40 @@ fn filter_can_match_land(f: &SelectionRequirement) -> bool {
 }
 
 impl GameState {
+    /// One of the five board/resource tallies the EXO Keeper and Oath cycles
+    /// compare between two seats.
+    pub fn player_tally(&self, seat: usize, what: crate::card::PlayerTally) -> i64 {
+        use crate::card::PlayerTally;
+        match what {
+            PlayerTally::Life => self.players[seat].life as i64,
+            PlayerTally::CardsInHand => self.players[seat].hand.len() as i64,
+            PlayerTally::CreaturesControlled => self
+                .battlefield
+                .iter()
+                .filter(|c| c.controller == seat && c.definition.is_creature())
+                .count() as i64,
+            PlayerTally::LandsControlled => self
+                .battlefield
+                .iter()
+                .filter(|c| c.controller == seat && c.definition.is_land())
+                .count() as i64,
+            PlayerTally::NonbasicLandsControlled => self
+                .battlefield
+                .iter()
+                .filter(|c| {
+                    c.controller == seat
+                        && c.definition.is_land()
+                        && !c.definition.supertypes.contains(&crate::card::Supertype::Basic)
+                })
+                .count() as i64,
+            PlayerTally::CreatureCardsInGraveyard => self.players[seat]
+                .graveyard
+                .iter()
+                .filter(|c| c.definition.is_creature())
+                .count() as i64,
+        }
+    }
+
     /// CR 700.5 — `player`'s devotion to `colors`: the number of mana
     /// symbols matching any listed color among the mana costs of
     /// permanents they control. A hybrid / Phyrexian / mono-hybrid pip
@@ -3043,32 +3077,10 @@ impl GameState {
                 if self.same_team(*p, controller) {
                     return false;
                 }
-                let tally = |seat: usize| -> i64 {
-                    use crate::card::PlayerTally;
-                    match what {
-                        PlayerTally::Life => self.players[seat].life as i64,
-                        PlayerTally::CardsInHand => self.players[seat].hand.len() as i64,
-                        PlayerTally::CreaturesControlled => self
-                            .battlefield
-                            .iter()
-                            .filter(|c| c.controller == seat && c.definition.is_creature())
-                            .count() as i64,
-                        PlayerTally::LandsControlled => self
-                            .battlefield
-                            .iter()
-                            .filter(|c| c.controller == seat && c.definition.is_land())
-                            .count() as i64,
-                        PlayerTally::CreatureCardsInGraveyard => self.players[seat]
-                            .graveyard
-                            .iter()
-                            .filter(|c| c.definition.is_creature())
-                            .count() as i64,
-                    }
-                };
                 let diff = if *fewer {
-                    tally(controller) - tally(*p)
+                    self.player_tally(controller, *what) - self.player_tally(*p, *what)
                 } else {
-                    tally(*p) - tally(controller)
+                    self.player_tally(*p, *what) - self.player_tally(controller, *what)
                 };
                 diff >= *by as i64
             }
@@ -3355,6 +3367,9 @@ impl GameState {
                         self.block_map.get(&card.id).is_some_and(|atk| atk.contains(&s))
                             || self.block_map.get(&s).is_some_and(|atk| atk.contains(&card.id))
                     }),
+                    R::BlockedBySourceThisTurn => source
+                        .and_then(|s| self.battlefield_find(s))
+                        .is_some_and(|src| src.blocked_attackers_this_turn.contains(&card.id)),
                     // Brine Hag fires from the graveyard, so the source's own
                     // damage log comes off its leaves-battlefield LKI.
                     R::DealtDamageToSourceThisTurn => source
@@ -4673,6 +4688,7 @@ impl GameState {
             | R::EquippedByAtLeast(_) | R::IsModified | R::DealtDamageThisTurn
             | R::DamagedBySourceThisTurn | R::DealtDamageToSourceThisTurn
             | R::BlockingOrBlockedBySource
+            | R::BlockedBySourceThisTurn
             | R::PlayerDamagedBySourceThisTurn
             | R::SaddledSourceThisTurn => false,
         }

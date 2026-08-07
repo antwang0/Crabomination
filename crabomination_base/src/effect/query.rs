@@ -670,7 +670,14 @@ impl Effect {
                 sel_has_target(who) || value_has_target(count)
             }
             Effect::WishToHand { .. } => false,
-            Effect::SacrificeAllButOnePerType { who } => sel_has_target(who),
+            Effect::SacrificeAllButOnePerType { who, .. } => sel_has_target(who),
+            // The Oath cycle picks its own opponent at resolution.
+            Effect::OathCatchUp { .. }
+            | Effect::GainControlWhileSourceAttached
+            | Effect::SacrificeEachUnlessPays { .. } => false,
+            Effect::MoveAllCountersOfKind { from, to, .. } => {
+                sel_has_target(from) || sel_has_target(to)
+            }
             Effect::EachPlayerKeepsOneSacrificeRest { who, .. } => sel_has_target(who),
             Effect::RevealRandomDiscardNonland { who, .. }
             | Effect::RevealRandomFromHand { who }
@@ -892,7 +899,7 @@ impl Effect {
             Effect::DiscardMatchingAtRandom { who, .. } => player_has_target(who),
             Effect::ExileFromHand { who, amount } => sel_has_target(who) || value_has_target(amount),
             Effect::CastUpToNFromOpponentsExile { count } => value_has_target(count),
-            Effect::DiscardAnyNumber { who } => sel_has_target(who),
+            Effect::DiscardAnyNumber { who, .. } => sel_has_target(who),
             Effect::SetNoMaxHandSize { who }
             | Effect::LookAtHand { who }
             | Effect::PutCardFromHandOnTopOfLibrary { who } => sel_has_target(who),
@@ -1714,7 +1721,7 @@ impl Effect {
             // manual Target. The filter is typically `Player` (Mind Rot,
             // Sign in Blood) but can be narrower (Howling Mine-style "you").
             Effect::Discard { who, .. }
-            | Effect::DiscardAnyNumber { who }
+            | Effect::DiscardAnyNumber { who, .. }
             | Effect::SetNoMaxHandSize { who }
             | Effect::SetMaxHandSize { who, .. }
             | Effect::Draw { who, .. }
@@ -3129,7 +3136,7 @@ impl Effect {
                 }
                 Effect::DestroyTargets { filter } => Some(filter),
                 Effect::Discard { who, .. } => sel_find(who, slot),
-                Effect::DiscardAnyNumber { who } => sel_find(who, slot),
+                Effect::DiscardAnyNumber { who, .. } => sel_find(who, slot),
                 Effect::DiscardChosen { from, .. }
                 | Effect::DiscardChosenFromRevealed { from, .. } => sel_find(from, slot),
                 Effect::BottomChosenFromHandAndDraw { from, .. } => sel_find(from, slot),
@@ -3141,6 +3148,9 @@ impl Effect {
                 Effect::RedirectYourDamageToChosen { what }
                 | Effect::RedirectYourCombatDamageToTarget { what }
                 | Effect::PreventAllDamageFromTargetThisTurn { what, .. } => sel_find(what, slot),
+                Effect::RedirectNextDamageTo { what, to } => {
+                    sel_find(what, slot).or_else(|| sel_find(to, slot))
+                }
                 Effect::ManaClash { opponent } => sel_find(opponent, slot),
                 Effect::SetNoMaxHandSize { who } => sel_find(who, slot),
                 Effect::SetMaxHandSize { who, .. } => sel_find(who, slot),

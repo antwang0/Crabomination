@@ -54759,6 +54759,7 @@ pub fn ajani_nacatl_pariah() -> CardDefinition {
                 loyalty_cost: -4,
                 effect: Effect::SacrificeAllButOnePerType {
                     who: Selector::Player(PlayerRef::EachOpponent),
+                    include_land: false,
                 },
                 ..Default::default()
             },
@@ -62588,6 +62589,7 @@ pub fn mythos_of_snapdax() -> CardDefinition {
         card_types: vec![CardType::Sorcery],
         effect: Effect::SacrificeAllButOnePerType {
             who: Selector::Player(PlayerRef::EachPlayer),
+            include_land: false,
         },
         ..Default::default()
     }

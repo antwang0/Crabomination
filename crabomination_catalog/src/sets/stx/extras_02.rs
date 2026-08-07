@@ -602,7 +602,7 @@ pub fn cathartic_pyre() -> CardDefinition {
                 amount: Value::Const(3),
             },
             Effect::Seq(vec![
-                Effect::DiscardAnyNumber { who: Selector::You },
+                Effect::DiscardAnyNumber { who: Selector::You, filter: SelectionRequirement::Any },
                 Effect::Draw {
                     who: Selector::You,
                     amount: Value::CardsDiscardedThisEffect,

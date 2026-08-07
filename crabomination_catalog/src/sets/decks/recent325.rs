@@ -74,7 +74,7 @@ pub fn miasma_demon() -> CardDefinition {
     CardDefinition {
         keywords: vec![Keyword::Flying],
         triggered_abilities: vec![etb(Effect::Seq(vec![
-            Effect::DiscardAnyNumber { who: Selector::You },
+            Effect::DiscardAnyNumber { who: Selector::You, filter: crate::card::SelectionRequirement::Any },
             Effect::CapTargetsAt {
                 amount: Value::CardsDiscardedThisEffect,
                 body: Box::new(Effect::ApplyToTargets {

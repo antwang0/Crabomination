@@ -635,6 +635,14 @@ impl GameState {
                         return Err(GameError::CannotAttack(id));
                     }
                 }
+                // CR 508.1a — Monstrous Hound: more lands than the defender.
+                if computed_kw(id).contains(&Keyword::CantAttackUnlessMoreLandsThanDefender)
+                    && let Some(d) = self.defender_for(atk.target)
+                    && self.player_tally(p, crate::card::PlayerTally::LandsControlled)
+                        <= self.player_tally(d, crate::card::PlayerTally::LandsControlled)
+                {
+                    return Err(GameError::CannotAttack(id));
+                }
                 // "Even number of counters" gate (Sab-Sunen). Zero is even.
                 if computed_kw(id).contains(&Keyword::CantAttackOrBlockUnlessEvenCounters)
                     && let Some(c) = self.battlefield.iter().find(|c| c.id == id)
@@ -1470,6 +1478,15 @@ impl GameState {
                     self.computed_permanent(attacker_id),
                 )
                 && a.power >= b.toughness
+            {
+                return Err(GameError::CannotBlock(blocker_id));
+            }
+
+            // CR 509.1b — Monstrous Hound: more lands than the attacker.
+            if kws_of(blocker_id).contains(&Keyword::CantBlockUnlessMoreLandsThanAttacker)
+                && let Some(a) = self.battlefield_find(attacker_id)
+                && self.player_tally(blocker.controller, crate::card::PlayerTally::LandsControlled)
+                    <= self.player_tally(a.controller, crate::card::PlayerTally::LandsControlled)
             {
                 return Err(GameError::CannotBlock(blocker_id));
             }
@@ -4130,7 +4147,9 @@ impl GameState {
             Target::Player(damaged_player),
             damage_amount,
         );
-        for kind in [EventKind::DealsCombatDamage, EventKind::DealsDamage] {
+        for kind in
+            [EventKind::DealsDamageToPlayer, EventKind::DealsCombatDamage, EventKind::DealsDamage]
+        {
             self.fire_combat_damage_triggers(
                 source,
                 kind,
@@ -4338,9 +4357,9 @@ impl GameState {
         }
     }
 
-    /// The non-combat, player-side half of `EventKind::DealsDamage`: a
-    /// permanent that just burned a player fires its own damage triggers with
-    /// that player bound to slot 0.
+    /// The non-combat, player-side half of `EventKind::DealsDamage` /
+    /// `DealsDamageToPlayer`: a permanent that just burned a player fires its
+    /// own damage triggers with that player bound to slot 0.
     pub(crate) fn fire_noncombat_damage_to_player_triggers(
         &mut self,
         source: CardId,
@@ -4350,12 +4369,14 @@ impl GameState {
         if self.battlefield_find(source).is_none() {
             return;
         }
-        self.fire_combat_damage_triggers(
-            source,
-            EventKind::DealsDamage,
-            Target::Player(damaged_player),
-            damage_amount,
-        );
+        for kind in [EventKind::DealsDamageToPlayer, EventKind::DealsDamage] {
+            self.fire_combat_damage_triggers(
+                source,
+                kind,
+                Target::Player(damaged_player),
+                damage_amount,
+            );
+        }
     }
 
     /// Shared body for the combat-damage trigger dispatch (to a player or to a

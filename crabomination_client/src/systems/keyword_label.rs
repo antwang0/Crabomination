@@ -107,6 +107,8 @@ fn keyword_tag(kw: &Keyword) -> Option<&'static str> {
         // gate — both read at a glance next to the other attack locks.
         CantAttackUnlessLandCount(_, _) => "Land?",
         CantAttackUnlessOpponentDamaged => "Blood?",
+        CantAttackUnlessMoreLandsThanDefender => "Land lead (atk)",
+        CantBlockUnlessMoreLandsThanAttacker => "Land lead (blk)",
         // Mogg Toady's "more creatures than the other player" gates.
         CantAttackUnlessMoreCreaturesThanDefender => "Horde?",
         CantBlockUnlessMoreCreaturesThanAttacker => "NoBlkHorde?",

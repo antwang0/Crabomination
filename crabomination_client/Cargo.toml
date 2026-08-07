@@ -4,7 +4,29 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-bevy = { version = "0.19.0" }
+# Bevy's `default` feature set, spelled out so `wayland` and `audio` can be
+# split off behind our own default-on features (see [features] below).
+bevy = { version = "0.19.0", default-features = false, features = [
+    # `2d` + `3d` + `ui`, minus the `default_platform` they pull in
+    "default_app",
+    "2d_bevy_render",
+    "3d_bevy_render",
+    "ui_api",
+    "ui_bevy_render",
+    "bevy_ui_widgets",
+    "scene",
+    "picking",
+    # `default_platform` minus `wayland`
+    "std",
+    "bevy_winit",
+    "bevy_clipboard",
+    "default_font",
+    "multi_threaded",
+    "webgl2",
+    "x11",
+    "custom_cursor",
+    "sysinfo_plugin",
+] }
 bevy_mesh = "0.19.0"
 rand = "0.10.1"
 serde = { version = "1.0.228", features = ["derive"] }
@@ -35,6 +57,17 @@ web-sys = { version = "0.3", features = [
 getrandom = { version = "0.4", features = ["wasm_js"] }
 
 [features]
+default = ["wayland", "audio", "gamepad"]
+
+# The pkg-config-backed platform bits, split out so a host that lacks the
+# system libraries can still type-check the client with
+# `--no-default-features`: without them `wayland-sys` / `alsa-sys` /
+# `libudev-sys` panic in their build scripts before any of our code is
+# compiled. All three are on by default — keep them on for a real build.
+wayland = ["bevy/wayland"]
+audio = ["bevy/audio"]
+gamepad = ["bevy/bevy_gilrs"]
+
 # Bevy's dynamic-linking dev accelerator — OPT-IN ONLY.
 #
 # It links std + a `bevy_dylib` dynamically, which speeds up the final

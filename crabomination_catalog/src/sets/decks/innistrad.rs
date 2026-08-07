@@ -4660,7 +4660,7 @@ pub fn into_the_night() -> CardDefinition {
         card_types: vec![CardType::Sorcery],
         effect: Effect::Seq(vec![
             Effect::BecomeNight,
-            Effect::DiscardAnyNumber { who: Selector::You },
+            Effect::DiscardAnyNumber { who: Selector::You, filter: SelectionRequirement::Any },
             Effect::Draw {
                 who: Selector::You,
                 amount: Value::Sum(vec![Value::CardsDiscardedThisEffect, Value::Const(1)]),
@@ -4964,7 +4964,7 @@ pub fn obsessive_astronomer() -> CardDefinition {
             TriggeredAbility {
                 event: EventSpec::new(EventKind::DayNightChanged, EventScope::AnyPlayer),
                 effect: Effect::Seq(vec![
-                    Effect::DiscardAnyNumber { who: Selector::You },
+                    Effect::DiscardAnyNumber { who: Selector::You, filter: SelectionRequirement::Any },
                     Effect::Draw {
                         who: Selector::You,
                         amount: Value::CardsDiscardedThisEffect,

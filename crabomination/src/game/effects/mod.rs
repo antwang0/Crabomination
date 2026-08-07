@@ -428,6 +428,24 @@ impl GameState {
         events: &mut Vec<GameEvent>,
         effect: &Effect,
     ) -> Result<(), GameError> {
+        self.run_each_unless_pays(filter, cost, ctx, events, effect, false)
+    }
+
+    /// Shared body for the pay-or-lose-something family: one decision per
+    /// matching permanent, asked of that permanent's controller. When
+    /// `sacrifice` the unpaid penalty is "sacrifice a permanent of your
+    /// choice" (Fade Away); otherwise the matching permanent itself bounces
+    /// (Cut the Tethers).
+    #[allow(clippy::too_many_arguments)]
+    fn run_each_unless_pays(
+        &mut self,
+        filter: &SelectionRequirement,
+        cost: &crate::mana::ManaCost,
+        ctx: &EffectContext,
+        events: &mut Vec<GameEvent>,
+        effect: &Effect,
+        sacrifice: bool,
+    ) -> Result<(), GameError> {
         let source = ctx.source.unwrap_or(CardId(0));
         let targets: Vec<(CardId, usize)> = self
             .battlefield
@@ -469,6 +487,25 @@ impl GameState {
             }
         }
         self.clear_answer_log();
+        if sacrifice {
+            // One sacrifice per unpaid permanent, chosen by its controller.
+            let seats: Vec<usize> = bounce
+                .iter()
+                .filter_map(|id| self.battlefield_find(*id).map(|c| c.controller))
+                .collect();
+            for seat in seats {
+                self.run_effect(
+                    &Effect::Sacrifice {
+                        who: Selector::Player(PlayerRef::Seat(seat)),
+                        count: crate::effect::Value::ONE,
+                        filter: SelectionRequirement::Permanent,
+                    },
+                    ctx,
+                    events,
+                )?;
+            }
+            return Ok(());
+        }
         for id in bounce {
             self.move_card_to(
                 id,
@@ -8702,7 +8739,7 @@ impl GameState {
                 Ok(())
             }
 
-            Effect::DiscardAnyNumber { who } => {
+            Effect::DiscardAnyNumber { who, filter } => {
                 use crate::decision::Decision;
                 let seats: Vec<usize> = self
                     .resolve_selector(who, ctx)
@@ -8713,13 +8750,14 @@ impl GameState {
                     })
                     .collect();
                 for (i, p) in seats.iter().copied().enumerate() {
-                    if self.players[p].hand.is_empty() { continue; }
                     let candidates: Vec<(crate::card::CardId, String)> = self
                         .players[p]
                         .hand
                         .iter()
+                        .filter(|c| self.evaluate_requirement_on_card(filter, c, p))
                         .map(|c| (c.id, c.definition.name.to_string()))
                         .collect();
+                    if candidates.is_empty() { continue; }
                     // "Any number" — count = hand size; the decider's
                     // `Discard(picked_ids)` answer can return 0..=hand.len()
                     // entries. AutoDecider picks 0 by default (it returns
@@ -8743,6 +8781,7 @@ impl GameState {
                         let rest = per_seat_continuation(&seats[i + 1..], |q| {
                             Effect::DiscardAnyNumber {
                                 who: Selector::Player(crate::effect::PlayerRef::Seat(q)),
+                                filter: filter.clone(),
                             }
                         });
                         self.suspend_signal = Some((decision, pending, rest));
@@ -15373,6 +15412,26 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::GainControlWhileSourceAttached => {
+                let Some(aura) = ctx.source else { return Ok(()) };
+                let Some(host) = self.battlefield_find(aura).and_then(|c| c.attached_to) else {
+                    return Ok(());
+                };
+                if let Some(prev) = self.change_control(host, ctx.controller)
+                    && !self.temporary_control.iter().any(|t| t.card == host)
+                {
+                    self.temporary_control.push(crate::game::TempControl {
+                        card: host,
+                        original_controller: prev,
+                        duration: crate::effect::Duration::Permanent,
+                        source: Some(aura),
+                        while_source_tapped: false,
+                        while_source_attached: true,
+                    });
+                }
+                Ok(())
+            }
+
             Effect::GainControlWhileTriggerAuraAttached => {
                 // CR 611.2c — the Aura that just attached is the trigger
                 // subject; it holds the steal for as long as it stays on.
@@ -19136,7 +19195,9 @@ impl GameState {
                 Ok(())
             }
 
-            Effect::SacrificeAllButOnePerType { who } => self.resolve_sacrifice_all_but_one_per_type(who, ctx, events),
+            Effect::SacrificeAllButOnePerType { who, include_land } => {
+                self.resolve_sacrifice_all_but_one_per_type(who, *include_land, ctx, events)
+            }
 
             Effect::EachPlayerKeepsOneSacrificeRest { who, filter } => {
                 // Deadly Vanity — each resolved player keeps one `filter`
@@ -24255,6 +24316,53 @@ impl GameState {
             }
 
             Effect::TargetPlayerThen { then, .. } => self.run_effect(then, ctx, events),
+
+            Effect::OathCatchUp { tally, body } => {
+                // The upkeep player compares themselves against each opponent;
+                // the one with the biggest lead becomes target slot 0 and the
+                // body runs under the upkeep player's control.
+                let seat = self.active_player_idx;
+                let mine = self.player_tally(seat, *tally);
+                let lead = (0..self.players.len())
+                    .filter(|&q| !self.same_team(q, seat))
+                    .filter(|&q| self.player_tally(q, *tally) > mine)
+                    .max_by_key(|&q| self.player_tally(q, *tally));
+                let Some(other) = lead else { return Ok(()) };
+                let mut sub = ctx.clone();
+                sub.controller = seat;
+                sub.targets = vec![Target::Player(other)];
+                self.run_effect(body, &sub, events)
+            }
+
+            Effect::MoveAllCountersOfKind { from, to, kind } => {
+                let Some(dest) =
+                    self.resolve_selector(to, ctx).into_iter().find_map(|e| e.as_permanent_id())
+                else {
+                    return Ok(());
+                };
+                let sources: Vec<CardId> = self
+                    .resolve_selector(from, ctx)
+                    .into_iter()
+                    .filter_map(|e| e.as_permanent_id())
+                    .filter(|id| *id != dest)
+                    .collect();
+                let mut moved = 0u32;
+                for id in sources {
+                    if let Some(c) = self.battlefield.iter_mut().find(|c| c.id == id) {
+                        let n = c.counter_count(*kind);
+                        if n > 0 {
+                            c.remove_counters(*kind, n);
+                            moved += n;
+                        }
+                    }
+                }
+                if moved > 0
+                    && let Some(c) = self.battlefield.iter_mut().find(|c| c.id == dest)
+                {
+                    c.add_counters(*kind, moved);
+                }
+                Ok(())
+            }
 
             Effect::PutOnLibraryFromHand { who, count } => {
                 use crate::decision::Decision;
@@ -30100,6 +30208,10 @@ impl GameState {
                 self.run_return_each_unless_pays(filter, cost, ctx, events, effect)
             }
 
+            Effect::SacrificeEachUnlessPays { filter, cost } => {
+                self.run_each_unless_pays(filter, cost, ctx, events, effect, true)
+            }
+
             Effect::TopTwoGraveyardOpponentSplits { who } => {
                 let owner = ctx.controller;
                 let top: Vec<(CardId, String)> = self.players[owner]
@@ -34315,26 +34427,32 @@ impl GameState {
     fn resolve_sacrifice_all_but_one_per_type(
         &mut self,
         who: &crate::effect::Selector,
+        include_land: bool,
         ctx: &EffectContext,
         events: &mut Vec<GameEvent>,
     ) -> Result<(), GameError> {
                 use crate::card::CardType;
-                for ent in self.resolve_selector(who, ctx) {
-                    let EntityRef::Player(p) = ent else { continue };
-                    let mut keep: Vec<CardId> = Vec::new();
-                    for ty in [
+                let types: &[CardType] = if include_land {
+                    &[CardType::Artifact, CardType::Creature, CardType::Enchantment, CardType::Land]
+                } else {
+                    &[
                         CardType::Artifact,
                         CardType::Creature,
                         CardType::Enchantment,
                         CardType::Planeswalker,
-                    ] {
+                    ]
+                };
+                for ent in self.resolve_selector(who, ctx) {
+                    let EntityRef::Player(p) = ent else { continue };
+                    let mut keep: Vec<CardId> = Vec::new();
+                    for ty in types {
                         let pick = self
                             .battlefield
                             .iter()
                             .filter(|c| {
                                 c.controller == p
-                                    && !c.definition.is_land()
-                                    && c.definition.card_types.contains(&ty)
+                                    && (include_land || !c.definition.is_land())
+                                    && c.definition.card_types.contains(ty)
                                     && !keep.contains(&c.id)
                             })
                             .max_by_key(|c| c.definition.cost.cmc())
@@ -34347,7 +34465,9 @@ impl GameState {
                         .battlefield
                         .iter()
                         .filter(|c| {
-                            c.controller == p && !c.definition.is_land() && !keep.contains(&c.id)
+                            c.controller == p
+                                && (include_land || !c.definition.is_land())
+                                && !keep.contains(&c.id)
                         })
                         .map(|c| c.id)
                         .collect();

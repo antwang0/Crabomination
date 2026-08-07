@@ -5066,7 +5066,7 @@ pub fn ilharg_the_raze_boar() -> CardDefinition {
 pub fn neheb_dreadhorde_champion() -> CardDefinition {
     let body = || {
         Effect::Seq(vec![
-            Effect::DiscardAnyNumber { who: Selector::You },
+            Effect::DiscardAnyNumber { who: Selector::You, filter: crate::card::SelectionRequirement::Any },
             Effect::Draw {
                 who: Selector::You,
                 amount: Value::CardsDiscardedThisEffect,
@@ -5285,6 +5285,7 @@ pub fn liliana_dreadhorde_general() -> CardDefinition {
                 loyalty_cost: -9,
                 effect: Effect::SacrificeAllButOnePerType {
                     who: Selector::Player(PlayerRef::EachOpponent),
+                    include_land: false,
                 },
                 ..Default::default()
             },

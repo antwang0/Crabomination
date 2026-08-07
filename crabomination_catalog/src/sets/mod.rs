@@ -440,6 +440,7 @@ pub mod scg2;
 pub mod shm;
 pub mod sos;
 pub mod exo;
+pub mod exo2;
 pub mod sth;
 pub mod stx;
 pub mod thb;

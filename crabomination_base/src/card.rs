@@ -1362,6 +1362,12 @@ pub enum Keyword {
     /// has been dealt damage this turn" (Bloodcrazed Goblin). Reads the
     /// per-turn `was_dealt_damage_this_turn` flag on each opponent.
     CantAttackUnlessOpponentDamaged,
+    /// CR 508.1a — "can't attack unless you control more lands than defending
+    /// player" (Monstrous Hound). Counts lands, not a specific land type.
+    CantAttackUnlessMoreLandsThanDefender,
+    /// CR 509.1b — the blocking half of
+    /// `CantAttackUnlessMoreLandsThanDefender` (Monstrous Hound).
+    CantBlockUnlessMoreLandsThanAttacker,
     /// CR 508.1a restriction — "This creature can't attack if defending player
     /// controls an untapped land" (Branded Brawlers).
     CantAttackIfDefenderHasUntappedLand,
@@ -1811,6 +1817,7 @@ pub enum PlayerTally {
     CardsInHand,
     CreaturesControlled,
     LandsControlled,
+    NonbasicLandsControlled,
     CreatureCardsInGraveyard,
 }
 
@@ -2077,6 +2084,10 @@ pub enum SelectionRequirement {
     /// blocked by it (Sentinel's "target creature blocking or blocked by
     /// this creature"). Reads `block_map` both ways.
     BlockingOrBlockedBySource,
+    /// "Creatures blocked by [source] this turn" — reads the source's
+    /// `blocked_attackers_this_turn`, so it still answers after combat has
+    /// been torn down (Wall of Nets' end-of-combat exile).
+    BlockedBySourceThisTurn,
     /// True when the candidate is blocking, or is blocked by, the ability's
     /// source — the symmetric combat-partner filter (Sisters of Stone Death's
     /// "creature blocking or blocked by this creature").
@@ -2536,6 +2547,12 @@ pub enum SelectionRequirement {
 }
 
 impl SelectionRequirement {
+    /// `Any`, as a function so it can be a `#[serde(default)]` for filter
+    /// fields added to existing effect variants.
+    pub fn any() -> Self {
+        SelectionRequirement::Any
+    }
+
     pub fn and(self, other: Self) -> Self {
         Self::And(Box::new(self), Box::new(other))
     }
@@ -4218,6 +4235,10 @@ pub struct EquipBonus {
     /// override.
     #[serde(default)]
     pub add_creature_types: Vec<CreatureType>,
+    /// Layer-4 additive card types — "enchanted creature … is an artifact in
+    /// addition to its other types" (Transmogrifying Licid).
+    #[serde(default)]
+    pub add_card_types: Vec<CardType>,
     /// Land types the host's type line becomes (the "is a Forest land" auras —
     /// Song of the Dryads). Pairs with `set_card_types: Some([Land])` so the
     /// intrinsic basic-land mana ability follows the granted type.
@@ -4413,6 +4434,10 @@ pub enum DynamicPt {
     /// Dracoplasm.
     EnteredTotals,
     /// Power = tapped lands the source's remembered player controls (Pallimud).
+    /// `base_p`/`base_t` plus the chosen player's tally — the EXO
+    /// as-enters-choose-an-opponent bodies (Entropic Specter's hand size,
+    /// Skyshroud War Beast's nonbasic lands).
+    ChosenPlayerTally { base_p: i32, base_t: i32, what: PlayerTally, power_only: bool },
     TappedLandsChosenPlayerControls { base_t: i32 },
     /// `inner` during the controller's turn, `base_p`/`base_t` on every other
     /// turn (Angry Mob).

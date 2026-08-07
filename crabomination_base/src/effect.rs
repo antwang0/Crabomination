@@ -2471,6 +2471,11 @@ pub enum EventKind {
     AttacksAndIsntBlocked,
     /// Combat damage was dealt to a player by a creature.
     DealsCombatDamageToPlayer,
+    /// "Whenever this permanent deals damage to a player" — the
+    /// combat-agnostic sibling of `DealsCombatDamageToPlayer` (Soltari
+    /// Visionary). Fires from both the combat step and the non-combat damage
+    /// funnel, with the damaged player bound to slot 0.
+    DealsDamageToPlayer,
     /// Combat damage was dealt to a planeswalker by a creature (keyed on the
     /// dealer). Pair with `EventScope::SelfSource`/`YourControl`; the damaged
     /// planeswalker is the default target slot (Vraska's Assassin token
@@ -3917,7 +3922,14 @@ pub enum Effect {
     /// for the "draw equal to discarded" rider. AutoDecider picks 0 (the
     /// conservative default); ScriptedDecider supplies the exact discard
     /// list via `DecisionAnswer::Discard(_)`.
-    DiscardAnyNumber { who: Selector },
+    DiscardAnyNumber {
+        who: Selector,
+        /// Restricts which hand cards may be picked ("discard any number of
+        /// *creature* cards" — Mind Maggots). `Any` for the unrestricted
+        /// wording.
+        #[serde(default = "SelectionRequirement::any")]
+        filter: SelectionRequirement,
+    },
     /// Set `Player.max_hand_size = None` on each resolved player, for the
     /// rest of the game. Used by Wisdom of Ages ("You have no maximum hand
     /// size for the rest of the game"), Reliquary Tower's static (which
@@ -4551,6 +4563,10 @@ pub enum Effect {
     /// controller pays `cost`." Cut the Tethers — one pay-or-bounce decision per
     /// permanent, asked of its controller.
     ReturnEachUnlessPays { filter: SelectionRequirement, cost: crate::mana::ManaCost },
+    /// "For each [filter], its controller sacrifices a permanent of their
+    /// choice unless they pay `cost`" (Fade Away). One pay-or-sacrifice
+    /// decision per matching permanent, asked of its controller.
+    SacrificeEachUnlessPays { filter: SelectionRequirement, cost: crate::mana::ManaCost },
     /// "Target opponent chooses one of the top two cards of your graveyard.
     /// Exile that card and put the other one into your hand" (Phyrexian
     /// Grimoire). `who` is the choosing player; the graveyard is the effect
@@ -6128,6 +6144,10 @@ pub enum Effect {
     /// attached to it" (Eriette, the Beguiler). The Aura is
     /// `ctx.trigger_source`; the stolen permanent is whatever it's attached to.
     GainControlWhileTriggerAuraAttached,
+    /// The `This`-keyed sibling of `GainControlWhileTriggerAuraAttached`: the
+    /// effect's own source is the Aura holding the steal (Dominating Licid,
+    /// whose attach is an activated ability rather than an ETB trigger).
+    GainControlWhileSourceAttached,
     /// CR 611.2c sibling — the resolved permanents gain `keyword` for as long
     /// as the effect's source stays tapped on the battlefield (Hisoka's Guard's
     /// shroud grant). Unwound by the same SBA sweep.
@@ -6582,6 +6602,16 @@ pub enum Effect {
         creature_types: Vec<crate::card::CreatureType>,
         duration: Duration,
     },
+    /// CR 603 — the EXO Oath cycle's shared template: "At the beginning of
+    /// each player's upkeep, that player chooses target player who leads them
+    /// on `tally` and is their opponent. The first player may [`body`]."
+    /// `body` resolves with the upkeep player as its controller and the chosen
+    /// opponent in target slot 0. Multiplayer auto-picks the biggest lead
+    /// instead of prompting.
+    OathCatchUp { tally: crate::card::PlayerTally, body: Box<Effect> },
+    /// Move every counter of `kind` from each resolved `from` onto `to` (Spike
+    /// Cannibal). Relocation, not creation — no doublers (CR 122.5).
+    MoveAllCountersOfKind { from: Selector, to: Selector, kind: crate::card::CounterType },
     /// "Choose target player matching `filter`, then `then`." A player target
     /// slot 0 with an explicit restriction, for bodies that don't reference
     /// the target themselves — the EXO Keeper cycle's "choose target opponent
@@ -7538,7 +7568,14 @@ pub enum Effect {
     /// creature, one enchantment, and one planeswalker from among the
     /// nonland permanents they control (auto-pick keeps the highest mana
     /// value of each) and sacrifices the rest (Ajani, Nacatl Avenger's -4).
-    SacrificeAllButOnePerType { who: Selector },
+    SacrificeAllButOnePerType {
+        who: Selector,
+        /// Cataclysm also lets each player keep one land ("an artifact, a
+        /// creature, an enchantment, and a land"). `false` is the
+        /// nonland-only Ajani wording.
+        #[serde(default)]
+        include_land: bool,
+    },
     /// "Each [resolved] player chooses a [`filter`] permanent they control,
     /// then sacrifices the rest [of their `filter` permanents]" — Deadly
     /// Vanity (keep one creature or planeswalker). Like

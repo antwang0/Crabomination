@@ -14927,7 +14927,10 @@ impl GameState {
                 .filter(|c| self.evaluate_requirement_static(&filter, &Target::Permanent(c.id), p, Some(card_id)))
                 .map(|c| (c.id, c.power()))
                 .collect();
-            picks.sort_by_key(|(_, pw)| *pw);
+            // Weakest first, but the source itself last: an ability whose body
+            // feeds the source (Spike Rogue) would otherwise auto-pay itself
+            // for a guaranteed no-op.
+            picks.sort_by_key(|(cid, pw)| (*cid == card_id, *pw));
             let mut left = count;
             for (cid, _) in picks {
                 if left == 0 { break; }
@@ -14958,7 +14961,7 @@ impl GameState {
                 .filter(|c| self.evaluate_requirement_static(&filter, &Target::Permanent(c.id), p, Some(card_id)))
                 .map(|c| (c.id, c.power()))
                 .collect();
-            picks.sort_by_key(|(_, pw)| *pw);
+            picks.sort_by_key(|(cid, pw)| (*cid == card_id, *pw));
             let mut left = x_value.unwrap_or(0);
             for (cid, _) in picks {
                 if left == 0 { break; }

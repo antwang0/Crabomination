@@ -93,7 +93,7 @@ pub fn last_rites() -> CardDefinition {
         "Last Rites",
         cost(&[generic(2), b()]),
         Effect::Seq(vec![
-            Effect::DiscardAnyNumber { who: Selector::You },
+            Effect::DiscardAnyNumber { who: Selector::You, filter: crate::card::SelectionRequirement::Any },
             Effect::DiscardChosen {
                 from: Selector::Player(PlayerRef::Target(0)),
                 count: Value::CardsDiscardedThisEffect,
@@ -110,7 +110,7 @@ pub fn rites_of_initiation() -> CardDefinition {
         "Rites of Initiation",
         cost(&[r()]),
         Effect::Seq(vec![
-            Effect::DiscardAnyNumber { who: Selector::You },
+            Effect::DiscardAnyNumber { who: Selector::You, filter: crate::card::SelectionRequirement::Any },
             Effect::PumpPT {
                 what: Selector::ControlledBy { who: PlayerRef::You, filter: R::Creature },
                 power: Value::CardsDiscardedThisEffect,
@@ -128,7 +128,7 @@ pub fn rites_of_refusal() -> CardDefinition {
         "Rites of Refusal",
         cost(&[generic(1), u()]),
         Effect::Seq(vec![
-            Effect::DiscardAnyNumber { who: Selector::You },
+            Effect::DiscardAnyNumber { who: Selector::You, filter: crate::card::SelectionRequirement::Any },
             Effect::CounterUnlessPaid {
                 what: target_filtered(R::IsSpellOnStack),
                 mana_cost: ManaCost::default(),

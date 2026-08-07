@@ -2117,6 +2117,7 @@ fn trigger_event_label(event: &crate::card::EventSpec) -> &'static str {
         (EventKind::LandPutIntoGraveyard, _) => "Land to GY",
         // Enrage (CR 702.130) — "Whenever this creature is dealt damage."
         (EventKind::DealsDamageToCreature, _) => "Damages a creature",
+        (EventKind::DealsDamageToPlayer, _) => "Damages a player",
         (EventKind::DealsCombatDamage, _) => "Deals combat damage",
         (EventKind::DealsDamage, _) => "Deals damage",
         (EventKind::DealtDamage, EventScope::SelfSource) => "Enrage",

@@ -2747,7 +2747,9 @@ Each a small targeted feature; sweep batch by batch.
    **The Dark** (97 cards, `sets::drk`/`drk2`) and **Homelands** (`sets::hml`–
    `hml3`), **Conspiracy: Take the Crown** (CN2), **Murders at Karlov
    Manor** (MKM) and **Stronghold** (STH) are all at zero. The rest of the
-   Tempest block is the live front: `set_gaps.py tmp exo` is **3** and 69.
+   Tempest block is the live front: **Exodus (EXO) is closed**, and
+   `set_gaps.py tmp` is down to **3** (Duplicity, Ertai's Meddling, Oracle
+   en-Vec — each tracked in TODO.md with the primitive it wants).
 1. **Replacement-effect framework** (Tier-1 #1) — highest-leverage primitive still
    open.
 2. **Card-zoom + stops/auto-yield + combat-math preview** (Tier-7 #1–3) — the trio
@@ -2762,6 +2764,32 @@ Each a small targeted feature; sweep batch by batch.
 7. **Replays, spectator, social, accessibility** as the product matures.
 
 ## Recently closed (this push)
+
+- **Exodus (EXO) closed** — 69 cards (`set_gaps.py exo` at zero),
+  `sets::exo2`, tests in `classic_sets/exo`. New primitives:
+  `EventKind::DealsDamageToPlayer` (the combat-agnostic dealer-side sibling of
+  `DealsCombatDamageToPlayer` — Soltari Visionary, Avenging Druid, Entropic
+  Specter), `Effect::{OathCatchUp, MoveAllCountersOfKind,
+  SacrificeEachUnlessPays, GainControlWhileSourceAttached}`,
+  `Effect::SacrificeAllButOnePerType.include_land` (Cataclysm's land slot),
+  `Effect::DiscardAnyNumber.filter` (Mind Maggots' creature-only pitch),
+  `DynamicPt::ChosenPlayerTally` + `PlayerTally::NonbasicLandsControlled`,
+  `EquipBonus.add_card_types` (layer-4 additive — Transmogrifying Licid),
+  `SelectionRequirement::BlockedBySourceThisTurn` (survives combat teardown —
+  Wall of Nets), and `Keyword::{CantAttackUnlessMoreLandsThanDefender,
+  CantBlockUnlessMoreLandsThanAttacker}`. Correctness: a
+  remove-a-counter-from-among cost now prefers a *non-source* donor, so an
+  ability that feeds the source (Spike Rogue) can't auto-pay itself into a
+  no-op. Cleanliness: the five-way seat comparison behind the Keeper/Oath
+  cycles is now `GameState::player_tally`.
+- **The client type-checks in cloud sessions** — `crabomination_client`'s
+  three pkg-config-backed platform bits (`wayland`, `audio`, `gamepad`) are
+  split into default-on features over an explicitly spelled-out Bevy feature
+  list, so `cargo check -p crabomination_client --no-default-features` works
+  on images without `wayland-client.pc` / `alsa.pc` / `libudev.pc`. That
+  immediately caught two real build breaks left by the Tempest wave
+  (`CounterType::Magnet` missing from the client's counter label + tooltip
+  matches).
 
 - **Tempest all but closed** — 37 more cards (`set_gaps.py tmp` 40 -> 3;
   only Duplicity, Ertai's Meddling and Oracle en-Vec remain, each tracked in

@@ -3,7 +3,29 @@
 Improvement opportunities for the engine, client, and tooling.
 Items are grouped by area and roughly ordered by impact within each group.
 
-## Noticed this run (Tempest closed to 3)
+## Noticed this run (Exodus closed)
+
+- **Kor Chant's chosen source collapses to "the next damage event."**
+  `Effect::RedirectNextDamageTo` is a one-shot per-permanent redirect with no
+  source restriction, so a different source can consume the redirect. A
+  `RedirectAllDamageFromChosenSourceThisTurn` (the redirect twin of
+  `PreventNextDamageFromChosenSource`) would close it. ⏳
+- **`Effect::OathCatchUp` auto-picks the biggest lead in multiplayer.** The
+  printed wording is "that player chooses target player who …", a real target
+  choice by the upkeep player. Exact in 1v1. ⏳
+- **Crashing Boars picks the blocker itself.** The printed line is "defending
+  player chooses an untapped creature they control"; the engine takes the
+  first match via `Selector::one_of`. Wants a `ChooseBy`-style selector that
+  routes the pick to a named seat. ⏳
+- **Volrath's Dungeon's buy-off is an `any_player` activation** gated on
+  `IsTurnOf(You)`, which reads the *activating* seat, so the "only during
+  their turn" clause is right but a third player in multiplayer can also buy
+  the pass. Same shape as Volrath's Curse (below). ⏳
+- **`Effect::SacrificeEachUnlessPays` asks in battlefield order.** APNAP
+  (CR 101.4) would ask the active player's permanents first. Harmless in 1v1.
+  ⏳
+
+## Noticed last run (Tempest closed to 3)
 
 - **CR 123 (Stickers) is the last untested CR section** and the only one the
   engine doesn't model at all — no sticker sheets, no `{TK}` tickets, no
@@ -33,16 +55,13 @@ Items are grouped by area and roughly ordered by impact within each group.
   activated ability anyone may pay, so a third player could also buy the pass
   in multiplayer. The `statics_ignored_this_turn` check now covers equipped
   bonuses, not just the Damping-Engine cost tax. ⏳
-- **`crabomination_client` cannot be compiled in the cloud session.**
-  `wayland-sys`'s build script needs `wayland-client.pc`, which isn't
-  installed, so `cargo check -p crabomination_client` fails before touching
-  our code. Fix worth trying: depend on bevy with
-  `default-features = false` plus `default_platform`'s list minus `wayland`,
-  and re-add it behind a default-on `wayland` feature of our own — then
-  `cargo check -p crabomination_client --no-default-features` type-checks in
-  the cloud while local builds are unchanged. Until then, client edits from a
-  cloud run are only type-checked by eye — keep them to the mechanical shape
-  of their neighbours, and verify locally. ⏳
+- **Client cloud type-check: DONE.** `crabomination_client` now spells Bevy's
+  default feature set out explicitly and gates the three pkg-config-backed
+  bits behind default-on features, so `cargo check -p crabomination_client
+  --no-default-features` works in the cloud. Run it before finishing any
+  client edit — it caught two `CounterType::Magnet` match breaks the moment it
+  landed. It still does NOT link or run the client, so visual changes remain
+  eyeball-only from a cloud session. ✅
 - **`PowerAtMostSourceCounters` is source-only.** The `evaluate_requirement_on_card`
   path has no source in scope, so it answers `false` there; only the
   `evaluate_requirement_static` path (targeting, the one that matters) reads

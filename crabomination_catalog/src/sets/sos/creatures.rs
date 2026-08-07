@@ -3411,7 +3411,7 @@ pub fn colossus_of_the_blood_age() -> CardDefinition {
             TriggeredAbility {
                 event: EventSpec::new(EventKind::CreatureDied, EventScope::SelfSource),
                 effect: Effect::Seq(vec![
-                    Effect::DiscardAnyNumber { who: Selector::You },
+                    Effect::DiscardAnyNumber { who: Selector::You, filter: SelectionRequirement::Any },
                     Effect::Draw {
                         who: Selector::You,
                         amount: Value::Sum(vec![Value::CardsDiscardedThisEffect, Value::Const(1)]),
