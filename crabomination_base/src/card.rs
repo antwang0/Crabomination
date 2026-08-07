@@ -237,6 +237,8 @@ pub enum CreatureType {
     Wombat,
     // Fifth Dawn (the Bringer cycle, Summoning Station's Pincher token).
     Bringer, Pincher,
+    // Coldsnap (the Aurochs herd).
+    Aurochs,
 }
 
 /// Land subtypes (basic land types + others).

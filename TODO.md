@@ -26,6 +26,13 @@ Items are grouped by area and roughly ordered by impact within each group.
 
 ## Noticed this run (Visions closed)
 
+- **Two Coldsnap cards want one primitive each.** Brooding Saurian ("at the
+  beginning of each end step, each player gains control of all nontoken
+  permanents they own") needs a bulk control-revert effect — the same shape
+  CR 800.4a's revert step wants. Goblin Furrier ("prevent all damage this
+  creature would deal to snow creatures") needs `StaticEffect::
+  PreventThisDamageToColor` generalized to a `SelectionRequirement`. ⏳
+
 - **`StaticEffect::CostReduction` has no scope knob.** It is controller-only,
   so Helm of Awakening needed a whole sibling variant
   (`AllPlayersSpellsCostLess`). The `AnthemFor*` family has the same problem

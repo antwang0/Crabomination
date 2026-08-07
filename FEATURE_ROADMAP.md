@@ -2770,6 +2770,17 @@ Each a small targeted feature; sweep batch by batch.
 
 ## Recently closed (this push)
 
+- **Coldsnap (CSP) opened** — 32 cards (`set_gaps.py csp` 123 → 91),
+  `sets::csp`, tests in `classic_sets/csp`. The snow tapland cycle, the `{S}`
+  pump/keyword creatures, the cumulative-upkeep payoffs (Earthen Goo, Arctic
+  Nishoba, Jötun Owl Keeper, Kjeldoran Javelineer) and the
+  copies-in-graveyards pair (Feast of Flesh, Kjeldoran War Cry). New:
+  `CreatureType::Aurochs`. The remaining pile leans on recover, ripple, the
+  Rimewind cycle and a handful of one-off legends — Brooding Saurian ("each
+  player gains control of all nontoken permanents they own") and Goblin Furrier
+  (a filtered `PreventThisDamageToColor`) each want one primitive and are
+  tracked in TODO.md.
+
 - **CR conformance + the truce's UI tail** — `cr_recent96`: CR 120.8 (a source
   dealing 0 damage deals none, so damage triggers don't fire), CR 514.2 (a real
   gap — cleanup cleared marked damage and "until end of turn" effects only on
