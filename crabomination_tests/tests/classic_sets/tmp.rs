@@ -1514,3 +1514,121 @@ fn booby_trap_goes_off_on_the_named_draw() {
     assert_eq!(g.players[1].life, 10, "the trap fired");
     assert!(g.battlefield_find(trap).is_none(), "and sacrificed itself");
 }
+
+// ── The set's last three ────────────────────────────────────────────────────
+
+/// Duplicity banks five cards on entry and swaps your hand for them each
+/// upkeep.
+#[test]
+fn duplicity_swaps_your_hand_for_its_reserve() {
+    let mut g = two_player_game();
+    for _ in 0..5 {
+        g.add_card_to_library(0, catalog::forest());
+    }
+    let held = g.add_card_to_hand(0, catalog::grizzly_bears());
+    let etb = catalog::duplicity().triggered_abilities[0].effect.clone();
+    let dup = g.add_card_to_battlefield(0, catalog::duplicity());
+    let ctx = EffectContext::for_ability(dup, 0, None);
+    g.resolve_effect(&etb, &ctx).expect("etb");
+    assert_eq!(g.exile.len(), 5);
+
+    let upkeep = catalog::duplicity().triggered_abilities[1].effect.clone();
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    g.resolve_effect(&upkeep, &ctx).expect("upkeep swap");
+    assert_eq!(g.players[0].hand.len(), 5, "the reserve came back");
+    assert!(g.exile.iter().any(|c| c.id == held), "the old hand went face down");
+
+    // Losing the enchantment bins the whole pile.
+    let ltb = catalog::duplicity().triggered_abilities[3].effect.clone();
+    g.resolve_effect(&ltb, &ctx).expect("ltb");
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == held));
+}
+
+/// Oracle en-Vec names the attackers for the opponent's next turn: everything
+/// else is benched, and a chosen creature that stays home dies.
+#[test]
+fn oracle_en_vec_dictates_the_next_attack() {
+    let mut g = two_player_game();
+    for seat in 0..2 {
+        for _ in 0..20 {
+            g.add_card_to_library(seat, catalog::forest());
+        }
+    }
+    let oracle = g.add_card_to_battlefield(0, catalog::oracle_en_vec());
+    g.clear_sickness(oracle);
+    let picked = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let benched = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Cards(vec![picked])]));
+    g.step = TurnStep::PreCombatMain;
+    activate(&mut g, oracle, 0, Some(Target::Player(1))).expect("meddle");
+    drain_stack(&mut g);
+
+    // The mandate is surfaced to clients so both halves badge on the board.
+    let view = crabomination::server::view::project(&g, 1);
+    let named = view.battlefield.iter().find(|p| p.id == picked).unwrap();
+    let rest = view.battlefield.iter().find(|p| p.id == benched).unwrap();
+    assert!(named.attack_mandated && !named.attack_benched);
+    assert!(rest.attack_benched && !rest.attack_mandated);
+
+    advance_to(&mut g, TurnStep::End);
+    advance_to(&mut g, TurnStep::DeclareAttackers);
+    assert_eq!(g.active_player_idx, 1);
+    g.priority.player_with_priority = 1;
+    assert!(
+        g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+            attacker: benched,
+            target: AttackTarget::Player(0),
+        }]))
+        .is_err(),
+        "only the chosen creatures may attack"
+    );
+    // Declaring nothing leaves the chosen creature home; it dies at end step.
+    g.perform_action(GameAction::DeclareAttackers(vec![])).ok();
+    advance_to(&mut g, TurnStep::End);
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(picked).is_none(), "it had to attack");
+    assert!(g.battlefield_find(benched).is_some());
+}
+
+/// Ertai's Meddling puts a spell on ice for X upkeeps, then hands it back.
+#[test]
+fn ertais_meddling_delays_a_spell_by_x_upkeeps() {
+    let mut g = two_player_game();
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    let meddle = g.add_card_to_hand(0, catalog::ertais_meddling());
+    for seat in 0..2 {
+        for _ in 0..20 {
+            g.add_card_to_library(seat, catalog::forest());
+        }
+    }
+    g.step = TurnStep::PreCombatMain;
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt,
+        target: Some(Target::Player(0)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("bolt");
+    g.players[0].mana_pool.add(Color::Blue, 2);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell {
+        card_id: meddle,
+        target: Some(Target::Permanent(bolt)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: Some(1),
+    })
+    .expect("meddle");
+    drain_stack(&mut g);
+    assert!(g.exile.iter().any(|c| c.id == bolt), "banked with a delay counter");
+    assert_eq!(g.players[0].life, 20);
+
+    // Seat 1's next upkeep removes the last counter and re-casts it.
+    advance_to(&mut g, TurnStep::Upkeep);
+    assert_eq!(g.active_player_idx, 1);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, 17, "the bolt came back");
+}

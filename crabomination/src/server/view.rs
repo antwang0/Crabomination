@@ -1572,6 +1572,12 @@ fn project_permanent(
         damage_prevented_as_source: state.source_damage_fully_prevented(card.id),
         doomed_next_damage,
         goaded: !card.goaded_by.is_empty(),
+        attack_mandated: state
+            .attack_mandate_for(card.controller)
+            .is_some_and(|chosen| chosen.contains(&card.id)),
+        attack_benched: state
+            .attack_mandate_for(card.controller)
+            .is_some_and(|chosen| !chosen.contains(&card.id) && card.definition.is_creature()),
         monstrous: card.monstrous,
         suspected: card.suspected,
         renowned: card.renowned,

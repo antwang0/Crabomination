@@ -8989,6 +8989,20 @@ pub enum Effect {
     /// twin of [`Effect::RememberPermanentOnSource`]. Backs the Torment
     /// Nightmare Horrors' "that player gains N life" leave trigger.
     RememberPlayerOnSource { who: PlayerRef },
+    /// CR 701.6a-adjacent — "Target spell's controller exiles it with `count`
+    /// delay counters on it"; at each of their upkeeps one comes off, and the
+    /// last removal puts it back on the stack (Ertai's Meddling). Ticked by
+    /// `process_delayed_spells`.
+    ///
+    /// Approximation: the return is a free cast from exile with an auto-picked
+    /// target rather than a literal copy of the original spell.
+    ExileSpellWithDelayCounters { what: Selector, count: Value },
+    /// CR 508.1a/d — "Target player chooses any number of creatures they
+    /// control. During that player's next turn, the chosen creatures attack if
+    /// able, and other creatures can't attack. At the beginning of that turn's
+    /// end step, destroy each of the chosen creatures that didn't attack"
+    /// (Oracle en-Vec). Registered on `GameState.attack_mandates`.
+    AttackMandateNextTurn { who: PlayerRef },
 
     /// CR 614 — "As this enters, sacrifice any number of creatures. This
     /// creature's power becomes their total power and its toughness their

@@ -675,6 +675,10 @@ impl Effect {
             Effect::OathCatchUp { .. }
             | Effect::GainControlWhileSourceAttached
             | Effect::SacrificeEachUnlessPays { .. } => false,
+            Effect::AttackMandateNextTurn { who } => player_has_target(who),
+            Effect::ExileSpellWithDelayCounters { what, count } => {
+                sel_has_target(what) || value_has_target(count)
+            }
             Effect::MoveAllCountersOfKind { from, to, .. } => {
                 sel_has_target(from) || sel_has_target(to)
             }
@@ -3148,6 +3152,7 @@ impl Effect {
                 Effect::RedirectYourDamageToChosen { what }
                 | Effect::RedirectYourCombatDamageToTarget { what }
                 | Effect::PreventAllDamageFromTargetThisTurn { what, .. } => sel_find(what, slot),
+                Effect::ExileSpellWithDelayCounters { what, .. } => sel_find(what, slot),
                 Effect::RedirectNextDamageTo { what, to } => {
                     sel_find(what, slot).or_else(|| sel_find(to, slot))
                 }

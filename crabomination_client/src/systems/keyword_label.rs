@@ -442,6 +442,8 @@ fn board_status_strip(
     summoning_sick: bool,
     suspected: bool,
     goaded: bool,
+    attack_mandated: bool,
+    attack_benched: bool,
     detained: bool,
     case_solved: Option<bool>,
     class_level: Option<u8>,
@@ -480,6 +482,15 @@ fn board_status_strip(
     // rather than a keyword since goad is a status, not a printed keyword.
     if goaded {
         parts.push("Goad".to_string());
+    }
+    // Oracle en-Vec's mandate — an opponent has named who attacks on this
+    // creature's controller's next turn. Same family of opponent-imposed
+    // combat compulsions as Goad, so it sits beside it: named creatures must
+    // attack (or die at end of turn), the rest can't attack at all.
+    if attack_mandated {
+        parts.push("Must!".to_string());
+    } else if attack_benched {
+        parts.push("Benched".to_string());
     }
     // CR 701.35 — a detained permanent can't attack/block and its abilities
     // can't be activated until the detainer's next turn. An opponent-imposed
@@ -582,6 +593,8 @@ pub fn sync_keyword_labels(
                 p.summoning_sick,
                 p.suspected,
                 p.goaded,
+                p.attack_mandated,
+                p.attack_benched,
                 p.detained,
                 p.case_solved,
                 p.class_level,

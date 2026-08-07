@@ -1734,6 +1734,13 @@ pub struct GameState {
     /// for snapshot back-compat.
     #[serde(default)]
     pub(crate) temporary_control: Vec<TempControl>,
+    /// CR 508.1a/d — a per-seat next-turn attack mandate (Oracle en-Vec): on
+    /// `seat`'s next turn the listed creatures attack if able and no other
+    /// creature they control may attack; at that turn's end step each listed
+    /// creature that didn't attack is destroyed. Armed when `seat` becomes the
+    /// active player and consumed at that turn's end step.
+    #[serde(default)]
+    pub(crate) attack_mandates: Vec<AttackMandate>,
     /// Temporary "becomes a copy" definition swaps awaiting reversion
     /// (`Effect::BecomeCopyOfFor`, CR 707.2). Records the pre-copy
     /// definition; the swap snaps back when the duration ends, mirroring
@@ -1820,6 +1827,16 @@ pub struct GameState {
     /// seat controls deals this turn. Cleared at cleanup.
     #[serde(default)]
     pub(crate) noncombat_damage_bonus_this_turn: Vec<(usize, u32)>,
+}
+
+/// One seat's pending next-turn attack mandate — see
+/// `GameState.attack_mandates`.
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+pub struct AttackMandate {
+    pub seat: usize,
+    pub chosen: Vec<CardId>,
+    /// False until `seat`'s next turn begins.
+    pub armed: bool,
 }
 
 /// A pending control-reversion entry — see `GameState.temporary_control`.
@@ -2159,6 +2176,7 @@ impl Clone for GameState {
             exile_resolving_spell_with_countdown: self.exile_resolving_spell_with_countdown,
             in_token_replacement: self.in_token_replacement,
             temporary_control: self.temporary_control.clone(),
+            attack_mandates: self.attack_mandates.clone(),
             temporary_copies: self.temporary_copies.clone(),
             foretold_this_turn: self.foretold_this_turn.clone(),
             plotted_cards: self.plotted_cards.clone(),
@@ -2480,6 +2498,7 @@ impl GameState {
             exile_resolving_spell_with_countdown: false,
             in_token_replacement: false,
             temporary_control: Vec::new(),
+            attack_mandates: Vec::new(),
             temporary_copies: Vec::new(),
             foretold_this_turn: std::collections::HashSet::new(),
             plotted_cards: std::collections::HashSet::new(),
@@ -4779,6 +4798,60 @@ impl GameState {
             .collect();
         for id in granted {
             events.append(&mut self.remove_suspend_time_counter(id));
+        }
+        events
+    }
+
+    /// The creatures a pending attack mandate names for `seat`, if any (Oracle
+    /// en-Vec). Read by the server view so the client can badge both the
+    /// named attackers and the benched rest.
+    pub fn attack_mandate_for(&self, seat: usize) -> Option<&[CardId]> {
+        self.attack_mandates.iter().find(|m| m.seat == seat).map(|m| m.chosen.as_slice())
+    }
+
+    /// Ertai's Meddling — at the beginning of each of the delaying player's
+    /// upkeeps, remove a delay counter from each spell card they own exiled
+    /// this way; the last removal puts it back on the stack.
+    pub fn process_delayed_spells(&mut self) -> Vec<crate::game::GameEvent> {
+        use crate::card::CounterType;
+        let active = self.active_player_idx;
+        let mut events = Vec::new();
+        let delayed: Vec<CardId> = self
+            .exile
+            .iter()
+            .filter(|c| c.owner == active && c.counter_count(CounterType::Delay) > 0)
+            .map(|c| c.id)
+            .collect();
+        for id in delayed {
+            let Some(card) = self.exile.iter_mut().find(|c| c.id == id) else { continue };
+            card.remove_counters(CounterType::Delay, 1);
+            events.push(crate::game::GameEvent::CounterRemoved {
+                card_id: id,
+                counter_type: CounterType::Delay,
+                count: 1,
+            });
+            if card.counter_count(CounterType::Delay) > 0 {
+                continue;
+            }
+            let owner = card.owner;
+            let effect = card.definition.effect.clone();
+            let auto_target = self.auto_target_for_effect_avoiding(&effect, owner, Some(id));
+            let saved_priority = self.priority.player_with_priority;
+            self.priority.player_with_priority = owner;
+            let cast = self.cast_card_for_free(
+                owner,
+                id,
+                crate::card::Zone::Exile,
+                auto_target,
+                vec![],
+                None,
+                None,
+                false,
+            );
+            self.priority.player_with_priority = saved_priority;
+            if let Ok(mut evs) = cast {
+                events.append(&mut evs);
+            }
         }
         events
     }

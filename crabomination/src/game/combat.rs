@@ -460,6 +460,30 @@ impl GameState {
             .iter()
             .enumerate()
             .any(|(i, pl)| !self.same_team(p, i) && pl.is_alive());
+        // CR 508.1a/d — Oracle en-Vec's mandate: only the chosen creatures may
+        // attack, and each of them that can attack must.
+        if let Some(m) = self.attack_mandates.iter().find(|m| m.seat == p && m.armed) {
+            let chosen = m.chosen.clone();
+            if let Some(bad) = attacks.iter().find(|a| !chosen.contains(&a.attacker)) {
+                return Err(GameError::CannotAttack(bad.attacker));
+            }
+            for id in chosen {
+                let Some(c) = self.battlefield.iter().find(|c| c.id == id && c.controller == p)
+                else {
+                    continue;
+                };
+                let kws = computed_kw(id);
+                let able = c.definition.is_creature()
+                    && !c.tapped
+                    && !kws.contains(&Keyword::Defender)
+                    && !kws.contains(&Keyword::CantAttack)
+                    && (!c.summoning_sick || kws.contains(&Keyword::Haste));
+                if able && has_legal_target && !attacks.iter().any(|a| a.attacker == id) {
+                    return Err(GameError::CannotAttack(id));
+                }
+            }
+        }
+
         if has_legal_target {
             for c in &self.battlefield {
                 // A creature must be declared if it carries MustAttack

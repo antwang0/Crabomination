@@ -339,6 +339,10 @@ impl GameState {
                 // end as the granting player's turn begins.
                 let ap = self.active_player_idx;
                 self.damage_locked_until_turn_of.retain(|(_, seat)| *seat != ap);
+                // Oracle en-Vec's mandate arms as its victim's turn begins.
+                for m in self.attack_mandates.iter_mut().filter(|m| m.seat == ap) {
+                    m.armed = true;
+                }
                 // Arboria — the active player's "acted during their last turn"
                 // flag starts over as their new turn begins.
                 if self.acted_on_own_turn.len() < self.players.len() {
@@ -468,6 +472,7 @@ impl GameState {
                 // CR 702.62d/e — Suspend time counters tick at the owner's
                 // upkeep; the spell is cast for free when the last comes off.
                 let mut susp = self.process_suspend();
+                susp.append(&mut self.process_delayed_spells());
                 events.append(&mut susp);
                 // Uvilda — hone counters tick down at the owner's upkeep.
                 let mut hone = self.process_hone();
@@ -549,6 +554,21 @@ impl GameState {
             }
             TurnStep::End => {
                 self.end_steps_this_turn = self.end_steps_this_turn.saturating_add(1);
+                // Oracle en-Vec — the mandate's payoff: every chosen creature
+                // that sat out is destroyed, then the mandate expires.
+                let seat = self.active_player_idx;
+                if let Some(i) = self.attack_mandates.iter().position(|m| m.seat == seat && m.armed)
+                {
+                    let m = self.attack_mandates.remove(i);
+                    for id in m.chosen {
+                        if self
+                            .battlefield_find(id)
+                            .is_some_and(|c| c.controller == seat && !c.attacked_this_turn)
+                        {
+                            self.destroy_permanent(id, false, &mut events);
+                        }
+                    }
+                }
                 // CR 725.2 — "At the beginning of the monarch's end step,
                 // that player draws a card." An inherent triggered ability
                 // with no source, so it uses the stack and can be responded

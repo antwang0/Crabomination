@@ -2747,9 +2747,8 @@ Each a small targeted feature; sweep batch by batch.
    **The Dark** (97 cards, `sets::drk`/`drk2`) and **Homelands** (`sets::hml`–
    `hml3`), **Conspiracy: Take the Crown** (CN2), **Murders at Karlov
    Manor** (MKM) and **Stronghold** (STH) are all at zero. The rest of the
-   Tempest block is the live front: **Exodus (EXO) is closed**, and
-   `set_gaps.py tmp` is down to **3** (Duplicity, Ertai's Meddling, Oracle
-   en-Vec — each tracked in TODO.md with the primitive it wants).
+   **whole Tempest block is closed** (`set_gaps.py tmp sth exo` is empty).
+   Pick the next block from `scripts/set_gaps.py`.
 1. **Replacement-effect framework** (Tier-1 #1) — highest-leverage primitive still
    open.
 2. **Card-zoom + stops/auto-yield + combat-math preview** (Tier-7 #1–3) — the trio
@@ -2765,6 +2764,15 @@ Each a small targeted feature; sweep batch by batch.
 
 ## Recently closed (this push)
 
+- **Tempest block closed** — TMP, STH and EXO all report zero gaps. The three
+  Tempest closers: **Duplicity** (`ExileHandThenReclaimLinked` + a linked
+  five-card face-down reserve), **Oracle en-Vec** (`Effect::
+  AttackMandateNextTurn` + `GameState.attack_mandates` — a per-seat next-turn
+  "only these attack, and they must" mandate armed at that seat's untap step
+  and cashed in at its end step) and **Ertai's Meddling**
+  (`Effect::ExileSpellWithDelayCounters` + `process_delayed_spells`, a
+  `CounterType::Delay` tick on an exiled stack object that re-casts it for
+  free when the last counter comes off).
 - **Exodus (EXO) closed** — 69 cards (`set_gaps.py exo` at zero),
   `sets::exo2`, tests in `classic_sets/exo`. New primitives:
   `EventKind::DealsDamageToPlayer` (the combat-agnostic dealer-side sibling of

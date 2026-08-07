@@ -1745,6 +1745,16 @@ pub struct PermanentView {
     /// `project_permanent`.
     #[serde(default)]
     pub goaded: bool,
+    /// True when an Oracle en-Vec-style attack mandate names this creature:
+    /// on its controller's next turn it must attack if able, and creatures
+    /// they control that aren't named can't attack at all. A UI hint so the
+    /// client can badge both halves.
+    #[serde(default)]
+    pub attack_mandated: bool,
+    /// True when a mandate covers this creature's controller but does NOT
+    /// name it — it simply can't attack on that turn.
+    #[serde(default)]
+    pub attack_benched: bool,
     /// True when this permanent is monstrous (CR 701.31). Populated by
     /// `project_permanent`.
     #[serde(default)]

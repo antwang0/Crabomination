@@ -636,6 +636,11 @@ fn build_tooltip_body(p: &crabomination::net::PermanentView) -> Option<String> {
     if p.goaded {
         lines.push(String::from("(goaded — must attack, and not the goader if able)"));
     }
+    if p.attack_mandated {
+        lines.push(String::from("(named to attack — must attack on its next turn or be destroyed)"));
+    } else if p.attack_benched {
+        lines.push(String::from("(benched — can't attack on its controller's next turn)"));
+    }
     if p.monstrous {
         lines.push(String::from("(monstrous)"));
     }

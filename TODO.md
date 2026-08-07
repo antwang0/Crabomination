@@ -3,7 +3,7 @@
 Improvement opportunities for the engine, client, and tooling.
 Items are grouped by area and roughly ordered by impact within each group.
 
-## Noticed this run (Exodus closed)
+## Noticed this run (the Tempest block closed)
 
 - **Kor Chant's chosen source collapses to "the next damage event."**
   `Effect::RedirectNextDamageTo` is a one-shot per-permanent redirect with no
@@ -24,6 +24,19 @@ Items are grouped by area and roughly ordered by impact within each group.
 - **`Effect::SacrificeEachUnlessPays` asks in battlefield order.** APNAP
   (CR 101.4) would ask the active player's permanents first. Harmless in 1v1.
   ⏳
+- **Ertai's Meddling returns a free cast, not a copy.** The printed line puts
+  the exiled card back "as a copy of the original spell", keeping its targets
+  and modes; `process_delayed_spells` re-casts it from exile with an
+  auto-picked target instead. Wants the delayed trigger to carry the original
+  cast's target/mode/X stamp. ⏳
+- **Oracle en-Vec's mandate doesn't survive a control change.**
+  `GameState.attack_mandates` keys on the seat, so a creature that changes
+  controller between the activation and the mandated turn is still on the
+  list. Also: `AttackMandate` is per-seat, so a second Oracle activation
+  replaces the first rather than stacking. ⏳
+- **Duplicity's LTB clause is `PermanentLeavesBattlefield`, not "lose
+  control".** A control change with the enchantment still on the battlefield
+  won't bin the pile. Wants a `LostControl` event kind. ⏳
 
 ## Noticed last run (Tempest closed to 3)
 
@@ -33,15 +46,11 @@ Items are grouped by area and roughly ordered by impact within each group.
   Scoping note: name stickers are a text-changing effect (CR 613.1c) and P/T
   stickers are layer 7b, so both could ride the existing layer machinery; the
   sheet/ticket economy in CR 123.2–123.3 is the bulk of the work. ⏳
-- **Tempest's last three cards.** `set_gaps.py tmp` is 3: **Duplicity**
-  (face-down hand↔exile swap each upkeep), **Ertai's Meddling** (exile a
-  *stack* spell with X delay counters, tick at the owner's upkeeps, then put
-  it back on the stack as a copy — the suspend loop in `process_suspend` is
-  the closest existing machinery, keyed on `CounterType::Time`; a `Delay`
-  branch plus a stack-object exile is the shape), and **Oracle en-Vec**
-  ("during that player's *next* turn the chosen creatures attack if able and
-  others can't" — wants a per-seat next-turn attack mandate, which
-  `StaticEffect::AttackTogether` does not cover). ⏳
+- **Tempest's last three cards: DONE.** Duplicity, Ertai's Meddling and
+  Oracle en-Vec all ship; `set_gaps.py tmp` is zero. Ertai's return is a free
+  cast from exile with an auto-picked target rather than a literal copy of the
+  original spell (targets/modes are re-chosen); Oracle en-Vec's mandate is
+  enforced at `declare_attackers` and swept at the end step. ✅
 - **Booby Trap's reveal clause is board-wide.** The printed line is "the
   chosen player reveals each card they draw";
   `StaticEffect::OpponentsPlayWithHandsRevealed` reveals every opponent's

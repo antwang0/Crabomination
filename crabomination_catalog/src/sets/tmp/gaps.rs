@@ -8,7 +8,7 @@ use crate::effect::shortcut::{draw, target_any, target_filtered};
 use crate::effect::{
     Duration, Effect, MillShareAxis, PlayerRef, Predicate, Selector, Value, ZoneDest,
 };
-use crate::mana::{ManaCost, b, cost, generic, r, u};
+use crate::mana::{ManaCost, b, cost, generic, r, u, w};
 
 fn artifact(name: &'static str, c: ManaCost, abilities: Vec<ActivatedAbility>) -> CardDefinition {
     CardDefinition {
@@ -1005,5 +1005,98 @@ pub fn booby_trap() -> CardDefinition {
             ]),
         }],
         ..artifact("Booby Trap", cost(&[generic(6)]), vec![])
+    }
+}
+
+// ── Wave 5: the set's last three ────────────────────────────────────────────
+
+/// Duplicity — {3}{U}{U}. A five-card face-down reserve you swap your hand
+/// with each upkeep, paid for with a card every end step.
+pub fn duplicity() -> CardDefinition {
+    use crate::card::{EventKind, EventScope, EventSpec};
+    CardDefinition {
+        name: "Duplicity",
+        cost: cost(&[generic(3), u(), u()]),
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+                effect: Effect::ExileTopOfLibrary {
+                    who: Selector::Player(PlayerRef::You),
+                    amount: Value::Const(5),
+                    link_to_source: true,
+                    face_down: true,
+                },
+            },
+            TriggeredAbility {
+                event: EventSpec::new(
+                    EventKind::StepBegins(crate::game::TurnStep::Upkeep),
+                    EventScope::YourControl,
+                ),
+                effect: Effect::ExileHandThenReclaimLinked,
+            },
+            TriggeredAbility {
+                event: EventSpec::new(
+                    EventKind::StepBegins(crate::game::TurnStep::End),
+                    EventScope::YourControl,
+                ),
+                effect: Effect::Discard {
+                    who: Selector::You,
+                    amount: Value::ONE,
+                    random: false,
+                },
+            },
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::PermanentLeavesBattlefield, EventScope::SelfSource),
+                effect: Effect::Move {
+                    what: Selector::CardsInZone {
+                        who: PlayerRef::You,
+                        zone: crate::card::Zone::Exile,
+                        filter: R::ExiledWithSource,
+                    },
+                    to: ZoneDest::Graveyard,
+                },
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Oracle en-Vec — {1}{W} 1/1. Names an opponent's attackers for their next
+/// turn; the ones that stay home die.
+pub fn oracle_en_vec() -> CardDefinition {
+    use crate::card::{CreatureType, Subtypes};
+    CardDefinition {
+        name: "Oracle en-Vec",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            condition: Some(Predicate::IsTurnOf(PlayerRef::You)),
+            effect: Effect::AttackMandateNextTurn { who: PlayerRef::Target(0) },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Ertai's Meddling — {X}{U} Instant. Puts a spell on ice for X of its
+/// controller's upkeeps, then hands it back.
+pub fn ertais_meddling() -> CardDefinition {
+    CardDefinition {
+        name: "Ertai's Meddling",
+        cost: cost(&[crate::mana::x(), u()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::ExileSpellWithDelayCounters {
+            what: target_filtered(R::IsSpellOnStack),
+            count: Value::XFromCost,
+        },
+        ..Default::default()
     }
 }

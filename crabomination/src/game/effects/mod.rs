@@ -15412,6 +15412,60 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::ExileSpellWithDelayCounters { what, count } => {
+                use crate::card::CounterType;
+                let n = self.evaluate_value(count, ctx).max(1) as u32;
+                let ids: Vec<CardId> =
+                    self.resolve_selector(what, ctx).iter().filter_map(|t| t.as_card_id()).collect();
+                for cid in ids {
+                    let Some(pos) = self.stack.iter().position(|si| {
+                        matches!(si, StackItem::Spell { card, uncounterable: false, .. }
+                            if card.id == cid)
+                    }) else {
+                        continue;
+                    };
+                    if let StackItem::Spell { card, .. } = self.stack.remove(pos) {
+                        let mut card = *card;
+                        card.add_counters(CounterType::Delay, n);
+                        self.exile.push(card);
+                    }
+                }
+                Ok(())
+            }
+
+            Effect::AttackMandateNextTurn { who } => {
+                let Some(seat) = self.resolve_player(who, ctx) else { return Ok(()) };
+                let candidates: Vec<(CardId, String)> = self
+                    .battlefield
+                    .iter()
+                    .filter(|c| c.controller == seat && c.definition.is_creature())
+                    .map(|c| (c.id, c.definition.name.to_string()))
+                    .collect();
+                if candidates.is_empty() {
+                    return Ok(());
+                }
+                let max = candidates.len() as u32;
+                let Some(chosen) = self.ask_seat_cards(
+                    seat,
+                    "Choose any number of creatures you control".into(),
+                    ctx.source.unwrap_or(CardId(0)),
+                    candidates,
+                    0,
+                    max,
+                    effect,
+                ) else {
+                    return Ok(());
+                };
+                self.clear_answer_log();
+                self.attack_mandates.retain(|m| m.seat != seat);
+                self.attack_mandates.push(crate::game::AttackMandate {
+                    seat,
+                    chosen,
+                    armed: self.active_player_idx == seat,
+                });
+                Ok(())
+            }
+
             Effect::GainControlWhileSourceAttached => {
                 let Some(aura) = ctx.source else { return Ok(()) };
                 let Some(host) = self.battlefield_find(aura).and_then(|c| c.attached_to) else {
