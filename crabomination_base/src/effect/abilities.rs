@@ -2187,6 +2187,9 @@ pub enum StaticEffect {
     /// sibling of `PreventAllDamageToYourCreatureTokens`; consulted on both
     /// the combat and noncombat damage paths.
     PreventAllDamageToYourCreatures,
+    /// CR 615 — "Prevent all damage that would be dealt to creatures" (Bubble
+    /// Matrix). The table-wide sibling of `PreventAllDamageToYourCreatures`.
+    PreventAllDamageToCreatures,
     /// CR 615 — "Prevent all combat damage that would be dealt to and dealt by
     /// creatures you control" (Statecraft). The controller-scoped,
     /// both-directions sibling of `PreventAllDamageToAndFromEnchanted`;

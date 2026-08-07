@@ -10834,6 +10834,11 @@ impl GameState {
                         crate::effect::StaticEffect::PreventAllDamageToYourCreatures
                     )
                 })
+        }) || self.battlefield.iter().any(|c| {
+            c.definition
+                .static_abilities
+                .iter()
+                .any(|sa| matches!(sa.effect, crate::effect::StaticEffect::PreventAllDamageToCreatures))
         })
     }
 
@@ -20864,6 +20869,7 @@ fn static_effect_to_effects(
             | StaticEffect::PreventNoncombatDamageToYouAndYourPermanents
             | StaticEffect::PreventAllDamageToYourCreatureTokens
             | StaticEffect::PreventAllDamageToYourCreatures
+            | StaticEffect::PreventAllDamageToCreatures
             | StaticEffect::PreventDamageToYourCreaturesFromYourSources
             | StaticEffect::PreventThisDamageToColor(_)
             | StaticEffect::UnspentManaBecomesColorless

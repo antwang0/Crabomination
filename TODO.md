@@ -3,7 +3,27 @@
 Improvement opportunities for the engine, client, and tooling.
 Items are grouped by area and roughly ordered by impact within each group.
 
-## Noticed this run (the Tempest block closed)
+## Noticed this run (the Tempest block closed; Weatherlight opened)
+
+- **Weatherlight (WTH) is the live front** — `set_gaps.py wth` is 103 after
+  the opening wave of 34. The remaining pile leans on cumulative upkeep
+  (Aboroth, Ancestral Knowledge, Arctic Wolves, Gallowbraid, Heart of
+  Bogardan, Inner Sanctum), banding (Benalish Infantry), phasing (Ertai's
+  Familiar) and a handful of one-off primitives. ⏳
+- **Haunting Misery wants an X-from-graveyard additional cost.**
+  `AdditionalCastCost::ExileFromGraveyard` takes a fixed `count`; the printed
+  card exiles X creature cards and deals X. Wants the `DiscardXFromCost`
+  treatment (an `ExileXFromGraveyardFromCost` variant reading the cast's X).
+  The card is deliberately NOT in the catalog until then. ⏳
+- **Dense Foliage wants "creatures can't be the targets of spells."** Shroud
+  is too broad (it also stops abilities); there's no spells-only keyword yet.
+  ⏳
+- **Board-wide `CreatureDied` listeners need a real kill in tests.** Neither
+  `destroy_permanent(id, false, &mut events)` nor
+  `remove_to_graveyard_with_triggers` dispatches to `EventScope::AnyPlayer`
+  listeners on *other* permanents — only a death that runs through the action
+  path (SBA after a bolt) does. Worth making the fixture helpers dispatch the
+  same way so tests don't have to route through combat/burn. ⏳
 
 - **Kor Chant's chosen source collapses to "the next damage event."**
   `Effect::RedirectNextDamageTo` is a one-shot per-permanent redirect with no

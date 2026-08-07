@@ -2748,7 +2748,9 @@ Each a small targeted feature; sweep batch by batch.
    `hml3`), **Conspiracy: Take the Crown** (CN2), **Murders at Karlov
    Manor** (MKM) and **Stronghold** (STH) are all at zero. The rest of the
    **whole Tempest block is closed** (`set_gaps.py tmp sth exo` is empty).
-   Pick the next block from `scripts/set_gaps.py`.
+   **Weatherlight (WTH)** is the new live front: `set_gaps.py wth` is 103
+   after an opening wave of 34 (`sets::wth`, tests in `classic_sets/wth`).
+   The remaining pile leans on cumulative upkeep, banding and phasing.
 1. **Replacement-effect framework** (Tier-1 #1) — highest-leverage primitive still
    open.
 2. **Card-zoom + stops/auto-yield + combat-math preview** (Tier-7 #1–3) — the trio
