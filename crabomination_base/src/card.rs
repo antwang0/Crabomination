@@ -1556,6 +1556,10 @@ pub enum Keyword {
     /// requirements (Goad targeting rules, can't-attack overrides) is
     /// approximated by the per-creature gate. Juggernaut, goaded creatures.
     MustAttack,
+    /// "If a creature you control attacks, this creature also attacks if
+    /// able" (Ekundu Cyclops) — a one-directional `MustAttack` that only
+    /// binds once some other creature its controller controls is declared.
+    MustAttackIfAnotherAttacks,
     /// "Attacks or blocks this turn if able" (Hustle). Satisfied by either;
     /// enforced as `MustAttack` on the bearer's controller's turn and as
     /// `MustBlock` otherwise.

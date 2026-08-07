@@ -918,3 +918,279 @@ fn cadaverous_bloom_exiles_for_two_mana() {
     assert!(g.exile.iter().any(|c| c.id == fuel));
     assert_eq!(g.players[0].mana_pool.total(), 2);
 }
+
+// ── Third wave ──────────────────────────────────────────────────────────────
+
+/// Crystal Golem ducks out at every end step and comes back at the untap.
+#[test]
+fn crystal_golem_phases_out_each_end_step() {
+    let mut g = two_player_game();
+    let golem = ready(&mut g, 0, catalog::crystal_golem());
+    g.active_player_idx = 0;
+    g.fire_step_triggers(TurnStep::End);
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(golem).is_none());
+    assert!(g.phased_out.iter().any(|c| c.id == golem));
+    g.do_phasing();
+    assert!(g.battlefield_find(golem).is_some(), "back at the untap step");
+}
+
+/// Dream Fighter takes its combat partner out of phase with it.
+#[test]
+fn dream_fighter_phases_out_its_partner() {
+    let mut g = two_player_game();
+    let fighter = ready(&mut g, 0, catalog::dream_fighter());
+    let blocker = ready(&mut g, 1, catalog::femeref_scouts());
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: fighter,
+        target: AttackTarget::Player(1),
+    }]))
+    .expect("attack");
+    while g.step != TurnStep::DeclareBlockers {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::DeclareBlockers(vec![(blocker, fighter)])).expect("block");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(fighter).is_none());
+    assert!(g.battlefield_find(blocker).is_none(), "both left the board");
+}
+
+/// Teferi's Imp discards on the way out and draws on the way back.
+#[test]
+fn teferis_imp_trades_a_card_each_phase() {
+    let mut g = two_player_game();
+    let imp = ready(&mut g, 0, catalog::teferis_imp());
+    g.add_card_to_hand(0, catalog::grizzly_bears());
+    g.add_card_to_library(0, catalog::grizzly_bears());
+    g.active_player_idx = 0;
+    g.do_phasing();
+    drain_stack(&mut g);
+    assert!(g.phased_out.iter().any(|c| c.id == imp));
+    assert_eq!(g.players[0].hand.len(), 0, "discarded on the way out");
+    g.do_phasing();
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(imp).is_some());
+    assert_eq!(g.players[0].hand.len(), 1, "drew on the way in");
+}
+
+/// Vaporous Djinn phases out when the rent goes unpaid.
+#[test]
+fn vaporous_djinn_phases_out_unpaid() {
+    let mut g = two_player_game();
+    let djinn = ready(&mut g, 0, catalog::vaporous_djinn());
+    g.active_player_idx = 0;
+    g.fire_step_triggers(TurnStep::Upkeep);
+    drain_stack(&mut g);
+    assert!(g.phased_out.iter().any(|c| c.id == djinn));
+}
+
+/// Taniwha drags every land you control out of phase.
+#[test]
+fn taniwha_phases_out_your_lands() {
+    let mut g = two_player_game();
+    ready(&mut g, 0, catalog::taniwha());
+    let mine = g.add_card_to_battlefield(0, catalog::island());
+    let theirs = g.add_card_to_battlefield(1, catalog::island());
+    g.active_player_idx = 0;
+    g.fire_step_triggers(TurnStep::Upkeep);
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(mine).is_none());
+    assert!(g.battlefield_find(theirs).is_some(), "not theirs");
+}
+
+/// Ekundu Cyclops has to join an attack someone else starts, but doesn't
+/// have to start one.
+#[test]
+fn ekundu_cyclops_joins_an_attack() {
+    let mut g = two_player_game();
+    let cyclops = ready(&mut g, 0, catalog::ekundu_cyclops());
+    let friend = ready(&mut g, 0, catalog::femeref_scouts());
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    assert!(
+        g.perform_action(GameAction::DeclareAttackers(vec![])).is_ok(),
+        "sitting the whole combat out is fine"
+    );
+    g.step = TurnStep::DeclareAttackers;
+    assert!(
+        g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+            attacker: friend,
+            target: AttackTarget::Player(1),
+        }]))
+        .is_err(),
+        "but the Cyclops has to come along"
+    );
+    g.step = TurnStep::DeclareAttackers;
+    assert!(
+        g.perform_action(GameAction::DeclareAttackers(vec![
+            Attack { attacker: friend, target: AttackTarget::Player(1) },
+            Attack { attacker: cyclops, target: AttackTarget::Player(1) },
+        ]))
+        .is_ok()
+    );
+}
+
+/// Purraj grows off any black spell for {B}.
+#[test]
+fn purraj_grows_off_black_spells() {
+    let mut g = two_player_game();
+    let purraj = ready(&mut g, 0, catalog::purraj_of_urborg());
+    g.decider = Box::new(crabomination::decision::ScriptedDecider::new([
+        crabomination::decision::DecisionAnswer::Bool(true),
+    ]));
+    g.players[0].mana_pool.add(Color::Black, 1);
+    let spell = g.add_card_to_hand(1, catalog::restless_dead());
+    g.players[1].mana_pool.add(Color::Black, 1);
+    g.players[1].mana_pool.add_colorless(1);
+    g.active_player_idx = 1;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast a black spell");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(purraj).unwrap().counter_count(CounterType::PlusOnePlusOne), 1);
+}
+
+/// Spectral Guardian shields artifacts only while it's untapped.
+#[test]
+fn spectral_guardian_shields_while_untapped() {
+    let mut g = two_player_game();
+    let guardian = ready(&mut g, 0, catalog::spectral_guardian());
+    let prism = ready(&mut g, 1, catalog::mana_prism());
+    assert!(g.computed_permanent(prism).unwrap().keywords.contains(&Keyword::Shroud));
+    g.battlefield_find_mut(guardian).unwrap().tapped = true;
+    assert!(!g.computed_permanent(prism).unwrap().keywords.contains(&Keyword::Shroud));
+}
+
+/// Chaosphere grounds the fliers and arms everyone else with reach.
+#[test]
+fn chaosphere_inverts_the_sky() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::chaosphere());
+    let flier = ready(&mut g, 1, catalog::bay_falcon());
+    let ground = ready(&mut g, 1, catalog::femeref_scouts());
+    assert!(g.computed_permanent(flier).unwrap().keywords.contains(&Keyword::CanBlockOnlyFlying));
+    assert!(g.computed_permanent(ground).unwrap().keywords.contains(&Keyword::Reach));
+}
+
+/// Abyssal Hunter taps a creature and stabs it for its own power.
+#[test]
+fn abyssal_hunter_taps_and_stabs() {
+    let mut g = two_player_game();
+    let hunter = ready(&mut g, 0, catalog::abyssal_hunter());
+    let victim = ready(&mut g, 1, catalog::sunweb());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    activate(&mut g, hunter, 0, Some(Target::Permanent(victim))).expect("stab");
+    drain_stack(&mut g);
+    let c = g.battlefield_find(victim).unwrap();
+    assert!(c.tapped);
+    assert_eq!(c.damage, 1);
+}
+
+/// Floodgate scales its parting shot with your Islands.
+#[test]
+fn floodgate_floods_on_the_way_out() {
+    let mut g = two_player_game();
+    let gate = ready(&mut g, 0, catalog::floodgate());
+    for _ in 0..5 {
+        g.add_card_to_battlefield(0, catalog::island());
+    }
+    let ground = ready(&mut g, 1, catalog::femeref_scouts());
+    let flier = ready(&mut g, 1, catalog::bay_falcon());
+    let evs = g.remove_to_graveyard_with_triggers(gate);
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(ground).unwrap().damage, 2, "five Islands, halved down");
+    assert!(g.battlefield_find(flier).is_some(), "fliers are spared");
+}
+
+/// Afiya Grove walks a counter onto a creature each upkeep and dies empty.
+#[test]
+fn afiya_grove_hands_out_its_counters() {
+    let mut g = two_player_game();
+    let grove = g.add_card_to_battlefield_with_counters(0, catalog::afiya_grove());
+    let target = ready(&mut g, 0, catalog::femeref_scouts());
+    assert_eq!(g.battlefield_find(grove).unwrap().counter_count(CounterType::PlusOnePlusOne), 3);
+    g.active_player_idx = 0;
+    for _ in 0..3 {
+        g.fire_step_triggers(TurnStep::Upkeep);
+        drain_stack(&mut g);
+    }
+    assert_eq!(g.battlefield_find(target).unwrap().counter_count(CounterType::PlusOnePlusOne), 3);
+    assert!(g.battlefield_find(grove).is_none(), "sacrificed once it's empty");
+}
+
+/// Divine Retribution scales with the size of the attack.
+#[test]
+fn divine_retribution_counts_the_attackers() {
+    let mut g = two_player_game();
+    let a = ready(&mut g, 1, catalog::crash_of_rhinos());
+    let b = ready(&mut g, 1, catalog::wild_elephant());
+    g.active_player_idx = 1;
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::DeclareAttackers(vec![
+        Attack { attacker: a, target: AttackTarget::Player(0) },
+        Attack { attacker: b, target: AttackTarget::Player(0) },
+    ]))
+    .expect("attack");
+    let spell = g.add_card_to_hand(0, catalog::divine_retribution());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell,
+        target: Some(Target::Permanent(b)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(b).unwrap().damage, 2);
+}
+
+/// Final Fortune buys a turn you don't live through.
+#[test]
+fn final_fortune_costs_the_game() {
+    let mut g = two_player_game();
+    let spell = g.add_card_to_hand(0, catalog::final_fortune());
+    g.players[0].mana_pool.add(Color::Red, 2);
+    cast(&mut g, spell, None).expect("cast");
+    drain_stack(&mut g);
+    assert!(g.players[0].extra_turns > 0, "an extra turn is queued");
+    while g.step != TurnStep::End {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    drain_stack(&mut g);
+    assert!(g.players[0].eliminated, "and it kills you at that turn's end step");
+}
+
+/// Decomposition rots its black host away and bills the controller.
+#[test]
+fn decomposition_grants_cumulative_upkeep() {
+    let mut g = two_player_game();
+    let host = ready(&mut g, 1, catalog::restless_dead());
+    let aura = g.add_card_to_hand(0, catalog::decomposition());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    cast(&mut g, aura, Some(Target::Permanent(host))).expect("cast");
+    drain_stack(&mut g);
+    assert!(
+        g.computed_permanent(host)
+            .unwrap()
+            .keywords
+            .iter()
+            .any(|k| matches!(k, Keyword::CumulativeUpkeep(_))),
+        "the host picked up the upkeep"
+    );
+}

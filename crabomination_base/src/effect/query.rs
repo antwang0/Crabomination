@@ -1590,6 +1590,10 @@ impl Effect {
             // The targeted side may be `b` when `a` is the source itself
             // (Volatile Stormdrake exchanges `This` with a targeted creature).
             Effect::ExchangeControl { a, b } => sel_filter(a).or_else(|| sel_filter(b)),
+            // "Move a counter from this onto target creature" (Afiya Grove):
+            // `requires_target` already saw the slot, so the filter walker has
+            // to as well or the trigger binds nothing.
+            Effect::MoveCounters { from, to, .. } => sel_filter(from).or_else(|| sel_filter(to)),
             Effect::ReattachTargetAura { aura, to } => sel_filter(aura).or_else(|| sel_filter(to)),
             Effect::RedirectNextDamage { target, to, .. } => {
                 sel_filter(target).or_else(|| sel_filter(to))
@@ -3137,6 +3141,9 @@ impl Effect {
                     sel_find(dealers, slot).or_else(|| sel_find(target, slot))
                 }
                 Effect::ExchangeControl { a, b } => sel_find(a, slot).or_else(|| sel_find(b, slot)),
+                Effect::MoveCounters { from, to, .. } => {
+                    sel_find(from, slot).or_else(|| sel_find(to, slot))
+                }
                 Effect::RedirectNextDamage { target, to, .. } => {
                     sel_find(target, slot).or_else(|| sel_find(to, slot))
                 }

@@ -494,6 +494,10 @@ impl GameState {
                 // combat if able").
                 let must = computed_kw(c.id).contains(&Keyword::MustAttack)
                     || computed_kw(c.id).contains(&Keyword::MustAttackOrBlock)
+                    // CR 508.1d — Ekundu Cyclops only has to join an attack
+                    // someone else already started.
+                    || (computed_kw(c.id).contains(&Keyword::MustAttackIfAnotherAttacks)
+                        && attacks.iter().any(|a| a.attacker != c.id))
                     || !c.goaded_by.is_empty();
                 if c.controller != p || !must {
                     continue;

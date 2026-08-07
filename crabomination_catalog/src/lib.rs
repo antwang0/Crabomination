@@ -152,6 +152,7 @@ pub use sets::exo::*;
 pub use sets::exo2::*;
 pub use sets::mir::*;
 pub use sets::mir2::*;
+pub use sets::mir3::*;
 pub use sets::vis::*;
 pub use sets::csp::*;
 pub use sets::vis2::*;
