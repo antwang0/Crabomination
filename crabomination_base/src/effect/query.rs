@@ -644,6 +644,7 @@ impl Effect {
             }
             Effect::ExileChosenFromHandOrGraveyard { who, .. }
             | Effect::ExileFromGraveyard { who, .. }
+            | Effect::ExileBottomOfGraveyard { who }
             | Effect::RevealTopChooseToGraveyard { who, .. }
             | Effect::MillAddManaForColoredSymbols { who } => player_has_target(who),
             Effect::GainControlAndReattachAura { what } => sel_has_target(what),

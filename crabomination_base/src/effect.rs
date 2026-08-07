@@ -5375,6 +5375,10 @@ pub enum Effect {
     /// (Decaying Soil's upkeep). Auto-picks the cheapest matches; fewer
     /// matches than `count` exiles what there is.
     ExileFromGraveyard { who: PlayerRef, count: Value, filter: SelectionRequirement },
+    /// "Exile the *bottom* card of `who`'s graveyard" (Phyrexian Furnace). The
+    /// graveyard is ordered, so this is index 0 — the oldest card, not the
+    /// freshest one `ExileFromGraveyard`'s auto-pick would take.
+    ExileBottomOfGraveyard { who: PlayerRef },
     /// CR 701.38 — an option vote. Starting with the controller and proceeding
     /// in turn order, each player votes for one of `options`; how the tally is
     /// spent is `tally`'s business. Untargeted, so it ignores hexproof/shroud.

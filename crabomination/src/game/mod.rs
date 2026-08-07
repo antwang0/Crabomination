@@ -4659,12 +4659,14 @@ impl GameState {
         use crate::card::{CounterType, CumulativeUpkeepCost, Keyword};
         let active = self.active_player_idx;
         let mut events = Vec::new();
+        // Computed keywords so a granted cumulative upkeep (Mana Chains' Aura)
+        // ticks too, not just the printed keyword.
         let affected: Vec<(CardId, CumulativeUpkeepCost)> = self
-            .battlefield
+            .compute_battlefield()
             .iter()
             .filter(|c| c.controller == active)
             .filter_map(|c| {
-                c.definition.keywords.iter().find_map(|k| match k {
+                c.keywords.iter().find_map(|k| match k {
                     Keyword::CumulativeUpkeep(cost) => Some((c.id, cost.clone())),
                     _ => None,
                 })
@@ -4709,7 +4711,17 @@ impl GameState {
                     for _ in 0..n {
                         symbols.extend(mc.symbols.iter().cloned());
                     }
-                    self.players[active].mana_pool.pay(&crate::mana::ManaCost::new(symbols)).is_ok()
+                    // Auto-tap: an upkeep step starts with an empty pool, so a
+                    // pool-only payment would sacrifice everything.
+                    match self
+                        .try_pay_with_auto_tap(active, &crate::mana::ManaCost::new(symbols))
+                    {
+                        Ok(receipt) => {
+                            events.extend(receipt.auto_events);
+                            true
+                        }
+                        Err(_) => false,
+                    }
                 }
                 CumulativeUpkeepCost::Life(per) => {
                     let total = per * n;
@@ -4734,6 +4746,24 @@ impl GameState {
                         } else {
                             events.push(crate::game::GameEvent::CoinFlipLost { player: active });
                         }
+                    }
+                    true
+                }
+                CumulativeUpkeepCost::PutCounterOnSelf(kind) => {
+                    // Always payable — the permanent pays with its own body.
+                    if let Some(c) = self.battlefield_find_mut(id) {
+                        c.add_counters(*kind, n);
+                    }
+                    events.push(crate::game::GameEvent::CounterAdded {
+                        card_id: id,
+                        counter_type: *kind,
+                        count: n,
+                    });
+                    true
+                }
+                CumulativeUpkeepCost::Draw(per) => {
+                    for _ in 0..(per * n) {
+                        self.draw_one(active, &mut events);
                     }
                     true
                 }

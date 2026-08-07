@@ -1091,6 +1091,12 @@ pub(crate) fn keyword_label(kw: &crabomination::card::Keyword) -> String {
             crabomination::card::WardCost::ExileFromGraveyard(n) => {
                 format!("Ward—Exile {n} cards from your graveyard")
             }
+            crabomination::card::WardCost::ExileTopFromGraveyardMatching(_) => {
+                "Ward—Exile the top matching card of your graveyard".into()
+            }
+            crabomination::card::WardCost::ReturnMatchingFromGraveyardToHand(_) => {
+                "Ward—Return a matching card from your graveyard".into()
+            }
             crabomination::card::WardCost::DamageFromSource(n) => format!("Ward—Take {n} damage"),
             crabomination::card::WardCost::SacrificeCreature => "Ward—Sacrifice a creature".into(),
             crabomination::card::WardCost::SacrificePermanents(n) => {

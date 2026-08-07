@@ -7144,6 +7144,21 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::ExileBottomOfGraveyard { who } => {
+                for p in self.resolve_players(who, ctx) {
+                    let Some(id) = self.players[p].graveyard.first().map(|c| c.id) else {
+                        continue;
+                    };
+                    if let Some(card) = Self::take_card(&mut self.players[p].graveyard, id) {
+                        self.exile.push(card);
+                        self.players[p].cards_exiled_this_turn += 1;
+                        events.push(GameEvent::PermanentExiled { card_id: id });
+                        self.note_left_graveyard(p, id, events);
+                    }
+                }
+                Ok(())
+            }
+
             Effect::SearchSameNameToBattlefield { who, what } => {
                 // Verdant Succession — `what` may already have left the
                 // battlefield, so the name is read from wherever the card is.
@@ -34939,6 +34954,50 @@ impl GameState {
                                 }
                             }
                             true
+                        }
+                    }
+                    WardCost::ExileTopFromGraveyardMatching(filter) => {
+                        // The graveyard is ordered, so "the top [filter] card"
+                        // is the last match — the payer has no choice.
+                        let pick = self.players[payer]
+                            .graveyard
+                            .iter()
+                            .rev()
+                            .find(|c| self.evaluate_requirement_on_card(filter, c, payer))
+                            .map(|c| c.id);
+                        match pick {
+                            None => false,
+                            Some(id) => {
+                                if let Some(card) =
+                                    Self::take_card(&mut self.players[payer].graveyard, id)
+                                {
+                                    self.exile.push(card);
+                                    self.players[payer].cards_exiled_this_turn += 1;
+                                    events.push(GameEvent::PermanentExiled { card_id: id });
+                                    self.note_left_graveyard(payer, id, events);
+                                }
+                                true
+                            }
+                        }
+                    }
+                    WardCost::ReturnMatchingFromGraveyardToHand(filter) => {
+                        let pick = self.players[payer]
+                            .graveyard
+                            .iter()
+                            .filter(|c| self.evaluate_requirement_on_card(filter, c, payer))
+                            .min_by_key(|c| c.definition.cost.cmc())
+                            .map(|c| c.id);
+                        match pick {
+                            None => false,
+                            Some(id) => {
+                                if let Some(card) =
+                                    Self::take_card(&mut self.players[payer].graveyard, id)
+                                {
+                                    self.players[payer].hand.push(card);
+                                    self.note_left_graveyard(payer, id, events);
+                                }
+                                true
+                            }
                         }
                     }
                     WardCost::BottomFromGraveyard(n) => {

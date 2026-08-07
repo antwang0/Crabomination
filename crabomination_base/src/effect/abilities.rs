@@ -2894,6 +2894,12 @@ pub struct ActivatedAbility {
     /// costs — Necropolis Fiend's "-X/-X".
     #[serde(default)]
     pub exile_other_x: bool,
+    /// When true, `exile_other_filter` names the *top* matching card of the
+    /// graveyard rather than any of them ("Exile the top creature card of your
+    /// graveyard:" — Necratog, Zombie Scavengers). The graveyard is ordered,
+    /// so there's no pick to make and no chooser is offered.
+    #[serde(default)]
+    pub exile_other_top: bool,
     /// Optional self-counter cost-reduction kind. When `Some(kind)`, the
     /// activation's generic mana cost is reduced by one for each counter
     /// of `kind` on the source permanent (clamped at the printed generic

@@ -687,6 +687,9 @@ pub enum CounterType {
     Feather,
     /// Aurification's gold counters (CR 122.1 — a marker counter).
     Gold,
+    /// Roc Hatchling's shell counters — it enters with four and sheds one per
+    /// upkeep, growing up once the last comes off.
+    Shell,
     /// Trap Digger's trap counters — a marker on a land, spent by sacrificing it.
     Trap,
     /// Coral Reef's polyp counters — spent to grow other creatures.
@@ -754,6 +757,13 @@ pub enum WardCost {
     /// library" (Anurid Scavenger). Unpayable when the graveyard is too small;
     /// auto-pay bottoms the cheapest.
     BottomFromGraveyard(u32),
+    /// "…unless you exile the top [filter] card of your graveyard" (Barrow
+    /// Ghoul, Circling Vultures). The graveyard is ordered, so "the top one"
+    /// is the last matching card — no choice to make.
+    ExileTopFromGraveyardMatching(Box<SelectionRequirement>),
+    /// "…unless you return a [filter] card from your graveyard to your hand"
+    /// (Harvest Wurm). Auto-pay returns the cheapest match.
+    ReturnMatchingFromGraveyardToHand(Box<SelectionRequirement>),
     /// "…unless [player] has [this source] deal N damage to them" — the
     /// Odyssey pay-in-damage menu (Blazing Salvo, Lava Blister, Molten
     /// Influence). Always payable; the damage comes from the effect's source.
@@ -1171,6 +1181,10 @@ pub enum Keyword {
     /// Tetsuo Umezawa). Checked alongside protection in the cast-time target
     /// gate; abilities and non-Aura spells still reach it.
     CantBeTargetedByAuras,
+    /// "This can't be the target of spells" (Dense Foliage's grant). Narrower
+    /// than shroud — abilities still reach it, and it isn't protection, so
+    /// damage/enchant/block are unaffected.
+    CantBeTargetedBySpells,
     /// CR 702.14 — legendary landwalk: unblockable while the defending player
     /// controls a legendary land (Livonya Silone). A supertype-scoped walk, so
     /// it can't ride `Landwalk(LandType)`.
@@ -1748,6 +1762,11 @@ pub enum CumulativeUpkeepCost {
     /// "Cumulative upkeep—Flip a coin." Always payable; each flip fires the
     /// controller's win/lose-a-flip triggers (Karplusan Minotaur).
     FlipCoin,
+    /// "Cumulative upkeep—Put a -1/-1 counter on this creature" (Aboroth).
+    /// Always payable; the counters land on the permanent itself.
+    PutCounterOnSelf(CounterType),
+    /// "Cumulative upkeep—Draw a card" (Psychic Vortex). Always payable.
+    Draw(u32),
 }
 
 impl CumulativeUpkeepCost {
@@ -1759,6 +1778,8 @@ impl CumulativeUpkeepCost {
             CumulativeUpkeepCost::Life(n) => format!("Pay {n} life"),
             CumulativeUpkeepCost::Sacrifice(_) => "Sacrifice".into(),
             CumulativeUpkeepCost::FlipCoin => "Flip a coin".into(),
+            CumulativeUpkeepCost::PutCounterOnSelf(k) => format!("Put a {k:?} counter on this"),
+            CumulativeUpkeepCost::Draw(n) => format!("Draw {n} card(s)"),
         }
     }
 }

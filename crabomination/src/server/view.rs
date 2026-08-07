@@ -1665,6 +1665,12 @@ fn project_permanent(
                 W::BottomFromGraveyard(n) => {
                     format!("Ward—bottom {n} card(s) from your graveyard")
                 }
+                W::ExileTopFromGraveyardMatching(_) => {
+                    "Ward—exile the top matching card of your graveyard".to_string()
+                }
+                W::ReturnMatchingFromGraveyardToHand(_) => {
+                    "Ward—return a matching card from your graveyard".to_string()
+                }
                 W::DamageFromSource(n) => format!("Ward—take {n} damage"),
                 W::SacrificeCreature => "Ward—sacrifice a creature".to_string(),
                 W::SacrificeMatching(_) => "Ward—sacrifice a matching permanent".to_string(),

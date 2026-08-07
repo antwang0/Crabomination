@@ -186,6 +186,7 @@ fn keyword_name(kw: &Keyword) -> Option<String> {
         // (CantBlock is a card-text restriction, not a Scryfall-tagged
         // keyword, so it's filtered the same way as Unblockable.)
         Keyword::CantBeTargetedByAuras
+        | Keyword::CantBeTargetedBySpells
         | Keyword::Regenerate(_) | Keyword::Unblockable | Keyword::CantBeCountered
         | Keyword::Recursion | Keyword::Inspired | Keyword::CantBlock
         | Keyword::CantBlockPowerAtLeast(_)

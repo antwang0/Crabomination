@@ -151,6 +151,7 @@ pub use sets::sos::*;
 pub use sets::exo::*;
 pub use sets::exo2::*;
 pub use sets::wth::*;
+pub use sets::wth2::*;
 pub use sets::sth::*;
 pub use sets::stx::*;
 pub use sets::thb::*;

@@ -32,7 +32,9 @@ pub(crate) fn ward_cost_is_trivial(cost: &crate::card::WardCost) -> bool {
         | WardCost::DamageFromSource(n) => *n == 0,
         WardCost::SacrificeCreature
         | WardCost::SacrificeMatching(_)
-        | WardCost::ReturnMatchingToHand(_) => false,
+        | WardCost::ReturnMatchingToHand(_)
+        | WardCost::ExileTopFromGraveyardMatching(_)
+        | WardCost::ReturnMatchingFromGraveyardToHand(_) => false,
         WardCost::SacrificeMatchingN(_, n) => *n == 0,
         // "{X}" is only free when the declared X was 0, which the caller
         // can't see here.
@@ -6373,6 +6375,12 @@ impl GameState {
                         .battlefield_find(cid)
                         .is_some_and(|c| !c.attacked_this_turn && !c.blocked_this_turn)
                 {
+                    self.players[p].hand.push(card);
+                    return Err(GameError::TargetHasProtection(cid));
+                }
+                // "Creatures can't be the targets of spells" (Dense Foliage) —
+                // no spell may target it; abilities are unaffected.
+                if matches!(kw, Keyword::CantBeTargetedBySpells) {
                     self.players[p].hand.push(card);
                     return Err(GameError::TargetHasProtection(cid));
                 }
@@ -13419,7 +13427,11 @@ impl GameState {
             if candidates.len() < count {
                 return Err(GameError::SelectionRequirementViolated);
             }
-            if let Some(chosen) = chosen_exile_other {
+            if ability.exile_other_top {
+                // "Exile the top [filter] card of your graveyard" — the
+                // graveyard is ordered, so the last matches are forced.
+                candidates.iter().rev().copied().take(count).collect()
+            } else if let Some(chosen) = chosen_exile_other {
                 // Replay path: keep the player's picks that are still valid
                 // candidates; backfill from the auto-pick if short.
                 let valid: std::collections::HashSet<CardId> = candidates.iter().copied().collect();
