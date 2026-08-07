@@ -1038,6 +1038,19 @@ pub struct PlayerView {
     /// cast instead of just refusing it. Empty when nothing is locked.
     #[serde(default)]
     pub locked_cast_kinds: Vec<String>,
+    /// Abeyance — true while this seat can't activate abilities that aren't
+    /// mana abilities. Turn-scoped; `#[serde(default)]` for snapshot
+    /// back-compat.
+    #[serde(default)]
+    pub nonmana_abilities_locked: bool,
+    /// Winding Canyons — true while this seat may cast creature spells as
+    /// though they had flash.
+    #[serde(default)]
+    pub creature_flash_this_turn: bool,
+    /// Bösium Strip — true while this seat may cast the top instant/sorcery of
+    /// its graveyard.
+    #[serde(default)]
+    pub graveyard_top_castable: bool,
     /// True when this player's life total can't change this turn (Flare of
     /// Fortitude) — both gain and loss are dropped. Surfaced so UIs can show
     /// the life total is frozen. `#[serde(default)]` for snapshot back-compat.

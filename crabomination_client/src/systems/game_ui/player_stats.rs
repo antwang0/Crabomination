@@ -992,6 +992,18 @@ pub fn update_player_stats_chips(
         for kind in &p.locked_cast_kinds {
             spawn_stat_chip(row, &ui_fonts, StatChipKind::SpellLock, format!("⊘ {kind}"));
         }
+        // Abeyance — non-mana abilities are off for the turn.
+        if p.nonmana_abilities_locked {
+            spawn_stat_chip(row, &ui_fonts, StatChipKind::SpellLock, "⊘ abilities".to_string());
+        }
+        // Winding Canyons — creature spells have flash this turn.
+        if p.creature_flash_this_turn {
+            spawn_stat_chip(row, &ui_fonts, StatChipKind::Uncounterable, "⚡ creatures".to_string());
+        }
+        // Bösium Strip — the graveyard's top instant/sorcery is castable.
+        if p.graveyard_top_castable {
+            spawn_stat_chip(row, &ui_fonts, StatChipKind::Uncounterable, "⚰ top".to_string());
+        }
         // Insist / Overmaster — the next spell of this kind can't be countered.
         for kind in &p.uncounterable_next {
             spawn_stat_chip(row, &ui_fonts, StatChipKind::Uncounterable, format!("⛨ {kind}"));

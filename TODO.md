@@ -24,27 +24,43 @@ Items are grouped by area and roughly ordered by impact within each group.
   Option<usize>` stamped by every control change, which would also give
   CR 800.4a's revert step a precise rule instead of "revert everything". ⏳
 
-## Noticed this run (Tempest block closed; Weatherlight opened)
+## Noticed this run (Weatherlight closed)
 
-- **Weatherlight (WTH) is the live front** — `set_gaps.py wth` is 103 after
-  the opening wave of 34. The remaining pile leans on cumulative upkeep
-  (Aboroth, Ancestral Knowledge, Arctic Wolves, Gallowbraid, Heart of
-  Bogardan, Inner Sanctum), banding (Benalish Infantry), phasing (Ertai's
-  Familiar) and a handful of one-off primitives. ⏳
-- **Haunting Misery wants an X-from-graveyard additional cost.**
-  `AdditionalCastCost::ExileFromGraveyard` takes a fixed `count`; the printed
-  card exiles X creature cards and deals X. Wants the `DiscardXFromCost`
-  treatment (an `ExileXFromGraveyardFromCost` variant reading the cast's X).
-  The card is deliberately NOT in the catalog until then. ⏳
-- **Dense Foliage wants "creatures can't be the targets of spells."** Shroud
-  is too broad (it also stops abilities); there's no spells-only keyword yet.
-  ⏳
+- **`Effect::AtEndOfCombat` carries one target, and now one subject.** It
+  captures `ctx.targets.first()` and `ctx.trigger_source`; a body that needs a
+  *second* target slot at end of combat still loses it. `AtNextEndStep` has a
+  slot-remapping hack for exactly this — worth generalizing both onto a shared
+  captured-context struct. ⏳
+- **Doomsday's five picks aren't ordered.** `Effect::Doomsday` takes the
+  chosen five and stacks them in pick order; the printed card lets you order
+  them freely on top. Wants an ordered `Decision::OrderCards` (which
+  `Decision::Scry` half-implements). ⏳
+- **`Effect::CoinFlipDoubleOrPreventNextDamage` auto-picks the source.** The
+  printed Desperate Gambit lets you choose any source you control; the
+  resolver takes the highest-power permanent. Needs a real chosen-source
+  prompt (the `PreventNextDamageFromChosenSource` machinery has the shape). ⏳
+- **Lotus Vale / Scorched Ruins enter, then pay.** The printed replacement is
+  "if this land would enter, sacrifice two untapped lands *instead*"; the
+  catalog models it as an ETB pay-or-sacrifice, so the land is briefly on the
+  battlefield and an ETB watcher sees it. Wants `CardDefinition
+  .enters_only_if_cost_paid`. ⏳
+- **`Effect::TapLandsSharingProductionWith` reads printed mana abilities.**
+  `GameState::colors_produced_by` walks `definition.activated_abilities`, so a
+  land whose mana ability is *granted* (Dryad Arbor-style statics) isn't seen
+  by Mana Web. Computed abilities would close it. ⏳
 - **Board-wide `CreatureDied` listeners need a real kill in tests.** Neither
   `destroy_permanent(id, false, &mut events)` nor
   `remove_to_graveyard_with_triggers` dispatches to `EventScope::AnyPlayer`
   listeners on *other* permanents — only a death that runs through the action
   path (SBA after a bolt) does. Worth making the fixture helpers dispatch the
   same way so tests don't have to route through combat/burn. ⏳
+- **CR 123 (Stickers) is the last untested CR section.** Nothing about
+  stickers is modelled — name/ability/P-T/art stickers, ticket costs, the
+  sticker-sheet setup in CR 103. Only worth doing alongside Unfinity cards. ⏳
+- **`GameState::check_state_based_actions` isn't reached by a bare
+  `PassPriority` with an empty stack.** Tests that arm a CR 603.8 state
+  trigger have to call it by hand (`classic_sets/wth`'s `settle`). Worth
+  confirming whether that matches CR 704.3 or is a fixture-only gap. ⏳
 
 ## Also this run (Exodus closed)
 

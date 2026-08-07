@@ -959,6 +959,9 @@ fn project_player(
             .iter()
             .map(|r| requirement_noun(r).to_string())
             .collect(),
+        nonmana_abilities_locked: player.cant_activate_nonmana_abilities_this_turn,
+        creature_flash_this_turn: player.creature_spells_as_flash_this_turn,
+        graveyard_top_castable: player.cast_from_graveyard_top_this_turn,
         // Insist / Overmaster — "your next [kind] spell can't be countered".
         uncounterable_next: player
             .next_spell_uncounterable
@@ -3023,6 +3026,23 @@ mod tests {
             .cant_cast_matching_this_turn
             .push(crate::card::SelectionRequirement::Creature);
         assert_eq!(project(&g, 0).players[1].locked_cast_kinds, vec!["creature".to_string()]);
+    }
+
+    /// The three turn-scoped seat permissions/locks reach the client.
+    #[test]
+    fn turn_scoped_seat_flags_surface() {
+        let mut g = two_player_game();
+        let before = &project(&g, 0).players[0];
+        assert!(!before.nonmana_abilities_locked);
+        assert!(!before.creature_flash_this_turn);
+        assert!(!before.graveyard_top_castable);
+        g.players[0].cant_activate_nonmana_abilities_this_turn = true;
+        g.players[0].creature_spells_as_flash_this_turn = true;
+        g.players[0].cast_from_graveyard_top_this_turn = true;
+        let after = &project(&g, 0).players[0];
+        assert!(after.nonmana_abilities_locked);
+        assert!(after.creature_flash_this_turn);
+        assert!(after.graveyard_top_castable);
     }
 
     #[test]
