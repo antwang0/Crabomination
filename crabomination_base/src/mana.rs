@@ -408,6 +408,9 @@ pub enum SpendRestriction {
     AbilitiesOnly,
     /// "Spend this mana only to cast Lesson spells." (Hermitic Herbalist.)
     LessonSpellsOnly,
+    /// "Spend this mana only to cast an Equipment spell or activate an equip
+    /// ability." (Freya Crescent.)
+    EquipmentSpellsOrEquip,
 }
 
 impl SpendRestriction {
@@ -428,6 +431,7 @@ impl SpendRestriction {
             }
             SpendRestriction::AbilitiesOnly => kind.activating_ability,
             SpendRestriction::LessonSpellsOnly => kind.lesson,
+            SpendRestriction::EquipmentSpellsOrEquip => kind.equipment,
         }
     }
 }
@@ -460,6 +464,8 @@ pub struct SpellKind {
     pub activating_ability: bool,
     /// Casting a Lesson spell (Hermitic Herbalist's Lesson-only mana).
     pub lesson: bool,
+    /// Casting an Equipment spell, or activating an equip ability.
+    pub equipment: bool,
 }
 
 /// WUBRG index for a color — used to bucket restricted mana per color.

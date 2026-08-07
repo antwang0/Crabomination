@@ -7509,10 +7509,13 @@ impl GameState {
         if self.is_protected_from(equipment, target) {
             return Err(GameError::TargetHasProtection(target));
         }
-        // Pay the equip cost from the floated mana pool.
+        // Pay the equip cost from the floated mana pool. Routed through the
+        // spend-restriction path so equip-only / artifact-only mana can fund
+        // it (Freya Crescent, Power Depot).
+        let spend_kind = crate::card::CardDefinition::equip_spend_kind_static();
         self.players[p]
             .mana_pool
-            .pay(&equip_cost)
+            .pay_for_spell(&equip_cost, &spend_kind)
             .map_err(GameError::Mana)?;
         // Attach.
         self.battlefield[equip_pos].attached_to = Some(target);

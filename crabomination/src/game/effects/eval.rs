@@ -1568,6 +1568,7 @@ impl GameState {
             R::Or(a, b) => self.evaluate_requirement_static(a, target, controller, source)
                 || self.evaluate_requirement_static(b, target, controller, source),
             R::Not(inner) => !self.evaluate_requirement_static(inner, target, controller, source),
+            R::ControllersTurn => self.active_player_idx == controller,
             R::ControlledByYou => match target {
                 // A `Target::Permanent` can also address a spell on the stack
                 // (a "copy target spell you control" ability); its caster is
@@ -2034,6 +2035,7 @@ impl GameState {
             }
             R::Not(inner) => !self.evaluate_requirement_on_card(inner, card, controller),
             R::ControlledByYou => card.controller == controller,
+            R::ControllersTurn => self.active_player_idx == controller,
             R::ControlledByOpponent => !self.same_team(card.controller, controller),
             R::OwnedByYou => card.owner == controller,
             R::Creature => card.definition.is_creature(),

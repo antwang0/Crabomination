@@ -300,6 +300,7 @@ impl Effect {
             Effect::ExileResolvingSpell => false,
             Effect::SilencePlayersThisTurn { who } => player_has_target(who),
             Effect::MayPay { body, .. } => body.requires_target(),
+            Effect::MayPayLife { then, .. } => then.requires_target(),
             Effect::MaySacrifice { then, else_, .. }
             | Effect::MayTap { then, else_, .. }
             | Effect::MayDiscard { then, else_, .. } => {
@@ -876,6 +877,7 @@ impl Effect {
             // a target (e.g. "you may sacrifice [target permanent]").
             Effect::MayDo { body, .. } => body.primary_target_filter(),
             Effect::MayPay { body, .. } => body.primary_target_filter(),
+            Effect::MayPayLife { then, .. } => then.primary_target_filter(),
             Effect::PayEnergy { then, .. } => then.primary_target_filter(),
             Effect::Process { then, .. } => then.primary_target_filter(),
             Effect::CollectEvidence { then, .. } | Effect::Forage { then } => {
@@ -1034,6 +1036,7 @@ impl Effect {
             | Effect::ForEach { body, .. }
             | Effect::MayDo { body, .. }
             | Effect::MayPay { body, .. } => body.prefers_graveyard_target(),
+            Effect::MayPayLife { then, .. } => then.prefers_graveyard_target(),
             Effect::Process { then, .. } => then.prefers_graveyard_target(),
             // Recasting a target card *from the graveyard* (Efreet Flamepainter,
             // The Dawning Archaic) wants the graveyard walked for the target.
@@ -1302,6 +1305,7 @@ impl Effect {
                     else_.effect_short_text()
                 }
             }
+            Effect::MayPayLife { then, .. } => then.effect_short_text(),
             Effect::MayDo { body, .. }
             | Effect::MayPay { body, .. }
             | Effect::DelayUntil { body, .. }
@@ -1451,6 +1455,7 @@ impl Effect {
             | Effect::Repeat { body, .. }
             | Effect::ForEach { body, .. } => body.accepts_player_target(),
             Effect::MayDo { body, .. } | Effect::MayPay { body, .. } => body.accepts_player_target(),
+            Effect::MayPayLife { then, .. } => then.accepts_player_target(),
             Effect::Process { then, .. } => then.accepts_player_target(),
             Effect::ChooseMode(modes) => modes.iter().any(|e| e.accepts_player_target()),
             Effect::ChooseN { modes, .. } => modes.iter().any(|e| e.accepts_player_target()),
@@ -1631,10 +1636,16 @@ impl Effect {
                 // `mode` field, so a mode-agnostic slot filter would reject a
                 // single-mode cast of any non-first mode). No cast-time slot
                 // filter is surfaced; see `Effect::Spree`'s resolution arm.
-                Effect::Spree { .. } | Effect::Tiered { .. } => None,
+                Effect::Spree { .. } => None,
+                // Tiered picks exactly one mode and every mode reads the same
+                // slots, so the first mode carrying a filter is authoritative.
+                Effect::Tiered { modes } => {
+                    modes.iter().find_map(|m| eff_find(&m.effect, slot, mode, kicked))
+                }
                 Effect::MayDo { body, .. } | Effect::MayPay { body, .. } => {
                     eff_find(body, slot, mode, kicked)
                 }
+                Effect::MayPayLife { then, .. } => eff_find(then, slot, mode, kicked),
                 Effect::CollectEvidence { then, .. } => eff_find(then, slot, mode, kicked),
                 Effect::IfRevealFromHand { then, else_, .. } => {
                     eff_find(then, slot, mode, kicked).or_else(|| eff_find(else_, slot, mode, kicked))
@@ -1889,6 +1900,7 @@ impl Effect {
             Effect::MayDo { body, .. } | Effect::MayPay { body, .. } => {
                 body.distinct_target_count(mode)
             }
+            Effect::MayPayLife { then, .. } => then.distinct_target_count(mode),
             _ => None,
         }
     }

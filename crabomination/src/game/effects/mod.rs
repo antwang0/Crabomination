@@ -1520,6 +1520,27 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::MayPayLife { amount, then } => {
+                let n = self.evaluate_value(amount, ctx).max(0) as i32;
+                let source = ctx.source.unwrap_or(CardId(0));
+                let mut cursor = 0;
+                let Some(yes) = self.ask_seat_bool(
+                    &mut cursor,
+                    ctx.controller,
+                    format!("Pay {n} life?"),
+                    source,
+                    effect,
+                ) else {
+                    return Ok(());
+                };
+                self.clear_answer_log();
+                if yes && self.players[ctx.controller].life >= n {
+                    self.adjust_life(ctx.controller, -n);
+                    self.run_effect(then, ctx, events)?;
+                }
+                Ok(())
+            }
+
             Effect::MayPayGenericUpTo { max, body } => {
                 // "You may pay {X}, X ≤ max" — prompt for a number bounded by
                 // both the printed cap and the mana actually in the pool, spend

@@ -1966,6 +1966,10 @@ pub enum Effect {
         #[serde(default)]
         else_: Option<Box<Effect>>,
     },
+    /// "You may pay N life. If you do, [then]." Life-cost sibling of
+    /// [`Effect::MayPay`]; the payment is skipped (and `then` with it) when
+    /// the controller declines or can't afford it.
+    MayPayLife { amount: Value, then: Box<Effect> },
 
     /// "You may pay {X}, where X ≤ `max`; if you do, [body reads X as
     /// `Value::TriggerEventAmount`]." The controller is prompted for a number

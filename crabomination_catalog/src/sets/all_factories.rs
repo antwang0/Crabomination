@@ -5567,6 +5567,12 @@ static FIN: &[Factory] = &[
     super::fin::thunder_magic,
     super::fin::ice_magic,
     super::fin::tifas_limit_break,
+    super::fin::freya_crescent,
+    super::fin::seymour_flux,
+    super::fin::self_destruct,
+    super::fin::valkyrie_aerial_unit,
+    super::fin::town_greeter,
+    super::fin::vaynes_treachery,
 ];
 static GPT: &[Factory] = &[
     super::gpt::mourning_thrull,

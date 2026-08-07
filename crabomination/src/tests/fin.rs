@@ -2764,3 +2764,127 @@ fn fire_magic_tier_scales_sweep() {
     drain_stack(&mut g);
     assert!(g.battlefield_find(bear).is_none(), "another 2 finished it off");
 }
+
+// ── Jump / misc FIN batch ─────────────────────────────────────────────────────
+
+/// Freya Crescent flies only during her controller's turn.
+#[test]
+fn freya_crescent_jump() {
+    let mut g = two_player_game();
+    let freya = g.add_card_to_battlefield(0, catalog::freya_crescent());
+    g.active_player_idx = 0;
+    assert!(g.computed_permanent(freya).unwrap().keywords.contains(&Keyword::Flying));
+    g.active_player_idx = 1;
+    assert!(!g.computed_permanent(freya).unwrap().keywords.contains(&Keyword::Flying));
+}
+
+/// Freya's restricted mana pays an equip cost but not a creature spell.
+#[test]
+fn freya_mana_pays_equip_only() {
+    let mut g = two_player_game();
+    let freya = g.add_card_to_battlefield(0, catalog::freya_crescent());
+    g.clear_sickness(freya);
+    let sword = g.add_card_to_battlefield(0, catalog::samurais_katana());
+    drain_stack(&mut g);
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    for _ in 0..5 {
+        g.perform_action(GameAction::ActivateAbility {
+            card_id: freya, ability_index: 0, target: None,
+            additional_targets: vec![], x_value: None,
+        }).ok();
+        g.battlefield_find_mut(freya).unwrap().tapped = false;
+    }
+    let bears = g.add_card_to_hand(0, catalog::grizzly_bears());
+    assert!(g.perform_action(GameAction::CastSpell {
+        card_id: bears, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).is_err(), "equip-only mana can't cast a creature");
+    assert!(g.perform_action(GameAction::Equip { equipment: sword, target: freya }).is_ok(),
+        "equip-only mana pays the equip cost");
+}
+
+/// Seymour Flux's upkeep trigger trades 1 life for a card and a counter.
+#[test]
+fn seymour_flux_pays_life_for_value() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::grizzly_bears());
+    let seymour = g.add_card_to_battlefield(0, catalog::seymour_flux());
+    g.decider = Box::new(crate::decision::ScriptedDecider::new(vec![
+        crate::decision::DecisionAnswer::Bool(true),
+    ]));
+    g.active_player_idx = 0;
+    g.step = TurnStep::Untap;
+    let life = g.players[0].life;
+    advance_to(&mut g, TurnStep::PreCombatMain);
+    assert_eq!(g.players[0].life, life - 1, "paid 1 life");
+    assert_eq!(
+        g.battlefield_find(seymour).unwrap().counter_count(CounterType::PlusOnePlusOne), 1);
+}
+
+/// Self-Destruct fires the creature's power at another target and at itself.
+#[test]
+fn self_destruct_hits_both_ways() {
+    let mut g = two_player_game();
+    let angel = g.add_card_to_battlefield(0, catalog::serra_angel()); // 4/4
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
+    let id = g.add_card_to_hand(0, catalog::self_destruct());
+    g.players[0].mana_pool.add(crate::mana::Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(angel)),
+        additional_targets: vec![Target::Permanent(bear)], mode: None, x_value: None,
+    }).expect("cast Self-Destruct");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_none(), "4 damage killed the 2/2");
+    assert!(g.battlefield_find(angel).is_none(), "and 4 back killed the 4/4");
+}
+
+/// Vayne's Treachery kicked by sacrificing a creature gives -6/-6.
+#[test]
+fn vaynes_treachery_kicked_by_sacrifice() {
+    let mut g = two_player_game();
+    let fodder = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let angel = g.add_card_to_battlefield(1, catalog::serra_angel()); // 4/4
+    let id = g.add_card_to_hand(0, catalog::vaynes_treachery());
+    g.players[0].mana_pool.add(crate::mana::Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpellKicked {
+        card_id: id, target: Some(Target::Permanent(angel)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast kicked");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(fodder).is_none(), "sacrificed as the kicker cost");
+    assert!(g.battlefield_find(angel).is_none(), "-6/-6 killed the 4/4");
+}
+
+/// Town Greeter mills four and takes a land.
+#[test]
+fn town_greeter_mills_for_a_land() {
+    let mut g = two_player_game();
+    for _ in 0..3 { g.add_card_to_library(0, catalog::grizzly_bears()); }
+    let land = g.add_card_to_library(0, catalog::forest());
+    g.decider = Box::new(crate::decision::ScriptedDecider::new(vec![
+        crate::decision::DecisionAnswer::Cards(vec![land]),
+    ]));
+    g.move_card_to_battlefield_for_test(0, catalog::town_greeter());
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == land), "took the milled land");
+}
+
+/// Valkyrie Aerial Unit's affinity for artifacts discounts its cost.
+#[test]
+fn valkyrie_affinity_for_artifacts() {
+    let mut g = two_player_game();
+    for _ in 0..3 { g.add_card_to_battlefield(0, catalog::sol_ring()); }
+    let id = g.add_card_to_hand(0, catalog::valkyrie_aerial_unit());
+    g.add_card_to_library(0, catalog::grizzly_bears());
+    g.add_card_to_library(0, catalog::grizzly_bears());
+    g.players[0].mana_pool.add(crate::mana::Color::Blue, 2);
+    g.players[0].mana_pool.add_colorless(2); // {5} reduced to {2} by 3 artifacts
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("affinity discount applied");
+}

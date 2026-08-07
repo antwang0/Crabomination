@@ -4233,3 +4233,179 @@ pub fn tifas_limit_break() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── Jump / misc FIN batch ─────────────────────────────────────────────────────
+
+/// Jump (Final Fantasy) — "During your turn, this creature has flying."
+fn jump() -> StaticAbility {
+    StaticAbility {
+        description: "Jump — During your turn, this creature has flying.",
+        effect: StaticEffect::SelfHasKeywordWhile {
+            keyword: Keyword::Flying,
+            condition: SelectionRequirement::ControllersTurn,
+        },
+    }
+}
+
+/// Freya Crescent — {R} 1/1 Rat Knight. Jump; {T}: Add {R}, spendable only on
+/// Equipment spells and equip abilities.
+pub fn freya_crescent() -> CardDefinition {
+    CardDefinition {
+        name: "Freya Crescent",
+        cost: cost(&[r()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Rat, CreatureType::Knight],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        static_abilities: vec![jump()],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::AddMana {
+                who: PlayerRef::You,
+                pool: ManaPayload::Restricted(
+                    Box::new(ManaPayload::Colors(vec![Color::Red])),
+                    crate::mana::SpendRestriction::EquipmentSpellsOrEquip,
+                ),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Seymour Flux — {4}{B} 5/5 Spirit Avatar. Upkeep: you may pay 1 life to draw
+/// a card and put a +1/+1 counter on it.
+pub fn seymour_flux() -> CardDefinition {
+    CardDefinition {
+        name: "Seymour Flux",
+        cost: cost(&[generic(4), b()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit, CreatureType::Avatar],
+            ..Default::default()
+        },
+        power: 5,
+        toughness: 5,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(
+                EventKind::StepBegins(TurnStep::Upkeep),
+                EventScope::YourControl,
+            ),
+            effect: Effect::MayPayLife {
+                amount: Value::ONE,
+                then: Box::new(Effect::Seq(vec![
+                    Effect::Draw { who: Selector::You, amount: Value::ONE },
+                    Effect::AddCounter {
+                        what: Selector::This,
+                        kind: CounterType::PlusOnePlusOne,
+                        amount: Value::ONE,
+                    },
+                ])),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Self-Destruct — {1}{R} Instant. Target creature you control deals damage
+/// equal to its power to any other target and that much to itself.
+pub fn self_destruct() -> CardDefinition {
+    CardDefinition {
+        name: "Self-Destruct",
+        cost: cost(&[generic(1), r()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::DealDamageEqualToPower {
+                source: Selector::Target(0),
+                target: Selector::Target(1),
+            },
+            Effect::DealDamageEqualToPower {
+                source: Selector::Target(0),
+                target: Selector::Target(0),
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Valkyrie Aerial Unit — {5}{U}{U} 5/4 Construct with affinity for artifacts
+/// and flying. ETB: surveil 2.
+pub fn valkyrie_aerial_unit() -> CardDefinition {
+    CardDefinition {
+        name: "Valkyrie Aerial Unit",
+        cost: cost(&[generic(5), u(), u()]),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Construct],
+            ..Default::default()
+        },
+        power: 5,
+        toughness: 4,
+        keywords: vec![Keyword::Flying],
+        affinity_filter: Some(
+            SelectionRequirement::Artifact.and(SelectionRequirement::ControlledByYou),
+        ),
+        triggered_abilities: vec![etb(Effect::Surveil {
+            who: PlayerRef::You,
+            amount: Value::Const(2),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Town Greeter — {1}{G} 1/1 Citizen. ETB: mill four, then you may put a land
+/// card from among them into your hand.
+pub fn town_greeter() -> CardDefinition {
+    CardDefinition {
+        name: "Town Greeter",
+        cost: cost(&[generic(1), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Citizen],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        triggered_abilities: vec![etb(Effect::MillThenToHand {
+            amount: Value::Const(4),
+            filter: SelectionRequirement::Land,
+        })],
+        ..Default::default()
+    }
+}
+
+/// Vayne's Treachery — {1}{B} Instant. Kicker—sacrifice an artifact or
+/// creature. Target creature gets -2/-2, or -6/-6 if kicked.
+pub fn vaynes_treachery() -> CardDefinition {
+    CardDefinition {
+        name: "Vayne's Treachery",
+        cost: cost(&[generic(1), b()]),
+        card_types: vec![CardType::Instant],
+        keywords: vec![Keyword::Kicker(cost(&[]))],
+        kicker_additional_cost: vec![crate::card::AdditionalCastCost::SacrificePermanent {
+            filter: SelectionRequirement::Artifact.or(SelectionRequirement::Creature),
+            count: 1,
+        }],
+        effect: Effect::If {
+            cond: Predicate::SpellWasKicked,
+            then: Box::new(Effect::PumpPT {
+                what: target_filtered(SelectionRequirement::Creature),
+                power: Value::Const(-6),
+                toughness: Value::Const(-6),
+                duration: Duration::EndOfTurn,
+            }),
+            else_: Box::new(Effect::PumpPT {
+                what: target_filtered(SelectionRequirement::Creature),
+                power: Value::Const(-2),
+                toughness: Value::Const(-2),
+                duration: Duration::EndOfTurn,
+            }),
+        },
+        ..Default::default()
+    }
+}

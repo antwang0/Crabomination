@@ -1453,6 +1453,9 @@ pub enum SelectionRequirement {
     /// targeting filters it routes through `evaluate_requirement_*`
     /// which read the source id from the resolution context.
     OtherThanSource,
+    /// True while it's the evaluating controller's turn ("During your turn,
+    /// …" — the Jump statics on Freya Crescent / Kain). Candidate-agnostic.
+    ControllersTurn,
     /// True when the candidate card is currently in some player's graveyard
     /// zone. Used to restrict zone-spanning trigger targets — e.g.
     /// Ascendant Dustspeaker / Lorehold Acolyte's "exile up to one target
@@ -2005,6 +2008,11 @@ pub struct CardDefinition {
     /// Defaults to empty via `#[serde(default)]` for snapshot back-compat.
     #[serde(default)]
     pub additional_cast_cost: Vec<AdditionalCastCost>,
+    /// CR 702.32 — non-mana kicker costs, paid only on a kicked cast
+    /// ("Kicker—Sacrifice an artifact or creature" — Vayne's Treachery).
+    /// Pair with `Keyword::Kicker` (an empty cost when there's no mana half).
+    #[serde(default)]
+    pub kicker_additional_cost: Vec<AdditionalCastCost>,
     /// CR 702.103 — Bestow alternative cost. When `Some(cost)`, the card may
     /// be cast as an Aura spell targeting a creature for this cost (via
     /// `GameAction::CastBestow`); it enters attached, grants its
@@ -2903,6 +2911,17 @@ impl CardDefinition {
             casting_nonartifact_spell: !self.is_artifact(),
             activating_ability: false,
             lesson: self.subtypes.spell_subtypes.contains(&crate::card::SpellSubtype::Lesson),
+            equipment: self.is_equipment(),
+        }
+    }
+
+    /// Spend-restriction context for paying an equip cost (CR 702.6).
+    pub fn equip_spend_kind_static() -> crate::mana::SpellKind {
+        crate::mana::SpellKind {
+            artifact: true,
+            equipment: true,
+            activating_ability: true,
+            ..Default::default()
         }
     }
 
@@ -2914,6 +2933,7 @@ impl CardDefinition {
             land_ability: self.is_land(),
             creature_ability: self.is_creature(),
             activating_ability: true,
+            equipment: self.is_equipment(),
             ..Default::default()
         }
     }

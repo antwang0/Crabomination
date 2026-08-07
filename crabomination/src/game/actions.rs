@@ -4182,7 +4182,10 @@ impl GameState {
         // this spell, sacrifice / discard …"). Validate payability up front
         // so an unpayable spell reverts to hand before any mana is spent;
         // the costs themselves are paid after the mana cost succeeds.
-        let additional_costs = card.definition.additional_cast_cost.clone();
+        let mut additional_costs = card.definition.additional_cast_cost.clone();
+        if kicked {
+            additional_costs.extend(card.definition.kicker_additional_cost.iter().cloned());
+        }
         if !additional_costs.is_empty() && !self.additional_costs_payable(p, &additional_costs) {
             self.players[p].hand.push(card);
             return Err(GameError::SelectionRequirementViolated);
