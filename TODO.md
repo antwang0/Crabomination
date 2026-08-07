@@ -61,11 +61,12 @@ Items are grouped by area and roughly ordered by impact within each group.
   single source is marked on it" (Ogre Enforcer) can't be written. Wants a
   `damage_by_source: HashMap<CardId, u32>` alongside the total, which would
   also give CR 120.6 a precise home. ⏳
-- **Remaining Visions gaps (5), one primitive each:** Breathstealer's Crypt (a
+- **Remaining Visions gaps (6), one primitive each:** Breathstealer's Crypt (a
   reveal-and-tax draw replacement), Forbidden Ritual (a repeatable *sacrifice*
   loop — `MayPayRepeatedly` is mana-only), Ogre Enforcer (per-source damage,
   above), Peace Talks (two turns of global untargetability), Pygmy Hippo
-  (drain the defender's lands into your next main phase). ⏳
+  (drain the defender's lands into your next main phase), Song of Blood (the
+  frozen-value capture above). ⏳
 
 ## Noticed last run (Weatherlight closed)
 

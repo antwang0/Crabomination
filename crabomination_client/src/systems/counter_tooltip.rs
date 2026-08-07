@@ -1501,7 +1501,6 @@ fn counter_label(kind: CounterType) -> &'static str {
         CounterType::Ore => "Ore",
         CounterType::Death => "Death",
         CounterType::Rust => "Rust",
-        CounterType::Pressure => "Pressure",
         CounterType::Winch => "Winch",
         CounterType::Wind => "Wind",
         CounterType::Pressure => "Pressure",
@@ -1585,7 +1584,6 @@ fn counter_reminder(kind: CounterType) -> Option<&'static str> {
         CounterType::Polyp => "Coral Reef's reserve — spend one (plus {U} and a tapped blue creature) to grow a creature.",
         CounterType::Death => "Bogardan Phoenix already came back once — the next death exiles it.",
         CounterType::Rust => "Corrosion's tally — an artifact is destroyed once its mana value is at most its rust count.",
-        CounterType::Pressure => "Magma Mine's stored charge — it deals this much damage when sacrificed.",
         CounterType::Ore => "Orcish Mine's countdown — one comes off each upkeep and each time the land taps; the last one destroys it.",
         _ => return None,
     })

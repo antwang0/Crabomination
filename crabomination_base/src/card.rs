@@ -703,8 +703,6 @@ pub enum CounterType {
     Death,
     /// Corrosion — an artifact dies once its mana value is at most its rust count.
     Rust,
-    /// Magma Mine — the stored damage it deals when sacrificed.
-    Pressure,
 }
 
 /// Every zone a card can occupy.

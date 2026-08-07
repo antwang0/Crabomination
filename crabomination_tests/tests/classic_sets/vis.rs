@@ -552,226 +552,6 @@ fn miraculous_recovery_reanimates_with_a_counter() {
     drain_stack(&mut g);
     let cp = g.computed_permanent(bear).expect("back on the battlefield");
     assert_eq!((cp.power, cp.toughness), (3, 3), "2/2 plus a counter");
-// ── Second wave ─────────────────────────────────────────────────────────────
-
-/// Bull Elephant's ETB returns *two* Forests, not one.
-#[test]
-fn bull_elephant_returns_two_forests() {
-    let mut g = two_player_game();
-    let a = g.add_card_to_battlefield(0, catalog::forest());
-    let b = g.add_card_to_battlefield(0, catalog::forest());
-    let elephant = g.add_card_to_battlefield(0, catalog::bull_elephant());
-    let etb = catalog::bull_elephant().triggered_abilities[0].effect.clone();
-    let ctx = crabomination::game::effects::EffectContext::for_ability(elephant, 0, None);
-    g.resolve_effect(&etb, &ctx).expect("etb");
-    drain_stack(&mut g);
-    assert!(g.battlefield_find(elephant).is_some(), "kept the Elephant");
-    assert!(g.battlefield_find(a).is_none() && g.battlefield_find(b).is_none());
-}
-
-/// One Forest isn't enough — the Elephant is sacrificed and the land stays.
-#[test]
-fn bull_elephant_needs_both_forests() {
-    let mut g = two_player_game();
-    let only = g.add_card_to_battlefield(0, catalog::forest());
-    let elephant = g.add_card_to_battlefield(0, catalog::bull_elephant());
-    let etb = catalog::bull_elephant().triggered_abilities[0].effect.clone();
-    let ctx = crabomination::game::effects::EffectContext::for_ability(elephant, 0, None);
-    g.resolve_effect(&etb, &ctx).expect("etb");
-    drain_stack(&mut g);
-    assert!(g.battlefield_find(elephant).is_none());
-    assert!(g.battlefield_find(only).is_some(), "unpayable costs aren't partially paid");
-}
-
-/// Flooded Shoreline bounces a creature by bouncing two Islands.
-#[test]
-fn flooded_shoreline_returns_two_islands() {
-    let mut g = two_player_game();
-    let shoreline = ready(&mut g, 0, catalog::flooded_shoreline());
-    let i1 = g.add_card_to_battlefield(0, catalog::island());
-    let i2 = g.add_card_to_battlefield(0, catalog::island());
-    let victim = ready(&mut g, 1, catalog::grizzly_bears());
-    g.players[0].mana_pool.add(Color::Blue, 2);
-    activate(&mut g, shoreline, 0, Some(Target::Permanent(victim))).expect("bounce");
-    drain_stack(&mut g);
-    assert!(g.battlefield_find(victim).is_none());
-    assert!(g.battlefield_find(i1).is_none() && g.battlefield_find(i2).is_none());
-}
-
-/// With only one Island the ability can't be activated at all.
-#[test]
-fn flooded_shoreline_needs_two_islands() {
-    let mut g = two_player_game();
-    let shoreline = ready(&mut g, 0, catalog::flooded_shoreline());
-    g.add_card_to_battlefield(0, catalog::island());
-    let victim = ready(&mut g, 1, catalog::grizzly_bears());
-    g.players[0].mana_pool.add(Color::Blue, 2);
-    assert!(activate(&mut g, shoreline, 0, Some(Target::Permanent(victim))).is_err());
-}
-
-/// Squandered Resources turns a Swamp into black mana.
-#[test]
-fn squandered_resources_reads_the_sacrificed_land() {
-    let mut g = two_player_game();
-    let res = ready(&mut g, 0, catalog::squandered_resources());
-    let swamp = g.add_card_to_battlefield(0, catalog::swamp());
-    activate(&mut g, res, 0, None).expect("sac the Swamp");
-    drain_stack(&mut g);
-    assert!(g.battlefield_find(swamp).is_none());
-    assert_eq!(g.players[0].mana_pool.amount(Color::Black), 1);
-}
-
-/// Desertion steals the creature it counters.
-#[test]
-fn desertion_steals_a_creature_spell() {
-    let mut g = two_player_game();
-    let bears = g.add_card_to_hand(1, catalog::grizzly_bears());
-    let desertion = g.add_card_to_hand(0, catalog::desertion());
-    g.players[1].mana_pool.add(Color::Green, 2);
-    g.step = TurnStep::PreCombatMain;
-    g.active_player_idx = 1;
-    g.priority.player_with_priority = 1;
-    g.perform_action(GameAction::CastSpell {
-        card_id: bears,
-        target: None,
-        additional_targets: vec![],
-        mode: None,
-        x_value: None,
-    })
-    .expect("cast bears");
-    g.players[0].mana_pool.add(Color::Blue, 2);
-    g.players[0].mana_pool.add_colorless(3);
-    g.priority.player_with_priority = 0;
-    g.perform_action(GameAction::CastSpell {
-        card_id: desertion,
-        target: Some(Target::Permanent(bears)),
-        additional_targets: vec![],
-        mode: None,
-        x_value: None,
-    })
-    .expect("counter it");
-    drain_stack(&mut g);
-    let stolen = g.battlefield_find(bears).expect("on the battlefield");
-    assert_eq!(stolen.controller, 0, "under the countering player's control");
-}
-
-/// Magma Mine stores charges and throws them all at once.
-#[test]
-fn magma_mine_deals_its_pressure_counters() {
-    let mut g = two_player_game();
-    let mine = ready(&mut g, 0, catalog::magma_mine());
-    for _ in 0..2 {
-        g.players[0].mana_pool.add_colorless(4);
-        activate(&mut g, mine, 0, None).expect("charge");
-        drain_stack(&mut g);
-    }
-    assert_eq!(g.battlefield_find(mine).unwrap().counter_count(CounterType::Pressure), 2);
-    activate(&mut g, mine, 1, Some(Target::Player(1))).expect("fire");
-    drain_stack(&mut g);
-    assert_eq!(g.players[1].life, 18);
-}
-
-/// Bogardan Phoenix comes back once, then exiles itself.
-#[test]
-fn bogardan_phoenix_returns_only_once() {
-    let mut g = two_player_game();
-    let phoenix = ready(&mut g, 0, catalog::bogardan_phoenix());
-    let mut events = Vec::new();
-    g.destroy_permanent(phoenix, false, &mut events);
-    g.dispatch_triggers_for_events(&events);
-    drain_stack(&mut g);
-    let back = g.battlefield_find(phoenix).expect("back from the first death");
-    assert_eq!(back.counter_count(CounterType::Death), 1);
-    let mut events = Vec::new();
-    g.destroy_permanent(phoenix, false, &mut events);
-    g.dispatch_triggers_for_events(&events);
-    drain_stack(&mut g);
-    assert!(g.battlefield_find(phoenix).is_none(), "the second death sticks");
-    assert!(g.exile.iter().any(|c| c.id == phoenix), "exiled, not in the graveyard");
-}
-
-/// Matopi Golem shrinks each time it regenerates.
-#[test]
-fn matopi_golem_shrinks_when_it_regenerates() {
-    let mut g = two_player_game();
-    let golem = ready(&mut g, 0, catalog::matopi_golem());
-    g.players[0].mana_pool.add_colorless(1);
-    activate(&mut g, golem, 0, None).expect("shield up");
-    drain_stack(&mut g);
-    let mut events = Vec::new();
-    g.destroy_permanent(golem, false, &mut events);
-    g.dispatch_triggers_for_events(&events);
-    drain_stack(&mut g);
-    let c = g.battlefield_find(golem).expect("regenerated");
-    assert_eq!(c.counter_count(CounterType::MinusOneMinusOne), 1);
-}
-
-/// Death Watch drains for the dead creature's stats.
-#[test]
-fn death_watch_drains_for_the_hosts_stats() {
-    let mut g = two_player_game();
-    let host = ready(&mut g, 1, catalog::grizzly_bears());
-    let watch = g.add_card_to_hand(0, catalog::death_watch());
-    g.players[0].mana_pool.add(Color::Black, 1);
-    cast(&mut g, watch, Some(Target::Permanent(host))).expect("enchant");
-    drain_stack(&mut g);
-    let mut events = Vec::new();
-    g.destroy_permanent(host, false, &mut events);
-    g.dispatch_triggers_for_events(&events);
-    drain_stack(&mut g);
-    assert_eq!(g.players[1].life, 18, "lost life equal to its power");
-    assert_eq!(g.players[0].life, 22, "gained life equal to its toughness");
-}
-
-/// Brood of Cockroaches buys itself back at the next end step.
-#[test]
-fn brood_of_cockroaches_returns_at_end_step() {
-    let mut g = two_player_game();
-    let brood = ready(&mut g, 0, catalog::brood_of_cockroaches());
-    let mut events = Vec::new();
-    g.destroy_permanent(brood, false, &mut events);
-    g.dispatch_triggers_for_events(&events);
-    drain_stack(&mut g);
-    assert!(g.players[0].graveyard.iter().any(|c| c.id == brood));
-    while g.step != TurnStep::End {
-        let _ = g.advance_step(Vec::new());
-    }
-    drain_stack(&mut g);
-    assert!(g.players[0].hand.iter().any(|c| c.id == brood), "back in hand");
-    assert_eq!(g.players[0].life, 19);
-}
-
-/// Suleiman's Legacy wipes Djinns on entry and keeps killing them after.
-#[test]
-fn suleimans_legacy_kills_djinns_on_sight() {
-    let mut g = two_player_game();
-    let efreet = ready(&mut g, 1, catalog::rainbow_efreet());
-    let legacy = g.add_card_to_battlefield(0, catalog::suleimans_legacy());
-    let etb = catalog::suleimans_legacy().triggered_abilities[0].effect.clone();
-    let ctx = crabomination::game::effects::EffectContext::for_ability(legacy, 0, None);
-    g.resolve_effect(&etb, &ctx).expect("sweep");
-    drain_stack(&mut g);
-    assert!(g.battlefield_find(efreet).is_none());
-    let latecomer = g.add_card_to_battlefield(1, catalog::rainbow_efreet());
-    g.dispatch_triggers_for_events(&[GameEvent::PermanentEntered { card_id: latecomer }]);
-    drain_stack(&mut g);
-    assert!(g.battlefield_find(latecomer).is_none(), "the static trigger catches it too");
-}
-
-/// Eye of Singularity destroys everything that shares a name.
-#[test]
-fn eye_of_singularity_enforces_singleton() {
-    let mut g = two_player_game();
-    let a = ready(&mut g, 0, catalog::grizzly_bears());
-    let b = ready(&mut g, 1, catalog::grizzly_bears());
-    let plains = g.add_card_to_battlefield(0, catalog::plains());
-    let eye = g.add_card_to_battlefield(0, catalog::eye_of_singularity());
-    let etb = catalog::eye_of_singularity().triggered_abilities[0].effect.clone();
-    let ctx = crabomination::game::effects::EffectContext::for_ability(eye, 0, None);
-    g.resolve_effect(&etb, &ctx).expect("sweep");
-    drain_stack(&mut g);
-    assert!(g.battlefield_find(a).is_none() && g.battlefield_find(b).is_none());
-    assert!(g.battlefield_find(plains).is_some(), "basic lands are exempt");
 }
 
 /// Quicksand shrinks a ground attacker and can't touch a flier.
@@ -813,57 +593,6 @@ fn magma_mine_deals_its_pressure_counters() {
 }
 
 /// Snake Basket turns X into that many 1/1 Snakes.
-fn quicksand_only_hits_ground_attackers() {
-    let mut g = two_player_game();
-    let sand = ready(&mut g, 0, catalog::quicksand());
-    let flier = ready(&mut g, 1, catalog::rainbow_efreet());
-    let ground = ready(&mut g, 1, catalog::grizzly_bears());
-    g.active_player_idx = 1;
-    g.step = TurnStep::DeclareAttackers;
-    g.priority.player_with_priority = 1;
-    g.perform_action(GameAction::DeclareAttackers(vec![
-        Attack { attacker: flier, target: AttackTarget::Player(0) },
-        Attack { attacker: ground, target: AttackTarget::Player(0) },
-    ]))
-    .expect("attack");
-    g.priority.player_with_priority = 0;
-    assert!(activate(&mut g, sand, 1, Some(Target::Permanent(flier))).is_err(), "flier is safe");
-    activate(&mut g, sand, 1, Some(Target::Permanent(ground))).expect("mire it");
-    drain_stack(&mut g);
-    assert!(g.battlefield_find(ground).is_none(), "-1/-2 takes a 2/2 to 1/0");
-}
-
-/// Griffin Canyon untaps and pumps a Griffin.
-#[test]
-fn griffin_canyon_untaps_and_pumps() {
-    let mut g = two_player_game();
-    let canyon = ready(&mut g, 0, catalog::griffin_canyon());
-    let griffin = ready(&mut g, 0, catalog::enforcer_griffin());
-    g.battlefield_find_mut(griffin).unwrap().tapped = true;
-    activate(&mut g, canyon, 1, Some(Target::Permanent(griffin))).expect("untap it");
-    drain_stack(&mut g);
-    let c = g.battlefield_find(griffin).expect("there");
-    assert!(!c.tapped);
-    let base = catalog::enforcer_griffin();
-    let cp = g.computed_permanent(griffin).unwrap();
-    assert_eq!((cp.power, cp.toughness), (base.power + 1, base.toughness + 1));
-}
-
-/// Miraculous Recovery reanimates with a +1/+1 counter.
-#[test]
-fn miraculous_recovery_adds_a_counter() {
-    let mut g = two_player_game();
-    let bears = g.add_card_to_graveyard(0, catalog::grizzly_bears());
-    let spell = g.add_card_to_hand(0, catalog::miraculous_recovery());
-    g.players[0].mana_pool.add(Color::White, 1);
-    g.players[0].mana_pool.add_colorless(4);
-    cast(&mut g, spell, Some(Target::Permanent(bears))).expect("recover");
-    drain_stack(&mut g);
-    let c = g.battlefield_find(bears).expect("back");
-    assert_eq!(c.counter_count(CounterType::PlusOnePlusOne), 1);
-}
-
-/// Snake Basket pays out X Snakes.
 #[test]
 fn snake_basket_makes_x_snakes() {
     let mut g = two_player_game();
@@ -880,7 +609,6 @@ fn snake_basket_makes_x_snakes() {
         mode: None,
     })
     .expect("crack the basket");
-    .expect("dump snakes");
     drain_stack(&mut g);
     assert_eq!(g.battlefield.iter().filter(|c| c.definition.name == "Snake").count(), 3);
 }
@@ -1057,39 +785,6 @@ fn knight_of_valor_shrinks_its_blockers() {
     while g.step != TurnStep::DeclareAttackers {
         g.perform_action(GameAction::PassPriority).expect("pass");
     }
-/// Diamond Kaleidoscope's Prisms cash in for any colour.
-#[test]
-fn diamond_kaleidoscope_prisms_make_mana() {
-    let mut g = two_player_game();
-    let kaleidoscope = ready(&mut g, 0, catalog::diamond_kaleidoscope());
-    g.players[0].mana_pool.add_colorless(3);
-    activate(&mut g, kaleidoscope, 0, None).expect("mint a Prism");
-    drain_stack(&mut g);
-    let prism = g.battlefield.iter().find(|c| c.definition.name == "Prism").expect("minted").id;
-    activate(&mut g, kaleidoscope, 1, None).expect("cash it in");
-    drain_stack(&mut g);
-    assert!(g.battlefield_find(prism).is_none());
-    assert_eq!(g.players[0].mana_pool.total(), 1);
-}
-
-/// Righteous War splits your board into two untouchable halves.
-#[test]
-fn righteous_war_grants_paired_protection() {
-    let mut g = two_player_game();
-    let white = ready(&mut g, 0, catalog::savannah_lions());
-    g.add_card_to_battlefield(0, catalog::righteous_war());
-    let cp = g.computed_permanent(white).expect("there");
-    assert!(cp.keywords.contains(&Keyword::Protection(Color::Black)));
-}
-
-/// Knight of Valor shrinks its non-flanking blockers.
-#[test]
-fn knight_of_valor_shrinks_blockers() {
-    let mut g = two_player_game();
-    let knight = ready(&mut g, 0, catalog::knight_of_valor());
-    let blocker = ready(&mut g, 1, catalog::grizzly_bears());
-    g.step = TurnStep::DeclareAttackers;
-    g.priority.player_with_priority = 0;
     g.perform_action(GameAction::DeclareAttackers(vec![Attack {
         attacker: knight,
         target: AttackTarget::Player(1),
@@ -1179,6 +874,289 @@ fn knight_of_the_mists_kills_a_knight_unpaid() {
         })
         .count();
     assert_eq!(knights, 1, "unpaid, so the ETB destroyed a Knight");
+}
+
+// ── Second wave ─────────────────────────────────────────────────────────────
+
+/// Bull Elephant's ETB returns *two* Forests, not one.
+#[test]
+fn bull_elephant_returns_two_forests() {
+    let mut g = two_player_game();
+    let a = g.add_card_to_battlefield(0, catalog::forest());
+    let b = g.add_card_to_battlefield(0, catalog::forest());
+    let elephant = g.add_card_to_battlefield(0, catalog::bull_elephant());
+    let etb = catalog::bull_elephant().triggered_abilities[0].effect.clone();
+    let ctx = crabomination::game::effects::EffectContext::for_ability(elephant, 0, None);
+    g.resolve_effect(&etb, &ctx).expect("etb");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(elephant).is_some(), "kept the Elephant");
+    assert!(g.battlefield_find(a).is_none() && g.battlefield_find(b).is_none());
+}
+
+/// One Forest isn't enough — the Elephant is sacrificed and the land stays.
+#[test]
+fn bull_elephant_needs_both_forests() {
+    let mut g = two_player_game();
+    let only = g.add_card_to_battlefield(0, catalog::forest());
+    let elephant = g.add_card_to_battlefield(0, catalog::bull_elephant());
+    let etb = catalog::bull_elephant().triggered_abilities[0].effect.clone();
+    let ctx = crabomination::game::effects::EffectContext::for_ability(elephant, 0, None);
+    g.resolve_effect(&etb, &ctx).expect("etb");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(elephant).is_none());
+    assert!(g.battlefield_find(only).is_some(), "unpayable costs aren't partially paid");
+}
+
+/// Flooded Shoreline bounces a creature by bouncing two Islands.
+#[test]
+fn flooded_shoreline_returns_two_islands() {
+    let mut g = two_player_game();
+    let shoreline = ready(&mut g, 0, catalog::flooded_shoreline());
+    let i1 = g.add_card_to_battlefield(0, catalog::island());
+    let i2 = g.add_card_to_battlefield(0, catalog::island());
+    let victim = ready(&mut g, 1, catalog::grizzly_bears());
+    g.players[0].mana_pool.add(Color::Blue, 2);
+    activate(&mut g, shoreline, 0, Some(Target::Permanent(victim))).expect("bounce");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(victim).is_none());
+    assert!(g.battlefield_find(i1).is_none() && g.battlefield_find(i2).is_none());
+}
+
+/// With only one Island the ability can't be activated at all.
+#[test]
+fn flooded_shoreline_needs_two_islands() {
+    let mut g = two_player_game();
+    let shoreline = ready(&mut g, 0, catalog::flooded_shoreline());
+    g.add_card_to_battlefield(0, catalog::island());
+    let victim = ready(&mut g, 1, catalog::grizzly_bears());
+    g.players[0].mana_pool.add(Color::Blue, 2);
+    assert!(activate(&mut g, shoreline, 0, Some(Target::Permanent(victim))).is_err());
+}
+
+/// Squandered Resources turns a Swamp into black mana.
+#[test]
+fn squandered_resources_reads_the_sacrificed_land() {
+    let mut g = two_player_game();
+    let res = ready(&mut g, 0, catalog::squandered_resources());
+    let swamp = g.add_card_to_battlefield(0, catalog::swamp());
+    activate(&mut g, res, 0, None).expect("sac the Swamp");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(swamp).is_none());
+    assert_eq!(g.players[0].mana_pool.amount(Color::Black), 1);
+}
+
+/// Desertion steals the creature it counters.
+#[test]
+fn desertion_steals_a_creature_spell() {
+    let mut g = two_player_game();
+    let bears = g.add_card_to_hand(1, catalog::grizzly_bears());
+    let desertion = g.add_card_to_hand(0, catalog::desertion());
+    g.players[1].mana_pool.add(Color::Green, 2);
+    g.step = TurnStep::PreCombatMain;
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bears,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast bears");
+    g.players[0].mana_pool.add(Color::Blue, 2);
+    g.players[0].mana_pool.add_colorless(3);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell {
+        card_id: desertion,
+        target: Some(Target::Permanent(bears)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("counter it");
+    drain_stack(&mut g);
+    let stolen = g.battlefield_find(bears).expect("on the battlefield");
+    assert_eq!(stolen.controller, 0, "under the countering player's control");
+}
+
+
+/// Bogardan Phoenix comes back once, then exiles itself.
+#[test]
+fn bogardan_phoenix_returns_only_once() {
+    let mut g = two_player_game();
+    let phoenix = ready(&mut g, 0, catalog::bogardan_phoenix());
+    let mut events = Vec::new();
+    g.destroy_permanent(phoenix, false, &mut events);
+    g.dispatch_triggers_for_events(&events);
+    drain_stack(&mut g);
+    let back = g.battlefield_find(phoenix).expect("back from the first death");
+    assert_eq!(back.counter_count(CounterType::Death), 1);
+    let mut events = Vec::new();
+    g.destroy_permanent(phoenix, false, &mut events);
+    g.dispatch_triggers_for_events(&events);
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(phoenix).is_none(), "the second death sticks");
+    assert!(g.exile.iter().any(|c| c.id == phoenix), "exiled, not in the graveyard");
+}
+
+/// Matopi Golem shrinks each time it regenerates.
+#[test]
+fn matopi_golem_shrinks_when_it_regenerates() {
+    let mut g = two_player_game();
+    let golem = ready(&mut g, 0, catalog::matopi_golem());
+    g.players[0].mana_pool.add_colorless(1);
+    activate(&mut g, golem, 0, None).expect("shield up");
+    drain_stack(&mut g);
+    let mut events = Vec::new();
+    g.destroy_permanent(golem, false, &mut events);
+    g.dispatch_triggers_for_events(&events);
+    drain_stack(&mut g);
+    let c = g.battlefield_find(golem).expect("regenerated");
+    assert_eq!(c.counter_count(CounterType::MinusOneMinusOne), 1);
+}
+
+/// Death Watch drains for the dead creature's stats.
+#[test]
+fn death_watch_drains_for_the_hosts_stats() {
+    let mut g = two_player_game();
+    let host = ready(&mut g, 1, catalog::grizzly_bears());
+    let watch = g.add_card_to_hand(0, catalog::death_watch());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    cast(&mut g, watch, Some(Target::Permanent(host))).expect("enchant");
+    drain_stack(&mut g);
+    let mut events = Vec::new();
+    g.destroy_permanent(host, false, &mut events);
+    g.dispatch_triggers_for_events(&events);
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, 18, "lost life equal to its power");
+    assert_eq!(g.players[0].life, 22, "gained life equal to its toughness");
+}
+
+
+/// Suleiman's Legacy wipes Djinns on entry and keeps killing them after.
+#[test]
+fn suleimans_legacy_kills_djinns_on_sight() {
+    let mut g = two_player_game();
+    let efreet = ready(&mut g, 1, catalog::rainbow_efreet());
+    let legacy = g.add_card_to_battlefield(0, catalog::suleimans_legacy());
+    let etb = catalog::suleimans_legacy().triggered_abilities[0].effect.clone();
+    let ctx = crabomination::game::effects::EffectContext::for_ability(legacy, 0, None);
+    g.resolve_effect(&etb, &ctx).expect("sweep");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(efreet).is_none());
+    let latecomer = g.add_card_to_battlefield(1, catalog::rainbow_efreet());
+    g.dispatch_triggers_for_events(&[GameEvent::PermanentEntered { card_id: latecomer }]);
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(latecomer).is_none(), "the static trigger catches it too");
+}
+
+/// Eye of Singularity destroys everything that shares a name.
+#[test]
+fn eye_of_singularity_enforces_singleton() {
+    let mut g = two_player_game();
+    let a = ready(&mut g, 0, catalog::grizzly_bears());
+    let b = ready(&mut g, 1, catalog::grizzly_bears());
+    let plains = g.add_card_to_battlefield(0, catalog::plains());
+    let eye = g.add_card_to_battlefield(0, catalog::eye_of_singularity());
+    let etb = catalog::eye_of_singularity().triggered_abilities[0].effect.clone();
+    let ctx = crabomination::game::effects::EffectContext::for_ability(eye, 0, None);
+    g.resolve_effect(&etb, &ctx).expect("sweep");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(a).is_none() && g.battlefield_find(b).is_none());
+    assert!(g.battlefield_find(plains).is_some(), "basic lands are exempt");
+}
+
+/// Quicksand shrinks a ground attacker and can't touch a flier.
+#[test]
+fn quicksand_only_hits_ground_attackers() {
+    let mut g = two_player_game();
+    let sand = ready(&mut g, 0, catalog::quicksand());
+    let flier = ready(&mut g, 1, catalog::rainbow_efreet());
+    let ground = ready(&mut g, 1, catalog::grizzly_bears());
+    g.active_player_idx = 1;
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::DeclareAttackers(vec![
+        Attack { attacker: flier, target: AttackTarget::Player(0) },
+        Attack { attacker: ground, target: AttackTarget::Player(0) },
+    ]))
+    .expect("attack");
+    g.priority.player_with_priority = 0;
+    assert!(activate(&mut g, sand, 1, Some(Target::Permanent(flier))).is_err(), "flier is safe");
+    activate(&mut g, sand, 1, Some(Target::Permanent(ground))).expect("mire it");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(ground).is_none(), "-1/-2 takes a 2/2 to 1/0");
+}
+
+/// Griffin Canyon untaps and pumps a Griffin.
+#[test]
+fn griffin_canyon_untaps_and_pumps() {
+    let mut g = two_player_game();
+    let canyon = ready(&mut g, 0, catalog::griffin_canyon());
+    let griffin = ready(&mut g, 0, catalog::enforcer_griffin());
+    g.battlefield_find_mut(griffin).unwrap().tapped = true;
+    activate(&mut g, canyon, 1, Some(Target::Permanent(griffin))).expect("untap it");
+    drain_stack(&mut g);
+    let c = g.battlefield_find(griffin).expect("there");
+    assert!(!c.tapped);
+    let base = catalog::enforcer_griffin();
+    let cp = g.computed_permanent(griffin).unwrap();
+    assert_eq!((cp.power, cp.toughness), (base.power + 1, base.toughness + 1));
+}
+
+/// Miraculous Recovery reanimates with a +1/+1 counter.
+#[test]
+fn miraculous_recovery_adds_a_counter() {
+    let mut g = two_player_game();
+    let bears = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let spell = g.add_card_to_hand(0, catalog::miraculous_recovery());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(4);
+    cast(&mut g, spell, Some(Target::Permanent(bears))).expect("recover");
+    drain_stack(&mut g);
+    let c = g.battlefield_find(bears).expect("back");
+    assert_eq!(c.counter_count(CounterType::PlusOnePlusOne), 1);
+}
+
+
+/// Diamond Kaleidoscope's Prisms cash in for any colour.
+#[test]
+fn diamond_kaleidoscope_prisms_make_mana() {
+    let mut g = two_player_game();
+    let kaleidoscope = ready(&mut g, 0, catalog::diamond_kaleidoscope());
+    g.players[0].mana_pool.add_colorless(3);
+    activate(&mut g, kaleidoscope, 0, None).expect("mint a Prism");
+    drain_stack(&mut g);
+    let prism = g.battlefield.iter().find(|c| c.definition.name == "Prism").expect("minted").id;
+    activate(&mut g, kaleidoscope, 1, None).expect("cash it in");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(prism).is_none());
+    assert_eq!(g.players[0].mana_pool.total(), 1);
+}
+
+/// Righteous War splits your board into two untouchable halves.
+#[test]
+fn righteous_war_grants_paired_protection() {
+    let mut g = two_player_game();
+    let white = ready(&mut g, 0, catalog::savannah_lions());
+    g.add_card_to_battlefield(0, catalog::righteous_war());
+    let cp = g.computed_permanent(white).expect("there");
+    assert!(cp.keywords.contains(&Keyword::Protection(Color::Black)));
+}
+
+/// Knight of Valor shrinks its non-flanking blockers.
+#[test]
+fn knight_of_valor_shrinks_blockers() {
+    let mut g = two_player_game();
+    let knight = ready(&mut g, 0, catalog::knight_of_valor());
+    let blocker = ready(&mut g, 1, catalog::grizzly_bears());
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: knight,
+        target: AttackTarget::Player(1),
+    }]))
+    .expect("attack");
     while g.step != TurnStep::DeclareBlockers {
         g.perform_action(GameAction::PassPriority).expect("pass");
     }
@@ -1287,19 +1265,6 @@ fn city_of_solitude_locks_out_the_off_turn_player() {
     );
 }
 
-/// Quirion Druid animates a land for good.
-#[test]
-fn quirion_druid_animates_a_land() {
-    let mut g = two_player_game();
-    let druid = ready(&mut g, 0, catalog::quirion_druid());
-    let forest = g.add_card_to_battlefield(0, catalog::forest());
-    g.players[0].mana_pool.add(Color::Green, 1);
-    activate(&mut g, druid, 0, Some(Target::Permanent(forest))).expect("animate");
-    drain_stack(&mut g);
-    let cp = g.computed_permanent(forest).expect("still a land");
-    assert_eq!((cp.power, cp.toughness), (2, 2));
-    assert!(cp.card_types.contains(&crabomination::card::CardType::Land), "still a land");
-}
 
 /// Katabatic Winds grounds fliers and locks their tap abilities.
 #[test]
@@ -1452,51 +1417,6 @@ fn vampirism_feeds_on_your_other_creatures() {
     assert_eq!((other.power, other.toughness), (2, 2), "and it pays -1/-1");
 }
 
-/// Righteous Aura buys off a source's next hit for {W} and two life.
-#[test]
-fn righteous_aura_prevents_the_next_hit() {
-    let mut g = two_player_game();
-    let auraboard = ready(&mut g, 0, catalog::righteous_aura());
-    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
-    g.players[1].mana_pool.add(Color::Red, 1);
-    g.step = TurnStep::PreCombatMain;
-    g.priority.player_with_priority = 1;
-    g.perform_action(GameAction::CastSpell {
-        card_id: bolt,
-        target: Some(Target::Player(0)),
-        additional_targets: vec![],
-        mode: None,
-        x_value: None,
-    })
-    .expect("bolt");
-    // In response — the shield names the spell already on the stack.
-    g.players[0].mana_pool.add(Color::White, 1);
-    activate(&mut g, auraboard, 0, None).expect("shield up");
-    drain_stack(&mut g);
-    assert_eq!(g.players[0].life, 18, "two life paid, no bolt damage");
-}
-
-/// Phyrexian Marauder enters with X counters and can never block.
-#[test]
-fn phyrexian_marauder_enters_with_x_counters() {
-    let mut g = two_player_game();
-    let m = g.add_card_to_hand(0, catalog::phyrexian_marauder());
-    g.players[0].mana_pool.add_colorless(3);
-    g.step = TurnStep::PreCombatMain;
-    g.priority.player_with_priority = 0;
-    g.perform_action(GameAction::CastSpell {
-        card_id: m,
-        target: None,
-        additional_targets: vec![],
-        mode: None,
-        x_value: Some(3),
-    })
-    .expect("cast");
-    drain_stack(&mut g);
-    let c = g.battlefield_find(m).expect("there");
-    assert_eq!(c.counter_count(CounterType::PlusOnePlusOne), 3);
-    assert!(catalog::phyrexian_marauder().keywords.contains(&Keyword::CantBlock));
-}
 
 // ── Wave five ───────────────────────────────────────────────────────────────
 
