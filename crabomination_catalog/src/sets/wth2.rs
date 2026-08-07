@@ -1574,3 +1574,407 @@ pub fn liege_of_the_hollows() -> CardDefinition {
         )
     }
 }
+
+// ── Wave 4: the closers ─────────────────────────────────────────────────────
+
+fn land(name: &'static str, abilities: Vec<ActivatedAbility>) -> CardDefinition {
+    CardDefinition {
+        name,
+        card_types: vec![CardType::Land],
+        activated_abilities: abilities,
+        ..Default::default()
+    }
+}
+
+/// Abeyance — {1}{W}. Shuts a player's instants, sorceries and non-mana
+/// abilities off for the turn, and replaces itself.
+pub fn abeyance() -> CardDefinition {
+    instant(
+        "Abeyance",
+        cost(&[generic(1), w()]),
+        Effect::Seq(vec![
+            Effect::PlayerCantCastMatchingThisTurn {
+                who: PlayerRef::Target(0),
+                filter: R::HasCardType(CardType::Instant).or(R::HasCardType(CardType::Sorcery)),
+            },
+            Effect::PlayerCantActivateNonManaAbilitiesThisTurn { who: PlayerRef::Target(0) },
+            draw(1),
+        ]),
+    )
+}
+
+/// Agonizing Memories — {2}{B}{B}. Two of their best cards go back on top.
+pub fn agonizing_memories() -> CardDefinition {
+    sorcery(
+        "Agonizing Memories",
+        cost(&[generic(2), b(), b()]),
+        Effect::Seq(vec![
+            Effect::LookAtHand { who: Selector::Player(PlayerRef::Target(0)) },
+            Effect::ChooseFromHandToTopOfLibrary {
+                who: PlayerRef::Target(0),
+                count: Value::Const(2),
+            },
+        ]),
+    )
+}
+
+/// Avizoa — {3}{U} 2/2 flier that trades untap steps for size.
+pub fn avizoa() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flying],
+        activated_abilities: vec![ActivatedAbility {
+            once_per_turn: true,
+            effect: Effect::Seq(vec![
+                Effect::PumpPT {
+                    what: Selector::This,
+                    power: Value::Const(2),
+                    toughness: Value::Const(2),
+                    duration: Duration::EndOfTurn,
+                },
+                Effect::SkipPlayerUntapStep { player: PlayerRef::You },
+            ]),
+            ..Default::default()
+        }],
+        ..creature("Avizoa", cost(&[generic(3), u()]), vec![CreatureType::Jellyfish], 2, 2)
+    }
+}
+
+/// Bösium Strip — {3}. Rents the top of your graveyard for a turn.
+pub fn bosium_strip() -> CardDefinition {
+    artifact(
+        "Bösium Strip",
+        cost(&[generic(3)]),
+        vec![ActivatedAbility {
+            mana_cost: cost(&[generic(3)]),
+            tap_cost: true,
+            effect: Effect::CastFromGraveyardTopThisTurn,
+            ..Default::default()
+        }],
+    )
+}
+
+/// Call of the Wild — {2}{G}{G}. Flips your library for creatures.
+pub fn call_of_the_wild() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(2), g(), g()]),
+            effect: Effect::RevealTopDeployIfMatch {
+                filter: R::Creature,
+                haste: false,
+                sacrifice_at_next_end_step: false,
+                miss_to_graveyard: true,
+            },
+            ..Default::default()
+        }],
+        ..enchantment("Call of the Wild", cost(&[generic(2), g(), g()]))
+    }
+}
+
+/// Choking Vines — {X}{G}. Blanks X attackers mid-combat and nicks each.
+pub fn choking_vines() -> CardDefinition {
+    CardDefinition {
+        cast_condition: Some(Predicate::CurrentStepIs(TurnStep::DeclareBlockers)),
+        ..instant(
+            "Choking Vines",
+            cost(&[crate::mana::x(), g()]),
+            Effect::TargetsExactlyX {
+                body: Box::new(Effect::ApplyToTargets {
+                    max_targets: 8,
+                    min_targets: 0,
+                    filter: R::Creature.and(R::IsAttacking),
+                    effect: Box::new(Effect::Seq(vec![
+                        Effect::BecomeBlocked { what: Selector::Target(0) },
+                        deal(1, Selector::Target(0)),
+                    ])),
+                }),
+            },
+        )
+    }
+}
+
+/// Desperate Gambit — {R}. One flip: double the next hit, or waste it.
+pub fn desperate_gambit() -> CardDefinition {
+    instant(
+        "Desperate Gambit",
+        cost(&[r()]),
+        Effect::CoinFlipDoubleOrPreventNextDamage { filter: R::Permanent },
+    )
+}
+
+/// Doomsday — {B}{B}{B}. Five cards left, half your life gone.
+pub fn doomsday() -> CardDefinition {
+    sorcery("Doomsday", cost(&[b(), b(), b()]), Effect::Doomsday)
+}
+
+/// Ertai's Familiar — {1}{U} 2/2 that mills you every time it blinks out.
+pub fn ertais_familiar() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Phasing],
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::PhasesOut, EventScope::SelfSource),
+                effect: Effect::Mill { who: Selector::You, amount: Value::Const(3) },
+            },
+            TriggeredAbility {
+                event: EventSpec::new(
+                    EventKind::PermanentLeavesBattlefield,
+                    EventScope::SelfSource,
+                ),
+                effect: Effect::Mill { who: Selector::You, amount: Value::Const(3) },
+            },
+        ],
+        // Losing Phasing until the next untap step is exactly "can't phase out
+        // until your next upkeep" — phasing is checked at untap.
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[u()]),
+            effect: Effect::LoseKeyword {
+                what: Selector::This,
+                keyword: Keyword::Phasing,
+                duration: Duration::UntilYourNextUntap,
+            },
+            ..Default::default()
+        }],
+        ..creature("Ertai's Familiar", cost(&[generic(1), u()]), vec![CreatureType::Illusion], 2, 2)
+    }
+}
+
+/// Firestorm — {R}. Pitch your hand, spray it across the board.
+pub fn firestorm() -> CardDefinition {
+    CardDefinition {
+        additional_cast_cost: vec![crate::card::AdditionalCastCost::DiscardXFromCost],
+        ..instant(
+            "Firestorm",
+            cost(&[r()]),
+            Effect::TargetsExactlyX {
+                body: Box::new(Effect::ApplyToTargets {
+                    max_targets: 8,
+                    min_targets: 0,
+                    filter: R::Any,
+                    effect: Box::new(Effect::DealDamage {
+                        to: Selector::Target(0),
+                        amount: Value::XFromCost,
+                    }),
+                }),
+            },
+        )
+    }
+}
+
+/// Haunting Misery — {1}{B}{B}. Your dead pay the damage.
+pub fn haunting_misery() -> CardDefinition {
+    CardDefinition {
+        additional_cast_cost: vec![
+            crate::card::AdditionalCastCost::ExileFromGraveyardXFromCost {
+                filter: R::Creature.and(R::InYourGraveyard),
+            },
+        ],
+        ..sorcery(
+            "Haunting Misery",
+            cost(&[generic(1), b(), b()]),
+            Effect::DealDamage {
+                to: target_filtered(R::Player.or(R::Planeswalker)),
+                amount: Value::XFromCost,
+            },
+        )
+    }
+}
+
+/// Heart of Bogardan — {2}{R}{R}. When its cumulative upkeep goes unpaid, it
+/// takes a player's board with it.
+pub fn heart_of_bogardan() -> CardDefinition {
+    // X = twice the age counters on it, minus 2. The trigger's event amount
+    // is the age count read while it was still on the battlefield.
+    let x = || {
+        Value::NonNeg(Box::new(Value::Diff(
+            Box::new(Value::Times(
+                Box::new(Value::TriggerEventAmount),
+                Box::new(Value::Const(2)),
+            )),
+            Box::new(Value::Const(2)),
+        )))
+    };
+    CardDefinition {
+        keywords: vec![cu(CumulativeUpkeepCost::Mana(cost(&[generic(2)])))],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CumulativeUpkeepUnpaid, EventScope::SelfSource),
+            effect: Effect::Seq(vec![
+                Effect::DealDamage {
+                    to: target_filtered(R::Player.or(R::Planeswalker)),
+                    amount: x(),
+                },
+                Effect::DealDamage {
+                    to: Selector::ControlledBy {
+                        who: PlayerRef::Target(0),
+                        filter: R::Creature,
+                    },
+                    amount: x(),
+                },
+            ]),
+        }],
+        ..enchantment("Heart of Bogardan", cost(&[generic(2), r(), r()]))
+    }
+}
+
+/// Lotus Vale — a land that costs two untapped lands and pays three mana back.
+pub fn lotus_vale() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![etb(Effect::SacrificeSourceUnlessCost {
+            cost: WardCost::SacrificeMatchingN(
+                Box::new(R::Land.and(R::Untapped).and(R::OtherThanSource)),
+                2,
+            ),
+        })],
+        ..land(
+            "Lotus Vale",
+            vec![ActivatedAbility {
+                tap_cost: true,
+                effect: crate::effect::shortcut::add_any_one_color(3),
+                ..Default::default()
+            }],
+        )
+    }
+}
+
+/// Scorched Ruins — Lotus Vale's colorless twin: two lands in, {C}{C}{C}{C} out.
+pub fn scorched_ruins() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![etb(Effect::SacrificeSourceUnlessCost {
+            cost: WardCost::SacrificeMatchingN(
+                Box::new(R::Land.and(R::Untapped).and(R::OtherThanSource)),
+                2,
+            ),
+        })],
+        ..land(
+            "Scorched Ruins",
+            vec![ActivatedAbility {
+                tap_cost: true,
+                effect: crate::effect::shortcut::add_colorless(4),
+                ..Default::default()
+            }],
+        )
+    }
+}
+
+/// Mana Web — {3}. Tapping one land for mana locks down every land like it.
+pub fn mana_web() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::TappedForMana, EventScope::OpponentControl)
+                .with_filter(Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: R::Land,
+                }),
+            effect: Effect::TapLandsSharingProductionWith { land: Selector::TriggerSource },
+        }],
+        ..artifact("Mana Web", cost(&[generic(3)]), vec![])
+    }
+}
+
+/// Orcish Settlers — {1}{R} 1/1 that cashes itself in for X lands.
+pub fn orcish_settlers() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[crate::mana::x(), crate::mana::x(), r()]),
+            tap_cost: true,
+            sac_cost: true,
+            effect: Effect::TargetsExactlyX {
+                body: Box::new(Effect::ApplyToTargets {
+                    max_targets: 8,
+                    min_targets: 0,
+                    filter: R::Land,
+                    effect: Box::new(Effect::Destroy { what: Selector::Target(0) }),
+                }),
+            },
+            ..Default::default()
+        }],
+        ..creature("Orcish Settlers", cost(&[generic(1), r()]), vec![CreatureType::Orc], 1, 1)
+    }
+}
+
+/// Spinning Darkness — {4}{B}{B}. Free if your graveyard is black enough.
+pub fn spinning_darkness() -> CardDefinition {
+    CardDefinition {
+        alternative_cost: Some(crate::card::AlternativeCost {
+            exile_filter: Some(R::HasColor(Color::Black).and(R::InYourGraveyard)),
+            exile_from_graveyard_count: 3,
+            ..Default::default()
+        }),
+        ..instant(
+            "Spinning Darkness",
+            cost(&[generic(4), b(), b()]),
+            Effect::Seq(vec![
+                deal(3, target_filtered(R::Creature.and(R::HasColor(Color::Black).negate()))),
+                Effect::GainLife { who: Selector::You, amount: Value::Const(3) },
+            ]),
+        )
+    }
+}
+
+/// Strands of Night — {2}{B}{B}. Swamps buy your creatures back.
+pub fn strands_of_night() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[b(), b()]),
+            life_cost: 2,
+            sac_other_filter: Some((R::HasLandType(LandType::Swamp), 1)),
+            effect: Effect::Move {
+                what: target_filtered(R::Creature.and(R::InYourGraveyard)),
+                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+            },
+            ..Default::default()
+        }],
+        ..enchantment("Strands of Night", cost(&[generic(2), b(), b()]))
+    }
+}
+
+/// Tariff — {1}{W}. Everyone's biggest creature pays rent or dies.
+pub fn tariff() -> CardDefinition {
+    sorcery(
+        "Tariff",
+        cost(&[generic(1), w()]),
+        Effect::EachPlayerSacrificesGreatestManaValueUnlessPays,
+    )
+}
+
+/// Thran Tome — {4}. Two cards, minus whichever one an opponent bins.
+pub fn thran_tome() -> CardDefinition {
+    CardDefinition {
+        subtypes: Subtypes {
+            artifact_subtypes: vec![crate::card::ArtifactSubtype::Book],
+            ..Default::default()
+        },
+        ..artifact(
+            "Thran Tome",
+            cost(&[generic(4)]),
+            vec![ActivatedAbility {
+                mana_cost: cost(&[generic(5)]),
+                tap_cost: true,
+                effect: Effect::Seq(vec![
+                    Effect::RevealTopOpponentBinsOne { count: 3, rest_stay_on_top: true },
+                    draw(2),
+                ]),
+                ..Default::default()
+            }],
+        )
+    }
+}
+
+/// Winding Canyons — a land that hands your creatures flash for the turn.
+pub fn winding_canyons() -> CardDefinition {
+    land(
+        "Winding Canyons",
+        vec![
+            ActivatedAbility {
+                tap_cost: true,
+                effect: crate::effect::shortcut::add_colorless(1),
+                ..Default::default()
+            },
+            ActivatedAbility {
+                mana_cost: cost(&[generic(2)]),
+                tap_cost: true,
+                effect: Effect::GrantCreatureSpellsFlashThisTurn { who: PlayerRef::You },
+                ..Default::default()
+            },
+        ],
+    )
+}

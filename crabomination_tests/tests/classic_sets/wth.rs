@@ -839,3 +839,292 @@ fn fungus_elemental_is_summoning_turn_only() {
     let cp = g.computed_permanent(elemental).unwrap();
     assert_eq!((cp.power, cp.toughness), (5, 5));
 }
+
+/// Abeyance locks instants, sorceries and non-mana abilities for the turn.
+#[test]
+fn abeyance_locks_spells_and_abilities() {
+    let mut g = two_player_game();
+    let biskelion = ready(&mut g, 1, catalog::serrated_biskelion());
+    let victim = ready(&mut g, 1, catalog::grizzly_bears());
+    g.add_card_to_library(0, catalog::forest());
+    let abeyance = g.add_card_to_hand(0, catalog::abeyance());
+    g.players[0].mana_pool.add(Color::White, 2);
+    let hand0 = g.players[0].hand.len();
+    cast(&mut g, abeyance, Some(Target::Player(1))).expect("cast");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand0 - 1 + 1, "it replaced itself");
+
+    g.priority.player_with_priority = 1;
+    assert!(
+        g.perform_action(GameAction::ActivateAbility {
+            card_id: biskelion,
+            ability_index: 0,
+            target: Some(Target::Permanent(victim)),
+            additional_targets: vec![],
+            mode: None,
+            x_value: None,
+        })
+        .is_err(),
+        "non-mana ability locked"
+    );
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.active_player_idx = 1;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 1;
+    assert!(
+        g.perform_action(GameAction::CastSpell {
+            card_id: bolt,
+            target: Some(Target::Player(0)),
+            additional_targets: vec![],
+            mode: None,
+            x_value: None,
+        })
+        .is_err(),
+        "instant locked"
+    );
+}
+
+/// Winding Canyons buys creature spells flash for the turn.
+#[test]
+fn winding_canyons_grants_creature_flash() {
+    let mut g = two_player_game();
+    let canyons = ready(&mut g, 0, catalog::winding_canyons());
+    let bears = g.add_card_to_hand(0, catalog::grizzly_bears());
+    g.players[0].mana_pool.add_colorless(2);
+    g.players[0].mana_pool.add(Color::Green, 3);
+    g.step = TurnStep::DeclareBlockers;
+    g.priority.player_with_priority = 0;
+    assert!(
+        g.perform_action(GameAction::CastSpell {
+            card_id: bears,
+            target: None,
+            additional_targets: vec![],
+            mode: None,
+            x_value: None,
+        })
+        .is_err(),
+        "sorcery speed without the Canyons"
+    );
+    activate(&mut g, canyons, 1, None).expect("buy flash");
+    drain_stack(&mut g);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bears,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("flash it in");
+}
+
+/// Bösium Strip rents the top of your graveyard — and only the top.
+#[test]
+fn bosium_strip_casts_only_the_graveyard_top() {
+    let mut g = two_player_game();
+    let strip = ready(&mut g, 0, catalog::bosium_strip());
+    let buried = g.add_card_to_graveyard(0, catalog::lightning_bolt());
+    let top = g.add_card_to_graveyard(0, catalog::relearn());
+    g.players[0].mana_pool.add_colorless(3);
+    activate(&mut g, strip, 0, None).expect("rent the graveyard");
+    drain_stack(&mut g);
+    let grant = |g: &GameState, id: CardId| {
+        g.players[0].graveyard.iter().find(|c| c.id == id).and_then(|c| g.graveyard_flashback_grant(0, c))
+    };
+    assert!(grant(&g, buried).is_none(), "not the top card");
+    assert!(grant(&g, top).is_some());
+}
+
+/// Heart of Bogardan cashes out when its cumulative upkeep goes unpaid.
+#[test]
+fn heart_of_bogardan_burns_on_an_unpaid_upkeep() {
+    let mut g = two_player_game();
+    let heart = ready(&mut g, 0, catalog::heart_of_bogardan());
+    g.battlefield_find_mut(heart).unwrap().add_counters(CounterType::Age, 2);
+    let bear = ready(&mut g, 1, catalog::grizzly_bears());
+    to_upkeep(&mut g, 0);
+    // Three age counters after the tick: X = 3 × 2 − 2 = 4.
+    assert!(g.battlefield_find(heart).is_none(), "unpaid, so sacrificed");
+    assert_eq!(g.players[1].life, 16);
+    assert!(g.battlefield_find(bear).is_none());
+}
+
+/// Mana Web taps every land that shares the tapped land's colours.
+#[test]
+fn mana_web_locks_the_matching_lands() {
+    let mut g = two_player_game();
+    ready(&mut g, 0, catalog::mana_web());
+    let tapped = ready(&mut g, 1, catalog::forest());
+    let sibling = ready(&mut g, 1, catalog::forest());
+    let offcolor = ready(&mut g, 1, catalog::island());
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: tapped,
+        ability_index: 0,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("tap for mana");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(sibling).unwrap().tapped, "the other Forest went too");
+    assert!(!g.battlefield_find(offcolor).unwrap().tapped, "the Island produces blue");
+}
+
+/// Tariff bills each player on their own biggest creature.
+#[test]
+fn tariff_eats_the_unaffordable_fatty() {
+    let mut g = two_player_game();
+    let fatty = ready(&mut g, 1, catalog::tolarian_serpent());
+    let small = ready(&mut g, 1, catalog::grizzly_bears());
+    let tariff = g.add_card_to_hand(0, catalog::tariff());
+    g.players[0].mana_pool.add(Color::White, 2);
+    cast(&mut g, tariff, None).expect("cast");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(fatty).is_none(), "seven mana was unaffordable");
+    assert!(g.battlefield_find(small).is_some());
+}
+
+/// Lotus Vale eats two untapped lands and pays three back.
+#[test]
+fn lotus_vale_costs_two_lands() {
+    let mut g = two_player_game();
+    let a = ready(&mut g, 0, catalog::forest());
+    let b = ready(&mut g, 0, catalog::forest());
+    let vale = g.add_card_to_battlefield(0, catalog::lotus_vale());
+    let etb = catalog::lotus_vale().triggered_abilities[0].effect.clone();
+    let ctx = crabomination::game::effects::EffectContext::for_ability(vale, 0, None);
+    g.resolve_effect(&etb, &ctx).expect("etb");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(vale).is_some());
+    let left = [a, b].iter().filter(|&&id| g.battlefield_find(id).is_some()).count();
+    assert_eq!(left, 0, "both lands were the cost");
+}
+
+/// Ertai's Familiar mills you when it phases out.
+#[test]
+fn ertais_familiar_mills_on_phase_out() {
+    let mut g = two_player_game();
+    let familiar = ready(&mut g, 0, catalog::ertais_familiar());
+    for _ in 0..5 {
+        g.add_card_to_library(0, catalog::forest());
+    }
+    g.do_phasing();
+    drain_stack(&mut g);
+    assert!(g.phased_out.iter().any(|c| c.id == familiar));
+    assert_eq!(g.players[0].graveyard.len(), 3);
+}
+
+/// Desperate Gambit's coin flip either doubles the next hit or wastes it.
+#[test]
+fn desperate_gambit_doubles_on_a_win() {
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    let pinger = ready(&mut g, 0, catalog::heavy_ballista());
+    let victim = ready(&mut g, 1, catalog::tolarian_serpent());
+    let gambit = g.add_card_to_hand(0, catalog::desperate_gambit());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    cast(&mut g, gambit, None).expect("cast");
+    drain_stack(&mut g);
+    g.attacking.push(Attack { attacker: victim, target: AttackTarget::Player(0) });
+    activate(&mut g, pinger, 0, Some(Target::Permanent(victim))).expect("shoot");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(victim).unwrap().damage, 4, "2 doubled");
+}
+
+/// Doomsday leaves exactly five cards and halves your life.
+#[test]
+fn doomsday_trims_to_five() {
+    let mut g = two_player_game();
+    for _ in 0..10 {
+        g.add_card_to_library(0, catalog::forest());
+    }
+    g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let dd = g.add_card_to_hand(0, catalog::doomsday());
+    g.players[0].mana_pool.add(Color::Black, 3);
+    cast(&mut g, dd, None).expect("cast");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].library.len(), 5);
+    assert_eq!(g.players[0].life, 10);
+}
+
+/// Haunting Misery pays its damage with exiled corpses.
+#[test]
+fn haunting_misery_scales_with_exiled_creatures() {
+    let mut g = two_player_game();
+    for _ in 0..3 {
+        g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    }
+    let misery = g.add_card_to_hand(0, catalog::haunting_misery());
+    g.players[0].mana_pool.add(Color::Black, 2);
+    g.players[0].mana_pool.add_colorless(1);
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell {
+        card_id: misery,
+        target: Some(Target::Player(1)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: Some(3),
+    })
+    .expect("cast for X=3");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, 17);
+    assert!(g.players[0].graveyard.iter().all(|c| c.definition.name != "Grizzly Bears"));
+}
+
+/// Thran Tome leaves the unchosen cards on top to be drawn.
+#[test]
+fn thran_tome_draws_around_the_binned_card() {
+    let mut g = two_player_game();
+    let tome = ready(&mut g, 0, catalog::thran_tome());
+    for _ in 0..4 {
+        g.add_card_to_library(0, catalog::forest());
+    }
+    g.players[0].mana_pool.add_colorless(5);
+    let hand0 = g.players[0].hand.len();
+    activate(&mut g, tome, 0, None).expect("activate");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].graveyard.len(), 1);
+    assert_eq!(g.players[0].hand.len(), hand0 + 2);
+    assert_eq!(g.players[0].library.len(), 1);
+}
+
+/// Choking Vines can only be cast in the declare-blockers step.
+#[test]
+fn choking_vines_is_declare_blockers_only() {
+    let mut g = two_player_game();
+    let attacker = ready(&mut g, 1, catalog::grizzly_bears());
+    let vines = g.add_card_to_hand(0, catalog::choking_vines());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    assert!(
+        g.perform_action(GameAction::CastSpell {
+            card_id: vines,
+            target: Some(Target::Permanent(attacker)),
+            additional_targets: vec![],
+            mode: None,
+            x_value: Some(1),
+        })
+        .is_err(),
+        "wrong step"
+    );
+    g.attacking.push(Attack { attacker, target: AttackTarget::Player(0) });
+    g.step = TurnStep::DeclareBlockers;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell {
+        card_id: vines,
+        target: Some(Target::Permanent(attacker)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: Some(1),
+    })
+    .expect("declare blockers");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(attacker).unwrap().damage, 1);
+}

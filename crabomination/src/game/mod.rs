@@ -1483,6 +1483,10 @@ pub struct GameState {
     /// Prison). Surfaced through the server view so a UI seat renders it.
     #[serde(default)]
     pub hands_revealed_to: Vec<(usize, usize)>,
+    /// Desperate Gambit — sources whose next damage this turn is doubled. The
+    /// entry is consumed by the first damage each names.
+    #[serde(default)]
+    pub(crate) double_next_damage_from: Vec<CardId>,
     /// CR 708.2 — `(face-down permanent, seat)` pairs a "look at target
     /// face-down creature" effect has revealed (Aven Soulgazer, Spy Network).
     /// The peek persists while the permanent stays face down.
@@ -2135,6 +2139,7 @@ impl Clone for GameState {
             creature_deaths_drain_toughness_this_turn: self.creature_deaths_drain_toughness_this_turn,
             no_search_this_turn: self.no_search_this_turn,
             hands_revealed_to: self.hands_revealed_to.clone(),
+            double_next_damage_from: self.double_next_damage_from.clone(),
             face_down_revealed_to: self.face_down_revealed_to.clone(),
             shroud_waivers: self.shroud_waivers.clone(),
             abilities_locked_this_turn: self.abilities_locked_this_turn.clone(),
@@ -2457,6 +2462,7 @@ impl GameState {
             creature_deaths_drain_toughness_this_turn: false,
             no_search_this_turn: false,
             hands_revealed_to: Vec::new(),
+            double_next_damage_from: Vec::new(),
             face_down_revealed_to: Vec::new(),
             shroud_waivers: Vec::new(),
             abilities_locked_this_turn: Vec::new(),
@@ -4783,6 +4789,17 @@ impl GameState {
                 }
             };
             if !paid {
+                // CR 702.24 — the unpaid event fires before the sacrifice, so a
+                // "when a player doesn't pay this permanent's cumulative
+                // upkeep" trigger still reads its age counters.
+                let unpaid = crate::game::GameEvent::CumulativeUpkeepUnpaid {
+                    card_id: id,
+                    player: active,
+                };
+                // Dispatch before the sacrifice so the trigger's source is
+                // still on the battlefield to be found.
+                self.dispatch_triggers_for_events(std::slice::from_ref(&unpaid));
+                events.push(unpaid);
                 self.sacrifice_one(id, active, &mut events);
             }
         }
@@ -19206,6 +19223,13 @@ impl GameState {
                 .or_else(|| self.find_card_anywhere(*card_id).map(|c| c.definition.cost.cmc()))
                 .unwrap_or(0),
             GameEvent::CardCycled { x, .. } => *x,
+            // Heart of Bogardan — "twice the number of age counters on it".
+            // Read at dispatch, while the permanent is still on the
+            // battlefield.
+            GameEvent::CumulativeUpkeepUnpaid { card_id, .. } => self
+                .battlefield_find(*card_id)
+                .map(|c| c.counter_count(crate::card::CounterType::Age))
+                .unwrap_or(0),
             GameEvent::BecameMonstrous { n, .. } => *n,
             // Nicanzil: 1 when a land was explored, 0 for a nonland.
             GameEvent::Explored { explored_land, .. } => *explored_land as u32,

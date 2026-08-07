@@ -138,6 +138,8 @@ pub(crate) fn event_matches_spec(
         (EventKind::RoomFullyUnlocked, GameEvent::RoomFullyUnlocked { .. }) => true,
         (EventKind::CaseSolved, GameEvent::CaseSolved { .. }) => true,
         (EventKind::PhasesIn, GameEvent::PermanentPhasedIn { .. }) => true,
+        (EventKind::PhasesOut, GameEvent::PermanentPhasedOut { .. }) => true,
+        (EventKind::CumulativeUpkeepUnpaid, GameEvent::CumulativeUpkeepUnpaid { .. }) => true,
         // CR 800.4 — the trigger's controller must be the seat that just
         // gained control (Risky Move fires for the new controller only).
         (EventKind::GainedControlOfThis, GameEvent::ControlChanged { card_id, to, .. }) => {
@@ -398,7 +400,9 @@ pub(crate) fn event_matches_spec(
             // CR 702.26 — "When this phases in." Source must equal the
             // phasing-in permanent.
             event,
-            GameEvent::PermanentPhasedIn { card_id } if *card_id == source.id
+            GameEvent::PermanentPhasedIn { card_id }
+            | GameEvent::PermanentPhasedOut { card_id }
+            | GameEvent::CumulativeUpkeepUnpaid { card_id, .. } if *card_id == source.id
         ) || matches!(
             // CR 701.40 — "Whenever this creature explores." Source must
             // equal the exploring permanent.
@@ -732,6 +736,7 @@ fn event_player(event: &GameEvent) -> Option<usize> {
         | GameEvent::ClassLevelReached { player, .. }
         | GameEvent::PoisonAdded { player, .. }
         | GameEvent::CardMilled { player, .. }
+        | GameEvent::CumulativeUpkeepUnpaid { player, .. }
         | GameEvent::PermanentDestroyedByEffect { controller: player, .. }
         | GameEvent::ManifestedDread { player, .. }
         | GameEvent::ManaAdded { player, .. }
@@ -834,7 +839,9 @@ pub(crate) fn event_subject(event: &GameEvent, kind: &EventKind) -> Option<Entit
         // Vehicle / saddled Mount ("that Mount or Vehicle gains …").
         GameEvent::VehicleCrewed { vehicle, .. } => Some(EntityRef::Permanent(*vehicle)),
         GameEvent::MountSaddled { mount, .. } => Some(EntityRef::Permanent(*mount)),
-        GameEvent::PermanentPhasedIn { card_id } => Some(EntityRef::Permanent(*card_id)),
+        GameEvent::PermanentPhasedIn { card_id }
+        | GameEvent::PermanentPhasedOut { card_id }
+        | GameEvent::CumulativeUpkeepUnpaid { card_id, .. } => Some(EntityRef::Permanent(*card_id)),
         GameEvent::Explored { card_id, .. } => Some(EntityRef::Permanent(*card_id)),
         GameEvent::BecameMonstrous { card_id, .. } => Some(EntityRef::Permanent(*card_id)),
         GameEvent::Transformed { card_id } => Some(EntityRef::Permanent(*card_id)),
@@ -1006,6 +1013,7 @@ fn event_card(event: &GameEvent) -> Option<CardId> {
         | GameEvent::PermanentUntapped { card_id }
         | GameEvent::Regenerated { card_id }
         | GameEvent::PermanentPhasedIn { card_id }
+        | GameEvent::PermanentPhasedOut { card_id }
         | GameEvent::Explored { card_id, .. }
         | GameEvent::BecameMonstrous { card_id, .. }
         | GameEvent::Transformed { card_id }

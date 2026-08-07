@@ -266,6 +266,7 @@ pub fn killer_instinct() -> CardDefinition {
                 filter: R::Creature,
                 haste: true,
                 sacrifice_at_next_end_step: true,
+                miss_to_graveyard: false,
             },
         }],
         ..Default::default()

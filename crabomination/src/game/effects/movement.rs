@@ -975,6 +975,17 @@ impl GameState {
         // player order the replacements — double-then-halve is the common
         // pick and keeps the event single-pass here).
         let amount = self.scale_damage_to(source, ent, amount);
+        // Desperate Gambit — "the next time that source would deal damage this
+        // turn, it deals double that damage instead". One-shot per entry.
+        let amount = match source
+            .and_then(|s| self.double_next_damage_from.iter().position(|&d| d == s))
+        {
+            Some(i) => {
+                self.double_next_damage_from.remove(i);
+                amount.saturating_mul(2)
+            }
+            None => amount,
+        };
         // CR 614.5 — Solphim, Mayhem Dominus: a noncombat-only doubler scoped
         // to "a source you control" hitting an opponent / their permanent.
         // Applied here (not in `scale_damage_to`) so combat damage is exempt.

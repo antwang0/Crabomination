@@ -2748,9 +2748,11 @@ Each a small targeted feature; sweep batch by batch.
    `hml3`), **Conspiracy: Take the Crown** (CN2), **Murders at Karlov
    Manor** (MKM) and **Stronghold** (STH) are all at zero. The
    **whole Tempest block is closed** too (`set_gaps.py tmp sth exo` is empty).
-   **Weatherlight (WTH)** is the new live front: `set_gaps.py wth` is 103
-   after an opening wave of 34 (`sets::wth`, tests in `classic_sets/wth`).
-   The remaining pile leans on cumulative upkeep, banding and phasing.
+   **Weatherlight (WTH) is closed** too (`set_gaps.py wth` at zero —
+   `sets::wth` + `sets::wth2`, tests in `classic_sets/wth`), which finishes
+   the Mirage block's third set and gives cumulative upkeep, banding and
+   phasing their first real card coverage. Pick the next set from the
+   remaining pre-modern pile (Visions, Alliances, Ice Age, Portal).
 1. **Replacement-effect framework** (Tier-1 #1) — highest-leverage primitive still
    open.
 2. **Card-zoom + stops/auto-yield + combat-math preview** (Tier-7 #1–3) — the trio
@@ -2765,6 +2767,35 @@ Each a small targeted feature; sweep batch by batch.
 7. **Replays, spectator, social, accessibility** as the product matures.
 
 ## Recently closed (this push)
+
+- **Weatherlight (WTH) closed** — 137 cards across `sets::wth` and
+  `sets::wth2` (`set_gaps.py wth` at zero), tests in `classic_sets/wth`.
+  Cumulative upkeep (CR 702.24) went from an unused keyword to a real
+  mechanic: it reads *computed* keywords (Mana Chains' Aura-granted upkeep
+  ticks), a mana upkeep auto-taps rather than draining an already-empty pool,
+  `CumulativeUpkeepCost::{PutCounterOnSelf, Draw}` cover the always-payable
+  kinds (Aboroth, Psychic Vortex), and `EventKind::CumulativeUpkeepUnpaid`
+  fires *before* the sacrifice with the age count as its event amount (Heart
+  of Bogardan). New primitives, by wave: `WardCost::{
+  ExileTopFromGraveyardMatching, ReturnMatchingFromGraveyardToHand}`,
+  `ActivatedAbility.exile_other_top`, `Effect::ExileBottomOfGraveyard`,
+  `Keyword::CantBeTargetedBySpells`, `CounterType::Shell`,
+  `Effect::RegenerateThenGainControl` (+ `CardInstance
+  .regeneration_control_grant` — Debt of Loyalty only steals if the shield is
+  really spent), `Effect::{PlayerCantActivateNonManaAbilitiesThisTurn,
+  ChooseFromHandToTopOfLibrary, CastFromGraveyardTopThisTurn,
+  GrantCreatureSpellsFlashThisTurn, CoinFlipDoubleOrPreventNextDamage,
+  Doomsday, TapLandsSharingProductionWith,
+  EachPlayerSacrificesGreatestManaValueUnlessPays}`,
+  `AdditionalCastCost::ExileFromGraveyardXFromCost`, `EventKind::PhasesOut`,
+  and `RevealTopDeployIfMatch.miss_to_graveyard` /
+  `RevealTopOpponentBinsOne.rest_stay_on_top`. Correctness: the AutoDecider
+  now takes library searches instead of declining every one;
+  `Effect::AtEndOfCombat` carries the triggering object into its delayed
+  trigger; `WardCost::SacrificeMatchingN` is source-aware (`OtherThanSource`
+  reads right — Lotus Vale can't pay for itself); phase-out triggers fire
+  while the permanent is still on the battlefield. Cleanliness: the six
+  duplicated cast-timing blocks collapsed into `GameState::flash_granted_for`.
 
 - **Tempest/Exodus follow-ups + CR conformance** — `EventKind::
   LostControlOfThis` (CR 800.4, with the trigger re-pointed at the seat that

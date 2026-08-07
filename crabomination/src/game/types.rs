@@ -2096,6 +2096,8 @@ pub enum GameEvent {
     /// CR 702.26 — a permanent phased in (returned from `phased_out` during its
     /// controller's untap step). Fires "when this phases in" triggers.
     PermanentPhasedIn { card_id: CardId },
+    /// CR 702.24 — `card_id`'s cumulative upkeep went unpaid.
+    CumulativeUpkeepUnpaid { card_id: CardId, player: usize },
     /// CR 800.4 / 613.1b — a permanent's controller changed. Fires "when you
     /// gain control of this permanent" triggers (Risky Move); `from` is the
     /// previous controller.

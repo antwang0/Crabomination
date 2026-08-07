@@ -107,7 +107,7 @@ pub fn murmurs_from_beyond() -> CardDefinition {
     arcane_instant(
         "Murmurs from Beyond",
         cost(&[generic(2), u()]),
-        Effect::RevealTopOpponentBinsOne { count: 3 },
+        Effect::RevealTopOpponentBinsOne { count: 3, rest_stay_on_top: false },
     )
 }
 

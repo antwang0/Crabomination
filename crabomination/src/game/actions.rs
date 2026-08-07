@@ -404,6 +404,9 @@ pub(crate) fn flashback_additional_costs(
         .map(|c| match c {
             A::DiscardXFromCost => A::Discard { count: x, filter: None },
             A::DiscardXRandomFromCost => A::DiscardRandom { count: x },
+            A::ExileFromGraveyardXFromCost { filter } => {
+                A::ExileFromGraveyard { filter: filter.clone(), count: x }
+            }
             other => other.clone(),
         })
         .collect()
@@ -1867,7 +1870,12 @@ impl crate::game::GameState {
                     )
                 })
         });
-        granted.then(|| card.definition.cost.clone())
+        // Bösium Strip — "until end of turn, you may cast instant and sorcery
+        // spells from the top of your graveyard". The flashback tail already
+        // exiles the spell, matching the printed rider.
+        let strip = self.players[seat].cast_from_graveyard_top_this_turn
+            && self.players[seat].graveyard.last().is_some_and(|c| c.id == card.id);
+        (granted || strip).then(|| card.definition.cost.clone())
     }
 
     /// CR 702.97 — the extra activated abilities a card in `owner`'s graveyard
@@ -2410,6 +2418,24 @@ impl crate::game::GameState {
                 }
             }
         }
+    }
+}
+
+impl GameState {
+    /// The colours a permanent's mana abilities can produce (Mana Web's
+    /// "could produce any type of mana that land could produce").
+    pub(crate) fn colors_produced_by(&self, id: CardId) -> Vec<ManaColor> {
+        let Some(c) = self.battlefield_find(id) else { return Vec::new() };
+        ManaColor::ALL
+            .iter()
+            .copied()
+            .filter(|col| {
+                c.definition
+                    .activated_abilities
+                    .iter()
+                    .any(|a| is_mana_ability(&a.effect) && effect_produces_color(&a.effect, *col))
+            })
+            .collect()
     }
 }
 
@@ -6246,18 +6272,7 @@ impl GameState {
         // Sigarda's Aid — a battlefield static can grant flash timing to
         // matching spells (Auras + Equipment). Serpent of the Pass — a
         // card-intrinsic `SelfFlashIf` condition on the spell being cast.
-        let self_flash = !self.player_locked_to_sorcery_timing(p)
-            && card.definition.static_abilities.iter().any(|sa| {
-                if let crate::effect::StaticEffect::SelfFlashIf { condition } = &sa.effect {
-                    let ctx = crate::game::effects::EffectContext::for_spell(p, None, 0, 0);
-                    self.evaluate_predicate(condition, &ctx)
-                } else {
-                    false
-                }
-            });
-        let flash_granted = self_flash
-            || self.battlefield_grants_flash(p, &card)
-            || self.flash_surcharge_for(p, &card).is_some();
+        let flash_granted = self.flash_granted_for(p, &card);
         let must_be_sorcery_speed = !(card.definition.is_instant_speed() || flash_granted)
             || self.player_locked_to_sorcery_timing(p);
         if must_be_sorcery_speed
@@ -6695,6 +6710,14 @@ impl GameState {
                 }
                 crate::card::AdditionalCastCost::DiscardXRandomFromCost => {
                     *c = crate::card::AdditionalCastCost::DiscardRandom {
+                        count: x_value.unwrap_or(0),
+                    };
+                }
+                // "Exile X [filter] cards from your graveyard" (Haunting
+                // Misery) — X is the cast's chosen X.
+                crate::card::AdditionalCastCost::ExileFromGraveyardXFromCost { filter } => {
+                    *c = crate::card::AdditionalCastCost::ExileFromGraveyard {
+                        filter: filter.clone(),
                         count: x_value.unwrap_or(0),
                     };
                 }
@@ -7185,7 +7208,9 @@ impl GameState {
             }
             // Concretized into `Discard` by `flashback_additional_costs`
             // before it reaches payment; a raw instance means X = 0.
-            A::DiscardXFromCost | A::DiscardXRandomFromCost => true,
+            A::DiscardXFromCost
+            | A::DiscardXRandomFromCost
+            | A::ExileFromGraveyardXFromCost { .. } => true,
             // "Sacrifice one or more" — zero is a legal choice, so the cost
             // is always payable (the cast pipeline concretizes it into a
             // counted SacrificePermanent before payment).
@@ -7360,7 +7385,8 @@ impl GameState {
                 A::SacrificeAnyNumber { .. }
                 | A::SacrificeAll { .. }
                 | A::DiscardXFromCost
-                | A::DiscardXRandomFromCost => {}
+                | A::DiscardXRandomFromCost
+                | A::ExileFromGraveyardXFromCost { .. } => {}
                 A::SacrificePermanent { filter, count } => {
                     // Honor the player's explicit pick(s) when present and
                     // valid; auto-pick the `count` cheapest matching permanents
@@ -8605,18 +8631,7 @@ impl GameState {
         // Sigarda's Aid — a battlefield static can grant flash timing to
         // matching spells (Auras + Equipment). Serpent of the Pass — a
         // card-intrinsic `SelfFlashIf` condition on the spell being cast.
-        let self_flash = !self.player_locked_to_sorcery_timing(p)
-            && card.definition.static_abilities.iter().any(|sa| {
-                if let crate::effect::StaticEffect::SelfFlashIf { condition } = &sa.effect {
-                    let ctx = crate::game::effects::EffectContext::for_spell(p, None, 0, 0);
-                    self.evaluate_predicate(condition, &ctx)
-                } else {
-                    false
-                }
-            });
-        let flash_granted = self_flash
-            || self.battlefield_grants_flash(p, &card)
-            || self.flash_surcharge_for(p, &card).is_some();
+        let flash_granted = self.flash_granted_for(p, &card);
         let must_be_sorcery_speed = !(card.definition.is_instant_speed() || flash_granted)
             || self.player_locked_to_sorcery_timing(p);
         if must_be_sorcery_speed && !self.can_cast_sorcery_speed(p) {
@@ -8929,18 +8944,7 @@ impl GameState {
         // Sigarda's Aid — a battlefield static can grant flash timing to
         // matching spells (Auras + Equipment). Serpent of the Pass — a
         // card-intrinsic `SelfFlashIf` condition on the spell being cast.
-        let self_flash = !self.player_locked_to_sorcery_timing(p)
-            && card.definition.static_abilities.iter().any(|sa| {
-                if let crate::effect::StaticEffect::SelfFlashIf { condition } = &sa.effect {
-                    let ctx = crate::game::effects::EffectContext::for_spell(p, None, 0, 0);
-                    self.evaluate_predicate(condition, &ctx)
-                } else {
-                    false
-                }
-            });
-        let flash_granted = self_flash
-            || self.battlefield_grants_flash(p, &card)
-            || self.flash_surcharge_for(p, &card).is_some();
+        let flash_granted = self.flash_granted_for(p, &card);
         let must_be_sorcery_speed = !(card.definition.is_instant_speed() || flash_granted)
             || self.player_locked_to_sorcery_timing(p);
         if must_be_sorcery_speed && !self.can_cast_sorcery_speed(p) {
@@ -9025,18 +9029,7 @@ impl GameState {
         // Sigarda's Aid — a battlefield static can grant flash timing to
         // matching spells (Auras + Equipment). Serpent of the Pass — a
         // card-intrinsic `SelfFlashIf` condition on the spell being cast.
-        let self_flash = !self.player_locked_to_sorcery_timing(p)
-            && card.definition.static_abilities.iter().any(|sa| {
-                if let crate::effect::StaticEffect::SelfFlashIf { condition } = &sa.effect {
-                    let ctx = crate::game::effects::EffectContext::for_spell(p, None, 0, 0);
-                    self.evaluate_predicate(condition, &ctx)
-                } else {
-                    false
-                }
-            });
-        let flash_granted = self_flash
-            || self.battlefield_grants_flash(p, &card)
-            || self.flash_surcharge_for(p, &card).is_some();
+        let flash_granted = self.flash_granted_for(p, &card);
         let must_be_sorcery_speed = !(card.definition.is_instant_speed() || flash_granted)
             || self.player_locked_to_sorcery_timing(p);
         if must_be_sorcery_speed && !self.can_cast_sorcery_speed(p) {
@@ -9135,18 +9128,7 @@ impl GameState {
         // Sigarda's Aid — a battlefield static can grant flash timing to
         // matching spells (Auras + Equipment). Serpent of the Pass — a
         // card-intrinsic `SelfFlashIf` condition on the spell being cast.
-        let self_flash = !self.player_locked_to_sorcery_timing(p)
-            && card.definition.static_abilities.iter().any(|sa| {
-                if let crate::effect::StaticEffect::SelfFlashIf { condition } = &sa.effect {
-                    let ctx = crate::game::effects::EffectContext::for_spell(p, None, 0, 0);
-                    self.evaluate_predicate(condition, &ctx)
-                } else {
-                    false
-                }
-            });
-        let flash_granted = self_flash
-            || self.battlefield_grants_flash(p, &card)
-            || self.flash_surcharge_for(p, &card).is_some();
+        let flash_granted = self.flash_granted_for(p, &card);
         let must_be_sorcery_speed = !(card.definition.is_instant_speed() || flash_granted)
             || self.player_locked_to_sorcery_timing(p);
         if must_be_sorcery_speed && !self.can_cast_sorcery_speed(p) {
@@ -9525,18 +9507,7 @@ impl GameState {
         // Sigarda's Aid — a battlefield static can grant flash timing to
         // matching spells (Auras + Equipment). Serpent of the Pass — a
         // card-intrinsic `SelfFlashIf` condition on the spell being cast.
-        let self_flash = !self.player_locked_to_sorcery_timing(p)
-            && card.definition.static_abilities.iter().any(|sa| {
-                if let crate::effect::StaticEffect::SelfFlashIf { condition } = &sa.effect {
-                    let ctx = crate::game::effects::EffectContext::for_spell(p, None, 0, 0);
-                    self.evaluate_predicate(condition, &ctx)
-                } else {
-                    false
-                }
-            });
-        let flash_granted = self_flash
-            || self.battlefield_grants_flash(p, &card)
-            || self.flash_surcharge_for(p, &card).is_some();
+        let flash_granted = self.flash_granted_for(p, &card);
         let must_be_sorcery_speed = !(card.definition.is_instant_speed() || flash_granted)
             || self.player_locked_to_sorcery_timing(p);
         if must_be_sorcery_speed
@@ -11186,6 +11157,27 @@ impl GameState {
     /// events plus the pre-payment pool snapshot (callers like `cast_spell`
     /// use it to compute converge). On payment failure the snapshot is
     /// restored — pool and tapped flags revert to the pre-call state.
+    /// CR 702.8 — may `p` cast `card` at instant speed? A card-intrinsic
+    /// `SelfFlashIf`, a battlefield grant (Sigarda's Aid), a flash *surcharge*
+    /// (Vedalken Orrery-style taxes), or Winding Canyons' turn-scoped
+    /// creature-spell permission. The six cast entry points share this.
+    pub(crate) fn flash_granted_for(&self, p: usize, card: &crate::card::CardInstance) -> bool {
+        let self_flash = !self.player_locked_to_sorcery_timing(p)
+            && card.definition.static_abilities.iter().any(|sa| {
+                if let crate::effect::StaticEffect::SelfFlashIf { condition } = &sa.effect {
+                    let ctx = crate::game::effects::EffectContext::for_spell(p, None, 0, 0);
+                    self.evaluate_predicate(condition, &ctx)
+                } else {
+                    false
+                }
+            });
+        self_flash
+            || self.battlefield_grants_flash(p, card)
+            || self.flash_surcharge_for(p, card).is_some()
+            || (self.players[p].creature_spells_as_flash_this_turn
+                && card.definition.is_creature())
+    }
+
     pub(crate) fn try_pay_with_auto_tap(
         &mut self,
         payer: usize,
@@ -12650,6 +12642,17 @@ impl GameState {
         // can't leak them onto the next activation. `None` on the first attempt
         // (may suspend for the choice); `Some` on the replay (used in lieu of
         // the auto-pick).
+        // Abeyance — "that player can't activate abilities that aren't mana
+        // abilities" this turn.
+        if self.players[p].cant_activate_nonmana_abilities_this_turn
+            && let Some(a) = self
+                .find_card_anywhere(card_id)
+                .and_then(|c| c.definition.activated_abilities.get(ability_index))
+            && !is_mana_ability(&a.effect)
+        {
+            return Err(GameError::AbilityConditionNotMet);
+        }
+
         let chosen_sac_other = self.pending_ability_sac_other.take();
         let chosen_tap_other = self.pending_ability_tap_other.take();
         let chosen_exile_other = self.pending_ability_exile_other.take();

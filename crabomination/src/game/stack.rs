@@ -2600,6 +2600,15 @@ impl GameState {
                 i += 1;
             }
         }
+        // CR 702.26 — "when this phases out" fires while the permanent is still
+        // on the battlefield, so its own trigger can be found.
+        if !to_phase_out.is_empty() {
+            let evs: Vec<GameEvent> = to_phase_out
+                .iter()
+                .map(|&card_id| GameEvent::PermanentPhasedOut { card_id })
+                .collect();
+            self.dispatch_triggers_for_events(&evs);
+        }
         // Phase OUT the set captured above.
         if !to_phase_out.is_empty() {
             let mut idx = 0;
@@ -3359,6 +3368,9 @@ impl GameState {
             // Turf Wound's land-play lock is turn-scoped.
             pl.cant_play_lands_this_turn = false;
             pl.cant_cast_matching_this_turn.clear();
+            pl.cant_activate_nonmana_abilities_this_turn = false;
+            pl.creature_spells_as_flash_this_turn = false;
+            pl.cast_from_graveyard_top_this_turn = false;
             pl.next_spell_uncounterable.clear();
             // CR 700.13 — "committed a crime this turn" resets each turn.
             pl.committed_crime_this_turn = false;
@@ -3721,6 +3733,8 @@ impl GameState {
         self.doubled_damage_sources_this_turn.clear();
         self.damage_sources_this_turn.clear();
         self.noncombat_damage_bonus_this_turn.clear();
+        // Desperate Gambit's unspent doubler expires with the turn.
+        self.double_next_damage_from.clear();
         self.damaged_creatures_die_this_turn = false;
         self.creature_deaths_drain_toughness_this_turn = false;
         self.no_search_this_turn = false;

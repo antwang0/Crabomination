@@ -4029,6 +4029,10 @@ pub enum AdditionalCastCost {
     /// "Discard X cards", where X is the cast's chosen X (Conflagrate's
     /// flashback). Concretized to a `Discard` of that count at cast time.
     DiscardXFromCost,
+    /// "As an additional cost to cast this spell, exile X [filter] cards from
+    /// your graveyard" (Haunting Misery). Like `DiscardXFromCost`, X is the
+    /// cast's declared `x_value` even though the mana cost has no `{X}` pip.
+    ExileFromGraveyardXFromCost { filter: SelectionRequirement },
     /// "Discard X cards at random", where X is the cast's chosen X
     /// (Devastating Dreams). Concretized to a `DiscardRandom` at cast time.
     DiscardXRandomFromCost,

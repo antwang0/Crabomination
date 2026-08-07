@@ -2708,6 +2708,13 @@ pub enum EventKind {
     /// CR 702.26 — a permanent phased in. The phasing-in permanent is the
     /// event subject; matched to `GameEvent::PermanentPhasedIn`.
     PhasesIn,
+    /// CR 702.26 — a permanent phased out; matched to
+    /// `GameEvent::PermanentPhasedOut` (Ertai's Familiar).
+    PhasesOut,
+    /// CR 702.24 — a player didn't pay a permanent's cumulative upkeep, so it
+    /// was sacrificed (Heart of Bogardan). `SelfSource`; the age counters are
+    /// still readable off the death LKI.
+    CumulativeUpkeepUnpaid,
     /// CR 800.4 — "when you gain control of this permanent from another
     /// player" (Risky Move). `SelfSource`; the trigger's controller must be
     /// the *new* controller, so it fires once for whoever just took it.
@@ -4204,7 +4211,13 @@ pub enum Effect {
     /// "Reveal the top `count` cards of your library. An opponent chooses one
     /// of them. Put that card into your graveyard and the rest into your
     /// hand." Murmurs from Beyond — the pick is routed to an opponent's seat.
-    RevealTopOpponentBinsOne { count: u32 },
+    RevealTopOpponentBinsOne {
+        count: u32,
+        /// Thran Tome — the unchosen cards stay on top of the library (to be
+        /// drawn by a following clause) instead of going to hand.
+        #[serde(default)]
+        rest_stay_on_top: bool,
+    },
     /// "You may cast a spell matching `filter` from among cards exiled with
     /// this source without paying its mana cost." Kaho, Minamo Historian —
     /// `filter`'s X resolves against the activation's chosen X.
@@ -4336,6 +4349,10 @@ pub enum Effect {
         haste: bool,
         #[serde(default)]
         sacrifice_at_next_end_step: bool,
+        /// "Otherwise, put it into your graveyard" (Call of the Wild) instead
+        /// of leaving the miss on top.
+        #[serde(default)]
+        miss_to_graveyard: bool,
     },
     /// "Look at the top `count` cards of your library. For each, put it into
     /// your graveyard unless you pay `life` life. Then put the rest into your
@@ -5754,6 +5771,39 @@ pub enum Effect {
     /// "Target player can't cast [filter] spells this turn" (Cease-Fire).
     /// Checked at the cast gate; cleared at cleanup.
     PlayerCantCastMatchingThisTurn { who: PlayerRef, filter: SelectionRequirement },
+    /// CR 602 — "that player can't activate abilities that aren't mana
+    /// abilities" this turn (Abeyance). Sets
+    /// `Player.cant_activate_nonmana_abilities_this_turn`, cleared at cleanup.
+    PlayerCantActivateNonManaAbilitiesThisTurn { who: PlayerRef },
+    /// "Look at `who`'s hand and choose `count` cards from it. Put them on top
+    /// of that player's library in any order" (Agonizing Memories). The
+    /// resolving controller picks; the auto-picker takes the priciest cards.
+    ChooseFromHandToTopOfLibrary { who: PlayerRef, count: Value },
+    /// "Until end of turn, you may cast instant and sorcery spells from the top
+    /// of your graveyard. If a spell cast this way would be put into a
+    /// graveyard, exile it instead" (Bösium Strip).
+    CastFromGraveyardTopThisTurn,
+    /// "You may cast creature spells this turn as though they had flash"
+    /// (Winding Canyons). Sets `Player.creature_spells_as_flash_this_turn`.
+    GrantCreatureSpellsFlashThisTurn { who: PlayerRef },
+    /// CR 705 — "Choose a source you control and flip a coin. If you win the
+    /// flip, the next time that source would deal damage this turn, it deals
+    /// double that damage instead. If you lose, prevent that damage"
+    /// (Desperate Gambit).
+    CoinFlipDoubleOrPreventNextDamage { filter: SelectionRequirement },
+    /// "Search your library and graveyard for five cards and exile the rest.
+    /// Put the chosen cards on top of your library in any order. You lose half
+    /// your life, rounded up." (Doomsday.)
+    Doomsday,
+    /// "Tap all lands that player controls that could produce any type of mana
+    /// the triggering land could produce" (Mana Web). `land` resolves the land
+    /// that was tapped for mana.
+    TapLandsSharingProductionWith { land: Selector },
+    /// "Each player sacrifices the creature they control with the greatest mana
+    /// value unless they pay that creature's mana cost" (Tariff). Ties are
+    /// broken by the permanent's own controller (auto-pick: the cheapest to
+    /// keep). The pay-or-sacrifice decision belongs to each player.
+    EachPlayerSacrificesGreatestManaValueUnlessPays,
     /// "The next [filter] spell you cast this turn can't be countered"
     /// (Insist, Overmaster). Arms a one-shot grant consumed by the next
     /// matching cast.

@@ -2649,6 +2649,8 @@ pub enum GameEventWire {
     /// Wire mirror of `GameEvent::Regenerated` (CR 701.15).
     Regenerated { card_id: CardId },
     PermanentPhasedOut { card_id: CardId },
+    /// Wire mirror of `GameEvent::CumulativeUpkeepUnpaid` (CR 702.24).
+    CumulativeUpkeepUnpaid { card_id: CardId, player: usize },
     PermanentPhasedIn { card_id: CardId },
     ControlChanged { card_id: CardId, from: usize, to: usize },
     Explored { card_id: CardId, controller: usize },
@@ -2915,6 +2917,9 @@ impl From<&GameEvent> for GameEventWire {
             GameEvent::Regenerated { card_id } => GameEventWire::Regenerated { card_id: *card_id },
             GameEvent::PermanentPhasedOut { card_id } => {
                 GameEventWire::PermanentPhasedOut { card_id: *card_id }
+            }
+            GameEvent::CumulativeUpkeepUnpaid { card_id, player } => {
+                GameEventWire::CumulativeUpkeepUnpaid { card_id: *card_id, player: *player }
             }
             GameEvent::PermanentPhasedIn { card_id } => {
                 GameEventWire::PermanentPhasedIn { card_id: *card_id }
@@ -3241,6 +3246,9 @@ impl GameEventWire {
             E::PermanentUntapped { card_id } => format!("{} untapped", name(*card_id)),
             E::Regenerated { card_id } => format!("{} regenerated", name(*card_id)),
             E::PermanentPhasedOut { card_id } => format!("{} phased out", name(*card_id)),
+            E::CumulativeUpkeepUnpaid { card_id, player } => {
+                format!("{} didn't pay {}'s cumulative upkeep", pn(*player), name(*card_id))
+            }
             E::PermanentPhasedIn { card_id } => format!("{} phased in", name(*card_id)),
             E::ControlChanged { card_id, to, .. } => {
                 format!("{} changed control to {}", name(*card_id), pn(*to))

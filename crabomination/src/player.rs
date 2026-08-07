@@ -422,6 +422,18 @@ pub struct Player {
     /// turn boundary alongside `cant_play_lands_this_turn`.
     #[serde(default)]
     pub cant_cast_matching_this_turn: Vec<crate::card::SelectionRequirement>,
+    /// Abeyance — "that player can't activate abilities that aren't mana
+    /// abilities" this turn. Cleared at the turn boundary.
+    #[serde(default)]
+    pub cant_activate_nonmana_abilities_this_turn: bool,
+    /// Winding Canyons — "you may cast creature spells this turn as though they
+    /// had flash". Cleared at the turn boundary.
+    #[serde(default)]
+    pub creature_spells_as_flash_this_turn: bool,
+    /// Bösium Strip — "until end of turn, you may cast instant and sorcery
+    /// spells from the top of your graveyard". Cleared at the turn boundary.
+    #[serde(default)]
+    pub cast_from_graveyard_top_this_turn: bool,
     /// "The next [filter] spell you cast this turn can't be countered"
     /// (Insist, Overmaster). Consumed by the next matching cast; cleared at
     /// end of turn.
@@ -1003,6 +1015,9 @@ impl Player {
             extra_land_plays: 0,
             cant_play_lands_this_turn: false,
             cant_cast_matching_this_turn: Vec::new(),
+            cant_activate_nonmana_abilities_this_turn: false,
+            creature_spells_as_flash_this_turn: false,
+            cast_from_graveyard_top_this_turn: false,
             next_spell_uncounterable: Vec::new(),
             extra_loyalty_activations: 0,
             activated_loyalty_this_turn: false,

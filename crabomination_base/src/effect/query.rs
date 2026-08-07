@@ -590,7 +590,15 @@ impl Effect {
             | Effect::RevealTopOfLibrary { who }
             | Effect::RevealTopThenShuffle { who, .. }
             | Effect::RemoveAllPoison { who }
-            | Effect::PlayerCantCastMatchingThisTurn { who, .. } => player_has_target(who),
+            | Effect::PlayerCantCastMatchingThisTurn { who, .. }
+            | Effect::PlayerCantActivateNonManaAbilitiesThisTurn { who }
+            | Effect::ChooseFromHandToTopOfLibrary { who, .. }
+            | Effect::GrantCreatureSpellsFlashThisTurn { who } => player_has_target(who),
+            Effect::CastFromGraveyardTopThisTurn
+            | Effect::Doomsday
+            | Effect::EachPlayerSacrificesGreatestManaValueUnlessPays
+            | Effect::CoinFlipDoubleOrPreventNextDamage { .. } => false,
+            Effect::TapLandsSharingProductionWith { land } => sel_has_target(land),
             Effect::DamageEachCreaturePerAura { .. }
             | Effect::SacrificeSourceUnlessTapCreature
             | Effect::EachPlayerDrawsUpToElseGainsLife { .. } => false,
