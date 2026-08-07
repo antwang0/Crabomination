@@ -3,7 +3,7 @@
 Improvement opportunities for the engine, client, and tooling.
 Items are grouped by area and roughly ordered by impact within each group.
 
-## Noticed this run (CR follow-ups)
+## Noticed last run (CR follow-ups)
 
 - **`Effect::MustBlockSource.chooser` asks even when the pick is forced.**
   The seat is only consulted when more than one candidate matches, but a
@@ -24,7 +24,7 @@ Items are grouped by area and roughly ordered by impact within each group.
   Option<usize>` stamped by every control change, which would also give
   CR 800.4a's revert step a precise rule instead of "revert everything". ⏳
 
-## Noticed this run (Visions opened)
+## Noticed this run (Visions all but closed)
 
 - **`StaticEffect::CostReduction` has no scope knob.** It is controller-only,
   so Helm of Awakening needed a whole sibling variant
@@ -50,11 +50,29 @@ Items are grouped by area and roughly ordered by impact within each group.
   the fallback (Knight of the Mists' "destroy target Knight") never had one
   bound and silently did nothing. Another instance of the parallel-walker class
   in the P3 audit section.
-- **Remaining Visions gaps (51) cluster on four shapes:** the phasing
-  mass-effects (Equipoise, Teferi's Realm, Katabatic Winds), the Chimera
-  sacrifice cycle (a `+2/+2` counter *plus* an indefinite keyword grant), the
-  world enchantments (Elkin Lair, Eye of Singularity), and the
-  "pay-per-attacker" pseudo-fog cycle (Elephant Grass, Heat Wave). ⏳
+- **`AffectedPermanents::AllOpponents` still drops some filter leaves.** Colour,
+  creature type and counter are decomposed now (Heat Wave forced it), but the
+  `ControlledByOpponent` branch in `affected_from_requirement` still discards
+  every *other* leaf it doesn't have a field for — a `Not(...)`, a power gate,
+  a token flag. The `CardMatch` fallback handles those on the non-opponent
+  path; the opponent path should route through it too. ⏳
+- **Per-source damage marking is unmodelled.** `CardInstance.damage` is one
+  total, so "can't be destroyed by lethal damage unless lethal damage dealt by a
+  single source is marked on it" (Ogre Enforcer) can't be written. Wants a
+  `damage_by_source: HashMap<CardId, u32>` alongside the total, which would
+  also give CR 120.6 a precise home. ⏳
+- **"Tapped a land for mana this turn" isn't tracked per player.**
+  `EventKind::TappedForMana` fires, but nothing tallies it, so Desolation's
+  "each player who tapped a land for mana this turn" has no predicate. ⏳
+- **No delayed-trigger kind for the untap step.** `DelayedTriggerKind` stops at
+  `YourNextUpkeep`, so Undiscovered Paradise's "during your next untap step, as
+  you untap your permanents, return this land to its owner's hand" lands a step
+  late. ⏳
+- **Remaining Visions gaps (8):** Breathstealer's Crypt (a reveal-and-tax draw
+  replacement), Desolation, Elkin Lair (exile-at-random-from-hand + may-play),
+  Forbidden Ritual (a repeatable *sacrifice* loop — `MayPayRepeatedly` is
+  mana-only), Ogre Enforcer, Peace Talks (a two-turn global untargetability),
+  Pygmy Hippo, Undiscovered Paradise. ⏳
 
 ## Noticed last run (Weatherlight closed)
 

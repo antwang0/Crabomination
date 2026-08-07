@@ -2751,10 +2751,9 @@ Each a small targeted feature; sweep batch by batch.
    **Weatherlight (WTH) is closed** too (`set_gaps.py wth` at zero —
    `sets::wth` + `sets::wth2`, tests in `classic_sets/wth`), which finishes
    the Mirage block's third set and gives cumulative upkeep, banding and
-   phasing their first real card coverage. **Visions (VIS)** is the new live
-   front: `set_gaps.py vis` is 76 after an opening wave of 63 (`sets::vis`,
-   tests in `classic_sets/vis`). The remaining pile leans on phasing
-   (Equipoise, Teferi's Realm), world enchantments and the Chimera cycle.
+   phasing their first real card coverage. **Visions (VIS)** is down to 8
+   (`sets::vis` + `sets::vis2`, tests in `classic_sets/vis`); each remaining
+   card needs one named primitive, listed in TODO.md.
 1. **Replacement-effect framework** (Tier-1 #1) — highest-leverage primitive still
    open.
 2. **Card-zoom + stops/auto-yield + combat-math preview** (Tier-7 #1–3) — the trio
@@ -2770,15 +2769,29 @@ Each a small targeted feature; sweep batch by batch.
 
 ## Recently closed (this push)
 
-- **Visions (VIS) opened** — 63 cards (`set_gaps.py vis` 139 → 76),
-  `sets::vis`, tests in `classic_sets/vis`. The Karoo bounce-land cycle, the
-  five Charms, the flanking knights, and the phasing trio (Teferi's Honor
-  Guard, Shimmering Efreet, plus Katabatic Winds' neighbours still open). New:
-  `Keyword::DamageBecomesMinusCounters` (CR 614 — the receiver-side twin of
-  wither; Lichenthrope) and `StaticEffect::AllPlayersSpellsCostLess` (the
-  table-wide sibling of `CostReduction` — Helm of Awakening). Correctness:
-  `WardCost::ReturnMatchingToHand` evaluates its filter source-aware, so a
-  Karoo land can't bounce itself to pay its own cost.
+- **Visions (VIS) all but closed** — `set_gaps.py vis` 139 → 8 across
+  `sets::vis` + `sets::vis2`, tests in `classic_sets/vis`. The Karoo bounce
+  lands, the Charms, the flanking knights, the Chimera cycle, the world
+  enchantments and every phasing card in the set. New primitives, by wave:
+  `Keyword::DamageBecomesMinusCounters`, `StaticEffect::AllPlayersSpellsCostLess`;
+  then counted return-to-hand costs (`WardCost::ReturnMatchingToHand` and
+  `ActivatedAbility.return_permanent_cost` both carry an N — Bull Elephant's
+  two Forests were a real bug),
+  `ManaPayload::AnyTypeSacrificedLandProduces`,
+  `CounteredSpellZone::CountererBattlefieldIfMatching`,
+  `CounterType::{Death, Rust, Pressure}`; then `Effect::SwapPhasedState`
+  (CR 702.26 simultaneity — Time and Tide),
+  `StaticEffect::PlayersActOnlyOnTheirOwnTurn` (City of Solitude, gated at the
+  action dispatch so casts *and* activations are covered),
+  `Effect::{TopOfGraveyardToLibraryTop, LookTopMayPayLifeToBin}`,
+  `AdditionalCastCost::ReturnToHand.count_x`; then
+  `SelectionRequirement::ManaValueAtMostOwnCounters` and
+  `LandsBecomeChosenBasicType.from_chosen_basic`. Correctness:
+  `WardCost::ReturnMatchingToHand` evaluates its filter source-aware; CR 704.5n
+  reads the *computed* type line, so an Equipment survives on an animated land;
+  and `AffectedPermanents::AllOpponents` stopped dropping the colour /
+  creature-type / counter leaves of an opponent-scoped static (Heat Wave). The
+  remaining 8 and what each needs are in TODO.md.
 
 - **Weatherlight (WTH) closed** — 137 cards across `sets::wth` and
   `sets::wth2` (`set_gaps.py wth` at zero), tests in `classic_sets/wth`.
