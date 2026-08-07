@@ -11937,14 +11937,36 @@ impl GameState {
         if !self.blocker_side_gates_allow_block(blocker, blocker_cp) {
             return false;
         }
-        attackers.iter().any(|(_, atk_cp)| {
-            can_block_attacker_computed(
-                blocker,
-                blocker_cp,
-                atk_cp.keywords.as_slice(),
-                atk_cp.colors.as_slice(),
-                atk_cp.power,
-            )
+        attackers.iter().any(|(atk, atk_cp)| {
+            !self.blocker_matching_restriction_bars(blocker, &blocker_cp.keywords, atk.id)
+                && can_block_attacker_computed(
+                    blocker,
+                    blocker_cp,
+                    atk_cp.keywords.as_slice(),
+                    atk_cp.colors.as_slice(),
+                    atk_cp.power,
+                )
+        })
+    }
+
+    /// CR 509.1b — "this creature can't block [filter] creatures" (Gibbering
+    /// Hyenas). The attacker is matched with the full requirement walker, so
+    /// unlike the keyword-only restrictions it needs `self`; every
+    /// block-legality path routes through here.
+    pub(crate) fn blocker_matching_restriction_bars(
+        &self,
+        blocker: &CardInstance,
+        blocker_kws: &[Keyword],
+        attacker_id: CardId,
+    ) -> bool {
+        blocker_kws.iter().any(|k| match k {
+            Keyword::CantBlockMatching(f) => self.evaluate_requirement_static(
+                f,
+                &Target::Permanent(attacker_id),
+                blocker.controller,
+                Some(blocker.id),
+            ),
+            _ => false,
         })
     }
 
@@ -12016,6 +12038,9 @@ impl GameState {
             return false;
         }
         if self.block_barred_by_protection_filter(atk_kws, attacker.controller, blocker.id) {
+            return false;
+        }
+        if self.blocker_matching_restriction_bars(blocker, &blocker_cp.keywords, attacker_id) {
             return false;
         }
         can_block_attacker_computed(blocker, blocker_cp, atk_kws, atk_colors, atk_power)

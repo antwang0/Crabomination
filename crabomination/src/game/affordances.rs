@@ -466,6 +466,33 @@ impl GameState {
         })
     }
 
+    /// Which of the declared attackers each of `seat`'s legal blockers may
+    /// actually block. `legal_blockers` only answers "can this creature block
+    /// *anything*", which reads as a lie on a board mixing flying, menace and
+    /// filtered restrictions; this pairs each blocker with its real set so the
+    /// client can grey out the illegal drops instead of letting the server
+    /// reject them. Empty outside the Declare Blockers step.
+    pub fn legal_block_targets(&self, seat: usize) -> Vec<(CardId, Vec<CardId>)> {
+        let blockers = self.legal_blockers(seat);
+        if blockers.is_empty() {
+            return Vec::new();
+        }
+        let attacker_ids: Vec<CardId> = self.attacking().iter().map(|a| a.attacker).collect();
+        self.with_frozen_layers(|g| {
+            blockers
+                .into_iter()
+                .map(|b| {
+                    let targets = attacker_ids
+                        .iter()
+                        .copied()
+                        .filter(|a| g.blocker_can_block_attacker(b, *a))
+                        .collect();
+                    (b, targets)
+                })
+                .collect()
+        })
+    }
+
     /// Hand cards the viewer could cast *with their Kicker paid* right now
     /// (CR 702.32) — computed via a `CastSpellKicked` dry-run so it accounts
     /// for the full base+kicker cost, timing, and the kicked target set.

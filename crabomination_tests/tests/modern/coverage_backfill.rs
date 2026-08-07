@@ -2531,3 +2531,36 @@ fn ravens_crime_retrace_requires_a_land_in_hand() {
     assert_eq!(g.players[0].mana_pool.amount(Color::Black), 1, "mana not spent on failed retrace");
 }
 
+
+/// `legal_block_targets` refines `legal_blockers` per attacker: a creature
+/// that can block *something* still can't be dropped on an attacker its own
+/// restriction bars, and `ClientView::block_is_legal` reads that map.
+#[test]
+fn client_view_legal_block_targets_are_per_attacker() {
+    let mut g = two_player_game();
+    g.step = TurnStep::DeclareAttackers;
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    let black = g.add_card_to_battlefield(0, catalog::cadaverous_knight());
+    g.clear_sickness(black);
+    let white = g.add_card_to_battlefield(0, catalog::femeref_scouts());
+    g.clear_sickness(white);
+    g.perform_action(GameAction::DeclareAttackers(vec![
+        Attack { attacker: black, target: AttackTarget::Player(1) },
+        Attack { attacker: white, target: AttackTarget::Player(1) },
+    ]))
+    .expect("declare attackers");
+    g.step = TurnStep::DeclareBlockers;
+    let hyenas = g.add_card_to_battlefield(1, catalog::gibbering_hyenas());
+    g.clear_sickness(hyenas);
+
+    assert!(g.legal_blockers(1).contains(&hyenas), "it can still block something");
+    let map = g.legal_block_targets(1);
+    let targets = &map.iter().find(|(b, _)| *b == hyenas).expect("listed").1;
+    assert!(targets.contains(&white));
+    assert!(!targets.contains(&black), "can't block black creatures");
+
+    let view = crabomination::server::view::project(&g, 1);
+    assert!(view.block_is_legal(hyenas, white));
+    assert!(!view.block_is_legal(hyenas, black));
+}

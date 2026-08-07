@@ -1509,16 +1509,12 @@ impl GameState {
             }
 
             // CR 509.1b — "can't block [filter] creatures" (Gibbering Hyenas).
-            let blocker_controller = blocker.controller;
-            if kws_of(blocker_id).iter().any(|k| match k {
-                Keyword::CantBlockMatching(f) => self.evaluate_requirement_static(
-                    f,
-                    &crate::game::types::Target::Permanent(attacker_id),
-                    blocker_controller,
-                    Some(blocker_id),
-                ),
-                _ => false,
-            }) {
+            let blocker_snapshot = blocker.clone();
+            if self.blocker_matching_restriction_bars(
+                &blocker_snapshot,
+                kws_of(blocker_id),
+                attacker_id,
+            ) {
                 return Err(GameError::CannotBlock(blocker_id));
             }
 

@@ -3535,7 +3535,10 @@ pub fn handle_game_input(
                     }
                 } else if let Some(blocker_id) = blocking.selected_blocker {
                     let is_attacker = cv.battlefield.iter().any(|c| c.id == game_id.0 && c.attacking);
-                    if is_attacker {
+                    // CR 509.1b — an illegal pairing would make the whole
+                    // declaration illegal, so drop it here rather than let the
+                    // server reject the batch.
+                    if is_attacker && cv.block_is_legal(blocker_id, game_id.0) {
                         blocking.assignments.push((blocker_id, game_id.0));
                         blocking.selected_blocker = None;
                     }

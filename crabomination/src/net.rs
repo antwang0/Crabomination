@@ -595,6 +595,13 @@ pub struct ClientView {
     /// `#[serde(default)]` for snapshot back-compat.
     #[serde(default)]
     pub legal_blockers: Vec<CardId>,
+    /// `(blocker, attackers it may legally block)` for each of the viewer's
+    /// legal blockers — the per-attacker refinement of `legal_blockers`, so
+    /// the client can grey out an illegal drop instead of round-tripping a
+    /// rejection. Empty outside the Declare Blockers step.
+    /// `#[serde(default)]` for snapshot back-compat.
+    #[serde(default)]
+    pub legal_block_targets: Vec<(CardId, Vec<CardId>)>,
     /// CR 702.69 — permanents put into a graveyard from the battlefield this
     /// turn (any controller). Drives the client's Gravestorm-count badge, the
     /// graveyard-storm analog of the per-player `spells_cast_this_turn` Storm
@@ -622,6 +629,17 @@ impl ClientView {
         match self.block_chooser.or(self.combat_chooser) {
             Some(chooser) => chooser == seat,
             None => self.active_player != seat,
+        }
+    }
+
+    /// May `blocker` legally be assigned to `attacker` right now? Reads the
+    /// server's `legal_block_targets` map; an empty map (an older server, or
+    /// any step but Declare Blockers) permits the assignment and leaves the
+    /// legality call to the server.
+    pub fn block_is_legal(&self, blocker: CardId, attacker: CardId) -> bool {
+        match self.legal_block_targets.iter().find(|(b, _)| *b == blocker) {
+            Some((_, attackers)) => attackers.contains(&attacker),
+            None => self.legal_block_targets.is_empty(),
         }
     }
 

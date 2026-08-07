@@ -331,6 +331,7 @@ mod tests {
             discard_activatable_hand: vec![],
             legal_attackers: vec![],
             legal_blockers: vec![],
+            legal_block_targets: vec![],
             attack_bands: vec![],
         }
     }

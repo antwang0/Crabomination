@@ -199,6 +199,7 @@ fn project_for_inner(state: &GameState, viewer: Option<usize>) -> ClientView {
         room_unlockable: affordances.room_unlockable,
         legal_attackers: viewer.map(|s| state.legal_attackers(s)).unwrap_or_default(),
         legal_blockers: viewer.map(|s| state.legal_blockers(s)).unwrap_or_default(),
+        legal_block_targets: viewer.map(|s| state.legal_block_targets(s)).unwrap_or_default(),
         permanents_to_graveyard_this_turn: state.permanents_to_graveyard_this_turn,
         // CR 702.22h — the bands, so a defender sees which attackers a single
         // block would drag in.
