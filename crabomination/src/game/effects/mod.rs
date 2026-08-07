@@ -447,7 +447,10 @@ impl GameState {
         sacrifice: bool,
     ) -> Result<(), GameError> {
         let source = ctx.source.unwrap_or(CardId(0));
-        let targets: Vec<(CardId, usize)> = self
+        // CR 101.4 — each affected player is asked in APNAP order, so the
+        // active player commits before their opponents see the answer.
+        let seat_order = self.apnap_sort((0..self.players.len()).collect());
+        let mut targets: Vec<(CardId, usize)> = self
             .battlefield
             .iter()
             .filter(|c| {
@@ -460,6 +463,9 @@ impl GameState {
             })
             .map(|c| (c.id, c.controller))
             .collect();
+        targets.sort_by_key(|(_, seat)| {
+            seat_order.iter().position(|s| s == seat).unwrap_or(usize::MAX)
+        });
         let mut cursor = 0;
         let mut bounce: Vec<CardId> = Vec::new();
         for (id, owner_seat) in targets {

@@ -129,3 +129,40 @@ fn cr_111_7_a_token_off_the_battlefield_ceases_to_exist() {
     );
     assert!(g.find_card_anywhere(token).is_none(), "it's gone from every zone");
 }
+
+/// CR 101.4 — an "each player sacrifices unless they pay" effect asks in
+/// APNAP order, not battlefield order.
+#[test]
+fn cr_101_4_each_unless_pays_asks_in_apnap_order() {
+    use crabomination::card::SelectionRequirement as R;
+    let mut g = multi_player_game(3);
+    // Seed the battlefield out of turn order: seat 2, then 0, then 1.
+    let c2 = g.add_card_to_battlefield(2, catalog::grizzly_bears());
+    let c0 = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let c1 = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.active_player_idx = 1;
+
+    // Nobody can pay, so everything is sacrificed — the order the graveyards
+    // fill in is the order the seats were asked.
+    let ctx = EffectContext::for_ability(CardId(0), 1, None);
+    let events = g
+        .resolve_effect(
+            &Effect::SacrificeEachUnlessPays {
+                filter: R::Creature,
+                cost: crabomination::mana::cost(&[crabomination::mana::generic(1)]),
+            },
+            &ctx,
+        )
+        .expect("resolve");
+    for id in [c0, c1, c2] {
+        assert!(g.battlefield_find(id).is_none(), "everything unpaid was sacrificed");
+    }
+    let sacrificed: Vec<CardId> = events
+        .iter()
+        .filter_map(|e| match e {
+            GameEvent::PermanentSacrificed { card_id, .. } => Some(*card_id),
+            _ => None,
+        })
+        .collect();
+    assert_eq!(sacrificed, vec![c1, c2, c0], "APNAP from the active player is 1, 2, 0");
+}

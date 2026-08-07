@@ -13,9 +13,16 @@ Items are grouped by area and roughly ordered by impact within each group.
   the battlefield or onto the stack under the control of a player who has left
   the game, that object remains in its current zone" — only the token and
   control-change halves are gated. ⏳
-- **CR 800.4a's exile clause is unmodelled.** Objects a departed player still
-  controls after their own objects leave and control effects end (a Bribery'd
-  creature) should be exiled; today they revert to their owner. ⏳
+- **CR 800.4a's exile clause is unmodelled, and blocked on a missing marker.**
+  Objects a departed player still controls once their own objects have left
+  and control-changing effects have ended (a Bribery'd creature) should be
+  exiled; today they revert to their owner. The blocker is that a
+  *permanent*-duration steal (Mind Control, Gruul Charm) registers nothing —
+  `Effect::GainControl` only pushes a `TempControl` entry for non-permanent
+  durations — so the engine can't tell "a control effect that is now ending"
+  from "no effect at all". Wants a `CardInstance.control_effect_from:
+  Option<usize>` stamped by every control change, which would also give
+  CR 800.4a's revert step a precise rule instead of "revert everything". ⏳
 
 ## Noticed this run (Tempest block closed; Weatherlight opened)
 
@@ -53,9 +60,6 @@ Items are grouped by area and roughly ordered by impact within each group.
   `IsTurnOf(You)`, which reads the *activating* seat, so the "only during
   their turn" clause is right but a third player in multiplayer can also buy
   the pass. Same shape as Volrath's Curse (below). ⏳
-- **`Effect::SacrificeEachUnlessPays` asks in battlefield order.** APNAP
-  (CR 101.4) would ask the active player's permanents first. Harmless in 1v1.
-  ⏳
 - **Ertai's Meddling returns a free cast, not a copy.** The printed line puts
   the exiled card back "as a copy of the original spell", keeping its targets
   and modes; `process_delayed_spells` re-casts it from exile with an
