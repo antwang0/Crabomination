@@ -308,7 +308,7 @@ fn ward_suffix(cost: &WardCost) -> String {
         DamageFromSource(n) => format!("{n}🗲"),
         SacrificeCreature | SacrificeMatching(_) => "sac".into(),
         SacrificePermanents(n) | SacrificeMatchingN(_, n) => format!("sac{n}"),
-        ReturnMatchingToHand(..) => "rtn".into(),
+        ReturnMatchingToHand(_, n) => format!("rtn{n}"),
         ExileTopFromGraveyardMatching(_) => "gy⌫".into(),
         ReturnMatchingFromGraveyardToHand(_) => "gy↑".into(),
         RemoveCounterFromPermanent => "ctr-".into(),
