@@ -10302,6 +10302,13 @@ impl GameState {
         if out_of_range {
             return Err(GameError::InvalidTarget);
         }
+        // CR 702.26b — a phased-out permanent is treated as though it doesn't
+        // exist, so nothing can target it.
+        if let Target::Permanent(c) = target
+            && self.phased_out.iter().any(|p| p.id == *c)
+        {
+            return Err(GameError::InvalidTarget);
+        }
         let cid = match target {
             Target::Player(p) => {
                 if self.player_has_static_shroud(*p)

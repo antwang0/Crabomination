@@ -4671,8 +4671,10 @@ impl GameState {
             .compute_battlefield()
             .iter()
             .filter(|c| c.controller == active)
-            .filter_map(|c| {
-                c.keywords.iter().find_map(|k| match k {
+            // CR 702.24b — multiple instances each trigger separately, and
+            // each counts every age counter on the permanent.
+            .flat_map(|c| {
+                c.keywords.iter().filter_map(move |k| match k {
                     Keyword::CumulativeUpkeep(cost) => Some((c.id, cost.clone())),
                     _ => None,
                 })
