@@ -1194,3 +1194,175 @@ fn decomposition_grants_cumulative_upkeep() {
         "the host picked up the upkeep"
     );
 }
+
+// ── Fourth wave ─────────────────────────────────────────────────────────────
+
+/// Catacomb Dragon halves the power of the creature that blocks it.
+#[test]
+fn catacomb_dragon_halves_its_blocker() {
+    let mut g = two_player_game();
+    let dragon = ready(&mut g, 0, catalog::catacomb_dragon());
+    let blocker = ready(&mut g, 1, catalog::sunweb());
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: dragon,
+        target: AttackTarget::Player(1),
+    }]))
+    .expect("attack");
+    while g.step != TurnStep::DeclareBlockers {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::DeclareBlockers(vec![(blocker, dragon)])).expect("block");
+    drain_stack(&mut g);
+    assert_eq!(g.computed_permanent(blocker).unwrap().power, 3, "5 power, halved down and off");
+}
+
+/// Raging Spirit can shed its colour for a turn.
+#[test]
+fn raging_spirit_becomes_colorless() {
+    let mut g = two_player_game();
+    let spirit = ready(&mut g, 0, catalog::raging_spirit());
+    assert!(!g.computed_permanent(spirit).unwrap().colors.is_empty());
+    g.players[0].mana_pool.add_colorless(2);
+    activate(&mut g, spirit, 0, None).expect("go colorless");
+    drain_stack(&mut g);
+    assert!(g.computed_permanent(spirit).unwrap().colors.is_empty());
+}
+
+/// Discordant Spirit banks the damage you took, then gives it all back.
+#[test]
+fn discordant_spirit_swells_on_their_turn() {
+    let mut g = two_player_game();
+    let spirit = ready(&mut g, 0, catalog::discordant_spirit());
+    g.players[0].damage_taken_this_turn = 3;
+    g.active_player_idx = 1;
+    g.fire_step_triggers(TurnStep::End);
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(spirit).unwrap().counter_count(CounterType::PlusOnePlusOne), 3);
+    g.active_player_idx = 0;
+    g.fire_step_triggers(TurnStep::End);
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(spirit).unwrap().counter_count(CounterType::PlusOnePlusOne), 0);
+}
+
+/// Unerring Sling shoots for the tapped helper's power.
+#[test]
+fn unerring_sling_fires_for_the_helpers_power() {
+    let mut g = two_player_game();
+    let sling = ready(&mut g, 0, catalog::unerring_sling());
+    let helper = ready(&mut g, 0, catalog::crash_of_rhinos());
+    let flier = ready(&mut g, 1, catalog::teekas_dragon());
+    g.step = TurnStep::DeclareAttackers;
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: flier,
+        target: AttackTarget::Player(0),
+    }]))
+    .expect("attack");
+    g.players[0].mana_pool.add_colorless(3);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: sling,
+        ability_index: 0,
+        target: Some(Target::Permanent(flier)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("fire");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(helper).unwrap().tapped, "the helper paid the cost");
+    assert!(g.battlefield_find(flier).is_none(), "8 power shot a 5/5 out of the sky");
+}
+
+/// Yare turns a defender into a one-creature wall.
+#[test]
+fn yare_lets_one_blocker_eat_the_attack() {
+    let mut g = two_player_game();
+    let defender = ready(&mut g, 1, catalog::femeref_scouts());
+    let spell = g.add_card_to_hand(0, catalog::yare());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    cast(&mut g, spell, Some(Target::Permanent(defender))).expect("cast");
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(defender).unwrap();
+    assert_eq!(cp.power, 4);
+    assert!(cp.keywords.contains(&Keyword::CanBlockAdditional(2)));
+}
+
+/// Political Trickery swaps a land for good.
+#[test]
+fn political_trickery_swaps_lands() {
+    let mut g = two_player_game();
+    let mine = g.add_card_to_battlefield(0, catalog::island());
+    let theirs = g.add_card_to_battlefield(1, catalog::forest());
+    let spell = g.add_card_to_hand(0, catalog::political_trickery());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell,
+        target: Some(Target::Permanent(mine)),
+        additional_targets: vec![Target::Permanent(theirs)],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(mine).unwrap().controller, 1);
+    assert_eq!(g.battlefield_find(theirs).unwrap().controller, 0);
+}
+
+/// Kukemssa Serpent needs an Island on both sides of the table.
+#[test]
+fn kukemssa_serpent_needs_islands() {
+    let mut g = two_player_game();
+    let serpent = ready(&mut g, 0, catalog::kukemssa_serpent());
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    assert!(
+        g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+            attacker: serpent,
+            target: AttackTarget::Player(1),
+        }]))
+        .is_err(),
+        "no Island to swim to"
+    );
+    g.add_card_to_battlefield(1, catalog::island());
+    g.step = TurnStep::DeclareAttackers;
+    assert!(
+        g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+            attacker: serpent,
+            target: AttackTarget::Player(1),
+        }]))
+        .is_ok()
+    );
+}
+
+/// Zirilan borrows a Dragon and gives it back at the end step.
+#[test]
+fn zirilan_borrows_a_dragon() {
+    let mut g = two_player_game();
+    let zirilan = ready(&mut g, 0, catalog::zirilan_of_the_claw());
+    g.add_card_to_library(0, catalog::volcanic_dragon());
+    g.players[0].mana_pool.add(Color::Red, 2);
+    g.players[0].mana_pool.add_colorless(1);
+    activate(&mut g, zirilan, 0, None).expect("summon");
+    drain_stack(&mut g);
+    let dragon = g
+        .battlefield
+        .iter()
+        .find(|c| c.definition.name == "Volcanic Dragon")
+        .expect("fetched")
+        .id;
+    assert!(g.computed_permanent(dragon).unwrap().keywords.contains(&Keyword::Haste));
+    while g.step != TurnStep::End {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(dragon).is_none(), "exiled at the end step");
+}

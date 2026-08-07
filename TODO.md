@@ -3,6 +3,49 @@
 Improvement opportunities for the engine, client, and tooling.
 Items are grouped by area and roughly ordered by impact within each group.
 
+## Noticed this run (Mirage opened)
+
+- **`legal_block_targets` recomputes `blocker_can_block_attacker` per pair.**
+  It shares one frozen-layer gather, but the per-pair walk is still O(blockers
+  x attackers) with a full requirement evaluation inside. Fine at real board
+  sizes; worth a cheap keyword prefilter if a wide board ever shows up in a
+  profile. ⏳
+- **`Selector::TriggerSource` on a block trigger binds the source, not the
+  partner.** It bit three cards this run (Dream Fighter, Crimson Roc,
+  Catacomb Dragon) before they were rewritten onto
+  `Selector::CreaturesInCombatWith(This)`; `combat_partner_punisher` already
+  worked around it. Either bind the partner there or rename the selector —
+  every `BecomesBlocked` / `Blocks` body that reads `TriggerSource` is
+  suspect and wants an audit. ⏳
+- **The parallel target-walker class claimed another card.**
+  `Effect::MoveCounters` was in `requires_target` but neither
+  `primary_target_filter` nor `target_filter_for_slot`, so Afiya Grove's
+  trigger silently did nothing. A single derive-or-table over the walkers
+  would end this class; today each is a hand-written match. ⏳
+- **`Selector::MatchingAmong` statics only resolve over `Selector::This`.**
+  `eager_static_targets` handles the self-scoped shape (the one every real
+  card uses); an inner `EachPermanent` still falls through to `None` and the
+  static contributes nothing. ⏳
+- **Mirage residue** — the last 54 cards lean on primitives worth one item
+  each: Celestial Dawn (a global colour/land-type rewrite), Forbidden Crypt
+  (a draw replacement that reaches the graveyard), Bazaar of Wonders
+  (name-matching counterspell static), Hall of Gemstone (a per-turn mana-type
+  lock), Null Chamber (a two-player name lock), Tombstone Stairwell
+  (token bookkeeping across both halves), Energy Vortex / Soul Echo
+  (counter-priced upkeep taxes), Grinning Totem and Mangara's Tome
+  (exile piles you may play from), Amber Prison / Hivis of the Scale
+  ("doesn't untap for as long as this stays tapped"), Meddle
+  (retarget-another), Flash and Lure of Prey (cast-condition put-onto-
+  battlefield), Illicit Auction (a life-bidding subgame), Polymorph and
+  Natural Balance. ⏳
+- **Sirocco is approximated.** The printed card discards each revealed blue
+  instant *unless its controller pays 4 life*; the shipped body uses
+  `RevealHandDiscardAllMatching`, which skips the payment window. Wants a
+  `RevealHandDiscardMatchingUnlessPayLife`. ⏳
+- **Suq'Ata Firewalker uses `HexproofFromColor`.** The printed line is a
+  shroud-from-red (its controller's red spells can't target it either);
+  `HexproofFromColor` only stops opponents. ⏳
+
 ## Noticed last run (CR follow-ups)
 
 - **`Effect::MustBlockSource.chooser` asks even when the pick is forced.**

@@ -2753,8 +2753,9 @@ Each a small targeted feature; sweep batch by batch.
    the Mirage block's third set and gives cumulative upkeep, banding and
    phasing their first real card coverage. **Visions (VIS) is closed** too (`set_gaps.py vis` at zero —
    `sets::vis` + `sets::vis2`, tests in `classic_sets/vis`), which finishes
-   the Mirage block's second set. The next live front is a fresh set: pick
-   one whose `set_gaps.py` count is still non-zero.
+   the Mirage block's second set. **Mirage (MIR) itself is the live front**
+   (`set_gaps.py mir` at 54 after this push, `sets::mir`–`mir4`); Coldsnap
+   (CSP) is open in parallel.
 1. **Replacement-effect framework** (Tier-1 #1) — highest-leverage primitive still
    open.
 2. **Card-zoom + stops/auto-yield + combat-math preview** (Tier-7 #1–3) — the trio
@@ -2769,6 +2770,26 @@ Each a small targeted feature; sweep batch by batch.
 7. **Replays, spectator, social, accessibility** as the product matures.
 
 ## Recently closed (this push)
+
+- **Mirage (MIR) opened** — 221 cards across `sets::mir`–`mir4`
+  (`set_gaps.py mir` 275 → 54), tests in `classic_sets/mir`. The slow-fetch
+  cycle, the flanking knights, the Charms, the guildmages, the phasing shells
+  (Crystal Golem, Dream Fighter, Teferi's Imp, Vaporous Djinn, Warping Wurm,
+  Taniwha, Mist Dragon), the combat punishers and Chaosphere's inverted sky.
+  New primitives, each forced by a card: `Keyword::{CantBlockPowerAtMost,
+  CantBlockMatching, MustAttackIfAnotherAttacks}`,
+  `Effect::{TopChosenFromHand, DestroyAllNoRegenGainControllerLifePerManaValue,
+  EachPlayerCreatesTokenPerControlled}` and `SelectionRequirement::YouPlayer`.
+  Three latent bugs fell out of it: `Selector::MatchingAmong` statics never
+  applied (so "first strike while attacking" was inert on Soltari Lancer and
+  Spirit of the Night), a card couldn't replace its *own* death, and
+  `Effect::MoveCounters` bound no target on a triggered ability.
+
+- **Per-attacker block legality** — `GameState::legal_block_targets` +
+  `ClientView.legal_block_targets` / `block_is_legal`: the client now refuses
+  an illegal blocker→attacker drop at the click instead of letting the server
+  reject the whole declaration. `legal_blockers` alone only answered "can this
+  block *something*".
 
 - **Coldsnap (CSP) opened** — 32 cards (`set_gaps.py csp` 123 → 91),
   `sets::csp`, tests in `classic_sets/csp`. The snow tapland cycle, the `{S}`

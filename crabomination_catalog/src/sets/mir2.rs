@@ -143,11 +143,13 @@ fn tap_ping_self(mana: ManaCost) -> ActivatedAbility {
     }
 }
 
-/// "…blocks a creature without flying" — the blocked creature rides in as the
-/// trigger's subject.
+/// "…blocks a creature without flying". The other creature in the block is
+/// reached through `CreaturesInCombatWith` — on a `Blocks` /
+/// `BecomesBlocked` trigger `Selector::TriggerSource` binds the source, not
+/// the partner.
 fn nonflying_subject() -> Predicate {
     Predicate::EntityMatchesAny {
-        what: Selector::TriggerSource,
+        what: Selector::CreaturesInCombatWith(Box::new(Selector::This)),
         filter: R::Not(Box::new(R::HasKeyword(Keyword::Flying))),
     }
 }
