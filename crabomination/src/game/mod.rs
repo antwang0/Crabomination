@@ -358,6 +358,11 @@ pub struct GameState {
     /// Index into `players` of the player whose turn it is.
     pub active_player_idx: usize,
     pub turn_number: u32,
+    /// Peace Talks — the last turn number on which no creature may attack and
+    /// nothing may be targeted by spells or activated abilities (CR 508.1a /
+    /// 115.6). `None` once the truce has lapsed.
+    #[serde(default)]
+    pub(crate) truce_until_turn: Option<u32>,
     /// `None` while the game is ongoing; `Some(None)` for a draw;
     /// `Some(Some(i))` when player `i` has won.
     pub game_over: Option<Option<usize>>,
@@ -1928,6 +1933,7 @@ impl Clone for GameState {
             step: self.step,
             active_player_idx: self.active_player_idx,
             turn_number: self.turn_number,
+            truce_until_turn: self.truce_until_turn,
             game_over: self.game_over,
             mandatory_loop_watch: self.mandatory_loop_watch,
             free_activation_watch: self.free_activation_watch,
@@ -2258,6 +2264,7 @@ impl GameState {
             step: TurnStep::Untap,
             active_player_idx: 0,
             turn_number: 1,
+            truce_until_turn: None,
             game_over: None,
             mandatory_loop_watch: (0, 0),
             free_activation_watch: (0, None, 0),
@@ -13693,6 +13700,47 @@ impl GameState {
                 }
             }
         }
+        // CR 121.2a — Breathstealer's Crypt: the drawn card is revealed, and a
+        // matching one is discarded unless its drawer pays the toll.
+        if drew
+            && let Some((filter, life)) = self.battlefield.iter().find_map(|c| {
+                c.definition.static_abilities.iter().find_map(|sa| match &sa.effect {
+                    crate::effect::StaticEffect::DrawsRevealedTaxed { filter, life } => {
+                        Some((filter.clone(), *life))
+                    }
+                    _ => None,
+                })
+            })
+            && let Some(drawn) = self.players[p].last_drawn_card
+        {
+            let matches = self.players[p]
+                .hand
+                .iter()
+                .find(|c| c.id == drawn)
+                .is_some_and(|c| self.evaluate_requirement_on_card(&filter, c, p));
+            if matches {
+                use crate::decision::{Decision, DecisionAnswer};
+                let pays = self.effective_life(p) > life as i32
+                    && matches!(
+                        self.decider.decide(&Decision::OptionalTrigger {
+                            source: drawn,
+                            description: format!("Pay {life} life to keep the revealed card?"),
+                        }),
+                        DecisionAnswer::Bool(true)
+                    );
+                if pays {
+                    let applied = self.adjust_life_applied(p, -(life as i32));
+                    if applied < 0 {
+                        events.push(GameEvent::LifeLost { player: p, amount: (-applied) as u32 });
+                    }
+                } else if let Some(pos) = self.players[p].hand.iter().position(|c| c.id == drawn) {
+                    let card = self.players[p].hand.remove(pos);
+                    let cid = card.id;
+                    self.players[p].graveyard.push(card);
+                    events.push(GameEvent::CardDiscarded { player: p, card_id: cid });
+                }
+            }
+        }
         // CR 121.2a / 614 — "If you would draw a card, draw two instead"
         // (Thought Reflection). Each doubler applies once per draw event
         // (n doublers: 1 → 2^n); the replacement draws themselves aren't
@@ -20856,6 +20904,7 @@ fn static_effect_to_effects(
             // Tomorrow, Azami's Familiar — a draw replacement consulted in
             // `draw_one`; no layer effect.
             | StaticEffect::ReplaceDrawWithLookN { .. }
+            | StaticEffect::DrawsRevealedTaxed { .. }
             // Possessed Portal / Shared Fate — consulted by `draw_one`; no
             // layer effect.
             // MayReplaceDrawWithTutor — a draw replacement consulted in

@@ -996,3 +996,85 @@ pub fn elkin_lair() -> CardDefinition {
         ..enchantment("Elkin Lair", cost(&[generic(3), r()]))
     }
 }
+
+// ── Wave 6: the last six ───────────────────────────────────────────────────
+
+/// Ogre Enforcer — only one source's worth of lethal damage puts it down.
+pub fn ogre_enforcer() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::SurvivesSplitLethalDamage],
+        ..creature("Ogre Enforcer", cost(&[generic(3), r()]), vec![CreatureType::Ogre], 4, 4)
+    }
+}
+
+/// Song of Blood — mill four, and every attacker rides the creatures that fell.
+pub fn song_of_blood() -> CardDefinition {
+    sorcery(
+        "Song of Blood",
+        cost(&[generic(1), r()]),
+        Effect::Seq(vec![
+            Effect::Mill { who: Selector::You, amount: Value::Const(4) },
+            Effect::PumpAttackersThisTurn {
+                power: Value::CreatureCardsMilledThisEffect,
+                toughness: Value::Const(0),
+            },
+        ]),
+    )
+}
+
+/// Peace Talks — two turns where nothing attacks and nothing can be targeted.
+pub fn peace_talks() -> CardDefinition {
+    sorcery("Peace Talks", cost(&[generic(1), w()]), Effect::TruceThisTurnAndNext)
+}
+
+/// Forbidden Ritual — feed it permanents; each one squeezes an opponent.
+pub fn forbidden_ritual() -> CardDefinition {
+    sorcery(
+        "Forbidden Ritual",
+        cost(&[generic(2), b(), b()]),
+        Effect::MayRepeat {
+            description: "Sacrifice another nontoken permanent to Forbidden Ritual?".into(),
+            max: 8,
+            body: Box::new(Effect::MaySacrifice {
+                description: "Sacrifice a nontoken permanent?".into(),
+                filter: R::NotToken,
+                count: Value::ONE,
+                then: Box::new(Effect::UnlessPlayerPays {
+                    who: PlayerRef::Target(0),
+                    cost: WardCost::SacrificeMatching(Box::new(R::Permanent)),
+                    then: Box::new(Effect::LoseLife {
+                        who: Selector::Player(PlayerRef::Target(0)),
+                        amount: Value::Const(2),
+                    }),
+                    if_paid: None,
+                }),
+                else_: None,
+            }),
+        },
+    )
+}
+
+/// Breathstealer's Crypt — every draw is public, and creatures cost 3 life.
+pub fn breathstealers_crypt() -> CardDefinition {
+    CardDefinition {
+        static_abilities: vec![StaticAbility {
+            description: "Drawn cards are revealed; a creature is discarded unless its drawer pays 3 life.",
+            effect: StaticEffect::DrawsRevealedTaxed { filter: R::Creature, life: 3 },
+        }],
+        ..enchantment("Breathstealer's Crypt", cost(&[generic(2), u(), b()]))
+    }
+}
+
+/// Pygmy Hippo — trade its combat damage for the defender's whole mana base.
+pub fn pygmy_hippo() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::AttacksAndIsntBlocked, EventScope::SelfSource),
+            effect: Effect::MayDo {
+                description: "Drain the defender's lands?".into(),
+                body: Box::new(Effect::DrainDefendersLandsForManaNextMain),
+            },
+        }],
+        ..creature("Pygmy Hippo", cost(&[g(), u()]), vec![CreatureType::Hippo], 2, 2)
+    }
+}

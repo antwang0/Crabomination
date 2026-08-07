@@ -4668,7 +4668,16 @@ impl GameState {
                 } else {
                     computed_toughness
                 };
-                if c.damage > 0 && (c.damage as i32) >= lethal_threshold {
+                // Ogre Enforcer — split lethal damage doesn't kill; only a
+                // single source's tally reaching the threshold does.
+                let needs_single_source = cp
+                    .map(|cp| {
+                        cp.keywords.contains(&crate::card::Keyword::SurvivesSplitLethalDamage)
+                    })
+                    .unwrap_or(false);
+                let single_source_lethal = !needs_single_source
+                    || (c.max_damage_from_single_source() as i32) >= lethal_threshold;
+                if c.damage > 0 && (c.damage as i32) >= lethal_threshold && single_source_lethal {
                     return true;
                 }
                 // Shriveling Rot — "whenever a creature is dealt damage,

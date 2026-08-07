@@ -4435,6 +4435,10 @@ pub enum Effect {
         filter: crate::card::SelectionRequirement,
         trigger: Box<crate::card::TriggeredAbility>,
     },
+    /// CR 611.2 — "Whenever a creature attacks this turn, it gets +P/+T until
+    /// end of turn" (Song of Blood). The bonus is fixed when this resolves, so
+    /// a later trigger can't re-read a resolution-scoped tally as zero.
+    PumpAttackersThisTurn { power: Value, toughness: Value },
     /// CR 509 — "Attacking creatures become blocked" (Fog Patch), even ones
     /// that can't be blocked. No blocker is assigned, so nothing deals or is
     /// dealt combat damage by the block.
@@ -5614,6 +5618,19 @@ pub enum Effect {
     /// CR 508.1a — "[creatures] can't attack this turn" (Festival). Arms the
     /// ban live for the current turn rather than the next one.
     CantAttackThisTurn { what: Selector },
+    /// "This turn and next turn, creatures can't attack, and players and
+    /// permanents can't be the targets of spells or activated abilities"
+    /// (Peace Talks). Sets `GameState.truce_until_turn`.
+    TruceThisTurnAndNext,
+    /// "You may repeat this process any number of times" (Forbidden Ritual) —
+    /// run `body`, then keep asking whether to run it again, up to `max`
+    /// iterations. The costless sibling of `MayPayRepeatedly`.
+    MayRepeat { description: String, body: Box<Effect>, max: u32 },
+    /// Pygmy Hippo — "you may have defending player activate a mana ability of
+    /// each land they control and lose all unspent mana. If you do, this
+    /// creature assigns no combat damage this turn and at the beginning of
+    /// your next main phase this turn, you add that much {C}."
+    DrainDefendersLandsForManaNextMain,
     /// "Until end of turn, if you tap a land you control for mana, it produces
     /// [color] instead of any other type" (Deep Water). The turn-scoped,
     /// controller-scoped sibling of `StaticEffect::LandsProduceColorInstead`.

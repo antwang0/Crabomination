@@ -2751,9 +2751,10 @@ Each a small targeted feature; sweep batch by batch.
    **Weatherlight (WTH) is closed** too (`set_gaps.py wth` at zero —
    `sets::wth` + `sets::wth2`, tests in `classic_sets/wth`), which finishes
    the Mirage block's third set and gives cumulative upkeep, banding and
-   phasing their first real card coverage. **Visions (VIS)** is down to 6
-   (`sets::vis` + `sets::vis2`, tests in `classic_sets/vis`); each remaining
-   card needs one named primitive, listed in TODO.md.
+   phasing their first real card coverage. **Visions (VIS) is closed** too (`set_gaps.py vis` at zero —
+   `sets::vis` + `sets::vis2`, tests in `classic_sets/vis`), which finishes
+   the Mirage block's second set. The next live front is a fresh set: pick
+   one whose `set_gaps.py` count is still non-zero.
 1. **Replacement-effect framework** (Tier-1 #1) — highest-leverage primitive still
    open.
 2. **Card-zoom + stops/auto-yield + combat-math preview** (Tier-7 #1–3) — the trio
@@ -2769,7 +2770,7 @@ Each a small targeted feature; sweep batch by batch.
 
 ## Recently closed (this push)
 
-- **Visions (VIS) all but closed** — `set_gaps.py vis` 139 → 6 across
+- **Visions (VIS) closed** — `set_gaps.py vis` 139 → 0 across
   `sets::vis` + `sets::vis2`, tests in `classic_sets/vis`. The Karoo bounce
   lands, the Charms, the flanking knights, the Chimera cycle, the world
   enchantments and every phasing card in the set. New primitives, by wave:
@@ -2793,8 +2794,21 @@ Each a small targeted feature; sweep batch by batch.
   creature-type / counter leaves of an opponent-scoped static (Heat Wave). The
   closing wave added `Effect::{ReturnToHandAtYourNextUntapStep,
   ExileRandomFromHandMayPlayThisTurn}` and
-  `Predicate::TappedLandForManaThisTurn`; the remaining 6 and what each needs
-  are in TODO.md.
+  `Predicate::TappedLandForManaThisTurn`. The last six each took one named
+  primitive: `StaticEffect::DrawsRevealedTaxed` (Breathstealer's Crypt, a
+  CR 121.2a reveal-and-tax draw replacement), `Effect::MayRepeat` (Forbidden
+  Ritual — the costless sibling of `MayPayRepeatedly`),
+  `Keyword::SurvivesSplitLethalDamage` + a per-source damage tally on
+  `CardInstance` read by the lethal-damage SBA (Ogre Enforcer),
+  `Effect::TruceThisTurnAndNext` + `GameState.truce_until_turn` (Peace Talks —
+  two turns where nothing attacks and nothing can be targeted),
+  `Effect::DrainDefendersLandsForManaNextMain` (Pygmy Hippo) and
+  `Effect::PumpAttackersThisTurn` (Song of Blood, whose amount is frozen at
+  resolution so a later combat trigger can't re-read it as zero). Correctness:
+  an activated ability's sacrifice cost now stamps `GameState.sacrificed_card`
+  and `Effect::WithSacrificedPt` carries the permanent actually sacrificed
+  rather than the ability's source — `Selector::SacrificedCard` read the wrong
+  card for every sac-cost activation.
 
 - **Weatherlight (WTH) closed** — 137 cards across `sets::wth` and
   `sets::wth2` (`set_gaps.py wth` at zero), tests in `classic_sets/wth`.

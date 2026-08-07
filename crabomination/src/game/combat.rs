@@ -222,6 +222,10 @@ impl GameState {
         if self.priority.player_with_priority != self.attack_declarer() {
             return Err(GameError::NotYourPriority);
         }
+        // Peace Talks — CR 508.1a, nobody attacks for its two turns.
+        if self.truce_active() && !attacks.is_empty() {
+            return Err(GameError::CannotAttack(attacks[0].attacker));
+        }
         let p = self.active_player_idx;
 
         // CR 803.1a/b — under the attack-left / attack-right option, the only
@@ -3348,6 +3352,7 @@ impl GameState {
                         && let Some(blocker) = self.battlefield_find_mut(blocker_id)
                     {
                         blocker.damage += dealt as u32;
+                        blocker.record_damage_from(atk.id, dealt as u32);
                         if atk.has_deathtouch {
                             blocker.dealt_deathtouch_damage = true;
                         }
@@ -3489,6 +3494,7 @@ impl GameState {
                                 });
                             } else {
                                 attacker.damage += dmg;
+                                attacker.record_damage_from(bid, dmg);
                                 if bc.keywords.contains(&Keyword::Deathtouch) {
                                     attacker.dealt_deathtouch_damage = true;
                                 }
@@ -3902,6 +3908,7 @@ impl GameState {
                         c.dealt_damage_this_turn = true;
                         c.damage_dealt_to_this_turn += amount;
                         c.damaged_by_this_turn.push(atk.id);
+                        c.record_damage_from(atk.id, amount);
                     }
                     events.push(GameEvent::DamageDealt {
                         amount,

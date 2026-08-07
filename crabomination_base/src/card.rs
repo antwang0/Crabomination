@@ -1192,6 +1192,10 @@ pub enum Keyword {
     /// than shroud — abilities still reach it, and it isn't protection, so
     /// damage/enchant/block are unaffected.
     CantBeTargetedBySpells,
+    /// CR 704.5g — "can't be destroyed by lethal damage unless lethal damage
+    /// dealt by a single source is marked on it" (Ogre Enforcer). Read against
+    /// `CardInstance::max_damage_from_single_source` in the lethal-damage SBA.
+    SurvivesSplitLethalDamage,
     /// "If damage would be dealt to this creature, put that many -1/-1
     /// counters on it instead" (Lichenthrope). The receiver-side twin of
     /// Wither — checked on the *victim* in the damage funnel.
@@ -5832,6 +5836,10 @@ pub struct CardInstance {
     /// source's *name* (Blazing Effigy's "other sources named Blazing
     /// Effigy"). Reset at cleanup; in-memory only.
     pub damage_by_source_name_this_turn: Vec<(&'static str, u32)>,
+    /// Damage marked on this permanent this turn, tallied per damaging source
+    /// *instance* — "unless lethal damage dealt by a single source is marked
+    /// on it" (Ogre Enforcer). Reset at cleanup; in-memory only.
+    pub damage_by_source_this_turn: Vec<(CardId, u32)>,
     /// Set when this creature is declared as a blocker; powers "creature that
     /// attacked or blocked this turn" filters (Gideon's Triumph). Cleared in
     /// per-turn cleanup. Transient — not serialized (defaults false on reload).
@@ -6178,6 +6186,7 @@ impl CardInstance {
             attacked_last_turn: false,
             attack_ban: AttackBan::None,
             damage_by_source_name_this_turn: Vec::new(),
+            damage_by_source_this_turn: Vec::new(),
             blocked_this_turn: false,
             blocked_attackers_this_turn: Vec::new(),
             must_block: None,
@@ -6644,6 +6653,21 @@ impl CardInstance {
         }
     }
 
+    /// Fold `amount` damage from source instance `src` into this turn's
+    /// per-source tally (Ogre Enforcer).
+    pub fn record_damage_from(&mut self, src: CardId, amount: u32) {
+        match self.damage_by_source_this_turn.iter_mut().find(|(s, _)| *s == src) {
+            Some((_, n)) => *n += amount,
+            None => self.damage_by_source_this_turn.push((src, amount)),
+        }
+    }
+
+    /// The largest damage tally any single source has marked on this permanent
+    /// this turn.
+    pub fn max_damage_from_single_source(&self) -> u32 {
+        self.damage_by_source_this_turn.iter().map(|(_, n)| *n).max().unwrap_or(0)
+    }
+
     pub fn clear_end_of_turn_effects(&mut self) {
         self.power_bonus = 0;
         self.toughness_bonus = 0;
@@ -6663,6 +6687,7 @@ impl CardInstance {
         self.damage_dealt_to_this_turn = 0;
         self.damaged_by_this_turn.clear();
         self.damage_by_source_name_this_turn.clear();
+        self.damage_by_source_this_turn.clear();
         // CR 701.15g — unused regeneration shields expire at end of turn,
         // and so does the "can't be regenerated this turn" lock.
         self.regeneration_shields = 0;

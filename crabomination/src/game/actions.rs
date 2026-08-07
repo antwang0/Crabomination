@@ -10370,6 +10370,10 @@ impl GameState {
         let controller = card.controller;
         // CR 702.18 — Autumn Willow's waiver makes it targetable by one
         // player's spells and abilities as though it had no shroud.
+        // Peace Talks — nothing at all can be targeted for its two turns.
+        if self.truce_active() {
+            return Err(GameError::TargetHasShroud(*cid));
+        }
         if self.permanent_has_keyword(*cid, &Keyword::Shroud)
             && !self.shroud_waivers.contains(&(*cid, caster))
         {
@@ -10777,11 +10781,21 @@ impl GameState {
             })
     }
 
+    /// Peace Talks — true while its two-turn truce is live: no creature can
+    /// attack and nothing can be targeted by a spell or activated ability.
+    pub fn truce_active(&self) -> bool {
+        self.truce_until_turn.is_some_and(|t| self.turn_number <= t)
+    }
+
     /// CR 702.18 — true if `player` controls a permanent granting "you have
     /// shroud" (Ivory Mask). Unlike hexproof this also blocks the player's own
     /// spells and abilities, and no ignore-hexproof static pierces it.
     pub fn player_has_static_shroud(&self, player: usize) -> bool {
         use crate::effect::StaticEffect;
+        // Peace Talks blankets every player for its two turns.
+        if self.truce_active() {
+            return true;
+        }
         // Gilded Light's turn-scoped grant rides the same check.
         if self.players.get(player).is_some_and(|p| p.shroud_this_turn) {
             return true;
@@ -14582,6 +14596,9 @@ impl GameState {
         // `Value::SacrificedPower/Toughness` survive intervening
         // resolutions (Witch's Oven's "toughness 4 or greater" branch).
         let mut cost_sac_pt: Option<(i32, i32)> = None;
+        // The permanent the cost actually sacrificed, for
+        // `Selector::SacrificedCard` at resolution.
+        let mut cost_sac_card: Option<CardId> = None;
         // Mana value of the cost-sacrificed permanent, threaded the same way
         // so the `ManaValueEqualsSacrificedPlus` search filter resolves
         // correctly at ability resolution (Transfigure → Fleshwrither).
@@ -14739,6 +14756,7 @@ impl GameState {
                     self.sacrificed_toughness = Some(t_val);
                     self.sacrificed_mana_value = Some(mv);
                     cost_sac_pt = Some((p_val, t_val));
+                    cost_sac_card = Some(card_id);
                     cost_sac_mv = mv;
                     cost_sac_count += 1;
                     cost_sac_total_power += p_val;
@@ -14879,6 +14897,9 @@ impl GameState {
                 self.sacrificed_colors = Some(snap.definition.cost.colors());
                 self.sacrificed_was_outlaw =
                     Some(crate::game::effects::card_is_outlaw(&snap));
+                // `Selector::SacrificedCard` reads the cost's victim.
+                self.sacrificed_card = Some(other_cid);
+                cost_sac_card = Some(other_cid);
                 cost_sac_pt = Some((p_val, t_val));
                 cost_sac_mv = mv;
                 self.died_card_snapshots.insert(other_cid, snap);
@@ -15265,7 +15286,7 @@ impl GameState {
                     toughness,
                     count: cost_sac_count,
                     mana_value: cost_sac_mv,
-                    card: Some(card_id),
+                    card: cost_sac_card,
                     body: Box::new(ability.effect.clone()),
                 },
                 None => ability.effect.clone(),
@@ -15304,7 +15325,7 @@ impl GameState {
                     toughness,
                     count: cost_sac_count,
                     mana_value: cost_sac_mv,
-                    card: Some(card_id),
+                    card: cost_sac_card,
                     body: Box::new(ability.effect),
                 },
                 None => ability.effect,

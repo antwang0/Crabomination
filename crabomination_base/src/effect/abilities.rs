@@ -2076,6 +2076,10 @@ pub enum StaticEffect {
     /// your library instead. Put one into your hand and the rest on the bottom
     /// in any order." (Tomorrow, Azami's Familiar.)
     ReplaceDrawWithLookN { count: u32 },
+    /// CR 121.2a — "If a player would draw a card, instead they draw a card
+    /// and reveal it. If it matches `filter`, that player discards it unless
+    /// they pay `life` life" (Breathstealer's Crypt). Global.
+    DrawsRevealedTaxed { filter: SelectionRequirement, life: u32 },
     /// Alpine Moon — lands matching the source's chosen name
     /// (`CardInstance.named_card`) that opponents control lose all land
     /// types and abilities. Pair with a `GrantActivatedAbility` over

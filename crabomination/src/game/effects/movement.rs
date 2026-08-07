@@ -1453,6 +1453,7 @@ impl GameState {
                         c.damage_dealt_to_this_turn += amount;
                         if let Some(src) = source {
                             c.damaged_by_this_turn.push(src);
+                            c.record_damage_from(src, amount);
                         }
                         if let Some(name) = source_name {
                             c.record_damage_from_named(name, amount);

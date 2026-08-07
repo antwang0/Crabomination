@@ -21205,6 +21205,12 @@ static VIS2: &[Factory] = &[
     super::vis2::undiscovered_paradise,
     super::vis2::desolation,
     super::vis2::elkin_lair,
+    super::vis2::ogre_enforcer,
+    super::vis2::song_of_blood,
+    super::vis2::peace_talks,
+    super::vis2::forbidden_ritual,
+    super::vis2::breathstealers_crypt,
+    super::vis2::pygmy_hippo,
 ];
 static WAR: &[Factory] = &[
     super::war::ironclad_krovod,

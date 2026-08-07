@@ -3233,6 +3233,92 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::TruceThisTurnAndNext => {
+                self.truce_until_turn = Some(self.turn_number + 1);
+                Ok(())
+            }
+
+            Effect::MayRepeat { description, body, max } => {
+                use crate::decision::{Decision, DecisionAnswer};
+                for i in 0..(*max).max(1) {
+                    if i > 0
+                        && !matches!(
+                            self.decider.decide(&Decision::OptionalTrigger {
+                                source: ctx.source.unwrap_or(CardId(0)),
+                                description: description.clone(),
+                            }),
+                            DecisionAnswer::Bool(true)
+                        )
+                    {
+                        break;
+                    }
+                    self.run_effect(body, ctx, events)?;
+                }
+                Ok(())
+            }
+
+            Effect::DrainDefendersLandsForManaNextMain => {
+                // Pygmy Hippo — the defender taps out for mana they then lose;
+                // the attacker banks that much {C} at their next main phase and
+                // deals no combat damage this turn.
+                let Some(source) = ctx.source else { return Ok(()) };
+                let Some(defender) = self
+                    .attacking
+                    .iter()
+                    .find(|a| a.attacker == source)
+                    .and_then(|a| match a.target {
+                        crate::game::types::AttackTarget::Player(p) => Some(p),
+                        _ => None,
+                    })
+                else {
+                    return Ok(());
+                };
+                let lands: Vec<CardId> = self
+                    .battlefield
+                    .iter()
+                    .filter(|c| c.controller == defender && c.definition.is_land() && !c.tapped)
+                    .map(|c| c.id)
+                    .collect();
+                if lands.is_empty() {
+                    return Ok(());
+                }
+                let before = self.players[defender].mana_pool.total();
+                for id in lands {
+                    let ability = self.battlefield_find(id).and_then(|c| {
+                        c.definition
+                            .activated_abilities
+                            .iter()
+                            .find(|a| {
+                                a.tap_cost
+                                    && crate::game::actions::is_mana_ability_public(&a.effect)
+                            })
+                            .cloned()
+                    });
+                    let Some(ability) = ability else { continue };
+                    if let Some(c) = self.battlefield_find_mut(id) {
+                        c.tapped = true;
+                    }
+                    let land_ctx = EffectContext::for_ability(id, defender, None);
+                    self.run_effect(&ability.effect, &land_ctx, events)?;
+                }
+                let gained = self.players[defender].mana_pool.total().saturating_sub(before);
+                self.players[defender].mana_pool.empty();
+                if let Some(c) = self.battlefield_find_mut(source) {
+                    c.granted_keywords_eot.push(crate::card::Keyword::DealsNoCombatDamage);
+                }
+                if gained > 0 {
+                    self.run_effect(
+                        &Effect::AddManaAtNextMainPhase {
+                            amount: crate::effect::Value::Const(gained as i32),
+                            any_color: false,
+                        },
+                        ctx,
+                        events,
+                    )?;
+                }
+                Ok(())
+            }
+
             Effect::PlayerGainsShroudThisTurn { who } => {
                 if let Some(p) = self.resolve_player(who, ctx) {
                     self.players[p].shroud_this_turn = true;
@@ -8274,6 +8360,27 @@ impl GameState {
 
             Effect::GrantTriggeredAbilityThisTurnToMatching { filter, trigger } => {
                 self.turn_granted_triggers.push((filter.clone(), (**trigger).clone()));
+                Ok(())
+            }
+
+            Effect::PumpAttackersThisTurn { power, toughness } => {
+                let power = self.evaluate_value(power, ctx);
+                let toughness = self.evaluate_value(toughness, ctx);
+                self.turn_granted_triggers.push((
+                    crate::card::SelectionRequirement::Creature,
+                    crate::card::TriggeredAbility {
+                        event: crate::effect::EventSpec::new(
+                            crate::effect::EventKind::Attacks,
+                            crate::effect::EventScope::SelfSource,
+                        ),
+                        effect: Effect::PumpPT {
+                            what: Selector::This,
+                            power: crate::effect::Value::Const(power),
+                            toughness: crate::effect::Value::Const(toughness),
+                            duration: crate::effect::Duration::EndOfTurn,
+                        },
+                    },
+                ));
                 Ok(())
             }
 

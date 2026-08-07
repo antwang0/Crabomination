@@ -24,7 +24,7 @@ Items are grouped by area and roughly ordered by impact within each group.
   Option<usize>` stamped by every control change, which would also give
   CR 800.4a's revert step a precise rule instead of "revert everything". ⏳
 
-## Noticed this run (Visions all but closed)
+## Noticed this run (Visions closed)
 
 - **`StaticEffect::CostReduction` has no scope knob.** It is controller-only,
   so Helm of Awakening needed a whole sibling variant
@@ -36,13 +36,12 @@ Items are grouped by area and roughly ordered by impact within each group.
   `ReturnMatchingFromGraveyardToHand`, alongside the two that already did) now
   goes through `evaluate_requirement_static` with `ctx.source`, so
   `OtherThanSource` / `IsSource` read right in all of them.
-- **`AtEachCombatThisTurn` bodies can't read the resolution that armed them.**
-  Song of Blood ("mill four; attackers get +1/+0 for each creature card milled
-  this way") needs the delayed body to carry a *number computed at cast time*.
-  `Selector::LastMoved` is per-resolution, so the body evaluates to 0 by the
-  time combat comes around. Wants a `Value::Const`-substituting capture on
-  `Effect::AtEachCombatThisTurn` (or a general "freeze this Value now"
-  wrapper); the card is held back until then. ⏳
+- ✅ **A floating attack pump can freeze its amount.** `Effect::
+  PumpAttackersThisTurn` evaluates its `power`/`toughness` at resolution and
+  installs a `turn_granted_triggers` watcher carrying `Value::Const`, so Song
+  of Blood's "for each creature card milled this way" survives to combat. The
+  general "freeze this Value now" wrapper is still worth having — every other
+  delayed body still re-reads its `Value` at fire time. ⏳
 - ✅ **`primary_target_filter` now walks the "unless you pay" fallback arms.**
   `PayManaOrElse` / `PayEnergyOrElse` / `PayEnergyOrElseValue` were surfaced by
   `requires_target` and `target_filter_for_slot` but not by
@@ -56,17 +55,25 @@ Items are grouped by area and roughly ordered by impact within each group.
   every *other* leaf it doesn't have a field for — a `Not(...)`, a power gate,
   a token flag. The `CardMatch` fallback handles those on the non-opponent
   path; the opponent path should route through it too. ⏳
-- **Per-source damage marking is unmodelled.** `CardInstance.damage` is one
-  total, so "can't be destroyed by lethal damage unless lethal damage dealt by a
-  single source is marked on it" (Ogre Enforcer) can't be written. Wants a
-  `damage_by_source: HashMap<CardId, u32>` alongside the total, which would
-  also give CR 120.6 a precise home. ⏳
-- **Remaining Visions gaps (6), one primitive each:** Breathstealer's Crypt (a
-  reveal-and-tax draw replacement), Forbidden Ritual (a repeatable *sacrifice*
-  loop — `MayPayRepeatedly` is mana-only), Ogre Enforcer (per-source damage,
-  above), Peace Talks (two turns of global untargetability), Pygmy Hippo
-  (drain the defender's lands into your next main phase), Song of Blood (the
-  frozen-value capture above). ⏳
+- ✅ **Per-source damage marking.** `CardInstance.damage_by_source_this_turn`
+  tallies every source's contribution alongside the total, and the lethal-damage
+  SBA reads it for `Keyword::SurvivesSplitLethalDamage` (Ogre Enforcer). CR
+  120.6's per-source questions now have a home too.
+- ✅ **Visions closes at zero.** The last six shipped with one primitive each:
+  `StaticEffect::DrawsRevealedTaxed` (Breathstealer's Crypt),
+  `Effect::MayRepeat` (Forbidden Ritual — the costless sibling of
+  `MayPayRepeatedly`), `Keyword::SurvivesSplitLethalDamage` (Ogre Enforcer),
+  `Effect::TruceThisTurnAndNext` + `GameState.truce_until_turn` (Peace Talks),
+  `Effect::DrainDefendersLandsForManaNextMain` (Pygmy Hippo) and
+  `Effect::PumpAttackersThisTurn` (Song of Blood).
+- **Peace Talks' truce is coarse.** `truce_active()` short-circuits the
+  permanent- and player-target checks and rejects every attack declaration; it
+  does not distinguish "targets of spells and activated abilities" from
+  *triggered* ability targets, which the printed card leaves legal. Worth a
+  `TargetSource` argument on the legality check. ⏳
+- **`Effect::MayRepeat` caps at a card-supplied `max`.** Forbidden Ritual's
+  "any number of times" is 8 in practice. A genuinely unbounded loop needs a
+  mandatory-loop guard like the one `mandatory_loop_watch` already runs. ⏳
 
 ## Noticed last run (Weatherlight closed)
 

@@ -235,6 +235,10 @@ impl Effect {
         }
         match self {
             Effect::AbandonThisScheme | Effect::GameIsADraw
+            | Effect::PumpAttackersThisTurn { .. }
+            | Effect::TruceThisTurnAndNext
+            | Effect::MayRepeat { .. }
+            | Effect::DrainDefendersLandsForManaNextMain
             | Effect::ExileRandomFromHandMayPlayThisTurn { .. }
             | Effect::ReturnToHandAtYourNextUntapStep { .. }
             | Effect::SwapPhasedState { .. }

@@ -187,6 +187,7 @@ fn keyword_name(kw: &Keyword) -> Option<String> {
         // keyword, so it's filtered the same way as Unblockable.)
         Keyword::CantBeTargetedByAuras
         | Keyword::CantBeTargetedBySpells
+        | Keyword::SurvivesSplitLethalDamage
         | Keyword::DamageBecomesMinusCounters
         | Keyword::Regenerate(_) | Keyword::Unblockable | Keyword::CantBeCountered
         | Keyword::Recursion | Keyword::Inspired | Keyword::CantBlock

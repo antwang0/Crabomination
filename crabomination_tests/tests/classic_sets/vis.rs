@@ -1647,3 +1647,145 @@ fn elkin_lair_gambles_a_card_each_upkeep() {
     drain_stack(&mut g);
     assert!(g.players[0].graveyard.iter().any(|c| c.id == card), "unplayed, so binned");
 }
+
+// ── Wave 6 ─────────────────────────────────────────────────────────────────
+
+/// Ogre Enforcer shrugs off split lethal damage but dies to one big hit.
+#[test]
+fn ogre_enforcer_needs_one_lethal_source() {
+    let mut g = two_player_game();
+    let o = ready(&mut g, 1, catalog::ogre_enforcer());
+    for _ in 0..2 {
+        let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+        g.players[0].mana_pool.add(Color::Red, 1);
+        cast(&mut g, bolt, Some(Target::Permanent(o))).expect("bolt");
+        drain_stack(&mut g);
+    }
+    assert!(g.battlefield_find(o).is_some(), "6 split damage isn't lethal enough");
+    let ctx =
+        crabomination::game::effects::EffectContext::for_ability(o, 0, Some(Target::Permanent(o)));
+    g.resolve_effect(
+        &crabomination::effect::Effect::DealDamage {
+            to: crabomination::effect::Selector::Target(0),
+            amount: crabomination::effect::Value::Const(4),
+        },
+        &ctx,
+    )
+    .expect("big hit");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(o).is_none(), "one source dealt lethal");
+}
+
+/// Song of Blood freezes the milled creature count into the attack pump.
+#[test]
+fn song_of_blood_pumps_attackers() {
+    let mut g = two_player_game();
+    for _ in 0..2 {
+        g.add_card_to_library(0, catalog::grizzly_bears());
+    }
+    for _ in 0..2 {
+        g.add_card_to_library(0, catalog::lightning_bolt());
+    }
+    let attacker = ready(&mut g, 0, catalog::grizzly_bears());
+    let spell = g.add_card_to_hand(0, catalog::song_of_blood());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    cast(&mut g, spell, None).expect("cast");
+    drain_stack(&mut g);
+    g.active_player_idx = 0;
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker,
+        target: AttackTarget::Player(1),
+    }]))
+    .expect("attack");
+    drain_stack(&mut g);
+    assert_eq!(g.computed_permanent(attacker).unwrap().power, 4, "+2/+0 for two creatures");
+}
+
+/// Peace Talks shuts down attacking and targeting for two turns.
+#[test]
+fn peace_talks_freezes_the_table() {
+    let mut g = two_player_game();
+    let attacker = ready(&mut g, 0, catalog::grizzly_bears());
+    let spell = g.add_card_to_hand(0, catalog::peace_talks());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    cast(&mut g, spell, None).expect("cast");
+    drain_stack(&mut g);
+    g.active_player_idx = 0;
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    assert!(
+        g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+            attacker,
+            target: AttackTarget::Player(1),
+        }]))
+        .is_err(),
+        "no attacks during the truce"
+    );
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    assert!(cast(&mut g, bolt, Some(Target::Permanent(attacker))).is_err(), "nothing is targetable");
+}
+
+/// Forbidden Ritual eats permanents to squeeze an opponent.
+#[test]
+fn forbidden_ritual_trades_permanents_for_life() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let spell = g.add_card_to_hand(0, catalog::forbidden_ritual());
+    g.players[0].mana_pool.add(Color::Black, 2);
+    g.players[0].mana_pool.add_colorless(2);
+    g.decider = Box::new(crabomination::decision::ScriptedDecider::new([
+        crabomination::decision::DecisionAnswer::Bool(true),
+    ]));
+    cast(&mut g, spell, Some(Target::Player(1))).expect("cast");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield.iter().filter(|c| c.controller == 0).count(), 0, "the bear went");
+    assert_eq!(g.players[1].life, 18, "and they had nothing to pay with");
+}
+
+/// Breathstealer's Crypt bins a drawn creature when the toll goes unpaid.
+#[test]
+fn breathstealers_crypt_taxes_drawn_creatures() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::breathstealers_crypt());
+    let bears = g.add_card_to_library(1, catalog::grizzly_bears());
+    let mut evs = Vec::new();
+    g.draw_one(1, &mut evs);
+    assert!(g.players[1].graveyard.iter().any(|c| c.id == bears), "discarded, unpaid");
+    assert_eq!(g.players[1].life, 20);
+}
+
+/// Pygmy Hippo drains the defender's lands into your next main phase.
+#[test]
+fn pygmy_hippo_drains_the_defender() {
+    let mut g = two_player_game();
+    let hippo = ready(&mut g, 0, catalog::pygmy_hippo());
+    for _ in 0..3 {
+        g.add_card_to_battlefield(1, catalog::forest());
+    }
+    g.decider = Box::new(crabomination::decision::ScriptedDecider::new([
+        crabomination::decision::DecisionAnswer::Bool(true),
+    ]));
+    g.active_player_idx = 0;
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: hippo,
+        target: AttackTarget::Player(1),
+    }]))
+    .expect("attack");
+    drain_stack(&mut g);
+    while g.step != TurnStep::CombatDamage {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+        drain_stack(&mut g);
+    }
+    assert!(
+        g.battlefield.iter().filter(|c| c.controller == 1).all(|c| c.tapped),
+        "their lands are tapped out"
+    );
+    assert_eq!(g.players[1].mana_pool.total(), 0, "and the mana is gone");
+}
