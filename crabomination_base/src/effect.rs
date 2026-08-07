@@ -2260,7 +2260,7 @@ pub enum ZoneDest {
 /// Where a countered spell goes after being lifted off the stack. The
 /// default (graveyard) matches CR 701.5g; Memory Lapse routes to the
 /// owner's library top, Spell Crumple routes to exile, etc.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum CounteredSpellZone {
     /// Top of the spell-owner's library (Memory Lapse).
     OwnerLibraryTop,
@@ -2278,6 +2278,9 @@ pub enum CounteredSpellZone {
     /// Exile stamped `exiled_with` = the countering source, so the source can
     /// name what it took later (Shell of the Last Kappa).
     ExileWithSource,
+    /// "…put that card onto the battlefield under your control instead"
+    /// (Desertion). Cards that fail the filter fall back to the graveyard.
+    CountererBattlefieldIfMatching(Box<SelectionRequirement>),
 }
 
 /// What mana to add to a pool.
@@ -2325,6 +2328,10 @@ pub enum ManaPayload {
     /// Add one mana of any type the *trigger's subject* land produced
     /// (Extraplanar Lens). Falls back to colorless if it produces nothing.
     AnyTypeTriggerSourceProduces,
+    /// Add one mana of any type a land sacrificed to pay this ability's cost
+    /// could produce (Squandered Resources). The controller picks among the
+    /// sacrificed lands' basic types; a typeless land yields {C}.
+    AnyTypeSacrificedLandProduces,
     /// Add one mana of any color among legendary creatures and planeswalkers
     /// you control (Mox Amber). The legal-color set is the union of those
     /// permanents' colors; produces nothing when empty.

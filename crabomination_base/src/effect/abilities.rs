@@ -2756,11 +2756,11 @@ pub struct ActivatedAbility {
     /// like Mind Stone (`{1}, {T}, Sacrifice this: Draw a card`),
     /// Cathar Commando, Greater Good, Zuran Orb, etc.
     pub sac_cost: bool,
-    /// "Return a [filter] you control to its owner's hand" as an activation
-    /// cost (Floodbringer, Soratami Mindsweeper). Paid before the ability goes
-    /// on the stack; activation is rejected when nothing matches.
+    /// "Return N [filter] you control to their owner's hand" as an activation
+    /// cost (Floodbringer, Flooded Shoreline's two Islands). Paid before the
+    /// ability goes on the stack; rejected when fewer than N match.
     #[serde(default)]
-    pub return_permanent_cost: Option<SelectionRequirement>,
+    pub return_permanent_cost: Option<(SelectionRequirement, u32)>,
     /// "Tap N untapped [filter] you control" as an activation cost (Crookclaw
     /// Elder, Keeper of the Nine Gales). Paid before the ability goes on the
     /// stack; activation is rejected when fewer than N untapped matches are

@@ -914,7 +914,7 @@ pub fn skull_collector() -> CardDefinition {
 fn moonfolk_ability(effect: Effect) -> ActivatedAbility {
     ActivatedAbility {
         mana_cost: cost(&[generic(2)]),
-        return_permanent_cost: Some(R::Land),
+        return_permanent_cost: Some((R::Land, 1)),
         effect,
         ..Default::default()
     }

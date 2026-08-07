@@ -86,9 +86,10 @@ fn karoo(name: &'static str, land: LandType, color: Color) -> CardDefinition {
             effect: StaticEffect::EntersTapped { applies_to: Selector::This },
         }],
         triggered_abilities: vec![etb(Effect::SacrificeSourceUnlessCost {
-            cost: WardCost::ReturnMatchingToHand(Box::new(
-                R::HasLandType(land).and(R::Untapped).and(R::OtherThanSource),
-            )),
+            cost: WardCost::ReturnMatchingToHand(
+                Box::new(R::HasLandType(land).and(R::Untapped).and(R::OtherThanSource)),
+                1,
+            ),
         })],
         activated_abilities: vec![ActivatedAbility {
             tap_cost: true,
@@ -400,7 +401,7 @@ pub fn aku_djinn() -> CardDefinition {
 pub fn bull_elephant() -> CardDefinition {
     CardDefinition {
         triggered_abilities: vec![etb(Effect::SacrificeSourceUnlessCost {
-            cost: WardCost::ReturnMatchingToHand(Box::new(R::HasLandType(LandType::Forest))),
+            cost: WardCost::ReturnMatchingToHand(Box::new(R::HasLandType(LandType::Forest)), 2),
         })],
         ..creature("Bull Elephant", cost(&[generic(3), g()]), vec![CreatureType::Elephant], 4, 4)
     }
@@ -1158,9 +1159,10 @@ pub fn waterspout_djinn() -> CardDefinition {
         triggered_abilities: vec![TriggeredAbility {
             event: your_upkeep(),
             effect: Effect::SacrificeSourceUnlessCost {
-                cost: WardCost::ReturnMatchingToHand(Box::new(
-                    R::HasLandType(LandType::Island).and(R::Untapped),
-                )),
+                cost: WardCost::ReturnMatchingToHand(
+                    Box::new(R::HasLandType(LandType::Island).and(R::Untapped)),
+                    1,
+                ),
             },
         }],
         ..creature("Waterspout Djinn", cost(&[generic(2), u(), u()]), vec![CreatureType::Djinn], 4, 4)

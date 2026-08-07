@@ -1135,7 +1135,7 @@ pub fn floodbringer() -> CardDefinition {
         keywords: vec![Keyword::Flying],
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[generic(2)]),
-            return_permanent_cost: Some(R::Land),
+            return_permanent_cost: Some((R::Land, 1)),
             effect: Effect::Tap { what: target_filtered(R::Land) },
             ..Default::default()
         }],
@@ -1155,7 +1155,7 @@ pub fn soratami_mindsweeper() -> CardDefinition {
         keywords: vec![Keyword::Flying],
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[generic(2)]),
-            return_permanent_cost: Some(R::Land),
+            return_permanent_cost: Some((R::Land, 1)),
             effect: Effect::Mill {
                 who: target_filtered(R::Player),
                 amount: Value::Const(2),

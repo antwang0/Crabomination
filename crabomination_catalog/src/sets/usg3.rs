@@ -447,7 +447,7 @@ pub fn antagonism() -> CardDefinition {
 pub fn attunement() -> CardDefinition {
     CardDefinition {
         activated_abilities: vec![ActivatedAbility {
-            return_permanent_cost: Some(R::IsSource),
+            return_permanent_cost: Some((R::IsSource, 1)),
             effect: Effect::Seq(vec![
                 Effect::Draw { who: Selector::You, amount: Value::Const(3) },
                 Effect::Discard {

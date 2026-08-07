@@ -392,7 +392,7 @@ pub fn pegasus_refuge() -> CardDefinition {
 pub fn broken_fall() -> CardDefinition {
     CardDefinition {
         activated_abilities: vec![ActivatedAbility {
-            return_permanent_cost: Some(R::IsSource),
+            return_permanent_cost: Some((R::IsSource, 1)),
             effect: Effect::Regenerate { what: target_filtered(R::Creature) },
             ..Default::default()
         }],

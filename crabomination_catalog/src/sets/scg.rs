@@ -1584,6 +1584,7 @@ pub fn raven_guild_initiate() -> CardDefinition {
     CardDefinition {
         keywords: vec![Keyword::MorphCost(Box::new(WardCost::ReturnMatchingToHand(
             Box::new(R::HasCreatureType(CreatureType::Bird)),
+            1,
         )))],
         ..creature(
             "Raven Guild Initiate",

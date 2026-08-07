@@ -699,6 +699,12 @@ pub enum CounterType {
     Polyp,
     /// Orcish Mine's ore counters — the Aura's countdown to destroying its host.
     Ore,
+    /// Bogardan Phoenix — set once its recursion has been used.
+    Death,
+    /// Corrosion — an artifact dies once its mana value is at most its rust count.
+    Rust,
+    /// Magma Mine — the stored damage it deals when sacrificed.
+    Pressure,
 }
 
 /// Every zone a card can occupy.
@@ -782,10 +788,10 @@ pub enum WardCost {
     /// `SacrificeMatching` ("Morph—Sacrifice two Mountains", Skirk Volcanist).
     /// Unpayable when fewer than N match.
     SacrificeMatchingN(Box<SelectionRequirement>, u32),
-    /// "…unless you return a [filter] you control to its owner's hand"
+    /// "…unless you return N [filter] you control to their owner's hand"
     /// ("Morph—Return a Bird you control to its owner's hand", Raven Guild
-    /// Initiate). Unpayable when nothing matches.
-    ReturnMatchingToHand(Box<SelectionRequirement>),
+    /// Initiate; Ovinomancer's three basics). Unpayable when fewer than N match.
+    ReturnMatchingToHand(Box<SelectionRequirement>, u32),
     /// "{X}, where X is this creature's power" — a dynamic generic cost read
     /// off the source's computed power at payment time (Esper Sentinel's
     /// rhystic tax).

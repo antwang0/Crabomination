@@ -10131,6 +10131,56 @@ impl GameState {
                             events.push(GameEvent::ManaAdded { player: p, color, source: ctx.source });
                         }
                     }
+                    // Squandered Resources — the land is already in the
+                    // graveyard when the ability resolves, so read its basic
+                    // types off the death snapshot.
+                    ManaPayload::AnyTypeSacrificedLandProduces => {
+                        use crate::card::LandType;
+                        let mut legal: Vec<Color> = Vec::new();
+                        let sacrificed: Vec<CardId> = self.cost_sacrificed_batch.clone();
+                        for id in sacrificed {
+                            let Some(card) = self
+                                .died_card_snapshots
+                                .get(&id)
+                                .or_else(|| self.leaves_bf_lki.get(&id))
+                                .or_else(|| self.find_card_anywhere(id))
+                            else {
+                                continue;
+                            };
+                            for lt in &card.definition.subtypes.land_types {
+                                let c = match lt {
+                                    LandType::Plains => Color::White,
+                                    LandType::Island => Color::Blue,
+                                    LandType::Swamp => Color::Black,
+                                    LandType::Mountain => Color::Red,
+                                    LandType::Forest => Color::Green,
+                                    _ => continue,
+                                };
+                                if !legal.contains(&c) {
+                                    legal.push(c);
+                                }
+                            }
+                        }
+                        if legal.is_empty() {
+                            self.players[p].mana_pool.add_colorless(mult);
+                            events.push(GameEvent::ColorlessManaAdded {
+                                player: p,
+                                source: ctx.source,
+                            });
+                        } else {
+                            let source = ctx.source.unwrap_or(CardId(0));
+                            let answer = self.decider.decide(&crate::decision::Decision::ChooseColor {
+                                source,
+                                legal: legal.clone(),
+                            });
+                            let color = match answer {
+                                crate::decision::DecisionAnswer::Color(c) if legal.contains(&c) => c,
+                                _ => legal[0],
+                            };
+                            add_one(self, p, color);
+                            events.push(GameEvent::ManaAdded { player: p, color, source: ctx.source });
+                        }
+                    }
                     // Extraplanar Lens — "one mana of any type that land
                     // produced": read the trigger subject's own basic types.
                     ManaPayload::AnyTypeTriggerSourceProduces => {
@@ -17867,6 +17917,21 @@ impl GameState {
                                 self.plotted_cards.insert(cid);
                                 self.plotted_this_turn.insert(cid);
                                 self.fire_becomes_plotted_triggers(cid, owner);
+                            }
+                            // Desertion — the countered card lands under the
+                            // countering player's control when it matches.
+                            CounteredSpellZone::CountererBattlefieldIfMatching(filter) => {
+                                let taken =
+                                    self.evaluate_requirement_on_card(filter, &card, ctx.controller);
+                                let dest = if taken {
+                                    ZoneDest::Battlefield {
+                                        controller: crate::effect::PlayerRef::You,
+                                        tapped: false,
+                                    }
+                                } else {
+                                    ZoneDest::Graveyard
+                                };
+                                self.place_card_in_dest(*card, ctx.controller, &dest, events);
                             }
                         }
                     }
@@ -35332,10 +35397,10 @@ impl GameState {
                         }
                         true
                     }
-                    WardCost::ReturnMatchingToHand(filter) => {
+                    WardCost::ReturnMatchingToHand(filter, n) => {
                         // Source-aware, so `OtherThanSource` reads right (the
                         // Karoo lands can't bounce themselves).
-                        let pick = self
+                        let mut pool: Vec<(CardId, u32)> = self
                             .battlefield
                             .iter()
                             .filter(|c| {
@@ -35347,22 +35412,23 @@ impl GameState {
                                         ctx.source,
                                     )
                             })
-                            .min_by_key(|c| c.definition.cost.cmc())
-                            .map(|c| c.id);
-                        match pick {
-                            Some(id) => {
-                                self.move_card_to(
-                                    id,
-                                    &crate::effect::ZoneDest::Hand(
-                                        crate::effect::PlayerRef::OwnerOfMoved,
-                                    ),
-                                    ctx,
-                                    events,
-                                );
-                                true
-                            }
-                            None => false,
+                            .map(|c| (c.id, c.definition.cost.cmc()))
+                            .collect();
+                        if (pool.len() as u32) < *n {
+                            return false;
                         }
+                        pool.sort_by_key(|(_, cmc)| *cmc);
+                        for (id, _) in pool.into_iter().take(*n as usize) {
+                            self.move_card_to(
+                                id,
+                                &crate::effect::ZoneDest::Hand(
+                                    crate::effect::PlayerRef::OwnerOfMoved,
+                                ),
+                                ctx,
+                                events,
+                            );
+                        }
+                        true
                     }
                     WardCost::SacrificePermanents(n) => {
                         let picks: Vec<CardId> = self

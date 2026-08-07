@@ -1679,7 +1679,7 @@ fn project_permanent(
                 W::SacrificeMatching(_) => "Ward—sacrifice a matching permanent".to_string(),
                 W::SacrificePermanents(n) => format!("Ward—sacrifice {n} permanents"),
                 W::SacrificeMatchingN(_, n) => format!("Ward—sacrifice {n} matching permanents"),
-                W::ReturnMatchingToHand(_) => "Ward—return a matching permanent".to_string(),
+                W::ReturnMatchingToHand(_, n) => format!("Ward—return {n} matching permanent(s)"),
                 W::GenericSourcePower => "Ward—{X} (this creature's power)".to_string(),
                 W::GenericXFromCost => "Ward—{X}".to_string(),
                 W::GenericCountersOnSource(kind) => {
@@ -2519,8 +2519,8 @@ fn ability_cost_label(ability: &crate::effect::ActivatedAbility) -> String {
     if ability.exile_top_cost > 0 {
         parts.push(format!("Exile {} from the top of your library", ability.exile_top_cost));
     }
-    if let Some(req) = ability.return_permanent_cost.as_ref() {
-        parts.push(format!("Return a {} you control to hand", requirement_noun(req)));
+    if let Some((req, n)) = ability.return_permanent_cost.as_ref() {
+        parts.push(format!("Return {n} {} you control to hand", requirement_noun(req)));
     }
     if let Some(req) = ability.sac_all_matching_cost.as_ref() {
         parts.push(format!("Sacrifice all {}s you control", requirement_noun(req)));

@@ -32,7 +32,7 @@ pub(crate) fn ward_cost_is_trivial(cost: &crate::card::WardCost) -> bool {
         | WardCost::DamageFromSource(n) => *n == 0,
         WardCost::SacrificeCreature
         | WardCost::SacrificeMatching(_)
-        | WardCost::ReturnMatchingToHand(_)
+        | WardCost::ReturnMatchingToHand(..)
         | WardCost::ExileTopFromGraveyardMatching(_)
         | WardCost::ReturnMatchingFromGraveyardToHand(_) => false,
         WardCost::SacrificeMatchingN(_, n) => *n == 0,
@@ -1494,6 +1494,7 @@ fn payload_yields_multiple(pool: &crate::effect::ManaPayload) -> bool {
         | ManaPayload::AnyColorOpponentCouldProduce
         | ManaPayload::AnyColorYouCouldProduce
         | ManaPayload::AnyTypeTriggerSourceProduces
+        | ManaPayload::AnyTypeSacrificedLandProduces
         | ManaPayload::AnyColorAmongLegendaries
         | ManaPayload::AnyColorAmongYourPermanents
         | ManaPayload::DraftNotedColorOfSource => true,
@@ -2454,7 +2455,8 @@ fn effect_produces_color(effect: &Effect, color: ManaColor) -> bool {
             // Color set depends on live board state — not auto-tapped.
             ManaPayload::AnyColorAmongLegendaries
             | ManaPayload::AnyColorAmongYourPermanents
-            | ManaPayload::AnyTypeTriggerSourceProduces => false,
+            | ManaPayload::AnyTypeTriggerSourceProduces
+            | ManaPayload::AnyTypeSacrificedLandProduces => false,
             // Devotion-scaled: it can make `color`, but only the controller
             // should choose to tap it (devotion may be 0). Not auto-tapped.
             ManaPayload::DevotionOfChosenColor => false,
@@ -14628,11 +14630,11 @@ impl GameState {
             self.remove_from_battlefield_to_exile(granter);
             events.push(GameEvent::PermanentExiled { card_id: granter });
         }
-        // "Return a [filter] you control to its owner's hand" as a cost
-        // (Floodbringer). Bounce the cheapest match so a bot doesn't throw
-        // away its best permanent.
-        if let Some(filter) = &ability.return_permanent_cost {
-            let pick = self
+        // "Return N [filter] you control to their owner's hand" as a cost
+        // (Floodbringer). Bounce the cheapest matches so a bot doesn't throw
+        // away its best permanents.
+        if let Some((filter, n)) = &ability.return_permanent_cost {
+            let mut pool: Vec<(CardId, u32)> = self
                 .battlefield
                 .iter()
                 .filter(|c| {
@@ -14644,16 +14646,21 @@ impl GameState {
                             Some(card_id),
                         )
                 })
-                .min_by_key(|c| c.definition.cost.cmc())
-                .map(|c| c.id)
-                .ok_or(GameError::SelectionRequirementViolated)?;
+                .map(|c| (c.id, c.definition.cost.cmc()))
+                .collect();
+            if (pool.len() as u32) < *n {
+                return Err(GameError::SelectionRequirementViolated);
+            }
+            pool.sort_by_key(|(_, cmc)| *cmc);
             let ctx = crate::game::effects::EffectContext::for_ability(card_id, p, None);
-            self.move_card_to(
-                pick,
-                &crate::effect::ZoneDest::Hand(crate::effect::PlayerRef::OwnerOfMoved),
-                &ctx,
-                &mut events,
-            );
+            for (id, _) in pool.into_iter().take(*n as usize) {
+                self.move_card_to(
+                    id,
+                    &crate::effect::ZoneDest::Hand(crate::effect::PlayerRef::OwnerOfMoved),
+                    &ctx,
+                    &mut events,
+                );
+            }
         }
         // "Tap N untapped [filter] you control" as a cost (Crookclaw Elder).
         // Taps the least useful matches first (lowest power) so a bot doesn't
