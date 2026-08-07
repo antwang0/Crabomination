@@ -6436,3 +6436,74 @@ fn creature_or_artifact_died_ignores_noncreature_nonartifact() {
         "a land dying is neither a creature nor an artifact"
     );
 }
+
+// ── CR 301.5c / 506.4 — attachment + combat legality against the layers ───────
+
+/// CR 301.5c — an Equipment unattaches when its host stops being a creature
+/// (Song of the Dryads turns it into a Forest land).
+#[test]
+fn cr_301_5c_equipment_falls_off_a_non_creature_host() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let greaves = g.add_card_to_battlefield(0, catalog::lightning_greaves());
+    g.battlefield_find_mut(greaves).unwrap().attached_to = Some(bear);
+    let song = g.add_card_to_battlefield(0, catalog::song_of_the_dryads());
+    g.battlefield_find_mut(song).unwrap().attached_to = Some(bear);
+    let _ = g.check_state_based_actions();
+    assert!(g.battlefield_find(bear).is_some(), "the host is still on the battlefield");
+    assert_eq!(g.battlefield_find(greaves).unwrap().attached_to, None,
+        "Equipment falls off a host that is no longer a creature");
+}
+
+/// CR 506.4 — an attacker that stops being a creature leaves combat.
+#[test]
+fn cr_506_4_attacker_that_stops_being_a_creature_leaves_combat() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(bear);
+    g.active_player_idx = 0;
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: bear, target: AttackTarget::Player(1),
+    }])).expect("attack");
+    assert_eq!(g.attacking.len(), 1);
+    let song = g.add_card_to_battlefield(0, catalog::song_of_the_dryads());
+    g.battlefield_find_mut(song).unwrap().attached_to = Some(bear);
+    let _ = g.check_state_based_actions();
+    assert!(g.attacking.is_empty(), "a noncreature attacker is removed from combat");
+}
+
+/// CR 702.67 — Fortify attaches a Fortification to a land you control and
+/// grants it the fortified-land bonus.
+#[test]
+fn cr_702_67_fortify_attaches_to_a_land() {
+    let mut g = two_player_game();
+    let forest = g.add_card_to_battlefield(0, catalog::forest());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let garrison = g.add_card_to_battlefield(0, catalog::darksteel_garrison());
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add_colorless(3);
+    assert!(g.perform_action(GameAction::Equip { equipment: garrison, target: bear }).is_err(),
+        "a Fortification can't attach to a creature");
+    g.perform_action(GameAction::Equip { equipment: garrison, target: forest })
+        .expect("fortify the land");
+    assert!(g.computed_permanent(forest).unwrap().keywords.contains(&Keyword::Indestructible));
+}
+
+/// CR 301.6 / 704.5n — a Fortification whose host stops being a land unattaches
+/// and stays on the battlefield.
+#[test]
+fn cr_301_6_fortification_falls_off_a_non_land() {
+    let mut g = two_player_game();
+    let forest = g.add_card_to_battlefield(0, catalog::forest());
+    let garrison = g.add_card_to_battlefield(0, catalog::darksteel_garrison());
+    g.battlefield_find_mut(garrison).unwrap().attached_to = Some(forest);
+    let _ = g.check_state_based_actions();
+    assert_eq!(g.battlefield_find(garrison).unwrap().attached_to, Some(forest));
+    g.remove_to_graveyard_with_triggers(forest);
+    let _ = g.check_state_based_actions();
+    assert!(g.battlefield_find(garrison).is_some(), "the Fortification stays in play");
+    assert_eq!(g.battlefield_find(garrison).unwrap().attached_to, None);
+}

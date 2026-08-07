@@ -2954,6 +2954,17 @@ impl CardDefinition {
     pub fn is_equipment(&self) -> bool {
         self.subtypes.artifact_subtypes.contains(&ArtifactSubtype::Equipment)
     }
+    /// CR 301.6 — an artifact with the Fortification subtype.
+    pub fn is_fortification(&self) -> bool {
+        self.subtypes.artifact_subtypes.contains(&ArtifactSubtype::Fortification)
+    }
+    /// CR 702.67 — the Fortify cost, if this card has the keyword.
+    pub fn has_fortify(&self) -> Option<&ManaCost> {
+        self.keywords.iter().find_map(|kw| match kw {
+            Keyword::Fortify(cost) => Some(cost),
+            _ => None,
+        })
+    }
     pub fn is_vehicle(&self) -> bool {
         self.subtypes.artifact_subtypes.contains(&ArtifactSubtype::Vehicle)
     }

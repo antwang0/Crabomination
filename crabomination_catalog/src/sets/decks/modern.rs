@@ -60840,3 +60840,35 @@ pub fn brass_squire() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Darksteel Garrison — {2} Fortification (CR 301.6 / 702.67). Fortified land
+/// has indestructible; whenever it becomes tapped, pump target creature.
+/// Fortify {3}.
+pub fn darksteel_garrison() -> CardDefinition {
+    use crate::card::{ArtifactSubtype, EquipBonus};
+    use crate::effect::shortcut::target_filtered;
+    CardDefinition {
+        name: "Darksteel Garrison",
+        cost: cost(&[generic(2)]),
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes {
+            artifact_subtypes: vec![ArtifactSubtype::Fortification],
+            ..Default::default()
+        },
+        keywords: vec![Keyword::Fortify(cost(&[generic(3)]))],
+        equipped_bonus: Some(EquipBonus {
+            keywords: vec![Keyword::Indestructible],
+            triggered_abilities: vec![TriggeredAbility {
+                event: EventSpec::new(EventKind::Tapped, EventScope::SelfSource),
+                effect: Effect::PumpPT {
+                    what: target_filtered(SelectionRequirement::Creature),
+                    power: Value::Const(1),
+                    toughness: Value::Const(1),
+                    duration: Duration::EndOfTurn,
+                },
+            }],
+            ..Default::default()
+        }),
+        ..Default::default()
+    }
+}

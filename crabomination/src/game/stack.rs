@@ -2797,20 +2797,54 @@ impl GameState {
         // illegal permanent or to a player, it becomes unattached from
         // that permanent or player. It remains on the battlefield."
         // Illegal here means the attached card isn't on the battlefield
-        // anymore (e.g. equipped creature died) OR the target permanent
-        // is no longer a legal target (no creature subtype for Equipment).
-        // The Equipment itself stays in play — only the link is cleared.
+        // anymore (e.g. equipped creature died) OR it is no longer a creature
+        // in the *computed* view — an Equipment on a Song-of-the-Dryads'd
+        // creature or an un-crewed Vehicle falls off (CR 301.5c). CR 301.5c
+        // also unattaches an Equipment that itself became a creature, unless
+        // it has Reconfigure. The Equipment stays in play — only the link
+        // is cleared.
+        let computed = self.compute_battlefield();
+        let is_creature_now = |id: CardId| {
+            computed
+                .iter()
+                .any(|c| c.id == id && c.card_types.contains(&crate::card::CardType::Creature))
+        };
+        // CR 506.4 — an attacking or blocking creature that stops being a
+        // creature is removed from combat (a Vehicle that loses its crewed
+        // animation, a creature turned into a noncreature permanent).
+        let out_of_combat: Vec<CardId> = self
+            .attacking
+            .iter()
+            .map(|a| a.attacker)
+            .chain(self.block_map.keys().copied())
+            .filter(|id| !is_creature_now(*id))
+            .collect();
+        for id in out_of_combat {
+            self.remove_from_combat(id);
+        }
+
+        let is_land_now = |id: CardId| {
+            computed
+                .iter()
+                .any(|c| c.id == id && c.card_types.contains(&crate::card::CardType::Land))
+        };
         let stale_equipment_links: Vec<CardId> = self
             .battlefield
             .iter()
-            .filter(|c| c.definition.is_equipment())
+            .filter(|c| c.definition.is_equipment() || c.definition.is_fortification())
             .filter_map(|c| {
                 let attached = c.attached_to?;
-                let is_still_legal = self
-                    .battlefield
-                    .iter()
-                    .any(|b| b.id == attached && b.definition.is_creature());
-                if !is_still_legal { Some(c.id) } else { None }
+                // CR 301.6 — a Fortification's legal host is a land.
+                let host_ok = if c.definition.is_fortification() {
+                    is_land_now(attached)
+                } else {
+                    is_creature_now(attached)
+                };
+                let self_animated = is_creature_now(c.id)
+                    && !c.definition.keywords.iter().any(|k| {
+                        matches!(k, crate::card::Keyword::Reconfigure(_))
+                    });
+                if !host_ok || self_animated { Some(c.id) } else { None }
             })
             .collect();
         for id in stale_equipment_links {

@@ -1457,6 +1457,7 @@ static DECKS: &[Factory] = &[
     super::decks::macabre_waltz,
     super::decks::witness_protection,
     super::decks::song_of_the_dryads,
+    super::decks::darksteel_garrison,
     super::decks::imprisoned_in_the_moon,
     super::decks::loot_the_pathfinder,
     super::decks::brightglass_gearhulk,

@@ -7479,14 +7479,18 @@ impl GameState {
         if self.battlefield[equip_pos].controller != p {
             return Err(GameError::NotYourPriority);
         }
-        if !self.battlefield[equip_pos].definition.is_equipment() {
+        // CR 702.67 — Fortify is the Fortification analogue of equip: same
+        // action, but it attaches to a land you control.
+        let fortify = self.battlefield[equip_pos].definition.is_fortification();
+        if !fortify && !self.battlefield[equip_pos].definition.is_equipment() {
             return Err(GameError::NotEquipment(equipment));
         }
-        let mut equip_cost = self.battlefield[equip_pos]
-            .definition
-            .has_equip()
-            .cloned()
-            .ok_or(GameError::NotEquipment(equipment))?;
+        let mut equip_cost = {
+            let def = &self.battlefield[equip_pos].definition;
+            if fortify { def.has_fortify() } else { def.has_equip() }
+        }
+        .cloned()
+        .ok_or(GameError::NotEquipment(equipment))?;
         // CR 702.6 — "Equip costs you pay cost {N} less" (Auriok Steelshaper).
         let reduction = self.equip_cost_reduction_for(p);
         if reduction > 0 {
@@ -7495,12 +7499,14 @@ impl GameState {
         // The target must be a creature the activating player controls
         // (CR 702.6c). Use the computed view so animated/becomes-a-creature
         // permanents are honored.
+        let want = if fortify {
+            crate::card::CardType::Land
+        } else {
+            crate::card::CardType::Creature
+        };
         let target_ok = self
             .computed_permanent(target)
-            .is_some_and(|c| {
-                c.controller == p
-                    && c.card_types.contains(&crate::card::CardType::Creature)
-            });
+            .is_some_and(|c| c.controller == p && c.card_types.contains(&want));
         if !target_ok {
             return Err(GameError::InvalidTarget);
         }
