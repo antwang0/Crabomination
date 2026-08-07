@@ -10,7 +10,8 @@ state-corrupting in ordinary play.
 
 ## Discovered follow-ups — Final Fantasy (`sets::fin`)
 
-The `fin` set is a live, growing catalog (enumerate the gaps with
+The `fin` set is a live, growing catalog (78 single-faced cards still missing
+as of the modern_decks push, down from 125 — enumerate the gaps with
 `python3 scripts/fin_gaps.py` — it diffs `set:fin` against the **whole**
 catalog, since FIN cards are split across `sets::fin` and
 `sets::decks::recent27`; a fin.rs-only check reports false gaps). Primitives

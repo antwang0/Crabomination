@@ -105,6 +105,9 @@ exercising each) was elided in a compaction pass; recover it from
   spend-restriction path. `fire_spell_cast_triggers` also walks statics- and
   Equipment-granted listeners, so a granted "whenever you cast a noncreature
   spell" clause fires (Red Mage's Rapier, Black Mage's Rod).
+- **Replacement (modern_decks):** `StaticEffect::OpponentMillBonus` — additive
+  mill replacement ("they mill that many plus four"), applied before the
+  `OpponentMillDoubled` doublers (The Water Crystal).
 - **Cast-mode / cost (modern_decks):** `Effect::Tiered` ("choose one additional
   cost", sharing the Spree cast path — the FIN Magic cycle),
   `CardDefinition.kicker_additional_cost` (non-mana kicker — Vayne's
