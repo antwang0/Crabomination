@@ -2077,6 +2077,7 @@ pub fn fear_of_isolation() -> CardDefinition {
         additional_cast_cost: vec![crate::card::AdditionalCastCost::ReturnToHand {
             filter: SelectionRequirement::ControlledByYou,
             count: 1,
+            count_x: false,
         }],
         ..Default::default()
     }

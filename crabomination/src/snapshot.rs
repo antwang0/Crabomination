@@ -857,7 +857,7 @@ mod tests {
         ] {
             let original = Effect::CounterSpellToZone {
                 what: target_filtered(SelectionRequirement::IsSpellOnStack),
-                zone,
+                zone: zone.clone(),
             };
             let json = serde_json::to_string(&original).expect("serialize");
             let parsed: Effect = serde_json::from_str(&json).expect("deserialize");

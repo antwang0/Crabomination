@@ -235,6 +235,9 @@ impl Effect {
         }
         match self {
             Effect::AbandonThisScheme | Effect::GameIsADraw
+            | Effect::SwapPhasedState { .. }
+            | Effect::TopOfGraveyardToLibraryTop { .. }
+            | Effect::LookTopMayPayLifeToBin { .. }
             | Effect::ExileCostSacrificedBatch
             | Effect::ExileEachMatchingThenControllerDraws { .. }
             | Effect::YourLandsProduceColorThisTurn(_)

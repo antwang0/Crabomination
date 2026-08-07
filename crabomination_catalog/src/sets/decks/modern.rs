@@ -59243,6 +59243,7 @@ pub fn familiars_ruse() -> CardDefinition {
         additional_cast_cost: vec![AdditionalCastCost::ReturnToHand {
             filter: SelectionRequirement::Creature,
             count: 1,
+            count_x: false,
         }],
         effect: Effect::CounterSpell {
             what: target_filtered(SelectionRequirement::IsSpellOnStack),

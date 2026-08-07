@@ -5641,6 +5641,17 @@ pub enum Effect {
         #[serde(default)]
         until_source_leaves: bool,
     },
+    /// CR 702.26 — "simultaneously, all phased-out [filter] phase in and all
+    /// [filter] with phasing phase out" (Time and Tide). Both sets are read
+    /// before either moves, so a phaser that just returned stays.
+    SwapPhasedState { filter: SelectionRequirement },
+    /// "If the top card of `who`'s graveyard matches `filter`, put it on top of
+    /// that player's library" (Guiding Spirit).
+    TopOfGraveyardToLibraryTop { who: PlayerRef, filter: SelectionRequirement },
+    /// "Look at the top card of `who`'s library. If it matches `filter`, you
+    /// may pay `life` life. If you do, put it into that player's graveyard"
+    /// (Wand of Denial).
+    LookTopMayPayLifeToBin { who: PlayerRef, filter: SelectionRequirement, life: u32 },
     /// Untap every permanent the selector resolves to. The optional
     /// `up_to` cap limits the count to "up to N" — used by Frantic
     /// Search ("untap up to three lands"), Cryptolith Rite-style

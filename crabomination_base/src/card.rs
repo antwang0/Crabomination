@@ -4057,6 +4057,10 @@ pub enum AdditionalCastCost {
         filter: SelectionRequirement,
         #[serde(default = "one_u32")]
         count: u32,
+        /// The count is the spell's announced X instead of `count` (Infernal
+        /// Harvest's "return X Swamps you control").
+        #[serde(default)]
+        count_x: bool,
     },
     /// "As an additional cost to cast this spell, exile [count] [filter]
     /// card(s) from your graveyard." The first (lowest-MV) exiled card's mana

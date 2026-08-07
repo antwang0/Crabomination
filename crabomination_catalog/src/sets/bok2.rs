@@ -328,6 +328,7 @@ pub fn veil_of_secrecy() -> CardDefinition {
         splice_extra_cost: Some(AdditionalCastCost::ReturnToHand {
             filter: R::Creature.and(R::HasColor(Color::Blue)),
             count: 1,
+            count_x: false,
         }),
         ..arcane_instant(
             "Veil of Secrecy",

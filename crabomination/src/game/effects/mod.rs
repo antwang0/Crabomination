@@ -2334,6 +2334,94 @@ impl GameState {
         match effect {
             Effect::Noop => Ok(()),
 
+            // CR 702.26 — Time and Tide. Snapshot both sides before either
+            // moves, so a phaser that just returned isn't sent straight back.
+            Effect::SwapPhasedState { filter } => {
+                let returning: Vec<CardId> = self
+                    .phased_out
+                    .iter()
+                    .filter(|c| {
+                        c.phased_out_by.is_none()
+                            && self.evaluate_requirement_on_card(filter, c, c.controller)
+                    })
+                    .map(|c| c.id)
+                    .collect();
+                let leaving: Vec<CardId> = self
+                    .compute_battlefield()
+                    .iter()
+                    .filter(|c| {
+                        c.keywords.contains(&crate::card::Keyword::Phasing)
+                            && self.evaluate_requirement_static(
+                                filter,
+                                &Target::Permanent(c.id),
+                                c.controller,
+                                ctx.source,
+                            )
+                    })
+                    .map(|c| c.id)
+                    .collect();
+                for id in returning {
+                    if let Some(pos) = self.phased_out.iter().position(|c| c.id == id) {
+                        let c = self.phased_out.remove(pos);
+                        self.battlefield.push(c);
+                        events.push(GameEvent::PermanentPhasedIn { card_id: id });
+                    }
+                }
+                for id in leaving {
+                    if let Some(pos) = self.battlefield.iter().position(|c| c.id == id) {
+                        self.remove_from_combat(id);
+                        let c = self.battlefield.remove(pos);
+                        self.phased_out.push(c);
+                        events.push(GameEvent::PermanentPhasedOut { card_id: id });
+                    }
+                }
+                Ok(())
+            }
+
+            // Guiding Spirit — only a matching top card moves.
+            Effect::TopOfGraveyardToLibraryTop { who, filter } => {
+                let Some(p) = self.resolve_player(who, ctx) else { return Ok(()) };
+                let hit = self.players[p]
+                    .graveyard
+                    .last()
+                    .filter(|c| self.evaluate_requirement_on_card(filter, c, p))
+                    .map(|c| c.id);
+                if let Some(id) = hit
+                    && let Some(card) = Self::take_card(&mut self.players[p].graveyard, id)
+                {
+                    self.players[p].library.insert(0, card);
+                }
+                Ok(())
+            }
+
+            // Wand of Denial — the look is free, the bin costs life.
+            Effect::LookTopMayPayLifeToBin { who, filter, life } => {
+                let Some(p) = self.resolve_player(who, ctx) else { return Ok(()) };
+                let Some(top) = self.players[p].library.first() else { return Ok(()) };
+                let (id, matches) = (top.id, self.evaluate_requirement_on_card(filter, top, p));
+                if !matches || self.players[ctx.controller].life < *life as i32 {
+                    return Ok(());
+                }
+                // Auto seats always pay: stripping an opponent's draw for two
+                // life is the only reason to activate this.
+                let pay = match self.decider.kind() {
+                    crate::decision::DeciderKind::Auto => true,
+                    _ => matches!(
+                        self.decider.decide(&crate::decision::Decision::OptionalTrigger {
+                            source: ctx.source.unwrap_or(id),
+                            description: format!("Pay {life} life to bin the top card?"),
+                        }),
+                        crate::decision::DecisionAnswer::Bool(true)
+                    ),
+                };
+                if pay {
+                    self.adjust_life(ctx.controller, -(*life as i32));
+                    let card = self.players[p].library.remove(0);
+                    self.players[p].graveyard.push(card);
+                }
+                Ok(())
+            }
+
             // CR 104.4 — Divine Intervention ends the game with no winner.
             Effect::GameIsADraw => {
                 self.game_over = Some(None);

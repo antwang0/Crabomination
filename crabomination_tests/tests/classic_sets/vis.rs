@@ -1227,3 +1227,273 @@ fn vis_wave_three_stat_lines_match_print() {
     assert!(catalog::scalebanes_elite().keywords.contains(&Keyword::Protection(Color::Black)));
     assert!(catalog::knight_of_valor().keywords.contains(&Keyword::Flanking));
 }
+
+// ── Wave four ───────────────────────────────────────────────────────────────
+
+/// A Chimera hands its keyword and a +2/+2 counter to another Chimera.
+#[test]
+fn chimeras_pass_their_keyword_along() {
+    for (donor, keyword) in [
+        (catalog::tin_wing_chimera as fn() -> CardDefinition, Keyword::Flying),
+        (catalog::lead_belly_chimera, Keyword::Trample),
+        (catalog::iron_heart_chimera, Keyword::Vigilance),
+        (catalog::brass_talon_chimera, Keyword::FirstStrike),
+    ] {
+        let mut g = two_player_game();
+        let from = ready(&mut g, 0, donor());
+        let to = ready(&mut g, 0, catalog::brass_talon_chimera());
+        activate(&mut g, from, 0, Some(Target::Permanent(to))).expect("sacrifice it");
+        drain_stack(&mut g);
+        let c = g.battlefield_find(to).expect("recipient");
+        assert_eq!(c.counter_count(CounterType::PlusTwoPlusTwo), 1, "{}", donor().name);
+        assert!(g.computed_permanent(to).unwrap().keywords.contains(&keyword));
+    }
+}
+
+/// Sands of Time flips every board at each upkeep.
+#[test]
+fn sands_of_time_swaps_tapped_state() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::sands_of_time());
+    let tapped = ready(&mut g, 0, catalog::grizzly_bears());
+    let untapped = ready(&mut g, 0, catalog::savannah_lions());
+    g.battlefield_find_mut(tapped).unwrap().tapped = true;
+    g.fire_step_triggers(TurnStep::Upkeep);
+    drain_stack(&mut g);
+    assert!(!g.battlefield_find(tapped).unwrap().tapped);
+    assert!(g.battlefield_find(untapped).unwrap().tapped);
+}
+
+/// City of Solitude stops the opponent acting on your turn.
+#[test]
+fn city_of_solitude_locks_out_the_off_turn_player() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::city_of_solitude());
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 1;
+    assert!(
+        g.perform_action(GameAction::CastSpell {
+            card_id: bolt,
+            target: Some(Target::Player(0)),
+            additional_targets: vec![],
+            mode: None,
+            x_value: None,
+        })
+        .is_err(),
+        "not their turn"
+    );
+}
+
+/// Quirion Druid animates a land for good.
+#[test]
+fn quirion_druid_animates_a_land() {
+    let mut g = two_player_game();
+    let druid = ready(&mut g, 0, catalog::quirion_druid());
+    let forest = g.add_card_to_battlefield(0, catalog::forest());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    activate(&mut g, druid, 0, Some(Target::Permanent(forest))).expect("animate");
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(forest).expect("still a land");
+    assert_eq!((cp.power, cp.toughness), (2, 2));
+    assert!(cp.card_types.contains(&crabomination::card::CardType::Land), "still a land");
+}
+
+/// Katabatic Winds grounds fliers and locks their tap abilities.
+#[test]
+fn katabatic_winds_grounds_fliers() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::katabatic_winds());
+    let flier = ready(&mut g, 1, catalog::rainbow_efreet());
+    let cp = g.computed_permanent(flier).expect("there");
+    assert!(cp.keywords.contains(&Keyword::CantAttack));
+    assert!(cp.keywords.contains(&Keyword::CantBlock));
+    assert!(cp.keywords.contains(&Keyword::CantActivateTapAbilities));
+}
+
+/// Time and Tide swaps both sides of the phasing ledger at once.
+#[test]
+fn time_and_tide_swaps_the_phased_out() {
+    let mut g = two_player_game();
+    let phaser = ready(&mut g, 0, catalog::shimmering_efreet());
+    let away = ready(&mut g, 0, catalog::grizzly_bears());
+    let ctx = crabomination::game::effects::EffectContext::for_ability(away, 0, None);
+    g.resolve_effect(
+        &crabomination::effect::Effect::PhaseOut {
+            what: crabomination::effect::Selector::This,
+            until_source_leaves: false,
+        },
+        &ctx,
+    )
+    .expect("phase it out");
+    let spell = g.add_card_to_hand(0, catalog::time_and_tide());
+    g.players[0].mana_pool.add(Color::Blue, 2);
+    cast(&mut g, spell, None).expect("cast");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(away).is_some(), "the phased-out creature came back");
+    assert!(g.battlefield_find(phaser).is_none(), "and the phaser left");
+}
+
+/// Equipoise phases out only the opponent's excess.
+#[test]
+fn equipoise_phases_out_the_excess() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::equipoise());
+    g.add_card_to_battlefield(0, catalog::forest());
+    let extra: Vec<CardId> =
+        (0..3).map(|_| g.add_card_to_battlefield(1, catalog::island())).collect();
+    let eq = g.battlefield.iter().find(|c| c.definition.name == "Equipoise").unwrap().id;
+    let etb = catalog::equipoise().triggered_abilities[0].effect.clone();
+    let mut ctx = crabomination::game::effects::EffectContext::for_ability(eq, 0, None);
+    ctx.targets = vec![Target::Player(1)];
+    g.resolve_effect(&etb, &ctx).expect("upkeep");
+    drain_stack(&mut g);
+    let left = extra.iter().filter(|id| g.battlefield_find(**id).is_some()).count();
+    assert_eq!(left, 1, "three lands against one leaves one");
+}
+
+/// Guiding Spirit puts a creature card back on top.
+#[test]
+fn guiding_spirit_recycles_a_creature() {
+    let mut g = two_player_game();
+    let spirit = ready(&mut g, 0, catalog::guiding_spirit());
+    let bears = g.add_card_to_graveyard(1, catalog::grizzly_bears());
+    activate(&mut g, spirit, 0, Some(Target::Player(1))).expect("recycle");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].library.first().map(|c| c.id), Some(bears));
+}
+
+/// Wand of Denial bins a nonland top card for 2 life.
+#[test]
+fn wand_of_denial_bins_a_nonland() {
+    let mut g = two_player_game();
+    let wand = ready(&mut g, 0, catalog::wand_of_denial());
+    g.players[1].library.clear();
+    let top = g.add_card_to_library(1, catalog::grizzly_bears());
+    activate(&mut g, wand, 0, Some(Target::Player(1))).expect("peek");
+    drain_stack(&mut g);
+    assert!(g.players[1].graveyard.iter().any(|c| c.id == top));
+    assert_eq!(g.players[0].life, 18);
+}
+
+/// Pillar Tombs of Aku takes a creature a turn, or five life and itself.
+#[test]
+fn pillar_tombs_of_aku_taxes_each_upkeep() {
+    let mut g = two_player_game();
+    let pillar = g.add_card_to_battlefield(0, catalog::pillar_tombs_of_aku());
+    g.fire_step_triggers(TurnStep::Upkeep);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, 15, "no creature to feed it");
+    assert!(g.battlefield_find(pillar).is_none(), "and it goes with them");
+}
+
+/// Ovinomancer needs three basics, then turns anything into a Sheep.
+#[test]
+fn ovinomancer_trades_lands_for_sheep() {
+    let mut g = two_player_game();
+    for _ in 0..3 {
+        g.add_card_to_battlefield(0, catalog::island());
+    }
+    let ovi = g.add_card_to_battlefield(0, catalog::ovinomancer());
+    let etb = catalog::ovinomancer().triggered_abilities[0].effect.clone();
+    let ctx = crabomination::game::effects::EffectContext::for_ability(ovi, 0, None);
+    g.resolve_effect(&etb, &ctx).expect("etb");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(ovi).is_some(), "the basics paid for it");
+    g.clear_sickness(ovi);
+    let victim = ready(&mut g, 1, catalog::grizzly_bears());
+    activate(&mut g, ovi, 0, Some(Target::Permanent(victim))).expect("shear it");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(victim).is_none());
+    assert!(g.battlefield.iter().any(|c| c.definition.name == "Sheep" && c.controller == 1));
+}
+
+/// Infernal Harvest turns X Swamps into X damage.
+#[test]
+fn infernal_harvest_pays_in_swamps() {
+    let mut g = two_player_game();
+    let swamps: Vec<CardId> =
+        (0..2).map(|_| g.add_card_to_battlefield(0, catalog::swamp())).collect();
+    let victim = ready(&mut g, 1, catalog::hill_giant());
+    let spell = g.add_card_to_hand(0, catalog::infernal_harvest());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell,
+        target: Some(Target::Permanent(victim)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: Some(2),
+    })
+    .expect("harvest");
+    drain_stack(&mut g);
+    assert!(swamps.iter().all(|id| g.battlefield_find(*id).is_none()), "both Swamps bounced");
+    assert_eq!(g.battlefield_find(victim).map(|c| c.damage), Some(2));
+}
+
+/// Vampirism drains the rest of your board into its host.
+#[test]
+fn vampirism_feeds_on_your_other_creatures() {
+    let mut g = two_player_game();
+    let host = ready(&mut g, 0, catalog::grizzly_bears());
+    let feeder = ready(&mut g, 0, catalog::hill_giant());
+    let aura = g.add_card_to_hand(0, catalog::vampirism());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    cast(&mut g, aura, Some(Target::Permanent(host))).expect("enchant");
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(host).expect("host");
+    assert_eq!((cp.power, cp.toughness), (3, 3), "+1/+1 for the one other creature");
+    let other = g.computed_permanent(feeder).expect("feeder");
+    assert_eq!((other.power, other.toughness), (2, 2), "and it pays -1/-1");
+}
+
+/// Righteous Aura buys off a source's next hit for {W} and two life.
+#[test]
+fn righteous_aura_prevents_the_next_hit() {
+    let mut g = two_player_game();
+    let auraboard = ready(&mut g, 0, catalog::righteous_aura());
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt,
+        target: Some(Target::Player(0)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("bolt");
+    // In response — the shield names the spell already on the stack.
+    g.players[0].mana_pool.add(Color::White, 1);
+    activate(&mut g, auraboard, 0, None).expect("shield up");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, 18, "two life paid, no bolt damage");
+}
+
+/// Phyrexian Marauder enters with X counters and can never block.
+#[test]
+fn phyrexian_marauder_enters_with_x_counters() {
+    let mut g = two_player_game();
+    let m = g.add_card_to_hand(0, catalog::phyrexian_marauder());
+    g.players[0].mana_pool.add_colorless(3);
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell {
+        card_id: m,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: Some(3),
+    })
+    .expect("cast");
+    drain_stack(&mut g);
+    let c = g.battlefield_find(m).expect("there");
+    assert_eq!(c.counter_count(CounterType::PlusOnePlusOne), 3);
+    assert!(catalog::phyrexian_marauder().keywords.contains(&Keyword::CantBlock));
+}

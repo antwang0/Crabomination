@@ -8954,6 +8954,7 @@ pub fn chocobo_kick() -> CardDefinition {
         kicker_action_cost: Some(crate::card::AdditionalCastCost::ReturnToHand {
             filter: SelectionRequirement::Land.and(SelectionRequirement::ControlledByYou),
             count: 1,
+            count_x: false,
         }),
         effect: Effect::If {
             cond: Predicate::SpellWasKicked,

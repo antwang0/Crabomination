@@ -6719,6 +6719,18 @@ impl GameState {
                         count: x_value.unwrap_or(0),
                     };
                 }
+                // "Return X [filter] you control" (Infernal Harvest).
+                crate::card::AdditionalCastCost::ReturnToHand {
+                    filter,
+                    count_x: true,
+                    ..
+                } => {
+                    *c = crate::card::AdditionalCastCost::ReturnToHand {
+                        filter: filter.clone(),
+                        count: x_value.unwrap_or(0),
+                        count_x: false,
+                    };
+                }
                 // "Exile X [filter] cards from your graveyard" (Haunting
                 // Misery) — X is the cast's chosen X.
                 crate::card::AdditionalCastCost::ExileFromGraveyardXFromCost { filter } => {
@@ -7232,7 +7244,7 @@ impl GameState {
                     >= *count as usize
             }
             A::DiscardRandom { count } => self.players[p].hand.len() >= *count as usize,
-            A::ReturnToHand { filter, count } => {
+            A::ReturnToHand { filter, count, .. } => {
                 let matching = self.battlefield.iter().filter(|c| {
                     c.controller == p
                         && self.evaluate_requirement_static(filter, &Target::Permanent(c.id), p, None)
@@ -7535,7 +7547,7 @@ impl GameState {
                         self.discard_card(p, id, &mut events);
                     }
                 }
-                A::ReturnToHand { filter, count } => {
+                A::ReturnToHand { filter, count, .. } => {
                     // Auto-pick the lowest-impact matches (tapped first, then
                     // lowest mana value) and bounce them to their owners' hands.
                     let mut cands: Vec<&crate::card::CardInstance> = self

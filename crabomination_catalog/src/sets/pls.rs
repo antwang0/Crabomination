@@ -138,6 +138,7 @@ pub fn arctic_merfolk() -> CardDefinition {
         kicker_action_cost: Some(AdditionalCastCost::ReturnToHand {
             filter: R::Creature,
             count: 1,
+            count_x: false,
         }),
         triggered_abilities: vec![etb(Effect::If {
             cond: Predicate::SpellWasKicked,

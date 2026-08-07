@@ -601,6 +601,7 @@ pub fn devour_in_flames() -> CardDefinition {
         additional_cast_cost: vec![AdditionalCastCost::ReturnToHand {
             filter: SelectionRequirement::Land,
             count: 1,
+            count_x: false,
         }],
         effect: Effect::DealDamage {
             to: target_filtered(

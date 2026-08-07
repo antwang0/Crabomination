@@ -788,6 +788,7 @@ pub fn deprive() -> CardDefinition {
         additional_cast_cost: vec![crate::card::AdditionalCastCost::ReturnToHand {
             filter: R::Land,
             count: 1,
+            count_x: false,
         }],
         effect: crate::effect::shortcut::counter_target_spell(),
         ..Default::default()

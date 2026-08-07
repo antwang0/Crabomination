@@ -12106,6 +12106,19 @@ impl GameState {
         {
             return Err(GameError::SilencedThisTurn);
         }
+        // City of Solitude — "players can cast spells and activate abilities
+        // only during their own turns". Mana abilities never use the stack, so
+        // they're routed elsewhere and stay legal.
+        if (action.is_cast() || matches!(action, GameAction::ActivateAbility { .. }))
+            && self.priority.player_with_priority != self.active_player_idx
+            && self.battlefield.iter().any(|c| {
+                c.definition.static_abilities.iter().any(|sa| {
+                    matches!(sa.effect, crate::effect::StaticEffect::PlayersActOnlyOnTheirOwnTurn)
+                })
+            })
+        {
+            return Err(GameError::SorcerySpeedOnly);
+        }
         // CR 702.50b — a player can't cast spells once an epic spell they
         // control resolves (the per-upkeep copies are put on the stack by
         // the epic ability itself, not cast).
@@ -20317,6 +20330,8 @@ fn static_effect_to_effects(
             // ArtifactActivatedAbilitiesLocked — consulted in
             // `activate_ability` (Collector Ouphe); no layer effect.
             | StaticEffect::ArtifactActivatedAbilitiesLocked
+            // City of Solitude — consulted at cast/activation time.
+            | StaticEffect::PlayersActOnlyOnTheirOwnTurn
             // Teferi statics — handled at cast time via dedicated checks
             // (`player_locked_to_sorcery_timing` etc.); not modeled as
             // continuous-layer modifications here.
