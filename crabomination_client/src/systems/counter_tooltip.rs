@@ -1597,6 +1597,9 @@ mod tests {
 
     fn make_permanent_view(damage: u32, toughness: i32) -> PermanentView {
         PermanentView {
+            abilities_locked: false,
+            attack_mandated: false,
+            attack_benched: false,
             turn_up_cost_label: None,
             room_doors: Vec::new(),
             stored_die_results: Vec::new(),

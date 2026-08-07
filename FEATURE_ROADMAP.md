@@ -2746,8 +2746,8 @@ Each a small targeted feature; sweep batch by batch.
    (64 cards, `sets::atq`), **Arabian Nights** (63 cards, `sets::arn`) and
    **The Dark** (97 cards, `sets::drk`/`drk2`) and **Homelands** (`sets::hml`–
    `hml3`), **Conspiracy: Take the Crown** (CN2), **Murders at Karlov
-   Manor** (MKM) and **Stronghold** (STH) are all at zero. The rest of the
-   **whole Tempest block is closed** (`set_gaps.py tmp sth exo` is empty).
+   Manor** (MKM) and **Stronghold** (STH) are all at zero. The
+   **whole Tempest block is closed** too (`set_gaps.py tmp sth exo` is empty).
    **Weatherlight (WTH)** is the new live front: `set_gaps.py wth` is 103
    after an opening wave of 34 (`sets::wth`, tests in `classic_sets/wth`).
    The remaining pile leans on cumulative upkeep, banding and phasing.

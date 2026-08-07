@@ -3,7 +3,7 @@
 Improvement opportunities for the engine, client, and tooling.
 Items are grouped by area and roughly ordered by impact within each group.
 
-## Noticed this run (the Tempest block closed; Weatherlight opened)
+## Noticed this run (Tempest block closed; Weatherlight opened)
 
 - **Weatherlight (WTH) is the live front** — `set_gaps.py wth` is 103 after
   the opening wave of 34. The remaining pile leans on cumulative upkeep
@@ -24,6 +24,8 @@ Items are grouped by area and roughly ordered by impact within each group.
   listeners on *other* permanents — only a death that runs through the action
   path (SBA after a bolt) does. Worth making the fixture helpers dispatch the
   same way so tests don't have to route through combat/burn. ⏳
+
+## Also this run (Exodus closed)
 
 - **Kor Chant's chosen source collapses to "the next damage event."**
   `Effect::RedirectNextDamageTo` is a one-shot per-permanent redirect with no
@@ -58,7 +60,7 @@ Items are grouped by area and roughly ordered by impact within each group.
   control".** A control change with the enchantment still on the battlefield
   won't bin the pile. Wants a `LostControl` event kind. ⏳
 
-## Noticed last run (Tempest closed to 3)
+## Noticed last run (Tempest down to 3)
 
 - **CR 123 (Stickers) is the last untested CR section** and the only one the
   engine doesn't model at all — no sticker sheets, no `{TK}` tickets, no
