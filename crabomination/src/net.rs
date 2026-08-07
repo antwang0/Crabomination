@@ -1377,6 +1377,11 @@ pub struct PermanentView {
     /// `project_permanent`.
     #[serde(default)]
     pub attached_to_name: Option<String>,
+    /// The verb for `attached_to_name` — "Enchanting" (Aura), "Equipping"
+    /// (Equipment), or "Fortifying" (Fortification, CR 301.6). `None` when
+    /// the permanent isn't attached.
+    #[serde(default)]
+    pub attached_verb: Option<String>,
     /// CR 702.95 — the `CardId` of this creature's Soulbond partner, if it's
     /// paired. Lets the client draw a pairing link / badge "Soulbonded with …"
     /// in the tooltip without scanning the battlefield. `None` for the common

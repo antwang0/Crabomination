@@ -186,7 +186,12 @@ fn build_tooltip_body(p: &crabomination::net::PermanentView) -> Option<String> {
     // For an Aura/Equipment, the host it's attached to (CR 301.5 / 303) — so a
     // player hovering the attachment itself sees what it's buffing.
     if let Some(host) = &p.attached_to_name {
-        let verb = if p.card_types.contains(&CardType::Enchantment) { "Enchanting" } else { "Equipping" };
+        // The server names the relationship (Aura / Equipment / Fortification);
+        // older snapshots fall back to the card-type heuristic.
+        let verb = p.attached_verb.clone().unwrap_or_else(|| {
+            if p.card_types.contains(&CardType::Enchantment) { "Enchanting" } else { "Equipping" }
+                .to_string()
+        });
         lines.push(format!("{verb}: {host}"));
     }
 
@@ -1183,6 +1188,7 @@ mod tests {
             chosen_creature_type: None,
             attachments: vec![],
             attached_to_name: None,
+            attached_verb: None,
             soulbond_partner: None,
             saga_final_chapter: None,
             has_other_face: false,

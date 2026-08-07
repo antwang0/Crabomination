@@ -1093,6 +1093,16 @@ fn project_permanent(
                 .find(|o| o.id == host)
                 .map(|o| o.definition.name.to_string())
         }),
+        attached_verb: card.attached_to.filter(|h| battlefield.iter().any(|o| o.id == *h)).map(|_| {
+            if card.definition.is_enchantment() {
+                "Enchanting"
+            } else if card.definition.is_fortification() {
+                "Fortifying"
+            } else {
+                "Equipping"
+            }
+            .to_string()
+        }),
         // CR 702.95 — Soulbond partner (only while still on the battlefield).
         soulbond_partner: card
             .soulbond_partner
