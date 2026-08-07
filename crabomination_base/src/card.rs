@@ -5688,6 +5688,10 @@ pub struct CardInstance {
     /// (Out of Time): `do_phasing` skips it, and it phases in when the
     /// source leaves.
     pub phased_out_by: Option<CardId>,
+    /// CR 502.1 — "during your next untap step, as you untap your permanents,
+    /// return this to its owner's hand" (Undiscovered Paradise). Cleared when
+    /// `do_untap` acts on it.
+    pub bounce_at_next_untap: bool,
     /// Bitmask of name choices already taken from this permanent's
     /// choose-a-name ability (Garth One-Eye — each name once per game).
     pub name_choices_used: u32,
@@ -6143,6 +6147,7 @@ impl CardInstance {
             echo_paid: false,
             granted_suspend: false,
             phased_out_by: None,
+            bounce_at_next_untap: false,
             name_choices_used: 0,
             chosen_permanent: None,
             chosen_player: None,

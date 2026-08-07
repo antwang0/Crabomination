@@ -2334,6 +2334,20 @@ impl GameState {
         match effect {
             Effect::Noop => Ok(()),
 
+            Effect::ReturnToHandAtYourNextUntapStep { what } => {
+                for id in self
+                    .resolve_selector(what, ctx)
+                    .iter()
+                    .filter_map(|e| e.as_permanent_id())
+                    .collect::<Vec<_>>()
+                {
+                    if let Some(c) = self.battlefield_find_mut(id) {
+                        c.bounce_at_next_untap = true;
+                    }
+                }
+                Ok(())
+            }
+
             // CR 702.26 — Time and Tide. Snapshot both sides before either
             // moves, so a phaser that just returned isn't sent straight back.
             Effect::SwapPhasedState { filter } => {

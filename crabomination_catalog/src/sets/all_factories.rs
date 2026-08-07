@@ -21223,6 +21223,8 @@ static VIS2: &[Factory] = &[
     super::vis2::three_wishes,
     super::vis2::foreshadow,
     super::vis2::necromancy,
+    super::vis2::undiscovered_paradise,
+    super::vis2::desolation,
 ];
 static WAR: &[Factory] = &[
     super::war::ironclad_krovod,

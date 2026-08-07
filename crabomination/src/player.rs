@@ -153,6 +153,10 @@ pub struct Player {
     pub commanders: Vec<CardId>,
     /// How many lands this player has played on their current turn.
     pub lands_played_this_turn: u32,
+    /// CR 605 — this player tapped a land for mana this turn (Desolation).
+    /// Cleared at cleanup.
+    #[serde(default)]
+    pub tapped_land_for_mana_this_turn: bool,
     /// Extra land plays granted this turn (Explore, Oracle of Mul Daya,
     /// Dryad of the Ilysian Grove, etc.). Defaults to 0. The player can
     /// play `1 + extra_land_plays` lands per turn total.
@@ -1012,6 +1016,7 @@ impl Player {
             sideboard: CowBox::default(),
             commanders: Vec::new(),
             lands_played_this_turn: 0,
+            tapped_land_for_mana_this_turn: false,
             extra_land_plays: 0,
             cant_play_lands_this_turn: false,
             cant_cast_matching_this_turn: Vec::new(),

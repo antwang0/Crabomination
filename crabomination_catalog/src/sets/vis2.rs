@@ -1406,3 +1406,58 @@ pub fn necromancy() -> CardDefinition {
         ..enchantment("Necromancy", cost(&[generic(2), b()]))
     }
 }
+
+/// Undiscovered Paradise — any colour, but it bounces itself next untap step.
+pub fn undiscovered_paradise() -> CardDefinition {
+    CardDefinition {
+        name: "Undiscovered Paradise",
+        card_types: vec![CardType::Land],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::Seq(vec![
+                Effect::AddMana {
+                    who: PlayerRef::You,
+                    pool: ManaPayload::AnyOneColor(Value::Const(1)),
+                },
+                Effect::ReturnToHandAtYourNextUntapStep { what: Selector::This },
+            ]),
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Desolation — {1}{B}{B}; tapping a land for mana costs you one at end step.
+pub fn desolation() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(TurnStep::End), EventScope::AnyPlayer),
+            effect: Effect::EachPlayerDoes {
+                who: PlayerRef::EachPlayer,
+                body: Box::new(Effect::If {
+                    cond: crate::effect::Predicate::TappedLandForManaThisTurn(PlayerRef::You),
+                    then: Box::new(Effect::Seq(vec![
+                        Effect::Sacrifice {
+                            who: Selector::You,
+                            count: Value::Const(1),
+                            filter: R::Land,
+                        },
+                        Effect::If {
+                            cond: crate::effect::Predicate::EntityMatches {
+                                what: Selector::SacrificedCard,
+                                filter: R::HasLandType(LandType::Plains),
+                            },
+                            then: Box::new(Effect::DealDamage {
+                                to: Selector::You,
+                                amount: Value::Const(2),
+                            }),
+                            else_: Box::new(Effect::Noop),
+                        },
+                    ])),
+                    else_: Box::new(Effect::Noop),
+                }),
+            },
+        }],
+        ..enchantment("Desolation", cost(&[generic(1), b(), b()]))
+    }
+}

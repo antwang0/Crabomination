@@ -1255,6 +1255,8 @@ pub enum Predicate {
     /// colour with all the others (Common Cause). Vacuously true when nothing
     /// matches; false as soon as one match is colourless.
     AllMatchingShareAColor(crate::card::SelectionRequirement),
+    /// `who` tapped a land for mana this turn (Desolation).
+    TappedLandForManaThisTurn(PlayerRef),
     /// `who` controls a land of every basic land type (Coalition Victory).
     ControlsLandOfEachBasicType(PlayerRef),
     /// `who` controls at least one creature of each of the five colours
@@ -5641,6 +5643,11 @@ pub enum Effect {
         #[serde(default)]
         until_source_leaves: bool,
     },
+    /// CR 502.1 — "during your next untap step, as you untap your permanents,
+    /// return [what] to its owner's hand" (Undiscovered Paradise). Arms a flag
+    /// the untap step consumes, so the bounce is a turn-based action rather
+    /// than a trigger.
+    ReturnToHandAtYourNextUntapStep { what: Selector },
     /// CR 702.26 — "simultaneously, all phased-out [filter] phase in and all
     /// [filter] with phasing phase out" (Time and Tide). Both sets are read
     /// before either moves, so a phaser that just returned stays.

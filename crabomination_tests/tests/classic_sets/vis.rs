@@ -1682,3 +1682,33 @@ fn animate_dead_attaches_and_reclaims() {
     drain_stack(&mut g);
     assert!(g.battlefield_find(dead).is_none());
 }
+
+/// Undiscovered Paradise bounces itself as you untap.
+#[test]
+fn undiscovered_paradise_bounces_at_untap() {
+    let mut g = two_player_game();
+    let land = ready(&mut g, 0, catalog::undiscovered_paradise());
+    activate(&mut g, land, 0, None).expect("tap for mana");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].mana_pool.total(), 1);
+    assert!(g.battlefield_find(land).is_some(), "it stays until the untap step");
+    g.active_player_idx = 0;
+    g.do_untap();
+    assert!(g.players[0].hand.iter().any(|c| c.id == land), "back in hand");
+}
+
+/// Desolation only taxes players who tapped a land for mana this turn.
+#[test]
+fn desolation_taxes_only_the_players_who_tapped() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::desolation());
+    let plains = ready(&mut g, 0, catalog::plains());
+    let idle = g.add_card_to_battlefield(1, catalog::forest());
+    activate(&mut g, plains, 0, None).expect("tap for mana");
+    drain_stack(&mut g);
+    g.fire_step_triggers(TurnStep::End);
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(plains).is_none(), "sacrificed the land it tapped");
+    assert_eq!(g.players[0].life, 18, "a Plains costs two more");
+    assert!(g.battlefield_find(idle).is_some(), "the idle player keeps theirs");
+}

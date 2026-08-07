@@ -1538,6 +1538,9 @@ impl GameState {
             Predicate::ColorIsMostCommonAmongPermanents(k) => {
                 self.most_common_permanent_colors().contains(k)
             }
+            Predicate::TappedLandForManaThisTurn(who) => self
+                .resolve_player(who, ctx)
+                .is_some_and(|p| self.players[p].tapped_land_for_mana_this_turn),
             Predicate::ControlsLandOfEachBasicType(who) => {
                 use crate::card::LandType::*;
                 let Some(p) = self.resolve_player(who, ctx) else { return false };

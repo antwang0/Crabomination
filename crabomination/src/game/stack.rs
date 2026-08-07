@@ -630,6 +630,7 @@ impl GameState {
                     // "did you activate a loyalty ability" flag are per-turn.
                     pl.extra_loyalty_activations = 0;
                     pl.activated_loyalty_this_turn = false;
+                    pl.tapped_land_for_mana_this_turn = false;
                 }
                 self.mana_spent_on_spells_this_turn = 0;
                 self.permanents_to_graveyard_this_turn = 0;
@@ -3204,6 +3205,28 @@ impl GameState {
                     card.summoning_sick = false;
                 }
             }
+        }
+        // CR 502.1 — Undiscovered Paradise: the bounce is part of the untap
+        // turn-based action, so it happens here rather than as a trigger.
+        let bouncing: Vec<CardId> = self
+            .battlefield
+            .iter()
+            .filter(|c| c.bounce_at_next_untap && untappers.contains(&c.controller))
+            .map(|c| c.id)
+            .collect();
+        for id in bouncing {
+            if let Some(c) = self.battlefield_find_mut(id) {
+                c.bounce_at_next_untap = false;
+            }
+            let ctx = crate::game::effects::EffectContext::for_ability(id, p, None);
+            let mut evs = Vec::new();
+            self.move_card_to(
+                id,
+                &crate::effect::ZoneDest::Hand(crate::effect::PlayerRef::OwnerOfMoved),
+                &ctx,
+                &mut evs,
+            );
+            self.dispatch_triggers_for_events(&evs);
         }
         // CR 502.3 — "untap this during each other player's untap step"
         // (Thousand Moons Infantry). On someone else's untap step, untap each

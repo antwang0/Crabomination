@@ -14513,6 +14513,9 @@ impl GameState {
             // (Extraplanar Lens), distinct from the plain tap above.
             if is_mana_ability(&ability.effect) {
                 events.push(GameEvent::TappedForMana { card_id, player: p });
+                if self.battlefield_find(card_id).is_some_and(|c| c.definition.is_land()) {
+                    self.players[p].tapped_land_for_mana_this_turn = true;
+                }
             }
         }
         if ability.untap_self_cost {
