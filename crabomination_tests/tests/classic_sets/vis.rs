@@ -517,3 +517,119 @@ fn vis_wave_two_stat_lines_match_print() {
     assert!(catalog::suqata_assassin().keywords.contains(&Keyword::Fear));
     assert!(catalog::talruum_piper().keywords.contains(&Keyword::AllMustBlock));
 }
+
+/// Phyrexian Marauder enters as an X/X and can't block.
+#[test]
+fn phyrexian_marauder_enters_with_x_counters() {
+    let mut g = two_player_game();
+    let marauder = g.add_card_to_hand(0, catalog::phyrexian_marauder());
+    g.players[0].mana_pool.add_colorless(3);
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell {
+        card_id: marauder,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: Some(3),
+    })
+    .expect("cast for X=3");
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(marauder).expect("resolved");
+    assert_eq!((cp.power, cp.toughness), (3, 3), "three +1/+1 counters");
+    assert!(cp.keywords.contains(&Keyword::CantBlock));
+}
+
+/// Miraculous Recovery reanimates with a +1/+1 counter.
+#[test]
+fn miraculous_recovery_reanimates_with_a_counter() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let spell = g.add_card_to_hand(0, catalog::miraculous_recovery());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(4);
+    cast(&mut g, spell, Some(Target::Permanent(bear))).expect("cast");
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(bear).expect("back on the battlefield");
+    assert_eq!((cp.power, cp.toughness), (3, 3), "2/2 plus a counter");
+}
+
+/// Quicksand shrinks a ground attacker and can't touch a flier.
+#[test]
+fn quicksand_only_catches_ground_attackers() {
+    let mut g = two_player_game();
+    let sand = ready(&mut g, 0, catalog::quicksand());
+    let attacker = ready(&mut g, 1, catalog::grizzly_bears());
+    g.active_player_idx = 1;
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker,
+        target: AttackTarget::Player(0),
+    }]))
+    .expect("attack");
+    drain_stack(&mut g);
+    g.priority.player_with_priority = 0;
+    activate(&mut g, sand, 1, Some(Target::Permanent(attacker))).expect("sac Quicksand");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(attacker).is_none(), "-1/-2 killed the 2/2");
+}
+
+/// Magma Mine charges up and then blows for its counter count.
+#[test]
+fn magma_mine_deals_its_pressure_counters() {
+    use crabomination::card::CounterType;
+    let mut g = two_player_game();
+    let mine = ready(&mut g, 0, catalog::magma_mine());
+    g.players[0].mana_pool.add_colorless(8);
+    activate(&mut g, mine, 0, None).expect("charge");
+    drain_stack(&mut g);
+    activate(&mut g, mine, 0, None).expect("charge again");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(mine).unwrap().counter_count(CounterType::Pressure), 2);
+    activate(&mut g, mine, 1, Some(Target::Player(1))).expect("blow");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, 18, "two pressure counters, two damage");
+}
+
+/// Snake Basket turns X into that many 1/1 Snakes.
+#[test]
+fn snake_basket_makes_x_snakes() {
+    let mut g = two_player_game();
+    let basket = ready(&mut g, 0, catalog::snake_basket());
+    g.players[0].mana_pool.add_colorless(3);
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: basket,
+        ability_index: 0,
+        target: None,
+        additional_targets: vec![],
+        x_value: Some(3),
+        mode: None,
+    })
+    .expect("crack the basket");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield.iter().filter(|c| c.definition.name == "Snake").count(), 3);
+}
+
+/// Griffin Canyon untaps and pumps a Griffin.
+#[test]
+fn griffin_canyon_untaps_a_griffin() {
+    let mut g = two_player_game();
+    let canyon = ready(&mut g, 0, catalog::griffin_canyon());
+    let griffin = ready(&mut g, 0, catalog::daraja_griffin());
+    g.battlefield_find_mut(griffin).unwrap().tapped = true;
+    activate(&mut g, canyon, 1, Some(Target::Permanent(griffin))).expect("untap it");
+    drain_stack(&mut g);
+    assert!(!g.battlefield_find(griffin).unwrap().tapped, "untapped");
+    assert_eq!(g.computed_permanent(griffin).unwrap().power, 3, "+1/+1");
+}
+
+/// Scalebane's Elite carries protection from black.
+#[test]
+fn scalebanes_elite_has_pro_black() {
+    let d = catalog::scalebanes_elite();
+    assert_eq!((d.power, d.toughness), (4, 4));
+    assert!(d.keywords.contains(&Keyword::Protection(Color::Black)));
+}

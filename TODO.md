@@ -36,7 +36,14 @@ Items are grouped by area and roughly ordered by impact within each group.
   `ReturnMatchingFromGraveyardToHand`, alongside the two that already did) now
   goes through `evaluate_requirement_static` with `ctx.source`, so
   `OtherThanSource` / `IsSource` read right in all of them.
-- **Remaining Visions gaps (63) cluster on four shapes:** the phasing
+- **`AtEachCombatThisTurn` bodies can't read the resolution that armed them.**
+  Song of Blood ("mill four; attackers get +1/+0 for each creature card milled
+  this way") needs the delayed body to carry a *number computed at cast time*.
+  `Selector::LastMoved` is per-resolution, so the body evaluates to 0 by the
+  time combat comes around. Wants a `Value::Const`-substituting capture on
+  `Effect::AtEachCombatThisTurn` (or a general "freeze this Value now"
+  wrapper); the card is held back until then. ⏳
+- **Remaining Visions gaps (64) cluster on four shapes:** the phasing
   mass-effects (Equipoise, Teferi's Realm, Katabatic Winds), the Chimera
   sacrifice cycle (a `+2/+2` counter *plus* an indefinite keyword grant), the
   world enchantments (Elkin Lair, Eye of Singularity), and the

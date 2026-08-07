@@ -1304,3 +1304,169 @@ pub fn betrayal() -> CardDefinition {
         ..aura("Betrayal", cost(&[u()]), EquipBonus::default())
     }
 }
+
+/// Scalebane's Elite — {3}{G}{W} 4/4 with protection from black.
+pub fn scalebanes_elite() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Protection(Color::Black)],
+        ..creature(
+            "Scalebane's Elite",
+            cost(&[generic(3), g(), w()]),
+            vec![CreatureType::Human, CreatureType::Soldier],
+            4,
+            4,
+        )
+    }
+}
+
+/// Phyrexian Marauder — {X} 0/0 Construct entering with X +1/+1 counters that
+/// can't block. (The "can't attack unless you pay {1} per counter" tax is
+/// dropped.)
+pub fn phyrexian_marauder() -> CardDefinition {
+    CardDefinition {
+        cost: cost(&[crate::mana::x()]),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        keywords: vec![Keyword::CantBlock],
+        enters_with_counters: Some((CounterType::PlusOnePlusOne, Value::XFromCost)),
+        ..creature(
+            "Phyrexian Marauder",
+            cost(&[crate::mana::x()]),
+            vec![CreatureType::Phyrexian, CreatureType::Construct],
+            0,
+            0,
+        )
+    }
+}
+
+/// Miraculous Recovery — {4}{W} Instant. Reanimate a creature card with a
+/// +1/+1 counter on it.
+pub fn miraculous_recovery() -> CardDefinition {
+    instant(
+        "Miraculous Recovery",
+        cost(&[generic(4), w()]),
+        Effect::Seq(vec![
+            Effect::Move {
+                what: target_filtered(R::Creature.and(R::InYourGraveyard)),
+                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+            },
+            Effect::AddCounter {
+                what: Selector::LastMoved,
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::ONE,
+            },
+        ]),
+    )
+}
+
+/// Quicksand — a colorless land that eats a ground attacker.
+pub fn quicksand() -> CardDefinition {
+    CardDefinition {
+        name: "Quicksand",
+        card_types: vec![CardType::Land],
+        activated_abilities: vec![
+            crate::sets::tap_add_colorless(),
+            ActivatedAbility {
+                tap_cost: true,
+                sac_cost: true,
+                effect: Effect::PumpPT {
+                    what: target_filtered(
+                        R::Creature.and(R::IsAttacking).and(R::HasKeyword(Keyword::Flying).negate()),
+                    ),
+                    power: Value::Const(-1),
+                    toughness: Value::Const(-2),
+                    duration: Duration::EndOfTurn,
+                },
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Griffin Canyon — {T}: Add {C}; {T}: untap a Griffin and pump it.
+pub fn griffin_canyon() -> CardDefinition {
+    CardDefinition {
+        name: "Griffin Canyon",
+        card_types: vec![CardType::Land],
+        activated_abilities: vec![
+            crate::sets::tap_add_colorless(),
+            ActivatedAbility {
+                tap_cost: true,
+                effect: Effect::Seq(vec![
+                    Effect::Untap {
+                        what: target_filtered(R::HasCreatureType(CreatureType::Griffin)),
+                        up_to: None,
+                    },
+                    Effect::PumpPT {
+                        what: Selector::Target(0),
+                        power: Value::ONE,
+                        toughness: Value::ONE,
+                        duration: Duration::EndOfTurn,
+                    },
+                ]),
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Magma Mine — {1} Artifact. Charge it up, then sacrifice it for that much
+/// damage.
+pub fn magma_mine() -> CardDefinition {
+    artifact(
+        "Magma Mine",
+        cost(&[generic(1)]),
+        vec![
+            ActivatedAbility {
+                mana_cost: cost(&[generic(4)]),
+                effect: Effect::AddCounter {
+                    what: Selector::This,
+                    kind: CounterType::Pressure,
+                    amount: Value::ONE,
+                },
+                ..Default::default()
+            },
+            ActivatedAbility {
+                tap_cost: true,
+                sac_cost: true,
+                effect: Effect::DealDamage {
+                    to: target_any(),
+                    amount: Value::CountersOn {
+                        what: Box::new(Selector::This),
+                        kind: CounterType::Pressure,
+                    },
+                },
+                ..Default::default()
+            },
+        ],
+    )
+}
+
+/// Snake Basket — {4} Artifact. {X}, sacrifice it: X 1/1 green Snakes.
+pub fn snake_basket() -> CardDefinition {
+    let snake = crate::card::TokenDefinition {
+        name: "Snake".into(),
+        power: 1,
+        toughness: 1,
+        colors: vec![Color::Green],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Snake], ..Default::default() },
+        ..Default::default()
+    };
+    artifact(
+        "Snake Basket",
+        cost(&[generic(4)]),
+        vec![ActivatedAbility {
+            mana_cost: cost(&[crate::mana::x()]),
+            sac_cost: true,
+            sorcery_speed: true,
+            effect: Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::XFromCost,
+                definition: snake,
+            },
+            ..Default::default()
+        }],
+    )
+}

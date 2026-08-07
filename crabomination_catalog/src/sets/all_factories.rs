@@ -21146,6 +21146,13 @@ static VIS: &[Factory] = &[
     super::vis::mystic_veil,
     super::vis::relic_ward,
     super::vis::betrayal,
+    super::vis::scalebanes_elite,
+    super::vis::phyrexian_marauder,
+    super::vis::miraculous_recovery,
+    super::vis::quicksand,
+    super::vis::griffin_canyon,
+    super::vis::magma_mine,
+    super::vis::snake_basket,
 ];
 static WAR: &[Factory] = &[
     super::war::ironclad_krovod,

@@ -435,6 +435,9 @@ pub enum CounterType {
     Fuse,
     /// Wind counter — Cyclone's escalating upkeep tally.
     Wind,
+    /// Pressure counter — Magma Mine's charge-then-blow tally. Distinct from
+    /// `Charge` so a Charge-matters payoff doesn't read it.
+    Pressure,
     /// Hunger counter — Fasting's upkeep tally; at five the enchantment is
     /// destroyed.
     Hunger,
