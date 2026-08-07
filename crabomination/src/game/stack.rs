@@ -3603,8 +3603,10 @@ impl GameState {
         // CR 514.2 — Second, the following actions happen simultaneously:
         // all damage marked on permanents is removed and all "until end of
         // turn" and "this turn" effects end.
-        // Clear temporary pump effects (CardInstance-level bonuses still used as base)
-        for card in &mut self.battlefield {
+        // Clear temporary pump effects (CardInstance-level bonuses still used
+        // as base). Phased-out permanents are still on the battlefield for
+        // this purpose (CR 702.26e), so they expire on the same schedule.
+        for card in self.battlefield.iter_mut().chain(self.phased_out.iter_mut()) {
             card.clear_end_of_turn_effects();
         }
         // Until-end-of-turn flashback grants (SOS "Flashback") live on
@@ -3663,8 +3665,9 @@ impl GameState {
         self.additional_upkeep_steps = 0;
         self.upkeep_steps_this_turn = 0;
         self.graveyard_from_battlefield_this_turn.clear();
-        // Clear all damage from creatures
-        for card in &mut self.battlefield {
+        // CR 514.2 — all damage marked on permanents is removed, phased-out
+        // ones included (they're treated as nonexistent, not as gone).
+        for card in self.battlefield.iter_mut().chain(self.phased_out.iter_mut()) {
             card.damage = 0;
         }
         // Clear the per-turn "permanents gained a counter this turn"

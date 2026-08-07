@@ -289,6 +289,7 @@ mod tests {
             max_blockers_per_combat: None,
             face_down_cast_cost: 3,
             day_night: None,
+            truce_active: false,
             combat_preview: None,
             castable_hand: vec![],
             back_castable_hand: vec![],

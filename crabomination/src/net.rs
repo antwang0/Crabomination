@@ -360,6 +360,12 @@ pub struct ClientView {
     /// snapshot back-compat.
     #[serde(default)]
     pub day_night: Option<bool>,
+    /// Peace Talks' truce is live: no creature may attack and nothing may be
+    /// targeted by a spell or activated ability. Surfaced so the UI can say
+    /// why an attack or a target is being refused. `#[serde(default)]` for
+    /// snapshot back-compat.
+    #[serde(default)]
+    pub truce_active: bool,
     /// Projected combat outcome for the current attacker/blocker
     /// assignment (Tier-7 #3 "combat math preview"). `None` outside of
     /// combat or when no attackers are declared. `#[serde(default)]` for

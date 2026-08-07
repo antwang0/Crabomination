@@ -66,6 +66,11 @@ Items are grouped by area and roughly ordered by impact within each group.
   `Effect::TruceThisTurnAndNext` + `GameState.truce_until_turn` (Peace Talks),
   `Effect::DrainDefendersLandsForManaNextMain` (Pygmy Hippo) and
   `Effect::PumpAttackersThisTurn` (Song of Blood).
+- ✅ **CR 514.2 reaches the phased-out zone.** Cleanup was clearing marked
+  damage and "until end of turn" effects only for permanents on the
+  battlefield; a phased-out permanent kept both across the turn boundary. Both
+  loops now chain `phased_out`. Regression:
+  `cr_514_2_cleanup_clears_phased_out_damage`.
 - **Peace Talks' truce is coarse.** `truce_active()` short-circuits the
   permanent- and player-target checks and rejects every attack declaration; it
   does not distinguish "targets of spells and activated abilities" from

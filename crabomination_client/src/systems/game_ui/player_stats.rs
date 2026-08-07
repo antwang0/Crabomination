@@ -1176,6 +1176,12 @@ pub fn update_player_stats_chips(
             Some(false) => spawn_stat_chip(row, &ui_fonts, StatChipKind::Night, "☾ night".to_string()),
             None => {}
         }
+        // Peace Talks — a table-wide truce; surface once, on the active
+        // player's row, so neither seat plans an attack or a targeted spell
+        // the server will refuse.
+        if cv.truce_active && p.seat == cv.active_player {
+            spawn_stat_chip(row, &ui_fonts, StatChipKind::Fog, "☮ truce".to_string());
+        }
         // CR 615.1 fog — a global turn state; surface once, on the active
         // player's row, so combat won't surprise either seat.
         if cv.combat_damage_prevented_this_turn && p.seat == cv.active_player {

@@ -151,6 +151,7 @@ fn project_for_inner(state: &GameState, viewer: Option<usize>) -> ClientView {
         max_attackers_per_combat: state.combat_participation_cap(false),
         max_blockers_per_combat: state.combat_participation_cap(true),
         day_night: state.day_night.map(|dn| dn == crate::game::types::DayNight::Day),
+        truce_active: state.truce_active(),
         combat_preview: combat_preview(state),
         // One pass over the hand builds a single library-stripped probe
         // template and reuses it across every affordance category, rather

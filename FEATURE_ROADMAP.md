@@ -2770,6 +2770,16 @@ Each a small targeted feature; sweep batch by batch.
 
 ## Recently closed (this push)
 
+- **CR conformance + the truce's UI tail** — `cr_recent96`: CR 120.8 (a source
+  dealing 0 damage deals none, so damage triggers don't fire), CR 514.2 (a real
+  gap — cleanup cleared marked damage and "until end of turn" effects only on
+  the battlefield, so a phased-out permanent kept both across the turn
+  boundary) and CR 121.5 (library → hand without the word "draw" isn't a draw).
+  Server: `ClientView.truce_active` surfaces Peace Talks' two-turn lock;
+  client: a "☮ truce" chip on the active player's row and a `1Src` keyword tag
+  for Ogre Enforcer, so neither seat plans an attack or a target the server
+  will refuse.
+
 - **Visions (VIS) closed** — `set_gaps.py vis` 139 → 0 across
   `sets::vis` + `sets::vis2`, tests in `classic_sets/vis`. The Karoo bounce
   lands, the Charms, the flanking knights, the Chimera cycle, the world

@@ -243,6 +243,9 @@ fn keyword_tag(kw: &Keyword) -> Option<&'static str> {
         // "Doesn't untap if it attacked during your last turn" (Goblin Rock
         // Sled, Tangle Kelp) — the swing costs a whole turn of availability.
         DoesntUntapIfAttackedLastTurn => "Rest",
+        // "Can't be destroyed by lethal damage unless one source dealt it all"
+        // (Ogre Enforcer) — chump-blocking maths change completely.
+        SurvivesSplitLethalDamage => "1Src",
         // "Can't be the target of spells unless it attacked or blocked this
         // turn" (Lurker) — reads as conditional shroud to the opponent.
         CantBeTargetedBySpellsUnlessAttackedOrBlocked => "Shr?",
