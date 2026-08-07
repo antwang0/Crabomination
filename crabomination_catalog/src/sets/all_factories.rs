@@ -21160,6 +21160,11 @@ static VIS: &[Factory] = &[
     super::vis::flooded_shoreline,
     super::vis::righteous_aura,
     super::vis::quirion_druid,
+    super::vis::rainbow_efreet,
+    super::vis::knight_of_valor,
+    super::vis::matopi_golem,
+    super::vis::brood_of_cockroaches,
+    super::vis::vampirism,
 ];
 static WAR: &[Factory] = &[
     super::war::ironclad_krovod,

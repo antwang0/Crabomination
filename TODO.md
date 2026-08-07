@@ -43,7 +43,12 @@ Items are grouped by area and roughly ordered by impact within each group.
   time combat comes around. Wants a `Value::Const`-substituting capture on
   `Effect::AtEachCombatThisTurn` (or a general "freeze this Value now"
   wrapper); the card is held back until then. ⏳
-- **Remaining Visions gaps (57) cluster on four shapes:** the phasing
+- **`PayManaOrElse` in an ETB trigger never reaches its `otherwise` arm.**
+  Knight of the Mists ("When this enters, you may pay {U}. If you don't,
+  destroy target Knight") is held back: with no mana floated and the decider
+  declining, nothing is destroyed. Worth tracing whether the trigger resolves
+  at all or whether the else branch's target slot is left unbound. ⏳
+- **Remaining Visions gaps (52) cluster on four shapes:** the phasing
   mass-effects (Equipoise, Teferi's Realm, Katabatic Winds), the Chimera
   sacrifice cycle (a `+2/+2` counter *plus* an indefinite keyword grant), the
   world enchantments (Elkin Lair, Eye of Singularity), and the

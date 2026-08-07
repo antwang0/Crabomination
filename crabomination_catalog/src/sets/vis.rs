@@ -1618,3 +1618,120 @@ pub fn quirion_druid() -> CardDefinition {
         )
     }
 }
+
+/// Rainbow Efreet — {3}{U} 3/1 flier that can phase itself out.
+pub fn rainbow_efreet() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flying],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[u(), u()]),
+            effect: Effect::PhaseOut { what: Selector::This, until_source_leaves: false },
+            ..Default::default()
+        }],
+        ..creature("Rainbow Efreet", cost(&[generic(3), u()]), vec![CreatureType::Efreet], 3, 1)
+    }
+}
+
+/// Knight of Valor — {2}{W} 2/2 with flanking; once a turn {1}{W} shrinks every
+/// non-flanking creature blocking it.
+pub fn knight_of_valor() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flanking],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1), w()]),
+            once_per_turn: true,
+            effect: Effect::PumpPT {
+                what: Selector::BlockingCreatures,
+                power: Value::Const(-1),
+                toughness: Value::Const(-1),
+                duration: Duration::EndOfTurn,
+            },
+            ..Default::default()
+        }],
+        ..creature(
+            "Knight of Valor",
+            cost(&[generic(2), w()]),
+            vec![CreatureType::Human, CreatureType::Knight],
+            2,
+            2,
+        )
+    }
+}
+
+/// Matopi Golem — {5} 3/3 that regenerates for {1} and shrinks each time.
+pub fn matopi_golem() -> CardDefinition {
+    CardDefinition {
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1)]),
+            effect: Effect::Regenerate { what: Selector::This },
+            ..Default::default()
+        }],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Regenerated, EventScope::SelfSource),
+            effect: Effect::AddCounter {
+                what: Selector::This,
+                kind: CounterType::MinusOneMinusOne,
+                amount: Value::ONE,
+            },
+        }],
+        ..creature("Matopi Golem", cost(&[generic(5)]), vec![CreatureType::Golem], 3, 3)
+    }
+}
+
+/// Brood of Cockroaches — {1}{B} 1/1 that comes back at the next end step for
+/// a life.
+pub fn brood_of_cockroaches() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CreatureDied, EventScope::SelfSource),
+            effect: Effect::DelayUntil {
+                kind: crate::effect::DelayedTriggerKind::NextEndStep,
+                body: Box::new(Effect::Seq(vec![
+                    Effect::LoseLife { who: Selector::You, amount: Value::ONE },
+                    Effect::Move {
+                        what: Selector::This,
+                        to: ZoneDest::Hand(PlayerRef::You),
+                    },
+                ])),
+            },
+        }],
+        ..creature(
+            "Brood of Cockroaches",
+            cost(&[generic(1), b()]),
+            vec![CreatureType::Insect],
+            1,
+            1,
+        )
+    }
+}
+
+/// Vampirism — {1}{B} Aura. The host grows per other creature you control while
+/// the rest of your team shrinks. (The delayed ETB draw is dropped.)
+pub fn vampirism() -> CardDefinition {
+    CardDefinition {
+        static_abilities: vec![StaticAbility {
+            description: "Other creatures you control get -1/-1.",
+            effect: StaticEffect::PumpPT {
+                applies_to: Selector::EachPermanent(
+                    R::Creature.and(R::ControlledByYou).and(R::OtherThanSource),
+                ),
+                power: -1,
+                toughness: -1,
+            },
+        }],
+        ..aura(
+            "Vampirism",
+            cost(&[generic(1), b()]),
+            EquipBonus {
+                scale: Some(crate::card::EquipScale {
+                    filter: R::Creature.and(R::OtherThanSource),
+                    per_power: 1,
+                    per_toughness: 1,
+                    ..Default::default()
+                }),
+                ..Default::default()
+            },
+        )
+    }
+}

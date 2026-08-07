@@ -761,3 +761,99 @@ fn quirion_druid_animates_a_land() {
     assert_eq!((cp.power, cp.toughness), (2, 2));
     assert!(cp.card_types.contains(&CardType::Creature) && cp.card_types.contains(&CardType::Land));
 }
+
+/// Rainbow Efreet phases itself out for {U}{U}.
+#[test]
+fn rainbow_efreet_phases_itself_out() {
+    let mut g = two_player_game();
+    let efreet = ready(&mut g, 0, catalog::rainbow_efreet());
+    g.players[0].mana_pool.add(Color::Blue, 2);
+    activate(&mut g, efreet, 0, None).expect("phase out");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(efreet).is_none(), "phased out");
+}
+
+/// Knight of Valor shrinks everything blocking it, once a turn.
+#[test]
+fn knight_of_valor_shrinks_its_blockers() {
+    let mut g = two_player_game();
+    let knight = ready(&mut g, 0, catalog::knight_of_valor());
+    let blocker = ready(&mut g, 1, catalog::grizzly_bears());
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    while g.step != TurnStep::DeclareAttackers {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: knight,
+        target: AttackTarget::Player(1),
+    }]))
+    .expect("attack");
+    drain_stack(&mut g);
+    while g.step != TurnStep::DeclareBlockers {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    g.perform_action(GameAction::DeclareBlockers(vec![(blocker, knight)])).expect("block");
+    drain_stack(&mut g);
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.priority.player_with_priority = 0;
+    activate(&mut g, knight, 0, None).expect("shrink the blockers");
+    drain_stack(&mut g);
+    // Flanking already gave -1/-1; the ability adds another.
+    assert!(g.battlefield_find(blocker).is_none(), "the 2/2 shrank away");
+}
+
+/// Matopi Golem shrinks itself each time it regenerates.
+#[test]
+fn matopi_golem_shrinks_on_regenerate() {
+    use crabomination::card::CounterType;
+    let mut g = two_player_game();
+    let golem = ready(&mut g, 0, catalog::matopi_golem());
+    g.players[0].mana_pool.add_colorless(1);
+    activate(&mut g, golem, 0, None).expect("shield up");
+    drain_stack(&mut g);
+    g.battlefield_find_mut(golem).unwrap().damage = 99;
+    let evs = g.check_state_based_actions();
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    let c = g.battlefield_find(golem).expect("regenerated instead of dying");
+    assert_eq!(c.counter_count(CounterType::MinusOneMinusOne), 1, "one -1/-1 per regeneration");
+}
+
+/// Brood of Cockroaches crawls back to hand at the next end step.
+#[test]
+fn brood_of_cockroaches_returns_at_end_step() {
+    let mut g = two_player_game();
+    let roaches = g.add_card_to_battlefield(0, catalog::brood_of_cockroaches());
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    let evs = g.remove_to_graveyard_with_triggers(roaches);
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    while g.step != TurnStep::End {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == roaches), "back in hand");
+    assert_eq!(g.players[0].life, 19, "for a life");
+}
+
+/// Vampirism grows its host per other creature you control and shrinks the
+/// rest of the team.
+#[test]
+fn vampirism_feeds_on_your_own_board() {
+    let mut g = two_player_game();
+    let host = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let other = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let aura = g.add_card_to_hand(0, catalog::vampirism());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    cast(&mut g, aura, Some(Target::Permanent(host))).expect("cast");
+    drain_stack(&mut g);
+    // One other creature → +1/+1 on the host, -1/-1 on it.
+    assert_eq!(g.computed_permanent(host).unwrap().power, 3);
+    assert_eq!(g.computed_permanent(other).unwrap().power, 1);
+}
