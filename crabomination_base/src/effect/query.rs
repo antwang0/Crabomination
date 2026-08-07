@@ -1826,6 +1826,13 @@ impl Effect {
             Effect::PayEnergy { then, .. }
             | Effect::PayEnergyValue { then, .. }
             | Effect::PayAnyEnergy { then } => then.primary_target_filter(),
+            // "…unless you pay {cost}" — the target lives in the fallback arm
+            // (Knight of the Mists), so a trigger can auto-target it.
+            Effect::PayManaOrElse { otherwise, .. }
+            | Effect::PayEnergyOrElse { otherwise, .. }
+            | Effect::PayEnergyOrElseValue { otherwise, .. } => {
+                otherwise.primary_target_filter()
+            }
             Effect::Process { then, .. } => then.primary_target_filter(),
             Effect::CollectEvidence { then, .. }
             | Effect::CollectEvidenceX { then }

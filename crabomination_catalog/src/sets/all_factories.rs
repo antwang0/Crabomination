@@ -21162,6 +21162,7 @@ static VIS: &[Factory] = &[
     super::vis::quirion_druid,
     super::vis::rainbow_efreet,
     super::vis::knight_of_valor,
+    super::vis::knight_of_the_mists,
     super::vis::matopi_golem,
     super::vis::brood_of_cockroaches,
     super::vis::vampirism,

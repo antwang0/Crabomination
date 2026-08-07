@@ -1658,6 +1658,27 @@ pub fn knight_of_valor() -> CardDefinition {
     }
 }
 
+/// Knight of the Mists — {2}{U} 2/2 with flanking whose ETB destroys a Knight
+/// unless you pay {U}.
+pub fn knight_of_the_mists() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flanking],
+        triggered_abilities: vec![etb(Effect::PayManaOrElse {
+            mana_cost: cost(&[u()]),
+            otherwise: Box::new(Effect::DestroyNoRegen {
+                what: target_filtered(R::HasCreatureType(CreatureType::Knight)),
+            }),
+        })],
+        ..creature(
+            "Knight of the Mists",
+            cost(&[generic(2), u()]),
+            vec![CreatureType::Human, CreatureType::Knight],
+            2,
+            2,
+        )
+    }
+}
+
 /// Matopi Golem — {5} 3/3 that regenerates for {1} and shrinks each time.
 pub fn matopi_golem() -> CardDefinition {
     CardDefinition {

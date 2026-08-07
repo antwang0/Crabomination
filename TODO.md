@@ -43,12 +43,14 @@ Items are grouped by area and roughly ordered by impact within each group.
   time combat comes around. Wants a `Value::Const`-substituting capture on
   `Effect::AtEachCombatThisTurn` (or a general "freeze this Value now"
   wrapper); the card is held back until then. ⏳
-- **`PayManaOrElse` in an ETB trigger never reaches its `otherwise` arm.**
-  Knight of the Mists ("When this enters, you may pay {U}. If you don't,
-  destroy target Knight") is held back: with no mana floated and the decider
-  declining, nothing is destroyed. Worth tracing whether the trigger resolves
-  at all or whether the else branch's target slot is left unbound. ⏳
-- **Remaining Visions gaps (52) cluster on four shapes:** the phasing
+- ✅ **`primary_target_filter` now walks the "unless you pay" fallback arms.**
+  `PayManaOrElse` / `PayEnergyOrElse` / `PayEnergyOrElseValue` were surfaced by
+  `requires_target` and `target_filter_for_slot` but not by
+  `primary_target_filter`, so a *triggered* ability whose only target lives in
+  the fallback (Knight of the Mists' "destroy target Knight") never had one
+  bound and silently did nothing. Another instance of the parallel-walker class
+  in the P3 audit section.
+- **Remaining Visions gaps (51) cluster on four shapes:** the phasing
   mass-effects (Equipoise, Teferi's Realm, Katabatic Winds), the Chimera
   sacrifice cycle (a `+2/+2` counter *plus* an indefinite keyword grant), the
   world enchantments (Elkin Lair, Eye of Singularity), and the

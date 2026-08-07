@@ -857,3 +857,21 @@ fn vampirism_feeds_on_your_own_board() {
     assert_eq!(g.computed_permanent(host).unwrap().power, 3);
     assert_eq!(g.computed_permanent(other).unwrap().power, 1);
 }
+
+/// Knight of the Mists destroys a Knight when its {U} goes unpaid — the target
+/// lives in the `PayManaOrElse` fallback arm, so the trigger must reach it.
+#[test]
+fn knight_of_the_mists_kills_a_knight_unpaid() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(1, catalog::knight_of_valor());
+    g.move_card_to_battlefield_for_test(0, catalog::knight_of_the_mists());
+    drain_stack(&mut g);
+    let knights = g
+        .battlefield
+        .iter()
+        .filter(|c| {
+            c.definition.subtypes.creature_types.contains(&crabomination::card::CreatureType::Knight)
+        })
+        .count();
+    assert_eq!(knights, 1, "unpaid, so the ETB destroyed a Knight");
+}
