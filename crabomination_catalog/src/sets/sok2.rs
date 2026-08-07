@@ -965,6 +965,7 @@ pub fn moonbow_illusionist() -> CardDefinition {
         activated_abilities: vec![moonfolk_ability(Effect::LandsBecomeChosenBasicType {
             what: target_filtered(R::Land),
             duration: Duration::EndOfTurn,
+                    from_chosen_basic: false,
         })],
         ..creature(
             "Moonbow Illusionist",

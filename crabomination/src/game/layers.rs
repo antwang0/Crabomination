@@ -234,6 +234,15 @@ pub enum AffectedPermanents {
         card_types: Vec<CardType>,
         #[serde(default)]
         friendly_seats: Vec<usize>,
+        /// Narrows the opponent scope by colour / creature type / counter, so
+        /// "blue creatures your opponents control" isn't read as all of them
+        /// (Heat Wave). `None` on each keeps the unnarrowed scope.
+        #[serde(default)]
+        color: Option<crate::mana::Color>,
+        #[serde(default)]
+        creature_type: Option<crate::card::CreatureType>,
+        #[serde(default)]
+        counter: Option<crate::card::CounterType>,
     },
     /// A specific set of permanents.
     Specific(Vec<CardId>),
@@ -726,7 +735,14 @@ fn affected_includes_gated(
                 owned_by_controller.is_none_or(|want| (card.owner == card.controller) == want);
             ctrl_ok && type_ok && color_ok && colorless_ok && token_ok && own_ok
         }
-        AffectedPermanents::AllOpponents { source_controller, card_types, friendly_seats } => {
+        AffectedPermanents::AllOpponents {
+            source_controller,
+            card_types,
+            friendly_seats,
+            color,
+            creature_type,
+            counter,
+        } => {
             // Empty `friendly_seats` → legacy 1v1 check (snapshots from
             // before push-XLIII didn't populate it).
             let ctrl_ok = if friendly_seats.is_empty() {
@@ -736,7 +752,20 @@ fn affected_includes_gated(
             };
             let type_ok = card_types.is_empty()
                 || card_types.iter().all(|t| card.definition.card_types.contains(t));
-            ctrl_ok && type_ok
+            let color_ok = color.is_none_or(|want| {
+                card.definition.cost.symbols.iter().any(|s| {
+                    matches!(s, crate::mana::ManaSymbol::Colored(c) if *c == want)
+                })
+            });
+            let ct_ok = creature_type.as_ref().is_none_or(|ct| {
+                let typed = match gate_types {
+                    Some(types) => types.contains(ct),
+                    None => card.definition.subtypes.creature_types.contains(ct),
+                };
+                typed || card.definition.keywords.contains(&Keyword::Changeling)
+            });
+            let counter_ok = counter.is_none_or(|k| card.counter_count(k) > 0);
+            ctrl_ok && type_ok && color_ok && ct_ok && counter_ok
         }
         AffectedPermanents::AllWithCreatureType { controller, creature_type, exclude_source } => {
             if *exclude_source && source == card.id {

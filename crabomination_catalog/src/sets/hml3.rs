@@ -249,6 +249,7 @@ pub fn jinx() -> CardDefinition {
             Effect::LandsBecomeChosenBasicType {
                 what: target_filtered(R::Land),
                 duration: Duration::EndOfTurn,
+                            from_chosen_basic: false,
             },
             Effect::AtNextTurnsUpkeep {
                 body: Box::new(Effect::Draw { who: Selector::You, amount: Value::ONE }),

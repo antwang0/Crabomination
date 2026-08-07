@@ -4494,6 +4494,11 @@ impl GameState {
             // Unresolved source-counter MV gate (concretized at resolution
             // via `resolve_source_counters`).
             R::ManaValueEqualsSourceCounters(_) => false,
+            // Corrosion — the candidate's own counters, so it reads off a
+            // `CardInstance` directly.
+            R::ManaValueAtMostOwnCounters(kind) => {
+                card.definition.cost.cmc() <= card.counter_count(*kind)
+            }
             R::ManaValueAtMostDiscardedThisEffect => {
                 card.definition.cost.cmc() <= self.last_discarded_mana_value.unwrap_or(0)
             }

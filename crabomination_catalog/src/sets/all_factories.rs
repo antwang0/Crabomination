@@ -21215,6 +21215,13 @@ static VIS2: &[Factory] = &[
     super::vis2::guiding_spirit,
     super::vis2::wand_of_denial,
     super::vis2::pillar_tombs_of_aku,
+    super::vis2::vision_charm,
+    super::vis2::elephant_grass,
+    super::vis2::heat_wave,
+    super::vis2::corrosion,
+    super::vis2::dream_tides,
+    super::vis2::three_wishes,
+    super::vis2::foreshadow,
 ];
 static WAR: &[Factory] = &[
     super::war::ironclad_krovod,

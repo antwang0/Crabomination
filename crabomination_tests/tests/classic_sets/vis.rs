@@ -1497,3 +1497,148 @@ fn phyrexian_marauder_enters_with_x_counters() {
     assert_eq!(c.counter_count(CounterType::PlusOnePlusOne), 3);
     assert!(catalog::phyrexian_marauder().keywords.contains(&Keyword::CantBlock));
 }
+
+// ── Wave five ───────────────────────────────────────────────────────────────
+
+/// Vision Charm's third mode phases out an artifact.
+#[test]
+fn vision_charm_phases_out_an_artifact() {
+    let mut g = two_player_game();
+    let mine = ready(&mut g, 1, catalog::magma_mine());
+    let charm = g.add_card_to_hand(0, catalog::vision_charm());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell {
+        card_id: charm,
+        target: Some(Target::Permanent(mine)),
+        additional_targets: vec![],
+        mode: Some(2),
+        x_value: None,
+    })
+    .expect("charm");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(mine).is_none());
+}
+
+/// Elephant Grass walls off black attackers and taxes the rest.
+#[test]
+fn elephant_grass_walls_black_and_taxes_the_rest() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::elephant_grass());
+    let black = ready(&mut g, 1, catalog::python());
+    let green = ready(&mut g, 1, catalog::grizzly_bears());
+    g.active_player_idx = 1;
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 1;
+    assert!(
+        g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+            attacker: black,
+            target: AttackTarget::Player(0),
+        }]))
+        .is_err(),
+        "black creatures can't attack at all"
+    );
+    assert!(
+        g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+            attacker: green,
+            target: AttackTarget::Player(0),
+        }]))
+        .is_err(),
+        "and the rest need two generic mana"
+    );
+    g.players[1].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: green,
+        target: AttackTarget::Player(0),
+    }]))
+    .expect("paid the toll");
+}
+
+/// Heat Wave charges a life per nonblue blocker.
+#[test]
+fn heat_wave_charges_life_to_block() {
+    let mut g = two_player_game();
+    let attacker = ready(&mut g, 0, catalog::grizzly_bears());
+    g.add_card_to_battlefield(0, catalog::heat_wave());
+    let blocker = ready(&mut g, 1, catalog::hill_giant());
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker,
+        target: AttackTarget::Player(1),
+    }]))
+    .expect("attack");
+    while g.step != TurnStep::DeclareBlockers {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::DeclareBlockers(vec![(blocker, attacker)])).expect("block");
+    assert_eq!(g.players[1].life, 19, "one life per blocker");
+}
+
+/// Corrosion rusts an opponent's artifacts until they crumble.
+#[test]
+fn corrosion_destroys_rusted_artifacts() {
+    let mut g = two_player_game();
+    let corrosion = g.add_card_to_battlefield(0, catalog::corrosion());
+    let cheap = g.add_card_to_battlefield(1, catalog::magma_mine());
+    let dear = g.add_card_to_battlefield(1, catalog::snake_basket());
+    let upkeep = catalog::corrosion().triggered_abilities[0].effect.clone();
+    let mut ctx = crabomination::game::effects::EffectContext::for_ability(corrosion, 0, None);
+    ctx.targets = vec![Target::Player(1)];
+    g.resolve_effect(&upkeep, &ctx).expect("first tick");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(cheap).is_none(), "a one-mana artifact rusts through at once");
+    assert_eq!(g.battlefield_find(dear).unwrap().counter_count(CounterType::Rust), 1);
+}
+
+/// Dream Tides keeps creatures tapped through the untap step.
+#[test]
+fn dream_tides_stops_creatures_untapping() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::dream_tides());
+    let bears = ready(&mut g, 0, catalog::grizzly_bears());
+    g.battlefield_find_mut(bears).unwrap().tapped = true;
+    g.active_player_idx = 0;
+    g.do_untap();
+    assert!(g.battlefield_find(bears).unwrap().tapped);
+}
+
+/// Foreshadow draws on a hit, and again next upkeep either way.
+#[test]
+fn foreshadow_draws_on_a_named_hit() {
+    let mut g = two_player_game();
+    g.players[1].library.clear();
+    g.add_card_to_library(1, catalog::grizzly_bears());
+    g.add_card_to_library(0, catalog::plains());
+    g.add_card_to_library(0, catalog::plains());
+    let spell = g.add_card_to_hand(0, catalog::foreshadow());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    let before = g.players[0].hand.len();
+    cast(&mut g, spell, Some(Target::Player(1))).expect("foreshadow");
+    drain_stack(&mut g);
+    assert!(g.players[1].graveyard.iter().any(|c| c.definition.name == "Grizzly Bears"));
+    // The named card is auto-picked; either way the delayed draw is pending.
+    assert!(g.players[0].hand.len() >= before - 1);
+    g.active_player_idx = 0;
+    g.fire_step_triggers(TurnStep::Upkeep);
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.len() >= before, "the next-upkeep draw landed");
+}
+
+/// Three Wishes exiles three cards you can play until your next turn.
+#[test]
+fn three_wishes_exiles_three_playable_cards() {
+    let mut g = two_player_game();
+    for _ in 0..3 {
+        g.add_card_to_library(0, catalog::plains());
+    }
+    let spell = g.add_card_to_hand(0, catalog::three_wishes());
+    g.players[0].mana_pool.add(Color::Blue, 2);
+    g.players[0].mana_pool.add_colorless(1);
+    cast(&mut g, spell, None).expect("wish");
+    drain_stack(&mut g);
+    assert_eq!(g.exile.iter().filter(|c| c.owner == 0 && c.definition.name == "Plains").count(), 3);
+}

@@ -1013,6 +1013,7 @@ pub fn reef_shaman() -> CardDefinition {
             effect: Effect::LandsBecomeChosenBasicType {
                 what: target_filtered(R::Land),
                 duration: Duration::EndOfTurn,
+                            from_chosen_basic: false,
             },
             ..Default::default()
         }],
@@ -1035,6 +1036,7 @@ pub fn shimmering_mirage() -> CardDefinition {
             Effect::LandsBecomeChosenBasicType {
                 what: target_filtered(R::Land),
                 duration: Duration::EndOfTurn,
+                            from_chosen_basic: false,
             },
             draw(1),
         ]),
@@ -1277,6 +1279,7 @@ pub fn tundra_kavu() -> CardDefinition {
             effect: Effect::LandsBecomeChosenBasicType {
                 what: target_filtered(R::Land),
                 duration: Duration::EndOfTurn,
+                            from_chosen_basic: false,
             },
             ..Default::default()
         }],

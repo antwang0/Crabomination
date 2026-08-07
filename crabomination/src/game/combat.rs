@@ -907,8 +907,19 @@ impl GameState {
                     if let crate::effect::StaticEffect::AttackTaxToController {
                         amount,
                         protect_planeswalkers,
+                        filter,
                     } = &sa.effect
                         && (!at_planeswalker || *protect_planeswalkers)
+                        // Elephant Grass — the tax only bites on matching
+                        // attackers, and is charged once per such attacker.
+                        && filter.as_ref().is_none_or(|f| {
+                            self.evaluate_requirement_static(
+                                f,
+                                &crate::game::types::Target::Permanent(atk.attacker),
+                                d,
+                                Some(c.id),
+                            )
+                        })
                     {
                         let mut ctx = crate::game::effects::EffectContext::for_spell(d, None, 0, 0);
                         ctx.source = Some(c.id);
@@ -1776,39 +1787,58 @@ impl GameState {
         // only while it's attacking this combat) and pay {tax} per declared
         // blocker from that blocker's controller's pool, auto-tapping for any
         // shortfall. Reject the whole declaration if a player can't cover it.
-        let block_tax_per: u32 = {
-            let mut sum = 0u32;
-            for c in &self.battlefield {
+        // The tax is summed per blocker, since a source may narrow itself to
+        // some of them (Heat Wave taxes only nonblue blockers) and may charge
+        // life rather than mana.
+        let block_tax_for = |st: &Self, blocker: CardId| -> (u32, u32) {
+            let (mut mana, mut life) = (st.block_tax_this_turn, 0u32);
+            for c in &st.battlefield {
                 for sa in &c.definition.static_abilities {
                     if let crate::effect::StaticEffect::BlockTaxToController {
                         amount,
                         only_while_attacking,
+                        filter,
+                        life: as_life,
                     } = &sa.effect
                     {
                         if *only_while_attacking
-                            && !self.attacking.iter().any(|a| a.attacker == c.id)
+                            && !st.attacking.iter().any(|a| a.attacker == c.id)
                         {
+                            continue;
+                        }
+                        if !filter.as_ref().is_none_or(|f| {
+                            st.evaluate_requirement_static(
+                                f,
+                                &crate::game::types::Target::Permanent(blocker),
+                                c.controller,
+                                Some(c.id),
+                            )
+                        }) {
                             continue;
                         }
                         let mut ctx =
                             crate::game::effects::EffectContext::for_spell(c.controller, None, 0, 0);
                         ctx.source = Some(c.id);
-                        sum += self.evaluate_value(amount, &ctx).max(0) as u32;
+                        let n = st.evaluate_value(amount, &ctx).max(0) as u32;
+                        if *as_life { life += n } else { mana += n }
                     }
                 }
             }
-            // War Cadence — a symmetric per-blocker tax for the rest of the turn.
-            sum + self.block_tax_this_turn
+            (mana, life)
         };
         // The spend is deferred to after every block-legality check so a
         // rejected declaration never costs mana (CR 601.2h-style atomicity).
-        let mut block_tax_by_controller: std::collections::HashMap<usize, u32> =
+        let mut block_tax_by_controller: std::collections::HashMap<usize, (u32, u32)> =
             std::collections::HashMap::new();
-        if block_tax_per > 0 {
-            for &(blocker_id, _) in &assignments {
-                if let Some(b) = self.battlefield_find(blocker_id) {
-                    *block_tax_by_controller.entry(b.controller).or_insert(0) += block_tax_per;
-                }
+        for &(blocker_id, _) in &assignments {
+            let (mana, life) = block_tax_for(self, blocker_id);
+            if mana == 0 && life == 0 {
+                continue;
+            }
+            if let Some(b) = self.battlefield_find(blocker_id) {
+                let e = block_tax_by_controller.entry(b.controller).or_insert((0, 0));
+                e.0 += mana;
+                e.1 += life;
             }
         }
 
@@ -2100,16 +2130,30 @@ impl GameState {
         // every payment if any player can't cover theirs.
         if !block_tax_by_controller.is_empty() {
             let mut snapshots = Vec::new();
-            let mut payers: Vec<(usize, u32)> = block_tax_by_controller.into_iter().collect();
+            let mut payers: Vec<(usize, (u32, u32))> =
+                block_tax_by_controller.into_iter().collect();
             payers.sort_by_key(|(p, _)| *p);
-            for (player, owed) in payers {
+            let mut life_paid: Vec<(usize, u32)> = Vec::new();
+            for (player, (mana, life)) in payers {
                 let snap = self.snapshot_payment_state(player);
-                let cost = crate::mana::cost(&[crate::mana::generic(owed)]);
-                if self.try_pay_with_auto_tap(player, &cost).is_err() {
+                // CR 119.4 — a life cost is unpayable below the amount owed.
+                let ok = self.players[player].life >= life as i32
+                    && (mana == 0 || {
+                        let cost = crate::mana::cost(&[crate::mana::generic(mana)]);
+                        self.try_pay_with_auto_tap(player, &cost).is_ok()
+                    });
+                if !ok {
                     for (p, s) in snapshots {
                         self.restore_payment_state(p, s);
                     }
+                    for (p, n) in life_paid {
+                        self.players[p].life += n as i32;
+                    }
                     return Err(GameError::CannotBlock(assignments[0].0));
+                }
+                if life > 0 {
+                    self.players[player].life -= life as i32;
+                    life_paid.push((player, life));
                 }
                 snapshots.push((player, snap));
             }

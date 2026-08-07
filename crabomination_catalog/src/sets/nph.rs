@@ -405,6 +405,7 @@ pub fn norns_annex() -> CardDefinition {
             effect: StaticEffect::AttackTaxToController {
                 amount: Value::ONE,
                 protect_planeswalkers: true,
+                            filter: None,
             },
         }],
         ..artifact(

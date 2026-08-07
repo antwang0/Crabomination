@@ -955,7 +955,14 @@ pub enum StaticEffect {
     /// per card) while dynamic ones scale off the controller's board — Sphere
     /// of Safety = number of enchantments you control. Copies stack. Paid from
     /// the pool, auto-tapping mana sources for any shortfall.
-    AttackTaxToController { amount: Value, protect_planeswalkers: bool },
+    AttackTaxToController {
+        amount: Value,
+        protect_planeswalkers: bool,
+        /// Narrows the tax to attackers matching it (Elephant Grass — nonblack
+        /// creatures only). `None` taxes every attacker.
+        #[serde(default)]
+        filter: Option<SelectionRequirement>,
+    },
     /// CR 508.1 — absolute attack prohibition. "Creatures can't attack you"
     /// (and, when `protect_planeswalkers`, a planeswalker you control) — a hard
     /// no, not a tax. Checked in `declare_attackers`. Blazing Archon,
@@ -980,6 +987,12 @@ pub enum StaticEffect {
         amount: Value,
         #[serde(default)]
         only_while_attacking: bool,
+        /// Narrows the tax to blockers matching it (Heat Wave — nonblue only).
+        #[serde(default)]
+        filter: Option<SelectionRequirement>,
+        /// The tax is paid in life rather than mana (Heat Wave).
+        #[serde(default)]
+        life: bool,
     },
     /// CR 121.2b — Targeted players can't draw more than `max` cards each
     /// turn. While active, an `Effect::Draw` that would push a player past

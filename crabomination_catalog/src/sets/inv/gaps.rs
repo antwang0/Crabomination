@@ -487,6 +487,7 @@ pub fn dream_thrush() -> CardDefinition {
             effect: Effect::LandsBecomeChosenBasicType {
                 what: target_filtered(R::Land),
                 duration: Duration::EndOfTurn,
+                            from_chosen_basic: false,
             },
             ..Default::default()
         }],

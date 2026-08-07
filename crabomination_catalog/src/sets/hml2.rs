@@ -344,6 +344,7 @@ pub fn koskun_falls() -> CardDefinition {
             effect: StaticEffect::AttackTaxToController {
                 amount: Value::Const(2),
                 protect_planeswalkers: false,
+                            filter: None,
             },
         }],
         ..Default::default()

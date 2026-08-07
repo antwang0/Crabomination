@@ -1188,6 +1188,7 @@ pub fn sea_snidd() -> CardDefinition {
             effect: Effect::LandsBecomeChosenBasicType {
                 what: target_filtered(R::Land),
                 duration: Duration::EndOfTurn,
+                            from_chosen_basic: false,
             },
             ..Default::default()
         }],

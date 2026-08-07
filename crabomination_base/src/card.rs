@@ -2341,6 +2341,10 @@ pub enum SelectionRequirement {
     /// to a concrete `ManaValueExactly(n)` by `resolve_source_counters` at
     /// effect resolution; unresolved instances evaluate false.
     ManaValueEqualsSourceCounters(CounterType),
+    /// "…with mana value less than or equal to the number of [kind] counters on
+    /// *it*" (Corrosion's rust counters). Reads the candidate's own counters,
+    /// unlike `ManaValueEqualsSourceCounters`.
+    ManaValueAtMostOwnCounters(CounterType),
     /// MV ≤ the mana value of the card discarded earlier in this resolution
     /// (Argentum Masticore's reflexive destroy).
     ManaValueAtMostDiscardedThisEffect,

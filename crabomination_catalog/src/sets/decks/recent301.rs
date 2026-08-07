@@ -117,6 +117,7 @@ pub fn terraformer() -> CardDefinition {
             effect: Effect::LandsBecomeChosenBasicType {
                 what: Selector::EachPermanent(R::Land.and(R::ControlledByYou)),
                 duration: Duration::EndOfTurn,
+                            from_chosen_basic: false,
             },
             ..Default::default()
         }],

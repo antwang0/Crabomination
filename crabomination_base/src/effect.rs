@@ -6646,7 +6646,15 @@ pub enum Effect {
     /// `what` becomes that type for `duration` (losing other types/abilities).
     /// Terraformer — "{1}: Choose a basic land type. Each land you control
     /// becomes that type until end of turn."
-    LandsBecomeChosenBasicType { what: Selector, duration: Duration },
+    LandsBecomeChosenBasicType {
+        what: Selector,
+        duration: Duration,
+        /// The controller first picks a *source* basic type and only lands of
+        /// that type change (Vision Charm's second mode). The printed card
+        /// allows any land type for the source pick; basics are what matter.
+        #[serde(default)]
+        from_chosen_basic: bool,
+    },
     /// "As [this] enters, choose a basic land type." Asks the controller (via
     /// the `ChooseColor` decision, basics mapping 1:1 onto colors) and stamps
     /// the choice on the source's `chosen_land_type`. Paired with

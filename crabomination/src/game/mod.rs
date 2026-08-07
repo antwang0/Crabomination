@@ -21342,12 +21342,14 @@ pub(crate) fn affected_from_requirement(
     if opponent {
         // `friendly_seats` is populated by `compute_battlefield` /
         // `apply_enters_tapped_replacement` once the source's team is known
-        // (this helper has no GameState handle). Counter/creature-type filters
-        // on the opponent path aren't decomposed yet (tracked in TODO.md).
+        // (this helper has no GameState handle).
         return Some(AffectedPermanents::AllOpponents {
             source_controller,
             card_types: types,
             friendly_seats: Vec::new(),
+            color: color_filter,
+            creature_type,
+            counter: counter_filter,
         });
     }
     if let Some(counter) = counter_filter {

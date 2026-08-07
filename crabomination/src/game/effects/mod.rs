@@ -27301,7 +27301,7 @@ impl GameState {
                 Ok(())
             }
 
-            Effect::LandsBecomeChosenBasicType { what, duration } => {
+            Effect::LandsBecomeChosenBasicType { what, duration, from_chosen_basic } => {
                 // Choose one basic land type (rides the ChooseColor decision,
                 // basics map 1:1 onto colors — as in ReplaceBasicLandType),
                 // then apply the BecomeBasicLand layer stack to every picked
@@ -27313,11 +27313,30 @@ impl GameState {
                 };
                 use crate::mana::Color;
                 let source = ctx.source.unwrap_or(CardId(0));
-                let lands: Vec<CardId> = self
+                let pick_basic = |st: &mut Self| match st.decider.decide(&Decision::ChooseColor {
+                    source,
+                    legal: vec![Color::White, Color::Blue, Color::Black, Color::Red, Color::Green],
+                }) {
+                    DecisionAnswer::Color(Color::White) => LandType::Plains,
+                    DecisionAnswer::Color(Color::Blue) => LandType::Island,
+                    DecisionAnswer::Color(Color::Black) => LandType::Swamp,
+                    DecisionAnswer::Color(Color::Red) => LandType::Mountain,
+                    _ => LandType::Forest,
+                };
+                // Vision Charm — the source type is picked first and narrows
+                // which lands change.
+                let from = from_chosen_basic.then(|| pick_basic(self));
+                let mut lands: Vec<CardId> = self
                     .resolve_selector(what, ctx)
                     .into_iter()
                     .filter_map(|e| e.as_permanent_id())
                     .collect();
+                if let Some(from) = from {
+                    lands.retain(|id| {
+                        self.computed_permanent(*id)
+                            .is_some_and(|cp| cp.subtypes.land_types.contains(&from))
+                    });
+                }
                 if lands.is_empty() {
                     return Ok(());
                 }

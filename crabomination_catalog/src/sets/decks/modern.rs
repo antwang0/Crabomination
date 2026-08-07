@@ -43405,6 +43405,7 @@ pub fn archangel_of_tithes() -> CardDefinition {
                 effect: StaticEffect::AttackTaxToController {
                     amount: Value::Const(1),
                     protect_planeswalkers: true,
+                                    filter: None,
                 },
             },
             StaticAbility {
@@ -43412,6 +43413,8 @@ pub fn archangel_of_tithes() -> CardDefinition {
                 effect: StaticEffect::BlockTaxToController {
                     amount: Value::Const(1),
                     only_while_attacking: true,
+                                    filter: None,
+                    life: false,
                 },
             },
         ],

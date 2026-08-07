@@ -1174,3 +1174,209 @@ pub fn pillar_tombs_of_aku() -> CardDefinition {
         ..enchantment("Pillar Tombs of Aku", cost(&[generic(2), b(), b()]))
     }
 }
+
+// ── Wave five ───────────────────────────────────────────────────────────────
+
+/// Vision Charm — {U} for a mill, a land-type swap, or a phase-out.
+pub fn vision_charm() -> CardDefinition {
+    instant(
+        "Vision Charm",
+        cost(&[u()]),
+        Effect::ChooseMode(vec![
+            Effect::Mill {
+                who: Selector::Player(PlayerRef::Target(0)),
+                amount: Value::Const(4),
+            },
+            Effect::LandsBecomeChosenBasicType {
+                what: Selector::EachPermanent(R::Land),
+                duration: Duration::EndOfTurn,
+                from_chosen_basic: true,
+            },
+            Effect::PhaseOut { what: target_filtered(R::Artifact), until_source_leaves: false },
+        ]),
+    )
+}
+
+/// Elephant Grass — {G}; black creatures can't attack you, and the rest pay.
+pub fn elephant_grass() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::CumulativeUpkeep(CumulativeUpkeepCost::Mana(cost(&[generic(1)])))],
+        static_abilities: vec![
+            StaticAbility {
+                description: "Black creatures can't attack you.",
+                effect: StaticEffect::CreaturesCantAttackController {
+                    protect_planeswalkers: false,
+                    filter: Some(R::HasColor(Color::Black)),
+                },
+            },
+            StaticAbility {
+                description: "Nonblack creatures can't attack you unless their controller pays {2} for each.",
+                effect: StaticEffect::AttackTaxToController {
+                    amount: Value::Const(2),
+                    protect_planeswalkers: false,
+                    filter: Some(R::Not(Box::new(R::HasColor(Color::Black)))),
+                },
+            },
+        ],
+        ..enchantment("Elephant Grass", cost(&[g()]))
+    }
+}
+
+/// Heat Wave — {2}{R}; blue creatures can't block you, and the rest bleed for it.
+pub fn heat_wave() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::CumulativeUpkeep(CumulativeUpkeepCost::Mana(cost(&[r()])))],
+        static_abilities: vec![
+            StaticAbility {
+                description: "Blue creatures can't block creatures you control.",
+                effect: StaticEffect::GrantKeyword {
+                    applies_to: Selector::EachPermanent(
+                        R::Creature.and(R::HasColor(Color::Blue)).and(R::ControlledByOpponent),
+                    ),
+                    keyword: Keyword::CantBlock,
+                },
+            },
+            StaticAbility {
+                description: "Nonblue creatures can't block unless their controller pays 1 life for each.",
+                effect: StaticEffect::BlockTaxToController {
+                    amount: Value::Const(1),
+                    only_while_attacking: false,
+                    filter: Some(R::Not(Box::new(R::HasColor(Color::Blue)))),
+                    life: true,
+                },
+            },
+        ],
+        ..enchantment("Heat Wave", cost(&[generic(2), r()]))
+    }
+}
+
+/// Corrosion — {1}{B}{R}; rust piles up on an opponent's artifacts until they crumble.
+pub fn corrosion() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::CumulativeUpkeep(CumulativeUpkeepCost::Mana(cost(&[generic(1)])))],
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: your_upkeep(),
+                effect: Effect::Seq(vec![
+                    Effect::AddCounter {
+                        what: Selector::ControlledBy {
+                            who: PlayerRef::Target(0),
+                            filter: R::Artifact,
+                        },
+                        kind: CounterType::Rust,
+                        amount: Value::Const(1),
+                    },
+                    Effect::CantBeRegeneratedThisTurn {
+                        what: Selector::EachPermanent(
+                            R::Artifact.and(R::ManaValueAtMostOwnCounters(CounterType::Rust)),
+                        ),
+                    },
+                    Effect::Destroy {
+                        what: Selector::EachPermanent(
+                            R::Artifact.and(R::ManaValueAtMostOwnCounters(CounterType::Rust)),
+                        ),
+                    },
+                ]),
+            },
+            TriggeredAbility {
+                event: EventSpec::new(
+                    EventKind::PermanentLeavesBattlefield,
+                    EventScope::SelfSource,
+                ),
+                effect: Effect::RemoveCounter {
+                    what: Selector::EachPermanent(R::WithAnyCounter),
+                    kind: CounterType::Rust,
+                    amount: Value::Const(99),
+                },
+            },
+        ],
+        ..enchantment("Corrosion", cost(&[generic(1), b(), r()]))
+    }
+}
+
+/// Dream Tides — {2}{U}{U}; creatures stay tapped unless you buy them back.
+pub fn dream_tides() -> CardDefinition {
+    CardDefinition {
+        static_abilities: vec![StaticAbility {
+            description: "Creatures don't untap during their controllers' untap steps.",
+            effect: StaticEffect::PreventUntapGlobal {
+                applies_to: Selector::EachPermanent(R::Creature),
+                condition: None,
+            },
+        }],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::AnyPlayer),
+            effect: Effect::EachPlayerDoes {
+                who: PlayerRef::ActivePlayer,
+                body: Box::new(Effect::MayPayRepeatedly {
+                    who: PlayerRef::You,
+                    description: "Pay {2} to untap a tapped nongreen creature?".into(),
+                    mana_cost: cost(&[generic(2)]),
+                    body: Box::new(Effect::Untap {
+                        what: Selector::Take {
+                            inner: Box::new(Selector::EachPermanent(
+                                R::Creature
+                                    .and(R::ControlledByYou)
+                                    .and(R::Tapped)
+                                    .and(R::Not(Box::new(R::HasColor(Color::Green)))),
+                            )),
+                            count: Box::new(Value::Const(1)),
+                        },
+                        up_to: None,
+                    }),
+                }),
+            },
+        }],
+        ..enchantment("Dream Tides", cost(&[generic(2), u(), u()]))
+    }
+}
+
+/// Three Wishes — {1}{U}{U}; three cards off the top, playable until your next turn.
+pub fn three_wishes() -> CardDefinition {
+    instant(
+        "Three Wishes",
+        cost(&[u(), u(), generic(1)]),
+        Effect::Seq(vec![
+            Effect::ExileTopAndGrantMayPlay {
+                who: PlayerRef::You,
+                count: Value::Const(3),
+                duration: crate::card::MayPlayDuration::EndOfControllersNextTurn,
+                pay_any_color: false,
+                max_mana_value: None,
+                pay_own_cost: true,
+                uncast_penalty: None,
+            },
+            Effect::DelayUntil {
+                kind: DelayedTriggerKind::YourNextUpkeep,
+                body: Box::new(Effect::Move {
+                    what: Selector::CardExiledWithSource,
+                    to: ZoneDest::Graveyard,
+                }),
+            },
+        ]),
+    )
+}
+
+/// Foreshadow — {1}{U}; name a card, strip their top, and draw either way.
+pub fn foreshadow() -> CardDefinition {
+    instant(
+        "Foreshadow",
+        cost(&[generic(1), u()]),
+        Effect::Seq(vec![
+            Effect::NameCard { what: Selector::This, restrict_to: None },
+            Effect::Mill { who: Selector::Player(PlayerRef::Target(0)), amount: Value::Const(1) },
+            Effect::If {
+                cond: crate::effect::Predicate::ValueAtLeast(
+                    Value::CardsMilledThisEffectMatching { filter: R::NamedBySource },
+                    Value::Const(1),
+                ),
+                then: Box::new(Effect::Draw { who: Selector::You, amount: Value::Const(1) }),
+                else_: Box::new(Effect::Noop),
+            },
+            Effect::DelayUntil {
+                kind: DelayedTriggerKind::YourNextUpkeep,
+                body: Box::new(Effect::Draw { who: Selector::You, amount: Value::Const(1) }),
+            },
+        ]),
+    )
+}

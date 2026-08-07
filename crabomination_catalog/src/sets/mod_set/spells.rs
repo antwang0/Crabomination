@@ -175,6 +175,7 @@ pub fn ghostly_prison() -> CardDefinition {
             effect: StaticEffect::AttackTaxToController {
                 amount: Value::Const(2),
                 protect_planeswalkers: false,
+                            filter: None,
             },
         }],
         ..Default::default()
@@ -192,6 +193,7 @@ pub fn propaganda() -> CardDefinition {
             effect: StaticEffect::AttackTaxToController {
                 amount: Value::Const(2),
                 protect_planeswalkers: false,
+                            filter: None,
             },
         }],
         ..Default::default()
@@ -215,6 +217,7 @@ pub fn sphere_of_safety() -> CardDefinition {
                     SelectionRequirement::Enchantment.and(SelectionRequirement::ControlledByYou),
                 )),
                 protect_planeswalkers: true,
+                            filter: None,
             },
         }],
         ..Default::default()
@@ -480,6 +483,7 @@ pub fn collective_restraint() -> CardDefinition {
             effect: StaticEffect::AttackTaxToController {
                 amount: Value::DomainCount(PlayerRef::You),
                 protect_planeswalkers: false,
+                            filter: None,
             },
         }],
         ..Default::default()

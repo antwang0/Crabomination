@@ -1309,6 +1309,8 @@ fn cr_509_1d_block_tax_auto_taps_lands() {
             effect: StaticEffect::BlockTaxToController {
                 amount: Value::Const(1),
                 only_while_attacking: false,
+                filter: None,
+                life: false,
             },
         }],
         ..Default::default()
