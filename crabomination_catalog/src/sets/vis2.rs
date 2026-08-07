@@ -1380,3 +1380,29 @@ pub fn foreshadow() -> CardDefinition {
         ]),
     )
 }
+
+/// Necromancy — {2}{B}; an Aura that reanimates and takes the creature with it.
+pub fn necromancy() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flash],
+        triggered_abilities: vec![
+            etb(Effect::Seq(vec![
+                Effect::Move {
+                    what: target_filtered(R::Creature.and(R::InGraveyard)),
+                    to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                },
+                Effect::Attach { what: Selector::This, to: Selector::LastMoved },
+            ])),
+            TriggeredAbility {
+                event: EventSpec::new(
+                    EventKind::PermanentLeavesBattlefield,
+                    EventScope::SelfSource,
+                ),
+                effect: Effect::SacrificeSelected {
+                    what: Selector::AttachedTo(Box::new(Selector::This)),
+                },
+            },
+        ],
+        ..enchantment("Necromancy", cost(&[generic(2), b()]))
+    }
+}

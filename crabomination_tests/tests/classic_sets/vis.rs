@@ -1642,3 +1642,43 @@ fn three_wishes_exiles_three_playable_cards() {
     drain_stack(&mut g);
     assert_eq!(g.exile.iter().filter(|c| c.owner == 0 && c.definition.name == "Plains").count(), 3);
 }
+
+/// Necromancy reanimates, attaches, and takes the creature with it.
+#[test]
+fn necromancy_takes_its_creature_with_it() {
+    let mut g = two_player_game();
+    let dead = g.add_card_to_graveyard(1, catalog::grizzly_bears());
+    let aura = g.add_card_to_hand(0, catalog::necromancy());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    cast(&mut g, aura, None).expect("cast");
+    drain_stack(&mut g);
+    let back = g.battlefield_find(dead).expect("on the battlefield");
+    assert_eq!(back.controller, 0, "under your control");
+    assert_eq!(g.battlefield_find(aura).and_then(|c| c.attached_to), Some(dead));
+    let mut events = Vec::new();
+    g.destroy_permanent(aura, false, &mut events);
+    g.dispatch_triggers_for_events(&events);
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(dead).is_none(), "the creature goes with it");
+}
+
+/// Animate Dead attaches to what it reanimates, shrinks it, and takes it back.
+#[test]
+fn animate_dead_attaches_and_reclaims() {
+    let mut g = two_player_game();
+    let dead = g.add_card_to_graveyard(1, catalog::hill_giant());
+    let aura = g.add_card_to_hand(0, catalog::animate_dead());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    cast(&mut g, aura, None).expect("cast");
+    drain_stack(&mut g);
+    let base = catalog::hill_giant();
+    let cp = g.computed_permanent(dead).expect("back");
+    assert_eq!((cp.power, cp.toughness), (base.power - 1, base.toughness));
+    let mut events = Vec::new();
+    g.destroy_permanent(aura, false, &mut events);
+    g.dispatch_triggers_for_events(&events);
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(dead).is_none());
+}

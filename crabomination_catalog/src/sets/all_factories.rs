@@ -21222,6 +21222,7 @@ static VIS2: &[Factory] = &[
     super::vis2::dream_tides,
     super::vis2::three_wishes,
     super::vis2::foreshadow,
+    super::vis2::necromancy,
 ];
 static WAR: &[Factory] = &[
     super::war::ironclad_krovod,
