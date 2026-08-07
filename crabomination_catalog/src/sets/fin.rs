@@ -3935,12 +3935,11 @@ fn job_equipment_with_triggers(
     equip: crate::mana::ManaCost,
     power: i32,
     toughness: i32,
-    keywords: Vec<Keyword>,
     add_type: CreatureType,
     triggers: Vec<TriggeredAbility>,
 ) -> CardDefinition {
     let mut def = crate::sets::decks::job_select_equipment(
-        name, mana, equip, power, toughness, keywords, Some(add_type),
+        name, mana, equip, power, toughness, vec![], Some(add_type),
     );
     if let Some(bonus) = def.equipped_bonus.as_mut() {
         bonus.triggered_abilities = triggers;
@@ -3999,7 +3998,6 @@ pub fn thiefs_knife() -> CardDefinition {
         cost(&[generic(4)]),
         1,
         1,
-        vec![],
         CreatureType::Rogue,
         vec![TriggeredAbility {
             event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
@@ -4019,7 +4017,6 @@ pub fn ninjas_blades() -> CardDefinition {
         cost(&[generic(2)]),
         1,
         1,
-        vec![],
         CreatureType::Ninja,
         vec![TriggeredAbility {
             event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
@@ -4047,7 +4044,6 @@ pub fn red_mages_rapier() -> CardDefinition {
         cost(&[generic(3)]),
         0,
         0,
-        vec![],
         CreatureType::Wizard,
         vec![TriggeredAbility {
             event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl)
@@ -4072,7 +4068,6 @@ pub fn black_mages_rod() -> CardDefinition {
         cost(&[generic(3)]),
         1,
         0,
-        vec![],
         CreatureType::Wizard,
         vec![TriggeredAbility {
             event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl)
@@ -4095,7 +4090,6 @@ pub fn sages_nouliths() -> CardDefinition {
         cost(&[generic(3)]),
         1,
         0,
-        vec![],
         CreatureType::Cleric,
         vec![TriggeredAbility {
             event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
@@ -4894,7 +4888,6 @@ pub fn astrologians_planisphere() -> CardDefinition {
         cost(&[generic(2)]),
         0,
         0,
-        vec![],
         CreatureType::Wizard,
         vec![
             TriggeredAbility {

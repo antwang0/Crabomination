@@ -1521,7 +1521,7 @@ impl GameState {
             }
 
             Effect::MayPayLife { amount, then } => {
-                let n = self.evaluate_value(amount, ctx).max(0) as i32;
+                let n = self.evaluate_value(amount, ctx).max(0);
                 let source = ctx.source.unwrap_or(CardId(0));
                 let mut cursor = 0;
                 let Some(yes) = self.ask_seat_bool(
