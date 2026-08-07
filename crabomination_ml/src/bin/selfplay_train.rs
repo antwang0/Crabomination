@@ -575,7 +575,7 @@ fn main() {
             // the cost of a forward pass over the whole window — with
             // λ = 1 the targets never change, so this is skipped entirely.
             if args.lambda < 1.0
-                && step % args.relabel_every == 0
+                && step.is_multiple_of(args.relabel_every)
                 && shared.window.lock().unwrap().len() as u64 >= args.min_window
             {
                 let mut w = shared.window.lock().unwrap();

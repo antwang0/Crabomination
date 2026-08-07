@@ -260,8 +260,7 @@ impl PlayModel {
         }
 
         let mut pooled: Vec<Tensor> = Vec::with_capacity(2 * NUM_GROUPS + 1);
-        for g in 0..NUM_GROUPS {
-            let h = &hs[g];
+        for (g, h) in hs.iter().enumerate().take(NUM_GROUPS) {
             let hm = h.broadcast_mul(&batch.mask[g])?;
             let count = batch.mask[g].sum(1)?; // [B,1]
             // Mean over the real (unmasked) objects; zero for empty groups,
