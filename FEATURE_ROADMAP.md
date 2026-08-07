@@ -2751,7 +2751,7 @@ Each a small targeted feature; sweep batch by batch.
    **Weatherlight (WTH) is closed** too (`set_gaps.py wth` at zero —
    `sets::wth` + `sets::wth2`, tests in `classic_sets/wth`), which finishes
    the Mirage block's third set and gives cumulative upkeep, banding and
-   phasing their first real card coverage. **Visions (VIS)** is down to 8
+   phasing their first real card coverage. **Visions (VIS)** is down to 5
    (`sets::vis` + `sets::vis2`, tests in `classic_sets/vis`); each remaining
    card needs one named primitive, listed in TODO.md.
 1. **Replacement-effect framework** (Tier-1 #1) — highest-leverage primitive still
@@ -2769,7 +2769,7 @@ Each a small targeted feature; sweep batch by batch.
 
 ## Recently closed (this push)
 
-- **Visions (VIS) all but closed** — `set_gaps.py vis` 139 → 8 across
+- **Visions (VIS) all but closed** — `set_gaps.py vis` 139 → 5 across
   `sets::vis` + `sets::vis2`, tests in `classic_sets/vis`. The Karoo bounce
   lands, the Charms, the flanking knights, the Chimera cycle, the world
   enchantments and every phasing card in the set. New primitives, by wave:
@@ -2791,7 +2791,10 @@ Each a small targeted feature; sweep batch by batch.
   reads the *computed* type line, so an Equipment survives on an animated land;
   and `AffectedPermanents::AllOpponents` stopped dropping the colour /
   creature-type / counter leaves of an opponent-scoped static (Heat Wave). The
-  remaining 8 and what each needs are in TODO.md.
+  closing wave added `Effect::{ReturnToHandAtYourNextUntapStep,
+  ExileRandomFromHandMayPlayThisTurn}` and
+  `Predicate::TappedLandForManaThisTurn`; the remaining 5 and what each needs
+  are in TODO.md.
 
 - **Weatherlight (WTH) closed** — 137 cards across `sets::wth` and
   `sets::wth2` (`set_gaps.py wth` at zero), tests in `classic_sets/wth`.

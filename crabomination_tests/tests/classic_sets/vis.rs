@@ -1712,3 +1712,18 @@ fn desolation_taxes_only_the_players_who_tapped() {
     assert_eq!(g.players[0].life, 18, "a Plains costs two more");
     assert!(g.battlefield_find(idle).is_some(), "the idle player keeps theirs");
 }
+
+/// Elkin Lair exiles a card each upkeep and bins it if it goes unplayed.
+#[test]
+fn elkin_lair_gambles_a_card_each_upkeep() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::elkin_lair());
+    let card = g.add_card_to_hand(0, catalog::grizzly_bears());
+    g.active_player_idx = 0;
+    g.fire_step_triggers(TurnStep::Upkeep);
+    drain_stack(&mut g);
+    assert!(g.exile.iter().any(|c| c.id == card), "exiled and playable");
+    g.fire_step_triggers(TurnStep::End);
+    drain_stack(&mut g);
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == card), "unplayed, so binned");
+}

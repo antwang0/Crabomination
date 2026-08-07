@@ -2334,6 +2334,28 @@ impl GameState {
         match effect {
             Effect::Noop => Ok(()),
 
+            Effect::ExileRandomFromHandMayPlayThisTurn { who } => {
+                let Some(seat) = self.resolve_player(who, ctx) else { return Ok(()) };
+                let len = self.players[seat].hand.len();
+                if len == 0 {
+                    return Ok(());
+                }
+                let idx = (rand::random::<u64>() % len as u64) as usize;
+                let mut card = self.players[seat].hand.remove(idx);
+                card.granted_alt_cast_cost_eot = Some(card.definition.cost.clone());
+                card.may_play_until = Some(crate::card::MayPlayPermission {
+                    player: seat,
+                    granted_turn: self.turn_number,
+                    duration: crate::card::MayPlayDuration::EndOfThisTurn,
+                    exile_after: false,
+                    miracle: false,
+                });
+                card.exiled_with = ctx.source;
+                events.push(GameEvent::PermanentExiled { card_id: card.id });
+                self.exile.push(card);
+                Ok(())
+            }
+
             Effect::ReturnToHandAtYourNextUntapStep { what } => {
                 for id in self
                     .resolve_selector(what, ctx)

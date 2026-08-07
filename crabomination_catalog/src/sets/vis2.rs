@@ -1461,3 +1461,24 @@ pub fn desolation() -> CardDefinition {
         ..enchantment("Desolation", cost(&[generic(1), b(), b()]))
     }
 }
+
+/// Elkin Lair — {3}{R} World enchantment; every upkeep gambles a card from hand.
+pub fn elkin_lair() -> CardDefinition {
+    CardDefinition {
+        supertypes: vec![Supertype::World],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::AnyPlayer),
+            effect: Effect::Seq(vec![
+                Effect::ExileRandomFromHandMayPlayThisTurn { who: PlayerRef::ActivePlayer },
+                Effect::DelayUntil {
+                    kind: DelayedTriggerKind::NextEndStep,
+                    body: Box::new(Effect::Move {
+                        what: Selector::CardExiledWithSource,
+                        to: ZoneDest::Graveyard,
+                    }),
+                },
+            ]),
+        }],
+        ..enchantment("Elkin Lair", cost(&[generic(3), r()]))
+    }
+}

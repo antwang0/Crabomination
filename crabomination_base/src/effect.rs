@@ -5643,6 +5643,10 @@ pub enum Effect {
         #[serde(default)]
         until_source_leaves: bool,
     },
+    /// "That player exiles a card at random from their hand. The player may
+    /// play that card this turn" (Elkin Lair). The exile is stamped
+    /// `exiled_with = source`, so a delayed trigger can bin whatever is left.
+    ExileRandomFromHandMayPlayThisTurn { who: PlayerRef },
     /// CR 502.1 — "during your next untap step, as you untap your permanents,
     /// return [what] to its owner's hand" (Undiscovered Paradise). Arms a flag
     /// the untap step consumes, so the bounce is a turn-based action rather

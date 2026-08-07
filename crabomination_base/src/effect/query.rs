@@ -235,6 +235,7 @@ impl Effect {
         }
         match self {
             Effect::AbandonThisScheme | Effect::GameIsADraw
+            | Effect::ExileRandomFromHandMayPlayThisTurn { .. }
             | Effect::ReturnToHandAtYourNextUntapStep { .. }
             | Effect::SwapPhasedState { .. }
             | Effect::TopOfGraveyardToLibraryTop { .. }

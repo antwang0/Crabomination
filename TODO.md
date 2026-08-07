@@ -61,18 +61,11 @@ Items are grouped by area and roughly ordered by impact within each group.
   single source is marked on it" (Ogre Enforcer) can't be written. Wants a
   `damage_by_source: HashMap<CardId, u32>` alongside the total, which would
   also give CR 120.6 a precise home. ⏳
-- **"Tapped a land for mana this turn" isn't tracked per player.**
-  `EventKind::TappedForMana` fires, but nothing tallies it, so Desolation's
-  "each player who tapped a land for mana this turn" has no predicate. ⏳
-- **No delayed-trigger kind for the untap step.** `DelayedTriggerKind` stops at
-  `YourNextUpkeep`, so Undiscovered Paradise's "during your next untap step, as
-  you untap your permanents, return this land to its owner's hand" lands a step
-  late. ⏳
-- **Remaining Visions gaps (8):** Breathstealer's Crypt (a reveal-and-tax draw
-  replacement), Desolation, Elkin Lair (exile-at-random-from-hand + may-play),
-  Forbidden Ritual (a repeatable *sacrifice* loop — `MayPayRepeatedly` is
-  mana-only), Ogre Enforcer, Peace Talks (a two-turn global untargetability),
-  Pygmy Hippo, Undiscovered Paradise. ⏳
+- **Remaining Visions gaps (5), one primitive each:** Breathstealer's Crypt (a
+  reveal-and-tax draw replacement), Forbidden Ritual (a repeatable *sacrifice*
+  loop — `MayPayRepeatedly` is mana-only), Ogre Enforcer (per-source damage,
+  above), Peace Talks (two turns of global untargetability), Pygmy Hippo
+  (drain the defender's lands into your next main phase). ⏳
 
 ## Noticed last run (Weatherlight closed)
 
