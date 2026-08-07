@@ -99,6 +99,10 @@ fn keyword_tag(kw: &Keyword) -> Option<&'static str> {
         CantBlock => "NoBlk",
         // Ironclaw Orcs — can't block creatures with power N or greater.
         CantBlockPowerAtLeast(_) => "NoBlk≥",
+        // Sunweb — the low-power mirror: it can't stop small attackers.
+        CantBlockPowerAtMost(_) => "NoBlk≤",
+        // Gibbering Hyenas — can't block a whole class of attacker.
+        CantBlockMatching(_) => "NoBlk*",
         // "Can't attack" (Pacifism / Cage of Hands) and the conditional
         // Goblin-Cohort lock both read at a glance on the board.
         CantAttack => "NoAtk",
@@ -412,7 +416,7 @@ fn keyword_value_suffix(kw: &Keyword) -> Option<String> {
         // "Eva≥N" (can't be blocked by power N or more) carries its threshold
         // too so it reads symmetrically with its "Eva≤N" sibling.
         CantBeBlockedByPowerAtMost(n) | CantBlockPowerAtLeast(n)
-        | CantBeBlockedByPowerAtLeast(n) => *n,
+        | CantBlockPowerAtMost(n) | CantBeBlockedByPowerAtLeast(n) => *n,
         _ => return None,
     };
     Some(n.to_string())

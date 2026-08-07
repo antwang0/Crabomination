@@ -5375,14 +5375,22 @@ impl GameState {
             // CR 614 — "If this permanent would be put into a graveyard, put
             // it on top of its owner's library instead" (Pulmonic Sliver's
             // Sliver-wide grant; the "may" is auto-taken).
-            let library_top_redirect = self.battlefield.iter().any(|src| {
-                src.definition.static_abilities.iter().any(|sa| {
-                    matches!(&sa.effect,
-                        crate::effect::StaticEffect::DiesToLibraryTopInstead { filter }
-                        if crate::game::layers::requirement_matches_card(
-                            filter, &card, src.controller))
-                })
-            });
+            // The dying permanent is already off the battlefield here, so a
+            // card that replaces its OWN death (Gravebane Zombie) has to be
+            // read off its snapshot alongside the battlefield grants.
+            let self_statics = std::iter::once((&card.definition, card.controller));
+            let library_top_redirect = self
+                .battlefield
+                .iter()
+                .map(|src| (&src.definition, src.controller))
+                .chain(self_statics)
+                .any(|(def, ctrl)| {
+                    def.static_abilities.iter().any(|sa| {
+                        matches!(&sa.effect,
+                            crate::effect::StaticEffect::DiesToLibraryTopInstead { filter }
+                            if crate::game::layers::requirement_matches_card(filter, &card, ctrl))
+                    })
+                });
             // CR 614 — "…would die, return it to its owner's hand instead"
             // (Necromancer's Magemark). Same site as the library-top redirect.
             let hand_redirect = self

@@ -944,6 +944,9 @@ pub(crate) fn requirement_matches_card(
             let minus = card.counter_count(CounterType::MinusOneMinusOne) as i32;
             (def.base_toughness() + plus - minus) > (def.base_power() + plus - minus)
         }
+        // A card that names itself in its own printed filter (Gravebane
+        // Zombie's dies-replacement).
+        R::HasName(n) => def.name == n,
         _ => false,
     }
 }

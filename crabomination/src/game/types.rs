@@ -1570,6 +1570,7 @@ pub enum PendingEffectState {
     /// step bottoms each chosen card and has `target_player` draw a
     /// replacement.
     BottomChosenFromHandAndDrawPending { target_player: usize },
+    TopChosenFromHandPending { target_player: usize },
     /// CR 701.16 — suspended on a `ChooseTarget` decision for a forced
     /// single-permanent sacrifice (Edicts, Annihilator with N=1, "sacrifice a
     /// creature" riders). `player` is the one doing the sacrificing (the

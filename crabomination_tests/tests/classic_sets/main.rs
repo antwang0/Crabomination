@@ -48,6 +48,7 @@ mod jud;
 mod ktk;
 mod lci;
 mod ltr;
+mod mir;
 mod mkm;
 mod mkm2;
 mod mmq;

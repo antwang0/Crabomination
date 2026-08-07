@@ -350,6 +350,32 @@ pub fn provoke() -> TriggeredAbility {
         },
     }
 }
+/// "Whenever this creature blocks or becomes blocked by a [`filter`] creature,
+/// destroy that creature at end of combat" (Dread Specter, Rock Basilisk,
+/// Mercadian Masques' punishers). The partner is remembered on the source at
+/// block time: by the end-of-combat step the block map is gone, so reading it
+/// there would find nothing.
+pub fn combat_partner_punisher(filter: SelectionRequirement) -> Vec<TriggeredAbility> {
+    let body = Effect::Seq(vec![
+        Effect::RememberPermanentOnSource {
+            what: Selector::MatchingAmong {
+                inner: Box::new(Selector::CreaturesInCombatWith(Box::new(Selector::This))),
+                filter,
+            },
+        },
+        Effect::AtEndOfCombat {
+            body: Box::new(Effect::Destroy { what: Selector::ChosenPermanentOfSource }),
+        },
+    ]);
+    [crate::card::EventKind::Blocks, crate::card::EventKind::BecomesBlocked]
+        .into_iter()
+        .map(|kind| TriggeredAbility {
+            event: crate::card::EventSpec::new(kind, crate::card::EventScope::SelfSource),
+            effect: body.clone(),
+        })
+        .collect()
+}
+
 pub fn on_dies(effect: Effect) -> TriggeredAbility {
     TriggeredAbility {
         event: EventSpec::new(EventKind::CreatureDied, EventScope::SelfSource),

@@ -404,6 +404,8 @@ pub mod pcy;
 pub mod pcy2;
 pub mod pcy3;
 pub mod pcy4;
+pub mod mir;
+pub mod mir2;
 pub mod mod_set;
 pub mod ogw;
 pub mod arc;

@@ -192,6 +192,8 @@ fn keyword_name(kw: &Keyword) -> Option<String> {
         | Keyword::Regenerate(_) | Keyword::Unblockable | Keyword::CantBeCountered
         | Keyword::Recursion | Keyword::Inspired | Keyword::CantBlock
         | Keyword::CantBlockPowerAtLeast(_)
+        | Keyword::CantBlockPowerAtMost(_)
+        | Keyword::CantBlockMatching(_)
         | Keyword::CantBlockPowerAtLeastOwnToughness
         | Keyword::CantActivateTapAbilities
         | Keyword::CantBlockGreaterPowerThanSelf

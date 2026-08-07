@@ -234,7 +234,9 @@ impl Effect {
             }
         }
         match self {
-            Effect::AbandonThisScheme | Effect::GameIsADraw
+            Effect::DestroyAllNoRegenGainControllerLifePerManaValue { .. }
+            | Effect::EachPlayerCreatesTokenPerControlled { .. }
+            | Effect::AbandonThisScheme | Effect::GameIsADraw
             | Effect::PumpAttackersThisTurn { .. }
             | Effect::TruceThisTurnAndNext
             | Effect::MayRepeat { .. }
@@ -1355,6 +1357,7 @@ impl Effect {
             Effect::DiscardChosenFromRevealed { from, reveal: count }
             | Effect::DiscardChosen { from, count, .. }
             | Effect::BottomChosenFromHandAndDraw { from, count, .. }
+            | Effect::TopChosenFromHand { from, count, .. }
             | Effect::ExileChosenUntilSourceLeaves { from, count, .. }
             | Effect::ExileChosenFromHand { from, count, .. } => {
                 sel_has_target(from) || value_has_target(count)
@@ -1762,7 +1765,8 @@ impl Effect {
             Effect::DiscardChosen { from, .. } | Effect::DiscardChosenFromRevealed { from, .. } => {
                 sel_filter(from)
             }
-            Effect::BottomChosenFromHandAndDraw { from, .. } => sel_filter(from),
+            Effect::BottomChosenFromHandAndDraw { from, .. }
+            | Effect::TopChosenFromHand { from, .. } => sel_filter(from),
             Effect::SearchSplitOpponentChooses { opponent, .. } => sel_filter(opponent),
             Effect::RedirectSpellTargetToSelf { what } => sel_filter(what),
             Effect::DoubleDamageFromSourceThisTurn { what } => sel_filter(what),
@@ -3171,7 +3175,8 @@ impl Effect {
                 Effect::DiscardAnyNumber { who, .. } => sel_find(who, slot),
                 Effect::DiscardChosen { from, .. }
                 | Effect::DiscardChosenFromRevealed { from, .. } => sel_find(from, slot),
-                Effect::BottomChosenFromHandAndDraw { from, .. } => sel_find(from, slot),
+                Effect::BottomChosenFromHandAndDraw { from, .. }
+                | Effect::TopChosenFromHand { from, .. } => sel_find(from, slot),
                 Effect::SearchSplitOpponentChooses { opponent, .. } => sel_find(opponent, slot),
                 Effect::RedirectSpellTargetToSelf { what } => sel_find(what, slot),
                 Effect::DoubleDamageFromSourceThisTurn { what } => sel_find(what, slot),

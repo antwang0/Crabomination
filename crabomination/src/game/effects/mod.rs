@@ -10564,6 +10564,30 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::DestroyAllNoRegenGainControllerLifePerManaValue { filter } => {
+                // Seeds of Innocence — each destroyed permanent pays its own
+                // controller its mana value in life. Mana values are read
+                // before anything leaves the battlefield.
+                let victims: Vec<(crate::card::CardId, usize, i32)> = self
+                    .battlefield
+                    .iter()
+                    .filter(|c| self.evaluate_requirement_on_card(filter, c, ctx.controller))
+                    .map(|c| (c.id, c.controller, c.definition.cost.cmc() as i32))
+                    .collect();
+                for (cid, controller, mv) in victims {
+                    if self.destroy_permanent(cid, true, events) && mv > 0 {
+                        let applied = self.adjust_life_applied(controller, mv);
+                        if applied > 0 {
+                            events.push(GameEvent::LifeGained {
+                                player: controller,
+                                amount: applied as u32,
+                            });
+                        }
+                    }
+                }
+                Ok(())
+            }
+
             Effect::Destroy { what } | Effect::DestroyNoRegen { what } => {
                 // CR 701.15g — `DestroyNoRegen` ("can't be regenerated")
                 // bypasses regeneration shields; everything else (the
@@ -17395,6 +17419,39 @@ impl GameState {
 
             Effect::ExchangeControlChoosing { filter, with } => self.resolve_exchange_control_choosing(filter, with, ctx, events),
 
+
+            Effect::EachPlayerCreatesTokenPerControlled { filter, definition } => {
+                // Waiting in the Weeds — the count is each player's own, so
+                // the per-seat `CreateToken` runs in that seat's context.
+                for p in 0..self.players.len() {
+                    let n = self
+                        .battlefield
+                        .iter()
+                        .filter(|c| {
+                            c.controller == p
+                                && self.evaluate_requirement_static(
+                                    filter,
+                                    &crate::game::types::Target::Permanent(c.id),
+                                    p,
+                                    ctx.source,
+                                )
+                        })
+                        .count() as i32;
+                    if n == 0 {
+                        continue;
+                    }
+                    self.run_effect(
+                        &Effect::CreateToken {
+                            who: PlayerRef::Seat(p),
+                            count: crate::effect::Value::Const(n),
+                            definition: definition.clone(),
+                        },
+                        &EffectContext { controller: p, source: ctx.source, ..Default::default() },
+                        events,
+                    )?;
+                }
+                Ok(())
+            }
 
             Effect::CreateToken { who, count, definition } => {
                 // Resolve every matched player so multi-player refs (EachPlayer
@@ -25278,6 +25335,52 @@ impl GameState {
                     let pending = PendingEffectState::BottomChosenFromHandAndDrawPending { target_player };
                     if self.players[picker].wants_ui {
                         let rest = per_seat_continuation(&seats[i + 1..], |q| Effect::BottomChosenFromHandAndDraw {
+                            from: Selector::Player(crate::effect::PlayerRef::Seat(q)),
+                            count: crate::effect::Value::Const(n as i32),
+                            filter: filter.clone(),
+                        });
+                        self.suspend_signal = Some((decision, pending, rest));
+                        return Ok(());
+                    }
+                    let answer = self.decider.decide(&decision);
+                    let mut applied = self.apply_pending_effect_answer(pending, &answer)?;
+                    events.append(&mut applied);
+                }
+                Ok(())
+            }
+
+            Effect::TopChosenFromHand { from, count, filter } => {
+                // The library-top sibling of `BottomChosenFromHandAndDraw`
+                // (Painful Memories) — same caster-picks-from-hand shape.
+                use crate::decision::Decision;
+                let n = self.evaluate_value(count, ctx).max(0) as usize;
+                if n == 0 { return Ok(()); }
+                let picker = ctx.controller;
+                let seats: Vec<usize> = self
+                    .resolve_selector(from, ctx)
+                    .into_iter()
+                    .filter_map(|e| match e {
+                        EntityRef::Player(p) => Some(p),
+                        _ => None,
+                    })
+                    .collect();
+                for (i, target_player) in seats.iter().copied().enumerate() {
+                    let candidates: Vec<(crate::card::CardId, String)> = self
+                        .players[target_player]
+                        .hand
+                        .iter()
+                        .filter(|c| self.evaluate_requirement_on_card(filter, c, picker))
+                        .map(|c| (c.id, c.definition.name.to_string()))
+                        .collect();
+                    if candidates.is_empty() { continue; }
+                    let decision = Decision::Discard {
+                        player: picker,
+                        count: n as u32,
+                        hand: candidates,
+                    };
+                    let pending = PendingEffectState::TopChosenFromHandPending { target_player };
+                    if self.players[picker].wants_ui {
+                        let rest = per_seat_continuation(&seats[i + 1..], |q| Effect::TopChosenFromHand {
                             from: Selector::Player(crate::effect::PlayerRef::Seat(q)),
                             count: crate::effect::Value::Const(n as i32),
                             filter: filter.clone(),

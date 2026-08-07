@@ -1317,8 +1317,17 @@ pub enum Keyword {
     /// greater" (Ironclaw Orcs, Ironclaw Buzzardiers). Enforced against the
     /// attacker's *computed* power in `can_block_attacker_computed`.
     CantBlockPowerAtLeast(u32),
+    /// CR 509.1b — "This creature can't block creatures with power N or less"
+    /// (Sunweb). The mirror of `CantBlockPowerAtLeast`, also against the
+    /// attacker's computed power.
+    CantBlockPowerAtMost(u32),
     /// "Can't block [creature type]s" (Burden of Proof's Detectives).
     CantBlockCreatureType(CreatureType),
+    /// CR 509.1b — "This creature can't block [filter] creatures" (Gibbering
+    /// Hyenas' "can't block black creatures"). The general sibling of
+    /// `CantBlockCreatureType`; the attacker is matched with the full
+    /// requirement walker in `declare_blockers`.
+    CantBlockMatching(Box<SelectionRequirement>),
     /// CR 509.1b — "This creature can't block creatures with power greater
     /// than this creature's power" (Spitfire Handler). The self-relative
     /// sibling of `CantBlockPowerAtLeast`; both powers are the computed ones.
@@ -1867,6 +1876,10 @@ pub enum SelectionRequirement {
     /// A player who is an opponent of the effect's controller ("target
     /// opponent").
     OpponentPlayer,
+    /// The effect's controller, as a player target ("targets you" —
+    /// Reparations). The self-side mirror of `OpponentPlayer`; teammates
+    /// don't match.
+    YouPlayer,
     /// "Target opponent who has/controls at least `by` more (or `fewer`)
     /// `what` than you do" — the EXO Keeper and Oath cycles' catch-up
     /// restriction, checked as the target is chosen.
@@ -2876,6 +2889,7 @@ fn controller_suffix(r: &SelectionRequirement) -> Option<String> {
     match r {
         SelectionRequirement::ControlledByYou => Some("you control".to_string()),
         SelectionRequirement::OpponentPlayer => Some("opponent".to_string()),
+        SelectionRequirement::YouPlayer => Some("you".to_string()),
         SelectionRequirement::ControlledByOpponent => Some("an opponent controls".to_string()),
         SelectionRequirement::ControlledByTriggerPlayer => Some("that player controls".to_string()),
         _ => None,

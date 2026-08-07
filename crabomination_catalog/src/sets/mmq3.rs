@@ -9,7 +9,7 @@ use crate::card::{
 };
 use crate::effect::{
     Duration, Effect, ManaPayload, PlayerRef, Selector, ZoneDest,
-    shortcut::{etb, target_any, target_filtered},
+    shortcut::{combat_partner_punisher, etb, target_any, target_filtered},
 };
 use crate::game::TurnStep;
 use crate::mana::{Color, ManaCost, b, cost, g, generic, r, u, w};
@@ -64,31 +64,6 @@ fn legate_alt(theirs: LandType, yours: LandType) -> AlternativeCost {
         ])),
         ..Default::default()
     }
-}
-
-/// "Whenever this creature blocks or becomes blocked by a [`filter`] creature,
-/// destroy that creature at end of combat."
-fn combat_partner_punisher(filter: R) -> Vec<TriggeredAbility> {
-    // The partner is captured now: by the end-of-combat step the block map is
-    // gone, so a `CreaturesInCombatWith` read there would find nothing.
-    let body = Effect::Seq(vec![
-        Effect::RememberPermanentOnSource {
-            what: Selector::MatchingAmong {
-                inner: Box::new(Selector::CreaturesInCombatWith(Box::new(Selector::This))),
-                filter,
-            },
-        },
-        Effect::AtEndOfCombat {
-            body: Box::new(Effect::Destroy { what: Selector::ChosenPermanentOfSource }),
-        },
-    ]);
-    [EventKind::Blocks, EventKind::BecomesBlocked]
-        .into_iter()
-        .map(|kind| TriggeredAbility {
-            event: EventSpec::new(kind, EventScope::SelfSource),
-            effect: body.clone(),
-        })
-        .collect()
 }
 
 fn your_upkeep(effect: Effect) -> TriggeredAbility {

@@ -2641,6 +2641,16 @@ impl GameState {
             {
                 Some(self.battlefield.iter().filter(|c| matches(req, c)).map(|c| c.id).collect())
             }
+            // "This creature has [keyword] as long as [filter]" (Soltari
+            // Lancer, Spirit of the Night). The inner selector is the source
+            // itself, so the affected list is the source or nothing — but the
+            // gate has to be re-read live, which is exactly what this pass
+            // does each recompute.
+            crate::effect::Selector::MatchingAmong { inner, filter }
+                if matches!(**inner, crate::effect::Selector::This) =>
+            {
+                Some(if matches(filter, source) { vec![source.id] } else { vec![] })
+            }
             crate::effect::Selector::ControlledBy { who, filter } => {
                 let ctx =
                     crate::game::effects::EffectContext::for_ability(source.id, source.controller, None);
@@ -18072,6 +18082,20 @@ impl GameState {
                 }
                 Ok(events)
             }
+            PendingEffectState::TopChosenFromHandPending { target_player } => {
+                let DecisionAnswer::Discard(card_ids) = answer else {
+                    return Err(GameError::DecisionAnswerMismatch);
+                };
+                // Hand → top of the owner's library (Painful Memories).
+                // Library index 0 is the top.
+                for cid in card_ids {
+                    if let Some(card) = Self::take_card(&mut self.players[target_player].hand, *cid)
+                    {
+                        self.players[target_player].library.insert(0, card);
+                    }
+                }
+                Ok(Vec::new())
+            }
             PendingEffectState::ExileChosenUntilSourceLeavesPending {
                 target_player,
                 source,
@@ -21513,6 +21537,14 @@ pub fn can_block_attacker_computed(
     if blocker_kws.iter().any(|k| {
         matches!(k, Keyword::CantBlockPowerAtLeast(n) if attacker_power >= *n as i32)
     }) {
+        return false;
+    }
+    // Sunweb (CR 509.1b): the low-power mirror — this blocker only stops real
+    // threats.
+    if blocker_kws
+        .iter()
+        .any(|k| matches!(k, Keyword::CantBlockPowerAtMost(n) if attacker_power <= *n as i32))
+    {
         return false;
     }
     // Spitfire Handler (CR 509.1b): the self-relative threshold.

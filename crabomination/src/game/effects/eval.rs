@@ -3075,6 +3075,7 @@ impl GameState {
             R::OpponentPlayer => {
                 matches!(target, Target::Player(p) if !self.same_team(*p, controller))
             }
+            R::YouPlayer => matches!(target, Target::Player(p) if *p == controller),
             R::OpponentTallyDiffers { what, by, fewer } => {
                 let Target::Player(p) = target else { return false };
                 if self.same_team(*p, controller) {
@@ -4182,6 +4183,7 @@ impl GameState {
             R::ManaValueEqualsCountersOnSource(_) | R::PowerAtMostSourceCounters(_) => false,
             R::Player
             | R::OpponentPlayer
+            | R::YouPlayer
             | R::OpponentTallyDiffers { .. }
             | R::PlayerAttackedThisTurn => false,
             R::And(a, b) => {

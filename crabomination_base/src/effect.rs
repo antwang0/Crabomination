@@ -5069,6 +5069,11 @@ pub enum Effect {
     /// Day of Judgment, Vindicate, ...). Indestructible and Shield-counter
     /// replacements still apply — only regeneration is denied.
     DestroyNoRegen { what: Selector },
+    /// "Destroy all [filter]. They can't be regenerated. The controller of
+    /// each of those permanents gains life equal to its mana value" (Seeds of
+    /// Innocence). Life is paid out per destroyed permanent, to its own
+    /// controller.
+    DestroyAllNoRegenGainControllerLifePerManaValue { filter: SelectionRequirement },
     /// "Destroy each nonland permanent with mana value equal to `value`" —
     /// resolves `value` at resolution (typically `CountersOn { This, Charge }`)
     /// and destroys every nonland permanent whose mana value matches. Ratchet
@@ -6297,6 +6302,14 @@ pub enum Effect {
     WeldArtifacts { what: Selector },
     /// Create `count` copies of the given token under `who`'s control.
     CreateToken { who: PlayerRef, count: Value, definition: TokenDefinition },
+    /// "Each player creates a `definition` token for each [`filter`] they
+    /// control" (Waiting in the Weeds). Unlike [`Effect::CreateToken`] with
+    /// `PlayerRef::EachPlayer`, the count is evaluated per receiving player
+    /// rather than once in the resolving controller's context.
+    EachPlayerCreatesTokenPerControlled {
+        filter: SelectionRequirement,
+        definition: TokenDefinition,
+    },
     /// "You may remove any number of `kind` counters from this. If you do,
     /// create that many `definition` tokens." The tokens are stamped
     /// `created_by = source`, so `ExileTokensCreatedBySourceForCounters` can
@@ -7922,6 +7935,15 @@ pub enum Effect {
     /// is an engine-wide gap, see Archon of Cruelty) — faithful in 1v1, so
     /// the printed "target player" self-cast mode is not yet available.
     BottomChosenFromHandAndDraw {
+        from: Selector,
+        count: Value,
+        filter: SelectionRequirement,
+    },
+    /// "Look at `from`'s hand and choose `count` card(s) matching `filter`.
+    /// That player puts them on top of their library" (Painful Memories).
+    /// The library-top sibling of [`Effect::BottomChosenFromHandAndDraw`],
+    /// with no replacement draw.
+    TopChosenFromHand {
         from: Selector,
         count: Value,
         filter: SelectionRequirement,
