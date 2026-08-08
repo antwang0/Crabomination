@@ -58,3 +58,12 @@ scratch_*
 scripts/.*_missing.json
 web/dist/
 .ladder/
+
+# Editor / rescue leftovers. A stray 700 KB `tests/sos_old.rs.bak` sat in
+# the tree for weeks before it was noticed; keep the class out.
+*.bak
+*.orig
+*.rej
+
+# Side-by-side target dir for allocator A/B builds (see PERF.md).
+/target-mi/
