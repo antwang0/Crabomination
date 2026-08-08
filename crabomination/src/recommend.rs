@@ -853,6 +853,36 @@ impl From<bool> for Pilot {
     }
 }
 
+/// Simulator work done by a batch of games, for throughput measurement.
+/// Win rates say whether a pilot is stronger; this says what the games
+/// cost. Summed across workers by `bot_ladder --bench`.
+#[derive(Debug, Clone, Copy, Default)]
+pub struct SimCost {
+    /// Games played, decided or not.
+    pub games: u64,
+    /// Accepted `perform_action` calls — the simulator's unit of work.
+    /// Bot decisions that were rejected or declined aren't counted.
+    pub decisions: u64,
+    /// Sum of `turn_number` at game end.
+    pub turns: u64,
+}
+
+impl SimCost {
+    fn record(&mut self, o: &GameOutcome) {
+        self.games += 1;
+        self.decisions += o.actions as u64;
+        self.turns += o.turns as u64;
+    }
+}
+
+impl std::ops::AddAssign for SimCost {
+    fn add_assign(&mut self, r: Self) {
+        self.games += r.games;
+        self.decisions += r.decisions;
+        self.turns += r.turns;
+    }
+}
+
 /// Decided/undecided tally of `games` bot-vs-bot games between two decks,
 /// alternating which deck sits in seat 0 (turn order). `uniform_*` selects
 /// the legacy uniform-pick bot for that side (A/B ladders).
@@ -860,6 +890,8 @@ pub struct MatchTally {
     pub wins_a: u32,
     pub wins_b: u32,
     pub undecided: u32,
+    /// Work done, for throughput reporting.
+    pub cost: SimCost,
     /// Per-game results in play order: +1 deck A won, −1 deck B won,
     /// 0 undecided — the raw material for paired per-slot statistics.
     pub outcomes: Vec<i8>,
@@ -903,8 +935,13 @@ pub fn simulate_match_games_piloted(
     // fraction of re-invoking ~80 card factories per game.
     let template_a0 = build_match_template(deck_a, deck_b);
     let template_b0 = build_match_template(deck_b, deck_a);
-    let mut tally =
-        MatchTally { wins_a: 0, wins_b: 0, undecided: 0, outcomes: Vec::with_capacity(games) };
+    let mut tally = MatchTally {
+        wins_a: 0,
+        wins_b: 0,
+        undecided: 0,
+        cost: SimCost::default(),
+        outcomes: Vec::with_capacity(games),
+    };
     for i in 0..games {
         let a_seat0 = i % 2 == 0;
         let mut shuffle_rng = seed_base.map(|b| {
@@ -921,7 +958,9 @@ pub fn simulate_match_games_piloted(
             if a_seat0 { [pilots[0], pilots[1]] } else { [pilots[1], pilots[0]] };
         // Unpaired games keep the unseeded jitter: this is the control
         // arm, and seeding it here would quietly change what it measures.
-        match play_one_game(template, seated, max_actions, shuffle_rng.as_mut(), None) {
+        let outcome = play_one_game(template, seated, max_actions, shuffle_rng.as_mut(), None);
+        tally.cost.record(&outcome);
+        match outcome.winner {
             Some(seat) => {
                 let a_won = (seat == 0) == a_seat0;
                 if a_won {
@@ -948,6 +987,8 @@ pub struct PairedTally {
     pub wins_a: u32,
     pub wins_b: u32,
     pub undecided: u32,
+    /// Work done, for throughput reporting.
+    pub cost: SimCost,
     /// One entry per *fully decided* pair, in play order. A pair with an
     /// undecided game is absent rather than recorded as a split: its games
     /// still count in the unpaired totals above, but it carries no paired
@@ -993,8 +1034,13 @@ pub fn simulate_match_pairs_piloted(
 ) -> PairedTally {
     let template_a0 = build_match_template(deck_a, deck_b);
     let template_b0 = build_match_template(deck_b, deck_a);
-    let mut tally =
-        PairedTally { wins_a: 0, wins_b: 0, undecided: 0, pairs: Vec::with_capacity(pairs) };
+    let mut tally = PairedTally {
+        wins_a: 0,
+        wins_b: 0,
+        undecided: 0,
+        cost: SimCost::default(),
+        pairs: Vec::with_capacity(pairs),
+    };
     for k in 0..pairs {
         let seed = seed_base.wrapping_add((k as u64).wrapping_mul(0x9E37_79B9_7F4A_7C15));
         let mut score = 0i8;
@@ -1009,7 +1055,10 @@ pub fn simulate_match_pairs_piloted(
             // Both games of the pair get the *same* jitter stream, so the
             // bots' tie-breaks replay identically and the only thing left
             // that can separate the two games is the profiles themselves.
-            match play_one_game(template, seated, max_actions, Some(&mut shuffle_rng), Some(seed)) {
+            let outcome =
+                play_one_game(template, seated, max_actions, Some(&mut shuffle_rng), Some(seed));
+            tally.cost.record(&outcome);
+            match outcome.winner {
                 Some(seat) => {
                     if (seat == 0) == a_seat0 {
                         tally.wins_a += 1;
@@ -1060,16 +1109,128 @@ pub(crate) fn build_match_template(seat0: &[CardFactory], seat1: &[CardFactory])
     g
 }
 
-/// Play one full bot game from a prebuilt template. Returns the winning
-/// SEAT (`Some(0)`/`Some(1)`), `None` for a stall/draw. Mirrors the
-/// server actor's fixed-point bot polling.
-fn play_one_game(
+/// One finished game: the winning seat (`None` for a stall/draw) plus what
+/// it cost to play.
+pub(crate) struct GameOutcome {
+    pub winner: Option<usize>,
+    /// Accepted `perform_action` calls.
+    pub actions: usize,
+    /// `turn_number` at game end.
+    pub turns: u32,
+}
+
+/// Play one full bot game from a prebuilt template. Mirrors the server
+/// actor's fixed-point bot polling.
+pub(crate) fn play_one_game(
     template: &GameState,
     pilots: [Pilot; 2],
     max_actions: usize,
     shuffle_rng: Option<&mut StdRng>,
     jitter_seed: Option<u64>,
-) -> Option<usize> {
+) -> GameOutcome {
+    play_one_game_traced(template, pilots, max_actions, shuffle_rng, jitter_seed, None)
+}
+
+/// A full game's observable history: one line per accepted action, each
+/// pairing the action with the state it produced. Two engine builds that
+/// agree on this agree on everything a game can be judged by.
+///
+/// Deliberately textual. A struct would be cheaper to compare and useless
+/// to read: when a trace moves, the question is always *which* action
+/// diverged and what the board looked like there, and a committed text
+/// snapshot answers that from the diff alone.
+pub struct GameTrace {
+    pub lines: Vec<String>,
+    pub winner: Option<usize>,
+    pub turns: u32,
+}
+
+impl GameTrace {
+    /// FNV-1a over the joined lines. Compact stand-in for the whole trace
+    /// where committing the text would be all bulk and no signal.
+    pub fn digest(&self) -> u64 {
+        let mut h: u64 = 0xcbf2_9ce4_8422_2325;
+        for b in self.lines.join("\n").bytes() {
+            h ^= b as u64;
+            h = h.wrapping_mul(0x1000_0000_01b3);
+        }
+        h
+    }
+
+    pub fn text(&self) -> String {
+        let mut s = self.lines.join("\n");
+        s.push('\n');
+        s.push_str(&format!(
+            "= winner {} turns {} actions {}\n",
+            match self.winner {
+                Some(s) => s.to_string(),
+                None => "none".to_string(),
+            },
+            self.turns,
+            self.lines.len(),
+        ));
+        s
+    }
+}
+
+/// Play one fully seeded game and record its trace. The shuffle stream and
+/// the bot's tie-break jitter both key off `seed`, so the same seed on the
+/// same engine must produce the same text — in this process or any other.
+pub fn trace_game(
+    deck_a: &[CardFactory],
+    deck_b: &[CardFactory],
+    seed: u64,
+    max_actions: usize,
+) -> GameTrace {
+    let template = build_match_template(deck_a, deck_b);
+    let mut rng = StdRng::seed_from_u64(seed);
+    let mut lines = Vec::new();
+    let o = play_one_game_traced(
+        &template,
+        [Pilot::default(), Pilot::default()],
+        max_actions,
+        Some(&mut rng),
+        Some(seed),
+        Some(&mut lines),
+    );
+    GameTrace { lines, winner: o.winner, turns: o.turns }
+}
+
+/// Board state after an action, compact enough to sit at the end of every
+/// trace line and complete enough that a rules change moves it.
+fn trace_state(g: &GameState) -> String {
+    let mut bf = [0usize; 2];
+    for c in g.battlefield.iter() {
+        if let Some(n) = bf.get_mut(c.controller) {
+            *n += 1;
+        }
+    }
+    format!(
+        "T{} {:?} | life {}/{} hand {}/{} bf {}/{} gy {}/{} lib {}/{} stack {}",
+        g.turn_number,
+        g.step,
+        g.players[0].life,
+        g.players[1].life,
+        g.players[0].hand.len(),
+        g.players[1].hand.len(),
+        bf[0],
+        bf[1],
+        g.players[0].graveyard.len(),
+        g.players[1].graveyard.len(),
+        g.players[0].library.len(),
+        g.players[1].library.len(),
+        g.stack.len(),
+    )
+}
+
+fn play_one_game_traced(
+    template: &GameState,
+    pilots: [Pilot; 2],
+    max_actions: usize,
+    shuffle_rng: Option<&mut StdRng>,
+    jitter_seed: Option<u64>,
+    mut trace: Option<&mut Vec<String>>,
+) -> GameOutcome {
     // Installed for the duration of this game and cleared after, so a
     // seeded game can't leak its stream into whatever the worker plays
     // next. See `bot::set_jitter_seed`.
@@ -1088,6 +1249,15 @@ fn play_one_game(
             None => g.players[seat].library.shuffle(&mut rand::rng()),
         }
     }
+    // A seeded deal implies a seeded *game*: mulligan reshuffles, random
+    // discards and every other in-game roll come off the state's own
+    // stream, drawn from the shuffle stream so it stays a function of the
+    // caller's seed. Without this a mulligan re-randomized the deal and
+    // the pair's two games diverged — which is also what broke the
+    // antithetic pairing's variance reduction on exactly those games.
+    if let Some(r) = seeded.as_deref_mut() {
+        g.rng.reseed(r.random());
+    }
     g.start_mulligan_phase();
     let mut bots: Vec<Box<dyn Bot>> = pilots.into_iter().map(Pilot::build).collect();
     let (mut actions, mut stale) = (0usize, 0usize);
@@ -1095,7 +1265,13 @@ fn play_one_game(
         let mut any = false;
         for (s, bot) in bots.iter_mut().enumerate() {
             let Some(a) = bot.next_action(&g, s) else { continue };
+            // Formatted before the move, because `perform_action` takes it
+            // by value; only kept when the move is accepted.
+            let pending = trace.as_ref().map(|_| format!("p{s} {a:?}"));
             if g.perform_action(a).is_ok() {
+                if let (Some(t), Some(p)) = (trace.as_mut(), pending) {
+                    t.push(format!("{:>5}. {p}  ~~  {}", t.len() + 1, trace_state(&g)));
+                }
                 any = true;
                 actions += 1;
                 if g.is_game_over() {
@@ -1106,7 +1282,7 @@ fn play_one_game(
         if any { stale = 0 } else { stale += 1 }
     }
     crate::server::bot::set_jitter_seed(None);
-    g.game_over.flatten()
+    GameOutcome { winner: g.game_over.flatten(), actions, turns: g.turn_number }
 }
 
 // ─────────────────────────────── evaluation ──────────────────────────────

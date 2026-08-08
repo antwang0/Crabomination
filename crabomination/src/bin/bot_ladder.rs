@@ -45,7 +45,7 @@ use crabomination::cube::{CardFactory, color_pair_name, cube_deck, random_color_
 use rand::SeedableRng;
 use rand::rngs::StdRng;
 use crabomination::recommend::{
-    Pilot, simulate_match_games_piloted, simulate_match_pairs_piloted,
+    Pilot, SimCost, simulate_match_games_piloted, simulate_match_pairs_piloted,
 };
 use crabomination::server::{EvalWeights, MctsConfig};
 use crabomination::sos_mode::{College, sos_deck};
@@ -332,6 +332,26 @@ fn paired_stat(pairs: &[i8]) -> Option<PairedStat> {
     Some(PairedStat { n, p, se, rho })
 }
 
+/// Peak resident set size in MiB, or `None` where the OS doesn't expose it
+/// cheaply. Linux keeps the high-water mark in `/proc/self/status`, which
+/// is what makes it worth reporting at all: sampling RSS at exit would
+/// miss the spike that matters.
+fn peak_rss_mib() -> Option<f64> {
+    let s = std::fs::read_to_string("/proc/self/status").ok()?;
+    let line = s.lines().find(|l| l.starts_with("VmHWM:"))?;
+    let kb: f64 = line.split_whitespace().nth(1)?.parse().ok()?;
+    Some(kb / 1024.0)
+}
+
+/// The committed throughput configuration. `--bench` pins every knob that
+/// moves the numbers so two runs on different days measure the same work:
+/// the hand-built archetypes (cube/sealed fields are seed-dependent in
+/// deck *content*, not just shuffles), a fixed seed, paired play, and a
+/// mirror of one profile against itself.
+const BENCH_SEED: u64 = 20250808;
+const BENCH_GAMES: usize = 240;
+const BENCH_PROFILE: &str = "baseline";
+
 struct Args {
     a: Pilot,
     b: Pilot,
@@ -342,13 +362,15 @@ struct Args {
     threads: usize,
     deck_set: String,
     paired: bool,
+    bench: bool,
 }
 
 fn parse_args() -> Result<Args, String> {
-    let mut a_name = "baseline".to_string();
-    let mut b_name = "v2".to_string();
-    let mut games = 200usize;
-    let mut seed = 0u64;
+    let bench = std::env::args().any(|a| a == "--bench");
+    let mut a_name = if bench { BENCH_PROFILE.to_string() } else { "baseline".to_string() };
+    let mut b_name = if bench { BENCH_PROFILE.to_string() } else { "v2".to_string() };
+    let mut games = if bench { BENCH_GAMES } else { 200usize };
+    let mut seed = if bench { BENCH_SEED } else { 0u64 };
     let mut threads = 0usize;
     let mut deck_set = "fixed".to_string();
     let mut paired = true;
@@ -377,6 +399,7 @@ fn parse_args() -> Result<Args, String> {
                 paired = false;
                 step = 1;
             }
+            "--bench" => step = 1,
             "-h" | "--help" => {
                 println!(
                     "bot_ladder [--a PROFILE] [--b PROFILE] [--games N] [--seed N] [--threads N]\n\
@@ -388,7 +411,11 @@ fn parse_args() -> Result<Args, String> {
                      --games is per archetype, split evenly across seats.\n\
                      --paired (default) plays each shuffle twice with the seats swapped\n\
                      and reports the variance-reduced estimate; --unpaired is the old\n\
-                     independent-shuffle behaviour, kept as the measurement control."
+                     independent-shuffle behaviour, kept as the measurement control.\n\
+                     --bench runs the committed throughput configuration ({BENCH_PROFILE}\n\
+                     mirror, {BENCH_GAMES} games x fixed decks, seed {BENCH_SEED}) and reports\n\
+                     games/sec, decisions/sec, turns/game, stalls and peak RSS. Compare\n\
+                     against the baseline in PERF.md; release builds only."
                 );
                 std::process::exit(0);
             }
@@ -422,6 +449,7 @@ fn parse_args() -> Result<Args, String> {
         threads,
         deck_set,
         paired,
+        bench,
     })
 }
 
@@ -522,6 +550,7 @@ fn main() {
     }
 
     let next = AtomicUsize::new(0);
+    let cost: Mutex<SimCost> = Mutex::new(SimCost::default());
     let rows: Mutex<Vec<Row>> = Mutex::new(
         field
             .iter()
@@ -550,7 +579,7 @@ fn main() {
                         let i = next.fetch_add(1, Ordering::Relaxed);
                         let Some(job) = jobs.get(i) else { break };
                         let d = &field[job.arch].deck;
-                        let (wins_a, wins_b, undecided, pairs) = if args.paired {
+                        let (wins_a, wins_b, undecided, pairs, job_cost) = if args.paired {
                             let t = simulate_match_pairs_piloted(
                                 d,
                                 d,
@@ -559,7 +588,7 @@ fn main() {
                                 50_000,
                                 job.seed,
                             );
-                            (t.wins_a, t.wins_b, t.undecided, t.pairs)
+                            (t.wins_a, t.wins_b, t.undecided, t.pairs, t.cost)
                         } else {
                             let t = simulate_match_games_piloted(
                                 d,
@@ -569,8 +598,9 @@ fn main() {
                                 50_000,
                                 Some(job.seed),
                             );
-                            (t.wins_a, t.wins_b, t.undecided, Vec::new())
+                            (t.wins_a, t.wins_b, t.undecided, Vec::new(), t.cost)
                         };
+                        *cost.lock().unwrap() += job_cost;
                         let mut rows = rows.lock().unwrap();
                         let row = &mut rows[job.arch];
                         row.wins_a += wins_a;
@@ -584,6 +614,7 @@ fn main() {
     });
 
     let rows = rows.into_inner().unwrap();
+    let cost = cost.into_inner().unwrap();
     const Z: f64 = 1.96;
     println!();
     println!(
@@ -633,10 +664,36 @@ fn main() {
         100.0 * hi,
     );
     println!();
-    println!(
-        "{decided} decided, {tu} undecided, in {:.1}s",
-        started.elapsed().as_secs_f64()
-    );
+    let wall = started.elapsed().as_secs_f64();
+    println!("{decided} decided, {tu} undecided, in {wall:.1}s");
+
+    if args.bench {
+        // Wall-clock throughput of the simulator itself. Reported as
+        // per-thread rates as well as aggregate: a change that only moves
+        // the aggregate is a scaling change (contention, allocator), one
+        // that moves the per-thread rate is a change to the game loop.
+        let g = cost.games as f64;
+        let stall_pct = 100.0 * cost.games.saturating_sub(decided as u64) as f64 / g.max(1.0);
+        println!();
+        println!("bench: {BENCH_PROFILE} mirror, {} decks, seed {}, {threads} threads, {} build",
+            field.len(),
+            args.seed,
+            if cfg!(debug_assertions) { "DEBUG (numbers meaningless)" } else { "release" },
+        );
+        println!("  games          {}", cost.games);
+        println!("  wall_s         {wall:.2}");
+        println!("  games_per_s    {:.2}", g / wall.max(1e-9));
+        println!("  games_per_s_th {:.3}", g / wall.max(1e-9) / threads as f64);
+        println!("  decisions      {}", cost.decisions);
+        println!("  decisions_per_s {:.0}", cost.decisions as f64 / wall.max(1e-9));
+        println!("  turns_per_game {:.2}", cost.turns as f64 / g.max(1.0));
+        println!("  decisions_per_game {:.1}", cost.decisions as f64 / g.max(1.0));
+        println!("  stalls         {tu} ({stall_pct:.2}%)");
+        match peak_rss_mib() {
+            Some(m) => println!("  peak_rss_mib   {m:.1}"),
+            None => println!("  peak_rss_mib   n/a"),
+        }
+    }
 
     // The paired estimate, when we played pairs. Same estimand as the
     // unpaired win rate above — printed next to it, not instead of it, so
