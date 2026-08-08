@@ -1784,3 +1784,145 @@ fn kukemssa_pirates_trade_damage_for_an_artifact() {
     assert_eq!(g.battlefield_find(loot).unwrap().controller, 0, "stole the artifact");
     assert_eq!(g.players[1].life, 20, "and assigned no combat damage");
 }
+
+/// Coral Fighters peeks at the *defending* player's top card and may bury it.
+#[test]
+fn coral_fighters_buries_the_defenders_top_card() {
+    let mut g = two_player_game();
+    let fighters = ready(&mut g, 0, catalog::coral_fighters());
+    let top = g.add_card_to_library(1, catalog::grizzly_bears());
+    g.add_card_to_library(1, catalog::lightning_bolt());
+    g.decider = Box::new(crabomination::decision::ScriptedDecider::new([
+        crabomination::decision::DecisionAnswer::Bool(true),
+    ]));
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: fighters,
+        target: AttackTarget::Player(1),
+    }]))
+    .expect("attack");
+    while g.step != TurnStep::CombatDamage {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+        drain_stack(&mut g);
+    }
+    assert_eq!(g.players[1].library.last().map(|c| c.id), Some(top), "bottomed");
+}
+
+/// Tainted Specter's discard is buyable by stacking your own library; a real
+/// discard sprays the board.
+#[test]
+fn tainted_specter_discard_sprays_the_board() {
+    for (stack_it, expect_life) in [(true, 20), (false, 19)] {
+        let mut g = two_player_game();
+        let specter = ready(&mut g, 0, catalog::tainted_specter());
+        g.add_card_to_hand(1, catalog::grizzly_bears());
+        g.players[0].mana_pool.add(Color::Black, 2);
+        g.players[0].mana_pool.add_colorless(1);
+        g.decider = Box::new(crabomination::decision::ScriptedDecider::new([
+            crabomination::decision::DecisionAnswer::Bool(stack_it),
+        ]));
+        activate(&mut g, specter, 0, Some(Target::Player(1))).expect("activate");
+        drain_stack(&mut g);
+        assert_eq!(g.players[1].life, expect_life, "stack_it={stack_it}");
+        assert_eq!(g.players[1].graveyard.len(), usize::from(!stack_it));
+    }
+}
+
+/// Hakim dresses himself in an Aura from the graveyard, then can shed it.
+#[test]
+fn hakim_wears_and_sheds_graveyard_auras() {
+    let mut g = two_player_game();
+    let hakim = ready(&mut g, 0, catalog::hakim_loreweaver());
+    let aura = g.add_card_to_graveyard(0, catalog::mind_harness());
+    // Resolved directly: a graveyard card doesn't survive the action layer's
+    // target plumbing (TODO.md — "Graveyard targets are dropped on the
+    // activated/triggered ability path"), the same idiom the Iridescent Drake
+    // test uses.
+    let ctx = crabomination::game::effects::EffectContext::for_ability(
+        hakim,
+        0,
+        Some(Target::Permanent(aura)),
+    );
+    let def = catalog::hakim_loreweaver();
+    g.resolve_effect(&def.activated_abilities[0].effect, &ctx).expect("dress");
+    assert_eq!(g.battlefield_find(aura).map(|c| c.attached_to), Some(Some(hakim)));
+    g.players[0].mana_pool.add(Color::Blue, 2);
+    g.battlefield_find_mut(hakim).unwrap().tapped = false;
+    activate(&mut g, hakim, 1, None).expect("shed");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(aura).is_none(), "Auras destroyed");
+}
+
+/// Purgatory pockets your dead creatures and rents one back per upkeep.
+#[test]
+fn purgatory_rents_back_the_dead() {
+    let mut g = two_player_game();
+    let purg = g.add_card_to_hand(0, catalog::purgatory());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    cast(&mut g, purg, None).expect("cast");
+    drain_stack(&mut g);
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    cast(&mut g, bolt, Some(Target::Permanent(bear))).expect("bolt");
+    drain_stack(&mut g);
+    assert!(g.exile.iter().any(|c| c.id == bear), "pocketed");
+
+    g.decider = Box::new(crabomination::decision::ScriptedDecider::new([
+        crabomination::decision::DecisionAnswer::Bool(true),
+    ]));
+    g.step = TurnStep::Untap;
+    while g.step != TurnStep::Upkeep {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    // `MayPay` spends floated mana, so float it once the trigger is on the
+    // stack (a step boundary empties the pool).
+    g.players[0].mana_pool.add_colorless(4);
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_some(), "rented back");
+    assert_eq!(g.players[0].life, 18, "two life");
+}
+
+/// Wellspring hands you the enchanted land on each of your upkeeps.
+#[test]
+fn wellspring_borrows_the_enchanted_land() {
+    let mut g = two_player_game();
+    let land = g.add_card_to_battlefield(1, catalog::forest());
+    let aura = g.add_card_to_hand(0, catalog::wellspring());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    cast(&mut g, aura, Some(Target::Permanent(land))).expect("cast");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(land).unwrap().controller, 0, "borrowed on entry");
+}
+
+/// Reflect Damage bounces the next damage event back at its source's
+/// controller.
+#[test]
+fn reflect_damage_returns_to_sender() {
+    let mut g = two_player_game();
+    let pinger = g.add_card_to_battlefield(1, catalog::prodigal_sorcerer());
+    g.clear_sickness(pinger);
+    let spell = g.add_card_to_hand(0, catalog::reflect_damage());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    cast(&mut g, spell, None).expect("cast");
+    drain_stack(&mut g);
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: pinger,
+        ability_index: 0,
+        target: Some(Target::Player(0)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("ping");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, 20, "prevented");
+    assert_eq!(g.players[1].life, 19, "dealt to the source's controller");
+}

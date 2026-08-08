@@ -272,7 +272,11 @@ pub fn hakim_loreweaver() -> CardDefinition {
                     })),
                 ])),
                 effect: Effect::AttachAuraFromGraveyardTo {
-                    aura: Selector::Target(0),
+                    aura: Selector::TargetFiltered {
+                        slot: 0,
+                        filter: R::HasEnchantmentSubtype(EnchantmentSubtype::Aura)
+                            .and(R::InGraveyard),
+                    },
                     host: Selector::This,
                 },
                 ..Default::default()

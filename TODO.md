@@ -3,6 +3,28 @@
 Improvement opportunities for the engine, client, and tooling.
 Items are grouped by area and roughly ordered by impact within each group.
 
+## Noticed this run (Mirage wave 5)
+
+- **Graveyard targets are dropped on the activated/triggered ability path.**
+  A *cast* spell can target a graveyard card (Fates Reversal's test does it
+  through `GameAction::CastSpell`), but the same `Target::Permanent(<gy card>)`
+  handed to `GameAction::ActivateAbility` never reaches the resolution — Hakim,
+  Loreweaver's Aura-recursion and Iridescent Drake's ETB both have to be tested
+  by resolving the effect directly. `Effect::AttachAuraFromGraveyardTo` is now
+  surfaced in `primary_target_filter` / `prefers_graveyard_target`, which was
+  one half of it; the remaining half is in the action layer's target
+  validation. ⏳
+- **`MayPay` can't reach lands, so upkeep "pay {4}" riders need floated mana.**
+  Purgatory's rent is unpayable unless the controller happens to have mana in
+  the pool when the trigger resolves. The comment calls this deliberate ("mana
+  abilities aren't activatable mid-resolve by default"), but for a UI seat the
+  right behaviour is a real payment window. ⏳
+- **Shadowbane is still unimplemented for want of one knob.** Its shield is
+  `PreventNextFromChosenSourceToTeam { one_event: true }` plus "if damage from
+  a black source is prevented this way, you gain that much life."
+  `PreventedSource.gain_life_colors` already models exactly that rider on the
+  other prevention family — the two want unifying rather than a third copy. ⏳
+
 ## Noticed this run (Mirage opened)
 
 - **`legal_block_targets` recomputes `blocker_can_block_attacker` per pair.**
@@ -26,18 +48,16 @@ Items are grouped by area and roughly ordered by impact within each group.
   `eager_static_targets` handles the self-scoped shape (the one every real
   card uses); an inner `EachPermanent` still falls through to `None` and the
   static contributes nothing. ⏳
-- **Mirage residue** — the last 54 cards lean on primitives worth one item
+- **Mirage residue** — the last 30 cards lean on primitives worth one item
   each: Celestial Dawn (a global colour/land-type rewrite), Forbidden Crypt
   (a draw replacement that reaches the graveyard), Bazaar of Wonders
   (name-matching counterspell static), Hall of Gemstone (a per-turn mana-type
   lock), Null Chamber (a two-player name lock), Tombstone Stairwell
   (token bookkeeping across both halves), Energy Vortex / Soul Echo
   (counter-priced upkeep taxes), Grinning Totem and Mangara's Tome
-  (exile piles you may play from), Amber Prison / Hivis of the Scale
-  ("doesn't untap for as long as this stays tapped"), Meddle
-  (retarget-another), Flash and Lure of Prey (cast-condition put-onto-
-  battlefield), Illicit Auction (a life-bidding subgame), Polymorph and
-  Natural Balance. ⏳
+  (exile piles you may play from), Meddle (retarget-another), Flash and Lure
+  of Prey (cast-condition put-onto-battlefield), Illicit Auction (a
+  life-bidding subgame), and Natural Balance. ⏳
 - **Suq'Ata Firewalker uses `HexproofFromColor`.** The printed line is a
   shroud-from-red (its controller's red spells can't target it either);
   `HexproofFromColor` only stops opponents. ⏳

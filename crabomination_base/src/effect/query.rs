@@ -1551,6 +1551,11 @@ impl Effect {
             Effect::MayDealPowerThenNoCombatDamage { to, .. } => sel_filter(to),
             Effect::TapAndHoldWhileSourceTapped { what }
             | Effect::GrantSacrificedLandTypesLandwalk { what, .. } => sel_filter(what),
+            // The Aura slot is the targeted one; the host is usually `This`
+            // (Iridescent Drake, Hakim, Loreweaver).
+            Effect::AttachAuraFromGraveyardTo { aura, host } => {
+                sel_filter(aura).or_else(|| sel_filter(host))
+            }
             Effect::RedirectNextCombatDamageTo { to, .. } => sel_filter(to),
             Effect::MoveChosenKeyword { from, .. } => sel_filter(from),
             // Prefer the damage target's own filter; fall back to a filter
@@ -2114,6 +2119,9 @@ impl Effect {
             Effect::GrantFlashbackThisTurn { .. }
             | Effect::GrantEmbalmThisTurn { .. }
             | Effect::GrantHarmonizeThisTurn { .. } => true,
+            // "Return target Aura card from your graveyard" — the pick only
+            // ever lives in a graveyard (Hakim, Iridescent Drake).
+            Effect::AttachAuraFromGraveyardTo { .. } => true,
             _ => false,
         }
     }
