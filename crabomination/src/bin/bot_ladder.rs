@@ -608,6 +608,20 @@ fn main() {
         }
     }
 
+    // A worker that finds an empty queue exits immediately, so `--threads N`
+    // silently runs min(N, jobs) workers. That reads as "scaling flattens at
+    // 4 threads" in a measurement, when what actually happened is that the
+    // run only ever had 4 chunks of work. Say so.
+    if jobs.len() < threads {
+        eprintln!(
+            "note: only {} job chunk(s) for {threads} threads — {} worker(s) will idle. \
+             Raise --games (chunks = decks x ceil(games/{}) ) before reading this as scaling.",
+            jobs.len(),
+            threads - jobs.len(),
+            if args.paired { CHUNK * 2 } else { CHUNK },
+        );
+    }
+
     let next = AtomicUsize::new(0);
     let cost: Mutex<SimCost> = Mutex::new(SimCost::default());
     let rows: Mutex<Vec<Row>> = Mutex::new(
