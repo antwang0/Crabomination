@@ -3213,6 +3213,29 @@ impl Effect {
                     sel_find(what, slot).or_else(|| sel_find(to, slot))
                 }
                 Effect::ManaClash { opponent } => sel_find(opponent, slot),
+                // Variants that declare a target slot but had no arm here —
+                // `requires_target` saw them, so the cast path asked for a
+                // target and then resolved against an empty list.
+                Effect::LicidAttach { host: what, .. }
+                | Effect::AttachSourceTo { host: what, .. }
+                | Effect::RemoveFromCombat { what }
+                | Effect::SpellBecomesChosenColor { what }
+                | Effect::UnlockRoomDoor { what }
+                | Effect::RevealRandomFromHand { who: what, .. }
+                | Effect::TopTwoGraveyardOpponentSplits { who: what }
+                | Effect::CoffinExile { what, .. } => sel_find(what, slot),
+                Effect::ExchangeOwnership { a, b, .. } => {
+                    sel_find(a, slot).or_else(|| sel_find(b, slot))
+                }
+                Effect::PreventNextDamageFromChosenSource { to, redirect_to, .. } => to
+                    .as_ref()
+                    .and_then(|t| sel_find(t, slot))
+                    .or_else(|| redirect_to.as_ref().and_then(|t| sel_find(t, slot))),
+                Effect::HauntCreature { body, .. } => eff_find(body, slot, mode, kicked),
+                Effect::PlayerMayPayLifeElse { else_, .. } => eff_find(else_, slot, mode, kicked),
+                Effect::ReplaceYourNextDrawThisTurn { body, .. } => {
+                    eff_find(body, slot, mode, kicked)
+                }
                 Effect::SetNoMaxHandSize { who } => sel_find(who, slot),
                 Effect::SetMaxHandSize { who, .. } => sel_find(who, slot),
                 Effect::Move { what, .. } | Effect::MoveChosen { from: what, .. } => {

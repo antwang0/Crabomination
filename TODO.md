@@ -39,11 +39,19 @@ Items are grouped by area and roughly ordered by impact within each group.
   worked around it. Either bind the partner there or rename the selector —
   every `BecomesBlocked` / `Blocks` body that reads `TriggerSource` is
   suspect and wants an audit. ⏳
-- **The parallel target-walker class claimed another card.**
+- **The parallel target-walker class is now ratcheted, not closed.**
   `Effect::MoveCounters` was in `requires_target` but neither
   `primary_target_filter` nor `target_filter_for_slot`, so Afiya Grove's
-  trigger silently did nothing. A single derive-or-table over the walkers
-  would end this class; today each is a hand-written match. ⏳
+  trigger silently did nothing; `AttachAuraFromGraveyardTo` was the same.
+  `core_rules/target_walkers` now serde-walks the whole catalog and fails if
+  more than 39 effect bodies declare a `TargetFiltered` slot the walker can't
+  answer — down from 164 after arms were added for LicidAttach (10 Licids),
+  PreventNextDamageFromChosenSource's `to`/`redirect_to`, AttachSourceTo,
+  RemoveFromCombat, SpellBecomesChosenColor, UnlockRoomDoor, HauntCreature,
+  RevealRandomFromHand, TopTwoGraveyardOpponentSplits, CoffinExile,
+  ExchangeOwnership, PlayerMayPayLifeElse and ReplaceYourNextDrawThisTurn.
+  The residual 39 are a long tail (run the test to list them). A single
+  derive-or-table over the three walkers would end the class outright. ⏳
 - **`Selector::MatchingAmong` statics only resolve over `Selector::This`.**
   `eager_static_targets` handles the self-scoped shape (the one every real
   card uses); an inner `EachPermanent` still falls through to `None` and the
