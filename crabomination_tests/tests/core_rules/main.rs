@@ -17,6 +17,7 @@ mod experience;
 mod format;
 mod freerunning;
 mod game;
+mod golden_trace;
 mod jewel;
 mod lci_craft;
 mod misconceptions;
