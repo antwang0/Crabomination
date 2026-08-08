@@ -22,7 +22,9 @@ the perf record.
 - **Perf**: **+12.4 %** this run, in two alternated A/B sittings — the trigger
   dispatcher no longer runs `compute_battlefield()` for one bool per card
   (**+8.2 %**), and its two grant scans are hoisted out of the per-permanent
-  loop (**+3.9 %**). Baseline re-anchored; this box is not the previous one.
+  loop (**+3.9 %**). Rebased onto another session's `Effect` boxing mid-run;
+  baseline re-anchored at the tip (24.09 games/s). This box is not the
+  previous one — absolutes from earlier runs do not compare.
 - **The profile's story changed and PERF.md now says so.** `--tree=caller` on
   `malloc` shows the 24 % allocator share is the *layer system*
   (`compute_permanent_pass` + the `Subtypes::clone` inside it are ~55 % of every

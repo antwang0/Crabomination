@@ -79,26 +79,34 @@ contention-immune, which makes it the better first look.
 
 ## Baseline
 
-Committed 2026-08-08 at the tip of this run's work (dispatcher fix + grant
-hoist). Refresh only alongside an intentional, explained change.
-Regressions beyond ~5 % get investigated before anything else lands — but
-check `host_calib_ms` first (see "How to measure").
+Committed 2026-08-08 at the branch tip: this run's dispatcher fix + grant
+hoist rebased onto another session's `Effect` boxing (`TokenDefinition` out
+of line, 1464 -> 448 bytes) and its catalog wave. Refresh only alongside an
+intentional, explained change. Regressions beyond ~5 % get investigated
+before anything else lands — but check `host_calib_ms` first (see "How to
+measure").
 
 ```text
 bot_ladder --bench   release, rustc 1.95.0, 4-core VM, 3 worker threads
                      mimalloc (the default); measured on an idle box
 host_cpu             Intel(R) Xeon(R) Processor @ 2.10GHz
-host_calib_ms        56 / 63 / 72 / 57           <- compare this first
+host_calib_ms        57 / 70 / 65 / 70           <- compare this first
 games                320
-games_per_s          23.10 / 22.50 / 22.88 / 22.34   (mean 22.71, spread 3.3 %)
-games_per_s_th       7.70 / 7.50 / 7.63 / 7.45
-decisions_per_s      13947 / 13585 / 13817 / 13489   (mean 13710)
+games_per_s          23.94 / 23.81 / 24.17 / 24.44   (mean 24.09, spread 2.6 %)
+games_per_s_th       7.98 / 7.94 / 8.06 / 8.15
+decisions_per_s      14454 / 14375 / 14592 / 14758   (mean 14545)
 turns_per_game       26.98
 decisions_per_game   603.9
 stalls               0 (0.00 %)
-peak_rss_mib         40.7 - 44.4
+peak_rss_mib         38.3 - 41.5
 determinism          ok (160 pairs, 0 sweeps, rho -1.000)
 ```
+
+This run's own binary (before the rebase) read 22.71 on the same box; the
+tip reads 24.09 and peak RSS fell 40.7-44.4 -> 38.3-41.5 MiB, both
+consistent with the `Effect` boxing that arrived with the rebase. That
+delta was **not** measured A/B by this run — it is a baseline observation,
+not a claim.
 
 **This is a different box from the previous baseline and the absolutes do
 not compare.** The 2026-08-08 baseline read 14.49 games/s on an Intel Xeon
