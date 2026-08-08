@@ -13,14 +13,18 @@ A number from a debug build describes `opt-level = 0`, not the code.
 # throughput — the committed configuration
 cargo run --release --bin bot_ladder -- --bench
 
-# allocator A/B (a feature change on the engine crate is a full rebuild, so
-# the variants need separate caches; /target-mi/ is gitignored)
+# allocator A/B — mimalloc is the default now, so the *system* allocator is
+# the opt-in side. A feature change on the engine crate is a full rebuild, so
+# the variants need separate caches; /target-mi/ is gitignored.
 cargo build --release -p crabomination --bin bot_ladder
 CARGO_TARGET_DIR=target-mi cargo build --release -p crabomination \
-  --bin bot_ladder --features mimalloc
+  --bin bot_ladder --no-default-features
 
-# instruction-level profile (deterministic; no `perf` in the routine image)
-cargo build --profile profiling --bin bot_ladder
+# instruction-level profile (deterministic; no `perf` in the routine image).
+# Profile the system allocator: valgrind replaces malloc, so a mimalloc build
+# measures the interception, not the program.
+cargo build --profile profiling -p crabomination --bin bot_ladder \
+  --no-default-features
 RUST_MIN_STACK=33554432 valgrind --tool=callgrind --callgrind-out-file=cg.out \
   target/profiling/bot_ladder --a gang --b gang --games 6 --threads 1 --seed 1
 callgrind_annotate --auto=no --threshold=95 cg.out            # self cost
@@ -42,57 +46,83 @@ aggregate: a change that moves only the aggregate is a scaling change
 (contention, allocator), one that moves the per-thread rate is a change to
 the game loop.
 
+**Absolute games/sec is not comparable across routine boxes, and barely
+across an hour on one.** Three back-to-back runs of one binary read 11.73 /
+12.34 / 10.01 games/s here — a 23 % swing — and `host_calib_ms` moved 63 / 55
+/ 69, in exact inverse rank order. `--bench` prints that probe (a fixed
+deterministic ALU + 4 MiB random-access loop, timed after the games so it
+can't perturb them) plus `host_cpu` precisely so the next run can tell a
+slower host from a regression. Check it *before* investigating a moved
+baseline. The only sound way to attribute a delta to code is to measure both
+sides in one sitting, alternating A/B/A/B — host drift then moves both.
+
+**`--threads N` needs enough work to fill N workers.** The queue holds
+`decks x ceil(games / 20)` chunks under `--paired`; a worker that finds it
+empty exits. `--threads 24 --games 8` therefore runs four workers and looks
+exactly like "scaling flattens at 4". The run now prints a note when this
+happens — heed it. Use `--games 120` or more for an actor-scaling sweep.
+
 A self-mirror on a shared seed must report **every pair as a split**
 (`rho -1.000`): the two games of a pair are the same game with the seats
 relabelled. A sweep in a `--bench` run is a determinism bug, not variance.
 
 Wall-clock notes for whoever iterates next: a release rebuild of the engine
-is ~13 min on the 4-core routine box (`codegen-units = 1` + thin LTO), so
-budget two or three measured iterations per run, not ten. Callgrind on six
-games takes about three minutes and is contention-immune, which makes it
-the better first look.
+took 24 min solo on this run's box (`codegen-units = 1` + thin LTO), and 32
+min each when two ran concurrently — budget two or three measured iterations
+per run, not ten. Callgrind on six games takes about three minutes and is
+contention-immune, which makes it the better first look.
 
 ## Baseline
 
-Committed 2026-08-08 at the tip of this run's work (post "Freeze the layer
-memo for the whole bot tick", `e919496`, rebased onto the concurrent card
-commits). Refresh only alongside an intentional, explained change.
-Regressions beyond ~5 % get investigated before anything else lands.
+Committed 2026-08-08 at the tip of this run's work (`bbf5ddcc`, layer-gather
+filter + mimalloc default). Refresh only alongside an intentional, explained
+change. Regressions beyond ~5 % get investigated before anything else lands —
+but check `host_calib_ms` first (see "How to measure").
 
 ```text
 bot_ladder --bench   release, rustc 1.95.0, 4-core VM, 3 worker threads
-                     measured on an idle box (load average < 0.5)
+                     mimalloc (the default); measured on an idle box
+host_cpu             Intel(R) Xeon(R) Processor @ 2.80GHz
+host_calib_ms        54 / 56 / 55 / 60          <- compare this first
 games                320
-games_per_s          11.80 / 11.82 / 11.79 / 11.97   (mean 11.85, spread 1.5 %)
-                     12.42 / 12.38 / 12.36 (mean 12.39) re-measured a run
-                     later on the same idle box. The +4.6 % over 11.85 is
-                     NOT a claimed win: the only engine change between them
-                     moved three `rand::random` sites onto `GameRng`, and
-                     those effects never fire in the bench decks. Read it as
-                     day-to-day drift on a shared VM, and as the reason a
-                     perf claim needs both sides measured in one sitting.
-                     Compare against 12.39 (system alloc) or 13.88
-                     (`--features mimalloc`), both measured that sitting.
-games_per_s_th       3.93 / 3.94 / 3.93 / 3.99
-decisions_per_s      7123 / 7139 / 7117 / 7231       (mean 7153)
+games_per_s          14.07 / 14.66 / 14.41 / 14.81   (mean 14.49, spread 5.1 %)
+games_per_s_th       4.69 / 4.89 / 4.80 / 4.94
+decisions_per_s      8497 / 8854 / 8699 / 8944       (mean 8749)
 turns_per_game       26.98
 decisions_per_game   603.9
 stalls               0 (0.00 %)
-peak_rss_mib         25.1 – 25.5
-determinism          ok (all pairs split)
-
-thread scaling (--bench --threads N, games/s; measured pre-optimization,
-so read the ratios, not the absolutes)
-  1 → 4.23     2 → 8.05 (95 % of linear)     4 → 14.56 (86 % of linear)
+peak_rss_mib         38.8 - 39.8
+determinism          ok (160 pairs, 0 sweeps, rho -1.000)
 ```
 
-**Measure on an idle box.** The optimization rows below were each taken as
-three back-to-back runs right after a 13–17 min release build, which reads
-2–3 % high and with a much wider spread (one such triple ran 10.91 / 11.52 /
-11.98 — a 9.8 % spread) than the same binary gives once the machine settles.
-The before/after *deltas* in the log are still sound because both sides were
-measured the same way; the absolute baseline above deliberately is not, and
-is the number to compare against.
+The previous baseline read 11.85-12.39 games/s and **is not comparable**: the
+same unchanged engine code read 9.64 on this box at the start of this run. The
+box moved, not the engine — the three commits between the two measurements are
+7 lines of RNG routing in a path the bench decks never take, a post-run assert,
+an unused import and an opt-in Cargo feature. That episode is why
+`host_calib_ms` exists. Within this run, on this box and this day:
+
+```text
+9.64  games/s   HEAD at the start of the run   (system alloc)
+12.32           + layer-gather filter          (system alloc, +27.8 %)
+14.49           + mimalloc default             (+50.3 % cumulative)
+```
+
+Actor scaling, `--bench --threads N --games 120` (a saturated queue — see the
+`--threads` note above), system allocator vs mimalloc:
+
+```text
+threads   1      4      8      16     24
+sys       4.54   15.33  16.71  15.76  13.83   games/s
+mi        4.96   18.93  19.72  19.32  18.12
+sys       16.1   31.2   49.2   83.3   115.5   peak RSS MiB
+mi        24.2   49.5   82.5   134.2  178.7
+```
+
+Four cores, so past ~4 actors this measures oversubscription, not scaling. The
+readable part is that mimalloc's edge *grows* with actor count (+9 % at 1,
++31 % at 24 — system malloc contends) while its RSS ratio stays flat at
+1.5-1.7x. Re-measure the scaling half on a box with real cores.
 
 ## Log
 
@@ -102,6 +132,9 @@ is the number to compare against.
 | 2026-08-08 | Run the whole `RandomBot` tick inside one `with_frozen_layers` scope (`e919496`) | 11.25 games/s, 6791 dec/s | 12.22 games/s, 7381 dec/s | `--bench` ×3 each side; golden traces byte-identical, turns/game unchanged |
 | | **cumulative this run** | **10.36 games/s** | **12.22 games/s (+18.0 %)** | both ends measured post-build; on the settled box the same code reads 11.85 |
 | 2026-08-08 | Opt-in mimalloc `#[global_allocator]` on `bot_ladder` / `selfplay_train` (`--features mimalloc`) | 12.39 games/s, 7478 dec/s | 13.88 games/s, 8378 dec/s | `--bench` ×3 each side on an idle box (12.42/12.38/12.36 → 13.82/14.07/13.74); **+12.0 %**. Two separate release builds into `target/` and `target-mi/`, allocator the only difference. Peak RSS 25.3 → 39.0 MiB. turns/game 26.98 unchanged, stalls 0, all pairs still split. |
+| 2026-08-08 | Filter the layer gather's 39 static-ability battlefield passes through one precomputed slice (`80086059`) | 9.64 games/s, 5825 dec/s | 12.32 games/s, 7437 dec/s | **+27.8 %**. `--bench` ×3 per side, *alternated* A/B/A/B in one sitting on an idle box (9.75/9.69/9.49 → 12.15/12.42/12.38). Sealed pool, the shape self-play trains on: 10.64 → 13.51, **+26.9 %** — so it isn't a vanilla-deck artifact. turns/game unchanged (26.98 / 19.01), stalls 0, RSS unchanged, all pairs split. Suite 18617 passed / 0 failed; all four golden traces byte-identical. |
+| 2026-08-08 | mimalloc from opt-in to default on `crabomination` + `crabomination_ml` (`bbf5ddcc`) | 12.12 games/s, 7317 dec/s | 14.77 games/s, 8918 dec/s | **+21.9 %**. `--bench` ×3 per side alternated, `host_calib_ms` steady 54–57. Larger than the +12.0 % row above because the gather fix removed the work the allocator cost was hiding behind. RSS 25.4 → 41.5 MiB at 3 threads; the actor sweep in **Baseline** is what unblocked making it default. |
+| | **cumulative this run** | **9.64 games/s** | **14.49 games/s (+50.3 %)** | both ends on the same box, same day; see the Baseline note on why the previous run's absolutes don't compare |
 
 ## Profile of record
 
