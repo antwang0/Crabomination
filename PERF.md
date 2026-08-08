@@ -111,6 +111,14 @@ peak_rss_mib         39.0 - 40.5
 determinism          ok (160 pairs, 0 sweeps, rho -1.000)
 ```
 
+**Not re-anchored by the 2026-08-08 sim-loop run.** That run measured its
+change as a `release-fast` A/B (see the Log row for `836059e2`) and never
+built a `release` binary of the tip, so the block above still describes
+`eb5f661c` and must not be read as covering the sim-loop freeze. Nothing
+here regressed: golden traces are byte-identical, `turns_per_game` held at
+26.98 and stalls at 0 across all 24 bench runs of that A/B. The next run to
+build `release` should re-anchor this block and say so.
+
 Stepping this session's box through the day, same binary rebuilt at each
 point: **19.76** at the branch tip this morning, 22.71 after this session's
 two fixes, 24.09 after the `Effect` boxing, **33.64** after the
