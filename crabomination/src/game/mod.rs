@@ -9312,17 +9312,17 @@ impl GameState {
             .flat_map(|p| p.command.iter())
             .filter(|c| c.definition.is_scheme() || c.command_zone_abilities_active())
             .collect();
-        for card in self
+        // Which of the three sources a card came from is known from the
+        // chain position, so pair it with the duration rather than asking
+        // `battlefield.contains` per card — that was an O(n²) membership
+        // scan inside the hottest function in the simulator.
+        let anthem_walk = self
             .battlefield
             .iter()
-            .chain(emblem_anthems.iter())
-            .chain(face_up_schemes.iter().copied())
-        {
-            let source_duration = if self.battlefield.iter().any(|c| c.id == card.id) {
-                EffectDuration::WhileSourceOnBattlefield
-            } else {
-                EffectDuration::Indefinite
-            };
+            .map(|c| (c, EffectDuration::WhileSourceOnBattlefield))
+            .chain(emblem_anthems.iter().map(|c| (c, EffectDuration::Indefinite)))
+            .chain(face_up_schemes.iter().map(|c| (*c, EffectDuration::Indefinite)));
+        for (card, source_duration) in anthem_walk {
             for sa in &card.definition.static_abilities {
                 // `AnthemForFilterIf` shares this gather; its predicate gate is
                 // re-evaluated here so the anthem switches off live.
@@ -9614,13 +9614,30 @@ impl GameState {
         // CR 604.3 — characteristic-defining dynamic P/T injection. The
         // formula lives on `CardDefinition.dynamic_pt`; we resolve it here
         // on every layer recompute and emit a layer-7 SetPT effect.
-        let goyf_n = self.distinct_card_types_in_all_graveyards() as i32;
-        let lands_in_gys: i32 = self.players.iter()
-            .map(|p| p.graveyard.iter().filter(|c| c.definition.is_land()).count() as i32)
-            .sum();
-        let creatures_in_gys: i32 = self.players.iter()
-            .map(|p| p.graveyard.iter().filter(|c| c.definition.is_creature()).count() as i32)
-            .sum();
+        //
+        // The three graveyard tallies feed Tarmogoyf-shaped formulas only, so
+        // they are gated on a `dynamic_pt` being present at all: computing
+        // them unconditionally cost three full graveyard walks (one of them
+        // building a `HashSet`) on every gather, and the gather runs about a
+        // million times per six bot games.
+        let has_dynamic_pt = self.battlefield.iter().any(|c| c.definition.dynamic_pt.is_some());
+        let (goyf_n, lands_in_gys, creatures_in_gys) = if has_dynamic_pt {
+            (
+                self.distinct_card_types_in_all_graveyards() as i32,
+                self.players
+                    .iter()
+                    .map(|p| p.graveyard.iter().filter(|c| c.definition.is_land()).count() as i32)
+                    .sum(),
+                self.players
+                    .iter()
+                    .map(|p| {
+                        p.graveyard.iter().filter(|c| c.definition.is_creature()).count() as i32
+                    })
+                    .sum(),
+            )
+        } else {
+            (0, 0, 0)
+        };
         for card in &self.battlefield {
             let Some(formula) = card.definition.dynamic_pt.clone() else { continue };
             // Angry Mob — the board-reading formula applies only on its
