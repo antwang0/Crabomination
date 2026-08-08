@@ -150,6 +150,16 @@ box with real cores.
 | 2026-08-08 | Hoist the trigger dispatcher's two grant scans (`statics_granted_triggers_for`, `equip_granted_triggers_for`) out of its per-permanent loop into board-level source lists (`f87974c3`) | 22.14 games/s | 23.00 games/s | **+3.9 %.** `--bench` x5 per side alternated. Under the 5 % claim bar, but the distributions don't overlap — slowest after (22.54) > fastest before (22.41), 5/5 pairs. The by-card methods stay as shims over the same pair, so there is still one walker. Suite 18788 passed / 0 failed; golden traces byte-identical. |
 | | **cumulative this run** | **19.76 games/s** | **+12.4 %** | measured as two alternated A/B sittings (+8.2 %, +3.9 %); the box drifted upward between them, so the absolutes on either side of the gap don't subtract |
 
+Measured on a **second, concurrent box** (Xeon @ 2.80GHz, `host_calib_ms`
+47-62) against base `3f1ddaac`, i.e. *without* the two dispatcher rows
+above. Absolutes therefore don't line up with the block above; the
+percentages are what carry over.
+
+| date | change | before | after | how measured |
+|---|---|---|---|---|
+| 2026-08-08 | `cast_candidates` stops calling `compute_hand_affordances` for its one `.spliceable` field; it asks `spliceable_hand_cards_on` against the probe template it already built (`489bb1d3`) | 16.08 games/s, 9709 dec/s | 22.83 games/s, 13786 dec/s | **+42.0 %.** `--bench` ×3 per side alternated A/B/A/B in one sitting on an idle box (15.98/16.07/16.18 → 23.00/22.38/23.10); every B run beat every A run by >6 games/s, so the gap is 20× the spread. Sealed pool (720 games), the shape self-play trains on: 40.2/40.0 s → 26.3/26.2 s, **+52.7 %**, 0 undecided both sides. turns/game 26.98 unchanged, stalls 0, RSS unchanged, all pairs split. Suite 18623 passed / 0 failed; all four golden traces byte-identical. |
+| 2026-08-08 | Card-name tallies (`spells_cast_by_name_this_game`, `spell_names_cast_this_turn`, `cycled_count_by_name`) key on `&'static str` instead of `String` (`eb5f661c`) | — | — | **No separate win claimed.** It rode in the sitting above, and it is exactly the class the CoW row measured at 0.1 %: `GameState::clone` is 0.9 M of ~16.7 M allocations. Kept as a typing change — the keys are `CardDefinition::name`, already `&'static str`, and the owned copies were a widening that allocated per entry per clone. Golden traces byte-identical. |
+
 ## Profile of record
 
 Callgrind, `--profile profiling --no-default-features` (system allocator —
@@ -213,7 +223,26 @@ Ordered by expected value. Each run pulls the top one, attaches numbers,
 and feeds what it finds back in. Re-profile and replenish when the list
 goes thin or stale. **Re-profile first** — the list below is derived from a
 profile taken *before* this run's fix removed 10.4 % of instructions, so the
-shares have all moved.
+shares have all moved. The `.spliceable` fix removed a further ~30 % of
+wall-clock on top of that, and it sat *above* the layer system in the call
+tree, so the profile owes a re-take before item 1 is costed.
+
+0. **Audit the bot's other whole-sweep calls the same way.** The
+   `.spliceable` win was not an algorithmic insight — it was one caller
+   asking for 40 answers and reading 1. `cast_candidates` is clean now, but
+   nothing structural stops the next one:
+   (a) `available_mana(state, seat)` is recomputed **per hand card** inside
+   `cast_candidates`' `can_afford_in_state` filter, and it calls
+   `granted_abilities_for` (which allocates a `Vec` and walks
+   `all_static_sources`) once per untapped permanent — O(hand × board²) with
+   allocations, all of it invariant across the filter. Hoist it to one
+   `AvailableMana` per call and pass it down; `can_afford_in_state` stays as
+   a shim that computes its own. Provably identical (`state` is `&`-borrowed
+   for the whole filter). Unmeasured but cheap to do.
+   (b) Grep discipline: a bot-path call to any `compute_*` / `*_hand_cards`
+   aggregate that reads one field is the smell. `view.rs` is the only
+   legitimate caller of `compute_hand_affordances` — it genuinely needs all
+   40 categories for the client.
 
 1. **Make `ComputedPermanent` cheap to build.** ~55 % of all allocations
    come from `compute_permanent_pass` cloning five collections per
@@ -280,3 +309,6 @@ shares have all moved.
   The caller tree explains why: `GameState::clone` is 0.9 M of ~16.7 M
   allocations. Shrinking `CardInstance` is still theoretically worth
   something for the memcpy share, but it is not where the allocator time is.
+- *The bot's affordance sweep* — `cast_candidates` calling
+  `compute_hand_affordances` for one field. Fixed (+42 % fixed decks,
+  +52.7 % sealed). The lesson generalises and is item 0 above.
