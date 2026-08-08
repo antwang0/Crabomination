@@ -2975,7 +2975,7 @@ impl GameState {
                 let host = eq.attached_to?;
                 let bonus = eq.definition.equipped_bonus.as_ref()?;
                 (!bonus.triggers_on_equipment)
-                    .then(|| (host, bonus.triggered_abilities.as_slice()))
+                    .then_some((host, bonus.triggered_abilities.as_slice()))
             })
             .collect()
     }
