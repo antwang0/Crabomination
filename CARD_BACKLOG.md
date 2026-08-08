@@ -16,6 +16,20 @@ priority in the current ML phase; this is where it waits.
   surfaced in `primary_target_filter` / `prefers_graveyard_target`, which was
   one half of it; the remaining half is in the action layer's target
   validation. ⏳
+  **Narrowed (read-only pass, no repro yet): it is _not_ the action layer.**
+  In `activate_ability_inner` a caller-supplied `target` clears
+  `check_target_legality`, clears the slot-0 `evaluate_requirement_static`
+  filter, skips the graveyard auto-bind block (that block is gated on
+  `target.is_none()`), and is handed to `TriggerPush::new(..).target(target)`
+  unmodified — `ability_target` is a clone of the same value, so the two can't
+  disagree. `randomize_single_target_on_stack()` runs right after the push and
+  *does* overwrite a single target from `enumerate_legal_targets_with_source`,
+  but it returns early unless a permanent with
+  `StaticEffect::RandomizeSingleTargets` is on the battlefield, so it is not
+  the culprit in an ordinary game. That puts the drop at **resolution**, in how
+  the effect consumes `StackItem::Trigger.target` — start at
+  `continue_trigger_resolution_with_source` and the `Selector`/`Target` reads
+  under it, not in `actions.rs`.
 - **`MayPay` can't reach lands, so upkeep "pay {4}" riders need floated mana.**
   Purgatory's rent is unpayable unless the controller happens to have mana in
   the pool when the trigger resolves. The comment calls this deliberate ("mana
