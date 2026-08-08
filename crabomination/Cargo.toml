@@ -14,6 +14,14 @@ rand = "0.10.2"
 
 ctor = "1.0.7"
 
+# Opt-in allocator for the simulator binaries. malloc/free/consolidate plus
+# the memcpy they drive were ~16 % of instructions in the callgrind profile,
+# and the engine's allocation pattern (many short-lived per-gather Vecs, one
+# thread per game worker) is what a thread-caching allocator is for. Never
+# linked into the library or the client — a `#[global_allocator]` is a
+# whole-program decision and belongs to whoever builds the program.
+mimalloc = { version = "0.1.52", optional = true, default-features = false }
+
 # Native-only transport deps: raw sockets don't exist on wasm32; the browser
 # client uses the WebSocket API via web-sys instead (see crabomination_client).
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
@@ -24,3 +32,9 @@ tungstenite = { version = "0.29.0", default-features = false, features = ["hands
 # .cargo/config.toml for the matching getrandom_backend rustflag).
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 getrandom = { version = "0.4", features = ["wasm_js"] }
+
+[features]
+# `cargo build --release -p crabomination --features mimalloc` swaps the
+# system allocator on `bot_ladder` / `bot_probe`. See PERF.md for the
+# measured effect before turning it on for a training run.
+mimalloc = ["dep:mimalloc"]

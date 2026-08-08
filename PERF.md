@@ -13,6 +13,12 @@ A number from a debug build describes `opt-level = 0`, not the code.
 # throughput — the committed configuration
 cargo run --release --bin bot_ladder -- --bench
 
+# allocator A/B (a feature change on the engine crate is a full rebuild, so
+# the variants need separate caches; /target-mi/ is gitignored)
+cargo build --release -p crabomination --bin bot_ladder
+CARGO_TARGET_DIR=target-mi cargo build --release -p crabomination \
+  --bin bot_ladder --features mimalloc
+
 # instruction-level profile (deterministic; no `perf` in the routine image)
 cargo build --profile profiling --bin bot_ladder
 RUST_MIN_STACK=33554432 valgrind --tool=callgrind --callgrind-out-file=cg.out \
@@ -58,6 +64,10 @@ bot_ladder --bench   release, rustc 1.95.0, 4-core VM, 3 worker threads
                      measured on an idle box (load average < 0.5)
 games                320
 games_per_s          11.80 / 11.82 / 11.79 / 11.97   (mean 11.85, spread 1.5 %)
+                     12.42 / 12.38 / 12.36 (mean 12.39) re-measured after the
+                     three missed `rand::random` sites moved onto GameRng —
+                     same box, same idleness; treat 12.39 as the system-alloc
+                     number to beat, 13.88 with `--features mimalloc`
 games_per_s_th       3.93 / 3.94 / 3.93 / 3.99
 decisions_per_s      7123 / 7139 / 7117 / 7231       (mean 7153)
 turns_per_game       26.98
@@ -86,6 +96,7 @@ is the number to compare against.
 | 2026-08-08 | Gate the layer gather's three graveyard tallies on a `dynamic_pt` being present; drop the O(n²) battlefield-membership test in the `AnthemForFilter` walk (`b17a76b`) | 10.36 games/s, 6253 dec/s | 11.25 games/s, 6791 dec/s | `--bench` ×3 each side; golden traces byte-identical, turns/game unchanged |
 | 2026-08-08 | Run the whole `RandomBot` tick inside one `with_frozen_layers` scope (`e919496`) | 11.25 games/s, 6791 dec/s | 12.22 games/s, 7381 dec/s | `--bench` ×3 each side; golden traces byte-identical, turns/game unchanged |
 | | **cumulative this run** | **10.36 games/s** | **12.22 games/s (+18.0 %)** | both ends measured post-build; on the settled box the same code reads 11.85 |
+| 2026-08-08 | Opt-in mimalloc `#[global_allocator]` on `bot_ladder` / `selfplay_train` (`--features mimalloc`) | 12.39 games/s, 7478 dec/s | 13.88 games/s, 8378 dec/s | `--bench` ×3 each side on an idle box (12.42/12.38/12.36 → 13.82/14.07/13.74); **+12.0 %**. Two separate release builds into `target/` and `target-mi/`, allocator the only difference. Peak RSS 25.3 → 39.0 MiB. turns/game 26.98 unchanged, stalls 0, all pairs still split. |
 
 ## Profile of record
 
@@ -145,9 +156,15 @@ goes thin or stale.
    path (partial mutation survives into the rest of the simulated line), so
    it needs a golden-trace update with a justification, or a variant that
    restores only on error paths a sim can actually hit.
-4. **Allocator swap.** malloc/free/consolidate/memcpy ≈ 16 % of
-   instructions. mimalloc or jemalloc behind an opt-in feature on the
-   binaries (never the library); measure with `--bench`.
+4. **Allocator swap — done, opt-in, not yet default.** mimalloc behind
+   `--features mimalloc` on `bot_ladder` and `selfplay_train` bought
+   +12.0 % (see the log row) for +14 MiB peak RSS at 3 worker threads.
+   Left opt-in rather than default because the RSS cost is per-thread-heap
+   and nobody has measured it at 16+ actors — do that, and if it holds,
+   make it the default for the ML binaries. jemalloc is unmeasured. Note
+   the two variants need separate target dirs (a feature change on the
+   engine crate forces a full 15–20 min rebuild); `/target-mi/` is
+   gitignored for this.
 5. **CowBox sharp edge audit.** Any `&mut` access — including a read-only
    `iter_mut` — deep-copies the zone while a snapshot shares it. 79
    `battlefield.iter_mut()` sites; the ones that matter are those running

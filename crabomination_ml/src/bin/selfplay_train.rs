@@ -41,6 +41,15 @@
 //! bottleneck by design — the learner spends most wall clock waiting,
 //! which is the sample-reuse cap doing its job.
 
+// Allocator swap, opt-in (`--features mimalloc`). The simulator spends ~16 %
+// of its instructions in malloc/free/memcpy and each actor is one thread
+// playing one game; `bot_ladder --bench` measured +12 % throughput for ~14
+// MiB more RSS. A `#[global_allocator]` is a whole-program choice, so it
+// lives in the binary.
+#[cfg(feature = "mimalloc")]
+#[global_allocator]
+static ALLOC: mimalloc::MiMalloc = mimalloc::MiMalloc;
+
 use std::path::PathBuf;
 use std::sync::Mutex;
 use std::sync::atomic::{AtomicU64, Ordering};

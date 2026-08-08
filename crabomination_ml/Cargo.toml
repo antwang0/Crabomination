@@ -13,9 +13,17 @@ candle-core = "0.11"
 candle-nn = "0.11"
 rand = "0.10.2"
 
+# Opt-in allocator, same swap `bot_ladder` measured (+12 % throughput on the
+# bench workload, ~14 MiB more RSS). Actors are one thread per game, which is
+# what a thread-caching allocator is built for.
+mimalloc = { version = "0.1.52", optional = true, default-features = false }
+
 [features]
 # `cargo build --release -p crabomination_ml --features cuda` puts the
 # learner on the GPU (Device::cuda_if_available in Trainer::new does the
 # runtime pick). Needs the CUDA toolkit installed (`pacman -S cuda`);
 # without the feature everything runs CPU exactly as before.
 cuda = ["candle-core/cuda", "candle-nn/cuda"]
+# Swap the system allocator on `selfplay_train`. See PERF.md for what it
+# bought on the ladder bench; re-measure before adopting it for a long run.
+mimalloc = ["dep:mimalloc"]
