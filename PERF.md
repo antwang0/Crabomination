@@ -239,11 +239,17 @@ per-clone collection copies moved the benchmark 0.1 %.
 
 Ordered by expected value. Each run pulls the top one, attaches numbers,
 and feeds what it finds back in. Re-profile and replenish when the list
-goes thin or stale. **Re-profile first** — the list below is derived from a
-profile taken *before* this run's fix removed 10.4 % of instructions, so the
-shares have all moved. The `.spliceable` fix removed a further ~30 % of
-wall-clock on top of that, and it sat *above* the layer system in the call
-tree, so the profile owes a re-take before item 1 is costed.
+goes thin or stale.
+
+**The re-profile is still owed.** Three separate fixes (the dispatcher pair,
+the affordance sweep, and this run's sim-loop freeze) have removed work from
+*different levels* of one call tree since the profile below was taken, so
+every share in "Profile of record" is stale and item 1 is uncosted. A run
+that starts here should build `--profile profiling --no-default-features`
+and take the callgrind pass *first* — budget ~25 min for the cold build on a
+4-core box, then 3 min for the run. This run tried and lost that build to a
+container restart; the numbers it did land came from reading the call tree
+by hand instead.
 
 0. **Audit the bot's other whole-sweep calls the same way.** The
    `.spliceable` win was not an algorithmic insight — it was one caller
@@ -256,8 +262,23 @@ tree, so the profile owes a re-take before item 1 is costed.
    aggregate that reads one field is the smell. `view.rs` is the only
    legitimate caller of `compute_hand_affordances` — it genuinely needs all
    40 categories for the client.
+   (c) ~~The sims' read-only helpers ran unfrozen~~ — **done, +5.0 %.** See
+   the Log row for `836059e2`. The generalisable rule it leaves behind:
+   **a freeze scope stops at a clone.** `LayerFreeze` clones as unfrozen on
+   purpose, so any helper called on a *cloned* state re-gathers per
+   `computed_permanent` even when its caller was frozen. Grep for
+   `&GameState` helpers reached from `simulate_*` / `sim_*` before assuming
+   the tick-level scope covers them.
+   (d) **Combat's whole-board reads** — `combat.rs` has 12
+   `compute_battlefield()` calls. `has_first_strikers` (2315) computes every
+   permanent to read the keywords of the 2-4 combat participants; the
+   banding pair (42, 304) is the same shape on a rarer path. The
+   first-strike one is called once per combat from `stack.rs:243`, so cost
+   it before spending on it. 404/418 and 2333/2354 genuinely want the whole
+   board — leave them.
 
-1. **Make `ComputedPermanent` cheap to build.** ~55 % of all allocations
+1. **Make `ComputedPermanent` cheap to build.** *(1(b) is written and
+   stashed as `cand1b-perm-memo` — see NEXT in TODO.md.)* ~55 % of all allocations
    come from `compute_permanent_pass` cloning five collections per
    permanent, most of which are byte-identical to the (immutable,
    `Arc`-shared) `CardDefinition` they came from. Two shapes:
@@ -282,6 +303,10 @@ tree, so the profile owes a re-take before item 1 is costed.
    "which sources carry a `GrantTriggeredAbility`" scan out of the per-card
    loop, the same shape as the layer-gather filter that won +27.8 %.
 3. **The gather is still #1 by self cost** (16.35 %, 22.17 % inclusive).
+   Shape confirmed by reading: each of the 39 passes is
+   `for &card in &sa_cards { let StaticEffect::X { .. } = sa.effect else { continue }; … }`,
+   so a presence summary needs a `StaticEffect` discriminant tag in
+   `crabomination_base` — that tag is the whole cost of this item.
    The filter landed last run cut the *number of cards* each of the 39
    static-ability passes walks; it did not cut the 39 walks. A pairs list
    (`Vec<(&CardInstance, &StaticAbility)>`) keeps push order and so keeps

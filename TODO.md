@@ -16,36 +16,29 @@ reference and want their own triage pass):
 
 ## NEXT (handoff — rewrite each run, keep under 15 lines)
 
-Branch `claude/modern_decks`. Fourth pass, no card work. `PERF.md` is the
-record. **Two routine sessions ran this branch concurrently on different
-boxes — rebase before pushing, and never compare absolutes across the two.**
+Branch `claude/modern_decks`. Fifth pass, no card work. `PERF.md` is the record.
 
-- **Perf, session A (+12.4 %)**: trigger dispatcher stops running
-  `compute_battlefield()` per card (+8.2 %) and hoists its grant scans out of
-  the per-permanent loop (+3.9 %).
-- **Perf, session B (+42.0 % fixed decks, +52.7 % sealed)**: `cast_candidates`
-  was calling `compute_hand_affordances` — ~40 categories of per-card dry-runs,
-  each a full state clone — to read one field, inside the attack sims. Now asks
-  `spliceable_hand_cards_on` against the probe it already had.
-- **Re-profile before pulling candidate 1.** The two sessions removed ~10 % and
-  ~30 % of wall-clock from *different levels* of the same call tree, so every
-  share in "Profile of record" is stale. Known-good facts that survive: the
-  24 % allocator share is the layer system (`compute_permanent_pass` ~55 % of
-  all allocations), not state cloning (`GameState::clone` 5 %); CoW-wrapping
-  per-clone collections is measured at 0.1 % and is closed — don't redo it.
-- **Next**: candidate 1(b), `computed_permanent_shared -> Arc<…>` memoized per
-  freeze scope. Candidate 0(a) (`available_mana` hoisted out of the per-hand-
-  card filter) was tried and reverted at +0.9 % — right shape, tiny constant
-  once the sweep above was gone. Two negative results are now logged; read the
-  Log before re-deriving either.
-- **Trackers**: TODO 782, roadmap 917, `PERF.md` ~285 — under target.
-  `ENGINE_BACKLOG` / `CARD_BACKLOG` / `SHIPPED` want a triage pass; a
-  title-based sweep of their "<set> — closed" sections is **not** safe.
-- **Bugs**: none pulled either session. Top filed item is still graveyard
-  targets dropped on the `ActivateAbility` path (`CARD_BACKLOG.md`) —
-  `check_target_legality` and the slot-0 filter both accept them, so the drop
-  is further in (target survives onto the stack; suspect resolution-time
-  rebinding). No repro yet.
+- **Perf, landed (+5.0 %)**: `836059e2` — the attack/block sims clone the
+  state and `LayerFreeze` clones *unfrozen*, so `pick_attacks`,
+  `sim_spell_action`, `decide_pending_policy` and `eval_material` re-gathered
+  the whole effect set per `computed_permanent`, once per sim-loop iteration.
+  12 alternated `release-fast` pairs; golden traces byte-identical.
+  **Rule this leaves: a freeze scope stops at a clone.**
+- **Next up**: PERF candidate 1(b), the per-freeze-scope
+  `Arc<ComputedPermanent>` memo — it compounds with the above, since more work
+  now runs inside a scope. It is ~30 lines: a
+  `perms: Vec<(CardId, Arc<ComputedPermanent>)>` on `LayerFreezeState` cleared
+  where `memo` is, and `computed_permanent` returning the `Arc`. `Arc` derefs,
+  so of ~187 call sites the only fixup is the explicit
+  `Option<ComputedPermanent>` annotation at `effects/eval.rs:3303`.
+- **Re-profile is still owed** — see the note atop "Perf candidates". Budget
+  the ~25 min cold `--profile profiling` build *first*; this run lost that
+  build to a container restart and picked its target by reading instead.
+- **Bugs**: the graveyard-target drop now has a real repro
+  (`classic_sets/mir.rs::hakim_takes_a_graveyard_aura_target_through_the_action_layer`).
+  Four read paths were ruled out by inspection — don't re-derive them, the
+  list is in the `CARD_BACKLOG.md` entry.
+- **Trackers**: TODO 787, roadmap 660 (compacted this run), `PERF.md` ~330.
 
 ## Environment note
 

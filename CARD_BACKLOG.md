@@ -30,6 +30,24 @@ priority in the current ML phase; this is where it waits.
   the effect consumes `StackItem::Trigger.target` — start at
   `continue_trigger_resolution_with_source` and the `Selector`/`Target` reads
   under it, not in `actions.rs`.
+  **Second read-only pass — four more paths ruled out. Don't re-derive these:**
+  (1) `check_target_legality_with_source` — a graveyard card misses
+  `battlefield_find` and takes the `else { … Ok(()) }` early return; only
+  `graveyard_cards_untargetable()` (Underworld Cerberus) rejects. Passes.
+  (2) the slot-0 `evaluate_requirement_static` gate in `activate_ability_inner`
+  — its `_` arm looks the card up in graveyards/exile/stack/library/hand
+  (`eval.rs:3285`), and both leaves of Hakim's / Iridescent Drake's filter
+  (`HasEnchantmentSubtype(Aura).and(InGraveyard)`) read fields that exist off
+  the battlefield. Passes.
+  (3) `ability_target_has_protection` — `computed_permanent` is `None` off the
+  battlefield, so it returns false. Passes.
+  (4) resolution — the CR 608.2b re-check calls the *same*
+  `evaluate_requirement_static`; `Selector::TargetFiltered` reads
+  `ctx.targets[slot]` verbatim; and `AttachAuraFromGraveyardTo` re-checks the
+  graveyard itself before moving the card.
+  A repro test now exists —
+  `classic_sets/mir.rs::hakim_takes_a_graveyard_aura_target_through_the_action_layer`
+  — drive the diagnosis from its actual failure, not from more reading.
 - **`MayPay` can't reach lands, so upkeep "pay {4}" riders need floated mana.**
   Purgatory's rent is unpayable unless the controller happens to have mana in
   the pool when the trigger resolves. The comment calls this deliberate ("mana
