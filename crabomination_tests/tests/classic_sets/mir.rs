@@ -1853,6 +1853,27 @@ fn hakim_wears_and_sheds_graveyard_auras() {
     assert!(g.battlefield_find(aura).is_none(), "Auras destroyed");
 }
 
+/// Repro for the filed "graveyard targets are dropped on the activated-ability
+/// path" bug: the same dress-up, driven through `GameAction::ActivateAbility`
+/// with the graveyard Aura as the slot-0 target.
+#[test]
+fn hakim_takes_a_graveyard_aura_target_through_the_action_layer() {
+    let mut g = two_player_game();
+    let hakim = ready(&mut g, 0, catalog::hakim_loreweaver());
+    let aura = g.add_card_to_graveyard(0, catalog::mind_harness());
+    // The ability is upkeep-only, on your turn, and only while Hakim is bare.
+    g.step = TurnStep::Upkeep;
+    g.active_player_idx = 0;
+    g.players[0].mana_pool.add(Color::Blue, 2);
+    activate(&mut g, hakim, 0, Some(Target::Permanent(aura))).expect("activate");
+    drain_stack(&mut g);
+    assert_eq!(
+        g.battlefield_find(aura).map(|c| c.attached_to),
+        Some(Some(hakim)),
+        "graveyard Aura target survived the action layer"
+    );
+}
+
 /// Purgatory pockets your dead creatures and rents one back per upkeep.
 #[test]
 fn purgatory_rents_back_the_dead() {
