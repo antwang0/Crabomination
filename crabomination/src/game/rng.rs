@@ -116,7 +116,6 @@ impl rand::TryRng for Draw<'_> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use rand::RngExt;
     use rand::seq::SliceRandom;
 
     #[test]

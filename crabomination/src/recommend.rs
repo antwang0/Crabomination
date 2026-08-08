@@ -1255,7 +1255,7 @@ fn play_one_game_traced(
     // caller's seed. Without this a mulligan re-randomized the deal and
     // the pair's two games diverged — which is also what broke the
     // antithetic pairing's variance reduction on exactly those games.
-    if let Some(r) = seeded.as_deref_mut() {
+    if let Some(r) = &mut seeded {
         g.rng.reseed(r.random());
     }
     g.start_mulligan_phase();

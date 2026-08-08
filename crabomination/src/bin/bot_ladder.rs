@@ -348,9 +348,14 @@ fn peak_rss_mib() -> Option<f64> {
 /// the hand-built archetypes (cube/sealed fields are seed-dependent in
 /// deck *content*, not just shuffles), a fixed seed, paired play, and a
 /// mirror of one profile against itself.
+///
+/// `gang` is `EvalWeights::default()` — the profile the bot actually
+/// plays, and therefore the one self-play training pays for. Benching
+/// `baseline` would measure a code path (no attack search, no combat
+/// sims, no gang-block search) that no real run takes.
 const BENCH_SEED: u64 = 20250808;
-const BENCH_GAMES: usize = 240;
-const BENCH_PROFILE: &str = "baseline";
+const BENCH_GAMES: usize = 80;
+const BENCH_PROFILE: &str = "gang";
 
 struct Args {
     a: Pilot,
@@ -692,6 +697,23 @@ fn main() {
         match peak_rss_mib() {
             Some(m) => println!("  peak_rss_mib   {m:.1}"),
             None => println!("  peak_rss_mib   n/a"),
+        }
+        // A self-mirror on a shared seed plays each pair twice with only
+        // the seat labels swapped, so every pair MUST split. A sweep means
+        // the two runs of one game diverged — a determinism bug, and one
+        // this harness gets to catch for free on every bench run.
+        if args.paired && args.a_name == args.b_name {
+            let sweeps = rows
+                .iter()
+                .flat_map(|r| r.pairs.iter())
+                .filter(|&&s| s != 0)
+                .count();
+            if sweeps == 0 {
+                println!("  determinism    ok (all pairs split)");
+            } else {
+                println!("  determinism    FAIL — {sweeps} of the mirrored pairs did not split");
+                std::process::exit(1);
+            }
         }
     }
 
