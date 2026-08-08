@@ -81,3 +81,47 @@ pub mod opt {
         Ok(Option::<String>::deserialize(de)?.map(super::intern))
     }
 }
+
+/// `Vec<&'static str>` sibling of this module, for name lists that live in
+/// cloned game state (`Player::spell_names_cast_this_turn`). Use as
+/// `#[serde(with = "crate::static_str_serde::vec", default)]`.
+pub mod vec {
+    use serde::de::Deserialize;
+    use serde::{Deserializer, Serializer};
+
+    pub fn serialize<S: Serializer>(v: &Vec<super::StaticStr>, ser: S) -> Result<S::Ok, S::Error> {
+        serde::Serialize::serialize(v, ser)
+    }
+
+    pub fn deserialize<'de, D: Deserializer<'de>>(
+        de: D,
+    ) -> Result<Vec<super::StaticStr>, D::Error> {
+        Ok(Vec::<String>::deserialize(de)?.into_iter().map(super::intern).collect())
+    }
+}
+
+/// `HashMap<&'static str, u32>` sibling of this module, for the per-name
+/// tallies that ride along in every `GameState` clone
+/// (`Player::spells_cast_by_name_this_game`, `GameState::cycled_count_by_name`).
+/// Use as `#[serde(with = "crate::static_str_serde::map_u32", default)]`.
+pub mod map_u32 {
+    use serde::de::Deserialize;
+    use serde::{Deserializer, Serializer};
+    use std::collections::HashMap;
+
+    pub fn serialize<S: Serializer>(
+        m: &HashMap<super::StaticStr, u32>,
+        ser: S,
+    ) -> Result<S::Ok, S::Error> {
+        serde::Serialize::serialize(m, ser)
+    }
+
+    pub fn deserialize<'de, D: Deserializer<'de>>(
+        de: D,
+    ) -> Result<HashMap<super::StaticStr, u32>, D::Error> {
+        Ok(HashMap::<String, u32>::deserialize(de)?
+            .into_iter()
+            .map(|(k, v)| (super::intern(k), v))
+            .collect())
+    }
+}

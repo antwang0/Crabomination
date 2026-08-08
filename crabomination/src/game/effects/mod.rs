@@ -2410,7 +2410,7 @@ impl GameState {
             return Ok(());
         }
         // Reveal the name most likely to matter: one an opponent already cast.
-        let cast_names: Vec<String> = (0..self.players.len())
+        let cast_names: Vec<&'static str> = (0..self.players.len())
             .filter(|o| !self.same_team(*o, p))
             .flat_map(|o| self.players[o].spell_names_cast_this_turn.clone())
             .collect();
@@ -2418,8 +2418,8 @@ impl GameState {
             .library
             .iter()
             .filter(|c| !c.definition.is_land())
-            .max_by_key(|c| cast_names.iter().filter(|n| *n == c.definition.name).count())
-            .map(|c| c.definition.name.to_string());
+            .max_by_key(|c| cast_names.iter().filter(|n| **n == c.definition.name).count())
+            .map(|c| c.definition.name);
         self.shuffle_library(p, events);
         let Some(name) = picked else { return Ok(()) };
         let n = self.evaluate_value(amount, ctx).max(0);
@@ -12485,8 +12485,8 @@ impl GameState {
                 // The cycled card must still be in its owner's graveyard.
                 let Some(card) = self.players[ctx.controller].graveyard.iter().find(|c| c.id == src)
                 else { return Ok(()) };
-                let name = card.definition.name.to_string();
-                let count = self.cycled_count_by_name.get(&name).copied().unwrap_or(0);
+                let name = card.definition.name;
+                let count = self.cycled_count_by_name.get(name).copied().unwrap_or(0);
                 let dest = if count >= *threshold {
                     ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false }
                 } else {

@@ -182,8 +182,12 @@ pub struct Player {
     /// this game" (Approach of the Second Sun). Bumped in `finalize_cast`
     /// with the cast card's printed name; never reset. Defaults empty for
     /// snapshot back-compat.
-    #[serde(default)]
-    pub spells_cast_by_name_this_game: std::collections::HashMap<String, u32>,
+    /// Keyed by the printed `&'static str` name, not an owned `String`: this
+    /// map is deep-cloned with every `GameState` clone (millions per bot
+    /// self-play game) and an owned key allocates per entry per clone.
+    #[serde(with = "crate::static_str_serde::map_u32", default)]
+    pub spells_cast_by_name_this_game:
+        std::collections::HashMap<crate::static_str_serde::StaticStr, u32>,
     /// Like `spells_cast_this_turn` but reset for every player at each
     /// turn's Cleanup (not just the player's own untap) — the CR-correct
     /// scope for Rule of Law's "each player can't cast more than one spell
@@ -745,8 +749,8 @@ pub struct Player {
     pub skip_turns: u32,
     /// Names of the spells this player has cast this turn (Grim Reminder).
     /// Cleared at untap.
-    #[serde(default)]
-    pub spell_names_cast_this_turn: Vec<String>,
+    #[serde(with = "crate::static_str_serde::vec", default)]
+    pub spell_names_cast_this_turn: Vec<crate::static_str_serde::StaticStr>,
     /// Card ids of the spells this player has cast this turn, in cast order —
     /// "the first instant spell … you've cast this turn" (Alania, Divergent
     /// Storm) resolves each id through `find_card_anywhere`. Cleared with

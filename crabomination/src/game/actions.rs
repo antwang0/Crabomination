@@ -7897,7 +7897,7 @@ impl GameState {
         // the same name").
         self.players[p]
             .spell_names_cast_this_turn
-            .push(card.definition.name.to_string());
+            .push(card.definition.name);
         self.players[p].spell_ids_cast_this_turn.push(card.id);
         // "First noncreature spell of a turn" tally (Nullstone Gargoyle). An
         // Adventure/Omen half cast is a noncreature spell regardless of the
@@ -7910,7 +7910,7 @@ impl GameState {
         *self
             .players[p]
             .spells_cast_by_name_this_game
-            .entry(card.definition.name.to_string())
+            .entry(card.definition.name)
             .or_insert(0) += 1;
         if from_hand {
             self.players[p].spells_cast_from_hand_this_turn += 1;

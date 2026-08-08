@@ -445,9 +445,11 @@ pub struct GameState {
     pub noncreature_spells_cast_this_turn: u32,
     /// CR 702.29 — per-game tally of how many times a card with each name has
     /// been cycled (Yidaro, Wandering Monster's "four or more times this game"
-    /// recursion). Keyed by card name; never reset. `#[serde(default)]`.
-    #[serde(default)]
-    pub cycled_count_by_name: std::collections::HashMap<String, u32>,
+    /// recursion). Keyed by the printed `&'static str` name (an owned key
+    /// would allocate per entry on every state clone); never reset.
+    #[serde(with = "crate::static_str_serde::map_u32", default)]
+    pub cycled_count_by_name:
+        std::collections::HashMap<crate::static_str_serde::StaticStr, u32>,
     /// CR 700.14 — running total of mana the active player has spent to
     /// cast spells this turn (Expend). Bumped in `finalize_cast` by each
     /// spell's `mana_spent`; reset at cleanup. `#[serde(default)]`.
@@ -13287,9 +13289,7 @@ impl GameState {
         // graveyard move, CardDiscarded, discard-matters counters, and the
         // Madness replacement, CR 702.35).
         let mut events = vec![];
-        let cycled_name = self
-            .find_card_anywhere(card_id)
-            .map(|c| c.definition.name.to_string());
+        let cycled_name = self.find_card_anywhere(card_id).map(|c| c.definition.name);
         if self.discard_card(seat, card_id, &mut events) {
             // CR 702.29c — emit the cycle-specific event in addition to
             // the discard event, so "When you cycle this card" triggers
