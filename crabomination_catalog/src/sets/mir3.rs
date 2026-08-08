@@ -1024,6 +1024,7 @@ pub fn circle_of_despair() -> CardDefinition {
                 gain_life: false,
                 redirect_to: None,
                 whole_turn: false,
+                exile_top_per_prevented: false,
             },
             ..Default::default()
         }],

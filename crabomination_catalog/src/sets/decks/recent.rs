@@ -11784,7 +11784,7 @@ pub fn gisa_glorious_resurrector() -> CardDefinition {
                 EventKind::StepBegins(crate::game::types::TurnStep::Upkeep),
                 EventScope::ActivePlayer,
             ),
-            effect: Effect::ReturnExiledBySourceToBattlefield { decayed: true },
+            effect: Effect::ReturnExiledBySourceToBattlefield { decayed: true, count: None },
         }],
         ..Default::default()
     }

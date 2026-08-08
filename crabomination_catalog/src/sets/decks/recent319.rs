@@ -913,7 +913,7 @@ pub fn synod_sanctum() -> CardDefinition {
             ActivatedAbility {
                 mana_cost: cost(&[generic(2)]),
                 sac_cost: true,
-                effect: Effect::ReturnExiledBySourceToBattlefield { decayed: false },
+                effect: Effect::ReturnExiledBySourceToBattlefield { decayed: false, count: None },
                 ..Default::default()
             },
         ],

@@ -54,6 +54,7 @@ pub fn charm_peddler() -> CardDefinition {
                 gain_life: false,
                 redirect_to: None,
                 whole_turn: false,
+                exile_top_per_prevented: false,
             },
             ..Default::default()
         },
@@ -75,6 +76,7 @@ pub fn cho_arrim_alchemist() -> CardDefinition {
                 gain_life: true,
                 redirect_to: None,
                 whole_turn: false,
+                exile_top_per_prevented: false,
             },
             ..Default::default()
         },
@@ -97,6 +99,7 @@ pub fn generals_regalia() -> CardDefinition {
                     Box::new(R::ControlledByYou),
                 ))),
                 whole_turn: false,
+                exile_top_per_prevented: false,
             },
             ..Default::default()
         }],

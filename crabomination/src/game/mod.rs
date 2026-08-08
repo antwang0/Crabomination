@@ -1387,6 +1387,10 @@ pub struct GameState {
     /// (CR 614.2, applied in `scale_damage_to`). Cleared at cleanup.
     #[serde(default)]
     pub(crate) doubled_damage_sources_this_turn: Vec<CardId>,
+    /// Kukemssa Pirates — creatures that assign no combat damage for the rest
+    /// of the turn (CR 510.1a). Cleared at cleanup.
+    #[serde(default)]
+    pub(crate) assigns_no_combat_damage_this_turn: Vec<CardId>,
     /// Distinct (controller, source) pairs that have dealt damage this turn.
     /// Powers `Predicate::SourcesYouControlledDealtDamageThisTurnAtLeast`
     /// (Case of the Burning Masks). Cleared at the turn boundary.
@@ -2114,6 +2118,7 @@ impl Clone for GameState {
             monarch_at_turn_start: self.monarch_at_turn_start,
             staggered_damage_players: self.staggered_damage_players.clone(),
             doubled_damage_sources_this_turn: self.doubled_damage_sources_this_turn.clone(),
+            assigns_no_combat_damage_this_turn: self.assigns_no_combat_damage_this_turn.clone(),
             damage_sources_this_turn: self.damage_sources_this_turn.clone(),
             creature_pw_cast_locks: self.creature_pw_cast_locks.clone(),
             damage_prevented_sources: self.damage_prevented_sources.clone(),
@@ -2440,6 +2445,7 @@ impl GameState {
             monarch_at_turn_start: None,
             staggered_damage_players: Vec::new(),
             doubled_damage_sources_this_turn: Vec::new(),
+            assigns_no_combat_damage_this_turn: Vec::new(),
             damage_sources_this_turn: Vec::new(),
             creature_pw_cast_locks: Vec::new(),
             damage_prevented_sources: Vec::new(),
@@ -5725,11 +5731,17 @@ impl GameState {
         {
             for c in &self.battlefield {
                 for sa in &c.definition.static_abilities {
-                    if let StaticEffect::AddDamageFromColorSpells { color, amount: bonus } =
-                        &sa.effect
-                        && spell_colors.contains(color)
-                    {
-                        amount = amount.saturating_add(*bonus);
+                    match &sa.effect {
+                        StaticEffect::AddDamageFromColorSpells { color, amount: bonus }
+                            if spell_colors.contains(color) =>
+                        {
+                            amount = amount.saturating_add(*bonus);
+                        }
+                        // Benevolent Unicorn — the shave twin, colour-blind.
+                        StaticEffect::ReduceSpellDamageBy { amount: shave } => {
+                            amount = amount.saturating_sub(*shave);
+                        }
+                        _ => {}
                     }
                 }
             }
@@ -20508,6 +20520,7 @@ fn static_effect_to_effects(
             | StaticEffect::NoncombatDamageToOpponentsBonus { .. }
             | StaticEffect::HalveDamageToYou
             | StaticEffect::ReduceDamageToYouBy(_)
+            | StaticEffect::ReduceSpellDamageBy { .. }
             | StaticEffect::ReduceColorDamageToYouBy { .. }
             | StaticEffect::ControllerMaxHandSizeReduced(_)
             | StaticEffect::ReduceDamageToYourCreaturesBy(_)

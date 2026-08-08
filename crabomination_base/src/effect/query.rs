@@ -524,6 +524,12 @@ impl Effect {
             Effect::ReduceEquipCost { .. }
             | Effect::SacrificeAtNextUpkeep { .. }
             | Effect::SacrificeAtNextEndStep { .. } => false,
+            Effect::ExileAtNextEndStep { what }
+            | Effect::AssignsNoCombatDamageThisTurn { what } => sel_has_target(what),
+            Effect::SacrificeSourceUnlessSacrificeTotalPower { .. } => false,
+            Effect::DiscardUnlessPutCardOnTop { who, then } => {
+                player_has_target(who) || then.requires_target()
+            }
             Effect::Unattach { what } => sel_has_target(what),
             Effect::SetSaddled { what } => sel_has_target(what),
             Effect::AtNextEndStep { body } | Effect::AtEndOfCombat { body } => {

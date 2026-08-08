@@ -1894,6 +1894,7 @@ pub fn petals_of_insight() -> CardDefinition {
         card_types: vec![CardType::Sorcery],
         subtypes: arcane(),
         effect: Effect::LookTopMayBottomAllElse {
+            who: None,
             count: Value::Const(3),
             then: Box::new(Effect::ReturnResolvingSpellToHand),
             else_: Box::new(Effect::Draw {

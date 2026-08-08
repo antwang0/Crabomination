@@ -2415,6 +2415,7 @@ pub fn beacon_of_destiny() -> CardDefinition {
                 gain_life: false,
                 redirect_to: Some(Selector::This),
                 whole_turn: false,
+                exile_top_per_prevented: false,
             },
             ..Default::default()
         }],

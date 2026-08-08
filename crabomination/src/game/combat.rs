@@ -2815,6 +2815,7 @@ impl GameState {
             if !blocker_filter(&bcp.keywords)
                 || bcp.keywords.contains(&Keyword::DealsNoCombatDamage)
                 || self.combat_damage_prevented_creatures.contains(&bid)
+                || self.assigns_no_combat_damage_this_turn.contains(&bid)
                 || self.combat_damage_prevented_for_dealer(bid)
                 || self.combat_damage_prevented_from(bid)
             {
@@ -3097,7 +3098,10 @@ impl GameState {
                         // Hallow, Awe Strike) is NOT short-circuited here: the
                         // damage still has to reach `apply_prevention_shields`
                         // so its life-gain / counter riders fire (CR 615.5).
-                        && !self.combat_damage_prevented_creatures.contains(&cp.id),
+                        && !self.combat_damage_prevented_creatures.contains(&cp.id)
+                        // Kukemssa Pirates — "assigns no combat damage this
+                        // turn" as the price of the stolen artifact.
+                        && !self.assigns_no_combat_damage_this_turn.contains(&cp.id),
                 })
             })
             .collect();

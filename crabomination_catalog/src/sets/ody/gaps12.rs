@@ -153,6 +153,7 @@ pub fn impulsive_maneuvers() -> CardDefinition {
                     what: Selector::TriggerSource,
                 }),
                 on_tails: Box::new(Effect::PreventNextEventFromChosenSourceAnywhere {
+                    reflect: false,
                     what: Some(Selector::TriggerSource),
                 }),
             },

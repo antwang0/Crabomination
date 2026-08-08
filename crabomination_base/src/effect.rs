@@ -4601,7 +4601,16 @@ pub enum Effect {
     /// "Look at the top `count` cards of your library. You may put those cards
     /// on the bottom in any order. If you do, `then`; otherwise `else_`."
     /// Petals of Insight. The controller is asked once for the whole batch.
-    LookTopMayBottomAllElse { count: Value, then: Box<Effect>, else_: Box<Effect> },
+    LookTopMayBottomAllElse {
+        /// Whose library is looked at. `None` = the controller's (the Petals
+        /// of Insight default); `Some` reads another seat's top — Coral
+        /// Fighters looks at the *defending player's* top card.
+        #[serde(default)]
+        who: Option<PlayerRef>,
+        count: Value,
+        then: Box<Effect>,
+        else_: Box<Effect>,
+    },
     /// "For each [filter], return it to its owner's hand unless that permanent's
     /// controller pays `cost`." Cut the Tethers — one pay-or-bounce decision per
     /// permanent, asked of its controller.
@@ -4635,6 +4644,25 @@ pub enum Effect {
     /// selector is resolved now; each hit gets its own CR 603.7a delayed
     /// trigger.
     SacrificeAtNextEndStep { what: Selector },
+    /// "Exile it at the beginning of the next end step" (Shallow Grave) — the
+    /// exile twin of [`Effect::SacrificeAtNextEndStep`]. The selector is
+    /// resolved now; each hit gets its own CR 603.7a delayed trigger.
+    ExileAtNextEndStep { what: Selector },
+    /// "Sacrifice this permanent unless you sacrifice any number of `filter`
+    /// with total power `total_power` or greater" (Phyrexian Dreadnought's
+    /// ETB). The controller picks the fodder (the source itself is never
+    /// eligible); an auto seat pays only when it can reach the bar without
+    /// spending more bodies than the source is worth, so it usually declines.
+    SacrificeSourceUnlessSacrificeTotalPower { filter: SelectionRequirement, total_power: Value },
+    /// "Target player discards a card unless they put a card from their hand
+    /// on top of their library. If that player discards a card this way,
+    /// `then`" (Tainted Specter). The victim chooses; an empty hand does
+    /// neither and `then` doesn't run.
+    DiscardUnlessPutCardOnTop { who: PlayerRef, then: Box<Effect> },
+    /// "This creature assigns no combat damage this turn" (Kukemssa Pirates'
+    /// price for the artifact). Flags each resolved permanent for the rest of
+    /// the turn; combat damage assignment skips it.
+    AssignsNoCombatDamageThisTurn { what: Selector },
     /// CR 603.7a — "At the beginning of your next upkeep, `body`." A general
     /// one-shot delayed trigger bound to the resolving source (Giant Slug,
     /// Hazezon Tamar).
@@ -7820,6 +7848,10 @@ pub enum Effect {
     ReturnExiledBySourceToBattlefield {
         #[serde(default)]
         decayed: bool,
+        /// "Return **a** card exiled with this enchantment" (Purgatory) — cap
+        /// the return at `count` cards instead of emptying the pile.
+        #[serde(default)]
+        count: Option<Value>,
     },
 
     /// Kianne, Dean of Substance — exile the top card of the controller's
@@ -8582,6 +8614,10 @@ pub enum Effect {
         /// (Oracle's Attendants).
         #[serde(default)]
         whole_turn: bool,
+        /// "Exile cards from the top of your library equal to the damage
+        /// prevented this way" (Bone Mask).
+        #[serde(default)]
+        exile_top_per_prevented: bool,
     },
     /// CR 615.7 — "Prevent the next `amount` damage that a source of your
     /// choice would deal to you and/or permanents you control this turn. If
@@ -8604,6 +8640,11 @@ pub enum Effect {
     PreventNextEventFromChosenSourceAnywhere {
         #[serde(default)]
         what: Option<Selector>,
+        /// CR 614.9 — "that damage is dealt to that source's controller
+        /// instead" (Reflect Damage). The shield redirects rather than
+        /// simply preventing.
+        #[serde(default)]
+        reflect: bool,
     },
     /// "Creatures `what` gain protection from the colors of `of` until
     /// `duration`" (Samite Elder). Reads the live colors of the permanent(s)

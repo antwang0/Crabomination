@@ -1385,3 +1385,402 @@ fn sirocco_bills_four_life_per_blue_instant() {
         assert_eq!(g.players[1].hand.len(), expect_hand, "pay={pay}");
     }
 }
+
+// ── Wave 5 ──────────────────────────────────────────────────────────────────
+
+/// Asmira counts every creature that hit your graveyard this turn, once per
+/// end step.
+#[test]
+fn asmira_counts_the_turns_dead() {
+    let mut g = two_player_game();
+    let asmira = ready(&mut g, 0, catalog::asmira_holy_avenger());
+    for _ in 0..2 {
+        let victim = ready(&mut g, 0, catalog::grizzly_bears());
+        g.destroy_permanent(victim, false, &mut Vec::new());
+    }
+    g.check_state_based_actions();
+    while g.step != TurnStep::End {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(asmira).unwrap().counter_count(CounterType::PlusOnePlusOne), 2);
+}
+
+/// Shauku can't attack while another creature is on the battlefield.
+#[test]
+fn shauku_attacks_only_alone() {
+    let mut g = two_player_game();
+    let shauku = ready(&mut g, 0, catalog::shauku_endbringer());
+    let other = ready(&mut g, 1, catalog::grizzly_bears());
+    g.step = TurnStep::DeclareAttackers;
+    assert!(
+        g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+            attacker: shauku,
+            target: AttackTarget::Player(1),
+        }]))
+        .is_err(),
+        "another creature is out"
+    );
+    g.destroy_permanent(other, false, &mut Vec::new());
+    g.check_state_based_actions();
+    g.step = TurnStep::DeclareAttackers;
+    assert!(
+        g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+            attacker: shauku,
+            target: AttackTarget::Player(1),
+        }]))
+        .is_ok(),
+        "alone on the board"
+    );
+}
+
+/// Shauku's tap exiles a creature and grows.
+#[test]
+fn shauku_eats_a_creature() {
+    let mut g = two_player_game();
+    let shauku = ready(&mut g, 0, catalog::shauku_endbringer());
+    let prey = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    activate(&mut g, shauku, 0, Some(Target::Permanent(prey))).expect("activate");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(prey).is_none(), "exiled");
+    assert_eq!(g.battlefield_find(shauku).unwrap().counter_count(CounterType::PlusOnePlusOne), 1);
+}
+
+/// Phyrexian Dreadnought sticks only when twelve power of creatures pays for
+/// it; otherwise it sacrifices itself.
+#[test]
+fn phyrexian_dreadnought_demands_twelve_power() {
+    // No fodder: it eats itself.
+    let mut g = two_player_game();
+    let spell = g.add_card_to_hand(0, catalog::phyrexian_dreadnought());
+    g.players[0].mana_pool.add_colorless(1);
+    cast(&mut g, spell, None).expect("cast");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(spell).is_none(), "no fodder, no Dreadnought");
+
+    // Twelve power of bears on board and the controller pays.
+    let mut g = two_player_game();
+    let fodder: Vec<CardId> =
+        (0..6).map(|_| g.add_card_to_battlefield(0, catalog::grizzly_bears())).collect();
+    let spell = g.add_card_to_hand(0, catalog::phyrexian_dreadnought());
+    g.players[0].mana_pool.add_colorless(1);
+    g.decider = Box::new(crabomination::decision::ScriptedDecider::new([
+        crabomination::decision::DecisionAnswer::Cards(fodder.clone()),
+    ]));
+    cast(&mut g, spell, None).expect("cast");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(spell).is_some(), "paid with 12 power");
+    assert!(fodder.iter().all(|f| g.battlefield_find(*f).is_none()), "fodder sacrificed");
+}
+
+/// Hivis keeps the Dragon only while it stays tapped.
+#[test]
+fn hivis_holds_a_dragon_while_tapped() {
+    let mut g = two_player_game();
+    let hivis = ready(&mut g, 0, catalog::hivis_of_the_scale());
+    let dragon = g.add_card_to_battlefield(1, catalog::volcanic_dragon());
+    activate(&mut g, hivis, 0, Some(Target::Permanent(dragon))).expect("activate");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(dragon).unwrap().controller, 0);
+    g.battlefield_find_mut(hivis).unwrap().tapped = false;
+    g.check_state_based_actions();
+    assert_eq!(g.battlefield_find(dragon).unwrap().controller, 1, "untapped, gave it back");
+}
+
+/// Amber Prison taps a permanent and holds it down while the Prison stays
+/// tapped.
+#[test]
+fn amber_prison_locks_while_tapped() {
+    let mut g = two_player_game();
+    let prison = ready(&mut g, 0, catalog::amber_prison());
+    let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.players[0].mana_pool.add_colorless(4);
+    activate(&mut g, prison, 0, Some(Target::Permanent(victim))).expect("activate");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(victim).unwrap().tapped);
+    assert_eq!(g.battlefield_find(victim).unwrap().untap_locked_by, Some(prison));
+}
+
+/// Bone Mask soaks a damage event and bills the top of your library for it.
+#[test]
+fn bone_mask_pays_with_library_cards() {
+    let mut g = two_player_game();
+    let mask = ready(&mut g, 0, catalog::bone_mask());
+    let bolt_src = g.add_card_to_battlefield(1, catalog::prodigal_sorcerer());
+    g.clear_sickness(bolt_src);
+    for _ in 0..5 {
+        g.add_card_to_library(0, catalog::grizzly_bears());
+    }
+    g.players[0].mana_pool.add_colorless(2);
+    activate(&mut g, mask, 0, None).expect("activate");
+    drain_stack(&mut g);
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: bolt_src,
+        ability_index: 0,
+        target: Some(Target::Player(0)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("ping");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, 20, "damage prevented");
+    assert_eq!(g.players[0].library.len(), 4, "one card exiled for the one point");
+}
+
+/// Ventifact Bottle banks charge counters and cashes them at your main phase.
+#[test]
+fn ventifact_bottle_cashes_charge_counters() {
+    let mut g = two_player_game();
+    let bottle = ready(&mut g, 0, catalog::ventifact_bottle());
+    g.players[0].mana_pool.add_colorless(4);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: bottle,
+        ability_index: 0,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: Some(3),
+    })
+    .expect("charge");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(bottle).unwrap().counter_count(CounterType::Charge), 3);
+    g.battlefield_find_mut(bottle).unwrap().tapped = false;
+    g.step = TurnStep::Upkeep;
+    while g.step != TurnStep::PreCombatMain {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bottle).unwrap().tapped);
+    assert_eq!(g.battlefield_find(bottle).unwrap().counter_count(CounterType::Charge), 0);
+    assert_eq!(g.players[0].mana_pool.total(), 3, "three colorless banked");
+}
+
+/// Benevolent Unicorn shaves a point off spell damage but leaves combat alone.
+#[test]
+fn benevolent_unicorn_shaves_spell_damage() {
+    let mut g = two_player_game();
+    ready(&mut g, 0, catalog::benevolent_unicorn());
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt,
+        target: Some(Target::Player(0)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("bolt");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, 18, "3 damage minus 1");
+}
+
+/// Prismatic Circle buys off damage from its named colour.
+#[test]
+fn prismatic_circle_shields_the_chosen_color() {
+    let mut g = two_player_game();
+    let circle = g.add_card_to_hand(0, catalog::prismatic_circle());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    cast(&mut g, circle, None).expect("cast");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(circle).unwrap().chosen_color.is_some(), "named a colour");
+}
+
+/// Roots of Life drips life when an opponent taps a land of the chosen type.
+#[test]
+fn roots_of_life_taxes_the_chosen_land_type() {
+    let mut g = two_player_game();
+    let roots = g.add_card_to_hand(0, catalog::roots_of_life());
+    g.players[0].mana_pool.add(Color::Green, 2);
+    g.players[0].mana_pool.add_colorless(1);
+    cast(&mut g, roots, None).expect("cast");
+    drain_stack(&mut g);
+    let chosen = g.battlefield_find(roots).unwrap().chosen_land_type.expect("chose a type");
+    let land = g.add_card_to_battlefield(1, catalog::plains());
+    let matches = g.battlefield_find(land).unwrap().definition.subtypes.land_types.contains(&chosen);
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: land,
+        ability_index: 0,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("tap for mana");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, if matches { 21 } else { 20 });
+}
+
+/// Mind Harness steals its host outright.
+#[test]
+fn mind_harness_steals_a_red_creature() {
+    let mut g = two_player_game();
+    let victim = g.add_card_to_battlefield(1, catalog::goblin_piker());
+    let aura = g.add_card_to_hand(0, catalog::mind_harness());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    cast(&mut g, aura, Some(Target::Permanent(victim))).expect("cast");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(victim).unwrap().controller, 0);
+}
+
+/// Consuming Ferocity kills its host on the third upkeep.
+#[test]
+fn consuming_ferocity_burns_its_host_out() {
+    let mut g = two_player_game();
+    let host = ready(&mut g, 0, catalog::grizzly_bears());
+    let aura = g.add_card_to_hand(0, catalog::consuming_ferocity());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    cast(&mut g, aura, Some(Target::Permanent(host))).expect("cast");
+    drain_stack(&mut g);
+    for _ in 0..3 {
+        g.step = TurnStep::Untap;
+        g.perform_action(GameAction::PassPriority).ok();
+        while g.step != TurnStep::Upkeep {
+            g.perform_action(GameAction::PassPriority).expect("pass");
+        }
+        drain_stack(&mut g);
+        g.check_state_based_actions();
+        if g.battlefield_find(host).is_none() {
+            break;
+        }
+        g.step = TurnStep::PreCombatMain;
+    }
+    assert!(g.battlefield_find(host).is_none(), "three counters, then dead");
+    assert!(g.players[0].life < 20, "it burned its controller on the way out");
+}
+
+/// Dream Cache draws three and puts two back.
+#[test]
+fn dream_cache_draws_three_returns_two() {
+    for (mode, top) in [(0usize, true), (1, false)] {
+        let mut g = two_player_game();
+        for _ in 0..5 {
+            g.add_card_to_library(0, catalog::grizzly_bears());
+        }
+        let spell = g.add_card_to_hand(0, catalog::dream_cache());
+        g.players[0].mana_pool.add(Color::Blue, 1);
+        g.players[0].mana_pool.add_colorless(2);
+        g.step = TurnStep::PreCombatMain;
+        g.perform_action(GameAction::CastSpell {
+            card_id: spell,
+            target: None,
+            additional_targets: vec![],
+            mode: Some(mode),
+            x_value: None,
+        })
+        .expect("cast");
+        drain_stack(&mut g);
+        assert_eq!(g.players[0].hand.len(), 1, "drew 3, put 2 back (mode {mode})");
+        assert_eq!(g.players[0].library.len(), 4);
+        let _ = top;
+    }
+}
+
+/// Sealed Fate exiles one of the top X of an opponent's library.
+#[test]
+fn sealed_fate_plucks_from_the_top() {
+    let mut g = two_player_game();
+    for _ in 0..5 {
+        g.add_card_to_library(1, catalog::grizzly_bears());
+    }
+    let spell = g.add_card_to_hand(0, catalog::sealed_fate());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.step = TurnStep::PreCombatMain;
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell,
+        target: Some(Target::Player(1)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: Some(3),
+    })
+    .expect("cast");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].library.len(), 4);
+    assert_eq!(g.exile.len(), 1);
+}
+
+/// Shallow Grave reanimates the freshest corpse with haste, then exiles it.
+#[test]
+fn shallow_grave_lends_a_corpse_for_one_turn() {
+    let mut g = two_player_game();
+    g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let spell = g.add_card_to_hand(0, catalog::shallow_grave());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    cast(&mut g, spell, None).expect("cast");
+    drain_stack(&mut g);
+    let bear = g
+        .battlefield
+        .iter()
+        .find(|c| c.definition.name == "Grizzly Bears")
+        .expect("reanimated")
+        .id;
+    assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Haste));
+    while g.step != TurnStep::End {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_none(), "exiled at the end step");
+}
+
+/// Polymorph kills a creature and digs its controller a replacement.
+#[test]
+fn polymorph_swaps_a_creature_for_the_next_one_down() {
+    let mut g = two_player_game();
+    let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.add_card_to_library(1, catalog::lightning_bolt());
+    g.add_card_to_library(1, catalog::volcanic_dragon());
+    let spell = g.add_card_to_hand(0, catalog::polymorph());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    cast(&mut g, spell, Some(Target::Permanent(victim))).expect("cast");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(victim).is_none());
+    assert!(
+        g.battlefield.iter().any(|c| c.definition.name == "Volcanic Dragon" && c.controller == 1),
+        "revealed down to a creature"
+    );
+}
+
+/// Aleatory can only be cast after blockers are declared.
+#[test]
+fn aleatory_waits_for_blockers() {
+    let mut g = two_player_game();
+    let target = ready(&mut g, 0, catalog::grizzly_bears());
+    let spell = g.add_card_to_hand(0, catalog::aleatory());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    assert!(cast(&mut g, spell, Some(Target::Permanent(target))).is_err(), "main phase is too early");
+}
+
+/// Kukemssa Pirates buys an artifact with its combat damage.
+#[test]
+fn kukemssa_pirates_trade_damage_for_an_artifact() {
+    let mut g = two_player_game();
+    let pirates = ready(&mut g, 0, catalog::kukemssa_pirates());
+    let loot = g.add_card_to_battlefield(1, catalog::bone_mask());
+    g.decider = Box::new(crabomination::decision::ScriptedDecider::new([
+        crabomination::decision::DecisionAnswer::Bool(true),
+    ]));
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: pirates,
+        target: AttackTarget::Player(1),
+    }]))
+    .expect("attack");
+    while g.step != TurnStep::CombatDamage {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+        drain_stack(&mut g);
+    }
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(loot).unwrap().controller, 0, "stole the artifact");
+    assert_eq!(g.players[1].life, 20, "and assigned no combat damage");
+}

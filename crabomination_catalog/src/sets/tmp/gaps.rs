@@ -104,7 +104,7 @@ pub fn cold_storage() -> CardDefinition {
             },
             ActivatedAbility {
                 sac_cost: true,
-                effect: Effect::ReturnExiledBySourceToBattlefield { decayed: false },
+                effect: Effect::ReturnExiledBySourceToBattlefield { decayed: false, count: None },
                 ..Default::default()
             },
         ],

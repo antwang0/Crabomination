@@ -1837,7 +1837,7 @@ pub fn martyrs_cause() -> CardDefinition {
         card_types: vec![CardType::Enchantment],
         activated_abilities: vec![ActivatedAbility {
             sac_other_filter: Some((R::Creature, 1)),
-            effect: Effect::PreventNextEventFromChosenSourceAnywhere { what: None },
+            effect: Effect::PreventNextEventFromChosenSourceAnywhere { what: None, reflect: false },
             ..Default::default()
         }],
         ..Default::default()

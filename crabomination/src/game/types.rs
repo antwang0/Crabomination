@@ -1813,6 +1813,10 @@ pub struct PreventionShield {
     /// dealt to this seat instead (Acolyte's Reward aimed at a player).
     #[serde(default)]
     pub redirect_to_player: Option<usize>,
+    /// Bone Mask — "exile cards from the top of your library equal to the
+    /// damage prevented this way". The seat whose library pays the toll.
+    #[serde(default)]
+    pub exile_top_for: Option<usize>,
 }
 
 /// CR 615.7 — a turn-long shield around one chosen damage *source*

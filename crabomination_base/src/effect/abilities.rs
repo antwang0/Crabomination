@@ -1310,6 +1310,10 @@ pub enum StaticEffect {
     /// (Urza's Armor). Applied per damage event to the static controller's own
     /// life total, after the additive bonuses and before the doublers.
     ReduceDamageToYouBy(u32),
+    /// "If a spell would deal damage to a permanent or player, it deals that
+    /// much damage minus `amount` instead" (Benevolent Unicorn). A global
+    /// shave on *spell* damage only, applied to every recipient.
+    ReduceSpellDamageBy { amount: u32 },
     /// "If a [colour] source would deal damage to you, prevent `amount` of
     /// that damage" (the Odyssey Sphere cycle). The colour-scoped sibling of
     /// `ReduceDamageToYouBy`.

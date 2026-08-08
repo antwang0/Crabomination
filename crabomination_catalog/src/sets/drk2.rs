@@ -522,7 +522,7 @@ pub fn safe_haven() -> CardDefinition {
     CardDefinition {
         triggered_abilities: vec![upkeep(Effect::MaySacrificeSource {
             description: "Sacrifice Safe Haven to return the exiled creatures?".into(),
-            then: Box::new(Effect::ReturnExiledBySourceToBattlefield { decayed: false }),
+            then: Box::new(Effect::ReturnExiledBySourceToBattlefield { decayed: false, count: None }),
             else_: None,
         })],
         ..land(

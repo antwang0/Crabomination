@@ -242,6 +242,7 @@ pub fn oracles_attendants() -> CardDefinition {
                 to: Some(target_filtered(R::Creature)),
                 redirect_to: Some(Selector::This),
                 whole_turn: true,
+                exile_top_per_prevented: false,
                 reflect: false,
                 gain_life: false,
             },

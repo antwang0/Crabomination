@@ -360,6 +360,7 @@ pub fn invulnerability() -> CardDefinition {
                 gain_life: false,
                 redirect_to: None,
                 whole_turn: false,
+                exile_top_per_prevented: false,
             },
         ),
         cost(&[generic(3)]),

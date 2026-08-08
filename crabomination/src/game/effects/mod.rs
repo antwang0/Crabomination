@@ -380,8 +380,115 @@ impl GameState {
     /// Petals of Insight — look at the top `count`, then either bottom the
     /// whole batch and run `then`, or leave them and run `else_`.
     #[inline(never)]
+    /// Phyrexian Dreadnought — "sacrifice this unless you sacrifice any number
+    /// of `filter` with total power `total_power` or greater." The source is
+    /// never eligible fodder (CR 701.17a — it is what's being spared).
+    fn run_sacrifice_unless_total_power(
+        &mut self,
+        filter: &SelectionRequirement,
+        total_power: &crate::effect::Value,
+        ctx: &EffectContext,
+        events: &mut Vec<GameEvent>,
+        effect: &Effect,
+    ) -> Result<(), GameError> {
+        let Some(src) = ctx.source else { return Ok(()) };
+        let need = self.evaluate_value(total_power, ctx).max(0) as i32;
+        let p = ctx.controller;
+        let pool: Vec<(CardId, String)> = self
+            .battlefield
+            .iter()
+            .filter(|c| c.id != src && c.controller == p)
+            .filter(|c| {
+                self.evaluate_requirement_static(
+                    filter,
+                    &crate::game::types::Target::Permanent(c.id),
+                    p,
+                    ctx.source,
+                )
+            })
+            .map(|c| (c.id, c.definition.name.to_string()))
+            .collect();
+        let reachable: i32 =
+            pool.iter().filter_map(|(id, _)| self.computed_permanent(*id)).map(|c| c.power).sum();
+        let picks = if reachable < need {
+            Vec::new()
+        } else {
+            let max = pool.len() as u32;
+            self.ask_seat_cards(
+                p,
+                format!("Sacrifice creatures with total power {need} or greater?"),
+                src,
+                pool,
+                0,
+                max,
+                effect,
+            )
+            .unwrap_or_default()
+        };
+        let paid: i32 =
+            picks.iter().filter_map(|id| self.computed_permanent(*id)).map(|c| c.power).sum();
+        if paid >= need && !picks.is_empty() {
+            for id in picks {
+                self.sacrifice_one(id, p, events);
+            }
+        } else {
+            self.sacrifice_one(src, p, events);
+        }
+        Ok(())
+    }
+
+    /// Tainted Specter — "target player discards a card unless they put a card
+    /// from their hand on top of their library." An empty hand does neither.
+    fn run_discard_unless_put_on_top(
+        &mut self,
+        who: &PlayerRef,
+        then: &Effect,
+        ctx: &EffectContext,
+        events: &mut Vec<GameEvent>,
+        effect: &Effect,
+    ) -> Result<(), GameError> {
+        let Some(victim) = self.resolve_player(who, ctx) else { return Ok(()) };
+        if self.players[victim].hand.is_empty() {
+            return Ok(());
+        }
+        let src = ctx.source.unwrap_or(CardId(0));
+        let mut cursor = 0;
+        let stack_it = self
+            .ask_seat_bool(
+                &mut cursor,
+                victim,
+                "Put a card from your hand on top of your library instead of discarding?".into(),
+                src,
+                effect,
+            )
+            .unwrap_or(false);
+        self.clear_answer_log();
+        if stack_it {
+            self.run_effect(
+                &Effect::PutCardFromHandOnTopOfLibrary {
+                    who: crate::effect::Selector::Player(PlayerRef::Seat(victim)),
+                },
+                ctx,
+                events,
+            )?;
+            return Ok(());
+        }
+        self.run_effect(
+            &Effect::Discard {
+                who: crate::effect::Selector::Player(PlayerRef::Seat(victim)),
+                amount: crate::effect::Value::Const(1),
+                random: false,
+            },
+            ctx,
+            events,
+        )?;
+        self.run_effect(then, ctx, events)
+    }
+
+    #[allow(clippy::too_many_arguments)]
     fn run_look_top_may_bottom_all(
         &mut self,
+        who: Option<&crate::effect::PlayerRef>,
         count: &crate::effect::Value,
         then: &Effect,
         else_: &Effect,
@@ -390,13 +497,22 @@ impl GameState {
         effect: &Effect,
     ) -> Result<(), GameError> {
         let n = self.evaluate_value(count, ctx).max(0) as usize;
+        // The looked-at library; the *decision* always belongs to the
+        // effect's controller (Coral Fighters peeks at the defender's top).
+        let lib = match who {
+            None => ctx.controller,
+            Some(pr) => match self.resolve_player(pr, ctx) {
+                Some(p) => p,
+                None => return Ok(()),
+            },
+        };
         let p = ctx.controller;
         let source = ctx.source.unwrap_or(CardId(0));
         let mut cursor = 0;
         let Some(bottom) = self.ask_seat_bool(
             &mut cursor,
             p,
-            "Put those cards on the bottom of your library?".into(),
+            "Put those cards on the bottom of the library?".into(),
             source,
             effect,
         ) else {
@@ -405,11 +521,11 @@ impl GameState {
         self.clear_answer_log();
         if bottom {
             let moved: Vec<CardId> =
-                self.players[p].library.iter().take(n).map(|c| c.id).collect();
+                self.players[lib].library.iter().take(n).map(|c| c.id).collect();
             for id in moved {
-                if let Some(pos) = self.players[p].library.iter().position(|c| c.id == id) {
-                    let card = self.players[p].library.remove(pos);
-                    self.players[p].library.push(card);
+                if let Some(pos) = self.players[lib].library.iter().position(|c| c.id == id) {
+                    let card = self.players[lib].library.remove(pos);
+                    self.players[lib].library.push(card);
                 }
             }
             self.run_effect(then, ctx, events)
@@ -14088,6 +14204,10 @@ impl GameState {
                     let dest = ZoneDest::Battlefield { controller: PlayerRef::Seat(seat), tapped: false };
                     let ret_ctx = EffectContext::for_ability(id, seat, None);
                     self.move_card_to(id, &dest, &ret_ctx, events);
+                    // Chainable: a follow-up `GrantKeyword(LastMoved)` /
+                    // `ExileAtNextEndStep(LastMoved)` in the same Seq sees the
+                    // reanimated creature (Shallow Grave).
+                    self.last_moved_cards.push(id);
                 }
                 Ok(())
             }
@@ -23896,14 +24016,20 @@ impl GameState {
                 Ok(())
             }
 
-            Effect::ReturnExiledBySourceToBattlefield { decayed } => {
+            Effect::ReturnExiledBySourceToBattlefield { decayed, count } => {
                 let Some(src) = ctx.source else { return Ok(()) };
-                let ids: Vec<crate::card::CardId> = self
+                let mut ids: Vec<crate::card::CardId> = self
                     .exile
                     .iter()
                     .filter(|c| c.exiled_with == Some(src) && c.definition.is_creature())
                     .map(|c| c.id)
                     .collect();
+                // "Return **a** card exiled with this" — Purgatory takes one,
+                // the uncapped form empties the pile.
+                if let Some(cap) = count {
+                    let cap = self.evaluate_value(cap, ctx).max(0) as usize;
+                    ids.truncate(cap);
+                }
                 for id in ids {
                     self.move_card_to(
                         id,
@@ -29182,6 +29308,7 @@ impl GameState {
                 gain_life,
                 redirect_to,
                 whole_turn,
+                exile_top_per_prevented,
             } => {
                 // CR 615.7 — Circle of Protection: a one-event shield around
                 // the controller, restricted to the chosen source. With
@@ -29239,6 +29366,7 @@ impl GameState {
                         redirect_to_player: redirect_player,
                         source_controller: src_ctrl,
                         source_color: shield_color,
+                        exile_top_for: exile_top_per_prevented.then_some(ctx.controller),
                         ..Default::default()
                     });
                 }
@@ -30040,7 +30168,7 @@ impl GameState {
                 Ok(())
             }
 
-            Effect::PreventNextEventFromChosenSourceAnywhere { what } => {
+            Effect::PreventNextEventFromChosenSourceAnywhere { what, reflect } => {
                 // CR 615.7 — Martyr's Cause. One floating shield keyed to the
                 // chosen source; the first damage event it deals to anything is
                 // soaked whole.
@@ -30055,11 +30183,29 @@ impl GameState {
                     ),
                 };
                 let Some(chosen) = chosen else { return Ok(()) };
+                // Reflect Damage — stamp the source's controller now; by damage
+                // time a resolving spell sits in no visible zone.
+                let src_ctrl = reflect
+                    .then(|| {
+                        self.battlefield_find(chosen).map(|c| c.controller).or_else(|| {
+                            self.stack.iter().find_map(|si| match si {
+                                crate::game::StackItem::Spell { card, caster, .. }
+                                    if card.id == chosen =>
+                                {
+                                    Some(*caster)
+                                }
+                                _ => None,
+                            })
+                        })
+                    })
+                    .flatten();
                 self.prevention_shields.push(crate::game::types::PreventionShield {
                     target: crate::game::types::PreventionTarget::Anything,
                     remaining: None,
                     source: Some(chosen),
                     one_event: true,
+                    reflect: *reflect,
+                    source_controller: src_ctrl,
                     ..Default::default()
                 });
                 Ok(())
@@ -31011,8 +31157,16 @@ impl GameState {
                 Ok(())
             }
 
-            Effect::LookTopMayBottomAllElse { count, then, else_ } => {
-                self.run_look_top_may_bottom_all(count, then, else_, ctx, events, effect)
+            Effect::LookTopMayBottomAllElse { who, count, then, else_ } => {
+                self.run_look_top_may_bottom_all(
+                    who.as_ref(),
+                    count,
+                    then,
+                    else_,
+                    ctx,
+                    events,
+                    effect,
+                )
             }
 
             Effect::ReturnEachUnlessPays { filter, cost } => {
@@ -31259,6 +31413,41 @@ impl GameState {
                         fires_once: true,
                         expires_after_turn: None,
                     });
+                }
+                Ok(())
+            }
+
+            Effect::ExileAtNextEndStep { what } => {
+                for ent in self.resolve_selector(what, ctx) {
+                    let Some(id) = ent.as_permanent_id() else { continue };
+                    self.delayed_triggers.push(crate::game::types::DelayedTrigger {
+                        controller: ctx.controller,
+                        source: id,
+                        kind: crate::game::types::DelayedKind::NextEndStep,
+                        effect: Effect::Exile { what: crate::effect::Selector::This },
+                        target: None,
+                        bound_token: None,
+                        bound_subject: None,
+                        fires_once: true,
+                        expires_after_turn: None,
+                    });
+                }
+                Ok(())
+            }
+
+            Effect::SacrificeSourceUnlessSacrificeTotalPower { filter, total_power } => {
+                self.run_sacrifice_unless_total_power(filter, total_power, ctx, events, effect)
+            }
+
+            Effect::DiscardUnlessPutCardOnTop { who, then } => {
+                self.run_discard_unless_put_on_top(who, then, ctx, events, effect)
+            }
+
+            Effect::AssignsNoCombatDamageThisTurn { what } => {
+                for ent in self.resolve_selector(what, ctx) {
+                    if let Some(id) = ent.as_permanent_id() {
+                        self.assigns_no_combat_damage_this_turn.push(id);
+                    }
                 }
                 Ok(())
             }

@@ -2114,6 +2114,10 @@ pub enum SelectionRequirement {
     /// entered (`CardInstance.chosen_color` — Story Circle's Circle-of-
     /// Protection shield). False when the source never chose one.
     HasChosenColorOfSource,
+    /// The candidate land has the basic land type the source permanent chose
+    /// as it entered (`CardInstance.chosen_land_type` — Roots of Life). False
+    /// when the source never chose one.
+    HasChosenLandTypeOfSource,
     /// CR 702.113 — the card has an Awaken alternative cost (Halimar Tidecaller).
     HasAwaken,
     /// True for a land that is **not** basic (CR 305.6) — i.e. a land card

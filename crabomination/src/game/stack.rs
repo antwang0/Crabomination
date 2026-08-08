@@ -3757,6 +3757,7 @@ impl GameState {
         self.artifact_damage_to_players_this_turn.clear();
         self.combat_damage_redirect_this_turn.clear();
         self.doubled_damage_sources_this_turn.clear();
+        self.assigns_no_combat_damage_this_turn.clear();
         self.damage_sources_this_turn.clear();
         self.noncombat_damage_bonus_this_turn.clear();
         // Desperate Gambit's unspent doubler expires with the turn.

@@ -360,6 +360,7 @@ pub fn greater_realm_of_preservation() -> CardDefinition {
                 gain_life: false,
                 redirect_to: None,
                 whole_turn: false,
+                exile_top_per_prevented: false,
             },
             ..Default::default()
         }],
@@ -675,6 +676,7 @@ pub fn nova_pentacle() -> CardDefinition {
                     filter: R::Creature.and(R::ControlledByOpponent),
                 }),
                 whole_turn: false,
+                exile_top_per_prevented: false,
             },
             ..Default::default()
         }],

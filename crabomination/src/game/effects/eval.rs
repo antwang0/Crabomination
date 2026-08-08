@@ -4083,6 +4083,11 @@ impl GameState {
                         .and_then(|sid| self.find_card_anywhere(sid))
                         .and_then(|src| src.chosen_color)
                         .is_some_and(|color| card.definition.printed_colors().contains(&color)),
+                    // Roots of Life — "a land of the chosen type".
+                    R::HasChosenLandTypeOfSource => source
+                        .and_then(|sid| self.find_card_anywhere(sid))
+                        .and_then(|src| src.chosen_land_type)
+                        .is_some_and(|lt| card.definition.subtypes.land_types.contains(&lt)),
                     // Mourner's Shield — "shares a color with the exiled card".
                     R::SharesColorWithExiledBySource => source.is_some_and(|sid| {
                         self.exile
@@ -4346,6 +4351,7 @@ impl GameState {
             // Need the ability's source or the live trigger context, which
             // only the static walker carries.
             R::HasChosenColorOfSource
+            | R::HasChosenLandTypeOfSource
             | R::SharesColorWithExiledBySource
             | R::SameNameAsExiledWithSource
             | R::SharesColorWithAttachedHost

@@ -49131,6 +49131,7 @@ fn circle_of_protection(name: &'static str, color: Color) -> CardDefinition {
                 gain_life: false,
                 redirect_to: None,
                 whole_turn: false,
+                exile_top_per_prevented: false,
             },
             ..Default::default()
         }],
@@ -60266,6 +60267,7 @@ pub fn deflecting_palm() -> CardDefinition {
             gain_life: false,
             redirect_to: None,
             whole_turn: false,
+                exile_top_per_prevented: false,
         },
         ..Default::default()
     }

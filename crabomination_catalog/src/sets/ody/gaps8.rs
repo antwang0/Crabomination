@@ -187,6 +187,7 @@ fn pilgrim(name: &'static str, color: Color) -> CardDefinition {
                 gain_life: false,
                 redirect_to: None,
                 whole_turn: false,
+                exile_top_per_prevented: false,
             },
             ..Default::default()
         }],

@@ -913,6 +913,7 @@ pub fn honorable_passage() -> CardDefinition {
             gain_life: false,
             redirect_to: None,
             whole_turn: false,
+                exile_top_per_prevented: false,
         },
     )
 }
@@ -1044,6 +1045,7 @@ pub fn zhalfirin_crusader() -> CardDefinition {
                 gain_life: false,
                 redirect_to: Some(target_any()),
                 whole_turn: false,
+                exile_top_per_prevented: false,
             },
             ..Default::default()
         }],
@@ -1587,6 +1589,7 @@ pub fn righteous_aura() -> CardDefinition {
                 gain_life: false,
                 redirect_to: None,
                 whole_turn: false,
+                exile_top_per_prevented: false,
             },
             ..Default::default()
         }],

@@ -576,6 +576,7 @@ impl GameState {
         let mut spent_one_event: Vec<usize> = Vec::new();
         // Ria Ivor — (seat, prevented) mite mints owed after the loop.
         let mut mite_mints: Vec<(usize, u32)> = Vec::new();
+        let mut exile_tolls: Vec<(usize, u32)> = Vec::new();
         let mut counters_for_target: u32 = 0;
         // Kill-Suit Cultist — the permanent to destroy after the shield pass
         // when a `destroy` shield soaks this event.
@@ -622,6 +623,9 @@ impl GameState {
             if soak > 0 && shield.counters_on_target {
                 counters_for_target += soak;
             }
+            if soak > 0 && let Some(seat) = shield.exile_top_for {
+                exile_tolls.push((seat, soak));
+            }
             prevented += soak;
             if shield.gain_life {
                 life_gain += soak;
@@ -666,6 +670,16 @@ impl GameState {
             let applied = self.adjust_life_applied(p, life_gain as i32);
             if applied > 0 {
                 events.push(GameEvent::LifeGained { player: p, amount: applied as u32 });
+            }
+        }
+        // Bone Mask — exile one card off the top per point the shield ate.
+        for (seat, n) in exile_tolls {
+            for _ in 0..n {
+                if self.players[seat].library.is_empty() {
+                    break;
+                }
+                let card = self.players[seat].library.remove(0);
+                self.place_card_in_dest(card, seat, &ZoneDest::Exile, events);
             }
         }
         // Ria Ivor — one Phyrexian Mite per point of damage the shield ate.
