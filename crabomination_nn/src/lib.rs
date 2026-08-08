@@ -1174,6 +1174,25 @@ impl PlayNet {
     }
 }
 
+/// Anything that can turn an encoded state into a win probability.
+///
+/// The engine's evaluation registry (`net_eval`) stores these rather than
+/// [`PlayNet`] directly so the *training harness* can substitute a batched
+/// GPU evaluator (encode on the game thread, ship the state to a collator,
+/// block on the reply) without the engine growing an ML dependency. Takes
+/// the state by value because a remote implementation has to move it into
+/// a queue; the local one just forwards.
+pub trait NetEvaluator: Send + Sync {
+    /// Win probability for the seat the state was encoded for, in [0, 1].
+    fn eval(&self, s: EncodedState) -> f32;
+}
+
+impl NetEvaluator for PlayNet {
+    fn eval(&self, s: EncodedState) -> f32 {
+        self.forward(&s)
+    }
+}
+
 /// Build a safetensors byte buffer from named f32 tensors — the writer half
 /// of [`PlayNet::load`], used by tests and by any tool that wants to emit
 /// weights without pulling in an ML framework.

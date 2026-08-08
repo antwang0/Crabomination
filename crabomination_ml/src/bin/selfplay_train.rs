@@ -19,6 +19,7 @@
 //!                [--window N] [--min-window N]
 //!                [--checkpoint-every N] [--out DIR] [--seed N]
 //!                [--use-best WEIGHTS.safetensors] [--seed-emb DECK.safetensors]
+//!                [--gpu-eval] [--eval-batch N] [--eval-flush-us N]
 //!                [--stop-after-stale N] [--relabel-mode full|new]
 //!                [--attn] [--blocks N] [--aux] [--ablate lib,cast,rel]
 //!                [--emb-dim N] [--obj-hidden N] [--h1 N] [--h2 N]
@@ -97,6 +98,15 @@ struct Args {
     /// this is what closes the self-improvement loop. Unset, actors play
     /// the heuristic default (the bootstrap phase).
     use_best: Option<PathBuf>,
+    /// Serve `--use-best` evals from a batched device-side collator
+    /// instead of per-thread CPU forwards. Pair with a large `--actors`
+    /// (hundreds): batch size is bounded by the number of games blocked
+    /// on an eval at once, so 22 threads can't fill a 256 batch.
+    gpu_eval: bool,
+    /// Collator limits: flush a batch at this many states...
+    eval_batch: usize,
+    /// ...or after this many microseconds, whichever comes first.
+    eval_flush_us: u64,
     /// Gate mode: skip training, load `<out>/deck-latest.safetensors`,
     /// and race net-judged builds against static-judged builds of the
     /// same candidate sets on paired pools, N games per pool.
@@ -224,6 +234,9 @@ fn parse_args() -> Args {
         out: PathBuf::from("nets"),
         seed: 0x0505_ACAD,
         use_best: None,
+        gpu_eval: false,
+        eval_batch: 256,
+        eval_flush_us: 1000,
         gate_builder: None,
         gate_builder_hc: None,
         distill_gen: None,
@@ -266,6 +279,12 @@ fn parse_args() -> Args {
             "--out" => a.out = PathBuf::from(val()),
             "--seed" => a.seed = val().parse().expect("--seed"),
             "--use-best" => a.use_best = Some(PathBuf::from(val())),
+            "--gpu-eval" => {
+                a.gpu_eval = true;
+                continue; // bare flag, consumes no value
+            }
+            "--eval-batch" => a.eval_batch = val().parse().expect("--eval-batch"),
+            "--eval-flush-us" => a.eval_flush_us = val().parse().expect("--eval-flush-us"),
             "--calibrate" => a.calibrate = Some(val().parse().expect("--calibrate")),
             "--calibrate-leaves" => {
                 a.calibrate_leaves = Some(val().parse().expect("--calibrate-leaves"))
@@ -1020,12 +1039,33 @@ fn main() {
         net
     });
     if let Some(best) = &args.use_best {
-        crabomination::server::net_eval::load_slot(
-            crabomination::server::net_eval::SLOT_BEST,
-            best,
-        )
-        .expect("--use-best weights load");
-        eprintln!("actors play with the net from {}", best.display());
+        if args.gpu_eval {
+            let cfg = net_config(&args, vocab.size());
+            let client = crabomination_ml::BatchEvalServer::start(
+                &cfg,
+                best,
+                args.eval_batch,
+                std::time::Duration::from_micros(args.eval_flush_us),
+            )
+            .expect("--gpu-eval server start");
+            crabomination::server::net_eval::set_slot(
+                crabomination::server::net_eval::SLOT_BEST,
+                Some(client),
+            );
+            eprintln!(
+                "actors play with the net from {} via batched eval (batch {}, flush {}us)",
+                best.display(),
+                args.eval_batch,
+                args.eval_flush_us
+            );
+        } else {
+            crabomination::server::net_eval::load_slot(
+                crabomination::server::net_eval::SLOT_BEST,
+                best,
+            )
+            .expect("--use-best weights load");
+            eprintln!("actors play with the net from {}", best.display());
+        }
     }
 
     let shared = Shared {

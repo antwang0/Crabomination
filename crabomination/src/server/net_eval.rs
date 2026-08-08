@@ -16,7 +16,7 @@ use std::cell::RefCell;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, OnceLock, RwLock};
 
-use crabomination_nn::PlayNet;
+use crabomination_nn::{NetEvaluator, PlayNet};
 
 use super::encode::{Vocab, encode_state};
 use crate::game::GameState;
@@ -27,7 +27,8 @@ pub const SLOT_BEST: u8 = 1;
 pub const SLOT_CANDIDATE: u8 = 2;
 const NUM_SLOTS: usize = 3;
 
-static SLOTS: RwLock<[Option<Arc<PlayNet>>; NUM_SLOTS]> = RwLock::new([None, None, None]);
+static SLOTS: RwLock<[Option<Arc<dyn NetEvaluator>>; NUM_SLOTS]> =
+    RwLock::new([None, None, None]);
 static GENERATION: AtomicU64 = AtomicU64::new(0);
 
 /// The encoder vocabulary every net in the registry must match. Built
@@ -37,9 +38,11 @@ pub fn vocab() -> &'static Vocab {
     VOCAB.get_or_init(Vocab::sos_sealed)
 }
 
-/// Install (or clear, with `None`) a slot. Running bots pick the change
-/// up at their next evaluation via the generation counter.
-pub fn set_slot(slot: u8, net: Option<Arc<PlayNet>>) {
+/// Install (or clear, with `None`) a slot — a local [`PlayNet`] or any
+/// other [`NetEvaluator`] (the training harness installs a batched GPU
+/// client here). Running bots pick the change up at their next
+/// evaluation via the generation counter.
+pub fn set_slot(slot: u8, net: Option<Arc<dyn NetEvaluator>>) {
     assert!((slot as usize) < NUM_SLOTS && slot != 0, "slot {slot} out of range");
     SLOTS.write().unwrap()[slot as usize] = net;
     GENERATION.fetch_add(1, Ordering::Release);
@@ -65,11 +68,11 @@ pub fn load_slot(slot: u8, path: &std::path::Path) -> Result<(), String> {
 }
 
 thread_local! {
-    static CACHE: RefCell<(u64, [Option<Arc<PlayNet>>; NUM_SLOTS])> =
+    static CACHE: RefCell<(u64, [Option<Arc<dyn NetEvaluator>>; NUM_SLOTS])> =
         const { RefCell::new((u64::MAX, [None, None, None])) };
 }
 
-fn net_for(slot: u8) -> Option<Arc<PlayNet>> {
+fn net_for(slot: u8) -> Option<Arc<dyn NetEvaluator>> {
     let generation = GENERATION.load(Ordering::Acquire);
     CACHE.with(|c| {
         let mut c = c.borrow_mut();
@@ -84,7 +87,7 @@ fn net_for(slot: u8) -> Option<Arc<PlayNet>> {
 /// (callers fall back to the heuristic).
 pub fn win_prob(state: &GameState, seat: usize, slot: u8) -> Option<f32> {
     let net = net_for(slot)?;
-    Some(net.forward(&encode_state(state, seat, vocab())))
+    Some(net.eval(encode_state(state, seat, vocab())))
 }
 
 #[cfg(test)]

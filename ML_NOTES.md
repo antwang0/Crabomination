@@ -58,6 +58,29 @@ only stays dead while the reasoning that killed it is readable.
   stratum both plays and benches reports **no** within-archetype number
   rather than passing the marginal off as one. `recommend_pool` prints
   `within` first and labels `raw` as the confound.
+- 🟢 **Batched actor inference (2026-08-08) — 2.2× net-piloted
+  generation.** User-designed game-pool architecture: hundreds of game
+  threads block inside `NetEvaluator::eval` (a new engine seam —
+  `net_eval` slots now hold `Arc<dyn NetEvaluator>`, `PlayNet` unchanged
+  as the local impl); a collator (`BatchEvalServer`, `selfplay_train
+  --gpu-eval --eval-batch N --eval-flush-us N`) batches their states and
+  scores each batch in one candle forward on the GPU. Thread-per-game
+  with blocking evals, not resumable searches — the OS scheduler does the
+  game multiplexing, and the search code kept its shape. An 8-thread
+  parity test holds the collator to the engine forward at 1e-4.
+  Measured (3 000 net-piloted games, r17-s43 pilot, 2 blocks):
+  **112.0 games/s (512 threads, batch 256, flush 200 µs) vs 51.5
+  (22-thread CPU eval)** with the learner parked. Two findings around
+  it: (1) collator knobs are flat (26.8–27.8 games/s across
+  256–768 threads, flush 100–1000 µs) when the learner is active,
+  because (2) **a training learner costs the actors ~4× in either arm**
+  (batched 112→27.8, CPU 51.5→23.6) — GPU kernel contention plus the
+  learner's CPU-side packing. This retro-explains round 18's 50.7
+  games/s average (slow while the learner trained, fast after its early
+  stop) and makes learner/actor scheduling the next infra lever if
+  net-piloted generation stays the bottleneck. Strategic point: batch
+  throughput is nearly flat in model size, so this is what makes
+  wider/deeper nets affordable for actors at all.
 - 🟢 **Round 17 (2026-08-08) — transformer blocks + longer/lower-lr
   training: first sweep of the replacement gates.** Proper pre-LN
   transformer blocks (`tblocks.*`: `x += attn(ln1(x));

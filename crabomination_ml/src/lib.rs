@@ -203,14 +203,45 @@ pub fn make_batch(rows: &[&TrainRow], dev: &Device) -> CResult<Batch> {
 /// row's raw result — see [`SampleWindow::relabel_lambda`].
 pub fn make_batch_with_targets(rows: &[(&TrainRow, f32)], dev: &Device) -> CResult<Batch> {
     let b = rows.len();
+    let states: Vec<&EncodedState> = rows.iter().map(|(r, _)| &r.state).collect();
+    let (ids, feats, mask, global) = pack_states(&states, dev)?;
+    let (mut win, mut life, mut len_t) = (vec![0f32; b], vec![0f32; b], vec![0f32; b]);
+    let mut aux = vec![0f32; b * AUX_FEATS];
+    for (ri, (row, target)) in rows.iter().enumerate() {
+        win[ri] = *target;
+        life[ri] = row.life_diff;
+        len_t[ri] = row.game_len;
+        aux[ri * AUX_FEATS..][..AUX_FEATS].copy_from_slice(&row.aux);
+    }
+    Ok(Batch {
+        ids,
+        feats,
+        mask,
+        global,
+        win: Tensor::from_vec(win, (b, 1), dev)?,
+        life: Tensor::from_vec(life, (b, 1), dev)?,
+        len_t: Tensor::from_vec(len_t, (b, 1), dev)?,
+        aux: Tensor::from_vec(aux, (b, AUX_FEATS), dev)?,
+    })
+}
+
+/// The state half of batch packing — per-group padded ids/features/masks
+/// plus globals, shared by the labeled training path and the label-free
+/// inference paths (`Trainer::predict_win_states`, the batch eval server).
+#[allow(clippy::type_complexity)]
+fn pack_states(
+    states: &[&EncodedState],
+    dev: &Device,
+) -> CResult<(Vec<Tensor>, Vec<Tensor>, Vec<Tensor>, Tensor)> {
+    let b = states.len();
     let (mut ids, mut feats, mut mask) = (Vec::new(), Vec::new(), Vec::new());
     for g in 0..NUM_GROUPS {
-        let n = rows.iter().map(|(r, _)| r.state.groups[g].len()).max().unwrap_or(0).max(1);
+        let n = states.iter().map(|s| s.groups[g].len()).max().unwrap_or(0).max(1);
         let mut id_v = vec![0u32; b * n];
         let mut ft_v = vec![0f32; b * n * OBJ_FEATS];
         let mut mk_v = vec![0f32; b * n];
-        for (ri, (row, _)) in rows.iter().enumerate() {
-            for (oi, o) in row.state.groups[g].iter().enumerate() {
+        for (ri, s) in states.iter().enumerate() {
+            for (oi, o) in s.groups[g].iter().enumerate() {
                 id_v[ri * n + oi] = o.card as u32;
                 ft_v[(ri * n + oi) * OBJ_FEATS..][..OBJ_FEATS].copy_from_slice(&o.feats);
                 mk_v[ri * n + oi] = 1.0;
@@ -221,24 +252,26 @@ pub fn make_batch_with_targets(rows: &[(&TrainRow, f32)], dev: &Device) -> CResu
         mask.push(Tensor::from_vec(mk_v, (b, n, 1), dev)?);
     }
     let mut gl = vec![0f32; b * GLOBAL_FEATS];
-    let (mut win, mut life, mut len_t) = (vec![0f32; b], vec![0f32; b], vec![0f32; b]);
-    let mut aux = vec![0f32; b * AUX_FEATS];
-    for (ri, (row, target)) in rows.iter().enumerate() {
-        gl[ri * GLOBAL_FEATS..][..GLOBAL_FEATS].copy_from_slice(&row.state.global);
-        win[ri] = *target;
-        life[ri] = row.life_diff;
-        len_t[ri] = row.game_len;
-        aux[ri * AUX_FEATS..][..AUX_FEATS].copy_from_slice(&row.aux);
+    for (ri, s) in states.iter().enumerate() {
+        gl[ri * GLOBAL_FEATS..][..GLOBAL_FEATS].copy_from_slice(&s.global);
     }
+    Ok((ids, feats, mask, Tensor::from_vec(gl, (b, GLOBAL_FEATS), dev)?))
+}
+
+/// Pack bare states for inference: real ids/features/masks/globals, zero
+/// labels (the forward pass never reads them).
+pub fn make_state_batch(states: &[&EncodedState], dev: &Device) -> CResult<Batch> {
+    let b = states.len();
+    let (ids, feats, mask, global) = pack_states(states, dev)?;
     Ok(Batch {
         ids,
         feats,
         mask,
-        global: Tensor::from_vec(gl, (b, GLOBAL_FEATS), dev)?,
-        win: Tensor::from_vec(win, (b, 1), dev)?,
-        life: Tensor::from_vec(life, (b, 1), dev)?,
-        len_t: Tensor::from_vec(len_t, (b, 1), dev)?,
-        aux: Tensor::from_vec(aux, (b, AUX_FEATS), dev)?,
+        global,
+        win: Tensor::zeros((b, 1), DType::F32, dev)?,
+        life: Tensor::zeros((b, 1), DType::F32, dev)?,
+        len_t: Tensor::zeros((b, 1), DType::F32, dev)?,
+        aux: Tensor::zeros((b, AUX_FEATS), DType::F32, dev)?,
     })
 }
 
@@ -516,11 +549,19 @@ impl Trainer {
     }
 
     pub fn predict_win(&self, s: &EncodedState) -> CResult<f32> {
-        let row =
-            TrainRow { state: s.clone(), win: 0.0, life_diff: 0.0, game_len: 0.0, traj: 0, ply: 0, aux: [0.0; AUX_FEATS] };
-        let batch = make_batch(&[&row], &self.dev)?;
-        let (win, _, _, _) = self.model.forward(&batch)?;
-        win.flatten_all()?.to_vec1::<f32>().map(|v| v[0])
+        self.predict_win_states(&[s], 1).map(|v| v[0])
+    }
+
+    /// Win probabilities for bare states — the batch eval server's scoring
+    /// path (no labels involved, unlike [`Self::predict_win_batch`]).
+    pub fn predict_win_states(&self, states: &[&EncodedState], chunk: usize) -> CResult<Vec<f32>> {
+        let mut out = Vec::with_capacity(states.len());
+        for part in states.chunks(chunk.max(1)) {
+            let batch = make_state_batch(part, &self.dev)?;
+            let (win, _, _, _) = self.model.forward(&batch)?;
+            out.extend(win.flatten_all()?.to_vec1::<f32>()?);
+        }
+        Ok(out)
     }
 
     /// Export weights as safetensors — the file `PlayNet::load` reads.
@@ -897,6 +938,103 @@ impl SampleWindow {
     }
 }
 
+/// One in-flight request to the batch eval server.
+struct EvalRequest {
+    state: EncodedState,
+    /// Rendezvous channel the requester blocks on. Capacity 1 so the
+    /// server's send never blocks on a slow requester.
+    reply: std::sync::mpsc::SyncSender<f32>,
+}
+
+/// Client half of the batched evaluator: implements the engine's
+/// [`NetEvaluator`] seam by shipping the encoded state to the collator
+/// and blocking until the batch it lands in has been scored. Install it
+/// with `net_eval::set_slot`; clone-cheap (`Arc` it once).
+pub struct BatchEvalClient {
+    tx: std::sync::mpsc::Sender<EvalRequest>,
+}
+
+impl crabomination_nn::NetEvaluator for BatchEvalClient {
+    fn eval(&self, s: EncodedState) -> f32 {
+        let (rtx, rrx) = std::sync::mpsc::sync_channel(1);
+        self.tx.send(EvalRequest { state: s, reply: rtx }).expect("batch eval server alive");
+        rrx.recv().expect("batch eval server replied")
+    }
+}
+
+/// Batched inference for actor evaluations — the thread-per-game design:
+/// a few hundred game threads play synchronously and block inside
+/// [`BatchEvalClient::eval`]; this server collates their requests into
+/// batches of up to `max_batch` (flushing after `flush` if demand is
+/// thin) and scores each batch in one forward pass on the trainer's
+/// device (the GPU in a `--features cuda` build).
+///
+/// Why this beats per-thread CPU inference only *in aggregate*: a single
+/// eval's GPU round trip costs more than the hand-rolled CPU forward,
+/// but a batch of 256 amortizes the dispatch to well under the CPU cost
+/// per state — and, more importantly, batch throughput is nearly flat in
+/// model size, which is what makes wider/deeper nets affordable for the
+/// actors at all.
+///
+/// The server thread exits when every client clone has been dropped.
+pub struct BatchEvalServer;
+
+impl BatchEvalServer {
+    /// Load `weights` under `cfg` and start the collator thread.
+    /// Fails fast (before spawning) if the weights don't load or the
+    /// device can't score a probe batch.
+    pub fn start(
+        cfg: &NetConfig,
+        weights: &std::path::Path,
+        max_batch: usize,
+        flush: std::time::Duration,
+    ) -> CResult<std::sync::Arc<BatchEvalClient>> {
+        let mut trainer = Trainer::new(cfg, 0.0)?;
+        trainer.load(weights)?;
+        let probe = EncodedState::default();
+        trainer.predict_win(&probe)?; // surface device/shape errors here, not mid-run
+
+        let (tx, rx) = std::sync::mpsc::channel::<EvalRequest>();
+        let max_batch = max_batch.max(1);
+        std::thread::Builder::new()
+            .name("batch-eval".into())
+            .spawn(move || {
+                let mut pending: Vec<EvalRequest> = Vec::with_capacity(max_batch);
+                // Block for the first request of each batch, then collect
+                // until the batch is full or the flush window closes.
+                while let Ok(first) = rx.recv() {
+                    pending.push(first);
+                    let deadline = std::time::Instant::now() + flush;
+                    while pending.len() < max_batch {
+                        let left = deadline.saturating_duration_since(std::time::Instant::now());
+                        match rx.recv_timeout(left) {
+                            Ok(r) => pending.push(r),
+                            Err(_) => break, // timeout or all senders gone: flush what we have
+                        }
+                    }
+                    let states: Vec<&EncodedState> = pending.iter().map(|r| &r.state).collect();
+                    match trainer.predict_win_states(&states, max_batch) {
+                        Ok(probs) => {
+                            for (r, p) in pending.drain(..).zip(probs) {
+                                let _ = r.reply.send(p); // requester may have died; fine
+                            }
+                        }
+                        Err(e) => {
+                            // Dropping the replies unblocks the requesters
+                            // into their expect(), which is the right
+                            // failure mode: a scoring error mid-run is a
+                            // bug, not a condition to play through.
+                            eprintln!("batch eval: forward failed: {e}");
+                            pending.clear();
+                        }
+                    }
+                }
+            })
+            .expect("spawn batch-eval thread");
+        Ok(std::sync::Arc::new(BatchEvalClient { tx }))
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1016,6 +1154,43 @@ mod tests {
                 "state {i}: engine {got} vs candle {want}"
             );
         }
+    }
+
+    /// The batched evaluator must be transparent: threads hammering the
+    /// collator concurrently — small batches, flush-timeout batches, full
+    /// batches, all interleaved — get exactly the numbers the engine's
+    /// single-state forward produces from the same exported weights. This
+    /// is the correctness bar for swapping it into the actors.
+    #[test]
+    fn batch_eval_server_matches_engine_forward() {
+        let cfg = NetConfig { blocks: 2, ..small_cfg() };
+        let trainer = Trainer::new(&cfg, 1e-3).expect("trainer");
+        let path = std::env::temp_dir()
+            .join(format!("crab_batch_eval_{}.safetensors", std::process::id()));
+        trainer.save(&path).expect("save");
+        let bytes = std::fs::read(&path).expect("read");
+        let net = PlayNet::load(&bytes).expect("engine loads export");
+        let client = BatchEvalServer::start(&cfg, &path, 32, std::time::Duration::from_millis(2))
+            .expect("server starts");
+        let _ = std::fs::remove_file(&path);
+
+        std::thread::scope(|s| {
+            for t in 0..8u64 {
+                let (client, net) = (&client, &net);
+                s.spawn(move || {
+                    let mut rng = StdRng::seed_from_u64(100 + t);
+                    for i in 0..50 {
+                        let st = random_state(&mut rng, cfg.vocab);
+                        let want = net.forward(&st);
+                        let got = crabomination_nn::NetEvaluator::eval(&**client, st);
+                        assert!(
+                            (got - want).abs() < 1e-4,
+                            "thread {t} state {i}: batched {got} vs engine {want}"
+                        );
+                    }
+                });
+            }
+        });
     }
 
     /// A file carrying only some of the attention tensors is a
