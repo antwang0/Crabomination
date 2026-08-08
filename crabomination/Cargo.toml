@@ -14,18 +14,18 @@ rand = "0.10.2"
 
 ctor = "1.0.7"
 
-# Opt-in allocator for the simulator binaries. malloc/free/consolidate plus
-# the memcpy they drive were ~16 % of instructions in the callgrind profile,
-# and the engine's allocation pattern (many short-lived per-gather Vecs, one
-# thread per game worker) is what a thread-caching allocator is for. Never
-# linked into the library or the client — a `#[global_allocator]` is a
-# whole-program decision and belongs to whoever builds the program.
-mimalloc = { version = "0.1.52", optional = true, default-features = false }
-
 # Native-only transport deps: raw sockets don't exist on wasm32; the browser
 # client uses the WebSocket API via web-sys instead (see crabomination_client).
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 socket2 = { version = "0.6.4", features = ["all"] }
+# Allocator for the simulator binaries. malloc/free/consolidate plus the
+# memcpy they drive were ~16 % of instructions in the callgrind profile, and
+# the engine's allocation pattern (many short-lived per-gather Vecs, one
+# thread per game worker) is what a thread-caching allocator is for. Native
+# only — there is no mimalloc on wasm32, and the browser client doesn't want
+# one. The `#[global_allocator]` lives in the binaries: it is a whole-program
+# decision and belongs to whoever builds the program.
+mimalloc = { version = "0.1.52", optional = true, default-features = false }
 tungstenite = { version = "0.29.0", default-features = false, features = ["handshake"] }
 
 # rand's OS entropy source needs the JS backend on wasm32 (see
@@ -34,7 +34,10 @@ tungstenite = { version = "0.29.0", default-features = false, features = ["hands
 getrandom = { version = "0.4", features = ["wasm_js"] }
 
 [features]
-# `cargo build --release -p crabomination --features mimalloc` swaps the
-# system allocator on `bot_ladder` / `bot_probe`. See PERF.md for the
-# measured effect before turning it on for a training run.
+# On by default: mimalloc is worth +21.9 % on the committed bench and more as
+# actors scale (+31 % at 24), for a flat ~1.5-1.7x RSS that is 179 MiB at 24
+# actors. See PERF.md. Build with `--no-default-features` to get the system
+# allocator back for an A/B. The `#[global_allocator]` itself lives in the
+# binaries, so a library consumer only pays the (unused) dependency.
+default = ["mimalloc"]
 mimalloc = ["dep:mimalloc"]

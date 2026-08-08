@@ -38,10 +38,11 @@
 //! cargo run --bin bot_ladder -- --a baseline --b v2 --games 400 --seed 7
 //! ```
 
-// Allocator swap, opt-in (`--features mimalloc`). The bench workload spends
-// ~16 % of its instructions in malloc/free/memcpy; PERF.md carries what the
-// swap actually bought. A `#[global_allocator]` is a whole-program choice,
-// so it lives in the binary rather than the library.
+// Allocator swap, on by default. The bench workload spends ~16 % of its
+// instructions in malloc/free/memcpy; the swap is worth +21.9 % here and
+// more as actors scale (PERF.md). `--no-default-features` restores the
+// system allocator, which is how the A/B is run. A `#[global_allocator]` is
+// a whole-program choice, so it lives in the binary rather than the library.
 #[cfg(feature = "mimalloc")]
 #[global_allocator]
 static ALLOC: mimalloc::MiMalloc = mimalloc::MiMalloc;

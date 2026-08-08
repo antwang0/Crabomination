@@ -32,7 +32,9 @@ rand = "0.10.1"
 serde = { version = "1.0.228", features = ["derive"] }
 serde_json = "1.0.150"
 toml = "1.1.2"
-crabomination = { path = "../crabomination" }
+# No allocator swap here: a `#[global_allocator]` is the program's call,
+# and neither of these is the simulator.
+crabomination = { path = "../crabomination", default-features = false }
 # Generating the white name-placeholder PNGs for cards with no Scryfall art
 # (see scryfall::ensure_card_images). All three are already in the tree via
 # Bevy, so they add no new compilation beyond imageproc itself.
