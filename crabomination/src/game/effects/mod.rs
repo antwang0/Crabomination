@@ -31524,6 +31524,11 @@ impl GameState {
                 self.run_discard_unless_put_on_top(who, then, ctx, events, effect)
             }
 
+            Effect::DoubleCombatDamageToCreaturesThisTurn => {
+                self.creature_combat_damage_doublers += 1;
+                Ok(())
+            }
+
             Effect::AssignsNoCombatDamageThisTurn { what } => {
                 for ent in self.resolve_selector(what, ctx) {
                     if let Some(id) = ent.as_permanent_id() {

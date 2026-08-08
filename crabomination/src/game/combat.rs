@@ -3321,11 +3321,11 @@ impl GameState {
                     // (post-prevention) amount dealt (CR 702.15a).
                     let dealt = self.apply_prevention_shields(
                         crate::game::effects::EntityRef::Permanent(blocker_id),
-                        self.scale_damage_to(
+                        self.double_creature_combat_damage(self.scale_damage_to(
                             Some(atk.id),
                             crate::game::effects::EntityRef::Permanent(blocker_id),
                             assign,
-                        ),
+                        )),
                         Some(atk.id),
                         &mut events,
                     ) as i32;
@@ -3470,11 +3470,11 @@ impl GameState {
                         }
                         let dmg = self.apply_prevention_shields(
                             crate::game::effects::EntityRef::Permanent(atk.id),
-                            self.scale_damage_to(
+                            self.double_creature_combat_damage(self.scale_damage_to(
                                 Some(bid),
                                 crate::game::effects::EntityRef::Permanent(atk.id),
                                 power,
-                            ),
+                            )),
                             Some(bid),
                             &mut events,
                         );

@@ -521,7 +521,8 @@ impl Effect {
             Effect::MillDeployCreaturesUntilEndStep { .. } => false,
             Effect::ExileEachTopFreePlayLesser => false,
             Effect::LookTopTakeOneDeployLandsRestGraveyard { .. } => false,
-            Effect::LookTopPutOneOnBottom { .. } => false,
+            Effect::LookTopPutOneOnBottom { .. }
+            | Effect::DoubleCombatDamageToCreaturesThisTurn => false,
             Effect::AllLandsProduceChosenColorThisTurn { chooser } => player_has_target(chooser),
             Effect::ReduceEquipCost { .. }
             | Effect::SacrificeAtNextUpkeep { .. }

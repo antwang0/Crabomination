@@ -2643,6 +2643,13 @@ impl GameState {
     /// computes, surfaced through the server view so the UI can flag locked
     /// permanents. Player-scoped skips (Yosei, Bontu's) aren't included — those
     /// are one-shot flags, not a property of the permanent.
+    /// Blind Fury — creature-to-creature combat damage is doubled once per
+    /// active doubler this turn (CR 614.x). Player-facing and noncombat damage
+    /// are untouched.
+    pub fn double_creature_combat_damage(&self, amount: u32) -> u32 {
+        amount.saturating_mul(1u32 << self.creature_combat_damage_doublers.min(8))
+    }
+
     /// CR 510.1a — this creature assigns no combat damage for the rest of the
     /// turn, whether by a printed keyword (Master of Cruelties) or a
     /// turn-scoped effect (Kukemssa Pirates). Both damage-assignment sites
@@ -3773,6 +3780,7 @@ impl GameState {
         self.combat_damage_redirect_this_turn.clear();
         self.doubled_damage_sources_this_turn.clear();
         self.assigns_no_combat_damage_this_turn.clear();
+        self.creature_combat_damage_doublers = 0;
         self.damage_sources_this_turn.clear();
         self.noncombat_damage_bonus_this_turn.clear();
         // Desperate Gambit's unspent doubler expires with the turn.

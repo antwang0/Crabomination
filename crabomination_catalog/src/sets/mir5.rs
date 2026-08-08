@@ -937,3 +937,20 @@ pub fn hall_of_gemstone() -> CardDefinition {
         ..enchantment("Hall of Gemstone", cost(&[generic(1), g(), g()]))
     }
 }
+
+/// Blind Fury — {2}{R}{R} strips trample from the board and doubles every
+/// creature-on-creature blow for the turn.
+pub fn blind_fury() -> CardDefinition {
+    instant(
+        "Blind Fury",
+        cost(&[generic(2), r(), r()]),
+        Effect::Seq(vec![
+            Effect::LoseKeyword {
+                what: Selector::EachPermanent(R::Creature),
+                keyword: Keyword::Trample,
+                duration: Duration::EndOfTurn,
+            },
+            Effect::DoubleCombatDamageToCreaturesThisTurn,
+        ]),
+    )
+}

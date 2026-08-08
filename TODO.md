@@ -56,7 +56,7 @@ Items are grouped by area and roughly ordered by impact within each group.
   `eager_static_targets` handles the self-scoped shape (the one every real
   card uses); an inner `EachPermanent` still falls through to `None` and the
   static contributes nothing. ⏳
-- **Mirage residue** — the last 19 cards, each blocked on one primitive:
+- **Mirage residue** — the last 18 cards, each blocked on one primitive:
   Celestial Dawn (a global colour/land-type rewrite), Forbidden Crypt (a draw
   replacement that reaches the graveyard), Bazaar of Wonders (name-matching
   counterspell static), Hall of Gemstone (a per-turn mana-type lock), Null
@@ -68,8 +68,7 @@ Items are grouped by area and roughly ordered by impact within each group.
   the dealer's colour and the recipient), Mindbender Spores (counters that
   carry granted abilities), Acidic Dagger and Barreling Attack (both want a
   `DelayedTriggerKind::BecomesBlocked` / "deals combat damage this turn"),
-  Cycle of Life (a "creature you cast this turn" filter), Blind Fury (a
-  turn-scoped doubler for combat damage to creatures), and Phyrexian Purge
+  Cycle of Life (a "creature you cast this turn" filter), and Phyrexian Purge
   (`CardDefinition.life_per_target`, the life twin of
   `cost_per_extra_target`). ⏳
 - **Suq'Ata Firewalker uses `HexproofFromColor`.** The printed line is a

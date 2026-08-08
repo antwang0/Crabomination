@@ -5844,6 +5844,11 @@ pub enum Effect {
     /// Shadowspear's "lose hexproof and indestructible until end of turn";
     /// `Duration::Permanent` is the indefinite loss (Ageless Sentinels).
     LoseKeyword { what: Selector, keyword: Keyword, duration: Duration },
+    /// CR 614.x — "If a creature would deal combat damage to a creature this
+    /// turn, it deals double that damage to that creature instead" (Blind
+    /// Fury). Creature-to-creature combat damage only: the player-facing and
+    /// noncombat paths are untouched.
+    DoubleCombatDamageToCreaturesThisTurn,
     /// CR 701.33 — abandon `this` scheme: turn it face down and put it on the
     /// bottom of its owner's scheme deck. The ongoing-scheme escape hatch
     /// ("abandon this scheme" — Perhaps You've Met My Cohort).

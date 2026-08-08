@@ -1391,6 +1391,10 @@ pub struct GameState {
     /// of the turn (CR 510.1a). Cleared at cleanup.
     #[serde(default)]
     pub(crate) assigns_no_combat_damage_this_turn: Vec<CardId>,
+    /// Blind Fury — how many times creature-to-creature combat damage is
+    /// doubled this turn. Cleared at cleanup.
+    #[serde(default)]
+    pub(crate) creature_combat_damage_doublers: u32,
     /// Distinct (controller, source) pairs that have dealt damage this turn.
     /// Powers `Predicate::SourcesYouControlledDealtDamageThisTurnAtLeast`
     /// (Case of the Burning Masks). Cleared at the turn boundary.
@@ -2119,6 +2123,7 @@ impl Clone for GameState {
             staggered_damage_players: self.staggered_damage_players.clone(),
             doubled_damage_sources_this_turn: self.doubled_damage_sources_this_turn.clone(),
             assigns_no_combat_damage_this_turn: self.assigns_no_combat_damage_this_turn.clone(),
+            creature_combat_damage_doublers: self.creature_combat_damage_doublers,
             damage_sources_this_turn: self.damage_sources_this_turn.clone(),
             creature_pw_cast_locks: self.creature_pw_cast_locks.clone(),
             damage_prevented_sources: self.damage_prevented_sources.clone(),
@@ -2446,6 +2451,7 @@ impl GameState {
             staggered_damage_players: Vec::new(),
             doubled_damage_sources_this_turn: Vec::new(),
             assigns_no_combat_damage_this_turn: Vec::new(),
+            creature_combat_damage_doublers: 0,
             damage_sources_this_turn: Vec::new(),
             creature_pw_cast_locks: Vec::new(),
             damage_prevented_sources: Vec::new(),

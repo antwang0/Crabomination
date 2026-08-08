@@ -2199,3 +2199,25 @@ fn hall_of_gemstone_locks_every_land_to_one_color() {
     .expect("tap for mana");
     assert_eq!(g.players[1].mana_pool.amount(locked), 1, "paid in the named colour");
 }
+
+/// Blind Fury strips trample and doubles creature-on-creature combat damage.
+#[test]
+fn blind_fury_doubles_creature_blows_and_strips_trample() {
+    let mut g = two_player_game();
+    let attacker = ready(&mut g, 0, catalog::grizzly_bears());
+    let blocker = g.add_card_to_battlefield(1, catalog::hill_giant());
+    let spell = g.add_card_to_hand(0, catalog::blind_fury());
+    g.players[0].mana_pool.add(Color::Red, 2);
+    g.players[0].mana_pool.add_colorless(2);
+    cast(&mut g, spell, None).expect("cast");
+    drain_stack(&mut g);
+    assert!(!g.computed_permanent(attacker).unwrap().keywords.contains(&Keyword::Trample));
+    try_block(&mut g, attacker, blocker).expect("block");
+    while g.step != TurnStep::End {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+        drain_stack(&mut g);
+    }
+    // The 2/2 dealt 4 to the 3/3 and killed it; the 3/3 dealt 6 back.
+    assert!(g.battlefield_find(blocker).is_none(), "4 damage to a 3/3");
+    assert!(g.battlefield_find(attacker).is_none());
+}
