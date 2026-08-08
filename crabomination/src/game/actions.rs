@@ -233,6 +233,17 @@ fn source_kind(card: &crate::card::CardInstance) -> u8 {
     }
 }
 
+/// WUBRG index, matching [`crate::mana::Color::ALL`] order.
+pub fn color_index(c: ManaColor) -> usize {
+    match c {
+        ManaColor::White => 0,
+        ManaColor::Blue => 1,
+        ManaColor::Black => 2,
+        ManaColor::Red => 3,
+        ManaColor::Green => 4,
+    }
+}
+
 /// A cached untapped mana source: what it can make and what it costs to
 /// activate. See `GameState::mana_source_table`.
 struct ManaSourceInfo {
@@ -11794,6 +11805,27 @@ impl GameState {
     /// Commander: it took `bot_vs_bot_commander_demo_terminates` from
     /// seconds to past its 600 s timeout. Colours can't change from
     /// tapping, so there is no reason to recompute them per pip.
+    /// One WUBRG mask per untapped mana source `player` controls, saying
+    /// which colours that source can make.
+    ///
+    /// Exposed for the net encoder, which needs "could this card in hand
+    /// be cast right now" as a *feature* and cannot mutate the game to
+    /// find out. `mana_source_table` itself stays private: its ordering
+    /// and redundancy fields are auto-tap's business, and callers outside
+    /// this module have no use for them.
+    pub fn untapped_mana_colors(&self, player: usize) -> Vec<[bool; 5]> {
+        self.mana_source_table(player, false)
+            .into_iter()
+            .map(|s| {
+                let mut mask = [false; 5];
+                for (col, _) in &s.colors {
+                    mask[color_index(*col)] = true;
+                }
+                mask
+            })
+            .collect()
+    }
+
     fn mana_source_table(&self, player: usize, creature_only: bool) -> Vec<ManaSourceInfo> {
         self.battlefield
             .iter()

@@ -997,6 +997,57 @@ pub struct PairedTally {
     pub pairs: Vec<i8>,
 }
 
+/// Wilson score interval at `z` standard normal deviates.
+///
+/// Not the normal approximation: at p̂ = 0 or 1 that has zero width, which
+/// once let a lucky 5-0 candidate claim a lower bound of 1.0 and eliminate
+/// the entire rest of the field (see
+/// `wilson_interval_is_not_degenerate_at_extremes`).
+pub fn wilson(wins: u32, n: u32, z: f64) -> (f64, f64) {
+    if n == 0 {
+        return (0.0, 1.0);
+    }
+    let (n, p) = (n as f64, wins as f64 / n as f64);
+    let z2 = z * z;
+    let denom = 1.0 + z2 / n;
+    let center = (p + z2 / (2.0 * n)) / denom;
+    let half = (z / denom) * (p * (1.0 - p) / n + z2 / (4.0 * n * n)).sqrt();
+    ((center - half).max(0.0), (center + half).min(1.0))
+}
+
+/// Paired win-rate estimate from per-pair scores in {−1, 0, +1}.
+///
+/// `p̂ = (E[S] + 1) / 2` and `SE(p̂) = sd(S) / (2√n)`, both read off the
+/// empirical pair-score distribution — no independence assumption between
+/// the two games of a pair, which is exactly the assumption pairing
+/// breaks.
+pub struct PairedStat {
+    pub n: usize,
+    pub p: f64,
+    pub se: f64,
+    /// Within-pair correlation, backed out of Var(S) = 2p(1−p)(1 + ρ).
+    /// Negative is the useful direction: the deal decided both games the
+    /// same way, so it cancelled.
+    pub rho: f64,
+}
+
+pub fn paired_stat(pairs: &[i8]) -> Option<PairedStat> {
+    let n = pairs.len();
+    if n < 2 {
+        return None;
+    }
+    let (nf, sum) = (n as f64, pairs.iter().map(|&s| s as f64).sum::<f64>());
+    let mean = sum / nf;
+    // S ∈ {−1,0,1} so E[S²] is just the sweep fraction.
+    let var = pairs.iter().map(|&s| (s as f64) * (s as f64)).sum::<f64>() / nf - mean * mean;
+    let p = (mean + 1.0) / 2.0;
+    let se = (var.max(0.0) / nf).sqrt() / 2.0;
+    // Independent games would give Var(S) = 2p(1−p); the shortfall is ρ.
+    let indep = 2.0 * p * (1.0 - p);
+    let rho = if indep > 1e-9 { var / indep - 1.0 } else { 0.0 };
+    Some(PairedStat { n, p, se, rho })
+}
+
 /// [`simulate_match_games_piloted`] with **antithetic seat pairing**: each
 /// pair plays the same shuffle twice with the pilots swapped between the
 /// seats.
@@ -2618,6 +2669,61 @@ mod tests {
         assert!(progress_calls.load(Ordering::Relaxed) > 0, "progress streamed");
         let games: u32 = rec.evals.iter().map(|e| e.decided() + e.undecided).sum();
         assert_eq!(games as usize, 2 * 2 * cfg.games_per_pairing, "full round-robin game count");
+    }
+
+    /// The paired estimator has to agree with the naive win rate on the
+    /// mean — pairing buys precision, not a different answer. Four
+    /// A-sweeps and one B-sweep out of ten is 13 of 20 games to A.
+    #[test]
+    fn paired_mean_matches_the_win_rate_it_estimates() {
+        let pairs = [1, 1, 1, 1, -1, 0, 0, 0, 0, 0];
+        let s = paired_stat(&pairs).unwrap();
+        assert_eq!(s.n, 10);
+        assert!((s.p - 0.65).abs() < 1e-9, "got {}", s.p);
+    }
+
+    /// All splits is the signature of a perfectly cancelled deal: the
+    /// estimate is dead even and, crucially, has *zero* width. Independent
+    /// games can never report that, which is the whole point.
+    #[test]
+    fn all_splits_is_an_even_result_with_no_uncertainty() {
+        let s = paired_stat(&[0; 8]).unwrap();
+        assert!((s.p - 0.5).abs() < 1e-9);
+        assert!(s.se < 1e-9, "splits carry no variance, got se {}", s.se);
+        assert!((s.rho + 1.0).abs() < 1e-9, "expected rho -1, got {}", s.rho);
+    }
+
+    /// Independent games at p = 0.5 split half the time and sweep the
+    /// other half, so that mix must read as rho = 0 — the calibration
+    /// point the efficiency factor is measured against.
+    #[test]
+    fn half_sweeps_half_splits_reads_as_independent() {
+        let pairs = [1, -1, 1, -1, 0, 0, 0, 0];
+        let s = paired_stat(&pairs).unwrap();
+        assert!((s.p - 0.5).abs() < 1e-9);
+        assert!(s.rho.abs() < 1e-9, "expected rho 0, got {}", s.rho);
+        // sd(S) = sqrt(0.5) over n = 8, halved onto the win-rate scale.
+        assert!((s.se - (0.5f64 / 8.0).sqrt() / 2.0).abs() < 1e-9, "got {}", s.se);
+    }
+
+    /// The failure mode worth being able to see: every pair a sweep means
+    /// the two games of a pair agreed *more* than chance, so the pairing
+    /// inflated variance instead of cancelling it (rho = +1, half the
+    /// precision of independent games). If a real run ever printed this,
+    /// pairing would be costing us games rather than saving them.
+    #[test]
+    fn all_sweeps_is_variance_inflation_not_reduction() {
+        let pairs = [1, -1, 1, -1, 1, -1, 1, -1];
+        let s = paired_stat(&pairs).unwrap();
+        assert!((s.p - 0.5).abs() < 1e-9);
+        assert!((s.rho - 1.0).abs() < 1e-9, "expected rho +1, got {}", s.rho);
+    }
+
+    /// Too few pairs for an empirical variance to mean anything.
+    #[test]
+    fn under_two_pairs_has_no_paired_estimate() {
+        assert!(paired_stat(&[]).is_none());
+        assert!(paired_stat(&[1]).is_none());
     }
 
     /// Wilson bounds: an undefeated small sample keeps a non-degenerate

@@ -184,6 +184,10 @@ pub fn play_recorded_game(
     // (turn, seat, encoded state) — labelled after the game decides.
     let mut snaps = Vec::new();
     let mut heur: Vec<i32> = Vec::new();
+    // Raw per-seat stats at each snapshot, parallel to `snaps` — the aux
+    // targets are deltas between a seat's consecutive snapshots, so the
+    // raw values have to be captured live and diffed at labelling time.
+    let mut raw: Vec<[f32; 4]> = Vec::new();
     let mut last_turn = (0u32, usize::MAX);
     let mut last_step = crate::game::TurnStep::Untap;
     let mut last_pair: Option<[crabomination_nn::EncodedState; 2]> = None;
@@ -206,6 +210,7 @@ pub fn play_recorded_game(
                         seat,
                         &EvalWeights::default(),
                     ));
+                    raw.push(snapshot_stats(&g, seat));
                 }
                 last_pair = Some(pair);
             }
@@ -242,9 +247,23 @@ pub fn play_recorded_game(
     let mut ply = [0u16, 0u16];
     let rows = snaps
         .into_iter()
-        .map(|(turn, seat, state)| {
+        .enumerate()
+        .map(|(j, (turn, seat, state))| {
             let p = ply[seat];
             ply[seat] += 1;
+            // Aux targets: deltas to this seat's *next* snapshot, which is
+            // always at j + 2 because snapshots are pushed in seat pairs.
+            // The last snapshot of a trajectory carries zero deltas — the
+            // game ends there, so "no further change" is the true label.
+            let aux = match raw.get(j + 2) {
+                Some(next) => [
+                    (next[0] - raw[j][0]) / 10.0,
+                    (next[1] - raw[j][1]) / 8.0,
+                    (next[2] - raw[j][2]) / 4.0,
+                    next[3] / 7.0,
+                ],
+                None => [0.0; crabomination_nn::AUX_FEATS],
+            };
             TrainRow {
                 state,
                 win: if seat == winner { 1.0 } else { 0.0 },
@@ -252,10 +271,32 @@ pub fn play_recorded_game(
                 game_len: (turns.saturating_sub(turn)) as f32 / 15.0,
                 traj: traj_base | seat as u32,
                 ply: p,
+                aux,
             }
         })
         .collect();
     RecordedGame { rows, heur, winner: Some(winner), turns }
+}
+
+/// Raw per-seat stats at snapshot time: `[life diff, board-power diff,
+/// creature-count diff, opponent hand size]`, unscaled — the aux labels
+/// are diffs of these between a seat's consecutive snapshots.
+fn snapshot_stats(g: &GameState, seat: usize) -> [f32; 4] {
+    let opp = 1 - seat;
+    let (mut power, mut creatures) = ([0i32; 2], [0i32; 2]);
+    for c in g.battlefield.iter() {
+        if c.definition.is_creature() {
+            let side = if c.controller == seat { 0 } else { 1 };
+            creatures[side] += 1;
+            power[side] += c.power().max(0);
+        }
+    }
+    [
+        (g.players[seat].life - g.players[opp].life) as f32,
+        (power[0] - power[1]) as f32,
+        (creatures[0] - creatures[1]) as f32,
+        g.players[opp].hand.len() as f32,
+    ]
 }
 
 #[cfg(test)]

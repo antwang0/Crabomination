@@ -82,7 +82,7 @@ fn cr_111_8_a_dead_token_cant_come_back() {
         &Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::ONE,
-            definition: crabomination::game::effects::treasure_token(),
+            definition: Box::new(crabomination::game::effects::treasure_token()),
         },
         &ctx,
     )

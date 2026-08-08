@@ -42,29 +42,80 @@ use std::collections::BTreeMap;
 
 /// Zone groups, in trunk-input order. Seat-relative: "self" is the seat
 /// being evaluated.
-pub const NUM_GROUPS: usize = 5;
+pub const NUM_GROUPS: usize = 8;
 /// Group indices into [`EncodedState::groups`].
 pub const G_BF_SELF: usize = 0;
 pub const G_BF_OPP: usize = 1;
 pub const G_HAND_SELF: usize = 2;
 pub const G_GY_SELF: usize = 3;
 pub const G_GY_OPP: usize = 4;
+/// The encoded seat's own library, as an unordered multiset of the cards
+/// still in it — one object per distinct name, carrying its remaining
+/// count in feature 27.
+///
+/// This is information the seat genuinely has (it is their own decklist)
+/// and the net was previously denied: before this group the library was a
+/// single scalar, `library.len() / 40`, so "22 cards left, three of them
+/// removal and one a bomb" and "22 lands" encoded identically. It is also
+/// the one zone where the bag-of-cards prior is unambiguously right — a
+/// library really is an unordered set, which is exactly the argument that
+/// makes the *deck* net work where the pooled play net did not.
+///
+/// Order never reaches the net: entries are emitted sorted by vocabulary
+/// index, and both pooling and attention are permutation-invariant over a
+/// group. The encoder must not leak the shuffle.
+pub const G_LIB_SELF: usize = 5;
+/// The stack, split by controller like the battlefield. One object per
+/// stack item — the spell's card, or a trigger's source card — with its
+/// depth from the top of the stack in feature 36. Before these groups the
+/// stack was a single count (`global[18]`): "there is a spell on the
+/// stack" was representable, "it is their removal spell aimed at my best
+/// creature" was not, and the latter is the shape of every
+/// instant-speed decision. Shallow stacks make the pooled bag mostly a
+/// one-object group, which is exactly when pooling is lossless.
+pub const G_STACK_SELF: usize = 6;
+pub const G_STACK_OPP: usize = 7;
 
 /// Per-object feature count. Baked into encoded rows — bump
 /// [`SHARD_VERSION`] if it changes. Feats 12..=19 are the evasion/combat
 /// keyword flags added in round 4 (flying, reach, menace, deathtouch,
 /// lifelink, trample, first-or-double strike, vigilance): the pooled
 /// encoder previously saw a Serra Angel and a Hill Giant as the same
-/// 4-mana 4/4-ish body.
-pub const OBJ_FEATS: usize = 20;
+/// 4-mana 4/4-ish body. Feats 20..=26 are the castability block (colour
+/// pips, castable now, castable next turn) and 27 is library
+/// multiplicity.
+///
+/// Feats 28..=36 are the round-12 relation block. Pooling can never
+/// represent an *edge* between two objects, but a flag summarising the
+/// edge from one endpoint's side survives it — and the attention layer
+/// can match flagged endpoints across groups:
+///
+/// * 28 `is_blocking` / 29 `is_blocked` — combat edges from `block_map`.
+/// * 30 `is_attached` — this object is an aura/equipment on a host.
+/// * 31 `has_own_attachment` / 32 `has_opp_attachment` — the host's
+///   side, split by who controls the attachment: an own aura is a buff,
+///   an opposing aura is a Pacifism, and before this the two encoded as
+///   the same creature.
+/// * 33 `targeted_by_stack` — something on the stack aims at this.
+/// * 34 counters other than loyalty/prepared, count / 4 (P/T counters
+///   already reach the net through effective P/T; this carries the rest
+///   — Glyph, Currency, and whatever lands later).
+/// * 35 `is_attachment_type` — aura or equipment by printed type.
+/// * 36 stack depth from the top, / 4 (stack groups only).
+pub const OBJ_FEATS: usize = 37;
 /// Global scalar feature count. Baked into encoded rows likewise.
-pub const GLOBAL_FEATS: usize = 24;
+pub const GLOBAL_FEATS: usize = 36;
 
 /// Standard trainer configuration (the file's shapes win at load time).
-/// Sizes quadrupled in round 4 (~600 k parameters, from ~125 k): four
-/// gate rounds measured the small net flat at 42–45 % as a replacement
-/// judge across data-volume and distribution fixes, leaving capacity the
-/// first untested lever.
+/// Sizes quadrupled in round 4: four gate rounds measured the small net
+/// flat at 42–45 % as a replacement judge across data-volume and
+/// distribution fixes, leaving capacity the first untested lever. (It was
+/// not the answer — see [`ATTN_HEADS`].)
+///
+/// Parameter count is a function of these constants *and* the vocabulary,
+/// so it is deliberately not quoted here; a stale figure was carried in
+/// this doc for several rounds. The trunk dominates: its input is
+/// `NUM_GROUPS · 2 · OBJ_HIDDEN + GLOBAL_FEATS`.
 pub const EMB_DIM: usize = 32;
 pub const OBJ_HIDDEN: usize = 64;
 pub const TRUNK_H1: usize = 512;
@@ -100,10 +151,18 @@ pub struct EncodedObject {
 }
 
 /// A full observable position from one seat's perspective.
-#[derive(Debug, Clone, PartialEq, Default)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct EncodedState {
     pub global: [f32; GLOBAL_FEATS],
     pub groups: [Vec<EncodedObject>; NUM_GROUPS],
+}
+
+// Hand-written rather than derived: `Default` for arrays stops at length
+// 32, and both feature counts have outgrown that.
+impl Default for EncodedState {
+    fn default() -> Self {
+        Self { global: [0.0; GLOBAL_FEATS], groups: std::array::from_fn(|_| Vec::new()) }
+    }
 }
 
 impl Default for EncodedObject {
@@ -119,6 +178,14 @@ impl Default for EncodedObject {
 /// this snapshot, scaled by 1/15 — both auxiliary targets exist for credit
 /// assignment (the KataGo lesson: a bare win bit can't say *why*), not for
 /// play.
+/// Auxiliary short-horizon targets, labelled from the recorded
+/// trajectory: `[Δlife-diff, Δpower-diff, Δcreature-diff, opp hand
+/// next]`, each measured to the seat's *next snapshot* and scaled. Dense
+/// and near-term where `win` is sparse and twenty turns away — the same
+/// credit-assignment argument as the life/length heads, one hop out
+/// instead of at the horizon. Terminal rows carry zero deltas.
+pub const AUX_FEATS: usize = 4;
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct TrainRow {
     pub state: EncodedState,
@@ -137,6 +204,8 @@ pub struct TrainRow {
     /// Position within the trajectory, ascending. Recorded rather than
     /// inferred from row order because the window samples and evicts.
     pub ply: u16,
+    /// See [`AUX_FEATS`]. All-zero when the recorder predates them.
+    pub aux: [f32; AUX_FEATS],
 }
 
 // ───────────────────────────── shard format ─────────────────────────────
@@ -145,7 +214,7 @@ pub struct TrainRow {
 /// `OBJ_FEATS`, `GLOBAL_FEATS`, group order, or the row layout changes —
 /// stale shards must fail loudly, not decode as garbage.
 pub const SHARD_MAGIC: [u8; 4] = *b"CRML";
-pub const SHARD_VERSION: u32 = 3;
+pub const SHARD_VERSION: u32 = 5;
 
 /// Serialize rows into a self-describing shard (little-endian throughout).
 pub fn write_shard(rows: &[TrainRow]) -> Vec<u8> {
@@ -171,6 +240,9 @@ pub fn write_shard(rows: &[TrainRow]) -> Vec<u8> {
         }
         out.extend_from_slice(&row.traj.to_le_bytes());
         out.extend_from_slice(&row.ply.to_le_bytes());
+        for v in row.aux {
+            out.extend_from_slice(&v.to_le_bytes());
+        }
     }
     out
 }
@@ -210,7 +282,11 @@ pub fn read_shard(bytes: &[u8]) -> Option<Vec<TrainRow>> {
         let game_len = r.f32()?;
         let traj = r.u32()?;
         let ply = r.u16()?;
-        rows.push(TrainRow { state, win, life_diff, game_len, traj, ply });
+        let mut aux = [0.0; AUX_FEATS];
+        for a in aux.iter_mut() {
+            *a = r.f32()?;
+        }
+        rows.push(TrainRow { state, win, life_diff, game_len, traj, ply, aux });
     }
     // Trailing bytes mean the writer and reader disagree about the layout.
     if r.pos != bytes.len() {
@@ -814,7 +890,15 @@ mod tests {
         feats[OBJ_FEATS - 1] = 1.0;
         state.groups[G_BF_SELF].push(EncodedObject { card: 7, feats });
         state.groups[G_GY_OPP].push(EncodedObject { card: 0, feats: [0.25; OBJ_FEATS] });
-        TrainRow { state, win: 1.0, life_diff: 0.55, game_len: 0.2, traj: 42, ply: 3 }
+        TrainRow {
+            state,
+            win: 1.0,
+            life_diff: 0.55,
+            game_len: 0.2,
+            traj: 42,
+            ply: 3,
+            aux: [0.1, -0.2, 0.3, 0.6],
+        }
     }
 
     #[test]

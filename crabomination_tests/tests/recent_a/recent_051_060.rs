@@ -1449,7 +1449,7 @@ mod recent54 {
                 &Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::ONE,
-                    definition: crabomination_base::tokens::treasure_token(),
+                    definition: Box::new(crabomination_base::tokens::treasure_token()),
                 },
                 &ctx,
             )

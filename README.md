@@ -30,5 +30,7 @@ Feature status and planning live in the tracking docs:
   log, profile of record, candidate queue.
 - [`ML_NOTES.md`](ML_NOTES.md) — bot/net experiment history and documented
   dead ends.
+- [`ML_PIPELINE.md`](ML_PIPELINE.md) — how self-play data, the encoder, the
+  nets, and the training loop fit together.
 - [`ENGINE_BACKLOG.md`](ENGINE_BACKLOG.md), [`CARD_BACKLOG.md`](CARD_BACKLOG.md),
   [`SHIPPED.md`](SHIPPED.md) — archives split out of the trackers for size.

@@ -1810,7 +1810,7 @@ fn strixhaven_bloomstadium_doubles_tokens_and_counters() {
         let eff = Effect::CreateToken {
             who: PlayerRef::You,
             count: crabomination::card::Value::Const(1),
-            definition: treasure_token(),
+            definition: Box::new(treasure_token()),
         };
         let ctx = EffectContext::for_spell(0, None, 0, 0);
         g.resolve_effect(&eff, &ctx).expect("CreateToken");

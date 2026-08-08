@@ -24,8 +24,8 @@ use candle_nn::{
     linear,
 };
 use crabomination_nn::{
-    ATTN_HEADS, DeckRow, EMB_DIM, EncodedState, GLOBAL_FEATS, NUM_GROUPS, OBJ_FEATS, OBJ_HIDDEN,
-    TRUNK_H1, TRUNK_H2, TrainRow,
+    ATTN_HEADS, AUX_FEATS, DeckRow, EMB_DIM, EncodedState, GLOBAL_FEATS, NUM_GROUPS, OBJ_FEATS,
+    OBJ_HIDDEN, TRUNK_H1, TRUNK_H2, TrainRow,
 };
 use rand::{Rng, RngExt};
 
@@ -42,6 +42,11 @@ pub struct NetConfig {
     /// Build the pre-pool interaction layer. Off reproduces the pure
     /// deep-sets net bit-for-bit, so it stays the control.
     pub attn: bool,
+    /// Build the short-horizon auxiliary head (`head_aux.*`, predicting
+    /// [`crabomination_nn::AUX_FEATS`] next-snapshot targets). Training-
+    /// only — the engine's loader ignores the tensors — and off by
+    /// default so the no-aux run stays the control.
+    pub aux: bool,
 }
 
 impl NetConfig {
@@ -54,6 +59,7 @@ impl NetConfig {
             h1: TRUNK_H1,
             h2: TRUNK_H2,
             attn: false,
+            aux: false,
         }
     }
 
@@ -77,6 +83,7 @@ pub struct PlayModel {
     head_win: Linear,
     head_life: Linear,
     head_len: Linear,
+    head_aux: Option<Linear>,
 }
 
 /// Candle mirror of `crabomination_nn`'s `Attn`. Tensor names must match
@@ -111,6 +118,11 @@ pub fn build_model(cfg: &NetConfig, vb: VarBuilder) -> CResult<PlayModel> {
         head_win: linear(cfg.h2, 1, vb.pp("head_win"))?,
         head_life: linear(cfg.h2, 1, vb.pp("head_life"))?,
         head_len: linear(cfg.h2, 1, vb.pp("head_len"))?,
+        head_aux: if cfg.aux {
+            Some(linear(cfg.h2, crabomination_nn::AUX_FEATS, vb.pp("head_aux"))?)
+        } else {
+            None
+        },
     })
 }
 
@@ -125,6 +137,7 @@ pub struct Batch {
     pub win: Tensor,    // [B, 1]
     pub life: Tensor,   // [B, 1]
     pub len_t: Tensor,  // [B, 1]
+    pub aux: Tensor,    // [B, AUX_FEATS]
 }
 
 /// [`make_batch_with_targets`] fitting each row's own game result — the
@@ -157,11 +170,13 @@ pub fn make_batch_with_targets(rows: &[(&TrainRow, f32)], dev: &Device) -> CResu
     }
     let mut gl = vec![0f32; b * GLOBAL_FEATS];
     let (mut win, mut life, mut len_t) = (vec![0f32; b], vec![0f32; b], vec![0f32; b]);
+    let mut aux = vec![0f32; b * AUX_FEATS];
     for (ri, (row, target)) in rows.iter().enumerate() {
         gl[ri * GLOBAL_FEATS..][..GLOBAL_FEATS].copy_from_slice(&row.state.global);
         win[ri] = *target;
         life[ri] = row.life_diff;
         len_t[ri] = row.game_len;
+        aux[ri * AUX_FEATS..][..AUX_FEATS].copy_from_slice(&row.aux);
     }
     Ok(Batch {
         ids,
@@ -171,6 +186,7 @@ pub fn make_batch_with_targets(rows: &[(&TrainRow, f32)], dev: &Device) -> CResu
         win: Tensor::from_vec(win, (b, 1), dev)?,
         life: Tensor::from_vec(life, (b, 1), dev)?,
         len_t: Tensor::from_vec(len_t, (b, 1), dev)?,
+        aux: Tensor::from_vec(aux, (b, AUX_FEATS), dev)?,
     })
 }
 
@@ -192,8 +208,8 @@ impl AttnLayer {
         // Tag each group's objects with its learned group embedding, then
         // concatenate along the object axis.
         let mut tagged: Vec<Tensor> = Vec::with_capacity(hs.len());
-        for (g, h) in hs.iter().enumerate() {
-            let ids = Tensor::full(g as u32, (b, sizes[g]), dev)?;
+        for (g, (h, n)) in hs.iter().zip(&sizes).enumerate() {
+            let ids = Tensor::full(g as u32, (b, *n), dev)?;
             tagged.push(h.add(&self.group.forward(&ids)?)?);
         }
         let refs: Vec<&Tensor> = tagged.iter().collect();
@@ -245,9 +261,10 @@ impl AttnLayer {
 }
 
 impl PlayModel {
-    /// Returns `(win probability, life-diff, game-len)` predictions,
-    /// each `[B, 1]`.
-    pub fn forward(&self, batch: &Batch) -> CResult<(Tensor, Tensor, Tensor)> {
+    /// Returns `(win probability, life-diff, game-len, aux)` predictions
+    /// — the first three `[B, 1]`, aux `[B, AUX_FEATS]` and present only
+    /// when the model was built with the aux head.
+    pub fn forward(&self, batch: &Batch) -> CResult<(Tensor, Tensor, Tensor, Option<Tensor>)> {
         // Per-object hidden states, one tensor per group.
         let mut hs: Vec<Tensor> = Vec::with_capacity(NUM_GROUPS);
         for g in 0..NUM_GROUPS {
@@ -260,15 +277,15 @@ impl PlayModel {
         }
 
         let mut pooled: Vec<Tensor> = Vec::with_capacity(2 * NUM_GROUPS + 1);
-        for (g, h) in hs.iter().enumerate().take(NUM_GROUPS) {
-            let hm = h.broadcast_mul(&batch.mask[g])?;
-            let count = batch.mask[g].sum(1)?; // [B,1]
+        for (h, m) in hs.iter().zip(&batch.mask) {
+            let hm = h.broadcast_mul(m)?;
+            let count = m.sum(1)?; // [B,1]
             // Mean over the real (unmasked) objects; zero for empty groups,
             // matching the engine forward's "empty slot stays zero".
             let mean = hm.sum(1)?.broadcast_div(&count.maximum(1f64)?)?;
             // Max over real objects: padding is pushed to -1e9 before the
             // reduction, then empty groups are zeroed via the 0/1 presence.
-            let sink = batch.mask[g].affine(1e9, -1e9)?;
+            let sink = m.affine(1e9, -1e9)?;
             let mx = hm.broadcast_add(&sink)?.max(1)?;
             let mx = mx.broadcast_mul(&count.minimum(1f64)?)?;
             pooled.push(mean);
@@ -282,7 +299,11 @@ impl PlayModel {
         let win = candle_nn::ops::sigmoid(&self.head_win.forward(&t2)?)?;
         let life = self.head_life.forward(&t2)?;
         let len_p = self.head_len.forward(&t2)?;
-        Ok((win, life, len_p))
+        let aux = match &self.head_aux {
+            Some(h) => Some(h.forward(&t2)?),
+            None => None,
+        };
+        Ok((win, life, len_p, aux))
     }
 }
 
@@ -305,6 +326,8 @@ pub struct LossParts {
     pub win: f32,
     pub life: f32,
     pub len: f32,
+    /// Raw MSE of the short-horizon aux head; 0.0 when the head is off.
+    pub aux: f32,
 }
 
 impl Trainer {
@@ -344,19 +367,26 @@ impl Trainer {
     /// λ-return path (see [`SampleWindow::relabel_lambda`]).
     pub fn train_step_with_targets(&mut self, rows: &[(&TrainRow, f32)]) -> CResult<LossParts> {
         let batch = make_batch_with_targets(rows, &self.dev)?;
-        let (win, life, len_p) = self.model.forward(&batch)?;
+        let (win, life, len_p, aux_p) = self.model.forward(&batch)?;
         let loss_win = candle_nn::loss::mse(&win, &batch.win)?;
         let loss_life = candle_nn::loss::mse(&life, &batch.life)?;
         let loss_len = candle_nn::loss::mse(&len_p, &batch.len_t)?;
-        let loss = loss_win
+        let mut loss = loss_win
             .add(&loss_life.affine(AUX_WEIGHT, 0.0)?)?
             .add(&loss_len.affine(AUX_WEIGHT, 0.0)?)?;
+        let mut aux_mse = 0.0;
+        if let Some(p) = aux_p {
+            let loss_aux = candle_nn::loss::mse(&p, &batch.aux)?;
+            aux_mse = loss_aux.to_scalar::<f32>()?;
+            loss = loss.add(&loss_aux.affine(AUX_WEIGHT, 0.0)?)?;
+        }
         self.opt.backward_step(&loss)?;
         Ok(LossParts {
             total: loss.to_scalar::<f32>()?,
             win: loss_win.to_scalar::<f32>()?,
             life: loss_life.to_scalar::<f32>()?,
             len: loss_len.to_scalar::<f32>()?,
+            aux: aux_mse,
         })
     }
 
@@ -371,7 +401,7 @@ impl Trainer {
         let mut out = Vec::with_capacity(rows.len());
         for part in rows.chunks(chunk.max(1)) {
             let batch = make_batch(part, &self.dev)?;
-            let (win, _, _) = self.model.forward(&batch)?;
+            let (win, _, _, _) = self.model.forward(&batch)?;
             out.extend(win.flatten_all()?.to_vec1::<f32>()?);
         }
         Ok(out)
@@ -379,9 +409,9 @@ impl Trainer {
 
     pub fn predict_win(&self, s: &EncodedState) -> CResult<f32> {
         let row =
-            TrainRow { state: s.clone(), win: 0.0, life_diff: 0.0, game_len: 0.0, traj: 0, ply: 0 };
+            TrainRow { state: s.clone(), win: 0.0, life_diff: 0.0, game_len: 0.0, traj: 0, ply: 0, aux: [0.0; AUX_FEATS] };
         let batch = make_batch(&[&row], &self.dev)?;
-        let (win, _, _) = self.model.forward(&batch)?;
+        let (win, _, _, _) = self.model.forward(&batch)?;
         win.flatten_all()?.to_vec1::<f32>().map(|v| v[0])
     }
 
@@ -393,6 +423,47 @@ impl Trainer {
     /// Resume from a previous export (shapes must match the config).
     pub fn load(&mut self, path: &std::path::Path) -> CResult<()> {
         self.varmap.load(path)
+    }
+
+    /// Start the card-embedding table from a trained deck net's, instead
+    /// of from noise.
+    ///
+    /// The two nets index the same vocabulary at the same width, so the
+    /// tensors are drop-in compatible — but the reason to do it is that
+    /// the deck net is the *only* learned component that has ever cleared
+    /// the ladder bar (61.7 %, 60.7 %). Whatever its embedding rows encode
+    /// about a card, it is enough to rank sealed builds, and it was
+    /// learned from a signal the play net never sees: one label per
+    /// decklist, tens of thousands of decklists, no board state in the
+    /// way. The play net starts every run having to rediscover "what is
+    /// this card worth" from win/loss bits attached to whole positions.
+    ///
+    /// Nothing is frozen: these are ordinary initial values and training
+    /// moves them. The claim is only that they are a better place to start
+    /// than random, and the control that tests it is the same run without
+    /// this flag.
+    pub fn seed_embeddings_from_deck_net(&mut self, deck_weights: &std::path::Path) -> CResult<()> {
+        let loaded = candle_core::safetensors::load(deck_weights, &self.dev)?;
+        let src = loaded.get("emb.weight").ok_or_else(|| {
+            candle_core::Error::Msg(format!(
+                "{} has no emb.weight — is that a deck-net export?",
+                deck_weights.display()
+            ))
+        })?;
+        let data = self.varmap.data().lock().unwrap();
+        let dst = data.get("emb.weight").expect("play model always has emb.weight");
+        if dst.dims() != src.dims() {
+            // Almost always a vocabulary that moved under one of the two
+            // nets. Silently seeding a truncated or misaligned table would
+            // scramble card identity, so refuse.
+            return Err(candle_core::Error::Msg(format!(
+                "embedding shape mismatch: deck net {:?} vs play net {:?} — retrain the deck \
+                 net against the current vocabulary",
+                src.dims(),
+                dst.dims()
+            )));
+        }
+        dst.set(src)
     }
 }
 
@@ -527,6 +598,13 @@ pub struct SampleWindow {
     /// [`relabel_lambda`](Self::relabel_lambda) runs.
     targets: VecDeque<f32>,
     cap: usize,
+    /// Rows ever pushed / ever evicted, in "all time" coordinates: the
+    /// deque currently holds indices `[evicted_total, pushed_total)`.
+    pushed_total: u64,
+    evicted_total: u64,
+    /// Everything before this (all-time coordinate) has had its λ-target
+    /// computed at least once — the incremental-relabel high-water mark.
+    relabel_mark: u64,
 }
 
 impl SampleWindow {
@@ -535,6 +613,9 @@ impl SampleWindow {
             rows: VecDeque::with_capacity(cap.min(1 << 20)),
             targets: VecDeque::with_capacity(cap.min(1 << 20)),
             cap,
+            pushed_total: 0,
+            evicted_total: 0,
+            relabel_mark: 0,
         }
     }
 
@@ -552,6 +633,7 @@ impl SampleWindow {
         while self.rows.len() > self.cap {
             self.rows.pop_front();
             self.targets.pop_front();
+            self.evicted_total += 1;
         }
     }
 
@@ -559,7 +641,9 @@ impl SampleWindow {
         if self.rows.len() == self.cap {
             self.rows.pop_front();
             self.targets.pop_front();
+            self.evicted_total += 1;
         }
+        self.pushed_total += 1;
         self.targets.push_back(row.win);
         self.rows.push_back(row);
     }
@@ -619,6 +703,8 @@ impl SampleWindow {
         if preds.len() != self.rows.len() {
             return; // a failed forward pass leaves the targets alone
         }
+        // A full pass covers everything, so the incremental mark advances.
+        self.relabel_mark = self.pushed_total;
         // Group row indices by trajectory, then walk each backwards.
         let mut by_traj: HashMap<u32, Vec<usize>> = HashMap::new();
         for (i, r) in self.rows.iter().enumerate() {
@@ -639,6 +725,64 @@ impl SampleWindow {
         }
     }
 
+    /// [`relabel_lambda`](Self::relabel_lambda), restricted to rows pushed
+    /// since the last relabel pass (full or incremental).
+    ///
+    /// Why this exists: the full pass recomputes λ-returns for the entire
+    /// window, and at the default cadence that dominated the learner. On
+    /// the round-11 runs the learner reached only 1.56× of its 6× reuse
+    /// cap because 264 relabel passes × a 250 k window spent 66 M
+    /// forward-rows maintaining targets against 13.5 M spent training.
+    /// Each new game's rows only need their λ-return computed once —
+    /// recomputing every older row's target every pass buys target
+    /// freshness the window doesn't live long enough to use (it turns
+    /// over in well under a minute at production push rates).
+    ///
+    /// The staleness trade is real but bounded: a row's target is
+    /// computed through the net as of the pass after its game arrived and
+    /// then never refreshed, so it ages by at most the row's lifetime in
+    /// the window. λ = 1 is unaffected (targets are the game result and
+    /// never change), and the full pass stays available as the control.
+    ///
+    /// Correctness leans on two invariants. Rows are pushed a whole game
+    /// at a time (the actor holds the window lock for the full game), so
+    /// the mark always lands on a game boundary and no trajectory ever
+    /// straddles it. And if eviction has overtaken the mark — the learner
+    /// fell far behind — the suffix is simply the whole window, which
+    /// degrades to the full pass rather than skipping anything.
+    pub fn relabel_lambda_new_rows(
+        &mut self,
+        lambda: f32,
+        value: impl Fn(&[&TrainRow]) -> Vec<f32>,
+    ) {
+        let start = self.relabel_mark.saturating_sub(self.evicted_total) as usize;
+        if start >= self.rows.len() {
+            return;
+        }
+        let suffix: Vec<&TrainRow> = self.rows.iter().skip(start).collect();
+        let preds = value(&suffix);
+        if preds.len() != suffix.len() {
+            return; // failed forward pass: keep the mark so these rows retry
+        }
+        self.relabel_mark = self.pushed_total;
+        // Same backward recursion as the full pass, over suffix-relative
+        // indices; targets are written at `start +` the suffix index.
+        let mut by_traj: HashMap<u32, Vec<usize>> = HashMap::new();
+        for (i, r) in suffix.iter().enumerate() {
+            by_traj.entry(r.traj).or_default().push(i);
+        }
+        for idxs in by_traj.values_mut() {
+            idxs.sort_by_key(|&i| suffix[i].ply);
+            let mut carried = suffix[*idxs.last().unwrap()].win;
+            self.targets[start + *idxs.last().unwrap()] = carried;
+            for w in idxs.windows(2).rev() {
+                let (t, next) = (w[0], w[1]);
+                carried = (1.0 - lambda) * preds[next] + lambda * carried;
+                self.targets[start + t] = carried.clamp(0.0, 1.0);
+            }
+        }
+    }
+
     /// Read-only view of the current fit targets, for tests and logging.
     pub fn targets(&self) -> &VecDeque<f32> {
         &self.targets
@@ -653,7 +797,7 @@ mod tests {
     use rand::rngs::StdRng;
 
     fn small_cfg() -> NetConfig {
-        NetConfig { vocab: 12, emb_dim: 4, obj_hidden: 8, h1: 32, h2: 16, attn: false }
+        NetConfig { vocab: 12, emb_dim: 4, obj_hidden: 8, h1: 32, h2: 16, attn: false, aux: false }
     }
 
     fn small_attn_cfg() -> NetConfig {
@@ -781,7 +925,7 @@ mod tests {
                 let s = random_state(&mut rng, cfg.vocab);
                 let win = if s.global[0] > s.global[1] { 1.0 } else { 0.0 };
                 let life_diff = (s.global[0] - s.global[1]).clamp(-1.0, 1.0);
-                TrainRow { state: s, win, life_diff, game_len: 0.5, traj: 0, ply: 0 }
+                TrainRow { state: s, win, life_diff, game_len: 0.5, traj: 0, ply: 0, aux: [0.0; AUX_FEATS] }
             })
             .collect();
 
@@ -816,6 +960,41 @@ mod tests {
         assert!(correct >= 85, "only {correct}/100 fresh states classified");
     }
 
+    /// The aux head fits its targets, and its tensors are invisible to
+    /// the engine: an aux-trained export loads as a plain value net and
+    /// produces identical win probabilities.
+    #[test]
+    fn aux_head_trains_and_the_engine_ignores_it() {
+        let cfg = NetConfig { aux: true, ..small_cfg() };
+        let mut trainer = Trainer::new(&cfg, 1e-3).expect("trainer");
+        let mut rng = StdRng::seed_from_u64(3);
+        let rows: Vec<TrainRow> = (0..8)
+            .map(|_| TrainRow {
+                state: random_state(&mut rng, cfg.vocab),
+                win: 1.0,
+                life_diff: 0.0,
+                game_len: 0.0,
+                traj: 0,
+                ply: 0,
+                aux: [0.25, -0.5, 0.1, 0.6],
+            })
+            .collect();
+        let refs: Vec<&TrainRow> = rows.iter().collect();
+        let loss = trainer.train_step(&refs).expect("step");
+        assert!(loss.aux > 0.0 && loss.aux.is_finite(), "aux mse {}", loss.aux);
+
+        let path =
+            std::env::temp_dir().join(format!("crab_aux_{}.safetensors", std::process::id()));
+        trainer.save(&path).expect("save");
+        let net = PlayNet::load(&std::fs::read(&path).expect("read"))
+            .expect("engine loads an aux-trained export");
+        let _ = std::fs::remove_file(&path);
+        let s = random_state(&mut rng, cfg.vocab);
+        let want = trainer.predict_win(&s).expect("candle forward");
+        let got = net.forward(&s);
+        assert!((got - want).abs() < 1e-4, "engine {got} vs candle {want}");
+    }
+
     fn random_deck_row<R: Rng>(rng: &mut R, vocab: usize) -> DeckRow {
         let cards = (0..40).map(|_| rng.random_range(0..vocab as u16)).collect();
         let mut feats = [0.0f32; crabomination_nn::DECK_FEATS];
@@ -845,6 +1024,51 @@ mod tests {
             let got = net.forward(&row.cards, &row.feats);
             assert!((got - want).abs() < 1e-4, "deck {i}: engine {got} vs candle {want}");
         }
+    }
+
+    /// Embedding transfer moves the deck net's table into the play net
+    /// row for row, and touches nothing else.
+    #[test]
+    fn deck_net_embeddings_transfer_into_the_play_net() {
+        let (vocab, emb_dim) = (20, 8);
+        let deck = DeckTrainer::new(&DeckNetConfig { vocab, emb_dim, h1: 32, h2: 16 }, 1e-3)
+            .expect("deck trainer");
+        let path = std::env::temp_dir()
+            .join(format!("crab_seed_emb_{}.safetensors", std::process::id()));
+        deck.save(&path).expect("save deck net");
+
+        let cfg = NetConfig { vocab, emb_dim, obj_hidden: 16, h1: 32, h2: 16, attn: false, aux: false };
+        let mut play = Trainer::new(&cfg, 1e-3).expect("play trainer");
+        let before = {
+            let d = play.varmap.data().lock().unwrap();
+            d.get("trunk1.weight").unwrap().as_tensor().flatten_all().unwrap().to_vec1::<f32>().unwrap()
+        };
+        play.seed_embeddings_from_deck_net(&path).expect("seed");
+
+        let want = {
+            let d = deck.varmap.data().lock().unwrap();
+            d.get("emb.weight").unwrap().as_tensor().flatten_all().unwrap().to_vec1::<f32>().unwrap()
+        };
+        let got = {
+            let d = play.varmap.data().lock().unwrap();
+            d.get("emb.weight").unwrap().as_tensor().flatten_all().unwrap().to_vec1::<f32>().unwrap()
+        };
+        assert_eq!(got.len(), vocab * emb_dim);
+        for (i, (a, b)) in got.iter().zip(&want).enumerate() {
+            assert!((a - b).abs() < 1e-6, "row-major slot {i}: {a} != {b}");
+        }
+        let after = {
+            let d = play.varmap.data().lock().unwrap();
+            d.get("trunk1.weight").unwrap().as_tensor().flatten_all().unwrap().to_vec1::<f32>().unwrap()
+        };
+        assert_eq!(before, after, "seeding must not disturb the rest of the net");
+
+        // A vocabulary that has moved under one of the two nets would
+        // scramble card identity silently; it has to be an error.
+        let wrong = NetConfig { vocab: vocab + 1, ..cfg };
+        let mut mismatched = Trainer::new(&wrong, 1e-3).expect("play trainer");
+        assert!(mismatched.seed_embeddings_from_deck_net(&path).is_err());
+        let _ = std::fs::remove_file(&path);
     }
 
     /// The deck net learns a synthetic build rule (low curve wins).
@@ -890,6 +1114,7 @@ mod tests {
                 game_len: 0.0,
                 traj: 0,
                 ply: i as u16,
+                aux: [0.0; AUX_FEATS],
             };
             row.state.global[0] = i as f32;
             w.push(row);
@@ -910,6 +1135,7 @@ mod tests {
             game_len: 0.0,
             traj,
             ply,
+            aux: [0.0; AUX_FEATS],
         }
     }
 
@@ -943,6 +1169,88 @@ mod tests {
         assert!((got[1] - 0.50).abs() < 1e-6, "{got:?}");
         assert!((got[2] - 0.75).abs() < 1e-6, "{got:?}");
         assert!((got[3] - 1.00).abs() < 1e-6, "terminal keeps the result: {got:?}");
+    }
+
+    /// The incremental pass predicts and relabels only rows pushed since
+    /// the last pass; earlier rows keep the targets they already have.
+    #[test]
+    fn incremental_relabel_touches_only_rows_pushed_since_the_last_pass() {
+        let mut w = SampleWindow::new(16);
+        for ply in 0..3 {
+            w.push(traj_row(1, ply, 1.0));
+        }
+        w.relabel_lambda(0.0, |rows| vec![0.5; rows.len()]);
+        let before: Vec<f32> = w.targets().iter().copied().collect();
+
+        for ply in 0..3 {
+            w.push(traj_row(2, ply, 0.0));
+        }
+        // A value function that would move trajectory 1 if consulted —
+        // seeing it untouched proves the pass never looked at it.
+        let seen = std::cell::Cell::new(0usize);
+        w.relabel_lambda_new_rows(0.0, |rows| {
+            seen.set(rows.len());
+            vec![0.9; rows.len()]
+        });
+        assert_eq!(seen.get(), 3, "only the new trajectory is re-predicted");
+        let after: Vec<f32> = w.targets().iter().copied().collect();
+        assert_eq!(after[..3], before[..3], "old targets untouched");
+        // Trajectory 2 at λ=0: rows take V(next) = 0.9; terminal keeps 0.
+        assert!((after[3] - 0.9).abs() < 1e-6, "{after:?}");
+        assert!((after[4] - 0.9).abs() < 1e-6, "{after:?}");
+        assert!((after[5] - 0.0).abs() < 1e-6, "{after:?}");
+    }
+
+    /// The mark is kept in all-time coordinates, so eviction under it
+    /// degrades to "the whole surviving window is new" — never a skip,
+    /// never an out-of-bounds index. And a pass with nothing new predicts
+    /// nothing at all.
+    #[test]
+    fn incremental_relabel_mark_survives_eviction() {
+        let mut w = SampleWindow::new(4);
+        for ply in 0..2 {
+            w.push(traj_row(1, ply, 1.0));
+        }
+        w.relabel_lambda_new_rows(1.0, |rows| vec![0.0; rows.len()]); // mark = 2
+        for ply in 0..2 {
+            w.push(traj_row(2, ply, 0.0));
+        }
+        for ply in 0..2 {
+            w.push(traj_row(3, ply, 1.0)); // evicts trajectory 1 entirely
+        }
+        let seen = std::cell::Cell::new(0usize);
+        w.relabel_lambda_new_rows(1.0, |rows| {
+            seen.set(rows.len());
+            vec![0.0; rows.len()]
+        });
+        assert_eq!(seen.get(), 4, "mark (2) == evicted (2): everything left is new");
+        // λ = 1 keeps every game result whatever the net says.
+        let t: Vec<f32> = w.targets().iter().copied().collect();
+        assert_eq!(t, vec![0.0, 0.0, 1.0, 1.0]);
+        // Nothing new since: the value function must not be called.
+        seen.set(0);
+        w.relabel_lambda_new_rows(1.0, |rows| {
+            seen.set(rows.len());
+            vec![0.0; rows.len()]
+        });
+        assert_eq!(seen.get(), 0);
+    }
+
+    /// A full pass advances the incremental mark: rows it covered are not
+    /// "new" to a subsequent incremental pass.
+    #[test]
+    fn full_relabel_advances_the_incremental_mark() {
+        let mut w = SampleWindow::new(16);
+        for ply in 0..3 {
+            w.push(traj_row(7, ply, 1.0));
+        }
+        w.relabel_lambda(0.5, |rows| vec![0.5; rows.len()]);
+        let seen = std::cell::Cell::new(usize::MAX);
+        w.relabel_lambda_new_rows(0.5, |rows| {
+            seen.set(rows.len());
+            vec![0.5; rows.len()]
+        });
+        assert_eq!(seen.get(), usize::MAX, "nothing new after a full pass");
     }
 
     /// Intermediate lambda interpolates, and the recursion must run along

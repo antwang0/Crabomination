@@ -1290,7 +1290,7 @@ fn magda_sacrifices_five_treasures_to_tutor_a_dragon() {
     let mint = Effect::CreateToken {
         who: PlayerRef::You,
         count: Value::Const(5),
-        definition: crabomination::game::effects::treasure_token(),
+        definition: Box::new(crabomination::game::effects::treasure_token()),
     };
     g.resolve_effect(&mint, &ctx).unwrap();
     let treasures_before = g.battlefield.iter()
@@ -1322,7 +1322,7 @@ fn magda_cannot_tutor_without_five_treasures() {
     let ctx = crabomination::game::effects::EffectContext::for_trigger(magda, 0, None, 0);
     g.resolve_effect(&Effect::CreateToken {
         who: PlayerRef::You, count: Value::Const(4),
-        definition: crabomination::game::effects::treasure_token(),
+        definition: Box::new(crabomination::game::effects::treasure_token()),
     }, &ctx).unwrap();
     g.add_card_to_library(0, catalog::balefire_dragon());
     assert!(g.perform_action(GameAction::ActivateAbility {

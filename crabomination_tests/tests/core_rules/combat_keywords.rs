@@ -726,7 +726,7 @@ fn create_token_attacking_joins_combat_tapped() {
     let trig = shortcut::on_attack(Effect::CreateTokenAttacking {
         who: PlayerRef::You,
         count: Value::Const(2),
-        definition: soldier,
+        definition: Box::new(soldier),
         cleanup: crabomination::effect::AttackingTokenCleanup::None,
     });
     let mut g = two_player_game();

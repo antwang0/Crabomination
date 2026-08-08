@@ -18,7 +18,10 @@
 //!                [--lr F] [--reuse F] [--lambda F] [--relabel-every N]
 //!                [--window N] [--min-window N]
 //!                [--checkpoint-every N] [--out DIR] [--seed N]
-//!                [--use-best WEIGHTS.safetensors]
+//!                [--use-best WEIGHTS.safetensors] [--seed-emb DECK.safetensors]
+//!                [--stop-after-stale N] [--relabel-mode full|new]
+//!                [--attn] [--aux] [--ablate lib,cast,rel]
+//!                [--emb-dim N] [--obj-hidden N] [--h1 N] [--h2 N]
 //!                [--gate-builder GAMES_PER_POOL]
 //!
 //! The build net (Phase C) trains alongside the play net from the same
@@ -53,7 +56,7 @@ static ALLOC: mimalloc::MiMalloc = mimalloc::MiMalloc;
 
 use std::path::PathBuf;
 use std::sync::Mutex;
-use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::time::Instant;
 
 use crabomination::selfplay::{
@@ -119,6 +122,37 @@ struct Args {
     /// Train the play net with the pre-pool attention layer — the
     /// interaction model. Off is the pooled control.
     attn: bool,
+    /// Train the short-horizon aux head (next-snapshot life/power/
+    /// creature deltas + opponent hand). Off is the control; the engine
+    /// ignores the extra tensors either way.
+    aux: bool,
+    /// Width overrides — the engine reads sizes from the tensor shapes,
+    /// so capacity is a flag, not a format change. `--seed-emb` requires
+    /// the deck net's width, so it refuses a changed `--emb-dim`.
+    emb_dim: Option<usize>,
+    obj_hidden: Option<usize>,
+    h1: Option<usize>,
+    h2: Option<usize>,
+    /// Stop the whole run — actors included — once the holdout AUC has
+    /// gone this many checkpoints without a new best. 0 (default) never
+    /// stops, the historical behaviour.
+    ///
+    /// This is the wall-clock lever: on the round-11 `full` run the
+    /// holdout AUC peaked at step 4 000, 112 s into a 1 538 s run, and
+    /// fell ~0.07 over the rest. `best.safetensors` rescues the artifact
+    /// but not the compute. Needs a holdout to see (`--holdout` > 0);
+    /// checkpoints without a scored holdout don't count either way. Note
+    /// stopping early also truncates *generation*, so the peak is being
+    /// compared against a run with more unique data — A/B against a
+    /// no-stop control before trusting a tuned value.
+    stop_after_stale: u64,
+    /// `full` (default) recomputes every window row's λ-return each
+    /// relabel tick — bit-identical to all prior runs. `new` relabels
+    /// only rows pushed since the last tick
+    /// (`SampleWindow::relabel_lambda_new_rows`): on the round-11 runs
+    /// the full pass spent 66 M forward-rows against 13.5 M trained and
+    /// held the learner to 1.56× of its 6× reuse cap. Ignored at λ = 1.
+    relabel_new: bool,
     /// Build training decks with the gate-passed deck net as the judge
     /// (best-of-32 over the same noisy-greedy candidates the heuristic
     /// picks from) instead of taking the heuristic builder's own pick.
@@ -129,6 +163,15 @@ struct Args {
     /// the gate result had no consumer: every training game was still
     /// played with heuristic builds.
     use_deck_best: Option<PathBuf>,
+    /// Initialize the play net's card embeddings from a trained deck net
+    /// rather than from noise. See
+    /// `Trainer::seed_embeddings_from_deck_net`. Ignored when the run
+    /// resumes from an existing `latest.safetensors`.
+    seed_emb: Option<PathBuf>,
+    /// Ablation control: comma-separated feature blocks to switch *off*
+    /// in the encoder (`lib`, `cast`). See
+    /// `crabomination::server::encode::set_encode_ablation`.
+    ablate: Vec<String>,
     /// Diagnostic mode: local-discrimination test over N games. See
     /// `pairwise`.
     pairwise: Option<usize>,
@@ -159,8 +202,17 @@ fn parse_args() -> Args {
         calibrate: None,
         pairwise: None,
         use_deck_best: None,
+        seed_emb: None,
+        ablate: Vec::new(),
         attn: false,
+        aux: false,
+        emb_dim: None,
+        obj_hidden: None,
+        h1: None,
+        h2: None,
         holdout: 0.05,
+        stop_after_stale: 0,
+        relabel_new: false,
     };
     let mut it = std::env::args().skip(1);
     while let Some(flag) = it.next() {
@@ -185,11 +237,40 @@ fn parse_args() -> Args {
             "--calibrate" => a.calibrate = Some(val().parse().expect("--calibrate")),
             "--pairwise" => a.pairwise = Some(val().parse().expect("--pairwise")),
             "--use-deck-best" => a.use_deck_best = Some(PathBuf::from(val())),
+            "--seed-emb" => a.seed_emb = Some(PathBuf::from(val())),
+            "--ablate" => {
+                a.ablate = val().split(',').map(|s| s.trim().to_string()).collect();
+                for b in &a.ablate {
+                    assert!(
+                        matches!(b.as_str(), "lib" | "cast" | "rel"),
+                        "--ablate: unknown block {b:?} (expected lib, cast, or rel)"
+                    );
+                }
+            }
             "--holdout" => a.holdout = val().parse().expect("--holdout"),
+            "--stop-after-stale" => {
+                a.stop_after_stale = val().parse().expect("--stop-after-stale")
+            }
+            "--relabel-mode" => {
+                let mode = val();
+                a.relabel_new = match mode.as_str() {
+                    "new" => true,
+                    "full" => false,
+                    other => panic!("--relabel-mode: {other:?} (expected full or new)"),
+                };
+            }
             "--attn" => {
                 a.attn = true;
                 continue; // bare flag, consumes no value
             }
+            "--aux" => {
+                a.aux = true;
+                continue; // bare flag, consumes no value
+            }
+            "--emb-dim" => a.emb_dim = Some(val().parse().expect("--emb-dim")),
+            "--obj-hidden" => a.obj_hidden = Some(val().parse().expect("--obj-hidden")),
+            "--h1" => a.h1 = Some(val().parse().expect("--h1")),
+            "--h2" => a.h2 = Some(val().parse().expect("--h2")),
             "--gate-builder" => a.gate_builder = Some(val().parse().expect("--gate-builder")),
             "--gate-builder-v2" => {
                 a.gate_builder_v2 = Some(val().parse().expect("--gate-builder-v2"))
@@ -198,6 +279,39 @@ fn parse_args() -> Args {
         }
     }
     a
+}
+
+/// The play-net configuration this invocation asks for — one place, so
+/// the training loop and every diagnostic that reloads a checkpoint
+/// build the same architecture from the same flags.
+fn net_config(args: &Args, vocab: usize) -> crabomination_ml::NetConfig {
+    let mut cfg = if args.attn {
+        NetConfig::with_attention(vocab)
+    } else {
+        NetConfig::standard(vocab)
+    };
+    cfg.aux = args.aux;
+    if let Some(v) = args.emb_dim {
+        cfg.emb_dim = v;
+    }
+    if let Some(v) = args.obj_hidden {
+        cfg.obj_hidden = v;
+    }
+    if let Some(v) = args.h1 {
+        cfg.h1 = v;
+    }
+    if let Some(v) = args.h2 {
+        cfg.h2 = v;
+    }
+    if cfg.attn {
+        assert!(
+            cfg.obj_hidden.is_multiple_of(crabomination_nn::ATTN_HEADS),
+            "--obj-hidden {} must be divisible by {} attention heads",
+            cfg.obj_hidden,
+            crabomination_nn::ATTN_HEADS
+        );
+    }
+    cfg
 }
 
 /// True when this trajectory belongs to the held-out set. A hash of the
@@ -229,12 +343,19 @@ struct Shared {
     games_done: AtomicU64,
     stalls: AtomicU64,
     live_actors: AtomicU64,
+    /// Set by the learner when `--stop-after-stale` trips: the holdout
+    /// has stopped improving, so further generation is compute spent
+    /// making `latest` worse. Actors finish their current game and exit.
+    stop: AtomicBool,
 }
 
 const DECK_WINDOW_CAP: usize = 200_000;
 
 fn actor_loop(shared: &Shared, args: &Args, vocab: &Vocab, deck_judge: Option<&DeckNet>) {
     loop {
+        if shared.stop.load(Ordering::Relaxed) {
+            break;
+        }
         let n = shared.next_game.fetch_add(1, Ordering::Relaxed);
         if let Some(max) = args.games
             && n >= max
@@ -307,6 +428,34 @@ fn actor_loop(shared: &Shared, args: &Args, vocab: &Vocab, deck_judge: Option<&D
         }
     }
     shared.live_actors.fetch_sub(1, Ordering::Relaxed);
+}
+
+/// Wall-clock decomposition of the learner thread between checkpoints,
+/// drained into `stats.jsonl` at each one.
+///
+/// Exists because the imbalance it exposes had to be reverse-engineered:
+/// the round-11 runs reached only 1.56× of their 6× reuse cap, and only
+/// arithmetic on the flags (264 relabel passes × a 250 k window = 66 M
+/// forward-rows vs 13.5 M trained) said the λ-relabel pass was why. Now
+/// the split is a column, not a derivation.
+#[derive(Default)]
+struct LearnerTiming {
+    sample: std::time::Duration,
+    step: std::time::Duration,
+    relabel: std::time::Duration,
+    deck: std::time::Duration,
+    sleep: std::time::Duration,
+}
+
+impl LearnerTiming {
+    /// Milliseconds per bucket since the last drain, zeroing the counters:
+    /// `[sample, step, relabel, deck, sleep]`.
+    fn take_ms(&mut self) -> [u64; 5] {
+        let out = [&self.sample, &self.step, &self.relabel, &self.deck, &self.sleep]
+            .map(|d| d.as_millis() as u64);
+        *self = Self::default();
+        out
+    }
 }
 
 fn sample_owned(shared: &Shared, n: usize, rng: &mut StdRng) -> Vec<(TrainRow, f32)> {
@@ -444,6 +593,16 @@ fn gate_builder_v2(args: &Args, games_per_pool: usize) {
 
 fn main() {
     let args = parse_args();
+    // Before anything encodes: the diagnostics below must see the same
+    // features the run being diagnosed was trained on.
+    if !args.ablate.is_empty() {
+        crabomination::server::encode::set_encode_ablation(
+            !args.ablate.iter().any(|b| b == "lib"),
+            !args.ablate.iter().any(|b| b == "cast"),
+            !args.ablate.iter().any(|b| b == "rel"),
+        );
+        eprintln!("encoder ablation: {} switched off", args.ablate.join(", "));
+    }
     let vocab = Vocab::sos_sealed();
     if let Some(games) = args.gate_builder_v2 {
         gate_builder_v2(&args, games);
@@ -461,11 +620,7 @@ fn main() {
         pairwise(&args, &vocab, games);
         return;
     }
-    let cfg = if args.attn {
-        NetConfig::with_attention(vocab.size())
-    } else {
-        NetConfig::standard(vocab.size())
-    };
+    let cfg = net_config(&args, vocab.size());
     let mut trainer = Trainer::new(&cfg, args.lr).expect("trainer init");
     let mut deck_trainer =
         DeckTrainer::new(&DeckNetConfig::standard(vocab.size()), args.lr).expect("deck trainer");
@@ -482,6 +637,12 @@ fn main() {
     if latest.exists() {
         trainer.load(&latest).expect("resume from latest.safetensors (delete it to start fresh)");
         eprintln!("resumed weights from {}", latest.display());
+    } else if let Some(src) = &args.seed_emb {
+        // Only on a fresh run: resuming already has embeddings that have
+        // been trained on real positions, and overwriting them with the
+        // deck net's would throw that away.
+        trainer.seed_embeddings_from_deck_net(src).expect("--seed-emb");
+        eprintln!("card embeddings seeded from the deck net at {}", src.display());
     }
     let deck_latest = args.out.join("deck-latest.safetensors");
     if deck_latest.exists() {
@@ -514,6 +675,7 @@ fn main() {
         games_done: AtomicU64::new(0),
         stalls: AtomicU64::new(0),
         live_actors: AtomicU64::new(args.actors as u64),
+        stop: AtomicBool::new(false),
     };
     eprintln!(
         "selfplay_train: {} actors, vocab {}, window {}, batch {}, reuse cap {}x",
@@ -543,6 +705,11 @@ fn main() {
         // in one head (or in effective sample reuse) is visible.
         let mut loss_ema = [f32::NAN; 4];
         let mut deck_loss_ema = f32::NAN;
+        // Best held-out AUC seen so far; drives `best.safetensors`.
+        let mut best_auc = f32::NEG_INFINITY;
+        // Scored checkpoints since the last new best — `--stop-after-stale`.
+        let mut stale = 0u64;
+        let mut timing = LearnerTiming::default();
         // (samples consumed when the actors finished, tail allowance).
         let mut tail_budget = None::<(u64, u64)>;
         let stats_path = args.out.join("stats.jsonl");
@@ -577,7 +744,9 @@ fn main() {
                 if !actors_live {
                     break; // no more data coming and the reuse budget is spent
                 }
+                let t0 = Instant::now();
                 std::thread::sleep(std::time::Duration::from_millis(200));
+                timing.sleep += t0.elapsed();
                 continue;
             }
             // Refresh the λ-returns periodically: they are computed
@@ -589,14 +758,25 @@ fn main() {
                 && step.is_multiple_of(args.relabel_every)
                 && shared.window.lock().unwrap().len() as u64 >= args.min_window
             {
+                let t0 = Instant::now();
                 let mut w = shared.window.lock().unwrap();
-                w.relabel_lambda(args.lambda, |rows| {
-                    trainer.predict_win_batch(rows, 512).unwrap_or_default()
-                });
+                let value =
+                    |rows: &[&TrainRow]| trainer.predict_win_batch(rows, 512).unwrap_or_default();
+                if args.relabel_new {
+                    w.relabel_lambda_new_rows(args.lambda, value);
+                } else {
+                    w.relabel_lambda(args.lambda, value);
+                }
+                drop(w);
+                timing.relabel += t0.elapsed();
             }
+            let t0 = Instant::now();
             let rows = sample_owned(&shared, args.batch, &mut rng);
+            timing.sample += t0.elapsed();
             let refs: Vec<(&TrainRow, f32)> = rows.iter().map(|(r, t)| (r, *t)).collect();
+            let t0 = Instant::now();
             let loss = trainer.train_step_with_targets(&refs).expect("train step");
+            timing.step += t0.elapsed();
             consumed += args.batch as u64;
             step += 1;
             for (ema, part) in loss_ema
@@ -610,6 +790,7 @@ fn main() {
             // is 2 rows/game, so training it every step would just churn
             // the same rows.
             if step.is_multiple_of(4) {
+                let t0 = Instant::now();
                 let rows: Vec<DeckRow> = {
                     let dw = shared.deck_window.lock().unwrap();
                     if dw.len() < 4_000 {
@@ -626,10 +807,11 @@ fn main() {
                     deck_loss_ema =
                         if deck_loss_ema.is_nan() { dl } else { 0.99 * deck_loss_ema + 0.01 * dl };
                 }
+                timing.deck += t0.elapsed();
             }
 
             if step.is_multiple_of(args.checkpoint_every) {
-                checkpoint(
+                let improved = checkpoint(
                     &trainer,
                     &deck_trainer,
                     deck_loss_ema,
@@ -640,8 +822,23 @@ fn main() {
                     loss_ema,
                     start,
                     &stats_path,
+                    &mut best_auc,
+                    &mut timing,
                     &mut prev_interval,
                 );
+                match improved {
+                    Some(true) => stale = 0,
+                    Some(false) => stale += 1,
+                    None => {} // no holdout scored: says nothing either way
+                }
+                if args.stop_after_stale > 0 && stale >= args.stop_after_stale {
+                    eprintln!(
+                        "early stop at step {step}: no holdout-AUC improvement in {stale} \
+                         checkpoints (best {best_auc:.4} is published as best.safetensors)"
+                    );
+                    shared.stop.store(true, Ordering::Relaxed);
+                    break;
+                }
             }
         }
         if step > 0 && !step.is_multiple_of(args.checkpoint_every) {
@@ -656,6 +853,8 @@ fn main() {
                 loss_ema,
                 start,
                 &stats_path,
+                &mut best_auc,
+                &mut timing,
                 &mut prev_interval,
             );
         }
@@ -692,7 +891,9 @@ struct Interval {
     consumed: u64,
     step: u64,
 }
-
+/// Returns whether this checkpoint improved the holdout AUC — `None` when
+/// no holdout was scored, so `--stop-after-stale` counts only checkpoints
+/// that actually said something.
 #[allow(clippy::too_many_arguments)]
 fn checkpoint(
     trainer: &Trainer,
@@ -705,8 +906,10 @@ fn checkpoint(
     loss_ema: [f32; 4],
     start: Instant,
     stats_path: &std::path::Path,
+    best_auc: &mut f32,
+    timing: &mut LearnerTiming,
     prev: &mut Interval,
-) {
+) -> Option<bool> {
     let tmp = args.out.join("latest.safetensors.tmp");
     trainer.save(&tmp).expect("save checkpoint");
     std::fs::rename(&tmp, args.out.join("latest.safetensors")).expect("publish checkpoint");
@@ -761,8 +964,9 @@ fn checkpoint(
     *prev = Interval { secs, games, rows, consumed, step };
     let cum_g = games as f64 / secs.max(1e-9);
     let cum_r = rows as f64 / secs.max(1e-9);
+    let [t_sample, t_step, t_relabel, t_deck, t_sleep] = timing.take_ms();
     let line = format!(
-        "{{\"step\":{step},\"loss_ema\":{total:.5},\"loss_win\":{win:.5},\"loss_life\":{life:.5},\"loss_len\":{len:.5},\"loss_deck\":{deck_loss:.5},\"val_n\":{val_n},\"val_win\":{val_win:.5},\"val_logloss\":{val_ll:.5},\"val_auc\":{val_auc:.5},\"rows_consumed\":{consumed},\"rows\":{rows},\"games\":{games},\"stalls\":{stalls},\"elapsed_s\":{secs:.0},\"games_per_s\":{dg:.3},\"rows_per_s\":{dr:.1},\"consumed_per_s\":{dc:.1},\"steps_per_s\":{ds:.3},\"games_per_s_cum\":{cum_g:.3},\"rows_per_s_cum\":{cum_r:.1}}}\n"
+        "{{\"step\":{step},\"loss_ema\":{total:.5},\"loss_win\":{win:.5},\"loss_life\":{life:.5},\"loss_len\":{len:.5},\"loss_deck\":{deck_loss:.5},\"val_n\":{val_n},\"val_win\":{val_win:.5},\"val_logloss\":{val_ll:.5},\"val_auc\":{val_auc:.5},\"rows_consumed\":{consumed},\"rows\":{rows},\"games\":{games},\"stalls\":{stalls},\"elapsed_s\":{secs:.0},\"games_per_s\":{dg:.3},\"rows_per_s\":{dr:.1},\"consumed_per_s\":{dc:.1},\"steps_per_s\":{ds:.3},\"games_per_s_cum\":{cum_g:.3},\"rows_per_s_cum\":{cum_r:.1},\"t_sample_ms\":{t_sample},\"t_step_ms\":{t_step},\"t_relabel_ms\":{t_relabel},\"t_deck_ms\":{t_deck},\"t_sleep_ms\":{t_sleep}}}\n"
     );
     use std::io::Write;
     let mut f = std::fs::OpenOptions::new()
@@ -771,15 +975,42 @@ fn checkpoint(
         .open(stats_path)
         .expect("stats.jsonl");
     f.write_all(line.as_bytes()).expect("stats write");
+    // Keep the best net by held-out ranking, not just the last one.
+    //
+    // `latest.safetensors` is whatever the run happened to end on, and a
+    // run that overfits ends on its *worst* net: in the round-11 pair the
+    // holdout AUC peaked around step 4–6 k and then fell ~0.07 over the
+    // next 45 k steps while the training loss went to 0.001. Every gate
+    // and every calibration before this was therefore scored on a
+    // memorised checkpoint. Publishing `best.safetensors` costs one file
+    // and makes those comparisons mean what they claim to.
+    let scored = val_n > 0 && val_auc.is_finite();
+    let mut improved = false;
+    if scored && val_auc > *best_auc {
+        *best_auc = val_auc;
+        let btmp = args.out.join("best.safetensors.tmp");
+        trainer.save(&btmp).expect("save best checkpoint");
+        std::fs::rename(&btmp, args.out.join("best.safetensors")).expect("publish best");
+        improved = true;
+    }
     let val_note = if val_n > 0 {
-        format!(" | val win {val_win:.4} auc {val_auc:.4} (n={val_n})")
+        let best_note = if improved { " *best*" } else { "" };
+        format!(" | val win {val_win:.4} auc {val_auc:.4} (n={val_n}){best_note}")
     } else {
         String::new()
     };
+    // Learner wall-clock split since the last checkpoint. "train" is
+    // sample + step + deck: the time spent actually learning, against the
+    // relabel overhead and the reuse-throttle idle.
+    let busy = (t_sample + t_step + t_relabel + t_deck + t_sleep).max(1);
     eprintln!(
         "step {step}: loss {total:.4} (win {win:.4}){val_note}, {games} games, {rows} rows \
-         ({dg:.1} games/s, {dr:.0} rows/s this interval; {cum_g:.1} games/s cum)",
+         ({dg:.1} games/s, {dr:.0} rows/s this interval; {cum_g:.1} games/s cum) [train {}% relabel {}% sleep {}%]",
+        100 * (t_sample + t_step + t_deck) / busy,
+        100 * t_relabel / busy,
+        100 * t_sleep / busy
     );
+    if scored { Some(improved) } else { None }
 }
 
 // ────────────────────────────── calibration ──────────────────────────────
@@ -806,18 +1037,14 @@ fn checkpoint(
 /// support rather than penalised for not being calibrated.
 fn calibrate(args: &Args, vocab: &Vocab, games: usize) {
     let best = args.use_best.as_ref().expect("--calibrate needs --use-best WEIGHTS");
-    let cfg = if args.attn {
-        NetConfig::with_attention(vocab.size())
-    } else {
-        NetConfig::standard(vocab.size())
-    };
+    let cfg = net_config(args, vocab.size());
     let mut trainer = Trainer::new(&cfg, args.lr).expect("trainer init");
     trainer
         .load(best)
         .expect("load weights for calibration (add --attn if these are attention weights)");
 
-    // (net p, heuristic score, actual result)
-    let mut obs: Vec<(f32, f32, f32)> = Vec::new();
+    // (net p, heuristic score, actual result, ply)
+    let mut obs: Vec<(f32, f32, f32, u16)> = Vec::new();
     let mut rng = StdRng::seed_from_u64(args.seed ^ 0xCA11B);
     for n in 0..games as u64 {
         let salt =
@@ -840,7 +1067,7 @@ fn calibrate(args: &Args, vocab: &Vocab, games: usize) {
         let refs: Vec<&TrainRow> = rec.rows.iter().collect();
         let preds = trainer.predict_win_batch(&refs, 512).expect("forward");
         for ((row, h), p) in rec.rows.iter().zip(&rec.heur).zip(preds) {
-            obs.push((p, *h as f32, row.win));
+            obs.push((p, *h as f32, row.win, row.ply));
         }
     }
     if obs.len() < 100 {
@@ -854,22 +1081,22 @@ fn calibrate(args: &Args, vocab: &Vocab, games: usize) {
     let mut best_ll = f32::INFINITY;
     for k in 0..60 {
         let t = 2.0f32.powf(k as f32 / 4.0);
-        let ll = log_loss(obs.iter().map(|&(_, h, y)| (sigmoid(h / t), y)));
+        let ll = log_loss(obs.iter().map(|&(_, h, y, _)| (sigmoid(h / t), y)));
         if ll < best_ll {
             best_ll = ll;
             best_t = t;
         }
     }
 
-    let net_ll = log_loss(obs.iter().map(|&(p, _, y)| (p, y)));
-    let net_brier = brier(obs.iter().map(|&(p, _, y)| (p, y)));
-    let heur_brier = brier(obs.iter().map(|&(_, h, y)| (sigmoid(h / best_t), y)));
-    let net_auc = auc(obs.iter().map(|&(p, _, y)| (p, y)));
-    let heur_auc = auc(obs.iter().map(|&(_, h, y)| (h, y)));
+    let net_ll = log_loss(obs.iter().map(|&(p, _, y, _)| (p, y)));
+    let net_brier = brier(obs.iter().map(|&(p, _, y, _)| (p, y)));
+    let heur_brier = brier(obs.iter().map(|&(_, h, y, _)| (sigmoid(h / best_t), y)));
+    let net_auc = auc(obs.iter().map(|&(p, _, y, _)| (p, y)));
+    let heur_auc = auc(obs.iter().map(|&(_, h, y, _)| (h, y)));
     // The constant predictor: what "knows nothing" scores, so the two
     // numbers above have a floor to be read against.
-    let base = obs.iter().map(|&(_, _, y)| y).sum::<f32>() / obs.len() as f32;
-    let base_ll = log_loss(obs.iter().map(|&(_, _, y)| (base, y)));
+    let base = obs.iter().map(|&(_, _, y, _)| y).sum::<f32>() / obs.len() as f32;
+    let base_ll = log_loss(obs.iter().map(|&(_, _, y, _)| (base, y)));
 
     println!("calibration on {} positions from {games} games", obs.len());
     println!("  base rate {base:.3}  (log-loss {base_ll:.4} — the score of knowing nothing)");
@@ -878,9 +1105,11 @@ fn calibrate(args: &Args, vocab: &Vocab, games: usize) {
         "  heuristic  log-loss {best_ll:.4}  Brier {heur_brier:.4}  AUC {heur_auc:.4}  (t={best_t:.1})"
     );
 
+    ply_strata(&obs, best_t);
+
     // Output histogram: the saturation check.
     let mut bins = [0usize; 10];
-    for &(p, _, _) in &obs {
+    for &(p, _, _, _) in &obs {
         bins[((p * 10.0) as usize).min(9)] += 1;
     }
     println!("  net output histogram (0.0..1.0 in tenths):");
@@ -888,12 +1117,83 @@ fn calibrate(args: &Args, vocab: &Vocab, games: usize) {
         let pct = 100.0 * *c as f64 / obs.len() as f64;
         println!("    {:.1}-{:.1}  {:>6}  {:5.1}%  {}", i as f32 / 10.0, (i + 1) as f32 / 10.0, c, pct, "#".repeat((pct / 2.0) as usize));
     }
-    let extreme = obs.iter().filter(|&&(p, _, _)| !(0.05..=0.95).contains(&p)).count();
+    let extreme = obs.iter().filter(|&&(p, _, _, _)| !(0.05..=0.95).contains(&p)).count();
     println!(
         "  {:.1}% of positions score outside [0.05, 0.95] — the search cannot rank lines \
          inside a saturated band",
         100.0 * extreme as f64 / obs.len() as f64
     );
+}
+
+/// Lower edge of each ply stratum; the last bucket is open-ended.
+const PLY_EDGES: [u16; 6] = [0, 4, 8, 12, 20, 32];
+
+/// Break the calibration observations down by position-in-game.
+///
+/// The aggregate numbers above pool every snapshot in every game, and the
+/// two ends of a game are not the same problem. Late positions are mostly
+/// *already decided* — one player is at 3 life facing a board they cannot
+/// beat — and any evaluation that can count power and life gets them
+/// right. Early positions are the contested ones, and they are the only
+/// ones where the search's choices can still change the result.
+///
+/// So a net that is better than the heuristic late and worse early posts a
+/// better aggregate AUC **and plays worse**, because it is winning the
+/// pooled comparison on exactly the positions where being right is free.
+/// That is a candidate explanation for the play net's standing result (a
+/// strictly better predictor that keeps losing gates) and it is invisible
+/// in any aggregate metric, which is why this breakdown exists.
+///
+/// Buckets are directly comparable: both seats are snapshotted at the same
+/// instants and carry the same `ply`, so every stratum holds exactly one
+/// win per loss and the base rate is 0.5 throughout. The heuristic's
+/// temperature is the one fitted globally — refitting per bucket would
+/// hand it a free parameter per stratum that it would not have in play.
+fn ply_strata(obs: &[(f32, f32, f32, u16)], heur_t: f32) {
+    println!("  by ply (snapshots are ~3/turn/seat, so ply 12 is about turn 4):");
+    println!("    {:<8} {:>7}  {:>8} {:>8} {:>7}   {:>8} {:>8}", "ply", "n", "net AUC", "heur", "delta", "net LL", "heur LL");
+    let mut first: Option<f32> = None;
+    let mut last: Option<f32> = None;
+    for (i, &lo) in PLY_EDGES.iter().enumerate() {
+        let hi = PLY_EDGES.get(i + 1).copied().unwrap_or(u16::MAX);
+        let cut: Vec<&(f32, f32, f32, u16)> =
+            obs.iter().filter(|o| o.3 >= lo && o.3 < hi).collect();
+        // AUC is undefined without both classes and meaningless on a
+        // handful of positions; say so rather than printing noise.
+        if cut.len() < 200 {
+            println!("    {:<8} {:>7}  (too few positions to score)", label(lo, hi), cut.len());
+            continue;
+        }
+        let n_auc = auc(cut.iter().map(|&&(p, _, y, _)| (p, y)));
+        let h_auc = auc(cut.iter().map(|&&(_, h, y, _)| (h, y)));
+        let n_ll = log_loss(cut.iter().map(|&&(p, _, y, _)| (p, y)));
+        let h_ll = log_loss(cut.iter().map(|&&(_, h, y, _)| (sigmoid(h / heur_t), y)));
+        println!(
+            "    {:<8} {:>7}  {:>8.4} {:>8.4} {:>+7.4}   {:>8.4} {:>8.4}",
+            label(lo, hi),
+            cut.len(),
+            n_auc,
+            h_auc,
+            n_auc - h_auc,
+            n_ll,
+            h_ll
+        );
+        first.get_or_insert(n_auc - h_auc);
+        last = Some(n_auc - h_auc);
+    }
+    if let (Some(f), Some(l)) = (first, last)
+        && f < 0.0
+        && l > 0.0
+    {
+        println!(
+            "    ^ the net's edge is late-game only ({f:+.4} earliest bucket, {l:+.4} latest) — \
+             the aggregate AUC is being carried by positions the search no longer decides"
+        );
+    }
+}
+
+fn label(lo: u16, hi: u16) -> String {
+    if hi == u16::MAX { format!("{lo}+") } else { format!("{lo}-{}", hi - 1) }
 }
 
 fn sigmoid(x: f32) -> f32 {
@@ -983,11 +1283,7 @@ fn auc(it: impl Iterator<Item = (f32, f32)>) -> f32 {
 /// differ by less than its own noise.
 fn pairwise(args: &Args, vocab: &Vocab, games: usize) {
     let best = args.use_best.as_ref().expect("--pairwise needs --use-best WEIGHTS");
-    let cfg = if args.attn {
-        NetConfig::with_attention(vocab.size())
-    } else {
-        NetConfig::standard(vocab.size())
-    };
+    let cfg = net_config(args, vocab.size());
     let mut trainer = Trainer::new(&cfg, args.lr).expect("trainer init");
     trainer.load(best).expect("load weights (add --attn for attention weights)");
 

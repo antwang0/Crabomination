@@ -19,11 +19,13 @@ use std::collections::HashMap;
 
 use crabomination_nn::{
     EncodedObject, EncodedState, G_BF_OPP, G_BF_SELF, G_GY_OPP, G_GY_SELF, G_HAND_SELF,
-    GLOBAL_FEATS, OBJ_FEATS,
+    G_LIB_SELF, G_STACK_OPP, G_STACK_SELF, GLOBAL_FEATS, OBJ_FEATS,
 };
 
 use crate::card::{CardInstance, CounterType};
+use crate::game::actions::color_index;
 use crate::game::{GameState, TurnStep};
+use crate::mana::ManaCost;
 
 /// Card-name → embedding-index table. Index 0 is reserved for unknown
 /// names; real cards are indexed 1.. in sorted-name order, so the mapping
@@ -58,23 +60,129 @@ impl Vocab {
     }
 }
 
+/// Which round-11 feature blocks the encoder emits.
+///
+/// A measurement control, in the house style of keeping the replaced
+/// behaviour available: the library group and the castability block landed
+/// together with a vocabulary change, so "the new encoder scores worse" has
+/// three candidate causes and no way to separate them without being able to
+/// switch each block off while everything else stays fixed.
+///
+/// Ablated blocks are *zeroed*, not removed — feature counts and
+/// [`crabomination_nn::SHARD_VERSION`] are unchanged, so an ablated run and
+/// a full run produce interchangeable shards and identically-shaped nets.
+/// Process-global for the same reason the net slot and the bot's jitter seed
+/// are: the encoder is called from deep inside the search and threading a
+/// config through every call site would be a worse trade than a flag set
+/// once at startup.
+static ABLATE: std::sync::atomic::AtomicU8 = std::sync::atomic::AtomicU8::new(0);
+const ABLATE_LIBRARY: u8 = 1;
+const ABLATE_CASTABILITY: u8 = 2;
+const ABLATE_RELATIONS: u8 = 4;
+
+/// Turn round-11/12 feature blocks off for an ablation run. All default
+/// on. `relations` covers the round-12 block whole: the relation flags
+/// (28..=35), the stack groups, and stack depth.
+pub fn set_encode_ablation(library: bool, castability: bool, relations: bool) {
+    let mask = if library { 0 } else { ABLATE_LIBRARY }
+        | if castability { 0 } else { ABLATE_CASTABILITY }
+        | if relations { 0 } else { ABLATE_RELATIONS };
+    ABLATE.store(mask, std::sync::atomic::Ordering::Relaxed);
+}
+
+fn ablated(bit: u8) -> bool {
+    ABLATE.load(std::sync::atomic::Ordering::Relaxed) & bit != 0
+}
+
 /// Encode the position from `seat`'s perspective. Two-player only, like
 /// the rest of the bot stack.
 pub fn encode_state(g: &GameState, seat: usize, vocab: &Vocab) -> EncodedState {
     let opp = 1 - seat;
     let mut s = EncodedState::default();
 
+    // Relation context (round 12): unary summaries of edges the pooled
+    // representation cannot carry — see the OBJ_FEATS doc, 28..=36.
+    let no_rel = ablated(ABLATE_RELATIONS);
+    let mut targeted: std::collections::HashSet<crate::card::CardId> = Default::default();
+    // (host id, attachment's controller) — resolved against the host's
+    // own controller at encode time, because "who controls the aura on
+    // this creature" is what separates a buff from a Pacifism.
+    let mut attachments: Vec<(crate::card::CardId, usize)> = Vec::new();
+    if !no_rel {
+        use crate::game::types::{StackItem, Target};
+        for item in g.stack.iter() {
+            let (target, extra): (&Option<Target>, &[Target]) = match item {
+                StackItem::Spell { target, additional_targets, .. } => {
+                    (target, additional_targets)
+                }
+                StackItem::Trigger { target, .. } => (target, &[]),
+            };
+            for t in target.iter().chain(extra) {
+                if let Target::Permanent(id) = t {
+                    targeted.insert(*id);
+                }
+            }
+        }
+        for c in g.battlefield.iter() {
+            if let Some(host) = c.attached_to {
+                attachments.push((host, c.controller));
+            }
+        }
+    }
+
     for c in g.battlefield.iter() {
         let group = if c.controller == seat { G_BF_SELF } else { G_BF_OPP };
-        s.groups[group].push(encode_battlefield_object(g, c, vocab));
+        let mut o = encode_battlefield_object(g, c, vocab);
+        if !no_rel {
+            if g.block_map.contains_key(&c.id) {
+                o.feats[28] = 1.0;
+            }
+            if g.block_map.values().any(|attackers| attackers.contains(&c.id)) {
+                o.feats[29] = 1.0;
+            }
+            if c.attached_to.is_some() {
+                o.feats[30] = 1.0;
+            }
+            for (host, attach_ctl) in &attachments {
+                if *host == c.id {
+                    if *attach_ctl == c.controller {
+                        o.feats[31] = 1.0;
+                    } else {
+                        o.feats[32] = 1.0;
+                    }
+                }
+            }
+            if targeted.contains(&c.id) {
+                o.feats[33] = 1.0;
+            }
+        }
+        s.groups[group].push(o);
     }
+    // Castability is per-seat state, so the hand's live/dead split is
+    // computed against this seat's own untapped sources.
+    let no_cast = ablated(ABLATE_CASTABILITY);
+    let sources = if no_cast { Vec::new() } else { g.untapped_mana_colors(seat) };
     for c in g.players[seat].hand.iter() {
-        s.groups[G_HAND_SELF].push(encode_card_object(c, vocab));
+        let mut o = encode_card_object(c, vocab);
+        if !no_cast && !c.definition.is_land() {
+            o.feats[25] = if affordable(&c.definition.cost, &sources) { 1.0 } else { 0.0 };
+            // Next turn is this turn plus one more source of any colour —
+            // the land drop the seat has not made yet. Deliberately
+            // optimistic about colour: "which of my cards come online if I
+            // hit my drop" is the question, and a wrong-colour land is the
+            // rarer case in a two-colour sealed deck.
+            o.feats[26] = if affordable_with_extra(&c.definition.cost, &sources) { 1.0 } else { 0.0 };
+        }
+        s.groups[G_HAND_SELF].push(o);
     }
     for (group, p) in [(G_GY_SELF, seat), (G_GY_OPP, opp)] {
         for c in g.players[p].graveyard.iter() {
             s.groups[group].push(encode_card_object(c, vocab));
         }
+    }
+    encode_library(&mut s, g, seat, vocab);
+    if !no_rel {
+        encode_stack(&mut s, g, seat, vocab);
     }
 
     let (mut lands, mut untapped, mut creatures, mut power) = ([0i32; 2], [0i32; 2], [0i32; 2], [0i32; 2]);
@@ -125,9 +233,125 @@ pub fn encode_state(g: &GameState, seat: usize, vocab: &Vocab) -> EncodedState {
     gl[21] = creatures[1] as f32 / 6.0;
     gl[22] = power[0] as f32 / 12.0;
     gl[23] = power[1] as f32 / 12.0;
-    const _: () = assert!(GLOBAL_FEATS == 24, "extend the fill above when adding globals");
+    // Mana actually available, by colour, for both seats. gl[14..=15]
+    // already counted untapped *lands*; these count untapped *sources*
+    // (mana creatures and rocks included) and say what colours they make.
+    // The opponent's half is public and is what makes "they have two
+    // untapped blue" — the shape of every instant-speed decision — even
+    // representable.
+    let opp_sources = if no_cast { Vec::new() } else { g.untapped_mana_colors(opp) };
+    if !no_cast {
+        for (base, src) in [(24, &sources), (30, &opp_sources)] {
+            for ci in 0..5 {
+                gl[base + ci] = src.iter().filter(|m| m[ci]).count() as f32 / 6.0;
+            }
+            gl[base + 5] = src.len() as f32 / 6.0;
+        }
+    }
+    const _: () = assert!(GLOBAL_FEATS == 36, "extend the fill above when adding globals");
 
     s
+}
+
+/// The seat's own library, deduplicated by card name.
+///
+/// One object per distinct name with its remaining count in feature 27,
+/// rather than one per physical card: a sealed deck's eight Plains are one
+/// fact, not eight, and collapsing them keeps the object count (and so the
+/// quadratic attention cost) down while *adding* information the
+/// enumerated form only carries implicitly — "two copies of that removal
+/// spell left" is directly readable.
+///
+/// Emitted in vocabulary-index order so the library's actual shuffle can
+/// never reach the net, whatever the architecture does downstream.
+fn encode_library(s: &mut EncodedState, g: &GameState, seat: usize, vocab: &Vocab) {
+    if ablated(ABLATE_LIBRARY) {
+        return;
+    }
+    let mut counts: std::collections::BTreeMap<u16, (&CardInstance, u32)> =
+        std::collections::BTreeMap::new();
+    for c in g.players[seat].library.iter() {
+        let idx = vocab.index_of(c.definition.name);
+        counts.entry(idx).and_modify(|e| e.1 += 1).or_insert((c, 1));
+    }
+    for (_, (c, n)) in counts {
+        let mut o = encode_card_object(c, vocab);
+        o.feats[27] = n as f32 / 4.0;
+        s.groups[G_LIB_SELF].push(o);
+    }
+}
+
+/// The stack, one object per item, split by controller like the
+/// battlefield. Spells encode their own card; a trigger encodes its
+/// source if that is still on the battlefield, and otherwise an unknown
+/// object — rare, and its group and depth still carry signal. Depth from
+/// the top of the stack (the item that resolves first) lands in feature
+/// 36, because pooling would otherwise erase resolution order.
+fn encode_stack(s: &mut EncodedState, g: &GameState, seat: usize, vocab: &Vocab) {
+    use crate::game::types::StackItem;
+    let n = g.stack.len();
+    for (i, item) in g.stack.iter().enumerate() {
+        let (mut o, controller) = match item {
+            StackItem::Spell { card, caster, .. } => (encode_card_object(card, vocab), *caster),
+            StackItem::Trigger { source, controller, .. } => (
+                g.battlefield
+                    .iter()
+                    .find(|c| c.id == *source)
+                    .map(|c| encode_card_object(c, vocab))
+                    .unwrap_or_default(),
+                *controller,
+            ),
+        };
+        // The stack is a Vec used LIFO: the last element is the top.
+        o.feats[36] = (n - 1 - i) as f32 / 4.0;
+        let group = if controller == seat { G_STACK_SELF } else { G_STACK_OPP };
+        s.groups[group].push(o);
+    }
+}
+
+/// Can `cost` be paid right now off `sources`, one mana per source?
+///
+/// Exact for the model it assumes, by Hall's condition over the 32 colour
+/// subsets: a multiset of coloured pips has a saturating assignment iff
+/// for every subset of colours, the pips wanting those colours are no more
+/// numerous than the sources able to make one of them. A saturating
+/// assignment uses exactly one source per coloured pip, so the generic
+/// remainder is satisfied iff the total source count covers the whole
+/// mana value.
+///
+/// It is an approximation of the rules, deliberately so: sources that tap
+/// for two mana, cost reduction, alternative costs, {X}, and hybrid pips
+/// (counted as their first half by `colored_symbols`) all fall outside it.
+/// This is a *feature* — "is this card roughly live" — not a legality
+/// check, and the real payment path is [`GameState::auto_tap_for_cost`].
+fn affordable(cost: &ManaCost, sources: &[[bool; 5]]) -> bool {
+    let mut pips = [0u32; 5];
+    for c in cost.colored_symbols() {
+        pips[color_index(c)] += 1;
+    }
+    let colored: u32 = pips.iter().sum();
+    // `cmc` charges mono-hybrid its generic half while `colored_symbols`
+    // also counts it as a pip; take whichever is larger so the total can
+    // never come in under the coloured requirement.
+    if (sources.len() as u32) < cost.cmc().max(colored) {
+        return false;
+    }
+    (1u32..32).all(|mask| {
+        let need: u32 = (0..5).filter(|i| mask >> i & 1 == 1).map(|i| pips[i]).sum();
+        let have = sources
+            .iter()
+            .filter(|s| (0..5).any(|i| mask >> i & 1 == 1 && s[i]))
+            .count() as u32;
+        need <= have
+    })
+}
+
+/// [`affordable`] with one more source that makes any colour — the land
+/// drop the seat has not taken yet.
+fn affordable_with_extra(cost: &ManaCost, sources: &[[bool; 5]]) -> bool {
+    let mut plus = sources.to_vec();
+    plus.push([true; 5]);
+    affordable(cost, &plus)
 }
 
 /// Encode a decklist for the build net: vocab indices plus deck-level
@@ -216,6 +440,23 @@ fn encode_card_object(c: &CardInstance, vocab: &Vocab) -> EncodedObject {
     if c.has_keyword(&Keyword::DoubleStrike) {
         feats[18] = 1.0;
     }
+    // Colour requirement, printed. `cmc` alone said a card costs four; it
+    // could not say the four was {2}{G}{G} in a deck with three Forests.
+    if !ablated(ABLATE_CASTABILITY) {
+        for col in def.cost.colored_symbols() {
+            feats[20 + color_index(col)] += 1.0 / 2.0;
+        }
+    }
+    // 25/26 (castable now / next turn) are hand-only and filled by the
+    // caller, which is the only place that knows the seat's mana.
+    // Multiplicity: one copy unless the library encoder says otherwise.
+    feats[27] = 1.0 / 4.0;
+    // An aura or equipment is a card whose whole value is an edge; the
+    // printed-type flag lets the net treat "attachment in hand" as a
+    // different kind of spell before any edge exists.
+    if !ablated(ABLATE_RELATIONS) && (def.is_aura() || def.is_equipment()) {
+        feats[35] = 1.0;
+    }
     EncodedObject { card: vocab.index_of(def.name), feats }
 }
 
@@ -233,6 +474,19 @@ fn encode_battlefield_object(g: &GameState, c: &CardInstance, vocab: &Vocab) -> 
     f[9] = if c.counter_count(CounterType::Prepared) > 0 { 1.0 } else { 0.0 };
     f[10] = if g.attacking.iter().any(|a| a.attacker == c.id) { 1.0 } else { 0.0 };
     f[11] = if c.is_token { 1.0 } else { 0.0 };
+    // Counters beyond loyalty/prepared, by count. P/T counters reach the
+    // net twice — through effective P/T and here — which is deliberate: a
+    // 3/3 that is a 2/2 plus a counter dies differently to bounce and
+    // counter-hate than a printed 3/3 does.
+    if !ablated(ABLATE_RELATIONS) {
+        let special: u32 = c
+            .counters
+            .iter()
+            .filter(|(k, _)| !matches!(k, CounterType::Loyalty | CounterType::Prepared))
+            .map(|(_, v)| *v)
+            .sum();
+        f[34] = special as f32 / 4.0;
+    }
     o
 }
 
@@ -242,6 +496,20 @@ mod tests {
     use crate::catalog;
     use crate::player::Player;
     use crabomination_nn::NUM_GROUPS;
+
+    /// The ablation flag has to be process-global — actor threads must see
+    /// what `main` set — and cargo runs the tests in this module as
+    /// parallel threads of one process. So every test that encodes takes
+    /// this lock: without it, `ablation_zeroes_exactly_the_block_it_names`
+    /// would blank the library group underneath whichever test happened to
+    /// be running beside it.
+    static ENCODE_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
+
+    fn encode_guard() -> std::sync::MutexGuard<'static, ()> {
+        // A panicking test poisons the lock; that failure is already
+        // reported, and propagating it would mask every other test here.
+        ENCODE_LOCK.lock().unwrap_or_else(|e| e.into_inner())
+    }
 
     fn two_player_game() -> GameState {
         let players = vec![Player::new(0, "Alice"), Player::new(1, "Bob")];
@@ -267,6 +535,7 @@ mod tests {
 
     #[test]
     fn encode_reads_the_position_seat_relative() {
+        let _guard = encode_guard();
         let vocab = Vocab::sos_sealed();
         let mut g = two_player_game();
         g.players[0].life = 12;
@@ -313,5 +582,263 @@ mod tests {
 
         // Empty groups exist but are empty, never dropped.
         assert_eq!(s0.groups.len(), NUM_GROUPS);
+    }
+
+    /// A land on the battlefield, `n` of them, controlled by `seat`.
+    fn add_lands(g: &mut GameState, seat: usize, land: fn() -> crate::card::CardDefinition, n: u32, id0: u32) {
+        for k in 0..n {
+            let mut inst = CardInstance::new(crate::card::CardId(id0 + k), land(), seat);
+            inst.controller = seat;
+            g.battlefield.push(inst);
+        }
+    }
+
+    #[test]
+    fn the_library_encodes_as_a_deduplicated_multiset() {
+        let _guard = encode_guard();
+        let vocab = Vocab::sos_sealed();
+        let mut g = two_player_game();
+        // Three Forests and one Island, pushed interleaved.
+        for (k, f) in [catalog::forest, catalog::island, catalog::forest, catalog::forest]
+            .into_iter()
+            .enumerate()
+        {
+            g.players[0].library.push(CardInstance::new(crate::card::CardId(700 + k as u32), f(), 0));
+        }
+        let s = encode_state(&g, 0, &vocab);
+        let lib = &s.groups[G_LIB_SELF];
+        assert_eq!(lib.len(), 2, "four cards, two distinct names");
+        // Sorted by vocabulary index, and the counts land in feat 27.
+        let by_name: Vec<(u16, f32)> = lib.iter().map(|o| (o.card, o.feats[27])).collect();
+        assert!(by_name[0].0 < by_name[1].0, "emitted in vocab-index order");
+        let forest = by_name.iter().find(|e| e.0 == vocab.index_of("Forest")).unwrap();
+        let island = by_name.iter().find(|e| e.0 == vocab.index_of("Island")).unwrap();
+        assert!((forest.1 - 3.0 / 4.0).abs() < 1e-6, "three Forests");
+        assert!((island.1 - 1.0 / 4.0).abs() < 1e-6, "one Island");
+        // The opponent's library is never encoded — only its size.
+        assert_eq!(encode_state(&g, 1, &vocab).groups[G_LIB_SELF].len(), 0);
+    }
+
+    /// The library is a *set* to the net: the shuffle is hidden
+    /// information and must not survive encoding, whatever pooling or
+    /// attention does with the group downstream.
+    #[test]
+    fn library_order_does_not_reach_the_encoding() {
+        let _guard = encode_guard();
+        let vocab = Vocab::sos_sealed();
+        let mut a = two_player_game();
+        let mut b = two_player_game();
+        let deck = [catalog::forest, catalog::island, catalog::forest, catalog::plains];
+        for (k, f) in deck.iter().enumerate() {
+            a.players[0].library.push(CardInstance::new(crate::card::CardId(700 + k as u32), f(), 0));
+        }
+        for (k, f) in deck.iter().rev().enumerate() {
+            b.players[0].library.push(CardInstance::new(crate::card::CardId(800 + k as u32), f(), 0));
+        }
+        assert_eq!(encode_state(&a, 0, &vocab), encode_state(&b, 0, &vocab));
+    }
+
+    #[test]
+    fn castability_flags_read_the_seat_mana() {
+        let _guard = encode_guard();
+        let vocab = Vocab::sos_sealed();
+        let mut g = two_player_game();
+        // Grizzly Bears is {1}{G}. One Forest is not enough mana; one
+        // Forest and one Island is; two Islands is enough *mana* but the
+        // wrong colour, which is the case `cmc` alone could never see.
+        let bear = || CardInstance::new(crate::card::CardId(902), catalog::grizzly_bears(), 0);
+        g.players[0].hand.push(bear());
+
+        add_lands(&mut g, 0, catalog::forest, 1, 100);
+        let one_forest = encode_state(&g, 0, &vocab);
+        assert_eq!(one_forest.groups[G_HAND_SELF][0].feats[25], 0.0, "one land, two-mana spell");
+        assert_eq!(one_forest.groups[G_HAND_SELF][0].feats[26], 1.0, "castable after a land drop");
+
+        add_lands(&mut g, 0, catalog::island, 1, 200);
+        let forest_island = encode_state(&g, 0, &vocab);
+        assert_eq!(forest_island.groups[G_HAND_SELF][0].feats[25], 1.0, "{{1}}{{G}} off Forest+Island");
+
+        let mut wrong = two_player_game();
+        wrong.players[0].hand.push(bear());
+        add_lands(&mut wrong, 0, catalog::island, 2, 300);
+        let two_islands = encode_state(&wrong, 0, &vocab);
+        assert_eq!(
+            two_islands.groups[G_HAND_SELF][0].feats[25], 0.0,
+            "two mana but no green source"
+        );
+        // Next turn it comes online: the assumed land drop is optimistic
+        // about colour, so it covers the {G} and an Island pays the {1}.
+        // That optimism is the documented approximation — a seat with no
+        // green land left in its library will read as castable here.
+        assert_eq!(two_islands.groups[G_HAND_SELF][0].feats[26], 1.0);
+
+        // Printed colour pips ride along on every object regardless of zone.
+        let g_pip = two_islands.groups[G_HAND_SELF][0].feats[20 + 4];
+        assert!((g_pip - 0.5).abs() < 1e-6, "one green pip");
+    }
+
+    #[test]
+    fn available_mana_globals_cover_both_seats() {
+        let _guard = encode_guard();
+        let vocab = Vocab::sos_sealed();
+        let mut g = two_player_game();
+        add_lands(&mut g, 0, catalog::forest, 2, 100);
+        add_lands(&mut g, 1, catalog::island, 3, 200);
+        // One of the opponent's Islands is tapped: available mana is not
+        // the same question as permanents controlled.
+        g.battlefield.last_mut().unwrap().tapped = true;
+
+        let s = encode_state(&g, 0, &vocab);
+        assert!((s.global[24 + 4] - 2.0 / 6.0).abs() < 1e-6, "two green sources");
+        assert_eq!(s.global[24 + 1], 0.0, "no blue sources");
+        assert!((s.global[29] - 2.0 / 6.0).abs() < 1e-6, "two untapped sources total");
+        assert!((s.global[30 + 1] - 2.0 / 6.0).abs() < 1e-6, "opponent has two untapped Islands");
+        assert!((s.global[35] - 2.0 / 6.0).abs() < 1e-6);
+    }
+
+    /// The ablation control blanks each block and leaves the other
+    /// standing, so a run with `--ablate lib` differs from the full
+    /// encoder in the library group and nothing else.
+    ///
+    /// Serialized against the other tests by construction: it is the only
+    /// one that touches the process-global, and it restores it.
+    #[test]
+    fn ablation_zeroes_exactly_the_block_it_names() {
+        let _guard = encode_guard();
+        let vocab = Vocab::sos_sealed();
+        let mut g = two_player_game();
+        g.players[0].hand.push(CardInstance::new(
+            crate::card::CardId(902),
+            catalog::grizzly_bears(),
+            0,
+        ));
+        g.players[0]
+            .library
+            .push(CardInstance::new(crate::card::CardId(700), catalog::forest(), 0));
+        add_lands(&mut g, 0, catalog::forest, 2, 100);
+
+        let full = encode_state(&g, 0, &vocab);
+        assert_eq!(full.groups[G_LIB_SELF].len(), 1);
+        assert_eq!(full.groups[G_HAND_SELF][0].feats[25], 1.0);
+        assert!(full.global[24 + 4] > 0.0);
+
+        set_encode_ablation(false, true, true);
+        let no_lib = encode_state(&g, 0, &vocab);
+        assert_eq!(no_lib.groups[G_LIB_SELF].len(), 0, "library group is empty");
+        assert_eq!(no_lib.groups[G_HAND_SELF][0].feats[25], 1.0, "castability survives");
+        assert!(no_lib.global[24 + 4] > 0.0);
+
+        set_encode_ablation(true, false, true);
+        let no_cast = encode_state(&g, 0, &vocab);
+        assert_eq!(no_cast.groups[G_LIB_SELF].len(), 1, "library survives");
+        assert_eq!(no_cast.groups[G_HAND_SELF][0].feats[25], 0.0, "castable-now zeroed");
+        assert_eq!(no_cast.groups[G_HAND_SELF][0].feats[26], 0.0, "castable-next zeroed");
+        assert_eq!(no_cast.groups[G_HAND_SELF][0].feats[20 + 4], 0.0, "pips zeroed");
+        for i in 24..36 {
+            assert_eq!(no_cast.global[i], 0.0, "available-mana global {i} zeroed");
+        }
+        // Everything outside the two blocks is untouched.
+        assert_eq!(no_cast.global[..24], full.global[..24]);
+
+        // The relations bit blanks the round-12 block and only it: a
+        // blocked attacker loses its flag, the stack groups empty, the
+        // other blocks stand.
+        g.attacking.push(crate::game::types::Attack {
+            attacker: crate::card::CardId(100),
+            target: crate::game::types::AttackTarget::Player(1),
+        });
+        g.block_map.insert(crate::card::CardId(101), vec![crate::card::CardId(100)]);
+        set_encode_ablation(true, true, true);
+        let with_rel = encode_state(&g, 0, &vocab);
+        assert!(with_rel.groups[G_BF_SELF].iter().any(|o| o.feats[29] == 1.0), "blocked flag on");
+        set_encode_ablation(true, true, false);
+        let no_rel = encode_state(&g, 0, &vocab);
+        assert!(no_rel.groups[G_BF_SELF].iter().all(|o| o.feats[29] == 0.0), "blocked flag off");
+        assert_eq!(no_rel.groups[G_LIB_SELF].len(), 1, "library survives rel ablation");
+        assert_eq!(no_rel.groups[G_HAND_SELF][0].feats[25], 1.0, "castability survives");
+
+        set_encode_ablation(true, true, true);
+        assert_eq!(encode_state(&g, 0, &vocab), with_rel, "all on restores the full encoding");
+    }
+
+    /// The round-12 relation block: attachment edges split by controller,
+    /// stack targeting, and the stack groups themselves.
+    #[test]
+    fn relations_and_the_stack_reach_the_encoding() {
+        let _guard = encode_guard();
+        let vocab = Vocab::sos_sealed();
+        let mut g = two_player_game();
+        // My bear; their bear; my Pacifism on *their* bear. The encoder
+        // reads the attachment edge and controllers, not the card text.
+        let mut mine = CardInstance::new(crate::card::CardId(1), catalog::grizzly_bears(), 0);
+        mine.controller = 0;
+        let mut theirs = CardInstance::new(crate::card::CardId(2), catalog::grizzly_bears(), 1);
+        theirs.controller = 1;
+        let mut aura = CardInstance::new(crate::card::CardId(3), catalog::pacifism(), 0);
+        aura.controller = 0;
+        aura.attached_to = Some(crate::card::CardId(2));
+        g.battlefield.push(mine);
+        g.battlefield.push(theirs);
+        g.battlefield.push(aura);
+        // A trigger on the stack, controlled by seat 1 off their bear,
+        // aimed at my bear.
+        g.stack.push(
+            crate::game::types::TriggerPush::new(
+                crate::card::CardId(2),
+                1,
+                crate::effect::Effect::VentureInto { dungeon: "Undercity".into() },
+            )
+            .target(Some(crate::game::types::Target::Permanent(crate::card::CardId(1))))
+            .build(),
+        );
+
+        let s = encode_state(&g, 0, &vocab);
+        let me = &s.groups[G_BF_SELF][0];
+        assert_eq!(me.feats[33], 1.0, "my bear is targeted by the stack");
+        assert_eq!(me.feats[30], 0.0);
+        let aura_obj =
+            s.groups[G_BF_SELF].iter().find(|o| o.feats[30] == 1.0).expect("aura is_attached");
+        assert_eq!(aura_obj.feats[35], 1.0, "printed aura type flag");
+        let host = &s.groups[G_BF_OPP][0];
+        assert_eq!(host.feats[32], 1.0, "their bear wears an opposing attachment");
+        assert_eq!(host.feats[31], 0.0, "not an own attachment");
+        // The trigger encodes its battlefield source into the opp stack
+        // group, top of stack at depth 0.
+        assert_eq!(s.groups[G_STACK_OPP].len(), 1);
+        assert_eq!(s.groups[G_STACK_SELF].len(), 0);
+        assert_eq!(s.groups[G_STACK_OPP][0].card, vocab.index_of("Grizzly Bears"));
+        assert_eq!(s.groups[G_STACK_OPP][0].feats[36], 0.0);
+
+        // Seat-relative like every other group: the same stack is "mine"
+        // from seat 1.
+        let s1 = encode_state(&g, 1, &vocab);
+        assert_eq!(s1.groups[G_STACK_SELF].len(), 1);
+        assert_eq!(s1.groups[G_STACK_OPP].len(), 0);
+        assert_eq!(s1.groups[G_BF_SELF][0].feats[31], 0.0);
+        assert_eq!(s1.groups[G_BF_SELF][0].feats[32], 1.0, "opposing aura from either view");
+    }
+
+    #[test]
+    fn affordable_respects_colour_requirements_not_just_mana_value() {
+        use crate::mana::{ManaSymbol, Color};
+        let cost = ManaCost::new(vec![
+            ManaSymbol::Generic(1),
+            ManaSymbol::Colored(Color::White),
+            ManaSymbol::Colored(Color::Blue),
+        ]);
+        let w = [true, false, false, false, false];
+        let u = [false, true, false, false, false];
+        let any = [true; 5];
+        // Three sources, but two of them can only make white: {W}{U} needs
+        // a saturating assignment and there is only one blue source, so
+        // Hall's condition fails on the {W,U} subset.
+        assert!(!affordable(&cost, &[w, w, w]));
+        assert!(affordable(&cost, &[w, u, any]));
+        // Enough colours, not enough mana.
+        assert!(!affordable(&cost, &[w, u]));
+        // Colourless sources cover the generic pip only.
+        let colourless = [false; 5];
+        assert!(affordable(&cost, &[w, u, colourless]));
+        assert!(!affordable(&cost, &[w, colourless, colourless]));
     }
 }

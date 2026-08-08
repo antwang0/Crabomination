@@ -1,0 +1,31 @@
+# W/B — the gated deck net's top pick of 512 candidates from the same pool
+# (net nets_ab_full/deck-latest.safetensors, gated 60.0% / 61.8% vs static)
+# Differs from sealed_wb_sim.txt by: -1 Page Loose Leaf, -Rancorous Archaic,
+# -Sundering Archaic, +Lecturing Scornmage, +Rapier Wit, +1 land.
+# Lost the head-to-head to sealed_wb_sim.txt: 43.9% / 44.2% on seeds 11/12
+# (deck_duel, 2000 antithetic pairs each). Kept as the measured record of
+# where the net judge and the simulation judge disagree.
+2 Inkling Mascot
+1 Page, Loose Leaf
+1 Ad Nauseam
+1 Adventurous Eater
+1 Arnyn, Deathbloom Botanist
+1 Ascendant Dustspeaker
+1 Elite Interceptor
+1 Emeritus of Truce
+1 Imperious Inkmage
+1 Inkshape Demonstrator
+1 Lecturing Scornmage
+1 Melancholic Poet
+1 Poisoner's Apprentice
+1 Quill-Blade Laureate
+1 Rapier Wit
+1 Rehearsed Debater
+1 Scolding Administrator
+1 Soaring Stoneglider
+1 Social Snub
+1 Stone Docent
+1 Tragedy Feaster
+2 Forum of Amity
+8 Plains
+8 Swamp

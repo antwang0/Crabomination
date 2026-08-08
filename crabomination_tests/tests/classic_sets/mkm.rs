@@ -598,7 +598,7 @@ fn teysa_mints_one_spirit_per_turn() {
             &crabomination::effect::Effect::CreateToken {
                 who: crabomination::effect::PlayerRef::You,
                 count: crabomination::card::Value::ONE,
-                definition: crabomination::game::effects::clue_token(),
+                definition: Box::new(crabomination::game::effects::clue_token()),
             },
             &ctx,
         )

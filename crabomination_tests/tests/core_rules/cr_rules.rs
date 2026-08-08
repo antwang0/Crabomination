@@ -2033,7 +2033,7 @@ fn cr_704_5y_same_controller_roles_keep_only_the_newest() {
         ..Default::default()
     };
     let ctx = crabomination::game::effects::EffectContext::for_ability(bear, 0, None);
-    let mint = Effect::CreateTokenAttachedTo { target: Selector::This, definition: role };
+    let mint = Effect::CreateTokenAttachedTo { target: Selector::This, definition: Box::new(role) };
     g.resolve_effect(&mint, &ctx).unwrap();
     let first: Vec<CardId> = g.battlefield.iter()
         .filter(|c| c.definition.name == "Wicked").map(|c| c.id).collect();
@@ -2067,7 +2067,7 @@ fn cr_704_5y_different_controllers_roles_coexist() {
         },
         ..Default::default()
     };
-    let mint = Effect::CreateTokenAttachedTo { target: Selector::This, definition: role };
+    let mint = Effect::CreateTokenAttachedTo { target: Selector::This, definition: Box::new(role) };
     g.resolve_effect(&mint, &crabomination::game::effects::EffectContext::for_ability(bear, 0, None)).unwrap();
     g.resolve_effect(&mint, &crabomination::game::effects::EffectContext::for_ability(bear, 1, None)).unwrap();
     g.check_state_based_actions();
@@ -4728,7 +4728,7 @@ fn cr_111_10_token_created_fires_per_token() {
         &crabomination::card::Effect::CreateToken {
             who: crabomination::effect::PlayerRef::You,
             count: crabomination::card::Value::Const(1),
-            definition: crabomination_base::tokens::blood_token(),
+            definition: Box::new(crabomination_base::tokens::blood_token()),
         },
         &EffectContext::for_ability(crabomination::card::CardId(0), 0, None),
     ).unwrap();
@@ -4755,7 +4755,7 @@ fn cr_614_13_token_doubling_fires_per_doubled_token() {
         &crabomination::card::Effect::CreateToken {
             who: crabomination::effect::PlayerRef::You,
             count: crabomination::card::Value::Const(1),
-            definition: crabomination_base::tokens::blood_token(),
+            definition: Box::new(crabomination_base::tokens::blood_token()),
         },
         &EffectContext::for_ability(crabomination::card::CardId(0), 0, None),
     ).unwrap();

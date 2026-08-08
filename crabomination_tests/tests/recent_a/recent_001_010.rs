@@ -5438,7 +5438,7 @@ mod recent {
         let ctx0 = crabomination::game::effects::EffectContext::for_ability(crabomination::card::CardId(0), 1, None);
         g.resolve_effect(&Effect::CreateToken {
             who: crabomination::effect::PlayerRef::You, count: Value::Const(2),
-            definition: crabomination_base::tokens::blood_token(),
+            definition: Box::new(crabomination_base::tokens::blood_token()),
         }, &ctx0).unwrap();
         let trig = catalog::bloodvial_purveyor().triggered_abilities[1].effect.clone();
         let ctx = crabomination::game::effects::EffectContext::for_trigger(bv, 0, None, 0);

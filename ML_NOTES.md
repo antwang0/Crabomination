@@ -58,6 +58,140 @@ only stays dead while the reasoning that killed it is readable.
   stratum both plays and benches reports **no** within-archetype number
   rather than passing the marginal off as one. `recommend_pool` prints
   `within` first and labels `raw` as the confound.
+- 🟡 **Round 12 — the fast loop is real; the quality levers were not.**
+  Two halves, one replicated, one refuted by its own replication.
+
+  **The training loop got 3–6× faster, and the speedup replicated.**
+  Three changes (`--stop-after-stale N`: stop generation once the holdout
+  AUC goes N checkpoints without a new best; `--relabel-mode new`:
+  λ-relabel only rows pushed since the last pass, instead of the whole
+  250 k window; a learner wall-clock decomposition in `stats.jsonl`).
+  Measured against round 11's `ab_full` (90 k games, 1 539 s, learner at
+  1.56× of its 6× reuse cap because 66 M relabel forward-rows dwarfed
+  13.5 M trained): complete measured runs now take 417–712 s, relabel
+  drops to 6–7 % of learner time — and generation jumped 58.5 → 81–85
+  games/s, because the full-window relabel's CPU-side batch packing had
+  been stealing actor cores all along. Quality is no worse: the control's
+  calibration AUC is 0.7835 (seed 43) / 0.7973 (seed 97) against round
+  11's 0.7798. An experiment cycle is now ~7 minutes, seeds included.
+
+  **Representation, aux heads, and capacity: all null at this run
+  length.** One change per run, seed 43 then seed 97, scored by
+  `--calibrate 500` on `best.safetensors`:
+
+  | calib AUC | control (`--ablate rel`) | +relations/stack | +aux head | +2× width |
+  |---|---|---|---|---|
+  | seed 43 | 0.7835 | 0.7830 | 0.7784 | 0.7834 |
+  | seed 97 | **0.7973** | 0.7717 | — | 0.7686 |
+
+  Every seed-43 signal — the relation block's early-ply gains, the wide
+  net's saturation collapse to 1.1 % — reversed or vanished on seed 97,
+  where the *control* was the best run of the round. The load-bearing
+  observation: identical config across seeds moves calibration AUC by
+  ~0.014, which is as large as every treatment effect measured. **At
+  this run length, single-seed calibration deltas below ~0.015 AUC are
+  unreadable — treatments need multi-seed means, which the fast loop now
+  makes affordable (~7 min/seed).** The v5 format itself stays: it is an
+  information superset with an `--ablate rel` control, the relation
+  features cost nothing measurable at encode time, and a Pacified
+  creature no longer encodes identically to a free one — but no quality
+  claim attaches to it yet.
+
+  Infrastructure that landed: encoder v5 (relation flags, special
+  counters, stack zone groups; `OBJ_FEATS` 37, `NUM_GROUPS` 8,
+  `SHARD_VERSION` 5), the `--aux` short-horizon head (next-snapshot
+  life/power/creature deltas + opp hand, labelled from the trajectory),
+  width flags (`--emb-dim/--obj-hidden/--h1/--h2` — the engine reads
+  shapes, so capacity is a flag), and `[profile.release-fast]` for
+  iteration builds. Old checkpoints are shape-incompatible with v5
+  binaries and fail loudly at load.
+- 🟡 **Round 11 — what the net was never told.** Ten rounds varied the
+  model, the targets and the data volume; none of them varied *what is in
+  the input*. Four changes, one shard-format bump (`SHARD_VERSION` 4):
+
+  1. **The seat's own library is encoded** (`G_LIB_SELF`, a sixth zone
+     group) as a multiset deduplicated by card name, each entry carrying
+     its remaining count. Before this the library was a single scalar,
+     `library.len() / 40`: "22 cards left, three of them removal and one a
+     bomb" and "22 lands" encoded identically — though a seat's own
+     decklist is information it plainly has. Entries are emitted in
+     vocabulary-index order so the shuffle cannot leak, whatever pooling
+     or attention does downstream (`library_order_does_not_reach_the_encoding`).
+     It is also the one zone where bag-of-cards is unambiguously the right
+     prior, which is the same argument that makes the deck net work.
+  2. **Castability** (`OBJ_FEATS` 20 → 28, `GLOBAL_FEATS` 24 → 36).
+     Coloured pips on every object; castable-now and
+     castable-after-one-more-land flags on hand cards; untapped mana by
+     colour as globals for *both* seats. `cmc / 8` said a card cost four
+     and could not say the four was `{2}{G}{G}` against three Forests —
+     nor that the opponent is holding two untapped blue, which is the
+     shape of every instant-speed decision. Affordability is Hall's
+     condition over the 32 colour subsets against
+     `GameState::untapped_mana_colors`: exact for the one-mana-per-source
+     model it assumes, and explicitly a feature rather than a legality
+     check (multi-mana sources, cost reduction and `{X}` fall outside it).
+  3. **Embedding transfer** (`selfplay_train --seed-emb DECK.safetensors`).
+     The play net's card embeddings start from a trained *deck* net's
+     instead of from noise. Nothing is frozen — the claim is only that it
+     is a better starting point, and the control that tests it is the same
+     run without the flag. The deck net is the only learned component that
+     has ever cleared the house bar, and it learns what a card is worth
+     from a signal the play net never receives: one label per decklist,
+     tens of thousands of decklists, no board state in the way.
+  4. **Ply-stratified calibration** — `--calibrate` now breaks its
+     net-vs-heuristic comparison out by position-in-game. See explanation
+     4 below; this is the instrument for it.
+
+  Every trained checkpoint was already stale before these landed: the
+  upstream SOS additions moved the vocabulary 153 → 164, which invalidates
+  embedding tables by design.
+
+  **Results (2 × 90 k games, λ 0.7, attention, seed 43, paired):**
+
+  - **The runs overfit hard, and the checkpoint being scored was the worst
+    one.** Held-out AUC peaks at step 4–6 k (0.740 control, 0.759 seeded)
+    and falls to 0.675 by step 53 k while the training win-loss goes to
+    0.0011. `latest.safetensors` is whatever the run ended on, so *every
+    gate and calibration in this program so far was scored on a memorised
+    net.* Fixed: the learner now also publishes `best.safetensors`, keyed
+    on held-out AUC.
+  - **Embedding transfer helps where it can be seen.** Seeded leads the
+    control at 10 of the first 12 checkpoints (up to +0.046 AUC at step
+    16 k), and peaks +0.019 higher. On the *final* checkpoints the
+    ordering reverses (0.7009 vs 0.7071) — but that comparison is between
+    two overfit nets and measures which memorised differently, not which
+    learned more. One seed pair; not adopted, not refuted.
+  - Cost was not the problem: 58–69 games/s against the prior 44–45,
+    despite roughly twice the objects per state.
+
+  **Ablation (`--ablate lib,cast`, `.ladder/run_ablate.sh`) — four matched
+  90 k-game runs, each scored on its own `best.safetensors` over 500 fresh
+  games. `neither` is the old encoder on the new vocabulary, which is the
+  control the vocab change destroyed.**
+
+  | arm | net AUC | log-loss | Brier | heur AUC | outside [.05,.95] |
+  |---|---|---|---|---|---|
+  | **full** (lib + cast) | 0.7798 | **0.5575** | **0.1902** | 0.7377 | **3.3 %** |
+  | `nolib` (cast only) | **0.7809** | 0.5720 | 0.1947 | 0.7329 | 11.6 % |
+  | `nocast` (lib only) | 0.7748 | 0.5680 | 0.1942 | 0.7341 | 4.8 % |
+  | `neither` (old encoder) | 0.7599 | 0.6033 | 0.2058 | 0.7404 | 12.8 % |
+
+  1. **Both blocks earn their place: +0.020 AUC, −0.046 log-loss, −0.0156
+     Brier over the old encoder.** Keep `full`.
+  2. **The library group buys calibration, not ranking.** Its AUC effect is
+     nil (`nolib` is +0.001, inside noise), but it collapses saturation
+     **12.8 % → 3.3 %** and takes log-loss with it. That matters more than
+     the AUC here: a flat, saturated output band is the *mechanism* by
+     which a better predictor was made a worse player, so this is the
+     first change to attack that mechanism directly.
+  3. **Castability buys ranking**, consistently in both conditions:
+     `full − nocast` = +0.005 AUC, `nolib − neither` = +0.021.
+  4. **The earlier "the new encoder regressed to 0.707" reading was an
+     artefact of scoring `latest`.** Same config, same seed, same games:
+     `latest` 0.7071 / 0.792, `best` 0.7798 / 0.558. **Checkpoint
+     selection was worth +0.073 AUC — more than every feature in this
+     round combined.**
+
 - 🔴 **Play net as an evaluator: documented dead end.** Ten gate rounds
   across every lever available, and it has never won. Recorded here so
   the next person does not re-derive it.
@@ -73,6 +207,28 @@ only stays dead while the reasoning that killed it is readable.
   | `net-blend` | 48.8 % [47.8, 49.8] |
   | `net-q10` / `net-q20` | 44.4 % / 44.4 % |
   | `netb-q10` / `netb-q20` | 48.0 % / 48.9 % |
+
+  **Re-gated on a clean checkpoint (round 11) — the dead end survives it.**
+  Every number in the table above piloted `latest.safetensors`, which
+  round 11 showed is a memorised checkpoint; that made the closure itself
+  suspect. Rerun with `nets_ab_full/best.safetensors` (peak-holdout-AUC
+  selection, 0.7798 AUC, 3.3 % saturated), 1 200 paired sealed-mirror
+  games per cell, two seeds:
+
+  | profile | vs `gang` s43 | vs `gang` s97 | vs `atk-sim` s43 | vs `atk-sim` s97 |
+  |---|---|---|---|---|
+  | `net` (replacement) | 48.1 % [46.0, 50.2] | 48.8 % [46.7, 51.0] | 47.6 % [45.5, 49.7] | 48.5 % [46.5, 50.5] |
+  | `net-blend` | 47.8 % [45.7, 49.8] | 49.3 % [47.4, 51.3] | 50.7 % [48.8, 52.5] | 50.2 % [48.5, 52.0] |
+
+  Two things at once: the contamination was *material* — the clean
+  checkpoint recovers ~4 points of the replacement's deficit (44.8 →
+  48.1/48.8 vs `gang`) — and it was *not the cause*: no cell clears 50 %.
+  The saturation account also falls with it: saturation dropped 12.8 % →
+  3.3 % between the two checkpoints and the replacement still loses, so a
+  flat output landscape was not what was losing the gates either.
+  Explanation 3 below (sim-leaf distribution mismatch) is now the only
+  proposed cause left standing, and the ply table further down still
+  points at a phase-dependent evaluator as the one untried design.
 
   **Three explanations proposed, two tested, both refuted:**
 
@@ -93,10 +249,53 @@ only stays dead while the reasoning that killed it is readable.
      exactly this pattern, and every instrument built so far would show
      the former while the gate measures the latter. Testable by pulling
      calibration positions from inside the search.
+  4. **REFUTED, and inverted — the most useful thing round 11 found.**
+     The proposal was: AUC pools every snapshot, late positions are
+     already decided and numerous, so a net that is better late and worse
+     early would post a better aggregate and play worse — winning the
+     pooled comparison on exactly the positions where being right is free.
+     `--calibrate` now prints the breakdown by ply. The data says the
+     opposite. Net minus heuristic AUC, round-11 `full` on
+     `best.safetensors`:
+
+     | ply | n | net AUC | heur | delta |
+     |---|---|---|---|---|
+     | 0–3 | 4000 | 0.6404 | 0.5832 | +0.0572 |
+     | 4–7 | 4000 | 0.6640 | 0.5841 | +0.0798 |
+     | 8–11 | 4000 | 0.6749 | 0.5785 | **+0.0964** |
+     | 12–19 | 8000 | 0.6947 | 0.6055 | +0.0891 |
+     | 20–31 | 11956 | 0.7887 | 0.7362 | +0.0525 |
+     | 32+ | 19688 | 0.8565 | 0.8404 | +0.0161 |
+
+     The margin **peaks in the contested early-mid game and decays to
+     nearly nothing by ply 32+**: both evaluations converge once the board
+     is developed enough that counting settles it. Since 61 % of snapshots
+     are ply 20+, the pooled figure is dominated by the phase where the
+     net adds least, and therefore **understates** it where the search's
+     choices still matter.
+
+     *Careful with the checkpoint here.* On `latest` (i.e. memorised) the
+     same config reads +0.038/+0.051/+0.039/+0.019 then **−0.044/−0.041**
+     — the net apparently *losing* late. That version of this finding was
+     an artefact, and the old-encoder `neither` arm still shows it (−0.011
+     at ply 32+), so it is what overfitting and a thin input look like, not
+     a property of value nets. Score `best.safetensors`.
+
+     Read against explanation 3, this still argues for a
+     **phase-dependent** evaluator — the net's marginal value over the
+     heuristic is concentrated before ply 20 — rather than the
+     replacement/blend pair that has been gated eight times. It is the
+     first concrete design the diagnostics have pointed at rather than
+     away from.
+
+     Base rates are exactly 0.5 in every stratum — both seats are
+     snapshotted at the same instants and carry the same `ply` — so the
+     buckets are directly comparable to each other.
 
   Levers already exhausted: data volume, window reuse, capacity (round 4),
   snapshot coverage, target shape (MC → TD(λ)), architecture (pooling →
-  attention), and output shaping (quantisation). Making the net a
+  attention), output shaping (quantisation), and checkpoint selection
+  (`best` over `latest` — worth ~4 points, not the gap). Making the net a
   strictly better predictor did not make it a better player at any point.
 
   **Where the evidence points instead:** the *deck* net, which clears the
@@ -369,7 +568,27 @@ only stays dead while the reasoning that killed it is readable.
   labels) judging best-of-32 builds beat the heuristic static judge
   over the same candidate sets 61.7 % [58.9, 64.4] and 60.7 %
   [57.9, 63.4] on independent seeds (1 200 games each,
-  `selfplay_train --gate-builder`). Remaining Phase C wiring: use the
-  net-judged builder for training-run decks and as `recommend_pool`'s
-  instant surrogate. Play-net replacement/blend still not adopted.
+  `selfplay_train --gate-builder`). **Re-gated after the 153 → 164 vocab
+  change on a round-11 net at 8× the sample: 60.0 % [59.1, 61.0] (seed 43)
+  and 61.8 % [60.8, 62.7] (seed 97), 9 600 games each, winning 11 of 12
+  pools on both.** Four independent gates now, all in the 60–62 % band —
+  this is the one stable result in the program. Remaining Phase C wiring:
+  use the net-judged builder for training-run decks and as
+  `recommend_pool`'s instant surrogate. Play-net replacement/blend still
+  not adopted.
+
+  What the gate does *not* say: it compares the net judge against the
+  **static score**, not against `recommend_pool`'s simulated ranking,
+  which plays games and is the stronger judge of the two. "Net beats
+  static" and "net beats simulation" are different claims — and the
+  second is now measured, in the direction expected. On the
+  `decks/sealed_pool.txt` W/B builds, `deck_duel` played the simulation
+  judge's top pick against the deck net's top pick (they differ by three
+  spells and a land) with identical pilots: the simulated pick won
+  **56.1 % [54.6, 57.6]** and **55.8 % [54.3, 57.2]** on independent
+  seeds (2 000 antithetic pairs = 4 000 games each, seeds 11/12). One
+  pool, top-pick-vs-top-pick — not a refutation of the gate, but a clean
+  bound: the net is a fast surrogate for the simulation judge, not a
+  replacement, and when the two disagree about a build the simulation is
+  the one to trust.
 - ⏳ **Difficulty levels**; optional **search-based AI** (MCTS over snapshots).

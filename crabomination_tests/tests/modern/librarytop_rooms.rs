@@ -146,7 +146,7 @@ fn gather_specimens_steals_token_mints() {
         &Effect::CreateToken {
             who: crabomination::effect::PlayerRef::You,
             count: crabomination::effect::Value::Const(1),
-            definition: crabomination_base::tokens::spirit_token(),
+            definition: Box::new(crabomination_base::tokens::spirit_token()),
         },
         &ctx,
     ).unwrap();
@@ -157,7 +157,7 @@ fn gather_specimens_steals_token_mints() {
         &Effect::CreateToken {
             who: crabomination::effect::PlayerRef::You,
             count: crabomination::effect::Value::Const(1),
-            definition: crabomination_base::tokens::treasure_token(),
+            definition: Box::new(crabomination_base::tokens::treasure_token()),
         },
         &ctx,
     ).unwrap();

@@ -49,6 +49,22 @@ inherits = "release"
 debug = true
 split-debuginfo = "unpacked"
 
+# Iteration profile for the ML/measurement binaries: release's opt-level
+# with parallel codegen and no LTO, trading the settings the comments
+# above call "marginal" for a measured 4.9x faster rebuild: touching
+# crabomination_base and rebuilding bot_ladder + deck_duel takes 2m04s
+# here vs 10m02s under `release` (2026-08-08, warm dep caches both
+# sides). Build with `cargo build --profile release-fast`; output lands
+# in `target/release-fast/`.
+#
+# Rule: never compare throughput or strength numbers across profiles —
+# a baseline measured under `release` is only comparable to candidates
+# also measured under `release`.
+[profile.release-fast]
+inherits = "release"
+codegen-units = 16
+lto = false
+
 # Optimize for size in the wasm-release profile to reduce load times and bandwidth usage on web.
 [profile.wasm-release]
 # Default to release profile values.
