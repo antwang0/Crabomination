@@ -78,7 +78,18 @@ only stays dead while the reasoning that killed it is readable.
   the judge its missing "bad deck" gradient. Not converged: the climb is
   still net-positive-scored and real-negative, but each ~10-minute
   iteration buys ground and the loop's stopping rule is explicit — stop
-  when climbed-vs-pick stops losing. Also this round: the three builder
+  when climbed-vs-pick stops losing. **Iterations 3–7 (2026-08-08):
+  39.0 → 42.3 → 39.3 → 39.1 → 43.0 % — the curve plateaus around 40 %**
+  at the 200-labels-per-iteration budget: the catastrophic exploit is
+  patched (12 % → ~40 %) but the climb still finds mild off-distribution
+  optimism, and marginal iterations stopped buying ground. The final
+  judge's vs-static gate is the best yet: **61.0 % [59.6, 62.4]**. Open
+  ends, in order: bigger label batches and rotated gauntlet fields per
+  iteration (the plateau may be a label-budget ceiling, not a method
+  ceiling); a trust region on the climb (≤3 swaps) which at ~40 %
+  exploit-severity is likely already net-positive; and the deck_duel
+  rematch of the final judge's pick against the simulation pick on
+  decks/sealed_pool.txt. Also this round: the three builder
   gates run pools in parallel (~12× faster; statistically equivalent,
   not bit-identical — game jitter is thread-RNG by design).
 - 🔴 **Round 15 — hill-climbing the deck net is adversarial, not
