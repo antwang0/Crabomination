@@ -32,6 +32,12 @@
 //!   then a scalar win-probability head (sigmoid). The trainer adds
 //!   auxiliary heads (final life difference, game length); inference
 //!   ignores any tensor it doesn't need.
+//! * Optionally, one of two pre-pool interaction architectures, chosen by
+//!   which tensors the file carries: a single tagged attention layer
+//!   (`attn.*`, see [`ATTN_HEADS`]) or a stack of pre-LN transformer
+//!   blocks (`tblocks.group.weight` + `tblocks.{i}.{ln1,ln2}.*`,
+//!   `tblocks.{i}.attn.{q,k,v,o}.*`, `tblocks.{i}.{ffn1,ffn2}.*`). A file
+//!   carrying both, or a partial set of either, is rejected.
 //!
 //! Hidden sizes are read from the tensor shapes, not hardcoded — the
 //! constants below describe the *standard* configuration the trainer uses
@@ -579,6 +585,10 @@ pub struct PlayNet {
     /// two architectures are distinguished by which tensors the file
     /// carries, not by a flag the caller has to remember.
     attn: Option<Attn>,
+    /// Present only in weights trained with the transformer stack
+    /// (`tblocks.*`). Mutually exclusive with [`Self::attn`] — a file
+    /// carrying both is a trainer bug and is rejected at load.
+    tstack: Option<TStack>,
 }
 
 /// Single pre-pool self-attention layer over every object on the board,
@@ -595,6 +605,55 @@ struct Attn {
     v_b: Vec<f32>,
     o_w: Tensor2,
     o_b: Vec<f32>,
+}
+
+/// Pre-pool transformer stack: the "proper blocks" successor to [`Attn`].
+///
+/// The group tag is added *into* the residual stream once at stack entry
+/// (like a positional embedding) rather than per-layer outside the
+/// residual — with normed residual blocks there is no clean "scores only"
+/// place for it, and zone identity in the pooled representation is
+/// harmless because pooling is per-group anyway.
+#[derive(Debug, Clone)]
+struct TStack {
+    /// Learned per-group tag, `[NUM_GROUPS, obj_hidden]`.
+    group: Tensor2,
+    blocks: Vec<TBlock>,
+}
+
+/// One pre-LN transformer block over the object set:
+/// `x += attn(ln1(x)); x += ffn2(relu(ffn1(ln2(x))))`. No relu on the
+/// residual stream, layer-norm eps 1e-5 (candle's default — parity).
+#[derive(Debug, Clone)]
+struct TBlock {
+    ln1_w: Vec<f32>,
+    ln1_b: Vec<f32>,
+    q_w: Tensor2,
+    q_b: Vec<f32>,
+    k_w: Tensor2,
+    k_b: Vec<f32>,
+    v_w: Tensor2,
+    v_b: Vec<f32>,
+    o_w: Tensor2,
+    o_b: Vec<f32>,
+    ln2_w: Vec<f32>,
+    ln2_b: Vec<f32>,
+    ffn1_w: Tensor2,
+    ffn1_b: Vec<f32>,
+    ffn2_w: Tensor2,
+    ffn2_b: Vec<f32>,
+}
+
+/// Layer norm over one row, eps matching candle's `LayerNormConfig`
+/// default.
+fn layer_norm_row(x: &[f32], w: &[f32], b: &[f32], out: &mut [f32]) {
+    let d = x.len();
+    let mean = x.iter().sum::<f32>() / d as f32;
+    let var = x.iter().map(|v| (v - mean) * (v - mean)).sum::<f32>() / d as f32;
+    let inv = 1.0 / (var + 1e-5).sqrt();
+    for i in 0..d {
+        out[i] = (x[i] - mean) * inv * w[i] + b[i];
+    }
 }
 
 impl PlayNet {
@@ -623,6 +682,7 @@ impl PlayNet {
             head_win_w: get("head_win.weight")?,
             head_win_b: get("head_win.bias")?.data,
             attn: None,
+            tstack: None,
         };
 
         // The interaction layer is all-or-nothing. A file carrying some of
@@ -664,6 +724,87 @@ impl PlayNet {
                 "attn.*",
                 format!("{present} of {} attention tensors present", ATTN_NAMES.len()),
             ));
+        };
+
+        // Transformer stack, likewise all-or-nothing per block and across
+        // the stack: blocks are counted while `tblocks.{i}.ln1.weight`
+        // exists, and each counted block must then carry its full tensor
+        // set — a gap means a trainer/inference mismatch.
+        let getd = |name: &str| -> Result<Tensor2, NnError> {
+            match st.tensor(name) {
+                Ok(_) => {}
+                Err(_) => return Err(NnError::BadTensor("tblocks.*", format!("missing {name}"))),
+            }
+            let view = st.tensor(name).unwrap();
+            if view.dtype() != safetensors::Dtype::F32 {
+                return Err(NnError::BadTensor(
+                    "tblocks.*",
+                    format!("{name}: dtype {:?}, want F32", view.dtype()),
+                ));
+            }
+            let (rows, cols) = match *view.shape() {
+                [r, c] => (r, c),
+                [n] => (1, n),
+                _ => {
+                    return Err(NnError::BadTensor(
+                        "tblocks.*",
+                        format!("{name}: rank {} shape", view.shape().len()),
+                    ));
+                }
+            };
+            let data = view
+                .data()
+                .chunks_exact(4)
+                .map(|c| f32::from_le_bytes(c.try_into().unwrap()))
+                .collect();
+            Ok(Tensor2 { rows, cols, data })
+        };
+        let mut n_blocks = 0;
+        while st.tensor(&format!("tblocks.{n_blocks}.ln1.weight")).is_ok() {
+            n_blocks += 1;
+        }
+        let has_group = st.tensor("tblocks.group.weight").is_ok();
+        let net = if n_blocks > 0 || has_group {
+            if net.attn.is_some() {
+                return Err(NnError::BadTensor(
+                    "tblocks.*",
+                    "both attn.* and tblocks.* present — pick one architecture".into(),
+                ));
+            }
+            if n_blocks == 0 || !has_group {
+                return Err(NnError::BadTensor(
+                    "tblocks.*",
+                    "group tag and blocks must both be present".into(),
+                ));
+            }
+            let mut blocks = Vec::with_capacity(n_blocks);
+            for i in 0..n_blocks {
+                let p = |suffix: &str| format!("tblocks.{i}.{suffix}");
+                blocks.push(TBlock {
+                    ln1_w: getd(&p("ln1.weight"))?.data,
+                    ln1_b: getd(&p("ln1.bias"))?.data,
+                    q_w: getd(&p("attn.q.weight"))?,
+                    q_b: getd(&p("attn.q.bias"))?.data,
+                    k_w: getd(&p("attn.k.weight"))?,
+                    k_b: getd(&p("attn.k.bias"))?.data,
+                    v_w: getd(&p("attn.v.weight"))?,
+                    v_b: getd(&p("attn.v.bias"))?.data,
+                    o_w: getd(&p("attn.o.weight"))?,
+                    o_b: getd(&p("attn.o.bias"))?.data,
+                    ln2_w: getd(&p("ln2.weight"))?.data,
+                    ln2_b: getd(&p("ln2.bias"))?.data,
+                    ffn1_w: getd(&p("ffn1.weight"))?,
+                    ffn1_b: getd(&p("ffn1.bias"))?.data,
+                    ffn2_w: getd(&p("ffn2.weight"))?,
+                    ffn2_b: getd(&p("ffn2.bias"))?.data,
+                });
+            }
+            PlayNet {
+                tstack: Some(TStack { group: getd("tblocks.group.weight")?, blocks }),
+                ..net
+            }
+        } else {
+            net
         };
 
         // Cross-check the shapes once here so forward() can trust them.
@@ -719,6 +860,38 @@ impl PlayNet {
                 ));
             }
         }
+        if let Some(ts) = &net.tstack {
+            if h_obj % ATTN_HEADS != 0 {
+                return Err(NnError::BadTensor(
+                    "tblocks.*",
+                    format!("obj_hidden {h_obj} not divisible by {ATTN_HEADS} heads"),
+                ));
+            }
+            if ts.group.rows != NUM_GROUPS || ts.group.cols != h_obj {
+                return Err(NnError::BadTensor(
+                    "tblocks.*",
+                    format!("group tag {}x{} != {NUM_GROUPS}x{h_obj}", ts.group.rows, ts.group.cols),
+                ));
+            }
+            for (i, blk) in ts.blocks.iter().enumerate() {
+                let square =
+                    [&blk.q_w, &blk.k_w, &blk.v_w, &blk.o_w].iter().all(|t| t.rows == h_obj && t.cols == h_obj);
+                let vecs = [&blk.ln1_w, &blk.ln1_b, &blk.ln2_w, &blk.ln2_b, &blk.q_b, &blk.k_b, &blk.v_b, &blk.o_b]
+                    .iter()
+                    .all(|v| v.len() == h_obj);
+                let ffn = blk.ffn1_w.cols == h_obj
+                    && blk.ffn1_b.len() == blk.ffn1_w.rows
+                    && blk.ffn2_w.cols == blk.ffn1_w.rows
+                    && blk.ffn2_w.rows == h_obj
+                    && blk.ffn2_b.len() == h_obj;
+                if !(square && vecs && ffn) {
+                    return Err(NnError::BadTensor(
+                        "tblocks.*",
+                        format!("block {i} shapes inconsistent with obj_hidden {h_obj}"),
+                    ));
+                }
+            }
+        }
         Ok(net)
     }
 
@@ -758,9 +931,9 @@ impl PlayNet {
     ///
     /// No layer norm and a single layer, deliberately. This is an
     /// experiment testing whether interaction modelling buys anything at
-    /// all; a full pre-norm transformer is a lot more parity surface
-    /// between this hand-rolled forward and the candle mirror, and is
-    /// worth paying for only once there is a signal to justify it.
+    /// all; the full pre-norm stack that pays that parity cost is
+    /// [`Self::transform`] (`tblocks.*`), and old `attn.*` checkpoints
+    /// keep loading through this path unchanged.
     fn attend(&self, hs: &mut [f32], owner: &[usize], h_obj: usize) {
         let Some(a) = &self.attn else { return };
         let n = owner.len();
@@ -836,6 +1009,110 @@ impl PlayNet {
         }
     }
 
+    /// The transformer stack: group tag once into the stream, then
+    /// pre-LN blocks in place. Attention math matches [`Self::attend`];
+    /// the differences are the normed input, no relu on the stream, and
+    /// the FFN half-block.
+    fn transform(&self, hs: &mut [f32], owner: &[usize], h_obj: usize) {
+        let Some(ts) = &self.tstack else { return };
+        let n = owner.len();
+        if n == 0 {
+            return;
+        }
+        let hd = h_obj / ATTN_HEADS;
+        let scale = 1.0 / (hd as f32).sqrt();
+
+        for i in 0..n {
+            let tag = &ts.group.data[owner[i] * h_obj..(owner[i] + 1) * h_obj];
+            for j in 0..h_obj {
+                hs[i * h_obj + j] += tag[j];
+            }
+        }
+
+        let mut xn = vec![0.0f32; n * h_obj];
+        for blk in &ts.blocks {
+            // x += attn(ln1(x))
+            for i in 0..n {
+                layer_norm_row(
+                    &hs[i * h_obj..(i + 1) * h_obj],
+                    &blk.ln1_w,
+                    &blk.ln1_b,
+                    &mut xn[i * h_obj..(i + 1) * h_obj],
+                );
+            }
+            let project = |w: &Tensor2, b: &[f32]| {
+                let mut out = vec![0.0f32; n * h_obj];
+                for i in 0..n {
+                    w.matvec(&xn[i * h_obj..(i + 1) * h_obj], &mut out[i * h_obj..(i + 1) * h_obj]);
+                    for (v, bb) in out[i * h_obj..(i + 1) * h_obj].iter_mut().zip(b) {
+                        *v += bb;
+                    }
+                }
+                out
+            };
+            let q = project(&blk.q_w, &blk.q_b);
+            let k = project(&blk.k_w, &blk.k_b);
+            let v = project(&blk.v_w, &blk.v_b);
+
+            let mut ctx = vec![0.0f32; n * h_obj];
+            let mut scores = vec![0.0f32; n];
+            for head in 0..ATTN_HEADS {
+                let off = head * hd;
+                for i in 0..n {
+                    let qi = &q[i * h_obj + off..i * h_obj + off + hd];
+                    let mut max = f32::NEG_INFINITY;
+                    for (j, sc) in scores.iter_mut().enumerate() {
+                        let kj = &k[j * h_obj + off..j * h_obj + off + hd];
+                        let dot: f32 = qi.iter().zip(kj).map(|(x, y)| x * y).sum();
+                        *sc = dot * scale;
+                        max = max.max(*sc);
+                    }
+                    let mut sum = 0.0f32;
+                    for sc in scores.iter_mut() {
+                        *sc = (*sc - max).exp();
+                        sum += *sc;
+                    }
+                    let inv = 1.0 / sum;
+                    for (j, sc) in scores.iter().enumerate() {
+                        let w = sc * inv;
+                        let vj = &v[j * h_obj + off..j * h_obj + off + hd];
+                        let dst = &mut ctx[i * h_obj + off..i * h_obj + off + hd];
+                        for (d, sv) in dst.iter_mut().zip(vj) {
+                            *d += w * sv;
+                        }
+                    }
+                }
+            }
+            let mut proj = vec![0.0f32; h_obj];
+            for i in 0..n {
+                blk.o_w.matvec(&ctx[i * h_obj..(i + 1) * h_obj], &mut proj);
+                for j in 0..h_obj {
+                    hs[i * h_obj + j] += proj[j] + blk.o_b[j];
+                }
+            }
+
+            // x += ffn2(relu(ffn1(ln2(x))))
+            let f = blk.ffn1_w.rows;
+            let mut f1 = vec![0.0f32; f];
+            for i in 0..n {
+                layer_norm_row(
+                    &hs[i * h_obj..(i + 1) * h_obj],
+                    &blk.ln2_w,
+                    &blk.ln2_b,
+                    &mut xn[i * h_obj..(i + 1) * h_obj],
+                );
+                blk.ffn1_w.matvec(&xn[i * h_obj..(i + 1) * h_obj], &mut f1);
+                for (v, b) in f1.iter_mut().zip(&blk.ffn1_b) {
+                    *v = (*v + b).max(0.0);
+                }
+                blk.ffn2_w.matvec(&f1, &mut proj);
+                for j in 0..h_obj {
+                    hs[i * h_obj + j] += proj[j] + blk.ffn2_b[j];
+                }
+            }
+        }
+    }
+
     /// Win probability for the seat the state was encoded for, in [0, 1].
     pub fn forward(&self, s: &EncodedState) -> f32 {
         let h_obj = self.obj_w.rows;
@@ -847,6 +1124,7 @@ impl PlayNet {
         // pools representations that have already seen the whole board.
         let (mut hs, owner) = self.encode_objects(s, h_obj);
         self.attend(&mut hs, &owner, h_obj);
+        self.transform(&mut hs, &owner, h_obj);
 
         let mut counts = [0usize; NUM_GROUPS];
         for gi in 0..NUM_GROUPS {

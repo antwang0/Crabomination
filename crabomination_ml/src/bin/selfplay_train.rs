@@ -20,7 +20,7 @@
 //!                [--checkpoint-every N] [--out DIR] [--seed N]
 //!                [--use-best WEIGHTS.safetensors] [--seed-emb DECK.safetensors]
 //!                [--stop-after-stale N] [--relabel-mode full|new]
-//!                [--attn] [--aux] [--ablate lib,cast,rel]
+//!                [--attn] [--blocks N] [--aux] [--ablate lib,cast,rel]
 //!                [--emb-dim N] [--obj-hidden N] [--h1 N] [--h2 N]
 //!                [--gate-builder GAMES_PER_POOL]
 //!
@@ -141,6 +141,10 @@ struct Args {
     /// creature deltas + opponent hand). Off is the control; the engine
     /// ignores the extra tensors either way.
     aux: bool,
+    /// Pre-pool transformer blocks (`--blocks N`): pre-LN attention +
+    /// 2× FFN per block, group tag in the stream. 0 (default) is off;
+    /// mutually exclusive with `--attn`, which it supersedes.
+    blocks: usize,
     /// Width overrides — the engine reads sizes from the tensor shapes,
     /// so capacity is a flag, not a format change. `--seed-emb` requires
     /// the deck net's width, so it refuses a changed `--emb-dim`.
@@ -233,6 +237,7 @@ fn parse_args() -> Args {
         ablate: Vec::new(),
         attn: false,
         aux: false,
+        blocks: 0,
         emb_dim: None,
         obj_hidden: None,
         h1: None,
@@ -297,6 +302,7 @@ fn parse_args() -> Args {
                 a.aux = true;
                 continue; // bare flag, consumes no value
             }
+            "--blocks" => a.blocks = val().parse().expect("--blocks"),
             "--emb-dim" => a.emb_dim = Some(val().parse().expect("--emb-dim")),
             "--obj-hidden" => a.obj_hidden = Some(val().parse().expect("--obj-hidden")),
             "--h1" => a.h1 = Some(val().parse().expect("--h1")),
@@ -329,6 +335,11 @@ fn net_config(args: &Args, vocab: usize) -> crabomination_ml::NetConfig {
         NetConfig::standard(vocab)
     };
     cfg.aux = args.aux;
+    cfg.blocks = args.blocks;
+    assert!(
+        !(cfg.attn && cfg.blocks > 0),
+        "--attn and --blocks are mutually exclusive architectures"
+    );
     if let Some(v) = args.emb_dim {
         cfg.emb_dim = v;
     }
@@ -341,7 +352,7 @@ fn net_config(args: &Args, vocab: usize) -> crabomination_ml::NetConfig {
     if let Some(v) = args.h2 {
         cfg.h2 = v;
     }
-    if cfg.attn {
+    if cfg.attn || cfg.blocks > 0 {
         assert!(
             cfg.obj_hidden.is_multiple_of(crabomination_nn::ATTN_HEADS),
             "--obj-hidden {} must be divisible by {} attention heads",
@@ -975,7 +986,13 @@ fn main() {
         args.lambda,
         args.batch,
         args.lr,
-        if args.attn { "attention" } else { "pooled" }
+        if args.blocks > 0 {
+            format!("{} transformer blocks", args.blocks)
+        } else if args.attn {
+            "attention".to_string()
+        } else {
+            "pooled".to_string()
+        }
     );
     std::fs::create_dir_all(&args.out).expect("create --out dir");
     let latest = args.out.join("latest.safetensors");

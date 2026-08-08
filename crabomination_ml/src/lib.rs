@@ -20,8 +20,8 @@ use std::collections::{HashMap, VecDeque};
 
 use candle_core::{DType, Device, Result as CResult, Tensor};
 use candle_nn::{
-    AdamW, Embedding, Linear, Module, Optimizer, ParamsAdamW, VarBuilder, VarMap, embedding,
-    linear,
+    AdamW, Embedding, LayerNorm, LayerNormConfig, Linear, Module, Optimizer, ParamsAdamW,
+    VarBuilder, VarMap, embedding, layer_norm, linear,
 };
 use crabomination_nn::{
     ATTN_HEADS, AUX_FEATS, DeckRow, EMB_DIM, EncodedState, GLOBAL_FEATS, NUM_GROUPS, OBJ_FEATS,
@@ -47,6 +47,11 @@ pub struct NetConfig {
     /// only — the engine's loader ignores the tensors — and off by
     /// default so the no-aux run stays the control.
     pub aux: bool,
+    /// Pre-pool transformer blocks (`tblocks.*`): pre-LN attention + 2×
+    /// FFN, stacked this many times, group tag added once at stack entry.
+    /// 0 disables. Mutually exclusive with [`Self::attn`] — the single
+    /// tagged-attention layer this stack supersedes.
+    pub blocks: usize,
 }
 
 impl NetConfig {
@@ -60,6 +65,7 @@ impl NetConfig {
             h2: TRUNK_H2,
             attn: false,
             aux: false,
+            blocks: 0,
         }
     }
 
@@ -78,6 +84,7 @@ pub struct PlayModel {
     emb: Embedding,
     obj: Linear,
     attn: Option<AttnLayer>,
+    tstack: Option<TStackLayer>,
     trunk1: Linear,
     trunk2: Linear,
     head_win: Linear,
@@ -97,7 +104,31 @@ struct AttnLayer {
     o: Linear,
 }
 
+/// Candle mirror of `crabomination_nn`'s `TStack`: a stack of pre-LN
+/// transformer blocks under the `tblocks.*` names, group tag added into
+/// the residual stream once at stack entry.
+struct TStackLayer {
+    group: Embedding,
+    blocks: Vec<TBlockLayer>,
+}
+
+/// One pre-LN block: `x += attn(ln1(x)); x += ffn2(relu(ffn1(ln2(x))))`.
+struct TBlockLayer {
+    ln1: LayerNorm,
+    q: Linear,
+    k: Linear,
+    v: Linear,
+    o: Linear,
+    ln2: LayerNorm,
+    ffn1: Linear,
+    ffn2: Linear,
+}
+
 pub fn build_model(cfg: &NetConfig, vb: VarBuilder) -> CResult<PlayModel> {
+    assert!(
+        !(cfg.attn && cfg.blocks > 0),
+        "attn and blocks are mutually exclusive architectures"
+    );
     Ok(PlayModel {
         emb: embedding(cfg.vocab, cfg.emb_dim, vb.pp("emb"))?,
         obj: linear(cfg.emb_dim + OBJ_FEATS, cfg.obj_hidden, vb.pp("obj"))?,
@@ -110,6 +141,27 @@ pub fn build_model(cfg: &NetConfig, vb: VarBuilder) -> CResult<PlayModel> {
                 v: linear(d, d, vb.pp("attn.v"))?,
                 o: linear(d, d, vb.pp("attn.o"))?,
             })
+        } else {
+            None
+        },
+        tstack: if cfg.blocks > 0 {
+            let d = cfg.obj_hidden;
+            let vbt = vb.pp("tblocks");
+            let mut blocks = Vec::with_capacity(cfg.blocks);
+            for i in 0..cfg.blocks {
+                let vbb = vbt.pp(i.to_string());
+                blocks.push(TBlockLayer {
+                    ln1: layer_norm(d, LayerNormConfig::default(), vbb.pp("ln1"))?,
+                    q: linear(d, d, vbb.pp("attn.q"))?,
+                    k: linear(d, d, vbb.pp("attn.k"))?,
+                    v: linear(d, d, vbb.pp("attn.v"))?,
+                    o: linear(d, d, vbb.pp("attn.o"))?,
+                    ln2: layer_norm(d, LayerNormConfig::default(), vbb.pp("ln2"))?,
+                    ffn1: linear(d, 2 * d, vbb.pp("ffn1"))?,
+                    ffn2: linear(2 * d, d, vbb.pp("ffn2"))?,
+                });
+            }
+            Some(TStackLayer { group: embedding(NUM_GROUPS, d, vbt.pp("group"))?, blocks })
         } else {
             None
         },
@@ -260,6 +312,59 @@ impl AttnLayer {
     }
 }
 
+impl TStackLayer {
+    /// The transformer stack over all groups concatenated, mirroring the
+    /// engine's `PlayNet::transform`. Same masking contract as
+    /// [`AttnLayer::apply`]: padding keys get a -1e9 bias so their weight
+    /// underflows to exactly zero; padding *rows* accumulate garbage that
+    /// pooling masks out, which the engine (no padding at all) never sees.
+    fn apply(&self, hs: &[Tensor], mask: &[Tensor]) -> CResult<Vec<Tensor>> {
+        let (b, _, d) = hs[0].dims3()?;
+        let dev = hs[0].device();
+        let sizes: Vec<usize> = hs.iter().map(|h| h.dim(1).unwrap()).collect();
+
+        // Group tag into the residual stream, once, at stack entry.
+        let mut tagged: Vec<Tensor> = Vec::with_capacity(hs.len());
+        for (g, (h, n)) in hs.iter().zip(&sizes).enumerate() {
+            let ids = Tensor::full(g as u32, (b, *n), dev)?;
+            tagged.push(h.add(&self.group.forward(&ids)?)?);
+        }
+        let refs: Vec<&Tensor> = tagged.iter().collect();
+        let mut x = Tensor::cat(&refs, 1)?; // [B,N,D]
+        let mrefs: Vec<&Tensor> = mask.iter().collect();
+        let m = Tensor::cat(&mrefs, 1)?; // [B,N,1]
+        let n: usize = sizes.iter().sum();
+        let hd = d / ATTN_HEADS;
+        let scale = 1.0 / (hd as f64).sqrt();
+        let keybias = ((m.reshape((b, 1, 1, n))? - 1.0)? * 1e9)?;
+
+        for blk in &self.blocks {
+            let xn = blk.ln1.forward(&x)?;
+            let split = |t: Tensor| -> CResult<Tensor> {
+                t.reshape((b, n, ATTN_HEADS, hd))?.transpose(1, 2)?.contiguous()
+            };
+            let q = split(blk.q.forward(&xn)?)?;
+            let k = split(blk.k.forward(&xn)?)?;
+            let v = split(blk.v.forward(&xn)?)?;
+            let scores = (q.matmul(&k.transpose(2, 3)?)? * scale)?.broadcast_add(&keybias)?;
+            let attn = candle_nn::ops::softmax_last_dim(&scores)?;
+            let ctx = attn.matmul(&v)?.transpose(1, 2)?.contiguous()?.reshape((b, n, d))?;
+            x = x.add(&blk.o.forward(&ctx)?)?;
+
+            let xn = blk.ln2.forward(&x)?;
+            x = x.add(&blk.ffn2.forward(&blk.ffn1.forward(&xn)?.relu()?)?)?;
+        }
+
+        let mut split_out = Vec::with_capacity(hs.len());
+        let mut off = 0;
+        for sz in sizes {
+            split_out.push(x.narrow(1, off, sz)?);
+            off += sz;
+        }
+        Ok(split_out)
+    }
+}
+
 impl PlayModel {
     /// Returns `(win probability, life-diff, game-len, aux)` predictions
     /// — the first three `[B, 1]`, aux `[B, AUX_FEATS]` and present only
@@ -274,6 +379,9 @@ impl PlayModel {
         }
         if let Some(a) = &self.attn {
             hs = a.apply(&hs, &batch.mask)?;
+        }
+        if let Some(ts) = &self.tstack {
+            hs = ts.apply(&hs, &batch.mask)?;
         }
 
         let mut pooled: Vec<Tensor> = Vec::with_capacity(2 * NUM_GROUPS + 1);
@@ -797,7 +905,7 @@ mod tests {
     use rand::rngs::StdRng;
 
     fn small_cfg() -> NetConfig {
-        NetConfig { vocab: 12, emb_dim: 4, obj_hidden: 8, h1: 32, h2: 16, attn: false, aux: false }
+        NetConfig { vocab: 12, emb_dim: 4, obj_hidden: 8, h1: 32, h2: 16, attn: false, aux: false, blocks: 0 }
     }
 
     fn small_attn_cfg() -> NetConfig {
@@ -881,6 +989,35 @@ mod tests {
         }
     }
 
+    /// The transformer stack's parity surface is strictly larger than the
+    /// single attention layer's: two blocks each carrying layer norms
+    /// (whose eps must agree), an FFN, and un-relu'd residual streams that
+    /// go negative — plus the padded-vs-unpadded masking difference the
+    /// attention test already polices. Any drift between the candle
+    /// forward and the hand-rolled engine forward shows up here.
+    #[test]
+    fn transformer_blocks_match_engine_inference() {
+        let cfg = NetConfig { blocks: 2, ..small_cfg() };
+        let trainer = Trainer::new(&cfg, 1e-3).expect("trainer");
+        let path = std::env::temp_dir()
+            .join(format!("crab_tblock_parity_{}.safetensors", std::process::id()));
+        trainer.save(&path).expect("save");
+        let bytes = std::fs::read(&path).expect("read");
+        let _ = std::fs::remove_file(&path);
+        let net = PlayNet::load(&bytes).expect("engine loads transformer export");
+
+        let mut rng = StdRng::seed_from_u64(29);
+        for i in 0..8 {
+            let s = random_state(&mut rng, cfg.vocab);
+            let want = trainer.predict_win(&s).expect("candle forward");
+            let got = net.forward(&s);
+            assert!(
+                (got - want).abs() < 1e-4,
+                "state {i}: engine {got} vs candle {want}"
+            );
+        }
+    }
+
     /// A file carrying only some of the attention tensors is a
     /// trainer/inference mismatch. Loading it as the pooled net would run
     /// the wrong architecture on the right weights and silently produce
@@ -909,6 +1046,15 @@ mod tests {
         assert!(
             PlayNet::load(&crabomination_nn::to_safetensors(&tensors)).is_err(),
             "a half-present attention layer must not load as the pooled net"
+        );
+
+        // Same rule for the transformer stack: a group tag with no blocks
+        // (or any other partial set) is a mismatch, not a fallback.
+        tensors.pop();
+        tensors.push(("tblocks.group.weight", vec![NUM_GROUPS, d], t(NUM_GROUPS * d)));
+        assert!(
+            PlayNet::load(&crabomination_nn::to_safetensors(&tensors)).is_err(),
+            "a half-present transformer stack must not load as the pooled net"
         );
     }
 
@@ -1037,7 +1183,8 @@ mod tests {
             .join(format!("crab_seed_emb_{}.safetensors", std::process::id()));
         deck.save(&path).expect("save deck net");
 
-        let cfg = NetConfig { vocab, emb_dim, obj_hidden: 16, h1: 32, h2: 16, attn: false, aux: false };
+        let cfg =
+            NetConfig { vocab, emb_dim, obj_hidden: 16, h1: 32, h2: 16, attn: false, aux: false, blocks: 0 };
         let mut play = Trainer::new(&cfg, 1e-3).expect("play trainer");
         let before = {
             let d = play.varmap.data().lock().unwrap();
