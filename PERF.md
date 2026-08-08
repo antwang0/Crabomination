@@ -26,10 +26,15 @@ CARGO_TARGET_DIR=target-mi cargo build --release -p crabomination \
 cargo build --profile profiling -p crabomination --bin bot_ladder \
   --no-default-features
 RUST_MIN_STACK=33554432 valgrind --tool=callgrind --callgrind-out-file=cg.out \
-  target/profiling/bot_ladder --a gang --b gang --games 6 --threads 1 --seed 1
+  target/profiling/bot_ladder --a gang --b gang --games 6 --threads 1 --seed 1 \
+  --decks fixed
 callgrind_annotate --auto=no --threshold=95 cg.out            # self cost
 callgrind_annotate --auto=no --inclusive=yes cg.out           # inclusive
 callgrind_annotate --auto=no --tree=caller cg.out             # who calls whom
+# the one that found this run's fix: callers of `malloc`, and the call
+# counts next to each. Self cost lies about allocation — a function with
+# 1.9 % self can be 35 % of every malloc in the program.
+callgrind_annotate --auto=no --tree=caller --threshold=99 cg.out > tree.txt
 
 # behaviour preservation
 cargo test -p crabomination_tests --test core_rules golden_trace
@@ -74,55 +79,47 @@ contention-immune, which makes it the better first look.
 
 ## Baseline
 
-Committed 2026-08-08 at the tip of this run's work (`bbf5ddcc`, layer-gather
-filter + mimalloc default). Refresh only alongside an intentional, explained
-change. Regressions beyond ~5 % get investigated before anything else lands —
-but check `host_calib_ms` first (see "How to measure").
+Committed 2026-08-08 at `c365ede8` (trigger-dispatcher fix). Refresh only
+alongside an intentional, explained change. Regressions beyond ~5 % get
+investigated before anything else lands — but check `host_calib_ms` first
+(see "How to measure").
 
 ```text
 bot_ladder --bench   release, rustc 1.95.0, 4-core VM, 3 worker threads
                      mimalloc (the default); measured on an idle box
-host_cpu             Intel(R) Xeon(R) Processor @ 2.80GHz
-host_calib_ms        54 / 56 / 55 / 60          <- compare this first
+host_cpu             Intel(R) Xeon(R) Processor @ 2.10GHz
+host_calib_ms        67 / 55 / 80 / 56           <- compare this first
 games                320
-games_per_s          14.07 / 14.66 / 14.41 / 14.81   (mean 14.49, spread 5.1 %)
-games_per_s_th       4.69 / 4.89 / 4.80 / 4.94
-decisions_per_s      8497 / 8854 / 8699 / 8944       (mean 8749)
+games_per_s          21.38 / 21.59 / 21.64 / 21.57   (mean 21.55, spread 1.2 %)
+games_per_s_th       7.13 / 7.20 / 7.21 / 7.19
+decisions_per_s      12909 / 13038 / 13068 / 13025   (mean 13010)
 turns_per_game       26.98
 decisions_per_game   603.9
 stalls               0 (0.00 %)
-peak_rss_mib         38.8 - 39.8
+peak_rss_mib         41.1 - 44.6
 determinism          ok (160 pairs, 0 sweeps, rho -1.000)
 ```
 
-The previous baseline read 11.85-12.39 games/s and **is not comparable**: the
-same unchanged engine code read 9.64 on this box at the start of this run. The
-box moved, not the engine — the three commits between the two measurements are
-7 lines of RNG routing in a path the bench decks never take, a post-run assert,
-an unused import and an opt-in Cargo feature. That episode is why
-`host_calib_ms` exists. Within this run, on this box and this day:
+**This is a different box from the previous baseline and the absolutes do
+not compare.** The 2026-08-08 baseline read 14.49 games/s on an Intel Xeon
+@ 2.80GHz with `host_calib_ms` 54-60; this box is a Xeon @ 2.10GHz with
+`host_calib_ms` 55-107 and the *unchanged* HEAD read **19.76** on it. The
+probe is not a linear correction — a slower probe here goes with faster
+games — so treat it as a box fingerprint, not a scaling factor, and only
+ever compare two binaries measured in one alternating sitting.
+
+Within this run, on this box and this day:
 
 ```text
-9.64  games/s   HEAD at the start of the run   (system alloc)
-12.32           + layer-gather filter          (system alloc, +27.8 %)
-14.49           + mimalloc default             (+50.3 % cumulative)
+19.76  games/s   HEAD at the start of the run
+21.55            + trigger-dispatcher fix (+8.2 %)
 ```
 
-Actor scaling, `--bench --threads N --games 120` (a saturated queue — see the
-`--threads` note above), system allocator vs mimalloc:
-
-```text
-threads   1      4      8      16     24
-sys       4.54   15.33  16.71  15.76  13.83   games/s
-mi        4.96   18.93  19.72  19.32  18.12
-sys       16.1   31.2   49.2   83.3   115.5   peak RSS MiB
-mi        24.2   49.5   82.5   134.2  178.7
-```
-
-Four cores, so past ~4 actors this measures oversubscription, not scaling. The
-readable part is that mimalloc's edge *grows* with actor count (+9 % at 1,
-+31 % at 24 — system malloc contends) while its RSS ratio stays flat at
-1.5-1.7x. Re-measure the scaling half on a box with real cores.
+The actor-scaling sweep from the previous run (system allocator vs mimalloc
+at 1/4/8/16/24 threads) is unchanged by this run's work and lives in
+`ML_NOTES.md`-adjacent history; its readable conclusion was that mimalloc's
+edge grows with actor count (+9 % at 1, +31 % at 24) while its RSS ratio
+stays flat at 1.5-1.7x. Re-measure on a box with real cores.
 
 ## Log
 
@@ -136,30 +133,29 @@ readable part is that mimalloc's edge *grows* with actor count (+9 % at 1,
 | 2026-08-08 | mimalloc from opt-in to default on `crabomination` + `crabomination_ml` (`bbf5ddcc`) | 12.12 games/s, 7317 dec/s | 14.77 games/s, 8918 dec/s | **+21.9 %**. `--bench` ×3 per side alternated, `host_calib_ms` steady 54–57. Larger than the +12.0 % row above because the gather fix removed the work the allocator cost was hiding behind. RSS 25.4 → 41.5 MiB at 3 threads; the actor sweep in **Baseline** is what unblocked making it default. |
 | | **cumulative this run** | **9.64 games/s** | **14.49 games/s (+50.3 %)** | both ends on the same box, same day; see the Baseline note on why the previous run's absolutes don't compare |
 
+| 2026-08-08 | CoW-wrap the per-turn / per-game tally collections (cast-name / id / profile logs, ETB + death lists, delayed triggers, graveyard + discard sets) so a state clone stops deep-copying them | 20.12 games/s | 20.10 games/s | **no win — reverted.** `--bench` x8 per side alternated in one sitting (base 19.28-20.65, cow 19.02-20.68). Golden traces identical. The negative result is the useful part: per-clone allocation traffic is *not* in these collections, which is what sent the run to the caller tree and found the layer-compute path below. |
+| 2026-08-08 | `dispatch_triggers_for_events` stops running `compute_battlefield()` for one bool per card; `permanents_with_abilities_removed` answers from the gathered effect set and only pays the layer pass when a `RemoveAllAbilities` effect is actually in scope (`c365ede8`) | 19.76 games/s, 11950 dec/s | 21.38 games/s, 12909 dec/s | **+8.2 %.** `--bench` x6 per side alternated A/B in one sitting; every B run beat every A run. Sealed pool (720 games) 32.15 s -> 31.30 s, +2.7 %. turns/game 26.98 unchanged, stalls 0, all pairs split. Suite 18788 passed / 0 failed; all four golden traces byte-identical. |
+| | **cumulative this run** | **19.76 games/s** | **21.55 games/s (+9.1 %)** | both ends on the same box, same day |
+
 ## Profile of record
 
 Callgrind, `--profile profiling --no-default-features` (system allocator —
-valgrind replaces malloc, so a mimalloc build would measure the interception),
-1 thread, `--a gang --b gang --games 6 --seed 1 --decks fixed`. Taken
-2026-08-08 at `67d6c549`, i.e. *after* this run's two wins.
+valgrind replaces malloc, so a mimalloc build would measure the
+interception), 1 thread, `--a gang --b gang --games 6 --seed 1 --decks
+fixed`. Taken 2026-08-08 at `1d824fe5`, i.e. *before* this run's fix.
 
-**23.49 G instructions, down from 38.5 G for the same six games (-39 %).**
+**23.50 G instructions for six games** (reproduced the previous run's 23.49 G
+exactly, so the workload is stable across boxes).
 
 Self cost, grouped:
 
 | share | site | note |
 |---|---|---|
-| 24.0 % | `_int_malloc` 8.25 / `_int_free` 5.58 / `malloc` 3.91 / `free` 2.20 / `malloc_consolidate` 2.09 / `unlink_chunk` 1.14 / arena `free` 0.86 | the allocator is now the single biggest cost |
-| 8.80 % | `__memcpy_avx_unaligned_erms` | almost all of it is state/zone cloning |
-| 16.35 % | `gather_continuous_effects_inner` (6.64 slice-iter + 4.40 non_null + 1.65 mod.rs + 1.60 vec + 1.22 option + 0.84 raw_vec) | was 38.15 % before the filter |
-| 6.66 % | `CardInstance::clone` | 5.32 + 1.34 option |
-| 2.78 % | `statics_granted_triggers_for` | |
-| 1.95 % | `Vec<T>::clone` | |
-| 1.91 % | `compute_permanent_pass` | |
-| 1.12 % | `drop_in_place<CardInstance>` | the other half of the clone traffic |
-| 0.82 % | `Subtypes::clone` | inside `CardInstance::clone` |
-| 0.74 % | `Keyword::eq` | linear `Vec<Keyword>` scans |
-| 0.73 % | `HashMap::clone` | |
+| 24.0 % | `_int_malloc` 8.26 / `_int_free` 5.58 / `malloc` 3.91 / `free` 2.20 / `malloc_consolidate` 2.09 / `unlink_chunk` 1.15 / arena `free` 0.86 | the allocator is the single biggest cost |
+| 8.78 % | `__memcpy_avx_unaligned_erms` | |
+| 16.35 % | `gather_continuous_effects_inner` (6.64 slice-iter + 4.40 non_null + 1.65 mod.rs + 1.60 vec + 1.22 option + 0.84 raw_vec) | |
+| 5.32 % | `CardInstance::clone` | |
+| 1.91 % | `compute_permanent_pass` | tiny self cost, huge allocator cost — see below |
 
 Inclusive:
 
@@ -168,83 +164,106 @@ Inclusive:
 | 89.96 % | `RandomBot::next_action` |
 | 75.97 % | `perform_action_inner` |
 | 59.59 % | `pick_attacks_scored` |
-| 59.54 % | `simulate_attack_outcome_once` |
 | 46.64 % | `perform_action` (the checkpoint-cloning wrapper) |
-| 30.30 % | `cast_spell` |
-| 27.75 % | `would_accept_on` |
-| 24.83 % | `compute_hand_affordances` |
-| 24.60 % | `computed_permanent` (was 50.14 %) |
-| 22.17 % | `gather_continuous_effects_inner` (was 52.52 %) |
+| 24.60 % | `computed_permanent` |
+| 22.17 % | `gather_continuous_effects_inner` |
+| 15.38 % | `apply_layers`, all of it under `compute_battlefield` |
+| 10.39 % | `dispatch_triggers_for_events -> compute_battlefield` (**fixed this run**) |
 
-The headline: **the layer system is no longer the bottleneck — cloning is.**
-Allocator plus memcpy is a third of all instructions, and the traffic is state
-and `CardInstance` copies for probes and rollback checkpoints.
+**Who actually allocates** (`--tree=caller` on `malloc`, ~16.7 M calls for
+six games; 9.43 M of them reach `_int_malloc`, the rest are tcache hits):
+
+| calls | caller |
+|---|---|
+| 5,802,510 | `layers::compute_permanent_pass` |
+| 3,279,608 | `Subtypes::clone` (almost all of it inside the above) |
+| 1,631,596 | `HashMap::clone` |
+| 1,540,297 | `RawVec::finish_grow` |
+| 1,387,916 | `gather_continuous_effects_inner` |
+| 1,202,386 | `Vec::clone` |
+| 901,798 | `GameState::clone` |
+| 860,938 | `CardInstance::clone` |
+| 123,616 | `apply_layers` |
+
+**The headline correction to the previous run's read: the 24 % allocator
+share is the layer system, not state cloning.** `compute_permanent_pass`
+clones five collections per permanent (`card_types`, `supertypes`,
+`subtypes`, `colors`, `keywords`) and is called 2.28 M times from
+`apply_layers` plus 1.00 M times from `computed_permanent` — together ~55 %
+of every allocation in the program. `GameState::clone` is 5 % of them. The
+CoW experiment in the **Log** above is the direct evidence: removing the
+per-clone collection copies moved the benchmark 0.1 %.
 
 ## Perf candidates
 
 Ordered by expected value. Each run pulls the top one, attaches numbers,
 and feeds what it finds back in. Re-profile and replenish when the list
-goes thin or stale.
+goes thin or stale. **Re-profile first** — the list below is derived from a
+profile taken *before* this run's fix removed 10.4 % of instructions, so the
+shares have all moved.
 
-1. **The clone / checkpoint path.** Now the top item by a wide margin: 24 %
-   allocator + 8.8 % memcpy + 6.7 % `CardInstance::clone` + 1.1 %
-   `drop_in_place` + 2.8 % of `Vec`/`Subtypes`/`HashMap` clones. Three angles,
-   probably in this order:
-   (a) `perform_action` clones the whole `GameState` for its rollback
-   checkpoint on every accepted action, and the combat sims and
-   `evaluate_action_sequence` already run inside a clone that is discarded —
-   the rollback there is dead weight (`perform_action_inner` skips it, and is
-   75.97 % inclusive against `perform_action`'s 46.64 %). Not
-   behaviour-preserving on the `Err` path (partial mutation would survive into
-   the rest of the simulated line), so it needs either a golden-trace update
-   with a justification or a variant that restores only on error paths a sim
-   can actually reach.
-   (b) Shrink `CardInstance`. `Subtypes::clone` (0.82 %) and `HashMap::clone`
-   (0.73 %) are per-card allocations on a struct that is copied by the
-   million; the cold fields want to be behind one `Arc` or an `Option<Box<…>>`
-   so the common instance clones as a memcpy with no heap traffic.
-   (c) String keys: `Player.spells_cast_by_name_this_game: HashMap<String,
-   u32>` and `GameState.cycled_count_by_name` are deep-cloned with every state
-   clone, and card names are already `&'static str`. `Arc<str>` keeps serde
-   working; interning to a `u32` id is better and bigger.
-2. **Flatten the layer gather's static-ability passes.** Still 16.35 % self /
-   22.17 % inclusive after this run's filter. The filter cut the *number of
-   cards* each of the 39 passes walks; it did not cut the 39 walks. Build one
-   `Vec<(&CardInstance, &StaticAbility)>` at the top of the gather and let each
-   pass be a single linear scan over the pairs. Nesting order is the same, so
-   push order is preserved — golden traces are the check. The 10 passes gated
-   on other definition fields (`equipped_bonus`, `soulbond_bonus`,
-   `dynamic_pt`, `level_bands`, `station`, `keywords`) want the same treatment
-   with their own filtered slices.
-3. **Memoize the layer gather outside freeze scopes.** Was the biggest item on
-   this list at 52 % inclusive; it is 22.17 % now, so the prize shrank while
-   the difficulty did not. The blocker is invalidation, not caching: the gather
-   reads `continuous_effects`, `battlefield`, players' emblems/command/
-   graveyards, `attacking`, `active_player_idx` and turn state, all `pub` and
-   mutated from hundreds of sites. Two designs: (a) a mutation epoch bumped at
-   every `&mut GameState` entry point, with the field set made private behind
-   accessors so the bump can't be forgotten; (b) route zone mutation through
-   `CowBox`'s `DerefMut` and derive validity from Arc identity plus a counter
-   for the non-CoW inputs. Multi-run project — do item 1 first.
-4. **`Keyword::eq` at 0.74 % self** — linear scans of `Vec<Keyword>`. A small
-   bitset for the ~64 common keywords would make `has_keyword` O(1) and shrink
-   `CardInstance` at the same time, so it rides along with item 1(b).
-5. **CowBox sharp edge audit.** Any `&mut` access — including a read-only
+1. **Make `ComputedPermanent` cheap to build.** ~55 % of all allocations
+   come from `compute_permanent_pass` cloning five collections per
+   permanent, most of which are byte-identical to the (immutable,
+   `Arc`-shared) `CardDefinition` they came from. Two shapes:
+   (a) hold `Arc<CardDefinition>` plus `Option<Vec<…>>` overrides and read
+   through accessors — `None` means "the printed value", so the common
+   unmodified permanent allocates nothing. ~4.5 k `computed_permanent` call
+   sites exist but nearly all read `.power` / `.toughness`; the five
+   collection fields are the ones that need accessors.
+   (b) memoize per (card, freeze scope): `LayerFreezeState` already caches
+   the gathered effect set for the whole bot tick, and a parallel
+   `Vec<(CardId, Arc<ComputedPermanent>)>` is sound by the same argument
+   (`with_frozen_layers` only hands out `&GameState`). Needs a
+   `computed_permanent_shared` returning `Arc<…>` so the memo isn't cloned
+   back out; the existing by-value method stays as the compat shim.
+   Do (b) first — it is smaller and its win is measurable on its own.
+2. **The dispatcher's per-card trigger gathering.** With the
+   `compute_battlefield` call gone, the remaining per-card work in
+   `dispatch_triggers_for_events` is `statics_granted_triggers_for` (2.78 %
+   self before the fix) plus `granted_triggers` and
+   `equip_granted_triggers_for`, each called once per battlefield card per
+   dispatch — O(cards²) against `all_static_sources`. Hoist the
+   "which sources carry a `GrantTriggeredAbility`" scan out of the per-card
+   loop, the same shape as the layer-gather filter that won +27.8 %.
+3. **The gather is still #1 by self cost** (16.35 %, 22.17 % inclusive).
+   The filter landed last run cut the *number of cards* each of the 39
+   static-ability passes walks; it did not cut the 39 walks. A pairs list
+   (`Vec<(&CardInstance, &StaticAbility)>`) keeps push order and so keeps
+   the traces, but it does not change the asymptotics either — the real win
+   is skipping a pass whose `StaticEffect` variant is absent from the board
+   entirely. That needs a per-variant presence summary built in one pass;
+   assign the tags in one place next to the passes so the two can't drift.
+4. **Memoize the gather outside freeze scopes.** Unchanged from last run:
+   the blocker is invalidation, not caching. `compute_battlefield` alone
+   re-gathers 123,712 times per six games. Two designs: a mutation epoch
+   bumped at every `&mut GameState` entry point with the field set made
+   private behind accessors; or route zone mutation through `CowBox`'s
+   `DerefMut` and derive validity from `Arc` identity. Multi-run project.
+5. **`Keyword::eq` (0.74 % self)** — linear scans of `Vec<Keyword>`. A
+   bitset for the ~64 common keywords makes `has_keyword` O(1) and shrinks
+   `CardInstance`; rides along with item 1.
+6. **`HashMap` hash choice** — `block_map`, `combat_damage_order` /
+   `_assignment` use SipHash and show up at 1.63 M `malloc` calls via
+   `HashMap::clone`.
+7. **CowBox sharp edge audit.** Any `&mut` access — including a read-only
    `iter_mut` — deep-copies the zone while a snapshot shares it. 79
-   `battlefield.iter_mut()` sites; the ones that matter are those running while
-   a probe clone is alive. Unmeasured, but item 1 will walk this code anyway.
-6. **Hash choice for internal maps.** `HashMap::clone` is 0.73 % self now that
-   the bigger costs are gone; `block_map`, `combat_damage_order` /
-   `_assignment` and friends use SipHash. Ride-along with item 1.
-7. **`legal_block_targets` per-pair requirement evaluation.** O(blockers x
-   attackers) with a full requirement walk inside. Still does not appear in the
-   profile — it is a view-layer path, not a bot path. Only worth doing if a
-   wide board shows up in a measurement.
-8. **Actor scaling — re-measure on real cores.** The sweep in **Baseline** ran
-   on a 4-core box, so everything past 4 actors is oversubscription. What it
-   does establish: mimalloc's edge grows with actor count and its RSS ratio
-   stays flat at 1.5-1.7x.
-9. **Effect-resolution recursion depth.** The 32 MB worker stacks
-   (`RUST_MIN_STACK` in `.cargo/config.toml`, plus explicit `stack_size` on
-   every worker) are still required. A robustness constraint rather than a
-   throughput cost; it lives here so nobody "cleans up" the stack sizes.
+   `battlefield.iter_mut()` sites. This is also the prerequisite for
+   per-card CoW (`Vec<CowBox<CardInstance>>`), which would make a zone
+   unshare one pointer memcpy plus one card clone instead of N card clones.
+8. **`legal_block_targets` per-pair requirement evaluation.** Still does not
+   appear in the profile — it is a view-layer path, not a bot path.
+9. **Actor scaling — re-measure on real cores.** Four-core boxes make
+   everything past 4 actors oversubscription.
+10. **Effect-resolution recursion depth.** The 32 MB worker stacks
+    (`RUST_MIN_STACK` in `.cargo/config.toml`, plus explicit `stack_size` on
+    every worker) are still required. A robustness constraint rather than a
+    throughput cost; it lives here so nobody "cleans up" the stack sizes.
+
+**Closed / ruled out:**
+
+- *State-clone allocation traffic* (was candidate 1). CoW-wrapping the
+  per-turn tally collections moved the bench 0.1 % over 8 alternated pairs.
+  The caller tree explains why: `GameState::clone` is 0.9 M of ~16.7 M
+  allocations. Shrinking `CardInstance` is still theoretically worth
+  something for the memcpy share, but it is not where the allocator time is.
