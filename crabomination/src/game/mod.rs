@@ -149,6 +149,17 @@ fn deserialize_decider<'de, D: serde::Deserializer<'de>>(
 
 // ── Game state ────────────────────────────────────────────────────────────────
 
+/// One live `StaticEffect::GrantTriggeredAbility` on the board, peeled out
+/// of its gating wrappers and with its filter already resolved against the
+/// source's named card. Built by
+/// [`GameState::trigger_grant_sources`](GameState::trigger_grant_sources).
+pub(crate) struct TriggerGrant<'a> {
+    pub filter: crate::card::SelectionRequirement,
+    pub ability: &'a crate::card::TriggeredAbility,
+    pub controller: usize,
+    pub source: CardId,
+}
+
 /// Interior-mutable memo for [`GameState::with_frozen_layers`]: the gathered
 /// continuous-effect set, shared via `Arc` so per-permanent layer passes
 /// don't re-clone it. `Mutex` (not `RefCell`) keeps `GameState: Sync` for the
@@ -2817,26 +2828,60 @@ impl GameState {
         &self,
         card: &CardInstance,
     ) -> Vec<crate::card::TriggeredAbility> {
+        self.statics_granted_triggers_with(card, &self.trigger_grant_sources())
+    }
+
+    /// The live `GrantTriggeredAbility` statics on the board, each with its
+    /// gating wrappers already peeled (Threshold, "while your turn", … —
+    /// Decaying Soil, Cephalid Sage) and its filter already resolved against
+    /// the source's named card.
+    ///
+    /// Hoisted out of [`statics_granted_triggers_for`] so a caller asking
+    /// about every battlefield permanent — the trigger dispatcher does, once
+    /// per event batch — peels and resolves the grants once instead of once
+    /// per permanent. On the overwhelmingly common board that grants nothing
+    /// this is a single cheap pass and every per-card call becomes a no-op.
+    ///
+    /// [`statics_granted_triggers_for`]: Self::statics_granted_triggers_for
+    pub(crate) fn trigger_grant_sources(&self) -> Vec<TriggerGrant<'_>> {
         let mut out = Vec::new();
         // CR 315.5 — a face-up conspiracy grants from the command zone too.
         for src in self.all_static_sources() {
             for sa in &src.definition.static_abilities {
-                // Peel the gating wrappers (Threshold, "while your turn", …)
-                // so a conditionally granted trigger only surfaces while its
-                // condition holds — Decaying Soil, Cephalid Sage.
                 if let Some(crate::effect::StaticEffect::GrantTriggeredAbility {
                     filter,
                     ability,
                 }) = self.active_static(&sa.effect, src)
-                    && self.evaluate_requirement_static(
-                        &filter.resolve_named_by_source(src.named_card.as_deref()),
-                        &Target::Permanent(card.id),
-                        src.controller,
-                        Some(src.id),
-                    )
                 {
-                    out.push((**ability).clone());
+                    out.push(TriggerGrant {
+                        filter: filter.resolve_named_by_source(src.named_card.as_deref()),
+                        ability,
+                        controller: src.controller,
+                        source: src.id,
+                    });
                 }
+            }
+        }
+        out
+    }
+
+    /// [`statics_granted_triggers_for`] against a prebuilt grant list.
+    ///
+    /// [`statics_granted_triggers_for`]: Self::statics_granted_triggers_for
+    pub(crate) fn statics_granted_triggers_with(
+        &self,
+        card: &CardInstance,
+        grants: &[TriggerGrant<'_>],
+    ) -> Vec<crate::card::TriggeredAbility> {
+        let mut out = Vec::new();
+        for g in grants {
+            if self.evaluate_requirement_static(
+                &g.filter,
+                &Target::Permanent(card.id),
+                g.controller,
+                Some(g.source),
+            ) {
+                out.push((*g.ability).clone());
             }
         }
         // CR 611.2 — turn-scoped floating watchers ("whenever a creature blocks
@@ -2910,16 +2955,44 @@ impl GameState {
         &self,
         card: &CardInstance,
     ) -> Vec<crate::card::TriggeredAbility> {
+        self.equip_granted_triggers_with(card, &self.equip_granted_trigger_sources())
+    }
+
+    /// The battlefield attachments that hand their `equipped_bonus` triggered
+    /// abilities to their host, as `(host_id, abilities)`. Hoisted out of
+    /// [`equip_granted_triggers_for`] for the same reason as
+    /// [`trigger_grant_sources`]: the dispatcher asks once per battlefield
+    /// permanent and each ask re-scanned the whole battlefield.
+    ///
+    /// [`equip_granted_triggers_for`]: Self::equip_granted_triggers_for
+    /// [`trigger_grant_sources`]: Self::trigger_grant_sources
+    pub(crate) fn equip_granted_trigger_sources(
+        &self,
+    ) -> Vec<(CardId, &[crate::card::TriggeredAbility])> {
+        self.battlefield
+            .iter()
+            .filter_map(|eq| {
+                let host = eq.attached_to?;
+                let bonus = eq.definition.equipped_bonus.as_ref()?;
+                (!bonus.triggers_on_equipment)
+                    .then(|| (host, bonus.triggered_abilities.as_slice()))
+            })
+            .collect()
+    }
+
+    /// [`equip_granted_triggers_for`] against a prebuilt attachment list.
+    ///
+    /// [`equip_granted_triggers_for`]: Self::equip_granted_triggers_for
+    pub(crate) fn equip_granted_triggers_with(
+        &self,
+        card: &CardInstance,
+        sources: &[(CardId, &[crate::card::TriggeredAbility])],
+    ) -> Vec<crate::card::TriggeredAbility> {
         let mut out = Vec::new();
-        for eq in &self.battlefield {
-            if eq.attached_to != Some(card.id) {
-                continue;
+        for (host, abilities) in sources {
+            if *host == card.id {
+                out.extend(abilities.iter().cloned());
             }
-            let Some(bonus) = &eq.definition.equipped_bonus else { continue };
-            if bonus.triggers_on_equipment {
-                continue;
-            }
-            out.extend(bonus.triggered_abilities.iter().cloned());
         }
         out
     }
@@ -15202,6 +15275,11 @@ impl GameState {
         // are skipped while a strip-abilities effect is in scope per CR
         // 113.10b. Empty (and free) on a board with no such effect.
         let stripped_ids = self.permanents_with_abilities_removed();
+        // Both grant walks are board-level: peel and resolve them once for
+        // the whole batch instead of once per battlefield permanent (the
+        // per-card form was O(cards x sources) with an allocation per pair).
+        let trigger_grants = self.trigger_grant_sources();
+        let equip_grants = self.equip_granted_trigger_sources();
         // CR 603.3d — keys for `once_per_turn` triggers that fire in this
         // batch; merged into the turn-scoped set after the battlefield walk
         // (deferred so we don't mutate `self` mid-immutable-borrow).
@@ -15218,13 +15296,13 @@ impl GameState {
             // (CR 603.3d) can be tracked per (source, index); granted
             // triggers are never once-per-turn and use a sentinel index.
             let n_printed = card.definition.triggered_abilities.len();
-            let static_granted = self.statics_granted_triggers_for(card);
+            let static_granted = self.statics_granted_triggers_with(card, &trigger_grants);
             let own_granted = self.granted_triggers(card.id);
             // Equipment/Aura-granted triggers belong to the *attachment*, not
             // the host, so they fire even when the host lost all abilities
             // (Contaminated Ground's tap trigger on a land it turned into a
             // Swamp — CR 613; the type change strips the land, not the Aura).
-            let equip_granted = self.equip_granted_triggers_for(card);
+            let equip_granted = self.equip_granted_triggers_with(card, &equip_grants);
             // A host that lost all abilities (Turn to Frog, "is a Swamp")
             // contributes none of its *own* triggers, but still carries its
             // attachments' equip-granted ones.
