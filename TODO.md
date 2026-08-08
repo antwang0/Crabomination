@@ -33,9 +33,11 @@ boxes — rebase before pushing, and never compare absolutes across the two.**
   24 % allocator share is the layer system (`compute_permanent_pass` ~55 % of
   all allocations), not state cloning (`GameState::clone` 5 %); CoW-wrapping
   per-clone collections is measured at 0.1 % and is closed — don't redo it.
-- **Next**: candidate 0 (the `available_mana`-per-hand-card hoist, same shape
-  as the win above, cheap), then 1(b) `computed_permanent_shared -> Arc<…>`
-  memoized per freeze scope.
+- **Next**: candidate 1(b), `computed_permanent_shared -> Arc<…>` memoized per
+  freeze scope. Candidate 0(a) (`available_mana` hoisted out of the per-hand-
+  card filter) was tried and reverted at +0.9 % — right shape, tiny constant
+  once the sweep above was gone. Two negative results are now logged; read the
+  Log before re-deriving either.
 - **Trackers**: TODO 782, roadmap 917, `PERF.md` ~285 — under target.
   `ENGINE_BACKLOG` / `CARD_BACKLOG` / `SHIPPED` want a triage pass; a
   title-based sweep of their "<set> — closed" sections is **not** safe.

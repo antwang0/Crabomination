@@ -166,6 +166,7 @@ percentages are what carry over.
 | date | change | before | after | how measured |
 |---|---|---|---|---|
 | 2026-08-08 | `cast_candidates` stops calling `compute_hand_affordances` for its one `.spliceable` field; it asks `spliceable_hand_cards_on` against the probe template it already built (`489bb1d3`) | 16.08 games/s, 9709 dec/s | 22.83 games/s, 13786 dec/s | **+42.0 %.** `--bench` ×3 per side alternated A/B/A/B in one sitting on an idle box (15.98/16.07/16.18 → 23.00/22.38/23.10); every B run beat every A run by >6 games/s, so the gap is 20× the spread. Sealed pool (720 games), the shape self-play trains on: 40.2/40.0 s → 26.3/26.2 s, **+52.7 %**, 0 undecided both sides. turns/game 26.98 unchanged, stalls 0, RSS unchanged, all pairs split. Suite 18623 passed / 0 failed; all four golden traces byte-identical. |
+| 2026-08-08 | Hoist `available_mana` out of `cast_candidates`' per-hand-card `can_afford_in_state` filter (one `AvailableMana` per call instead of one per card, each walking the board and allocating a `Vec` per untapped permanent via `granted_abilities_for`) | 22.83 games/s | 23.03 games/s | **No win — reverted.** `--bench` ×3 per side alternated on an idle box (22.82/22.53/23.13 → 23.04/23.18/22.88); +0.9 %, and the distributions overlap (the best A run beats the worst B run). Measured against the same base as the row above by rebuilding that exact commit with the patch applied in a worktree. The asymptotics were real but the constant is not: the bench hand is ~7 cards over a 3-6 permanent board, and the sweep that *was* multiplying this is gone as of the row above. Left in **Perf candidates** as a closed sub-item so it doesn't get re-derived. |
 | 2026-08-08 | Card-name tallies (`spells_cast_by_name_this_game`, `spell_names_cast_this_turn`, `cycled_count_by_name`) key on `&'static str` instead of `String` (`eb5f661c`) | — | — | **No separate win claimed.** It rode in the sitting above, and it is exactly the class the CoW row measured at 0.1 %: `GameState::clone` is 0.9 M of ~16.7 M allocations. Kept as a typing change — the keys are `CardDefinition::name`, already `&'static str`, and the owned copies were a widening that allocated per entry per clone. Golden traces byte-identical. |
 
 ## Profile of record
@@ -239,14 +240,9 @@ tree, so the profile owes a re-take before item 1 is costed.
    `.spliceable` win was not an algorithmic insight — it was one caller
    asking for 40 answers and reading 1. `cast_candidates` is clean now, but
    nothing structural stops the next one:
-   (a) `available_mana(state, seat)` is recomputed **per hand card** inside
-   `cast_candidates`' `can_afford_in_state` filter, and it calls
-   `granted_abilities_for` (which allocates a `Vec` and walks
-   `all_static_sources`) once per untapped permanent — O(hand × board²) with
-   allocations, all of it invariant across the filter. Hoist it to one
-   `AvailableMana` per call and pass it down; `can_afford_in_state` stays as
-   a shim that computes its own. Provably identical (`state` is `&`-borrowed
-   for the whole filter). Unmeasured but cheap to do.
+   (a) ~~`available_mana` per hand card~~ — **tried, no win, reverted.** See
+   the Log row; the shape was right but the constant is tiny once the
+   affordance sweep is gone. Don't redo it without a board-size argument.
    (b) Grep discipline: a bot-path call to any `compute_*` / `*_hand_cards`
    aggregate that reads one field is the smell. `view.rs` is the only
    legitimate caller of `compute_hand_affordances` — it genuinely needs all
