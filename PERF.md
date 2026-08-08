@@ -48,16 +48,18 @@ the better first look.
 
 ## Baseline
 
-Committed 2026-08-08 at `6060e48` (post "Freeze the layer memo for the
-whole bot tick"). Refresh only alongside an intentional, explained change.
+Committed 2026-08-08 at the tip of this run's work (post "Freeze the layer
+memo for the whole bot tick", `e919496`, rebased onto the concurrent card
+commits). Refresh only alongside an intentional, explained change.
 Regressions beyond ~5 % get investigated before anything else lands.
 
 ```text
 bot_ladder --bench   release, rustc 1.95.0, 4-core VM, 3 worker threads
+                     measured on an idle box (load average < 0.5)
 games                320
-games_per_s          12.46 / 12.03 / 12.18   (mean 12.22, spread 3.5 %)
-games_per_s_th       4.15 / 4.01 / 4.06
-decisions_per_s      7524 / 7263 / 7356      (mean 7381)
+games_per_s          11.80 / 11.82 / 11.79 / 11.97   (mean 11.85, spread 1.5 %)
+games_per_s_th       3.93 / 3.94 / 3.93 / 3.99
+decisions_per_s      7123 / 7139 / 7117 / 7231       (mean 7153)
 turns_per_game       26.98
 decisions_per_game   603.9
 stalls               0 (0.00 %)
@@ -69,20 +71,21 @@ so read the ratios, not the absolutes)
   1 → 4.23     2 → 8.05 (95 % of linear)     4 → 14.56 (86 % of linear)
 ```
 
-Re-verified at the end of the run on the final binary (which also carries
-the `--bench` determinism print): 12.13 / 12.23 / 11.83 games/s, mean
-12.06, `determinism ok` on all three. That −1.3 % against the recorded
-mean is the box's noise, not a regression — run-to-run spread here is
-~2–3 %, so a claimed win under ~5 % needs either a microbenchmark or
-repeated runs.
+**Measure on an idle box.** The optimization rows below were each taken as
+three back-to-back runs right after a 13–17 min release build, which reads
+2–3 % high and with a much wider spread (one such triple ran 10.91 / 11.52 /
+11.98 — a 9.8 % spread) than the same binary gives once the machine settles.
+The before/after *deltas* in the log are still sound because both sides were
+measured the same way; the absolute baseline above deliberately is not, and
+is the number to compare against.
 
 ## Log
 
 | date | change | before | after | how measured |
 |---|---|---|---|---|
-| 2026-08-08 | Gate the layer gather's three graveyard tallies on a `dynamic_pt` being present; drop the O(n²) battlefield-membership test in the `AnthemForFilter` walk (`f7559f4`) | 10.36 games/s, 6253 dec/s | 11.25 games/s, 6791 dec/s | `--bench` ×3 each side; golden traces byte-identical, turns/game unchanged |
-| 2026-08-08 | Run the whole `RandomBot` tick inside one `with_frozen_layers` scope (`6060e48`) | 11.25 games/s, 6791 dec/s | 12.22 games/s, 7381 dec/s | `--bench` ×3 each side; golden traces byte-identical, turns/game unchanged |
-| | **cumulative this run** | **10.36 games/s** | **12.22 games/s (+18.0 %)** | |
+| 2026-08-08 | Gate the layer gather's three graveyard tallies on a `dynamic_pt` being present; drop the O(n²) battlefield-membership test in the `AnthemForFilter` walk (`b17a76b`) | 10.36 games/s, 6253 dec/s | 11.25 games/s, 6791 dec/s | `--bench` ×3 each side; golden traces byte-identical, turns/game unchanged |
+| 2026-08-08 | Run the whole `RandomBot` tick inside one `with_frozen_layers` scope (`e919496`) | 11.25 games/s, 6791 dec/s | 12.22 games/s, 7381 dec/s | `--bench` ×3 each side; golden traces byte-identical, turns/game unchanged |
+| | **cumulative this run** | **10.36 games/s** | **12.22 games/s (+18.0 %)** | both ends measured post-build; on the settled box the same code reads 11.85 |
 
 ## Profile of record
 

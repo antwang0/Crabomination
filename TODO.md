@@ -13,8 +13,9 @@ It added `PERF.md`, `bot_ladder --bench`, golden traces, and a seeded
   outside freeze scopes (52 % of instructions; blocked only on a sound
   invalidation story). Candidate 2 (merge the ~50 battlefield passes in
   `gather_continuous_effects_inner`) is the cheaper mechanical alternative.
-  Beat 12.22 games/s on `bot_ladder --bench`; a release rebuild is 13–17 min
-  on this box, so budget two or three measured iterations, not ten.
+  Beat 11.85 games/s on `bot_ladder --bench` (measure on an idle box — a run
+  straight off a build reads 2–3 % high); a release rebuild is 13–24 min, so
+  budget two or three measured iterations, not ten.
 - **Trackers**: this file is ~9.5 k lines against the ~1 k target. ~3.5 k sit
   in fully-closed sections and ~1.6 k in ✅-only bullets, but a mechanical
   sweep is unsafe (some "closed" sections still list live approximations) —
