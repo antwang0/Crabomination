@@ -58,6 +58,34 @@ only stays dead while the reasoning that killed it is readable.
   stratum both plays and benches reports **no** within-archetype number
   rather than passing the marginal off as one. `recommend_pool` prints
   `within` first and labels `raw` as the confound.
+- 🟡 **Round 14 — the self-play loop runs end to end; the gains don't
+  compound.** The label self-consistency candidate got its test: train a
+  fresh net on games piloted *by the net* (`--use-best`), gate the
+  result, promote, repeat. Replacement-pilot gates, 1 200 paired
+  sealed-mirror games per cell:
+
+  | vs `atk-sim` | seed 43 | seed 97 |
+  |---|---|---|
+  | control (heuristic-labelled, r12) | 47.6 % | 48.5 % |
+  | gen 1 (labels from r12-net play) | **51.4 % [49.5, 53.3]** | **50.4 % [48.6, 52.2]** |
+  | gen 2 (labels from gen-1 play) | 48.7 % [46.7, 50.6] | 49.8 % [48.0, 51.6] |
+
+  Generation 1 produced the first above-50 point estimates in fourteen
+  rounds — +3.8/+1.9 over control, exactly the direction self-consistency
+  predicts. Generation 2 gave it back. So the loop does not compound at
+  this scale, and the hypothesis in its strong form (each generation's
+  labels make the next generation stronger) is not supported. What
+  remains defensible: one generation of training on net-piloted games is
+  worth roughly the historical deficit — the gen-1 net is the first
+  replacement pilot at genuine parity with the heuristic search — but at
+  ±1.9 pts per cell against a ~2-pt effect, distinguishing "small real
+  one-off gain" from "the good half of noise" needs bigger gates than
+  the effect justifies. Two structural notes for whoever reopens this:
+  the loop promotes unconditionally (a gatekeeper that only promotes a
+  candidate beating the incumbent is the standard refinement), and
+  net-piloted generation runs at 70 games/s — the full
+  generate/train/gate cycle is ~10 minutes, so a many-generation run is
+  affordable if a reason to believe in it appears.
 - 🔴 **Round 13 — both survivors fall, and the paradox is now fully
   unexplained.** Two measurements, two seeds each.
 
