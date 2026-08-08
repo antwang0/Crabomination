@@ -60,8 +60,8 @@ use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::time::Instant;
 
 use crabomination::selfplay::{
-    best_build_by, heuristic_sealed_build, hill_climb_build_by, play_recorded_game,
-    sealed_game_template, sealed_pool, static_deck_score,
+    best_build_by, heuristic_sealed_build, hill_climb_build_by, mutate_build,
+    play_recorded_game, sealed_game_template, sealed_pool, static_deck_score,
 };
 use crabomination::server::bot::EvalWeights;
 use crabomination::server::encode::{Vocab, encode_deck};
@@ -101,6 +101,16 @@ struct Args {
     /// and race net-judged builds against static-judged builds of the
     /// same candidate sets on paired pools, N games per pool.
     gate_builder: Option<usize>,
+    /// Distillation, generation half: label N decks with a gauntlet win
+    /// rate (240 games each vs a fixed 20-deck field) and append to
+    /// `<out>/deck_labels.bin`. The deck mix deliberately covers the
+    /// space search visits — builder picks, best-of-32 picks, 3/8/15-swap
+    /// mutants, and climb trajectories under the current deck net.
+    distill_gen: Option<usize>,
+    /// Distillation, training half: fit the deck net to the gauntlet
+    /// win rates in `<out>/deck_labels.bin`, report holdout pair-order
+    /// accuracy, save `<out>/deck-distilled.safetensors`.
+    distill_train: bool,
     /// Gate mode: race hill-climbed builds (single-spell-swap search
     /// under the deck-net judge, started from the net's best-of-32 pick)
     /// against the plain best-of-32 pick — same pools, same pilots, same
@@ -212,6 +222,8 @@ fn parse_args() -> Args {
         use_best: None,
         gate_builder: None,
         gate_builder_hc: None,
+        distill_gen: None,
+        distill_train: false,
         gate_builder_v2: None,
         calibrate: None,
         calibrate_leaves: None,
@@ -292,6 +304,11 @@ fn parse_args() -> Args {
             "--gate-builder" => a.gate_builder = Some(val().parse().expect("--gate-builder")),
             "--gate-builder-hc" => {
                 a.gate_builder_hc = Some(val().parse().expect("--gate-builder-hc"))
+            }
+            "--distill-gen" => a.distill_gen = Some(val().parse().expect("--distill-gen")),
+            "--distill-train" => {
+                a.distill_train = true;
+                continue;
             }
             "--gate-builder-v2" => {
                 a.gate_builder_v2 = Some(val().parse().expect("--gate-builder-v2"))
@@ -498,6 +515,42 @@ fn wilson(wins: u32, n: u32) -> (f64, f64) {
     ((center - half).max(0.0), (center + half).min(1.0))
 }
 
+/// Run `per_pool` for pool indices `0..n` across up to `threads` workers,
+/// returning results in pool order. Deck construction is seeded per pool
+/// and matches the sequential loop exactly; game tallies drift by a game
+/// or two per pool because the bots' candidate jitter draws from the
+/// thread RNG by design (measured 30.0% vs 29.9% on a 4,800-game gate) —
+/// statistically equivalent, not bit-identical.
+/// 32 MB worker stacks, same as every other thread that simulates games.
+fn parallel_pools<T: Send>(
+    n: u64,
+    threads: usize,
+    per_pool: impl Fn(u64) -> T + Sync,
+) -> Vec<T> {
+    let next = AtomicU64::new(0);
+    let results: Mutex<Vec<(u64, T)>> = Mutex::new(Vec::new());
+    std::thread::scope(|scope| {
+        for _ in 0..threads.clamp(1, n as usize) {
+            std::thread::Builder::new()
+                .stack_size(32 * 1024 * 1024)
+                .spawn_scoped(scope, || {
+                    loop {
+                        let i = next.fetch_add(1, Ordering::Relaxed);
+                        if i >= n {
+                            break;
+                        }
+                        let r = per_pool(i);
+                        results.lock().unwrap().push((i, r));
+                    }
+                })
+                .expect("spawn gate worker");
+        }
+    });
+    let mut v = results.into_inner().unwrap();
+    v.sort_by_key(|(i, _)| *i);
+    v.into_iter().map(|(_, r)| r).collect()
+}
+
 /// The builder gate: over paired pools, both judges rank the *same*
 /// best-of-N candidate set — net win-prob vs the heuristic's static
 /// score — and their picks race with identical pilots. Whatever
@@ -515,8 +568,7 @@ fn gate_builder(args: &Args, vocab: &Vocab, games_per_pool: usize) {
         "builder gate: net-judged vs static-judged best-of-{CANDS}, {games_per_pool} games x {POOLS} pools, seed {}",
         args.seed
     );
-    let (mut wins_net, mut wins_static, mut undecided) = (0u32, 0u32, 0u32);
-    for i in 0..POOLS {
+    let per_pool = |i: u64| {
         let salt = args.seed ^ i.wrapping_mul(0x9E37_79B9_7F4A_7C15).wrapping_add(0xB111D);
         let pool = sealed_pool(salt);
         let net_deck = best_build_by(&pool, CANDS, salt ^ 1, |d| {
@@ -533,13 +585,22 @@ fn gate_builder(args: &Args, vocab: &Vocab, games_per_pool: usize) {
             4_000,
             Some(salt ^ 2),
         );
-        println!(
-            "pool #{i}: net {} - {} static ({} n/d)",
-            tally.wins_a, tally.wins_b, tally.undecided
-        );
-        wins_net += tally.wins_a;
-        wins_static += tally.wins_b;
-        undecided += tally.undecided;
+        (
+            format!(
+                "pool #{i}: net {} - {} static ({} n/d)",
+                tally.wins_a, tally.wins_b, tally.undecided
+            ),
+            tally.wins_a,
+            tally.wins_b,
+            tally.undecided,
+        )
+    };
+    let (mut wins_net, mut wins_static, mut undecided) = (0u32, 0u32, 0u32);
+    for (line, a, b, nd) in parallel_pools(POOLS, args.actors, per_pool) {
+        println!("{line}");
+        wins_net += a;
+        wins_static += b;
+        undecided += nd;
     }
     let decided = wins_net + wins_static;
     let pct = 100.0 * wins_net as f64 / decided.max(1) as f64;
@@ -561,6 +622,164 @@ fn gate_builder(args: &Args, vocab: &Vocab, games_per_pool: usize) {
     );
 }
 
+/// Generate gauntlet-labelled decks for distillation. Eight variants per
+/// pool spanning builder-distribution and search-visited space, each
+/// labelled by win rate over 240 games against a fixed 20-deck field,
+/// parallelised across pools.
+fn distill_gen(args: &Args, vocab: &Vocab, n_decks: usize) {
+    use crabomination::cube::CardFactory;
+    use crabomination::recommend::{Pilot, simulate_match_games_piloted};
+    let path = args.out.join("deck-latest.safetensors");
+    let bytes = std::fs::read(&path)
+        .unwrap_or_else(|e| panic!("{}: {e} (need a deck net for the search variants)", path.display()));
+    let net = DeckNet::load(&bytes).expect("deck net loads");
+    assert_eq!(net.vocab_size(), vocab.size(), "deck net vocab != encoder vocab");
+    const FIELD: u64 = 20;
+    const GAMES_PER_FIELD_DECK: usize = 12; // 240 games per labelled deck
+    let field: Vec<Vec<CardFactory>> = (0..FIELD)
+        .map(|i| {
+            let seed = 0xF1E1D ^ i.wrapping_mul(0x9E37_79B9_7F4A_7C15);
+            heuristic_sealed_build(&sealed_pool(seed), seed ^ 1)
+        })
+        .collect();
+
+    let pools_n = n_decks.div_ceil(8);
+    let mut jobs: Vec<(u64, Vec<CardFactory>)> = Vec::new();
+    for pi in 0..pools_n as u64 {
+        let salt = args.seed ^ pi.wrapping_mul(0x9E37_79B9_7F4A_7C15).wrapping_add(0xD157);
+        let pool = sealed_pool(salt);
+        let judge = |d: &[CardFactory]| {
+            let (cards, feats) = encode_deck(d, vocab);
+            net.forward(&cards, &feats) as f64
+        };
+        let pick32 = best_build_by(&pool, 32, salt ^ 1, judge);
+        let variants: Vec<Vec<CardFactory>> = vec![
+            heuristic_sealed_build(&pool, salt ^ 2),
+            heuristic_sealed_build(&pool, salt ^ 3),
+            pick32.clone(),
+            mutate_build(&pool, pick32.clone(), 3, salt ^ 4),
+            mutate_build(&pool, pick32.clone(), 8, salt ^ 5),
+            mutate_build(&pool, pick32.clone(), 15, salt ^ 6),
+            hill_climb_build_by(&pool, pick32.clone(), 2, judge),
+            hill_climb_build_by(&pool, pick32, 6, judge),
+        ];
+        for (vi, v) in variants.into_iter().enumerate() {
+            jobs.push((salt ^ (0x100 + vi as u64), v));
+        }
+    }
+    jobs.truncate(n_decks);
+    println!(
+        "distill-gen: {} decks x {} games vs {FIELD} field decks, {} threads",
+        jobs.len(),
+        GAMES_PER_FIELD_DECK as u64 * FIELD,
+        args.actors
+    );
+
+    let next = AtomicU64::new(0);
+    let done = AtomicU64::new(0);
+    let results: Mutex<Vec<DeckRow>> = Mutex::new(Vec::new());
+    std::thread::scope(|scope| {
+        for _ in 0..args.actors {
+            std::thread::Builder::new()
+                .stack_size(32 * 1024 * 1024)
+                .spawn_scoped(scope, || {
+                    loop {
+                        let j = next.fetch_add(1, Ordering::Relaxed) as usize;
+                        let Some((seed, deck)) = jobs.get(j) else { break };
+                        let (mut wins, mut decided) = (0u32, 0u32);
+                        for (fi, fd) in field.iter().enumerate() {
+                            let t = simulate_match_games_piloted(
+                                deck,
+                                fd,
+                                GAMES_PER_FIELD_DECK,
+                                [Pilot::default(), Pilot::default()],
+                                4_000,
+                                Some(seed ^ (fi as u64) << 32),
+                            );
+                            wins += t.wins_a;
+                            decided += t.wins_a + t.wins_b;
+                        }
+                        let (cards, feats) = encode_deck(deck, vocab);
+                        let win = wins as f32 / decided.max(1) as f32;
+                        results.lock().unwrap().push(DeckRow { cards, feats, win });
+                        let d = done.fetch_add(1, Ordering::Relaxed) + 1;
+                        if d % 50 == 0 {
+                            eprintln!("  {d}/{} labelled", jobs.len());
+                        }
+                    }
+                })
+                .expect("spawn labeller");
+        }
+    });
+    let fresh = results.into_inner().unwrap();
+    let labels_path = args.out.join("deck_labels.bin");
+    let mut all = std::fs::read(&labels_path)
+        .ok()
+        .and_then(|b| crabomination_nn::read_deck_shard(&b))
+        .unwrap_or_default();
+    let (lo, hi) = fresh.iter().fold((1.0f32, 0.0f32), |(l, h), r| (l.min(r.win), h.max(r.win)));
+    let mean = fresh.iter().map(|r| r.win).sum::<f32>() / fresh.len().max(1) as f32;
+    all.extend(fresh);
+    std::fs::write(&labels_path, crabomination_nn::write_deck_shard(&all))
+        .expect("write deck_labels.bin");
+    println!(
+        "labelled win rates: mean {mean:.3}, min {lo:.3}, max {hi:.3}; {} total rows in {}",
+        all.len(),
+        labels_path.display()
+    );
+}
+
+/// Fit the deck net to the gauntlet labels; holdout is every 10th row.
+fn distill_train(args: &Args, vocab: &Vocab) {
+    let labels_path = args.out.join("deck_labels.bin");
+    let bytes = std::fs::read(&labels_path)
+        .unwrap_or_else(|e| panic!("{}: {e} (run --distill-gen first)", labels_path.display()));
+    let rows = crabomination_nn::read_deck_shard(&bytes).expect("readable deck_labels.bin");
+    let (mut train, mut hold): (Vec<DeckRow>, Vec<DeckRow>) = (Vec::new(), Vec::new());
+    for (i, r) in rows.into_iter().enumerate() {
+        if i % 10 == 0 { hold.push(r) } else { train.push(r) }
+    }
+    println!("distill-train: {} train / {} holdout rows", train.len(), hold.len());
+    let mut trainer =
+        DeckTrainer::new(&DeckNetConfig::standard(vocab.size()), args.lr).expect("deck trainer");
+    let mut rng = StdRng::seed_from_u64(args.seed ^ 0xD157);
+    // Pair-order accuracy: of random holdout pairs with meaningfully
+    // different labels, how often does the net order them the same way?
+    let pair_acc = |t: &DeckTrainer| {
+        let preds: Vec<f32> =
+            hold.iter().map(|r| t.predict(r).unwrap_or(0.5)).collect();
+        let (mut ok, mut n) = (0u32, 0u32);
+        let mut prng = StdRng::seed_from_u64(7);
+        for _ in 0..5_000 {
+            let (a, b) =
+                (prng.random_range(0..hold.len()), prng.random_range(0..hold.len()));
+            if (hold[a].win - hold[b].win).abs() < 0.05 {
+                continue;
+            }
+            n += 1;
+            if (preds[a] > preds[b]) == (hold[a].win > hold[b].win) {
+                ok += 1;
+            }
+        }
+        (ok, n)
+    };
+    for step in 1..=4_000u32 {
+        let batch: Vec<&DeckRow> =
+            (0..64).map(|_| &train[rng.random_range(0..train.len())]).collect();
+        let loss = trainer.train_step(&batch).expect("step");
+        if step % 1_000 == 0 {
+            let (ok, n) = pair_acc(&trainer);
+            println!(
+                "step {step}: train mse {loss:.4}, holdout pair-order {:.1}% ({n} pairs)",
+                100.0 * ok as f64 / n.max(1) as f64
+            );
+        }
+    }
+    let out = args.out.join("deck-distilled.safetensors");
+    trainer.save(&out).expect("save distilled net");
+    println!("saved {}", out.display());
+}
+
 /// Race hill-climbed builds against the best-of-32 picks they started
 /// from. Judge, pools, and pilots are identical on both sides, so this
 /// isolates one thing: whether *searching* the build space under the
@@ -579,8 +798,7 @@ fn gate_builder_hc(args: &Args, vocab: &Vocab, games_per_pool: usize) {
         "builder gate: hill-climbed vs best-of-{CANDS} (same net judge), {games_per_pool} games x {POOLS} pools, seed {}",
         args.seed
     );
-    let (mut wins_hc, mut wins_pick, mut undecided) = (0u32, 0u32, 0u32);
-    for i in 0..POOLS {
+    let per_pool = |i: u64| {
         let salt = args.seed ^ i.wrapping_mul(0x9E37_79B9_7F4A_7C15).wrapping_add(0xB111DC);
         let pool = sealed_pool(salt);
         let judge = |d: &[crabomination::cube::CardFactory]| {
@@ -602,17 +820,26 @@ fn gate_builder_hc(args: &Args, vocab: &Vocab, games_per_pool: usize) {
             4_000,
             Some(salt ^ 2),
         );
-        println!(
-            "pool #{i}: climbed {} - {} pick ({} n/d), {swaps} slots changed, net score {:.4} -> {:.4}",
+        (
+            format!(
+                "pool #{i}: climbed {} - {} pick ({} n/d), {swaps} slots changed, net score {:.4} -> {:.4}",
+                tally.wins_a,
+                tally.wins_b,
+                tally.undecided,
+                judge(&pick),
+                judge(&climbed),
+            ),
             tally.wins_a,
             tally.wins_b,
             tally.undecided,
-            judge(&pick),
-            judge(&climbed),
-        );
-        wins_hc += tally.wins_a;
-        wins_pick += tally.wins_b;
-        undecided += tally.undecided;
+        )
+    };
+    let (mut wins_hc, mut wins_pick, mut undecided) = (0u32, 0u32, 0u32);
+    for (line, a, b, nd) in parallel_pools(POOLS, args.actors, per_pool) {
+        println!("{line}");
+        wins_hc += a;
+        wins_pick += b;
+        undecided += nd;
     }
     let decided = wins_hc + wins_pick;
     let pct = 100.0 * wins_hc as f64 / decided.max(1) as f64;
@@ -643,8 +870,7 @@ fn gate_builder_v2(args: &Args, games_per_pool: usize) {
         "builder gate: builder_v2 vs legacy builder, {games_per_pool} games x {POOLS} pools, seed {}",
         args.seed
     );
-    let (mut wins_v2, mut wins_old, mut undecided) = (0u32, 0u32, 0u32);
-    for i in 0..POOLS {
+    let per_pool = |i: u64| {
         let salt = args.seed ^ i.wrapping_mul(0x9E37_79B9_7F4A_7C15).wrapping_add(0xB0111D);
         let pool = sealed_pool(salt);
         let v2 = crabomination::selfplay::heuristic_sealed_build_with(&pool, salt ^ 1, true);
@@ -657,13 +883,22 @@ fn gate_builder_v2(args: &Args, games_per_pool: usize) {
             4_000,
             Some(salt ^ 2),
         );
-        println!(
-            "pool #{i}: v2 {} - {} legacy ({} n/d)",
-            tally.wins_a, tally.wins_b, tally.undecided
-        );
-        wins_v2 += tally.wins_a;
-        wins_old += tally.wins_b;
-        undecided += tally.undecided;
+        (
+            format!(
+                "pool #{i}: v2 {} - {} legacy ({} n/d)",
+                tally.wins_a, tally.wins_b, tally.undecided
+            ),
+            tally.wins_a,
+            tally.wins_b,
+            tally.undecided,
+        )
+    };
+    let (mut wins_v2, mut wins_old, mut undecided) = (0u32, 0u32, 0u32);
+    for (line, a, b, nd) in parallel_pools(POOLS, args.actors, per_pool) {
+        println!("{line}");
+        wins_v2 += a;
+        wins_old += b;
+        undecided += nd;
     }
     let decided = wins_v2 + wins_old;
     let pct = 100.0 * wins_v2 as f64 / decided.max(1) as f64;
@@ -708,6 +943,14 @@ fn main() {
     }
     if let Some(games) = args.gate_builder_hc {
         gate_builder_hc(&args, &vocab, games);
+        return;
+    }
+    if let Some(n) = args.distill_gen {
+        distill_gen(&args, &vocab, n);
+        return;
+    }
+    if args.distill_train {
+        distill_train(&args, &vocab);
         return;
     }
     if let Some(games) = args.calibrate {

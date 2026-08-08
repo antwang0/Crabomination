@@ -58,6 +58,29 @@ only stays dead while the reasoning that killed it is readable.
   stratum both plays and benches reports **no** within-archetype number
   rather than passing the marginal off as one. `recommend_pool` prints
   `within` first and labels `raw` as the confound.
+- 🟡 **Round 16 — sim-judge distillation closes the exploit, two
+  iterations in.** The fix round 15 demanded: retrain the deck net on
+  *gauntlet win rates* (240 games vs a fixed 20-deck field per label)
+  over a deck mix that covers search-visited space — builder picks,
+  best-of-32 picks, 3/8/15-swap mutants, and climb trajectories under
+  the current judge (`--distill-gen` / `--distill-train`,
+  `deck_labels.bin`, `DECK_SHARD` format). DAgger-shaped: each iteration
+  labels the previous judge's own climb endpoints.
+
+  | climb-vs-pick gate (the exploit test) | result |
+  |---|---|
+  | original net (round 15) | 11.6 % / 14.3 % |
+  | distilled, iteration 1 (400 labels, holdout pair-order 93 %) | 30.0 % |
+  | distilled, iteration 2 (+200 labels under iter-1 judge) | 34.5 % [33.2, 35.9] |
+
+  The within-distribution gate holds at 58.1 % / 57.0 % vs static — no
+  regression — and the label spread (0.00–0.76 win rate) is what gave
+  the judge its missing "bad deck" gradient. Not converged: the climb is
+  still net-positive-scored and real-negative, but each ~10-minute
+  iteration buys ground and the loop's stopping rule is explicit — stop
+  when climbed-vs-pick stops losing. Also this round: the three builder
+  gates run pools in parallel (~12× faster; statistically equivalent,
+  not bit-identical — game jitter is thread-RNG by design).
 - 🔴 **Round 15 — hill-climbing the deck net is adversarial, not
   optimizing.** `hill_climb_build_by` (greedy single-spell swaps from the
   net's best-of-32 pick, same judge) gated against the pick it started

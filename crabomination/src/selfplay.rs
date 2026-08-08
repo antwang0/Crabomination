@@ -181,6 +181,48 @@ pub fn hill_climb_build_by<F: FnMut(&[CardFactory]) -> f64>(
     deck
 }
 
+/// `swaps` random single-spell substitutions from the pool, for
+/// distillation coverage: the deck net must be trained on the *space
+/// search visits*, not just builder outputs, or search exploits its
+/// extrapolation (the round-15 lesson). Deterministic in `seed`.
+pub fn mutate_build(
+    pool: &[CardFactory],
+    mut deck: Vec<CardFactory>,
+    swaps: usize,
+    seed: u64,
+) -> Vec<CardFactory> {
+    use std::collections::BTreeMap;
+    let mut rng = StdRng::seed_from_u64(seed);
+    let mut avail: BTreeMap<&'static str, (CardFactory, i32)> = BTreeMap::new();
+    for f in pool {
+        let d = f();
+        if !d.is_land() {
+            avail.entry(d.name).or_insert((*f, 0)).1 += 1;
+        }
+    }
+    for f in &deck {
+        if let Some(e) = avail.get_mut(f().name) {
+            e.1 -= 1;
+        }
+    }
+    let spell_slots: Vec<usize> =
+        (0..deck.len()).filter(|&i| !deck[i]().is_land()).collect();
+    for _ in 0..swaps {
+        let free: Vec<CardFactory> =
+            avail.values().filter(|(_, n)| *n > 0).map(|(f, _)| *f).collect();
+        if free.is_empty() || spell_slots.is_empty() {
+            break;
+        }
+        let slot = spell_slots[rng.random_range(0..spell_slots.len())];
+        let inc = free[rng.random_range(0..free.len())];
+        let out = deck[slot];
+        deck[slot] = inc;
+        avail.get_mut(inc().name).expect("from avail").1 -= 1;
+        avail.entry(out().name).or_insert((out, 0)).1 += 1;
+    }
+    deck
+}
+
 /// The heuristic builder's own opinion of a finished deck, exposed so a
 /// gate can pit "static-score judge" against a learned judge over the
 /// *same* candidate set — the comparison that isolates the judge.

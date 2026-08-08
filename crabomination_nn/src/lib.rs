@@ -334,6 +334,56 @@ pub struct DeckRow {
     pub win: f32,
 }
 
+/// Deck-label shard: the distillation training set — decklists labelled
+/// with a *gauntlet win rate* rather than a single game's outcome. One
+/// 300-game win rate carries the information of hundreds of Bernoulli
+/// labels, and the file accumulates across generation passes (read,
+/// extend, rewrite — it is tiny).
+pub const DECK_SHARD_MAGIC: [u8; 4] = *b"CRDL";
+pub const DECK_SHARD_VERSION: u32 = 1;
+
+pub fn write_deck_shard(rows: &[DeckRow]) -> Vec<u8> {
+    let mut out = Vec::with_capacity(16 + rows.len() * 128);
+    out.extend_from_slice(&DECK_SHARD_MAGIC);
+    out.extend_from_slice(&DECK_SHARD_VERSION.to_le_bytes());
+    out.extend_from_slice(&(rows.len() as u32).to_le_bytes());
+    for r in rows {
+        out.extend_from_slice(&(r.cards.len() as u16).to_le_bytes());
+        for c in &r.cards {
+            out.extend_from_slice(&c.to_le_bytes());
+        }
+        for v in r.feats {
+            out.extend_from_slice(&v.to_le_bytes());
+        }
+        out.extend_from_slice(&r.win.to_le_bytes());
+    }
+    out
+}
+
+/// `None` on any mismatch — a stale or torn label file is rejected whole.
+pub fn read_deck_shard(bytes: &[u8]) -> Option<Vec<DeckRow>> {
+    let mut r = Reader { b: bytes, pos: 0 };
+    if r.take(4)? != DECK_SHARD_MAGIC || r.u32()? != DECK_SHARD_VERSION {
+        return None;
+    }
+    let n = r.u32()? as usize;
+    let mut rows = Vec::with_capacity(n);
+    for _ in 0..n {
+        let k = r.u16()? as usize;
+        let mut cards = Vec::with_capacity(k);
+        for _ in 0..k {
+            cards.push(r.u16()?);
+        }
+        let mut feats = [0.0; DECK_FEATS];
+        for f in feats.iter_mut() {
+            *f = r.f32()?;
+        }
+        let win = r.f32()?;
+        rows.push(DeckRow { cards, feats, win });
+    }
+    (r.pos == bytes.len()).then_some(rows)
+}
+
 /// The build-evaluation net `D(decklist) → win probability`. Deep-sets
 /// over the card multiset: embedding rows summed, meaned and maxed, then
 /// a two-layer trunk over `[pools ⊕ deck features]`. Lives in its own
@@ -962,6 +1012,17 @@ mod tests {
         let want2 = 1.0 / (1.0 + (-4.75f32).exp());
         let got2 = net.forward(&s);
         assert!((got2 - want2).abs() < 1e-6, "got {got2}, want {want2}");
+    }
+
+    #[test]
+    fn deck_shard_roundtrip_is_exact() {
+        let rows = vec![
+            DeckRow { cards: vec![1, 5, 5, 9], feats: [0.25; DECK_FEATS], win: 0.62 },
+            DeckRow { cards: vec![], feats: [0.0; DECK_FEATS], win: 0.0 },
+        ];
+        let bytes = write_deck_shard(&rows);
+        assert_eq!(read_deck_shard(&bytes).expect("decodes"), rows);
+        assert!(read_deck_shard(&bytes[..bytes.len() - 1]).is_none());
     }
 
     /// DeckNet forward against hand arithmetic: embedding 1, both trunk
