@@ -36,11 +36,13 @@ const SAMPLE_EVERY: u64 = 3;
 /// bound.
 const CAP: usize = 4_096;
 
+/// One captured leaf: the encoded state, its heuristic score, the seat the
+/// score is from, and the turn number.
+type Leaf = (EncodedState, i32, usize, u32);
+
 thread_local! {
-    /// (leaf evaluations seen, captured (state, heuristic score, seat,
-    /// turn)).
-    static BUF: RefCell<(u64, Vec<(EncodedState, i32, usize, u32)>)> =
-        const { RefCell::new((0, Vec::new())) };
+    /// (leaf evaluations seen, captured leaves).
+    static BUF: RefCell<(u64, Vec<Leaf>)> = const { RefCell::new((0, Vec::new())) };
 }
 
 /// Turn capture on or off for this process.
@@ -68,7 +70,7 @@ pub fn maybe(g: &GameState, seat: usize, heur: i32) {
 }
 
 /// Take this thread's captured leaves and reset the sampling counter.
-pub fn drain() -> Vec<(EncodedState, i32, usize, u32)> {
+pub fn drain() -> Vec<Leaf> {
     BUF.with(|b| {
         let mut b = b.borrow_mut();
         b.0 = 0;
