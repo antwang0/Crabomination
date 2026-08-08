@@ -2434,7 +2434,7 @@ fn tribal_golem_borrows_keywords() {
     assert!(g.computed_permanent(golem).unwrap().keywords.is_empty(), "bare board, bare Golem");
     g.add_card_to_battlefield(0, catalog::snapping_thragg()); // Beast
     g.add_card_to_battlefield(0, catalog::reckless_one()); // Goblin
-    let kws = g.computed_permanent(golem).unwrap().keywords;
+    let kws = g.computed_permanent(golem).unwrap().keywords.clone();
     assert!(kws.contains(&Keyword::Trample) && kws.contains(&Keyword::Haste));
     assert!(!kws.contains(&Keyword::Flying), "no Wizard, no flying");
 }
@@ -2446,7 +2446,7 @@ fn run_wild_grants_trample_and_regen() {
     let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
     let spell = g.add_card_to_hand(0, catalog::run_wild());
     cast(&mut g, 0, spell, Some(Target::Permanent(bear)));
-    let kws = g.computed_permanent(bear).unwrap().keywords;
+    let kws = g.computed_permanent(bear).unwrap().keywords.clone();
     assert!(kws.contains(&Keyword::Trample));
     assert!(kws.iter().any(|k| matches!(k, Keyword::Regenerate(_))));
 }

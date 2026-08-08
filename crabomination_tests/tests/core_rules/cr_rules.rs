@@ -6989,12 +6989,12 @@ fn cr_702_166_corrupted_gates_static_keywords() {
     let mut g = two_player_game();
     let skirge = g.add_card_to_battlefield(0, catalog::bonepicker_skirge());
     // No poison yet → neither keyword is live.
-    let kw = g.computed_permanent(skirge).unwrap().keywords;
+    let kw = g.computed_permanent(skirge).unwrap().keywords.clone();
     assert!(!kw.contains(&Keyword::Deathtouch), "no deathtouch below 3 poison");
     assert!(!kw.contains(&Keyword::Lifelink), "no lifelink below 3 poison");
     // Opponent reaches 3 poison → Corrupted turns on.
     g.players[1].poison_counters = 3;
-    let kw = g.computed_permanent(skirge).unwrap().keywords;
+    let kw = g.computed_permanent(skirge).unwrap().keywords.clone();
     assert!(kw.contains(&Keyword::Deathtouch), "deathtouch live at 3 poison");
     assert!(kw.contains(&Keyword::Lifelink), "lifelink live at 3 poison");
     // Two poison is below the threshold.

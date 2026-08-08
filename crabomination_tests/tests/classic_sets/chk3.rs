@@ -157,7 +157,7 @@ fn swirl_the_mists_rewrites_protection_color_words() {
     let knight = g.add_card_to_battlefield(1, catalog::stillmoon_cavalier());
     g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Color(Color::Blue)]));
     cast(&mut g, 0, catalog::swirl_the_mists(), None);
-    let kws = g.computed_permanent(knight).unwrap().keywords;
+    let kws = g.computed_permanent(knight).unwrap().keywords.clone();
     assert!(kws.contains(&Keyword::Protection(Color::Blue)), "white and black → blue");
     assert!(!kws.contains(&Keyword::Protection(Color::White)));
     assert!(!kws.contains(&Keyword::Protection(Color::Black)));

@@ -45,7 +45,7 @@ fn whiptail_moloch_shoots_your_own_creature() {
 fn utvara_scalper_flies_and_must_attack() {
     let mut g = two_player_game();
     let us = g.add_card_to_battlefield(0, catalog::utvara_scalper());
-    let kw = g.computed_permanent(us).unwrap().keywords;
+    let kw = g.computed_permanent(us).unwrap().keywords.clone();
     assert!(kw.contains(&Keyword::Flying) && kw.contains(&Keyword::MustAttack));
 }
 
@@ -144,7 +144,7 @@ fn slaughterhouse_bouncer_shrinks_a_creature_when_hellbent() {
 fn transguild_courier_is_all_colors() {
     let mut g = two_player_game();
     let tc = g.add_card_to_battlefield(0, catalog::transguild_courier());
-    let colors = g.computed_permanent(tc).unwrap().colors;
+    let colors = g.computed_permanent(tc).unwrap().colors.clone();
     for c in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] {
         assert!(colors.contains(&c), "is {c:?}");
     }

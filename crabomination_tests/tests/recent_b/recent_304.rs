@@ -10,7 +10,7 @@ use crabomination::mana::Color;
 fn rakdos_ragemutt_has_lifelink_and_haste() {
     let mut g = two_player_game();
     let rr = g.add_card_to_battlefield(0, catalog::rakdos_ragemutt());
-    let kw = g.computed_permanent(rr).unwrap().keywords;
+    let kw = g.computed_permanent(rr).unwrap().keywords.clone();
     assert!(kw.contains(&Keyword::Lifelink) && kw.contains(&Keyword::Haste));
 }
 

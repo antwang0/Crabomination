@@ -566,7 +566,7 @@ fn animus_of_predation_wears_its_noted_keywords() {
     g.players[0].draft_notes = notes;
     let animus = g.move_card_to_battlefield_for_test(0, catalog::animus_of_predation());
     drain_stack(&mut g);
-    let kws = g.computed_permanent(animus).expect("on battlefield").keywords;
+    let kws = g.computed_permanent(animus).expect("on battlefield").keywords.clone();
     assert!(kws.contains(&Keyword::Flying), "noted flying is granted");
     assert!(!kws.contains(&Keyword::Trample), "trample isn't on the printed list");
 }

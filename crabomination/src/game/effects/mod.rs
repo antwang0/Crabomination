@@ -5969,7 +5969,7 @@ impl GameState {
                 };
                 let subj_colors = self
                     .computed_permanent(subj)
-                    .map(|cp| cp.colors)
+                    .map(|cp| cp.colors.clone())
                     .unwrap_or_default();
                 // Subject first, then every other creature that shares a color.
                 let mut recipients = vec![subj];
@@ -14035,7 +14035,7 @@ impl GameState {
                     let Some(cid) = ent.as_permanent_id() else { continue };
                     let walks: Vec<crate::card::Keyword> = self
                         .computed_permanent(cid)
-                        .map(|cp| cp.keywords)
+                        .map(|cp| cp.keywords.clone())
                         .unwrap_or_default()
                         .into_iter()
                         .filter(|k| {
@@ -16322,7 +16322,7 @@ impl GameState {
                 };
                 let types = self
                     .computed_permanent(entered)
-                    .map(|cp| cp.card_types)
+                    .map(|cp| cp.card_types.clone())
                     .unwrap_or_default();
                 let candidates: Vec<(CardId, String)> = self
                     .battlefield
@@ -33619,7 +33619,7 @@ impl GameState {
                 };
                 let subj_colors = self
                     .computed_permanent(subj)
-                    .map(|cp| cp.colors)
+                    .map(|cp| cp.colors.clone())
                     .unwrap_or_default();
                 // Radiance fans out over every other permanent that shares a
                 // card type with the subject (creatures for the usual cards,

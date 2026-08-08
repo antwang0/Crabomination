@@ -705,7 +705,7 @@ fn stratus_walk_grants_flight_and_restricts_blocks() {
     g.add_card_to_library(0, catalog::great_hart());
     cast(&mut g, catalog::stratus_walk(), Some(Target::Permanent(bear)), 1, &[(Color::Blue, 1)]);
     assert_eq!(g.players[0].hand.len(), hand + 1, "ETB draw");
-    let kws = g.computed_permanent(bear).unwrap().keywords;
+    let kws = g.computed_permanent(bear).unwrap().keywords.clone();
     assert!(kws.contains(&Keyword::Flying));
     assert!(kws.contains(&Keyword::CanBlockOnlyFlying));
 }

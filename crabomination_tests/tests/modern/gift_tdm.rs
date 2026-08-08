@@ -1593,7 +1593,7 @@ fn qarsi_revenant_renew_grants_three_keywords() {
         additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("Renew");
     drain_stack(&mut g);
-    let kw = g.computed_permanent(target).unwrap().keywords;
+    let kw = g.computed_permanent(target).unwrap().keywords.clone();
     assert!(kw.contains(&Keyword::Flying) && kw.contains(&Keyword::Deathtouch) && kw.contains(&Keyword::Lifelink));
 }
 

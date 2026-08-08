@@ -1145,7 +1145,7 @@ mod recent18 {
         g.battlefield_find_mut(aura).unwrap().attached_to = Some(victim);
         g.fire_self_etb_triggers(aura, 0);
         drain_stack(&mut g);
-        let kws = g.computed_permanent(victim).unwrap().keywords;
+        let kws = g.computed_permanent(victim).unwrap().keywords.clone();
         assert!(kws.contains(&Keyword::CantAttack) && kws.contains(&Keyword::CantBlock));
         // Support 2 landed a +1/+1 counter somewhere friendly (the other bear).
         assert!(g.computed_permanent(other).unwrap().power >= 2, "support buffed a creature");

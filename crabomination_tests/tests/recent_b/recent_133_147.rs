@@ -2301,7 +2301,7 @@ mod recent146 {
             "no keywords without an opposing planeswalker",
         );
         g.add_card_to_battlefield(1, catalog::karn_scion_of_urza());
-        let kws = g.computed_permanent(ginger).unwrap().keywords;
+        let kws = g.computed_permanent(ginger).unwrap().keywords.clone();
         assert!(kws.contains(&Keyword::Trample), "trample once opponent has a planeswalker");
         assert!(kws.contains(&Keyword::Hexproof), "hexproof too");
         assert!(kws.contains(&Keyword::Haste), "haste too");

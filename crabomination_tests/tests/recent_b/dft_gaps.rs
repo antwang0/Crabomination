@@ -140,7 +140,7 @@ fn winter_grants_ward_to_artifacts() {
     let mut g = main_phase();
     etb(&mut g, catalog::winter_cursed_rider());
     let lotus = g.add_card_to_battlefield(0, catalog::radiant_lotus());
-    let kws = g.computed_permanent(lotus).unwrap().keywords;
+    let kws = g.computed_permanent(lotus).unwrap().keywords.clone();
     assert!(kws.contains(&Keyword::Ward(WardCost::Life(2))));
 }
 

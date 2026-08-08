@@ -2233,12 +2233,12 @@ fn etched_champion_metalcraft_grants_protection() {
     use crabomination::card::Keyword;
     let mut g = two_player_game();
     let champ = g.add_card_to_battlefield(0, catalog::etched_champion()); // 1 artifact (itself)
-    let no_metalcraft = g.computed_permanent(champ).unwrap().keywords;
+    let no_metalcraft = g.computed_permanent(champ).unwrap().keywords.clone();
     assert!(!no_metalcraft.contains(&Keyword::Protection(Color::Red)), "no protection below 3 artifacts");
     // Add two more artifacts → metalcraft on.
     g.add_card_to_battlefield(0, catalog::ornithopter());
     g.add_card_to_battlefield(0, catalog::ornithopter());
-    let kws = g.computed_permanent(champ).unwrap().keywords;
+    let kws = g.computed_permanent(champ).unwrap().keywords.clone();
     for c in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] {
         assert!(kws.contains(&Keyword::Protection(c)), "metalcraft grants protection from {c:?}");
     }

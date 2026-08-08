@@ -257,7 +257,7 @@ impl GameState {
                 let color_ok = shield.gain_life_colors.is_empty()
                     || self
                         .computed_permanent(src)
-                        .map(|cp| cp.colors)
+                        .map(|cp| cp.colors.clone())
                         .or_else(|| {
                             self.find_card_anywhere(src).map(|c| c.definition.printed_colors())
                         })
@@ -832,7 +832,7 @@ impl GameState {
             && self
                 .computed_permanent(tgt)
                 .into_iter()
-                .flat_map(|cp| cp.keywords)
+                .flat_map(|cp| cp.keywords.clone())
                 .any(|k| match k {
                     crate::card::Keyword::PreventDamageFromMatching(f) => self
                         .evaluate_requirement_static(&f, &crate::game::types::Target::Permanent(src), self.battlefield_find(tgt).map_or(0, |c| c.controller), Some(src)),
@@ -947,7 +947,7 @@ impl GameState {
             if !types.is_empty() {
                 let src_types = self
                     .computed_permanent(src)
-                    .map(|c| c.card_types)
+                    .map(|c| c.card_types.clone())
                     .or_else(|| {
                         self.find_card_anywhere(src)
                             .map(|c| c.definition.card_types.clone())

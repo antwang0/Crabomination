@@ -17,7 +17,7 @@ fn thundersong_trumpeter_locks_a_creature_down() {
         additional_targets: vec![], x_value: None, mode: None,
     }).expect("tap it down");
     drain_stack(&mut g);
-    let kw = g.computed_permanent(foe).unwrap().keywords;
+    let kw = g.computed_permanent(foe).unwrap().keywords.clone();
     assert!(kw.contains(&Keyword::CantAttack) && kw.contains(&Keyword::CantBlock),
         "target can't attack or block this turn");
 }

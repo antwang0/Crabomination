@@ -1670,7 +1670,7 @@ fn traitorous_blood_grants_trample() {
     g.active_player_idx = 0;
     g.priority.player_with_priority = 0;
     crabomination::game::cast_at(&mut g, spell, Target::Permanent(victim));
-    let kws = g.computed_permanent(victim).unwrap().keywords;
+    let kws = g.computed_permanent(victim).unwrap().keywords.clone();
     assert!(kws.contains(&Keyword::Trample) && kws.contains(&Keyword::Haste));
 }
 

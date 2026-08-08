@@ -67,3 +67,7 @@ web/dist/
 
 # Side-by-side target dir for allocator A/B builds (see PERF.md).
 /target-mi/
+
+# callgrind / profiling output
+cg*.out
+callgrind.out.*

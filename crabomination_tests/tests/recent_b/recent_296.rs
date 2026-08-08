@@ -197,7 +197,7 @@ fn peregrine_mask_grants_evasion_keywords() {
     g.players[0].mana_pool.add_colorless(2);
     g.perform_action(GameAction::Equip { equipment: mask, target: bear }).expect("equip");
     drain_stack(&mut g);
-    let kw = g.computed_permanent(bear).unwrap().keywords;
+    let kw = g.computed_permanent(bear).unwrap().keywords.clone();
     assert!(kw.contains(&Keyword::Flying) && kw.contains(&Keyword::FirstStrike)
         && kw.contains(&Keyword::Defender), "mask grants flying + first strike + defender");
 }

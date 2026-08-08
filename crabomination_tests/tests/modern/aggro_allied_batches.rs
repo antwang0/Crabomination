@@ -206,7 +206,7 @@ fn voice_of_the_blessed_flies_at_four_counters() {
     assert!(!g.computed_permanent(voice).unwrap().keywords.contains(&Keyword::Flying));
     g.battlefield.iter_mut().find(|c| c.id == voice).unwrap()
         .add_counters(CounterType::PlusOnePlusOne, 4);
-    let kws = g.computed_permanent(voice).unwrap().keywords;
+    let kws = g.computed_permanent(voice).unwrap().keywords.clone();
     assert!(kws.contains(&Keyword::Flying) && kws.contains(&Keyword::Vigilance),
         "4+ counters grant flying and vigilance");
 }

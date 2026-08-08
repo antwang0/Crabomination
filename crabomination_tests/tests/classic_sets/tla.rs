@@ -651,10 +651,10 @@ fn foggy_swamp_hunters_keywords_after_two_draws() {
     let mut g = two_player_game();
     let f = g.add_card_to_battlefield(0, catalog::foggy_swamp_hunters());
     g.players[0].cards_drawn_this_turn = 1;
-    let kws = g.computed_permanent(f).unwrap().keywords;
+    let kws = g.computed_permanent(f).unwrap().keywords.clone();
     assert!(!kws.contains(&Keyword::Lifelink) && !kws.contains(&Keyword::Menace), "off at 1 draw");
     g.players[0].cards_drawn_this_turn = 2;
-    let kws = g.computed_permanent(f).unwrap().keywords;
+    let kws = g.computed_permanent(f).unwrap().keywords.clone();
     assert!(kws.contains(&Keyword::Lifelink) && kws.contains(&Keyword::Menace), "on at 2 draws");
 }
 
@@ -858,7 +858,7 @@ fn energybending_fixes_lands_and_draws() {
         card_id: eb, target: None, additional_targets: vec![], mode: None, x_value: None,
     }).expect("cast");
     drain_stack(&mut g);
-    let lts = g.computed_permanent(forest).unwrap().subtypes.land_types;
+    let lts = g.computed_permanent(forest).unwrap().subtypes.land_types.clone();
     for lt in [LandType::Plains, LandType::Island, LandType::Swamp, LandType::Mountain, LandType::Forest] {
         assert!(lts.contains(&lt), "Forest gained {lt:?}");
     }
@@ -1196,7 +1196,7 @@ fn enter_the_avatar_state_grants_keywords() {
         card_id: eas, target: Some(Target::Permanent(mine)), additional_targets: vec![], mode: None, x_value: None,
     }).expect("cast");
     drain_stack(&mut g);
-    let kws = g.computed_permanent(mine).unwrap().keywords;
+    let kws = g.computed_permanent(mine).unwrap().keywords.clone();
     for kw in [Keyword::Flying, Keyword::FirstStrike, Keyword::Lifelink, Keyword::Hexproof] {
         assert!(kws.contains(&kw), "granted {kw:?}");
     }

@@ -2191,7 +2191,7 @@ fn gtc16_glaring_spotlight_ignores_and_shields() {
     }).expect("activate spotlight sac");
     drain_stack(&mut g);
     assert!(g.battlefield_find(spotlight).is_none(), "Spotlight was sacrificed");
-    let kws = g.computed_permanent(mine).unwrap().keywords;
+    let kws = g.computed_permanent(mine).unwrap().keywords.clone();
     assert!(kws.contains(&Keyword::Hexproof) && kws.contains(&Keyword::Unblockable),
         "own creatures gained hexproof + unblockable");
     // With the Spotlight gone, the opponent's hexproof creature is untargetable again.

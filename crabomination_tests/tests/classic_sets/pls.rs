@@ -304,7 +304,7 @@ fn dominarias_judgment_grants_domain_protection() {
     g.add_card_to_battlefield(0, catalog::island());
     let judgment = g.add_card_to_hand(0, catalog::dominarias_judgment());
     cast(&mut g, 0, judgment, None);
-    let kws = g.computed_permanent(bears).unwrap().keywords;
+    let kws = g.computed_permanent(bears).unwrap().keywords.clone();
     assert!(kws.contains(&Keyword::Protection(Color::Red)));
     assert!(kws.contains(&Keyword::Protection(Color::Blue)));
     assert!(!kws.contains(&Keyword::Protection(Color::Green)), "no Forest, no pro-green");

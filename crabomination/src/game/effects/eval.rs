@@ -3300,7 +3300,7 @@ impl GameState {
                 // Scriptures I), an animated land, or a devotion-gated god
                 // must filter by its *computed* types, not the printed ones.
                 // Off-battlefield cards keep the printed definition.
-                let computed: Option<crate::game::layers::ComputedPermanent> =
+                let computed: Option<std::sync::Arc<crate::game::layers::ComputedPermanent>> =
                     if self.in_layer_gather.load(std::sync::atomic::Ordering::Relaxed) {
                         None // mid-recompute: printed types (reentrancy guard)
                     } else {

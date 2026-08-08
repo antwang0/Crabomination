@@ -2553,7 +2553,7 @@ fn concerted_effort_shares_keywords_at_upkeep() {
         g.perform_action(GameAction::PassPriority).expect("pass");
     }
     drain_stack(&mut g);
-    let kws = g.computed_permanent(ground).unwrap().keywords;
+    let kws = g.computed_permanent(ground).unwrap().keywords.clone();
     assert!(kws.contains(&K::Flying), "shared from Serra Angel");
     assert!(kws.contains(&K::Vigilance), "and vigilance");
     let _ = flyer;

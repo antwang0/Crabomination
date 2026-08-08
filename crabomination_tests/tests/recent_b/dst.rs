@@ -1259,7 +1259,7 @@ fn death_mask_duplicant_gains_imprinted_keywords() {
     })
     .expect("imprint the Angel");
     drain_stack(&mut g);
-    let kws = g.computed_permanent(dup).unwrap().keywords;
+    let kws = g.computed_permanent(dup).unwrap().keywords.clone();
     assert!(kws.contains(&Keyword::Flying), "flying bleeds through");
     assert!(!kws.contains(&Keyword::Vigilance), "vigilance isn't on the printed list");
 }

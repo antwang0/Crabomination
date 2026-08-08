@@ -175,6 +175,12 @@ struct LayerFreezeState {
     /// Lazily-gathered effect set, populated on the first computed read
     /// inside a scope and cleared when the outermost scope exits.
     memo: Option<std::sync::Arc<Vec<ContinuousEffect>>>,
+    /// Per-card layer results for this scope, by the same argument as
+    /// `memo`: nothing the layer pass reads can change while frozen, so a
+    /// second `computed_permanent` for the same card is the same answer.
+    /// Short — one entry per permanent actually asked about — so a linear
+    /// scan beats hashing. Cleared with `memo`.
+    perms: Vec<(CardId, std::sync::Arc<crate::game::layers::ComputedPermanent>)>,
 }
 
 impl LayerFreeze {
@@ -5732,7 +5738,7 @@ impl GameState {
         let controller = self.battlefield_find(tgt).map_or(0, |c| c.controller);
         self.computed_permanent(tgt)
             .into_iter()
-            .flat_map(|cp| cp.keywords)
+            .flat_map(|cp| cp.keywords.clone())
             .any(|k| match k {
                 crate::card::Keyword::PreventDamageFromMatching(f) => self
                     .evaluate_requirement_static(
@@ -7496,6 +7502,7 @@ impl GameState {
                 st.depth -= 1;
                 if st.depth == 0 {
                     st.memo = None;
+                    st.perms.clear();
                 }
             }
         }
@@ -7517,6 +7524,7 @@ impl GameState {
         st.depth -= 1;
         if st.depth == 0 {
             st.memo = None;
+            st.perms.clear();
         }
     }
 
@@ -10775,15 +10783,54 @@ impl GameState {
     /// applies the layer pass to only the one target card, instead of
     /// building a `ComputedPermanent` for every permanent and discarding
     /// all but one.
-    pub fn computed_permanent(&self, id: CardId) -> Option<ComputedPermanent> {
-        let card = self.battlefield.iter().find(|c| c.id == id)?;
-        if let Some(fx) = self.frozen_effects() {
-            return Some(crate::game::layers::apply_layers_one(card, &fx));
+    /// Inside a freeze scope the result is memoized per card and handed back
+    /// as a shared `Arc`, so the combat helpers that ask about the same two
+    /// or three permanents dozens of times per simulated attack pay one
+    /// layer pass between them. `Arc` derefs, so callers read fields as
+    /// before.
+    pub fn computed_permanent(&self, id: CardId) -> Option<std::sync::Arc<ComputedPermanent>> {
+        // Mid-gather reads take the printed-types fallback (see
+        // `frozen_effects`), so they must neither read nor write the memo.
+        // One lock covers both memos: a hit costs exactly one acquisition,
+        // a miss two, and only the scope's first computed read pays three.
+        let mut frozen_fx = None;
+        if !self.in_layer_gather.load(std::sync::atomic::Ordering::Relaxed) {
+            let st = self.layer_freeze.lock();
+            if st.depth > 0 {
+                if let Some((_, cp)) = st.perms.iter().find(|(k, _)| *k == id) {
+                    return Some(cp.clone());
+                }
+                frozen_fx = Some(st.memo.clone());
+            }
         }
-        Some(crate::game::layers::apply_layers_one(
+        let card = self.battlefield.iter().find(|c| c.id == id)?;
+        if let Some(memo) = frozen_fx {
+            // Inside a scope; `memo` is `None` only on its first computed
+            // read, which fills it exactly as `frozen_effects` would.
+            let fx = match memo {
+                Some(fx) => fx,
+                None => {
+                    let fx = std::sync::Arc::new(self.gather_continuous_effects());
+                    let mut st = self.layer_freeze.lock();
+                    if st.depth > 0 {
+                        st.memo = Some(fx.clone());
+                    }
+                    fx
+                }
+            };
+            let cp = std::sync::Arc::new(crate::game::layers::apply_layers_one(card, &fx));
+            // Re-check: an entry stored after the scope closed would outlive
+            // the state it describes, and nothing would clear it.
+            let mut st = self.layer_freeze.lock();
+            if st.depth > 0 {
+                st.perms.push((id, cp.clone()));
+            }
+            return Some(cp);
+        }
+        Some(std::sync::Arc::new(crate::game::layers::apply_layers_one(
             card,
             &self.gather_continuous_effects(),
-        ))
+        )))
     }
 
     /// CR 603.10 — a last-known-information snapshot of a battlefield permanent
@@ -11296,7 +11343,7 @@ impl GameState {
         let Some(tgt) = self.computed_permanent(target) else { return false };
         let src_colors = self
             .computed_permanent(source)
-            .map(|c| c.colors)
+            .map(|c| c.colors.clone())
             .unwrap_or_else(|| {
                 self.battlefield_find(source)
                     .map(|c| c.definition.cost.colors())
@@ -11319,7 +11366,7 @@ impl GameState {
         // source of that type.
         let src_creature_types = self
             .computed_permanent(source)
-            .map(|c| c.subtypes.creature_types)
+            .map(|c| c.subtypes.creature_types.clone())
             .unwrap_or_else(|| {
                 self.battlefield_find(source)
                     .map(|c| c.definition.subtypes.creature_types.clone())
@@ -11331,7 +11378,7 @@ impl GameState {
             .unwrap_or(0);
         let src_card_types = self
             .computed_permanent(source)
-            .map(|c| c.card_types)
+            .map(|c| c.card_types.clone())
             .unwrap_or_else(|| {
                 self.battlefield_find(source)
                     .map(|c| c.definition.card_types.clone())
@@ -11974,7 +12021,9 @@ impl GameState {
     /// view, gathered once. Hoisted out of the per-blocker scan so
     /// `legal_blockers` / the bot's block planner pay `apply_layers_one`
     /// per *attacker*, not per attacker × blocker (audit P2).
-    pub(crate) fn computed_attackers(&self) -> Vec<(&CardInstance, ComputedPermanent)> {
+    pub(crate) fn computed_attackers(
+        &self,
+    ) -> Vec<(&CardInstance, std::sync::Arc<ComputedPermanent>)> {
         self.attacking
             .iter()
             .filter_map(|atk| {
@@ -12081,7 +12130,7 @@ impl GameState {
     pub(crate) fn can_block_any_computed_attacker(
         &self,
         blocker_id: CardId,
-        attackers: &[(&CardInstance, ComputedPermanent)],
+        attackers: &[(&CardInstance, std::sync::Arc<ComputedPermanent>)],
     ) -> bool {
         let Some(blocker) = self.battlefield.iter().find(|c| c.id == blocker_id) else {
             return false;
@@ -19652,7 +19701,7 @@ impl GameState {
     /// colorless objects and for ids that have left every visible zone.
     pub fn card_colors_anywhere(&self, id: CardId) -> Vec<crate::mana::Color> {
         if let Some(cp) = self.computed_permanent(id) {
-            return cp.colors;
+            return cp.colors.clone();
         }
         self.find_card_anywhere(id).map(|c| c.definition.printed_colors()).unwrap_or_default()
     }

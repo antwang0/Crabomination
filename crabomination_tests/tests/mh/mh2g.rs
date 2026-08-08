@@ -258,7 +258,7 @@ fn cr_702_62e_suspend_grants_suspend() {
     }
     drain_stack(&mut g);
     assert!(g.battlefield_find(bear).is_some(), "cast back for free");
-    let kws = g.computed_permanent(bear).unwrap().keywords;
+    let kws = g.computed_permanent(bear).unwrap().keywords.clone();
     assert!(kws.contains(&Keyword::Haste), "suspend grants haste");
 }
 

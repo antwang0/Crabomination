@@ -6370,7 +6370,7 @@ impl GameState {
             // Gods Willing) is honored, not just printed protection.
             let kws = self
                 .computed_permanent(cid)
-                .map(|cp| cp.keywords)
+                .map(|cp| cp.keywords.clone())
                 .unwrap_or_else(|| target_card.definition.keywords.clone());
             for kw in &kws {
                 if let Keyword::Protection(prot_color) = kw
@@ -6514,7 +6514,7 @@ impl GameState {
                     let controller = tc.controller;
                     let printed = self
                         .computed_permanent(cid)
-                        .map(|cp| cp.keywords)
+                        .map(|cp| cp.keywords.clone())
                         .unwrap_or_else(|| tc.definition.keywords.clone())
                         .iter()
                         .any(|kw| match kw {
@@ -8331,7 +8331,7 @@ impl GameState {
         };
         let has = self
             .computed_permanent(perm_id)
-            .map(|cp| cp.keywords)
+            .map(|cp| cp.keywords.clone())
             .unwrap_or_else(|| {
                 self.battlefield_find(perm_id)
                     .map(|c| c.definition.keywords.clone())
@@ -10411,7 +10411,7 @@ impl GameState {
             && self
                 .computed_permanent(*cid)
                 .into_iter()
-                .flat_map(|cp| cp.keywords)
+                .flat_map(|cp| cp.keywords.clone())
                 .any(|k| match k {
                     Keyword::CantBeTargetedByAbilitiesFromMatching(f) => self
                         .evaluate_requirement_static(&f, &Target::Permanent(src), controller, Some(src)),

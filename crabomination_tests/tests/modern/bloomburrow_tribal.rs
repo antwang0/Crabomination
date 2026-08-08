@@ -549,7 +549,7 @@ fn mirran_crusader_has_double_strike_and_two_protections() {
     use crabomination::card::Keyword;
     let mut g = two_player_game();
     let mc = g.add_card_to_battlefield(0, catalog::mirran_crusader());
-    let kws = g.computed_permanent(mc).unwrap().keywords;
+    let kws = g.computed_permanent(mc).unwrap().keywords.clone();
     assert!(kws.contains(&Keyword::DoubleStrike), "double strike");
     assert!(kws.contains(&Keyword::Protection(Color::Black)), "protection from black");
     assert!(kws.contains(&Keyword::Protection(Color::Green)), "protection from green");

@@ -590,7 +590,7 @@ fn council_guardian_gains_every_winning_protection() {
     let id = g.add_card_to_hand(0, catalog::council_guardian());
     ballot(&mut g, [0, 2]); // blue, red — one vote each
     cast(&mut g, 0, id, None);
-    let kw = g.computed_permanent(id).expect("guardian").keywords;
+    let kw = g.computed_permanent(id).expect("guardian").keywords.clone();
     assert!(kw.contains(&Keyword::Protection(Color::Blue)));
     assert!(kw.contains(&Keyword::Protection(Color::Red)));
     assert!(!kw.contains(&Keyword::Protection(Color::Green)));

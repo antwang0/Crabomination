@@ -55,7 +55,7 @@ mod recent238 {
         let big = g.add_card_to_battlefield(0, catalog::serra_angel()); // 4/4
         let modes = spree_modes(&catalog::smugglers_surprise());
         g.resolve_effect(&modes[2].effect, &EffectContext::for_spell(0, None, 0, 0)).unwrap();
-        let kws = g.computed_permanent(big).unwrap().keywords;
+        let kws = g.computed_permanent(big).unwrap().keywords.clone();
         assert!(kws.contains(&Keyword::Hexproof) && kws.contains(&Keyword::Indestructible));
     }
 

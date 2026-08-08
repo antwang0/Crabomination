@@ -7560,7 +7560,7 @@ fn ward_tax(state: &GameState, id: CardId, actor: usize) -> Option<crate::card::
     }
     state
         .computed_permanent(id)
-        .map(|cp| cp.keywords)
+        .map(|cp| cp.keywords.clone())
         .unwrap_or_else(|| c.definition.keywords.clone())
         .iter()
         .find_map(|k| match k {

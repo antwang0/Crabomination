@@ -93,10 +93,10 @@ fn cr_612_3_color_word_rewrite_skips_a_granted_protection() {
             Layer::L3Text,
         );
     }
-    let pk = g.computed_permanent(printed).expect("computed").keywords;
+    let pk = g.computed_permanent(printed).expect("computed").keywords.clone();
     assert!(pk.contains(&Keyword::Protection(Color::Red)), "printed word rewritten");
     assert!(!pk.contains(&Keyword::Protection(Color::Black)));
-    let gk = g.computed_permanent(granted).expect("computed").keywords;
+    let gk = g.computed_permanent(granted).expect("computed").keywords.clone();
     assert!(
         gk.contains(&Keyword::Protection(Color::Black)),
         "CR 612.3 — a granted keyword isn't text and survives the rewrite"

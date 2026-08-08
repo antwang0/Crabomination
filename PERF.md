@@ -69,6 +69,17 @@ slower host from a regression. Check it *before* investigating a moved
 baseline. The only sound way to attribute a delta to code is to measure both
 sides in one sitting, alternating A/B/A/B — host drift then moves both.
 
+**Sub-5 % changes need callgrind, not `--bench`.** Two runs of one binary
+here differ by more than a 2 % code change is worth, so a small win reads as
+noise however many pairs you run. `callgrind` on a fixed workload counts
+instructions deterministically: build both sides `release-fast`, run each
+under `--tool=callgrind` on `--a gang --b gang --games 6 --threads 1 --seed
+1 --decks fixed` (~3 min each, and both can run at once — instruction counts
+don't care about contention), and diff `I refs`. Keep the allocator the same
+on both sides; the absolute number then describes mimalloc's interception,
+but the *ratio* is sound. Wall-clock is still the arbiter for anything
+allocator- or cache-shaped, where Ir undercounts.
+
 **`--threads N` needs enough work to fill N workers.** The queue holds
 `decks x ceil(games / 20)` chunks under `--paired`; a worker that finds it
 empty exits. `--threads 24 --games 8` therefore runs four workers and looks
@@ -185,63 +196,82 @@ percentages are what carry over.
 | 2026-08-08 | Hoist `available_mana` out of `cast_candidates`' per-hand-card `can_afford_in_state` filter (one `AvailableMana` per call instead of one per card, each walking the board and allocating a `Vec` per untapped permanent via `granted_abilities_for`) | 22.83 games/s | 23.03 games/s | **No win — reverted.** `--bench` ×3 per side alternated on an idle box (22.82/22.53/23.13 → 23.04/23.18/22.88); +0.9 %, and the distributions overlap (the best A run beats the worst B run). Measured against the same base as the row above by rebuilding that exact commit with the patch applied in a worktree. The asymptotics were real but the constant is not: the bench hand is ~7 cards over a 3-6 permanent board, and the sweep that *was* multiplying this is gone as of the row above. Left in **Perf candidates** as a closed sub-item so it doesn't get re-derived. |
 | 2026-08-08 | Card-name tallies (`spells_cast_by_name_this_game`, `spell_names_cast_this_turn`, `cycled_count_by_name`) key on `&'static str` instead of `String` (`eb5f661c`) | — | — | **No separate win claimed.** It rode in the sitting above, and it is exactly the class the CoW row measured at 0.1 %: `GameState::clone` is 0.9 M of ~16.7 M allocations. Kept as a typing change — the keys are `CardDefinition::name`, already `&'static str`, and the owned copies were a widening that allocated per entry per clone. Golden traces byte-identical. |
 | 2026-08-08 | Freeze the layer scope around the attack/block sims' read-only helpers — `pick_attacks`, `sim_spell_action`, `decide_pending_policy`, `eval_material` (`836059e2`) | 21.94 games/s, 13248 dec/s | 23.03 games/s, 13904 dec/s (**+5.0 %**) | `release-fast` A/B, 12 alternated pairs in one sitting; median paired +5.7 %, 11/12 rounds positive (the one loss read `host_calib_ms` 66 vs 52 on its pair). `turns_per_game` 26.98 and `stalls` 0 on every run, both sides; determinism ok |
+| 2026-08-08 | Per-freeze-scope memo of `computed_permanent`: `LayerFreezeState` grows a `perms: Vec<(CardId, Arc<ComputedPermanent>)>` cleared where `memo` is, and the method hands back the `Arc` (candidate 1(b)) | 13,307,099,945 Ir | 13,052,911,075 Ir (**-1.91 %**) | **Small win, kept, and wall-clock cannot see it.** Measured by callgrind instruction count, A/B on identical `release-fast` binaries over `--a gang --b gang --games 6 --threads 1 --seed 1 --decks fixed` — deterministic, so the 1.91 % is exact rather than a mean. `--bench` wall-clock over 8 alternated pairs read +0.7 % mean / +1.1 % median with 5/8 pairs positive, i.e. inside this box's noise; that is *why* the row quotes Ir. An instrumented build put the memo's hit rate at **3.30 M hits / 9.57 M calls (34.5 %)** — the ceiling is 50 %, because half of all `computed_permanent` calls come from `depth == 0` mutating paths (combat damage, SBAs, effect resolution) where freezing is unsound. Reducing the per-call lock traffic from 3 acquisitions to 1-2 was worth only 0.12 pts of the 1.91, so the lock was not the cost. Suite 18806 passed / 0 failed; all golden traces byte-identical; `turns_per_game` 26.98 and `stalls` 0 on all 16 bench runs; determinism ok. |
 
 ## Profile of record
 
 Callgrind, `--profile profiling --no-default-features` (system allocator —
 valgrind replaces malloc, so a mimalloc build would measure the
 interception), 1 thread, `--a gang --b gang --games 6 --seed 1 --decks
-fixed`. Taken 2026-08-08 at `1d824fe5`, i.e. *before* this run's fix.
+fixed`. Retaken 2026-08-08 at `fae58aa7`, i.e. *after* the dispatcher pair,
+the affordance sweep and the sim-loop freeze, all of which the previous
+profile predates.
 
-**23.50 G instructions for six games** (reproduced the previous run's 23.49 G
-exactly, so the workload is stable across boxes).
+**13.84 G instructions for six games, down from 23.50 G** — the same
+workload, so the three landed fixes are worth **-41 %** of the simulator's
+instructions between the two profiles.
 
-Self cost, grouped:
+Self cost, grouped (previous profile's share in brackets):
 
 | share | site | note |
 |---|---|---|
-| 24.0 % | `_int_malloc` 8.26 / `_int_free` 5.58 / `malloc` 3.91 / `free` 2.20 / `malloc_consolidate` 2.09 / `unlink_chunk` 1.15 / arena `free` 0.86 | the allocator is the single biggest cost |
-| 8.78 % | `__memcpy_avx_unaligned_erms` | |
-| 16.35 % | `gather_continuous_effects_inner` (6.64 slice-iter + 4.40 non_null + 1.65 mod.rs + 1.60 vec + 1.22 option + 0.84 raw_vec) | |
-| 5.32 % | `CardInstance::clone` | |
-| 1.91 % | `compute_permanent_pass` | tiny self cost, huge allocator cost — see below |
+| 20.3 % | `_int_malloc` 6.56 / `_int_free` 4.94 / `malloc` 3.49 / `free` 2.01 / `malloc_consolidate` 1.58 / `unlink_chunk` 0.90 / arena `free` 0.79 | [24.0 %] still the single biggest cost |
+| 15.9 % | `gather_continuous_effects_inner` (6.27 slice-iter + 4.14 non_null + 1.56 mod.rs + 1.52 vec + 1.14 option + 0.79 raw_vec + 0.53 mut_ptr) | [16.35 %] |
+| 11.0 % | `CardInstance::clone` (7.96 + 2.00 option + 1.03 raw_vec) | [5.32 %] **doubled its share — now the #1 engine function** |
+| 8.71 % | `__memcpy_avx_unaligned_erms` | [8.78 %] |
+| 2.40 % | `compute_permanent_pass` | [1.91 %] tiny self cost, big allocator cost |
+| 2.20 % | `drop_in_place<CardInstance>` | |
+| 1.66 % | `granted_abilities_for` | |
+| 0.78 % | `Keyword::eq` | [0.74 %] |
 
 Inclusive:
 
 | share | site |
 |---|---|
-| 89.96 % | `RandomBot::next_action` |
-| 75.97 % | `perform_action_inner` |
-| 59.59 % | `pick_attacks_scored` |
-| 46.64 % | `perform_action` (the checkpoint-cloning wrapper) |
-| 24.60 % | `computed_permanent` |
-| 22.17 % | `gather_continuous_effects_inner` |
-| 15.38 % | `apply_layers`, all of it under `compute_battlefield` |
-| 10.39 % | `dispatch_triggers_for_events -> compute_battlefield` (**fixed this run**) |
+| 86.32 % | `RandomBot::next_action` |
+| 66.27 % | `perform_action_inner` |
+| 63.53 % | `perform_action` (the checkpoint-cloning wrapper) |
+| 58.16 % | `pick_attacks_scored` → 58.08 % `simulate_attack_outcome_once` |
+| 38.79 % | `pass_priority` → 31.79 % `advance_step` |
+| 21.34 % | `cast_spell` |
+| 21.31 % | `Arc::make_mut` — the `CowBox` unshare, 20.91 % of it in `clone/uninit.rs` |
+| 21.12 % | `gather_continuous_effects_inner` |
+| 18.45 % | `computed_permanent` (**memoized this run — see the Log**) |
+| 17.47 % | `auto_tap_for_cost_inner` |
+| 11.58 % | `compute_battlefield` |
+| 9.67 % | `would_accept_on` |
+| 9.53 % | `mana_source_table`, of which **8.23 % is `Vec::clone`** |
+| 9.10 % | `effective_mana_abilities` |
+| 6.58 % | `drop_in_place<GameState>` / 5.28 % `GameState::clone` |
+| 5.07 % | `intrinsic_land_mana_abilities` |
 
-**Who actually allocates** (`--tree=caller` on `malloc`, ~16.7 M calls for
-six games; 9.43 M of them reach `_int_malloc`, the rest are tcache hits):
+**Who actually allocates** (`--tree=caller` on `malloc`):
 
 | calls | caller |
 |---|---|
-| 5,802,510 | `layers::compute_permanent_pass` |
-| 3,279,608 | `Subtypes::clone` (almost all of it inside the above) |
-| 1,631,596 | `HashMap::clone` |
-| 1,540,297 | `RawVec::finish_grow` |
-| 1,387,916 | `gather_continuous_effects_inner` |
-| 1,202,386 | `Vec::clone` |
-| 901,798 | `GameState::clone` |
-| 860,938 | `CardInstance::clone` |
-| 123,616 | `apply_layers` |
+| 2,254,014 | `Vec::clone` |
+| 2,588,924 | `compute_permanent_pass` (1,537,206 + 1,051,718 across two sites) |
+| 1,537,206 | `Subtypes::clone` (all of it inside the above) |
+| 1,036,628 | `iter::flatten::and_then_or_clear` |
+| 888,340 | `apply_layers` |
+| 868,914 | `HashMap::clone` |
+| 796,844 | `CardInstance::clone` |
+| 648,866 | `computed_permanent` |
+| 367,900 | `gather_continuous_effects_inner` |
+| 331,628 | `ActivatedAbility::clone` |
+| 241,290 + 160,860 | `GameState::clone` |
 
-**The headline correction to the previous run's read: the 24 % allocator
-share is the layer system, not state cloning.** `compute_permanent_pass`
-clones five collections per permanent (`card_types`, `supertypes`,
-`subtypes`, `colors`, `keywords`) and is called 2.28 M times from
-`apply_layers` plus 1.00 M times from `computed_permanent` — together ~55 %
-of every allocation in the program. `GameState::clone` is 5 % of them. The
-CoW experiment in the **Log** above is the direct evidence: removing the
-per-clone collection copies moved the benchmark 0.1 %.
+`compute_permanent` (the layer pass for one card) is entered **888,340×
+from `apply_layers`** and **648,866× from `computed_permanent`**, at ~970
+instructions each. The layer system is still where the allocator time is,
+and the split says a per-scope `compute_battlefield` memo (candidate 1(c))
+is the larger of the two remaining halves.
+
+**What the re-profile changed about the read:** the allocator share fell
+24.0 → 20.3 % but `CardInstance::clone` doubled to 11 %, so the *checkpoint
+clone* — not the layer system — is now the fastest-growing cost, and
+`Arc::make_mut` at 21.31 % inclusive says most of it is `CowBox` zones
+unsharing. That is candidate 7 and it has moved up.
 
 ## Perf candidates
 
@@ -249,15 +279,21 @@ Ordered by expected value. Each run pulls the top one, attaches numbers,
 and feeds what it finds back in. Re-profile and replenish when the list
 goes thin or stale.
 
-**The re-profile is still owed.** Three separate fixes (the dispatcher pair,
-the affordance sweep, and this run's sim-loop freeze) have removed work from
-*different levels* of one call tree since the profile below was taken, so
-every share in "Profile of record" is stale and item 1 is uncosted. A run
-that starts here should build `--profile profiling --no-default-features`
-and take the callgrind pass *first* — budget ~25 min for the cold build on a
-4-core box, then 3 min for the run. This run tried and lost that build to a
-container restart; the numbers it did land came from reading the call tree
-by hand instead.
+**The re-profile is done** (2026-08-08, `fae58aa7`) — see "Profile of
+record". Every share below is from it. Two methodological notes for whoever
+comes next, both learned the hard way this run:
+
+- **This box cannot resolve a sub-5 % change by wall-clock.** Eight
+  alternated `--bench` pairs of a change worth exactly -1.91 % instructions
+  read +0.7 % mean with 5/8 pairs positive. Use `callgrind` instruction
+  counts for anything you expect to land under ~5 %: same binaries, same
+  fixed workload, deterministic to the instruction. Wall-clock stays the
+  arbiter for anything allocator- or cache-shaped, where Ir lies.
+- **An inclusive share is an upper bound on a memo, not an estimate.**
+  `computed_permanent` was 18.45 % inclusive; memoizing it per freeze scope
+  hit 34.5 % of calls and returned 1.91 %. Half of its calls come from
+  `depth == 0` mutating paths that cannot be frozen at all — check the
+  frozen fraction before costing the next memo.
 
 0. **Audit the bot's other whole-sweep calls the same way.** The
    `.spliceable` win was not an algorithmic insight — it was one caller
@@ -285,23 +321,40 @@ by hand instead.
    it before spending on it. 404/418 and 2333/2354 genuinely want the whole
    board — leave them.
 
-1. **Make `ComputedPermanent` cheap to build.** *(1(b) is written and
-   stashed as `cand1b-perm-memo` — see NEXT in TODO.md.)* ~55 % of all allocations
-   come from `compute_permanent_pass` cloning five collections per
-   permanent, most of which are byte-identical to the (immutable,
-   `Arc`-shared) `CardDefinition` they came from. Two shapes:
-   (a) hold `Arc<CardDefinition>` plus `Option<Vec<…>>` overrides and read
+1. **Make `ComputedPermanent` cheap to build.** ~2.59 M of the profile's
+   mallocs are `compute_permanent_pass` cloning five collections per
+   permanent, most byte-identical to the (immutable, `Arc`-shared)
+   `CardDefinition` they came from.
+   (a) Hold `Arc<CardDefinition>` plus `Option<Vec<…>>` overrides and read
    through accessors — `None` means "the printed value", so the common
-   unmodified permanent allocates nothing. ~4.5 k `computed_permanent` call
-   sites exist but nearly all read `.power` / `.toughness`; the five
-   collection fields are the ones that need accessors.
-   (b) memoize per (card, freeze scope): `LayerFreezeState` already caches
-   the gathered effect set for the whole bot tick, and a parallel
-   `Vec<(CardId, Arc<ComputedPermanent>)>` is sound by the same argument
-   (`with_frozen_layers` only hands out `&GameState`). Needs a
-   `computed_permanent_shared` returning `Arc<…>` so the memo isn't cloned
-   back out; the existing by-value method stays as the compat shim.
-   Do (b) first — it is smaller and its win is measurable on its own.
+   unmodified permanent allocates nothing. **This is now the top item**:
+   it is the only shape that helps the ~50 % of `computed_permanent` calls
+   and the 888,340 `apply_layers` entries that no memo can reach, because
+   they run on mutating paths. Big: ~4.5 k call sites read `ComputedPermanent`,
+   though nearly all read `.power` / `.toughness`; the five collection
+   fields are the ones that need accessors.
+   (b) ~~Memoize per (card, freeze scope)~~ — **done, -1.91 % Ir.** See the
+   Log row. Hit rate 34.5 %, ceiling 50 %.
+   (c) **The same memo for `compute_battlefield`** — untried, and the
+   larger remaining half: `apply_layers` enters `compute_permanent`
+   888,340× vs `computed_permanent`'s 648,866×, and `compute_battlefield`
+   itself is 11.58 % inclusive over 46,090 calls. Needs
+   `Vec<Arc<ComputedPermanent>>` (28 call sites) so the memo isn't cloned
+   back out, and it can share `perms` with 1(b) — fill per card, assemble
+   the vector from hits. Cost it against the same frozen-fraction check as
+   1(b) *before* building it.
+
+1.5 **`effective_mana_abilities` clones every ability it returns**
+   (`mana_source_table` 9.53 % inclusive, of which **8.23 % is `Vec::clone``;
+   `effective_mana_abilities` 9.10 %; `ActivatedAbility::clone` 331,628
+   mallocs). Every untapped permanent's printed mana abilities are deep-cloned
+   on every `auto_tap_for_cost_inner` (17.47 % inclusive) call, and the two
+   consumers — `mana_source_table` and `untapped_mana_colors` — only ever
+   *read* `.effect`. The printed ones can borrow from `card.definition`;
+   only `granted_abilities_for` and `intrinsic_land_mana_abilities` (5.07 %)
+   synthesize, so `Vec<(usize, Cow<'_, ActivatedAbility>)>` covers it. Small,
+   local, and the numbers are already attached — a good next pull.
+
 2. **The dispatcher's per-card trigger gathering.** With the
    `compute_battlefield` call gone, the remaining per-card work in
    `dispatch_triggers_for_events` is `statics_granted_triggers_for` (2.78 %
@@ -310,7 +363,8 @@ by hand instead.
    dispatch — O(cards²) against `all_static_sources`. Hoist the
    "which sources carry a `GrantTriggeredAbility`" scan out of the per-card
    loop, the same shape as the layer-gather filter that won +27.8 %.
-3. **The gather is still #1 by self cost** (16.35 %, 22.17 % inclusive).
+3. **The gather is still the #1 engine function by self cost** (15.9 %,
+   21.12 % inclusive — barely moved by any of the three landed fixes).
    Shape confirmed by reading: each of the 39 passes is
    `for &card in &sa_cards { let StaticEffect::X { .. } = sa.effect else { continue }; … }`,
    so a presence summary needs a `StaticEffect` discriminant tag in
@@ -322,21 +376,26 @@ by hand instead.
    is skipping a pass whose `StaticEffect` variant is absent from the board
    entirely. That needs a per-variant presence summary built in one pass;
    assign the tags in one place next to the passes so the two can't drift.
-4. **Memoize the gather outside freeze scopes.** Unchanged from last run:
-   the blocker is invalidation, not caching. `compute_battlefield` alone
-   re-gathers 123,712 times per six games. Two designs: a mutation epoch
+4. **Memoize the gather outside freeze scopes.** Unchanged: the blocker is
+   invalidation, not caching. `compute_battlefield` alone runs 46,090 times
+   per six games and `gather_continuous_effects_inner` allocates 367,900
+   times. Two designs: a mutation epoch
    bumped at every `&mut GameState` entry point with the field set made
    private behind accessors; or route zone mutation through `CowBox`'s
    `DerefMut` and derive validity from `Arc` identity. Multi-run project.
-5. **`Keyword::eq` (0.74 % self)** — linear scans of `Vec<Keyword>`. A
+5. **`Keyword::eq` (0.78 % self)** — linear scans of `Vec<Keyword>`. A
    bitset for the ~64 common keywords makes `has_keyword` O(1) and shrinks
    `CardInstance`; rides along with item 1.
 6. **`HashMap` hash choice** — `block_map`, `combat_damage_order` /
-   `_assignment` use SipHash and show up at 1.63 M `malloc` calls via
+   `_assignment` use SipHash and show up at 868,914 `malloc` calls via
    `HashMap::clone`.
-7. **CowBox sharp edge audit.** Any `&mut` access — including a read-only
-   `iter_mut` — deep-copies the zone while a snapshot shares it. 79
-   `battlefield.iter_mut()` sites. This is also the prerequisite for
+7. **CowBox sharp edge audit — promoted by the re-profile.**
+   `Arc::make_mut` is **21.31 % inclusive** and `CardInstance::clone` has
+   doubled its self share to 11 %, so the checkpoint clone is now the
+   fastest-growing cost in the simulator. Any `&mut` access — including a
+   read-only `iter_mut` — deep-copies the zone while a snapshot shares it.
+   79 `battlefield.iter_mut()` sites; start by finding which of them are
+   read-only. This is also the prerequisite for
    per-card CoW (`Vec<CowBox<CardInstance>>`), which would make a zone
    unshare one pointer memcpy plus one card clone instead of N card clones.
 8. **`legal_block_targets` per-pair requirement evaluation.** Still does not

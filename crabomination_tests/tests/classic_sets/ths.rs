@@ -689,7 +689,7 @@ fn ths_batch3_monstrosity_riders() {
     })
     .expect("monstrosity");
     drain_stack(&mut g);
-    let kws = g.computed_permanent(giant).unwrap().keywords;
+    let kws = g.computed_permanent(giant).unwrap().keywords.clone();
     assert!(kws.contains(&Keyword::Reach) && kws.contains(&Keyword::CanBlockAdditional(99)));
 }
 

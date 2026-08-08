@@ -1779,7 +1779,7 @@ fn ulamog_defiler_counters_and_annihilator() {
     );
     // Force five counters and read annihilator off the computed view.
     g.battlefield_find_mut(ula).unwrap().counters.insert(CounterType::PlusOnePlusOne, 5);
-    let kws = g.computed_permanent(ula).unwrap().keywords;
+    let kws = g.computed_permanent(ula).unwrap().keywords.clone();
     assert!(kws.contains(&Keyword::Annihilator(5)), "annihilator scales with counters");
 }
 

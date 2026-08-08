@@ -544,7 +544,7 @@ fn anavolver_kicked_with_one_half_only() {
     .expect("cast");
     drain_stack(&mut g);
     assert_eq!(power_of(&g, volver), 4, "3/3 plus one counter");
-    let kws = g.computed_permanent(volver).unwrap().keywords;
+    let kws = g.computed_permanent(volver).unwrap().keywords.clone();
     assert!(!kws.contains(&Keyword::Flying), "the blue half wasn't paid");
 }
 
@@ -566,7 +566,7 @@ fn cetavolver_kicked_with_both_halves() {
     .expect("cast");
     drain_stack(&mut g);
     assert_eq!(power_of(&g, volver), 4, "1/1 plus three counters");
-    let kws = g.computed_permanent(volver).unwrap().keywords;
+    let kws = g.computed_permanent(volver).unwrap().keywords.clone();
     assert!(kws.contains(&Keyword::FirstStrike) && kws.contains(&Keyword::Trample));
 }
 

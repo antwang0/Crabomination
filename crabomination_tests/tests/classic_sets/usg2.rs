@@ -227,7 +227,7 @@ fn wirecat_is_gated_on_a_live_enchantment() {
     let cat = g.add_card_to_battlefield(0, catalog::wirecat());
     assert!(!g.computed_permanent(cat).unwrap().keywords.contains(&Keyword::CantAttack));
     let ench = g.add_card_to_battlefield(1, catalog::bedlam());
-    let kws = g.computed_permanent(cat).unwrap().keywords;
+    let kws = g.computed_permanent(cat).unwrap().keywords.clone();
     assert!(kws.contains(&Keyword::CantAttack) && kws.contains(&Keyword::CantBlock));
     g.destroy_permanent(ench, false, &mut vec![]);
     assert!(!g.computed_permanent(cat).unwrap().keywords.contains(&Keyword::CantAttack));

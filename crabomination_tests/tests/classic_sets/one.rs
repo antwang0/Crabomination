@@ -439,7 +439,7 @@ fn add_oil(g: &mut GameState, id: crabomination::card::CardId, n: u32) {
 fn tyrranax_rex_keywords() {
     let mut g = two_player_game();
     let rex = g.add_card_to_battlefield(0, catalog::tyrranax_rex());
-    let kws = g.computed_permanent(rex).unwrap().keywords;
+    let kws = g.computed_permanent(rex).unwrap().keywords.clone();
     assert!(kws.contains(&Keyword::Toxic(4)) && kws.contains(&Keyword::Trample) && kws.contains(&Keyword::Haste));
     assert!(catalog::tyrranax_rex().keywords.iter().any(|k| matches!(k, Keyword::CantBeCountered)));
 }

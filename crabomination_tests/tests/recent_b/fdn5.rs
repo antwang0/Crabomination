@@ -1280,7 +1280,7 @@ fn spectral_shift_rewrites_a_land_type() {
     })
     .expect("cast");
     drain_stack(&mut g);
-    let types = g.computed_permanent(forest).unwrap().subtypes.land_types;
+    let types = g.computed_permanent(forest).unwrap().subtypes.land_types.clone();
     assert!(!types.contains(&crabomination::card::LandType::Forest), "the type was replaced");
 }
 

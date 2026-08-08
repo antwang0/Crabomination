@@ -749,7 +749,7 @@ fn lost_in_thought_locks_the_host_down() {
     let shade = g.add_card_to_battlefield(1, catalog::nantuko_shade());
     let aura = g.add_card_to_hand(0, catalog::lost_in_thought());
     cast(&mut g, 0, aura, Some(Target::Permanent(shade)));
-    let kws = g.computed_permanent(shade).unwrap().keywords;
+    let kws = g.computed_permanent(shade).unwrap().keywords.clone();
     assert!(kws.contains(&Keyword::CantAttack) && kws.contains(&Keyword::CantBlock));
     assert!(kws.contains(&Keyword::CantActivateAbilities));
 }
