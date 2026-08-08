@@ -56,10 +56,10 @@ Items are grouped by area and roughly ordered by impact within each group.
   `eager_static_targets` handles the self-scoped shape (the one every real
   card uses); an inner `EachPermanent` still falls through to `None` and the
   static contributes nothing. ⏳
-- **Mirage residue** — the last 18 cards, each blocked on one primitive:
+- **Mirage residue** — the last 17 cards, each blocked on one primitive:
   Celestial Dawn (a global colour/land-type rewrite), Forbidden Crypt (a draw
   replacement that reaches the graveyard), Bazaar of Wonders (name-matching
-  counterspell static), Hall of Gemstone (a per-turn mana-type lock), Null
+  counterspell static), Null
   Chamber (a *two-name* lock — `named_card` holds one), Tombstone Stairwell
   (token bookkeeping across both halves), Energy Vortex / Soul Echo
   (counter-priced upkeep taxes), Grinning Totem and Mangara's Tome (exile

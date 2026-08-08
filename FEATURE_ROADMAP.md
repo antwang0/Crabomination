@@ -2754,8 +2754,8 @@ Each a small targeted feature; sweep batch by batch.
    phasing their first real card coverage. **Visions (VIS) is closed** too (`set_gaps.py vis` at zero —
    `sets::vis` + `sets::vis2`, tests in `classic_sets/vis`), which finishes
    the Mirage block's second set. **Mirage (MIR) itself is the live front**
-   (`set_gaps.py mir` at 18 after this push, `sets::mir`–`mir5`); Coldsnap
-   (CSP) is open in parallel. Each of MIR's last 19 is blocked on one
+   (`set_gaps.py mir` at 17 after this push, `sets::mir`–`mir5`); Coldsnap
+   (CSP) is open in parallel. Each of MIR's last 17 is blocked on one
    primitive — TODO.md → "Mirage residue" names them card by card.
 1. **Replacement-effect framework** (Tier-1 #1) — highest-leverage primitive still
    open.
@@ -2772,7 +2772,7 @@ Each a small targeted feature; sweep batch by batch.
 
 ## Recently closed (this push)
 
-- **Mirage waves 5–7** — 36 more cards (`set_gaps.py mir` 54 → 19),
+- **Mirage waves 5–7** — 37 more cards (`set_gaps.py mir` 54 → 17),
   `sets::mir5`, tests in `classic_sets/mir`. New primitives, each forced by a
   card: `Effect::{ExileAtNextEndStep, SacrificeSourceUnlessSacrificeTotalPower,
   DiscardUnlessPutCardOnTop, AssignsNoCombatDamageThisTurn,
