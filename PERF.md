@@ -79,28 +79,36 @@ contention-immune, which makes it the better first look.
 
 ## Baseline
 
-Committed 2026-08-08 at the branch tip: this run's dispatcher fix + grant
-hoist rebased onto another session's `Effect` boxing (`TokenDefinition` out
-of line, 1464 -> 448 bytes) and its catalog wave. Refresh only alongside an
-intentional, explained change. Regressions beyond ~5 % get investigated
-before anything else lands — but check `host_calib_ms` first (see "How to
-measure").
+Measured at `eb5f661c`, i.e. **after** every engine change either session
+landed today: this session's dispatcher fix and grant hoist, the other
+session's `Effect`/`TokenDefinition` boxing, affordance-sweep narrowing and
+card-name tallies. (The two commits above it, Round 16 and the PERF/TODO
+merge, touch only ML and trackers.) Refresh only alongside an intentional,
+explained change. Regressions beyond ~5 % get investigated before anything
+else lands — but check `host_calib_ms` first (see "How to measure").
 
 ```text
 bot_ladder --bench   release, rustc 1.95.0, 4-core VM, 3 worker threads
                      mimalloc (the default); measured on an idle box
 host_cpu             Intel(R) Xeon(R) Processor @ 2.10GHz
-host_calib_ms        57 / 70 / 65 / 70           <- compare this first
+host_calib_ms        69 / 70 / 70 / 69           <- compare this first
 games                320
-games_per_s          23.94 / 23.81 / 24.17 / 24.44   (mean 24.09, spread 2.6 %)
-games_per_s_th       7.98 / 7.94 / 8.06 / 8.15
-decisions_per_s      14454 / 14375 / 14592 / 14758   (mean 14545)
+games_per_s          33.55 / 33.32 / 33.97 / 33.73   (mean 33.64, spread 1.9 %)
+games_per_s_th       11.18 / 11.11 / 11.32 / 11.24
+decisions_per_s      20259 / 20121 / 20510 / 20367   (mean 20314)
 turns_per_game       26.98
 decisions_per_game   603.9
 stalls               0 (0.00 %)
-peak_rss_mib         38.3 - 41.5
+peak_rss_mib         39.0 - 40.5
 determinism          ok (160 pairs, 0 sweeps, rho -1.000)
 ```
+
+Stepping this session's box through the day, same binary rebuilt at each
+point: **19.76** at the branch tip this morning, 22.71 after this session's
+two fixes, 24.09 after the `Effect` boxing, **33.64** after the
+affordance-sweep pair. Only the first two steps were measured A/B here; the
+last two are baseline observations across a rebase, and the sessions ran on
+different boxes, so read the per-change rows in **Log** for the claims.
 
 This run's own binary (before the rebase) read 22.71 on the same box; the
 tip reads 24.09 and peak RSS fell 40.7-44.4 -> 38.3-41.5 MiB, both
