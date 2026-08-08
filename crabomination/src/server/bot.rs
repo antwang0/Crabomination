@@ -1366,6 +1366,18 @@ fn decide_pending_policy(
     decision: &crate::decision::Decision,
     eval_modes: bool,
 ) -> crate::decision::DecisionAnswer {
+    // Read-only, and reached once per pending decision inside the attack /
+    // block sims on a cloned (unfrozen) state — share one gather.
+    state.with_frozen_layers(|s| decide_pending_policy_inner(s, seat, w, decision, eval_modes))
+}
+
+fn decide_pending_policy_inner(
+    state: &GameState,
+    seat: usize,
+    w: &EvalWeights,
+    decision: &crate::decision::Decision,
+    eval_modes: bool,
+) -> crate::decision::DecisionAnswer {
     match decision {
         // Smarter mulligan than AutoDecider's blanket Keep:
         // ship hands that are flooded or screwed on lands.
@@ -5800,6 +5812,14 @@ pub fn pick_blocks_for_test(state: &GameState, seat: usize) -> Vec<(CardId, Card
 /// replay the same choice inside a simulation (see
 /// [`simulate_through_combat`]) rather than re-deriving it.
 pub fn pick_attacks(state: &GameState, seat: usize) -> Vec<Attack> {
+    // Layer-aware per-creature checks (Defender/Flying grants, Propaganda,
+    // computed P/T) run once per candidate attacker — share one gather, the
+    // same way `pick_blocks` does. Matters most inside the attack/block sims,
+    // which call this on a freshly cloned (and therefore unfrozen) state.
+    state.with_frozen_layers(|state| pick_attacks_inner(state, seat))
+}
+
+fn pick_attacks_inner(state: &GameState, seat: usize) -> Vec<Attack> {
     use crate::card::Keyword;
     // Pick the attack target: prefer an opposing monarch (CR
     // 724 — stealing the crown denies their end-step card and
@@ -6431,6 +6451,12 @@ fn simulate_attack_outcome_once(
 /// deterministic greedy stand-in carries exactly the information the sim
 /// is missing — "that mana will be spent on something".
 fn sim_spell_action(g: &GameState, w: &EvalWeights) -> Option<GameAction> {
+    // Called once per sim-loop iteration on a cloned (unfrozen) state; every
+    // candidate it ranks runs layer-aware checks.
+    g.with_frozen_layers(|g| sim_spell_action_inner(g, w))
+}
+
+fn sim_spell_action_inner(g: &GameState, w: &EvalWeights) -> Option<GameAction> {
     let p = g.player_with_priority();
     if !g.stack.is_empty() {
         return pick_stack_response(g, p, w)
@@ -8391,6 +8417,12 @@ fn ply_blend_factor(turn: u32) -> f32 {
 }
 
 fn eval_material(state: &GameState, seat: usize, w: &EvalWeights) -> i32 {
+    // Scores a whole board, so it reads every permanent's computed state —
+    // and the sims call it on a cloned (unfrozen) state once per candidate.
+    state.with_frozen_layers(|state| eval_material_frozen(state, seat, w))
+}
+
+fn eval_material_frozen(state: &GameState, seat: usize, w: &EvalWeights) -> i32 {
     // The learned value net, when a profile asks for it and a net is
     // loaded. Undecided positions only: the heuristic's ±100 000·unit for
     // a decided game must keep dominating the net's 0..10 000 range so
@@ -8431,7 +8463,7 @@ fn eval_material(state: &GameState, seat: usize, w: &EvalWeights) -> i32 {
 /// between. Only the first reads as progress to a greedy evaluator, which
 /// is why this bot puts 95 % of its plays in the precombat main.
 fn eval_material_summon_sick_blind(state: &GameState, seat: usize, w: &EvalWeights) -> i32 {
-    eval_material_inner(state, seat, w, true)
+    state.with_frozen_layers(|state| eval_material_inner(state, seat, w, true))
 }
 
 fn eval_material_inner(
