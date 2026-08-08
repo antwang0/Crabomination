@@ -703,7 +703,7 @@ fn distill_gen(args: &Args, vocab: &Vocab, n_decks: usize) {
                         let win = wins as f32 / decided.max(1) as f32;
                         results.lock().unwrap().push(DeckRow { cards, feats, win });
                         let d = done.fetch_add(1, Ordering::Relaxed) + 1;
-                        if d % 50 == 0 {
+                        if d.is_multiple_of(50) {
                             eprintln!("  {d}/{} labelled", jobs.len());
                         }
                     }

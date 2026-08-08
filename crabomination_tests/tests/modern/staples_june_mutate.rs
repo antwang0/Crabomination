@@ -1659,7 +1659,7 @@ fn yidaro_recurs_on_fourth_cycle() {
     assert!(g.players[0].library.iter().any(|c| c.id == y1), "Yidaro shuffled into library");
 
     // Pre-load the game count to 3 so the next cycle is the 4th.
-    g.cycled_count_by_name.insert("Yidaro, Wandering Monster".into(), 3);
+    g.cycled_count_by_name.insert("Yidaro, Wandering Monster", 3);
     let y2 = g.add_card_to_hand(0, catalog::yidaro_wandering_monster());
     g.players[0].mana_pool.add(Color::Red, 1);
     g.players[0].mana_pool.add_colorless(1);
