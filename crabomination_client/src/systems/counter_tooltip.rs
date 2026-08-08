@@ -546,6 +546,17 @@ fn build_tooltip_body(p: &crabomination::net::PermanentView) -> Option<String> {
     if p.attack_toll > 0 {
         lines.push(format!("(toll: {{{}}} to attack with this)", p.attack_toll));
     }
+    // CR 510.1a — an attacker that will deal nothing (Kukemssa Pirates traded
+    // its damage for an artifact, Master of Cruelties). Without the line the
+    // silent damage step reads as a bug.
+    if p.assigns_no_combat_damage {
+        lines.push(String::from("(assigns no combat damage this turn)"));
+    }
+    // CR 702.26 — phasing that won't fire, because something pinned it
+    // (Spatial Binding).
+    if p.pinned_in_phase {
+        lines.push(String::from("(pinned: has phasing but can't phase out)"));
+    }
     // Surface +1/+1 and -1/-1 counter highlights — the most common
     // counter shapes carry a P/T delta that's often more important than
     // the printed body. Push (modern_decks batch 174): added the
@@ -1661,6 +1672,8 @@ mod tests {
             damage_prevented_as_source: false,
             doomed_next_damage: false,
             goaded: false,
+            assigns_no_combat_damage: false,
+            pinned_in_phase: false,
             monstrous: false,
             sector: None,
             suspected: false,
@@ -1938,6 +1951,22 @@ mod tests {
         p.wont_untap = true;
         let body = build_tooltip_body(&p).expect("tooltip should render");
         assert!(body.to_lowercase().contains("locked"), "got: {body}");
+    }
+
+    #[test]
+    fn assigns_no_combat_damage_renders_in_tooltip() {
+        let mut p = make_permanent_view(0, 2);
+        p.assigns_no_combat_damage = true;
+        let body = build_tooltip_body(&p).expect("tooltip should render");
+        assert!(body.contains("assigns no combat damage"), "got: {body}");
+    }
+
+    #[test]
+    fn pinned_in_phase_renders_in_tooltip() {
+        let mut p = make_permanent_view(0, 2);
+        p.pinned_in_phase = true;
+        let body = build_tooltip_body(&p).expect("tooltip should render");
+        assert!(body.contains("can't phase out"), "got: {body}");
     }
 
     #[test]

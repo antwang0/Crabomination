@@ -1786,6 +1786,16 @@ pub struct PermanentView {
     /// `project_permanent`.
     #[serde(default)]
     pub goaded: bool,
+    /// CR 510.1a — this creature assigns no combat damage for the rest of the
+    /// turn (Kukemssa Pirates' price for the stolen artifact, Master of
+    /// Cruelties). Without the badge an attack that deals nothing looks like
+    /// a bug.
+    #[serde(default)]
+    pub assigns_no_combat_damage: bool,
+    /// CR 702.26 — this permanent has phasing but is pinned in phase
+    /// (Spatial Binding), so it won't duck out at its controller's untap step.
+    #[serde(default)]
+    pub pinned_in_phase: bool,
     /// True when an Oracle en-Vec-style attack mandate names this creature:
     /// on its controller's next turn it must attack if able, and creatures
     /// they control that aren't named can't attack at all. A UI hint so the

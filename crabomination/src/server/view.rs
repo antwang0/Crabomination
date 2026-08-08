@@ -1590,6 +1590,13 @@ fn project_permanent(
         damage_prevented_as_source: state.source_damage_fully_prevented(card.id),
         doomed_next_damage,
         goaded: !card.goaded_by.is_empty(),
+        assigns_no_combat_damage: state.assigns_no_combat_damage(card.id),
+        pinned_in_phase: state
+            .computed_permanent(card.id)
+            .is_some_and(|cp| {
+                cp.keywords.contains(&crate::card::Keyword::Phasing)
+                    && cp.keywords.contains(&crate::card::Keyword::CantPhaseOut)
+            }),
         must_block: card.must_block.is_some(),
         attack_mandated: state
             .attack_mandate_for(card.controller)
@@ -3086,6 +3093,27 @@ mod tests {
         assert!(view.castable_plotted.is_empty(), "not the turn it was plotted");
         g.plotted_this_turn.clear();
         assert_eq!(project(&g, 0).castable_plotted, vec![bolt]);
+    }
+
+    #[test]
+    fn project_surfaces_no_combat_damage_and_phase_pin() {
+        let mut g = two_player_game();
+        let pirates = g.add_card_to_battlefield(0, catalog::kukemssa_pirates());
+        let plain = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+        g.assigns_no_combat_damage_this_turn.push(pirates);
+        let phaser = |extra: Vec<crate::card::Keyword>| crate::card::CardDefinition {
+            keywords: [vec![crate::card::Keyword::Phasing], extra].concat(),
+            ..catalog::grizzly_bears()
+        };
+        let ghost = g.add_card_to_battlefield(0, phaser(vec![]));
+        let pinned =
+            g.add_card_to_battlefield(0, phaser(vec![crate::card::Keyword::CantPhaseOut]));
+        let v = project(&g, 0);
+        let at = |id| v.battlefield.iter().find(|p| p.id == id).unwrap();
+        assert!(at(pirates).assigns_no_combat_damage, "traded its damage away");
+        assert!(!at(plain).assigns_no_combat_damage);
+        assert!(at(pinned).pinned_in_phase, "phasing that can't fire");
+        assert!(!at(ghost).pinned_in_phase, "plain phasing still ducks out");
     }
 
     #[test]

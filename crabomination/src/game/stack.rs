@@ -2643,6 +2643,18 @@ impl GameState {
     /// computes, surfaced through the server view so the UI can flag locked
     /// permanents. Player-scoped skips (Yosei, Bontu's) aren't included — those
     /// are one-shot flags, not a property of the permanent.
+    /// CR 510.1a — this creature assigns no combat damage for the rest of the
+    /// turn, whether by a printed keyword (Master of Cruelties) or a
+    /// turn-scoped effect (Kukemssa Pirates). Both damage-assignment sites
+    /// consult the same two sources; this is the read-only mirror the client
+    /// badge uses.
+    pub fn assigns_no_combat_damage(&self, card_id: crate::card::CardId) -> bool {
+        self.assigns_no_combat_damage_this_turn.contains(&card_id)
+            || self.computed_permanent(card_id).is_some_and(|cp| {
+                cp.keywords.contains(&crate::card::Keyword::DealsNoCombatDamage)
+            })
+    }
+
     pub fn untap_prevented_by_static(&self, card_id: crate::card::CardId) -> bool {
         use crate::card::CounterType;
         use crate::effect::{Selector, StaticEffect};
