@@ -58,6 +58,38 @@ only stays dead while the reasoning that killed it is readable.
   stratum both plays and benches reports **no** within-archetype number
   rather than passing the marginal off as one. `recommend_pool` prints
   `within` first and labels `raw` as the confound.
+- 🟢 **Round 17 (2026-08-08) — transformer blocks + longer/lower-lr
+  training: first sweep of the replacement gates.** Proper pre-LN
+  transformer blocks (`tblocks.*`: `x += attn(ln1(x));
+  x += ffn2(relu(ffn1(ln2(x))))`, 4 heads, 2× FFN, group tag into the
+  stream at stack entry) landed as a third tensor-presence-selected
+  architecture with a 1e-4 parity test, and trained under a changed
+  regime: **2 blocks, 500 k window (2×), lr 1e-4 (10×↓), 250 k games
+  (~2.8×), stale patience 12**. Two training seeds; learner on the 4090
+  (~27 steps/s, actors 123–137 games/s, 0 stalls, ~30–34 min/seed).
+  Holdout AUC 0.8049 (s43) / 0.8025 (s97) — both above every prior run
+  (r12 control 0.7973), replicated. The gates are the result:
+
+  | replacement gate (paired, 1 200 games) | s43 net | s97 net |
+  |---|---|---|
+  | vs gang, ladder seed 43 | 51.0 % [48.2, 53.8] | 50.2 % [47.4, 53.1] |
+  | vs gang, ladder seed 97 | 50.8 % [48.0, 53.7] | 51.1 % [48.3, 53.9] |
+  | vs atk-sim, ladder seed 43 | 53.5 % [50.7, 56.3] | 52.2 % [49.3, 55.0] |
+  | vs atk-sim, ladder seed 97 | 51.9 % [49.1, 54.7] | 52.4 % [49.6, 55.2] |
+
+  **All eight point estimates ≥ 50 % — the first time the net as
+  replacement pilot has swept both opponents on both training seeds.**
+  Pooled: 52.5 % vs atk-sim (4 800 games, clearly above parity), 50.8 %
+  vs gang (parity-to-slightly-above; every prior round lost this gate at
+  47–49 %). Caveats: blocks, window, lr, and run length changed
+  *together* per the round's design, so attribution among them is open —
+  a `--blocks 2` run at the old regime (or `--attn` at the new one)
+  would separate architecture from optimization; and vs-gang is parity,
+  not dominance. Calibration saturation 9.2 %/7.5 % outside
+  [0.05, 0.95], in line with prior nets. Next: promote a round-17 net as
+  the self-play pilot (round-14 loop, gen 1 was the only prior
+  above-50), and the attribution ablation if the levers matter for the
+  next scale-up.
 - 🟡 **Round 16 — sim-judge distillation closes the exploit, two
   iterations in.** The fix round 15 demanded: retrain the deck net on
   *gauntlet win rates* (240 games vs a fixed 20-deck field per label)
