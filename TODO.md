@@ -5,22 +5,22 @@ Items are grouped by area and roughly ordered by impact within each group.
 
 ## NEXT (handoff — rewrite each run, keep under 15 lines)
 
-Branch `claude/modern_decks`. Last run was an ML/perf pass, not a card pass.
-It added `PERF.md`, `bot_ladder --bench`, golden traces, and a seeded
-`GameState::rng` (mulligan reshuffles were unseeded — see that commit).
+Branch `claude/modern_decks`. Two consecutive ML/perf passes, no card work.
+`PERF.md` is the perf record: baseline, log, profile, candidate queue.
 
-- **Perf**: pull the top `PERF.md` candidate — memoize the layer gather
-  outside freeze scopes (52 % of instructions; blocked only on a sound
-  invalidation story). Candidate 2 (merge the ~50 battlefield passes in
-  `gather_continuous_effects_inner`) is the cheaper mechanical alternative.
-  Beat 11.85 games/s on `bot_ladder --bench` (measure on an idle box — a run
-  straight off a build reads 2–3 % high); a release rebuild is 13–24 min, so
-  budget two or three measured iterations, not ten.
-- **Trackers**: this file is ~9.5 k lines against the ~1 k target. ~3.5 k sit
-  in fully-closed sections and ~1.6 k in ✅-only bullets, but a mechanical
-  sweep is unsafe (some "closed" sections still list live approximations) —
-  it wants a triage pass from the card side. No `ML_NOTES.md` yet; create it
-  the next time a net/gate narrative would otherwise land here.
+- **Perf**: bench now reads **12.39 games/s** system-alloc / **13.88 with
+  `--features mimalloc`** (idle box, 3 threads). Candidate 4 (allocator) is
+  done and opt-in; measure it at 16+ actors and make it default if the RSS
+  holds. Next up is candidate 1 (memoize the layer gather outside freeze
+  scopes — 52 % inclusive, blocked on invalidation) or the cheaper
+  candidate 2 (merge the ~50 battlefield passes). A release rebuild is
+  15–20 min, so budget two or three measured iterations.
+- **Determinism**: closed — three `rand::random::<u64>()` sites in
+  `effects/mod.rs` had been missed by the `rand::rng()` sweep and still drew
+  from the thread RNG. Grep for both spellings before assuming it stays shut.
+- **Trackers**: this file is ~9.5 k lines against the ~1 k target; the sweep
+  wants a triage pass from the card side (some "closed" sections still list
+  live approximations). No `ML_NOTES.md` yet.
 - **Cards**: the Mirage residue and every ⏳ below are untouched.
 
 ## Noticed this run (Mirage wave 5)
