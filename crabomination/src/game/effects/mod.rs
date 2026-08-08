@@ -2456,7 +2456,8 @@ impl GameState {
                 if len == 0 {
                     return Ok(());
                 }
-                let idx = (rand::random::<u64>() % len as u64) as usize;
+                use rand::RngExt;
+                let idx = self.rng.draw().random_range(0..len);
                 let mut card = self.players[seat].hand.remove(idx);
                 card.granted_alt_cast_cost_eot = Some(card.definition.cost.clone());
                 card.may_play_until = Some(crate::card::MayPlayPermission {
@@ -15719,7 +15720,8 @@ impl GameState {
                         && c.counters.get(&CounterType::PlusOnePlusOne).copied().unwrap_or(0) == 0;
                     let total = missing_kw.len() + usize::from(missing_pp);
                     if total == 0 { continue; }
-                    let pick = (rand::random::<u64>() % total as u64) as usize;
+                    use rand::RngExt;
+                    let pick = self.rng.draw().random_range(0..total);
                     self.permanents_gained_counter_this_turn.insert(cid);
                     if pick < missing_kw.len() {
                         let kw = missing_kw.swap_remove(pick);
@@ -18029,8 +18031,9 @@ impl GameState {
                     if candidates.is_empty() {
                         break;
                     }
-                    let (pick, is_land) =
-                        candidates[(rand::random::<u64>() % candidates.len() as u64) as usize];
+                    use rand::RngExt;
+                    let idx = self.rng.draw().random_range(0..candidates.len());
+                    let (pick, is_land) = candidates[idx];
                     let mut sub = ctx.clone();
                     sub.targets = vec![Target::Permanent(pick)];
                     self.run_effect(
