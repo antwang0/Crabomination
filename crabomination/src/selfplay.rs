@@ -104,6 +104,83 @@ pub fn best_build_by<F: FnMut(&[CardFactory]) -> f64>(
         .expect("n > 0 builds")
 }
 
+/// Greedy hill-climb over single spell swaps, under an arbitrary judge.
+///
+/// [`best_build_by`] picks the best of N *random* candidates — it never
+/// searches. This walks from a starting build: for each non-land slot,
+/// try every distinct non-land pool card not already used, keep the
+/// first strict improvement, repeat up to `max_passes` passes or until a
+/// full pass finds nothing. A deck-net judge scores a 40-card list in
+/// microseconds, so the few thousand evaluations a climb costs are free
+/// next to a single simulated game.
+///
+/// Lands are never touched: the mana base came from the builder's
+/// colour/count model and the judge has no way to know a swapped basic
+/// broke it. Deterministic — candidates are visited in name order — so
+/// the same pool and start always climb to the same deck.
+pub fn hill_climb_build_by<F: FnMut(&[CardFactory]) -> f64>(
+    pool: &[CardFactory],
+    mut deck: Vec<CardFactory>,
+    max_passes: usize,
+    mut judge: F,
+) -> Vec<CardFactory> {
+    use std::collections::BTreeMap;
+    // Pool multiset minus the current deck, spells only, one
+    // representative factory per name. Kept incrementally correct as
+    // swaps are accepted within a pass.
+    let mut avail: BTreeMap<&'static str, (CardFactory, i32)> = BTreeMap::new();
+    for f in pool {
+        let d = f();
+        if d.is_land() {
+            continue;
+        }
+        avail.entry(d.name).or_insert((*f, 0)).1 += 1;
+    }
+    for f in &deck {
+        if let Some(e) = avail.get_mut(f().name) {
+            e.1 -= 1;
+        }
+    }
+    let mut best = judge(&deck);
+    for _ in 0..max_passes {
+        let mut improved = false;
+        for i in 0..deck.len() {
+            if deck[i]().is_land() {
+                continue;
+            }
+            let old = deck[i];
+            let old_name = old().name;
+            let cands: Vec<CardFactory> = avail
+                .iter()
+                .filter(|(name, (_, n))| *n > 0 && **name != old_name)
+                .map(|(_, (f, _))| *f)
+                .collect();
+            let mut chosen = None;
+            for c in cands {
+                deck[i] = c;
+                let score = judge(&deck);
+                if score > best {
+                    best = score;
+                    chosen = Some(c);
+                    break;
+                }
+            }
+            match chosen {
+                Some(c) => {
+                    improved = true;
+                    avail.get_mut(c().name).expect("came from avail").1 -= 1;
+                    avail.entry(old_name).or_insert((old, 0)).1 += 1;
+                }
+                None => deck[i] = old,
+            }
+        }
+        if !improved {
+            break;
+        }
+    }
+    deck
+}
+
 /// The heuristic builder's own opinion of a finished deck, exposed so a
 /// gate can pit "static-score judge" against a learned judge over the
 /// *same* candidate set — the comparison that isolates the judge.
@@ -302,6 +379,30 @@ fn snapshot_stats(g: &GameState, seat: usize) -> [f32; 4] {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// The climb monotonically improves its judge, keeps the deck at 40
+    /// with the mana base untouched, and is deterministic.
+    #[test]
+    fn hill_climb_improves_the_judge_and_preserves_shape() {
+        let pool = sealed_pool(0xC1B);
+        let start = heuristic_sealed_build(&pool, 5);
+        let lands_before = start.iter().filter(|f| f().is_land()).count();
+        // A judge the climb can definitely satisfy: cheap decks win.
+        let judge = |d: &[CardFactory]| {
+            -(d.iter().map(|f| f().cost.cmc() as i64).sum::<i64>() as f64)
+        };
+        let before = judge(&start);
+        let climbed = hill_climb_build_by(&pool, start.clone(), 6, judge);
+        let after = judge(&climbed);
+        assert!(after >= before, "climb must never worsen: {before} -> {after}");
+        assert!(after > before, "a sealed pool always has a cheaper spell somewhere");
+        assert_eq!(climbed.len(), 40);
+        assert_eq!(climbed.iter().filter(|f| f().is_land()).count(), lands_before);
+        // Deterministic: same pool, same start, same deck.
+        let again = hill_climb_build_by(&pool, start, 6, judge);
+        let names = |d: &[CardFactory]| d.iter().map(|f| f().name).collect::<Vec<_>>();
+        assert_eq!(names(&climbed), names(&again));
+    }
 
     /// End-to-end: sealed pools build 40-card decks, a recorded game
     /// produces per-turn rows from both seats, and the labels agree with

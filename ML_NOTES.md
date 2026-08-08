@@ -58,6 +58,23 @@ only stays dead while the reasoning that killed it is readable.
   stratum both plays and benches reports **no** within-archetype number
   rather than passing the marginal off as one. `recommend_pool` prints
   `within` first and labels `raw` as the confound.
+- 🔴 **Round 15 — hill-climbing the deck net is adversarial, not
+  optimizing.** `hill_climb_build_by` (greedy single-spell swaps from the
+  net's best-of-32 pick, same judge) gated against the pick it started
+  from: the climbed builds won **11.6 % [10.7, 12.5] and 14.3 %
+  [13.4, 15.4]** of 4 800 games per seed — catastrophically worse — while
+  the net's own score of them rose from ~0.70 to ~0.95 across ~20 of 23
+  spell slots changed. Textbook off-distribution exploitation: the net
+  was trained to rank *noisy-greedy builder outputs*, and unconstrained
+  search maximizes its errors, not its knowledge. Best-of-32 works
+  precisely because all candidates come from the distribution the judge
+  is calibrated on. This also sharpens the deck-duel reading: best-of-512
+  is a mild dose of the same tail-walking. Rules of engagement from here:
+  the deck net is a **within-distribution surrogate**, never an
+  objective; any search under it needs either a tight trust region
+  (≤2–3 swaps from a builder-generated start) or a judge trained on
+  search-visited builds (sim-judge distillation with climb states in the
+  training set). Both are open; the unconstrained form is closed.
 - 🟡 **Round 14 — the self-play loop runs end to end; the gains don't
   compound.** The label self-consistency candidate got its test: train a
   fresh net on games piloted *by the net* (`--use-best`), gate the

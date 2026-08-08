@@ -60,8 +60,8 @@ use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::time::Instant;
 
 use crabomination::selfplay::{
-    best_build_by, heuristic_sealed_build, play_recorded_game, sealed_game_template, sealed_pool,
-    static_deck_score,
+    best_build_by, heuristic_sealed_build, hill_climb_build_by, play_recorded_game,
+    sealed_game_template, sealed_pool, static_deck_score,
 };
 use crabomination::server::bot::EvalWeights;
 use crabomination::server::encode::{Vocab, encode_deck};
@@ -101,6 +101,11 @@ struct Args {
     /// and race net-judged builds against static-judged builds of the
     /// same candidate sets on paired pools, N games per pool.
     gate_builder: Option<usize>,
+    /// Gate mode: race hill-climbed builds (single-spell-swap search
+    /// under the deck-net judge, started from the net's best-of-32 pick)
+    /// against the plain best-of-32 pick — same pools, same pilots, same
+    /// judge, so the result isolates the *search*. N games per pool.
+    gate_builder_hc: Option<usize>,
     /// Gate mode: race the repaired sealed builder (`builder_v2`)
     /// against the one it replaces, same pools, same pilots, N games
     /// per pool. No net involved — this measures the builder alone.
@@ -206,6 +211,7 @@ fn parse_args() -> Args {
         seed: 0x0505_ACAD,
         use_best: None,
         gate_builder: None,
+        gate_builder_hc: None,
         gate_builder_v2: None,
         calibrate: None,
         calibrate_leaves: None,
@@ -284,6 +290,9 @@ fn parse_args() -> Args {
             "--h1" => a.h1 = Some(val().parse().expect("--h1")),
             "--h2" => a.h2 = Some(val().parse().expect("--h2")),
             "--gate-builder" => a.gate_builder = Some(val().parse().expect("--gate-builder")),
+            "--gate-builder-hc" => {
+                a.gate_builder_hc = Some(val().parse().expect("--gate-builder-hc"))
+            }
             "--gate-builder-v2" => {
                 a.gate_builder_v2 = Some(val().parse().expect("--gate-builder-v2"))
             }
@@ -552,6 +561,79 @@ fn gate_builder(args: &Args, vocab: &Vocab, games_per_pool: usize) {
     );
 }
 
+/// Race hill-climbed builds against the best-of-32 picks they started
+/// from. Judge, pools, and pilots are identical on both sides, so this
+/// isolates one thing: whether *searching* the build space under the
+/// deck net beats sampling it.
+fn gate_builder_hc(args: &Args, vocab: &Vocab, games_per_pool: usize) {
+    use crabomination::recommend::{Pilot, simulate_match_games_piloted};
+    let path = args.out.join("deck-latest.safetensors");
+    let bytes = std::fs::read(&path)
+        .unwrap_or_else(|e| panic!("{}: {e} (train a deck net first)", path.display()));
+    let net = DeckNet::load(&bytes).expect("deck net loads");
+    assert_eq!(net.vocab_size(), vocab.size(), "deck net vocab != encoder vocab");
+    const POOLS: u64 = 12;
+    const CANDS: usize = 32;
+    const PASSES: usize = 6;
+    println!(
+        "builder gate: hill-climbed vs best-of-{CANDS} (same net judge), {games_per_pool} games x {POOLS} pools, seed {}",
+        args.seed
+    );
+    let (mut wins_hc, mut wins_pick, mut undecided) = (0u32, 0u32, 0u32);
+    for i in 0..POOLS {
+        let salt = args.seed ^ i.wrapping_mul(0x9E37_79B9_7F4A_7C15).wrapping_add(0xB111DC);
+        let pool = sealed_pool(salt);
+        let judge = |d: &[crabomination::cube::CardFactory]| {
+            let (cards, feats) = encode_deck(d, vocab);
+            net.forward(&cards, &feats) as f64
+        };
+        let pick = best_build_by(&pool, CANDS, salt ^ 1, judge);
+        let climbed = hill_climb_build_by(&pool, pick.clone(), PASSES, judge);
+        let swaps = climbed
+            .iter()
+            .zip(&pick)
+            .filter(|(a, b)| a() .name != b().name)
+            .count();
+        let tally = simulate_match_games_piloted(
+            &climbed,
+            &pick,
+            games_per_pool,
+            [Pilot::default(), Pilot::default()],
+            4_000,
+            Some(salt ^ 2),
+        );
+        println!(
+            "pool #{i}: climbed {} - {} pick ({} n/d), {swaps} slots changed, net score {:.4} -> {:.4}",
+            tally.wins_a,
+            tally.wins_b,
+            tally.undecided,
+            judge(&pick),
+            judge(&climbed),
+        );
+        wins_hc += tally.wins_a;
+        wins_pick += tally.wins_b;
+        undecided += tally.undecided;
+    }
+    let decided = wins_hc + wins_pick;
+    let pct = 100.0 * wins_hc as f64 / decided.max(1) as f64;
+    let (lo, hi) = wilson(wins_hc, decided);
+    println!(
+        "TOTAL: climbed {wins_hc} - {wins_pick} pick ({undecided} n/d) = {pct:.1}% [{:.1}%, {:.1}%]",
+        lo * 100.0,
+        hi * 100.0
+    );
+    println!(
+        "verdict: {}",
+        if lo > 0.5 {
+            "hill-climbed builds are stronger — the interval clears 50%"
+        } else if hi < 0.5 {
+            "the plain pick is stronger — the interval is below 50%"
+        } else {
+            "inconclusive — the interval straddles 50%"
+        }
+    );
+}
+
 /// Race the repaired builder against the one it replaces: same pool,
 /// same pilots, same seeds — only the build differs.
 fn gate_builder_v2(args: &Args, games_per_pool: usize) {
@@ -622,6 +704,10 @@ fn main() {
     }
     if let Some(games) = args.gate_builder {
         gate_builder(&args, &vocab, games);
+        return;
+    }
+    if let Some(games) = args.gate_builder_hc {
+        gate_builder_hc(&args, &vocab, games);
         return;
     }
     if let Some(games) = args.calibrate {
