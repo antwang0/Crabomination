@@ -40,6 +40,15 @@ codegen-units = 1
 # Slows compile times, marginal improvements.
 lto = "thin"
 
+# Release speed with frame pointers and full DWARF, so perf/samply/flamegraph
+# resolve engine frames instead of printing `??`. Benchmarks and profiles run
+# here — never on a debug build, where opt-level 0 engine code dwarfs whatever
+# is being measured.
+[profile.profiling]
+inherits = "release"
+debug = true
+split-debuginfo = "unpacked"
+
 # Optimize for size in the wasm-release profile to reduce load times and bandwidth usage on web.
 [profile.wasm-release]
 # Default to release profile values.
