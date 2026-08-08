@@ -1135,7 +1135,20 @@ impl Default for RandomBot {
 }
 
 impl Bot for RandomBot {
+    /// The whole tick runs inside one `with_frozen_layers` scope. Sound by
+    /// construction — a bot only ever receives `&GameState`, so nothing it
+    /// does here can invalidate the gathered continuous-effect set — and it
+    /// turns a bot tick's many `computed_permanent` reads into one gather
+    /// instead of one gather each. The scope does NOT reach the dry-run
+    /// probes and combat sims: those clone the state, and `LayerFreeze`
+    /// clones as unfrozen precisely because the clone gets mutated.
     fn next_action(&mut self, state: &GameState, seat: usize) -> Option<GameAction> {
+        state.with_frozen_layers(|state| self.next_action_inner(state, seat))
+    }
+}
+
+impl RandomBot {
+    fn next_action_inner(&mut self, state: &GameState, seat: usize) -> Option<GameAction> {
         if state.is_game_over() {
             return None;
         }
