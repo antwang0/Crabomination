@@ -501,7 +501,7 @@ pub fn thopter_squadron() -> CardDefinition {
                 effect: Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::ONE,
-                    definition: TokenDefinition {
+                    definition: Box::new(TokenDefinition {
                         name: "Thopter".to_string(),
                         power: 1,
                         toughness: 1,
@@ -512,7 +512,7 @@ pub fn thopter_squadron() -> CardDefinition {
                             ..Default::default()
                         },
                         ..Default::default()
-                    },
+                    }),
                 },
                 ..Default::default()
             },

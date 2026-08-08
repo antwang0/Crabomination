@@ -1193,7 +1193,7 @@ pub fn giant_caterpillar() -> CardDefinition {
                 body: Box::new(Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::ONE,
-                    definition: butterfly,
+                    definition: Box::new(butterfly),
                 }),
             },
             ..Default::default()
@@ -1468,7 +1468,7 @@ pub fn snake_basket() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::XFromCost,
-                definition: snake,
+                definition: Box::new(snake),
             },
             ..Default::default()
         }],

@@ -541,7 +541,7 @@ pub fn jotun_owl_keeper() -> CardDefinition {
                     what: Box::new(Selector::This),
                     kind: CounterType::Age,
                 },
-                definition: TokenDefinition {
+                definition: Box::new(TokenDefinition {
                     name: "Bird".to_string(),
                     card_types: vec![CardType::Creature],
                     colors: vec![Color::White],
@@ -553,7 +553,7 @@ pub fn jotun_owl_keeper() -> CardDefinition {
                     toughness: 1,
                     keywords: vec![Keyword::Flying],
                     ..Default::default()
-                },
+                }),
             },
         }],
         ..creature("Jötun Owl Keeper", cost(&[generic(2), w()]), vec![CreatureType::Giant], 3, 3)

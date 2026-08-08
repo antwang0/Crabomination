@@ -168,13 +168,13 @@ pub fn diamond_kaleidoscope() -> CardDefinition {
                 effect: Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::Const(1),
-                    definition: TokenDefinition {
+                    definition: Box::new(TokenDefinition {
                         name: "Prism".into(),
                         power: 0,
                         toughness: 1,
                         card_types: vec![CardType::Artifact, CardType::Creature],
                         ..Default::default()
-                    },
+                    }),
                 },
                 ..Default::default()
             },
@@ -434,7 +434,7 @@ pub fn ovinomancer() -> CardDefinition {
                 Effect::CreateToken {
                     who: PlayerRef::ControllerOf(Box::new(Selector::Target(0))),
                     count: Value::Const(1),
-                    definition: TokenDefinition {
+                    definition: Box::new(TokenDefinition {
                         name: "Sheep".into(),
                         power: 0,
                         toughness: 1,
@@ -445,7 +445,7 @@ pub fn ovinomancer() -> CardDefinition {
                             ..Default::default()
                         },
                         ..Default::default()
-                    },
+                    }),
                 },
             ]),
             ..Default::default()

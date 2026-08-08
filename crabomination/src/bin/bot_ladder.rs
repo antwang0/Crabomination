@@ -293,6 +293,63 @@ fn parse_profile(name: &str) -> Option<Pilot> {
 /// Profile names accepted by `--a` / `--b`, for the help text and errors.
 const PROFILES: &str = "baseline, combat, holdsick, holdsick+combat, atk, atk-cheap, atk-hold, atk-sim, atk-race, atk-life, dflt-life, blk, lookahead, holdinst, mcts, mcts-heur, mcts-deep, planner, v2+combat, pretap, scaled, keywords, kw25, base, base+kw, life, power, v2, uniform, landseq, mull, gang, landseq2, mull2, race2, look1, look2, smarttap, det1, det3, net, net-blend, net-blend300, net-q10, net-q20, netb-q10, netb-q20 (net* need CRAB_NET=<weights.safetensors>)";
 
+/// Peak resident set size in MiB, or `None` where the OS doesn't expose it
+/// cheaply. Linux keeps the high-water mark in `/proc/self/status`, which
+/// is what makes it worth reporting at all: sampling RSS at exit would
+/// miss the spike that matters.
+fn peak_rss_mib() -> Option<f64> {
+    let s = std::fs::read_to_string("/proc/self/status").ok()?;
+    let line = s.lines().find(|l| l.starts_with("VmHWM:"))?;
+    let kb: f64 = line.split_whitespace().nth(1)?.parse().ok()?;
+    Some(kb / 1024.0)
+}
+
+/// Host speed probe: a fixed, deterministic mixed ALU + random-access
+/// workload, timed on one thread.
+///
+/// Absolute games/sec is only comparable between runs on the *same class of
+/// host*. Identical engine code read 12.39 games/s on one routine box and
+/// 9.64 on another — a 22 % gap that looks exactly like a regression and
+/// isn't. The committed baseline records this probe next to the throughput
+/// numbers so the next run can tell the two apart before it goes hunting.
+/// Compare `host_calib_ms` first; scale the throughput comparison by it, or
+/// re-measure both sides in one sitting (always the better answer).
+fn host_calib_ms() -> f64 {
+    // 4 MiB of u64 — past L2 on the boxes this runs on, so the loop pays
+    // real memory latency the way the engine's pointer-chasing does, not
+    // just ALU throughput.
+    const N: usize = 1 << 19;
+    let mut buf: Vec<u64> = (0..N as u64).collect();
+    let t = std::time::Instant::now();
+    let mut x: u64 = 0x2545_F491_4F6C_DD1D;
+    let mut acc: u64 = 0;
+    for _ in 0..20_000_000u32 {
+        x ^= x << 13;
+        x ^= x >> 7;
+        x ^= x << 17;
+        let i = (x as usize) & (N - 1);
+        acc = acc.wrapping_add(buf[i]);
+        buf[i] = acc;
+    }
+    std::hint::black_box((acc, buf));
+    t.elapsed().as_secs_f64() * 1000.0
+}
+
+/// CPU model string from `/proc/cpuinfo`, for the same reason as
+/// [`host_calib_ms`]. Coarse — cloud VMs often report a generic model — so
+/// it's a hint, not the measurement.
+fn host_cpu_model() -> String {
+    std::fs::read_to_string("/proc/cpuinfo")
+        .ok()
+        .and_then(|s| {
+            s.lines()
+                .find(|l| l.starts_with("model name"))
+                .and_then(|l| l.split_once(':'))
+                .map(|(_, v)| v.trim().to_string())
+        })
+        .unwrap_or_else(|| "unknown".to_string())
+}
+
 /// The committed throughput configuration. `--bench` pins every knob that
 /// moves the numbers so two runs on different days measure the same work:
 /// the hand-built archetypes (cube/sealed fields are seed-dependent in

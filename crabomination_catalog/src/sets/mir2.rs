@@ -954,7 +954,7 @@ pub fn waiting_in_the_weeds() -> CardDefinition {
         cost(&[generic(1), g(), g()]),
         Effect::EachPlayerCreatesTokenPerControlled {
             filter: R::HasLandType(LandType::Forest).and(R::Untapped),
-            definition: TokenDefinition {
+            definition: Box::new(TokenDefinition {
                 name: "Cat".into(),
                 power: 1,
                 toughness: 1,
@@ -965,7 +965,7 @@ pub fn waiting_in_the_weeds() -> CardDefinition {
                     ..Default::default()
                 },
                 ..Default::default()
-            },
+            }),
         },
     )
 }
@@ -998,7 +998,7 @@ pub fn carrion() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::XFromCost,
-                definition: TokenDefinition {
+                definition: Box::new(TokenDefinition {
                     name: "Insect".into(),
                     power: 0,
                     toughness: 1,
@@ -1009,7 +1009,7 @@ pub fn carrion() -> CardDefinition {
                         ..Default::default()
                     },
                     ..Default::default()
-                },
+                }),
             },
         )
     }

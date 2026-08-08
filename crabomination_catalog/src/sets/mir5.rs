@@ -707,7 +707,7 @@ pub fn basalt_golem() -> CardDefinition {
                     Effect::CreateToken {
                         who: PlayerRef::DefendingPlayer,
                         count: Value::ONE,
-                        definition: TokenDefinition {
+                        definition: Box::new(TokenDefinition {
                             name: "Wall".into(),
                             power: 0,
                             toughness: 2,
@@ -718,7 +718,7 @@ pub fn basalt_golem() -> CardDefinition {
                                 ..Default::default()
                             },
                             ..Default::default()
-                        },
+                        }),
                     },
                 ])),
             },

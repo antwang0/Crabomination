@@ -1095,7 +1095,7 @@ pub fn tidal_wave() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: TokenDefinition {
+                definition: Box::new(TokenDefinition {
                     name: "Wall".into(),
                     power: 5,
                     toughness: 5,
@@ -1107,7 +1107,7 @@ pub fn tidal_wave() -> CardDefinition {
                         ..Default::default()
                     },
                     ..Default::default()
-                },
+                }),
             },
             Effect::SacrificeLastCreatedTokensAtNextEndStep,
         ]),
@@ -1122,7 +1122,7 @@ pub fn goblin_scouts() -> CardDefinition {
         Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::Const(3),
-            definition: TokenDefinition {
+            definition: Box::new(TokenDefinition {
                 name: "Goblin Scout".into(),
                 power: 1,
                 toughness: 1,
@@ -1134,7 +1134,7 @@ pub fn goblin_scouts() -> CardDefinition {
                     ..Default::default()
                 },
                 ..Default::default()
-            },
+            }),
         },
     )
 }

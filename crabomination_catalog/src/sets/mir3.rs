@@ -679,7 +679,7 @@ pub fn jungle_patrol() -> CardDefinition {
                 effect: Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::ONE,
-                    definition: TokenDefinition {
+                    definition: Box::new(TokenDefinition {
                         name: "Wood".into(),
                         power: 0,
                         toughness: 1,
@@ -691,7 +691,7 @@ pub fn jungle_patrol() -> CardDefinition {
                             ..Default::default()
                         },
                         ..Default::default()
-                    },
+                    }),
                 },
                 ..Default::default()
             },

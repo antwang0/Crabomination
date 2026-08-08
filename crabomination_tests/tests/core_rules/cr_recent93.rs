@@ -23,13 +23,13 @@ fn bear_token(who: PlayerRef) -> Effect {
     Effect::CreateToken {
         who,
         count: Value::ONE,
-        definition: TokenDefinition {
+        definition: Box::new(TokenDefinition {
             name: "Bear".into(),
             power: 2,
             toughness: 2,
             card_types: vec![crabomination::card::CardType::Creature],
             ..Default::default()
-        },
+        }),
     }
 }
 
