@@ -69,6 +69,7 @@ pub type SnapshotSink = Arc<Mutex<SnapshotSinkState>>;
 pub mod mcts;
 pub mod bot;
 pub mod encode;
+pub mod leaf_capture;
 pub mod net_eval;
 pub mod lobby;
 mod replay;

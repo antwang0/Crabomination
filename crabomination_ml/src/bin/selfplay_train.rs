@@ -179,6 +179,14 @@ struct Args {
     /// and the heuristic evaluation as *predictors of the winner* on the
     /// same positions. Requires `--use-best`.
     calibrate: Option<usize>,
+    /// Diagnostic mode: like `--calibrate`, but scored on the *simulated
+    /// leaves* the searches actually evaluate (captured via
+    /// `server::leaf_capture`) alongside the snapshot positions from the
+    /// same games. This is the direct test of the last standing
+    /// explanation for "better predictor, worse pilot": a net that holds
+    /// its edge on snapshots and loses it on sim leaves would produce
+    /// exactly that pattern while every other instrument reads fine.
+    calibrate_leaves: Option<usize>,
 }
 
 fn parse_args() -> Args {
@@ -200,6 +208,7 @@ fn parse_args() -> Args {
         gate_builder: None,
         gate_builder_v2: None,
         calibrate: None,
+        calibrate_leaves: None,
         pairwise: None,
         use_deck_best: None,
         seed_emb: None,
@@ -235,6 +244,9 @@ fn parse_args() -> Args {
             "--seed" => a.seed = val().parse().expect("--seed"),
             "--use-best" => a.use_best = Some(PathBuf::from(val())),
             "--calibrate" => a.calibrate = Some(val().parse().expect("--calibrate")),
+            "--calibrate-leaves" => {
+                a.calibrate_leaves = Some(val().parse().expect("--calibrate-leaves"))
+            }
             "--pairwise" => a.pairwise = Some(val().parse().expect("--pairwise")),
             "--use-deck-best" => a.use_deck_best = Some(PathBuf::from(val())),
             "--seed-emb" => a.seed_emb = Some(PathBuf::from(val())),
@@ -614,6 +626,10 @@ fn main() {
     }
     if let Some(games) = args.calibrate {
         calibrate(&args, &vocab, games);
+        return;
+    }
+    if let Some(games) = args.calibrate_leaves {
+        calibrate_leaves(&args, &vocab, games);
         return;
     }
     if let Some(games) = args.pairwise {
@@ -1122,6 +1138,131 @@ fn calibrate(args: &Args, vocab: &Vocab, games: usize) {
         "  {:.1}% of positions score outside [0.05, 0.95] — the search cannot rank lines \
          inside a saturated band",
         100.0 * extreme as f64 / obs.len() as f64
+    );
+}
+
+/// Score net and heuristic on the positions the search *consumes* —
+/// simulated leaves — against the snapshot positions from the same games.
+///
+/// Ground truth for a leaf is the real game's winner from the evaluating
+/// seat's perspective: the same label snapshots carry, applied to the
+/// hypothetical positions the search ranked while playing that game. The
+/// heuristic's temperature is fitted per distribution, so each evaluator
+/// is scored as the best forecast it can support on that set.
+fn calibrate_leaves(args: &Args, vocab: &Vocab, games: usize) {
+    let best = args.use_best.as_ref().expect("--calibrate-leaves needs --use-best WEIGHTS");
+    let cfg = net_config(args, vocab.size());
+    let mut trainer = Trainer::new(&cfg, args.lr).expect("trainer init");
+    trainer.load(best).expect("load weights (match --attn/width flags to the checkpoint)");
+
+    // (net p, heuristic score, result, turn)
+    let mut leaves: Vec<(f32, f32, f32, u16)> = Vec::new();
+    let mut snaps: Vec<(f32, f32, f32, u16)> = Vec::new();
+    crabomination::server::leaf_capture::set_enabled(true);
+    let mut rng = StdRng::seed_from_u64(args.seed ^ 0x1EAF);
+    for n in 0..games as u64 {
+        let salt =
+            |k: u64| args.seed ^ n.wrapping_mul(0x9E37_79B9_7F4A_7C15).wrapping_add(k * 0x1EA);
+        let pool_a = sealed_pool(salt(1));
+        let pool_b = sealed_pool(salt(2));
+        let deck_a = heuristic_sealed_build(&pool_a, salt(3));
+        let deck_b = heuristic_sealed_build(&pool_b, salt(4));
+        let template = sealed_game_template(&deck_a, &deck_b);
+        let rec = play_recorded_game(
+            &template,
+            [EvalWeights::default(), EvalWeights::default()],
+            rng.random_range(0..u64::MAX),
+            50_000,
+            vocab,
+        );
+        let captured = crabomination::server::leaf_capture::drain();
+        let Some(winner) = rec.winner else { continue };
+
+        let leaf_rows: Vec<TrainRow> = captured
+            .iter()
+            .map(|(state, _, _, _)| TrainRow {
+                state: state.clone(),
+                win: 0.0,
+                life_diff: 0.0,
+                game_len: 0.0,
+                traj: 0,
+                ply: 0,
+                aux: [0.0; crabomination_nn::AUX_FEATS],
+            })
+            .collect();
+        let refs: Vec<&TrainRow> = leaf_rows.iter().collect();
+        let preds = trainer.predict_win_batch(&refs, 512).expect("leaf forward");
+        for ((_, heur, seat, turn), p) in captured.iter().zip(preds) {
+            let y = if *seat == winner { 1.0 } else { 0.0 };
+            leaves.push((p, *heur as f32, y, *turn as u16));
+        }
+
+        let refs: Vec<&TrainRow> = rec.rows.iter().collect();
+        let preds = trainer.predict_win_batch(&refs, 512).expect("snap forward");
+        for ((row, h), p) in rec.rows.iter().zip(&rec.heur).zip(preds) {
+            snaps.push((p, *h as f32, row.win, row.ply));
+        }
+    }
+    crabomination::server::leaf_capture::set_enabled(false);
+    if leaves.len() < 500 || snaps.len() < 500 {
+        eprintln!(
+            "calibrate-leaves: only {} leaves / {} snapshots — not enough to say anything",
+            leaves.len(),
+            snaps.len()
+        );
+        return;
+    }
+
+    let fit_t = |obs: &[(f32, f32, f32, u16)]| {
+        let (mut best_t, mut best_ll) = (1.0f32, f32::INFINITY);
+        for k in 0..60 {
+            let t = 2.0f32.powf(k as f32 / 4.0);
+            let ll = log_loss(obs.iter().map(|&(_, h, y, _)| (sigmoid(h / t), y)));
+            if ll < best_ll {
+                best_ll = ll;
+                best_t = t;
+            }
+        }
+        best_t
+    };
+    let score = |name: &str, obs: &[(f32, f32, f32, u16)]| -> (f32, f32) {
+        let t = fit_t(obs);
+        let n_auc = auc(obs.iter().map(|&(p, _, y, _)| (p, y)));
+        let h_auc = auc(obs.iter().map(|&(_, h, y, _)| (h, y)));
+        let n_ll = log_loss(obs.iter().map(|&(p, _, y, _)| (p, y)));
+        let h_ll = log_loss(obs.iter().map(|&(_, h, y, _)| (sigmoid(h / t), y)));
+        println!(
+            "  {name:<11} {:>7}  net {n_auc:.4} vs heur {h_auc:.4}  delta {:+.4}   LL {n_ll:.4} vs {h_ll:.4}",
+            obs.len(),
+            n_auc - h_auc,
+        );
+        (n_auc, h_auc)
+    };
+
+    println!("sim-leaf calibration: {games} games, {} leaves, {} snapshots", leaves.len(), snaps.len());
+    let (sn, sh) = score("snapshots", &snaps);
+    let (ln_, lh) = score("sim leaves", &leaves);
+    // The leaf set skews later than snapshots (searches run every turn but
+    // leaves pile up on big boards), so also show the leaf strata: a
+    // mismatch confined to one phase reads differently from a global one.
+    let early: Vec<_> = leaves.iter().copied().filter(|o| o.3 <= 6).collect();
+    let late: Vec<_> = leaves.iter().copied().filter(|o| o.3 > 6).collect();
+    if early.len() >= 500 {
+        score("leaves t1-6", &early);
+    }
+    if late.len() >= 500 {
+        score("leaves t7+", &late);
+    }
+    let (ds, dl) = (sn - sh, ln_ - lh);
+    println!(
+        "verdict: net-minus-heuristic AUC is {ds:+.4} on snapshots and {dl:+.4} on sim leaves — {}",
+        if dl < ds * 0.5 {
+            "the edge shrinks by more than half off-distribution; the mismatch hypothesis is SUPPORTED"
+        } else if dl < ds {
+            "the edge shrinks but survives; a partial mismatch at most"
+        } else {
+            "the edge holds on the positions the search consumes; the mismatch hypothesis is REFUTED"
+        }
     );
 }
 

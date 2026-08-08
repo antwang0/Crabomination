@@ -58,6 +58,51 @@ only stays dead while the reasoning that killed it is readable.
   stratum both plays and benches reports **no** within-archetype number
   rather than passing the marginal off as one. `recommend_pool` prints
   `within` first and labels `raw` as the confound.
+- 🔴 **Round 13 — both survivors fall, and the paradox is now fully
+  unexplained.** Two measurements, two seeds each.
+
+  **The sim-leaf mismatch hypothesis is REFUTED.** `--calibrate-leaves`
+  (via `server::leaf_capture`, hooks at all four search leaf sites)
+  scores net and heuristic on the *simulated* positions the searches
+  actually rank, labelled by the real game's winner — the direct test of
+  explanation 3, the last one standing. The edge does not shrink
+  off-distribution; it holds or grows:
+
+  | net − heur AUC | snapshots | sim leaves |
+  |---|---|---|
+  | seed 43 | +0.0202 | +0.0211 |
+  | seed 97 | +0.0452 | +0.0519 |
+
+  (~5 600 leaves and ~30 000 snapshots per seed from the same 300 games;
+  the net's absolute AUC on leaves is 0.84–0.85, *better* than on
+  snapshots.) Every mechanistic explanation proposed for "strictly better
+  predictor, strictly worse pilot" has now been tested and refuted:
+  local discrimination (net is better), manufactured noise (quantisation
+  moved nothing), memorised checkpoints (~4 pts, not the gap),
+  saturation (collapsed 4×, still loses), late-game-carried AUC
+  (inverted), and distribution mismatch (this entry). What remains is
+  not a measurement artifact but something structural — the leading
+  candidate being label self-consistency: both evaluators are judged at
+  predicting outcomes of games *played by heuristic-maximising pilots*,
+  a fixed point the heuristic is definitionally consistent with and the
+  net can only approximate from outside. If that is the mechanism, no
+  calibration can see it, and the test is training on net-piloted games
+  (`--use-best` self-play) so the net's labels come from its own play.
+
+  **The ply-scheduled blend is a null.** The one design
+  three rounds of stratified calibration pointed at: the net's predictive
+  edge peaks at ply 8–11 and vanishes by ply 32+, so `netb-ply`
+  (`net_eval_blend_ply`) scales the blend-300 bias by turn — full through
+  turn 5, linear to zero at turn 12 — spending the net's voice only where
+  it measurably knows more. Gated 1 200 paired sealed-mirror games per
+  cell, two seeds: **47.9 % [46.3, 49.6] / 49.1 % [47.6, 50.6] vs `gang`**
+  and **49.0 % [47.5, 50.5] / 49.4 % [48.0, 50.8] vs constant
+  `net-blend300`** — the taper is at best neutral against the constant
+  blend it modifies, and the pair loses to the default outright on one
+  seed. A predictive edge concentrated in the contested phase still does
+  not convert to wins through a value-bias blend; whatever the bias tilts
+  in the opening is not the thing the search needed help with. The
+  profile stays as a measured control (`netb-ply`), not a live candidate.
 - 🟡 **Round 12 — the fast loop is real; the quality levers were not.**
   Two halves, one replicated, one refuted by its own replication.
 
@@ -241,14 +286,12 @@ only stays dead while the reasoning that killed it is readable.
      follows its noise."* Quantising the output onto a 0.1 / 0.05 grid
      makes it tie exactly like the heuristic — and moves the win rate by
      less than a point in either direction. Refuted.
-  3. *Untested:* **distribution mismatch.** Every diagnostic samples the
-     snapshot cadence (turn start / postcombat main / end step), but the
-     search evaluates *simulated leaves* inside `simulate_attack_outcome`
-     — a distribution the net is neither trained on nor measured at. A
-     net better on snapshots and worse on sim leaves would produce
-     exactly this pattern, and every instrument built so far would show
-     the former while the gate measures the latter. Testable by pulling
-     calibration positions from inside the search.
+  3. *"Distribution mismatch: the search evaluates simulated leaves the
+     net is neither trained on nor measured at."* **REFUTED, round 13**
+     — `--calibrate-leaves` captured the leaves the searches rank and
+     the net's edge held or grew there on both seeds (+0.021 vs +0.020
+     and +0.052 vs +0.045 net-minus-heuristic AUC, leaves vs snapshots).
+     The net predicts *better* on the search's own distribution.
   4. **REFUTED, and inverted — the most useful thing round 11 found.**
      The proposal was: AUC pools every snapshot, late positions are
      already decided and numerous, so a net that is better late and worse

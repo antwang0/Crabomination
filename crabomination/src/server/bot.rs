@@ -184,6 +184,16 @@ pub struct EvalWeights {
     /// the position. A knob rather than a constant because the right
     /// loudness is a measurement (see the `net_eval_blend*` profiles).
     pub net_blend_scale: i32,
+    /// With [`net_blend_scale`](Self::net_blend_scale): scale the bias by
+    /// game phase — full weight through turn 5, linear to zero at turn
+    /// 12. The stratified calibration has shown three rounds running that
+    /// the net's edge over the heuristic peaks at ply 8–11 and decays to
+    /// nearly nothing by ply 32+ (both evaluations converge once counting
+    /// settles the board), so a constant blend spends the net's voice
+    /// exactly where it knows the least. The taper shape is fixed rather
+    /// than a knob: the schedule is the hypothesis under test, and knobs
+    /// multiply gate rounds.
+    pub net_blend_ply: bool,
     /// Sequence the land drop instead of taking the first land that
     /// covers the most missing colors. Two additions:
     ///
@@ -305,6 +315,7 @@ impl EvalWeights {
             attack_race_horizon: false,
             net_slot: 0,
             net_blend_scale: 0,
+            net_blend_ply: false,
             land_urgency: false,
             mull_quality: false,
             block_gang: false,
@@ -365,6 +376,7 @@ impl EvalWeights {
             attack_race_horizon: false,
             net_slot: 0,
             net_blend_scale: 0,
+            net_blend_ply: false,
             land_urgency: false,
             mull_quality: false,
             block_gang: false,
@@ -408,6 +420,7 @@ impl EvalWeights {
             attack_race_horizon: false,
             net_slot: 0,
             net_blend_scale: 0,
+            net_blend_ply: false,
             land_urgency: false,
             mull_quality: false,
             block_gang: false,
@@ -848,6 +861,14 @@ impl EvalWeights {
     /// net's bias can contribute.
     pub const fn net_eval_blend300() -> Self {
         Self { net_blend_scale: 300, ..Self::net_eval() }
+    }
+
+    /// [`net_eval_blend300`](Self::net_eval_blend300) with the phase
+    /// taper: the net speaks loudly in the opening it wins and goes
+    /// silent in the endgame it doesn't. Gate against `gang` for
+    /// adoption and against `net-blend300` to isolate the taper.
+    pub const fn net_eval_blend_ply() -> Self {
+        Self { net_blend_ply: true, ..Self::net_eval_blend300() }
     }
 
     /// The adopted default plus the searched block assignment.
@@ -3006,7 +3027,9 @@ fn settle_answer(
         }
         fuel = fuel.checked_sub(1)?;
     }
-    Some(eval_material(&g, seat, w))
+    let v = eval_material(&g, seat, w);
+    super::leaf_capture::maybe(&g, seat, v);
+    Some(v)
 }
 
 /// Judge a self-costly optional trigger by outcome: settle "yes" and "no"
@@ -6383,7 +6406,9 @@ fn simulate_attack_outcome_once(
             return None;
         }
     }
-    Some(eval_material(&g, seat, w))
+    let v = eval_material(&g, seat, w);
+    super::leaf_capture::maybe(&g, seat, v);
+    Some(v)
 }
 
 /// The spell a combat simulation lets the current priority holder cast —
@@ -6683,7 +6708,9 @@ fn simulate_block_outcome_once(
             return None;
         }
     }
-    Some(eval_material(&g, seat, w))
+    let v = eval_material(&g, seat, w);
+    super::leaf_capture::maybe(&g, seat, v);
+    Some(v)
 }
 
 fn pick_blocks(state: &GameState, seat: usize) -> Vec<(CardId, CardId)> {
@@ -8343,6 +8370,15 @@ fn first_damage_amount(effect: &Effect, x: u32) -> Option<i32> {
 /// per permanent, opponents' counted against), hand size (×2), and life.
 /// Deliberately coarse — it's compared between candidate *outcomes* of the
 /// same tick, so shared terms cancel and only the action's delta matters.
+/// Phase weight for the ply-scheduled blend: 1.0 through turn 5, linear
+/// to 0.0 at turn 12, matching where the stratified calibrations put the
+/// net's edge (peak ply 8–11 ≈ turns 3–4; gone by ply 32+ ≈ turn 11).
+fn ply_blend_factor(turn: u32) -> f32 {
+    const FULL_UNTIL: f32 = 5.0;
+    const ZERO_AT: f32 = 12.0;
+    ((ZERO_AT - turn as f32) / (ZERO_AT - FULL_UNTIL)).clamp(0.0, 1.0)
+}
+
 fn eval_material(state: &GameState, seat: usize, w: &EvalWeights) -> i32 {
     // The learned value net, when a profile asks for it and a net is
     // loaded. Undecided positions only: the heuristic's ±100 000·unit for
@@ -8361,7 +8397,10 @@ fn eval_material(state: &GameState, seat: usize, w: &EvalWeights) -> i32 {
             p
         };
         if w.net_blend_scale > 0 {
-            let bias = ((p - 0.5) * (w.net_blend_scale * w.unit) as f32) as i32;
+            let mut bias = ((p - 0.5) * (w.net_blend_scale * w.unit) as f32) as i32;
+            if w.net_blend_ply {
+                bias = (bias as f32 * ply_blend_factor(state.turn_number)) as i32;
+            }
             return eval_material_inner(state, seat, w, false) + bias;
         }
         return (p * 10_000.0) as i32;
@@ -8734,7 +8773,11 @@ fn score_settled_state(g: &GameState, seat: usize, w: &EvalWeights) -> Option<i3
         // falls back to the static rank.
         CombatSim::Incomplete => None,
         // Skipped leaves `sim` untouched, so scoring it is just scoring `g`.
-        CombatSim::Skipped | CombatSim::Completed => Some(eval_material(&sim, seat, w)),
+        CombatSim::Skipped | CombatSim::Completed => {
+            let v = eval_material(&sim, seat, w);
+            super::leaf_capture::maybe(&sim, seat, v);
+            Some(v)
+        }
     }
 }
 
@@ -9267,6 +9310,21 @@ pub fn eval_material_public(state: &GameState, seat: usize, w: &EvalWeights) -> 
 
 #[cfg(test)]
 mod tests {
+    use super::ply_blend_factor;
+
+    /// The taper is the hypothesis: full net voice through the opening
+    /// where its measured edge lives, silence by the turn the stratified
+    /// calibrations say both evaluations converge.
+    #[test]
+    fn ply_blend_factor_is_full_early_and_zero_late() {
+        assert_eq!(ply_blend_factor(0), 1.0);
+        assert_eq!(ply_blend_factor(5), 1.0);
+        let mid = ply_blend_factor(8);
+        assert!(mid > 0.0 && mid < 1.0, "{mid}");
+        assert_eq!(ply_blend_factor(12), 0.0);
+        assert_eq!(ply_blend_factor(30), 0.0);
+    }
+
     use super::*;
     use crate::catalog;
     use crate::game::GameState;
