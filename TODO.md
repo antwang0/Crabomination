@@ -16,23 +16,31 @@ reference and want their own triage pass):
 
 ## NEXT (handoff — rewrite each run, keep under 15 lines)
 
-Branch `claude/modern_decks`. Two consecutive ML/perf passes, no card work.
-`PERF.md` is the perf record: baseline, log, profile, candidate queue.
+Branch `claude/modern_decks`. Third ML/perf pass, no card work. `PERF.md` is
+the perf record; the tracker index at the top of this file is new.
 
-- **Perf**: bench now reads **12.39 games/s** system-alloc / **13.88 with
-  `--features mimalloc`** (idle box, 3 threads). Candidate 4 (allocator) is
-  done and opt-in; measure it at 16+ actors and make it default if the RSS
-  holds. Next up is candidate 1 (memoize the layer gather outside freeze
-  scopes — 52 % inclusive, blocked on invalidation) or the cheaper
-  candidate 2 (merge the ~50 battlefield passes). A release rebuild is
-  15–20 min, so budget two or three measured iterations.
-- **Determinism**: closed — three `rand::random::<u64>()` sites in
-  `effects/mod.rs` had been missed by the `rand::rng()` sweep and still drew
-  from the thread RNG. Grep for both spellings before assuming it stays shut.
-- **Trackers**: this file is ~9.5 k lines against the ~1 k target; the sweep
-  wants a triage pass from the card side (some "closed" sections still list
-  live approximations). No `ML_NOTES.md` yet.
-- **Cards**: the Mirage residue and every ⏳ below are untouched.
+- **Perf**: bench reads **14.49 games/s** (was 9.64 on this box at the start).
+  Layer-gather static-ability filter **+27.8 %**, mimalloc now default
+  **+21.9 %**, cumulative **+50.3 %**. Candidates 2 and 4 are closed. Fresh
+  callgrind at `67d6c549`: 23.5 G instructions for six games, down from 38.5 G.
+  **The layer system is no longer the bottleneck — cloning is**: allocator 24 %
+  + memcpy 8.8 % + `CardInstance::clone` 6.7 %. Pull candidate 1 (the
+  clone/checkpoint path) next; candidate 2 (flatten the 39 gather passes into
+  one `(card, static_ability)` pair list) is the cheap one.
+- **Measurement**: `--bench` prints `host_cpu` / `host_calib_ms`. This box swung
+  23 % run-to-run and the probe tracked it exactly, so **always alternate A/B in
+  one sitting** and check the probe before believing a baseline moved. Absolutes
+  from earlier runs do not compare. `--threads N` now warns when the job queue
+  can't fill N workers — `--games 120` minimum for an actor sweep.
+- **Trackers**: this file 774 lines, roadmap 917 — both under target.
+  `ENGINE_BACKLOG.md` / `CARD_BACKLOG.md` / `SHIPPED.md` are verbatim archives
+  and want a triage pass. Warning: a title-based sweep of the "<set> — closed"
+  and "Noticed this run (… closure)" sections is **not** safe — most of their
+  body is live residual approximations, not shipped history.
+- **Bugs**: nothing pulled this run. Top filed item is graveyard targets being
+  dropped on the `ActivateAbility` path (`CARD_BACKLOG.md`); `check_target_
+  legality` and the slot-0 requirement check both accept them, so the drop is
+  further in — no repro written yet.
 
 ## Environment note
 
