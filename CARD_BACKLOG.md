@@ -7,47 +7,24 @@ priority in the current ML phase; this is where it waits.
 
 ## Noticed this run (Mirage wave 5)
 
-- **Graveyard targets are dropped on the activated/triggered ability path.**
-  A *cast* spell can target a graveyard card (Fates Reversal's test does it
-  through `GameAction::CastSpell`), but the same `Target::Permanent(<gy card>)`
-  handed to `GameAction::ActivateAbility` never reaches the resolution — Hakim,
-  Loreweaver's Aura-recursion and Iridescent Drake's ETB both have to be tested
-  by resolving the effect directly. `Effect::AttachAuraFromGraveyardTo` is now
-  surfaced in `primary_target_filter` / `prefers_graveyard_target`, which was
-  one half of it; the remaining half is in the action layer's target
-  validation. ⏳
-  **Narrowed (read-only pass, no repro yet): it is _not_ the action layer.**
-  In `activate_ability_inner` a caller-supplied `target` clears
-  `check_target_legality`, clears the slot-0 `evaluate_requirement_static`
-  filter, skips the graveyard auto-bind block (that block is gated on
-  `target.is_none()`), and is handed to `TriggerPush::new(..).target(target)`
-  unmodified — `ability_target` is a clone of the same value, so the two can't
-  disagree. `randomize_single_target_on_stack()` runs right after the push and
-  *does* overwrite a single target from `enumerate_legal_targets_with_source`,
-  but it returns early unless a permanent with
-  `StaticEffect::RandomizeSingleTargets` is on the battlefield, so it is not
-  the culprit in an ordinary game. That puts the drop at **resolution**, in how
-  the effect consumes `StackItem::Trigger.target` — start at
-  `continue_trigger_resolution_with_source` and the `Selector`/`Target` reads
-  under it, not in `actions.rs`.
-  **Second read-only pass — four more paths ruled out. Don't re-derive these:**
-  (1) `check_target_legality_with_source` — a graveyard card misses
-  `battlefield_find` and takes the `else { … Ok(()) }` early return; only
-  `graveyard_cards_untargetable()` (Underworld Cerberus) rejects. Passes.
-  (2) the slot-0 `evaluate_requirement_static` gate in `activate_ability_inner`
-  — its `_` arm looks the card up in graveyards/exile/stack/library/hand
-  (`eval.rs:3285`), and both leaves of Hakim's / Iridescent Drake's filter
-  (`HasEnchantmentSubtype(Aura).and(InGraveyard)`) read fields that exist off
-  the battlefield. Passes.
-  (3) `ability_target_has_protection` — `computed_permanent` is `None` off the
-  battlefield, so it returns false. Passes.
-  (4) resolution — the CR 608.2b re-check calls the *same*
-  `evaluate_requirement_static`; `Selector::TargetFiltered` reads
-  `ctx.targets[slot]` verbatim; and `AttachAuraFromGraveyardTo` re-checks the
-  graveyard itself before moving the card.
-  A repro test now exists —
-  `classic_sets/mir.rs::hakim_takes_a_graveyard_aura_target_through_the_action_layer`
-  — drive the diagnosis from its actual failure, not from more reading.
+- ✅ **"Graveyard targets are dropped on the activated/triggered ability path"
+  — NOT A BUG. Closed.** A repro driven through `GameAction::ActivateAbility`
+  (`classic_sets/mir.rs::hakim_takes_a_graveyard_aura_target_through_the_action_layer`)
+  shows the target reaching the stack item intact
+  (`Trigger activated=true target=Some(Permanent(..))`) and passing the CR
+  608.2b re-check at resolution (`And(HasEnchantmentSubtype(Aura), InGraveyard)`
+  → true). Nothing on that path drops it.
+  What actually made the two cards look broken was **CR 704.5m**: both tests
+  dressed Hakim in *Mind Harness*, whose enchant restriction is "creature
+  that's red or green", and Hakim is blue — so the Aura came back attached to
+  an illegal host and state-based actions correctly binned it. The
+  direct-`resolve_effect` idiom the old tests used never runs SBAs, which is
+  the only reason they looked green. Using a plain "enchant creature" Aura
+  (Ritual of Steel) the action-layer path passes.
+  *Lesson for the next such report: a `resolve_effect`-only test is not
+  evidence that the action layer is broken — it is evidence that SBAs were
+  skipped.*
+
 - **`MayPay` can't reach lands, so upkeep "pay {4}" riders need floated mana.**
   Purgatory's rent is unpayable unless the controller happens to have mana in
   the pool when the trigger resolves. The comment calls this deliberate ("mana

@@ -1834,10 +1834,11 @@ fn hakim_wears_and_sheds_graveyard_auras() {
     let mut g = two_player_game();
     let hakim = ready(&mut g, 0, catalog::hakim_loreweaver());
     let aura = g.add_card_to_graveyard(0, catalog::mind_harness());
-    // Resolved directly: a graveyard card doesn't survive the action layer's
-    // target plumbing (TODO.md — "Graveyard targets are dropped on the
-    // activated/triggered ability path"), the same idiom the Iridescent Drake
-    // test uses.
+    // Resolved directly, which skips SBAs — deliberate here, because Mind
+    // Harness enchants "creature that's red or green" and Hakim is blue, so
+    // CR 704.5m would bin the Aura. The action-layer path is covered by
+    // `hakim_takes_a_graveyard_aura_target_through_the_action_layer`, which
+    // uses a legal host; graveyard targets are *not* dropped there.
     let ctx = crabomination::game::effects::EffectContext::for_ability(
         hakim,
         0,
@@ -1853,14 +1854,24 @@ fn hakim_wears_and_sheds_graveyard_auras() {
     assert!(g.battlefield_find(aura).is_none(), "Auras destroyed");
 }
 
-/// Repro for the filed "graveyard targets are dropped on the activated-ability
-/// path" bug: the same dress-up, driven through `GameAction::ActivateAbility`
-/// with the graveyard Aura as the slot-0 target.
+/// Hakim really does take a graveyard Aura as the slot-0 target of
+/// `GameAction::ActivateAbility` — the whole action-layer path, not a direct
+/// `resolve_effect`.
+///
+/// This started as a repro for the filed "graveyard targets are dropped on the
+/// activated/triggered ability path" bug. They are not: the target reaches the
+/// stack item intact and passes the CR 608.2b re-check at resolution. What the
+/// original repro actually hit was CR 704.5m — it used Mind Harness, whose
+/// enchant restriction is "creature that's red or green", against a *blue*
+/// Hakim, so the Aura came back attached to an illegal host and state-based
+/// actions correctly binned it. `hakim_wears_and_sheds_graveyard_auras` only
+/// looks fine because resolving the effect directly never runs SBAs.
 #[test]
 fn hakim_takes_a_graveyard_aura_target_through_the_action_layer() {
     let mut g = two_player_game();
     let hakim = ready(&mut g, 0, catalog::hakim_loreweaver());
-    let aura = g.add_card_to_graveyard(0, catalog::mind_harness());
+    // A plain "enchant creature" Aura, so Hakim is a legal host (CR 704.5m).
+    let aura = g.add_card_to_graveyard(0, catalog::ritual_of_steel());
     // The ability is upkeep-only, on your turn, and only while Hakim is bare.
     g.step = TurnStep::Upkeep;
     g.active_player_idx = 0;

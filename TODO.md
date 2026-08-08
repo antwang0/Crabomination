@@ -34,10 +34,14 @@ Branch `claude/modern_decks`. Fifth pass, no card work. `PERF.md` is the record.
 - **Re-profile is still owed** — see the note atop "Perf candidates". Budget
   the ~25 min cold `--profile profiling` build *first*; this run lost that
   build to a container restart and picked its target by reading instead.
-- **Bugs**: the graveyard-target drop now has a real repro
-  (`classic_sets/mir.rs::hakim_takes_a_graveyard_aura_target_through_the_action_layer`).
-  Four read paths were ruled out by inspection — don't re-derive them, the
-  list is in the `CARD_BACKLOG.md` entry.
+- **Bugs**: the top filed item — "graveyard targets are dropped on the
+  activated/triggered ability path" — is **closed as not-a-bug**. The target
+  reaches the stack intact and passes the CR 608.2b re-check; the two cards
+  looked broken because their tests attached Mind Harness ("enchant creature
+  that's red or green") to a *blue* Hakim and CR 704.5m binned it, which only
+  went unnoticed because a direct `resolve_effect` skips SBAs. See
+  `CARD_BACKLOG.md`. **Backlog now has no confirmed engine bug at the top —
+  re-mine `audit_incomplete` / `audit_stubs` to replenish it.**
 - **Trackers**: TODO 787, roadmap 660 (compacted this run), `PERF.md` ~330.
 
 ## Environment note
