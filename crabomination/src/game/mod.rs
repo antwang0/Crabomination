@@ -7375,6 +7375,32 @@ impl GameState {
         crate::game::layers::apply_layers(&self.battlefield, &self.gather_continuous_effects())
     }
 
+    /// CR 113.10b — the battlefield permanents a `RemoveAllAbilities`
+    /// continuous effect currently strips (Turn to Frog, Lignify).
+    ///
+    /// The trigger dispatcher wants only this one bit per permanent, and
+    /// running a whole-board layer pass for it was ~10 % of simulator
+    /// instructions. A board with no strip effect in scope — the
+    /// overwhelming majority — answers "nothing is stripped" from the
+    /// gathered effect set alone, and only the rare board that has one
+    /// pays for the layer pass.
+    pub(crate) fn permanents_with_abilities_removed(&self) -> Vec<CardId> {
+        fn strip(state: &GameState, fx: &[ContinuousEffect]) -> Vec<CardId> {
+            if !fx.iter().any(|e| matches!(e.modification, Modification::RemoveAllAbilities)) {
+                return Vec::new();
+            }
+            crate::game::layers::apply_layers(&state.battlefield, fx)
+                .into_iter()
+                .filter(|c| c.lost_all_abilities)
+                .map(|c| c.id)
+                .collect()
+        }
+        if let Some(fx) = self.frozen_effects() {
+            return strip(self, &fx);
+        }
+        strip(self, &self.gather_continuous_effects())
+    }
+
     /// Run `f` with the gathered continuous-effect set memoized, so every
     /// `computed_permanent` / `compute_battlefield` call inside reuses one
     /// gather instead of rebuilding the full effect set per call. Sound by
@@ -15171,12 +15197,11 @@ impl GameState {
         // { also_dies }` static is in play. (Self-death + SBA paths gate
         // separately in `stack.rs`.)
         let dies_suppressed = crate::game::actions::creature_dies_triggers_suppressed(self);
-        // Resolve per-permanent layer state once so the dispatcher can
-        // honour `Modification::RemoveAllAbilities` (Turn to Frog,
+        // Which permanents have lost their abilities (Turn to Frog,
         // Mercurial Transformation, Lignify) — printed triggered abilities
         // are skipped while a strip-abilities effect is in scope per CR
-        // 113.10b.
-        let computed = self.compute_battlefield();
+        // 113.10b. Empty (and free) on a board with no such effect.
+        let stripped_ids = self.permanents_with_abilities_removed();
         // CR 603.3d — keys for `once_per_turn` triggers that fire in this
         // batch; merged into the turn-scoped set after the battlefield walk
         // (deferred so we don't mutate `self` mid-immutable-borrow).
@@ -15185,11 +15210,7 @@ impl GameState {
         // `EventSpec::per_subject_cap` fires in this batch (deferred merge).
         let mut capped_fired_this_batch: Vec<(CardId, CardId)> = Vec::new();
         for card in &self.battlefield {
-            let stripped = computed
-                .iter()
-                .find(|c| c.id == card.id)
-                .map(|c| c.lost_all_abilities)
-                .unwrap_or(false);
+            let stripped = stripped_ids.contains(&card.id);
             // Walk printed triggered abilities AND any transient
             // granted_triggers_eot for this permanent (Root Manipulation,
             // Rabid Attack-style "creatures gain '…trigger…' EOT"). Printed
