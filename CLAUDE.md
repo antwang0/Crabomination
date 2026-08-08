@@ -5,6 +5,21 @@ MTG engine (Rust) targeting full-card coverage plus ML training; Bevy client.
 ## Builds
 
 - Always use debug builds. Never pass `--release` unless explicitly asked.
+- **Carve-out: benchmarks and profiles are optimized builds.** A debug engine
+  runs at opt-level 0, so any number measured there describes the compiler,
+  not the code. Throughput runs use `--release`
+  (`cargo run --release --bin bot_ladder -- --bench`); profiling uses
+  `--profile profiling` (release + full debuginfo + frame pointers). Numbers
+  from any other profile don't go in `PERF.md`.
+
+## Performance
+
+`PERF.md` is the record: a committed bench baseline, a before/after row per
+optimization, and a "Perf candidates" queue. Every perf change lands with its
+numbers and how they were measured; no measured win means revert or re-justify
+as a correctness/clarity change. Golden traces
+(`crabomination_tests/tests/core_rules/golden_trace.rs`) must stay identical
+across a behaviour-preserving change — a commit that moves one says why.
 
 ## Test suite conventions (`crabomination_tests`)
 
