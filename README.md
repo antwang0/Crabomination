@@ -24,4 +24,11 @@ Feature status and planning live in the tracking docs:
 
 - [`FEATURE_ROADMAP.md`](FEATURE_ROADMAP.md) — prioritized engine/UX/infra capabilities.
 - [`CUBE_FEATURES.md`](CUBE_FEATURES.md), [`DECK_FEATURES.md`](DECK_FEATURES.md), [`STRIXHAVEN2.md`](STRIXHAVEN2.md) — per-card implementation status.
-- [`TODO.md`](TODO.md) — engine approximations log and rules-coverage audit.
+- [`TODO.md`](TODO.md) — the working handoff: `NEXT`, plus the open engine /
+  bot / infra backlog.
+- [`PERF.md`](PERF.md) — simulator perf record: bench baseline, before/after
+  log, profile of record, candidate queue.
+- [`ML_NOTES.md`](ML_NOTES.md) — bot/net experiment history and documented
+  dead ends.
+- [`ENGINE_BACKLOG.md`](ENGINE_BACKLOG.md), [`CARD_BACKLOG.md`](CARD_BACKLOG.md),
+  [`SHIPPED.md`](SHIPPED.md) — archives split out of the trackers for size.
