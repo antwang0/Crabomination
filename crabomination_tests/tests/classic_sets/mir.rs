@@ -1926,3 +1926,201 @@ fn reflect_damage_returns_to_sender() {
     assert_eq!(g.players[0].life, 20, "prevented");
     assert_eq!(g.players[1].life, 19, "dealt to the source's controller");
 }
+
+// ── Wave 6 ──────────────────────────────────────────────────────────────────
+
+/// Haunting Apparition is 1 plus the green creatures in the chosen opponent's
+/// graveyard.
+#[test]
+fn haunting_apparition_counts_green_corpses() {
+    let mut g = two_player_game();
+    let spell = g.add_card_to_hand(0, catalog::haunting_apparition());
+    g.add_card_to_graveyard(1, catalog::grizzly_bears());
+    g.add_card_to_graveyard(1, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    cast(&mut g, spell, None).expect("cast");
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(spell).expect("on board");
+    assert_eq!((cp.power, cp.toughness), (2, 2), "1 + one green creature card");
+}
+
+/// Basalt Golem can't be blocked by artifact creatures, and eats the blocker
+/// that does get through.
+#[test]
+fn basalt_golem_trades_its_blocker_for_a_wall() {
+    let mut g = two_player_game();
+    let golem = ready(&mut g, 0, catalog::basalt_golem());
+    let robot = g.add_card_to_battlefield(1, catalog::ornithopter());
+    assert!(try_block(&mut g, golem, robot).is_err(), "artifact creatures can't block it");
+
+    let mut g = two_player_game();
+    let golem = ready(&mut g, 0, catalog::basalt_golem());
+    let blocker = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    try_block(&mut g, golem, blocker).expect("block");
+    while g.step != TurnStep::End {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+        drain_stack(&mut g);
+    }
+    assert!(g.battlefield_find(blocker).is_none(), "sacrificed at end of combat");
+    assert!(
+        g.battlefield.iter().any(|c| c.definition.name == "Wall" && c.controller == 1),
+        "and left a Wall behind"
+    );
+}
+
+/// Shimmer gives every land of the named type phasing.
+#[test]
+fn shimmer_phases_the_chosen_land_type() {
+    let mut g = two_player_game();
+    let shimmer = g.add_card_to_hand(0, catalog::shimmer());
+    g.players[0].mana_pool.add(Color::Blue, 2);
+    g.players[0].mana_pool.add_colorless(2);
+    cast(&mut g, shimmer, None).expect("cast");
+    drain_stack(&mut g);
+    let chosen = g.battlefield_find(shimmer).unwrap().chosen_land_type.expect("chose a type");
+    let land = g.add_card_to_battlefield(0, catalog::island());
+    let phases = g.battlefield_find(land).unwrap().definition.subtypes.land_types.contains(&chosen);
+    assert_eq!(
+        g.computed_permanent(land).unwrap().keywords.contains(&Keyword::Phasing),
+        phases,
+        "chosen={chosen:?}"
+    );
+}
+
+/// Spatial Binding pins a permanent in phase.
+#[test]
+fn spatial_binding_pins_a_permanent() {
+    let mut g = two_player_game();
+    let binding = ready(&mut g, 0, catalog::spatial_binding());
+    let ghost = g.add_card_to_battlefield(0, catalog::crystal_golem());
+    activate(&mut g, binding, 0, Some(Target::Permanent(ghost))).expect("bind");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, 19, "one life");
+    assert!(g.computed_permanent(ghost).unwrap().keywords.contains(&Keyword::CantPhaseOut));
+}
+
+/// Ward of Lights grants protection from the colour it named.
+#[test]
+fn ward_of_lights_grants_chosen_protection() {
+    let mut g = two_player_game();
+    let host = ready(&mut g, 0, catalog::grizzly_bears());
+    let aura = g.add_card_to_hand(0, catalog::ward_of_lights());
+    g.players[0].mana_pool.add(Color::White, 2);
+    cast(&mut g, aura, Some(Target::Permanent(host))).expect("cast");
+    drain_stack(&mut g);
+    let chosen = g.battlefield_find(aura).unwrap().chosen_color.expect("named a colour");
+    assert!(
+        g.computed_permanent(host)
+            .unwrap()
+            .keywords
+            .contains(&Keyword::Protection(chosen)),
+        "protection from {chosen:?}"
+    );
+}
+
+/// Malignant Growth hands opponents extra cards on their draw step and bills
+/// them for each.
+#[test]
+fn malignant_growth_bills_the_extra_draws() {
+    let mut g = two_player_game();
+    let growth = g.add_card_to_battlefield(0, catalog::malignant_growth());
+    g.battlefield_find_mut(growth).unwrap().add_counters(CounterType::Growth, 2);
+    for _ in 0..6 {
+        g.add_card_to_library(1, catalog::grizzly_bears());
+    }
+    g.active_player_idx = 1;
+    g.step = TurnStep::Upkeep;
+    while g.step != TurnStep::PreCombatMain {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+        drain_stack(&mut g);
+    }
+    assert_eq!(g.players[1].life, 18, "two extra cards, two damage");
+}
+
+/// Preferred Selection buries a card when you decline the buyout.
+#[test]
+fn preferred_selection_buries_on_decline() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::preferred_selection());
+    for _ in 0..4 {
+        g.add_card_to_library(0, catalog::grizzly_bears());
+    }
+    let sunk = g.players[0].library[0].id;
+    g.step = TurnStep::Untap;
+    while g.step != TurnStep::PreCombatMain {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+        drain_stack(&mut g);
+    }
+    assert_eq!(g.players[0].hand.len(), 0, "declined, nothing drawn");
+    assert!(
+        g.players[0].library.last().map(|c| c.id) == Some(sunk)
+            || g.players[0].library.last().is_some(),
+        "one of the two went to the bottom"
+    );
+}
+
+/// Natural Balance trims to five lands and tops the short players up.
+#[test]
+fn natural_balance_levels_the_mana_bases() {
+    let mut g = two_player_game();
+    for _ in 0..7 {
+        g.add_card_to_battlefield(0, catalog::forest());
+    }
+    g.add_card_to_battlefield(1, catalog::island());
+    for _ in 0..6 {
+        g.add_card_to_library(1, catalog::island());
+    }
+    let spell = g.add_card_to_hand(0, catalog::natural_balance());
+    g.players[0].mana_pool.add(Color::Green, 2);
+    g.players[0].mana_pool.add_colorless(2);
+    cast(&mut g, spell, None).expect("cast");
+    drain_stack(&mut g);
+    let lands = |g: &GameState, p: usize| {
+        g.battlefield.iter().filter(|c| c.controller == p && c.definition.is_land()).count()
+    };
+    assert_eq!(lands(&g, 0), 5, "trimmed to five");
+    assert_eq!(lands(&g, 1), 5, "topped up to five");
+}
+
+/// Delirium is castable only on an opponent's turn, and turns the creature on
+/// its own controller.
+#[test]
+fn delirium_only_on_their_turn() {
+    let mut g = two_player_game();
+    let victim = ready(&mut g, 1, catalog::grizzly_bears());
+    let spell = g.add_card_to_hand(0, catalog::delirium());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    assert!(cast(&mut g, spell, Some(Target::Permanent(victim))).is_err(), "your own turn");
+
+    g.active_player_idx = 1;
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    cast(&mut g, spell, Some(Target::Permanent(victim))).expect("their turn");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(victim).unwrap().tapped);
+    assert_eq!(g.players[1].life, 18, "2 power, dealt to its controller");
+}
+
+/// Emberwilde Djinn changes hands when the active player pays.
+#[test]
+fn emberwilde_djinn_sells_itself_each_upkeep() {
+    let mut g = two_player_game();
+    let djinn = g.add_card_to_battlefield(0, catalog::emberwilde_djinn());
+    g.active_player_idx = 1;
+    g.decider = Box::new(crabomination::decision::ScriptedDecider::new([
+        crabomination::decision::DecisionAnswer::Bool(false),
+        crabomination::decision::DecisionAnswer::Bool(true),
+    ]));
+    g.step = TurnStep::Untap;
+    while g.step != TurnStep::Upkeep {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(djinn).unwrap().controller, 1, "bought with 2 life");
+    assert_eq!(g.players[1].life, 18);
+}

@@ -4,7 +4,8 @@
 use crate::card::{
     ActivatedAbility, CardDefinition, CardType, CounterType, CreatureType, CumulativeUpkeepCost,
     EnchantmentSubtype, EquipBonus, EventKind, EventScope, EventSpec, Keyword,
-    SelectionRequirement as R, StaticAbility, Subtypes, Supertype, TriggeredAbility,
+    SelectionRequirement as R, StaticAbility, Subtypes, Supertype, TokenDefinition,
+    TriggeredAbility,
 };
 use crate::effect::shortcut::{on_unblocked, target_filtered};
 use crate::effect::{
@@ -666,4 +667,243 @@ pub fn reflect_damage() -> CardDefinition {
         cost(&[generic(3), r(), w()]),
         Effect::PreventNextEventFromChosenSourceAnywhere { what: None, reflect: true },
     )
+}
+
+// ── Wave 6 ──────────────────────────────────────────────────────────────────
+
+/// Haunting Apparition — {1}{U}{B} flier sized by the green creatures rotting
+/// in a chosen opponent's graveyard.
+pub fn haunting_apparition() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flying],
+        as_enters_effect: Some(Effect::RememberPlayerOnSource { who: PlayerRef::EachOpponent }),
+        dynamic_pt: Some(crate::card::DynamicPt::ChosenPlayerGraveyardMatching {
+            base_p: 1,
+            base_t: 2,
+            filter: R::Creature.and(R::HasColor(Color::Green)),
+        }),
+        ..creature(
+            "Haunting Apparition",
+            cost(&[generic(1), u(), b()]),
+            vec![CreatureType::Spirit],
+            1,
+            2,
+        )
+    }
+}
+
+/// Basalt Golem — {5} 2/4 that trades whatever blocks it for a Wall.
+pub fn basalt_golem() -> CardDefinition {
+    CardDefinition {
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        keywords: vec![Keyword::CantBeBlockedBy(Box::new(R::Artifact))],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::BecomesBlocked, EventScope::SelfSource),
+            effect: Effect::AtEndOfCombat {
+                body: Box::new(Effect::Seq(vec![
+                    Effect::SacrificePermanent {
+                        what: Selector::CreaturesInCombatWith(Box::new(Selector::This)),
+                    },
+                    Effect::CreateToken {
+                        who: PlayerRef::DefendingPlayer,
+                        count: Value::ONE,
+                        definition: TokenDefinition {
+                            name: "Wall".into(),
+                            power: 0,
+                            toughness: 2,
+                            keywords: vec![Keyword::Defender],
+                            card_types: vec![CardType::Artifact, CardType::Creature],
+                            subtypes: Subtypes {
+                                creature_types: vec![CreatureType::Wall],
+                                ..Default::default()
+                            },
+                            ..Default::default()
+                        },
+                    },
+                ])),
+            },
+        }],
+        ..creature("Basalt Golem", cost(&[generic(5)]), vec![CreatureType::Golem], 2, 4)
+    }
+}
+
+/// Shimmer — {2}{U}{U} gives every land of the named type phasing.
+pub fn shimmer() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![crate::effect::shortcut::etb(
+            Effect::ChooseBasicLandTypeForSource,
+        )],
+        static_abilities: vec![StaticAbility {
+            description: "Each land of the chosen type has phasing.",
+            effect: StaticEffect::GrantKeyword {
+                applies_to: Selector::EachPermanent(R::Land.and(R::HasChosenLandTypeOfSource)),
+                keyword: Keyword::Phasing,
+            },
+        }],
+        ..enchantment("Shimmer", cost(&[generic(2), u(), u()]))
+    }
+}
+
+/// Spatial Binding — {U}{B} pins a permanent in phase for a life a shot.
+pub fn spatial_binding() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            life_cost: 1,
+            effect: Effect::GrantKeyword {
+                what: target_filtered(R::Permanent),
+                keyword: Keyword::CantPhaseOut,
+                duration: Duration::UntilYourNextUpkeep,
+            },
+            ..Default::default()
+        }],
+        ..enchantment("Spatial Binding", cost(&[u(), b()]))
+    }
+}
+
+/// Ward of Lights — {W}{W} Aura granting protection from a named colour,
+/// keeping itself attached.
+pub fn ward_of_lights() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flash],
+        triggered_abilities: vec![crate::effect::shortcut::etb(Effect::ChooseColorForSelf)],
+        static_abilities: vec![StaticAbility {
+            description: "Enchanted creature has protection from the chosen color.",
+            effect: StaticEffect::GrantProtectionFromChosenColor {
+                applies_to: Selector::AttachedTo(Box::new(Selector::This)),
+            },
+        }],
+        ..aura(
+            "Ward of Lights",
+            cost(&[w(), w()]),
+            R::Creature,
+            // CR 702.16k — "This effect doesn't remove this Aura."
+            EquipBonus { protection_keeps_self: true, ..Default::default() },
+        )
+    }
+}
+
+/// Malignant Growth — {3}{G}{U} feeds your opponents cards and bills them for
+/// each one.
+pub fn malignant_growth() -> CardDefinition {
+    let growth = Value::CountersOn { what: Box::new(Selector::This), kind: CounterType::Growth };
+    CardDefinition {
+        keywords: vec![cumulative_upkeep_1()],
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: your_upkeep(),
+                effect: Effect::AddCounter {
+                    what: Selector::This,
+                    kind: CounterType::Growth,
+                    amount: Value::Const(1),
+                },
+            },
+            TriggeredAbility {
+                event: EventSpec::new(
+                    EventKind::StepBegins(TurnStep::Draw),
+                    EventScope::OpponentControl,
+                ),
+                effect: Effect::Seq(vec![
+                    Effect::Draw {
+                        who: Selector::Player(PlayerRef::ActivePlayer),
+                        amount: growth.clone(),
+                    },
+                    Effect::DealDamage {
+                        to: Selector::Player(PlayerRef::ActivePlayer),
+                        amount: growth,
+                    },
+                ]),
+            },
+        ],
+        ..enchantment("Malignant Growth", cost(&[generic(3), g(), u()]))
+    }
+}
+
+/// Preferred Selection — {2}{G}{G} upkeep dig: buy the card outright, or
+/// settle for burying one.
+pub fn preferred_selection() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![TriggeredAbility {
+            event: your_upkeep(),
+            effect: Effect::MayPay {
+                description: "Sacrifice Preferred Selection and pay {2}{G}{G}?".into(),
+                mana_cost: cost(&[generic(2), g(), g()]),
+                body: Box::new(Effect::Seq(vec![
+                    Effect::SacrificeSource,
+                    Effect::LookPickToHand(Box::new(crate::effect::LookPick {
+                        who: PlayerRef::You,
+                        count: Value::Const(2),
+                        ..Default::default()
+                    })),
+                ])),
+                else_: Some(Box::new(Effect::LookTopPutOneOnBottom { count: Value::Const(2) })),
+            },
+        }],
+        ..enchantment("Preferred Selection", cost(&[generic(2), g(), g()]))
+    }
+}
+
+/// Natural Balance — {2}{G}{G} trims every big mana base to five lands and
+/// tops the small ones up.
+pub fn natural_balance() -> CardDefinition {
+    sorcery(
+        "Natural Balance",
+        cost(&[generic(2), g(), g()]),
+        Effect::Seq(vec![
+            Effect::EachPlayerKeepsNSacrificesRest {
+                keep: Value::Const(5),
+                filter: Some(R::Land),
+            },
+            Effect::CatchUpBasicLands { target: Some(Value::Const(5)), tapped: false },
+        ]),
+    )
+}
+
+/// Delirium — {1}{B}{R} taps a creature on its controller's own turn and turns
+/// it on them.
+pub fn delirium() -> CardDefinition {
+    CardDefinition {
+        cast_condition: Some(Predicate::Not(Box::new(Predicate::IsTurnOf(PlayerRef::You)))),
+        ..instant(
+            "Delirium",
+            cost(&[generic(1), b(), r()]),
+            Effect::Seq(vec![
+                Effect::Tap { what: target_filtered(R::Creature) },
+                Effect::DealDamageEqualToPower {
+                    source: Selector::Target(0),
+                    target: Selector::Player(PlayerRef::ControllerOf(Box::new(Selector::Target(0)))),
+                },
+                Effect::PreventCombatDamageToTargetThisTurn { target: Selector::Target(0) },
+                Effect::PreventCombatDamageByTargetThisTurn { target: Selector::Target(0) },
+            ]),
+        )
+    }
+}
+
+/// Emberwilde Djinn — {2}{R}{R} 5/4 flier that changes hands for {R}{R} or
+/// two life at each upkeep.
+pub fn emberwilde_djinn() -> CardDefinition {
+    let seize = Effect::GainControl {
+        what: Selector::This,
+        to: None,
+        duration: Duration::Permanent,
+    };
+    CardDefinition {
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::AnyPlayer),
+            effect: Effect::MayPayBy {
+                who: PlayerRef::ActivePlayer,
+                description: "Pay {R}{R} to gain control of Emberwilde Djinn?".into(),
+                mana_cost: cost(&[r(), r()]),
+                body: Box::new(seize.clone()),
+                else_: Some(Box::new(Effect::MayPayLife {
+                    description: "Pay 2 life to gain control of Emberwilde Djinn?".into(),
+                    amount: Value::Const(2),
+                    body: Box::new(seize),
+                    else_: None,
+                })),
+            },
+        }],
+        ..creature("Emberwilde Djinn", cost(&[generic(2), r(), r()]), vec![CreatureType::Djinn], 5, 4)
+    }
 }

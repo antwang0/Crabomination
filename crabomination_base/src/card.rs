@@ -1170,6 +1170,9 @@ pub enum Keyword {
     /// battlefield as usual.
     Escape(crate::mana::ManaCost, u32),
     Phasing,
+    /// CR 702.26 — "this permanent can't phase out" (Spatial Binding).
+    /// Suppresses the untap-step phase-out even while Phasing is granted.
+    CantPhaseOut,
     Dredge(u32),
     Annihilator(u32),
     /// "This doesn't untap during your untap step if it has a [kind] counter
@@ -4510,6 +4513,15 @@ pub enum DynamicPt {
     /// as-enters-choose-an-opponent bodies (Entropic Specter's hand size,
     /// Skyshroud War Beast's nonbasic lands).
     ChosenPlayerTally { base_p: i32, base_t: i32, what: PlayerTally, power_only: bool },
+    /// Power = `base_p` plus the cards matching `filter` in the source's
+    /// remembered player's graveyard (Haunting Apparition — "1 plus the number
+    /// of green creature cards in the chosen player's graveyard"). The
+    /// filtered sibling of `ChosenPlayerTally`'s fixed tallies.
+    ChosenPlayerGraveyardMatching {
+        base_p: i32,
+        base_t: i32,
+        filter: SelectionRequirement,
+    },
     TappedLandsChosenPlayerControls { base_t: i32 },
     /// `inner` during the controller's turn, `base_p`/`base_t` on every other
     /// turn (Angry Mob).

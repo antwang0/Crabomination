@@ -2574,7 +2574,10 @@ impl GameState {
             .compute_battlefield()
             .iter()
             .filter(|c| {
-                c.controller == p && c.keywords.contains(&crate::card::Keyword::Phasing)
+                c.controller == p
+                    && c.keywords.contains(&crate::card::Keyword::Phasing)
+                    // CR 702.26 — Spatial Binding pins a permanent in phase.
+                    && !c.keywords.contains(&crate::card::Keyword::CantPhaseOut)
             })
             .map(|c| c.id)
             .collect();

@@ -12061,6 +12061,16 @@ static MIR5: &[Factory] = &[
     super::mir5::polymorph,
     super::mir5::aleatory,
     super::mir5::reflect_damage,
+    super::mir5::haunting_apparition,
+    super::mir5::basalt_golem,
+    super::mir5::shimmer,
+    super::mir5::spatial_binding,
+    super::mir5::ward_of_lights,
+    super::mir5::malignant_growth,
+    super::mir5::preferred_selection,
+    super::mir5::natural_balance,
+    super::mir5::delirium,
+    super::mir5::emberwilde_djinn,
 ];
 static MKM: &[Factory] = &[
     super::mkm::repeat_offender,

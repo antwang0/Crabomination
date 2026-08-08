@@ -326,6 +326,7 @@ pub fn razias_purification() -> CardDefinition {
         cost: cost(&[generic(4), r(), w()]),
         card_types: vec![CardType::Sorcery],
         effect: Effect::EachPlayerKeepsNSacrificesRest {
+            filter: None,
             keep: Value::Const(3),
         },
         ..Default::default()

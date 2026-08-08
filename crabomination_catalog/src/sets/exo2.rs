@@ -1096,7 +1096,7 @@ pub fn skyshroud_war_beast() -> CardDefinition {
 pub fn limited_resources() -> CardDefinition {
     CardDefinition {
         triggered_abilities: vec![crate::effect::shortcut::etb(
-            Effect::EachPlayerKeepsNSacrificesRest { keep: Value::Const(5) },
+            Effect::EachPlayerKeepsNSacrificesRest { keep: Value::Const(5), filter: None },
         )],
         static_abilities: vec![StaticAbility {
             description: "Players can't play lands as long as ten or more lands are on the battlefield.",

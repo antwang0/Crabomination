@@ -92,6 +92,7 @@ fn keyword_name(kw: &Keyword) -> Option<String> {
         Keyword::Daybound => "Daybound",
         Keyword::Nightbound => "Nightbound",
         Keyword::Phasing => "Phasing",
+        Keyword::CantPhaseOut => "Can't phase out",
         Keyword::Banding => "Banding",
         Keyword::BandsWithOther(_) => "Bands with other",
         Keyword::Retrace => "Retrace",

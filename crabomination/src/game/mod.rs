@@ -9911,6 +9911,19 @@ impl GameState {
                         card.chosen_player.map(|seat| self.player_tally(seat, what) as i32).unwrap_or(0);
                     if power_only { (base_p + n, base_t) } else { (base_p + n, base_t + n) }
                 }
+                crate::card::DynamicPt::ChosenPlayerGraveyardMatching { base_p, base_t, filter } => {
+                    let n = card
+                        .chosen_player
+                        .map(|seat| {
+                            self.players[seat]
+                                .graveyard
+                                .iter()
+                                .filter(|c| self.evaluate_requirement_on_card(&filter, c, seat))
+                                .count() as i32
+                        })
+                        .unwrap_or(0);
+                    (base_p + n, base_t)
+                }
                 crate::card::DynamicPt::TappedLandsChosenPlayerControls { base_t } => {
                     let n = card
                         .chosen_player

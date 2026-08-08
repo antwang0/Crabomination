@@ -521,6 +521,7 @@ impl Effect {
             Effect::MillDeployCreaturesUntilEndStep { .. } => false,
             Effect::ExileEachTopFreePlayLesser => false,
             Effect::LookTopTakeOneDeployLandsRestGraveyard { .. } => false,
+            Effect::LookTopPutOneOnBottom { .. } => false,
             Effect::ReduceEquipCost { .. }
             | Effect::SacrificeAtNextUpkeep { .. }
             | Effect::SacrificeAtNextEndStep { .. } => false,
@@ -727,7 +728,7 @@ impl Effect {
             Effect::ManifestDread { .. } => false,
             Effect::ManifestDreadRepeatThenCounters { .. } => false,
             Effect::Cloak { .. } => false,
-            Effect::CatchUpBasicLands => false,
+            Effect::CatchUpBasicLands { .. } => false,
             Effect::ExileUntilDuplicateName { .. } => false,
             Effect::ExileFromHandTaxed { .. } => false,
             Effect::Hideaway { .. } => false,

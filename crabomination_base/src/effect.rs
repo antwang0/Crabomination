@@ -3982,7 +3982,13 @@ pub enum Effect {
     /// "Each player chooses `keep` permanents they control, then sacrifices the
     /// rest" (Razia's Purification). Each player's own pick — the auto picker
     /// keeps their highest-mana-value permanents.
-    EachPlayerKeepsNSacrificesRest { keep: Value },
+    EachPlayerKeepsNSacrificesRest {
+        keep: Value,
+        /// Narrows both the keep pool and the sacrifice (Natural Balance is
+        /// lands-only). `None` = every permanent (Razia's Purification).
+        #[serde(default)]
+        filter: Option<SelectionRequirement>,
+    },
     /// "Each player returns a permanent matching `filter` they control to its
     /// owner's hand" (Curfew). APNAP order; each player picks their own, and a
     /// player controlling no match does nothing.
@@ -5234,6 +5240,10 @@ pub enum Effect {
     /// Top = most recently put into the graveyard (Mistmoon Griffin). No-op if
     /// the graveyard holds no creature card.
     ReturnTopCreatureFromGraveyard { who: PlayerRef },
+    /// "Look at the top `count` cards of your library, then put one of them on
+    /// the bottom" (Preferred Selection's declined branch). The rest stay on
+    /// top in order; an auto seat buries the priciest card.
+    LookTopPutOneOnBottom { count: Value },
     /// CR 712 — Transform the targeted double-faced permanent(s): swap each to
     /// its other face in place (same object, keeping counters / tapped state /
     /// attachments per CR 712.9). Toggles front↔back; a `Transforms` event
@@ -7886,7 +7896,16 @@ pub enum Effect {
     /// Scholarship Sponsor — each player controlling fewer lands than the
     /// player with the most searches their library for up to (difference)
     /// basic land cards, puts them onto the battlefield tapped, then shuffles.
-    CatchUpBasicLands,
+    CatchUpBasicLands {
+        /// The land count each player is brought up to. `None` = the current
+        /// leader's total (Scholarship Sponsor); `Some(n)` a flat bar
+        /// (Natural Balance's five).
+        #[serde(default)]
+        target: Option<Value>,
+        /// The fetched basics enter tapped (Scholarship Sponsor).
+        #[serde(default)]
+        tapped: bool,
+    },
 
     /// Uvilda, Dean of Perfection — the controller may exile an instant or
     /// sorcery card from their hand with `count` hone counters on it. The

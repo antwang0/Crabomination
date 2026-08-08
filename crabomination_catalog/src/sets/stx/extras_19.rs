@@ -385,7 +385,7 @@ pub fn scholarship_sponsor() -> CardDefinition {
         },
         power: 3,
         toughness: 3,
-        triggered_abilities: vec![etb(Effect::CatchUpBasicLands)],
+        triggered_abilities: vec![etb(Effect::CatchUpBasicLands { target: None, tapped: true })],
         ..Default::default()
     }
 }

@@ -8750,7 +8750,7 @@ impl GameState {
                 Ok(())
             }
 
-            Effect::EachPlayerKeepsNSacrificesRest { keep } => {
+            Effect::EachPlayerKeepsNSacrificesRest { keep, filter } => {
                 use crate::decision::{Decision, DecisionAnswer};
                 let keep = self.evaluate_value(keep, ctx).max(0) as usize;
                 let source = ctx.source.unwrap_or(CardId(0));
@@ -8763,6 +8763,16 @@ impl GameState {
                         .battlefield
                         .iter()
                         .filter(|c| c.controller == p)
+                        .filter(|c| {
+                            filter.as_ref().is_none_or(|f| {
+                                self.evaluate_requirement_static(
+                                    f,
+                                    &Target::Permanent(c.id),
+                                    p,
+                                    ctx.source,
+                                )
+                            })
+                        })
                         .map(|c| (c.id, c.definition.name.to_string()))
                         .collect();
                     if mine.len() <= keep {
@@ -24172,9 +24182,9 @@ impl GameState {
                 Ok(())
             }
 
-            Effect::CatchUpBasicLands => {
+            Effect::CatchUpBasicLands { target, tapped } => {
                 use crate::card::Supertype;
-                
+                let tapped = *tapped;
                 let n = self.players.len();
                 let land_counts: Vec<usize> = (0..n)
                     .map(|p| {
@@ -24184,7 +24194,10 @@ impl GameState {
                             .count()
                     })
                     .collect();
-                let max = land_counts.iter().copied().max().unwrap_or(0);
+                let max = match target {
+                    Some(v) => self.evaluate_value(v, ctx).max(0) as usize,
+                    None => land_counts.iter().copied().max().unwrap_or(0),
+                };
                 for (p, &count) in land_counts.iter().enumerate() {
                     let deficit = max.saturating_sub(count);
                     if deficit == 0 {
@@ -24204,7 +24217,7 @@ impl GameState {
                     for id in ids {
                         self.move_card_to(
                             id,
-                            &ZoneDest::Battlefield { controller: PlayerRef::Seat(p), tapped: true },
+                            &ZoneDest::Battlefield { controller: PlayerRef::Seat(p), tapped },
                             ctx,
                             events,
                         );
@@ -31413,6 +31426,49 @@ impl GameState {
                         fires_once: true,
                         expires_after_turn: None,
                     });
+                }
+                Ok(())
+            }
+
+            Effect::LookTopPutOneOnBottom { count } => {
+                use crate::decision::{Decision, DecisionAnswer};
+                let n = self.evaluate_value(count, ctx).max(0) as usize;
+                let p = ctx.controller;
+                let seen: Vec<(CardId, String)> = self.players[p]
+                    .library
+                    .iter()
+                    .take(n)
+                    .map(|c| (c.id, c.definition.name.to_string()))
+                    .collect();
+                if seen.is_empty() {
+                    return Ok(());
+                }
+                let answer = self.decider.decide(&Decision::ChooseCards {
+                    source: ctx.source.unwrap_or(CardId(0)),
+                    prompt: "Choose a card to put on the bottom".into(),
+                    candidates: seen.clone(),
+                    min: 1,
+                    max: 1,
+                });
+                // Auto seats bury the priciest of the two.
+                let pick = match answer {
+                    DecisionAnswer::Cards(v) if !v.is_empty() => v[0],
+                    _ => seen
+                        .iter()
+                        .max_by_key(|(id, _)| {
+                            self.players[p]
+                                .library
+                                .iter()
+                                .find(|c| c.id == *id)
+                                .map(|c| c.definition.cost.cmc())
+                                .unwrap_or(0)
+                        })
+                        .map(|(id, _)| *id)
+                        .unwrap_or(seen[0].0),
+                };
+                if let Some(pos) = self.players[p].library.iter().position(|c| c.id == pick) {
+                    let card = self.players[p].library.remove(pos);
+                    self.players[p].library.push(card);
                 }
                 Ok(())
             }
