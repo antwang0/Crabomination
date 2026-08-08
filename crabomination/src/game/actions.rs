@@ -11541,6 +11541,14 @@ impl GameState {
     /// mana satisfies, or when the source can produce a color the cost
     /// requires.
     fn untapped_relevant_source_exists(&self, player: usize, cost: &crate::mana::ManaCost) -> bool {
+        self.with_frozen_layers(|g| g.untapped_relevant_source_exists_inner(player, cost))
+    }
+
+    fn untapped_relevant_source_exists_inner(
+        &self,
+        player: usize,
+        cost: &crate::mana::ManaCost,
+    ) -> bool {
         use crate::mana::ManaSymbol;
         let flexible = cost.symbols.iter().any(|s| {
             matches!(s, ManaSymbol::Generic(n) if *n > 0) || matches!(s, ManaSymbol::MonoHybrid(_, _))
@@ -11745,6 +11753,10 @@ impl GameState {
     /// color" source (Birds of Paradise, etc.) toward every color, since
     /// the tap loop can script it to the needed color.
     fn untapped_producers_of(&self, player: usize, color: ManaColor) -> u32 {
+        self.with_frozen_layers(|g| g.untapped_producers_of_inner(player, color))
+    }
+
+    fn untapped_producers_of_inner(&self, player: usize, color: ManaColor) -> u32 {
         self.battlefield
             .iter()
             .filter(|c| {
@@ -11826,7 +11838,16 @@ impl GameState {
             .collect()
     }
 
+    /// Frozen: every untapped permanent asks `effective_mana_abilities`, and
+    /// each of those runs `printed_land_mana_ability_lost` and
+    /// `intrinsic_land_mana_abilities`, both of which take a layer pass. One
+    /// scope makes the whole table share one gather and one
+    /// `ComputedPermanent` per card.
     fn mana_source_table(&self, player: usize, creature_only: bool) -> Vec<ManaSourceInfo> {
+        self.with_frozen_layers(|g| g.mana_source_table_inner(player, creature_only))
+    }
+
+    fn mana_source_table_inner(&self, player: usize, creature_only: bool) -> Vec<ManaSourceInfo> {
         self.battlefield
             .iter()
             .filter(|c| c.controller == player && !c.tapped)
