@@ -16,31 +16,32 @@ reference and want their own triage pass):
 
 ## NEXT (handoff — rewrite each run, keep under 15 lines)
 
-Branch `claude/modern_decks`. Third ML/perf pass, no card work. `PERF.md` is
-the perf record; the tracker index at the top of this file is new.
+Branch `claude/modern_decks`. Fourth ML/perf pass, no card work. `PERF.md` is
+the perf record.
 
-- **Perf**: bench reads **14.49 games/s** (was 9.64 on this box at the start).
-  Layer-gather static-ability filter **+27.8 %**, mimalloc now default
-  **+21.9 %**, cumulative **+50.3 %**. Candidates 2 and 4 are closed. Fresh
-  callgrind at `67d6c549`: 23.5 G instructions for six games, down from 38.5 G.
-  **The layer system is no longer the bottleneck — cloning is**: allocator 24 %
-  + memcpy 8.8 % + `CardInstance::clone` 6.7 %. Pull candidate 1 (the
-  clone/checkpoint path) next; candidate 2 (flatten the 39 gather passes into
-  one `(card, static_ability)` pair list) is the cheap one.
-- **Measurement**: `--bench` prints `host_cpu` / `host_calib_ms`. This box swung
-  23 % run-to-run and the probe tracked it exactly, so **always alternate A/B in
-  one sitting** and check the probe before believing a baseline moved. Absolutes
-  from earlier runs do not compare. `--threads N` now warns when the job queue
-  can't fill N workers — `--games 120` minimum for an actor sweep.
-- **Trackers**: this file 774 lines, roadmap 917 — both under target.
-  `ENGINE_BACKLOG.md` / `CARD_BACKLOG.md` / `SHIPPED.md` are verbatim archives
-  and want a triage pass. Warning: a title-based sweep of the "<set> — closed"
-  and "Noticed this run (… closure)" sections is **not** safe — most of their
-  body is live residual approximations, not shipped history.
-- **Bugs**: nothing pulled this run. Top filed item is graveyard targets being
-  dropped on the `ActivateAbility` path (`CARD_BACKLOG.md`); `check_target_
-  legality` and the slot-0 requirement check both accept them, so the drop is
-  further in — no repro written yet.
+- **Perf**: **+12.4 %** this run, in two alternated A/B sittings — the trigger
+  dispatcher no longer runs `compute_battlefield()` for one bool per card
+  (**+8.2 %**), and its two grant scans are hoisted out of the per-permanent
+  loop (**+3.9 %**). Baseline re-anchored; this box is not the previous one.
+- **The profile's story changed and PERF.md now says so.** `--tree=caller` on
+  `malloc` shows the 24 % allocator share is the *layer system*
+  (`compute_permanent_pass` + the `Subtypes::clone` inside it are ~55 % of every
+  allocation), not state cloning (`GameState::clone` is 5 %). A CoW pass over
+  the per-turn tally collections moved the bench 0.1 % and was reverted — that
+  negative result is logged, don't redo it. **Re-profile before pulling
+  candidate 1**: the shares moved when 10.4 % of instructions left.
+- **Next**: candidate 1(b) — memoize `ComputedPermanent` per freeze scope
+  (`LayerFreezeState` already caches the gather; add
+  `computed_permanent_shared -> Arc<…>`), then 1(a), the struct shape. The
+  gather is still #1 by self cost (16 %) and candidate 3 explains why a pairs
+  list alone won't fix it.
+- **Trackers**: this file 782 lines, roadmap 917, `PERF.md` 265 — all under
+  target. `ENGINE_BACKLOG.md` / `CARD_BACKLOG.md` / `SHIPPED.md` are verbatim
+  archives wanting a triage pass; a title-based sweep of their "<set> — closed"
+  sections is **not** safe (most of the body is live residuals).
+- **Bugs**: nothing pulled. Top filed item is still graveyard targets dropped on
+  the `ActivateAbility` path (`CARD_BACKLOG.md`) — `check_target_legality` and
+  the slot-0 filter both accept them, so the drop is further in; no repro yet.
 
 ## Environment note
 

@@ -79,24 +79,24 @@ contention-immune, which makes it the better first look.
 
 ## Baseline
 
-Committed 2026-08-08 at `c365ede8` (trigger-dispatcher fix). Refresh only
-alongside an intentional, explained change. Regressions beyond ~5 % get
-investigated before anything else lands — but check `host_calib_ms` first
-(see "How to measure").
+Committed 2026-08-08 at the tip of this run's work (dispatcher fix + grant
+hoist). Refresh only alongside an intentional, explained change.
+Regressions beyond ~5 % get investigated before anything else lands — but
+check `host_calib_ms` first (see "How to measure").
 
 ```text
 bot_ladder --bench   release, rustc 1.95.0, 4-core VM, 3 worker threads
                      mimalloc (the default); measured on an idle box
 host_cpu             Intel(R) Xeon(R) Processor @ 2.10GHz
-host_calib_ms        67 / 55 / 80 / 56           <- compare this first
+host_calib_ms        56 / 63 / 72 / 57           <- compare this first
 games                320
-games_per_s          21.38 / 21.59 / 21.64 / 21.57   (mean 21.55, spread 1.2 %)
-games_per_s_th       7.13 / 7.20 / 7.21 / 7.19
-decisions_per_s      12909 / 13038 / 13068 / 13025   (mean 13010)
+games_per_s          23.10 / 22.50 / 22.88 / 22.34   (mean 22.71, spread 3.3 %)
+games_per_s_th       7.70 / 7.50 / 7.63 / 7.45
+decisions_per_s      13947 / 13585 / 13817 / 13489   (mean 13710)
 turns_per_game       26.98
 decisions_per_game   603.9
 stalls               0 (0.00 %)
-peak_rss_mib         41.1 - 44.6
+peak_rss_mib         40.7 - 44.4
 determinism          ok (160 pairs, 0 sweeps, rho -1.000)
 ```
 
@@ -108,18 +108,22 @@ probe is not a linear correction — a slower probe here goes with faster
 games — so treat it as a box fingerprint, not a scaling factor, and only
 ever compare two binaries measured in one alternating sitting.
 
-Within this run, on this box and this day:
+Within this run, each step measured as its own alternated A/B sitting:
 
 ```text
-19.76  games/s   HEAD at the start of the run
-21.55            + trigger-dispatcher fix (+8.2 %)
+19.76 -> 21.38   trigger dispatcher stops computing the whole board  +8.2 %
+22.14 -> 23.00   grant scans hoisted out of the dispatcher's loop    +3.9 %
 ```
 
+The two sittings are hours apart and the box drifted upward between them
+(the same binary read 21.38 then 22.14), so **the absolutes across the gap
+do not subtract** — the compounded figure is +12.4 %, not 23.00/19.76.
+
 The actor-scaling sweep from the previous run (system allocator vs mimalloc
-at 1/4/8/16/24 threads) is unchanged by this run's work and lives in
-`ML_NOTES.md`-adjacent history; its readable conclusion was that mimalloc's
-edge grows with actor count (+9 % at 1, +31 % at 24) while its RSS ratio
-stays flat at 1.5-1.7x. Re-measure on a box with real cores.
+at 1/4/8/16/24 threads) is untouched by this run's work; its readable
+conclusion was that mimalloc's edge grows with actor count (+9 % at 1,
++31 % at 24) while its RSS ratio stays flat at 1.5-1.7x. Re-measure on a
+box with real cores.
 
 ## Log
 
@@ -135,7 +139,8 @@ stays flat at 1.5-1.7x. Re-measure on a box with real cores.
 
 | 2026-08-08 | CoW-wrap the per-turn / per-game tally collections (cast-name / id / profile logs, ETB + death lists, delayed triggers, graveyard + discard sets) so a state clone stops deep-copying them | 20.12 games/s | 20.10 games/s | **no win — reverted.** `--bench` x8 per side alternated in one sitting (base 19.28-20.65, cow 19.02-20.68). Golden traces identical. The negative result is the useful part: per-clone allocation traffic is *not* in these collections, which is what sent the run to the caller tree and found the layer-compute path below. |
 | 2026-08-08 | `dispatch_triggers_for_events` stops running `compute_battlefield()` for one bool per card; `permanents_with_abilities_removed` answers from the gathered effect set and only pays the layer pass when a `RemoveAllAbilities` effect is actually in scope (`c365ede8`) | 19.76 games/s, 11950 dec/s | 21.38 games/s, 12909 dec/s | **+8.2 %.** `--bench` x6 per side alternated A/B in one sitting; every B run beat every A run. Sealed pool (720 games) 32.15 s -> 31.30 s, +2.7 %. turns/game 26.98 unchanged, stalls 0, all pairs split. Suite 18788 passed / 0 failed; all four golden traces byte-identical. |
-| | **cumulative this run** | **19.76 games/s** | **21.55 games/s (+9.1 %)** | both ends on the same box, same day |
+| 2026-08-08 | Hoist the trigger dispatcher's two grant scans (`statics_granted_triggers_for`, `equip_granted_triggers_for`) out of its per-permanent loop into board-level source lists (`f87974c3`) | 22.14 games/s | 23.00 games/s | **+3.9 %.** `--bench` x5 per side alternated. Under the 5 % claim bar, but the distributions don't overlap — slowest after (22.54) > fastest before (22.41), 5/5 pairs. The by-card methods stay as shims over the same pair, so there is still one walker. Suite 18788 passed / 0 failed; golden traces byte-identical. |
+| | **cumulative this run** | **19.76 games/s** | **+12.4 %** | measured as two alternated A/B sittings (+8.2 %, +3.9 %); the box drifted upward between them, so the absolutes on either side of the gap don't subtract |
 
 ## Profile of record
 
