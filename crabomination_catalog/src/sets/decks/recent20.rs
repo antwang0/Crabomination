@@ -109,7 +109,7 @@ pub fn battle_cry_goblin() -> CardDefinition {
             effect: Effect::CreateTokenAttacking {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: TokenDefinition {
+                definition: Box::new(TokenDefinition {
                     name: "Goblin".into(),
                     power: 1,
                     toughness: 1,
@@ -120,7 +120,7 @@ pub fn battle_cry_goblin() -> CardDefinition {
                         ..Default::default()
                     },
                     ..Default::default()
-                },
+                }),
                 cleanup: Default::default(),
             },
         }],
@@ -177,7 +177,7 @@ pub fn gisa_the_hellraiser() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(2),
-                definition: zombie_rogue_token(true),
+                definition: Box::new(zombie_rogue_token(true)),
             },
         }],
         ..Default::default()
@@ -206,10 +206,10 @@ pub fn magda_the_hoardmaster() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: TokenDefinition {
+                definition: Box::new(TokenDefinition {
                     tapped: true,
                     ..treasure_token()
-                },
+                }),
             },
         }],
         activated_abilities: vec![ActivatedAbility {
@@ -221,7 +221,7 @@ pub fn magda_the_hoardmaster() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: TokenDefinition {
+                definition: Box::new(TokenDefinition {
                     name: "Scorpion Dragon".into(),
                     power: 4,
                     toughness: 4,
@@ -233,7 +233,7 @@ pub fn magda_the_hoardmaster() -> CardDefinition {
                         ..Default::default()
                     },
                     ..Default::default()
-                },
+                }),
             },
             ..Default::default()
         }],
@@ -386,7 +386,7 @@ pub fn rakish_crew() -> CardDefinition {
             etb(Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: mercenary_token(),
+                definition: Box::new(mercenary_token()),
             }),
             TriggeredAbility {
                 event: EventSpec::new(EventKind::CreatureDied, EventScope::YourControl)
@@ -454,7 +454,7 @@ pub fn rictus_robber() -> CardDefinition {
             then: Box::new(Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: zombie_rogue_token(false),
+                definition: Box::new(zombie_rogue_token(false)),
             }),
             else_: Box::new(Effect::Noop),
         })],
@@ -582,7 +582,7 @@ pub fn treasure_dredger() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: treasure_token(),
+                definition: Box::new(treasure_token()),
             },
             ..Default::default()
         }],
@@ -705,7 +705,7 @@ pub fn lassoed_by_the_law() -> CardDefinition {
             etb(Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: mercenary_token(),
+                definition: Box::new(mercenary_token()),
             }),
         ],
         ..Default::default()
@@ -738,7 +738,7 @@ pub fn roxanne_starfall_savant() -> CardDefinition {
     let make = || Effect::CreateToken {
         who: PlayerRef::You,
         count: Value::Const(1),
-        definition: meteorite(),
+        definition: Box::new(meteorite()),
     };
     CardDefinition {
         name: "Roxanne, Starfall Savant",
@@ -829,7 +829,7 @@ pub fn bovine_intervention() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::ControllerOf(Box::new(Selector::Target(0))),
                 count: Value::Const(1),
-                definition: TokenDefinition {
+                definition: Box::new(TokenDefinition {
                     name: "Ox".into(),
                     power: 2,
                     toughness: 2,
@@ -840,7 +840,7 @@ pub fn bovine_intervention() -> CardDefinition {
                         ..Default::default()
                     },
                     ..Default::default()
-                },
+                }),
             },
             Effect::Destroy {
                 what: target_filtered(

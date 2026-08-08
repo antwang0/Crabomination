@@ -47,7 +47,7 @@ pub fn fuss_bother() -> CardDefinition {
                     Effect::CreateToken {
                         who: PlayerRef::You,
                         count: Value::Const(3),
-                        definition: thopter_token(),
+                        definition: Box::new(thopter_token()),
                     },
                     Effect::Surveil {
                         who: PlayerRef::You,

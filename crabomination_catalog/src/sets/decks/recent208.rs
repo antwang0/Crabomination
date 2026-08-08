@@ -63,7 +63,7 @@ pub fn gleaming_barrier() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: crabomination_base::tokens::treasure_token(),
+                definition: Box::new(crabomination_base::tokens::treasure_token()),
             },
         }],
         ..Default::default()

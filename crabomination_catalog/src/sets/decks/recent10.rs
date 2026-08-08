@@ -65,7 +65,7 @@ pub fn messenger_hawk() -> CardDefinition {
         triggered_abilities: vec![etb(Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::ONE,
-            definition: clue_token(),
+            definition: Box::new(clue_token()),
         })],
         ..Default::default()
     }
@@ -139,7 +139,7 @@ pub fn treetop_freedom_fighters() -> CardDefinition {
         triggered_abilities: vec![etb(Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::ONE,
-            definition: white_ally(),
+            definition: Box::new(white_ally()),
         })],
         ..Default::default()
     }

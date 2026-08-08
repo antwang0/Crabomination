@@ -235,7 +235,7 @@ pub fn niko_light_of_hope() -> CardDefinition {
         triggered_abilities: vec![etb(Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::Const(2),
-            definition: shard_token(),
+            definition: Box::new(shard_token()),
         })],
         activated_abilities: vec![ActivatedAbility {
             tap_cost: true,

@@ -413,7 +413,7 @@ pub fn wingmantle_chaplain() -> CardDefinition {
                     )),
                     filter: R::Creature,
                 },
-                definition: bird(),
+                definition: Box::new(bird()),
             }),
             TriggeredAbility {
                 event: EventSpec::new(EventKind::EntersBattlefield, EventScope::YourControl)
@@ -426,7 +426,7 @@ pub fn wingmantle_chaplain() -> CardDefinition {
                 effect: Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::Const(1),
-                    definition: bird(),
+                    definition: Box::new(bird()),
                 },
             },
         ],

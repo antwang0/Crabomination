@@ -159,7 +159,7 @@ pub fn unassuming_sage() -> CardDefinition {
             mana_cost: cost(&[generic(2)]),
             body: Box::new(Effect::CreateTokenAttachedTo {
                 target: Selector::This,
-                definition: sorcerer_role(),
+                definition: Box::new(sorcerer_role()),
             }),
             else_: None,
         })],
@@ -193,7 +193,7 @@ pub fn spellbook_vendor() -> CardDefinition {
                 mana_cost: cost(&[generic(1)]),
                 body: Box::new(Effect::CreateTokenAttachedTo {
                     target: target_filtered(R::Creature.and(R::ControlledByYou)),
-                    definition: sorcerer_role(),
+                    definition: Box::new(sorcerer_role()),
                 }),
                 else_: None,
             },
@@ -299,7 +299,7 @@ pub fn warehouse_tabby() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: rat_token(),
+                definition: Box::new(rat_token()),
             },
         }],
         activated_abilities: vec![ActivatedAbility {
@@ -359,7 +359,7 @@ pub fn spiteful_hexmage() -> CardDefinition {
         toughness: 2,
         triggered_abilities: vec![etb(Effect::CreateTokenAttachedTo {
             target: target_filtered(R::Creature.and(R::ControlledByYou)),
-            definition: cursed_role(),
+            definition: Box::new(cursed_role()),
         })],
         ..Default::default()
     }
@@ -386,7 +386,7 @@ pub fn harried_spearguard() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: rat_token(),
+                definition: Box::new(rat_token()),
             },
         }],
         ..Default::default()
@@ -444,7 +444,7 @@ pub fn redcap_thief() -> CardDefinition {
         triggered_abilities: vec![etb(Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::ONE,
-            definition: treasure_token(),
+            definition: Box::new(treasure_token()),
         })],
         ..Default::default()
     }

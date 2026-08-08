@@ -439,7 +439,7 @@ pub fn advent_of_the_wurm() -> CardDefinition {
         effect: Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::ONE,
-            definition: wurm,
+            definition: Box::new(wurm),
         },
         ..Default::default()
     }

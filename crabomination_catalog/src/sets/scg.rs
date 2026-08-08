@@ -1206,7 +1206,7 @@ pub fn hunting_pack() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: TokenDefinition {
+                definition: Box::new(TokenDefinition {
                     name: "Beast".into(),
                     power: 4,
                     toughness: 4,
@@ -1217,7 +1217,7 @@ pub fn hunting_pack() -> CardDefinition {
                         ..Default::default()
                     },
                     ..Default::default()
-                },
+                }),
             },
         )
     }

@@ -46,7 +46,7 @@ pub fn scream_puff() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: food_token(),
+                definition: Box::new(food_token()),
             },
         }],
         ..Default::default()
@@ -101,12 +101,12 @@ pub fn return_from_the_wilds() -> CardDefinition {
                 Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::ONE,
-                    definition: white_human_token(),
+                    definition: Box::new(white_human_token()),
                 },
                 Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::ONE,
-                    definition: food_token(),
+                    definition: Box::new(food_token()),
                 },
             ],
         },

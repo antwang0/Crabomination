@@ -70,7 +70,7 @@ pub fn case_of_the_stashed_skeleton() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: TokenDefinition {
+                definition: Box::new(TokenDefinition {
                     name: "Skeleton".into(),
                     colors: vec![crate::mana::Color::Black],
                     card_types: vec![CardType::Creature],
@@ -81,7 +81,7 @@ pub fn case_of_the_stashed_skeleton() -> CardDefinition {
                     power: 2,
                     toughness: 1,
                     ..Default::default()
-                },
+                }),
             },
             Effect::Suspect {
                 what: Selector::LastCreatedToken,

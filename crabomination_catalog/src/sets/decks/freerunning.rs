@@ -129,7 +129,7 @@ pub fn distract_the_guards() -> CardDefinition {
         effect: Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::Const(3),
-            definition: TokenDefinition {
+            definition: Box::new(TokenDefinition {
                 name: "Human Rogue".into(),
                 power: 1,
                 toughness: 1,
@@ -140,7 +140,7 @@ pub fn distract_the_guards() -> CardDefinition {
                     ..Default::default()
                 },
                 ..Default::default()
-            },
+            }),
         },
         alternative_cost: Some(freerunning(cost(&[generic(1), w()]))),
         ..Default::default()

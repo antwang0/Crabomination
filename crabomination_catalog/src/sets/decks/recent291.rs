@@ -74,7 +74,7 @@ pub fn selesnya_guildmage() -> CardDefinition {
                 effect: Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::ONE,
-                    definition: saproling_token(),
+                    definition: Box::new(saproling_token()),
                 },
                 ..Default::default()
             },
@@ -288,7 +288,7 @@ pub fn rakdos_guildmage() -> CardDefinition {
                     Effect::CreateToken {
                         who: PlayerRef::You,
                         count: Value::ONE,
-                        definition: hasty_goblin_token(),
+                        definition: Box::new(hasty_goblin_token()),
                     },
                     Effect::ExileLastCreatedTokensAtNextEndStep,
                 ]),
@@ -359,7 +359,7 @@ pub fn fists_of_ironwood() -> CardDefinition {
         triggered_abilities: vec![etb(Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::Const(2),
-            definition: saproling_token(),
+            definition: Box::new(saproling_token()),
         })],
         ..Default::default()
     }
@@ -375,7 +375,7 @@ pub fn scatter_the_seeds() -> CardDefinition {
         effect: Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::Const(3),
-            definition: saproling_token(),
+            definition: Box::new(saproling_token()),
         },
         ..Default::default()
     }
@@ -568,7 +568,7 @@ pub fn aura_mutation() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ManaValueOf(Box::new(Selector::Target(0))),
-                definition: saproling_token(),
+                definition: Box::new(saproling_token()),
             },
             Effect::Destroy {
                 what: target_filtered(R::Enchantment),

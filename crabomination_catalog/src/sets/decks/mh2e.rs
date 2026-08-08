@@ -49,7 +49,7 @@ pub fn barbed_spike() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: thopter_token(),
+                definition: Box::new(thopter_token()),
             },
             Effect::Attach {
                 what: Selector::This,
@@ -100,7 +100,7 @@ pub fn breyas_apprentice() -> CardDefinition {
         triggered_abilities: vec![etb(Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::ONE,
-            definition: thopter_token(),
+            definition: Box::new(thopter_token()),
         })],
         activated_abilities: vec![ActivatedAbility {
             tap_cost: true,
@@ -229,7 +229,7 @@ pub fn goblin_traprunner() -> CardDefinition {
             on_heads: Box::new(Effect::CreateTokenAttacking {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: goblin,
+                definition: Box::new(goblin),
                 cleanup: crate::effect::AttackingTokenCleanup::None,
             }),
             on_tails: Box::new(Effect::Noop),

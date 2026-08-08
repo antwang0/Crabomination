@@ -320,7 +320,7 @@ pub fn ooze_flux() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: TokenDefinition {
+                definition: Box::new(TokenDefinition {
                     name: "Ooze".into(),
                     power: 0,
                     toughness: 0,
@@ -329,7 +329,7 @@ pub fn ooze_flux() -> CardDefinition {
                     subtypes: creatures(vec![CreatureType::Ooze]),
                     dynamic_pt: Some((Value::XFromCost, Value::XFromCost)),
                     ..Default::default()
-                },
+                }),
             },
             ..Default::default()
         }],
@@ -413,7 +413,7 @@ pub fn mystic_genesis() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: TokenDefinition {
+                definition: Box::new(TokenDefinition {
                     name: "Ooze".into(),
                     power: 0,
                     toughness: 0,
@@ -422,7 +422,7 @@ pub fn mystic_genesis() -> CardDefinition {
                     subtypes: creatures(vec![CreatureType::Ooze]),
                     dynamic_pt: Some((mv(), mv())),
                     ..Default::default()
-                },
+                }),
             },
             Effect::CounterSpell {
                 what: target_filtered(R::IsSpellOnStack),

@@ -256,7 +256,7 @@ pub fn pegasus_stampede() -> CardDefinition {
         effect: Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::ONE,
-            definition: TokenDefinition {
+            definition: Box::new(TokenDefinition {
                 name: "Pegasus".to_string(),
                 power: 1,
                 toughness: 1,
@@ -267,7 +267,7 @@ pub fn pegasus_stampede() -> CardDefinition {
                 },
                 keywords: vec![Keyword::Flying],
                 ..Default::default()
-            },
+            }),
         },
         ..Default::default()
     }
@@ -850,7 +850,7 @@ pub fn keeper_of_the_beasts() -> CardDefinition {
         Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::ONE,
-            definition: TokenDefinition {
+            definition: Box::new(TokenDefinition {
                 name: "Beast".to_string(),
                 power: 2,
                 toughness: 2,
@@ -860,7 +860,7 @@ pub fn keeper_of_the_beasts() -> CardDefinition {
                     ..Default::default()
                 },
                 ..Default::default()
-            },
+            }),
         },
     )
 }

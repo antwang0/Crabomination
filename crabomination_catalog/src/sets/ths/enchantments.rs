@@ -342,7 +342,7 @@ pub fn hammer_of_purphoros() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: crabomination_base::tokens::golem_3_3_token(),
+                definition: Box::new(crabomination_base::tokens::golem_3_3_token()),
             },
             ..Default::default()
         }],
@@ -420,7 +420,7 @@ pub fn heliod_god_of_the_sun() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: cleric,
+                definition: Box::new(cleric),
             },
             ..Default::default()
         }],
@@ -574,7 +574,7 @@ pub fn pharika_god_of_affliction() -> CardDefinition {
                 Effect::CreateToken {
                     who: PlayerRef::OwnerOf(Box::new(Selector::Target(0))),
                     count: Value::Const(1),
-                    definition: snake,
+                    definition: Box::new(snake),
                 },
                 Effect::Exile {
                     what: target_filtered(

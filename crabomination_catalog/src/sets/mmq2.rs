@@ -593,7 +593,7 @@ pub fn snake_pit() -> CardDefinition {
                 body: Box::new(Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::ONE,
-                    definition: TokenDefinition {
+                    definition: Box::new(TokenDefinition {
                         name: "Snake".into(),
                         power: 1,
                         toughness: 1,
@@ -604,7 +604,7 @@ pub fn snake_pit() -> CardDefinition {
                             ..Default::default()
                         },
                         ..Default::default()
-                    },
+                    }),
                 }),
             },
         }],

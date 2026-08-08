@@ -106,7 +106,7 @@ pub fn silk_web_weaver() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: crate::effect::PlayerRef::You,
                 count: Value::Const(1),
-                definition: TokenDefinition {
+                definition: Box::new(TokenDefinition {
                     name: "Human Citizen".into(),
                     power: 1,
                     toughness: 1,
@@ -117,7 +117,7 @@ pub fn silk_web_weaver() -> CardDefinition {
                         ..Default::default()
                     },
                     ..Default::default()
-                },
+                }),
             },
         }],
         activated_abilities: vec![ActivatedAbility {

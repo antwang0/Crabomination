@@ -70,7 +70,7 @@ pub fn season_of_the_burrow() -> CardDefinition {
                 Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::ONE,
-                    definition: token("Rabbit", 1, 1, Color::White, CreatureType::Rabbit),
+                    definition: Box::new(token("Rabbit", 1, 1, Color::White, CreatureType::Rabbit)),
                 },
                 Effect::Seq(vec![
                     Effect::Move {
@@ -182,10 +182,10 @@ pub fn season_of_the_bold() -> CardDefinition {
                 Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::ONE,
-                    definition: TokenDefinition {
+                    definition: Box::new(TokenDefinition {
                         tapped: true,
                         ..crabomination_base::tokens::treasure_token()
-                    },
+                    }),
                 },
                 Effect::ExileTopAndGrantMayPlay {
                     who: PlayerRef::You,
@@ -306,7 +306,7 @@ fn wick_snail() -> Effect {
         else_: Box::new(Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::ONE,
-            definition: token("Snail", 1, 1, Color::Black, CreatureType::Snail),
+            definition: Box::new(token("Snail", 1, 1, Color::Black, CreatureType::Snail)),
         }),
     }
 }

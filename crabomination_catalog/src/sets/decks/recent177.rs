@@ -148,7 +148,7 @@ pub fn arahbo_the_first_fang() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: cat_token(),
+                definition: Box::new(cat_token()),
             },
         }],
         ..Default::default()
@@ -165,7 +165,7 @@ pub fn bumbleflowers_sharepot() -> CardDefinition {
         triggered_abilities: vec![etb(Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::ONE,
-            definition: crabomination_base::tokens::food_token(),
+            definition: Box::new(crabomination_base::tokens::food_token()),
         })],
         activated_abilities: vec![ActivatedAbility {
             tap_cost: true,

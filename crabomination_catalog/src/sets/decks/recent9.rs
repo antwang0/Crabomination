@@ -126,7 +126,7 @@ pub fn invasion_reinforcements() -> CardDefinition {
         triggered_abilities: vec![etb(Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::ONE,
-            definition: ally,
+            definition: Box::new(ally),
         })],
         ..Default::default()
     }
@@ -254,7 +254,7 @@ pub fn sourbread_auntie() -> CardDefinition {
                 Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::Const(2),
-                    definition: goblin,
+                    definition: Box::new(goblin),
                 },
             ])),
         })],
@@ -307,7 +307,7 @@ pub fn knowledge_seeker() -> CardDefinition {
             on_dies(Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: crabomination_base::tokens::clue_token(),
+                definition: Box::new(crabomination_base::tokens::clue_token()),
             }),
         ],
         ..Default::default()
@@ -379,7 +379,7 @@ pub fn unlucky_cabbage_merchant() -> CardDefinition {
         triggered_abilities: vec![etb(Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::ONE,
-            definition: food_token(),
+            definition: Box::new(food_token()),
         })],
         ..Default::default()
     }

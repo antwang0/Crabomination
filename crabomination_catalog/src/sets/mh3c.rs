@@ -68,7 +68,7 @@ pub fn spawn_gang_commander() -> CardDefinition {
         triggered_abilities: vec![on_cast(Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::Const(3),
-            definition: crabomination_base::tokens::eldrazi_spawn_token(),
+            definition: Box::new(crabomination_base::tokens::eldrazi_spawn_token()),
         })],
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[generic(1), colorless(1)]),
@@ -190,12 +190,12 @@ pub fn wurmcoil_larva() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: phyrexian_wurm(1, 2, Keyword::Deathtouch),
+                definition: Box::new(phyrexian_wurm(1, 2, Keyword::Deathtouch)),
             },
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: phyrexian_wurm(2, 1, Keyword::Lifelink),
+                definition: Box::new(phyrexian_wurm(2, 1, Keyword::Lifelink)),
             },
         ]))],
         ..Default::default()
@@ -249,7 +249,7 @@ pub fn ajani_fells_the_godsire() -> CardDefinition {
                     Effect::CreateToken {
                         who: PlayerRef::You,
                         count: Value::ONE,
-                        definition: cat_warrior(),
+                        definition: Box::new(cat_warrior()),
                     },
                     Effect::AddKeywordCounter {
                         what: target_filtered(R::Creature.and(R::ControlledByYou)),
@@ -771,7 +771,7 @@ pub fn drowner_of_truth() -> CardDefinition {
             then: Box::new(Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(2),
-                definition: crabomination_base::tokens::eldrazi_spawn_token(),
+                definition: Box::new(crabomination_base::tokens::eldrazi_spawn_token()),
             }),
             else_: Box::new(Effect::Noop),
         })],
@@ -974,7 +974,7 @@ pub fn idol_of_false_gods() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: crabomination_base::tokens::eldrazi_spawn_token(),
+                definition: Box::new(crabomination_base::tokens::eldrazi_spawn_token()),
             },
             ..Default::default()
         }],
@@ -1194,7 +1194,7 @@ pub fn path_of_annihilation() -> CardDefinition {
             crate::effect::shortcut::etb(Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(2),
-                definition: crabomination_base::tokens::eldrazi_spawn_token(),
+                definition: Box::new(crabomination_base::tokens::eldrazi_spawn_token()),
             }),
             crate::card::TriggeredAbility {
                 event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl).with_filter(
@@ -1249,7 +1249,7 @@ pub fn propagator_drone() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: crabomination_base::tokens::eldrazi_spawn_token(),
+                definition: Box::new(crabomination_base::tokens::eldrazi_spawn_token()),
             },
             ..Default::default()
         }],

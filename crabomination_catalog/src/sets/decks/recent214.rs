@@ -162,7 +162,7 @@ pub fn suspicious_shambler() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(2),
-                definition: black_zombie_2_2(),
+                definition: Box::new(black_zombie_2_2()),
             },
             ..Default::default()
         }],
@@ -327,7 +327,7 @@ pub fn primeval_bounty() -> CardDefinition {
                 effect: Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::Const(1),
-                    definition: green_beast_3_3(),
+                    definition: Box::new(green_beast_3_3()),
                 },
             },
             TriggeredAbility {

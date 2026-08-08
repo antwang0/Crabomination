@@ -127,7 +127,7 @@ pub fn lathliss_dragon_queen() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: dragon,
+                definition: Box::new(dragon),
             },
         }],
         activated_abilities: vec![ActivatedAbility {

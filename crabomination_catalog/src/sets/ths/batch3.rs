@@ -205,7 +205,7 @@ pub fn evangel_of_heliod() -> CardDefinition {
         triggered_abilities: vec![etb(Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::DevotionTo(vec![Color::White]),
-            definition: TokenDefinition {
+            definition: Box::new(TokenDefinition {
                 name: "Soldier".into(),
                 power: 1,
                 toughness: 1,
@@ -216,7 +216,7 @@ pub fn evangel_of_heliod() -> CardDefinition {
                     ..Default::default()
                 },
                 ..Default::default()
-            },
+            }),
         })],
         ..creature(
             "Evangel of Heliod",

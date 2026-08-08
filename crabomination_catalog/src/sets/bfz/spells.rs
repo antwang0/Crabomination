@@ -352,7 +352,7 @@ pub fn grave_birthing() -> CardDefinition {
                 Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::Const(1),
-                    definition: eldrazi_scion_token(),
+                    definition: Box::new(eldrazi_scion_token()),
                 },
                 crate::effect::shortcut::draw(1),
             ]),
@@ -587,7 +587,7 @@ pub fn unified_front() -> CardDefinition {
         Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::ConvergedValue,
-            definition: kor_ally_token(),
+            definition: Box::new(kor_ally_token()),
         },
     )
 }
@@ -712,7 +712,7 @@ pub fn from_beyond() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: eldrazi_scion_token(),
+                definition: Box::new(eldrazi_scion_token()),
             },
         }],
         activated_abilities: vec![ActivatedAbility {

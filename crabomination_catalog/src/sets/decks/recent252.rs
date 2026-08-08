@@ -148,7 +148,7 @@ pub fn audience_with_trostani() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: plant_0_1_token(),
+                definition: Box::new(plant_0_1_token()),
             },
             Effect::Draw {
                 who: Selector::You,
@@ -202,7 +202,7 @@ pub fn krenko_baron_of_tin_street() -> CardDefinition {
                 body: Box::new(Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::ONE,
-                    definition: hasty_goblin_token(),
+                    definition: Box::new(hasty_goblin_token()),
                 }),
                 else_: None,
             },
@@ -280,7 +280,7 @@ pub fn detectives_satchel() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: thopter_token(),
+                definition: Box::new(thopter_token()),
             },
             ..Default::default()
         }],
@@ -514,7 +514,7 @@ pub fn slime_against_humanity() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: ooze,
+                definition: Box::new(ooze),
             },
             Effect::AddCounter {
                 what: Selector::LastCreatedToken,

@@ -144,7 +144,7 @@ pub fn prismari_fireshaper() -> CardDefinition {
                 effect: Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::Const(1),
-                    definition: treasure_token(),
+                    definition: Box::new(treasure_token()),
                 },
             },
             magecraft(Effect::DealDamage {
@@ -625,7 +625,7 @@ pub fn witherbloom_pest_spawner() -> CardDefinition {
                 effect: Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::Const(2),
-                    definition: super::shared::stx_pest_token(),
+                    definition: Box::new(super::shared::stx_pest_token()),
                 },
             },
             TriggeredAbility {
@@ -663,7 +663,7 @@ pub fn prismari_wave_mage() -> CardDefinition {
                 effect: Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::Const(1),
-                    definition: treasure_token(),
+                    definition: Box::new(treasure_token()),
                 },
             },
             magecraft(Effect::Seq(vec![
@@ -1554,7 +1554,7 @@ pub fn witherbloom_necromage() -> CardDefinition {
             etb(Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: stx_pest_token(),
+                definition: Box::new(stx_pest_token()),
             }),
             dies_drain(2),
         ],
@@ -1625,7 +1625,7 @@ pub fn witherbloom_pestcaller_b103() -> CardDefinition {
         triggered_abilities: vec![etb(Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::Const(1),
-            definition: stx_pest_token(),
+            definition: Box::new(stx_pest_token()),
         })],
         ..Default::default()
     }
@@ -1680,7 +1680,7 @@ pub fn lorehold_battlemage_b103() -> CardDefinition {
             magecraft(Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: lorehold_spirit_token(),
+                definition: Box::new(lorehold_spirit_token()),
             }),
         ],
         ..Default::default()
@@ -1715,7 +1715,7 @@ pub fn lorehold_embertusk() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: lorehold_spirit_token(),
+                definition: Box::new(lorehold_spirit_token()),
             },
         ]))],
         ..Default::default()
@@ -1797,7 +1797,7 @@ pub fn lorehold_lecturer() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: lorehold_spirit_token(),
+                definition: Box::new(lorehold_spirit_token()),
             },
         ]),
         ..Default::default()
@@ -1828,7 +1828,7 @@ pub fn prismari_sparkblade() -> CardDefinition {
             etb(Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: treasure_token(),
+                definition: Box::new(treasure_token()),
             }),
             magecraft_scry(1),
         ],

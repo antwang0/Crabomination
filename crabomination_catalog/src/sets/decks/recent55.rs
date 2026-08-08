@@ -56,7 +56,7 @@ pub fn thopter_engineer() -> CardDefinition {
         triggered_abilities: vec![etb(Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::ONE,
-            definition: thopter_token(),
+            definition: Box::new(thopter_token()),
         })],
         static_abilities: vec![StaticAbility {
             description: "Artifact creatures you control have haste.",
@@ -88,7 +88,7 @@ pub fn maverick_thopterist() -> CardDefinition {
         triggered_abilities: vec![etb(Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::Const(2),
-            definition: thopter_token(),
+            definition: Box::new(thopter_token()),
         })],
         ..Default::default()
     }
@@ -185,7 +185,7 @@ pub fn saheeli_sublime_artificer() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: servo_token(),
+                definition: Box::new(servo_token()),
             },
         }],
         loyalty_abilities: vec![LoyaltyAbility {

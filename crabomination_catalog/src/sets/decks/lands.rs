@@ -1138,7 +1138,7 @@ pub fn restless_cottage() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: crabomination_base::tokens::food_token(),
+                definition: Box::new(crabomination_base::tokens::food_token()),
             },
             Effect::MayDo {
                 description: "Exile up to one target card from a graveyard".into(),
@@ -1318,7 +1318,7 @@ pub fn sokenzan_crucible_of_defiance() -> CardDefinition {
         Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::Const(2),
-            definition: spirit,
+            definition: Box::new(spirit),
         },
     )
 }
@@ -1734,7 +1734,7 @@ pub fn restless_anchorage() -> CardDefinition {
         Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::Const(1),
-            definition: crate::game::effects::map_token(),
+            definition: Box::new(crate::game::effects::map_token()),
         },
     )
 }
@@ -2373,7 +2373,7 @@ pub fn fountainport() -> CardDefinition {
                 effect: Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::Const(1),
-                    definition: fish,
+                    definition: Box::new(fish),
                 },
                 ..Default::default()
             },
@@ -2383,7 +2383,7 @@ pub fn fountainport() -> CardDefinition {
                 effect: Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::Const(1),
-                    definition: crabomination_base::tokens::treasure_token(),
+                    definition: Box::new(crabomination_base::tokens::treasure_token()),
                 },
                 ..Default::default()
             },

@@ -348,7 +348,7 @@ pub fn riling_dawnbreaker() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: TokenDefinition {
+                definition: Box::new(TokenDefinition {
                     name: "Soldier".into(),
                     power: 2,
                     toughness: 2,
@@ -359,7 +359,7 @@ pub fn riling_dawnbreaker() -> CardDefinition {
                         ..Default::default()
                     },
                     ..Default::default()
-                },
+                }),
             },
         })),
         ..Default::default()

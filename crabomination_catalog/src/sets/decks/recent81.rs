@@ -86,7 +86,7 @@ pub fn seize_the_spoils() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: crate::game::effects::treasure_token(),
+                definition: Box::new(crate::game::effects::treasure_token()),
             },
         ]),
         ..Default::default()

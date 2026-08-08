@@ -169,7 +169,7 @@ pub fn tangled_colony() -> CardDefinition {
         triggered_abilities: vec![on_dies(Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::MarkedDamageOn(Box::new(Selector::This)),
-            definition: rat_token(),
+            definition: Box::new(rat_token()),
         })],
         ..Default::default()
     }

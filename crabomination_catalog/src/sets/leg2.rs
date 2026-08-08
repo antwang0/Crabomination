@@ -721,7 +721,7 @@ pub fn boris_devilboon() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: TokenDefinition {
+                definition: Box::new(TokenDefinition {
                     name: "Minor Demon".into(),
                     power: 1,
                     toughness: 1,
@@ -732,7 +732,7 @@ pub fn boris_devilboon() -> CardDefinition {
                         ..Default::default()
                     },
                     ..Default::default()
-                },
+                }),
             },
             ..Default::default()
         }],

@@ -1333,7 +1333,7 @@ pub fn tetravus() -> CardDefinition {
                 event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::SelfSource),
                 effect: Effect::RemoveCountersToCreateTokens {
                     kind: CounterType::PlusOnePlusOne,
-                    definition: tetravite,
+                    definition: Box::new(tetravite),
                 },
             },
             TriggeredAbility {

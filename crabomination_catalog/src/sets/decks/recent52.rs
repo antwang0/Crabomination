@@ -297,7 +297,7 @@ pub fn defiled_crypt_cadaver_lab() -> CardDefinition {
                     effect: Effect::CreateToken {
                         who: PlayerRef::You,
                         count: Value::ONE,
-                        definition: TokenDefinition {
+                        definition: Box::new(TokenDefinition {
                             name: "Horror".to_string(),
                             power: 2,
                             toughness: 2,
@@ -308,7 +308,7 @@ pub fn defiled_crypt_cadaver_lab() -> CardDefinition {
                                 ..Default::default()
                             },
                             ..Default::default()
-                        },
+                        }),
                     },
                 }],
                 ..Default::default()
@@ -393,7 +393,7 @@ pub fn zimone_all_questioning() -> CardDefinition {
                 Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::ONE,
-                    definition: TokenDefinition {
+                    definition: Box::new(TokenDefinition {
                         name: "Primo, the Indivisible".to_string(),
                         power: 0,
                         toughness: 0,
@@ -405,7 +405,7 @@ pub fn zimone_all_questioning() -> CardDefinition {
                             ..Default::default()
                         },
                         ..Default::default()
-                    },
+                    }),
                 },
                 Effect::AddCounter {
                     what: Selector::LastCreatedToken,
@@ -463,7 +463,7 @@ pub fn ghostly_dancers() -> CardDefinition {
                 effect: Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::ONE,
-                    definition: spirit_token(),
+                    definition: Box::new(spirit_token()),
                 },
             },
         ],
@@ -586,7 +586,7 @@ pub fn brimstone_roundup() -> CardDefinition {
         triggered_abilities: vec![crate::effect::shortcut::flurry(Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::ONE,
-            definition: mercenary(),
+            definition: Box::new(mercenary()),
         })],
         ..Default::default()
     }
@@ -661,7 +661,7 @@ pub fn trail_of_crumbs() -> CardDefinition {
                 effect: Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::ONE,
-                    definition: food_token(),
+                    definition: Box::new(food_token()),
                 },
             },
             TriggeredAbility {

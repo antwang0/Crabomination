@@ -259,7 +259,7 @@ pub fn nut_collector() -> CardDefinition {
                 body: Box::new(Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::ONE,
-                    definition: squirrel(),
+                    definition: Box::new(squirrel()),
                 }),
             },
         }],

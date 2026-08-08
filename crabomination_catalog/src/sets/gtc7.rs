@@ -265,7 +265,7 @@ pub fn miming_slime() -> CardDefinition {
         effect: Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::ONE,
-            definition: TokenDefinition {
+            definition: Box::new(TokenDefinition {
                 name: "Ooze".into(),
                 power: 0,
                 toughness: 0,
@@ -274,7 +274,7 @@ pub fn miming_slime() -> CardDefinition {
                 subtypes: creatures(vec![CreatureType::Ooze]),
                 dynamic_pt: Some((x.clone(), x)),
                 ..Default::default()
-            },
+            }),
         },
         ..Default::default()
     }

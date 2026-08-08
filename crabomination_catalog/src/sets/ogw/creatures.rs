@@ -1397,7 +1397,7 @@ pub fn desolation_twin() -> CardDefinition {
         triggered_abilities: vec![on_cast(Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::Const(1),
-            definition: eldrazi_10_10_token(),
+            definition: Box::new(eldrazi_10_10_token()),
         })],
         ..colossus("Desolation Twin", cost(&[generic(10)]), 10, 10)
     }
@@ -1504,7 +1504,7 @@ pub fn sifter_of_skulls() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: eldrazi_scion_token(),
+                definition: Box::new(eldrazi_scion_token()),
             },
         }],
         ..colossus("Sifter of Skulls", cost(&[generic(3), b()]), 4, 3)
@@ -1539,7 +1539,7 @@ pub fn pawn_of_ulamog() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: eldrazi_spawn_token(),
+                definition: Box::new(eldrazi_spawn_token()),
             },
         }],
         ..Default::default()
@@ -1749,7 +1749,7 @@ pub fn spawnsire_of_ulamog() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(2),
-                definition: eldrazi_spawn_token(),
+                definition: Box::new(eldrazi_spawn_token()),
             },
             ..Default::default()
         }],
@@ -1834,7 +1834,7 @@ pub fn blight_herder() -> CardDefinition {
             then: Box::new(Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(3),
-                definition: eldrazi_scion_token(),
+                definition: Box::new(eldrazi_scion_token()),
             }),
         })],
         keywords: vec![],
@@ -2148,7 +2148,7 @@ pub fn zendikars_roil() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: elemental,
+                definition: Box::new(elemental),
             },
         }],
         ..Default::default()
@@ -2279,7 +2279,7 @@ pub fn akoum_stonewaker() -> CardDefinition {
                     Effect::CreateToken {
                         who: crate::effect::PlayerRef::You,
                         count: Value::Const(1),
-                        definition: elemental,
+                        definition: Box::new(elemental),
                     },
                     Effect::DelayUntil {
                         kind: DelayedTriggerKind::NextEndStep,
@@ -2416,7 +2416,7 @@ pub fn spawning_bed() -> CardDefinition {
                 effect: Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::Const(3),
-                    definition: eldrazi_scion_token(),
+                    definition: Box::new(eldrazi_scion_token()),
                 },
                 ..Default::default()
             },
@@ -2900,7 +2900,7 @@ pub fn linvala_the_preserver() -> CardDefinition {
                     then: Box::new(Effect::CreateToken {
                         who: PlayerRef::You,
                         count: Value::Const(1),
-                        definition: angel,
+                        definition: Box::new(angel),
                     }),
                     else_: Box::new(Effect::Noop),
                 },
@@ -3006,7 +3006,7 @@ pub fn dranas_chosen() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: zombie,
+                definition: Box::new(zombie),
             },
             ..Default::default()
         }],

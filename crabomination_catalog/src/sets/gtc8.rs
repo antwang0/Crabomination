@@ -52,7 +52,7 @@ pub fn call_of_the_nightwing() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: TokenDefinition {
+                definition: Box::new(TokenDefinition {
                     name: "Horror".into(),
                     power: 1,
                     toughness: 1,
@@ -61,7 +61,7 @@ pub fn call_of_the_nightwing() -> CardDefinition {
                     subtypes: creatures(vec![CreatureType::Horror]),
                     keywords: vec![Keyword::Flying],
                     ..Default::default()
-                },
+                }),
             },
             Effect::Cipher,
         ]),

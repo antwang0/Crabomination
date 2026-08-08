@@ -81,7 +81,7 @@ pub fn spyglass_siren() -> CardDefinition {
         triggered_abilities: vec![etb(Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::Const(1),
-            definition: map_token(),
+            definition: Box::new(map_token()),
         })],
         ..Default::default()
     }
@@ -131,7 +131,7 @@ pub fn goldvein_hydra() -> CardDefinition {
         triggered_abilities: vec![on_dies(Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::PowerOf(Box::new(Selector::This)),
-            definition: treasure_token(),
+            definition: Box::new(treasure_token()),
         })],
         ..Default::default()
     }
@@ -544,7 +544,7 @@ pub fn clay_fired_bricks() -> CardDefinition {
         triggered_abilities: vec![etb(Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::Const(2),
-            definition: gnome,
+            definition: Box::new(gnome),
         })],
         static_abilities: vec![StaticAbility {
             description: "Creatures you control get +1/+1.",
@@ -913,7 +913,7 @@ pub fn waterwind_scout() -> CardDefinition {
         triggered_abilities: vec![etb(Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::Const(1),
-            definition: map_token(),
+            definition: Box::new(map_token()),
         })],
         ..Default::default()
     }
@@ -1012,7 +1012,7 @@ pub fn plundering_pirate() -> CardDefinition {
         triggered_abilities: vec![etb(Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::Const(1),
-            definition: treasure_token(),
+            definition: Box::new(treasure_token()),
         })],
         ..Default::default()
     }
@@ -1073,7 +1073,7 @@ pub fn oltec_cloud_guard() -> CardDefinition {
         triggered_abilities: vec![etb(Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::Const(1),
-            definition: TokenDefinition {
+            definition: Box::new(TokenDefinition {
                 name: "Gnome".into(),
                 power: 1,
                 toughness: 1,
@@ -1083,7 +1083,7 @@ pub fn oltec_cloud_guard() -> CardDefinition {
                     ..Default::default()
                 },
                 ..Default::default()
-            },
+            }),
         })],
         ..Default::default()
     }
@@ -1313,7 +1313,7 @@ pub fn greedy_freebooter() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: treasure_token(),
+                definition: Box::new(treasure_token()),
             },
         ]))],
         ..Default::default()
@@ -1338,7 +1338,7 @@ pub fn cartographers_companion() -> CardDefinition {
         triggered_abilities: vec![etb(Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::Const(1),
-            definition: map_token(),
+            definition: Box::new(map_token()),
         })],
         ..Default::default()
     }
@@ -1699,7 +1699,7 @@ pub fn sanguine_evangelist() -> CardDefinition {
     let bat = || Effect::CreateToken {
         who: PlayerRef::You,
         count: Value::Const(1),
-        definition: TokenDefinition {
+        definition: Box::new(TokenDefinition {
             name: "Bat".into(),
             power: 1,
             toughness: 1,
@@ -1711,7 +1711,7 @@ pub fn sanguine_evangelist() -> CardDefinition {
                 ..Default::default()
             },
             ..Default::default()
-        },
+        }),
     };
     CardDefinition {
         name: "Sanguine Evangelist",
@@ -2375,7 +2375,7 @@ pub fn nurturing_bristleback() -> CardDefinition {
         triggered_abilities: vec![etb(Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::Const(1),
-            definition: dino,
+            definition: Box::new(dino),
         })],
         ..Default::default()
     }
@@ -2462,7 +2462,7 @@ pub fn tinkers_tote() -> CardDefinition {
         triggered_abilities: vec![etb(Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::Const(2),
-            definition: gnome,
+            definition: Box::new(gnome),
         })],
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[w()]),
@@ -2637,7 +2637,7 @@ pub fn enterprising_scallywag() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: treasure_token(),
+                definition: Box::new(treasure_token()),
             },
         }],
         ..Default::default()
@@ -2661,7 +2661,7 @@ pub fn careening_mine_cart() -> CardDefinition {
         triggered_abilities: vec![on_attack(Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::Const(1),
-            definition: treasure_token(),
+            definition: Box::new(treasure_token()),
         })],
         ..Default::default()
     }
@@ -2717,7 +2717,7 @@ pub fn bonehoard_dracosaur() -> CardDefinition {
                     then: Box::new(Effect::CreateToken {
                         who: PlayerRef::You,
                         count: Value::Const(1),
-                        definition: dino,
+                        definition: Box::new(dino),
                     }),
                     else_: Box::new(Effect::Noop),
                 },
@@ -2728,7 +2728,7 @@ pub fn bonehoard_dracosaur() -> CardDefinition {
                     then: Box::new(Effect::CreateToken {
                         who: PlayerRef::You,
                         count: Value::Const(1),
-                        definition: treasure_token(),
+                        definition: Box::new(treasure_token()),
                     }),
                     else_: Box::new(Effect::Noop),
                 },
@@ -2758,7 +2758,7 @@ pub fn the_belligerent() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: treasure_token(),
+                definition: Box::new(treasure_token()),
             },
             Effect::GrantPlayFromTopThisTurn,
         ]))],
@@ -2955,7 +2955,7 @@ pub fn brackish_blunder() -> CardDefinition {
                 then: Box::new(Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::Const(1),
-                    definition: map_token(),
+                    definition: Box::new(map_token()),
                 }),
                 else_: Box::new(Effect::Noop),
             },
@@ -3010,7 +3010,7 @@ pub fn diamond_pick_axe() -> CardDefinition {
             triggered_abilities: vec![on_attack(Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: treasure_token(),
+                definition: Box::new(treasure_token()),
             })],
             ..Default::default()
         }),
@@ -3183,7 +3183,7 @@ pub fn ancestors_aid() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: treasure_token(),
+                definition: Box::new(treasure_token()),
             },
         ]),
         ..Default::default()
@@ -3425,7 +3425,7 @@ pub fn canonized_in_blood() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: demon,
+                definition: Box::new(demon),
             },
             ..Default::default()
         }],
@@ -3481,7 +3481,7 @@ pub fn threefold_thunderhulk() -> CardDefinition {
     let make_gnomes = move || Effect::CreateToken {
         who: PlayerRef::You,
         count: Value::PowerOf(Box::new(Selector::This)),
-        definition: gnome.clone(),
+        definition: Box::new(gnome.clone()),
     };
     CardDefinition {
         name: "Threefold Thunderhulk",
@@ -3767,7 +3767,7 @@ pub fn deeproot_pilgrimage() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: token,
+                definition: Box::new(token),
             },
         }],
         ..Default::default()
@@ -4384,7 +4384,7 @@ pub fn fanatical_offering() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: map_token(),
+                definition: Box::new(map_token()),
             },
         ]),
         ..Default::default()
@@ -4459,7 +4459,7 @@ pub fn envoy_of_okinec_ahau() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: TokenDefinition {
+                definition: Box::new(TokenDefinition {
                     name: "Gnome".into(),
                     power: 1,
                     toughness: 1,
@@ -4469,7 +4469,7 @@ pub fn envoy_of_okinec_ahau() -> CardDefinition {
                         ..Default::default()
                     },
                     ..Default::default()
-                },
+                }),
             },
             ..Default::default()
         }],
@@ -4865,7 +4865,7 @@ pub fn corpses_of_the_lost() -> CardDefinition {
             etb(Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: skeleton(2, "Skeleton Pirate"),
+                definition: Box::new(skeleton(2, "Skeleton Pirate")),
             }),
             TriggeredAbility {
                 event: EventSpec::new(
@@ -4879,7 +4879,7 @@ pub fn corpses_of_the_lost() -> CardDefinition {
                     then: Box::new(Effect::CreateToken {
                         who: PlayerRef::You,
                         count: Value::Const(1),
-                        definition: skeleton(1, "Skeleton"),
+                        definition: Box::new(skeleton(1, "Skeleton")),
                     }),
                     else_: Box::new(Effect::Noop),
                 },
@@ -4970,7 +4970,7 @@ pub fn broodrage_mycoid() -> CardDefinition {
                 then: Box::new(Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::Const(1),
-                    definition: TokenDefinition {
+                    definition: Box::new(TokenDefinition {
                         name: "Fungus".into(),
                         power: 1,
                         toughness: 1,
@@ -4982,7 +4982,7 @@ pub fn broodrage_mycoid() -> CardDefinition {
                         },
                         keywords: vec![Keyword::CantBlock],
                         ..Default::default()
-                    },
+                    }),
                 }),
                 else_: Box::new(Effect::Noop),
             },
@@ -5785,7 +5785,7 @@ pub fn poetic_ingenuity() -> CardDefinition {
                 effect: Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::Const(1),
-                    definition: treasure_token(),
+                    definition: Box::new(treasure_token()),
                 },
             },
             TriggeredAbility {
@@ -5798,7 +5798,7 @@ pub fn poetic_ingenuity() -> CardDefinition {
                 effect: Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::Const(1),
-                    definition: dino,
+                    definition: Box::new(dino),
                 },
             },
         ],
@@ -5916,7 +5916,7 @@ pub fn anim_pakal_thousandth_moon() -> CardDefinition {
                     what: Box::new(Selector::This),
                     kind: CounterType::PlusOnePlusOne,
                 },
-                definition: gnome,
+                definition: Box::new(gnome),
                 cleanup: crate::effect::AttackingTokenCleanup::None,
             },
         ]))],
@@ -6317,7 +6317,7 @@ pub fn vito_fanatic_of_aclazotz() -> CardDefinition {
                     Effect::CreateToken {
                         who: PlayerRef::You,
                         count: Value::Const(1),
-                        definition: demon,
+                        definition: Box::new(demon),
                     },
                 ],
             },
@@ -6523,7 +6523,7 @@ pub fn palanis_hatcher() -> CardDefinition {
             etb(Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(2),
-                definition: egg,
+                definition: Box::new(egg),
             }),
             TriggeredAbility {
                 event: EventSpec::new(
@@ -6542,7 +6542,7 @@ pub fn palanis_hatcher() -> CardDefinition {
                     Effect::CreateToken {
                         who: PlayerRef::You,
                         count: Value::Const(1),
-                        definition: dino,
+                        definition: Box::new(dino),
                     },
                 ]),
             },
@@ -6622,7 +6622,7 @@ pub fn the_mycotyrant() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::TimesDescendedThisTurn,
-                definition: fungus,
+                definition: Box::new(fungus),
             },
         }],
         ..Default::default()

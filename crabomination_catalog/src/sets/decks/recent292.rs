@@ -129,7 +129,7 @@ pub fn selesnya_evangel() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: saproling_token(),
+                definition: Box::new(saproling_token()),
             },
             ..Default::default()
         }],
@@ -221,7 +221,7 @@ pub fn bramble_elemental() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(2),
-                definition: saproling_token(),
+                definition: Box::new(saproling_token()),
             },
         }],
         ..Default::default()

@@ -69,7 +69,7 @@ pub fn release_the_dogs() -> CardDefinition {
         effect: Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::Const(4),
-            definition: dog_token(),
+            definition: Box::new(dog_token()),
         },
         ..Default::default()
     }
@@ -149,7 +149,7 @@ pub fn maalfeld_twins() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(2),
-                definition: zombie_token(),
+                definition: Box::new(zombie_token()),
             },
         }],
         ..Default::default()
@@ -172,7 +172,7 @@ pub fn rapacious_dragon() -> CardDefinition {
         triggered_abilities: vec![etb(Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::Const(2),
-            definition: crabomination_base::tokens::treasure_token(),
+            definition: Box::new(crabomination_base::tokens::treasure_token()),
         })],
         ..Default::default()
     }
@@ -383,7 +383,7 @@ pub fn regal_caracal() -> CardDefinition {
         triggered_abilities: vec![etb(Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::Const(2),
-            definition: cat_lifelink_token(),
+            definition: Box::new(cat_lifelink_token()),
         })],
         ..Default::default()
     }

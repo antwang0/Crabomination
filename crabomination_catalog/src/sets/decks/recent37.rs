@@ -251,7 +251,7 @@ pub fn dawn_of_hope() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: soldier,
+                definition: Box::new(soldier),
             },
             ..Default::default()
         }],

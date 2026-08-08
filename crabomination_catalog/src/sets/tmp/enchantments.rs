@@ -277,7 +277,7 @@ pub fn field_of_souls() -> CardDefinition {
             ),
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
-                definition: TokenDefinition {
+                definition: Box::new(TokenDefinition {
                     name: "Spirit".to_string(),
                     power: 1,
                     toughness: 1,
@@ -289,7 +289,7 @@ pub fn field_of_souls() -> CardDefinition {
                     },
                     keywords: vec![Keyword::Flying],
                     ..Default::default()
-                },
+                }),
                 count: Value::ONE,
             },
         }],
@@ -367,7 +367,7 @@ pub fn pegasus_refuge() -> CardDefinition {
             discard_cost: Some((R::Any, 1)),
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
-                definition: TokenDefinition {
+                definition: Box::new(TokenDefinition {
                     name: "Pegasus".to_string(),
                     power: 1,
                     toughness: 1,
@@ -379,7 +379,7 @@ pub fn pegasus_refuge() -> CardDefinition {
                     },
                     keywords: vec![Keyword::Flying],
                     ..Default::default()
-                },
+                }),
                 count: Value::ONE,
             },
             ..Default::default()
@@ -520,7 +520,7 @@ pub fn sarcomancy() -> CardDefinition {
             etb(Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: TokenDefinition {
+                definition: Box::new(TokenDefinition {
                     name: "Zombie".to_string(),
                     power: 2,
                     toughness: 2,
@@ -531,7 +531,7 @@ pub fn sarcomancy() -> CardDefinition {
                         ..Default::default()
                     },
                     ..Default::default()
-                },
+                }),
             }),
             TriggeredAbility {
                 event: EventSpec::new(
@@ -574,7 +574,7 @@ pub fn tooth_and_claw() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: TokenDefinition {
+                definition: Box::new(TokenDefinition {
                     name: "Carnivore".to_string(),
                     power: 3,
                     toughness: 1,
@@ -585,7 +585,7 @@ pub fn tooth_and_claw() -> CardDefinition {
                         ..Default::default()
                     },
                     ..Default::default()
-                },
+                }),
             },
             ..Default::default()
         }],
@@ -751,7 +751,7 @@ pub fn spirit_mirror() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: TokenDefinition {
+                definition: Box::new(TokenDefinition {
                     name: "Reflection".to_string(),
                     power: 2,
                     toughness: 2,
@@ -762,7 +762,7 @@ pub fn spirit_mirror() -> CardDefinition {
                         ..Default::default()
                     },
                     ..Default::default()
-                },
+                }),
             },
         }],
         activated_abilities: vec![ActivatedAbility {

@@ -136,7 +136,7 @@ pub fn blot_out_the_sky() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::XFromCost,
-                definition: inkling_2_1_token(),
+                definition: Box::new(inkling_2_1_token()),
             },
             Effect::Tap {
                 what: Selector::LastCreatedTokens,
@@ -171,7 +171,7 @@ pub fn serpentine_curve() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: crate::catalog::sets::sos::fractal_token(),
+                definition: Box::new(crate::catalog::sets::sos::fractal_token()),
             },
             Effect::AddCounter {
                 what: Selector::LastCreatedToken,
@@ -392,7 +392,7 @@ pub fn burn_down_the_house() -> CardDefinition {
                 Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::Const(3),
-                    definition: devil_1_1_token(),
+                    definition: Box::new(devil_1_1_token()),
                 },
                 Effect::GrantKeyword {
                     what: Selector::LastCreatedTokens,
@@ -437,7 +437,7 @@ pub fn geometric_nexus() -> CardDefinition {
                 Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::Const(1),
-                    definition: crate::catalog::sets::sos::fractal_token(),
+                    definition: Box::new(crate::catalog::sets::sos::fractal_token()),
                 },
                 Effect::AddCounter {
                     what: Selector::LastCreatedToken,
@@ -478,7 +478,7 @@ pub fn culmination_of_studies() -> CardDefinition {
                     sel: last(),
                     filter: SelectionRequirement::HasCardType(CardType::Land),
                 },
-                definition: crate::game::effects::treasure_token(),
+                definition: Box::new(crate::game::effects::treasure_token()),
             },
             Effect::Draw {
                 who: Selector::You,
@@ -708,7 +708,7 @@ pub fn elemental_masterpiece() -> CardDefinition {
         effect: Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::Const(2),
-            definition: elemental_4_4,
+            definition: Box::new(elemental_4_4),
         },
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[
@@ -718,7 +718,7 @@ pub fn elemental_masterpiece() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: crate::game::effects::treasure_token(),
+                definition: Box::new(crate::game::effects::treasure_token()),
             },
             from_hand: true,
             discard_self_cost: true,
@@ -791,7 +791,7 @@ pub fn sticky_fingers() -> CardDefinition {
                 effect: Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::Const(1),
-                    definition: crate::game::effects::treasure_token(),
+                    definition: Box::new(crate::game::effects::treasure_token()),
                 },
             }],
             ..Default::default()
@@ -1011,7 +1011,7 @@ pub fn illustrious_historian() -> CardDefinition {
                 Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::Const(1),
-                    definition: spirit_3_2_token(),
+                    definition: Box::new(spirit_3_2_token()),
                 },
                 Effect::Tap {
                     what: Selector::LastCreatedToken,
@@ -1170,7 +1170,7 @@ pub fn dramatic_finale() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: inkling_2_1_token(),
+                definition: Box::new(inkling_2_1_token()),
             },
         }],
         ..Default::default()
@@ -1230,7 +1230,7 @@ pub fn kasmina_enigma_sage() -> CardDefinition {
                     Effect::CreateToken {
                         who: PlayerRef::You,
                         count: Value::Const(1),
-                        definition: crate::catalog::sets::sos::fractal_token(),
+                        definition: Box::new(crate::catalog::sets::sos::fractal_token()),
                     },
                     Effect::AddCounter {
                         what: Selector::LastCreatedToken,

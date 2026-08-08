@@ -169,7 +169,7 @@ pub fn chocobo_racetrack() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: bird,
+                definition: Box::new(bird),
             },
         }],
         ..Default::default()
@@ -567,7 +567,7 @@ pub fn white_mages_staff() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: hero,
+                definition: Box::new(hero),
             },
             Effect::Attach {
                 what: Selector::This,
@@ -1162,7 +1162,7 @@ pub fn barret_avalanche_leader() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: rebel,
+                definition: Box::new(rebel),
             },
         }],
         ..Default::default()
@@ -1327,7 +1327,7 @@ pub fn gysahl_greens() -> CardDefinition {
         effect: Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::ONE,
-            definition: racetrack_bird_token(),
+            definition: Box::new(racetrack_bird_token()),
         },
         ..Default::default()
     }
@@ -1356,7 +1356,7 @@ pub fn battle_menu() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: knight,
+                definition: Box::new(knight),
             },
             Effect::PumpPT {
                 what: target_filtered(SelectionRequirement::Creature),
@@ -3638,7 +3638,7 @@ pub fn prompto_argentum() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: crabomination_base::tokens::treasure_token(),
+                definition: Box::new(crabomination_base::tokens::treasure_token()),
             },
         }],
         ..Default::default()
@@ -3730,7 +3730,7 @@ pub fn rufus_shinra() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: darkstar,
+                definition: Box::new(darkstar),
             },
         }],
         ..Default::default()
@@ -4113,7 +4113,7 @@ pub fn moogles_valor() -> CardDefinition {
                     filter: SelectionRequirement::Creature
                         .and(SelectionRequirement::ControlledByYou),
                 },
-                definition: moogle,
+                definition: Box::new(moogle),
             },
             Effect::GrantKeyword {
                 what: Selector::EachPermanent(
@@ -4189,7 +4189,7 @@ pub fn retrieve_the_esper() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: robot,
+                definition: Box::new(robot),
             },
             Effect::If {
                 cond: Predicate::CastFromGraveyard,
@@ -4252,7 +4252,7 @@ pub fn circle_of_power() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: wizard,
+                definition: Box::new(wizard),
             },
             Effect::PumpPT {
                 what: wizards(),
@@ -4411,7 +4411,7 @@ pub fn rinoa_heartilly() -> CardDefinition {
             etb(Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: angelo,
+                definition: Box::new(angelo),
             }),
             TriggeredAbility {
                 event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
@@ -4950,7 +4950,7 @@ pub fn aerith_rescue_mission() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(3),
-                definition: hero,
+                definition: Box::new(hero),
             },
             Effect::Seq(vec![
                 Effect::ApplyToTargets {
@@ -5033,12 +5033,12 @@ pub fn the_final_days() -> CardDefinition {
                     who: PlayerRef::You,
                     filter: SelectionRequirement::Creature,
                 },
-                definition: horror.clone(),
+                definition: Box::new(horror.clone()),
             }),
             else_: Box::new(Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(2),
-                definition: horror,
+                definition: Box::new(horror),
             }),
         },
         ..Default::default()
@@ -5114,7 +5114,7 @@ pub fn call_the_mountain_chocobo() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: bird,
+                definition: Box::new(bird),
             },
         ]),
         ..Default::default()
@@ -5413,7 +5413,7 @@ fn job_select_etb() -> TriggeredAbility {
         Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::ONE,
-            definition: hero_token(),
+            definition: Box::new(hero_token()),
         },
         Effect::Attach {
             what: Selector::This,
@@ -6469,7 +6469,7 @@ pub fn summon_fat_chocobo() -> CardDefinition {
                 Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::ONE,
-                    definition: bird,
+                    definition: Box::new(bird),
                 },
             ),
             (2, trample()),
@@ -7695,7 +7695,7 @@ pub fn the_wandering_minstrel() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: elemental,
+                definition: Box::new(elemental),
             },
         }],
         activated_abilities: vec![ActivatedAbility {
@@ -7791,7 +7791,7 @@ pub fn ignis_scientia() -> CardDefinition {
                     then: Box::new(Effect::CreateToken {
                         who: PlayerRef::You,
                         count: Value::ONE,
-                        definition: crabomination_base::tokens::food_token(),
+                        definition: Box::new(crabomination_base::tokens::food_token()),
                     }),
                     else_: Box::new(Effect::Noop),
                 },
@@ -7875,7 +7875,7 @@ pub fn summon_knights_of_round() -> CardDefinition {
     let make_three = || Effect::CreateToken {
         who: PlayerRef::You,
         count: Value::Const(3),
-        definition: knight(),
+        definition: Box::new(knight()),
     };
     let others = || {
         Selector::EachPermanent(
@@ -7969,7 +7969,7 @@ pub fn tellah_great_sage() -> CardDefinition {
                 Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::ONE,
-                    definition: hero_token(),
+                    definition: Box::new(hero_token()),
                 },
                 Effect::If {
                     cond: Predicate::CastSpellManaSpentAtLeast(4),
@@ -8209,7 +8209,7 @@ pub fn kain_traitorous_dragoon() -> CardDefinition {
                 Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::TriggerEventAmount,
-                    definition: treasure(),
+                    definition: Box::new(treasure()),
                 },
                 Effect::LoseLife {
                     who: Selector::You,

@@ -118,7 +118,7 @@ pub fn saber_ants() -> CardDefinition {
                 body: Box::new(Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::TriggerEventAmount,
-                    definition: TokenDefinition {
+                    definition: Box::new(TokenDefinition {
                         name: "Insect".into(),
                         power: 1,
                         toughness: 1,
@@ -129,7 +129,7 @@ pub fn saber_ants() -> CardDefinition {
                             ..Default::default()
                         },
                         ..Default::default()
-                    },
+                    }),
                 }),
             },
         }],

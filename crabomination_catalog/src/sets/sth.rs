@@ -532,7 +532,7 @@ pub fn spike_breeder() -> CardDefinition {
         effect: Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::ONE,
-            definition: TokenDefinition {
+            definition: Box::new(TokenDefinition {
                 name: "Spike".into(),
                 colors: vec![Color::Green],
                 card_types: vec![CardType::Creature],
@@ -543,7 +543,7 @@ pub fn spike_breeder() -> CardDefinition {
                 power: 1,
                 toughness: 1,
                 ..Default::default()
-            },
+            }),
         },
         ..Default::default()
     });
@@ -598,7 +598,7 @@ pub fn sliver_queen() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: TokenDefinition {
+                definition: Box::new(TokenDefinition {
                     name: "Sliver".into(),
                     card_types: vec![CardType::Creature],
                     subtypes: Subtypes {
@@ -608,7 +608,7 @@ pub fn sliver_queen() -> CardDefinition {
                     power: 1,
                     toughness: 1,
                     ..Default::default()
-                },
+                }),
             },
             ..Default::default()
         }],
@@ -1093,7 +1093,7 @@ pub fn lab_rats() -> CardDefinition {
         effect: Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::ONE,
-            definition: TokenDefinition {
+            definition: Box::new(TokenDefinition {
                 name: "Rat".into(),
                 colors: vec![Color::Black],
                 card_types: vec![CardType::Creature],
@@ -1101,7 +1101,7 @@ pub fn lab_rats() -> CardDefinition {
                 power: 1,
                 toughness: 1,
                 ..Default::default()
-            },
+            }),
         },
         ..Default::default()
     }
@@ -1273,7 +1273,7 @@ pub fn mogg_infestation() -> CardDefinition {
                     Box::new(Value::CreaturesDiedThisTurn(PlayerRef::Target(0))),
                     Box::new(Value::Const(2)),
                 ),
-                definition: TokenDefinition {
+                definition: Box::new(TokenDefinition {
                     name: "Goblin".into(),
                     colors: vec![Color::Red],
                     card_types: vec![CardType::Creature],
@@ -1284,7 +1284,7 @@ pub fn mogg_infestation() -> CardDefinition {
                     power: 1,
                     toughness: 1,
                     ..Default::default()
-                },
+                }),
             },
         ]),
         ..Default::default()
@@ -1663,7 +1663,7 @@ pub fn hornet_cannon() -> CardDefinition {
                 Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::ONE,
-                    definition: TokenDefinition {
+                    definition: Box::new(TokenDefinition {
                         name: "Hornet".into(),
                         card_types: vec![CardType::Artifact, CardType::Creature],
                         subtypes: Subtypes {
@@ -1674,7 +1674,7 @@ pub fn hornet_cannon() -> CardDefinition {
                         toughness: 1,
                         keywords: vec![Keyword::Flying, Keyword::Haste],
                         ..Default::default()
-                    },
+                    }),
                 },
                 Effect::AtNextEndStep {
                     body: Box::new(Effect::Destroy { what: Selector::LastMoved }),

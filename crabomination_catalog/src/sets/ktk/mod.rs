@@ -118,7 +118,7 @@ pub fn ponyback_brigade() -> CardDefinition {
         triggered_abilities: vec![etb(Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::Const(3),
-            definition: goblin,
+            definition: Box::new(goblin),
         })],
         alternative_cost: Some(dash(cost(&[generic(4), b(), r()]))),
         ..Default::default()

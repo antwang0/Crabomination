@@ -151,7 +151,7 @@ pub fn deathpact_angel() -> CardDefinition {
         triggered_abilities: vec![on_dies(Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::ONE,
-            definition: cleric,
+            definition: Box::new(cleric),
         })],
         ..Default::default()
     }

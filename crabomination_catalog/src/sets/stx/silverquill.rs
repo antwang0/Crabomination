@@ -291,7 +291,7 @@ pub fn felisa_fang_of_silverquill() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: inkling_token(),
+                definition: Box::new(inkling_token()),
             },
         }],
         ..Default::default()
@@ -419,7 +419,7 @@ pub fn hunt_for_specimens() -> CardDefinition {
             Effect::CreateToken {
                 who: PR::You,
                 count: Value::Const(1),
-                definition: pest,
+                definition: Box::new(pest),
             },
             // Learn (CR 701.45) — reveal a Lesson into hand or discard-to-draw.
             Effect::Learn { who: PR::You },
@@ -1597,7 +1597,7 @@ pub fn silverquill_sermon() -> CardDefinition {
         effect: Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::Const(2),
-            definition: inkling_token(),
+            definition: Box::new(inkling_token()),
         },
         ..Default::default()
     }
@@ -1772,7 +1772,7 @@ pub fn inkling_decree() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: inkling_token(),
+                definition: Box::new(inkling_token()),
             },
         ]),
         ..Default::default()
@@ -2120,7 +2120,7 @@ pub fn inkling_acolyte() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: crate::catalog::sets::sos::inkling_token(),
+                definition: Box::new(crate::catalog::sets::sos::inkling_token()),
             },
         }],
         ..Default::default()
@@ -2238,7 +2238,7 @@ pub fn silverquill_reckoning() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: crate::catalog::sets::sos::inkling_token(),
+                definition: Box::new(crate::catalog::sets::sos::inkling_token()),
             },
         ]),
         ..Default::default()
@@ -2336,7 +2336,7 @@ pub fn silverquill_quillscribe() -> CardDefinition {
                 effect: Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::Const(1),
-                    definition: crate::catalog::sets::sos::inkling_token(),
+                    definition: Box::new(crate::catalog::sets::sos::inkling_token()),
                 },
             },
             magecraft(Effect::AddCounter {
@@ -2888,7 +2888,7 @@ pub fn inkling_verseweaver() -> CardDefinition {
         triggered_abilities: vec![magecraft(Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::Const(1),
-            definition: inkling,
+            definition: Box::new(inkling),
         })],
         ..Default::default()
     }
@@ -3010,7 +3010,7 @@ pub fn silverquill_heraldist() -> CardDefinition {
                 Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::Const(1),
-                    definition: inkling_token(),
+                    definition: Box::new(inkling_token()),
                 },
             ]),
         }],
@@ -3250,7 +3250,7 @@ pub fn silverquill_pact() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(2),
-                definition: inkling_token(),
+                definition: Box::new(inkling_token()),
             },
         ]),
         ..Default::default()
@@ -3299,7 +3299,7 @@ pub fn inkling_sermon() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: inkling_token(),
+                definition: Box::new(inkling_token()),
             },
         ]),
         ..Default::default()
@@ -3500,7 +3500,7 @@ pub fn silverquill_ovation() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(2),
-                definition: inkling_token(),
+                definition: Box::new(inkling_token()),
             },
             Effect::ForEach {
                 selector: Selector::EachPermanent(
@@ -3628,7 +3628,7 @@ pub fn silverquill_spellscribe() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: inkling_token(),
+                definition: Box::new(inkling_token()),
             },
         }],
         ..Default::default()
@@ -4065,7 +4065,7 @@ pub fn silverquill_forge() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(2),
-                definition: inkling_token(),
+                definition: Box::new(inkling_token()),
             },
             Effect::Drain {
                 from: Selector::Player(PlayerRef::EachOpponent),
@@ -4190,7 +4190,7 @@ pub fn silverquill_battle_oration() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: inkling_token(),
+                definition: Box::new(inkling_token()),
             },
         ]),
         ..Default::default()
@@ -4356,7 +4356,7 @@ pub fn silverquill_inkproclamation() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: inkling_token(),
+                definition: Box::new(inkling_token()),
             },
         ]),
         ..Default::default()
@@ -4616,7 +4616,7 @@ pub fn silverquill_inkflood() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(2),
-                definition: inkling_token(),
+                definition: Box::new(inkling_token()),
             },
             Effect::GainLife {
                 who: Selector::You,
@@ -4761,7 +4761,7 @@ pub fn silverquill_convocation() -> CardDefinition {
         effect: Effect::Seq(vec![
             Effect::CreateToken {
                 who: PlayerRef::You,
-                definition: inkling_token(),
+                definition: Box::new(inkling_token()),
                 count: Value::Const(2),
             },
             Effect::Drain {
@@ -4820,7 +4820,7 @@ pub fn inkling_recruiter() -> CardDefinition {
         triggered_abilities: vec![crate::effect::shortcut::etb(Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::Const(1),
-            definition: inkling_token(),
+            definition: Box::new(inkling_token()),
         })],
         ..Default::default()
     }
@@ -5884,7 +5884,7 @@ pub fn inkling_ascendancy() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(2),
-                definition: inkling_token(),
+                definition: Box::new(inkling_token()),
             },
             Effect::PumpPT {
                 what: Selector::EachPermanent(
@@ -6711,7 +6711,7 @@ pub fn silverquill_convene() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(2),
-                definition: inkling_token(),
+                definition: Box::new(inkling_token()),
             },
             Effect::LoseLife {
                 who: Selector::Player(PlayerRef::EachOpponent),
@@ -6862,7 +6862,7 @@ pub fn silverquill_pronouncement() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(2),
-                definition: inkling_token(),
+                definition: Box::new(inkling_token()),
             },
         ]),
         ..Default::default()
@@ -7037,7 +7037,7 @@ pub fn silverquill_festscribe() -> CardDefinition {
                 Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::Const(1),
-                    definition: inkling_token(),
+                    definition: Box::new(inkling_token()),
                 },
                 Effect::GainLife {
                     who: Selector::You,
@@ -7343,7 +7343,7 @@ pub fn silverquill_invocation() -> CardDefinition {
         effect: Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::Const(3),
-            definition: inkling_token(),
+            definition: Box::new(inkling_token()),
         },
         ..Default::default()
     }
@@ -7430,7 +7430,7 @@ pub fn inkling_pageant() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(2),
-                definition: inkling_token(),
+                definition: Box::new(inkling_token()),
             },
             Effect::GainLife {
                 who: Selector::You,
@@ -7884,7 +7884,7 @@ pub fn silverquill_lecturer_b58() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: inkling_token(),
+                definition: Box::new(inkling_token()),
             },
             Effect::GainLife {
                 who: Selector::You,
@@ -8324,7 +8324,7 @@ pub fn silverquill_quillchorus() -> CardDefinition {
         effect: Effect::Seq(vec![
             Effect::CreateToken {
                 who: PlayerRef::You,
-                definition: inkling_token(),
+                definition: Box::new(inkling_token()),
                 count: Value::Const(3),
             },
             drain(1),
@@ -8461,7 +8461,7 @@ pub fn inkling_heraldcourier() -> CardDefinition {
         keywords: vec![Keyword::Flying, Keyword::Vigilance],
         triggered_abilities: vec![etb(Effect::CreateToken {
             who: PlayerRef::You,
-            definition: inkling_token(),
+            definition: Box::new(inkling_token()),
             count: Value::Const(1),
         })],
         ..Default::default()
@@ -8928,7 +8928,7 @@ pub fn silverquill_ravenstrike_b125() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: inkling_token(),
+                definition: Box::new(inkling_token()),
             },
             Effect::GainLife {
                 who: Selector::You,
@@ -9501,7 +9501,7 @@ pub fn inkling_sermon_ii_b131() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: inkling_token(),
+                definition: Box::new(inkling_token()),
             },
         ]),
         ..Default::default()
@@ -9955,7 +9955,7 @@ pub fn silverquill_pristine_sermon_b136() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: inkling_token(),
+                definition: Box::new(inkling_token()),
             },
         ]),
         ..Default::default()
@@ -10420,7 +10420,7 @@ pub fn inkling_ledgerlord_b143() -> CardDefinition {
                 Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::Const(2),
-                    definition: inkling_token(),
+                    definition: Box::new(inkling_token()),
                 },
             ])),
         })],
@@ -10932,7 +10932,7 @@ pub fn silverquill_inkriot_b146() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(2),
-                definition: inkling_token(),
+                definition: Box::new(inkling_token()),
             },
             Effect::GainLife {
                 who: Selector::You,
@@ -11809,7 +11809,7 @@ pub fn silverquill_quilledict_b154() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(2),
-                definition: inkling_token(),
+                definition: Box::new(inkling_token()),
             },
         ]),
         ..Default::default()
@@ -12005,7 +12005,7 @@ pub fn silverquill_quillplay_b155() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: inkling_token(),
+                definition: Box::new(inkling_token()),
             },
         ]),
         ..Default::default()
@@ -12105,7 +12105,7 @@ pub fn silverquill_recital_b155() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: inkling_token(),
+                definition: Box::new(inkling_token()),
             },
             Effect::GainLife {
                 who: Selector::You,
@@ -12444,7 +12444,7 @@ pub fn silverquill_tactician_b156() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: inkling_token(),
+                definition: Box::new(inkling_token()),
             },
         }],
         ..Default::default()
@@ -13067,7 +13067,7 @@ pub fn silverquill_penkeeper_b161() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: inkling_token(),
+                definition: Box::new(inkling_token()),
             },
         ]),
         ..Default::default()
@@ -13956,7 +13956,7 @@ pub fn umbral_juke() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: stx_inkling_token(),
+                definition: Box::new(stx_inkling_token()),
             },
         ]),
         ..Default::default()
@@ -15311,7 +15311,7 @@ pub fn silverquill_inkdrain_b191() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: inkling_token(),
+                definition: Box::new(inkling_token()),
             },
         ]),
         ..Default::default()
@@ -15784,7 +15784,7 @@ pub fn silverquill_wordstamp_b195() -> CardDefinition {
         effect: Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::Const(2),
-            definition: inkling_token(),
+            definition: Box::new(inkling_token()),
         },
         ..Default::default()
     }
@@ -16377,7 +16377,7 @@ pub fn silverquill_quillforge_b202() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(2),
-                definition: inkling_token(),
+                definition: Box::new(inkling_token()),
             },
             drain(3),
         ]),
@@ -16718,7 +16718,7 @@ pub fn silverquill_sumptuous_b202() -> CardDefinition {
         effect: Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::Const(3),
-            definition: inkling_token(),
+            definition: Box::new(inkling_token()),
         },
         ..Default::default()
     }

@@ -2175,7 +2175,7 @@ impl GameState {
             &Effect::CreateToken {
                 who: PlayerRef::You,
                 count: crate::effect::Value::Const(picks.len() as i32),
-                definition: definition.clone(),
+                definition: Box::new(definition.clone()),
             },
             ctx,
             events,
@@ -4479,7 +4479,7 @@ impl GameState {
                         &Effect::CreateToken {
                             who: crate::effect::PlayerRef::You,
                             count: crate::effect::Value::ONE,
-                            definition: insect.clone(),
+                            definition: Box::new(insect.clone()),
                         },
                         ctx,
                         events,
@@ -14874,7 +14874,7 @@ impl GameState {
                         &Effect::CreateToken {
                             who: crate::effect::PlayerRef::You,
                             count: crate::effect::Value::Const(1),
-                            definition: token,
+                            definition: Box::new(token),
                         },
                         ctx,
                         events,
@@ -22537,7 +22537,7 @@ impl GameState {
                         &Effect::CreateToken {
                             who: PlayerRef::Seat(caster),
                             count: crate::effect::Value::Const(mv as i32),
-                            definition: token,
+                            definition: Box::new(token),
                         },
                         ctx,
                     )?;
@@ -22632,7 +22632,7 @@ impl GameState {
                         &Effect::CreateToken {
                             who: crate::effect::PlayerRef::You,
                             count: crate::effect::Value::Const(total),
-                            definition: token,
+                            definition: Box::new(token),
                         },
                         ctx,
                     )
@@ -23978,7 +23978,7 @@ impl GameState {
                     &Effect::CreateToken {
                         who: PlayerRef::You,
                         count: crate::effect::Value::ONE,
-                        definition: token,
+                        definition: Box::new(token),
                     },
                     ctx,
                     events,
@@ -26224,7 +26224,7 @@ impl GameState {
                         &Effect::CreateToken {
                             who: PlayerRef::Seat(p),
                             count: crate::effect::Value::Const(n as i32),
-                            definition: (**token).clone(),
+                            definition: Box::new((**token).clone()),
                         },
                         &EffectContext { controller: p, ..ctx.clone() },
                         events,
@@ -35506,7 +35506,7 @@ impl GameState {
                 &Effect::CreateToken {
                     who: crate::effect::PlayerRef::You,
                     count: crate::effect::Value::Const(matches),
-                    definition: token.clone(),
+                    definition: Box::new(token.clone()),
                 },
                 ctx,
                 events,

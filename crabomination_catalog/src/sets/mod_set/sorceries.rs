@@ -341,7 +341,7 @@ pub fn big_score() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(2),
-                definition: treasure_token(),
+                definition: Box::new(treasure_token()),
             },
             Effect::Draw {
                 who: Selector::You,
@@ -774,7 +774,7 @@ pub fn servo_exhibition() -> CardDefinition {
         effect: Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::Const(2),
-            definition: crate::card::TokenDefinition {
+            definition: Box::new(crate::card::TokenDefinition {
                 name: "Servo".into(),
                 power: 1,
                 toughness: 1,
@@ -785,7 +785,7 @@ pub fn servo_exhibition() -> CardDefinition {
                     ..Default::default()
                 },
                 ..Default::default()
-            },
+            }),
         },
         ..Default::default()
     }

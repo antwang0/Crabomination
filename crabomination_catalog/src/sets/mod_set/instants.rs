@@ -357,7 +357,7 @@ pub fn pact_of_the_titan() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: TokenDefinition {
+                definition: Box::new(TokenDefinition {
                     name: "Giant".into(),
                     power: 4,
                     toughness: 4,
@@ -374,7 +374,7 @@ pub fn pact_of_the_titan() -> CardDefinition {
 
                     static_abilities: vec![],
                     ..Default::default()
-                },
+                }),
             },
             Effect::DelayUntil {
                 kind: DelayedTriggerKind::YourNextUpkeep,
@@ -448,7 +448,7 @@ pub fn swan_song() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::ControllerOf(Box::new(Selector::Target(0))),
                 count: Value::Const(1),
-                definition: TokenDefinition {
+                definition: Box::new(TokenDefinition {
                     name: "Bird".into(),
                     power: 2,
                     toughness: 2,
@@ -465,7 +465,7 @@ pub fn swan_song() -> CardDefinition {
 
                     static_abilities: vec![],
                     ..Default::default()
-                },
+                }),
             },
             Effect::CounterSpell {
                 what: target_filtered(
@@ -687,7 +687,7 @@ pub fn deadly_dispute() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: crate::game::effects::treasure_token(),
+                definition: Box::new(crate::game::effects::treasure_token()),
             },
         ]),
         ..Default::default()
@@ -1073,7 +1073,7 @@ pub fn pongify() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::ControllerOf(Box::new(Selector::Target(0))),
                 count: Value::Const(1),
-                definition: ape,
+                definition: Box::new(ape),
             },
             Effect::DestroyNoRegen {
                 what: target_filtered(SelectionRequirement::Creature),
@@ -1850,7 +1850,7 @@ pub fn flash_foliage() -> CardDefinition {
         cast_only_after_blockers: true,
         effect: Effect::Seq(vec![
             Effect::CreateTokenBlocking {
-                definition: TokenDefinition {
+                definition: Box::new(TokenDefinition {
                     name: "Saproling".into(),
                     power: 1,
                     toughness: 1,
@@ -1861,7 +1861,7 @@ pub fn flash_foliage() -> CardDefinition {
                         ..Default::default()
                     },
                     ..Default::default()
-                },
+                }),
                 filter: SelectionRequirement::Creature.and(SelectionRequirement::IsAttacking),
             },
             Effect::Draw {

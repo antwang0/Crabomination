@@ -120,7 +120,7 @@ pub fn quandrix_aetherist_b103() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: fractal_token(),
+                definition: Box::new(fractal_token()),
             },
             Effect::AddCounter {
                 what: Selector::LastCreatedToken,
@@ -514,7 +514,7 @@ pub fn quandrix_lecturer() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: fractal_token(),
+                definition: Box::new(fractal_token()),
             },
             Effect::AddCounter {
                 what: Selector::LastCreatedToken,
@@ -1156,7 +1156,7 @@ pub fn quandrix_mathematician_b104() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: fractal_token(),
+                definition: Box::new(fractal_token()),
             },
             Effect::AddCounter {
                 what: Selector::LastCreatedToken,
@@ -1188,7 +1188,7 @@ pub fn fractal_bloom_b104() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(2),
-                definition: fractal_token(),
+                definition: Box::new(fractal_token()),
             },
             Effect::DistributeCountersAmongLastCreated {
                 total: Value::Const(3),

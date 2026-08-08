@@ -169,7 +169,7 @@ pub fn drake_hatcher() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: drake_token(),
+                definition: Box::new(drake_token()),
             },
             ..Default::default()
         }],

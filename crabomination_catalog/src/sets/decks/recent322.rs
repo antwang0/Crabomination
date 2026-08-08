@@ -102,7 +102,7 @@ pub fn beacon_of_creation() -> CardDefinition {
             count: Value::CountOf(Box::new(Selector::EachPermanent(
                 R::HasLandType(crate::card::LandType::Forest).and(R::ControlledByYou),
             ))),
-            definition: TokenDefinition {
+            definition: Box::new(TokenDefinition {
                 name: "Insect".into(),
                 colors: vec![Color::Green],
                 card_types: vec![CardType::Creature],
@@ -113,7 +113,7 @@ pub fn beacon_of_creation() -> CardDefinition {
                 power: 1,
                 toughness: 1,
                 ..Default::default()
-            },
+            }),
         },
     )
 }

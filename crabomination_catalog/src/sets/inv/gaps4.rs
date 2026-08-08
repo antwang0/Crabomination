@@ -137,7 +137,7 @@ pub fn rith_the_awakener() -> CardDefinition {
         Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::CountOf(Box::new(of_chosen_color(R::Permanent))),
-            definition: saproling(),
+            definition: Box::new(saproling()),
         },
     )
 }
@@ -314,7 +314,7 @@ pub fn verdeloth_the_ancient() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::XFromCost,
-                definition: saproling(),
+                definition: Box::new(saproling()),
             },
         }],
         ..creature(
@@ -663,7 +663,7 @@ pub fn saproling_infestation() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: saproling(),
+                definition: Box::new(saproling()),
             },
         }],
         ..enchantment("Saproling Infestation", cost(&[generic(1), g()]))
@@ -683,7 +683,7 @@ pub fn saproling_symbiosis() -> CardDefinition {
                 sel: Box::new(Selector::EachPermanent(R::ControlledByYou)),
                 filter: R::Creature,
             },
-            definition: saproling(),
+            definition: Box::new(saproling()),
         },
     )
     }

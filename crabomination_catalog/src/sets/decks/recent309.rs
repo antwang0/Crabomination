@@ -457,7 +457,7 @@ pub fn geralf_the_fleshwright() -> CardDefinition {
                 effect: Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::ONE,
-                    definition: TokenDefinition {
+                    definition: Box::new(TokenDefinition {
                         name: "Zombie Rogue".into(),
                         power: 2,
                         toughness: 2,
@@ -468,7 +468,7 @@ pub fn geralf_the_fleshwright() -> CardDefinition {
                             ..Default::default()
                         },
                         ..Default::default()
-                    },
+                    }),
                 },
             },
             TriggeredAbility {
@@ -510,7 +510,7 @@ pub fn selvala_eager_trailblazer() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: mercenary_token(),
+                definition: Box::new(mercenary_token()),
             },
         }],
         activated_abilities: vec![ActivatedAbility {
@@ -544,7 +544,7 @@ pub fn ertha_jo_frontier_mentor() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: mercenary_token(),
+                definition: Box::new(mercenary_token()),
             },
         }],
         ..legend(
@@ -569,7 +569,7 @@ pub fn bonny_pall_clearcutter() -> CardDefinition {
                 effect: Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::ONE,
-                    definition: TokenDefinition {
+                    definition: Box::new(TokenDefinition {
                         name: "Beau".into(),
                         power: 0,
                         toughness: 0,
@@ -585,7 +585,7 @@ pub fn bonny_pall_clearcutter() -> CardDefinition {
                             Value::count(Selector::EachPermanent(R::Land.and(R::ControlledByYou))),
                         )),
                         ..Default::default()
-                    },
+                    }),
                 },
             },
             TriggeredAbility {
@@ -872,7 +872,7 @@ pub fn great_train_heist() -> CardDefinition {
                         body: Box::new(Effect::CreateToken {
                             who: PlayerRef::You,
                             count: Value::ONE,
-                            definition: crabomination_base::tokens::treasure_token(),
+                            definition: Box::new(crabomination_base::tokens::treasure_token()),
                         }),
                     },
                 ),
@@ -1309,7 +1309,7 @@ pub fn oko_the_ringleader() -> CardDefinition {
                 effect: Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::ONE,
-                    definition: TokenDefinition {
+                    definition: Box::new(TokenDefinition {
                         name: "Elk".into(),
                         power: 3,
                         toughness: 3,
@@ -1320,7 +1320,7 @@ pub fn oko_the_ringleader() -> CardDefinition {
                             ..Default::default()
                         },
                         ..Default::default()
-                    },
+                    }),
                 },
                 ..Default::default()
             },

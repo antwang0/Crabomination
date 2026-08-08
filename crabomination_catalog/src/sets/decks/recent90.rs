@@ -174,7 +174,7 @@ pub fn improbable_alliance() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: faerie,
+                definition: Box::new(faerie),
             },
         }],
         activated_abilities: vec![ActivatedAbility {
@@ -372,7 +372,7 @@ pub fn docent_of_perfection() -> CardDefinition {
     let make_wizard = || Effect::CreateToken {
         who: PlayerRef::You,
         count: Value::ONE,
-        definition: human_wizard_token(),
+        definition: Box::new(human_wizard_token()),
     };
     let final_iteration = CardDefinition {
         name: "Final Iteration",
@@ -653,7 +653,7 @@ pub fn rise_from_the_tides() -> CardDefinition {
                 zone: crate::card::Zone::Graveyard,
                 filter: R::HasCardType(CardType::Instant).or(R::HasCardType(CardType::Sorcery)),
             }),
-            definition: zombie,
+            definition: Box::new(zombie),
         },
         ..Default::default()
     }

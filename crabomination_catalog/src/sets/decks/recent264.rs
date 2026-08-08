@@ -87,7 +87,7 @@ pub fn preening_champion() -> CardDefinition {
         triggered_abilities: vec![etb(Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::Const(1),
-            definition: elemental,
+            definition: Box::new(elemental),
         })],
         ..Default::default()
     }
@@ -123,7 +123,7 @@ pub fn knight_of_the_new_coalition() -> CardDefinition {
         triggered_abilities: vec![etb(Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::Const(1),
-            definition: knight,
+            definition: Box::new(knight),
         })],
         ..Default::default()
     }
@@ -156,7 +156,7 @@ pub fn conscripted_infantry() -> CardDefinition {
         triggered_abilities: vec![dies(Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::Const(1),
-            definition: soldier,
+            definition: Box::new(soldier),
         })],
         ..Default::default()
     }

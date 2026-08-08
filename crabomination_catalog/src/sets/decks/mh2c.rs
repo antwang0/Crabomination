@@ -123,7 +123,7 @@ pub fn batterbone() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: germ,
+                definition: Box::new(germ),
             },
             Effect::Attach {
                 what: Selector::This,
@@ -341,7 +341,7 @@ pub fn etherium_spinner() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: thopter_token(),
+                definition: Box::new(thopter_token()),
             },
         }],
         ..Default::default()

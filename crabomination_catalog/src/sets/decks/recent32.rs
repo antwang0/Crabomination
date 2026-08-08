@@ -300,7 +300,7 @@ pub fn mahadi_emporium_master() -> CardDefinition {
         effect: Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::CreaturesDiedThisTurnTotal,
-            definition: crabomination_base::tokens::treasure_token(),
+            definition: Box::new(crabomination_base::tokens::treasure_token()),
         },
     }];
     def

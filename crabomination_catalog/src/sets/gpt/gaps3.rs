@@ -73,7 +73,7 @@ pub fn seize_the_soul() -> CardDefinition {
         Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::ONE,
-            definition: spirit_token(),
+            definition: Box::new(spirit_token()),
         },
     ]);
     CardDefinition {
@@ -237,7 +237,7 @@ pub fn dune_brood_nephilim() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::count(Selector::EachPermanent(R::Land.and(R::ControlledByYou))),
-                definition: sand_token(),
+                definition: Box::new(sand_token()),
             },
         }],
         ..Default::default()

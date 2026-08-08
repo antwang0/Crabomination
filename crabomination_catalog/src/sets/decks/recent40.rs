@@ -205,7 +205,7 @@ pub fn castle_ardenvale() -> CardDefinition {
                 effect: Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::Const(1),
-                    definition: human,
+                    definition: Box::new(human),
                 },
                 ..Default::default()
             },
@@ -315,7 +315,7 @@ pub fn field_of_the_dead() -> CardDefinition {
                 effect: Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::Const(1),
-                    definition: zombie,
+                    definition: Box::new(zombie),
                 },
             },
         ],

@@ -208,7 +208,7 @@ pub fn bringer_of_the_green_dawn() -> CardDefinition {
         Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::ONE,
-            definition: TokenDefinition {
+            definition: Box::new(TokenDefinition {
                 name: "Beast".into(),
                 colors: vec![crate::mana::Color::Green],
                 card_types: vec![CardType::Creature],
@@ -219,7 +219,7 @@ pub fn bringer_of_the_green_dawn() -> CardDefinition {
                 power: 3,
                 toughness: 3,
                 ..Default::default()
-            },
+            }),
         },
         "Create a 3/3 Beast?",
     )
@@ -544,7 +544,7 @@ pub fn summoning_station() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: TokenDefinition {
+                definition: Box::new(TokenDefinition {
                     name: "Pincher".into(),
                     card_types: vec![CardType::Creature],
                     subtypes: Subtypes {
@@ -554,7 +554,7 @@ pub fn summoning_station() -> CardDefinition {
                     power: 2,
                     toughness: 2,
                     ..Default::default()
-                },
+                }),
             },
             ..Default::default()
         }],

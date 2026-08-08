@@ -500,7 +500,7 @@ pub fn security_detail() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: TokenDefinition {
+                definition: Box::new(TokenDefinition {
                     name: "Soldier".into(),
                     power: 1,
                     toughness: 1,
@@ -511,7 +511,7 @@ pub fn security_detail() -> CardDefinition {
                         ..Default::default()
                     },
                     ..Default::default()
-                },
+                }),
             },
             ..Default::default()
         }],
@@ -572,7 +572,7 @@ pub fn midnight_ritual() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::XFromCost,
-                definition: TokenDefinition {
+                definition: Box::new(TokenDefinition {
                     name: "Zombie".into(),
                     power: 2,
                     toughness: 2,
@@ -583,7 +583,7 @@ pub fn midnight_ritual() -> CardDefinition {
                         ..Default::default()
                     },
                     ..Default::default()
-                },
+                }),
             },
         ]),
         ..sorcery(

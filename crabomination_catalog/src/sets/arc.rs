@@ -79,14 +79,14 @@ pub fn delight_in_the_hunt() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: token(
+                definition: Box::new(token(
                     "Horror",
                     3,
                     3,
                     vec![Color::Black],
                     vec![CreatureType::Horror],
                     vec![],
-                ),
+                )),
             },
             Effect::PreventAllDamageThisTurn {
                 target: Selector::EachPermanent(R::Creature.and(R::ControlledByYou)),
@@ -108,26 +108,26 @@ pub fn evil_comes_to_fruition() -> CardDefinition {
             then: Box::new(Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(7),
-                definition: token(
+                definition: Box::new(token(
                     "Elemental",
                     3,
                     3,
                     vec![Color::Green],
                     vec![CreatureType::Elemental],
                     vec![],
-                ),
+                )),
             }),
             else_: Box::new(Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(7),
-                definition: token(
+                definition: Box::new(token(
                     "Plant",
                     0,
                     1,
                     vec![Color::Green],
                     vec![CreatureType::Plant],
                     vec![],
-                ),
+                )),
             }),
         },
     )
@@ -141,7 +141,7 @@ pub fn kneel_before_my_legions() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: TokenDefinition {
+                definition: Box::new(TokenDefinition {
                     name: "Scarecrow".into(),
                     power: 4,
                     toughness: 4,
@@ -152,7 +152,7 @@ pub fn kneel_before_my_legions() -> CardDefinition {
                     },
                     keywords: vec![Keyword::Vigilance],
                     ..Default::default()
-                },
+                }),
             },
             Effect::PumpPT {
                 what: Selector::EachPermanent(R::Creature.and(R::ControlledByYou)),

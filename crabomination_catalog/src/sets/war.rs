@@ -2298,7 +2298,7 @@ pub fn tibalt_rakish_instigator() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: devil_token(),
+                definition: Box::new(devil_token()),
             },
             ..Default::default()
         }],
@@ -2324,7 +2324,7 @@ pub fn teyo_the_shieldmage() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: TokenDefinition {
+                definition: Box::new(TokenDefinition {
                     name: "Wall".into(),
                     power: 0,
                     toughness: 3,
@@ -2336,7 +2336,7 @@ pub fn teyo_the_shieldmage() -> CardDefinition {
                         ..Default::default()
                     },
                     ..Default::default()
-                },
+                }),
             },
             ..Default::default()
         }],
@@ -2366,7 +2366,7 @@ pub fn kasmina_enigmatic_mentor() -> CardDefinition {
                 Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::ONE,
-                    definition: TokenDefinition {
+                    definition: Box::new(TokenDefinition {
                         name: "Wizard".into(),
                         power: 2,
                         toughness: 2,
@@ -2377,7 +2377,7 @@ pub fn kasmina_enigmatic_mentor() -> CardDefinition {
                             ..Default::default()
                         },
                         ..Default::default()
-                    },
+                    }),
                 },
                 draw(1),
                 Effect::Discard {
@@ -2552,7 +2552,7 @@ pub fn god_eternal_oketra() -> CardDefinition {
                 effect: Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::ONE,
-                    definition: TokenDefinition {
+                    definition: Box::new(TokenDefinition {
                         name: "Zombie Warrior".into(),
                         power: 4,
                         toughness: 4,
@@ -2561,7 +2561,7 @@ pub fn god_eternal_oketra() -> CardDefinition {
                         colors: vec![Color::Black],
                         subtypes: creatures(vec![CreatureType::Zombie, CreatureType::Warrior]),
                         ..Default::default()
-                    },
+                    }),
                 },
             },
             dies,
@@ -2785,14 +2785,14 @@ pub fn finale_of_glory() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::XFromCost,
-                definition: soldier,
+                definition: Box::new(soldier),
             },
             Effect::If {
                 cond: Predicate::ValueAtLeast(Value::XFromCost, Value::Const(10)),
                 then: Box::new(Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::XFromCost,
-                    definition: angel,
+                    definition: Box::new(angel),
                 }),
                 else_: Box::new(Effect::Noop),
             },
@@ -3655,7 +3655,7 @@ pub fn tolsimir_friend_to_wolves() -> CardDefinition {
             etb(Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: voja,
+                definition: Box::new(voja),
             }),
             TriggeredAbility {
                 event: EventSpec::new(EventKind::EntersBattlefield, EventScope::YourControl)
@@ -3984,7 +3984,7 @@ pub fn sarkhan_the_masterless() -> CardDefinition {
                 effect: Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::ONE,
-                    definition: dragon_token,
+                    definition: Box::new(dragon_token),
                 },
                 ..Default::default()
             },
@@ -4046,7 +4046,7 @@ pub fn arlinn_voice_of_the_pack() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: wolf,
+                definition: Box::new(wolf),
             },
             ..Default::default()
         }],
@@ -4459,7 +4459,7 @@ pub fn vraska_swarms_eminence() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: vraska_assassin_token(),
+                definition: Box::new(vraska_assassin_token()),
             },
             ..Default::default()
         }],
@@ -4860,7 +4860,7 @@ pub fn parhelion_ii() -> CardDefinition {
         triggered_abilities: vec![on_attack(Effect::CreateTokenAttacking {
             who: PlayerRef::You,
             count: Value::Const(2),
-            definition: TokenDefinition {
+            definition: Box::new(TokenDefinition {
                 name: "Angel".into(),
                 power: 4,
                 toughness: 4,
@@ -4869,7 +4869,7 @@ pub fn parhelion_ii() -> CardDefinition {
                 colors: vec![Color::White],
                 subtypes: creatures(vec![CreatureType::Angel]),
                 ..Default::default()
-            },
+            }),
             cleanup: crate::effect::AttackingTokenCleanup::None,
         })],
         ..Default::default()
@@ -5131,7 +5131,7 @@ pub fn ugin_the_ineffable() -> CardDefinition {
         loyalty_abilities: vec![
             LoyaltyAbility {
                 loyalty_cost: 1,
-                effect: Effect::ExileTopFaceDownTokenReturns { token: spirit },
+                effect: Effect::ExileTopFaceDownTokenReturns { token: Box::new(spirit) },
                 ..Default::default()
             },
             LoyaltyAbility {
@@ -5268,7 +5268,7 @@ pub fn liliana_dreadhorde_general() -> CardDefinition {
                 effect: Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::Const(2),
-                    definition: zombie(),
+                    definition: Box::new(zombie()),
                 },
                 ..Default::default()
             },
@@ -5507,7 +5507,7 @@ pub fn planewide_celebration() -> CardDefinition {
                 Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::ONE,
-                    definition: citizen,
+                    definition: Box::new(citizen),
                 },
                 Effect::Move {
                     what: target_filtered(R::PermanentCard.and(R::InYourGraveyard)),

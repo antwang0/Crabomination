@@ -107,7 +107,7 @@ pub fn dread_summons() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::CreatureCardsMilledThisEffect,
-                definition: zombie_2_2_tapped(),
+                definition: Box::new(zombie_2_2_tapped()),
             },
         ]),
         ..Default::default()
@@ -348,7 +348,7 @@ pub fn seraphic_steed() -> CardDefinition {
         triggered_abilities: vec![attacks_while_saddled(Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::Const(1),
-            definition: angel_3_3_flying(),
+            definition: Box::new(angel_3_3_flying()),
         })],
         ..Default::default()
     }
@@ -465,7 +465,7 @@ pub fn sandstorm_salvager() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: golem_3_3(),
+                definition: Box::new(golem_3_3()),
             },
         }],
         activated_abilities: vec![ActivatedAbility {

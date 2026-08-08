@@ -105,7 +105,7 @@ fn fish_token() -> TokenDefinition {
         triggered_abilities: vec![on_dies(Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::Const(1),
-            definition: TokenDefinition {
+            definition: Box::new(TokenDefinition {
                 name: "Kraken".into(),
                 power: 9,
                 toughness: 9,
@@ -116,7 +116,7 @@ fn fish_token() -> TokenDefinition {
                     ..Default::default()
                 },
                 ..Default::default()
-            },
+            }),
         })],
         ..Default::default()
     };
@@ -133,7 +133,7 @@ fn fish_token() -> TokenDefinition {
         triggered_abilities: vec![on_dies(Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::Const(1),
-            definition: whale,
+            definition: Box::new(whale),
         })],
         ..Default::default()
     }
@@ -155,7 +155,7 @@ pub fn reef_worm() -> CardDefinition {
         triggered_abilities: vec![on_dies(Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::Const(1),
-            definition: fish_token(),
+            definition: Box::new(fish_token()),
         })],
         ..Default::default()
     }

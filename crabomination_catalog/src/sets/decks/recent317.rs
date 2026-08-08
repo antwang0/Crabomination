@@ -356,7 +356,7 @@ pub fn nuisance_engine() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: TokenDefinition {
+                definition: Box::new(TokenDefinition {
                     name: "Pest".into(),
                     card_types: vec![CardType::Artifact, CardType::Creature],
                     subtypes: Subtypes {
@@ -366,7 +366,7 @@ pub fn nuisance_engine() -> CardDefinition {
                     power: 0,
                     toughness: 1,
                     ..Default::default()
-                },
+                }),
             },
             ..Default::default()
         }],
@@ -521,7 +521,7 @@ pub fn luminous_angel() -> CardDefinition {
                 body: Box::new(Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::ONE,
-                    definition: TokenDefinition {
+                    definition: Box::new(TokenDefinition {
                         name: "Spirit".into(),
                         colors: vec![Color::White],
                         card_types: vec![CardType::Creature],
@@ -533,7 +533,7 @@ pub fn luminous_angel() -> CardDefinition {
                         toughness: 1,
                         keywords: vec![Keyword::Flying],
                         ..Default::default()
-                    },
+                    }),
                 }),
             },
         }],

@@ -155,7 +155,7 @@ pub fn forbidden_orchard() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::Target(0),
                 count: Value::ONE,
-                definition: spirit_token(),
+                definition: Box::new(spirit_token()),
             },
         }],
         ..Default::default()
@@ -1119,7 +1119,7 @@ pub fn orochi_hatchery() -> CardDefinition {
                     what: Box::new(Selector::This),
                     kind: CounterType::Charge,
                 },
-                definition: snake_token(),
+                definition: Box::new(snake_token()),
             },
             ..Default::default()
         }],
@@ -1958,7 +1958,7 @@ pub fn tatsumasa_the_dragons_fang() -> CardDefinition {
             mana_cost: cost(&[generic(6)]),
             exile_self_cost: true,
             effect: Effect::CreateTokenReturnSelfWhenItDies {
-                definition: TokenDefinition {
+                definition: Box::new(TokenDefinition {
                     name: "Dragon Spirit".into(),
                     power: 5,
                     toughness: 5,
@@ -1967,7 +1967,7 @@ pub fn tatsumasa_the_dragons_fang() -> CardDefinition {
                     keywords: vec![Keyword::Flying],
                     subtypes: types(vec![CreatureType::Dragon, CreatureType::Spirit]),
                     ..Default::default()
-                },
+                }),
             },
             ..Default::default()
         }],

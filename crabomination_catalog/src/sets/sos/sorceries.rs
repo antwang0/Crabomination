@@ -280,7 +280,7 @@ pub fn antiquities_on_the_loose() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(2),
-                definition: spirit_token(),
+                definition: Box::new(spirit_token()),
             },
             Effect::If {
                 cond: Predicate::CastFromGraveyard,
@@ -319,7 +319,7 @@ pub fn group_project() -> CardDefinition {
         effect: Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::Const(1),
-            definition: spirit_token(),
+            definition: Box::new(spirit_token()),
         },
         ..Default::default()
     }
@@ -431,7 +431,7 @@ pub fn send_in_the_pest() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: pest_token(),
+                definition: Box::new(pest_token()),
             },
         ]),
         ..Default::default()
@@ -969,7 +969,7 @@ pub fn visionarys_dance() -> CardDefinition {
         effect: Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::Const(2),
-            definition: elemental_token(),
+            definition: Box::new(elemental_token()),
         },
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[generic(2)]),
@@ -1569,7 +1569,7 @@ pub fn snarl_song() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: fractal_token(),
+                definition: Box::new(fractal_token()),
             },
             Effect::AddCounter {
                 what: Selector::LastCreatedToken,
@@ -1579,7 +1579,7 @@ pub fn snarl_song() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: fractal_token(),
+                definition: Box::new(fractal_token()),
             },
             Effect::AddCounter {
                 what: Selector::LastCreatedToken,
@@ -1617,7 +1617,7 @@ pub fn wild_hypothesis() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: fractal_token(),
+                definition: Box::new(fractal_token()),
             },
             Effect::AddCounter {
                 what: Selector::LastCreatedToken,
@@ -1673,7 +1673,7 @@ pub fn artistic_process() -> CardDefinition {
                 Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::Const(1),
-                    definition: elemental_token(),
+                    definition: Box::new(elemental_token()),
                 },
                 Effect::GrantKeyword {
                     what: Selector::LastCreatedToken,

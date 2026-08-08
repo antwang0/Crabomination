@@ -836,7 +836,7 @@ pub fn ingenious_mastery() -> CardDefinition {
                 Effect::CreateToken {
                     who: PlayerRef::EachOpponent,
                     count: Value::Const(2),
-                    definition: treasure_token(),
+                    definition: Box::new(treasure_token()),
                 },
                 Effect::Scry {
                     who: PlayerRef::EachOpponent,
@@ -2357,7 +2357,7 @@ pub fn awesome_presentation() -> CardDefinition {
         effect: Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::Const(2),
-            definition: inkling_token(),
+            definition: Box::new(inkling_token()),
         },
         ..Default::default()
     }

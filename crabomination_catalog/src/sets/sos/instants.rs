@@ -58,7 +58,7 @@ pub fn harsh_annotation() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::ControllerOf(Box::new(Selector::Target(0))),
                 count: Value::Const(1),
-                definition: inkling_token(),
+                definition: Box::new(inkling_token()),
             },
         ]),
         ..Default::default()
@@ -974,7 +974,7 @@ pub fn fractal_anomaly() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: fractal_token(),
+                definition: Box::new(fractal_token()),
             },
             Effect::AddCounter {
                 what: Selector::LastCreatedToken,
@@ -1559,7 +1559,7 @@ pub fn muses_encouragement() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: elemental_token(),
+                definition: Box::new(elemental_token()),
             },
             Effect::Surveil {
                 who: PlayerRef::You,

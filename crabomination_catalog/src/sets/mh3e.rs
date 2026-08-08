@@ -341,7 +341,7 @@ pub fn glimpse_the_impossible() -> CardDefinition {
                 Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::ONE,
-                    definition: crabomination_base::tokens::eldrazi_spawn_token(),
+                    definition: Box::new(crabomination_base::tokens::eldrazi_spawn_token()),
                 },
             ]))),
         },

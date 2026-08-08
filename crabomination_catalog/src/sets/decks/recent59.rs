@@ -49,7 +49,7 @@ pub fn talrands_invocation() -> CardDefinition {
         effect: Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::Const(2),
-            definition: drake,
+            definition: Box::new(drake),
         },
         ..Default::default()
     }
@@ -170,7 +170,7 @@ pub fn metallurgic_summonings() -> CardDefinition {
                 Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::ONE,
-                    definition: construct,
+                    definition: Box::new(construct),
                 },
                 Effect::AddCounter {
                     what: Selector::LastCreatedToken,

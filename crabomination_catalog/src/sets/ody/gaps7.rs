@@ -408,7 +408,7 @@ pub fn beast_attack() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: TokenDefinition {
+                definition: Box::new(TokenDefinition {
                     name: "Beast".into(),
                     power: 4,
                     toughness: 4,
@@ -419,7 +419,7 @@ pub fn beast_attack() -> CardDefinition {
                         ..Default::default()
                     },
                     ..Default::default()
-                },
+                }),
             },
         )
     }

@@ -115,7 +115,7 @@ pub fn fated_intervention() -> CardDefinition {
         Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::Const(2),
-            definition: TokenDefinition {
+            definition: Box::new(TokenDefinition {
                 name: "Centaur".into(),
                 power: 3,
                 toughness: 3,
@@ -126,7 +126,7 @@ pub fn fated_intervention() -> CardDefinition {
                     ..Default::default()
                 },
                 ..Default::default()
-            },
+            }),
         },
     )
 }
@@ -175,7 +175,7 @@ pub fn ornitharch() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(2),
-                definition: TokenDefinition {
+                definition: Box::new(TokenDefinition {
                     name: "Bird".into(),
                     power: 1,
                     toughness: 1,
@@ -187,7 +187,7 @@ pub fn ornitharch() -> CardDefinition {
                     },
                     keywords: vec![Keyword::Flying],
                     ..Default::default()
-                },
+                }),
             },
         )],
         ..creature(
@@ -921,7 +921,7 @@ pub fn kiora_the_crashing_wave() -> CardDefinition {
                         effect: Effect::CreateToken {
                             who: PlayerRef::You,
                             count: Value::ONE,
-                            definition: TokenDefinition {
+                            definition: Box::new(TokenDefinition {
                                 name: "Kraken".into(),
                                 power: 9,
                                 toughness: 9,
@@ -932,7 +932,7 @@ pub fn kiora_the_crashing_wave() -> CardDefinition {
                                     ..Default::default()
                                 },
                                 ..Default::default()
-                            },
+                            }),
                         },
                     }],
                     statics: vec![],

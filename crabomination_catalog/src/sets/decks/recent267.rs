@@ -56,7 +56,7 @@ pub fn argothian_opportunist() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: crate::game::effects::powerstone_token(),
+                definition: Box::new(crate::game::effects::powerstone_token()),
             },
             Effect::Tap {
                 what: Selector::LastCreatedToken,
@@ -138,7 +138,7 @@ pub fn gnawing_crescendo() -> CardDefinition {
                     then: Box::new(Effect::CreateToken {
                         who: PlayerRef::You,
                         count: Value::ONE,
-                        definition: rat,
+                        definition: Box::new(rat),
                     }),
                     else_: Box::new(Effect::Noop),
                 }),

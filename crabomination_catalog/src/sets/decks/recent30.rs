@@ -99,7 +99,7 @@ pub fn broadcast_rambler() -> CardDefinition {
         triggered_abilities: vec![etb(Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::ONE,
-            definition: thopter_token(),
+            definition: Box::new(thopter_token()),
         })],
         ..Default::default()
     }
@@ -285,7 +285,7 @@ pub fn autarch_mammoth() -> CardDefinition {
     let make = || Effect::CreateToken {
         who: PlayerRef::You,
         count: Value::ONE,
-        definition: elephant(),
+        definition: Box::new(elephant()),
     };
     CardDefinition {
         name: "Autarch Mammoth",
@@ -452,7 +452,7 @@ pub fn back_on_track() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: pilot,
+                definition: Box::new(pilot),
             },
         ]),
         ..Default::default()

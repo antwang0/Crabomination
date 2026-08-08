@@ -91,7 +91,7 @@ pub fn quest_for_the_gravelord() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: zombie,
+                definition: Box::new(zombie),
             },
             ..Default::default()
         }],
@@ -274,7 +274,7 @@ pub fn origin_spellbomb() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: myr,
+                definition: Box::new(myr),
             },
             ..Default::default()
         }],

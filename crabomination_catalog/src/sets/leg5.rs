@@ -349,7 +349,7 @@ pub fn stangg() -> CardDefinition {
                 effect: Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::ONE,
-                    definition: TokenDefinition {
+                    definition: Box::new(TokenDefinition {
                         name: "Stangg Twin".into(),
                         power: 3,
                         toughness: 4,
@@ -361,7 +361,7 @@ pub fn stangg() -> CardDefinition {
                             ..Default::default()
                         },
                         ..Default::default()
-                    },
+                    }),
                 },
             },
             TriggeredAbility {

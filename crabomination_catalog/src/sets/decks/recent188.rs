@@ -84,7 +84,7 @@ pub fn rise_of_the_varmints() -> CardDefinition {
                 who: PlayerRef::You,
                 filter: R::Creature,
             },
-            definition: varmint_token(),
+            definition: Box::new(varmint_token()),
         },
         ..Default::default()
     }

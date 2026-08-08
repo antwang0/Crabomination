@@ -33,7 +33,7 @@ pub fn insidious_roots() -> CardDefinition {
                 Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::ONE,
-                    definition: TokenDefinition {
+                    definition: Box::new(TokenDefinition {
                         name: "Plant".into(),
                         colors: vec![Color::Green],
                         card_types: vec![CardType::Creature],
@@ -44,7 +44,7 @@ pub fn insidious_roots() -> CardDefinition {
                         power: 0,
                         toughness: 1,
                         ..Default::default()
-                    },
+                    }),
                 },
                 Effect::AddCounter {
                     what: Selector::EachPermanent(

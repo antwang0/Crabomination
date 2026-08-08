@@ -264,7 +264,7 @@ pub fn pest_inheritance() -> CardDefinition {
             count: Value::CountOf(Box::new(Selector::EachPermanent(
                 SelectionRequirement::Land.and(SelectionRequirement::ControlledByYou),
             ))),
-            definition: pest,
+            definition: Box::new(pest),
         },
         ..Default::default()
     }
@@ -439,7 +439,7 @@ pub fn pest_studies() -> CardDefinition {
         effect: Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::Const(2),
-            definition: pest,
+            definition: Box::new(pest),
         },
         ..Default::default()
     }
@@ -553,7 +553,7 @@ pub fn inkling_lesson() -> CardDefinition {
         effect: Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::Const(2),
-            definition: inkling_token(),
+            definition: Box::new(inkling_token()),
         },
         ..Default::default()
     }
@@ -599,7 +599,7 @@ pub fn fractal_studies() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: fractal,
+                definition: Box::new(fractal),
             },
             Effect::AddCounter {
                 what: Selector::LastCreatedToken,
@@ -633,7 +633,7 @@ pub fn spirit_lesson() -> CardDefinition {
         effect: Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::Const(2),
-            definition: lorehold_spirit_token(),
+            definition: Box::new(lorehold_spirit_token()),
         },
         ..Default::default()
     }
@@ -708,7 +708,7 @@ pub fn mascot_lesson_b32() -> CardDefinition {
         effect: Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::Const(1),
-            definition: inkling,
+            definition: Box::new(inkling),
         },
         ..Default::default()
     }

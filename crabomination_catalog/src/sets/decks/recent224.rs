@@ -154,7 +154,7 @@ pub fn mu_yanling_wind_rider() -> CardDefinition {
             etb(Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: vehicle_3_2_crew1(),
+                definition: Box::new(vehicle_3_2_crew1()),
             }),
             // `once_per_turn` approximates "one or more … deal combat damage".
             TriggeredAbility {

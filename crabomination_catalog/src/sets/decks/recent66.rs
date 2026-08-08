@@ -189,7 +189,7 @@ pub fn wrangler_of_the_damned() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: TokenDefinition {
+                definition: Box::new(TokenDefinition {
                     name: "Spirit".into(),
                     power: 2,
                     toughness: 2,
@@ -201,7 +201,7 @@ pub fn wrangler_of_the_damned() -> CardDefinition {
                         ..Default::default()
                     },
                     ..Default::default()
-                },
+                }),
             },
         }],
         ..Default::default()
@@ -362,7 +362,7 @@ pub fn prickly_pair() -> CardDefinition {
         triggered_abilities: vec![etb(Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::ONE,
-            definition: mercenary_token(),
+            definition: Box::new(mercenary_token()),
         })],
         ..Default::default()
     }
@@ -401,7 +401,7 @@ pub fn the_weatherseed_treaty() -> CardDefinition {
                 Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::ONE,
-                    definition: TokenDefinition {
+                    definition: Box::new(TokenDefinition {
                         name: "Saproling".into(),
                         power: 1,
                         toughness: 1,
@@ -412,7 +412,7 @@ pub fn the_weatherseed_treaty() -> CardDefinition {
                             ..Default::default()
                         },
                         ..Default::default()
-                    },
+                    }),
                 },
             ),
             (

@@ -768,7 +768,7 @@ pub fn hangarback_walker() -> CardDefinition {
                     what: Box::new(Selector::This),
                     kind: CounterType::PlusOnePlusOne,
                 },
-                definition: thopter,
+                definition: Box::new(thopter),
             },
         }],
         ..Default::default()

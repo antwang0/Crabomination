@@ -602,7 +602,7 @@ pub fn feral_lightning() -> CardDefinition {
     // minted in the same step, so all three are exiled.
     let mint = |def: TokenDefinition| {
         Effect::Seq(vec![
-            Effect::CreateToken { who: PlayerRef::You, count: Value::ONE, definition: def },
+            Effect::CreateToken { who: PlayerRef::You, count: Value::ONE, definition: Box::new(def) },
             Effect::AtNextEndStep {
                 body: Box::new(Effect::Exile { what: Selector::LastCreatedToken }),
             },

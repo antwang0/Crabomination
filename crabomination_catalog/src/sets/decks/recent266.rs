@@ -39,7 +39,7 @@ pub fn fungal_infection() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: saproling,
+                definition: Box::new(saproling),
             },
         ]),
         ..Default::default()

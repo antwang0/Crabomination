@@ -197,7 +197,7 @@ pub fn queen_marchesa() -> CardDefinition {
                 effect: Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::ONE,
-                    definition: TokenDefinition {
+                    definition: Box::new(TokenDefinition {
                         name: "Assassin".to_string(),
                         power: 1,
                         toughness: 1,
@@ -209,7 +209,7 @@ pub fn queen_marchesa() -> CardDefinition {
                         },
                         keywords: vec![Keyword::Deathtouch, Keyword::Haste],
                         ..Default::default()
-                    },
+                    }),
                 },
             },
         ],
@@ -866,7 +866,7 @@ pub fn daretti_ingenious_iconoclast() -> CardDefinition {
                 effect: Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::ONE,
-                    definition: TokenDefinition {
+                    definition: Box::new(TokenDefinition {
                         name: "Construct".to_string(),
                         power: 1,
                         toughness: 1,
@@ -877,7 +877,7 @@ pub fn daretti_ingenious_iconoclast() -> CardDefinition {
                         },
                         keywords: vec![Keyword::Defender],
                         ..Default::default()
-                    },
+                    }),
                 },
                 ..Default::default()
             },

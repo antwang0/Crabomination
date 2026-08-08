@@ -24,7 +24,7 @@ fn opponent_food() -> Effect {
     Effect::CreateToken {
         who: PlayerRef::EachOpponent,
         count: Value::Const(1),
-        definition: crabomination_base::tokens::food_token(),
+        definition: Box::new(crabomination_base::tokens::food_token()),
     }
 }
 
@@ -67,7 +67,7 @@ pub fn crumb_and_get_it() -> CardDefinition {
                 Effect::CreateToken {
                     who: PlayerRef::EachOpponent,
                     count: Value::Const(1),
-                    definition: crabomination_base::tokens::food_token(),
+                    definition: Box::new(crabomination_base::tokens::food_token()),
                 },
                 pump,
                 Effect::GrantKeyword {
@@ -100,7 +100,7 @@ pub fn blooming_blast() -> CardDefinition {
                 Effect::CreateToken {
                     who: PlayerRef::EachOpponent,
                     count: Value::Const(1),
-                    definition: crabomination_base::tokens::treasure_token(),
+                    definition: Box::new(crabomination_base::tokens::treasure_token()),
                 },
                 bolt,
                 Effect::DealDamage {
@@ -138,7 +138,7 @@ pub fn longstalk_brawl() -> CardDefinition {
                 Effect::CreateToken {
                     who: PlayerRef::EachOpponent,
                     count: Value::Const(1),
-                    definition: tapped_fish_token(),
+                    definition: Box::new(tapped_fish_token()),
                 },
                 Effect::AddCounter {
                     what: Selector::Target(0),
@@ -172,7 +172,7 @@ pub fn into_the_flood_maw() -> CardDefinition {
                 Effect::CreateToken {
                     who: PlayerRef::EachOpponent,
                     count: Value::Const(1),
-                    definition: tapped_fish_token(),
+                    definition: Box::new(tapped_fish_token()),
                 },
                 Effect::Move {
                     what: target_filtered(
@@ -297,7 +297,7 @@ pub fn mind_spiral() -> CardDefinition {
                 Effect::CreateToken {
                     who: PlayerRef::EachOpponent,
                     count: Value::Const(1),
-                    definition: tapped_fish_token(),
+                    definition: Box::new(tapped_fish_token()),
                 },
                 draw3(),
                 Effect::Tap {
@@ -360,7 +360,7 @@ pub fn sazacaps_brew() -> CardDefinition {
                 Effect::CreateToken {
                     who: PlayerRef::EachOpponent,
                     count: Value::Const(1),
-                    definition: tapped_fish_token(),
+                    definition: Box::new(tapped_fish_token()),
                 },
                 draw2(),
                 Effect::PumpPT {

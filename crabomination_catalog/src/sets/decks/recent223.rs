@@ -43,7 +43,7 @@ pub fn warren_warleader() -> CardDefinition {
             Effect::CreateTokenAttacking {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: rabbit_1_1(),
+                definition: Box::new(rabbit_1_1()),
                 cleanup: Default::default(),
             },
             Effect::PumpPT {

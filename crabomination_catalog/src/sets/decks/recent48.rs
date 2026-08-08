@@ -78,7 +78,7 @@ pub fn hornet_nest() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::TriggerEventAmount,
-                definition: hornet,
+                definition: Box::new(hornet),
             },
         }],
         ..Default::default()

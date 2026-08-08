@@ -277,7 +277,7 @@ pub fn intrepid_trufflesnout() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: food_token(),
+                definition: Box::new(food_token()),
             },
         }],
         ..Default::default()

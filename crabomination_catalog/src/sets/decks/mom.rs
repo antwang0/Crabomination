@@ -102,7 +102,7 @@ pub fn invasion_of_kaladesh() -> CardDefinition {
         triggered_abilities: vec![etb(Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::Const(1),
-            definition: thopter,
+            definition: Box::new(thopter),
         })],
         back_face: Some(Box::new(aetherwing)),
         ..Default::default()

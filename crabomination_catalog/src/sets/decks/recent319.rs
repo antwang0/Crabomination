@@ -640,7 +640,7 @@ pub fn living_hive() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::PowerOf(Box::new(Selector::This)),
-                definition: TokenDefinition {
+                definition: Box::new(TokenDefinition {
                     name: "Insect".into(),
                     colors: vec![Color::Green],
                     card_types: vec![CardType::Creature],
@@ -651,7 +651,7 @@ pub fn living_hive() -> CardDefinition {
                     power: 1,
                     toughness: 1,
                     ..Default::default()
-                },
+                }),
             },
         }],
         ..creature(
@@ -845,7 +845,7 @@ pub fn pentavus() -> CardDefinition {
                 effect: Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::ONE,
-                    definition: pentavite,
+                    definition: Box::new(pentavite),
                 },
                 ..Default::default()
             },
@@ -880,7 +880,7 @@ pub fn myr_incubator() -> CardDefinition {
             sac_cost: true,
             effect: Effect::SearchExileThenTokensPerCard {
                 filter: R::Artifact,
-                definition: TokenDefinition {
+                definition: Box::new(TokenDefinition {
                     name: "Myr".into(),
                     card_types: vec![CardType::Artifact, CardType::Creature],
                     subtypes: Subtypes {
@@ -890,7 +890,7 @@ pub fn myr_incubator() -> CardDefinition {
                     power: 1,
                     toughness: 1,
                     ..Default::default()
-                },
+                }),
             },
             ..Default::default()
         }],
@@ -1011,7 +1011,7 @@ pub fn lightning_coils() -> CardDefinition {
                             what: Box::new(Selector::This),
                             kind: CounterType::Charge,
                         },
-                        definition: TokenDefinition {
+                        definition: Box::new(TokenDefinition {
                             name: "Elemental".into(),
                             colors: vec![Color::Red],
                             card_types: vec![CardType::Creature],
@@ -1023,7 +1023,7 @@ pub fn lightning_coils() -> CardDefinition {
                             toughness: 1,
                             keywords: vec![Keyword::Haste],
                             ..Default::default()
-                        },
+                        }),
                     },
                     Effect::RemoveAllCounters {
                         what: Selector::This,

@@ -238,7 +238,7 @@ pub fn mourners_surprise() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: mercenary(),
+                definition: Box::new(mercenary()),
             },
         ]),
         ..Default::default()

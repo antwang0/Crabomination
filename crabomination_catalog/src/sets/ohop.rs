@@ -226,14 +226,14 @@ pub fn the_fourth_sphere() -> CardDefinition {
             chaos(Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: token(
+                definition: Box::new(token(
                     "Zombie",
                     2,
                     2,
                     vec![Color::Black],
                     vec![CreatureType::Zombie],
                     vec![],
-                ),
+                )),
             }),
         ],
     )
@@ -280,27 +280,27 @@ pub fn goldmeadow() -> CardDefinition {
                 effect: Effect::CreateToken {
                     who: PlayerRef::ControllerOf(Box::new(Selector::TriggerSource)),
                     count: Value::Const(3),
-                    definition: token(
+                    definition: Box::new(token(
                         "Goat",
                         0,
                         1,
                         vec![Color::White],
                         vec![CreatureType::Goat],
                         vec![],
-                    ),
+                    )),
                 },
             },
             chaos(Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: token(
+                definition: Box::new(token(
                     "Goat",
                     0,
                     1,
                     vec![Color::White],
                     vec![CreatureType::Goat],
                     vec![],
-                ),
+                )),
             }),
         ],
     )
@@ -330,14 +330,14 @@ pub fn shiv() -> CardDefinition {
         vec![chaos(Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::ONE,
-            definition: token(
+            definition: Box::new(token(
                 "Dragon",
                 5,
                 5,
                 vec![Color::Red],
                 vec![CreatureType::Dragon],
                 vec![Keyword::Flying],
-            ),
+            )),
         })],
     )
 }

@@ -579,7 +579,7 @@ pub fn wall_of_kelp() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: TokenDefinition {
+                definition: Box::new(TokenDefinition {
                     name: "Kelp".into(),
                     power: 0,
                     toughness: 1,
@@ -591,7 +591,7 @@ pub fn wall_of_kelp() -> CardDefinition {
                     },
                     keywords: vec![Keyword::Defender],
                     ..Default::default()
-                },
+                }),
             },
             ..Default::default()
         }],

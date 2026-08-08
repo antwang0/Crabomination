@@ -151,7 +151,7 @@ pub fn the_swarmweaver() -> CardDefinition {
         triggered_abilities: vec![etb(Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::Const(2),
-            definition: insect_token(),
+            definition: Box::new(insect_token()),
         })],
         static_abilities: vec![StaticAbility {
             description: "Delirium — Insects and Spiders you control get +1/+1 and have deathtouch.",

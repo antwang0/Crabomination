@@ -73,7 +73,7 @@ pub fn kemba_kha_regent() -> CardDefinition {
                     sel: Box::new(Selector::AttachedToMe(Box::new(Selector::This))),
                     filter: SelectionRequirement::HasArtifactSubtype(ArtifactSubtype::Equipment),
                 },
-                definition: cat,
+                definition: Box::new(cat),
             },
         }],
         ..Default::default()
@@ -260,7 +260,7 @@ pub fn valduk_keeper_of_the_flame() -> CardDefinition {
                             EnchantmentSubtype::Aura,
                         )),
                     },
-                    definition: elemental,
+                    definition: Box::new(elemental),
                 },
                 Effect::ExileLastCreatedTokensAtNextEndStep,
             ]),
@@ -401,7 +401,7 @@ pub fn flayer_husk() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: germ,
+                definition: Box::new(germ),
             },
             Effect::Attach {
                 what: Selector::This,
@@ -522,7 +522,7 @@ pub fn srams_expertise() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(3),
-                definition: servo,
+                definition: Box::new(servo),
             },
             Effect::CastFromHandWithoutPaying {
                 filter: Some(SelectionRequirement::ManaValueAtMost(3)),

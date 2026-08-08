@@ -723,7 +723,7 @@ pub fn goblin_offensive() -> CardDefinition {
         Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::XFromCost,
-            definition: crate::card::TokenDefinition {
+            definition: Box::new(crate::card::TokenDefinition {
                 name: "Goblin".into(),
                 power: 1,
                 toughness: 1,
@@ -734,7 +734,7 @@ pub fn goblin_offensive() -> CardDefinition {
                     ..Default::default()
                 },
                 ..Default::default()
-            },
+            }),
         },
     )
 }

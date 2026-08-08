@@ -142,7 +142,7 @@ pub fn inkling_aether_smith() -> CardDefinition {
                 Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::Const(1),
-                    definition: inkling_token(),
+                    definition: Box::new(inkling_token()),
                 },
                 Effect::AddCounter {
                     what: target_filtered(
@@ -302,7 +302,7 @@ pub fn witherbloom_toxicology() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: pest,
+                definition: Box::new(pest),
             },
         ]),
         ..Default::default()
@@ -335,7 +335,7 @@ pub fn pest_brood_caller() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(2),
-                definition: pest,
+                definition: Box::new(pest),
             },
         }],
         ..Default::default()
@@ -1039,7 +1039,7 @@ pub fn lorehold_smith() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: treasure_token(),
+                definition: Box::new(treasure_token()),
             },
         }],
         ..Default::default()

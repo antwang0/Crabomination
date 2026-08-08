@@ -202,7 +202,7 @@ pub fn infestation_sage() -> CardDefinition {
         triggered_abilities: vec![on_dies(Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::ONE,
-            definition: TokenDefinition {
+            definition: Box::new(TokenDefinition {
                 name: "Insect".into(),
                 power: 1,
                 toughness: 1,
@@ -214,7 +214,7 @@ pub fn infestation_sage() -> CardDefinition {
                 },
                 keywords: vec![Keyword::Flying],
                 ..Default::default()
-            },
+            }),
         })],
         ..Default::default()
     }
@@ -237,7 +237,7 @@ pub fn prideful_parent() -> CardDefinition {
         triggered_abilities: vec![etb(Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::ONE,
-            definition: TokenDefinition {
+            definition: Box::new(TokenDefinition {
                 name: "Cat".into(),
                 power: 1,
                 toughness: 1,
@@ -248,7 +248,7 @@ pub fn prideful_parent() -> CardDefinition {
                     ..Default::default()
                 },
                 ..Default::default()
-            },
+            }),
         })],
         ..Default::default()
     }
@@ -302,7 +302,7 @@ pub fn guarded_heir() -> CardDefinition {
         triggered_abilities: vec![etb(Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::Const(2),
-            definition: TokenDefinition {
+            definition: Box::new(TokenDefinition {
                 name: "Knight".into(),
                 power: 3,
                 toughness: 3,
@@ -313,7 +313,7 @@ pub fn guarded_heir() -> CardDefinition {
                     ..Default::default()
                 },
                 ..Default::default()
-            },
+            }),
         })],
         ..Default::default()
     }

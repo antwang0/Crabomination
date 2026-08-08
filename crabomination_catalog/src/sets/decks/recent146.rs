@@ -246,7 +246,7 @@ pub fn faunsbane_troll() -> CardDefinition {
         toughness: 4,
         triggered_abilities: vec![etb(Effect::CreateTokenAttachedTo {
             target: Selector::This,
-            definition: super::woe_roles::monster_role(),
+            definition: Box::new(super::woe_roles::monster_role()),
         })],
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[generic(1)]),

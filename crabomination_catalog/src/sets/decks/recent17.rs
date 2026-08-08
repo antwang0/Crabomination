@@ -48,7 +48,7 @@ pub fn corsair_captain() -> CardDefinition {
         triggered_abilities: vec![etb(Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::ONE,
-            definition: crate::game::effects::treasure_token(),
+            definition: Box::new(crate::game::effects::treasure_token()),
         })],
         static_abilities: vec![StaticAbility {
             description: "Other Pirates you control get +1/+1.",

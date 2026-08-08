@@ -1162,7 +1162,7 @@ pub fn verdant_force() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: crate::card::TokenDefinition {
+                definition: Box::new(crate::card::TokenDefinition {
                     name: "Saproling".to_string(),
                     power: 1,
                     toughness: 1,
@@ -1173,7 +1173,7 @@ pub fn verdant_force() -> CardDefinition {
                         ..Default::default()
                     },
                     ..Default::default()
-                },
+                }),
             },
         }],
         ..creature(
@@ -1192,7 +1192,7 @@ pub fn mongrel_pack() -> CardDefinition {
         triggered_abilities: vec![on_dies(Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::Const(4),
-            definition: crate::card::TokenDefinition {
+            definition: Box::new(crate::card::TokenDefinition {
                 name: "Dog".to_string(),
                 power: 1,
                 toughness: 1,
@@ -1203,7 +1203,7 @@ pub fn mongrel_pack() -> CardDefinition {
                     ..Default::default()
                 },
                 ..Default::default()
-            },
+            }),
         })],
         ..creature("Mongrel Pack", cost(&[generic(3), g()]), vec![CreatureType::Dog], 4, 1)
     }

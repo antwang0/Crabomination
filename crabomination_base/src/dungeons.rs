@@ -174,7 +174,7 @@ fn atropal_token() -> TokenDefinition {
 }
 
 fn mint(token: TokenDefinition, n: i32) -> Effect {
-    Effect::CreateToken { who: PlayerRef::You, count: Value::Const(n), definition: token }
+    Effect::CreateToken { who: PlayerRef::You, count: Value::Const(n), definition: Box::new(token) }
 }
 
 pub fn lost_mine_of_phandelver() -> DungeonDefinition {

@@ -257,7 +257,7 @@ pub fn zektar_shrine_expedition() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: TokenDefinition {
+                definition: Box::new(TokenDefinition {
                     name: "Elemental".into(),
                     power: 7,
                     toughness: 1,
@@ -269,7 +269,7 @@ pub fn zektar_shrine_expedition() -> CardDefinition {
                         ..Default::default()
                     },
                     ..Default::default()
-                },
+                }),
             },
             Effect::ExileLastCreatedTokensAtNextEndStep,
         ]),
@@ -325,7 +325,7 @@ pub fn turntimber_ranger() -> CardDefinition {
                 Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::Const(1),
-                    definition: TokenDefinition {
+                    definition: Box::new(TokenDefinition {
                         name: "Wolf".into(),
                         power: 2,
                         toughness: 2,
@@ -336,7 +336,7 @@ pub fn turntimber_ranger() -> CardDefinition {
                             ..Default::default()
                         },
                         ..Default::default()
-                    },
+                    }),
                 },
                 Effect::AddCounter {
                     what: Selector::This,
@@ -645,7 +645,7 @@ pub fn summoners_bane() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: TokenDefinition {
+                definition: Box::new(TokenDefinition {
                     name: "Illusion".into(),
                     power: 2,
                     toughness: 2,
@@ -656,7 +656,7 @@ pub fn summoners_bane() -> CardDefinition {
                         ..Default::default()
                     },
                     ..Default::default()
-                },
+                }),
             },
         ]),
     )
@@ -753,7 +753,7 @@ pub fn cobra_trap() -> CardDefinition {
         effect: Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::Const(4),
-            definition: TokenDefinition {
+            definition: Box::new(TokenDefinition {
                 name: "Snake".into(),
                 power: 1,
                 toughness: 1,
@@ -764,7 +764,7 @@ pub fn cobra_trap() -> CardDefinition {
                     ..Default::default()
                 },
                 ..Default::default()
-            },
+            }),
         },
         ..Default::default()
     }
@@ -876,7 +876,7 @@ pub fn kalitas_bloodchief_of_ghet() -> CardDefinition {
                     then: Box::new(Effect::CreateToken {
                         who: PlayerRef::You,
                         count: Value::Const(1),
-                        definition: TokenDefinition {
+                        definition: Box::new(TokenDefinition {
                             name: "Vampire".into(),
                             power: 0,
                             toughness: 0,
@@ -891,7 +891,7 @@ pub fn kalitas_bloodchief_of_ghet() -> CardDefinition {
                                 Value::SacrificedToughness,
                             )),
                             ..Default::default()
-                        },
+                        }),
                     }),
                     else_: Box::new(Effect::Noop),
                 },
@@ -919,7 +919,7 @@ pub fn lullmage_mentor() -> CardDefinition {
                 body: Box::new(Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::Const(1),
-                    definition: TokenDefinition {
+                    definition: Box::new(TokenDefinition {
                         name: "Merfolk".into(),
                         power: 1,
                         toughness: 1,
@@ -930,7 +930,7 @@ pub fn lullmage_mentor() -> CardDefinition {
                             ..Default::default()
                         },
                         ..Default::default()
-                    },
+                    }),
                 }),
             },
         }],

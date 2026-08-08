@@ -78,7 +78,7 @@ pub fn scalestorm_summoner() -> CardDefinition {
             then: Box::new(Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: dinosaur_token(),
+                definition: Box::new(dinosaur_token()),
             }),
             else_: Box::new(Effect::Noop),
         })],

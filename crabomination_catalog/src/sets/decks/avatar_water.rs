@@ -500,7 +500,7 @@ pub fn katara_water_tribes_hope() -> CardDefinition {
         toughness: 3,
         keywords: vec![Keyword::Vigilance],
         triggered_abilities: vec![etb(Effect::CreateToken {
-            definition: TokenDefinition {
+            definition: Box::new(TokenDefinition {
                 name: "Ally".into(),
                 power: 1,
                 toughness: 1,
@@ -511,7 +511,7 @@ pub fn katara_water_tribes_hope() -> CardDefinition {
                     ..Default::default()
                 },
                 ..Default::default()
-            },
+            }),
             count: Value::ONE,
             who: PlayerRef::You,
         })],

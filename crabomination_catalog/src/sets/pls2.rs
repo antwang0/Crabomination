@@ -222,7 +222,7 @@ pub fn nemata_grove_guardian() -> CardDefinition {
                 effect: Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::ONE,
-                    definition: saproling(),
+                    definition: Box::new(saproling()),
                 },
                 ..Default::default()
             },
@@ -903,7 +903,7 @@ pub fn march_of_souls() -> CardDefinition {
         cost(&[generic(4), w()]),
         Effect::DestroyThenVictimControllersMakeToken {
             what: Selector::EachPermanent(R::Creature),
-            definition: crate::card::TokenDefinition {
+            definition: Box::new(crate::card::TokenDefinition {
                 name: "Spirit".into(),
                 power: 1,
                 toughness: 1,
@@ -915,7 +915,7 @@ pub fn march_of_souls() -> CardDefinition {
                     ..Default::default()
                 },
                 ..Default::default()
-            },
+            }),
             no_regen: true,
         },
     )
@@ -1116,7 +1116,7 @@ pub fn riths_charm() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(3),
-                definition: saproling(),
+                definition: Box::new(saproling()),
             },
             Effect::PreventAllDamageFromChosenSourceThisTurn { filter: R::Permanent, gain_life_from_colors: vec![] },
         ]),
@@ -1644,7 +1644,7 @@ pub fn questing_phelddagrif() -> CardDefinition {
                     Effect::CreateToken {
                         who: PlayerRef::Target(0),
                         count: Value::ONE,
-                        definition: hippo,
+                        definition: Box::new(hippo),
                     },
                 ]),
                 ..Default::default()

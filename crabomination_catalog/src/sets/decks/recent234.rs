@@ -111,7 +111,7 @@ pub fn unfortunate_accident() -> CardDefinition {
                 Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::ONE,
-                    definition: mercenary_token(),
+                    definition: Box::new(mercenary_token()),
                 },
             ),
         ]),

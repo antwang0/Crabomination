@@ -355,7 +355,7 @@ pub fn hour_of_need() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::ControllerOf(Box::new(Selector::Target(0))),
                 count: Value::Const(1),
-                definition: TokenDefinition {
+                definition: Box::new(TokenDefinition {
                     name: "Sphinx".into(),
                     power: 4,
                     toughness: 4,
@@ -367,7 +367,7 @@ pub fn hour_of_need() -> CardDefinition {
                     },
                     keywords: vec![Keyword::Flying],
                     ..Default::default()
-                },
+                }),
             },
             Effect::Exile {
                 what: Selector::Target(0),
@@ -444,7 +444,7 @@ pub fn launch_the_fleet() -> CardDefinition {
                 effect: Effect::CreateTokenAttacking {
                     who: PlayerRef::You,
                     count: Value::Const(1),
-                    definition: soldier_token(),
+                    definition: Box::new(soldier_token()),
                     cleanup: AttackingTokenCleanup::None,
                 },
             }),
@@ -1165,7 +1165,7 @@ pub fn renowned_weaver() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: TokenDefinition {
+                definition: Box::new(TokenDefinition {
                     name: "Spider".into(),
                     power: 1,
                     toughness: 3,
@@ -1177,7 +1177,7 @@ pub fn renowned_weaver() -> CardDefinition {
                     },
                     keywords: vec![Keyword::Reach],
                     ..Default::default()
-                },
+                }),
             },
             ..Default::default()
         }],
@@ -1340,7 +1340,7 @@ pub fn revel_of_the_fallen_god() -> CardDefinition {
         Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::Const(4),
-            definition: TokenDefinition {
+            definition: Box::new(TokenDefinition {
                 name: "Satyr".into(),
                 power: 2,
                 toughness: 2,
@@ -1352,7 +1352,7 @@ pub fn revel_of_the_fallen_god() -> CardDefinition {
                 },
                 keywords: vec![Keyword::Haste],
                 ..Default::default()
-            },
+            }),
         },
     )
 }
@@ -1368,7 +1368,7 @@ pub fn rise_of_eagles() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(2),
-                definition: TokenDefinition {
+                definition: Box::new(TokenDefinition {
                     name: "Bird".into(),
                     power: 2,
                     toughness: 2,
@@ -1380,7 +1380,7 @@ pub fn rise_of_eagles() -> CardDefinition {
                     },
                     keywords: vec![Keyword::Flying],
                     ..Default::default()
-                },
+                }),
             },
             Effect::Scry {
                 who: PlayerRef::You,
@@ -1469,7 +1469,7 @@ pub fn ritual_of_the_returned() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: TokenDefinition {
+                definition: Box::new(TokenDefinition {
                     name: "Zombie".into(),
                     colors: vec![Color::Black],
                     card_types: vec![CardType::Creature],
@@ -1482,7 +1482,7 @@ pub fn ritual_of_the_returned() -> CardDefinition {
                         Value::ToughnessOf(Box::new(Selector::Target(0))),
                     )),
                     ..Default::default()
-                },
+                }),
             },
         ]),
     )

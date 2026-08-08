@@ -68,7 +68,7 @@ pub fn oketras_monument() -> CardDefinition {
         Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::Const(1),
-            definition: warrior,
+            definition: Box::new(warrior),
         },
     )
 }

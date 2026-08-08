@@ -213,7 +213,7 @@ pub fn welcome_to_sweettooth() -> CardDefinition {
                 Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::Const(1),
-                    definition: crabomination_base::tokens::food_token(),
+                    definition: Box::new(crabomination_base::tokens::food_token()),
                 },
             ),
             (

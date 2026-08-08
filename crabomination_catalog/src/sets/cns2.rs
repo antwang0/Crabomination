@@ -262,7 +262,7 @@ pub fn flamewright() -> CardDefinition {
                 effect: Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::ONE,
-                    definition: TokenDefinition {
+                    definition: Box::new(TokenDefinition {
                         name: "Construct".into(),
                         power: 1,
                         toughness: 1,
@@ -273,7 +273,7 @@ pub fn flamewright() -> CardDefinition {
                             ..Default::default()
                         },
                         ..Default::default()
-                    },
+                    }),
                 },
                 ..Default::default()
             },
@@ -329,7 +329,7 @@ pub fn grenzos_rebuttal() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: TokenDefinition {
+                definition: Box::new(TokenDefinition {
                     name: "Ogre".into(),
                     power: 4,
                     toughness: 4,
@@ -340,7 +340,7 @@ pub fn grenzos_rebuttal() -> CardDefinition {
                         ..Default::default()
                     },
                     ..Default::default()
-                },
+                }),
             },
             Effect::EachPlayerDestroysChosenFromLeftNeighbor {
                 filters: vec![R::Artifact, R::Creature, R::Land],
@@ -544,7 +544,7 @@ pub fn reign_of_the_pit() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: TokenDefinition {
+                definition: Box::new(TokenDefinition {
                     name: "Demon".into(),
                     colors: vec![Color::Black],
                     card_types: vec![CardType::Creature],
@@ -555,7 +555,7 @@ pub fn reign_of_the_pit() -> CardDefinition {
                     },
                     dynamic_pt: Some((Value::SacrificedTotalPower, Value::SacrificedTotalPower)),
                     ..Default::default()
-                },
+                }),
             },
         ]),
         ..Default::default()

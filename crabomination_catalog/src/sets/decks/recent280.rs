@@ -15,7 +15,7 @@ fn food() -> Effect {
     Effect::CreateToken {
         who: PlayerRef::You,
         count: Value::ONE,
-        definition: crabomination_base::tokens::food_token(),
+        definition: Box::new(crabomination_base::tokens::food_token()),
     }
 }
 

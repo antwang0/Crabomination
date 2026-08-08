@@ -224,7 +224,7 @@ pub fn storm_kiln_artist() -> CardDefinition {
         triggered_abilities: vec![magecraft(Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::Const(1),
-            definition: treasure_token(),
+            definition: Box::new(treasure_token()),
         })],
         ..Default::default()
     }
@@ -331,7 +331,7 @@ pub fn lorehold_excavation() -> CardDefinition {
                 Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::Const(1),
-                    definition: crabomination_base::tokens::lorehold_spirit_3_2_token(),
+                    definition: Box::new(crabomination_base::tokens::lorehold_spirit_3_2_token()),
                 },
                 Effect::Tap {
                     what: Selector::LastCreatedToken,
@@ -548,7 +548,7 @@ pub fn lorehold_loremaster() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: lorehold_spirit_token(),
+                definition: Box::new(lorehold_spirit_token()),
             },
         }],
         ..Default::default()
@@ -639,7 +639,7 @@ pub fn lorehold_spiritcaller() -> CardDefinition {
                 effect: Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::Const(1),
-                    definition: lorehold_spirit_token(),
+                    definition: Box::new(lorehold_spirit_token()),
                 },
             },
             TriggeredAbility {
@@ -851,7 +851,7 @@ pub fn lorehold_spiritmaster() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(2),
-                definition: lorehold_spirit_token(),
+                definition: Box::new(lorehold_spirit_token()),
             },
         }],
         ..Default::default()
@@ -981,7 +981,7 @@ pub fn lorehold_battlescroll() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(2),
-                definition: lorehold_spirit_token(),
+                definition: Box::new(lorehold_spirit_token()),
             },
             Effect::GrantKeyword {
                 what: Selector::EachPermanent(
@@ -1035,7 +1035,7 @@ pub fn lorehold_tomescholar() -> CardDefinition {
                     then: Box::new(Effect::CreateToken {
                         who: PlayerRef::You,
                         count: Value::Const(1),
-                        definition: lorehold_spirit_token(),
+                        definition: Box::new(lorehold_spirit_token()),
                     }),
                     else_: Box::new(Effect::Noop),
                 },
@@ -1227,7 +1227,7 @@ pub fn lorehold_echoflame() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: lorehold_spirit_token(),
+                definition: Box::new(lorehold_spirit_token()),
             },
         ]),
         ..Default::default()
@@ -1281,7 +1281,7 @@ pub fn lorehold_pilgrimwarden() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: soldier_token,
+                definition: Box::new(soldier_token),
             },
         }],
         ..Default::default()
@@ -1394,7 +1394,7 @@ pub fn lorehold_ringleader() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(2),
-                definition: lorehold_spirit_token(),
+                definition: Box::new(lorehold_spirit_token()),
             },
         }],
         ..Default::default()
@@ -1727,7 +1727,7 @@ pub fn lorehold_spirit_caller() -> CardDefinition {
                 Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::Const(2),
-                    definition: lorehold_spirit_token(),
+                    definition: Box::new(lorehold_spirit_token()),
                 },
                 Effect::GrantKeyword {
                     what: Selector::EachPermanent(
@@ -1769,7 +1769,7 @@ pub fn lorehold_recital() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: lorehold_spirit_token(),
+                definition: Box::new(lorehold_spirit_token()),
             },
         ]),
         ..Default::default()
@@ -1846,7 +1846,7 @@ pub fn lorehold_soulshaper() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: lorehold_spirit_token(),
+                definition: Box::new(lorehold_spirit_token()),
             },
         }],
         ..Default::default()
@@ -2087,7 +2087,7 @@ pub fn lorehold_battlecaster() -> CardDefinition {
                 effect: Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::Const(1),
-                    definition: lorehold_spirit_token(),
+                    definition: Box::new(lorehold_spirit_token()),
                 },
             },
             TriggeredAbility {
@@ -2191,7 +2191,7 @@ pub fn lorehold_outburst() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(2),
-                definition: lorehold_spirit_token(),
+                definition: Box::new(lorehold_spirit_token()),
             },
             Effect::PumpPT {
                 what: each_your_creature(),
@@ -2314,7 +2314,7 @@ pub fn lorehold_embercouncil() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(2),
-                definition: lorehold_spirit_token(),
+                definition: Box::new(lorehold_spirit_token()),
             },
             Effect::DealDamage {
                 to: Selector::Player(PlayerRef::EachOpponent),
@@ -2524,7 +2524,7 @@ pub fn lorehold_pyrescroll() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: lorehold_spirit_token(),
+                definition: Box::new(lorehold_spirit_token()),
             },
         ]),
         ..Default::default()
@@ -3121,7 +3121,7 @@ pub fn lorehold_vow() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: lorehold_spirit_token(),
+                definition: Box::new(lorehold_spirit_token()),
             },
         ]),
         ..Default::default()
@@ -3240,7 +3240,7 @@ pub fn lorehold_memoirist() -> CardDefinition {
                 Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::Const(1),
-                    definition: lorehold_spirit_token(),
+                    definition: Box::new(lorehold_spirit_token()),
                 },
             ]),
         }],
@@ -3426,7 +3426,7 @@ pub fn lorehold_mass_ritual() -> CardDefinition {
         effect: Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::Const(3),
-            definition: lorehold_spirit_token(),
+            definition: Box::new(lorehold_spirit_token()),
         },
         ..Default::default()
     }
@@ -3542,7 +3542,7 @@ pub fn lorehold_spirit_legion() -> CardDefinition {
                 Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::Const(2),
-                    definition: lorehold_spirit_token(),
+                    definition: Box::new(lorehold_spirit_token()),
                 },
                 Effect::ForEach {
                     selector: Selector::EachPermanent(
@@ -3629,7 +3629,7 @@ pub fn spirit_phalanx() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(2),
-                definition: lorehold_spirit_token(),
+                definition: Box::new(lorehold_spirit_token()),
             },
             Effect::ForEach {
                 selector: Selector::EachPermanent(
@@ -3667,7 +3667,7 @@ pub fn lorehold_warhost() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(2),
-                definition: lorehold_spirit_token(),
+                definition: Box::new(lorehold_spirit_token()),
             },
         }],
         ..Default::default()
@@ -3788,7 +3788,7 @@ pub fn lorehold_ghostmaster() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(3),
-                definition: lorehold_spirit_token(),
+                definition: Box::new(lorehold_spirit_token()),
             },
         }],
         ..Default::default()
@@ -3809,7 +3809,7 @@ pub fn lorehold_b37_spiritflame() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: lorehold_spirit_token(),
+                definition: Box::new(lorehold_spirit_token()),
             },
             Effect::DealDamage {
                 to: Selector::Player(PlayerRef::EachOpponent),
@@ -3991,7 +3991,7 @@ pub fn lorehold_spiritrider() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(2),
-                definition: lorehold_spirit_token(),
+                definition: Box::new(lorehold_spirit_token()),
             },
         }],
         ..Default::default()
@@ -4137,7 +4137,7 @@ pub fn lorehold_spiritsage() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: small_spirit,
+                definition: Box::new(small_spirit),
             },
         }],
         ..Default::default()
@@ -4286,7 +4286,7 @@ pub fn lorehold_wraithcaller() -> CardDefinition {
         triggered_abilities: vec![crate::effect::shortcut::etb(Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::Const(1),
-            definition: spirit_flying,
+            definition: Box::new(spirit_flying),
         })],
         ..Default::default()
     }
@@ -4445,7 +4445,7 @@ pub fn lorehold_recital_v2() -> CardDefinition {
             },
             Effect::CreateToken {
                 who: PlayerRef::You,
-                definition: lorehold_spirit_token(),
+                definition: Box::new(lorehold_spirit_token()),
                 count: Value::Const(1),
             },
         ]),
@@ -4515,7 +4515,7 @@ pub fn lorehold_pyresummon() -> CardDefinition {
             },
             Effect::CreateToken {
                 who: PlayerRef::You,
-                definition: lorehold_spirit_token(),
+                definition: Box::new(lorehold_spirit_token()),
                 count: Value::Const(1),
             },
         ]),
@@ -5001,7 +5001,7 @@ pub fn lorehold_spiritscribe() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(2),
-                definition: lorehold_spirit_token(),
+                definition: Box::new(lorehold_spirit_token()),
             },
             Effect::DealDamage {
                 to: Selector::Player(PlayerRef::EachOpponent),
@@ -5470,7 +5470,7 @@ pub fn lorehold_memoriam() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(2),
-                definition: lorehold_spirit_token(),
+                definition: Box::new(lorehold_spirit_token()),
             },
             Effect::GainLife {
                 who: Selector::You,
@@ -5548,7 +5548,7 @@ pub fn lorehold_echocaller() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: lorehold_spirit_token(),
+                definition: Box::new(lorehold_spirit_token()),
             },
             Effect::GainLife {
                 who: Selector::You,
@@ -5821,7 +5821,7 @@ pub fn lorehold_skyblaze() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: lorehold_spirit_token(),
+                definition: Box::new(lorehold_spirit_token()),
             },
             Effect::DealDamage {
                 to: Selector::EachPermanent(
@@ -6146,7 +6146,7 @@ pub fn lorehold_summit() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(2),
-                definition: lorehold_spirit_token(),
+                definition: Box::new(lorehold_spirit_token()),
             },
             Effect::GrantKeyword {
                 what: Selector::EachPermanent(
@@ -6296,7 +6296,7 @@ pub fn lorehold_reverence_v2() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: lorehold_spirit_token(),
+                definition: Box::new(lorehold_spirit_token()),
             },
             Effect::GainLife {
                 who: Selector::You,
@@ -6406,7 +6406,7 @@ pub fn lorehold_reliquarian() -> CardDefinition {
             etb(Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: lorehold_spirit_token(),
+                definition: Box::new(lorehold_spirit_token()),
             }),
             magecraft_gain_life(1),
         ],
@@ -6476,7 +6476,7 @@ pub fn lorehold_spiritbinder_b59() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: lorehold_spirit_token(),
+                definition: Box::new(lorehold_spirit_token()),
             },
             Effect::GainLife {
                 who: Selector::You,
@@ -6649,7 +6649,7 @@ pub fn lorehold_battle_keeper() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: lorehold_spirit_token(),
+                definition: Box::new(lorehold_spirit_token()),
             },
             Effect::DealDamage {
                 to: target_filtered(
@@ -6887,7 +6887,7 @@ pub fn lorehold_memorialcaller() -> CardDefinition {
         triggered_abilities: vec![
             etb(Effect::CreateToken {
                 who: PlayerRef::You,
-                definition: lorehold_spirit_token(),
+                definition: Box::new(lorehold_spirit_token()),
                 count: Value::Const(2),
             }),
             magecraft_gain_life(1),
@@ -7025,7 +7025,7 @@ pub fn lorehold_sparkchorus() -> CardDefinition {
         effect: Effect::Seq(vec![
             Effect::CreateToken {
                 who: PlayerRef::You,
-                definition: lorehold_spirit_token(),
+                definition: Box::new(lorehold_spirit_token()),
                 count: Value::Const(2),
             },
             Effect::DealDamage {
@@ -7117,7 +7117,7 @@ pub fn lorehold_spiritmint_b66() -> CardDefinition {
         toughness: 2,
         triggered_abilities: vec![etb(Effect::CreateToken {
             who: PlayerRef::You,
-            definition: lorehold_spirit_token(),
+            definition: Box::new(lorehold_spirit_token()),
             count: Value::Const(1),
         })],
         ..Default::default()
@@ -7302,7 +7302,7 @@ pub fn lorehold_spirit_crier() -> CardDefinition {
             event: EventSpec::new(EventKind::CreatureDied, EventScope::SelfSource),
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
-                definition: lorehold_spirit_token(),
+                definition: Box::new(lorehold_spirit_token()),
                 count: Value::Const(1),
             },
         }],
@@ -7327,7 +7327,7 @@ pub fn lorehold_bellringer() -> CardDefinition {
         keywords: vec![Keyword::Haste],
         triggered_abilities: vec![etb(Effect::CreateToken {
             who: PlayerRef::You,
-            definition: lorehold_spirit_token(),
+            definition: Box::new(lorehold_spirit_token()),
             count: Value::Const(1),
         })],
         ..Default::default()
@@ -7355,7 +7355,7 @@ pub fn lorehold_sparkshrine() -> CardDefinition {
             },
             Effect::CreateToken {
                 who: PlayerRef::You,
-                definition: lorehold_spirit_token(),
+                definition: Box::new(lorehold_spirit_token()),
                 count: Value::Const(1),
             },
         ]),
@@ -7526,7 +7526,7 @@ pub fn lorehold_heraldcaller_b125() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(2),
-                definition: lorehold_spirit_token(),
+                definition: Box::new(lorehold_spirit_token()),
             },
             Effect::GainLife {
                 who: Selector::You,
@@ -8146,7 +8146,7 @@ pub fn lorehold_excavation_b129() -> CardDefinition {
         effect: Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::Const(2),
-            definition: lorehold_spirit_token(),
+            definition: Box::new(lorehold_spirit_token()),
         },
         ..Default::default()
     }
@@ -8343,7 +8343,7 @@ pub fn lorehold_battle_cantrip_b130() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: lorehold_spirit_token(),
+                definition: Box::new(lorehold_spirit_token()),
             },
         ]),
         ..Default::default()
@@ -8476,7 +8476,7 @@ pub fn lorehold_battle_chant_b131() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(2),
-                definition: lorehold_spirit_token(),
+                definition: Box::new(lorehold_spirit_token()),
             },
             Effect::GrantKeyword {
                 what: Selector::EachPermanent(
@@ -8650,7 +8650,7 @@ pub fn lorehold_skyforge_b132() -> CardDefinition {
         effect: Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::Const(2),
-            definition: spirit_token(),
+            definition: Box::new(spirit_token()),
         },
         ..Default::default()
     }
@@ -8871,7 +8871,7 @@ pub fn lorehold_ember_chant_b136() -> CardDefinition {
         effect: Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::Const(2),
-            definition: lorehold_spirit_token(),
+            definition: Box::new(lorehold_spirit_token()),
         },
         ..Default::default()
     }
@@ -9029,7 +9029,7 @@ pub fn lorehold_spiritsong_b138() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: lorehold_spirit_token(),
+                definition: Box::new(lorehold_spirit_token()),
             },
             Effect::GainLife {
                 who: Selector::You,
@@ -9172,7 +9172,7 @@ pub fn lorehold_spiritforge_b141() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(2),
-                definition: lorehold_spirit_token(),
+                definition: Box::new(lorehold_spirit_token()),
             },
             Effect::GainLife {
                 who: Selector::You,
@@ -9340,7 +9340,7 @@ pub fn lorehold_spiritmender_b142() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: lorehold_spirit_token(),
+                definition: Box::new(lorehold_spirit_token()),
             },
         ]))],
         ..Default::default()
@@ -9747,7 +9747,7 @@ pub fn lorehold_spirit_glyph_b146() -> CardDefinition {
         effect: Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::Const(1),
-            definition: lorehold_spirit_token(),
+            definition: Box::new(lorehold_spirit_token()),
         },
         ..Default::default()
     }
@@ -9893,7 +9893,7 @@ pub fn lorehold_spirit_decree_b146() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: lorehold_spirit_token(),
+                definition: Box::new(lorehold_spirit_token()),
             },
         ]),
         ..Default::default()
@@ -10707,7 +10707,7 @@ pub fn lorehold_stratagem_b154() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(2),
-                definition: lorehold_spirit_token(),
+                definition: Box::new(lorehold_spirit_token()),
             },
             deal(3, Selector::Player(PlayerRef::EachOpponent)),
         ]),
@@ -10773,7 +10773,7 @@ pub fn lorehold_strikeritual_b154() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: lorehold_spirit_token(),
+                definition: Box::new(lorehold_spirit_token()),
             },
         ]),
         ..Default::default()
@@ -11271,7 +11271,7 @@ pub fn lorehold_spirit_caller_b155() -> CardDefinition {
         triggered_abilities: vec![etb(Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::Const(2),
-            definition: lorehold_spirit_token(),
+            definition: Box::new(lorehold_spirit_token()),
         })],
         ..Default::default()
     }
@@ -11507,7 +11507,7 @@ pub fn lorehold_stonewright_b158() -> CardDefinition {
         effect: Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::Const(2),
-            definition: lorehold_spirit_token(),
+            definition: Box::new(lorehold_spirit_token()),
         },
         ..Default::default()
     }
@@ -11550,7 +11550,7 @@ pub fn lorehold_spectral_lance_b158() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: lorehold_spirit_token(),
+                definition: Box::new(lorehold_spirit_token()),
             },
         ]),
         ..Default::default()
@@ -11704,7 +11704,7 @@ pub fn lorehold_battlescroll_b159() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(2),
-                definition: lorehold_spirit_token(),
+                definition: Box::new(lorehold_spirit_token()),
             },
             Effect::GrantKeyword {
                 what: Selector::EachPermanent(
@@ -11906,7 +11906,7 @@ pub fn lorehold_cavalcade_b161() -> CardDefinition {
         effect: Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::Const(2),
-            definition: lorehold_spirit_token(),
+            definition: Box::new(lorehold_spirit_token()),
         },
         ..Default::default()
     }
@@ -12383,7 +12383,7 @@ pub fn lorehold_command() -> CardDefinition {
                 Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::Const(1),
-                    definition: spirit_32,
+                    definition: Box::new(spirit_32),
                 },
                 Effect::Seq(vec![
                     Effect::PumpPT {
@@ -15151,7 +15151,7 @@ pub fn lorehold_spirit_sage_b203() -> CardDefinition {
         triggered_abilities: vec![etb(Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::Const(1),
-            definition: lorehold_spirit_token(),
+            definition: Box::new(lorehold_spirit_token()),
         })],
         ..Default::default()
     }
@@ -15294,7 +15294,7 @@ pub fn lorehold_spiritbringer_b204() -> CardDefinition {
         triggered_abilities: vec![etb(Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::Const(1),
-            definition: lorehold_spirit_token(),
+            definition: Box::new(lorehold_spirit_token()),
         })],
         ..Default::default()
     }

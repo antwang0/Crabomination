@@ -90,7 +90,7 @@ pub fn quandrix_conjurer() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: fractal_token,
+                definition: Box::new(fractal_token),
             },
             Effect::AddCounter {
                 what: Selector::EachPermanent(
@@ -214,7 +214,7 @@ pub fn silverquill_ambassador() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: inkling_token(),
+                definition: Box::new(inkling_token()),
             },
         }],
         ..Default::default()
@@ -599,7 +599,7 @@ pub fn witherbloom_botanist() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: pest,
+                definition: Box::new(pest),
             },
         }],
         ..Default::default()
@@ -790,7 +790,7 @@ pub fn prismari_tinkerer() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: crate::game::effects::treasure_token(),
+                definition: Box::new(crate::game::effects::treasure_token()),
             },
         }],
         ..Default::default()
@@ -919,7 +919,7 @@ pub fn witherbloom_conjurer() -> CardDefinition {
                 effect: Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::Const(2),
-                    definition: pest,
+                    definition: Box::new(pest),
                 },
             },
             TriggeredAbility {
@@ -1114,7 +1114,7 @@ pub fn lorehold_treasure_smith() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: crate::game::effects::treasure_token(),
+                definition: Box::new(crate::game::effects::treasure_token()),
             },
         }],
         ..Default::default()
@@ -1307,7 +1307,7 @@ pub fn witherbloom_pestmaster() -> CardDefinition {
                 effect: Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::Const(1),
-                    definition: pest,
+                    definition: Box::new(pest),
                 },
             },
             TriggeredAbility {
@@ -1433,7 +1433,7 @@ pub fn quandrix_equation() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: fractal,
+                definition: Box::new(fractal),
             },
             Effect::AddCounter {
                 what: Selector::LastCreatedToken,
@@ -1560,7 +1560,7 @@ pub fn lorehold_memorial() -> CardDefinition {
                     Effect::CreateToken {
                         who: PlayerRef::You,
                         count: Value::Const(1),
-                        definition: spirit,
+                        definition: Box::new(spirit),
                     },
                 ]),
             },
@@ -1597,7 +1597,7 @@ pub fn prismari_ember_trickster() -> CardDefinition {
                 effect: Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::Const(1),
-                    definition: crate::game::effects::treasure_token(),
+                    definition: Box::new(crate::game::effects::treasure_token()),
                 },
             },
             crate::effect::shortcut::prowess(),
@@ -1892,7 +1892,7 @@ pub fn silverquill_scribefall() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(2),
-                definition: inkling,
+                definition: Box::new(inkling),
             },
             Effect::Drain {
                 from: Selector::Player(PlayerRef::EachOpponent),
@@ -2034,7 +2034,7 @@ pub fn prismari_spectacle() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(2),
-                definition: crate::game::effects::treasure_token(),
+                definition: Box::new(crate::game::effects::treasure_token()),
             },
         ]),
         ..Default::default()
@@ -2241,7 +2241,7 @@ pub fn prismari_eccentric() -> CardDefinition {
                 effect: Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::Const(1),
-                    definition: crate::game::effects::treasure_token(),
+                    definition: Box::new(crate::game::effects::treasure_token()),
                 },
             },
             TriggeredAbility {

@@ -205,7 +205,7 @@ pub fn speaker_of_the_heavens() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: angel,
+                definition: Box::new(angel),
             },
             ..Default::default()
         }],

@@ -84,7 +84,7 @@ pub fn redrock_sentinel() -> CardDefinition {
                 Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::ONE,
-                    definition: crabomination_base::tokens::treasure_token(),
+                    definition: Box::new(crabomination_base::tokens::treasure_token()),
                 },
             ]),
             ..Default::default()

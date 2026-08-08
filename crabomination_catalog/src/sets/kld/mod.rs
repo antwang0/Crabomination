@@ -338,7 +338,7 @@ pub fn aether_swooper() -> CardDefinition {
                 then: Box::new(Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::Const(1),
-                    definition: thopter,
+                    definition: Box::new(thopter),
                 }),
             }),
         ],

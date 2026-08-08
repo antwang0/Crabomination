@@ -233,7 +233,7 @@ pub fn mobilization() -> CardDefinition {
             mana_cost: cost(&[generic(2), w()]),
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
-                definition: TokenDefinition {
+                definition: Box::new(TokenDefinition {
                     name: "Soldier".into(),
                     colors: vec![Color::White],
                     subtypes: Subtypes {
@@ -244,7 +244,7 @@ pub fn mobilization() -> CardDefinition {
                     power: 1,
                     toughness: 1,
                     ..Default::default()
-                },
+                }),
                 count: Value::ONE,
             },
             ..Default::default()
@@ -724,7 +724,7 @@ pub fn centaur_glade() -> CardDefinition {
             mana_cost: cost(&[generic(2), g(), g()]),
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
-                definition: TokenDefinition {
+                definition: Box::new(TokenDefinition {
                     name: "Centaur".into(),
                     colors: vec![Color::Green],
                     subtypes: Subtypes {
@@ -735,7 +735,7 @@ pub fn centaur_glade() -> CardDefinition {
                     power: 3,
                     toughness: 3,
                     ..Default::default()
-                },
+                }),
                 count: Value::ONE,
             },
             ..Default::default()
@@ -868,7 +868,7 @@ pub fn symbiotic_beast() -> CardDefinition {
             event: EventSpec::new(EventKind::CreatureDied, EventScope::SelfSource),
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
-                definition: insect_token(),
+                definition: Box::new(insect_token()),
                 count: Value::Const(4),
             },
         }],
@@ -889,7 +889,7 @@ pub fn symbiotic_wurm() -> CardDefinition {
             event: EventSpec::new(EventKind::CreatureDied, EventScope::SelfSource),
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
-                definition: insect_token(),
+                definition: Box::new(insect_token()),
                 count: Value::Const(7),
             },
         }],

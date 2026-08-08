@@ -70,7 +70,7 @@ pub fn gilded_ghoda() -> CardDefinition {
         triggered_abilities: vec![attack_while_saddled(Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::Const(1),
-            definition: treasure_token(),
+            definition: Box::new(treasure_token()),
         })],
         ..Default::default()
     }
@@ -164,7 +164,7 @@ pub fn draconautics_engineer() -> CardDefinition {
                 effect: Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::Const(1),
-                    definition: dino_dragon_token(),
+                    definition: Box::new(dino_dragon_token()),
                 },
                 ..Default::default()
             },

@@ -304,7 +304,7 @@ pub fn thopter_fabricator() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: thopter,
+                definition: Box::new(thopter),
             },
         }],
         ..Default::default()
@@ -404,7 +404,7 @@ pub fn march_of_the_world_ooze() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: elephant,
+                definition: Box::new(elephant),
             },
         }],
         ..Default::default()

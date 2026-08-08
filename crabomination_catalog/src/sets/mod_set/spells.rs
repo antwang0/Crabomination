@@ -417,7 +417,7 @@ pub fn smothering_tithe() -> CardDefinition {
                 then: Box::new(Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::Const(1),
-                    definition: crate::game::effects::treasure_token(),
+                    definition: Box::new(crate::game::effects::treasure_token()),
                 }),
                 if_paid: None,
             },
@@ -536,7 +536,7 @@ pub fn luminarch_ascension() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: V::Const(1),
-                definition: TokenDefinition {
+                definition: Box::new(TokenDefinition {
                     name: "Angel".into(),
                     power: 4,
                     toughness: 4,
@@ -548,7 +548,7 @@ pub fn luminarch_ascension() -> CardDefinition {
                         ..Default::default()
                     },
                     ..Default::default()
-                },
+                }),
             },
             ..Default::default()
         }],

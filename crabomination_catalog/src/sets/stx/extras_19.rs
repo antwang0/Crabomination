@@ -278,7 +278,7 @@ pub fn kianne_dean_of_substance() -> CardDefinition {
                     Effect::CreateToken {
                         who: PlayerRef::You,
                         count: Value::Const(1),
-                        definition: fractal,
+                        definition: Box::new(fractal),
                     },
                     Effect::AddCounter {
                         what: Selector::LastCreatedToken,
@@ -533,7 +533,7 @@ pub fn valentin_dean_of_the_vein() -> CardDefinition {
                     body: Box::new(Effect::CreateToken {
                         who: PlayerRef::You,
                         count: Value::Const(1),
-                        definition: valentin_pest_token(),
+                        definition: Box::new(valentin_pest_token()),
                     }),
                     else_: None,
                 })),
@@ -849,7 +849,7 @@ fn awaken_the_blood_avatar() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: avatar,
+                definition: Box::new(avatar),
             },
         ]),
         ..Default::default()

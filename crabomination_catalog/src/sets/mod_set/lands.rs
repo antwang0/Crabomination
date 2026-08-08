@@ -503,7 +503,7 @@ pub fn urzas_saga() -> CardDefinition {
                         effect: Effect::CreateToken {
                             who: PlayerRef::You,
                             count: Value::Const(1),
-                            definition: construct,
+                            definition: Box::new(construct),
                         },
                         ..Default::default()
                     }),

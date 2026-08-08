@@ -142,7 +142,7 @@ pub fn shatter_the_oath() -> CardDefinition {
                     Selector::EachPermanent(R::Creature.and(R::ControlledByYou)),
                     Value::ONE,
                 ),
-                definition: wicked_role(),
+                definition: Box::new(wicked_role()),
             },
         ]),
         ..Default::default()
@@ -160,7 +160,7 @@ pub fn lord_skitters_blessing() -> CardDefinition {
         triggered_abilities: vec![
             etb(Effect::CreateTokenAttachedTo {
                 target: target_filtered(R::Creature.and(R::ControlledByYou)),
-                definition: wicked_role(),
+                definition: Box::new(wicked_role()),
             }),
             TriggeredAbility {
                 event: EventSpec::new(
@@ -203,7 +203,7 @@ pub fn flick_a_coin() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: treasure_token(),
+                definition: Box::new(treasure_token()),
             },
             Effect::Draw {
                 who: Selector::You,
@@ -245,7 +245,7 @@ pub fn ogre_chitterlord() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(2),
-                definition: rat_token(),
+                definition: Box::new(rat_token()),
             },
             Effect::If {
                 cond: Predicate::SelectorCountAtLeast {
@@ -297,7 +297,7 @@ pub fn redcap_gutter_dweller() -> CardDefinition {
             etb(Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(2),
-                definition: rat_token(),
+                definition: Box::new(rat_token()),
             }),
             TriggeredAbility {
                 event: EventSpec::new(

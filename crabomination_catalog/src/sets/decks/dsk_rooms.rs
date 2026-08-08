@@ -181,7 +181,7 @@ pub fn dollmakers_shop_porcelain_gallery() -> CardDefinition {
                 effect: Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::ONE,
-                    definition: toy_token(),
+                    definition: Box::new(toy_token()),
                 },
             }],
             ..Default::default()
@@ -294,7 +294,7 @@ pub fn smoky_lounge_misty_salon() -> CardDefinition {
             triggered_abilities: vec![on_unlock(Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: door_spirit(),
+                definition: Box::new(door_spirit()),
             })],
             ..Default::default()
         },

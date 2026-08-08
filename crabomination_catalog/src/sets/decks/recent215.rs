@@ -169,7 +169,7 @@ pub fn lathril_blade_of_the_elves() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::TriggerEventAmount,
-                definition: elf_warrior_1_1(),
+                definition: Box::new(elf_warrior_1_1()),
             },
         }],
         activated_abilities: vec![ActivatedAbility {
@@ -260,7 +260,7 @@ pub fn kykar_zephyr_awakener() -> CardDefinition {
                 Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::ONE,
-                    definition: white_spirit_flyer_1_1(),
+                    definition: Box::new(white_spirit_flyer_1_1()),
                 },
             ]),
         }],

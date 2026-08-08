@@ -57,7 +57,7 @@ pub fn kykar_winds_fury() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: white_spirit_token(),
+                definition: Box::new(white_spirit_token()),
             },
         }],
         activated_abilities: vec![ActivatedAbility {
@@ -141,7 +141,7 @@ pub fn the_locust_god() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: insect_token(),
+                definition: Box::new(insect_token()),
             },
         }],
         activated_abilities: vec![ActivatedAbility {

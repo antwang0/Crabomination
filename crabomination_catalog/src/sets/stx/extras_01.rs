@@ -1238,7 +1238,7 @@ pub fn leyline_invocation() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: TokenDefinition {
+                definition: Box::new(TokenDefinition {
                     name: "Fractal".to_string(),
                     colors: vec![Color::Green, Color::Blue],
                     card_types: vec![CardType::Creature],
@@ -1249,7 +1249,7 @@ pub fn leyline_invocation() -> CardDefinition {
                     power: 0,
                     toughness: 0,
                     ..Default::default()
-                },
+                }),
             },
             Effect::AddCounter {
                 what: Selector::LastCreatedToken,
@@ -2041,7 +2041,7 @@ pub fn witherbloom_pest_eater() -> CardDefinition {
                 effect: Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::Const(1),
-                    definition: stx_pest_token(),
+                    definition: Box::new(stx_pest_token()),
                 },
             },
             TriggeredAbility {

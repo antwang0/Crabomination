@@ -223,7 +223,7 @@ pub fn dog_walker() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(2),
-                definition: crate::card::TokenDefinition {
+                definition: Box::new(crate::card::TokenDefinition {
                     name: "Dog".into(),
                     power: 1,
                     toughness: 1,
@@ -235,7 +235,7 @@ pub fn dog_walker() -> CardDefinition {
                     },
                     tapped: true,
                     ..Default::default()
-                },
+                }),
             },
         }],
         ..Default::default()
@@ -385,7 +385,7 @@ pub fn drag_the_canal() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: crate::card::TokenDefinition {
+                definition: Box::new(crate::card::TokenDefinition {
                     name: "Detective".into(),
                     power: 2,
                     toughness: 2,
@@ -396,7 +396,7 @@ pub fn drag_the_canal() -> CardDefinition {
                         ..Default::default()
                     },
                     ..Default::default()
-                },
+                }),
             },
             Effect::If {
                 cond: Predicate::CreaturesDiedThisTurnTotalAtLeast {
@@ -443,7 +443,7 @@ pub fn harried_dronesmith() -> CardDefinition {
                 Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::ONE,
-                    definition: crate::card::TokenDefinition {
+                    definition: Box::new(crate::card::TokenDefinition {
                         name: "Thopter".into(),
                         power: 1,
                         toughness: 1,
@@ -454,7 +454,7 @@ pub fn harried_dronesmith() -> CardDefinition {
                         },
                         keywords: vec![Keyword::Flying, Keyword::Haste],
                         ..Default::default()
-                    },
+                    }),
                 },
                 Effect::SacrificeLastCreatedTokensAtNextEndStep,
             ]),
@@ -635,7 +635,7 @@ pub fn gadget_technician() -> CardDefinition {
     let thopter = || Effect::CreateToken {
         who: PlayerRef::You,
         count: Value::ONE,
-        definition: crate::card::TokenDefinition {
+        definition: Box::new(crate::card::TokenDefinition {
             name: "Thopter".into(),
             power: 1,
             toughness: 1,
@@ -646,7 +646,7 @@ pub fn gadget_technician() -> CardDefinition {
             },
             keywords: vec![Keyword::Flying],
             ..Default::default()
-        },
+        }),
     };
     CardDefinition {
         name: "Gadget Technician",

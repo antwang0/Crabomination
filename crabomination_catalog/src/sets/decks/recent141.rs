@@ -219,7 +219,7 @@ pub fn old_flitterfang() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: food_token(),
+                definition: Box::new(food_token()),
             },
         }],
         activated_abilities: vec![ActivatedAbility {
@@ -397,7 +397,7 @@ pub fn tough_cookie() -> CardDefinition {
         triggered_abilities: vec![etb(Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::ONE,
-            definition: food_token(),
+            definition: Box::new(food_token()),
         })],
         activated_abilities: vec![
             ActivatedAbility {

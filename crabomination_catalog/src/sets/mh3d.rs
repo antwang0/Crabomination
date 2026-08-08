@@ -750,7 +750,7 @@ pub fn genku_future_shaper() -> CardDefinition {
                 what: Selector::TriggerSource,
                 filter: R::NotToken,
             }),
-            effect: Effect::ChooseMode(vec![mk(fox), mk(moonfolk), mk(rat)]),
+            effect: Effect::ChooseMode(vec![mk(Box::new(fox)), mk(Box::new(moonfolk)), mk(Box::new(rat))]),
         }],
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[generic(3), w(), u()]),

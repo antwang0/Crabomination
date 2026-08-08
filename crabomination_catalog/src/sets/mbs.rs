@@ -105,7 +105,7 @@ fn living_weapon() -> TriggeredAbility {
         Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::ONE,
-            definition: TokenDefinition {
+            definition: Box::new(TokenDefinition {
                 name: "Phyrexian Germ".into(),
                 card_types: vec![CardType::Creature],
                 colors: vec![Color::Black],
@@ -114,7 +114,7 @@ fn living_weapon() -> TriggeredAbility {
                     ..Default::default()
                 },
                 ..Default::default()
-            },
+            }),
         },
         Effect::Attach { what: Selector::This, to: Selector::LastCreatedToken },
     ]))
@@ -239,7 +239,7 @@ pub fn masters_call() -> CardDefinition {
         Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::Const(2),
-            definition: myr_token(),
+            definition: Box::new(myr_token()),
         },
     )
 }
@@ -254,7 +254,7 @@ pub fn phyrexian_rebirth() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: TokenDefinition {
+                definition: Box::new(TokenDefinition {
                     name: "Phyrexian Horror".into(),
                     card_types: vec![CardType::Artifact, CardType::Creature],
                     subtypes: Subtypes {
@@ -266,7 +266,7 @@ pub fn phyrexian_rebirth() -> CardDefinition {
                         Value::PermanentsDestroyedThisResolution,
                     )),
                     ..Default::default()
-                },
+                }),
             },
         ]),
     )
@@ -697,7 +697,7 @@ pub fn nested_ghoul() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: TokenDefinition {
+                definition: Box::new(TokenDefinition {
                     name: "Phyrexian Zombie".into(),
                     power: 2,
                     toughness: 2,
@@ -708,7 +708,7 @@ pub fn nested_ghoul() -> CardDefinition {
                         ..Default::default()
                     },
                     ..Default::default()
-                },
+                }),
             },
         }],
         ..creature(
@@ -1506,14 +1506,14 @@ pub fn myr_sire() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: TokenDefinition {
+                definition: Box::new(TokenDefinition {
                     name: "Phyrexian Myr".into(),
                     subtypes: Subtypes {
                         creature_types: vec![CreatureType::Phyrexian, CreatureType::Myr],
                         ..Default::default()
                     },
                     ..myr_token()
-                },
+                }),
             },
         }],
         ..artifact_creature(
@@ -1535,7 +1535,7 @@ pub fn myr_turbine() -> CardDefinition {
                 effect: Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::ONE,
-                    definition: myr_token(),
+                    definition: Box::new(myr_token()),
                 },
                 ..Default::default()
             },
@@ -1788,7 +1788,7 @@ pub fn titan_forge() -> CardDefinition {
                 effect: Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::ONE,
-                    definition: TokenDefinition {
+                    definition: Box::new(TokenDefinition {
                         name: "Golem".into(),
                         power: 9,
                         toughness: 9,
@@ -1798,7 +1798,7 @@ pub fn titan_forge() -> CardDefinition {
                             ..Default::default()
                         },
                         ..Default::default()
-                    },
+                    }),
                 },
                 ..Default::default()
             },

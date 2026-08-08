@@ -170,7 +170,7 @@ pub fn errand_of_duty() -> CardDefinition {
         effect: Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::ONE,
-            definition: TokenDefinition {
+            definition: Box::new(TokenDefinition {
                 name: "Knight".into(),
                 power: 1,
                 toughness: 1,
@@ -182,7 +182,7 @@ pub fn errand_of_duty() -> CardDefinition {
                     ..Default::default()
                 },
                 ..Default::default()
-            },
+            }),
         },
         ..Default::default()
     }
@@ -198,7 +198,7 @@ pub fn feast_or_famine() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: TokenDefinition {
+                definition: Box::new(TokenDefinition {
                     name: "Zombie".into(),
                     power: 2,
                     toughness: 2,
@@ -209,7 +209,7 @@ pub fn feast_or_famine() -> CardDefinition {
                         ..Default::default()
                     },
                     ..Default::default()
-                },
+                }),
             },
             Effect::DestroyNoRegen {
                 what: target_filtered(

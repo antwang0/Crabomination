@@ -57,7 +57,7 @@ pub fn mascot_exhibition() -> CardDefinition {
     let mint = |t: TokenDefinition| Effect::CreateToken {
         who: PlayerRef::You,
         count: Value::Const(1),
-        definition: t,
+        definition: Box::new(t),
     };
     CardDefinition {
         name: "Mascot Exhibition",
@@ -230,7 +230,7 @@ pub fn body_of_research() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: fractal,
+                definition: Box::new(fractal),
             },
             Effect::AddCounter {
                 what: Selector::LastCreatedToken,
@@ -425,7 +425,7 @@ pub fn multiple_choice() -> CardDefinition {
                 then: Box::new(Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::Const(1),
-                    definition: elemental,
+                    definition: Box::new(elemental),
                 }),
                 else_: Box::new(Effect::Noop),
             },
@@ -606,7 +606,7 @@ pub fn elemental_expressionism() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(2),
-                definition: TokenDefinition {
+                definition: Box::new(TokenDefinition {
                     name: "Elemental".into(),
                     power: 4,
                     toughness: 4,
@@ -623,7 +623,7 @@ pub fn elemental_expressionism() -> CardDefinition {
 
                     static_abilities: vec![],
                     ..Default::default()
-                },
+                }),
             },
         ]),
         ..Default::default()
@@ -823,7 +823,7 @@ pub fn excavation_technique() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::ControllerOf(Box::new(Selector::Target(0))),
                 count: Value::Const(2),
-                definition: crabomination_base::tokens::treasure_token(),
+                definition: Box::new(crabomination_base::tokens::treasure_token()),
             },
             Effect::Destroy {
                 what: target_filtered(

@@ -142,7 +142,7 @@ pub fn skeletonize() -> CardDefinition {
                 body: Box::new(Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::ONE,
-                    definition: skeleton_token(),
+                    definition: Box::new(skeleton_token()),
                 }),
             },
             Effect::DealDamage {

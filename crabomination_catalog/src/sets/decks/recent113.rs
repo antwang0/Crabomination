@@ -282,7 +282,7 @@ pub fn irregular_cohort() -> CardDefinition {
         triggered_abilities: vec![etb(Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::Const(1),
-            definition: TokenDefinition {
+            definition: Box::new(TokenDefinition {
                 name: "Shapeshifter".into(),
                 power: 2,
                 toughness: 2,
@@ -293,7 +293,7 @@ pub fn irregular_cohort() -> CardDefinition {
                 },
                 keywords: vec![Keyword::Changeling],
                 ..Default::default()
-            },
+            }),
         })],
         ..Default::default()
     }
@@ -526,7 +526,7 @@ pub fn mother_bear() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(2),
-                definition: bear,
+                definition: Box::new(bear),
             },
             ..Default::default()
         }],
@@ -796,7 +796,7 @@ pub fn recruit_the_worthy() -> CardDefinition {
         effect: Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::Const(1),
-            definition: TokenDefinition {
+            definition: Box::new(TokenDefinition {
                 name: "Soldier".into(),
                 power: 1,
                 toughness: 1,
@@ -807,7 +807,7 @@ pub fn recruit_the_worthy() -> CardDefinition {
                 },
                 colors: vec![Color::White],
                 ..Default::default()
-            },
+            }),
         },
         ..Default::default()
     }
@@ -892,7 +892,7 @@ pub fn goblin_war_party() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(3),
-                definition: TokenDefinition {
+                definition: Box::new(TokenDefinition {
                     name: "Goblin".into(),
                     power: 1,
                     toughness: 1,
@@ -903,7 +903,7 @@ pub fn goblin_war_party() -> CardDefinition {
                     },
                     colors: vec![Color::Red],
                     ..Default::default()
-                },
+                }),
             },
             Effect::Seq(vec![
                 Effect::PumpPT {
@@ -1190,7 +1190,7 @@ pub fn rank_officer() -> CardDefinition {
             then: Box::new(Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: TokenDefinition {
+                definition: Box::new(TokenDefinition {
                     name: "Zombie".into(),
                     power: 2,
                     toughness: 2,
@@ -1201,7 +1201,7 @@ pub fn rank_officer() -> CardDefinition {
                     },
                     colors: vec![Color::Black],
                     ..Default::default()
-                },
+                }),
             }),
             else_: None,
         })],

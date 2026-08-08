@@ -227,7 +227,7 @@ pub fn head_of_the_homestead() -> CardDefinition {
         triggered_abilities: vec![etb(Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::Const(2),
-            definition: rabbit_token(),
+            definition: Box::new(rabbit_token()),
         })],
         ..creature(
             "Head of the Homestead",
@@ -251,7 +251,7 @@ pub fn dragoons_wyvern() -> CardDefinition {
         triggered_abilities: vec![etb(Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::Const(1),
-            definition: hero_token(),
+            definition: Box::new(hero_token()),
         })],
         ..creature(
             "Dragoon's Wyvern",
@@ -271,7 +271,7 @@ pub fn dwarven_castle_guard() -> CardDefinition {
         triggered_abilities: vec![on_dies(Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::Const(1),
-            definition: hero_token(),
+            definition: Box::new(hero_token()),
         })],
         ..creature(
             "Dwarven Castle Guard",

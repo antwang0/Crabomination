@@ -409,7 +409,7 @@ pub fn wand_of_the_elements() -> CardDefinition {
         |power: i32, toughness: i32, color: Color, keywords: Vec<Keyword>| Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::ONE,
-            definition: TokenDefinition {
+            definition: Box::new(TokenDefinition {
                 name: "Elemental".into(),
                 colors: vec![color],
                 card_types: vec![CardType::Creature],
@@ -421,7 +421,7 @@ pub fn wand_of_the_elements() -> CardDefinition {
                 toughness,
                 keywords,
                 ..Default::default()
-            },
+            }),
         };
     CardDefinition {
         activated_abilities: vec![
@@ -454,7 +454,7 @@ pub fn wirefly_hive() -> CardDefinition {
                 on_heads: Box::new(Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::ONE,
-                    definition: TokenDefinition {
+                    definition: Box::new(TokenDefinition {
                         name: "Wirefly".into(),
                         card_types: vec![CardType::Artifact, CardType::Creature],
                         subtypes: Subtypes {
@@ -465,7 +465,7 @@ pub fn wirefly_hive() -> CardDefinition {
                         toughness: 2,
                         keywords: vec![Keyword::Flying],
                         ..Default::default()
-                    },
+                    }),
                 }),
                 on_tails: Box::new(Effect::Destroy {
                     what: Selector::EachPermanent(R::HasName("Wirefly".into())),
@@ -567,7 +567,7 @@ pub fn gemini_engine() -> CardDefinition {
             who: PlayerRef::You,
             count: Value::ONE,
             cleanup: crate::effect::AttackingTokenCleanup::SacrificeAtEndOfCombat,
-            definition: TokenDefinition {
+            definition: Box::new(TokenDefinition {
                 name: "Twin".into(),
                 card_types: vec![CardType::Artifact, CardType::Creature],
                 subtypes: Subtypes {
@@ -581,7 +581,7 @@ pub fn gemini_engine() -> CardDefinition {
                     Value::ToughnessOf(Box::new(Selector::This)),
                 )),
                 ..Default::default()
-            },
+            }),
         }]))],
         ..artifact("Gemini Engine", cost(&[generic(6)]))
     }
@@ -709,7 +709,7 @@ pub fn pulse_of_the_tangle() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: TokenDefinition {
+                definition: Box::new(TokenDefinition {
                     name: "Beast".into(),
                     colors: vec![Color::Green],
                     card_types: vec![CardType::Creature],
@@ -720,7 +720,7 @@ pub fn pulse_of_the_tangle() -> CardDefinition {
                     power: 3,
                     toughness: 3,
                     ..Default::default()
-                },
+                }),
             },
             pulse_rebuy(Predicate::AnOpponentControlsMoreCreatures),
         ]),

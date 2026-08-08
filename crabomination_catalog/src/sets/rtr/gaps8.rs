@@ -254,7 +254,7 @@ pub fn grove_of_the_guardian() -> CardDefinition {
                 effect: Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::ONE,
-                    definition: crate::card::TokenDefinition {
+                    definition: Box::new(crate::card::TokenDefinition {
                         name: "Elemental".into(),
                         power: 8,
                         toughness: 8,
@@ -266,7 +266,7 @@ pub fn grove_of_the_guardian() -> CardDefinition {
                         },
                         keywords: vec![Keyword::Vigilance],
                         ..Default::default()
-                    },
+                    }),
                 },
                 ..Default::default()
             },

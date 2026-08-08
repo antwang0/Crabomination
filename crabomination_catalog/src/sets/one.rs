@@ -594,7 +594,7 @@ pub fn chimney_rabble() -> CardDefinition {
         triggered_abilities: vec![etb(Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::ONE,
-            definition: goblin,
+            definition: Box::new(goblin),
         })],
         ..Default::default()
     }
@@ -884,7 +884,7 @@ pub fn skrelvs_hive() -> CardDefinition {
                 Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::ONE,
-                    definition: mite_token(),
+                    definition: Box::new(mite_token()),
                 },
             ]),
         }],
@@ -1025,7 +1025,7 @@ pub fn crawling_chorus() -> CardDefinition {
         triggered_abilities: vec![on_dies(Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::ONE,
-            definition: mite_token(),
+            definition: Box::new(mite_token()),
         })],
         ..Default::default()
     }
@@ -1125,7 +1125,7 @@ pub fn mandibular_kite() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: germ,
+                definition: Box::new(germ),
             },
             Effect::Attach {
                 what: Selector::This,
@@ -1373,7 +1373,7 @@ pub fn basilica_shepherd() -> CardDefinition {
         triggered_abilities: vec![etb(Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::Const(2),
-            definition: mite_token(),
+            definition: Box::new(mite_token()),
         })],
         ..Default::default()
     }
@@ -1443,7 +1443,7 @@ pub fn deadly_derision() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: crate::game::effects::treasure_token(),
+                definition: Box::new(crate::game::effects::treasure_token()),
             },
         ]),
         ..Default::default()
@@ -2283,7 +2283,7 @@ pub fn ovika_enigma_goliath() -> CardDefinition {
                 Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::TriggerEventAmount,
-                    definition: phyrexian_goblin_token(),
+                    definition: Box::new(phyrexian_goblin_token()),
                 },
                 Effect::GrantKeyword {
                     what: Selector::LastCreatedTokens,
@@ -2597,7 +2597,7 @@ fn for_mirrodin(
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: rebel,
+                definition: Box::new(rebel),
             },
             Effect::Attach {
                 what: Selector::This,
@@ -2746,7 +2746,7 @@ pub fn infested_fleshcutter() -> CardDefinition {
             triggered_abilities: vec![on_attack(Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: mite_token(),
+                definition: Box::new(mite_token()),
             })],
             ..Default::default()
         }),
@@ -2993,7 +2993,7 @@ pub fn kemba_kha_enduring() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: cat,
+                definition: Box::new(cat),
             },
             ..Default::default()
         }],
@@ -3880,7 +3880,7 @@ pub fn incubation_sac() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: TokenDefinition {
+                definition: Box::new(TokenDefinition {
                     name: "Phyrexian Golem".into(),
                     power: 3,
                     toughness: 3,
@@ -3890,7 +3890,7 @@ pub fn incubation_sac() -> CardDefinition {
                         ..Default::default()
                     },
                     ..Default::default()
-                },
+                }),
             },
             ..Default::default()
         }],
@@ -3923,7 +3923,7 @@ pub fn urabrasks_forge() -> CardDefinition {
                 Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::ONE,
-                    definition: TokenDefinition {
+                    definition: Box::new(TokenDefinition {
                         name: "Phyrexian Horror".into(),
                         power: 0,
                         toughness: 1,
@@ -3936,7 +3936,7 @@ pub fn urabrasks_forge() -> CardDefinition {
                         keywords: vec![Keyword::Trample, Keyword::Haste],
                         dynamic_pt: Some((oil.clone(), Value::ONE)),
                         ..Default::default()
-                    },
+                    }),
                 },
                 Effect::SacrificeLastCreatedTokensAtNextEndStep,
             ]),
@@ -4372,7 +4372,7 @@ pub fn gleeful_demolition() -> CardDefinition {
                 Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::Const(3),
-                    definition: phyrexian_goblin_token(),
+                    definition: Box::new(phyrexian_goblin_token()),
                 },
             ])),
             else_: Box::new(Effect::Destroy {
@@ -4476,7 +4476,7 @@ pub fn stinging_hivemaster() -> CardDefinition {
         triggered_abilities: vec![on_dies(Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::ONE,
-            definition: mite_token(),
+            definition: Box::new(mite_token()),
         })],
         ..Default::default()
     }
@@ -4960,7 +4960,7 @@ pub fn charge_of_the_mites() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(2),
-                definition: mite_token(),
+                definition: Box::new(mite_token()),
             },
         ]),
         ..Default::default()
@@ -4999,7 +4999,7 @@ pub fn mite_overseer() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: mite_token(),
+                definition: Box::new(mite_token()),
             },
             ..Default::default()
         }],
@@ -5393,7 +5393,7 @@ pub fn malcator_purity_overseer() -> CardDefinition {
     let mint_golem = || Effect::CreateToken {
         who: PlayerRef::You,
         count: Value::ONE,
-        definition: golem_token(),
+        definition: Box::new(golem_token()),
     };
     CardDefinition {
         name: "Malcator, Purity Overseer",
@@ -5604,7 +5604,7 @@ pub fn indoctrination_attendant() -> CardDefinition {
                 Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::ONE,
-                    definition: mite_token(),
+                    definition: Box::new(mite_token()),
                 },
             ])),
         })],
@@ -5649,7 +5649,7 @@ pub fn mirrex() -> CardDefinition {
                 effect: Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::ONE,
-                    definition: mite_token(),
+                    definition: Box::new(mite_token()),
                 },
                 ..Default::default()
             },
@@ -6337,7 +6337,7 @@ pub fn lukka_bound_to_ruin() -> CardDefinition {
                 effect: Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::ONE,
-                    definition: beast_token(),
+                    definition: Box::new(beast_token()),
                 },
                 ..Default::default()
             },
@@ -6467,7 +6467,7 @@ pub fn nissa_ascended_animist() -> CardDefinition {
                 effect: Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::ONE,
-                    definition: TokenDefinition {
+                    definition: Box::new(TokenDefinition {
                         name: "Phyrexian Horror".into(),
                         card_types: vec![CardType::Creature],
                         colors: vec![Color::Green],
@@ -6480,7 +6480,7 @@ pub fn nissa_ascended_animist() -> CardDefinition {
                             Value::LoyaltyOf(Box::new(Selector::This)),
                         )),
                         ..Default::default()
-                    },
+                    }),
                 },
                 ..Default::default()
             },
@@ -6645,7 +6645,7 @@ pub fn kaito_dancing_shadow() -> CardDefinition {
                 effect: Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::ONE,
-                    definition: TokenDefinition {
+                    definition: Box::new(TokenDefinition {
                         name: "Drone".into(),
                         power: 2,
                         toughness: 2,
@@ -6663,7 +6663,7 @@ pub fn kaito_dancing_shadow() -> CardDefinition {
                             effect: drain(2),
                         }],
                         ..Default::default()
-                    },
+                    }),
                 },
                 ..Default::default()
             },
@@ -6696,7 +6696,7 @@ pub fn the_eternal_wanderer() -> CardDefinition {
                 effect: Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::ONE,
-                    definition: TokenDefinition {
+                    definition: Box::new(TokenDefinition {
                         name: "Samurai".into(),
                         power: 2,
                         toughness: 2,
@@ -6708,7 +6708,7 @@ pub fn the_eternal_wanderer() -> CardDefinition {
                         },
                         keywords: vec![Keyword::DoubleStrike],
                         ..Default::default()
-                    },
+                    }),
                 },
                 ..Default::default()
             },
@@ -6749,7 +6749,7 @@ pub fn white_suns_twilight() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::XFromCost,
-                definition: mite_token(),
+                definition: Box::new(mite_token()),
             },
         ]),
         ..Default::default()
@@ -7065,7 +7065,7 @@ pub fn viral_spawning() -> CardDefinition {
         effect: Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::ONE,
-            definition: beast_token(),
+            definition: Box::new(beast_token()),
         },
         ..Default::default()
     }
@@ -7227,7 +7227,7 @@ pub fn goliath_hatchery() -> CardDefinition {
             etb(Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(2),
-                definition: beast_token(),
+                definition: Box::new(beast_token()),
             }),
             TriggeredAbility {
                 event: EventSpec::new(
@@ -7486,7 +7486,7 @@ pub fn churning_reservoir() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: TokenDefinition {
+                definition: Box::new(TokenDefinition {
                     name: "Phyrexian Goblin".into(),
                     power: 1,
                     toughness: 1,
@@ -7497,7 +7497,7 @@ pub fn churning_reservoir() -> CardDefinition {
                         ..Default::default()
                     },
                     ..Default::default()
-                },
+                }),
             },
             ..Default::default()
         }],
@@ -7649,7 +7649,7 @@ pub fn venser_corpse_puppet() -> CardDefinition {
                     then: Box::new(Effect::CreateToken {
                         who: PlayerRef::You,
                         count: Value::ONE,
-                        definition: TokenDefinition {
+                        definition: Box::new(TokenDefinition {
                             name: "The Hollow Sentinel".into(),
                             power: 3,
                             toughness: 3,
@@ -7660,7 +7660,7 @@ pub fn venser_corpse_puppet() -> CardDefinition {
                                 ..Default::default()
                             },
                             ..Default::default()
-                        },
+                        }),
                     }),
                     else_: Box::new(Effect::Noop),
                 },
@@ -7876,7 +7876,7 @@ pub fn blade_of_shared_souls() -> CardDefinition {
                 Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::ONE,
-                    definition: TokenDefinition {
+                    definition: Box::new(TokenDefinition {
                         name: "Rebel".into(),
                         power: 2,
                         toughness: 2,
@@ -7887,7 +7887,7 @@ pub fn blade_of_shared_souls() -> CardDefinition {
                             ..Default::default()
                         },
                         ..Default::default()
-                    },
+                    }),
                 },
                 Effect::Attach {
                     what: Selector::This,

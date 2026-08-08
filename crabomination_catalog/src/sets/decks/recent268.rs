@@ -40,7 +40,7 @@ pub fn aether_channeler() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: bird,
+                definition: Box::new(bird),
             },
             Effect::Move {
                 what: target_filtered(R::Nonland.and(R::OtherThanSource)),

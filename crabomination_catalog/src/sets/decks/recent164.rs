@@ -55,7 +55,7 @@ pub fn goblin_negotiation() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ExcessDamageDealtThisResolution,
-                definition: goblin_token(),
+                definition: Box::new(goblin_token()),
             },
         ]),
         ..Default::default()

@@ -43,7 +43,7 @@ pub fn chandra_flamecaller() -> CardDefinition {
                     Effect::CreateToken {
                         who: PlayerRef::You,
                         count: Value::Const(2),
-                        definition: elemental,
+                        definition: Box::new(elemental),
                     },
                     Effect::ExileLastCreatedTokensAtNextEndStep,
                 ]),

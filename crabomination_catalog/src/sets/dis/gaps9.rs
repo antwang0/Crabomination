@@ -136,7 +136,7 @@ pub fn research_development() -> CardDefinition {
                 cost: cost(&[generic(3), u(), r()]),
                 card_types: vec![CardType::Instant],
                 effect: Effect::TokenUnlessOpponentLetsYouDraw {
-                    token: TokenDefinition {
+                    token: Box::new(TokenDefinition {
                         name: "Elemental".into(),
                         power: 3,
                         toughness: 1,
@@ -144,7 +144,7 @@ pub fn research_development() -> CardDefinition {
                         colors: vec![Color::Red],
                         subtypes: types(vec![CreatureType::Elemental]),
                         ..Default::default()
-                    },
+                    }),
                     times: 3,
                 },
             },

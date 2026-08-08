@@ -55,7 +55,7 @@ pub fn storm_herd() -> CardDefinition {
         effect: Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::LifeOf(PlayerRef::You),
-            definition: pegasus_token(),
+            definition: Box::new(pegasus_token()),
         },
         ..Default::default()
     }
@@ -181,7 +181,7 @@ pub fn thunderheads() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: weird_token(),
+                definition: Box::new(weird_token()),
             },
             Effect::ExileLastCreatedTokensAtNextEndStep,
         ]),
@@ -280,7 +280,7 @@ pub fn teysa_orzhov_scion() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: TokenDefinition {
+                definition: Box::new(TokenDefinition {
                     name: "Spirit".into(),
                     power: 1,
                     toughness: 1,
@@ -292,7 +292,7 @@ pub fn teysa_orzhov_scion() -> CardDefinition {
                         ..Default::default()
                     },
                     ..Default::default()
-                },
+                }),
             },
         }],
         ..Default::default()
@@ -460,7 +460,7 @@ pub fn ulasht_the_hate_seed() -> CardDefinition {
                 Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::ONE,
-                    definition: saproling_token(),
+                    definition: Box::new(saproling_token()),
                 },
             ]),
             ..Default::default()

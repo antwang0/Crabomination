@@ -90,7 +90,7 @@ pub fn master_of_the_hunt() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: TokenDefinition {
+                definition: Box::new(TokenDefinition {
                     name: "Wolves of the Hunt".into(),
                     power: 1,
                     toughness: 1,
@@ -104,7 +104,7 @@ pub fn master_of_the_hunt() -> CardDefinition {
                         "Wolves of the Hunt".into(),
                     )))],
                     ..Default::default()
-                },
+                }),
             },
             ..Default::default()
         }],

@@ -424,7 +424,7 @@ pub fn last_stand() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: lands_you_control(LandType::Forest),
-                definition: saproling(),
+                definition: Box::new(saproling()),
             },
             Effect::GainLife {
                 who: Selector::You,

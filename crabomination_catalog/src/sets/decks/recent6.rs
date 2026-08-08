@@ -66,7 +66,7 @@ pub fn elspeth_suns_champion() -> CardDefinition {
                 effect: Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::Const(3),
-                    definition: soldier_token(),
+                    definition: Box::new(soldier_token()),
                 },
                 ..Default::default()
             },
@@ -191,12 +191,12 @@ pub fn increasing_devotion() -> CardDefinition {
             then: Box::new(Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(10),
-                definition: human_token(),
+                definition: Box::new(human_token()),
             }),
             else_: Box::new(Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(5),
-                definition: human_token(),
+                definition: Box::new(human_token()),
             }),
         },
         keywords: vec![Keyword::Flashback(cost(&[generic(7), w(), w()]))],
@@ -255,7 +255,7 @@ pub fn talrand_sky_summoner() -> CardDefinition {
         triggered_abilities: vec![magecraft(Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::ONE,
-            definition: TokenDefinition {
+            definition: Box::new(TokenDefinition {
                 name: "Drake".to_string(),
                 card_types: vec![CardType::Creature],
                 subtypes: Subtypes {
@@ -267,7 +267,7 @@ pub fn talrand_sky_summoner() -> CardDefinition {
                 colors: vec![Color::Blue],
                 keywords: vec![Keyword::Flying],
                 ..Default::default()
-            },
+            }),
         })],
         ..Default::default()
     }
@@ -383,7 +383,7 @@ pub fn malcolm_keen_eyed_navigator() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: treasure_token(),
+                definition: Box::new(treasure_token()),
             },
         }],
         ..Default::default()
@@ -473,7 +473,7 @@ pub fn shambling_ghast() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: treasure_token(),
+                definition: Box::new(treasure_token()),
             },
         ]))],
         ..Default::default()

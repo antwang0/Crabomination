@@ -96,7 +96,7 @@ fn living_weapon() -> TriggeredAbility {
         Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::ONE,
-            definition: TokenDefinition {
+            definition: Box::new(TokenDefinition {
                 name: "Phyrexian Germ".into(),
                 card_types: vec![CardType::Creature],
                 colors: vec![Color::Black],
@@ -105,7 +105,7 @@ fn living_weapon() -> TriggeredAbility {
                     ..Default::default()
                 },
                 ..Default::default()
-            },
+            }),
         },
         Effect::Attach { what: Selector::This, to: Selector::LastCreatedToken },
     ]))
@@ -428,7 +428,7 @@ pub fn shrine_of_loyal_legions() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::CountersOn { what: Box::new(Selector::This), kind: CounterType::Charge },
-                definition: phyrexian_myr(),
+                definition: Box::new(phyrexian_myr()),
             },
             ..Default::default()
         },
@@ -1301,7 +1301,7 @@ pub fn fresh_meat() -> CardDefinition {
         Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::ControllerCreaturesDiedThisTurn,
-            definition: TokenDefinition {
+            definition: Box::new(TokenDefinition {
                 name: "Beast".into(),
                 power: 3,
                 toughness: 3,
@@ -1312,7 +1312,7 @@ pub fn fresh_meat() -> CardDefinition {
                     ..Default::default()
                 },
                 ..Default::default()
-            },
+            }),
         },
     )
 }
@@ -1407,7 +1407,7 @@ pub fn vital_splicer() -> CardDefinition {
         triggered_abilities: vec![etb(Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::ONE,
-            definition: phyrexian_golem(),
+            definition: Box::new(phyrexian_golem()),
         })],
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[generic(1)]),
@@ -1843,7 +1843,7 @@ pub fn phyrexian_swarmlord() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::PoisonCountersOf(PlayerRef::EachOpponent),
-                definition: TokenDefinition {
+                definition: Box::new(TokenDefinition {
                     name: "Phyrexian Insect".into(),
                     power: 1,
                     toughness: 1,
@@ -1855,7 +1855,7 @@ pub fn phyrexian_swarmlord() -> CardDefinition {
                     },
                     keywords: vec![Keyword::Infect],
                     ..Default::default()
-                },
+                }),
             },
         }],
         ..creature(
@@ -1965,7 +1965,7 @@ pub fn conversion_chamber() -> CardDefinition {
                 effect: Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::ONE,
-                    definition: phyrexian_golem(),
+                    definition: Box::new(phyrexian_golem()),
                 },
                 ..Default::default()
             },
@@ -2123,7 +2123,7 @@ pub fn parasitic_implant() -> CardDefinition {
                 Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::ONE,
-                    definition: phyrexian_myr(),
+                    definition: Box::new(phyrexian_myr()),
                 },
             ]),
         }],
@@ -2204,12 +2204,12 @@ pub fn chancellor_of_the_forge() -> CardDefinition {
         opening_hand: Some(chancellor_reveal(Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::ONE,
-            definition: goblin.clone(),
+            definition: Box::new(goblin.clone()),
         })),
         triggered_abilities: vec![etb(Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::PermanentCountControlledByMatching(PlayerRef::You, R::Creature),
-            definition: goblin,
+            definition: Box::new(goblin),
         })],
         ..creature(
             "Chancellor of the Forge",

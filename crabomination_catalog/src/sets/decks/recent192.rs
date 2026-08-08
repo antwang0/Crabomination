@@ -47,7 +47,7 @@ pub fn hell_to_pay() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ExcessDamageDealtThisResolution,
-                definition: treasure,
+                definition: Box::new(treasure),
             },
         ]),
         ..Default::default()

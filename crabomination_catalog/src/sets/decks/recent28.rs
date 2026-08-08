@@ -47,7 +47,7 @@ pub fn piggy_bank() -> CardDefinition {
         triggered_abilities: vec![on_dies(Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::ONE,
-            definition: treasure_token(),
+            definition: Box::new(treasure_token()),
         })],
         ..Default::default()
     }

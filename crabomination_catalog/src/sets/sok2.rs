@@ -1154,7 +1154,7 @@ pub fn seed_the_land() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::ControllerOf(Box::new(Selector::TriggerSource)),
                 count: Value::ONE,
-                definition: crate::card::TokenDefinition {
+                definition: Box::new(crate::card::TokenDefinition {
                     name: "Snake".into(),
                     card_types: vec![CardType::Creature],
                     colors: vec![Color::Green],
@@ -1165,7 +1165,7 @@ pub fn seed_the_land() -> CardDefinition {
                     power: 1,
                     toughness: 1,
                     ..Default::default()
-                },
+                }),
             },
         }],
         ..Default::default()
@@ -1405,7 +1405,7 @@ pub fn endless_swarm() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: hand(),
-                definition: crate::card::TokenDefinition {
+                definition: Box::new(crate::card::TokenDefinition {
                     name: "Snake".into(),
                     card_types: vec![CardType::Creature],
                     colors: vec![Color::Green],
@@ -1416,7 +1416,7 @@ pub fn endless_swarm() -> CardDefinition {
                     power: 1,
                     toughness: 1,
                     ..Default::default()
-                },
+                }),
             },
         )
     }
@@ -2054,7 +2054,7 @@ pub fn tomb_of_urami() -> CardDefinition {
                 effect: Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::ONE,
-                    definition: crate::card::TokenDefinition {
+                    definition: Box::new(crate::card::TokenDefinition {
                         name: "Urami".into(),
                         card_types: vec![CardType::Creature],
                         supertypes: vec![crate::card::Supertype::Legendary],
@@ -2067,7 +2067,7 @@ pub fn tomb_of_urami() -> CardDefinition {
                         toughness: 5,
                         keywords: vec![Keyword::Flying],
                         ..Default::default()
-                    },
+                    }),
                 },
                 ..Default::default()
             },

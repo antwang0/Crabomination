@@ -82,7 +82,7 @@ pub fn slime_molding() -> CardDefinition {
         effect: Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::ONE,
-            definition: TokenDefinition {
+            definition: Box::new(TokenDefinition {
                 name: "Ooze".into(),
                 power: 0,
                 toughness: 0,
@@ -94,7 +94,7 @@ pub fn slime_molding() -> CardDefinition {
                 },
                 dynamic_pt: Some((Value::XFromCost, Value::XFromCost)),
                 ..Default::default()
-            },
+            }),
         },
         ..Default::default()
     }
@@ -109,7 +109,7 @@ pub fn call_of_the_conclave() -> CardDefinition {
         effect: Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::ONE,
-            definition: TokenDefinition {
+            definition: Box::new(TokenDefinition {
                 name: "Centaur".into(),
                 power: 3,
                 toughness: 3,
@@ -120,7 +120,7 @@ pub fn call_of_the_conclave() -> CardDefinition {
                     ..Default::default()
                 },
                 ..Default::default()
-            },
+            }),
         },
         ..Default::default()
     }
@@ -143,7 +143,7 @@ pub fn armada_wurm() -> CardDefinition {
         triggered_abilities: vec![etb(Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::ONE,
-            definition: wurm_token(),
+            definition: Box::new(wurm_token()),
         })],
         ..Default::default()
     }
@@ -584,7 +584,7 @@ pub fn utvara_hellkite() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: TokenDefinition {
+                definition: Box::new(TokenDefinition {
                     name: "Dragon".into(),
                     power: 6,
                     toughness: 6,
@@ -596,7 +596,7 @@ pub fn utvara_hellkite() -> CardDefinition {
                     },
                     keywords: vec![Keyword::Flying],
                     ..Default::default()
-                },
+                }),
             },
         }],
         ..Default::default()

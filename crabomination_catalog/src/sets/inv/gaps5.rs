@@ -222,7 +222,7 @@ pub fn artifact_mutation() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ManaValueOf(Box::new(Selector::Target(0))),
-                definition: saproling(),
+                definition: Box::new(saproling()),
             },
         ]),
     )
@@ -363,7 +363,7 @@ pub fn pure_reflection() -> CardDefinition {
                 Effect::CreateToken {
                     who: PlayerRef::Triggerer,
                     count: Value::Const(1),
-                    definition: TokenDefinition {
+                    definition: Box::new(TokenDefinition {
                         name: "Reflection".into(),
                         power: 0,
                         toughness: 0,
@@ -378,7 +378,7 @@ pub fn pure_reflection() -> CardDefinition {
                             Value::ManaValueOf(Box::new(Selector::TriggerSource)),
                         )),
                         ..Default::default()
-                    },
+                    }),
                 },
             ]),
         }],

@@ -277,7 +277,7 @@ pub fn akki_ember_keeper() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: colorless_spirit_token(),
+                definition: Box::new(colorless_spirit_token()),
             },
         }],
         ..Default::default()
@@ -463,7 +463,7 @@ pub fn chishiro_the_shattered_blade() -> CardDefinition {
                 effect: Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::Const(1),
-                    definition: red_menace_spirit_token(),
+                    definition: Box::new(red_menace_spirit_token()),
                 },
             },
             TriggeredAbility {

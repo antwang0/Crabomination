@@ -558,7 +558,7 @@ pub fn haunted_angel() -> CardDefinition {
                 Effect::CreateToken {
                     who: PlayerRef::EachOpponent,
                     count: Value::ONE,
-                    definition: crate::card::TokenDefinition {
+                    definition: Box::new(crate::card::TokenDefinition {
                         name: "Angel".to_string(),
                         power: 3,
                         toughness: 3,
@@ -570,7 +570,7 @@ pub fn haunted_angel() -> CardDefinition {
                             ..Default::default()
                         },
                         ..Default::default()
-                    },
+                    }),
                 },
             ]),
         }],
@@ -916,7 +916,7 @@ fn penumbra(
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: crate::card::TokenDefinition {
+                definition: Box::new(crate::card::TokenDefinition {
                     name: token_name.to_string(),
                     power: p,
                     toughness: t,
@@ -924,7 +924,7 @@ fn penumbra(
                     colors: vec![Color::Black],
                     subtypes: Subtypes { creature_types: types.clone(), ..Default::default() },
                     ..Default::default()
-                },
+                }),
             },
         }],
         ..creature(name, c, types, p, t)
@@ -1429,7 +1429,7 @@ pub fn aether_mutation() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ManaValueOf(Box::new(Selector::Target(0))),
-                definition: saproling(),
+                definition: Box::new(saproling()),
             },
         ]),
     )
@@ -1447,7 +1447,7 @@ pub fn death_mutation() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ManaValueOf(Box::new(Selector::Target(0))),
-                definition: saproling(),
+                definition: Box::new(saproling()),
             },
         ]),
     )
@@ -1618,7 +1618,7 @@ pub fn goblin_trenches() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(2),
-                definition: crate::card::TokenDefinition {
+                definition: Box::new(crate::card::TokenDefinition {
                     name: "Goblin Soldier".to_string(),
                     power: 1,
                     toughness: 1,
@@ -1629,7 +1629,7 @@ pub fn goblin_trenches() -> CardDefinition {
                         ..Default::default()
                     },
                     ..Default::default()
-                },
+                }),
             },
             ..Default::default()
         }],

@@ -399,7 +399,7 @@ pub fn infested_roothold() -> CardDefinition {
                 body: Box::new(Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::ONE,
-                    definition: TokenDefinition {
+                    definition: Box::new(TokenDefinition {
                         name: "Insect".into(),
                         colors: vec![Color::Green],
                         card_types: vec![CardType::Creature],
@@ -410,7 +410,7 @@ pub fn infested_roothold() -> CardDefinition {
                         power: 1,
                         toughness: 1,
                         ..Default::default()
-                    },
+                    }),
                 }),
             },
         }],
@@ -864,7 +864,7 @@ pub fn myr_matrix() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: TokenDefinition {
+                definition: Box::new(TokenDefinition {
                     name: "Myr".into(),
                     card_types: vec![CardType::Artifact, CardType::Creature],
                     subtypes: Subtypes {
@@ -874,7 +874,7 @@ pub fn myr_matrix() -> CardDefinition {
                     power: 1,
                     toughness: 1,
                     ..Default::default()
-                },
+                }),
             },
             ..Default::default()
         }],
@@ -905,7 +905,7 @@ pub fn spawning_pit() -> CardDefinition {
                 effect: Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::ONE,
-                    definition: TokenDefinition {
+                    definition: Box::new(TokenDefinition {
                         name: "Spawn".into(),
                         card_types: vec![CardType::Artifact, CardType::Creature],
                         subtypes: Subtypes {
@@ -915,7 +915,7 @@ pub fn spawning_pit() -> CardDefinition {
                         power: 2,
                         toughness: 2,
                         ..Default::default()
-                    },
+                    }),
                 },
                 ..Default::default()
             },

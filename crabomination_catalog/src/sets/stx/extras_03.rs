@@ -393,7 +393,7 @@ pub fn witherbloom_skillchaser() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: super::shared::stx_pest_token(),
+                definition: Box::new(super::shared::stx_pest_token()),
             },
         }],
         ..Default::default()
@@ -422,7 +422,7 @@ pub fn quandrix_pop_quiz() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: fractal_token(),
+                definition: Box::new(fractal_token()),
             },
             Effect::AddCounter {
                 what: Selector::LastCreatedToken,
@@ -1054,7 +1054,7 @@ pub fn witherbloom_apprenticeship() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(2),
-                definition: pest,
+                definition: Box::new(pest),
             },
             Effect::ForEach {
                 selector: Selector::EachPermanent(
@@ -1521,7 +1521,7 @@ pub fn grim_bounty() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: treasure_token(),
+                definition: Box::new(treasure_token()),
             },
         ]),
         ..Default::default()
@@ -2030,7 +2030,7 @@ pub fn mascot_summoning() -> CardDefinition {
         effect: Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::Const(1),
-            definition: TokenDefinition {
+            definition: Box::new(TokenDefinition {
                 name: "Cat".to_string(),
                 power: 2,
                 toughness: 2,
@@ -2047,7 +2047,7 @@ pub fn mascot_summoning() -> CardDefinition {
 
                 static_abilities: vec![],
                 ..Default::default()
-            },
+            }),
         },
         ..Default::default()
     }

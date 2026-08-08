@@ -74,7 +74,7 @@ pub fn starforged_sword() -> CardDefinition {
                 Effect::CreateToken {
                     who: PlayerRef::EachOpponent,
                     count: Value::ONE,
-                    definition: tapped_fish(),
+                    definition: Box::new(tapped_fish()),
                 },
                 Effect::AttachSourceTo {
                     host: target_filtered(R::Creature.and(R::ControlledByYou)),

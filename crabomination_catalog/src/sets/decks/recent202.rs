@@ -40,7 +40,7 @@ pub fn rite_of_the_dragoncaller() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: dragon,
+                definition: Box::new(dragon),
             },
         }],
         ..Default::default()
@@ -84,7 +84,7 @@ pub fn koma_world_eater() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(4),
-                definition: coil,
+                definition: Box::new(coil),
             },
         }],
         ..Default::default()
@@ -224,7 +224,7 @@ pub fn kiora_the_rising_tide() -> CardDefinition {
                     body: Box::new(Effect::CreateToken {
                         who: PlayerRef::You,
                         count: Value::ONE,
-                        definition: scion,
+                        definition: Box::new(scion),
                     }),
                 },
             },

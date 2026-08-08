@@ -233,7 +233,7 @@ pub fn day_of_the_dragons() -> CardDefinition {
             TriggeredAbility {
                 event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
                 effect: Effect::ExileYourCreaturesForDragons {
-                    token: TokenDefinition {
+                    token: Box::new(TokenDefinition {
                         name: "Dragon".into(),
                         power: 5,
                         toughness: 5,
@@ -245,7 +245,7 @@ pub fn day_of_the_dragons() -> CardDefinition {
                         },
                         keywords: vec![Keyword::Flying],
                         ..Default::default()
-                    },
+                    }),
                 },
             },
             TriggeredAbility {

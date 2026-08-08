@@ -115,7 +115,7 @@ pub fn searslicer_goblin() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: goblin_token(),
+                definition: Box::new(goblin_token()),
             },
         }],
         ..Default::default()

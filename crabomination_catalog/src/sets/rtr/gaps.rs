@@ -232,7 +232,7 @@ pub fn centaurs_herald() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: centaur_token(),
+                definition: Box::new(centaur_token()),
             },
             ..Default::default()
         }],

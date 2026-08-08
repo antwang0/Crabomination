@@ -1518,7 +1518,7 @@ pub fn meloku_the_clouded_mirror() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: TokenDefinition {
+                definition: Box::new(TokenDefinition {
                     name: "Illusion".into(),
                     power: 1,
                     toughness: 1,
@@ -1527,7 +1527,7 @@ pub fn meloku_the_clouded_mirror() -> CardDefinition {
                     colors: vec![Color::Blue],
                     subtypes: spirit(vec![CreatureType::Illusion]),
                     ..Default::default()
-                },
+                }),
             },
             ..Default::default()
         }],
@@ -1727,14 +1727,14 @@ pub fn honden_of_lifes_web() -> CardDefinition {
         triggered_abilities: vec![honden_upkeep(Effect::CreateToken {
             who: PlayerRef::You,
             count: shrines_you_control(),
-            definition: TokenDefinition {
+            definition: Box::new(TokenDefinition {
                 name: "Spirit".into(),
                 power: 1,
                 toughness: 1,
                 card_types: vec![CardType::Creature],
                 subtypes: spirit(vec![CreatureType::Spirit]),
                 ..Default::default()
-            },
+            }),
         })],
         ..Default::default()
     }
@@ -2798,14 +2798,14 @@ pub fn dripping_tongue_zubera() -> CardDefinition {
         Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::ZuberasDiedThisTurnTotal,
-            definition: TokenDefinition {
+            definition: Box::new(TokenDefinition {
                 name: "Spirit".into(),
                 power: 1,
                 toughness: 1,
                 card_types: vec![CardType::Creature],
                 subtypes: spirit(vec![CreatureType::Spirit]),
                 ..Default::default()
-            },
+            }),
         },
     )
 }
@@ -4287,14 +4287,14 @@ pub fn spiritual_visit() -> CardDefinition {
         effect: Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::ONE,
-            definition: TokenDefinition {
+            definition: Box::new(TokenDefinition {
                 name: "Spirit".into(),
                 power: 1,
                 toughness: 1,
                 card_types: vec![CardType::Creature],
                 subtypes: spirit(vec![CreatureType::Spirit]),
                 ..Default::default()
-            },
+            }),
         },
         ..Default::default()
     }
@@ -4315,14 +4315,14 @@ pub fn promise_of_bunrei() -> CardDefinition {
                 Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::Const(4),
-                    definition: TokenDefinition {
+                    definition: Box::new(TokenDefinition {
                         name: "Spirit".into(),
                         power: 1,
                         toughness: 1,
                         card_types: vec![CardType::Creature],
                         subtypes: spirit(vec![CreatureType::Spirit]),
                         ..Default::default()
-                    },
+                    }),
                 },
             ]),
         }],
@@ -4619,7 +4619,7 @@ pub fn orochi_eggwatcher() -> CardDefinition {
                 Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::ONE,
-                    definition: snake,
+                    definition: Box::new(snake),
                 },
                 Effect::If {
                     cond: Predicate::ValueAtLeast(
@@ -5202,7 +5202,7 @@ pub fn marrow_gnawer() -> CardDefinition {
                     who: PlayerRef::You,
                     filter: SelectionRequirement::HasCreatureType(CreatureType::Rat),
                 })),
-                definition: TokenDefinition {
+                definition: Box::new(TokenDefinition {
                     name: "Rat".into(),
                     power: 1,
                     toughness: 1,
@@ -5210,7 +5210,7 @@ pub fn marrow_gnawer() -> CardDefinition {
                     subtypes: spirit(vec![CreatureType::Rat]),
                     colors: vec![crate::mana::Color::Black],
                     ..Default::default()
-                },
+                }),
             },
             ..Default::default()
         }],
@@ -5899,14 +5899,14 @@ pub fn budoka_gardener() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: TokenDefinition {
+                definition: Box::new(TokenDefinition {
                     name: "Elemental".into(),
                     card_types: vec![CardType::Creature],
                     colors: vec![Color::Green],
                     subtypes: spirit(vec![CreatureType::Elemental]),
                     dynamic_pt: Some((lands_you_control(), lands_you_control())),
                     ..Default::default()
-                },
+                }),
             },
             ..Default::default()
         }],

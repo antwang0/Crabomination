@@ -334,7 +334,7 @@ pub fn roc_egg() -> CardDefinition {
         triggered_abilities: vec![on_dies(Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::Const(1),
-            definition: TokenDefinition {
+            definition: Box::new(TokenDefinition {
                 name: "Bird".into(),
                 power: 3,
                 toughness: 3,
@@ -346,7 +346,7 @@ pub fn roc_egg() -> CardDefinition {
                     ..Default::default()
                 },
                 ..Default::default()
-            },
+            }),
         })],
         ..creature(
             "Roc Egg",
@@ -375,13 +375,13 @@ pub fn mitotic_slime() -> CardDefinition {
     let small = on_dies(Effect::CreateToken {
         who: PlayerRef::You,
         count: Value::Const(2),
-        definition: ooze(1, None),
+        definition: Box::new(ooze(1, None)),
     });
     CardDefinition {
         triggered_abilities: vec![on_dies(Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::Const(2),
-            definition: ooze(2, Some(small)),
+            definition: Box::new(ooze(2, Some(small))),
         })],
         ..creature("Mitotic Slime", cost(&[generic(4), g()]), vec![CreatureType::Ooze], 4, 4)
     }

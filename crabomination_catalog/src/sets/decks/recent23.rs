@@ -137,7 +137,7 @@ pub fn thrumming_hivepool() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(2),
-                definition: TokenDefinition {
+                definition: Box::new(TokenDefinition {
                     name: "Sliver".into(),
                     power: 1,
                     toughness: 1,
@@ -148,7 +148,7 @@ pub fn thrumming_hivepool() -> CardDefinition {
                         ..Default::default()
                     },
                     ..Default::default()
-                },
+                }),
             },
         }],
         ..Default::default()
@@ -162,7 +162,7 @@ pub fn bill_the_pony() -> CardDefinition {
     let food = || Effect::CreateToken {
         who: PlayerRef::You,
         count: Value::Const(2),
-        definition: crabomination_base::tokens::food_token(),
+        definition: Box::new(crabomination_base::tokens::food_token()),
     };
     CardDefinition {
         name: "Bill the Pony",

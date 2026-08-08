@@ -550,7 +550,7 @@ pub fn bottle_of_suleiman() -> CardDefinition {
                 on_heads: Box::new(Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::ONE,
-                    definition: crate::card::TokenDefinition {
+                    definition: Box::new(crate::card::TokenDefinition {
                         name: "Djinn".into(),
                         power: 5,
                         toughness: 5,
@@ -561,7 +561,7 @@ pub fn bottle_of_suleiman() -> CardDefinition {
                         },
                         keywords: vec![Keyword::Flying],
                         ..Default::default()
-                    },
+                    }),
                 }),
                 on_tails: Box::new(Effect::DealDamage {
                     to: Selector::You,

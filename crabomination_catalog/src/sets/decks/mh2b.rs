@@ -136,7 +136,7 @@ pub fn chatterstorm() -> CardDefinition {
         effect: Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::Const(1),
-            definition: squirrel_token(),
+            definition: Box::new(squirrel_token()),
         },
         ..Default::default()
     }
@@ -222,7 +222,7 @@ pub fn squirrel_sanctuary() -> CardDefinition {
             etb(Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: squirrel_token(),
+                definition: Box::new(squirrel_token()),
             }),
             TriggeredAbility {
                 event: EventSpec::new(EventKind::CreatureDied, EventScope::YourControl)
@@ -270,7 +270,7 @@ pub fn scurry_oak() -> CardDefinition {
                     body: Box::new(Effect::CreateToken {
                         who: PlayerRef::You,
                         count: Value::Const(1),
-                        definition: squirrel_token(),
+                        definition: Box::new(squirrel_token()),
                     }),
                 },
             },
@@ -298,7 +298,7 @@ pub fn drey_keeper() -> CardDefinition {
         triggered_abilities: vec![etb(Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::Const(2),
-            definition: squirrel_token(),
+            definition: Box::new(squirrel_token()),
         })],
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[generic(3), b()]),
@@ -512,7 +512,7 @@ pub fn hard_evidence() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: TokenDefinition {
+                definition: Box::new(TokenDefinition {
                     name: "Crab".into(),
                     power: 0,
                     toughness: 3,
@@ -523,12 +523,12 @@ pub fn hard_evidence() -> CardDefinition {
                         ..Default::default()
                     },
                     ..Default::default()
-                },
+                }),
             },
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: crabomination_base::tokens::clue_token(),
+                definition: Box::new(crabomination_base::tokens::clue_token()),
             },
         ]),
         ..Default::default()
@@ -761,7 +761,7 @@ pub fn general_ferrous_rokiric() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: TokenDefinition {
+                definition: Box::new(TokenDefinition {
                     name: "Golem".into(),
                     power: 4,
                     toughness: 4,
@@ -772,7 +772,7 @@ pub fn general_ferrous_rokiric() -> CardDefinition {
                         ..Default::default()
                     },
                     ..Default::default()
-                },
+                }),
             },
         }],
         ..Default::default()
@@ -949,7 +949,7 @@ pub fn tavern_scoundrel() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(2),
-                definition: crabomination_base::tokens::treasure_token(),
+                definition: Box::new(crabomination_base::tokens::treasure_token()),
             },
         }],
         activated_abilities: vec![ActivatedAbility {
@@ -1111,7 +1111,7 @@ pub fn underworld_hermit() -> CardDefinition {
         triggered_abilities: vec![etb(Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::DevotionTo(vec![Color::Black]),
-            definition: squirrel_token(),
+            definition: Box::new(squirrel_token()),
         })],
         ..Default::default()
     }
@@ -1136,7 +1136,7 @@ pub fn late_to_dinner() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: crabomination_base::tokens::food_token(),
+                definition: Box::new(crabomination_base::tokens::food_token()),
             },
         ]),
         ..Default::default()
@@ -1294,7 +1294,7 @@ pub fn orchard_strider() -> CardDefinition {
         triggered_abilities: vec![etb(Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::Const(2),
-            definition: crabomination_base::tokens::food_token(),
+            definition: Box::new(crabomination_base::tokens::food_token()),
         })],
         ..Default::default()
     }
@@ -1339,7 +1339,7 @@ pub fn funnel_web_recluse() -> CardDefinition {
             then: Box::new(Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: crabomination_base::tokens::clue_token(),
+                definition: Box::new(crabomination_base::tokens::clue_token()),
             }),
             else_: Box::new(Effect::Noop),
         })],
@@ -1385,7 +1385,7 @@ pub fn jewel_eyed_cobra() -> CardDefinition {
         triggered_abilities: vec![on_dies(Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::ONE,
-            definition: crabomination_base::tokens::treasure_token(),
+            definition: Box::new(crabomination_base::tokens::treasure_token()),
         })],
         ..Default::default()
     }
@@ -1451,7 +1451,7 @@ pub fn fairgrounds_patrol() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: TokenDefinition {
+                definition: Box::new(TokenDefinition {
                     name: "Thopter".into(),
                     power: 1,
                     toughness: 1,
@@ -1462,7 +1462,7 @@ pub fn fairgrounds_patrol() -> CardDefinition {
                         ..Default::default()
                     },
                     ..Default::default()
-                },
+                }),
             },
             ..Default::default()
         }],
@@ -1522,7 +1522,7 @@ pub fn soul_of_migration() -> CardDefinition {
         triggered_abilities: vec![etb(Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::Const(2),
-            definition: TokenDefinition {
+            definition: Box::new(TokenDefinition {
                 name: "Bird".into(),
                 power: 1,
                 toughness: 1,
@@ -1534,7 +1534,7 @@ pub fn soul_of_migration() -> CardDefinition {
                     ..Default::default()
                 },
                 ..Default::default()
-            },
+            }),
         })],
         ..Default::default()
     }
@@ -1599,7 +1599,7 @@ pub fn floodhound() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: crabomination_base::tokens::clue_token(),
+                definition: Box::new(crabomination_base::tokens::clue_token()),
             },
             ..Default::default()
         }],

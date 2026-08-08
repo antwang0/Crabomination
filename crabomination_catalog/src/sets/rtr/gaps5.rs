@@ -330,7 +330,7 @@ pub fn knightly_valor() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: TokenDefinition {
+                definition: Box::new(TokenDefinition {
                     name: "Knight".into(),
                     power: 2,
                     toughness: 2,
@@ -342,7 +342,7 @@ pub fn knightly_valor() -> CardDefinition {
                         ..Default::default()
                     },
                     ..Default::default()
-                },
+                }),
             },
         }],
         ..Default::default()

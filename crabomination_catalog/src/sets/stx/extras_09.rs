@@ -808,7 +808,7 @@ pub fn bramble_brewer() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: stx_pest_token(),
+                definition: Box::new(stx_pest_token()),
             },
         }],
         ..Default::default()
@@ -878,7 +878,7 @@ pub fn pestbrood_grovecaller() -> CardDefinition {
                 effect: Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::Const(1),
-                    definition: stx_pest_token(),
+                    definition: Box::new(stx_pest_token()),
                 },
             },
             // Whenever another Pest you control dies → gain 1 + draw 1.
@@ -1098,7 +1098,7 @@ pub fn quandrix_geomancer() -> CardDefinition {
                 count: Value::CountOf(Box::new(Selector::EachPermanent(
                     SelectionRequirement::Land.and(SelectionRequirement::ControlledByYou),
                 ))),
-                definition: one_one_fractal,
+                definition: Box::new(one_one_fractal),
             },
         }],
         ..Default::default()
@@ -1283,7 +1283,7 @@ pub fn prismari_treasurewright() -> CardDefinition {
                 effect: Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::Const(2),
-                    definition: crate::game::effects::treasure_token(),
+                    definition: Box::new(crate::game::effects::treasure_token()),
                 },
             },
             magecraft(Effect::Scry {
@@ -1899,7 +1899,7 @@ pub fn prismari_sparkbinder() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: crate::game::effects::treasure_token(),
+                definition: Box::new(crate::game::effects::treasure_token()),
             },
         ]))],
         ..Default::default()
@@ -2196,7 +2196,7 @@ pub fn quandrix_tessellator() -> CardDefinition {
                 Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::Const(1),
-                    definition: fractal,
+                    definition: Box::new(fractal),
                 },
                 Effect::AddCounter {
                     what: Selector::LastCreatedToken,
@@ -2308,7 +2308,7 @@ pub fn witherbloom_pestbinder() -> CardDefinition {
                 effect: Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::Const(1),
-                    definition: super::shared::stx_pest_token(),
+                    definition: Box::new(super::shared::stx_pest_token()),
                 },
             },
             TriggeredAbility {
@@ -2593,7 +2593,7 @@ pub fn lorehold_stonebrand() -> CardDefinition {
                     Effect::CreateToken {
                         who: PlayerRef::You,
                         count: Value::Const(1),
-                        definition: lorehold_spirit_token(),
+                        definition: Box::new(lorehold_spirit_token()),
                     },
                 ])),
             },

@@ -856,14 +856,14 @@ pub fn watchful_giant() -> CardDefinition {
         triggered_abilities: vec![etb(Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::ONE,
-            definition: token(
+            definition: Box::new(token(
                 "Human",
                 vec![Color::White],
                 1,
                 1,
                 vec![CreatureType::Human],
                 vec![],
-            ),
+            )),
         })],
         ..body(
             "Watchful Giant",
@@ -1016,14 +1016,14 @@ pub fn sprouting_renewal() -> CardDefinition {
                 Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::ONE,
-                    definition: token(
+                    definition: Box::new(token(
                         "Elf Knight",
                         vec![Color::Green, Color::White],
                         2,
                         2,
                         vec![CreatureType::Elf, CreatureType::Knight],
                         vec![Keyword::Vigilance],
-                    ),
+                    )),
                 },
                 Effect::Destroy {
                     what: target_filtered(R::Artifact.or(R::Enchantment)),
@@ -2529,14 +2529,14 @@ pub fn biogenic_ooze() -> CardDefinition {
     let make_ooze = || Effect::CreateToken {
         who: PlayerRef::You,
         count: Value::ONE,
-        definition: token(
+        definition: Box::new(token(
             "Ooze",
             vec![Color::Green],
             2,
             2,
             vec![CreatureType::Ooze],
             vec![],
-        ),
+        )),
     };
     CardDefinition {
         triggered_abilities: vec![
@@ -2786,7 +2786,7 @@ pub fn knight_of_the_last_breath() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: wb_spirit(),
+                definition: Box::new(wb_spirit()),
             },
             ..Default::default()
         }],
@@ -3008,14 +3008,14 @@ pub fn rampage_of_the_clans() -> CardDefinition {
                 Effect::CreateToken {
                     who: PlayerRef::ControllerOf(Box::new(Selector::TriggerSource)),
                     count: Value::Const(1),
-                    definition: token(
+                    definition: Box::new(token(
                         "Centaur",
                         vec![Color::Green],
                         3,
                         3,
                         vec![CreatureType::Centaur],
                         vec![],
-                    ),
+                    )),
                 },
                 Effect::Destroy {
                     what: Selector::TriggerSource,
@@ -3109,14 +3109,14 @@ pub fn goblin_gathering() -> CardDefinition {
                     filter: R::HasName("Goblin Gathering".into()),
                 }),
             ]),
-            definition: token(
+            definition: Box::new(token(
                 "Goblin",
                 vec![Color::Red],
                 1,
                 1,
                 vec![CreatureType::Goblin],
                 vec![],
-            ),
+            )),
         },
         ..Default::default()
     }
@@ -3253,14 +3253,14 @@ pub fn depose_deploy() -> CardDefinition {
                     Effect::CreateToken {
                         who: PlayerRef::You,
                         count: Value::Const(2),
-                        definition: token(
+                        definition: Box::new(token(
                             "Thopter",
                             vec![],
                             1,
                             1,
                             vec![CreatureType::Thopter],
                             vec![Keyword::Flying],
-                        ),
+                        )),
                     },
                     Effect::GainLife {
                         who: Selector::You,
@@ -3338,14 +3338,14 @@ pub fn warrant_warden() -> CardDefinition {
                 effect: Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::Const(1),
-                    definition: token(
+                    definition: Box::new(token(
                         "Sphinx",
                         vec![Color::White, Color::Blue],
                         4,
                         4,
                         vec![CreatureType::Sphinx],
                         vec![Keyword::Flying, Keyword::Vigilance],
-                    ),
+                    )),
                 },
             },
             fuse: false,
@@ -3383,14 +3383,14 @@ pub fn thrash_threat() -> CardDefinition {
                 effect: Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::Const(1),
-                    definition: token(
+                    definition: Box::new(token(
                         "Beast",
                         vec![Color::Red, Color::Green],
                         4,
                         4,
                         vec![CreatureType::Beast],
                         vec![Keyword::Trample],
-                    ),
+                    )),
                 },
             },
             fuse: false,
@@ -3740,14 +3740,14 @@ pub fn incubation_incongruity() -> CardDefinition {
                     Effect::CreateToken {
                         who: PlayerRef::ControllerOf(Box::new(Selector::Target(0))),
                         count: Value::Const(1),
-                        definition: token(
+                        definition: Box::new(token(
                             "Frog Lizard",
                             vec![Color::Green],
                             3,
                             3,
                             vec![CreatureType::Frog, CreatureType::Lizard],
                             vec![],
-                        ),
+                        )),
                     },
                 ]),
             },
@@ -4197,7 +4197,7 @@ pub fn ethereal_absolution() -> CardDefinition {
                     then: Box::new(Effect::CreateToken {
                         who: PlayerRef::You,
                         count: Value::ONE,
-                        definition: TokenDefinition {
+                        definition: Box::new(TokenDefinition {
                             name: "Spirit".into(),
                             power: 1,
                             toughness: 1,
@@ -4206,7 +4206,7 @@ pub fn ethereal_absolution() -> CardDefinition {
                             subtypes: creatures(vec![CreatureType::Spirit]),
                             keywords: vec![Keyword::Flying],
                             ..Default::default()
-                        },
+                        }),
                     }),
                     else_: Box::new(Effect::Noop),
                 },
@@ -4399,12 +4399,12 @@ pub fn mesmerizing_benthid() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: illusion(),
+                definition: Box::new(illusion()),
             },
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: illusion(),
+                definition: Box::new(illusion()),
             },
         ]))],
         static_abilities: vec![StaticAbility {
@@ -4837,14 +4837,14 @@ pub fn awaken_the_erstwhile() -> CardDefinition {
         cost: cost(&[generic(3), b(), b()]),
         card_types: vec![CardType::Sorcery],
         effect: Effect::EachPlayerDiscardsHandMakeTokens {
-            token: token(
+            token: Box::new(token(
                 "Zombie",
                 vec![Color::Black],
                 2,
                 2,
                 vec![CreatureType::Zombie],
                 vec![],
-            ),
+            )),
         },
         ..Default::default()
     }

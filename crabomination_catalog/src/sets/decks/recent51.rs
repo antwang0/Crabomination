@@ -56,7 +56,7 @@ pub fn skullport_merchant() -> CardDefinition {
         triggered_abilities: vec![etb(Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::Const(1),
-            definition: treasure_token(),
+            definition: Box::new(treasure_token()),
         })],
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[generic(1), b()]),

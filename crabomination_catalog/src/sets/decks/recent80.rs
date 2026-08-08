@@ -52,7 +52,7 @@ pub fn bonehoard() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: germ,
+                definition: Box::new(germ),
             },
             Effect::Attach {
                 what: Selector::This,

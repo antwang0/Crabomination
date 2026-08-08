@@ -59,7 +59,7 @@ pub fn broken_visage() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: TokenDefinition {
+                definition: Box::new(TokenDefinition {
                     name: "Spirit".into(),
                     card_types: vec![CardType::Creature],
                     colors: vec![Color::Black],
@@ -72,7 +72,7 @@ pub fn broken_visage() -> CardDefinition {
                         Value::ToughnessOf(dead()),
                     )),
                     ..Default::default()
-                },
+                }),
             },
             Effect::SacrificeLastCreatedTokensAtNextEndStep,
         ]),

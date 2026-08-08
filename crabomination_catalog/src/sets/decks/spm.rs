@@ -78,7 +78,7 @@ pub fn city_pigeon() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: crabomination_base::tokens::food_token(),
+                definition: Box::new(crabomination_base::tokens::food_token()),
             },
         }],
         ..Default::default()
@@ -128,7 +128,7 @@ pub fn common_crook() -> CardDefinition {
         triggered_abilities: vec![on_dies(Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::Const(1),
-            definition: crate::game::effects::treasure_token(),
+            definition: Box::new(crate::game::effects::treasure_token()),
         })],
         ..Default::default()
     }
@@ -666,7 +666,7 @@ pub fn spider_girl_legacy_hero() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: TokenDefinition {
+                definition: Box::new(TokenDefinition {
                     name: "Human Citizen".into(),
                     power: 1,
                     toughness: 1,
@@ -677,7 +677,7 @@ pub fn spider_girl_legacy_hero() -> CardDefinition {
                         ..Default::default()
                     },
                     ..Default::default()
-                },
+                }),
             },
         }],
         ..Default::default()
@@ -701,7 +701,7 @@ pub fn spider_ham_peter_porker() -> CardDefinition {
         triggered_abilities: vec![etb(Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::Const(1),
-            definition: crabomination_base::tokens::food_token(),
+            definition: Box::new(crabomination_base::tokens::food_token()),
         })],
         ..Default::default()
     }
@@ -1037,7 +1037,7 @@ pub fn news_helicopter() -> CardDefinition {
         triggered_abilities: vec![etb(Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::Const(1),
-            definition: human_citizen_token(),
+            definition: Box::new(human_citizen_token()),
         })],
         ..Default::default()
     }

@@ -204,7 +204,7 @@ pub fn funeral_pyre() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::OwnerOf(Box::new(Selector::Target(0))),
                 count: Value::Const(1),
-                definition: TokenDefinition {
+                definition: Box::new(TokenDefinition {
                     name: "Spirit".into(),
                     power: 1,
                     toughness: 1,
@@ -216,7 +216,7 @@ pub fn funeral_pyre() -> CardDefinition {
                         ..Default::default()
                     },
                     ..Default::default()
-                },
+                }),
             },
         ]),
     )
@@ -491,7 +491,7 @@ pub fn firecat_blitz() -> CardDefinition {
                 Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::XFromCost,
-                    definition: TokenDefinition {
+                    definition: Box::new(TokenDefinition {
                         name: "Elemental Cat".into(),
                         power: 1,
                         toughness: 1,
@@ -503,7 +503,7 @@ pub fn firecat_blitz() -> CardDefinition {
                             ..Default::default()
                         },
                         ..Default::default()
-                    },
+                    }),
                 },
                 Effect::ExileLastCreatedTokensAtNextEndStep,
             ]),
@@ -676,7 +676,7 @@ pub fn crush_of_wurms() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(3),
-                definition: TokenDefinition {
+                definition: Box::new(TokenDefinition {
                     name: "Wurm".into(),
                     power: 6,
                     toughness: 6,
@@ -687,7 +687,7 @@ pub fn crush_of_wurms() -> CardDefinition {
                         ..Default::default()
                     },
                     ..Default::default()
-                },
+                }),
             },
         )
     }
@@ -745,7 +745,7 @@ pub fn grizzly_fate() -> CardDefinition {
     let bears = |n: i32| Effect::CreateToken {
         who: PlayerRef::You,
         count: Value::Const(n),
-        definition: TokenDefinition {
+        definition: Box::new(TokenDefinition {
             name: "Bear".into(),
             power: 2,
             toughness: 2,
@@ -753,7 +753,7 @@ pub fn grizzly_fate() -> CardDefinition {
             colors: vec![Color::Green],
             subtypes: Subtypes { creature_types: vec![CreatureType::Bear], ..Default::default() },
             ..Default::default()
-        },
+        }),
     };
     CardDefinition {
         keywords: vec![Keyword::Flashback(cost(&[generic(5), g(), g()]))],
@@ -1859,7 +1859,7 @@ pub fn spirit_cairn() -> CardDefinition {
                 body: Box::new(Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::Const(1),
-                    definition: TokenDefinition {
+                    definition: Box::new(TokenDefinition {
                         name: "Spirit".into(),
                         power: 1,
                         toughness: 1,
@@ -1871,7 +1871,7 @@ pub fn spirit_cairn() -> CardDefinition {
                             ..Default::default()
                         },
                         ..Default::default()
-                    },
+                    }),
                 }),
                 else_: None,
             },

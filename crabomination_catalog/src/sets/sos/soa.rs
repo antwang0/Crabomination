@@ -216,7 +216,7 @@ pub fn subterranean_tremors() -> CardDefinition {
                 then: Box::new(Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::Const(1),
-                    definition: TokenDefinition {
+                    definition: Box::new(TokenDefinition {
                         name: "Lizard".to_string(),
                         power: 8,
                         toughness: 8,
@@ -227,7 +227,7 @@ pub fn subterranean_tremors() -> CardDefinition {
                             ..Default::default()
                         },
                         ..Default::default()
-                    },
+                    }),
                 }),
                 else_: Box::new(Effect::Noop),
             },
@@ -246,7 +246,7 @@ pub fn awaken_the_woods() -> CardDefinition {
         effect: Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::XFromCost,
-            definition: TokenDefinition {
+            definition: Box::new(TokenDefinition {
                 name: "Forest Dryad".to_string(),
                 power: 1,
                 toughness: 1,
@@ -258,7 +258,7 @@ pub fn awaken_the_woods() -> CardDefinition {
                     ..Default::default()
                 },
                 ..Default::default()
-            },
+            }),
         },
         ..Default::default()
     }

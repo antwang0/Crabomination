@@ -36,7 +36,7 @@ pub fn luxurious_locomotive() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::SourceCrewerCount,
-                definition: treasure_token(),
+                definition: Box::new(treasure_token()),
             },
         }],
         ..Default::default()
@@ -131,7 +131,7 @@ fn ox_token() -> TokenDefinition {
 pub fn bruse_tarl_roving_rancher() -> CardDefinition {
     let reveal = |kind| TriggeredAbility {
         event: EventSpec::new(kind, EventScope::SelfSource),
-        effect: Effect::ExileTopLandTokenElseMayPlay { token: ox_token() },
+        effect: Effect::ExileTopLandTokenElseMayPlay { token: Box::new(ox_token()) },
     };
     CardDefinition {
         name: "Bruse Tarl, Roving Rancher",

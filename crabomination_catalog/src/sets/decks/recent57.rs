@@ -67,7 +67,7 @@ pub fn requiem_angel() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: spirit_flyer(vec![Color::White]),
+                definition: Box::new(spirit_flyer(vec![Color::White])),
             },
         }],
         ..Default::default()
@@ -146,7 +146,7 @@ pub fn martial_coup() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::XFromCost,
-                definition: soldier_token(),
+                definition: Box::new(soldier_token()),
             },
         ]),
         ..Default::default()
@@ -167,7 +167,7 @@ pub fn beckon_apparition() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: spirit_flyer(vec![Color::White, Color::Black]),
+                definition: Box::new(spirit_flyer(vec![Color::White, Color::Black])),
             },
         ]),
         ..Default::default()
@@ -258,7 +258,7 @@ pub fn captains_claws() -> CardDefinition {
             triggered_abilities: vec![on_attack(Effect::CreateTokenAttacking {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: ally,
+                definition: Box::new(ally),
                 cleanup: Default::default(),
             })],
             ..Default::default()
@@ -288,7 +288,7 @@ pub fn ancestral_blade() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: soldier_token(),
+                definition: Box::new(soldier_token()),
             },
             Effect::Attach {
                 what: Selector::This,

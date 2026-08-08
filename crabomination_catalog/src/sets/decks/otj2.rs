@@ -257,7 +257,7 @@ pub fn riku_of_many_paths() -> CardDefinition {
                     Effect::CreateToken {
                         who: PlayerRef::You,
                         count: Value::ONE,
-                        definition: bird,
+                        definition: Box::new(bird),
                     },
                 ],
             },

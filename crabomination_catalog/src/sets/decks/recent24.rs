@@ -394,7 +394,7 @@ pub fn nimble_thopterist() -> CardDefinition {
         triggered_abilities: vec![etb(Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::Const(1),
-            definition: thopter_token(),
+            definition: Box::new(thopter_token()),
         })],
         ..Default::default()
     }
@@ -794,7 +794,7 @@ pub fn unwilling_vessel() -> CardDefinition {
     abilities.push(crate::effect::shortcut::on_dies(Effect::CreateToken {
         who: PlayerRef::You,
         count: Value::ONE,
-        definition: TokenDefinition {
+        definition: Box::new(TokenDefinition {
             name: "Spirit".into(),
             card_types: vec![CardType::Creature],
             colors: vec![Color::Blue],
@@ -814,7 +814,7 @@ pub fn unwilling_vessel() -> CardDefinition {
                 },
             )),
             ..Default::default()
-        },
+        }),
     }));
     CardDefinition {
         name: "Unwilling Vessel",
@@ -916,7 +916,7 @@ pub fn cryptcaller_chariot() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: zombie_2_2_token(),
+                definition: Box::new(zombie_2_2_token()),
             },
         }],
         ..Default::default()
@@ -1089,7 +1089,7 @@ pub fn defend_the_rider() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: pilot_token(),
+                definition: Box::new(pilot_token()),
             },
         ]),
         ..Default::default()
@@ -1358,7 +1358,7 @@ pub fn glimmerburst() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: glimmer_token(),
+                definition: Box::new(glimmer_token()),
             },
         ]),
         ..Default::default()
@@ -1484,7 +1484,7 @@ pub fn gremlin_tamer() -> CardDefinition {
         triggered_abilities: eerie(Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::ONE,
-            definition: gremlin_token(),
+            definition: Box::new(gremlin_token()),
         }),
         ..Default::default()
     }
@@ -1975,7 +1975,7 @@ pub fn toby_beastie_befriender() -> CardDefinition {
         triggered_abilities: vec![etb(Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::ONE,
-            definition: lonely_beast_token(),
+            definition: Box::new(lonely_beast_token()),
         })],
         static_abilities: vec![StaticAbility {
             description: "While you control 4+ creature tokens, your creature tokens have flying.",
@@ -2051,7 +2051,7 @@ pub fn twitching_doll() -> CardDefinition {
                     count: Value::TotalCountersOn {
                         what: Box::new(Selector::This),
                     },
-                    definition: spider_2_2_token(),
+                    definition: Box::new(spider_2_2_token()),
                 },
                 ..Default::default()
             },
@@ -2461,7 +2461,7 @@ pub fn synapse_necromage() -> CardDefinition {
         triggered_abilities: vec![crate::effect::shortcut::on_dies(Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::Const(2),
-            definition: fungus_cant_block_token(),
+            definition: Box::new(fungus_cant_block_token()),
         })],
         ..Default::default()
     }
@@ -2489,7 +2489,7 @@ pub fn midnight_mayhem() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(3),
-                definition: gremlin_token(),
+                definition: Box::new(gremlin_token()),
             },
             grant(Keyword::Menace),
             grant(Keyword::Lifelink),
@@ -2611,7 +2611,7 @@ pub fn tunnel_surveyor() -> CardDefinition {
         triggered_abilities: vec![etb(Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::ONE,
-            definition: glimmer_token(),
+            definition: Box::new(glimmer_token()),
         })],
         ..Default::default()
     }

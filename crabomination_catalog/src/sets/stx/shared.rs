@@ -73,7 +73,7 @@ pub fn inkling_summoning() -> CardDefinition {
         effect: Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::Const(1),
-            definition: inkling,
+            definition: Box::new(inkling),
         },
         ..Default::default()
     }
@@ -110,7 +110,7 @@ pub fn tend_the_pests() -> CardDefinition {
             body: Box::new(Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: pest,
+                definition: Box::new(pest),
             }),
         },
         ..Default::default()
@@ -156,7 +156,7 @@ pub fn spirit_summoning() -> CardDefinition {
         effect: Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::Const(1),
-            definition: spirit,
+            definition: Box::new(spirit),
         },
         ..Default::default()
     }

@@ -104,7 +104,7 @@ pub fn murder_investigation() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::PowerOf(Box::new(Selector::TriggerSource)),
-                definition: TokenDefinition {
+                definition: Box::new(TokenDefinition {
                     name: "Soldier".into(),
                     power: 1,
                     toughness: 1,
@@ -115,7 +115,7 @@ pub fn murder_investigation() -> CardDefinition {
                         ..Default::default()
                     },
                     ..Default::default()
-                },
+                }),
             },
         }],
         ..Default::default()

@@ -159,7 +159,7 @@ pub fn master_of_waves() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::DevotionTo(vec![Color::Blue]),
-                definition: TokenDefinition {
+                definition: Box::new(TokenDefinition {
                     name: "Elemental".into(),
                     power: 1,
                     toughness: 0,
@@ -170,7 +170,7 @@ pub fn master_of_waves() -> CardDefinition {
                         ..Default::default()
                     },
                     ..Default::default()
-                },
+                }),
             },
         }],
         ..Default::default()

@@ -1527,7 +1527,7 @@ pub fn midsummer_revel() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: verses(),
-                definition: crate::card::TokenDefinition {
+                definition: Box::new(crate::card::TokenDefinition {
                     name: "Beast".into(),
                     power: 3,
                     toughness: 3,
@@ -1538,7 +1538,7 @@ pub fn midsummer_revel() -> CardDefinition {
                         ..Default::default()
                     },
                     ..Default::default()
-                },
+                }),
             },
             ..Default::default()
         }],
@@ -2669,7 +2669,7 @@ pub fn metrognome() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: crate::card::TokenDefinition {
+                definition: Box::new(crate::card::TokenDefinition {
                     name: "Gnome".into(),
                     power: 1,
                     toughness: 1,
@@ -2679,7 +2679,7 @@ pub fn metrognome() -> CardDefinition {
                         ..Default::default()
                     },
                     ..Default::default()
-                },
+                }),
             },
             ..Default::default()
         }],

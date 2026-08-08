@@ -84,7 +84,7 @@ pub fn akroan_crusader() -> CardDefinition {
         triggered_abilities: vec![heroic(Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::ONE,
-            definition: TokenDefinition {
+            definition: Box::new(TokenDefinition {
                 name: "Soldier".into(),
                 power: 1,
                 toughness: 1,
@@ -96,7 +96,7 @@ pub fn akroan_crusader() -> CardDefinition {
                     ..Default::default()
                 },
                 ..Default::default()
-            },
+            }),
         })],
         ..creature(
             "Akroan Crusader",

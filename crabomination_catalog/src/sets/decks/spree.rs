@@ -226,7 +226,7 @@ pub fn phantom_interference() -> CardDefinition {
                 Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::ONE,
-                    definition: TokenDefinition {
+                    definition: Box::new(TokenDefinition {
                         name: "Spirit".into(),
                         power: 2,
                         toughness: 2,
@@ -238,7 +238,7 @@ pub fn phantom_interference() -> CardDefinition {
                             ..Default::default()
                         },
                         ..Default::default()
-                    },
+                    }),
                 },
             ),
             mode(
@@ -331,7 +331,7 @@ pub fn dance_of_the_tumbleweeds() -> CardDefinition {
                 Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::ONE,
-                    definition: TokenDefinition {
+                    definition: Box::new(TokenDefinition {
                         name: "Elemental".into(),
                         power: 0,
                         toughness: 0,
@@ -343,7 +343,7 @@ pub fn dance_of_the_tumbleweeds() -> CardDefinition {
                         },
                         dynamic_pt: Some((lands.clone(), lands)),
                         ..Default::default()
-                    },
+                    }),
                 },
             ),
         ]),

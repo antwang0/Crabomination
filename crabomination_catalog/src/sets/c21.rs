@@ -486,7 +486,7 @@ pub fn taste_of_death() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(3),
-                definition: crabomination_base::tokens::food_token(),
+                definition: Box::new(crabomination_base::tokens::food_token()),
             },
         ]),
         ..Default::default()
@@ -548,7 +548,7 @@ pub fn brasss_bounty() -> CardDefinition {
                 )),
                 filter: SelectionRequirement::Land,
             },
-            definition: crabomination_base::tokens::treasure_token(),
+            definition: Box::new(crabomination_base::tokens::treasure_token()),
         },
         ..Default::default()
     }

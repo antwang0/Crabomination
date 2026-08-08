@@ -304,7 +304,7 @@ pub fn waylay() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(3),
-                definition: TokenDefinition {
+                definition: Box::new(TokenDefinition {
                     name: "Knight".into(),
                     power: 2,
                     toughness: 2,
@@ -315,7 +315,7 @@ pub fn waylay() -> CardDefinition {
                         ..Default::default()
                     },
                     ..Default::default()
-                },
+                }),
             },
             Effect::ExileLastCreatedTokensAtNextCleanup,
         ]),
@@ -404,7 +404,7 @@ pub fn greener_pastures() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::ActivePlayer,
                 count: Value::ONE,
-                definition: TokenDefinition {
+                definition: Box::new(TokenDefinition {
                     name: "Saproling".into(),
                     power: 1,
                     toughness: 1,
@@ -415,7 +415,7 @@ pub fn greener_pastures() -> CardDefinition {
                         ..Default::default()
                     },
                     ..Default::default()
-                },
+                }),
             },
         }],
         ..enchantment("Greener Pastures", cost(&[generic(2), g()]))
@@ -839,7 +839,7 @@ pub fn phyrexian_processor() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: TokenDefinition {
+                definition: Box::new(TokenDefinition {
                     name: "Phyrexian Minion".into(),
                     card_types: vec![CardType::Creature],
                     colors: vec![Color::Black],
@@ -853,7 +853,7 @@ pub fn phyrexian_processor() -> CardDefinition {
                         Value::ChosenNumberOfSource,
                     )),
                     ..Default::default()
-                },
+                }),
             },
             ..Default::default()
         }],
@@ -937,7 +937,7 @@ pub fn sporogenesis() -> CardDefinition {
                         what: Box::new(Selector::TriggerSource),
                         kind: CounterType::Fungus,
                     },
-                    definition: TokenDefinition {
+                    definition: Box::new(TokenDefinition {
                         name: "Saproling".into(),
                         power: 1,
                         toughness: 1,
@@ -948,7 +948,7 @@ pub fn sporogenesis() -> CardDefinition {
                             ..Default::default()
                         },
                         ..Default::default()
-                    },
+                    }),
                 },
             },
             TriggeredAbility {

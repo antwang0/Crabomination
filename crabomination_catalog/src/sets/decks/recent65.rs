@@ -159,7 +159,7 @@ pub fn nested_shambler() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::PowerOf(Box::new(Selector::TriggerSource)),
-                definition: squirrel,
+                definition: Box::new(squirrel),
             },
         }],
         ..Default::default()

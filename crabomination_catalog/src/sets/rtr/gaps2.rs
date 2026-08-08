@@ -285,7 +285,7 @@ pub fn seller_of_songbirds() -> CardDefinition {
         triggered_abilities: vec![etb(Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::ONE,
-            definition: bird_token(),
+            definition: Box::new(bird_token()),
         })],
         ..Default::default()
     }

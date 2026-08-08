@@ -64,7 +64,7 @@ pub fn abhorrent_overlord() -> CardDefinition {
             etb(Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::DevotionTo(vec![Color::Black]),
-                definition: TokenDefinition {
+                definition: Box::new(TokenDefinition {
                     name: "Harpy".into(),
                     power: 1,
                     toughness: 1,
@@ -76,7 +76,7 @@ pub fn abhorrent_overlord() -> CardDefinition {
                         ..Default::default()
                     },
                     ..Default::default()
-                },
+                }),
             }),
             upkeep(Effect::Sacrifice {
                 who: Selector::You,
@@ -104,7 +104,7 @@ pub fn akroan_horse() -> CardDefinition {
         triggered_abilities: vec![upkeep(Effect::CreateToken {
             who: PlayerRef::EachOpponent,
             count: Value::ONE,
-            definition: TokenDefinition {
+            definition: Box::new(TokenDefinition {
                 name: "Soldier".into(),
                 power: 1,
                 toughness: 1,
@@ -115,7 +115,7 @@ pub fn akroan_horse() -> CardDefinition {
                     ..Default::default()
                 },
                 ..Default::default()
-            },
+            }),
         })],
         ..creature(
             "Akroan Horse",

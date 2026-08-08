@@ -54,7 +54,7 @@ pub fn rat_out() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: rat_token(),
+                definition: Box::new(rat_token()),
             },
         ]),
         ..Default::default()
@@ -76,7 +76,7 @@ pub fn eriettes_whisper() -> CardDefinition {
             },
             Effect::CreateTokenAttachedTo {
                 target: target_filtered(R::Creature.and(R::ControlledByYou)),
-                definition: wicked_role(),
+                definition: Box::new(wicked_role()),
             },
         ]),
         ..Default::default()
@@ -104,7 +104,7 @@ pub fn witchs_mark() -> CardDefinition {
             },
             Effect::CreateTokenAttachedTo {
                 target: target_filtered(R::Creature.and(R::ControlledByYou)),
-                definition: wicked_role(),
+                definition: Box::new(wicked_role()),
             },
         ]),
         ..Default::default()
@@ -127,7 +127,7 @@ pub fn edgewall_pack() -> CardDefinition {
         triggered_abilities: vec![etb(Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::ONE,
-            definition: rat_token(),
+            definition: Box::new(rat_token()),
         })],
         ..Default::default()
     }
@@ -195,7 +195,7 @@ pub fn spider_food() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: food_token(),
+                definition: Box::new(food_token()),
             },
         ]),
         ..Default::default()
@@ -220,7 +220,7 @@ pub fn cursed_courtier() -> CardDefinition {
         keywords: vec![Keyword::Lifelink],
         triggered_abilities: vec![etb(Effect::CreateTokenAttachedTo {
             target: Selector::This,
-            definition: cursed_role(),
+            definition: Box::new(cursed_role()),
         })],
         ..Default::default()
     }

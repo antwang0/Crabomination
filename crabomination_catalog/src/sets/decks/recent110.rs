@@ -293,7 +293,7 @@ pub fn worldspine_wurm() -> CardDefinition {
                 effect: Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::Const(3),
-                    definition: TokenDefinition {
+                    definition: Box::new(TokenDefinition {
                         name: "Wurm".into(),
                         power: 5,
                         toughness: 5,
@@ -305,7 +305,7 @@ pub fn worldspine_wurm() -> CardDefinition {
                             ..Default::default()
                         },
                         ..Default::default()
-                    },
+                    }),
                 },
             },
         ],
@@ -465,7 +465,7 @@ pub fn genesis_chamber() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::ControllerOf(Box::new(Selector::TriggerSource)),
                 count: Value::Const(1),
-                definition: TokenDefinition {
+                definition: Box::new(TokenDefinition {
                     name: "Myr".into(),
                     power: 1,
                     toughness: 1,
@@ -475,7 +475,7 @@ pub fn genesis_chamber() -> CardDefinition {
                         ..Default::default()
                     },
                     ..Default::default()
-                },
+                }),
             },
         }],
         ..Default::default()
@@ -504,7 +504,7 @@ pub fn entreat_the_angels() -> CardDefinition {
         effect: Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::XFromCost,
-            definition: TokenDefinition {
+            definition: Box::new(TokenDefinition {
                 name: "Angel".into(),
                 power: 4,
                 toughness: 4,
@@ -516,7 +516,7 @@ pub fn entreat_the_angels() -> CardDefinition {
                     ..Default::default()
                 },
                 ..Default::default()
-            },
+            }),
         },
         ..Default::default()
     }

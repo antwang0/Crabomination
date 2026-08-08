@@ -81,7 +81,7 @@ pub fn chalk_outline() -> CardDefinition {
                 Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::ONE,
-                    definition: detective_token(),
+                    definition: Box::new(detective_token()),
                 },
                 investigate(1),
             ]),

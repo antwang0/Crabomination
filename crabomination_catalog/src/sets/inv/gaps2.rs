@@ -587,7 +587,7 @@ pub fn ordered_migration() -> CardDefinition {
         Effect::CreateToken {
             who: PlayerRef::You,
             count: domain(),
-            definition: crate::card::TokenDefinition {
+            definition: Box::new(crate::card::TokenDefinition {
                 name: "Bird".into(),
                 power: 1,
                 toughness: 1,
@@ -599,7 +599,7 @@ pub fn ordered_migration() -> CardDefinition {
                 },
                 keywords: vec![Keyword::Flying],
                 ..Default::default()
-            },
+            }),
         },
     )
 }

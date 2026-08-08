@@ -1592,7 +1592,7 @@ pub fn goblin_marshal() -> CardDefinition {
     let goblins = || Effect::CreateToken {
         who: PlayerRef::You,
         count: Value::Const(2),
-        definition: crate::card::TokenDefinition {
+        definition: Box::new(crate::card::TokenDefinition {
             name: "Goblin".into(),
             power: 1,
             toughness: 1,
@@ -1603,7 +1603,7 @@ pub fn goblin_marshal() -> CardDefinition {
                 ..Default::default()
             },
             ..Default::default()
-        },
+        }),
     };
     CardDefinition {
         keywords: vec![Keyword::Echo(cost(&[generic(4), r(), r()]))],

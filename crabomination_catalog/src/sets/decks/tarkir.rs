@@ -530,7 +530,7 @@ pub fn twin_silk_spider() -> CardDefinition {
         triggered_abilities: vec![etb(Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::Const(1),
-            definition: TokenDefinition {
+            definition: Box::new(TokenDefinition {
                 name: "Spider".into(),
                 power: 1,
                 toughness: 2,
@@ -542,7 +542,7 @@ pub fn twin_silk_spider() -> CardDefinition {
                     ..Default::default()
                 },
                 ..Default::default()
-            },
+            }),
         })],
         ..Default::default()
     }
@@ -688,7 +688,7 @@ pub fn frontline_rush() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(2),
-                definition: TokenDefinition {
+                definition: Box::new(TokenDefinition {
                     name: "Goblin".into(),
                     power: 1,
                     toughness: 1,
@@ -699,7 +699,7 @@ pub fn frontline_rush() -> CardDefinition {
                         ..Default::default()
                     },
                     ..Default::default()
-                },
+                }),
             },
             Effect::PumpPT {
                 what: target_filtered(SelectionRequirement::Creature),
@@ -979,7 +979,7 @@ pub fn mammoth_bellow() -> CardDefinition {
         effect: Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::Const(1),
-            definition: TokenDefinition {
+            definition: Box::new(TokenDefinition {
                 name: "Elephant".into(),
                 power: 5,
                 toughness: 5,
@@ -990,7 +990,7 @@ pub fn mammoth_bellow() -> CardDefinition {
                     ..Default::default()
                 },
                 ..Default::default()
-            },
+            }),
         },
         ..Default::default()
     }
@@ -1350,7 +1350,7 @@ pub fn wingblade_disciple() -> CardDefinition {
         triggered_abilities: vec![flurry(Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::Const(1),
-            definition: TokenDefinition {
+            definition: Box::new(TokenDefinition {
                 name: "Bird".into(),
                 power: 1,
                 toughness: 1,
@@ -1362,7 +1362,7 @@ pub fn wingblade_disciple() -> CardDefinition {
                     ..Default::default()
                 },
                 ..Default::default()
-            },
+            }),
         })],
         ..Default::default()
     }
@@ -2103,7 +2103,7 @@ pub fn underfoot_underdogs() -> CardDefinition {
         triggered_abilities: vec![etb(Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::Const(1),
-            definition: TokenDefinition {
+            definition: Box::new(TokenDefinition {
                 name: "Goblin".into(),
                 card_types: vec![CardType::Creature],
                 subtypes: Subtypes {
@@ -2114,7 +2114,7 @@ pub fn underfoot_underdogs() -> CardDefinition {
                 power: 1,
                 toughness: 1,
                 ..Default::default()
-            },
+            }),
         })],
         activated_abilities: vec![ActivatedAbility {
             tap_cost: true,
@@ -2657,7 +2657,7 @@ pub fn jeskai_monument() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(2),
-                definition: TokenDefinition {
+                definition: Box::new(TokenDefinition {
                     name: "Bird".into(),
                     card_types: vec![CardType::Creature],
                     subtypes: Subtypes {
@@ -2669,7 +2669,7 @@ pub fn jeskai_monument() -> CardDefinition {
                     toughness: 1,
                     keywords: vec![Keyword::Flying],
                     ..Default::default()
-                },
+                }),
             },
         )],
         ..Default::default()
@@ -2695,7 +2695,7 @@ pub fn mardu_monument() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(3),
-                definition: warrior_token(),
+                definition: Box::new(warrior_token()),
             },
         )],
         ..Default::default()
@@ -2720,7 +2720,7 @@ pub fn sultai_monument() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(2),
-                definition: TokenDefinition {
+                definition: Box::new(TokenDefinition {
                     name: "Zombie Druid".into(),
                     card_types: vec![CardType::Creature],
                     subtypes: Subtypes {
@@ -2731,7 +2731,7 @@ pub fn sultai_monument() -> CardDefinition {
                     power: 2,
                     toughness: 2,
                     ..Default::default()
-                },
+                }),
             },
         )],
         ..Default::default()
@@ -2756,7 +2756,7 @@ pub fn temur_monument() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: TokenDefinition {
+                definition: Box::new(TokenDefinition {
                     name: "Elephant".into(),
                     card_types: vec![CardType::Creature],
                     subtypes: Subtypes {
@@ -2767,7 +2767,7 @@ pub fn temur_monument() -> CardDefinition {
                     power: 5,
                     toughness: 5,
                     ..Default::default()
-                },
+                }),
             },
         )],
         ..Default::default()

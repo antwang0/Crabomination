@@ -105,7 +105,7 @@ pub fn sigil_of_the_empty_throne() -> CardDefinition {
         triggered_abilities: vec![on_cast_enchantment(Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::ONE,
-            definition: TokenDefinition {
+            definition: Box::new(TokenDefinition {
                 name: "Angel".into(),
                 power: 4,
                 toughness: 4,
@@ -117,7 +117,7 @@ pub fn sigil_of_the_empty_throne() -> CardDefinition {
                     ..Default::default()
                 },
                 ..Default::default()
-            },
+            }),
         })],
         ..Default::default()
     }
@@ -140,7 +140,7 @@ pub fn ajanis_chosen() -> CardDefinition {
         triggered_abilities: vec![constellation(Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::ONE,
-            definition: TokenDefinition {
+            definition: Box::new(TokenDefinition {
                 name: "Cat".into(),
                 power: 2,
                 toughness: 2,
@@ -151,7 +151,7 @@ pub fn ajanis_chosen() -> CardDefinition {
                     ..Default::default()
                 },
                 ..Default::default()
-            },
+            }),
         })],
         ..Default::default()
     }
@@ -576,7 +576,7 @@ pub fn sacred_mesa() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: TokenDefinition {
+                definition: Box::new(TokenDefinition {
                     name: "Pegasus".into(),
                     power: 1,
                     toughness: 1,
@@ -588,7 +588,7 @@ pub fn sacred_mesa() -> CardDefinition {
                         ..Default::default()
                     },
                     ..Default::default()
-                },
+                }),
             },
             ..Default::default()
         }],
@@ -669,7 +669,7 @@ pub fn griffin_guide() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: TokenDefinition {
+                definition: Box::new(TokenDefinition {
                     name: "Griffin".into(),
                     power: 2,
                     toughness: 2,
@@ -681,7 +681,7 @@ pub fn griffin_guide() -> CardDefinition {
                         ..Default::default()
                     },
                     ..Default::default()
-                },
+                }),
             },
         }],
         ..Default::default()

@@ -203,7 +203,7 @@ pub fn boggart_mischief() -> CardDefinition {
                 Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::Const(2),
-                    definition: goblin,
+                    definition: Box::new(goblin),
                 },
             ])),
         })],
@@ -479,7 +479,7 @@ pub fn forecasting_fortune_teller() -> CardDefinition {
         triggered_abilities: vec![etb(Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::ONE,
-            definition: clue_token(),
+            definition: Box::new(clue_token()),
         })],
         ..Default::default()
     }
@@ -512,7 +512,7 @@ pub fn pretending_poxbearers() -> CardDefinition {
         triggered_abilities: vec![on_dies(Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::ONE,
-            definition: ally,
+            definition: Box::new(ally),
         })],
         ..Default::default()
     }

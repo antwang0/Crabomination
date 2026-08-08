@@ -35,7 +35,7 @@ pub fn mine_raider() -> CardDefinition {
             then: Box::new(Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: crabomination_base::tokens::treasure_token(),
+                definition: Box::new(crabomination_base::tokens::treasure_token()),
             }),
             else_: Box::new(Effect::Noop),
         })],

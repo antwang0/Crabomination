@@ -161,7 +161,7 @@ pub fn emeritus_of_truce() -> CardDefinition {
         Effect::CreateToken {
             who: PlayerRef::Target(0),
             count: Value::Const(1),
-            definition: inkling_token(),
+            definition: Box::new(inkling_token()),
         },
         Effect::If {
             cond: Predicate::AnOpponentControlsMoreCreatures,
@@ -1149,7 +1149,7 @@ pub fn jadzi_steward_of_fate() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::XFromCost,
-                definition: crabomination_base::tokens::fractal_token(),
+                definition: Box::new(crabomination_base::tokens::fractal_token()),
             },
             // Counters land on the freshly-minted batch in one shot —
             // a per-Fractal ForEach lets the SBA sweep the still-0/0
@@ -1400,7 +1400,7 @@ pub fn lluwen_exchange_student() -> CardDefinition {
         Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::Const(1),
-            definition: pest_token(),
+            definition: Box::new(pest_token()),
         },
     );
     let mut front = enters_prepared(vanilla_front(
@@ -1440,7 +1440,7 @@ pub fn campus_composer() -> CardDefinition {
         Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::Const(1),
-            definition: elemental_token(),
+            definition: Box::new(elemental_token()),
         },
     );
     enters_prepared(vanilla_front(
@@ -1601,7 +1601,7 @@ pub fn strife_scholar() -> CardDefinition {
         Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::Const(2),
-            definition: spirit,
+            definition: Box::new(spirit),
         },
     );
     enters_prepared(vanilla_front(

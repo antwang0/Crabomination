@@ -38,7 +38,7 @@ pub fn faebloom_trick() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(2),
-                definition: faerie_token(),
+                definition: Box::new(faerie_token()),
             },
             Effect::Tap {
                 what: target_filtered(R::Creature.and(R::ControlledByOpponent)),

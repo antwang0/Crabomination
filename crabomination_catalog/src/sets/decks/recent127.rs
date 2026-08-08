@@ -331,7 +331,7 @@ pub fn boneyard_desecrator() -> CardDefinition {
                     then: Box::new(Effect::CreateToken {
                         who: PlayerRef::You,
                         count: Value::ONE,
-                        definition: treasure_token(),
+                        definition: Box::new(treasure_token()),
                     }),
                     else_: Box::new(Effect::Noop),
                 },

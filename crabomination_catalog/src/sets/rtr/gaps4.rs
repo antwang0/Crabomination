@@ -689,14 +689,14 @@ pub fn vitu_ghazi_guildmage() -> CardDefinition {
                 effect: E::CreateToken {
                     who: PlayerRef::You,
                     count: Value::ONE,
-                    definition: token(
+                    definition: Box::new(token(
                         "Centaur",
                         3,
                         3,
                         vec![Color::Green],
                         CreatureType::Centaur,
                         vec![],
-                    ),
+                    )),
                 },
                 ..Default::default()
             },
@@ -800,14 +800,14 @@ pub fn korozda_guildmage() -> CardDefinition {
                     E::CreateToken {
                         who: PlayerRef::You,
                         count: Value::SacrificedToughness,
-                        definition: token(
+                        definition: Box::new(token(
                             "Saproling",
                             1,
                             1,
                             vec![Color::Green],
                             CreatureType::Saproling,
                             vec![],
-                        ),
+                        )),
                     },
                 ]),
                 ..Default::default()
@@ -851,14 +851,14 @@ pub fn eyes_in_the_skies() -> CardDefinition {
             E::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: token(
+                definition: Box::new(token(
                     "Bird",
                     1,
                     1,
                     vec![Color::White],
                     CreatureType::Bird,
                     vec![Keyword::Flying],
-                ),
+                )),
             },
             E::Populate {
                 who: PlayerRef::You,
@@ -879,14 +879,14 @@ pub fn coursers_accord() -> CardDefinition {
             E::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: token(
+                definition: Box::new(token(
                     "Centaur",
                     3,
                     3,
                     vec![Color::Green],
                     CreatureType::Centaur,
                     vec![],
-                ),
+                )),
             },
             E::Populate {
                 who: PlayerRef::You,
@@ -907,14 +907,14 @@ pub fn horncallers_chant() -> CardDefinition {
             E::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: token(
+                definition: Box::new(token(
                     "Rhino",
                     4,
                     4,
                     vec![Color::Green],
                     CreatureType::Rhino,
                     vec![Keyword::Trample],
-                ),
+                )),
             },
             E::Populate {
                 who: PlayerRef::You,

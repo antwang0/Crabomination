@@ -382,7 +382,7 @@ pub fn camellia_the_seedmiser() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: squirrel_token(),
+                definition: Box::new(squirrel_token()),
             },
         }],
         activated_abilities: vec![ActivatedAbility {
@@ -522,7 +522,7 @@ pub fn dalkovan_encampment() -> CardDefinition {
                 effect: Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::Const(2),
-                    definition: warrior_token(),
+                    definition: Box::new(warrior_token()),
                 },
                 ..Default::default()
             },

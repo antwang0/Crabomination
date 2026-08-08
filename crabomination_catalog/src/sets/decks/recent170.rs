@@ -76,7 +76,7 @@ fn roads_land(name: &'static str, color: Color) -> CardDefinition {
                 effect: Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::ONE,
-                    definition: roads_pilot_token(),
+                    definition: Box::new(roads_pilot_token()),
                 },
                 ..Default::default()
             },
@@ -124,7 +124,7 @@ pub fn rangers_aetherhive() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: thopter_token(),
+                definition: Box::new(thopter_token()),
             },
         }],
         ..Default::default()

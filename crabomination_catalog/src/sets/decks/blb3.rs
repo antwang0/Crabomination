@@ -76,7 +76,7 @@ pub fn ral_crackling_wit() -> CardDefinition {
                 effect: Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::ONE,
-                    definition: otter_token(),
+                    definition: Box::new(otter_token()),
                 },
                 ..Default::default()
             },
@@ -213,7 +213,7 @@ pub fn vren_the_relentless() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::CreaturesExiledFromControlThisTurn(PlayerRef::EachOpponent),
-                definition: swarm_rat(),
+                definition: Box::new(swarm_rat()),
             },
         }],
         ..legend(

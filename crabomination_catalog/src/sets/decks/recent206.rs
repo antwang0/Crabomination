@@ -136,7 +136,7 @@ pub fn an_offer_you_cant_refuse() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::ControllerOf(Box::new(Selector::Target(0))),
                 count: Value::Const(2),
-                definition: crabomination_base::tokens::treasure_token(),
+                definition: Box::new(crabomination_base::tokens::treasure_token()),
             },
             Effect::CounterSpell {
                 what: target_filtered(R::IsSpellOnStack.and(R::Noncreature)),
@@ -171,7 +171,7 @@ pub fn involuntary_employment() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: crabomination_base::tokens::treasure_token(),
+                definition: Box::new(crabomination_base::tokens::treasure_token()),
             },
         ]),
         ..Default::default()

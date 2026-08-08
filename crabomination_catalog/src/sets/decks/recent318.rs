@@ -257,7 +257,7 @@ pub fn one_dozen_eyes() -> CardDefinition {
         Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::Const(count),
-            definition: TokenDefinition {
+            definition: Box::new(TokenDefinition {
                 name: name.into(),
                 colors: vec![Color::Green],
                 card_types: vec![CardType::Creature],
@@ -268,7 +268,7 @@ pub fn one_dozen_eyes() -> CardDefinition {
                 power,
                 toughness,
                 ..Default::default()
-            },
+            }),
         }
     };
     entwine_spell(

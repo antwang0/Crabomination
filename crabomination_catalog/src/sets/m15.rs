@@ -120,7 +120,7 @@ pub fn triplicate_spirits() -> CardDefinition {
         Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::Const(3),
-            definition: spirit_token(),
+            definition: Box::new(spirit_token()),
         },
     )
 }
@@ -254,7 +254,7 @@ pub fn feral_incarnation() -> CardDefinition {
         Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::Const(3),
-            definition: beast_token(),
+            definition: Box::new(beast_token()),
         },
     )
 }
@@ -572,7 +572,7 @@ pub fn soul_of_zendikar() -> CardDefinition {
         Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::Const(1),
-            definition: beast_token(),
+            definition: Box::new(beast_token()),
         },
     )
 }
@@ -841,7 +841,7 @@ pub fn kalonian_twingrove() -> CardDefinition {
         triggered_abilities: vec![etb(Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::Const(1),
-            definition: TokenDefinition {
+            definition: Box::new(TokenDefinition {
                 name: "Treefolk Warrior".into(),
                 colors: vec![Color::Green],
                 card_types: vec![CardType::Creature],
@@ -851,7 +851,7 @@ pub fn kalonian_twingrove() -> CardDefinition {
                 },
                 dynamic_pt: Some((forest_count(), forest_count())),
                 ..Default::default()
-            },
+            }),
         })],
         ..creature(
             "Kalonian Twingrove",
@@ -1834,7 +1834,7 @@ pub fn sliver_hive() -> CardDefinition {
                 effect: Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::Const(1),
-                    definition: TokenDefinition {
+                    definition: Box::new(TokenDefinition {
                         name: "Sliver".into(),
                         power: 1,
                         toughness: 1,
@@ -1844,7 +1844,7 @@ pub fn sliver_hive() -> CardDefinition {
                             ..Default::default()
                         },
                         ..Default::default()
-                    },
+                    }),
                 },
                 ..Default::default()
             },
@@ -1926,7 +1926,7 @@ pub fn brood_keeper() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: TokenDefinition {
+                definition: Box::new(TokenDefinition {
                     name: "Dragon".into(),
                     power: 2,
                     toughness: 2,
@@ -1948,7 +1948,7 @@ pub fn brood_keeper() -> CardDefinition {
                         ..Default::default()
                     }],
                     ..Default::default()
-                },
+                }),
             },
         }],
         ..creature(
@@ -1982,7 +1982,7 @@ pub fn necromancers_stockpile() -> CardDefinition {
                     then: Box::new(Effect::CreateToken {
                         who: PlayerRef::You,
                         count: Value::Const(1),
-                        definition: TokenDefinition {
+                        definition: Box::new(TokenDefinition {
                             name: "Zombie".into(),
                             power: 2,
                             toughness: 2,
@@ -1999,7 +1999,7 @@ pub fn necromancers_stockpile() -> CardDefinition {
                                 },
                             }],
                             ..Default::default()
-                        },
+                        }),
                     }),
                     else_: Box::new(Effect::Noop),
                 },
@@ -2029,7 +2029,7 @@ pub fn first_response() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: TokenDefinition {
+                definition: Box::new(TokenDefinition {
                     name: "Soldier".into(),
                     power: 1,
                     toughness: 1,
@@ -2040,7 +2040,7 @@ pub fn first_response() -> CardDefinition {
                         ..Default::default()
                     },
                     ..Default::default()
-                },
+                }),
             },
         }],
         ..Default::default()
@@ -2142,7 +2142,7 @@ pub fn spirit_bonds() -> CardDefinition {
                 body: Box::new(Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::Const(1),
-                    definition: spirit_token(),
+                    definition: Box::new(spirit_token()),
                 }),
                 else_: None,
             },
@@ -2419,7 +2419,7 @@ pub fn garruk_apex_predator() -> CardDefinition {
                 effect: Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::ONE,
-                    definition: TokenDefinition {
+                    definition: Box::new(TokenDefinition {
                         name: "Beast".into(),
                         power: 3,
                         toughness: 3,
@@ -2431,7 +2431,7 @@ pub fn garruk_apex_predator() -> CardDefinition {
                             ..Default::default()
                         },
                         ..Default::default()
-                    },
+                    }),
                 },
                 ..Default::default()
             },
@@ -2535,7 +2535,7 @@ pub fn goblin_kaboomist() -> CardDefinition {
                 Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::ONE,
-                    definition: TokenDefinition {
+                    definition: Box::new(TokenDefinition {
                         name: "Land Mine".into(),
                         card_types: vec![CardType::Artifact],
                         activated_abilities: vec![ActivatedAbility {
@@ -2552,7 +2552,7 @@ pub fn goblin_kaboomist() -> CardDefinition {
                             ..Default::default()
                         }],
                         ..Default::default()
-                    },
+                    }),
                 },
                 Effect::FlipCoin {
                     count: Value::ONE,
@@ -2988,7 +2988,7 @@ pub fn waste_not() -> CardDefinition {
                 Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::ONE,
-                    definition: TokenDefinition {
+                    definition: Box::new(TokenDefinition {
                         name: "Zombie".into(),
                         power: 2,
                         toughness: 2,
@@ -2999,7 +2999,7 @@ pub fn waste_not() -> CardDefinition {
                             ..Default::default()
                         },
                         ..Default::default()
-                    },
+                    }),
                 },
             ),
             on_discard(

@@ -126,7 +126,7 @@ pub fn ogre_slumlord() -> CardDefinition {
                 body: Box::new(Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::ONE,
-                    definition: TokenDefinition {
+                    definition: Box::new(TokenDefinition {
                         name: "Rat".into(),
                         power: 1,
                         toughness: 1,
@@ -134,7 +134,7 @@ pub fn ogre_slumlord() -> CardDefinition {
                         colors: vec![Color::Black],
                         subtypes: creatures(vec![CreatureType::Rat]),
                         ..Default::default()
-                    },
+                    }),
                 }),
             },
         }],

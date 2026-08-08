@@ -38,7 +38,7 @@ pub fn cranial_ram() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: TokenDefinition {
+                definition: Box::new(TokenDefinition {
                     name: "Phyrexian Germ".into(),
                     card_types: vec![CardType::Creature],
                     colors: vec![Color::Black],
@@ -47,7 +47,7 @@ pub fn cranial_ram() -> CardDefinition {
                         ..Default::default()
                     },
                     ..Default::default()
-                },
+                }),
             },
             Effect::Attach {
                 what: Selector::This,
@@ -72,7 +72,7 @@ pub fn the_underworld_cookbook() -> CardDefinition {
                 effect: Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::ONE,
-                    definition: crabomination_base::tokens::food_token(),
+                    definition: Box::new(crabomination_base::tokens::food_token()),
                 },
                 ..Default::default()
             },
@@ -277,7 +277,7 @@ pub fn urza_lord_high_artificer() -> CardDefinition {
         triggered_abilities: vec![etb(Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::ONE,
-            definition: construct,
+            definition: Box::new(construct),
         })],
         activated_abilities: vec![
             ActivatedAbility {

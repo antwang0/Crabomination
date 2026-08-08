@@ -580,7 +580,7 @@ pub fn sunspire_gatekeepers() -> CardDefinition {
             then: Box::new(Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: knight_vigilance_token(),
+                definition: Box::new(knight_vigilance_token()),
             }),
             else_: Box::new(Effect::Noop),
         })],
@@ -690,17 +690,17 @@ pub fn trostanis_summoner() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: knight_vigilance_token(),
+                definition: Box::new(knight_vigilance_token()),
             },
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: centaur,
+                definition: Box::new(centaur),
             },
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: rhino,
+                definition: Box::new(rhino),
             },
         ]))],
         ..Default::default()

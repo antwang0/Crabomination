@@ -73,7 +73,7 @@ pub fn dark_depths() -> CardDefinition {
                         Effect::CreateToken {
                             who: PlayerRef::You,
                             count: Value::ONE,
-                            definition: marit_lage(),
+                            definition: Box::new(marit_lage()),
                         },
                     ])),
                     else_: Box::new(Effect::Noop),

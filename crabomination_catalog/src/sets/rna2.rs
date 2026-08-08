@@ -69,7 +69,7 @@ pub fn dovin_grand_arbiter() -> CardDefinition {
                     Effect::CreateToken {
                         who: PlayerRef::You,
                         count: Value::ONE,
-                        definition: token(
+                        definition: Box::new(token(
                             "Thopter",
                             vec![],
                             1,
@@ -77,7 +77,7 @@ pub fn dovin_grand_arbiter() -> CardDefinition {
                             vec![CardType::Artifact, CardType::Creature],
                             vec![CreatureType::Thopter],
                             vec![Keyword::Flying],
-                        ),
+                        )),
                     },
                     Effect::GainLife {
                         who: Selector::You,
@@ -384,7 +384,7 @@ pub fn captive_audience() -> CardDefinition {
                     Effect::CreateToken {
                         who: PlayerRef::EachOpponent,
                         count: Value::Const(5),
-                        definition: TokenDefinition {
+                        definition: Box::new(TokenDefinition {
                             name: "Zombie".into(),
                             power: 2,
                             toughness: 2,
@@ -395,7 +395,7 @@ pub fn captive_audience() -> CardDefinition {
                                 ..Default::default()
                             },
                             ..Default::default()
-                        },
+                        }),
                     },
                 ],
             },

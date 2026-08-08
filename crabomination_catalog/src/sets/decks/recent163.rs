@@ -109,7 +109,7 @@ pub fn revenge_of_the_rats() -> CardDefinition {
                 who: PlayerRef::You,
                 filter: R::Creature,
             },
-            definition: TokenDefinition {
+            definition: Box::new(TokenDefinition {
                 name: "Rat".into(),
                 power: 1,
                 toughness: 1,
@@ -121,7 +121,7 @@ pub fn revenge_of_the_rats() -> CardDefinition {
                 },
                 tapped: true,
                 ..Default::default()
-            },
+            }),
         },
         ..Default::default()
     }

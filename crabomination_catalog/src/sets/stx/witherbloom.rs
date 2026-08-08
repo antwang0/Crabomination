@@ -64,7 +64,7 @@ pub fn pest_summoning() -> CardDefinition {
         effect: Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::Const(2),
-            definition: pest,
+            definition: Box::new(pest),
         },
         ..Default::default()
     }
@@ -148,7 +148,7 @@ pub fn pest_swarmer() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: stx_pest_token(),
+                definition: Box::new(stx_pest_token()),
             },
         }],
         ..Default::default()
@@ -203,7 +203,7 @@ pub fn pest_swarm() -> CardDefinition {
         effect: Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::Const(3),
-            definition: stx_pest_token(),
+            definition: Box::new(stx_pest_token()),
         },
         ..Default::default()
     }
@@ -423,7 +423,7 @@ pub fn callous_bloodmage() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: pest,
+                definition: Box::new(pest),
             },
             Effect::Seq(vec![
                 Effect::Draw {
@@ -498,7 +498,7 @@ pub fn witherbloom_mossfeeder() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: stx_pest_token(),
+                definition: Box::new(stx_pest_token()),
             },
         }],
         ..Default::default()
@@ -557,7 +557,7 @@ pub fn pest_cultivator() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(2),
-                definition: stx_pest_token(),
+                definition: Box::new(stx_pest_token()),
             },
         }],
         ..Default::default()
@@ -668,7 +668,7 @@ pub fn witherbloom_pestkeeper() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: stx_pest_token(),
+                definition: Box::new(stx_pest_token()),
             },
         }],
         ..Default::default()
@@ -742,7 +742,7 @@ pub fn pest_swarm_inheritance() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: stx_pest_token(),
+                definition: Box::new(stx_pest_token()),
             },
         ]),
         ..Default::default()
@@ -852,7 +852,7 @@ pub fn witherbloom_pestmancer() -> CardDefinition {
         triggered_abilities: vec![magecraft(Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::Const(1),
-            definition: stx_pest_token(),
+            definition: Box::new(stx_pest_token()),
         })],
         ..Default::default()
     }
@@ -1055,7 +1055,7 @@ pub fn witherbloom_toxicultivator() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: stx_pest_token(),
+                definition: Box::new(stx_pest_token()),
             },
         }],
         ..Default::default()
@@ -1082,7 +1082,7 @@ pub fn pest_outburst() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(2),
-                definition: stx_pest_token(),
+                definition: Box::new(stx_pest_token()),
             },
             Effect::GainLife {
                 who: Selector::You,
@@ -1278,7 +1278,7 @@ pub fn pest_harvest() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: pest,
+                definition: Box::new(pest),
             },
             Effect::Draw {
                 who: Selector::You,
@@ -1354,7 +1354,7 @@ pub fn witherbloom_pestcaller() -> CardDefinition {
         triggered_abilities: vec![magecraft(Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::Const(1),
-            definition: stx_pest_token(),
+            definition: Box::new(stx_pest_token()),
         })],
         ..Default::default()
     }
@@ -1386,7 +1386,7 @@ pub fn pest_swarmlord() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(2),
-                definition: stx_pest_token(),
+                definition: Box::new(stx_pest_token()),
             },
         }],
         ..Default::default()
@@ -1499,7 +1499,7 @@ pub fn pest_mausoleum() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: stx_pest_token(),
+                definition: Box::new(stx_pest_token()),
             },
         ]),
         ..Default::default()
@@ -1533,7 +1533,7 @@ pub fn pest_ravager() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(2),
-                definition: stx_pest_token(),
+                definition: Box::new(stx_pest_token()),
             },
         }],
         ..Default::default()
@@ -1667,7 +1667,7 @@ pub fn pestilent_bloom() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: stx_pest_token(),
+                definition: Box::new(stx_pest_token()),
             },
         ]),
         ..Default::default()
@@ -1701,7 +1701,7 @@ pub fn witherbloom_pest_lord() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: stx_pest_token(),
+                definition: Box::new(stx_pest_token()),
             },
         }],
         static_abilities: vec![StaticAbility {
@@ -1835,7 +1835,7 @@ pub fn witherbloom_spore_master() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(2),
-                definition: stx_pest_token(),
+                definition: Box::new(stx_pest_token()),
             },
         }],
         ..Default::default()
@@ -1900,7 +1900,7 @@ pub fn pest_cultivator_adept() -> CardDefinition {
                 effect: Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::Const(1),
-                    definition: stx_pest_token(),
+                    definition: Box::new(stx_pest_token()),
                 },
             },
             magecraft(Effect::AddCounter {
@@ -2029,7 +2029,7 @@ pub fn pest_wrangler() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: stx_pest_token(),
+                definition: Box::new(stx_pest_token()),
             },
         }],
         ..Default::default()
@@ -2173,7 +2173,7 @@ pub fn pest_brood_mother() -> CardDefinition {
                 effect: Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::Const(2),
-                    definition: stx_pest_token(),
+                    definition: Box::new(stx_pest_token()),
                 },
             },
             pest_death_drain,
@@ -2311,7 +2311,7 @@ pub fn witherbloom_coatlcaller() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: stx_pest_token(),
+                definition: Box::new(stx_pest_token()),
             },
         }],
         ..Default::default()
@@ -2337,7 +2337,7 @@ pub fn witherbloom_pestbreaker() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: stx_pest_token(),
+                definition: Box::new(stx_pest_token()),
             },
         ]),
         ..Default::default()
@@ -2489,7 +2489,7 @@ pub fn witherbloom_lichenkeeper() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: stx_pest_token(),
+                definition: Box::new(stx_pest_token()),
             },
         }],
         ..Default::default()
@@ -2546,7 +2546,7 @@ pub fn witherbloom_bloomweaver() -> CardDefinition {
                 effect: Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::Const(1),
-                    definition: stx_pest_token(),
+                    definition: Box::new(stx_pest_token()),
                 },
             },
             magecraft_ping_each_opp(1),
@@ -2889,7 +2889,7 @@ pub fn witherbloom_pestswarm() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(2),
-                definition: stx_pest_token(),
+                definition: Box::new(stx_pest_token()),
             },
         }],
         ..Default::default()
@@ -3088,7 +3088,7 @@ pub fn witherbloom_pesthatch() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: stx_pest_token(),
+                definition: Box::new(stx_pest_token()),
             },
             Effect::AddCounter {
                 what: target_filtered(
@@ -3193,7 +3193,7 @@ pub fn pest_skyswarm() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: stx_pest_token(),
+                definition: Box::new(stx_pest_token()),
             },
         }],
         ..Default::default()
@@ -3289,7 +3289,7 @@ pub fn pest_snatchgrab() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: stx_pest_token(),
+                definition: Box::new(stx_pest_token()),
             },
         ]),
         ..Default::default()
@@ -3389,7 +3389,7 @@ pub fn witherbloom_pestrider() -> CardDefinition {
                 Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::Const(1),
-                    definition: stx_pest_token(),
+                    definition: Box::new(stx_pest_token()),
                 },
                 Effect::AddCounter {
                     what: Selector::LastCreatedToken,
@@ -3449,7 +3449,7 @@ pub fn pest_horde() -> CardDefinition {
         effect: Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::Const(4),
-            definition: stx_pest_token(),
+            definition: Box::new(stx_pest_token()),
         },
         ..Default::default()
     }
@@ -3590,7 +3590,7 @@ pub fn pest_vinekin() -> CardDefinition {
                 Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::Const(2),
-                    definition: stx_pest_token(),
+                    definition: Box::new(stx_pest_token()),
                 },
             ]),
         }],
@@ -3657,7 +3657,7 @@ pub fn pest_swarmrider() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: stx_pest_token(),
+                definition: Box::new(stx_pest_token()),
             },
         }],
         ..Default::default()
@@ -3833,7 +3833,7 @@ pub fn witherbloom_cultivator() -> CardDefinition {
                 effect: Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::Const(1),
-                    definition: stx_pest_token(),
+                    definition: Box::new(stx_pest_token()),
                 },
             },
             magecraft(Effect::AddCounter {
@@ -3982,7 +3982,7 @@ pub fn witherbloom_bloodglyph() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: stx_pest_token(),
+                definition: Box::new(stx_pest_token()),
             },
         ]),
         ..Default::default()
@@ -4086,7 +4086,7 @@ pub fn pest_brewer() -> CardDefinition {
         toughness: 2,
         triggered_abilities: vec![crate::effect::shortcut::etb(Effect::CreateToken {
             who: PlayerRef::You,
-            definition: stx_pest_token(),
+            definition: Box::new(stx_pest_token()),
             count: Value::Const(1),
         })],
         ..Default::default()
@@ -4148,7 +4148,7 @@ pub fn witherbloom_pestsage() -> CardDefinition {
         toughness: 4,
         triggered_abilities: vec![crate::effect::shortcut::etb(Effect::CreateToken {
             who: PlayerRef::You,
-            definition: stx_pest_token(),
+            definition: Box::new(stx_pest_token()),
             count: Value::Const(2),
         })],
         ..Default::default()
@@ -4220,7 +4220,7 @@ pub fn pest_cultivator_v2() -> CardDefinition {
         toughness: 3,
         triggered_abilities: vec![crate::effect::shortcut::etb(Effect::CreateToken {
             who: PlayerRef::You,
-            definition: stx_pest_token(),
+            definition: Box::new(stx_pest_token()),
             count: Value::Const(1),
         })],
         ..Default::default()
@@ -4323,7 +4323,7 @@ pub fn witherbloom_cinderscribe() -> CardDefinition {
         triggered_abilities: vec![crate::effect::shortcut::etb(Effect::Seq(vec![
             Effect::CreateToken {
                 who: PlayerRef::You,
-                definition: stx_pest_token(),
+                definition: Box::new(stx_pest_token()),
                 count: Value::Const(2),
             },
             Effect::LoseLife {
@@ -4355,7 +4355,7 @@ pub fn witherbloom_thornmaster() -> CardDefinition {
         keywords: vec![Keyword::Deathtouch],
         triggered_abilities: vec![crate::effect::shortcut::etb(Effect::CreateToken {
             who: PlayerRef::You,
-            definition: stx_pest_token(),
+            definition: Box::new(stx_pest_token()),
             count: Value::Const(1),
         })],
         ..Default::default()
@@ -4443,7 +4443,7 @@ pub fn witherbloom_pestswarm_master() -> CardDefinition {
         toughness: 3,
         triggered_abilities: vec![crate::effect::shortcut::etb(Effect::CreateToken {
             who: PlayerRef::You,
-            definition: stx_pest_token(),
+            definition: Box::new(stx_pest_token()),
             count: Value::Const(2),
         })],
         ..Default::default()
@@ -4639,7 +4639,7 @@ pub fn pest_quartermaster() -> CardDefinition {
                 Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::Const(1),
-                    definition: stx_pest_token(),
+                    definition: Box::new(stx_pest_token()),
                 },
                 Effect::Draw {
                     who: Selector::You,
@@ -4715,7 +4715,7 @@ pub fn pest_glutton() -> CardDefinition {
                 Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::Const(1),
-                    definition: stx_pest_token(),
+                    definition: Box::new(stx_pest_token()),
                 },
                 Effect::GainLife {
                     who: Selector::You,
@@ -4768,7 +4768,7 @@ pub fn pestilent_marsh() -> CardDefinition {
         effect: Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::Const(2),
-            definition: stx_pest_token(),
+            definition: Box::new(stx_pest_token()),
         },
         ..Default::default()
     }
@@ -4828,7 +4828,7 @@ pub fn pestseed() -> CardDefinition {
         effect: Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::Const(1),
-            definition: stx_pest_token(),
+            definition: Box::new(stx_pest_token()),
         },
         ..Default::default()
     }
@@ -5148,7 +5148,7 @@ pub fn pest_cultivator_sage() -> CardDefinition {
         triggered_abilities: vec![on_attack(Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::Const(1),
-            definition: stx_pest_token(),
+            definition: Box::new(stx_pest_token()),
         })],
         ..Default::default()
     }
@@ -5474,7 +5474,7 @@ pub fn pest_brood() -> CardDefinition {
         effect: Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::Const(2),
-            definition: stx_pest_token(),
+            definition: Box::new(stx_pest_token()),
         },
         ..Default::default()
     }
@@ -5624,7 +5624,7 @@ pub fn pest_curse() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(2),
-                definition: stx_pest_token(),
+                definition: Box::new(stx_pest_token()),
             },
             Effect::Discard {
                 who: Selector::You,
@@ -5675,7 +5675,7 @@ pub fn witherbloom_pestcradle() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: stx_pest_token(),
+                definition: Box::new(stx_pest_token()),
             },
             Effect::GainLife {
                 who: Selector::You,
@@ -5730,7 +5730,7 @@ pub fn witherbloom_pestcaller_b54() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(2),
-                definition: stx_pest_token(),
+                definition: Box::new(stx_pest_token()),
             },
             Effect::Surveil {
                 who: PlayerRef::You,
@@ -5771,7 +5771,7 @@ pub fn witherbloom_pestharvest() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(2),
-                definition: stx_pest_token(),
+                definition: Box::new(stx_pest_token()),
             },
             Effect::Draw {
                 who: Selector::You,
@@ -5891,7 +5891,7 @@ pub fn pest_caretaker() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: stx_pest_token(),
+                definition: Box::new(stx_pest_token()),
             },
             Effect::Surveil {
                 who: PlayerRef::You,
@@ -6035,7 +6035,7 @@ pub fn pest_roostmaster() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: stx_pest_token(),
+                definition: Box::new(stx_pest_token()),
             },
         }],
         ..Default::default()
@@ -6294,7 +6294,7 @@ pub fn witherbloom_corpsegrove() -> CardDefinition {
         triggered_abilities: vec![on_dies(Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::Const(1),
-            definition: stx_pest_token(),
+            definition: Box::new(stx_pest_token()),
         })],
         ..Default::default()
     }
@@ -6474,7 +6474,7 @@ pub fn witherbloom_pestcollector() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: stx_pest_token(),
+                definition: Box::new(stx_pest_token()),
             },
             Effect::Scry {
                 who: PlayerRef::You,
@@ -6734,7 +6734,7 @@ pub fn witherbloom_bonewright() -> CardDefinition {
         triggered_abilities: vec![etb(Effect::Seq(vec![
             Effect::CreateToken {
                 who: PlayerRef::You,
-                definition: stx_pest_token(),
+                definition: Box::new(stx_pest_token()),
                 count: Value::Const(1),
             },
             Effect::GainLife {
@@ -6838,7 +6838,7 @@ pub fn witherbloom_drainvine() -> CardDefinition {
             drain(2),
             Effect::CreateToken {
                 who: PlayerRef::You,
-                definition: stx_pest_token(),
+                definition: Box::new(stx_pest_token()),
                 count: Value::Const(1),
             },
         ]),
@@ -6880,7 +6880,7 @@ pub fn pest_vinegrower() -> CardDefinition {
         toughness: 3,
         triggered_abilities: vec![etb(Effect::CreateToken {
             who: PlayerRef::You,
-            definition: stx_pest_token(),
+            definition: Box::new(stx_pest_token()),
             count: Value::Const(2),
         })],
         ..Default::default()
@@ -7004,7 +7004,7 @@ pub fn pest_vinemother() -> CardDefinition {
         toughness: 3,
         triggered_abilities: vec![etb(Effect::CreateToken {
             who: PlayerRef::You,
-            definition: stx_pest_token(),
+            definition: Box::new(stx_pest_token()),
             count: Value::Const(2),
         })],
         ..Default::default()
@@ -7189,7 +7189,7 @@ pub fn pest_carrionbinder() -> CardDefinition {
         triggered_abilities: vec![etb(Effect::Seq(vec![
             Effect::CreateToken {
                 who: PlayerRef::You,
-                definition: stx_pest_token(),
+                definition: Box::new(stx_pest_token()),
                 count: Value::Const(2),
             },
             Effect::Drain {
@@ -7237,7 +7237,7 @@ pub fn pest_spawnmother() -> CardDefinition {
         toughness: 4,
         triggered_abilities: vec![etb(Effect::CreateToken {
             who: PlayerRef::You,
-            definition: stx_pest_token(),
+            definition: Box::new(stx_pest_token()),
             count: Value::Const(3),
         })],
         ..Default::default()
@@ -7386,7 +7386,7 @@ pub fn pest_cinderpriest_b125() -> CardDefinition {
             etb(Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: stx_pest_token(),
+                definition: Box::new(stx_pest_token()),
             }),
             magecraft_drain_each_opp(1),
         ],
@@ -7588,7 +7588,7 @@ pub fn witherbloom_pestsower_b127() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(2),
-                definition: stx_pest_token(),
+                definition: Box::new(stx_pest_token()),
             },
             Effect::Drain {
                 from: Selector::Player(PlayerRef::EachOpponent),
@@ -7922,7 +7922,7 @@ pub fn witherbloom_pestswarm_b129() -> CardDefinition {
         effect: Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::Const(3),
-            definition: stx_pest_token(),
+            definition: Box::new(stx_pest_token()),
         },
         ..Default::default()
     }
@@ -8177,7 +8177,7 @@ pub fn pest_overgrowth_b131() -> CardDefinition {
         effect: Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::Const(3),
-            definition: stx_pest_token(),
+            definition: Box::new(stx_pest_token()),
         },
         ..Default::default()
     }
@@ -8347,7 +8347,7 @@ pub fn witherbloom_twinpest_b133() -> CardDefinition {
         triggered_abilities: vec![etb(Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::Const(2),
-            definition: stx_pest_token(),
+            definition: Box::new(stx_pest_token()),
         })],
         ..Default::default()
     }
@@ -8808,7 +8808,7 @@ pub fn witherbloom_pestmage_b141() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: stx_pest_token(),
+                definition: Box::new(stx_pest_token()),
             },
             Effect::Surveil {
                 who: PlayerRef::You,
@@ -8829,7 +8829,7 @@ pub fn witherbloom_pestbloom_b141() -> CardDefinition {
         effect: Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::Const(3),
-            definition: stx_pest_token(),
+            definition: Box::new(stx_pest_token()),
         },
         ..Default::default()
     }
@@ -9219,7 +9219,7 @@ pub fn pest_spawnchant_b144() -> CardDefinition {
         effect: Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::Const(2),
-            definition: stx_pest_token(),
+            definition: Box::new(stx_pest_token()),
         },
         ..Default::default()
     }
@@ -9561,7 +9561,7 @@ pub fn witherbloom_withergrove_b146() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: stx_pest_token(),
+                definition: Box::new(stx_pest_token()),
             },
         ]),
         ..Default::default()
@@ -10025,7 +10025,7 @@ pub fn witherbloom_spawnbed_b150() -> CardDefinition {
         triggered_abilities: vec![magecraft(Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::Const(1),
-            definition: stx_pest_token(),
+            definition: Box::new(stx_pest_token()),
         })],
         ..Default::default()
     }
@@ -10187,7 +10187,7 @@ pub fn witherbloom_cauldronthief_b152() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: stx_pest_token(),
+                definition: Box::new(stx_pest_token()),
             },
         ]))],
         ..Default::default()
@@ -11483,7 +11483,7 @@ pub fn witherbloom_bonebinder_b159() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: stx_pest_token(),
+                definition: Box::new(stx_pest_token()),
             },
         ]))],
         ..Default::default()
@@ -11882,7 +11882,7 @@ pub fn witherbloom_pestsower_b162() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(2),
-                definition: stx_pest_token(),
+                definition: Box::new(stx_pest_token()),
             },
             drain(1),
         ]))],
@@ -12240,7 +12240,7 @@ pub fn pest_bestiary_b166() -> CardDefinition {
         effect: Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::Const(2),
-            definition: stx_pest_token(),
+            definition: Box::new(stx_pest_token()),
         },
         ..Default::default()
     }
@@ -12325,7 +12325,7 @@ pub fn pest_reborn_b166() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: stx_pest_token(),
+                definition: Box::new(stx_pest_token()),
             },
         ]),
         ..Default::default()
@@ -12442,7 +12442,7 @@ pub fn witherbloom_pestbringer_b167() -> CardDefinition {
         effect: Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::Const(3),
-            definition: stx_pest_token(),
+            definition: Box::new(stx_pest_token()),
         },
         ..Default::default()
     }
@@ -12503,7 +12503,7 @@ pub fn pestmaster_b169() -> CardDefinition {
             etb(Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: stx_pest_token(),
+                definition: Box::new(stx_pest_token()),
             }),
             TriggeredAbility {
                 event: EventSpec::new(EventKind::CreatureDied, EventScope::AnotherOfYours)
@@ -12566,7 +12566,7 @@ pub fn pest_swarmer_b169() -> CardDefinition {
         triggered_abilities: vec![etb(Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::Const(2),
-            definition: stx_pest_token(),
+            definition: Box::new(stx_pest_token()),
         })],
         ..Default::default()
     }
@@ -12612,7 +12612,7 @@ pub fn witherbloom_pestkeeper_b169() -> CardDefinition {
         triggered_abilities: vec![magecraft(Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::Const(1),
-            definition: stx_pest_token(),
+            definition: Box::new(stx_pest_token()),
         })],
         ..Default::default()
     }
@@ -12925,7 +12925,7 @@ pub fn witherbloom_pestharvest_b175() -> CardDefinition {
         effect: Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::Const(2),
-            definition: stx_pest_token(),
+            definition: Box::new(stx_pest_token()),
         },
         ..Default::default()
     }
@@ -12970,7 +12970,7 @@ pub fn witherbloom_doublestrike_b191() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(2),
-                definition: stx_pest_token(),
+                definition: Box::new(stx_pest_token()),
             },
         ]),
         ..Default::default()
@@ -13261,7 +13261,7 @@ pub fn witherbloom_hexblossom_b187() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: stx_pest_token(),
+                definition: Box::new(stx_pest_token()),
             },
         ]),
         ..Default::default()
@@ -13680,7 +13680,7 @@ pub fn witherbloom_soulgift_b192() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: stx_pest_token(),
+                definition: Box::new(stx_pest_token()),
             },
         ]),
         ..Default::default()
@@ -13906,7 +13906,7 @@ pub fn witherbloom_sapdrain_b192() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: stx_pest_token(),
+                definition: Box::new(stx_pest_token()),
             },
         ]),
         ..Default::default()
@@ -14206,7 +14206,7 @@ pub fn witherbloom_pestrune_b195() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: stx_pest_token(),
+                definition: Box::new(stx_pest_token()),
             },
         ]))],
         ..Default::default()
@@ -14290,7 +14290,7 @@ pub fn witherbloom_soulkeeper_b196() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: stx_pest_token(),
+                definition: Box::new(stx_pest_token()),
             },
         ]))],
         ..Default::default()
@@ -14792,7 +14792,7 @@ pub fn witherbloom_pestcaller_b202() -> CardDefinition {
         triggered_abilities: vec![etb(Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::Const(2),
-            definition: stx_pest_token(),
+            definition: Box::new(stx_pest_token()),
         })],
         ..Default::default()
     }
@@ -15068,7 +15068,7 @@ pub fn witherbloom_verdance_b202() -> CardDefinition {
         effect: Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::Const(1),
-            definition: beast_token,
+            definition: Box::new(beast_token),
         },
         ..Default::default()
     }
@@ -15210,7 +15210,7 @@ pub fn pest_patriarch_b203() -> CardDefinition {
         triggered_abilities: vec![etb(Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::Const(1),
-            definition: stx_pest_token(),
+            definition: Box::new(stx_pest_token()),
         })],
         ..Default::default()
     }
@@ -15571,7 +15571,7 @@ pub fn witherbloom_toxicult_b207() -> CardDefinition {
             etb(Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: stx_pest_token(),
+                definition: Box::new(stx_pest_token()),
             }),
             magecraft_drain_each_opp(1),
         ],
@@ -15595,7 +15595,7 @@ pub fn witherbloom_rotcaller_b207() -> CardDefinition {
         triggered_abilities: vec![etb(Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::Const(2),
-            definition: stx_pest_token(),
+            definition: Box::new(stx_pest_token()),
         })],
         ..Default::default()
     }

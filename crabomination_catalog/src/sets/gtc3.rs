@@ -280,7 +280,7 @@ pub fn urbis_protector() -> CardDefinition {
         triggered_abilities: vec![etb(Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::ONE,
-            definition: TokenDefinition {
+            definition: Box::new(TokenDefinition {
                 name: "Angel".into(),
                 power: 4,
                 toughness: 4,
@@ -289,7 +289,7 @@ pub fn urbis_protector() -> CardDefinition {
                 colors: vec![Color::White],
                 subtypes: creatures(vec![CreatureType::Angel]),
                 ..Default::default()
-            },
+            }),
         })],
         ..Default::default()
     }

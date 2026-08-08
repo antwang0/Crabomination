@@ -89,7 +89,7 @@ pub fn asinine_antics() -> CardDefinition {
                 zone: ZoneRef::Battlefield,
                 filter: R::Creature.and(R::ControlledByOpponent),
             },
-            definition: cursed_role(),
+            definition: Box::new(cursed_role()),
         },
         ..Default::default()
     }
@@ -148,7 +148,7 @@ pub fn feed_the_cauldron() -> CardDefinition {
                 then: Box::new(Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::ONE,
-                    definition: food_token(),
+                    definition: Box::new(food_token()),
                 }),
                 else_: Box::new(Effect::Noop),
             },
@@ -174,7 +174,7 @@ pub fn experimental_confectioner() -> CardDefinition {
             etb(Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: food_token(),
+                definition: Box::new(food_token()),
             }),
             TriggeredAbility {
                 event: EventSpec::new(EventKind::PermanentSacrificed, EventScope::YourControl)
@@ -185,7 +185,7 @@ pub fn experimental_confectioner() -> CardDefinition {
                 effect: Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::ONE,
-                    definition: rat_token(),
+                    definition: Box::new(rat_token()),
                 },
             },
         ],
@@ -213,7 +213,7 @@ pub fn embereth_veteran() -> CardDefinition {
             sac_cost: true,
             effect: Effect::CreateTokenAttachedTo {
                 target: target_filtered(R::Creature.and(R::OtherThanSource)),
-                definition: young_hero_role(),
+                definition: Box::new(young_hero_role()),
             },
             ..Default::default()
         }],
@@ -316,7 +316,7 @@ pub fn curse_of_the_werefox() -> CardDefinition {
         effect: Effect::Seq(vec![
             Effect::CreateTokenAttachedTo {
                 target: target_filtered(R::Creature.and(R::ControlledByYou)),
-                definition: monster_role(),
+                definition: Box::new(monster_role()),
             },
             Effect::ApplyToTargets {
                 max_targets: 1,
@@ -392,7 +392,7 @@ pub fn collectors_vault() -> CardDefinition {
                 Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::ONE,
-                    definition: treasure_token(),
+                    definition: Box::new(treasure_token()),
                 },
             ]),
             ..Default::default()
@@ -570,14 +570,14 @@ pub fn twisted_sewer_witch() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: rat_token(),
+                definition: Box::new(rat_token()),
             },
             Effect::CreateTokenAttachedToEach {
                 target: Selector::EachMatching {
                     zone: ZoneRef::Battlefield,
                     filter: R::ControlledByYou.and(R::HasCreatureType(CreatureType::Rat)),
                 },
-                definition: super::woe_roles::wicked_role(),
+                definition: Box::new(super::woe_roles::wicked_role()),
             },
         ]))],
         ..Default::default()
@@ -601,7 +601,7 @@ pub fn mintstrosity() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: food_token(),
+                definition: Box::new(food_token()),
             },
         }],
         ..Default::default()
@@ -625,7 +625,7 @@ pub fn protective_parents() -> CardDefinition {
             event: EventSpec::new(EventKind::CreatureDied, EventScope::SelfSource),
             effect: Effect::CreateTokenAttachedTo {
                 target: target_filtered(R::Creature.and(R::ControlledByYou)),
-                definition: young_hero_role(),
+                definition: Box::new(young_hero_role()),
             },
         }],
         ..Default::default()
@@ -650,7 +650,7 @@ pub fn merry_bards() -> CardDefinition {
             mana_cost: cost(&[generic(1)]),
             body: Box::new(Effect::CreateTokenAttachedTo {
                 target: target_filtered(R::Creature.and(R::ControlledByYou)),
-                definition: young_hero_role(),
+                definition: Box::new(young_hero_role()),
             }),
             else_: None,
         })],
@@ -674,7 +674,7 @@ pub fn monstrous_rage() -> CardDefinition {
             },
             Effect::CreateTokenAttachedTo {
                 target: Selector::Target(0),
-                definition: monster_role(),
+                definition: Box::new(monster_role()),
             },
         ]),
         ..Default::default()
@@ -753,7 +753,7 @@ pub fn into_the_fae_court() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: faerie_token(),
+                definition: Box::new(faerie_token()),
             },
         ]),
         ..Default::default()
@@ -783,7 +783,7 @@ pub fn knight_of_doves() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: bird_token(),
+                definition: Box::new(bird_token()),
             },
         }],
         ..Default::default()
@@ -847,7 +847,7 @@ pub fn gingerbread_hunter() -> CardDefinition {
         triggered_abilities: vec![etb(Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::ONE,
-            definition: food_token(),
+            definition: Box::new(food_token()),
         })],
         ..Default::default()
     }

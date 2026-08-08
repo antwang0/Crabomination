@@ -178,7 +178,7 @@ pub fn buy_your_silence() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::ControllerOf(Box::new(Selector::Target(0))),
                 count: Value::ONE,
-                definition: crabomination_base::tokens::treasure_token(),
+                definition: Box::new(crabomination_base::tokens::treasure_token()),
             },
             Effect::Move {
                 what: target_filtered(R::Nonland),

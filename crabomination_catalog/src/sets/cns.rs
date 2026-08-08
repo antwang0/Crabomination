@@ -95,11 +95,11 @@ pub fn sentinel_dispatch() -> CardDefinition {
         triggered_abilities: vec![first_upkeep(Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::ONE,
-            definition: TokenDefinition {
+            definition: Box::new(TokenDefinition {
                 card_types: vec![CardType::Artifact, CardType::Creature],
                 keywords: vec![Keyword::Defender],
                 ..token("Construct", 1, 1, CreatureType::Construct, vec![])
-            },
+            }),
         })],
         ..conspiracy("Sentinel Dispatch")
     }
@@ -113,18 +113,18 @@ pub fn hold_the_perimeter() -> CardDefinition {
             first_upkeep(Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: TokenDefinition {
+                definition: Box::new(TokenDefinition {
                     keywords: vec![Keyword::Defender],
                     ..token("Soldier", 1, 2, CreatureType::Soldier, vec![Color::White])
-                },
+                }),
             }),
             first_upkeep(Effect::CreateToken {
                 who: PlayerRef::EachOpponent,
                 count: Value::ONE,
-                definition: TokenDefinition {
+                definition: Box::new(TokenDefinition {
                     keywords: vec![Keyword::CantBlock],
                     ..token("Goblin", 1, 1, CreatureType::Goblin, vec![Color::Red])
-                },
+                }),
             }),
         ],
         ..conspiracy("Hold the Perimeter")
@@ -321,13 +321,13 @@ pub fn assemble_the_rank_and_vile() -> CardDefinition {
                             Effect::CreateToken {
                                 who: PlayerRef::You,
                                 count: Value::ONE,
-                                definition: token(
+                                definition: Box::new(token(
                                     "Zombie",
                                     2,
                                     2,
                                     CreatureType::Zombie,
                                     vec![Color::Black],
-                                ),
+                                )),
                             },
                             Effect::Tap { what: Selector::LastCreatedToken },
                         ])),
@@ -634,10 +634,10 @@ pub fn rousing_of_souls() -> CardDefinition {
             then: Box::new(Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::CardsRevealedThisEffect,
-                definition: TokenDefinition {
+                definition: Box::new(TokenDefinition {
                     keywords: vec![Keyword::Flying],
                     ..token("Spirit", 1, 1, CreatureType::Spirit, vec![Color::White])
-                },
+                }),
             }),
         },
         ..Default::default()
@@ -654,7 +654,7 @@ pub fn selvalas_charge() -> CardDefinition {
             then: Box::new(Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::CardsRevealedThisEffect,
-                definition: token("Elephant", 3, 3, CreatureType::Elephant, vec![Color::Green]),
+                definition: Box::new(token("Elephant", 3, 3, CreatureType::Elephant, vec![Color::Green])),
             }),
         },
         ..Default::default()
@@ -936,13 +936,13 @@ pub fn lieutenants_of_the_guard() -> CardDefinition {
                         Effect::CreateToken {
                             who: PlayerRef::You,
                             count: Value::ONE,
-                            definition: token(
+                            definition: Box::new(token(
                                 "Soldier",
                                 1,
                                 1,
                                 CreatureType::Soldier,
                                 vec![Color::White],
-                            ),
+                            )),
                         },
                     ),
                 ],

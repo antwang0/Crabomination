@@ -63,7 +63,7 @@ pub fn camera_launcher() -> CardDefinition {
                 Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::Const(1),
-                    definition: thopter,
+                    definition: Box::new(thopter),
                 },
             ]),
             ..Default::default()
@@ -300,7 +300,7 @@ pub fn stampeding_scurryfoot() -> CardDefinition {
                 Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::Const(1),
-                    definition: elephant,
+                    definition: Box::new(elephant),
                 },
             ]),
             ..Default::default()
@@ -541,7 +541,7 @@ pub fn eusocial_engineering() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: robot,
+                definition: Box::new(robot),
             },
         }],
         alternative_cost: Some(warp(cost(&[generic(1), g()]))),
@@ -632,7 +632,7 @@ pub fn biomechan_engineer() -> CardDefinition {
         triggered_abilities: vec![etb(Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::Const(1),
-            definition: lander_token(),
+            definition: Box::new(lander_token()),
         })],
         ..Default::default()
     }
@@ -654,7 +654,7 @@ pub fn biotech_specialist() -> CardDefinition {
         triggered_abilities: vec![etb(Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::Const(1),
-            definition: lander_token(),
+            definition: Box::new(lander_token()),
         })],
         ..Default::default()
     }
@@ -676,7 +676,7 @@ pub fn beamsaw_prospector() -> CardDefinition {
         triggered_abilities: vec![on_dies(Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::Const(1),
-            definition: lander_token(),
+            definition: Box::new(lander_token()),
         })],
         ..Default::default()
     }
@@ -691,7 +691,7 @@ pub fn bioengineered_future() -> CardDefinition {
         triggered_abilities: vec![etb(Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::Const(1),
-            definition: lander_token(),
+            definition: Box::new(lander_token()),
         })],
         ..Default::default()
     }
@@ -988,7 +988,7 @@ pub fn knight_luminary() -> CardDefinition {
         triggered_abilities: vec![etb(Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::Const(1),
-            definition: soldier,
+            definition: Box::new(soldier),
         })],
         alternative_cost: Some(warp(cost(&[generic(1), w()]))),
         ..Default::default()
@@ -1049,7 +1049,7 @@ pub fn dauntless_scrapbot() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: lander_token(),
+                definition: Box::new(lander_token()),
             },
         ]))],
         ..Default::default()
@@ -1073,7 +1073,7 @@ pub fn edge_rover() -> CardDefinition {
         triggered_abilities: vec![on_dies(Effect::CreateToken {
             who: PlayerRef::EachPlayer,
             count: Value::Const(1),
-            definition: lander_token(),
+            definition: Box::new(lander_token()),
         })],
         ..Default::default()
     }
@@ -1094,7 +1094,7 @@ pub fn galactic_wayfarer() -> CardDefinition {
         triggered_abilities: vec![etb(Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::Const(1),
-            definition: lander_token(),
+            definition: Box::new(lander_token()),
         })],
         ..Default::default()
     }
@@ -1117,7 +1117,7 @@ pub fn glacier_godmaw() -> CardDefinition {
         triggered_abilities: vec![etb(Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::Const(1),
-            definition: lander_token(),
+            definition: Box::new(lander_token()),
         })],
         ..Default::default()
     }
@@ -1140,7 +1140,7 @@ pub fn kav_landseeker() -> CardDefinition {
         triggered_abilities: vec![etb(Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::Const(1),
-            definition: lander_token(),
+            definition: Box::new(lander_token()),
         })],
         ..Default::default()
     }
@@ -1162,7 +1162,7 @@ pub fn emergency_eject() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::ControllerOf(Box::new(Selector::Target(0))),
                 count: Value::Const(1),
-                definition: lander_token(),
+                definition: Box::new(lander_token()),
             },
         ]),
         ..Default::default()
@@ -1708,7 +1708,7 @@ pub fn wedgelight_rammer() -> CardDefinition {
         triggered_abilities: vec![etb(Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::Const(1),
-            definition: robot,
+            definition: Box::new(robot),
         })],
         activated_abilities: vec![station()],
         station: vec![StationBand {
@@ -2462,7 +2462,7 @@ pub fn honored_knight_captain() -> CardDefinition {
         triggered_abilities: vec![etb(Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::Const(1),
-            definition: soldier,
+            definition: Box::new(soldier),
         })],
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[generic(4), w(), w()]),
@@ -2596,7 +2596,7 @@ pub fn gravpack_monoist() -> CardDefinition {
         triggered_abilities: vec![on_dies(Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::Const(1),
-            definition: robot,
+            definition: Box::new(robot),
         })],
         ..Default::default()
     }
@@ -2784,7 +2784,7 @@ pub fn kavaron_harrier() -> CardDefinition {
                 body: Box::new(Effect::CreateTokenAttacking {
                     who: PlayerRef::You,
                     count: Value::Const(1),
-                    definition: robot,
+                    definition: Box::new(robot),
                     cleanup: crate::effect::AttackingTokenCleanup::SacrificeAtEndOfCombat,
                 }),
                 else_: None,
@@ -2970,7 +2970,7 @@ pub fn seedship_agrarian() -> CardDefinition {
                 effect: Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::Const(1),
-                    definition: lander_token(),
+                    definition: Box::new(lander_token()),
                 },
             },
             TriggeredAbility {
@@ -3109,7 +3109,7 @@ pub fn rayblade_trooper() -> CardDefinition {
                 effect: Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::Const(1),
-                    definition: soldier,
+                    definition: Box::new(soldier),
                 },
             },
         ],
@@ -3629,7 +3629,7 @@ pub fn samis_curiosity() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: lander_token(),
+                definition: Box::new(lander_token()),
             },
         ]),
         ..Default::default()
@@ -3647,7 +3647,7 @@ pub fn lithobraking() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: lander_token(),
+                definition: Box::new(lander_token()),
             },
             Effect::MaySacrifice {
                 description: "Sacrifice an artifact".into(),
@@ -3768,7 +3768,7 @@ pub fn mechan_assembler() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: robot_2_2(),
+                definition: Box::new(robot_2_2()),
             },
         }],
         ..Default::default()
@@ -3858,7 +3858,7 @@ pub fn scrounge_for_eternity() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: lander_token(),
+                definition: Box::new(lander_token()),
             },
         ]),
         ..Default::default()
@@ -4334,7 +4334,7 @@ pub fn seedship_impact() -> CardDefinition {
                 Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::Const(1),
-                    definition: lander_token(),
+                    definition: Box::new(lander_token()),
                 },
             ])),
             else_: Box::new(Effect::Destroy {
@@ -4375,7 +4375,7 @@ pub fn desculpting_blast() -> CardDefinition {
                 then: Box::new(Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::Const(1),
-                    definition: drone,
+                    definition: Box::new(drone),
                 }),
                 else_: Box::new(Effect::Noop),
             },
@@ -4457,7 +4457,7 @@ pub fn orbital_plunge() -> CardDefinition {
                 then: Box::new(Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::Const(1),
-                    definition: lander_token(),
+                    definition: Box::new(lander_token()),
                 }),
                 else_: Box::new(Effect::Noop),
             },
@@ -4614,7 +4614,7 @@ pub fn cosmogrand_zenith() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(2),
-                definition: soldier,
+                definition: Box::new(soldier),
             },
             Effect::AddCounter {
                 what: Selector::EachPermanent(
@@ -4736,7 +4736,7 @@ pub fn sunstar_expansionist() -> CardDefinition {
                 then: Box::new(Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::Const(1),
-                    definition: lander_token(),
+                    definition: Box::new(lander_token()),
                 }),
                 else_: Box::new(Effect::Noop),
             }),
@@ -5165,7 +5165,7 @@ pub fn terrapact_intimidator() -> CardDefinition {
             option_a: Box::new(Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(2),
-                definition: lander_token(),
+                definition: Box::new(lander_token()),
             }),
             option_b: Box::new(Effect::AddCounter {
                 what: Selector::This,
@@ -5357,7 +5357,7 @@ pub fn sami_ships_engineer() -> CardDefinition {
                 then: Box::new(Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::Const(1),
-                    definition: robot,
+                    definition: Box::new(robot),
                 }),
                 else_: Box::new(Effect::Noop),
             },
@@ -5570,7 +5570,7 @@ pub fn kavaron_memorial_world() -> CardDefinition {
                 Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::Const(1),
-                    definition: robot_token(),
+                    definition: Box::new(robot_token()),
                 },
                 Effect::PumpPT {
                     what: team(),
@@ -5743,7 +5743,7 @@ pub fn station_monitor() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: drone,
+                definition: Box::new(drone),
             },
         }],
         ..Default::default()
@@ -6229,7 +6229,7 @@ pub fn melded_moxite() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: tapped_robot,
+                definition: Box::new(tapped_robot),
             },
             ..Default::default()
         }],
@@ -6294,7 +6294,7 @@ pub fn auxiliary_boosters() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: robot_token(),
+                definition: Box::new(robot_token()),
             },
             Effect::Attach {
                 what: Selector::This,
@@ -6387,7 +6387,7 @@ pub fn weapons_manufacturing() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: munitions,
+                definition: Box::new(munitions),
             },
         }],
         ..Default::default()
@@ -7252,7 +7252,7 @@ pub fn infinite_guideline_station() -> CardDefinition {
                 sel: Box::new(Selector::EachPermanent(multicolored_you.clone())),
                 filter: SelectionRequirement::Any,
             },
-            definition: eoe_robot_token(true),
+            definition: Box::new(eoe_robot_token(true)),
         })],
         activated_abilities: vec![station()],
         station: vec![StationBand {
@@ -7306,7 +7306,7 @@ pub fn secluded_starforge() -> CardDefinition {
                 effect: Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::Const(1),
-                    definition: eoe_robot_token(false),
+                    definition: Box::new(eoe_robot_token(false)),
                 },
                 ..Default::default()
             },

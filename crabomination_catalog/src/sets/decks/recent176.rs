@@ -142,7 +142,7 @@ pub fn zahur_glorys_past() -> CardDefinition {
                 then: Box::new(Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::Const(1),
-                    definition: tapped_zombie_token(),
+                    definition: Box::new(tapped_zombie_token()),
                 }),
                 else_: Box::new(Effect::Noop),
             },

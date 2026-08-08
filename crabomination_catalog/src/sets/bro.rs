@@ -565,7 +565,7 @@ pub fn phyrexian_warhorse() -> CardDefinition {
                 then: Box::new(Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::Const(1),
-                    definition: TokenDefinition {
+                    definition: Box::new(TokenDefinition {
                         name: "Soldier".into(),
                         power: 1,
                         toughness: 1,
@@ -573,7 +573,7 @@ pub fn phyrexian_warhorse() -> CardDefinition {
                         colors: vec![Color::White],
                         subtypes: construct(vec![CreatureType::Soldier]),
                         ..Default::default()
-                    },
+                    }),
                 }),
                 else_: Box::new(Effect::Noop),
             },

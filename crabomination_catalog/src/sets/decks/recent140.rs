@@ -45,7 +45,7 @@ pub fn food_coma() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: food_token(),
+                definition: Box::new(food_token()),
             },
         ]))],
         ..Default::default()
@@ -97,7 +97,7 @@ pub fn song_of_totentanz() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::XFromCost,
-                definition: rat_token(),
+                definition: Box::new(rat_token()),
             },
             Effect::GrantKeyword {
                 what: Selector::EachMatching {

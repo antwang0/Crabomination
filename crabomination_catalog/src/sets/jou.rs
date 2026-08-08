@@ -435,7 +435,7 @@ pub fn hydra_broodmaster() -> CardDefinition {
         triggered_abilities: vec![on_becomes_monstrous(Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::TriggerEventAmount,
-            definition: TokenDefinition {
+            definition: Box::new(TokenDefinition {
                 name: "Hydra".into(),
                 colors: vec![Color::Green],
                 card_types: vec![CardType::Creature],
@@ -445,7 +445,7 @@ pub fn hydra_broodmaster() -> CardDefinition {
                 },
                 dynamic_pt: Some((Value::TriggerEventAmount, Value::TriggerEventAmount)),
                 ..Default::default()
-            },
+            }),
         })],
         ..creature(
             "Hydra Broodmaster",
@@ -477,7 +477,7 @@ pub fn king_macar_the_gold_cursed() -> CardDefinition {
                     Effect::CreateToken {
                         who: PlayerRef::You,
                         count: Value::ONE,
-                        definition: super::thb::gold_token(),
+                        definition: Box::new(super::thb::gold_token()),
                     },
                 ])),
             },
@@ -560,7 +560,7 @@ pub fn flurry_of_horns() -> CardDefinition {
         Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::Const(2),
-            definition: TokenDefinition {
+            definition: Box::new(TokenDefinition {
                 name: "Minotaur".into(),
                 power: 2,
                 toughness: 3,
@@ -572,7 +572,7 @@ pub fn flurry_of_horns() -> CardDefinition {
                 },
                 keywords: vec![Keyword::Haste],
                 ..Default::default()
-            },
+            }),
         },
     )
 }

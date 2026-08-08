@@ -454,7 +454,7 @@ pub fn grovetender_druids() -> CardDefinition {
             body: Box::new(Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: plant,
+                definition: Box::new(plant),
             }),
             else_: None,
         })],
@@ -883,7 +883,7 @@ pub fn void_attendant() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: eldrazi_scion_token(),
+                definition: Box::new(eldrazi_scion_token()),
             },
             ..Default::default()
         }],

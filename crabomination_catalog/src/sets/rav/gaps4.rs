@@ -49,14 +49,14 @@ pub fn hunted_horror() -> CardDefinition {
         triggered_abilities: vec![etb(Effect::CreateToken {
             who: PlayerRef::Target(0),
             count: Value::Const(2),
-            definition: token(
+            definition: Box::new(token(
                 "Centaur",
                 3,
                 3,
                 vec![Color::Green],
                 CreatureType::Centaur,
                 vec![Keyword::Protection(Color::Black)],
-            ),
+            )),
         })],
         ..Default::default()
     }
@@ -79,14 +79,14 @@ pub fn hunted_phantasm() -> CardDefinition {
         triggered_abilities: vec![etb(Effect::CreateToken {
             who: PlayerRef::Target(0),
             count: Value::Const(5),
-            definition: token(
+            definition: Box::new(token(
                 "Goblin",
                 1,
                 1,
                 vec![Color::Red],
                 CreatureType::Goblin,
                 vec![],
-            ),
+            )),
         })],
         ..Default::default()
     }
@@ -109,14 +109,14 @@ pub fn hunted_dragon() -> CardDefinition {
         triggered_abilities: vec![etb(Effect::CreateToken {
             who: PlayerRef::Target(0),
             count: Value::Const(3),
-            definition: token(
+            definition: Box::new(token(
                 "Knight",
                 2,
                 2,
                 vec![Color::White],
                 CreatureType::Knight,
                 vec![Keyword::FirstStrike],
-            ),
+            )),
         })],
         ..Default::default()
     }
@@ -139,14 +139,14 @@ pub fn hunted_lammasu() -> CardDefinition {
         triggered_abilities: vec![etb(Effect::CreateToken {
             who: PlayerRef::Target(0),
             count: Value::ONE,
-            definition: token(
+            definition: Box::new(token(
                 "Horror",
                 4,
                 4,
                 vec![Color::Black],
                 CreatureType::Horror,
                 vec![],
-            ),
+            )),
         })],
         ..Default::default()
     }
@@ -168,14 +168,14 @@ pub fn hunted_troll() -> CardDefinition {
         triggered_abilities: vec![etb(Effect::CreateToken {
             who: PlayerRef::Target(0),
             count: Value::Const(4),
-            definition: token(
+            definition: Box::new(token(
                 "Faerie",
                 1,
                 1,
                 vec![Color::Blue],
                 CreatureType::Faerie,
                 vec![Keyword::Flying],
-            ),
+            )),
         })],
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[g()]),

@@ -59,7 +59,7 @@ pub fn grand_entryway_elegant_rotunda() -> CardDefinition {
             triggered_abilities: vec![on_unlock(Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: glimmer,
+                definition: Box::new(glimmer),
             })],
             ..Default::default()
         },

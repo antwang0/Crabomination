@@ -65,7 +65,7 @@ pub fn nezumi_linkbreaker() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: mercenary_token(),
+                definition: Box::new(mercenary_token()),
             },
         }],
         ..Default::default()
@@ -83,7 +83,7 @@ pub fn gold_rush() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: tokens::treasure_token(),
+                definition: Box::new(tokens::treasure_token()),
             },
             Effect::PumpPT {
                 what: target_filtered(R::Creature),
@@ -115,7 +115,7 @@ pub fn prosperity_tycoon() -> CardDefinition {
         triggered_abilities: vec![etb(Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::ONE,
-            definition: mercenary_token(),
+            definition: Box::new(mercenary_token()),
         })],
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[generic(2)]),

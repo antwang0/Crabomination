@@ -410,7 +410,7 @@ pub fn squirrel_wrangler() -> CardDefinition {
         effect: Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::Const(2),
-            definition: TokenDefinition {
+            definition: Box::new(TokenDefinition {
                 name: "Squirrel".to_string(),
                 power: 1,
                 toughness: 1,
@@ -421,7 +421,7 @@ pub fn squirrel_wrangler() -> CardDefinition {
                     ..Default::default()
                 },
                 ..Default::default()
-            },
+            }),
         },
         ..Default::default()
     };
@@ -856,7 +856,7 @@ pub fn infernal_genesis() -> CardDefinition {
                 Effect::CreateToken {
                     who: PlayerRef::ActivePlayer,
                     count: Value::ManaValueOf(Box::new(Selector::LastMoved)),
-                    definition: TokenDefinition {
+                    definition: Box::new(TokenDefinition {
                         name: "Minion".to_string(),
                         power: 1,
                         toughness: 1,
@@ -867,7 +867,7 @@ pub fn infernal_genesis() -> CardDefinition {
                             ..Default::default()
                         },
                         ..Default::default()
-                    },
+                    }),
                 },
             ]),
         }],

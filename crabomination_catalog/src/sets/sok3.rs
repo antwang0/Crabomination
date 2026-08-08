@@ -161,7 +161,7 @@ pub fn rally_the_horde() -> CardDefinition {
             then: Box::new(Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::NonlandCardsExiledThisEffect,
-                definition: TokenDefinition {
+                definition: Box::new(TokenDefinition {
                     name: "Warrior".into(),
                     power: 1,
                     toughness: 1,
@@ -172,7 +172,7 @@ pub fn rally_the_horde() -> CardDefinition {
                         ..Default::default()
                     },
                     ..Default::default()
-                },
+                }),
             }),
         },
     )

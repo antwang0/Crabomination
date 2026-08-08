@@ -176,7 +176,7 @@ pub fn discerning_financier() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: treasure_token(),
+                definition: Box::new(treasure_token()),
             },
         }],
         activated_abilities: vec![ActivatedAbility {

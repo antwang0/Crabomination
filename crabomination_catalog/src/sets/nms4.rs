@@ -347,7 +347,7 @@ pub fn saproling_burst() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: TokenDefinition {
+                definition: Box::new(TokenDefinition {
                     name: "Saproling".to_string(),
                     card_types: vec![CardType::Creature],
                     subtypes: Subtypes {
@@ -363,7 +363,7 @@ pub fn saproling_burst() -> CardDefinition {
                         },
                     }],
                     ..Default::default()
-                },
+                }),
             },
             ..Default::default()
         }],

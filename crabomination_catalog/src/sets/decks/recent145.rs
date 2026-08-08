@@ -54,7 +54,7 @@ pub fn hylda_of_the_icy_crown() -> CardDefinition {
                     Effect::CreateToken {
                         who: PlayerRef::You,
                         count: Value::ONE,
-                        definition: elemental_token(),
+                        definition: Box::new(elemental_token()),
                     },
                     Effect::AddCounter {
                         what: Selector::EachMatching {

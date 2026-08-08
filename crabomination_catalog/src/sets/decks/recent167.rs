@@ -217,7 +217,7 @@ pub fn hour_of_victory() -> CardDefinition {
         triggered_abilities: vec![etb(Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::ONE,
-            definition: TokenDefinition {
+            definition: Box::new(TokenDefinition {
                 name: "Zombie".into(),
                 power: 2,
                 toughness: 2,
@@ -228,7 +228,7 @@ pub fn hour_of_victory() -> CardDefinition {
                     ..Default::default()
                 },
                 ..Default::default()
-            },
+            }),
         })],
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[generic(1), b()]),
@@ -535,7 +535,7 @@ pub fn howlsquad_heavy() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: goblin(),
+                definition: Box::new(goblin()),
             },
         }],
         activated_abilities: vec![ActivatedAbility {
@@ -761,7 +761,7 @@ pub fn haunt_the_network() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(2),
-                definition: thopter,
+                definition: Box::new(thopter),
             },
             Effect::Drain {
                 from: Selector::Player(PlayerRef::Target(0)),

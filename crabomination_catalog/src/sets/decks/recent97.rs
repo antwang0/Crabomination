@@ -434,7 +434,7 @@ pub fn naomi_pillar_of_order() -> CardDefinition {
         then: Box::new(Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::Const(1),
-            definition: samurai_vigilance_token(),
+            definition: Box::new(samurai_vigilance_token()),
         }),
         else_: Box::new(Effect::Noop),
     };

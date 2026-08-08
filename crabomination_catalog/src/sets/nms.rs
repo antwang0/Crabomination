@@ -132,7 +132,7 @@ pub fn angelic_favor() -> CardDefinition {
                 Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::ONE,
-                    definition: TokenDefinition {
+                    definition: Box::new(TokenDefinition {
                         name: "Angel".into(),
                         power: 4,
                         toughness: 4,
@@ -144,7 +144,7 @@ pub fn angelic_favor() -> CardDefinition {
                         },
                         keywords: vec![Keyword::Flying],
                         ..Default::default()
-                    },
+                    }),
                 },
                 Effect::ExileLastCreatedTokensAtNextEndStep,
             ]),
@@ -1059,7 +1059,7 @@ pub fn mogg_alarm() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(2),
-                definition: TokenDefinition {
+                definition: Box::new(TokenDefinition {
                     name: "Goblin".into(),
                     power: 1,
                     toughness: 1,
@@ -1070,7 +1070,7 @@ pub fn mogg_alarm() -> CardDefinition {
                         ..Default::default()
                     },
                     ..Default::default()
-                },
+                }),
             },
         )
     }
