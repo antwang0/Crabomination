@@ -19,11 +19,11 @@ Items are grouped by area and roughly ordered by impact within each group.
   the pool when the trigger resolves. The comment calls this deliberate ("mana
   abilities aren't activatable mid-resolve by default"), but for a UI seat the
   right behaviour is a real payment window. ⏳
-- **Shadowbane is still unimplemented for want of one knob.** Its shield is
-  `PreventNextFromChosenSourceToTeam { one_event: true }` plus "if damage from
-  a black source is prevented this way, you gain that much life."
-  `PreventedSource.gain_life_colors` already models exactly that rider on the
-  other prevention family — the two want unifying rather than a third copy. ⏳
+- ✅ **Shadowbane** ships: `PreventNextFromChosenSourceToTeam` grew a
+  `gain_life_colors` rider and `PreventionShield` a `gain_life_color` /
+  `gain_life_to` pair. `PreventionShield` is `Copy`, so its gate is a single
+  colour where `PreventedSource`'s is a `Vec` — the two prevention families
+  still want unifying.
 
 ## Noticed this run (Mirage opened)
 
@@ -56,16 +56,22 @@ Items are grouped by area and roughly ordered by impact within each group.
   `eager_static_targets` handles the self-scoped shape (the one every real
   card uses); an inner `EachPermanent` still falls through to `None` and the
   static contributes nothing. ⏳
-- **Mirage residue** — the last 30 cards lean on primitives worth one item
-  each: Celestial Dawn (a global colour/land-type rewrite), Forbidden Crypt
-  (a draw replacement that reaches the graveyard), Bazaar of Wonders
-  (name-matching counterspell static), Hall of Gemstone (a per-turn mana-type
-  lock), Null Chamber (a two-player name lock), Tombstone Stairwell
+- **Mirage residue** — the last 19 cards, each blocked on one primitive:
+  Celestial Dawn (a global colour/land-type rewrite), Forbidden Crypt (a draw
+  replacement that reaches the graveyard), Bazaar of Wonders (name-matching
+  counterspell static), Hall of Gemstone (a per-turn mana-type lock), Null
+  Chamber (a *two-name* lock — `named_card` holds one), Tombstone Stairwell
   (token bookkeeping across both halves), Energy Vortex / Soul Echo
-  (counter-priced upkeep taxes), Grinning Totem and Mangara's Tome
-  (exile piles you may play from), Meddle (retarget-another), Flash and Lure
-  of Prey (cast-condition put-onto-battlefield), Illicit Auction (a
-  life-bidding subgame), and Natural Balance. ⏳
+  (counter-priced upkeep taxes), Grinning Totem and Mangara's Tome (exile
+  piles you may play from), Meddle (retarget-another), Illicit Auction (a
+  life-bidding subgame), Mangara's Equity (a damage trigger filtered on both
+  the dealer's colour and the recipient), Mindbender Spores (counters that
+  carry granted abilities), Acidic Dagger and Barreling Attack (both want a
+  `DelayedTriggerKind::BecomesBlocked` / "deals combat damage this turn"),
+  Cycle of Life (a "creature you cast this turn" filter), Blind Fury (a
+  turn-scoped doubler for combat damage to creatures), and Phyrexian Purge
+  (`CardDefinition.life_per_target`, the life twin of
+  `cost_per_extra_target`). ⏳
 - **Suq'Ata Firewalker uses `HexproofFromColor`.** The printed line is a
   shroud-from-red (its controller's red spells can't target it either);
   `HexproofFromColor` only stops opponents. ⏳

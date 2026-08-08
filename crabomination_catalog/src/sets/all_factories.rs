@@ -12071,6 +12071,7 @@ static MIR5: &[Factory] = &[
     super::mir5::natural_balance,
     super::mir5::delirium,
     super::mir5::emberwilde_djinn,
+    super::mir5::shadowbane,
 ];
 static MKM: &[Factory] = &[
     super::mkm::repeat_offender,

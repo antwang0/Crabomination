@@ -907,3 +907,18 @@ pub fn emberwilde_djinn() -> CardDefinition {
         ..creature("Emberwilde Djinn", cost(&[generic(2), r(), r()]), vec![CreatureType::Djinn], 5, 4)
     }
 }
+
+/// Shadowbane — {1}{W} damage shield over you and your creatures; a black
+/// source pays you back in life.
+pub fn shadowbane() -> CardDefinition {
+    instant(
+        "Shadowbane",
+        cost(&[generic(1), w()]),
+        Effect::PreventNextFromChosenSourceToTeam {
+            amount: Value::Const(0),
+            to: Selector::None,
+            one_event: true,
+            gain_life_colors: vec![Color::Black],
+        },
+    )
+}

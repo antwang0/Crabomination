@@ -812,6 +812,7 @@ pub fn opal_eye_kondas_yojimbo() -> CardDefinition {
             ActivatedAbility {
                 tap_cost: true,
                 effect: Effect::PreventNextFromChosenSourceToTeam {
+                    gain_life_colors: vec![],
                     amount: Value::Const(i32::MAX),
                     to: Selector::This,
                     one_event: true,
@@ -901,6 +902,7 @@ pub fn shining_shoal() -> CardDefinition {
             "Shining Shoal",
             cost(&[crate::mana::x(), w(), w()]),
             Effect::PreventNextFromChosenSourceToTeam {
+                    gain_life_colors: vec![],
                 amount: Value::XFromCost,
                 to: crate::effect::shortcut::target_any(),
                 one_event: false,

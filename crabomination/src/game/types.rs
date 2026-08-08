@@ -1817,6 +1817,15 @@ pub struct PreventionShield {
     /// damage prevented this way". The seat whose library pays the toll.
     #[serde(default)]
     pub exile_top_for: Option<usize>,
+    /// Shadowbane — `gain_life` only pays out when the damage source is this
+    /// colour. `None` = no colour gate. (Single-colour: the multi-colour form
+    /// lives on `PreventedSource`, which isn't `Copy`.)
+    #[serde(default)]
+    pub gain_life_color: Option<crate::mana::Color>,
+    /// Seat that gains the life when `gain_life` fires on a shield whose
+    /// `target` isn't a player (Shadowbane covers creatures too).
+    #[serde(default)]
+    pub gain_life_to: Option<usize>,
 }
 
 /// CR 615.7 — a turn-long shield around one chosen damage *source*

@@ -392,7 +392,7 @@ impl GameState {
         effect: &Effect,
     ) -> Result<(), GameError> {
         let Some(src) = ctx.source else { return Ok(()) };
-        let need = self.evaluate_value(total_power, ctx).max(0) as i32;
+        let need = self.evaluate_value(total_power, ctx).max(0);
         let p = ctx.controller;
         let pool: Vec<(CardId, String)> = self
             .battlefield
@@ -29386,7 +29386,7 @@ impl GameState {
                 Ok(())
             }
 
-            Effect::PreventNextFromChosenSourceToTeam { amount, to, one_event } => {
+            Effect::PreventNextFromChosenSourceToTeam { amount, to, one_event, gain_life_colors } => {
                 // CR 615.7 — one shared "next N" pool around the controller and
                 // everything they control, restricted to a chosen source; the
                 // soaked damage is redirected to `to` (Refraction Trap).
@@ -29404,16 +29404,21 @@ impl GameState {
                         _ => {}
                     }
                 }
-                if n > 0 {
+                // A pointless budget with `one_event` is the "prevent that
+                // damage" form (Shadowbane) — an unbudgeted one-event shield.
+                if n > 0 || *one_event {
                     self.prevention_shields.push(crate::game::types::PreventionShield {
                         target: crate::game::types::PreventionTarget::PlayerAndPermanents(
                             ctx.controller,
                         ),
-                        remaining: Some(n),
+                        remaining: (n > 0).then_some(n),
                         source: Some(chosen),
                         redirect_to: dst,
                         redirect_to_player: dst_player,
                         one_event: *one_event,
+                        gain_life: !gain_life_colors.is_empty(),
+                        gain_life_color: gain_life_colors.first().copied(),
+                        gain_life_to: (!gain_life_colors.is_empty()).then_some(ctx.controller),
                         ..Default::default()
                     });
                 }

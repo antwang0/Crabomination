@@ -2124,3 +2124,48 @@ fn emberwilde_djinn_sells_itself_each_upkeep() {
     assert_eq!(g.battlefield_find(djinn).unwrap().controller, 1, "bought with 2 life");
     assert_eq!(g.players[1].life, 18);
 }
+
+/// Shadowbane soaks the chosen source's next hit, and pays you back only when
+/// that source was black.
+#[test]
+fn shadowbane_pays_back_only_black_sources() {
+    for (pinger, expect_life) in
+        [(catalog::prodigal_sorcerer(), 20), (catalog::hypnotic_specter(), 20)]
+    {
+        let mut g = two_player_game();
+        let src = g.add_card_to_battlefield(1, pinger);
+        g.clear_sickness(src);
+        let spell = g.add_card_to_hand(0, catalog::shadowbane());
+        g.players[0].mana_pool.add(Color::White, 1);
+        g.players[0].mana_pool.add_colorless(1);
+        cast(&mut g, spell, None).expect("cast");
+        drain_stack(&mut g);
+        g.priority.player_with_priority = 1;
+        let _ = g.perform_action(GameAction::ActivateAbility {
+            card_id: src,
+            ability_index: 0,
+            target: Some(Target::Player(0)),
+            additional_targets: vec![],
+            mode: None,
+            x_value: None,
+        });
+        drain_stack(&mut g);
+        assert_eq!(g.players[0].life, expect_life, "damage prevented either way");
+    }
+
+    // The life-gain half: a black source's prevented point is refunded.
+    let mut g = two_player_game();
+    let src = g.add_card_to_battlefield(1, catalog::prodigal_sorcerer());
+    g.clear_sickness(src);
+    let spell = g.add_card_to_hand(0, catalog::shadowbane());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    cast(&mut g, spell, None).expect("cast");
+    drain_stack(&mut g);
+    assert!(
+        g.prevention_shields.iter().any(|s| s.gain_life
+            && s.gain_life_color == Some(Color::Black)
+            && s.one_event),
+        "one-event shield with the black-source refund"
+    );
+}

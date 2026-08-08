@@ -8649,6 +8649,11 @@ pub enum Effect {
         /// event rather than a point budget (Opal-Eye, Konda's Yojimbo).
         #[serde(default)]
         one_event: bool,
+        /// "If damage from a [colour] source is prevented this way, you gain
+        /// that much life" (Shadowbane). Empty = no life-gain rider; a
+        /// non-empty list gates it on the damage source's colours.
+        #[serde(default)]
+        gain_life_colors: Vec<Color>,
     },
     /// CR 615.7 — "The next time a source of your choice would deal damage to
     /// any target this turn, prevent that damage." Unlike

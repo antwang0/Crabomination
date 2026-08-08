@@ -577,6 +577,7 @@ impl GameState {
         // Ria Ivor — (seat, prevented) mite mints owed after the loop.
         let mut mite_mints: Vec<(usize, u32)> = Vec::new();
         let mut exile_tolls: Vec<(usize, u32)> = Vec::new();
+        let mut life_gain_to: Option<usize> = None;
         let mut counters_for_target: u32 = 0;
         // Kill-Suit Cultist — the permanent to destroy after the shield pass
         // when a `destroy` shield soaks this event.
@@ -627,8 +628,12 @@ impl GameState {
                 exile_tolls.push((seat, soak));
             }
             prevented += soak;
-            if shield.gain_life {
+            if shield.gain_life
+                // Shadowbane's rider only pays out on a black source.
+                && shield.gain_life_color.is_none_or(|c| src_colors.contains(&c))
+            {
                 life_gain += soak;
+                life_gain_to = life_gain_to.or(shield.gain_life_to);
             }
             if shield.reflect {
                 reflected += soak;
@@ -666,7 +671,7 @@ impl GameState {
                 count: counters_for_target,
             });
         }
-        if life_gain > 0 && let Some(p) = to_player {
+        if life_gain > 0 && let Some(p) = life_gain_to.or(to_player) {
             let applied = self.adjust_life_applied(p, life_gain as i32);
             if applied > 0 {
                 events.push(GameEvent::LifeGained { player: p, amount: applied as u32 });
