@@ -64,10 +64,15 @@ bot_ladder --bench   release, rustc 1.95.0, 4-core VM, 3 worker threads
                      measured on an idle box (load average < 0.5)
 games                320
 games_per_s          11.80 / 11.82 / 11.79 / 11.97   (mean 11.85, spread 1.5 %)
-                     12.42 / 12.38 / 12.36 (mean 12.39) re-measured after the
-                     three missed `rand::random` sites moved onto GameRng —
-                     same box, same idleness; treat 12.39 as the system-alloc
-                     number to beat, 13.88 with `--features mimalloc`
+                     12.42 / 12.38 / 12.36 (mean 12.39) re-measured a run
+                     later on the same idle box. The +4.6 % over 11.85 is
+                     NOT a claimed win: the only engine change between them
+                     moved three `rand::random` sites onto `GameRng`, and
+                     those effects never fire in the bench decks. Read it as
+                     day-to-day drift on a shared VM, and as the reason a
+                     perf claim needs both sides measured in one sitting.
+                     Compare against 12.39 (system alloc) or 13.88
+                     (`--features mimalloc`), both measured that sitting.
 games_per_s_th       3.93 / 3.94 / 3.93 / 3.99
 decisions_per_s      7123 / 7139 / 7117 / 7231       (mean 7153)
 turns_per_game       26.98
