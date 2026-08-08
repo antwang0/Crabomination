@@ -5663,7 +5663,7 @@ impl GameState {
             Zone::Graveyard if card.definition.shuffles_into_library_instead => {
                 use rand::seq::SliceRandom;
                 self.players[owner].library.push(card);
-                let mut rng = rand::rng();
+                let mut rng = self.rng.draw();
                 self.players[owner].library.shuffle(&mut rng);
             }
             // CR 614.6 — Rest in Peace / Leyline of the Void redirect the

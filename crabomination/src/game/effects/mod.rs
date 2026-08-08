@@ -3650,7 +3650,7 @@ impl GameState {
                     .iter()
                     .filter(|c| c.exiled_with == Some(source))
                     .map(|c| c.id)
-                    .choose(&mut rand::rng());
+                    .choose(&mut self.rng.draw());
                 if let Some(cid) = picked {
                     self.move_card_to(cid, &ZoneDest::Hand(PlayerRef::OwnerOfMoved), ctx, events);
                 }
@@ -3907,7 +3907,7 @@ impl GameState {
                         ),
                     });
                 }
-                revealed.shuffle(&mut rand::rng());
+                revealed.shuffle(&mut self.rng.draw());
                 self.players[p].library.extend(revealed);
                 Ok(())
             }
@@ -4098,7 +4098,7 @@ impl GameState {
                         None => rest.push(card),
                     }
                 }
-                rest.shuffle(&mut rand::rng());
+                rest.shuffle(&mut self.rng.draw());
                 self.players[p].library.extend(rest);
                 Ok(())
             }
@@ -4167,7 +4167,7 @@ impl GameState {
                 picks.truncate(3);
                 // Only "three cards with different names" hands a card to you.
                 if picks.len() == 3
-                    && let Some(&(chosen, _)) = picks.choose(&mut rand::rng())
+                    && let Some(&(chosen, _)) = picks.choose(&mut self.rng.draw())
                     && let Some(pos) = self.players[p].library.iter().position(|c| c.id == chosen)
                 {
                     let card = self.players[p].library.remove(pos);
@@ -4417,7 +4417,7 @@ impl GameState {
                     }
                 }
                 for idx in [pos, copy_pos] {
-                    if let Some(pick) = candidates.choose(&mut rand::rng())
+                    if let Some(pick) = candidates.choose(&mut self.rng.draw())
                         && let StackItem::Spell { target, .. } = &mut self.stack[idx]
                     {
                         *target = Some(pick.clone());
@@ -4589,7 +4589,7 @@ impl GameState {
                     }
                 }
                 use rand::seq::SliceRandom;
-                rest.shuffle(&mut rand::rng());
+                rest.shuffle(&mut self.rng.draw());
                 self.players[opp].library.extend(rest);
                 Ok(())
             }
@@ -7825,7 +7825,7 @@ impl GameState {
                         .filter(|c| self.evaluate_requirement_on_card(filter, c, p))
                         .map(|c| c.id)
                         .collect();
-                    if let Some(&cid) = pool.choose(&mut rand::rng()) {
+                    if let Some(&cid) = pool.choose(&mut self.rng.draw()) {
                         self.discard_card(p, cid, events);
                     }
                 }
@@ -12802,7 +12802,7 @@ impl GameState {
                 for ent in self.resolve_selector(who, ctx) {
                     let EntityRef::Player(p) = ent else { continue };
                     let Some(card) =
-                        self.players[p].hand.iter().choose(&mut rand::rng()) else {
+                        self.players[p].hand.iter().choose(&mut self.rng.draw()) else {
                         continue;
                     };
                     let (id, mv) = (card.id, card.definition.cost.cmc());
@@ -12818,7 +12818,7 @@ impl GameState {
                     let EntityRef::Player(p) = ent else { continue };
                     let mut ids: Vec<CardId> =
                         self.players[p].hand.iter().map(|c| c.id).collect();
-                    ids.shuffle(&mut rand::rng());
+                    ids.shuffle(&mut self.rng.draw());
                     let revealed: Vec<CardId> = ids.into_iter().take(n).collect();
                     for cid in revealed {
                         let is_land = self
@@ -12849,7 +12849,7 @@ impl GameState {
                     let Some(named) = named else { continue };
                     let mut ids: Vec<CardId> =
                         self.players[p].hand.iter().map(|c| c.id).collect();
-                    ids.shuffle(&mut rand::rng());
+                    ids.shuffle(&mut self.rng.draw());
                     for cid in ids.into_iter().take(n) {
                         let hit = self.players[p]
                             .hand
@@ -12914,7 +12914,7 @@ impl GameState {
                         .hand
                         .iter()
                         .map(|c| (c.id, c.definition.is_land()))
-                        .choose(&mut rand::rng())
+                        .choose(&mut self.rng.draw())
                     else {
                         continue;
                     };
@@ -17354,7 +17354,7 @@ impl GameState {
                     if ids.is_empty() {
                         continue;
                     }
-                    let mut rng = rand::rng();
+                    let mut rng = self.rng.draw();
                     ids.shuffle(&mut rng);
                     let doomed = rng.random_range(0..n);
                     for id in ids.iter().skip(doomed).step_by(n) {
@@ -20486,7 +20486,7 @@ impl GameState {
                         .filter(|c| self.evaluate_requirement_on_card(&filter, c, p))
                         .map(|c| c.id)
                         .collect();
-                    let Some(&pick) = ids.choose(&mut rand::rng()) else { break };
+                    let Some(&pick) = ids.choose(&mut self.rng.draw()) else { break };
                     let Some(card) = Self::take_card(&mut self.players[p].library, pick)
                     else { break };
                     self.place_card_in_dest(card, p, to, events);
@@ -20507,7 +20507,7 @@ impl GameState {
                         .filter(|c| self.evaluate_requirement_on_card(&filter, c, p))
                         .map(|c| c.id)
                         .collect();
-                    let Some(&pick) = ids.choose(&mut rand::rng()) else { break };
+                    let Some(&pick) = ids.choose(&mut self.rng.draw()) else { break };
                     let Some(card) = Self::take_card(&mut self.players[p].graveyard, pick)
                     else { break };
                     self.players[p].hand.push(card);
@@ -20521,7 +20521,7 @@ impl GameState {
                 let Some(p) = self.resolve_player(who, ctx) else { return Ok(()); };
                 let ids: Vec<crate::card::CardId> =
                     self.players[p].graveyard.iter().map(|c| c.id).collect();
-                let Some(&pick) = ids.choose(&mut rand::rng()) else { return Ok(()) };
+                let Some(&pick) = ids.choose(&mut self.rng.draw()) else { return Ok(()) };
                 let is_creature = self.players[p]
                     .graveyard
                     .iter()
@@ -21174,7 +21174,7 @@ impl GameState {
                 use rand::seq::SliceRandom;
                 let mut rest: Vec<crate::card::CardId> =
                     top.iter().copied().filter(|id| *id != pick).collect();
-                rest.shuffle(&mut rand::rng());
+                rest.shuffle(&mut self.rng.draw());
                 for id in rest {
                     if let Some(card) = Self::take_card(&mut self.players[p].library, id) {
                         self.players[p].library.push(card);
@@ -21407,7 +21407,7 @@ impl GameState {
                 use rand::seq::SliceRandom;
                 let mut rest: Vec<crate::card::CardId> =
                     top.into_iter().filter(|id| *id != pick).collect();
-                rest.shuffle(&mut rand::rng());
+                rest.shuffle(&mut self.rng.draw());
                 for id in rest {
                     if let Some(card) = Self::take_card(&mut self.players[opp].library, id) {
                         self.players[opp].library.push(card);
@@ -22256,7 +22256,7 @@ impl GameState {
                 use rand::seq::SliceRandom;
                 let mut rest: Vec<crate::card::CardId> =
                     revealed.iter().copied().filter(|id| !taken.contains(id)).collect();
-                rest.shuffle(&mut rand::rng());
+                rest.shuffle(&mut self.rng.draw());
                 for id in rest {
                     if let Some(card) = Self::take_card(&mut self.players[p].library, id) {
                         self.players[p].library.push(card);
@@ -22388,7 +22388,7 @@ impl GameState {
                     // Discard a card at random.
                     use rand::seq::SliceRandom;
                     let mut ids: Vec<CardId> = self.players[p].hand.iter().map(|c| c.id).collect();
-                    ids.shuffle(&mut rand::rng());
+                    ids.shuffle(&mut self.rng.draw());
                     let cid = ids[0];
                     let mv = self.players[p].hand.iter().find(|c| c.id == cid)
                         .map(|c| c.definition.cost.cmc()).unwrap_or(0);
@@ -22843,7 +22843,7 @@ impl GameState {
                 use rand::seq::SliceRandom;
                 let mut rest: Vec<crate::card::CardId> =
                     revealed.iter().copied().filter(|id| Some(*id) != pick).collect();
-                rest.shuffle(&mut rand::rng());
+                rest.shuffle(&mut self.rng.draw());
                 for id in rest {
                     if let Some(card) = Self::take_card(&mut self.players[p].library, id) {
                         self.players[p].library.push(card);
@@ -22937,7 +22937,7 @@ impl GameState {
                 use rand::seq::SliceRandom;
                 let mut rest: Vec<crate::card::CardId> =
                     looked.into_iter().filter(|id| *id != chosen).collect();
-                rest.shuffle(&mut rand::rng());
+                rest.shuffle(&mut self.rng.draw());
                 for id in rest {
                     if let Some(card) = Self::take_card(&mut self.players[p].library, id) {
                         self.players[p].library.push(card);
@@ -23041,7 +23041,7 @@ impl GameState {
                         self.move_card_to(id, &ZoneDest::Exile, ctx, events);
                     }
                 } else {
-                    rest.shuffle(&mut rand::rng());
+                    rest.shuffle(&mut self.rng.draw());
                     for id in rest {
                         if let Some(card) = Self::take_card(&mut self.players[p].library, id) {
                             self.players[p].library.push(card);
@@ -23366,7 +23366,7 @@ impl GameState {
                 use rand::seq::SliceRandom;
                 let mut rest: Vec<crate::card::CardId> =
                     looked.iter().copied().filter(|id| !taken.contains(id)).collect();
-                rest.shuffle(&mut rand::rng());
+                rest.shuffle(&mut self.rng.draw());
                 for id in rest {
                     if let Some(card) = Self::take_card(&mut self.players[p].library, id) {
                         self.players[p].library.push(card);
@@ -26038,7 +26038,7 @@ impl GameState {
                 }
                 // Bottom the non-land reveals in a random order (CR — the player
                 // saw them, so a deterministic bottom would be known info).
-                rest.shuffle(&mut rand::rng());
+                rest.shuffle(&mut self.rng.draw());
                 for c in rest {
                     self.players[p].library.push(c);
                 }
@@ -26073,7 +26073,7 @@ impl GameState {
                 }
                 {
                     use rand::seq::SliceRandom;
-                    revealed.shuffle(&mut rand::rng());
+                    revealed.shuffle(&mut self.rng.draw());
                 }
                 for c in revealed {
                     self.players[p].library.push(c);
@@ -26256,7 +26256,7 @@ impl GameState {
                 }
                 {
                     use rand::seq::SliceRandom;
-                    revealed.shuffle(&mut rand::rng());
+                    revealed.shuffle(&mut self.rng.draw());
                 }
                 for c in revealed {
                     self.players[p].library.push(c);
@@ -27483,7 +27483,7 @@ impl GameState {
                 // Bottom the batched misses in a genuinely random order.
                 if !bottom_random.is_empty() {
                     use rand::seq::SliceRandom;
-                    bottom_random.shuffle(&mut rand::rng());
+                    bottom_random.shuffle(&mut self.rng.draw());
                     self.players[p].library.extend(bottom_random);
                 }
                 if matches!(miss_dest, crate::effect::RevealMissDest::ShuffleIntoLibrary) {
@@ -33578,7 +33578,7 @@ impl GameState {
                 use rand::seq::IteratorRandom;
                 self.resolve_selector_inner(inner, ctx)
                     .into_iter()
-                    .choose(&mut rand::rng())
+                    .choose(&mut self.rng.draw())
                     .into_iter()
                     .collect()
             }
@@ -33671,7 +33671,7 @@ impl GameState {
                         pool.push(EntityRef::Player(p));
                     }
                 }
-                pool.choose(&mut rand::rng()).copied().into_iter().collect()
+                pool.choose(&mut self.rng.draw()).copied().into_iter().collect()
             }
 
             Selector::BlockingCreatures => ctx
@@ -34484,7 +34484,7 @@ impl GameState {
                     return vec![];
                 }
                 let mut all = self.resolve_selector(inner, ctx);
-                all.shuffle(&mut rand::rng());
+                all.shuffle(&mut self.rng.draw());
                 all.truncate(n);
                 all
             }
@@ -35811,7 +35811,7 @@ impl GameState {
                                 if len == 0 {
                                     break;
                                 }
-                                let idx = rand::rng().random_range(0..len);
+                                let idx = self.rng.draw().random_range(0..len);
                                 let card_id = self.players[payer].hand[idx].id;
                                 self.discard_card(payer, card_id, events);
                             }

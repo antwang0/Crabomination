@@ -30,6 +30,7 @@ pub mod combat;
 #[doc(hidden)]
 pub mod effects;
 pub mod layers;
+pub mod rng;
 #[doc(hidden)]
 pub mod stack;
 /// CR 729 — nested subgames (Shahrazad).
@@ -358,6 +359,11 @@ pub struct GameState {
     /// Index into `players` of the player whose turn it is.
     pub active_player_idx: usize,
     pub turn_number: u32,
+    /// Game-scoped randomness — every "at random" the rules ask for. Not
+    /// serialized: a restored snapshot gets a fresh stream (see
+    /// [`rng::GameRng`]).
+    #[serde(skip, default)]
+    pub rng: rng::GameRng,
     /// Peace Talks — the last turn number on which no creature may attack and
     /// nothing may be targeted by spells or activated abilities (CR 508.1a /
     /// 115.6). `None` once the truce has lapsed.
@@ -1941,6 +1947,7 @@ impl Clone for GameState {
             step: self.step,
             active_player_idx: self.active_player_idx,
             turn_number: self.turn_number,
+            rng: self.rng.clone(),
             truce_until_turn: self.truce_until_turn,
             game_over: self.game_over,
             mandatory_loop_watch: self.mandatory_loop_watch,
@@ -2274,6 +2281,7 @@ impl GameState {
             step: TurnStep::Untap,
             active_player_idx: 0,
             turn_number: 1,
+            rng: rng::GameRng::default(),
             truce_until_turn: None,
             game_over: None,
             mandatory_loop_watch: (0, 0),
@@ -3134,7 +3142,7 @@ impl GameState {
     pub fn shuffle_seating(&mut self) {
         use rand::seq::SliceRandom;
         let mut order: Vec<usize> = (0..self.players.len()).collect();
-        order.shuffle(&mut rand::rng());
+        order.shuffle(&mut self.rng.draw());
         let mut seated: Vec<crate::player::Player> = Vec::with_capacity(order.len());
         for (new_seat, &old) in order.iter().enumerate() {
             let mut p = self.players[old].clone();
@@ -3724,7 +3732,7 @@ impl GameState {
                 })
             })
             .collect();
-        if let Some(seat) = claimants.into_iter().choose(&mut rand::rng()) {
+        if let Some(seat) = claimants.into_iter().choose(&mut self.rng.draw()) {
             self.active_player_idx = seat;
             self.priority.player_with_priority = seat;
             self.skip_first_draw = self.players.len() <= 2;
@@ -6723,7 +6731,7 @@ impl GameState {
         if card.definition.shuffles_into_library_instead {
             use rand::seq::SliceRandom;
             self.players[owner].library.push(card);
-            let mut rng = rand::rng();
+            let mut rng = self.rng.draw();
             self.players[owner].library.shuffle(&mut rng);
             return false;
         }
@@ -16899,7 +16907,7 @@ impl GameState {
 
     fn shuffle_library_silently(&mut self, seat: usize) {
         use rand::seq::SliceRandom;
-        self.players[seat].library.shuffle(&mut rand::rng());
+        self.players[seat].library.shuffle(&mut self.rng.draw());
     }
 
     /// A crude keepability score for an opening hand: lands first (2–5 is the
@@ -16931,7 +16939,7 @@ impl GameState {
     /// triggers key on (Psychogenic Probe). Game-setup shuffles bypass this.
     pub(crate) fn shuffle_library(&mut self, seat: usize, events: &mut Vec<GameEvent>) {
         use rand::seq::SliceRandom;
-        self.players[seat].library.shuffle(&mut rand::rng());
+        self.players[seat].library.shuffle(&mut self.rng.draw());
         // A one-shot top reveal (Aven Windreader) only covers the card that was
         // on top; a shuffle moves it.
         self.library_tops_revealed.retain(|s| *s != seat);
@@ -16944,7 +16952,7 @@ impl GameState {
         for card in hand {
             self.players[seat].library.push(card);
         }
-        let mut rng = rand::rng();
+        let mut rng = self.rng.draw();
         self.players[seat].library.shuffle(&mut rng);
     }
 
@@ -17924,7 +17932,7 @@ impl GameState {
                 }
                 if !bottom_batch.is_empty() {
                     use rand::seq::SliceRandom;
-                    bottom_batch.shuffle(&mut rand::rng());
+                    bottom_batch.shuffle(&mut self.rng.draw());
                     self.players[player].library.extend(bottom_batch);
                 }
                 // "If you put a card into your hand this way, …" — the rider
@@ -18028,7 +18036,7 @@ impl GameState {
                 use rand::seq::SliceRandom;
                 let mut rest: Vec<CardId> =
                     revealed.iter().copied().filter(|id| !taken.contains(id)).collect();
-                rest.shuffle(&mut rand::rng());
+                rest.shuffle(&mut self.rng.draw());
                 for id in rest {
                     if let Some(card) = Self::take_card(&mut self.players[player].library, id) {
                         self.players[player].library.push(card);
@@ -19448,7 +19456,7 @@ impl GameState {
             if len == 0 {
                 continue;
             }
-            let idx = rand::rng().random_range(0..len);
+            let idx = self.rng.draw().random_range(0..len);
             let card = self.players[seat].library.remove(idx);
             self.players[seat].ante.push(card);
         }

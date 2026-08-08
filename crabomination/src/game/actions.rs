@@ -8396,7 +8396,7 @@ impl GameState {
         }
         let choices =
             self.enumerate_legal_targets_with_source(&effect, controller, source);
-        let Some(pick) = choices.into_iter().choose(&mut rand::rng()) else { return };
+        let Some(pick) = choices.into_iter().choose(&mut self.rng.draw()) else { return };
         match self.stack.last_mut() {
             Some(StackItem::Spell { target, .. }) | Some(StackItem::Trigger { target, .. }) => {
                 *target = Some(pick);
@@ -13960,7 +13960,7 @@ impl GameState {
                 }
                 if ability.discard_cost_random {
                     use rand::seq::SliceRandom;
-                    picks.shuffle(&mut rand::rng());
+                    picks.shuffle(&mut self.rng.draw());
                 } else {
                     picks.sort_by_key(|(_, cmc)| *cmc);
                 }

@@ -34,6 +34,9 @@ impl GameState {
             (0..seats).map(|i| Player::new(i, self.players[i].name.clone())).collect(),
         );
         sub.subgame_depth = self.subgame_depth + 1;
+        // Derived from (and advancing) the outer stream, so a seeded game
+        // stays seeded through a Shahrazad.
+        sub.rng = self.rng.fork();
         for seat in 0..seats {
             let defs: Vec<crate::card::CardDefinition> =
                 self.players[seat].library.iter().map(|c| (*c.definition).clone()).collect();
@@ -42,7 +45,7 @@ impl GameState {
             for def in defs {
                 sub.add_card_to_library(seat, def);
             }
-            sub.players[seat].library.shuffle(&mut rand::rng());
+            sub.players[seat].library.shuffle(&mut sub.rng.draw());
         }
         sub.start_mulligan_phase();
 

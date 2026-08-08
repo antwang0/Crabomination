@@ -160,6 +160,11 @@ pub fn play_recorded_game(
     for seat in 0..2 {
         g.players[seat].library.shuffle(&mut rng);
     }
+    // The in-game rolls (mulligan reshuffles, random discards) key off the
+    // same seed, so a training game that crashes or produces a suspect row
+    // can be replayed exactly. Derived rather than drawn, so the explore
+    // draw below keeps its old position in the stream.
+    g.rng.reseed(seed ^ 0x5EED_600D_C0DE_1234);
     g.start_mulligan_phase();
     // Opening-move exploration. Both seats otherwise play the same
     // deterministic policy, so the net only ever sees the narrow band of
