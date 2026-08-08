@@ -7466,7 +7466,17 @@ impl GameState {
     fn gather_continuous_effects_inner(&self) -> Vec<ContinuousEffect> {
         // Include static-ability effects from permanents currently on the battlefield.
         let mut all_effects: Vec<ContinuousEffect> = (*self.continuous_effects).clone();
-        for card in &self.battlefield {
+        // Most passes below are gated on `definition.static_abilities`, and a
+        // typical board is vanilla creatures and basic lands. Filter once so
+        // those passes walk the handful of cards that can contribute instead
+        // of striding the whole battlefield ~40 times. Order is preserved, so
+        // the emitted effect sequence is unchanged.
+        let sa_cards: Vec<&CardInstance> = self
+            .battlefield
+            .iter()
+            .filter(|c| !c.definition.static_abilities.is_empty())
+            .collect();
+        for &card in &sa_cards {
             // CR 613.7a — static-ability effects carry the source object's
         // timestamp (entry-stamped; id-order fallback for unstamped objects).
         let ts = card.object_timestamp();
@@ -8050,7 +8060,7 @@ impl GameState {
         // the live `attacking` list and scope the grant to the source's own
         // attackers. Layer-6 keyword addition, like the equipment grants.
         if !self.attacking.is_empty() {
-            for card in &self.battlefield {
+            for &card in &sa_cards {
                 for sa in &card.definition.static_abilities {
                     let crate::effect::StaticEffect::GrantKeywordToAttackers { keyword } =
                         &sa.effect
@@ -8089,7 +8099,7 @@ impl GameState {
         // filters mentioning them resolve here into a Specific id list per
         // recompute; `affected_from_requirement` drops them on the static
         // path, so there's no double application.
-        for card in &self.battlefield {
+        for &card in &sa_cards {
             for sa in &card.definition.static_abilities {
                 // CR 716.2 / 611.2 — peel the level/turn/counter gates to the
                 // inner grant (Blacksmith's Talent's level-3 "during your
@@ -8120,7 +8130,7 @@ impl GameState {
         // battlefield, so `PumpPT` statics over them resolve here into a
         // Specific id list per recompute; `affected_from_requirement` drops
         // them on the static path, so there's no double application.
-        for card in &self.battlefield {
+        for &card in &sa_cards {
             for sa in &card.definition.static_abilities {
                 // CR 611.2 — peel any `While*` gate first, so a gated combat
                 // anthem (Watchdog's untapped rider) still resolves live.
@@ -8151,7 +8161,7 @@ impl GameState {
         // <condition>" (Kor Duelist's "double strike while equipped"). The
         // condition reads live board state, so it resolves here per recompute
         // into a layer-6 self keyword.
-        for card in &self.battlefield {
+        for &card in &sa_cards {
             for sa in &card.definition.static_abilities {
                 let crate::effect::StaticEffect::SelfHasKeywordWhile { keyword, condition } =
                     &sa.effect
@@ -8179,7 +8189,7 @@ impl GameState {
         }
         // Predicate-gated sibling of the loop above — the condition reads live
         // board state relative to the source (e.g. "you control another Faerie").
-        for card in &self.battlefield {
+        for &card in &sa_cards {
             for sa in &card.definition.static_abilities {
                 let crate::effect::StaticEffect::SelfHasKeywordWhilePredicate { keyword, condition } =
                     &sa.effect
@@ -8205,7 +8215,7 @@ impl GameState {
         // to [colors] ≥ threshold." Emit a layer-4 RemoveCardType(Creature)
         // self-effect while the gate is unmet; reading devotion needs the
         // live GameState, so it can't route through static_ability_to_effects.
-        for card in &self.battlefield {
+        for &card in &sa_cards {
             for sa in &card.definition.static_abilities {
                 let crate::effect::StaticEffect::NotCreatureWhileDevotionBelow {
                     colors,
@@ -8231,7 +8241,7 @@ impl GameState {
         // enchantment becomes an `MV/MV` creature. Starfield gates on the
         // controller holding five or more enchantments, so the set is gathered
         // state-aware rather than through `static_ability_to_effects`.
-        for card in &self.battlefield {
+        for &card in &sa_cards {
             for sa in &card.definition.static_abilities {
                 let crate::effect::StaticEffect::NonAuraEnchantmentsAreCreatures {
                     yours_only,
@@ -8288,7 +8298,7 @@ impl GameState {
         // CR 613 — March of the Machines: each noncreature artifact becomes an
         // `MV/MV` artifact creature. Gathered state-aware alongside Opalescence
         // (the affected set is "artifact and not already a creature").
-        for card in &self.battlefield {
+        for &card in &sa_cards {
             for sa in &card.definition.static_abilities {
                 if !matches!(sa.effect, crate::effect::StaticEffect::NoncreatureArtifactsAreCreatures)
                 {
@@ -8322,7 +8332,7 @@ impl GameState {
         }
         // Titania's Song — the ability-stripping half of the same animation
         // (layer 6), paired on the card with `NoncreatureArtifactsAreCreatures`.
-        for card in &self.battlefield {
+        for &card in &sa_cards {
             for sa in &card.definition.static_abilities {
                 if !matches!(
                     sa.effect,
@@ -8349,7 +8359,7 @@ impl GameState {
         // The bonus differs per affected permanent (it excludes itself), so
         // this is gathered state-aware: one Specific effect per matching
         // permanent, scaled by the live count minus one.
-        for card in &self.battlefield {
+        for &card in &sa_cards {
             for sa in &card.definition.static_abilities {
                 let crate::effect::StaticEffect::PumpPTPerOtherOfType {
                     creature_type,
@@ -8439,7 +8449,7 @@ impl GameState {
         // War Balloon — "as long as this has N+ [kind] counters, it's a
         // creature." Emit a layer-4 AddCardType(Creature) self-effect while
         // the count holds (printed P/T already carry the stats).
-        for card in &self.battlefield {
+        for &card in &sa_cards {
             for sa in &card.definition.static_abilities {
                 let crate::effect::StaticEffect::SelfIsCreatureWhileCountersAtLeast { kind, n } =
                     &sa.effect
@@ -8461,7 +8471,7 @@ impl GameState {
         }
         // Idol of False Gods — "as long as this has N+ [kind] counters, it has
         // [keyword]." Layer-6 keyword grant while the count holds.
-        for card in &self.battlefield {
+        for &card in &sa_cards {
             for sa in &card.definition.static_abilities {
                 let crate::effect::StaticEffect::SelfHasKeywordWhileCountersAtLeast { kind, n, keyword } =
                     &sa.effect
@@ -8505,7 +8515,7 @@ impl GameState {
         // Death-Mask Duplicant — the imprinted card's evasion keywords bleed
         // onto the Duplicant. Matched by variant so the printed "landwalk" /
         // "protection" families cover any land type / colour.
-        for card in &self.battlefield {
+        for &card in &sa_cards {
             for sa in &card.definition.static_abilities {
                 let crate::effect::StaticEffect::GainKeywordsFromExiledWith { keywords } =
                     &sa.effect
@@ -8534,7 +8544,7 @@ impl GameState {
         }
         // Phyrexian Ingester — the imprinted creature card's printed P/T is
         // added as a layer-7c pump.
-        for card in &self.battlefield {
+        for &card in &sa_cards {
             if !card.definition.static_abilities.iter().any(|sa| {
                 matches!(sa.effect, crate::effect::StaticEffect::PumpSelfByExiledWithStats)
             }) {
@@ -8561,7 +8571,7 @@ impl GameState {
         }
         // Mirror Golem — "protection from each of the exiled card's card types"
         // (CR 702.16), live-resolved off the imprint.
-        for card in &self.battlefield {
+        for &card in &sa_cards {
             if !card.definition.static_abilities.iter().any(|sa| {
                 matches!(
                     sa.effect,
@@ -8589,7 +8599,7 @@ impl GameState {
         // Alpine Moon — opponents' lands matching the source's chosen name
         // lose all land types and abilities (the any-color mana grant rides
         // a separate `GrantActivatedAbility` over `NamedBySource`).
-        for card in &self.battlefield {
+        for &card in &sa_cards {
             let has = card.definition.static_abilities.iter().any(|sa| {
                 matches!(sa.effect, crate::effect::StaticEffect::NamedLandsNeutralized)
             });
@@ -8625,7 +8635,7 @@ impl GameState {
         // Ultima — lands with a blight counter lose all land types and
         // abilities (the "{T}: Add {C}" half rides a `GrantActivatedAbility`
         // over `WithCounter(Blight)` lands).
-        for card in &self.battlefield {
+        for &card in &sa_cards {
             let has = card.definition.static_abilities.iter().any(|sa| {
                 matches!(sa.effect, crate::effect::StaticEffect::BlightedLandsNeutralized)
             });
@@ -8663,7 +8673,7 @@ impl GameState {
         // (`StaticEffect::PumpSelfByControlledPermanents`) — count the
         // controller's matching battlefield permanents live and emit a
         // layer-7 ModifyPowerToughness self-effect.
-        for card in &self.battlefield {
+        for &card in &sa_cards {
             for sa in &card.definition.static_abilities {
                 let crate::effect::StaticEffect::PumpSelfByControlledPermanents {
                     filter,
@@ -8709,7 +8719,7 @@ impl GameState {
         // "This creature gets +P/+T for each [thing]" where the count is an
         // arbitrary `Value` (`StaticEffect::PumpSelfByValue`) — evaluated live
         // against the source, then emitted as a layer-7 self-effect.
-        for card in &self.battlefield {
+        for &card in &sa_cards {
             for sa in &card.definition.static_abilities {
                 let Some(inner) = self.active_static(&sa.effect, card) else { continue };
                 let crate::effect::StaticEffect::PumpSelfByValue {
@@ -8748,7 +8758,7 @@ impl GameState {
         // "[applies_to] you control get +P/+T for each Equipment attached to
         // this creature" (Armament Master) — count the source's own
         // attachments, then emit a per-affected layer-7 pump.
-        for card in &self.battlefield {
+        for &card in &sa_cards {
             for sa in &card.definition.static_abilities {
                 let crate::effect::StaticEffect::PumpTeamPerAttachmentOnSource {
                     applies_to,
@@ -8807,7 +8817,7 @@ impl GameState {
         // `count_graveyard`), then emit a per-affected layer-7 pump. Warrior of
         // Light (legendary anthem) and Cid, Timeless Artificer (graveyard-aware
         // Artificer count) ride this.
-        for card in &self.battlefield {
+        for &card in &sa_cards {
             for sa in &card.definition.static_abilities {
                 let crate::effect::StaticEffect::PumpTeamByControlledPermanents {
                     applies_to,
@@ -8888,7 +8898,7 @@ impl GameState {
         // (`StaticEffect::PumpSelfIf`) — evaluate the gating predicate live
         // against the source and, while it holds, emit a layer-7 pump plus an
         // optional keyword grant.
-        for card in &self.battlefield {
+        for &card in &sa_cards {
             for sa in &card.definition.static_abilities {
                 let crate::effect::StaticEffect::PumpSelfIf {
                     condition,
@@ -8932,7 +8942,7 @@ impl GameState {
         // "As long as [condition], this creature has base power and toughness
         // P/T." (`StaticEffect::SetBasePtIf`) — a live layer-7b set (Snowmelt
         // Stag). +N/+M and counters still stack on top per CR 613.7c/f.
-        for card in &self.battlefield {
+        for &card in &sa_cards {
             for sa in &card.definition.static_abilities {
                 let crate::effect::StaticEffect::SetBasePtIf { condition, power, toughness } =
                     &sa.effect
@@ -8962,7 +8972,7 @@ impl GameState {
         // (`StaticEffect::GrantPumpSelfIf`) — Sedge Sliver. The condition is
         // evaluated per matching permanent with that permanent's controller
         // as "you".
-        for card in &self.battlefield {
+        for &card in &sa_cards {
             for sa in &card.definition.static_abilities {
                 let crate::effect::StaticEffect::GrantPumpSelfIf {
                     filter,
@@ -9017,7 +9027,7 @@ impl GameState {
         }
         // "[Creatures the selector picks] get +X/+Y" with live Values
         // (`StaticEffect::PumpPTByValue`) — Meishin's hand-sized shrink.
-        for card in &self.battlefield {
+        for &card in &sa_cards {
             for sa in &card.definition.static_abilities {
                 let crate::effect::StaticEffect::PumpPTByValue { applies_to, power, toughness } =
                     &sa.effect
@@ -9053,7 +9063,7 @@ impl GameState {
         // the gate against the source; while it holds, emit a layer-7 pump for
         // every permanent the selector resolves to (e.g. Beastmaster Ascension
         // at 7+ quest counters → all your creatures +5/+5).
-        for card in &self.battlefield {
+        for &card in &sa_cards {
             for sa in &card.definition.static_abilities {
                 let crate::effect::StaticEffect::PumpTeamIf {
                     condition,
@@ -9115,7 +9125,7 @@ impl GameState {
         // CR 702.44 — "each other Samurai you control gets +1/+1 for each point
         // of bushido it has" (Takeno). Per-permanent magnitude, so each match
         // gets its own pinned effect.
-        for card in &self.battlefield {
+        for &card in &sa_cards {
             for sa in &card.definition.static_abilities {
                 let crate::effect::StaticEffect::PumpPerBushido { filter } = &sa.effect else {
                     continue;
@@ -9155,7 +9165,7 @@ impl GameState {
         // pumps the controller's creatures of the type named at the source's
         // ETB (`CardInstance.chosen_creature_type`). Adaptive Automaton,
         // Patchwork Banner.
-        for card in &self.battlefield {
+        for &card in &sa_cards {
             for sa in &card.definition.static_abilities {
                 let crate::effect::StaticEffect::AnthemForChosenType { power, toughness, exclude_source, opponents, all_players, per_counter } =
                     &sa.effect
@@ -9202,7 +9212,7 @@ impl GameState {
         // Chosen-color anthem (`StaticEffect::AnthemForChosenColor`) — pumps the
         // controller's creatures of the color named at the source's ETB
         // (`CardInstance.chosen_color`). Heraldic Banner.
-        for card in &self.battlefield {
+        for &card in &sa_cards {
             for sa in &card.definition.static_abilities {
                 let crate::effect::StaticEffect::AnthemForChosenColor { power, toughness } =
                     &sa.effect
@@ -9232,7 +9242,7 @@ impl GameState {
         // Chosen-type keyword grant (`StaticEffect::GrantKeywordToChosenType`) —
         // grants a keyword to the controller's (or each opponent's) creatures of
         // the type named at the source's ETB. Steely Resolve, Kindred Boon.
-        for card in &self.battlefield {
+        for &card in &sa_cards {
             for sa in &card.definition.static_abilities {
                 let crate::effect::StaticEffect::GrantKeywordToChosenType { keyword, opponents } =
                     &sa.effect
@@ -9427,7 +9437,7 @@ impl GameState {
         }
         // Crown of Convergence — the anthem reads the top of the controller's
         // library, so it can only be gathered live.
-        for card in &self.battlefield {
+        for &card in &sa_cards {
             for sa in &card.definition.static_abilities {
                 let crate::effect::StaticEffect::AnthemForColorSharedWithLibraryTop {
                     power,
@@ -9470,7 +9480,7 @@ impl GameState {
         // and the per-static gather emits nothing. Resolve those live here and
         // pin the effect to the matching ids, mirroring the `AnthemForFilter`
         // stateful path above.
-        for card in &self.battlefield {
+        for &card in &sa_cards {
             for sa in &card.definition.static_abilities {
                 let (req, modification, layer, sublayer) = match &sa.effect {
                     crate::effect::StaticEffect::SetBasePtForFilter {
@@ -9523,7 +9533,7 @@ impl GameState {
         }
         // Predicate-gated self keyword (`StaticEffect::SelfHasKeywordIf`) —
         // Freya Crescent's "During your turn, Freya has flying".
-        for card in &self.battlefield {
+        for &card in &sa_cards {
             for sa in &card.definition.static_abilities {
                 let crate::effect::StaticEffect::SelfHasKeywordIf { keyword, condition } =
                     &sa.effect
@@ -9551,7 +9561,7 @@ impl GameState {
         }
         // CR 905.2b draft-noted keywords (`StaticEffect::SelfHasDraftNotedKeywords`)
         // — Animus of Predation wears whatever it removed from the draft.
-        for card in &self.battlefield {
+        for &card in &sa_cards {
             if !card.definition.static_abilities.iter().any(|sa| {
                 matches!(sa.effect, crate::effect::StaticEffect::SelfHasDraftNotedKeywords)
             }) {
@@ -9574,7 +9584,7 @@ impl GameState {
         }
         // Predicate-gated self is-a-creature (`StaticEffect::SelfIsCreatureIf`) —
         // Midnight Mangler is an artifact creature during turns other than yours.
-        for card in &self.battlefield {
+        for &card in &sa_cards {
             for sa in &card.definition.static_abilities {
                 let crate::effect::StaticEffect::SelfIsCreatureIf { condition, creature_types } =
                     &sa.effect
@@ -10219,7 +10229,7 @@ impl GameState {
         }
         // Ulamog, the Defiler — annihilator X where X = +1/+1 counters,
         // injected as a computed layer-6 keyword.
-        for card in &self.battlefield {
+        for &card in &sa_cards {
             let has = card.definition.static_abilities.iter().any(|sa| {
                 matches!(sa.effect, crate::effect::StaticEffect::AnnihilatorPerPlusOneCounter)
             });
@@ -10268,7 +10278,7 @@ impl GameState {
         // count sets its base P/T (layer 7a CDA) and grants its keywords.
         // CR 604.3 — `SelfBasePtFromValue`: a state-driven CDA on the source's
         // own base P/T (Ixidron's "equal to the number of face-down creatures").
-        for card in &self.battlefield {
+        for &card in &sa_cards {
             for sa in &card.definition.static_abilities {
                 let crate::effect::StaticEffect::SelfBasePtFromValue { power, toughness } =
                     &sa.effect
@@ -10297,7 +10307,7 @@ impl GameState {
         }
         // Porcelain Gallery — the live-magnitude `SetBasePtForFilter`: both
         // sides are `Value`s evaluated against the static's source each pass.
-        for card in &self.battlefield {
+        for &card in &sa_cards {
             for sa in &card.definition.static_abilities {
                 let crate::effect::StaticEffect::SetBasePtForFilterFromValue {
                     applies_to,
