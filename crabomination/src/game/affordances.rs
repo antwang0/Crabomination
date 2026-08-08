@@ -1524,7 +1524,11 @@ impl GameState {
     /// `splice_extra_cost`) is payable on top. Dry-run-gated per candidate so
     /// a splicer the seat can't afford alongside the host never shows up.
     /// Hosts with no affordable splicer are omitted.
-    fn spliceable_hand_cards_on(
+    ///
+    /// `pub(crate)` so the bot can ask for *this* category alone against the
+    /// probe template it already built, instead of paying for the whole
+    /// [`compute_hand_affordances`](Self::compute_hand_affordances) sweep.
+    pub(crate) fn spliceable_hand_cards_on(
         &self,
         template: &GameState,
         seat: usize,

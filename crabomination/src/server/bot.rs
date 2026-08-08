@@ -3571,7 +3571,18 @@ fn cast_candidates(
     // Arcane spell the bot is casting anyway. `spliceable` already dry-ran the
     // one-splicer case; `would_accept` re-checks the combined cost, and the
     // spliced clauses' targets are auto-aimed inside `cast_spell_spliced`.
-    for (host, splicers) in state.compute_hand_affordances(seat).spliceable {
+    // Ask for the one category we read, against the probe template this call
+    // already built. `compute_hand_affordances` would run ~40 categories of
+    // per-card dry-runs (each a full state clone) and throw 39 of them away —
+    // and `cast_candidates` runs inside the attack simulations, so that waste
+    // was multiplied per simulated priority pass. Same result: the sweep's
+    // `spliceable` field *is* this call, and it is empty off-priority.
+    let spliceable = if state.player_with_priority() == seat {
+        state.spliceable_hand_cards_on(probe, seat)
+    } else {
+        Vec::new()
+    };
+    for (host, splicers) in spliceable {
         let (target, additional_targets) = {
             let eff = state.players[seat]
                 .hand
