@@ -98,75 +98,66 @@ contention-immune, which makes it the better first look.
 
 ## Baseline
 
-Measured at `eb5f661c`, i.e. **after** every engine change either session
-landed today: this session's dispatcher fix and grant hoist, the other
-session's `Effect`/`TokenDefinition` boxing, affordance-sweep narrowing and
-card-name tallies. (The two commits above it, Round 16 and the PERF/TODO
-merge, touch only ML and trackers.) Refresh only alongside an intentional,
-explained change. Regressions beyond ~5 % get investigated before anything
-else lands — but check `host_calib_ms` first (see "How to measure").
+Re-anchored at the tip of this run's perf work (`release`, built from the
+commit that adds the mana-walker freeze). Refresh only alongside an
+intentional, explained change. Regressions beyond ~5 % get investigated
+before anything else lands — but check `host_calib_ms` first (see "How to
+measure").
 
 ```text
 bot_ladder --bench   release, rustc 1.95.0, 4-core VM, 3 worker threads
                      mimalloc (the default); measured on an idle box
 host_cpu             Intel(R) Xeon(R) Processor @ 2.10GHz
-host_calib_ms        69 / 70 / 70 / 69           <- compare this first
+host_calib_ms        48 / 65 / 58 / 48            <- compare this first
 games                320
-games_per_s          33.55 / 33.32 / 33.97 / 33.73   (mean 33.64, spread 1.9 %)
-games_per_s_th       11.18 / 11.11 / 11.32 / 11.24
-decisions_per_s      20259 / 20121 / 20510 / 20367   (mean 20314)
+games_per_s          33.26 / 33.46 / 31.98 / 33.80   (mean 33.13, spread 5.7 %)
+games_per_s_th       11.09 / 11.16 / 10.66 / 11.27
+decisions_per_s      20085 / 20208 / 19314 / 20408   (mean 20004)
 turns_per_game       26.98
 decisions_per_game   603.9
 stalls               0 (0.00 %)
-peak_rss_mib         39.0 - 40.5
-determinism          ok (160 pairs, 0 sweeps, rho -1.000)
+peak_rss_mib         38.1 - 40.8
+determinism          ok (160 pairs, 0 sweeps, all pairs split)
 ```
 
-**Not re-anchored by the 2026-08-08 sim-loop run.** That run measured its
-change as a `release-fast` A/B (see the Log row for `836059e2`) and never
-built a `release` binary of the tip, so the block above still describes
-`eb5f661c` and must not be read as covering the sim-loop freeze. Nothing
-here regressed: golden traces are byte-identical, `turns_per_game` held at
-26.98 and stalls at 0 across all 24 bench runs of that A/B. The next run to
-build `release` should re-anchor this block and say so.
-
-Stepping this session's box through the day, same binary rebuilt at each
-point: **19.76** at the branch tip this morning, 22.71 after this session's
-two fixes, 24.09 after the `Effect` boxing, **33.64** after the
-affordance-sweep pair. Only the first two steps were measured A/B here; the
-last two are baseline observations across a rebase, and the sessions ran on
-different boxes, so read the per-change rows in **Log** for the claims.
-
-This run's own binary (before the rebase) read 22.71 on the same box; the
-tip reads 24.09 and peak RSS fell 40.7-44.4 -> 38.3-41.5 MiB, both
-consistent with the `Effect` boxing that arrived with the rebase. That
-delta was **not** measured A/B by this run — it is a baseline observation,
-not a claim.
-
-**This is a different box from the previous baseline and the absolutes do
-not compare.** The 2026-08-08 baseline read 14.49 games/s on an Intel Xeon
-@ 2.80GHz with `host_calib_ms` 54-60; this box is a Xeon @ 2.10GHz with
-`host_calib_ms` 55-107 and the *unchanged* HEAD read **19.76** on it. The
-probe is not a linear correction — a slower probe here goes with faster
-games — so treat it as a box fingerprint, not a scaling factor, and only
-ever compare two binaries measured in one alternating sitting.
-
-Within this run, each step measured as its own alternated A/B sitting:
+**Read this block before concluding anything from the absolute.** The
+previous anchor (`eb5f661c`, same box model, one day earlier) read mean
+**33.64** with `host_calib_ms` 69/70/70/69. This block reads **33.13** with
+the probe at 48-65 — a *faster* probe going with slightly slower games,
+which is the same inverse relationship the "How to measure" note describes,
+and the two blocks were taken in different containers. The -1.5 % is inside
+this block's own 5.7 % spread and inside the 5 % investigate band, and the
+pre-run binary no longer exists on disk, so the two cannot be alternated.
+**The per-change rows in Log are what carry this run's claims**, and both
+were measured in a single alternated sitting on this box:
 
 ```text
-19.76 -> 21.38   trigger dispatcher stops computing the whole board  +8.2 %
-22.14 -> 23.00   grant scans hoisted out of the dispatcher's loop    +3.9 %
+release-fast, alternated A/B, one sitting each
+13,307,099,945 -> 13,052,911,075 Ir   computed_permanent memo        -1.91 %
+13,052,911,075 -> 12,235,211,102 Ir   mana walkers frozen            -6.26 %
+                                      cumulative this run            -8.06 %
+27.43 -> 28.67 games/s                mana walkers, 6/6 pairs        +4.5 %
 ```
 
-The two sittings are hours apart and the box drifted upward between them
-(the same binary read 21.38 then 22.14), so **the absolutes across the gap
-do not subtract** — the compounded figure is +12.4 %, not 23.00/19.76.
+The instruction counts are the same fixed six-game workload throughout, so
+the -8.06 % subtracts honestly; the wall-clock figures do not, which is the
+whole reason this run measured in Ir. Nothing regressed on the correctness
+side: `turns_per_game` held at 26.98 and `stalls` at 0 across all 28 bench
+runs of both A/Bs and this block, determinism ok everywhere, and all golden
+traces are byte-identical.
 
-The actor-scaling sweep from the previous run (system allocator vs mimalloc
-at 1/4/8/16/24 threads) is untouched by this run's work; its readable
-conclusion was that mimalloc's edge grows with actor count (+9 % at 1,
-+31 % at 24) while its RSS ratio stays flat at 1.5-1.7x. Re-measure on a
-box with real cores.
+The actor-scaling sweep from an earlier run (system allocator vs mimalloc
+at 1/4/8/16/24 threads) is untouched; its readable conclusion was that
+mimalloc's edge grows with actor count (+9 % at 1, +31 % at 24) while its
+RSS ratio stays flat at 1.5-1.7x. Re-measure on a box with real cores.
+
+Historical steps, kept because the percentages carry even though the
+absolutes don't: 19.76 at one morning's branch tip, 21.38 after the trigger
+dispatcher stopped computing the whole board (+8.2 %), 23.00 after the grant
+scans were hoisted (+3.9 %), 16.08 -> 22.83 for the affordance-sweep fix
+(+42.0 % fixed decks, +52.7 % sealed), 21.94 -> 23.03 for the sim-loop
+freeze (+5.0 %). Each was its own alternated sitting; none of them subtract
+across the gaps.
 
 ## Log
 
@@ -321,6 +312,26 @@ comes next, both learned the hard way this run:
    first-strike one is called once per combat from `stack.rs:243`, so cost
    it before spending on it. 404/418 and 2333/2354 genuinely want the whole
    board — leave them.
+   (e) **The mana walkers ran unfrozen** — **done, +4.5 %.** See the Log row.
+   The shape it leaves: a `&mut self` entry point (`auto_tap_for_cost_inner`)
+   means everything under it runs at `depth == 0`, however read-only. Look
+   for the `&self` sub-walkers *inside* a mutating path, not for mutating
+   paths to freeze.
+   (f) **Where the remaining unfrozen layer traffic is.** At the tip the
+   gather still runs 260,370× from `computed_permanent`, 52,332× from
+   `dispatch_triggers_for_events` and 46,090× from `compute_battlefield`.
+   The `computed_permanent` callers, by inclusive share:
+   `printed_land_mana_ability_lost` 2.04 % (72,436×), `activate_ability_inner`
+   2.01 % (36,772×), `scale_damage_to` 1.46 % (21,936×),
+   `intrinsic_land_mana_abilities` 1.27 % (85,854×), `activate_ability`
+   1.00 % (18,386×), `evaluate_requirement_static` 0.90 % (93,612×),
+   `damage_prevented_by_protection` 0.78 % (91,762×). The last two are the
+   interesting pair: both are `&self`, both are called in tight loops from
+   combat-damage resolution, and `damage_prevented_by_protection` already
+   opens its *own* one-call scope — which memoizes nothing, because the
+   scope dies with the call. Freezing the read-only damage-computation
+   region of `resolve_combat` (before any damage is applied) would give all
+   of them one scope to share. Untried; check it doesn't span a mutation.
 
 1. **Make `ComputedPermanent` cheap to build.** ~2.59 M of the profile's
    mallocs are `compute_permanent_pass` cloning five collections per
@@ -347,8 +358,15 @@ comes next, both learned the hard way this run:
 
 1.5 **`effective_mana_abilities` clones every ability it returns** — still
    open after the freeze row above, which fixed the *layer* half of this
-   cluster but not the *allocation* half.
-   (`mana_source_table` 9.53 % inclusive, of which **8.23 % is `Vec::clone``;
+   cluster but not the *allocation* half. **Do not re-try freezing it**: a
+   `with_frozen_layers` scope *inside* `effective_mana_abilities` measured
+   12,235,211,102 -> 12,239,293,155 Ir (**+0.03 %, a null**) and was
+   reverted. Its callers already hold a scope, so the nested freeze buys
+   nothing; within one `mana_source_table` scope each land's
+   `printed_land_mana_ability_lost` misses the per-card memo once and
+   `intrinsic_land_mana_abilities` then hits it. What is left is the
+   allocation (`mana_source_table` 9.53 % inclusive, of which **8.23 % is
+   `Vec::clone`**;
    `effective_mana_abilities` 9.10 %; `ActivatedAbility::clone` 331,628
    mallocs). Every untapped permanent's printed mana abilities are deep-cloned
    on every `auto_tap_for_cost_inner` (17.47 % inclusive) call, and the two
