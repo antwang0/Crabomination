@@ -3,6 +3,25 @@
 Improvement opportunities for the engine, client, and tooling.
 Items are grouped by area and roughly ordered by impact within each group.
 
+## NEXT (handoff — rewrite each run, keep under 15 lines)
+
+Branch `claude/modern_decks`. Last run was an ML/perf pass, not a card pass.
+It added `PERF.md`, `bot_ladder --bench`, golden traces, and a seeded
+`GameState::rng` (mulligan reshuffles were unseeded — see that commit).
+
+- **Perf**: pull the top `PERF.md` candidate — memoize the layer gather
+  outside freeze scopes (52 % of instructions; blocked only on a sound
+  invalidation story). Candidate 2 (merge the ~50 battlefield passes in
+  `gather_continuous_effects_inner`) is the cheaper mechanical alternative.
+  Beat 12.22 games/s on `bot_ladder --bench`; a release rebuild is 13–17 min
+  on this box, so budget two or three measured iterations, not ten.
+- **Trackers**: this file is ~9.5 k lines against the ~1 k target. ~3.5 k sit
+  in fully-closed sections and ~1.6 k in ✅-only bullets, but a mechanical
+  sweep is unsafe (some "closed" sections still list live approximations) —
+  it wants a triage pass from the card side. No `ML_NOTES.md` yet; create it
+  the next time a net/gate narrative would otherwise land here.
+- **Cards**: the Mirage residue and every ⏳ below are untouched.
+
 ## Noticed this run (Mirage wave 5)
 
 - **Graveyard targets are dropped on the activated/triggered ability path.**
