@@ -69,8 +69,12 @@ so read the ratios, not the absolutes)
   1 → 4.23     2 → 8.05 (95 % of linear)     4 → 14.56 (86 % of linear)
 ```
 
-Run-to-run spread on this box is ~2–3 %, so a claimed win under ~5 % needs
-either a microbenchmark or repeated runs.
+Re-verified at the end of the run on the final binary (which also carries
+the `--bench` determinism print): 12.13 / 12.23 / 11.83 games/s, mean
+12.06, `determinism ok` on all three. That −1.3 % against the recorded
+mean is the box's noise, not a regression — run-to-run spread here is
+~2–3 %, so a claimed win under ~5 % needs either a microbenchmark or
+repeated runs.
 
 ## Log
 
