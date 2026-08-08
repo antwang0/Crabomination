@@ -536,6 +536,7 @@ fn main() {
         // (samples consumed when the actors finished, tail allowance).
         let mut tail_budget = None::<(u64, u64)>;
         let stats_path = args.out.join("stats.jsonl");
+        let mut prev_interval = Interval::default();
         loop {
             if let Some(max) = args.steps
                 && step >= max
@@ -629,6 +630,7 @@ fn main() {
                     loss_ema,
                     start,
                     &stats_path,
+                    &mut prev_interval,
                 );
             }
         }
@@ -644,6 +646,7 @@ fn main() {
                 loss_ema,
                 start,
                 &stats_path,
+                &mut prev_interval,
             );
         }
         eprintln!(
@@ -666,6 +669,20 @@ fn main() {
     );
 }
 
+/// Counters as of the previous checkpoint, so every stats line can report
+/// the rate over *that interval* and not just the run average. A run whose
+/// throughput decays — window growth, allocator churn, actors starving on
+/// the learner's lock — shows it here and nowhere else: the cumulative
+/// rate is dominated by however the run started.
+#[derive(Default)]
+struct Interval {
+    secs: f64,
+    games: u64,
+    rows: u64,
+    consumed: u64,
+    step: u64,
+}
+
 #[allow(clippy::too_many_arguments)]
 fn checkpoint(
     trainer: &Trainer,
@@ -678,6 +695,7 @@ fn checkpoint(
     loss_ema: [f32; 4],
     start: Instant,
     stats_path: &std::path::Path,
+    prev: &mut Interval,
 ) {
     let tmp = args.out.join("latest.safetensors.tmp");
     trainer.save(&tmp).expect("save checkpoint");
@@ -722,8 +740,19 @@ fn checkpoint(
             }
         }
     };
+    // Interval rates: what the simulator and learner did since the last
+    // checkpoint. `*_cum` stay alongside them so a decaying run reads as a
+    // gap between the two rather than as a single ambiguous number.
+    let dt = (secs - prev.secs).max(1e-9);
+    let dg = games.saturating_sub(prev.games) as f64 / dt;
+    let dr = rows.saturating_sub(prev.rows) as f64 / dt;
+    let dc = consumed.saturating_sub(prev.consumed) as f64 / dt;
+    let ds = step.saturating_sub(prev.step) as f64 / dt;
+    *prev = Interval { secs, games, rows, consumed, step };
+    let cum_g = games as f64 / secs.max(1e-9);
+    let cum_r = rows as f64 / secs.max(1e-9);
     let line = format!(
-        "{{\"step\":{step},\"loss_ema\":{total:.5},\"loss_win\":{win:.5},\"loss_life\":{life:.5},\"loss_len\":{len:.5},\"loss_deck\":{deck_loss:.5},\"val_n\":{val_n},\"val_win\":{val_win:.5},\"val_logloss\":{val_ll:.5},\"val_auc\":{val_auc:.5},\"rows_consumed\":{consumed},\"rows\":{rows},\"games\":{games},\"stalls\":{stalls},\"elapsed_s\":{secs:.0}}}\n"
+        "{{\"step\":{step},\"loss_ema\":{total:.5},\"loss_win\":{win:.5},\"loss_life\":{life:.5},\"loss_len\":{len:.5},\"loss_deck\":{deck_loss:.5},\"val_n\":{val_n},\"val_win\":{val_win:.5},\"val_logloss\":{val_ll:.5},\"val_auc\":{val_auc:.5},\"rows_consumed\":{consumed},\"rows\":{rows},\"games\":{games},\"stalls\":{stalls},\"elapsed_s\":{secs:.0},\"games_per_s\":{dg:.3},\"rows_per_s\":{dr:.1},\"consumed_per_s\":{dc:.1},\"steps_per_s\":{ds:.3},\"games_per_s_cum\":{cum_g:.3},\"rows_per_s_cum\":{cum_r:.1}}}\n"
     );
     use std::io::Write;
     let mut f = std::fs::OpenOptions::new()
@@ -738,8 +767,8 @@ fn checkpoint(
         String::new()
     };
     eprintln!(
-        "step {step}: loss {total:.4} (win {win:.4}){val_note}, {games} games, {rows} rows ({:.1} games/s)",
-        games as f64 / secs.max(0.001)
+        "step {step}: loss {total:.4} (win {win:.4}){val_note}, {games} games, {rows} rows \
+         ({dg:.1} games/s, {dr:.0} rows/s this interval; {cum_g:.1} games/s cum)",
     );
 }
 
