@@ -5687,6 +5687,11 @@ pub enum Effect {
     /// [color] instead of any other type" (Deep Water). The turn-scoped,
     /// controller-scoped sibling of `StaticEffect::LandsProduceColorInstead`.
     YourLandsProduceColorThisTurn(crate::mana::Color),
+    /// "That player chooses a color. Until end of turn, lands tapped for mana
+    /// produce mana of the chosen color instead of any other type" (Hall of
+    /// Gemstone). The global twin of `YourLandsProduceColorThisTurn` — the
+    /// lock binds every seat, not just the chooser's.
+    AllLandsProduceChosenColorThisTurn { chooser: PlayerRef },
     /// "Each player may discard up to `max` cards. This deals damage to each
     /// player equal to `max` minus the number they discarded" (Mind Bomb).
     EachPlayerMayDiscardUpToThenDamage { max: u32 },

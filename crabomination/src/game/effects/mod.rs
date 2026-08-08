@@ -9420,6 +9420,26 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::AllLandsProduceChosenColorThisTurn { chooser } => {
+                use crate::decision::{Decision, DecisionAnswer};
+                use crate::mana::Color;
+                let Some(seat) = self.resolve_player(chooser, ctx) else { return Ok(()) };
+                let legal =
+                    vec![Color::White, Color::Blue, Color::Black, Color::Red, Color::Green];
+                let color = match self.decider.decide(&Decision::ChooseColor {
+                    source: ctx.source.unwrap_or(CardId(0)),
+                    legal,
+                }) {
+                    DecisionAnswer::Color(c) => c,
+                    _ => Color::White,
+                };
+                let _ = seat;
+                for p in self.players.iter_mut() {
+                    p.lands_produce_color_this_turn = Some(color);
+                }
+                Ok(())
+            }
+
             // Mind Bomb — each player trades cards for damage.
             Effect::EachPlayerMayDiscardThenTutorBasic => {
                 use crate::card::Supertype;

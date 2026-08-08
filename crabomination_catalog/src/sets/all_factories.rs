@@ -12072,6 +12072,7 @@ static MIR5: &[Factory] = &[
     super::mir5::delirium,
     super::mir5::emberwilde_djinn,
     super::mir5::shadowbane,
+    super::mir5::hall_of_gemstone,
 ];
 static MKM: &[Factory] = &[
     super::mkm::repeat_offender,

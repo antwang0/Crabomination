@@ -2754,8 +2754,9 @@ Each a small targeted feature; sweep batch by batch.
    phasing their first real card coverage. **Visions (VIS) is closed** too (`set_gaps.py vis` at zero —
    `sets::vis` + `sets::vis2`, tests in `classic_sets/vis`), which finishes
    the Mirage block's second set. **Mirage (MIR) itself is the live front**
-   (`set_gaps.py mir` at 54 after this push, `sets::mir`–`mir4`); Coldsnap
-   (CSP) is open in parallel.
+   (`set_gaps.py mir` at 19 after this push, `sets::mir`–`mir5`); Coldsnap
+   (CSP) is open in parallel. Each of MIR's last 19 is blocked on one
+   primitive — TODO.md → "Mirage residue" names them card by card.
 1. **Replacement-effect framework** (Tier-1 #1) — highest-leverage primitive still
    open.
 2. **Card-zoom + stops/auto-yield + combat-math preview** (Tier-7 #1–3) — the trio
@@ -2770,6 +2771,23 @@ Each a small targeted feature; sweep batch by batch.
 7. **Replays, spectator, social, accessibility** as the product matures.
 
 ## Recently closed (this push)
+
+- **Mirage waves 5–7** — 36 more cards (`set_gaps.py mir` 54 → 19),
+  `sets::mir5`, tests in `classic_sets/mir`. New primitives, each forced by a
+  card: `Effect::{ExileAtNextEndStep, SacrificeSourceUnlessSacrificeTotalPower,
+  DiscardUnlessPutCardOnTop, AssignsNoCombatDamageThisTurn,
+  LookTopPutOneOnBottom, AllLandsProduceChosenColorThisTurn}`,
+  `Keyword::CantPhaseOut` (CR 702.26),
+  `StaticEffect::ReduceSpellDamageBy`,
+  `SelectionRequirement::HasChosenLandTypeOfSource`,
+  `DynamicPt::ChosenPlayerGraveyardMatching`, and knobs on the existing
+  prevention / look / return families (`exile_top_per_prevented`, `reflect`,
+  `gain_life_colors`, `LookTopMayBottomAllElse.who`,
+  `ReturnExiledBySourceToBattlefield.count`,
+  `EachPlayerKeepsNSacrificesRest.filter`, `CatchUpBasicLands.target/tapped`).
+  Correctness: 125 of the 164 silent target-walker gaps closed and the rest
+  ratcheted by `core_rules/target_walkers`; CR 704.5m, 702.26c and the
+  anywhere-shield redirect pinned in `core_rules/cr_recent98`.
 
 - **Mirage (MIR) opened** — 221 cards across `sets::mir`–`mir4`
   (`set_gaps.py mir` 275 → 54), tests in `classic_sets/mir`. The slow-fetch

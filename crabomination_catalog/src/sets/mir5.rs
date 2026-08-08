@@ -922,3 +922,18 @@ pub fn shadowbane() -> CardDefinition {
         },
     )
 }
+
+/// Hall of Gemstone — {1}{G}{G} World enchantment; each upkeep its turn's
+/// player names a colour and every land pays in it for the turn.
+pub fn hall_of_gemstone() -> CardDefinition {
+    CardDefinition {
+        supertypes: vec![Supertype::World],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::AnyPlayer),
+            effect: Effect::AllLandsProduceChosenColorThisTurn {
+                chooser: PlayerRef::ActivePlayer,
+            },
+        }],
+        ..enchantment("Hall of Gemstone", cost(&[generic(1), g(), g()]))
+    }
+}

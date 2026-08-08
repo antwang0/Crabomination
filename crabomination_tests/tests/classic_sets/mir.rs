@@ -2169,3 +2169,33 @@ fn shadowbane_pays_back_only_black_sources() {
         "one-event shield with the black-source refund"
     );
 }
+
+/// Hall of Gemstone locks every land to the turn player's named colour.
+#[test]
+fn hall_of_gemstone_locks_every_land_to_one_color() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::hall_of_gemstone());
+    g.step = TurnStep::Untap;
+    while g.step != TurnStep::PreCombatMain {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+        drain_stack(&mut g);
+    }
+    let locked = g.players[0].lands_produce_color_this_turn.expect("named a colour");
+    assert_eq!(
+        g.players[1].lands_produce_color_this_turn,
+        Some(locked),
+        "the lock binds every seat, not just the chooser"
+    );
+    let forest = g.add_card_to_battlefield(1, catalog::forest());
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: forest,
+        ability_index: 0,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("tap for mana");
+    assert_eq!(g.players[1].mana_pool.amount(locked), 1, "paid in the named colour");
+}

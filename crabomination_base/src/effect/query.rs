@@ -522,6 +522,7 @@ impl Effect {
             Effect::ExileEachTopFreePlayLesser => false,
             Effect::LookTopTakeOneDeployLandsRestGraveyard { .. } => false,
             Effect::LookTopPutOneOnBottom { .. } => false,
+            Effect::AllLandsProduceChosenColorThisTurn { chooser } => player_has_target(chooser),
             Effect::ReduceEquipCost { .. }
             | Effect::SacrificeAtNextUpkeep { .. }
             | Effect::SacrificeAtNextEndStep { .. } => false,
