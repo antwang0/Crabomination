@@ -11009,12 +11009,8 @@ impl GameState {
         // effect (Mercurial Transformation / Turn to Frog) don't fire
         // printed Magecraft / spell-cast triggers. Pre-compute the stripped
         // set so the filter below can drop those listeners.
-        let stripped: std::collections::HashSet<CardId> = self
-            .compute_battlefield()
-            .into_iter()
-            .filter(|c| c.lost_all_abilities)
-            .map(|c| c.id)
-            .collect();
+        let stripped: std::collections::HashSet<CardId> =
+            self.permanents_with_abilities_removed().into_iter().collect();
         // Whether the cast spell came from its caster's hand, read off the
         // stack item. Stamped into the trigger context so
         // `Predicate::CastFromHand` (Quandrix, the Proof) reflects the
@@ -13319,9 +13315,7 @@ impl GameState {
             && !source_in_command
         {
             let locked = self
-                .compute_battlefield()
-                .iter()
-                .find(|c| c.id == card_id)
+                .computed_permanent(card_id)
                 .is_some_and(|c| c.keywords.contains(&Keyword::CantActivateAbilities));
             if locked {
                 return Err(GameError::AbilitySuppressedByNamedCard);
