@@ -5136,22 +5136,28 @@ fn pick_turn_face_up(state: &GameState, seat: usize) -> Option<GameAction> {
 ///
 /// Takes a prebuilt [`GameState::grant_scan`] because every caller runs it in
 /// a per-permanent loop; without it each card re-walked the whole board.
-fn usable_abilities(
+///
+/// The printed half is *borrowed* from `card.definition` — every caller only
+/// reads `.effect` and the cost fields, and deep-cloning the printed list per
+/// permanent per generator was 1.71 % of the program on its own. Only the
+/// grants, which are synthesized, are owned.
+fn usable_abilities<'a>(
     state: &GameState,
-    card: &crate::card::CardInstance,
+    card: &'a crate::card::CardInstance,
     scan: &crate::game::actions::GrantScan<'_>,
-) -> Vec<(usize, crate::effect::ActivatedAbility)> {
-    let printed = card.definition.activated_abilities.clone();
+) -> Vec<(usize, std::borrow::Cow<'a, crate::effect::ActivatedAbility>)> {
+    let printed = &card.definition.activated_abilities;
     let n = printed.len();
     printed
-        .into_iter()
+        .iter()
+        .map(std::borrow::Cow::Borrowed)
         .enumerate()
         .chain(
             state
                 .granted_abilities_with(card.id, scan)
                 .into_iter()
                 .enumerate()
-                .map(|(i, ab)| (n + i, ab)),
+                .map(|(i, ab)| (n + i, std::borrow::Cow::Owned(ab))),
         )
         .collect()
 }
