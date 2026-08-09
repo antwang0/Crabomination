@@ -296,12 +296,17 @@ impl GameState {
             }
         }
 
+        // One whole-board layer pass for the whole declaration. Everything
+        // from here to the trigger collection is validation — nothing mutates
+        // a layer input — and the band, attacks-alone, can't-attack-alone and
+        // trigger passes were each taking their own, up to four per call.
+        let computed = self.compute_battlefield();
+
         // CR 702.22c-d — band legality: every member must be attacking, at
         // most one may lack banding, at least one must have it, and they must
         // all attack the same defender. Read from the *computed* keyword set
         // so a granted banding counts.
         {
-            let computed = self.compute_battlefield();
             let has_banding = |id: CardId| {
                 computed.iter().any(|c| c.id == id && c.keywords.contains(&Keyword::Banding))
             };
@@ -401,9 +406,8 @@ impl GameState {
         // single attacker. Read from the computed keyword set so granted
         // variants count.
         if attacks.len() > 1 {
-            let computed_pre = self.compute_battlefield();
             if attacks.iter().any(|atk| {
-                computed_pre
+                computed
                     .iter()
                     .find(|c| c.id == atk.attacker)
                     .is_some_and(|c| c.keywords.contains(&Keyword::AttacksAlone))
@@ -415,8 +419,7 @@ impl GameState {
         // CR 508.0 — "can't attack alone" (Militia Rallier). A lone attacker
         // carrying CantAttackAlone makes the batch illegal.
         if attacks.len() == 1 {
-            let computed_pre = self.compute_battlefield();
-            if computed_pre.iter().find(|c| c.id == attacks[0].attacker).is_some_and(|c| {
+            if computed.iter().find(|c| c.id == attacks[0].attacker).is_some_and(|c| {
                 c.keywords.contains(&Keyword::CantAttackAlone)
                     || c.keywords.contains(&Keyword::CantAttackOrBlockAlone)
             }) {
@@ -444,7 +447,6 @@ impl GameState {
             usize,
             Option<crate::effect::Predicate>,
         )> = vec![];
-        let computed = self.compute_battlefield();
         let computed_kw = |id: CardId| -> &[Keyword] {
             computed
                 .iter()
