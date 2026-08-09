@@ -1,0 +1,35 @@
+# W/B — the sim-distilled deck judge's top pick of 512 candidates from
+# decks/sealed_pool.txt (net nets_distill7/deck-distilled.safetensors,
+# round 16: trained on gauntlet win-rate labels incl. search-visited
+# builds; vs-static gate 61.0% [59.6, 62.4]).
+# Rematch of the round-11 duel the pre-distillation net pick lost
+# 43.9%/44.2% to sealed_wb_sim.txt.
+# RESULT (2026-08-09): lost 38.1% [36.6, 39.6] / 39.2% [37.7, 40.7] on
+# seeds 11/12 (2000 antithetic pairs each) — worse than the old net
+# pick. Traded the sim pick's four bodies for reactive spells + a land.
+# The vs-static gate does not measure top-pick quality: an argmax under
+# judge error is winner's-curse territory. Sim judge stays the deck
+# authority; kept as the measured record.
+1 Ad Nauseam
+1 Adventurous Eater
+1 Arnyn, Deathbloom Botanist
+1 Ascendant Dustspeaker
+1 Emeritus of Truce
+2 Forum of Amity
+1 Hop to It
+1 Imperious Inkmage
+2 Inkling Mascot
+1 Inkshape Demonstrator
+1 Melancholic Poet
+2 Page, Loose Leaf
+8 Plains
+1 Poisoner's Apprentice
+1 Quill-Blade Laureate
+1 Rapier Wit
+1 Rehearsed Debater
+1 Scolding Administrator
+1 Soaring Stoneglider
+1 Social Snub
+8 Swamp
+1 Tragedy Feaster
+1 Wander Off

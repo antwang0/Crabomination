@@ -58,6 +58,21 @@ only stays dead while the reasoning that killed it is readable.
   stratum both plays and benches reports **no** within-archetype number
   rather than passing the marginal off as one. `recommend_pool` prints
   `within` first and labels `raw` as the confound.
+- 🔴 **Deck_duel rematch (2026-08-09) — the distilled judge's top pick
+  is WORSE than the old net's.** The round-16 loop's final judge
+  (`nets_distill7/deck-distilled.safetensors`, vs-static 61.0 %,
+  exploit gate ~40 %) picked its best of 512 builds from
+  `decks/sealed_pool.txt`; against the simulation judge's pick it lost
+  **38.1 % [36.6, 39.6] / 39.2 % [37.7, 40.7]** (2 000 antithetic pairs
+  × seeds 11/12) — below the pre-distillation net pick's 43.9/44.2 on
+  the same protocol. The pick traded the sim build's four bodies for
+  reactive spells + an 18th source (`decks/sealed_wb_distill.txt`).
+  Reading: the vs-static gate scores *ranking over the whole candidate
+  set against a weak judge*; a top pick is an argmax under judge error
+  — winner's curse — and distillation fixed the exploit gate without
+  fixing top-of-ranking value. The deck net's honest role is unchanged
+  and now precisely bounded: fast surrogate ranker, never the pick.
+  The sim judge sleeves the deck.
 - 🟡 **Round 23 (2026-08-09) — actor-side softmax action sampling:
   null at the first dose.** Infrastructure landed and stays (thread-
   local `set_action_sampling` over the three live scored pickers,
