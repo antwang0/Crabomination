@@ -16,38 +16,46 @@ reference and want their own triage pass):
 
 ## NEXT (handoff — rewrite each run, keep under 15 lines)
 
-Branch `claude/modern_decks`. Tenth pass: three commits, two perf and one
-defect. **6,497,854,664 -> 6,150,469,969 Ir on the fixed six-game workload,
--5.35 %** over four callgrind A/Bs, and **55.72 -> 58.70 games/s, +5.35 %**
-at `release` + mimalloc — a same-box alternated A/B against the pre-run tip,
-4/4 pairs positive (the anchor reads 60.46 after rebasing onto the ML run's
-three commits; they don't touch the bench path). The two methods agreeing to two digits is new; read
-Baseline's box line before comparing absolutes to the last anchor.
+Branch `claude/modern_decks`. Eleventh pass, four perf commits, one shape.
+**6,151,471,423 -> 5,798,284,923 Ir on the fixed six-game workload, -5.74 %**,
+base-vs-tip callgrind on the current base (`87d76144`). Started from the same
+branch point as the tenth pass and was **rebased on top of it**, so the four
+per-commit numbers in the messages were measured against 6,539,623,988 and
+don't chain — PERF's Log block says so and the -5.74 % is the one that counts.
 
-- **The run's row is `f1908d4f`, -4.37 %**: the gather's `AnthemForFilter`
-  walk was still chaining the whole battlefield, and Leyline of Singularity's
-  presence check was the Coat of Arms shape verbatim. Found by listing every
-  *top-level statement* in `gather_continuous_effects_inner` instead of
-  grepping for `for card in &self.battlefield`. Gather self -31.1 %.
-- **`ColdState` (`69f3a94b`, -0.93 %)**: 90 rarely written collections behind
-  one `CowBox`, `Deref`/`DerefMut` so no call site changed. Two nulls are
-  written up in PERF and are worth reading before redoing them: **widening
-  that group to 126 fields read +1.23 %** (unshare probability, not size, is
-  the variable), and hand-hoisting `compute_permanent`'s CR 613.8 gate scans
-  read -0.007 % because LLVM already does it.
-- **Next up, in order**: (1) **PERF candidate 0.5 — the transaction
-  checkpoint is still 6.4 %** (clone 2.51 + drop 3.95) for a rollback that
-  fired 20 times in 64,248 actions; the bot's sim loop is where the actions
-  are. (2) The gather's `GraveyardAnthem` pass, the last unconditional
-  whole-zone walk in it. (3) `_int_malloc`/`_int_free` at **18.0 %** is now
-  the biggest single block and no row has ever attacked it head-on.
-- **Bugs**: the `keyword_counters` `HashMap`-order defect is **fixed**
-  (`86670250`, insertion-ordered newtype + an ordering test). The
+- **All four rows are one shape: a `&mut self` path taking a
+  `computed_permanent` outside a freeze scope**, each re-gathering every
+  continuous effect in the game to answer one question about one card.
+  `do_untap` did it twice per permanent (-4.08 %), `activate_ability` +
+  `_inner` four times per activation, `scale_damage_to` twice per call.
+  **Gathers from `computed_permanent` 260,370 -> 151,776 (-42 %).**
+- **How to find the next one** (now in PERF's notes): `--tree=caller` on
+  `computed_permanent`, divide each caller's inclusive Ir by its call count.
+  >2,000/call = unfrozen, worth a gather each; a few hundred = already in a
+  scope, worth ~200 Ir. That distinction is why the land-mana row was costed
+  at 2 % and returned 0.26 %.
+- **Two builds disagreed about the same change**: hoisting `compute_permanent`'s
+  CR 613.8 gate scans read -0.007 % on the tenth pass's base (LLVM had done it)
+  and -0.63 % on the branch point's (it had not). Dropped in the rebase;
+  written up so a third attempt doesn't cost two more builds.
+- **Owed first: the paired `--bench` A/B this pass could not take.** The base
+  release binary was lost to a container restart and a second 25-min release
+  build didn't fit. The new anchor (61.07 vs 60.46, calib 47-53 vs 45-49) says
+  *no regression* — turns/game 26.98, stalls 0, RSS 22.2-22.4, determinism ok —
+  but it cannot separate -5.74 % Ir from a 6.7 % spread. Build `87d76144` into
+  a worktree target dir and alternate.
+- **Next up, in order**: (1) **`compute_battlefield`, 13.09 % inclusive and
+  untouched for two passes** — PERF candidate (A). (2) PERF candidate 0.5,
+  the transaction checkpoint, still ~10 % between clone and drop. (3) The
+  allocator at **18.4 %**, still never attacked head-on.
+- **Bugs**: no open entries in "Engine — Robustness / defects". The
   panic/unwrap sweep of the self-play path is still untouched (~183
-  `unwrap()`/`expect()` under `game/` + `bot.rs`).
-- **Disk**: `target/debug/incremental` hit 17 G and filled the volume to
-  98 %; deleting it freed 17 G. Do it *before* a second release build.
-- **Trackers**: TODO 793, roadmap 660, `PERF.md` 601, `INCOMPLETE_CARDS` 247.
+  `unwrap()`/`expect()` under `game/` + `bot.rs`); a spot-check of `bot.rs`'s
+  non-test ones found them all guarded by a preceding `is_some()`, so cost
+  that sweep as cleanup, not as a crash risk.
+- **Disk**: `target/debug/incremental` reaches 13-17 G; delete it *before* a
+  release build. Two concurrent release builds fit in 23 G.
+- **Trackers**: TODO 800, roadmap 660, `PERF.md` 660, `INCOMPLETE_CARDS` 247.
 
 ## Environment note
 
