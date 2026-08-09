@@ -75,6 +75,7 @@
 //! state the heuristic bot does, so that the ladder compares policies
 //! rather than information.
 
+use rand::RngExt;
 use rand::seq::SliceRandom;
 use rand::rng;
 
@@ -144,6 +145,19 @@ impl MctsBot {
                 None => 0.5,
             };
         }
+        // The value net, when the profile carries one, is a *native* UCB1
+        // reward: a calibrated win probability already in [0, 1], with no
+        // squash scale to tune. This is a better fit than it ever was as
+        // a replacement inside the shallow sims — those needed fine
+        // discrimination between near-identical lines, while a bandit
+        // over rollout outcomes needs exactly a bounded win estimate.
+        // Empty slot falls through to the heuristic, per the EvalWeights
+        // convention.
+        if self.cfg.weights.net_slot != 0
+            && let Some(p) = super::net_eval::win_prob(g, seat, self.cfg.weights.net_slot)
+        {
+            return p as f64;
+        }
         let material = super::bot::eval_material_for_mcts(g, seat, &self.cfg.weights) as f64;
         // Logistic squash. The scale is set so a swing of roughly one
         // creature moves the reward appreciably without saturating.
@@ -159,6 +173,13 @@ impl MctsBot {
             let mut lib = std::mem::take(&mut p.library);
             lib.shuffle(&mut r);
             p.library = lib;
+        }
+        // Under a determinizing profile the opponent's *hand* is redealt
+        // too (the library shuffle above never covered it — rollouts have
+        // been reading the held cards since the first MCTS experiment).
+        // Salted per rollout so the bandit averages over imagined hands.
+        if self.cfg.weights.determinize > 0 {
+            super::bot::determinize_hidden(&mut g, seat, 0x3C75_0000 ^ r.random::<u32>() as u64);
         }
         let stop_turn = g.turn_number + self.cfg.horizon_turns;
         let mut policy: Vec<RandomBot> = (0..g.players.len())

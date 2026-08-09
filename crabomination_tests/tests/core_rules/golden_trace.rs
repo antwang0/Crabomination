@@ -156,12 +156,16 @@ fn different_seeds_produce_different_games() {
 /// fails when the engine drifts, and the readable diff is one test up.
 ///
 /// `(seed, winner, turns, actions, digest)`.
+// Re-pinned 2026-08-09: `EvalWeights::default()` adopted `determinize: 1`
+// (task #25), so the default bot's sims redeal hidden zones and three of
+// the five seeded games legitimately take different lines. Deliberate
+// behaviour change, not drift.
 const DIGESTS: &[(u64, Option<usize>, u32, usize, u64)] = &[
-    (1, Some(0), 11, 269, 0x8573_fe96_81c5_5749),
+    (1, Some(0), 11, 261, 0x61f3_3b6d_61d2_c691),
     (2, Some(1), 16, 404, 0x5678_1950_8088_3a6b),
-    (3, Some(1), 20, 480, 0x5930_42b4_db37_3c9a),
+    (3, Some(0), 19, 459, 0x4cab_8692_6eda_d70a),
     (4, Some(0), 13, 330, 0x3947_01c0_e7bc_f137),
-    (5, Some(0), 9, 218, 0xef00_5c18_bf9c_9af0),
+    (5, Some(0), 9, 220, 0x9e0e_bab8_ae39_2a9b),
 ];
 
 #[test]

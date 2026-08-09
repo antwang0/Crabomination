@@ -1172,8 +1172,18 @@ impl Default for EvalWeights {
     /// blockers). Note that adopting it also turns `block_search` on,
     /// which measured null by itself — the search was never the
     /// problem; it had nothing worth searching.
+    /// Determinized search was adopted 2026-08-09 (task #25): the
+    /// default bot no longer reads hidden zones in its sims and planner
+    /// dry-runs. Priced by asymmetric gates — the peek was worth ~1.4
+    /// pts to this profile (`det1` vs `gang` 49.3 %/48.0 %) and ~0.5 to
+    /// the net champion — and those cells faced *still-cheating*
+    /// opponents, so they overstate the cost against honest opposition
+    /// (a human). Ladder control profiles keep `determinize: 0`
+    /// explicitly; measurement tools built on this default (deck_duel,
+    /// recommend_pool sims) are honest from this date and their numbers
+    /// are not margin-comparable to earlier cheating-sim runs.
     fn default() -> Self {
-        Self::block_gang_search()
+        Self { determinize: 1, ..Self::block_gang_search() }
     }
 }
 
@@ -6737,6 +6747,7 @@ fn gang_block_candidates(
 /// This is what turns the combat sims from perfect-information search
 /// into search under uncertainty — see
 /// [`determinize`](EvalWeights::determinize) for why that matters.
+/// `pub(crate)` for the MCTS rollouts, which share the same obligation.
 ///
 /// Two honest approximations, both in the direction of forgetting more
 /// than a real player would:
@@ -6751,7 +6762,7 @@ fn gang_block_candidates(
 /// paths deliberately: this is a redeal of hidden information before the
 /// simulation starts, not a game action, and routing it through
 /// `move_card` would fire zone-change triggers that never happened.
-fn determinize_hidden(g: &mut GameState, seat: usize, salt: u64) {
+pub(crate) fn determinize_hidden(g: &mut GameState, seat: usize, salt: u64) {
     use rand::seq::SliceRandom;
     let mut rng = StdRng::seed_from_u64(
         salt ^ ((g.turn_number as u64) << 32) ^ ((seat as u64) << 16) ^ g.step as u64,

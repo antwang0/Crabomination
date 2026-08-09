@@ -288,13 +288,28 @@ fn parse_profile(name: &str) -> Option<Pilot> {
             horizon_turns: 3,
             ..MctsConfig::default()
         })),
+        // Net-evaluated MCTS: the champion's win probability is the UCB1
+        // reward (native [0,1], no squash), rollouts redeal hidden zones
+        // (determinize 1 in the weights). The historical "MCTS loses"
+        // verdict was earned with the heuristic reward; these are its
+        // rematch profiles.
+        "mcts-net" => Some(Pilot::Mcts(MctsConfig {
+            weights: EvalWeights::net_eval_det1(),
+            ..MctsConfig::default()
+        })),
+        "mcts-net-deep" => Some(Pilot::Mcts(MctsConfig {
+            iterations: 64,
+            horizon_turns: 3,
+            weights: EvalWeights::net_eval_det1(),
+            ..MctsConfig::default()
+        })),
         "uniform" => Some(Pilot::Uniform),
         _ => None,
     }
 }
 
 /// Profile names accepted by `--a` / `--b`, for the help text and errors.
-const PROFILES: &str = "baseline, combat, holdsick, holdsick+combat, atk, atk-cheap, atk-hold, atk-sim, atk-race, atk-life, dflt-life, blk, lookahead, holdinst, mcts, mcts-heur, mcts-deep, planner, v2+combat, pretap, scaled, keywords, kw25, base, base+kw, life, power, v2, uniform, landseq, mull, gang, landseq2, mull2, race2, look1, look2, smarttap, det1, det3, net, net-det1, net-det3, net-blend, net-blend300, net-q10, net-q20, netb-q10, netb-q20, netb-ply (net* need CRAB_NET=<weights.safetensors>)";
+const PROFILES: &str = "baseline, combat, holdsick, holdsick+combat, atk, atk-cheap, atk-hold, atk-sim, atk-race, atk-life, dflt-life, blk, lookahead, holdinst, mcts, mcts-heur, mcts-deep, planner, v2+combat, pretap, scaled, keywords, kw25, base, base+kw, life, power, v2, uniform, landseq, mull, gang, landseq2, mull2, race2, look1, look2, smarttap, det1, det3, net, net-det1, net-det3, net-blend, net-blend300, net-q10, net-q20, netb-q10, netb-q20, netb-ply, mcts-net, mcts-net-deep (*net* need CRAB_NET=<weights.safetensors> or the committed nets/champion.safetensors)";
 
 /// Peak resident set size in MiB, or `None` where the OS doesn't expose it
 /// cheaply. Linux keeps the high-water mark in `/proc/self/status`, which
@@ -442,7 +457,7 @@ fn parse_args() -> Result<Args, String> {
         .ok_or_else(|| format!("unknown profile {a_name}; expected one of: {PROFILES}"))?;
     let b = parse_profile(&b_name)
         .ok_or_else(|| format!("unknown profile {b_name}; expected one of: {PROFILES}"))?;
-    if a_name.starts_with("net") || b_name.starts_with("net") {
+    if a_name.contains("net") || b_name.contains("net") {
         // The net profile silently equals atk-sim when the slot is empty,
         // which would make a forgotten CRAB_NET measure the wrong thing —
         // so weights are mandatory here. CRAB_NET wins when set; the
