@@ -876,6 +876,97 @@ pub struct MayPlayPermission {
     pub miracle: bool,
 }
 
+/// CR 122.1b — the keyword counters on a permanent, in the order they were
+/// first added.
+///
+/// Deliberately a `Vec`, not a `HashMap`. `layers.rs` walks this to push one
+/// granted keyword per counter kind into the computed keyword list, so a
+/// `HashMap`'s iteration order — reseeded per process by `RandomState` —
+/// reached game state, and two processes on the same seed could disagree.
+/// A permanent carries one or two kinds when it carries any at all, so the
+/// linear scans are also cheaper than hashing a `Keyword` (which owns a
+/// boxed `SelectionRequirement` in several variants).
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct KeywordCounters(Vec<(Keyword, u32)>);
+
+impl KeywordCounters {
+    pub fn get(&self, kw: &Keyword) -> Option<&u32> {
+        self.0.iter().find(|(k, _)| k == kw).map(|(_, n)| n)
+    }
+    /// Add `n` counters of `kw`, creating the entry at 0 first.
+    pub fn add(&mut self, kw: Keyword, n: u32) {
+        match self.0.iter_mut().find(|(k, _)| *k == kw) {
+            Some((_, have)) => *have += n,
+            None => self.0.push((kw, n)),
+        }
+    }
+    /// Remove up to `n` counters of `kw`, dropping the entry when it hits 0
+    /// so layer 6 can't grant a phantom zero-count keyword. Returns how many
+    /// were actually removed.
+    pub fn remove_up_to(&mut self, kw: &Keyword, n: u32) -> u32 {
+        let Some(i) = self.0.iter().position(|(k, _)| k == kw) else { return 0 };
+        let removed = self.0[i].1.min(n);
+        self.0[i].1 -= removed;
+        if self.0[i].1 == 0 {
+            self.0.remove(i);
+        }
+        removed
+    }
+    pub fn insert(&mut self, kw: Keyword, n: u32) {
+        match self.0.iter_mut().find(|(k, _)| *k == kw) {
+            Some((_, have)) => *have = n,
+            None => self.0.push((kw, n)),
+        }
+    }
+    pub fn remove(&mut self, kw: &Keyword) {
+        self.0.retain(|(k, _)| k != kw);
+    }
+    pub fn clear(&mut self) {
+        self.0.clear();
+    }
+    pub fn len(&self) -> usize {
+        self.0.len()
+    }
+    pub fn is_empty(&self) -> bool {
+        self.0.is_empty()
+    }
+    pub fn iter(&self) -> impl Iterator<Item = (&Keyword, &u32)> {
+        self.0.iter().map(|(k, n)| (k, n))
+    }
+    pub fn values(&self) -> impl Iterator<Item = &u32> {
+        self.0.iter().map(|(_, n)| n)
+    }
+}
+
+impl<'a> IntoIterator for &'a KeywordCounters {
+    type Item = (&'a Keyword, &'a u32);
+    type IntoIter = std::iter::Map<
+        std::slice::Iter<'a, (Keyword, u32)>,
+        fn(&'a (Keyword, u32)) -> (&'a Keyword, &'a u32),
+    >;
+    fn into_iter(self) -> Self::IntoIter {
+        self.0.iter().map(|(k, n)| (k, n))
+    }
+}
+
+impl IntoIterator for KeywordCounters {
+    type Item = (Keyword, u32);
+    type IntoIter = std::vec::IntoIter<(Keyword, u32)>;
+    fn into_iter(self) -> Self::IntoIter {
+        self.0.into_iter()
+    }
+}
+
+impl FromIterator<(Keyword, u32)> for KeywordCounters {
+    fn from_iter<I: IntoIterator<Item = (Keyword, u32)>>(iter: I) -> Self {
+        let mut out = Self::default();
+        for (k, n) in iter {
+            out.add(k, n);
+        }
+        out
+    }
+}
+
 /// Keyword abilities supported by the engine.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum Keyword {
@@ -5778,7 +5869,7 @@ pub struct CardData {
     /// the printed/granted/counter sources can be inspected separately
     /// (e.g., for "remove all abilities" effects). Defaults to empty.
     /// Push (modern_decks batch 183): added per CR 122.1b.
-    pub keyword_counters: std::collections::HashMap<Keyword, u32>,
+    pub keyword_counters: KeywordCounters,
     /// "You may cast/play this card without paying its mana cost" permission
     /// granted by Practiced Scrollsmith, Suspend Aggression, Nita, …
     /// Set by `Effect::GrantMayPlay`; consumed by
@@ -6244,7 +6335,7 @@ impl CardInstance {
             granted_keywords_eot_ts: Vec::new(),
             removed_keywords_eot: Vec::new(),
             removed_keywords: Vec::new(),
-            keyword_counters: std::collections::HashMap::new(),
+            keyword_counters: KeywordCounters::default(),
             may_play_until: None,
             dealt_deathtouch_damage: false,
             dealt_damage_this_turn: false,

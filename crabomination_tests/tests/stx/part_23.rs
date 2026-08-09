@@ -586,17 +586,11 @@ fn cr_122_1b_remove_keyword_counter_drops_keyword() {
     let _ = g.compute_battlefield();
     assert!(g.battlefield_find(bear).unwrap().has_keyword(&Keyword::Flying));
     // Now remove the counter via the engine path.
+    // `remove_up_to` is the engine's RemoveKeywordCounter path: it drops the
+    // entry when the count hits 0.
     g.battlefield_find_mut(bear).unwrap()
         .keyword_counters
-        .entry(Keyword::Flying)
-        .and_modify(|c| { *c = c.saturating_sub(1); });
-    // Drop the entry if zero to mimic the engine's RemoveKeywordCounter
-    // path (which calls .remove when the count hits 0).
-    if g.battlefield_find(bear).unwrap()
-        .keyword_counters.get(&Keyword::Flying).copied().unwrap_or(0) == 0 {
-        g.battlefield_find_mut(bear).unwrap()
-            .keyword_counters.remove(&Keyword::Flying);
-    }
+        .remove_up_to(&Keyword::Flying, 1);
     let _ = g.compute_battlefield();
     assert!(!g.battlefield_find(bear).unwrap().has_keyword(&Keyword::Flying),
         "removing the last flying counter drops the granted Flying");
@@ -616,13 +610,41 @@ fn cr_122_1b_remove_one_of_two_keyword_counters_keeps_keyword() {
     // Remove 1.
     g.battlefield_find_mut(bear).unwrap()
         .keyword_counters
-        .entry(Keyword::Trample)
-        .and_modify(|c| { *c = c.saturating_sub(1); });
+        .remove_up_to(&Keyword::Trample, 1);
     let _ = g.compute_battlefield();
     assert!(g.battlefield_find(bear).unwrap().has_keyword(&Keyword::Trample),
         "trample still granted after removing 1 of 2 counters");
     assert_eq!(g.battlefield_find(bear).unwrap()
         .keyword_counters.get(&Keyword::Trample).copied().unwrap_or(0), 1);
+}
+
+/// CR 122.1b — the granted keywords land in the order the counters were
+/// added, not in a hash order that `RandomState` reseeds per process.
+/// `layers.rs` pushes one keyword per counter kind straight into the computed
+/// keyword list, so a `HashMap` here put process-dependent order into game
+/// state; `KeywordCounters` is insertion-ordered for exactly this reason.
+#[test]
+fn cr_122_1b_keyword_counter_grant_order_is_insertion_order() {
+    use crabomination::card::Keyword;
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    {
+        let c = g.battlefield_find_mut(bear).unwrap();
+        c.keyword_counters.insert(Keyword::Trample, 1);
+        c.keyword_counters.insert(Keyword::Flying, 1);
+        c.keyword_counters.insert(Keyword::Lifelink, 1);
+    }
+    let cp = g.compute_battlefield();
+    let kws: Vec<Keyword> = cp
+        .iter()
+        .find(|c| c.id == bear)
+        .unwrap()
+        .keywords
+        .iter()
+        .filter(|k| matches!(k, Keyword::Trample | Keyword::Flying | Keyword::Lifelink))
+        .cloned()
+        .collect();
+    assert_eq!(kws, vec![Keyword::Trample, Keyword::Flying, Keyword::Lifelink]);
 }
 
 /// Witherbloom Stripblossom (b192) — exercises Effect::RemoveKeywordCounter

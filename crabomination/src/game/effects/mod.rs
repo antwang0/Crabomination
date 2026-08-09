@@ -15689,7 +15689,7 @@ impl GameState {
                             base
                         };
                         if let Some(c) = self.battlefield_find_mut(cid) {
-                            *c.keyword_counters.entry(keyword.clone()).or_insert(0) += n;
+                            c.keyword_counters.add(keyword.clone(), n);
                             // "This permanent gained a counter this turn"
                             // payoffs count keyword counters too (CR 122.1b).
                             self.permanents_gained_counter_this_turn.insert(cid);
@@ -15726,7 +15726,7 @@ impl GameState {
                     if pick < missing_kw.len() {
                         let kw = missing_kw.swap_remove(pick);
                         if let Some(c) = self.battlefield_find_mut(cid) {
-                            *c.keyword_counters.entry(kw.clone()).or_insert(0) += 1;
+                            c.keyword_counters.add(kw.clone(), 1);
                         }
                         events.push(GameEvent::KeywordCounterAdded { card_id: cid, keyword: kw, count: 1 });
                     } else if let Some(c) = self.battlefield_find_mut(cid) {
@@ -15752,15 +15752,9 @@ impl GameState {
                 for ent in self.resolve_selector(what, ctx) {
                     if let Some(cid) = ent.as_permanent_id()
                         && let Some(c) = self.battlefield_find_mut(cid) {
-                            let entry = c.keyword_counters.entry(keyword.clone()).or_insert(0);
-                            let remove = (*entry).min(request);
-                            *entry -= remove;
-                            // If the counter is now 0, drop the entry to
-                            // keep the map sparse (so layer-6 doesn't
-                            // grant a phantom 0-count keyword).
-                            if *entry == 0 {
-                                c.keyword_counters.remove(keyword);
-                            }
+                            // Dropping the entry at 0 keeps the list sparse,
+                            // so layer 6 can't grant a phantom 0-count keyword.
+                            c.keyword_counters.remove_up_to(keyword, request);
                         }
                 }
                 Ok(())
@@ -15820,7 +15814,7 @@ impl GameState {
                         }
                         for (kw, n) in taken_kw {
                             if n > 0 {
-                                *d.keyword_counters.entry(kw).or_insert(0) += n;
+                                d.keyword_counters.add(kw, n);
                             }
                         }
                     }
