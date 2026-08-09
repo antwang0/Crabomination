@@ -58,6 +58,22 @@ only stays dead while the reasoning that killed it is readable.
   stratum both plays and benches reports **no** within-archetype number
   rather than passing the marginal off as one. `recommend_pool` prints
   `within` first and labels `raw` as the confound.
+- 🔴 **Round 24 (2026-08-09) — capacity is null-to-negative even under
+  the regime that works.** The fair retest round 12 couldn't run: 2×
+  representation width (emb 64, obj_hidden 128) on the champion config,
+  heuristic actors (training throughput unchanged). AUC 0.8075/0.7871
+  (below control, s97 notably weak), pooled gates **50.2 % gang /
+  52.0 % atk-sim vs the r20 control's 51.8/54.4** — the atk-sim delta
+  is marginally significant *negative*. Caveat: hyperparameters
+  (lr, cosine horizon, patience) were tuned on the small model and were
+  not re-searched for the wide one; "capacity at champion
+  hyperparameters" is the claim. Within that claim the small-model
+  story is now properly settled: 64-wide/32-emb is right-sized for
+  this data distribution, and the round-11 "widening cannot recover
+  discarded information" lesson holds from the other side too — width
+  adds fitting surface, not knowledge. Next lever by elimination:
+  **search amplification** (net-evaluated deeper/determinized search —
+  the evaluator is now the best component; multiply it).
 - 🔴 **Deck_duel rematch (2026-08-09) — the distilled judge's top pick
   is WORSE than the old net's.** The round-16 loop's final judge
   (`nets_distill7/deck-distilled.safetensors`, vs-static 61.0 %,
