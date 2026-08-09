@@ -443,9 +443,23 @@ fn parse_args() -> Result<Args, String> {
     if a_name.starts_with("net") || b_name.starts_with("net") {
         // The net profile silently equals atk-sim when the slot is empty,
         // which would make a forgotten CRAB_NET measure the wrong thing —
-        // so an explicit weights file is mandatory here.
-        let path = std::env::var("CRAB_NET")
-            .map_err(|_| "profile `net` needs CRAB_NET=<weights.safetensors>".to_string())?;
+        // so weights are mandatory here. CRAB_NET wins when set; the
+        // committed champion (`nets/champion.safetensors`, the round-20
+        // net: pooled replacement gates 51.8 % vs gang / 54.4 % vs
+        // atk-sim) is the fallback so `--a net` works out of the box.
+        const CHAMPION: &str = "nets/champion.safetensors";
+        let path = std::env::var("CRAB_NET").unwrap_or_else(|_| {
+            if std::path::Path::new(CHAMPION).exists() {
+                CHAMPION.to_string()
+            } else {
+                String::new()
+            }
+        });
+        if path.is_empty() {
+            return Err(format!(
+                "profile `net` needs CRAB_NET=<weights.safetensors> (or the committed {CHAMPION})"
+            ));
+        }
         crabomination::server::net_eval::load_slot(
             crabomination::server::net_eval::SLOT_BEST,
             std::path::Path::new(&path),

@@ -58,6 +58,28 @@ only stays dead while the reasoning that killed it is readable.
   stratum both plays and benches reports **no** within-archetype number
   rather than passing the marginal off as one. `recommend_pool` prints
   `within` first and labels `raw` as the confound.
+- 🟢 **Round 22 (2026-08-09) — blend is dead weight; data scaling is
+  flat at 250 k; the round-20 net is the committed champion.** Two
+  follow-ups to round 20, plus the adoption:
+
+  *22a blend gates* (no training): with the r20 nets, `net-blend300`
+  pools 52.1 % gang / 53.9 % atk-sim — indistinguishable from plain
+  replacement (51.8/54.4) — and the quieter `net-blend` is *worse*
+  (51.4/52.9). The historical ordering (blend > replacement, quieter >
+  louder) has fully inverted: every unit of `eval_material` mixed in now
+  dilutes a better evaluator. The heuristic crutch era is over;
+  replacement is the pilot.
+
+  *22b longer horizon + more games* (400 k games, cosine 90 k, two
+  seeds): AUC 0.8189/0.8059 (s43 is the champion-line record), pooled
+  gates 52.2 % gang / 54.0 % atk-sim — **null vs round 20** at 1.6× the
+  compute. The games curve has flattened at 250 k under this
+  architecture and window.
+
+  *Adoption:* `nets/champion.safetensors` = the round-20 seed-97 net
+  (AUC 0.8090; replacement gates 52.2/51.2 gang, 55.1/53.9 atk-sim),
+  committed, and `bot_ladder` now falls back to it when `CRAB_NET` is
+  unset — `--a net` works out of the box; CRAB_NET still overrides.
 - 🟢 **Rounds 19–21 (2026-08-09) — cosine decay adopted; Muon and a 1M
   window are nulls.** Three regime-side levers on the champion config
   (attn + 500 k window + lr 1e-4 + 250 k games + patience 12), each
