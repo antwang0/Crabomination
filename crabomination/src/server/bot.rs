@@ -56,6 +56,82 @@ fn jitter_below(n: usize) -> usize {
     })
 }
 
+/// A uniform draw in [0, 1) from the jitter stream.
+fn jitter_f64() -> f64 {
+    JITTER.with(|j| match &mut *j.borrow_mut() {
+        Some(r) => r.random::<f64>(),
+        None => rng().random::<f64>(),
+    })
+}
+
+thread_local! {
+    /// Per-thread softmax sampling over the LIVE scored pickers' candidates
+    /// (attacks, blocks, main-phase finalists): `(temperature in eval
+    /// units, last turn to sample on)`. Installed by self-play actors to
+    /// diversify training data — the AlphaZero opening-temperature idea
+    /// applied to this bot's decomposed searches. `None` — the default,
+    /// and what gates, ladders, and real matches run — keeps every picker
+    /// argmax. Thread-local rather than an `EvalWeights` field so the
+    /// simulations' inner policies (same weights, same thread) can never
+    /// see it: the only call sites are the three live pickers.
+    static SAMPLING: std::cell::Cell<Option<(i32, u32)>> =
+        const { std::cell::Cell::new(None) };
+}
+
+/// Install (or clear) live-action sampling for this thread:
+/// `Some((temp, turns))` softmax-samples candidate picks with temperature
+/// `temp` (eval units) through turn `turns`, argmax after.
+pub fn set_action_sampling(cfg: Option<(i32, u32)>) {
+    SAMPLING.with(|s| s.set(cfg));
+}
+
+/// The sampling temperature in force for a decision on `turn`, if any.
+fn sampling_temp(turn: u32) -> Option<f64> {
+    SAMPLING
+        .with(|s| s.get())
+        .and_then(|(t, turns)| (t > 0 && turn <= turns).then_some(t as f64))
+}
+
+/// Softmax-sample an index from `scores` at temperature `temp`, drawing
+/// from the jitter stream (seeded ⇒ reproducible). Max-subtracted so the
+/// net profile's ±10 000-scale scores can't overflow the exp.
+fn sample_scored_index(scores: &[i32], temp: f64) -> usize {
+    debug_assert!(!scores.is_empty());
+    let max = *scores.iter().max().unwrap();
+    let ws: Vec<f64> = scores.iter().map(|&s| (((s - max) as f64) / temp).exp()).collect();
+    let total: f64 = ws.iter().sum();
+    let mut u = jitter_f64() * total;
+    for (i, w) in ws.iter().enumerate() {
+        u -= w;
+        if u <= 0.0 {
+            return i;
+        }
+    }
+    scores.len() - 1
+}
+
+/// Choose among `(candidate index, score)` pairs: softmax-sampled when
+/// this thread has sampling installed and the turn qualifies, otherwise
+/// the first-wins-ties argmax every ladder number was measured under.
+fn choose_scored(turn: u32, scored: &[(usize, i32)]) -> Option<usize> {
+    if scored.is_empty() {
+        return None;
+    }
+    if scored.len() > 1
+        && let Some(t) = sampling_temp(turn)
+    {
+        let ws: Vec<i32> = scored.iter().map(|&(_, s)| s).collect();
+        return Some(scored[sample_scored_index(&ws, t)].0);
+    }
+    let mut best = scored[0];
+    for &c in &scored[1..] {
+        if c.1 > best.1 {
+            best = c;
+        }
+    }
+    Some(best.0)
+}
+
 /// Drives one seat without a human client. Implementations see the full
 /// `GameState` and return the single next action they'd like to submit.
 pub trait Bot: Send {
@@ -6309,16 +6385,15 @@ fn pick_attacks_scored(state: &GameState, seat: usize, w: &EvalWeights) -> Vec<A
         }
     }
 
-    let mut best: Option<(usize, i32)> = None;
+    // First-wins-ties in `choose_scored`: index 0 is greedy, so equal
+    // scores keep it (unless this thread is sampling — actors only).
+    let mut scored: Vec<(usize, i32)> = Vec::new();
     for (i, cand) in candidates.iter().enumerate() {
         let Some(score) = simulate_attack_outcome(state, seat, cand, w) else { continue };
-        // Strictly greater: index 0 is greedy, so equal scores keep it.
-        if best.map(|(_, s)| score > s).unwrap_or(true) {
-            best = Some((i, score));
-        }
+        scored.push((i, score));
     }
-    match best {
-        Some((i, _)) => candidates.swap_remove(i),
+    match choose_scored(state.turn_number, &scored) {
+        Some(i) => candidates.swap_remove(i),
         None => greedy,
     }
 }
@@ -6541,15 +6616,13 @@ fn pick_blocks_scored(state: &GameState, seat: usize, w: &EvalWeights) -> Vec<(C
         candidates.extend(gang_block_candidates(state, seat, &greedy, w));
     }
 
-    let mut best: Option<(usize, i32)> = None;
+    let mut scored: Vec<(usize, i32)> = Vec::new();
     for (i, cand) in candidates.iter().enumerate() {
         let Some(score) = simulate_block_outcome(state, seat, cand, w) else { continue };
-        if best.map(|(_, s)| score > s).unwrap_or(true) {
-            best = Some((i, score));
-        }
+        scored.push((i, score));
     }
-    match best {
-        Some((i, _)) => candidates.swap_remove(i),
+    match choose_scored(state.turn_number, &scored) {
+        Some(i) => candidates.swap_remove(i),
         None => greedy,
     }
 }
@@ -8978,22 +9051,31 @@ fn pick_by_outcome(
         return finalists.into_iter().next().map(|(_, a)| a);
     }
     let baseline = eval_material(state, seat, w);
-    finalists
+    let evd: Vec<(i32, i32, GameAction)> = finalists
         .into_iter()
-        .max_by_key(|(s, a)| {
+        .map(|(s, a)| {
             // Known-temporary casts (bounce, until-EOT stat changes) are
             // pinned to the baseline: the post-resolution snapshot can't
             // see the effect reversing, so evaluating it would sell a
             // bounce as removal. They win only on static score against
             // other no-eval-gain lines.
-            let ev = if action_outcome_is_temporary(state, a) {
+            let ev = if action_outcome_is_temporary(state, &a) {
                 baseline
             } else {
-                evaluate_action_outcome(state, seat, a, w).unwrap_or(baseline)
+                evaluate_action_outcome(state, seat, &a, w).unwrap_or(baseline)
             };
-            (ev, *s)
+            (ev, s, a)
         })
-        .map(|(_, a)| a)
+        .collect();
+    // Actor-side exploration: sample finalists by outcome score. The
+    // static score stays out of the softmax — it's a tiebreak, not a
+    // second opinion at temperature.
+    if let Some(t) = sampling_temp(state.turn_number) {
+        let ws: Vec<i32> = evd.iter().map(|e| e.0).collect();
+        let i = sample_scored_index(&ws, t);
+        return evd.into_iter().nth(i).map(|(_, _, a)| a);
+    }
+    evd.into_iter().max_by_key(|(ev, s, _)| (*ev, *s)).map(|(_, _, a)| a)
 }
 
 /// True when `e`'s tree contains a leaf whose apparent value REVERSES
@@ -14530,5 +14612,67 @@ mod stack_response_tests {
             pct >= 55.0,
             "scored pick should clearly beat the uniform baseline, got {pct:.1}%",
         );
+    }
+}
+
+#[cfg(test)]
+mod action_sampling_tests {
+    use super::*;
+
+    /// With no sampling installed (every gate, ladder, and real match),
+    /// `choose_scored` is exactly the historical argmax: first index wins
+    /// ties, best score wins otherwise.
+    #[test]
+    fn sampling_off_is_first_wins_ties_argmax() {
+        set_action_sampling(None);
+        assert_eq!(choose_scored(3, &[]), None);
+        assert_eq!(choose_scored(3, &[(7, 100)]), Some(7));
+        assert_eq!(choose_scored(3, &[(0, 100), (1, 100)]), Some(0), "ties keep index 0");
+        assert_eq!(choose_scored(3, &[(0, 100), (1, 101)]), Some(1));
+    }
+
+    /// The turn cutoff is the schedule: sampling through `turns`, argmax
+    /// after — and clearing the config clears it.
+    #[test]
+    fn sampling_respects_the_turn_cutoff() {
+        set_action_sampling(Some((150, 5)));
+        assert!(sampling_temp(1).is_some());
+        assert!(sampling_temp(5).is_some());
+        assert!(sampling_temp(6).is_none(), "past the cutoff is argmax");
+        set_action_sampling(Some((0, 5)));
+        assert!(sampling_temp(1).is_none(), "temp 0 is off");
+        set_action_sampling(None);
+        assert!(sampling_temp(1).is_none());
+    }
+
+    /// The softmax explores in proportion to score: a one-temperature gap
+    /// is sampled but minority; a huge gap is effectively argmax; equal
+    /// scores split. Seeded jitter makes the counts deterministic.
+    #[test]
+    fn softmax_explores_proportionally() {
+        set_jitter_seed(Some(7));
+        set_action_sampling(Some((150, 20)));
+
+        let draws = |scored: &[(usize, i32)]| -> [usize; 2] {
+            let mut n = [0usize; 2];
+            for _ in 0..300 {
+                n[choose_scored(1, scored).unwrap()] += 1;
+            }
+            n
+        };
+        // Gap of one temperature: better line dominates, worse line still
+        // gets real visits (softmax weight ratio e ≈ 2.72 : 1).
+        let n = draws(&[(0, 0), (1, 150)]);
+        assert!(n[1] > n[0], "better line must dominate: {n:?}");
+        assert!(n[0] > 30, "worse line must still be explored: {n:?}");
+        // Gap of many temperatures: exploration vanishes.
+        let n = draws(&[(0, 0), (1, 3000)]);
+        assert!(n[0] == 0, "a 20-temperature gap should never sample the loser: {n:?}");
+        // Equal scores: roughly even split.
+        let n = draws(&[(0, 500), (1, 500)]);
+        assert!(n[0] > 100 && n[1] > 100, "equal scores should split: {n:?}");
+
+        set_action_sampling(None);
+        set_jitter_seed(None);
     }
 }

@@ -23,6 +23,7 @@
 //!                [--stop-after-stale N] [--relabel-mode full|new]
 //!                [--attn] [--blocks N] [--aux] [--ablate lib,cast,rel]
 //!                [--muon] [--muon-lr F] [--lr-cosine STEPS]
+//!                [--sample-temp N] [--sample-turns N]
 //!                [--emb-dim N] [--obj-hidden N] [--h1 N] [--h2 N]
 //!                [--gate-builder GAMES_PER_POOL]
 //!
@@ -166,6 +167,12 @@ struct Args {
     /// horizon should approximate the *expected* run length under early
     /// stop, not the `--steps` cap.
     lr_cosine: u64,
+    /// Actor-side softmax action sampling: temperature in eval units
+    /// (0 = off). ~120 is one mid-size creature on the heuristic scale;
+    /// ~300 ≈ 3 % win probability on the net's ±10 000 scale.
+    sample_temp: i32,
+    /// Sample through this turn, argmax after (AlphaZero-style cutoff).
+    sample_turns: u32,
     /// Width overrides — the engine reads sizes from the tensor shapes,
     /// so capacity is a flag, not a format change. `--seed-emb` requires
     /// the deck net's width, so it refuses a changed `--emb-dim`.
@@ -265,6 +272,8 @@ fn parse_args() -> Args {
         muon: false,
         muon_lr: 0.02,
         lr_cosine: 0,
+        sample_temp: 0,
+        sample_turns: 6,
         emb_dim: None,
         obj_hidden: None,
         h1: None,
@@ -342,6 +351,8 @@ fn parse_args() -> Args {
             }
             "--muon-lr" => a.muon_lr = val().parse().expect("--muon-lr"),
             "--lr-cosine" => a.lr_cosine = val().parse().expect("--lr-cosine"),
+            "--sample-temp" => a.sample_temp = val().parse().expect("--sample-temp"),
+            "--sample-turns" => a.sample_turns = val().parse().expect("--sample-turns"),
             "--emb-dim" => a.emb_dim = Some(val().parse().expect("--emb-dim")),
             "--obj-hidden" => a.obj_hidden = Some(val().parse().expect("--obj-hidden")),
             "--h1" => a.h1 = Some(val().parse().expect("--h1")),
@@ -1131,7 +1142,18 @@ fn main() {
             // the ladder's 32 MB workers.
             std::thread::Builder::new()
                 .stack_size(32 * 1024 * 1024)
-                .spawn_scoped(scope, || actor_loop(&shared, &args, &vocab, deck_judge.as_ref()))
+                .spawn_scoped(scope, || {
+                    // Data-generation exploration only: the sampling
+                    // config is thread-local, so gates and calibration
+                    // (different threads/processes) stay argmax.
+                    if args.sample_temp > 0 {
+                        crabomination::server::bot::set_action_sampling(Some((
+                            args.sample_temp,
+                            args.sample_turns,
+                        )));
+                    }
+                    actor_loop(&shared, &args, &vocab, deck_judge.as_ref())
+                })
                 .expect("spawn actor");
         }
 
