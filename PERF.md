@@ -329,9 +329,21 @@ comes next, both learned the hard way this run:
    interesting pair: both are `&self`, both are called in tight loops from
    combat-damage resolution, and `damage_prevented_by_protection` already
    opens its *own* one-call scope — which memoizes nothing, because the
-   scope dies with the call. Freezing the read-only damage-computation
-   region of `resolve_combat` (before any damage is applied) would give all
-   of them one scope to share. Untried; check it doesn't span a mutation.
+   scope dies with the call.
+   **Do not freeze across `resolve_combat_damage_with_filter`'s apply loop
+   without deciding the rules question first.** Read the code before
+   trying: it already hoists a whole-board `computed: &[ComputedPermanent]`
+   taken *before* the batch and reads attacker/blocker P/T from it, which is
+   CR 510.2 (combat damage is simultaneous). But `scale_damage_to` and
+   `damage_prevented_by_protection` are called *inside* the apply loop and
+   re-derive live, and the loop mutates a layer input: Wither/Infect damage
+   adds -1/-1 counters, which `compute_permanent_pass` reads. A freeze
+   scope would silently switch those two helpers from live to pre-batch
+   values. Pre-batch is probably the *more* correct reading, but that makes
+   it a rules change wearing an optimization's clothes — land it as a rules
+   fix with its own tests and a blessed trace, or not at all. The safe
+   subset is phase 1 (`gather_combat_damage_decisions`), which runs before
+   any damage is dealt; cost it first, it may be too small to matter.
 
 1. **Make `ComputedPermanent` cheap to build.** ~2.59 M of the profile's
    mallocs are `compute_permanent_pass` cloning five collections per

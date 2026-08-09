@@ -28,15 +28,15 @@ one bug class. `PERF.md` is the record.
   fixed six-game workload, deterministic and contention-immune, and both
   sides can run at once. (2) An inclusive share is an *upper bound* on what
   a memo can win: check the frozen fraction first.
-- **Next up, in order**: PERF candidate 0(f) — freeze the read-only
-  damage-computation region of `resolve_combat`, which would give
-  `damage_prevented_by_protection` (91,762 calls) and
-  `evaluate_requirement_static` (93,612) one scope to share instead of a
-  per-call one; then 1(c), the same memo for `compute_battlefield`
+- **Next up, in order**: candidate 1(c), the per-scope memo for
+  `compute_battlefield`
   (`apply_layers` still enters the per-card pass 888,340× vs
   `computed_permanent`'s 648,866×); then 1.5, `effective_mana_abilities`
-  deep-cloning every ability it returns. **Do not re-try freezing inside
-  `effective_mana_abilities`** — measured +0.03 %, a null, reverted.
+  deep-cloning every ability it returns. Two traps written up in PERF:
+  **don't re-try freezing inside `effective_mana_abilities`** (+0.03 %, a
+  null, reverted), and **don't freeze across combat damage's apply loop** —
+  Wither/Infect counters mutate a layer input mid-batch, so it's a rules
+  change, not an optimization. Candidate 0(f) has the full argument.
 - **The re-profile is done** (13.84 G Ir for six games, down from 23.50 G).
   It promoted **CowBox** to the top of the untried list: `Arc::make_mut` is
   21.31 % inclusive and `CardInstance::clone`'s self share doubled to 11 %,
