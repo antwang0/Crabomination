@@ -65,6 +65,16 @@ inherits = "release"
 codegen-units = 16
 lto = false
 
+# `release-fast` plus debuginfo: what line-level callgrind attribution wants.
+# `profiling` inherits `release` (cgu 1 + thin LTO) and so costs a ~24-minute
+# rebuild; this one rebuilds in minutes and inlines identically to the
+# `release-fast` binaries the A/B rows are measured on, so an attribution
+# taken here describes the code those rows move.
+[profile.profiling-fast]
+inherits = "release-fast"
+debug = true
+split-debuginfo = "unpacked"
+
 # Optimize for size in the wasm-release profile to reduce load times and bandwidth usage on web.
 [profile.wasm-release]
 # Default to release profile values.
