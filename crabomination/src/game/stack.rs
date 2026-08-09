@@ -4218,10 +4218,20 @@ impl GameState {
                 (c.controller != c.owner).then_some((c.id, c.controller, dmg))
             })
             .collect();
-        for id in self.battlefield.iter().map(|c| c.id).collect::<Vec<_>>() {
-            if let Some(c) = self.battlefield_find(id)
-                && c.controller == c.owner
-            {
+        // Only an *armed* id can be disarmed, so walk the latch set rather
+        // than the whole battlefield — the old loop allocated a Vec of every
+        // id and did an O(n) `battlefield_find` per id to reach a `remove`
+        // that is a no-op on the empty set every ordinary board carries.
+        if !self.steal_penalty_armed.is_empty() {
+            let disarm: Vec<CardId> = self
+                .steal_penalty_armed
+                .iter()
+                .copied()
+                .filter(|&id| {
+                    self.battlefield_find(id).is_some_and(|c| c.controller == c.owner)
+                })
+                .collect();
+            for id in disarm {
                 self.steal_penalty_armed.remove(&id);
             }
         }
@@ -4386,9 +4396,18 @@ impl GameState {
         // 122.3 annihilation, so Persist/Undying read the pre-sweep pile
         // (Young Wolf with a +1/+1 counter that takes three -1/-1 counters
         // dies for good).
+        // Only Persist/Undying read the snapshot — `return_persist_undying`
+        // returns on the spot when a dying card has neither, so an entry for
+        // any other card is built and thrown away. Gate the map on the same
+        // printed-keyword predicate its reader uses, which leaves it empty
+        // (and unallocated) on the boards that carry neither keyword.
         let pre_sba_pm_counters: std::collections::HashMap<CardId, (u32, u32)> = self
             .battlefield
             .iter()
+            .filter(|c| {
+                c.definition.keywords.contains(&Keyword::Persist)
+                    || c.definition.keywords.contains(&Keyword::Undying)
+            })
             .map(|c| {
                 (
                     c.id,
