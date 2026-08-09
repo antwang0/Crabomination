@@ -16,41 +16,43 @@ reference and want their own triage pass):
 
 ## NEXT (handoff — rewrite each run, keep under 15 lines)
 
-Branch `claude/modern_decks`. Seventh pass: two structural perf wins.
-End to end, `release` + mimalloc, 5/5 alternated pairs against the pre-run
-tip: **+35.6 % games/s (34.26 -> 46.44), -42 % peak RSS (41.0 -> 23.8 MiB)**.
-`PERF.md` is the record.
+Branch `claude/modern_decks`. Eighth pass: the gather, finally attributed.
+**8,887,218,012 -> 7,993,961,114 Ir on the fixed six-game workload, -10.05 %**
+(`profiling-fast` callgrind A/B; `PERF.md` Log has both rows and the bench).
 
-- **Landed**: `CardInstance` is now `Arc<CardData>` with `Deref`/`DerefMut`
-  (-25.6 % Ir) and `ComputedPermanent`'s four printed-derived collections are
-  `Printed<T>` = `Arc<CardDefinition>` + projection, cloned only on write
-  (-17.1 % Ir). 14.40 G -> 8.89 G Ir; allocations 16.7 M -> 5.09 M.
-- **Measure allocation fixes with mimalloc, not callgrind's system alloc.**
-  `Printed<T>` reads -17.1 % Ir / +13.5 % wall against glibc and **+1.7 %**
-  at `release` with mimalloc — the number that describes a training run.
-  The CoW row removes struct copies, not just allocations, and carries
-  essentially the whole +35.6 %. New method note in PERF.
-- **The lesson both share**: when a cost is structural, find the *type* that
-  kills the class, and pick one that `Deref`s to what the field used to be —
-  candidate 1(a)'s "~4.5 k call sites" became eleven `.clone()` -> `.to_vec()`.
-- **Next up is the gather, and it is the only thing left**: 17.7 % self,
-  1,573,494,744 Ir over 358,792 calls, unmoved to the instruction by both
-  fixes — and it is *not* allocation-shaped, so unlike `Printed<T>` its Ir
-  share is the share mimalloc sees too. **Its 39 per-variant passes are ruled out** — a presence-mask gate
-  measured +1.43 % and was reverted (PERF Log + candidate 3). Take a
-  line-level attribution first: `--profile profiling` keeps debuginfo,
-  `release-fast` strips it. Then 1(a)'s leftover `colors` and 1.5.
-- **Traps already paid for, in PERF**: don't re-freeze inside
-  `effective_mana_abilities` (+0.03 %); don't memo `compute_battlefield`
-  (0 of 617,032 calls frozen); don't freeze across combat damage's apply loop
-  (rules change, not an optimization).
-- **Bugs**: `audit_stubs` clean, the dead-ability class is a suite gate. Next
-  source is `INCOMPLETE_CARDS.md`'s missing-primitive buckets or a fresh
-  panic/unwrap sweep of the self-play path — untouched this run.
-- **Disk**: budget for it. `target/debug/incremental` hit 15 G; deleting it
-  freed 14 G mid-run. Don't edit engine sources while a `release` build is
-  running — cargo picks up the edit mid-build and the binary is neither side.
-- **Trackers**: TODO 792, roadmap 660, `PERF.md` 534, `INCOMPLETE_CARDS` 247.
+- **What the attribution said, and it was not what two runs had guessed.**
+  The gather's 4,385 Ir/call was **65 % slice iteration and pointer advance**
+  (`slice::iter` 5.93 % of the program, `ptr::non_null` 5.57 %), not the 39
+  per-variant passes. It was eleven separate `for card in &self.battlefield`
+  loops. Folding them into the `sa_cards` walk: **-9.02 % program, -36.7 %
+  of the gather** (4,385 -> 2,774 Ir/call). Then `Cow` on
+  `effective_mana_abilities` + one fewer `battlefield_find` in
+  `granted_abilities_for`: **-1.14 %**.
+- **Method that made it possible**: new `[profile.profiling-fast]` =
+  `release-fast` + debuginfo. Engine rebuild ~3.5 min instead of ~24, and it
+  reproduced the recorded `release-fast` gather figure to the instruction.
+  **Read the `file:function` rows, not function totals** — cost in
+  `slice/iter/macros.rs` means walking, and the fix is fewer walks.
+- **Trap, paid for once**: gating a loop's *head* is only safe if the loop
+  has one pass. The Unleash loop also carries the CR 611.2 `WhileCondition`
+  gate and the suspect / living-metal statics; gating it killed every
+  threshold/retype static (15 `classic_sets` failures). Nine of eleven were
+  single-purpose; that one was not. Read the whole body first.
+- **Next up, in order**: (1) **candidate 1.7** — `players: self.players.clone()`
+  is **488,350,327 Ir, 5.49 %**, and `GameState::clone` + its drop is ~12.3 %
+  of the program. `Player` has 165 fields and is a plain struct; make it
+  `Arc<PlayerData>` + `Deref`/`DerefMut`, exactly candidate 7 one level up
+  (that one was -25.6 %). This is now the single biggest cost. (2)
+  `granted_abilities_for`, still 388 M / 4.9 % and mostly walking
+  `all_static_sources` per call. (3) the gather's remaining 995 M, now in
+  pass *bodies* rather than walking.
+- **Bugs**: `audit_stubs` clean, dead-ability class is a suite gate. The
+  panic/unwrap sweep of the self-play path is still untouched (90 `unwrap()`
+  under `game/` + `bot.rs`); `INCOMPLETE_CARDS.md`'s missing-primitive
+  buckets likewise.
+- **Disk**: `target/debug/incremental` reached 8.8 G again; deleting it
+  freed 8 G. Budget for it before a full `cargo test`.
+- **Trackers**: TODO 811, roadmap 660, `PERF.md` 546, `INCOMPLETE_CARDS` 247.
 
 ## Environment note
 
