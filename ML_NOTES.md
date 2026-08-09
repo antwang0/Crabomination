@@ -58,6 +58,18 @@ only stays dead while the reasoning that killed it is readable.
   stratum both plays and benches reports **no** within-archetype number
   rather than passing the marginal off as one. `recommend_pool` prints
   `within` first and labels `raw` as the confound.
+- 🟡 **Round 23 (2026-08-09) — actor-side softmax action sampling:
+  null at the first dose.** Infrastructure landed and stays (thread-
+  local `set_action_sampling` over the three live scored pickers,
+  `--sample-temp`/`--sample-turns`, gates/sims argmax by construction,
+  golden traces unchanged): temp 120 through turn 6 on the champion
+  config gated **51.7 % gang / 53.7 % atk-sim pooled vs the r20
+  control's 51.8/54.4** — null, atk-sim trending slightly down.
+  Saturation improved a touch (8.0–8.5 % vs ~10 %). Untried: hotter/
+  longer sampling doses, and sampling paired with net-piloted
+  generation (where the argmax fixed point is the net's own). Note the
+  sampled runs' holdout AUCs are not comparable to argmax rounds — the
+  validation games contain exploration moves.
 - 🟢 **Round 22 (2026-08-09) — blend is dead weight; data scaling is
   flat at 250 k; the round-20 net is the committed champion.** Two
   follow-ups to round 20, plus the adoption:
