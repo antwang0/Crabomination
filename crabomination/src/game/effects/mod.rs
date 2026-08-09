@@ -15992,11 +15992,8 @@ impl GameState {
                 // CR 508.1a — a second mandate on the same seat stacks with
                 // the first rather than replacing it: the union must attack,
                 // and everything outside the union still can't.
-                self.attack_mandates.push(crate::game::AttackMandate {
-                    seat,
-                    chosen,
-                    armed: self.active_player_idx == seat,
-                });
+                let armed = self.active_player_idx == seat;
+                self.attack_mandates.push(crate::game::AttackMandate { seat, chosen, armed });
                 Ok(())
             }
 
@@ -19564,7 +19561,8 @@ impl GameState {
             }
 
             Effect::LockCreatureAndPlaneswalkerCasts => {
-                self.creature_pw_cast_locks.push((ctx.controller, self.turn_number));
+                let turn = self.turn_number;
+                self.creature_pw_cast_locks.push((ctx.controller, turn));
                 Ok(())
             }
 

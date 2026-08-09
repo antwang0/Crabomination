@@ -317,6 +317,529 @@ pub enum AttackOption {
     AttackRight,
 }
 
+/// The cold tail of [`GameState`]: fields that are read from anywhere but
+/// written only by the handful of cards that use them.
+///
+/// `perform_action` snapshots the whole state before every action so a
+/// rejected action can be rolled back, and the bot re-clones a state per
+/// simulated line. Cloning ~85 separate empty `Vec`/`HashMap`/`HashSet`
+/// fields costs thousands of instructions each time and the overwhelming
+/// majority of actions never touch one of them, so they live behind a
+/// single [`CowBox`]: the clone is one reference bump, and the first write
+/// in an action unshares the group once.
+///
+/// Membership is a pure performance question — `Deref`/`DerefMut` on
+/// `GameState` mean moving a field in or out changes no call site. Move a
+/// field *out* if it turns out to be written on most actions (it would
+/// unshare the group every time); move one *in* if it is a collection only
+/// rare cards touch.
+#[derive(Clone, Default, serde::Serialize, serde::Deserialize)]
+pub struct ColdState {
+    /// CR 801.2c — the range matrix, recomputed as each turn begins so a
+    /// player leaving the game only shifts ranges on the next turn.
+    /// `range_matrix[a][b]` is "b is within a's range". Empty means unlimited.
+    #[serde(default)]
+    pub range_matrix: Vec<Vec<bool>>,
+    /// Partition of seats into teams. Every seat appears in exactly one
+    /// entry; free-for-all formats have one singleton team per seat,
+    /// team formats (Two-Headed Giant) have multiple seats per team.
+    /// Populated by `GameState::new`; reshape with `assign_teams`.
+    /// Defaults to empty for snapshots predating the field — helpers
+    /// (`team_of`, `teammates`, `opponents_of`) treat empty as "each
+    /// seat is its own singleton team".
+    #[serde(default)]
+    pub teams: Vec<crate::team::Team>,
+    /// CR 702.29 — per-game tally of how many times a card with each name has
+    /// been cycled (Yidaro, Wandering Monster's "four or more times this game"
+    /// recursion). Keyed by the printed `&'static str` name (an owned key
+    /// would allocate per entry on every state clone); never reset.
+    #[serde(with = "crate::static_str_serde::map_u32", default)]
+    pub cycled_count_by_name:
+        std::collections::HashMap<crate::static_str_serde::StaticStr, u32>,
+    /// Cards put into a graveyard **from the battlefield** this turn (CR —
+    /// Second Sunrise's restore set). Cleared at cleanup.
+    #[serde(default)]
+    pub graveyard_from_battlefield_this_turn: std::collections::HashSet<CardId>,
+    /// Cards that entered the battlefield from a graveyard — or were cast
+    /// from one — this turn. Stamped at the gy→battlefield move funnel and
+    /// at every cast-from-graveyard site; read by
+    /// `SelectionRequirement::EnteredFromGraveyardThisTurn` (Prized
+    /// Amalgam's gate). Cleared at each turn's untap step.
+    #[serde(default)]
+    pub(crate) entered_from_graveyard_this_turn: std::collections::HashSet<CardId>,
+    /// Permanents that entered the battlefield directly from exile (not via a
+    /// cast) this turn. Set in the exile→battlefield move path; read by
+    /// `Predicate::EnteredFromExile` (Fire Lord Zuko's "whenever a permanent
+    /// you control enters from exile"). Cleared at each turn's untap step.
+    #[serde(default)]
+    pub(crate) entered_from_exile_this_turn: std::collections::HashSet<CardId>,
+    /// Death-time snapshots of every creature that died this turn, in death
+    /// order. The typed sibling of `Player.creatures_died_this_turn`, which
+    /// is only a tally; read by `Predicate::CreatureDiedThisTurnMatching`
+    /// (Undead Sprinter's "if a non-Zombie creature died this turn").
+    /// Cleared at each turn's untap step.
+    #[serde(default)]
+    pub(crate) creature_deaths_this_turn: Vec<CardInstance>,
+    /// Tokens minted by `Effect::CreateTokenAttacking` with a non-`None`
+    /// cleanup (Mobilize sacrifice / Myriad exile). Drained when the combat
+    /// phase ends (CR 511.3).
+    #[serde(default)]
+    pub(crate) attacking_token_cleanup: Vec<(CardId, crate::effect::AttackingTokenCleanup)>,
+    /// Transient: colors of the most-recently-sacrificed cost permanent —
+    /// Lyzolda's `Predicate::SacrificedWasColor`. Set on the sacrifice-cost
+    /// paths; reset between resolutions.
+    #[serde(default)]
+    pub(crate) sacrificed_colors: Option<Vec<crate::mana::Color>>,
+    /// Cards exiled from a graveyard to pay the current activation's
+    /// `exile_other_filter` cost — read by `Selector::CostExiledCards`
+    /// (Necropolis's "the exiled card's mana value").
+    #[serde(default)]
+    pub(crate) cost_exiled_cards: Vec<CardId>,
+    /// Colors of the most recently discarded card
+    /// (`Predicate::LastDiscardedWasColor` — Chandra Ablaze). Stamped in
+    /// `discard_card`.
+    #[serde(default)]
+    pub(crate) last_discarded_colors: Vec<crate::mana::Color>,
+    /// Creature types on the most recently discarded card
+    /// (`Predicate::LastDiscardedHasCreatureType` — Necromancer's Stockpile).
+    /// Stamped in `discard_card`.
+    #[serde(default)]
+    pub(crate) last_discarded_creature_types: Vec<crate::card::CreatureType>,
+    /// Transient: the permanents tapped to pay the activated ability currently
+    /// resolving (CR 602.5b `tap_n_filter` costs). Read by
+    /// `SelectionRequirement::SharesCreatureTypeWithTapped` (Cryptic Gateway).
+    #[serde(default)]
+    pub(crate) tapped_for_cost: Vec<CardId>,
+    /// Seats whose library top has been revealed to everyone by a one-shot
+    /// effect (Aven Windreader). Cleared whenever that seat draws or the top
+    /// otherwise changes; see `reveal_library_top_for`.
+    #[serde(default)]
+    pub(crate) library_tops_revealed: Vec<usize>,
+    /// CR 702.32b — the `kicker_options` indices the in-flight cast is paying
+    /// for, consumed by the cast pipeline (`GameAction::CastSpellKickers`).
+    pub(crate) cast_kicker_options: Vec<u8>,
+    /// Turn-scoped `(land type, extra color)` mana grants from
+    /// `Effect::ExtraManaOnLandTapThisTurn` (Bubbling Muck). Cleared at cleanup.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub(crate) extra_mana_on_land_tap_this_turn: Vec<(crate::card::LandType, crate::mana::Color)>,
+    /// Transient: players whose `gained_life_earlier_this_turn` flag should
+    /// flip once the current trigger-dispatch batch finishes filter
+    /// evaluation (drained at the end of `push_ordered_trigger_candidates`,
+    /// so "first time each turn" filters inside the same batch still read
+    /// the pre-batch state — including across an order-triggers suspend).
+    #[serde(skip)]
+    pub(crate) life_gain_flag_pending: Vec<usize>,
+    /// Transient: graveyard cards whose `FromYourGraveyard` combat-damage
+    /// trigger already fired during the current combat-damage sub-step.
+    /// "Whenever one or more creatures you control deal combat damage to a
+    /// player" fires once per damage batch (CR 603.2), but the engine walks
+    /// attackers one at a time — this set dedupes the per-attacker walks.
+    /// Cleared at the top of each damage sub-step (first-strike and regular
+    /// damage are separate batches).
+    #[serde(skip)]
+    pub(crate) gy_combat_trigger_fired_this_step: Vec<CardId>,
+    /// Transient: `(chosen, other)` for the `Effect::SeparateIntoPiles`
+    /// currently running its two bodies. Read by
+    /// `Selector::SeparatedPile`; set and cleared inside one resolution.
+    #[serde(skip)]
+    pub(crate) separated_piles: (Vec<CardId>, Vec<CardId>),
+    /// Printed colours of the most recently cast spell this turn — Mana
+    /// Maze's cast restriction. Cleared at Cleanup.
+    #[serde(default)]
+    pub(crate) last_cast_spell_colors: Vec<crate::mana::Color>,
+    /// Creatures under a turn-scoped "prevent damage from spells and abilities
+    /// that target this" shield (Silhouette). Cleared at cleanup.
+    #[serde(default)]
+    pub(crate) targeting_damage_prevented_this_turn: Vec<CardId>,
+    /// CR 611.2 — floating "this turn, whenever a [filter] …" watchers. Merged
+    /// into every matching permanent's trigger set for the rest of the turn, so
+    /// permanents entering later carry them too (Mage Hunters' Onslaught).
+    /// Cleared at cleanup.
+    #[serde(default)]
+    pub(crate) turn_granted_triggers:
+        Vec<(crate::card::SelectionRequirement, crate::card::TriggeredAbility)>,
+    /// CR 615.1 fog with an exception (Inspire Awe). When `Some(filter)` and
+    /// `prevent_combat_damage_this_turn` is set, a creature's combat damage is
+    /// prevented unless the *dealer* matches `filter`. `None` = prevent all.
+    #[serde(default)]
+    pub(crate) prevent_combat_damage_except: Option<crate::card::SelectionRequirement>,
+    /// CR 614.9 / 615 — creatures whose combat damage is prevented in both
+    /// directions for the rest of the turn (Maze of Ith: "prevent all combat
+    /// damage that would be dealt to and dealt by that creature"). The combat
+    /// resolver skips dealing *and* receiving combat damage for any creature
+    /// in this set. Cleared at cleanup.
+    #[serde(default)]
+    pub(crate) combat_damage_prevented_creatures: Vec<CardId>,
+    /// CR 615 — creatures that prevent all combat damage dealt *to* them this
+    /// turn (incoming only; they still deal their own). The turn-scoped sibling
+    /// of the `PreventAllCombatDamageToThis` static (Fog Bank), granted by a
+    /// one-shot effect — Fleeting Flight's "prevent all combat damage that would
+    /// be dealt to it this turn". Cleared at cleanup.
+    #[serde(default)]
+    pub(crate) combat_damage_prevented_to_this_turn: Vec<CardId>,
+    /// CR 615.1 — creatures whose *own* combat damage is prevented this turn
+    /// (Azorius Ploy's "prevent all combat damage target creature would deal").
+    /// The mirror of `combat_damage_prevented_to_this_turn`. Cleared at cleanup.
+    #[serde(default)]
+    pub(crate) combat_damage_prevented_by_this_turn: Vec<CardId>,
+    /// CR 615 — sources whose damage is prevented outright for the rest of the
+    /// turn, combat and noncombat alike ("prevent all damage target creature
+    /// would deal this turn" — Chain of Silence). Cleared at the turn boundary
+    /// alongside the combat-only list.
+    #[serde(default)]
+    pub(crate) all_damage_prevented_by_this_turn: Vec<CardId>,
+    /// CR 614 — "if `from` would draw a card, that player skips that draw and
+    /// `to` draws instead", as `(from, to)` pairs (Plagiarize). Cleared at
+    /// cleanup.
+    #[serde(default)]
+    pub(crate) draws_redirected_this_turn: Vec<(usize, usize)>,
+    /// CR 615 — players who have "prevent all combat damage that would be dealt
+    /// to you this turn" active (Druid's Deliverance). Consulted in
+    /// `prevent_combat_to_target` for the player-target case. Cleared at cleanup.
+    #[serde(default)]
+    pub(crate) combat_damage_prevented_to_players_this_turn: Vec<usize>,
+    /// CR 510.1c — attackers that became blocked this combat. An attacker
+    /// stays blocked even if all its blockers leave combat (double-strike
+    /// step-one kills, post-block removal): without trample it assigns no
+    /// combat damage. Cleared when combat ends.
+    #[serde(default)]
+    pub(crate) blocked_attackers: Vec<CardId>,
+    /// CR 702.22c-f — the attacking bands declared this combat, each a list of
+    /// still-attacking members. A band lasts for the rest of combat even if a
+    /// member loses banding (CR 702.22e); a creature removed from combat drops
+    /// out of its band (CR 702.22f). Cleared when combat ends.
+    #[serde(default)]
+    pub(crate) attack_bands: Vec<Vec<CardId>>,
+    /// CR 614.13-style ETB-control replacement (Gather Specimens): seats
+    /// whose opponents' creatures enter under their control instead this
+    /// turn. Cleared at cleanup.
+    #[serde(default)]
+    pub creature_etb_steal_this_turn: Vec<usize>,
+    /// Players who have paid the Leonin Arbiter search tax this turn
+    /// (covers further searches until end of turn). Cleared at cleanup.
+    #[serde(default)]
+    pub(crate) search_tax_paid_this_turn: Vec<usize>,
+    /// "Spells your opponents cast cost {N} more until your next turn"
+    /// (Elspeth Conquers Death II). Each entry taxes matching spells cast by
+    /// opponents of `controller`; cleared at `controller`'s untap.
+    #[serde(default)]
+    pub turn_scoped_spell_taxes: Vec<TurnScopedSpellTax>,
+    /// CR 615.7 — sources whose damage is prevented this turn (Burrenton
+    /// Forge-Tender's chosen source, Hallow's life refund, Awe Strike's single
+    /// instance per CR 615.8). Cleared at cleanup.
+    #[serde(default)]
+    pub(crate) damage_prevented_sources: Vec<crate::game::types::PreventedSource>,
+    /// CR 614 — turn-scoped replacements of what a land tap produces
+    /// (Pale Moon, Harvest Mage). Applied at the mana-ability chokepoint;
+    /// cleared at cleanup.
+    #[serde(default)]
+    pub(crate) land_mana_replacements_this_turn: Vec<crate::game::types::LandManaReplacement>,
+    /// CR 614 — seats whose spells and abilities add `Color` instead of any
+    /// other colour for the rest of the turn, and who may spend that colour as
+    /// any colour (False Dawn). Cleared at cleanup.
+    pub(crate) colored_mana_becomes_this_turn: Vec<(usize, crate::mana::Color)>,
+    /// `(blocker, attacker)` pairs declared this turn, kept off the permanents
+    /// so it survives the blocker's death — "destroy it and all creatures it
+    /// blocked this turn" (Defiant Vanguard). Cleared at cleanup.
+    #[serde(default)]
+    pub(crate) blocks_declared_this_turn: Vec<(CardId, CardId)>,
+    /// "All combat damage that would be dealt to you this turn is dealt to
+    /// `to` instead" — `(protected seat, to)` pairs (CR 614.9, Turn the
+    /// Tables). Narrower than `damage_redirect_this_turn`: combat damage only,
+    /// and only damage aimed at the player. Cleared at cleanup.
+    #[serde(default)]
+    pub(crate) combat_damage_redirect_this_turn: Vec<(usize, CardId)>,
+    /// Lightning, Army of One's Stagger — `(victim, registrant)` pairs: until
+    /// the registrant's next turn, damage to the victim or a permanent they
+    /// control is doubled (applied in `scale_damage_to`). Cleared as the
+    /// registrant's turn begins.
+    #[serde(default)]
+    pub(crate) staggered_damage_players: Vec<(usize, usize)>,
+    /// Overblaze — sources whose damage is doubled for the rest of the turn
+    /// (CR 614.2, applied in `scale_damage_to`). Cleared at cleanup.
+    #[serde(default)]
+    pub(crate) doubled_damage_sources_this_turn: Vec<CardId>,
+    /// Kukemssa Pirates — creatures that assign no combat damage for the rest
+    /// of the turn (CR 510.1a). Cleared at cleanup.
+    #[serde(default)]
+    pub(crate) assigns_no_combat_damage_this_turn: Vec<CardId>,
+    /// Distinct (controller, source) pairs that have dealt damage this turn.
+    /// Powers `Predicate::SourcesYouControlledDealtDamageThisTurnAtLeast`
+    /// (Case of the Burning Masks). Cleared at the turn boundary.
+    #[serde(default)]
+    pub(crate) damage_sources_this_turn: Vec<(usize, CardId)>,
+    /// Single Combat's lock — `(registerer, registration_turn)`: no player may
+    /// cast a creature or planeswalker spell until the end of the registerer's
+    /// next turn. Cleared in `cleanup_wear_off` at the end of the registerer's
+    /// first turn strictly after `registration_turn`.
+    #[serde(default)]
+    pub(crate) creature_pw_cast_locks: Vec<(usize, u32)>,
+    /// Per-pair "can't block" restrictions for the turn: `(blocker, attacker)`
+    /// — the blocker can't block that specific attacker (Kozilek's Pathfinder's
+    /// "{C}: Target creature can't block this creature this turn"). Cleared at
+    /// cleanup. `#[serde(default)]` for snapshot back-compat.
+    #[serde(default)]
+    pub(crate) cant_block_pairs: Vec<(CardId, CardId)>,
+    /// CR 509.1b — creatures barred from blocking at all this turn
+    /// (Concussive Bolt). Cleared at cleanup.
+    #[serde(default)]
+    pub(crate) cant_block_this_turn: Vec<CardId>,
+    /// CR 508.1a — creatures granted "can attack this turn as though it didn't
+    /// have defender" (Krotiq Nestguard's activated ability). Cleared at cleanup.
+    pub(crate) attack_despite_defender_this_turn: Vec<CardId>,
+    /// CR 615 — "prevent all damage that would be dealt to and dealt by
+    /// [permanent] until your next turn" (Kiora, the Crashing Wave's +1).
+    /// Each entry is `(permanent, the seat whose next turn ends it)`; the
+    /// entry is dropped at that seat's untap step.
+    pub(crate) damage_locked_until_turn_of: Vec<(CardId, usize)>,
+    /// Active prevention shields (CR 615.1) around players/permanents.
+    /// Created by `Effect::PreventNextDamage` / `PreventAllDamageThisTurn`;
+    /// consulted by the non-combat damage path (`deal_damage_to_from`) and
+    /// cleared at cleanup. `#[serde(default)]` for snapshot back-compat.
+    #[serde(default)]
+    pub prevention_shields: Vec<crate::game::types::PreventionShield>,
+    /// CR 614.9 — one-shot "all damage to you and your permanents this turn is
+    /// dealt to the chosen permanent instead" (Gideon's Sacrifice). Each entry
+    /// is `(protected_player, redirect_target)`; consulted in
+    /// `damage_redirect_target` and cleared at cleanup.
+    #[serde(default)]
+    pub damage_redirect_this_turn: Vec<(usize, CardId)>,
+    /// CR 614.9 — one-shot per-permanent redirects: "the next time damage
+    /// would be dealt to `.0` this turn, it's dealt to `.1` instead"
+    /// (Mirrorwood Treefolk). Consumed by the first damage event and cleared
+    /// at cleanup.
+    #[serde(default)]
+    pub next_damage_redirect: Vec<(CardId, crate::game::effects::EntityRef)>,
+    /// CR 614.9 — "All damage that would be dealt to `.0` this turn is dealt
+    /// to `.1` instead" (Karona's Zealot). Unlike `next_damage_redirect` this
+    /// isn't consumed by the first event; cleared at cleanup.
+    #[serde(default)]
+    pub turn_damage_redirect: Vec<(CardId, crate::game::effects::EntityRef)>,
+    /// CR 614.9 — creatures whose next combat damage this turn is dealt to
+    /// their own controller instead (Goblin Psychopath). Cleared at cleanup.
+    #[serde(default)]
+    pub next_combat_damage_to_controller: Vec<CardId>,
+    /// CR 614 — "the next time this would deal combat damage to an opponent
+    /// this turn, it deals that damage to [creature] instead" (Soltari
+    /// Guerrillas). Consumed on the first unblocked hit; cleared at cleanup.
+    #[serde(default)]
+    pub next_combat_damage_redirect: Vec<(CardId, CardId)>,
+    /// CR 614.9 — `(spell card id, that spell's controller)`: all damage the
+    /// spell would deal this turn goes to its controller instead
+    /// (Reverberation). Cleared at cleanup.
+    #[serde(default)]
+    pub spell_damage_to_controller: Vec<(CardId, usize)>,
+    /// `(sorcery card id, caster, damage dealt)` for every sorcery spell that
+    /// has dealt damage this turn — Backdraft's "half the damage dealt by one
+    /// of those sorcery spells". Cleared at cleanup.
+    #[serde(default)]
+    pub sorcery_damage_this_turn: Vec<(CardId, usize, u32)>,
+    /// `(seat, damage)` dealt to each player by artifact sources this turn
+    /// (Reverse Polarity). Cleared at cleanup.
+    #[serde(default)]
+    pub artifact_damage_to_players_this_turn: Vec<(usize, u32)>,
+    /// CR 701.19 — `(viewer, owner)` pairs where `viewer` has looked at
+    /// `owner`'s hand and keeps seeing it (Wanderguard Sentry, Thought
+    /// Prison). Surfaced through the server view so a UI seat renders it.
+    #[serde(default)]
+    pub hands_revealed_to: Vec<(usize, usize)>,
+    /// Desperate Gambit — sources whose next damage this turn is doubled. The
+    /// entry is consumed by the first damage each names.
+    #[serde(default)]
+    pub(crate) double_next_damage_from: Vec<CardId>,
+    /// CR 708.2 — `(face-down permanent, seat)` pairs a "look at target
+    /// face-down creature" effect has revealed (Aven Soulgazer, Spy Network).
+    /// The peek persists while the permanent stays face down.
+    #[serde(default)]
+    pub face_down_revealed_to: Vec<(CardId, usize)>,
+    /// CR 702.18 — `(permanent, seat)` pairs whose shroud is waived for that
+    /// seat's spells and abilities this turn (Autumn Willow). Cleared at
+    /// cleanup.
+    #[serde(default)]
+    pub shroud_waivers: Vec<(CardId, usize)>,
+    /// Permanents whose activated abilities can't be activated this turn
+    /// (Interdict). Non-mana activations from these sources are rejected
+    /// until cleanup.
+    #[serde(default)]
+    pub abilities_locked_this_turn: Vec<CardId>,
+    /// CR 701.38 — `(seat, option index)` for every vote cast on the most
+    /// recent ballot, read by `PlayerRef::OpponentsWhoVotedDifferently`.
+    #[serde(default)]
+    pub last_vote: Vec<(usize, usize)>,
+    /// CR 500.8 — steps/phases a player skips for the rest of this turn
+    /// (Fatespinner). `(seat, step)`; cleared at cleanup.
+    #[serde(default)]
+    pub skipped_steps_this_turn: Vec<(usize, TurnStep)>,
+    /// "Creatures `.0` controls can't attack `.1` this turn" (Web of Inertia).
+    /// Checked when attacks are declared; cleared at cleanup.
+    #[serde(default)]
+    pub cant_attack_player_this_turn: Vec<(usize, usize)>,
+    /// CR 723.1 — `(controlled, controller)` pairs waiting for `controlled` to
+    /// actually take a turn (Mindslaver). A later entry for the same seat
+    /// overwrites the earlier one (CR 723.1a).
+    #[serde(default)]
+    pub pending_player_control: Vec<(usize, usize)>,
+    /// Registered replacement effects (Phase H — Commander prerequisite).
+    /// Walked by zone-change paths (`place_card_in_dest`,
+    /// `remove_from_battlefield_to_*`) at placement time; a matching
+    /// entry rewrites the destination zone.
+    ///
+    /// `#[serde(default)]` so snapshots written before this field
+    /// existed deserialize cleanly as empty (no replacements active).
+    #[serde(default)]
+    pub replacement_effects: Vec<crate::replacement::ReplacementEffect>,
+    /// Per-commander cast-from-command-zone counter (Phase L).
+    /// Keyed by the commander's `CardId`; each entry tracks how many
+    /// times that commander has been cast from the command zone this
+    /// game. The commander tax is `{2}` × this value, added as
+    /// generic mana on top of the printed cost (CR 903.8).
+    ///
+    /// `#[serde(default)]` for snapshot back-compat.
+    #[serde(default)]
+    pub commander_cast_count: HashMap<CardId, u32>,
+    /// 21-commander-damage tracker (Phase M / CR 704.5v). Keyed by
+    /// `(victim_seat, commander_card_id)`; values are running totals
+    /// of combat / direct damage dealt by that commander to that
+    /// seat over the whole game. The SBA in
+    /// `check_state_based_actions` eliminates a player when any of
+    /// their entries crosses 21.
+    ///
+    /// `#[serde(default)]` for snapshot back-compat.
+    #[serde(default)]
+    pub commander_damage: HashMap<(usize, CardId), u32>,
+    /// Auras that lost their host this turn, keyed by the (now-gone) host's
+    /// CardId → list of `(aura id, aura controller)`. Populated in the
+    /// orphan-Aura SBA sweep before the Aura is sent to the graveyard, so
+    /// "whenever an enchanted creature dies" payoffs (Hateful Eidolon,
+    /// Dawn Evangel) can count the Auras you controlled that were on it at
+    /// resolution time. Cleared in `do_cleanup`. `#[serde(skip)]` — transient.
+    #[serde(skip)]
+    pub(crate) auras_at_death: HashMap<CardId, Vec<(CardId, usize)>>,
+    /// Set of permanent CardIds that gained one or more counters during
+    /// the current turn. Bumped in `Effect::AddCounter`'s resolver
+    /// whenever a permanent gains counters; reset to empty in
+    /// `do_cleanup`. Powers Fractal Tender's end-step "if you put a
+    /// counter on this creature this turn, mint a Fractal" rider via
+    /// the new `Predicate::SourceGainedCounterThisTurn` predicate.
+    /// `#[serde(default)]` for snapshot back-compat.
+    #[serde(default)]
+    pub permanents_gained_counter_this_turn: std::collections::HashSet<CardId>,
+    /// Permanents whose `StaticEffect::CounterAmplifierOncePerTurn` extra
+    /// +1/+1 counter has already been added this turn (Cursed Wombat). The
+    /// granted ability "triggers only once each turn" per permanent; cleared at
+    /// cleanup. `#[serde(default)]` for snapshot back-compat.
+    #[serde(default)]
+    pub(crate) permanents_amplified_counter_this_turn: std::collections::HashSet<CardId>,
+    /// How many times each source's escalating ability has resolved this turn
+    /// (CR 603.3-style "if this is the first/second/third time …" — Vito,
+    /// Fanatic of Aclazotz). Keyed by source `CardId`; cleared at cleanup.
+    #[serde(default)]
+    pub(crate) ability_resolutions_this_turn: std::collections::HashMap<CardId, u32>,
+    /// Per-permanent transient triggered abilities granted by spells /
+    /// continuous effects (Rabid Attack, Root Manipulation: "creatures
+    /// you control gain '…trigger…' until end of turn"). The dispatcher
+    /// walks this map alongside each permanent's printed
+    /// `triggered_abilities` and fires matching events. Cleared in
+    /// `do_cleanup` (the "until end of turn" expiry). Other durations
+    /// (Permanent) would need a separate map; only EOT grants are
+    /// modeled today since that's what the printed catalog needs.
+    /// `#[serde(default)]` for snapshot back-compat.
+    #[serde(default)]
+    pub granted_triggers_eot:
+        std::collections::HashMap<CardId, Vec<crate::card::TriggeredAbility>>,
+    /// Permanents whose death is replaced by exile for the rest of the
+    /// turn — "if that creature would die this turn, exile it instead"
+    /// (Wilt in the Heat). Checked in `remove_from_battlefield_to_graveyard_raw`
+    /// alongside the Finality-counter redirect; cleared at cleanup. The
+    /// redirect lasts the whole turn, so it also catches deaths from later
+    /// combat / removal, not just the spell's own damage. `#[serde(default)]`
+    /// for snapshot back-compat.
+    #[serde(default)]
+    pub(crate) dies_to_exile_eot: std::collections::HashSet<CardId>,
+    /// CR 614 — creatures granted Kumano's rider until end of turn: a creature
+    /// they damage is exiled instead of dying. The granted twin of
+    /// `CardDefinition.damage_exiles_if_dies`; cleared at cleanup (Runesword).
+    #[serde(default)]
+    pub(crate) damage_exiles_victim_eot: std::collections::HashSet<CardId>,
+    /// CR 701.15g — creatures whose damage this turn denies its victim
+    /// regeneration (Runesword). Cleared at cleanup.
+    #[serde(default)]
+    pub(crate) damage_denies_regen_eot: std::collections::HashSet<CardId>,
+    /// "That spell gains [keywords]" grants onto spells still on the stack
+    /// (Judith, Carnage Connoisseur). Consulted when a spell starts resolving
+    /// and dropped once it leaves the stack.
+    #[serde(default)]
+    pub(crate) spell_keyword_grants: Vec<(CardId, crate::card::Keyword)>,
+    /// Temporary control changes awaiting reversion (Act of Treason /
+    /// Threaten / Tempted by the Oriq). `Effect::GainControl` with a
+    /// non-`Permanent` duration records the controller the permanent had
+    /// immediately before the steal so control snaps back when the
+    /// duration ends (CR 800.4 control-changing effects). `#[serde(default)]`
+    /// for snapshot back-compat.
+    #[serde(default)]
+    pub(crate) temporary_control: Vec<TempControl>,
+    /// CR 508.1a/d — a per-seat next-turn attack mandate (Oracle en-Vec): on
+    /// `seat`'s next turn the listed creatures attack if able and no other
+    /// creature they control may attack; at that turn's end step each listed
+    /// creature that didn't attack is destroyed. Armed when `seat` becomes the
+    /// active player and consumed at that turn's end step.
+    #[serde(default)]
+    pub(crate) attack_mandates: Vec<AttackMandate>,
+    /// Temporary "becomes a copy" definition swaps awaiting reversion
+    /// (`Effect::BecomeCopyOfFor`, CR 707.2). Records the pre-copy
+    /// definition; the swap snaps back when the duration ends, mirroring
+    /// `temporary_control`. Entries whose card left the battlefield are
+    /// dropped (a new object keeps nothing). `#[serde(default)]` for
+    /// snapshot back-compat.
+    #[serde(default)]
+    pub temporary_copies: Vec<TempCopy>,
+    /// CR 702.143b — cards foretold this turn can't be cast from exile until
+    /// a later turn. Tracks the cards a player foretold during the current
+    /// turn; cleared at cleanup. `#[serde(default)]` for snapshot back-compat.
+    #[serde(default)]
+    pub foretold_this_turn: std::collections::HashSet<CardId>,
+    /// CR 702.170 — cards currently plotted (exiled face-up, castable from
+    /// exile without paying their mana cost on a later turn).
+    /// `#[serde(default)]` for snapshot back-compat.
+    #[serde(default)]
+    pub plotted_cards: std::collections::HashSet<CardId>,
+    /// CR 603.8 latch for `sacrifice_and_burn_when_stolen` (Bronze Bombshell):
+    /// permanents whose steal penalty has already been put on the stack, so the
+    /// state trigger fires once per control change rather than every SBA pass.
+    /// Cleared for a card when control returns to its owner. `#[serde(default)]`.
+    #[serde(default)]
+    pub steal_penalty_armed: std::collections::HashSet<CardId>,
+    /// CR 603.8 latch for `sacrifice_when_you_control_no_other` (Synod
+    /// Centurion) — the sibling of `steal_penalty_armed`. Cleared for a card
+    /// as soon as the controller has a matching permanent again.
+    #[serde(default)]
+    pub no_other_sacrifice_armed: std::collections::HashSet<CardId>,
+    /// CR 603.8 latch for `CardDefinition::state_trigger`: permanents whose
+    /// state trigger has already been put on the stack while its condition
+    /// holds. Cleared for a card as soon as the condition is false again, so
+    /// the ability can trigger anew (Hidden Predators, Veiled Crocodile).
+    #[serde(default)]
+    pub state_trigger_armed: std::collections::HashSet<CardId>,
+    /// CR 702.170d — cards plotted *this* turn can't be cast until a later
+    /// turn. Cleared at cleanup. `#[serde(default)]` for back-compat.
+    #[serde(default)]
+    pub plotted_this_turn: std::collections::HashSet<CardId>,
+    /// CR 603.3d — triggered abilities flagged `TriggeredAbility::once_per_turn`
+    /// ("this ability triggers only once each turn") that have already fired
+    /// this turn, keyed by (source card, trigger index). Cleared at cleanup.
+    /// `#[serde(default)]` for snapshot back-compat. Powers Dramatic Finale.
+    #[serde(default)]
+    pub triggered_once_per_turn_used: std::collections::HashSet<(CardId, usize)>,
+    /// `EventSpec::per_subject_cap` tallies: fires of a capped trigger this
+    /// turn, keyed by (watcher, event subject). Cleared at cleanup.
+    #[serde(default)]
+    pub(crate) per_subject_trigger_uses: std::collections::HashMap<(CardId, CardId), u8>,
+    /// Taii Wakeen — per-seat bonus added to noncombat damage a source that
+    /// seat controls deals this turn. Cleared at cleanup.
+    #[serde(default)]
+    pub(crate) noncombat_damage_bonus_this_turn: Vec<(usize, u32)>,
+}
+
 #[derive(serde::Serialize, serde::Deserialize)]
 pub struct GameState {
     pub players: Vec<Player>,
@@ -330,25 +853,11 @@ pub struct GameState {
     /// uses; `Some(n)` limits each player to the `n` seats either side of them.
     #[serde(default)]
     pub range_of_influence: Option<u32>,
-    /// CR 801.2c — the range matrix, recomputed as each turn begins so a
-    /// player leaving the game only shifts ranges on the next turn.
-    /// `range_matrix[a][b]` is "b is within a's range". Empty means unlimited.
-    #[serde(default)]
-    pub range_matrix: Vec<Vec<bool>>,
     /// CR 809.3c — the Emperor variant's attack restriction: a player may only
     /// attack the seats immediately either side of them (and their
     /// planeswalkers / battles), even when their range of influence is wider.
     #[serde(default)]
     pub attack_adjacent_only: bool,
-    /// Partition of seats into teams. Every seat appears in exactly one
-    /// entry; free-for-all formats have one singleton team per seat,
-    /// team formats (Two-Headed Giant) have multiple seats per team.
-    /// Populated by `GameState::new`; reshape with `assign_teams`.
-    /// Defaults to empty for snapshots predating the field — helpers
-    /// (`team_of`, `teammates`, `opponents_of`) treat empty as "each
-    /// seat is its own singleton team".
-    #[serde(default)]
-    pub teams: Vec<crate::team::Team>,
     /// CR 804 — the deploy creatures option (always on in Emperor, optional
     /// in other team variants): every creature gains "{T}: Target teammate
     /// gains control of this creature. Activate only as a sorcery."
@@ -449,13 +958,6 @@ pub struct GameState {
     /// Cleanup alongside `spells_cast_this_turn`.
     #[serde(default)]
     pub noncreature_spells_cast_this_turn: u32,
-    /// CR 702.29 — per-game tally of how many times a card with each name has
-    /// been cycled (Yidaro, Wandering Monster's "four or more times this game"
-    /// recursion). Keyed by the printed `&'static str` name (an owned key
-    /// would allocate per entry on every state clone); never reset.
-    #[serde(with = "crate::static_str_serde::map_u32", default)]
-    pub cycled_count_by_name:
-        std::collections::HashMap<crate::static_str_serde::StaticStr, u32>,
     /// CR 700.14 — running total of mana the active player has spent to
     /// cast spells this turn (Expend). Bumped in `finalize_cast` by each
     /// spell's `mana_spent`; reset at cleanup. `#[serde(default)]`.
@@ -483,39 +985,10 @@ pub struct GameState {
     /// copy counts; reset at each turn's untap step.
     #[serde(default)]
     pub permanents_to_graveyard_this_turn: u32,
-    /// Cards put into a graveyard **from the battlefield** this turn (CR —
-    /// Second Sunrise's restore set). Cleared at cleanup.
-    #[serde(default)]
-    pub graveyard_from_battlefield_this_turn: std::collections::HashSet<CardId>,
-    /// Cards that entered the battlefield from a graveyard — or were cast
-    /// from one — this turn. Stamped at the gy→battlefield move funnel and
-    /// at every cast-from-graveyard site; read by
-    /// `SelectionRequirement::EnteredFromGraveyardThisTurn` (Prized
-    /// Amalgam's gate). Cleared at each turn's untap step.
-    #[serde(default)]
-    pub(crate) entered_from_graveyard_this_turn: std::collections::HashSet<CardId>,
-    /// Permanents that entered the battlefield directly from exile (not via a
-    /// cast) this turn. Set in the exile→battlefield move path; read by
-    /// `Predicate::EnteredFromExile` (Fire Lord Zuko's "whenever a permanent
-    /// you control enters from exile"). Cleared at each turn's untap step.
-    #[serde(default)]
-    pub(crate) entered_from_exile_this_turn: std::collections::HashSet<CardId>,
-    /// Death-time snapshots of every creature that died this turn, in death
-    /// order. The typed sibling of `Player.creatures_died_this_turn`, which
-    /// is only a tally; read by `Predicate::CreatureDiedThisTurnMatching`
-    /// (Undead Sprinter's "if a non-Zombie creature died this turn").
-    /// Cleared at each turn's untap step.
-    #[serde(default)]
-    pub(crate) creature_deaths_this_turn: Vec<CardInstance>,
     /// Delayed triggered abilities registered by resolved spells/abilities
     /// (Pact upkeep cost, Goryo's exile-at-EOT, etc.). Fired by the step
     /// dispatcher when the matching event occurs.
     pub delayed_triggers: Vec<DelayedTrigger>,
-    /// Tokens minted by `Effect::CreateTokenAttacking` with a non-`None`
-    /// cleanup (Mobilize sacrifice / Myriad exile). Drained when the combat
-    /// phase ends (CR 511.3).
-    #[serde(default)]
-    pub(crate) attacking_token_cleanup: Vec<(CardId, crate::effect::AttackingTokenCleanup)>,
     /// Transient: power of the most recently sacrificed creature within the
     /// current effect resolution. Set by `Effect::SacrificeAndRemember` and
     /// read by `Value::SacrificedPower` (e.g. Thud). Reset between
@@ -573,39 +1046,19 @@ pub struct GameState {
     /// Vehicle — Hellish Sideswipe's `Predicate::SacrificedWasVehicle`.
     #[serde(default)]
     pub(crate) sacrificed_was_vehicle: Option<bool>,
-    /// Transient: colors of the most-recently-sacrificed cost permanent —
-    /// Lyzolda's `Predicate::SacrificedWasColor`. Set on the sacrifice-cost
-    /// paths; reset between resolutions.
-    #[serde(default)]
-    pub(crate) sacrificed_colors: Option<Vec<crate::mana::Color>>,
     /// Card id of the permanent sacrificed for the current cost/resolution —
     /// read by `Selector::SacrificedCard` (Rescue from the Underworld).
     pub(crate) sacrificed_card: Option<CardId>,
-    /// Cards exiled from a graveyard to pay the current activation's
-    /// `exile_other_filter` cost — read by `Selector::CostExiledCards`
-    /// (Necropolis's "the exiled card's mana value").
-    #[serde(default)]
-    pub(crate) cost_exiled_cards: Vec<CardId>,
     /// Transient: whether the last card discarded during the current
     /// resolution was multicolored (Stormscale Anarch). Stamped in
     /// `discard_card`.
     #[serde(default)]
     pub(crate) last_discarded_was_multicolored: Option<bool>,
-    /// Colors of the most recently discarded card
-    /// (`Predicate::LastDiscardedWasColor` — Chandra Ablaze). Stamped in
-    /// `discard_card`.
-    #[serde(default)]
-    pub(crate) last_discarded_colors: Vec<crate::mana::Color>,
     /// Transient: card-type count of the most recently discarded card
     /// (`Value::LastDiscardedCardTypes` — Mount Velus Manticore). Stamped in
     /// `discard_card`.
     #[serde(default)]
     pub(crate) last_discarded_card_types: u32,
-    /// Creature types on the most recently discarded card
-    /// (`Predicate::LastDiscardedHasCreatureType` — Necromancer's Stockpile).
-    /// Stamped in `discard_card`.
-    #[serde(default)]
-    pub(crate) last_discarded_creature_types: Vec<crate::card::CreatureType>,
     /// Mana value of the last card discarded during the current resolution
     /// (Argentum Masticore's "MV ≤ the discarded card" reflexive gate).
     pub(crate) last_discarded_mana_value: Option<u32>,
@@ -627,11 +1080,6 @@ pub struct GameState {
     /// by `Value::TappedForCostPower`. Reset between independent resolutions.
     #[serde(default)]
     pub(crate) tapped_for_cost_power: Option<i32>,
-    /// Transient: the permanents tapped to pay the activated ability currently
-    /// resolving (CR 602.5b `tap_n_filter` costs). Read by
-    /// `SelectionRequirement::SharesCreatureTypeWithTapped` (Cryptic Gateway).
-    #[serde(default)]
-    pub(crate) tapped_for_cost: Vec<CardId>,
     /// False Cure — life lost per 1 life gained, by any player, for the rest
     /// of the turn (`Effect::AnyLifeGainPunishedThisTurn`). Cleared at cleanup.
     #[serde(default)]
@@ -661,11 +1109,6 @@ pub struct GameState {
     /// (`SameControllerAsTargetSlot` — Barrin's Spite) can see its sibling.
     #[serde(skip)]
     pub(crate) target_slots_scratch: Vec<Option<Target>>,
-    /// Seats whose library top has been revealed to everyone by a one-shot
-    /// effect (Aven Windreader). Cleared whenever that seat draws or the top
-    /// otherwise changes; see `reveal_library_top_for`.
-    #[serde(default)]
-    pub(crate) library_tops_revealed: Vec<usize>,
     /// Transient: id of the most-recently-created token within the current
     /// effect resolution. Set by `Effect::CreateToken` and read by
     /// `Selector::LastCreatedToken` so a follow-up `AddCounter` /
@@ -696,9 +1139,6 @@ pub struct GameState {
     /// Aftershocks reads "the number of times that spell was kicked").
     #[serde(skip)]
     pub(crate) cast_kick_count: u32,
-    /// CR 702.32b — the `kicker_options` indices the in-flight cast is paying
-    /// for, consumed by the cast pipeline (`GameAction::CastSpellKickers`).
-    pub(crate) cast_kicker_options: Vec<u8>,
     /// Transient: ids of all tokens created within the current effect
     /// resolution. Set by `Effect::CreateToken`
     /// alongside `last_created_token` and read by
@@ -753,10 +1193,6 @@ pub struct GameState {
     /// within the current resolution (`Value::CardsRevealedThisEffect`).
     #[serde(skip)]
     pub(crate) cards_revealed_this_resolution: u32,
-    /// Turn-scoped `(land type, extra color)` mana grants from
-    /// `Effect::ExtraManaOnLandTapThisTurn` (Bubbling Muck). Cleared at cleanup.
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub(crate) extra_mana_on_land_tap_this_turn: Vec<(crate::card::LandType, crate::mana::Color)>,
     /// Transient: count of *creature* cards discarded within the current
     /// effect resolution. Bumped alongside `cards_discarded_this_resolution`
     /// when the discarded card carries `CardType::Creature`. Read by
@@ -812,22 +1248,6 @@ pub struct GameState {
     /// with the given counter on it (Esper Origins). Cleared once consumed.
     #[serde(skip)]
     pub(crate) resolving_spell_to_battlefield_transformed: Option<Option<crate::card::CounterType>>,
-    /// Transient: players whose `gained_life_earlier_this_turn` flag should
-    /// flip once the current trigger-dispatch batch finishes filter
-    /// evaluation (drained at the end of `push_ordered_trigger_candidates`,
-    /// so "first time each turn" filters inside the same batch still read
-    /// the pre-batch state — including across an order-triggers suspend).
-    #[serde(skip)]
-    pub(crate) life_gain_flag_pending: Vec<usize>,
-    /// Transient: graveyard cards whose `FromYourGraveyard` combat-damage
-    /// trigger already fired during the current combat-damage sub-step.
-    /// "Whenever one or more creatures you control deal combat damage to a
-    /// player" fires once per damage batch (CR 603.2), but the engine walks
-    /// attackers one at a time — this set dedupes the per-attacker walks.
-    /// Cleared at the top of each damage sub-step (first-strike and regular
-    /// damage are separate batches).
-    #[serde(skip)]
-    pub(crate) gy_combat_trigger_fired_this_step: Vec<CardId>,
     /// CR 724 — set by `Effect::EndTheTurn`; consumed after the current
     /// stack item finishes resolving (exile the stack, clear combat, jump
     /// to cleanup).
@@ -856,15 +1276,6 @@ pub struct GameState {
     /// to empty between independent resolutions.
     #[serde(skip)]
     pub(crate) discarded_card_ids_this_resolution: Vec<CardId>,
-    /// Transient: `(chosen, other)` for the `Effect::SeparateIntoPiles`
-    /// currently running its two bodies. Read by
-    /// `Selector::SeparatedPile`; set and cleared inside one resolution.
-    #[serde(skip)]
-    pub(crate) separated_piles: (Vec<CardId>, Vec<CardId>),
-    /// Printed colours of the most recently cast spell this turn — Mana
-    /// Maze's cast restriction. Cleared at Cleanup.
-    #[serde(default)]
-    pub(crate) last_cast_spell_colors: Vec<crate::mana::Color>,
     /// Transient: set when a `wants_ui` caster answers an optional extra-
     /// target prompt with `DecisionAnswer::DeclineTarget`. The cast replay
     /// (`ResumeContext::CastExtraTargetPick`) re-enters `perform_action`,
@@ -916,10 +1327,6 @@ pub struct GameState {
     /// Saved and restored around each nested `resolve_effect`.
     #[serde(skip)]
     pub(crate) resolution_targets: Vec<CardId>,
-    /// Creatures under a turn-scoped "prevent damage from spells and abilities
-    /// that target this" shield (Silhouette). Cleared at cleanup.
-    #[serde(default)]
-    pub(crate) targeting_damage_prevented_this_turn: Vec<CardId>,
     /// Transient: the permanents sacrificed to pay the activation currently
     /// on the stack, so its body can exile them (Sword of the Ages). Stamped
     /// by `activate_ability`, consumed by `Effect::ExileCostSacrificedBatch`.
@@ -1010,13 +1417,6 @@ pub struct GameState {
     /// permanent card" clause can't pick back what it just ate (Deadly Brew).
     #[serde(default)]
     pub(crate) cards_sacrificed_this_resolution: Vec<CardId>,
-    /// CR 611.2 — floating "this turn, whenever a [filter] …" watchers. Merged
-    /// into every matching permanent's trigger set for the rest of the turn, so
-    /// permanents entering later carry them too (Mage Hunters' Onslaught).
-    /// Cleared at cleanup.
-    #[serde(default)]
-    pub(crate) turn_granted_triggers:
-        Vec<(crate::card::SelectionRequirement, crate::card::TriggeredAbility)>,
     /// The creature type an `Effect::NameCreatureType` picked during the
     /// current resolution, for sources that aren't battlefield permanents (an
     /// instant/sorcery is off the stack by the time its body runs — Outbreak).
@@ -1203,11 +1603,6 @@ pub struct GameState {
     /// boundary.
     #[serde(default)]
     pub nonland_permanent_left_bf_this_turn: bool,
-    /// CR 615.1 fog with an exception (Inspire Awe). When `Some(filter)` and
-    /// `prevent_combat_damage_this_turn` is set, a creature's combat damage is
-    /// prevented unless the *dealer* matches `filter`. `None` = prevent all.
-    #[serde(default)]
-    pub(crate) prevent_combat_damage_except: Option<crate::card::SelectionRequirement>,
     /// CR 701.10f / 614.5 — transient mana-production multiplier for the
     /// mana ability currently resolving (Mana Reflection ×2, Nyxbloom
     /// Ancient ×3, composed). Set before a tapped-for-mana ability resolves
@@ -1281,71 +1676,10 @@ pub struct GameState {
     /// step of your turn" gate doesn't loop on the extra step it grants.
     #[serde(default)]
     pub upkeep_steps_this_turn: u32,
-    /// CR 614.9 / 615 — creatures whose combat damage is prevented in both
-    /// directions for the rest of the turn (Maze of Ith: "prevent all combat
-    /// damage that would be dealt to and dealt by that creature"). The combat
-    /// resolver skips dealing *and* receiving combat damage for any creature
-    /// in this set. Cleared at cleanup.
-    #[serde(default)]
-    pub(crate) combat_damage_prevented_creatures: Vec<CardId>,
-    /// CR 615 — creatures that prevent all combat damage dealt *to* them this
-    /// turn (incoming only; they still deal their own). The turn-scoped sibling
-    /// of the `PreventAllCombatDamageToThis` static (Fog Bank), granted by a
-    /// one-shot effect — Fleeting Flight's "prevent all combat damage that would
-    /// be dealt to it this turn". Cleared at cleanup.
-    #[serde(default)]
-    pub(crate) combat_damage_prevented_to_this_turn: Vec<CardId>,
-    /// CR 615.1 — creatures whose *own* combat damage is prevented this turn
-    /// (Azorius Ploy's "prevent all combat damage target creature would deal").
-    /// The mirror of `combat_damage_prevented_to_this_turn`. Cleared at cleanup.
-    #[serde(default)]
-    pub(crate) combat_damage_prevented_by_this_turn: Vec<CardId>,
-    /// CR 615 — sources whose damage is prevented outright for the rest of the
-    /// turn, combat and noncombat alike ("prevent all damage target creature
-    /// would deal this turn" — Chain of Silence). Cleared at the turn boundary
-    /// alongside the combat-only list.
-    #[serde(default)]
-    pub(crate) all_damage_prevented_by_this_turn: Vec<CardId>,
-    /// CR 614 — "if `from` would draw a card, that player skips that draw and
-    /// `to` draws instead", as `(from, to)` pairs (Plagiarize). Cleared at
-    /// cleanup.
-    #[serde(default)]
-    pub(crate) draws_redirected_this_turn: Vec<(usize, usize)>,
     /// CR 615 — "if any source would deal `.0` or more damage this turn, it
     /// deals `.1` damage instead" (Equal Treatment). Cleared at cleanup.
     #[serde(default)]
     pub(crate) damage_becomes_this_turn: Option<(u32, u32)>,
-    /// CR 615 — players who have "prevent all combat damage that would be dealt
-    /// to you this turn" active (Druid's Deliverance). Consulted in
-    /// `prevent_combat_to_target` for the player-target case. Cleared at cleanup.
-    #[serde(default)]
-    pub(crate) combat_damage_prevented_to_players_this_turn: Vec<usize>,
-    /// CR 510.1c — attackers that became blocked this combat. An attacker
-    /// stays blocked even if all its blockers leave combat (double-strike
-    /// step-one kills, post-block removal): without trample it assigns no
-    /// combat damage. Cleared when combat ends.
-    #[serde(default)]
-    pub(crate) blocked_attackers: Vec<CardId>,
-    /// CR 702.22c-f — the attacking bands declared this combat, each a list of
-    /// still-attacking members. A band lasts for the rest of combat even if a
-    /// member loses banding (CR 702.22e); a creature removed from combat drops
-    /// out of its band (CR 702.22f). Cleared when combat ends.
-    #[serde(default)]
-    pub(crate) attack_bands: Vec<Vec<CardId>>,
-    /// CR 614.13-style ETB-control replacement (Gather Specimens): seats
-    /// whose opponents' creatures enter under their control instead this
-    /// turn. Cleared at cleanup.
-    #[serde(default)]
-    pub creature_etb_steal_this_turn: Vec<usize>,
-    /// Players who have paid the Leonin Arbiter search tax this turn
-    /// (covers further searches until end of turn). Cleared at cleanup.
-    #[serde(default)]
-    pub(crate) search_tax_paid_this_turn: Vec<usize>,
-    /// "Spells your opponents cast cost {N} more until your next turn"
-    /// (Elspeth Conquers Death II). Each entry taxes matching spells cast by
-    /// opponents of `controller`; cleared at `controller`'s untap.
-    #[serde(default)]
-    pub turn_scoped_spell_taxes: Vec<TurnScopedSpellTax>,
     /// CR 701.38 — "you choose how each player votes this turn" (Illusion of
     /// Choice). Every vote this turn is answered by this seat on the voter's
     /// behalf; the votes are still *cast* by their own players. Cleared at the
@@ -1363,25 +1697,6 @@ pub struct GameState {
     /// mid-turn crown change.
     #[serde(default)]
     pub monarch_at_turn_start: Option<usize>,
-    /// CR 615.7 — sources whose damage is prevented this turn (Burrenton
-    /// Forge-Tender's chosen source, Hallow's life refund, Awe Strike's single
-    /// instance per CR 615.8). Cleared at cleanup.
-    #[serde(default)]
-    pub(crate) damage_prevented_sources: Vec<crate::game::types::PreventedSource>,
-    /// CR 614 — turn-scoped replacements of what a land tap produces
-    /// (Pale Moon, Harvest Mage). Applied at the mana-ability chokepoint;
-    /// cleared at cleanup.
-    #[serde(default)]
-    pub(crate) land_mana_replacements_this_turn: Vec<crate::game::types::LandManaReplacement>,
-    /// CR 614 — seats whose spells and abilities add `Color` instead of any
-    /// other colour for the rest of the turn, and who may spend that colour as
-    /// any colour (False Dawn). Cleared at cleanup.
-    pub(crate) colored_mana_becomes_this_turn: Vec<(usize, crate::mana::Color)>,
-    /// `(blocker, attacker)` pairs declared this turn, kept off the permanents
-    /// so it survives the blocker's death — "destroy it and all creatures it
-    /// blocked this turn" (Defiant Vanguard). Cleared at cleanup.
-    #[serde(default)]
-    pub(crate) blocks_declared_this_turn: Vec<(CardId, CardId)>,
     /// The permanent currently resolving an effect, stamped onto every token
     /// it mints (`CardInstance.created_by`). Resolution-scoped scratch.
     #[serde(default, skip)]
@@ -1396,65 +1711,10 @@ pub struct GameState {
     /// in `remove_to_graveyard_with_triggers`. Cleared at cleanup.
     #[serde(default)]
     pub(crate) creature_deaths_drain_toughness_this_turn: bool,
-    /// "All combat damage that would be dealt to you this turn is dealt to
-    /// `to` instead" — `(protected seat, to)` pairs (CR 614.9, Turn the
-    /// Tables). Narrower than `damage_redirect_this_turn`: combat damage only,
-    /// and only damage aimed at the player. Cleared at cleanup.
-    #[serde(default)]
-    pub(crate) combat_damage_redirect_this_turn: Vec<(usize, CardId)>,
-    /// Lightning, Army of One's Stagger — `(victim, registrant)` pairs: until
-    /// the registrant's next turn, damage to the victim or a permanent they
-    /// control is doubled (applied in `scale_damage_to`). Cleared as the
-    /// registrant's turn begins.
-    #[serde(default)]
-    pub(crate) staggered_damage_players: Vec<(usize, usize)>,
-    /// Overblaze — sources whose damage is doubled for the rest of the turn
-    /// (CR 614.2, applied in `scale_damage_to`). Cleared at cleanup.
-    #[serde(default)]
-    pub(crate) doubled_damage_sources_this_turn: Vec<CardId>,
-    /// Kukemssa Pirates — creatures that assign no combat damage for the rest
-    /// of the turn (CR 510.1a). Cleared at cleanup.
-    #[serde(default)]
-    pub(crate) assigns_no_combat_damage_this_turn: Vec<CardId>,
     /// Blind Fury — how many times creature-to-creature combat damage is
     /// doubled this turn. Cleared at cleanup.
     #[serde(default)]
     pub(crate) creature_combat_damage_doublers: u32,
-    /// Distinct (controller, source) pairs that have dealt damage this turn.
-    /// Powers `Predicate::SourcesYouControlledDealtDamageThisTurnAtLeast`
-    /// (Case of the Burning Masks). Cleared at the turn boundary.
-    #[serde(default)]
-    pub(crate) damage_sources_this_turn: Vec<(usize, CardId)>,
-    /// Single Combat's lock — `(registerer, registration_turn)`: no player may
-    /// cast a creature or planeswalker spell until the end of the registerer's
-    /// next turn. Cleared in `cleanup_wear_off` at the end of the registerer's
-    /// first turn strictly after `registration_turn`.
-    #[serde(default)]
-    pub(crate) creature_pw_cast_locks: Vec<(usize, u32)>,
-    /// Per-pair "can't block" restrictions for the turn: `(blocker, attacker)`
-    /// — the blocker can't block that specific attacker (Kozilek's Pathfinder's
-    /// "{C}: Target creature can't block this creature this turn"). Cleared at
-    /// cleanup. `#[serde(default)]` for snapshot back-compat.
-    #[serde(default)]
-    pub(crate) cant_block_pairs: Vec<(CardId, CardId)>,
-    /// CR 509.1b — creatures barred from blocking at all this turn
-    /// (Concussive Bolt). Cleared at cleanup.
-    #[serde(default)]
-    pub(crate) cant_block_this_turn: Vec<CardId>,
-    /// CR 508.1a — creatures granted "can attack this turn as though it didn't
-    /// have defender" (Krotiq Nestguard's activated ability). Cleared at cleanup.
-    pub(crate) attack_despite_defender_this_turn: Vec<CardId>,
-    /// CR 615 — "prevent all damage that would be dealt to and dealt by
-    /// [permanent] until your next turn" (Kiora, the Crashing Wave's +1).
-    /// Each entry is `(permanent, the seat whose next turn ends it)`; the
-    /// entry is dropped at that seat's untap step.
-    pub(crate) damage_locked_until_turn_of: Vec<(CardId, usize)>,
-    /// Active prevention shields (CR 615.1) around players/permanents.
-    /// Created by `Effect::PreventNextDamage` / `PreventAllDamageThisTurn`;
-    /// consulted by the non-combat damage path (`deal_damage_to_from`) and
-    /// cleared at cleanup. `#[serde(default)]` for snapshot back-compat.
-    #[serde(default)]
-    pub prevention_shields: Vec<crate::game::types::PreventionShield>,
     /// CR 615.12 — "Damage can't be prevented this turn" (Skullcrack,
     /// Impractical Joke). While set, every prevention shield is ignored.
     /// Cleared at cleanup.
@@ -1469,46 +1729,6 @@ pub struct GameState {
     pub attack_tax_this_turn: u32,
     #[serde(default)]
     pub block_tax_this_turn: u32,
-    /// CR 614.9 — one-shot "all damage to you and your permanents this turn is
-    /// dealt to the chosen permanent instead" (Gideon's Sacrifice). Each entry
-    /// is `(protected_player, redirect_target)`; consulted in
-    /// `damage_redirect_target` and cleared at cleanup.
-    #[serde(default)]
-    pub damage_redirect_this_turn: Vec<(usize, CardId)>,
-    /// CR 614.9 — one-shot per-permanent redirects: "the next time damage
-    /// would be dealt to `.0` this turn, it's dealt to `.1` instead"
-    /// (Mirrorwood Treefolk). Consumed by the first damage event and cleared
-    /// at cleanup.
-    #[serde(default)]
-    pub next_damage_redirect: Vec<(CardId, crate::game::effects::EntityRef)>,
-    /// CR 614.9 — "All damage that would be dealt to `.0` this turn is dealt
-    /// to `.1` instead" (Karona's Zealot). Unlike `next_damage_redirect` this
-    /// isn't consumed by the first event; cleared at cleanup.
-    #[serde(default)]
-    pub turn_damage_redirect: Vec<(CardId, crate::game::effects::EntityRef)>,
-    /// CR 614.9 — creatures whose next combat damage this turn is dealt to
-    /// their own controller instead (Goblin Psychopath). Cleared at cleanup.
-    #[serde(default)]
-    pub next_combat_damage_to_controller: Vec<CardId>,
-    /// CR 614 — "the next time this would deal combat damage to an opponent
-    /// this turn, it deals that damage to [creature] instead" (Soltari
-    /// Guerrillas). Consumed on the first unblocked hit; cleared at cleanup.
-    #[serde(default)]
-    pub next_combat_damage_redirect: Vec<(CardId, CardId)>,
-    /// CR 614.9 — `(spell card id, that spell's controller)`: all damage the
-    /// spell would deal this turn goes to its controller instead
-    /// (Reverberation). Cleared at cleanup.
-    #[serde(default)]
-    pub spell_damage_to_controller: Vec<(CardId, usize)>,
-    /// `(sorcery card id, caster, damage dealt)` for every sorcery spell that
-    /// has dealt damage this turn — Backdraft's "half the damage dealt by one
-    /// of those sorcery spells". Cleared at cleanup.
-    #[serde(default)]
-    pub sorcery_damage_this_turn: Vec<(CardId, usize, u32)>,
-    /// `(seat, damage)` dealt to each player by artifact sources this turn
-    /// (Reverse Polarity). Cleared at cleanup.
-    #[serde(default)]
-    pub artifact_damage_to_players_this_turn: Vec<(usize, u32)>,
     /// Per seat: this player cast a spell or put a nontoken permanent onto the
     /// battlefield during their own most recent turn (Arboria). Reset for a
     /// player as their untap step begins.
@@ -1516,93 +1736,24 @@ pub struct GameState {
     pub acted_on_own_turn: Vec<bool>,
     /// CR — Shadow of Doubt: no player may search a library this turn.
     pub no_search_this_turn: bool,
-    /// CR 701.19 — `(viewer, owner)` pairs where `viewer` has looked at
-    /// `owner`'s hand and keeps seeing it (Wanderguard Sentry, Thought
-    /// Prison). Surfaced through the server view so a UI seat renders it.
-    #[serde(default)]
-    pub hands_revealed_to: Vec<(usize, usize)>,
-    /// Desperate Gambit — sources whose next damage this turn is doubled. The
-    /// entry is consumed by the first damage each names.
-    #[serde(default)]
-    pub(crate) double_next_damage_from: Vec<CardId>,
-    /// CR 708.2 — `(face-down permanent, seat)` pairs a "look at target
-    /// face-down creature" effect has revealed (Aven Soulgazer, Spy Network).
-    /// The peek persists while the permanent stays face down.
-    #[serde(default)]
-    pub face_down_revealed_to: Vec<(CardId, usize)>,
-    /// CR 702.18 — `(permanent, seat)` pairs whose shroud is waived for that
-    /// seat's spells and abilities this turn (Autumn Willow). Cleared at
-    /// cleanup.
-    #[serde(default)]
-    pub shroud_waivers: Vec<(CardId, usize)>,
-    /// Permanents whose activated abilities can't be activated this turn
-    /// (Interdict). Non-mana activations from these sources are rejected
-    /// until cleanup.
-    #[serde(default)]
-    pub abilities_locked_this_turn: Vec<CardId>,
-    /// CR 701.38 — `(seat, option index)` for every vote cast on the most
-    /// recent ballot, read by `PlayerRef::OpponentsWhoVotedDifferently`.
-    #[serde(default)]
-    pub last_vote: Vec<(usize, usize)>,
     /// CR 701.38 — the seat whose vote the running `VoteTally::PerVote` body
     /// belongs to; read by `PlayerRef::CurrentVoter` (Expropriate).
     #[serde(default, skip)]
     pub current_voter: Option<usize>,
-    /// CR 500.8 — steps/phases a player skips for the rest of this turn
-    /// (Fatespinner). `(seat, step)`; cleared at cleanup.
-    #[serde(default)]
-    pub skipped_steps_this_turn: Vec<(usize, TurnStep)>,
-    /// "Creatures `.0` controls can't attack `.1` this turn" (Web of Inertia).
-    /// Checked when attacks are declared; cleared at cleanup.
-    #[serde(default)]
-    pub cant_attack_player_this_turn: Vec<(usize, usize)>,
     /// Shaman's Trance — for this turn, `Some(seat)` may play lands and cast
     /// spells from *every* graveyard as though they were in theirs, and no
     /// other player may play from a graveyard at all. Cleared at cleanup.
     #[serde(default)]
     pub graveyard_play_pooled_for: Option<usize>,
-    /// CR 723.1 — `(controlled, controller)` pairs waiting for `controlled` to
-    /// actually take a turn (Mindslaver). A later entry for the same seat
-    /// overwrites the earlier one (CR 723.1a).
-    #[serde(default)]
-    pub pending_player_control: Vec<(usize, usize)>,
     /// CR 723.1 — who is making `seat`'s decisions this turn, if anyone.
     /// Indexed by seat; set as that player's turn begins and cleared when the
     /// next turn begins.
     #[serde(default)]
     pub controlled_by: Vec<Option<usize>>,
-    /// Registered replacement effects (Phase H — Commander prerequisite).
-    /// Walked by zone-change paths (`place_card_in_dest`,
-    /// `remove_from_battlefield_to_*`) at placement time; a matching
-    /// entry rewrites the destination zone.
-    ///
-    /// `#[serde(default)]` so snapshots written before this field
-    /// existed deserialize cleanly as empty (no replacements active).
-    #[serde(default)]
-    pub replacement_effects: Vec<crate::replacement::ReplacementEffect>,
     /// Monotonic counter handing out `ReplacementId`s. Defaults to 0
     /// for snapshot back-compat.
     #[serde(default)]
     pub(crate) next_replacement_id: u32,
-    /// Per-commander cast-from-command-zone counter (Phase L).
-    /// Keyed by the commander's `CardId`; each entry tracks how many
-    /// times that commander has been cast from the command zone this
-    /// game. The commander tax is `{2}` × this value, added as
-    /// generic mana on top of the printed cost (CR 903.8).
-    ///
-    /// `#[serde(default)]` for snapshot back-compat.
-    #[serde(default)]
-    pub commander_cast_count: HashMap<CardId, u32>,
-    /// 21-commander-damage tracker (Phase M / CR 704.5v). Keyed by
-    /// `(victim_seat, commander_card_id)`; values are running totals
-    /// of combat / direct damage dealt by that commander to that
-    /// seat over the whole game. The SBA in
-    /// `check_state_based_actions` eliminates a player when any of
-    /// their entries crosses 21.
-    ///
-    /// `#[serde(default)]` for snapshot back-compat.
-    #[serde(default)]
-    pub commander_damage: HashMap<(usize, CardId), u32>,
     /// Per-dying-card snapshot
     /// cache, populated at SBA emission time for every dying creature
     /// (token or non-token). Used by trigger-dispatch lookups
@@ -1622,14 +1773,6 @@ pub struct GameState {
     /// don't need to preserve mid-SBA state.
     #[serde(skip)]
     pub died_card_snapshots: HashMap<CardId, CardInstance>,
-    /// Auras that lost their host this turn, keyed by the (now-gone) host's
-    /// CardId → list of `(aura id, aura controller)`. Populated in the
-    /// orphan-Aura SBA sweep before the Aura is sent to the graveyard, so
-    /// "whenever an enchanted creature dies" payoffs (Hateful Eidolon,
-    /// Dawn Evangel) can count the Auras you controlled that were on it at
-    /// resolution time. Cleared in `do_cleanup`. `#[serde(skip)]` — transient.
-    #[serde(skip)]
-    pub(crate) auras_at_death: HashMap<CardId, Vec<(CardId, usize)>>,
     /// CR 603.10 / 608.2h — last-known-information snapshots for
     /// leaves-the-battlefield triggers that read the dying object's
     /// characteristics *as they last existed on the battlefield* (e.g.
@@ -1654,56 +1797,6 @@ pub struct GameState {
     /// subject. `#[serde(skip)]`.
     #[serde(skip)]
     pub(crate) resolving_lki_subject: Option<CardId>,
-    /// Set of permanent CardIds that gained one or more counters during
-    /// the current turn. Bumped in `Effect::AddCounter`'s resolver
-    /// whenever a permanent gains counters; reset to empty in
-    /// `do_cleanup`. Powers Fractal Tender's end-step "if you put a
-    /// counter on this creature this turn, mint a Fractal" rider via
-    /// the new `Predicate::SourceGainedCounterThisTurn` predicate.
-    /// `#[serde(default)]` for snapshot back-compat.
-    #[serde(default)]
-    pub permanents_gained_counter_this_turn: std::collections::HashSet<CardId>,
-    /// Permanents whose `StaticEffect::CounterAmplifierOncePerTurn` extra
-    /// +1/+1 counter has already been added this turn (Cursed Wombat). The
-    /// granted ability "triggers only once each turn" per permanent; cleared at
-    /// cleanup. `#[serde(default)]` for snapshot back-compat.
-    #[serde(default)]
-    pub(crate) permanents_amplified_counter_this_turn: std::collections::HashSet<CardId>,
-    /// How many times each source's escalating ability has resolved this turn
-    /// (CR 603.3-style "if this is the first/second/third time …" — Vito,
-    /// Fanatic of Aclazotz). Keyed by source `CardId`; cleared at cleanup.
-    #[serde(default)]
-    pub(crate) ability_resolutions_this_turn: std::collections::HashMap<CardId, u32>,
-    /// Per-permanent transient triggered abilities granted by spells /
-    /// continuous effects (Rabid Attack, Root Manipulation: "creatures
-    /// you control gain '…trigger…' until end of turn"). The dispatcher
-    /// walks this map alongside each permanent's printed
-    /// `triggered_abilities` and fires matching events. Cleared in
-    /// `do_cleanup` (the "until end of turn" expiry). Other durations
-    /// (Permanent) would need a separate map; only EOT grants are
-    /// modeled today since that's what the printed catalog needs.
-    /// `#[serde(default)]` for snapshot back-compat.
-    #[serde(default)]
-    pub granted_triggers_eot:
-        std::collections::HashMap<CardId, Vec<crate::card::TriggeredAbility>>,
-    /// Permanents whose death is replaced by exile for the rest of the
-    /// turn — "if that creature would die this turn, exile it instead"
-    /// (Wilt in the Heat). Checked in `remove_from_battlefield_to_graveyard_raw`
-    /// alongside the Finality-counter redirect; cleared at cleanup. The
-    /// redirect lasts the whole turn, so it also catches deaths from later
-    /// combat / removal, not just the spell's own damage. `#[serde(default)]`
-    /// for snapshot back-compat.
-    #[serde(default)]
-    pub(crate) dies_to_exile_eot: std::collections::HashSet<CardId>,
-    /// CR 614 — creatures granted Kumano's rider until end of turn: a creature
-    /// they damage is exiled instead of dying. The granted twin of
-    /// `CardDefinition.damage_exiles_if_dies`; cleared at cleanup (Runesword).
-    #[serde(default)]
-    pub(crate) damage_exiles_victim_eot: std::collections::HashSet<CardId>,
-    /// CR 701.15g — creatures whose damage this turn denies its victim
-    /// regeneration (Runesword). Cleared at cleanup.
-    #[serde(default)]
-    pub(crate) damage_denies_regen_eot: std::collections::HashSet<CardId>,
     /// CR 729.5 — how deep this game is nested inside subgames. The main game
     /// is 0; `play_subgame` refuses to nest past a fixed cap.
     #[serde(default)]
@@ -1730,11 +1823,6 @@ pub struct GameState {
     /// cleared after; read in `deal_damage_to_from`. Transient.
     #[serde(skip)]
     pub(crate) resolving_spell_deathtouch_seat: Option<usize>,
-    /// "That spell gains [keywords]" grants onto spells still on the stack
-    /// (Judith, Carnage Connoisseur). Consulted when a spell starts resolving
-    /// and dropped once it leaves the stack.
-    #[serde(default)]
-    pub(crate) spell_keyword_grants: Vec<(CardId, crate::card::Keyword)>,
     /// One-shot guard so a spell dealing damage to several objects at once
     /// fires the "your instant or sorcery deals damage" trigger a single time.
     #[serde(skip)]
@@ -1768,70 +1856,6 @@ pub struct GameState {
     /// the replacement's extra mints aren't re-replaced (CR 614.5). Transient.
     #[serde(skip)]
     pub(crate) in_token_replacement: bool,
-    /// Temporary control changes awaiting reversion (Act of Treason /
-    /// Threaten / Tempted by the Oriq). `Effect::GainControl` with a
-    /// non-`Permanent` duration records the controller the permanent had
-    /// immediately before the steal so control snaps back when the
-    /// duration ends (CR 800.4 control-changing effects). `#[serde(default)]`
-    /// for snapshot back-compat.
-    #[serde(default)]
-    pub(crate) temporary_control: Vec<TempControl>,
-    /// CR 508.1a/d — a per-seat next-turn attack mandate (Oracle en-Vec): on
-    /// `seat`'s next turn the listed creatures attack if able and no other
-    /// creature they control may attack; at that turn's end step each listed
-    /// creature that didn't attack is destroyed. Armed when `seat` becomes the
-    /// active player and consumed at that turn's end step.
-    #[serde(default)]
-    pub(crate) attack_mandates: Vec<AttackMandate>,
-    /// Temporary "becomes a copy" definition swaps awaiting reversion
-    /// (`Effect::BecomeCopyOfFor`, CR 707.2). Records the pre-copy
-    /// definition; the swap snaps back when the duration ends, mirroring
-    /// `temporary_control`. Entries whose card left the battlefield are
-    /// dropped (a new object keeps nothing). `#[serde(default)]` for
-    /// snapshot back-compat.
-    #[serde(default)]
-    pub temporary_copies: Vec<TempCopy>,
-    /// CR 702.143b — cards foretold this turn can't be cast from exile until
-    /// a later turn. Tracks the cards a player foretold during the current
-    /// turn; cleared at cleanup. `#[serde(default)]` for snapshot back-compat.
-    #[serde(default)]
-    pub foretold_this_turn: std::collections::HashSet<CardId>,
-    /// CR 702.170 — cards currently plotted (exiled face-up, castable from
-    /// exile without paying their mana cost on a later turn).
-    /// `#[serde(default)]` for snapshot back-compat.
-    #[serde(default)]
-    pub plotted_cards: std::collections::HashSet<CardId>,
-    /// CR 603.8 latch for `sacrifice_and_burn_when_stolen` (Bronze Bombshell):
-    /// permanents whose steal penalty has already been put on the stack, so the
-    /// state trigger fires once per control change rather than every SBA pass.
-    /// Cleared for a card when control returns to its owner. `#[serde(default)]`.
-    #[serde(default)]
-    pub steal_penalty_armed: std::collections::HashSet<CardId>,
-    /// CR 603.8 latch for `sacrifice_when_you_control_no_other` (Synod
-    /// Centurion) — the sibling of `steal_penalty_armed`. Cleared for a card
-    /// as soon as the controller has a matching permanent again.
-    #[serde(default)]
-    pub no_other_sacrifice_armed: std::collections::HashSet<CardId>,
-    /// CR 603.8 latch for `CardDefinition::state_trigger`: permanents whose
-    /// state trigger has already been put on the stack while its condition
-    /// holds. Cleared for a card as soon as the condition is false again, so
-    /// the ability can trigger anew (Hidden Predators, Veiled Crocodile).
-    #[serde(default)]
-    pub state_trigger_armed: std::collections::HashSet<CardId>,
-    /// CR 702.170d — cards plotted *this* turn can't be cast until a later
-    /// turn. Cleared at cleanup. `#[serde(default)]` for back-compat.
-    #[serde(default)]
-    pub plotted_this_turn: std::collections::HashSet<CardId>,
-    /// CR 603.3d — triggered abilities flagged `TriggeredAbility::once_per_turn`
-    /// ("this ability triggers only once each turn") that have already fired
-    /// this turn, keyed by (source card, trigger index). Cleared at cleanup.
-    /// `#[serde(default)]` for snapshot back-compat. Powers Dramatic Finale.
-    #[serde(default)]
-    pub triggered_once_per_turn_used: std::collections::HashSet<(CardId, usize)>,
-    /// `EventSpec::per_subject_cap` tallies: fires of a capped trigger this
-    /// turn, keyed by (watcher, event subject). Cleared at cleanup.
-    #[serde(default)]
-    pub(crate) per_subject_trigger_uses: std::collections::HashMap<(CardId, CardId), u8>,
     /// CR 725 — the monarch (if any). The monarch draws a card at the
     /// beginning of their end step, and a creature dealing combat damage to
     /// the monarch makes its controller the new monarch. `#[serde(default)]`
@@ -1865,10 +1889,28 @@ pub struct GameState {
     /// The sector picked by the `Effect::ChooseSector` currently resolving.
     #[serde(skip)]
     pub(crate) chosen_sector: Option<crate::card::Sector>,
-    /// Taii Wakeen — per-seat bonus added to noncombat damage a source that
-    /// seat controls deals this turn. Cleared at cleanup.
-    #[serde(default)]
-    pub(crate) noncombat_damage_bonus_this_turn: Vec<(usize, u32)>,
+    /// The rarely-written tail of the state: per-turn and end-of-turn
+    /// registries, format bookkeeping, and cost/vote scratch. Held behind
+    /// one CoW handle so a checkpoint clone bumps a refcount instead of
+    /// deep-copying ~85 mostly-empty collections; `Deref`/`DerefMut` keep
+    /// every `state.field` access working unchanged. See [`ColdState`].
+    #[serde(flatten)]
+    pub cold: CowBox<ColdState>,
+}
+
+/// Field access on the cold group reads like a `GameState` field.
+impl std::ops::Deref for GameState {
+    type Target = ColdState;
+    fn deref(&self) -> &ColdState {
+        &self.cold
+    }
+}
+
+/// Writing any cold field unshares the whole group once — see [`ColdState`].
+impl std::ops::DerefMut for GameState {
+    fn deref_mut(&mut self) -> &mut ColdState {
+        &mut self.cold
+    }
 }
 
 /// One seat's pending next-turn attack mandate — see
@@ -1955,9 +1997,7 @@ impl Clone for GameState {
             players: self.players.clone(),
             attack_option: self.attack_option,
             range_of_influence: self.range_of_influence,
-            range_matrix: self.range_matrix.clone(),
             attack_adjacent_only: self.attack_adjacent_only,
-            teams: self.teams.clone(),
             deploy_creatures: self.deploy_creatures,
             battlefield: self.battlefield.clone(),
             phased_out: self.phased_out.clone(),
@@ -1984,20 +2024,12 @@ impl Clone for GameState {
             skip_first_draw: self.skip_first_draw,
             spells_cast_this_turn: self.spells_cast_this_turn,
             noncreature_spells_cast_this_turn: self.noncreature_spells_cast_this_turn,
-            cycled_count_by_name: self.cycled_count_by_name.clone(),
             mana_spent_on_spells_this_turn: self.mana_spent_on_spells_this_turn,
             expend_prev_total: self.expend_prev_total,
             casting_from_library_top: self.casting_from_library_top,
             spells_cast_last_turn: self.spells_cast_last_turn,
             permanents_to_graveyard_this_turn: self.permanents_to_graveyard_this_turn,
-            graveyard_from_battlefield_this_turn: self
-                .graveyard_from_battlefield_this_turn
-                .clone(),
-            entered_from_graveyard_this_turn: self.entered_from_graveyard_this_turn.clone(),
-            entered_from_exile_this_turn: self.entered_from_exile_this_turn.clone(),
-            creature_deaths_this_turn: self.creature_deaths_this_turn.clone(),
             delayed_triggers: self.delayed_triggers.clone(),
-            attacking_token_cleanup: self.attacking_token_cleanup.clone(),
             sacrificed_power: self.sacrificed_power,
             revealed_for_cost_power: self.revealed_for_cost_power,
             sacrificed_total_power: self.sacrificed_total_power,
@@ -2005,13 +2037,9 @@ impl Clone for GameState {
             sacrificed_was_artifact: self.sacrificed_was_artifact,
             sacrificed_was_outlaw: self.sacrificed_was_outlaw,
             sacrificed_was_vehicle: self.sacrificed_was_vehicle,
-            sacrificed_colors: self.sacrificed_colors.clone(),
             sacrificed_card: self.sacrificed_card,
-            cost_exiled_cards: self.cost_exiled_cards.clone(),
             last_discarded_was_multicolored: self.last_discarded_was_multicolored,
-            last_discarded_colors: self.last_discarded_colors.clone(),
             last_discarded_card_types: self.last_discarded_card_types,
-            last_discarded_creature_types: self.last_discarded_creature_types.clone(),
             sacrificed_toughness: self.sacrificed_toughness,
             sacrificed_mana_value: self.sacrificed_mana_value,
             exiled_for_cost_mana_value: self.exiled_for_cost_mana_value,
@@ -2021,19 +2049,16 @@ impl Clone for GameState {
             cost_discarded_mana_value: self.cost_discarded_mana_value,
             block_poison_this_turn: self.block_poison_this_turn,
             tapped_for_cost_power: self.tapped_for_cost_power,
-            tapped_for_cost: self.tapped_for_cost.clone(),
             life_gain_punish_this_turn: self.life_gain_punish_this_turn,
             trigger_event_amount_scratch: self.trigger_event_amount_scratch,
             trigger_event_player_scratch: self.trigger_event_player_scratch,
             activation_mana_colors_scratch: self.activation_mana_colors_scratch.clone(),
             target_slots_scratch: self.target_slots_scratch.clone(),
-            library_tops_revealed: self.library_tops_revealed.clone(),
             last_created_token: self.last_created_token,
             last_die_roll: self.last_die_roll,
             extra_cast_reduction: self.extra_cast_reduction,
             cast_paid_uncounterable: self.cast_paid_uncounterable,
             cast_kick_count: self.cast_kick_count,
-            cast_kicker_options: self.cast_kicker_options.clone(),
             last_created_tokens: self.last_created_tokens.clone(),
             last_moved_cards: self.last_moved_cards.clone(),
             cards_discarded_this_resolution: self.cards_discarded_this_resolution,
@@ -2042,7 +2067,6 @@ impl Clone for GameState {
             permanents_returned_this_resolution: self.permanents_returned_this_resolution,
             permanents_tapped_this_resolution: self.permanents_tapped_this_resolution,
             cards_revealed_this_resolution: self.cards_revealed_this_resolution,
-            extra_mana_on_land_tap_this_turn: self.extra_mana_on_land_tap_this_turn.clone(),
             creature_cards_discarded_this_resolution: self.creature_cards_discarded_this_resolution,
             greatest_discarded_mv_this_resolution: self.greatest_discarded_mv_this_resolution,
             cards_discarded_per_player_this_resolution: self.cards_discarded_per_player_this_resolution.clone(),
@@ -2050,17 +2074,13 @@ impl Clone for GameState {
             shuffle_resolving_spell_into_library: self.shuffle_resolving_spell_into_library,
             return_resolving_spell_to_hand: self.return_resolving_spell_to_hand,
             exile_resolving_spell: self.exile_resolving_spell,
-            gy_combat_trigger_fired_this_step: self.gy_combat_trigger_fired_this_step.clone(),
             resolving_spell_library_from_top: self.resolving_spell_library_from_top,
             resolving_spell_to_battlefield_transformed: self
                 .resolving_spell_to_battlefield_transformed,
-            life_gain_flag_pending: self.life_gain_flag_pending.clone(),
             end_turn_requested: self.end_turn_requested,
             cipher_encode_pending: self.cipher_encode_pending,
             haunt_pending: self.haunt_pending.clone(),
             discarded_card_ids_this_resolution: self.discarded_card_ids_this_resolution.clone(),
-            separated_piles: self.separated_piles.clone(),
-            last_cast_spell_colors: self.last_cast_spell_colors.clone(),
             suppress_extra_target_prompts: self.suppress_extra_target_prompts,
             exiled_card_ids_this_resolution: self.exiled_card_ids_this_resolution.clone(),
             permanents_destroyed_this_resolution: self.permanents_destroyed_this_resolution,
@@ -2069,9 +2089,6 @@ impl Clone for GameState {
             creatures_died_this_resolution: self.creatures_died_this_resolution,
             resolution_depth: self.resolution_depth,
             resolution_targets: self.resolution_targets.clone(),
-            targeting_damage_prevented_this_turn: self
-                .targeting_damage_prevented_this_turn
-                .clone(),
             cost_sacrificed_batch: self.cost_sacrificed_batch.clone(),
             damage_dealt_this_resolution: self.damage_dealt_this_resolution,
             damaged_this_resolution: self.damaged_this_resolution.clone(),
@@ -2092,7 +2109,6 @@ impl Clone for GameState {
             cards_sacrificed_this_resolution: self.cards_sacrificed_this_resolution.clone(),
             chosen_creature_type_scratch: self.chosen_creature_type_scratch,
             chosen_creature_types_scratch: self.chosen_creature_types_scratch.clone(),
-            turn_granted_triggers: self.turn_granted_triggers.clone(),
             named_card_this_resolution: self.named_card_this_resolution.clone(),
             names_this_resolution: self.names_this_resolution.clone(),
             pending_cast_face: self.pending_cast_face,
@@ -2116,7 +2132,6 @@ impl Clone for GameState {
             pending_control_changes: self.pending_control_changes.clone(),
             prevent_combat_damage_this_turn: self.prevent_combat_damage_this_turn,
             nonland_permanent_left_bf_this_turn: self.nonland_permanent_left_bf_this_turn,
-            prevent_combat_damage_except: self.prevent_combat_damage_except.clone(),
             mana_production_multiplier: self.mana_production_multiplier,
             resolving_source: self.resolving_source.clone(),
             in_layer_gather: std::sync::atomic::AtomicBool::new(false),
@@ -2129,91 +2144,32 @@ impl Clone for GameState {
             end_steps_this_turn: self.end_steps_this_turn,
             additional_upkeep_steps: self.additional_upkeep_steps,
             upkeep_steps_this_turn: self.upkeep_steps_this_turn,
-            combat_damage_prevented_creatures: self.combat_damage_prevented_creatures.clone(),
-            combat_damage_prevented_to_this_turn: self.combat_damage_prevented_to_this_turn.clone(),
-            combat_damage_prevented_by_this_turn: self.combat_damage_prevented_by_this_turn.clone(),
-            all_damage_prevented_by_this_turn: self.all_damage_prevented_by_this_turn.clone(),
-            draws_redirected_this_turn: self.draws_redirected_this_turn.clone(),
             damage_becomes_this_turn: self.damage_becomes_this_turn,
-            combat_damage_prevented_to_players_this_turn: self
-                .combat_damage_prevented_to_players_this_turn
-                .clone(),
-            blocked_attackers: self.blocked_attackers.clone(),
-            attack_bands: self.attack_bands.clone(),
-            creature_etb_steal_this_turn: self.creature_etb_steal_this_turn.clone(),
-            search_tax_paid_this_turn: self.search_tax_paid_this_turn.clone(),
-            turn_scoped_spell_taxes: self.turn_scoped_spell_taxes.clone(),
             vote_controller_this_turn: self.vote_controller_this_turn,
             source_name_scratch: self.source_name_scratch,
             monarch_at_turn_start: self.monarch_at_turn_start,
-            staggered_damage_players: self.staggered_damage_players.clone(),
-            doubled_damage_sources_this_turn: self.doubled_damage_sources_this_turn.clone(),
-            assigns_no_combat_damage_this_turn: self.assigns_no_combat_damage_this_turn.clone(),
             creature_combat_damage_doublers: self.creature_combat_damage_doublers,
-            damage_sources_this_turn: self.damage_sources_this_turn.clone(),
-            creature_pw_cast_locks: self.creature_pw_cast_locks.clone(),
-            damage_prevented_sources: self.damage_prevented_sources.clone(),
-            land_mana_replacements_this_turn: self.land_mana_replacements_this_turn.clone(),
-            colored_mana_becomes_this_turn: self.colored_mana_becomes_this_turn.clone(),
-            blocks_declared_this_turn: self.blocks_declared_this_turn.clone(),
             token_minting_source: self.token_minting_source,
-            cant_block_pairs: self.cant_block_pairs.clone(),
-            cant_block_this_turn: self.cant_block_this_turn.clone(),
-            attack_despite_defender_this_turn: self.attack_despite_defender_this_turn.clone(),
-            damage_locked_until_turn_of: self.damage_locked_until_turn_of.clone(),
-            prevention_shields: self.prevention_shields.clone(),
             damage_cant_be_prevented_this_turn: self.damage_cant_be_prevented_this_turn,
             attack_tax_this_turn: self.attack_tax_this_turn,
             block_tax_this_turn: self.block_tax_this_turn,
-            damage_redirect_this_turn: self.damage_redirect_this_turn.clone(),
-            next_damage_redirect: self.next_damage_redirect.clone(),
-            turn_damage_redirect: self.turn_damage_redirect.clone(),
-            next_combat_damage_to_controller: self.next_combat_damage_to_controller.clone(),
-            next_combat_damage_redirect: self.next_combat_damage_redirect.clone(),
-            spell_damage_to_controller: self.spell_damage_to_controller.clone(),
-            sorcery_damage_this_turn: self.sorcery_damage_this_turn.clone(),
-            artifact_damage_to_players_this_turn: self
-                .artifact_damage_to_players_this_turn
-                .clone(),
             acted_on_own_turn: self.acted_on_own_turn.clone(),
-            combat_damage_redirect_this_turn: self.combat_damage_redirect_this_turn.clone(),
             damaged_creatures_die_this_turn: self.damaged_creatures_die_this_turn,
             creature_deaths_drain_toughness_this_turn: self.creature_deaths_drain_toughness_this_turn,
             no_search_this_turn: self.no_search_this_turn,
-            hands_revealed_to: self.hands_revealed_to.clone(),
-            double_next_damage_from: self.double_next_damage_from.clone(),
-            face_down_revealed_to: self.face_down_revealed_to.clone(),
-            shroud_waivers: self.shroud_waivers.clone(),
-            abilities_locked_this_turn: self.abilities_locked_this_turn.clone(),
-            last_vote: self.last_vote.clone(),
             current_voter: self.current_voter,
-            skipped_steps_this_turn: self.skipped_steps_this_turn.clone(),
-            cant_attack_player_this_turn: self.cant_attack_player_this_turn.clone(),
             graveyard_play_pooled_for: self.graveyard_play_pooled_for,
-            pending_player_control: self.pending_player_control.clone(),
             controlled_by: self.controlled_by.clone(),
-            replacement_effects: self.replacement_effects.clone(),
             next_replacement_id: self.next_replacement_id,
-            commander_cast_count: self.commander_cast_count.clone(),
-            commander_damage: self.commander_damage.clone(),
             died_card_snapshots: self.died_card_snapshots.clone(),
-            auras_at_death: self.auras_at_death.clone(),
             leaves_bf_lki: self.leaves_bf_lki.clone(),
             resolving_lki_source: self.resolving_lki_source,
             resolving_lki_subject: self.resolving_lki_subject,
-            permanents_gained_counter_this_turn: self.permanents_gained_counter_this_turn.clone(),
-            permanents_amplified_counter_this_turn: self.permanents_amplified_counter_this_turn.clone(),
-            ability_resolutions_this_turn: self.ability_resolutions_this_turn.clone(),
-            granted_triggers_eot: self.granted_triggers_eot.clone(),
-            dies_to_exile_eot: self.dies_to_exile_eot.clone(),
-            damage_exiles_victim_eot: self.damage_exiles_victim_eot.clone(),
-            damage_denies_regen_eot: self.damage_denies_regen_eot.clone(),
             subgame_depth: self.subgame_depth,
             resolving_spell_lifelink_seat: self.resolving_spell_lifelink_seat,
             resolving_spell_caster: self.resolving_spell_caster,
             resolving_spell_snapshot: self.resolving_spell_snapshot.clone(),
             resolving_spell_deathtouch_seat: self.resolving_spell_deathtouch_seat,
-            spell_keyword_grants: self.spell_keyword_grants.clone(),
             spell_damage_trigger_fired: self.spell_damage_trigger_fired,
             in_draw_double: self.in_draw_double,
             in_turn_based_draw: self.in_turn_based_draw,
@@ -2222,17 +2178,6 @@ impl Clone for GameState {
             in_chains_replacement: self.in_chains_replacement,
             exile_resolving_spell_with_countdown: self.exile_resolving_spell_with_countdown,
             in_token_replacement: self.in_token_replacement,
-            temporary_control: self.temporary_control.clone(),
-            attack_mandates: self.attack_mandates.clone(),
-            temporary_copies: self.temporary_copies.clone(),
-            foretold_this_turn: self.foretold_this_turn.clone(),
-            plotted_cards: self.plotted_cards.clone(),
-            steal_penalty_armed: self.steal_penalty_armed.clone(),
-            no_other_sacrifice_armed: self.no_other_sacrifice_armed.clone(),
-            state_trigger_armed: self.state_trigger_armed.clone(),
-            plotted_this_turn: self.plotted_this_turn.clone(),
-            triggered_once_per_turn_used: self.triggered_once_per_turn_used.clone(),
-            per_subject_trigger_uses: self.per_subject_trigger_uses.clone(),
             monarch: self.monarch,
             initiative: self.initiative,
             day_night: self.day_night,
@@ -2240,7 +2185,7 @@ impl Clone for GameState {
             current_turn_is_extra: self.current_turn_is_extra,
             sector_block_lock_turn: self.sector_block_lock_turn,
             chosen_sector: self.chosen_sector,
-            noncombat_damage_bonus_this_turn: self.noncombat_damage_bonus_this_turn.clone(),
+            cold: self.cold.clone(),
         }
     }
 }
@@ -2289,9 +2234,7 @@ impl GameState {
             players,
             attack_option: AttackOption::default(),
             range_of_influence: None,
-            range_matrix: Vec::new(),
             attack_adjacent_only: false,
-            teams,
             deploy_creatures: false,
             battlefield: CowBox::default(),
             phased_out: CowBox::default(),
@@ -2320,18 +2263,12 @@ impl GameState {
             skip_first_draw: n <= 2,
             spells_cast_this_turn: 0,
             noncreature_spells_cast_this_turn: 0,
-            cycled_count_by_name: std::collections::HashMap::new(),
             mana_spent_on_spells_this_turn: 0,
             expend_prev_total: 0,
             casting_from_library_top: None,
             spells_cast_last_turn: 0,
             permanents_to_graveyard_this_turn: 0,
-            graveyard_from_battlefield_this_turn: Default::default(),
-            entered_from_graveyard_this_turn: std::collections::HashSet::new(),
-            entered_from_exile_this_turn: std::collections::HashSet::new(),
-            creature_deaths_this_turn: Vec::new(),
             delayed_triggers: Vec::new(),
-            attacking_token_cleanup: Vec::new(),
             sacrificed_power: None,
             revealed_for_cost_power: None,
             sacrificed_total_power: 0,
@@ -2339,13 +2276,9 @@ impl GameState {
             sacrificed_was_artifact: None,
             sacrificed_was_outlaw: None,
             sacrificed_was_vehicle: None,
-            sacrificed_colors: None,
             sacrificed_card: None,
-            cost_exiled_cards: Vec::new(),
             last_discarded_was_multicolored: None,
-            last_discarded_colors: Vec::new(),
             last_discarded_card_types: 0,
-            last_discarded_creature_types: Vec::new(),
             sacrificed_toughness: None,
             sacrificed_mana_value: None,
             exiled_for_cost_mana_value: None,
@@ -2355,19 +2288,16 @@ impl GameState {
             cost_discarded_mana_value: None,
             block_poison_this_turn: 0,
             tapped_for_cost_power: None,
-            tapped_for_cost: Vec::new(),
             life_gain_punish_this_turn: 0,
             trigger_event_amount_scratch: 0,
             trigger_event_player_scratch: None,
             activation_mana_colors_scratch: Vec::new(),
             target_slots_scratch: Vec::new(),
-            library_tops_revealed: Vec::new(),
             last_created_token: None,
             last_die_roll: 0,
             extra_cast_reduction: 0,
             cast_paid_uncounterable: false,
             cast_kick_count: 0,
-            cast_kicker_options: Vec::new(),
             last_created_tokens: Vec::new(),
             last_moved_cards: Vec::new(),
             cards_discarded_this_resolution: 0,
@@ -2376,7 +2306,6 @@ impl GameState {
             permanents_returned_this_resolution: 0,
             permanents_tapped_this_resolution: 0,
             cards_revealed_this_resolution: 0,
-            extra_mana_on_land_tap_this_turn: Vec::new(),
             creature_cards_discarded_this_resolution: 0,
             greatest_discarded_mv_this_resolution: 0,
             cards_discarded_per_player_this_resolution: HashMap::new(),
@@ -2384,16 +2313,12 @@ impl GameState {
             shuffle_resolving_spell_into_library: false,
             return_resolving_spell_to_hand: false,
             exile_resolving_spell: false,
-            gy_combat_trigger_fired_this_step: Vec::new(),
             resolving_spell_library_from_top: None,
             resolving_spell_to_battlefield_transformed: None,
-            life_gain_flag_pending: Vec::new(),
             end_turn_requested: false,
             cipher_encode_pending: None,
             haunt_pending: None,
             discarded_card_ids_this_resolution: Vec::new(),
-            separated_piles: (Vec::new(), Vec::new()),
-            last_cast_spell_colors: Vec::new(),
             suppress_extra_target_prompts: None,
             exiled_card_ids_this_resolution: Vec::new(),
             permanents_destroyed_this_resolution: 0,
@@ -2401,7 +2326,6 @@ impl GameState {
             creatures_died_this_resolution: 0,
             resolution_depth: 0,
             resolution_targets: Vec::new(),
-            targeting_damage_prevented_this_turn: Vec::new(),
             cost_sacrificed_batch: Vec::new(),
             damage_dealt_this_resolution: 0,
             damaged_this_resolution: Vec::new(),
@@ -2423,7 +2347,6 @@ impl GameState {
             cards_sacrificed_this_resolution: Vec::new(),
             chosen_creature_type_scratch: None,
             chosen_creature_types_scratch: Vec::new(),
-            turn_granted_triggers: Vec::new(),
             named_card_this_resolution: None,
             names_this_resolution: HashMap::new(),
             pending_cast_face: CastFace::Front,
@@ -2447,7 +2370,6 @@ impl GameState {
             pending_control_changes: Vec::new(),
             prevent_combat_damage_this_turn: false,
             nonland_permanent_left_bf_this_turn: false,
-            prevent_combat_damage_except: None,
             mana_production_multiplier: 1,
             resolving_source: None,
             in_layer_gather: std::sync::atomic::AtomicBool::new(false),
@@ -2460,87 +2382,32 @@ impl GameState {
             end_steps_this_turn: 0,
             additional_upkeep_steps: 0,
             upkeep_steps_this_turn: 0,
-            combat_damage_prevented_creatures: Vec::new(),
-            combat_damage_prevented_to_this_turn: Vec::new(),
-            combat_damage_prevented_by_this_turn: Vec::new(),
-            all_damage_prevented_by_this_turn: Vec::new(),
-            draws_redirected_this_turn: Vec::new(),
             damage_becomes_this_turn: None,
-            combat_damage_prevented_to_players_this_turn: Vec::new(),
-            blocked_attackers: Vec::new(),
-            attack_bands: Vec::new(),
-            creature_etb_steal_this_turn: Vec::new(),
-            search_tax_paid_this_turn: Vec::new(),
-            turn_scoped_spell_taxes: Vec::new(),
             vote_controller_this_turn: None,
             source_name_scratch: None,
             monarch_at_turn_start: None,
-            staggered_damage_players: Vec::new(),
-            doubled_damage_sources_this_turn: Vec::new(),
-            assigns_no_combat_damage_this_turn: Vec::new(),
             creature_combat_damage_doublers: 0,
-            damage_sources_this_turn: Vec::new(),
-            creature_pw_cast_locks: Vec::new(),
-            damage_prevented_sources: Vec::new(),
-            land_mana_replacements_this_turn: Vec::new(),
-            colored_mana_becomes_this_turn: Vec::new(),
-            blocks_declared_this_turn: Vec::new(),
             token_minting_source: None,
-            cant_block_pairs: Vec::new(),
-            cant_block_this_turn: Vec::new(),
-            attack_despite_defender_this_turn: Vec::new(),
-            damage_locked_until_turn_of: Vec::new(),
-            prevention_shields: Vec::new(),
             damage_cant_be_prevented_this_turn: false,
             attack_tax_this_turn: 0,
             block_tax_this_turn: 0,
-            damage_redirect_this_turn: Vec::new(),
-            next_damage_redirect: Vec::new(),
-            turn_damage_redirect: Vec::new(),
-            next_combat_damage_to_controller: Vec::new(),
-            next_combat_damage_redirect: Vec::new(),
-            spell_damage_to_controller: Vec::new(),
-            sorcery_damage_this_turn: Vec::new(),
-            artifact_damage_to_players_this_turn: Vec::new(),
             acted_on_own_turn: Vec::new(),
-            combat_damage_redirect_this_turn: Vec::new(),
             damaged_creatures_die_this_turn: false,
             creature_deaths_drain_toughness_this_turn: false,
             no_search_this_turn: false,
-            hands_revealed_to: Vec::new(),
-            double_next_damage_from: Vec::new(),
-            face_down_revealed_to: Vec::new(),
-            shroud_waivers: Vec::new(),
-            abilities_locked_this_turn: Vec::new(),
-            last_vote: Vec::new(),
             current_voter: None,
-            skipped_steps_this_turn: Vec::new(),
-            cant_attack_player_this_turn: Vec::new(),
             graveyard_play_pooled_for: None,
-            pending_player_control: Vec::new(),
             controlled_by: Vec::new(),
-            replacement_effects: Vec::new(),
             next_replacement_id: 1,
-            commander_cast_count: HashMap::new(),
-            commander_damage: HashMap::new(),
             died_card_snapshots: HashMap::new(),
-            auras_at_death: HashMap::new(),
             leaves_bf_lki: HashMap::new(),
             resolving_lki_source: None,
             resolving_lki_subject: None,
-            permanents_gained_counter_this_turn: std::collections::HashSet::new(),
-            permanents_amplified_counter_this_turn: std::collections::HashSet::new(),
-            ability_resolutions_this_turn: std::collections::HashMap::new(),
-            granted_triggers_eot: std::collections::HashMap::new(),
-            dies_to_exile_eot: std::collections::HashSet::new(),
-            damage_exiles_victim_eot: std::collections::HashSet::new(),
-            damage_denies_regen_eot: std::collections::HashSet::new(),
             subgame_depth: 0,
             resolving_spell_lifelink_seat: None,
             resolving_spell_caster: None,
             resolving_spell_snapshot: None,
             resolving_spell_deathtouch_seat: None,
-            spell_keyword_grants: Vec::new(),
             spell_damage_trigger_fired: false,
             in_draw_double: false,
             in_turn_based_draw: false,
@@ -2549,17 +2416,6 @@ impl GameState {
             in_chains_replacement: false,
             exile_resolving_spell_with_countdown: false,
             in_token_replacement: false,
-            temporary_control: Vec::new(),
-            attack_mandates: Vec::new(),
-            temporary_copies: Vec::new(),
-            foretold_this_turn: std::collections::HashSet::new(),
-            plotted_cards: std::collections::HashSet::new(),
-            steal_penalty_armed: std::collections::HashSet::new(),
-            no_other_sacrifice_armed: std::collections::HashSet::new(),
-            state_trigger_armed: std::collections::HashSet::new(),
-            plotted_this_turn: std::collections::HashSet::new(),
-            triggered_once_per_turn_used: std::collections::HashSet::new(),
-            per_subject_trigger_uses: std::collections::HashMap::new(),
             monarch: None,
             initiative: None,
             day_night: None,
@@ -2567,7 +2423,7 @@ impl GameState {
             current_turn_is_extra: false,
             sector_block_lock_turn: None,
             chosen_sector: None,
-            noncombat_damage_bonus_this_turn: Vec::new(),
+            cold: CowBox::new(ColdState { teams, ..Default::default() }),
         }
     }
 

@@ -1101,6 +1101,11 @@ impl GameState {
             // Validated above — commit only. Filter by *controller*, not
             // *owner*: a stolen creature (Threaten / Mind Control) attacks
             // for its current controller.
+            // Both of these read the cold group, whose `Deref` borrows the
+            // whole state — take them before the battlefield `&mut`.
+            let decayed = computed_kw(id).contains(&Keyword::Decayed);
+            let granted: Vec<crate::card::TriggeredAbility> =
+                self.granted_triggers_eot.get(&id).cloned().unwrap_or_default();
             let card = self
                 .battlefield
                 .iter_mut()
@@ -1120,14 +1125,6 @@ impl GameState {
             if computed_kw(id).contains(&Keyword::Exert) {
                 card.skip_next_untap = true;
             }
-            // CR 702.147 — Decayed. "When it attacks, sacrifice it at end of
-            // combat." Reuse the attacking-token cleanup queue (CR 511.3).
-            if computed_kw(id).contains(&Keyword::Decayed) {
-                self.attacking_token_cleanup.push((
-                    id,
-                    crate::effect::AttackingTokenCleanup::SacrificeAtEndOfCombat,
-                ));
-            }
             // CR 702.121 — Melee: +1/+1 until end of turn per opponent attacked.
             if melee_opponents > 0 && computed_kw(id).contains(&Keyword::Melee) {
                 card.power_bonus += melee_opponents;
@@ -1144,16 +1141,11 @@ impl GameState {
             // Walk printed Attacks triggers + any transient granted
             // Attacks triggers (Root Manipulation's "gain 1 life when
             // this attacks" grant lands in `granted_triggers_eot`).
-            let granted: &[crate::card::TriggeredAbility] = self
-                .granted_triggers_eot
-                .get(&id)
-                .map(Vec::as_slice)
-                .unwrap_or(&[]);
             for t in card
                 .definition
                 .triggered_abilities
                 .iter()
-                .chain(granted)
+                .chain(granted.iter())
                 .chain(static_granted.iter())
                 .chain(equip_granted.iter())
             {
@@ -1172,6 +1164,14 @@ impl GameState {
                     // require the post-batch view).
                     triggers.push((id, t.effect.clone(), p, t.event.filter.clone()));
                 }
+            }
+            // CR 702.147 — Decayed. "When it attacks, sacrifice it at end of
+            // combat." Reuse the attacking-token cleanup queue (CR 511.3).
+            if decayed {
+                self.attacking_token_cleanup.push((
+                    id,
+                    crate::effect::AttackingTokenCleanup::SacrificeAtEndOfCombat,
+                ));
             }
             // Annihilator N — CR 702.85a: "Whenever this creature attacks,
             // defending player sacrifices N permanents." Translate the

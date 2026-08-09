@@ -5047,11 +5047,12 @@ impl GameState {
                 && let Some(host) = aura.attached_to
                 && !self.battlefield.iter().any(|b| b.id == host)
             {
-                self.auras_at_death.entry(host).or_default().push((id, aura.controller));
+                let (aura_controller, aura_snapshot) = (aura.controller, aura.clone());
+                self.auras_at_death.entry(host).or_default().push((id, aura_controller));
                 // Snapshot the leaving Aura so its "when enchanted creature
                 // dies" trigger (EnchantedBySource) can fire via LKI even
                 // though the Aura itself is gone (Minion's Return).
-                self.died_card_snapshots.insert(id, aura.clone());
+                self.died_card_snapshots.insert(id, aura_snapshot);
             }
             // Fire any leaves-the-battlefield triggers on the Aura itself
             // (CR 603.6d) — e.g. Rancor's "return it to its owner's hand".
