@@ -12817,9 +12817,13 @@ impl GameState {
     ) -> Result<Vec<GameEvent>, GameError> {
         let p = self.priority.player_with_priority;
         self.check_free_activation_loop(card_id, ability_index)?;
-        let creature_source =
-            self.battlefield.iter().any(|c| c.id == card_id) && self.permanent_is_creature(card_id);
-        let before = creature_source.then(|| self.players[p].mana_pool.clone());
+        // Mana produced by a *creature* is marked as such (CR 106.12
+        // restrictions). Whether the source is one is a layer read, and
+        // `_inner` already computes that permanent for the ability lookup —
+        // so it hands back the pre-activation pool when the source is a
+        // creature, instead of this frame paying a second whole-game gather.
+        // Nothing has moved mana at the point it fills this in.
+        let mut before: Option<crate::mana::ManaPool> = None;
         let out = self.activate_ability_inner(
             card_id,
             ability_index,
@@ -12827,6 +12831,7 @@ impl GameState {
             additional_targets,
             x_value,
             chosen_mode,
+            &mut before,
         );
         if let Some(before) = before {
             let pool = &mut self.players[p].mana_pool;
@@ -12853,6 +12858,9 @@ impl GameState {
         additional_targets: Vec<Target>,
         x_value: Option<u32>,
         chosen_mode: Option<usize>,
+        // Out: the caller's pre-activation mana pool, filled only when the
+        // source is a creature — see `activate_ability`.
+        creature_mana_before: &mut Option<crate::mana::ManaPool>,
     ) -> Result<Vec<GameEvent>, GameError> {
         let p = self.priority.player_with_priority;
 
@@ -12973,16 +12981,25 @@ impl GameState {
             // (CR 113.10b) keep their granted mana abilities but lose
             // non-mana grants.
             //
-            // All three reads are layer reads on an unchanged board, so they
-            // share one gather — this is a `&mut self` path, so without the
-            // scope each one re-gathers every continuous effect in the game.
-            let (stripped, granted, intrinsic) = self.with_frozen_layers(|g| {
+            // Every layer read this activation needs, in one scope — this is
+            // a `&mut self` path, so without it each one re-gathers every
+            // continuous effect in the game. `creature_source` is the
+            // caller's "did a creature make this mana" flag (CR 106.12 /
+            // Cursed Totem-style restrictions); it comes off the same
+            // `ComputedPermanent` as `stripped`, and no mana has moved yet.
+            let (stripped, is_creature, granted, intrinsic) = self.with_frozen_layers(|g| {
+                let cp = g.computed_permanent(card_id);
                 (
-                    g.computed_permanent(card_id).map(|c| c.lost_all_abilities).unwrap_or(false),
+                    cp.as_ref().map(|c| c.lost_all_abilities).unwrap_or(false),
+                    cp.as_ref()
+                        .is_some_and(|c| c.card_types.contains(&crate::card::CardType::Creature)),
                     g.granted_abilities_for(card_id),
                     g.intrinsic_land_mana_abilities(card_id),
                 )
             });
+            if is_creature {
+                *creature_mana_before = Some(self.players[p].mana_pool.clone());
+            }
             let printed_count = self.battlefield[pos].definition.activated_abilities.len();
             if ability_index < printed_count {
                 let raw = self.battlefield[pos]
