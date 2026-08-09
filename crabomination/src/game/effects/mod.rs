@@ -12626,7 +12626,7 @@ impl GameState {
                     if *counters > 0 {
                         let n = self.scaled_counter_count(p, crate::card::CounterType::PlusOnePlusOne, *counters, true);
                         if let Some(inst) = self.battlefield_find_mut(cid) {
-                            *inst.counters.entry(crate::card::CounterType::PlusOnePlusOne).or_insert(0) += n;
+                            inst.add_counters(crate::card::CounterType::PlusOnePlusOne, n);
                         }
                     }
                 }
@@ -14149,7 +14149,7 @@ impl GameState {
                 let ret_ctx = EffectContext::for_ability(src, owner, None);
                 self.move_card_to(src, &dest, &ret_ctx, events);
                 if let Some(c) = self.battlefield.iter_mut().find(|c| c.id == src) {
-                    *c.counters.entry(*kind).or_insert(0) += *amount;
+                    c.add_counters(*kind, *amount);
                 }
                 Ok(())
             }
@@ -15730,7 +15730,7 @@ impl GameState {
                         }
                         events.push(GameEvent::KeywordCounterAdded { card_id: cid, keyword: kw, count: 1 });
                     } else if let Some(c) = self.battlefield_find_mut(cid) {
-                        *c.counters.entry(CounterType::PlusOnePlusOne).or_insert(0) += 1;
+                        c.add_counters(CounterType::PlusOnePlusOne, 1);
                         events.push(GameEvent::CounterAdded {
                             card_id: cid, counter_type: CounterType::PlusOnePlusOne, count: 1,
                         });
@@ -22450,7 +22450,7 @@ impl GameState {
                     ctx, events,
                 );
                 if let Some(c) = self.battlefield.iter_mut().find(|c| c.id == id) {
-                    *c.counters.entry(crate::card::CounterType::PlusOnePlusOne).or_insert(0) += 1;
+                    c.add_counters(crate::card::CounterType::PlusOnePlusOne, 1);
                     // "…a black Zombie in addition to its other types."
                     let def = std::sync::Arc::make_mut(&mut c.definition);
                     if !def.subtypes.creature_types.contains(&crate::card::CreatureType::Zombie) {
@@ -33488,9 +33488,9 @@ impl GameState {
         if !c.tapped {
             return false;
         }
-        let stun = c.counters.get(&crate::card::CounterType::Stun).copied().unwrap_or(0);
-        if stun > 0 {
-            *c.counters.entry(crate::card::CounterType::Stun).or_insert(0) -= 1;
+        if c.remove_counters(crate::card::CounterType::Stun, 1) > 0 {
+            // The Stun counter is removed instead of untapping; the accessor
+            // drops the entry when the last one comes off (CR 122.1).
         } else {
             c.tapped = false;
             events.push(GameEvent::PermanentUntapped { card_id: cid });

@@ -1862,7 +1862,7 @@ fn project_permanent(
         }),
         // CR 700.9 — mirrors the engine's `R::IsModified` (eval.rs): counters,
         // an attached Equipment, or an Aura the controller controls.
-        modified: !card.counters.is_empty()
+        modified: card.counters.values().any(|&n| n > 0)
             || battlefield.iter().any(|o| {
                 o.attached_to == Some(card.id)
                     && (o.definition.is_artifact()

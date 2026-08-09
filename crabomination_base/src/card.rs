@@ -6362,14 +6362,27 @@ impl CardInstance {
         self.counters.get(&ct).copied().unwrap_or(0)
     }
 
+    /// CR 122.1 — a counter kind is on a permanent or it is not; a stored
+    /// count of zero is neither, and readers that ask "does this map have
+    /// entries" (CR 700.9 `IsModified`) can't tell the difference. These two
+    /// maintain the invariant: no zero-valued entry ever lands in `counters`.
     pub fn add_counters(&mut self, ct: CounterType, n: u32) {
+        if n == 0 {
+            return;
+        }
         *self.counters.entry(ct).or_insert(0) += n;
     }
 
+    /// Remove up to `n` counters of kind `ct`; returns how many came off.
+    /// Callers use it as a probe (`remove_counters(Prepared, 1) > 0`), so it
+    /// must not materialize an entry for a kind the permanent doesn't have.
     pub fn remove_counters(&mut self, ct: CounterType, n: u32) -> u32 {
-        let entry = self.counters.entry(ct).or_insert(0);
-        let removed = (*entry).min(n);
-        *entry -= removed;
+        let Some(have) = self.counters.get_mut(&ct) else { return 0 };
+        let removed = (*have).min(n);
+        *have -= removed;
+        if *have == 0 {
+            self.counters.remove(&ct);
+        }
         removed
     }
 

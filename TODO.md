@@ -42,11 +42,13 @@ and **43.29 -> 47.86 games/s, +10.6 %, 4/4 pairs** at `release` + mimalloc
   833 M / 11.8 %, of which **627 M is `Vec::from_iter`** materializing a
   fresh `ComputedPermanent` for the whole board on each of 46 k calls — ask
   item 0's question of its callers before memoizing. (3) candidate 4.
-- **Bugs**: two new, both quoted in "Engine — Robustness / defects" above
-  and both unfixed — zero-count counter entries making CR 700.9 "modified"
-  wrong, and `keyword_counters` `HashMap` order reaching a `Vec` in
-  `layers.rs`. The panic/unwrap sweep of the self-play path is still
-  untouched (90 `unwrap()` under `game/` + `bot.rs`).
+- **Bugs**: the zero-count-counter defect (CR 700.9 "modified" reading true
+  for permanents with nothing on them) is **fixed** — accessors keep the
+  invariant, both readers ask `values().any(n > 0)`, three regression tests.
+  Still open in "Engine — Robustness / defects" above: `keyword_counters`
+  `HashMap` order reaching a `Vec` in `layers.rs`. The panic/unwrap sweep of
+  the self-play path is still untouched (90 `unwrap()` under `game/` +
+  `bot.rs`).
 - **Disk**: two concurrent `release` builds + `profiling-fast` + a worktree
   ran to 22 G of 37 G. `release` engine builds took 27 min each running two
   at a time; `profiling-fast` is 3.5 min and is what A/B iteration should use.
@@ -71,23 +73,8 @@ target/debug/incremental` reclaims several GB without a full rebuild.
 
 ## Engine — Robustness / defects (open)
 
-Found by profiling this run, both unfixed. Neither is speculative — the code
-is quoted.
+Found by profiling. Not speculative — the code is quoted.
 
-- **Zero-count counter entries make CR 700.9 "modified" wrong.**
-  `CardInstance::remove_counters` is `*self.counters.entry(ct).or_insert(0)`,
-  so *probing* a kind the permanent doesn't have materializes `{kind: 0}` —
-  and several callers are pure probes (`actions.rs`
-  `remove_counters(Prepared, 1) > 0`, `mod.rs`'s `remove_counters(k, u32::MAX)`
-  sweeps). `untap_permanent` leaves `{Stun: 0}` behind the same way when the
-  last Stun counter comes off. Two readers take "map non-empty" to mean "has
-  counters": `eval.rs`'s `R::IsModified` and `view.rs`'s `modified` field. So
-  a creature with no counters, no Equipment and no Aura can read as modified
-  for the rest of the game. The rest of the codebase already filters `n > 0`
-  defensively, which is the tell. Fix is two-sided: keep the invariant in
-  `add_counters`/`remove_counters` (skip `n == 0`, drop an entry that reaches
-  0), and make the two readers ask `values().any(|&n| n > 0)` so the class
-  can't recur. Expect golden traces to move — bless them in the same commit.
 - **`keyword_counters` iteration order reaches a `Vec`.** `layers.rs`'s
   `for (kw, count) in &card.keyword_counters { … keywords.push(kw.clone()) }`
   pushes in `HashMap` order, which `RandomState` reseeds per process. Latent

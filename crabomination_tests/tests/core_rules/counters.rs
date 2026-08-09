@@ -700,3 +700,55 @@ fn populate_is_noop_without_a_creature_token() {
     drain_stack(&mut g);
     assert_eq!(g.battlefield.len(), before, "no token to copy → no-op");
 }
+
+// ── CR 122.1 / 700.9 — no zero-count counter entries ─────────────────────
+
+/// `remove_counters` is used as a probe all over the engine
+/// (`remove_counters(Prepared, 1) > 0`, the `u32::MAX` sweeps), and it used
+/// to be `entry(ct).or_insert(0)` — so probing a kind the permanent never had
+/// left `{kind: 0}` behind. `R::IsModified` reads "does this permanent have
+/// counters", so a bear with nothing on it read as modified for the rest of
+/// the game.
+#[test]
+fn probing_an_absent_counter_kind_leaves_no_entry() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let removed = g
+        .battlefield_find_mut(bear)
+        .expect("bear on the battlefield")
+        .remove_counters(CounterType::Prepared, 1);
+    assert_eq!(removed, 0, "nothing to remove");
+    assert!(
+        g.battlefield_find(bear).expect("bear").counters.is_empty(),
+        "a probe of an absent counter kind must not materialize a zero entry"
+    );
+}
+
+/// The other half: taking the last counter of a kind off drops the entry
+/// rather than storing a zero, so the same reader stays honest.
+#[test]
+fn removing_the_last_counter_drops_the_entry() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    {
+        let c = g.battlefield_find_mut(bear).expect("bear");
+        c.add_counters(CounterType::PlusOnePlusOne, 2);
+        assert_eq!(c.remove_counters(CounterType::PlusOnePlusOne, 5), 2);
+    }
+    assert!(
+        g.battlefield_find(bear).expect("bear").counters.is_empty(),
+        "the last +1/+1 counter coming off must drop the entry, not zero it"
+    );
+}
+
+/// `add_counters(kind, 0)` is a no-op — "put zero counters on it" must not
+/// make the permanent modified.
+#[test]
+fn adding_zero_counters_is_a_no_op() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.battlefield_find_mut(bear)
+        .expect("bear")
+        .add_counters(CounterType::PlusOnePlusOne, 0);
+    assert!(g.battlefield_find(bear).expect("bear").counters.is_empty());
+}

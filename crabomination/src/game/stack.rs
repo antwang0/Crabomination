@@ -4443,7 +4443,9 @@ impl GameState {
             if let Some((kind, max)) = card.definition.max_counters_of_kind {
                 let current = card.counters.get(&kind).copied().unwrap_or(0);
                 if current > max {
-                    *card.counters.entry(kind).or_insert(0) = max;
+                    // Through the accessor so a cap of 0 drops the entry
+                    // rather than storing a zero (CR 122.1).
+                    card.remove_counters(kind, current - max);
                 }
             }
         }

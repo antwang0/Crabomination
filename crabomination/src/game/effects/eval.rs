@@ -3562,7 +3562,11 @@ impl GameState {
                     // CR 700.9 — counters, equipped, or enchanted by an Aura
                     // the permanent's own controller controls.
                     R::IsModified => {
-                        !card.counters.is_empty()
+                        // `values().any(n > 0)`, not `!is_empty()`: a stored
+                        // zero is not a counter (CR 122.1). The accessors keep
+                        // the invariant, this keeps the reader honest if a
+                        // direct `entry()` site ever breaks it again.
+                        card.counters.values().any(|&n| n > 0)
                             || self.battlefield.iter().any(|o| {
                                 o.attached_to == Some(*cid)
                                     && (o.definition.is_artifact()
