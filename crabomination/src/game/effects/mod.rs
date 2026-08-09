@@ -14035,7 +14035,7 @@ impl GameState {
                     let Some(cid) = ent.as_permanent_id() else { continue };
                     let walks: Vec<crate::card::Keyword> = self
                         .computed_permanent(cid)
-                        .map(|cp| cp.keywords.clone())
+                        .map(|cp| cp.keywords.to_vec())
                         .unwrap_or_default()
                         .into_iter()
                         .filter(|k| {
@@ -16322,7 +16322,7 @@ impl GameState {
                 };
                 let types = self
                     .computed_permanent(entered)
-                    .map(|cp| cp.card_types.clone())
+                    .map(|cp| cp.card_types.to_vec())
                     .unwrap_or_default();
                 let candidates: Vec<(CardId, String)> = self
                     .battlefield
@@ -17149,7 +17149,7 @@ impl GameState {
                 };
                 let types: Vec<CardType> = self
                     .computed_permanent(cid)
-                    .map(|cp| cp.card_types.clone())
+                    .map(|cp| cp.card_types.to_vec())
                     .unwrap_or_else(|| {
                         self.battlefield_find(cid)
                             .map(|c| c.definition.card_types.clone())

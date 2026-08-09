@@ -1514,7 +1514,7 @@ fn project_permanent(
         controller: card.controller,
         owner: card.owner,
         card_types: cp
-            .map(|c| c.card_types.clone())
+            .map(|c| c.card_types.to_vec())
             .unwrap_or_else(|| card.definition.card_types.clone()),
         tapped: card.tapped,
         damage: card.damage,
@@ -1525,7 +1525,7 @@ fn project_permanent(
         base_power: card.definition.base_power(),
         base_toughness: card.definition.base_toughness(),
         keywords: cp
-            .map(|c| c.keywords.clone())
+            .map(|c| c.keywords.to_vec())
             .unwrap_or_else(|| card.definition.keywords.clone()),
         counters: card.counters.iter().map(|(k, v)| (*k, *v)).collect(),
         attached_to: card.attached_to,

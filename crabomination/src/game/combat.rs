@@ -2183,7 +2183,7 @@ impl GameState {
         // before mutating so the borrow of `assignments` stays clean.
         let computed = self.compute_battlefield();
         let kws_for = |id: CardId| -> Vec<Keyword> {
-            computed.iter().find(|c| c.id == id).map(|c| c.keywords.clone()).unwrap_or_default()
+            computed.iter().find(|c| c.id == id).map(|c| c.keywords.to_vec()).unwrap_or_default()
         };
         let sum_n = |kws: &[Keyword], pick: fn(&Keyword) -> Option<i32>| -> i32 {
             kws.iter().filter_map(pick).sum()

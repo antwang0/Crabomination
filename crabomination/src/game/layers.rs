@@ -297,17 +297,91 @@ pub enum AffectedPermanents {
 
 // ── Computed permanent ────────────────────────────────────────────────────────
 
+/// A layer-computed characteristic that is usually exactly the printed one.
+///
+/// Holds the permanent's (immutable, `Arc`-shared) `CardDefinition` and a
+/// projection into it; the printed value is cloned only when a layer
+/// actually writes through `DerefMut`. `compute_permanent_pass` runs ~1.5 M
+/// times per six games and was **40 % of every allocation the simulator
+/// makes**, nearly all of it cloning collections nothing then modified.
+///
+/// `Deref`/`DerefMut` to `T` keep the field reading like the plain type, so
+/// `cp.keywords.contains(&kw)` and `cp.subtypes.creature_types` are
+/// unchanged at ~4.5 k call sites. The override is boxed so the struct stays
+/// 24 bytes whatever `T` is — `Subtypes` alone is seven `Vec`s.
+pub struct Printed<T: Clone + 'static> {
+    src: std::sync::Arc<crate::card::CardDefinition>,
+    proj: fn(&crate::card::CardDefinition) -> &T,
+    over: Option<Box<T>>,
+}
+
+impl<T: Clone> Printed<T> {
+    #[inline]
+    pub(crate) fn new(
+        src: std::sync::Arc<crate::card::CardDefinition>,
+        proj: fn(&crate::card::CardDefinition) -> &T,
+    ) -> Self {
+        Self { src, proj, over: None }
+    }
+}
+
+impl<T: Clone> std::ops::Deref for Printed<T> {
+    type Target = T;
+    #[inline]
+    fn deref(&self) -> &T {
+        match &self.over {
+            Some(v) => v,
+            None => (self.proj)(&self.src),
+        }
+    }
+}
+
+/// The clone point: the first layer write materializes the printed value.
+impl<T: Clone> std::ops::DerefMut for Printed<T> {
+    #[inline]
+    fn deref_mut(&mut self) -> &mut T {
+        let proj = self.proj;
+        let src = &self.src;
+        self.over.get_or_insert_with(|| Box::new(proj(src).clone()))
+    }
+}
+
+impl<T: Clone> Clone for Printed<T> {
+    fn clone(&self) -> Self {
+        Self { src: self.src.clone(), proj: self.proj, over: self.over.clone() }
+    }
+}
+
+impl<T: Clone + std::fmt::Debug> std::fmt::Debug for Printed<T> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        std::fmt::Debug::fmt(&**self, f)
+    }
+}
+
+/// Equality is on the effective value, never on where it came from.
+impl<T: Clone + PartialEq> PartialEq for Printed<T> {
+    fn eq(&self, other: &Self) -> bool {
+        **self == **other
+    }
+}
+
+impl<T: Clone + PartialEq> PartialEq<T> for Printed<T> {
+    fn eq(&self, other: &T) -> bool {
+        **self == *other
+    }
+}
+
 /// The fully resolved state of a permanent after all layers are applied.
 /// Use this instead of reading `CardInstance` fields directly when layers matter.
 #[derive(Debug, Clone)]
 pub struct ComputedPermanent {
     pub id: CardId,
     pub controller: usize,
-    pub card_types: Vec<CardType>,
-    pub supertypes: Vec<Supertype>,
-    pub subtypes: Subtypes,
+    pub card_types: Printed<Vec<CardType>>,
+    pub supertypes: Printed<Vec<Supertype>>,
+    pub subtypes: Printed<Subtypes>,
     pub colors: Vec<Color>,
-    pub keywords: Vec<Keyword>,
+    pub keywords: Printed<Vec<Keyword>>,
     pub power: i32,
     pub toughness: i32,
     /// True when at least one `Modification::RemoveAllAbilities` continuous
@@ -388,11 +462,13 @@ fn compute_permanent_pass(
     gate_power: Option<i32>,
     gate_types: Option<&[CreatureType]>,
 ) -> ComputedPermanent {
-    // Start from the base card definition.
+    // Start from the base card definition — borrowed, not cloned: each of
+    // these materializes only if a layer below actually writes to it.
     let mut controller = card.controller;
-    let mut card_types = card.definition.card_types.clone();
-    let mut supertypes = card.definition.supertypes.clone();
-    let mut subtypes = card.definition.subtypes.clone();
+    let def = &card.definition;
+    let mut card_types = Printed::new(def.clone(), |d| &d.card_types);
+    let mut supertypes = Printed::new(def.clone(), |d| &d.supertypes);
+    let mut subtypes = Printed::new(def.clone(), |d| &d.subtypes);
     // CR 702.103d — while bestowed, the permanent is an Aura enchantment,
     // not a creature. Strip the Creature type and add the Aura subtype so
     // it isn't a valid blocker/attacker/removal target and the orphan-Aura
@@ -412,7 +488,7 @@ fn compute_permanent_pass(
         }
     }
     let mut colors = colors_from_card(card);
-    let mut keywords = card.definition.keywords.clone();
+    let mut keywords = Printed::new(def.clone(), |d| &d.keywords);
     // EOT-granted keywords join the layer walk as synthetic L6 effects at
     // their grant timestamps (CR 613.7), so a grant resolved *after* a
     // RemoveAllAbilities / RemoveKeyword effect survives it while an
@@ -521,7 +597,7 @@ fn compute_permanent_pass(
                 if !card_types.contains(t) { card_types.push(t.clone()); }
             }
             Modification::RemoveCardType(t) => card_types.retain(|x| x != t),
-            Modification::SetCardTypes(ts) => card_types = ts.clone(),
+            Modification::SetCardTypes(ts) => *card_types = ts.clone(),
             Modification::AddSupertype(s) => {
                 if !supertypes.contains(s) { supertypes.push(*s); }
             }
@@ -606,19 +682,26 @@ fn compute_permanent_pass(
     // CR 702.22 — "loses all 'bands with other' abilities" (Shelkin Brownie,
     // Tolaria) can't name a payload, so a removal of `BandsWithOther` strips
     // every instance whatever its quality.
-    let removes_all_bands = card
-        .removed_keywords_eot
-        .iter()
-        .chain(&card.removed_keywords)
-        .any(|k| matches!(k, Keyword::BandsWithOther(_)));
-    keywords.retain(|k| {
-        !(card.removed_keywords_eot.contains(k)
-            || card.removed_keywords.contains(k)
-            || (removes_all_bands && matches!(k, Keyword::BandsWithOther(_))))
-    });
+    // Both retains are gated on their input being non-empty: `retain` takes
+    // `&mut`, which materializes the printed keyword list even when it
+    // removes nothing, and the empty case is the overwhelming majority.
+    if !card.removed_keywords_eot.is_empty() || !card.removed_keywords.is_empty() {
+        let removes_all_bands = card
+            .removed_keywords_eot
+            .iter()
+            .chain(&card.removed_keywords)
+            .any(|k| matches!(k, Keyword::BandsWithOther(_)));
+        keywords.retain(|k| {
+            !(card.removed_keywords_eot.contains(k)
+                || card.removed_keywords.contains(k)
+                || (removes_all_bands && matches!(k, Keyword::BandsWithOther(_))))
+        });
+    }
     // CR 113.11 — "can't have or gain" beats any grant, whatever its
     // timestamp (Archetype of Courage vs. a later first-strike anthem).
-    keywords.retain(|k| !cant_have_keywords.contains(k));
+    if !cant_have_keywords.is_empty() {
+        keywords.retain(|k| !cant_have_keywords.contains(k));
+    }
 
     // Compute final P/T.
     let (mut power, mut toughness) = if let Some((p, t)) = set_pt {

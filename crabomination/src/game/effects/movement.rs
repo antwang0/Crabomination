@@ -832,7 +832,7 @@ impl GameState {
             && self
                 .computed_permanent(tgt)
                 .into_iter()
-                .flat_map(|cp| cp.keywords.clone())
+                .flat_map(|cp| cp.keywords.to_vec())
                 .any(|k| match k {
                     crate::card::Keyword::PreventDamageFromMatching(f) => self
                         .evaluate_requirement_static(&f, &crate::game::types::Target::Permanent(src), self.battlefield_find(tgt).map_or(0, |c| c.controller), Some(src)),
@@ -947,7 +947,7 @@ impl GameState {
             if !types.is_empty() {
                 let src_types = self
                     .computed_permanent(src)
-                    .map(|c| c.card_types.clone())
+                    .map(|c| c.card_types.to_vec())
                     .or_else(|| {
                         self.find_card_anywhere(src)
                             .map(|c| c.definition.card_types.clone())
@@ -1133,7 +1133,7 @@ impl GameState {
         // Triumph of the Hordes-style anthems) are honored.
         let src_kws: Vec<crate::card::Keyword> = source
             .and_then(|s| self.computed_permanent(s))
-            .map(|cp| cp.keywords.clone())
+            .map(|cp| cp.keywords.to_vec())
             .unwrap_or_default();
         let source_has_infect = src_kws.contains(&crate::card::Keyword::Infect);
         // CR 702.80a / 702.90e — wither/infect damage to a creature lands as

@@ -7248,7 +7248,7 @@ fn pick_blocks_inner(state: &GameState, seat: usize) -> Vec<(CardId, CardId)> {
         }
         state
             .computed_permanent(id)
-            .map(|cp| cp.keywords.clone())
+            .map(|cp| cp.keywords.to_vec())
             .unwrap_or_default()
             .iter()
             .filter_map(|k| match k {
@@ -7560,7 +7560,7 @@ fn ward_tax(state: &GameState, id: CardId, actor: usize) -> Option<crate::card::
     }
     state
         .computed_permanent(id)
-        .map(|cp| cp.keywords.clone())
+        .map(|cp| cp.keywords.to_vec())
         .unwrap_or_else(|| c.definition.keywords.clone())
         .iter()
         .find_map(|k| match k {

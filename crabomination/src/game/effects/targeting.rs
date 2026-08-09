@@ -131,7 +131,7 @@ impl GameState {
                 return false;
             }
             self.computed_permanent(cid)
-                .map(|cp| cp.keywords.clone())
+                .map(|cp| cp.keywords.to_vec())
                 .unwrap_or_else(|| c.definition.keywords.clone())
                 .iter()
                 .any(|k| matches!(k, Keyword::Ward(w)

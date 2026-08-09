@@ -5738,7 +5738,7 @@ impl GameState {
         let controller = self.battlefield_find(tgt).map_or(0, |c| c.controller);
         self.computed_permanent(tgt)
             .into_iter()
-            .flat_map(|cp| cp.keywords.clone())
+            .flat_map(|cp| cp.keywords.to_vec())
             .any(|k| match k {
                 crate::card::Keyword::PreventDamageFromMatching(f) => self
                     .evaluate_requirement_static(
@@ -11378,7 +11378,7 @@ impl GameState {
             .unwrap_or(0);
         let src_card_types = self
             .computed_permanent(source)
-            .map(|c| c.card_types.clone())
+            .map(|c| c.card_types.to_vec())
             .unwrap_or_else(|| {
                 self.battlefield_find(source)
                     .map(|c| c.definition.card_types.clone())
