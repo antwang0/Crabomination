@@ -16,43 +16,41 @@ reference and want their own triage pass):
 
 ## NEXT (handoff — rewrite each run, keep under 15 lines)
 
-Branch `claude/modern_decks`. Eighth pass: the gather, finally attributed.
-**8,887,218,012 -> 7,993,961,114 Ir on the fixed six-game workload, -10.05 %**
-(`profiling-fast` callgrind A/B; `PERF.md` Log has both rows and the bench).
+Branch `claude/modern_decks`. Ninth pass: five perf rows, one shape.
+**7,994,965,799 -> 7,035,606,377 Ir on the fixed six-game workload, -12.00 %**,
+and **43.29 -> 47.86 games/s, +10.6 %, 4/4 pairs** at `release` + mimalloc
+(different, slower box than the last anchor — read the Baseline box line).
 
-- **What the attribution said, and it was not what two runs had guessed.**
-  The gather's 4,385 Ir/call was **65 % slice iteration and pointer advance**
-  (`slice::iter` 5.93 % of the program, `ptr::non_null` 5.57 %), not the 39
-  per-variant passes. It was eleven separate `for card in &self.battlefield`
-  loops. Folding them into the `sa_cards` walk: **-9.02 % program, -36.7 %
-  of the gather** (4,385 -> 2,774 Ir/call). Then `Cow` on
-  `effective_mana_abilities` + one fewer `battlefield_find` in
-  `granted_abilities_for`: **-1.14 %**.
-- **Method that made it possible**: new `[profile.profiling-fast]` =
-  `release-fast` + debuginfo. Engine rebuild ~3.5 min instead of ~24, and it
-  reproduced the recorded `release-fast` gather figure to the instruction.
-  **Read the `file:function` rows, not function totals** — cost in
-  `slice/iter/macros.rs` means walking, and the fix is fewer walks.
-- **Trap, paid for once**: gating a loop's *head* is only safe if the loop
-  has one pass. The Unleash loop also carries the CR 611.2 `WhileCondition`
-  gate and the suspect / living-metal statics; gating it killed every
-  threshold/retype static (15 `classic_sets` failures). Nine of eleven were
-  single-purpose; that one was not. Read the whole body first.
-- **Next up, in order**: (1) **candidate 1.7** — `players: self.players.clone()`
-  is **488,350,327 Ir, 5.49 %**, and `GameState::clone` + its drop is ~12.3 %
-  of the program. `Player` has 165 fields and is a plain struct; make it
-  `Arc<PlayerData>` + `Deref`/`DerefMut`, exactly candidate 7 one level up
-  (that one was -25.6 %). This is now the single biggest cost. (2)
-  `granted_abilities_for`, still 388 M / 4.9 % and mostly walking
-  `all_static_sources` per call. (3) the gather's remaining 995 M, now in
-  pass *bodies* rather than walking.
-- **Bugs**: `audit_stubs` clean, dead-ability class is a suite gate. The
-  panic/unwrap sweep of the self-play path is still untouched (90 `unwrap()`
-  under `game/` + `bot.rs`); `INCOMPLETE_CARDS.md`'s missing-primitive
-  buckets likewise.
-- **Disk**: `target/debug/incremental` reached 8.8 G again; deleting it
-  freed 8 G. Budget for it before a full `cargo test`.
-- **Trackers**: TODO 811, roadmap 660, `PERF.md` 546, `INCOMPLETE_CARDS` 247.
+- **Four of the five rows were one shape**: a per-card loop rebuilding a
+  board-level scan. `GrantScan` (-2.58 %), `granted_abilities_for`'s eight
+  `battlefield_find`s collapsed to one (-1.56 %), the trigger-grant hoist
+  (-3.39 %), and the layer pass reading counters in one map walk instead of
+  ten lookups (-2.87 %). **The tell**: cost in `slice/iter/macros.rs` +
+  `ptr/non_null.rs` rather than the function's own file. **The trap**: a
+  scan already hoisted into a `_with` variant can still be O(n²) — grep the
+  `_for` shim's callers for a surrounding loop. That is what candidate 2's
+  triggered half was, for a whole run.
+- **Candidate 1.7 landed at -2.21 %**, an eighth of candidate 7 on the same
+  shape. A CoW handle pays in proportion to the siblings sharing the
+  unshare: 20 cards/1 written vs 2 seats/1 written. Count first next time.
+  Also measured and rejected: gating a `&mut` to skip an unshare (-0.04 %,
+  the next writer pays it) and an `is_empty()` guard inside `counter_count`
+  (-0.02 %, hashbrown already does it).
+- **Next up, in order**: (1) **the gather is back to #1 by a wide margin** —
+  918 M self / 13.1 %, 1.55 G inclusive / **22.0 %**, 2,559 Ir/call over
+  358,792 calls, and a third of it is still walking. (2) `compute_battlefield`
+  833 M / 11.8 %, of which **627 M is `Vec::from_iter`** materializing a
+  fresh `ComputedPermanent` for the whole board on each of 46 k calls — ask
+  item 0's question of its callers before memoizing. (3) candidate 4.
+- **Bugs**: two new, both quoted in "Engine — Robustness / defects" above
+  and both unfixed — zero-count counter entries making CR 700.9 "modified"
+  wrong, and `keyword_counters` `HashMap` order reaching a `Vec` in
+  `layers.rs`. The panic/unwrap sweep of the self-play path is still
+  untouched (90 `unwrap()` under `game/` + `bot.rs`).
+- **Disk**: two concurrent `release` builds + `profiling-fast` + a worktree
+  ran to 22 G of 37 G. `release` engine builds took 27 min each running two
+  at a time; `profiling-fast` is 3.5 min and is what A/B iteration should use.
+- **Trackers**: TODO 821, roadmap 660, `PERF.md` 578, `INCOMPLETE_CARDS` 247.
 
 ## Environment note
 
@@ -70,6 +68,33 @@ already does the update, but its failures are silenced, so check
 `pkg-config --exists wayland-client` before blaming the crate); and a full
 `cargo test --workspace` including the client can fill the disk — `rm -rf
 target/debug/incremental` reclaims several GB without a full rebuild.
+
+## Engine — Robustness / defects (open)
+
+Found by profiling this run, both unfixed. Neither is speculative — the code
+is quoted.
+
+- **Zero-count counter entries make CR 700.9 "modified" wrong.**
+  `CardInstance::remove_counters` is `*self.counters.entry(ct).or_insert(0)`,
+  so *probing* a kind the permanent doesn't have materializes `{kind: 0}` —
+  and several callers are pure probes (`actions.rs`
+  `remove_counters(Prepared, 1) > 0`, `mod.rs`'s `remove_counters(k, u32::MAX)`
+  sweeps). `untap_permanent` leaves `{Stun: 0}` behind the same way when the
+  last Stun counter comes off. Two readers take "map non-empty" to mean "has
+  counters": `eval.rs`'s `R::IsModified` and `view.rs`'s `modified` field. So
+  a creature with no counters, no Equipment and no Aura can read as modified
+  for the rest of the game. The rest of the codebase already filters `n > 0`
+  defensively, which is the tell. Fix is two-sided: keep the invariant in
+  `add_counters`/`remove_counters` (skip `n == 0`, drop an entry that reaches
+  0), and make the two readers ask `values().any(|&n| n > 0)` so the class
+  can't recur. Expect golden traces to move — bless them in the same commit.
+- **`keyword_counters` iteration order reaches a `Vec`.** `layers.rs`'s
+  `for (kw, count) in &card.keyword_counters { … keywords.push(kw.clone()) }`
+  pushes in `HashMap` order, which `RandomState` reseeds per process. Latent
+  rather than proven: it only bites a permanent carrying two or more distinct
+  keyword-counter kinds, and the golden traces (the cross-process determinism
+  check) are green. `Keyword` has no `Ord`, so the cheap fix is not sorting —
+  either give it a derived `Ord` or make the consumer order-insensitive.
 
 ## Engine — Missing Mechanics
 
