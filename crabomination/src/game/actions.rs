@@ -12924,10 +12924,6 @@ impl GameState {
             // activated abilities used. We allow mana abilities through (no
             // catalog card stripping abilities has a mana ability of
             // interest right now) by detecting them via `is_mana_ability`.
-            let stripped = self
-                .computed_permanent(card_id)
-                .map(|c| c.lost_all_abilities)
-                .unwrap_or(false);
             // `StaticEffect::GrantActivatedAbility` (Galazeth Prismari,
             // Cryptolith Rite, …): surface granted abilities as virtual
             // activated abilities at indices ≥ printed_count, so standard
@@ -12935,9 +12931,18 @@ impl GameState {
             // modifying every ability lookup path. Stripped permanents
             // (CR 113.10b) keep their granted mana abilities but lose
             // non-mana grants.
+            //
+            // All three reads are layer reads on an unchanged board, so they
+            // share one gather — this is a `&mut self` path, so without the
+            // scope each one re-gathers every continuous effect in the game.
+            let (stripped, granted, intrinsic) = self.with_frozen_layers(|g| {
+                (
+                    g.computed_permanent(card_id).map(|c| c.lost_all_abilities).unwrap_or(false),
+                    g.granted_abilities_for(card_id),
+                    g.intrinsic_land_mana_abilities(card_id),
+                )
+            });
             let printed_count = self.battlefield[pos].definition.activated_abilities.len();
-            let granted = self.granted_abilities_for(card_id);
-            let intrinsic = self.intrinsic_land_mana_abilities(card_id);
             if ability_index < printed_count {
                 let raw = self.battlefield[pos]
                     .definition

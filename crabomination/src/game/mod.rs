@@ -3982,6 +3982,8 @@ impl GameState {
     /// lands count). Backs the CR 508.1a/509.1b "more creatures than the
     /// defending/attacking player" gates (Mogg Toady).
     pub(crate) fn creature_count(&self, seat: usize) -> usize {
+        // Not worth a `with_frozen_layers` here: measured as an exact null
+        // (0 gathers removed) — its callers already hold a scope.
         self.battlefield
             .iter()
             .filter(|c| c.controller == seat && self.permanent_is_creature(c.id))
@@ -5659,8 +5661,13 @@ impl GameState {
         };
         // Source identity: a battlefield permanent's computed colors +
         // controller, else the resolving spell stamped by `resolve_spell`.
+        // One layer read for both this and the "is the source a permanent?"
+        // test below — each `computed_permanent` outside a freeze scope
+        // re-gathers every continuous effect in the game.
+        let source_cp = source.and_then(|s| self.computed_permanent(s));
         let source_info: Option<(usize, Vec<crate::mana::Color>)> = source.and_then(|s| {
-            self.computed_permanent(s)
+            source_cp
+                .as_ref()
                 .map(|cp| (cp.controller, cp.colors.clone()))
                 .or_else(|| match &self.resolving_source {
                     Some((id, caster, colors, _)) if *id == s => {
@@ -5676,8 +5683,8 @@ impl GameState {
         // permanent or player". Recipient-agnostic, so it sits outside the
         // player-only block below; the source must be a resolving spell
         // (no battlefield permanent behind it).
-        if let Some(s) = source
-            && self.computed_permanent(s).is_none()
+        if source.is_some()
+            && source_cp.is_none()
             && let Some((_, spell_colors)) = &source_info
         {
             for c in &self.battlefield {
