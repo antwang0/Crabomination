@@ -12272,10 +12272,10 @@ impl GameState {
         use crate::effect::{Selector, StaticEffect};
         let tgt = Target::Permanent(card_id);
         let mut out = Vec::new();
-        // One lookup: this is called ~272 k times per six bot games and
-        // `battlefield_find` is a linear scan.
-        let on_battlefield = self.battlefield_find(card_id);
-        if on_battlefield.is_none() {
+        // One lookup, reused by every `me`-reading block below: this is called
+        // ~272 k times per six bot games and `battlefield_find` is a linear
+        // scan of the whole battlefield.
+        let Some(me) = self.battlefield_find(card_id) else {
             // A card outside the battlefield can still carry an instance grant
             // — Cursecloth Wrappings hands a graveyard creature card embalm.
             if let Some(c) = self.find_card_anywhere(card_id) {
@@ -12283,37 +12283,50 @@ impl GameState {
                 out.extend(c.granted_activated_eot.iter().cloned());
             }
             return out;
+        };
+        // Which of the "has the activated abilities of …" statics this
+        // permanent carries, in one pass of its static abilities instead of
+        // one pass per block below.
+        let (mut welder, mut ooze, mut marvin, mut kraj, mut safehouse) =
+            (false, false, false, false, false);
+        for sa in &me.definition.static_abilities {
+            match sa.effect {
+                StaticEffect::HasActivatedAbilitiesOfExiledWithSelf => welder = true,
+                StaticEffect::HasActivatedAbilitiesOfGraveyardCreatures => ooze = true,
+                StaticEffect::HasActivatedAbilitiesOfOtherNamedControlledCreatures => {
+                    marvin = true
+                }
+                StaticEffect::HasActivatedAbilitiesOfCounteredCreatures => kraj = true,
+                StaticEffect::HasActivatedAbilitiesOfGraveyardLands => safehouse = true,
+                _ => {}
+            }
         }
         // Instance-granted abilities first (Urza's Saga chapters) — the
         // client view lists printed + instance-granted in this order, so
         // their indices must come before the battlefield-static grants.
-        if let Some(c) = on_battlefield {
-            out.extend(c.granted_activated_abilities.iter().cloned());
-            out.extend(c.granted_activated_eot.iter().cloned());
-            // Myr Welder — "has all activated abilities of all cards exiled
-            // with it", read live off the imprint pile.
-            if c.definition.static_abilities.iter().any(|sa| {
-                matches!(sa.effect, StaticEffect::HasActivatedAbilitiesOfExiledWithSelf)
-            }) {
-                for imp in self.exile.iter().filter(|e| e.exiled_with == Some(card_id)) {
-                    out.extend(imp.definition.activated_abilities.iter().cloned());
-                }
+        out.extend(me.granted_activated_abilities.iter().cloned());
+        out.extend(me.granted_activated_eot.iter().cloned());
+        // Myr Welder — "has all activated abilities of all cards exiled
+        // with it", read live off the imprint pile.
+        if welder {
+            for imp in self.exile.iter().filter(|e| e.exiled_with == Some(card_id)) {
+                out.extend(imp.definition.activated_abilities.iter().cloned());
             }
-            // CR 804.2 — the deploy creatures option gives every creature
-            // "{T}: Target teammate gains control of this creature. Activate
-            // only as a sorcery."
-            if self.deploy_creatures && c.definition.is_creature() {
-                out.push(crate::effect::ActivatedAbility {
-                    tap_cost: true,
-                    sorcery_speed: true,
-                    effect: Effect::GainControl {
-                        what: Selector::This,
-                        to: Some(crate::effect::PlayerRef::EachTeammate),
-                        duration: crate::effect::Duration::Permanent,
-                    },
-                    ..Default::default()
-                });
-            }
+        }
+        // CR 804.2 — the deploy creatures option gives every creature
+        // "{T}: Target teammate gains control of this creature. Activate
+        // only as a sorcery."
+        if self.deploy_creatures && me.definition.is_creature() {
+            out.push(crate::effect::ActivatedAbility {
+                tap_cost: true,
+                sorcery_speed: true,
+                effect: Effect::GainControl {
+                    what: Selector::This,
+                    to: Some(crate::effect::PlayerRef::EachTeammate),
+                    duration: crate::effect::Duration::Permanent,
+                },
+                ..Default::default()
+            });
         }
         // CR 315.5 — a face-up conspiracy grants from the command zone too.
         for src in self.all_static_sources() {
@@ -12387,11 +12400,7 @@ impl GameState {
         // usable activated ability of every creature card in every graveyard.
         // Skip graveyard-only activations (`from_graveyard` / `exile_self_cost`)
         // — those function only from the graveyard, so the Ooze can't use them.
-        if self.battlefield_find(card_id).is_some_and(|c| {
-            c.definition.static_abilities.iter().any(|sa| {
-                matches!(sa.effect, StaticEffect::HasActivatedAbilitiesOfGraveyardCreatures)
-            })
-        }) {
+        if ooze {
             for pl in &self.players {
                 for card in &pl.graveyard {
                     if !card.definition.is_creature() {
@@ -12408,14 +12417,7 @@ impl GameState {
         }
         // Marvin, Murderous Mimic — every activated ability of each creature
         // its controller controls whose name differs from Marvin's.
-        if let Some(me) = self.battlefield_find(card_id).filter(|c| {
-            c.definition.static_abilities.iter().any(|sa| {
-                matches!(
-                    sa.effect,
-                    StaticEffect::HasActivatedAbilitiesOfOtherNamedControlledCreatures
-                )
-            })
-        }) {
+        if marvin {
             let (seat, name) = (me.controller, me.definition.name);
             for other in &self.battlefield {
                 if other.controller != seat
@@ -12429,11 +12431,7 @@ impl GameState {
         }
         // Experiment Kraj — every activated ability of each *other* creature
         // carrying a +1/+1 counter.
-        if self.battlefield_find(card_id).is_some_and(|c| {
-            c.definition.static_abilities.iter().any(|sa| {
-                matches!(sa.effect, StaticEffect::HasActivatedAbilitiesOfCounteredCreatures)
-            })
-        }) {
+        if kraj {
             for other in &self.battlefield {
                 if other.id == card_id
                     || !other.definition.is_creature()
@@ -12446,11 +12444,7 @@ impl GameState {
         }
         // Mirran Safehouse — every battlefield-usable activated ability of
         // every land card in every graveyard.
-        if self.battlefield_find(card_id).is_some_and(|c| {
-            c.definition.static_abilities.iter().any(|sa| {
-                matches!(sa.effect, StaticEffect::HasActivatedAbilitiesOfGraveyardLands)
-            })
-        }) {
+        if safehouse {
             for pl in &self.players {
                 for card in &pl.graveyard {
                     if !card.definition.is_land() {
@@ -12469,13 +12463,13 @@ impl GameState {
         // static's filter, the source has all of that card's battlefield-
         // usable activated abilities (the top card is revealed by the
         // companion `TopOfLibraryRevealed` static).
-        if let Some(c) = self.battlefield_find(card_id) {
-            for sa in &c.definition.static_abilities {
+        {
+            for sa in &me.definition.static_abilities {
                 let StaticEffect::HasActivatedAbilitiesOfLibraryTop { filter } = &sa.effect else {
                     continue;
                 };
-                if let Some(top) = self.players[c.controller].library.first()
-                    && self.evaluate_requirement_on_card(filter, top, c.controller)
+                if let Some(top) = self.players[me.controller].library.first()
+                    && self.evaluate_requirement_on_card(filter, top, me.controller)
                 {
                     for ab in &top.definition.activated_abilities {
                         if ab.from_graveyard || ab.exile_self_cost || ab.from_hand {
@@ -12489,15 +12483,14 @@ impl GameState {
         // Agatha's Soul Cauldron — a creature you control with a +1/+1
         // counter has all activated abilities of creature cards exiled
         // with any Cauldron its controller controls.
-        if let Some(target) = self.battlefield_find(card_id)
-            && target.definition.is_creature()
-            && target.counter_count(crate::card::CounterType::PlusOnePlusOne) > 0
+        if me.definition.is_creature()
+            && me.counter_count(crate::card::CounterType::PlusOnePlusOne) > 0
         {
             let cauldrons: Vec<CardId> = self
                 .battlefield
                 .iter()
                 .filter(|c| {
-                    c.controller == target.controller
+                    c.controller == me.controller
                         && c.definition.static_abilities.iter().any(|sa| {
                             matches!(
                                 sa.effect,
@@ -12550,13 +12543,7 @@ impl GameState {
                     if cond.activated_abilities.is_empty() {
                         continue;
                     }
-                    if self.battlefield_find(card_id).is_some_and(|host| {
-                        self.evaluate_requirement_on_card(
-                            &cond.host_filter,
-                            host,
-                            eq.controller,
-                        )
-                    }) {
+                    if self.evaluate_requirement_on_card(&cond.host_filter, me, eq.controller) {
                         out.extend(cond.activated_abilities.iter().cloned());
                     }
                 }
@@ -12565,11 +12552,9 @@ impl GameState {
         // CR 721.2a — Station `{N+}` activated-ability bands. While the source's
         // charge-counter count meets a band threshold, that band's activated
         // abilities are usable (a Planet's `12+ | {cost}: …`).
-        if let Some(c) = self.battlefield_find(card_id)
-            && !c.definition.station.is_empty()
-        {
-            let charges = c.counter_count(crate::card::CounterType::Charge);
-            for band in c.definition.station.iter().filter(|b| charges >= b.min) {
+        if !me.definition.station.is_empty() {
+            let charges = me.counter_count(crate::card::CounterType::Charge);
+            for band in me.definition.station.iter().filter(|b| charges >= b.min) {
                 out.extend(band.activated.iter().cloned());
             }
         }
