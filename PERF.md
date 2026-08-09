@@ -22,12 +22,20 @@ CARGO_TARGET_DIR=target-mi cargo build --release -p crabomination \
 
 # instruction-level profile (deterministic; no `perf` in the routine image).
 # Profile the system allocator: valgrind replaces malloc, so a mimalloc build
-# measures the interception, not the program.
-cargo build --profile profiling -p crabomination --bin bot_ladder \
+# measures the interception, not the program. `profiling-fast` is
+# `release-fast` + debuginfo: same opt settings as the A/B binaries, so the
+# attribution describes the code the Log rows move, and the engine rebuilds
+# in ~3.5 min instead of ~24. (`profiling` inherits `release`; use it only
+# if you need to attribute LTO'd code.)
+cargo build --profile profiling-fast -p crabomination --bin bot_ladder \
   --no-default-features
 RUST_MIN_STACK=33554432 valgrind --tool=callgrind --callgrind-out-file=cg.out \
-  target/profiling/bot_ladder --a gang --b gang --games 6 --threads 1 --seed 1 \
-  --decks fixed
+  target/profiling-fast/bot_ladder --a gang --b gang --games 6 --threads 1 \
+  --seed 1 --decks fixed
+callgrind_annotate --auto=yes --threshold=99 cg.out > ann.txt   # per-line
+# Read the *file:function* rows, not just function totals: a function whose
+# cost sits in slice/iter/macros.rs and ptr/non_null.rs is walking, not
+# computing, and the fix is fewer walks. That is what found this run's -9 %.
 callgrind_annotate --auto=no --threshold=95 cg.out            # self cost
 callgrind_annotate --auto=no --inclusive=yes cg.out           # inclusive
 callgrind_annotate --auto=no --tree=caller cg.out             # who calls whom
@@ -236,58 +244,55 @@ percentages are what carry over.
 | 2026-08-09 | `CardInstance` becomes a CoW handle: the ~110 fields move to `CardData` behind an `Arc`, `Deref`/`DerefMut` keep every `card.field` read and write working, and `DerefMut` is the single unshare point (candidate 7) | 14,403,731,176 Ir; 25.44 games/s, 15351 dec/s | 10,718,206,071 Ir (**-25.59 %**); 32.50 games/s (**+27.8 %**) | The zones were already `CowBox<Vec<CardInstance>>`, so a `GameState` clone was cheap but the *first write* deep-copied every card in the zone: `Arc::make_mut` was **24.12 %** inclusive and `CardInstance::clone` **14.69 %** self, 15.85 % of the program under `advance_step` alone. Now unsharing a zone copies N pointers and only the written card clones. Callgrind A/B on identical `release-fast --no-default-features` binaries over the fixed six-game workload; `--bench` ×4 alternated pairs, 4/4 positive and non-overlapping (base 25.12-25.85, cand 31.88-32.91). Peak RSS **fell** 23.3 → 21.3 MiB (shared cards aren't duplicated). Suite 18810 passed / 0 failed; all four golden traces byte-identical; `turns_per_game` 26.98 and `stalls` 0 on all 10 bench runs; determinism ok, all pairs split. Cost: two borrow-checker fixes where a `&mut` field write and a `&self` read of the same card overlapped. **Under `release` + mimalloc this row carries essentially the run's whole +35.6 %** (see Baseline): unlike the `Printed<T>` row it removes deep struct copies, not just allocations, so the allocator can't absorb it. |
 | 2026-08-09 | Gate each of the gather's 38 per-variant passes on a `u64` presence mask built in one walk of the board's static abilities (candidate 3(ii)) | 8,886,099,152 Ir | 9,013,111,944 Ir (**+1.43 %**) | **No win — reverted.** The gather's own self cost went *up*, 1,573 M -> 1,696 M (+7.8 % of itself): the 38-arm classifier costs ~342 Ir per gather and the passes it skips were already near-free. The negative result is the useful part — it says the 39 passes are not where the gather's 4,385 Ir/call lives, so the next attempt should profile the body line by line (`--profile profiling`, which keeps debuginfo) rather than guess again. Written up in candidate 3. |
 | 2026-08-09 | `ComputedPermanent`'s four printed-derived collections (`card_types`, `supertypes`, `subtypes`, `keywords`) become `Printed<T>` — the `Arc<CardDefinition>` plus a projection, cloned only on the first layer write (candidate 1(a)) | 10,718,206,071 Ir; 32.61 games/s (system alloc); 45.73 games/s (`release`, mimalloc) | 8,886,099,152 Ir (**-17.09 %**); 37.02 games/s (**+13.5 %**, system alloc); **46.49 games/s (+1.7 %, `release` + mimalloc — the number that ships)** | `compute_permanent_pass` was **3,482,320 of the program's 8,723,045 allocations (40 %)**, nearly all of them cloning a collection that nothing then modified. `Printed<T>` `Deref`/`DerefMut`s to `T`, so the ~4.5 k `cp.keywords.contains(…)` / `cp.subtypes.creature_types` sites are untouched; the whole change is 11 `.clone()` → `.to_vec()` fixups plus gating the two unconditional `keywords.retain` calls (they take `&mut`, so they materialized the list even when they removed nothing). Result: **compute_permanent_pass allocations 3,482,320 → 30,086**, program-wide 8,723,045 → **5,093,895 (-41.6 %)**, allocator self cost 21.4 → 10.9 %. Callgrind A/B on identical `release-fast --no-default-features` binaries, fixed six-game workload; `--bench` ×4 alternated, 4/4 positive and non-overlapping (before 31.94-33.31, after 35.44-37.66). Peak RSS 21.3 → 23.7 MiB — the one cost, four `Arc<CardDefinition>` clones per computed permanent keeping definitions alive. **The two wall-clock figures disagree and the mimalloc one is the real one**: the +13.5 % was measured against the *system* allocator (`--no-default-features`, which callgrind forces), and a 4/4-pair alternated A/B of the two `release` + mimalloc binaries reads **45.73 → 46.49 games/s, +1.7 %** (paired deltas +0.76 / +0.03 / +0.79 / +1.46, `host_calib_ms` 45-58). Kept: 4/4 positive under the shipped configuration, an exact -17.09 % of the work, and no cost but 2 MiB. See the new allocator note under "How to measure". Suite 18810 passed / 0 failed; all four golden traces byte-identical; turns_per_game 26.98, stalls 0, determinism ok on all 16 runs. |
+| 2026-08-09 | Fold the gather's eleven whole-battlefield walks into one: the walk that builds `sa_cards` also sets a presence flag per pass, and each pass iterates an empty slice when its flag is clear. Bludgeon Brawl's `ArtifactsAreEquipment` scan is hoisted out of its per-card loop (candidate 3) | 8,887,218,012 Ir; gather self 1,573,494,744 | 8,085,908,260 Ir (**-9.02 %**); gather self 995,310,108 (**-36.7 %**) | **The line-level attribution the previous attempt asked for, taken on the new `profiling-fast` profile.** It says the gather's 4,385 Ir/call is not in the 39 per-variant arms at all: **527,365,400 Ir (5.93 % of the program) is `slice::iter` and 494,753,454 (5.57 %) is `ptr::non_null`** — ~65 % of the gather is raw slice iteration and pointer advance, against 179,561,212 in `mod.rs` itself. That is the *eleven separate `for card in &self.battlefield` loops*, four of which scanned a `Vec<Keyword>` per card unconditionally, plus `brawl_equip_mv` — which re-scanned every card's static abilities *per battlefield card*, 7,140,444 `is_artifact` calls for six games. Now one walk with one keyword scan per card, and each pass is skipped wholesale. Gather calls unchanged (358,792), so Ir/gather is 4,385 → 2,774; `is_artifact` + `is_creature` self 222,027,450 → 114,920,790. **Why this worked where the presence mask didn't**: that one gated already-empty walks over a short `sa_cards` and paid a 38-arm classifier; this one gates eleven walks of the *whole* board and pays one `u32`-ish flag set per card. Callgrind A/B on identical `profiling-fast --no-default-features` binaries (= `release-fast` + debuginfo, same opt settings — the baseline's gather self reproduces PERF's recorded 1,573,494,744 exactly), fixed six-game workload. Suite 18627 passed / 0 failed; all four golden traces byte-identical. **One trap paid for**: the Unleash loop also carries the CR 611.2 predicate gate, its sibling, and the suspect / living-metal statics — gating that loop on `any_unleash` silently killed every `WhileCondition` static (15 failures across `classic_sets`). It stays ungated; only its two keyword scans are gated. Check a loop's whole body before gating its head. |
 
 ## Profile of record
 
-Callgrind on `release-fast --no-default-features` (system allocator —
-valgrind replaces malloc, so a mimalloc build would measure the
-interception), 1 thread, `--a gang --b gang --games 6 --seed 1 --decks
-fixed`. Retaken 2026-08-09 at the `Printed<T>` commit, i.e. *after* every
-row in the Log.
+Callgrind on `profiling-fast --no-default-features` (= `release-fast` opt
+settings + debuginfo; system allocator, because valgrind replaces malloc and
+a mimalloc build would measure the interception), 1 thread, `--a gang --b
+gang --games 6 --seed 1 --decks fixed`. Retaken 2026-08-09 at the
+whole-board-walk-folding commit, i.e. *after* every row in the Log.
 
-**8.89 G instructions for six games, down from 14.40 G** at this run's
-start on the same workload and the same profile — the two CoW rows.
-(The 2026-08-08 profile of record read 13.84 G under `--profile
-profiling`; the profiles differ in inlining, so only same-profile pairs
-subtract.)
+**8.09 G instructions for six games**, from 8.89 G at the `Printed<T>`
+commit and 14.40 G at this run's start on the same workload. The
+`profiling-fast` baseline reproduced the `release-fast` gather figure to
+the instruction (1,573,494,744 both), so the two profiles' numbers
+subtract; `--profile profiling` (LTO) does not — it read 13.84 G where
+`release-fast` read 14.40.
 
-Self cost, grouped (share at this run's start in brackets):
+Self cost, grouped (share at the `Printed<T>` commit in brackets):
 
 | share | site | note |
 |---|---|---|
-| 17.7 % | `gather_continuous_effects_inner` | [9.84 %] **the #1 engine function by a wide margin, and its absolute is untouched by either fix — 1,573,494,744 Ir before and after** |
-| 10.9 % | `_int_malloc` 3.93 / `_int_free` 3.69 / `malloc` 2.68 / `free` ~0.6 | [17.7 %] |
-| 4.77 % | `granted_abilities_for` | [2.77 %] |
-| 4.44 % | `Vec::from_iter` | |
-| 3.98 % | `compute_permanent_pass` | [3.56 %] its *allocations* are gone, not its arithmetic |
-| 3.36 % | `__memcpy_avx_unaligned_erms` | [7.23 %] |
-| 2.94 % | `GameState::clone` / 2.94 % `trigger_grant_sources` | |
-| 2.92 % | `Vec::clone` | [4.80 %] |
-| 2.18 % | `Arc::clone_from_ref_in` | [24.04 % inclusive as the zone unshare] |
-| 1.94 % | `CardInstance::counter_count` | |
-| — | `CardInstance::clone` | [**14.69 %**] gone: an `Arc` bump |
+| 12.3 % | `gather_continuous_effects_inner` | [17.7 %] 995,310,108 Ir over the same 358,792 calls = **2,774 Ir/gather**, from 4,385. Still #1, but the walking is gone: `slice::iter` 527 M → 203 M, `non_null` 495 M → 242 M, while `mod.rs`'s own lines went *up* 180 M → 219 M (the fused walk). What is left is pass bodies. |
+| 12.1 % | `_int_malloc` 4.30 / `_int_free` 4.05 / `malloc` 2.94 / `free` 1.78 | [10.9 %] unchanged in absolute terms — the share rose because the total fell |
+| 5.01 % | `granted_abilities_for` | [4.77 %] 404,837,864 Ir, **byte-identical before and after** — now the #2 engine function and the obvious next pull |
+| 3.69 % | `__memcpy_avx_unaligned_erms` | |
+| 2.75 % | `compute_permanent_pass` | its *allocations* are gone, not its arithmetic |
+| 1.48 % | `CardInstance::counter_count` | |
+| 1.30 % | `hashbrown RawTable::clone` | candidate 6 |
+| 1.02 % | `trigger_grant_sources` | candidate 2 |
 
-**Who actually allocates** — 5,093,895 allocations for six games, down from
-8,723,045 at the CoW commit and ~16.7 M at the run's start:
+**The costs the per-line attribution named, in caller terms** (these are
+inclusive of callees and so overlap each other):
 
-| calls | share | caller |
+| Ir | share | site |
 |---|---|---|
-| 767,735 | 1.07 % | `RawVecInner::finish_grow` |
-| 644,306 | 1.34 % | `Arc::clone_from_ref_in` |
-| 554,990 | 0.91 % | `Vec::from_iter` |
-| 541,762 | 2.13 % | `Vec::clone` |
-| 417,768 | 0.40 % | `computed_permanent` |
-| 343,162 | 0.51 % | `gather_continuous_effects_inner` |
-| 329,100 | 0.28 % | `GameState::clone` |
-| 30,086 | 0.03 % | `compute_permanent_pass` — was **3,482,320** |
+| 768,854,629 | 8.65 % | `GameState::clone`, 64,248 calls = **11,967 Ir per checkpoint** |
+| 488,350,327 | 5.49 % | └ of which `players: self.players.clone()` alone — candidate 1.7 |
+| 319,829,660 | 3.60 % | `drop_in_place<GameState>` |
+| 160,860 | — | `battlefield`, for contrast: a `CowBox` `Arc` bump |
 
-**The read after this run:** both structural costs the 2026-08-08 profile
-named are gone. What is left is one function: `gather_continuous_effects_inner`
-at 17.7 % self / ~22 % inclusive, **1.57 G instructions across 358,792
-calls = 4,385 Ir per gather**, called 260,370× from `computed_permanent`,
-52,332× from `dispatch_triggers_for_events` and 46,090× from
-`compute_battlefield`. Neither fix moved it by a single instruction. It is
-candidate 3 and then candidate 4, and nothing else on the list is close.
+(Shares from the pre-fix profile, where the total was 8.89 G; the absolutes
+are unmoved by this run's fix, which touched neither.)
+
+**The read after this run:** state checkpointing is now the largest single
+cost in the program — `GameState::clone` plus its drop is ~12.3 % and
+`players` is nearly half of it, for exactly the reason candidate 7 named one
+level down. That is candidate 1.7. The gather is still #1 as a single
+function but is no longer the whole story, and `granted_abilities_for` at
+5 % has never been touched.
 
 ## Perf candidates
 
@@ -436,6 +441,21 @@ methodological notes, each learned the hard way:
    synthesize, so `Vec<(usize, Cow<'_, ActivatedAbility>)>` covers it. Small,
    local, and the numbers are already attached — a good next pull.
 
+1.7 **`Player` is the last non-CoW checkpoint cost — the top item after the
+   gather.** The 2026-08-09 line-level attribution reads
+   `GameState::clone` at **768,854,629 Ir (8.65 %) over 64,248 calls
+   (11,967 Ir per clone)**, plus `drop_in_place<GameState>` at 319,829,660
+   (3.60 %) — ~12.3 % of the program in state checkpointing. Of the clone,
+   **`players: self.players.clone()` alone is 488,350,327 Ir (5.49 %)**,
+   against 160,860 for `battlefield` (a `CowBox` `Arc` bump) and 160,860 for
+   `exile`. `Player` is a plain struct with **165 fields** — its zones are
+   already `CowBox`, but the ~30 per-turn `Vec`/`HashSet` tallies, the
+   `String` name and the rest are deep-copied per player per checkpoint.
+   This is candidate 7 one level up and takes the same fix: `Player` becomes
+   `Arc<PlayerData>` with `Deref`/`DerefMut`, `DerefMut` the single unshare
+   point, so `players.clone()` is N `Arc` bumps and only a written player
+   unshares. Candidate 7 was worth -25.6 % Ir on the same shape.
+
 2. **The dispatcher's per-card trigger gathering.** With the
    `compute_battlefield` call gone, the remaining per-card work in
    `dispatch_triggers_for_events` is `statics_granted_triggers_for` (2.78 %
@@ -444,50 +464,40 @@ methodological notes, each learned the hard way:
    dispatch — O(cards²) against `all_static_sources`. Hoist the
    "which sources carry a `GrantTriggeredAbility`" scan out of the per-card
    loop, the same shape as the layer-gather filter that won +27.8 %.
-3. **The gather. THE TOP ITEM — it is now the whole remaining story.**
-   17.7 % self, ~22 % inclusive, **1,573,494,744 Ir over 358,792 calls =
-   4,385 Ir per gather**, and that absolute is *byte-identical* before and
-   after both of this run's -25.6 % / -17.1 % fixes: nothing landed so far
-   has touched it.
+3. ~~**The gather.**~~ **Largely done, -9.02 % program Ir / -36.7 % of the
+   gather.** See the Log row. What the line-level attribution settled, and
+   what is left:
 
-   **The 39 per-variant passes are NOT where the 4,385 goes — measured,
-   don't redo it.** A `u64` presence mask (one bit per pass, built in one
-   walk of every static ability with a 38-arm classifier that peels the
-   `While*` wrappers) plus a one-line `sa_gate(present, BIT, &sa_cards)` in
-   front of each of the 38 passes measured **8,886,099,152 ->
-   9,013,111,944 Ir (+1.43 %) and the gather itself 1,573 M -> 1,696 M
-   (+7.8 % of itself)**, and was reverted. Skipping 38 of 39 passes bought
-   *nothing*: the classifier cost 342 Ir per gather and the passes it
-   skipped were already near-free, because on a bench board `sa_cards` is
-   short and an empty-ish pass is a loop set-up and a discriminant test.
-   Flattening to a `Vec<(&CardInstance, &StaticAbility)>` pairs list has
-   the same ceiling and was not attempted after this result.
+   - **The 39 per-variant passes are NOT where the cost is — measured
+     twice, don't redo it.** The `u64` presence mask over them read
+     +1.43 % and was reverted (Log). The attribution says why: on a bench
+     board `sa_cards` is near-empty, so all 39 are loop set-ups.
+   - **It was the eleven whole-battlefield walks**, at 5.93 % of the
+     program in `slice::iter` plus 5.57 % in `ptr::non_null`. Folding them
+     into the `sa_cards` walk took the gather from 4,385 to 2,774 Ir/call.
+   - **Still open, in order:** the gather is *still* the #1 engine
+     function at 995,310,108 Ir (12.3 % of the new 8.09 G) over the same
+     358,792 calls. `mod.rs`'s own lines are now 184,286,054 and
+     `option.rs` 146,755,592 — i.e. the remaining cost is the passes'
+     bodies, not the walking. The next reads are the *first* loop, which
+     calls `static_ability_to_effects(card, …)` per static-ability card
+     and gets a freshly allocated `Vec<ContinuousEffect>` back to `extend`
+     from (make it push into `&mut all_effects`); `all_effects` itself,
+     which starts as a clone of `continuous_effects` and grows by repeated
+     `push`/`extend` (reserve once); and the emblem / graveyard /
+     `all_static_sources` loops, which run whether or not anything is
+     there — same shape as the eleven just folded, one zone out.
+   - **The trap this cost, worth reading before the next gate.** The
+     Unleash loop is not a single pass: it also carries the CR 611.2
+     `WhileCondition` predicate gate, its sibling, and the suspect /
+     living-metal statics. Gating its head killed every threshold /
+     retype / conditional-keyword static in the catalog — 15 `classic_sets`
+     failures, all green again once only the two keyword scans were gated.
+     Read a loop's whole body before gating its head; nine of the eleven
+     were single-purpose, that one was not.
+   - After this, candidate 4 (memoizing the gather) is the only structural
+     move left on it, and candidate 1.7 is worth more.
 
-   **So look at the rest of the body instead.** The candidates, in the
-   order the counters suggest: the *first* loop, which calls
-   `static_ability_to_effects(card, …)` per static-ability card and gets a
-   freshly allocated `Vec<ContinuousEffect>` back to `extend` from — make
-   it push into `&mut all_effects` instead; `all_effects` itself, which
-   starts as a clone of `continuous_effects` and then grows by repeated
-   `push`/`extend` (`RawVecInner::finish_grow` is 767,735 allocations
-   program-wide) — reserve once; and the emblem / graveyard /
-   `all_static_sources` loops that run whether or not anything is there.
-   Get a line-level attribution first: build `--profile profiling` (it
-   keeps debuginfo, unlike `release-fast`, which is built with
-   `-C strip=debuginfo`) and run `callgrind_annotate --auto=yes` over
-   `mod.rs`. That costs one 24-minute build and answers the question this
-   item has now guessed wrong once.
-   Shape confirmed by reading: each of the 39 passes is
-   `for &card in &sa_cards { let StaticEffect::X { .. } = sa.effect else { continue }; … }`,
-   so a presence summary needs a `StaticEffect` discriminant tag in
-   `crabomination_base` — that tag is the whole cost of this item.
-   The filter landed last run cut the *number of cards* each of the 39
-   static-ability passes walks; it did not cut the 39 walks. A pairs list
-   (`Vec<(&CardInstance, &StaticAbility)>`) keeps push order and so keeps
-   the traces, but it does not change the asymptotics either — the real win
-   is skipping a pass whose `StaticEffect` variant is absent from the board
-   entirely. That needs a per-variant presence summary built in one pass;
-   assign the tags in one place next to the passes so the two can't drift.
 4. **Memoize the gather outside freeze scopes.** Unchanged: the blocker is
    invalidation, not caching. `compute_battlefield` alone runs 46,090 times
    per six games and `gather_continuous_effects_inner` allocates 367,900

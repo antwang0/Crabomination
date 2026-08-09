@@ -7580,11 +7580,52 @@ impl GameState {
         // those passes walk the handful of cards that can contribute instead
         // of striding the whole battlefield ~40 times. Order is preserved, so
         // the emitted effect sequence is unchanged.
-        let sa_cards: Vec<&CardInstance> = self
-            .battlefield
-            .iter()
-            .filter(|c| !c.definition.static_abilities.is_empty())
-            .collect();
+        //
+        // The same walk answers "can this whole-board pass fire at all" for the
+        // ten passes further down that iterate the battlefield directly. Each
+        // was its own walk, and four of them scanned a `Vec<Keyword>` per card
+        // whether or not anything on the board carried the keyword. One walk
+        // with one keyword scan per card replaces eleven; each pass keeps its
+        // place and iterates an empty slice when its flag is clear, so the
+        // emitted effect sequence is unchanged.
+        let mut sa_cards: Vec<&CardInstance> = Vec::new();
+        let (mut any_equipped_bonus, mut any_soulbond_bonus, mut any_attached) =
+            (false, false, false);
+        let (mut any_reconfigure, mut any_impending, mut any_unleash) = (false, false, false);
+        let (mut any_hexproof_unless, mut any_dynamic_pt) = (false, false);
+        let (mut any_level_bands, mut any_station, mut any_living_metal) = (false, false, false);
+        for card in self.battlefield.iter() {
+            let def = &card.definition;
+            if !def.static_abilities.is_empty() {
+                sa_cards.push(card);
+            }
+            any_equipped_bonus |= def.equipped_bonus.is_some();
+            any_soulbond_bonus |= def.soulbond_bonus.is_some();
+            any_attached |= card.attached_to.is_some();
+            any_dynamic_pt |= def.dynamic_pt.is_some();
+            any_level_bands |= !def.level_bands.is_empty();
+            any_station |= !def.station.is_empty();
+            for kw in &def.keywords {
+                match kw {
+                    Keyword::Impending(_) => any_impending = true,
+                    Keyword::Reconfigure(_) => any_reconfigure = true,
+                    Keyword::Unleash => any_unleash = true,
+                    Keyword::HexproofUnlessAttackingOrBlocking => any_hexproof_unless = true,
+                    Keyword::LivingMetal => any_living_metal = true,
+                    _ => {}
+                }
+            }
+        }
+        // Bludgeon Brawl's pass calls `brawl_equip_mv` per battlefield card,
+        // and that helper re-scans the whole board's static abilities looking
+        // for `ArtifactsAreEquipment` — O(cards²) on every gather for a card
+        // that is almost never out. Ask once, off the short `sa_cards` list.
+        let any_artifacts_are_equipment = sa_cards.iter().any(|c| {
+            c.definition
+                .static_abilities
+                .iter()
+                .any(|sa| matches!(sa.effect, crate::effect::StaticEffect::ArtifactsAreEquipment))
+        });
         for &card in &sa_cards {
             // CR 613.7a — static-ability effects carry the source object's
         // timestamp (entry-stamped; id-order fallback for unstamped objects).
@@ -7735,7 +7776,7 @@ impl GameState {
         // Bludgeon Brawl (CR 613 layers 4/7c) — while it's out, each
         // noncreature, non-Equipment artifact gains the Equipment subtype and,
         // once attached, hands its host +X/+0 for its own mana value.
-        for card in &self.battlefield {
+        for card in if any_artifacts_are_equipment { &self.battlefield[..] } else { &[] } {
             let Some(x) = self.brawl_equip_mv(card) else { continue };
             all_effects.push(ContinuousEffect {
                 timestamp: card.object_timestamp(),
@@ -7768,7 +7809,7 @@ impl GameState {
         // attached to, for as long as the Equipment stays on the battlefield.
         // The stale-link SBA in `stack.rs` clears `attached_to` when the
         // equipped creature leaves, so a dangling link can't leak a bonus.
-        for card in &self.battlefield {
+        for card in if any_equipped_bonus { &self.battlefield[..] } else { &[] } {
             let Some(bonus) = &card.definition.equipped_bonus else { continue };
             let Some(target) = card.attached_to else { continue };
             // Only apply while the target is still a creature on the bf.
@@ -8113,7 +8154,7 @@ impl GameState {
         // CR 702.95 — Soulbond. A creature carrying a `soulbond_bonus` that's
         // paired confers the bonus on BOTH itself and its partner (P/T layer
         // 7c, keywords layer 6), for as long as both stay on the battlefield.
-        for card in &self.battlefield {
+        for card in if any_soulbond_bonus { &self.battlefield[..] } else { &[] } {
             let Some(bonus) = &card.definition.soulbond_bonus else { continue };
             let Some(partner) = card.soulbond_partner else { continue };
             if !self.battlefield.iter().any(|c| c.id == partner) {
@@ -8151,7 +8192,7 @@ impl GameState {
         // attached to a creature. Strip the Creature card type at layer 4
         // (the +1/+1 it confers still scales off its own counters; its equip
         // bonus and exile ability are unaffected). Lion Sash.
-        for card in &self.battlefield {
+        for card in if any_reconfigure && any_attached { &self.battlefield[..] } else { &[] } {
             if card.attached_to.is_some() && card.definition.has_reconfigure().is_some() {
                 all_effects.push(ContinuousEffect {
                     timestamp: card.object_timestamp(),
@@ -8603,7 +8644,7 @@ impl GameState {
         // CR 702.183 — Impending: a permanent with the Impending keyword isn't
         // a creature while it has a time counter. Emit a layer-4
         // RemoveCardType(Creature) self-effect while counters remain.
-        for card in &self.battlefield {
+        for card in if any_impending { &self.battlefield[..] } else { &[] } {
             let is_impending = card
                 .definition
                 .keywords
@@ -9739,8 +9780,7 @@ impl GameState {
         // them unconditionally cost three full graveyard walks (one of them
         // building a `HashSet`) on every gather, and the gather runs about a
         // million times per six bot games.
-        let has_dynamic_pt = self.battlefield.iter().any(|c| c.definition.dynamic_pt.is_some());
-        let (goyf_n, lands_in_gys, creatures_in_gys) = if has_dynamic_pt {
+        let (goyf_n, lands_in_gys, creatures_in_gys) = if any_dynamic_pt {
             (
                 self.distinct_card_types_in_all_graveyards() as i32,
                 self.players
@@ -9757,7 +9797,7 @@ impl GameState {
         } else {
             (0, 0, 0)
         };
-        for card in &self.battlefield {
+        for card in if any_dynamic_pt { &self.battlefield[..] } else { &[] } {
             let Some(formula) = card.definition.dynamic_pt.clone() else { continue };
             // Angry Mob — the board-reading formula applies only on its
             // controller's turn; every other turn it's the printed base.
@@ -10361,7 +10401,7 @@ impl GameState {
         // "Has hexproof unless it's attacking or blocking" (Tromokratis) —
         // injected as a computed layer-6 Hexproof so every existing
         // targeting gate honors it.
-        for card in &self.battlefield {
+        for card in if any_hexproof_unless { &self.battlefield[..] } else { &[] } {
             if !card
                 .definition
                 .keywords
@@ -10447,7 +10487,7 @@ impl GameState {
                 });
             }
         }
-        for card in &self.battlefield {
+        for card in if any_level_bands { &self.battlefield[..] } else { &[] } {
             if card.definition.level_bands.is_empty() {
                 continue;
             }
@@ -10485,7 +10525,7 @@ impl GameState {
         // by the permanent's charge-counter count grants its abilities (layer
         // 6); a band with a `[P/T]` box also makes it a creature with that base
         // P/T (CR 721.2b — layers 4 + 7a).
-        for card in &self.battlefield {
+        for card in if any_station { &self.battlefield[..] } else { &[] } {
             if card.definition.station.is_empty() {
                 continue;
             }
@@ -10533,12 +10573,17 @@ impl GameState {
                 }
             }
         }
+        // Not gated: this loop carries five unrelated passes, three of them
+        // (the CR 611.2 predicate gate, its sibling, and the suspect/
+        // living-metal statics) live for cards this walk is the only reach
+        // to. The two keyword scans inside it are gated instead.
         for card in &self.battlefield {
             // CR 702.98 — Unleash's second static: a creature with the
             // Unleash keyword can't block while it has a +1/+1 counter.
             // Injected as a computed `CantBlock` so the existing block-
             // legality enforcement (`declare_blockers`) honors it.
-            if card.definition.keywords.contains(&Keyword::Unleash)
+            if any_unleash
+                && card.definition.keywords.contains(&Keyword::Unleash)
                 && card.counters.get(&crate::card::CounterType::PlusOnePlusOne).copied().unwrap_or(0) > 0
             {
                 all_effects.push(ContinuousEffect {
@@ -10614,7 +10659,8 @@ impl GameState {
             }
             // CR 702.161 — Living metal: a Vehicle with this keyword is an
             // artifact creature during its controller's turn, no crew needed.
-            if card.definition.keywords.contains(&Keyword::LivingMetal)
+            if any_living_metal
+                && card.definition.keywords.contains(&Keyword::LivingMetal)
                 && card.controller == self.active_player_idx
             {
                 all_effects.push(ContinuousEffect {
