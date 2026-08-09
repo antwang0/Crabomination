@@ -4631,8 +4631,9 @@ fn main_phase_action_with(
 /// included. Strictly-better-than-passing or nothing.
 fn pick_sacrifice_value(state: &GameState, seat: usize, w: &EvalWeights) -> Option<GameAction> {
     let baseline = eval_material(state, seat, w);
+    let scan = state.grant_scan();
     for card in state.battlefield.iter().filter(|c| c.controller == seat) {
-        for (idx, ab) in usable_abilities(state, card) {
+        for (idx, ab) in usable_abilities(state, card, &scan) {
             if !ab.sac_cost && ab.sac_other_filter.is_none() {
                 continue;
             }
@@ -4704,8 +4705,9 @@ fn pick_reprepare(state: &GameState, seat: usize) -> Option<GameAction> {
     targets.sort_by_key(|c| {
         std::cmp::Reverse(c.definition.prepare_spell.as_deref().map(|s| s.cost.cmc()).unwrap_or(0))
     });
+    let scan = state.grant_scan();
     for card in state.battlefield.iter().filter(|c| c.controller == seat) {
-        for (idx, ab) in usable_abilities(state, card) {
+        for (idx, ab) in usable_abilities(state, card, &scan) {
             if !prepares_target(&ab.effect) {
                 continue;
             }
@@ -5026,9 +5028,13 @@ fn pick_turn_face_up(state: &GameState, seat: usize) -> Option<GameAction> {
 /// Threshold-granted removal on the Torment Possessed cycle, Cryptolith Rite).
 /// The bot's ability generators walk this instead of `definition
 /// .activated_abilities`, which silently skipped every grant.
+///
+/// Takes a prebuilt [`GameState::grant_scan`] because every caller runs it in
+/// a per-permanent loop; without it each card re-walked the whole board.
 fn usable_abilities(
     state: &GameState,
     card: &crate::card::CardInstance,
+    scan: &crate::game::actions::GrantScan<'_>,
 ) -> Vec<(usize, crate::effect::ActivatedAbility)> {
     let printed = card.definition.activated_abilities.clone();
     let n = printed.len();
@@ -5037,7 +5043,7 @@ fn usable_abilities(
         .enumerate()
         .chain(
             state
-                .granted_abilities_for(card.id)
+                .granted_abilities_with(card.id, scan)
                 .into_iter()
                 .enumerate()
                 .map(|(i, ab)| (n + i, ab)),
@@ -5057,8 +5063,9 @@ fn pick_removal_destroy(state: &GameState, seat: usize) -> Option<GameAction> {
         .filter_map(|c| state.computed_permanent(c.id).map(|cp| (c.id, cp.power)))
         .collect();
     foes.sort_by_key(|(_, pow)| std::cmp::Reverse(*pow));
+    let scan = state.grant_scan();
     for card in state.battlefield.iter().filter(|c| c.controller == seat) {
-        for (idx, ab) in usable_abilities(state, card) {
+        for (idx, ab) in usable_abilities(state, card, &scan) {
             if ab.sac_cost {
                 continue; // `pick_removal_sacrifice` owns the trade math.
             }
@@ -5096,8 +5103,9 @@ fn pick_removal_ping(state: &GameState, seat: usize) -> Option<GameAction> {
     // Reach for the win first: if a constant-damage "any target" ability is
     // lethal to an opponent, point it at their face. Only fires when the hit
     // is actually lethal (life ≤ amount), so it's never a wasted chip ping.
+    let scan = state.grant_scan();
     for card in state.battlefield.iter().filter(|c| c.controller == seat) {
-        for (idx, ab) in usable_abilities(state, card) {
+        for (idx, ab) in usable_abilities(state, card, &scan) {
             let Effect::DealDamage { to, amount: Value::Const(n) } = &ab.effect else { continue };
             // Must be an untyped "any target" slot (a creature-only filter
             // can't be pointed at a player).
@@ -5129,8 +5137,9 @@ fn pick_removal_ping(state: &GameState, seat: usize) -> Option<GameAction> {
         .filter_map(|c| state.computed_permanent(c.id).map(|cp| (c.id, cp.power)))
         .collect();
     foes.sort_by_key(|(_, pow)| std::cmp::Reverse(*pow));
+    let scan = state.grant_scan();
     for card in state.battlefield.iter().filter(|c| c.controller == seat) {
-        for (idx, ab) in usable_abilities(state, card) {
+        for (idx, ab) in usable_abilities(state, card, &scan) {
             // The effect must be a bare single-target DealDamage whose target
             // can be a creature (not a self/own-board selector).
             let Effect::DealDamage { to, amount } = &ab.effect else { continue };
@@ -5231,9 +5240,10 @@ fn pick_removal_sacrifice(state: &GameState, seat: usize) -> Option<GameAction> 
         .filter_map(|c| state.computed_permanent(c.id).map(|cp| (c.id, cp.power)))
         .collect();
     foes.sort_by_key(|(_, pow)| std::cmp::Reverse(*pow));
+    let scan = state.grant_scan();
     for card in state.battlefield.iter().filter(|c| c.controller == seat) {
         let src_power = state.computed_permanent(card.id).map(|cp| cp.power).unwrap_or(0);
-        for (idx, ab) in usable_abilities(state, card) {
+        for (idx, ab) in usable_abilities(state, card, &scan) {
             if !ab.sac_cost {
                 continue;
             }
@@ -7394,11 +7404,14 @@ fn available_mana(state: &GameState, seat: usize) -> AvailableMana {
             out.colors.insert(c);
         }
     }
+    // One board-level grant scan for the whole sweep instead of one per
+    // untapped permanent (see `GameState::grant_scan`).
+    let scan = state.grant_scan();
     for p in state.battlefield.iter().filter(|p| p.controller == seat && !p.tapped) {
         // Printed abilities plus anything granted to it (Cryptolith Rite
         // turning creatures into mana sources, Urza's Saga chapters), so a
         // granted mana ability doesn't read as "no mana here".
-        let granted = state.granted_abilities_for(p.id);
+        let granted = state.granted_abilities_with(p.id, &scan);
         let mut best = 0u32;
         for a in p.definition.activated_abilities.iter().chain(granted.iter()) {
             if !is_countable_mana_ability(a) {

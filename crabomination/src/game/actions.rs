@@ -9,6 +9,34 @@ use crate::mana::{Color as ManaColor, ManaSymbol};
 /// `Value::Sacrificed*` and `Predicate::SacrificedWas*`.
 type SacrificeSnapshot = (CardId, u32, bool, i32, u32, bool, bool, Vec<ManaColor>);
 
+/// The grant sources live on the board right now, independent of which
+/// permanent is asking — see [`GameState::grant_scan`]. Borrows the state it
+/// was scanned from, so it can't outlive a board change.
+#[derive(Default)]
+pub(crate) struct GrantScan<'a> {
+    /// Live `GrantActivatedAbility` statics past their CR 611.2 wrapper and
+    /// `condition` gate: `(applies_to, ability, source)`.
+    statics: Vec<(
+        &'a crate::effect::Selector,
+        &'a crate::effect::ActivatedAbility,
+        &'a CardInstance,
+    )>,
+    /// Live `GrantActivatedAbilityFromGraveyard`: `(filter, ability, owning
+    /// seat, source id)`.
+    graveyard: Vec<(
+        &'a crate::card::SelectionRequirement,
+        &'a crate::effect::ActivatedAbility,
+        usize,
+        CardId,
+    )>,
+    /// Soulbond pairs whose bonus carries activated abilities and whose
+    /// partner is still on the battlefield: `(source, partner, abilities)`.
+    soulbond: Vec<(CardId, CardId, &'a [crate::effect::ActivatedAbility])>,
+    /// Attached permanents carrying an `equipped_bonus`, matched per card by
+    /// `attached_to`.
+    equipment: Vec<&'a CardInstance>,
+}
+
 /// Skip-Ward check. Ward variants whose payment is trivially affordable
 /// (free mana, 0 life, 0 discard) would always auto-pay and produce no
 /// visible difference from no Ward at all — so we skip the stack-churn
@@ -11554,11 +11582,12 @@ impl GameState {
             matches!(s, ManaSymbol::Generic(n) if *n > 0) || matches!(s, ManaSymbol::MonoHybrid(_, _))
         });
         let cost_colors = cost.colors();
+        let scan = self.grant_scan();
         self.battlefield.iter().any(|c| {
             if c.controller != player || c.tapped {
                 return false;
             }
-            let mana_abilities = self.effective_mana_abilities(c.id);
+            let mana_abilities = self.effective_mana_abilities_with(c.id, &scan);
             if mana_abilities.is_empty() {
                 return false;
             }
@@ -11757,12 +11786,13 @@ impl GameState {
     }
 
     fn untapped_producers_of_inner(&self, player: usize, color: ManaColor) -> u32 {
+        let scan = self.grant_scan();
         self.battlefield
             .iter()
             .filter(|c| {
                 c.controller == player
                     && !c.tapped
-                    && self.effective_mana_abilities(c.id).iter().any(|(_, a)| {
+                    && self.effective_mana_abilities_with(c.id, &scan).iter().any(|(_, a)| {
                         effect_produces_color(&a.effect, color)
                     })
             })
@@ -11848,12 +11878,15 @@ impl GameState {
     }
 
     fn mana_source_table_inner(&self, player: usize, creature_only: bool) -> Vec<ManaSourceInfo> {
+        // One board-level grant scan for the whole table instead of one per
+        // untapped permanent (see `grant_scan`).
+        let scan = self.grant_scan();
         self.battlefield
             .iter()
             .filter(|c| c.controller == player && !c.tapped)
             .filter(|c| !creature_only || self.permanent_is_creature(c.id))
             .filter_map(|c| {
-                let abilities = self.effective_mana_abilities(c.id);
+                let abilities = self.effective_mana_abilities_with(c.id, &scan);
                 let (first_idx, first) = abilities.first()?;
                 let colors: Vec<(ManaColor, usize)> = ManaColor::ALL
                     .into_iter()
@@ -12179,6 +12212,17 @@ impl GameState {
         &self,
         card_id: CardId,
     ) -> Vec<(usize, std::borrow::Cow<'_, crate::effect::ActivatedAbility>)> {
+        self.effective_mana_abilities_with(card_id, &self.grant_scan())
+    }
+
+    /// [`effective_mana_abilities`](Self::effective_mana_abilities) against a
+    /// prebuilt [`grant_scan`](Self::grant_scan) — `mana_source_table_inner`
+    /// asks this per untapped permanent, so the scan is built once per table.
+    pub(crate) fn effective_mana_abilities_with(
+        &self,
+        card_id: CardId,
+        scan: &GrantScan<'_>,
+    ) -> Vec<(usize, std::borrow::Cow<'_, crate::effect::ActivatedAbility>)> {
         use std::borrow::Cow;
         let Some(card) = self.battlefield_find(card_id) else {
             return vec![];
@@ -12196,7 +12240,7 @@ impl GameState {
                 out.push((i, Cow::Borrowed(a)));
             }
         }
-        let granted = self.granted_abilities_for(card_id);
+        let granted = self.granted_abilities_with(card_id, scan);
         let gc = granted.len();
         for (j, a) in granted.into_iter().enumerate() {
             if is_mana_ability(&a.effect) {
@@ -12265,9 +12309,94 @@ impl GameState {
         }
     }
 
+    /// The board-level half of [`granted_abilities_for`]: which grant sources
+    /// are live right now, independent of which permanent is asking. Building
+    /// it costs three whole-battlefield walks and both graveyards — the same
+    /// walks [`granted_abilities_for`] used to run *per call*, from three
+    /// per-card loops (`bot::usable_abilities`, `effective_mana_abilities`,
+    /// `bot::available_mana`). Build one per loop and hand it to
+    /// [`granted_abilities_with`](Self::granted_abilities_with).
+    ///
+    /// Bound to `&self`, so it is invalid the moment the board changes; there
+    /// is deliberately no cached copy on `GameState`.
+    pub(crate) fn grant_scan(&self) -> GrantScan<'_> {
+        use crate::effect::{Selector, StaticEffect};
+        let mut scan = GrantScan::default();
+        // CR 315.5 — a face-up conspiracy grants from the command zone too.
+        for src in self.all_static_sources() {
+            for sa in &src.definition.static_abilities {
+                // CR 611.2 — a grant may sit under a duration/predicate
+                // wrapper ("Threshold — this creature has '…'"); unwrap it
+                // and honour the gate.
+                let Some(inner) = self.active_static(&sa.effect, src) else { continue };
+                let StaticEffect::GrantActivatedAbility { applies_to, ability, condition } = inner
+                else {
+                    continue;
+                };
+                // Hellbent-style gate: the grant is live only while the
+                // source's controller satisfies `condition`. Depends on the
+                // source, not on the permanent asking, so it is decided here.
+                if let Some(pred) = condition {
+                    let cond_ctx = crate::game::effects::EffectContext::for_ability(
+                        src.id, src.controller, None,
+                    );
+                    if !self.evaluate_predicate(pred, &cond_ctx) {
+                        continue;
+                    }
+                }
+                scan.statics.push((applies_to, ability, src));
+            }
+        }
+        // Riftstone Portal — "as long as this card is in your graveyard,
+        // lands you control have '…'". The grant is live from the graveyard,
+        // scoped to the owning seat's permanents.
+        for (seat, pl) in self.players.iter().enumerate() {
+            for src in pl.graveyard.iter() {
+                for sa in &src.definition.static_abilities {
+                    let StaticEffect::GrantActivatedAbilityFromGraveyard { applies_to, ability } =
+                        &sa.effect
+                    else {
+                        continue;
+                    };
+                    let Selector::EachPermanent(req) = applies_to else { continue };
+                    scan.graveyard.push((req, &**ability, seat, src.id));
+                }
+            }
+        }
+        for src in self.battlefield.iter() {
+            // CR 702.95 — Soulbond-granted activated abilities (Deadeye
+            // Navigator's flicker). A paired creature carrying a
+            // `soulbond_bonus` with `activated_abilities` grants them to BOTH
+            // itself and its partner.
+            if let Some(bonus) = &src.definition.soulbond_bonus
+                && !bonus.activated_abilities.is_empty()
+                && let Some(partner) = src.soulbond_partner
+                && self.battlefield.iter().any(|c| c.id == partner)
+            {
+                scan.soulbond.push((src.id, partner, &bonus.activated_abilities));
+            }
+            // CR 702.6e — Equipment/Aura-granted activated abilities, matched
+            // per card by `attached_to`.
+            if src.attached_to.is_some() && src.definition.equipped_bonus.is_some() {
+                scan.equipment.push(src);
+            }
+        }
+        scan
+    }
+
     pub fn granted_abilities_for(
         &self,
         card_id: CardId,
+    ) -> Vec<crate::effect::ActivatedAbility> {
+        self.granted_abilities_with(card_id, &self.grant_scan())
+    }
+
+    /// [`granted_abilities_for`](Self::granted_abilities_for) against a
+    /// prebuilt [`grant_scan`](Self::grant_scan).
+    pub(crate) fn granted_abilities_with(
+        &self,
+        card_id: CardId,
+        scan: &GrantScan<'_>,
     ) -> Vec<crate::effect::ActivatedAbility> {
         use crate::effect::{Selector, StaticEffect};
         let tgt = Target::Permanent(card_id);
@@ -12328,71 +12457,42 @@ impl GameState {
                 ..Default::default()
             });
         }
-        // CR 315.5 — a face-up conspiracy grants from the command zone too.
-        for src in self.all_static_sources() {
-            for sa in &src.definition.static_abilities {
-                // CR 611.2 — a grant may sit under a duration/predicate
-                // wrapper ("Threshold — this creature has '…'"); unwrap it
-                // and honour the gate.
-                let Some(inner) = self.active_static(&sa.effect, src) else { continue };
-                let StaticEffect::GrantActivatedAbility { applies_to, ability, condition } = inner
-                else {
-                    continue;
-                };
-                // Hellbent-style gate: the grant is live only while the
-                // source's controller satisfies `condition`.
-                if let Some(pred) = condition {
-                    let cond_ctx = crate::game::effects::EffectContext::for_ability(
-                        src.id, src.controller, None,
-                    );
-                    if !self.evaluate_predicate(pred, &cond_ctx) {
-                        continue;
+        // CR 315.5 — battlefield and command-zone `GrantActivatedAbility`
+        // statics that are already known live (see `grant_scan`).
+        for (applies_to, ability, src) in &scan.statics {
+            match applies_to {
+                Selector::EachPermanent(req) => {
+                    // Evaluate the filter from the granting source's
+                    // controller so "ControlledByYou" picks that
+                    // player's permanents (and `NamedBySource` reads
+                    // the granting source's chosen name).
+                    if self.evaluate_requirement_static(req, &tgt, src.controller, Some(src.id)) {
+                        out.push((*ability).clone());
                     }
                 }
-                match applies_to {
-                    Selector::EachPermanent(req) => {
-                        // Evaluate the filter from the granting source's
-                        // controller so "ControlledByYou" picks that
-                        // player's permanents (and `NamedBySource` reads
-                        // the granting source's chosen name).
-                        if self.evaluate_requirement_static(req, &tgt, src.controller, Some(src.id)) {
-                            out.push(ability.clone());
-                        }
+                // "Enchanted/equipped creature has [ability]" — the
+                // grant rides the attachment link (Splinter Twin).
+                Selector::AttachedTo(inner) if matches!(**inner, Selector::This) => {
+                    if src.attached_to == Some(card_id) {
+                        out.push((*ability).clone());
                     }
-                    // "Enchanted/equipped creature has [ability]" — the
-                    // grant rides the attachment link (Splinter Twin).
-                    Selector::AttachedTo(inner) if matches!(**inner, Selector::This) => {
-                        if src.attached_to == Some(card_id) {
-                            out.push(ability.clone());
-                        }
-                    }
-                    // Self-grant — "this creature has '[ability]'", optionally
-                    // condition-gated (Gobhobbler Rats' Hellbent regenerate).
-                    Selector::This => {
-                        if src.id == card_id {
-                            out.push(ability.clone());
-                        }
-                    }
-                    _ => continue,
                 }
+                // Self-grant — "this creature has '[ability]'", optionally
+                // condition-gated (Gobhobbler Rats' Hellbent regenerate).
+                Selector::This => {
+                    if src.id == card_id {
+                        out.push((*ability).clone());
+                    }
+                }
+                _ => continue,
             }
         }
         // Riftstone Portal — "as long as this card is in your graveyard,
         // lands you control have '…'". The grant is live from the graveyard,
         // scoped to the owning seat's permanents.
-        for seat in 0..self.players.len() {
-            for src in &self.players[seat].graveyard {
-                for sa in &src.definition.static_abilities {
-                    let StaticEffect::GrantActivatedAbilityFromGraveyard { applies_to, ability } =
-                        &sa.effect
-                    else {
-                        continue;
-                    };
-                    let Selector::EachPermanent(req) = applies_to else { continue };
-                    if self.evaluate_requirement_static(req, &tgt, seat, Some(src.id)) {
-                        out.push((**ability).clone());
-                    }
-                }
+        for (req, ability, seat, src_id) in &scan.graveyard {
+            if self.evaluate_requirement_static(req, &tgt, *seat, Some(*src_id)) {
+                out.push((*ability).clone());
             }
         }
         // Necrotic Ooze — a permanent with
@@ -12516,22 +12616,15 @@ impl GameState {
         // CR 702.95 — Soulbond-granted activated abilities (Deadeye Navigator's
         // flicker). A paired creature carrying a `soulbond_bonus` with
         // `activated_abilities` grants them to BOTH itself and its partner.
-        for src in &self.battlefield {
-            let Some(bonus) = &src.definition.soulbond_bonus else { continue };
-            if bonus.activated_abilities.is_empty() {
-                continue;
-            }
-            let Some(partner) = src.soulbond_partner else { continue };
-            if (src.id == card_id || partner == card_id)
-                && self.battlefield.iter().any(|c| c.id == partner)
-            {
-                out.extend(bonus.activated_abilities.iter().cloned());
+        for (src_id, partner, abilities) in &scan.soulbond {
+            if *src_id == card_id || *partner == card_id {
+                out.extend(abilities.iter().cloned());
             }
         }
         // CR 702.6e — Equipment-granted activated abilities. An Equipment whose
         // `equipped_bonus.activated_abilities` is non-empty and is attached to
         // this creature grants them (Wrench's "{3}, {T}: Tap target creature").
-        for eq in &self.battlefield {
+        for eq in &scan.equipment {
             if eq.attached_to != Some(card_id) {
                 continue;
             }
