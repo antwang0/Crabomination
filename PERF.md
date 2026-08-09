@@ -117,91 +117,45 @@ contention-immune, which makes it the better first look.
 ## Baseline
 
 Re-anchored (`release`, mimalloc — the shipped configuration) at the
-2026-08-09 Coat of Arms gate, i.e. the tip. **Read the box line before
-comparing to the previous anchor: this is a different, slower host** — Xeon
-@ 2.10GHz, `host_calib_ms` 48-70, against the previous anchor's 2.80GHz at
-45-51. The pre-run code reads **43.29 games/s here**, so the box is worth
-about -11 % and these absolutes do not subtract against the old 48.74.
-Refresh only alongside an intentional, explained change.
-Regressions beyond ~5 % get investigated before anything else lands — but
-check `host_calib_ms` first (see "How to measure").
+2026-08-09 tip, with a **same-box alternated A/B against the pre-run tip**
+(`4ea017c5`, built from a worktree into its own target dir) so the run's
+wall-clock number doesn't depend on the box at all. **Read `host_calib_ms`
+before comparing to an older anchor**: this box reads 44-48, against the
+previous anchor's 48-70 — it is a faster host, which is most of why the
+absolutes jumped. Refresh only alongside an intentional, explained change.
+Regressions beyond ~5 % get investigated before anything else lands.
 
 ```text
 bot_ladder --bench   release, rustc 1.95.0, 4-core VM, 3 worker threads
                      mimalloc (the default); measured on an idle box
-host_cpu             Intel(R) Xeon(R) Processor @ 2.10GHz   <- NOT the 2.80GHz
-                                                               box of the
-                                                               previous anchor
-host_calib_ms        51 / 55 / 50 / 48            <- compare this first
+host_calib_ms        46 / 45 / 48 / 45            <- compare this first
 games                320
-games_per_s          52.72 / 55.41 / 54.50 / 55.43   (mean 54.52, spread 5 %)
-games_per_s_th       17.57 / 18.47 / 18.17 / 18.48
-decisions_per_s      31837 / 33461 / 32910 / 33469   (mean 32919)
+games_per_s          59.47 / 58.75 / 57.02 / 59.57   (mean 58.70, spread 4 %)
+decisions_per_s      35914 / 35477 / 34433 / 35973   (mean 35449)
 turns_per_game       26.98
 stalls               0 (0.00 %)
-peak_rss_mib         23.4 - 23.9
+peak_rss_mib         22.1 - 22.7
 determinism          ok (all 160 pairs split, every run)
 ```
 
-**What this run is worth, measured end to end.** Three sets of `--bench`
-runs on one box in one sitting, all `release` + mimalloc:
+**What this run is worth, measured end to end.** Four alternated pairs in one
+sitting, both sides `release` + mimalloc on the same idle box:
 
 ```text
-release + mimalloc, --bench   <- the shipped configuration
-pre-run tip e354379e   43.29 games/s mean  (40.71-45.71)  26142 dec/s
-trigger-grant hoist    47.86              (44.89-51.43)  28898
-Coat of Arms gate      54.52              (52.72-55.43)  32919   <- the tip
-
-whole run              43.29 -> 54.52     +25.9 %,  dec/s +25.9 %
+                pre-run 4ea017c5      tip           paired delta
+pair 1          56.93                 59.47         +2.54
+pair 2          57.68                 58.75         +1.07
+pair 3          52.09                 57.02         +4.93
+pair 4          56.18                 59.57         +3.39
+mean            55.72                 58.70         +2.98  = +5.35 %
+dec/s mean      33647                 35449                  +5.36 %
 ```
 
-The first two were measured **alternated A/B/A/B ×4** and every one of the
-four pairs was positive (+3.48 / +6.40 / +2.29 / +6.09). The third set is
-not alternated against the first — it was taken after the base binary was
-deleted — but it does not need to be: **its slowest run (52.72) beats the
-fastest of the other eight (51.43)**, and its `host_calib_ms` (48-55) sits
-inside the base runs' range (48-70), so the box was if anything kinder to
-the base. `turns_per_game` 26.98 and `stalls` 0 on all twelve runs;
-determinism ok, all 160 pairs split every run; peak RSS 24.0 -> 23.7.
-
-+25.9 % wall-clock against **-18.22 % instructions** is the expected shape:
-Ir undercounts allocation and cache effects, and this run removed a `Vec`
-allocation per gather on top of the walking.
-
-Ir is the arbiter for the individual Log rows — this box cannot resolve a
-2 % change by wall-clock. This block is the check that the shipped
-configuration actually sees them, and it does.
-
-Older anchors, kept because the percentages carry even though the absolutes
-don't: 45.72 -> 48.74 games/s (+6.6 %) at the previous run's gather commit
-on the 2.80GHz box, and 34.26 -> 46.44 (+35.6 %) for the run before that.
-
-**The per-change rows in Log are measured differently and don't add up to
-+10.6 %**, deliberately — each is an alternated `profiling-fast` + system
-allocator callgrind sitting, which is the only way to resolve a small change
-here:
-
-```text
-profiling-fast + system allocator, callgrind, fixed six-game workload
-7,994,965,799 -> 7,818,537,433 Ir   Player CoW handle             -2.21 %
-              -> 7,696,302,458      granted_abilities_for lookup  -1.56 %
-              -> 7,497,680,035      GrantScan hoist               -2.58 %
-              -> 7,282,343,054      counter-fold in the layer pass -2.87 %
-              -> 7,035,606,377      trigger-grant hoist           -3.39 %
-                                    cumulative this run          -12.00 %
-```
-
-The actor-scaling sweep from an earlier run (system allocator vs mimalloc
-at 1/4/8/16/24 threads) is untouched; its readable conclusion was that
-mimalloc's edge grows with actor count (+9 % at 1, +31 % at 24) while its
-RSS ratio stays flat at 1.5-1.7x. Re-measure on a box with real cores.
-
-Historical steps, kept because the percentages carry even though the
-absolutes don't: 19.76 at one morning's branch tip, 21.38 after the trigger
-dispatcher stopped computing the whole board (+8.2 %), 23.00 after the grant
-scans were hoisted (+3.9 %), 16.08 -> 22.83 for the affordance-sweep fix
-(+42.0 % fixed decks, +52.7 % sealed), 21.94 -> 23.03 for the sim-loop
-freeze (+5.0 %), and the two CoW rows' -38.31 % Ir two runs ago.
+**4/4 pairs positive, and the wall-clock +5.35 % lands on top of the
+callgrind -5.35 %** — the two methods agree to two digits here, which they
+have not always done (see the `Printed<T>` row, where the allocator absorbed
+most of an -17 % instruction win). Peak RSS unchanged at 22.1-22.7 MiB,
+`turns_per_game` 26.98 and `stalls` 0 on all eight runs, determinism ok.
 
 ## Log
 
@@ -246,54 +200,70 @@ percentages are what carry over.
 | 2026-08-09 | Coat of Arms' gather pass stops building a whole-board creature list before checking whether the static that consumes it is anywhere on the board | 7,035,606,377 Ir | 6,538,441,281 Ir (**-7.07 %**) | **The largest single row of the run, from gating one block.** The pass built `Vec<(CardId, &Vec<CreatureType>, bool)>` over every creature — an allocation, an `is_creature` per card and a `Vec<Keyword>` scan per card for `Changeling` — and *then* walked the whole battlefield looking for `PumpPerSharedType`, which is on the board approximately never. `is_creature` was **5,078,630 calls / 78,145,532 Ir inside the gather**, the single hottest line in it, and this pass was most of them. Now the presence question is asked once off the short `sa_cards` list (the same shape as `any_artifacts_are_equipment` beside it), and the inner walk iterates `sa_cards` rather than the battlefield. Safe to gate the *whole* block, unlike last run's Unleash trap: `PumpPerSharedType` is the loop's only purpose, and the pass matches `sa.effect` directly rather than through `active_static`, so a bare `matches!` finds exactly what the loop would have. Its sibling one block up (Sliver Legion / `PumpPTPerOtherOfType`) was already in this shape, which is what the fix copies. `recent_a`'s `coat_of_arms_scales_with_shared_types` exercises the gate's true side. Full suite 18093 passed / 0 failed; golden traces byte-identical; clippy clean. |
 | | **cumulative this run** | **7,994,965,799 Ir** | **6,538,441,281 Ir (-18.22 %)** | six alternated `profiling-fast --no-default-features` callgrind A/Bs on the one fixed six-game workload, so the six rows subtract honestly |
 
+Tenth run. Baseline re-taken on a fresh box before anything landed:
+**6,497,854,664 Ir** on the same fixed six-game workload (the 6,538,441,281
+above was a different host image; the two absolutes are within 0.6 % and the
+rows below subtract against the 6,497,854,664 re-take, not against it).
+
+| date | change | before | after | how measured |
+|---|---|---|---|---|
+| 2026-08-09 | Hoist `compute_permanent`'s three CR 613.8 gate scans out of `apply_layers`' per-card loop and fuse them into one pass | 6,497,854,664 Ir | 6,497,409,724 Ir (**-0.007 %**) | **No win — reverted, and the reason is worth keeping.** `compute_permanent` re-derives `has_power_gated` / `has_type_changer` / `has_type_lord` per permanent, three `any()` walks of the effect set inside a whole-board loop — textbook per-card-loop-rebuilds-a-board-scan. LLVM had already done it: the scans are loop-invariant and `compute_permanent` inlines into the `map`, so the hoist moved 444,940 Ir out of 6.5 G. **Check whether the optimizer already hoists a scan before writing the hoist** — the tell is that the function's *self* cost is tiny (`compute_permanent` self was 31,937,700, 0.49 %) even though the source reads O(cards x effects). |
+| 2026-08-09 | `GameState`'s cold tail — 90 per-turn / end-of-turn registries, `teams`, the range matrix, cost and vote scratch — moves into a `ColdState` behind one `CowBox`, with `Deref`/`DerefMut` on `GameState` so no call site changes (`69f3a94b`) | 6,497,854,664 Ir | 6,437,616,446 Ir (**-0.93 %**) | `perform_action` snapshots the whole state before every action so a rejected one rolls back. The clone was **379,630,296 Ir (5.84 %)** and dropping it another **272,555,229 (4.19 %)** — 10.0 % of the program over 64,248 actions, of which **20** actually rolled back. Almost none of that is allocation: it is the field-by-field walk over ~140 separate `Vec`/`HashMap`/`HashSet` fields that are empty on a real board (~30 Ir each, both directions). After: clone **161,485,660 (-3.36 % of the program)**, drop 254,059,834. The drop barely moves because it is dominated by the ~45 collections still in `GameState` plus the few that are genuinely non-empty (`players`, `controlled_by`, `acted_on_own_turn`). Suite 18,817 passed / 0 failed; golden traces byte-identical; clippy clean; snapshot round-trip green (`#[serde(flatten)]` keeps the wire shape flat). |
+| 2026-08-09 | The same grouping, widened to 126 fields (`*_this_resolution` scratch, `pending_*`, `block_map`, `died_card_snapshots`, `delayed_triggers`) | 6,497,854,664 Ir | 6,577,530,529 Ir (**+1.23 %**) | **Regression — not landed.** The boundary, measured rather than guessed. Those fields are written on most actions, so the group unshares almost every time and one 126-field unshare costs more than the individual empty clones it replaced. **The rule: group size x unshare probability has to stay under the sum of the individual clone costs.** `resolve_effect`'s prologue alone clears twelve of them, and it runs ~20 k times per six games. Membership is a free parameter — `Deref` means moving a field in or out changes no call site — so the next run can retune it with one build. |
+| 2026-08-09 | The gather's `AnthemForFilter` walk iterates `sa_cards` instead of the whole battlefield; Leyline of Singularity's presence check asks `sa_cards` too (`f1908d4f`) | 6,437,616,446 Ir | 6,156,192,934 Ir (**-4.37 %**) | **Two passes the eleven-walk fold missed, found by listing every top-level statement in the function rather than every `for card in &self.battlefield`.** The anthem walk chained `self.battlefield.iter()` with the emblem and command-zone legs, and its body does nothing for a card with no printed statics — `sa_cards` is exactly that filter in the same order, so the emitted effect sequence is unchanged. The Leyline check is the Coat of Arms shape verbatim: scan every permanent's statics before asking whether the card is even out. Gather self **885,832,058 -> 610,672,182 (-31.1 %)**. Full suite green; golden traces byte-identical. |
+| 2026-08-09 | `card.keyword_counters` becomes an insertion-ordered `Vec` newtype instead of a `HashMap` (`86670250`) | 6,156,192,934 Ir | 6,150,469,969 Ir (**-0.09 %**) | Landed as a determinism fix, not a perf row — see TODO's robustness section. The instructions are a rounding error but they are the right sign: the linear scans replace hashing a `Keyword`, several of whose variants own a boxed `SelectionRequirement`. |
+| | **cumulative this run** | **6,497,854,664 Ir** | **6,150,469,969 Ir (-5.35 %)** | four alternated `profiling-fast --no-default-features` callgrind A/Bs on the one fixed six-game workload |
+
 ## Profile of record
 
 Callgrind on `profiling-fast --no-default-features` (= `release-fast` opt
 settings + debuginfo; system allocator, because valgrind replaces malloc and
 a mimalloc build would measure the interception), 1 thread, `--a gang --b
-gang --games 6 --seed 1 --decks fixed`. Retaken 2026-08-09 at the Coat of
-Arms gate, i.e. *after* every row in the Log.
+gang --games 6 --seed 1 --decks fixed`. Retaken 2026-08-09 at the tip, i.e.
+*after* every row in the Log.
 
-**6.54 G instructions for six games**, from 7.99 G at this run's start and
-14.40 G two runs ago on the same workload.
+**6.15 G instructions for six games**, from 6.50 G at this run's start.
 
 Self cost, grouped (share at this run's start in brackets):
 
 | share | site | note |
 |---|---|---|
-| 11.4 % | `gather_continuous_effects_inner` | [11.5 %] `mod.rs`'s own lines 229 M / `ptr::non_null` 213 M / `slice::iter` 162 M. **1,056 M inclusive over 358,792 calls = 2,943 Ir/gather**, from 4,322 at this run's start (the Coat of Arms gate alone took it 1,551 M → 1,056 M). Still the #1 engine function, and still about a third walking. |
-| 14.5 % | `_int_malloc` 4.75 / `_int_free` 4.32 / `malloc` 3.20 / `free` ~1.9 | [12.1 %] falling in absolute terms now (338 M → 311 M) — the Coat of Arms `Vec` was one allocation per gather |
-| 3.60 % | `__memcpy_avx_unaligned_erms` | |
-| 2.29 % | `compute_permanent_pass` | [2.75 %] 222 M → 161 M, the counter-fold row |
-| 1.27 % | `hashbrown RawTable::clone` | candidate 6; 2,493,330 of its calls come from `GameState::clone` |
-| 1.24 % | `Arc::clone_from_ref_in` | the CoW handles' refcount traffic, the price of the two CoW rows |
-| — | `granted_abilities_for` | was 5.01 % / #2; **gone from the self list** after the two rows that halved it |
-| — | `CardInstance::counter_count` | was 1.48 %; gone with the counter-fold |
-| — | `trigger_grant_sources` | was 1.02 % self plus ~198 M of walking; gone with the hoist |
+| 18.0 % | `_int_malloc` 5.26 / `_int_free` 4.43 / `malloc` 3.31 / `free` 1.99 / consolidate+merge+unlink 2.2 / arena free 0.78 | [17.7 %] **the biggest single theme, and it grew as a share because everything around it shrank.** Nothing this run attacked it directly |
+| 9.93 % | `gather_continuous_effects_inner` | [13.63 %] 885,832,058 -> 610,672,182 after the anthem-walk row. `mod.rs`'s own lines 228 M / `ptr::non_null` 149 M / `slice::iter` 102 M / `vec` 77 M / `option` 54 M — **still about half walking** |
+| 4.00 % | `__memcpy_avx_unaligned_erms` | [3.85 %] `GameState` is still ~190 fields wide and is memcpy'd three times per clone |
+| 3.31 % | `Arc::clone_from_ref_in` | [1.94 %] the CoW handles' refcount traffic — cards, players, zones, and now `ColdState` |
+| 2.59 % | `compute_permanent_pass` | [2.47 %] 723,971,201 inclusive over 1,277,508 calls |
+| 1.06 % | `hashbrown RawTable::clone` | candidate 6; the ~30 maps still in `GameState` |
+| 0.87 % | `GameState::clone` self | [0.68 %] |
+| 0.65 % | `CardDefinition::printed_colors` | candidate 1(a)'s leftover — a fresh `Vec<Color>` per computed permanent |
 
 Inclusive, in caller terms (these overlap each other), at the tip:
 
 | Ir | share | site |
 |---|---|---|
-| 1,249,398,910 | 19.11 % | `computed_permanent` — was 1,617 M / 23.0 % before the Coat of Arms gate |
-| 1,056,111,669 | 16.15 % | `gather_continuous_effects_inner` — was 1,551 M / 22.0 % |
-| 770,675,875 | 11.79 % | `compute_battlefield` |
-| 627,670,300 | **9.60 %** | └ of which `Vec::from_iter`, i.e. materializing a fresh `ComputedPermanent` for the whole board on each of its 46 k calls. **The most concentrated single item left.** |
-| 727,883,931 | 11.13 % | `compute_permanent_pass` |
-| 657,495,558 | 10.06 % | `check_state_based_actions` |
+| 4,402,478,165 | 71.58 % | `perform_action` |
+| 3,983,465,099 | 64.77 % | └ `perform_action_inner` — the 7 % gap is the transaction checkpoint |
+| 723,971,201 | 11.77 % | `compute_permanent_pass` (1,277,508 calls) |
+| 573,401,647 | 9.32 % | `gather_continuous_effects_inner` from `computed_permanent` alone (260,370 calls) |
+| 254,059,834 | 3.95 % | `drop_in_place<GameState>` under `perform_action` (64,228 calls) |
+| 161,485,660 | 2.51 % | `GameState::clone` under `perform_action` (64,248 calls) |
 
-**The read after this run.** Every per-card-loop-rebuilds-a-board-scan site
-the profile named is fixed; the four rows that came from that one shape
-(`GrantScan`, the `battlefield_find` dedup, the trigger hoist, the
-counter-fold) are **-10.0 % between them**, against -2.2 % for the
-representation change. **The layer system is now essentially the whole
-program**: `computed_permanent` 23.0 % inclusive, the gather 22.0 %,
-`compute_battlefield` 11.8 %, and the three overlap heavily. `_int_malloc`
-+ `_int_free` at 15.9 % is the second theme, and 627 M of it is
-`compute_battlefield` building a fresh `Vec<ComputedPermanent>` for the
-whole board on each of its 46 k calls. Candidate 4 (memoizing the gather)
-and candidate 1(c)'s successor (making `compute_battlefield` not
-materialize) are what is left at this size.
+**The read after this run.** Two themes are left and they are both structural.
+
+1. **The transaction checkpoint is still 6.4 %** (clone 2.51 + drop 3.95) for
+   a rollback that fired 20 times in 64,248 actions. `ColdState` took the
+   easy half; what is left is the ~45 collections that are written often
+   enough that grouping them loses (measured — see the +1.23 % row), plus
+   the handful that are genuinely non-empty on every state (`players`,
+   `controlled_by`, `acted_on_own_turn`). The next move here is not a bigger
+   group, it is *not taking the snapshot* — e.g. letting the bot's sim loop
+   opt into `perform_action_inner` plus an explicit checkpoint only where it
+   actually recovers from an `Err`.
+2. **`_int_malloc`/`_int_free` at 18.0 %** is now the largest single block
+   and no row has ever attacked it head-on; the wins that moved it moved it
+   by allocating less elsewhere. Note the profile is the *system* allocator
+   by construction (valgrind), and the shipped build is mimalloc, so treat
+   the 18 % as an upper bound and settle it on `--bench` wall-clock.
 
 ## Perf candidates
 
@@ -301,9 +271,20 @@ Ordered by expected value. Each run pulls the top one, attaches numbers,
 and feeds what it finds back in. Re-profile and replenish when the list
 goes thin or stale.
 
-**The profile of record is current** (2026-08-09, at the trigger-grant-hoist
-commit) — see that section. Every share below is from it. Five
-methodological notes, each learned the hard way:
+**The profile of record is current** (2026-08-09, at this run's tip) — see
+that section. Every share below is from it. Methodological notes, each
+learned the hard way:
+
+- **Check whether LLVM already hoists the scan.** Three per-card `any()`
+  walks of the effect set inside `apply_layers`' whole-board loop read
+  **-0.007 %** when hoisted by hand: they are loop-invariant and the callee
+  inlines, so the optimizer had already done it. The tell is a function
+  whose *self* cost is tiny even though the source reads O(n x m).
+- **A CoW group pays only while it stays unwritten.** Grouping 90 rarely
+  written collections behind one `CowBox` was -0.93 %; widening the same
+  group to 126 by adding the per-resolution scratch was **+1.23 %**, because
+  one big unshare on nearly every action costs more than the empty clones it
+  replaced. Group size x unshare probability < sum of individual clone costs.
 
 - **The dominant shape in this engine is "a per-card loop rebuilds a
   board-level scan".** Four of this run's five rows were that one shape and
@@ -394,6 +375,24 @@ methodological notes, each learned the hard way:
    fix with its own tests and a blessed trace, or not at all. The safe
    subset is phase 1 (`gather_combat_damage_decisions`), which runs before
    any damage is dealt; cost it first, it may be too small to matter.
+
+0.5 **Stop taking the transaction checkpoint where nothing recovers from
+   it.** `perform_action` clones the state before every action and drops the
+   clone after: **2.51 % + 3.95 % = 6.4 % of the program**, over 64,248
+   actions of which **20** rolled back. `ColdState` (this run) took the half
+   that came from walking empty collections; the rest is irreducible while
+   the snapshot is unconditional. Two routes, neither taken yet:
+   **(a)** the bot's `simulate_attack_outcome_once` loop is where nearly all
+   the actions are — it calls `perform_action` and, on `Err`, retries
+   `PassPriority` and bails. It could call `perform_action_inner` and take
+   one explicit checkpoint only around the calls that are allowed to fail,
+   which is a bot change, not an engine one.
+   **(b)** make the residual `GameState` narrow enough that the snapshot is a
+   memcpy plus a handful of `Arc` bumps — that means CoW-ing `players`
+   (written on most actions, so count the siblings first: two seats) and
+   folding the ~45 remaining collections into a *second*, hotter group whose
+   unshare is still cheaper than 45 empty clones. The +1.23 % row says the
+   naive version of (b) loses; a two-group split is untested.
 
 1. **Make `ComputedPermanent` cheap to build.**
    (a) ~~Hold the `Arc<CardDefinition>` and clone a collection only when a
@@ -489,7 +488,29 @@ methodological notes, each learned the hard way:
    and it is rebuilt per dispatch. Two reads: does every dispatch need it
    (gate on the event set), and can the board walk be shared with
    `grant_scan`, which now walks the same sources for the activated half.
-3. **The gather — back to #1, and now by a wide margin.** 918 M self
+3. **The gather — still #1 among engine functions, now 9.93 % self.**
+   **This run took another -4.37 % out of it** by listing every *top-level
+   statement* in the function instead of grepping for
+   `for card in &self.battlefield`: the `AnthemForFilter` walk was still
+   chaining the whole battlefield (now `sa_cards`), and Leyline of
+   Singularity's presence check was the Coat of Arms shape verbatim. Gather
+   self 885,832,058 -> 610,672,182.
+   **What is left in it, in order:**
+   - **The `GraveyardAnthem` pass walks both graveyards unconditionally**
+     (`for player in &self.players { for card in &player.graveyard { … } }`),
+     ~30 cards late game x 358 k gathers. There is no cheap presence gate —
+     the sources are *in* the graveyard — so this one wants either a cached
+     per-definition flag or candidate 4.
+   - The ungated `for card in &self.battlefield` at the Unleash / CR 611.2
+     block stays ungated on purpose (read its comment and last run's trap
+     before touching it); splitting it would also reorder emission.
+   - `all_effects` starts as a clone of `continuous_effects` and grows by
+     repeated `push`/`extend` — reserve once.
+   - ~40 separate `for &card in &sa_cards` loops, i.e. ~40 loop set-ups per
+     gather. **Ruled out already**: the `u64` presence mask over them read
+     +1.43 % and was reverted.
+
+   *(historical, kept for the numbers it settled)* **back to #1, and now by a wide margin.** 918 M self
    (13.1 %), 1,550,667,623 inclusive (**22.0 %**), 358,792 calls =
    **2,559 Ir/gather**. Untouched this run, so its absolute is unchanged and
    only its share moved. **This is the top item for the next run.** What the
