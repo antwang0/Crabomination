@@ -50,18 +50,36 @@ doc-derived — confirm before acting.
 
 ## Structural dead capabilities (authoritative — from pass 1)
 
-A selectable mode that resolves to nothing. Needs human triage — a `Noop` mode
-is also the idiom for a deliberate "you may … (or decline)" option.
+**Dead abilities are now a suite gate.** `crabomination_tests`
+`core_rules::structural_audit::no_shipped_card_has_a_dead_ability` asserts
+over the whole catalog that no card ships a triggered / activated / loyalty
+ability whose effect resolves to nothing, so that half of pass 1 can't
+regress silently and doesn't need a triage table here any more. The walker
+lives in `crabomination::audit` — one copy, shared by both audit binaries
+and the test.
+
+Dead **modes** stay out of the gate and still want human triage: a `Noop`
+arm is also the idiom for a deliberate "you may … (or decline)" option. Run
+`cargo run -p crabomination --bin audit_incomplete -- --structural-only`
+for the current list.
 
 | Card | Location | Verdict |
 |---|---|---|
 | Sublime Epiphany ✓ | stx/extras_02.rs:668 | **Fixed.** All five modes now real: mode 1 → `Effect::CounterAbility`, mode 3 → `Effect::CreateTokenCopyOf`. |
 | Elite Interceptor ✓ | sos/mdfcs.rs:181 | **Not a gap.** Arm #2 (`Noop`) is the deliberate "decline" half of "you may tap or untap"; the draw is unconditional. |
 
-> Notes: (1) an earlier manual pass mislabeled the Sublime Epiphany finding as a
-> card called "Persist" — the structural auditor is the source of truth. (2) The
-> Elite Interceptor flag shows even the structural pass needs triage: a `Noop`
-> mode is ambiguous between "unimplemented" and "intentional decline."
+Closed as of the 2026-08-09 re-mine (all three were real, all three fixed at
+the helper rather than per card — see the commit):
+
+| Card | Was | Fix |
+|---|---|---|
+| Magosi, the Waterveil | empty ETB trigger | `tapped_etb_land` no longer emits `etb(Noop)` |
+| Oran-Rief, the Vastwood | empty ETB trigger | same helper |
+| Annie Joins Up | empty "legendary creature enters" trigger | `joins_up`'s `ongoing` is now `Option<TriggeredAbility>`; Annie's second ability is static |
+| Circling Vultures | flagged, **not a bug** | the auditor's cost-only carve-out now covers the five self-moving costs, not just `sac_cost` |
+
+> Note: an earlier manual pass mislabeled the Sublime Epiphany finding as a
+> card called "Persist" — the structural auditor is the source of truth.
 
 ---
 
