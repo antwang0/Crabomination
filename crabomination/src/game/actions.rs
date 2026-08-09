@@ -12140,16 +12140,28 @@ impl GameState {
         &self,
         card_id: CardId,
     ) -> Vec<crate::effect::ActivatedAbility> {
-        use crate::card::LandType;
         let Some(card) = self.battlefield_find(card_id) else {
             return vec![];
         };
-        let printed: &[LandType] = &card.definition.subtypes.land_types;
         let Some(computed) = self.computed_permanent(card_id) else {
             return vec![];
         };
+        Self::intrinsic_land_mana_abilities_with(card, &computed.subtypes.land_types)
+    }
+
+    /// [`intrinsic_land_mana_abilities`](Self::intrinsic_land_mana_abilities)
+    /// against a computed land-type list the caller already holds.
+    /// `effective_mana_abilities_with` reads the same card's computed types
+    /// for its printed-ability check, and a `computed_permanent` outside a
+    /// freeze scope is a whole-game gather.
+    pub(crate) fn intrinsic_land_mana_abilities_with(
+        card: &crate::card::CardInstance,
+        computed_land_types: &[crate::card::LandType],
+    ) -> Vec<crate::effect::ActivatedAbility> {
+        use crate::card::LandType;
+        let printed: &[LandType] = &card.definition.subtypes.land_types;
         let mut out = Vec::new();
-        for lt in &computed.subtypes.land_types {
+        for lt in computed_land_types {
             if printed.contains(lt) {
                 continue;
             }
@@ -12182,8 +12194,20 @@ impl GameState {
     /// mana abilities that aren't a basic type's intrinsic ability are real
     /// rules text and survive.
     pub(crate) fn printed_land_mana_ability_lost(&self, card_id: CardId, index: usize) -> bool {
-        use crate::card::LandType;
         let Some(card) = self.battlefield_find(card_id) else { return false };
+        let Some(computed) = self.computed_permanent(card_id) else { return false };
+        Self::printed_land_mana_ability_lost_with(card, index, &computed.subtypes.land_types)
+    }
+
+    /// [`printed_land_mana_ability_lost`](Self::printed_land_mana_ability_lost)
+    /// against a computed land-type list the caller already holds — see
+    /// [`intrinsic_land_mana_abilities_with`](Self::intrinsic_land_mana_abilities_with).
+    pub(crate) fn printed_land_mana_ability_lost_with(
+        card: &crate::card::CardInstance,
+        index: usize,
+        computed_land_types: &[crate::card::LandType],
+    ) -> bool {
+        use crate::card::LandType;
         if !card.definition.is_land() {
             return false;
         }
@@ -12202,8 +12226,7 @@ impl GameState {
         if !card.definition.subtypes.land_types.contains(&basic) {
             return false;
         }
-        self.computed_permanent(card_id)
-            .is_some_and(|cp| !cp.subtypes.land_types.contains(&basic))
+        !computed_land_types.contains(&basic)
     }
 
     /// `(index, ability)` for every mana-producing activated ability a
@@ -12232,6 +12255,16 @@ impl GameState {
             return vec![];
         };
         let printed_count = card.definition.activated_abilities.len();
+        // One layer read for the whole list. Both CR 305.6 checks below ask
+        // the same card for the same thing — its *computed* land types — and
+        // a `computed_permanent` outside a freeze scope gathers every
+        // continuous effect in the game. This was one gather per printed mana
+        // ability plus one more for the intrinsic pass.
+        let computed = self.computed_permanent(card_id);
+        let computed_land_types: &[crate::card::LandType] = match &computed {
+            Some(cp) => &cp.subtypes.land_types,
+            None => &[],
+        };
         // The printed abilities are borrowed from `card.definition`, which
         // outlives the call — only `granted_abilities_for` and
         // `intrinsic_land_mana_abilities` synthesize, and all three callers
@@ -12240,7 +12273,10 @@ impl GameState {
         // permanent per `auto_tap_for_cost_inner`.
         let mut out: Vec<(usize, Cow<'_, crate::effect::ActivatedAbility>)> = Vec::new();
         for (i, a) in card.definition.activated_abilities.iter().enumerate() {
-            if is_mana_ability(&a.effect) && !self.printed_land_mana_ability_lost(card_id, i) {
+            if is_mana_ability(&a.effect)
+                && !(computed.is_some()
+                    && Self::printed_land_mana_ability_lost_with(card, i, computed_land_types))
+            {
                 out.push((i, Cow::Borrowed(a)));
             }
         }
@@ -12251,8 +12287,13 @@ impl GameState {
                 out.push((printed_count + j, Cow::Owned(a)));
             }
         }
-        for (k, a) in self.intrinsic_land_mana_abilities(card_id).into_iter().enumerate() {
-            out.push((printed_count + gc + k, Cow::Owned(a)));
+        if computed.is_some() {
+            for (k, a) in Self::intrinsic_land_mana_abilities_with(card, computed_land_types)
+                .into_iter()
+                .enumerate()
+            {
+                out.push((printed_count + gc + k, Cow::Owned(a)));
+            }
         }
         out
     }
