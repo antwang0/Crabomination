@@ -95,9 +95,12 @@ fn sampling_temp(turn: u32) -> Option<f64> {
 /// Softmax-sample an index from `scores` at temperature `temp`, drawing
 /// from the jitter stream (seeded ⇒ reproducible). Max-subtracted so the
 /// net profile's ±10 000-scale scores can't overflow the exp.
+/// Total on an empty slice (index 0): the sampling branch of
+/// `main_phase_action_with` reaches this with a candidate list that the
+/// argmax branch beside it handles as "no action", and a panic on the
+/// actor path kills a training run mid-flight.
 fn sample_scored_index(scores: &[i32], temp: f64) -> usize {
-    debug_assert!(!scores.is_empty());
-    let max = *scores.iter().max().unwrap();
+    let Some(&max) = scores.iter().max() else { return 0 };
     let ws: Vec<f64> = scores.iter().map(|&s| (((s - max) as f64) / temp).exp()).collect();
     let total: f64 = ws.iter().sum();
     let mut u = jitter_f64() * total;
@@ -107,7 +110,7 @@ fn sample_scored_index(scores: &[i32], temp: f64) -> usize {
             return i;
         }
     }
-    scores.len() - 1
+    scores.len().saturating_sub(1)
 }
 
 /// Choose among `(candidate index, score)` pairs: softmax-sampled when
@@ -14712,6 +14715,23 @@ mod action_sampling_tests {
         assert!(n[0] > 100 && n[1] > 100, "equal scores should split: {n:?}");
 
         set_action_sampling(None);
+        set_jitter_seed(None);
+    }
+
+    /// Robustness: the sampler is total. `main_phase_action_with`'s
+    /// sampling branch reaches it with the same candidate list the argmax
+    /// branch beside it treats as "no action", and `scores.len() - 1` on an
+    /// empty slice underflowed (debug) / returned a huge index that then
+    /// indexed a slice (release). A panic on the actor path kills a
+    /// training run at whatever game it happens to reach.
+    #[test]
+    fn sample_scored_index_is_total_on_an_empty_candidate_list() {
+        set_jitter_seed(Some(11));
+        assert_eq!(sample_scored_index(&[], 150.0), 0);
+        assert_eq!(sample_scored_index(&[7], 150.0), 0);
+        for _ in 0..50 {
+            assert!(sample_scored_index(&[3, 1, 2], 150.0) < 3);
+        }
         set_jitter_seed(None);
     }
 }
