@@ -7626,6 +7626,17 @@ impl GameState {
                 .iter()
                 .any(|sa| matches!(sa.effect, crate::effect::StaticEffect::ArtifactsAreEquipment))
         });
+        // Coat of Arms' pass built a `Vec` of every creature on the board —
+        // one `is_creature` and one `Vec<Keyword>` scan per card — before
+        // looking for the static that consumes it, on every gather. Ask off
+        // the short `sa_cards` list first. The pass matches `sa.effect`
+        // directly rather than through `active_static`, so a bare `matches!`
+        // here finds exactly what it would have found.
+        let any_pump_per_shared_type = sa_cards.iter().any(|c| {
+            c.definition.static_abilities.iter().any(|sa| {
+                matches!(sa.effect, crate::effect::StaticEffect::PumpPerSharedType { .. })
+            })
+        });
         for &card in &sa_cards {
             // CR 613.7a — static-ability effects carry the source object's
         // timestamp (entry-stamped; id-order fallback for unstamped objects).
@@ -8549,7 +8560,7 @@ impl GameState {
         // shares ≥1 creature type with it (Changeling shares all types). The
         // bonus is per-creature (shared-type count differs per subject), so it's
         // gathered state-aware like Sliver Legion above.
-        {
+        if any_pump_per_shared_type {
             use crate::card::Keyword;
             let creatures: Vec<(CardId, &Vec<crate::card::CreatureType>, bool)> = self
                 .battlefield
@@ -8560,7 +8571,7 @@ impl GameState {
                      c.definition.keywords.contains(&Keyword::Changeling))
                 })
                 .collect();
-            for src in &self.battlefield {
+            for &src in &sa_cards {
                 for sa in &src.definition.static_abilities {
                     let crate::effect::StaticEffect::PumpPerSharedType { power, toughness } =
                         &sa.effect
