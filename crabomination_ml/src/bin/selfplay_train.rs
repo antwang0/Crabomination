@@ -22,6 +22,7 @@
 //!                [--gpu-eval] [--eval-batch N] [--eval-flush-us N]
 //!                [--stop-after-stale N] [--relabel-mode full|new]
 //!                [--attn] [--blocks N] [--aux] [--ablate lib,cast,rel]
+//!                [--muon] [--muon-lr F] [--lr-cosine STEPS]
 //!                [--emb-dim N] [--obj-hidden N] [--h1 N] [--h2 N]
 //!                [--gate-builder GAMES_PER_POOL]
 //!
@@ -155,6 +156,16 @@ struct Args {
     /// 2× FFN per block, group tag in the stream. 0 (default) is off;
     /// mutually exclusive with `--attn`, which it supersedes.
     blocks: usize,
+    /// Train with the Muon hybrid optimizer (orthogonalized updates on
+    /// hidden matrices; AdamW at `--lr` for embeddings/heads/biases).
+    muon: bool,
+    /// Muon step size — RMS-1 update semantics, ~100× an AdamW lr.
+    muon_lr: f64,
+    /// Cosine-decay the lr from its base to a 10 % floor over this many
+    /// steps (`cosine_lr_factor`). 0 (default) = constant lr. The
+    /// horizon should approximate the *expected* run length under early
+    /// stop, not the `--steps` cap.
+    lr_cosine: u64,
     /// Width overrides — the engine reads sizes from the tensor shapes,
     /// so capacity is a flag, not a format change. `--seed-emb` requires
     /// the deck net's width, so it refuses a changed `--emb-dim`.
@@ -251,6 +262,9 @@ fn parse_args() -> Args {
         attn: false,
         aux: false,
         blocks: 0,
+        muon: false,
+        muon_lr: 0.02,
+        lr_cosine: 0,
         emb_dim: None,
         obj_hidden: None,
         h1: None,
@@ -322,6 +336,12 @@ fn parse_args() -> Args {
                 continue; // bare flag, consumes no value
             }
             "--blocks" => a.blocks = val().parse().expect("--blocks"),
+            "--muon" => {
+                a.muon = true;
+                continue; // bare flag, consumes no value
+            }
+            "--muon-lr" => a.muon_lr = val().parse().expect("--muon-lr"),
+            "--lr-cosine" => a.lr_cosine = val().parse().expect("--lr-cosine"),
             "--emb-dim" => a.emb_dim = Some(val().parse().expect("--emb-dim")),
             "--obj-hidden" => a.obj_hidden = Some(val().parse().expect("--obj-hidden")),
             "--h1" => a.h1 = Some(val().parse().expect("--h1")),
@@ -996,15 +1016,31 @@ fn main() {
         return;
     }
     let cfg = net_config(&args, vocab.size());
-    let mut trainer = Trainer::new(&cfg, args.lr).expect("trainer init");
+    let mut trainer = if args.muon {
+        Trainer::new_muon(
+            &cfg,
+            crabomination_ml::MuonParams {
+                lr: args.muon_lr,
+                adamw_lr: args.lr,
+                ..Default::default()
+            },
+        )
+        .expect("muon trainer init")
+    } else {
+        Trainer::new(&cfg, args.lr).expect("trainer init")
+    };
     let mut deck_trainer =
         DeckTrainer::new(&DeckNetConfig::standard(vocab.size()), args.lr).expect("deck trainer");
     eprintln!(
-        "learner device: {} (lambda {}, batch {}, lr {}, {})",
+        "learner device: {} (lambda {}, batch {}, {}, {})",
         trainer.device_label(),
         args.lambda,
         args.batch,
-        args.lr,
+        if args.muon {
+            format!("muon lr {} / adamw lr {}", args.muon_lr, args.lr)
+        } else {
+            format!("lr {}", args.lr)
+        },
         if args.blocks > 0 {
             format!("{} transformer blocks", args.blocks)
         } else if args.attn {
@@ -1176,6 +1212,9 @@ fn main() {
             let rows = sample_owned(&shared, args.batch, &mut rng);
             timing.sample += t0.elapsed();
             let refs: Vec<(&TrainRow, f32)> = rows.iter().map(|(r, t)| (r, *t)).collect();
+            if args.lr_cosine > 0 {
+                trainer.set_lr_factor(crabomination_ml::cosine_lr_factor(step, args.lr_cosine));
+            }
             let t0 = Instant::now();
             let loss = trainer.train_step_with_targets(&refs).expect("train step");
             timing.step += t0.elapsed();

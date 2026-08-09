@@ -58,6 +58,33 @@ only stays dead while the reasoning that killed it is readable.
   stratum both plays and benches reports **no** within-archetype number
   rather than passing the marginal off as one. `recommend_pool` prints
   `within` first and labels `raw` as the confound.
+- 🟢 **Rounds 19–21 (2026-08-09) — cosine decay adopted; Muon and a 1M
+  window are nulls.** Three regime-side levers on the champion config
+  (attn + 500 k window + lr 1e-4 + 250 k games + patience 12), each
+  implemented, unit-tested, and two-seeded against the r17b arm-A
+  control (AUC 0.8126/0.8069, pooled gates 51.4 % gang / 52.9 %
+  atk-sim):
+
+  | round | change | AUC (s43/s97) | pooled gang | pooled atk-sim | verdict |
+  |---|---|---|---|---|---|
+  | 19 | Muon (muon-lr 0.02, adamw 3e-4) | 0.8140/0.7968 | 50.0 % | 51.1 % | ❌ null-to-negative |
+  | 20 | cosine lr →10 % floor over 60 k | 0.8070/0.8090 | 51.8 % | **54.4 %** | ✅ **adopted** |
+  | 21 | window 1M (on r20) | 0.8077/0.8084 | 52.3 % | 54.1 % | ➖ null-leaning-positive |
+
+  **Round 20 is the win: best atk-sim gates in the program** (all four
+  cells 53.3–55.1 %, both training seeds improved independently), with
+  AUC flat — a pilot gain, not a predictor gain; the decayed tail
+  fine-tunes instead of thrashing. Muon details: `--muon` hybrid
+  (Newton-Schulz on hidden matrices, AdamW for emb/heads/biases/norms;
+  routing + spectral-flattening + learning tests) — the lr probes
+  showed muon-lr flat across 10× while the AdamW side starved at 1e-4
+  (0.789 → 0.804 at 3e-4), and the full runs still landed below
+  control with worse saturation (11.3/8.4 %). Window 1M: gang cells
+  were the most consistent ever (all ≥51.7 %) but +0.5 pooled is
+  inside noise — not adopted; harmless if RAM permits. **Champion
+  config after this sweep: `--attn --window 500000 --lr 1e-4
+  --lr-cosine 60000 --relabel-mode new --stop-after-stale 12`,
+  250 k games** (`nets_r20_*`, pooled 51.8/54.4).
 - 🟢 **Rounds 18 + 17b (2026-08-09) — the regime did it, not the
   blocks; self-play labels don't stack.** The two follow-ups to round
   17's sweep, both two-seeded:

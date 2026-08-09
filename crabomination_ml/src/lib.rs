@@ -452,8 +452,131 @@ impl PlayModel {
 pub struct Trainer {
     pub varmap: VarMap,
     pub model: PlayModel,
-    opt: AdamW,
+    opt: Opt,
     dev: Device,
+}
+
+/// The trainer's optimizer: plain AdamW (the historical default) or the
+/// Muon hybrid. Each variant remembers its construction-time base lr so
+/// a schedule can scale it multiplicatively.
+enum Opt {
+    AdamW { o: AdamW, base_lr: f64 },
+    Muon(MuonOpt),
+}
+
+impl Opt {
+    fn backward_step(&mut self, loss: &Tensor) -> CResult<()> {
+        match self {
+            Opt::AdamW { o, .. } => o.backward_step(loss),
+            Opt::Muon(o) => {
+                let grads = loss.backward()?;
+                o.step(&grads)
+            }
+        }
+    }
+
+    /// Scale every learning rate to `factor` × its construction-time
+    /// base — the seam an lr schedule drives. Factor semantics (not
+    /// absolute lr) so one call scales both halves of the Muon hybrid
+    /// coherently.
+    fn set_lr_factor(&mut self, factor: f64) {
+        match self {
+            Opt::AdamW { o, base_lr } => o.set_learning_rate(*base_lr * factor),
+            Opt::Muon(m) => {
+                m.lr = m.base_lr * factor;
+                m.adamw.set_learning_rate(m.base_adamw_lr * factor);
+            }
+        }
+    }
+}
+
+/// Cosine decay factor for step `t` over horizon `h`: 1.0 at t = 0,
+/// falling on a half-cosine to a 0.1 floor at t ≥ h. The floor is
+/// standard practice (a zero lr wastes the tail; 10 % keeps fitting) and
+/// the horizon is a flag, not the step cap — early stop means the cap is
+/// never the actual run length.
+pub fn cosine_lr_factor(t: u64, horizon: u64) -> f64 {
+    const FLOOR: f64 = 0.1;
+    if horizon == 0 {
+        return 1.0;
+    }
+    let x = (t.min(horizon) as f64) / (horizon as f64);
+    FLOOR + (1.0 - FLOOR) * 0.5 * (1.0 + (std::f64::consts::PI * x).cos())
+}
+
+/// Muon hyperparameters. `lr` is the orthogonalized update's step size —
+/// note its scale is unrelated to AdamW's: the update has RMS ≈ 1 by
+/// construction, so typical values are ~100× an AdamW lr.
+#[derive(Debug, Clone, Copy)]
+pub struct MuonParams {
+    pub lr: f64,
+    pub momentum: f64,
+    /// AdamW lr for everything Muon doesn't cover (embeddings, heads,
+    /// biases, layer norms, the group-tag tables).
+    pub adamw_lr: f64,
+}
+
+impl Default for MuonParams {
+    fn default() -> Self {
+        Self { lr: 0.02, momentum: 0.95, adamw_lr: 1e-4 }
+    }
+}
+
+/// Muon (momentum + Newton-Schulz orthogonalization of the update) over
+/// the 2-D hidden weight matrices, with AdamW handling the rest — the
+/// standard split: orthogonalizing an embedding table or a 1-row head
+/// is meaningless-to-harmful, so those stay on Adam.
+struct MuonOpt {
+    /// (tensor name, parameter, momentum buffer). Names are kept for the
+    /// routing test and debugability.
+    muon: Vec<(String, candle_core::Var, Tensor)>,
+    adamw: AdamW,
+    lr: f64,
+    momentum: f64,
+    /// Construction-time lrs, the bases a schedule factor multiplies.
+    base_lr: f64,
+    base_adamw_lr: f64,
+}
+
+impl MuonOpt {
+    /// Nesterov-momentum Muon step on the routed matrices, AdamW on the
+    /// rest, from one shared backward pass.
+    fn step(&mut self, grads: &candle_core::backprop::GradStore) -> CResult<()> {
+        for (_, var, buf) in &mut self.muon {
+            let Some(g) = grads.get(var.as_tensor()) else { continue };
+            *buf = ((&*buf * self.momentum)? + g)?;
+            let u = (g + (&*buf * self.momentum)?)?;
+            let o = newton_schulz5(&u, 5)?;
+            // Keller Jordan's aspect-ratio compensation: tall matrices
+            // get sqrt(rows/cols) more step, so per-output-neuron update
+            // scale is width-independent.
+            let (m, n) = o.dims2()?;
+            let scale = self.lr * ((m as f64 / n as f64).max(1.0)).sqrt();
+            var.set(&(var.as_tensor() - (o * scale)?)?)?;
+        }
+        self.adamw.step(grads)
+    }
+}
+
+/// Quintic Newton-Schulz iteration approximately orthogonalizing `g`
+/// (singular values pushed toward 1; with these coefficients they land
+/// in roughly [0.7, 1.2] after 5 steps, which is all Muon needs).
+fn newton_schulz5(g: &Tensor, steps: usize) -> CResult<Tensor> {
+    const A: f64 = 3.4445;
+    const B: f64 = -4.7750;
+    const C: f64 = 2.0315;
+    let (m, n) = g.dims2()?;
+    // Work on the wide orientation: the m×m gram matrix is the small one.
+    let t = m > n;
+    let mut x = if t { g.t()?.contiguous()? } else { g.clone() };
+    let norm = x.sqr()?.sum_all()?.sqrt()?.to_scalar::<f32>()? as f64 + 1e-7;
+    x = (x / norm)?;
+    for _ in 0..steps {
+        let a = x.matmul(&x.t()?)?;
+        let b = ((&a * B)? + (a.matmul(&a)? * C)?)?;
+        x = ((&x * A)? + b.matmul(&x)?)?;
+    }
+    if t { Ok(x.t()?.contiguous()?) } else { Ok(x) }
 }
 
 /// Loss weights: the auxiliary targets regularize, they don't compete.
@@ -480,7 +603,68 @@ impl Trainer {
         let vb = VarBuilder::from_varmap(&varmap, DType::F32, &dev);
         let model = build_model(cfg, vb)?;
         let opt = AdamW::new(varmap.all_vars(), ParamsAdamW { lr, ..Default::default() })?;
-        Ok(Trainer { varmap, model, opt, dev })
+        Ok(Trainer { varmap, model, opt: Opt::AdamW { o: opt, base_lr: lr }, dev })
+    }
+
+    /// [`new`](Self::new) with the Muon hybrid optimizer. Routing: a 2-D
+    /// `.weight` matrix goes to Muon unless it is an embedding table
+    /// (`emb`, `attn.group`, `tblocks.group`), a prediction head, or a
+    /// layer norm; everything else — and all 1-D tensors — goes to AdamW.
+    pub fn new_muon(cfg: &NetConfig, p: MuonParams) -> CResult<Trainer> {
+        let dev = Device::cuda_if_available(0)?;
+        let varmap = VarMap::new();
+        let vb = VarBuilder::from_varmap(&varmap, DType::F32, &dev);
+        let model = build_model(cfg, vb)?;
+        let (mut muon, mut rest) = (Vec::new(), Vec::new());
+        for (name, var) in varmap.data().lock().unwrap().iter() {
+            let hidden_matrix = name.ends_with(".weight")
+                && var.dims().len() == 2
+                && !name.starts_with("emb")
+                && !name.starts_with("head_")
+                && !name.contains("group")
+                && !name.contains("ln");
+            if hidden_matrix {
+                let buf = Tensor::zeros(var.dims(), DType::F32, &dev)?;
+                muon.push((name.clone(), var.clone(), buf));
+            } else {
+                rest.push(var.clone());
+            }
+        }
+        muon.sort_by(|a, b| a.0.cmp(&b.0)); // HashMap order is not a schedule
+        let adamw =
+            AdamW::new(rest, ParamsAdamW { lr: p.adamw_lr, ..Default::default() })?;
+        let opt = MuonOpt {
+            muon,
+            adamw,
+            lr: p.lr,
+            momentum: p.momentum,
+            base_lr: p.lr,
+            base_adamw_lr: p.adamw_lr,
+        };
+        Ok(Trainer { varmap, model, opt: Opt::Muon(opt), dev })
+    }
+
+    /// Drive an lr schedule: scale all optimizer lrs to `factor` × base.
+    pub fn set_lr_factor(&mut self, factor: f64) {
+        self.opt.set_lr_factor(factor);
+    }
+
+    /// Names of the matrices routed to Muon (empty under AdamW) — the
+    /// routing is part of the optimizer's contract, so it's testable.
+    pub fn muon_routed(&self) -> Vec<&str> {
+        match &self.opt {
+            Opt::AdamW { .. } => Vec::new(),
+            Opt::Muon(m) => m.muon.iter().map(|(n, _, _)| n.as_str()).collect(),
+        }
+    }
+
+    /// The current AdamW-side learning rate (post-schedule), for logging
+    /// and the schedule test.
+    pub fn current_lr(&self) -> f64 {
+        match &self.opt {
+            Opt::AdamW { o, .. } => o.learning_rate(),
+            Opt::Muon(m) => m.adamw.learning_rate(),
+        }
     }
 
     /// Which device the learner actually got.
@@ -1154,6 +1338,112 @@ mod tests {
                 "state {i}: engine {got} vs candle {want}"
             );
         }
+    }
+
+    /// The schedule's shape contract: full lr at step 0, half-decayed at
+    /// the horizon midpoint, the 10 % floor at and past the horizon,
+    /// monotone in between — and the factor actually reaches the
+    /// optimizer.
+    #[test]
+    fn cosine_schedule_shape_and_application() {
+        assert!((cosine_lr_factor(0, 1000) - 1.0).abs() < 1e-9);
+        assert!((cosine_lr_factor(500, 1000) - 0.55).abs() < 1e-9);
+        assert!((cosine_lr_factor(1000, 1000) - 0.1).abs() < 1e-9);
+        assert!((cosine_lr_factor(5000, 1000) - 0.1).abs() < 1e-9);
+        assert!((cosine_lr_factor(123, 0) - 1.0).abs() < 1e-9, "horizon 0 = schedule off");
+        let mut prev = f64::MAX;
+        for t in (0..=1000).step_by(50) {
+            let f = cosine_lr_factor(t, 1000);
+            assert!(f <= prev, "not monotone at t={t}");
+            prev = f;
+        }
+
+        let mut tr = Trainer::new(&small_cfg(), 1e-3).expect("trainer");
+        tr.set_lr_factor(cosine_lr_factor(500, 1000));
+        assert!((tr.current_lr() - 5.5e-4).abs() < 1e-12, "factor must reach AdamW");
+        let mut tm = Trainer::new_muon(&small_cfg(), MuonParams::default()).expect("muon");
+        tm.set_lr_factor(0.5);
+        assert!((tm.current_lr() - 0.5e-4).abs() < 1e-12, "factor must reach the muon hybrid");
+    }
+
+    /// Newton-Schulz on a diagonal matrix stays diagonal, so the diagonal
+    /// entries ARE the singular values — a closed-form view of the
+    /// orthogonalization. Inputs spanning two orders of magnitude must
+    /// come out near 1, or Muon is just momentum with extra matmuls.
+    #[test]
+    fn newton_schulz_flattens_singular_values() {
+        let dev = Device::Cpu;
+        let svs = [5.0f32, 1.0, 0.2, 0.05];
+        let mut m = vec![0.0f32; svs.len() * svs.len()];
+        for (i, s) in svs.iter().enumerate() {
+            m[i * svs.len() + i] = *s;
+        }
+        let g = Tensor::from_vec(m, (svs.len(), svs.len()), &dev).unwrap();
+        let o = newton_schulz5(&g, 5).unwrap();
+        let flat = o.flatten_all().unwrap().to_vec1::<f32>().unwrap();
+        let out: Vec<f32> = (0..svs.len()).map(|i| flat[i * svs.len() + i]).collect();
+        let (mn, mx) = out.iter().fold((f32::MAX, f32::MIN), |(a, b), v| (a.min(*v), b.max(*v)));
+        assert!(
+            mn > 0.3 && mx < 1.3 && mx / mn < 3.0,
+            "singular values {out:?} not flattened (input ratio 100:1)"
+        );
+    }
+
+    /// The routing is the optimizer's contract: hidden matrices to Muon,
+    /// embeddings/heads/biases/norms to AdamW.
+    #[test]
+    fn muon_routes_hidden_matrices_only() {
+        let cfg = NetConfig { attn: true, aux: true, ..small_cfg() };
+        let t = Trainer::new_muon(&cfg, MuonParams::default()).expect("muon trainer");
+        let routed = t.muon_routed();
+        for want in ["obj.weight", "trunk1.weight", "trunk2.weight", "attn.q.weight", "attn.o.weight"] {
+            assert!(routed.contains(&want), "{want} should be Muon-routed, got {routed:?}");
+        }
+        for banned in ["emb.weight", "head_win.weight", "head_aux.weight", "attn.group.weight", "obj.bias"] {
+            assert!(!routed.contains(&banned), "{banned} must stay on AdamW");
+        }
+        // And the AdamW-only construction routes nothing.
+        assert!(Trainer::new(&cfg, 1e-3).unwrap().muon_routed().is_empty());
+    }
+
+    /// Muon fits the same synthetic signal the AdamW test fits — the
+    /// end-to-end proof the hybrid step actually descends.
+    #[test]
+    fn muon_learns_the_synthetic_signal() {
+        let cfg = small_cfg();
+        let mut trainer = Trainer::new_muon(
+            &cfg,
+            MuonParams { lr: 0.02, momentum: 0.95, adamw_lr: 3e-3 },
+        )
+        .expect("muon trainer");
+        let mut rng = StdRng::seed_from_u64(11);
+        let rows: Vec<TrainRow> = (0..512)
+            .map(|_| {
+                let s = random_state(&mut rng, cfg.vocab);
+                let win = if s.global[0] > s.global[1] { 1.0 } else { 0.0 };
+                let life_diff = (s.global[0] - s.global[1]).clamp(-1.0, 1.0);
+                TrainRow { state: s, win, life_diff, game_len: 0.5, traj: 0, ply: 0, aux: [0.0; AUX_FEATS] }
+            })
+            .collect();
+        let mut last = f32::MAX;
+        for _ in 0..400 {
+            let batch: Vec<&TrainRow> =
+                (0..64).map(|_| &rows[rng.random_range(0..rows.len())]).collect();
+            last = trainer.train_step(&batch).expect("step").total;
+            if last < 0.02 {
+                break;
+            }
+        }
+        assert!(last < 0.08, "muon failed to fit: last loss {last}");
+        let mut correct = 0;
+        for _ in 0..100 {
+            let s = random_state(&mut rng, cfg.vocab);
+            let p = trainer.predict_win(&s).expect("predict");
+            if (p > 0.5) == (s.global[0] > s.global[1]) {
+                correct += 1;
+            }
+        }
+        assert!(correct >= 85, "only {correct}/100 fresh states classified");
     }
 
     /// The batched evaluator must be transparent: threads hammering the
