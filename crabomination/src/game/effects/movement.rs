@@ -2343,9 +2343,9 @@ impl GameState {
                 // opponent to protect it. In 2-player there is a single
                 // opponent; multiplayer protector choice is a follow-up.
                 if card.definition.is_battle() {
-                    if card.definition.defense > 0 {
-                        card.counters
-                            .insert(CounterType::Defense, card.definition.defense);
+                    let defense = card.definition.defense;
+                    if defense > 0 {
+                        card.counters.insert(CounterType::Defense, defense);
                     }
                     if card.protected_by.is_none() {
                         let ctrl = card.controller;

@@ -5427,15 +5427,10 @@ pub enum AttackBan {
     Active,
 }
 
-/// `Serialize`/`Deserialize` are implemented manually below — `definition`
-/// is round-tripped by *card name* (via `catalog::lookup_by_name`) rather
-/// than by serializing the full `CardDefinition` tree, which would force
-/// the parent's `Deserialize<'de>` impl to bound `'de: 'static` because
-/// of the `&'static str` name field. Manual impls let `CardInstance` be
-/// `Deserialize<'de>` for any `'de`, which is a hard requirement for
-/// containers like `Box<CardInstance>` inside `StackItem`.
+/// A card's mutable per-object state. Reached only through
+/// [`CardInstance`], which owns it behind an `Arc` — see that type for why.
 #[derive(Debug, Clone)]
-pub struct CardInstance {
+pub struct CardData {
     pub id: CardId,
     /// Static blueprint, shared behind an `Arc` so cloning a `CardInstance`
     /// (and therefore a whole `GameState` — the bot dry-runs every candidate
@@ -6078,6 +6073,55 @@ pub struct CardInstance {
     pub resolve_riders: Option<(bool, bool)>,
 }
 
+/// A card object: a copy-on-write handle around [`CardData`].
+///
+/// `CardData` is ~110 fields with a dozen `Vec`s and two `HashMap`s, and the
+/// engine clones whole zones constantly — the `perform_action` checkpoint,
+/// every bot dry-run probe. Behind the `Arc` a clone is a refcount bump and
+/// only a card that is actually *written* pays a deep copy, so unsharing a
+/// 20-permanent battlefield costs one card clone instead of twenty.
+/// `Deref`/`DerefMut` make it read and write like the plain struct, so
+/// `card.tapped = true` still works — it just unshares that one card first.
+///
+/// `Serialize`/`Deserialize` are implemented manually below — `definition`
+/// is round-tripped by *card name* (via `catalog::lookup_by_name`) rather
+/// than by serializing the full `CardDefinition` tree, which would force
+/// the parent's `Deserialize<'de>` impl to bound `'de: 'static` because
+/// of the `&'static str` name field. Manual impls let `CardInstance` be
+/// `Deserialize<'de>` for any `'de`, which is a hard requirement for
+/// containers like `Box<CardInstance>` inside `StackItem`.
+#[derive(Clone)]
+pub struct CardInstance(Arc<CardData>);
+
+impl std::ops::Deref for CardInstance {
+    type Target = CardData;
+    #[inline]
+    fn deref(&self) -> &CardData {
+        &self.0
+    }
+}
+
+/// The unshare point: every `&mut` reach into a card goes through here, so a
+/// shared card is cloned exactly once and then written in place.
+impl std::ops::DerefMut for CardInstance {
+    #[inline]
+    fn deref_mut(&mut self) -> &mut CardData {
+        Arc::make_mut(&mut self.0)
+    }
+}
+
+impl std::fmt::Debug for CardInstance {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        std::fmt::Debug::fmt(&*self.0, f)
+    }
+}
+
+impl From<CardData> for CardInstance {
+    fn from(data: CardData) -> Self {
+        Self(Arc::new(data))
+    }
+}
+
 impl CardInstance {
     /// The instant/sorcery alternate half (Adventure or Omen) this card is
     /// currently on the stack as, if any. While set, the card resolves down the
@@ -6112,7 +6156,7 @@ impl CardInstance {
         if definition.is_battle() && definition.defense > 0 {
             counters.insert(CounterType::Defense, definition.defense);
         }
-        Self {
+        CardData {
             id,
             definition,
             owner,
@@ -6262,6 +6306,7 @@ impl CardInstance {
             protected_by: None,
             resolve_riders: None,
         }
+        .into()
     }
 
     pub fn new_token(id: CardId, definition: impl Into<Arc<CardDefinition>>, owner: usize) -> Self {
@@ -6628,10 +6673,11 @@ impl CardInstance {
                 }
             }
         }
-        self.definition = Arc::new(def);
         // CR 730.2d — the merged permanent is a token only if its *topmost*
         // component is one.
-        self.is_token = top.is_token;
+        let top_is_token = top.is_token;
+        self.definition = Arc::new(def);
+        self.is_token = top_is_token;
     }
 
     pub fn can_attack(&self) -> bool {

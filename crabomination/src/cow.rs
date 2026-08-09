@@ -16,7 +16,10 @@ use std::sync::Arc;
 /// Sharp edge: any `&mut` access (including `iter_mut` used read-only)
 /// copies the whole inner value while a snapshot shares it. That is never
 /// *worse* than the eager clone this replaces, but prefer `&self` access
-/// on hot read paths.
+/// on hot read paths. For the card zones the edge is blunt:
+/// [`CardInstance`](crate::card::CardInstance) is itself a CoW handle, so
+/// unsharing a zone copies a vector of pointers and only the cards actually
+/// written pay a deep clone.
 #[derive(Debug)]
 pub struct CowBox<T: Clone>(Arc<T>);
 
