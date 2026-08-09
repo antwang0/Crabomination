@@ -39,16 +39,25 @@ impl GameState {
         &self,
         ids: &[CardId],
     ) -> Vec<crate::card::SelectionRequirement> {
-        let computed = self.compute_battlefield();
-        computed
-            .iter()
-            .filter(|c| ids.contains(&c.id))
-            .flat_map(|c| c.keywords.iter())
-            .filter_map(|k| match k {
-                Keyword::BandsWithOther(q) => Some((**q).clone()),
-                _ => None,
-            })
-            .collect()
+        // The band is 2-3 cards; computing all ~20 permanents to read their
+        // keywords was the whole cost. Walk the battlefield for order, but
+        // compute only the members — under one freeze so they share a gather.
+        self.with_frozen_layers(|g| {
+            g.battlefield
+                .iter()
+                .filter(|c| ids.contains(&c.id))
+                .filter_map(|c| g.computed_permanent(c.id))
+                .flat_map(|c| {
+                    c.keywords
+                        .iter()
+                        .filter_map(|k| match k {
+                            Keyword::BandsWithOther(q) => Some((**q).clone()),
+                            _ => None,
+                        })
+                        .collect::<Vec<_>>()
+                })
+                .collect()
+        })
     }
 
     /// CR 702.22j — is this set of blockers a "bands with other [quality]"
@@ -2314,20 +2323,20 @@ impl GameState {
     // ── Combat resolution ─────────────────────────────────────────────────────
 
     pub(crate) fn has_first_strikers(&self) -> bool {
-        let computed = self.compute_battlefield();
-        let kws_of = |id: CardId| -> &[Keyword] {
-            computed
-                .iter()
-                .find(|c| c.id == id)
-                .map(|c| c.keywords.as_slice())
-                .unwrap_or(&[])
-        };
-        self.attacking.iter().any(|atk| {
-            kws_of(atk.attacker).contains(&Keyword::FirstStrike)
-                || kws_of(atk.attacker).contains(&Keyword::DoubleStrike)
-        }) || self.block_map.keys().any(|&id| {
-            kws_of(id).contains(&Keyword::FirstStrike)
-                || kws_of(id).contains(&Keyword::DoubleStrike)
+        // Asked once per combat-damage step about the 2-6 combat
+        // participants; computing the whole board for it was the cost.
+        if self.attacking.is_empty() && self.block_map.is_empty() {
+            return false;
+        }
+        self.with_frozen_layers(|g| {
+            let strikes_first = |id: CardId| {
+                g.computed_permanent(id).is_some_and(|c| {
+                    c.keywords.contains(&Keyword::FirstStrike)
+                        || c.keywords.contains(&Keyword::DoubleStrike)
+                })
+            };
+            g.attacking.iter().any(|atk| strikes_first(atk.attacker))
+                || g.block_map.keys().any(|&id| strikes_first(id))
         })
     }
 
