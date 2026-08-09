@@ -16,43 +16,45 @@ reference and want their own triage pass):
 
 ## NEXT (handoff — rewrite each run, keep under 15 lines)
 
-Branch `claude/modern_decks`. Ninth pass: five perf rows, one shape.
-**7,994,965,799 -> 7,035,606,377 Ir on the fixed six-game workload, -12.00 %**,
-and **43.29 -> 47.86 games/s, +10.6 %, 4/4 pairs** at `release` + mimalloc
-(different, slower box than the last anchor — read the Baseline box line).
+Branch `claude/modern_decks`. Ninth pass, all perf plus one defect.
+**7,994,965,799 -> 6,538,441,281 Ir on the fixed six-game workload, -18.22 %**
+over six callgrind A/Bs, and **43.29 -> 54.52 games/s, +25.9 %** at
+`release` + mimalloc (slower box than the last anchor — read Baseline's box
+line; the tip's slowest run beats every pre-run run).
 
-- **Four of the five rows were one shape**: a per-card loop rebuilding a
-  board-level scan. `GrantScan` (-2.58 %), `granted_abilities_for`'s eight
+- **One shape produced five of the six rows: a loop rebuilding a board-level
+  scan.** `GrantScan` (-2.58 %), `granted_abilities_for`'s eight
   `battlefield_find`s collapsed to one (-1.56 %), the trigger-grant hoist
-  (-3.39 %), and the layer pass reading counters in one map walk instead of
-  ten lookups (-2.87 %). **The tell**: cost in `slice/iter/macros.rs` +
-  `ptr/non_null.rs` rather than the function's own file. **The trap**: a
-  scan already hoisted into a `_with` variant can still be O(n²) — grep the
-  `_for` shim's callers for a surrounding loop. That is what candidate 2's
-  triggered half was, for a whole run.
-- **Candidate 1.7 landed at -2.21 %**, an eighth of candidate 7 on the same
-  shape. A CoW handle pays in proportion to the siblings sharing the
-  unshare: 20 cards/1 written vs 2 seats/1 written. Count first next time.
-  Also measured and rejected: gating a `&mut` to skip an unshare (-0.04 %,
-  the next writer pays it) and an `is_empty()` guard inside `counter_count`
-  (-0.02 %, hashbrown already does it).
-- **Next up, in order**: (1) **the gather is back to #1 by a wide margin** —
-  918 M self / 13.1 %, 1.55 G inclusive / **22.0 %**, 2,559 Ir/call over
-  358,792 calls, and a third of it is still walking. (2) `compute_battlefield`
-  833 M / 11.8 %, of which **627 M is `Vec::from_iter`** materializing a
-  fresh `ComputedPermanent` for the whole board on each of 46 k calls — ask
-  item 0's question of its callers before memoizing. (3) candidate 4.
-- **Bugs**: the zero-count-counter defect (CR 700.9 "modified" reading true
-  for permanents with nothing on them) is **fixed** — accessors keep the
-  invariant, both readers ask `values().any(n > 0)`, three regression tests.
-  Still open in "Engine — Robustness / defects" above: `keyword_counters`
+  (-3.39 %), the layer pass reading counters in one map walk instead of ten
+  lookups (-2.87 %), and — biggest of all — **Coat of Arms' gather pass
+  building a whole-board creature `Vec` before checking whether the static
+  that consumes it exists (-7.07 %)**. Candidate 1.7 (`Player` CoW) was the
+  odd one out at -2.21 %.
+- **The tell**: cost in `slice/iter/macros.rs` + `ptr/non_null.rs` rather
+  than the function's own file. **Two traps paid for**: a scan hoisted into
+  a `_with` variant can still be O(n²) — grep the `_for` shim's callers for
+  a surrounding loop; and a CoW handle pays in proportion to the siblings
+  sharing the unshare (20 cards/1 written = -25.6 %, 2 seats/1 = -2.2 %).
+  Nulls, recorded so nobody redoes them: gating a `&mut` to skip an unshare
+  (-0.04 %) and an `is_empty()` guard inside `counter_count` (-0.02 %).
+- **Next up, in order**: (1) **`compute_battlefield`'s 627,670,300 Ir
+  (9.60 %) of `Vec::from_iter`** — a fresh `ComputedPermanent` for the whole
+  board on each of 46 k calls, and the most concentrated single item left.
+  Ask item 0's question of its callers (`check_state_based_actions` 10.1 %,
+  `declare_blockers`) before memoizing. (2) the gather, still #1 at 1,056 M
+  inclusive / 16.2 %, 2,943 Ir/call, about a third of it still walking —
+  and **the Coat of Arms row says to re-read every remaining pass for the
+  same build-then-check shape**. (3) candidate 4.
+- **Bugs**: the zero-count-counter defect (CR 700.9 "modified" true on
+  permanents with nothing on them) is **fixed**, three regression tests.
+  Still open in "Engine — Robustness / defects": `keyword_counters`
   `HashMap` order reaching a `Vec` in `layers.rs`. The panic/unwrap sweep of
   the self-play path is still untouched (90 `unwrap()` under `game/` +
   `bot.rs`).
-- **Disk**: two concurrent `release` builds + `profiling-fast` + a worktree
-  ran to 22 G of 37 G. `release` engine builds took 27 min each running two
-  at a time; `profiling-fast` is 3.5 min and is what A/B iteration should use.
-- **Trackers**: TODO 821, roadmap 660, `PERF.md` 578, `INCOMPLETE_CARDS` 247.
+- **Disk**: `target/debug/incremental` hit 13 G again; deleting it freed 13 G.
+  `release` engine builds are 27 min; `profiling-fast` is 3.5 min and is
+  what A/B iteration should use.
+- **Trackers**: TODO 819, roadmap 660, `PERF.md` 578, `INCOMPLETE_CARDS` 247.
 
 ## Environment note
 

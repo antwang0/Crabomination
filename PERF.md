@@ -117,13 +117,11 @@ contention-immune, which makes it the better first look.
 ## Baseline
 
 Re-anchored (`release`, mimalloc — the shipped configuration) at the
-2026-08-09 trigger-grant-hoist commit. **Read the box line before comparing
-to the previous anchor: this is a different, slower host** — Xeon @ 2.10GHz,
-`host_calib_ms` 48-70, against the previous anchor's Xeon @ 2.80GHz at
-45-51. The previous anchor's *code* reads **43.29 games/s here**, so the box
-is worth about -11 % and the absolutes below do not subtract against 48.74.
-What does carry is the alternated A/B in the block underneath, measured on
-this box in one sitting: **43.29 -> 47.86 games/s, +10.6 %, 4/4 pairs**.
+2026-08-09 Coat of Arms gate, i.e. the tip. **Read the box line before
+comparing to the previous anchor: this is a different, slower host** — Xeon
+@ 2.10GHz, `host_calib_ms` 48-70, against the previous anchor's 2.80GHz at
+45-51. The pre-run code reads **43.29 games/s here**, so the box is worth
+about -11 % and these absolutes do not subtract against the old 48.74.
 Refresh only alongside an intentional, explained change.
 Regressions beyond ~5 % get investigated before anything else lands — but
 check `host_calib_ms` first (see "How to measure").
@@ -134,38 +132,45 @@ bot_ladder --bench   release, rustc 1.95.0, 4-core VM, 3 worker threads
 host_cpu             Intel(R) Xeon(R) Processor @ 2.10GHz   <- NOT the 2.80GHz
                                                                box of the
                                                                previous anchor
-host_calib_ms        60 / 56 / 56 / 56            <- compare this first
+host_calib_ms        51 / 55 / 50 / 48            <- compare this first
 games                320
-games_per_s          44.89 / 47.11 / 48.00 / 51.43   (mean 47.86, spread 14 %)
-games_per_s_th       14.96 / 15.70 / 16.00 / 17.14
-decisions_per_s      27104 / 28444 / 28986 / 31056   (mean 28898)
+games_per_s          52.72 / 55.41 / 54.50 / 55.43   (mean 54.52, spread 5 %)
+games_per_s_th       17.57 / 18.47 / 18.17 / 18.48
+decisions_per_s      31837 / 33461 / 32910 / 33469   (mean 32919)
 turns_per_game       26.98
 stalls               0 (0.00 %)
-peak_rss_mib         23.5 - 23.7
+peak_rss_mib         23.4 - 23.9
 determinism          ok (all 160 pairs split, every run)
 ```
 
-**What this run is worth, measured end to end.** The pre-run tip
-(`e354379e`) and this one, both built `release` + mimalloc, alternated
-A/B/A/B ×4 in one sitting on one box:
+**What this run is worth, measured end to end.** Three sets of `--bench`
+runs on one box in one sitting, all `release` + mimalloc:
 
 ```text
-release + mimalloc, --bench, 4 alternated pairs   <- the shipped configuration
-games_per_s      43.29 -> 47.86      +10.6 %   4/4 pairs positive
-                 (40.71-45.71)  (44.89-51.43)  paired +3.48/+6.40/+2.29/+6.09
-decisions_per_s  26142 -> 28898      +10.5 %
-peak_rss_mib      24.0 ->  23.6      -2 %
-host_calib_ms    48-70 vs 56-60; turns_per_game 26.98 and stalls 0 on all
-                 8 runs; determinism ok, all 160 pairs split every run
+release + mimalloc, --bench   <- the shipped configuration
+pre-run tip e354379e   43.29 games/s mean  (40.71-45.71)  26142 dec/s
+trigger-grant hoist    47.86              (44.89-51.43)  28898
+Coat of Arms gate      54.52              (52.72-55.43)  32919   <- the tip
+
+whole run              43.29 -> 54.52     +25.9 %,  dec/s +25.9 %
 ```
 
-The distributions overlap by one run (base's best 45.71 against the tip's
-worst 44.89) — this box's spread is wide and its `host_calib_ms` moved 48-70
-across the base runs. The paired reading is what carries: every one of the
-four alternated pairs is positive, and the mean matches the **-12.00 %
-instructions** the Log rows measured deterministically. Ir is the arbiter
-for the individual rows; this block is the sanity check that the shipped
-configuration sees them.
+The first two were measured **alternated A/B/A/B ×4** and every one of the
+four pairs was positive (+3.48 / +6.40 / +2.29 / +6.09). The third set is
+not alternated against the first — it was taken after the base binary was
+deleted — but it does not need to be: **its slowest run (52.72) beats the
+fastest of the other eight (51.43)**, and its `host_calib_ms` (48-55) sits
+inside the base runs' range (48-70), so the box was if anything kinder to
+the base. `turns_per_game` 26.98 and `stalls` 0 on all twelve runs;
+determinism ok, all 160 pairs split every run; peak RSS 24.0 -> 23.7.
+
++25.9 % wall-clock against **-18.22 % instructions** is the expected shape:
+Ir undercounts allocation and cache effects, and this run removed a `Vec`
+allocation per gather on top of the walking.
+
+Ir is the arbiter for the individual Log rows — this box cannot resolve a
+2 % change by wall-clock. This block is the check that the shipped
+configuration actually sees them, and it does.
 
 Older anchors, kept because the percentages carry even though the absolutes
 don't: 45.72 -> 48.74 games/s (+6.6 %) at the previous run's gather commit
@@ -246,18 +251,18 @@ percentages are what carry over.
 Callgrind on `profiling-fast --no-default-features` (= `release-fast` opt
 settings + debuginfo; system allocator, because valgrind replaces malloc and
 a mimalloc build would measure the interception), 1 thread, `--a gang --b
-gang --games 6 --seed 1 --decks fixed`. Retaken 2026-08-09 at the
-trigger-grant-hoist commit, i.e. *after* every row in the Log.
+gang --games 6 --seed 1 --decks fixed`. Retaken 2026-08-09 at the Coat of
+Arms gate, i.e. *after* every row in the Log.
 
-**7.04 G instructions for six games**, from 7.99 G at this run's start and
+**6.54 G instructions for six games**, from 7.99 G at this run's start and
 14.40 G two runs ago on the same workload.
 
 Self cost, grouped (share at this run's start in brackets):
 
 | share | site | note |
 |---|---|---|
-| 13.1 % | `gather_continuous_effects_inner` | [11.5 %] 918 M over 358,792 calls = **2,559 Ir/gather**. Untouched this run in absolute terms (918 M then and now); the share rose because the total fell. **Now #1 by a wide margin and the obvious next pull.** Its cost is split `ptr::non_null` 249 M / `mod.rs`'s own lines 229 M / `slice::iter` 202 M / `option.rs` 147 M / `vec` 92 M — so it is *still* about a third walking even after last run's eleven-into-one fold. |
-| 15.9 % | `_int_malloc` 4.81 / `_int_free` 4.40 / `malloc` 3.19 / `free` 1.93 | [12.1 %] flat in absolute terms, rising in share |
+| 11.4 % | `gather_continuous_effects_inner` | [11.5 %] `mod.rs`'s own lines 229 M / `ptr::non_null` 213 M / `slice::iter` 162 M. **1,056 M inclusive over 358,792 calls = 2,943 Ir/gather**, from 4,322 at this run's start (the Coat of Arms gate alone took it 1,551 M → 1,056 M). Still the #1 engine function, and still about a third walking. |
+| 14.5 % | `_int_malloc` 4.75 / `_int_free` 4.32 / `malloc` 3.20 / `free` ~1.9 | [12.1 %] falling in absolute terms now (338 M → 311 M) — the Coat of Arms `Vec` was one allocation per gather |
 | 3.60 % | `__memcpy_avx_unaligned_erms` | |
 | 2.29 % | `compute_permanent_pass` | [2.75 %] 222 M → 161 M, the counter-fold row |
 | 1.27 % | `hashbrown RawTable::clone` | candidate 6; 2,493,330 of its calls come from `GameState::clone` |
@@ -266,20 +271,16 @@ Self cost, grouped (share at this run's start in brackets):
 | — | `CardInstance::counter_count` | was 1.48 %; gone with the counter-fold |
 | — | `trigger_grant_sources` | was 1.02 % self plus ~198 M of walking; gone with the hoist |
 
-Inclusive, in caller terms (these overlap each other):
+Inclusive, in caller terms (these overlap each other), at the tip:
 
 | Ir | share | site |
 |---|---|---|
-| 1,617,222,849 | 22.99 % | `computed_permanent` |
-| 1,550,667,623 | 22.04 % | `gather_continuous_effects_inner` |
-| 833,290,308 | 11.84 % | `compute_battlefield` — of which 627 M is `Vec::from_iter`, i.e. materializing the whole board's `ComputedPermanent`s |
-| 728,040,366 | 10.35 % | `compute_permanent_pass` |
-| 692,837,294 | 9.85 % | `check_state_based_actions` |
-| 551,859,825 | 7.84 % | `dispatch_triggers_for_events` |
-| 473,842,498 | 6.73 % | `GameState::clone` — was 967 M before candidate 1.7 |
-| 397,957,839 | 5.66 % | `drop_in_place<GameState>` |
-| 325,643,262 | 4.63 % | `Player::deref_mut` — the unshare candidate 1.7 pays for |
-| 277,452,209 | 3.94 % | `mana_source_table` |
+| 1,249,398,910 | 19.11 % | `computed_permanent` — was 1,617 M / 23.0 % before the Coat of Arms gate |
+| 1,056,111,669 | 16.15 % | `gather_continuous_effects_inner` — was 1,551 M / 22.0 % |
+| 770,675,875 | 11.79 % | `compute_battlefield` |
+| 627,670,300 | **9.60 %** | └ of which `Vec::from_iter`, i.e. materializing a fresh `ComputedPermanent` for the whole board on each of its 46 k calls. **The most concentrated single item left.** |
+| 727,883,931 | 11.13 % | `compute_permanent_pass` |
+| 657,495,558 | 10.06 % | `check_state_based_actions` |
 
 **The read after this run.** Every per-card-loop-rebuilds-a-board-scan site
 the profile named is fixed; the four rows that came from that one shape
