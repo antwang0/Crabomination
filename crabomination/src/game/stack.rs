@@ -744,13 +744,16 @@ impl GameState {
             EventScope::ControllerAttackedByOpponent
             | EventScope::ControllerPlaneswalkerAttackedByOpponent => false, // combat-based
         };
+        // One board-level scan for the whole walk: the per-card shim rebuilds
+        // it, so asking it per battlefield permanent is O(cards²).
+        let trigger_grants = self.trigger_grant_sources();
         let mut candidates: Vec<(CardId, Effect, usize, Option<crate::card::Predicate>)> = self
             .battlefield
             .iter()
             .flat_map(|c| {
                 // Printed triggers plus statics-granted ones (Kataki's "All
                 // artifacts have '…upkeep…'"), both firing off `c`.
-                let granted = self.statics_granted_triggers_for(c);
+                let granted = self.statics_granted_triggers_with(c, &trigger_grants);
                 c.definition
                     .triggered_abilities
                     .iter()

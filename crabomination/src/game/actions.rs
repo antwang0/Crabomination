@@ -11057,6 +11057,10 @@ impl GameState {
             .filter(|c| !stripped.contains(&c.id))
             .map(|c| (c.id, c.controller))
             .collect();
+        // Both grant lists are board-level: the per-card shims rebuild them,
+        // so asking them per live permanent is O(cards²).
+        let trigger_grants = self.trigger_grant_sources();
+        let equip_grants = self.equip_granted_trigger_sources();
         for (cid, c_controller) in live {
             let Some(c) = self.battlefield.iter().find(|c| c.id == cid) else { continue };
             for (idx, t) in c.definition.triggered_abilities.iter().enumerate() {
@@ -11065,9 +11069,9 @@ impl GameState {
                 }
             }
             for t in self
-                .statics_granted_triggers_for(c)
+                .statics_granted_triggers_with(c, &trigger_grants)
                 .into_iter()
-                .chain(self.equip_granted_triggers_for(c))
+                .chain(self.equip_granted_triggers_with(c, &equip_grants))
             {
                 if t.event.kind == EventKind::SpellCast && scope_matches(t.event.scope, c_controller) {
                     candidates.push((cid, c_controller, t.effect, t.event.filter, usize::MAX, false));
