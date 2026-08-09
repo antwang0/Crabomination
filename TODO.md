@@ -20,7 +20,8 @@ Branch `claude/modern_decks`. Tenth pass: three commits, two perf and one
 defect. **6,497,854,664 -> 6,150,469,969 Ir on the fixed six-game workload,
 -5.35 %** over four callgrind A/Bs, and **55.72 -> 58.70 games/s, +5.35 %**
 at `release` + mimalloc — a same-box alternated A/B against the pre-run tip,
-4/4 pairs positive. The two methods agreeing to two digits is new; read
+4/4 pairs positive (the anchor reads 60.46 after rebasing onto the ML run's
+three commits; they don't touch the bench path). The two methods agreeing to two digits is new; read
 Baseline's box line before comparing absolutes to the last anchor.
 
 - **The run's row is `f1908d4f`, -4.37 %**: the gather's `AnthemForFilter`

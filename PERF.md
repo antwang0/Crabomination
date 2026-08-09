@@ -128,15 +128,22 @@ Regressions beyond ~5 % get investigated before anything else lands.
 ```text
 bot_ladder --bench   release, rustc 1.95.0, 4-core VM, 3 worker threads
                      mimalloc (the default); measured on an idle box
-host_calib_ms        46 / 45 / 48 / 45            <- compare this first
+host_calib_ms        49 / 45 / 46 / 46            <- compare this first
 games                320
-games_per_s          59.47 / 58.75 / 57.02 / 59.57   (mean 58.70, spread 4 %)
-decisions_per_s      35914 / 35477 / 34433 / 35973   (mean 35449)
+games_per_s          60.13 / 60.44 / 61.06 / 60.21   (mean 60.46, spread 2 %)
+decisions_per_s      36312 / 36496 / 36870 / 36358   (mean 36509)
 turns_per_game       26.98
 stalls               0 (0.00 %)
-peak_rss_mib         22.1 - 22.7
+peak_rss_mib         22.0 - 22.6
 determinism          ok (all 160 pairs split, every run)
 ```
+
+Taken at the branch tip *after* rebasing onto the concurrent ML run's three
+commits (actor softmax sampling + the committed champion net). Those don't
+touch the `--bench` path — `gang` is a weights profile, and sampling is
+thread-local and off unless `--sample-temp` installs it — and the numbers
+agree: 60.46 against the 58.70 this run's own A/B measured an hour earlier
+on the same box, i.e. no regression from the merge.
 
 **What this run is worth, measured end to end.** Four alternated pairs in one
 sitting, both sides `release` + mimalloc on the same idle box:
