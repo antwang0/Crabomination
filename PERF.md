@@ -254,7 +254,8 @@ percentages are what carry over.
 | 2026-08-09 | `Player` becomes a CoW handle: the ~165 fields move to `PlayerData` behind an `Arc`, `Deref`/`DerefMut` keep every `player.field` read and write working, and `DerefMut` is the single unshare point (candidate 1.7) | 7,994,965,799 Ir | 7,818,537,433 Ir (**-2.21 %**) | Candidate 7 one level up, and the ceiling is much lower for the reason the shape implies: there are **two seats, not twenty cards**, and one of them is written on essentially every checkpoint. `GameState::clone` inclusive **967,524,311 → 473,827,424 (-51.0 %)** and `drop_in_place<GameState>` 441,814,641 → 396,985,432, against a new `Player::deref_mut` line at **326,104,839 (4.17 % of the program)** — i.e. the change removes the *other* seat's deep copy and nothing else. Six borrow-checker fixes, all one kind: a `&mut` field borrow now borrows the whole seat, so three loops re-borrow per zone, `manifest_card` scans library-then-hand instead of chaining, and `find_card_anywhere_mut` locates with shared borrows before taking the one `&mut` (which also stops it unsharing every seat on a miss). Snapshot wire format unchanged — `Player`'s serde impls are transparent over `PlayerData`. Rider measured at **-0.04 %**: `empty_mana_pools` gets a read-only fast path (plus `ManaPool::is_empty()`, stricter than `total() == 0`) so it stops taking `&mut` on 51 k step changes with nothing to do; kept for the sharp edge it documents, not the instructions — **the deep copy it skips is mostly paid by the next writer in the same checkpoint**, which is the general lesson for CoW gating. Callgrind A/B on identical `profiling-fast --no-default-features` binaries, fixed six-game workload. `core_rules` 1664 passed / 0 failed; golden traces byte-identical. |
 | 2026-08-09 | `granted_abilities_for` looks its own card up once instead of eight times, and classifies the five "has the activated abilities of …" statics in one pass | 7,818,537,433 Ir | 7,696,302,458 Ir (**-1.56 %**) | The function ran `battlefield_find(card_id)` — a linear scan of the whole battlefield — once at the top and again inside each of seven blocks, all resolving to the same card (the top one early-returns when the card is off the battlefield, so the later seven could never differ). It is called ~233 k times per six games from three per-card loops, so the redundant scans multiply. `granted_abilities_for` **411,928,730 → 291,885,476 inclusive (-29.1 %)**, its `ptr::non_null` line 120,941,056 → 79,449,414 (-34.3 %) — pointer advance, the same signature the gather fold read. Push order into `out`, which indexes `GameAction::ActivateAbility`, is unchanged. `core_rules` 1664 passed / 0 failed; golden traces byte-identical. |
 | 2026-08-09 | `GrantScan`: the board-level half of `granted_abilities_for` is hoisted out of the per-card loops (candidate 2's shape, applied to activated rather than triggered grants) | 7,696,302,458 Ir | 7,497,680,035 Ir (**-2.58 %**) | What was left in `granted_abilities_for` after the row above was **four whole-board walks per call**: `all_static_sources()` (battlefield + command zones) for `GrantActivatedAbility` statics, both graveyards for `GrantActivatedAbilityFromGraveyard`, and two more battlefield passes for soulbond pairs and attached `equipped_bonus`. None of those depend on *which* permanent is asking — including the CR 611.2 `active_static` unwrap and the Hellbent-style `condition` predicate, both of which read only the source. `grant_scan()` collects them in one pass and `granted_abilities_with(card_id, &scan)` does the per-card half. Threaded into the five per-card loops that were paying it: `mana_source_table_inner`, `untapped_relevant_source_exists_inner`, `untapped_producers_of_inner`, `bot::available_mana`, and `bot::usable_abilities` (six call sites). `granted_abilities_for` keeps its old signature by building a scan of its own, so the ~18 k non-loop callers are unaffected. Emission order into `out` is preserved exactly — each scan `Vec` is filled in the source-iteration order the old inline loop used. Callgrind A/B on identical `profiling-fast --no-default-features` binaries. Full suite green; golden traces byte-identical. |
-| | **cumulative this run** | **7,994,965,799 Ir** | **7,497,680,035 Ir (-6.22 %)** | three alternated `profiling-fast --no-default-features` callgrind A/Bs on the one fixed six-game workload, so the three rows subtract honestly |
+| 2026-08-09 | `compute_permanent_pass` reads the permanent's counters in one pass of the map instead of ten keyed `counter_count` lookups | 7,497,680,035 Ir | 7,282,343,054 Ir (**-2.87 %**) | The CR 613.7f P/T block asked for ten counter kinds by name (`PlusOnePlusOne`, `MinusOneMinusOne` and the eight one-sided ones), and it runs **per card per layer pass — 12.0 M per-card computations for six games**. The caller tree named it exactly: `compute_permanent_pass` → `counter_count` **12,775,080 calls, 166,076,040 Ir**, on permanents that carry one or two counter kinds when they carry any. Now one `for (kind, n) in &card.counters` with a ten-arm match. Summing is order-independent, so the `HashMap` iteration order can't leak into game state — the golden traces, which are the cross-process determinism check, are byte-identical. **Measured first and rejected on the way here**: an `is_empty()` fast path *inside* `counter_count` read **-0.02 %**, because hashbrown's `get_inner` already early-returns on an empty table before hashing. The cost was never the lookup, it was making ten calls; reverted. Full suite 18090 passed / 0 failed; clippy clean. |
+| | **cumulative this run** | **7,994,965,799 Ir** | **7,282,343,054 Ir (-8.91 %)** | four alternated `profiling-fast --no-default-features` callgrind A/Bs on the one fixed six-game workload, so the four rows subtract honestly |
 
 ## Profile of record
 
@@ -451,20 +452,22 @@ methodological notes, each learned the hard way:
    synthesize, so `Vec<(usize, Cow<'_, ActivatedAbility>)>` covers it. Small,
    local, and the numbers are already attached — a good next pull.
 
-1.7 **`Player` is the last non-CoW checkpoint cost — the top item after the
-   gather.** The 2026-08-09 line-level attribution reads
-   `GameState::clone` at **768,854,629 Ir (8.65 %) over 64,248 calls
-   (11,967 Ir per clone)**, plus `drop_in_place<GameState>` at 319,829,660
-   (3.60 %) — ~12.3 % of the program in state checkpointing. Of the clone,
-   **`players: self.players.clone()` alone is 488,350,327 Ir (5.49 %)**,
-   against 160,860 for `battlefield` (a `CowBox` `Arc` bump) and 160,860 for
-   `exile`. `Player` is a plain struct with **165 fields** — its zones are
-   already `CowBox`, but the ~30 per-turn `Vec`/`HashSet` tallies, the
-   `String` name and the rest are deep-copied per player per checkpoint.
-   This is candidate 7 one level up and takes the same fix: `Player` becomes
-   `Arc<PlayerData>` with `Deref`/`DerefMut`, `DerefMut` the single unshare
-   point, so `players.clone()` is N `Arc` bumps and only a written player
-   unshares. Candidate 7 was worth -25.6 % Ir on the same shape.
+1.7 ~~**`Player` is the last non-CoW checkpoint cost.**~~ **Done, -2.21 % Ir.**
+   See the Log row. It was worth an eighth of what candidate 7 was worth on
+   the same shape, and the reason generalises: **a CoW handle pays off in
+   proportion to how many siblings share the unshare.** Twenty cards in a
+   zone and one written is a 20x saving; two seats and one written is 2x, and
+   half of that 2x is all this returned. `GameState::clone` still halved
+   (967 M -> 474 M inclusive) — the new `Player::deref_mut` line is 326 M
+   against the 494 M saved. **Before costing the next CoW candidate, count
+   the siblings.**
+   What the row also settled, and it cost a build to learn: **gating a `&mut`
+   to skip an unshare is usually worthless.** `empty_mana_pools` was the
+   single biggest unshare source (153 M, 1.96 %) doing nothing on 51 k step
+   changes; a read-only fast path in front of it returned **-0.04 %**,
+   because the seat it declines to unshare is unshared by the next writer in
+   the same checkpoint anyway. Gate a `&mut` for clarity, not for
+   instructions — unless the checkpoint really has no other writer.
 
 2. **The dispatcher's per-card trigger gathering.** With the
    `compute_battlefield` call gone, the remaining per-card work in
@@ -474,6 +477,15 @@ methodological notes, each learned the hard way:
    dispatch — O(cards²) against `all_static_sources`. Hoist the
    "which sources carry a `GrantTriggeredAbility`" scan out of the per-card
    loop, the same shape as the layer-gather filter that won +27.8 %.
+   **The activated-ability half of this is done, -2.58 %** — see the
+   `GrantScan` Log row, which is the exact pattern this item asks for. The
+   triggered half already has its board-level list (`trigger_grant_sources` +
+   `statics_granted_triggers_with`), so what is left here is the *cost of
+   building that list*: `trigger_grant_sources` is **199 M (2.6 %) spread
+   over `option.rs` / `mut_ptr.rs` / `ptr::non_null.rs`**, i.e. all walking,
+   and it is rebuilt per dispatch. Two reads: does every dispatch need it
+   (gate on the event set), and can the board walk be shared with
+   `grant_scan`, which now walks the same sources for the activated half.
 3. ~~**The gather.**~~ **Largely done, -9.02 % program Ir / -36.7 % of the
    gather.** See the Log row. What the line-level attribution settled, and
    what is left:

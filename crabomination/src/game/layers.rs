@@ -526,22 +526,32 @@ fn compute_permanent_pass(
     // CR 613.7f — +1/+1, -1/-1, and the rarer one-sided counters
     // (-0/-1, -0/-2, -1/-0, +1/+0, +0/+1, +2/+0, +0/+2), which affect only one
     // of power/toughness, so track per-stat deltas.
+    // One pass over the permanent's counters rather than ten keyed lookups:
+    // this runs per card per layer pass (12.0 M per-card computations for six
+    // bot games), and a permanent carries one or two counter kinds when it
+    // carries any at all. Summing over the map is order-independent, so the
+    // `HashMap` iteration order cannot leak into game state.
     let (counter_power_delta, counter_toughness_delta) = {
-        let plus = card.counter_count(CounterType::PlusOnePlusOne) as i32;
-        let minus = card.counter_count(CounterType::MinusOneMinusOne) as i32;
-        let minus_zero_one = card.counter_count(CounterType::MinusZeroMinusOne) as i32;
-        let minus_zero_two = card.counter_count(CounterType::MinusZeroMinusTwo) as i32;
-        let minus_one_zero = card.counter_count(CounterType::MinusOneMinusZero) as i32;
-        let plus_one_zero = card.counter_count(CounterType::PlusOnePlusZero) as i32;
-        let plus_zero_one = card.counter_count(CounterType::PlusZeroPlusOne) as i32;
-        let plus_two_zero = card.counter_count(CounterType::PlusTwoPlusZero) as i32;
-        let plus_zero_two = card.counter_count(CounterType::PlusZeroPlusTwo) as i32;
-        let plus_two_two = card.counter_count(CounterType::PlusTwoPlusTwo) as i32;
-        let base = plus - minus + 2 * plus_two_two;
-        (
-            base - minus_one_zero + plus_one_zero + 2 * plus_two_zero,
-            base - minus_zero_one - 2 * minus_zero_two + plus_zero_one + 2 * plus_zero_two,
-        )
+        let (mut dp, mut dt) = (0i32, 0i32);
+        for (kind, n) in &card.counters {
+            let n = *n as i32;
+            let (p, t) = match kind {
+                CounterType::PlusOnePlusOne => (1, 1),
+                CounterType::MinusOneMinusOne => (-1, -1),
+                CounterType::MinusZeroMinusOne => (0, -1),
+                CounterType::MinusZeroMinusTwo => (0, -2),
+                CounterType::MinusOneMinusZero => (-1, 0),
+                CounterType::PlusOnePlusZero => (1, 0),
+                CounterType::PlusZeroPlusOne => (0, 1),
+                CounterType::PlusTwoPlusZero => (2, 0),
+                CounterType::PlusZeroPlusTwo => (0, 2),
+                CounterType::PlusTwoPlusTwo => (2, 2),
+                _ => continue,
+            };
+            dp += p * n;
+            dt += t * n;
+        }
+        (dp, dt)
     };
 
     let mut set_pt: Option<(i32, i32)> = None;
