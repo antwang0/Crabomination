@@ -87,6 +87,12 @@ fn net_for(slot: u8) -> Option<Arc<dyn NetEvaluator>> {
     })
 }
 
+/// Whether a slot currently holds an evaluator — the check gating "use
+/// the strongest available bot" decisions like the lobby's seat filler.
+pub fn slot_loaded(slot: u8) -> bool {
+    net_for(slot).is_some()
+}
+
 /// The net's win probability for `seat`, or `None` when the slot is empty
 /// (callers fall back to the heuristic).
 pub fn win_prob(state: &GameState, seat: usize, slot: u8) -> Option<f32> {

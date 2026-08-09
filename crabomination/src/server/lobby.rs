@@ -27,8 +27,30 @@ use crate::game::GameState;
 use crate::net::{ClientMsg, LobbyFormat, LobbyInfo, ServerMsg, SpectatableInfo};
 
 use super::{
-    run_match_reconnectable_spectatable, MatchOutcome, RandomBot, SeatChannel, SeatOccupant,
+    run_match_reconnectable_spectatable, MatchOutcome, MctsBot, MctsConfig, RandomBot,
+    SeatChannel, SeatOccupant,
 };
+
+/// The bot a lobby seat gets: the strongest adopted pilot the process can
+/// support. With a value net loaded (the server boots
+/// `nets/champion.safetensors` into SLOT_BEST when present), that is
+/// net-evaluated MCTS at the round-26 adopted strength — the first
+/// profile to beat the plain net pilot (53.4/52.5 % head-to-head;
+/// 56.1/54.4 % vs gang) — with honest, determinized rollouts. Without a
+/// net, the heuristic default plays; nothing about a bare checkout
+/// changes.
+fn default_bot() -> Box<dyn super::Bot> {
+    if super::net_eval::slot_loaded(super::net_eval::SLOT_BEST) {
+        Box::new(MctsBot::new(MctsConfig {
+            iterations: 64,
+            horizon_turns: 3,
+            weights: super::EvalWeights::net_eval_det1(),
+            ..MctsConfig::default()
+        }))
+    } else {
+        Box::new(RandomBot::new())
+    }
+}
 
 /// Callback invoked when a lobby-started match finishes, with its gamemode,
 /// wall-clock duration, and outcome. Lets the server binary fold lobby matches
@@ -831,7 +853,7 @@ fn apply<G: Send + 'static>(
                     humans += 1;
                 }
                 SeatSpec::Bot => {
-                    occupants.push(SeatOccupant::Bot(Box::new(RandomBot::new())));
+                    occupants.push(SeatOccupant::Bot(default_bot()));
                     bots += 1;
                 }
             }

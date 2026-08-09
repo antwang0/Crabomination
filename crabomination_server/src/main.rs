@@ -66,6 +66,21 @@ fn main() {
     let format = Format::from_env();
     // Validate CRAB_DECK / CRAB_BOT_DECK at boot (exits on a bad list).
     let _ = deck_overrides();
+    // Load the committed champion value net, if this checkout carries it:
+    // lobby bots then play net-evaluated MCTS (the strongest adopted
+    // pilot) instead of the heuristic. CRAB_NET overrides the path; a
+    // missing file is fine (heuristic bots), a *bad* file is a boot error
+    // — silently degrading the advertised bot strength would be worse.
+    let net_path =
+        env::var("CRAB_NET").unwrap_or_else(|_| "nets/champion.safetensors".to_string());
+    if std::path::Path::new(&net_path).exists() {
+        crabomination::server::net_eval::load_slot(
+            crabomination::server::net_eval::SLOT_BEST,
+            std::path::Path::new(&net_path),
+        )
+        .unwrap_or_else(|e| panic!("value net {net_path}: {e}"));
+        println!("value net loaded from {net_path}; lobby bots use MCTS-net");
+    }
     let pairing_timeout = pairing_timeout_from_env();
     // Connection caps must be at least 1 — a `0` (typo or empty-string-ish
     // misconfig) would otherwise silently refuse every client, so treat

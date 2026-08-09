@@ -303,6 +303,26 @@ fn parse_profile(name: &str) -> Option<Pilot> {
             weights: EvalWeights::net_eval_det1(),
             ..MctsConfig::default()
         })),
+        // The scaling curve above mcts-net-deep: iterations at fixed
+        // horizon, and horizon at fixed iterations.
+        "mcts-net-128" => Some(Pilot::Mcts(MctsConfig {
+            iterations: 128,
+            horizon_turns: 3,
+            weights: EvalWeights::net_eval_det1(),
+            ..MctsConfig::default()
+        })),
+        "mcts-net-256" => Some(Pilot::Mcts(MctsConfig {
+            iterations: 256,
+            horizon_turns: 3,
+            weights: EvalWeights::net_eval_det1(),
+            ..MctsConfig::default()
+        })),
+        "mcts-net-h4" => Some(Pilot::Mcts(MctsConfig {
+            iterations: 64,
+            horizon_turns: 4,
+            weights: EvalWeights::net_eval_det1(),
+            ..MctsConfig::default()
+        })),
         "uniform" => Some(Pilot::Uniform),
         _ => None,
     }

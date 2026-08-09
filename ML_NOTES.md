@@ -58,6 +58,33 @@ only stays dead while the reasoning that killed it is readable.
   stratum both plays and benches reports **no** within-archetype number
   rather than passing the marginal off as one. `recommend_pool` prints
   `within` first and labels `raw` as the confound.
+- 🟢 **Round 27 (2026-08-10) — the scaling curve climbs; MCTS-net ships
+  to the client; the training loop is armed.** Three tracks on the
+  round-26 result:
+
+  *Scaling* (vs the `net` champion, 1 200 games/cell, two ladder
+  seeds): 24 iters 49.4 % → 64 **53.0 %** → 128 **54.35 %** → 256
+  **55.0 %** pooled — each doubling buys ~+1.4 then ~+0.7, still
+  climbing at 256. Horizon 4 ≈ horizon 3 (53.0 %): three turns of
+  rollout captures what these positions need; iterations are the axis.
+  `mcts-net-256` is the strongest known pilot (~58–59 % vs gang
+  implied).
+
+  *Client adoption*: the server boots `nets/champion.safetensors` into
+  SLOT_BEST when present (CRAB_NET overrides; bad file = boot error,
+  not silent degradation) and lobby bot seats play `MctsBot` at the
+  round-26 shape (64 iters, 3-turn, honest determinized rollouts) —
+  the strongest adopted pilot, falling back to the heuristic on a bare
+  checkout.
+
+  *Training loop*: `play_recorded_game_mcts` + `selfplay_train
+  --mcts-actors N`; rollout rewards route through SLOT_BEST, so
+  `--gpu-eval` batches them on the collator with no extra plumbing.
+  Measured generation: **2.6 games/s** (MCTS-64, 256 threads, batched
+  eval, learner parked) — ~50× heuristic actors, as the round-26 cost
+  ratio predicted. First pass armed: 50 k MCTS-piloted games vs a 50 k
+  net-piloted same-budget control, seed 43, gates on both
+  (`run_r27_loop.sh`) — the design isolates label quality from volume.
 - 🟢 **Round 26 (2026-08-09) — MCTS-net: search amplification is real,
   and it's the new strongest pilot.** The rematch the heuristic-era
   verdict deserved: the champion net's win probability as a *native*

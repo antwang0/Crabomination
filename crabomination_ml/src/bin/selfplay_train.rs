@@ -23,7 +23,7 @@
 //!                [--stop-after-stale N] [--relabel-mode full|new]
 //!                [--attn] [--blocks N] [--aux] [--ablate lib,cast,rel]
 //!                [--muon] [--muon-lr F] [--lr-cosine STEPS]
-//!                [--sample-temp N] [--sample-turns N]
+//!                [--sample-temp N] [--sample-turns N] [--mcts-actors N]
 //!                [--emb-dim N] [--obj-hidden N] [--h1 N] [--h2 N]
 //!                [--gate-builder GAMES_PER_POOL]
 //!
@@ -173,6 +173,13 @@ struct Args {
     sample_temp: i32,
     /// Sample through this turn, argmax after (AlphaZero-style cutoff).
     sample_turns: u32,
+    /// Pilot actors with net-evaluated MCTS at this many rollouts per
+    /// decision (0 = the plain scored bot). Requires `--use-best`; pair
+    /// with `--gpu-eval` — rollout rewards go through the same slot, so
+    /// they batch on the collator automatically. Generation is ~50–100×
+    /// slower per game than heuristic actors: size `--games` from a
+    /// measured probe, not hope.
+    mcts_actors: u32,
     /// Width overrides — the engine reads sizes from the tensor shapes,
     /// so capacity is a flag, not a format change. `--seed-emb` requires
     /// the deck net's width, so it refuses a changed `--emb-dim`.
@@ -274,6 +281,7 @@ fn parse_args() -> Args {
         lr_cosine: 0,
         sample_temp: 0,
         sample_turns: 6,
+        mcts_actors: 0,
         emb_dim: None,
         obj_hidden: None,
         h1: None,
@@ -353,6 +361,7 @@ fn parse_args() -> Args {
             "--lr-cosine" => a.lr_cosine = val().parse().expect("--lr-cosine"),
             "--sample-temp" => a.sample_temp = val().parse().expect("--sample-temp"),
             "--sample-turns" => a.sample_turns = val().parse().expect("--sample-turns"),
+            "--mcts-actors" => a.mcts_actors = val().parse().expect("--mcts-actors"),
             "--emb-dim" => a.emb_dim = Some(val().parse().expect("--emb-dim")),
             "--obj-hidden" => a.obj_hidden = Some(val().parse().expect("--obj-hidden")),
             "--h1" => a.h1 = Some(val().parse().expect("--h1")),
@@ -481,11 +490,23 @@ fn actor_loop(shared: &Shared, args: &Args, vocab: &Vocab, deck_judge: Option<&D
         let deck_b = build(&pool_b, salt(4));
         let template = sealed_game_template(&deck_a, &deck_b);
         let pilot = if args.use_best.is_some() {
-            EvalWeights::net_eval()
+            if args.mcts_actors > 0 {
+                // MCTS pilots want the round-26 shape: honest rollouts.
+                EvalWeights::net_eval_det1()
+            } else {
+                EvalWeights::net_eval()
+            }
         } else {
             EvalWeights::default()
         };
-        let rec = play_recorded_game(&template, [pilot, pilot], salt(5), 4_000, vocab);
+        let rec = crabomination::selfplay::play_recorded_game_mcts(
+            &template,
+            [pilot, pilot],
+            salt(5),
+            4_000,
+            vocab,
+            if args.use_best.is_some() { args.mcts_actors } else { 0 },
+        );
         shared.games_done.fetch_add(1, Ordering::Relaxed);
         if rec.rows.is_empty() {
             shared.stalls.fetch_add(1, Ordering::Relaxed);

@@ -274,6 +274,23 @@ pub fn play_recorded_game(
     max_actions: usize,
     vocab: &Vocab,
 ) -> RecordedGame {
+    play_recorded_game_mcts(template, weights, seed, max_actions, vocab, 0)
+}
+
+/// [`play_recorded_game`] with the seats piloted by net-evaluated MCTS
+/// (`mcts_iterations` > 0, 3-turn horizon — the round-26 adopted shape)
+/// instead of the scored bot. This is the training side of search
+/// amplification: labels from games played ~3–5 points stronger than the
+/// plain net pilot. `weights` still parameterizes the reward and the
+/// exploration openings.
+pub fn play_recorded_game_mcts(
+    template: &GameState,
+    weights: [EvalWeights; 2],
+    seed: u64,
+    max_actions: usize,
+    vocab: &Vocab,
+    mcts_iterations: u32,
+) -> RecordedGame {
     let mut g = template.clone();
     let mut rng = StdRng::seed_from_u64(seed);
     for seat in 0..2 {
@@ -295,7 +312,18 @@ pub fn play_recorded_game(
     let explore_plies = rng.random_range(0..=EXPLORE_PLIES);
     let mut bots: Vec<Box<dyn Bot>> = weights
         .into_iter()
-        .map(|w| Box::new(RandomBot::with_weights(w)) as Box<dyn Bot>)
+        .map(|w| -> Box<dyn Bot> {
+            if mcts_iterations > 0 {
+                Box::new(crate::server::MctsBot::new(crate::server::MctsConfig {
+                    iterations: mcts_iterations,
+                    horizon_turns: 3,
+                    weights: w,
+                    ..crate::server::MctsConfig::default()
+                }))
+            } else {
+                Box::new(RandomBot::with_weights(w))
+            }
+        })
         .collect();
     let mut explorers: Vec<Box<dyn Bot>> =
         (0..2).map(|_| Box::new(RandomBot::uniform_baseline()) as Box<dyn Bot>).collect();
