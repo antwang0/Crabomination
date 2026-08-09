@@ -58,6 +58,31 @@ only stays dead while the reasoning that killed it is readable.
   stratum both plays and benches reports **no** within-archetype number
   rather than passing the marginal off as one. `recommend_pool` prints
   `within` first and labels `raw` as the confound.
+- 🟢 **Round 26 (2026-08-09) — MCTS-net: search amplification is real,
+  and it's the new strongest pilot.** The rematch the heuristic-era
+  verdict deserved: the champion net's win probability as a *native*
+  UCB1 reward (calibrated [0,1], no logistic squash) with honest
+  rollouts (hands redealt under determinize — the old library shuffle
+  never covered held cards).
+
+  | matchup (paired, 1 200 games/cell) | seed 43 | seed 97 |
+  |---|---|---|
+  | mcts-net (24 iters) vs net | 49.6 % | 49.2 % |
+  | **mcts-net-deep (64 iters, 3-turn) vs net** | **53.4 % [50.6, 56.2]** | **52.5 % [49.7, 55.3]** |
+  | mcts-net-deep vs gang | **56.1 % [53.3, 58.9]** | **54.4 % [51.6, 57.2]** |
+  | mcts-net-deep vs atk-sim | **55.8 % [52.9, 58.5]** | **55.8 % [53.0, 58.6]** |
+
+  **First profile ever to beat the adopted net pilot, using the same
+  net** — and the best absolute numbers in program history (the gang
+  gate jumped 51.8 → ~55.3 pooled). At 24 iterations the bandit only
+  ties the decomposed searcher; at 64/3-turn it wins, so the scaling
+  curve is live and unexplored upward. Cost: ~8–10 min per 1 200-game
+  matchup (~50–100× the champion's per-game cost) — fine for client
+  play (per-decision latency, human-paced), prohibitive for training
+  generation without routing rollout evals through the batched
+  inference server (they are exactly the batchable shape). Open next:
+  the iteration/horizon scaling curve (128+), adoption as the ladder's
+  strongest profile, and MCTS-net-generated training data.
 - 🟢 **Determinized search priced (2026-08-09, task #25) — the
   information cheat was worth ~1–1.5 points and nothing rested on it.**
   Coverage fix first: the cast planner's dry-runs now redeal hidden
