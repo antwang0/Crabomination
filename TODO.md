@@ -16,46 +16,53 @@ reference and want their own triage pass):
 
 ## NEXT (handoff — rewrite each run, keep under 15 lines)
 
-Branch `claude/modern_decks`. Eleventh pass, four perf commits, one shape.
-**6,151,471,423 -> 5,798,284,923 Ir on the fixed six-game workload, -5.74 %**,
-base-vs-tip callgrind on the current base (`87d76144`). Started from the same
-branch point as the tenth pass and was **rebased on top of it**, so the four
-per-commit numbers in the messages were measured against 6,539,623,988 and
-don't chain — PERF's Log block says so and the -5.74 % is the one that counts.
+Branch `claude/modern_decks`. Eleventh pass, **two sessions landed on it**
+and the second rebased onto the first. Five perf commits plus one defect.
+**6,151,455,670 -> 5,620,794,622 Ir on the fixed six-game workload,
+-8.63 %**, base `87d76144` vs tip. **The owed paired A/B is taken: 66.69 ->
+70.65 games/s, +5.93 %, 8/8 alternated same-box pairs** at `release` +
+mimalloc. Wall-clock is ~2/3 of the Ir win, which is the expected split —
+four rows remove gathers and translate, one removes allocations and
+mimalloc absorbs it.
 
-- **All four rows are one shape: a `&mut self` path taking a
-  `computed_permanent` outside a freeze scope**, each re-gathering every
-  continuous effect in the game to answer one question about one card.
-  `do_untap` did it twice per permanent (-4.08 %), `activate_ability` +
-  `_inner` four times per activation, `scale_damage_to` twice per call.
-  **Gathers from `computed_permanent` 260,370 -> 151,776 (-42 %).**
-- **How to find the next one** (now in PERF's notes): `--tree=caller` on
-  `computed_permanent`, divide each caller's inclusive Ir by its call count.
-  >2,000/call = unfrozen, worth a gather each; a few hundred = already in a
-  scope, worth ~200 Ir. That distinction is why the land-mana row was costed
-  at 2 % and returned 0.26 %.
-- **Two builds disagreed about the same change**: hoisting `compute_permanent`'s
-  CR 613.8 gate scans read -0.007 % on the tenth pass's base (LLVM had done it)
-  and -0.63 % on the branch point's (it had not). Dropped in the rebase;
-  written up so a third attempt doesn't cost two more builds.
-- **Owed first: the paired `--bench` A/B this pass could not take.** The base
-  release binary was lost to a container restart and a second 25-min release
-  build didn't fit. The new anchor (61.07 vs 60.46, calib 47-53 vs 45-49) says
-  *no regression* — turns/game 26.98, stalls 0, RSS 22.2-22.4, determinism ok —
-  but it cannot separate -5.74 % Ir from a 6.7 % spread. Build `87d76144` into
-  a worktree target dir and alternate.
-- **Next up, in order**: (1) **`compute_battlefield`, 13.09 % inclusive and
-  untouched for two passes** — PERF candidate (A). (2) PERF candidate 0.5,
-  the transaction checkpoint, still ~10 % between clone and drop. (3) The
-  allocator at **18.4 %**, still never attacked head-on.
-- **Bugs**: no open entries in "Engine — Robustness / defects". The
-  panic/unwrap sweep of the self-play path is still untouched (~183
-  `unwrap()`/`expect()` under `game/` + `bot.rs`); a spot-check of `bot.rs`'s
-  non-test ones found them all guarded by a preceding `is_some()`, so cost
-  that sweep as cleanup, not as a crash risk.
-- **Disk**: `target/debug/incremental` reaches 13-17 G; delete it *before* a
-  release build. Two concurrent release builds fit in 23 G.
-- **Trackers**: TODO 800, roadmap 660, `PERF.md` 660, `INCOMPLETE_CARDS` 247.
+- **Four rows are one shape** (`&mut self` path taking a
+  `computed_permanent` outside a freeze scope): `do_untap` twice per
+  permanent, `activate_ability` + `_inner` four times per activation,
+  `scale_damage_to` twice per call. Gathers from `computed_permanent`
+  260,370 -> 151,776 (-42 %). **The fifth is the allocation shape**:
+  `usable_abilities` handing out deep-cloned printed abilities to six
+  callers that only read them (`Cow`, -3.05 %).
+- **Two ways to find the next one, both now in PERF's notes**: (1)
+  `--tree=caller` on `computed_permanent`, inclusive Ir ÷ call count —
+  >2,000/call is unfrozen and worth a gather, a few hundred is a memo hit
+  worth ~200 Ir; (2) read the caller rows under `__rust_alloc`, not the
+  self-cost list. `do_untap` was 4.33 % of the program and appears in no
+  self-cost list at all.
+- **Next up, in order**: (1) **PERF candidate 0.25 —
+  `check_state_based_actions`, 11.69 %, never touched by any pass**, with
+  two exactly-behaviour-preserving sub-items written out. (2) candidate (A),
+  `compute_battlefield` at 13.51 %. (3) candidate 1(a) — `printed_colors`
+  re-costed at 2.72 % / 390 k allocations, four times the old estimate.
+  (4) The allocator at 18.5 %: PERF's Profile-of-record now carries the
+  full allocation tree, so it can finally be attacked head-on.
+- **Bugs**: fixed a live panic on the actor path — `sample_scored_index`
+  was total only under `debug_assert!`, and `main_phase_action_with`'s
+  sampling branch reaches it with the empty candidate list the argmax
+  branch beside it handles as "no action" (`a67c5b9a`, regression test).
+  The broader panic/unwrap sweep is still open; see the robustness section
+  for what filter actually found this one.
+- **The anchor is stale on purpose**: it was taken at `bab861cf`, and
+  `998b2433` then made `EvalWeights::default()` carry `determinize: 1`.
+  `--bench` runs `gang` = `EvalWeights::default()`, so the bench workload
+  itself changed. **Re-anchor before comparing any absolute to 70.65**; the
+  +5.93 % paired delta stands, both its sides predate the change.
+- **Concurrency**: three sessions pushed to this branch on the same day.
+  Fetch before building a baseline — the second session duplicated two of
+  the first's rows and threw them away in the rebase.
+- **Env**: `rm -rf target/debug/incremental` (7-17 G) before a release
+  build. `cargo-nextest` is not in the image: `curl -sSLf
+  https://get.nexte.st/latest/linux | tar xz` into `~/.cargo/bin`.
+- **Trackers**: TODO 825, roadmap 660, `PERF.md` 752, `INCOMPLETE_CARDS` 247.
 
 ## Environment note
 
@@ -81,7 +88,19 @@ Found by profiling. Not speculative — the code is quoted.
 *(No open entries. The `keyword_counters` `HashMap`-order defect was fixed
 in `86670250`: `KeywordCounters` is an insertion-ordered `Vec` newtype, which
 sidesteps `Keyword` having no `Ord`, and `cr_122_1b_keyword_counter_grant_
-order_is_insertion_order` pins it.)*
+order_is_insertion_order` pins it. The actor-sampler panic was fixed in
+`a67c5b9a`.)*
+
+**Open: the panic/unwrap sweep of the self-play path.** ~183
+`unwrap()`/`expect()` under `game/` + `bot.rs`. It wants **triage, not a
+blanket rewrite** — every site spot-checked so far was already guarded by a
+preceding test (`worlds.len() > 1` before `.max().unwrap()`,
+`battlefield.push` before `find(…).unwrap()`, `writes_to_shared` before the
+two `teams` unwraps, `mayhem` set from `mayhem_cost().is_some()`). The
+filter that actually found `a67c5b9a` is narrower and worth reusing: **a
+`debug_assert!` standing in for a runtime guard**, or a `len() - 1` / bare
+index on a slice whose emptiness the *caller* tolerates. `sample_scored_index`
+had both, on the one path only a training actor takes.
 
 ## Engine — Missing Mechanics
 
