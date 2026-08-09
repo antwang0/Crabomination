@@ -28,11 +28,13 @@ one bug class. `PERF.md` is the record.
   fixed six-game workload, deterministic and contention-immune, and both
   sides can run at once. (2) An inclusive share is an *upper bound* on what
   a memo can win: check the frozen fraction first.
-- **Next up, in order**: candidate 1(c), the per-scope memo for
-  `compute_battlefield`
-  (`apply_layers` still enters the per-card pass 888,340× vs
-  `computed_permanent`'s 648,866×); then 1.5, `effective_mana_abilities`
-  deep-cloning every ability it returns. Two traps written up in PERF:
+- **Next up**: candidate **1(a)** — make `ComputedPermanent` cheap to
+  build (`Arc<CardDefinition>` + `Option` overrides behind accessors). This
+  run costed the alternatives away: `compute_battlefield` runs 617,032×
+  per bench at 19.51 permanents, **0 of them frozen**, so 1(c)'s memo is
+  dead and ~12.0 M per-card layer passes can only be reached by making the
+  pass itself cheap. Then 1.5, `effective_mana_abilities` deep-cloning
+  every ability it returns. Two traps written up in PERF:
   **don't re-try freezing inside `effective_mana_abilities`** (+0.03 %, a
   null, reverted), and **don't freeze across combat damage's apply loop** —
   Wither/Infect counters mutate a layer input mid-batch, so it's a rules

@@ -359,14 +359,27 @@ comes next, both learned the hard way this run:
    fields are the ones that need accessors.
    (b) ~~Memoize per (card, freeze scope)~~ — **done, -1.91 % Ir.** See the
    Log row. Hit rate 34.5 %, ceiling 50 %.
-   (c) **The same memo for `compute_battlefield`** — untried, and the
-   larger remaining half: `apply_layers` enters `compute_permanent`
-   888,340× vs `computed_permanent`'s 648,866×, and `compute_battlefield`
-   itself is 11.58 % inclusive over 46,090 calls. Needs
-   `Vec<Arc<ComputedPermanent>>` (28 call sites) so the memo isn't cloned
-   back out, and it can share `perms` with 1(b) — fill per card, assemble
-   the vector from hits. Cost it against the same frozen-fraction check as
-   1(b) *before* building it.
+   (c) ~~The same memo for `compute_battlefield`~~ — **dead, don't build
+   it.** An instrumented `--bench` run counted **617,032
+   `compute_battlefield` calls of which 0 are inside a freeze scope**, at
+   19.51 permanents each. A per-scope memo would never hit. (This is the
+   frozen-fraction check from the method note, run *before* the work
+   instead of after — total cost one 2m18s build and one bench run.)
+   What the same run does say is that `compute_battlefield` is the
+   **bigger** consumer of the per-card layer pass: ~12.0 M per-card
+   computations against `computed_permanent`'s 9.57 M calls, and all
+   12.0 M of them unfrozen. Its callers, by inclusive share:
+   `declare_attackers_banded` 2.45 % (9,928×),
+   `check_state_based_actions` 2.41 % (10,670×), `declare_blockers` 2.00 %
+   (7,754×), `finalize_cast` 1.51 % (7,046×), `resolve_combat` 0.86 %,
+   `advance_step` 0.67 %, `process_cumulative_upkeep` 0.40 %, `do_phasing`
+   0.40 %, `bands_with_other_qualities` 0.33 %. Three routes, in
+   increasing size: put those callers inside a scope where they're
+   read-only (`check_state_based_actions` and `declare_blockers` look
+   like item 0's shape); ask item 0's question of each — does it really
+   need all 19.5 permanents, or two of them; or make the per-card pass
+   itself cheap, which is 1(a) and helps all 12.0 M unconditionally.
+   **1(a) is the item this measurement promotes.**
 
 1.5 **`effective_mana_abilities` clones every ability it returns** — still
    open after the freeze row above, which fixed the *layer* half of this
