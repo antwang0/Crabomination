@@ -12178,26 +12178,33 @@ impl GameState {
     pub fn effective_mana_abilities(
         &self,
         card_id: CardId,
-    ) -> Vec<(usize, crate::effect::ActivatedAbility)> {
+    ) -> Vec<(usize, std::borrow::Cow<'_, crate::effect::ActivatedAbility>)> {
+        use std::borrow::Cow;
         let Some(card) = self.battlefield_find(card_id) else {
             return vec![];
         };
         let printed_count = card.definition.activated_abilities.len();
-        let mut out: Vec<(usize, crate::effect::ActivatedAbility)> = Vec::new();
+        // The printed abilities are borrowed from `card.definition`, which
+        // outlives the call — only `granted_abilities_for` and
+        // `intrinsic_land_mana_abilities` synthesize, and all three callers
+        // read `.effect` and the cost fields. Cloning them was one
+        // `ActivatedAbility` deep copy per printed mana ability per untapped
+        // permanent per `auto_tap_for_cost_inner`.
+        let mut out: Vec<(usize, Cow<'_, crate::effect::ActivatedAbility>)> = Vec::new();
         for (i, a) in card.definition.activated_abilities.iter().enumerate() {
             if is_mana_ability(&a.effect) && !self.printed_land_mana_ability_lost(card_id, i) {
-                out.push((i, a.clone()));
+                out.push((i, Cow::Borrowed(a)));
             }
         }
         let granted = self.granted_abilities_for(card_id);
-        for (j, a) in granted.iter().enumerate() {
+        let gc = granted.len();
+        for (j, a) in granted.into_iter().enumerate() {
             if is_mana_ability(&a.effect) {
-                out.push((printed_count + j, a.clone()));
+                out.push((printed_count + j, Cow::Owned(a)));
             }
         }
-        let gc = granted.len();
         for (k, a) in self.intrinsic_land_mana_abilities(card_id).into_iter().enumerate() {
-            out.push((printed_count + gc + k, a));
+            out.push((printed_count + gc + k, Cow::Owned(a)));
         }
         out
     }
@@ -12265,7 +12272,10 @@ impl GameState {
         use crate::effect::{Selector, StaticEffect};
         let tgt = Target::Permanent(card_id);
         let mut out = Vec::new();
-        if self.battlefield_find(card_id).is_none() {
+        // One lookup: this is called ~272 k times per six bot games and
+        // `battlefield_find` is a linear scan.
+        let on_battlefield = self.battlefield_find(card_id);
+        if on_battlefield.is_none() {
             // A card outside the battlefield can still carry an instance grant
             // — Cursecloth Wrappings hands a graveyard creature card embalm.
             if let Some(c) = self.find_card_anywhere(card_id) {
@@ -12277,7 +12287,7 @@ impl GameState {
         // Instance-granted abilities first (Urza's Saga chapters) — the
         // client view lists printed + instance-granted in this order, so
         // their indices must come before the battlefield-static grants.
-        if let Some(c) = self.battlefield_find(card_id) {
+        if let Some(c) = on_battlefield {
             out.extend(c.granted_activated_abilities.iter().cloned());
             out.extend(c.granted_activated_eot.iter().cloned());
             // Myr Welder — "has all activated abilities of all cards exiled
