@@ -9343,10 +9343,14 @@ impl GameState {
         // chain position, so pair it with the duration rather than asking
         // `battlefield.contains` per card — that was an O(n²) membership
         // scan inside the hottest function in the simulator.
-        let anthem_walk = self
-            .battlefield
+        // The battlefield leg walks `sa_cards`, not the whole board: the body
+        // does nothing for a card with no printed statics, and `sa_cards` is
+        // that same filter in the same order, so the emitted sequence is
+        // unchanged. On a bench board it turns a whole-board walk inside the
+        // simulator's hottest function into a walk of two or three cards.
+        let anthem_walk = sa_cards
             .iter()
-            .map(|c| (c, EffectDuration::WhileSourceOnBattlefield))
+            .map(|c| (*c, EffectDuration::WhileSourceOnBattlefield))
             .chain(emblem_anthems.iter().map(|c| (c, EffectDuration::Indefinite)))
             .chain(face_up_schemes.iter().map(|c| (*c, EffectDuration::Indefinite)));
         for (card, source_duration) in anthem_walk {
@@ -10602,7 +10606,9 @@ impl GameState {
         // CR 613 layer 4 — Leyline of Singularity: all nonland permanents are
         // legendary. Add the supertype to every nonland permanent so the legend
         // rule collapses same-named duplicates across all players.
-        if self.battlefield.iter().any(|c| {
+        // Ask the short `sa_cards` list, not the whole board: only a card with
+        // printed statics can carry this one (the Coat of Arms shape).
+        if sa_cards.iter().any(|c| {
             c.definition.static_abilities.iter().any(|sa| {
                 matches!(sa.effect, crate::effect::StaticEffect::AllNonlandPermanentsAreLegendary)
             })
