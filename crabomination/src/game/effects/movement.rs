@@ -1732,12 +1732,12 @@ impl GameState {
         events: &mut Vec<GameEvent>,
     ) {
         let pl = &mut self.players[p];
-        if let Some(c) = pl
-            .library
-            .iter_mut()
-            .chain(pl.hand.iter_mut())
-            .find(|c| c.id == cid)
-        {
+        // Library first, then hand — two passes rather than a `chain`, which
+        // would need both zones borrowed mutably at once (`Player` is a CoW
+        // handle, so a field `&mut` borrows the whole seat).
+        let in_library = pl.library.iter().any(|c| c.id == cid);
+        let zone = if in_library { &mut pl.library } else { &mut pl.hand };
+        if let Some(c) = zone.iter_mut().find(|c| c.id == cid) {
             c.turn_face_down();
         }
         let dest = ZoneDest::Battlefield {
@@ -1763,11 +1763,17 @@ impl GameState {
         }
         // Sweep the owner's hidden/graveyard zones for same-named cards.
         // Graveyard exiles get leaves-graveyard bookkeeping.
-        let pl = &mut self.players[owner];
         let mut swept: Vec<crate::card::CardInstance> = Vec::new();
         let mut from_gy: Vec<CardId> = Vec::new();
-        for (zi, zone) in [&mut pl.graveyard, &mut pl.hand, &mut pl.library].into_iter().enumerate()
-        {
+        // Re-borrow the seat per zone: `Player` is a CoW handle, so three
+        // `&mut` zone borrows can't be live at once.
+        for zi in 0..3 {
+            let pl = &mut self.players[owner];
+            let zone = match zi {
+                0 => &mut pl.graveyard,
+                1 => &mut pl.hand,
+                _ => &mut pl.library,
+            };
             let mut i = 0;
             while i < zone.len() {
                 if zone[i].definition.name == name.as_str() {

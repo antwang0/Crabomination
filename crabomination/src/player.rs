@@ -70,8 +70,10 @@ pub enum LossCause {
     Other,
 }
 
+/// A seat's mutable state. Reached only through [`Player`], which owns it
+/// behind an `Arc` — see that type for why.
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct Player {
+pub struct PlayerData {
     pub id: PlayerId,
     pub name: String,
     pub life: i32,
@@ -996,9 +998,64 @@ pub struct Player {
     pub coin_flip_advantage: u32,
 }
 
+/// A seat: a copy-on-write handle around [`PlayerData`].
+///
+/// `PlayerData` is ~165 fields — a `String`, ~30 per-turn `Vec`/`HashSet`
+/// tallies, two `HashMap`s — and `GameState::clone` copies every one of them
+/// per checkpoint (the `perform_action` checkpoint, every bot dry-run probe).
+/// Behind the `Arc` that clone is a refcount bump and only a seat actually
+/// *written* pays a deep copy. `Deref`/`DerefMut` make it read and write like
+/// the plain struct, so `player.life -= 2` still works — it just unshares that
+/// one seat first. Same shape as [`crate::card::CardInstance`] one level down.
+#[derive(Clone)]
+pub struct Player(std::sync::Arc<PlayerData>);
+
+impl std::ops::Deref for Player {
+    type Target = PlayerData;
+    #[inline]
+    fn deref(&self) -> &PlayerData {
+        &self.0
+    }
+}
+
+/// The unshare point: every `&mut` reach into a seat goes through here, so a
+/// shared seat is cloned exactly once and then written in place.
+impl std::ops::DerefMut for Player {
+    #[inline]
+    fn deref_mut(&mut self) -> &mut PlayerData {
+        std::sync::Arc::make_mut(&mut self.0)
+    }
+}
+
+impl std::fmt::Debug for Player {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        std::fmt::Debug::fmt(&*self.0, f)
+    }
+}
+
+impl From<PlayerData> for Player {
+    fn from(data: PlayerData) -> Self {
+        Self(std::sync::Arc::new(data))
+    }
+}
+
+// Transparent serde: the wire format is `PlayerData`'s, so snapshots written
+// before the handle existed round-trip unchanged.
+impl Serialize for Player {
+    fn serialize<S: serde::Serializer>(&self, s: S) -> Result<S::Ok, S::Error> {
+        (*self.0).serialize(s)
+    }
+}
+
+impl<'de> Deserialize<'de> for Player {
+    fn deserialize<D: serde::Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
+        PlayerData::deserialize(d).map(Self::from)
+    }
+}
+
 impl Player {
     pub fn new(idx: usize, name: impl Into<String>) -> Self {
-        Self {
+        Self::from(PlayerData {
             id: PlayerId(idx),
             name: name.into(),
             life: 20,
@@ -1164,9 +1221,11 @@ impl Player {
             smart_tap: false,
             manual_mana: false,
             coin_flip_advantage: 0,
-        }
+        })
     }
+}
 
+impl PlayerData {
     pub fn is_alive(&self) -> bool {
         !self.eliminated
     }

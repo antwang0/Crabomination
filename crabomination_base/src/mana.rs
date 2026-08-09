@@ -1384,6 +1384,18 @@ impl ManaPool {
         *self = Self::default();
     }
 
+    /// True iff the pool holds nothing at all. Stricter than `total() == 0`,
+    /// which by design ignores the snow/creature provenance counters and both
+    /// spend-restricted lists — `empty()` clears those too, so a caller
+    /// skipping the call needs this.
+    pub fn is_empty(&self) -> bool {
+        self.total() == 0
+            && self.snow == 0
+            && self.restricted.is_empty()
+            && self.restricted_colorless.is_empty()
+            && self.creature.iter().all(|&n| n == 0)
+    }
+
     /// Fold every bucket of `other` into this pool (colors, colorless, snow,
     /// and spend-restricted entries). Used to restore protected floating mana
     /// after paying a cost from freshly-tapped sources (the "keep my floating

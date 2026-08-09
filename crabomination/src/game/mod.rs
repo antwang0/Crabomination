@@ -11002,6 +11002,17 @@ impl GameState {
         // end-of-combat-step empty is where it finally clears (no re-seed).
         let end_of_combat = self.step == crate::game::types::TurnStep::EndCombat;
         for (i, player) in self.players.iter_mut().enumerate() {
+            // Read-only fast path. `Player` is a CoW handle, so the first
+            // `&mut` field write below deep-copies the whole seat — and this
+            // runs at every step change (51 k times per six bot games) with
+            // nothing to do on the overwhelming majority of them.
+            if player.firebending_kept_red == 0
+                && (all_persist
+                    || (player.mana_pool.is_empty()
+                        && player.kept_mana_this_turn.total() == 0))
+            {
+                continue;
+            }
             if all_persist {
                 // Pool survives intact; still handle firebending below.
             } else if keepers.contains(&i) {
@@ -11024,7 +11035,8 @@ impl GameState {
                 if end_of_combat {
                     player.firebending_kept_red = 0;
                 } else {
-                    player.mana_pool.add(crate::mana::Color::Red, player.firebending_kept_red);
+                    let red = player.firebending_kept_red;
+                    player.mana_pool.add(crate::mana::Color::Red, red);
                 }
             }
             // CR 500.4 exception — "you don't lose this mana as steps and phases
@@ -11032,7 +11044,11 @@ impl GameState {
             // so it doesn't survive the turn. Skipped under Upwelling
             // (`all_persist`), where the pool already carried it intact.
             if !all_persist && player.kept_mana_this_turn.total() > 0 {
-                player.mana_pool.absorb(&player.kept_mana_this_turn);
+                // Take-and-restore rather than a clone: `Player` is a CoW
+                // handle, so `&mut` one field borrows the whole seat.
+                let kept = std::mem::take(&mut player.kept_mana_this_turn);
+                player.mana_pool.absorb(&kept);
+                player.kept_mana_this_turn = kept;
             }
         }
     }
@@ -11809,8 +11825,16 @@ impl GameState {
             }
         }
         for p in 0..self.players.len() {
-            let pl = &mut self.players[p];
-            for zone in [&mut pl.library, &mut pl.hand, &mut pl.graveyard, &mut pl.command] {
+            // Re-borrow the seat per zone: `Player` is a CoW handle, so four
+            // `&mut` zone borrows can't be live at once.
+            for zi in 0..4 {
+                let pl = &mut self.players[p];
+                let zone = match zi {
+                    0 => &mut pl.library,
+                    1 => &mut pl.hand,
+                    2 => &mut pl.graveyard,
+                    _ => &mut pl.command,
+                };
                 collect(std::mem::take(&mut **zone), &mut owned);
             }
         }
@@ -19855,19 +19879,26 @@ impl GameState {
         if self.battlefield.iter().any(|c| c.id == id) {
             return self.battlefield.iter_mut().find(|c| c.id == id);
         }
-        for p in &mut self.players {
-            if let Some(c) = p.hand.iter_mut().find(|c| c.id == id) {
-                return Some(c);
-            }
-            if let Some(c) = p.graveyard.iter_mut().find(|c| c.id == id) {
-                return Some(c);
-            }
-            if let Some(c) = p.library.iter_mut().find(|c| c.id == id) {
-                return Some(c);
-            }
-            if let Some(c) = p.ante.iter_mut().find(|c| c.id == id) {
-                return Some(c);
-            }
+        // Locate first with shared borrows, then take the one `&mut`: `Player`
+        // is a CoW handle, so an `iter_mut()` per zone would both borrow the
+        // whole seat *and* unshare it on every miss.
+        let found = self.players.iter().enumerate().find_map(|(pi, p)| {
+            let zone = |z: usize, v: &CowBox<Vec<CardInstance>>| {
+                v.iter().position(|c| c.id == id).map(|i| (pi, z, i))
+            };
+            zone(0, &p.hand)
+                .or_else(|| zone(1, &p.graveyard))
+                .or_else(|| zone(2, &p.library))
+                .or_else(|| zone(3, &p.ante))
+        });
+        if let Some((pi, z, i)) = found {
+            let p = &mut self.players[pi];
+            return Some(match z {
+                0 => &mut p.hand[i],
+                1 => &mut p.graveyard[i],
+                2 => &mut p.library[i],
+                _ => &mut p.ante[i],
+            });
         }
         if let Some(c) = self.exile.iter_mut().find(|c| c.id == id) {
             return Some(c);

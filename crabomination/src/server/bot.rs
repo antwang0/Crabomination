@@ -262,7 +262,7 @@ pub struct EvalWeights {
     /// default** — it measured null over 28 800 paired games (see
     /// [`Player::smart_tap`]).
     ///
-    /// [`Player::smart_tap`]: crate::player::Player::smart_tap
+    /// [`Player::smart_tap`]: crate::player::PlayerData::smart_tap
     pub smart_tap: bool,
     /// Quantize the net's win probability onto a grid of this many
     /// levels before the search consumes it; 0 is off (continuous).
