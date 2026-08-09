@@ -16,33 +16,42 @@ reference and want their own triage pass):
 
 ## NEXT (handoff — rewrite each run, keep under 15 lines)
 
-Branch `claude/modern_decks`. Fifth pass, no card work. `PERF.md` is the record.
+Branch `claude/modern_decks`. Sixth pass: two perf wins, the owed re-profile,
+one bug class. `PERF.md` is the record.
 
-- **Perf, landed (+5.0 %)**: `836059e2` — the attack/block sims clone the
-  state and `LayerFreeze` clones *unfrozen*, so `pick_attacks`,
-  `sim_spell_action`, `decide_pending_policy` and `eval_material` re-gathered
-  the whole effect set per `computed_permanent`, once per sim-loop iteration.
-  12 alternated `release-fast` pairs; golden traces byte-identical.
-  **Rule this leaves: a freeze scope stops at a clone.**
-- **Next up**: PERF candidate 1(b), the per-freeze-scope
-  `Arc<ComputedPermanent>` memo — it compounds with the above, since more work
-  now runs inside a scope. It is ~30 lines: a
-  `perms: Vec<(CardId, Arc<ComputedPermanent>)>` on `LayerFreezeState` cleared
-  where `memo` is, and `computed_permanent` returning the `Arc`. `Arc` derefs,
-  so of ~187 call sites the only fixup is the explicit
-  `Option<ComputedPermanent>` annotation at `effects/eval.rs:3303`.
-- **Re-profile is still owed** — see the note atop "Perf candidates". Budget
-  the ~25 min cold `--profile profiling` build *first*; this run lost that
-  build to a container restart and picked its target by reading instead.
-- **Bugs**: the top filed item — "graveyard targets are dropped on the
-  activated/triggered ability path" — is **closed as not-a-bug**. The target
-  reaches the stack intact and passes the CR 608.2b re-check; the two cards
-  looked broken because their tests attached Mind Harness ("enchant creature
-  that's red or green") to a *blue* Hakim and CR 704.5m binned it, which only
-  went unnoticed because a direct `resolve_effect` skips SBAs. See
-  `CARD_BACKLOG.md`. **Backlog now has no confirmed engine bug at the top —
-  re-mine `audit_incomplete` / `audit_stubs` to replenish it.**
-- **Trackers**: TODO 787, roadmap 660 (compacted this run), `PERF.md` ~330.
+- **Perf, landed**: the per-freeze-scope `computed_permanent` memo
+  (-1.91 % Ir) and freezing the three read-only mana walkers (-6.26 % Ir,
+  **+4.5 % wall-clock, 6/6 pairs**). Cumulative **-8.06 %** instructions.
+  Baseline re-anchored at `release` (mean 33.13 games/s).
+- **Read PERF's two method notes before measuring anything.** (1) This box
+  cannot resolve a sub-5 % change by wall-clock — use `callgrind` Ir on the
+  fixed six-game workload, deterministic and contention-immune, and both
+  sides can run at once. (2) An inclusive share is an *upper bound* on what
+  a memo can win: check the frozen fraction first.
+- **Next up, in order**: PERF candidate 0(f) — freeze the read-only
+  damage-computation region of `resolve_combat`, which would give
+  `damage_prevented_by_protection` (91,762 calls) and
+  `evaluate_requirement_static` (93,612) one scope to share instead of a
+  per-call one; then 1(c), the same memo for `compute_battlefield`
+  (`apply_layers` still enters the per-card pass 888,340× vs
+  `computed_permanent`'s 648,866×); then 1.5, `effective_mana_abilities`
+  deep-cloning every ability it returns. **Do not re-try freezing inside
+  `effective_mana_abilities`** — measured +0.03 %, a null, reverted.
+- **The re-profile is done** (13.84 G Ir for six games, down from 23.50 G).
+  It promoted **CowBox** to the top of the untried list: `Arc::make_mut` is
+  21.31 % inclusive and `CardInstance::clone`'s self share doubled to 11 %,
+  so the checkpoint clone is now the fastest-growing cost.
+- **Bugs**: the backlog's top item is replenished and then closed —
+  re-mining `audit_incomplete --structural-only` found three shipped cards
+  with a dead triggered ability (Magosi, Oran-Rief, Annie Joins Up), all
+  three fixed at the *helper*, and the class is now a suite gate
+  (`core_rules::structural_audit`). `audit_stubs` is clean. Next bug source
+  is `INCOMPLETE_CARDS.md`'s missing-primitive buckets or a fresh
+  panic/unwrap sweep of the self-play path.
+- **Disk**: a full `debug` + `release` + `release-fast` + `profiling` set
+  fills the session allowance. `target/debug/incremental` alone was 16 G;
+  deleting it and `target/profiling` freed 18 G mid-run. Budget for it.
+- **Trackers**: TODO 793, roadmap 660, `PERF.md` 440, `INCOMPLETE_CARDS` 247.
 
 ## Environment note
 
