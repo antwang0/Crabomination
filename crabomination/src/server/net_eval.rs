@@ -27,7 +27,11 @@ pub const SLOT_BEST: u8 = 1;
 pub const SLOT_CANDIDATE: u8 = 2;
 const NUM_SLOTS: usize = 3;
 
-static SLOTS: RwLock<[Option<Arc<dyn NetEvaluator>>; NUM_SLOTS]> =
+/// The slot table: one optional evaluator per slot, shared by the global
+/// `SLOTS` and each thread's generation-tagged `CACHE`.
+type SlotTable = [Option<Arc<dyn NetEvaluator>>; NUM_SLOTS];
+
+static SLOTS: RwLock<SlotTable> =
     RwLock::new([None, None, None]);
 static GENERATION: AtomicU64 = AtomicU64::new(0);
 
@@ -68,7 +72,7 @@ pub fn load_slot(slot: u8, path: &std::path::Path) -> Result<(), String> {
 }
 
 thread_local! {
-    static CACHE: RefCell<(u64, [Option<Arc<dyn NetEvaluator>>; NUM_SLOTS])> =
+    static CACHE: RefCell<(u64, SlotTable)> =
         const { RefCell::new((u64::MAX, [None, None, None])) };
 }
 

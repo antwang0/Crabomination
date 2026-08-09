@@ -443,6 +443,10 @@ pub fn crusher_zendikon() -> CardDefinition {
 
 // ── Lands ───────────────────────────────────────────────────────────────────
 
+/// `trigger: Effect::Noop` means "no ETB ability at all" — the lands that
+/// only enter tapped (Magosi, Oran-Rief) pass it. Emitting `etb(Noop)` gave
+/// them a triggered ability real Magic doesn't have, which put an empty
+/// object on the stack and cost a priority round every time one entered.
 pub(crate) fn tapped_etb_land(
     name: &'static str,
     color: Color,
@@ -455,7 +459,10 @@ pub(crate) fn tapped_etb_land(
             description: "This land enters tapped.",
             effect: StaticEffect::EntersTapped { applies_to: Selector::This },
         }],
-        triggered_abilities: vec![etb(trigger)],
+        triggered_abilities: match trigger {
+            Effect::Noop => vec![],
+            t => vec![etb(t)],
+        },
         activated_abilities: vec![ActivatedAbility {
             tap_cost: true,
             effect: Effect::AddMana { who: PlayerRef::You, pool: ManaPayload::Colors(vec![color]) },

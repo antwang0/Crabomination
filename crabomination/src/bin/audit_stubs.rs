@@ -12,26 +12,9 @@
 
 use std::collections::HashSet;
 
+use crabomination::audit::resolve_effect_is_empty;
 use crabomination::card::{CardDefinition, CardType};
 use crabomination::catalog::all_known_factories;
-use crabomination::effect::Effect;
-
-/// True if the effect tree does nothing at all (Noop, or nested
-/// combinators that bottom out in Noop). Conservative: any leaf that
-/// isn't a combinator counts as "does something".
-fn effect_is_empty(e: &Effect) -> bool {
-    match e {
-        Effect::Noop => true,
-        Effect::Seq(v) => v.iter().all(effect_is_empty),
-        Effect::If { then, else_, .. } => effect_is_empty(then) && effect_is_empty(else_),
-        Effect::ForEach { body, .. } => effect_is_empty(body),
-        Effect::Repeat { body, .. } => effect_is_empty(body),
-        Effect::MayDo { body, .. } => effect_is_empty(body),
-        Effect::ChooseMode(v) => v.iter().all(effect_is_empty),
-        Effect::ChooseN { modes, .. } => modes.iter().all(effect_is_empty),
-        _ => false,
-    }
-}
 
 fn def_has_any_ability(def: &CardDefinition) -> bool {
     !def.triggered_abilities.is_empty()
@@ -45,7 +28,7 @@ fn classify(def: &CardDefinition) -> Option<&'static str> {
     let is_is = def.is_instant() || def.is_sorcery();
     if is_is {
         // A spell whose resolve does nothing and has no cast-trigger.
-        if effect_is_empty(&def.effect) && def.triggered_abilities.is_empty() {
+        if resolve_effect_is_empty(def) && def.triggered_abilities.is_empty() {
             return Some("BLANK SPELL (resolves to nothing)");
         }
         return None;
@@ -56,7 +39,7 @@ fn classify(def: &CardDefinition) -> Option<&'static str> {
         || def.card_types.contains(&CardType::Enchantment)
         || def.card_types.contains(&CardType::Planeswalker))
         && !def.is_creature();
-    if non_creature_perm && effect_is_empty(&def.effect) && !def_has_any_ability(def) {
+    if non_creature_perm && resolve_effect_is_empty(def) && !def_has_any_ability(def) {
         return Some("BLANK PERMANENT (no abilities)");
     }
     // Planeswalker with no loyalty abilities is unusable.

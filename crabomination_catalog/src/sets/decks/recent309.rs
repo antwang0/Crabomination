@@ -40,25 +40,27 @@ fn legend(
     }
 }
 
-/// A legendary enchantment shell for the "Joins Up" cycle.
+/// A legendary enchantment shell for the "Joins Up" cycle. `ongoing: None`
+/// for the member whose second ability is static rather than triggered
+/// (Annie) — a filler `legend_enters(Noop)` gave it a trigger that fires on
+/// every legendary creature entering and resolves to nothing.
 fn joins_up(
     name: &'static str,
     mana: crate::mana::ManaCost,
     etb: Effect,
-    ongoing: TriggeredAbility,
+    ongoing: Option<TriggeredAbility>,
 ) -> CardDefinition {
+    let mut triggered_abilities = vec![TriggeredAbility {
+        event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+        effect: etb,
+    }];
+    triggered_abilities.extend(ongoing);
     CardDefinition {
         name,
         cost: mana,
         supertypes: vec![Supertype::Legendary],
         card_types: vec![CardType::Enchantment],
-        triggered_abilities: vec![
-            TriggeredAbility {
-                event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-                effect: etb,
-            },
-            ongoing,
-        ],
+        triggered_abilities,
         ..Default::default()
     }
 }
@@ -129,11 +131,11 @@ pub fn kellan_joins_up() -> CardDefinition {
             up_to: true,
             to: ZoneDest::ExilePlotted,
         },
-        legend_enters(Effect::AddCounter {
+        Some(legend_enters(Effect::AddCounter {
             what: Selector::EachPermanent(R::Creature.and(R::ControlledByYou)),
             kind: CounterType::PlusOnePlusOne,
             amount: Value::ONE,
-        }),
+        })),
     )
 }
 
@@ -232,7 +234,7 @@ pub fn annie_joins_up() -> CardDefinition {
                 to: target_filtered(R::Creature.or(R::Planeswalker).and(R::ControlledByOpponent)),
                 amount: Value::Const(5),
             },
-            legend_enters(Effect::Noop),
+            None,
         )
     }
 }
@@ -297,7 +299,7 @@ pub fn tinybones_joins_up() -> CardDefinition {
             amount: Value::ONE,
             random: false,
         },
-        legend_enters(Effect::Seq(vec![
+        Some(legend_enters(Effect::Seq(vec![
             Effect::Mill {
                 who: target_filtered(R::Player),
                 amount: Value::ONE,
@@ -306,7 +308,7 @@ pub fn tinybones_joins_up() -> CardDefinition {
                 who: Selector::Target(0),
                 amount: Value::ONE,
             },
-        ])),
+        ]))),
     )
 }
 
@@ -322,7 +324,7 @@ pub fn vraska_joins_up() -> CardDefinition {
             keyword: Keyword::Deathtouch,
             amount: Value::ONE,
         },
-        TriggeredAbility {
+        Some(TriggeredAbility {
             event: EventSpec::new(
                 EventKind::DealsCombatDamageToPlayer,
                 EventScope::YourControl,
@@ -335,7 +337,7 @@ pub fn vraska_joins_up() -> CardDefinition {
                 who: Selector::You,
                 amount: Value::ONE,
             },
-        },
+        }),
     )
 }
 

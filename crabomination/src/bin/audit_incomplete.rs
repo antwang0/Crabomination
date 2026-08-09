@@ -35,120 +35,18 @@
 use std::collections::HashSet;
 use std::path::{Path, PathBuf};
 
-use crabomination::card::CardDefinition;
+use crabomination::audit::{DeadCapability, dead_capabilities};
 use crabomination::catalog::all_known_factories;
-use serde_json::Value;
 
 // ── Pass 1: structural (serde-walk the effect tree) ──────────────────────────
-
-/// True if a serialized `Effect` node does nothing at all. Mirrors the typed
-/// `effect_is_empty` in `audit_stubs.rs`, but over the JSON form so it stays
-/// correct as new combinators are added (externally-tagged enums: a unit
-/// variant is the bare string `"Noop"`, others are `{"Variant": payload}`).
-fn effect_is_empty(v: &Value) -> bool {
-    match v {
-        Value::String(s) => s == "Noop",
-        Value::Object(m) if m.len() == 1 => {
-            let (tag, p) = m.iter().next().unwrap();
-            match tag.as_str() {
-                "Seq" | "ChooseMode" => arr_all_empty(p),
-                "ChooseN" | "Escalate" => p.get("modes").map(arr_all_empty).unwrap_or(false),
-                "If" => {
-                    matches!((p.get("then"), p.get("else_")), (Some(t), Some(e)) if effect_is_empty(t) && effect_is_empty(e))
-                }
-                "ForEach" | "Repeat" | "MayDo" => p.get("body").map(effect_is_empty).unwrap_or(false),
-                _ => false,
-            }
-        }
-        _ => false,
-    }
-}
-
-fn arr_all_empty(v: &Value) -> bool {
-    v.as_array().map(|a| a.iter().all(effect_is_empty)).unwrap_or(false)
-}
-
-#[derive(Debug)]
-enum StructuralFinding {
-    DeadMode { modal: &'static str, index: usize },
-    DeadAbility { kind: &'static str, index: usize },
-}
-
-/// Recursively hunt for modal nodes anywhere in the tree and report any arm
-/// that resolves to nothing.
-fn find_dead_modes(v: &Value, out: &mut Vec<StructuralFinding>) {
-    match v {
-        Value::Object(m) => {
-            for (tag, p) in m {
-                match tag.as_str() {
-                    "ChooseMode" => {
-                        if let Some(arr) = p.as_array() {
-                            for (i, arm) in arr.iter().enumerate() {
-                                if effect_is_empty(arm) {
-                                    out.push(StructuralFinding::DeadMode { modal: "ChooseMode", index: i });
-                                }
-                            }
-                        }
-                    }
-                    "ChooseN" | "Escalate" => {
-                        if let Some(arr) = p.get("modes").and_then(Value::as_array) {
-                            for (i, arm) in arr.iter().enumerate() {
-                                if effect_is_empty(arm) {
-                                    out.push(StructuralFinding::DeadMode { modal: "ChooseN/Escalate", index: i });
-                                }
-                            }
-                        }
-                    }
-                    _ => {}
-                }
-                find_dead_modes(p, out);
-            }
-        }
-        Value::Array(a) => a.iter().for_each(|e| find_dead_modes(e, out)),
-        _ => {}
-    }
-}
-
-fn scan_card(def: &CardDefinition) -> Vec<StructuralFinding> {
-    let mut out = Vec::new();
-    let v = serde_json::to_value(def).expect("CardDefinition serializes");
-
-    // Dead modes anywhere in the resolve effect or ability effects.
-    find_dead_modes(&v, &mut out);
-
-    // Dead abilities: a triggered/activated/loyalty ability whose effect is
-    // entirely empty. (Static abilities carry a StaticEffect, not an Effect,
-    // so they're out of scope here.)
-    for (key, kind) in [
-        ("triggered_abilities", "triggered"),
-        ("activated_abilities", "activated"),
-        ("loyalty_abilities", "loyalty"),
-    ] {
-        if let Some(arr) = v.get(key).and_then(Value::as_array) {
-            for (i, ab) in arr.iter().enumerate() {
-                if let Some(eff) = ab.get("effect")
-                    && effect_is_empty(eff)
-                {
-                    // "{cost}: Sacrifice this." (Hopeful Vigil, Hopeless
-                    // Nightmare) is a real ability whose whole point is the
-                    // sacrifice — an empty resolution effect is correct, the
-                    // sacrifice is paid as part of the activation cost.
-                    let is_sac_ability =
-                        ab.get("sac_cost").and_then(Value::as_bool).unwrap_or(false);
-                    if is_sac_ability {
-                        continue;
-                    }
-                    out.push(StructuralFinding::DeadAbility { kind, index: i });
-                }
-            }
-        }
-    }
-    out
-}
+//
+// The walker itself lives in `crabomination::audit` so this binary,
+// `audit_stubs`, and the `core_rules::structural_audit` regression test all
+// share one definition of "does nothing".
 
 fn run_structural() {
     let mut seen: HashSet<String> = HashSet::new();
-    let mut flagged: Vec<(String, Vec<StructuralFinding>)> = Vec::new();
+    let mut flagged: Vec<(String, Vec<DeadCapability>)> = Vec::new();
     let mut total = 0usize;
 
     for factory in all_known_factories() {
@@ -157,7 +55,7 @@ fn run_structural() {
             continue;
         }
         total += 1;
-        let findings = scan_card(&def);
+        let findings = dead_capabilities(&def);
         if !findings.is_empty() {
             flagged.push((def.name.to_string(), findings));
         }
@@ -168,18 +66,7 @@ fn run_structural() {
     eprintln!("Scanned {total} unique cards; {} have dead modes/abilities.\n", flagged.len());
     for (name, findings) in &flagged {
         for f in findings {
-            match f {
-                StructuralFinding::DeadMode { modal, index } => {
-                    eprintln!(
-                        "  {name}  — {modal} arm #{index} resolves to nothing \
-                         (REVIEW: a placeholder for a missing primitive, OR a \
-                         deliberate \"you may … / decline\" mode)"
-                    );
-                }
-                StructuralFinding::DeadAbility { kind, index } => {
-                    eprintln!("  {name}  — {kind} ability #{index} has an empty effect");
-                }
-            }
+            eprintln!("  {name}  — {f}");
         }
     }
     eprintln!();

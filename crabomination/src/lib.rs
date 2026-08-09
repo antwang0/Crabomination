@@ -20,6 +20,7 @@ pub mod catalog {
 }
 
 mod card_registry;
+pub mod audit;
 
 pub mod cow;
 pub mod cube;

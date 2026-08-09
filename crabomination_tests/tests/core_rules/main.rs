@@ -18,6 +18,7 @@ mod format;
 mod freerunning;
 mod game;
 mod golden_trace;
+mod structural_audit;
 mod jewel;
 mod lci_craft;
 mod misconceptions;
