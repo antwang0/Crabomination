@@ -58,6 +58,23 @@ only stays dead while the reasoning that killed it is readable.
   stratum both plays and benches reports **no** within-archetype number
   rather than passing the marginal off as one. `recommend_pool` prints
   `within` first and labels `raw` as the confound.
+- 🟢 **Determinized search priced (2026-08-09, task #25) — the
+  information cheat was worth ~1–1.5 points and nothing rested on it.**
+  Coverage fix first: the cast planner's dry-runs now redeal hidden
+  zones under `determinize` too (one turn-keyed redeal shared by all
+  finalists of a decision; the sequence recursion does NOT re-redeal —
+  it continues a line through cards already drawn). New `net-det1`/
+  `net-det3` profiles. The asymmetric gates (mirrors are blind — both
+  seats cheat identically): `det1` vs `gang` 49.3/48.0 (the peek buys
+  the heuristic ~1.4 pts); **`net-det1` vs `net` 48.9/50.0 — the
+  champion barely uses the peek**; honest champion 50.4/50.7 vs gang,
+  52.2/52.2 vs atk-sim. All these cells face *still-cheating*
+  opponents, so they lower-bound the honest bot's standing vs humans.
+  Consequences: the program's ladder conclusions survive un-asterisked;
+  determinized deeper search (MCTS-net) is well-founded; and the client
+  default should flip to `determinize: 1` — the honest bot is ~equal
+  and it stops reading the human's hand (recommended, not yet flipped:
+  it changes shipped gameplay).
 - 🔴 **Round 24 (2026-08-09) — capacity is null-to-negative even under
   the regime that works.** The fair retest round 12 couldn't run: 2×
   representation width (emb 64, obj_hidden 128) on the champion config,

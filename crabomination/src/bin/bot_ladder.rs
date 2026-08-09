@@ -245,6 +245,8 @@ fn parse_profile(name: &str) -> Option<Pilot> {
         "det1" => Some(Pilot::Scored(EvalWeights::determinized())),
         "det3" => Some(Pilot::Scored(EvalWeights::determinized3())),
         "net" => Some(Pilot::Scored(EvalWeights::net_eval())),
+        "net-det1" => Some(Pilot::Scored(EvalWeights::net_eval_det1())),
+        "net-det3" => Some(Pilot::Scored(EvalWeights::net_eval_det3())),
         "net-blend" => Some(Pilot::Scored(EvalWeights::net_eval_blend())),
         "net-blend300" => Some(Pilot::Scored(EvalWeights::net_eval_blend300())),
         "netb-ply" => Some(Pilot::Scored(EvalWeights::net_eval_blend_ply())),
@@ -292,7 +294,7 @@ fn parse_profile(name: &str) -> Option<Pilot> {
 }
 
 /// Profile names accepted by `--a` / `--b`, for the help text and errors.
-const PROFILES: &str = "baseline, combat, holdsick, holdsick+combat, atk, atk-cheap, atk-hold, atk-sim, atk-race, atk-life, dflt-life, blk, lookahead, holdinst, mcts, mcts-heur, mcts-deep, planner, v2+combat, pretap, scaled, keywords, kw25, base, base+kw, life, power, v2, uniform, landseq, mull, gang, landseq2, mull2, race2, look1, look2, smarttap, det1, det3, net, net-blend, net-blend300, net-q10, net-q20, netb-q10, netb-q20, netb-ply (net* need CRAB_NET=<weights.safetensors>)";
+const PROFILES: &str = "baseline, combat, holdsick, holdsick+combat, atk, atk-cheap, atk-hold, atk-sim, atk-race, atk-life, dflt-life, blk, lookahead, holdinst, mcts, mcts-heur, mcts-deep, planner, v2+combat, pretap, scaled, keywords, kw25, base, base+kw, life, power, v2, uniform, landseq, mull, gang, landseq2, mull2, race2, look1, look2, smarttap, det1, det3, net, net-det1, net-det3, net-blend, net-blend300, net-q10, net-q20, netb-q10, netb-q20, netb-ply (net* need CRAB_NET=<weights.safetensors>)";
 
 /// Peak resident set size in MiB, or `None` where the OS doesn't expose it
 /// cheaply. Linux keeps the high-water mark in `/proc/self/status`, which

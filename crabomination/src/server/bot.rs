@@ -901,6 +901,22 @@ impl EvalWeights {
         Self { net_slot: super::net_eval::SLOT_BEST, ..Self::attack_search_sim() }
     }
 
+    /// [`net_eval`](Self::net_eval) with honest search: hidden zones are
+    /// redealt before every sim and planner dry-run, so the champion's
+    /// searches stop reading the opponent's hand and the real library
+    /// order. The `net` vs `net-det1` ladder is the asymmetric
+    /// measurement of what the peek was worth (mirrors can't see it —
+    /// both seats cheat identically).
+    pub const fn net_eval_det1() -> Self {
+        Self { determinize: 1, ..Self::net_eval() }
+    }
+
+    /// [`net_eval_det1`](Self::net_eval_det1) averaging three redeals per
+    /// combat sim — the lower-variance honest search, at 3× sim cost.
+    pub const fn net_eval_det3() -> Self {
+        Self { determinize: 3, ..Self::net_eval() }
+    }
+
     /// [`net_eval`](Self::net_eval), blended instead of replaced: the
     /// heuristic evaluation plus a ±50·unit net bias. The division of
     /// labor: the heuristic resolves small material deltas exactly, the
@@ -8827,6 +8843,18 @@ fn evaluate_action_outcome(
     action: &GameAction,
     w: &EvalWeights,
 ) -> Option<i32> {
+    // Under determinization the planner's dry-runs must not read the true
+    // hidden zones either: a resolution that draws would otherwise plan
+    // around the exact card coming. One redeal (k = 0), not an average —
+    // the planner evaluates many candidates per decision and the salt is
+    // turn/step-keyed, so every finalist is judged against the *same*
+    // redeal, which keeps the comparison among candidates consistent.
+    // The recursion inside `evaluate_action_sequence` must NOT re-redeal:
+    // it continues a line through cards the sim already drew.
+    if w.determinize > 0 {
+        let g = sim_start_state(state, seat, w, 0);
+        return evaluate_action_sequence(&g, seat, action, w, w.lookahead);
+    }
     evaluate_action_sequence(state, seat, action, w, w.lookahead)
 }
 
