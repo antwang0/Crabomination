@@ -69,6 +69,16 @@ slower host from a regression. Check it *before* investigating a moved
 baseline. The only sound way to attribute a delta to code is to measure both
 sides in one sitting, alternating A/B/A/B — host drift then moves both.
 
+**An allocator-shaped change must be measured with the shipped allocator.**
+The default is mimalloc; callgrind forces the *system* allocator (valgrind
+replaces malloc). A change that removes allocations therefore reads far
+larger under callgrind and under a `--no-default-features` wall-clock A/B
+than it is worth in a training run: this run's `Printed<T>` row measured
+-17.09 % Ir and +13.5 % system-allocator wall-clock, and **+1.7 %** at
+`release` with mimalloc. Ir still tells you *whether* a change helps and by
+how much it cut work; only a `release` run tells you what ships. Do both
+before quoting a throughput number for an allocation fix.
+
 **Sub-5 % changes need callgrind, not `--bench`.** Two runs of one binary
 here differ by more than a 2 % code change is worth, so a small win reads as
 noise however many pairs you run. `callgrind` on a fixed workload counts
@@ -98,48 +108,73 @@ contention-immune, which makes it the better first look.
 
 ## Baseline
 
-Re-anchored (`release`) at the `CardInstance`-CoW commit — the first of
-this run's two rows; the `Printed<T>` row landed after this build and its
-+13.5 % is *not* in these numbers, so a next run measuring the tip should
-read **higher**, not treat it as drift. Refresh only alongside an
-intentional, explained change. Regressions beyond ~5 % get investigated
-before anything else lands — but check `host_calib_ms` first (see "How to
-measure").
+Re-anchored (`release`, mimalloc — the shipped configuration) at this
+run's tip, which is **+35.6 % games/s and -42 % peak RSS** against the
+pre-run tip on the same box (the alternated A/B is below).
+Refresh only alongside an intentional, explained change.
+Regressions beyond ~5 % get investigated before anything else lands — but
+check `host_calib_ms` first (see "How to measure").
 
 ```text
 bot_ladder --bench   release, rustc 1.95.0, 4-core VM, 3 worker threads
                      mimalloc (the default); measured on an idle box
 host_cpu             Intel(R) Xeon(R) Processor @ 2.80GHz
-host_calib_ms        45 / 46 / 45 / 46            <- compare this first
+host_calib_ms        48 / 49 / 47 / 45            <- compare this first
 games                320
-games_per_s          42.54 / 45.26 / 46.37 / 45.70   (mean 44.97, spread 8.5 %)
-games_per_s_th       14.18 / 15.09 / 15.46 / 15.23
-decisions_per_s      25686 / 27332 / 27999 / 27598   (mean 27154)
+games_per_s          46.64 / 44.45 / 46.15 / 45.65   (mean 45.72, spread 4.8 %)
+games_per_s_th       15.55 / 14.82 / 15.38 / 15.22
+decisions_per_s      28164 / 26843 / 27866 / 27563   (mean 27609)
 turns_per_game       26.98
 decisions_per_game   603.9
 stalls               0 (0.00 %)
-peak_rss_mib         24.1 - 24.2
+peak_rss_mib         23.9 - 24.2
 determinism          ok (160 pairs, 0 sweeps, all pairs split)
 ```
 
-**Read this block before concluding anything from the absolute.** It was
-taken on a **different box model** from the previous anchor — Xeon @
-2.80GHz with `host_calib_ms` 45-46, against 2.10GHz and 48-65 — so the
-33.13 → 44.97 jump is part box and part code and the split is not
-recoverable from these two blocks. `peak_rss_mib` 38-41 → 24 is the one
-absolute that does carry: it is allocation behaviour, not clock speed.
-**The per-change rows in Log are what carry this run's claims**, each
-measured in a single alternated `release-fast` sitting on one box:
+**What this run is worth, measured end to end.** The pre-run tip
+(`2eee69ad`) and this one, both built `release` + mimalloc, alternated
+A/B/A/B ×5 in one sitting on one box:
 
 ```text
-release-fast, alternated A/B, one sitting each
+release + mimalloc, --bench, 5 alternated pairs   <- the shipped configuration
+games_per_s      34.26 -> 46.44      +35.6 %   5/5 pairs, no overlap
+                 (32.95-34.93)  (45.65-47.40)
+decisions_per_s  20686 -> 28045      +35.6 %
+peak_rss_mib      41.0 ->  23.8      -42 %
+host_calib_ms    45-78 vs 45-46; turns_per_game 26.98 and stalls 0 on all
+                 10 runs; determinism ok, all pairs split
+```
+
+That also settles the previous anchor's absolute: the old block read 33.13
+on what it called a slower box, and the *same pre-run code* reads 34.26
+here — so the box difference is ~3 %, and 33.13 → 45.72 is almost all
+code.
+
+**The per-change rows in Log are measured differently and don't add up to
++35.6 %**, deliberately — each was an alternated `release-fast` + system
+allocator sitting, which is the only way to resolve a small change here:
+
+```text
+release-fast + system allocator, callgrind, fixed six-game workload
 14,403,731,176 -> 10,718,206,071 Ir   CardInstance CoW handle       -25.59 %
 10,718,206,071 ->  8,886,099,152 Ir   ComputedPermanent Printed<T>  -17.09 %
                                       cumulative this run           -38.31 %
-25.44 -> 32.50 games/s                CoW handle, 4/4 pairs         +27.8 %
-32.61 -> 37.02 games/s                Printed<T>, 4/4 pairs         +13.5 %
 16.7 M -> 5.09 M allocations          cumulative                    -69 %
+
+release + mimalloc, --bench, alternated pairs   <- the shipped configuration
+45.73 -> 46.49 games/s                Printed<T>, 4/4 pairs          +1.7 %
+34.26 -> 46.44 games/s                both rows, 5/5 pairs          +35.6 %
 ```
+
+**The two allocators disagree on purpose, and the gap is the lesson.**
+`Printed<T>` is an allocation-count fix: -17.09 % Ir and +13.5 %
+wall-clock against the *system* allocator, **+1.7 %** against mimalloc,
+which is what ships. glibc's `malloc` is expensive enough that removing
+3.5 M of them looks enormous; mimalloc's is cheap enough that the same
+3.5 M were most of a rounding error. The `CardInstance` CoW row is the
+other shape — it removes deep struct copies, not just allocations — and
+carries essentially the whole +35.6 %. Measure allocation-shaped changes
+at `release` before quoting a throughput number for them.
 
 Older steps, kept because the percentages carry even though the absolutes
 don't: 13,307,099,945 -> 13,052,911,075 Ir for the `computed_permanent`
@@ -198,8 +233,9 @@ percentages are what carry over.
 | 2026-08-08 | Freeze the layer scope around the attack/block sims' read-only helpers — `pick_attacks`, `sim_spell_action`, `decide_pending_policy`, `eval_material` (`836059e2`) | 21.94 games/s, 13248 dec/s | 23.03 games/s, 13904 dec/s (**+5.0 %**) | `release-fast` A/B, 12 alternated pairs in one sitting; median paired +5.7 %, 11/12 rounds positive (the one loss read `host_calib_ms` 66 vs 52 on its pair). `turns_per_game` 26.98 and `stalls` 0 on every run, both sides; determinism ok |
 | 2026-08-08 | Per-freeze-scope memo of `computed_permanent`: `LayerFreezeState` grows a `perms: Vec<(CardId, Arc<ComputedPermanent>)>` cleared where `memo` is, and the method hands back the `Arc` (candidate 1(b)) | 13,307,099,945 Ir | 13,052,911,075 Ir (**-1.91 %**) | **Small win, kept, and wall-clock cannot see it.** Measured by callgrind instruction count, A/B on identical `release-fast` binaries over `--a gang --b gang --games 6 --threads 1 --seed 1 --decks fixed` — deterministic, so the 1.91 % is exact rather than a mean. `--bench` wall-clock over 8 alternated pairs read +0.7 % mean / +1.1 % median with 5/8 pairs positive, i.e. inside this box's noise; that is *why* the row quotes Ir. An instrumented build put the memo's hit rate at **3.30 M hits / 9.57 M calls (34.5 %)** — the ceiling is 50 %, because half of all `computed_permanent` calls come from `depth == 0` mutating paths (combat damage, SBAs, effect resolution) where freezing is unsound. Reducing the per-call lock traffic from 3 acquisitions to 1-2 was worth only 0.12 pts of the 1.91, so the lock was not the cost. Suite 18806 passed / 0 failed; all golden traces byte-identical; `turns_per_game` 26.98 and `stalls` 0 on all 16 bench runs; determinism ok. |
 | 2026-08-08 | Freeze the layer scope around the three read-only mana walkers — `mana_source_table`, `untapped_relevant_source_exists`, `untapped_producers_of` | 13,052,911,075 Ir; 27.43 games/s | 12,235,211,102 Ir (**-6.26 %**); 28.67 games/s (**+4.5 %**) | Same lesson as the sim-loop freeze, one level down. `auto_tap_for_cost_inner` (17.47 % inclusive) is `&mut self`, so the table it builds ran at `depth == 0`: every untapped permanent's `effective_mana_abilities` called `printed_land_mana_ability_lost` *per printed mana ability* and `intrinsic_land_mana_abilities` once, each of which is a full `gather_continuous_effects` + layer pass. A five-land board paid ~10 gathers per auto-tap. The three walkers are all `&self` and pure reads, so one scope covers each. Callgrind A/B as above, plus `--bench` ×6 alternated pairs: **6/6 pairs positive**, median paired +1.17 games/s. Compounds with the memo row above — the freeze is what lets it hit. Suite 18806 passed / 0 failed; golden traces byte-identical; turns_per_game 26.98, stalls 0, determinism ok on all 12 runs. |
-| 2026-08-09 | `CardInstance` becomes a CoW handle: the ~110 fields move to `CardData` behind an `Arc`, `Deref`/`DerefMut` keep every `card.field` read and write working, and `DerefMut` is the single unshare point (candidate 7) | 14,403,731,176 Ir; 25.44 games/s, 15351 dec/s | 10,718,206,071 Ir (**-25.59 %**); 32.50 games/s (**+27.8 %**) | The zones were already `CowBox<Vec<CardInstance>>`, so a `GameState` clone was cheap but the *first write* deep-copied every card in the zone: `Arc::make_mut` was **24.12 %** inclusive and `CardInstance::clone` **14.69 %** self, 15.85 % of the program under `advance_step` alone. Now unsharing a zone copies N pointers and only the written card clones. Callgrind A/B on identical `release-fast --no-default-features` binaries over the fixed six-game workload; `--bench` ×4 alternated pairs, 4/4 positive and non-overlapping (base 25.12-25.85, cand 31.88-32.91). Peak RSS **fell** 23.3 → 21.3 MiB (shared cards aren't duplicated). Suite 18810 passed / 0 failed; all four golden traces byte-identical; `turns_per_game` 26.98 and `stalls` 0 on all 10 bench runs; determinism ok, all pairs split. Cost: two borrow-checker fixes where a `&mut` field write and a `&self` read of the same card overlapped. |
-| 2026-08-09 | `ComputedPermanent`'s four printed-derived collections (`card_types`, `supertypes`, `subtypes`, `keywords`) become `Printed<T>` — the `Arc<CardDefinition>` plus a projection, cloned only on the first layer write (candidate 1(a)) | 10,718,206,071 Ir; 32.61 games/s, 19693 dec/s | 8,886,099,152 Ir (**-17.09 %**); 37.02 games/s (**+13.5 %**), 22353 dec/s | `compute_permanent_pass` was **3,482,320 of the program's 8,723,045 allocations (40 %)**, nearly all of them cloning a collection that nothing then modified. `Printed<T>` `Deref`/`DerefMut`s to `T`, so the ~4.5 k `cp.keywords.contains(…)` / `cp.subtypes.creature_types` sites are untouched; the whole change is 11 `.clone()` → `.to_vec()` fixups plus gating the two unconditional `keywords.retain` calls (they take `&mut`, so they materialized the list even when they removed nothing). Result: **compute_permanent_pass allocations 3,482,320 → 30,086**, program-wide 8,723,045 → **5,093,895 (-41.6 %)**, allocator self cost 21.4 → 10.9 %. Callgrind A/B on identical `release-fast --no-default-features` binaries, fixed six-game workload; `--bench` ×4 alternated, 4/4 positive and non-overlapping (before 31.94-33.31, after 35.44-37.66). Peak RSS 21.3 → 23.7 MiB — the one cost, four `Arc<CardDefinition>` clones per computed permanent keeping definitions alive. Suite 18810 passed / 0 failed; all four golden traces byte-identical; turns_per_game 26.98, stalls 0, determinism ok on all 8 runs. |
+| 2026-08-09 | `CardInstance` becomes a CoW handle: the ~110 fields move to `CardData` behind an `Arc`, `Deref`/`DerefMut` keep every `card.field` read and write working, and `DerefMut` is the single unshare point (candidate 7) | 14,403,731,176 Ir; 25.44 games/s, 15351 dec/s | 10,718,206,071 Ir (**-25.59 %**); 32.50 games/s (**+27.8 %**) | The zones were already `CowBox<Vec<CardInstance>>`, so a `GameState` clone was cheap but the *first write* deep-copied every card in the zone: `Arc::make_mut` was **24.12 %** inclusive and `CardInstance::clone` **14.69 %** self, 15.85 % of the program under `advance_step` alone. Now unsharing a zone copies N pointers and only the written card clones. Callgrind A/B on identical `release-fast --no-default-features` binaries over the fixed six-game workload; `--bench` ×4 alternated pairs, 4/4 positive and non-overlapping (base 25.12-25.85, cand 31.88-32.91). Peak RSS **fell** 23.3 → 21.3 MiB (shared cards aren't duplicated). Suite 18810 passed / 0 failed; all four golden traces byte-identical; `turns_per_game` 26.98 and `stalls` 0 on all 10 bench runs; determinism ok, all pairs split. Cost: two borrow-checker fixes where a `&mut` field write and a `&self` read of the same card overlapped. **Under `release` + mimalloc this row carries essentially the run's whole +35.6 %** (see Baseline): unlike the `Printed<T>` row it removes deep struct copies, not just allocations, so the allocator can't absorb it. |
+| 2026-08-09 | Gate each of the gather's 38 per-variant passes on a `u64` presence mask built in one walk of the board's static abilities (candidate 3(ii)) | 8,886,099,152 Ir | 9,013,111,944 Ir (**+1.43 %**) | **No win — reverted.** The gather's own self cost went *up*, 1,573 M -> 1,696 M (+7.8 % of itself): the 38-arm classifier costs ~342 Ir per gather and the passes it skips were already near-free. The negative result is the useful part — it says the 39 passes are not where the gather's 4,385 Ir/call lives, so the next attempt should profile the body line by line (`--profile profiling`, which keeps debuginfo) rather than guess again. Written up in candidate 3. |
+| 2026-08-09 | `ComputedPermanent`'s four printed-derived collections (`card_types`, `supertypes`, `subtypes`, `keywords`) become `Printed<T>` — the `Arc<CardDefinition>` plus a projection, cloned only on the first layer write (candidate 1(a)) | 10,718,206,071 Ir; 32.61 games/s (system alloc); 45.73 games/s (`release`, mimalloc) | 8,886,099,152 Ir (**-17.09 %**); 37.02 games/s (**+13.5 %**, system alloc); **46.49 games/s (+1.7 %, `release` + mimalloc — the number that ships)** | `compute_permanent_pass` was **3,482,320 of the program's 8,723,045 allocations (40 %)**, nearly all of them cloning a collection that nothing then modified. `Printed<T>` `Deref`/`DerefMut`s to `T`, so the ~4.5 k `cp.keywords.contains(…)` / `cp.subtypes.creature_types` sites are untouched; the whole change is 11 `.clone()` → `.to_vec()` fixups plus gating the two unconditional `keywords.retain` calls (they take `&mut`, so they materialized the list even when they removed nothing). Result: **compute_permanent_pass allocations 3,482,320 → 30,086**, program-wide 8,723,045 → **5,093,895 (-41.6 %)**, allocator self cost 21.4 → 10.9 %. Callgrind A/B on identical `release-fast --no-default-features` binaries, fixed six-game workload; `--bench` ×4 alternated, 4/4 positive and non-overlapping (before 31.94-33.31, after 35.44-37.66). Peak RSS 21.3 → 23.7 MiB — the one cost, four `Arc<CardDefinition>` clones per computed permanent keeping definitions alive. **The two wall-clock figures disagree and the mimalloc one is the real one**: the +13.5 % was measured against the *system* allocator (`--no-default-features`, which callgrind forces), and a 4/4-pair alternated A/B of the two `release` + mimalloc binaries reads **45.73 → 46.49 games/s, +1.7 %** (paired deltas +0.76 / +0.03 / +0.79 / +1.46, `host_calib_ms` 45-58). Kept: 4/4 positive under the shipped configuration, an exact -17.09 % of the work, and no cost but 2 MiB. See the new allocator note under "How to measure". Suite 18810 passed / 0 failed; all four golden traces byte-identical; turns_per_game 26.98, stalls 0, determinism ok on all 16 runs. |
 
 ## Profile of record
 
@@ -353,8 +389,9 @@ methodological notes, each learned the hard way:
    definition in place (MDFC face-swap, "loses all abilities", keyword
    grants), which would leave a filled cache stale. A `ColorSet` bitmask
    return would dodge both, at the cost of touching every `cp.colors`
-   reader. Worth ~0.5 M of the remaining 5.09 M allocations — do it after
-   candidate 3.
+   reader. Worth ~0.5 M of the remaining 5.09 M allocations, which after this run's
+   allocator lesson means **~0.2 % at `release`** — do it only if it falls
+   out of other work, not on its own.
    (b) ~~Memoize per (card, freeze scope)~~ — **done, -1.91 % Ir.** See the
    Log row. Hit rate 34.5 %, ceiling 50 %.
    (c) ~~The same memo for `compute_battlefield`~~ — **dead, don't build
@@ -411,25 +448,35 @@ methodological notes, each learned the hard way:
    17.7 % self, ~22 % inclusive, **1,573,494,744 Ir over 358,792 calls =
    4,385 Ir per gather**, and that absolute is *byte-identical* before and
    after both of this run's -25.6 % / -17.1 % fixes: nothing landed so far
-   has touched it. Where the 4,385 goes: the body runs **39 sequential
-   passes over `sa_cards`**, and on a bench board `sa_cards` holds 2-4
-   cards with 1-2 static abilities each, so the passes are ~39 × 4 loop
-   set-ups plus a discriminant test, over and over. Two stacked fixes,
-   both order-preserving (and so trace-preserving):
-   (i) **flatten to a pairs list.** Build
-   `Vec<(&CardInstance, &StaticAbility)>` once, before the passes, and let
-   each pass iterate *that* instead of the nested
-   `for &card in &sa_cards { for sa in &card.definition.static_abilities`.
-   Same order, one loop instead of two, and the 3 passes that call
-   `self.active_static(&sa.effect, card)` stop re-peeling every gate 39
-   times (36 of the 39 match `&sa.effect` directly and must keep doing so —
-   don't hand them the peeled effect).
-   (ii) **a presence bitmask.** One `u64`, one bit per pass, built in a
-   single walk of the pairs with a match that also peels gate wrappers
-   unconditionally (a superset is safe: a pass may run needlessly, it must
-   never be skipped wrongly). Each pass then early-outs on one bit test.
-   The tag match must live immediately next to the passes so the two can't
-   drift.
+   has touched it.
+
+   **The 39 per-variant passes are NOT where the 4,385 goes — measured,
+   don't redo it.** A `u64` presence mask (one bit per pass, built in one
+   walk of every static ability with a 38-arm classifier that peels the
+   `While*` wrappers) plus a one-line `sa_gate(present, BIT, &sa_cards)` in
+   front of each of the 38 passes measured **8,886,099,152 ->
+   9,013,111,944 Ir (+1.43 %) and the gather itself 1,573 M -> 1,696 M
+   (+7.8 % of itself)**, and was reverted. Skipping 38 of 39 passes bought
+   *nothing*: the classifier cost 342 Ir per gather and the passes it
+   skipped were already near-free, because on a bench board `sa_cards` is
+   short and an empty-ish pass is a loop set-up and a discriminant test.
+   Flattening to a `Vec<(&CardInstance, &StaticAbility)>` pairs list has
+   the same ceiling and was not attempted after this result.
+
+   **So look at the rest of the body instead.** The candidates, in the
+   order the counters suggest: the *first* loop, which calls
+   `static_ability_to_effects(card, …)` per static-ability card and gets a
+   freshly allocated `Vec<ContinuousEffect>` back to `extend` from — make
+   it push into `&mut all_effects` instead; `all_effects` itself, which
+   starts as a clone of `continuous_effects` and then grows by repeated
+   `push`/`extend` (`RawVecInner::finish_grow` is 767,735 allocations
+   program-wide) — reserve once; and the emblem / graveyard /
+   `all_static_sources` loops that run whether or not anything is there.
+   Get a line-level attribution first: build `--profile profiling` (it
+   keeps debuginfo, unlike `release-fast`, which is built with
+   `-C strip=debuginfo`) and run `callgrind_annotate --auto=yes` over
+   `mod.rs`. That costs one 24-minute build and answers the question this
+   item has now guessed wrong once.
    Shape confirmed by reading: each of the 39 passes is
    `for &card in &sa_cards { let StaticEffect::X { .. } = sa.effect else { continue }; … }`,
    so a presence summary needs a `StaticEffect` discriminant tag in

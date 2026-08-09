@@ -5432,11 +5432,11 @@ pub enum AttackBan {
 #[derive(Debug, Clone)]
 pub struct CardData {
     pub id: CardId,
-    /// Static blueprint, shared behind an `Arc` so cloning a `CardInstance`
-    /// (and therefore a whole `GameState` — the bot dry-runs every candidate
-    /// action against a clone) is a refcount bump rather than a deep copy of
-    /// the definition's ~two dozen `Vec` fields. The definition is immutable
-    /// for the common case; the handful of effects that rewrite it
+    /// Static blueprint, shared behind an `Arc` so materializing a
+    /// `CardData` (which the CoW handle does only for a card actually being
+    /// written) doesn't deep-copy the definition's ~two dozen `Vec` fields.
+    /// The definition is immutable for the common case; the handful of
+    /// effects that rewrite it
     /// (MDFC face-swap, "loses all abilities", overload effect override,
     /// keyword grants) go through `Arc::make_mut`, which clones lazily only
     /// when the `Arc` is actually shared.

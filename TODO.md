@@ -16,44 +16,41 @@ reference and want their own triage pass):
 
 ## NEXT (handoff — rewrite each run, keep under 15 lines)
 
-Branch `claude/modern_decks`. Sixth pass: two perf wins, the owed re-profile,
-one bug class. `PERF.md` is the record.
+Branch `claude/modern_decks`. Seventh pass: two structural perf wins.
+End to end, `release` + mimalloc, 5/5 alternated pairs against the pre-run
+tip: **+35.6 % games/s (34.26 -> 46.44), -42 % peak RSS (41.0 -> 23.8 MiB)**.
+`PERF.md` is the record.
 
-- **Perf, landed**: the per-freeze-scope `computed_permanent` memo
-  (-1.91 % Ir) and freezing the three read-only mana walkers (-6.26 % Ir,
-  **+4.5 % wall-clock, 6/6 pairs**). Cumulative **-8.06 %** instructions.
-  Baseline re-anchored at `release` (mean 33.13 games/s).
-- **Read PERF's two method notes before measuring anything.** (1) This box
-  cannot resolve a sub-5 % change by wall-clock — use `callgrind` Ir on the
-  fixed six-game workload, deterministic and contention-immune, and both
-  sides can run at once. (2) An inclusive share is an *upper bound* on what
-  a memo can win: check the frozen fraction first.
-- **Next up**: candidate **1(a)** — make `ComputedPermanent` cheap to
-  build (`Arc<CardDefinition>` + `Option` overrides behind accessors). This
-  run costed the alternatives away: `compute_battlefield` runs 617,032×
-  per bench at 19.51 permanents, **0 of them frozen**, so 1(c)'s memo is
-  dead and ~12.0 M per-card layer passes can only be reached by making the
-  pass itself cheap. Then 1.5, `effective_mana_abilities` deep-cloning
-  every ability it returns. Two traps written up in PERF:
-  **don't re-try freezing inside `effective_mana_abilities`** (+0.03 %, a
-  null, reverted), and **don't freeze across combat damage's apply loop** —
-  Wither/Infect counters mutate a layer input mid-batch, so it's a rules
-  change, not an optimization. Candidate 0(f) has the full argument.
-- **The re-profile is done** (13.84 G Ir for six games, down from 23.50 G).
-  It promoted **CowBox** to the top of the untried list: `Arc::make_mut` is
-  21.31 % inclusive and `CardInstance::clone`'s self share doubled to 11 %,
-  so the checkpoint clone is now the fastest-growing cost.
-- **Bugs**: the backlog's top item is replenished and then closed —
-  re-mining `audit_incomplete --structural-only` found three shipped cards
-  with a dead triggered ability (Magosi, Oran-Rief, Annie Joins Up), all
-  three fixed at the *helper*, and the class is now a suite gate
-  (`core_rules::structural_audit`). `audit_stubs` is clean. Next bug source
-  is `INCOMPLETE_CARDS.md`'s missing-primitive buckets or a fresh
-  panic/unwrap sweep of the self-play path.
-- **Disk**: a full `debug` + `release` + `release-fast` + `profiling` set
-  fills the session allowance. `target/debug/incremental` alone was 16 G;
-  deleting it and `target/profiling` freed 18 G mid-run. Budget for it.
-- **Trackers**: TODO 793, roadmap 660, `PERF.md` 440, `INCOMPLETE_CARDS` 247.
+- **Landed**: `CardInstance` is now `Arc<CardData>` with `Deref`/`DerefMut`
+  (-25.6 % Ir) and `ComputedPermanent`'s four printed-derived collections are
+  `Printed<T>` = `Arc<CardDefinition>` + projection, cloned only on write
+  (-17.1 % Ir). 14.40 G -> 8.89 G Ir; allocations 16.7 M -> 5.09 M.
+- **Measure allocation fixes with mimalloc, not callgrind's system alloc.**
+  `Printed<T>` reads -17.1 % Ir / +13.5 % wall against glibc and **+1.7 %**
+  at `release` with mimalloc — the number that describes a training run.
+  The CoW row removes struct copies, not just allocations, and carries
+  essentially the whole +35.6 %. New method note in PERF.
+- **The lesson both share**: when a cost is structural, find the *type* that
+  kills the class, and pick one that `Deref`s to what the field used to be —
+  candidate 1(a)'s "~4.5 k call sites" became eleven `.clone()` -> `.to_vec()`.
+- **Next up is the gather, and it is the only thing left**: 17.7 % self,
+  1,573,494,744 Ir over 358,792 calls, unmoved to the instruction by both
+  fixes — and it is *not* allocation-shaped, so unlike `Printed<T>` its Ir
+  share is the share mimalloc sees too. **Its 39 per-variant passes are ruled out** — a presence-mask gate
+  measured +1.43 % and was reverted (PERF Log + candidate 3). Take a
+  line-level attribution first: `--profile profiling` keeps debuginfo,
+  `release-fast` strips it. Then 1(a)'s leftover `colors` and 1.5.
+- **Traps already paid for, in PERF**: don't re-freeze inside
+  `effective_mana_abilities` (+0.03 %); don't memo `compute_battlefield`
+  (0 of 617,032 calls frozen); don't freeze across combat damage's apply loop
+  (rules change, not an optimization).
+- **Bugs**: `audit_stubs` clean, the dead-ability class is a suite gate. Next
+  source is `INCOMPLETE_CARDS.md`'s missing-primitive buckets or a fresh
+  panic/unwrap sweep of the self-play path — untouched this run.
+- **Disk**: budget for it. `target/debug/incremental` hit 15 G; deleting it
+  freed 14 G mid-run. Don't edit engine sources while a `release` build is
+  running — cargo picks up the edit mid-build and the binary is neither side.
+- **Trackers**: TODO 792, roadmap 660, `PERF.md` 534, `INCOMPLETE_CARDS` 247.
 
 ## Environment note
 
