@@ -3091,35 +3091,27 @@ impl GameState {
             }
             set
         };
-        // CR 502.3 / 613 — "doesn't untap while it has a [kind] counter" must
-        // be read off the *computed* keywords, so a granted one counts too
-        // (Temporal Distortion's hourglass counters, Steel Dromedary's own).
-        let counter_locked: Vec<crate::card::CardId> = self
-            .battlefield
-            .iter()
-            .filter(|c| {
-                self.computed_permanent(c.id).is_some_and(|cp| {
-                    cp.keywords.iter().any(|k| {
-                        matches!(k, crate::card::Keyword::DoesntUntapWhileCounter(kind)
-                            if c.counter_count(*kind) > 0)
-                    })
-                })
-            })
-            .map(|c| c.id)
-            .collect();
-        // CR 502.3 — "doesn't untap … if it attacked during your last turn",
-        // read off the computed keywords so an Aura's grant counts (Tangle
-        // Kelp).
-        let attack_locked: Vec<crate::card::CardId> = self
-            .battlefield
-            .iter()
-            .filter(|c| {
-                self.computed_permanent(c.id).is_some_and(|cp| {
-                    cp.keywords.contains(&crate::card::Keyword::DoesntUntapIfAttackedLastTurn)
-                })
-            })
-            .map(|c| c.id)
-            .collect();
+        // CR 502.3 / 613 — both untap locks must be read off the *computed*
+        // keywords, so a granted one counts too (Temporal Distortion's
+        // hourglass counters, Steel Dromedary's own; Tangle Kelp's aura
+        // grant of "doesn't untap if it attacked"). One whole-board layer
+        // pass answers both: `computed_permanent` outside a freeze scope
+        // re-gathers every continuous effect in the game per call, and these
+        // were two such calls per battlefield permanent per untap step.
+        let computed = self.compute_battlefield();
+        let mut counter_locked: Vec<crate::card::CardId> = Vec::new();
+        let mut attack_locked: Vec<crate::card::CardId> = Vec::new();
+        for (c, cp) in self.battlefield.iter().zip(&computed) {
+            if cp.keywords.iter().any(|k| {
+                matches!(k, crate::card::Keyword::DoesntUntapWhileCounter(kind)
+                    if c.counter_count(*kind) > 0)
+            }) {
+                counter_locked.push(c.id);
+            }
+            if cp.keywords.contains(&crate::card::Keyword::DoesntUntapIfAttackedLastTurn) {
+                attack_locked.push(c.id);
+            }
+        }
         // Track which permanents actually flip tapped→untapped so we can
         // fire CR 702.108 Inspired ("becomes untapped") triggers afterward.
         let mut untapped_now: Vec<crate::card::CardId> = Vec::new();
