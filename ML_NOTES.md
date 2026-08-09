@@ -58,6 +58,35 @@ only stays dead while the reasoning that killed it is readable.
   stratum both plays and benches reports **no** within-archetype number
   rather than passing the marginal off as one. `recommend_pool` prints
   `within` first and labels `raw` as the confound.
+- 🟢 **Rounds 18 + 17b (2026-08-09) — the regime did it, not the
+  blocks; self-play labels don't stack.** The two follow-ups to round
+  17's sweep, both two-seeded:
+
+  **17b attribution ablation.** Arm A (old `--attn` single-attention
+  architecture under the NEW regime — 500 k window, lr 1e-4, 250 k
+  games, patience 12): **all eight gates ≥ 50.7 %**, pooled **51.4 %
+  vs gang / 52.9 % vs atk-sim**, AUC 0.8126/0.8069 — matches or beats
+  round 17's blocks (50.8/52.5, AUC 0.8049/0.8025). Arm B (`--blocks 2`
+  under the OLD regime — 250 k window, lr 1e-3, 90 k games, patience
+  5): pooled 49.2 % / 51.1 %, AUC 0.7847/0.7776 — the historical
+  pattern. **Verdict: the optimization regime is the entire effect; the
+  transformer blocks add nothing measurable** (echoes round 11's
+  "the ceiling was overfitting" — more data at lower lr with a patient
+  stop was the binding constraint all along). By parsimony the champion
+  config is `--attn` + new regime: simpler, cheaper for actors, and the
+  best AUC on record for its class. Widening/deepening stays closed
+  unless a capacity signal appears under the new regime.
+
+  **Round 18 self-play promotion (r17 nets as pilots, own seed each,
+  r17 regime).** Pooled gates **49.5 % vs gang / 51.5 % vs atk-sim** —
+  within noise of round 17, trending a point down. The round-14
+  "no compounding" result replicates at the new capability level;
+  self-play labeling is closed as a stacking mechanism (two levels, two
+  nulls). The seed-97 run posted **AUC 0.8204, the program record**, on
+  identical gates — the predictor/pilot dissociation again (caveat: its
+  holdout is its own pilot's distribution). Also the first production
+  run of the batched eval: **95.7 games/s** net-piloted (vs 50.7 for
+  the CPU-eval seed), 231 k games in 40 min, 0 stalls.
 - 🟢 **Batched actor inference (2026-08-08) — 2.2× net-piloted
   generation.** User-designed game-pool architecture: hundreds of game
   threads block inside `NetEvaluator::eval` (a new engine seam —
