@@ -613,6 +613,27 @@ fn mirror_gallery_suspends_the_legend_rule() {
     assert!(g.battlefield_find(a).is_some() && g.battlefield_find(b).is_some());
 }
 
+/// CR 704.5j turns off only the legend rule: the rest of the sweep (CR 704.5g
+/// lethal damage, CR 704.5a life loss) still runs while Mirror Gallery is out.
+#[test]
+fn mirror_gallery_doesnt_suspend_the_rest_of_the_sweep() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::mirror_gallery());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    if let Some(c) = g.battlefield_find_mut(bear) {
+        c.damage = 99;
+    }
+    g.players[1].life = 0;
+    let events = g.check_state_based_actions();
+    assert!(g.battlefield_find(bear).is_none(), "lethal damage still kills");
+    assert!(
+        events.iter().any(|e| matches!(e, GameEvent::CreatureDied { card_id } if *card_id == bear)),
+        "the death event is still reported"
+    );
+    assert!(g.players[1].eliminated, "life <= 0 still eliminates");
+    assert_eq!(g.game_over, Some(Some(0)));
+}
+
 /// Gods' Eye leaves a Spirit behind.
 #[test]
 fn gods_eye_leaves_a_spirit() {

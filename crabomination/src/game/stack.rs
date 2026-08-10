@@ -4489,47 +4489,49 @@ impl GameState {
                             .is_some_and(|cp| cp.supertypes.contains(&Supertype::Legendary)))
             };
             // CR 704.5j — Mirror Gallery turns the legend rule off entirely.
-            if self.battlefield.iter().any(|c| {
+            // Only *this* SBA is switched off; the rest of the sweep (deaths,
+            // loss conditions, the Aura/Equipment sweeps) still runs.
+            let legend_rule_off = self.battlefield.iter().any(|c| {
                 c.definition.static_abilities.iter().any(|sa| {
                     matches!(sa.effect, crate::effect::StaticEffect::LegendRuleDoesntApply)
                 })
-            }) {
-                return Vec::new();
-            }
-            // Walk descending by id so each group's vec is newest-first.
-            let mut by_id: Vec<_> = self
-                .battlefield
-                .iter()
-                .filter(|c| is_legendary(c))
-                // Aeve — "isn't legendary if it's a token".
-                .filter(|c| !(c.is_token && c.definition.nonlegendary_as_token))
-                .collect();
-            by_id.sort_by_key(|b| std::cmp::Reverse(b.id));
-            for c in by_id {
-                let key = (c.controller, c.definition.name);
-                groups
-                    .entry(key)
-                    .or_insert_with(|| {
-                        order.push(key);
-                        Vec::new()
-                    })
-                    .push((c.id, c.definition.name.to_string()));
-            }
-            // CR 704.5j exception — a same-name group of exactly two whose
-            // members all carry `legend_pair_exempt` (Brothers Yamazaki) is
-            // skipped: the legend rule doesn't apply to them.
-            let pair_exempt = |dups: &[(CardId, String)]| -> bool {
-                dups.len() == 2
-                    && dups.iter().all(|(id, _)| {
-                        self.battlefield_find(*id)
-                            .is_some_and(|c| c.definition.legend_pair_exempt)
-                    })
-            };
+            });
             let mut out = Vec::new();
-            for k in order {
-                let dups = groups.remove(&k).unwrap_or_default();
-                if dups.len() > 1 && !pair_exempt(&dups) {
-                    out.push((k.0, k.1.to_string(), dups));
+            if !legend_rule_off {
+                // Walk descending by id so each group's vec is newest-first.
+                let mut by_id: Vec<_> = self
+                    .battlefield
+                    .iter()
+                    .filter(|c| is_legendary(c))
+                    // Aeve — "isn't legendary if it's a token".
+                    .filter(|c| !(c.is_token && c.definition.nonlegendary_as_token))
+                    .collect();
+                by_id.sort_by_key(|b| std::cmp::Reverse(b.id));
+                for c in by_id {
+                    let key = (c.controller, c.definition.name);
+                    groups
+                        .entry(key)
+                        .or_insert_with(|| {
+                            order.push(key);
+                            Vec::new()
+                        })
+                        .push((c.id, c.definition.name.to_string()));
+                }
+                // CR 704.5j exception — a same-name group of exactly two whose
+                // members all carry `legend_pair_exempt` (Brothers Yamazaki) is
+                // skipped: the legend rule doesn't apply to them.
+                let pair_exempt = |dups: &[(CardId, String)]| -> bool {
+                    dups.len() == 2
+                        && dups.iter().all(|(id, _)| {
+                            self.battlefield_find(*id)
+                                .is_some_and(|c| c.definition.legend_pair_exempt)
+                        })
+                };
+                for k in order {
+                    let dups = groups.remove(&k).unwrap_or_default();
+                    if dups.len() > 1 && !pair_exempt(&dups) {
+                        out.push((k.0, k.1.to_string(), dups));
+                    }
                 }
             }
             out
