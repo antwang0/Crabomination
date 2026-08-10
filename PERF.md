@@ -117,29 +117,33 @@ contention-immune, which makes it the better first look.
 ## Baseline
 
 Re-anchored (`release`, mimalloc — the shipped configuration) at the
-2026-08-09 eleventh-pass tip, with the **alternated same-box A/B against
-`87d76144` that the first anchor of this pass could not take** (the base
-release binary had been lost to a container restart; it was rebuilt from a
-worktree into its own target dir). **Read `host_calib_ms` before comparing
-to an older anchor.** Refresh only alongside an intentional, explained
-change. Regressions beyond ~5 % get investigated before anything else lands.
+2026-08-10 twelfth-pass tip `3565e55f`. **The previous 70.65 anchor does not
+compare**: it predates `998b2433` making `EvalWeights::default()` carry
+`determinize: 1`, and `--bench` runs `gang` = `EvalWeights::default()`, so
+the bench *workload* changed underneath it. This anchor is the first taken
+after that change; treat 70.65 as belonging to a different bench.
+**Read `host_calib_ms` before comparing to an older anchor.** Refresh only
+alongside an intentional, explained change. Regressions beyond ~5 % get
+investigated before anything else lands.
 
 ```text
 bot_ladder --bench   release, rustc 1.95.0, 4-core VM, 3 worker threads
                      mimalloc (the default); measured on an idle box
-host_calib_ms        54-82 across the sitting   <- within-sitting only; this
-                     box's probe reads worse than the previous anchor's
-                     45-49 while its absolute games/s reads higher, so the
+host_calib_ms        47-65 across the sitting   <- within-sitting only; the
                      probe does not transfer between anchors
 games                320
-games_per_s          67.86 / 70.52 / 72.10 / 70.73 / 71.81 / 68.92 / 73.22 /
-                     70.02   (mean 70.65)
-decisions_per_s      mean 42660
+games_per_s          64.51 / 58.76 / 59.91 / 58.57 / 63.17 / 61.14 / 61.57 /
+                     56.29   (mean 60.49, spread 14.6 % — take >=6 runs)
+decisions_per_s      mean 36526
 turns_per_game       26.98
 stalls               0 (0.00 %)
-peak_rss_mib         22.3 - 22.9
-determinism          ok (all 160 pairs split, on all 16 runs)
+peak_rss_mib         22.1 - 22.5
+determinism          ok (all 160 pairs split, on all 8 runs)
 ```
+
+The twelfth pass's own delta is the paired `profiling-fast` A/B in the Log
+(6/6 pairs, +9.57 %), not a difference of anchors: the two anchors are not
+the same bench.
 
 **What the eleventh pass is worth, measured end to end.** Eight alternated
 pairs in one sitting, both sides `release` + mimalloc on the same idle box:
@@ -262,6 +266,16 @@ the game* — ~2,900 Ir — to answer one question about one card.
 | | *not landed* | 6,539,623,988 Ir | 6,498,593,052 Ir (-0.63 %) | **`LayerGates` — dropped in the rebase, and the disagreement is the point.** Hoisting `compute_permanent`'s three CR 613.8 gate scans out of the per-card loop measured **-0.63 %** on the pre-rebase base (the function's self cost 74,510,172 → 34,492,716) and **-0.007 %** on the tenth pass's base, where LLVM had already hoisted them (self cost 31,937,700). Same source, same profile, two different codegen outcomes — so "the optimizer already does it" is a property of the build, not of the code. The tenth pass's revert stands; this note exists so the third attempt doesn't cost another two builds. |
 | | **cumulative this pass** | **6,151,455,670 Ir** | **5,620,794,622 Ir (-8.63 %)** | base `87d76144` vs the final tip, both `profiling-fast --no-default-features`, on the one fixed six-game workload. **8/8 alternated `--bench` pairs positive at `release` + mimalloc, +5.93 %** — see Baseline. |
 
+Twelfth pass — the whole-board layer pass, four sites. Base `48ac252c`.
+
+| date | change | before | after | how measured |
+|---|---|---|---|---|
+| 2026-08-09 | The SBA sweep's CR 603.8 steal-penalty disarm walks the latch set instead of the battlefield, and its CR 704.8 ±1/±1 snapshot is gated on the same printed-keyword predicate its reader uses (`b5e8a1b8`, candidate 0.25(b)) | 5,622,084,243 Ir | 5,519,931,366 Ir (**-1.82 %**) | `check_state_based_actions` 11.68 % -> 9.93 % inclusive. Both were whole-board walks kept alive for cards no ordinary board carries: a Bronze Bombshell that has changed controllers, and Persist/Undying. `spec_from_iter` under the sweep was flat (178.2 M both sides) — the win is in `battlefield_find` and the `HashMap` build, not the collects. |
+| 2026-08-09 | `declare_attackers_banded` takes one `compute_battlefield` for all four of its legality reads (`88644979`, candidate (A)) | 5,519,931,366 Ir | 5,411,392,050 Ir (**-1.97 %**) | 9,928 whole-board passes over ~2,600 declarations: band legality, CR 508.0 "attacks only alone", "can't attack alone", and the trigger collection each took their own. Everything between them returns `Err` without touching a layer input. Never more work than before — the band pass was already unconditional and the two alone-checks are mutually exclusive. |
+| 2026-08-09 | `finalize_cast` routes its CR 113.10b stripped-set read through `permanents_with_abilities_removed`; the CR 602.5c lock check uses `computed_permanent` (`1072dc6a`) | 5,411,392,050 Ir | 5,309,173,117 Ir (**-1.89 %**) | The guarded helper had existed since `c365ede8` and this caller never adopted it — it answers "nothing is stripped" off the gathered effect set on any board without a Turn to Frog. **Grep for the naive shape when a guarded helper lands**; a second copy of the pattern was still there a pass later. |
+| 2026-08-09 | `has_first_strikers` and `bands_with_other_qualities` read their combat participants under one freeze instead of computing the board (`3565e55f`, candidate 0(d)) | 5,309,173,117 Ir | 5,260,848,923 Ir (**-0.91 %**) | 2-6 creatures out of ~20 permanents. `has_first_strikers` also short-circuits on an empty combat. `bands_with_other_qualities` keeps the battlefield walk for ordering — its qualities are consumed positionally — and computes only the members. |
+| | **cumulative this pass** | **5,622,084,243 Ir** | **5,260,848,923 Ir (-6.43 %)** | base `48ac252c` vs tip, four alternated `profiling-fast --no-default-features` callgrind A/Bs on the one fixed six-game workload. **Wall-clock, 6/6 alternated `--bench` pairs positive, mean +9.57 %** (base 14.49-16.45, cand 16.29-17.88 games_per_s_th) on the same two binaries — larger than the Ir delta, which is the expected direction for removing whole layer passes: each one is a gather plus ~20 per-card passes, and its cache traffic is what Ir under-weights. |
+
 ## Profile of record
 
 Callgrind on `profiling-fast --no-default-features` (= `release-fast` opt
@@ -334,9 +348,11 @@ Ordered by expected value. Each run pulls the top one, attaches numbers,
 and feeds what it finds back in. Re-profile and replenish when the list
 goes thin or stale.
 
-**The profile of record is current** (2026-08-09, at this run's tip) — see
-that section. Every share below is from it. Methodological notes, each
-learned the hard way:
+**The profile of record is one pass stale** — it was taken at `48ac252c`,
+the twelfth pass's base, and that pass then removed ~7,300
+`compute_battlefield` calls. Shares below are from it and are upper bounds
+for anything in the layer path; re-take it before costing a layer candidate.
+Methodological notes, each learned the hard way:
 
 - **The shape that paid the eleventh pass: a `&mut self` path taking a
   `computed_permanent` outside a freeze scope.** Each one re-gathers *every
@@ -407,11 +423,25 @@ learned the hard way:
   whole zone" — look for the type that makes the whole class impossible
   before enumerating its instances.
 
-**Top of the list after the eleventh (unfrozen-gather) pass**, in order:
+**After the twelfth (whole-board-pass) pass.** Four rows, -6.43 % Ir /
++9.57 % wall. The shape they shared: **a `&mut self` entry point taking a
+whole-board `compute_battlefield` to read one bit, or taking several where
+one would do.** How to find the next one: `--tree=caller` on
+`compute_battlefield` and read the call counts against how many times the
+caller can actually run. `declare_attackers_banded` showed 9,928 calls over
+~2,600 attack declarations — the ratio *is* the bug. What is left in that
+list, in order: `check_state_based_actions` (10,670 / ~7,500 sweeps — still
+>1 per sweep, find the second one), `declare_blockers` (7,754),
+`resolve_combat` (3,196), `process_cumulative_upkeep` (1,742), `do_phasing`
+(1,718). The last three look like one pass per turn each, i.e. legitimate.
 
-- **(A) `compute_battlefield` is now the biggest layer consumer** — 758 M
-  inclusive (13.09 %) over 47,808 calls at 15,870 Ir each, *and neither of
-  the last two passes touched it*. That is candidate 1(c)'s successor and
+**Top of the list**, in order:
+
+- **(A) `compute_battlefield` is still the biggest layer consumer** —
+  759 M inclusive (13.50 %) over 47,808 calls at 15,870 Ir each at the
+  twelfth pass's base; the pass took ~7,300 of those calls out via
+  `declare_attackers_banded`, `finalize_cast` and the two combat helpers.
+  Re-profile before costing the rest. That is candidate 1(c)'s successor and
   candidate 4(a): does each caller need all ~19.5 `ComputedPermanent`s
   materialized, or two of them? Caller list is under candidate 1(c) —
   `declare_attackers_banded`, `check_state_based_actions`, `declare_blockers`,
@@ -455,13 +485,14 @@ learned the hard way:
    `computed_permanent` even when its caller was frozen. Grep for
    `&GameState` helpers reached from `simulate_*` / `sim_*` before assuming
    the tick-level scope covers them.
-   (d) **Combat's whole-board reads** — `combat.rs` has 12
-   `compute_battlefield()` calls. `has_first_strikers` (2315) computes every
-   permanent to read the keywords of the 2-4 combat participants; the
-   banding pair (42, 304) is the same shape on a rarer path. The
-   first-strike one is called once per combat from `stack.rs:243`, so cost
-   it before spending on it. 404/418 and 2333/2354 genuinely want the whole
-   board — leave them.
+   (d) ~~**Combat's whole-board reads**~~ — **done, -0.91 % between
+   `has_first_strikers`, `bands_with_other_qualities` and the
+   `declare_attackers_banded` hoist (-1.97 %, its own row).** What is left:
+   `declare_blockers` (7,754 calls) takes exactly one pass and reads only
+   the attackers and blockers through two closures — the same shape, but
+   cost the participant count against the board size first; and
+   `resolve_first_strike_damage` / `resolve_combat` genuinely want the whole
+   board (CR 510.2, damage is simultaneous) — leave them.
    (e) **The mana walkers ran unfrozen** — **done, +4.5 %.** See the Log row.
    The shape it leaves: a `&mut self` entry point (`auto_tap_for_cost_inner`)
    means everything under it runs at `depth == 0`, however read-only. Look
@@ -495,7 +526,8 @@ learned the hard way:
    subset is phase 1 (`gather_combat_damage_decisions`), which runs before
    any damage is dealt; cost it first, it may be too small to matter.
 
-0.25 **`check_state_based_actions` — 11.69 %, never touched by any pass.**
+0.25 **`check_state_based_actions` — 9.93 % after the twelfth pass's
+   sub-item (b), which is done (-1.82 %, see the Log).**
    ~7,500 sweeps at **~87,600 Ir each**, and it is the shape the gather fold
    (-9.02 %) and `do_untap` (-4.08 %) both paid out on: ~20 unconditional
    whole-board walks for state triggers no bench board carries
@@ -505,15 +537,14 @@ learned the hard way:
    **(a)** `compute_battlefield` is called **10,670 times from ~7,500
    sweeps** (156 M, 2.7 %) — more than one whole-board layer pass per sweep.
    Find the second one; that is also the top of candidate (A).
-   **(b)** the free ones first, both exactly behaviour-preserving:
-   `for id in self.battlefield.iter().map(|c| c.id).collect::<Vec<_>>()`
-   allocates a `Vec` of every id and then does an O(n) `battlefield_find`
-   per id, only to `steal_penalty_armed.remove(&id)` — gate the loop on
-   `!self.steal_penalty_armed.is_empty()`, since `remove` on an empty set is
-   a no-op. `pre_sba_pm_counters` builds a whole-board
-   `HashMap<CardId,(u32,u32)>` per sweep for the CR 704.8 last-known-
-   information snapshot that only the Persist/Undying paths read.
-   Read the gather-fold trap in candidate 3 before gating any loop's *head*.
+   **(b)** ~~the steal-penalty disarm and the CR 704.8 ±1/±1 snapshot~~ —
+   **done, -1.82 %.** What is left of the item: the other ~18 whole-board
+   walks the sweep does unconditionally (`flip_when_predicate`,
+   `sacrifice_when`, `state_trigger`, `sacrifice_when_you_control_no_other`,
+   the `WhileSourceTapped` / `WhileSourceAttached` sweeps). Each wants the
+   same treatment — find the latch or the printed predicate its reader
+   already uses and gate on that, not on the board. Read the gather-fold
+   trap in candidate 3 before gating any loop's *head*.
 
 0.5 **Stop taking the transaction checkpoint where nothing recovers from
    it.** `perform_action` clones the state before every action and drops the

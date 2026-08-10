@@ -16,53 +16,46 @@ reference and want their own triage pass):
 
 ## NEXT (handoff — rewrite each run, keep under 15 lines)
 
-Branch `claude/modern_decks`. Eleventh pass, **two sessions landed on it**
-and the second rebased onto the first. Five perf commits plus one defect.
-**6,151,455,670 -> 5,620,794,622 Ir on the fixed six-game workload,
--8.63 %**, base `87d76144` vs tip. **The owed paired A/B is taken: 66.69 ->
-70.65 games/s, +5.93 %, 8/8 alternated same-box pairs** at `release` +
-mimalloc. Wall-clock is ~2/3 of the Ir win, which is the expected split —
-four rows remove gathers and translate, one removes allocations and
-mimalloc absorbs it.
+Branch `claude/modern_decks`. **Twelfth pass: four perf commits, one shape.**
+`5,622,084,243 -> 5,260,848,923 Ir, -6.43 %` on the fixed six-game workload,
+base `48ac252c` vs tip `3565e55f`. **Wall-clock 6/6 alternated `--bench`
+pairs positive, mean +9.57 %** (`profiling-fast --no-default-features`, same
+two binaries). Suite green, golden traces byte-identical on every row.
 
-- **Four rows are one shape** (`&mut self` path taking a
-  `computed_permanent` outside a freeze scope): `do_untap` twice per
-  permanent, `activate_ability` + `_inner` four times per activation,
-  `scale_damage_to` twice per call. Gathers from `computed_permanent`
-  260,370 -> 151,776 (-42 %). **The fifth is the allocation shape**:
-  `usable_abilities` handing out deep-cloned printed abilities to six
-  callers that only read them (`Cow`, -3.05 %).
-- **Two ways to find the next one, both now in PERF's notes**: (1)
-  `--tree=caller` on `computed_permanent`, inclusive Ir ÷ call count —
-  >2,000/call is unfrozen and worth a gather, a few hundred is a memo hit
-  worth ~200 Ir; (2) read the caller rows under `__rust_alloc`, not the
-  self-cost list. `do_untap` was 4.33 % of the program and appears in no
-  self-cost list at all.
-- **Next up, in order**: (1) **PERF candidate 0.25 —
-  `check_state_based_actions`, 11.69 %, never touched by any pass**, with
-  two exactly-behaviour-preserving sub-items written out. (2) candidate (A),
-  `compute_battlefield` at 13.51 %. (3) candidate 1(a) — `printed_colors`
-  re-costed at 2.72 % / 390 k allocations, four times the old estimate.
-  (4) The allocator at 18.5 %: PERF's Profile-of-record now carries the
-  full allocation tree, so it can finally be attacked head-on.
-- **Bugs**: fixed a live panic on the actor path — `sample_scored_index`
-  was total only under `debug_assert!`, and `main_phase_action_with`'s
-  sampling branch reaches it with the empty candidate list the argmax
-  branch beside it handles as "no action" (`a67c5b9a`, regression test).
-  The broader panic/unwrap sweep is still open; see the robustness section
-  for what filter actually found this one.
-- **The anchor is stale on purpose**: it was taken at `bab861cf`, and
-  `998b2433` then made `EvalWeights::default()` carry `determinize: 1`.
-  `--bench` runs `gang` = `EvalWeights::default()`, so the bench workload
-  itself changed. **Re-anchor before comparing any absolute to 70.65**; the
-  +5.93 % paired delta stands, both its sides predate the change.
-- **Concurrency**: three sessions pushed to this branch on the same day.
-  Fetch before building a baseline — the second session duplicated two of
-  the first's rows and threw them away in the rebase.
-- **Env**: `rm -rf target/debug/incremental` (7-17 G) before a release
-  build. `cargo-nextest` is not in the image: `curl -sSLf
-  https://get.nexte.st/latest/linux | tar xz` into `~/.cargo/bin`.
-- **Trackers**: TODO 825, roadmap 660, `PERF.md` 752, `INCOMPLETE_CARDS` 247.
+- **The shape**: a `&mut self` entry point taking a whole-board
+  `compute_battlefield` to read one bit, or taking several where one would
+  do. `declare_attackers_banded` took four per declaration (-1.97 %);
+  `finalize_cast` never adopted the guarded helper that had existed since
+  `c365ede8` (-1.89 %); the SBA sweep walked the board for a Bronze Bombshell
+  latch and a Persist/Undying snapshot (-1.82 %); `has_first_strikers` and
+  `bands_with_other_qualities` computed ~20 permanents to read 2-6 (-0.91 %).
+  **How to find the next: `--tree=caller` on `compute_battlefield`, divide
+  each caller's call count by how many times it can actually run.** 9,928
+  over ~2,600 declarations — the ratio *is* the bug.
+- **Next up, in order**: (1) the SBA's remaining ~18 unconditional
+  whole-board walks — candidate 0.25(b)'s leftover, same treatment, gate on
+  the latch or printed predicate the reader already uses. (2) **Re-take the
+  profile of record first** — it is one pass stale and ~7,300
+  `compute_battlefield` calls are gone from it. (3) candidate 1(a),
+  `printed_colors` -> `ColorSet` (2.72 %, 390 k allocations). (4) candidate
+  0.5, the unconditional `perform_action` checkpoint (~9.5 %). (5) the
+  allocator at 18.5 %; PERF carries the full allocation tree.
+- **The anchor is re-taken and the old one is void**: `60.49 games/s` mean of
+  8 at `release` + mimalloc. The previous `70.65` predates `998b2433` giving
+  `EvalWeights::default()` `determinize: 1`, and `--bench` runs `gang` =
+  `EvalWeights::default()` — different bench, don't subtract. Spread is
+  14.6 % on this box; take >=6 runs.
+- **Bugs**: nothing new found. The panic/unwrap sweep of the self-play path
+  is still open — see the robustness section for the filter that works.
+- **Fetch before you build.** `git branch -a` in a fresh clone shows only
+  `main` and the session's own branch; `origin/claude/modern_decks` does not
+  appear until an explicit `git fetch origin claude/modern_decks`. A whole
+  session's work was rebuilt on stale `main` before that was noticed.
+- **Env**: `rm -rf target/debug/incremental target/release` before a release
+  build (3-17 G). `cargo-nextest` is not in the image. `release` rebuild of
+  the engine is 23 min; `profiling-fast` is 3 min and is what A/B iteration
+  should use.
+- **Trackers**: TODO 818, roadmap 660, `PERF.md` 783, `INCOMPLETE_CARDS` 247.
 
 ## Environment note
 
