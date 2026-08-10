@@ -56,9 +56,14 @@ neither anchor was taken on the merged tip.
   4,964,563,445 Ir, -11.68 %** from `81c88580` — below either session's own
   tip, so nothing cancelled in the join. `check_state_based_actions` 11.69 %
   -> 6.31 %, `compute_battlefield` 13.51 % (two passes ago) -> 6.00 %.
-- **Next up, in order**: (1) **the `release` anchor on the merged tip is
-  still owed** (one 25-min build + >=6 `--bench` runs); the profile of record
-  is also still written at one session's tip. (2) PERF candidate (A)'s remaining
+- **The `release` anchor is taken on the merged tip: 55.88 games/s mean of 8**
+  (33,741 dec/s, calib 49-61, 26.98 turns/game, 0 stalls, all pairs split).
+  Absolutes still don't transfer between containers — the same code read
+  60.49 and 64.42 in two sittings, and 55.70 vs 55.88 on two containers with
+  a 1.0 % instruction difference *the wrong way*. Quote paired A/Bs.
+- **Next up, in order**: (1) **re-take the profile of record** — it is still
+  written at one session's tip; the merged-tip inclusive shares are in PERF's
+  Log row and should be promoted into it. (2) PERF candidate (A)'s remaining
   `compute_battlefield` callers, asking "all 19.5, or two of them?" —
   `resolve_combat`, `advance_step`, `process_cumulative_upkeep`, `do_phasing`;
   **`declare_blockers`' remaining passes are legitimate, its tap-another
@@ -89,7 +94,7 @@ neither anchor was taken on the merged tip.
   build (3-17 G). `cargo-nextest` is not in the image. `release` rebuild of
   the engine is 23 min; `profiling-fast` is 3 min and is what A/B iteration
   should use.
-- **Trackers**: TODO 861, roadmap 660, `PERF.md` 838, `INCOMPLETE_CARDS` 247.
+- **Trackers**: TODO 866, roadmap 660, `PERF.md` 818, `INCOMPLETE_CARDS` 247.
 
 ## Environment note
 

@@ -116,55 +116,50 @@ contention-immune, which makes it the better first look.
 
 ## Baseline
 
-**Both anchors below predate the two-session merge.** Two sessions ran on
-this branch at once; the rebase that joined them produced a tip neither
-anchor was measured on. The merged tip *has* been measured under callgrind
-(**4,964,563,445 Ir, -11.68 % from `81c88580`** — see the Log), but not at
-`release`. **Re-take the anchor on the merged tip before comparing any
-absolute to it** — the paired deltas on both sides still
-stand, because each was measured against its own base in one sitting. The
-second session's anchor, taken on its own pre-rebase tip on a different
-container: **55.70 games/s mean of 8** (51.27-57.69), 33,631 dec/s,
-`host_calib_ms` 48-60 — which is *not* comparable to the 64.42 below for the
-same reason the two 2026-08-10 sittings below differ by 6.5 %.
+**Anchored 2026-08-10 on the merged twelfth-pass tip `6bbdc38c`** (`release`,
+mimalloc — the shipped configuration), after the rebase that joined the two
+concurrent sessions. This is the authoritative anchor; the three pre-merge
+anchors noted below are kept only for the box-drift lesson they record.
 
-Re-anchored (`release`, mimalloc — the shipped configuration) at the
-2026-08-10 twelfth-pass tip, **taken before the rebase onto `81c88580`**
-(`a37863a0` is the same engine code, one merge later). **The previous 70.65 anchor does not
-compare**: it predates `998b2433` making `EvalWeights::default()` carry
-`determinize: 1`, and `--bench` runs `gang` = `EvalWeights::default()`, so
-the bench *workload* changed underneath it. This anchor is the first taken
-after that change; treat 70.65 as belonging to a different bench.
+**The previous 70.65 anchor does not compare at all**: it predates
+`998b2433` making `EvalWeights::default()` carry `determinize: 1`, and
+`--bench` runs `gang` = `EvalWeights::default()`, so the bench *workload*
+changed underneath it. Treat 70.65 as belonging to a different bench.
 **Read `host_calib_ms` before comparing to an older anchor.** Refresh only
-alongside an intentional, explained change. Regressions beyond ~5 % get
+alongside an intentional, explained change; regressions beyond ~5 % get
 investigated before anything else lands.
 
 ```text
 bot_ladder --bench   release, rustc 1.95.0, 4-core VM, 3 worker threads
                      mimalloc (the default); measured on an idle box
-host_calib_ms        47-65 across the sitting   <- within-sitting only; the
-                     probe does not transfer between anchors
+host_calib_ms        49-61 across the sitting   <- within-sitting only
 games                320
-games_per_s          63.67 / 65.14 / 65.60 / 66.04 / 61.77 / 64.30
-                     (mean 64.42, spread 6.9 % — take >=6 runs)
+games_per_s          56.42 / 56.31 / 55.72 / 55.45 / 56.52 / 56.63 / 54.19 /
+                     55.77   (mean 55.88, spread 4.5 % — take >=6 runs)
+decisions_per_s      mean 33741
 turns_per_game       26.98
 stalls               0 (0.00 %)
-peak_rss_mib         22.1 - 22.5
-determinism          ok (all 160 pairs split, on every run)
+peak_rss_mib         22.3 - 22.5
+determinism          ok (all 160 pairs split, on all 8 runs)
 ```
 
-An earlier sitting the same night, on the pre-rebase tip (identical engine
-code), read 58.57-64.51, **mean 60.49 over 8** with a 14.6 % spread — one run
-at 56.29 dragged it. The +6.5 % between the two sittings is box drift, not a
-change: nothing in `81c88580` touches the engine hot path, `turns_per_game`
-and `stalls` are identical, and `host_calib_ms` overlaps (47-65 vs 48-58).
-**This box needs >=6 runs and still moves ~5 % between sittings** — which is
-the whole reason the pass's own delta is quoted as a paired A/B, not as a
-difference of anchors.
+**Absolutes do not transfer between containers, and this pass proved it
+twice.** The same engine code read 60.49 and 64.42 in two sittings on one
+box (+6.5 % of pure drift), and the second session's container read 55.70 on
+its own tip where this container reads 55.88 on a tip with 1.0 % *fewer*
+instructions. **Quote a paired A/B measured in one sitting, never a
+difference of anchors.** The pass's own deltas, each paired:
 
-The twelfth pass's own delta is the paired `profiling-fast` A/B in the Log
-(6/6 pairs, +9.57 %), not a difference of anchors: the two anchors are not
-the same bench.
+- callgrind, merged, `81c88580` -> `6bbdc38c`: **-11.68 %**
+- wall-clock, first session, 6/6 alternated pairs: **+9.57 %**
+- wall-clock, second session, 8/8 alternated pairs: **+10.85 %**
+  (50.24 -> 55.70; the two sessions' work overlaps, so these don't add)
+
+*(Pre-merge anchors, kept for the drift record only: `64.42` mean of 6 on
+the first session's pushed tip, `60.49` mean of 8 on the same engine code an
+earlier sitting the same night, `55.70` mean of 8 on the second session's
+pre-rebase tip on a different container. None is comparable to another or to
+the anchor above.)*
 
 **What the eleventh pass is worth, measured end to end.** Eight alternated
 pairs in one sitting, both sides `release` + mimalloc on the same idle box:
@@ -190,21 +185,6 @@ of the instruction win, which is the expected shape: four of the five rows
 remove *gathers* and translate, one (`usable_abilities`) removes
 *allocations* and mimalloc absorbs most of it — see the `Printed<T>` row,
 where -17.09 % Ir was worth +1.7 % at `release`.
-
-**This anchor is already stale for absolute comparison, and knowingly so.**
-It was measured at `bab861cf`; `998b2433` then made `EvalWeights::default()`
-carry `determinize: 1`, and `--bench` runs `gang` = `EvalWeights::default()`.
-The bench bot now redeals hidden zones instead of reading them, which is a
-different workload — more work per decision, and different games. **The next
-run must re-anchor before comparing any absolute to the 70.65 above**; the
-+5.93 % paired delta still stands, because both sides of that A/B predate
-the change.
-
-Note the anchor absolutes moved a long way (61.07 -> 70.65) without any
-change of that size landing between them: the first anchor of the pass was
-taken on a different container. **That is exactly why the paired number is
-the one to quote.** The un-paired anchor kept here for the record:
-`58.85 / 60.19 / 62.82 / 62.43` (mean 61.07, calib 47-53).
 
 ## Log
 
@@ -319,7 +299,7 @@ same fixed six-game workload, `profiling-fast --no-default-features`:
 
 | | | before | after | |
 |---|---|---|---|---|
-| 2026-08-10 | **twelfth pass, both sessions, merged** | **5,620,660,987 Ir** (`81c88580`) | **4,964,563,445 Ir** (`6e4fa142`) | **-11.68 %.** Below either session's own tip (5,013,096,289 / 5,260,848,923), so the merge kept the union of the non-overlapping work and none of it cancelled. Base check: the other session's base `48ac252c` reads 5,622,084,243 against `81c88580`'s 5,620,660,987 — 0.03 % apart, confirming `81c88580` doesn't touch the engine hot path. Inclusive at the merged tip: `auto_tap_for_cost_inner` 744,864,725 (15.00 %), `computed_permanent` 706,279,518 (14.23 %), `dispatch_triggers_for_events` 534,111,146 (10.76 %), `gather_continuous_effects_inner` 516,321,501 (10.40 %), `check_state_based_actions` 313,205,944 (6.31 %, from 11.69 %), `compute_battlefield` 297,944,249 (6.00 %, from 13.51 % two passes ago). **The `release` anchor on this tip is still owed** — see Baseline. |
+| 2026-08-10 | **twelfth pass, both sessions, merged** | **5,620,660,987 Ir** (`81c88580`) | **4,964,563,445 Ir** (`6e4fa142`) | **-11.68 %.** Below either session's own tip (5,013,096,289 / 5,260,848,923), so the merge kept the union of the non-overlapping work and none of it cancelled. Base check: the other session's base `48ac252c` reads 5,622,084,243 against `81c88580`'s 5,620,660,987 — 0.03 % apart, confirming `81c88580` doesn't touch the engine hot path. Inclusive at the merged tip: `auto_tap_for_cost_inner` 744,864,725 (15.00 %), `computed_permanent` 706,279,518 (14.23 %), `dispatch_triggers_for_events` 534,111,146 (10.76 %), `gather_continuous_effects_inner` 516,321,501 (10.40 %), `check_state_based_actions` 313,205,944 (6.31 %, from 11.69 %), `compute_battlefield` 297,944,249 (6.00 %, from 13.51 % two passes ago). **The `release` anchor on this tip is now taken: 55.88 games/s mean of 8** — see Baseline. |
 
 ## Profile of record
 
