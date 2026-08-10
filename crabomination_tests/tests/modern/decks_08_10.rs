@@ -918,7 +918,7 @@ fn wild_mongrel_pumps_via_discard() {
     assert_eq!(view.toughness(), 3, "toughness should be base 2 + bonus 1 = 3");
     // Color of choice (Blue) replaces its printed green via layer 5.
     let computed = g.computed_permanent(mongrel).unwrap();
-    assert_eq!(computed.colors, vec![Color::Blue], "becomes the chosen color");
+    assert_eq!(computed.colors.to_vec(), vec![Color::Blue], "becomes the chosen color");
     // Fodder discarded.
     assert!(g.players[0].graveyard.iter().any(|c| c.id == fodder),
         "Discarded card lands in graveyard");

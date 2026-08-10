@@ -146,16 +146,14 @@ impl GameState {
             // its unordered pair; count the distinct pairs (Niv-Mizzet).
             Value::DistinctTwoColorPairsControlled(who) => {
                 let Some(p) = self.resolve_player(who, ctx) else { return 0 };
-                let mut pairs: Vec<Vec<crate::mana::Color>> = Vec::new();
+                let mut pairs: Vec<crate::mana::ColorSet> = Vec::new();
                 for c in self.battlefield.iter().filter(|c| c.controller == p) {
                     let Some(cp) = self.computed_permanent(c.id) else { continue };
                     if cp.colors.len() != 2 {
                         continue;
                     }
-                    let mut pair = cp.colors.clone();
-                    pair.sort_by_key(|c| *c as u8);
-                    if !pairs.contains(&pair) {
-                        pairs.push(pair);
+                    if !pairs.contains(&cp.colors) {
+                        pairs.push(cp.colors);
                     }
                 }
                 pairs.len() as i32

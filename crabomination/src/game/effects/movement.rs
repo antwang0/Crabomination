@@ -257,9 +257,9 @@ impl GameState {
                 let color_ok = shield.gain_life_colors.is_empty()
                     || self
                         .computed_permanent(src)
-                        .map(|cp| cp.colors.clone())
+                        .map(|cp| cp.colors)
                         .or_else(|| {
-                            self.find_card_anywhere(src).map(|c| c.definition.printed_colors())
+                            self.find_card_anywhere(src).map(|c| c.definition.printed_color_set())
                         })
                         .is_some_and(|cs| shield.gain_life_colors.iter().any(|c| cs.contains(c)));
                 if let Some(seat) = shield.gain_life_to.filter(|_| color_ok) {

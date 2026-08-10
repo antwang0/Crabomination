@@ -567,5 +567,5 @@ fn darkest_hour_makes_every_creature_black() {
     let mut g = two_player_game();
     g.add_card_to_battlefield(0, catalog::darkest_hour());
     let theirs = g.add_card_to_battlefield(1, catalog::serra_zealot()); // white
-    assert_eq!(g.computed_permanent(theirs).unwrap().colors, vec![Color::Black]);
+    assert_eq!(g.computed_permanent(theirs).unwrap().colors.to_vec(), vec![Color::Black]);
 }

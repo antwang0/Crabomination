@@ -177,6 +177,73 @@ fn color_set_predicates_match_cr_105_2() {
     assert!(all.is_multicolored());
 }
 
+/// The bitmask's walk order is WUBRG and independent of insertion order —
+/// `ComputedPermanent.colors` is a `ColorSet`, so this is what pins the
+/// colour order every trace and view sees.
+#[test]
+fn color_set_iterates_in_wubrg_order_whatever_the_insertion_order() {
+    use crate::mana::ColorSet;
+
+    let mut s = ColorSet::empty();
+    for c in [Color::Green, Color::White, Color::Black] {
+        s.insert(c);
+    }
+    assert_eq!(s.to_vec(), vec![Color::White, Color::Black, Color::Green]);
+    assert_eq!(ColorSet::all().to_vec(), Color::ALL.to_vec());
+    assert_eq!(s.iter().count(), 3);
+
+    // `contains` is `Borrow<Color>`-generic so the `Vec<Color>` readers it
+    // replaced — which hand it a `&Color` out of an iterator — compile
+    // unchanged.
+    assert!(s.contains(Color::White) && s.contains(Color::Green));
+    assert!(!s.contains(Color::Red));
+    assert!([Color::Red, Color::Black].iter().any(|c| s.contains(c)));
+
+    let mut t = ColorSet::single(Color::Red);
+    assert!(!s.intersects(t));
+    t.insert(Color::White);
+    assert!(s.intersects(t));
+    t.remove(Color::White);
+    assert!(!s.intersects(t));
+    t.clear();
+    assert!(t.is_empty());
+
+    let collected: ColorSet = [Color::Blue, Color::Blue, Color::Red].into_iter().collect();
+    assert_eq!(collected.len(), 2, "a set dedupes");
+}
+
+/// CR 105.2 — printed colour comes from the colour indicator plus the cost's
+/// coloured pips, with Devoid (CR 702.114) forcing colourless. The bitmask
+/// form is the layer pass's; the `Vec` form is derived from it.
+#[test]
+fn printed_color_set_folds_indicator_pips_and_devoid() {
+    use crate::card::{CardDefinition, Keyword};
+    use crate::mana::{hybrid, phyrexian, ColorSet};
+
+    let gold = CardDefinition {
+        cost: cost(&[generic(1), hybrid(Color::Green, Color::White), phyrexian(Color::Black)]),
+        ..Default::default()
+    };
+    assert_eq!(
+        gold.printed_color_set().to_vec(),
+        vec![Color::White, Color::Black, Color::Green],
+    );
+    assert_eq!(gold.printed_colors(), gold.printed_color_set().to_vec());
+
+    let indicated = CardDefinition {
+        color_indicator: vec![Color::Red],
+        ..Default::default()
+    };
+    assert_eq!(indicated.printed_color_set(), ColorSet::single(Color::Red));
+
+    let devoid = CardDefinition {
+        cost: cost(&[generic(1), b()]),
+        keywords: vec![Keyword::Devoid],
+        ..Default::default()
+    };
+    assert!(devoid.printed_color_set().is_colorless());
+}
+
 // ── ManaCost::summary() printed-Oracle rendering ────────────────────────────
 
 #[test]

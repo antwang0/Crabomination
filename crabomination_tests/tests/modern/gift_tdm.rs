@@ -2636,7 +2636,7 @@ fn turn_to_frog_makes_target_a_1_1_blue_frog_with_no_abilities() {
     let cp = g.computed_permanent(angel).expect("angel still on bf");
     assert_eq!((cp.power, cp.toughness), (1, 1), "becomes 1/1");
     assert!(cp.subtypes.creature_types == vec![CreatureType::Frog], "becomes a Frog");
-    assert!(cp.colors.contains(&Color::Blue) && cp.colors.len() == 1, "becomes mono-blue");
+    assert!(cp.colors.contains(Color::Blue) && cp.colors.len() == 1, "becomes mono-blue");
     assert!(!cp.keywords.contains(&Keyword::Flying), "loses flying");
     assert!(cp.lost_all_abilities, "loses all abilities");
 }
@@ -2869,7 +2869,7 @@ fn witness_protection_makes_a_1_1_gw_citizen() {
     assert_eq!((cp.power, cp.toughness), (1, 1));
     assert!(cp.subtypes.creature_types == vec![CreatureType::Citizen]);
     assert!(cp.card_types.contains(&CardType::Creature) && !cp.card_types.contains(&CardType::Land));
-    assert!(cp.colors.contains(&Color::Green) && cp.colors.contains(&Color::White));
+    assert!(cp.colors.contains(Color::Green) && cp.colors.contains(Color::White));
     assert!(!cp.keywords.contains(&Keyword::Flying) && cp.lost_all_abilities);
 }
 

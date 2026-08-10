@@ -1064,7 +1064,7 @@ fn turn_resets_creature_to_red_0_1_weird() {
     let c = g.computed_permanent(flyer).unwrap();
     assert_eq!((c.power, c.toughness), (0, 1), "base 0/1");
     assert!(!c.keywords.contains(&Keyword::Flying), "abilities lost");
-    assert_eq!(c.colors, vec![Color::Red], "became red");
+    assert_eq!(c.colors.to_vec(), vec![Color::Red], "became red");
     assert!(c.subtypes.creature_types.contains(&crabomination::card::CreatureType::Weird));
 }
 

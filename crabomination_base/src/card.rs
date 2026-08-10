@@ -5077,38 +5077,42 @@ impl CardDefinition {
 
     /// Printed colors from the mana cost's colored pips (CR 105.2), with
     /// the Devoid CDA (CR 702.114) yielding colorless.
-    pub fn printed_colors(&self) -> Vec<crate::mana::Color> {
-        use crate::mana::ManaSymbol;
+    ///
+    /// Allocation-free; the `Vec` form is [`Self::printed_colors`]. The
+    /// layer pass calls this ~1.2 M times per six bench games, so it stays
+    /// on the bitmask.
+    pub fn printed_color_set(&self) -> crate::mana::ColorSet {
+        use crate::mana::{ColorSet, ManaSymbol};
         if let Some(forced) = &self.color_override {
-            return forced.clone();
+            return forced.iter().collect();
         }
         if self.keywords.contains(&Keyword::Devoid) {
-            return Vec::new();
+            return ColorSet::empty();
         }
-        let mut colors = Vec::new();
-        let mut push = |c: crate::mana::Color| {
-            if !colors.contains(&c) {
-                colors.push(c);
-            }
-        };
+        let mut colors = ColorSet::empty();
         // CR 105.2c — a color indicator defines color for objects (tokens,
         // back faces) whose mana cost can't.
         for c in &self.color_indicator {
-            push(*c);
+            colors.insert(*c);
         }
         for sym in &self.cost.symbols {
             match sym {
                 ManaSymbol::Colored(c) | ManaSymbol::Phyrexian(c) | ManaSymbol::MonoHybrid(_, c) => {
-                    push(*c)
+                    colors.insert(*c)
                 }
                 ManaSymbol::Hybrid(a, b) => {
-                    push(*a);
-                    push(*b);
+                    colors.insert(*a);
+                    colors.insert(*b);
                 }
                 _ => {}
             }
         }
         colors
+    }
+
+    /// [`Self::printed_color_set`] in WUBRG order as a `Vec`.
+    pub fn printed_colors(&self) -> Vec<crate::mana::Color> {
+        self.printed_color_set().to_vec()
     }
 
     pub fn is_legendary(&self) -> bool { self.supertypes.contains(&Supertype::Legendary) }

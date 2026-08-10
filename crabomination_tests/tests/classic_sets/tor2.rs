@@ -119,11 +119,11 @@ fn possessed_centaur_turns_on_at_threshold() {
     g.battlefield_find_mut(centaur).unwrap().summoning_sick = false;
     let cp = g.computed_permanent(centaur).unwrap();
     assert_eq!((cp.power, cp.toughness), (3, 3));
-    assert!(!cp.colors.contains(&Color::Black));
+    assert!(!cp.colors.contains(Color::Black));
     fill_graveyard(&mut g, 0);
     let cp = g.computed_permanent(centaur).unwrap();
     assert_eq!((cp.power, cp.toughness), (4, 4));
-    assert!(cp.colors.contains(&Color::Black));
+    assert!(cp.colors.contains(Color::Black));
     let prey = g.add_card_to_battlefield(1, catalog::grizzly_bears());
     activate(&mut g, 0, centaur, 0, Some(Target::Permanent(prey)));
     assert!(g.battlefield_find(prey).is_none(), "the green creature died");

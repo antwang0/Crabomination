@@ -91,7 +91,7 @@ fn cr_204_2_color_indicator_defines_color() {
         .find(|c| c.definition.name == "Monkey")
         .expect("minted");
     assert!(monkey.definition.cost.symbols.is_empty(), "tokens have no mana cost");
-    assert_eq!(g.computed_permanent(monkey.id).unwrap().colors, vec![Color::Green]);
+    assert_eq!(g.computed_permanent(monkey.id).unwrap().colors.to_vec(), vec![Color::Green]);
 }
 
 /// CR 733.1 — a declaration the acting player can't pay for is reversed whole:

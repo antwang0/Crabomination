@@ -710,7 +710,7 @@ fn crimson_wisps_grants_haste_and_red_and_draws() {
     cast_at(&mut g, id, Target::Permanent(bear));
     let cp = g.computed_permanent(bear).unwrap();
     assert!(cp.keywords.contains(&Keyword::Haste), "gained haste");
-    assert!(cp.colors.contains(&C::Red), "became red");
+    assert!(cp.colors.contains(C::Red), "became red");
     // Wisps left hand (−1), draw refilled (+1): net hand size unchanged.
     assert_eq!(g.players[0].hand.len(), hand_before, "cantripped");
 }

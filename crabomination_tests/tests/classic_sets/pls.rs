@@ -164,7 +164,7 @@ fn caldera_kavu_recolors_itself() {
     ]));
     let kavu = g.add_card_to_battlefield(0, catalog::caldera_kavu());
     activate(&mut g, 0, kavu, 1, None);
-    assert_eq!(g.computed_permanent(kavu).unwrap().colors, vec![Color::White]);
+    assert_eq!(g.computed_permanent(kavu).unwrap().colors.to_vec(), vec![Color::White]);
 }
 
 /// Confound only answers a spell aimed at a creature.
@@ -533,7 +533,7 @@ fn dralnus_crusade_reshapes_goblins() {
     g.add_card_to_battlefield(0, catalog::dralnus_crusade());
     let cp = g.computed_permanent(goblin).unwrap();
     assert_eq!((cp.power, cp.toughness), (3, 3));
-    assert_eq!(cp.colors, vec![Color::Black]);
+    assert_eq!(cp.colors.to_vec(), vec![Color::Black]);
     assert!(cp.subtypes.creature_types.contains(&crabomination::card::CreatureType::Zombie));
 }
 

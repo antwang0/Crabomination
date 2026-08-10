@@ -123,7 +123,7 @@ fn alloy_golem_is_the_chosen_color() {
     cast(&mut g, 0, hand, None);
     let golem = g.battlefield.iter().find(|c| c.definition.name == "Alloy Golem").unwrap();
     let chosen = golem.chosen_color.expect("a color was chosen");
-    assert_eq!(g.computed_permanent(golem.id).unwrap().colors, vec![chosen]);
+    assert_eq!(g.computed_permanent(golem.id).unwrap().colors.to_vec(), vec![chosen]);
 }
 
 /// Benalish Lancer's kicker is two counters and first strike.

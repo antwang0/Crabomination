@@ -108,7 +108,7 @@ fn govern_the_guildless_forecast_upkeep_only() {
         target: Some(Target::Permanent(bear)), additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("Forecast activatable in upkeep");
     drain_stack(&mut g);
-    assert_eq!(g.computed_permanent(bear).unwrap().colors, vec![Color::Red],
+    assert_eq!(g.computed_permanent(bear).unwrap().colors.to_vec(), vec![Color::Red],
         "target became the chosen color");
     assert!(g.players[0].hand.iter().any(|c| c.id == govern), "card stays in hand");
 }
@@ -819,7 +819,7 @@ fn nightcreep_recolors_creatures_and_lands() {
     })
     .expect("cast Nightcreep");
     drain_stack(&mut g);
-    assert!(g.computed_permanent(bear).unwrap().colors.contains(&Color::Black), "creature is black");
+    assert!(g.computed_permanent(bear).unwrap().colors.contains(Color::Black), "creature is black");
     assert!(
         g.computed_permanent(forest).unwrap().subtypes.land_types.contains(&LandType::Swamp),
         "land became a Swamp",

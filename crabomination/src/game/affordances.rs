@@ -883,7 +883,7 @@ impl GameState {
                         && c.definition.is_creature()
                         && self
                             .computed_permanent(c.id)
-                            .map(|cp| cp.colors.iter().any(|col| spell_colors.contains(col)))
+                            .map(|cp| cp.colors.iter().any(|col| spell_colors.contains(&col)))
                             .unwrap_or(false)
                 })
                 .map(|c| c.id)

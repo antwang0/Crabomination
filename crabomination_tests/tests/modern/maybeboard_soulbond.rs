@@ -954,7 +954,7 @@ fn leyline_of_the_guildpact_makes_your_permanents_all_colors() {
     let cp = g.compute_battlefield();
     let f = cp.iter().find(|c| c.id == forest).unwrap();
     for col in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] {
-        assert!(f.colors.contains(&col), "your land is now {col:?}");
+        assert!(f.colors.contains(col), "your land is now {col:?}");
     }
 }
 

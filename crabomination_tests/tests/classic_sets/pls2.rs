@@ -160,7 +160,7 @@ fn shifting_sky_repaints_nonlands() {
     cast(&mut g, 0, sky, None);
     let colors = &g.computed_permanent(bears).unwrap().colors;
     assert_eq!(colors.len(), 1, "exactly the chosen color");
-    assert!(!colors.contains(&Color::Green), "green was replaced");
+    assert!(!colors.contains(Color::Green), "green was replaced");
 }
 
 /// Natural Emergence animates its controller's lands.

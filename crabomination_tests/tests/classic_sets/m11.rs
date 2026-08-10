@@ -565,7 +565,7 @@ fn incite_recolors_and_compels() {
     g.players[0].mana_pool.add(Color::Red, 1);
     cast(&mut g, id, Some(Target::Permanent(bear)));
     let cp = g.computed_permanent(bear).unwrap();
-    assert_eq!(cp.colors, vec![Color::Red]);
+    assert_eq!(cp.colors.to_vec(), vec![Color::Red]);
     assert!(cp.keywords.contains(&Keyword::MustAttack));
 }
 

@@ -549,7 +549,7 @@ fn neurok_transmuter_unmakes_an_artifact_creature() {
     drain_stack(&mut g);
     let cp = g.computed_permanent(myr).unwrap();
     assert!(!cp.card_types.contains(&CardType::Artifact));
-    assert!(cp.colors.contains(&Color::Blue));
+    assert!(cp.colors.contains(Color::Blue));
 }
 
 /// Chimeric Egg charges off opponents' nonartifact spells, then animates.

@@ -3483,7 +3483,7 @@ fn ardyn_the_usurper_anthem_and_starscourge() {
     let tcp = g.computed_permanent(token.id).unwrap();
     assert_eq!((tcp.power, tcp.toughness), (5, 5), "5/5 override");
     assert!(tcp.subtypes.creature_types.contains(&crabomination::card::CreatureType::Demon), "is a Demon");
-    assert!(tcp.colors.contains(&crabomination::mana::Color::Black) && tcp.colors.len() == 1, "black only");
+    assert!(tcp.colors.contains(crabomination::mana::Color::Black) && tcp.colors.len() == 1, "black only");
 }
 
 /// Lightning exiles the top card for a may-play on combat damage to a player.

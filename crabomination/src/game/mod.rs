@@ -5668,7 +5668,7 @@ impl GameState {
         let source_info: Option<(usize, Vec<crate::mana::Color>)> = source.and_then(|s| {
             source_cp
                 .as_ref()
-                .map(|cp| (cp.controller, cp.colors.clone()))
+                .map(|cp| (cp.controller, cp.colors.to_vec()))
                 .or_else(|| match &self.resolving_source {
                     Some((id, caster, colors, _)) if *id == s => {
                         Some((*caster, colors.clone()))
@@ -11166,10 +11166,10 @@ impl GameState {
             self.computed_permanent(id).filter(|c| {
                 c.card_types.contains(&crate::card::CardType::Creature)
             })
-            .map(|c| c.colors.clone())
+            .map(|c| c.colors)
         };
         match (creature_colors(src), creature_colors(tgt)) {
-            (Some(a), Some(b)) => a.iter().any(|k| b.contains(k)),
+            (Some(a), Some(b)) => a.intersects(b),
             _ => false,
         }
     }
@@ -11317,12 +11317,12 @@ impl GameState {
 
     fn damage_prevented_by_protection_inner(&self, source: CardId, target: CardId) -> bool {
         let Some(tgt) = self.computed_permanent(target) else { return false };
-        let src_colors = self
+        let src_colors: crate::mana::ColorSet = self
             .computed_permanent(source)
-            .map(|c| c.colors.clone())
+            .map(|c| c.colors)
             .unwrap_or_else(|| {
                 self.battlefield_find(source)
-                    .map(|c| c.definition.cost.colors())
+                    .map(|c| c.definition.cost.colors().into_iter().collect())
                     .unwrap_or_default()
             });
         // CR 702.16 — protection from creatures prevents all damage from a
@@ -11363,9 +11363,7 @@ impl GameState {
         tgt.keywords.iter().any(|kw| match kw {
             Keyword::Protection(color) => src_colors.contains(color),
             // CR 702.16 — "protection from its colors" (Earnest Fellowship).
-            Keyword::ProtectionFromOwnColors => {
-                tgt.colors.iter().any(|c| src_colors.contains(c))
-            }
+            Keyword::ProtectionFromOwnColors => tgt.colors.intersects(src_colors),
             Keyword::ProtectionFromCreatureType(ty) => src_creature_types.contains(ty),
             Keyword::ProtectionFromMatching(f) => self.evaluate_requirement_static(
                 f,
@@ -12143,7 +12141,7 @@ impl GameState {
                     blocker,
                     blocker_cp,
                     atk_cp.keywords.as_slice(),
-                    atk_cp.colors.as_slice(),
+                    atk_cp.colors,
                     atk_cp.power,
                 )
         })
@@ -12208,7 +12206,7 @@ impl GameState {
         }
         let atk_cp = self.computed_permanent(attacker_id);
         let atk_kws = atk_cp.as_ref().map(|c| c.keywords.as_slice()).unwrap_or(&[]);
-        let atk_colors = atk_cp.as_ref().map(|c| c.colors.as_slice()).unwrap_or(&[]);
+        let atk_colors = atk_cp.as_ref().map(|c| c.colors).unwrap_or_default();
         let atk_power = atk_cp.as_ref().map(|c| c.power).unwrap_or_else(|| attacker.power());
         // CR 509.1b — "can't be blocked as long as defending player controls a
         // [filter]" (Neurok Spy, Hazy Homunculus). Enforced in
@@ -19685,7 +19683,7 @@ impl GameState {
     /// colorless objects and for ids that have left every visible zone.
     pub fn card_colors_anywhere(&self, id: CardId) -> Vec<crate::mana::Color> {
         if let Some(cp) = self.computed_permanent(id) {
-            return cp.colors.clone();
+            return cp.colors.to_vec();
         }
         self.find_card_anywhere(id).map(|c| c.definition.printed_colors()).unwrap_or_default()
     }
@@ -21692,7 +21690,7 @@ pub fn can_block_attacker_computed(
     blocker: &CardInstance,
     blocker_computed: &ComputedPermanent,
     attacker_kws: &[Keyword],
-    attacker_colors: &[crate::mana::Color],
+    attacker_colors: crate::mana::ColorSet,
     attacker_power: i32,
 ) -> bool {
     let blocker_kws = &blocker_computed.keywords;
@@ -21788,7 +21786,7 @@ pub fn can_block_attacker_computed(
     // black creatures.
     if attacker_kws.contains(&Keyword::Fear) {
         let blocker_is_artifact = blocker.definition.is_artifact();
-        let blocker_is_black = blocker_computed.colors.contains(&crate::mana::Color::Black);
+        let blocker_is_black = blocker_computed.colors.contains(crate::mana::Color::Black);
         if !blocker_is_artifact && !blocker_is_black {
             return false;
         }
@@ -21800,10 +21798,7 @@ pub fn can_block_attacker_computed(
     // against the blocker's computed colors — not raw `{C}` cost pips.
     if attacker_kws.contains(&Keyword::Intimidate) {
         let blocker_is_artifact = blocker.definition.is_artifact();
-        let shares_color = blocker_computed
-            .colors
-            .iter()
-            .any(|c| attacker_colors.contains(c));
+        let shares_color = blocker_computed.colors.intersects(attacker_colors);
         if !blocker_is_artifact && !shares_color {
             return false;
         }
@@ -21820,7 +21815,7 @@ pub fn can_block_attacker_computed(
         // CR 702.16e — "protection from its colors": can't be blocked by a
         // creature sharing any of the attacker's own colors.
         if matches!(kw, Keyword::ProtectionFromOwnColors)
-            && blocker_computed.colors.iter().any(|c| attacker_colors.contains(c))
+            && blocker_computed.colors.intersects(attacker_colors)
         {
             return false;
         }

@@ -454,7 +454,7 @@ fn ambush_commander_animates_forests_and_eats_one() {
     let cp = g.computed_permanent(forest).expect("computed");
     assert_eq!((cp.power, cp.toughness), (1, 1));
     assert!(cp.subtypes.creature_types.contains(&CreatureType::Elf));
-    assert!(cp.colors.contains(&Color::Green));
+    assert!(cp.colors.contains(Color::Green));
     activate(&mut g, 0, commander, 0, Some(Target::Permanent(commander)));
     assert!(g.battlefield_find(forest).is_none(), "the Forest was the Elf sacrificed");
     assert_eq!(g.computed_permanent(commander).unwrap().power, 5);

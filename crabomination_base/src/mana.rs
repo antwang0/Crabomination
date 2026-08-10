@@ -77,8 +77,36 @@ impl ColorSet {
         self.0 |= Self::bit_for(c);
     }
 
-    pub fn contains(self, c: Color) -> bool {
-        self.0 & Self::bit_for(c) != 0
+    /// Generic over `Color` / `&Color` so the `Vec<Color>` readers this
+    /// replaced (`colors.contains(&c)`, `.iter().any(|k| set.contains(k))`)
+    /// compile unchanged.
+    pub fn contains<C: core::borrow::Borrow<Color>>(self, c: C) -> bool {
+        self.0 & Self::bit_for(*c.borrow()) != 0
+    }
+
+    pub fn remove(&mut self, c: Color) {
+        self.0 &= !Self::bit_for(c);
+    }
+
+    /// Drop every color (layer 5's `LoseAllColors`).
+    pub fn clear(&mut self) {
+        self.0 = 0;
+    }
+
+    /// Colors in WUBRG order. Deterministic regardless of insertion order,
+    /// which is what makes this sound to serialize into a trace.
+    pub fn iter(self) -> ColorSetIter {
+        ColorSetIter { bits: self.0 }
+    }
+
+    pub fn to_vec(self) -> Vec<Color> {
+        self.iter().collect()
+    }
+
+    /// True iff the two sets share at least one color (CR 702.16b's
+    /// protection-from-a-shared-color family, damage-prevention shields).
+    pub fn intersects(self, other: ColorSet) -> bool {
+        self.0 & other.0 != 0
     }
 
     pub fn is_empty(self) -> bool {
@@ -125,6 +153,70 @@ impl ColorSet {
         self.0 == 0
     }
 }
+
+impl FromIterator<Color> for ColorSet {
+    fn from_iter<I: IntoIterator<Item = Color>>(iter: I) -> Self {
+        let mut s = Self::empty();
+        for c in iter {
+            s.insert(c);
+        }
+        s
+    }
+}
+
+impl<'a> FromIterator<&'a Color> for ColorSet {
+    fn from_iter<I: IntoIterator<Item = &'a Color>>(iter: I) -> Self {
+        iter.into_iter().copied().collect()
+    }
+}
+
+impl Extend<Color> for ColorSet {
+    fn extend<I: IntoIterator<Item = Color>>(&mut self, iter: I) {
+        for c in iter {
+            self.insert(c);
+        }
+    }
+}
+
+impl IntoIterator for ColorSet {
+    type Item = Color;
+    type IntoIter = ColorSetIter;
+    fn into_iter(self) -> Self::IntoIter {
+        self.iter()
+    }
+}
+
+impl IntoIterator for &ColorSet {
+    type Item = Color;
+    type IntoIter = ColorSetIter;
+    fn into_iter(self) -> Self::IntoIter {
+        self.iter()
+    }
+}
+
+/// Allocation-free WUBRG-order walk over a [`ColorSet`].
+#[derive(Debug, Clone)]
+pub struct ColorSetIter {
+    bits: u8,
+}
+
+impl Iterator for ColorSetIter {
+    type Item = Color;
+    fn next(&mut self) -> Option<Color> {
+        if self.bits == 0 {
+            return None;
+        }
+        let idx = self.bits.trailing_zeros();
+        self.bits &= self.bits - 1;
+        Some(Color::ALL[idx as usize])
+    }
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        let n = self.bits.count_ones() as usize;
+        (n, Some(n))
+    }
+}
+
+impl ExactSizeIterator for ColorSetIter {}
 
 /// A single symbol in a mana cost.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]

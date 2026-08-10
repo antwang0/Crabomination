@@ -2752,7 +2752,7 @@ fn cr_702_36_fear_blockable_only_by_artifact_or_black() {
         let inst = g.battlefield_find(blk).unwrap().clone();
         let cp = g.computed_permanent(blk).unwrap();
         assert_eq!(
-            crabomination::game::can_block_attacker_computed(&inst, &cp, attacker_kws, &[], 2),
+            crabomination::game::can_block_attacker_computed(&inst, &cp, attacker_kws, crabomination::mana::ColorSet::empty(), 2),
             expect, "{why}"
         );
     };
@@ -2767,14 +2767,14 @@ fn cr_702_36_fear_blockable_only_by_artifact_or_black() {
 fn cr_702_13_intimidate_blockable_only_by_artifact_or_shared_color() {
     use crabomination::card::Keyword;
     let attacker_kws = [Keyword::Intimidate];
-    let attacker_colors = [Color::Red];
+    let attacker_colors = crabomination::mana::ColorSet::single(Color::Red);
     let assert_block = |def: crabomination::card::CardDefinition, expect: bool, why: &str| {
         let mut g = two_player_game();
         let blk = g.add_card_to_battlefield(1, def);
         let inst = g.battlefield_find(blk).unwrap().clone();
         let cp = g.computed_permanent(blk).unwrap();
         assert_eq!(
-            crabomination::game::can_block_attacker_computed(&inst, &cp, &attacker_kws, &attacker_colors, 2),
+            crabomination::game::can_block_attacker_computed(&inst, &cp, &attacker_kws, attacker_colors, 2),
             expect, "{why}"
         );
     };
@@ -2802,7 +2802,7 @@ fn cr_702_72_skulk_blocked_only_by_equal_or_lesser_power() {
         let inst = g.battlefield_find(blk).unwrap().clone();
         let cp = g.computed_permanent(blk).unwrap();
         assert_eq!(
-            crabomination::game::can_block_attacker_computed(&inst, &cp, &attacker_kws, &[], 2),
+            crabomination::game::can_block_attacker_computed(&inst, &cp, &attacker_kws, crabomination::mana::ColorSet::empty(), 2),
             expect, "{why}"
         );
     };
@@ -2830,7 +2830,7 @@ fn cr_509_1b_cant_be_blocked_by_power_at_least() {
         let inst = g.battlefield_find(blk).unwrap().clone();
         let cp = g.computed_permanent(blk).unwrap();
         assert_eq!(
-            crabomination::game::can_block_attacker_computed(&inst, &cp, &attacker_kws, &[], 5),
+            crabomination::game::can_block_attacker_computed(&inst, &cp, &attacker_kws, crabomination::mana::ColorSet::empty(), 5),
             expect, "{why}"
         );
     };
@@ -3378,7 +3378,7 @@ fn cr_702_160_prototype_sets_cost_color_and_size_keeping_abilities() {
     drain_stack(&mut g);
     let cp = g.computed_permanent(proto).unwrap();
     assert_eq!((cp.power, cp.toughness), (1, 1), "prototype size (CR 702.160c)");
-    assert_eq!(cp.colors, vec![Color::Black], "prototype color follows its cost");
+    assert_eq!(cp.colors.to_vec(), vec![Color::Black], "prototype color follows its cost");
     assert!(cp.keywords.contains(&crabomination::card::Keyword::Deathtouch), "abilities/types kept");
 }
 
@@ -3463,7 +3463,7 @@ fn cr_702_31_horsemanship_only_blocked_by_horsemanship() {
     let binst = g.battlefield_find(blk).unwrap();
     let bcomp = g.computed_permanent(blk).unwrap();
     assert!(!crabomination::game::can_block_attacker_computed(
-        binst, &bcomp, &acomp.keywords, &acomp.colors, acomp.power),
+        binst, &bcomp, &acomp.keywords, acomp.colors, acomp.power),
         "a non-horsemanship creature can't block a horsemanship attacker");
 }
 
@@ -3480,7 +3480,7 @@ fn cr_702_28b_shadow_creature_cant_block_nonshadow() {
     let binst = g.battlefield_find(blk).unwrap();
     let bcomp = g.computed_permanent(blk).unwrap();
     assert!(!crabomination::game::can_block_attacker_computed(
-        binst, &bcomp, &acomp.keywords, &acomp.colors, acomp.power),
+        binst, &bcomp, &acomp.keywords, acomp.colors, acomp.power),
         "a shadow creature can't block a non-shadow attacker");
 }
 
@@ -4800,11 +4800,11 @@ fn cr_509_1b_can_block_only_flying_restriction() {
     let binst = g.battlefield_find(blk).unwrap();
     let bcomp = g.computed_permanent(blk).unwrap();
     assert!(
-        !crabomination::game::can_block_attacker_computed(binst, &bcomp, &[], &[], 3),
+        !crabomination::game::can_block_attacker_computed(binst, &bcomp, &[], crabomination::mana::ColorSet::empty(), 3),
         "ground attacker can't be blocked by a fly-only blocker"
     );
     assert!(
-        crabomination::game::can_block_attacker_computed(binst, &bcomp, &[Keyword::Flying], &[], 3),
+        crabomination::game::can_block_attacker_computed(binst, &bcomp, &[Keyword::Flying], crabomination::mana::ColorSet::empty(), 3),
         "a flyer can be blocked"
     );
 }

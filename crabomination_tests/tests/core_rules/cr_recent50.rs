@@ -21,7 +21,7 @@ fn cr_710_1c_flipping_keeps_color_and_mana_cost() {
     g.flip_permanent(pupil, &mut evs);
     let cp = g.computed_permanent(pupil).unwrap();
     assert_eq!(g.battlefield_find(pupil).unwrap().definition.name, "Ichiga, Who Topples Oaks");
-    assert!(cp.colors.contains(&Color::Green), "still green");
+    assert!(cp.colors.contains(Color::Green), "still green");
     assert_eq!(g.battlefield_find(pupil).unwrap().definition.cost.cmc(), 3);
 }
 

@@ -21,7 +21,7 @@ use crate::card::{
     CardId, CardType, CounterType, CreatureType, Keyword, LandType, SelectionRequirement, Subtypes,
     Supertype,
 };
-use crate::mana::Color;
+use crate::mana::{Color, ColorSet};
 use serde::{Deserialize, Serialize};
 
 // ── Duration ──────────────────────────────────────────────────────────────────
@@ -380,7 +380,7 @@ pub struct ComputedPermanent {
     pub card_types: Printed<Vec<CardType>>,
     pub supertypes: Printed<Vec<Supertype>>,
     pub subtypes: Printed<Subtypes>,
-    pub colors: Vec<Color>,
+    pub colors: ColorSet,
     pub keywords: Printed<Vec<Keyword>>,
     pub power: i32,
     pub toughness: i32,
@@ -631,10 +631,8 @@ fn compute_permanent_pass(
             }
 
             // Layer 5
-            Modification::AddColor(c) => {
-                if !colors.contains(c) { colors.push(*c); }
-            }
-            Modification::SetColors(cs) => colors = cs.clone(),
+            Modification::AddColor(c) => colors.insert(*c),
+            Modification::SetColors(cs) => colors = cs.iter().collect(),
             Modification::LoseAllColors => colors.clear(),
 
             // Layer 6. Duplicate grants of a binary keyword collapse to one,
@@ -753,8 +751,8 @@ fn compute_permanent_pass(
 
 /// Determine which colors a card has from its mana cost symbols
 /// (CR 105.2 + the Devoid CDA).
-fn colors_from_card(card: &crate::card::CardInstance) -> Vec<Color> {
-    card.definition.printed_colors()
+fn colors_from_card(card: &crate::card::CardInstance) -> ColorSet {
+    card.definition.printed_color_set()
 }
 
 /// Returns true if `effect` affects `card`. `gate_power` is the card's

@@ -2726,7 +2726,7 @@ impl GameState {
                     .into_iter()
                     .filter_map(|e| e.as_permanent_id())
                     .filter_map(|id| self.computed_permanent(id))
-                    .flat_map(|cp| cp.colors.clone())
+                    .flat_map(|cp| cp.colors)
                     .fold(Vec::new(), |mut acc, c| {
                         if !acc.contains(&c) {
                             acc.push(c);
@@ -5969,7 +5969,7 @@ impl GameState {
                 };
                 let subj_colors = self
                     .computed_permanent(subj)
-                    .map(|cp| cp.colors.clone())
+                    .map(|cp| cp.colors)
                     .unwrap_or_default();
                 // Subject first, then every other creature that shares a color.
                 let mut recipients = vec![subj];
@@ -10360,9 +10360,9 @@ impl GameState {
                             .collect();
                         for id in mine {
                             if let Some(cp) = self.computed_permanent(id) {
-                                for col in &cp.colors {
-                                    if !legal.contains(col) {
-                                        legal.push(*col);
+                                for col in cp.colors {
+                                    if !legal.contains(&col) {
+                                        legal.push(col);
                                     }
                                 }
                             }
@@ -15330,7 +15330,7 @@ impl GameState {
                         .map(|c| c.id)
                         .filter(|id| {
                             self.computed_permanent(*id)
-                                .is_some_and(|cp| cp.colors.contains(&color))
+                                .is_some_and(|cp| cp.colors.contains(color))
                         })
                         .filter(|id| {
                             self.evaluate_requirement_static(
@@ -33611,7 +33611,7 @@ impl GameState {
                 };
                 let subj_colors = self
                     .computed_permanent(subj)
-                    .map(|cp| cp.colors.clone())
+                    .map(|cp| cp.colors)
                     .unwrap_or_default();
                 // Radiance fans out over every other permanent that shares a
                 // card type with the subject (creatures for the usual cards,
@@ -33924,7 +33924,7 @@ impl GameState {
                 else {
                     return vec![];
                 };
-                let Some(colors) = self.computed_permanent(anchor).map(|cp| cp.colors.clone())
+                let Some(colors) = self.computed_permanent(anchor).map(|cp| cp.colors)
                 else {
                     return vec![];
                 };

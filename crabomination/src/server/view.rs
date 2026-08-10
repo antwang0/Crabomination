@@ -1851,7 +1851,7 @@ fn project_permanent(
             .map(|c| c.subtypes.creature_types.clone())
             .unwrap_or_else(|| card.definition.subtypes.creature_types.clone()),
         lost_all_abilities: cp.is_some_and(|c| c.lost_all_abilities),
-        colors: cp.map(|c| c.colors.clone()).unwrap_or_else(|| {
+        colors: cp.map(|c| c.colors.to_vec()).unwrap_or_else(|| {
             let mut cs = card.definition.cost.colors();
             for c in &card.definition.color_indicator {
                 if !cs.contains(c) {

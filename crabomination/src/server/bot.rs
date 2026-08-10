@@ -3750,7 +3750,7 @@ fn cast_candidates(
                     && p.definition.is_creature()
                     && state
                         .computed_permanent(p.id)
-                        .map(|cp| cp.colors.iter().any(|col| spell_colors.contains(col)))
+                        .map(|cp| cp.colors.iter().any(|col| spell_colors.contains(&col)))
                         .unwrap_or(false)
             })
             .map(|p| p.id)

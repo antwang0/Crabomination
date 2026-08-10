@@ -1232,10 +1232,10 @@ fn seize_the_day_grants_an_extra_combat() {
 fn repentant_vampire_turns_white_past_threshold() {
     let mut g = main_phase();
     let vamp = g.add_card_to_battlefield(0, catalog::repentant_vampire());
-    assert!(!g.computed_permanent(vamp).unwrap().colors.contains(&Color::White));
+    assert!(!g.computed_permanent(vamp).unwrap().colors.contains(Color::White));
     assert!(g.granted_abilities_for(vamp).is_empty());
     fill_graveyard(&mut g, 0);
-    assert!(g.computed_permanent(vamp).unwrap().colors.contains(&Color::White));
+    assert!(g.computed_permanent(vamp).unwrap().colors.contains(Color::White));
     assert_eq!(g.granted_abilities_for(vamp).len(), 1, "the Threshold tapper is live");
 }
 
@@ -1250,7 +1250,7 @@ fn wayward_angel_falls_past_threshold() {
     let cp = g.computed_permanent(angel).unwrap();
     assert_eq!((cp.power, cp.toughness), (7, 7));
     assert!(cp.keywords.contains(&Keyword::Trample));
-    assert!(cp.colors.contains(&Color::Black));
+    assert!(cp.colors.contains(Color::Black));
 }
 
 /// Stone-Tongue Basilisk lures every blocker past Threshold.

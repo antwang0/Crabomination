@@ -40,8 +40,8 @@ fn cr_305_7_terraformer_relands_your_lands() {
 fn cr_202_2b_hybrid_card_is_multicolored() {
     let mut g = two_player_game();
     let bg = g.add_card_to_battlefield(0, catalog::boros_guildmage());
-    let colors = g.computed_permanent(bg).unwrap().colors.clone();
-    assert!(colors.contains(&Color::Red) && colors.contains(&Color::White),
+    let colors = g.computed_permanent(bg).unwrap().colors;
+    assert!(colors.contains(Color::Red) && colors.contains(Color::White),
         "hybrid pips make it both colors");
     assert_eq!(colors.len(), 2, "exactly two colors → multicolored");
 }

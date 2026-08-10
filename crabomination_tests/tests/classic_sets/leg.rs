@@ -274,7 +274,7 @@ fn amrou_kithkin_dodges_big_blockers() {
 fn touch_of_darkness_repaints_a_creature() {
     let mut g = main_phase();
     let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
-    assert_eq!(g.computed_permanent(bear).unwrap().colors, vec![Color::Green]);
+    assert_eq!(g.computed_permanent(bear).unwrap().colors.to_vec(), vec![Color::Green]);
     let spell = g.add_card_to_hand(0, catalog::touch_of_darkness());
     mana(&mut g, 0);
     g.perform_action(GameAction::CastSpell {
@@ -286,9 +286,9 @@ fn touch_of_darkness_repaints_a_creature() {
     })
     .expect("cast");
     drain_stack(&mut g);
-    assert_eq!(g.computed_permanent(bear).unwrap().colors, vec![Color::Black]);
+    assert_eq!(g.computed_permanent(bear).unwrap().colors.to_vec(), vec![Color::Black]);
     g.do_cleanup(&mut vec![]);
-    assert_eq!(g.computed_permanent(bear).unwrap().colors, vec![Color::Green]);
+    assert_eq!(g.computed_permanent(bear).unwrap().colors.to_vec(), vec![Color::Green]);
 }
 
 /// Transmutation flips a creature's stats for the turn.

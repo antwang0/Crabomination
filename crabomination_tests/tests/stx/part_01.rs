@@ -2873,7 +2873,7 @@ fn mercurial_transformation_frog_mode_makes_blue_one_one() {
     let computed = g.computed_permanent(dragon).expect("Dragon still on bf");
     assert_eq!((computed.power, computed.toughness), (1, 1), "becomes a 1/1 Frog");
     assert!(!computed.keywords.contains(&Keyword::Flying), "loses all abilities");
-    assert!(computed.colors.contains(&Color::Blue) && computed.colors.len() == 1,
+    assert!(computed.colors.contains(Color::Blue) && computed.colors.len() == 1,
         "becomes mono-blue");
 }
 

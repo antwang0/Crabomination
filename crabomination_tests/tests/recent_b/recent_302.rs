@@ -144,9 +144,9 @@ fn slaughterhouse_bouncer_shrinks_a_creature_when_hellbent() {
 fn transguild_courier_is_all_colors() {
     let mut g = two_player_game();
     let tc = g.add_card_to_battlefield(0, catalog::transguild_courier());
-    let colors = g.computed_permanent(tc).unwrap().colors.clone();
+    let colors = g.computed_permanent(tc).unwrap().colors;
     for c in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] {
-        assert!(colors.contains(&c), "is {c:?}");
+        assert!(colors.contains(c), "is {c:?}");
     }
 }
 

@@ -1636,7 +1636,7 @@ impl GameState {
             }
 
             let blocker_cp = cp_of(blocker_id).ok_or(GameError::CannotBlock(blocker_id))?;
-            let atk_colors = cp_of(attacker_id).map(|c| c.colors.as_slice()).unwrap_or(&[]);
+            let atk_colors = cp_of(attacker_id).map(|c| c.colors).unwrap_or_default();
             let atk_power = cp_of(attacker_id).map(|c| c.power).unwrap_or_else(|| attacker.power());
             if !super::can_block_attacker_computed(
                 blocker,
@@ -1990,7 +1990,7 @@ impl GameState {
                 Some(a) => a,
                 None => continue,
             };
-            let atk_colors = cp_of(atk.attacker).map(|c| c.colors.as_slice()).unwrap_or(&[]);
+            let atk_colors = cp_of(atk.attacker).map(|c| c.colors).unwrap_or_default();
             let atk_power = cp_of(atk.attacker).map(|c| c.power).unwrap_or_else(|| attacker.power());
             let idle_able_blocker = self.battlefield.iter().any(|b| {
                 cp_of(b.id).is_some_and(|c| c.card_types.contains(&crate::card::CardType::Creature))
@@ -2022,7 +2022,7 @@ impl GameState {
                 Some(a) => a,
                 None => continue,
             };
-            let atk_colors = cp_of(atk.attacker).map(|c| c.colors.as_slice()).unwrap_or(&[]);
+            let atk_colors = cp_of(atk.attacker).map(|c| c.colors).unwrap_or_default();
             let atk_power = cp_of(atk.attacker).map(|c| c.power).unwrap_or_else(|| attacker.power());
             let unmet = self.battlefield.iter().any(|b| {
                 cp_of(b.id).is_some_and(|c| c.card_types.contains(&crate::card::CardType::Creature))
@@ -2060,7 +2060,7 @@ impl GameState {
                 continue;
             }
             let Some(attacker) = self.battlefield_find(required) else { continue };
-            let atk_colors = cp_of(required).map(|c| c.colors.as_slice()).unwrap_or(&[]);
+            let atk_colors = cp_of(required).map(|c| c.colors).unwrap_or_default();
             let atk_power = cp_of(required).map(|c| c.power).unwrap_or_else(|| attacker.power());
             let able = cp_of(b.id).is_some_and(|bcp| {
                 super::can_block_attacker_computed(
@@ -2091,7 +2091,7 @@ impl GameState {
             }
             let Some(defender_idx) = self.defender_for(atk.target) else { continue };
             let Some(attacker) = self.battlefield_find(atk.attacker) else { continue };
-            let atk_colors = cp_of(atk.attacker).map(|c| c.colors.clone()).unwrap_or_default();
+            let atk_colors = cp_of(atk.attacker).map(|c| c.colors).unwrap_or_default();
             let atk_power = cp_of(atk.attacker).map(|c| c.power).unwrap_or_else(|| attacker.power());
             let unmet = self.battlefield.iter().any(|b| {
                 cp_of(b.id).is_some_and(|c| c.card_types.contains(&crate::card::CardType::Creature))
@@ -2104,7 +2104,7 @@ impl GameState {
                         .any(|(bid, aid)| *bid == b.id && *aid == atk.attacker)
                     && cp_of(b.id).is_some_and(|bcp| {
                         super::can_block_attacker_computed(
-                            b, bcp, kws_of(atk.attacker), &atk_colors, atk_power,
+                            b, bcp, kws_of(atk.attacker), atk_colors, atk_power,
                         )
                     })
             });
@@ -2141,12 +2141,12 @@ impl GameState {
                         .zip(cp_of(b.id))
                         .is_some_and(|(attacker, bcp)| {
                             let atk_colors =
-                                cp_of(atk.attacker).map(|c| c.colors.clone()).unwrap_or_default();
+                                cp_of(atk.attacker).map(|c| c.colors).unwrap_or_default();
                             let atk_power = cp_of(atk.attacker)
                                 .map(|c| c.power)
                                 .unwrap_or_else(|| attacker.power());
                             super::can_block_attacker_computed(
-                                b, bcp, kws_of(atk.attacker), &atk_colors, atk_power,
+                                b, bcp, kws_of(atk.attacker), atk_colors, atk_power,
                             )
                         })
             });

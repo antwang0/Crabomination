@@ -44,7 +44,7 @@ fn goring_warplow_prototype_is_black_1_1_with_deathtouch() {
     drain_stack(&mut g);
     let cp = g.computed_permanent(id).expect("on battlefield");
     assert_eq!((cp.power, cp.toughness), (1, 1), "prototype size");
-    assert_eq!(cp.colors, vec![Color::Black], "prototype color follows its cost");
+    assert_eq!(cp.colors.to_vec(), vec![Color::Black], "prototype color follows its cost");
     assert!(cp.keywords.contains(&Keyword::Deathtouch), "keeps abilities");
     let r = g.battlefield_find(id).unwrap();
     assert!(r.cast_as_prototype);
@@ -67,7 +67,7 @@ fn prototype_state_survives_snapshot_roundtrip() {
     let g2: GameState = serde_json::from_str(&json).expect("deserialize");
     let cp = g2.computed_permanent(id).expect("on battlefield after restore");
     assert_eq!((cp.power, cp.toughness), (3, 2));
-    assert_eq!(cp.colors, vec![Color::Red]);
+    assert_eq!(cp.colors.to_vec(), vec![Color::Red]);
     assert!(cp.keywords.contains(&Keyword::Haste));
 }
 
@@ -169,7 +169,7 @@ fn frogmyr_enforcer_affinity_reduces_prototype_cost() {
     drain_stack(&mut g);
     let cp = g.computed_permanent(id).unwrap();
     assert_eq!((cp.power, cp.toughness), (2, 2));
-    assert_eq!(cp.colors, vec![Color::Red]);
+    assert_eq!(cp.colors.to_vec(), vec![Color::Red]);
 }
 
 /// Skitterbeam Battalion's ETB makes two token copies of itself (prototype

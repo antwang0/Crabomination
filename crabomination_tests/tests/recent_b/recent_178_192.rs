@@ -459,8 +459,8 @@ mod recent180 {
         let cp = g.computed_permanent(goat).unwrap();
         assert_eq!((cp.power, cp.toughness), (4, 4), "three +1/+1 counters → 4/4");
         assert!(cp.subtypes.creature_types.contains(&CreatureType::Demon), "became a Demon");
-        assert!(cp.colors.contains(&Color::Black), "became black");
-        assert!(cp.colors.contains(&Color::White), "kept its white color");
+        assert!(cp.colors.contains(Color::Black), "became black");
+        assert!(cp.colors.contains(Color::White), "kept its white color");
         // "Activate only once" — the second try is rejected.
         let second = g.perform_action(GameAction::ActivateAbility {
             card_id: goat,

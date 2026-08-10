@@ -2576,7 +2576,7 @@ fn eaten_by_piranhas_shrinks_creature() {
     let cp = g.computed_permanent(foe).unwrap();
     assert_eq!((cp.power, cp.toughness), (1, 1), "now 1/1");
     assert!(cp.keywords.is_empty(), "lost all abilities (flying)");
-    assert!(cp.colors.contains(&Color::Black), "is black");
+    assert!(cp.colors.contains(Color::Black), "is black");
 }
 
 /// Tendril of the Mycotyrant animates a land into a 7/7 Fungus via seven counters.

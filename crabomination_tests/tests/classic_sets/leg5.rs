@@ -106,7 +106,7 @@ fn aisling_leprechaun_turns_its_blocker_green() {
     let lions = g.add_card_to_battlefield(0, catalog::savannah_lions());
     let fae = g.add_card_to_battlefield(1, catalog::aisling_leprechaun());
     block(&mut g, lions, fae);
-    let colors = g.computed_permanent(lions).unwrap().colors.clone();
+    let colors = g.computed_permanent(lions).unwrap().colors.to_vec();
     assert_eq!(colors, vec![Color::Green]);
 }
 
@@ -285,7 +285,7 @@ fn alchors_tomb_repaints_a_permanent() {
     })
     .expect("activate");
     drain_stack(&mut g);
-    assert_ne!(g.computed_permanent(bear).unwrap().colors, vec![Color::Green]);
+    assert_ne!(g.computed_permanent(bear).unwrap().colors.to_vec(), vec![Color::Green]);
 }
 
 /// Rohgahh pumps the Kobolds he keeps.

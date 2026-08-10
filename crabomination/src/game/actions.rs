@@ -4352,7 +4352,7 @@ impl GameState {
             });
             let shares = self
                 .computed_permanent(cid)
-                .map(|cp| cp.colors.iter().any(|col| spell_colors.contains(col)))
+                .map(|cp| cp.colors.iter().any(|col| spell_colors.contains(&col)))
                 .unwrap_or(false);
             if !on_bf || !shares {
                 return Err(GameError::InvalidTarget);
@@ -6935,7 +6935,7 @@ impl GameState {
         for cid in convoke_creatures {
             let colors: Vec<crate::mana::Color> = self
                 .computed_permanent(*cid)
-                .map(|cp| cp.colors.clone())
+                .map(|cp| cp.colors.to_vec())
                 .unwrap_or_default();
             if let Some(c) = self.battlefield.iter_mut().find(|c| c.id == *cid) {
                 c.tapped = true;
