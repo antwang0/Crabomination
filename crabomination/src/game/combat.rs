@@ -414,26 +414,26 @@ impl GameState {
         // declared attacker carries AttacksAlone, the batch must be a
         // single attacker. Read from the computed keyword set so granted
         // variants count.
-        if attacks.len() > 1 {
-            if attacks.iter().any(|atk| {
+        if attacks.len() > 1
+            && attacks.iter().any(|atk| {
                 computed
                     .iter()
                     .find(|c| c.id == atk.attacker)
                     .is_some_and(|c| c.keywords.contains(&Keyword::AttacksAlone))
-            }) {
-                return Err(GameError::CannotAttack(attacks[0].attacker));
-            }
+            })
+        {
+            return Err(GameError::CannotAttack(attacks[0].attacker));
         }
 
         // CR 508.0 — "can't attack alone" (Militia Rallier). A lone attacker
         // carrying CantAttackAlone makes the batch illegal.
-        if attacks.len() == 1 {
-            if computed.iter().find(|c| c.id == attacks[0].attacker).is_some_and(|c| {
+        if attacks.len() == 1
+            && computed.iter().find(|c| c.id == attacks[0].attacker).is_some_and(|c| {
                 c.keywords.contains(&Keyword::CantAttackAlone)
                     || c.keywords.contains(&Keyword::CantAttackOrBlockAlone)
-            }) {
-                return Err(GameError::CannotAttack(attacks[0].attacker));
-            }
+            })
+        {
+            return Err(GameError::CannotAttack(attacks[0].attacker));
         }
 
         // CR 506.2 — Silent Arbiter: "No more than N creatures can attack each
