@@ -2990,6 +2990,25 @@ impl GameState {
     /// `TeamId(seat)` when `teams` is empty (e.g. snapshots from before
     /// the field was added).
     pub fn team_of(&self, seat: usize) -> crate::team::TeamId {
+        // Fast path for the layout `GameState::new` builds and every
+        // non-team format keeps: one singleton team per seat, in seat
+        // order. One index and one compare instead of a scan of every
+        // team's member list — `same_team` is called ~1.2 M times per six
+        // games and was 1.45 % of the program walking those `Vec`s.
+        // `assign_teams` rejects a seat appearing twice, so a hit here is
+        // the same team the scan below would find; the `debug_assert` is
+        // the audit.
+        if let Some(t) = self.teams.get(seat)
+            && t.members.len() == 1
+            && t.members[0] == seat
+        {
+            debug_assert_eq!(t.id, self.team_of_scan(seat), "team_of fast path drifted");
+            return t.id;
+        }
+        self.team_of_scan(seat)
+    }
+
+    fn team_of_scan(&self, seat: usize) -> crate::team::TeamId {
         for t in &self.teams {
             if t.members.contains(&seat) {
                 return t.id;
@@ -3031,7 +3050,7 @@ impl GameState {
     /// True when `a` and `b` are on the same team. A seat is always its
     /// own teammate (returns true for `a == b`).
     pub fn same_team(&self, a: usize, b: usize) -> bool {
-        self.team_of(a) == self.team_of(b)
+        a == b || self.team_of(a) == self.team_of(b)
     }
 
     /// CR 809 — set the game up as an Emperor game of `teams` teams of
