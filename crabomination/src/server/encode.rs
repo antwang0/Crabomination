@@ -325,10 +325,10 @@ pub fn encode_state(g: &GameState, seat: usize, vocab: &Vocab) -> EncodedState {
             if let crate::game::types::AttackTarget::Player(p) = a.target {
                 let is_blocked = blocker_sums.contains_key(&a.attacker)
                     || g.block_map.values().any(|att| att.contains(&a.attacker));
-                if !is_blocked {
-                    if let Some((pw, _)) = eff_pt(a.attacker) {
-                        gl[if p == seat { 39 } else { 40 }] += pw as f32 / 12.0;
-                    }
+                if !is_blocked
+                    && let Some((pw, _)) = eff_pt(a.attacker)
+                {
+                    gl[if p == seat { 39 } else { 40 }] += pw as f32 / 12.0;
                 }
             }
         }
