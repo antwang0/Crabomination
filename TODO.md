@@ -16,10 +16,10 @@ reference and want their own triage pass):
 
 ## NEXT (handoff — rewrite each run, keep under 15 lines)
 
-Branch `claude/modern_decks`. **Fifteenth pass: two perf commits, -3.87 % Ir**
-(4,185,775,886 -> 4,023,920,637, base `2b736358`, `profiling-fast
---no-default-features` callgrind). Suite 18,828 green, all four golden
-traces byte-identical, clippy clean workspace-wide.
+Branch `claude/modern_decks`. **Fifteenth pass: two perf commits (-3.87 % Ir),
+and one flaky-gate fix** (4,185,775,886 -> 4,023,920,637, base `2b736358`,
+`profiling-fast --no-default-features` callgrind). Suite 18,828 green, all
+four golden traces byte-identical, clippy clean workspace-wide.
 
 - **Both rows are one shape: a `&mut self` path paying a whole-game gather
   to read one bit.** (a) `permanents_with_abilities_removed` gathered once
@@ -46,6 +46,11 @@ traces byte-identical, clippy clean workspace-wide.
   callgrind is the whole measurement. A fresh `release` `--bench` anchor was
   taken on this container for the stall / determinism / RSS record only —
   **it does not compare to the 62.48 anchor**, which was a different box.
+- **A flaky gate test was found and fixed** (`a669eefd`):
+  `crabomination_ml::learns_a_synthetic_signal` failed ~1 full-suite run in
+  8, purely from sampling its ~90.9 % accuracy with 100 draws against an
+  `>= 85` floor. **Run the full suite more than once before believing it is
+  green** — this only surfaced on the third run of the session.
 - **Bugs**: the panic/unwrap sweep is still open, but a **third filter came
   up clean** — unsigned `len() - k` / `.min(len()-1)` on a collection the
   caller tolerates empty, 16 hits under `game/` + `bot.rs`, every one
@@ -62,7 +67,7 @@ traces byte-identical, clippy clean workspace-wide.
   --exclude crabomination_client` (~18,828 tests, a few minutes). A cold
   dep build is ~13 min, a warm engine `profiling-fast` rebuild ~4.5 min,
   `release` ~35 min, a callgrind run ~3.5 min.
-- **Trackers**: TODO 890, roadmap 660, `PERF.md` 1,050, `INCOMPLETE_CARDS`
+- **Trackers**: TODO 895, roadmap 660, `PERF.md` 1,050, `INCOMPLETE_CARDS`
   247. `PERF.md` is over the ~1k trigger and **compaction was considered and
   declined**: its Log is one line per row, so collapsing rows saves ~nothing
   and costs the record. Trim it only by merging whole *passes* into one
