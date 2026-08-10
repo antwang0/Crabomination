@@ -18,7 +18,8 @@ reference and want their own triage pass):
 
 Branch `claude/modern_decks`. **Twelfth pass: four perf commits, one shape.**
 `5,622,084,243 -> 5,260,848,923 Ir, -6.43 %` on the fixed six-game workload,
-base `48ac252c` vs tip `3565e55f`. **Wall-clock 6/6 alternated `--bench`
+base `48ac252c` vs the pre-rebase tip (then rebased onto `81c88580`;
+its changes are in the ML/client/lobby paths, not the engine hot path). **Wall-clock 6/6 alternated `--bench`
 pairs positive, mean +9.57 %** (`profiling-fast --no-default-features`, same
 two binaries). Suite green, golden traces byte-identical on every row.
 
