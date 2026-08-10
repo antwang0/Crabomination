@@ -11886,7 +11886,7 @@ impl GameState {
     }
 
     /// Frozen: every untapped permanent asks `effective_mana_abilities`, and
-    /// each of those runs `printed_land_mana_ability_lost` and
+    /// each of those runs `printed_land_mana_ability_lost_with` and
     /// `intrinsic_land_mana_abilities`, both of which take a layer pass. One
     /// scope makes the whole table share one gather and one
     /// `ComputedPermanent` per card.
@@ -12208,14 +12208,10 @@ impl GameState {
     /// Seas, Blood Moon, a Trait Doctoring color/land-word change). Printed
     /// mana abilities that aren't a basic type's intrinsic ability are real
     /// rules text and survive.
-    pub(crate) fn printed_land_mana_ability_lost(&self, card_id: CardId, index: usize) -> bool {
-        let Some(card) = self.battlefield_find(card_id) else { return false };
-        let Some(computed) = self.computed_permanent(card_id) else { return false };
-        Self::printed_land_mana_ability_lost_with(card, index, &computed.subtypes.land_types)
-    }
-
-    /// [`printed_land_mana_ability_lost`](Self::printed_land_mana_ability_lost)
-    /// against a computed land-type list the caller already holds — see
+    ///
+    /// Takes the computed land-type list the caller already holds — every
+    /// caller is inside a scope that has one, so the `&self` variant that
+    /// fetched its own (a whole-game gather per call) is gone. See
     /// [`intrinsic_land_mana_abilities_with`](Self::intrinsic_land_mana_abilities_with).
     pub(crate) fn printed_land_mana_ability_lost_with(
         card: &crate::card::CardInstance,
@@ -13012,16 +13008,34 @@ impl GameState {
             // caller's "did a creature make this mana" flag (CR 106.12 /
             // Cursed Totem-style restrictions); it comes off the same
             // `ComputedPermanent` as `stripped`, and no mana has moved yet.
-            let (stripped, is_creature, granted, intrinsic) = self.with_frozen_layers(|g| {
-                let cp = g.computed_permanent(card_id);
-                (
-                    cp.as_ref().map(|c| c.lost_all_abilities).unwrap_or(false),
-                    cp.as_ref()
-                        .is_some_and(|c| c.card_types.contains(&crate::card::CardType::Creature)),
-                    g.granted_abilities_for(card_id),
-                    g.intrinsic_land_mana_abilities(card_id),
-                )
-            });
+            let (stripped, is_creature, granted, intrinsic, land_mana_lost) =
+                self.with_frozen_layers(|g| {
+                    let cp = g.computed_permanent(card_id);
+                    // CR 305.6 / 612 — the same computed view answers whether a
+                    // basic's printed mana ability survived its type line, so
+                    // the check below reads it here instead of taking its own
+                    // gather (`printed_land_mana_ability_lost` did, 1.28 % of
+                    // the simulator). Cheap when the index isn't a printed
+                    // single-colour mana ability: `_with` bails on the printed
+                    // shape.
+                    let land_mana_lost = match (&cp, g.battlefield_find(card_id)) {
+                        (Some(c), Some(card)) => Self::printed_land_mana_ability_lost_with(
+                            card,
+                            ability_index,
+                            &c.subtypes.land_types,
+                        ),
+                        _ => false,
+                    };
+                    (
+                        cp.as_ref().map(|c| c.lost_all_abilities).unwrap_or(false),
+                        cp.as_ref().is_some_and(|c| {
+                            c.card_types.contains(&crate::card::CardType::Creature)
+                        }),
+                        g.granted_abilities_for(card_id),
+                        g.intrinsic_land_mana_abilities(card_id),
+                        land_mana_lost,
+                    )
+                });
             if is_creature {
                 *creature_mana_before = Some(self.players[p].mana_pool.clone());
             }
@@ -13036,7 +13050,7 @@ impl GameState {
                 }
                 // CR 305.6 / 612 — a basic's intrinsic mana ability follows its
                 // *computed* type line, so a rewritten type takes it away.
-                if self.printed_land_mana_ability_lost(card_id, ability_index) {
+                if land_mana_lost {
                     return Err(GameError::AbilityIndexOutOfBounds);
                 }
                 raw
@@ -13291,11 +13305,22 @@ impl GameState {
             }
         }
 
+        // The three CR 602.5 gates below all read one bit of *this* card's
+        // computed view, nothing between them touches a layer input, and this
+        // is a `&mut self` path — so each `computed_permanent` was its own
+        // whole-game gather. Take one, under the same conditions that decide
+        // whether any of them can fire.
+        let tap_gated = ability.tap_cost || ability.untap_self_cost;
+        let on_battlefield = !source_in_gy && !source_in_hand && !source_in_command;
+        let cp = (tap_gated || (on_battlefield && !is_mana_ability(&ability.effect)))
+            .then(|| self.computed_permanent(card_id))
+            .flatten();
+
         // CR 602.5 — "activated abilities with {T} in their costs can't be
         // activated" (Serra Bestiary). Read off the computed keyword set so a
         // granted restriction applies immediately.
-        if (ability.tap_cost || ability.untap_self_cost)
-            && self.computed_permanent(card_id).is_some_and(|cp| {
+        if tap_gated
+            && cp.as_ref().is_some_and(|cp| {
                 cp.keywords.contains(&Keyword::CantActivateTapAbilities)
             })
         {
@@ -13305,19 +13330,13 @@ impl GameState {
         // CR 602.5g/h — a creature's ability with a {T} or {Q} cost can't be
         // activated while the creature is summoning-sick, unless it has haste
         // or its controller has a Tyvar-style "as though they had haste" static.
-        if (ability.tap_cost || ability.untap_self_cost)
-            && !source_in_gy
-            && !source_in_hand
-            && !source_in_command
-        {
+        if tap_gated && on_battlefield {
             let sick = self.battlefield_find(card_id).is_some_and(|c| {
                 c.summoning_sick
-                    && self
-                        .computed_permanent(card_id)
-                        .is_some_and(|cp| {
-                            cp.card_types.contains(&crate::card::CardType::Creature)
-                                && !cp.keywords.contains(&Keyword::Haste)
-                        })
+                    && cp.as_ref().is_some_and(|cp| {
+                        cp.card_types.contains(&crate::card::CardType::Creature)
+                            && !cp.keywords.contains(&Keyword::Haste)
+                    })
             });
             if sick {
                 let exempt = self.battlefield.iter().any(|c| {
@@ -13338,17 +13357,11 @@ impl GameState {
         // CR 602.5c — a permanent whose *computed* keyword set carries
         // `CantActivateAbilities` (Detention Vortex's Aura grant, etc.) can't
         // activate its non-mana abilities. Battlefield sources only.
-        if !is_mana_ability(&ability.effect)
-            && !source_in_gy
-            && !source_in_hand
-            && !source_in_command
+        if on_battlefield
+            && !is_mana_ability(&ability.effect)
+            && cp.as_ref().is_some_and(|c| c.keywords.contains(&Keyword::CantActivateAbilities))
         {
-            let locked = self
-                .computed_permanent(card_id)
-                .is_some_and(|c| c.keywords.contains(&Keyword::CantActivateAbilities));
-            if locked {
-                return Err(GameError::AbilitySuppressedByNamedCard);
-            }
+            return Err(GameError::AbilitySuppressedByNamedCard);
         }
 
         // Once-per-turn: reject if this ability index has already been
