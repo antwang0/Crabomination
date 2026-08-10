@@ -3125,7 +3125,7 @@ fn settle_answer(
     answer: crate::decision::DecisionAnswer,
 ) -> Option<i32> {
     let mut g = state.clone();
-    g.perform_action(GameAction::SubmitDecision(answer)).ok()?;
+    dry_run(&mut g, GameAction::SubmitDecision(answer)).ok()?;
     let mut fuel = 64u32;
     loop {
         if g.is_game_over() {
@@ -3136,11 +3136,11 @@ fn settle_answer(
                 let pending = g.pending_decision.as_ref().unwrap();
                 decide_pending_policy(&g, pending.acting_player(), w, &pending.decision, false)
             };
-            g.perform_action(GameAction::SubmitDecision(answer)).ok()?;
+            dry_run(&mut g, GameAction::SubmitDecision(answer)).ok()?;
         } else if g.stack.is_empty() {
             break;
         } else {
-            g.perform_action(GameAction::PassPriority).ok()?;
+            dry_run(&mut g, GameAction::PassPriority).ok()?;
         }
         fuel = fuel.checked_sub(1)?;
     }
@@ -6477,6 +6477,44 @@ fn simulate_attack_outcome(
     simulate_attack_outcome_once(state, seat, attacks, w, 0)
 }
 
+/// One action on a throwaway dry-run clone.
+///
+/// `perform_action`'s transaction checkpoint clones the whole state so a
+/// *rejected* action can be restored — and every caller of this helper throws
+/// the clone away on `Err`, so the restore is never read. The checkpoint is
+/// not free twice over: it also shares every CoW zone, so the simulation's
+/// next write deep-copies one. Use this wherever an `Err` ends the dry run.
+#[inline]
+fn dry_run(
+    g: &mut GameState,
+    action: GameAction,
+) -> Result<Vec<crate::game::GameEvent>, crate::game::GameError> {
+    g.perform_action_inner(action)
+}
+
+/// The simulation loops' action step, with the historical fallback: a rejected
+/// action is rolled back and retried as a priority pass.
+///
+/// When the action *is* a pass, the fallback is a no-op — the engine is
+/// deterministic, so retrying the same call on the restored state fails the
+/// same way — which is why a pass takes the checkpoint-free path and abandons
+/// on `Err`. The one error `perform_action` deliberately does not roll back is
+/// `ManualTapRequired`, which leaves exactly the state the retry would have
+/// seen, so that retry is kept and reads the same. Returns false when the
+/// simulation must be abandoned.
+fn sim_step(g: &mut GameState, action: GameAction) -> bool {
+    if matches!(action, GameAction::PassPriority) {
+        return match g.perform_action_inner(GameAction::PassPriority) {
+            Ok(_) => true,
+            Err(crate::game::GameError::ManualTapRequired { .. }) => {
+                g.perform_action_inner(GameAction::PassPriority).is_ok()
+            }
+            Err(_) => false,
+        };
+    }
+    g.perform_action(action).is_ok() || dry_run(g, GameAction::PassPriority).is_ok()
+}
+
 fn simulate_attack_outcome_once(
     state: &GameState,
     seat: usize,
@@ -6485,7 +6523,7 @@ fn simulate_attack_outcome_once(
     k: u8,
 ) -> Option<i32> {
     let mut g = sim_start_state(state, seat, w, k);
-    g.perform_action(GameAction::DeclareAttackers(attacks.to_vec())).ok()?;
+    dry_run(&mut g, GameAction::DeclareAttackers(attacks.to_vec())).ok()?;
     let start_turn = g.turn_number;
     // One turn cycle of pure priority passes is on the order of fifty
     // actions; the rest is headroom for triggers and decisions.
@@ -6525,7 +6563,7 @@ fn simulate_attack_outcome_once(
                 let pending = g.pending_decision.as_ref().unwrap();
                 decide_pending_policy(&g, pending.acting_player(), w, &pending.decision, false)
             };
-            g.perform_action(GameAction::SubmitDecision(answer)).ok()?;
+            dry_run(&mut g, GameAction::SubmitDecision(answer)).ok()?;
             continue;
         }
         // Declarations are one-shot per step per turn; the marker keeps a
@@ -6553,7 +6591,7 @@ fn simulate_attack_outcome_once(
             }
             _ => GameAction::PassPriority,
         };
-        if g.perform_action(action).is_err() && g.perform_action(GameAction::PassPriority).is_err() {
+        if !sim_step(&mut g, action) {
             return None;
         }
     }
@@ -6837,7 +6875,7 @@ fn simulate_block_outcome_once(
     k: u8,
 ) -> Option<i32> {
     let mut g = sim_start_state(state, seat, w, k);
-    g.perform_action(GameAction::DeclareBlockers(blocks.to_vec())).ok()?;
+    dry_run(&mut g, GameAction::DeclareBlockers(blocks.to_vec())).ok()?;
     let turn = g.turn_number;
     let mut fuel = 200u32;
     while !g.is_game_over() && g.turn_number == turn && g.step < TurnStep::EndCombat {
@@ -6847,7 +6885,7 @@ fn simulate_block_outcome_once(
                 let pending = g.pending_decision.as_ref().unwrap();
                 decide_pending_policy(&g, pending.acting_player(), w, &pending.decision, false)
             };
-            g.perform_action(GameAction::SubmitDecision(answer)).ok()?;
+            dry_run(&mut g, GameAction::SubmitDecision(answer)).ok()?;
             continue;
         }
         // Under `attack_sim_spells` the combat window is live: tricks and
@@ -6858,9 +6896,7 @@ fn simulate_block_outcome_once(
         } else {
             GameAction::PassPriority
         };
-        if g.perform_action(action).is_err()
-            && g.perform_action(GameAction::PassPriority).is_err()
-        {
+        if !sim_step(&mut g, action) {
             return None;
         }
     }
@@ -8815,7 +8851,7 @@ fn simulate_through_combat(g: &mut GameState, fuel: &mut u32, w: &EvalWeights) -
                 let pending = g.pending_decision.as_ref().unwrap();
                 decide_pending_policy(g, pending.acting_player(), w, &pending.decision, false)
             };
-            if g.perform_action(GameAction::SubmitDecision(answer)).is_err() {
+            if dry_run(g, GameAction::SubmitDecision(answer)).is_err() {
                 return CombatSim::Incomplete;
             }
             continue;
@@ -8841,12 +8877,8 @@ fn simulate_through_combat(g: &mut GameState, fuel: &mut u32, w: &EvalWeights) -
             }
             _ => GameAction::PassPriority,
         };
-        if g.perform_action(action).is_err() {
-            // A rejected declaration would spin forever; fall back to
-            // passing, and give up if even that fails.
-            if g.perform_action(GameAction::PassPriority).is_err() {
-                return CombatSim::Incomplete;
-            }
+        if !sim_step(g, action) {
+            return CombatSim::Incomplete;
         }
     }
     CombatSim::Completed
@@ -8899,7 +8931,7 @@ fn evaluate_action_sequence(
     depth: u8,
 ) -> Option<i32> {
     let mut g = state.clone();
-    g.perform_action(action.clone()).ok()?;
+    dry_run(&mut g, action.clone()).ok()?;
     let mut fuel = 64u32;
     loop {
         if g.is_game_over() {
@@ -8910,11 +8942,11 @@ fn evaluate_action_sequence(
                 let pending = g.pending_decision.as_ref().unwrap();
                 decide_pending_policy(&g, pending.acting_player(), w, &pending.decision, false)
             };
-            g.perform_action(GameAction::SubmitDecision(answer)).ok()?;
+            dry_run(&mut g, GameAction::SubmitDecision(answer)).ok()?;
         } else if g.stack.is_empty() {
             break;
         } else {
-            g.perform_action(GameAction::PassPriority).ok()?;
+            dry_run(&mut g, GameAction::PassPriority).ok()?;
         }
         fuel = fuel.checked_sub(1)?;
     }
@@ -9052,7 +9084,7 @@ fn improves_this_turn(
         eval_material_summon_sick_blind(state, seat, w)
     };
     let mut g = state.clone();
-    if g.perform_action(action.clone()).is_err() {
+    if dry_run(&mut g, action.clone()).is_err() {
         return true;
     }
     let mut fuel = 64u32;
@@ -9062,12 +9094,12 @@ fn improves_this_turn(
                 let pending = g.pending_decision.as_ref().unwrap();
                 decide_pending_policy(&g, pending.acting_player(), w, &pending.decision, false)
             };
-            if g.perform_action(GameAction::SubmitDecision(answer)).is_err() {
+            if dry_run(&mut g, GameAction::SubmitDecision(answer)).is_err() {
                 return true;
             }
         } else if g.stack.is_empty() {
             break;
-        } else if g.perform_action(GameAction::PassPriority).is_err() {
+        } else if dry_run(&mut g, GameAction::PassPriority).is_err() {
             return true;
         }
         fuel = match fuel.checked_sub(1) {
