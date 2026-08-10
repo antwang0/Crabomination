@@ -58,6 +58,20 @@ only stays dead while the reasoning that killed it is readable.
   stratum both plays and benches reports **no** within-archetype number
   rather than passing the marginal off as one. `recommend_pool` prints
   `within` first and labels `raw` as the confound.
+- 🟡 **Round 27 loop verdict (2026-08-10) — the flywheel does not turn
+  at this scale: MCTS-quality labels are a null.** 50 k MCTS-64-piloted
+  games vs a 50 k net-piloted same-budget control, identical regime,
+  seed 43: AUC 0.8180 vs 0.8130 (sub-threshold), gates 50.1/51.4 %
+  pooled vs 49.75/52.1 % — indistinguishable (both below the 250 k-game
+  champion, as the budget predicts). No signal → no seed-97 replication
+  per the pre-registered rule. Third strike for label-source levers
+  (rounds 14, 18, 27), and this one had a generator that was *provably*
+  ~3 points stronger. Coherent picture: **search amplifies at
+  inference, not through training** — the net's ceiling is set by
+  representation/data diversity, not label quality. The strongest
+  system remains champion net + MCTS at inference (256 iters for
+  strength, 64 for latency). A 250 k-game MCTS arm (~130 h) is not
+  worth queueing on a zero-signal 50 k result.
 - 🟢 **Round 27 (2026-08-10) — the scaling curve climbs; MCTS-net ships
   to the client; the training loop is armed.** Three tracks on the
   round-26 result:
