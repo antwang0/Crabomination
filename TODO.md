@@ -16,62 +16,68 @@ reference and want their own triage pass):
 
 ## NEXT (handoff — rewrite each run, keep under 15 lines)
 
-Branch `claude/modern_decks`. **Fifteenth pass: two perf commits (-3.87 % Ir),
-and one flaky-gate fix** (4,185,775,886 -> 4,023,920,637, base `2b736358`,
-`profiling-fast --no-default-features` callgrind). Suite 18,828 green, all
-four golden traces byte-identical, clippy clean workspace-wide.
+Branch `claude/modern_decks`. **Sixteenth pass: three perf commits,
+-1.836 % Ir** (4,021,875,017 -> 3,948,056,772, base `91ffe271`,
+`profiling-fast --no-default-features` callgrind). Suite 18,828 green,
+golden traces byte-identical, clippy clean workspace-wide.
 
-- **Both rows are one shape: a `&mut self` path paying a whole-game gather
-  to read one bit.** (a) `permanents_with_abilities_removed` gathered once
-  per trigger dispatch (-2.54 %); (b) `printed_land_mana_ability_lost`
-  fetched a computed view *before* the printed test that decides the answer,
-  twenty lines below a scope that already held one (-1.36 %).
-- **The device that made (a) landable, and the one to reuse:** a presence
-  gate that is authoritative only on `false`; the six emitting blocks
-  `debug_assert!` against the same named predicates; and a debug-only
-  cross-check in the gated function that re-runs the real gather whenever
-  the gate says `false`, so **all 18,828 tests audit the gate on real boards**
-  instead of against a re-derived list. Gathers 243,190 -> 165,336 over two
-  passes.
-- **Next up** (PERF candidates, all re-costed on this tip): (0)
-  `bot::cast_candidates` 4.75 % — **already read at line level this pass,
-  don't redo it**: there is no hot line, the cost is fourteen candidate
-  blocks running unconditionally, so gate the blocks, don't hoist. (1)
-  `would_accept` 15.08 % over 5,102 probes — same question one level up:
-  fewer probes, not faster ones. (3) the combat-damage cluster, four helpers
-  gathering once per damage application; the safe subset is a scope around
-  *one* assignment, not the batch (read the CR 510.2 warning first).
-- **Deliberately not claimed: a wall-clock number.** -3.87 % is inside this
-  box's noise (PERF records 8 pairs of a -1.91 % change reading +0.7 %), so
-  callgrind is the whole measurement. A fresh `release` `--bench` anchor was
-  taken on this container for the stall / determinism / RSS record only —
-  **it does not compare to the 62.48 anchor**, which was a different box.
-- **A flaky gate test was found and fixed** (`a669eefd`):
-  `crabomination_ml::learns_a_synthetic_signal` failed ~1 full-suite run in
-  8, purely from sampling its ~90.9 % accuracy with 100 draws against an
-  `>= 85` floor. **Run the full suite more than once before believing it is
-  green** — this only surfaced on the third run of the session.
-- **Bugs**: the panic/unwrap sweep is still open, but a **third filter came
-  up clean** — unsigned `len() - k` / `.min(len()-1)` on a collection the
-  caller tolerates empty, 16 hits under `game/` + `bot.rs`, every one
-  guarded by a preceding `is_empty()` or a `push` on the same line. The
-  stale-`position()`-after-mutation class is also already swept (the equip
-  path re-finds by id with a comment saying why). It wants a *fourth* filter.
-- **Fetch before you build. This has now cost four sessions.** A fresh
+- **Two of the three rows are one new shape: a cheap leaf function called a
+  million times.** `same_team` was **1.45 % of the program** walking `Vec`s
+  to answer what is `seat`'s own index in every non-team format; a
+  singleton-layout fast path in `team_of` (-1.21 %) plus flipping nine
+  `!same_team(…) && static_abilities.any(…)` scans so the selective
+  conjunct runs first (-0.41 %) took it **58.4 M -> 5.7 M, -90 %**. The
+  filter that finds the next one: a function whose whole self cost sits in
+  `slice/iter` and `ptr/non_null` with a five-figure call count.
+- **Correct the previous handoff, and don't redo it.** `cast_candidates`'
+  cost is **not** the fourteen specialty blocks. Gating them all landed
+  **-0.226 %**; their walks and predicates are ~13 M of self cost between
+  them, not the "~134 M of breadth" the fifteenth pass costed. The 191 M is
+  callees: the **plain-cast `flat_map` is 219 M / 5.44 %** on its own, of
+  which `can_afford_in_state` is 56 M and the rest is
+  `auto_targets_for_effect_all_slots` + `requires_target` walking the
+  effect tree per hand card per mode. `requires_target` is a deep recursive
+  walk of an immutable `Arc<CardDefinition>` field, called from every
+  block — **a per-definition memo is the obvious next move and nothing has
+  tried it.**
+- **Next up** (PERF candidates, all re-costed on this tip): (0) the auto-tap
+  chain is now the whole top of the list — `auto_tap_for_cost_inner`
+  14.21 % -> `activate_ability` 9.19 % -> `_inner` 8.51 %, ~18 k Ir per land
+  tap, **two whole-game gathers per activation** (candidate 4's warning
+  applies), plus `grant_scan`, `ActivatedAbility::clone` and
+  `resolve_extra_mana_on_land_tap` per tap. 8,892 auto-taps for six games
+  is the other half: most are inside `would_accept_on` probes, so "fewer
+  probes" and "cheaper taps" are the same item from two ends. (2) the
+  allocator, ~16.2 % plus `Arc::clone_from_ref_in` ~3.4 % self — still
+  never attacked head-on; `RawTable::clone` is 0.91 % / 353,862 allocs and
+  wants to know *which* `HashMap` in `CardData` is being deep-copied.
+- **Deliberately not claimed: a wall-clock number.** -1.836 % is well inside
+  this box's noise (PERF records 8 pairs of a -1.91 % change reading
+  +0.7 %), so callgrind is the whole measurement. A fresh `release`
+  `--bench` anchor was taken for the stall / determinism / RSS record only.
+- **Bugs**: the panic/unwrap sweep's **fourth filter came up clean too**.
+  Two shapes, both silent-in-release: `evaluate_value(...) as usize` without
+  `.max(0)` (one hit, and it is `.max(1)`), and `power()/toughness()/life`
+  cast to `usize` (one hit, `LIFE_TENTHS[life as usize]`, guarded by
+  `life <= MAX` above it). Four filters exhausted; the item now wants a
+  *fifth*, and the three tried so far all looked for a missing or wrong
+  guard — try looking at the *callers* of a `pub(crate)` helper instead.
+- **Fetch before you build. This has now cost five sessions.** A fresh
   clone's `git branch -a` shows only `main` and the session's own branch;
   run `git fetch origin && git checkout -B claude/modern_decks
   origin/claude/modern_decks` as the very first command.
-- **Env**: `rm -rf target/debug/incremental target/profiling-fast` before a
-  `release` build (disk allowance ~30 G; a cold workspace fills 17 G).
-  `cargo-nextest` is not in the image — use `cargo test --workspace
-  --exclude crabomination_client` (~18,828 tests, a few minutes). A cold
-  dep build is ~13 min, a warm engine `profiling-fast` rebuild ~4.5 min,
-  `release` ~35 min, a callgrind run ~3.5 min.
-- **Trackers**: TODO 895, roadmap 660, `PERF.md` 1,050, `INCOMPLETE_CARDS`
-  247. `PERF.md` is over the ~1k trigger and **compaction was considered and
-  declined**: its Log is one line per row, so collapsing rows saves ~nothing
-  and costs the record. Trim it only by merging whole *passes* into one
-  line, oldest first.
+- **Env**: `cargo-nextest` is not in the image — use `cargo test --workspace
+  --exclude crabomination_client` (18,828 tests). **Do not `pgrep -f "cargo
+  test --workspace"` in a wait loop: the loop's own command line matches it
+  and never exits.** Cold dep build ~13 min, warm engine `profiling-fast`
+  rebuild ~3.5 min, `release` ~35 min, a callgrind run ~3.5 min. Disk
+  allowance ~30 G; `target/` with `profiling-fast` + `release` + test
+  binaries fills ~23 G.
+- **Trackers**: TODO 895, roadmap 660, `PERF.md` **1,090** (down from
+  1,133 — the three superseded pre-merge `--bench` anchors are compacted to
+  their lessons), `INCOMPLETE_CARDS` 247. `PERF.md` is still over the ~1k
+  trigger and its Log is one line per row, so the only trim left is merging
+  whole *passes* into one line, oldest first.
 
 ## Environment note
 
@@ -148,9 +154,24 @@ debug, i.e. the profile of a bug that only appears at game 400 k:
   53 index sites, and the one path that genuinely mutates in between (the
   equip sacrifice) already re-finds by id and carries a comment saying why.
 
-So the item now wants a *fourth* filter. The two exhausted so far both
-looked for a missing guard; the next one should look for a guard that is
-present but tests the wrong thing.
+**The fourth filter was run 2026-08-10 and is also clean.** Two shapes,
+both chosen because they wrap silently in release — a negative index or
+count that only appears at game 400 k:
+
+- **`evaluate_value(…) as usize` without a `.max(0)`.** `Value` evaluation
+  returns `i32` and is trivially negative (a `Diff`, a `PowerOf` on a
+  -X/-X'd creature). One hit in the whole workspace, and it is `.max(1)`
+  (`mod.rs:20879`). Every other one of the ~270 sites carries `.max(0)`.
+- **`power()` / `toughness()` / `life` cast to `usize`.** One hit,
+  `bot.rs`'s `LIFE_TENTHS[life as usize]`, and the `life <= 0` and
+  `life <= MAX` branches above it are exactly the guard.
+
+Four filters exhausted. What is left of the item is the ~183
+`unwrap()`/`expect()`, still wanting triage rather than a blanket rewrite,
+and a *fifth* filter. The four tried so far all looked at the site — a
+missing guard, a wrong guard, a silent cast. The next one should look at
+the **callers** of a `pub(crate)` helper: a precondition the helper's own
+body documents but does not check, where one caller of several forgets it.
 
 ## Engine — Missing Mechanics
 

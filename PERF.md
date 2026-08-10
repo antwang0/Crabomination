@@ -189,73 +189,30 @@ drift here was ~0.4 %, so this sitting's pairs are trustworthy and the
 71.52/62.48 gap is not drift but a different machine. **Keep the base
 binary and re-run it, rather than reasoning about `host_calib_ms` alone.**
 
-The pre-merge anchors below are kept only for the box-drift lesson.
+The pre-merge anchors below are compacted to their lessons; the numbers
+themselves are in git, and none of them compares to the anchor above.
 
-
-**The previous 70.65 anchor does not compare at all**: it predates
-`998b2433` making `EvalWeights::default()` carry `determinize: 1`, and
-`--bench` runs `gang` = `EvalWeights::default()`, so the bench *workload*
-changed underneath it. Treat 70.65 as belonging to a different bench.
-**Read `host_calib_ms` before comparing to an older anchor.** Refresh only
-alongside an intentional, explained change; regressions beyond ~5 % get
-investigated before anything else lands.
-
-```text
-bot_ladder --bench   release, rustc 1.95.0, 4-core VM, 3 worker threads
-                     mimalloc (the default); measured on an idle box
-host_calib_ms        49-61 across the sitting   <- within-sitting only
-games                320
-games_per_s          56.42 / 56.31 / 55.72 / 55.45 / 56.52 / 56.63 / 54.19 /
-                     55.77   (mean 55.88, spread 4.5 % — take >=6 runs)
-decisions_per_s      mean 33741
-turns_per_game       26.98
-stalls               0 (0.00 %)
-peak_rss_mib         22.3 - 22.5
-determinism          ok (all 160 pairs split, on all 8 runs)
-```
-
-**Absolutes do not transfer between containers, and this pass proved it
-twice.** The same engine code read 60.49 and 64.42 in two sittings on one
-box (+6.5 % of pure drift), and the second session's container read 55.70 on
-its own tip where this container reads 55.88 on a tip with 1.0 % *fewer*
-instructions. **Quote a paired A/B measured in one sitting, never a
-difference of anchors.** The pass's own deltas, each paired:
-
-- callgrind, merged, `81c88580` -> `6bbdc38c`: **-11.68 %**
-- wall-clock, first session, 6/6 alternated pairs: **+9.57 %**
-- wall-clock, second session, 8/8 alternated pairs: **+10.85 %**
-  (50.24 -> 55.70; the two sessions' work overlaps, so these don't add)
-
-*(Pre-merge anchors, kept for the drift record only: `64.42` mean of 6 on
-the first session's pushed tip, `60.49` mean of 8 on the same engine code an
-earlier sitting the same night, `55.70` mean of 8 on the second session's
-pre-rebase tip on a different container. None is comparable to another or to
-the anchor above.)*
-
-**What the eleventh pass is worth, measured end to end.** Eight alternated
-pairs in one sitting, both sides `release` + mimalloc on the same idle box:
-
-```text
-                pre-pass 87d76144     tip           paired delta
-pair 1          62.52                 67.86         +5.34
-pair 2          65.73                 70.52         +4.79
-pair 3          67.01                 72.10         +5.09
-pair 4          68.70                 70.73         +2.03
-pair 5          67.97                 71.81         +3.84
-pair 6          67.37                 68.92         +1.55
-pair 7          69.41                 73.22         +3.81
-pair 8          64.81                 70.02         +5.21
-mean            66.69                 70.65         +3.96  = +5.93 %
-dec/s mean      40272                 42660                  +5.93 %
-median paired                                       +4.31
-```
-
-**8/8 pairs positive**, against a callgrind **-8.63 %** over the same span
-(6,151,455,670 -> 5,620,794,622). The wall-clock lands at about two thirds
-of the instruction win, which is the expected shape: four of the five rows
-remove *gathers* and translate, one (`usable_abilities`) removes
-*allocations* and mimalloc absorbs most of it — see the `Printed<T>` row,
-where -17.09 % Ir was worth +1.7 % at `release`.
+- **70.65 belongs to a different bench.** It predates `998b2433` making
+  `EvalWeights::default()` carry `determinize: 1`, and `--bench` runs
+  `gang` = `EvalWeights::default()`, so the *workload* changed underneath
+  it. **Read `host_calib_ms` before comparing to any older anchor.**
+  Refresh only alongside an intentional, explained change; regressions
+  beyond ~5 % get investigated before anything else lands.
+- **Absolutes do not transfer between containers, and one pass proved it
+  twice.** The same engine code read 60.49 and 64.42 in two sittings on one
+  box (+6.5 % of pure drift), and a second container read 55.70 on its own
+  tip where the first read 55.88 on a tip with 1.0 % *fewer* instructions.
+  **Quote a paired A/B measured in one sitting, never a difference of
+  anchors.** That pass's own paired deltas: callgrind -11.68 %, wall-clock
+  +9.57 % (6/6 pairs) and +10.85 % (8/8 pairs) in two sittings whose work
+  overlaps, so they don't add.
+- **The eleventh pass, end to end**: 8/8 alternated `release` + mimalloc
+  pairs in one sitting, 66.69 -> 70.65 games/s (**+5.93 %**, median paired
+  +4.31), against callgrind **-8.63 %** over the same span. The wall-clock
+  lands at about two thirds of the instruction win, which is the expected
+  shape when four of five rows remove *gathers* and one removes
+  *allocations* that mimalloc absorbs — see the `Printed<T>` row, where
+  -17.09 % Ir was worth +1.7 % at `release`.
 
 ## Log
 
@@ -400,6 +357,11 @@ almost nothing ever reads the restore.**
 
 | 2026-08-10 | `activate_ability_inner`'s land-mana check reads the view its own scope already took (`88a0b787`) | 4,079,432,834 Ir | 4,023,920,637 Ir (**-1.36 %**) | `printed_land_mana_ability_lost` fetched its own `computed_permanent` *before* the printed test that decides the answer, on a `&mut self` path — 52,322,432 Ir / 1.28 % over 18,386 calls, every one of them a whole-game gather for a card the enclosing `with_frozen_layers` had already computed. The `&self` variant is deleted; the scope returns the boolean. `computed_permanent` calls from `activate_ability_inner` 55,196 → 36,772. The three CR 602.5 gates below it were also folded onto one view (`tap_gated` / `on_battlefield` hoisted out of their conditions) — worth ~0 on the bench, because the short-circuits already meant only one of the three ever gathered, but it takes the shape out of the file. Bench output byte-identical; suite 18,828 / 0; golden traces byte-identical. |
 
+| 2026-08-10 | `cast_candidates`' fourteen specialty blocks gate on one warm walk per zone instead of taking a cold walk each (`52f4311a`) | 4,021,875,017 Ir | 4,012,768,783 Ir (**-0.226 %**) | Each block walked the hand (or graveyard) to ask "is there a card here for me" — an `Arc<CardData>` + `Arc<CardDefinition>` chase per card per block, and a `keywords` scan per block for the six keyword shapes. One pass per zone now fills a `u32`; a clear bit skips the block. The one asymptotic item removed: `spell_granted_convoke` walked the whole battlefield **per hand card** (~49 k walks per six games) for a board-level fact, now gathered once alongside Repartee and the prepared-creature check — three battlefield walks become one. Soundness device is the strip gate's: bits over-approximate, each block still applies its own filter, and `gated_block!` runs every block under `debug_assertions` and asserts the gate against what it emitted, so all 18,828 tests audit the mask on real boards. **The useful part is the negative result**: the previous pass costed this at "~134 M of breadth", but the block walks and their predicates are only ~13 M of self cost between them. The 191 M is callees — the plain-cast `flat_map` alone is 219 M / 5.44 % — so the next attempt on this function belongs there, not in the block count. Golden traces byte-identical. |
+| 2026-08-10 | `team_of` checks the singleton-team layout directly instead of scanning every team's member list (`4772369a`) | 4,012,768,783 Ir; `same_team` 58,406,112 | 3,964,309,168 Ir (**-1.208 %**); `same_team` 20,001,502 (**-65.8 %**) | `same_team` was **1.45 % of the program** over ~1.2 M calls doing nothing but walking `Vec`s: `team_of` scanned every team and ran `members.contains(&seat)`, twice per call, to answer what in every non-team format is `seat`'s own index. The layout `GameState::new` builds — one singleton team per seat, in seat order — is now one bounds-checked index, a `len() == 1` and a compare; the scan stays as `team_of_scan` for 2HG / Emperor / Star and pre-`teams` snapshots, with a `debug_assert_eq!` running it against the fast path on every hit. `same_team` also short-circuits `a == b`, which is exact. Callgrind A/B on identical `profiling-fast --no-default-features` binaries, fixed six-game workload. Suite 18,828 / 0; golden traces byte-identical; clippy clean. |
+| 2026-08-10 | Nine opponent-static battlefield scans test the printed ability before the team (`abb2b502`) | 3,964,309,168 Ir; `same_team` 20,001,502 | 3,948,056,772 Ir (**-0.410 %**); `same_team` 5,693,328 | All nine shared one shape — `!same_team(c.controller, X) && c.definition.static_abilities.iter().any(matches!(…))` — so the team lookup ran for every permanent on the board while the far more selective test (the list is empty on nearly all of them) came second. Both conjuncts are pure, so the flip is exact. The family: `flagbearer_candidates` (**457,242 `same_team` calls per six games**, once per permanent per activation), `opponent_locks_cast_of`, `player_search_locked_by_opponent`, the two spell-name locks in `cast_spell_with_convoke`, the artifact-ability lock in `activate_ability_inner`, `OpponentsCantBlockWithEvenMv`, `OpponentMillDoubled`, and Drannith Magistrate's cast-zone lock. Across the two rows `same_team` is **58,406,112 → 5,693,328, -90.3 %**. Golden traces byte-identical. |
+| | **cumulative, sixteenth pass** | **4,021,875,017 Ir** | **3,948,056,772 Ir (-1.836 %)** | three rows, all callgrind on the fixed six-game workload; no wall-clock delta claimed (see **Baseline**) |
+
 **What the pass leaves behind, as a rule.** *A checkpoint is only worth its
 clone where something reads the restore.* Three questions find the next one:
 does this caller keep the state after an `Err` (usually not — dry runs throw
@@ -417,11 +379,39 @@ settings + debuginfo; system allocator, because valgrind replaces malloc and
 a mimalloc build would measure the interception), 1 thread, `--a gang --b
 gang --games 6 --seed 1 --decks fixed`.
 
-**Retaken 2026-08-10 on the fifteenth pass's tip `88a0b787`: 4,023,920,637
-Ir, 2,445,057 allocations.** The base it was taken against (`2b736358`) read
-4,185,775,886, i.e. 0.006 % from the recorded fourteenth-pass figure of
-4,186,040,742 — a clean reproduction across a rebuild and a container, so
-the two passes' numbers chain.
+**Retaken 2026-08-10 on the sixteenth pass's tip `abb2b502`: 3,948,056,772
+Ir.** The pass's base (`91ffe271`) rebuilt on a fresh container read
+4,021,875,017 against the recorded fifteenth-pass figure of 4,023,920,637 —
+**0.05 % apart**, so the two passes' numbers chain.
+
+The tip's shape, re-taken (inclusive, overlapping) — the top of the list is
+now one chain, `auto_tap → activate_ability → activate_ability_inner`:
+
+| Ir | share | site |
+|---|---|---|
+| 560,969,439 | 14.21 % | `auto_tap_for_cost_inner` (8,892 calls) |
+| 362,952,537 |  9.19 % | `activate_ability` (18,340 of its 18,386 calls come from auto-tap) |
+| 361,814,133 |  9.16 % | `gather_continuous_effects_inner` |
+| 336,141,240 |  8.51 % | `activate_ability_inner` |
+| 322,059,972 |  8.16 % | `dispatch_triggers_for_events` |
+| 307,007,892 |  7.78 % | `compute_permanent_pass` |
+| 180,824,052 |  4.58 % | `bot::cast_candidates` |
+| 156,577,992 |  3.97 % | `computed_permanent` |
+| 144,397,308 |  3.66 % | `mana_source_table` (8,892) |
+| 118,060,582 |  2.99 % | `check_state_based_actions` |
+
+**The allocator is still the largest single theme and still untouched**:
+`_int_malloc` 4.79 / `_int_free` 3.94 / `malloc` 2.91 / `free` 1.76 /
+`malloc_consolidate` 0.68 / arena+merge+unlink 2.13 = **~16.2 %**, with
+`Arc::clone_from_ref_in` (the CoW unshare) another **~3.4 % self**.
+
+**Where the `collect()`s are**, re-measured on the tip: `compute_battlefield`
+224 M / 5.66 % over 17,718 calls; `bot::cast_candidates` 169 M / 4.26 % over
+7,024; `check_state_based_actions` 139 M / 3.51 % over **82,634 collects**;
+`mana_source_table` 133 M / 3.37 % over 8,892; `fire_step_triggers` 63 M /
+1.59 %.
+
+The fifteenth pass's table, for the record:
 
 **4.02 G instructions for six games**, from 4.19 G at this pass's start,
 4.96 G at the fourteenth's, 5.62 G at the twelfth's, and 14.40 G eight
@@ -625,6 +615,49 @@ thrown away:
   and enumerate every way one can enter (a resolved `continuous_effect`, a
   static ability converted during the gather) or it will silently keep
   abilities a Turn to Frog took away.
+
+**After the sixteenth (leaf-cost) pass.** Three rows, -1.836 % Ir
+(4,021,875,017 → 3,948,056,772). Two of them were one shape — *a cheap
+leaf function called a million times, and a scan whose selective conjunct
+was second* — and the third was a null worth recording. What the re-profile
+on the tip promotes, in order:
+
+- **(0) The auto-tap chain, 14.21 %, is now the whole top of the list.**
+  `auto_tap_for_cost_inner` (8,892 calls) → `activate_ability` (18,340) →
+  `activate_ability_inner` (336 M / 8.51 %, ~18 k Ir per land tap). Inside
+  `_inner`, by size: **`computed_permanent` 36,772 calls / 106 M / 2.65 %,
+  i.e. exactly two whole-game gathers per activation** (candidate 4 below —
+  read its warning); `continue_ability_resolution_x` 30 M;
+  `flagbearer_violation` 25 M *before* this pass's reorder took its
+  `same_team` walk; `grant_scan` 15.6 M (a board scan per activation);
+  `ActivatedAbility::clone` 13.6 M (740 Ir per activation, cloned only to
+  release the borrow — an `Arc<ActivatedAbility>` would take it);
+  `resolve_extra_mana_on_land_tap` 9.1 M over 18,296 calls, which is a
+  presence-gate shape. **8,892 auto-taps for six games is the other half of
+  the lever**: most of them are inside `would_accept_on` probes, so
+  candidate (1) and this one are the same item from two ends.
+- **(1) `bot::cast_candidates` — read at line level twice now; the answer
+  has moved.** Its cost is *not* the fourteen specialty blocks (this pass
+  gated them all for -0.226 %; their walks and predicates are ~13 M of self
+  cost between them). It is the **plain-cast `flat_map`: 219 M / 5.44 %
+  over 32,124 iterations**, of which `can_afford_in_state` is 56 M / 1.41 %
+  and the rest is `auto_targets_for_effect_all_slots` + `requires_target`
+  walking the effect tree per hand card per mode. `requires_target` is a
+  deep recursive walk of an immutable `Arc<CardDefinition>` field and is
+  called from every block — **a per-definition memo is the obvious shape,
+  and nothing has tried it**.
+- **(2) The allocator, ~16.2 %, plus `Arc::clone_from_ref_in` ~3.4 % self.**
+  Still the largest theme and still never attacked head-on. Named
+  sub-targets with counts on the tip: `hashbrown RawTable::clone` 0.91 % /
+  353,862 allocations (**which `HashMap` is being deep-copied per card
+  clone, and would a small insertion-ordered `Vec` — the shape
+  `KeywordCounters` already uses — make it free?**), `Vec::clone` 1.01 %.
+  Cost these with a `release` + mimalloc A/B, not callgrind alone.
+- **(3) `compute_battlefield` materializes 224 M / 5.66 % of `Vec` over
+  17,718 calls** — unchanged, now the single largest `collect()` site.
+- **(4) `check_state_based_actions`, 2.99 % inclusive and 82,634 collects
+  (7.7 per sweep)** — `sba_board_scan` already gates the rare SBAs; what is
+  left is the ~21 whole-board walks per sweep.
 
 **After the fifteenth (presence-gate) pass.** Two rows, -3.87 % Ir
 (4,185,775,886 → 4,023,920,637), both the same shape: *a `&mut self` path
