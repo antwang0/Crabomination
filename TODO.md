@@ -85,7 +85,10 @@ golden traces byte-identical, clippy clean. Largest single pass since the
   25** — the cost is the build, not the run, so measure freely. `release`
   engine rebuild ~20 min; `release-fast` ~3 min warm and is what A/B
   iteration should use; a cold `release-fast` dep build is ~13 min.
-- **Trackers**: TODO 858, roadmap 660, `PERF.md` 893, `INCOMPLETE_CARDS` 247.
+- **Trackers**: TODO 870, roadmap 660, `PERF.md` 952, `INCOMPLETE_CARDS` 247.
+  All under the ~1k line trigger except `PERF.md`, which is the perf record
+  and is indexed by section; compact its pre-twelfth-pass Log rows next time
+  it needs a trim.
 
 ## Environment note
 
