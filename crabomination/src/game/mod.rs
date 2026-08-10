@@ -7319,6 +7319,40 @@ impl GameState {
         crate::game::layers::apply_layers(&self.battlefield, &self.gather_continuous_effects())
     }
 
+    /// The computed view restricted to permanents that can be creatures —
+    /// what the CR 704.5g death sweep reads. A permanent printed without the
+    /// Creature type only gains it from an `AddCardType` / `SetCardTypes`
+    /// continuous effect (CR 613 layer 4), so when none is live the layer
+    /// pass is skipped for it and the caller's `find(id)` simply misses, which
+    /// is the same answer the full view gives. With one live the whole board
+    /// is computed as before. Roughly half a bench board is non-creature.
+    pub(crate) fn compute_battlefield_creatures(&self) -> Vec<ComputedPermanent> {
+        fn go(
+            bf: &[crate::card::CardInstance],
+            fx: &[ContinuousEffect],
+        ) -> Vec<ComputedPermanent> {
+            let type_changing = fx.iter().any(|e| {
+                matches!(
+                    e.modification,
+                    Modification::AddCardType(_)
+                        | Modification::RemoveCardType(_)
+                        | Modification::SetCardTypes(_)
+                )
+            });
+            if type_changing {
+                return crate::game::layers::apply_layers(bf, fx);
+            }
+            bf.iter()
+                .filter(|c| c.definition.is_creature())
+                .map(|c| crate::game::layers::apply_layers_one(c, fx))
+                .collect()
+        }
+        if let Some(fx) = self.frozen_effects() {
+            return go(&self.battlefield, &fx);
+        }
+        go(&self.battlefield, &self.gather_continuous_effects())
+    }
+
     /// CR 113.10b — the battlefield permanents a `RemoveAllAbilities`
     /// continuous effect currently strips (Turn to Frog, Lignify).
     ///

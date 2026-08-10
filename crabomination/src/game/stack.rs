@@ -4773,8 +4773,11 @@ impl GameState {
             self.remove_from_battlefield_to_graveyard_raw(id);
         }
 
-        // Collect dead creatures using layer-computed toughness.
-        let computed = self.compute_battlefield();
+        // Collect dead creatures using layer-computed toughness. Only
+        // creatures can be in `dead`, and the `find(id)` misses below already
+        // fall back to the printed type, so the layer pass skips the
+        // permanents no card-type-changing effect can animate.
+        let computed = self.compute_battlefield_creatures();
         let dead: Vec<CardId> = self
             .battlefield
             .iter()
