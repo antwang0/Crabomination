@@ -45,7 +45,10 @@ full re-take of the profile of record. Bench output byte-identical.
   is a rules change, the safe subset is one assignment's pre-checks. (2)
   **four `collect()` sites are 17.25 % between them** and none has ever
   been taken: `compute_battlefield` 5.87 %, `cast_candidates` 4.43 %,
-  `mana_source_table` 3.49 %, `check_state_based_actions` 3.46 %. (3)
+  `mana_source_table` 3.49 %, `check_state_based_actions` 3.46 % — but
+  those are *inclusive*: their `Vec` machinery is **0.10 % between them**,
+  so the lever is how many entries the consumer reads, not the container.
+  (3)
   `would_accept` 14.21 %. (4) the allocator ~16.4 %, still never attacked.
 - **Bugs**: the panic sweep's fifth filter ran and is **clean** — see the
   robustness section. All ten `i.min(xs.len() - 1)` clamps are guarded

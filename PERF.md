@@ -533,8 +533,12 @@ call site: `Arc::clone_from_ref_in` **802,482 (4.60 % of the program)**;
 `computed_permanent` 340,310; `GameState::clone` 264,202; `Vec::clone`
 239,240; `gather_continuous_effects_inner` 199,072.
 
-**Where the `collect()`s are**, by inlining site — this is the map for the
-next three candidates, and each row is a `Vec` materialized and thrown away:
+**Where the `collect()`s are**, by inlining site. **These are inclusive
+rows and the "a `Vec` materialized and thrown away" gloss they were written
+with is wrong** — see candidate (1) above, where the `Vec` machinery at the
+four largest of them is measured at 0.10 % between them. The cost is the
+iterator body, so read each row as "this much work is driven by one
+`collect`", not "this much allocation":
 `compute_battlefield` 224 M / 4.71 % over 17,718 calls (12,641 Ir each);
 `bot::cast_candidates` 169 M / 3.55 % over 7,024 calls (**24,040 Ir each**);
 `mana_source_table` 146 M / 3.07 % over 8,892; `check_state_based_actions`
@@ -676,14 +680,22 @@ pass's table did not:
   clothes. The safe subset is still a scope around *one* assignment's
   pre-application checks, and phase 1 (`gather_combat_damage_decisions`),
   which runs before any damage is dealt.
-- **(1) Four `collect()` sites are 17.25 % between them**, and no pass has
-  taken any of them: `compute_battlefield` **5.87 %** (the single largest,
-  17,718 calls — does each caller need all ~19.5 `ComputedPermanent`s, or
-  an iterator, or two of them?), `cast_candidates` **4.43 %**,
+- **(1) Four `collect()` sites are 17.25 % between them** — `compute_
+  battlefield` **5.87 %** (17,718 calls), `cast_candidates` **4.43 %**,
   `mana_source_table` **3.49 %**, `check_state_based_actions` **3.46 %**
-  (7.7 collects per sweep). Each row is a `Vec` materialized and mostly
-  thrown away, and together they are the concrete half of the allocator
-  theme below.
+  (7.7 collects per sweep) — and no pass has taken any of them. **Read the
+  next sentence before costing one.** Those are *inclusive* rows, and the
+  earlier framing of this item ("a `Vec` materialized and thrown away")
+  is wrong: the `Vec` machinery at these four sites is **0.10 % between
+  them** (`raw_vec` + `vec/mod` self cost: 3.14 M / 0.23 M / 0.12 M /
+  0.09 M Ir). The 17.25 % is the *iterator body* — for
+  `compute_battlefield` that is `compute_permanent` per card. So the lever
+  is **not** a cheaper container and not an arena; it is **how many entries
+  the consumer actually reads**. A caller that wants one permanent, or
+  wants to stop at the first match, should take a lazy iterator or a
+  targeted lookup; swapping the collect for `SmallVec` buys 0.1 % at most.
+  Check each caller's consumption pattern first — that is the measurement
+  this item still needs.
 
 The rest of the tip, inclusive and overlapping, for the record:
 `pick_attacks_scored` 52.11 % (630 calls) / `simulate_attack_outcome_*`
