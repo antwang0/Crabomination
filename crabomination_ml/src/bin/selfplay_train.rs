@@ -100,6 +100,11 @@ struct Args {
     /// this is what closes the self-improvement loop. Unset, actors play
     /// the heuristic default (the bootstrap phase).
     use_best: Option<PathBuf>,
+    /// Override the heuristic actors' `determinize` (round 28c). The
+    /// r25 adoption flipped the *default* pilot to honest sims, which
+    /// silently changed the training data distribution too; 0 restores
+    /// the pre-adoption generator for attribution.
+    actor_det: Option<u8>,
     /// Serve `--use-best` evals from a batched device-side collator
     /// instead of per-thread CPU forwards. Pair with a large `--actors`
     /// (hundreds): batch size is bounded by the number of games blocked
@@ -259,6 +264,7 @@ fn parse_args() -> Args {
         out: PathBuf::from("nets"),
         seed: 0x0505_ACAD,
         use_best: None,
+        actor_det: None,
         gpu_eval: false,
         eval_batch: 256,
         eval_flush_us: 1000,
@@ -310,6 +316,7 @@ fn parse_args() -> Args {
             "--out" => a.out = PathBuf::from(val()),
             "--seed" => a.seed = val().parse().expect("--seed"),
             "--use-best" => a.use_best = Some(PathBuf::from(val())),
+            "--actor-det" => a.actor_det = Some(val().parse().expect("--actor-det")),
             "--gpu-eval" => {
                 a.gpu_eval = true;
                 continue; // bare flag, consumes no value
@@ -489,7 +496,7 @@ fn actor_loop(shared: &Shared, args: &Args, vocab: &Vocab, deck_judge: Option<&D
         let deck_a = build(&pool_a, salt(3));
         let deck_b = build(&pool_b, salt(4));
         let template = sealed_game_template(&deck_a, &deck_b);
-        let pilot = if args.use_best.is_some() {
+        let mut pilot = if args.use_best.is_some() {
             if args.mcts_actors > 0 {
                 // MCTS pilots want the round-26 shape: honest rollouts.
                 EvalWeights::net_eval_det1()
@@ -499,6 +506,9 @@ fn actor_loop(shared: &Shared, args: &Args, vocab: &Vocab, deck_judge: Option<&D
         } else {
             EvalWeights::default()
         };
+        if let Some(d) = args.actor_det {
+            pilot.determinize = d;
+        }
         let rec = crabomination::selfplay::play_recorded_game_mcts(
             &template,
             [pilot, pilot],
