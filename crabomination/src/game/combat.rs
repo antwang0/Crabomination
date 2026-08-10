@@ -1796,8 +1796,9 @@ impl GameState {
                 }
             }
             // CR 509.1b — Okk's blocking half: needs a strictly bigger partner
-            // among the whole combat's blockers.
-            let computed_pow = self.compute_battlefield();
+            // among the whole combat's blockers. Nothing above mutates the
+            // board, so this reads the pass taken at the top.
+            let computed_pow = &computed;
             let power_of = |id: CardId| {
                 computed_pow.iter().find(|c| c.id == id).map(|c| c.power).unwrap_or(0)
             };
