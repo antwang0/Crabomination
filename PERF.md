@@ -122,8 +122,37 @@ contention-immune, which makes it the better first look.
 
 ## Baseline
 
-**Anchored 2026-08-10 at `28629ba9`** (`release`, mimalloc — the shipped
-configuration), i.e. on the fifteenth pass's tip.
+**Anchored 2026-08-10 at `abb2b502`** (`release`, mimalloc — the shipped
+configuration), i.e. on the sixteenth pass's tip.
+
+```text
+bot_ladder --bench   release, rustc 1.95.0, 4-core VM, 3 worker threads
+                     mimalloc (the default); measured on an idle box
+host_cpu             Intel(R) Xeon(R) Processor @ 2.80GHz
+host_calib_ms        45-55 across the sitting   <- within-sitting only
+games                320
+games_per_s          84.74 / 85.93 / 83.64 / 81.24 / 80.56 / 81.35 / 78.71 /
+                     79.29   (mean 81.93, spread 9.2 % — take >=6 runs)
+games_per_s_th       26.24 - 28.64
+decisions_per_s      mean 49,475
+turns_per_game       26.98
+stalls               0 (0.00 %)
+peak_rss_mib         21.7 - 22.2
+determinism          ok (all 160 pairs split, on all 8 runs)
+```
+
+**This anchor is a different container again and must not be subtracted
+from the one below it.** `host_calib_ms` reads 45-55 here against 52-64
+there — a materially faster host — and it drifted *upward* across the
+sitting in exact inverse rank order with games/s (the first three runs read
+45-48 and 83.6-85.9; the last two read 50-55 and 78.7-79.3). **The pass's
+measurement is the callgrind number, and deliberately only that**:
+-1.836 % is far inside this box's noise. What this run is good for is the
+rest of the row — `turns_per_game` 26.98 unchanged, `stalls` 0 on all eight
+runs, determinism ok on all eight, peak RSS 21.7-22.2 MiB (down ~1.5 MiB on
+the previous container, and the code allocates strictly less).
+
+The previous anchor, `28629ba9` (the fifteenth pass's tip), for the record:
 
 ```text
 bot_ladder --bench   release, rustc 1.95.0, 4-core VM, 3 worker threads
@@ -389,6 +418,7 @@ now one chain, `auto_tap → activate_ability → activate_ability_inner`:
 
 | Ir | share | site |
 |---|---|---|
+| 580,037,674 | 14.69 % | `would_accept` — the affordance probe, 5,102 calls (was 15.08 %) |
 | 560,969,439 | 14.21 % | `auto_tap_for_cost_inner` (8,892 calls) |
 | 362,952,537 |  9.19 % | `activate_ability` (18,340 of its 18,386 calls come from auto-tap) |
 | 361,814,133 |  9.16 % | `gather_continuous_effects_inner` |
