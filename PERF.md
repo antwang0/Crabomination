@@ -122,10 +122,40 @@ contention-immune, which makes it the better first look.
 
 ## Baseline
 
-**Anchored 2026-08-10 on the merged twelfth-pass tip `6bbdc38c`** (`release`,
-mimalloc — the shipped configuration), after the rebase that joined the two
-concurrent sessions. This is the authoritative anchor; the three pre-merge
-anchors noted below are kept only for the box-drift lesson they record.
+**Anchored 2026-08-10 on the thirteenth-pass tip `610df3b6`** (`release`,
+mimalloc — the shipped configuration). The `6bbdc38c` anchor below it
+(55.88) is superseded as an absolute and kept for the box-drift lesson: it
+was taken on a *different container*, and this one runs the same workload
+~25 % faster (`host_calib_ms` 45-54 against 49-61). **The two anchors do
+not subtract — nothing like +25 % happened.**
+
+```text
+bot_ladder --bench   release, rustc 1.95.0, 4-core VM, 3 worker threads
+                     mimalloc (the default); measured on an idle box
+host_calib_ms        45-54 across the sitting   <- within-sitting only
+games                320
+games_per_s          67.96 / 71.00 / 73.99 / 72.98 / 74.03 / 72.56 / 70.79 /
+                     68.82   (mean 71.52, spread 8.5 % — take >=6 runs)
+decisions_per_s      mean 43185
+turns_per_game       26.98
+stalls               0 (0.00 %)
+peak_rss_mib         22.1 - 22.5
+determinism          ok (all 160 pairs split, on all 8 runs)
+```
+
+**The thirteenth pass's wall-clock is a null, and that is the expected
+result.** Six alternated `release` + mimalloc pairs of `a4947da6` against
+`610df3b6`, both built and run in one sitting on this container: **69.22 ->
+69.59 games/s, +0.54 % mean, 3/6 pairs positive** (paired deltas -4.73 /
++8.66 / +1.70 / -0.26 / +3.37 / -5.29 %; the +8.66 pair's A run read
+`host_calib_ms` 61 against 46 everywhere else). A -4.17 % instruction
+change cannot be resolved by wall-clock on a box whose within-sitting
+spread is ±8 % — this is the "sub-5 % changes need callgrind" note above,
+demonstrated rather than asserted. **The pass's measurement is the Ir
+figure; this block is a health check** (turns/game 26.98, stalls 0,
+determinism ok, RSS flat), not a delta.
+
+The pre-merge anchors below are kept only for the box-drift lesson.
 
 **The previous 70.65 anchor does not compare at all**: it predates
 `998b2433` making `EvalWeights::default()` carry `determinize: 1`, and

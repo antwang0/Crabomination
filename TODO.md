@@ -44,9 +44,13 @@ item 1 for two runs — and PERF's *Profile of record* is current at
   `cr_305_6_auto_tap_sees_a_rewritten_land_type` — that is how the flag was
   checked instead of assumed. Do this for every new gate; it costs one
   3-minute build.
-- **`--bench` anchor**: see PERF's Baseline. Absolutes do not transfer
-  between containers — quote a paired A/B measured in one sitting, never a
-  difference of anchors.
+- **`--bench` at `release` is a null for this pass and the anchor is
+  re-taken (71.52 mean of 8, `host_calib_ms` 45-54).** Six alternated pairs
+  of base vs tip in one sitting read **+0.54 %, 3/6 positive** — a -4.17 %
+  Ir change is under this box's ±8 % spread. Don't read the 55.88 -> 71.52
+  anchor move as a win; it is a different container. Cost of learning this
+  properly: two 24-minute `release` builds. Next run, quote Ir and treat
+  `--bench` as a health check (turns/game, stalls, determinism, RSS).
 - **Bugs**: the panic/unwrap sweep of the self-play path is still open — see
   the robustness section for the filter that works.
 - **Fetch before you build. This has now cost three sessions.** A fresh
@@ -64,7 +68,7 @@ item 1 for two runs — and PERF's *Profile of record* is current at
   ~20 min; `profiling-fast` is ~4 min warm (~11 min cold) and is what A/B
   iteration should use. A `cargo test --workspace` builds candle via
   `crabomination_ml` — budget ~25 min the first time.
-- **Trackers**: TODO 836, roadmap 660, `PERF.md` 862, `INCOMPLETE_CARDS` 247.
+- **Trackers**: TODO 852, roadmap 660, `PERF.md` 892, `INCOMPLETE_CARDS` 247.
 
 ## Environment note
 
@@ -112,6 +116,19 @@ filter that actually found `a67c5b9a` is narrower and worth reusing: **a
 `debug_assert!` standing in for a runtime guard**, or a `len() - 1` / bare
 index on a slice whose emptiness the *caller* tolerates. `sample_scored_index`
 had both, on the one path only a training actor takes.
+
+**Both of that filter's halves were swept 2026-08-10 and are clean** — a
+negative result worth not re-deriving. The `len() - 1` half: 13 sites under
+`game/` + `bot.rs`, every one either preceded by an `is_empty()` early
+return (`apply_enters_as_choice`, `pick_trigger_mode`, the Captive Audience
+mode picker, `EscalatingThisTurn`), taken on a `const` array of five card
+types, taken right after the matching `push`, or guarded by a `first()`
+let-else. The `debug_assert!` half: only two sites remain
+(`mod.rs:3900`'s replacement-effect iteration cap, `stack.rs:5911`'s
+unsupported redirect target), and both fall through to a defined release
+behaviour rather than standing in for a guard. What is left of the item is
+the ~183 `unwrap()`/`expect()`, which still wants triage rather than a
+blanket rewrite — and a *third* filter, since these two are exhausted.
 
 ## Engine — Missing Mechanics
 
