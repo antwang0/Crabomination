@@ -18,7 +18,7 @@ reference and want their own triage pass):
 
 Branch `claude/modern_decks`. **Seventeenth pass: four perf commits,
 -3.316 % Ir** (3,948,115,609 -> 3,817,208,224, base `8ca7df9f`,
-`profiling-fast --no-default-features` callgrind). Suite 18,831 green, golden
+`profiling-fast --no-default-features` callgrind). Suite 18,836 green, golden
 traces byte-identical, clippy clean, bench output byte-identical.
 
 - **All four rows are one shape, and it is not the sixteenth pass's.** *A
