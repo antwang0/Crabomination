@@ -43,11 +43,11 @@ two binaries). Suite green, golden traces byte-identical on every row.
   `printed_colors` -> `ColorSet` (2.72 %, 390 k allocations). (4) candidate
   0.5, the unconditional `perform_action` checkpoint (~9.5 %). (5) the
   allocator at 18.5 %; PERF carries the full allocation tree.
-- **The anchor is re-taken and the old one is void**: `60.49 games/s` mean of
-  8 at `release` + mimalloc. The previous `70.65` predates `998b2433` giving
+- **The anchor is re-taken and the old one is void**: `64.42 games/s` mean of
+  6 at `release` + mimalloc on the pushed tip (an earlier sitting on the same
+  engine code read 60.49 — the box drifts ~5 % between sittings). The previous `70.65` predates `998b2433` giving
   `EvalWeights::default()` `determinize: 1`, and `--bench` runs `gang` =
-  `EvalWeights::default()` — different bench, don't subtract. Spread is
-  14.6 % on this box; take >=6 runs.
+  `EvalWeights::default()` — different bench, don't subtract. Take >=6 runs.
 - **Bugs**: nothing new found. The panic/unwrap sweep of the self-play path
   is still open — see the robustness section for the filter that works.
 - **Fetch before you build.** `git branch -a` in a fresh clone shows only

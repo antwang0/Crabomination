@@ -133,14 +133,22 @@ bot_ladder --bench   release, rustc 1.95.0, 4-core VM, 3 worker threads
 host_calib_ms        47-65 across the sitting   <- within-sitting only; the
                      probe does not transfer between anchors
 games                320
-games_per_s          64.51 / 58.76 / 59.91 / 58.57 / 63.17 / 61.14 / 61.57 /
-                     56.29   (mean 60.49, spread 14.6 % — take >=6 runs)
-decisions_per_s      mean 36526
+games_per_s          63.67 / 65.14 / 65.60 / 66.04 / 61.77 / 64.30
+                     (mean 64.42, spread 6.9 % — take >=6 runs)
 turns_per_game       26.98
 stalls               0 (0.00 %)
 peak_rss_mib         22.1 - 22.5
-determinism          ok (all 160 pairs split, on all 8 runs)
+determinism          ok (all 160 pairs split, on every run)
 ```
+
+An earlier sitting the same night, on the pre-rebase tip (identical engine
+code), read 58.57-64.51, **mean 60.49 over 8** with a 14.6 % spread — one run
+at 56.29 dragged it. The +6.5 % between the two sittings is box drift, not a
+change: nothing in `81c88580` touches the engine hot path, `turns_per_game`
+and `stalls` are identical, and `host_calib_ms` overlaps (47-65 vs 48-58).
+**This box needs >=6 runs and still moves ~5 % between sittings** — which is
+the whole reason the pass's own delta is quoted as a paired A/B, not as a
+difference of anchors.
 
 The twelfth pass's own delta is the paired `profiling-fast` A/B in the Log
 (6/6 pairs, +9.57 %), not a difference of anchors: the two anchors are not
