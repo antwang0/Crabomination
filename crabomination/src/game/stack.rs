@@ -4142,25 +4142,44 @@ impl GameState {
             s.state_trigger |= d.state_trigger.is_some();
             s.steal_penalty |= d.sacrifice_and_burn_when_stolen.is_some() && c.controller != c.owner;
             s.no_other |= d.sacrifice_when_you_control_no_other.is_some();
-            s.persist_undying |=
-                d.keywords.contains(&Keyword::Persist) || d.keywords.contains(&Keyword::Undying);
-            s.pm_both |= c.counter_count(CounterType::PlusOnePlusOne) > 0
-                && c.counter_count(CounterType::MinusOneMinusOne) > 0;
             s.max_counters |= d.max_counters_of_kind.is_some();
-            s.legendary |= d.supertypes.contains(&Supertype::Legendary);
-            s.world |= d.supertypes.contains(&Supertype::World);
             s.saga |= !d.saga_chapters.is_empty();
-            s.planeswalker |= d.is_planeswalker();
-            s.battle |= d.is_battle() && d.defense > 0;
             s.bestowed |= c.bestowed;
-            s.aura |= d.is_aura();
-            s.role |= d
-                .subtypes
-                .enchantment_subtypes
-                .contains(&crate::card::EnchantmentSubtype::Role);
-            s.start_engines |= d.keywords.contains(&Keyword::StartYourEngines);
-            s.equipment_attached |= c.attached_to.is_some() && d.is_equipment();
             s.soulbond |= c.soulbond_partner.is_some();
+            // One walk per vector rather than one per flag.
+            if !c.counters.is_empty() {
+                s.pm_both |= c.counter_count(CounterType::PlusOnePlusOne) > 0
+                    && c.counter_count(CounterType::MinusOneMinusOne) > 0;
+            }
+            for kw in d.keywords.iter() {
+                match kw {
+                    Keyword::Persist | Keyword::Undying => s.persist_undying = true,
+                    Keyword::StartYourEngines => s.start_engines = true,
+                    _ => {}
+                }
+            }
+            for st in d.supertypes.iter() {
+                match st {
+                    Supertype::Legendary => s.legendary = true,
+                    Supertype::World => s.world = true,
+                    _ => {}
+                }
+            }
+            for t in d.card_types.iter() {
+                match t {
+                    crate::card::CardType::Planeswalker => s.planeswalker = true,
+                    crate::card::CardType::Battle => s.battle |= d.defense > 0,
+                    _ => {}
+                }
+            }
+            for es in d.subtypes.enchantment_subtypes.iter() {
+                match es {
+                    crate::card::EnchantmentSubtype::Aura => s.aura = true,
+                    crate::card::EnchantmentSubtype::Role => s.role = true,
+                    _ => {}
+                }
+            }
+            s.equipment_attached |= c.attached_to.is_some() && d.is_equipment();
             for sa in &d.static_abilities {
                 match sa.effect {
                     StaticEffect::AllNonlandPermanentsAreLegendary => s.supertype_grant = true,
@@ -4849,6 +4868,11 @@ impl GameState {
             .map(|c| c.id)
             .collect();
 
+        // Set when Persist/Undying puts a permanent back: the only way the
+        // death loop can *add* to the board, and so the only reason the
+        // presence scan has to be retaken below.
+        let mut board_grew = false;
+
         // Hushbringer (CR 614): suppress creature-death triggers while a
         // `SuppressCreatureEtbTriggers { also_dies }` static is in play.
         let dies_suppressed = crate::game::actions::creature_dies_triggers_suppressed(self);
@@ -5081,13 +5105,16 @@ impl GameState {
             self.return_persist_undying(
                 id, owner, (has_persist, has_undying, minus_count, plus_count), &mut events,
             );
+            if (has_persist || has_undying) && self.battlefield.iter().any(|c| c.id == id) {
+                board_grew = true;
+            }
             let _ = controller_idx; // used via closure above
         }
 
-        // Persist/Undying can have put a permanent back and the deaths above
-        // removed others, so the flags below are re-read from the post-death
-        // board.
-        let scan = self.sba_board_scan();
+        // Every flag is an over-approximation and the sweep so far can only
+        // have *removed* permanents, so the scan taken above still covers the
+        // post-death board. Only a Persist/Undying return grows it.
+        let scan = if board_grew { self.sba_board_scan() } else { scan };
 
         // Planeswalkers with 0 loyalty die (CR 704.5i).
         let pw_dead: Vec<CardId> = if !scan.planeswalker {
