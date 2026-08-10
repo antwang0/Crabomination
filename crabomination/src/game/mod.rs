@@ -11382,6 +11382,27 @@ impl GameState {
             && colors.iter().any(|c| tgt.colors.contains(c))
     }
 
+    /// The keywords [`damage_prevented_by_protection_inner`] can answer `true`
+    /// for. Kept next to it: adding a protection keyword without adding it
+    /// here silently turns that protection off.
+    #[inline]
+    fn protection_keyword(kw: &Keyword) -> bool {
+        matches!(
+            kw,
+            Keyword::Protection(_)
+                | Keyword::ProtectionFromOwnColors
+                | Keyword::ProtectionFromCreatures
+                | Keyword::ProtectionFromCreatureType(_)
+                | Keyword::ProtectionFromMatching(_)
+                | Keyword::ProtectionFromManaValueExcept(_)
+                | Keyword::ProtectionFromManaValueParity { .. }
+                | Keyword::ProtectionFromMulticolored
+                | Keyword::ProtectionFromMonocolored
+                | Keyword::ProtectionFromCardType(_)
+                | Keyword::ProtectionFromEverything
+        )
+    }
+
     pub fn damage_prevented_by_protection(&self, source: CardId, target: CardId) -> bool {
         // Both sides read through the layer system — share one gather.
         self.with_frozen_layers(|g| g.damage_prevented_by_protection_inner(source, target))
@@ -11389,6 +11410,16 @@ impl GameState {
 
     fn damage_prevented_by_protection_inner(&self, source: CardId, target: CardId) -> bool {
         let Some(tgt) = self.computed_permanent(target) else { return false };
+        // Everything below this reads the *source* — five `computed_permanent`
+        // lookups and two `Vec` clones — and none of it can change the answer
+        // unless the target carries a protection keyword. Most permanents
+        // never do, so gate on the one thing that is already computed.
+        // `is_protection_keyword` must list exactly the keywords the
+        // `ProtectionFromCreatures` check and the final `match` can answer
+        // `true` for.
+        if !tgt.keywords.iter().any(Self::protection_keyword) {
+            return false;
+        }
         let src_colors: crate::mana::ColorSet = self
             .computed_permanent(source)
             .map(|c| c.colors)
