@@ -6858,7 +6858,49 @@ impl CardInstance {
         self.damage_by_source_this_turn.iter().map(|(_, n)| *n).max().unwrap_or(0)
     }
 
+    /// True when every field [`clear_end_of_turn_effects`] resets already
+    /// holds its cleared value.
+    ///
+    /// Read through `Deref`, so the cleanup sweep never takes a `&mut` — and
+    /// never unshares the CoW `Arc` — for a permanent with nothing to clear,
+    /// which is most of them on most turns. **Every field the clear writes
+    /// must appear here**, or it is skipped while it still matters.
+    fn end_of_turn_effects_are_clear(&self) -> bool {
+        self.power_bonus == 0
+            && self.toughness_bonus == 0
+            && self.loyalty_uses_this_turn == 0
+            && !self.loyalty_twice_this_turn
+            && self.once_per_turn_used.is_empty()
+            && self.granted_keywords_eot.is_empty()
+            && self.granted_keywords_eot_ts.is_empty()
+            && self.granted_activated_eot.is_empty()
+            && self.removed_keywords_eot.is_empty()
+            && self.granted_flashback_eot.is_none()
+            && self.granted_harmonize_eot.is_none()
+            && self.granted_alt_cast_cost_eot.is_none()
+            && self.granted_cast_surcharge_eot.is_none()
+            && !self.dealt_deathtouch_damage
+            && !self.dealt_damage_this_turn
+            && self.damage_dealt_to_this_turn == 0
+            && self.damaged_by_this_turn.is_empty()
+            && self.damage_by_source_name_this_turn.is_empty()
+            && self.damage_by_source_this_turn.is_empty()
+            && self.regeneration_shields == 0
+            && self.regeneration_control_grant.is_none()
+            && !self.cant_regenerate_this_turn
+            && !self.damage_prevention_off_eot
+            && !self.saddled
+            && self.saddled_by.is_empty()
+            && self.crewed_by.is_empty()
+    }
+
     pub fn clear_end_of_turn_effects(&mut self) {
+        // See `end_of_turn_effects_are_clear`: the sweep runs over every
+        // battlefield and phased-out permanent each turn, and each of the
+        // writes below is a `DerefMut` on the CoW handle.
+        if self.end_of_turn_effects_are_clear() {
+            return;
+        }
         self.power_bonus = 0;
         self.toughness_bonus = 0;
         self.loyalty_uses_this_turn = 0;
