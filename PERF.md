@@ -127,8 +127,38 @@ contention-immune, which makes it the better first look.
 
 ## Baseline
 
-**Anchored 2026-08-10 at `6ed3dbfc`** (`release`, mimalloc — the shipped
-configuration), i.e. on the seventeenth pass's tip.
+**Anchored 2026-08-10 at `56986d65`** (`release`, mimalloc — the shipped
+configuration), i.e. on the eighteenth pass's tip.
+
+```text
+bot_ladder --bench   release, rustc 1.95.0, 4-core VM, 3 worker threads
+                     mimalloc (the default); measured on an idle box
+host_cpu             Intel(R) Xeon(R) Processor @ 2.80GHz
+host_calib_ms        50-62 across the sitting   <- within-sitting only
+games                320
+games_per_s          72.34 / 73.14 / 68.18 / 71.04 / 71.21 / 71.80
+                     (mean 71.29, spread 7.3 %)
+games_per_s_th       22.73 - 24.38
+decisions_per_s      mean 43,046
+turns_per_game       26.98
+stalls               0 (0.00 %)
+peak_rss_mib         22.0 - 22.2
+determinism          ok (all 160 pairs split, on all 6 runs)
+```
+
+**71.29 against the 69.13 below is +3.1 %, and the pass is worth -1.155 %
+by instruction count — so most of that gap is the host, and no wall-clock
+delta is claimed.** The tell is in the probe: `host_calib_ms` reads **50-62
+here against 49-85** on the previous anchor, i.e. the same box on a
+markedly quieter sitting, and this run's spread (7.3 %) sits inside the
+documented ±8 %. The anchor is refreshed because the tip moved, not because
+the wall-clock did. What the run does establish, and what it is here for:
+**stalls 0 and determinism ok on all six runs**, `turns_per_game` 26.98
+unchanged across three consecutive anchors, and peak RSS 22.0-22.2 MiB
+against 21.8-22.4.
+
+The previous anchor, `6ed3dbfc` (the seventeenth pass's tip), for the
+record:
 
 ```text
 bot_ladder --bench   release, rustc 1.95.0, 4-core VM, 3 worker threads
@@ -146,9 +176,9 @@ peak_rss_mib         21.8 - 22.4
 determinism          ok (all 160 pairs split, on all 6 runs)
 ```
 
-**Another container again, and 69.13 against the 81.93 above is host, not a
-regression** — the evidence, in order. (a) `host_calib_ms` reads 49-85 here
-against 45-55 there. (b) Every one of the pass's four changes strictly
+**Another container again, and 69.13 against the 81.93 recorded at
+`abb2b502` is host, not a regression** — the evidence, in order.
+(a) `host_calib_ms` reads 49-85 here against 45-55 there. (b) Every one of the pass's four changes strictly
 *removes* work, and callgrind — deterministic on a fixed workload —
 measures **-3.316 %** instructions across them with the six games' output
 byte-identical on every row. (c) The one confound worth ruling out was the

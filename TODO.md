@@ -52,6 +52,11 @@ full re-take of the profile of record. Bench output byte-identical.
   against the empty-slice underflow. Five filters exhausted; the next one
   should stop grepping and run the actor path with overflow checks on in
   release for a few thousand games.
+- **Bench anchor refreshed at `56986d65`**: mean 71.29 games/s (6 runs,
+  spread 7.3 %), stalls 0, determinism ok on all six, `turns_per_game`
+  26.98, RSS 22.0-22.2 MiB. That is +3.1 % on the 69.13 anchor against a
+  pass worth -1.155 % by Ir, and `host_calib_ms` 50-62 vs 49-85 says the
+  rest is a quieter host — **no wall-clock delta is claimed**.
 - **Profile the binary in place.** `split-debuginfo = "unpacked"` puts the
   DWARF beside it, so a copy counts instructions right and annotates every
   frame `???`. Cost this run one wasted base profile.
