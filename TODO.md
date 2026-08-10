@@ -16,68 +16,57 @@ reference and want their own triage pass):
 
 ## NEXT (handoff — rewrite each run, keep under 15 lines)
 
-Branch `claude/modern_decks`. **Sixteenth pass: three perf commits,
--1.836 % Ir** (4,021,875,017 -> 3,948,056,772, base `91ffe271`,
-`profiling-fast --no-default-features` callgrind). Suite 18,828 green,
-golden traces byte-identical, clippy clean workspace-wide.
+Branch `claude/modern_decks`. **Seventeenth pass: four perf commits,
+-3.316 % Ir** (3,948,115,609 -> 3,817,208,224, base `8ca7df9f`,
+`profiling-fast --no-default-features` callgrind). Suite green, golden
+traces byte-identical, clippy clean, bench output byte-identical.
 
-- **Two of the three rows are one new shape: a cheap leaf function called a
-  million times.** `same_team` was **1.45 % of the program** walking `Vec`s
-  to answer what is `seat`'s own index in every non-team format; a
-  singleton-layout fast path in `team_of` (-1.21 %) plus flipping nine
-  `!same_team(…) && static_abilities.any(…)` scans so the selective
-  conjunct runs first (-0.41 %) took it **58.4 M -> 5.7 M, -90 %**. The
-  filter that finds the next one: a function whose whole self cost sits in
-  `slice/iter` and `ptr/non_null` with a five-figure call count.
-- **Correct the previous handoff, and don't redo it.** `cast_candidates`'
-  cost is **not** the fourteen specialty blocks. Gating them all landed
-  **-0.226 %**; their walks and predicates are ~13 M of self cost between
-  them, not the "~134 M of breadth" the fifteenth pass costed. The 191 M is
-  callees: the **plain-cast `flat_map` is 219 M / 5.44 %** on its own, of
-  which `can_afford_in_state` is 56 M and the rest is
-  `auto_targets_for_effect_all_slots` + `requires_target` walking the
-  effect tree per hand card per mode. `requires_target` is a deep recursive
-  walk of an immutable `Arc<CardDefinition>` field, called from every
-  block — **a per-definition memo is the obvious next move and nothing has
-  tried it.**
-- **Next up** (PERF candidates, all re-costed on this tip): (0) the auto-tap
-  chain is now the whole top of the list — `auto_tap_for_cost_inner`
-  14.21 % -> `activate_ability` 9.19 % -> `_inner` 8.51 %, ~18 k Ir per land
-  tap, **two whole-game gathers per activation** (candidate 4's warning
-  applies), plus `grant_scan`, `ActivatedAbility::clone` and
-  `resolve_extra_mana_on_land_tap` per tap. 8,892 auto-taps for six games
-  is the other half: most are inside `would_accept_on` probes, so "fewer
-  probes" and "cheaper taps" are the same item from two ends. (2) the
-  allocator, ~16.2 % plus `Arc::clone_from_ref_in` ~3.4 % self — still
-  never attacked head-on; `RawTable::clone` is 0.91 % / 353,862 allocs and
-  wants to know *which* `HashMap` in `CardData` is being deep-copied.
-- **Deliberately not claimed: a wall-clock number.** -1.836 % is well inside
-  this box's noise (PERF records 8 pairs of a -1.91 % change reading
-  +0.7 %), so callgrind is the whole measurement. A fresh `release`
-  `--bench` anchor was taken for the stall / determinism / RSS record only.
-- **Bugs**: the panic/unwrap sweep's **fourth filter came up clean too**.
-  Two shapes, both silent-in-release: `evaluate_value(...) as usize` without
-  `.max(0)` (one hit, and it is `.max(1)`), and `power()/toughness()/life`
-  cast to `usize` (one hit, `LIFE_TENTHS[life as usize]`, guarded by
-  `life <= MAX` above it). Four filters exhausted; the item now wants a
-  *fifth*, and the three tried so far all looked for a missing or wrong
-  guard — try looking at the *callers* of a `pub(crate)` helper instead.
-- **Fetch before you build. This has now cost five sessions.** A fresh
+- **All four rows are one shape, and it is not the sixteenth pass's.** *A
+  hot helper computes the expensive half of its answer before asking the
+  cheap question that decides it.* `activate_ability_inner` built a
+  whole-board `grant_scan` for indices it never reaches (-0.58 %);
+  `clear_end_of_turn_effects` wrote 28 CoW fields on permanents with
+  nothing to clear, **844,428 `DerefMut`s / 1.37 %** (-0.70 %);
+  `damage_prevented_by_protection` took **five** `computed_permanent`s on
+  the source — 45 % of every such call in the program — before asking
+  whether the target has a protection keyword at all (-0.73 %); and
+  `activate_ability_inner` read its card's computed view **twice**, the
+  second outside any freeze scope, i.e. 18,386 whole-game gathers
+  (-1.35 %). **How to find the next one:** `--tree=calling` on a hot
+  function, then ask of each callee "how many of these N calls can
+  possibly change the answer". Gathers are down 165,336 -> 146,950.
+- **Next up** (PERF candidates, all re-costed on this tip): (0) **the
+  attack search is 52.11 % of the program** — `pick_attacks_scored`, 630
+  calls, 3.2 M Ir each, playing a full turn cycle per candidate. No pass
+  has ever touched the search itself, only its inner loop. It is a
+  bot-quality question too, so it needs a `bot_ladder` win-rate gate; the
+  cheap first probe is "how often does the search actually depart from
+  greedy". (1) `would_accept` 14.22 %. (2) the auto-tap chain 12.67 % —
+  **its own body is 0.03 %, so do not spend a run on its scratch
+  allocations**. (3) `dispatch_triggers_for_events` 8.44 %, 2,867 Ir of
+  *self* per call with only 1.2 spec matches. (4) `scale_damage_to` takes
+  14,624 unfrozen gathers. (5) the allocator, ~16.5 %, still never
+  attacked head-on.
+- **Bugs**: the panic/unwrap sweep's fifth filter was **not** attempted
+  this pass — the run went to perf end to end. The item still wants a
+  filter that looks at the *callers* of a `pub(crate)` helper rather than
+  at a missing guard.
+- **Fetch before you build. This has now cost six sessions.** A fresh
   clone's `git branch -a` shows only `main` and the session's own branch;
   run `git fetch origin && git checkout -B claude/modern_decks
   origin/claude/modern_decks` as the very first command.
-- **Env**: `cargo-nextest` is not in the image — use `cargo test --workspace
-  --exclude crabomination_client` (18,828 tests). **Do not `pgrep -f "cargo
-  test --workspace"` in a wait loop: the loop's own command line matches it
-  and never exits.** Cold dep build ~13 min, warm engine `profiling-fast`
-  rebuild ~3.5 min, `release` ~35 min, a callgrind run ~3.5 min. Disk
-  allowance ~30 G; `target/` with `profiling-fast` + `release` + test
-  binaries fills ~23 G.
-- **Trackers**: TODO 895, roadmap 660, `PERF.md` **1,090** (down from
-  1,133 — the three superseded pre-merge `--bench` anchors are compacted to
-  their lessons), `INCOMPLETE_CARDS` 247. `PERF.md` is still over the ~1k
-  trigger and its Log is one line per row, so the only trim left is merging
-  whole *passes* into one line, oldest first.
+- **Env**: `cargo-nextest` is not in the image — use `cargo test
+  --workspace --exclude crabomination_client`. **Do not `pgrep -f "cargo
+  test --workspace"` in a wait loop: the loop's own command line matches
+  it and never exits** — this bit again this run; write a `.done` marker
+  file instead. Touching `crabomination_base` costs a ~14 min rebuild
+  (catalog + engine); engine-only is ~4.5 min, a callgrind run ~3.5 min.
+  Disk allowance ~30 G.
+- **Trackers**: TODO 885, roadmap 660, `PERF.md` **1,181** (passes one to
+  nine are now a seven-row index; the file still grew because the
+  seventeenth pass added four rows and a re-taken profile).
+  `INCOMPLETE_CARDS` 247. Next PERF trim: passes ten to thirteen, same
+  treatment.
 
 ## Environment note
 
