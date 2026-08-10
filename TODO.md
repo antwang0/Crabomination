@@ -16,79 +16,57 @@ reference and want their own triage pass):
 
 ## NEXT (handoff — rewrite each run, keep under 15 lines)
 
-Branch `claude/modern_decks`. **Fourteenth pass: two perf commits and a
-correction, -11.56 % Ir / +11.10 % wall** (4,733,001,860 -> 4,186,040,742,
-base `95406ebe`, `profiling-fast --no-default-features` callgrind;
-wall-clock 52.18 -> 57.97 games/s, 6/6 alternated `release-fast` pairs).
-Suite 18,097 green, all four
-golden traces byte-identical, clippy clean. Largest single pass since the
-`CardInstance` representation change.
+Branch `claude/modern_decks`. **Fifteenth pass: two perf commits, -3.87 % Ir**
+(4,185,775,886 -> 4,023,920,637, base `2b736358`, `profiling-fast
+--no-default-features` callgrind). Suite 18,828 green, all four golden
+traces byte-identical, clippy clean workspace-wide.
 
-- **Both rows are one shape: `perform_action` clones the whole state before
-  every action so a rejected one can be restored, and almost nothing reads
-  the restore.** (a) the mid-round priority pass cannot fail at all — 41.6 %
-  of a bot game's actions (-1.85 %); (b) every dry run in `bot.rs` throws the
-  clone away on `Err`, so `dry_run` / `sim_step` skip the checkpoint
-  (-11.38 %, of which +1.77 % was given back by the correction below).
-  **The clone is never the whole cost**: it shares every CoW
-  zone, so the next write deep-copies one that was uniquely owned a line
-  earlier. `Arc::clone_from_ref_in` fell 40 % without being touched.
-- **The rule to reuse**: a checkpoint is only worth its clone where something
-  reads the restore. Ask (1) does the caller keep the state after an `Err`,
-  (2) can the action fail at all, (3) if the fallback re-runs the same call
-  on the same state, does determinism make it a no-op.
-- **And the trap it walked into**, worth +1.77 % to undo (`3e2ee6cb`):
-  `simulate_through_combat` looked like a dry run, but one of its three
-  callers (`combat_aware`'s `before` probe) runs it with `let _ =` and scores
-  the state whatever comes back. **Check every caller, not the function.**
-  Nothing on the bench reached it — traces were identical either way — which
-  is why latent divergence has to be found by reading, not by testing.
-- **Next up, in order** (PERF's candidates, re-costed on this tip):
-  (1) **`permanents_with_abilities_removed`, 130,060,796 Ir / 3.16 %** — one
-  full gather per trigger dispatch to answer one bit that is false on every
-  bench board, and now the largest single removable item. **Freezing the
-  dispatcher's phase 1 does not fix it (checked — phase 1 makes exactly one
-  gather).** The gate must not gather, and it is only safe if the gather's
-  own six `RemoveAllAbilities` blocks and the presence scan call the *same*
-  named predicates — PERF candidate (0) lists all six sites. (2)
-  `bot::cast_candidates`, the most expensive single `collect()` site.
-  (3) `compute_battlefield` materializing a whole `Vec` per call.
-- **Residual checkpoint is 13,980 clones / 2.72 %** (the real game's actions
-  plus the fallible declarations inside the sims). Candidate 0.5(b) — a
-  second, hotter CoW group in `GameState` — is what is left of that item and
-  is no longer worth its risk at 2.72 %.
-- **Two sessions ran on this branch at once again, and the rebase was
-  clean** (their rows are in `actions.rs`, these in `bot.rs`/`stack.rs`/
-  `mod.rs`). The tip was **re-measured after the rebase** rather than
-  subtracted: -13.10 % against their tip reproduces the -13.02 % measured
-  against ours. Do that, don't add cumulative figures.
-- **The `release` anchor is re-taken at 62.48 games/s and it is *lower* than
-  the 71.52 it replaces while the code is 11 % faster** — different
-  container (`host_calib_ms` 50-60 vs 45-54). The base binary re-run an hour
-  apart read 52.38 then 52.18, i.e. within-sitting drift was 0.4 %, so
-  **keep the base binary around as a control instead of reasoning about
-  `host_calib_ms`.** Never subtract two anchors.
-- **Bugs**: the panic/unwrap sweep of the self-play path is still open; both
-  halves of the old filter are swept clean, so it wants a *third* filter.
-  ~183 `unwrap()`/`expect()` under `game/` + `bot.rs` needing triage.
-- **Fetch before you build. This has now cost three sessions.** A fresh
+- **Both rows are one shape: a `&mut self` path paying a whole-game gather
+  to read one bit.** (a) `permanents_with_abilities_removed` gathered once
+  per trigger dispatch (-2.54 %); (b) `printed_land_mana_ability_lost`
+  fetched a computed view *before* the printed test that decides the answer,
+  twenty lines below a scope that already held one (-1.36 %).
+- **The device that made (a) landable, and the one to reuse:** a presence
+  gate that is authoritative only on `false`; the six emitting blocks
+  `debug_assert!` against the same named predicates; and a debug-only
+  cross-check in the gated function that re-runs the real gather whenever
+  the gate says `false`, so **all 18,828 tests audit the gate on real boards**
+  instead of against a re-derived list. Gathers 243,190 -> 165,336 over two
+  passes.
+- **Next up** (PERF candidates, all re-costed on this tip): (0)
+  `bot::cast_candidates` 4.75 % — **already read at line level this pass,
+  don't redo it**: there is no hot line, the cost is fourteen candidate
+  blocks running unconditionally, so gate the blocks, don't hoist. (1)
+  `would_accept` 15.08 % over 5,102 probes — same question one level up:
+  fewer probes, not faster ones. (3) the combat-damage cluster, four helpers
+  gathering once per damage application; the safe subset is a scope around
+  *one* assignment, not the batch (read the CR 510.2 warning first).
+- **Deliberately not claimed: a wall-clock number.** -3.87 % is inside this
+  box's noise (PERF records 8 pairs of a -1.91 % change reading +0.7 %), so
+  callgrind is the whole measurement. A fresh `release` `--bench` anchor was
+  taken on this container for the stall / determinism / RSS record only —
+  **it does not compare to the 62.48 anchor**, which was a different box.
+- **Bugs**: the panic/unwrap sweep is still open, but a **third filter came
+  up clean** — unsigned `len() - k` / `.min(len()-1)` on a collection the
+  caller tolerates empty, 16 hits under `game/` + `bot.rs`, every one
+  guarded by a preceding `is_empty()` or a `push` on the same line. The
+  stale-`position()`-after-mutation class is also already swept (the equip
+  path re-finds by id with a comment saying why). It wants a *fourth* filter.
+- **Fetch before you build. This has now cost four sessions.** A fresh
   clone's `git branch -a` shows only `main` and the session's own branch;
-  `origin/claude/modern_decks` does not appear until an explicit
-  `git fetch origin`, and it is ~1,860 commits ahead of `main`. **Run
-  `git fetch origin && git checkout -B claude/modern_decks
-  origin/claude/modern_decks` as the very first command**, before reading a
-  tracker — `main`'s trackers describe a project without `crabomination_ml`,
-  `PERF.md` or `bot_ladder`.
+  run `git fetch origin && git checkout -B claude/modern_decks
+  origin/claude/modern_decks` as the very first command.
 - **Env**: `rm -rf target/debug/incremental target/profiling-fast` before a
-  `release` build (disk allowance ~30 G). `cargo-nextest` is not in the
-  image. **A callgrind run of the fixed six-game workload is ~1 minute, not
-  25** — the cost is the build, not the run, so measure freely. `release`
-  engine rebuild ~20 min; `release-fast` ~3 min warm and is what A/B
-  iteration should use; a cold `release-fast` dep build is ~13 min.
-- **Trackers**: TODO 870, roadmap 660, `PERF.md` 952, `INCOMPLETE_CARDS` 247.
-  All under the ~1k line trigger except `PERF.md`, which is the perf record
-  and is indexed by section; compact its pre-twelfth-pass Log rows next time
-  it needs a trim.
+  `release` build (disk allowance ~30 G; a cold workspace fills 17 G).
+  `cargo-nextest` is not in the image — use `cargo test --workspace
+  --exclude crabomination_client` (~18,828 tests, a few minutes). A cold
+  dep build is ~13 min, a warm engine `profiling-fast` rebuild ~4.5 min,
+  `release` ~35 min, a callgrind run ~3.5 min.
+- **Trackers**: TODO 890, roadmap 660, `PERF.md` 1,050, `INCOMPLETE_CARDS`
+  247. `PERF.md` is over the ~1k trigger and **compaction was considered and
+  declined**: its Log is one line per row, so collapsing rows saves ~nothing
+  and costs the record. Trim it only by merging whole *passes* into one
+  line, oldest first.
 
 ## Environment note
 
@@ -149,6 +127,25 @@ unsupported redirect target), and both fall through to a defined release
 behaviour rather than standing in for a guard. What is left of the item is
 the ~183 `unwrap()`/`expect()`, which still wants triage rather than a
 blanket rewrite — and a *third* filter, since these two are exhausted.
+
+**The third filter was run 2026-08-10 and is also clean.** Two shapes, both
+chosen because they fail *silently* in release (wrapping) and loudly in
+debug, i.e. the profile of a bug that only appears at game 400 k:
+
+- **Unsigned `len() - k` where the caller tolerates an empty collection.**
+  16 hits under `game/` + `bot.rs`. Every one is guarded: an `is_empty()`
+  early return, a `push` on the line above (`stack.len() - 1` in
+  `CreateTokenCopyOf`), a `const` array, a `first()` let-else, or a
+  `hand.len() > max` test in the same condition (the two cleanup-discard
+  sites). `selfplay.rs:521`'s bare index is in a `#[cfg(test)]` body.
+- **A stale index across a mutation** — `position()` / `iter().position`
+  followed by `battlefield[pos]` after something that can remove a card.
+  53 index sites, and the one path that genuinely mutates in between (the
+  equip sacrifice) already re-finds by id and carries a comment saying why.
+
+So the item now wants a *fourth* filter. The two exhausted so far both
+looked for a missing guard; the next one should look for a guard that is
+present but tests the wrong thing.
 
 ## Engine — Missing Mechanics
 

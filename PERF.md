@@ -384,17 +384,46 @@ profile after the allocator itself.
 Callgrind on `profiling-fast --no-default-features` (= `release-fast` opt
 settings + debuginfo; system allocator, because valgrind replaces malloc and
 a mimalloc build would measure the interception), 1 thread, `--a gang --b
-gang --games 6 --seed 1 --decks fixed`. **Retaken 2026-08-10 on the merged
-twelfth-pass tip `a4947da6`** — the re-take NEXT had been owing since the
-two concurrent sessions joined. The number reproduces the recorded merged
-figure to 0.03 % (4,963,254,419 against 4,964,563,445), which is this
-profile's build-to-build noise, so the merge measurement stands.
+gang --games 6 --seed 1 --decks fixed`.
 
-**4.96 G instructions for six games**, from 5.62 G at the twelfth pass's
-start, 6.15 G at the eleventh's, and 14.40 G six passes ago on the same
-workload. **3,748,803 allocations**, from 4,073,937.
+**Retaken 2026-08-10 on the fifteenth pass's tip `88a0b787`: 4,023,920,637
+Ir, 2,445,057 allocations.** The base it was taken against (`2b736358`) read
+4,185,775,886, i.e. 0.006 % from the recorded fourteenth-pass figure of
+4,186,040,742 — a clean reproduction across a rebuild and a container, so
+the two passes' numbers chain.
 
-Self cost, grouped:
+**4.02 G instructions for six games**, from 4.19 G at this pass's start,
+4.96 G at the fourteenth's, 5.62 G at the twelfth's, and 14.40 G eight
+passes ago on the same workload. **2,445,057 allocations**, from 3,748,803.
+
+The tip's shape, in one table (inclusive, overlapping):
+
+| Ir | share | calls | site |
+|---|---|---|---|
+| 3,094,150,259 | 76.89 % | | `perform_action_inner` |
+| 1,391,324,294 | 34.58 % | | `perform_action` |
+| 606,964,219 | 15.08 % | 5,102 | `would_accept` — the affordance probe, now the largest single named consumer that isn't the action dispatcher |
+| 581,810,215 | 14.46 % | 8,892 | `auto_tap_for_cost_inner` |
+| 526,847,459 | 13.09 % | 203,770 | `computed_permanent` — 128,066 of those gather, i.e. 37 % memo hits |
+| 394,720,976 |  9.81 % | | `dispatch_triggers_for_events` — was 11.72 % before the strip gate |
+| 361,673,091 |  8.99 % | **165,336** | `gather_continuous_effects_inner` — 243,190 gathers two passes ago |
+| 307,176,076 |  7.63 % | | `compute_permanent_pass` |
+| 286,537,425 |  7.12 % | 10,670 | `check_state_based_actions` (candidate 0.25) |
+| 267,242,117 |  6.64 % | 17,718 | `compute_battlefield` |
+| 191,166,118 |  4.75 % | 7,024 | `bot::cast_candidates` — climbing as a share; still never read at line level |
+| 144,255,177 |  3.58 % | 8,892 | `mana_source_table` |
+| 82,717,638 |  2.06 % | | `GameState::clone` |
+
+**Who still gathers**, the number that has driven four passes:
+`computed_permanent` 128,066, `compute_battlefield` 17,718,
+`check_state_based_actions` 10,670, `frozen_effects` 8,882 — **165,336
+total**, down from 243,190.
+
+Self cost, grouped (allocator block re-measured on the tip: `_int_malloc`
+4.74 / `_int_free` 3.89 / `malloc` 2.87 / `free` 1.74 / `malloc_consolidate`
+0.66 / arena+merge+unlink 2.22 = **~16.1 %**, from 19.3 % — the first pass
+where it fell as a share, because the strip gate removed 78 k gathers and
+each gather allocated):
 
 | share | site | note |
 |---|---|---|
@@ -565,6 +594,53 @@ thrown away:
   and enumerate every way one can enter (a resolved `continuous_effect`, a
   static ability converted during the gather) or it will silently keep
   abilities a Turn to Frog took away.
+
+**After the fifteenth (presence-gate) pass.** Two rows, -3.87 % Ir
+(4,185,775,886 → 4,023,920,637), both the same shape: *a `&mut self` path
+paying a whole-game gather to read one bit*. What the re-profile on the tip
+promotes, in order:
+
+- **(0) `bot::cast_candidates` — 191,166,118 Ir / 4.75 % over 7,024 calls
+  (27,215 each), and now the largest single named removable item.**
+  **Read at line level this pass, so don't spend that again — and the answer
+  is that there is no hot line.** The largest single one is
+  `can_afford_in_state` in the plain-cast filter, **56,546,672 Ir / 1.41 %
+  over 12,114 calls (4,668 each)**; after that nothing inside the function
+  clears 0.1 % (`beneficial_aura_host` 3.4 M, `spliceable_hand_cards_on`
+  0.6 M, `ward_gate_ok` 2.7 M, the three `has_*` printed predicates ~0.2 M
+  each). The other ~134 M is *breadth*: fourteen candidate blocks each
+  walking the hand or the battlefield and pushing `GameAction`s. So the
+  lever is **not** a hoist, it is **how many candidates get built at all** —
+  the blocks run unconditionally even when the seat has no mana for any of
+  them. Cost a "can this block produce anything" gate per block, cheapest
+  first, before touching `can_afford_in_state` (which candidate 0(a) already
+  tried and reverted).
+- **(1) `would_accept` — 606,964,219 Ir / 15.08 % over 5,102 calls, i.e.
+  119,000 Ir per probe.** Each one is a full `perform_action_inner`. This is
+  real simulation, not waste, so the lever is *how many probes*, not how
+  fast one is — the same question as (0), one level up. Cost the two
+  together before touching either.
+- **(2) `check_state_based_actions`, 7.12 %** — unchanged in substance;
+  candidate 0.25 below still describes it, and the ~21 whole-board walks per
+  sweep are still the item.
+- **(3) The combat-damage cluster, ~62 M / 1.5 % between four helpers**:
+  `apply_prevention_shields` (4,456×), `creature_redirects_damage_to_
+  controller` (4,454×), `damage_from_source_prevented_by_keyword` (4,450×)
+  and `resolve_combat` (4,474×), each ~3,510 Ir/call — i.e. **all four
+  gather, all four are called once per damage application, and they are
+  called in sequence for the same assignment.** The safe subset is a scope
+  around *one* assignment's pre-application checks, which shares three
+  gathers into one; a scope around the batch is the CR 510.2 rules change
+  candidate 0(f) warns about. Read that warning before starting.
+- **(4) `activate_ability_inner` still takes two computed views per
+  activation** (36,772 calls over 18,386 activations, 106,612,588 Ir /
+  2.65 %): the `with_frozen_layers` scope at the ability lookup, and the
+  CR 602.5 gate ~270 lines later. Folding the second onto the first is
+  worth ~1.3 % but is **not** obviously behaviour-preserving — the {X}
+  modal, the cost-pick consumption and the free-activation guard all sit
+  between them, and the later gates also run for graveyard / hand / command
+  sources where the earlier scope never ran. Prove the region touches no
+  layer input before moving it, or leave it.
 
 **After the fourteenth (transaction-checkpoint) pass.** Two rows and a
 correction, -11.56 % Ir — the largest single pass since the `CardInstance` representation change.
