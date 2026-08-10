@@ -33,24 +33,52 @@ two binaries). Suite green, golden traces byte-identical on every row.
   **How to find the next: `--tree=caller` on `compute_battlefield`, divide
   each caller's call count by how many times it can actually run.** 9,928
   over ~2,600 declarations — the ratio *is* the bug.
-- **Next up, in order**: (1) the SBA's remaining whole-board walks —
-  **not** its layer pass, which is one per sweep and genuinely whole-board;
-  the target is the **227,678 `Vec` collects inlined into the sweep, 3.23 %,
-  ~21 per sweep**. Cost them line-level (`--auto=yes`) first; an empty
-  `collect()` doesn't allocate, so only the walks that find something pay.
-  (2) **Re-take the profile of record** — it is one pass stale and ~7,300
-  `compute_battlefield` calls are gone from it. (3) candidate 1(a),
-  `printed_colors` -> `ColorSet` (2.72 %, 390 k allocations). (4) candidate
-  0.5, the unconditional `perform_action` checkpoint (~9.5 %). (5) the
-  allocator at 18.5 %; PERF carries the full allocation tree.
+**A second session ran on this branch at the same time and its four rows are
+rebased in below.** Its measurements: `5,620,660,987 -> 5,013,096,289 Ir,
+-10.81 %` against base `81c88580`, **8/8 alternated `release` pairs, 50.24 ->
+55.70 games/s, +10.85 %**. The two sessions overlap on
+`declare_attackers_banded`, `finalize_cast`, the CR 603.8 disarm and the CR
+704.8 snapshot, so **the two cumulative figures must not be added**, and
+neither anchor was taken on the merged tip.
+
+- **Second session's rows, in one line each**: `check_state_based_actions`'s
+  ~20 empty `filter().collect()` heads now ride one `sba_board_scan` presence
+  pass (-3.13 %, sweep 11.69 % -> 8.92 %); its death scan computes only the
+  creatures via the new `compute_battlefield_creatures` (-1.92 %); the scan
+  itself runs once per sweep and walks each definition vector once (-1.28 %);
+  and `declare_blockers` shares one layer pass with CR 509.1b's Okk read
+  (part of -4.90 %, the rest of which duplicated this session's work).
+  **Presence-flag rule learned there**: a flag must over-approximate its
+  block, and you must enumerate what can turn one *on* mid-sweep (a flip, a
+  `BecomeCopyOf` revert, a Persist/Undying return, a defeated battle's back
+  face) and retake the scan there.
+- **Next up, in order**: (1) **re-measure the merged tip** — neither
+  session's cumulative number or anchor describes it, and the profile of
+  record is two sessions stale. One `profiling-fast` build + callgrind, one
+  `release` build + >=6 `--bench` runs. (2) PERF candidate (A)'s remaining
+  `compute_battlefield` callers, asking "all 19.5, or two of them?" —
+  `resolve_combat`, `advance_step`, `process_cumulative_upkeep`, `do_phasing`;
+  **`declare_blockers`' remaining passes are legitimate, its tap-another
+  block mutates the board between them — verified, don't spend a build.**
+  (3) candidate 1(a), `printed_colors` -> `ColorSet`. (4) candidate 0.5, the
+  unconditional `perform_action` checkpoint (~9.5 %). (5) the allocator at
+  ~18.9 %; PERF carries the full allocation tree.
+- **Bug fixed in the second session (`9db8557c`)**: Mirror Gallery's CR
+  704.5j check used `return Vec::new()` inside the legend-group block, so a
+  `LegendRuleDoesntApply` permanent skipped *every* later state-based action
+  and discarded the sweep's events — the game could not be won or lost.
+  Regression test in `classic_sets/bok`; the `return`-inside-a-`let`-block
+  class was swept and this was the only real instance.
 - **The anchor is re-taken and the old one is void**: `64.42 games/s` mean of
   6 at `release` + mimalloc on the pushed tip (an earlier sitting on the same
   engine code read 60.49 — the box drifts ~5 % between sittings). The previous `70.65` predates `998b2433` giving
   `EvalWeights::default()` `determinize: 1`, and `--bench` runs `gang` =
   `EvalWeights::default()` — different bench, don't subtract. Take >=6 runs.
-- **Bugs**: nothing new found. The panic/unwrap sweep of the self-play path
-  is still open — see the robustness section for the filter that works.
-- **Fetch before you build.** `git branch -a` in a fresh clone shows only
+- **Bugs**: the panic/unwrap sweep of the self-play path is still open — see
+  the robustness section for the filter that works.
+- **Fetch before you build, and again before you push.** Two sessions
+  collided on this branch on the same day and the join cost a rebase with
+  conflicts in three engine files and both trackers. `git branch -a` in a fresh clone shows only
   `main` and the session's own branch; `origin/claude/modern_decks` does not
   appear until an explicit `git fetch origin claude/modern_decks`. A whole
   session's work was rebuilt on stale `main` before that was noticed.
@@ -58,7 +86,7 @@ two binaries). Suite green, golden traces byte-identical on every row.
   build (3-17 G). `cargo-nextest` is not in the image. `release` rebuild of
   the engine is 23 min; `profiling-fast` is 3 min and is what A/B iteration
   should use.
-- **Trackers**: TODO 818, roadmap 660, `PERF.md` 783, `INCOMPLETE_CARDS` 247.
+- **Trackers**: TODO 849, roadmap 660, `PERF.md` 829, `INCOMPLETE_CARDS` 247.
 
 ## Environment note
 
@@ -85,7 +113,16 @@ Found by profiling. Not speculative — the code is quoted.
 in `86670250`: `KeywordCounters` is an insertion-ordered `Vec` newtype, which
 sidesteps `Keyword` having no `Ord`, and `cr_122_1b_keyword_counter_grant_
 order_is_insertion_order` pins it. The actor-sampler panic was fixed in
-`a67c5b9a`.)*
+`a67c5b9a`. Mirror Gallery aborting the whole SBA sweep was fixed in
+`9db8557c` — CR 704.5j's `LegendRuleDoesntApply` check sat inside the
+legend-group block and used `return Vec::new()`, so a board with one out
+skipped every later state-based action (deaths, loss conditions, the Aura
+and Equipment sweeps) and discarded the sweep's events; the game could not
+be won or lost. Regression test in `classic_sets/bok`. **The filter that
+found it: a `return` inside a `let … = { … };` initializer block**, which
+exits the whole function rather than the block. The workspace was swept for
+the class — the other nine hits are all `Err` / `let-else` guards that
+legitimately abort their function, so this was the only one.)*
 
 **Open: the panic/unwrap sweep of the self-play path.** ~183
 `unwrap()`/`expect()` under `game/` + `bot.rs`. It wants **triage, not a

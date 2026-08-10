@@ -116,6 +116,16 @@ contention-immune, which makes it the better first look.
 
 ## Baseline
 
+**Both anchors below predate the two-session merge.** Two sessions ran on
+this branch at once; the rebase that joined them produced a tip neither
+anchor was measured on. **Re-take the anchor on the merged tip before
+comparing any absolute to it** — the paired deltas on both sides still
+stand, because each was measured against its own base in one sitting. The
+second session's anchor, taken on its own pre-rebase tip on a different
+container: **55.70 games/s mean of 8** (51.27-57.69), 33,631 dec/s,
+`host_calib_ms` 48-60 — which is *not* comparable to the 64.42 below for the
+same reason the two 2026-08-10 sittings below differ by 6.5 %.
+
 Re-anchored (`release`, mimalloc — the shipped configuration) at the
 2026-08-10 twelfth-pass tip, **taken before the rebase onto `81c88580`**
 (`a37863a0` is the same engine code, one merge later). **The previous 70.65 anchor does not
@@ -284,6 +294,23 @@ Twelfth pass — the whole-board layer pass, four sites. Base `48ac252c`.
 | 2026-08-09 | `finalize_cast` routes its CR 113.10b stripped-set read through `permanents_with_abilities_removed`; the CR 602.5c lock check uses `computed_permanent` (`622b43ae`) | 5,411,392,050 Ir | 5,309,173,117 Ir (**-1.89 %**) | The guarded helper had existed since `c365ede8` and this caller never adopted it — it answers "nothing is stripped" off the gathered effect set on any board without a Turn to Frog. **Grep for the naive shape when a guarded helper lands**; a second copy of the pattern was still there a pass later. |
 | 2026-08-09 | `has_first_strikers` and `bands_with_other_qualities` read their combat participants under one freeze instead of computing the board (`a37863a0`, candidate 0(d)) | 5,309,173,117 Ir | 5,260,848,923 Ir (**-0.91 %**) | 2-6 creatures out of ~20 permanents. `has_first_strikers` also short-circuits on an empty combat. `bands_with_other_qualities` keeps the battlefield walk for ordering — its qualities are consumed positionally — and computes only the members. |
 | | **cumulative this pass** | **5,622,084,243 Ir** | **5,260,848,923 Ir (-6.43 %)** | base `48ac252c` vs tip **measured pre-rebase** (the four rows then rebased onto `81c88580`, whose changes are in the ML/client/lobby paths); four alternated `profiling-fast --no-default-features` callgrind A/Bs on the one fixed six-game workload. **Wall-clock, 6/6 alternated `--bench` pairs positive, mean +9.57 %** (base 14.49-16.45, cand 16.29-17.88 games_per_s_th) on the same two binaries — larger than the Ir delta, which is the expected direction for removing whole layer passes: each one is a gather plus ~20 per-card passes, and its cache traffic is what Ir under-weights. |
+
+Twelfth pass, **second concurrent session** — the state-based-action sweep.
+Base `81c88580`. **These four rows were measured on a tree that did not
+contain the four above, and vice versa**: the two sessions ran at the same
+time on the same branch and were joined by a rebase. Where they overlap (the
+CR 603.8 disarm, the CR 704.8 snapshot, `declare_attackers_banded`,
+`finalize_cast`) the merged tree keeps one implementation, so **the two
+cumulative figures describe overlapping work and must not be added.** The
+merged tip has not been re-measured; that is the first job next run.
+
+| date | change | before | after | how measured |
+|---|---|---|---|---|
+| 2026-08-10 | The SBA's ~20 rare whole-board sweeps ride one presence pass (`2038bb59`) | 5,620,660,987 Ir | 5,444,517,546 Ir (**-3.13 %**) | `check_state_based_actions` opened each rare state-based action with its own `battlefield.iter().filter(…).collect()` and every one came back empty: **178,224,638 Ir (3.17 %) in `spec_from_iter.rs:check_state_based_actions`**, plus **63,537,327 (1.13 %)** in hashbrown for the CR 704.8 ±1/±1 map and the soulbond id set. `sba_board_scan` answers "can this SBA fire at all" for all of them in one battlefield pass; each block keeps its original code behind an over-approximating flag, and the scan is retaken wherever the sweep can change the answer (flip, `BecomeCopyOf` revert, Persist/Undying return, defeated battle). Rode along, same shape: the CR 122.3 / 122.4 / soulbond / token-cleanup loops read before taking `&mut` (which unshares the zone, and for the token sweep the seat's whole `PlayerData`). `check_state_based_actions` inclusive **656,879,426 (11.69 %) → 485,902,312 (8.92 %), -26.0 %**. **This is the answer to the other session's "next up (1)"** — the ~21 collects per sweep were the cost, and a presence pass, not line-level costing, is what removes them. |
+| 2026-08-10 | The death sweep's layer pass skips permanents that can't be creatures (`f3c8670c`) | 5,444,517,546 Ir | 5,339,874,694 Ir (**-1.92 %**) | The CR 704.5g scan's `compute_battlefield()` was **155,605,066 Ir, 2.86 %**, the largest line in the sweep, and half a bench board is lands. `apply_layers` computes each permanent independently, and only `AddCardType` / `RemoveCardType` / `SetCardTypes` write `card_types`, so with none live the noncreatures' views are never built and the scan's existing `unwrap_or_else(is_creature)` fallback gives the same answer. Bestow's layer-4 Creature strip is card-intrinsic, so a bestowed permanent is still computed and still reads noncreature. **The other session's note that the sweep's layer pass is "genuinely whole-board" is half right** — it is whole-board over *creatures*, and `compute_battlefield_creatures` now exists for any caller in that shape. |
+| 2026-08-10 | The SBA presence scan runs once per sweep and walks each vector once (`129a1b0e`) | 5,339,874,694 Ir | 5,271,399,214 Ir (**-1.28 %**) | The scan itself was **46,166,408 + 45,227,168 Ir (1.68 %)** across its two sites. The post-death retake is unnecessary — the flags over-approximate and everything before it only *removes* permanents, which can only turn a flag off — so it is taken only when a Persist/Undying return actually grew the board. The per-card body walked `keywords` ×3, `supertypes` ×2, `card_types` ×2 and `enchantment_subtypes` ×2 through `contains` / `is_planeswalker` / `is_battle` / `is_aura`; it now walks each once with a `match`, and the two `counter_count` lookups sit behind `counters.is_empty()`. |
+| 2026-08-10 | Three call sites stop rebuilding a whole-board layer view they already have (`0045cbc0`) | 5,271,399,214 Ir | 5,013,096,289 Ir (**-4.90 %**) | Found independently of the other session and overlapping it: `declare_attackers_banded` (three passes here, four there — same fix, theirs landed), `finalize_cast`'s CR 113.10b strip set (same fix, theirs landed), and **`declare_blockers`, which is this row's unique half** — its own pass plus CR 509.1b's Okk power read, 132,691,778 Ir over 7,754 calls, with nothing between them mutating the board. `compute_battlefield` inclusive **602,521,248 (11.43 %) → 362,605,632 (7.23 %)** on this session's tree. |
+| | **cumulative, second session** | **5,620,660,987 Ir** | **5,013,096,289 Ir (-10.81 %)** | base `81c88580` vs this session's pre-rebase tip, both `profiling-fast --no-default-features`, every side built and run in one sitting on one container. **Wall-clock: 8/8 alternated `release` + mimalloc pairs positive, 50.24 -> 55.70 games/s, +10.85 %** (per-pair deltas +2.89 / +7.57 / +4.75 / +5.75 / +4.67 / +7.65 / +4.83 / +5.50; dec/s 30,341 -> 33,631, +10.84 %; turns/game 26.98, stalls 0, all 160 pairs split on all 16 runs, `host_calib_ms` 48-60). **Ir and wall-clock agree to 0.05 points**, which is the shape to expect when every row removes work rather than allocations — contrast the eleventh pass's allocation row, where -17.09 % Ir was worth +1.7 % at `release`. |
 
 ## Profile of record
 
