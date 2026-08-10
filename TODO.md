@@ -33,10 +33,12 @@ two binaries). Suite green, golden traces byte-identical on every row.
   **How to find the next: `--tree=caller` on `compute_battlefield`, divide
   each caller's call count by how many times it can actually run.** 9,928
   over ~2,600 declarations — the ratio *is* the bug.
-- **Next up, in order**: (1) the SBA's remaining ~18 unconditional
-  whole-board walks — candidate 0.25(b)'s leftover, same treatment, gate on
-  the latch or printed predicate the reader already uses. (2) **Re-take the
-  profile of record first** — it is one pass stale and ~7,300
+- **Next up, in order**: (1) the SBA's remaining whole-board walks —
+  **not** its layer pass, which is one per sweep and genuinely whole-board;
+  the target is the **227,678 `Vec` collects inlined into the sweep, 3.23 %,
+  ~21 per sweep**. Cost them line-level (`--auto=yes`) first; an empty
+  `collect()` doesn't allocate, so only the walks that find something pay.
+  (2) **Re-take the profile of record** — it is one pass stale and ~7,300
   `compute_battlefield` calls are gone from it. (3) candidate 1(a),
   `printed_colors` -> `ColorSet` (2.72 %, 390 k allocations). (4) candidate
   0.5, the unconditional `perform_action` checkpoint (~9.5 %). (5) the

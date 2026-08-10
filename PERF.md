@@ -535,9 +535,19 @@ list, in order: `check_state_based_actions` (10,670 / ~7,500 sweeps — still
    (`flip_when_predicate`, `sacrifice_when`, `state_trigger`,
    `sacrifice_and_burn_when_stolen`, `sacrifice_when_you_control_no_other`,
    the `WhileSourceTapped` / `WhileSourceAttached` effect sweeps, …).
-   **(a)** `compute_battlefield` is called **10,670 times from ~7,500
-   sweeps** (156 M, 2.7 %) — more than one whole-board layer pass per sweep.
-   Find the second one; that is also the top of candidate (A).
+   **(a)** ~~"more than one whole-board pass per sweep — find the second
+   one"~~ — **there is no second one; the sweep count was wrong.** At the
+   twelfth pass's tip `compute_battlefield` runs 10,670× from the sweep and
+   `effective_life` runs 21,502× = 2 per sweep, so there are **~10,750
+   sweeps, not ~7,500** — i.e. exactly one pass each, and it is the CR 704.5g
+   lethal-damage/toughness read, which genuinely wants the whole board. The
+   other site (the `flip_when_has_keyword` guard) never fires on the bench.
+   **What is actually left in the sweep**: its own code is only 6.2 M
+   (0.12 % — a leaf-free function), `compute_battlefield` is 156 M (2.96 %),
+   and **178 M (3.23 %) is 227,678 `Vec` collects inlined into it — ~21 per
+   sweep at ~780 Ir each**, the remaining whole-board walks. Note an *empty*
+   `collect()` does not allocate, so these are the walks that find
+   something; cost them with a line-level `--auto=yes` run before gating.
    **(b)** ~~the steal-penalty disarm and the CR 704.8 ±1/±1 snapshot~~ —
    **done, -1.82 %.** What is left of the item: the other ~18 whole-board
    walks the sweep does unconditionally (`flip_when_predicate`,
