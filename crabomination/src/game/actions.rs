@@ -13007,6 +13007,16 @@ impl GameState {
             // caller's "did a creature make this mana" flag (CR 106.12 /
             // Cursed Totem-style restrictions); it comes off the same
             // `ComputedPermanent` as `stripped`, and no mana has moved yet.
+            //
+            // The grant/intrinsic halves are indexed only at
+            // `ability_index >= printed_count`, and the printed count is a
+            // definition read with no layer in it — so decide it first and
+            // skip both for a printed index. That is nearly every
+            // activation (a land tapping for mana is index 0), and each one
+            // was a whole-board `grant_scan` plus a second
+            // `computed_permanent`.
+            let printed_count = self.battlefield[pos].definition.activated_abilities.len();
+            let want_extra = ability_index >= printed_count;
             let (stripped, is_creature, granted, intrinsic, land_mana_lost) =
                 self.with_frozen_layers(|g| {
                     let cp = g.computed_permanent(card_id);
@@ -13030,15 +13040,14 @@ impl GameState {
                         cp.as_ref().is_some_and(|c| {
                             c.card_types.contains(&crate::card::CardType::Creature)
                         }),
-                        g.granted_abilities_for(card_id),
-                        g.intrinsic_land_mana_abilities(card_id),
+                        if want_extra { g.granted_abilities_for(card_id) } else { Vec::new() },
+                        if want_extra { g.intrinsic_land_mana_abilities(card_id) } else { Vec::new() },
                         land_mana_lost,
                     )
                 });
             if is_creature {
                 *creature_mana_before = Some(self.players[p].mana_pool.clone());
             }
-            let printed_count = self.battlefield[pos].definition.activated_abilities.len();
             if ability_index < printed_count {
                 let raw = self.battlefield[pos]
                     .definition
