@@ -3316,6 +3316,187 @@ fn main_phase_action(state: &GameState, seat: usize) -> GameAction {
 /// kick. Plain casts are left unvalidated for the caller to probe lazily in
 /// score order, which is what keeps a typical tick down to one or two
 /// engine probes instead of the whole hand.
+/// Which specialty blocks of [`cast_candidates`] a zone can still produce.
+///
+/// Each block used to take its own cold walk of the hand (or graveyard) to
+/// ask "is there a card here for me", and the answer is no for nearly all
+/// of them on nearly every board. One warm walk answers all of them at
+/// once; a clear bit skips the block outright. Bits over-approximate —
+/// each block still applies its own filter — so a set bit costs only the
+/// walk it always paid.
+mod spec {
+    // hand
+    pub const DELVE: u32 = 1 << 0;
+    pub const CONVOKE: u32 = 1 << 1;
+    pub const GIFT: u32 = 1 << 2;
+    pub const SPREE: u32 = 1 << 3;
+    pub const CONSPIRE: u32 = 1 << 4;
+    pub const KICKER: u32 = 1 << 5;
+    pub const KICKERS: u32 = 1 << 6;
+    pub const MULTIKICKER: u32 = 1 << 7;
+    pub const BESTOW: u32 = 1 << 8;
+    pub const ADVENTURE: u32 = 1 << 9;
+    pub const OMEN: u32 = 1 << 10;
+    pub const PROTOTYPE: u32 = 1 << 11;
+    pub const SPLIT: u32 = 1 << 12;
+    pub const BACK: u32 = 1 << 13;
+    pub const ALT_COST: u32 = 1 << 14;
+    // battlefield
+    pub const PREPARED: u32 = 1 << 18;
+    // graveyard
+    pub const GY_AFTERMATH: u32 = 1 << 15;
+    pub const GY_RECAST: u32 = 1 << 16;
+    pub const GY_BACK: u32 = 1 << 17;
+    /// The one graveyard loop that carries flashback, disturb, mayhem,
+    /// harmonize and the `from_graveyard` activated abilities.
+    pub const GY_LOOP: u32 = GY_RECAST;
+}
+
+/// Run one gated specialty block. Release skips it when its bit is clear;
+/// debug runs it anyway and asserts the gate against what it actually
+/// emitted, so the whole suite audits the mask on real boards rather than
+/// against a re-derived list.
+macro_rules! gated_block {
+    ($mask:expr, $bit:expr, $out:expr, $body:block) => {{
+        let gate = $mask & $bit != 0;
+        if gate || cfg!(debug_assertions) {
+            let before = $out.len();
+            $body
+            debug_assert!(
+                gate || $out.len() == before,
+                concat!("cast_candidates gate ", stringify!($bit), " skipped a real candidate"),
+            );
+        }
+    }};
+}
+
+/// The three board facts the candidate blocks used to take a walk each for.
+struct BoardFacts {
+    /// SOS Repartee: steers the plain-cast block toward creature-aimed
+    /// sibling candidates.
+    repartee: bool,
+    /// A `GrantConvokeToSpells` static is on the board, so the convoke
+    /// block's per-card grant test can find something.
+    grants_convoke: bool,
+    /// Some permanent carries a prepared inset spell.
+    prepared: bool,
+}
+
+impl BoardFacts {
+    fn gather(state: &GameState, seat: usize) -> Self {
+        let mut f = BoardFacts { repartee: false, grants_convoke: false, prepared: false };
+        for c in state.battlefield.iter() {
+            if c.controller != seat {
+                continue;
+            }
+            f.repartee = f.repartee
+                || c.definition.triggered_abilities.iter().any(is_repartee_trigger);
+            f.grants_convoke = f.grants_convoke
+                || c.definition.static_abilities.iter().any(|sa| {
+                    matches!(sa.effect, crate::effect::StaticEffect::GrantConvokeToSpells { .. })
+                });
+            f.prepared = f.prepared
+                || (c.definition.prepare_spell.is_some()
+                    && c.counter_count(crate::card::CounterType::Prepared) > 0);
+        }
+        f
+    }
+}
+
+/// One walk of `seat`'s hand for every specialty block's entry predicate.
+fn hand_specialties(state: &GameState, seat: usize, facts: &BoardFacts) -> u32 {
+    use crate::card::Keyword;
+    let mut m = 0;
+    for c in state.players[seat].hand.iter() {
+        let def = &c.definition;
+        for kw in &def.keywords {
+            m |= match kw {
+                Keyword::Delve => spec::DELVE,
+                Keyword::Convoke | Keyword::Improvise => spec::CONVOKE,
+                Keyword::Conspire => spec::CONSPIRE,
+                Keyword::Kicker(_) | Keyword::Offspring(_) => spec::KICKER,
+                Keyword::Multikicker(_) => spec::MULTIKICKER,
+                _ => 0,
+            };
+        }
+        if def.gift.is_some() {
+            m |= spec::GIFT;
+        }
+        if matches!(
+            def.effect,
+            Effect::Spree { .. }
+                | Effect::Tiered { .. }
+                | Effect::ChooseModesCast { .. }
+                | Effect::ChooseModesByPoints { .. }
+        ) {
+            m |= spec::SPREE;
+        }
+        if !def.kicker_options.is_empty() {
+            m |= spec::KICKERS;
+        }
+        if def.bestow.is_some() {
+            m |= spec::BESTOW;
+        }
+        if def.adventure.is_some() {
+            m |= spec::ADVENTURE;
+        }
+        if def.omen.is_some() {
+            m |= spec::OMEN;
+        }
+        if def.prototype.is_some() {
+            m |= spec::PROTOTYPE;
+        }
+        if def.split.as_deref().is_some_and(|s| !s.aftermath) {
+            m |= spec::SPLIT;
+        }
+        if def.back_face.is_some() {
+            m |= spec::BACK;
+        }
+        if def.alternative_cost.is_some() {
+            m |= spec::ALT_COST;
+        }
+    }
+    // A convoke *grant* is a board property; the block tested it per hand
+    // card, which ran a whole-battlefield walk once per card per tick.
+    if facts.grants_convoke {
+        m |= spec::CONVOKE;
+    }
+    m
+}
+
+/// One walk of `seat`'s graveyard for the graveyard blocks' predicates.
+fn graveyard_specialties(state: &GameState, seat: usize) -> u32 {
+    use crate::card::Keyword;
+    let mut m = 0;
+    for c in state.players[seat].graveyard.iter() {
+        let def = &c.definition;
+        for kw in &def.keywords {
+            m |= match kw {
+                Keyword::Flashback(_)
+                | Keyword::JumpStart
+                | Keyword::GraveyardCast
+                | Keyword::Disturb(_)
+                | Keyword::Mayhem(_)
+                | Keyword::Harmonize(_) => spec::GY_RECAST,
+                _ => 0,
+            };
+        }
+        if c.granted_flashback_eot.is_some() || c.granted_harmonize_eot.is_some() {
+            m |= spec::GY_RECAST;
+        }
+        if def.activated_abilities.iter().any(|ab| ab.from_graveyard) {
+            m |= spec::GY_RECAST;
+        }
+        if def.split.as_deref().is_some_and(|s| s.aftermath) {
+            m |= spec::GY_AFTERMATH;
+        }
+        if c.may_cast_back_from_graveyard && def.back_face.is_some() {
+            m |= spec::GY_BACK;
+        }
+    }
+    m
+}
+
 fn cast_candidates(
     state: &GameState,
     seat: usize,
@@ -3330,11 +3511,14 @@ fn cast_candidates(
     // *lazily* at the pick site below, in descending score order, so a
     // typical tick probes one or two candidates instead of the whole hand.
     //
-    // SOS Repartee, computed once: it steers the plain-cast block toward
-    // offering creature-aimed sibling candidates.
-    let has_repartee = state.battlefield.iter().any(|c| {
-        c.controller == seat && c.definition.triggered_abilities.iter().any(is_repartee_trigger)
-    });
+    // One board walk and one hand walk for every block below — see
+    // `BoardFacts` / `spec`. SOS Repartee (`facts.repartee`) steers the
+    // plain-cast block toward offering creature-aimed sibling candidates.
+    let facts = BoardFacts::gather(state, seat);
+    let mask = hand_specialties(state, seat, &facts)
+        | graveyard_specialties(state, seat)
+        | if facts.prepared { spec::PREPARED } else { 0 };
+    let has_repartee = facts.repartee;
     let mut unvalidated: Vec<GameAction> = state.players[seat]
         .hand
         .iter()
@@ -3448,6 +3632,7 @@ fn cast_candidates(
     // pip total), then let `would_accept` confirm the reduced cost is
     // payable. Appended to the candidate set so the bot actually leverages
     // Treasure Cruise / Dig Through Time / Gurmag Angler off a full bin.
+    gated_block!(mask, spec::DELVE, castable, {
     for c in state.players[seat]
         .hand
         .iter()
@@ -3491,6 +3676,7 @@ fn cast_candidates(
             castable.push(action);
         }
     }
+    });
 
     // Convoke / Improvise (CR 702.51 / 702.126): tap untapped creatures
     // (or artifacts) to pay {1} each. Without this the bot never taps a
@@ -3498,9 +3684,10 @@ fn cast_candidates(
     // capped at the spell's generic pips and drawn from creatures that
     // aren't already committed to combat; `would_accept` is the final gate,
     // so an unaffordable-even-with-help spell just doesn't make the list.
+    gated_block!(mask, spec::CONVOKE, castable, {
     for c in state.players[seat].hand.iter() {
         let convoke = c.definition.keywords.contains(&crate::card::Keyword::Convoke)
-            || state.spell_granted_convoke(seat, c);
+            || (facts.grants_convoke && state.spell_granted_convoke(seat, c));
         let improvise = c.definition.keywords.contains(&crate::card::Keyword::Improvise);
         if !convoke && !improvise {
             continue;
@@ -3554,6 +3741,7 @@ fn cast_candidates(
             }
         }
     }
+    });
 
     // Gift (CR 702.165): a spell/permanent with a gift can be cast via
     // `CastGift`, promising the gift to resolve its enhanced `gifted_effect`
@@ -3562,6 +3750,7 @@ fn cast_candidates(
     // (Scrapshooter, Starfall Invocation) would otherwise be wasted. Offer the
     // promised variant alongside; the gifted effect's target slots are picked
     // from `gifted_effect`, and `would_accept` is the final gate.
+    gated_block!(mask, spec::GIFT, castable, {
     for c in state.players[seat]
         .hand
         .iter()
@@ -3594,6 +3783,7 @@ fn cast_candidates(
             castable.push(action);
         }
     }
+    });
 
     // Spree (CR 702.172) / Tiered / ChooseModesCast: these must be cast via
     // `CastSpellSpree` with the chosen modes stamped — a plain `CastSpell`
@@ -3601,6 +3791,7 @@ fn cast_candidates(
     // every-mode combination for Spree so a bot with mana up can escalate
     // rather than always firing the cheapest tier; `would_accept` gates
     // affordability, so unpayable combinations drop out on their own.
+    gated_block!(mask, spec::SPREE, castable, {
     for c in state.players[seat].hand.iter() {
         let (modes, combo): (Vec<&Effect>, bool) = match &c.definition.effect {
             Effect::Spree { modes } => (modes.iter().map(|m| &m.effect).collect(), true),
@@ -3644,12 +3835,14 @@ fn cast_candidates(
             }
         }
     }
+    });
 
     // SOS Prepare — a prepared creature's inset spell is a castable
     // resource: offer `CastPrepareSpell` whenever the cost is payable and
     // the spell has a legal target (`would_accept` gates timing/cost).
     // Casting unprepares the creature; enters-prepared bodies were
     // previously dead weight under bot control.
+    gated_block!(mask, spec::PREPARED, castable, {
     for c in state.battlefield.iter().filter(|c| c.controller == seat) {
         let Some(spell) = c.definition.prepare_spell.as_deref() else { continue };
         if c.counter_count(crate::card::CounterType::Prepared) == 0 {
@@ -3683,6 +3876,7 @@ fn cast_candidates(
             castable.push(action);
         }
     }
+    });
 
     // Splice onto Arcane (CR 702.47): splice every affordable partner onto an
     // Arcane spell the bot is casting anyway. `spliceable` already dry-ran the
@@ -3735,6 +3929,7 @@ fn cast_candidates(
     // spell. The bot conspires whenever it can — the copy is strictly upside
     // for the targeted/value spells it appears on. `would_accept` confirms the
     // base cost is still payable after the (free, tap-only) conspire cost.
+    gated_block!(mask, spec::CONSPIRE, castable, {
     for c in state.players[seat]
         .hand
         .iter()
@@ -3786,6 +3981,7 @@ fn cast_candidates(
             castable.push(action);
         }
     }
+    });
 
     // Kicker / Offspring (CR 702.32 / 702.166): for any hand card with the
     // optional additional cost, offer a `CastSpellKicked` candidate. Targets
@@ -3793,6 +3989,7 @@ fn cast_candidates(
     // (typically broader) branch, so a kicked Tear Asunder can aim at a
     // creature. `would_accept` validates the full base+kicker cost, so this is
     // only added when affordable.
+    gated_block!(mask, spec::KICKER, castable, {
     for c in state.players[seat]
         .hand
         .iter()
@@ -3829,9 +4026,11 @@ fn cast_candidates(
             castable.push(action);
         }
     }
+    });
 
     // CR 702.32b — "Kicker {A} and/or {B}": offer the largest affordable
     // subset (both halves before either alone; each rider is pure upside).
+    gated_block!(mask, spec::KICKERS, castable, {
     for c in state.players[seat]
         .hand
         .iter()
@@ -3872,9 +4071,11 @@ fn cast_candidates(
             castable.push(action);
         }
     }
+    });
 
     // Multikicker (CR 702.33c): offer the *biggest affordable* kick count
     // (probed 4 → 1 via `would_accept`, which validates base + N×kick).
+    gated_block!(mask, spec::MULTIKICKER, castable, {
     for c in state.players[seat]
         .hand
         .iter()
@@ -3905,11 +4106,13 @@ fn cast_candidates(
             }
         }
     }
+    });
 
     // Bestow (CR 702.103): for any hand card with a bestow cost, offer a
     // `CastBestow` candidate that enchants the bot's sturdiest creature (the
     // host most likely to stick, so the Aura keeps its value). `would_accept`
     // validates the full bestow cost, so this is only added when affordable.
+    gated_block!(mask, spec::BESTOW, castable, {
     for c in state.players[seat]
         .hand
         .iter()
@@ -3934,12 +4137,14 @@ fn cast_candidates(
             castable.push(action);
         }
     }
+    });
 
     // Adventure (CR 715): for any hand card with an adventure half that
     // *targets* something (removal / bounce / pump — Stomp, Petty Theft,
     // Swift End, Boulder Rush), offer a `CastAdventure` candidate. Token /
     // card-draw adventures are skipped here so the bot still prefers playing
     // those cards as creatures; the interactive halves are pure tempo wins.
+    gated_block!(mask, spec::ADVENTURE, castable, {
     for c in state.players[seat].hand.iter() {
         let Some(adv) = c.definition.has_adventure() else { continue };
         if !adv.effect.requires_target() {
@@ -3961,10 +4166,12 @@ fn cast_candidates(
             castable.push(action);
         }
     }
+    });
 
     // Omen (CR 702.183): for any hand card with an Omen half that *targets*
     // something, offer a `CastOmen` candidate (the card shuffles back into the
     // library on resolution, so the creature is still drawable later).
+    gated_block!(mask, spec::OMEN, castable, {
     for c in state.players[seat].hand.iter() {
         let Some(omen) = c.definition.has_omen() else { continue };
         if !omen.effect.requires_target() {
@@ -3986,10 +4193,12 @@ fn cast_candidates(
             castable.push(action);
         }
     }
+    });
 
     // Prototype (CR 702.160): for any hand card with a prototype face, offer
     // a `CastPrototype` candidate. The smaller colored cost is often the only
     // affordable line early; the body's ETB auto-targets through the cast path.
+    gated_block!(mask, spec::PROTOTYPE, castable, {
     for c in state.players[seat].hand.iter() {
         if c.definition.has_prototype().is_none() {
             continue;
@@ -4005,10 +4214,12 @@ fn cast_candidates(
             castable.push(action);
         }
     }
+    });
 
     // Split cards (CR 709): for any hand card with a non-aftermath split,
     // offer a `CastSplitRight` candidate (the left half is already covered by
     // the plain `CastSpell` path). Auto-target the right half's effect.
+    gated_block!(mask, spec::SPLIT, castable, {
     for c in state.players[seat].hand.iter() {
         let Some(split) = c.definition.has_split() else { continue };
         if split.aftermath {
@@ -4031,9 +4242,11 @@ fn cast_candidates(
             castable.push(action);
         }
     }
+    });
 
     // Aftermath (CR 702.127): cast the right half of a split card from the
     // graveyard. `would_accept` enforces the graveyard-only + timing rules.
+    gated_block!(mask, spec::GY_AFTERMATH, castable, {
     for c in state.players[seat].graveyard.iter() {
         let Some(split) = c.definition.has_split().filter(|s| s.aftermath) else { continue };
         let (target, additional_targets) = if split.right.effect.requires_target() {
@@ -4053,10 +4266,12 @@ fn cast_candidates(
             castable.push(action);
         }
     }
+    });
 
     // Flashback / Jump-start (CR 702.34/702.103) and Disturb (CR 702.146):
     // recast graveyard cards. `would_accept` enforces zone, timing, and an
     // affordable cost, so these only surface when actually castable.
+    gated_block!(mask, spec::GY_LOOP, castable, {
     for c in state.players[seat].graveyard.iter() {
         use crate::card::Keyword;
         let recastable = c.effective_flashback().is_some()
@@ -4169,6 +4384,7 @@ fn cast_candidates(
             }
         }
     }
+    });
 
     // MDFC back faces (CR 712): cast the back of a hand MDFC, or the back of a
     // graveyard MDFC carrying the one-shot `may_cast_back_from_graveyard`
@@ -4177,6 +4393,7 @@ fn cast_candidates(
     // zone, so these only surface when actually castable. (Land backs are
     // played via PlayLandBack, handled by the land logic, so they're skipped
     // here.)
+    gated_block!(mask, spec::BACK | spec::GY_BACK, castable, {
     let back_sources = state.players[seat].hand.iter().chain(
         state.players[seat]
             .graveyard
@@ -4208,6 +4425,7 @@ fn cast_candidates(
             castable.push(action);
         }
     }
+    });
 
     // Adventure creature (CR 715) and plotted cards (CR 702.170d): cast the
     // creature half / a plotted card from exile. `would_accept` enforces the
@@ -4248,6 +4466,7 @@ fn cast_candidates(
     // `CastSpellAlternative` candidate. `would_accept` validates the alt cost
     // and its `condition` gate (e.g. Spectacle's opponent-lost-life), so a
     // Skewer the Critics is only offered for {R} once an opponent has bled.
+    gated_block!(mask, spec::ALT_COST, castable, {
     for c in state.players[seat].hand.iter().filter(|c| {
         c.definition.alternative_cost.as_ref().is_some_and(|a| {
             a.exile_filter.is_none()
@@ -4287,6 +4506,7 @@ fn cast_candidates(
             castable.push(action);
         }
     }
+    });
 
     let mut out: Vec<(GameAction, bool)> = Vec::with_capacity(castable.len() + unvalidated.len());
     out.extend(castable.into_iter().map(|a| (a, true)));
