@@ -359,7 +359,22 @@ re-take.
 
 | date | change | before | after | how measured |
 |---|---|---|---|---|
+| 2026-08-10 | The trigger dispatcher's three per-card grant lookups ride board-level presence gates | 3,812,623,112 Ir | 3,768,577,483 Ir (**-1.155 %**) | `dispatch_triggers_for_events` walks the battlefield once per event batch — 52,332 batches over six games, ~18 permanents each — and asked three questions of every permanent that only the *board* can answer `yes` to. `statics_granted_triggers_with` was **34,049,232 Ir / 0.89 % over 945,812 calls, 36 Ir each**, and its three legs are a `GrantTriggeredAbility` list (board), `turn_granted_triggers` (board) and the card's own `station` bands (per-card); with the first two empty it walks two empty slices and returns an empty `Vec`. `granted_triggers(card.id)` was 3,783,248 Ir of `HashMap` probing against a map that is empty; `equip_granted_triggers_with` 945,812 Ir against an empty source list. Hoisting `!trigger_grants.is_empty() \|\| !turn_granted_triggers.is_empty()`, `!granted_triggers_eot.is_empty()` and `!equip_grants.is_empty()` out of the loop and gating each call on its own flag (station stays per-card, so the gate is exactly the function's own non-empty condition) removes **44,045,629 Ir**, against ~38.8 M predicted from the call counts — the remainder is the call/return and `Vec` machinery around them. **Predicted and measured agreeing to 12 % is the check that the row is the change**: `cca74c29` landed in `bot_ladder.rs` mid-build, and an env-gated branch in the binary crate cannot account for a delta this size in the engine. Bench output byte-identical across all six games (24 decided, 0 undecided, 12/12 splits, rho -1.000). |
 | 2026-08-10 | The search's candidates share one determinized start state instead of rebuilding it each (`SimBases`) | 3,812,623,112 Ir | 3,815,798,240 Ir (**+0.083 %**) | **No win — reverted, and the reason retires a plausible-looking candidate.** `sim_start_state` is a pure function of `(state, seat, k)`, so `pick_attacks_scored` built the *identical* redeal for all ~8 candidates, `pick_blocks_scored` for all of its, and `pick_by_outcome` / `pick_sacrifice_value` for every finalist — 3-8 rebuilds of one answer per decision. Building it once and cloning per candidate reads **+0.08 %**, four times the documented build-to-build noise. **Why the asymptotics lie here: the redeal is not the cost, and the clone it saves is the clone you now make anyway.** `determinize_hidden`'s own work is two `SliceRandom::shuffle`s and a hand drain/redraw; what looks expensive — the two `PlayerData` unshares (~165 fields) and the library CoW copies — is paid *either way*, eagerly by `determinize_hidden` before or lazily by the simulation's first write after. What is actually removed is one library deep-copy (the searching seat never draws inside the horizon) and two shuffles, and that is smaller than the `Vec<GameState>` the cache lives in plus the enum dispatch. **The rule: before caching a pure function across a candidate loop, ask what fraction of its cost is work the candidates would each have done regardless.** |
+| | **cumulative, eighteenth pass** | **3,812,623,112 Ir** | **3,768,577,483 Ir (-1.155 %)** | one row landed and one reverted, both callgrind on the fixed six-game workload; no wall-clock delta claimed. |
+
+**What the pass leaves behind, as a rule.** *A per-card question only the
+board can answer `yes` to is a board-level flag with a per-card call
+attached.* The gather-hoisting passes already moved the board-level *work*
+out of these loops (`f87974c3` hoisted these very two grant scans in pass
+three); what stayed behind was the **call**, at 36 Ir a permanent a batch.
+How to find the next one: take `--tree=calling` on a hot loop body, list the
+callees whose per-call cost is *tiny* and whose call count is
+`permanents x batches`, and for each ask what its answer depends on. If
+every leg of the callee reads a collection the loop does not vary, the
+condition belongs above the loop. `check_state_based_actions` (7.30 %, 7.7
+`collect()`s per sweep) and `compute_battlefield` (6.99 %) are the two
+loops with that shape still unexamined.
 
 ## Profile of record
 

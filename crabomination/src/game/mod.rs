@@ -15433,6 +15433,14 @@ impl GameState {
             std::collections::HashSet::new();
         // `EventSpec::per_subject_cap` fires in this batch (deferred merge).
         let mut capped_fired_this_batch: Vec<(CardId, CardId)> = Vec::new();
+        // Presence gates for the three per-card grant lookups below. On a
+        // board that grants nothing each returns empty for every permanent,
+        // and the calls were 36 / 4 / 1 Ir of pure overhead — paid 945,812
+        // times each over six bench games. The station leg of
+        // `statics_granted_triggers_with` is per-card, so it stays per-card.
+        let any_static_grant = !trigger_grants.is_empty() || !self.turn_granted_triggers.is_empty();
+        let any_own_grant = !self.granted_triggers_eot.is_empty();
+        let any_equip_grant = !equip_grants.is_empty();
         for card in &self.battlefield {
             let stripped = stripped_ids.contains(&card.id);
             // Walk printed triggered abilities AND any transient
@@ -15442,13 +15450,22 @@ impl GameState {
             // (CR 603.3d) can be tracked per (source, index); granted
             // triggers are never once-per-turn and use a sentinel index.
             let n_printed = card.definition.triggered_abilities.len();
-            let static_granted = self.statics_granted_triggers_with(card, &trigger_grants);
-            let own_granted = self.granted_triggers(card.id);
+            let static_granted = if any_static_grant || !card.definition.station.is_empty() {
+                self.statics_granted_triggers_with(card, &trigger_grants)
+            } else {
+                Vec::new()
+            };
+            let own_granted: &[crate::card::TriggeredAbility] =
+                if any_own_grant { self.granted_triggers(card.id) } else { &[] };
             // Equipment/Aura-granted triggers belong to the *attachment*, not
             // the host, so they fire even when the host lost all abilities
             // (Contaminated Ground's tap trigger on a land it turned into a
             // Swamp — CR 613; the type change strips the land, not the Aura).
-            let equip_granted = self.equip_granted_triggers_with(card, &equip_grants);
+            let equip_granted = if any_equip_grant {
+                self.equip_granted_triggers_with(card, &equip_grants)
+            } else {
+                Vec::new()
+            };
             // A host that lost all abilities (Turn to Frog, "is a Swamp")
             // contributes none of its *own* triggers, but still carries its
             // attachments' equip-granted ones.

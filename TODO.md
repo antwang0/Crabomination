@@ -16,64 +16,57 @@ reference and want their own triage pass):
 
 ## NEXT (handoff — rewrite each run, keep under 15 lines)
 
-Branch `claude/modern_decks`. **Seventeenth pass: four perf commits,
--3.316 % Ir** (3,948,115,609 -> 3,817,208,224, base `8ca7df9f`,
-`profiling-fast --no-default-features` callgrind). Suite 18,836 green, golden
-traces byte-identical, clippy clean, bench output byte-identical.
+Branch `claude/modern_decks`. **Eighteenth pass: one perf commit, -1.155 %
+Ir** (3,812,623,112 -> 3,768,577,483, base `26b5d2c7`, `profiling-fast
+--no-default-features` callgrind), plus one measured no-win reverted and a
+full re-take of the profile of record. Bench output byte-identical.
 
-- **All four rows are one shape, and it is not the sixteenth pass's.** *A
-  hot helper computes the expensive half of its answer before asking the
-  cheap question that decides it.* `activate_ability_inner` built a
-  whole-board `grant_scan` for indices it never reaches (-0.58 %);
-  `clear_end_of_turn_effects` wrote 26 CoW fields on permanents with
-  nothing to clear, **844,428 `DerefMut`s / 1.37 %** (-0.70 %);
-  `damage_prevented_by_protection` took **five** `computed_permanent`s on
-  the source — 45 % of every such call in the program — before asking
-  whether the target has a protection keyword at all (-0.73 %); and
-  `activate_ability_inner` read its card's computed view **twice**, the
-  second outside any freeze scope, i.e. 18,386 whole-game gathers
-  (-1.35 %). **How to find the next one:** `--tree=calling` on a hot
-  function, then ask of each callee "how many of these N calls can
-  possibly change the answer". Gathers are down 165,336 -> 146,950.
+- **The row, and the shape it names.** *A per-card question only the board
+  can answer `yes` to is a board-level flag with a per-card call attached.*
+  `dispatch_triggers_for_events` asked three of them of every permanent in
+  every one of 52,332 batches — `statics_granted_triggers_with` alone was
+  **945,812 calls at 36 Ir**, walking two empty slices to return an empty
+  `Vec`. Pass three already hoisted these scans' *work*; what stayed was
+  the call. **How to find the next one:** `--tree=calling` on a hot loop,
+  list the callees whose per-call cost is tiny and whose count is
+  `permanents x batches`, and ask what each leg's answer depends on.
+- **The no-win, so nobody re-derives it.** The attack/block searches and
+  the planner rebuild the *identical* determinized start state per
+  candidate (`sim_start_state` is pure in `(state, seat, k)`). Caching it
+  reads **+0.083 %**: the `PlayerData` unshares and library CoW copies are
+  paid either way, eagerly by `determinize_hidden` or lazily by the sim's
+  first write, so only two shuffles and one library copy are actually
+  removed — less than the cache costs. Full row in PERF.
 - **Next up** (PERF candidates, all re-costed on this tip): (0) **the
-  attack search is 52.11 % of the program** — `pick_attacks_scored`, 630
-  calls, 3.2 M Ir each, playing a full turn cycle per candidate. No pass
-  has ever touched the search itself, only its inner loop. It is a
-  bot-quality question too, so it needs a `bot_ladder` win-rate gate; the
-  cheap first probe is "how often does the search actually depart from
-  greedy". (1) `would_accept` 14.22 %. (2) the auto-tap chain 12.67 % —
-  **its own body is 0.03 %, so do not spend a run on its scratch
-  allocations**. (3) `dispatch_triggers_for_events` 8.44 %, 2,867 Ir of
-  *self* per call with only 1.2 spec matches. (4) `scale_damage_to` takes
-  14,624 unfrozen gathers. (5) the allocator, ~16.5 %, still never
-  attacked head-on.
-- **The bench anchor moved down and it is the host.** 69.13 games/s here
-  against the recorded 81.93; `host_calib_ms` 49-85 vs 45-55. Ruled out the
-  one real confound — the `encode.rs` commit that landed mid-pass, which
-  under `codegen-units = 1` + LTO could have moved inlining crate-wide — by
-  re-running callgrind on the *merged* tip: **+0.014 % against the pass's
-  own number**, inside build-to-build noise. Stalls 0, determinism ok and
-  `turns_per_game` 26.98 on all six runs, RSS 21.8-22.4 MiB.
-- **Bugs**: the panic/unwrap sweep's fifth filter was **not** attempted
-  this pass — the run went to perf end to end. The item still wants a
-  filter that looks at the *callers* of a `pub(crate)` helper rather than
-  at a missing guard.
-- **Fetch before you build. This has now cost six sessions.** A fresh
-  clone's `git branch -a` shows only `main` and the session's own branch;
-  run `git fetch origin && git checkout -B claude/modern_decks
-  origin/claude/modern_decks` as the very first command.
-- **Env**: `cargo-nextest` is not in the image — use `cargo test
-  --workspace --exclude crabomination_client`. **Do not `pgrep -f "cargo
-  test --workspace"` in a wait loop: the loop's own command line matches
-  it and never exits** — this bit again this run; write a `.done` marker
-  file instead. Touching `crabomination_base` costs a ~14 min rebuild
-  (catalog + engine); engine-only is ~4.5 min, a callgrind run ~3.5 min.
-  Disk allowance ~30 G.
-- **Trackers**: TODO 892, roadmap 660, `PERF.md` **1,205** (passes one to
-  nine are now a seven-row index; the file still grew because the
-  seventeenth pass added four rows and a re-taken profile).
-  `INCOMPLETE_CARDS` 247. Next PERF trim: passes ten to thirteen, same
-  treatment.
+  attack search, 52.11 %** — still untouched, still needs a `bot_ladder`
+  win-rate gate, cheap first probe is "how often does the search depart
+  from greedy". (1) **`resolve_combat` 14.27 %, newly visible** — read the
+  CR 510.2 warning in candidate 0(f) first; a freeze across the apply loop
+  is a rules change, the safe subset is one assignment's pre-checks. (2)
+  **four `collect()` sites are 17.25 % between them** and none has ever
+  been taken: `compute_battlefield` 5.87 %, `cast_candidates` 4.43 %,
+  `mana_source_table` 3.49 %, `check_state_based_actions` 3.46 %. (3)
+  `would_accept` 14.21 %. (4) the allocator ~16.4 %, still never attacked.
+- **Bugs**: the panic sweep's fifth filter ran and is **clean** — see the
+  robustness section. All ten `i.min(xs.len() - 1)` clamps are guarded
+  against the empty-slice underflow. Five filters exhausted; the next one
+  should stop grepping and run the actor path with overflow checks on in
+  release for a few thousand games.
+- **Profile the binary in place.** `split-debuginfo = "unpacked"` puts the
+  DWARF beside it, so a copy counts instructions right and annotates every
+  frame `???`. Cost this run one wasted base profile.
+- **Another session pushes to this branch.** `cca74c29` landed mid-run and
+  needed a rebase; check `git log origin/claude/modern_decks` before
+  measuring, and re-take the base if it touched the engine.
+- **Env**: `cargo-nextest` is not in the image — `cargo test --workspace
+  --exclude crabomination_client`. Do not `pgrep -f "cargo test"` in a wait
+  loop (the loop matches itself); use a `.done` marker. **Do not run the
+  suite build and a profiling build at once** — both compile the engine
+  crate, load hits 8 on 4 cores and each takes 3x as long. Engine
+  `profiling-fast` alone is ~8 min, a callgrind run ~4 min.
+- **Trackers**: TODO 9xx, roadmap 660, `PERF.md` ~1.2k (passes one to
+  thirteen are now two index tables). Next PERF trim: passes fourteen to
+  sixteen, same treatment.
 
 ## Environment note
 
