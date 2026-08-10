@@ -7376,7 +7376,53 @@ impl GameState {
         if let Some(fx) = self.frozen_effects() {
             return strip(self, &fx);
         }
+        // The gather is the whole cost here: `dispatch_triggers_for_events` is
+        // `&mut self`, so it runs unfrozen and rebuilds the full effect set
+        // once per dispatch to answer one bit that is false on every board
+        // without a strip effect. Ask the cheap presence gate first — it walks
+        // the battlefield once instead of gathering.
+        if !self.ability_strip_in_scope() {
+            debug_assert!(
+                !self
+                    .gather_continuous_effects()
+                    .iter()
+                    .any(|e| matches!(e.modification, Modification::RemoveAllAbilities)),
+                "ability_strip_in_scope missed a RemoveAllAbilities source",
+            );
+            return Vec::new();
+        }
         strip(self, &self.gather_continuous_effects())
+    }
+
+    /// Cheap over-approximation of "the gathered effect set can contain a
+    /// layer-6 `RemoveAllAbilities`", answered without gathering. `false` is
+    /// authoritative; `true` only means the gather has to run.
+    ///
+    /// Six routes reach the modification and each is named here:
+    /// a resolved `continuous_effects` entry (Turn to Frog, Mercurial
+    /// Transformation, the treasure/land animations), an attached
+    /// `equipped_bonus.remove_abilities` (Heliod's Punishment),
+    /// `NoncreatureArtifactsLoseAbilities` (Titania's Song),
+    /// `NamedLandsNeutralized` (Alpine Moon), `BlightedLandsNeutralized`
+    /// (Ultima), and the two `static_ability_to_effects` arms
+    /// (`CreaturesLoseAllAbilities`, a replacing `LandTypeChanger`). The last
+    /// five are folded into [`card_can_strip_abilities`], which the emitting
+    /// blocks `debug_assert!` against so the gate can't drift from them; a
+    /// debug-only cross-check in `permanents_with_abilities_removed` re-runs
+    /// the gather whenever this says `false`, so the whole suite audits it.
+    fn ability_strip_in_scope(&self) -> bool {
+        self.continuous_effects
+            .iter()
+            .any(|e| matches!(e.modification, Modification::RemoveAllAbilities))
+            || self.battlefield.iter().any(card_can_strip_abilities)
+            || self.players.iter().any(|p| {
+                p.command
+                    .iter()
+                    .any(|c| c.command_zone_abilities_active() && card_can_strip_abilities(c))
+                    || p.emblems.iter().any(|em| {
+                        em.statics.iter().any(|sa| static_effect_strips_abilities(&sa.effect))
+                    })
+            })
     }
 
     /// Run `f` with the gathered continuous-effect set memoized, so every
@@ -7864,6 +7910,7 @@ impl GameState {
             // grants so they survive (same timestamp → stable insertion
             // order; CR 613.7 grant-after-removal).
             if bonus.remove_abilities {
+                debug_assert!(card_can_strip_abilities(card), "strip gate: equipped_bonus");
                 all_effects.push(ContinuousEffect {
                     timestamp: card.object_timestamp(),
                     source: card.id,
@@ -8398,6 +8445,7 @@ impl GameState {
                 ) {
                     continue;
                 }
+                debug_assert!(card_can_strip_abilities(card), "strip gate: Titania's Song");
                 use crate::card::SelectionRequirement as R;
                 all_effects.push(ContinuousEffect {
                     timestamp: card.object_timestamp(),
@@ -8662,6 +8710,7 @@ impl GameState {
                 matches!(sa.effect, crate::effect::StaticEffect::NamedLandsNeutralized)
             });
             let Some(name) = card.named_card.as_deref().filter(|_| has) else { continue };
+            debug_assert!(card_can_strip_abilities(card), "strip gate: Alpine Moon");
             let hit: Vec<CardId> = self
                 .battlefield
                 .iter()
@@ -8700,6 +8749,7 @@ impl GameState {
             if !has {
                 continue;
             }
+            debug_assert!(card_can_strip_abilities(card), "strip gate: Ultima");
             let hit: Vec<CardId> = self
                 .battlefield
                 .iter()
@@ -20062,6 +20112,55 @@ pub(crate) fn effective_loyalty_abilities(
     abilities
 }
 
+/// True when `effect` can put a layer-6 `Modification::RemoveAllAbilities`
+/// into the gathered set — the static-ability half of the presence gate in
+/// [`GameState::ability_strip_in_scope`]. Over-approximates: the state gates
+/// (counters, turn, class level, predicate) are ignored, so a `true` here only
+/// means "gather and check". Every gather site that emits the modification
+/// `debug_assert!`s against this or [`card_can_strip_abilities`], so a
+/// seventh source can't quietly appear without the gate learning about it.
+fn static_effect_strips_abilities(effect: &crate::effect::StaticEffect) -> bool {
+    use crate::effect::StaticEffect as SE;
+    match effect {
+        // Dress Down; Titania's Song; Alpine Moon; Ultima.
+        SE::CreaturesLoseAllAbilities
+        | SE::NoncreatureArtifactsLoseAbilities
+        | SE::NamedLandsNeutralized
+        | SE::BlightedLandsNeutralized => true,
+        // Blood Moon replaces; Urborg only adds.
+        SE::LandTypeChanger { replace, .. } | SE::LandTypeChangerWhileCounters { replace, .. } => {
+            *replace
+        }
+        // Gate wrappers — `static_effect_to_effects` recurses through these
+        // (and the stateful pass does for `WhileCondition`), so the predicate
+        // must too.
+        SE::WhileClassLevelAtLeast { inner, .. }
+        | SE::WhileYourTurn { inner }
+        | SE::WhileNotYourTurn { inner }
+        | SE::WhileCountersAtLeast { inner, .. }
+        | SE::WhileCondition { inner, .. } => static_effect_strips_abilities(inner),
+        _ => false,
+    }
+}
+
+/// True when `card` — on the battlefield, in the command zone, or synthesized
+/// for an emblem — can contribute a `RemoveAllAbilities` to the gathered set.
+/// Covers the attachment half (Heliod's Punishment's `remove_abilities`) plus
+/// every static-ability route, including CR 721.2a Station bands.
+fn card_can_strip_abilities(card: &CardInstance) -> bool {
+    let def = &card.definition;
+    if card.attached_to.is_some()
+        && def.equipped_bonus.as_ref().is_some_and(|b| b.remove_abilities)
+    {
+        return true;
+    }
+    def.static_abilities.iter().any(|sa| static_effect_strips_abilities(&sa.effect))
+        || def
+            .station
+            .iter()
+            .any(|band| band.statics.iter().any(static_effect_strips_abilities))
+}
+
 /// Convert a `StaticAbility` from a source permanent into `ContinuousEffect`s.
 /// Takes the full `CardInstance` so Equipment/Aura abilities can use `attached_to`.
 fn static_ability_to_effects(
@@ -20470,23 +20569,26 @@ fn static_effect_to_effects(
                 }
             }
             // Dress Down — every creature loses all abilities (layer 6).
-            StaticEffect::CreaturesLoseAllAbilities => vec![ContinuousEffect {
-                timestamp,
-                source,
-                affected: AffectedPermanents::All {
-                    controller: None,
-                    card_types: vec![crate::card::CardType::Creature],
-                    exclude_source: false,
-                    color: None,
-                    token: None,
-                    colorless: false,
-                    owned_by_controller: None,
-                },
-                layer: Layer::L6Ability,
-                sublayer: None,
-                duration: EffectDuration::WhileSourceOnBattlefield,
-                modification: Modification::RemoveAllAbilities,
-            }],
+            StaticEffect::CreaturesLoseAllAbilities => {
+                debug_assert!(static_effect_strips_abilities(effect), "strip gate: Dress Down");
+                vec![ContinuousEffect {
+                    timestamp,
+                    source,
+                    affected: AffectedPermanents::All {
+                        controller: None,
+                        card_types: vec![crate::card::CardType::Creature],
+                        exclude_source: false,
+                        color: None,
+                        token: None,
+                        colorless: false,
+                        owned_by_controller: None,
+                    },
+                    layer: Layer::L6Ability,
+                    sublayer: None,
+                    duration: EffectDuration::WhileSourceOnBattlefield,
+                    modification: Modification::RemoveAllAbilities,
+                }]
+            }
             StaticEffect::SetBasePtForFilter { applies_to, power, toughness } => {
                 match selector_to_affected(applies_to, card) {
                     Some(affected) => vec![ContinuousEffect {
@@ -20564,6 +20666,10 @@ fn static_effect_to_effects(
                         if *replace {
                             // Blood Moon — lose other land types + abilities;
                             // the intrinsic mana ability follows the type.
+                            debug_assert!(
+                                static_effect_strips_abilities(effect),
+                                "strip gate: Blood Moon",
+                            );
                             vec![
                                 mk(Layer::L4Type, Modification::SetLandTypes(vec![*land_type])),
                                 mk(Layer::L6Ability, Modification::RemoveAllAbilities),

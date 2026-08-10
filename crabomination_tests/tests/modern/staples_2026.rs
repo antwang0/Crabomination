@@ -668,6 +668,36 @@ fn dress_down_strips_abilities() {
     assert!(cp.keywords.contains(&Keyword::Flying), "restored after Dress Down leaves");
 }
 
+/// CR 113.10b — a *static* ability-strip (Dress Down) suppresses printed
+/// triggers, not just keywords. Regression: the strip-presence gate in
+/// `permanents_with_abilities_removed` short-circuits the effect gather, so
+/// the static route has to reach it as well as the resolved-effect route
+/// (Mercurial Transformation, `stx::part_08`).
+#[test]
+fn dress_down_suppresses_printed_triggers() {
+    let mut g = two_player_game();
+    let witch = g.add_card_to_battlefield(0, catalog::sedgemoor_witch());
+    g.clear_sickness(witch);
+    drain_stack(&mut g);
+    g.add_card_to_battlefield(0, catalog::dress_down());
+    let before = g.battlefield.iter().filter(|c| c.is_token).count();
+    // Magecraft would make a Pest; stripped, it can't.
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("bolt castable");
+    drain_stack(&mut g);
+    assert_eq!(
+        g.battlefield.iter().filter(|c| c.is_token).count(),
+        before,
+        "magecraft stripped by Dress Down",
+    );
+}
+
 /// Ox of Agonas: ETB dumps the hand and draws three; escaping adds a counter.
 #[test]
 fn ox_of_agonas_etb_and_escape_counter() {

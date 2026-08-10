@@ -365,6 +365,8 @@ almost nothing ever reads the restore.**
 | | **cumulative this pass, re-measured on the rebased tip** | **4,733,001,860 Ir** (`95406ebe`) | **4,186,040,742 Ir (-11.56 %)** | Both rows were measured against `d95cd5ba` and then rebased over the other session's `ManaSourceInfo` row; the tip was re-measured rather than subtracted (-13.10 % before the correction row, against a -13.02 % measured on our own base — nothing cancelled in the join). Callgrind on `profiling-fast --no-default-features`, the one fixed six-game workload. Suite green (18,097 passed / 0 failed) and **all four golden traces byte-identical at every step** — they are fixed-seed bot games, i.e. exactly the path these rows change, which is the check that makes "the restore is never read" a measurement rather than an argument. The bench also plays the same 24 games to the same 12 split pairs. |
 | | **wall-clock, same pass** | **52.18 games/s** | **57.97 games/s (+11.10 %)** | Six alternated `--bench` pairs of `95406ebe` against `3e2ee6cb`, both built `release-fast` in one sitting on one container. **6/6 pairs positive**; per-pair +9.81 / +9.03 / +13.70 / +14.05 / +7.69 / +12.46 %; `decisions_per_s` 31,511 → 35,338 (+12.1 %); `turns_per_game` 26.98 and `stalls` 0 on all twelve runs. **Ir and wall-clock agree to half a point** — the shape to expect when a change removes work *and* allocations, and the counter-example to the thirteenth pass's null. A first take on the pre-correction tip read +13.19 % against the same base, i.e. the correction's +1.77 % Ir shows up in wall-clock too. `release-fast` absolutes never go in Baseline; the paired delta is the measurement. |
 
+| 2026-08-10 | `permanents_with_abilities_removed` asks a presence gate instead of gathering (`PENDING`) | 4,185,775,886 Ir (`2b736358`) | 4,079,432,834 Ir (**-2.54 %**) | The function was 130,147,835 Ir / 3.11 % — one full `gather_continuous_effects` per trigger dispatch to answer one bit that is `false` on every bench board, because `dispatch_triggers_for_events` is `&mut self` and so runs unfrozen. `ability_strip_in_scope` walks `continuous_effects` + the battlefield instead: ~400 Ir/call against ~2,190, and the function drops off the 99 % threshold entirely. `gather_continuous_effects_inner` 515,391,375 → 398,071,050 (**-22.8 %**, i.e. 59,378 of ~243 k gathers gone); `dispatch_triggers_for_events` 490 M → 395 M. Callgrind on `profiling-fast --no-default-features`, the fixed six-game workload; bench output byte-identical apart from wall-time. **The gate is `false`-authoritative, not exact** — six routes reach `RemoveAllAbilities` and each is named in the doc comment; the emitting blocks `debug_assert!` against the same two predicates, and a debug-only cross-check re-runs the gather whenever the gate says `false`, so the whole suite audits it on real boards. |
+
 **What the pass leaves behind, as a rule.** *A checkpoint is only worth its
 clone where something reads the restore.* Three questions find the next one:
 does this caller keep the state after an `Err` (usually not — dry runs throw
@@ -570,26 +572,20 @@ either being touched directly**, because the checkpoint was what made the
 unshares necessary. What the pass leaves at the top of the list, measured on
 its tip (4,113,269,670 Ir):
 
-- **(0) `permanents_with_abilities_removed` — 130,060,796 Ir, 3.16 %, one
-  full gather per trigger dispatch to answer one bit.** The largest single
-  identified removable item in the profile, promoted from the other
-  session's re-take (2.63 % there). `strip()` already gates on
-  `fx.iter().any(RemoveAllAbilities)` and the answer is "no" on every bench
-  board; what costs 3.16 % is *producing `fx`*, because
-  `dispatch_triggers_for_events` is `&mut self` and so runs at depth 0.
-  **Freezing the dispatcher's phase 1 does not fix it — checked, don't
-  spend the build**: phase 1 makes exactly one gather (this one), so a
-  memo has nothing to share it with. The fix is a presence gate that does
-  not gather, and **the reason this pass did not land it is that the gate
-  is hard to make sound**: `RemoveAllAbilities` reaches the layer system
-  from six places — `continuous_effects` (cheap to test), an attached
-  `equipped_bonus.remove_abilities` (mod.rs 7874), the artifact strip
-  (8412), the named-land hoser (8680), Blight counters on lands (8717),
-  and two `static_ability_to_effects` arms (20488, 20569). A hand-written
-  `StaticEffect` predicate over those goes stale the first time a card adds
-  a seventh. **Land it by making the gather's own six blocks call named
-  predicates and having the presence scan call the same six**, so the flag
-  cannot drift from the code it guards — not by re-deriving the list.
+- ~~**(0) `permanents_with_abilities_removed` — one full gather per trigger
+  dispatch to answer one bit**~~ — **done, -2.54 %.** See the Log row. The
+  soundness device that made it landable, and the one to reuse for the next
+  presence gate: the gate over-approximates and is only authoritative on
+  `false`; the six emitting blocks `debug_assert!` against the same two named
+  predicates (`card_can_strip_abilities` / `static_effect_strips_abilities`),
+  which recurse through the `While*` gate wrappers because
+  `static_effect_to_effects` does; and a `debug_assert!` in the gated function
+  re-runs the gather whenever the gate says `false`, so **every one of the
+  18 k suite tests audits the gate against the thing it approximates on a
+  real board** rather than against a re-derived list. Residual gate cost is
+  ~400 Ir/call over 59,378 calls (~0.57 %); a cached flag on `GameState`
+  would take that but has to be invalidated on every battlefield write —
+  not worth it at that size.
 - **(A) `compute_battlefield` is still the biggest layer consumer** —
   759 M inclusive (13.50 %) over 47,808 calls at 15,870 Ir each at the
   twelfth pass's base; the pass took ~7,300 of those calls out via
