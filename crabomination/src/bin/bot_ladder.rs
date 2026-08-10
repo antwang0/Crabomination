@@ -570,6 +570,32 @@ fn main() {
         }
     };
 
+    // Encoder ablation, mirroring selfplay_train's --ablate. A net
+    // trained with a block ablated has *never-trained* (random-init)
+    // weight columns for those features — gating it under the full
+    // encoder feeds live features into random weights, which measures
+    // garbage, not the ablation. The gate must encode exactly as the
+    // training run did.
+    if let Ok(spec) = std::env::var("CRAB_ABLATE") {
+        let off: Vec<String> =
+            spec.split(',').map(|s| s.trim().to_string()).collect();
+        for b in &off {
+            assert!(
+                matches!(b.as_str(), "lib" | "cast" | "rel" | "combat" | "kw"),
+                "CRAB_ABLATE: unknown block {b:?} (expected lib, cast, rel, combat, or kw)"
+            );
+        }
+        let on = |name: &str| !off.iter().any(|b| b == name);
+        crabomination::server::encode::set_encode_ablation(
+            on("lib"),
+            on("cast"),
+            on("rel"),
+            on("combat"),
+            on("kw"),
+        );
+        eprintln!("encoder ablation via CRAB_ABLATE: {spec} switched off");
+    }
+
     const CUBE_PAIRS: usize = 8;
     let field: Vec<Archetype> = match args.deck_set.as_str() {
         "fixed" => archetypes(),
