@@ -17,9 +17,9 @@ reference and want their own triage pass):
 ## NEXT (handoff — rewrite each run, keep under 15 lines)
 
 Branch `claude/modern_decks`. **Fourteenth pass: two perf commits and a
-correction, -11.56 % Ir / +11 % wall** (4,733,001,860 -> 4,186,040,742, base `95406ebe`,
-`profiling-fast --no-default-features` callgrind; wall-clock 52.38 -> 59.29
-games/s, 6/6 alternated `release-fast` pairs, taken before the correction).
+correction, -11.56 % Ir / +11.10 % wall** (4,733,001,860 -> 4,186,040,742,
+base `95406ebe`, `profiling-fast --no-default-features` callgrind;
+wall-clock 52.18 -> 57.97 games/s, 6/6 alternated `release-fast` pairs).
 Suite 18,097 green, all four
 golden traces byte-identical, clippy clean. Largest single pass since the
 `CardInstance` representation change.
@@ -62,6 +62,12 @@ golden traces byte-identical, clippy clean. Largest single pass since the
   `mod.rs`). The tip was **re-measured after the rebase** rather than
   subtracted: -13.10 % against their tip reproduces the -13.02 % measured
   against ours. Do that, don't add cumulative figures.
+- **The `release` anchor is re-taken at 62.48 games/s and it is *lower* than
+  the 71.52 it replaces while the code is 11 % faster** — different
+  container (`host_calib_ms` 50-60 vs 45-54). The base binary re-run an hour
+  apart read 52.38 then 52.18, i.e. within-sitting drift was 0.4 %, so
+  **keep the base binary around as a control instead of reasoning about
+  `host_calib_ms`.** Never subtract two anchors.
 - **Bugs**: the panic/unwrap sweep of the self-play path is still open; both
   halves of the old filter are swept clean, so it wants a *third* filter.
   ~183 `unwrap()`/`expect()` under `game/` + `bot.rs` needing triage.

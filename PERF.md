@@ -122,43 +122,44 @@ contention-immune, which makes it the better first look.
 
 ## Baseline
 
-**Anchored 2026-08-10 at `610df3b6`** (`release`, mimalloc — the shipped
-configuration), i.e. after the thirteenth pass's first two rows; its third
-(-0.49 %) landed later and is an order of magnitude below this bench's
-resolution. The `6bbdc38c` anchor below it
-(55.88) is superseded as an absolute and kept for the box-drift lesson: it
-was taken on a *different container*, and this one runs the same workload
-~25 % faster (`host_calib_ms` 45-54 against 49-61). **The two anchors do
-not subtract — nothing like +25 % happened.**
+**Anchored 2026-08-10 at `3e2ee6cb`** (`release`, mimalloc — the shipped
+configuration), i.e. on the fourteenth pass's tip.
 
 ```text
 bot_ladder --bench   release, rustc 1.95.0, 4-core VM, 3 worker threads
                      mimalloc (the default); measured on an idle box
-host_calib_ms        45-54 across the sitting   <- within-sitting only
+host_calib_ms        50-60 across the sitting   <- within-sitting only
 games                320
-games_per_s          67.96 / 71.00 / 73.99 / 72.98 / 74.03 / 72.56 / 70.79 /
-                     68.82   (mean 71.52, spread 8.5 % — take >=6 runs)
-decisions_per_s      mean 43185
+games_per_s          62.77 / 62.82 / 62.29 / 62.59 / 59.80 / 62.62 / 63.47 /
+                     63.50   (mean 62.48, spread 5.9 % — take >=6 runs)
+decisions_per_s      mean 37732
 turns_per_game       26.98
 stalls               0 (0.00 %)
-peak_rss_mib         22.1 - 22.5
+peak_rss_mib         21.7 - 22.1
 determinism          ok (all 160 pairs split, on all 8 runs)
 ```
 
-**The thirteenth pass's wall-clock is a null, and that is the expected
-result.** Six alternated `release` + mimalloc pairs of `a4947da6` against
-`610df3b6`, both built and run in one sitting on this container: **69.22 ->
-69.59 games/s, +0.54 % mean, 3/6 pairs positive** (paired deltas -4.73 /
-+8.66 / +1.70 / -0.26 / +3.37 / -5.29 %; the +8.66 pair's A run read
-`host_calib_ms` 61 against 46 everywhere else). The pass was -4.17 % at
-the tip measured; it finished at -4.64 %, and neither can be resolved by
-wall-clock on a box whose within-sitting
-spread is ±8 % — this is the "sub-5 % changes need callgrind" note above,
-demonstrated rather than asserted. **The pass's measurement is the Ir
-figure; this block is a health check** (turns/game 26.98, stalls 0,
-determinism ok, RSS flat), not a delta.
+**62.48 is *lower* than the 71.52 anchor it replaces and the code is 11 %
+faster. Read this before comparing any two anchors again.** The 71.52 was
+taken on a different container (`host_calib_ms` 45-54 against 50-60 here);
+this sitting's *base* binary measures the difference directly and says the
+box, not the code, moved. The pass's own delta is a paired A/B taken in one
+sitting on this container: **52.18 -> 57.97 games/s, +11.10 % mean, 6/6
+alternated `release-fast` pairs** of `95406ebe` against `3e2ee6cb`
+(per-pair +9.81 / +9.03 / +13.70 / +14.05 / +7.69 / +12.46 %;
+`decisions_per_s` 31,511 -> 35,338, +12.1 %; `turns_per_game` 26.98 and
+`stalls` 0 on all twelve runs). **It agrees with the -11.56 % instruction
+count to half a point**, which is what a change that removes work *and*
+allocations looks like — contrast the thirteenth pass's null.
+
+**The base binary is a usable control and cost nothing.** `bl_base` read
+52.38 mean and, an hour later, 52.18 on the same box: within-sitting
+drift here was ~0.4 %, so this sitting's pairs are trustworthy and the
+71.52/62.48 gap is not drift but a different machine. **Keep the base
+binary and re-run it, rather than reasoning about `host_calib_ms` alone.**
 
 The pre-merge anchors below are kept only for the box-drift lesson.
+
 
 **The previous 70.65 anchor does not compare at all**: it predates
 `998b2433` making `EvalWeights::default()` carry `determinize: 1`, and
@@ -362,7 +363,7 @@ almost nothing ever reads the restore.**
 | 2026-08-10 | The bot's dry runs stop taking a rollback nobody reads (`831054fb`) | 4,667,673,580 Ir | 4,136,463,189 Ir (**-11.38 %**) | Every simulation and probe in `bot.rs` throws its clone away on `Err` — `.ok()?`, `return None`, `return CombatSim::Incomplete`, `return true` — so the checkpoint's restore is never read. `dry_run` is that call with the argument written down once. The two simulation loops keep their historical fallback (rejected action → roll back → retry as a priority pass) through `sim_step`, which takes the checkpoint only when the action can need it: **when the action is itself a `PassPriority` the fallback re-runs the same call on the restored state and the engine is deterministic, so it fails identically** — abandoning is the same outcome one clone earlier. `ManualTapRequired`, the one error `perform_action` does not roll back, leaves exactly the state the retry would have seen, so that retry is kept. `perform_action` 70.45 % → 29.61 % inclusive; `GameState::clone` -54 %, `drop_in_place<GameState>` -46 %; **`Arc::clone_from_ref_in` — the CoW unshare — 803,672,462 → 479,320,016, -40 %**, which is the half of the win the clone and drop do not explain: with no checkpoint holding a second reference, a write to a zone the simulation already owns is a refcount check, not a deep copy. |
 | 2026-08-10 | `simulate_through_combat` keeps its checkpoints — its torn state *is* read (`3e2ee6cb`) | 4,113,269,670 Ir | 4,186,040,742 Ir (**+1.77 %**) | The correction to the row above, and the shape of the trap. Two of `simulate_through_combat`'s three callers throw the state away on `Incomplete`; the third — `combat_aware`'s `before` probe — runs it with `let _ =` and scores whatever comes back, so an abandoned walk would score a state left mid-action instead of the rolled-back one. **Nothing on the bench reaches it** (traces and the 24 bench games are byte-identical either way), which is why it was worth reverting rather than arguing about: the divergence is latent, not absent. **The audit rule: a `dry_run` site is only sound when the caller cannot read the state after an `Err`.** The other nine sites hold their clone in a local that dies on the failure path. |
 | | **cumulative this pass, re-measured on the rebased tip** | **4,733,001,860 Ir** (`95406ebe`) | **4,186,040,742 Ir (-11.56 %)** | Both rows were measured against `d95cd5ba` and then rebased over the other session's `ManaSourceInfo` row; the tip was re-measured rather than subtracted (-13.10 % before the correction row, against a -13.02 % measured on our own base — nothing cancelled in the join). Callgrind on `profiling-fast --no-default-features`, the one fixed six-game workload. Suite green (18,097 passed / 0 failed) and **all four golden traces byte-identical at every step** — they are fixed-seed bot games, i.e. exactly the path these rows change, which is the check that makes "the restore is never read" a measurement rather than an argument. The bench also plays the same 24 games to the same 12 split pairs. |
-| | **wall-clock, same pass** | **52.38 games/s** | **59.29 games/s (+13.19 %)** | Six alternated `--bench` pairs of `95406ebe` against `831054fb`, both built `release-fast` in one sitting on one container. **6/6 pairs positive**; per-pair +11.10 / +11.36 / +14.63 / +14.27 / +13.44 / +14.48 %; `decisions_per_s` 31,131 → 35,801 (+15.0 %); `turns_per_game` 26.98 and `stalls` 0 on all twelve runs; `host_calib_ms` 51-80 (the 80 sits on the *first* A run, i.e. against this row). **Ir and wall-clock agree to 0.1 points** — the shape to expect when a change removes work *and* allocations, and the counter-example to the thirteenth pass's null. `release-fast` absolutes never go in Baseline; the paired delta is the measurement. |
+| | **wall-clock, same pass** | **52.18 games/s** | **57.97 games/s (+11.10 %)** | Six alternated `--bench` pairs of `95406ebe` against `3e2ee6cb`, both built `release-fast` in one sitting on one container. **6/6 pairs positive**; per-pair +9.81 / +9.03 / +13.70 / +14.05 / +7.69 / +12.46 %; `decisions_per_s` 31,511 → 35,338 (+12.1 %); `turns_per_game` 26.98 and `stalls` 0 on all twelve runs. **Ir and wall-clock agree to half a point** — the shape to expect when a change removes work *and* allocations, and the counter-example to the thirteenth pass's null. A first take on the pre-correction tip read +13.19 % against the same base, i.e. the correction's +1.77 % Ir shows up in wall-clock too. `release-fast` absolutes never go in Baseline; the paired delta is the measurement. |
 
 **What the pass leaves behind, as a rule.** *A checkpoint is only worth its
 clone where something reads the restore.* Three questions find the next one:
