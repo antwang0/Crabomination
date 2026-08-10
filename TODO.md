@@ -16,48 +16,55 @@ reference and want their own triage pass):
 
 ## NEXT (handoff — rewrite each run, keep under 15 lines)
 
-Branch `claude/modern_decks`. **Thirteenth pass: three perf commits, -4.64 % Ir**
-(4,963,254,419 -> 4,733,001,860, base `a4947da6`, `profiling-fast
---no-default-features` callgrind). Suite 18827 green, golden traces
-byte-identical, clippy clean. **The profile of record is re-taken** — NEXT's
-item 1 for two runs — and PERF's *Profile of record* is current at
-`a4947da6`; the re-take reproduced the merged-tip figure to 0.03 %.
+Branch `claude/modern_decks`. **Fourteenth pass: two perf commits and a
+correction, -11.56 % Ir / +11 % wall** (4,733,001,860 -> 4,186,040,742, base `95406ebe`,
+`profiling-fast --no-default-features` callgrind; wall-clock 52.38 -> 59.29
+games/s, 6/6 alternated `release-fast` pairs, taken before the correction).
+Suite 18,097 green, all four
+golden traces byte-identical, clippy clean. Largest single pass since the
+`CardInstance` representation change.
 
-- **The three rows**: `ComputedPermanent.colors` becomes a `ColorSet` bitmask
-  (-2.55 %; `printed_colors` was 2.14 % over 683,248 calls and allocated
-  302,944 times), and auto-tap skips the per-card layer pass when no effect
-  in scope rewrites a land type (-1.66 %; `effective_mana_abilities_with`
-  -44.7 %), and `ManaSourceInfo.colors` becomes a bitmask + fixed array
-  (-0.49 %, the smallest row on PERF's list and labelled as such). The first
-  two are the same shape one level apart: **a hot path building a whole
-  computed object to read one field of it.**
-- **Next up, in order** (PERF's candidates 0 / 0.1 / 0.2, all newly costed):
-  (1) `bot::cast_candidates` — **169 M Ir / 3.55 % in `collect()` over 7,024
-  calls, 24,040 Ir each**, the most expensive single collect site in the
-  program and never profiled at line level. (2) `compute_battlefield`
-  materializes 224 M / 4.71 % of `Vec` over 17,718 calls — candidate 4(a).
-  (3) `permanents_with_abilities_removed` runs a **full gather 59,378 times**
-  (115 M / 2.42 % from the trigger dispatcher alone) to answer one bit that
-  is false on every bench board; the land-type gate is the pattern, but
-  enumerate every way a `RemoveAllAbilities` can enter the set first.
-- **The gating rule this pass paid for, and it is cheap**: mutate the
-  presence predicate and run the regression test. Deleting
-  `ReplaceBasicLandType` from `rewrites_land_types` fails
-  `cr_305_6_auto_tap_sees_a_rewritten_land_type` — that is how the flag was
-  checked instead of assumed. Do this for every new gate; it costs one
-  3-minute build.
-- **`--bench` at `release` is a null for this pass and the anchor is
-  re-taken (71.52 mean of 8, `host_calib_ms` 45-54).** Six alternated pairs
-  of base vs tip in one sitting read **+0.54 %, 3/6 positive** — a -4.64 %
-  Ir change is under this box's ±8 % spread. Don't read the 55.88 -> 71.52
-  anchor move as a win; it is a different container. Cost of learning this
-  properly: two 24-minute `release` builds. Next run, quote Ir and treat
-  `--bench` as a health check (turns/game, stalls, determinism, RSS).
-- **Bugs**: the panic/unwrap sweep of the self-play path is still open, but
-  **both halves of the filter that used to work are now swept clean** (all
-  13 `len() - 1` sites guarded, both remaining `debug_assert!`s fall through
-  to defined release behaviour) — see the robustness section. What is left
-  is ~183 `unwrap()`/`expect()` wanting triage and a *third* filter.
+- **Both rows are one shape: `perform_action` clones the whole state before
+  every action so a rejected one can be restored, and almost nothing reads
+  the restore.** (a) the mid-round priority pass cannot fail at all — 41.6 %
+  of a bot game's actions (-1.85 %); (b) every dry run in `bot.rs` throws the
+  clone away on `Err`, so `dry_run` / `sim_step` skip the checkpoint
+  (-11.38 %, of which +1.77 % was given back by the correction below).
+  **The clone is never the whole cost**: it shares every CoW
+  zone, so the next write deep-copies one that was uniquely owned a line
+  earlier. `Arc::clone_from_ref_in` fell 40 % without being touched.
+- **The rule to reuse**: a checkpoint is only worth its clone where something
+  reads the restore. Ask (1) does the caller keep the state after an `Err`,
+  (2) can the action fail at all, (3) if the fallback re-runs the same call
+  on the same state, does determinism make it a no-op.
+- **And the trap it walked into**, worth +1.77 % to undo (`3e2ee6cb`):
+  `simulate_through_combat` looked like a dry run, but one of its three
+  callers (`combat_aware`'s `before` probe) runs it with `let _ =` and scores
+  the state whatever comes back. **Check every caller, not the function.**
+  Nothing on the bench reached it — traces were identical either way — which
+  is why latent divergence has to be found by reading, not by testing.
+- **Next up, in order** (PERF's candidates, re-costed on this tip):
+  (1) **`permanents_with_abilities_removed`, 130,060,796 Ir / 3.16 %** — one
+  full gather per trigger dispatch to answer one bit that is false on every
+  bench board, and now the largest single removable item. **Freezing the
+  dispatcher's phase 1 does not fix it (checked — phase 1 makes exactly one
+  gather).** The gate must not gather, and it is only safe if the gather's
+  own six `RemoveAllAbilities` blocks and the presence scan call the *same*
+  named predicates — PERF candidate (0) lists all six sites. (2)
+  `bot::cast_candidates`, the most expensive single `collect()` site.
+  (3) `compute_battlefield` materializing a whole `Vec` per call.
+- **Residual checkpoint is 13,980 clones / 2.72 %** (the real game's actions
+  plus the fallible declarations inside the sims). Candidate 0.5(b) — a
+  second, hotter CoW group in `GameState` — is what is left of that item and
+  is no longer worth its risk at 2.72 %.
+- **Two sessions ran on this branch at once again, and the rebase was
+  clean** (their rows are in `actions.rs`, these in `bot.rs`/`stack.rs`/
+  `mod.rs`). The tip was **re-measured after the rebase** rather than
+  subtracted: -13.10 % against their tip reproduces the -13.02 % measured
+  against ours. Do that, don't add cumulative figures.
+- **Bugs**: the panic/unwrap sweep of the self-play path is still open; both
+  halves of the old filter are swept clean, so it wants a *third* filter.
+  ~183 `unwrap()`/`expect()` under `game/` + `bot.rs` needing triage.
 - **Fetch before you build. This has now cost three sessions.** A fresh
   clone's `git branch -a` shows only `main` and the session's own branch;
   `origin/claude/modern_decks` does not appear until an explicit
@@ -65,14 +72,13 @@ item 1 for two runs — and PERF's *Profile of record* is current at
   `git fetch origin && git checkout -B claude/modern_decks
   origin/claude/modern_decks` as the very first command**, before reading a
   tracker — `main`'s trackers describe a project without `crabomination_ml`,
-  `PERF.md` or `bot_ladder`, and everything planned from them already exists
-  here.
-- **Env**: `rm -rf target/debug/incremental target/release` before a release
-  build — the disk allowance is ~30 G and `target/debug` alone is 24 G.
-  `cargo-nextest` is not in the image. `release` rebuild of the engine is
-  ~20 min; `profiling-fast` is ~4 min warm (~11 min cold) and is what A/B
-  iteration should use. A `cargo test --workspace` builds candle via
-  `crabomination_ml` — budget ~25 min the first time.
+  `PERF.md` or `bot_ladder`.
+- **Env**: `rm -rf target/debug/incremental target/profiling-fast` before a
+  `release` build (disk allowance ~30 G). `cargo-nextest` is not in the
+  image. **A callgrind run of the fixed six-game workload is ~1 minute, not
+  25** — the cost is the build, not the run, so measure freely. `release`
+  engine rebuild ~20 min; `release-fast` ~3 min warm and is what A/B
+  iteration should use; a cold `release-fast` dep build is ~13 min.
 - **Trackers**: TODO 858, roadmap 660, `PERF.md` 893, `INCOMPLETE_CARDS` 247.
 
 ## Environment note

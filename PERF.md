@@ -351,6 +351,29 @@ profile reproduces the merged figure to 0.03 %).
 | 2026-08-10 | `ManaSourceInfo.colors` becomes a `ColorSet` + a fixed `[usize; 5]` (candidate 1.5's allocation leftover) | 4,756,306,488 Ir | 4,733,001,860 Ir (**-0.49 %**) | **The smallest row on this list, and quoted as such.** `Vec<(ManaColor, usize)>` held at most five entries and was one heap allocation per untapped source per `auto_tap_for_cost` — 67,468 of them per six games, 1.8 % of the program's allocations — and `redundancy` did a linear scan of it per (source, colour, other source), i.e. quadratic in the untapped board. The bitmask makes the membership test one `and`, and `color_idx[color_index(c)]` replaces the `find`. Iteration order is unchanged (`ColorSet::iter` walks WUBRG, which is what `ManaColor::ALL` gave), and `redundancy` mins over the colours, so ordering could not leak anyway. Callgrind A/B on identical `profiling-fast --no-default-features` binaries; well under the 5 % claim bar, which is why it is quoted in instructions on a deterministic workload rather than in `--bench`. Suite 18827 passed / 0 failed; golden traces byte-identical; clippy clean. |
 | | **cumulative this pass** | **4,963,254,419 Ir** | **4,733,001,860 Ir (-4.64 %)** | three alternated `profiling-fast --no-default-features` callgrind A/Bs on the one fixed six-game workload, so the three rows subtract honestly. **Wall-clock at `release` + mimalloc is a null** — see Baseline; six alternated pairs read +0.54 %, which is what a sub-5 % change looks like against this box's ±8 % spread. |
 
+**Fourteenth pass — the transaction checkpoint.** Base `95406ebe` (the
+thirteenth pass's tip). One shape, two rows and a correction: **`perform_action` clones the
+whole state before every action so a rejected one can be restored, and
+almost nothing ever reads the restore.**
+
+| date | change | before | after | how measured |
+|---|---|---|---|---|
+| 2026-08-10 | The mid-round priority pass stops paying for a checkpoint (`42c5db08`) | 4,755,784,897 Ir (`d95cd5ba`) | 4,667,673,580 Ir (**-1.85 %**) | **41.6 % of the actions a bot game takes cannot be rejected.** `pass_priority`'s early return — not every player has passed yet — bumps the pass counter, hands priority to the next seat and returns `Ok(vec![])`; there is nothing to roll back. Every `return Err` between `perform_action`'s entry and the dispatch match is a pure validation guard that has not touched the state, so an early `Err` needs no restore either. `pass_priority_is_trivial` names the branch next to the code that owns it. Checkpoints 64,248 → 37,512; `GameState::clone` 161,227,776 → 94,614,770 (-41.3 %). Measured against `d95cd5ba`, i.e. before the `ManaSourceInfo` row rebased under it — the two don't touch the same code. |
+| 2026-08-10 | The bot's dry runs stop taking a rollback nobody reads (`831054fb`) | 4,667,673,580 Ir | 4,136,463,189 Ir (**-11.38 %**) | Every simulation and probe in `bot.rs` throws its clone away on `Err` — `.ok()?`, `return None`, `return CombatSim::Incomplete`, `return true` — so the checkpoint's restore is never read. `dry_run` is that call with the argument written down once. The two simulation loops keep their historical fallback (rejected action → roll back → retry as a priority pass) through `sim_step`, which takes the checkpoint only when the action can need it: **when the action is itself a `PassPriority` the fallback re-runs the same call on the restored state and the engine is deterministic, so it fails identically** — abandoning is the same outcome one clone earlier. `ManualTapRequired`, the one error `perform_action` does not roll back, leaves exactly the state the retry would have seen, so that retry is kept. `perform_action` 70.45 % → 29.61 % inclusive; `GameState::clone` -54 %, `drop_in_place<GameState>` -46 %; **`Arc::clone_from_ref_in` — the CoW unshare — 803,672,462 → 479,320,016, -40 %**, which is the half of the win the clone and drop do not explain: with no checkpoint holding a second reference, a write to a zone the simulation already owns is a refcount check, not a deep copy. |
+| 2026-08-10 | `simulate_through_combat` keeps its checkpoints — its torn state *is* read (`3e2ee6cb`) | 4,113,269,670 Ir | 4,186,040,742 Ir (**+1.77 %**) | The correction to the row above, and the shape of the trap. Two of `simulate_through_combat`'s three callers throw the state away on `Incomplete`; the third — `combat_aware`'s `before` probe — runs it with `let _ =` and scores whatever comes back, so an abandoned walk would score a state left mid-action instead of the rolled-back one. **Nothing on the bench reaches it** (traces and the 24 bench games are byte-identical either way), which is why it was worth reverting rather than arguing about: the divergence is latent, not absent. **The audit rule: a `dry_run` site is only sound when the caller cannot read the state after an `Err`.** The other nine sites hold their clone in a local that dies on the failure path. |
+| | **cumulative this pass, re-measured on the rebased tip** | **4,733,001,860 Ir** (`95406ebe`) | **4,186,040,742 Ir (-11.56 %)** | Both rows were measured against `d95cd5ba` and then rebased over the other session's `ManaSourceInfo` row; the tip was re-measured rather than subtracted (-13.10 % before the correction row, against a -13.02 % measured on our own base — nothing cancelled in the join). Callgrind on `profiling-fast --no-default-features`, the one fixed six-game workload. Suite green (18,097 passed / 0 failed) and **all four golden traces byte-identical at every step** — they are fixed-seed bot games, i.e. exactly the path these rows change, which is the check that makes "the restore is never read" a measurement rather than an argument. The bench also plays the same 24 games to the same 12 split pairs. |
+| | **wall-clock, same pass** | **52.38 games/s** | **59.29 games/s (+13.19 %)** | Six alternated `--bench` pairs of `95406ebe` against `831054fb`, both built `release-fast` in one sitting on one container. **6/6 pairs positive**; per-pair +11.10 / +11.36 / +14.63 / +14.27 / +13.44 / +14.48 %; `decisions_per_s` 31,131 → 35,801 (+15.0 %); `turns_per_game` 26.98 and `stalls` 0 on all twelve runs; `host_calib_ms` 51-80 (the 80 sits on the *first* A run, i.e. against this row). **Ir and wall-clock agree to 0.1 points** — the shape to expect when a change removes work *and* allocations, and the counter-example to the thirteenth pass's null. `release-fast` absolutes never go in Baseline; the paired delta is the measurement. |
+
+**What the pass leaves behind, as a rule.** *A checkpoint is only worth its
+clone where something reads the restore.* Three questions find the next one:
+does this caller keep the state after an `Err` (usually not — dry runs throw
+it away); can this action fail at all (the trivial pass cannot); and if the
+fallback re-runs the same call on the same state, does determinism make it a
+no-op. And the clone is never the whole cost — it *shares every CoW zone*, so
+the next write deep-copies one that was uniquely owned a line earlier. That
+second half was 40 % of `Arc::clone_from_ref_in`, the largest theme in the
+profile after the allocator itself.
+
 ## Profile of record
 
 Callgrind on `profiling-fast --no-default-features` (= `release-fast` opt
@@ -538,8 +561,34 @@ thrown away:
   static ability converted during the gather) or it will silently keep
   abilities a Turn to Frog took away.
 
-**Top of the list**, in order:
+**After the fourteenth (transaction-checkpoint) pass.** Two rows and a
+correction, -11.56 % Ir — the largest single pass since the `CardInstance` representation change.
+Shares below that predate it are upper bounds; **the allocator fell 19.1 % →
+14.5 % and `Arc::clone_from_ref_in` 17.22 % → 11.59 % inclusive without
+either being touched directly**, because the checkpoint was what made the
+unshares necessary. What the pass leaves at the top of the list, measured on
+its tip (4,113,269,670 Ir):
 
+- **(0) `permanents_with_abilities_removed` — 130,060,796 Ir, 3.16 %, one
+  full gather per trigger dispatch to answer one bit.** The largest single
+  identified removable item in the profile, promoted from the other
+  session's re-take (2.63 % there). `strip()` already gates on
+  `fx.iter().any(RemoveAllAbilities)` and the answer is "no" on every bench
+  board; what costs 3.16 % is *producing `fx`*, because
+  `dispatch_triggers_for_events` is `&mut self` and so runs at depth 0.
+  **Freezing the dispatcher's phase 1 does not fix it — checked, don't
+  spend the build**: phase 1 makes exactly one gather (this one), so a
+  memo has nothing to share it with. The fix is a presence gate that does
+  not gather, and **the reason this pass did not land it is that the gate
+  is hard to make sound**: `RemoveAllAbilities` reaches the layer system
+  from six places — `continuous_effects` (cheap to test), an attached
+  `equipped_bonus.remove_abilities` (mod.rs 7874), the artifact strip
+  (8412), the named-land hoser (8680), Blight counters on lands (8717),
+  and two `static_ability_to_effects` arms (20488, 20569). A hand-written
+  `StaticEffect` predicate over those goes stale the first time a card adds
+  a seventh. **Land it by making the gather's own six blocks call named
+  predicates and having the presence scan call the same six**, so the flag
+  cannot drift from the code it guards — not by re-deriving the list.
 - **(A) `compute_battlefield` is still the biggest layer consumer** —
   759 M inclusive (13.50 %) over 47,808 calls at 15,870 Ir each at the
   twelfth pass's base; the pass took ~7,300 of those calls out via
@@ -673,12 +722,21 @@ thrown away:
    `ColdState`, so the share climbs as everything else falls), over 64,248
    actions of which **20** rolled back. `ColdState` took the half
    that came from walking empty collections; the rest is irreducible while
-   the snapshot is unconditional. Two routes, neither taken yet:
-   **(a)** the bot's `simulate_attack_outcome_once` loop is where nearly all
-   the actions are — it calls `perform_action` and, on `Err`, retries
-   `PassPriority` and bails. It could call `perform_action_inner` and take
-   one explicit checkpoint only around the calls that are allowed to fail,
-   which is a bot change, not an engine one.
+   the snapshot is unconditional.
+   **(a)** ~~the bot's simulation loops call `perform_action` and, on `Err`,
+   retry `PassPriority` and bail~~ — **done, -11.56 % net;
+   see the fourteenth pass in the Log.** The item under-costed itself by a
+   factor of three: it counted the clone and the drop and missed that the
+   clone *shares every CoW zone*, so the next write deep-copies one. That
+   second half was 40 % of `Arc::clone_from_ref_in`. It also asked for "one
+   explicit checkpoint around the calls that are allowed to fail" and the
+   answer turned out to be simpler — **no checkpoint at all**, because a
+   dry run throws the state away on `Err` and a `PassPriority` retry after a
+   rollback fails identically on a deterministic engine.
+   **Residual: 13,980 checkpoints, 111,734,105 Ir (2.72 %)** — the real
+   game's own actions plus the fallible declarations inside the sims. Route
+   (b) below is what is left of the item, and at 2.72 % it is no longer
+   worth its risk.
    **(b)** make the residual `GameState` narrow enough that the snapshot is a
    memcpy plus a handful of `Arc` bumps — that means CoW-ing `players`
    (written on most actions, so count the siblings first: two seats) and
