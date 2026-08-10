@@ -79,14 +79,21 @@ static ABLATE: std::sync::atomic::AtomicU8 = std::sync::atomic::AtomicU8::new(0)
 const ABLATE_LIBRARY: u8 = 1;
 const ABLATE_CASTABILITY: u8 = 2;
 const ABLATE_RELATIONS: u8 = 4;
+const ABLATE_COMBAT: u8 = 8;
+const ABLATE_KW: u8 = 16;
 
-/// Turn round-11/12 feature blocks off for an ablation run. All default
-/// on. `relations` covers the round-12 block whole: the relation flags
-/// (28..=35), the stack groups, and stack depth.
-pub fn set_encode_ablation(library: bool, castability: bool, relations: bool) {
+/// Turn feature blocks off for an ablation run. All default on.
+/// `relations` covers the round-12 block whole: the relation flags
+/// (28..=35), the stack groups, and stack depth. `combat` is the
+/// round-28 combat-structure block (object feats 37..=39, globals
+/// 36..=40); `kw` is the round-28 keyword classes and exile counts
+/// (object feats 40..=44, globals 41..=42).
+pub fn set_encode_ablation(library: bool, castability: bool, relations: bool, combat: bool, kw: bool) {
     let mask = if library { 0 } else { ABLATE_LIBRARY }
         | if castability { 0 } else { ABLATE_CASTABILITY }
-        | if relations { 0 } else { ABLATE_RELATIONS };
+        | if relations { 0 } else { ABLATE_RELATIONS }
+        | if combat { 0 } else { ABLATE_COMBAT }
+        | if kw { 0 } else { ABLATE_KW };
     ABLATE.store(mask, std::sync::atomic::Ordering::Relaxed);
 }
 
@@ -130,9 +137,57 @@ pub fn encode_state(g: &GameState, seat: usize, vocab: &Vocab) -> EncodedState {
         }
     }
 
+    // Combat structure (round 28): the round-12 flags said a creature is
+    // blocked; these say by what. Effective P/T of one combat's
+    // counterparties, summed — a pooling-safe unary summary of the edge,
+    // like the relation flags, but carrying the numbers the block sims
+    // actually trade on.
+    let no_combat = ablated(ABLATE_COMBAT);
+    let eff_pt = |id: crate::card::CardId| {
+        g.battlefield
+            .iter()
+            .find(|c| c.id == id)
+            .map(|c| (c.power().max(0), (c.toughness() - c.damage as i32).max(0)))
+    };
+    // Attacker → summed P/T of its blockers (`block_map` is blocker →
+    // attackers, so this is the map inverted).
+    let mut blocker_sums: HashMap<crate::card::CardId, (i32, i32)> = HashMap::new();
+    if !no_combat {
+        for (blocker, attackers) in g.block_map.iter() {
+            if let Some((p, t)) = eff_pt(*blocker) {
+                for a in attackers {
+                    let e = blocker_sums.entry(*a).or_insert((0, 0));
+                    e.0 += p;
+                    e.1 += t;
+                }
+            }
+        }
+    }
+
     for c in g.battlefield.iter() {
         let group = if c.controller == seat { G_BF_SELF } else { G_BF_OPP };
         let mut o = encode_battlefield_object(g, c, vocab);
+        if !no_combat {
+            // An object is never both an attacker and a blocker in one
+            // combat, so one feature pair serves both endpoints.
+            let counterpart = blocker_sums.get(&c.id).copied().or_else(|| {
+                g.block_map.get(&c.id).map(|attackers| {
+                    attackers.iter().filter_map(|a| eff_pt(*a)).fold((0, 0), |acc, (p, t)| {
+                        (acc.0 + p, acc.1 + t)
+                    })
+                })
+            });
+            if let Some((p, t)) = counterpart {
+                o.feats[37] = p as f32 / 8.0;
+                o.feats[38] = t as f32 / 8.0;
+            }
+            if g.attacking.iter().any(|a| {
+                a.attacker == c.id
+                    && !matches!(a.target, crate::game::types::AttackTarget::Player(_))
+            }) {
+                o.feats[39] = 1.0;
+            }
+        }
         if !no_rel {
             if g.block_map.contains_key(&c.id) {
                 o.feats[28] = 1.0;
@@ -248,7 +303,44 @@ pub fn encode_state(g: &GameState, seat: usize, vocab: &Vocab) -> EncodedState {
             gl[base + 5] = src.len() as f32 / 6.0;
         }
     }
-    const _: () = assert!(GLOBAL_FEATS == 36, "extend the fill above when adding globals");
+    if !no_combat {
+        // Fine combat phase. The coarse slot 11 collapses "attacks
+        // declared, blocks pending" and "damage dealt" — opposite worlds
+        // to a value function, and the states the combat sims evaluate
+        // most. DeclareAttackers still reads as pre-blocks even with
+        // `g.attacking` filled, which is exactly the attack sim's leaf.
+        let step_slot = match g.step {
+            TurnStep::DeclareAttackers => Some(36),
+            TurnStep::DeclareBlockers => Some(37),
+            TurnStep::FirstStrikeDamage | TurnStep::CombatDamage | TurnStep::EndCombat => Some(38),
+            _ => None,
+        };
+        if let Some(slot) = step_slot {
+            gl[slot] = 1.0;
+        }
+        // Power aimed at each life total through creatures nothing
+        // blocks. Before blocks it is the whole attack; after, what got
+        // through — the phase one-hots above disambiguate which.
+        for a in g.attacking.iter() {
+            if let crate::game::types::AttackTarget::Player(p) = a.target {
+                let is_blocked = blocker_sums.contains_key(&a.attacker)
+                    || g.block_map.values().any(|att| att.contains(&a.attacker));
+                if !is_blocked {
+                    if let Some((pw, _)) = eff_pt(a.attacker) {
+                        gl[if p == seat { 39 } else { 40 }] += pw as f32 / 12.0;
+                    }
+                }
+            }
+        }
+    }
+    if !ablated(ABLATE_KW) {
+        // Exile sizes — the one public zone the encoding had no trace
+        // of. Counts only: contents wait on zone groups (and face-down
+        // exile is hidden information anyway).
+        gl[41] = g.exile.iter().filter(|c| c.owner == seat).count() as f32 / 10.0;
+        gl[42] = g.exile.iter().filter(|c| c.owner == opp).count() as f32 / 10.0;
+    }
+    const _: () = assert!(GLOBAL_FEATS == 43, "extend the fill above when adding globals");
 
     s
 }
@@ -457,7 +549,92 @@ fn encode_card_object(c: &CardInstance, vocab: &Vocab) -> EncodedObject {
     if !ablated(ABLATE_RELATIONS) && (def.is_aura() || def.is_equipment()) {
         feats[35] = 1.0;
     }
+    // Keyword classes (round 28) the round-4 evasion flags don't carry.
+    // Mostly redundant with the card embedding for in-vocab cards; this
+    // is for tokens (index 0) and granted keywords, which the embedding
+    // can never see. Coarse by design: every flavour of hexproof,
+    // protection and ward is one "hard to target" bit, every
+    // can't-be-blocked variant one "hard to block" bit — a value
+    // function trades on the class, not the fine print.
+    if !ablated(ABLATE_KW) {
+        for (i, kw) in
+            [Keyword::Haste, Keyword::Indestructible, Keyword::Defender].iter().enumerate()
+        {
+            // 40 haste, 42 indestructible, 44 defender.
+            if c.has_keyword(kw) {
+                feats[40 + 2 * i] = 1.0;
+            }
+        }
+        if c.ward().is_some() || any_keyword(c, is_hard_to_target) {
+            feats[41] = 1.0;
+        }
+        if any_keyword(c, is_hard_to_block) {
+            feats[43] = 1.0;
+        }
+    }
     EncodedObject { card: vocab.index_of(def.name), feats }
+}
+
+/// Any printed or EOT-granted keyword matching `pred`, minus removals.
+/// Keyword *counters* are skipped — [`CardInstance::has_keyword`] covers
+/// them for exact variants, and a counter granting a parametrized
+/// keyword class is beyond this resolution.
+fn any_keyword(c: &CardInstance, pred: fn(&crate::card::Keyword) -> bool) -> bool {
+    c.definition
+        .keywords
+        .iter()
+        .chain(c.granted_keywords_eot.iter())
+        .filter(|k| !c.removed_keywords.contains(k) && !c.removed_keywords_eot.contains(k))
+        .any(pred)
+}
+
+/// Hexproof, shroud, and protection in all their flavours. Ward is
+/// checked separately through [`CardInstance::ward`], which already
+/// reads grants.
+fn is_hard_to_target(k: &crate::card::Keyword) -> bool {
+    use crate::card::Keyword::*;
+    matches!(
+        k,
+        Hexproof
+            | HexproofFromColor(_)
+            | HexproofFromMonocolored
+            | HexproofFromMulticolored
+            | HexproofExceptColors(_)
+            | HexproofFromAbilities
+            | Shroud
+            | Protection(_)
+            | ProtectionFromColoredSpells
+            | ProtectionFromSpells
+            | ProtectionFromCreatures
+            | ProtectionFromMatching(_)
+            | ProtectionFromCreatureType(_)
+            | ProtectionFromSpellSubtype(_)
+            | ProtectionFromManaValueExcept(_)
+            | ProtectionFromMulticolored
+            | ProtectionFromMonocolored
+            | ProtectionFromCardType(_)
+            | ProtectionFromInstants
+            | ProtectionFromEverything
+            | ProtectionFromOwnColors
+    )
+}
+
+/// The can't-be-blocked family beyond the round-4 evasion flags (menace
+/// and flying carry their own bits already).
+fn is_hard_to_block(k: &crate::card::Keyword) -> bool {
+    use crate::card::Keyword::*;
+    matches!(
+        k,
+        Unblockable
+            | Shadow
+            | Horsemanship
+            | Fear
+            | Intimidate
+            | Skulk
+            | Landwalk(_)
+            | LandwalkFiltered(_)
+            | DomainLandwalk
+    )
 }
 
 /// Battlefield objects add live state on top of the printed features:
@@ -722,13 +899,13 @@ mod tests {
         assert_eq!(full.groups[G_HAND_SELF][0].feats[25], 1.0);
         assert!(full.global[24 + 4] > 0.0);
 
-        set_encode_ablation(false, true, true);
+        set_encode_ablation(false, true, true, true, true);
         let no_lib = encode_state(&g, 0, &vocab);
         assert_eq!(no_lib.groups[G_LIB_SELF].len(), 0, "library group is empty");
         assert_eq!(no_lib.groups[G_HAND_SELF][0].feats[25], 1.0, "castability survives");
         assert!(no_lib.global[24 + 4] > 0.0);
 
-        set_encode_ablation(true, false, true);
+        set_encode_ablation(true, false, true, true, true);
         let no_cast = encode_state(&g, 0, &vocab);
         assert_eq!(no_cast.groups[G_LIB_SELF].len(), 1, "library survives");
         assert_eq!(no_cast.groups[G_HAND_SELF][0].feats[25], 0.0, "castable-now zeroed");
@@ -748,17 +925,153 @@ mod tests {
             target: crate::game::types::AttackTarget::Player(1),
         });
         g.block_map.insert(crate::card::CardId(101), vec![crate::card::CardId(100)]);
-        set_encode_ablation(true, true, true);
+        set_encode_ablation(true, true, true, true, true);
         let with_rel = encode_state(&g, 0, &vocab);
         assert!(with_rel.groups[G_BF_SELF].iter().any(|o| o.feats[29] == 1.0), "blocked flag on");
-        set_encode_ablation(true, true, false);
+        set_encode_ablation(true, true, false, true, true);
         let no_rel = encode_state(&g, 0, &vocab);
         assert!(no_rel.groups[G_BF_SELF].iter().all(|o| o.feats[29] == 0.0), "blocked flag off");
         assert_eq!(no_rel.groups[G_LIB_SELF].len(), 1, "library survives rel ablation");
         assert_eq!(no_rel.groups[G_HAND_SELF][0].feats[25], 1.0, "castability survives");
 
-        set_encode_ablation(true, true, true);
+        // The combat bit blanks the round-28 combat structure and only
+        // it. IDs 100/101 are the Forests above — power 0, so the
+        // endpoint sums stay 0 and the phase one-hot is the readable
+        // difference.
+        g.step = TurnStep::DeclareBlockers;
+        let with_combat = encode_state(&g, 0, &vocab);
+        assert_eq!(with_combat.global[37], 1.0, "declare-blockers one-hot on");
+        set_encode_ablation(true, true, true, false, true);
+        let no_combat = encode_state(&g, 0, &vocab);
+        assert_eq!(no_combat.global[37], 0.0, "declare-blockers one-hot off");
+        assert_eq!(no_combat.groups[G_LIB_SELF].len(), 1, "library survives combat ablation");
+        assert!(
+            no_combat.groups[G_BF_SELF].iter().any(|o| o.feats[29] == 1.0),
+            "relation flags survive combat ablation"
+        );
+
+        // The kw bit blanks the keyword classes and exile counts.
+        g.exile.push(CardInstance::new(crate::card::CardId(950), catalog::grizzly_bears(), 0));
+        set_encode_ablation(true, true, true, true, true);
+        let with_kw = encode_state(&g, 0, &vocab);
+        assert!((with_kw.global[41] - 1.0 / 10.0).abs() < 1e-6, "exile count on");
+        set_encode_ablation(true, true, true, true, false);
+        let no_kw = encode_state(&g, 0, &vocab);
+        assert_eq!(no_kw.global[41], 0.0, "exile count off");
+        assert_eq!(no_kw.global[37], 1.0, "combat block survives kw ablation");
+
+        g.step = TurnStep::PreCombatMain;
+        g.exile.clear();
+        set_encode_ablation(true, true, true, true, true);
         assert_eq!(encode_state(&g, 0, &vocab), with_rel, "all on restores the full encoding");
+    }
+
+    /// The round-28 combat-structure block: counterpart P/T sums across
+    /// the block edges, attack-target kind, fine phase one-hots, and
+    /// unblocked incoming power.
+    #[test]
+    fn combat_structure_reaches_the_encoding() {
+        let _guard = encode_guard();
+        let vocab = Vocab::sos_sealed();
+        let mut g = two_player_game();
+        g.step = TurnStep::DeclareBlockers;
+        g.active_player_idx = 1;
+        // Their 3/3 and 2/2 attack me; my two bears gang-block the 3/3;
+        // the 2/2 gets through.
+        let mut big = CardInstance::new(crate::card::CardId(1), catalog::hill_giant(), 1);
+        big.controller = 1;
+        let mut small = CardInstance::new(crate::card::CardId(2), catalog::grizzly_bears(), 1);
+        small.controller = 1;
+        let mut b1 = CardInstance::new(crate::card::CardId(3), catalog::grizzly_bears(), 0);
+        b1.controller = 0;
+        let mut b2 = CardInstance::new(crate::card::CardId(4), catalog::grizzly_bears(), 0);
+        b2.controller = 0;
+        b2.damage = 1;
+        for c in [big, small, b1, b2] {
+            g.battlefield.push(c);
+        }
+        for id in [1, 2] {
+            g.attacking.push(crate::game::types::Attack {
+                attacker: crate::card::CardId(id),
+                target: crate::game::types::AttackTarget::Player(0),
+            });
+        }
+        g.block_map.insert(crate::card::CardId(3), vec![crate::card::CardId(1)]);
+        g.block_map.insert(crate::card::CardId(4), vec![crate::card::CardId(1)]);
+
+        let s = encode_state(&g, 0, &vocab);
+        // Both creatures are off the SOS vocab (index 0), so objects are
+        // told apart by their power feature, not the card index.
+        let giant = s.groups[G_BF_OPP]
+            .iter()
+            .find(|o| (o.feats[4] - 3.0 / 8.0).abs() < 1e-6)
+            .expect("the 3/3 attacker encoded");
+        // The blocked 3/3 sees 2+2 power and 2+1 effective toughness
+        // (one bear carries a damage) across the table.
+        assert!((giant.feats[37] - 4.0 / 8.0).abs() < 1e-6, "blockers' power on the attacker");
+        assert!((giant.feats[38] - 3.0 / 8.0).abs() < 1e-6, "blockers' toughness on the attacker");
+        // Each bear sees the 3/3 it blocks; the damage on one of them
+        // changes its own row, not the counterpart sums.
+        let bears: Vec<_> =
+            s.groups[G_BF_SELF].iter().filter(|o| o.feats[37] > 0.0).collect();
+        assert_eq!(bears.len(), 2, "both blockers carry counterpart sums");
+        for b in &bears {
+            assert!((b.feats[37] - 3.0 / 8.0).abs() < 1e-6);
+            assert!((b.feats[38] - 3.0 / 8.0).abs() < 1e-6);
+        }
+        // The unblocked 2/2 aims 2 power at my life total; nothing gets
+        // through at theirs. Blocks-pending one-hot set, no other.
+        assert!((s.global[39] - 2.0 / 12.0).abs() < 1e-6, "incoming unblocked power");
+        assert_eq!(s.global[40], 0.0);
+        assert_eq!(s.global[36], 0.0);
+        assert_eq!(s.global[37], 1.0);
+        assert_eq!(s.global[38], 0.0);
+        // Seat-relative: the same combat from the attacker's chair.
+        let s1 = encode_state(&g, 1, &vocab);
+        assert_eq!(s1.global[39], 0.0);
+        assert!((s1.global[40] - 2.0 / 12.0).abs() < 1e-6);
+
+        // An attack at a planeswalker flags target kind and stays out of
+        // the life-total sums.
+        g.attacking[1].target =
+            crate::game::types::AttackTarget::Planeswalker(crate::card::CardId(99));
+        let s = encode_state(&g, 0, &vocab);
+        let attacker = s.groups[G_BF_OPP]
+            .iter()
+            .find(|o| (o.feats[4] - 2.0 / 8.0).abs() < 1e-6)
+            .expect("the attacking 2/2 encoded");
+        assert_eq!(attacker.feats[39], 1.0, "attacking a non-player target");
+        assert_eq!(s.global[39], 0.0, "walker attack leaves the life total alone");
+    }
+
+    /// The round-28 keyword classes: granted keywords reach the flags
+    /// (the card embedding can never see a grant), removals win, and the
+    /// coarse classes cover their parametrized variants.
+    #[test]
+    fn keyword_classes_reach_the_encoding() {
+        use crate::card::Keyword;
+        let _guard = encode_guard();
+        let vocab = Vocab::sos_sealed();
+        let mut g = two_player_game();
+        let mut c = CardInstance::new(crate::card::CardId(1), catalog::grizzly_bears(), 0);
+        c.controller = 0;
+        c.granted_keywords_eot.push(Keyword::Haste);
+        c.granted_keywords_eot.push(Keyword::Hexproof);
+        c.granted_keywords_eot.push(Keyword::Shadow);
+        g.battlefield.push(c);
+
+        let o = &encode_state(&g, 0, &vocab).groups[G_BF_SELF][0];
+        assert_eq!(o.feats[40], 1.0, "haste");
+        assert_eq!(o.feats[41], 1.0, "hexproof → hard to target");
+        assert_eq!(o.feats[42], 0.0, "not indestructible");
+        assert_eq!(o.feats[43], 1.0, "shadow → hard to block");
+        assert_eq!(o.feats[44], 0.0, "not a defender");
+
+        // A removed keyword no longer counts, exact-variant or class.
+        g.battlefield[0].removed_keywords.push(Keyword::Hexproof);
+        let o = &encode_state(&g, 0, &vocab).groups[G_BF_SELF][0];
+        assert_eq!(o.feats[41], 0.0, "removed hexproof does not flag");
+        assert_eq!(o.feats[43], 1.0, "shadow unaffected");
     }
 
     /// The round-12 relation block: attachment edges split by controller,

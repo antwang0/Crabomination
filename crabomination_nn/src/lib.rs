@@ -108,9 +108,39 @@ pub const G_STACK_OPP: usize = 7;
 ///   — Glyph, Currency, and whatever lands later).
 /// * 35 `is_attachment_type` — aura or equipment by printed type.
 /// * 36 stack depth from the top, / 4 (stack groups only).
-pub const OBJ_FEATS: usize = 37;
+///
+/// Feats 37..=44 are the round-28 (v6) block pair. 37..=39 is combat
+/// structure: the round-12 flags said a creature *is* blocked, not by
+/// what, so a 2/2 chump and a 5/5 trade encoded identically:
+///
+/// * 37/38 counterpart power / effective-toughness sums, / 8 — on a
+///   blocked attacker, its blockers summed; on a blocker, the attackers
+///   it blocks summed. An object is never both in one combat.
+/// * 39 `attacking_non_player` — the attack targets a planeswalker or
+///   battle, not a life total.
+/// * 40..=44 keyword classes invisible to feats 12..=19: haste,
+///   hard-to-target (ward/hexproof/shroud/protection), indestructible,
+///   hard-to-block (unblockable/shadow/fear/intimidate/skulk/
+///   horsemanship/landwalk), defender. Mostly redundant with the card
+///   embedding for in-vocab cards; load-bearing for tokens and grants.
+pub const OBJ_FEATS: usize = 45;
 /// Global scalar feature count. Baked into encoded rows likewise.
-pub const GLOBAL_FEATS: usize = 36;
+///
+/// Globals 36..=42 are round 28: fine combat phase one-hots (36
+/// declare-attackers, 37 declare-blockers, 38 damage/end-combat — the
+/// original coarse slot 11 collapsed "blocks pending" and "damage
+/// dealt", which are the states the combat sims evaluate most), 39/40
+/// unblocked attacker power aimed at self/opp, / 12, and 41/42 exile
+/// sizes self/opp, / 10.
+pub const GLOBAL_FEATS: usize = 43;
+
+/// v5 feature counts. Checkpoints trained before round 28 have weight
+/// matrices sized to these; [`PlayNet::load`] widens them with zero
+/// columns, which computes exactly what the old binary computed — the
+/// new features multiply into zeros. The champion (and every historical
+/// net) stays loadable, and golden traces do not move.
+const LEGACY_OBJ_FEATS: usize = 37;
+const LEGACY_GLOBAL_FEATS: usize = 36;
 
 /// Standard trainer configuration (the file's shapes win at load time).
 /// Sizes quadrupled in round 4: four gate rounds measured the small net
@@ -220,7 +250,7 @@ pub struct TrainRow {
 /// `OBJ_FEATS`, `GLOBAL_FEATS`, group order, or the row layout changes —
 /// stale shards must fail loudly, not decode as garbage.
 pub const SHARD_MAGIC: [u8; 4] = *b"CRML";
-pub const SHARD_VERSION: u32 = 5;
+pub const SHARD_VERSION: u32 = 6;
 
 /// Serialize rows into a self-describing shard (little-endian throughout).
 pub fn write_shard(rows: &[TrainRow]) -> Vec<u8> {
@@ -522,6 +552,22 @@ impl Tensor2 {
             *o = acc;
         }
     }
+
+    /// Widen to `new_cols` by appending zero columns on the right. Input
+    /// layouts put the newest features last (objects: `emb ++ feats`;
+    /// trunk: pooled groups then globals), so right-padding a legacy
+    /// weight matrix makes the new inputs multiply into zeros — the
+    /// padded net computes exactly what it did before the feature bump.
+    fn pad_cols(&mut self, new_cols: usize) {
+        debug_assert!(new_cols >= self.cols);
+        let mut data = vec![0.0f32; self.rows * new_cols];
+        for r in 0..self.rows {
+            data[r * new_cols..r * new_cols + self.cols]
+                .copy_from_slice(&self.data[r * self.cols..(r + 1) * self.cols]);
+        }
+        self.cols = new_cols;
+        self.data = data;
+    }
 }
 
 #[derive(Debug)]
@@ -806,6 +852,18 @@ impl PlayNet {
         } else {
             net
         };
+
+        // Legacy v5 checkpoints (pre-round-28 feature counts) are widened
+        // with zero columns rather than rejected — see [`LEGACY_OBJ_FEATS`].
+        // Both pads or neither: a file matching one legacy count but not
+        // the other falls through to the shape check and fails loudly.
+        let mut net = net;
+        if net.obj_w.cols == net.emb.cols + LEGACY_OBJ_FEATS
+            && net.trunk1_w.cols == NUM_GROUPS * 2 * net.obj_w.rows + LEGACY_GLOBAL_FEATS
+        {
+            net.obj_w.pad_cols(net.emb.cols + OBJ_FEATS);
+            net.trunk1_w.pad_cols(NUM_GROUPS * 2 * net.obj_w.rows + GLOBAL_FEATS);
+        }
 
         // Cross-check the shapes once here so forward() can trust them.
         let h_obj = net.obj_w.rows;
@@ -1309,6 +1367,65 @@ mod tests {
         let want2 = 1.0 / (1.0 + (-4.75f32).exp());
         let got2 = net.forward(&s);
         assert!((got2 - want2).abs() < 1e-6, "got {got2}, want {want2}");
+    }
+
+    /// A v5 checkpoint — weight matrices sized to the pre-round-28
+    /// feature counts — loads by zero-padding, and the padded net cannot
+    /// see the new features: a state with every round-28 slot lit scores
+    /// exactly what the legacy arithmetic says. This is what keeps the
+    /// champion and the golden traces fixed across the encoder bump.
+    #[test]
+    fn legacy_v5_checkpoint_loads_zero_padded() {
+        let legacy_trunk_in = NUM_GROUPS * 2 + LEGACY_GLOBAL_FEATS;
+        let mut obj_w = vec![0.0f32; 1 + LEGACY_OBJ_FEATS];
+        obj_w[0] = 1.0;
+        obj_w[1] = 1.0;
+        let bytes = to_safetensors(&[
+            ("emb.weight", vec![2, 1], vec![0.0, 2.0]),
+            ("obj.weight", vec![1, 1 + LEGACY_OBJ_FEATS], obj_w),
+            ("obj.bias", vec![1], vec![0.0]),
+            ("trunk1.weight", vec![1, legacy_trunk_in], vec![1.0; legacy_trunk_in]),
+            ("trunk1.bias", vec![1], vec![0.0]),
+            ("trunk2.weight", vec![1, 1], vec![1.0]),
+            ("trunk2.bias", vec![1], vec![0.0]),
+            ("head_win.weight", vec![1, 1], vec![1.0]),
+            ("head_win.bias", vec![1], vec![0.0]),
+        ]);
+        let net = PlayNet::load(&bytes).expect("legacy shapes load");
+
+        // Same state as `forward_matches_hand_computation`, plus every
+        // round-28 feature slot set to something loud.
+        let mut feats = [0.0; OBJ_FEATS];
+        feats[0] = 0.5;
+        for f in feats.iter_mut().skip(LEGACY_OBJ_FEATS) {
+            *f = 100.0;
+        }
+        let mut s = EncodedState::default();
+        s.groups[G_BF_SELF].push(EncodedObject { card: 1, feats });
+        s.global[3] = 0.25;
+        for gl in s.global.iter_mut().skip(LEGACY_GLOBAL_FEATS) {
+            *gl = 100.0;
+        }
+        let want = 1.0 / (1.0 + (-5.25f32).exp());
+        let got = net.forward(&s);
+        assert!((got - want).abs() < 1e-6, "got {got}, want {want}");
+
+        // Half-legacy shapes are a corrupt file, not a version: rejected.
+        let mut obj_w = vec![0.0f32; 1 + LEGACY_OBJ_FEATS];
+        obj_w[0] = 1.0;
+        let trunk_in = NUM_GROUPS * 2 + GLOBAL_FEATS;
+        let mixed = to_safetensors(&[
+            ("emb.weight", vec![2, 1], vec![0.0, 2.0]),
+            ("obj.weight", vec![1, 1 + LEGACY_OBJ_FEATS], obj_w),
+            ("obj.bias", vec![1], vec![0.0]),
+            ("trunk1.weight", vec![1, trunk_in], vec![1.0; trunk_in]),
+            ("trunk1.bias", vec![1], vec![0.0]),
+            ("trunk2.weight", vec![1, 1], vec![1.0]),
+            ("trunk2.bias", vec![1], vec![0.0]),
+            ("head_win.weight", vec![1, 1], vec![1.0]),
+            ("head_win.bias", vec![1], vec![0.0]),
+        ]);
+        assert!(PlayNet::load(&mixed).is_err(), "mixed old/new shapes must not load");
     }
 
     #[test]

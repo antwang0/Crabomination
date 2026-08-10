@@ -21,7 +21,7 @@
 //!                [--use-best WEIGHTS.safetensors] [--seed-emb DECK.safetensors]
 //!                [--gpu-eval] [--eval-batch N] [--eval-flush-us N]
 //!                [--stop-after-stale N] [--relabel-mode full|new]
-//!                [--attn] [--blocks N] [--aux] [--ablate lib,cast,rel]
+//!                [--attn] [--blocks N] [--aux] [--ablate lib,cast,rel,combat,kw]
 //!                [--muon] [--muon-lr F] [--lr-cosine STEPS]
 //!                [--sample-temp N] [--sample-turns N] [--mcts-actors N]
 //!                [--emb-dim N] [--obj-hidden N] [--h1 N] [--h2 N]
@@ -327,8 +327,8 @@ fn parse_args() -> Args {
                 a.ablate = val().split(',').map(|s| s.trim().to_string()).collect();
                 for b in &a.ablate {
                     assert!(
-                        matches!(b.as_str(), "lib" | "cast" | "rel"),
-                        "--ablate: unknown block {b:?} (expected lib, cast, or rel)"
+                        matches!(b.as_str(), "lib" | "cast" | "rel" | "combat" | "kw"),
+                        "--ablate: unknown block {b:?} (expected lib, cast, rel, combat, or kw)"
                     );
                 }
             }
@@ -1011,6 +1011,8 @@ fn main() {
             !args.ablate.iter().any(|b| b == "lib"),
             !args.ablate.iter().any(|b| b == "cast"),
             !args.ablate.iter().any(|b| b == "rel"),
+            !args.ablate.iter().any(|b| b == "combat"),
+            !args.ablate.iter().any(|b| b == "kw"),
         );
         eprintln!("encoder ablation: {} switched off", args.ablate.join(", "));
     }
