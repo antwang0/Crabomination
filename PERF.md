@@ -122,8 +122,10 @@ contention-immune, which makes it the better first look.
 
 ## Baseline
 
-**Anchored 2026-08-10 on the thirteenth-pass tip `610df3b6`** (`release`,
-mimalloc — the shipped configuration). The `6bbdc38c` anchor below it
+**Anchored 2026-08-10 at `610df3b6`** (`release`, mimalloc — the shipped
+configuration), i.e. after the thirteenth pass's first two rows; its third
+(-0.49 %) landed later and is an order of magnitude below this bench's
+resolution. The `6bbdc38c` anchor below it
 (55.88) is superseded as an absolute and kept for the box-drift lesson: it
 was taken on a *different container*, and this one runs the same workload
 ~25 % faster (`host_calib_ms` 45-54 against 49-61). **The two anchors do

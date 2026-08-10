@@ -53,8 +53,11 @@ item 1 for two runs — and PERF's *Profile of record* is current at
   anchor move as a win; it is a different container. Cost of learning this
   properly: two 24-minute `release` builds. Next run, quote Ir and treat
   `--bench` as a health check (turns/game, stalls, determinism, RSS).
-- **Bugs**: the panic/unwrap sweep of the self-play path is still open — see
-  the robustness section for the filter that works.
+- **Bugs**: the panic/unwrap sweep of the self-play path is still open, but
+  **both halves of the filter that used to work are now swept clean** (all
+  13 `len() - 1` sites guarded, both remaining `debug_assert!`s fall through
+  to defined release behaviour) — see the robustness section. What is left
+  is ~183 `unwrap()`/`expect()` wanting triage and a *third* filter.
 - **Fetch before you build. This has now cost three sessions.** A fresh
   clone's `git branch -a` shows only `main` and the session's own branch;
   `origin/claude/modern_decks` does not appear until an explicit
@@ -70,7 +73,7 @@ item 1 for two runs — and PERF's *Profile of record* is current at
   ~20 min; `profiling-fast` is ~4 min warm (~11 min cold) and is what A/B
   iteration should use. A `cargo test --workspace` builds candle via
   `crabomination_ml` — budget ~25 min the first time.
-- **Trackers**: TODO 855, roadmap 660, `PERF.md` 891, `INCOMPLETE_CARDS` 247.
+- **Trackers**: TODO 858, roadmap 660, `PERF.md` 893, `INCOMPLETE_CARDS` 247.
 
 ## Environment note
 
