@@ -8,6 +8,35 @@ use crate::game::types::{DelayedKind, DelayedTrigger};
 /// `(source, effect, controller, intervening/subject filter)`.
 type DeathTrigger = (CardId, Effect, usize, Option<crate::card::Predicate>);
 
+/// Presence flags for the rare state-based actions, taken in one battlefield
+/// pass by [`GameState::sba_board_scan`]. See that method for the contract.
+#[derive(Debug, Default, Clone, Copy)]
+struct SbaBoardScan {
+    flip_keyword: bool,
+    flip_predicate: bool,
+    sacrifice_when: bool,
+    state_trigger: bool,
+    steal_penalty: bool,
+    no_other: bool,
+    persist_undying: bool,
+    pm_both: bool,
+    max_counters: bool,
+    legendary: bool,
+    supertype_grant: bool,
+    legend_rule_off: bool,
+    lethal_by_power: bool,
+    world: bool,
+    saga: bool,
+    planeswalker: bool,
+    battle: bool,
+    bestowed: bool,
+    aura: bool,
+    role: bool,
+    start_engines: bool,
+    equipment_attached: bool,
+    soulbond: bool,
+}
+
 /// How a CR 514 cleanup round ended, telling the caller how to continue.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum CleanupOutcome {
@@ -4096,6 +4125,57 @@ impl GameState {
         }
     }
 
+    /// One battlefield pass answering "is this SBA's shape present at all?"
+    /// for every rare state-based action, so the sweep pays one walk instead
+    /// of ~20 `filter(...).collect()` passes that come back empty. Every flag
+    /// is an over-approximation of its block's own filter: false means the
+    /// block provably does nothing, true re-runs the original code unchanged.
+    fn sba_board_scan(&self) -> SbaBoardScan {
+        use crate::card::{CounterType, Keyword, Supertype};
+        use crate::effect::StaticEffect;
+        let mut s = SbaBoardScan::default();
+        for c in self.battlefield.iter() {
+            let d = &c.definition;
+            s.flip_keyword |= d.flip_when_has_keyword.is_some() && !c.flipped;
+            s.flip_predicate |= d.flip_when_predicate.is_some() && !c.flipped;
+            s.sacrifice_when |= d.sacrifice_when.is_some();
+            s.state_trigger |= d.state_trigger.is_some();
+            s.steal_penalty |= d.sacrifice_and_burn_when_stolen.is_some() && c.controller != c.owner;
+            s.no_other |= d.sacrifice_when_you_control_no_other.is_some();
+            s.persist_undying |=
+                d.keywords.contains(&Keyword::Persist) || d.keywords.contains(&Keyword::Undying);
+            s.pm_both |= c.counter_count(CounterType::PlusOnePlusOne) > 0
+                && c.counter_count(CounterType::MinusOneMinusOne) > 0;
+            s.max_counters |= d.max_counters_of_kind.is_some();
+            s.legendary |= d.supertypes.contains(&Supertype::Legendary);
+            s.world |= d.supertypes.contains(&Supertype::World);
+            s.saga |= !d.saga_chapters.is_empty();
+            s.planeswalker |= d.is_planeswalker();
+            s.battle |= d.is_battle() && d.defense > 0;
+            s.bestowed |= c.bestowed;
+            s.aura |= d.is_aura();
+            s.role |= d
+                .subtypes
+                .enchantment_subtypes
+                .contains(&crate::card::EnchantmentSubtype::Role);
+            s.start_engines |= d.keywords.contains(&Keyword::StartYourEngines);
+            s.equipment_attached |= c.attached_to.is_some() && d.is_equipment();
+            s.soulbond |= c.soulbond_partner.is_some();
+            for sa in &d.static_abilities {
+                match sa.effect {
+                    StaticEffect::AllNonlandPermanentsAreLegendary => s.supertype_grant = true,
+                    StaticEffect::LegendRuleDoesntApply => s.legend_rule_off = true,
+                    StaticEffect::LethalDamageByPower { .. } => s.lethal_by_power = true,
+                    _ => {}
+                }
+            }
+        }
+        // CR 704.5j — the Ring's emblem grants the supertype without a
+        // battlefield source.
+        s.supertype_grant |= self.players.iter().any(|p| p.ring_temptations >= 1);
+        s
+    }
+
     pub fn check_state_based_actions(&mut self) -> Vec<GameEvent> {
         let mut events = vec![];
 
@@ -4110,16 +4190,18 @@ impl GameState {
 
         self.sync_graveyard_shapeshifters();
 
+        // One pass answering "which of the rare SBAs can fire on this board".
+        // Retaken below wherever the sweep can change the answer (a flip swaps
+        // a definition; Persist/Undying puts a permanent back).
+        let mut scan = self.sba_board_scan();
+        let mut flipped = false;
+
         // CR 603.8 — state-triggered flip (Student of Elements: "When this
         // creature has flying, flip it"). Cheap guard so the common board pays
         // nothing; only compute the layer view when an unflipped state-flip
         // card is present, then flip any whose *computed* keywords now satisfy
         // the condition. Flipping clears the condition, so it fires once.
-        if self
-            .battlefield
-            .iter()
-            .any(|c| c.definition.flip_when_has_keyword.is_some() && !c.flipped)
-        {
+        if scan.flip_keyword {
             let computed = self.compute_battlefield();
             let to_flip: Vec<CardId> = self
                 .battlefield
@@ -4132,59 +4214,74 @@ impl GameState {
                 .collect();
             for id in to_flip {
                 self.flip_permanent(id, &mut events);
+                flipped = true;
             }
         }
 
         // CR 603.8 — state-triggered flip on a board predicate (Rune-Tail's
         // "when you have 30 or more life"). Same once-only shape as the
         // keyword variant above.
-        let flip_when: Vec<(CardId, usize)> = self
-            .battlefield
-            .iter()
-            .filter(|c| c.definition.flip_when_predicate.is_some() && !c.flipped)
-            .map(|c| (c.id, c.controller))
-            .collect();
-        for (id, ctrl) in flip_when {
-            let Some(pred) =
-                self.battlefield_find(id).and_then(|c| c.definition.flip_when_predicate.clone())
-            else {
-                continue;
-            };
-            let ctx = crate::game::effects::EffectContext::for_ability(id, ctrl, None);
-            if self.evaluate_predicate(&pred, &ctx) {
-                self.flip_permanent(id, &mut events);
+        if scan.flip_predicate {
+            let flip_when: Vec<(CardId, usize)> = self
+                .battlefield
+                .iter()
+                .filter(|c| c.definition.flip_when_predicate.is_some() && !c.flipped)
+                .map(|c| (c.id, c.controller))
+                .collect();
+            for (id, ctrl) in flip_when {
+                let Some(pred) =
+                    self.battlefield_find(id).and_then(|c| c.definition.flip_when_predicate.clone())
+                else {
+                    continue;
+                };
+                let ctx = crate::game::effects::EffectContext::for_ability(id, ctrl, None);
+                if self.evaluate_predicate(&pred, &ctx) {
+                    self.flip_permanent(id, &mut events);
+                    flipped = true;
+                }
             }
+        }
+
+        // A flip swaps the permanent's definition, so every flag below is
+        // re-read from the post-flip board.
+        if flipped {
+            scan = self.sba_board_scan();
         }
 
         // CR 603.8 — "when [condition], sacrifice this" state trigger
         // (Phylactery Lich). Evaluated from each carrier's own controller.
-        let sacrifice_when: Vec<(CardId, usize)> = self
-            .battlefield
-            .iter()
-            .filter(|c| c.definition.sacrifice_when.is_some())
-            .map(|c| (c.id, c.controller))
-            .collect();
-        for (id, ctrl) in sacrifice_when {
-            let Some(pred) =
-                self.battlefield_find(id).and_then(|c| c.definition.sacrifice_when.clone())
-            else {
-                continue;
-            };
-            let ctx = crate::game::effects::EffectContext::for_ability(id, ctrl, None);
-            if self.evaluate_predicate(&pred, &ctx) {
-                self.sacrifice_one(id, ctrl, &mut events);
+        if scan.sacrifice_when {
+            let sacrifice_when: Vec<(CardId, usize)> = self
+                .battlefield
+                .iter()
+                .filter(|c| c.definition.sacrifice_when.is_some())
+                .map(|c| (c.id, c.controller))
+                .collect();
+            for (id, ctrl) in sacrifice_when {
+                let Some(pred) =
+                    self.battlefield_find(id).and_then(|c| c.definition.sacrifice_when.clone())
+                else {
+                    continue;
+                };
+                let ctx = crate::game::effects::EffectContext::for_ability(id, ctrl, None);
+                if self.evaluate_predicate(&pred, &ctx) {
+                    self.sacrifice_one(id, ctrl, &mut events);
+                }
             }
         }
 
         // CR 603.8 — the general state trigger: "When [condition], [effect]."
         // Latched per permanent so it goes on the stack once while the
         // condition holds and re-arms once it's false again.
-        let state_triggers: Vec<(CardId, usize)> = self
-            .battlefield
-            .iter()
-            .filter(|c| c.definition.state_trigger.is_some())
-            .map(|c| (c.id, c.controller))
-            .collect();
+        let state_triggers: Vec<(CardId, usize)> = if scan.state_trigger {
+            self.battlefield
+                .iter()
+                .filter(|c| c.definition.state_trigger.is_some())
+                .map(|c| (c.id, c.controller))
+                .collect()
+        } else {
+            Vec::new()
+        };
         for (id, ctrl) in state_triggers {
             let Some(st) =
                 self.battlefield_find(id).and_then(|c| c.definition.state_trigger.clone())
@@ -4210,14 +4307,17 @@ impl GameState {
         // trigger (Bronze Bombshell): that player sacrifices it, then it deals
         // N damage to them. Latched in `steal_penalty_armed` so it fires once
         // per control change; the latch clears when control returns to owner.
-        let steal_penalties: Vec<(CardId, usize, u32)> = self
-            .battlefield
-            .iter()
-            .filter_map(|c| {
-                let dmg = c.definition.sacrifice_and_burn_when_stolen?;
-                (c.controller != c.owner).then_some((c.id, c.controller, dmg))
-            })
-            .collect();
+        let steal_penalties: Vec<(CardId, usize, u32)> = if scan.steal_penalty {
+            self.battlefield
+                .iter()
+                .filter_map(|c| {
+                    let dmg = c.definition.sacrifice_and_burn_when_stolen?;
+                    (c.controller != c.owner).then_some((c.id, c.controller, dmg))
+                })
+                .collect()
+        } else {
+            Vec::new()
+        };
         // Only an *armed* id can be disarmed, so walk the latch set rather
         // than the whole battlefield — the old loop allocated a Vec of every
         // id and did an O(n) `battlefield_find` per id to reach a `remove`
@@ -4335,6 +4435,7 @@ impl GameState {
                 })
                 .map(|tc| tc.card)
                 .collect();
+            let mut reverted = false;
             for card in lapsed {
                 if let Some(pos) = self.temporary_copies.iter().position(|tc| tc.card == card)
                     && let Some(def) = self.temporary_copies[pos].original_def()
@@ -4342,8 +4443,13 @@ impl GameState {
                     self.temporary_copies.remove(pos);
                     if let Some(c) = self.battlefield.iter_mut().find(|c| c.id == card) {
                         c.definition = def;
+                        reverted = true;
                     }
                 }
+            }
+            // A reverted copy swaps the definition back, so re-read the flags.
+            if reverted {
+                scan = self.sba_board_scan();
             }
         }
 
@@ -4351,14 +4457,17 @@ impl GameState {
         // sacrifice this permanent" (Synod Centurion). Latched in
         // `no_other_sacrifice_armed` so it queues once while the condition
         // holds; the latch clears as soon as a match is back.
-        let no_other: Vec<(CardId, usize, crate::card::SelectionRequirement)> = self
-            .battlefield
-            .iter()
-            .filter_map(|c| {
-                let f = c.definition.sacrifice_when_you_control_no_other.clone()?;
-                Some((c.id, c.controller, f))
-            })
-            .collect();
+        let no_other: Vec<(CardId, usize, crate::card::SelectionRequirement)> = if scan.no_other {
+            self.battlefield
+                .iter()
+                .filter_map(|c| {
+                    let f = c.definition.sacrifice_when_you_control_no_other.clone()?;
+                    Some((c.id, c.controller, f))
+                })
+                .collect()
+        } else {
+            Vec::new()
+        };
         for (id, seat, filter) in no_other {
             let alone = !self.battlefield.iter().any(|o| {
                 o.id != id
@@ -4395,53 +4504,58 @@ impl GameState {
         // the sweep's actions ran. Snapshot the ±1/±1 counts here, ahead of the
         // 122.3 annihilation, so Persist/Undying read the pre-sweep pile
         // (Young Wolf with a +1/+1 counter that takes three -1/-1 counters
-        // dies for good).
-        // Only Persist/Undying read the snapshot — `return_persist_undying`
-        // returns on the spot when a dying card has neither, so an entry for
-        // any other card is built and thrown away. Gate the map on the same
-        // printed-keyword predicate its reader uses, which leaves it empty
-        // (and unallocated) on the boards that carry neither keyword.
-        let pre_sba_pm_counters: std::collections::HashMap<CardId, (u32, u32)> = self
-            .battlefield
-            .iter()
-            .filter(|c| {
-                c.definition.keywords.contains(&Keyword::Persist)
-                    || c.definition.keywords.contains(&Keyword::Undying)
-            })
-            .map(|c| {
-                (
-                    c.id,
-                    (
-                        c.counter_count(crate::card::CounterType::MinusOneMinusOne),
-                        c.counter_count(crate::card::CounterType::PlusOnePlusOne),
-                    ),
-                )
-            })
-            .collect();
+        // dies for good). Only the Persist/Undying return reads it, and only
+        // for a card whose *printed* keywords carry one, so the map holds
+        // exactly those cards; every other lookup misses and is unused.
+        let pre_sba_pm_counters: std::collections::HashMap<CardId, (u32, u32)> =
+            if scan.persist_undying {
+                self.battlefield
+                    .iter()
+                    .filter(|c| {
+                        c.definition.keywords.contains(&Keyword::Persist)
+                            || c.definition.keywords.contains(&Keyword::Undying)
+                    })
+                    .map(|c| {
+                        (
+                            c.id,
+                            (
+                                c.counter_count(crate::card::CounterType::MinusOneMinusOne),
+                                c.counter_count(crate::card::CounterType::PlusOnePlusOne),
+                            ),
+                        )
+                    })
+                    .collect()
+            } else {
+                std::collections::HashMap::new()
+            };
 
         // +1/+1 and -1/-1 counters cancel each other out (CR 122.3 — the
         // SBA removes `N` of each kind, where `N` is the smaller count).
-        for card in &mut self.battlefield {
-            let plus = card
-                .counters
-                .get(&crate::card::CounterType::PlusOnePlusOne)
-                .copied()
-                .unwrap_or(0);
-            let minus = card
-                .counters
-                .get(&crate::card::CounterType::MinusOneMinusOne)
-                .copied()
-                .unwrap_or(0);
-            if plus > 0 && minus > 0 {
-                let cancel = plus.min(minus);
-                *card
+        // The `&mut` walk unshares the zone, so skip it unless a permanent
+        // actually holds both kinds.
+        if scan.pm_both {
+            for card in &mut self.battlefield {
+                let plus = card
                     .counters
-                    .entry(crate::card::CounterType::PlusOnePlusOne)
-                    .or_insert(0) -= cancel;
-                *card
+                    .get(&crate::card::CounterType::PlusOnePlusOne)
+                    .copied()
+                    .unwrap_or(0);
+                let minus = card
                     .counters
-                    .entry(crate::card::CounterType::MinusOneMinusOne)
-                    .or_insert(0) -= cancel;
+                    .get(&crate::card::CounterType::MinusOneMinusOne)
+                    .copied()
+                    .unwrap_or(0);
+                if plus > 0 && minus > 0 {
+                    let cancel = plus.min(minus);
+                    *card
+                        .counters
+                        .entry(crate::card::CounterType::PlusOnePlusOne)
+                        .or_insert(0) -= cancel;
+                    *card
+                        .counters
+                        .entry(crate::card::CounterType::MinusOneMinusOne)
+                        .or_insert(0) -= cancel;
+                }
             }
         }
 
@@ -4450,13 +4564,15 @@ impl GameState {
         // printed cap, the SBA prunes the excess down to the cap. Uses the
         // new `CardDefinition.max_counters_of_kind: Option<(CounterType,
         // u32)>` field — None ⇒ no cap, the default.
-        for card in &mut self.battlefield {
-            if let Some((kind, max)) = card.definition.max_counters_of_kind {
-                let current = card.counters.get(&kind).copied().unwrap_or(0);
-                if current > max {
-                    // Through the accessor so a cap of 0 drops the entry
-                    // rather than storing a zero (CR 122.1).
-                    card.remove_counters(kind, current - max);
+        if scan.max_counters {
+            for card in &mut self.battlefield {
+                if let Some((kind, max)) = card.definition.max_counters_of_kind {
+                    let current = card.counters.get(&kind).copied().unwrap_or(0);
+                    if current > max {
+                        // Through the accessor so a cap of 0 drops the entry
+                        // rather than storing a zero (CR 122.1).
+                        card.remove_counters(kind, current - max);
+                    }
                 }
             }
         }
@@ -4473,14 +4589,7 @@ impl GameState {
             // the Legendary supertype (Leyline of Singularity, the Ring's
             // emblem) counts. Only pay for the layer computation when such a
             // grant is live; otherwise the printed supertype is authoritative.
-            let supertype_grant_active = self.battlefield.iter().any(|c| {
-                c.definition.static_abilities.iter().any(|sa| {
-                    matches!(
-                        sa.effect,
-                        crate::effect::StaticEffect::AllNonlandPermanentsAreLegendary
-                    )
-                })
-            }) || (0..self.players.len()).any(|s| self.players[s].ring_temptations >= 1);
+            let supertype_grant_active = scan.supertype_grant;
             let is_legendary = |c: &CardInstance| -> bool {
                 c.definition.supertypes.contains(&Supertype::Legendary)
                     || (supertype_grant_active
@@ -4491,13 +4600,8 @@ impl GameState {
             // CR 704.5j — Mirror Gallery turns the legend rule off entirely.
             // Only *this* SBA is switched off; the rest of the sweep (deaths,
             // loss conditions, the Aura/Equipment sweeps) still runs.
-            let legend_rule_off = self.battlefield.iter().any(|c| {
-                c.definition.static_abilities.iter().any(|sa| {
-                    matches!(sa.effect, crate::effect::StaticEffect::LegendRuleDoesntApply)
-                })
-            });
             let mut out = Vec::new();
-            if !legend_rule_off {
+            if !scan.legend_rule_off && (scan.legendary || supertype_grant_active) {
                 // Walk descending by id so each group's vec is newest-first.
                 let mut by_id: Vec<_> = self
                     .battlefield
@@ -4603,12 +4707,15 @@ impl GameState {
         // owners' graveyards; on a timestamp tie ALL of them go. Unlike the
         // legend rule this is global, not per-controller.
         let world_victims: Vec<CardId> = {
-            let worlds: Vec<(CardId, u64)> = self
-                .battlefield
-                .iter()
-                .filter(|c| c.definition.supertypes.contains(&Supertype::World))
-                .map(|c| (c.id, c.battlefield_timestamp))
-                .collect();
+            let worlds: Vec<(CardId, u64)> = if scan.world {
+                self.battlefield
+                    .iter()
+                    .filter(|c| c.definition.supertypes.contains(&Supertype::World))
+                    .map(|c| (c.id, c.battlefield_timestamp))
+                    .collect()
+            } else {
+                Vec::new()
+            };
             if worlds.len() > 1 {
                 let newest = worlds.iter().map(|&(_, ts)| ts).max().unwrap();
                 let tied = worlds.iter().filter(|&&(_, ts)| ts == newest).count() > 1;
@@ -4635,8 +4742,10 @@ impl GameState {
         // exemption: FIN's "Legendary Enchantment Creature — Saga" back faces
         // survive by exiling and re-entering front face up on their last
         // chapter, which resets the lore count before the SBA can see it.
-        let saga_victims: Vec<CardId> = self
-            .battlefield
+        let saga_victims: Vec<CardId> = if !scan.saga {
+            Vec::new()
+        } else {
+            self.battlefield
             .iter()
             .filter(|c| {
                 let Some(final_ch) = c.definition.saga_chapters.iter().map(|(n, _)| *n).max() else {
@@ -4651,7 +4760,8 @@ impl GameState {
                 })
             })
             .map(|c| c.id)
-            .collect();
+            .collect()
+        };
         for id in saga_victims {
             if let Some(c) = self.battlefield.iter().find(|c| c.id == id) {
                 self.died_card_snapshots.insert(id, c.clone());
@@ -4704,7 +4814,7 @@ impl GameState {
                 // power threshold can be 0, so gate on actual damage being
                 // marked (a 0-power creature dies only once it's been dealt
                 // damage; an undamaged one survives — CR 704.5g ruling).
-                let lethal_threshold = if self.lethal_damage_by_power(c.id) {
+                let lethal_threshold = if scan.lethal_by_power && self.lethal_damage_by_power(c.id) {
                     computed
                         .iter()
                         .find(|cp| cp.id == c.id)
@@ -4971,43 +5081,59 @@ impl GameState {
             let _ = controller_idx; // used via closure above
         }
 
+        // Persist/Undying can have put a permanent back and the deaths above
+        // removed others, so the flags below are re-read from the post-death
+        // board.
+        let scan = self.sba_board_scan();
+
         // Planeswalkers with 0 loyalty die (CR 704.5i).
-        let pw_dead: Vec<CardId> = self
-            .battlefield
-            .iter()
-            .filter(|c| {
-                c.definition.is_planeswalker()
-                    && c.counter_count(crate::card::CounterType::Loyalty) == 0
-            })
-            .map(|c| c.id)
-            .collect();
+        let pw_dead: Vec<CardId> = if !scan.planeswalker {
+            Vec::new()
+        } else {
+            self.battlefield
+                .iter()
+                .filter(|c| {
+                    c.definition.is_planeswalker()
+                        && c.counter_count(crate::card::CounterType::Loyalty) == 0
+                })
+                .map(|c| c.id)
+                .collect()
+        };
         for id in pw_dead {
             events.push(GameEvent::PlaneswalkerDied { card_id: id });
             self.remove_from_battlefield_to_graveyard_raw(id);
         }
 
         // CR 310.10 / 704.5x — a battle with no defense counters is defeated.
-        let defeated_battles: Vec<CardId> = self
-            .battlefield
-            .iter()
-            .filter(|c| {
-                c.definition.is_battle()
-                    && c.definition.defense > 0
-                    && c.counter_count(crate::card::CounterType::Defense) == 0
-            })
-            .map(|c| c.id)
-            .collect();
+        let defeated_battles: Vec<CardId> = if !scan.battle {
+            Vec::new()
+        } else {
+            self.battlefield
+                .iter()
+                .filter(|c| {
+                    c.definition.is_battle()
+                        && c.definition.defense > 0
+                        && c.counter_count(crate::card::CounterType::Defense) == 0
+                })
+                .map(|c| c.id)
+                .collect()
+        };
+        let any_defeated = !defeated_battles.is_empty();
         for id in defeated_battles {
             self.defeat_battle(id, &mut events);
         }
+        // A defeated battle's back face re-enters the battlefield.
+        let scan = if any_defeated { self.sba_board_scan() } else { scan };
 
         // CR 702.103f — a bestowed permanent that is unattached, or attached
         // to an illegal object, ceases to be bestowed: it stays in play and
         // reverts to a creature (the rule's stated exception to 704.5m, so it
         // never hits the graveyard). Run before the orphan-Aura sweep so it
         // isn't swept away.
-        let unbestowed: Vec<CardId> = self
-            .battlefield
+        let unbestowed: Vec<CardId> = if !scan.bestowed {
+            Vec::new()
+        } else {
+            self.battlefield
             .iter()
             .filter(|c| c.bestowed)
             .filter(|c| match c.attached_to {
@@ -5030,7 +5156,8 @@ impl GameState {
                 }
             })
             .map(|c| c.id)
-            .collect();
+            .collect()
+        };
         for id in unbestowed {
             if let Some(c) = self.battlefield.iter_mut().find(|c| c.id == id) {
                 c.bestowed = false;
@@ -5039,8 +5166,10 @@ impl GameState {
         }
 
         // Auras with no valid attachment target go to their owner's graveyard (CR 704.5n/5q).
-        let orphaned_auras: Vec<CardId> = self
-            .battlefield
+        let orphaned_auras: Vec<CardId> = if !scan.aura {
+            Vec::new()
+        } else {
+            self.battlefield
             .iter()
             .filter(|c| c.definition.is_aura() && c.attached_to_player.is_none())
             .filter(|c| {
@@ -5050,7 +5179,8 @@ impl GameState {
                 }
             })
             .map(|c| c.id)
-            .collect();
+            .collect()
+        };
         for id in orphaned_auras {
             // Record (aura → host) before the Aura leaves, so "whenever an
             // enchanted creature dies" payoffs can count the Auras that were
@@ -5080,8 +5210,10 @@ impl GameState {
         // filter is recoverable — distinct from the missing-host sweep
         // above. Bestowed Auras are exempt (their host loss reverts them
         // to creatures, handled earlier).
-        let illegally_attached: Vec<CardId> = self
-            .battlefield
+        let illegally_attached: Vec<CardId> = if !scan.aura {
+            Vec::new()
+        } else {
+            self.battlefield
             .iter()
             .filter(|c| c.definition.is_aura() && !c.bestowed)
             .filter_map(|c| {
@@ -5119,7 +5251,8 @@ impl GameState {
                     None
                 }
             })
-            .collect();
+            .collect()
+        };
         for id in illegally_attached {
             events.append(&mut self.remove_to_graveyard_with_triggers(id));
         }
@@ -5127,7 +5260,9 @@ impl GameState {
         // CR 704.5y — if a permanent has more than one Role controlled by
         // the same player attached, each but the newest (by battlefield
         // timestamp, CardId tiebreak) goes to its owner's graveyard.
-        let stale_roles: Vec<CardId> = {
+        let stale_roles: Vec<CardId> = if !scan.role {
+            Vec::new()
+        } else {
             let mut by_host: std::collections::HashMap<(CardId, usize), Vec<(u64, CardId)>> =
                 std::collections::HashMap::new();
             for c in self.battlefield.iter().filter(|c| {
@@ -5160,16 +5295,18 @@ impl GameState {
         // CR 704.5z — a player who controls a "Start your engines!" permanent
         // and has no speed gets speed 1. (The self-ETB path also seeds it;
         // this SBA covers blink/control-change/token-copy arrivals.)
-        for seat in 0..self.players.len() {
-            if self.players[seat].speed == 0
-                && self.battlefield.iter().any(|c| {
-                    c.controller == seat
-                        && c.definition
-                            .keywords
-                            .contains(&crate::card::Keyword::StartYourEngines)
-                })
-            {
-                self.players[seat].speed = 1;
+        if scan.start_engines {
+            for seat in 0..self.players.len() {
+                if self.players[seat].speed == 0
+                    && self.battlefield.iter().any(|c| {
+                        c.controller == seat
+                            && c.definition
+                                .keywords
+                                .contains(&crate::card::Keyword::StartYourEngines)
+                    })
+                {
+                    self.players[seat].speed = 1;
+                }
             }
         }
 
@@ -5180,8 +5317,10 @@ impl GameState {
         // anymore (e.g. equipped creature died) OR the target permanent
         // is no longer a legal target (no creature subtype for Equipment).
         // The Equipment itself stays in play — only the link is cleared.
-        let stale_equipment_links: Vec<CardId> = self
-            .battlefield
+        let stale_equipment_links: Vec<CardId> = if !scan.equipment_attached {
+            Vec::new()
+        } else {
+            self.battlefield
             .iter()
             .filter(|c| c.definition.is_equipment())
             .filter_map(|c| {
@@ -5201,7 +5340,8 @@ impl GameState {
                     });
                 if !is_still_legal { Some(c.id) } else { None }
             })
-            .collect();
+            .collect()
+        };
         for id in stale_equipment_links {
             if let Some(c) = self.battlefield.iter_mut().find(|c| c.id == id) {
                 c.attached_to = None;
@@ -5210,13 +5350,15 @@ impl GameState {
 
         // CR 702.95h — Soulbond pairs break when either creature leaves the
         // battlefield. Clear any link that points at a card no longer in play.
-        let on_bf: std::collections::HashSet<CardId> =
-            self.battlefield.iter().map(|c| c.id).collect();
-        for c in &mut self.battlefield {
-            if let Some(p) = c.soulbond_partner
-                && !on_bf.contains(&p)
-            {
-                c.soulbond_partner = None;
+        if scan.soulbond {
+            let on_bf: std::collections::HashSet<CardId> =
+                self.battlefield.iter().map(|c| c.id).collect();
+            for c in &mut self.battlefield {
+                if let Some(p) = c.soulbond_partner
+                    && !on_bf.contains(&p)
+                {
+                    c.soulbond_partner = None;
+                }
             }
         }
 
@@ -5226,12 +5368,22 @@ impl GameState {
         // token from its post-bf zone now matches the timing real MTG would
         // produce. Without this, dead tokens linger in graveyards (and would
         // count toward graveyard-size effects, mill prompts, etc.).
-        for player in &mut self.players {
-            player.graveyard.retain(|c| !c.is_token);
-            player.hand.retain(|c| !c.is_token);
-            player.library.retain(|c| !c.is_token);
+        // Each `retain` unshares its CoW zone and the seat's `PlayerData`, so
+        // read first: an off-battlefield token is the rare case.
+        for seat in 0..self.players.len() {
+            if self.players[seat].graveyard.iter().any(|c| c.is_token) {
+                self.players[seat].graveyard.retain(|c| !c.is_token);
+            }
+            if self.players[seat].hand.iter().any(|c| c.is_token) {
+                self.players[seat].hand.retain(|c| !c.is_token);
+            }
+            if self.players[seat].library.iter().any(|c| c.is_token) {
+                self.players[seat].library.retain(|c| !c.is_token);
+            }
         }
-        self.exile.retain(|c| !c.is_token);
+        if self.exile.iter().any(|c| c.is_token) {
+            self.exile.retain(|c| !c.is_token);
+        }
 
         // Player loss conditions (CR 704.5a/b/c). Eliminated players are
         // removed from turn/priority rotation; the game ends when ≤ 1
