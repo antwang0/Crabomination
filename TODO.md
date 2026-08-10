@@ -52,10 +52,13 @@ neither anchor was taken on the merged tip.
   block, and you must enumerate what can turn one *on* mid-sweep (a flip, a
   `BecomeCopyOf` revert, a Persist/Undying return, a defeated battle's back
   face) and retake the scan there.
-- **Next up, in order**: (1) **re-measure the merged tip** — neither
-  session's cumulative number or anchor describes it, and the profile of
-  record is two sessions stale. One `profiling-fast` build + callgrind, one
-  `release` build + >=6 `--bench` runs. (2) PERF candidate (A)'s remaining
+- **The merged tip is measured under callgrind: 5,620,660,987 ->
+  4,964,563,445 Ir, -11.68 %** from `81c88580` — below either session's own
+  tip, so nothing cancelled in the join. `check_state_based_actions` 11.69 %
+  -> 6.31 %, `compute_battlefield` 13.51 % (two passes ago) -> 6.00 %.
+- **Next up, in order**: (1) **the `release` anchor on the merged tip is
+  still owed** (one 25-min build + >=6 `--bench` runs); the profile of record
+  is also still written at one session's tip. (2) PERF candidate (A)'s remaining
   `compute_battlefield` callers, asking "all 19.5, or two of them?" —
   `resolve_combat`, `advance_step`, `process_cumulative_upkeep`, `do_phasing`;
   **`declare_blockers`' remaining passes are legitimate, its tap-another
@@ -86,7 +89,7 @@ neither anchor was taken on the merged tip.
   build (3-17 G). `cargo-nextest` is not in the image. `release` rebuild of
   the engine is 23 min; `profiling-fast` is 3 min and is what A/B iteration
   should use.
-- **Trackers**: TODO 849, roadmap 660, `PERF.md` 829, `INCOMPLETE_CARDS` 247.
+- **Trackers**: TODO 861, roadmap 660, `PERF.md` 838, `INCOMPLETE_CARDS` 247.
 
 ## Environment note
 

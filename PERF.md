@@ -118,8 +118,10 @@ contention-immune, which makes it the better first look.
 
 **Both anchors below predate the two-session merge.** Two sessions ran on
 this branch at once; the rebase that joined them produced a tip neither
-anchor was measured on. **Re-take the anchor on the merged tip before
-comparing any absolute to it** — the paired deltas on both sides still
+anchor was measured on. The merged tip *has* been measured under callgrind
+(**4,964,563,445 Ir, -11.68 % from `81c88580`** — see the Log), but not at
+`release`. **Re-take the anchor on the merged tip before comparing any
+absolute to it** — the paired deltas on both sides still
 stand, because each was measured against its own base in one sitting. The
 second session's anchor, taken on its own pre-rebase tip on a different
 container: **55.70 games/s mean of 8** (51.27-57.69), 33,631 dec/s,
@@ -311,6 +313,13 @@ merged tip has not been re-measured; that is the first job next run.
 | 2026-08-10 | The SBA presence scan runs once per sweep and walks each vector once (`129a1b0e`) | 5,339,874,694 Ir | 5,271,399,214 Ir (**-1.28 %**) | The scan itself was **46,166,408 + 45,227,168 Ir (1.68 %)** across its two sites. The post-death retake is unnecessary — the flags over-approximate and everything before it only *removes* permanents, which can only turn a flag off — so it is taken only when a Persist/Undying return actually grew the board. The per-card body walked `keywords` ×3, `supertypes` ×2, `card_types` ×2 and `enchantment_subtypes` ×2 through `contains` / `is_planeswalker` / `is_battle` / `is_aura`; it now walks each once with a `match`, and the two `counter_count` lookups sit behind `counters.is_empty()`. |
 | 2026-08-10 | Three call sites stop rebuilding a whole-board layer view they already have (`0045cbc0`) | 5,271,399,214 Ir | 5,013,096,289 Ir (**-4.90 %**) | Found independently of the other session and overlapping it: `declare_attackers_banded` (three passes here, four there — same fix, theirs landed), `finalize_cast`'s CR 113.10b strip set (same fix, theirs landed), and **`declare_blockers`, which is this row's unique half** — its own pass plus CR 509.1b's Okk power read, 132,691,778 Ir over 7,754 calls, with nothing between them mutating the board. `compute_battlefield` inclusive **602,521,248 (11.43 %) → 362,605,632 (7.23 %)** on this session's tree. |
 | | **cumulative, second session** | **5,620,660,987 Ir** | **5,013,096,289 Ir (-10.81 %)** | base `81c88580` vs this session's pre-rebase tip, both `profiling-fast --no-default-features`, every side built and run in one sitting on one container. **Wall-clock: 8/8 alternated `release` + mimalloc pairs positive, 50.24 -> 55.70 games/s, +10.85 %** (per-pair deltas +2.89 / +7.57 / +4.75 / +5.75 / +4.67 / +7.65 / +4.83 / +5.50; dec/s 30,341 -> 33,631, +10.84 %; turns/game 26.98, stalls 0, all 160 pairs split on all 16 runs, `host_calib_ms` 48-60). **Ir and wall-clock agree to 0.05 points**, which is the shape to expect when every row removes work rather than allocations — contrast the eleventh pass's allocation row, where -17.09 % Ir was worth +1.7 % at `release`. |
+
+**The merged tip, measured.** Both sessions' work joined, callgrind on the
+same fixed six-game workload, `profiling-fast --no-default-features`:
+
+| | | before | after | |
+|---|---|---|---|---|
+| 2026-08-10 | **twelfth pass, both sessions, merged** | **5,620,660,987 Ir** (`81c88580`) | **4,964,563,445 Ir** (`6e4fa142`) | **-11.68 %.** Below either session's own tip (5,013,096,289 / 5,260,848,923), so the merge kept the union of the non-overlapping work and none of it cancelled. Base check: the other session's base `48ac252c` reads 5,622,084,243 against `81c88580`'s 5,620,660,987 — 0.03 % apart, confirming `81c88580` doesn't touch the engine hot path. Inclusive at the merged tip: `auto_tap_for_cost_inner` 744,864,725 (15.00 %), `computed_permanent` 706,279,518 (14.23 %), `dispatch_triggers_for_events` 534,111,146 (10.76 %), `gather_continuous_effects_inner` 516,321,501 (10.40 %), `check_state_based_actions` 313,205,944 (6.31 %, from 11.69 %), `compute_battlefield` 297,944,249 (6.00 %, from 13.51 % two passes ago). **The `release` anchor on this tip is still owed** — see Baseline. |
 
 ## Profile of record
 
