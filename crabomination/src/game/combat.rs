@@ -1578,13 +1578,12 @@ impl GameState {
             // while an opponent has the static (zero is even).
             if blocker.definition.cost.cmc() % 2 == 0
                 && self.battlefield.iter().any(|c| {
-                    !self.same_team(c.controller, blocker.controller)
-                        && c.definition.static_abilities.iter().any(|sa| {
-                            matches!(
-                                sa.effect,
-                                crate::effect::StaticEffect::OpponentsCantBlockWithEvenMv
-                            )
-                        })
+                    c.definition.static_abilities.iter().any(|sa| {
+                        matches!(
+                            sa.effect,
+                            crate::effect::StaticEffect::OpponentsCantBlockWithEvenMv
+                        )
+                    }) && !self.same_team(c.controller, blocker.controller)
                 })
             {
                 return Err(GameError::CannotBlock(blocker_id));

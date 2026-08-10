@@ -5921,10 +5921,10 @@ impl GameState {
         if let Some(name) = spell_name
             && self.battlefield.iter().any(|c| {
                 c.named_card.as_deref() == Some(name)
-                    && !self.same_team(c.controller, p)
                     && c.definition.static_abilities.iter().any(|sa| {
                         matches!(sa.effect, crate::effect::StaticEffect::OpponentsCantCastNamed)
                     })
+                    && !self.same_team(c.controller, p)
             })
         {
             return Err(GameError::SpellNameLocked);
@@ -5933,13 +5933,13 @@ impl GameState {
         // permanent, and a card exiled with it shares this spell's name.
         if let Some(name) = spell_name
             && self.battlefield.iter().any(|c| {
-                !self.same_team(c.controller, p)
-                    && c.definition.static_abilities.iter().any(|sa| {
-                        matches!(
-                            sa.effect,
-                            crate::effect::StaticEffect::OpponentsCantCastNamesExiledWithSource
-                        )
-                    })
+                c.definition.static_abilities.iter().any(|sa| {
+                    matches!(
+                        sa.effect,
+                        crate::effect::StaticEffect::OpponentsCantCastNamesExiledWithSource
+                    )
+                })
+                    && !self.same_team(c.controller, p)
                     && self
                         .exile
                         .iter()
@@ -10515,11 +10515,11 @@ impl GameState {
     pub(crate) fn flagbearer_candidates(&self, actor: usize) -> Vec<CardId> {
         use crate::effect::StaticEffect;
         let restricted = self.battlefield.iter().any(|c| {
-            !self.same_team(c.controller, actor)
-                && c.definition
-                    .static_abilities
-                    .iter()
-                    .any(|sa| matches!(sa.effect, StaticEffect::FlagbearersMustBeTargeted))
+            c.definition
+                .static_abilities
+                .iter()
+                .any(|sa| matches!(sa.effect, StaticEffect::FlagbearersMustBeTargeted))
+                && !self.same_team(c.controller, actor)
         });
         if !restricted {
             return Vec::new();
@@ -10623,14 +10623,13 @@ impl GameState {
     ) -> bool {
         use crate::effect::StaticEffect;
         self.battlefield.iter().any(|c| {
-            !self.same_team(c.controller, player)
-                && c.definition.static_abilities.iter().any(|sa| {
-                    matches!(
-                        &sa.effect,
-                        StaticEffect::OpponentsCantCastMatching { filter }
-                            if self.evaluate_requirement_on_card(filter, card, player)
-                    )
-                })
+            c.definition.static_abilities.iter().any(|sa| {
+                matches!(
+                    &sa.effect,
+                    StaticEffect::OpponentsCantCastMatching { filter }
+                        if self.evaluate_requirement_on_card(filter, card, player)
+                )
+            }) && !self.same_team(c.controller, player)
         })
     }
 
@@ -10886,11 +10885,11 @@ impl GameState {
     pub(crate) fn player_search_locked_by_opponent(&self, player: usize) -> bool {
         use crate::effect::StaticEffect;
         self.battlefield.iter().any(|c| {
-            !self.same_team(c.controller, player)
-                && c.definition
-                    .static_abilities
-                    .iter()
-                    .any(|sa| matches!(sa.effect, StaticEffect::OpponentsCantSearchLibraries))
+            c.definition
+                .static_abilities
+                .iter()
+                .any(|sa| matches!(sa.effect, StaticEffect::OpponentsCantSearchLibraries))
+                && !self.same_team(c.controller, player)
         })
     }
 
@@ -13228,13 +13227,12 @@ impl GameState {
                 && self.battlefield_find(card_id).is_some_and(|c| c.definition.is_artifact());
             if src_artifact_on_bf
                 && self.battlefield.iter().any(|c| {
-                    !self.same_team(c.controller, p)
-                        && c.definition.static_abilities.iter().any(|sa| {
-                            matches!(
-                                sa.effect,
-                                crate::effect::StaticEffect::OpponentsCantActivateArtifactAbilities
-                            )
-                        })
+                    c.definition.static_abilities.iter().any(|sa| {
+                        matches!(
+                            sa.effect,
+                            crate::effect::StaticEffect::OpponentsCantActivateArtifactAbilities
+                        )
+                    }) && !self.same_team(c.controller, p)
                 })
             {
                 return Err(GameError::AbilitySuppressedByNamedCard);

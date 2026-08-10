@@ -6036,11 +6036,11 @@ impl GameState {
             .battlefield
             .iter()
             .filter(|c| {
-                !self.same_team(c.controller, p)
-                    && c.definition
-                        .static_abilities
-                        .iter()
-                        .any(|sa| matches!(sa.effect, StaticEffect::OpponentMillDoubled))
+                c.definition
+                    .static_abilities
+                    .iter()
+                    .any(|sa| matches!(sa.effect, StaticEffect::OpponentMillDoubled))
+                    && !self.same_team(c.controller, p)
             })
             .count()
             .min(16);
@@ -6357,13 +6357,12 @@ impl GameState {
             // casting from any zone but the hand.
             || (!matches!(zone, Zone::Hand)
                 && self.battlefield.iter().any(|c| {
-                    !self.same_team(c.controller, caster)
-                        && c.definition.static_abilities.iter().any(|sa| {
-                            matches!(
-                                sa.effect,
-                                crate::effect::StaticEffect::OpponentsCantCastFromAnywhereButHand
-                            )
-                        })
+                    c.definition.static_abilities.iter().any(|sa| {
+                        matches!(
+                            sa.effect,
+                            crate::effect::StaticEffect::OpponentsCantCastFromAnywhereButHand
+                        )
+                    }) && !self.same_team(c.controller, caster)
                 }))
     }
 
