@@ -72,6 +72,38 @@ fn cr_612_2_land_type_rewrite_moves_the_mana_ability_not_the_name() {
     assert_eq!(g.players[0].mana_pool.amount(Color::Green), 0);
 }
 
+/// CR 305.6 through the *auto-tap* path, which runs inside a frozen layer
+/// scope. `effective_mana_abilities_with` skips the per-card layer pass when
+/// no effect in scope rewrites a land type (`actions::rewrites_land_types`),
+/// so each of the three modifications that write `subtypes.land_types` needs
+/// a case that would notice the gate closing on it. This is
+/// `ReplaceBasicLandType`; `SetLandTypes` is Blood Moon and `AddLandType` is
+/// Urborg, both in `modern/decks_16_17_misc`.
+#[test]
+fn cr_305_6_auto_tap_sees_a_rewritten_land_type() {
+    let mut g = main_phase();
+    let forest = g.add_card_to_battlefield(0, catalog::forest());
+    install(
+        &mut g,
+        forest,
+        Modification::ReplaceBasicLandType(LandType::Forest, LandType::Island),
+        Layer::L3Text,
+    );
+    g.auto_tap_for_cost(0, &crabomination::mana::cost(&[crabomination::mana::u()]));
+    assert_eq!(g.players[0].mana_pool.amount(Color::Blue), 1, "taps for blue");
+    assert_eq!(g.players[0].mana_pool.amount(Color::Green), 0, "printed Forest tap is gone");
+}
+
+/// The gate's other side: with no land-type rewrite anywhere, auto-tap still
+/// reads the printed type line.
+#[test]
+fn auto_tap_reads_printed_land_types_when_nothing_rewrites_them() {
+    let mut g = main_phase();
+    g.add_card_to_battlefield(0, catalog::forest());
+    g.auto_tap_for_cost(0, &crabomination::mana::cost(&[crabomination::mana::g()]));
+    assert_eq!(g.players[0].mana_pool.amount(Color::Green), 1);
+}
+
 /// CR 612.3 — granted abilities aren't part of an object's text, so a
 /// color-word rewrite reaches the printed protection but not a granted one.
 #[test]

@@ -180,6 +180,21 @@ fn drainable_counters(c: &CardInstance, kinds: Option<&[crate::card::CounterType
 
 /// Returns true if the given effect is purely a mana ability — only adds
 /// mana and uses no targets. Mana abilities resolve immediately without the stack.
+/// The three modifications that write `ComputedPermanent.subtypes.land_types`
+/// (Spreading Seas, Blood Moon, Urborg, Magical Hack). With none of them in
+/// scope a permanent's computed land types are its printed ones, which is
+/// what lets `effective_mana_abilities_with` skip the per-card layer pass.
+/// Keep in step with `layers::compute_permanent_pass` — a fourth land-type
+/// writer added there must be added here or lands stop losing their mana
+/// abilities.
+fn rewrites_land_types(e: &crate::game::layers::ContinuousEffect) -> bool {
+    use crate::game::layers::Modification as M;
+    matches!(
+        e.modification,
+        M::AddLandType(_) | M::SetLandTypes(_) | M::ReplaceBasicLandType(..)
+    )
+}
+
 /// Public wrapper for `is_mana_ability` — read by `SelectionRequirement::
 /// HasNonManaActivatedAbility` (Tsabo's Web).
 pub fn is_mana_ability_public(effect: &Effect) -> bool {
@@ -12256,10 +12271,23 @@ impl GameState {
         // a `computed_permanent` outside a freeze scope gathers every
         // continuous effect in the game. This was one gather per printed mana
         // ability plus one more for the intrinsic pass.
-        let computed = self.computed_permanent(card_id);
+        //
+        // And the layer pass is skipped outright when nothing in scope can
+        // rewrite a land type: exactly three modifications write
+        // `subtypes.land_types` (see `rewrites_land_types`), and with none of
+        // them present the computed type line *is* the printed one. Inside a
+        // freeze scope the effect list is already gathered, so the test is a
+        // walk of it; outside one, `frozen_effects` returns `None` and the
+        // old path stands rather than paying a gather to save a gather.
+        let computed = match self.frozen_effects() {
+            Some(fx) if !fx.iter().any(rewrites_land_types) => None,
+            _ => self.computed_permanent(card_id),
+        };
         let computed_land_types: &[crate::card::LandType] = match &computed {
+            // `card` came out of `battlefield_find`, so `computed_permanent`
+            // found it too — a `None` here is the gate above, not a miss.
             Some(cp) => &cp.subtypes.land_types,
-            None => &[],
+            None => &card.definition.subtypes.land_types,
         };
         // The printed abilities are borrowed from `card.definition`, which
         // outlives the call — only `granted_abilities_for` and
@@ -12270,8 +12298,7 @@ impl GameState {
         let mut out: Vec<(usize, Cow<'_, crate::effect::ActivatedAbility>)> = Vec::new();
         for (i, a) in card.definition.activated_abilities.iter().enumerate() {
             if is_mana_ability(&a.effect)
-                && !(computed.is_some()
-                    && Self::printed_land_mana_ability_lost_with(card, i, computed_land_types))
+                && !Self::printed_land_mana_ability_lost_with(card, i, computed_land_types)
             {
                 out.push((i, Cow::Borrowed(a)));
             }
@@ -12283,13 +12310,11 @@ impl GameState {
                 out.push((printed_count + j, Cow::Owned(a)));
             }
         }
-        if computed.is_some() {
-            for (k, a) in Self::intrinsic_land_mana_abilities_with(card, computed_land_types)
-                .into_iter()
-                .enumerate()
-            {
-                out.push((printed_count + gc + k, Cow::Owned(a)));
-            }
+        for (k, a) in Self::intrinsic_land_mana_abilities_with(card, computed_land_types)
+            .into_iter()
+            .enumerate()
+        {
+            out.push((printed_count + gc + k, Cow::Owned(a)));
         }
         out
     }
