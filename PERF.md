@@ -122,8 +122,39 @@ contention-immune, which makes it the better first look.
 
 ## Baseline
 
-**Anchored 2026-08-10 at `3e2ee6cb`** (`release`, mimalloc — the shipped
-configuration), i.e. on the fourteenth pass's tip.
+**Anchored 2026-08-10 at `28629ba9`** (`release`, mimalloc — the shipped
+configuration), i.e. on the fifteenth pass's tip.
+
+```text
+bot_ladder --bench   release, rustc 1.95.0, 4-core VM, 3 worker threads
+                     mimalloc (the default); measured on an idle box
+host_cpu             Intel(R) Xeon(R) Processor @ 2.80GHz
+host_calib_ms        52-64 across the sitting   <- within-sitting only
+games                320
+games_per_s          65.77 / 66.18 / 66.65 / 63.82 / 63.13 / 63.28 / 62.43 /
+                     62.22   (mean 64.19, spread 7.1 % — take >=6 runs)
+games_per_s_th       20.74 - 22.22
+decisions_per_s      mean 38,760
+turns_per_game       26.98
+stalls               0 (0.00 %)
+peak_rss_mib         23.3 - 23.8
+determinism          ok (all 160 pairs split, on all 8 runs)
+```
+
+**This anchor is not a measurement of the pass and must not be subtracted
+from the one below it.** It is a different container: `host_calib_ms` reads
+52-64 here against 50-60 there, i.e. a slightly *slower* host, and the run
+reads 64.19 against 62.48 — the direction agrees with the -3.87 %
+instruction count but the magnitude means nothing. **The pass's measurement
+is the callgrind number, and deliberately only that**: -3.87 % is inside
+this box's wall-clock noise (the record below has eight alternated pairs of
+a -1.91 % change reading +0.7 %), so no wall-clock delta is claimed. What
+this run *is* good for is the rest of the row — `turns_per_game` 26.98
+unchanged, `stalls` 0, determinism ok on all eight runs, peak RSS 23.3-23.8
+MiB (up ~1.5 MiB on the previous container; not investigated, the code
+allocates strictly less).
+
+The previous anchor, `3e2ee6cb` (the fourteenth pass's tip), for the record:
 
 ```text
 bot_ladder --bench   release, rustc 1.95.0, 4-core VM, 3 worker threads

@@ -1564,16 +1564,24 @@ mod tests {
             "loss failed to fall: first {first}, last {last}"
         );
 
-        // The learned rule generalizes to fresh states.
+        // The learned rule generalizes to fresh states. **1000 samples, not
+        // 100**: the trained accuracy on this synthetic signal is ~90.9 %
+        // (ten runs: 893-920 per 1000), and weight init comes from candle's
+        // process-global device RNG, so the model is not fixed run to run.
+        // At 100 samples the *measurement*'s own noise is ~3 points, which
+        // put the old `>= 85` assert inside one sigma of the mean and failed
+        // the suite roughly one run in eight (seen at 83 and 84). More
+        // training doesn't help — the loss assert above already passed on
+        // those runs. Ten times the sample puts the floor ~7 sigma out.
         let mut correct = 0;
-        for _ in 0..100 {
+        for _ in 0..1000 {
             let s = random_state(&mut rng, cfg.vocab);
             let p = trainer.predict_win(&s).expect("predict");
             if (p > 0.5) == (s.global[0] > s.global[1]) {
                 correct += 1;
             }
         }
-        assert!(correct >= 85, "only {correct}/100 fresh states classified");
+        assert!(correct >= 850, "only {correct}/1000 fresh states classified");
     }
 
     /// The aux head fits its targets, and its tensors are invisible to

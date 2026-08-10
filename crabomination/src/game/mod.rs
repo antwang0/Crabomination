@@ -7382,11 +7382,15 @@ impl GameState {
         // without a strip effect. Ask the cheap presence gate first — it walks
         // the battlefield once instead of gathering.
         if !self.ability_strip_in_scope() {
+            // The cross-check gathers, so it must not run re-entrantly: a
+            // gather started inside one would clear `in_layer_gather` on the
+            // way out and let the outer one serve the memo mid-gather.
             debug_assert!(
-                !self
-                    .gather_continuous_effects()
-                    .iter()
-                    .any(|e| matches!(e.modification, Modification::RemoveAllAbilities)),
+                self.in_layer_gather.load(std::sync::atomic::Ordering::Relaxed)
+                    || !self
+                        .gather_continuous_effects()
+                        .iter()
+                        .any(|e| matches!(e.modification, Modification::RemoveAllAbilities)),
                 "ability_strip_in_scope missed a RemoveAllAbilities source",
             );
             return Vec::new();
