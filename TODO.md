@@ -18,14 +18,14 @@ reference and want their own triage pass):
 
 Branch `claude/modern_decks`. **Seventeenth pass: four perf commits,
 -3.316 % Ir** (3,948,115,609 -> 3,817,208,224, base `8ca7df9f`,
-`profiling-fast --no-default-features` callgrind). Suite green, golden
+`profiling-fast --no-default-features` callgrind). Suite 18,831 green, golden
 traces byte-identical, clippy clean, bench output byte-identical.
 
 - **All four rows are one shape, and it is not the sixteenth pass's.** *A
   hot helper computes the expensive half of its answer before asking the
   cheap question that decides it.* `activate_ability_inner` built a
   whole-board `grant_scan` for indices it never reaches (-0.58 %);
-  `clear_end_of_turn_effects` wrote 28 CoW fields on permanents with
+  `clear_end_of_turn_effects` wrote 26 CoW fields on permanents with
   nothing to clear, **844,428 `DerefMut`s / 1.37 %** (-0.70 %);
   `damage_prevented_by_protection` took **five** `computed_permanent`s on
   the source — 45 % of every such call in the program — before asking
@@ -47,6 +47,13 @@ traces byte-identical, clippy clean, bench output byte-identical.
   *self* per call with only 1.2 spec matches. (4) `scale_damage_to` takes
   14,624 unfrozen gathers. (5) the allocator, ~16.5 %, still never
   attacked head-on.
+- **The bench anchor moved down and it is the host.** 69.13 games/s here
+  against the recorded 81.93; `host_calib_ms` 49-85 vs 45-55. Ruled out the
+  one real confound — the `encode.rs` commit that landed mid-pass, which
+  under `codegen-units = 1` + LTO could have moved inlining crate-wide — by
+  re-running callgrind on the *merged* tip: **+0.014 % against the pass's
+  own number**, inside build-to-build noise. Stalls 0, determinism ok and
+  `turns_per_game` 26.98 on all six runs, RSS 21.8-22.4 MiB.
 - **Bugs**: the panic/unwrap sweep's fifth filter was **not** attempted
   this pass — the run went to perf end to end. The item still wants a
   filter that looks at the *callers* of a `pub(crate)` helper rather than
@@ -62,7 +69,7 @@ traces byte-identical, clippy clean, bench output byte-identical.
   file instead. Touching `crabomination_base` costs a ~14 min rebuild
   (catalog + engine); engine-only is ~4.5 min, a callgrind run ~3.5 min.
   Disk allowance ~30 G.
-- **Trackers**: TODO 885, roadmap 660, `PERF.md` **1,181** (passes one to
+- **Trackers**: TODO 892, roadmap 660, `PERF.md` **1,205** (passes one to
   nine are now a seven-row index; the file still grew because the
   seventeenth pass added four rows and a re-taken profile).
   `INCOMPLETE_CARDS` 247. Next PERF trim: passes ten to thirteen, same

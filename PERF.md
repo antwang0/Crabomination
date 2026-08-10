@@ -122,8 +122,43 @@ contention-immune, which makes it the better first look.
 
 ## Baseline
 
-**Anchored 2026-08-10 at `abb2b502`** (`release`, mimalloc — the shipped
-configuration), i.e. on the sixteenth pass's tip.
+**Anchored 2026-08-10 at `e2ea34d0`** (`release`, mimalloc — the shipped
+configuration), i.e. on the seventeenth pass's tip.
+
+```text
+bot_ladder --bench   release, rustc 1.95.0, 4-core VM, 3 worker threads
+                     mimalloc (the default); measured on an idle box
+host_cpu             Intel(R) Xeon(R) Processor @ 2.80GHz
+host_calib_ms        49-85 across the sitting   <- within-sitting only
+games                320
+games_per_s          70.53 / 70.76 / 66.21 / 69.68 / 68.05 / 69.57
+                     (mean 69.13, spread 6.6 %)
+games_per_s_th       22.07 - 23.59
+decisions_per_s      mean 41,746
+turns_per_game       26.98
+stalls               0 (0.00 %)
+peak_rss_mib         21.8 - 22.4
+determinism          ok (all 160 pairs split, on all 6 runs)
+```
+
+**Another container again, and 69.13 against the 81.93 above is host, not a
+regression** — the evidence, in order. (a) `host_calib_ms` reads 49-85 here
+against 45-55 there. (b) Every one of the pass's four changes strictly
+*removes* work, and callgrind — deterministic on a fixed workload —
+measures **-3.316 %** instructions across them with the six games' output
+byte-identical on every row. (c) The one confound worth ruling out was the
+`encode.rs` commit that landed on the branch between the pass's base and
+its tip: with `codegen-units = 1` + thin LTO a 335-line addition to the
+engine crate can move inlining crate-wide. Re-running callgrind on the
+*merged* tip read **3,817,731,167 Ir against the pass's 3,817,208,224 —
++0.014 %**, i.e. inside the documented ~0.02 % build-to-build noise, so the
+encoder is inert for the non-net bench path and the pass's number holds on
+the merged tree. **No wall-clock delta is claimed for this pass**; the
+anchor is here for the stall / determinism / RSS record and for the next
+run's host comparison. `turns_per_game` 26.98 unchanged, `stalls` 0 and
+determinism ok on all six runs, peak RSS 21.8-22.4 MiB against 21.7-22.2.
+
+The previous anchor, `abb2b502` (the sixteenth pass's tip), for the record:
 
 ```text
 bot_ladder --bench   release, rustc 1.95.0, 4-core VM, 3 worker threads
@@ -140,17 +175,6 @@ stalls               0 (0.00 %)
 peak_rss_mib         21.7 - 22.2
 determinism          ok (all 160 pairs split, on all 8 runs)
 ```
-
-**This anchor is a different container again and must not be subtracted
-from the one below it.** `host_calib_ms` reads 45-55 here against 52-64
-there — a materially faster host — and it drifted *upward* across the
-sitting in exact inverse rank order with games/s (the first three runs read
-45-48 and 83.6-85.9; the last two read 50-55 and 78.7-79.3). **The pass's
-measurement is the callgrind number, and deliberately only that**:
--1.836 % is far inside this box's noise. What this run is good for is the
-rest of the row — `turns_per_game` 26.98 unchanged, `stalls` 0 on all eight
-runs, determinism ok on all eight, peak RSS 21.7-22.2 MiB (down ~1.5 MiB on
-the previous container, and the code allocates strictly less).
 
 The previous anchor, `28629ba9` (the fifteenth pass's tip), for the record:
 
@@ -375,10 +399,10 @@ line.
 
 | date | change | before | after | how measured |
 |---|---|---|---|---|
-| 2026-08-10 | Activation skips the grant/intrinsic scans for a printed ability index (`a1cd5c33`) | 3,948,115,609 Ir | 3,925,179,842 Ir (**-0.581 %**) | `activate_ability_inner` built `granted_abilities_for` (a whole-board `grant_scan`) and `intrinsic_land_mana_abilities` (a second `computed_permanent`) on every activation, but both are indexed only at `ability_index >= printed_count`. The printed count is a definition read with no layer in it, so it moves above the freeze scope and gates both. Nearly every activation is a printed index — a land tapping for mana is index 0 — so this is 18,386 grant scans gone. Removed, by the base profile: `grant_scan` 15,567,975, `granted_abilities_with` 3,157,650, `intrinsic_land_mana_abilities` 3,360,210 and its `computed_permanent`. Golden traces byte-identical. |
-| 2026-08-10 | The cleanup sweep stops unsharing permanents with nothing to clear (`aaa11c99`) | 3,925,179,842 Ir | 3,897,784,226 Ir (**-0.698 %**) | `clear_end_of_turn_effects` wrote 28 fields unconditionally, once per battlefield and phased-out permanent per turn. `CardInstance` is a CoW `Arc<CardData>`, so each write is a `DerefMut` — **844,428 of them for six games, 1.37 % of the simulator**, and the first on a shared card deep-copies the whole `CardData`. Almost every permanent reaches cleanup with all 28 already cleared. `end_of_turn_effects_are_clear` reads the same 28 through `Deref` and returns early; it mirrors the reset list exactly, and a field added to one and not the other silently stops being cleared, hence the note on both. Golden traces byte-identical. |
-| 2026-08-10 | Protection asks the target for a protection keyword first (`38625e8f`) | 3,897,784,226 Ir | 3,869,292,204 Ir (**-0.731 %**) | `damage_prevented_by_protection_inner` took **five** `computed_permanent` lookups on the *source* — colours, is-a-creature, creature types, card types, plus two `Vec` clones — before looking at whether the target carries a protection keyword at all. Those five were **91,762 of the program's 203,770 `computed_permanent` calls, 45 % of them**, and all of it is dead work on a board where nothing has protection. The gate reads `tgt.keywords`, which the function had already computed. `protection_keyword` lists exactly the keywords the `ProtectionFromCreatures` check and the final `match` can answer `true` for, and sits next to them. Golden traces byte-identical. |
-| 2026-08-10 | Activation takes one whole-game gather instead of two (`67ff4748`) | 3,869,292,204 Ir | 3,817,208,224 Ir (**-1.346 %**) | `activate_ability_inner` read this card's computed view twice: once inside the battlefield branch's `with_frozen_layers`, then again ~300 lines later for the three CR 602.5 gates — and that second read is on a `&mut self` path outside any scope, so it re-gathered every continuous effect in the game. 18,386 whole-game gathers, 106,596,809 Ir / 2.75 % between the pair. Nothing between the two points mutates a layer input (the one write is the `{X}` prompt, which returns), so the closure hands its view out. Each gate still re-checks its own condition, so a view the old `.then()` would have skipped can't change an answer. `computed_permanent` from `activate_ability_inner` **36,772 → 18,386**, 106,596,809 → 54,317,768 Ir. Suite 18,828 / 0; golden traces byte-identical. |
+| 2026-08-10 | Activation skips the grant/intrinsic scans for a printed ability index (`eb296df2`) | 3,948,115,609 Ir | 3,925,179,842 Ir (**-0.581 %**) | `activate_ability_inner` built `granted_abilities_for` (a whole-board `grant_scan`) and `intrinsic_land_mana_abilities` (a second `computed_permanent`) on every activation, but both are indexed only at `ability_index >= printed_count`. The printed count is a definition read with no layer in it, so it moves above the freeze scope and gates both. Nearly every activation is a printed index — a land tapping for mana is index 0 — so this is 18,386 grant scans gone. Removed, by the base profile: `grant_scan` 15,567,975, `granted_abilities_with` 3,157,650, `intrinsic_land_mana_abilities` 3,360,210 and its `computed_permanent`. Golden traces byte-identical. |
+| 2026-08-10 | The cleanup sweep stops unsharing permanents with nothing to clear (`8c8cd401`) | 3,925,179,842 Ir | 3,897,784,226 Ir (**-0.698 %**) | `clear_end_of_turn_effects` wrote 26 fields unconditionally, once per battlefield and phased-out permanent per turn. `CardInstance` is a CoW `Arc<CardData>`, so each write is a `DerefMut` — **844,428 of them for six games, 1.37 % of the simulator**, and the first on a shared card deep-copies the whole `CardData`. Almost every permanent reaches cleanup with all 26 already cleared. `end_of_turn_effects_are_clear` reads the same 28 through `Deref` and returns early; it mirrors the reset list exactly, and a field added to one and not the other silently stops being cleared, hence the note on both. Golden traces byte-identical. |
+| 2026-08-10 | Protection asks the target for a protection keyword first (`23065780`) | 3,897,784,226 Ir | 3,869,292,204 Ir (**-0.731 %**) | `damage_prevented_by_protection_inner` took **five** `computed_permanent` lookups on the *source* — colours, is-a-creature, creature types, card types, plus two `Vec` clones — before looking at whether the target carries a protection keyword at all. Those five were **91,762 of the program's 203,770 `computed_permanent` calls, 45 % of them**, and all of it is dead work on a board where nothing has protection. The gate reads `tgt.keywords`, which the function had already computed. `protection_keyword` lists exactly the keywords the `ProtectionFromCreatures` check and the final `match` can answer `true` for, and sits next to them. Golden traces byte-identical. |
+| 2026-08-10 | Activation takes one whole-game gather instead of two (`e2ea34d0`) | 3,869,292,204 Ir | 3,817,208,224 Ir (**-1.346 %**) | `activate_ability_inner` read this card's computed view twice: once inside the battlefield branch's `with_frozen_layers`, then again ~300 lines later for the three CR 602.5 gates — and that second read is on a `&mut self` path outside any scope, so it re-gathered every continuous effect in the game. 18,386 whole-game gathers, 106,596,809 Ir / 2.75 % between the pair. Nothing between the two points mutates a layer input (the one write is the `{X}` prompt, which returns), so the closure hands its view out. Each gate still re-checks its own condition, so a view the old `.then()` would have skipped can't change an answer. `computed_permanent` from `activate_ability_inner` **36,772 → 18,386**, 106,596,809 → 54,317,768 Ir. Suite 18,831 / 0 on the merged tree; golden traces byte-identical. |
 | | **cumulative, seventeenth pass** | **3,948,115,609 Ir** | **3,817,208,224 Ir (-3.316 %)** | four rows, all callgrind on the fixed six-game workload; no wall-clock delta claimed (see **Baseline** — this box cannot resolve 3 % by `--bench`) |
 
 **What the pass leaves behind, as a rule.** *A checkpoint is only worth its
@@ -398,7 +422,7 @@ settings + debuginfo; system allocator, because valgrind replaces malloc and
 a mimalloc build would measure the interception), 1 thread, `--a gang --b
 gang --games 6 --seed 1 --decks fixed`.
 
-**Retaken 2026-08-10 on the seventeenth pass's tip `67ff4748`:
+**Retaken 2026-08-10 on the seventeenth pass's tip `e2ea34d0`:
 3,817,208,224 Ir.** The pass's base (`8ca7df9f`) rebuilt on a fresh
 container read 3,948,115,609 against the recorded sixteenth-pass figure of
 3,948,056,772 — **0.0015 % apart**, so the two passes' numbers chain.
