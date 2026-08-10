@@ -12305,6 +12305,18 @@ impl GameState {
         if !matches!(action, GameAction::SubmitDecision(_)) && self.pending_decision.is_some() {
             return Err(GameError::DecisionPending);
         }
+        // The checkpoint exists to restore a *failed* action's partial
+        // mutation, and the mid-round priority pass has neither half: it
+        // cannot fail, and it writes two integers. Every `return Err` between
+        // here and `perform_action_inner`'s dispatch is a pure validation
+        // guard that has not touched the state, so an `Err` on this path
+        // needs no restore either. This is 41 % of the actions a bot game
+        // takes — and the checkpoint is not just its own clone and drop: it
+        // shares every CoW zone, so the action's first write to one deep-
+        // copies it.
+        if matches!(action, GameAction::PassPriority) && self.pass_priority_is_trivial() {
+            return self.perform_action_inner(action);
+        }
         let mut checkpoint = self.clone();
         let result = self.perform_action_inner(action);
         // `ManualTapRequired` is a suspension dressed as an `Err`: the

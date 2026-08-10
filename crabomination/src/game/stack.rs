@@ -146,6 +146,17 @@ impl GameState {
 impl GameState {
     // ── Pass priority ─────────────────────────────────────────────────────────
 
+    /// True when the next [`pass_priority`](Self::pass_priority) will take its
+    /// early return: not every player has passed yet, so it bumps the pass
+    /// counter, hands priority to the next seat and stops. That branch is
+    /// infallible and writes two integers — nothing to roll back — which is
+    /// what lets `perform_action` skip its transaction checkpoint for it.
+    /// Every other branch resolves the stack or advances the step and can
+    /// fail, so it keeps the checkpoint.
+    pub(crate) fn pass_priority_is_trivial(&self) -> bool {
+        self.priority.consecutive_passes + 1 < self.alive_count()
+    }
+
     pub fn pass_priority(&mut self) -> Result<Vec<GameEvent>, GameError> {
         let alive = self.alive_count();
         self.priority.consecutive_passes += 1;
