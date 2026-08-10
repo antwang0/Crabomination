@@ -29,6 +29,12 @@ CARGO_TARGET_DIR=target-mi cargo build --release -p crabomination \
 # if you need to attribute LTO'd code.)
 cargo build --profile profiling-fast -p crabomination --bin bot_ladder \
   --no-default-features
+# `-p crabomination` is load-bearing. Drop it and `--no-default-features`
+# does not reach the engine crate: the binary keeps mimalloc, callgrind
+# measures mimalloc-under-valgrind instead of the system allocator, and the
+# total lands ~11 % low (4.41 G vs 4.96 G on the same tip, 2026-08-10) while
+# looking like a win. Check the profile for `libmimalloc-sys` frames before
+# trusting a total.
 RUST_MIN_STACK=33554432 valgrind --tool=callgrind --callgrind-out-file=cg.out \
   target/profiling-fast/bot_ladder --a gang --b gang --games 6 --threads 1 \
   --seed 1 --decks fixed

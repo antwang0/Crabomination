@@ -84,12 +84,24 @@ neither anchor was taken on the merged tip.
   `EvalWeights::default()` — different bench, don't subtract. Take >=6 runs.
 - **Bugs**: the panic/unwrap sweep of the self-play path is still open — see
   the robustness section for the filter that works.
-- **Fetch before you build, and again before you push.** Two sessions
-  collided on this branch on the same day and the join cost a rebase with
-  conflicts in three engine files and both trackers. `git branch -a` in a fresh clone shows only
-  `main` and the session's own branch; `origin/claude/modern_decks` does not
-  appear until an explicit `git fetch origin claude/modern_decks`. A whole
-  session's work was rebuilt on stale `main` before that was noticed.
+- **Fetch before you build. This has now cost two sessions.** `git branch -a`
+  in a fresh clone shows only `main` and the session's own branch;
+  `origin/claude/modern_decks` does not appear until an explicit
+  `git fetch origin claude/modern_decks`, and the remote branch is ~1,860
+  commits ahead of `main`. **Run `git fetch origin claude/modern_decks &&
+  git checkout -B claude/modern_decks origin/claude/modern_decks` as the very
+  first command of the session**, before reading a tracker or planning a
+  thing — the trackers on `main` describe a project without
+  `crabomination_ml`, `PERF.md` or `bot_ladder`, and everything you plan from
+  them is work that already exists here. A second whole session was rebuilt
+  on stale `main` (2026-08-10) before noticing, at the push.
+- **The profile of record is still owed a re-take on the merged tip** (NEXT
+  item 1). One was attempted 2026-08-10 and thrown away: the build omitted
+  `-p crabomination`, so `--no-default-features` never reached the engine
+  crate, mimalloc stayed in, and callgrind measured the interception —
+  4,405,732,099 Ir against the comparable 4,964,563,445. PERF's *How to
+  measure* now carries the warning. Use the command there verbatim; budget
+  ~10 min for the `profiling-fast` build and ~25 min for the callgrind run.
 - **Env**: `rm -rf target/debug/incremental target/release` before a release
   build (3-17 G). `cargo-nextest` is not in the image. `release` rebuild of
   the engine is 23 min; `profiling-fast` is 3 min and is what A/B iteration
