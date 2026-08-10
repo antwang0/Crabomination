@@ -8851,7 +8851,10 @@ fn simulate_through_combat(g: &mut GameState, fuel: &mut u32, w: &EvalWeights) -
                 let pending = g.pending_decision.as_ref().unwrap();
                 decide_pending_policy(g, pending.acting_player(), w, &pending.decision, false)
             };
-            if dry_run(g, GameAction::SubmitDecision(answer)).is_err() {
+            // Not `dry_run`: `combat_aware`'s `before` probe scores this
+            // state even when the walk comes back `Incomplete`, so a
+            // rejected action here must still be rolled back.
+            if g.perform_action(GameAction::SubmitDecision(answer)).is_err() {
                 return CombatSim::Incomplete;
             }
             continue;
@@ -8877,7 +8880,12 @@ fn simulate_through_combat(g: &mut GameState, fuel: &mut u32, w: &EvalWeights) -
             }
             _ => GameAction::PassPriority,
         };
-        if !sim_step(g, action) {
+        // Checkpointed for the same reason as the decision above: an
+        // abandoned walk's state is read, so it has to be the rolled-back
+        // one. A rejected declaration would spin forever, hence the pass.
+        if g.perform_action(action).is_err()
+            && g.perform_action(GameAction::PassPriority).is_err()
+        {
             return CombatSim::Incomplete;
         }
     }
