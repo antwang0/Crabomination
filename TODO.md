@@ -162,12 +162,32 @@ count that only appears at game 400 k:
   `bot.rs`'s `LIFE_TENTHS[life as usize]`, and the `life <= 0` and
   `life <= MAX` branches above it are exactly the guard.
 
-Four filters exhausted. What is left of the item is the ~183
-`unwrap()`/`expect()`, still wanting triage rather than a blanket rewrite,
-and a *fifth* filter. The four tried so far all looked at the site — a
-missing guard, a wrong guard, a silent cast. The next one should look at
-the **callers** of a `pub(crate)` helper: a precondition the helper's own
-body documents but does not check, where one caller of several forgets it.
+**The fifth filter was run 2026-08-10 and is also clean.** It looked where
+the four before it did not — at a precondition *some* sites enforce and a
+sibling might not, rather than at the site alone. Two sweeps:
+
+- **Documented preconditions.** Eight `///` blocks under `game/` + `bot.rs`
+  state one ("must already be", "assumes", "must be non-empty"). Every one
+  is either validated in the body (`assign_teams` returns a typed
+  `TeamError` for each of empty / unknown / duplicate / missing seat) or
+  holds structurally. No caller-side gap.
+- **The `len() - 1` clamp family, the shape the third filter opened and did
+  not close across `effects/`.** Ten sites clamp a decider-supplied index
+  with `i.min(xs.len() - 1)`, which underflows to `usize::MAX` on an empty
+  `xs` and then indexes out of bounds. **All ten are guarded**, and by
+  three different idioms — an explicit `if xs.is_empty() { return … }`
+  (`apply_enters_as_choice`, `apply_enters_mode_choice`,
+  `EscalatingThisTurn`, `pick_trigger_mode`, and both `available`
+  builders), a pattern guard (`Some(modes) if !modes.is_empty()` in
+  `clamp_activated_mode`), a `first()` let-else (`LoseKeyword`), or a
+  `const` five-element array (the two `CardType` pickers). The precondition
+  is real and nobody forgot it.
+
+Five filters exhausted, four of them looking at the site and one at the
+callers. What is left of the item is the ~183 `unwrap()`/`expect()`, still
+wanting triage rather than a blanket rewrite. The next filter probably has
+to stop pattern-matching on syntax: run the actor path under a build that
+turns overflow checks on in release and let a few thousand games find it.
 
 ## Engine — Missing Mechanics
 
