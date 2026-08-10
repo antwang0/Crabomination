@@ -12951,6 +12951,12 @@ impl GameState {
             }
         };
 
+        // This card's computed view, taken once by the battlefield branch
+        // below and read again by the CR 602.5 gates further down. Nothing
+        // between the two points mutates a layer input (the one write is the
+        // `{X}` prompt, which returns), so the second read reuses this
+        // instead of taking its own whole-game gather.
+        let mut bf_cp = None;
         let ability: crate::effect::ActivatedAbility = if source_in_gy {
             let owner = source_owner.unwrap();
             let card = self.players[owner].graveyard.iter()
@@ -13017,7 +13023,7 @@ impl GameState {
             // `computed_permanent`.
             let printed_count = self.battlefield[pos].definition.activated_abilities.len();
             let want_extra = ability_index >= printed_count;
-            let (stripped, is_creature, granted, intrinsic, land_mana_lost) =
+            let (stripped, is_creature, granted, intrinsic, land_mana_lost, cp) =
                 self.with_frozen_layers(|g| {
                     let cp = g.computed_permanent(card_id);
                     // CR 305.6 / 612 — the same computed view answers whether a
@@ -13043,8 +13049,10 @@ impl GameState {
                         if want_extra { g.granted_abilities_for(card_id) } else { Vec::new() },
                         if want_extra { g.intrinsic_land_mana_abilities(card_id) } else { Vec::new() },
                         land_mana_lost,
+                        cp,
                     )
                 });
+            bf_cp = cp;
             if is_creature {
                 *creature_mana_before = Some(self.players[p].mana_pool.clone());
             }
@@ -13316,12 +13324,17 @@ impl GameState {
         // computed view, nothing between them touches a layer input, and this
         // is a `&mut self` path — so each `computed_permanent` was its own
         // whole-game gather. Take one, under the same conditions that decide
-        // whether any of them can fire.
+        // whether any of them can fire. On the battlefield that one is
+        // `bf_cp`, already taken by the ability lookup above; each gate
+        // re-checks its own condition, so handing it a view the old gate
+        // would have skipped cannot change an answer.
         let tap_gated = ability.tap_cost || ability.untap_self_cost;
         let on_battlefield = !source_in_gy && !source_in_hand && !source_in_command;
-        let cp = (tap_gated || (on_battlefield && !is_mana_ability(&ability.effect)))
-            .then(|| self.computed_permanent(card_id))
-            .flatten();
+        let cp = if on_battlefield {
+            bf_cp
+        } else {
+            tap_gated.then(|| self.computed_permanent(card_id)).flatten()
+        };
 
         // CR 602.5 — "activated abilities with {T} in their costs can't be
         // activated" (Serra Bestiary). Read off the computed keyword set so a
