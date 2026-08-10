@@ -323,13 +323,47 @@ fn parse_profile(name: &str) -> Option<Pilot> {
             weights: EvalWeights::net_eval_det1(),
             ..MctsConfig::default()
         })),
+        // Round 29: the search internals, one knob at a time against the
+        // mcts-net-deep control (64/h3, c=1.0, no priors, fixed budget).
+        // (a) The exploration constant was never tuned for rewards that
+        // live in [0,1] win-probability space.
+        "mcts-net-c05" | "mcts-net-c14" | "mcts-net-c20" => Some(Pilot::Mcts(MctsConfig {
+            iterations: 64,
+            horizon_turns: 3,
+            exploration: match name {
+                "mcts-net-c05" => 0.5,
+                "mcts-net-c14" => 1.4,
+                _ => 2.0,
+            },
+            weights: EvalWeights::net_eval_det1(),
+            ..MctsConfig::default()
+        })),
+        // (b) Root priors from the candidate generator's scores (P-UCT).
+        "mcts-net-prior" => Some(Pilot::Mcts(MctsConfig {
+            iterations: 64,
+            horizon_turns: 3,
+            prior_weight: 1.5,
+            weights: EvalWeights::net_eval_det1(),
+            ..MctsConfig::default()
+        })),
+        // (c) Adaptive budget: early-stop decided roots, extend close
+        // calls to 4x. Mean cost is measured, not assumed — the games/s
+        // line in the ladder output is part of this profile's result.
+        "mcts-net-adapt" => Some(Pilot::Mcts(MctsConfig {
+            iterations: 64,
+            horizon_turns: 3,
+            early_stop: true,
+            extend_close: 4.0,
+            weights: EvalWeights::net_eval_det1(),
+            ..MctsConfig::default()
+        })),
         "uniform" => Some(Pilot::Uniform),
         _ => None,
     }
 }
 
 /// Profile names accepted by `--a` / `--b`, for the help text and errors.
-const PROFILES: &str = "baseline, combat, holdsick, holdsick+combat, atk, atk-cheap, atk-hold, atk-sim, atk-race, atk-life, dflt-life, blk, lookahead, holdinst, mcts, mcts-heur, mcts-deep, planner, v2+combat, pretap, scaled, keywords, kw25, base, base+kw, life, power, v2, uniform, landseq, mull, gang, landseq2, mull2, race2, look1, look2, smarttap, det1, det3, net, net-det1, net-det3, net-blend, net-blend300, net-q10, net-q20, netb-q10, netb-q20, netb-ply, mcts-net, mcts-net-deep (*net* need CRAB_NET=<weights.safetensors> or the committed nets/champion.safetensors)";
+const PROFILES: &str = "baseline, combat, holdsick, holdsick+combat, atk, atk-cheap, atk-hold, atk-sim, atk-race, atk-life, dflt-life, blk, lookahead, holdinst, mcts, mcts-heur, mcts-deep, planner, v2+combat, pretap, scaled, keywords, kw25, base, base+kw, life, power, v2, uniform, landseq, mull, gang, landseq2, mull2, race2, look1, look2, smarttap, det1, det3, net, net-det1, net-det3, net-blend, net-blend300, net-q10, net-q20, netb-q10, netb-q20, netb-ply, mcts-net, mcts-net-deep, mcts-net-128, mcts-net-256, mcts-net-h4, mcts-net-c05, mcts-net-c14, mcts-net-c20, mcts-net-prior, mcts-net-adapt (*net* need CRAB_NET=<weights.safetensors> or the committed nets/champion.safetensors)";
 
 /// Peak resident set size in MiB, or `None` where the OS doesn't expose it
 /// cheaply. Linux keeps the high-water mark in `/proc/self/status`, which

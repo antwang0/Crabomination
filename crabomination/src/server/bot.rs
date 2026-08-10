@@ -9698,12 +9698,15 @@ fn score_candidate(state: &GameState, seat: usize, action: &GameAction, w: &Eval
 // ladder difference is the *search*, not a second opinion about what is
 // castable or what a board is worth.
 
-/// The main-phase plays worth searching from `state`, validated.
+/// The main-phase plays worth searching from `state`, validated, each
+/// with its heuristic score (in `w.unit`s). The scores were always
+/// computed here to rank the arm cap; returning them lets the search
+/// seed root priors from the same opinion instead of starting uniform.
 pub(crate) fn main_phase_candidates_for_mcts(
     state: &GameState,
     seat: usize,
     w: &EvalWeights,
-) -> Vec<GameAction> {
+) -> Vec<(GameAction, i32)> {
     let probe = state.affordance_probe_template();
     let mut ranked: Vec<(i32, GameAction, bool)> = cast_candidates(state, seat, &probe, w)
         .into_iter()
@@ -9716,21 +9719,23 @@ pub(crate) fn main_phase_candidates_for_mcts(
     // badly.
     const MAX_ARMS: usize = 6;
     let mut out = Vec::with_capacity(MAX_ARMS);
-    for (_, a, ok) in ranked {
+    for (s, a, ok) in ranked {
         if out.len() >= MAX_ARMS {
             break;
         }
         if ok || GameState::would_accept_on(&probe, a.clone()) {
-            out.push(a);
+            out.push((a, s));
         }
     }
     // A land drop is a real option and is enumerated separately.
+    // `score_candidate` has no opinion on lands; two units — a solid
+    // default play, ahead of a marginal cast, behind a strong one.
     if state.can_player_play_land(seat)
         && let Some(land) = pick_land_to_play(state, seat, w)
     {
         let action = GameAction::PlayLand(land);
         if GameState::would_accept_on(&probe, action.clone()) {
-            out.push(action);
+            out.push((action, 2 * w.unit));
         }
     }
     out
