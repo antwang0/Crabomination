@@ -307,71 +307,81 @@ same fixed six-game workload, `profiling-fast --no-default-features`:
 |---|---|---|---|---|
 | 2026-08-10 | **twelfth pass, both sessions, merged** | **5,620,660,987 Ir** (`81c88580`) | **4,964,563,445 Ir** (`6e4fa142`) | **-11.68 %.** Below either session's own tip (5,013,096,289 / 5,260,848,923), so the merge kept the union of the non-overlapping work and none of it cancelled. Base check: the other session's base `48ac252c` reads 5,622,084,243 against `81c88580`'s 5,620,660,987 — 0.03 % apart, confirming `81c88580` doesn't touch the engine hot path. Inclusive at the merged tip: `auto_tap_for_cost_inner` 744,864,725 (15.00 %), `computed_permanent` 706,279,518 (14.23 %), `dispatch_triggers_for_events` 534,111,146 (10.76 %), `gather_continuous_effects_inner` 516,321,501 (10.40 %), `check_state_based_actions` 313,205,944 (6.31 %, from 11.69 %), `compute_battlefield` 297,944,249 (6.00 %, from 13.51 % two passes ago). **The `release` anchor on this tip is now taken: 55.88 games/s mean of 8** — see Baseline. |
 
+**Thirteenth pass.** Base `a4947da6` (the merged twelfth-pass tip plus the
+round-27 ML commits, which don't touch the engine hot path — the re-taken
+profile reproduces the merged figure to 0.03 %).
+
+| date | change | before | after | how measured |
+|---|---|---|---|---|
+| 2026-08-10 | `ComputedPermanent.colors` becomes a `ColorSet` bitmask (`59cd783e`, candidate 1(a)'s remainder) | 4,963,254,419 Ir | 4,836,659,318 Ir (**-2.55 %**) | `colors` was the one field the eleventh pass's `Printed<T>` row could not borrow: `printed_colors()` *computes* a `Vec<Color>` from `color_override` / Devoid / `color_indicator` / cost symbols, so there is nothing to project. It was **106,024,788 Ir inclusive (2.14 %) over 683,248 calls from `compute_permanent_pass`** — 155 Ir each, 302,944 of them growing a `Vec` — and the result was then cloned again on every `ComputedPermanent::clone`. `ColorSet` already existed for Commander colour identity; giving it `contains<Borrow<Color>>` / `iter` / `to_vec` / `intersects` / `FromIterator` / `Extend` / `IntoIterator` let the ~70 `cp.colors` readers compile unchanged — the `Printed<T>` / `KeywordCounters` trick, third time. `printed_colors()` survives as `printed_color_set().to_vec()`, so there is still one walker. `can_block_attacker_computed` takes a `ColorSet` instead of a `&[Color]`, which also drops two `colors.clone()` per must-block check in `declare_blockers`' CR 509.1c loops. **Colour order is now WUBRG rather than indicator-then-pip order** — strictly more deterministic, a bitmask cannot carry an insertion order into a trace — and all four golden traces are byte-identical, so nothing on the bench path read it. Callgrind A/B on identical `profiling-fast --no-default-features` binaries. Suite 18825 passed / 0 failed; clippy clean. |
+| 2026-08-10 | Auto-tap skips the per-card layer pass when nothing rewrites a land type (`d95cd5ba`) | 4,836,659,318 Ir | 4,756,306,488 Ir (**-1.66 %**) | `effective_mana_abilities_with` took a `computed_permanent` per untapped permanent per auto-tap and read **one field** out of it — `subtypes.land_types`, for the two CR 305.6 consumers. Inside `mana_source_table`'s freeze scope the gather is memoized but each call is still a full per-card layer pass: **95,644,776 Ir (1.93 %) over 67,468 calls, 1,418 Ir each**, to answer "is this Forest still a Forest". Exactly three modifications write `subtypes.land_types` — `AddLandType` (Urborg), `SetLandTypes` (Blood Moon), `ReplaceBasicLandType` (Mind Bend) — so with none in scope the computed type line *is* the printed one. The test is a walk of the already-gathered effect list; outside a freeze scope `frozen_effects()` returns `None` and the old path stands rather than paying a gather to save a gather. `effective_mana_abilities_with` **161,920,619 → 89,565,572 inclusive (-44.7 %)**, `mana_source_table` 244,258,164 → 156,843,652, `auto_tap_for_cost_inner` 15.00 % → 13.78 %. **The presence flag was checked, not assumed**: `cr_305_6_auto_tap_sees_a_rewritten_land_type` pins the third writer through the frozen auto-tap path and *fails* when `ReplaceBasicLandType` is deleted from the predicate. Suite 18827 passed / 0 failed; golden traces byte-identical; clippy clean. |
+| | **cumulative this pass** | **4,963,254,419 Ir** | **4,756,306,488 Ir (-4.17 %)** | two alternated `profiling-fast --no-default-features` callgrind A/Bs on the one fixed six-game workload, so the two rows subtract honestly. |
+
 ## Profile of record
 
 Callgrind on `profiling-fast --no-default-features` (= `release-fast` opt
 settings + debuginfo; system allocator, because valgrind replaces malloc and
 a mimalloc build would measure the interception), 1 thread, `--a gang --b
-gang --games 6 --seed 1 --decks fixed`. Retaken 2026-08-09 at the
-final tip, i.e. *after* every row in the Log including the `usable_abilities`
-row. (The sampler robustness commit doesn't touch the bench path — sampling
-is thread-local and off unless `--sample-temp` installs it.)
+gang --games 6 --seed 1 --decks fixed`. **Retaken 2026-08-10 on the merged
+twelfth-pass tip `a4947da6`** — the re-take NEXT had been owing since the
+two concurrent sessions joined. The number reproduces the recorded merged
+figure to 0.03 % (4,963,254,419 against 4,964,563,445), which is this
+profile's build-to-build noise, so the merge measurement stands.
 
-**5.62 G instructions for six games**, from 6.15 G at this pass's start,
-6.50 G at the tenth pass's start, and 14.40 G four passes ago on the same
-workload.
+**4.96 G instructions for six games**, from 5.62 G at the twelfth pass's
+start, 6.15 G at the eleventh's, and 14.40 G six passes ago on the same
+workload. **3,748,803 allocations**, from 4,073,937.
 
-Self cost, grouped (share at this pass's start in brackets):
+Self cost, grouped:
 
 | share | site | note |
 |---|---|---|
-| 18.5 % | `_int_malloc` 5.29 / `_int_free` 4.51 / `malloc` 3.34 / `free` 2.00 / consolidate 0.90 / merge+arena+unlink 2.4 | [18.0 %] **the largest single block, and it grows as a share every pass because no row has ever attacked it head-on.** Ir over-weights it — see the allocator note above — but it is also the only theme left at this size. |
-| 3.23 % | `__memcpy_avx_unaligned_erms` | 182 M |
-| 6.8 % | `gather_continuous_effects_inner` | `mod.rs` 156 M / `ptr::non_null` 101 M / `slice::iter` 70 M / `vec` 52 M. **535 M inclusive over 251,916 calls = 2,126 Ir/gather.** The per-call cost is what the tenth pass moved; the *number* of gathers is what this pass moved, 358,792 → 251,916. |
-| 2.67 % | `compute_permanent_pass` | 150 M |
-| 2.90 % | `Arc::clone_from_ref_in` | 111 M + 52 M — the CoW handles' unshare. **861,828 of the program's 4.07 M allocations sit under it**: the unshares deep-copying the collections inside `CardData` / `PlayerData` |
-| 1.16 % | `hashbrown RawTable::clone` | [1.50 %] fell with the `KeywordCounters` newtype; what is left is `GameState::clone`'s own maps |
-| 1.09 % | `Vec::clone` | |
-| 0.68 % | `CardDefinition::printed_colors` | **152,955,976 inclusive (2.72 %)** over 1,245,030 calls from `compute_permanent_pass`, of which **390,228 allocate** — candidate 1(a), re-costed this pass |
+| 19.3 % | `_int_malloc` 5.49 / `_int_free` 4.80 / `malloc` 3.56 / `free` 2.14 / `malloc_consolidate` 0.92 / arena+merge+unlink 2.34 | **the largest single block, and it has grown as a share every pass because no row has ever attacked it head-on.** Ir over-weights it — see the allocator note above — but it is the only theme left at this size. |
+| 6.6 % | `gather_continuous_effects_inner` | `mod.rs` 150 M / `ptr::non_null` 97 M / `slice::iter` 68 M / `vec` 51 M. 516 M inclusive over 243,190 gathers = **2,123 Ir/gather** — the per-call cost the tenth pass moved and the eleventh/twelfth did not. |
+| 3.29 % | `__memcpy_avx_unaligned_erms` | 163 M |
+| 2.90 % | `Arc::clone_from_ref_in` | 109 M `ptr` + 52 M `raw_vec` + 40 M `uint_macros`. **802,482 of the program's 3.75 M allocations** sit under it — the CoW unshares deep-copying the collections inside `CardData` / `PlayerData`. |
+| 1.72 % | `compute_permanent_pass` | 86 M |
+| 1.30 % | `hashbrown RawTable::clone` | 353,862 allocations |
+| 1.21 % | `Vec::clone` | 239,240 allocations |
+| 1.07 % | `GameState::clone` | own fields only; the zone unshare is the `Arc` row above |
+| 0.47 % | `CardDefinition::printed_colors` | **removed by the ColorSet row** — kept here as the before |
 
-Inclusive, in caller terms (these overlap each other), at the tip:
+Inclusive, in caller terms (these overlap each other):
 
-| Ir | share | site |
-|---|---|---|
-| 759,091,556 | 13.51 % | `compute_battlefield` — **now the largest layer consumer**, and untouched by the last two passes |
-| 743,926,271 | 13.24 % | `auto_tap_for_cost_inner` |
-| 686,077,999 | 12.21 % | `compute_permanent_pass` |
-| 685,672,108 | 12.20 % | `computed_permanent` — was 1,249 M / 19.11 % two passes ago |
-| 657,058,294 | 11.69 % | `check_state_based_actions` — **never touched; candidate 0.25** |
-| 535,462,778 |  9.53 % | `gather_continuous_effects_inner` — was 1,056 M / 16.15 % two passes ago |
-| 523,138,110 |  9.31 % | `dispatch_triggers_for_events` |
-| 373,205,760 |  6.64 % | `drop_in_place<GameState>` — the transaction checkpoint's other half (candidate 0.5) |
-| 152,955,976 |  2.72 % | `CardDefinition::printed_colors` — candidate 1(a) |
+| Ir | share | calls | site |
+|---|---|---|---|
+| 3,501,254,529 | 70.54 % | 64 k | `perform_action` |
+| 744,365,168 | 15.00 % | 8,892 | `auto_tap_for_cost_inner` — **now the largest named consumer**, and only ~1/3 of it is the tapping itself (`activate_ability` 4.55 % + 4.29 %) |
+| 706,741,290 | 14.24 % | | `computed_permanent` |
+| 534,140,634 | 10.76 % | 52 k | `dispatch_triggers_for_events` |
+| 516,339,194 | 10.40 % | 243,190 | `gather_continuous_effects_inner` |
+| 412,685,108 |  8.31 % | | `compute_permanent_pass` |
+| 359,977,808 |  7.25 % | | `drop_in_place<GameState>` — the transaction checkpoint's other half (candidate 0.5) |
+| 313,182,377 |  6.31 % | 10,670 | `check_state_based_actions` — was 11.69 % two passes ago (candidate 0.25) |
+| 297,647,165 |  6.00 % | 17,718 | `compute_battlefield` — was 13.51 %, and its call count fell 47,808 → 17,718 |
+| 244,258,164 |  4.92 % | 8,892 | `mana_source_table` |
+| 200,930,662 |  4.05 % | | `GameState::clone` |
+| 161,920,619 |  3.26 % | 67,468 | `effective_mana_abilities_with` — **removed 44.7 % of by the land-type gate row** |
+| 130,398,805 |  2.63 % | 59,378 | `permanents_with_abilities_removed` — gathers once per call to answer one bit |
+| 106,024,788 |  2.14 % | 683,248 | `CardDefinition::printed_colors` — **removed by the ColorSet row** |
+| 87,836,252 |  1.77 % | | `CardInstance::clear_end_of_turn_effects` |
+| 84,286,316 |  1.70 % | | `CardInstance::deref_mut` — the CoW unshare point |
+| 73,944,552 |  1.49 % | | `same_team` |
 
-**The read after this pass.** One shape produced all four rows: **a
-`&mut self` path taking a `computed_permanent` outside a freeze scope**, each
-one re-gathering every continuous effect in the game to answer one question
-about one card. Gathers from `computed_permanent` fell **260,370 → 151,776
-(-42 %)** and the gather's inclusive share went 16.15 % → 9.24 % without its
-per-call cost moving at all.
+**The allocation tree**, 3,748,803 allocations for six games by allocating
+call site: `Arc::clone_from_ref_in` **802,482 (4.60 % of the program)**;
+`RawVecInner::finish_grow` 657,705 (1.53 %) — `Vec::push` growth;
+`SpecFromIterNested::from_iter` 258,284 (1.24 %); `RawTable::clone` 353,862;
+`computed_permanent` 340,310; `GameState::clone` 264,202; `Vec::clone`
+239,240; `gather_continuous_effects_inner` 199,072.
 
-What that leaves, in order of size: **`compute_battlefield` is now the
-biggest layer consumer at 13.51 %** and neither of the last two passes
-touched it; **`check_state_based_actions` at 11.69 % has never been touched
-at all** (candidate 0.25); the **allocator is 18.5 % and growing as a
-share**, with its four top call sites now named in candidate 1(a) and
-below; and `drop_in_place<GameState>` + `GameState::clone` are still ~10 %
-between them for a rollback that fires 20 times in 64,248 actions
-(candidate 0.5).
-
-**The allocation tree, taken this pass and not previously written down.**
-4,073,937 allocations for six games, by allocating call site:
-`Arc::clone_from_ref_in` **861,828 (4.23 % of the program)** — the CoW
-unshares deep-copying `CardData` / `PlayerData` collections;
-`RawVecInner::finish_grow` 758,109 (1.55 %) — `Vec::push` growth, of which
-**`printed_colors` alone is 390,228**; `SpecFromIterNested::from_iter`
-277,096; `computed_permanent` 387,008. That is the map for attacking the
-18.5 % head-on, which no pass has done.
+**Where the `collect()`s are**, by inlining site — this is the map for the
+next three candidates, and each row is a `Vec` materialized and thrown away:
+`compute_battlefield` 224 M / 4.71 % over 17,718 calls (12,641 Ir each);
+`bot::cast_candidates` 169 M / 3.55 % over 7,024 calls (**24,040 Ir each**);
+`mana_source_table` 146 M / 3.07 % over 8,892; `check_state_based_actions`
+140 M / 2.95 % over **82,634 collects, i.e. 7.7 per sweep**;
+`fire_step_triggers` 63 M / 1.32 %.
 
 ## Perf candidates
 
@@ -379,10 +389,11 @@ Ordered by expected value. Each run pulls the top one, attaches numbers,
 and feeds what it finds back in. Re-profile and replenish when the list
 goes thin or stale.
 
-**The profile of record is one pass stale** — it was taken at `48ac252c`,
-the twelfth pass's base, and that pass then removed ~7,300
-`compute_battlefield` calls. Shares below are from it and are upper bounds
-for anything in the layer path; re-take it before costing a layer candidate.
+**The profile of record is current** — retaken 2026-08-10 at `a4947da6`,
+the thirteenth pass's base. Shares quoted below without a date are from it.
+Two of its rows have since been paid (`printed_colors`,
+`effective_mana_abilities_with`); everything else is live.
+
 Methodological notes, each learned the hard way:
 
 - **The shape that paid the eleventh pass: a `&mut self` path taking a
@@ -465,6 +476,33 @@ list, in order: `check_state_based_actions` (10,670 / ~7,500 sweeps — still
 >1 per sweep, find the second one), `declare_blockers` (7,754),
 `resolve_combat` (3,196), `process_cumulative_upkeep` (1,742), `do_phasing`
 (1,718). The last three look like one pass per turn each, i.e. legitimate.
+
+**After the thirteenth (representation + presence-gate) pass.** Two rows,
+-4.17 % Ir. The shapes they shared with the last three passes: **a hot
+struct field that is computed and allocated when it could be a bitmask**,
+and **a caller that materializes a whole computed view to read one field of
+it**. The re-taken profile promotes the next three by size, and all three
+are the *same* shape one level up — a `collect()` whose result is mostly
+thrown away:
+
+- **(0) `bot::cast_candidates` allocates 169 M Ir / 3.55 % in
+  `collect()` over 7,024 calls — 24,040 Ir per call, the most expensive
+  single collect site in the program.** Never profiled at line level. Read
+  `--auto=yes` on it before guessing: the affordance sweep it used to carry
+  is gone, so this is the candidate *list* itself.
+- **(0.1) `compute_battlefield` materializes 224 M Ir / 4.71 % of `Vec`
+  over 17,718 calls** (12,641 Ir each) — candidate 4(a), unchanged in
+  substance but now costed: does each caller need all ~19.5
+  `ComputedPermanent`s, or an iterator, or two of them?
+- **(0.2) `permanents_with_abilities_removed` runs a full gather 59,378
+  times** (115 M / 2.42 % from `dispatch_triggers_for_events` alone) to
+  answer one bit that is `false` on every bench board. `c365ede8` already
+  made it bail off the gathered set; what is left is *the gather*. The
+  land-type gate above is the pattern — find a cheap over-approximation of
+  "could a `RemoveAllAbilities` be in scope" that doesn't need the gather,
+  and enumerate every way one can enter (a resolved `continuous_effect`, a
+  static ability converted during the gather) or it will silently keep
+  abilities a Turn to Frog took away.
 
 **Top of the list**, in order:
 
@@ -557,8 +595,15 @@ list, in order: `check_state_based_actions` (10,670 / ~7,500 sweeps — still
    subset is phase 1 (`gather_combat_damage_decisions`), which runs before
    any damage is dealt; cost it first, it may be too small to matter.
 
-0.25 **`check_state_based_actions` — 9.93 % after the twelfth pass's
-   sub-item (b), which is done (-1.82 %, see the Log).**
+0.25 **`check_state_based_actions` — 6.31 % at the thirteenth pass's base,
+   down from 11.69 %.** The number that names what is left:
+   **140,479,219 Ir (2.95 %) in `spec_from_iter.rs:check_state_based_actions`
+   over 82,634 collects — 7.7 per sweep at ~1,700 Ir each**, after the
+   presence scan already removed ~21 empty ones. These are the walks that
+   *find* something. Cost them with `--auto=yes` before gating; an empty
+   `collect()` does not allocate, so what is left is real work or a
+   whole-board walk that could be a participant walk.
+   *(historical, from when this was 9.93 %)*
    ~7,500 sweeps at **~87,600 Ir each**, and it is the shape the gather fold
    (-9.02 %) and `do_untap` (-4.08 %) both paid out on: ~20 unconditional
    whole-board walks for state triggers no bench board carries
@@ -609,30 +654,14 @@ list, in order: `check_state_based_actions` (10,670 / ~7,500 sweeps — still
 
 1. **Make `ComputedPermanent` cheap to build.**
    (a) ~~Hold the `Arc<CardDefinition>` and clone a collection only when a
-   layer writes it~~ — **done, -17.09 % Ir / +13.5 % wall.** See the Log
-   row. `compute_permanent_pass` went from 3,482,320 allocations to 30,086.
-   What is left of the item: **`colors` is still cloned per call.**
-   `CardDefinition::printed_colors()` *computes* a fresh `Vec<Color>`
-   (from `color_override` / Devoid / `color_indicator` / cost symbols), so
-   there is nothing to borrow — it can't be a `Printed<T>` without caching
-   the result on the definition, and a cache there is **unsound as written**:
-   `Arc::make_mut(&mut card.definition)` mutates a *uniquely owned*
-   definition in place (MDFC face-swap, "loses all abilities", keyword
-   grants), which would leave a filled cache stale. A `ColorSet` bitmask
-   return would dodge both, at the cost of touching every `cp.colors`
-   reader. **Re-costed 2026-08-09 and it is bigger than the old note said**:
-   `printed_colors` is **152,955,976 Ir inclusive (2.72 %)** over
-   **1,245,030 calls from `compute_permanent_pass`**, of which **390,228
-   allocate** — 9.6 % of the program's 4.07 M allocations in one function
-   (the colourless majority returns an empty `Vec` and is free; every card
-   with a coloured pip pays a `Vec::push` growth). The old "~0.2 % at
-   `release`" figure was an allocation-count argument; the instruction count
-   says ~2 %, and a `ColorSet` bitmask removes the *computation* as well as
-   the allocation. Scope check before starting: 126 `.colors` sites across
-   the workspace, but most are `ManaCost::colors` / client colour arrays —
-   grep for the `ComputedPermanent` field specifically, and give `ColorSet`
-   `contains(&Color)` / `iter()` / `is_empty()` / `len()` so the readers
-   compile unchanged (the `KeywordCounters` and `Printed<T>` trick).
+   layer writes it~~ — **done, -17.09 % Ir / +13.5 % wall.** ~~What is left
+   of the item: `colors` is still cloned per call~~ — **also done, -2.55 %
+   Ir, 2026-08-10: `ColorSet` bitmask, see the Log.** The reasoning the item
+   carried (a cache on `CardDefinition` is unsound because
+   `Arc::make_mut(&mut card.definition)` mutates a uniquely owned definition
+   in place — MDFC face-swap, "loses all abilities", keyword grants) is why
+   the fix had to be a representation change rather than a memo; keep it in
+   mind before caching anything else on a definition.
    (b) ~~Memoize per (card, freeze scope)~~ — **done, -1.91 % Ir.** See the
    Log row. Hit rate 34.5 %, ceiling 50 %.
    (c) ~~The same memo for `compute_battlefield`~~ — **dead, don't build
@@ -657,9 +686,18 @@ list, in order: `check_state_based_actions` (10,670 / ~7,500 sweeps — still
    itself cheap, which is 1(a) and helps all 12.0 M unconditionally.
    **1(a) is the item this measurement promotes.**
 
-1.5 **`effective_mana_abilities` clones every ability it returns** — still
-   open after the freeze row above, which fixed the *layer* half of this
-   cluster but not the *allocation* half. **Do not re-try freezing it**: a
+1.5 **`effective_mana_abilities` clones every ability it returns** — the
+   `Cow` row fixed the printed half and the **2026-08-10 land-type gate
+   removed 44.7 % of what was left** (161,920,619 -> 89,565,572 inclusive).
+   What survives at 1.88 %, over 67,468 calls (1,327 Ir each):
+   `battlefield_find`'s linear scan, `granted_abilities_with` (15.1 M),
+   `intrinsic_land_mana_abilities_with` (3.0 M), the `frozen_effects` lock
+   and the `out` `Vec`. `mana_source_table`'s own remaining 3.30 % is
+   mostly this plus `ManaSourceInfo.colors: Vec<(ManaColor, usize)>` — a
+   heap allocation per untapped source per auto-tap for at most five
+   entries, which wants a fixed array (its only consumers are a
+   `find`-by-colour and `untapped_mana_colors`' `[bool; 5]` conversion).
+   The original text, still true of the allocation half: **Do not re-try freezing it**: a
    `with_frozen_layers` scope *inside* `effective_mana_abilities` measured
    12,235,211,102 -> 12,239,293,155 Ir (**+0.03 %, a null**) and was
    reverted. Its callers already hold a scope, so the nested freeze buys

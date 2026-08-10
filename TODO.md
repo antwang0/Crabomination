@@ -16,97 +16,55 @@ reference and want their own triage pass):
 
 ## NEXT (handoff — rewrite each run, keep under 15 lines)
 
-Branch `claude/modern_decks`. **Twelfth pass: four perf commits, one shape.**
-`5,622,084,243 -> 5,260,848,923 Ir, -6.43 %` on the fixed six-game workload,
-base `48ac252c` vs the pre-rebase tip (then rebased onto `81c88580`;
-its changes are in the ML/client/lobby paths, not the engine hot path). **Wall-clock 6/6 alternated `--bench`
-pairs positive, mean +9.57 %** (`profiling-fast --no-default-features`, same
-two binaries). Suite green, golden traces byte-identical on every row.
+Branch `claude/modern_decks`. **Thirteenth pass: two perf commits, -4.17 % Ir**
+(4,963,254,419 -> 4,756,306,488, base `a4947da6`, `profiling-fast
+--no-default-features` callgrind). Suite 18827 green, golden traces
+byte-identical, clippy clean. **The profile of record is re-taken** — NEXT's
+item 1 for two runs — and PERF's *Profile of record* is current at
+`a4947da6`; the re-take reproduced the merged-tip figure to 0.03 %.
 
-- **The shape**: a `&mut self` entry point taking a whole-board
-  `compute_battlefield` to read one bit, or taking several where one would
-  do. `declare_attackers_banded` took four per declaration (-1.97 %);
-  `finalize_cast` never adopted the guarded helper that had existed since
-  `c365ede8` (-1.89 %); the SBA sweep walked the board for a Bronze Bombshell
-  latch and a Persist/Undying snapshot (-1.82 %); `has_first_strikers` and
-  `bands_with_other_qualities` computed ~20 permanents to read 2-6 (-0.91 %).
-  **How to find the next: `--tree=caller` on `compute_battlefield`, divide
-  each caller's call count by how many times it can actually run.** 9,928
-  over ~2,600 declarations — the ratio *is* the bug.
-**A second session ran on this branch at the same time and its four rows are
-rebased in below.** Its measurements: `5,620,660,987 -> 5,013,096,289 Ir,
--10.81 %` against base `81c88580`, **8/8 alternated `release` pairs, 50.24 ->
-55.70 games/s, +10.85 %**. The two sessions overlap on
-`declare_attackers_banded`, `finalize_cast`, the CR 603.8 disarm and the CR
-704.8 snapshot, so **the two cumulative figures must not be added**, and
-neither anchor was taken on the merged tip.
-
-- **Second session's rows, in one line each**: `check_state_based_actions`'s
-  ~20 empty `filter().collect()` heads now ride one `sba_board_scan` presence
-  pass (-3.13 %, sweep 11.69 % -> 8.92 %); its death scan computes only the
-  creatures via the new `compute_battlefield_creatures` (-1.92 %); the scan
-  itself runs once per sweep and walks each definition vector once (-1.28 %);
-  and `declare_blockers` shares one layer pass with CR 509.1b's Okk read
-  (part of -4.90 %, the rest of which duplicated this session's work).
-  **Presence-flag rule learned there**: a flag must over-approximate its
-  block, and you must enumerate what can turn one *on* mid-sweep (a flip, a
-  `BecomeCopyOf` revert, a Persist/Undying return, a defeated battle's back
-  face) and retake the scan there.
-- **The merged tip is measured under callgrind: 5,620,660,987 ->
-  4,964,563,445 Ir, -11.68 %** from `81c88580` — below either session's own
-  tip, so nothing cancelled in the join. `check_state_based_actions` 11.69 %
-  -> 6.31 %, `compute_battlefield` 13.51 % (two passes ago) -> 6.00 %.
-- **The `release` anchor is taken on the merged tip: 55.88 games/s mean of 8**
-  (33,741 dec/s, calib 49-61, 26.98 turns/game, 0 stalls, all pairs split).
-  Absolutes still don't transfer between containers — the same code read
-  60.49 and 64.42 in two sittings, and 55.70 vs 55.88 on two containers with
-  a 1.0 % instruction difference *the wrong way*. Quote paired A/Bs.
-- **Next up, in order**: (1) **re-take the profile of record** — it is still
-  written at one session's tip; the merged-tip inclusive shares are in PERF's
-  Log row and should be promoted into it. (2) PERF candidate (A)'s remaining
-  `compute_battlefield` callers, asking "all 19.5, or two of them?" —
-  `resolve_combat`, `advance_step`, `process_cumulative_upkeep`, `do_phasing`;
-  **`declare_blockers`' remaining passes are legitimate, its tap-another
-  block mutates the board between them — verified, don't spend a build.**
-  (3) candidate 1(a), `printed_colors` -> `ColorSet`. (4) candidate 0.5, the
-  unconditional `perform_action` checkpoint (~9.5 %). (5) the allocator at
-  ~18.9 %; PERF carries the full allocation tree.
-- **Bug fixed in the second session (`9db8557c`)**: Mirror Gallery's CR
-  704.5j check used `return Vec::new()` inside the legend-group block, so a
-  `LegendRuleDoesntApply` permanent skipped *every* later state-based action
-  and discarded the sweep's events — the game could not be won or lost.
-  Regression test in `classic_sets/bok`; the `return`-inside-a-`let`-block
-  class was swept and this was the only real instance.
-- **The anchor is re-taken and the old one is void**: `64.42 games/s` mean of
-  6 at `release` + mimalloc on the pushed tip (an earlier sitting on the same
-  engine code read 60.49 — the box drifts ~5 % between sittings). The previous `70.65` predates `998b2433` giving
-  `EvalWeights::default()` `determinize: 1`, and `--bench` runs `gang` =
-  `EvalWeights::default()` — different bench, don't subtract. Take >=6 runs.
+- **The two rows**: `ComputedPermanent.colors` becomes a `ColorSet` bitmask
+  (-2.55 %; `printed_colors` was 2.14 % over 683,248 calls and allocated
+  302,944 times), and auto-tap skips the per-card layer pass when no effect
+  in scope rewrites a land type (-1.66 %; `effective_mana_abilities_with`
+  -44.7 %). Both are the same shape one level apart: **a hot path building a
+  whole computed object to read one field of it.**
+- **Next up, in order** (PERF's candidates 0 / 0.1 / 0.2, all newly costed):
+  (1) `bot::cast_candidates` — **169 M Ir / 3.55 % in `collect()` over 7,024
+  calls, 24,040 Ir each**, the most expensive single collect site in the
+  program and never profiled at line level. (2) `compute_battlefield`
+  materializes 224 M / 4.71 % of `Vec` over 17,718 calls — candidate 4(a).
+  (3) `permanents_with_abilities_removed` runs a **full gather 59,378 times**
+  (115 M / 2.42 % from the trigger dispatcher alone) to answer one bit that
+  is false on every bench board; the land-type gate is the pattern, but
+  enumerate every way a `RemoveAllAbilities` can enter the set first.
+- **The gating rule this pass paid for, and it is cheap**: mutate the
+  presence predicate and run the regression test. Deleting
+  `ReplaceBasicLandType` from `rewrites_land_types` fails
+  `cr_305_6_auto_tap_sees_a_rewritten_land_type` — that is how the flag was
+  checked instead of assumed. Do this for every new gate; it costs one
+  3-minute build.
+- **`--bench` anchor**: see PERF's Baseline. Absolutes do not transfer
+  between containers — quote a paired A/B measured in one sitting, never a
+  difference of anchors.
 - **Bugs**: the panic/unwrap sweep of the self-play path is still open — see
   the robustness section for the filter that works.
-- **Fetch before you build. This has now cost two sessions.** `git branch -a`
-  in a fresh clone shows only `main` and the session's own branch;
+- **Fetch before you build. This has now cost three sessions.** A fresh
+  clone's `git branch -a` shows only `main` and the session's own branch;
   `origin/claude/modern_decks` does not appear until an explicit
-  `git fetch origin claude/modern_decks`, and the remote branch is ~1,860
-  commits ahead of `main`. **Run `git fetch origin claude/modern_decks &&
-  git checkout -B claude/modern_decks origin/claude/modern_decks` as the very
-  first command of the session**, before reading a tracker or planning a
-  thing — the trackers on `main` describe a project without
-  `crabomination_ml`, `PERF.md` or `bot_ladder`, and everything you plan from
-  them is work that already exists here. A second whole session was rebuilt
-  on stale `main` (2026-08-10) before noticing, at the push.
-- **The profile of record is still owed a re-take on the merged tip** (NEXT
-  item 1). One was attempted 2026-08-10 and thrown away: the build omitted
-  `-p crabomination`, so `--no-default-features` never reached the engine
-  crate, mimalloc stayed in, and callgrind measured the interception —
-  4,405,732,099 Ir against the comparable 4,964,563,445. PERF's *How to
-  measure* now carries the warning. Use the command there verbatim; budget
-  ~10 min for the `profiling-fast` build and ~25 min for the callgrind run.
+  `git fetch origin`, and it is ~1,860 commits ahead of `main`. **Run
+  `git fetch origin && git checkout -B claude/modern_decks
+  origin/claude/modern_decks` as the very first command**, before reading a
+  tracker — `main`'s trackers describe a project without `crabomination_ml`,
+  `PERF.md` or `bot_ladder`, and everything planned from them already exists
+  here.
 - **Env**: `rm -rf target/debug/incremental target/release` before a release
-  build (3-17 G). `cargo-nextest` is not in the image. `release` rebuild of
-  the engine is 23 min; `profiling-fast` is 3 min and is what A/B iteration
-  should use.
-- **Trackers**: TODO 866, roadmap 660, `PERF.md` 818, `INCOMPLETE_CARDS` 247.
+  build — the disk allowance is ~30 G and `target/debug` alone is 24 G.
+  `cargo-nextest` is not in the image. `release` rebuild of the engine is
+  ~20 min; `profiling-fast` is ~4 min warm (~11 min cold) and is what A/B
+  iteration should use. A `cargo test --workspace` builds candle via
+  `crabomination_ml` — budget ~25 min the first time.
+- **Trackers**: TODO 836, roadmap 660, `PERF.md` 862, `INCOMPLETE_CARDS` 247.
 
 ## Environment note
 
