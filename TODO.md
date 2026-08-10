@@ -16,19 +16,21 @@ reference and want their own triage pass):
 
 ## NEXT (handoff — rewrite each run, keep under 15 lines)
 
-Branch `claude/modern_decks`. **Thirteenth pass: two perf commits, -4.17 % Ir**
-(4,963,254,419 -> 4,756,306,488, base `a4947da6`, `profiling-fast
+Branch `claude/modern_decks`. **Thirteenth pass: three perf commits, -4.64 % Ir**
+(4,963,254,419 -> 4,733,001,860, base `a4947da6`, `profiling-fast
 --no-default-features` callgrind). Suite 18827 green, golden traces
 byte-identical, clippy clean. **The profile of record is re-taken** — NEXT's
 item 1 for two runs — and PERF's *Profile of record* is current at
 `a4947da6`; the re-take reproduced the merged-tip figure to 0.03 %.
 
-- **The two rows**: `ComputedPermanent.colors` becomes a `ColorSet` bitmask
+- **The three rows**: `ComputedPermanent.colors` becomes a `ColorSet` bitmask
   (-2.55 %; `printed_colors` was 2.14 % over 683,248 calls and allocated
   302,944 times), and auto-tap skips the per-card layer pass when no effect
   in scope rewrites a land type (-1.66 %; `effective_mana_abilities_with`
-  -44.7 %). Both are the same shape one level apart: **a hot path building a
-  whole computed object to read one field of it.**
+  -44.7 %), and `ManaSourceInfo.colors` becomes a bitmask + fixed array
+  (-0.49 %, the smallest row on PERF's list and labelled as such). The first
+  two are the same shape one level apart: **a hot path building a whole
+  computed object to read one field of it.**
 - **Next up, in order** (PERF's candidates 0 / 0.1 / 0.2, all newly costed):
   (1) `bot::cast_candidates` — **169 M Ir / 3.55 % in `collect()` over 7,024
   calls, 24,040 Ir each**, the most expensive single collect site in the
@@ -46,7 +48,7 @@ item 1 for two runs — and PERF's *Profile of record* is current at
   3-minute build.
 - **`--bench` at `release` is a null for this pass and the anchor is
   re-taken (71.52 mean of 8, `host_calib_ms` 45-54).** Six alternated pairs
-  of base vs tip in one sitting read **+0.54 %, 3/6 positive** — a -4.17 %
+  of base vs tip in one sitting read **+0.54 %, 3/6 positive** — a -4.64 %
   Ir change is under this box's ±8 % spread. Don't read the 55.88 -> 71.52
   anchor move as a win; it is a different container. Cost of learning this
   properly: two 24-minute `release` builds. Next run, quote Ir and treat
@@ -68,7 +70,7 @@ item 1 for two runs — and PERF's *Profile of record* is current at
   ~20 min; `profiling-fast` is ~4 min warm (~11 min cold) and is what A/B
   iteration should use. A `cargo test --workspace` builds candle via
   `crabomination_ml` — budget ~25 min the first time.
-- **Trackers**: TODO 852, roadmap 660, `PERF.md` 892, `INCOMPLETE_CARDS` 247.
+- **Trackers**: TODO 855, roadmap 660, `PERF.md` 891, `INCOMPLETE_CARDS` 247.
 
 ## Environment note
 

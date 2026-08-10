@@ -148,8 +148,9 @@ result.** Six alternated `release` + mimalloc pairs of `a4947da6` against
 `610df3b6`, both built and run in one sitting on this container: **69.22 ->
 69.59 games/s, +0.54 % mean, 3/6 pairs positive** (paired deltas -4.73 /
 +8.66 / +1.70 / -0.26 / +3.37 / -5.29 %; the +8.66 pair's A run read
-`host_calib_ms` 61 against 46 everywhere else). A -4.17 % instruction
-change cannot be resolved by wall-clock on a box whose within-sitting
+`host_calib_ms` 61 against 46 everywhere else). The pass was -4.17 % at
+the tip measured; it finished at -4.64 %, and neither can be resolved by
+wall-clock on a box whose within-sitting
 spread is ±8 % — this is the "sub-5 % changes need callgrind" note above,
 demonstrated rather than asserted. **The pass's measurement is the Ir
 figure; this block is a health check** (turns/game 26.98, stalls 0,
@@ -345,7 +346,8 @@ profile reproduces the merged figure to 0.03 %).
 |---|---|---|---|---|
 | 2026-08-10 | `ComputedPermanent.colors` becomes a `ColorSet` bitmask (`59cd783e`, candidate 1(a)'s remainder) | 4,963,254,419 Ir | 4,836,659,318 Ir (**-2.55 %**) | `colors` was the one field the eleventh pass's `Printed<T>` row could not borrow: `printed_colors()` *computes* a `Vec<Color>` from `color_override` / Devoid / `color_indicator` / cost symbols, so there is nothing to project. It was **106,024,788 Ir inclusive (2.14 %) over 683,248 calls from `compute_permanent_pass`** — 155 Ir each, 302,944 of them growing a `Vec` — and the result was then cloned again on every `ComputedPermanent::clone`. `ColorSet` already existed for Commander colour identity; giving it `contains<Borrow<Color>>` / `iter` / `to_vec` / `intersects` / `FromIterator` / `Extend` / `IntoIterator` let the ~70 `cp.colors` readers compile unchanged — the `Printed<T>` / `KeywordCounters` trick, third time. `printed_colors()` survives as `printed_color_set().to_vec()`, so there is still one walker. `can_block_attacker_computed` takes a `ColorSet` instead of a `&[Color]`, which also drops two `colors.clone()` per must-block check in `declare_blockers`' CR 509.1c loops. **Colour order is now WUBRG rather than indicator-then-pip order** — strictly more deterministic, a bitmask cannot carry an insertion order into a trace — and all four golden traces are byte-identical, so nothing on the bench path read it. Callgrind A/B on identical `profiling-fast --no-default-features` binaries. Suite 18825 passed / 0 failed; clippy clean. |
 | 2026-08-10 | Auto-tap skips the per-card layer pass when nothing rewrites a land type (`d95cd5ba`) | 4,836,659,318 Ir | 4,756,306,488 Ir (**-1.66 %**) | `effective_mana_abilities_with` took a `computed_permanent` per untapped permanent per auto-tap and read **one field** out of it — `subtypes.land_types`, for the two CR 305.6 consumers. Inside `mana_source_table`'s freeze scope the gather is memoized but each call is still a full per-card layer pass: **95,644,776 Ir (1.93 %) over 67,468 calls, 1,418 Ir each**, to answer "is this Forest still a Forest". Exactly three modifications write `subtypes.land_types` — `AddLandType` (Urborg), `SetLandTypes` (Blood Moon), `ReplaceBasicLandType` (Mind Bend) — so with none in scope the computed type line *is* the printed one. The test is a walk of the already-gathered effect list; outside a freeze scope `frozen_effects()` returns `None` and the old path stands rather than paying a gather to save a gather. `effective_mana_abilities_with` **161,920,619 → 89,565,572 inclusive (-44.7 %)**, `mana_source_table` 244,258,164 → 156,843,652, `auto_tap_for_cost_inner` 15.00 % → 13.78 %. **The presence flag was checked, not assumed**: `cr_305_6_auto_tap_sees_a_rewritten_land_type` pins the third writer through the frozen auto-tap path and *fails* when `ReplaceBasicLandType` is deleted from the predicate. Suite 18827 passed / 0 failed; golden traces byte-identical; clippy clean. |
-| | **cumulative this pass** | **4,963,254,419 Ir** | **4,756,306,488 Ir (-4.17 %)** | two alternated `profiling-fast --no-default-features` callgrind A/Bs on the one fixed six-game workload, so the two rows subtract honestly. |
+| 2026-08-10 | `ManaSourceInfo.colors` becomes a `ColorSet` + a fixed `[usize; 5]` (candidate 1.5's allocation leftover) | 4,756,306,488 Ir | 4,733,001,860 Ir (**-0.49 %**) | **The smallest row on this list, and quoted as such.** `Vec<(ManaColor, usize)>` held at most five entries and was one heap allocation per untapped source per `auto_tap_for_cost` — 67,468 of them per six games, 1.8 % of the program's allocations — and `redundancy` did a linear scan of it per (source, colour, other source), i.e. quadratic in the untapped board. The bitmask makes the membership test one `and`, and `color_idx[color_index(c)]` replaces the `find`. Iteration order is unchanged (`ColorSet::iter` walks WUBRG, which is what `ManaColor::ALL` gave), and `redundancy` mins over the colours, so ordering could not leak anyway. Callgrind A/B on identical `profiling-fast --no-default-features` binaries; well under the 5 % claim bar, which is why it is quoted in instructions on a deterministic workload rather than in `--bench`. Suite 18827 passed / 0 failed; golden traces byte-identical; clippy clean. |
+| | **cumulative this pass** | **4,963,254,419 Ir** | **4,733,001,860 Ir (-4.64 %)** | three alternated `profiling-fast --no-default-features` callgrind A/Bs on the one fixed six-game workload, so the three rows subtract honestly. **Wall-clock at `release` + mimalloc is a null** — see Baseline; six alternated pairs read +0.54 %, which is what a sub-5 % change looks like against this box's ±8 % spread. |
 
 ## Profile of record
 
@@ -507,8 +509,8 @@ list, in order: `check_state_based_actions` (10,670 / ~7,500 sweeps — still
 `resolve_combat` (3,196), `process_cumulative_upkeep` (1,742), `do_phasing`
 (1,718). The last three look like one pass per turn each, i.e. legitimate.
 
-**After the thirteenth (representation + presence-gate) pass.** Two rows,
--4.17 % Ir. The shapes they shared with the last three passes: **a hot
+**After the thirteenth (representation + presence-gate) pass.** Three rows,
+-4.64 % Ir. The shapes they shared with the last three passes: **a hot
 struct field that is computed and allocated when it could be a bitmask**,
 and **a caller that materializes a whole computed view to read one field of
 it**. The re-taken profile promotes the next three by size, and all three
@@ -722,11 +724,8 @@ thrown away:
    What survives at 1.88 %, over 67,468 calls (1,327 Ir each):
    `battlefield_find`'s linear scan, `granted_abilities_with` (15.1 M),
    `intrinsic_land_mana_abilities_with` (3.0 M), the `frozen_effects` lock
-   and the `out` `Vec`. `mana_source_table`'s own remaining 3.30 % is
-   mostly this plus `ManaSourceInfo.colors: Vec<(ManaColor, usize)>` — a
-   heap allocation per untapped source per auto-tap for at most five
-   entries, which wants a fixed array (its only consumers are a
-   `find`-by-colour and `untapped_mana_colors`' `[bool; 5]` conversion).
+   and the `out` `Vec`. ~~`ManaSourceInfo.colors: Vec<(ManaColor, usize)>`~~
+   — **done, -0.49 %, see the Log.**
    The original text, still true of the allocation half: **Do not re-try freezing it**: a
    `with_frozen_layers` scope *inside* `effective_mana_abilities` measured
    12,235,211,102 -> 12,239,293,155 Ir (**+0.03 %, a null**) and was

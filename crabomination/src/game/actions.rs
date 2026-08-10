@@ -294,8 +294,13 @@ struct ManaSourceInfo {
     /// Ability index used when any mana will do (the generic portion).
     first_idx: usize,
     rank: u8,
-    /// Producible colours with the ability index that makes each.
-    colors: Vec<(ManaColor, usize)>,
+    /// Producible colours, with the ability index that makes each in
+    /// `color_idx[color_index(c)]` (only read where `colors` contains the
+    /// colour). A bitmask plus a fixed array rather than a
+    /// `Vec<(ManaColor, usize)>`: at most five entries, and the `Vec` was
+    /// one heap allocation per untapped source per `auto_tap_for_cost`.
+    colors: crate::mana::ColorSet,
+    color_idx: [usize; 5],
 }
 
 impl ManaSourceInfo {
@@ -319,11 +324,8 @@ impl ManaSourceInfo {
         }
         self.colors
             .iter()
-            .map(|(c, _)| {
-                others
-                    .iter()
-                    .filter(|o| o.id != self.id && o.colors.iter().any(|(oc, _)| oc == c))
-                    .count() as u32
+            .map(|c| {
+                others.iter().filter(|o| o.id != self.id && o.colors.contains(c)).count() as u32
             })
             .min()
             .unwrap_or(u32::MAX)
@@ -11875,8 +11877,8 @@ impl GameState {
             .into_iter()
             .map(|s| {
                 let mut mask = [false; 5];
-                for (col, _) in &s.colors {
-                    mask[color_index(*col)] = true;
+                for col in s.colors {
+                    mask[color_index(col)] = true;
                 }
                 mask
             })
@@ -11903,20 +11905,22 @@ impl GameState {
             .filter_map(|c| {
                 let abilities = self.effective_mana_abilities_with(c.id, &scan);
                 let (first_idx, first) = abilities.first()?;
-                let colors: Vec<(ManaColor, usize)> = ManaColor::ALL
-                    .into_iter()
-                    .filter_map(|col| {
-                        abilities
-                            .iter()
-                            .find(|(_, a)| effect_produces_color(&a.effect, col))
-                            .map(|(i, _)| (col, *i))
-                    })
-                    .collect();
+                let mut colors = crate::mana::ColorSet::empty();
+                let mut color_idx = [0usize; 5];
+                for col in ManaColor::ALL {
+                    if let Some((i, _)) =
+                        abilities.iter().find(|(_, a)| effect_produces_color(&a.effect, col))
+                    {
+                        colors.insert(col);
+                        color_idx[color_index(col)] = *i;
+                    }
+                }
                 Some(ManaSourceInfo {
                     id: c.id,
                     first_idx: *first_idx,
                     rank: Self::mana_source_cost_rank(first),
                     colors,
+                    color_idx,
                 })
             })
             .collect()
@@ -12070,7 +12074,7 @@ impl GameState {
                 .iter()
                 .filter(|s| !self.battlefield_find(s.id).is_some_and(|c| c.tapped))
                 .filter_map(|s| {
-                    let idx = s.colors.iter().find(|(c, _)| *c == color).map(|(_, i)| *i)?;
+                    let idx = s.colors.contains(color).then(|| s.color_idx[color_index(color)])?;
                     let breadth = if smart { s.colors.len() } else { 0 };
                     Some((s.rank, breadth, s.id, idx))
                 })
