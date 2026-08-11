@@ -1460,6 +1460,56 @@ fn cr_508_1d_must_attack_creature_is_forced_to_attack() {
     }])).expect("legal once the Rig is declared");
 }
 
+/// CR 508.1d / 613 — the same requirement when the keyword is *granted*, not
+/// printed. `declare_attackers_banded`'s layer pass covers only the declared
+/// participants unless `board_keyword_in_scope` says some permanent can carry
+/// an attack requirement; these two pin the gate's non-printed legs, so
+/// dropping either from the disjunction fails here rather than silently
+/// dropping the requirement in a training run.
+#[test]
+fn cr_508_1d_eot_granted_must_attack_is_still_forced() {
+    use crabomination::game::types::{Attack, AttackTarget};
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(bear);
+    if let Some(c) = g.battlefield_find_mut(bear) {
+        c.granted_keywords_eot.push(Keyword::MustAttack);
+    }
+    advance_to(&mut g, TurnStep::DeclareAttackers);
+    assert!(g.perform_action(GameAction::DeclareAttackers(vec![])).is_err(),
+        "an EOT-granted MustAttack forces the declaration");
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: bear, target: AttackTarget::Player(1),
+    }])).expect("legal once declared");
+}
+
+#[test]
+fn cr_508_1d_layer_granted_must_attack_is_still_forced() {
+    use crabomination::game::layers::{
+        AffectedPermanents, ContinuousEffect, EffectDuration, Layer, Modification,
+    };
+    use crabomination::game::types::{Attack, AttackTarget};
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(bear);
+    let timestamp = g.next_timestamp();
+    g.add_continuous_effect(ContinuousEffect {
+        timestamp,
+        source: bear,
+        affected: AffectedPermanents::Specific(vec![bear]),
+        layer: Layer::L6Ability,
+        sublayer: None,
+        duration: EffectDuration::WhileSourceOnBattlefield,
+        modification: Modification::AddKeyword(Keyword::MustAttack),
+    });
+    advance_to(&mut g, TurnStep::DeclareAttackers);
+    assert!(g.perform_action(GameAction::DeclareAttackers(vec![])).is_err(),
+        "a layer-6 AddKeyword MustAttack forces the declaration");
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: bear, target: AttackTarget::Player(1),
+    }])).expect("legal once declared");
+}
+
 /// CR 725.3 — only one player is the monarch; becoming it displaces the old.
 #[test]
 fn cr_725_3_only_one_monarch_at_a_time() {
