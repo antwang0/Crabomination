@@ -28,7 +28,7 @@ included — the apt deps below install cleanly here).
   (`ea8cc1fd`, -0.278 %, *and a bug fix*); `auto_tap`'s inner loops stop
   rebuilding constants (`f2fb6722`, **-0.622 %** — a comment asserting a
   value was "recomputed each iteration because…" was simply wrong); and
-  `auto_tap` builds its source table only when it will tap (`bd3fd945`,
+  `auto_tap` builds its source table only when it will tap (`1ec589d1`,
   **-0.807 %**, the run's largest row).
 - **The `HashMap`-order audit TODO has been asking for is done.** All 31
   map/set fields of `GameState`/`ColdState`/`Player`; exactly one leak,
@@ -37,7 +37,7 @@ included — the apt deps below install cleanly here).
 - **Next up.** PERF candidate (0) is the *memo* half of
   `mana_source_table` — the gate took the calls that tap nothing, so
   **re-profile before costing it**; every share on file predates
-  `bd3fd945`. Then candidate (1), the other
+  `1ec589d1`. Then candidate (1), the other
   half of the `RawTable::clone` block (seven `ColdState` maps + nine
   `GameState` hash fields, 0.41 %), **gated on serde**: a `HashMap` is a
   JSON object, a `Vec` newtype an array of pairs. `pick_attacks_scored`
