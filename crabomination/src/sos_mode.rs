@@ -27,7 +27,7 @@
 //! before hitting the requested count; the assembler tops up shortfalls
 //! with extra basic lands so every deck reaches 60 cards.
 
-use std::collections::HashMap;
+use crate::fxhash::HashMap;
 
 use rand::seq::SliceRandom;
 use rand::{Rng, RngExt};
@@ -241,7 +241,7 @@ pub fn random_college<R: Rng>(rng: &mut R) -> College {
 /// Assemble a 60-card SoS deck for the given college.
 pub fn sos_deck<R: Rng>(college: College, rng: &mut R) -> Vec<CardFactory> {
     let mut deck: Vec<CardFactory> = Vec::with_capacity(60);
-    let mut counts: HashMap<usize, u32> = HashMap::new();
+    let mut counts: HashMap<usize, u32> = HashMap::default();
 
     let [c0, c1] = college.colors();
 
@@ -360,7 +360,7 @@ pub fn sos_special_guests() -> Vec<CardFactory> {
 /// at startup to prefetch Scryfall art for the full SoS card universe (the
 /// per-match deck is randomly rolled after assets are loaded).
 pub fn all_sos_cards() -> Vec<CardFactory> {
-    use std::collections::HashSet;
+    use crate::fxhash::HashSet;
     let mut all: Vec<CardFactory> = vec![plains, island, swamp, mountain, forest];
     all.extend(sos_special_guests());
     for college in [
@@ -376,7 +376,7 @@ pub fn all_sos_cards() -> Vec<CardFactory> {
             all.extend(mono_color_pool(c));
         }
     }
-    let mut seen: HashSet<usize> = HashSet::new();
+    let mut seen: HashSet<usize> = HashSet::default();
     all.retain(|f| seen.insert(*f as usize));
     all
 }
@@ -568,7 +568,7 @@ mod tests {
         // Each individual non-basic card capped at COPY_CAP. Basics are
         // exempt (decks are heavily basic-padded for small colleges).
         let basics = [plains, island, swamp, mountain, forest];
-        let basic_addrs: std::collections::HashSet<usize> =
+        let basic_addrs: crate::fxhash::HashSet<usize> =
             basics.iter().map(|f| *f as usize).collect();
         let mut rng = rand::rng();
         for college in [
@@ -580,7 +580,7 @@ mod tests {
         ] {
             for _ in 0..10 {
                 let deck = sos_deck(college, &mut rng);
-                let mut counts: HashMap<usize, u32> = HashMap::new();
+                let mut counts: HashMap<usize, u32> = HashMap::default();
                 for &f in &deck {
                     *counts.entry(f as usize).or_insert(0) += 1;
                 }
@@ -616,7 +616,7 @@ mod tests {
             College::Witherbloom,
         ] {
             let [c0, c1] = college.colors();
-            let mut allowed: std::collections::HashSet<usize> = Default::default();
+            let mut allowed: crate::fxhash::HashSet<usize> = Default::default();
             for &c in &[c0, c1] {
                 for f in mono_color_pool(c) {
                     allowed.insert(f as usize);
@@ -664,7 +664,7 @@ mod tests {
 
     #[test]
     fn all_sos_cards_includes_every_factory_used_by_the_pools() {
-        let all: std::collections::HashSet<usize> =
+        let all: crate::fxhash::HashSet<usize> =
             all_sos_cards().into_iter().map(|f| f as usize).collect();
         // Spot-check: school lands + a handful of pool cards.
         let must_include: Vec<CardFactory> = vec![

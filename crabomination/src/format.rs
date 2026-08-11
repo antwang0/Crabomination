@@ -5,7 +5,7 @@
 //! [`validate_deck`] to check that a list of card definitions is legal in a
 //! given format before starting a game.
 
-use std::collections::HashMap;
+use crate::fxhash::HashMap;
 
 use crate::card::{CardDefinition, CompanionRule, Supertype};
 use crate::mana::{ColorSet, ManaSymbol};
@@ -360,7 +360,7 @@ pub fn validate_deck(deck: &[CardDefinition], format: Format) -> Result<(), Vec<
     }
 
     // Count copies of each non-basic card.
-    let mut copy_counts: HashMap<&'static str, u32> = HashMap::new();
+    let mut copy_counts: HashMap<&'static str, u32> = HashMap::default();
     for card in deck {
         if !is_basic_land(card) {
             *copy_counts.entry(card.name).or_insert(0) += 1;
@@ -445,8 +445,8 @@ pub fn validate_full_deck(deck: &Deck, format: Format) -> Result<(), Vec<DeckErr
     // CR 100.2a — the four-of limit counts the sideboard too. `validate_deck`
     // already flagged main-only overruns, so only report names the combined
     // count pushes over that the main deck alone did not.
-    let mut main_counts: HashMap<&'static str, u32> = HashMap::new();
-    let mut total_counts: HashMap<&'static str, u32> = HashMap::new();
+    let mut main_counts: HashMap<&'static str, u32> = HashMap::default();
+    let mut total_counts: HashMap<&'static str, u32> = HashMap::default();
     for card in deck.main.iter().chain(deck.sideboard.iter()) {
         if is_basic_land(card) {
             continue;
@@ -519,8 +519,8 @@ fn card_meets_companion(rule: &CompanionRule, c: &CardDefinition) -> bool {
 /// True if any single mana symbol appears two or more times in the cost
 /// (Jegantha). Hybrid/Phyrexian pips count by their printed symbol.
 fn cost_has_duplicate_symbol(c: &CardDefinition) -> bool {
-    use std::collections::HashMap;
-    let mut seen: HashMap<String, u32> = HashMap::new();
+    use crate::fxhash::HashMap;
+    let mut seen: HashMap<String, u32> = HashMap::default();
     for s in &c.cost.symbols {
         // Generic/colorless/X amounts are a single symbol regardless of size.
         let key = match s {
@@ -563,7 +563,7 @@ pub fn companion_restriction_met(
                 });
             }
         CompanionRule::Singleton => {
-            let mut seen: std::collections::HashMap<&str, u32> = std::collections::HashMap::new();
+            let mut seen: crate::fxhash::HashMap<&str, u32> = crate::fxhash::HashMap::default();
             for c in deck {
                 if is_basic_land(c) {
                     continue;

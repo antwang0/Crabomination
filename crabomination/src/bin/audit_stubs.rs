@@ -10,7 +10,7 @@
 //!
 //! Run: `cargo run -p crabomination --bin audit_stubs`
 
-use std::collections::HashSet;
+use crabomination::fxhash::HashSet;
 
 use crabomination::audit::resolve_effect_is_empty;
 use crabomination::card::{CardDefinition, CardType};
@@ -50,7 +50,7 @@ fn classify(def: &CardDefinition) -> Option<&'static str> {
 }
 
 fn main() {
-    let mut seen: HashSet<String> = HashSet::new();
+    let mut seen: HashSet<String> = HashSet::default();
     let mut flagged: Vec<(String, &'static str, String)> = Vec::new();
     let mut total = 0usize;
 

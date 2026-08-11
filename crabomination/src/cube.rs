@@ -18,7 +18,7 @@
 //! making sure each color has enough cards to fill 17 picks. The point
 //! is variety, not tournament-grade decks.
 
-use std::collections::HashMap;
+use crate::fxhash::HashMap;
 
 use rand::{Rng, RngExt};
 use rand::seq::SliceRandom;
@@ -115,7 +115,7 @@ pub fn cube_deck<R: Rng>(colors: [Color; 2], rng: &mut R) -> Vec<CardFactory> {
     // Single counts map shared across all `sample_with_cap` calls so a
     // two-color card that appears in both color pools (e.g. `terminate`
     // for a Black-Red pair) is capped at four total — not four per pool.
-    let mut counts: HashMap<usize, u32> = HashMap::new();
+    let mut counts: HashMap<usize, u32> = HashMap::default();
 
     // 22 basic lands.
     for &c in &colors {
@@ -186,7 +186,7 @@ fn sample_with_cap<R: Rng>(
 /// after assets are loaded). The union covers basics + colorless +
 /// each color's pool with every other color paired in.
 pub fn all_cube_cards() -> Vec<CardFactory> {
-    use std::collections::HashSet;
+    use crate::fxhash::HashSet;
     let mut all: Vec<CardFactory> = vec![plains, island, swamp, mountain, forest, wastes];
     all.extend(colorless_pool());
     let colors = [
@@ -203,7 +203,7 @@ pub fn all_cube_cards() -> Vec<CardFactory> {
     // Dedupe by function-pointer address — same card may appear in
     // multiple pools (two-color cards) and the loop above hits each
     // mono-color list once per partner.
-    let mut seen: HashSet<usize> = HashSet::new();
+    let mut seen: HashSet<usize> = HashSet::default();
     all.retain(|f| seen.insert(*f as usize));
     all
 }
@@ -3170,7 +3170,7 @@ mod tests {
             // Group factory pointers by address and verify non-basic counts ≤ 4.
             let basic_a = basic_factory(pair[0]) as usize;
             let basic_b = basic_factory(pair[1]) as usize;
-            let mut counts: HashMap<usize, u32> = HashMap::new();
+            let mut counts: HashMap<usize, u32> = HashMap::default();
             for &f in &deck {
                 *counts.entry(f as usize).or_insert(0) += 1;
             }
@@ -3310,7 +3310,7 @@ mod tests {
     #[test]
     fn all_cube_cards_is_deduplicated() {
         let cards = all_cube_cards();
-        let mut seen: HashMap<usize, u32> = HashMap::new();
+        let mut seen: HashMap<usize, u32> = HashMap::default();
         for f in &cards {
             *seen.entry(*f as usize).or_insert(0) += 1;
         }

@@ -467,7 +467,7 @@ impl GameState {
                 .unwrap_or(0),
             Value::OpponentsAttackedThisCombat => {
                 use crate::game::types::AttackTarget;
-                let mut seats = std::collections::HashSet::new();
+                let mut seats = crate::fxhash::HashSet::default();
                 for atk in &self.attacking {
                     let defender = match atk.target {
                         AttackTarget::Player(p) => Some(p),
@@ -645,8 +645,8 @@ impl GameState {
             Value::LargestCreatureTypeCount => {
                 // Greatest number of the controller's creatures sharing a
                 // creature type; changelings count for every type.
-                use std::collections::HashMap;
-                let mut counts: HashMap<crate::card::CreatureType, i32> = HashMap::new();
+                use crate::fxhash::HashMap;
+                let mut counts: HashMap<crate::card::CreatureType, i32> = HashMap::default();
                 let mut changelings = 0i32;
                 for c in self.battlefield.iter().filter(|c| c.controller == ctx.controller) {
                     let Some(cp) = self.computed_permanent(c.id) else { continue };
@@ -1128,8 +1128,8 @@ impl GameState {
                 })
                 .unwrap_or(0),
             Value::DistinctColorsAmong(s) => {
-                let mut seen: std::collections::HashSet<crate::mana::Color> =
-                    std::collections::HashSet::new();
+                let mut seen: crate::fxhash::HashSet<crate::mana::Color> =
+                    crate::fxhash::HashSet::default();
                 for ent in self.resolve_selector(s, ctx) {
                     if let Some(cid) = ent.as_permanent_id()
                         && let Some(c) = self.battlefield_find(cid)
@@ -1142,8 +1142,8 @@ impl GameState {
             Value::DistinctTypesInTopOfLibrary { who, count } => {
                 let Some(p) = self.resolve_player(who, ctx) else { return 0; };
                 let n = self.evaluate_value(count, ctx).max(0) as usize;
-                let mut seen: std::collections::HashSet<CardType> =
-                    std::collections::HashSet::new();
+                let mut seen: crate::fxhash::HashSet<CardType> =
+                    crate::fxhash::HashSet::default();
                 for card in self.players[p].library.iter().take(n) {
                     for t in &card.definition.card_types {
                         seen.insert(t.clone());
@@ -1219,8 +1219,8 @@ impl GameState {
             }
             Value::DistinctTypesInGraveyard { who } => {
                 let Some(p) = self.resolve_player(who, ctx) else { return 0; };
-                let mut seen: std::collections::HashSet<CardType> =
-                    std::collections::HashSet::new();
+                let mut seen: crate::fxhash::HashSet<CardType> =
+                    crate::fxhash::HashSet::default();
                 for card in &self.players[p].graveyard {
                     for t in &card.definition.card_types {
                         seen.insert(t.clone());
@@ -1230,8 +1230,8 @@ impl GameState {
             }
             Value::DistinctCardTypesExiledWith => {
                 let Some(src) = ctx.source else { return 0; };
-                let mut seen: std::collections::HashSet<CardType> =
-                    std::collections::HashSet::new();
+                let mut seen: crate::fxhash::HashSet<CardType> =
+                    crate::fxhash::HashSet::default();
                 for card in self.exile.iter().filter(|c| c.exiled_with == Some(src)) {
                     for t in &card.definition.card_types {
                         seen.insert(t.clone());
@@ -1283,7 +1283,7 @@ impl GameState {
             // Selvala, Eager Trailblazer — distinct computed powers.
             Value::DistinctPowersAmongCreaturesControlled(p) => {
                 let Some(seat) = self.resolve_player(p, ctx) else { return 0 };
-                let powers: std::collections::HashSet<i32> = self
+                let powers: crate::fxhash::HashSet<i32> = self
                     .battlefield
                     .iter()
                     .filter(|c| c.controller == seat && c.definition.is_creature())
@@ -2070,7 +2070,7 @@ impl GameState {
                 .any(|c| self.evaluate_requirement_on_card(filter, c, ctx.controller)),
             Predicate::DistinctCounterKindsAmongCreaturesAtLeast { who, at_least } => {
                 let Some(p) = self.resolve_player(who, ctx) else { return false };
-                let mut kinds = std::collections::HashSet::new();
+                let mut kinds = crate::fxhash::HashSet::default();
                 for c in self.battlefield.iter().filter(|c| {
                     c.controller == p && c.definition.card_types.contains(&crate::card::CardType::Creature)
                 }) {
@@ -2695,7 +2695,7 @@ impl GameState {
             }
             Predicate::CovenActive { who } => {
                 let Some(p) = self.resolve_player(who, ctx) else { return false };
-                let powers: std::collections::HashSet<i32> = self
+                let powers: crate::fxhash::HashSet<i32> = self
                     .battlefield
                     .iter()
                     .filter(|c| c.controller == p && c.definition.is_creature())
@@ -3041,7 +3041,7 @@ impl GameState {
     /// Shared by melee's pump and Custodi Soulcaller's mana-value gate.
     pub(crate) fn opponents_attacked_this_combat(&self) -> u32 {
         use crate::game::types::AttackTarget;
-        let mut seats = std::collections::HashSet::new();
+        let mut seats = crate::fxhash::HashSet::default();
         for atk in &self.attacking {
             let defender = match atk.target {
                 AttackTarget::Player(p) => Some(p),

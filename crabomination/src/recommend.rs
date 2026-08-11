@@ -30,7 +30,7 @@
 //! rates carry sampling noise — the confidence intervals reported per
 //! candidate are the honest error bars for that.
 
-use std::collections::HashMap;
+use crate::fxhash::HashMap;
 use std::sync::Mutex;
 use std::sync::atomic::{AtomicUsize, Ordering};
 
@@ -370,7 +370,7 @@ pub fn suggest_main_deck_in_colors<R: Rng>(
         }
     }
     scored.sort_by_key(|(_, s)| std::cmp::Reverse(*s));
-    let mut counts: HashMap<usize, u32> = HashMap::new();
+    let mut counts: HashMap<usize, u32> = HashMap::default();
     let mut main = Vec::new();
     let mut leftovers = Vec::new();
     for (f, _) in scored {
@@ -510,7 +510,7 @@ fn basic_split(
         })
         .collect();
     let total_w: u32 = weights.iter().map(|(_, w)| w).sum();
-    let mut out: HashMap<Color, u32> = HashMap::new();
+    let mut out: HashMap<Color, u32> = HashMap::default();
     if total_w == 0 {
         // No colored pips (all-artifact main): split evenly.
         let per = total / colors.len().max(1) as u32;
@@ -685,7 +685,7 @@ pub fn enumerate_candidates(pool: &[CardFactory], cfg: &SimConfig) -> Vec<Candid
 
     let mut rng = StdRng::seed_from_u64(cfg.seed); // noise=0 → unused; keeps API one-shape
     let mut out: Vec<CandidateBuild> = Vec::new();
-    let mut seen_mains: std::collections::HashSet<Vec<usize>> = std::collections::HashSet::new();
+    let mut seen_mains: crate::fxhash::HashSet<Vec<usize>> = crate::fxhash::HashSet::default();
     for (colors, splash_colors) in shapes {
         let Some(build) = build_shape(
             pool,
@@ -1488,7 +1488,7 @@ pub fn evaluate_candidates<F>(
 where
     F: Fn(&[CandidateEval]) + Sync,
 {
-    let prefill = vec![SlotOutcomes::new(); candidate_decks.len()];
+    let prefill = vec![SlotOutcomes::default(); candidate_decks.len()];
     evaluate_candidates_slots(candidate_decks, gauntlet, cfg, &prefill, &on_progress).0
 }
 
@@ -1509,7 +1509,7 @@ where
 {
     let state = Mutex::new(EvalState {
         evals: (0..candidate_decks.len()).map(CandidateEval::new).collect(),
-        slots: vec![SlotOutcomes::new(); candidate_decks.len()],
+        slots: vec![SlotOutcomes::default(); candidate_decks.len()],
     });
     let mut active: Vec<usize> = (0..candidate_decks.len()).collect();
     let rounds: u32 = if cfg.racing { cfg.racing_rounds.max(1) } else { 1 };
@@ -1745,13 +1745,13 @@ pub fn per_card_attribution(
     samples: &[(&CandidateBuild, f64)],
     min_side: usize,
 ) -> Vec<CardAttribution> {
-    let all_names: std::collections::HashSet<&'static str> = samples
+    let all_names: crate::fxhash::HashSet<&'static str> = samples
         .iter()
         .flat_map(|(c, _)| c.main.iter().chain(c.duals.iter()).map(|&f| f().name))
         .collect();
-    let mut per: HashMap<&'static str, (Vec<f64>, Vec<f64>)> = HashMap::new();
+    let mut per: HashMap<&'static str, (Vec<f64>, Vec<f64>)> = HashMap::default();
     for (c, wr) in samples {
-        let in_deck: std::collections::HashSet<&'static str> =
+        let in_deck: crate::fxhash::HashSet<&'static str> =
             c.main.iter().chain(c.duals.iter()).map(|&f| f().name).collect();
         for name in &all_names {
             let e = per.entry(name).or_default();
@@ -1763,7 +1763,7 @@ pub fn per_card_attribution(
     // Within-archetype comparison, keyed by the build's colour identity.
     // Splash is part of the key: "B/G" and "B/G + u" are different mana
     // bases and a card can be right in one and wrong in the other.
-    let mut strata: HashMap<String, Vec<(&CandidateBuild, f64)>> = HashMap::new();
+    let mut strata: HashMap<String, Vec<(&CandidateBuild, f64)>> = HashMap::default();
     for (c, wr) in samples {
         let mut key: Vec<String> = c.colors.iter().map(|x| format!("{x:?}")).collect();
         key.sort();
@@ -1901,7 +1901,7 @@ impl Session {
     /// front — every stage of this session faces the same field.
     pub fn new(cfg: SimConfig) -> Self {
         let gauntlet = generate_gauntlet(&cfg);
-        Self { cfg, gauntlet, cache: HashMap::new() }
+        Self { cfg, gauntlet, cache: HashMap::default() }
     }
 
     pub fn cfg(&self) -> &SimConfig {
@@ -1991,7 +1991,7 @@ impl Session {
         let cfg = self.cfg.clone();
         let noise = (cfg.build_temperature.max(0.0) * 4.0).round() as i32;
         let mut variants: Vec<CandidateBuild> = Vec::new();
-        let mut seen: std::collections::HashSet<Vec<usize>> = std::collections::HashSet::new();
+        let mut seen: crate::fxhash::HashSet<Vec<usize>> = crate::fxhash::HashSet::default();
         for &ci in base.ranking.iter().take(cfg.refine_top) {
             let shape = &base.candidates[ci];
             for v in 0..cfg.variants_per_shape.max(1) {
@@ -2108,8 +2108,8 @@ impl Session {
             );
             let explore = cfg.search_children / 4;
             let mut children: Vec<CandidateBuild> = Vec::new();
-            let mut seen: std::collections::HashSet<Vec<usize>> =
-                std::collections::HashSet::new();
+            let mut seen: crate::fxhash::HashSet<Vec<usize>> =
+                crate::fxhash::HashSet::default();
             seen.insert(deck_key(&incumbent.main));
             // Gradient children first (positive expected gain only), then
             // random exploration swaps.
@@ -2342,7 +2342,7 @@ mod tests {
             splash: Vec::new(),
             main,
             duals: Vec::new(),
-            basics: HashMap::new(),
+            basics: HashMap::default(),
             leftovers: Vec::new(),
             static_score: 0,
             label: String::new(),
@@ -2804,8 +2804,8 @@ mod tests {
     /// slots are excluded.
     #[test]
     fn paired_diff_uses_shared_decided_slots_only() {
-        let mut a = SlotOutcomes::new();
-        let mut b = SlotOutcomes::new();
+        let mut a = SlotOutcomes::default();
+        let mut b = SlotOutcomes::default();
         for i in 0..30u32 {
             a.insert((0, i), 1);
             b.insert((0, i), 1); // concordant wins: no variance
@@ -2821,7 +2821,7 @@ mod tests {
         assert_eq!(pd.n, 40);
         assert!((pd.mean + 0.25).abs() < 1e-9, "mean −10/40, got {}", pd.mean);
         assert!(pd.mean + 1.96 * pd.se < 0.0, "a is significantly behind b");
-        assert!(paired_diff(&SlotOutcomes::new(), &b).is_none(), "no shared slots → None");
+        assert!(paired_diff(&SlotOutcomes::default(), &b).is_none(), "no shared slots → None");
     }
 
     /// Session cache: the same deck re-raced in a later stage replays its

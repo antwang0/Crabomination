@@ -15,7 +15,7 @@
 //! by their object features alone — a Pest token is "an unknown 1/1" to the
 //! net, which is most of what it needs to know.
 
-use std::collections::HashMap;
+use crate::fxhash::HashMap;
 
 use crabomination_nn::{
     EncodedObject, EncodedState, G_BF_OPP, G_BF_SELF, G_GY_OPP, G_GY_SELF, G_HAND_SELF,
@@ -110,7 +110,7 @@ pub fn encode_state(g: &GameState, seat: usize, vocab: &Vocab) -> EncodedState {
     // Relation context (round 12): unary summaries of edges the pooled
     // representation cannot carry — see the OBJ_FEATS doc, 28..=36.
     let no_rel = ablated(ABLATE_RELATIONS);
-    let mut targeted: std::collections::HashSet<crate::card::CardId> = Default::default();
+    let mut targeted: crate::fxhash::HashSet<crate::card::CardId> = Default::default();
     // (host id, attachment's controller) — resolved against the host's
     // own controller at encode time, because "who controls the aura on
     // this creature" is what separates a buff from a Pacifism.
@@ -151,7 +151,7 @@ pub fn encode_state(g: &GameState, seat: usize, vocab: &Vocab) -> EncodedState {
     };
     // Attacker → summed P/T of its blockers (`block_map` is blocker →
     // attackers, so this is the map inverted).
-    let mut blocker_sums: HashMap<crate::card::CardId, (i32, i32)> = HashMap::new();
+    let mut blocker_sums: HashMap<crate::card::CardId, (i32, i32)> = HashMap::default();
     if !no_combat {
         for (blocker, attackers) in g.block_map.iter() {
             if let Some((p, t)) = eff_pt(*blocker) {

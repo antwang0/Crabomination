@@ -32,7 +32,7 @@
 //!      `cargo run -p crabomination --bin audit_incomplete -- --comments-only`
 //!      `cargo run -p crabomination --bin audit_incomplete -- --structural-only`
 
-use std::collections::HashSet;
+use crabomination::fxhash::HashSet;
 use std::path::{Path, PathBuf};
 
 use crabomination::audit::{DeadCapability, dead_capabilities};
@@ -45,7 +45,7 @@ use crabomination::catalog::all_known_factories;
 // share one definition of "does nothing".
 
 fn run_structural() {
-    let mut seen: HashSet<String> = HashSet::new();
+    let mut seen: HashSet<String> = HashSet::default();
     let mut flagged: Vec<(String, Vec<DeadCapability>)> = Vec::new();
     let mut total = 0usize;
 

@@ -5,7 +5,7 @@
 //! as the resolver for `crabomination_base`'s `CardInstance` `Deserialize` impl
 //! at startup (see the `ctor` registration in `lib.rs`).
 
-use std::collections::HashMap;
+use crate::fxhash::HashMap;
 use std::sync::OnceLock;
 
 use crabomination_catalog::sets;
@@ -122,7 +122,7 @@ pub fn all_known_factories() -> Vec<CardFactory> {
     all.extend(sets::all_factories::all_catalog_card_factories());
     // Dedupe by function-pointer address so repeated copies of the same
     // card across decks/cube don't bloat the registry.
-    let mut seen = std::collections::HashSet::new();
+    let mut seen = crate::fxhash::HashSet::default();
     all.retain(|f| seen.insert(*f as usize));
     all
 }
@@ -133,7 +133,7 @@ pub fn all_known_factories() -> Vec<CardFactory> {
 fn name_index() -> &'static HashMap<&'static str, CardFactory> {
     static INDEX: OnceLock<HashMap<&'static str, CardFactory>> = OnceLock::new();
     INDEX.get_or_init(|| {
-        let mut map: HashMap<&'static str, CardFactory> = HashMap::new();
+        let mut map: HashMap<&'static str, CardFactory> = HashMap::default();
         for f in all_known_factories() {
             // Calling each factory once at index-build time is cheap (it
             // just allocates a struct) and gives us the card name. We

@@ -16,7 +16,7 @@
 //! Unresolvable names are reported rather than dropped silently, so an
 //! import UI can show exactly what's missing from the catalog.
 
-use std::collections::HashMap;
+use crate::fxhash::HashMap;
 
 use crate::cube::CardFactory;
 

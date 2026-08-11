@@ -2751,9 +2751,9 @@ fn decide_creature_type(
     suggestions: &[crate::card::CreatureType],
 ) -> crate::decision::DecisionAnswer {
     use crate::card::{CreatureType, Keyword};
-    use std::collections::HashMap;
+    use crate::fxhash::HashMap;
     // Weight battlefield presence over hand presence (2:1).
-    let mut tally: HashMap<CreatureType, i32> = HashMap::new();
+    let mut tally: HashMap<CreatureType, i32> = HashMap::default();
     let mut count = |types: &[CreatureType], changeling: bool, weight: i32| {
         if changeling {
             // A Changeling bumps every type it could enable; give the current
@@ -2794,7 +2794,7 @@ fn decide_library_search(
     const COLORS: [Color; 5] =
         [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green];
     // How many of our lands already tap for each color.
-    let mut sources: std::collections::HashMap<Color, usize> = std::collections::HashMap::new();
+    let mut sources: crate::fxhash::HashMap<Color, usize> = crate::fxhash::HashMap::default();
     for c in state
         .battlefield
         .iter()
@@ -6787,7 +6787,7 @@ fn simulate_attack_outcome_once(
     // horizon can push the stop out one more cycle (see below).
     let mut stop_turn = start_turn;
     let mut extended = false;
-    let mut declared: std::collections::HashSet<(u32, TurnStep)> = Default::default();
+    let mut declared: crate::fxhash::HashSet<(u32, TurnStep)> = Default::default();
     // *This* turn's attack declaration is the candidate, already submitted.
     // Without this the loop's own DeclareAttackers arm fires on the same
     // turn and re-declares the greedy set over the top of it — which the
@@ -6995,9 +6995,9 @@ fn gang_block_candidates(
     use crate::card::Keyword;
     const MAX_CANDIDATES: usize = 3;
 
-    let blocked: std::collections::HashSet<CardId> =
+    let blocked: crate::fxhash::HashSet<CardId> =
         greedy.iter().map(|(_, a)| *a).collect();
-    let used: std::collections::HashSet<CardId> = greedy.iter().map(|(b, _)| *b).collect();
+    let used: crate::fxhash::HashSet<CardId> = greedy.iter().map(|(b, _)| *b).collect();
 
     // Idle bodies, cheapest first: the gang should cost as little as it
     // can and still kill.
@@ -7267,10 +7267,10 @@ fn pick_blocks_inner(state: &GameState, seat: usize) -> Vec<(CardId, CardId)> {
     // is being attacked, if the attackers aimed at it would deal lethal
     // (total power ≥ its loyalty), mark those attackers so the chump-block
     // pass will trade idle blockers to save the walker.
-    let defend_attackers: std::collections::HashSet<CardId> = {
+    let defend_attackers: crate::fxhash::HashSet<CardId> = {
         use crate::card::CounterType;
-        let mut pw_attackers: std::collections::HashMap<CardId, (u32, Vec<CardId>)> =
-            std::collections::HashMap::new();
+        let mut pw_attackers: crate::fxhash::HashMap<CardId, (u32, Vec<CardId>)> =
+            crate::fxhash::HashMap::default();
         for atk in state.attacking() {
             if let AttackTarget::Planeswalker(pw) = atk.target
                 && state.battlefield_find(pw).map(|c| c.controller) == Some(seat)
@@ -7281,7 +7281,7 @@ fn pick_blocks_inner(state: &GameState, seat: usize) -> Vec<(CardId, CardId)> {
                 e.1.push(atk.attacker);
             }
         }
-        let mut set = std::collections::HashSet::new();
+        let mut set = crate::fxhash::HashSet::default();
         for (pw, (incoming, atkrs)) in pw_attackers {
             let loyalty = state
                 .battlefield_find(pw)
@@ -7350,12 +7350,12 @@ fn pick_blocks_inner(state: &GameState, seat: usize) -> Vec<(CardId, CardId)> {
     // assigned blockers — if blocker total toughness >= attacker
     // power, additional blockers on the same attacker are wasteful
     // unless they bring deathtouch / first strike.
-    let mut attacker_damage_taken: std::collections::HashMap<CardId, i32> =
-        std::collections::HashMap::new();
+    let mut attacker_damage_taken: crate::fxhash::HashMap<CardId, i32> =
+        crate::fxhash::HashMap::default();
     // Blockers already committed to each attacker — folds Rampage (CR 702.23)
     // into the trade math for the second-and-later blocker.
-    let mut attacker_block_count: std::collections::HashMap<CardId, i32> =
-        std::collections::HashMap::new();
+    let mut attacker_block_count: crate::fxhash::HashMap<CardId, i32> =
+        crate::fxhash::HashMap::default();
     let mut assignments: Vec<(CardId, CardId)> = Vec::new();
 
     for (b_id, b_pow, b_tough, b_flying, b_reach, b_dt) in blockers {
@@ -7505,7 +7505,7 @@ fn pick_blocks_inner(state: &GameState, seat: usize) -> Vec<(CardId, CardId)> {
     // combined power reaches the attacker's toughness, then commit only if
     // the gang actually kills it.
     if life_threatened {
-        let mut used: std::collections::HashSet<CardId> =
+        let mut used: crate::fxhash::HashSet<CardId> =
             assignments.iter().map(|(b, _)| *b).collect();
         let mut idle: Vec<(CardId, i32, i32, bool, bool, bool)> = state
             .battlefield
@@ -11235,7 +11235,7 @@ mod tests {
         g.step = TurnStep::DeclareBlockers;
         g.priority.player_with_priority = 1;
         let blocks = pick_blocks_for_test(&g, 1);
-        let distinct: std::collections::HashSet<_> = blocks.iter().map(|(b, _)| *b).collect();
+        let distinct: crate::fxhash::HashSet<_> = blocks.iter().map(|(b, _)| *b).collect();
         assert!(distinct.len() <= 1, "block plan trimmed to the cap");
         g.declare_blockers(blocks).expect("the trimmed plan is legal");
     }

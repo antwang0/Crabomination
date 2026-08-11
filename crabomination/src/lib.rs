@@ -30,6 +30,7 @@ pub mod demo;
 pub mod draft;
 pub mod recommend;
 pub mod format;
+pub mod fxhash;
 pub mod game;
 pub mod net;
 pub mod player;

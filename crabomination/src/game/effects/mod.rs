@@ -749,7 +749,7 @@ impl GameState {
         let mut seats = vec![ctx.controller];
         seats.extend(self.opponents_of(ctx.controller));
         let legal: Vec<Target> = candidates.iter().map(|id| Target::Permanent(*id)).collect();
-        let mut tally: std::collections::HashMap<CardId, u32> = std::collections::HashMap::new();
+        let mut tally: crate::fxhash::HashMap<CardId, u32> = crate::fxhash::HashMap::default();
         for seat in seats {
             // CR 701.38 — a vote-control grant answers every ballot.
             let asked = self.vote_controller_this_turn.unwrap_or(seat);
@@ -4149,8 +4149,8 @@ impl GameState {
                 // Reveal the three best distinct-named creature cards. Group by
                 // name, keep the highest-MV representative of each, then take
                 // the top three names by that MV.
-                let mut best_by_name: std::collections::HashMap<String, (CardId, u32)> =
-                    std::collections::HashMap::new();
+                let mut best_by_name: crate::fxhash::HashMap<String, (CardId, u32)> =
+                    crate::fxhash::HashMap::default();
                 for c in &self.players[p].library {
                     if !c.definition.is_creature() {
                         continue;
@@ -5072,8 +5072,8 @@ impl GameState {
                 // mode 1 (target creature) — run each with the right target.
                 // Single-target-mode cards (the Strixhaven Commands) are
                 // unaffected since only one picked mode consumes slot 0.
-                let mut slot_of_mode: std::collections::HashMap<u8, usize> =
-                    std::collections::HashMap::new();
+                let mut slot_of_mode: crate::fxhash::HashMap<u8, usize> =
+                    crate::fxhash::HashMap::default();
                 let mut next_slot = 0usize;
                 for &i in picks {
                     if modes.get(i as usize).is_some_and(|m| m.requires_target()) {
@@ -11394,7 +11394,7 @@ impl GameState {
                 ) else {
                     return Ok(());
                 };
-                let valid: std::collections::HashSet<CardId> =
+                let valid: crate::fxhash::HashSet<CardId> =
                     candidates.iter().map(|(id, _)| *id).collect();
                 let chosen: Vec<CardId> = answer_ids
                     .into_iter()
@@ -11454,7 +11454,7 @@ impl GameState {
                 ) else {
                     return Ok(());
                 };
-                let valid: std::collections::HashSet<CardId> =
+                let valid: crate::fxhash::HashSet<CardId> =
                     candidates.iter().map(|(id, _)| *id).collect();
                 let chosen: Vec<CardId> =
                     answer_ids.into_iter().filter(|id| valid.contains(id)).collect();
@@ -13405,7 +13405,7 @@ impl GameState {
             Effect::PhaseOut { what, until_source_leaves } => {
                 // CR 702.26 — collect the targeted permanents (and anything
                 // attached to them) and move them to the phased-out zone.
-                let mut ids: std::collections::HashSet<crate::card::CardId> = self
+                let mut ids: crate::fxhash::HashSet<crate::card::CardId> = self
                     .resolve_selector(what, ctx)
                     .iter()
                     .filter_map(|e| e.as_permanent_id())
@@ -16594,7 +16594,7 @@ impl GameState {
                 // Haunting Echoes' second half: every library card sharing a
                 // name with something exiled earlier in this resolution goes
                 // too, then the searched player shuffles.
-                let names: std::collections::HashSet<&'static str> = self
+                let names: crate::fxhash::HashSet<&'static str> = self
                     .exiled_card_ids_this_resolution
                     .iter()
                     .filter_map(|cid| self.exile.iter().find(|c| c.id == *cid))
@@ -19790,7 +19790,7 @@ impl GameState {
                 // Destroy the X chosen targets (slots 0..X) matching `filter`;
                 // without an {X} in the cost, every given target.
                 let x = if ctx.x_value > 0 { ctx.x_value as usize } else { ctx.targets.len() };
-                let mut seen = std::collections::HashSet::new();
+                let mut seen = crate::fxhash::HashSet::default();
                 for (i, t) in ctx.targets.iter().enumerate().take(x) {
                     if let Target::Permanent(id) = t
                         && seen.insert(*id)
@@ -22581,7 +22581,7 @@ impl GameState {
                 let wanted: Option<&'static str> = if self.players[p].hand.is_empty() {
                     None
                 } else {
-                    let lib_names: std::collections::HashSet<&str> =
+                    let lib_names: crate::fxhash::HashSet<&str> =
                         self.players[p].library.iter().map(|c| c.definition.name).collect();
                     self.players[p].hand.iter().map(|c| c.definition.name)
                         .find(|n| lib_names.contains(n))
@@ -24833,7 +24833,7 @@ impl GameState {
                 // Retraced Image — reveal a hand card that shares a name with
                 // some permanent and put it onto the battlefield.
                 use crate::decision::{Decision, DecisionAnswer};
-                let names: std::collections::HashSet<&'static str> =
+                let names: crate::fxhash::HashSet<&'static str> =
                     self.battlefield.iter().map(|c| c.definition.name).collect();
                 let candidates: Vec<(CardId, String)> = self.players[ctx.controller]
                     .hand
@@ -28514,8 +28514,8 @@ impl GameState {
                     None => match self.decider.decide(&decision) {
                         DecisionAnswer::Amount(n) if n > 0 => n.min(*max),
                         _ => {
-                            let mut counts: std::collections::HashMap<u32, u32> =
-                                std::collections::HashMap::new();
+                            let mut counts: crate::fxhash::HashMap<u32, u32> =
+                                crate::fxhash::HashMap::default();
                             for (i, pl) in self.players.iter().enumerate() {
                                 if i == ctx.controller {
                                     continue;
@@ -32367,7 +32367,7 @@ impl GameState {
                     // suspended pick (the old synchronous ask hit AutoDecider
                     // → empty set → decline, so collect evidence never
                     // happened for UI seats). Under-threshold answers decline.
-                    let mv: std::collections::HashMap<CardId, u32> =
+                    let mv: crate::fxhash::HashMap<CardId, u32> =
                         gy.iter().copied().collect();
                     let candidates: Vec<(CardId, String)> = self.players[p]
                         .graveyard
@@ -32497,7 +32497,7 @@ impl GameState {
                     }
                     self.players[p].graveyard.iter().map(|c| c.id).collect()
                 };
-                let gy_ids: std::collections::HashSet<CardId> =
+                let gy_ids: crate::fxhash::HashSet<CardId> =
                     self.players[p].graveyard.iter().map(|c| c.id).collect();
                 let chosen: Vec<CardId> =
                     to_exile.into_iter().filter(|id| gy_ids.contains(id)).collect();
@@ -35298,7 +35298,7 @@ impl GameState {
                 use crate::effect::RevealMissDest;
                 let x = ctx.x_value as usize;
                 let mut victims: Vec<(u8, usize)> = Vec::new();
-                let mut seen = std::collections::HashSet::new();
+                let mut seen = crate::fxhash::HashSet::default();
                 for (i, t) in ctx.targets.iter().enumerate().take(x) {
                     if let Target::Permanent(id) = t
                         && seen.insert(*id)

@@ -22,7 +22,7 @@
 //! detection — the bot greedily picks the highest-scored card,
 //! breaking ties on mana value.
 
-use std::collections::HashMap;
+use crate::fxhash::HashMap;
 
 use rand::{Rng, RngExt};
 use rand::seq::SliceRandom;
@@ -58,7 +58,7 @@ pub fn generate_pack<R: Rng>(pool: &[CardFactory], rng: &mut R) -> Vec<CardFacto
     }
     let want = PACK_SIZE.min(pool.len());
     let mut pack: Vec<CardFactory> = Vec::with_capacity(want);
-    let mut used: std::collections::HashSet<usize> = std::collections::HashSet::new();
+    let mut used: crate::fxhash::HashSet<usize> = crate::fxhash::HashSet::default();
     while pack.len() < want {
         let idx = rng.random_range(0..pool.len());
         if used.insert(idx) {
@@ -162,7 +162,7 @@ pub fn generate_sos_pack<R: Rng>(pool: &[CardFactory], rng: &mut R) -> Vec<CardF
     // The Special Guests sheet is collated separately (see
     // `SOS_SPECIAL_GUEST_RATE`), so keep it out of the colour buckets.
     let guests: Vec<usize> = {
-        let sheet: std::collections::HashSet<usize> = crate::sos_mode::sos_special_guests()
+        let sheet: crate::fxhash::HashSet<usize> = crate::sos_mode::sos_special_guests()
             .into_iter()
             .map(|f| f as usize)
             .collect();
@@ -174,8 +174,8 @@ pub fn generate_sos_pack<R: Rng>(pool: &[CardFactory], rng: &mut R) -> Vec<CardF
     };
     // Pre-bucket every card in the pool. The bucket function is pure,
     // so caching once amortizes across the pack roll.
-    let mut by_bucket: std::collections::HashMap<SosBucket, Vec<usize>> =
-        std::collections::HashMap::new();
+    let mut by_bucket: crate::fxhash::HashMap<SosBucket, Vec<usize>> =
+        crate::fxhash::HashMap::default();
     for (i, factory) in pool.iter().enumerate() {
         if guests.contains(&i) {
             continue;
@@ -183,12 +183,12 @@ pub fn generate_sos_pack<R: Rng>(pool: &[CardFactory], rng: &mut R) -> Vec<CardF
         let def = factory();
         by_bucket.entry(sos_bucket_of(&def)).or_default().push(i);
     }
-    let mut used: std::collections::HashSet<usize> = std::collections::HashSet::new();
+    let mut used: crate::fxhash::HashSet<usize> = crate::fxhash::HashSet::default();
     let mut pack: Vec<CardFactory> = Vec::with_capacity(PACK_SIZE);
     let pull_from = |bucket: SosBucket,
                         want: usize,
-                        by_bucket: &std::collections::HashMap<SosBucket, Vec<usize>>,
-                        used: &mut std::collections::HashSet<usize>,
+                        by_bucket: &crate::fxhash::HashMap<SosBucket, Vec<usize>>,
+                        used: &mut crate::fxhash::HashSet<usize>,
                         pack: &mut Vec<CardFactory>,
                         rng: &mut R|
      -> usize {
@@ -467,7 +467,7 @@ pub fn bot_pick(pack: &[CardFactory], seat_picks_so_far: &[CardFactory]) -> Opti
 /// to. Lands and colorless cards don't contribute (they don't signal
 /// color preference).
 pub fn colors_of_picks(picks: &[CardFactory]) -> HashMap<Color, u32> {
-    let mut totals: HashMap<Color, u32> = HashMap::new();
+    let mut totals: HashMap<Color, u32> = HashMap::default();
     for factory in picks {
         let def = factory();
         for c in colors_of_cost(&def.cost) {
@@ -551,7 +551,7 @@ pub fn suggest_main_deck(picks: &[CardFactory], target_spells: usize) -> (Vec<Ca
     // silently dropped over-cap copies entirely (e.g. 6 Lightning Bolts →
     // main capped to 4, leftovers built via `.skip(take)` which missed the
     // 2 dropped copies).
-    let mut counts: HashMap<usize, u32> = HashMap::new();
+    let mut counts: HashMap<usize, u32> = HashMap::default();
     let mut main: Vec<CardFactory> = Vec::new();
     let mut leftovers: Vec<CardFactory> = Vec::new();
     for (factory, _score) in on_color {
@@ -598,7 +598,7 @@ pub fn top_two_colors(picks: &[CardFactory]) -> [Color; 2] {
 /// at least one of each chosen color when possible, to avoid color
 /// screw on draws.
 pub fn suggest_basic_split(main_deck: &[CardFactory], colors: [Color; 2], total_lands: u32) -> HashMap<Color, u32> {
-    let mut weights: HashMap<Color, u32> = HashMap::new();
+    let mut weights: HashMap<Color, u32> = HashMap::default();
     for &c in &colors {
         weights.insert(c, 0);
     }
@@ -612,7 +612,7 @@ pub fn suggest_basic_split(main_deck: &[CardFactory], colors: [Color; 2], total_
         }
     }
     let total_weight: u32 = weights.values().sum();
-    let mut out: HashMap<Color, u32> = HashMap::new();
+    let mut out: HashMap<Color, u32> = HashMap::default();
     if total_weight == 0 {
         // No colored pips at all (e.g. all artifacts) — split lands
         // 50/50 between the two chosen colors.
@@ -667,7 +667,7 @@ pub fn basic_land_factory(color: Color) -> CardFactory {
 /// Lightning Bolts ends up with four in their main deck and two on
 /// the sideboard.
 pub fn enforce_copy_cap(cards: Vec<CardFactory>) -> Vec<CardFactory> {
-    let mut counts: HashMap<usize, u32> = HashMap::new();
+    let mut counts: HashMap<usize, u32> = HashMap::default();
     let mut out = Vec::with_capacity(cards.len());
     for f in cards {
         let key = f as usize;
@@ -1304,7 +1304,7 @@ mod tests {
         let pack = generate_pack(&pool, &mut rng);
         assert_eq!(pack.len(), PACK_SIZE);
         // No duplicates within a pack.
-        let mut seen: std::collections::HashSet<usize> = std::collections::HashSet::new();
+        let mut seen: crate::fxhash::HashSet<usize> = crate::fxhash::HashSet::default();
         for f in &pack {
             assert!(seen.insert(*f as usize), "pack has duplicate factories");
         }
@@ -1501,7 +1501,7 @@ mod tests {
     #[test]
     fn sos_packs_collate_special_guests_on_their_own_slot() {
         let pool = sos_draft_pool();
-        let sheet: std::collections::HashSet<usize> = crate::sos_mode::sos_special_guests()
+        let sheet: crate::fxhash::HashSet<usize> = crate::sos_mode::sos_special_guests()
             .into_iter()
             .map(|f| f as usize)
             .collect();
@@ -1543,7 +1543,7 @@ mod tests {
             pool.len()
         );
         // All entries are unique factory pointers.
-        let mut seen = std::collections::HashSet::new();
+        let mut seen = crate::fxhash::HashSet::default();
         for f in &pool {
             assert!(seen.insert(*f as usize), "duplicate factory in SoS pool");
         }
@@ -1561,7 +1561,7 @@ mod tests {
         let mut rng = fixed_rng();
         let pack = generate_sos_pack(&pool, &mut rng);
         assert_eq!(pack.len(), PACK_SIZE, "SoS pack must be exactly 15 cards");
-        let mut seen = std::collections::HashSet::new();
+        let mut seen = crate::fxhash::HashSet::default();
         for f in &pack {
             assert!(seen.insert(*f as usize), "SoS pack has duplicate factory");
         }
@@ -1575,8 +1575,8 @@ mod tests {
         // against a regression that breaks bucket assignment.
         let pool = sos_draft_pool();
         let mut rng = fixed_rng();
-        let mut bucket_totals: std::collections::HashMap<SosBucket, u32> =
-            std::collections::HashMap::new();
+        let mut bucket_totals: crate::fxhash::HashMap<SosBucket, u32> =
+            crate::fxhash::HashMap::default();
         let n = 100;
         for _ in 0..n {
             let pack = generate_sos_pack(&pool, &mut rng);

@@ -108,17 +108,21 @@ pub mod map_u32 {
     use serde::de::Deserialize;
     use serde::{Deserializer, Serializer};
     use std::collections::HashMap;
+    use std::hash::BuildHasher;
 
-    pub fn serialize<S: Serializer>(
-        m: &HashMap<super::StaticStr, u32>,
+    // Generic over the hasher: the engine's maps carry a fixed one so their
+    // iteration order is reproducible (`crabomination::fxhash`), and this
+    // module is `#[serde(with = ...)]` on those very fields.
+    pub fn serialize<S: Serializer, H: BuildHasher>(
+        m: &HashMap<super::StaticStr, u32, H>,
         ser: S,
     ) -> Result<S::Ok, S::Error> {
         serde::Serialize::serialize(m, ser)
     }
 
-    pub fn deserialize<'de, D: Deserializer<'de>>(
+    pub fn deserialize<'de, D: Deserializer<'de>, H: BuildHasher + Default>(
         de: D,
-    ) -> Result<HashMap<super::StaticStr, u32>, D::Error> {
+    ) -> Result<HashMap<super::StaticStr, u32, H>, D::Error> {
         Ok(HashMap::<String, u32>::deserialize(de)?
             .into_iter()
             .map(|(k, v)| (super::intern(k), v))

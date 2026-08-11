@@ -189,7 +189,7 @@ pub struct PlayerData {
     /// self-play game) and an owned key allocates per entry per clone.
     #[serde(with = "crate::static_str_serde::map_u32", default)]
     pub spells_cast_by_name_this_game:
-        std::collections::HashMap<crate::static_str_serde::StaticStr, u32>,
+        crate::fxhash::HashMap<crate::static_str_serde::StaticStr, u32>,
     /// Like `spells_cast_this_turn` but reset for every player at each
     /// turn's Cleanup (not just the player's own untap) — the CR-correct
     /// scope for Rule of Law's "each player can't cast more than one spell
@@ -530,7 +530,7 @@ pub struct PlayerData {
     /// Backs `SelectionRequirement::PutIntoGraveyardThisTurn` (Reenact the
     /// Crime).
     #[serde(default)]
-    pub graveyard_ids_this_turn: std::collections::HashSet<CardId>,
+    pub graveyard_ids_this_turn: crate::fxhash::HashSet<CardId>,
     /// CR 700.11 — true if a *permanent* card was put into this player's
     /// graveyard from anywhere this turn ("you descended this turn"). Set in
     /// `send_to_graveyard`, reset at untap. Gates "if you descended this turn"
@@ -588,7 +588,7 @@ pub struct PlayerData {
     /// can offer a graveyard cast only for cards actually discarded this turn.
     /// Populated in `discard_card`; cleared in `do_untap`.
     #[serde(default)]
-    pub discarded_this_turn: std::collections::HashSet<crate::card::CardId>,
+    pub discarded_this_turn: crate::fxhash::HashSet<crate::card::CardId>,
     /// Number of permanents this player has sacrificed so far this turn.
     /// Bumped in `dispatch_triggers_for_events` per `PermanentSacrificed`
     /// event; reset in `do_untap`. Powers "if you sacrificed a permanent
@@ -1089,7 +1089,7 @@ impl Player {
             activated_loyalty_this_turn: false,
             spells_cast_this_turn: 0,
             sorceries_cast_this_turn: 0,
-            spells_cast_by_name_this_game: std::collections::HashMap::new(),
+            spells_cast_by_name_this_game: crate::fxhash::HashMap::default(),
             spells_cast_this_game_turn: 0,
             noncreature_spells_cast_this_game_turn: 0,
             nonartifact_spells_cast_this_game_turn: 0,
@@ -1147,7 +1147,7 @@ impl Player {
             cards_exiled_this_turn: 0,
             cards_to_graveyard_this_turn: 0,
             creature_cards_to_graveyard_this_turn: 0,
-            graveyard_ids_this_turn: std::collections::HashSet::new(),
+            graveyard_ids_this_turn: crate::fxhash::HashSet::default(),
             instants_or_sorceries_cast_this_turn: 0,
             spells_cast_from_hand_this_turn: 0,
             extra_plus_one_counters_this_turn: 0,
@@ -1157,7 +1157,7 @@ impl Player {
             turn_spell_discounts: Vec::new(),
             face_down_discount_this_turn: 0,
             cards_discarded_this_turn: 0,
-            discarded_this_turn: std::collections::HashSet::new(),
+            discarded_this_turn: crate::fxhash::HashSet::default(),
             permanents_sacrificed_this_turn: 0,
             artifacts_sacrificed_this_turn: 0,
             creatures_cast_this_turn: 0,

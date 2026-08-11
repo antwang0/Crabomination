@@ -1185,7 +1185,7 @@ pub fn cost_reduction_for_spell_full(
         .iter()
         .any(|sa| matches!(sa.effect, StaticEffect::SelfCostReducedPerCardTypeInGraveyard))
     {
-        let types: std::collections::HashSet<crate::card::CardType> = state.players[caster]
+        let types: crate::fxhash::HashSet<crate::card::CardType> = state.players[caster]
             .graveyard
             .iter()
             .flat_map(|c| c.definition.card_types.iter().cloned())
@@ -4506,7 +4506,7 @@ impl GameState {
         if splice_cards.is_empty() || splice_cards.contains(&card_id) {
             return Err(GameError::InvalidTarget);
         }
-        let mut seen = std::collections::HashSet::new();
+        let mut seen = crate::fxhash::HashSet::default();
         let spell_subtypes = self.players[p]
             .hand
             .iter()
@@ -7489,7 +7489,7 @@ impl GameState {
                             }
                         }
                         if picked.len() < *count as usize {
-                            let already: std::collections::HashSet<CardId> =
+                            let already: crate::fxhash::HashSet<CardId> =
                                 picked.iter().map(|c| c.id).collect();
                             let mut cands: Vec<&crate::card::CardInstance> = self
                                 .battlefield
@@ -11344,7 +11344,7 @@ impl GameState {
     ) -> crate::mana::ManaPool {
         use crate::mana::{Color, ManaPool, ManaSymbol};
         let pool = &self.players[payer].mana_pool;
-        let mut colored_need: std::collections::HashMap<Color, u32> = std::collections::HashMap::new();
+        let mut colored_need: crate::fxhash::HashMap<Color, u32> = crate::fxhash::HashMap::default();
         let mut colorless_need = 0u32;
         for s in &cost.symbols {
             match s {
@@ -11502,7 +11502,7 @@ impl GameState {
             // (Forest vs Mox Emerald) is NOT forced — leave those pips out
             // of the eager tap so the choice check below can prompt.
             let color_is_forced = |col: ManaColor| -> bool {
-                use std::collections::HashSet;
+                use crate::fxhash::HashSet;
                 let need = cost
                     .symbols
                     .iter()
@@ -11657,7 +11657,7 @@ impl GameState {
     /// whether the resulting tap actually pays.
     fn payment_requires_manual_choice(&self, player: usize, cost: &crate::mana::ManaCost) -> bool {
         use crate::mana::{Color, ManaSymbol};
-        use std::collections::{HashMap, HashSet};
+        use crate::fxhash::{HashMap, HashSet};
         // A from-hand mana source (Elvish Spirit Guide) is invisible to the
         // auto-tapper but a real payment option — its presence alone makes
         // the payment a manual choice.
@@ -11675,7 +11675,7 @@ impl GameState {
 
         // Colored requirement per colour + generic (folding {C} in as
         // generic — payable from any source for the choice analysis).
-        let mut need: HashMap<Color, u32> = HashMap::new();
+        let mut need: HashMap<Color, u32> = HashMap::default();
         let mut generic = 0u32;
         for s in &cost.symbols {
             match s {
@@ -13778,11 +13778,11 @@ impl GameState {
             } else if let Some(chosen) = chosen_exile_other {
                 // Replay path: keep the player's picks that are still valid
                 // candidates; backfill from the auto-pick if short.
-                let valid: std::collections::HashSet<CardId> = candidates.iter().copied().collect();
+                let valid: crate::fxhash::HashSet<CardId> = candidates.iter().copied().collect();
                 let mut picks: Vec<CardId> =
                     chosen.into_iter().filter(|id| valid.contains(id)).take(count).collect();
                 if picks.len() < count {
-                    let have: std::collections::HashSet<CardId> = picks.iter().copied().collect();
+                    let have: crate::fxhash::HashSet<CardId> = picks.iter().copied().collect();
                     let extra: Vec<CardId> = candidates.iter().copied().filter(|id| !have.contains(id)).collect();
                     picks.extend(self.auto_pick_lowest_cmc_gy(p, &extra, count - picks.len()));
                 }
@@ -14230,8 +14230,8 @@ impl GameState {
             if ability.discard_cost_same_name {
                 // CR 601 — "Discard N cards with the same name." Find any name
                 // in hand with `count`+ matching copies; discard that many.
-                let mut by_name: std::collections::HashMap<&str, Vec<CardId>> =
-                    std::collections::HashMap::new();
+                let mut by_name: crate::fxhash::HashMap<&str, Vec<CardId>> =
+                    crate::fxhash::HashMap::default();
                 for c in self.players[p].hand.iter().filter(|c| c.id != card_id) {
                     if self.evaluate_requirement_on_card(filter, c, p) {
                         by_name.entry(c.definition.name).or_default().push(c.id);

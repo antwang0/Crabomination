@@ -176,7 +176,7 @@ pub struct DraftSession {
     // Deckbuilding state (only populated once draft completes)
     pub main: Vec<CardFactory>,
     pub sideboard: Vec<CardFactory>,
-    pub basics: HashMap<ManaColor, u32>,
+    pub basics: crabomination::fxhash::HashMap<ManaColor, u32>,
     pub player_colors: [ManaColor; 2],
 
     // Opponent select
@@ -217,7 +217,7 @@ impl DraftSession {
             pack_sort: PackSort::default(),
             main: Vec::new(),
             sideboard: Vec::new(),
-            basics: HashMap::new(),
+            basics: Default::default(),
             player_colors: [ManaColor::White, ManaColor::Blue],
             chosen_opponent: None,
             save_status: None,

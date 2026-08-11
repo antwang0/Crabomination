@@ -2622,10 +2622,10 @@ impl GameState {
         // `CantPhaseOut` only ever shrinks the set, so the presence gate on
         // Phasing alone is exact — and it is `false` on nearly every board,
         // which is the whole-board layer pass this step used to take per turn.
-        let mut to_phase_out: std::collections::HashSet<crate::card::CardId> =
+        let mut to_phase_out: crate::fxhash::HashSet<crate::card::CardId> =
             self.with_frozen_layers(|g| {
                 if !g.board_keyword_in_scope(&[crate::card::Keyword::Phasing]) {
-                    return std::collections::HashSet::new();
+                    return crate::fxhash::HashSet::default();
                 }
                 g.compute_battlefield()
                     .iter()
@@ -2891,7 +2891,7 @@ impl GameState {
         };
         // CR 502.3 — the filtered sibling (Prophet of Kruphix): an off-turn
         // controller untaps only the permanents matching the static's filter.
-        let filtered_untap: std::collections::HashSet<crate::card::CardId> = {
+        let filtered_untap: crate::fxhash::HashSet<crate::card::CardId> = {
             let filters: Vec<(usize, SelectionRequirement)> = self
                 .battlefield
                 .iter()
@@ -2907,7 +2907,7 @@ impl GameState {
                     })
                 })
                 .collect();
-            let mut set = std::collections::HashSet::new();
+            let mut set = crate::fxhash::HashSet::default();
             // Endbringer — "untap this during each other player's untap step".
             for c in &self.battlefield {
                 if c.controller != p
@@ -2937,14 +2937,14 @@ impl GameState {
         // Storage Matrix — while an untapped one is out, each untapping player
         // picks artifact / creature / land and untaps only that type this step.
         // The auto pick is whichever type would free the most permanents.
-        let matrix_choice: std::collections::HashMap<usize, crate::card::CardType> = {
+        let matrix_choice: crate::fxhash::HashMap<usize, crate::card::CardType> = {
             let live = self.battlefield.iter().any(|c| {
                 !c.tapped
                     && c.definition.static_abilities.iter().any(|sa| {
                         matches!(sa.effect, StaticEffect::UntapOnlyChosenTypeWhileUntapped)
                     })
             });
-            let mut out = std::collections::HashMap::new();
+            let mut out = crate::fxhash::HashMap::default();
             if live {
                 use crate::card::CardType;
                 for seat in &untappers {
@@ -2967,8 +2967,8 @@ impl GameState {
             }
             out
         };
-        let prevented: std::collections::HashSet<crate::card::CardId> = {
-            let mut blocked = std::collections::HashSet::new();
+        let prevented: crate::fxhash::HashSet<crate::card::CardId> = {
+            let mut blocked = crate::fxhash::HashSet::default();
             // Storage Matrix's off-type permanents are simply blocked.
             if !matrix_choice.is_empty() {
                 for c in &self.battlefield {
@@ -3065,7 +3065,7 @@ impl GameState {
         // Only a source that actually prints "you may choose not to untap
         // this" holds itself down; one without the clause (Kill Switch)
         // untaps normally and releases its lock.
-        let lock_sources: std::collections::HashSet<crate::card::CardId> = self
+        let lock_sources: crate::fxhash::HashSet<crate::card::CardId> = self
             .battlefield
             .iter()
             .filter_map(|c| c.untap_locked_by)
@@ -3081,17 +3081,17 @@ impl GameState {
                 })
             })
             .collect();
-        let tapped_now_set: std::collections::HashSet<crate::card::CardId> =
+        let tapped_now_set: crate::fxhash::HashSet<crate::card::CardId> =
             self.battlefield.iter().filter(|c| c.tapped).map(|c| c.id).collect();
         // Shipbreaker Kraken — a presence-lock holds while its source is still
         // on the battlefield.
-        let on_battlefield: std::collections::HashSet<crate::card::CardId> =
+        let on_battlefield: crate::fxhash::HashSet<crate::card::CardId> =
             self.battlefield.iter().map(|c| c.id).collect();
         // CR 502.3 — "Players can't untap more than one [filter] during their
         // untap steps" (Winter Moon, Imi Statue). Pre-resolve each cap's
         // matching permanents (the untap loop below borrows the battlefield
         // mutably), then let each player untap at most one per cap.
-        let untap_caps: Vec<(std::collections::HashSet<crate::card::CardId>, u32)> = self
+        let untap_caps: Vec<(crate::fxhash::HashSet<crate::card::CardId>, u32)> = self
             .battlefield
             .iter()
             .flat_map(|c| c.definition.static_abilities.iter().map(move |sa| (c, sa)))
@@ -3117,11 +3117,11 @@ impl GameState {
                 (set, max)
             })
             .collect();
-        let mut capped_untaps: std::collections::HashMap<(usize, usize), u32> =
-            std::collections::HashMap::new();
+        let mut capped_untaps: crate::fxhash::HashMap<(usize, usize), u32> =
+            crate::fxhash::HashMap::default();
         // CR 502.1 — ask each `MayChooseNotToUntap` permanent's controller
         // before the loop (which borrows the battlefield mutably).
-        let may_decline: std::collections::HashSet<crate::card::CardId> = {
+        let may_decline: crate::fxhash::HashSet<crate::card::CardId> = {
             let asking: Vec<(crate::card::CardId, usize, &'static str)> = self
                 .battlefield
                 .iter()
@@ -3132,7 +3132,7 @@ impl GameState {
                 })
                 .map(|c| (c.id, c.controller, c.definition.name))
                 .collect();
-            let mut set = std::collections::HashSet::new();
+            let mut set = crate::fxhash::HashSet::default();
             for (id, _seat, name) in asking {
                 if let crate::decision::DecisionAnswer::Bool(true) =
                     self.decider.decide(&crate::decision::Decision::OptionalTrigger {
@@ -4446,7 +4446,7 @@ impl GameState {
             .iter()
             .any(|e| e.duration == crate::game::layers::EffectDuration::WhileSourceTapped)
         {
-            let still_tapped: std::collections::HashSet<CardId> =
+            let still_tapped: crate::fxhash::HashSet<CardId> =
                 self.battlefield.iter().filter(|c| c.tapped).map(|c| c.id).collect();
             self.continuous_effects.retain(|e| {
                 e.duration != crate::game::layers::EffectDuration::WhileSourceTapped
@@ -4461,7 +4461,7 @@ impl GameState {
             .iter()
             .any(|e| e.duration == crate::game::layers::EffectDuration::WhileSourceAttached)
         {
-            let attached: std::collections::HashSet<CardId> = self
+            let attached: crate::fxhash::HashSet<CardId> = self
                 .battlefield
                 .iter()
                 .filter(|c| c.attached_to.is_some())
@@ -4564,7 +4564,7 @@ impl GameState {
         // dies for good). Only the Persist/Undying return reads it, and only
         // for a card whose *printed* keywords carry one, so the map holds
         // exactly those cards; every other lookup misses and is unused.
-        let pre_sba_pm_counters: std::collections::HashMap<CardId, (u32, u32)> =
+        let pre_sba_pm_counters: crate::fxhash::HashMap<CardId, (u32, u32)> =
             if scan.persist_undying {
                 self.battlefield
                     .iter()
@@ -4583,7 +4583,7 @@ impl GameState {
                     })
                     .collect()
             } else {
-                std::collections::HashMap::new()
+                crate::fxhash::HashMap::default()
             };
 
         // +1/+1 and -1/-1 counters cancel each other out (CR 122.3 — the
@@ -4635,8 +4635,8 @@ impl GameState {
         // controller's decider per group (AutoDecider keeps the newest).
         let legend_groups = {
             let mut order: Vec<(usize, &str)> = Vec::new();
-            let mut groups: std::collections::HashMap<(usize, &str), Vec<(CardId, String)>> =
-                std::collections::HashMap::new();
+            let mut groups: crate::fxhash::HashMap<(usize, &str), Vec<(CardId, String)>> =
+                crate::fxhash::HashMap::default();
             // CR 704.5j reads *current* supertypes, so a continuous grant of
             // the Legendary supertype (Leyline of Singularity, the Ring's
             // emblem) counts. Only pay for the layer computation when such a
@@ -5329,8 +5329,8 @@ impl GameState {
         let stale_roles: Vec<CardId> = if !scan.role {
             Vec::new()
         } else {
-            let mut by_host: std::collections::HashMap<(CardId, usize), Vec<(u64, CardId)>> =
-                std::collections::HashMap::new();
+            let mut by_host: crate::fxhash::HashMap<(CardId, usize), Vec<(u64, CardId)>> =
+                crate::fxhash::HashMap::default();
             for c in self.battlefield.iter().filter(|c| {
                 c.definition
                     .subtypes
@@ -5417,7 +5417,7 @@ impl GameState {
         // CR 702.95h — Soulbond pairs break when either creature leaves the
         // battlefield. Clear any link that points at a card no longer in play.
         if scan.soulbond {
-            let on_bf: std::collections::HashSet<CardId> =
+            let on_bf: crate::fxhash::HashSet<CardId> =
                 self.battlefield.iter().map(|c| c.id).collect();
             for c in &mut self.battlefield {
                 if let Some(p) = c.soulbond_partner

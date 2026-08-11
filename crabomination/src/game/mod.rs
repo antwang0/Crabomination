@@ -121,7 +121,7 @@ use crate::game::layers::{
 };
 use crate::cow::CowBox;
 use crate::player::Player;
-use std::collections::HashMap;
+use crate::fxhash::HashMap;
 
 // ── Decider serde adapter ────────────────────────────────────────────────────
 //
@@ -371,7 +371,7 @@ pub struct ColdState {
     /// would allocate per entry on every state clone); never reset.
     #[serde(with = "crate::static_str_serde::map_u32", default)]
     pub cycled_count_by_name:
-        std::collections::HashMap<crate::static_str_serde::StaticStr, u32>,
+        crate::fxhash::HashMap<crate::static_str_serde::StaticStr, u32>,
     /// Cards put into a graveyard **from the battlefield** this turn (CR —
     /// Second Sunrise's restore set). Cleared at cleanup.
     #[serde(default)]
@@ -750,7 +750,7 @@ pub struct ColdState {
     /// (CR 603.3-style "if this is the first/second/third time …" — Vito,
     /// Fanatic of Aclazotz). Keyed by source `CardId`; cleared at cleanup.
     #[serde(default)]
-    pub(crate) ability_resolutions_this_turn: std::collections::HashMap<CardId, u32>,
+    pub(crate) ability_resolutions_this_turn: crate::fxhash::HashMap<CardId, u32>,
     /// Per-permanent transient triggered abilities granted by spells /
     /// continuous effects (Rabid Attack, Root Manipulation: "creatures
     /// you control gain '…trigger…' until end of turn"). The dispatcher
@@ -762,7 +762,7 @@ pub struct ColdState {
     /// `#[serde(default)]` for snapshot back-compat.
     #[serde(default)]
     pub granted_triggers_eot:
-        std::collections::HashMap<CardId, Vec<crate::card::TriggeredAbility>>,
+        crate::fxhash::HashMap<CardId, Vec<crate::card::TriggeredAbility>>,
     /// Permanents whose death is replaced by exile for the rest of the
     /// turn — "if that creature would die this turn, exile it instead"
     /// (Wilt in the Heat). Checked in `remove_from_battlefield_to_graveyard_raw`
@@ -849,7 +849,7 @@ pub struct ColdState {
     /// `EventSpec::per_subject_cap` tallies: fires of a capped trigger this
     /// turn, keyed by (watcher, event subject). Cleared at cleanup.
     #[serde(default)]
-    pub(crate) per_subject_trigger_uses: std::collections::HashMap<(CardId, CardId), u8>,
+    pub(crate) per_subject_trigger_uses: crate::fxhash::HashMap<(CardId, CardId), u8>,
     /// Taii Wakeen — per-seat bonus added to noncombat damage a source that
     /// seat controls deals this turn. Cleared at cleanup.
     #[serde(default)]
@@ -1234,14 +1234,14 @@ pub struct GameState {
     /// discarded this way" via `Value::MaxCardsDiscardedThisEffectByAnyPlayer`.
     /// Reset to empty between independent resolutions.
     #[serde(skip)]
-    pub(crate) cards_discarded_per_player_this_resolution: std::collections::HashMap<usize, u32>,
+    pub(crate) cards_discarded_per_player_this_resolution: crate::fxhash::HashMap<usize, u32>,
     /// Transient: per-player count of *nonland* cards discarded within the
     /// current effect resolution. Read by `Predicate::DiscardedNonlandThisEffect`
     /// — Kroxa's "each opponent who didn't discard a nonland card this way
     /// loses 3 life." Reset to empty between independent resolutions.
     #[serde(skip)]
     pub(crate) nonland_cards_discarded_per_player_this_resolution:
-        std::collections::HashMap<usize, u32>,
+        crate::fxhash::HashMap<usize, u32>,
     /// Transient: set by `Effect::ShuffleSelfIntoLibrary` during spell
     /// resolution; the post-resolution routing reads it to send the
     /// resolving spell to its owner's library (shuffled) instead of the
@@ -1427,7 +1427,7 @@ pub struct GameState {
     /// so a follow-up step can gate on "if you sacrificed a permanent this way"
     /// (Deadly Brew). Reset between independent resolutions.
     #[serde(skip)]
-    pub(crate) players_sacrificed_this_resolution: std::collections::HashSet<usize>,
+    pub(crate) players_sacrificed_this_resolution: crate::fxhash::HashSet<usize>,
     /// The cards sacrificed during the current resolution, read by
     /// `SelectionRequirement::NotSacrificedThisResolution` so an "another
     /// permanent card" clause can't pick back what it just ate (Deadly Brew).
@@ -1456,7 +1456,7 @@ pub struct GameState {
     /// `Effect::EachPlayerRevealTopKeepIfNamed` (Conundrum Sphinx). Reset
     /// between independent resolutions.
     #[serde(skip)]
-    pub(crate) names_this_resolution: std::collections::HashMap<usize, String>,
+    pub(crate) names_this_resolution: crate::fxhash::HashMap<usize, String>,
     /// Transient: which face / cast path the in-progress cast is using.
     /// Set by `cast_spell_back_face` (`Back`) and `cast_flashback`
     /// (`Flashback`); reset to `Front` after each emitted SpellCast
@@ -2269,9 +2269,9 @@ impl GameState {
             next_effect_timestamp: 1,
             next_id: 1,
             attacking: Vec::new(),
-            block_map: HashMap::new(),
-            combat_damage_order: HashMap::new(),
-            combat_damage_assignment: HashMap::new(),
+            block_map: HashMap::default(),
+            combat_damage_order: HashMap::default(),
+            combat_damage_assignment: HashMap::default(),
             combat_damage_plan_step: None,
             blockers_declared: false,
             // Multiplayer (3+) doesn't skip the first draw — only the 2-player
@@ -2324,8 +2324,8 @@ impl GameState {
             cards_revealed_this_resolution: 0,
             creature_cards_discarded_this_resolution: 0,
             greatest_discarded_mv_this_resolution: 0,
-            cards_discarded_per_player_this_resolution: HashMap::new(),
-            nonland_cards_discarded_per_player_this_resolution: HashMap::new(),
+            cards_discarded_per_player_this_resolution: HashMap::default(),
+            nonland_cards_discarded_per_player_this_resolution: HashMap::default(),
             shuffle_resolving_spell_into_library: false,
             return_resolving_spell_to_hand: false,
             exile_resolving_spell: false,
@@ -2359,12 +2359,12 @@ impl GameState {
             permanents_enter_tapped_this_turn: false,
             counters_removed_this_effect: 0,
             counters_removed_as_cost: 0,
-            players_sacrificed_this_resolution: std::collections::HashSet::new(),
+            players_sacrificed_this_resolution: crate::fxhash::HashSet::default(),
             cards_sacrificed_this_resolution: Vec::new(),
             chosen_creature_type_scratch: None,
             chosen_creature_types_scratch: Vec::new(),
             named_card_this_resolution: None,
-            names_this_resolution: HashMap::new(),
+            names_this_resolution: HashMap::default(),
             pending_cast_face: CastFace::Front,
             pending_cast_sacrifices: None,
             pending_cast_discards: None,
@@ -2416,7 +2416,7 @@ impl GameState {
             controlled_by: Vec::new(),
             next_replacement_id: 1,
             died_card_snapshots: Default::default(),
-            leaves_bf_lki: HashMap::new(),
+            leaves_bf_lki: HashMap::default(),
             resolving_lki_source: None,
             resolving_lki_subject: None,
             subgame_depth: 0,
@@ -2964,8 +2964,8 @@ impl GameState {
     /// restriction.
     pub fn greatest_shared_type_count(&self, seat: usize) -> usize {
         use crate::card::{CardType, CreatureType, Keyword};
-        let mut tally: std::collections::HashMap<CreatureType, usize> =
-            std::collections::HashMap::new();
+        let mut tally: crate::fxhash::HashMap<CreatureType, usize> =
+            crate::fxhash::HashMap::default();
         let mut changelings = 0usize;
         for cp in self
             .battlefield
@@ -10367,8 +10367,8 @@ impl GameState {
                     (base + bf + gy, base + bf + gy)
                 }
                 crate::card::DynamicPt::CardTypesInOpponentsGraveyards { base_p, base_t } => {
-                    let mut seen: std::collections::HashSet<crate::card::CardType> =
-                        std::collections::HashSet::new();
+                    let mut seen: crate::fxhash::HashSet<crate::card::CardType> =
+                        crate::fxhash::HashSet::default();
                     for (i, player) in self.players.iter().enumerate() {
                         if i == card.controller { continue; }
                         for c in &player.graveyard {
@@ -10378,8 +10378,8 @@ impl GameState {
                     (base_p + seen.len() as i32, base_t)
                 }
                 crate::card::DynamicPt::CardTypesInControllerGraveyard { base_p, base_t } => {
-                    let mut seen: std::collections::HashSet<crate::card::CardType> =
-                        std::collections::HashSet::new();
+                    let mut seen: crate::fxhash::HashSet<crate::card::CardType> =
+                        crate::fxhash::HashSet::default();
                     for c in &self.players[card.controller].graveyard {
                         for ct in &c.definition.card_types { seen.insert(ct.clone()); }
                     }
@@ -10523,8 +10523,8 @@ impl GameState {
                     (base_p + n, base_t + n)
                 }
                 crate::card::DynamicPt::ColorsAmongAlliesControlledPower { base_p, base_t } => {
-                    let mut colors: std::collections::HashSet<crate::mana::Color> =
-                        std::collections::HashSet::new();
+                    let mut colors: crate::fxhash::HashSet<crate::mana::Color> =
+                        crate::fxhash::HashSet::default();
                     for c in self.battlefield.iter().filter(|c| {
                         c.controller == card.controller
                             && c.definition.is_creature()
@@ -10984,7 +10984,7 @@ impl GameState {
     /// Instant, Land, Planeswalker, Sorcery, Battle, Tribal) across every
     /// player's graveyard. Used by Tarmogoyf-style dynamic P/T.
     pub fn distinct_card_types_in_all_graveyards(&self) -> usize {
-        let mut seen: std::collections::HashSet<CardType> = std::collections::HashSet::new();
+        let mut seen: crate::fxhash::HashSet<CardType> = crate::fxhash::HashSet::default();
         for player in &self.players {
             for card in &player.graveyard {
                 for ct in &card.definition.card_types {
@@ -11005,7 +11005,7 @@ impl GameState {
     /// Distinct card types among cards in `seat`'s graveyard — the delirium
     /// count as a number (`Value::CardTypesInGraveyard`, Lucid Dreams).
     pub fn distinct_card_types_in_graveyard(&self, seat: usize) -> usize {
-        let mut kinds: std::collections::HashSet<&CardType> = std::collections::HashSet::new();
+        let mut kinds: crate::fxhash::HashSet<&CardType> = crate::fxhash::HashSet::default();
         for c in &self.players[seat].graveyard {
             for t in &c.definition.card_types {
                 kinds.insert(t);
@@ -14961,7 +14961,7 @@ impl GameState {
         // Validate the crew: distinct, controlled by p, untapped creatures,
         // none being the Vehicle itself. Sum their computed power.
         let computed = self.compute_battlefield();
-        let mut seen = std::collections::HashSet::new();
+        let mut seen = crate::fxhash::HashSet::default();
         let mut total_power: i32 = 0;
         for &cid in crew_creatures {
             if cid == vehicle || !seen.insert(cid) {
@@ -15047,7 +15047,7 @@ impl GameState {
             .saddle_cost()
             .ok_or(GameError::InvalidTarget)?;
         let computed = self.compute_battlefield();
-        let mut seen = std::collections::HashSet::new();
+        let mut seen = crate::fxhash::HashSet::default();
         let mut total_power: i32 = 0;
         for &cid in creatures {
             if cid == mount || !seen.insert(cid) {
@@ -15682,8 +15682,8 @@ impl GameState {
         // CR 603.3d — keys for `once_per_turn` triggers that fire in this
         // batch; merged into the turn-scoped set after the battlefield walk
         // (deferred so we don't mutate `self` mid-immutable-borrow).
-        let mut once_fired_this_batch: std::collections::HashSet<(CardId, usize)> =
-            std::collections::HashSet::new();
+        let mut once_fired_this_batch: crate::fxhash::HashSet<(CardId, usize)> =
+            crate::fxhash::HashSet::default();
         // `EventSpec::per_subject_cap` fires in this batch (deferred merge).
         let mut capped_fired_this_batch: Vec<(CardId, CardId)> = Vec::new();
         // Presence gates for the three per-card grant lookups below. On a
@@ -19154,8 +19154,8 @@ impl GameState {
         chooser: usize,
     ) -> Vec<crate::card::CreatureType> {
         use crate::card::CreatureType;
-        let mut counts: std::collections::HashMap<CreatureType, usize> =
-            std::collections::HashMap::new();
+        let mut counts: crate::fxhash::HashMap<CreatureType, usize> =
+            crate::fxhash::HashMap::default();
         let public = self
             .battlefield
             .iter()
@@ -20083,7 +20083,7 @@ impl GameState {
     /// Reads printed colours: the callers sit inside the layer walk, so asking
     /// for computed colours here would recurse.
     pub fn most_common_permanent_colors(&self) -> Vec<crate::mana::Color> {
-        let mut tally = std::collections::HashMap::<crate::mana::Color, u32>::new();
+        let mut tally = crate::fxhash::HashMap::<crate::mana::Color, u32>::default();
         for c in &self.battlefield {
             for k in c.definition.printed_colors() {
                 *tally.entry(k).or_default() += 1;

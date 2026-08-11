@@ -9,7 +9,7 @@
 //! aborts — a sealed ranking with silently missing cards is worse than
 //! no ranking.
 
-use std::collections::HashMap;
+use crabomination::fxhash::HashMap;
 use std::sync::atomic::{AtomicUsize, Ordering};
 
 use crabomination::recommend::{self, SimConfig};
@@ -302,7 +302,7 @@ fn main() {
     let best = &rec.candidates[rec.ranking[0]];
     let land_count = best.duals.len() as u32 + best.basics.values().sum::<u32>();
     println!("\nrecommended build — {} ({} spells + {land_count} lands):", best.label, best.main.len());
-    let mut counts: HashMap<&str, u32> = HashMap::new();
+    let mut counts: HashMap<&str, u32> = HashMap::default();
     for &f in &best.main {
         *counts.entry(f().name).or_insert(0) += 1;
     }
@@ -311,7 +311,7 @@ fn main() {
     for (n, name) in lines {
         println!("  {n} {name}");
     }
-    let mut dual_counts: HashMap<&str, u32> = HashMap::new();
+    let mut dual_counts: HashMap<&str, u32> = HashMap::default();
     for &f in &best.duals {
         *dual_counts.entry(f().name).or_insert(0) += 1;
     }

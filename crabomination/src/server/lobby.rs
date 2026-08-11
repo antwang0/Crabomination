@@ -18,7 +18,7 @@
 //!   manager, ships the resulting messages, and hands a filled lobby's channels
 //!   to [`run_match`].
 
-use std::collections::{HashMap, HashSet};
+use crate::fxhash::{HashMap, HashSet};
 use std::sync::{mpsc, Arc};
 use std::thread;
 use std::time::{Duration, Instant};
@@ -590,11 +590,11 @@ pub fn serve_lobbies<G: Send + 'static>(
     on_match_end: MatchEndHook,
 ) {
     let mut mgr = LobbyManager::new();
-    let mut channels: HashMap<ConnId, (SeatChannel, G)> = HashMap::new();
+    let mut channels: HashMap<ConnId, (SeatChannel, G)> = HashMap::default();
     // Live resume tokens → the running match's reattach channel + seat.
-    let mut registry: HashMap<String, ResumeTarget> = HashMap::new();
+    let mut registry: HashMap<String, ResumeTarget> = HashMap::default();
     // Live matches available to spectate, keyed by match id.
-    let mut running: HashMap<u64, RunningMatch<G>> = HashMap::new();
+    let mut running: HashMap<u64, RunningMatch<G>> = HashMap::default();
     let mut next_match_id: u64 = 0;
     // A finished match sends a `MatchDone` here so the driver can prune its
     // resume tokens (otherwise a stale token would only be cleared on a failed

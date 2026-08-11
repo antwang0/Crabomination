@@ -1,6 +1,6 @@
 /// Dump every card definition from the catalog as JSON on stdout.
 /// Used by scripts/verify_cards.py to compare our data against Scryfall.
-use std::collections::HashSet;
+use crabomination::fxhash::HashSet;
 
 use crabomination::card::{CardDefinition, CardType, Keyword, Supertype};
 use crabomination::catalog::all_known_factories;
@@ -329,7 +329,7 @@ fn summarize(def: &CardDefinition) -> CardSummary {
 
 fn main() {
     let factories = all_known_factories();
-    let mut seen: HashSet<String> = HashSet::new();
+    let mut seen: HashSet<String> = HashSet::default();
     let mut cards: Vec<CardSummary> = Vec::new();
 
     for factory in factories {

@@ -252,9 +252,9 @@ fn combat_preview(state: &GameState) -> Option<crate::net::CombatPreview> {
         return None;
     }
     let block_map = state.block_map_snapshot(); // (blocker, attacker)
-    let mut dmg: std::collections::HashMap<usize, i32> = std::collections::HashMap::new();
-    let mut pw_dmg: std::collections::HashMap<CardId, i32> = std::collections::HashMap::new();
-    let mut lifegain: std::collections::HashMap<usize, i32> = std::collections::HashMap::new();
+    let mut dmg: crate::fxhash::HashMap<usize, i32> = crate::fxhash::HashMap::default();
+    let mut pw_dmg: crate::fxhash::HashMap<CardId, i32> = crate::fxhash::HashMap::default();
+    let mut lifegain: crate::fxhash::HashMap<usize, i32> = crate::fxhash::HashMap::default();
     let mut dying: Vec<CardId> = Vec::new();
 
     // Use layer-computed P/T + keywords so the preview honors anthems,
@@ -664,7 +664,7 @@ fn project_player(
         });
     // Coven — three or more controlled creatures with different (computed) powers.
     let coven_active = {
-        let powers: std::collections::HashSet<i32> = state
+        let powers: crate::fxhash::HashSet<i32> = state
             .battlefield
             .iter()
             .filter(|c| c.controller == player_seat && c.definition.is_creature())
