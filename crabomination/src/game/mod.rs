@@ -15254,13 +15254,21 @@ impl GameState {
                 _ => {}
             }
         }
+        // Every block from here to the trigger-candidate phase fires a
+        // `delayed_triggers` entry, and each opens by scanning the event
+        // batch into a `Vec`. With nothing registered all four come back
+        // empty, so they read an empty slice instead — one `is_empty()`
+        // against four scans and four `collect`s, on every one of the ~52 k
+        // dispatches a six-game bench run takes.
+        let watch_events: &[GameEvent] =
+            if self.delayed_triggers.is_empty() { &[] } else { events };
         // Event-keyed delayed triggers ("when [card] dies this turn, …").
         // Fire any `WhenCardDies(cid)` whose watched card appears in a
         // `CreatureDied` event in this batch, with its captured target.
         // `PermanentDied` covers non-creature deaths (a watched artifact —
         // Melira's return rider); a creature death lists its id twice, which
         // is harmless since a fired watcher is removed.
-        let died: Vec<CardId> = events
+        let died: Vec<CardId> = watch_events
             .iter()
             .filter_map(|e| match e {
                 GameEvent::CreatureDied { card_id }
@@ -15317,7 +15325,7 @@ impl GameState {
         // "Whenever a creature attacks you or a planeswalker you control"
         // floating triggers (Tamiyo +2). Fire once per qualifying attacker;
         // the attacker is the trigger source.
-        let attackers: Vec<CardId> = events
+        let attackers: Vec<CardId> = watch_events
             .iter()
             .filter_map(|e| match e {
                 GameEvent::AttackerDeclared(id) => Some(*id),
@@ -15386,7 +15394,7 @@ impl GameState {
         // entering creature controlled by the trigger's controller; the
         // entering creature is the trigger source. These persist (not
         // fires_once) until cleanup.
-        let entered_creatures: Vec<(CardId, usize)> = events
+        let entered_creatures: Vec<(CardId, usize)> = watch_events
             .iter()
             .filter_map(|e| match e {
                 GameEvent::PermanentEntered { card_id } => self
@@ -15424,7 +15432,7 @@ impl GameState {
         // died under the trigger's controller (read from the death LKI
         // snapshot); the dead creature is the trigger source. These persist
         // until cleanup.
-        let died_creatures: Vec<(CardId, usize)> = events
+        let died_creatures: Vec<(CardId, usize)> = watch_events
             .iter()
             .filter_map(|e| match e {
                 GameEvent::CreatureDied { card_id } => self
