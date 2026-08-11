@@ -787,24 +787,30 @@ impl GameState {
         // One board-level scan for the whole walk: the per-card shim rebuilds
         // it, so asking it per battlefield permanent is O(cards²).
         let trigger_grants = self.trigger_grant_sources();
-        let mut candidates: Vec<(CardId, Effect, usize, Option<crate::card::Predicate>)> = self
-            .battlefield
-            .iter()
-            .flat_map(|c| {
-                // Printed triggers plus statics-granted ones (Kataki's "All
-                // artifacts have '…upkeep…'"), both firing off `c`.
-                let granted = self.statics_granted_triggers_with(c, &trigger_grants);
-                c.definition
-                    .triggered_abilities
-                    .iter()
-                    .cloned()
-                    .chain(granted)
-                    .filter(|t| t.event.kind == kind)
-                    .filter(|t| scope_matches(&t.event.scope, c.controller))
-                    .map(|t| (c.id, t.effect, c.controller, t.event.filter))
-                    .collect::<Vec<_>>()
-            })
-            .collect();
+        // Presence gate for the per-card grant walk (the dispatcher's device):
+        // on a board that grants nothing it returns empty for every permanent.
+        let any_static_grant = !trigger_grants.is_empty() || !self.turn_granted_triggers.is_empty();
+        let mut candidates: Vec<(CardId, Effect, usize, Option<crate::card::Predicate>)> =
+            Vec::new();
+        for c in self.battlefield.iter() {
+            // Printed triggers plus statics-granted ones (Kataki's "All
+            // artifacts have '…upkeep…'"), both firing off `c`. Filter on the
+            // borrowed ability and clone only the survivors: this runs on every
+            // step of every turn and a `TriggeredAbility` clone is an `Effect`
+            // tree plus the event's filter predicate.
+            for t in c.definition.triggered_abilities.iter() {
+                if t.event.kind == kind && scope_matches(&t.event.scope, c.controller) {
+                    candidates.push((c.id, t.effect.clone(), c.controller, t.event.filter.clone()));
+                }
+            }
+            if any_static_grant || !c.definition.station.is_empty() {
+                for t in self.statics_granted_triggers_with(c, &trigger_grants) {
+                    if t.event.kind == kind && scope_matches(&t.event.scope, c.controller) {
+                        candidates.push((c.id, t.effect, c.controller, t.event.filter));
+                    }
+                }
+            }
+        }
         // CR 702.6e / 303.4 — step triggers granted to a permanent by an
         // attached Aura/Equipment's `equipped_bonus` fire as though printed on
         // the host ("Enchanted creature has 'At the beginning of your upkeep,
