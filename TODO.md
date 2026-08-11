@@ -55,8 +55,13 @@ byte-identical on both rows; 18,612 tests green, golden traces unchanged.
   silences `apt-get update` failures, so it cannot tell you why.
 - **Final checks, this run.** `cargo test -p crabomination -p
   crabomination_tests` **18,612 passed / 0 failed / 1 ignored**, golden
-  traces green; workspace clippy clean. **The client crate was not built
-  or tested this run** (disk + time); nothing in the diff touches it.
+  traces green. `cargo clippy --workspace --all-targets` **exit 0, zero
+  warnings**, client included (`ea8795e0` names the one tuple that tripped
+  `type_complexity`). The client's *tests* were not run — nothing in the
+  diff touches it, and the Bevy build is ~45 min here. **No `--bench`
+  anchor run**: at -1.296 % the pass sits far under what this box resolves
+  by wall-clock, so the callgrind numbers are the measurement of record and
+  the anchor stands, same call as `c7bdd850`.
 - **Trackers.** PERF ~1.6k, TODO ~1.0k, roadmap 660.
 
 ## Environment note
