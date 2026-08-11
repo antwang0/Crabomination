@@ -16,65 +16,58 @@ reference and want their own triage pass):
 
 ## NEXT (handoff — rewrite each run, keep under 15 lines)
 
-Branch `claude/modern_decks`. **Eighteenth pass: one perf commit, -1.155 %
-Ir** (3,812,623,112 -> 3,768,577,483, base `26b5d2c7`, `profiling-fast
---no-default-features` callgrind), plus one measured no-win reverted and a
-full re-take of the profile of record. Bench output byte-identical.
+Branch `claude/modern_decks`. **Nineteenth pass: two perf commits,
+-1.968 % Ir** (3,768,870,942 -> 3,694,708,603, base `10cdbe63`,
+`profiling-fast --no-default-features` callgrind), plus one measured null
+kept as a determinism fix. Bench output byte-identical on every row,
+suite 18,837 green, clippy clean.
 
-- **The row, and the shape it names.** *A per-card question only the board
-  can answer `yes` to is a board-level flag with a per-card call attached.*
-  `dispatch_triggers_for_events` asked three of them of every permanent in
-  every one of 52,332 batches — `statics_granted_triggers_with` alone was
-  **945,812 calls at 36 Ir**, walking two empty slices to return an empty
-  `Vec`. Pass three already hoisted these scans' *work*; what stayed was
-  the call. **How to find the next one:** `--tree=calling` on a hot loop,
-  list the callees whose per-call cost is tiny and whose count is
-  `permanents x batches`, and ask what each leg's answer depends on.
-- **The no-win, so nobody re-derives it.** The attack/block searches and
-  the planner rebuild the *identical* determinized start state per
-  candidate (`sim_start_state` is pure in `(state, seat, k)`). Caching it
-  reads **+0.083 %**: the `PlayerData` unshares and library CoW copies are
-  paid either way, eagerly by `determinize_hidden` or lazily by the sim's
-  first write, so only two shuffles and one library copy are actually
-  removed — less than the cache costs. Full row in PERF.
-- **Next up** (PERF candidates, all re-costed on this tip): (0) **the
-  attack search, 52.11 %** — still untouched, still needs a `bot_ladder`
-  win-rate gate, cheap first probe is "how often does the search depart
-  from greedy". (1) **`resolve_combat` 14.27 %, newly visible** — read the
-  CR 510.2 warning in candidate 0(f) first; a freeze across the apply loop
-  is a rules change, the safe subset is one assignment's pre-checks. (2)
-  **four `collect()` sites are 17.25 % between them** and none has ever
-  been taken: `compute_battlefield` 5.87 %, `cast_candidates` 4.43 %,
-  `mana_source_table` 3.49 %, `check_state_based_actions` 3.46 % — but
-  those are *inclusive*: their `Vec` machinery is **0.10 % between them**,
-  so the lever is how many entries the consumer reads, not the container.
-  (3)
-  `would_accept` 14.21 %. (4) the allocator ~16.4 %, still never attacked.
-- **Bugs**: the panic sweep's fifth filter ran and is **clean** — see the
-  robustness section. All ten `i.min(xs.len() - 1)` clamps are guarded
-  against the empty-slice underflow. Five filters exhausted; the next one
-  should stop grepping and run the actor path with overflow checks on in
-  release for a few thousand games.
-- **Bench anchor refreshed at `56986d65`**: mean 71.29 games/s (6 runs,
-  spread 7.3 %), stalls 0, determinism ok on all six, `turns_per_game`
-  26.98, RSS 22.0-22.2 MiB. That is +3.1 % on the 69.13 anchor against a
-  pass worth -1.155 % by Ir, and `host_calib_ms` 50-62 vs 49-85 says the
-  rest is a quieter host — **no wall-clock delta is claimed**.
-- **Profile the binary in place.** `split-debuginfo = "unpacked"` puts the
-  DWARF beside it, so a copy counts instructions right and annotates every
-  frame `???`. Cost this run one wasted base profile.
-- **Another session pushes to this branch.** `cca74c29` landed mid-run and
-  needed a rebase; check `git log origin/claude/modern_decks` before
-  measuring, and re-take the base if it touched the engine.
+- **The shape both rows share.** *A whole-board `compute_battlefield`
+  whose consumers are all `find(id)` lookups is a participant computation
+  with a presence gate on whichever consumer is not.* `declare_blockers`
+  (-1.021 %) and the combat-damage resolver (-1.008 %) were both that.
+  New helper: `GameState::compute_permanents(&[CardId])` — one gather,
+  one `apply_layers_one` per named permanent.
+- **Next up, and the analysis is already written down.** PERF candidate
+  (0) is `declare_attackers_banded`'s pass (**1.64 %**, 3,780 calls) and
+  `declare_blockers`' validation pass (**1.10 %**) — **~2.7 % between
+  them**, blocked on the same keyword presence gate, which the candidate
+  entry specifies exactly (four keyword sources in `layers.rs:491-518`,
+  `AddKeyword` the only additive modification, `goaded_by` is an instance
+  field and must be in the gate, hoist `groups` above `computed`, and
+  give `computed_kw` a `debug_assert!` so a missed whole-board consumer
+  panics across the suite instead of silently returning `&[]`). After
+  that: the attack search 52 % (needs a ladder win-rate gate, cheap first
+  probe is "how often does the search depart from greedy"),
+  `would_accept` 14 %, the allocator ~16 %.
+- **The null, so nobody re-derives it.** `CardData.counters` HashMap ->
+  `CounterBag` read **+0.051 %**: `hashbrown` short-circuits the
+  empty-table clone, so the 1.09 M `CardData` deep copies were paying for
+  a branch, not an allocation. Kept anyway — `Effect::RemoveAnyCounter`
+  and six collect sites read map order into game state, the same
+  cross-process determinism class `86670250` fixed for `keyword_counters`.
+- **Bugs**: no new ones found or filed. The panic sweep's five filters
+  remain exhausted; the sixth is still "run the actor path with overflow
+  checks on in release for a few thousand games" — **not done this run.**
+- **Bench re-anchored at `17a52107`**: mean 67.31 games/s (6 runs, spread
+  1.95 %), stalls 0, determinism ok on all six, `turns_per_game` 26.98,
+  RSS 22.1-22.5. That is **-5.6 % on the 71.29 anchor, and it is the
+  host** — checked with a same-sitting paired A/B (the two perf commits
+  reverted, both sides `profiling-fast`, **+1.82 % mean, 4/6 pairs
+  positive**), not asserted from `host_calib_ms` alone. Full evidence in
+  **Baseline**. **Reuse that method**: reverting two files and rebuilding
+  the engine costs 5 minutes and turns "probably the box" into a number.
 - **Env**: `cargo-nextest` is not in the image — `cargo test --workspace
-  --exclude crabomination_client`. Do not `pgrep -f "cargo test"` in a wait
-  loop (the loop matches itself); use a `.done` marker. **Do not run the
-  suite build and a profiling build at once** — both compile the engine
-  crate, load hits 8 on 4 cores and each takes 3x as long. Engine
-  `profiling-fast` alone is ~8 min, a callgrind run ~4 min.
-- **Trackers**: TODO 9xx, roadmap 660, `PERF.md` ~1.2k (passes one to
-  thirteen are now two index tables). Next PERF trim: passes fourteen to
-  sixteen, same treatment.
+  --exclude crabomination_client`. `crabomination_client` needs
+  `libwayland-dev libasound2-dev libudev-dev libxkbcommon-dev` (not
+  installed this run; the client was untouched). A cold
+  `profiling-fast` build is ~16 min, an **engine-only** rebuild ~5 min, a
+  callgrind run ~1 min of wall plus ~4 of valgrind. Callgrind and a test
+  build *can* run together — instruction counts are contention-immune —
+  but two compile jobs cannot.
+- **Trackers**: TODO 9xx, roadmap 660, `PERF.md` ~1.4k. Next PERF trim:
+  passes fourteen to sixteen to an index table, same treatment as one to
+  thirteen — still not done.
 
 ## Environment note
 
@@ -97,7 +90,18 @@ target/debug/incremental` reclaims several GB without a full rebuild.
 
 Found by profiling. Not speculative — the code is quoted.
 
-*(No open entries. The `keyword_counters` `HashMap`-order defect was fixed
+*(No open entries. The sibling `counters` `HashMap`-order defect was fixed
+in `a44f5271`: `CardData.counters` is now a `CounterBag`, an
+insertion-ordered `Vec` newtype, because `Effect::RemoveAnyCounter` reads
+"the first present kind" off the map and six other sites collect the kinds
+into a `Vec` and act on them in order — `RandomState` reseeds that order per
+process, so two runs on one seed could diverge.
+`cr_122_counter_bag_order_is_insertion_order` pins it. **The remaining
+`HashMap`/`HashSet` iteration in game logic wants the same audit**: the
+survey that found this one was `grep '\.iter()' `on every `HashMap` field of
+`GameState` and `PlayerData`, then asking of each whether the consumer sums
+(safe), inserts into a set and counts (safe), or `find`s / `collect`s
+(not). The `keyword_counters` `HashMap`-order defect was fixed
 in `86670250`: `KeywordCounters` is an insertion-ordered `Vec` newtype, which
 sidesteps `Keyword` having no `Ord`, and `cr_122_1b_keyword_counter_grant_
 order_is_insertion_order` pins it. The actor-sampler panic was fixed in

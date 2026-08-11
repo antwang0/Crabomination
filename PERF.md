@@ -127,8 +127,54 @@ contention-immune, which makes it the better first look.
 
 ## Baseline
 
-**Anchored 2026-08-10 at `56986d65`** (`release`, mimalloc — the shipped
-configuration), i.e. on the eighteenth pass's tip.
+**Anchored 2026-08-11 at `17a52107`** (`release`, mimalloc — the shipped
+configuration), i.e. on the nineteenth pass's tip.
+
+```text
+bot_ladder --bench   release, rustc 1.95.0, 4-core VM, 3 worker threads
+                     mimalloc (the default); measured on an idle box
+host_cpu             Intel(R) Xeon(R) Processor @ 2.80GHz
+host_calib_ms        53-70 across the sitting   <- within-sitting only
+games                320
+games_per_s          66.65 / 67.67 / 66.82 / 66.92 / 67.82 / 67.95
+                     (mean 67.31, spread 1.95 %)
+games_per_s_th       22.22 - 22.65
+decisions_per_s      mean 40,641
+turns_per_game       26.98
+stalls               0 (0.00 %)
+peak_rss_mib         22.1 - 22.5
+determinism          ok (all 160 pairs split, on all 6 runs)
+```
+
+**67.31 against the 71.29 below is -5.6 %, and it is the host. That was
+checked, not asserted**, because -5.6 % is past the threshold this file
+sets for investigating before stopping. Four things say so, in order of
+weight.
+
+1. **A same-sitting paired A/B.** The tip's two perf commits were reverted
+   out of `combat.rs` + `game/mod.rs` (keeping `a44f5271`), rebuilt
+   `profiling-fast --no-default-features`, and the two binaries alternated
+   `--bench` on this box: base **56.36 / 55.85 / 55.56 / 57.25 / 56.70 /
+   57.61** (mean 56.55) against tip **56.80 / 58.49 / 55.26 / 56.26 /
+   59.59 / 59.09** (mean 57.58) — **+1.82 % mean paired, 4/6 pairs
+   positive**. The tip is not slower than its own base on this machine.
+   (A seventh pair was discarded: `host_calib_ms` read **525** on it, i.e.
+   something else had the box. That is what the probe is for.)
+2. **`host_calib_ms` 53-70 here against 50-62** on the previous anchor.
+3. **Callgrind says the code does less work**: -1.968 % instructions on the
+   fixed six-game workload, deterministic, with the bench output
+   byte-identical on every row. Both changes strictly *remove* allocations,
+   so there is no cache-shaped story in which Ir falls and wall-clock rises.
+4. `turns_per_game` **26.98** unchanged across four consecutive anchors,
+   `stalls` 0, determinism ok on all six runs, peak RSS 22.1-22.5 MiB
+   against 22.0-22.2.
+
+**No wall-clock delta is claimed for this pass.** The paired +1.82 % is
+inside this box's documented noise for a 2 % change; the measurement of
+record is the callgrind number.
+
+The previous anchor, `56986d65` (the eighteenth pass's tip), for the
+record:
 
 ```text
 bot_ladder --bench   release, rustc 1.95.0, 4-core VM, 3 worker threads
@@ -406,6 +452,33 @@ condition belongs above the loop. `check_state_based_actions` (7.30 %, 7.7
 `collect()`s per sweep) and `compute_battlefield` (6.99 %) are the two
 loops with that shape still unexamined.
 
+**Nineteenth pass.** Base `10cdbe63` (the eighteenth pass's tip plus the
+PERF/bench and `--actor-det` commits), re-measured on a fresh container:
+**3,768,870,942 Ir** against the recorded 3,768,577,483 at `56986d65`,
+i.e. **+0.0078 %** — inside build-to-build noise, so the eighteenth pass's
+tip carries over unchanged. Every row is callgrind on `profiling-fast
+--no-default-features`, `--a gang --b gang --games 6 --threads 1 --seed 1
+--decks fixed`.
+
+| date | change | before | after | how measured |
+|---|---|---|---|---|
+| 2026-08-11 | `CardData.counters` becomes an insertion-ordered `CounterBag` (`a44f5271`) | 3,768,870,942 Ir | 3,770,806,042 Ir (**+0.051 %**) | **No win — kept as a determinism fix, not reverted.** The prediction was ~0.9 % from the 1,092,990 `RawTable::clone` calls the CoW unshare takes (45,641,597 Ir / 1.21 % inclusive under `Arc::clone_from_ref_in`). It did not land, and the reason retires the candidate: **`hashbrown` short-circuits the empty-table clone**, so those 1.09 M `CardData` deep copies were paying ~42 Ir for a branch, not for an allocation, and a `Vec` clone of an empty `Vec` costs about the same. Real deltas: `RawTable::clone` -2.7 M, `counter_count` -1.0 M, against `RawTable::drop` +3.9 M and a wash of `Arc::clone_from_ref_in` file re-attribution. **What justifies the commit is CR-level**: `counters` was a `HashMap`, `RandomState` reseeds its iteration order per process, and `Effect::RemoveAnyCounter` reads "the first present kind" off it while six other sites collect the kinds into a `Vec` and act on them in order — the same class `86670250` fixed for `keyword_counters`. `cr_122_counter_bag_order_is_insertion_order` pins it. |
+| 2026-08-11 | `declare_blockers` stops re-deriving computed views it already has (`5795a906`) | 3,770,806,042 Ir | 3,732,316,928 Ir (**-1.021 %**) | Three sites, one shape: *a `&mut self` path paying a fresh whole-game gather for a computed view it is already holding, or for permanents it never reads.* (a) The Burden of Proof gate called `computed_permanent(attacker_id)` **unconditionally per assignment** — 8,617,417 Ir over 2,436 calls — and the Ironclaw Curse gate two more, all for cards the function's own `compute_battlefield` had already computed; nothing between mutates a layer input, which the Okk check 300 lines lower already says in a comment. (b) The Flanking/Bushido/Rampage snapshot took a **second** whole-board pass (37,976,438 Ir over 2,578 calls, ~23 layer passes each) and read it only through `kws_for`, called with the assignments' own blockers and attackers. (c) The CR 509.3g unblocked sweep gathered once per unblocked attacker to read Frenzy (8,570,454 Ir over 2,654 calls); one freeze scope makes it one gather. Bench output byte-identical, suite 18,837 green. |
+| 2026-08-11 | Combat damage computes the participants, not the board (`17a52107`) | 3,732,316,928 Ir | 3,694,708,603 Ir (**-1.008 %**) | Same shape one level down. `resolve_combat`'s whole-board pass was 48,985,366 Ir (1.30 %) over 3,196 calls — ~23 layer passes for ~4 participants — and every consumer under `resolve_combat_damage_with_filter` (attacker infos, banding assigner, `combat_lethals`, the blocker scans) is an id lookup. The one whole-board consumer is `free_division_targets`' second half, gated on a keyword the attacker carries, so `combat_damage_computed` builds attackers + declared blockers and falls back to the whole board only when a Butcher Orgg is attacking. **The gate is checked, not assumed**: `butcher_orgg_divides_damage_among_defenders` assigns damage to a creature that never blocked and fails if the fallback is dropped. New helper `GameState::compute_permanents(&[CardId])` — one gather, one `apply_layers_one` per named permanent. Bench output byte-identical. |
+| | **cumulative, nineteenth pass** | **3,768,870,942 Ir** | **3,694,708,603 Ir (-1.968 %)** | two rows landed, one null kept for correctness; callgrind on the fixed six-game workload, bench output byte-identical on every row. |
+
+**What the pass leaves behind, as a rule.** *A whole-board
+`compute_battlefield` whose consumers are all `find(id)` lookups is a
+participant computation with a presence gate on whichever consumer is not.*
+Three of the four remaining big passes were that, and the gate was always
+cheap and always local: `resolve_combat`'s was one keyword on the attackers
+it had already computed. **How to find the next one:** take the
+`compute_battlefield` call sites from `--auto=yes` (they are all one line,
+with their call counts), and for each grep the function body for
+`&self.battlefield` — a `find(|c| c.id == …)` is a lookup, a `for c in
+&self.battlefield` is a scan, and only the scans block the subset. The
+sites left, by size, are in the candidates list.
+
 ## Profile of record
 
 Callgrind on `profiling-fast --no-default-features` (= `release-fast` opt
@@ -550,6 +623,57 @@ iterator body, so read each row as "this much work is driven by one
 Ordered by expected value. Each run pulls the top one, attaches numbers,
 and feeds what it finds back in. Re-profile and replenish when the list
 goes thin or stale.
+
+**Re-costed on the nineteenth pass's base** (`10cdbe63`, 3,768,870,942 Ir).
+The `compute_battlefield` call sites, with their per-site cost and call
+count, because two of them were paid this pass and the rest are ranked by
+this table. Take it from `--auto=yes`: every one is a single source line
+with its callee row underneath.
+
+| site | Ir | calls | status |
+|---|---|---|---|
+| `declare_attackers_banded` | 61,859,555 (1.64 %) | 3,780 | **open — top candidate, see (0) below** |
+| `resolve_combat` | 48,985,366 (1.30 %) | 3,196 | paid, `17a52107` |
+| `declare_blockers` (validation) | 41,289,574 (1.10 %) | 2,598 | **open — needs the same gate as (0)** |
+| `declare_blockers` (P/T snapshot) | 37,976,438 (1.01 %) | 2,578 | paid, `5795a906` |
+| `do_phasing` | 22,845,211 (0.61 %) | 1,718 | legitimate — filters the whole board for Phasing |
+| `do_untap` | 22,784,044 (0.60 %) | 1,718 | legitimate — reads untap locks for every permanent |
+| `process_cumulative_upkeep` | 23,322,553 (0.62 %) | 1,742 | one pass per turn |
+| `resolve_first_strike_damage` | 2,309,715 (0.06 %) | 78 | paid, `17a52107` |
+
+0. **`declare_attackers_banded`'s whole-board pass, 1.64 % — the analysis
+   is done, the code is not.** Its `computed` has exactly **two**
+   whole-board consumers; everything else is `computed_kw(id)` /
+   `computed.iter().find(|c| c.id == …)` on the declared attackers, the
+   band members, and `self.attacking`.
+   - **(a)** the CR 508.1d "attacks each combat if able" loop (`for c in
+     &self.battlefield`, ~`combat.rs:502`), which asks every permanent for
+     `MustAttack` / `MustAttackOrBlock` / `MustAttackIfAnotherAttacks` —
+     *or* `!c.goaded_by.is_empty()`, which is an instance field, not a
+     keyword, and has to be in the gate.
+   - **(b)** the Magnetic Web `AttackTogether` loop (~`combat.rs:546`),
+     already inside `for filter in groups`, so it is skipped whenever
+     `groups` is empty — but `groups` is built *after* `computed` and has
+     to be hoisted above it (it reads only `self.battlefield` +
+     `active_static`, so the move is mechanical).
+   **The gate is exact, not an over-approximation, and this is why:**
+   `compute_permanent` seeds `keywords` from exactly four places, all
+   visible in `layers.rs:491-518` — the live `definition.keywords`,
+   `granted_keywords_eot`, the CR 122.1b `keyword_counters`, and a
+   layer-6 `Modification::AddKeyword` in the gathered set.
+   `AddKeyword` is the *only* additive keyword modification (`RemoveKeyword`
+   / `CantHaveKeyword` / `RemoveAllAbilities` only shrink, so ignoring them
+   keeps the gate conservative). So `board_keyword_in_scope(fx, kws)` is a
+   disjunction over those four, and it is `false` on every bench board.
+   **Wrap the gate and the subset in one `with_frozen_layers` scope** so the
+   gather is paid once. **And add the safety net this pass did not need but
+   this one does**: give `computed_kw` a `debug_assert!` that the id is
+   present in `computed` whenever it is on the battlefield, so a
+   whole-board consumer nobody noticed panics across all 18,837 tests
+   instead of silently returning `&[]` and dropping a restriction.
+   Same treatment then unlocks `declare_blockers`' own validation pass
+   (1.10 %) — its blocker is the mirror-image CR 509.1c loop asking every
+   permanent for `MustBlock` / `MustAttackOrBlock`. **~2.7 % between them.**
 
 **The profile of record is current** — retaken 2026-08-10 at `a4947da6`,
 the thirteenth pass's base. Shares quoted below without a date are from it.
