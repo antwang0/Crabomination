@@ -2613,17 +2613,25 @@ impl GameState {
         // out), plus any Aura/Equipment attached to one of them.
         // Computed keywords so layer-granted Phasing (Teferi's Veil-style
         // statics) phases out too, not just the printed/EOT-granted keyword.
-        let mut to_phase_out: std::collections::HashSet<crate::card::CardId> = self
-            .compute_battlefield()
-            .iter()
-            .filter(|c| {
-                c.controller == p
-                    && c.keywords.contains(&crate::card::Keyword::Phasing)
-                    // CR 702.26 — Spatial Binding pins a permanent in phase.
-                    && !c.keywords.contains(&crate::card::Keyword::CantPhaseOut)
-            })
-            .map(|c| c.id)
-            .collect();
+        // `CantPhaseOut` only ever shrinks the set, so the presence gate on
+        // Phasing alone is exact — and it is `false` on nearly every board,
+        // which is the whole-board layer pass this step used to take per turn.
+        let mut to_phase_out: std::collections::HashSet<crate::card::CardId> =
+            self.with_frozen_layers(|g| {
+                if !g.board_keyword_in_scope(&[crate::card::Keyword::Phasing]) {
+                    return std::collections::HashSet::new();
+                }
+                g.compute_battlefield()
+                    .iter()
+                    .filter(|c| {
+                        c.controller == p
+                            && c.keywords.contains(&crate::card::Keyword::Phasing)
+                            // CR 702.26 — Spatial Binding pins a permanent in phase.
+                            && !c.keywords.contains(&crate::card::Keyword::CantPhaseOut)
+                    })
+                    .map(|c| c.id)
+                    .collect()
+            });
         if !to_phase_out.is_empty() {
             let attached: Vec<crate::card::CardId> = self
                 .battlefield
@@ -3138,20 +3146,33 @@ impl GameState {
         // pass answers both: `computed_permanent` outside a freeze scope
         // re-gathers every continuous effect in the game per call, and these
         // were two such calls per battlefield permanent per untap step.
-        let computed = self.compute_battlefield();
-        let mut counter_locked: Vec<crate::card::CardId> = Vec::new();
-        let mut attack_locked: Vec<crate::card::CardId> = Vec::new();
-        for (c, cp) in self.battlefield.iter().zip(&computed) {
-            if cp.keywords.iter().any(|k| {
-                matches!(k, crate::card::Keyword::DoesntUntapWhileCounter(kind)
-                    if c.counter_count(*kind) > 0)
+        // Neither lock is on a bench board, so the pass rides a presence gate
+        // on the two keywords it looks for.
+        let (counter_locked, attack_locked) = self.with_frozen_layers(|g| {
+            let mut counter_locked: Vec<crate::card::CardId> = Vec::new();
+            let mut attack_locked: Vec<crate::card::CardId> = Vec::new();
+            if !g.board_keyword_matching(|k| {
+                matches!(
+                    k,
+                    crate::card::Keyword::DoesntUntapWhileCounter(_)
+                        | crate::card::Keyword::DoesntUntapIfAttackedLastTurn
+                )
             }) {
-                counter_locked.push(c.id);
+                return (counter_locked, attack_locked);
             }
-            if cp.keywords.contains(&crate::card::Keyword::DoesntUntapIfAttackedLastTurn) {
-                attack_locked.push(c.id);
+            for (c, cp) in g.battlefield.iter().zip(&g.compute_battlefield()) {
+                if cp.keywords.iter().any(|k| {
+                    matches!(k, crate::card::Keyword::DoesntUntapWhileCounter(kind)
+                        if c.counter_count(*kind) > 0)
+                }) {
+                    counter_locked.push(c.id);
+                }
+                if cp.keywords.contains(&crate::card::Keyword::DoesntUntapIfAttackedLastTurn) {
+                    attack_locked.push(c.id);
+                }
             }
-        }
+            (counter_locked, attack_locked)
+        });
         // Track which permanents actually flip tapped→untapped so we can
         // fire CR 702.108 Inspired ("becomes untapped") triggers afterward.
         let mut untapped_now: Vec<crate::card::CardId> = Vec::new();

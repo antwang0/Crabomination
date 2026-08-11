@@ -4662,19 +4662,25 @@ impl GameState {
         let mut events = Vec::new();
         // Computed keywords so a granted cumulative upkeep (Mana Chains' Aura)
         // ticks too, not just the printed keyword.
-        let affected: Vec<(CardId, CumulativeUpkeepCost)> = self
-            .compute_battlefield()
-            .iter()
-            .filter(|c| c.controller == active)
-            // CR 702.24b — multiple instances each trigger separately, and
-            // each counts every age counter on the permanent.
-            .flat_map(|c| {
-                c.keywords.iter().filter_map(move |k| match k {
-                    Keyword::CumulativeUpkeep(cost) => Some((c.id, cost.clone())),
-                    _ => None,
+        // Gated: the upkeep step took a whole-board layer pass every turn to
+        // find a keyword almost no board carries.
+        let affected: Vec<(CardId, CumulativeUpkeepCost)> = self.with_frozen_layers(|g| {
+            if !g.board_keyword_matching(|k| matches!(k, Keyword::CumulativeUpkeep(_))) {
+                return Vec::new();
+            }
+            g.compute_battlefield()
+                .iter()
+                .filter(|c| c.controller == active)
+                // CR 702.24b — multiple instances each trigger separately, and
+                // each counts every age counter on the permanent.
+                .flat_map(|c| {
+                    c.keywords.iter().filter_map(move |k| match k {
+                        Keyword::CumulativeUpkeep(cost) => Some((c.id, cost.clone())),
+                        _ => None,
+                    })
                 })
-            })
-            .collect();
+                .collect()
+        });
         for (id, cost) in affected {
             if let Some(c) = self.battlefield_find_mut(id) {
                 c.add_counters(CounterType::Age, 1);
@@ -7381,15 +7387,22 @@ impl GameState {
     ///
     /// [`compute_permanents`]: Self::compute_permanents
     pub(crate) fn board_keyword_in_scope(&self, kws: &[Keyword]) -> bool {
+        self.board_keyword_matching(|k| kws.contains(k))
+    }
+
+    /// [`board_keyword_in_scope`] over a predicate, for the keywords that
+    /// carry a payload (`CumulativeUpkeep(_)`, `DoesntUntapWhileCounter(_)`).
+    ///
+    /// [`board_keyword_in_scope`]: Self::board_keyword_in_scope
+    pub(crate) fn board_keyword_matching(&self, pred: impl Fn(&Keyword) -> bool) -> bool {
         let granted = |fx: &[ContinuousEffect]| {
-            fx.iter().any(
-                |e| matches!(&e.modification, Modification::AddKeyword(k) if kws.contains(k)),
-            )
+            fx.iter()
+                .any(|e| matches!(&e.modification, Modification::AddKeyword(k) if pred(k)))
         };
         let hit = self.battlefield.iter().any(|c| {
-            c.definition.keywords.iter().any(|k| kws.contains(k))
-                || c.granted_keywords_eot.iter().any(|k| kws.contains(k))
-                || kws.iter().any(|k| c.keyword_counters.get(k).is_some_and(|n| *n > 0))
+            c.definition.keywords.iter().any(&pred)
+                || c.granted_keywords_eot.iter().any(&pred)
+                || c.keyword_counters.iter().any(|(k, n)| *n > 0 && pred(k))
         }) || match self.frozen_effects() {
             Some(fx) => granted(&fx),
             None => granted(&self.gather_continuous_effects()),
@@ -7397,11 +7410,8 @@ impl GameState {
         #[cfg(debug_assertions)]
         if !hit {
             debug_assert!(
-                !self
-                    .compute_battlefield()
-                    .iter()
-                    .any(|c| c.keywords.iter().any(|k| kws.contains(k))),
-                "board_keyword_in_scope({kws:?}) said no, but the computed board has one"
+                !self.compute_battlefield().iter().any(|c| c.keywords.iter().any(&pred)),
+                "board_keyword_matching said no, but the computed board has a match"
             );
         }
         hit
