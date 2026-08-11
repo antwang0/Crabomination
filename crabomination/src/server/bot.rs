@@ -14893,7 +14893,7 @@ mod stack_response_tests {
             // guards against a state where neither bot volunteers an
             // accepted action (counted as a draw below).
             let (mut actions, mut stale) = (0usize, 0usize);
-            while !g.is_game_over() && actions < 50_000 && stale < 8 {
+            while !g.is_game_over() && actions < 50_000 && stale < crate::recommend::STALE_ROUNDS {
                 let mut any = false;
                 for (s, bot) in bots.iter_mut().enumerate() {
                     let Some(a) = bot.next_action(&g, s) else { continue };

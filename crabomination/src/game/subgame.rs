@@ -11,6 +11,7 @@ use rand::seq::SliceRandom;
 
 use crate::game::GameState;
 use crate::player::Player;
+use crate::recommend::STALE_ROUNDS;
 use crate::server::bot::{Bot, RandomBot};
 
 /// CR 729.5 — a subgame may itself contain a subgame; the nest is capped so
@@ -52,7 +53,7 @@ impl GameState {
         let mut bots: Vec<Box<dyn Bot>> =
             (0..seats).map(|_| Box::new(RandomBot::default()) as Box<dyn Bot>).collect();
         let (mut actions, mut stale) = (0usize, 0usize);
-        while !sub.is_game_over() && actions < MAX_ACTIONS && stale < 8 {
+        while !sub.is_game_over() && actions < MAX_ACTIONS && stale < STALE_ROUNDS {
             let mut any = false;
             for (s, bot) in bots.iter_mut().enumerate() {
                 let Some(a) = bot.next_action(&sub, s) else { continue };

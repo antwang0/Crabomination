@@ -81,6 +81,7 @@ use rand::rng;
 
 use crate::decision::{AutoDecider, Decider};
 use crate::game::{GameAction, GameState, TurnStep};
+use crate::recommend::STALE_ROUNDS;
 
 use super::bot::{Bot, EvalWeights, RandomBot};
 
@@ -306,7 +307,7 @@ impl MctsBot {
             .collect();
         let mut fuel = 400u32;
         let mut stale = 0u32;
-        while !g.is_game_over() && g.turn_number < stop_turn && fuel > 0 && stale < 8 {
+        while !g.is_game_over() && g.turn_number < stop_turn && fuel > 0 && (stale as usize) < STALE_ROUNDS {
             fuel -= 1;
             if g.pending_decision.is_some() {
                 let answer = {

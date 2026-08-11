@@ -24,6 +24,7 @@ use crabomination::card::CardDefinition;
 use crabomination::cube::{CardFactory, cube_deck, random_color_pair};
 use crabomination::game::{GameAction, GameState};
 use crabomination::player::Player;
+use crabomination::recommend::STALE_ROUNDS;
 use crabomination::server::{Bot, EvalWeights, RandomBot};
 use crabomination::sos_mode::{College, sos_deck};
 use rand::SeedableRng;
@@ -283,7 +284,7 @@ fn run(
         ];
 
         let (mut actions, mut stale) = (0usize, 0usize);
-        while !g.is_game_over() && actions < 20_000 && stale < 8 {
+        while !g.is_game_over() && actions < 20_000 && stale < STALE_ROUNDS {
             let mut any = false;
             for (s, bot) in bots.iter_mut().enumerate() {
                 // Only instrument seat 0 so the numbers are per-player.
@@ -417,7 +418,7 @@ fn run(
         }
         if g.is_game_over() {
             c.ended_decided += 1;
-        } else if stale >= 8 {
+        } else if stale >= STALE_ROUNDS {
             c.ended_stale += 1;
             let band = match g.turn_number {
                 0..=10 => "t<=10",
