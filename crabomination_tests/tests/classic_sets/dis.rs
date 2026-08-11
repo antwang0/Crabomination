@@ -1693,6 +1693,38 @@ fn sphinx_of_the_chimes_discard_pair_draws_four() {
     assert_eq!(g.players[0].hand.iter().filter(|c| c.definition.name == "Island").count(), 4, "drew four");
 }
 
+/// CR 601 — when two names both have enough copies, the cheapest goes. The
+/// gate used to `find` over a `HashMap`'s values, so it binned whichever name
+/// the walk reached first: a bomb could go while a spare pair sat next to it.
+#[test]
+fn sphinx_of_the_chimes_discards_the_cheapest_qualifying_pair() {
+    let mut g = two_player_game();
+    let s = g.add_card_to_battlefield(0, catalog::sphinx_of_the_chimes());
+    // Two qualifying pairs: Grizzly Bears at mana value 2, Phantom Warrior at 3.
+    g.add_card_to_hand(0, catalog::grizzly_bears());
+    g.add_card_to_hand(0, catalog::grizzly_bears());
+    g.add_card_to_hand(0, catalog::phantom_warrior());
+    g.add_card_to_hand(0, catalog::phantom_warrior());
+    for _ in 0..4 {
+        g.add_card_to_library(0, catalog::island());
+    }
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: s,
+        ability_index: 0,
+        target: None,
+        additional_targets: vec![],
+        x_value: None,
+        mode: None,
+    })
+    .expect("activate Sphinx");
+    drain_stack(&mut g);
+    let binned = |n: &str| g.players[0].graveyard.iter().filter(|c| c.definition.name == n).count();
+    assert_eq!(binned("Grizzly Bears"), 2, "the mv-2 pair is the cheaper one");
+    assert_eq!(binned("Phantom Warrior"), 0, "the mv-3 pair stays in hand");
+}
+
 /// Elemental Resonance adds mana equal to the enchanted permanent's cost at the
 /// start of the controller's first main phase.
 #[test]

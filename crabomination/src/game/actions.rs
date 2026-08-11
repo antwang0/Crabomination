@@ -14228,17 +14228,29 @@ impl GameState {
         {
             let count = *count as usize;
             if ability.discard_cost_same_name {
-                // CR 601 — "Discard N cards with the same name." Find any name
-                // in hand with `count`+ matching copies; discard that many.
+                // CR 601 — "Discard N cards with the same name." Take the
+                // *cheapest* qualifying name, matching the sibling branch
+                // below and this gate's own stated intent: a `find` over the
+                // map picked whichever name the walk reached first, i.e. an
+                // arbitrary choice that could bin a bomb while a spare land
+                // sat next to it. Ties on mana value fall back to the name so
+                // the pick is total.
                 let mut by_name: crate::fxhash::HashMap<&str, Vec<CardId>> =
+                    crate::fxhash::HashMap::default();
+                let mut mv_of: crate::fxhash::HashMap<&str, u32> =
                     crate::fxhash::HashMap::default();
                 for c in self.players[p].hand.iter().filter(|c| c.id != card_id) {
                     if self.evaluate_requirement_on_card(filter, c, p) {
                         by_name.entry(c.definition.name).or_default().push(c.id);
+                        mv_of.insert(c.definition.name, c.definition.cost.cmc());
                     }
                 }
-                match by_name.values().find(|ids| ids.len() >= count) {
-                    Some(ids) => ids.iter().take(count).copied().collect(),
+                let best = by_name
+                    .iter()
+                    .filter(|(_, ids)| ids.len() >= count)
+                    .min_by_key(|(name, _)| (mv_of.get(*name).copied().unwrap_or(0), **name));
+                match best {
+                    Some((_, ids)) => ids.iter().take(count).copied().collect(),
                     None => return Err(GameError::SelectionRequirementViolated),
                 }
             } else {
