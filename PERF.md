@@ -128,7 +128,10 @@ contention-immune, which makes it the better first look.
 ## Baseline
 
 **Anchored 2026-08-11 at `ed4c152c`** (`release`, mimalloc — the shipped
-configuration), i.e. on the twentieth pass's tip.
+configuration), i.e. on the twentieth pass's third row. The fourth
+(`c7bdd850`) landed after and is worth **-0.343 %** by instruction count —
+far under what `--bench` resolves here, so the anchor was not re-run for
+it; a `release` rebuild is 22 minutes.
 
 ```text
 bot_ladder --bench   release, rustc 1.95.0, 4-core VM, 3 worker threads
@@ -495,7 +498,8 @@ games' bench output byte-identical apart from the wall-time line.
 | 2026-08-11 | `declare_attackers_banded` gates its whole-board pass (`31116d43`) | 3,694,337,730 Ir | 3,630,334,304 Ir (**-1.733 %**) | The site the nineteenth pass named as the top candidate: 61,859,555 Ir / 1.64 % over 3,780 calls. Exactly two whole-board consumers — the CR 508.1d "attacks each combat if able" loop and the Magnetic Web `AttackTogether` loop — against a dozen `find(id)` lookups. `groups` and the Oracle en-Vec mandate hoist above the pass (both read only the battlefield and the active statics), and the gate, the subset and the whole-board fallback share one freeze scope. New `GameState::board_keyword_in_scope`. |
 | 2026-08-11 | `declare_blockers` gates its validation pass the same way (`911cf298`) | 3,630,334,304 Ir | 3,593,030,829 Ir (**-1.028 %**) | 41,289,574 Ir / 1.10 % over 2,598 calls, and the candidate's prediction to the tenth of a point. Five whole-board consumers, all CR 509.1 requirement loops; four are already skipped by an attacker keyword or by `must_block`, which the subset answers, and only "blocks each combat if able" reads the computed view before the keyword that decides it. Subset = declared blockers + their attackers + `self.attacking` + `block_map`'s existing blockers. |
 | 2026-08-11 | The three per-turn whole-board passes ride a presence gate (`ed4c152c`) | 3,593,030,829 Ir | 3,513,438,110 Ir (**-2.216 %**) | The three sites the nineteenth pass's table called "legitimate — one pass per turn" are not: each was ~23 layer passes to build an empty set. `process_cumulative_upkeep` 23,239,540 (0.65 %), `do_phasing` 22,747,396 (0.63 %), `do_untap` 22,686,075 (0.63 %) — Phasing, `CumulativeUpkeep(_)`, `DoesntUntapWhileCounter(_)` / `DoesntUntapIfAttackedLastTurn`, none of them on a bench board. `board_keyword_matching` is the predicate form of the gate, for the payload-carrying keywords. **The win is larger than the three site costs** (79.6 M against 68.7 M) because the freeze scope also folds each site's gather in with the pass it gates. `compute_battlefield` calls **5,488 -> 310**: `submit_decision` is the only whole-board caller left and the per-turn path has none. |
-| | **cumulative, twentieth pass** | **3,694,337,730 Ir** | **3,513,438,110 Ir (-4.897 %)** | three rows, all callgrind on the fixed six-game workload; no wall-clock delta claimed (see **Baseline** — this box cannot resolve 5 % by `--bench`). |
+| 2026-08-11 | The dispatcher's four delayed-trigger scans ride one `is_empty` (`c7bdd850`) | 3,513,438,110 Ir | 3,501,374,248 Ir (**-0.343 %**) | `dispatch_triggers_for_events` runs 52,332 times over six games and four of its blocks — the `WhenCardDies` watch, the Tamiyo attack watch, the two turn-scoped First Day of Class / Waltz of Rage watches — each scan the event batch into a `Vec` *before* asking whether any `delayed_triggers` entry wants it. Nearly always none is registered, so all four come back empty; they now read an empty slice. Exact by construction: every consumer of the four `Vec`s sits inside an `if !xs.is_empty()` whose body only ever fires a `delayed_triggers` entry. **The rest of that function is still 4.3 % of self cost, ~2.8 % of it `Vec` machinery over 366,316 collects (7 per dispatch)** — this row took the four cheapest; the candidate list keeps the rest. |
+| | **cumulative, twentieth pass** | **3,694,337,730 Ir** | **3,501,374,248 Ir (-5.223 %)** | four rows, all callgrind on the fixed six-game workload; no wall-clock delta claimed (see **Baseline** — this box cannot resolve 5 % by `--bench`). |
 
 **What the pass leaves behind, as a rule.** *"One pass per turn" is not a
 reason to keep a whole-board layer pass — it is a reason nobody looked.*
@@ -718,13 +722,19 @@ remaining cost is per-card `computed_permanent` and the gather itself.
    `--auto=yes` on it before guessing; the eighteenth pass's candidate (1)
    is the warning that the cost is the *iterator body*, not the container.
 4. **`dispatch_triggers_for_events`, 352,489,276 / 9.81 % over ~52 k
-   calls.** The eighteenth pass costed its internals: the cost is *setup*
-   (`push_ordered_trigger_candidates` 48 M, `trigger_grant_sources` 24 M,
-   `statics_granted_triggers_with` at 18 calls per dispatch), not matching
-   — `event_matches_spec` runs 1.2 times per dispatch. Wanted: a gate on
-   "does this batch contain an event any permanent listens for", taken
-   before the setup. Same shape as the passes above, one level out from
-   the layer system.
+   calls — and `c7bdd850` took only the four cheapest blocks of it.** What
+   is left, measured on the same profile: **~152 M of *self* cost (4.3 %),
+   of which ~99 M is `Vec` / `raw_vec` / `spec_from_iter` machinery over
+   366,316 collects, i.e. 7 per dispatch**; plus
+   `push_ordered_trigger_candidates` 40,578,361 (1.15 %, exactly one per
+   dispatch) and `trigger_grant_sources` ~40 M. The eighteenth pass
+   established the cost is *setup*, not matching — `event_matches_spec`
+   runs 1.2 times per dispatch. Two levers, in order: (a) the same
+   empty-slice gate `c7bdd850` used, applied to whichever of the remaining
+   collects has a board-level precondition; (b) a `u32` presence mask over
+   the batch's event kinds filled in one pass, with each block gated on its
+   bit — the `gated_block!` device from `52f4311a`, `debug_assertions`
+   audit included.
 
 **The profile of record is current** — retaken 2026-08-10 at `a4947da6`,
 the thirteenth pass's base. Shares quoted below without a date are from it.
