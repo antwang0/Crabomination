@@ -572,6 +572,23 @@ gang --games 6 --seed 1 --decks fixed`.
 3,201,568,157 Ir.** Supersedes the twenty-second-pass table beneath it,
 which is kept only for the rows it costed that are still live.
 
+**Now three rows stale — retake before pulling anything under ~0.5 %.**
+`5d4b5402` (-0.594 %) and `841dd40b` (-0.942 %) landed after it, and the
+tip measures **3,132,870,988 Ir**; every share below reads ~2 % high, and
+the hasher row moves them unevenly — the map-heavy sites (`GameState::clone`,
+the `ColdState` unshare, `dispatch_triggers_for_events`) fell further than
+the search does. What the tip's caller tree *does* say, taken 2026-08-11:
+`computed_permanent`'s gathering callers are `damage_prevented_by_protection`
+2,036 Ir/call over 18,986, `scale_damage_to` 1,920 over 14,624,
+`damage_from_source_prevented_by_keyword` 3,507 over 4,450, `dying_snapshot`
+3,458 over 3,420, `permanent_has_keyword` **1,417** over 8,328 (down from
+2,638 — that is `5d4b5402` showing up), `blocker_can_block_attacker` 286 over
+15,368. The four candidate-(10) sites enumerated off it —
+`ability_target_has_protection` (24 calls), `auto_target_for_effect_avoiding_set_xc`
+(220), `noncombat_damage_doublers_for` (174), `can_block_any_computed_attacker`
+— are all **cold on this workload** and were not taken; the family's warm
+members are the damage leaves, and those are at their one-gather floor.
+
 | Ir | share | site |
 |---|---|---|
 | 1,602,691,451 | 50.06 % | `pick_attacks_scored` (630 calls) — the search, still untouched |

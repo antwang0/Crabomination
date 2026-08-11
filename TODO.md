@@ -16,74 +16,52 @@ reference and want their own triage pass):
 
 ## NEXT (handoff — rewrite each run, keep under 15 lines)
 
-Branch `claude/modern_decks`. **Twenty-fifth pass, and it collided with a
-concurrent session**: both pulled candidate (9) shape (a) from base
-`10cb8fbf` and wrote functionally identical code. Theirs is kept
-(`56f6623f`, -0.740 %); mine was dropped in the rebase. On top of it:
-`5d4b5402` (the same shape somewhere else) + the stall instrumentation and
-`STALE_ROUNDS`, **3,177,885,139 -> 3,159,019,265 Ir (-0.594 %)**. Bench
-output identical, **18,612 tests green** (1 ignored, pre-existing),
-`cargo clippy --workspace --all-targets` **clean**, golden traces
-unchanged.
+Branch `claude/modern_decks`. **The P0 is closed and it was a bug class, not
+a site.** `841dd40b` gives the engine `crate::fxhash::HashMap` / `HashSet`
+(rustc's seedless FxHasher): every pool now reproduces on a fixed seed —
+cube 1,130,728 x3, all 2,548,986 x2, sos 684,268 x2, `determinism ok` on
+all seven — and it is **-0.942 % Ir** (3,162,657,064 -> 3,132,870,988),
+paying longer-lived candidate (6). `125108c1` fixed the sibling leak (CR
+705.1 flips read `rand::random()`; Mana Crypt is in the cube pool).
+`--decks fixed` is byte-identical at 193,232 decisions, 18,618 tests green,
+clippy clean, golden traces unchanged plus a new cube-pairing trace.
 
-- **Next up — new candidate (10), the cheapest thing on the list.** Shape
-  (a) is a *family*, not a damage-path fix: any `&self` function reading
-  the layer system twice is one `with_frozen_layers` from paying, it
-  cannot change behaviour (the closure cannot mutate), and
-  `check_target_legality_with_source` was -0.516 % in ten minutes.
-  **Enumerate rather than profile**, and read `--tree=caller` on
-  `computed_permanent` at *the callers of the leaf helpers*, not the
-  helpers — the two damage leaves still gathering take one gather each and
-  have nothing to fold. Then (9)(b) (a behaviour change, golden traces
-  decide) and `can_afford_in_state`'s five whole-board walks per call.
-  Profile of record is **two rows stale**; retake before pulling anything
-  under ~0.3 %.
-- **START HERE: the cube pool is not deterministic on a fixed seed.** Three
-  identical `--bench --threads 1 --decks cube --games 300 --seed 11` runs
-  read **decisions 1,129,690 / 1,130,785 / 1,130,706** and determinism
-  ok / FAIL 1 / FAIL 5. `--decks fixed` is clean (six runs, decisions
-  193,232 identical), so it is not the harness, the loop, the threading or
-  the deck construction — it is a *card*, or a rules path only cube cards
-  reach, leaking `HashMap` order or unseeded RNG into game logic. Full
-  write-up and the bisect recipe are the P0 at the top of the robustness
-  section. **This outranks every perf item**: it makes every cube/`all`
-  measurement unreproducible, including the "~0.1 % stall rate" this file
-  treated as a stable number.
-- **The stall question is answered and needs no more work.** `stalls_by`
-  (`419d2ea6`) reads **cap 0 / stuck 0 / draw 4-6** on `--decks all
-  --games 300 --seed 11`: every undecided game is a rules draw, not a
-  simulator failure. Nothing to fix — but the count moves run to run,
-  which is the P0 above, not a stall problem.
-- **Filters.** Eleventh (`15ec11c1`) is the first that found anything:
-  `stale < 8` written out six times across five files, now one
-  `STALE_ROUNDS`. A **twelfth** is owed; the natural next from the same
-  family is *a predicate two callers each re-derive*. Pass 24's
-  clone-then-narrow filter is still unswept semantically —
-  `.keywords.to_vec()` inside an `.any()` survives at `mod.rs:5721`,
-  `actions.rs:10472`, `movement.rs:835` (all small; arithmetic says under
-  the floor, so cost before writing).
-- **Collision hygiene, if it happens again.** Fetch before starting a perf
-  row, not just before pushing. The rebase cost more than the row did, and
-  `git add -A` had swept tracker edits into a code commit, which is what
-  made the conflicts messy — stage explicitly.
+- **Next up — the profile of record is three rows stale; retake first.**
+  Candidate (10) was enumerated off the tip's caller tree this run and its
+  four sites are all **cold** (24-220 calls) — that is a negative result,
+  not a to-do; the family's warm members are the damage leaves and they are
+  at their one-gather floor. So the real top of the list is candidate (0)
+  `pick_attacks_scored` (50 %) / (1) `would_accept` / (5) `pick_by_outcome`
+  — all three the same **probe-count** question, all three needing a
+  `bot_ladder` win-rate gate rather than an Ir number, and **now gateable
+  on the wide pools for the first time**, which is what the P0 bought.
+  Then (9)(b) (behaviour change, golden traces decide) and
+  `can_afford_in_state`'s five whole-board walks per call.
+- **Filters.** The twelfth is owed. Pass 25's suggestion still stands: *a
+  predicate two callers each re-derive*. Pass 24's clone-then-narrow filter
+  is still unswept semantically — `.keywords.to_vec()` inside an `.any()`
+  survives at `mod.rs:5721`, `actions.rs:10472`, `movement.rs:835` (all
+  small; cost before writing).
+- **Rules residue from the P0.** A hash walk deciding a game outcome is now
+  reproducible but still arbitrary. `ac8e3b50` fixed the one known site
+  (Sphinx of the Chimes binned an arbitrary qualifying name); the ~110
+  map/set locals are unswept for siblings. Low priority — none of them can
+  desynchronize a run any more.
 - **Env.** No `cargo-nextest`; `cargo test -p crabomination -p
-  crabomination_tests` is the gate (~25 min cold, ~45 s warm, always with
-  `CARGO_INCREMENTAL=0`). Cold `profiling-fast` build ~12 min, **engine-
-  only rebuild ~3.5 min**, callgrind ~7. `release` (cgu 1 + thin LTO) is
-  ~22 min — budget for it before starting, it is what the `--bench` anchor
-  needs. The SessionStart hook again left the client apt deps uninstalled
-  (`pkg-config --exists wayland-client` false); the four-package
-  `apt-get install` below fixes it in a minute and clippy needs it.
-- **Trackers.** PERF **1.78k**, TODO ~1.08k, roadmap 660. PERF is well over
-  the ~1k guidance and the compaction is *shovel-ready*: passes 20-25 fold
-  into the Log index exactly as 1-19 already did (~150 lines -> ~45), and
-  passes 12-18's frozen candidate snapshots in the candidates section
-  (~287 lines, every entry paid or restated above at a fresher share)
-  collapse to a pointer. Hoist two things rather than dropping them: the
-  "Ir over-weights allocation and representation changes" warning into the
-  methodological notes, and the `ability_strip_in_scope` soundness device
-  into the longer-lived list. A session did exactly this and lost it to the
-  rebase — it is worth ~330 lines.
+  crabomination_tests` is the gate (~25 min cold, ~45 s warm, always
+  `CARGO_INCREMENTAL=0`). `profiling-fast` cold **~13 min**, engine-only
+  ~3.5; callgrind on the six-game workload ~5. `release` (cgu 1 + thin LTO)
+  is ~22 min — budget for it before starting; it is what the `--bench`
+  anchor needs, and **the anchor has not been re-run since `ed4c152c`**.
+  Client apt deps are still not installed by the SessionStart hook; the
+  four-package `apt-get install` below fixes it in a minute.
+- **Trackers.** PERF **1.44k** (was 1.80k — passes 20-25 folded into the
+  Log index, passes 12-18's frozen candidate snapshots collapsed to a
+  pointer, the two non-restated items hoisted first), TODO ~1.09k, roadmap
+  660. PERF is still over the ~1k guidance; the next compactable block is
+  **Baseline**, which now carries five cross-check paragraphs for anchors
+  it explicitly declines to refresh — collapse four of them to one table
+  and keep the host-fingerprint reasoning.
 
 ## Environment note
 
