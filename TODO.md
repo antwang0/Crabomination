@@ -16,45 +16,48 @@ reference and want their own triage pass):
 
 ## NEXT (handoff — rewrite each run, keep under 15 lines)
 
-Branch `claude/modern_decks`. **Twenty-second pass: three perf commits,
--1.796 % Ir** (3,423,919,639 -> 3,362,421,936, base `18b83e6a`,
+Branch `claude/modern_decks`. **Twenty-third pass: two perf commits,
+-1.296 % Ir** (3,361,108,555 -> 3,317,550,360, base `a9d62f11`,
 `profiling-fast --no-default-features` callgrind). Bench output
-byte-identical on every row.
+byte-identical on both rows; 18,612 tests green, golden traces unchanged.
 
-- **Rows.** `empty_mana_pools` gates its three board scans on the seats
-  (`ef731ecc`, **-0.709 %**); the `TappedForCostPower` probe — a
-  `serde_json::to_string` of the whole effect tree — runs only for
-  tap-another costs (`df35df04`, **-0.727 %**); damage triggers build
-  their grant set once per event, not once per event *kind* (`1112e709`,
-  -0.372 %). Plus `084e4126`, a dead-work removal at **-0.030 %** —
-  under the claim floor, so it is *not* in the cumulative; PERF records
-  why it was kept and what the estimate got wrong.
-- **Next up.** PERF candidates are renumbered against a profile retaken at
-  `1112e709`. (2) `trigger_grant_sources`, ~89 k genuinely-one-per-batch
-  calls at ~480 Ir — the lever left is a cheaper scan, not fewer calls.
-  (4) `fire_combat_damage_triggers` taking a `kinds: &[EventKind]` — worth
-  ~3/4 of whatever share is kind-independent; measure the split first, and
-  note `gy_combat_trigger_fired_this_step` is mutated across kinds. (9)
-  five damage-path callers still gather per `computed_permanent` (4.1 %
-  between them) — read the entry for why a scope over the loop is unsound.
-- **Robustness.** The **seventh filter** (integer/float division or modulo
-  by a runtime-zero denominator — panics loudly, unlike the wrap the first
-  six hunted) was run 2026-08-11 and is **clean**; see the robustness
-  section. An **eighth** filter is owed.
-- **Bench.** Eleven `--bench` runs at the tip, mean **94.76**, spread
-  **14.0 %**; the idle-box eight read **96.53** against the anchor's 95.64
-  (+0.9 %). Anchor left alone — a 12.5 % sitting cannot replace a 7.48 %
-  one. **Three runs is not a spread estimate on this box**: the first three
-  read 90.03 and looked like a -5.9 % regression. See **Baseline**.
-- **Env.** No `cargo-nextest` (use `cargo test --workspace`; ~19 k tests in
-  ~40 s once built). Timings here: cold `profiling-fast` engine-only build
-  **~12 min**, incremental engine **~3.5**, callgrind ~5, cold
-  `cargo test --workspace` ~35. The client apt deps install cleanly (see
-  below); `pkg-config --exists wayland-client` is the check.
-- **Final checks, this run.** Workspace clippy **clean** (exit 0, zero
-  warnings, client included, ~6 min once warm); `cargo test --workspace`
-  **18,995 passed / 0 failed / 1 ignored**, golden traces green.
-- **Trackers.** PERF ~1.57k, TODO ~950, roadmap 660.
+- **Rows.** `fire_combat_damage_triggers` takes the whole kind list
+  (`08cbc9c3`, **-1.051 %**, shim calls 28,564 -> 7,118); the dispatcher's
+  delayed-trigger block rides one `is_empty` instead of an empty slice
+  (`b925063c`, **-0.247 %**, and -232 lines from the file's largest fn).
+- **Next up.** Candidate (4) is **paid**; (6) lever (a) is **paid**.
+  (2) `trigger_grant_sources` was costed this run and **not taken** — the
+  peel saves nothing, only a *cached* board flag would, and it needs
+  invalidation at every battlefield mutation. Best remaining, in order:
+  (6a') the dispatcher's last two per-dispatch collects (`synthesized`,
+  `equip_granted_trigger_sources`) each want a presence gate; (9) five
+  damage-path callers gather per `computed_permanent`, 4.1 % between them;
+  (0)/(1) `pick_attacks_scored` 50.7 % and `would_accept` 15.1 %, both
+  bot-quality questions wanting a ladder gate, not an Ir number.
+  **Retake the profile before pulling (0), (1) or (8)** — it is one pass
+  stale.
+- **Robustness.** The **eighth filter** (std collection/slice ops whose
+  runtime argument is a *length*: `split_off`/`split_at`/`copy_from_slice`,
+  `chunks`/`step_by`, runtime range slicing, `Vec::remove`/`insert`) was
+  run 2026-08-11 and is **clean** — see the robustness section. A **ninth**
+  is owed.
+- **Env, and what bit this run.** No `cargo-nextest`. The container has a
+  **~30 GB writable allowance** and a full `cargo build` + `cargo test
+  --workspace` fills it: `target/debug/incremental` alone reached 12 GB and
+  the disk hit 100 %, which fails builds with "failed to create query
+  cache". **Build with `CARGO_INCREMENTAL=0`** and skip
+  `-p crabomination_client` unless the change touches it — the Bevy stack
+  is ~45 min of compile on this 4-core box and nothing engine-side needs
+  it. Timings: `profiling-fast` engine rebuild ~4 min, callgrind ~6,
+  `cargo test -p crabomination -p crabomination_tests` ~12 cold / ~40 s
+  warm. The SessionStart hook did **not** leave the client apt deps
+  installed this run (`pkg-config --exists wayland-client` was false); it
+  silences `apt-get update` failures, so it cannot tell you why.
+- **Final checks, this run.** `cargo test -p crabomination -p
+  crabomination_tests` **18,612 passed / 0 failed / 1 ignored**, golden
+  traces green; workspace clippy clean. **The client crate was not built
+  or tested this run** (disk + time); nothing in the diff touches it.
+- **Trackers.** PERF ~1.6k, TODO ~1.0k, roadmap 660.
 
 ## Environment note
 
@@ -222,6 +225,36 @@ controller already pushed; `max_affordable_x` clamps `x_pips` with
 > 0`; every ML rate is `.max(1)`. The one float site,
 `sample_scored_index`'s `/ temp`, is reached only from `sampling_temp`,
 which the trainer sets behind `args.sample_temp > 0`. No hit.
+
+**The eighth filter was run 2026-08-11 and is also clean.** The first six
+hunt a silent wrap and the seventh a zero denominator; this one hunts the
+*other* loud panic — a std collection or slice operation whose runtime
+argument is a length, not an index, so the third filter's bare-index sweep
+never looked at it. Four shapes, whole workspace:
+
+- **`split_off(n)` / `split_at(n)` / `copy_from_slice`.** Five `split_off`
+  sites. The four in `effects/mod.rs` (the copy-a-spell repointing) take
+  `taken.split_off(t.iter().len())` where `taken` was *initialized* from
+  `t` and only pushed to since, so `len >= n` structurally;
+  `bot.rs:7052`'s redeal is `library.len().saturating_sub(n)`. The four
+  `copy_from_slice` sites in `crabomination_ml` copy `[f32; AUX_FEATS]` /
+  `[f32; GLOBAL_FEATS]` / `[f32; OBJ_FEATS]` **arrays**, not slices, into
+  same-width windows — a length mismatch is a compile error, not a panic.
+- **`chunks(n)` / `chunks_exact(n)` / `step_by(n)` with a runtime `n`**
+  (all three panic on zero). One hit each: `make_batch`'s
+  `rows.chunks(chunk.max(1))`, and `EachPlayerSplitsAndSacrificesRandom
+  Pile`'s `step_by(n)` where `n = (*piles).max(1)`.
+- **Runtime range slicing `&xs[a..b]`.** Two sites, both in
+  `continue_trigger_ordering`'s same-controller run walk, both `i < j <=
+  rest.len()` by the loop that computed them.
+- **`Vec::remove(i)` / `insert(i, _)` with a computed index.** ~30 sites
+  under `game/` + `bot.rs`; every one is an `if let Some(pos) =
+  …position(…)` on the same collection, an index below a `len()` the loop
+  condition holds (`hybrids.remove(idx)` inside `while !hybrids.is_empty()`
+  with `unwrap_or(0)`), or a `0..greedy.len()` enumeration.
+
+No hit. The item is still the ~183 `unwrap()`/`expect()` wanting triage,
+and a *ninth* filter — the eight above are exhausted.
 
 **Stall rate, measured on the same runs** (the standing robustness goal —
 the bench's `--decks fixed` reads 0 and always has, which hides this): the

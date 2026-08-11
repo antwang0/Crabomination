@@ -562,6 +562,32 @@ own 52,332 (0.71 %) and `fire_step_triggers`' 14,462 (0.20 %) are already
 one-per-batch and cannot be hoisted further — what is left is making the
 scan itself cheaper, not calling it less. See candidate (2).
 
+The twenty-third pass. Base `a9d62f11` (the twenty-second pass's tip)
+rebuilt here read **3,361,108,555 Ir** against the recorded 3,361,424,559 —
+**0.009 % apart**, so the passes' numbers chain. Same workload and build as
+every row above.
+
+| date | change | before | after | how measured |
+|---|---|---|---|---|
+| 2026-08-11 | `fire_combat_damage_triggers` takes the whole kind list (`08cbc9c3`) | 3,361,108,555 Ir | 3,325,777,827 Ir (**-1.051 %**) | Candidate (4), and the other half of `1112e709`: that row stopped the *callers* rebuilding the grant set per kind, this one stops the *callee* re-walking the board per kind. One damage event fires four `EventKind`s and each call re-walked the battlefield five times — printed/granted on the dealer, attached Equipment, attached Auras, soulbond partners, `YourControl` listeners, `AnyPlayer` dealer-filter listeners — to filter on `t.event.kind`. The walks are kind-independent; the signature becomes `kinds: &[EventKind]` and each walk buckets into `by_kind[i]`, drained in `kinds` order at the bottom so the stack sees exactly the per-kind batches it did. **The graveyard walk stays per-kind**: `gy_combat_trigger_fired_this_step` is read and written between kinds, so a merged walk would let one graveyard card fire for two kinds of one damage event. Calls **28,564 -> 7,118**; bench output byte-identical. |
+| 2026-08-11 | The dispatcher's delayed-trigger block rides one `is_empty` (`b925063c`) | 3,325,777,827 Ir | 3,317,550,360 Ir (**-0.247 %**) | Candidate (6a), and the rest of what `c7bdd850` started: that row made the four watch blocks scan an *empty slice*, and the five `collect`s still ran on all 52,332 dispatches. The whole block moves to `fire_delayed_event_watchers`, called only when `delayed_triggers` is non-empty. Exact by construction — every consumer inside sits in an `if !xs.is_empty()` whose body only fires a `delayed_triggers` entry — and the gate is read once at the top, as `watch_events` was, so a `retain` inside cannot change which later blocks run. **The ratio is the lesson**: `c7bdd850` bought -0.343 % by not *scanning*, this one -0.247 % by not *collecting*, so an empty `collect` is ~150 Ir, not ~0 — but the scan half was still the larger one. Also -232 lines from the file's largest function. |
+| | **cumulative, twenty-third pass** | **3,361,108,555 Ir** | **3,317,550,360 Ir (-1.296 %)** | two rows, callgrind on the fixed six-game workload; bench output byte-identical on both, 18,612 tests green, golden traces unchanged |
+
+**What the pass leaves behind.** Both rows are the *kind/batch* form of the
+file's oldest lever — *ask the cheap question before building the expensive
+answer* — and between them they close the two halves of the damage-trigger
+and delayed-trigger blocks. Candidate (4) is now paid; candidate (6a) is
+paid for the delayed-trigger collects and **not** for the three that
+remain per dispatch (`synthesized`, `equip_granted_trigger_sources`, the
+per-card `all_triggers`). Candidate (2) was costed this run and **not
+taken**: `trigger_grant_sources`' remaining ~89 k calls are ~480 Ir each
+over ~20 cards, i.e. ~24 Ir per card for the iterator plus an empty
+`static_abilities` loop, and `active_static` returns on its first `match`
+arm for a non-wrapper effect — so a syntactic peel saves almost nothing and
+the only real lever left is a *cached* board-level flag, which needs
+maintenance at every battlefield mutation. Cost that maintenance before
+writing it.
+
 ## Profile of record
 
 Callgrind on `profiling-fast --no-default-features` (= `release-fast` opt
@@ -776,7 +802,19 @@ remaining cost is per-card `computed_permanent` and the gather itself.
    `GameState::clone` + one `perform_action_inner` per candidate action.
    What is unexamined is the *probe count*, i.e. how many candidates the
    bot dry-runs that no scoring pass could have chosen.
-2. **The `trigger_grant_sources` scan itself, half paid.** 53 M / 1.57 %
+2. **The `trigger_grant_sources` scan itself — costed 2026-08-11 and
+   deliberately not taken.** The peel is not the cost: `active_static`
+   returns on its *first* `match` arm for any non-wrapper effect, and a
+   card with no `static_abilities` runs an empty inner loop, so the ~480 Ir
+   per call is ~24 Ir per card of iterator overhead over ~20 cards. A
+   syntactic peel saves the `EffectContext` only on the rare
+   `WhileCondition` static; `resolve_named_by_source` only runs on a hit.
+   **The only lever with real headroom is a cached board-level flag**
+   ("does any static source carry a `GrantTriggeredAbility`"), and that
+   needs invalidation at every battlefield mutation — `sa_cards` is a
+   *local* built inside the gather, not a state field, so it cannot be
+   borrowed here. Cost the maintenance before writing it. Original
+   measurement, kept: 53 M / 1.57 %
    over 110,540 calls at the twenty-second pass's base; `1112e709` took the
    28,564 that were per-*kind*, leaving ~89 k that are genuinely one per
    batch (the dispatcher 52,332, `fire_step_triggers` 14,462,
@@ -804,17 +842,10 @@ remaining cost is per-card `computed_permanent` and the gather itself.
    `Vec` newtype as an array of pairs, so any field that reaches a
    snapshot needs a custom impl or a format bump. Check the field's serde
    attribute before costing it.
-4. **`fire_combat_damage_triggers`, 60,358,016 / 1.80 % over 28,564 calls,
-   with the kind-independent half now hoisted and the rest not.** Its two
-   callers each fire *four* event kinds per damage event and the body
-   re-walks the battlefield for equipment, auras, soulbond and the
-   `YourControl` dealer listeners on every one of them, plus every player's
-   graveyard. Taking a `kinds: &[EventKind]` and wrapping the body in a
-   kind loop is mechanical; **the order constraint is that the stack pushes
-   must stay grouped per kind, in the current kind order**, and
-   `gy_combat_trigger_fired_this_step` is mutated across kinds, so only the
-   walks above it may be hoisted. Worth ~3/4 of whatever share is
-   kind-independent — measure the split with `--tree=calling` first.
+4. **PAID (`08cbc9c3`, -1.051 %).** `fire_combat_damage_triggers` takes
+   `kinds: &[EventKind]`; the five kind-independent walks run once and
+   bucket by kind, the graveyard walk stays per-kind for its dedupe set.
+   Calls 28,564 -> 7,118. Nothing left here on this profile.
 5. **`pick_by_outcome`, 215,958,939 / 6.42 %, essentially all of it one
    `collect()` in `bot.rs`.** Never profiled at line level. Read
    `--auto=yes` on it before guessing; the eighteenth pass's candidate (1)
@@ -826,9 +857,14 @@ remaining cost is per-card `computed_permanent` and the gather itself.
    366,316 collects, i.e. 7 per dispatch**; plus
    `push_ordered_trigger_candidates` (1.15 %, exactly one per dispatch),
    `trigger_grant_sources` 0.71 % and `permanents_with_abilities_removed`
-   0.56 % (both candidate (2)). Two levers, in order: (a) the same
-   empty-slice gate `c7bdd850` used, applied to whichever of the remaining
-   collects has a board-level precondition; (b) a `u32` presence mask over
+   0.56 % (both candidate (2)). **Lever (a) is paid** (`b925063c`,
+   -0.247 %): the four delayed-trigger collects are gone, not merely
+   emptied. **Two collects per dispatch remain and each wants its own
+   precondition** — the `synthesized` death/control-change chain (gate on
+   `deaths.is_empty() && control_changes.is_empty()`, which is the common
+   case) and `equip_granted_trigger_sources` (a whole-battlefield
+   `filter_map` on a board that usually has no attachment). Next, in
+   order: (a') those two gates; (b) a `u32` presence mask over
    the batch's event kinds filled in one pass, with each block gated on its
    bit — the `gated_block!` device from `52f4311a`, `debug_assertions`
    audit included. **The per-card `all_triggers` Vec is *not* a target** —
@@ -874,9 +910,12 @@ remaining cost is per-card `computed_permanent` and the gather itself.
    whether a *read-only prefix* per (attacker, blocker) pair can hold one
    scope.
 
-**The profile of record is current** — retaken 2026-08-11 at `1112e709`,
-the twenty-second pass's tip. Every share quoted in the candidates above is
-from that retake.
+**The profile of record is one pass stale** — it was retaken at `1112e709`
+(the twenty-second pass's tip) and every share quoted in the candidates
+above is from that retake. The twenty-third pass moved 1.296 % of it, all
+of it inside candidates (4) and (6a), so the *other* candidates' shares are
+still good to a tenth of a point; **retake before pulling (0), (1) or (8)**,
+whose shares are large enough that a stale denominator matters.
 
 Methodological notes, each learned the hard way:
 
