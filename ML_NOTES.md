@@ -7,6 +7,38 @@ only stays dead while the reasoning that killed it is readable.
 
 ## Tier 13 — AI
 
+- 🔴 **Round 29 — MCTS internals: every knob is null-to-negative; only
+  iterations pay.** Three tunings of the round-26/27 search, each gated
+  head-to-head against the `mcts-net-deep` control (64 iters / h3 /
+  c 1.0 / no priors / fixed budget), 100-game paired cells × seeds
+  43/97, champion net both sides:
+
+  | knob | profile(s) | vs deep, pooled | verdict |
+  |---|---|---|---|
+  | exploration c 0.5 / 1.4 / 2.0 | mcts-net-c05/c14/c20 | 49.8 / 49.3 / 49.4 % | flat — c 1.0 already fine |
+  | P-UCT root priors (w 1.5, temp 4 units) | mcts-net-prior | **46.3 %** | NEGATIVE — candidate scores misallocate the budget |
+  | adaptive budget (early-stop + 4× close-call extension) | mcts-net-adapt | 51.2 % | see below |
+
+  The adaptive arm's 51.2 % is not a win: its measured wall clock ran
+  ~1.6× the control cell — the close-call extension dominates the
+  early-stop savings, so it *spends* ~2×, and the pre-registered claim
+  was cost, not strength. The budget-matched cell settles it:
+  **adapt vs fixed-128 = 49.7 % pooled** (50.1/49.2) — adaptive
+  allocation is exactly worth its average spend, no more. The prior
+  result is the interesting negative: at 64 iterations, seeding visits
+  from `score_candidate` is worse than uniform UCB1 exploration —
+  plausibly the softmax (temp 4 units) is too sharp and starves arms
+  the heuristic underrates, which is the very case search exists for.
+  A gentler dose is untested; the first dose is clearly harmful.
+
+  Conclusion, sharpening round 27: **the only MCTS lever that pays is
+  raw iterations** (24→256 = 49.4→55.0 % vs champion). Selection
+  policy, exploration constant, and allocation shape are all at a
+  local optimum the defaults already occupy. Client stays MctsBot-64;
+  mcts-net-256 stays the strength reference. Infra stays (priors,
+  adaptive budget, and the c profiles are config, defaults off/1.0,
+  pure-function unit tests in `mcts.rs`).
+
 - 🔴 **Round 28 — encoder v6, and the training regression it uncovered
   (arc open: champion-era reproduction run pending).** The plan was a
   representation round: encoder v6 (combat-structure block — counterpart
