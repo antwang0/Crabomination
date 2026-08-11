@@ -7,6 +7,34 @@ only stays dead while the reasoning that killed it is readable.
 
 ## Tier 13 — AI
 
+- 🔴 **Round 31 — MCTS combat coverage: a large, clean NEGATIVE. Combat
+  declarations need the sims' precision, not the rollouts' breadth.**
+  The hypothesis was coverage: the round-26/27 wins searched only
+  main-phase plays, so searching attack/block declarations too (same
+  candidate menus the sim searches score, rollouts + net rewards in
+  place of the one-turn sims) should extend the win to the decisions
+  that decide limited games. Gate: `mcts-net-combat` vs `mcts-net-deep`,
+  identical 64-iteration budgets, 100-game paired cells:
+
+  | seed 43 | seed 97 |
+  |---|---|
+  | **39.4 %** [37.3, 41.5] | **38.4 %** [36.4, 40.4] |
+
+  Eleven points down, both seeds, CIs nowhere near 50 — and +26 %
+  wall clock on top. Why this direction reverses the main-phase result:
+  a combat declaration's candidates differ by *fine margins* (hold one
+  blocker back, chump or don't) that the sims resolve with exact
+  engine damage math over one structured turn cycle, while ~9 noisy
+  rollouts per arm resolve them with the variance of three turns of
+  semi-random continuations. Main-phase candidates differ grossly
+  (cast the bomb or don't), which is what rollout averaging can rank.
+  Search breadth beats sim precision exactly where outcomes diverge
+  coarsely, and loses where the decision hinges on arithmetic the
+  engine already does perfectly. `search_combat` stays in-tree,
+  default off; the adopted pilots are untouched (they never enabled
+  it). Raising iterations was considered and not queued: at −11 the
+  gap is not a budget artifact.
+
 - 🟡 **Round 30 — champion re-baseline: the healthy regime reproduces
   champion-class nets; det0 data is a null at full training; the
   incumbent survives.** The 2×2 grid (actor data × training seed, all
