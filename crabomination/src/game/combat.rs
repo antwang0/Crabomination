@@ -2369,8 +2369,46 @@ impl GameState {
         })
     }
 
+    /// The computed views [`resolve_combat_damage_with_filter`] reads: every
+    /// attacker and every declared blocker, from one gather.
+    ///
+    /// Everything under that resolver looks its permanents up by id — the
+    /// attacker infos, the banding assigner, the lethal table, the blocker
+    /// scans. The one whole-board consumer is [`free_division_targets`]'
+    /// second half (Butcher Orgg divides among *any* of the defending
+    /// player's creatures), and it is gated on a keyword the attacker itself
+    /// carries, so the whole board is computed only when such an attacker is
+    /// actually in combat. **The gate is checked, not assumed**:
+    /// `butcher_orgg_divides_damage_among_defenders` assigns damage to a
+    /// creature that never blocked, so it fails if this falls back to the
+    /// subset.
+    ///
+    /// [`free_division_targets`]: Self::free_division_targets
+    /// [`resolve_combat_damage_with_filter`]: Self::resolve_combat_damage_with_filter
+    fn combat_damage_computed(&self) -> Vec<ComputedPermanent> {
+        let mut ids: Vec<CardId> = Vec::new();
+        for atk in &self.attacking {
+            if !ids.contains(&atk.attacker) {
+                ids.push(atk.attacker);
+            }
+        }
+        // `block_map`'s key order is a `HashMap`'s, but it only decides which
+        // permanents get computed; every reader looks up by id, and the one
+        // that collects (`free_division_targets`) sorts.
+        for &bid in self.block_map.keys() {
+            if !ids.contains(&bid) {
+                ids.push(bid);
+            }
+        }
+        let subset = self.compute_permanents(&ids);
+        if subset.iter().any(|c| c.keywords.contains(&Keyword::DividesCombatDamageAmongDefenders)) {
+            return self.compute_battlefield();
+        }
+        subset
+    }
+
     pub fn resolve_first_strike_damage(&mut self) -> Result<Vec<GameEvent>, GameError> {
-        let computed = self.compute_battlefield();
+        let computed = self.combat_damage_computed();
         // CR 510.4: in the first-strike combat damage step, only creatures
         // with first strike or double strike deal combat damage. The same
         // gate applies to attackers (who deals?) and blockers (who strikes
@@ -2391,7 +2429,7 @@ impl GameState {
     }
 
     pub fn resolve_combat(&mut self) -> Result<Vec<GameEvent>, GameError> {
-        let computed = self.compute_battlefield();
+        let computed = self.combat_damage_computed();
         // CR 510.5: in the regular combat damage step, every attacking and
         // blocking creature that didn't deal damage in the first-strike step
         // deals damage now — i.e. anyone without first strike, plus double

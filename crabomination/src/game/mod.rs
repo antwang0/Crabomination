@@ -7337,6 +7337,32 @@ impl GameState {
         crate::game::layers::apply_layers(&self.battlefield, &self.gather_continuous_effects())
     }
 
+    /// The computed views for just `ids`, in that order, from one gather.
+    ///
+    /// `apply_layers` is exactly `apply_layers_one` mapped over the
+    /// battlefield, so these are the same answers `compute_battlefield` gives
+    /// — for a caller that reads a handful of permanents by id, at a
+    /// fraction of the per-card work. Ids not on the battlefield are skipped,
+    /// so `find(id)` on the result misses exactly as it would on the whole
+    /// view. Use it only where the consumers are all id lookups; a
+    /// whole-board scan of the result would silently see a subset.
+    pub(crate) fn compute_permanents(&self, ids: &[CardId]) -> Vec<ComputedPermanent> {
+        fn go(
+            bf: &[crate::card::CardInstance],
+            fx: &[ContinuousEffect],
+            ids: &[CardId],
+        ) -> Vec<ComputedPermanent> {
+            ids.iter()
+                .filter_map(|id| bf.iter().find(|c| c.id == *id))
+                .map(|c| crate::game::layers::apply_layers_one(c, fx))
+                .collect()
+        }
+        if let Some(fx) = self.frozen_effects() {
+            return go(&self.battlefield, &fx, ids);
+        }
+        go(&self.battlefield, &self.gather_continuous_effects(), ids)
+    }
+
     /// The computed view restricted to permanents that can be creatures —
     /// what the CR 704.5g death sweep reads. A permanent printed without the
     /// Creature type only gains it from an `AddCardType` / `SetCardTypes`
