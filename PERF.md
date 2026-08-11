@@ -376,27 +376,15 @@ kept below is the lever and the lesson.
 | 12 | 5,620,660,987 -> 4,964,563,445 Ir (**-11.68 %**, two concurrent sessions merged at `6e4fa142`) | **A `&mut self` entry point taking a whole-board `compute_battlefield` to read one bit, or several where one would do**: `declare_attackers_banded` (`a21da084`), `finalize_cast` (`622b43ae`), `has_first_strikers` / `bands_with_other_qualities` (`a37863a0`); and the SBA sweep's ~20 rare whole-board passes riding one presence pass (`2038bb59`, `129a1b0e`), its death sweep skipping non-creatures (`f3c8670c`), three sites reusing a layer view they already held (`0045cbc0`). The two sessions overlapped, so their separate cumulative figures must not be added — only the merged tip is authoritative. |
 | 13 | 4,963,254,419 -> 4,733,001,860 Ir (**-4.64 %**) | **A hot struct field that is computed and allocated when it could be a bitmask**: `ComputedPermanent.colors` -> `ColorSet` (`59cd783e`, -2.55 %) and `ManaSourceInfo.colors` -> `ColorSet` + `[usize; 5]` (-0.49 %); plus auto-tap skipping the per-card layer pass when nothing rewrites a land type (`d95cd5ba`, -1.66 %). **The trick that made the first two cheap to land, third time now** (`Printed<T>`, `KeywordCounters`, `ColorSet`): give the new representation the old one's API — `contains` / `iter` / `to_vec` / `FromIterator` / `IntoIterator` — and ~70 call sites compile unchanged. **And the presence flag was *checked*, not assumed**: `cr_305_6_auto_tap_sees_a_rewritten_land_type` fails if any one of the three `land_types` writers is dropped from the predicate. |
 
-**Fourteenth pass — the transaction checkpoint.** Base `95406ebe` (the
-thirteenth pass's tip). One shape, two rows and a correction: **`perform_action` clones the
-whole state before every action so a rejected one can be restored, and
-almost nothing ever reads the restore.**
+Passes fourteen to sixteen, compacted to an index — same treatment as one
+to thirteen. The rows' prose is in git (`git log -S` on the commit hashes);
+what is kept below is the lever and the lesson.
 
-| date | change | before | after | how measured |
-|---|---|---|---|---|
-| 2026-08-10 | The mid-round priority pass stops paying for a checkpoint (`42c5db08`) | 4,755,784,897 Ir (`d95cd5ba`) | 4,667,673,580 Ir (**-1.85 %**) | **41.6 % of the actions a bot game takes cannot be rejected.** `pass_priority`'s early return — not every player has passed yet — bumps the pass counter, hands priority to the next seat and returns `Ok(vec![])`; there is nothing to roll back. Every `return Err` between `perform_action`'s entry and the dispatch match is a pure validation guard that has not touched the state, so an early `Err` needs no restore either. `pass_priority_is_trivial` names the branch next to the code that owns it. Checkpoints 64,248 → 37,512; `GameState::clone` 161,227,776 → 94,614,770 (-41.3 %). Measured against `d95cd5ba`, i.e. before the `ManaSourceInfo` row rebased under it — the two don't touch the same code. |
-| 2026-08-10 | The bot's dry runs stop taking a rollback nobody reads (`831054fb`) | 4,667,673,580 Ir | 4,136,463,189 Ir (**-11.38 %**) | Every simulation and probe in `bot.rs` throws its clone away on `Err` — `.ok()?`, `return None`, `return CombatSim::Incomplete`, `return true` — so the checkpoint's restore is never read. `dry_run` is that call with the argument written down once. The two simulation loops keep their historical fallback (rejected action → roll back → retry as a priority pass) through `sim_step`, which takes the checkpoint only when the action can need it: **when the action is itself a `PassPriority` the fallback re-runs the same call on the restored state and the engine is deterministic, so it fails identically** — abandoning is the same outcome one clone earlier. `ManualTapRequired`, the one error `perform_action` does not roll back, leaves exactly the state the retry would have seen, so that retry is kept. `perform_action` 70.45 % → 29.61 % inclusive; `GameState::clone` -54 %, `drop_in_place<GameState>` -46 %; **`Arc::clone_from_ref_in` — the CoW unshare — 803,672,462 → 479,320,016, -40 %**, which is the half of the win the clone and drop do not explain: with no checkpoint holding a second reference, a write to a zone the simulation already owns is a refcount check, not a deep copy. |
-| 2026-08-10 | `simulate_through_combat` keeps its checkpoints — its torn state *is* read (`3e2ee6cb`) | 4,113,269,670 Ir | 4,186,040,742 Ir (**+1.77 %**) | The correction to the row above, and the shape of the trap. Two of `simulate_through_combat`'s three callers throw the state away on `Incomplete`; the third — `combat_aware`'s `before` probe — runs it with `let _ =` and scores whatever comes back, so an abandoned walk would score a state left mid-action instead of the rolled-back one. **Nothing on the bench reaches it** (traces and the 24 bench games are byte-identical either way), which is why it was worth reverting rather than arguing about: the divergence is latent, not absent. **The audit rule: a `dry_run` site is only sound when the caller cannot read the state after an `Err`.** The other nine sites hold their clone in a local that dies on the failure path. |
-| | **cumulative this pass, re-measured on the rebased tip** | **4,733,001,860 Ir** (`95406ebe`) | **4,186,040,742 Ir (-11.56 %)** | Both rows were measured against `d95cd5ba` and then rebased over the other session's `ManaSourceInfo` row; the tip was re-measured rather than subtracted (-13.10 % before the correction row, against a -13.02 % measured on our own base — nothing cancelled in the join). Callgrind on `profiling-fast --no-default-features`, the one fixed six-game workload. Suite green (18,097 passed / 0 failed) and **all four golden traces byte-identical at every step** — they are fixed-seed bot games, i.e. exactly the path these rows change, which is the check that makes "the restore is never read" a measurement rather than an argument. The bench also plays the same 24 games to the same 12 split pairs. |
-| | **wall-clock, same pass** | **52.18 games/s** | **57.97 games/s (+11.10 %)** | Six alternated `--bench` pairs of `95406ebe` against `3e2ee6cb`, both built `release-fast` in one sitting on one container. **6/6 pairs positive**; per-pair +9.81 / +9.03 / +13.70 / +14.05 / +7.69 / +12.46 %; `decisions_per_s` 31,511 → 35,338 (+12.1 %); `turns_per_game` 26.98 and `stalls` 0 on all twelve runs. **Ir and wall-clock agree to half a point** — the shape to expect when a change removes work *and* allocations, and the counter-example to the thirteenth pass's null. A first take on the pre-correction tip read +13.19 % against the same base, i.e. the correction's +1.77 % Ir shows up in wall-clock too. `release-fast` absolutes never go in Baseline; the paired delta is the measurement. |
-
-| 2026-08-10 | `permanents_with_abilities_removed` asks a presence gate instead of gathering (`a7eaa930`) | 4,185,775,886 Ir (`2b736358`) | 4,079,432,834 Ir (**-2.54 %**) | The function was 130,147,835 Ir / 3.11 % — one full `gather_continuous_effects` per trigger dispatch to answer one bit that is `false` on every bench board, because `dispatch_triggers_for_events` is `&mut self` and so runs unfrozen. `ability_strip_in_scope` walks `continuous_effects` + the battlefield instead: ~400 Ir/call against ~2,190, and the function drops off the 99 % threshold entirely. `gather_continuous_effects_inner` 515,391,375 → 398,071,050 (**-22.8 %**, i.e. 59,378 of ~243 k gathers gone); `dispatch_triggers_for_events` 490 M → 395 M. Callgrind on `profiling-fast --no-default-features`, the fixed six-game workload; bench output byte-identical apart from wall-time. **The gate is `false`-authoritative, not exact** — six routes reach `RemoveAllAbilities` and each is named in the doc comment; the emitting blocks `debug_assert!` against the same two predicates, and a debug-only cross-check re-runs the gather whenever the gate says `false`, so the whole suite audits it on real boards. |
-
-| 2026-08-10 | `activate_ability_inner`'s land-mana check reads the view its own scope already took (`88a0b787`) | 4,079,432,834 Ir | 4,023,920,637 Ir (**-1.36 %**) | `printed_land_mana_ability_lost` fetched its own `computed_permanent` *before* the printed test that decides the answer, on a `&mut self` path — 52,322,432 Ir / 1.28 % over 18,386 calls, every one of them a whole-game gather for a card the enclosing `with_frozen_layers` had already computed. The `&self` variant is deleted; the scope returns the boolean. `computed_permanent` calls from `activate_ability_inner` 55,196 → 36,772. The three CR 602.5 gates below it were also folded onto one view (`tap_gated` / `on_battlefield` hoisted out of their conditions) — worth ~0 on the bench, because the short-circuits already meant only one of the three ever gathered, but it takes the shape out of the file. Bench output byte-identical; suite 18,828 / 0; golden traces byte-identical. |
-
-| 2026-08-10 | `cast_candidates`' fourteen specialty blocks gate on one warm walk per zone instead of taking a cold walk each (`52f4311a`) | 4,021,875,017 Ir | 4,012,768,783 Ir (**-0.226 %**) | Each block walked the hand (or graveyard) to ask "is there a card here for me" — an `Arc<CardData>` + `Arc<CardDefinition>` chase per card per block, and a `keywords` scan per block for the six keyword shapes. One pass per zone now fills a `u32`; a clear bit skips the block. The one asymptotic item removed: `spell_granted_convoke` walked the whole battlefield **per hand card** (~49 k walks per six games) for a board-level fact, now gathered once alongside Repartee and the prepared-creature check — three battlefield walks become one. Soundness device is the strip gate's: bits over-approximate, each block still applies its own filter, and `gated_block!` runs every block under `debug_assertions` and asserts the gate against what it emitted, so all 18,828 tests audit the mask on real boards. **The useful part is the negative result**: the previous pass costed this at "~134 M of breadth", but the block walks and their predicates are only ~13 M of self cost between them. The 191 M is callees — the plain-cast `flat_map` alone is 219 M / 5.44 % — so the next attempt on this function belongs there, not in the block count. Golden traces byte-identical. |
-| 2026-08-10 | `team_of` checks the singleton-team layout directly instead of scanning every team's member list (`4772369a`) | 4,012,768,783 Ir; `same_team` 58,406,112 | 3,964,309,168 Ir (**-1.208 %**); `same_team` 20,001,502 (**-65.8 %**) | `same_team` was **1.45 % of the program** over ~1.2 M calls doing nothing but walking `Vec`s: `team_of` scanned every team and ran `members.contains(&seat)`, twice per call, to answer what in every non-team format is `seat`'s own index. The layout `GameState::new` builds — one singleton team per seat, in seat order — is now one bounds-checked index, a `len() == 1` and a compare; the scan stays as `team_of_scan` for 2HG / Emperor / Star and pre-`teams` snapshots, with a `debug_assert_eq!` running it against the fast path on every hit. `same_team` also short-circuits `a == b`, which is exact. Callgrind A/B on identical `profiling-fast --no-default-features` binaries, fixed six-game workload. Suite 18,828 / 0; golden traces byte-identical; clippy clean. |
-| 2026-08-10 | Nine opponent-static battlefield scans test the printed ability before the team (`abb2b502`) | 3,964,309,168 Ir; `same_team` 20,001,502 | 3,948,056,772 Ir (**-0.410 %**); `same_team` 5,693,328 | All nine shared one shape — `!same_team(c.controller, X) && c.definition.static_abilities.iter().any(matches!(…))` — so the team lookup ran for every permanent on the board while the far more selective test (the list is empty on nearly all of them) came second. Both conjuncts are pure, so the flip is exact. The family: `flagbearer_candidates` (**457,242 `same_team` calls per six games**, once per permanent per activation), `opponent_locks_cast_of`, `player_search_locked_by_opponent`, the two spell-name locks in `cast_spell_with_convoke`, the artifact-ability lock in `activate_ability_inner`, `OpponentsCantBlockWithEvenMv`, `OpponentMillDoubled`, and Drannith Magistrate's cast-zone lock. Across the two rows `same_team` is **58,406,112 → 5,693,328, -90.3 %**. Golden traces byte-identical. |
-| | **cumulative, sixteenth pass** | **4,021,875,017 Ir** | **3,948,056,772 Ir (-1.836 %)** | three rows, all callgrind on the fixed six-game workload; no wall-clock delta claimed (see **Baseline**) |
+| pass | base -> tip | levers, and what each taught |
+|---|---|---|
+| 14 | 4,733,001,860 -> 4,186,040,742 Ir (**-11.56 %**); wall-clock 52.18 -> 57.97 games/s (**+11.10 %**, 6/6 alternated `release-fast` pairs) | **The transaction checkpoint**: `perform_action` cloned the whole state before every action so a rejected one could be restored, and almost nothing reads the restore. The mid-round priority pass takes none (`42c5db08`, -1.85 % — **41.6 % of a bot game's actions cannot be rejected**); the bot's dry runs take none (`831054fb`, **-11.38 %** — every probe throws its clone away on `Err`). **The correction is the audit rule** (`3e2ee6cb`, +1.77 %): `simulate_through_combat`'s torn state *is* read, by `combat_aware`'s `before` probe — so *a `dry_run` site is only sound when the caller cannot read the state after an `Err`*. And the clone is never the whole cost: it **shares every CoW zone**, so the next write deep-copies one that was uniquely owned a line earlier, which was 40 % of `Arc::clone_from_ref_in`. **Ir and wall-clock agreed to half a point** — the shape to expect when a change removes work *and* allocations. |
+| 15 | 4,185,775,886 -> 4,023,920,637 Ir (**-3.87 %**) | **A presence gate instead of a gather.** `permanents_with_abilities_removed` ran a full gather per trigger dispatch for one bit that is `false` on every bench board (`a7eaa930`, **-2.54 %**); `ability_strip_in_scope` names all six routes to `RemoveAllAbilities` in its doc, the emitting blocks `debug_assert!` against the same predicates, and a debug-only cross-check re-runs the gather whenever the gate says `false` — the device every later gate in this file copies. Plus `activate_ability_inner`'s land-mana check reading the view its own scope already took (`88a0b787`, -1.36 %). |
+| 16 | 4,021,875,017 -> 3,948,056,772 Ir (**-1.836 %**) | **Ask the cheap, selective question first.** `cast_candidates`' fourteen specialty blocks gate on one warm walk per zone (`52f4311a`, -0.226 % — and the negative result that the block walks are only ~13 M of self cost, so the next attempt on that function belongs in the plain-cast `flat_map` at 5.44 %); `team_of` reads the singleton-team layout instead of scanning every team's member list (`4772369a`, **-1.208 %**); nine opponent-static battlefield scans test the printed ability before the team (`abb2b502`, -0.410 %). Across the last two, `same_team` **58,406,112 -> 5,693,328, -90.3 %**. |
 
 The seventeenth pass. Base `8ca7df9f` rebuilt on a fresh container read
 **3,948,115,609 Ir** against the recorded sixteenth-pass figure of
@@ -413,16 +401,6 @@ line.
 | 2026-08-10 | Protection asks the target for a protection keyword first (`96129f68`) | 3,897,784,226 Ir | 3,869,292,204 Ir (**-0.731 %**) | `damage_prevented_by_protection_inner` took **five** `computed_permanent` lookups on the *source* — colours, is-a-creature, creature types, card types, plus two `Vec` clones — before looking at whether the target carries a protection keyword at all. Those five were **91,762 of the program's 203,770 `computed_permanent` calls, 45 % of them**, and all of it is dead work on a board where nothing has protection. The gate reads `tgt.keywords`, which the function had already computed. `protection_keyword` lists exactly the keywords the `ProtectionFromCreatures` check and the final `match` can answer `true` for, and sits next to them. Golden traces byte-identical. |
 | 2026-08-10 | Activation takes one whole-game gather instead of two (`6ed3dbfc`) | 3,869,292,204 Ir | 3,817,208,224 Ir (**-1.346 %**) | `activate_ability_inner` read this card's computed view twice: once inside the battlefield branch's `with_frozen_layers`, then again ~300 lines later for the three CR 602.5 gates — and that second read is on a `&mut self` path outside any scope, so it re-gathered every continuous effect in the game. 18,386 whole-game gathers, 106,596,809 Ir / 2.75 % between the pair. Nothing between the two points mutates a layer input (the one write is the `{X}` prompt, which returns), so the closure hands its view out. Each gate still re-checks its own condition, so a view the old `.then()` would have skipped can't change an answer. `computed_permanent` from `activate_ability_inner` **36,772 → 18,386**, 106,596,809 → 54,317,768 Ir. Suite 18,836 / 0 on the merged tree; golden traces byte-identical. |
 | | **cumulative, seventeenth pass** | **3,948,115,609 Ir** | **3,817,208,224 Ir (-3.316 %)** | four rows, all callgrind on the fixed six-game workload; no wall-clock delta claimed (see **Baseline** — this box cannot resolve 3 % by `--bench`) |
-
-**What the pass leaves behind, as a rule.** *A checkpoint is only worth its
-clone where something reads the restore.* Three questions find the next one:
-does this caller keep the state after an `Err` (usually not — dry runs throw
-it away); can this action fail at all (the trivial pass cannot); and if the
-fallback re-runs the same call on the same state, does determinism make it a
-no-op. And the clone is never the whole cost — it *shares every CoW zone*, so
-the next write deep-copies one that was uniquely owned a line earlier. That
-second half was 40 % of `Arc::clone_from_ref_in`, the largest theme in the
-profile after the allocator itself.
 
 **Eighteenth pass.** Base `26b5d2c7` (the seventeenth pass's tip plus the
 encoder-clippy and tracker commits), re-measured on a fresh container:
@@ -482,6 +460,35 @@ with their call counts), and for each grep the function body for
 &self.battlefield` is a scan, and only the scans block the subset. The
 sites left, by size, are in the candidates list.
 
+**Twentieth pass.** Base `3655c37c` (the nineteenth pass's tip),
+re-measured on a fresh container: **3,694,337,730 Ir** against the recorded
+3,694,708,603 — **-0.010 %**, so the two passes' numbers chain. Every row
+is callgrind on `profiling-fast --no-default-features`, `--a gang --b gang
+--games 6 --threads 1 --seed 1 --decks fixed`, and every one left the six
+games' bench output byte-identical apart from the wall-time line.
+
+| date | change | before | after | how measured |
+|---|---|---|---|---|
+| 2026-08-11 | `declare_attackers_banded` gates its whole-board pass (`31116d43`) | 3,694,337,730 Ir | 3,630,334,304 Ir (**-1.733 %**) | The site the nineteenth pass named as the top candidate: 61,859,555 Ir / 1.64 % over 3,780 calls. Exactly two whole-board consumers — the CR 508.1d "attacks each combat if able" loop and the Magnetic Web `AttackTogether` loop — against a dozen `find(id)` lookups. `groups` and the Oracle en-Vec mandate hoist above the pass (both read only the battlefield and the active statics), and the gate, the subset and the whole-board fallback share one freeze scope. New `GameState::board_keyword_in_scope`. |
+| 2026-08-11 | `declare_blockers` gates its validation pass the same way (`911cf298`) | 3,630,334,304 Ir | 3,593,030,829 Ir (**-1.028 %**) | 41,289,574 Ir / 1.10 % over 2,598 calls, and the candidate's prediction to the tenth of a point. Five whole-board consumers, all CR 509.1 requirement loops; four are already skipped by an attacker keyword or by `must_block`, which the subset answers, and only "blocks each combat if able" reads the computed view before the keyword that decides it. Subset = declared blockers + their attackers + `self.attacking` + `block_map`'s existing blockers. |
+| 2026-08-11 | The three per-turn whole-board passes ride a presence gate (`ed4c152c`) | 3,593,030,829 Ir | 3,513,438,110 Ir (**-2.216 %**) | The three sites the nineteenth pass's table called "legitimate — one pass per turn" are not: each was ~23 layer passes to build an empty set. `process_cumulative_upkeep` 23,239,540 (0.65 %), `do_phasing` 22,747,396 (0.63 %), `do_untap` 22,686,075 (0.63 %) — Phasing, `CumulativeUpkeep(_)`, `DoesntUntapWhileCounter(_)` / `DoesntUntapIfAttackedLastTurn`, none of them on a bench board. `board_keyword_matching` is the predicate form of the gate, for the payload-carrying keywords. **The win is larger than the three site costs** (79.6 M against 68.7 M) because the freeze scope also folds each site's gather in with the pass it gates. `compute_battlefield` calls **5,488 -> 310**: `submit_decision` is the only whole-board caller left and the per-turn path has none. |
+| | **cumulative, twentieth pass** | **3,694,337,730 Ir** | **3,513,438,110 Ir (-4.897 %)** | three rows, all callgrind on the fixed six-game workload; no wall-clock delta claimed (see **Baseline** — this box cannot resolve 5 % by `--bench`). |
+
+**What the pass leaves behind, as a rule.** *"One pass per turn" is not a
+reason to keep a whole-board layer pass — it is a reason nobody looked.*
+The nineteenth pass's table wrote off `do_phasing` / `do_untap` /
+`process_cumulative_upkeep` as legitimate on the strength of their call
+counts, and all three were the cheapest gate in the file: a single keyword
+that no board carries. **The filter that finds the next one:** a
+`compute_battlefield` (or a per-card `computed_permanent` loop) whose
+`filter` names one `Keyword` variant. The gate is
+`board_keyword_in_scope` / `board_keyword_matching`, it is `false`-
+authoritative by construction, and both halves are audited across the whole
+suite — a debug-only whole-board re-run inside the gate, plus a
+`debug_assert!` at the subset's read sites that a battlefield permanent was
+never read outside it. That second half is what makes the subset safe to
+widen later.
+
 ## Profile of record
 
 Callgrind on `profiling-fast --no-default-features` (= `release-fast` opt
@@ -489,10 +496,36 @@ settings + debuginfo; system allocator, because valgrind replaces malloc and
 a mimalloc build would measure the interception), 1 thread, `--a gang --b
 gang --games 6 --seed 1 --decks fixed`.
 
-**Retaken 2026-08-10 on the seventeenth pass's tip `6ed3dbfc`:
-3,817,208,224 Ir.** The pass's base (`8ca7df9f`) rebuilt on a fresh
-container read 3,948,115,609 against the recorded sixteenth-pass figure of
-3,948,056,772 — **0.0015 % apart**, so the two passes' numbers chain.
+**Re-taken 2026-08-11 on the twentieth pass's tip `ed4c152c`:
+3,513,438,110 Ir.** The layer system has come down hard across the
+nineteenth and twentieth passes and the top of the list has reshuffled;
+these supersede the seventeenth-pass table below, which is kept for the
+rows it costed that are still live.
+
+| Ir | share | site |
+|---|---|---|
+| 1,845,020,927 | 51.35 % | `pick_attacks_scored` (630 calls) — the search, still untouched |
+| 534,428,881 | 14.87 % | `would_accept` |
+| 507,575,030 | 14.13 % | `resolve_combat` |
+| 507,252,955 | 14.12 % | `try_pay_after_snapshot_mode` — **new to this file** |
+| 483,645,579 | 13.46 % | `auto_tap_for_cost_inner` |
+| 352,489,276 |  9.81 % | `dispatch_triggers_for_events` |
+| 317,061,930 |  8.83 % | `simulate_through_combat` |
+| 315,917,638 |  8.79 % | `gather_continuous_effects_inner` |
+| 226,841,402 |  6.31 % | `pick_by_outcome` (225,396,844 of it one `in_place_collect`) |
+| 209,692,860 |  5.84 % | `compute_permanent` |
+| 181,032,011 |  5.04 % | `cast_candidates` |
+| 114,869,442 |  3.20 % | `computed_permanent` |
+
+**Who still takes a whole-board pass**: `compute_battlefield` **310 calls**
+(`submit_decision`, 0.02 %), from 17,718 three passes ago. The layer cost
+that is left is per-card `computed_permanent` and the gather.
+
+The seventeenth pass's table, for the rows it costed. **Retaken 2026-08-10
+on its tip `6ed3dbfc`: 3,817,208,224 Ir.** The pass's base (`8ca7df9f`)
+rebuilt on a fresh container read 3,948,115,609 against the recorded
+sixteenth-pass figure of 3,948,056,772 — **0.0015 % apart**, so the two
+passes' numbers chain.
 
 The tip's shape, re-taken (inclusive, overlapping). The top of the list is
 still the `auto_tap -> activate_ability -> activate_ability_inner` chain,
@@ -627,56 +660,48 @@ Ordered by expected value. Each run pulls the top one, attaches numbers,
 and feeds what it finds back in. Re-profile and replenish when the list
 goes thin or stale.
 
-**Re-costed on the nineteenth pass's base** (`10cdbe63`, 3,768,870,942 Ir).
-The `compute_battlefield` call sites, with their per-site cost and call
-count, because two of them were paid this pass and the rest are ranked by
-this table. Take it from `--auto=yes`: every one is a single source line
-with its callee row underneath.
+**The `compute_battlefield` table is closed.** Every site the nineteenth
+and twentieth passes ranked is paid: `declare_attackers_banded`
+(`31116d43`), `declare_blockers` x2 (`42f59829`, `911cf298`),
+`resolve_combat` + `resolve_first_strike_damage` (`4f3e86c0`),
+`do_phasing` / `do_untap` / `process_cumulative_upkeep` (`ed4c152c`).
+**Calls 17,718 -> 5,488 -> 310**, and the 310 are all `submit_decision`
+(741,960 Ir / 0.02 %). Do not re-open this table; the layer system's
+remaining cost is per-card `computed_permanent` and the gather itself.
 
-| site | Ir | calls | status |
-|---|---|---|---|
-| `declare_attackers_banded` | 61,859,555 (1.64 %) | 3,780 | **open — top candidate, see (0) below** |
-| `resolve_combat` | 48,985,366 (1.30 %) | 3,196 | paid, `4f3e86c0` |
-| `declare_blockers` (validation) | 41,289,574 (1.10 %) | 2,598 | **open — needs the same gate as (0)** |
-| `declare_blockers` (P/T snapshot) | 37,976,438 (1.01 %) | 2,578 | paid, `42f59829` |
-| `do_phasing` | 22,845,211 (0.61 %) | 1,718 | legitimate — filters the whole board for Phasing |
-| `do_untap` | 22,784,044 (0.60 %) | 1,718 | legitimate — reads untap locks for every permanent |
-| `process_cumulative_upkeep` | 23,322,553 (0.62 %) | 1,742 | one pass per turn |
-| `resolve_first_strike_damage` | 2,309,715 (0.06 %) | 78 | paid, `4f3e86c0` |
-
-0. **`declare_attackers_banded`'s whole-board pass, 1.64 % — the analysis
-   is done, the code is not.** Its `computed` has exactly **two**
-   whole-board consumers; everything else is `computed_kw(id)` /
-   `computed.iter().find(|c| c.id == …)` on the declared attackers, the
-   band members, and `self.attacking`.
-   - **(a)** the CR 508.1d "attacks each combat if able" loop (`for c in
-     &self.battlefield`, ~`combat.rs:502`), which asks every permanent for
-     `MustAttack` / `MustAttackOrBlock` / `MustAttackIfAnotherAttacks` —
-     *or* `!c.goaded_by.is_empty()`, which is an instance field, not a
-     keyword, and has to be in the gate.
-   - **(b)** the Magnetic Web `AttackTogether` loop (~`combat.rs:546`),
-     already inside `for filter in groups`, so it is skipped whenever
-     `groups` is empty — but `groups` is built *after* `computed` and has
-     to be hoisted above it (it reads only `self.battlefield` +
-     `active_static`, so the move is mechanical).
-   **The gate is exact, not an over-approximation, and this is why:**
-   `compute_permanent` seeds `keywords` from exactly four places, all
-   visible in `layers.rs:491-518` — the live `definition.keywords`,
-   `granted_keywords_eot`, the CR 122.1b `keyword_counters`, and a
-   layer-6 `Modification::AddKeyword` in the gathered set.
-   `AddKeyword` is the *only* additive keyword modification (`RemoveKeyword`
-   / `CantHaveKeyword` / `RemoveAllAbilities` only shrink, so ignoring them
-   keeps the gate conservative). So `board_keyword_in_scope(fx, kws)` is a
-   disjunction over those four, and it is `false` on every bench board.
-   **Wrap the gate and the subset in one `with_frozen_layers` scope** so the
-   gather is paid once. **And add the safety net this pass did not need but
-   this one does**: give `computed_kw` a `debug_assert!` that the id is
-   present in `computed` whenever it is on the battlefield, so a
-   whole-board consumer nobody noticed panics across all 18,837 tests
-   instead of silently returning `&[]` and dropping a restriction.
-   Same treatment then unlocks `declare_blockers`' own validation pass
-   (1.10 %) — its blocker is the mirror-image CR 509.1c loop asking every
-   permanent for `MustBlock` / `MustAttackOrBlock`. **~2.7 % between them.**
+0. **`try_pay_after_snapshot_mode`, 507,252,955 Ir / 14.12 % — the largest
+   name in the profile that has never been on this list.** It sits just
+   above `auto_tap_for_cost_inner` (483,645,579 / 13.46 %), so most of it
+   is the auto-tap chain candidate (2) already describes from the other
+   end — but **the ~24 M between them has never been looked at**, and
+   neither has the question of how often the snapshot it takes is read.
+   That is the fourteenth pass's shape (`831054fb`, -11.38 %) applied one
+   level up: *a checkpoint is only worth its clone where something reads
+   the restore.* First probe: `--tree=caller` on it, then count how many
+   of its calls end in a rollback.
+1. **The attack search itself, `pick_attacks_scored` 51.35 % over 630
+   calls.** Unchanged from the seventeenth pass's framing and still the
+   largest single item in the file. Every pass has made its inner loop
+   cheaper and none has touched the loop. **This is a bot-quality question
+   as much as a perf one** — a narrower search is a different player, so it
+   needs a `bot_ladder` win-rate gate, not an Ir number. Cheapest first
+   probe: how often does the search depart from greedy? If rarely, the
+   candidates that never win are pure cost.
+2. **`would_accept`, 534,428,881 / 14.87 %**, and the auto-tap chain under
+   it — see the eighteenth pass's items (1) and (2) below, both still live.
+3. **`pick_by_outcome`, 226,841,402 / 6.31 %, of which 225,396,844 is a
+   single `in_place_collect`** — i.e. essentially all of it is one
+   `collect()` in `bot.rs`. Never profiled at line level. Read
+   `--auto=yes` on it before guessing; the eighteenth pass's candidate (1)
+   is the warning that the cost is the *iterator body*, not the container.
+4. **`dispatch_triggers_for_events`, 352,489,276 / 9.81 % over ~52 k
+   calls.** The eighteenth pass costed its internals: the cost is *setup*
+   (`push_ordered_trigger_candidates` 48 M, `trigger_grant_sources` 24 M,
+   `statics_granted_triggers_with` at 18 calls per dispatch), not matching
+   — `event_matches_spec` runs 1.2 times per dispatch. Wanted: a gate on
+   "does this batch contain an event any permanent listens for", taken
+   before the setup. Same shape as the passes above, one level out from
+   the layer system.
 
 **The profile of record is current** — retaken 2026-08-10 at `a4947da6`,
 the thirteenth pass's base. Shares quoted below without a date are from it.
