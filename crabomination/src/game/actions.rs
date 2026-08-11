@@ -11943,13 +11943,12 @@ impl GameState {
         // Deduct what the pool already covers before deciding what to tap.
         // We track a "virtual" pool snapshot so we don't mutate the real pool here.
         let pool = &self.players[player].mana_pool;
-        let mut avail: std::collections::HashMap<ManaColor, u32> = [
-            (ManaColor::White, pool.amount(ManaColor::White)),
-            (ManaColor::Blue,  pool.amount(ManaColor::Blue)),
-            (ManaColor::Black, pool.amount(ManaColor::Black)),
-            (ManaColor::Red,   pool.amount(ManaColor::Red)),
-            (ManaColor::Green, pool.amount(ManaColor::Green)),
-        ].into_iter().collect();
+        // Five fixed keys indexed by `color_index`, not a hash table: this
+        // runs once per auto-tap and every cost symbol probed it.
+        let mut avail = [0u32; 5];
+        for c in ManaColor::ALL {
+            avail[color_index(c)] = pool.amount(c);
+        }
         let mut avail_colorless = pool.colorless_amount();
 
         let mut still_need_colors: Vec<ManaColor> = Vec::new();
@@ -11961,29 +11960,29 @@ impl GameState {
         for sym in &cost.symbols {
             match sym {
                 ManaSymbol::Colored(c) => {
-                    let have = avail.entry(*c).or_default();
+                    let have = &mut avail[color_index(*c)];
                     if *have > 0 { *have -= 1; } else { still_need_colors.push(*c); }
                 }
                 ManaSymbol::Hybrid(a, b) => hybrids.push((*a, *b)),
                 ManaSymbol::Phyrexian(c) => {
                     // Pool covers it if available; otherwise paid with life — no tapping.
-                    let have = avail.entry(*c).or_default();
+                    let have = &mut avail[color_index(*c)];
                     if *have > 0 { *have -= 1; }
                 }
                 ManaSymbol::PhyrexianHybrid(a, b) => {
                     // Either color from the pool; otherwise paid with life.
-                    let have_a = avail.entry(*a).or_default();
+                    let have_a = &mut avail[color_index(*a)];
                     if *have_a > 0 {
                         *have_a -= 1;
                     } else {
-                        let have_b = avail.entry(*b).or_default();
+                        let have_b = &mut avail[color_index(*b)];
                         if *have_b > 0 { *have_b -= 1; }
                     }
                 }
                 ManaSymbol::MonoHybrid(n, c) => {
                     // {n/C}: spend a matching colored mana if on hand;
                     // otherwise treat the pip as {n} generic to tap for.
-                    let have = avail.entry(*c).or_default();
+                    let have = &mut avail[color_index(*c)];
                     if *have > 0 { *have -= 1; } else { generic += n; }
                 }
                 ManaSymbol::Generic(n) => generic += n,
@@ -12005,36 +12004,32 @@ impl GameState {
         // must tap the Swamp rather than hunting for a white source (the
         // previous code always tried color A and stranded the cast).
         // `reach` = pool mana + untapped sources that can make the color.
-        fn reach(
-            c: &ManaColor,
-            avail: &std::collections::HashMap<ManaColor, u32>,
-            prod: &std::collections::HashMap<ManaColor, u32>,
-        ) -> u32 {
-            avail.get(c).copied().unwrap_or(0) + prod.get(c).copied().unwrap_or(0)
+        fn reach(c: ManaColor, avail: &[u32; 5], prod: &[u32; 5]) -> u32 {
+            avail[color_index(c)] + prod[color_index(c)]
         }
         if !hybrids.is_empty() {
-            let mut prod: std::collections::HashMap<ManaColor, u32> = ManaColor::ALL
-                .iter()
-                .map(|c| (*c, self.untapped_producers_of(player, *c)))
-                .collect();
+            let mut prod = [0u32; 5];
+            for c in ManaColor::ALL {
+                prod[color_index(c)] = self.untapped_producers_of(player, c);
+            }
             while !hybrids.is_empty() {
                 let idx = hybrids
                     .iter()
-                    .position(|(a, b)| (reach(a, &avail, &prod) > 0) ^ (reach(b, &avail, &prod) > 0))
+                    .position(|(a, b)| (reach(*a, &avail, &prod) > 0) ^ (reach(*b, &avail, &prod) > 0))
                     .or_else(|| {
                         hybrids.iter().position(|(a, b)| {
-                            reach(a, &avail, &prod) > 0 || reach(b, &avail, &prod) > 0
+                            reach(*a, &avail, &prod) > 0 || reach(*b, &avail, &prod) > 0
                         })
                     })
                     .unwrap_or(0);
                 let (a, b) = hybrids.remove(idx);
-                let pick = if reach(&a, &avail, &prod) > 0 { a } else { b };
-                if avail.get(&pick).copied().unwrap_or(0) > 0 {
+                let pick = if reach(a, &avail, &prod) > 0 { a } else { b };
+                if avail[color_index(pick)] > 0 {
                     // Already in the pool — consume it, no tapping needed.
-                    *avail.entry(pick).or_default() -= 1;
-                } else if prod.get(&pick).copied().unwrap_or(0) > 0 {
+                    avail[color_index(pick)] -= 1;
+                } else if prod[color_index(pick)] > 0 {
                     // Reserve an untapped source of this color to tap below.
-                    *prod.entry(pick).or_default() -= 1;
+                    prod[color_index(pick)] -= 1;
                     still_need_colors.push(pick);
                 } else {
                     // Neither color reachable — push anyway; the tap loop
@@ -12045,7 +12040,7 @@ impl GameState {
         }
 
         // Remaining pool total after colored deductions covers generic pips.
-        let pool_total_left: u32 = avail.values().sum::<u32>() + avail_colorless;
+        let pool_total_left: u32 = avail.iter().sum::<u32>() + avail_colorless;
         let generic_to_tap = generic.saturating_sub(pool_total_left);
 
         // Tap a color-matched source for each still-needed colored pip.
@@ -12105,18 +12100,27 @@ impl GameState {
 
         // Tap any mana source for remaining generic pips, spending the
         // most replaceable ones first — see `source_redundancy`.
-        // Recomputed each iteration because tapping one source changes
-        // how redundant the rest are.
+        //
+        // `redundancy` reads `sources`, which this loop never mutates
+        // (tapping writes the battlefield, and the table's colours can't
+        // change from a tap — that is why it is built once at all), so the
+        // ranking is constant across the pips and is computed once here.
+        // It used to be recomputed per live source per pip. Gated on there
+        // being a generic pip at all: most costs have none, and building the
+        // ranking is O(sources² × colours).
+        let keep_by_idx: Vec<u32> = if smart && generic_to_tap > 0 {
+            sources.iter().map(|s| s.redundancy(&sources)).collect()
+        } else {
+            Vec::new()
+        };
         for _ in 0..generic_to_tap {
             // Same controller-vs-owner fix as the colored-pip loop.
-            let live: Vec<&ManaSourceInfo> = sources
+            let source = sources
                 .iter()
-                .filter(|s| !self.battlefield_find(s.id).is_some_and(|c| c.tapped))
-                .collect();
-            let source = live
-                .iter()
-                .map(|s| {
-                    let keep = if smart { s.redundancy(&sources) } else { 0 };
+                .enumerate()
+                .filter(|(_, s)| !self.battlefield_find(s.id).is_some_and(|c| c.tapped))
+                .map(|(i, s)| {
+                    let keep = if smart { keep_by_idx[i] } else { 0 };
                     (s.rank, std::cmp::Reverse(keep), s.id, s.first_idx)
                 })
                 .min_by_key(|&(rank, keep, ..)| (rank, keep))
