@@ -1252,6 +1252,27 @@ impl RandomBot {
             self.blocks_declared = false;
         }
     }
+
+    /// Is this combat step's declaration still to be made? For the Monte
+    /// Carlo layer, which searches the declaration itself but leaves
+    /// every other tick of the phase (tricks, removal, passes) to this
+    /// bot — the two share one latch or they double-declare.
+    pub(crate) fn declaration_pending(&mut self, state: &GameState, attacks: bool) -> bool {
+        self.sync_step(state);
+        if attacks { !self.attackers_declared } else { !self.blocks_declared }
+    }
+
+    /// Record that the declaration for the current step was made on this
+    /// bot's behalf, so its own combat arms pass priority instead of
+    /// re-declaring.
+    pub(crate) fn note_external_declaration(&mut self, state: &GameState, attacks: bool) {
+        self.sync_step(state);
+        if attacks {
+            self.attackers_declared = true;
+        } else {
+            self.blocks_declared = true;
+        }
+    }
 }
 
 impl Default for RandomBot {
@@ -6618,19 +6639,23 @@ fn pick_attacks_inner(state: &GameState, seat: usize) -> Vec<Attack> {
 ///
 /// Ties go to the greedy set, so the search only ever departs from the
 /// current behavior for a strict improvement.
-fn pick_attacks_scored(state: &GameState, seat: usize, w: &EvalWeights) -> Vec<Attack> {
+/// The attack declarations worth scoring: greedy first (index 0 wins
+/// every tie), all-home, then greedy-minus-one holdbacks ordered by
+/// toughness ascending — the cheapest body to keep home is also the one
+/// most likely to die attacking, so the front of the order is where
+/// both halves of the trade are largest. Shared by the sim search below
+/// and the Monte Carlo bot, so the two search identical menus.
+pub(crate) fn attack_candidates_for_mcts(
+    state: &GameState,
+    seat: usize,
+    w: &EvalWeights,
+) -> Vec<Vec<Attack>> {
     let greedy = pick_attacks(state, seat);
     if w.attack_search == 0 || greedy.is_empty() {
-        return greedy;
+        return vec![greedy];
     }
-    // Candidates, in the order they're scored. Index 0 is greedy and wins
-    // every tie.
     let mut candidates: Vec<Vec<Attack>> = vec![greedy.clone(), Vec::new()];
     if greedy.len() > 1 {
-        // Which attacker to consider holding back? Order by toughness
-        // ascending: the cheapest body to keep home is also the one most
-        // likely to die attacking, so the front of this list is where both
-        // halves of the trade are largest.
         let mut order: Vec<usize> = (0..greedy.len()).collect();
         order.sort_by_key(|&i| {
             state.battlefield_find(greedy[i].attacker).map(|c| c.toughness()).unwrap_or(0)
@@ -6640,6 +6665,14 @@ fn pick_attacks_scored(state: &GameState, seat: usize, w: &EvalWeights) -> Vec<A
             alt.remove(i);
             candidates.push(alt);
         }
+    }
+    candidates
+}
+
+fn pick_attacks_scored(state: &GameState, seat: usize, w: &EvalWeights) -> Vec<Attack> {
+    let mut candidates = attack_candidates_for_mcts(state, seat, w);
+    if candidates.len() == 1 {
+        return candidates.swap_remove(0);
     }
 
     // First-wins-ties in `choose_scored`: index 0 is greedy, so equal
@@ -6651,7 +6684,7 @@ fn pick_attacks_scored(state: &GameState, seat: usize, w: &EvalWeights) -> Vec<A
     }
     match choose_scored(state.turn_number, &scored) {
         Some(i) => candidates.swap_remove(i),
-        None => greedy,
+        None => candidates.swap_remove(0),
     }
 }
 
@@ -6886,16 +6919,23 @@ fn sim_spell_action_inner(g: &GameState, w: &EvalWeights) -> Option<GameAction> 
 ///
 /// Ties go to the greedy assignment, so the search only ever departs from
 /// current behavior for a strict improvement.
-fn pick_blocks_scored(state: &GameState, seat: usize, w: &EvalWeights) -> Vec<(CardId, CardId)> {
+/// The block assignments worth scoring: greedy first (index 0 wins every
+/// tie), no-blocks, greedy-minus-one releases (cheapest bodies first —
+/// those are the chump-blocks the greedy pass throws in to save life,
+/// and the ones most likely to be worth more alive than the damage they
+/// absorb), then the gang candidates. Shared by the sim search below and
+/// the Monte Carlo bot, so the two search identical menus.
+pub(crate) fn block_candidates_for_mcts(
+    state: &GameState,
+    seat: usize,
+    w: &EvalWeights,
+) -> Vec<Vec<(CardId, CardId)>> {
     let greedy = pick_blocks(state, seat);
     if w.block_search == 0 || greedy.is_empty() {
-        return greedy;
+        return vec![greedy];
     }
     let mut candidates: Vec<Vec<(CardId, CardId)>> = vec![greedy.clone(), Vec::new()];
     if greedy.len() > 1 {
-        // Consider releasing the cheapest bodies first: those are the
-        // chump-blocks the greedy pass throws in to save life, and the ones
-        // most likely to be worth more alive than the damage they absorb.
         let mut order: Vec<usize> = (0..greedy.len()).collect();
         order.sort_by_key(|&i| {
             state.battlefield_find(greedy[i].0).map(|c| c.toughness()).unwrap_or(0)
@@ -6910,6 +6950,14 @@ fn pick_blocks_scored(state: &GameState, seat: usize, w: &EvalWeights) -> Vec<(C
     if w.block_gang {
         candidates.extend(gang_block_candidates(state, seat, &greedy, w));
     }
+    candidates
+}
+
+fn pick_blocks_scored(state: &GameState, seat: usize, w: &EvalWeights) -> Vec<(CardId, CardId)> {
+    let mut candidates = block_candidates_for_mcts(state, seat, w);
+    if candidates.len() == 1 {
+        return candidates.swap_remove(0);
+    }
 
     let mut scored: Vec<(usize, i32)> = Vec::new();
     for (i, cand) in candidates.iter().enumerate() {
@@ -6918,7 +6966,7 @@ fn pick_blocks_scored(state: &GameState, seat: usize, w: &EvalWeights) -> Vec<(C
     }
     match choose_scored(state.turn_number, &scored) {
         Some(i) => candidates.swap_remove(i),
-        None => greedy,
+        None => candidates.swap_remove(0),
     }
 }
 
@@ -9746,6 +9794,18 @@ pub(crate) fn main_phase_candidates_for_mcts(
 /// The heuristic bot's board evaluation, for scoring a rollout leaf.
 pub(crate) fn eval_material_for_mcts(state: &GameState, seat: usize, w: &EvalWeights) -> i32 {
     eval_material(state, seat, w)
+}
+
+/// Kill-the-biggest-attacker-first, for the Monte Carlo bot's block arm:
+/// removal cast before blocks shrinks the combat the blocks then answer,
+/// and the searched declaration must see the same pre-shrunk board the
+/// heuristic's does.
+pub(crate) fn defensive_removal_for_mcts(
+    state: &GameState,
+    seat: usize,
+    w: &EvalWeights,
+) -> Option<GameAction> {
+    pick_defensive_removal(state, seat, w)
 }
 
 /// The heuristic board evaluation, exposed for measurement.

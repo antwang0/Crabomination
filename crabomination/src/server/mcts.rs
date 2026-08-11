@@ -128,6 +128,15 @@ pub struct MctsConfig {
     pub extend_close: f64,
     /// How close "close" is, in reward (win-probability) units.
     pub close_margin: f64,
+    /// Search combat declarations too (round 31). Off, the bot searches
+    /// only main-phase plays and combat falls through to the heuristic —
+    /// the shape every MCTS result through round 29 was measured on. On,
+    /// attack and block declarations are searched over the same candidate
+    /// menus the sim searches score (`attack_candidates_for_mcts` /
+    /// `block_candidates_for_mcts`), with rollouts in place of the
+    /// one-turn simulations — which sees through *sampled* opposing
+    /// combat instead of the greedy declarations the sims assume.
+    pub search_combat: bool,
 }
 
 impl Default for MctsConfig {
@@ -143,6 +152,7 @@ impl Default for MctsConfig {
             early_stop: false,
             extend_close: 1.0,
             close_margin: 0.03,
+            search_combat: false,
         }
     }
 }
@@ -406,10 +416,80 @@ impl MctsBot {
             .unwrap_or(0);
         candidates.into_iter().nth(best).unwrap_or(GameAction::PassPriority)
     }
+
+    /// The round-31 combat arms: search the attack/block declaration when
+    /// it is this seat's to make and still pending. `None` means "not a
+    /// searched combat tick" and the caller falls through to the normal
+    /// path. Master Warcraft-style declarations for the *other* side
+    /// (forced-only) stay with the heuristic, as does every non-declaration
+    /// tick of the phase — tricks, defensive removal follow-ups, passes —
+    /// via the shared latch on the fallback bot.
+    fn combat_search(&mut self, state: &GameState, seat: usize) -> Option<GameAction> {
+        if state.pending_decision.is_some()
+            || state.player_with_priority() != seat
+            || state.is_game_over()
+        {
+            return None;
+        }
+        let is_active = state.active_player_idx == seat;
+        let w = self.cfg.weights;
+
+        if state.step == TurnStep::DeclareAttackers
+            && is_active
+            && state.attack_declarer() == seat
+            && self.fallback.declaration_pending(state, true)
+        {
+            let cands = super::bot::attack_candidates_for_mcts(state, seat, &w);
+            self.fallback.note_external_declaration(state, true);
+            if cands.len() < 2 {
+                let only = cands.into_iter().next().unwrap_or_default();
+                return Some(GameAction::DeclareAttackers(only));
+            }
+            // No cheap prior scores exist for declarations (the heuristic's
+            // opinion costs a simulation); every arm starts equal.
+            let arms = cands
+                .into_iter()
+                .map(|a| (GameAction::DeclareAttackers(a), 0))
+                .collect();
+            return Some(self.search(state, seat, arms));
+        }
+
+        if state.step == TurnStep::DeclareBlockers
+            && !is_active
+            && state.may_declare_blocks(seat)
+            && !state.attacking().is_empty()
+            && self.fallback.declaration_pending(state, false)
+        {
+            // Removal before blocks, exactly like the heuristic arm: the
+            // declaration should answer the combat that remains after the
+            // biggest attacker dies. The latch stays unset so this tick
+            // repeats until the removal runs dry.
+            if let Some(a) = super::bot::defensive_removal_for_mcts(state, seat, &w) {
+                return Some(a);
+            }
+            let cands = super::bot::block_candidates_for_mcts(state, seat, &w);
+            self.fallback.note_external_declaration(state, false);
+            if cands.len() < 2 {
+                let only = cands.into_iter().next().unwrap_or_default();
+                return Some(GameAction::DeclareBlockers(only));
+            }
+            let arms = cands
+                .into_iter()
+                .map(|b| (GameAction::DeclareBlockers(b), 0))
+                .collect();
+            return Some(self.search(state, seat, arms));
+        }
+        None
+    }
 }
 
 impl Bot for MctsBot {
     fn next_action(&mut self, state: &GameState, seat: usize) -> Option<GameAction> {
+        if self.cfg.search_combat
+            && let Some(a) = self.combat_search(state, seat)
+        {
+            return Some(a);
+        }
         // Only the main-phase play choice is searched; everything else is
         // the heuristic bot's, unchanged.
         let searchable = state.pending_decision.is_none()
@@ -436,6 +516,93 @@ impl Bot for MctsBot {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn creature(name: &'static str, p: i32, t: i32) -> crate::card::CardDefinition {
+        crate::card::CardDefinition {
+            name,
+            card_types: vec![crate::card::CardType::Creature],
+            power: p,
+            toughness: t,
+            ..Default::default()
+        }
+    }
+
+    /// The round-31 block arm: a searched declaration comes back from the
+    /// candidate menu, and the latch shared with the fallback stops the
+    /// next tick of the same step from declaring again.
+    #[test]
+    fn combat_search_declares_blocks_once() {
+        use crate::game::types::{Attack, AttackTarget};
+        use crate::player::Player;
+
+        let players = vec![Player::new(0, "A"), Player::new(1, "B")];
+        let mut g = GameState::new(players);
+        g.step = TurnStep::DeclareBlockers;
+        g.active_player_idx = 1;
+        g.priority.player_with_priority = 0;
+        let atk = g.add_card_to_battlefield(1, creature("Beater", 3, 3));
+        g.add_card_to_battlefield(0, creature("Bear A", 2, 2));
+        g.add_card_to_battlefield(0, creature("Bear B", 2, 2));
+        g.attacking = vec![Attack { attacker: atk, target: AttackTarget::Player(0) }];
+
+        let mut bot = MctsBot::new(MctsConfig {
+            iterations: 8,
+            search_combat: true,
+            ..MctsConfig::default()
+        });
+        let a = bot.next_action(&g, 0);
+        assert!(
+            matches!(a, Some(GameAction::DeclareBlockers(_))),
+            "searched block declaration, got {a:?}"
+        );
+        let b = bot.next_action(&g, 0);
+        assert!(
+            !matches!(b, Some(GameAction::DeclareBlockers(_))),
+            "second tick must not re-declare, got {b:?}"
+        );
+    }
+
+    /// The attack arm, and the off switch: with `search_combat` false the
+    /// declaration is the fallback heuristic's exactly as before round 31.
+    #[test]
+    fn combat_search_declares_attacks_and_defaults_off() {
+        use crate::player::Player;
+
+        let players = vec![Player::new(0, "A"), Player::new(1, "B")];
+        let mut g = GameState::new(players);
+        g.step = TurnStep::DeclareAttackers;
+        g.active_player_idx = 0;
+        g.priority.player_with_priority = 0;
+        g.add_card_to_battlefield(0, creature("Bear", 2, 2));
+        for c in g.battlefield.iter_mut() {
+            c.summoning_sick = false;
+        }
+
+        let mut on = MctsBot::new(MctsConfig {
+            iterations: 8,
+            search_combat: true,
+            ..MctsConfig::default()
+        });
+        let a = on.next_action(&g, 0);
+        assert!(
+            matches!(a, Some(GameAction::DeclareAttackers(_))),
+            "searched attack declaration, got {a:?}"
+        );
+        let again = on.next_action(&g, 0);
+        assert!(
+            !matches!(again, Some(GameAction::DeclareAttackers(_))),
+            "second tick must not re-declare, got {again:?}"
+        );
+
+        // Default config: the combat arm never fires; the fallback's own
+        // declaration path (which sets its own latch) still runs.
+        let mut off = MctsBot::new(MctsConfig { iterations: 8, ..MctsConfig::default() });
+        let d = off.next_action(&g, 0);
+        assert!(
+            matches!(d, Some(GameAction::DeclareAttackers(_))),
+            "fallback declares when search_combat is off, got {d:?}"
+        );
+    }
 
     #[test]
     fn softmax_priors_are_a_distribution_ordered_by_score() {
