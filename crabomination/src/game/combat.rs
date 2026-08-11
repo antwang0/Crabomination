@@ -3,6 +3,13 @@ use crate::card::Keyword;
 use crate::effect::{Effect, EventKind, Selector, Value};
 use crate::game::layers::ComputedPermanent;
 
+/// One combat/noncombat damage trigger gathered by `fire_combat_damage_
+/// triggers`, before its intervening-'if' runs: `(source, effect,
+/// controller, intervening-if, bind_dealer)`. The last flag binds the damage
+/// dealer as the body's `TriggerSource` (the Phase-1.5 listener pattern —
+/// Kaito's "return one of them to hand").
+type DamageTrigger = (CardId, Effect, usize, Option<crate::card::Predicate>, bool);
+
 /// The `AttackBlockCostTapAnother` filters carried by a computed keyword list
 /// (Hollow Warrior) — one helper must be tapped per entry.
 fn tap_another_filters(kws: &[Keyword]) -> Vec<crate::card::SelectionRequirement> {
@@ -4691,13 +4698,10 @@ impl GameState {
             .find(|c| c.id == source)
             .map(|c| c.controller);
 
-        // (source, effect, controller, intervening-if, bind_dealer): the last
-        // flag binds the damage dealer as the body's `TriggerSource` (the
-        // Phase-1.5 listener pattern — Kaito's "return one of them to hand").
-        // One bucket per requested kind; drained in order at the bottom.
+        // One [`DamageTrigger`] bucket per requested kind; drained in order at
+        // the bottom.
         let slot = |k: &EventKind| kinds.iter().position(|want| want == k);
-        let mut by_kind: Vec<Vec<(CardId, Effect, usize, Option<crate::card::Predicate>, bool)>> =
-            kinds.iter().map(|_| Vec::new()).collect();
+        let mut by_kind: Vec<Vec<DamageTrigger>> = kinds.iter().map(|_| Vec::new()).collect();
 
         if let Some(c) = self.battlefield.iter().find(|c| c.id == source) {
             // Printed + statics-granted ("Slivers you control have
