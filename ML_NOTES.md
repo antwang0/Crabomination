@@ -7,6 +7,34 @@ only stays dead while the reasoning that killed it is readable.
 
 ## Tier 13 — AI
 
+- 🟡 **Round 30 — champion re-baseline: the healthy regime reproduces
+  champion-class nets; det0 data is a null at full training; the
+  incumbent survives.** The 2×2 grid (actor data × training seed, all
+  GPU learner, champion regime, encoder v6, gates = 2×100-game paired
+  cells per opponent):
+
+  | arm | steps | calib AUC | gang pooled | atk-sim pooled |
+  |---|---|---|---|---|
+  | det1 s43 (r28f) | 64k | 0.8115 | 52.1 % | 53.7 % |
+  | det1 s97 (r28f) | 68k | 0.8182 | 51.2 % | 52.7 % |
+  | det0 s43 | 56k | 0.8088 | 50.9 % | 52.7 % |
+  | det0 s97 | 64k | 0.8062 | 51.2 % | 53.4 % |
+  | champion (incumbent) | 70k | — | 51.7 % | 54.5 % |
+
+  1. **The det0 +1pt reading from the crippled CPU runs does not
+     replicate**: at full training the arms are indistinguishable (det1
+     pooled 51.6/53.2 vs det0 51.1/53.0). The honest-sims default
+     (`determinize: 1`) costs the training data nothing measurable —
+     keep it; `--actor-det` stays as a control knob only.
+  2. **No cell clears the incumbent** (pre-registered adoption rule):
+     the four fresh draws cluster gang 50.9–52.1 / atk-sim 52.7–53.7,
+     and the champion's 54.5 atk-sim sits at the top edge. Consistent
+     with the champion being a good draw from this distribution, not a
+     different distribution. Champion stays; four spare
+     champion-class nets now exist (nets_r28f_full_*, nets_r30_det0_*).
+  3. The repaired pipeline is trustworthy again: 4/4 healthy runs land
+     in the champion band on the first attempt.
+
 - 🔴 **Round 29 — MCTS internals: every knob is null-to-negative; only
   iterations pay.** Three tunings of the round-26/27 search, each gated
   head-to-head against the `mcts-net-deep` control (64 iters / h3 /
