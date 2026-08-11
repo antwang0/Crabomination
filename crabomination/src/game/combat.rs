@@ -305,11 +305,81 @@ impl GameState {
             }
         }
 
-        // One whole-board layer pass for the whole declaration. Everything
-        // from here to the trigger collection is validation — nothing mutates
-        // a layer input — and the band, attacks-alone, can't-attack-alone and
-        // trigger passes were each taking their own, up to four per call.
-        let computed = self.compute_battlefield();
+        // CR 508.1d — "attacks each combat if able" (Juggernaut, goaded
+        // creatures). Any creature the active player controls that carries
+        // MustAttack and *can* legally attack (untapped, not sick / has
+        // Haste, not Defender / CantAttack) must be in the declared batch
+        // while at least one opponent is in range. Reject an incomplete
+        // declaration so the requirement is honored.
+        let has_legal_target = self
+            .players
+            .iter()
+            .enumerate()
+            .any(|(i, pl)| !self.same_team(p, i) && pl.is_alive());
+        // CR 508.1d — Magnetic Web: once one of the group attacks, every
+        // able member of the group has to join it. Built before the layer
+        // pass because an empty group list is what lets the pass stay small
+        // — it reads only the battlefield and the active statics, so the
+        // hoist is mechanical.
+        let groups: Vec<crate::card::SelectionRequirement> = if has_legal_target {
+            self.battlefield
+                .iter()
+                .flat_map(|c| c.definition.static_abilities.iter().map(move |sa| (c, sa)))
+                .filter_map(|(c, sa)| match self.active_static(&sa.effect, c) {
+                    Some(crate::effect::StaticEffect::AttackTogether { filter }) => {
+                        Some(filter.clone())
+                    }
+                    _ => None,
+                })
+                .collect()
+        } else {
+            Vec::new()
+        };
+        // CR 508.1a/d — Oracle en-Vec's mandate: only the chosen creatures may
+        // attack, and each of them that can attack must.
+        let mandate = self.armed_attack_mandate_for(p);
+
+        // One layer pass for the whole declaration. Everything from here to
+        // the trigger collection is validation — nothing mutates a layer
+        // input — and the band, attacks-alone, can't-attack-alone and trigger
+        // passes were each taking their own, up to four per call.
+        //
+        // Only two consumers below read the *whole* board: the CR 508.1d
+        // requirement loop and the `AttackTogether` loop. Both are no-ops
+        // unless a permanent can carry an attack requirement, so when none
+        // can, the pass covers just the declared attackers, the band members
+        // and the creatures already attacking — a handful instead of ~23.
+        // One freeze scope so the gate and the pass share a single gather.
+        let (computed, attack_requirement) = self.with_frozen_layers(|g| {
+            let requirement = has_legal_target
+                && (g.battlefield.iter().any(|c| !c.goaded_by.is_empty())
+                    || g.board_keyword_in_scope(&[
+                        Keyword::MustAttack,
+                        Keyword::MustAttackOrBlock,
+                        Keyword::MustAttackIfAnotherAttacks,
+                    ]));
+            if requirement || !groups.is_empty() {
+                return (g.compute_battlefield(), requirement);
+            }
+            let mut ids: Vec<CardId> = Vec::new();
+            let mut want = |id: CardId| {
+                if !ids.contains(&id) {
+                    ids.push(id);
+                }
+            };
+            attacks.iter().for_each(|a| want(a.attacker));
+            bands.iter().flatten().for_each(|&m| want(m));
+            g.attacking.iter().for_each(|a| want(a.attacker));
+            mandate.iter().flatten().for_each(|&id| want(id));
+            (g.compute_permanents(&ids), requirement)
+        });
+        // A whole-board consumer that slipped past the gate above would
+        // silently read `&[]` for every permanent outside the subset and drop
+        // its restriction. Panic on it across the suite instead.
+        #[cfg(debug_assertions)]
+        let computed_ids: Vec<CardId> = computed.iter().map(|c| c.id).collect();
+        #[cfg(debug_assertions)]
+        let battlefield_ids: Vec<CardId> = self.battlefield.iter().map(|c| c.id).collect();
 
         // CR 702.22c-d — band legality: every member must be attacking, at
         // most one may lack banding, at least one must have it, and they must
@@ -457,6 +527,12 @@ impl GameState {
             Option<crate::effect::Predicate>,
         )> = vec![];
         let computed_kw = |id: CardId| -> &[Keyword] {
+            #[cfg(debug_assertions)]
+            debug_assert!(
+                computed_ids.contains(&id) || !battlefield_ids.contains(&id),
+                "computed_kw({id:?}) read a battlefield permanent outside the gated \
+                 subset — a whole-board consumer needs the gate widened"
+            );
             computed
                 .iter()
                 .find(|c| c.id == id)
@@ -464,20 +540,7 @@ impl GameState {
                 .unwrap_or(&[])
         };
 
-        // CR 508.1d — "attacks each combat if able" (Juggernaut, goaded
-        // creatures). Any creature the active player controls that carries
-        // MustAttack and *can* legally attack (untapped, not sick / has
-        // Haste, not Defender / CantAttack) must be in the declared batch
-        // while at least one opponent is in range. Reject an incomplete
-        // declaration so the requirement is honored.
-        let has_legal_target = self
-            .players
-            .iter()
-            .enumerate()
-            .any(|(i, pl)| !self.same_team(p, i) && pl.is_alive());
-        // CR 508.1a/d — Oracle en-Vec's mandate: only the chosen creatures may
-        // attack, and each of them that can attack must.
-        if let Some(chosen) = self.armed_attack_mandate_for(p) {
+        if let Some(chosen) = mandate {
             if let Some(bad) = attacks.iter().find(|a| !chosen.contains(&a.attacker)) {
                 return Err(GameError::CannotAttack(bad.attacker));
             }
@@ -498,7 +561,7 @@ impl GameState {
             }
         }
 
-        if has_legal_target {
+        if attack_requirement {
             for c in &self.battlefield {
                 // A creature must be declared if it carries MustAttack
                 // (Juggernaut) or is goaded (CR 701.38 — "attacks each
@@ -523,40 +586,27 @@ impl GameState {
                     return Err(GameError::CannotAttack(c.id));
                 }
             }
-            // CR 508.1d — Magnetic Web: once one of the group attacks, every
-            // able member of the group has to join it.
-            let groups: Vec<crate::card::SelectionRequirement> = self
-                .battlefield
-                .iter()
-                .flat_map(|c| c.definition.static_abilities.iter().map(move |sa| (c, sa)))
-                .filter_map(|(c, sa)| match self.active_static(&sa.effect, c) {
-                    Some(crate::effect::StaticEffect::AttackTogether { filter }) => {
-                        Some(filter.clone())
-                    }
-                    _ => None,
-                })
-                .collect();
-            for filter in groups {
-                let matches = |id: CardId| {
-                    self.evaluate_requirement_static(&filter, &Target::Permanent(id), p, None)
-                };
-                if !attacks.iter().any(|atk| matches(atk.attacker)) {
+        }
+        // CR 508.1d — Magnetic Web (`groups`, built above the layer pass).
+        for filter in groups {
+            let matches = |id: CardId| {
+                self.evaluate_requirement_static(&filter, &Target::Permanent(id), p, None)
+            };
+            if !attacks.iter().any(|atk| matches(atk.attacker)) {
+                continue;
+            }
+            for c in &self.battlefield {
+                if c.controller != p || !matches(c.id) {
                     continue;
                 }
-                for c in &self.battlefield {
-                    if c.controller != p || !matches(c.id) {
-                        continue;
-                    }
-                    let kws = computed_kw(c.id);
-                    let able = c.definition.is_creature()
-                        && !c.tapped
-                        && (!kws.contains(&Keyword::Defender)
-                            || self.ignores_defender_for_attack(c))
-                        && !kws.contains(&Keyword::CantAttack)
-                        && (!c.summoning_sick || kws.contains(&Keyword::Haste));
-                    if able && !attacks.iter().any(|atk| atk.attacker == c.id) {
-                        return Err(GameError::CannotAttack(c.id));
-                    }
+                let kws = computed_kw(c.id);
+                let able = c.definition.is_creature()
+                    && !c.tapped
+                    && (!kws.contains(&Keyword::Defender) || self.ignores_defender_for_attack(c))
+                    && !kws.contains(&Keyword::CantAttack)
+                    && (!c.summoning_sick || kws.contains(&Keyword::Haste));
+                if able && !attacks.iter().any(|atk| atk.attacker == c.id) {
+                    return Err(GameError::CannotAttack(c.id));
                 }
             }
         }

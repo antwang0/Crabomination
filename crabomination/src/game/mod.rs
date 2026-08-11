@@ -7363,6 +7363,50 @@ impl GameState {
         go(&self.battlefield, &self.gather_continuous_effects(), ids)
     }
 
+    /// Cheap over-approximation of "some battlefield permanent's *computed*
+    /// keyword set can contain one of `kws`", answered without a layer pass.
+    /// `false` is authoritative, so a whole-board requirement loop keyed on
+    /// one of `kws` can be skipped — and with it the whole-board pass its
+    /// consumers would otherwise need (see [`compute_permanents`]).
+    ///
+    /// `compute_permanent` seeds `keywords` from exactly four places
+    /// (`layers.rs`): the live `definition.keywords`, `granted_keywords_eot`,
+    /// the CR 122.1b `keyword_counters`, and a layer-6
+    /// `Modification::AddKeyword` in the gathered set. `AddKeyword` is the
+    /// only *additive* keyword modification — `RemoveKeyword` /
+    /// `CantHaveKeyword` / `RemoveAllAbilities` only shrink, and the two
+    /// text-changing rewrites retype `Protection` / `Landwalk` in place — so
+    /// the disjunction over those four never misses. Debug builds re-run the
+    /// whole-board pass whenever this says `false`, so the suite audits it.
+    ///
+    /// [`compute_permanents`]: Self::compute_permanents
+    pub(crate) fn board_keyword_in_scope(&self, kws: &[Keyword]) -> bool {
+        let granted = |fx: &[ContinuousEffect]| {
+            fx.iter().any(
+                |e| matches!(&e.modification, Modification::AddKeyword(k) if kws.contains(k)),
+            )
+        };
+        let hit = self.battlefield.iter().any(|c| {
+            c.definition.keywords.iter().any(|k| kws.contains(k))
+                || c.granted_keywords_eot.iter().any(|k| kws.contains(k))
+                || kws.iter().any(|k| c.keyword_counters.get(k).is_some_and(|n| *n > 0))
+        }) || match self.frozen_effects() {
+            Some(fx) => granted(&fx),
+            None => granted(&self.gather_continuous_effects()),
+        };
+        #[cfg(debug_assertions)]
+        if !hit {
+            debug_assert!(
+                !self
+                    .compute_battlefield()
+                    .iter()
+                    .any(|c| c.keywords.iter().any(|k| kws.contains(k))),
+                "board_keyword_in_scope({kws:?}) said no, but the computed board has one"
+            );
+        }
+        hit
+    }
+
     /// The computed view restricted to permanents that can be creatures —
     /// what the CR 704.5g death sweep reads. A permanent printed without the
     /// Creature type only gains it from an `AddCardType` / `SetCardTypes`
