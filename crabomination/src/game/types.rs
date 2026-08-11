@@ -5,6 +5,143 @@ use crate::decision::{Decision, DecisionAnswer};
 use crate::effect::Effect;
 use crate::mana::{Color, ManaError};
 
+/// An insertion-ordered set of ids, backed by a `Vec`.
+///
+/// A `Vec` and not a `HashSet` for the same two reasons as
+/// [`CounterBag`](crate::card::CounterBag). **Clone cost**: `ColdState`
+/// carries ~20 of these behind one `CowBox`, so *every* write to any cold
+/// field deep-copies the whole group — an empty `hashbrown` table clone
+/// still walks its control bytes where an empty `Vec` clone allocates
+/// nothing. On the bench profile `RawTable::clone` ran 984,988 times under
+/// the CoW unshare for 1.22 % of the program. **Order**: `RandomState`
+/// reseeds a `HashSet`'s iteration order per process, so any consumer that
+/// iterates one leaks that reseed into game state.
+///
+/// These sets hold a handful of ids each, so the linear scans are cheaper
+/// than hashing. `insert` keeps set semantics (no duplicates) and returns
+/// whether the value was new, matching `HashSet::insert`.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(transparent)]
+pub struct IdSet<T>(Vec<T>);
+
+impl<T> Default for IdSet<T> {
+    fn default() -> Self {
+        Self(Vec::new())
+    }
+}
+
+impl<T: PartialEq> IdSet<T> {
+    pub fn insert(&mut self, v: T) -> bool {
+        if self.0.contains(&v) {
+            return false;
+        }
+        self.0.push(v);
+        true
+    }
+    pub fn contains(&self, v: &T) -> bool {
+        self.0.contains(v)
+    }
+    pub fn remove(&mut self, v: &T) -> bool {
+        match self.0.iter().position(|x| x == v) {
+            Some(i) => {
+                self.0.remove(i);
+                true
+            }
+            None => false,
+        }
+    }
+    pub fn retain(&mut self, f: impl FnMut(&T) -> bool) {
+        self.0.retain(f);
+    }
+}
+
+impl<T> IdSet<T> {
+    pub fn clear(&mut self) {
+        self.0.clear();
+    }
+    pub fn len(&self) -> usize {
+        self.0.len()
+    }
+    pub fn is_empty(&self) -> bool {
+        self.0.is_empty()
+    }
+    pub fn iter(&self) -> std::slice::Iter<'_, T> {
+        self.0.iter()
+    }
+}
+
+impl<T: PartialEq> PartialEq for IdSet<T> {
+    /// Set equality: order-insensitive, so a value round-tripped through a
+    /// snapshot still compares equal however it was rebuilt.
+    fn eq(&self, other: &Self) -> bool {
+        self.0.len() == other.0.len() && self.0.iter().all(|v| other.0.contains(v))
+    }
+}
+
+impl<T: Eq> Eq for IdSet<T> {}
+
+impl<'a, T> IntoIterator for &'a IdSet<T> {
+    type Item = &'a T;
+    type IntoIter = std::slice::Iter<'a, T>;
+    fn into_iter(self) -> Self::IntoIter {
+        self.0.iter()
+    }
+}
+
+impl<T: PartialEq> FromIterator<T> for IdSet<T> {
+    fn from_iter<I: IntoIterator<Item = T>>(it: I) -> Self {
+        let mut out = Self::default();
+        for v in it {
+            out.insert(v);
+        }
+        out
+    }
+}
+
+impl<T: PartialEq> Extend<T> for IdSet<T> {
+    fn extend<I: IntoIterator<Item = T>>(&mut self, it: I) {
+        for v in it {
+            self.insert(v);
+        }
+    }
+}
+
+#[cfg(test)]
+mod id_set_tests {
+    use super::IdSet;
+
+    /// The three properties the field swap relies on: `insert` keeps set
+    /// semantics and reports novelty like `HashSet::insert`, iteration is
+    /// insertion order (never `RandomState`'s), and equality ignores order
+    /// so a rebuilt value still compares equal.
+    #[test]
+    fn set_semantics_insertion_order_and_unordered_eq() {
+        let mut s: IdSet<u32> = IdSet::default();
+        assert!(s.insert(7));
+        assert!(!s.insert(7), "duplicate insert reports not-new");
+        s.insert(3);
+        assert_eq!(s.len(), 2);
+        assert_eq!(s.iter().copied().collect::<Vec<_>>(), vec![7, 3], "insertion order");
+        assert!(s.contains(&3) && !s.contains(&9));
+        assert!(s.remove(&7) && !s.remove(&7));
+        assert_eq!(s.iter().copied().collect::<Vec<_>>(), vec![3]);
+
+        let a: IdSet<u32> = [1, 2].into_iter().collect();
+        let b: IdSet<u32> = [2, 1].into_iter().collect();
+        assert_eq!(a, b, "equality is order-insensitive");
+    }
+
+    /// Same wire shape as the `HashSet` it replaces — a sequence — so
+    /// existing snapshots round-trip.
+    #[test]
+    fn serializes_as_a_sequence() {
+        let s: IdSet<u32> = [5, 6].into_iter().collect();
+        assert_eq!(serde_json::to_string(&s).unwrap(), "[5,6]");
+        let back: IdSet<u32> = serde_json::from_str("[5,6]").unwrap();
+        assert_eq!(back, s);
+    }
+}
+
 /// serde default for `ImpulsePending.take` (back-compat: a snapshot without
 /// the field takes one card).
 pub fn one() -> usize {

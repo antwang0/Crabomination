@@ -359,20 +359,20 @@ pub struct ColdState {
     /// Cards put into a graveyard **from the battlefield** this turn (CR —
     /// Second Sunrise's restore set). Cleared at cleanup.
     #[serde(default)]
-    pub graveyard_from_battlefield_this_turn: std::collections::HashSet<CardId>,
+    pub graveyard_from_battlefield_this_turn: crate::game::types::IdSet<CardId>,
     /// Cards that entered the battlefield from a graveyard — or were cast
     /// from one — this turn. Stamped at the gy→battlefield move funnel and
     /// at every cast-from-graveyard site; read by
     /// `SelectionRequirement::EnteredFromGraveyardThisTurn` (Prized
     /// Amalgam's gate). Cleared at each turn's untap step.
     #[serde(default)]
-    pub(crate) entered_from_graveyard_this_turn: std::collections::HashSet<CardId>,
+    pub(crate) entered_from_graveyard_this_turn: crate::game::types::IdSet<CardId>,
     /// Permanents that entered the battlefield directly from exile (not via a
     /// cast) this turn. Set in the exile→battlefield move path; read by
     /// `Predicate::EnteredFromExile` (Fire Lord Zuko's "whenever a permanent
     /// you control enters from exile"). Cleared at each turn's untap step.
     #[serde(default)]
-    pub(crate) entered_from_exile_this_turn: std::collections::HashSet<CardId>,
+    pub(crate) entered_from_exile_this_turn: crate::game::types::IdSet<CardId>,
     /// Death-time snapshots of every creature that died this turn, in death
     /// order. The typed sibling of `Player.creatures_died_this_turn`, which
     /// is only a tally; read by `Predicate::CreatureDiedThisTurnMatching`
@@ -723,13 +723,13 @@ pub struct ColdState {
     /// the new `Predicate::SourceGainedCounterThisTurn` predicate.
     /// `#[serde(default)]` for snapshot back-compat.
     #[serde(default)]
-    pub permanents_gained_counter_this_turn: std::collections::HashSet<CardId>,
+    pub permanents_gained_counter_this_turn: crate::game::types::IdSet<CardId>,
     /// Permanents whose `StaticEffect::CounterAmplifierOncePerTurn` extra
     /// +1/+1 counter has already been added this turn (Cursed Wombat). The
     /// granted ability "triggers only once each turn" per permanent; cleared at
     /// cleanup. `#[serde(default)]` for snapshot back-compat.
     #[serde(default)]
-    pub(crate) permanents_amplified_counter_this_turn: std::collections::HashSet<CardId>,
+    pub(crate) permanents_amplified_counter_this_turn: crate::game::types::IdSet<CardId>,
     /// How many times each source's escalating ability has resolved this turn
     /// (CR 603.3-style "if this is the first/second/third time …" — Vito,
     /// Fanatic of Aclazotz). Keyed by source `CardId`; cleared at cleanup.
@@ -755,16 +755,16 @@ pub struct ColdState {
     /// combat / removal, not just the spell's own damage. `#[serde(default)]`
     /// for snapshot back-compat.
     #[serde(default)]
-    pub(crate) dies_to_exile_eot: std::collections::HashSet<CardId>,
+    pub(crate) dies_to_exile_eot: crate::game::types::IdSet<CardId>,
     /// CR 614 — creatures granted Kumano's rider until end of turn: a creature
     /// they damage is exiled instead of dying. The granted twin of
     /// `CardDefinition.damage_exiles_if_dies`; cleared at cleanup (Runesword).
     #[serde(default)]
-    pub(crate) damage_exiles_victim_eot: std::collections::HashSet<CardId>,
+    pub(crate) damage_exiles_victim_eot: crate::game::types::IdSet<CardId>,
     /// CR 701.15g — creatures whose damage this turn denies its victim
     /// regeneration (Runesword). Cleared at cleanup.
     #[serde(default)]
-    pub(crate) damage_denies_regen_eot: std::collections::HashSet<CardId>,
+    pub(crate) damage_denies_regen_eot: crate::game::types::IdSet<CardId>,
     /// "That spell gains [keywords]" grants onto spells still on the stack
     /// (Judith, Carnage Connoisseur). Consulted when a spell starts resolving
     /// and dropped once it leaves the stack.
@@ -797,39 +797,39 @@ pub struct ColdState {
     /// a later turn. Tracks the cards a player foretold during the current
     /// turn; cleared at cleanup. `#[serde(default)]` for snapshot back-compat.
     #[serde(default)]
-    pub foretold_this_turn: std::collections::HashSet<CardId>,
+    pub foretold_this_turn: crate::game::types::IdSet<CardId>,
     /// CR 702.170 — cards currently plotted (exiled face-up, castable from
     /// exile without paying their mana cost on a later turn).
     /// `#[serde(default)]` for snapshot back-compat.
     #[serde(default)]
-    pub plotted_cards: std::collections::HashSet<CardId>,
+    pub plotted_cards: crate::game::types::IdSet<CardId>,
     /// CR 603.8 latch for `sacrifice_and_burn_when_stolen` (Bronze Bombshell):
     /// permanents whose steal penalty has already been put on the stack, so the
     /// state trigger fires once per control change rather than every SBA pass.
     /// Cleared for a card when control returns to its owner. `#[serde(default)]`.
     #[serde(default)]
-    pub steal_penalty_armed: std::collections::HashSet<CardId>,
+    pub steal_penalty_armed: crate::game::types::IdSet<CardId>,
     /// CR 603.8 latch for `sacrifice_when_you_control_no_other` (Synod
     /// Centurion) — the sibling of `steal_penalty_armed`. Cleared for a card
     /// as soon as the controller has a matching permanent again.
     #[serde(default)]
-    pub no_other_sacrifice_armed: std::collections::HashSet<CardId>,
+    pub no_other_sacrifice_armed: crate::game::types::IdSet<CardId>,
     /// CR 603.8 latch for `CardDefinition::state_trigger`: permanents whose
     /// state trigger has already been put on the stack while its condition
     /// holds. Cleared for a card as soon as the condition is false again, so
     /// the ability can trigger anew (Hidden Predators, Veiled Crocodile).
     #[serde(default)]
-    pub state_trigger_armed: std::collections::HashSet<CardId>,
+    pub state_trigger_armed: crate::game::types::IdSet<CardId>,
     /// CR 702.170d — cards plotted *this* turn can't be cast until a later
     /// turn. Cleared at cleanup. `#[serde(default)]` for back-compat.
     #[serde(default)]
-    pub plotted_this_turn: std::collections::HashSet<CardId>,
+    pub plotted_this_turn: crate::game::types::IdSet<CardId>,
     /// CR 603.3d — triggered abilities flagged `TriggeredAbility::once_per_turn`
     /// ("this ability triggers only once each turn") that have already fired
     /// this turn, keyed by (source card, trigger index). Cleared at cleanup.
     /// `#[serde(default)]` for snapshot back-compat. Powers Dramatic Finale.
     #[serde(default)]
-    pub triggered_once_per_turn_used: std::collections::HashSet<(CardId, usize)>,
+    pub triggered_once_per_turn_used: crate::game::types::IdSet<(CardId, usize)>,
     /// `EventSpec::per_subject_cap` tallies: fires of a capped trigger this
     /// turn, keyed by (watcher, event subject). Cleared at cleanup.
     #[serde(default)]
