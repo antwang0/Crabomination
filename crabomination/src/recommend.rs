@@ -865,6 +865,14 @@ pub struct SimCost {
     pub decisions: u64,
     /// Sum of `turn_number` at game end.
     pub turns: u64,
+    /// Undecided games that ran out of action budget — the loop was still
+    /// making moves.
+    pub action_capped: u64,
+    /// Undecided games where neither bot had a move accepted for eight
+    /// consecutive rounds — the loop was stuck, not slow.
+    pub no_legal_move: u64,
+    /// Games that ended by the rules with no winner (CR 104.4 draw).
+    pub draws: u64,
 }
 
 impl SimCost {
@@ -872,6 +880,12 @@ impl SimCost {
         self.games += 1;
         self.decisions += o.actions as u64;
         self.turns += o.turns as u64;
+        match o.stop {
+            StopReason::ActionCap => self.action_capped += 1,
+            StopReason::NoLegalMove => self.no_legal_move += 1,
+            StopReason::GameOver if o.winner.is_none() => self.draws += 1,
+            StopReason::GameOver => {}
+        }
     }
 }
 
@@ -880,6 +894,9 @@ impl std::ops::AddAssign for SimCost {
         self.games += r.games;
         self.decisions += r.decisions;
         self.turns += r.turns;
+        self.action_capped += r.action_capped;
+        self.no_legal_move += r.no_legal_move;
+        self.draws += r.draws;
     }
 }
 
@@ -1160,6 +1177,30 @@ pub(crate) fn build_match_template(seat0: &[CardFactory], seat1: &[CardFactory])
     g
 }
 
+/// Consecutive no-move rounds before a bot play loop gives the game up.
+/// Two bots that both pass priority forever produce one such round per
+/// pass, so this is deliberately small. Shared with
+/// [`crate::selfplay`]'s recording loop, which is otherwise a separate
+/// hand-written copy of the same fixed point — the two stall counts are
+/// only comparable if this number is.
+pub const STALE_ROUNDS: usize = 8;
+
+/// Why a game's play loop stopped. An undecided game is not one failure
+/// mode but three, and the bench's `stalls` count merged them: a capped
+/// game was doing work and ran out of budget, a stuck one had no bot able
+/// to move at all, and a draw is a legitimate rules outcome. They want
+/// different fixes, so the outcome says which.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum StopReason {
+    /// `is_game_over()` — a winner, or an in-game draw (CR 104.4).
+    GameOver,
+    /// `actions >= max_actions`.
+    ActionCap,
+    /// [`STALE_ROUNDS`] consecutive rounds in which neither bot had an
+    /// action accepted.
+    NoLegalMove,
+}
+
 /// One finished game: the winning seat (`None` for a stall/draw) plus what
 /// it cost to play.
 pub(crate) struct GameOutcome {
@@ -1168,6 +1209,8 @@ pub(crate) struct GameOutcome {
     pub actions: usize,
     /// `turn_number` at game end.
     pub turns: u32,
+    /// Which of the loop's three exits ended this game.
+    pub stop: StopReason,
 }
 
 /// Play one full bot game from a prebuilt template. Mirrors the server
@@ -1312,7 +1355,7 @@ fn play_one_game_traced(
     g.start_mulligan_phase();
     let mut bots: Vec<Box<dyn Bot>> = pilots.into_iter().map(Pilot::build).collect();
     let (mut actions, mut stale) = (0usize, 0usize);
-    while !g.is_game_over() && actions < max_actions && stale < 8 {
+    while !g.is_game_over() && actions < max_actions && stale < STALE_ROUNDS {
         let mut any = false;
         for (s, bot) in bots.iter_mut().enumerate() {
             let Some(a) = bot.next_action(&g, s) else { continue };
@@ -1333,7 +1376,17 @@ fn play_one_game_traced(
         if any { stale = 0 } else { stale += 1 }
     }
     crate::server::bot::set_jitter_seed(None);
-    GameOutcome { winner: g.game_over.flatten(), actions, turns: g.turn_number }
+    // Tested in the loop's own order: `is_game_over` wins over both caps,
+    // and a game that hits the action cap on the same iteration it goes
+    // stale is reported as capped.
+    let stop = if g.is_game_over() {
+        StopReason::GameOver
+    } else if actions >= max_actions {
+        StopReason::ActionCap
+    } else {
+        StopReason::NoLegalMove
+    };
+    GameOutcome { winner: g.game_over.flatten(), actions, turns: g.turn_number, stop }
 }
 
 // ─────────────────────────────── evaluation ──────────────────────────────

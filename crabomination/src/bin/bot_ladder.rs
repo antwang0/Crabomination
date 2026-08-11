@@ -826,7 +826,15 @@ fn main() {
         println!("  decisions_per_s {:.0}", cost.decisions as f64 / wall.max(1e-9));
         println!("  turns_per_game {:.2}", cost.turns as f64 / g.max(1.0));
         println!("  decisions_per_game {:.1}", cost.decisions as f64 / g.max(1.0));
+        // Split by *why*: an action-capped game was still making moves and
+        // ran out of budget, a stuck one had no bot able to move at all,
+        // and a draw is a rules outcome, not a stall. They want different
+        // fixes, so a moving stall rate names its own top cause.
         println!("  stalls         {tu} ({stall_pct:.2}%)");
+        println!(
+            "  stalls_by      cap {} / stuck {} / draw {}",
+            cost.action_capped, cost.no_legal_move, cost.draws,
+        );
         match peak_rss_mib() {
             Some(m) => println!("  peak_rss_mib   {m:.1}"),
             None => println!("  peak_rss_mib   n/a"),

@@ -23,7 +23,9 @@ use crabomination_nn::TrainRow;
 use crate::cube::CardFactory;
 use crate::draft::{generate_sos_pack, sos_draft_pool};
 use crate::game::GameState;
-use crate::recommend::{SimConfig, build_match_template, build_random_deck};
+use crate::recommend::{
+    STALE_ROUNDS, SimConfig, StopReason, build_match_template, build_random_deck,
+};
 use crate::server::bot::{Bot, EvalWeights, RandomBot};
 use crate::server::encode::{Vocab, encode_state};
 
@@ -248,6 +250,10 @@ pub struct RecordedGame {
     /// unlabelled position teaches nothing).
     pub winner: Option<usize>,
     pub turns: u32,
+    /// Which of the loop's three exits ended this game. The training
+    /// actor counts a rowless game as a "stall"; this says whether it ran
+    /// out of action budget, got stuck with no bot able to move, or drew.
+    pub stop: StopReason,
 }
 
 /// Upper bound on the randomised opening window, in actions. Each game
@@ -339,7 +345,7 @@ pub fn play_recorded_game_mcts(
     let mut last_step = crate::game::TurnStep::Untap;
     let mut last_pair: Option<[crabomination_nn::EncodedState; 2]> = None;
     let (mut actions, mut stale) = (0usize, 0usize);
-    while !g.is_game_over() && actions < max_actions && stale < 8 {
+    while !g.is_game_over() && actions < max_actions && stale < STALE_ROUNDS {
         let new_turn = (g.turn_number, g.active_player_idx) != last_turn;
         let step_point = g.step != last_step
             && matches!(
@@ -381,8 +387,17 @@ pub fn play_recorded_game_mcts(
     }
 
     let turns = g.turn_number;
+    // Same order as `recommend::play_one_game_traced`: `is_game_over`
+    // wins over both caps, and the action cap wins over staleness.
+    let stop = if g.is_game_over() {
+        StopReason::GameOver
+    } else if actions >= max_actions {
+        StopReason::ActionCap
+    } else {
+        StopReason::NoLegalMove
+    };
     let Some(Some(winner)) = g.game_over else {
-        return RecordedGame { rows: Vec::new(), heur: Vec::new(), winner: None, turns };
+        return RecordedGame { rows: Vec::new(), heur: Vec::new(), winner: None, turns, stop };
     };
     let life = [g.players[0].life, g.players[1].life];
     // One trajectory per (game, seat): the two seats see different
@@ -422,7 +437,7 @@ pub fn play_recorded_game_mcts(
             }
         })
         .collect();
-    RecordedGame { rows, heur, winner: Some(winner), turns }
+    RecordedGame { rows, heur, winner: Some(winner), turns, stop }
 }
 
 /// Raw per-seat stats at snapshot time: `[life diff, board-power diff,

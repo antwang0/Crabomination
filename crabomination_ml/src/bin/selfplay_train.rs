@@ -66,6 +66,7 @@ use crabomination::selfplay::{
     best_build_by, heuristic_sealed_build, hill_climb_build_by, mutate_build,
     play_recorded_game, sealed_game_template, sealed_pool, static_deck_score,
 };
+use crabomination::recommend::StopReason;
 use crabomination::server::bot::EvalWeights;
 use crabomination::server::encode::{Vocab, encode_deck};
 use crabomination_ml::{DeckNetConfig, DeckTrainer, NetConfig, SampleWindow, Trainer};
@@ -467,6 +468,11 @@ struct Shared {
     next_game: AtomicU64,
     games_done: AtomicU64,
     stalls: AtomicU64,
+    /// The two ways a stall happens, so a moving stall rate names its own
+    /// cause instead of only its size. `stalls - capped - stuck` is the
+    /// remainder: a game that ended by the rules but produced no rows.
+    stalls_capped: AtomicU64,
+    stalls_stuck: AtomicU64,
     live_actors: AtomicU64,
     /// Set by the learner when `--stop-after-stale` trips: the holdout
     /// has stopped improving, so further generation is compute spent
@@ -530,6 +536,17 @@ fn actor_loop(shared: &Shared, args: &Args, vocab: &Vocab, deck_judge: Option<&D
         shared.games_done.fetch_add(1, Ordering::Relaxed);
         if rec.rows.is_empty() {
             shared.stalls.fetch_add(1, Ordering::Relaxed);
+            match rec.stop {
+                StopReason::ActionCap => {
+                    shared.stalls_capped.fetch_add(1, Ordering::Relaxed);
+                }
+                StopReason::NoLegalMove => {
+                    shared.stalls_stuck.fetch_add(1, Ordering::Relaxed);
+                }
+                // Ended by the rules with no winner: a draw, not a stall
+                // the simulator can be blamed for. Left out of both splits.
+                StopReason::GameOver => {}
+            }
             continue;
         }
         // A whole game's rows share a trajectory pair, so the split is
@@ -1166,6 +1183,8 @@ fn main() {
         next_game: AtomicU64::new(0),
         games_done: AtomicU64::new(0),
         stalls: AtomicU64::new(0),
+        stalls_capped: AtomicU64::new(0),
+        stalls_stuck: AtomicU64::new(0),
         live_actors: AtomicU64::new(args.actors as u64),
         stop: AtomicBool::new(false),
     };
@@ -1425,6 +1444,8 @@ fn checkpoint(
     let games = shared.games_done.load(Ordering::Relaxed);
     let rows = shared.rows_pushed.load(Ordering::Relaxed);
     let stalls = shared.stalls.load(Ordering::Relaxed);
+    let stalls_capped = shared.stalls_capped.load(Ordering::Relaxed);
+    let stalls_stuck = shared.stalls_stuck.load(Ordering::Relaxed);
     let secs = start.elapsed().as_secs_f64();
     let [total, win, life, len] = loss_ema;
     // Held-out scoring. `val_win` is directly comparable to `loss_win`
@@ -1472,7 +1493,7 @@ fn checkpoint(
     let cum_r = rows as f64 / secs.max(1e-9);
     let [t_sample, t_step, t_relabel, t_deck, t_sleep] = timing.take_ms();
     let line = format!(
-        "{{\"step\":{step},\"loss_ema\":{total:.5},\"loss_win\":{win:.5},\"loss_life\":{life:.5},\"loss_len\":{len:.5},\"loss_deck\":{deck_loss:.5},\"val_n\":{val_n},\"val_win\":{val_win:.5},\"val_logloss\":{val_ll:.5},\"val_auc\":{val_auc:.5},\"rows_consumed\":{consumed},\"rows\":{rows},\"games\":{games},\"stalls\":{stalls},\"elapsed_s\":{secs:.0},\"games_per_s\":{dg:.3},\"rows_per_s\":{dr:.1},\"consumed_per_s\":{dc:.1},\"steps_per_s\":{ds:.3},\"games_per_s_cum\":{cum_g:.3},\"rows_per_s_cum\":{cum_r:.1},\"t_sample_ms\":{t_sample},\"t_step_ms\":{t_step},\"t_relabel_ms\":{t_relabel},\"t_deck_ms\":{t_deck},\"t_sleep_ms\":{t_sleep}}}\n"
+        "{{\"step\":{step},\"loss_ema\":{total:.5},\"loss_win\":{win:.5},\"loss_life\":{life:.5},\"loss_len\":{len:.5},\"loss_deck\":{deck_loss:.5},\"val_n\":{val_n},\"val_win\":{val_win:.5},\"val_logloss\":{val_ll:.5},\"val_auc\":{val_auc:.5},\"rows_consumed\":{consumed},\"rows\":{rows},\"games\":{games},\"stalls\":{stalls},\"stalls_capped\":{stalls_capped},\"stalls_stuck\":{stalls_stuck},\"elapsed_s\":{secs:.0},\"games_per_s\":{dg:.3},\"rows_per_s\":{dr:.1},\"consumed_per_s\":{dc:.1},\"steps_per_s\":{ds:.3},\"games_per_s_cum\":{cum_g:.3},\"rows_per_s_cum\":{cum_r:.1},\"t_sample_ms\":{t_sample},\"t_step_ms\":{t_step},\"t_relabel_ms\":{t_relabel},\"t_deck_ms\":{t_deck},\"t_sleep_ms\":{t_sleep}}}\n"
     );
     use std::io::Write;
     let mut f = std::fs::OpenOptions::new()
