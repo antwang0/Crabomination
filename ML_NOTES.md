@@ -57,18 +57,43 @@ only stays dead while the reasoning that killed it is readable.
      plays the *current default* pilots, which changed at r25. Gates
      are the only stable cross-era instrument.
 
-  The one hypothesis left standing: the champion's quality depended on
-  conditions the flags never encoded — champion-era *code* and/or the
-  old container's generation:learner interleaving (slower actors meant
-  most learner steps saw a continuously-refreshed window; on this box
-  the same flags produce a short streaming phase plus a long static
-  tail, which r28d showed is worse than fewer steps). The decisive
-  experiment is running: the r19-21 commit (`4f81029a7`) built in a
-  worktree, champion recipe verbatim, actors throttled to old-box
-  games/s, gated with today's ladder (legacy pad-on-load makes
-  cross-version gating exact). Reproduces → code drift, bisect;
-  fails → the champion needed the old box, re-baseline and retune the
-  regime for this one.
+  **ROOT CAUSE (found by the champion-era reproduction): the trainer
+  was built without `--features cuda` all week.** The worktree repro
+  (r19-21 commit `4f81029a7`, champion recipe and seed verbatim) also
+  landed in the 50/51 band — same code, same flags, still short — and
+  its stats.jsonl against the original run's told the whole story:
+
+  | | learner steps/s | total steps | gen games/s | best AUC |
+  |---|---|---|---|---|
+  | original r20-s97 | 42–53 | **70,124** | 162.8 | 0.8090 @ step 54k |
+  | worktree repro | 3.1–4.8 | 10,135 | 70.6 | 0.7803 @ step 10k |
+
+  The original learner ran on the RTX 4090 (round 12: "GPU learner
+  confirmed"); every binary built this session used
+  `cargo build --release --bin selfplay_train` — no cuda feature — so
+  the learner fell to CPU at a tenth the speed and every run since
+  round 28 was silently undertrained (~8–10k steps where the champion
+  got 70k, cosine never annealed, best checkpoints at step ~2k). The
+  GPU was present and idle the whole time (`nvidia-smi` clean); the
+  container was never the problem, and neither was the encoder. The
+  build doc in crabomination_ml/Cargo.toml says the right command; the
+  lesson is the learner-device line in the first log paragraph is a
+  *gate*, not a detail — a CPU learner on this workload is a
+  misconfiguration, and nothing downstream of it is measurable.
+
+  Findings that survive the dissolution: `--tail-reuse` (the fixed
+  tail allowance really was the binding stop for a slow learner, and
+  remains a correctness knob), `CRAB_ABLATE` (gating ablated-trained
+  nets under the full encoder feeds live features into never-trained
+  random columns — always match), the champion re-gate (measurement
+  pipeline stable across ~100 commits), and the traps: cross-era calib
+  AUC is apples-to-oranges, and holdout-AUC improvement ≠ gate
+  strength (r28d: tail-heavy CPU training raised AUC and lowered
+  gates). The det0 +1pt reading (28c-D) was measured on crippled runs
+  and needs re-verification before anyone acts on it. **Round 28f is
+  the round-28 experiment run for real: v6 vs v5-parity, two seeds,
+  champion regime, GPU learner (the run script now hard-aborts if the
+  learner is not on cuda).**
 
 - 🟡 **Smarter combat** — `server/bot.rs` blocking is heuristic (value trades,
   first-strike/deathtouch/trample/**indestructible** awareness — an
