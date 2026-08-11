@@ -2512,6 +2512,7 @@ dependencies = [
  "crabomination",
  "crabomination_base",
  "crabomination_catalog",
+ "rand 0.10.2",
  "serde_json",
 ]
 

@@ -14,4 +14,6 @@ edition = "2024"
 crabomination = { path = "../crabomination" }
 crabomination_base = { path = "../crabomination_base" }
 crabomination_catalog = { path = "../crabomination_catalog" }
+# Seeded deck construction for the cube golden trace; already in the tree.
+rand = "0.10.2"
 serde_json = "1.0.150"

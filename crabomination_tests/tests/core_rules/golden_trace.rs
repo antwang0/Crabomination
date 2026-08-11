@@ -193,3 +193,38 @@ fn seeded_games_match_their_digests() {
         );
     }
 }
+
+/// The pool that broke, and the one the hand-built decks above cannot
+/// stand in for: two seeded cube decks, traced twice. `--decks cube` played
+/// a different game on every run until `841dd40b`, because `RandomState`
+/// reseeds every `HashMap` — per process *and* per instance — and ~110 of
+/// the engine's maps are locals the field-by-field survey never reached.
+/// The decks here draw from the whole cube pool, so they touch card paths
+/// `red()` / `white_blue()` never do.
+#[test]
+fn a_seeded_cube_pairing_replays_identically() {
+    use crabomination::mana::Color;
+    use rand::SeedableRng;
+    let decks = || {
+        let mut r = rand::rngs::StdRng::seed_from_u64(0xC0BE_5EED);
+        let a = crabomination::cube::cube_deck([Color::Red, Color::Black], &mut r);
+        let b = crabomination::cube::cube_deck([Color::White, Color::Blue], &mut r);
+        (a, b)
+    };
+    let (a1, b1) = decks();
+    let (a2, b2) = decks();
+    assert_eq!((&a1, &b1), (&a2, &b2), "cube deck construction is not seeded");
+    let (t1, t2) = (
+        trace_game(&a1, &b1, 11, MAX_ACTIONS),
+        trace_game(&a2, &b2, 11, MAX_ACTIONS),
+    );
+    if t1.digest() != t2.digest() {
+        let at = t1.lines.iter().zip(&t2.lines).position(|(x, y)| x != y);
+        panic!(
+            "a cube game is not reproducible; first divergence at {at:?}:\n  run 1: {:?}\n  \
+             run 2: {:?}",
+            at.and_then(|i| t1.lines.get(i)),
+            at.and_then(|i| t2.lines.get(i)),
+        );
+    }
+}
