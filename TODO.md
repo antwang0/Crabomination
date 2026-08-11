@@ -55,7 +55,7 @@ clippy clean, golden traces unchanged plus a new cube-pairing trace.
   anchor needs, and **the anchor has not been re-run since `ed4c152c`**.
   Client apt deps are still not installed by the SessionStart hook; the
   four-package `apt-get install` below fixes it in a minute.
-- **Trackers.** PERF **1.44k** (was 1.80k — passes 20-25 folded into the
+- **Trackers.** PERF **1.45k** (was 1.80k — passes 20-25 folded into the
   Log index, passes 12-18's frozen candidate snapshots collapsed to a
   pointer, the two non-restated items hoisted first), TODO ~1.09k, roadmap
   660. PERF is still over the ~1k guidance; the next compactable block is
