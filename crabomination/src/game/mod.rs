@@ -160,6 +160,22 @@ pub(crate) struct TriggerGrant<'a> {
     pub source: CardId,
 }
 
+/// One battlefield pass answering everything
+/// [`GameState::dispatch_triggers_for_events`] needs to know about the board.
+/// Built by [`GameState::dispatch_board_scan`].
+pub(crate) struct DispatchScan<'a> {
+    /// [`creature_dies_triggers_suppressed`](crate::game::actions::creature_dies_triggers_suppressed).
+    pub dies_suppressed: bool,
+    /// The battlefield leg of the ability-strip presence gate; the
+    /// off-battlefield legs stay in
+    /// [`GameState::ability_strip_off_battlefield`].
+    pub strip_on_battlefield: bool,
+    /// [`GameState::trigger_grant_sources`].
+    pub trigger_grants: Vec<TriggerGrant<'a>>,
+    /// [`GameState::equip_granted_trigger_sources`].
+    pub equip_grants: Vec<(CardId, &'a [crate::card::TriggeredAbility])>,
+}
+
 /// Interior-mutable memo for [`GameState::with_frozen_layers`]: the gathered
 /// continuous-effect set, shared via `Arc` so per-permanent layer passes
 /// don't re-clone it. `Mutex` (not `RefCell`) keeps `GameState: Sync` for the
@@ -2859,6 +2875,87 @@ impl GameState {
             }
         }
         out
+    }
+
+    /// The four board-level facts [`dispatch_triggers_for_events`] asks for on
+    /// every dispatch, gathered in one pass over the battlefield instead of
+    /// four. Same device as `stack.rs`'s `SbaBoardScan`; the debug cross-check
+    /// below keeps it from drifting from the functions it fuses.
+    ///
+    /// [`dispatch_triggers_for_events`]: Self::dispatch_triggers_for_events
+    pub(crate) fn dispatch_board_scan(&self) -> DispatchScan<'_> {
+        use crate::effect::StaticEffect;
+        let mut scan = DispatchScan {
+            dies_suppressed: false,
+            strip_on_battlefield: false,
+            trigger_grants: Vec::new(),
+            equip_grants: Vec::new(),
+        };
+        for card in self.battlefield.iter() {
+            let def = &card.definition;
+            if let Some(host) = card.attached_to
+                && let Some(bonus) = def.equipped_bonus.as_ref()
+            {
+                if !bonus.triggers_on_equipment {
+                    scan.equip_grants.push((host, bonus.triggered_abilities.as_slice()));
+                }
+                scan.strip_on_battlefield |= bonus.remove_abilities;
+            }
+            for sa in &def.static_abilities {
+                scan.dies_suppressed |= matches!(
+                    sa.effect,
+                    StaticEffect::SuppressCreatureEtbTriggers { also_dies: true, .. }
+                );
+                scan.strip_on_battlefield |= static_effect_strips_abilities(&sa.effect);
+                if let Some(StaticEffect::GrantTriggeredAbility { filter, ability }) =
+                    self.active_static(&sa.effect, card)
+                {
+                    scan.trigger_grants.push(TriggerGrant {
+                        filter: filter.resolve_named_by_source(card.named_card.as_deref()),
+                        ability,
+                        controller: card.controller,
+                        source: card.id,
+                    });
+                }
+            }
+            scan.strip_on_battlefield |= def
+                .station
+                .iter()
+                .any(|band| band.statics.iter().any(static_effect_strips_abilities));
+        }
+        // CR 315.5 — a face-up conspiracy grants from the command zone too.
+        for p in &self.players {
+            for src in p.command.iter().filter(|c| c.command_zone_abilities_active()) {
+                for sa in &src.definition.static_abilities {
+                    if let Some(StaticEffect::GrantTriggeredAbility { filter, ability }) =
+                        self.active_static(&sa.effect, src)
+                    {
+                        scan.trigger_grants.push(TriggerGrant {
+                            filter: filter.resolve_named_by_source(src.named_card.as_deref()),
+                            ability,
+                            controller: src.controller,
+                            source: src.id,
+                        });
+                    }
+                }
+            }
+        }
+        debug_assert!(
+            scan.dies_suppressed == crate::game::actions::creature_dies_triggers_suppressed(self)
+                && scan.strip_on_battlefield
+                    == self.battlefield.iter().any(card_can_strip_abilities)
+                && scan.equip_grants == self.equip_granted_trigger_sources()
+                && scan
+                    .trigger_grants
+                    .iter()
+                    .map(|g| (g.source, g.controller, std::ptr::from_ref(g.ability)))
+                    .eq(self
+                        .trigger_grant_sources()
+                        .iter()
+                        .map(|g| (g.source, g.controller, std::ptr::from_ref(g.ability)))),
+            "dispatch_board_scan drifted from the four walks it fuses",
+        );
+        scan
     }
 
     /// The largest number of `seat`'s creatures sharing one creature type
@@ -7482,6 +7579,20 @@ impl GameState {
     /// gathered effect set alone, and only the rare board that has one
     /// pays for the layer pass.
     pub(crate) fn permanents_with_abilities_removed(&self) -> Vec<CardId> {
+        self.permanents_with_abilities_removed_gated(
+            self.battlefield.iter().any(card_can_strip_abilities),
+        )
+    }
+
+    /// [`permanents_with_abilities_removed`] with the presence gate's
+    /// battlefield leg supplied by the caller — the trigger dispatcher already
+    /// walks the battlefield once for it (see [`Self::dispatch_board_scan`]).
+    ///
+    /// [`permanents_with_abilities_removed`]: Self::permanents_with_abilities_removed
+    pub(crate) fn permanents_with_abilities_removed_gated(
+        &self,
+        strip_on_battlefield: bool,
+    ) -> Vec<CardId> {
         fn strip(state: &GameState, fx: &[ContinuousEffect]) -> Vec<CardId> {
             if !fx.iter().any(|e| matches!(e.modification, Modification::RemoveAllAbilities)) {
                 return Vec::new();
@@ -7500,7 +7611,7 @@ impl GameState {
         // once per dispatch to answer one bit that is false on every board
         // without a strip effect. Ask the cheap presence gate first — it walks
         // the battlefield once instead of gathering.
-        if !self.ability_strip_in_scope() {
+        if !(strip_on_battlefield || self.ability_strip_off_battlefield()) {
             // The cross-check gathers, so it must not run re-entrantly: a
             // gather started inside one would clear `in_layer_gather` on the
             // way out and let the outer one serve the memo mid-gather.
@@ -7510,16 +7621,20 @@ impl GameState {
                         .gather_continuous_effects()
                         .iter()
                         .any(|e| matches!(e.modification, Modification::RemoveAllAbilities)),
-                "ability_strip_in_scope missed a RemoveAllAbilities source",
+                "the ability-strip presence gate missed a RemoveAllAbilities source",
             );
             return Vec::new();
         }
         strip(self, &self.gather_continuous_effects())
     }
 
-    /// Cheap over-approximation of "the gathered effect set can contain a
-    /// layer-6 `RemoveAllAbilities`", answered without gathering. `false` is
-    /// authoritative; `true` only means the gather has to run.
+    /// The off-battlefield half of a cheap over-approximation of "the gathered
+    /// effect set can contain a layer-6 `RemoveAllAbilities`", answered
+    /// without gathering. `false` on both halves is authoritative; `true`
+    /// only means the gather has to run. The battlefield half is
+    /// `battlefield.iter().any(card_can_strip_abilities)`, split out because
+    /// the trigger dispatcher already walks the battlefield for it
+    /// ([`Self::dispatch_board_scan`]).
     ///
     /// Six routes reach the modification and each is named here:
     /// a resolved `continuous_effects` entry (Turn to Frog, Mercurial
@@ -7533,11 +7648,10 @@ impl GameState {
     /// blocks `debug_assert!` against so the gate can't drift from them; a
     /// debug-only cross-check in `permanents_with_abilities_removed` re-runs
     /// the gather whenever this says `false`, so the whole suite audits it.
-    fn ability_strip_in_scope(&self) -> bool {
+    fn ability_strip_off_battlefield(&self) -> bool {
         self.continuous_effects
             .iter()
             .any(|e| matches!(e.modification, Modification::RemoveAllAbilities))
-            || self.battlefield.iter().any(card_can_strip_abilities)
             || self.players.iter().any(|p| {
                 p.command
                     .iter()
@@ -15547,21 +15661,24 @@ impl GameState {
         // and call `&self.evaluate_predicate` to gate each candidate by
         // the optional `EventSpec::filter`.
         let mut candidates: Vec<TriggerCandidate> = Vec::new();
-        // Hushbringer (CR 614): suppress reaction creature-death triggers
-        // ("whenever a creature dies") while a `SuppressCreatureEtbTriggers
-        // { also_dies }` static is in play. (Self-death + SBA paths gate
-        // separately in `stack.rs`.)
-        let dies_suppressed = crate::game::actions::creature_dies_triggers_suppressed(self);
+        // One battlefield pass for the four board-level facts below, instead
+        // of one walk each. Hushbringer (CR 614) suppression of reaction
+        // creature-death triggers ("whenever a creature dies") while a
+        // `SuppressCreatureEtbTriggers { also_dies }` static is in play
+        // (self-death + SBA paths gate separately in `stack.rs`); the
+        // ability-strip presence gate; and both grant lists, peeled and
+        // resolved once for the whole batch instead of once per battlefield
+        // permanent (the per-card form was O(cards x sources) with an
+        // allocation per pair).
+        let scan = self.dispatch_board_scan();
+        let dies_suppressed = scan.dies_suppressed;
         // Which permanents have lost their abilities (Turn to Frog,
         // Mercurial Transformation, Lignify) — printed triggered abilities
         // are skipped while a strip-abilities effect is in scope per CR
         // 113.10b. Empty (and free) on a board with no such effect.
-        let stripped_ids = self.permanents_with_abilities_removed();
-        // Both grant walks are board-level: peel and resolve them once for
-        // the whole batch instead of once per battlefield permanent (the
-        // per-card form was O(cards x sources) with an allocation per pair).
-        let trigger_grants = self.trigger_grant_sources();
-        let equip_grants = self.equip_granted_trigger_sources();
+        let stripped_ids = self.permanents_with_abilities_removed_gated(scan.strip_on_battlefield);
+        let trigger_grants = scan.trigger_grants;
+        let equip_grants = scan.equip_grants;
         // CR 603.3d — keys for `once_per_turn` triggers that fire in this
         // batch; merged into the turn-scoped set after the battlefield walk
         // (deferred so we don't mutate `self` mid-immutable-borrow).
@@ -20323,8 +20440,8 @@ pub(crate) fn effective_loyalty_abilities(
 }
 
 /// True when `effect` can put a layer-6 `Modification::RemoveAllAbilities`
-/// into the gathered set — the static-ability half of the presence gate in
-/// [`GameState::ability_strip_in_scope`]. Over-approximates: the state gates
+/// into the gathered set — the static-ability half of the presence gate on
+/// [`GameState::permanents_with_abilities_removed`]. Over-approximates: the state gates
 /// (counters, turn, class level, predicate) are ignored, so a `true` here only
 /// means "gather and check". Every gather site that emits the modification
 /// `debug_assert!`s against this or [`card_can_strip_abilities`], so a
