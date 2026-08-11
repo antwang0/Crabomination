@@ -104,55 +104,26 @@ target/debug/incremental` reclaims several GB without a full rebuild.
 
 ## Engine — Robustness / defects (open)
 
-### P0 — the cube pool is not deterministic on a fixed seed (found 2026-08-11)
+### Determinism — closed 2026-08-11 (`841dd40b`)
 
-**Three identical invocations of `bot_ladder --bench --threads 1 --decks
-cube --games 300 --seed 11` did different amounts of work:**
+The cube pool's fixed-seed nondeterminism is fixed and the whole class is
+shut: `crate::fxhash::HashMap` / `HashSet` (rustc's seedless FxHasher)
+replace `std`'s across the engine, so no map's walk order can differ
+between two runs of one seed. `--decks cube` reads decisions **1,130,728**
+identically over three runs, `all` 2,548,986 and `sos` 684,268 over two
+each, `determinism ok` on every one; `--decks fixed` is unchanged at
+193,232. `--decks all`'s stall rate is now a stable **6 draws / 5,100
+games (0.12 %)** — all rules draws, nothing to fix. A separate leak fixed
+in the same sitting (`125108c1`): CR 705.1 coin flips read
+`rand::random()` inside `AutoDecider`, and Mana Crypt is in the cube pool.
 
-```text
-decisions  1,129,690   determinism  ok (all pairs split)
-decisions  1,130,785   determinism  FAIL — 1 of the mirrored pairs did not split
-decisions  1,130,706   determinism  FAIL — 5 of the mirrored pairs did not split
-```
-
-Single-threaded, one process each, same seed. The `decisions` count is the
-proof and needs no interpretation: the simulator played different games.
-This directly violates the standing goal ("same seed, two runs, identical
-trace") and it means **every number ever measured on the cube or `all`
-pools is unreproducible** — including the "~0.1 % stall rate" this file
-recorded as a stable figure, which reads 4, 5 or 6 draws per 5,100 games
-depending on the run.
-
-What is already ruled out:
-
-- **Not threading.** Reproduced at `--threads 1`.
-- **Not deck construction.** `cube_archetypes` / `sos_archetypes` seed
-  their own `StdRng` (`seed ^ 0xC0BE_5EED`, `seed ^ 0x0505_ACAD`), and the
-  archetype list is identical run to run.
-- **Not the game loop or the harness.** `--decks fixed` is *clean*: six
-  consecutive `--bench` runs read `decisions 193,232` **identically** and
-  `determinism ok` every time. Same binary, same functions, same seeding
-  path.
-- **Not the draws.** `MatchTally::pairs` excludes undecided pairs by
-  construction, so a draw cannot produce a non-splitting entry; the sweeps
-  and the draws are two symptoms, not one.
-
-That leaves the one thing the fixed pool does not have: **the cards.** The
-four fixed archetypes are hand-built from a small classic set; the cube
-pool is not. So the suspect is a *card* — or a rules path only cube cards
-reach — reading `HashMap`/`HashSet` iteration order, or unseeded RNG, into
-game logic. `--decks sos` read `ok` on its one run, so start with cube.
-
-**The bisect tool already exists and exits 1 on failure**: `bot_ladder
---bench --threads 1 --decks cube --games 300 --seed <n>`. Narrow by
-archetype (`CUBE_PAIRS`), then by decklist, then reach for the golden-trace
-machinery — `trace_game` on the offending pair, twice in one process and
-once in another, diffs to the exact action. The 2026-08-11 `IdMap` /
-`CounterBag` / `KeywordCounters` fixes are the precedent for what the
-finding will look like, and the survey that found them explicitly covered
-only `GameState` / `ColdState` / `Player` fields — **not** per-card state
-or the catalog, which is where this one has to be.
-
+**What is left of it, as a rules question, not a determinism one.** A map
+whose walk order picks a *game outcome* is still arbitrary, just
+reproducibly so. Known site: `actions.rs`'s discard-cost gate does
+`by_name.values().find(|ids| ids.len() >= count)` for "discard N cards with
+the same name" (Kozilek-style), which picks an arbitrary qualifying name
+rather than the cheapest. Sweep the ~110 map/set locals for siblings when
+someone wants a rules pass; none of them can desynchronize a run any more.
 
 Found by profiling. Not speculative — the code is quoted.
 
