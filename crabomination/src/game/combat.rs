@@ -3482,39 +3482,50 @@ impl GameState {
                     if assign == 0 {
                         continue;
                     }
-                    // CR 614.9 — a Maze-of-Ith'd blocker takes no combat damage.
-                    // CR 615 — Emmara shields your creature tokens.
-                    if self.combat_damage_prevented_creatures.contains(&blocker_id)
-                        || self.all_damage_to_creature_token_prevented(blocker_id)
-                        || self.all_damage_to_your_creature_prevented(blocker_id)
-                    {
+                    // One freeze scope over this pair's read-only prefix. Every
+                    // check here is `&self` and the first `&mut self` call is
+                    // `apply_prevention_shields` below, so no layer input can
+                    // move between them — the reads already happened at one
+                    // game state, this only stops each rebuilding the gather.
+                    // `damage_prevented_by_protection` and `scale_damage_to`
+                    // both take one, and both already freeze internally, so
+                    // the scope is what merges them.
+                    let Some(scaled) = self.with_frozen_layers(|g| {
+                        // CR 614.9 — a Maze-of-Ith'd blocker takes no combat
+                        // damage. CR 615 — Emmara shields your creature tokens.
+                        if g.combat_damage_prevented_creatures.contains(&blocker_id)
+                            || g.all_damage_to_creature_token_prevented(blocker_id)
+                            || g.all_damage_to_your_creature_prevented(blocker_id)
+                            // CR 702.16e — protection from the attacker's color
+                            // prevents its combat damage to the blocker.
+                            || g.damage_prevented_by_protection(atk.id, blocker_id)
+                            // CR 615 — Light of Sanction: your source → your
+                            // creature.
+                            || g.damage_from_your_source_to_your_creature_prevented(
+                                atk.id,
+                                blocker_id,
+                            )
+                            // CR 615 — Indentured Oaf: this source prevents its
+                            // own damage to creatures of a chosen color.
+                            || g.source_damage_to_color_prevented(atk.id, blocker_id)
+                        {
+                            return None;
+                        }
+                        Some(g.double_creature_combat_damage(g.scale_damage_to(
+                            Some(atk.id),
+                            crate::game::effects::EntityRef::Permanent(blocker_id),
+                            assign,
+                        )))
+                    }) else {
                         continue;
-                    }
-                    // CR 702.16e — protection from the attacker's color prevents
-                    // its combat damage to the blocker.
-                    if self.damage_prevented_by_protection(atk.id, blocker_id) {
-                        continue;
-                    }
-                    // CR 615 — Light of Sanction: your source → your creature.
-                    if self.damage_from_your_source_to_your_creature_prevented(atk.id, blocker_id) {
-                        continue;
-                    }
-                    // CR 615 — Indentured Oaf: this source prevents its own
-                    // damage to creatures of a chosen color.
-                    if self.source_damage_to_color_prevented(atk.id, blocker_id) {
-                        continue;
-                    }
+                    };
                     // CR 615 — route attacker→blocker combat damage through
                     // the blocker's prevention shields. Lifelink and the
                     // wither/infect -1/-1 counters scale off the actual
                     // (post-prevention) amount dealt (CR 702.15a).
                     let dealt = self.apply_prevention_shields(
                         crate::game::effects::EntityRef::Permanent(blocker_id),
-                        self.double_creature_combat_damage(self.scale_damage_to(
-                            Some(atk.id),
-                            crate::game::effects::EntityRef::Permanent(blocker_id),
-                            assign,
-                        )),
+                        scaled,
                         Some(atk.id),
                         &mut events,
                     ) as i32;
@@ -3605,38 +3616,45 @@ impl GameState {
                 // the attacker's keywords don't gate the blocker's strike
                 // step — a regular blocker must wait for the regular step
                 // even if the attacker has first strike.
-                let dealing_blocker_ids: Vec<CardId> = blocker_ids
-                    .iter()
-                    .copied()
-                    .filter(|&bid| computed_of(bid)
-                        .is_some_and(|bc| blocker_filter(&bc.keywords)))
-                    // CR 614.9 — a Maze-of-Ith'd blocker deals no combat damage.
-                    .filter(|bid| !self.combat_damage_prevented_creatures.contains(bid))
-                    // CR 615.1 — "prevent all combat damage it would deal" (Azorius Ploy).
-                    .filter(|bid| !self.combat_damage_prevented_from(*bid))
-                    // CR 615.1 — fog (with Inspire Awe's per-dealer exception).
-                    .filter(|&bid| !self.combat_damage_prevented_for_dealer(bid))
-                    // CR 702.16e — a blocker whose color the attacker has
-                    // protection from deals no combat damage to it.
-                    .filter(|&bid| !self.damage_prevented_by_protection(bid, atk.id))
-                    // CR 615 — Light of Sanction: your source → your creature.
-                    .filter(|&bid| {
-                        !self.damage_from_your_source_to_your_creature_prevented(bid, atk.id)
-                    })
-                    // CR 615 — Indentured Oaf: a blocker's own damage to a
-                    // chosen color is prevented.
-                    .filter(|&bid| !self.source_damage_to_color_prevented(bid, atk.id))
-                    .collect();
-
-                let attacker_takes_strike_back =
-                    // CR 614.9 — a Maze-of-Ith'd attacker takes no combat damage.
-                    !self.combat_damage_prevented_creatures.contains(&atk.id)
-                    // CR 615 — Iroas shields attacking creatures you control.
-                    && !self.damage_to_attacker_prevented(atk.id)
-                    // CR 615 — Emmara shields your creature tokens.
-                    && !self.all_damage_to_creature_token_prevented(atk.id)
-                    // CR 615 — Rune-Tail's Essence shields all your creatures.
-                    && !self.all_damage_to_your_creature_prevented(atk.id);
+                // One freeze scope for the whole strike-back gate: every
+                // predicate below is `&self`, so the per-blocker
+                // `damage_prevented_by_protection` walks share one gather
+                // instead of taking one each.
+                let (dealing_blocker_ids, attacker_takes_strike_back) =
+                    self.with_frozen_layers(|g| {
+                        let ids: Vec<CardId> = blocker_ids
+                            .iter()
+                            .copied()
+                            .filter(|&bid| computed_of(bid)
+                                .is_some_and(|bc| blocker_filter(&bc.keywords)))
+                            // CR 614.9 — a Maze-of-Ith'd blocker deals no combat damage.
+                            .filter(|bid| !g.combat_damage_prevented_creatures.contains(bid))
+                            // CR 615.1 — "prevent all combat damage it would deal" (Azorius Ploy).
+                            .filter(|bid| !g.combat_damage_prevented_from(*bid))
+                            // CR 615.1 — fog (with Inspire Awe's per-dealer exception).
+                            .filter(|&bid| !g.combat_damage_prevented_for_dealer(bid))
+                            // CR 702.16e — a blocker whose color the attacker has
+                            // protection from deals no combat damage to it.
+                            .filter(|&bid| !g.damage_prevented_by_protection(bid, atk.id))
+                            // CR 615 — Light of Sanction: your source → your creature.
+                            .filter(|&bid| {
+                                !g.damage_from_your_source_to_your_creature_prevented(bid, atk.id)
+                            })
+                            // CR 615 — Indentured Oaf: a blocker's own damage to a
+                            // chosen color is prevented.
+                            .filter(|&bid| !g.source_damage_to_color_prevented(bid, atk.id))
+                            .collect();
+                        let takes =
+                            // CR 614.9 — a Maze-of-Ith'd attacker takes no combat damage.
+                            !g.combat_damage_prevented_creatures.contains(&atk.id)
+                            // CR 615 — Iroas shields attacking creatures you control.
+                            && !g.damage_to_attacker_prevented(atk.id)
+                            // CR 615 — Emmara shields your creature tokens.
+                            && !g.all_damage_to_creature_token_prevented(atk.id)
+                            // CR 615 — Rune-Tail's Essence shields all your creatures.
+                            && !g.all_damage_to_your_creature_prevented(atk.id);
+                        (ids, takes)
+                    });
 
                 if attacker_takes_strike_back {
                     // CR 702.90 / 615.6 — each blocker's strike-back is its
@@ -3649,21 +3667,28 @@ impl GameState {
                         let Some(bc) = computed_of(bid) else { continue };
                         // CR 510.1e — a multi-block blocker only assigns this
                         // attacker its share of the divided damage.
-                        let power = self.blocker_damage_to(
-                            bid,
-                            atk.id,
-                            combat_damage_value(bc).max(0) as u32,
-                        );
-                        if power == 0 {
+                        // Same read-only prefix as the attacker side: both
+                        // calls are `&self` and `apply_prevention_shields` is
+                        // the first write, so one scope holds the pair.
+                        let Some(scaled) = self.with_frozen_layers(|g| {
+                            let power = g.blocker_damage_to(
+                                bid,
+                                atk.id,
+                                combat_damage_value(bc).max(0) as u32,
+                            );
+                            (power != 0).then(|| {
+                                g.double_creature_combat_damage(g.scale_damage_to(
+                                    Some(bid),
+                                    crate::game::effects::EntityRef::Permanent(atk.id),
+                                    power,
+                                ))
+                            })
+                        }) else {
                             continue;
-                        }
+                        };
                         let dmg = self.apply_prevention_shields(
                             crate::game::effects::EntityRef::Permanent(atk.id),
-                            self.double_creature_combat_damage(self.scale_damage_to(
-                                Some(bid),
-                                crate::game::effects::EntityRef::Permanent(atk.id),
-                                power,
-                            )),
+                            scaled,
                             Some(bid),
                             &mut events,
                         );
