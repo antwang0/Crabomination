@@ -945,7 +945,8 @@ remaining cost is per-card `computed_permanent` and the gather itself.
    `--tree=caller` on `Vec::from_iter`, inclusive, so these are *iterator
    body* costs (see the eighteenth pass's correction below, which is still
    the warning that matters):
-   `cast_candidates` **168,130,962 / 5.25 %** over 7,024 calls;
+   `cast_candidates` **168,130,962 / 5.25 %** over 7,024 calls — **broken
+   down 2026-08-11**, see below;
    `check_state_based_actions` **132,514,326 / 4.14 %** over 82,634;
    `mana_source_table` **108,286,211 / 3.38 %** over 7,370;
    `pick_attacks_inner` 0.67 % over 7,842;
@@ -957,6 +958,32 @@ remaining cost is per-card `computed_permanent` and the gather itself.
    — `cast_candidates` is 23,900 Ir per call of auto-targeting per hand
    candidate, `check_state_based_actions` is `compute_battlefield_creatures`
    plus the `dead` filter. Read `--auto=yes` on either before costing it.
+   **`cast_candidates`, broken down** (`--auto=yes` + `--tree=calling`,
+   twenty-fourth pass's tip). Its *own* self cost is under 0.2 % across six
+   file rows — the 5.62 % inclusive is callees inlined into the
+   `Vec::from_iter` frame, so read the annotated source, not the function
+   list. Two callers, 3,382 and 3,642. By callee:
+   * `can_afford_in_state` **56,500,015 / 1.76 % over 12,114 calls
+     (4,664 Ir each)** — the hand-walk filter, and the largest named item.
+     Its body per hand card: `extra_cost_for_card_in_hand`,
+     `cost_reduction_for_spell`, **a `ManaCost` clone** to append
+     `colored_spell_tax_for_spell` (empty on every bench card),
+     `relax_cost_colors`, and `available_mana(state, seat)` **rebuilt per
+     card**. Two cheap levers, neither costed: make the clone a `Cow` the
+     way `7c75fb94` did for `relax_cost_colors_for_spell`; and re-cost
+     hoisting `available_mana` out of the filter — **the fourth pass's
+     no-win on exactly that is not authoritative any more**, it was
+     wall-clock on a different box at 8 G total, and callgrind would settle
+     it in one pair.
+   * `affordance_probe_template` **31,110,605 / 0.97 % over 3,382**
+     (9,199 each) — one library-stripped `GameState` clone per tick.
+   * `pick_land_to_play` 26,629,385 / 0.83 % over 1,410;
+     `beneficial_aura_host` 3,392,725 over 606; `Vec::retain` 0.09 %.
+   The sibling rows at the same call site are `would_accept`
+   **168,728,436 / 5.27 % over 1,534** (the lazy final gate, 110 k Ir per
+   probe) and `pick_by_outcome` 210,019,714 / 6.56 % over 908 — both
+   candidate (1)/(5), i.e. probe-count questions.
+
    The allocator block re-reads **~17.0 %** on this base (`_int_malloc`
    5.34 / `_int_free` 4.38 / `malloc` 3.23 / `free` 1.96 / merge 0.88 /
    arena 0.77 / consolidate 0.74 / unlink 0.73),

@@ -40,7 +40,12 @@ on every row; **18,612 tests green**, golden traces unchanged.
   the trace update needs a one-line justification. Then **(6b)** the
   dispatcher's event-kind presence mask, and **(8)**'s top two rows
   (`cast_candidates` 5.25 %, `check_state_based_actions` 4.14 %) — read
-  `--auto=yes` on either first, both are real iterator-body work.
+  `--auto=yes` on either first, both are real iterator-body work —
+  `cast_candidates` **is now broken down in PERF** and its cheapest lever
+  is `can_afford_in_state`'s per-hand-card `ManaCost` clone (`Cow` it, as
+  `7c75fb94` did) plus a callgrind re-cost of hoisting `available_mana`
+  out of that filter, whose fourth-pass no-win was wall-clock on another
+  box at 8 G total and does not bind.
   (0)/(1)/(5) are bot-quality questions wanting a ladder gate, not an Ir
   number.
 - **New filter, unswept.** The row that paid most was `.cloned()` before
