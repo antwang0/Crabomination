@@ -6886,22 +6886,30 @@ impl GameState {
     /// The spell-aware form: also true when `seat` controls a face-up source
     /// whose permission covers this particular spell — Unexpected Potential's
     /// chosen name, Emissary's Ploy's chosen mana value.
+    ///
+    /// One battlefield pass, not two: the seat-agnostic
+    /// `PlayersMaySpendManaAsAnyColor` scan that
+    /// [`spend_mana_as_any_color_active_for`](Self::spend_mana_as_any_color_active_for)
+    /// would take is folded into the same walk. Every payment asks this
+    /// question (`try_pay_after_snapshot_mode` is the only caller of the
+    /// relaxation), so the walk count is per-payment.
     pub fn spend_mana_as_any_color_for_spell(
         &self,
         seat: Option<usize>,
         kind: &crate::mana::SpellKind,
     ) -> bool {
         use crate::effect::StaticEffect;
-        if self.spend_mana_as_any_color_active_for(seat) {
+        if seat.is_some_and(|s| self.players[s].may_spend_any_color_this_turn) {
             return true;
         }
-        let Some(seat) = seat else { return false };
-        self.battlefield
-            .iter()
-            .chain(self.players[seat].command.iter())
-            .filter(|c| c.controller == seat && !c.face_down)
-            .any(|c| {
-                c.definition.static_abilities.iter().any(|sa| match sa.effect {
+        // False Dawn folds every colour into white and then lets white pay for
+        // anything, so the relaxed-cost path covers both clauses.
+        if !self.colored_mana_becomes_this_turn.is_empty() {
+            return true;
+        }
+        let spell_permission = |c: &crate::card::CardInstance| {
+            seat.is_some_and(|s| c.controller == s && !c.face_down)
+                && c.definition.static_abilities.iter().any(|sa| match sa.effect {
                     StaticEffect::MaySpendManaAsAnyColorForNamedSpells => {
                         kind.name.is_some() && c.named_card.as_deref() == kind.name
                     }
@@ -6910,7 +6918,16 @@ impl GameState {
                     }
                     _ => false,
                 })
-            })
+        };
+        let board = self.battlefield.iter().any(|c| {
+            c.definition
+                .static_abilities
+                .iter()
+                .any(|sa| matches!(sa.effect, StaticEffect::PlayersMaySpendManaAsAnyColor))
+                || spell_permission(c)
+        });
+        board
+            || seat.is_some_and(|s| self.players[s].command.iter().any(spell_permission))
     }
 
     /// The cost as it must actually be paid: with a Lattice-style
@@ -6922,15 +6939,19 @@ impl GameState {
 
     /// `relax_cost_colors_for`, but consulting the name-restricted permission
     /// too (Unexpected Potential's chosen name).
-    pub fn relax_cost_colors_for_spell(
+    ///
+    /// Borrowed when no permission is active — which is every payment in a
+    /// game without a Lattice-style effect — so the common path costs no
+    /// `Vec` clone.
+    pub fn relax_cost_colors_for_spell<'a>(
         &self,
         seat: Option<usize>,
-        cost: &crate::mana::ManaCost,
+        cost: &'a crate::mana::ManaCost,
         kind: &crate::mana::SpellKind,
-    ) -> crate::mana::ManaCost {
+    ) -> std::borrow::Cow<'a, crate::mana::ManaCost> {
         use crate::mana::ManaSymbol;
         if !self.spend_mana_as_any_color_for_spell(seat, kind) {
-            return cost.clone();
+            return std::borrow::Cow::Borrowed(cost);
         }
         let mut relaxed = 0;
         let mut symbols: Vec<ManaSymbol> = Vec::with_capacity(cost.symbols.len());
@@ -6945,7 +6966,7 @@ impl GameState {
         if relaxed > 0 {
             symbols.push(ManaSymbol::Generic(relaxed));
         }
-        crate::mana::ManaCost::new(symbols)
+        std::borrow::Cow::Owned(crate::mana::ManaCost::new(symbols))
     }
 
     /// The seat-aware form: also relaxes for a seat holding this turn's North
