@@ -752,3 +752,41 @@ fn adding_zero_counters_is_a_no_op() {
         .add_counters(CounterType::PlusOnePlusOne, 0);
     assert!(g.battlefield_find(bear).expect("bear").counters.is_empty());
 }
+
+/// CR 122 — the counter bag iterates in the order kinds were first added.
+///
+/// Regression test for a cross-process determinism defect: `counters` was a
+/// `HashMap`, whose iteration order `RandomState` reseeds per process, and
+/// several effects read it in order — `Effect::RemoveAnyCounter` (Thrull
+/// Parasite) takes "the first present kind", and the counter-copy /
+/// proliferate / remove-all paths collect the kinds into a `Vec` and act on
+/// them in sequence. Two processes on the same seed could therefore diverge.
+#[test]
+fn cr_122_counter_bag_order_is_insertion_order() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    {
+        let c = g.battlefield_find_mut(bear).unwrap();
+        c.add_counters(CounterType::Charge, 2);
+        c.add_counters(CounterType::PlusOnePlusOne, 1);
+        c.add_counters(CounterType::Shield, 3);
+        // Re-adding an existing kind keeps its original position.
+        c.add_counters(CounterType::Charge, 1);
+    }
+    let c = g.battlefield_find(bear).unwrap();
+    let kinds: Vec<(CounterType, u32)> = c.counters.iter().map(|(k, n)| (*k, *n)).collect();
+    assert_eq!(
+        kinds,
+        vec![
+            (CounterType::Charge, 3),
+            (CounterType::PlusOnePlusOne, 1),
+            (CounterType::Shield, 3),
+        ],
+    );
+    // Removing the middle kind closes the gap without reordering the rest.
+    let c = g.battlefield_find_mut(bear).unwrap();
+    assert_eq!(c.remove_counters(CounterType::PlusOnePlusOne, 1), 1);
+    let c = g.battlefield_find(bear).unwrap();
+    let kinds: Vec<CounterType> = c.counters.iter().map(|(k, _)| *k).collect();
+    assert_eq!(kinds, vec![CounterType::Charge, CounterType::Shield]);
+}

@@ -15432,7 +15432,8 @@ impl GameState {
                         && let Some(c) = self.battlefield_find_mut(cid)
                     {
                         let ctrl = c.controller;
-                        if let Some(kind) = c.counters.iter().find(|(_, n)| **n > 0).map(|(k, _)| *k) {
+                        let first = c.counters.iter().find(|(_, n)| **n > 0).map(|(k, _)| *k);
+                        if let Some(kind) = first {
                             let removed = c.remove_counters(kind, 1);
                             if removed > 0 {
                                 if kind == CounterType::Oil {

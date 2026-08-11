@@ -2317,7 +2317,7 @@ fn cankerbloom_sacs_to_destroy_and_proliferate() {
     let counted = g.add_card_to_battlefield(0, catalog::grizzly_bears());
     {
         let bear = g.battlefield.iter_mut().find(|c| c.id == counted).unwrap();
-        *bear.counters.entry(CounterType::PlusOnePlusOne).or_insert(0) = 1;
+        bear.counters.insert(CounterType::PlusOnePlusOne, 1);
     }
     g.clear_sickness(canker);
     g.players[0].mana_pool.add(Color::Green, 1);

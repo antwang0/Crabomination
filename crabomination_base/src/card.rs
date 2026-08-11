@@ -1,4 +1,3 @@
-use std::collections::HashMap;
 use std::sync::Arc;
 
 use serde::{Deserialize, Serialize};
@@ -874,6 +873,100 @@ pub struct MayPlayPermission {
     /// be cast there. Defaults to `false` for snapshot back-compat.
     #[serde(default)]
     pub miracle: bool,
+}
+
+/// CR 122 — the counters on a permanent, in the order they were first added.
+///
+/// A `Vec` for the same two reasons [`KeywordCounters`] is: `HashMap`'s
+/// iteration order is reseeded per process by `RandomState`, and a permanent
+/// carries one or two kinds when it carries any at all. The clone cost is the
+/// measured half — `CardData` is deep-copied ~1.09 M times per six bench games
+/// by the CoW unshare, and an empty `Vec` clone allocates nothing where an
+/// empty `hashbrown` table clone still walks its control bytes.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct CounterBag(Vec<(CounterType, u32)>);
+
+impl CounterBag {
+    pub fn get(&self, ct: &CounterType) -> Option<&u32> {
+        self.0.iter().find(|(k, _)| k == ct).map(|(_, n)| n)
+    }
+    pub fn get_mut(&mut self, ct: &CounterType) -> Option<&mut u32> {
+        self.0.iter_mut().find(|(k, _)| k == ct).map(|(_, n)| n)
+    }
+    /// Set the count for `ct`, returning the previous one. Mirrors
+    /// `HashMap::insert`, zero-valued entries included — the CR 122.1
+    /// invariant is [`CardData::add_counters`]'s job, not this type's.
+    pub fn insert(&mut self, ct: CounterType, n: u32) -> Option<u32> {
+        match self.0.iter_mut().find(|(k, _)| *k == ct) {
+            Some((_, have)) => Some(std::mem::replace(have, n)),
+            None => {
+                self.0.push((ct, n));
+                None
+            }
+        }
+    }
+    /// Add `n` counters of `ct`, creating the entry at 0 first.
+    pub fn add(&mut self, ct: CounterType, n: u32) {
+        match self.0.iter_mut().find(|(k, _)| *k == ct) {
+            Some((_, have)) => *have += n,
+            None => self.0.push((ct, n)),
+        }
+    }
+    pub fn remove(&mut self, ct: &CounterType) -> Option<u32> {
+        let i = self.0.iter().position(|(k, _)| k == ct)?;
+        Some(self.0.remove(i).1)
+    }
+    pub fn clear(&mut self) {
+        self.0.clear();
+    }
+    pub fn len(&self) -> usize {
+        self.0.len()
+    }
+    pub fn is_empty(&self) -> bool {
+        self.0.is_empty()
+    }
+    pub fn iter(&self) -> impl Iterator<Item = (&CounterType, &u32)> {
+        self.0.iter().map(|(k, n)| (k, n))
+    }
+    pub fn values(&self) -> impl Iterator<Item = &u32> {
+        self.0.iter().map(|(_, n)| n)
+    }
+}
+
+impl<'a> IntoIterator for &'a CounterBag {
+    type Item = (&'a CounterType, &'a u32);
+    type IntoIter = std::iter::Map<
+        std::slice::Iter<'a, (CounterType, u32)>,
+        fn(&'a (CounterType, u32)) -> (&'a CounterType, &'a u32),
+    >;
+    fn into_iter(self) -> Self::IntoIter {
+        self.0.iter().map(|(k, n)| (k, n))
+    }
+}
+
+impl IntoIterator for CounterBag {
+    type Item = (CounterType, u32);
+    type IntoIter = std::vec::IntoIter<(CounterType, u32)>;
+    fn into_iter(self) -> Self::IntoIter {
+        self.0.into_iter()
+    }
+}
+
+impl FromIterator<(CounterType, u32)> for CounterBag {
+    fn from_iter<I: IntoIterator<Item = (CounterType, u32)>>(iter: I) -> Self {
+        let mut out = Self::default();
+        for (k, n) in iter {
+            out.insert(k, n);
+        }
+        out
+    }
+}
+
+impl std::ops::Index<&CounterType> for CounterBag {
+    type Output = u32;
+    fn index(&self, ct: &CounterType) -> &u32 {
+        self.get(ct).expect("no counters of that kind")
+    }
 }
 
 /// CR 122.1b — the keyword counters on a permanent, in the order they were
@@ -5549,7 +5642,7 @@ pub struct CardData {
     /// battlefield (new object, CR 400.7).
     pub perm_power_bonus: i32,
     pub perm_toughness_bonus: i32,
-    pub counters: HashMap<CounterType, u32>,
+    pub counters: CounterBag,
     pub attached_to: Option<CardId>,
     /// CR 303.4a — the seat this Aura enchants, for "enchant player" Auras
     /// (the Curse cycle, Psychic Possession). Mutually exclusive with
@@ -6170,7 +6263,7 @@ pub struct CardData {
 
 /// A card object: a copy-on-write handle around [`CardData`].
 ///
-/// `CardData` is ~110 fields with a dozen `Vec`s and two `HashMap`s, and the
+/// `CardData` is ~110 fields with a dozen `Vec`s and no `HashMap`, and the
 /// engine clones whole zones constantly — the `perform_action` checkpoint,
 /// every bot dry-run probe. Behind the `Arc` a clone is a refcount bump and
 /// only a card that is actually *written* pays a deep copy, so unsharing a
@@ -6242,7 +6335,7 @@ impl CardInstance {
         let summoning_sick = definition.is_creature();
         let base_loyalty = definition.base_loyalty;
         let is_planeswalker = definition.is_planeswalker();
-        let mut counters = HashMap::new();
+        let mut counters = CounterBag::default();
         if is_planeswalker && base_loyalty > 0 {
             counters.insert(CounterType::Loyalty, base_loyalty);
         }
@@ -6465,7 +6558,7 @@ impl CardInstance {
         if n == 0 {
             return;
         }
-        *self.counters.entry(ct).or_insert(0) += n;
+        self.counters.add(ct, n);
     }
 
     /// Remove up to `n` counters of kind `ct`; returns how many came off.

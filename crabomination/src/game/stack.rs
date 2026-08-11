@@ -4577,14 +4577,9 @@ impl GameState {
                     .unwrap_or(0);
                 if plus > 0 && minus > 0 {
                     let cancel = plus.min(minus);
-                    *card
-                        .counters
-                        .entry(crate::card::CounterType::PlusOnePlusOne)
-                        .or_insert(0) -= cancel;
-                    *card
-                        .counters
-                        .entry(crate::card::CounterType::MinusOneMinusOne)
-                        .or_insert(0) -= cancel;
+                    card.counters.insert(crate::card::CounterType::PlusOnePlusOne, plus - cancel);
+                    card.counters
+                        .insert(crate::card::CounterType::MinusOneMinusOne, minus - cancel);
                 }
             }
         }
