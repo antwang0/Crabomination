@@ -16,62 +16,41 @@ reference and want their own triage pass):
 
 ## NEXT (handoff — rewrite each run, keep under 15 lines)
 
-Branch `claude/modern_decks`. **Twentieth pass: four perf commits,
--5.223 % Ir** (3,694,337,730 -> 3,501,374,248, base `3655c37c`,
-`profiling-fast --no-default-features` callgrind), plus a flaky-gate fix
-and two gate regression tests. Bench output byte-identical on every row,
-suite **18,839** green, workspace clippy clean. Rebased over a concurrent
-session's `9e9b4e73` (ML_NOTES only).
+Branch `claude/modern_decks`. **Twenty-first pass: four perf commits,
+-1.423 % Ir** (3,501,692,629 -> 3,451,879,102, base `e2d030c6`,
+`profiling-fast --no-default-features` callgrind). Bench output identical
+on every row, suite **18,995** green, workspace clippy clean (client
+included — the apt deps below install cleanly here).
 
-- **The `compute_battlefield` table is closed.** Calls **17,718 -> 5,488 ->
-  310**, and the 310 are all `submit_decision` (0.02 %). The nineteenth
-  pass's candidate (0) landed exactly as specified (-1.733 %), its mirror in
-  `declare_blockers` to the tenth of a point (-1.028 %) — and then the three
-  sites that table wrote off as "legitimate — one pass per turn"
-  (`do_phasing`, `do_untap`, `process_cumulative_upkeep`) turned out to be
-  the cheapest gate in the file and the biggest row (-2.216 %). *"One pass
-  per turn" was a reason nobody looked.* New: `board_keyword_in_scope` /
-  `board_keyword_matching`, both audited across the suite.
-- **The fourth row, and what it leaves.** `dispatch_triggers_for_events`'s
-  four delayed-trigger blocks scanned the event batch before asking whether
-  anything was watching (-0.343 %). **The rest of that function is the
-  bigger half and is written up as candidate (4)**: ~152 M of self cost,
-  ~99 M of it `Vec` machinery over **7 collects per dispatch**, ~52 k
-  dispatches per six games. Two named levers, the second being the
-  `gated_block!` presence mask from `52f4311a`.
-- **Next up.** PERF candidate (0) is `try_pay_after_snapshot_mode`,
-  **14.12 %** — the largest name in the profile never on the list. Most of
-  it is the auto-tap chain, but the ~24 M above `auto_tap_for_cost_inner`
-  and "how often is that snapshot's restore read" are both unexamined; it is
-  the fourteenth pass's shape one level up. Then `pick_by_outcome` (6.31 %,
-  essentially one `collect()`), the trigger-dispatch batch gate (9.81 %),
-  and the attack search 51 % (still needs a ladder win-rate gate).
-- **A flaky gate, found and fixed** (`09257f37`). `crabomination_ml`'s
-  `muon_learns_the_synthetic_signal` failed a full-workspace run and passed
-  in isolation: at n = 100 its generalization score lands in 76-91 over 24
-  runs against a `>= 78` bar, i.e. **3 of 24 fail**. Fixed by quadrupling
-  the sample (326-358 / 400 over 20 runs) and setting the bar at 70 %.
-  **The filter, if another one shows up**: a suite failure that will not
-  reproduce alone is a distribution, so sample it 20+ times and read the
-  min before touching the threshold.
-- **Bugs**: the panic sweep's **sixth filter is done and clean** —
-  `[profile.overflow]` over 17,693 bot_ladder games across all four deck
-  pools plus 600 `selfplay_train` games, 0 panics. Six filters exhausted; a
-  seventh needs a new idea. Stall rate on the wider pools measured at
-  **~0.1 %** (bench `fixed` is 0, which hid it) — see the robustness section.
-- **Bench re-anchored at `ed4c152c`**: mean 95.64 games/s, stalls 0,
-  determinism ok on all six, turns 26.98. **That is +42 % on the 67.31
-  anchor and it is the host, not the code** — `host_cpu` reports a
-  *different CPU model* this time (2.10 vs 2.80 GHz) with `host_calib_ms`
-  47-52 vs 53-70. Absolutes do not chain across those two blocks; the Ir
-  numbers do (base re-read -0.010 % against the recorded tip).
-- **Env** (details in *Environment note* below): no `cargo-nextest`; the
-  client was untouched. Disk is tight — `rm -rf target/debug/incremental`
-  frees ~11 GB. Builds: `profiling-fast` engine-only **~3 min** (cold ~20),
-  `release` **22 min**, a fresh profile ~9, callgrind ~5 min wall.
-- **Trackers**: TODO 929, roadmap 660, `PERF.md` ~1.4k. Passes one to
-  sixteen are now all indexed — that trim item is **done**. Next one, at
-  ~1.5k: the eighteenth/nineteenth tables, same treatment.
+- **Rows.** Payment's cost relaxation borrows and walks the board once
+  (`716e0211`, -0.110 %); `ColdState`'s 15 id sets are `Vec`-backed
+  (`1536a598`, -0.418 %); `died_card_snapshots` is insertion-ordered
+  (`d0244dc0`, -0.278 %, *and a bug fix*); `auto_tap`'s inner loops stop
+  rebuilding constants (`eaaa73db`, **-0.622 %** — a comment asserting a
+  value was "recomputed each iteration because…" was simply wrong).
+- **The `HashMap`-order audit TODO has been asking for is done.** All 31
+  map/set fields of `GameState`/`ColdState`/`Player`; exactly one leak,
+  fixed. The robustness section records the three sites that look risky
+  and are not, so nobody re-runs the survey.
+- **Next up.** PERF candidate (0) is `mana_source_table`, **3.83 % over
+  8,892 calls**, rebuilt on every auto-tap even when the pool already
+  covers the cost — two probes written out. Then candidate (1), the other
+  half of the `RawTable::clone` block (seven `ColdState` maps + nine
+  `GameState` hash fields, 0.41 %), **gated on serde**: a `HashMap` is a
+  JSON object, a `Vec` newtype an array of pairs. `pick_attacks_scored`
+  at 51 % still needs a ladder win-rate gate, not an Ir number.
+- **Bench.** Do not chain absolutes against the committed anchor without
+  reading `host_calib_ms` first: this container reports the *2.80 GHz*
+  `host_cpu` and calibrates like the 2.10 GHz box. Eight runs, mean 94.20,
+  **spread 14.8 %** — the anchor was left alone rather than replaced with
+  a looser measurement. See **Baseline**.
+- **Env.** No `cargo-nextest` (use `cargo test --workspace`; ~19 k tests
+  run in ~40 s once built). Timings here: cold `profiling-fast`
+  engine-only build **~45 min** (the catalog crate is ~27 of it),
+  incremental engine ~8, callgrind ~5, `release` **~25**, cold
+  `cargo test --workspace` ~35. Disk peaked at 45 %.
+- **Trackers.** PERF passes 17-19 collapsed to the index (that trim item
+  is done); PERF ~1.47k, TODO ~955, roadmap 660.
 
 ## Environment note
 

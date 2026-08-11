@@ -166,6 +166,28 @@ here read 3,694,337,730 against the nineteenth pass's recorded
 anchors, `stalls` 0, determinism ok on all six runs, peak RSS 21.7-22.3
 against 22.1-22.5.
 
+**Cross-check at `eaaa73db` (the twenty-first pass's tip), 2026-08-11 — the
+anchor is NOT refreshed, and the reason is the spread.** Eight `--bench`
+runs in one sitting on this container: 91.49 / 94.20 / 93.00 / 93.61 /
+96.02 / 96.14 / 101.55 / 87.57, **mean 94.20, spread 14.8 %** — twice the
+committed anchor's 7.48 %, so this sitting resolves nothing at the pass's
+1.423 % and re-anchoring on it would replace a tighter measurement with a
+looser one. 94.20 against 95.64 is **-1.5 %, inside that spread**, while
+the instruction count says the tip does 1.423 % *less* work; no
+investigation is owed. The workload facts all match the anchor exactly:
+`turns_per_game` **26.98** (a sixth consecutive anchor), `stalls` **0**,
+`determinism` ok on all eight, `peak_rss_mib` 21.8-22.3 against 21.7-22.3,
+`decisions_per_game` 603.9.
+
+**The host fingerprint disagrees with itself here, and the calibration
+probe is the half to believe.** `host_cpu` reads *2.80 GHz* — the
+`4f3e86c0` anchor's box, not the `ed4c152c` anchor's 2.10 GHz one — while
+`host_calib_ms` reads **46-62**, overlapping the 2.10 GHz box's 47-52 and
+not the 2.80 box's own 53-70. A container that reports the older model
+string and calibrates like the newer one is why the probe exists: compare
+`host_calib_ms` before comparing absolutes, and never chain across two
+blocks whose probes don't overlap.
+
 The previous anchor, `4f3e86c0` (the nineteenth pass's tip), for the
 record:
 
@@ -467,7 +489,9 @@ as every row above.
 |---|---|---|---|---|
 | 2026-08-11 | Payment's cost relaxation borrows and walks the board once (`716e0211`) | 3,501,692,629 Ir | 3,497,826,864 Ir (**-0.110 %**) | `try_pay_after_snapshot_mode` is 14.12 % of the profile and its first two statements are pure preamble: `relax_cost_colors_for_spell` cloned the `ManaCost` on the common path, and `spend_mana_as_any_color_for_spell` took *two* battlefield passes to decide there was nothing to relax (one for the seat-agnostic `PlayersMaySpendManaAsAnyColor`, one for the two named-spell permissions). Now `Cow::Borrowed` plus one fused walk. At the edge of what a single A/B pair resolves, but the change strictly removes a clone and a board pass, so the sign is not in question. |
 | 2026-08-11 | `ColdState`'s 15 id sets are `Vec`-backed (`1536a598`) | 3,497,826,864 Ir | 3,483,193,405 Ir (**-0.418 %**) | Found in `--tree=caller` under `RawTable::clone`, which has exactly two callers: **`Arc::clone_from_ref_in` 984,988x / 42,825,844 Ir / 1.22 %** (the `ColdState` CoW unshare, 22 tables per unshare, ~44.8 k unshares for six games) and `GameState::clone` 302,418x / 0.41 %. An empty `hashbrown` table clone still walks its control bytes. `IdSet<T>` is a `Vec` newtype carrying `HashSet`'s API for the six methods these fields use — **nothing iterates one**, so the swap is 15 type annotations and no call-site changes — and it serializes as the same sequence. The seven `HashMap` fields in the group are left: their JSON shape is an object, and changing it moves the snapshot format. |
-| | **cumulative, twenty-first pass** | **3,501,692,629 Ir** | **3,483,193,405 Ir (-0.528 %)** | callgrind on the fixed six-game workload; bench output identical on every row |
+| 2026-08-11 | `died_card_snapshots` is insertion-ordered, not a `HashMap` (`d0244dc0`) | 3,483,193,405 Ir | 3,473,495,633 Ir (**-0.278 %**) | **A determinism fix that also pays.** `dispatch_triggers_for_events` walks `.values()` pushing `TriggerCandidate`s, and a candidate's position decides where its ability lands on the stack — nothing between there and `drain_trigger_queue` sorts, so two creatures dying to the same damage stacked their LKI triggers in `RandomState` order. `IdMap<K, V>` is the map sibling of `IdSet`. **Four times the 15 sets' per-field rate on one field**, because this one is *populated* on every death: a non-empty table clone allocates a table plus control bytes where a `Vec` allocates once. The bench never hits two-simultaneous-deaths, which is why golden traces never caught the defect. |
+| 2026-08-11 | `auto_tap`'s inner loops stop rebuilding constants (`eaaa73db`) | 3,473,495,633 Ir | 3,451,879,102 Ir (**-0.622 %**) | Three rebuilds in one function (13.46 % over 8,892 calls), two of them with a comment asserting the opposite. **`redundancy` is constant across the generic-pip loop** — the comment said it is recomputed "because tapping one source changes how redundant the rest are", but it reads `sources`, the local table the loop never mutates, so it was O(pips × live × sources × colours) to rebuild one ranking; hoisted, and gated on `generic_to_tap > 0` because most costs have no generic pip and the build is O(sources² × colours). The same loop collected a `live: Vec<&ManaSourceInfo>` per pip only to `min_by_key` it — fused, and `min_by_key` keeps the first of equal keys either way. And `avail` / `prod` were `HashMap<ManaColor, u32>` over five fixed keys, i.e. an allocation plus a SipHash per cost symbol, now `[u32; 5]` indexed by `color_index`. |
+| | **cumulative, twenty-first pass** | **3,501,692,629 Ir** | **3,451,879,102 Ir (-1.423 %)** | four rows, callgrind on the fixed six-game workload; bench output identical on every row |
 
 **The nineteenth pass's empty-table finding, corrected.** That pass
 concluded from `CounterBag` (+0.051 %) that "`hashbrown` short-circuits the
@@ -669,27 +693,25 @@ and twentieth passes ranked is paid: `declare_attackers_banded`
 (741,960 Ir / 0.02 %). Do not re-open this table; the layer system's
 remaining cost is per-card `computed_permanent` and the gather itself.
 
-0. **`auto_tap_for_cost_inner`'s two inner loops rebuild constants.**
-   Read on the twenty-first pass's base, unpaid, and specified:
-   (a) the generic-pip loop calls `s.redundancy(&sources)` per live source
-   *per pip*, and `sources` is a local that the loop never mutates — the
-   comment claiming it is "recomputed each iteration because tapping one
-   source changes how redundant the rest are" is **wrong**, the value is
-   constant across the loop and belongs in the table (or a parallel `Vec`)
-   built once; (b) that same loop collects a `live: Vec<&ManaSourceInfo>`
-   per pip only to `min_by_key` it — fuse the filter into the iterator;
-   (c) `avail` and `prod` are `HashMap<ManaColor, u32>` over five fixed
-   keys, i.e. an allocation plus a SipHash per cost symbol where `[u32; 5]`
-   indexed by `color_index` would do. `auto_tap_for_cost_inner` is
-   483,645,579 / 13.46 % over 8,892 calls, and `mana_source_table`'s
-   collect under it is 134,127,895 / 3.83 %.
-   ~~**`try_pay_after_snapshot_mode`, 14.12 %** — the preamble half~~ —
-   **paid** (`716e0211`, -0.110 %). What is left of that function is the
-   auto-tap chain, i.e. this item and (2). The snapshot question it also
+0. **`mana_source_table`, 134,127,895 / 3.83 % over 8,892 calls — the
+   whole of what is left in the auto-tap chain's setup.** `eaaa73db` took
+   the two selection loops; this is the table they read, one
+   `effective_mana_abilities_with` plus a five-colour scan per untapped
+   permanent, and it is rebuilt on **every** auto-tap even when the pool
+   already covers the cost. Two probes, in order: (a) how many of the
+   8,892 calls tap nothing (`still_need_colors` empty and
+   `generic_to_tap == 0`)? Those built the table for nothing — the same
+   shape as `716e0211` one level up. (b) the table is a pure function of
+   (battlefield tap state, layer inputs); `would_accept`'s probe clones
+   and immediately asks for it, so a per-freeze-scope memo may be the
+   `computed_permanent` trick again.
+   ~~**`try_pay_after_snapshot_mode`, 14.12 %**~~ — the preamble half is
+   **paid** (`716e0211`, -0.110 %) and the two loops under it are
+   **paid** (`eaaa73db`, -0.622 %). The snapshot question that item also
    asked has an answer: `snapshot_payment_state` is
    **9,390,030 Ir / 0.27 % over 8,892 calls**, so eliding the unread
-   restore is worth at most a quarter point — not the fourteenth pass's
-   shape after all.
+   restore is worth at most a quarter point — *not* the fourteenth pass's
+   shape after all, and not worth the soundness argument.
 1. **The `RawTable::clone` block, half paid.** `--tree=caller` on
    `RawTable::clone` has exactly two callers, and `1536a598` took the
    larger one's set half. Left: the **seven `ColdState` `HashMap` fields**
