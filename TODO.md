@@ -16,58 +16,45 @@ reference and want their own triage pass):
 
 ## NEXT (handoff — rewrite each run, keep under 15 lines)
 
-Branch `claude/modern_decks`. **Nineteenth pass: two perf commits,
--1.968 % Ir** (3,768,870,942 -> 3,694,708,603, base `10cdbe63`,
-`profiling-fast --no-default-features` callgrind), plus one measured null
-kept as a determinism fix. Bench output byte-identical on every row,
-suite 18,837 green, clippy clean.
+Branch `claude/modern_decks`. **Twentieth pass: three perf commits,
+-4.897 % Ir** (3,694,337,730 -> 3,513,438,110, base `3655c37c`,
+`profiling-fast --no-default-features` callgrind). Bench output
+byte-identical on every row, suite 18,837 green, clippy clean.
 
-- **The shape both rows share.** *A whole-board `compute_battlefield`
-  whose consumers are all `find(id)` lookups is a participant computation
-  with a presence gate on whichever consumer is not.* `declare_blockers`
-  (-1.021 %) and the combat-damage resolver (-1.008 %) were both that.
-  New helper: `GameState::compute_permanents(&[CardId])` — one gather,
-  one `apply_layers_one` per named permanent.
-- **Next up, and the analysis is already written down.** PERF candidate
-  (0) is `declare_attackers_banded`'s pass (**1.64 %**, 3,780 calls) and
-  `declare_blockers`' validation pass (**1.10 %**) — **~2.7 % between
-  them**, blocked on the same keyword presence gate, which the candidate
-  entry specifies exactly (four keyword sources in `layers.rs:491-518`,
-  `AddKeyword` the only additive modification, `goaded_by` is an instance
-  field and must be in the gate, hoist `groups` above `computed`, and
-  give `computed_kw` a `debug_assert!` so a missed whole-board consumer
-  panics across the suite instead of silently returning `&[]`). After
-  that: the attack search 52 % (needs a ladder win-rate gate, cheap first
-  probe is "how often does the search depart from greedy"),
-  `would_accept` 14 %, the allocator ~16 %.
-- **The null, so nobody re-derives it.** `CardData.counters` HashMap ->
-  `CounterBag` read **+0.051 %**: `hashbrown` short-circuits the
-  empty-table clone, so the 1.09 M `CardData` deep copies were paying for
-  a branch, not an allocation. Kept anyway — `Effect::RemoveAnyCounter`
-  and six collect sites read map order into game state, the same
-  cross-process determinism class `86670250` fixed for `keyword_counters`.
-- **Bugs**: no new ones found or filed. The panic sweep's five filters
-  remain exhausted; the sixth is still "run the actor path with overflow
-  checks on in release for a few thousand games" — **not done this run.**
-- **Bench re-anchored at `4f3e86c0`**: mean 67.31 games/s (6 runs, spread
-  1.95 %), stalls 0, determinism ok on all six, `turns_per_game` 26.98,
-  RSS 22.1-22.5. That is **-5.6 % on the 71.29 anchor, and it is the
-  host** — checked with a same-sitting paired A/B (the two perf commits
-  reverted, both sides `profiling-fast`, **+1.82 % mean, 4/6 pairs
-  positive**), not asserted from `host_calib_ms` alone. Full evidence in
-  **Baseline**. **Reuse that method**: reverting two files and rebuilding
-  the engine costs 5 minutes and turns "probably the box" into a number.
-- **Env**: `cargo-nextest` is not in the image — `cargo test --workspace
-  --exclude crabomination_client`. `crabomination_client` needs
-  `libwayland-dev libasound2-dev libudev-dev libxkbcommon-dev` (not
-  installed this run; the client was untouched). A cold
-  `profiling-fast` build is ~16 min, an **engine-only** rebuild ~5 min, a
-  callgrind run ~1 min of wall plus ~4 of valgrind. Callgrind and a test
-  build *can* run together — instruction counts are contention-immune —
-  but two compile jobs cannot.
-- **Trackers**: TODO 9xx, roadmap 660, `PERF.md` ~1.4k. Next PERF trim:
-  passes fourteen to sixteen to an index table, same treatment as one to
-  thirteen — still not done.
+- **The `compute_battlefield` table is closed.** Calls **17,718 -> 5,488 ->
+  310**, and the 310 are all `submit_decision` (0.02 %). The nineteenth
+  pass's candidate (0) landed exactly as specified (-1.733 %), its mirror in
+  `declare_blockers` to the tenth of a point (-1.028 %) — and then the three
+  sites that table wrote off as "legitimate — one pass per turn"
+  (`do_phasing`, `do_untap`, `process_cumulative_upkeep`) turned out to be
+  the cheapest gate in the file and the biggest row (-2.216 %). *"One pass
+  per turn" was a reason nobody looked.* New: `board_keyword_in_scope` /
+  `board_keyword_matching`, both audited across the suite.
+- **Next up.** PERF candidate (0) is `try_pay_after_snapshot_mode`,
+  **14.12 %** — the largest name in the profile never on the list. Most of
+  it is the auto-tap chain, but the ~24 M above `auto_tap_for_cost_inner`
+  and "how often is that snapshot's restore read" are both unexamined; it is
+  the fourteenth pass's shape one level up. Then `pick_by_outcome` (6.31 %,
+  essentially one `collect()`), the trigger-dispatch batch gate (9.81 %),
+  and the attack search 51 % (still needs a ladder win-rate gate).
+- **Bugs**: the panic sweep's **sixth filter is done and clean** —
+  `[profile.overflow]` over 17,693 bot_ladder games across all four deck
+  pools plus 600 `selfplay_train` games, 0 panics. Six filters exhausted; a
+  seventh needs a new idea. Stall rate on the wider pools measured at
+  **~0.1 %** (bench `fixed` is 0, which hid it) — see the robustness section.
+- **Bench re-anchored at `ed4c152c`**: mean 95.64 games/s, stalls 0,
+  determinism ok on all six, turns 26.98. **That is +42 % on the 67.31
+  anchor and it is the host, not the code** — `host_cpu` reports a
+  *different CPU model* this time (2.10 vs 2.80 GHz) with `host_calib_ms`
+  47-52 vs 53-70. Absolutes do not chain across those two blocks; the Ir
+  numbers do (base re-read -0.010 % against the recorded tip).
+- **Env** (details in *Environment note* below): no `cargo-nextest`; the
+  client was untouched. Disk is tight — `rm -rf target/debug/incremental`
+  frees ~11 GB. Builds: `profiling-fast` engine-only **~3 min** (cold ~20),
+  `release` **22 min**, a fresh profile ~9, callgrind ~5 min wall.
+- **Trackers**: TODO 929, roadmap 660, `PERF.md` ~1.4k. Passes one to
+  sixteen are now all indexed — that trim item is **done**. Next one, at
+  ~1.5k: the eighteenth/nineteenth tables, same treatment.
 
 ## Environment note
 
@@ -188,11 +175,32 @@ sibling might not, rather than at the site alone. Two sweeps:
   `const` five-element array (the two `CardType` pickers). The precondition
   is real and nobody forgot it.
 
-Five filters exhausted, four of them looking at the site and one at the
-callers. What is left of the item is the ~183 `unwrap()`/`expect()`, still
-wanting triage rather than a blanket rewrite. The next filter probably has
-to stop pattern-matching on syntax: run the actor path under a build that
-turns overflow checks on in release and let a few thousand games find it.
+**The sixth filter was run 2026-08-11 and is also clean** — the one the
+five before it pointed at, and the only one that does not pattern-match on
+syntax. `[profile.overflow]` (`release-fast` + `overflow-checks = true`,
+committed in `Cargo.toml` with the invocation in its comment) turns every
+silent wrap into a panic with a backtrace. Run:
+
+- `bot_ladder --a gang --b gang --games 300 --threads 3`, four seeds across
+  all four deck pools (`all` x2, `sealed`, `cube`, `sos`) — **17,693 games
+  decided, 0 panics**.
+- `selfplay_train --actors 3 --games 600 --steps 60 --batch 64` — the real
+  actor path, encoder and learner included — **600 games, 56,353 rows, 0
+  panics, 0 stalls**.
+
+So the arithmetic is clean on ~18 k games across every pool the bench and
+the trainer touch. What is left of the item is still the ~183
+`unwrap()`/`expect()`, wanting triage rather than a blanket rewrite, and a
+*seventh* filter — the six above are exhausted. Rerun the overflow profile
+after any change to counters, damage, mana or the encoder; it costs one
+9-minute build and two minutes of games.
+
+**Stall rate, measured on the same runs** (the standing robustness goal —
+the bench's `--decks fixed` reads 0 and always has, which hides this): the
+wider pools stall at **~0.1 %** — `all` seed 11 5/5,100, `cube` seed 41
+2/2,400, `all` seed 7 0/5,100, `sealed` 0/3,600, `sos` 0/1,500. Not moving
+and not trivial. If it is ever worth a run, the top cause wants finding
+first — dump the stalled games' final states rather than guessing.
 
 ## Engine — Missing Mechanics
 
