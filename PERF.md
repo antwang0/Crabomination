@@ -588,6 +588,39 @@ the only real lever left is a *cached* board-level flag, which needs
 maintenance at every battlefield mutation. Cost that maintenance before
 writing it.
 
+The twenty-fourth pass. Base `4d5fbc69` (the twenty-third pass's tip)
+rebuilt here read **3,318,705,480 Ir** against the recorded 3,317,550,360 —
+**0.035 % apart**, so the passes' numbers chain. Same workload and build as
+every row above.
+
+| date | change | before | after | how measured |
+|---|---|---|---|---|
+| 2026-08-11 | Step triggers filter before cloning (`006d5966`) | 3,318,705,480 Ir | 3,256,158,471 Ir (**-1.885 %**) | `fire_step_triggers` built its candidate list as `triggered_abilities.iter().cloned().chain(granted).filter(kind).filter(scope)` — **every printed trigger on every battlefield permanent cloned, then discarded unless it matched this step's kind**, and a `TriggeredAbility` clone is an `Effect` tree plus the event's filter predicate. Filter on the borrowed ability, clone the survivors; the per-card `collect::<Vec<_>>()` inside the `flat_map` goes with it, and the per-card grant walk takes the dispatcher's presence gate. The function's collect row was 67,972,378 / 2.05 % over 14,462 calls and is now **absent from the collect table entirely**. Order unchanged: printed then granted, per card, in battlefield order. |
+| 2026-08-11 | The SBA sweep's Hushbringer scan is gated on there being a death (`41551bcc`) | 3,256,158,471 Ir | 3,253,878,954 Ir (**-0.070 %**) | `creature_dies_triggers_suppressed` walks the battlefield x `static_abilities`, and `check_state_based_actions` ran it on all 82,634 sweeps although both reads sit inside `for id in dead`. `!dead.is_empty() && …` is exact — the value is only ever observed when the loop runs. Small because the scan inlines into the sweep and never surfaced as its own profile row; kept for that plus the invariant it states. |
+| 2026-08-11 | The trigger dispatcher takes one board scan, not four (`f28faaa0`) | 3,253,878,954 Ir | 3,217,512,298 Ir (**-1.118 %**) | Candidate (6a'), generalized. The dispatcher opened with **four** separate walks of `self.battlefield`, three of them also walking each card's `static_abilities`: `creature_dies_triggers_suppressed`, the ability-strip presence gate, `trigger_grant_sources`, `equip_granted_trigger_sources`. `dispatch_board_scan` -> `DispatchScan` fuses them, the device `stack.rs` already used for `SbaBoardScan`. `ability_strip_in_scope` splits into `ability_strip_off_battlefield` plus a caller-supplied battlefield leg. A `debug_assert!` in the fused scan cross-checks all four fields against the functions it replaces, so the whole suite audits it against drift — the same guarantee the strip gate already carried. |
+| 2026-08-11 | Spell-cast triggers walk the battlefield once (`125557eb`) | 3,217,512,298 Ir | 3,201,568,157 Ir (**-0.496 %**) | The same shape one function over, plus one of its own: `fire_spell_cast_triggers` collected `live: Vec<(CardId, usize)>` and then re-`find`-ed each id in the battlefield — **O(cards²) for nothing**, since nothing between the collect and the loop mutates. Three board walks become the one `DispatchScan`, the per-card grant lookups take the presence gates, and `stripped` is the `Vec` the gate returns instead of a `HashSet` built from it (empty on almost every board, which a slice answers with a length check). |
+| | **cumulative, twenty-fourth pass** | **3,318,705,480 Ir** | **3,201,568,157 Ir (-3.530 %)** | four rows, callgrind on the fixed six-game workload; bench output identical on every row (24 decided, 12 splits, rho -1.000), 18,612 tests green, golden traces unchanged |
+
+**What the pass leaves behind.** The largest row in five passes was not a
+gate, a memo or a representation — it was **`cloned()` sitting *before* the
+`filter` that throws the clones away**, in a function every step of every
+turn calls. Nothing about the call counts said so: `fire_step_triggers` was
+2.55 % inclusive and its 14,462 calls looked one-per-step and therefore
+fine. **The filter that finds the next one: an iterator that clones and
+then narrows.** `.cloned()` / `.to_vec()` / `.clone()` followed (however
+many adapters later) by a `.filter` or an `if` on a field the *borrowed*
+item could have answered. The whole-workspace sweep for the exact shape
+(`\.cloned\(\)\s*\n\s*(\.chain\(…\)\s*\n\s*)?\.filter`) is clean after this
+row, but the sweep only catches the syntactic form — the semantic one is
+"how much of what this loop builds does it keep?".
+
+Second lesson, from the two `DispatchScan` rows: **a fused board scan is
+worth writing even when each walk it replaces is individually invisible.**
+`creature_dies_triggers_suppressed` and `equip_granted_trigger_sources` do
+not appear anywhere in the profile — they inline — and the four walks
+together were still 1.118 % of the program. The count that predicts the win
+is `walks x battlefield x call count`, not any one walk's profile row.
+
 ## Profile of record
 
 Callgrind on `profiling-fast --no-default-features` (= `release-fast` opt
@@ -595,28 +628,35 @@ settings + debuginfo; system allocator, because valgrind replaces malloc and
 a mimalloc build would measure the interception), 1 thread, `--a gang --b
 gang --games 6 --seed 1 --decks fixed`.
 
-**Re-taken 2026-08-11 on the twenty-second pass's tip `1112e709`:
-3,362,421,936 Ir.** Supersedes the twentieth-pass table beneath it, which
-is kept only for the rows it costed that are still live.
+**Re-taken 2026-08-11 on the twenty-fourth pass's tip `125557eb`:
+3,201,568,157 Ir.** Supersedes the twenty-second-pass table beneath it,
+which is kept only for the rows it costed that are still live.
 
 | Ir | share | site |
 |---|---|---|
-| 1,705,928,021 | 50.74 % | `pick_attacks_scored` (630 calls) — the search, still untouched |
-| 1,698,697,513 | 50.52 % | `simulate_attack_outcome_once`, under it |
-| 507,363,159 | 15.09 % | `would_accept` |
-| 493,062,433 | 14.66 % | `resolve_combat` |
-| 409,383,637 | 12.18 % | `auto_tap_for_cost_inner` |
-| 311,902,398 |  9.28 % | `gather_continuous_effects_inner` |
-| 273,857,088 |  8.14 % | `dispatch_triggers_for_events` (52,332 calls) |
-| 215,958,939 |  6.42 % | `pick_by_outcome` |
-| 179,909,483 |  5.35 % | `cast_candidates` (7,024 calls) |
-| 163,301,976 |  4.86 % | `check_state_based_actions` (82,634 calls) |
-| 157,719,416 |  4.69 % | `compute_permanent` |
-| 116,475,295 |  3.46 % | `mana_source_table` (7,370 calls) |
-| 60,358,016 |  1.80 % | `fire_combat_damage_triggers` (28,564 calls) |
+| 1,602,691,451 | 50.06 % | `pick_attacks_scored` (630 calls) — the search, still untouched |
+| 1,595,447,621 | 49.83 % | `simulate_attack_outcome_once`, under it |
+| 491,192,545 | 15.34 % | `would_accept` |
+| 431,881,315 | 13.49 % | `try_pay_after_snapshot_mode` |
+| 410,025,202 | 12.81 % | `auto_tap_for_cost_inner` |
+| 359,094,195 | 11.22 % | `resolve_combat` |
+| 311,764,753 |  9.74 % | `gather_continuous_effects_inner` (141,106 gathers) |
+| 240,615,249 |  7.52 % | `dispatch_triggers_for_events` (52,332 calls) |
+| 210,019,714 |  6.56 % | `pick_by_outcome` |
+| 179,992,085 |  5.62 % | `cast_candidates` (7,024 calls) |
+| 157,750,775 |  4.93 % | `compute_permanent` (248,654 calls) |
+| 116,895,124 |  3.65 % | `mana_source_table` (7,370 calls) |
+| 113,472,401 |  3.54 % | `check_state_based_actions` (82,634 calls) |
 
-`try_pay_after_snapshot_mode` has left the top of the list: the twenty-first
-pass paid both halves the seventeenth named.
+`fire_step_triggers` has left this table (2.55 % -> below threshold) and
+the collect table with it; `fire_combat_damage_triggers` left at the
+twenty-third pass. Shares rise where the denominator fell — `would_accept`
+and `try_pay_after_snapshot_mode` are unchanged in absolute Ir.
+
+**Who gathers, at this tip**: `computed_permanent` 107,936 (243,439,898 /
+7.60 %), `frozen_effects` 18,916 (1.21 %), `check_state_based_actions`
+10,670 (0.67 %), `compute_permanents` 3,274, `compute_battlefield` 310 —
+**141,106 total**. The `computed_permanent` row is candidate (9).
 
 The twentieth pass's tip `ed4c152c` read **3,513,438,110 Ir**. The layer
 system has come down hard across the nineteenth and twentieth passes and
@@ -790,7 +830,7 @@ and twentieth passes ranked is paid: `declare_attackers_banded`
 (741,960 Ir / 0.02 %). Do not re-open this table; the layer system's
 remaining cost is per-card `computed_permanent` and the gather itself.
 
-0. **`pick_attacks_scored`, 1,705,928,021 / 50.74 % over 630 calls.** The
+0. **`pick_attacks_scored`, 1,602,691,451 / 50.06 % over 630 calls.** The
    largest single item in the file for five passes and still untouched; the
    search itself, not its inner loop, which every pass since the
    seventeenth has made cheaper. **This is a bot-quality question as much
@@ -798,7 +838,7 @@ remaining cost is per-card `computed_permanent` and the gather itself.
    `bot_ladder` win-rate gate, not an Ir number. Cheapest first probe: how
    often does the search depart from greedy? If rarely, the candidates that
    never win are pure cost.
-1. **`would_accept`, 507,363,159 / 15.09 %** — the affordance probe, one
+1. **`would_accept`, 491,192,545 / 15.34 %** — the affordance probe, one
    `GameState::clone` + one `perform_action_inner` per candidate action.
    What is unexamined is the *probe count*, i.e. how many candidates the
    bot dry-runs that no scoring pass could have chosen.
@@ -822,12 +862,15 @@ remaining cost is per-card `computed_permanent` and the gather itself.
    `cast_spell` 14,092 …). ~480 Ir each for a walk of `all_static_sources()`
    x `static_abilities` calling `active_static` per ability. **The lever
    left is making the scan cheaper, not calling it less**: the same
-   presence-gate device as `ability_strip_in_scope` — a syntactic peel of
-   the duration/predicate wrappers with no `EffectContext` and no
-   `resolve_named_by_source` — or a board-level flag. Cost it against the
-   walk's ~24 Ir per card before writing it. The sibling
-   `permanents_with_abilities_removed` (52,332 calls, 18,905,488 / 0.56 %)
-   and `equip_granted_trigger_sources` are the same shape.
+   presence-gate device on `permanents_with_abilities_removed` — a
+   syntactic peel of the duration/predicate wrappers with no
+   `EffectContext` and no `resolve_named_by_source` — or a board-level
+   flag. Cost it against the walk's ~24 Ir per card before writing it.
+   **Since the twenty-fourth pass three of the scan's callers — the
+   dispatcher's 52,332, `cast_spell`'s 14,092 and `fire_step_triggers`'
+   14,462 — run inside `dispatch_board_scan` or behind its presence gate,
+   so a cached board flag now has one place to be read and three to be
+   maintained.**
 3. **The `RawTable::clone` block, half paid.** `--tree=caller` on
    `RawTable::clone` has exactly two callers, and `271c7d14` took the
    larger one's set half. Left: the **seven `ColdState` `HashMap` fields**
@@ -846,30 +889,39 @@ remaining cost is per-card `computed_permanent` and the gather itself.
    `kinds: &[EventKind]`; the five kind-independent walks run once and
    bucket by kind, the graveyard walk stays per-kind for its dedupe set.
    Calls 28,564 -> 7,118. Nothing left here on this profile.
-5. **`pick_by_outcome`, 215,958,939 / 6.42 %, essentially all of it one
+4b. **PAID (`006d5966`, -1.885 %) — and the shape it opened is the one to
+   sweep next.** `fire_step_triggers` cloned every printed
+   `TriggeredAbility` on every permanent and then filtered on
+   `t.event.kind`. **The general filter: an iterator that clones and then
+   narrows.** The syntactic sweep is clean workspace-wide; the semantic
+   question — "how much of what this loop builds does it keep?" — is not
+   swept and wants a pass of its own over the hot trigger/candidate
+   builders (`push_ordered_trigger_candidates`,
+   `statics_granted_triggers_with`, `cast_candidates`' `flat_map`).
+5. **`pick_by_outcome`, 210,019,714 / 6.56 %, essentially all of it one
    `collect()` in `bot.rs`.** Never profiled at line level. Read
    `--auto=yes` on it before guessing; the eighteenth pass's candidate (1)
    is the warning that the cost is the *iterator body*, not the container.
-6. **`dispatch_triggers_for_events`, 273,857,088 / 8.14 % over 52,332
-   calls — and `c7bdd850` took only the four cheapest blocks of it.** What
-   is left, measured on the same profile: **~152 M of *self* cost (4.3 %),
-   of which ~99 M is `Vec` / `raw_vec` / `spec_from_iter` machinery over
-   366,316 collects, i.e. 7 per dispatch**; plus
-   `push_ordered_trigger_candidates` (1.15 %, exactly one per dispatch),
-   `trigger_grant_sources` 0.71 % and `permanents_with_abilities_removed`
-   0.56 % (both candidate (2)). **Lever (a) is paid** (`b925063c`,
-   -0.247 %): the four delayed-trigger collects are gone, not merely
-   emptied. **Two collects per dispatch remain and each wants its own
-   precondition** — the `synthesized` death/control-change chain (gate on
-   `deaths.is_empty() && control_changes.is_empty()`, which is the common
-   case) and `equip_granted_trigger_sources` (a whole-battlefield
-   `filter_map` on a board that usually has no attachment). Next, in
-   order: (a') those two gates; (b) a `u32` presence mask over
-   the batch's event kinds filled in one pass, with each block gated on its
-   bit — the `gated_block!` device from `52f4311a`, `debug_assertions`
-   audit included. **The per-card `all_triggers` Vec is *not* a target** —
-   33,980 Ir over the whole run, checked 2026-08-11.
-7. **`mana_source_table`, 116,475,295 / 3.46 % over 7,370 calls** — down
+   Here it is `evaluate_action_outcome` per finalist — a clone and a
+   resolution each — so the container is certainly not the cost, and the
+   real question is the *finalist count*, which is a bot-quality question
+   like (0) and (1).
+6. **`dispatch_triggers_for_events`, 240,615,249 / 7.52 % over 52,332
+   calls.** `c7bdd850` took the four cheapest blocks, `b925063c` the
+   delayed-trigger collects, and `f28faaa0` (lever a', generalized) fused
+   the four board walks at the top of the function into one
+   `dispatch_board_scan`. Its collect row is **94,608 collects /
+   14,001,655 / 0.44 %**, down from 146,940 / 22,068,557 / 0.66 %. What is
+   left, in order: (b) a `u32` presence mask over the batch's event kinds
+   filled in one pass, with each block gated on its bit — the
+   `gated_block!` device from `52f4311a`, `debug_assertions` audit
+   included; and `push_ordered_trigger_candidates` (~1.1 %, exactly one
+   per dispatch). The `synthesized` chain is **not** worth a gate on its
+   own any more — `Vec::from_iter` on an empty iterator is `Vec::new()`,
+   so the empty case is one `next()` over two empty vectors. **The
+   per-card `all_triggers` Vec is *not* a target** — 33,980 Ir over the
+   whole run, checked 2026-08-11.
+7. **`mana_source_table`, 116,895,124 / 3.65 % over 7,370 calls** — down
    from 8,892 since the gate (`1ec589d1`). What is left is probe (b),
    untried: the table is a pure function of (battlefield tap state, layer
    inputs, `creature_only`), so a per-freeze-scope memo may be the
@@ -878,44 +930,64 @@ remaining cost is per-card `computed_permanent` and the gather itself.
    the hit rate before writing it. `untapped_producers_of` — five frozen
    board scans where one would do — **does not appear on this profile at
    all**; the hybrid path is cold on the bench decks, so leave it.
-8. **The collect table, re-measured on the twenty-second pass's tip** —
+8. **The collect table, re-measured on the twenty-fourth pass's tip** —
    `--tree=caller` on `Vec::from_iter`, inclusive, so these are *iterator
    body* costs (see the eighteenth pass's correction below, which is still
    the warning that matters):
-   `cast_candidates` **167,980,972 / 4.91 %** over 7,024 calls;
-   `mana_source_table` **108,024,772 / 3.20 %** over 7,370;
-   `check_state_based_actions` **132,606,131 / 3.87 %** over 82,634;
-   `fire_step_triggers` ~1.80 % over 14,462;
-   `dispatch_triggers_for_events` 0.78 % over 356,268;
-   `pick_removal_ping` 0.62 % over 37,710.
-   `empty_mana_pools`' row (0.50 % over 51,088) is **paid** (`ef731ecc`).
-   The allocator block re-reads **~17.3 %** on this base (`_int_malloc`
-   5.16 / `_int_free` 4.27 / `malloc` 3.14 / `free` 1.91 / merge 0.86 /
-   arena 0.75 / consolidate 0.72 / unlink 0.70),
-   `__memcpy_avx_unaligned_erms` 3.28 %, `Arc::clone_from_ref_in` ~4.2 %
-   self (`make_mut` is 180,648 of those unshares, 169,845,883 / 5.03 %),
-   `gather_continuous_effects_inner` 2.60 % self / 9.28 % inclusive.
-9. **The gathers `computed_permanent` still takes, by caller.** PERF's own
-   rule — divide each caller's inclusive Ir by its call count, >2,000 means
-   it is outside a freeze scope — names five, all in the damage path:
-   `scale_damage_to` 49,405,047 / 14,624 (**3,378**),
-   `damage_prevented_by_protection` 39,658,825 / 18,986 (**2,089**),
-   `permanent_has_keyword` 21,982,346 / 8,328 (**2,639**),
-   `damage_from_source_prevented_by_keyword` 15,609,818 / 4,450 (**3,508**),
-   `dying_snapshot` 11,827,266 / 3,420 (**3,458**) — **138.5 M / 4.1 %
-   between them**. The reason this is *not* a free row: they all sit under
-   `resolve_combat`'s damage loop, which writes `dealt_damage_this_turn` /
-   `damaged_by_this_turn` between the reads, and those are layer inputs, so
-   a freeze scope over the loop is unsound. The tractable question is
-   whether a *read-only prefix* per (attacker, blocker) pair can hold one
-   scope.
+   `cast_candidates` **168,130,962 / 5.25 %** over 7,024 calls;
+   `check_state_based_actions` **132,514,326 / 4.14 %** over 82,634;
+   `mana_source_table` **108,286,211 / 3.38 %** over 7,370;
+   `pick_attacks_inner` 0.67 % over 7,842;
+   `pick_removal_ping` 0.67 % over 37,710;
+   `dispatch_triggers_for_events` 0.44 % over 94,608.
+   **`fire_step_triggers` is off this table** (`006d5966`); `empty_mana_pools`
+   was paid at `ef731ecc`. Only three rows are over 3 %, and the top two are
+   the ones whose iterator body is real work rather than container overhead
+   — `cast_candidates` is 23,900 Ir per call of auto-targeting per hand
+   candidate, `check_state_based_actions` is `compute_battlefield_creatures`
+   plus the `dead` filter. Read `--auto=yes` on either before costing it.
+   The allocator block re-reads **~17.0 %** on this base (`_int_malloc`
+   5.34 / `_int_free` 4.38 / `malloc` 3.23 / `free` 1.96 / merge 0.88 /
+   arena 0.77 / consolidate 0.74 / unlink 0.73),
+   `__memcpy_avx_unaligned_erms` 3.34 %, `Arc::clone_from_ref_in` **16.09 %
+   inclusive** / ~5.4 % self over ~1.6 M CoW unshares,
+   `gather_continuous_effects_inner` 2.74 % self / 9.74 % inclusive.
+9. **The gathers `computed_permanent` still takes, by caller — the top
+   candidate now.** PERF's own rule — divide each caller's inclusive Ir by
+   its call count, >2,000 means it is outside a freeze scope — names five,
+   all in the damage path, re-read on the twenty-fourth pass's tip:
+   `scale_damage_to` 49,405,906 / 14,624 (**3,378**),
+   `damage_prevented_by_protection` 39,667,284 / 18,986 (**2,089**),
+   `permanent_has_keyword` 21,973,585 / 8,328 (**2,638**),
+   `damage_from_source_prevented_by_keyword` 15,610,446 / 4,450 (**3,508**),
+   `dying_snapshot` 11,819,145 / 3,420 (**3,456**) — **138.5 M / 4.33 %
+   between them**, and `computed_permanent`'s gathers are 7.60 % of the
+   program. **What was checked on the twenty-fourth pass and is now known:
+   every one of the five already takes its own `with_frozen_layers` scope
+   internally** (`damage_prevented_by_protection` since `96129f68`,
+   `scale_damage_to` since the eleventh pass), so each per-call cost is
+   *one* gather plus its work — there is no intra-call duplicate left to
+   remove. **The only lever left is a scope spanning several calls**, and
+   the blocker is real: they sit under `resolve_combat`'s damage loop,
+   which writes `dealt_damage_this_turn` / `damaged_by_this_turn` and
+   **changes life totals via lifelink between the reads**, and a
+   `WhileCondition` static can read life (Serra Ascendant), so a blanket
+   freeze over the loop is unsound. Two tractable shapes, in order:
+   (a) the strictly-`&self` prefix of one (attacker, blocker) iteration —
+   `damage_prevented_by_protection`, the three per-source prevention
+   checks, and `scale_damage_to` all run before `apply_prevention_shields`
+   takes `&mut self`, so one scope over that prefix folds ~2 gathers into
+   1 and is sound by construction; (b) note that
+   `resolve_combat_damage_with_filter` **already holds `computed:
+   &[ComputedPermanent]` for the whole step** and the five helpers
+   re-derive from scratch what it contains — a `_with(computed)` variant
+   would be nearly free, but it pins the layer view to the step's start,
+   which is arguably *more* CR 510.2-correct and is still a behaviour
+   change. Golden traces decide (b); (a) needs nothing.
 
-**The profile of record is one pass stale** — it was retaken at `1112e709`
-(the twenty-second pass's tip) and every share quoted in the candidates
-above is from that retake. The twenty-third pass moved 1.296 % of it, all
-of it inside candidates (4) and (6a), so the *other* candidates' shares are
-still good to a tenth of a point; **retake before pulling (0), (1) or (8)**,
-whose shares are large enough that a stale denominator matters.
+**The profile of record was retaken at `125557eb`** (the twenty-fourth
+pass's tip) and every share quoted in the candidates above is from that
+retake, except where a candidate says otherwise.
 
 Methodological notes, each learned the hard way:
 

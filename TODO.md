@@ -16,53 +16,49 @@ reference and want their own triage pass):
 
 ## NEXT (handoff — rewrite each run, keep under 15 lines)
 
-Branch `claude/modern_decks`. **Twenty-third pass: two perf commits,
--1.296 % Ir** (3,361,108,555 -> 3,317,550,360, base `a9d62f11`,
-`profiling-fast --no-default-features` callgrind). Bench output
-byte-identical on both rows; 18,612 tests green, golden traces unchanged.
+Branch `claude/modern_decks`. **Twenty-fourth pass: four perf commits,
+-3.530 % Ir** (3,318,705,480 -> 3,201,568,157, base `4d5fbc69`,
+`profiling-fast --no-default-features` callgrind). Bench output identical
+on every row; **18,612 tests green**, golden traces unchanged.
 
-- **Rows.** `fire_combat_damage_triggers` takes the whole kind list
-  (`08cbc9c3`, **-1.051 %**, shim calls 28,564 -> 7,118); the dispatcher's
-  delayed-trigger block rides one `is_empty` instead of an empty slice
-  (`b925063c`, **-0.247 %**, and -232 lines from the file's largest fn).
-- **Next up.** Candidate (4) is **paid**; (6) lever (a) is **paid**.
-  (2) `trigger_grant_sources` was costed this run and **not taken** — the
-  peel saves nothing, only a *cached* board flag would, and it needs
-  invalidation at every battlefield mutation. Best remaining, in order:
-  (6a') the dispatcher's last two per-dispatch collects (`synthesized`,
-  `equip_granted_trigger_sources`) each want a presence gate; (9) five
-  damage-path callers gather per `computed_permanent`, 4.1 % between them;
-  (0)/(1) `pick_attacks_scored` 50.7 % and `would_accept` 15.1 %, both
+- **Rows.** `fire_step_triggers` filters before cloning (`006d5966`,
+  **-1.885 %** — the largest single row in five passes); the SBA sweep's
+  Hushbringer scan rides `!dead.is_empty()` (`41551bcc`, -0.070 %); the
+  trigger dispatcher takes one fused board scan instead of four walks
+  (`f28faaa0`, **-1.118 %**, new `DispatchScan` + `dispatch_board_scan`,
+  debug cross-checked against the four it replaces); `fire_spell_cast_
+  triggers` does the same and drops an O(cards²) id round-trip
+  (`125557eb`, -0.496 %).
+- **Next up.** Profile **retaken at the tip** — shares in PERF are fresh.
+  Best remaining: **(9)** the five damage-path `computed_permanent`
+  callers, 138.5 M / 4.33 %; this run established that all five already
+  freeze *internally*, so the only lever is a cross-call scope — do shape
+  (a), the strictly-`&self` prefix of one (attacker, blocker) iteration,
+  which is sound by construction; shape (b) (reuse the damage step's
+  existing `computed` slice) is a behaviour change, golden traces decide.
+  Then (6b) the dispatcher's event-kind presence mask. (0)/(1)/(5) are
   bot-quality questions wanting a ladder gate, not an Ir number.
-  **Retake the profile before pulling (0), (1) or (8)** — it is one pass
-  stale.
-- **Robustness.** The **eighth filter** (std collection/slice ops whose
-  runtime argument is a *length*: `split_off`/`split_at`/`copy_from_slice`,
-  `chunks`/`step_by`, runtime range slicing, `Vec::remove`/`insert`) was
-  run 2026-08-11 and is **clean** — see the robustness section. A **ninth**
-  is owed.
-- **Env, and what bit this run.** No `cargo-nextest`. The container has a
-  **~30 GB writable allowance** and a full `cargo build` + `cargo test
-  --workspace` fills it: `target/debug/incremental` alone reached 12 GB and
-  the disk hit 100 %, which fails builds with "failed to create query
-  cache". **Build with `CARGO_INCREMENTAL=0`** and skip
-  `-p crabomination_client` unless the change touches it — the Bevy stack
-  is ~45 min of compile on this 4-core box and nothing engine-side needs
-  it. Timings: `profiling-fast` engine rebuild ~4 min, callgrind ~6,
-  `cargo test -p crabomination -p crabomination_tests` ~12 cold / ~40 s
-  warm. The SessionStart hook did **not** leave the client apt deps
-  installed this run (`pkg-config --exists wayland-client` was false); it
-  silences `apt-get update` failures, so it cannot tell you why.
-- **Final checks, this run.** `cargo test -p crabomination -p
-  crabomination_tests` **18,612 passed / 0 failed / 1 ignored**, golden
-  traces green. `cargo clippy --workspace --all-targets` **exit 0, zero
-  warnings**, client included (`ea8795e0` names the one tuple that tripped
-  `type_complexity`). The client's *tests* were not run — nothing in the
-  diff touches it, and the Bevy build is ~45 min here. **No `--bench`
-  anchor run**: at -1.296 % the pass sits far under what this box resolves
-  by wall-clock, so the callgrind numbers are the measurement of record and
-  the anchor stands, same call as `c7bdd850`.
-- **Trackers.** PERF ~1.6k, TODO ~1.0k, roadmap 660.
+- **New filter, unswept.** The row that paid most was `.cloned()` before
+  the `.filter` that discards the clones. The syntactic form is clean
+  workspace-wide; the semantic one ("how much of what this loop builds
+  does it keep?") is owed a pass over the hot candidate builders.
+- **Robustness.** The **ninth** (non-total-order comparators) and
+  **tenth** (unbounded `loop`/`while` in `game/` + `bot.rs`) filters were
+  run 2026-08-11 and are **clean** — details in the robustness section; an
+  eleventh is owed. **The stall rate
+  (~0.1 % on the wider pools) still wants its top cause**: `play_one_game_
+  traced` ends on either `actions >= max_actions` or `stale >= 8` and
+  reports neither, so the first move is to make `GameOutcome` say which.
+- **Env.** No `cargo-nextest`; `cargo test -p crabomination -p
+  crabomination_tests` is the gate (~25 min cold, ~40 s warm, always with
+  `CARGO_INCREMENTAL=0`). Cold `profiling-fast` build ~20 min, engine-only
+  rebuild ~4.5 min, callgrind ~7. The SessionStart hook again left the
+  client apt deps uninstalled (`pkg-config --exists wayland-client` false);
+  the four-package `apt-get install` in the Environment note below fixes it
+  in about a minute and `cargo clippy --workspace` needs it.
+- **Trackers.** PERF ~1.7k, TODO ~1.0k, roadmap 660. PERF is over the ~1k
+  guidance and its Log is already indexed down to passes 1-19; the next
+  compaction should fold passes 20-24 into the same index.
 
 ## Environment note
 
@@ -258,8 +254,45 @@ never looked at it. Four shapes, whole workspace:
   condition holds (`hybrids.remove(idx)` inside `while !hybrids.is_empty()`
   with `unwrap_or(0)`), or a `0..greedy.len()` enumeration.
 
-No hit. The item is still the ~183 `unwrap()`/`expect()` wanting triage,
-and a *ninth* filter — the eight above are exhausted.
+No hit. The item is still the ~183 `unwrap()`/`expect()` wanting triage.
+
+**The ninth filter was run 2026-08-11 and is also clean.** The first eight
+hunt a wrap, a zero denominator, or a length-argument panic; this one hunts
+the third loud panic std can raise — **a comparator that is not a total
+order**, which `sort_by`/`sort_unstable_by` detect and panic on, and which
+a `NaN` produces for free. Every `partial_cmp` / `sort_by` /
+`sort_unstable_by` / `max_by` / `min_by` / `binary_search_by` under
+`game/`, `bot.rs`, `crabomination_ml/` and `crabomination_nn/` was read.
+There is **no `partial_cmp(…).unwrap()` in the workspace**. Every float
+comparator is either `total_cmp` (`selfplay.rs`'s argmax,
+`recommend_pool`'s ranking, `selfplay_train`'s quantile) or
+`partial_cmp(…).unwrap_or(Equal)`; the latter is only inconsistent if a
+`NaN` reaches it, and the three sites that feed one to a `sort_by` are all
+in `recommend.rs` — off the self-play path — with `win_rate()` guarded at
+`decided() == 0` and `best_delta()` built from it. Every comparator on the
+engine's own hot paths (`layers.rs`'s layer/sublayer/timestamp sort,
+`bot.rs:2871`, `view.rs:560`, `effects/mod.rs`'s five descending-index
+sorts) is integer `cmp` and total by construction.
+
+**The tenth filter was run 2026-08-11 and is also clean.** It hunts the
+failure mode a training run notices as a *hang* rather than a panic: **an
+unbounded `loop` / `while` whose exit condition is game state**. All eight
+`loop {` and ~40 non-`while let` `while` sites under `game/` and `bot.rs`
+were read. Three shapes, all bounded: a collection that strictly shrinks
+each round (every `while !library.is_empty()` / `while !pool.is_empty()` /
+`while live.len() > 1`, and the CR 616.1e draw-replacement loop, whose
+`declined` list grows monotonically and filters `applicable`); a structural
+peel that descends a finite effect tree (`active_static`'s wrapper loop,
+`pick_trigger_mode`'s `MayDo`/`CapTargetsAt` peel); or an explicit counter
+(`bot.rs`'s three sim loops carry `fuel`, the coin-flip loop a
+`wins >= 64` backstop, `subgame.rs` `MAX_ACTIONS` + `stale < 8`, the
+`source_zone` sweep a `budget`). **The one that is not bounded by any of
+the three is the top-level game loop itself** — `play_one_game_traced`'s
+`while !g.is_game_over() && actions < max_actions && stale < 8` — and it is
+bounded by its own two counters, which is exactly what a *stall* is. That
+is the open item below, not a new one.
+
+An *eleventh* filter is owed — the ten above are exhausted.
 
 **Stall rate, measured on the same runs** (the standing robustness goal —
 the bench's `--decks fixed` reads 0 and always has, which hides this): the
