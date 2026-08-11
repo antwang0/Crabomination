@@ -15105,6 +15105,253 @@ impl GameState {
         }
     }
 
+    /// The `delayed_triggers` watchers an event batch can fire: the
+    /// event-keyed "when [card] dies this turn" set, Tamiyo's
+    /// "whenever a creature attacks you", and the two turn-scoped
+    /// CR 603.4 watchers (First Day of Class, Waltz of Rage).
+    ///
+    /// Split out of [`dispatch_triggers_for_events`] so one `is_empty()`
+    /// skips the whole block — five event scans and their `collect`s —
+    /// on a board with nothing registered, which is nearly every
+    /// dispatch. `c7bdd850` made the five scans read an empty slice;
+    /// this skips them outright.
+    ///
+    /// [`dispatch_triggers_for_events`]: Self::dispatch_triggers_for_events
+    fn fire_delayed_event_watchers(&mut self, events: &[GameEvent]) {
+        // Event-keyed delayed triggers ("when [card] dies this turn, …").
+        // Fire any `WhenCardDies(cid)` whose watched card appears in a
+        // `CreatureDied` event in this batch, with its captured target.
+        // `PermanentDied` covers non-creature deaths (a watched artifact —
+        // Melira's return rider); a creature death lists its id twice, which
+        // is harmless since a fired watcher is removed.
+        let died: Vec<CardId> = events
+            .iter()
+            .filter_map(|e| match e {
+                GameEvent::CreatureDied { card_id }
+                | GameEvent::PermanentDied { card_id, .. } => Some(*card_id),
+                _ => None,
+            })
+            // CR 700.4 — a redirected death (exile / library-top) never
+            // happened; "when [card] dies" watchers keep watching.
+            .filter(|card_id| !self.death_was_replaced(*card_id))
+            .collect();
+        if !died.is_empty() {
+            use crate::game::types::DelayedKind;
+            let mut fire: Vec<crate::game::types::DelayedTrigger> = Vec::new();
+            let mut watched: Vec<CardId> = Vec::new();
+            self.delayed_triggers.retain(|dt| {
+                let watched_id = match dt.kind {
+                    // CR 702.55 — Haunt's death-watch fires any turn.
+                    DelayedKind::WhenCardDies(cid)
+                    | DelayedKind::WhenTokenDies(cid)
+                    | DelayedKind::WhenHauntedCreatureDies(cid) => Some(cid),
+                    _ => None,
+                };
+                if let Some(cid) = watched_id
+                    && died.contains(&cid)
+                {
+                    fire.push(dt.clone());
+                    watched.push(cid);
+                    false
+                } else {
+                    true
+                }
+            });
+            for (dt, cid) in fire.into_iter().zip(watched) {
+                // Expose the dead creature as the trigger's source so bodies
+                // can reference it (e.g. "exile it") via `Selector::This` /
+                // `TriggerSource`; `target` still carries its controller.
+                // Carry the dead creature's mana value as the event amount so
+                // `ManaValueLessThanEventAmount` filters (Rushed Rebirth's
+                // "creature card with lesser mana value") read it at
+                // resolution.
+                let mv = self
+                    .find_card_anywhere(cid)
+                    .map(|c| c.definition.cost.cmc())
+                    .unwrap_or(0);
+                self.stack.push(
+                    TriggerPush::new(dt.source, dt.controller, dt.effect)
+                        .target(dt.target)
+                        .trigger_source(Some(crate::game::effects::EntityRef::Card(cid)))
+                        .event_amount(mv)
+                        .build(),
+                );
+            }
+        }
+        // "Whenever a creature attacks you or a planeswalker you control"
+        // floating triggers (Tamiyo +2). Fire once per qualifying attacker;
+        // the attacker is the trigger source.
+        let attackers: Vec<CardId> = events
+            .iter()
+            .filter_map(|e| match e {
+                GameEvent::AttackerDeclared(id) => Some(*id),
+                _ => None,
+            })
+            .collect();
+        if !attackers.is_empty() {
+            use crate::game::types::DelayedKind;
+            let watchers: Vec<crate::game::types::DelayedTrigger> = self
+                .delayed_triggers
+                .iter()
+                .filter(|dt| {
+                    matches!(dt.kind, DelayedKind::CreatureAttacksYouUntilYourNextTurn)
+                })
+                .cloned()
+                .collect();
+            for dt in watchers {
+                for &atk_id in &attackers {
+                    let defender = self
+                        .attack_for(atk_id)
+                        .and_then(|a| self.defender_for(a.target));
+                    if defender == Some(dt.controller) {
+                        self.stack.push(
+                            TriggerPush::new(dt.source, dt.controller, dt.effect.clone())
+                                .trigger_source(Some(
+                            crate::game::effects::EntityRef::Permanent(atk_id),
+                        ))
+                                .build(),
+                        );
+                    }
+                }
+            }
+            // "Until end of turn, whenever a [filter] creature attacks, …"
+            // floating triggers (Summon: Leviathan II/III). Any player's
+            // qualifying attacker fires the registering controller's body.
+            let matching_watchers: Vec<crate::game::types::DelayedTrigger> = self
+                .delayed_triggers
+                .iter()
+                .filter(|dt| {
+                    matches!(dt.kind, DelayedKind::MatchingCreatureAttacksThisTurn(_))
+                })
+                .cloned()
+                .collect();
+            for dt in matching_watchers {
+                let DelayedKind::MatchingCreatureAttacksThisTurn(ref filt) = dt.kind else {
+                    continue;
+                };
+                for &atk_id in &attackers {
+                    let matches = self
+                        .battlefield_find(atk_id)
+                        .is_some_and(|c| self.evaluate_requirement_on_card(filt, c, dt.controller));
+                    if matches {
+                        self.stack.push(
+                            TriggerPush::new(dt.source, dt.controller, dt.effect.clone())
+                                .trigger_source(Some(
+                                    crate::game::effects::EntityRef::Permanent(atk_id),
+                                ))
+                                .build(),
+                        );
+                    }
+                }
+            }
+        }
+        // Turn-scoped "whenever a creature you control enters this turn"
+        // delayed triggers (CR 603.4 — First Day of Class). Fire once per
+        // entering creature controlled by the trigger's controller; the
+        // entering creature is the trigger source. These persist (not
+        // fires_once) until cleanup.
+        let entered_creatures: Vec<(CardId, usize)> = events
+            .iter()
+            .filter_map(|e| match e {
+                GameEvent::PermanentEntered { card_id } => self
+                    .battlefield_find(*card_id)
+                    .filter(|c| c.definition.is_creature())
+                    .map(|c| (*card_id, c.controller)),
+                _ => None,
+            })
+            .collect();
+        if !entered_creatures.is_empty() {
+            use crate::game::types::DelayedKind;
+            let watchers: Vec<crate::game::types::DelayedTrigger> = self
+                .delayed_triggers
+                .iter()
+                .filter(|dt| {
+                    matches!(dt.kind, DelayedKind::CreatureYouControlEntersThisTurn)
+                })
+                .cloned()
+                .collect();
+            for (cid, controller) in &entered_creatures {
+                for dt in &watchers {
+                    if dt.controller != *controller {
+                        continue;
+                    }
+                    self.stack.push(
+                        TriggerPush::new(dt.source, dt.controller, dt.effect.clone())
+                            .trigger_source(Some(crate::game::effects::EntityRef::Permanent(*cid)))
+                            .build(),
+                    );
+                }
+            }
+        }
+        // Turn-scoped "whenever a creature you control dies this turn" delayed
+        // triggers (CR 603.4 — Waltz of Rage). Fire once per creature that
+        // died under the trigger's controller (read from the death LKI
+        // snapshot); the dead creature is the trigger source. These persist
+        // until cleanup.
+        let died_creatures: Vec<(CardId, usize)> = events
+            .iter()
+            .filter_map(|e| match e {
+                GameEvent::CreatureDied { card_id } => self
+                    .died_card_snapshots
+                    .get(card_id)
+                    .map(|snap| (*card_id, snap.controller)),
+                _ => None,
+            })
+            .collect();
+        if !died_creatures.is_empty() {
+            use crate::game::types::DelayedKind;
+            let watchers: Vec<crate::game::types::DelayedTrigger> = self
+                .delayed_triggers
+                .iter()
+                .filter(|dt| matches!(dt.kind, DelayedKind::CreatureYouControlDiesThisTurn))
+                .cloned()
+                .collect();
+            for (cid, controller) in &died_creatures {
+                for dt in &watchers {
+                    if dt.controller != *controller {
+                        continue;
+                    }
+                    self.stack.push(
+                        TriggerPush::new(dt.source, dt.controller, dt.effect.clone())
+                            .trigger_source(Some(crate::game::effects::EntityRef::Permanent(*cid)))
+                            .build(),
+                    );
+                }
+            }
+            // "Whenever a creature [matching filter] dies this turn" — any
+            // player's creature (Massacre Girl). Gate each dead creature on its
+            // death LKI snapshot; the dead creature is the trigger source.
+            let matching_watchers: Vec<crate::game::types::DelayedTrigger> = self
+                .delayed_triggers
+                .iter()
+                .filter(|dt| matches!(dt.kind, DelayedKind::MatchingCreatureDiesThisTurn(_)))
+                .cloned()
+                .collect();
+            if !matching_watchers.is_empty() {
+                for (cid, _) in &died_creatures {
+                    let Some(snap) = self.died_card_snapshots.get(cid).cloned() else {
+                        continue;
+                    };
+                    for dt in &matching_watchers {
+                        let DelayedKind::MatchingCreatureDiesThisTurn(ref filt) = dt.kind else {
+                            continue;
+                        };
+                        if !self.evaluate_requirement_on_card(filt, &snap, dt.controller) {
+                            continue;
+                        }
+                        self.stack.push(
+                            TriggerPush::new(dt.source, dt.controller, dt.effect.clone())
+                                .trigger_source(Some(crate::game::effects::EntityRef::Permanent(
+                                    *cid,
+                                )))
+                                .build(),
+                        );
+                    }
+                }
+            }
+        }
+    }
+
     pub fn dispatch_triggers_for_events(&mut self, events: &[GameEvent]) {
         // Cost-payment events (paid life) queued since the last dispatch —
         // fold them in so resumed-decision paths that bypass
@@ -15289,245 +15536,11 @@ impl GameState {
                 _ => {}
             }
         }
-        // Every block from here to the trigger-candidate phase fires a
-        // `delayed_triggers` entry, and each opens by scanning the event
-        // batch into a `Vec`. With nothing registered all four come back
-        // empty, so they read an empty slice instead — one `is_empty()`
-        // against four scans and four `collect`s, on every one of the ~52 k
-        // dispatches a six-game bench run takes.
-        let watch_events: &[GameEvent] =
-            if self.delayed_triggers.is_empty() { &[] } else { events };
-        // Event-keyed delayed triggers ("when [card] dies this turn, …").
-        // Fire any `WhenCardDies(cid)` whose watched card appears in a
-        // `CreatureDied` event in this batch, with its captured target.
-        // `PermanentDied` covers non-creature deaths (a watched artifact —
-        // Melira's return rider); a creature death lists its id twice, which
-        // is harmless since a fired watcher is removed.
-        let died: Vec<CardId> = watch_events
-            .iter()
-            .filter_map(|e| match e {
-                GameEvent::CreatureDied { card_id }
-                | GameEvent::PermanentDied { card_id, .. } => Some(*card_id),
-                _ => None,
-            })
-            // CR 700.4 — a redirected death (exile / library-top) never
-            // happened; "when [card] dies" watchers keep watching.
-            .filter(|card_id| !self.death_was_replaced(*card_id))
-            .collect();
-        if !died.is_empty() {
-            use crate::game::types::DelayedKind;
-            let mut fire: Vec<crate::game::types::DelayedTrigger> = Vec::new();
-            let mut watched: Vec<CardId> = Vec::new();
-            self.delayed_triggers.retain(|dt| {
-                let watched_id = match dt.kind {
-                    // CR 702.55 — Haunt's death-watch fires any turn.
-                    DelayedKind::WhenCardDies(cid)
-                    | DelayedKind::WhenTokenDies(cid)
-                    | DelayedKind::WhenHauntedCreatureDies(cid) => Some(cid),
-                    _ => None,
-                };
-                if let Some(cid) = watched_id
-                    && died.contains(&cid)
-                {
-                    fire.push(dt.clone());
-                    watched.push(cid);
-                    false
-                } else {
-                    true
-                }
-            });
-            for (dt, cid) in fire.into_iter().zip(watched) {
-                // Expose the dead creature as the trigger's source so bodies
-                // can reference it (e.g. "exile it") via `Selector::This` /
-                // `TriggerSource`; `target` still carries its controller.
-                // Carry the dead creature's mana value as the event amount so
-                // `ManaValueLessThanEventAmount` filters (Rushed Rebirth's
-                // "creature card with lesser mana value") read it at
-                // resolution.
-                let mv = self
-                    .find_card_anywhere(cid)
-                    .map(|c| c.definition.cost.cmc())
-                    .unwrap_or(0);
-                self.stack.push(
-                    TriggerPush::new(dt.source, dt.controller, dt.effect)
-                        .target(dt.target)
-                        .trigger_source(Some(crate::game::effects::EntityRef::Card(cid)))
-                        .event_amount(mv)
-                        .build(),
-                );
-            }
-        }
-        // "Whenever a creature attacks you or a planeswalker you control"
-        // floating triggers (Tamiyo +2). Fire once per qualifying attacker;
-        // the attacker is the trigger source.
-        let attackers: Vec<CardId> = watch_events
-            .iter()
-            .filter_map(|e| match e {
-                GameEvent::AttackerDeclared(id) => Some(*id),
-                _ => None,
-            })
-            .collect();
-        if !attackers.is_empty() {
-            use crate::game::types::DelayedKind;
-            let watchers: Vec<crate::game::types::DelayedTrigger> = self
-                .delayed_triggers
-                .iter()
-                .filter(|dt| {
-                    matches!(dt.kind, DelayedKind::CreatureAttacksYouUntilYourNextTurn)
-                })
-                .cloned()
-                .collect();
-            for dt in watchers {
-                for &atk_id in &attackers {
-                    let defender = self
-                        .attack_for(atk_id)
-                        .and_then(|a| self.defender_for(a.target));
-                    if defender == Some(dt.controller) {
-                        self.stack.push(
-                            TriggerPush::new(dt.source, dt.controller, dt.effect.clone())
-                                .trigger_source(Some(
-                            crate::game::effects::EntityRef::Permanent(atk_id),
-                        ))
-                                .build(),
-                        );
-                    }
-                }
-            }
-            // "Until end of turn, whenever a [filter] creature attacks, …"
-            // floating triggers (Summon: Leviathan II/III). Any player's
-            // qualifying attacker fires the registering controller's body.
-            let matching_watchers: Vec<crate::game::types::DelayedTrigger> = self
-                .delayed_triggers
-                .iter()
-                .filter(|dt| {
-                    matches!(dt.kind, DelayedKind::MatchingCreatureAttacksThisTurn(_))
-                })
-                .cloned()
-                .collect();
-            for dt in matching_watchers {
-                let DelayedKind::MatchingCreatureAttacksThisTurn(ref filt) = dt.kind else {
-                    continue;
-                };
-                for &atk_id in &attackers {
-                    let matches = self
-                        .battlefield_find(atk_id)
-                        .is_some_and(|c| self.evaluate_requirement_on_card(filt, c, dt.controller));
-                    if matches {
-                        self.stack.push(
-                            TriggerPush::new(dt.source, dt.controller, dt.effect.clone())
-                                .trigger_source(Some(
-                                    crate::game::effects::EntityRef::Permanent(atk_id),
-                                ))
-                                .build(),
-                        );
-                    }
-                }
-            }
-        }
-        // Turn-scoped "whenever a creature you control enters this turn"
-        // delayed triggers (CR 603.4 — First Day of Class). Fire once per
-        // entering creature controlled by the trigger's controller; the
-        // entering creature is the trigger source. These persist (not
-        // fires_once) until cleanup.
-        let entered_creatures: Vec<(CardId, usize)> = watch_events
-            .iter()
-            .filter_map(|e| match e {
-                GameEvent::PermanentEntered { card_id } => self
-                    .battlefield_find(*card_id)
-                    .filter(|c| c.definition.is_creature())
-                    .map(|c| (*card_id, c.controller)),
-                _ => None,
-            })
-            .collect();
-        if !entered_creatures.is_empty() {
-            use crate::game::types::DelayedKind;
-            let watchers: Vec<crate::game::types::DelayedTrigger> = self
-                .delayed_triggers
-                .iter()
-                .filter(|dt| {
-                    matches!(dt.kind, DelayedKind::CreatureYouControlEntersThisTurn)
-                })
-                .cloned()
-                .collect();
-            for (cid, controller) in &entered_creatures {
-                for dt in &watchers {
-                    if dt.controller != *controller {
-                        continue;
-                    }
-                    self.stack.push(
-                        TriggerPush::new(dt.source, dt.controller, dt.effect.clone())
-                            .trigger_source(Some(crate::game::effects::EntityRef::Permanent(*cid)))
-                            .build(),
-                    );
-                }
-            }
-        }
-        // Turn-scoped "whenever a creature you control dies this turn" delayed
-        // triggers (CR 603.4 — Waltz of Rage). Fire once per creature that
-        // died under the trigger's controller (read from the death LKI
-        // snapshot); the dead creature is the trigger source. These persist
-        // until cleanup.
-        let died_creatures: Vec<(CardId, usize)> = watch_events
-            .iter()
-            .filter_map(|e| match e {
-                GameEvent::CreatureDied { card_id } => self
-                    .died_card_snapshots
-                    .get(card_id)
-                    .map(|snap| (*card_id, snap.controller)),
-                _ => None,
-            })
-            .collect();
-        if !died_creatures.is_empty() {
-            use crate::game::types::DelayedKind;
-            let watchers: Vec<crate::game::types::DelayedTrigger> = self
-                .delayed_triggers
-                .iter()
-                .filter(|dt| matches!(dt.kind, DelayedKind::CreatureYouControlDiesThisTurn))
-                .cloned()
-                .collect();
-            for (cid, controller) in &died_creatures {
-                for dt in &watchers {
-                    if dt.controller != *controller {
-                        continue;
-                    }
-                    self.stack.push(
-                        TriggerPush::new(dt.source, dt.controller, dt.effect.clone())
-                            .trigger_source(Some(crate::game::effects::EntityRef::Permanent(*cid)))
-                            .build(),
-                    );
-                }
-            }
-            // "Whenever a creature [matching filter] dies this turn" — any
-            // player's creature (Massacre Girl). Gate each dead creature on its
-            // death LKI snapshot; the dead creature is the trigger source.
-            let matching_watchers: Vec<crate::game::types::DelayedTrigger> = self
-                .delayed_triggers
-                .iter()
-                .filter(|dt| matches!(dt.kind, DelayedKind::MatchingCreatureDiesThisTurn(_)))
-                .cloned()
-                .collect();
-            if !matching_watchers.is_empty() {
-                for (cid, _) in &died_creatures {
-                    let Some(snap) = self.died_card_snapshots.get(cid).cloned() else {
-                        continue;
-                    };
-                    for dt in &matching_watchers {
-                        let DelayedKind::MatchingCreatureDiesThisTurn(ref filt) = dt.kind else {
-                            continue;
-                        };
-                        if !self.evaluate_requirement_on_card(filt, &snap, dt.controller) {
-                            continue;
-                        }
-                        self.stack.push(
-                            TriggerPush::new(dt.source, dt.controller, dt.effect.clone())
-                                .trigger_source(Some(crate::game::effects::EntityRef::Permanent(
-                                    *cid,
-                                )))
-                                .build(),
-                        );
-                    }
-                }
-            }
+        // Every block in `fire_delayed_event_watchers` fires a
+        // `delayed_triggers` entry, so with none registered — nearly every
+        // dispatch — the whole thing is dead. Ask once.
+        if !self.delayed_triggers.is_empty() {
+            self.fire_delayed_event_watchers(events);
         }
         // Phase 1: collect candidate triggers while the borrow on
         // `self.battlefield` is shared. Phase 2 will mutate `self.stack`
