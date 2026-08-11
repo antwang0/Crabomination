@@ -11021,12 +11021,16 @@ impl GameState {
                     .build(),
             );
         }
-        // CR 113.10b — permanents under a "loses all abilities" continuous
-        // effect (Mercurial Transformation / Turn to Frog) don't fire
-        // printed Magecraft / spell-cast triggers. Pre-compute the stripped
-        // set so the filter below can drop those listeners.
-        let stripped: std::collections::HashSet<CardId> =
-            self.permanents_with_abilities_removed().into_iter().collect();
+        // One battlefield pass for the ability-strip presence gate and both
+        // grant lists (the dispatcher's `DispatchScan`), instead of one walk
+        // each. CR 113.10b — permanents under a "loses all abilities"
+        // continuous effect (Mercurial Transformation / Turn to Frog) don't
+        // fire printed Magecraft / spell-cast triggers, so the stripped set
+        // drops those listeners below; it is empty on almost every board,
+        // which a `Vec` answers with a length check and a `HashSet` answers
+        // with a hash.
+        let scan = self.dispatch_board_scan();
+        let stripped = self.permanents_with_abilities_removed(scan.strip_on_battlefield);
         // Whether the cast spell came from its caster's hand, read off the
         // stack item. Stamped into the trigger context so
         // `Predicate::CastFromHand` (Quandrix, the Proof) reflects the
@@ -11063,28 +11067,35 @@ impl GameState {
         #[allow(clippy::type_complexity)]
         let mut candidates: Vec<(CardId, usize, Effect, Option<crate::effect::Predicate>, usize, bool)> =
             Vec::new();
-        let live: Vec<(CardId, usize)> = self
-            .battlefield
-            .iter()
-            .filter(|c| !stripped.contains(&c.id))
-            .map(|c| (c.id, c.controller))
-            .collect();
-        // Both grant lists are board-level: the per-card shims rebuild them,
-        // so asking them per live permanent is O(cards²).
-        let trigger_grants = self.trigger_grant_sources();
-        let equip_grants = self.equip_granted_trigger_sources();
-        for (cid, c_controller) in live {
-            let Some(c) = self.battlefield.iter().find(|c| c.id == cid) else { continue };
+        let trigger_grants = scan.trigger_grants;
+        let equip_grants = scan.equip_grants;
+        // Presence gates for the two per-card grant walks: on a board that
+        // grants nothing each returns empty for every permanent (the
+        // dispatcher's device). The station leg of
+        // `statics_granted_triggers_with` is per-card, so it stays per-card.
+        let any_static_grant = !trigger_grants.is_empty() || !self.turn_granted_triggers.is_empty();
+        let any_equip_grant = !equip_grants.is_empty();
+        for c in self.battlefield.iter() {
+            if stripped.contains(&c.id) {
+                continue;
+            }
+            let (cid, c_controller) = (c.id, c.controller);
             for (idx, t) in c.definition.triggered_abilities.iter().enumerate() {
                 if t.event.kind == EventKind::SpellCast && scope_matches(t.event.scope, c_controller) {
                     candidates.push((cid, c_controller, t.effect.clone(), t.event.filter.clone(), idx, t.event.once_per_turn));
                 }
             }
-            for t in self
-                .statics_granted_triggers_with(c, &trigger_grants)
-                .into_iter()
-                .chain(self.equip_granted_triggers_with(c, &equip_grants))
-            {
+            let static_granted = if any_static_grant || !c.definition.station.is_empty() {
+                self.statics_granted_triggers_with(c, &trigger_grants)
+            } else {
+                Vec::new()
+            };
+            let equip_granted = if any_equip_grant {
+                self.equip_granted_triggers_with(c, &equip_grants)
+            } else {
+                Vec::new()
+            };
+            for t in static_granted.into_iter().chain(equip_granted) {
                 if t.event.kind == EventKind::SpellCast && scope_matches(t.event.scope, c_controller) {
                     candidates.push((cid, c_controller, t.effect, t.event.filter, usize::MAX, false));
                 }

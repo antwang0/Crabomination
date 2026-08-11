@@ -7578,18 +7578,12 @@ impl GameState {
     /// overwhelming majority — answers "nothing is stripped" from the
     /// gathered effect set alone, and only the rare board that has one
     /// pays for the layer pass.
-    pub(crate) fn permanents_with_abilities_removed(&self) -> Vec<CardId> {
-        self.permanents_with_abilities_removed_gated(
-            self.battlefield.iter().any(card_can_strip_abilities),
-        )
-    }
-
-    /// [`permanents_with_abilities_removed`] with the presence gate's
-    /// battlefield leg supplied by the caller — the trigger dispatcher already
-    /// walks the battlefield once for it (see [`Self::dispatch_board_scan`]).
     ///
-    /// [`permanents_with_abilities_removed`]: Self::permanents_with_abilities_removed
-    pub(crate) fn permanents_with_abilities_removed_gated(
+    /// `strip_on_battlefield` is the presence gate's battlefield leg
+    /// (`battlefield.iter().any(card_can_strip_abilities)`), supplied by the
+    /// caller because both call sites already walk the battlefield for it —
+    /// see [`Self::dispatch_board_scan`].
+    pub(crate) fn permanents_with_abilities_removed(
         &self,
         strip_on_battlefield: bool,
     ) -> Vec<CardId> {
@@ -15676,7 +15670,7 @@ impl GameState {
         // Mercurial Transformation, Lignify) — printed triggered abilities
         // are skipped while a strip-abilities effect is in scope per CR
         // 113.10b. Empty (and free) on a board with no such effect.
-        let stripped_ids = self.permanents_with_abilities_removed_gated(scan.strip_on_battlefield);
+        let stripped_ids = self.permanents_with_abilities_removed(scan.strip_on_battlefield);
         let trigger_grants = scan.trigger_grants;
         let equip_grants = scan.equip_grants;
         // CR 603.3d — keys for `once_per_turn` triggers that fire in this
