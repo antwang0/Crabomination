@@ -26,7 +26,9 @@ byte-identical on every row.
   `serde_json::to_string` of the whole effect tree — runs only for
   tap-another costs (`df35df04`, **-0.727 %**); damage triggers build
   their grant set once per event, not once per event *kind* (`1112e709`,
-  -0.372 %).
+  -0.372 %). Plus `084e4126`, a dead-work removal at **-0.030 %** —
+  under the claim floor, so it is *not* in the cumulative; PERF records
+  why it was kept and what the estimate got wrong.
 - **Next up.** PERF candidates are renumbered against a profile retaken at
   `1112e709`. (2) `trigger_grant_sources`, ~89 k genuinely-one-per-batch
   calls at ~480 Ir — the lever left is a cheaper scan, not fewer calls.
