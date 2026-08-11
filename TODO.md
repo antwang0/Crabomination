@@ -39,15 +39,20 @@ byte-identical on every row.
   by a runtime-zero denominator — panics loudly, unlike the wrap the first
   six hunted) was run 2026-08-11 and is **clean**; see the robustness
   section. An **eighth** filter is owed.
-- **Bench.** The committed anchor was **not** re-run this pass (a `release`
-  rebuild is ~25 min and the pass is under what `--bench` resolves here).
-  Read `host_calib_ms` before chaining absolutes. See **Baseline**.
+- **Bench.** Eleven `--bench` runs at the tip, mean **94.76**, spread
+  **14.0 %**; the idle-box eight read **96.53** against the anchor's 95.64
+  (+0.9 %). Anchor left alone — a 12.5 % sitting cannot replace a 7.48 %
+  one. **Three runs is not a spread estimate on this box**: the first three
+  read 90.03 and looked like a -5.9 % regression. See **Baseline**.
 - **Env.** No `cargo-nextest` (use `cargo test --workspace`; ~19 k tests in
   ~40 s once built). Timings here: cold `profiling-fast` engine-only build
   **~12 min**, incremental engine **~3.5**, callgrind ~5, cold
   `cargo test --workspace` ~35. The client apt deps install cleanly (see
   below); `pkg-config --exists wayland-client` is the check.
-- **Trackers.** PERF ~1.55k, TODO ~950, roadmap 660.
+- **Final checks, this run.** Workspace clippy **clean** (exit 0, zero
+  warnings, client included, ~6 min once warm); `cargo test --workspace`
+  **18,995 passed / 0 failed / 1 ignored**, golden traces green.
+- **Trackers.** PERF ~1.57k, TODO ~950, roadmap 660.
 
 ## Environment note
 

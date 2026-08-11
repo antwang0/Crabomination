@@ -179,6 +179,28 @@ investigation is owed. The workload facts all match the anchor exactly:
 `determinism` ok on all eight, `peak_rss_mib` 21.8-22.3 against 21.7-22.3,
 `decisions_per_game` 603.9.
 
+**Cross-check at `1112e709` (the twenty-second pass's tip), 2026-08-11 —
+the anchor is NOT refreshed, and no regression is owed.** Eleven `--bench`
+runs on this container. The first three, taken immediately after the
+`release` link finished, read 90.14 / 90.59 / 89.36 (mean 90.03, spread
+1.4 %) — which against the anchor's 95.64 is **-5.9 %**, past the noise
+band, so eight more were taken on an idle box: 95.92 / 92.99 / 90.60 /
+98.72 / 95.18 / 102.65 / 99.94 / 96.26, **mean 96.53, spread 12.5 %**.
+**96.53 against 95.64 is +0.9 %**, and across all eleven the mean is 94.76
+with a **14.0 % spread** — the same figure the twenty-first pass measured
+here. *The tight three-run sample was the bottom of the distribution, not a
+regression*: three runs is not a spread estimate on this box, and a sample
+whose spread is smaller than the effect you are testing for is the trap.
+The instruction count is the measurement of record either way and it says
+the tip does **4.3 % less work than the anchor** (3,362,421,936 against
+3,513,438,110). Re-anchoring on a 12.5 % sitting would replace a 7.48 %
+measurement with a looser one, and `host_cpu` still reads *2.80 GHz*
+against the anchor's 2.10 GHz box. Workload facts all match the anchor
+exactly: `turns_per_game` **26.98** (a seventh consecutive anchor),
+`stalls` **0**, `determinism` ok on all eleven, `decisions_per_game`
+**603.9**, `decisions` **193,232** identical run to run, `peak_rss_mib`
+21.4-22.0 against 21.7-22.3, `host_calib_ms` 45-55 against 47-52.
+
 **The host fingerprint disagrees with itself here, and the calibration
 probe is the half to believe.** `host_cpu` reads *2.80 GHz* — the
 `4f3e86c0` anchor's box, not the `ed4c152c` anchor's 2.10 GHz one — while
