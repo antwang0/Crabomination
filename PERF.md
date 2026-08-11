@@ -127,7 +127,7 @@ contention-immune, which makes it the better first look.
 
 ## Baseline
 
-**Anchored 2026-08-11 at `17a52107`** (`release`, mimalloc — the shipped
+**Anchored 2026-08-11 at `4f3e86c0`** (`release`, mimalloc — the shipped
 configuration), i.e. on the nineteenth pass's tip.
 
 ```text
@@ -152,7 +152,7 @@ sets for investigating before stopping. Four things say so, in order of
 weight.
 
 1. **A same-sitting paired A/B.** The tip's two perf commits were reverted
-   out of `combat.rs` + `game/mod.rs` (keeping `a44f5271`), rebuilt
+   out of `combat.rs` + `game/mod.rs` (keeping `df87c2d1`), rebuilt
    `profiling-fast --no-default-features`, and the two binaries alternated
    `--bench` on this box: base **56.36 / 55.85 / 55.56 / 57.25 / 56.70 /
    57.61** (mean 56.55) against tip **56.80 / 58.49 / 55.26 / 56.26 /
@@ -456,15 +456,18 @@ loops with that shape still unexamined.
 PERF/bench and `--actor-det` commits), re-measured on a fresh container:
 **3,768,870,942 Ir** against the recorded 3,768,577,483 at `56986d65`,
 i.e. **+0.0078 %** — inside build-to-build noise, so the eighteenth pass's
-tip carries over unchanged. Every row is callgrind on `profiling-fast
+tip carries over unchanged. The pass was rebased over another session's
+`3c5a12e4` after measuring; that commit touches only
+`crabomination_ml/src/bin/selfplay_train.rs`, which no `bot_ladder` build
+links, so the numbers stand without a re-take. Every row is callgrind on `profiling-fast
 --no-default-features`, `--a gang --b gang --games 6 --threads 1 --seed 1
 --decks fixed`.
 
 | date | change | before | after | how measured |
 |---|---|---|---|---|
-| 2026-08-11 | `CardData.counters` becomes an insertion-ordered `CounterBag` (`a44f5271`) | 3,768,870,942 Ir | 3,770,806,042 Ir (**+0.051 %**) | **No win — kept as a determinism fix, not reverted.** The prediction was ~0.9 % from the 1,092,990 `RawTable::clone` calls the CoW unshare takes (45,641,597 Ir / 1.21 % inclusive under `Arc::clone_from_ref_in`). It did not land, and the reason retires the candidate: **`hashbrown` short-circuits the empty-table clone**, so those 1.09 M `CardData` deep copies were paying ~42 Ir for a branch, not for an allocation, and a `Vec` clone of an empty `Vec` costs about the same. Real deltas: `RawTable::clone` -2.7 M, `counter_count` -1.0 M, against `RawTable::drop` +3.9 M and a wash of `Arc::clone_from_ref_in` file re-attribution. **What justifies the commit is CR-level**: `counters` was a `HashMap`, `RandomState` reseeds its iteration order per process, and `Effect::RemoveAnyCounter` reads "the first present kind" off it while six other sites collect the kinds into a `Vec` and act on them in order — the same class `86670250` fixed for `keyword_counters`. `cr_122_counter_bag_order_is_insertion_order` pins it. |
-| 2026-08-11 | `declare_blockers` stops re-deriving computed views it already has (`5795a906`) | 3,770,806,042 Ir | 3,732,316,928 Ir (**-1.021 %**) | Three sites, one shape: *a `&mut self` path paying a fresh whole-game gather for a computed view it is already holding, or for permanents it never reads.* (a) The Burden of Proof gate called `computed_permanent(attacker_id)` **unconditionally per assignment** — 8,617,417 Ir over 2,436 calls — and the Ironclaw Curse gate two more, all for cards the function's own `compute_battlefield` had already computed; nothing between mutates a layer input, which the Okk check 300 lines lower already says in a comment. (b) The Flanking/Bushido/Rampage snapshot took a **second** whole-board pass (37,976,438 Ir over 2,578 calls, ~23 layer passes each) and read it only through `kws_for`, called with the assignments' own blockers and attackers. (c) The CR 509.3g unblocked sweep gathered once per unblocked attacker to read Frenzy (8,570,454 Ir over 2,654 calls); one freeze scope makes it one gather. Bench output byte-identical, suite 18,837 green. |
-| 2026-08-11 | Combat damage computes the participants, not the board (`17a52107`) | 3,732,316,928 Ir | 3,694,708,603 Ir (**-1.008 %**) | Same shape one level down. `resolve_combat`'s whole-board pass was 48,985,366 Ir (1.30 %) over 3,196 calls — ~23 layer passes for ~4 participants — and every consumer under `resolve_combat_damage_with_filter` (attacker infos, banding assigner, `combat_lethals`, the blocker scans) is an id lookup. The one whole-board consumer is `free_division_targets`' second half, gated on a keyword the attacker carries, so `combat_damage_computed` builds attackers + declared blockers and falls back to the whole board only when a Butcher Orgg is attacking. **The gate is checked, not assumed**: `butcher_orgg_divides_damage_among_defenders` assigns damage to a creature that never blocked and fails if the fallback is dropped. New helper `GameState::compute_permanents(&[CardId])` — one gather, one `apply_layers_one` per named permanent. Bench output byte-identical. |
+| 2026-08-11 | `CardData.counters` becomes an insertion-ordered `CounterBag` (`df87c2d1`) | 3,768,870,942 Ir | 3,770,806,042 Ir (**+0.051 %**) | **No win — kept as a determinism fix, not reverted.** The prediction was ~0.9 % from the 1,092,990 `RawTable::clone` calls the CoW unshare takes (45,641,597 Ir / 1.21 % inclusive under `Arc::clone_from_ref_in`). It did not land, and the reason retires the candidate: **`hashbrown` short-circuits the empty-table clone**, so those 1.09 M `CardData` deep copies were paying ~42 Ir for a branch, not for an allocation, and a `Vec` clone of an empty `Vec` costs about the same. Real deltas: `RawTable::clone` -2.7 M, `counter_count` -1.0 M, against `RawTable::drop` +3.9 M and a wash of `Arc::clone_from_ref_in` file re-attribution. **What justifies the commit is CR-level**: `counters` was a `HashMap`, `RandomState` reseeds its iteration order per process, and `Effect::RemoveAnyCounter` reads "the first present kind" off it while six other sites collect the kinds into a `Vec` and act on them in order — the same class `86670250` fixed for `keyword_counters`. `cr_122_counter_bag_order_is_insertion_order` pins it. |
+| 2026-08-11 | `declare_blockers` stops re-deriving computed views it already has (`42f59829`) | 3,770,806,042 Ir | 3,732,316,928 Ir (**-1.021 %**) | Three sites, one shape: *a `&mut self` path paying a fresh whole-game gather for a computed view it is already holding, or for permanents it never reads.* (a) The Burden of Proof gate called `computed_permanent(attacker_id)` **unconditionally per assignment** — 8,617,417 Ir over 2,436 calls — and the Ironclaw Curse gate two more, all for cards the function's own `compute_battlefield` had already computed; nothing between mutates a layer input, which the Okk check 300 lines lower already says in a comment. (b) The Flanking/Bushido/Rampage snapshot took a **second** whole-board pass (37,976,438 Ir over 2,578 calls, ~23 layer passes each) and read it only through `kws_for`, called with the assignments' own blockers and attackers. (c) The CR 509.3g unblocked sweep gathered once per unblocked attacker to read Frenzy (8,570,454 Ir over 2,654 calls); one freeze scope makes it one gather. Bench output byte-identical, suite 18,837 green. |
+| 2026-08-11 | Combat damage computes the participants, not the board (`4f3e86c0`) | 3,732,316,928 Ir | 3,694,708,603 Ir (**-1.008 %**) | Same shape one level down. `resolve_combat`'s whole-board pass was 48,985,366 Ir (1.30 %) over 3,196 calls — ~23 layer passes for ~4 participants — and every consumer under `resolve_combat_damage_with_filter` (attacker infos, banding assigner, `combat_lethals`, the blocker scans) is an id lookup. The one whole-board consumer is `free_division_targets`' second half, gated on a keyword the attacker carries, so `combat_damage_computed` builds attackers + declared blockers and falls back to the whole board only when a Butcher Orgg is attacking. **The gate is checked, not assumed**: `butcher_orgg_divides_damage_among_defenders` assigns damage to a creature that never blocked and fails if the fallback is dropped. New helper `GameState::compute_permanents(&[CardId])` — one gather, one `apply_layers_one` per named permanent. Bench output byte-identical. |
 | | **cumulative, nineteenth pass** | **3,768,870,942 Ir** | **3,694,708,603 Ir (-1.968 %)** | two rows landed, one null kept for correctness; callgrind on the fixed six-game workload, bench output byte-identical on every row. |
 
 **What the pass leaves behind, as a rule.** *A whole-board
@@ -633,13 +636,13 @@ with its callee row underneath.
 | site | Ir | calls | status |
 |---|---|---|---|
 | `declare_attackers_banded` | 61,859,555 (1.64 %) | 3,780 | **open — top candidate, see (0) below** |
-| `resolve_combat` | 48,985,366 (1.30 %) | 3,196 | paid, `17a52107` |
+| `resolve_combat` | 48,985,366 (1.30 %) | 3,196 | paid, `4f3e86c0` |
 | `declare_blockers` (validation) | 41,289,574 (1.10 %) | 2,598 | **open — needs the same gate as (0)** |
-| `declare_blockers` (P/T snapshot) | 37,976,438 (1.01 %) | 2,578 | paid, `5795a906` |
+| `declare_blockers` (P/T snapshot) | 37,976,438 (1.01 %) | 2,578 | paid, `42f59829` |
 | `do_phasing` | 22,845,211 (0.61 %) | 1,718 | legitimate — filters the whole board for Phasing |
 | `do_untap` | 22,784,044 (0.60 %) | 1,718 | legitimate — reads untap locks for every permanent |
 | `process_cumulative_upkeep` | 23,322,553 (0.62 %) | 1,742 | one pass per turn |
-| `resolve_first_strike_damage` | 2,309,715 (0.06 %) | 78 | paid, `17a52107` |
+| `resolve_first_strike_damage` | 2,309,715 (0.06 %) | 78 | paid, `4f3e86c0` |
 
 0. **`declare_attackers_banded`'s whole-board pass, 1.64 % — the analysis
    is done, the code is not.** Its `computed` has exactly **two**

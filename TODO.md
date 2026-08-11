@@ -49,7 +49,7 @@ suite 18,837 green, clippy clean.
 - **Bugs**: no new ones found or filed. The panic sweep's five filters
   remain exhausted; the sixth is still "run the actor path with overflow
   checks on in release for a few thousand games" — **not done this run.**
-- **Bench re-anchored at `17a52107`**: mean 67.31 games/s (6 runs, spread
+- **Bench re-anchored at `4f3e86c0`**: mean 67.31 games/s (6 runs, spread
   1.95 %), stalls 0, determinism ok on all six, `turns_per_game` 26.98,
   RSS 22.1-22.5. That is **-5.6 % on the 71.29 anchor, and it is the
   host** — checked with a same-sitting paired A/B (the two perf commits
@@ -91,7 +91,7 @@ target/debug/incremental` reclaims several GB without a full rebuild.
 Found by profiling. Not speculative — the code is quoted.
 
 *(No open entries. The sibling `counters` `HashMap`-order defect was fixed
-in `a44f5271`: `CardData.counters` is now a `CounterBag`, an
+in `df87c2d1`: `CardData.counters` is now a `CounterBag`, an
 insertion-ordered `Vec` newtype, because `Effect::RemoveAnyCounter` reads
 "the first present kind" off the map and six other sites collect the kinds
 into a `Vec` and act on them in order — `RandomState` reseeds that order per
