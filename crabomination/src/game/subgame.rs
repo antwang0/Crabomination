@@ -12,7 +12,7 @@ use rand::seq::SliceRandom;
 use crate::game::GameState;
 use crate::player::Player;
 use crate::recommend::STALE_ROUNDS;
-use crate::server::bot::{Bot, RandomBot};
+use crate::server::bot::{Bot, HeuristicBot};
 
 /// CR 729.5 — a subgame may itself contain a subgame; the nest is capped so
 /// a library full of Shahrazads terminates.
@@ -51,7 +51,7 @@ impl GameState {
         sub.start_mulligan_phase();
 
         let mut bots: Vec<Box<dyn Bot>> =
-            (0..seats).map(|_| Box::new(RandomBot::default()) as Box<dyn Bot>).collect();
+            (0..seats).map(|_| Box::new(HeuristicBot::default()) as Box<dyn Bot>).collect();
         let (mut actions, mut stale) = (0usize, 0usize);
         while !sub.is_game_over() && actions < MAX_ACTIONS && stale < STALE_ROUNDS {
             let mut any = false;

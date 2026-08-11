@@ -83,7 +83,7 @@ use crate::decision::{AutoDecider, Decider};
 use crate::game::{GameAction, GameState, TurnStep};
 use crate::recommend::STALE_ROUNDS;
 
-use super::bot::{Bot, EvalWeights, RandomBot};
+use super::bot::{Bot, EvalWeights, HeuristicBot};
 
 /// Tunables for [`MctsBot`]. Every one of these trades search quality for
 /// wall clock, and the right setting is a measurement, so none of them are
@@ -247,12 +247,12 @@ fn leader_decided(visits: &[u32], totals: &[f64], parent: f64, exploration: f64)
 /// re-deriving all of combat from scratch.
 pub struct MctsBot {
     cfg: MctsConfig,
-    fallback: RandomBot,
+    fallback: HeuristicBot,
 }
 
 impl MctsBot {
     pub fn new(cfg: MctsConfig) -> Self {
-        Self { cfg, fallback: RandomBot::with_weights(cfg.weights) }
+        Self { cfg, fallback: HeuristicBot::with_weights(cfg.weights) }
     }
 
     /// Score a finished rollout on a 0..=1 scale.
@@ -306,12 +306,12 @@ impl MctsBot {
             super::bot::determinize_hidden(&mut g, seat, 0x3C75_0000 ^ r.random::<u32>() as u64);
         }
         let stop_turn = g.turn_number + self.cfg.horizon_turns;
-        let mut policy: Vec<RandomBot> = (0..g.players.len())
+        let mut policy: Vec<HeuristicBot> = (0..g.players.len())
             .map(|_| {
                 if self.cfg.heuristic_rollouts {
-                    RandomBot::with_weights(self.cfg.weights)
+                    HeuristicBot::with_weights(self.cfg.weights)
                 } else {
-                    RandomBot::uniform_baseline()
+                    HeuristicBot::uniform_baseline()
                 }
             })
             .collect();

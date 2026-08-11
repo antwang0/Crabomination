@@ -25,7 +25,7 @@ use crabomination::cube::{CardFactory, cube_deck, random_color_pair};
 use crabomination::game::{GameAction, GameState};
 use crabomination::player::Player;
 use crabomination::recommend::STALE_ROUNDS;
-use crabomination::server::{Bot, EvalWeights, RandomBot};
+use crabomination::server::{Bot, EvalWeights, HeuristicBot};
 use crabomination::sos_mode::{College, sos_deck};
 use rand::SeedableRng;
 use rand::rngs::StdRng;
@@ -279,8 +279,8 @@ fn run(
         // rather than a mirror.
         c.cur = Split::default();
         let mut bots: Vec<Box<dyn Bot>> = vec![
-            Box::new(RandomBot::with_weights(weights)),
-            Box::new(RandomBot::with_weights(weights_b)),
+            Box::new(HeuristicBot::with_weights(weights)),
+            Box::new(HeuristicBot::with_weights(weights_b)),
         ];
 
         let (mut actions, mut stale) = (0usize, 0usize);

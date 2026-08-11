@@ -224,7 +224,7 @@ pub struct EvalWeights {
     /// anything, and size affordability off the floating pool.
     ///
     /// Not a weight — a behavioral control, kept for the same reason
-    /// [`RandomBot::uniform_baseline`] is, so the tap-out fix stays
+    /// [`HeuristicBot::uniform_baseline`] is, so the tap-out fix stays
     /// measurable on the ladder instead of being asserted. Approximates
     /// the old pass with its land-tap half, which is the part the
     /// measurement in `main_phase_action_with` was of.
@@ -1190,19 +1190,26 @@ impl Default for EvalWeights {
     }
 }
 
-/// Reference bot. Taps lands and plays a (roughly random) affordable card
-/// from hand, but combat is heuristic: it attacks with creatures that swing
-/// safely or profitably (evasion / first-strike / deathtouch / menace /
-/// lifelink / trample / indestructible awareness, plus a suicide filter and
+/// The engine's heuristic player, and the one every real run uses: the
+/// client's opponent, the ladder's profiles, and every self-play training
+/// actor. Was called `RandomBot` until the name outlived the behaviour —
+/// only [`uniform_baseline`](Self::uniform_baseline) is random now, and it
+/// exists solely as the ladder's control arm.
+///
+/// Main phase: enumerates castable candidates and ranks them by
+/// [`score_candidate`]. Combat: it attacks with creatures that swing safely
+/// or profitably (evasion / first-strike / deathtouch / menace / lifelink /
+/// trample / indestructible awareness, plus a suicide filter and
 /// planeswalker redirection) and assigns blockers to maximize value trades
-/// and survive lethal (see `pick_attack`/`pick_blocks`). Decisions are
-/// auto-answered with [`AutoDecider`].
+/// and survive lethal (see `pick_attacks_scored` / `pick_blocks_scored`).
+/// How it values a board is [`EvalWeights`], which is what a ladder profile
+/// selects. Decisions are auto-answered with [`AutoDecider`].
 ///
 /// The bot keeps a little internal flag state so it only submits
 /// `DeclareAttackers`/`DeclareBlockers` once per combat phase — the match
 /// actor polls it repeatedly, so without these flags it would re-submit every
 /// tick.
-pub struct RandomBot {
+pub struct HeuristicBot {
     last_step_key: Option<(u32, TurnStep, usize)>,
     attackers_declared: bool,
     blocks_declared: bool,
@@ -1220,7 +1227,7 @@ pub struct RandomBot {
     weights: EvalWeights,
 }
 
-impl RandomBot {
+impl HeuristicBot {
     pub fn new() -> Self {
         Self {
             last_step_key: None,
@@ -1275,13 +1282,13 @@ impl RandomBot {
     }
 }
 
-impl Default for RandomBot {
+impl Default for HeuristicBot {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl Bot for RandomBot {
+impl Bot for HeuristicBot {
     /// The whole tick runs inside one `with_frozen_layers` scope. Sound by
     /// construction — a bot only ever receives `&GameState`, so nothing it
     /// does here can invalidate the gathered continuous-effect set — and it
@@ -1294,7 +1301,7 @@ impl Bot for RandomBot {
     }
 }
 
-impl RandomBot {
+impl HeuristicBot {
     fn next_action_inner(&mut self, state: &GameState, seat: usize) -> Option<GameAction> {
         if state.is_game_over() {
             return None;
@@ -10483,7 +10490,7 @@ mod tests {
         assert_eq!(have.total, 3, "Sol Ring's two plus the Forest's one");
         assert!(have.colors.contains(crate::mana::Color::Green));
 
-        let mut bot = RandomBot::new();
+        let mut bot = HeuristicBot::new();
         let action = bot.next_action(&g, 0).expect("bot should produce an action");
         assert!(
             matches!(action, GameAction::CastSpell { card_id, .. } if card_id == bear),
@@ -10505,7 +10512,7 @@ mod tests {
         }
         // A hand card it cannot cast: wrong color, and no black source.
         g.add_card_to_hand(0, catalog::doom_blade());
-        let mut bot = RandomBot::new();
+        let mut bot = HeuristicBot::new();
         let action = bot.next_action(&g, 0).expect("bot should produce an action");
         assert!(
             matches!(action, GameAction::PassPriority),
@@ -10529,7 +10536,7 @@ mod tests {
         // A Mountain pays the {1} fire-counter cost; nothing else to do.
         let mtn = g.add_card_to_battlefield(0, catalog::mountain());
         g.clear_sickness(mtn);
-        let mut bot = RandomBot::new();
+        let mut bot = HeuristicBot::new();
         // Drive a few actions: tap the land for mana, then sink into the counter.
         let mut animated = false;
         for _ in 0..6 {
@@ -11059,7 +11066,7 @@ mod tests {
         let mut g = two_player_game();
         let petal = g.add_card_to_battlefield(0, catalog::lotus_petal());
         g.clear_sickness(petal);
-        let mut bot = RandomBot::new();
+        let mut bot = HeuristicBot::new();
         let action = bot.next_action(&g, 0).expect("bot should produce an action");
         // Should not activate Lotus Petal's sac-cost ability.
         if let GameAction::ActivateAbility { card_id, .. } = action {
@@ -11083,7 +11090,7 @@ mod tests {
         g.add_card_to_library(0, catalog::island());
         g.add_card_to_library(0, catalog::island());
 
-        let mut bot = RandomBot::new();
+        let mut bot = HeuristicBot::new();
         let action = bot.next_action(&g, 0).expect("bot should produce an action");
         match action {
             GameAction::ActivateLoyaltyAbility { card_id, ability_index, .. } => {
@@ -11180,7 +11187,7 @@ mod tests {
         let atk = g.add_card_to_battlefield(0, one_one_with("Sneak", crate::card::Keyword::Menace));
         g.clear_sickness(atk);
         g.add_card_to_battlefield(1, catalog::grizzly_bears()); // lone 2/2 blocker
-        let mut bot = RandomBot::new();
+        let mut bot = HeuristicBot::new();
         match bot.next_action(&g, 0).expect("bot acts") {
             GameAction::DeclareAttackers(a) => {
                 assert!(a.iter().any(|atk_decl| atk_decl.attacker == atk),
@@ -11203,7 +11210,7 @@ mod tests {
             let c = g.add_card_to_battlefield(0, catalog::grizzly_bears());
             g.clear_sickness(c);
         }
-        let mut bot = RandomBot::new();
+        let mut bot = HeuristicBot::new();
         match bot.next_action(&g, 0).expect("bot acts") {
             GameAction::DeclareAttackers(a) => {
                 assert!(a.len() <= 1, "batch trimmed to the cap, got {}", a.len());
@@ -11252,7 +11259,7 @@ mod tests {
         let wall = g.add_card_to_battlefield(0, catalog::wall_of_lost_thoughts()); // 0/4 Defender
         g.clear_sickness(wall);
         g.players[1].life = 3; // the Wall's 4 toughness-damage is lethal
-        let mut bot = RandomBot::new();
+        let mut bot = HeuristicBot::new();
         match bot.next_action(&g, 0).expect("bot acts") {
             GameAction::DeclareAttackers(a) => {
                 assert!(a.iter().any(|d| d.attacker == wall),
@@ -11278,7 +11285,7 @@ mod tests {
         deadly.keywords.push(crate::card::Keyword::Deathtouch);
         deadly.keywords.push(crate::card::Keyword::CantBlock);
         g.add_card_to_battlefield(1, deadly);
-        let mut bot = RandomBot::new();
+        let mut bot = HeuristicBot::new();
         match bot.next_action(&g, 0).expect("bot acts") {
             GameAction::DeclareAttackers(a) => {
                 assert!(a.iter().any(|d| d.attacker == atk),
@@ -11299,7 +11306,7 @@ mod tests {
         let atk = g.add_card_to_battlefield(0, catalog::grizzly_bears());
         g.clear_sickness(atk);
         g.prevent_combat_damage_this_turn = true; // a Fog is active
-        let mut bot = RandomBot::new();
+        let mut bot = HeuristicBot::new();
         match bot.next_action(&g, 0).expect("bot acts") {
             GameAction::DeclareAttackers(a) => {
                 assert!(a.is_empty(), "fogged attacker stays home");
@@ -11428,14 +11435,14 @@ mod tests {
         let dd = g.add_card_to_battlefield(0, catalog::dandan());
         g.clear_sickness(dd);
         g.add_card_to_battlefield(0, catalog::island()); // your Island, not the defender's
-        let mut bot = RandomBot::new();
+        let mut bot = HeuristicBot::new();
         if let Some(GameAction::DeclareAttackers(a)) = bot.next_action(&g, 0) {
             assert!(!a.iter().any(|x| x.attacker == dd),
                 "Dandân must not be declared when the defender controls no Island");
         } // declaring no attackers is also fine
         // Now give the defender an Island — Dandân becomes a legal attacker.
         g.add_card_to_battlefield(1, catalog::island());
-        let mut bot2 = RandomBot::new();
+        let mut bot2 = HeuristicBot::new();
         match bot2.next_action(&g, 0).expect("bot acts") {
             GameAction::DeclareAttackers(a) => {
                 assert!(a.iter().any(|x| x.attacker == dd),
@@ -11459,7 +11466,7 @@ mod tests {
         // hold the 1/1 back.
         g.add_card_to_battlefield(1, catalog::hill_giant());
         g.add_card_to_battlefield(1, catalog::hill_giant());
-        let mut bot = RandomBot::new();
+        let mut bot = HeuristicBot::new();
         match bot.next_action(&g, 0).expect("bot acts") {
             GameAction::DeclareAttackers(a) => {
                 assert!(a.iter().any(|atk_decl| atk_decl.attacker == atk),
@@ -11485,7 +11492,7 @@ mod tests {
         g.players[0].mana_pool.add(crate::mana::Color::Red, 1);
         g.players[0].mana_pool.add(crate::mana::Color::Green, 1);
         g.players[0].mana_pool.add_colorless(1);
-        let mut bot = RandomBot::new();
+        let mut bot = HeuristicBot::new();
         // Drive the bot until it produces a CastSpell — could pass
         // through PlayLand / mana abilities first if seeded with hand-
         // played lands, but in this synthetic state the next non-mana
@@ -11518,7 +11525,7 @@ mod tests {
         // {1}{R}: enough for Stomp, not the {2}{R} creature.
         g.players[0].mana_pool.add(crate::mana::Color::Red, 1);
         g.players[0].mana_pool.add_colorless(1);
-        let mut bot = RandomBot::new();
+        let mut bot = HeuristicBot::new();
         for _ in 0..16 {
             let action = bot.next_action(&g, 0).expect("bot should act");
             if let GameAction::CastAdventure { card_id, .. } = action {
@@ -11543,7 +11550,7 @@ mod tests {
         g.discard_card(0, bolt, &mut events);
         g.players[0].mana_pool.add(crate::mana::Color::Red, 1);
         g.players[0].mana_pool.add_colorless(1);
-        let mut bot = RandomBot::new();
+        let mut bot = HeuristicBot::new();
         for _ in 0..16 {
             let action = bot.next_action(&g, 0).expect("bot should act");
             if let GameAction::CastMayhem { card_id, .. } = action {
@@ -11566,7 +11573,7 @@ mod tests {
         // {1}{B}: enough for Petty Revenge, not the {4}{G} creature.
         g.players[0].mana_pool.add(crate::mana::Color::Black, 1);
         g.players[0].mana_pool.add_colorless(1);
-        let mut bot = RandomBot::new();
+        let mut bot = HeuristicBot::new();
         for _ in 0..16 {
             let action = bot.next_action(&g, 0).expect("bot should act");
             if let GameAction::CastOmen { card_id, .. } = action {
@@ -11595,7 +11602,7 @@ mod tests {
         // that the bot finds the conspire cast, not that it fires it at the
         // worst possible moment.
         g.step = TurnStep::PostCombatMain;
-        let mut bot = RandomBot::new();
+        let mut bot = HeuristicBot::new();
         for _ in 0..16 {
             let action = bot.next_action(&g, 0).expect("bot should act");
             if let GameAction::CastSpellConspire { card_id, .. } = action {
@@ -11959,7 +11966,7 @@ mod tests {
         let mut g = two_player_game();
         let bird = g.add_card_to_battlefield(0, catalog::ornithopter_of_paradise());
         g.clear_sickness(bird);
-        let mut bot = RandomBot::new();
+        let mut bot = HeuristicBot::new();
         let action = bot.next_action(&g, 0).expect("bot should produce an action");
         if let GameAction::ActivateAbility { card_id, .. } = action {
             assert_ne!(card_id, bird,
@@ -11996,7 +12003,7 @@ mod tests {
             })
             .collect();
         g.add_card_to_hand(0, catalog::grizzly_bears());
-        let mut bot = RandomBot::new();
+        let mut bot = HeuristicBot::new();
         let action = bot.next_action(&g, 0).expect("bot should act");
         assert!(
             matches!(action, GameAction::CastSpell { .. }),
@@ -12054,8 +12061,8 @@ mod tests {
             run_match(
                 g,
                 vec![
-                    SeatOccupant::Bot(Box::new(RandomBot::new())),
-                    SeatOccupant::Bot(Box::new(RandomBot::new())),
+                    SeatOccupant::Bot(Box::new(HeuristicBot::new())),
+                    SeatOccupant::Bot(Box::new(HeuristicBot::new())),
                 ],
             );
             let _ = done_tx.send(());
@@ -12082,7 +12089,7 @@ mod tests {
         g.players[0].mana_pool.add(crate::mana::Color::Red, 1);
         let bird = g.add_card_to_battlefield(1, catalog::ornithopter_of_paradise());
         g.clear_sickness(bird);
-        let mut bot = RandomBot::new();
+        let mut bot = HeuristicBot::new();
         let action = bot.next_action(&g, 0).expect("bot should act");
         match action {
             GameAction::CastSpell { card_id, target, .. } => {
@@ -12105,7 +12112,7 @@ mod tests {
         let opus = g.add_card_to_hand(0, catalog::magma_opus());
         // Only {U/R}{U/R} worth of mana — can't cast the {8} spell.
         g.players[0].mana_pool.add(crate::mana::Color::Blue, 2);
-        let mut bot = RandomBot::new();
+        let mut bot = HeuristicBot::new();
         let action = bot.next_action(&g, 0).expect("bot should act");
         match action {
             GameAction::ActivateDiscardAbility { card_id } => assert_eq!(card_id, opus),
@@ -12148,8 +12155,8 @@ mod tests {
             run_match(
                 g,
                 vec![
-                    SeatOccupant::Bot(Box::new(RandomBot::new())),
-                    SeatOccupant::Bot(Box::new(RandomBot::new())),
+                    SeatOccupant::Bot(Box::new(HeuristicBot::new())),
+                    SeatOccupant::Bot(Box::new(HeuristicBot::new())),
                 ],
             );
             let _ = done_tx.send(());
@@ -12192,7 +12199,7 @@ mod tests {
         // Pretend a land was played already so PlayLand is also blocked.
         g.players[0].lands_played_this_turn = 1;
 
-        let mut bot = RandomBot::new();
+        let mut bot = HeuristicBot::new();
         // Drive a few action picks; none of them may be a sorcery-speed
         // CastSpell (Tireless Tracker). PassPriority and instant casts
         // (Lightning Bolt) are both fine.
@@ -12250,7 +12257,7 @@ mod tests {
         g.priority.player_with_priority = 0;
         g.active_player_idx = 0;
 
-        let mut bot = RandomBot::new();
+        let mut bot = HeuristicBot::new();
         for _ in 0..50 {
             let Some(action) = bot.next_action(&g, 0) else { continue };
             if let GameAction::CastSpell { .. } = action {
@@ -12286,7 +12293,7 @@ mod tests {
         g.players[0].mana_pool.add(crate::mana::Color::Blue, 1);
         g.players[0].mana_pool.add_colorless(2);
 
-        let mut bot = RandomBot::new();
+        let mut bot = HeuristicBot::new();
         for _ in 0..50 {
             let Some(action) = bot.next_action(&g, 0) else { continue };
             if let GameAction::CastSpell { card_id, .. } = action {
@@ -12557,7 +12564,7 @@ mod tests {
             c.tapped = false;
         }
 
-        let mut bot = RandomBot::new();
+        let mut bot = HeuristicBot::new();
         // 50 trials; if the bot ever returns ActivateAbility on the
         // stolen card it would deadlock. PassPriority and any action
         // on a card the bot actually controls are both fine.
@@ -12592,7 +12599,7 @@ mod tests {
         g.players[0].mana_pool.add(crate::mana::Color::Blue, 1);
         g.players[0].mana_pool.add(crate::mana::Color::Black, 1);
         g.add_card_to_hand(0, catalog::drown_in_the_loch());
-        let mut bot = RandomBot::new();
+        let mut bot = HeuristicBot::new();
         let action = bot.next_action(&g, 0).expect("bot should act");
         // The bot should cast Drown in the Loch with mode = Some(1)
         // (destroy mode). Mode 0 (counter spell) has no spell on the
@@ -12637,7 +12644,7 @@ mod tests {
         // Drive the bot until it produces the delve cast (it may tap/scan
         // first, but with no lands and one floating U the delve is the only
         // castable line).
-        let mut bot = RandomBot::new();
+        let mut bot = HeuristicBot::new();
         let mut found = false;
         for _ in 0..6 {
             match bot.next_action(&g, 0) {
@@ -12904,7 +12911,7 @@ mod tests {
         g.set_attacking(vec![Attack { attacker: bears, target: AttackTarget::Player(1) }]);
         g.set_block_map([(dragon, bears)]);
         g.set_blockers_declared(true);
-        let action = RandomBot::new().next_action(&g, 0);
+        let action = HeuristicBot::new().next_action(&g, 0);
         assert!(
             matches!(
                 action,
@@ -12932,7 +12939,7 @@ mod tests {
         g.set_attacking(vec![Attack { attacker: bears, target: AttackTarget::Player(1) }]);
         g.set_block_map([(elf, bears)]);
         g.set_blockers_declared(true);
-        let action = RandomBot::new().next_action(&g, 0);
+        let action = HeuristicBot::new().next_action(&g, 0);
         assert!(
             matches!(action, Some(GameAction::PassPriority)),
             "no trick needed on a won fight, got {action:?}",
@@ -13052,21 +13059,21 @@ mod tests {
             "a vanilla creature achieves nothing on the turn it lands",
         );
         // So the gated bot passes in the first main...
-        let mut bot = RandomBot::with_weights(w);
+        let mut bot = HeuristicBot::with_weights(w);
         assert!(
             matches!(bot.next_action(&g, 0), Some(GameAction::PassPriority)),
             "gated bot holds the creature in the precombat main",
         );
         // ...and deploys it in the second, where holding costs nothing.
         g.step = TurnStep::PostCombatMain;
-        let mut bot2 = RandomBot::with_weights(w);
+        let mut bot2 = HeuristicBot::with_weights(w);
         assert!(
             matches!(bot2.next_action(&g, 0), Some(GameAction::CastSpell { card_id, .. }) if card_id == bear),
             "gated bot casts it postcombat",
         );
         // The historical profile casts it immediately, which is the
         // behavior the gate exists to change.
-        let mut plain = RandomBot::with_weights(EvalWeights::baseline());
+        let mut plain = HeuristicBot::with_weights(EvalWeights::baseline());
         let mut pre = g.clone();
         pre.step = TurnStep::PreCombatMain;
         assert!(
@@ -13128,7 +13135,7 @@ mod tests {
                 next_player: None,
             },
         });
-        let mut bot = RandomBot::new();
+        let mut bot = HeuristicBot::new();
         let action = bot.next_action(&g, 0).expect("bot answers the decision");
         let GameAction::SubmitDecision(DecisionAnswer::PutOnLibrary(put)) = action else {
             panic!("expected a PutOnLibrary answer, got {action:?}");
@@ -13374,7 +13381,7 @@ mod monarch_tests {
             }
         }
 
-        let mut bot = RandomBot::new();
+        let mut bot = HeuristicBot::new();
         match bot.next_action(&g, 0).expect("an action") {
             GameAction::DeclareAttackers(attacks) => {
                 assert!(
@@ -13457,7 +13464,7 @@ mod stack_response_tests {
         let cs = g.add_card_to_hand(1, catalog::counterspell());
         for _ in 0..2 { g.add_card_to_battlefield(1, catalog::island()); }
         g.priority.player_with_priority = 1;
-        let mut bot = RandomBot::new();
+        let mut bot = HeuristicBot::new();
         let action = bot.next_action(&g, 1).expect("bot acts");
         match action {
             GameAction::CastSpell { card_id, target, .. } => {
@@ -13483,7 +13490,7 @@ mod stack_response_tests {
         g.add_card_to_hand(1, catalog::counterspell());
         for _ in 0..2 { g.add_card_to_battlefield(1, catalog::island()); }
         g.priority.player_with_priority = 1;
-        let mut bot = RandomBot::new();
+        let mut bot = HeuristicBot::new();
         let action = bot.next_action(&g, 1).expect("bot acts");
         assert!(matches!(action, GameAction::PassPriority),
             "a 2-drop bear isn't worth the counter: {action:?}");
@@ -13594,7 +13601,7 @@ mod stack_response_tests {
         let mut big = catalog::grizzly_bears();
         big.name = "Wall"; big.power = 5; big.toughness = 5;
         g.add_card_to_battlefield(1, big);
-        let mut bot = RandomBot::new();
+        let mut bot = HeuristicBot::new();
         match bot.next_action(&g, 0).expect("bot acts") {
             GameAction::DeclareAttackers(a) => {
                 assert!(a.iter().any(|d| d.attacker == atk),
@@ -13818,7 +13825,7 @@ mod stack_response_tests {
         g.players[0].mana_pool.add(Color::Green, 1);
         g.players[0].mana_pool.add_colorless(1);
 
-        let mut bot = RandomBot::new();
+        let mut bot = HeuristicBot::new();
         match bot.next_action(&g, 0).expect("bot acts") {
             GameAction::CastSpell { card_id, target, .. } => {
                 assert_eq!(card_id, bolt, "only the instant is castable off-turn");
@@ -13879,7 +13886,7 @@ mod stack_response_tests {
         let cs = g.add_card_to_hand(1, catalog::counterspell());
         for _ in 0..2 { g.add_card_to_battlefield(1, catalog::island()); }
         g.priority.player_with_priority = 1;
-        let mut bot = RandomBot::new();
+        let mut bot = HeuristicBot::new();
         match bot.next_action(&g, 1).expect("bot acts") {
             GameAction::CastSpell { card_id, .. } => {
                 assert_eq!(card_id, cs, "counters the removal aimed at its best creature");
@@ -14268,7 +14275,7 @@ mod stack_response_tests {
             g.perform_action(GameAction::PassPriority).unwrap();
             fuel -= 1;
         }
-        let action = RandomBot::new().next_action(&g, 0).expect("defender acts");
+        let action = HeuristicBot::new().next_action(&g, 0).expect("defender acts");
         assert!(
             matches!(
                 action,
@@ -14367,7 +14374,7 @@ mod stack_response_tests {
                 g.pending_decision.as_ref().map(|p| &p.decision),
                 Some(Decision::OptionalTrigger { .. })
             ));
-            RandomBot::new().next_action(&g, 0).expect("bot answers")
+            HeuristicBot::new().next_action(&g, 0).expect("bot answers")
         };
         assert!(
             matches!(run(2, 3), GameAction::SubmitDecision(DecisionAnswer::Bool(true))),
@@ -14644,7 +14651,7 @@ mod stack_response_tests {
         while g.player_with_priority() != 0 {
             g.perform_action(GameAction::PassPriority).unwrap();
         }
-        let action = RandomBot::new().next_action(&g, 0).expect("bot holds priority");
+        let action = HeuristicBot::new().next_action(&g, 0).expect("bot holds priority");
         assert!(
             matches!(action, GameAction::CastPrepareSpell { creature_id, .. } if creature_id == em),
             "inset Lightning Bolt fires before the body dies, got {action:?}"
@@ -14725,7 +14732,7 @@ mod stack_response_tests {
                 "paradigm copy must suspend as a real prompt, got {:?}",
                 g.pending_decision
             );
-            RandomBot::new().next_action(&g, 0).expect("bot answers")
+            HeuristicBot::new().next_action(&g, 0).expect("bot answers")
         };
         let at_low = run_at(4);
         assert!(
@@ -14826,7 +14833,7 @@ mod stack_response_tests {
             "trigger resolution must suspend on the modal, got {:?}",
             g.pending_decision
         );
-        let mut bot = RandomBot::new();
+        let mut bot = HeuristicBot::new();
         let action = bot.next_action(&g, 0).expect("bot answers its pending decision");
         assert!(
             matches!(
@@ -14863,7 +14870,7 @@ mod stack_response_tests {
         })
         .unwrap();
         // Resolve; answer each suspended reveal prompt with the bot.
-        let mut bot = RandomBot::new();
+        let mut bot = HeuristicBot::new();
         let mut guard = 0;
         loop {
             while g.pending_decision.is_none() && !g.stack.is_empty() {
@@ -14943,9 +14950,9 @@ mod stack_response_tests {
             let mut bots: Vec<Box<dyn Bot>> = (0..2)
                 .map(|s| -> Box<dyn Bot> {
                     if s == scored_seat {
-                        Box::new(RandomBot::new())
+                        Box::new(HeuristicBot::new())
                     } else {
-                        Box::new(RandomBot::uniform_baseline())
+                        Box::new(HeuristicBot::uniform_baseline())
                     }
                 })
                 .collect();

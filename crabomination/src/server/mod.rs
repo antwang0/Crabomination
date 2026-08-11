@@ -79,7 +79,7 @@ pub mod view;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod ws;
 
-pub use bot::{Bot, EvalWeights, RandomBot};
+pub use bot::{Bot, EvalWeights, HeuristicBot};
 pub use mcts::{MctsBot, MctsConfig};
 pub use lobby::{serve_lobbies, ConnId, LobbyManager};
 #[cfg(not(target_arch = "wasm32"))]
@@ -1340,7 +1340,7 @@ mod tests {
     use crate::game::{GameAction, TurnStep};
     use crate::net::{ClientMsg, GameEventWire, ServerMsg};
     use crate::player::Player;
-    use crate::server::bot::RandomBot;
+    use crate::server::bot::HeuristicBot;
 
     fn two_player_game() -> GameState {
         let mut state = GameState::new(vec![Player::new(0, "P0"), Player::new(1, "P1")]);
@@ -1576,7 +1576,7 @@ mod tests {
                 state,
                 vec![
                     SeatOccupant::Human(s0),
-                    SeatOccupant::Bot(Box::new(RandomBot::new())),
+                    SeatOccupant::Bot(Box::new(HeuristicBot::new())),
                 ],
             )
         });
@@ -1602,7 +1602,7 @@ mod tests {
                 state,
                 vec![
                     SeatOccupant::Human(s0),
-                    SeatOccupant::Bot(Box::new(RandomBot::new())),
+                    SeatOccupant::Bot(Box::new(HeuristicBot::new())),
                 ],
             )
         });
@@ -2170,8 +2170,8 @@ mod tests {
             run_match(
                 state,
                 vec![
-                    SeatOccupant::Bot(Box::new(RandomBot::new())),
-                    SeatOccupant::Bot(Box::new(RandomBot::new())),
+                    SeatOccupant::Bot(Box::new(HeuristicBot::new())),
+                    SeatOccupant::Bot(Box::new(HeuristicBot::new())),
                 ],
             );
             let _ = done_tx.send(());
@@ -2201,8 +2201,8 @@ mod tests {
             run_match(
                 state,
                 vec![
-                    SeatOccupant::Bot(Box::new(RandomBot::new())),
-                    SeatOccupant::Bot(Box::new(RandomBot::new())),
+                    SeatOccupant::Bot(Box::new(HeuristicBot::new())),
+                    SeatOccupant::Bot(Box::new(HeuristicBot::new())),
                 ],
             )
         });
@@ -2233,8 +2233,8 @@ mod tests {
                 run_match(
                     state,
                     vec![
-                        SeatOccupant::Bot(Box::new(RandomBot::new())),
-                        SeatOccupant::Bot(Box::new(RandomBot::new())),
+                        SeatOccupant::Bot(Box::new(HeuristicBot::new())),
+                        SeatOccupant::Bot(Box::new(HeuristicBot::new())),
                     ],
                 );
                 let _ = done_tx.send(());
@@ -2263,8 +2263,8 @@ mod tests {
             run_match_spectated(
                 state,
                 vec![
-                    SeatOccupant::Bot(Box::new(RandomBot::new())),
-                    SeatOccupant::Bot(Box::new(RandomBot::new())),
+                    SeatOccupant::Bot(Box::new(HeuristicBot::new())),
+                    SeatOccupant::Bot(Box::new(HeuristicBot::new())),
                 ],
                 vec![spec_seat],
             );
@@ -2303,8 +2303,8 @@ mod tests {
             run_match(
                 state,
                 vec![
-                    SeatOccupant::Bot(Box::new(RandomBot::new())),
-                    SeatOccupant::Bot(Box::new(RandomBot::new())),
+                    SeatOccupant::Bot(Box::new(HeuristicBot::new())),
+                    SeatOccupant::Bot(Box::new(HeuristicBot::new())),
                 ],
             );
             let _ = done_tx.send(());
@@ -2319,7 +2319,7 @@ mod tests {
     /// mirror). Verifies the Phase I/J/L/M pipeline end-to-end:
     /// command zone populated at setup for all 4 seats, replacement
     /// effect bounces commanders back if killed, cast-from-CZ + tax
-    /// accounting runs through `RandomBot` action picks across all
+    /// accounting runs through `HeuristicBot` action picks across all
     /// 4 players, 21-commander-damage SBA still terminates the game.
     /// Phase A/B/C/D/E machinery is also exercised: 4-seat turn
     /// rotation, APNAP trigger ordering, team-aware attack/block
@@ -2333,15 +2333,15 @@ mod tests {
             run_match(
                 state,
                 vec![
-                    SeatOccupant::Bot(Box::new(RandomBot::new())),
-                    SeatOccupant::Bot(Box::new(RandomBot::new())),
-                    SeatOccupant::Bot(Box::new(RandomBot::new())),
-                    SeatOccupant::Bot(Box::new(RandomBot::new())),
+                    SeatOccupant::Bot(Box::new(HeuristicBot::new())),
+                    SeatOccupant::Bot(Box::new(HeuristicBot::new())),
+                    SeatOccupant::Bot(Box::new(HeuristicBot::new())),
+                    SeatOccupant::Bot(Box::new(HeuristicBot::new())),
                 ],
             );
             let _ = done_tx.send(());
         });
-        // `RandomBot` draws from the global RNG, so a 4-player FFA's length
+        // `HeuristicBot` draws from the global RNG, so a 4-player FFA's length
         // varies by more than an order of magnitude run to run (observed
         // 0.5s–15s). The assertion is termination, not speed — give it enough
         // headroom that an unlucky game isn't a false failure. (Seeding the
@@ -2412,8 +2412,8 @@ mod tests {
             run_match_full(
                 state,
                 vec![
-                    SeatOccupant::Bot(Box::new(RandomBot::new())),
-                    SeatOccupant::Bot(Box::new(RandomBot::new())),
+                    SeatOccupant::Bot(Box::new(HeuristicBot::new())),
+                    SeatOccupant::Bot(Box::new(HeuristicBot::new())),
                 ],
                 vec![],
                 Some(sink_for_match),

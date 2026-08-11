@@ -3372,7 +3372,7 @@ fn angelic_gift_draws_and_grants_flying() {
 /// 1-damage pinger finishes a 2/2 that took 1 combat damage this turn.
 #[test]
 fn bot_pings_a_chipped_creature_for_lethal() {
-    use crabomination::server::bot::{Bot, RandomBot};
+    use crabomination::server::bot::{Bot, HeuristicBot};
     let mut g = two_player_game();
     let tim = g.add_card_to_battlefield(0, catalog::prodigal_sorcerer()); // {T}: 1 dmg
     g.clear_sickness(tim);
@@ -3381,7 +3381,7 @@ fn bot_pings_a_chipped_creature_for_lethal() {
     g.active_player_idx = 0;
     g.priority.player_with_priority = 0;
     g.step = TurnStep::PreCombatMain;
-    let action = RandomBot::new().next_action(&g, 0);
+    let action = HeuristicBot::new().next_action(&g, 0);
     assert!(
         matches!(&action, Some(GameAction::ActivateAbility { card_id, target: Some(Target::Permanent(t)), .. })
             if *card_id == tim && *t == foe),

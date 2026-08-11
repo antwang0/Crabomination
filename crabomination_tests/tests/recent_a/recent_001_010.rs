@@ -7943,7 +7943,7 @@ mod recent3 {
     fn bot_fires_seq_wrapped_reach_drain_for_lethal() {
         use crabomination::card::{ActivatedAbility, CardDefinition, CardType, Effect, Selector, Value};
         use crabomination::effect::PlayerRef;
-        use crabomination::server::bot::{Bot, RandomBot};
+        use crabomination::server::bot::{Bot, HeuristicBot};
         let drainer = CardDefinition {
             name: "Test Drainer",
             card_types: vec![CardType::Artifact],
@@ -7966,7 +7966,7 @@ mod recent3 {
         g.step = TurnStep::PreCombatMain;
         g.active_player_idx = 0;
         g.priority.player_with_priority = 0;
-        let action = RandomBot::new().next_action(&g, 0);
+        let action = HeuristicBot::new().next_action(&g, 0);
         assert!(
             matches!(action, Some(GameAction::ActivateAbility { card_id, .. }) if card_id == id),
             "bot activates the Seq-wrapped drain for lethal: {action:?}"
@@ -7976,7 +7976,7 @@ mod recent3 {
     /// The bot equips its Equipment onto an attacker rather than a Defender wall.
     #[test]
     fn bot_equips_attacker_not_defender_wall() {
-        use crabomination::server::bot::{Bot, RandomBot};
+        use crabomination::server::bot::{Bot, HeuristicBot};
         let mut g = two_player_game();
         // A big 0/4 Wall (Defender) and a smaller real attacker.
         let wall = g.add_card_to_battlefield(0, catalog::wall_of_omens()); // Defender, 0/4
@@ -7989,7 +7989,7 @@ mod recent3 {
         // The bot should equip the attacker, not the higher-toughness Wall.
         let mut found = None;
         for _ in 0..40 {
-            if let Some(GameAction::Equip { equipment, target }) = RandomBot::new().next_action(&g, 0) {
+            if let Some(GameAction::Equip { equipment, target }) = HeuristicBot::new().next_action(&g, 0) {
                 found = Some((equipment, target));
                 break;
             }
@@ -8002,7 +8002,7 @@ mod recent3 {
     /// small body outranks a bigger vanilla one.
     #[test]
     fn bot_equips_by_computed_power() {
-        use crabomination::server::bot::{Bot, RandomBot};
+        use crabomination::server::bot::{Bot, HeuristicBot};
         let mut g = two_player_game();
         let lions = g.add_card_to_battlefield(0, catalog::savannah_lions()); // 2/1
         let mother = g.add_card_to_battlefield(0, catalog::mother_of_runes()); // 1/1
@@ -8016,7 +8016,7 @@ mod recent3 {
         g.priority.player_with_priority = 0;
         let mut found = None;
         for _ in 0..40 {
-            if let Some(GameAction::Equip { equipment, target }) = RandomBot::new().next_action(&g, 0) {
+            if let Some(GameAction::Equip { equipment, target }) = HeuristicBot::new().next_action(&g, 0) {
                 found = Some((equipment, target));
                 break;
             }

@@ -18,7 +18,7 @@ use bevy::input::keyboard::{Key, KeyboardInput};
 use bevy::prelude::*;
 
 use crabomination::server::{
-    run_match_full, RandomBot, SeatOccupant, SnapshotSink, SnapshotSinkState,
+    run_match_full, HeuristicBot, SeatOccupant, SnapshotSink, SnapshotSinkState,
 };
 
 use crate::card::Card;
@@ -591,7 +591,7 @@ fn rematch_in_place(
                     state,
                     vec![
                         SeatOccupant::Human(server_seat),
-                        SeatOccupant::Bot(Box::new(RandomBot::new())),
+                        SeatOccupant::Bot(Box::new(HeuristicBot::new())),
                     ],
                     vec![],
                     Some(sink_for_match),
@@ -603,8 +603,8 @@ fn rematch_in_place(
                 run_match_full(
                     state,
                     vec![
-                        SeatOccupant::Bot(Box::new(RandomBot::new())),
-                        SeatOccupant::Bot(Box::new(RandomBot::new())),
+                        SeatOccupant::Bot(Box::new(HeuristicBot::new())),
+                        SeatOccupant::Bot(Box::new(HeuristicBot::new())),
                     ],
                     vec![server_seat],
                     Some(sink_for_match),

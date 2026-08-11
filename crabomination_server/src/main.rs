@@ -6,7 +6,7 @@
 //! Environment variables:
 //! - `CRAB_BIND` — address to listen on (default `0.0.0.0:7777`).
 //! - `CRAB_BOT=1` — instead of pairing two clients, seat each client
-//!   against a `RandomBot`.
+//!   against a `HeuristicBot`.
 //! - `CRAB_FORMAT=cube` — build matches with random two-color cube decks
 //!   (via `crabomination::cube::build_cube_state`) instead of the default
 //!   BRG/Goryo's demo decks. Any other value (or unset) → demo decks.
@@ -35,7 +35,7 @@ use std::time::{Duration, Instant};
 
 use crabomination::net::LobbyFormat;
 use crabomination::server::{
-    run_match_full, serve_lobbies, tcp_seat, ws_seat, ConnId, MatchOutcome, RandomBot,
+    run_match_full, serve_lobbies, tcp_seat, ws_seat, ConnId, MatchOutcome, HeuristicBot,
     SeatOccupant, SnapshotSink,
 };
 
@@ -503,7 +503,7 @@ fn run_bot_match(stream: TcpStream, peer: std::net::SocketAddr, format: Format) 
         format.build(),
         vec![
             SeatOccupant::Human(seat),
-            SeatOccupant::Bot(Box::new(RandomBot::new())),
+            SeatOccupant::Bot(Box::new(HeuristicBot::new())),
         ],
         &format!("bot match {peer}, format={}", format.label()),
     ) else {

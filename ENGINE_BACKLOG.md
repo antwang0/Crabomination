@@ -1942,7 +1942,7 @@ parallel hand-maintained walkers drifting) are tracked in P3 below.
 
 - **"May" triggers: bot now value-aware; human suspend still ⏳.**
   `AutoDecider` still declines every `Decision::OptionalTrigger`
-  (`Bool(false)`), but **`RandomBot` now takes beneficial ones**
+  (`Bool(false)`), but **`HeuristicBot` now takes beneficial ones**
   (`optional_trigger_beneficial` — accept unless the matching `MayDo` body
   imposes a self-cost: lose life / sacrifice / discard). Tests:
   `bot_takes_beneficial_optional_trigger`,
@@ -1953,7 +1953,7 @@ parallel hand-maintained walkers drifting) are tracked in P3 below.
 
 - **AutoDecider declines all library searches** (`Decision::SearchLibrary
   → Search(None)` in `decision.rs`) — kept as-is so tests stay
-  deterministic. The **bot** now overrides this: `RandomBot` handles
+  deterministic. The **bot** now overrides this: `HeuristicBot` handles
   `Decision::SearchLibrary` via `decide_library_search` (prefer a basic
   land toward the weakest color, else fetch the first candidate), so
   singleplayer tutors actually fix mana. Tests: `bot_search_*`. Remaining:
@@ -2915,13 +2915,13 @@ recover from `git log -p -- TODO.md`. A few rows carry a residual ⏳ gap inline
   prompt — it hands over the lowest-mana-value eligible card. Fine for
   Karn's +1 and Animal Magnetism, but a real pick belongs on the opposing
   seat's decider.
-- ⏳ **Bot matches aren't reproducible.** `RandomBot` draws from the global
+- ⏳ **Bot matches aren't reproducible.** `HeuristicBot` draws from the global
   RNG, so `bot_vs_bot_commander_demo_terminates` varies 0.5s–15s+ run to run
   and occasionally blew its old 120s ceiling. The ceiling is now 600s, but
   it's a *wall-clock* budget inside a test binary that runs 450 other tests
   in parallel: under a loaded `cargo test --workspace` the binary takes ~620s
   and the assertion trips even though the same test finishes in ~50s alone.
-  The real fix is a seeded RNG on `RandomBot` (with the seed printed on
+  The real fix is a seeded RNG on `HeuristicBot` (with the seed printed on
   failure) and an action-count ceiling instead of a clock.
 - ⏳ **`Effect::EachPlayerChoosesCreatureTypeThen` asks the synchronous
   decider for every seat**, so a UI player isn't prompted for their own

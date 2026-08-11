@@ -9,7 +9,7 @@
 //!
 //! Determinism: pools, builds, and shuffles are derived from the seeds
 //! the caller passes, matching the ladder/recommender convention. The
-//! games themselves are not replayable — [`RandomBot`]'s candidate jitter
+//! games themselves are not replayable — [`HeuristicBot`]'s candidate jitter
 //! draws from the thread RNG by design — which the training loop doesn't
 //! need; the jitter is the exploration noise that diversifies the data.
 
@@ -26,7 +26,7 @@ use crate::game::GameState;
 use crate::recommend::{
     STALE_ROUNDS, SimConfig, StopReason, build_match_template, build_random_deck,
 };
-use crate::server::bot::{Bot, EvalWeights, RandomBot};
+use crate::server::bot::{Bot, EvalWeights, HeuristicBot};
 use crate::server::encode::{Vocab, encode_state};
 
 /// A 6-pack SOS sealed pool, fully determined by `seed`.
@@ -327,12 +327,12 @@ pub fn play_recorded_game_mcts(
                     ..crate::server::MctsConfig::default()
                 }))
             } else {
-                Box::new(RandomBot::with_weights(w))
+                Box::new(HeuristicBot::with_weights(w))
             }
         })
         .collect();
     let mut explorers: Vec<Box<dyn Bot>> =
-        (0..2).map(|_| Box::new(RandomBot::uniform_baseline()) as Box<dyn Bot>).collect();
+        (0..2).map(|_| Box::new(HeuristicBot::uniform_baseline()) as Box<dyn Bot>).collect();
 
     // (turn, seat, encoded state) — labelled after the game decides.
     let mut snaps = Vec::new();

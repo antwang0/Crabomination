@@ -169,7 +169,7 @@ fn cr_601_2b_discard_x_cost_rejects_an_empty_hand() {
 /// The bot fires a Threshold-*granted* removal ability, not just printed ones.
 #[test]
 fn bot_uses_a_granted_removal_ability() {
-    use crabomination::server::bot::{Bot, RandomBot};
+    use crabomination::server::bot::{Bot, HeuristicBot};
 
     let mut g = main_phase();
     let aven = g.add_card_to_battlefield(0, catalog::possessed_aven());
@@ -179,7 +179,7 @@ fn bot_uses_a_granted_removal_ability() {
         g.add_card_to_graveyard(0, catalog::forest());
     }
     mana(&mut g, 0);
-    let action = RandomBot::new().next_action(&g, 0).expect("the bot acts");
+    let action = HeuristicBot::new().next_action(&g, 0).expect("the bot acts");
     assert!(
         matches!(
             action,

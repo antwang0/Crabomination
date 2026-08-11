@@ -27,7 +27,7 @@ use crate::game::GameState;
 use crate::net::{ClientMsg, LobbyFormat, LobbyInfo, ServerMsg, SpectatableInfo};
 
 use super::{
-    run_match_reconnectable_spectatable, MatchOutcome, MctsBot, MctsConfig, RandomBot,
+    run_match_reconnectable_spectatable, MatchOutcome, MctsBot, MctsConfig, HeuristicBot,
     SeatChannel, SeatOccupant,
 };
 
@@ -48,7 +48,7 @@ fn default_bot() -> Box<dyn super::Bot> {
             ..MctsConfig::default()
         }))
     } else {
-        Box::new(RandomBot::new())
+        Box::new(HeuristicBot::new())
     }
 }
 
@@ -188,7 +188,7 @@ pub enum SeatSpec {
 
 /// A filled lobby ready to become a match: the gamemode, pre-built state, and
 /// seats in order. The driver maps each `Human` seat back to its channel and
-/// each `Bot` seat to a fresh `RandomBot`.
+/// each `Bot` seat to a fresh `HeuristicBot`.
 pub struct StartMatch {
     pub format: LobbyFormat,
     pub state: GameState,

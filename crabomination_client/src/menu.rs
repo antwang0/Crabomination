@@ -2,7 +2,7 @@
 //!
 //! Lets the user pick how to start the match:
 //!
-//! - **Play vs Bot** — in-process server, RandomBot opponent (no network).
+//! - **Play vs Bot** — in-process server, HeuristicBot opponent (no network).
 //! - **Host LAN Game** — spawn a TCP listener; local player joins via an
 //!   in-process channel; second seat is filled by the next remote client to
 //!   connect. (Use this + a second client running "Join" on another machine.)
@@ -28,7 +28,7 @@ use crabomination::game::GameState;
 #[cfg(not(target_arch = "wasm32"))]
 use crabomination::server::{run_match, tcp_seat};
 use crabomination::server::{
-    ClientChannel, RandomBot, SeatOccupant, run_match_full, seat_pair,
+    ClientChannel, HeuristicBot, SeatOccupant, run_match_full, seat_pair,
     SnapshotSink, SnapshotSinkState,
 };
 
@@ -121,9 +121,9 @@ pub struct CliBootFormat(pub Option<MatchFormat>);
 #[derive(Clone, Debug)]
 #[cfg_attr(target_arch = "wasm32", allow(dead_code))] // HostLan{port} unused in browser
 pub enum NetMode {
-    /// In-process server, RandomBot opponent.
+    /// In-process server, HeuristicBot opponent.
     LocalBot,
-    /// In-process server with two RandomBots; the local UI is a spectator.
+    /// In-process server with two HeuristicBots; the local UI is a spectator.
     SpectateBots,
     /// Bind a TCP listener on `port`; pair the local in-process seat against
     /// the next remote client to connect.
@@ -1394,7 +1394,7 @@ fn spawn_inprocess_bot(world: &mut World, format: MatchFormat) {
     let mut occupants: Vec<SeatOccupant> = Vec::with_capacity(n_seats);
     occupants.push(SeatOccupant::Human(server_seat));
     for _ in 1..n_seats {
-        occupants.push(SeatOccupant::Bot(Box::new(RandomBot::new())));
+        occupants.push(SeatOccupant::Bot(Box::new(HeuristicBot::new())));
     }
     std::thread::spawn(move || {
         run_match_full(state, occupants, vec![], Some(sink_for_match));
@@ -1419,7 +1419,7 @@ impl LatestSnapshot {
     }
 }
 
-/// Spectate-only mode: both seats are RandomBots, the local UI hooks
+/// Spectate-only mode: both seats are HeuristicBots, the local UI hooks
 /// up a spectator channel that mirrors seat 0's projection. Any actions
 /// the local UI submits are silently dropped server-side.
 fn spawn_spectate_bots(world: &mut World, format: MatchFormat) {
@@ -1434,7 +1434,7 @@ fn spawn_spectate_bots(world: &mut World, format: MatchFormat) {
     }
     let n_seats = state.players.len();
     let occupants: Vec<SeatOccupant> = (0..n_seats)
-        .map(|_| SeatOccupant::Bot(Box::new(RandomBot::new())))
+        .map(|_| SeatOccupant::Bot(Box::new(HeuristicBot::new())))
         .collect();
     std::thread::spawn(move || {
         run_match_full(state, occupants, vec![server_seat], Some(sink_for_match));
@@ -1488,7 +1488,7 @@ fn spawn_host_lan(world: &mut World, port: u16, format: MatchFormat) -> std::io:
 
 /// Load a previously exported debug state file. If the export carries a
 /// full `GameSnapshot` (the new format), the snapshot is restored into a
-/// real `GameState` and run as an in-process match against a `RandomBot`
+/// real `GameState` and run as an in-process match against a `HeuristicBot`
 /// — meaning the user can keep playing from the saved board, which is
 /// the whole point of this debug workflow.
 ///
@@ -1530,7 +1530,7 @@ fn spawn_loaded_debug_state(world: &mut World, path: &std::path::Path) -> std::i
 
     if let Some((restored, dropped_triggers, source_label)) = restored_with_dropped {
         // Spawn a live match seated as the original viewer; the second
-        // seat is filled by a RandomBot so the user can play forward.
+        // seat is filled by a HeuristicBot so the user can play forward.
         let viewer_seat = export.view.your_seat;
         let bot_seat = if viewer_seat == 0 { 1 } else { 0 };
         let (server_seat, ClientChannel { tx, rx }) = seat_pair();
@@ -1539,11 +1539,11 @@ fn spawn_loaded_debug_state(world: &mut World, path: &std::path::Path) -> std::i
         let occupants = if viewer_seat == 0 {
             vec![
                 SeatOccupant::Human(server_seat),
-                SeatOccupant::Bot(Box::new(RandomBot::new())),
+                SeatOccupant::Bot(Box::new(HeuristicBot::new())),
             ]
         } else {
             vec![
-                SeatOccupant::Bot(Box::new(RandomBot::new())),
+                SeatOccupant::Bot(Box::new(HeuristicBot::new())),
                 SeatOccupant::Human(server_seat),
             ]
         };

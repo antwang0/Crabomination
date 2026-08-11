@@ -1358,7 +1358,7 @@ fn bot_attacks_finishable_planeswalker_with_proper_power() {
     // it off in one swing. Lock-in: with a 5-loyalty PW + a 5-power
     // attacker (Grizzly Bears pumped to 5/5 with +1/+1 counters), the
     // bot should aim AT the walker.
-    use crabomination::server::bot::{Bot, RandomBot};
+    use crabomination::server::bot::{Bot, HeuristicBot};
     use crabomination::card::CounterType;
     let mut g = two_player_game();
     let beater = g.add_card_to_battlefield(0, catalog::grizzly_bears());
@@ -1376,7 +1376,7 @@ fn bot_attacks_finishable_planeswalker_with_proper_power() {
     g.step = TurnStep::DeclareAttackers;
     g.priority.player_with_priority = 0;
     g.active_player_idx = 0;
-    let mut bot = RandomBot::new();
+    let mut bot = HeuristicBot::new();
     let action = bot.next_action(&g, 0);
     // Bot should DeclareAttackers with the beater aimed at the walker
     // since 5 power finishes off a 5-loyalty walker.
@@ -1397,7 +1397,7 @@ fn bot_attacks_finishable_planeswalker_with_proper_power() {
 #[test]
 fn bot_stifles_a_threatening_opponent_ability() {
     // Server/bot: react to an opponent ability on the stack with Stifle.
-    use crabomination::server::bot::{Bot, RandomBot};
+    use crabomination::server::bot::{Bot, HeuristicBot};
     let mut g = two_player_game();
     // P0 casts Devourer of Destiny — its on-cast Scry trigger lands on the stack.
     let dev = g.add_card_to_hand(0, catalog::devourer_of_destiny());
@@ -1409,7 +1409,7 @@ fn bot_stifles_a_threatening_opponent_ability() {
     let stifle = g.add_card_to_hand(1, catalog::stifle());
     g.players[1].mana_pool.add(Color::Blue, 1);
     g.priority.player_with_priority = 1;
-    let mut bot = RandomBot::new();
+    let mut bot = HeuristicBot::new();
     match bot.next_action(&g, 1) {
         Some(GameAction::CastSpell { card_id, target, .. }) => {
             assert_eq!(card_id, stifle, "bot casts Stifle");
@@ -1425,7 +1425,7 @@ fn bot_does_not_aim_at_walker_too_tough_to_finish() {
     // Symmetric lock-in: when the bot's attacking power is below the
     // walker's loyalty, the bot should NOT throw attackers at the
     // walker.
-    use crabomination::server::bot::{Bot, RandomBot};
+    use crabomination::server::bot::{Bot, HeuristicBot};
     use crabomination::card::CounterType;
     let mut g = two_player_game();
     let beater = g.add_card_to_battlefield(0, catalog::grizzly_bears());
@@ -1443,7 +1443,7 @@ fn bot_does_not_aim_at_walker_too_tough_to_finish() {
     g.step = TurnStep::DeclareAttackers;
     g.priority.player_with_priority = 0;
     g.active_player_idx = 0;
-    let mut bot = RandomBot::new();
+    let mut bot = HeuristicBot::new();
     let action = bot.next_action(&g, 0);
     match action {
         Some(GameAction::DeclareAttackers(attacks)) => {

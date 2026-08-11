@@ -1172,7 +1172,7 @@ fn orzhov_enforcer_afterlife() {
 /// (regression for adapt-shape recognition in `pick_self_pump_counter`).
 #[test]
 fn bot_activates_adapt_ability() {
-    use crabomination::server::bot::{Bot, RandomBot};
+    use crabomination::server::bot::{Bot, HeuristicBot};
     let mut g = two_player_game();
     let munc = g.add_card_to_battlefield(0, catalog::aeromunculus());
     g.clear_sickness(munc);
@@ -1182,7 +1182,7 @@ fn bot_activates_adapt_ability() {
     g.players[0].mana_pool.add(Color::Green, 1);
     g.players[0].mana_pool.add(Color::Blue, 1);
     g.players[0].mana_pool.add_colorless(2);
-    let action = RandomBot::new().next_action(&g, 0);
+    let action = HeuristicBot::new().next_action(&g, 0);
     assert!(
         matches!(action, Some(GameAction::ActivateAbility { card_id, .. }) if card_id == munc),
         "bot adapts Aeromunculus: {action:?}"

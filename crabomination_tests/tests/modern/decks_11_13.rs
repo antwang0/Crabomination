@@ -168,7 +168,7 @@ fn fury_evoke_etb_deals_four_damage() {
 
 #[test]
 fn bot_kicks_tear_asunder_to_hit_a_creature() {
-    use crabomination::server::bot::{Bot, RandomBot};
+    use crabomination::server::bot::{Bot, HeuristicBot};
     let mut g = two_player_game();
     // Only a creature on board — unkicked Tear Asunder (artifact/enchantment)
     // has no legal target, so the bot's only castable play is the kicked
@@ -181,7 +181,7 @@ fn bot_kicks_tear_asunder_to_hit_a_creature() {
     g.step = TurnStep::PreCombatMain;
     g.priority.player_with_priority = 0;
     g.active_player_idx = 0;
-    let action = RandomBot::new().next_action(&g, 0);
+    let action = HeuristicBot::new().next_action(&g, 0);
     assert!(matches!(action, Some(GameAction::CastSpellKicked { .. })),
         "bot kicks Tear Asunder when only a creature is targetable: {action:?}");
 }

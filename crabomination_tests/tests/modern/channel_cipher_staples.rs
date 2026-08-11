@@ -260,7 +260,7 @@ fn turn_up_able_affordance_lists_payable_face_down_permanent() {
 /// The bot unmasks an affordable face-down Disguise creature in its main phase.
 #[test]
 fn bot_turns_up_affordable_face_down_creature() {
-    use crabomination::server::bot::{Bot, RandomBot};
+    use crabomination::server::bot::{Bot, HeuristicBot};
     let mut g = two_player_game();
     let id = g.add_card_to_hand(0, catalog::bubble_smuggler());
     g.active_player_idx = 0;
@@ -275,7 +275,7 @@ fn bot_turns_up_affordable_face_down_creature() {
     g.active_player_idx = 0;
     g.priority.player_with_priority = 0;
     g.step = TurnStep::PreCombatMain;
-    let mut bot = RandomBot::new();
+    let mut bot = HeuristicBot::new();
     let action = bot.next_action(&g, 0);
     assert!(matches!(action, Some(GameAction::TurnFaceUp { card_id }) if card_id == id),
         "bot should turn up the face-down creature; got {action:?}");

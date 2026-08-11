@@ -1057,7 +1057,7 @@ only stays dead while the reasoning that killed it is readable.
   triggers are likewise judged by settled outcome
   (`decide_optional_by_outcome`). Remaining: land-drop choice, deliberate
   hold-up planning.
-- 🟡 **Mulligan decisions** — `RandomBot` ships flood/screw mulligans with
+- 🟡 **Mulligan decisions** — `HeuristicBot` ships flood/screw mulligans with
   color-screw awareness. A quality-aware rule (`mull` — card-quality sum,
   a redundancy requirement at two lands, on-the-draw allowance) is
   **measured and not adopted**: 50.2 % [49.6, 50.8] over 28 800 sealed

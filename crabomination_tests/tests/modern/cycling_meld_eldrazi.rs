@@ -971,7 +971,7 @@ fn lightning_skelemental_discards_and_sacrifices() {
 /// The bot recasts a graveyard Flashback card when it's the only play.
 #[test]
 fn bot_offers_flashback_recast() {
-    use crabomination::server::bot::{Bot, RandomBot};
+    use crabomination::server::bot::{Bot, HeuristicBot};
     let mut g = two_player_game();
     let id = g.add_card_to_graveyard(0, catalog::hellspark_elemental());
     g.players[0].mana_pool.add(Color::Red, 1);
@@ -979,7 +979,7 @@ fn bot_offers_flashback_recast() {
     g.step = TurnStep::PreCombatMain;
     g.priority.player_with_priority = 0;
     g.active_player_idx = 0;
-    let action = RandomBot::new().next_action(&g, 0);
+    let action = HeuristicBot::new().next_action(&g, 0);
     assert!(matches!(action, Some(GameAction::CastFlashback { card_id, .. }) if card_id == id),
         "bot flashbacks Hellspark Elemental: {action:?}");
 }
@@ -987,7 +987,7 @@ fn bot_offers_flashback_recast() {
 /// The bot disturb-casts a graveyard DFC when it's the only play.
 #[test]
 fn bot_offers_disturb_recast() {
-    use crabomination::server::bot::{Bot, RandomBot};
+    use crabomination::server::bot::{Bot, HeuristicBot};
     let mut g = two_player_game();
     let id = g.add_card_to_graveyard(0, catalog::baithook_angler());
     g.players[0].mana_pool.add(Color::Blue, 1);
@@ -998,7 +998,7 @@ fn bot_offers_disturb_recast() {
     g.step = TurnStep::PostCombatMain;
     g.priority.player_with_priority = 0;
     g.active_player_idx = 0;
-    let action = RandomBot::new().next_action(&g, 0);
+    let action = HeuristicBot::new().next_action(&g, 0);
     assert!(matches!(action, Some(GameAction::CastDisturb { card_id, .. }) if card_id == id),
         "bot disturb-casts Baithook Angler: {action:?}");
 }

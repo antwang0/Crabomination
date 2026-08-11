@@ -41,7 +41,7 @@ pub enum ClientMsg {
     /// Lobby: join the open lobby with this id. Fills a seat; when the lobby
     /// reaches capacity the server starts the match for everyone in it.
     JoinLobby { lobby_id: u64 },
-    /// Lobby: add a bot (RandomBot) to fill one seat of the lobby you're in.
+    /// Lobby: add a bot (HeuristicBot) to fill one seat of the lobby you're in.
     /// If that fills the lobby, the match starts immediately. Host-only.
     AddBotToLobby,
     /// Lobby: remove the most recently added bot seat from the lobby you're

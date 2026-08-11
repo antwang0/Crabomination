@@ -46,7 +46,7 @@ use crate::draft::{
 use crate::game::GameState;
 use crate::mana::Color;
 use crate::player::Player;
-use crate::server::{Bot, EvalWeights, MctsBot, MctsConfig, RandomBot};
+use crate::server::{Bot, EvalWeights, MctsBot, MctsConfig, HeuristicBot};
 
 /// Everything tunable about a recommender run. Maps 1:1 onto the client's
 /// simulation-settings panel; engine callers use `SimConfig::default()`.
@@ -833,8 +833,8 @@ impl Pilot {
 
     fn build(self) -> Box<dyn Bot> {
         match self {
-            Pilot::Scored(w) => Box::new(RandomBot::with_weights(w)),
-            Pilot::Uniform => Box::new(RandomBot::uniform_baseline()),
+            Pilot::Scored(w) => Box::new(HeuristicBot::with_weights(w)),
+            Pilot::Uniform => Box::new(HeuristicBot::uniform_baseline()),
             Pilot::Mcts(cfg) => Box::new(MctsBot::new(cfg)),
         }
     }

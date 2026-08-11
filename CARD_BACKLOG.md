@@ -4089,7 +4089,7 @@ Planeshift is at zero `set_gaps.py` gaps (86 cards this run); Invasion went
   seating, but several players taking turns simultaneously needs a turn-marker
   ring in the turn loop, plus 807.4e–i's marker removal and extra-turn rules.
 - **Subgames are bot-only and bounded.** `GameState::play_subgame` (CR 729)
-  pilots the nest with `RandomBot` and caps it at 4 000 actions and two levels
+  pilots the nest with `HeuristicBot` and caps it at 4 000 actions and two levels
   of nesting; a `wants_ui` seat can't take priority inside a subgame, and a
   stalled nest counts as a draw (so every player pays Shahrazad's toll). CR
   729.4's "the subgame's ante/cards return" is modelled by never touching the
