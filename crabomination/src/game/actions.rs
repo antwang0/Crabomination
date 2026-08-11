@@ -11936,9 +11936,6 @@ impl GameState {
         // activation, then battlefield order" — the historical behaviour,
         // kept as the ladder control.
         let smart = self.players[player].smart_tap;
-        // Built once; the selection loops below re-check `tapped` live but
-        // read colours and costs from here. See `mana_source_table`.
-        let sources = self.mana_source_table(player, creature_only);
 
         // Deduct what the pool already covers before deciding what to tap.
         // We track a "virtual" pool snapshot so we don't mutate the real pool here.
@@ -12042,6 +12039,19 @@ impl GameState {
         // Remaining pool total after colored deductions covers generic pips.
         let pool_total_left: u32 = avail.iter().sum::<u32>() + avail_colorless;
         let generic_to_tap = generic.saturating_sub(pool_total_left);
+
+        // Nothing to tap: the two loops below are no-ops and `events` is
+        // still empty, so return before building the source table. That
+        // table is a layer pass per untapped permanent
+        // (`mana_source_table`, 3.83 % of the profile over 8,892 calls) and
+        // every caller whose pool already covers the cost was paying for it.
+        if still_need_colors.is_empty() && generic_to_tap == 0 {
+            return events;
+        }
+
+        // Built once; the selection loops below re-check `tapped` live but
+        // read colours and costs from here. See `mana_source_table`.
+        let sources = self.mana_source_table(player, creature_only);
 
         // Tap a color-matched source for each still-needed colored pip.
         // For abilities that produce `AnyOneColor` (Black Lotus, Birds of
