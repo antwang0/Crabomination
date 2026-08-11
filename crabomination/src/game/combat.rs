@@ -4251,11 +4251,13 @@ impl GameState {
                     }
                 }
                 if amount > 0 {
+                    let granted = self.static_granted_triggers_of(atk.id);
                     self.fire_combat_damage_triggers(
                         atk.id,
                         EventKind::DealsCombatDamageToPlaneswalker,
                         Target::Permanent(pw_id),
                         amount,
+                        &granted,
                     );
                 }
                 if let Some(p) = spill_to
@@ -4415,11 +4417,13 @@ impl GameState {
         }
         self.fire_source_dealt_damage_watchers(source, damage_amount);
         self.fire_source_combat_damage_to_player_watchers(source, damage_amount);
+        let granted = self.static_granted_triggers_of(source);
         self.fire_combat_damage_triggers(
             source,
             EventKind::DealsCombatDamageToPlayer,
             Target::Player(damaged_player),
             damage_amount,
+            &granted,
         );
         for kind in
             [EventKind::DealsDamageToPlayer, EventKind::DealsCombatDamage, EventKind::DealsDamage]
@@ -4429,6 +4433,7 @@ impl GameState {
                 kind,
                 Target::Player(damaged_player),
                 damage_amount,
+                &granted,
             );
         }
         // CR 510 — "whenever combat damage is dealt to you" listeners fire off
@@ -4588,11 +4593,13 @@ impl GameState {
         damaged_creature: CardId,
         damage_amount: u32,
     ) {
+        let granted = self.static_granted_triggers_of(source);
         self.fire_combat_damage_triggers(
             source,
             EventKind::DealsCombatDamageToCreature,
             Target::Permanent(damaged_creature),
             damage_amount,
+            &granted,
         );
         // Combat damage is damage: the combat-agnostic wordings fire too.
         for kind in [
@@ -4605,6 +4612,7 @@ impl GameState {
                 kind,
                 Target::Permanent(damaged_creature),
                 damage_amount,
+                &granted,
             );
         }
     }
@@ -4621,12 +4629,14 @@ impl GameState {
         if self.battlefield_find(source).is_none() {
             return;
         }
+        let granted = self.static_granted_triggers_of(source);
         for kind in [EventKind::DealsDamageToCreature, EventKind::DealsDamage] {
             self.fire_combat_damage_triggers(
                 source,
                 kind,
                 Target::Permanent(damaged_creature),
                 damage_amount,
+                &granted,
             );
         }
     }
@@ -4643,12 +4653,14 @@ impl GameState {
         if self.battlefield_find(source).is_none() {
             return;
         }
+        let granted = self.static_granted_triggers_of(source);
         for kind in [EventKind::DealsDamageToPlayer, EventKind::DealsDamage] {
             self.fire_combat_damage_triggers(
                 source,
                 kind,
                 Target::Player(damaged_player),
                 damage_amount,
+                &granted,
             );
         }
     }
@@ -4658,12 +4670,29 @@ impl GameState {
     /// triggers, equipment- and soulbond-granted triggers (CR 702.6e / 702.95),
     /// `YourControl`-scope listeners, and `FromYourGraveyard` triggers, pushing
     /// each onto the stack with `default_target` bound to slot 0.
+    /// The `GrantTriggeredAbility` set a battlefield permanent currently
+    /// carries — empty when it has left. Board-level, so the damage-trigger
+    /// callers build it once per damage event.
+    fn static_granted_triggers_of(&self, source: CardId) -> Vec<crate::card::TriggeredAbility> {
+        self.battlefield
+            .iter()
+            .find(|c| c.id == source)
+            .map(|c| self.statics_granted_triggers_for(c))
+            .unwrap_or_default()
+    }
+
+    /// `static_granted` is the source's `GrantTriggeredAbility` set, which is
+    /// board-level and *kind-independent* — the callers below fire four event
+    /// kinds per damage event, so they build it once and pass it in rather
+    /// than making each call rebuild `trigger_grant_sources` (a whole-board
+    /// scan) for the same permanent.
     fn fire_combat_damage_triggers(
         &mut self,
         source: CardId,
         kind: EventKind,
         default_target: Target,
         damage_amount: u32,
+        static_granted: &[crate::card::TriggeredAbility],
     ) {
         let attacker_controller = self
             .battlefield
@@ -4683,7 +4712,6 @@ impl GameState {
                 // '…combat damage…'" — Tempered/Virulent) + instance-granted
                 // (`GrantTriggeredAbility` on `granted_triggers_eot` — Summon:
                 // Primal Odin's Zantetsuken) fire alike.
-                let static_granted = self.statics_granted_triggers_for(c);
                 let instance_granted: &[crate::card::TriggeredAbility] = self
                     .granted_triggers_eot
                     .get(&c.id)
