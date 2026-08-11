@@ -16,44 +16,38 @@ reference and want their own triage pass):
 
 ## NEXT (handoff — rewrite each run, keep under 15 lines)
 
-Branch `claude/modern_decks`. **Twenty-first pass: five perf commits,
--2.218 % Ir** (3,501,692,629 -> 3,424,021,668, base `e2d030c6`,
-`profiling-fast --no-default-features` callgrind). Bench output identical
-on every row, suite **18,995** green, workspace clippy clean (client
-included — the apt deps below install cleanly here).
+Branch `claude/modern_decks`. **Twenty-second pass: three perf commits,
+-1.796 % Ir** (3,423,919,639 -> 3,362,421,936, base `18b83e6a`,
+`profiling-fast --no-default-features` callgrind). Bench output
+byte-identical on every row.
 
-- **Rows.** Payment's cost relaxation borrows and walks the board once
-  (`7c75fb94`, -0.110 %); `ColdState`'s 15 id sets are `Vec`-backed
-  (`271c7d14`, -0.418 %); `died_card_snapshots` is insertion-ordered
-  (`ea8cc1fd`, -0.278 %, *and a bug fix*); `auto_tap`'s inner loops stop
-  rebuilding constants (`f2fb6722`, **-0.622 %** — a comment asserting a
-  value was "recomputed each iteration because…" was simply wrong); and
-  `auto_tap` builds its source table only when it will tap (`1ec589d1`,
-  **-0.807 %**, the run's largest row).
-- **The `HashMap`-order audit TODO has been asking for is done.** All 31
-  map/set fields of `GameState`/`ColdState`/`Player`; exactly one leak,
-  fixed. The robustness section records the three sites that look risky
-  and are not, so nobody re-runs the survey.
-- **Next up.** PERF candidate (0) is the *memo* half of
-  `mana_source_table` — the gate took the calls that tap nothing, so
-  **re-profile before costing it**; every share on file predates
-  `1ec589d1`. Then candidate (1), the other
-  half of the `RawTable::clone` block (seven `ColdState` maps + nine
-  `GameState` hash fields, 0.41 %), **gated on serde**: a `HashMap` is a
-  JSON object, a `Vec` newtype an array of pairs. `pick_attacks_scored`
-  at 51 % still needs a ladder win-rate gate, not an Ir number.
-- **Bench.** Do not chain absolutes against the committed anchor without
-  reading `host_calib_ms` first: this container reports the *2.80 GHz*
-  `host_cpu` and calibrates like the 2.10 GHz box. Eight runs, mean 94.20,
-  **spread 14.8 %** — the anchor was left alone rather than replaced with
-  a looser measurement. See **Baseline**.
-- **Env.** No `cargo-nextest` (use `cargo test --workspace`; ~19 k tests
-  run in ~40 s once built). Timings here: cold `profiling-fast`
-  engine-only build **~45 min** (the catalog crate is ~27 of it),
-  incremental engine ~8, callgrind ~5, `release` **~25**, cold
-  `cargo test --workspace` ~35. Disk peaked at 45 %.
-- **Trackers.** PERF passes 17-19 collapsed to the index (that trim item
-  is done); PERF ~1.47k, TODO ~955, roadmap 660.
+- **Rows.** `empty_mana_pools` gates its three board scans on the seats
+  (`ef731ecc`, **-0.709 %**); the `TappedForCostPower` probe — a
+  `serde_json::to_string` of the whole effect tree — runs only for
+  tap-another costs (`df35df04`, **-0.727 %**); damage triggers build
+  their grant set once per event, not once per event *kind* (`1112e709`,
+  -0.372 %).
+- **Next up.** PERF candidates are renumbered against a profile retaken at
+  `1112e709`. (2) `trigger_grant_sources`, ~89 k genuinely-one-per-batch
+  calls at ~480 Ir — the lever left is a cheaper scan, not fewer calls.
+  (4) `fire_combat_damage_triggers` taking a `kinds: &[EventKind]` — worth
+  ~3/4 of whatever share is kind-independent; measure the split first, and
+  note `gy_combat_trigger_fired_this_step` is mutated across kinds. (9)
+  five damage-path callers still gather per `computed_permanent` (4.1 %
+  between them) — read the entry for why a scope over the loop is unsound.
+- **Robustness.** The **seventh filter** (integer/float division or modulo
+  by a runtime-zero denominator — panics loudly, unlike the wrap the first
+  six hunted) was run 2026-08-11 and is **clean**; see the robustness
+  section. An **eighth** filter is owed.
+- **Bench.** The committed anchor was **not** re-run this pass (a `release`
+  rebuild is ~25 min and the pass is under what `--bench` resolves here).
+  Read `host_calib_ms` before chaining absolutes. See **Baseline**.
+- **Env.** No `cargo-nextest` (use `cargo test --workspace`; ~19 k tests in
+  ~40 s once built). Timings here: cold `profiling-fast` engine-only build
+  **~12 min**, incremental engine **~3.5**, callgrind ~5, cold
+  `cargo test --workspace` ~35. The client apt deps install cleanly (see
+  below); `pkg-config --exists wayland-client` is the check.
+- **Trackers.** PERF ~1.55k, TODO ~950, roadmap 660.
 
 ## Environment note
 
@@ -206,6 +200,21 @@ the trainer touch. What is left of the item is still the ~183
 *seventh* filter — the six above are exhausted. Rerun the overflow profile
 after any change to counters, damage, mana or the encoder; it costs one
 9-minute build and two minutes of games.
+
+**The seventh filter was run 2026-08-11 and is also clean.** The six above
+all hunt a *silent* wrap; this one hunts the opposite — an integer or float
+division/modulo whose denominator is a runtime count the caller can make
+zero, which panics loudly (or goes `NaN`) rather than wrapping. Every
+`/` or `%` by a non-constant under `game/`, `bot.rs` and
+`crabomination_ml/` was read: the seat-rotation family is `% players.len()`
+and a game always has a seat; `DealDamageDividedEvenly` guards with
+`targets.is_empty()`; `DigToHandLoseLife` guards with `per > 0`; the
+Praetor's Grasp-style `order[seat % order.len()]` builds `order` with the
+controller already pushed; `max_affordable_x` clamps `x_pips` with
+`.max(1)`; the bot's race math is inside `total_raw_power > 0 && opp_clock
+> 0`; every ML rate is `.max(1)`. The one float site,
+`sample_scored_index`'s `/ temp`, is reached only from `sampling_temp`,
+which the trainer sets behind `args.sample_temp > 0`. No hit.
 
 **Stall rate, measured on the same runs** (the standing robustness goal —
 the bench's `--decks fixed` reads 0 and always has, which hides this): the
