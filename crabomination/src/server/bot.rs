@@ -5468,7 +5468,9 @@ fn pick_removal_ping(state: &GameState, seat: usize) -> Option<GameAction> {
         .filter_map(|c| state.computed_permanent(c.id).map(|cp| (c.id, cp.power)))
         .collect();
     foes.sort_by_key(|(_, pow)| std::cmp::Reverse(*pow));
-    let scan = state.grant_scan();
+    // Reuses the scan built above: `state` is `&GameState` and nothing
+    // between the two loops mutates it, so a second `grant_scan` was a
+    // second walk of every static ability in play for the same answer.
     for card in state.battlefield.iter().filter(|c| c.controller == seat) {
         for (idx, ab) in usable_abilities(state, card, &scan) {
             // The effect must be a bare single-target DealDamage whose target
