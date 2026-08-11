@@ -105,6 +105,14 @@ struct Args {
     /// silently changed the training data distribution too; 0 restores
     /// the pre-adoption generator for attribution.
     actor_det: Option<u8>,
+    /// Window-passes of tail training after the actors finish (round
+    /// 28d). The old fixed allowance (reuse/2 passes) assumed the
+    /// learner streamed most of its budget during generation; a faster
+    /// container halved the streaming phase and the allowance silently
+    /// became the binding stop — runs died at ~8k steps mid-improvement
+    /// with stop-after-stale never firing. Raise it and let stale be
+    /// the stopper it was built to be.
+    tail_reuse: f64,
     /// Serve `--use-best` evals from a batched device-side collator
     /// instead of per-thread CPU forwards. Pair with a large `--actors`
     /// (hundreds): batch size is bounded by the number of games blocked
@@ -265,6 +273,7 @@ fn parse_args() -> Args {
         seed: 0x0505_ACAD,
         use_best: None,
         actor_det: None,
+        tail_reuse: 3.0,
         gpu_eval: false,
         eval_batch: 256,
         eval_flush_us: 1000,
@@ -317,6 +326,7 @@ fn parse_args() -> Args {
             "--seed" => a.seed = val().parse().expect("--seed"),
             "--use-best" => a.use_best = Some(PathBuf::from(val())),
             "--actor-det" => a.actor_det = Some(val().parse().expect("--actor-det")),
+            "--tail-reuse" => a.tail_reuse = val().parse().expect("--tail-reuse"),
             "--gpu-eval" => {
                 a.gpu_eval = true;
                 continue; // bare flag, consumes no value
@@ -1225,7 +1235,7 @@ fn main() {
             // and stop.
             if !actors_live && tail_budget.is_none() {
                 let wlen = shared.window.lock().unwrap().len() as u64;
-                tail_budget = Some((consumed, (args.reuse * wlen as f64 / 2.0) as u64));
+                tail_budget = Some((consumed, (args.tail_reuse * wlen as f64) as u64));
             }
             if let Some((at, budget)) = tail_budget
                 && consumed - at + args.batch as u64 > budget
