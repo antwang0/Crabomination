@@ -7218,7 +7218,13 @@ impl GameState {
             + self.coin_flip_advantage_now(player);
         let mut heads = false;
         for _ in 0..(advantage as usize + 1) {
-            let answer = self.decider.decide(&crate::decision::Decision::CoinFlip { player });
+            // Roll off the game's own stream, then hand the result to the
+            // decider so a script can still override it. Every replay
+            // (Krark's Thumb) draws, so the stream advances the same way
+            // whichever seat is flipping.
+            let roll = rand::RngExt::random::<bool>(&mut self.rng.draw());
+            let answer =
+                self.decider.decide(&crate::decision::Decision::CoinFlip { player, heads: roll });
             if matches!(answer, crate::decision::DecisionAnswer::Bool(true)) {
                 heads = true;
             }

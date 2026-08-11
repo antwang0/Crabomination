@@ -144,3 +144,27 @@ fn cr_611_2b_indefinite_effect_outlives_its_source() {
     drain_stack(&mut g);
     assert!(g.exile.iter().any(|c| c.id == corpse), "the Nightmare was exiled");
 }
+
+/// CR 705.1 — the flip is drawn from the `GameState`'s own seeded stream, so
+/// a fixed seed reflips identically in the next process. It used to read
+/// `rand::random()` (the thread RNG) inside `AutoDecider`, and Mana Crypt's
+/// upkeep flip is in the cube pool: every cube/`all` bench number was
+/// therefore unreproducible on a fixed seed.
+#[test]
+fn cr_705_1_flips_come_off_the_seeded_game_stream() {
+    let wins = |seed: u64| {
+        let mut g = main_phase();
+        g.rng.reseed(seed);
+        let cat = g.add_card_to_battlefield(0, catalog::crazed_firecat());
+        g.fire_self_etb_triggers(cat, 0);
+        drain_stack(&mut g)
+            .iter()
+            .filter(|e| matches!(e, GameEvent::CoinFlipWon { .. }))
+            .count()
+    };
+    assert_eq!(wins(7), wins(7), "same seed flipped a different number of heads");
+    assert!(
+        (0..32).any(|s| wins(s) != wins(0)),
+        "every seed flipped the same coins — the flip isn't reading the stream"
+    );
+}

@@ -182,13 +182,20 @@ pub enum Decision {
     },
 
     /// CR 705 — flip a coin. The decider answers with `Bool(true)` for
-    /// heads or `Bool(false)` for tails. `AutoDecider` uses the engine's
-    /// rng to pick randomly; `ScriptedDecider` can script the outcome.
+    /// heads or `Bool(false)` for tails. `AutoDecider` returns the roll the
+    /// engine already made; `ScriptedDecider` can override it.
     /// Used by `Effect::FlipCoin` (Karplusan Minotaur, Mana Clash, Ral
     /// Zarek's -7 ultimate).
     CoinFlip {
         /// Player flipping (typically `EffectContext.controller`).
         player: usize,
+        /// The engine's roll, drawn from the `GameState`'s own `GameRng`
+        /// so a seeded game reflips identically in the next process. The
+        /// flip is not a *choice* — it is surfaced as a decision only so a
+        /// test can script it — so the randomness belongs here, upstream
+        /// of the decider, not in `AutoDecider`.
+        #[serde(default)]
+        heads: bool,
     },
 
     /// CR 706 — roll an N-sided die. The decider answers with
@@ -568,9 +575,12 @@ impl Decider for AutoDecider {
             Decision::NameCard { suggestions, .. } => {
                 DecisionAnswer::NamedCard(suggestions.first().cloned().unwrap_or_default())
             }
-            // CR 705 — a real random flip. Tests that need a specific
-            // outcome script it via `ScriptedDecider` (`Bool(true)` = heads).
-            Decision::CoinFlip { .. } => DecisionAnswer::Bool(rand::random::<bool>()),
+            // CR 705 — the engine already rolled off the game's seeded
+            // stream; take it. Drawing here instead (`rand::random()`) put
+            // the thread RNG into game logic, so a fixed seed replayed
+            // differently in the next process — Mana Crypt's upkeep flip
+            // made every cube measurement unreproducible.
+            Decision::CoinFlip { heads, .. } => DecisionAnswer::Bool(*heads),
             // CR 706 — AutoDecider returns the die's midpoint (rounded
             // up) so the result is deterministic AND lands on a typical
             // "middle" result-table band. For a d6 that's 3; for a d20

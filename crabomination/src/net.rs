@@ -2518,7 +2518,7 @@ impl From<&Decision> for DecisionWire {
                     would_be: *would_be,
                 }
             }
-            Decision::CoinFlip { player } => DecisionWire::CoinFlip { player: *player },
+            Decision::CoinFlip { player, .. } => DecisionWire::CoinFlip { player: *player },
             Decision::DieRoll { player, sides } => DecisionWire::DieRoll {
                 player: *player,
                 sides: *sides,
