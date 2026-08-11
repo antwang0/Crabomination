@@ -16,68 +16,62 @@ reference and want their own triage pass):
 
 ## NEXT (handoff — rewrite each run, keep under 15 lines)
 
-Branch `claude/modern_decks`. **Twenty-fourth pass: five perf commits,
--4.243 % Ir** (3,318,705,480 -> 3,177,885,139, base `4d5fbc69`,
-`profiling-fast --no-default-features` callgrind). Bench output identical
-on every row; **18,612 tests green**, golden traces unchanged.
+Branch `claude/modern_decks`. **Twenty-fifth pass, and it collided with a
+concurrent session**: both pulled candidate (9) shape (a) from base
+`10cb8fbf` and wrote functionally identical code. Theirs is kept
+(`56f6623f`, -0.740 %); mine was dropped in the rebase. On top of it:
+`5d4b5402` (the same shape somewhere else) + the stall instrumentation and
+`STALE_ROUNDS`, **3,177,885,139 -> 3,159,019,265 Ir (-0.594 %)**. Bench
+output identical, **18,612 tests green** (1 ignored, pre-existing),
+`cargo clippy --workspace --all-targets` **clean**, golden traces
+unchanged.
 
-- **Rows.** `fire_step_triggers` filters before cloning (`006d5966`,
-  **-1.885 %** — the largest single row in five passes); the SBA sweep's
-  Hushbringer scan rides `!dead.is_empty()` (`41551bcc`, -0.070 %); the
-  trigger dispatcher takes one fused board scan instead of four walks
-  (`f28faaa0`, **-1.118 %**, new `DispatchScan` + `dispatch_board_scan`,
-  debug cross-checked against the four it replaces); `fire_spell_cast_
-  triggers` does the same and drops an O(cards²) id round-trip
-  (`125557eb`, -0.496 %); the combat damage step's three read-only
-  prefixes each hold one freeze scope (`56f6623f`, -0.740 %, candidate
-  (9) shape (a)).
-- **Next up.** Profile retaken at `125557eb`; the last row moved 0.74 % of
-  it, so the shares are good to a tenth of a point. Candidate (9)'s
-  remaining half is shape **(b)** — the damage step already holds
-  `computed: &[ComputedPermanent]` and the five helpers re-derive it — but
-  that pins the layer view to the step's start, so it is a behaviour
-  question (arguably *more* CR 510.2-correct); golden traces decide, and
-  the trace update needs a one-line justification. Then **(6b)** the
-  dispatcher's event-kind presence mask, and **(8)**'s top two rows
-  (`cast_candidates` 5.25 %, `check_state_based_actions` 4.14 %) — read
-  `--auto=yes` on either first, both are real iterator-body work —
-  `cast_candidates` **is now broken down in PERF**: its largest named
-  callee is `can_afford_in_state` (1.76 %, 12,114 calls, 4,664 Ir each),
-  which takes **five separate whole-battlefield walks per call** — the
-  `DispatchScan` shape again, and the same fix. The clone and the
-  `available_mana` hoist are ruled out there by arithmetic, not by an A/B.
-  (0)/(1)/(5) are bot-quality questions wanting a ladder gate, not an Ir
-  number.
-- **New filter, unswept.** The row that paid most was `.cloned()` before
-  the `.filter` that discards the clones. The syntactic form is clean
-  workspace-wide; the semantic one ("how much of what this loop builds
-  does it keep?") is owed a pass over the hot candidate builders.
-- **Robustness.** The **ninth** (non-total-order comparators) and
-  **tenth** (unbounded `loop`/`while` in `game/` + `bot.rs`) filters were
-  run 2026-08-11 and are **clean** — details in the robustness section; an
-  eleventh is owed. **The stall rate
-  (~0.1 % on the wider pools) still wants its top cause**: `play_one_game_
-  traced` ends on either `actions >= max_actions` or `stale >= 8` and
-  reports neither, so the first move is to make `GameOutcome` say which.
-- **Final checks, this run.** `cargo test -p crabomination -p
-  crabomination_tests` **18,612 passed / 0 failed / 1 ignored**, golden
-  traces green, run after the last engine commit. `cargo clippy
-  --workspace --all-targets` **exit 0, zero warnings**, client included
-  (ran twice: after the four trigger rows and again after the combat row).
-  **No `--bench` anchor run**: at -4.243 % the pass is still under what
-  this box resolves by wall-clock (three back-to-back runs of one binary
-  swing 23 %), so the callgrind numbers are the measurement of record and
-  the Baseline anchor stands — same call as `c7bdd850`.
+- **Next up — new candidate (10), the cheapest thing on the list.** Shape
+  (a) is a *family*, not a damage-path fix: any `&self` function reading
+  the layer system twice is one `with_frozen_layers` from paying, it
+  cannot change behaviour (the closure cannot mutate), and
+  `check_target_legality_with_source` was -0.516 % in ten minutes.
+  **Enumerate rather than profile**, and read `--tree=caller` on
+  `computed_permanent` at *the callers of the leaf helpers*, not the
+  helpers — the two damage leaves still gathering take one gather each and
+  have nothing to fold. Then (9)(b) (a behaviour change, golden traces
+  decide) and `can_afford_in_state`'s five whole-board walks per call.
+  Profile of record is **two rows stale**; retake before pulling anything
+  under ~0.3 %.
+- **One measurement is owed and is cheap.** `stalls_by cap / stuck / draw`
+  now exists (`419d2ea6`); run `--decks all --games 300 --seed 11 --bench`
+  and read it. `cap` and `stuck` want opposite fixes. Not run here — the
+  release link was cut short by the rebase.
+- **Filters.** Eleventh (`15ec11c1`) is the first that found anything:
+  `stale < 8` written out six times across five files, now one
+  `STALE_ROUNDS`. A **twelfth** is owed; the natural next from the same
+  family is *a predicate two callers each re-derive*. Pass 24's
+  clone-then-narrow filter is still unswept semantically —
+  `.keywords.to_vec()` inside an `.any()` survives at `mod.rs:5721`,
+  `actions.rs:10472`, `movement.rs:835` (all small; arithmetic says under
+  the floor, so cost before writing).
+- **Collision hygiene, if it happens again.** Fetch before starting a perf
+  row, not just before pushing. The rebase cost more than the row did, and
+  `git add -A` had swept tracker edits into a code commit, which is what
+  made the conflicts messy — stage explicitly.
 - **Env.** No `cargo-nextest`; `cargo test -p crabomination -p
-  crabomination_tests` is the gate (~25 min cold, ~40 s warm, always with
-  `CARGO_INCREMENTAL=0`). Cold `profiling-fast` build ~20 min, engine-only
-  rebuild ~4.5 min, callgrind ~7. The SessionStart hook again left the
-  client apt deps uninstalled (`pkg-config --exists wayland-client` false);
-  the four-package `apt-get install` in the Environment note below fixes it
-  in about a minute and `cargo clippy --workspace` needs it.
-- **Trackers.** PERF ~1.7k, TODO ~1.0k, roadmap 660. PERF is over the ~1k
-  guidance and its Log is already indexed down to passes 1-19; the next
-  compaction should fold passes 20-24 into the same index.
+  crabomination_tests` is the gate (~25 min cold, ~45 s warm, always with
+  `CARGO_INCREMENTAL=0`). Cold `profiling-fast` build ~12 min, **engine-
+  only rebuild ~3.5 min**, callgrind ~7. `release` (cgu 1 + thin LTO) is
+  ~22 min — budget for it before starting, it is what the `--bench` anchor
+  needs. The SessionStart hook again left the client apt deps uninstalled
+  (`pkg-config --exists wayland-client` false); the four-package
+  `apt-get install` below fixes it in a minute and clippy needs it.
+- **Trackers.** PERF **1.78k**, TODO ~1.08k, roadmap 660. PERF is well over
+  the ~1k guidance and the compaction is *shovel-ready*: passes 20-25 fold
+  into the Log index exactly as 1-19 already did (~150 lines -> ~45), and
+  passes 12-18's frozen candidate snapshots in the candidates section
+  (~287 lines, every entry paid or restated above at a fresher share)
+  collapse to a pointer. Hoist two things rather than dropping them: the
+  "Ir over-weights allocation and representation changes" warning into the
+  methodological notes, and the `ability_strip_in_scope` soundness device
+  into the longer-lived list. A session did exactly this and lost it to the
+  rebase — it is worth ~330 lines.
 
 ## Environment note
 
@@ -311,14 +305,46 @@ the three is the top-level game loop itself** — `play_one_game_traced`'s
 bounded by its own two counters, which is exactly what a *stall* is. That
 is the open item below, not a new one.
 
-An *eleventh* filter is owed — the ten above are exhausted.
+**The eleventh filter was run 2026-08-11 and is the first of the eleven
+that found something** (`15ec11c1`). It looks at neither syntax nor a
+precondition but at *duplication*: **one invariant written out by hand in
+more than one place.** `stale < 8` — the "neither bot volunteered an
+accepted action for N consecutive rounds, give the game up" fixed point —
+appeared **six times across five files**: the ladder loop
+(`recommend.rs`), the recording loop (`selfplay.rs`), the subgame loop
+(`game/subgame.rs`, shipped CR 729 rules code), the MCTS rollout
+(`server/mcts.rs`), `bot_probe`, and a bot test — plus `bot_probe`'s
+`stale >= 8` report threshold. Nothing tied them together, so **the
+ladder's stall rate and the training actor's were never the same
+measurement**, and a change to one would silently not reach the others.
+All six read `recommend::STALE_ROUNDS` now; no value changed. The
+per-context *action* budgets sitting next to them (4,000 in the training
+actor, 20,000 in `bot_probe` and the golden traces, 50,000 in the bot
+test, `MAX_ACTIONS` in the subgame) are deliberately different and were
+left alone — the filter is for a fixed point over the bots, not for every
+literal.
 
-**Stall rate, measured on the same runs** (the standing robustness goal —
-the bench's `--decks fixed` reads 0 and always has, which hides this): the
-wider pools stall at **~0.1 %** — `all` seed 11 5/5,100, `cube` seed 41
-2/2,400, `all` seed 7 0/5,100, `sealed` 0/3,600, `sos` 0/1,500. Not moving
-and not trivial. If it is ever worth a run, the top cause wants finding
-first — dump the stalled games' final states rather than guessing.
+A *twelfth* filter is owed. The natural next one, from the same family:
+**a predicate two callers each re-derive**, rather than a constant two
+callers each spell out.
+
+**Stall rate — the top cause is now askable, which was the blocker**
+(`419d2ea6`). The measurement stands: the wider pools stall at **~0.1 %** —
+`all` seed 11 5/5,100, `cube` seed 41 2/2,400, `all` seed 7 0/5,100,
+`sealed` 0/3,600, `sos` 0/1,500; `--decks fixed` reads 0 and always has,
+which is what hid it. What was missing was not games but *attribution*: the
+loop ends on either `actions >= max_actions` or `stale >= STALE_ROUNDS` and
+reported neither. `recommend::StopReason` now carries which, `GameOutcome`
+and `RecordedGame` both hold it, `bot_ladder --bench` prints a
+`stalls_by cap / stuck / draw` line beside `stalls`, and
+`selfplay_train`'s `stats.jsonl` gains `stalls_capped` / `stalls_stuck`
+next to `stalls` — so a training run that starts stalling says why in the
+same file that says how fast it is going. **Next step is a measurement,
+not a change**: `--decks all --games 300 --seed 11 --bench` (= the 5,100
+games above) and read `stalls_by`. `cap` and `stuck` want opposite fixes —
+a budget too small for a grindy pool, against a genuine no-legal-move fixed
+point — so do not guess which before the line says. Not run this session:
+the release link was cut short by a rebase onto a concurrent session.
 
 ## Engine — Missing Mechanics
 

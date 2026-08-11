@@ -602,6 +602,24 @@ every row above.
 | 2026-08-11 | The combat damage step's read-only prefixes each hold one freeze scope (`56f6623f`) | 3,201,568,157 Ir | 3,177,885,139 Ir (**-0.740 %**) | Candidate (9), shape (a). The five damage-path `computed_permanent` callers are 138.5 M / 4.33 % and **each already freezes internally**, so there is no intra-call duplicate left; a blanket freeze over the damage loop is unsound because lifelink moves life totals between the reads and a `WhileCondition` static can read life. What *is* sound is each iteration's read-only prefix — every call from the first prevention probe through `scale_damage_to` is `&self` and `apply_prevention_shields` is the first `&mut self`. Three scopes: the per-(attacker, blocker) prefix (six probes + the scaling, `continue` becoming a `None` return); the strike-back gate once per attacker (`dealing_blocker_ids`' seven filters, one `damage_prevented_by_protection` per blocker, plus `attacker_takes_strike_back`); and the per-blocker strike-back prefix. Short-circuit order and every predicate unchanged. |
 | | **cumulative, twenty-fourth pass** | **3,318,705,480 Ir** | **3,177,885,139 Ir (-4.243 %)** | five rows, callgrind on the fixed six-game workload; bench output identical on every row (24 decided, 12 splits, rho -1.000), 18,612 tests green, golden traces unchanged |
 
+**Twenty-fifth pass — a concurrent session, and the first collision this
+file has had to record.** Two sessions pulled candidate (9) shape (a) at
+the same time from the same base `10cb8fbf`, wrote **functionally
+identical** code for the damage step's three prefixes (same three scopes,
+same predicates, same short-circuit order; the diff is variable naming and
+comment wrapping), and measured it independently at **-0.740 %**
+(`56f6623f`, kept) and **-0.698 %** (dropped in the rebase). *That 0.042 %
+spread between two containers on the same source is the best cross-session
+reproducibility datapoint the file has* — it is twice the 0.02 %
+build-to-build figure and still well inside the 0.1 % claim floor, so the
+floor is doing its job. The base measurements agreed to 0.016 %
+(3,201,053,304 against the recorded 3,201,568,157).
+
+| date | change | before | after | how measured |
+|---|---|---|---|---|
+| 2026-08-11 | Target legality takes one freeze scope for the whole check (`5d4b5402`), plus the stall instrumentation (`419d2ea6`) and `STALE_ROUNDS` (`15ec11c1`) | 3,177,885,139 Ir | 3,159,019,265 Ir (**-0.594 %**) | **Shape (a) is not a damage-path item — it is a *family*, and this is the second member.** `check_target_legality_with_source` is `&self` end to end and reads the layer system three times: `permanent_has_keyword` for Shroud, again for Hexproof, and a `computed_permanent` keyword scan for Artifact Ward. Body moves to `check_target_legality_inner`; the entry point is one `with_frozen_layers`. Measured in isolation on the dropped twin's tip it read **-0.516 %** (3,178,703,430 -> 3,162,316,313) with `permanent_has_keyword` **21,988,411 -> 11,808,343 Ir at an unchanged 8,328 calls** and gathers 134,116 -> 127,878 — that is the row's own mechanism, off the caller table. The -0.594 % above is the rebased span and so also carries the two instrumentation commits, which add one `StopReason` branch per *game*; the difference between the two figures is that plus noise, not a second win. Bench output identical (24 decided, 12 splits, rho -1.000). |
+
+
 **What the pass leaves behind.** The largest row in five passes was not a
 gate, a memo or a representation — it was **`cloned()` sitting *before* the
 `filter` that throws the clones away**, in a function every step of every
@@ -1030,12 +1048,42 @@ remaining cost is per-card `computed_permanent` and the gather itself.
    which is arguably *more* CR 510.2-correct and is still a behaviour
    change. Golden traces decide (b); (a) needed nothing and **is PAID**
    (`56f6623f`, -0.740 %) — three scopes, one per prefix. (b) is all that
-   is left of this candidate, and it is a behaviour question, not a perf
-   one.
+   is left *of the damage path*, and it is a behaviour question, not a perf
+   one. **But shape (a) turned out not to be a damage-path item at all** —
+   see (10): the same wrapping paid again immediately, on a function with
+   nothing to do with combat.
+
+10. **The rest of the "reads the layer system twice" family — the cheapest
+    item on this list, and mechanical.** Candidate (9) framed shape (a) as
+    a damage-loop fix; `5d4b5402` shows it is a *shape*, not a site. Any
+    `&self` function that reads the layer system more than once is one
+    `with_frozen_layers` away from paying, the wrapping is mechanical, and
+    **it cannot change behaviour because the closure cannot mutate** — so a
+    wrong guess costs a rebuild, not a bug, which makes this the one
+    candidate worth attacking by enumeration rather than by profile.
+    `check_target_legality_with_source` was worth -0.516 % and took ten
+    minutes.
+
+    *The search*, and the part candidate (9) got wrong: PERF's rule is
+    `--tree=caller` on `computed_permanent`, inclusive Ir over call count,
+    >2,000 means it is gathering — but applied to the **leaf helpers** it
+    finds only sites where one gather is already the floor. Apply it to
+    **their callers**, which is where a second read can exist. On the
+    twenty-fifth pass's tip the two damage leaves that are still gathering,
+    `damage_from_source_prevented_by_keyword` (3,507 Ir over 4,450 calls)
+    and `dying_snapshot` (3,458 over 3,420), each take exactly *one*
+    `computed_permanent` and so have nothing to fold — the win is in
+    whoever calls them, or in the `&self` functions that call several
+    different leaves. `blocker_can_block_attacker` at 286 Ir/call over
+    15,368 calls is what a caller already inside someone's scope looks
+    like; imitate its caller.
 
 **The profile of record was retaken at `125557eb`** (the twenty-fourth
 pass's tip) and every share quoted in the candidates above is from that
-retake, except where a candidate says otherwise.
+retake, except where a candidate says otherwise. **It is now two rows
+stale**: `56f6623f` and `5d4b5402` moved the damage and targeting paths by
+-1.33 % between them, so shares in (0), (1), (5) and (8) read very slightly
+low. Retake before pulling anything whose margin is under ~0.3 %.
 
 Methodological notes, each learned the hard way:
 
