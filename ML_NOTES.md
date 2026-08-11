@@ -90,10 +90,31 @@ only stays dead while the reasoning that killed it is readable.
   AUC is apples-to-oranges, and holdout-AUC improvement ≠ gate
   strength (r28d: tail-heavy CPU training raised AUC and lowered
   gates). The det0 +1pt reading (28c-D) was measured on crippled runs
-  and needs re-verification before anyone acts on it. **Round 28f is
-  the round-28 experiment run for real: v6 vs v5-parity, two seeds,
-  champion regime, GPU learner (the run script now hard-aborts if the
-  learner is not on cuda).**
+  and needs re-verification before anyone acts on it.
+
+  **Round 28f — the real experiment, and the final verdict: encoder v6
+  is a NULL.** GPU learner restored (62–68k steps per run, cosine
+  annealed, AUC back in the champion band; the run script hard-aborts
+  unless the learner logs cuda), v6 vs v5-parity, two training seeds,
+  800 paired games per arm per gate:
+
+  | arm | calib AUC (s43/s97) | gang pooled | atk-sim pooled |
+  |---|---|---|---|
+  | v6 full | 0.8115 / 0.8182 | 51.6 % | 53.2 % |
+  | v5-parity (`--ablate combat,kw`) | 0.8184 / 0.8166 | 51.6 % | 53.2 % |
+  | champion re-gate (control) | — | 51.7 % | 54.5 % |
+
+  Identical to the decimal on both gates. The combat-structure and
+  keyword/exile blocks move nothing a healthy champion-regime net can
+  use — the round-12 conclusion (representation additions beyond
+  library + castability are null) survives a far stronger test, and
+  the round-17b theme holds: regime and data dominate, inputs don't.
+  The v6 format stays in-tree on the round-12 precedent — information
+  superset, per-block ablation controls, zero measured encode cost,
+  legacy checkpoints load padded — but no quality claim attaches to
+  it. The champion stays champion (r28f arms match it on gang and
+  trail ~1 pt on atk-sim — inside noise, no adoption case). Round 28
+  closed.
 
 - 🟡 **Smarter combat** — `server/bot.rs` blocking is heuristic (value trades,
   first-strike/deathtouch/trample/**indestructible** awareness — an
