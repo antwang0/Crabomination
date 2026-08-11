@@ -23,10 +23,10 @@ on every row, suite **18,995** green, workspace clippy clean (client
 included — the apt deps below install cleanly here).
 
 - **Rows.** Payment's cost relaxation borrows and walks the board once
-  (`716e0211`, -0.110 %); `ColdState`'s 15 id sets are `Vec`-backed
-  (`1536a598`, -0.418 %); `died_card_snapshots` is insertion-ordered
-  (`d0244dc0`, -0.278 %, *and a bug fix*); `auto_tap`'s inner loops stop
-  rebuilding constants (`eaaa73db`, **-0.622 %** — a comment asserting a
+  (`7c75fb94`, -0.110 %); `ColdState`'s 15 id sets are `Vec`-backed
+  (`271c7d14`, -0.418 %); `died_card_snapshots` is insertion-ordered
+  (`ea8cc1fd`, -0.278 %, *and a bug fix*); `auto_tap`'s inner loops stop
+  rebuilding constants (`f2fb6722`, **-0.622 %** — a comment asserting a
   value was "recomputed each iteration because…" was simply wrong).
 - **The `HashMap`-order audit TODO has been asking for is done.** All 31
   map/set fields of `GameState`/`ColdState`/`Player`; exactly one leak,
