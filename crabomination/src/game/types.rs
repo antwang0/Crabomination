@@ -106,6 +106,73 @@ impl<T: PartialEq> Extend<T> for IdSet<T> {
     }
 }
 
+/// An insertion-ordered map from ids to values, backed by a `Vec`.
+///
+/// The map sibling of [`IdSet`], and it exists for the order half of that
+/// type's argument rather than the clone half: `dispatch_triggers_for_events`
+/// walks `died_card_snapshots` pushing `TriggerCandidate`s, and a
+/// `TriggerCandidate`'s position decides where its ability lands on the
+/// stack. A `HashMap`'s iteration order is reseeded per process by
+/// `RandomState`, so two runs on one seed could stack two LKI triggers in
+/// opposite orders. Insertion order is die order, which is the order CR
+/// 603.3b wants anyway.
+///
+/// Holds a handful of entries — it is cleared at the end of every dispatch
+/// batch — so the linear scans are cheaper than hashing.
+#[derive(Debug, Clone)]
+pub struct IdMap<K, V>(Vec<(K, V)>);
+
+impl<K, V> Default for IdMap<K, V> {
+    fn default() -> Self {
+        Self(Vec::new())
+    }
+}
+
+impl<K: PartialEq, V> IdMap<K, V> {
+    pub fn get(&self, k: &K) -> Option<&V> {
+        self.0.iter().find(|(x, _)| x == k).map(|(_, v)| v)
+    }
+    pub fn get_mut(&mut self, k: &K) -> Option<&mut V> {
+        self.0.iter_mut().find(|(x, _)| x == k).map(|(_, v)| v)
+    }
+    pub fn contains_key(&self, k: &K) -> bool {
+        self.0.iter().any(|(x, _)| x == k)
+    }
+    /// Set `k`'s value, returning the previous one — `HashMap::insert`'s
+    /// contract. An existing key keeps its position.
+    pub fn insert(&mut self, k: K, v: V) -> Option<V> {
+        match self.0.iter_mut().find(|(x, _)| *x == k) {
+            Some((_, have)) => Some(std::mem::replace(have, v)),
+            None => {
+                self.0.push((k, v));
+                None
+            }
+        }
+    }
+    pub fn remove(&mut self, k: &K) -> Option<V> {
+        let i = self.0.iter().position(|(x, _)| x == k)?;
+        Some(self.0.remove(i).1)
+    }
+}
+
+impl<K, V> IdMap<K, V> {
+    pub fn clear(&mut self) {
+        self.0.clear();
+    }
+    pub fn len(&self) -> usize {
+        self.0.len()
+    }
+    pub fn is_empty(&self) -> bool {
+        self.0.is_empty()
+    }
+    pub fn values(&self) -> impl Iterator<Item = &V> {
+        self.0.iter().map(|(_, v)| v)
+    }
+    pub fn iter(&self) -> impl Iterator<Item = (&K, &V)> {
+        self.0.iter().map(|(k, v)| (k, v))
+    }
+}
+
 #[cfg(test)]
 mod id_set_tests {
     use super::IdSet;
@@ -129,6 +196,22 @@ mod id_set_tests {
         let a: IdSet<u32> = [1, 2].into_iter().collect();
         let b: IdSet<u32> = [2, 1].into_iter().collect();
         assert_eq!(a, b, "equality is order-insensitive");
+    }
+
+    /// The property the trigger dispatcher depends on: walking an `IdMap`
+    /// yields die order, and re-writing an existing key does not move it.
+    /// A `HashMap` here put two LKI triggers on the stack in `RandomState`
+    /// order — different in every process.
+    #[test]
+    fn id_map_iterates_in_insertion_order() {
+        let mut m: super::IdMap<u32, &str> = super::IdMap::default();
+        m.insert(9, "a");
+        m.insert(2, "b");
+        assert_eq!(m.insert(9, "a2"), Some("a"), "re-insert returns the old value");
+        assert_eq!(m.values().copied().collect::<Vec<_>>(), vec!["a2", "b"], "position kept");
+        assert_eq!(m.get(&2), Some(&"b"));
+        assert_eq!(m.remove(&9), Some("a2"));
+        assert!(!m.contains_key(&9) && m.len() == 1);
     }
 
     /// Same wire shape as the `HashSet` it replaces — a sequence — so

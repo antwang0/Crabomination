@@ -100,12 +100,25 @@ insertion-ordered `Vec` newtype, because `Effect::RemoveAnyCounter` reads
 "the first present kind" off the map and six other sites collect the kinds
 into a `Vec` and act on them in order — `RandomState` reseeds that order per
 process, so two runs on one seed could diverge.
-`cr_122_counter_bag_order_is_insertion_order` pins it. **The remaining
-`HashMap`/`HashSet` iteration in game logic wants the same audit**: the
-survey that found this one was `grep '\.iter()' `on every `HashMap` field of
-`GameState` and `PlayerData`, then asking of each whether the consumer sums
-(safe), inserts into a set and counts (safe), or `find`s / `collect`s
-(not). The `keyword_counters` `HashMap`-order defect was fixed
+`cr_122_counter_bag_order_is_insertion_order` pins it. **That audit is now
+done and its one finding is fixed.** The survey — every `HashMap`/`HashSet`
+field of `GameState`, `ColdState` and `Player`, asking of each consumer
+whether it sums / maxes (safe), tests membership or counts (safe), looks up
+by key (safe), or `find`s / `collect`s / iterates into an ordered structure
+(not) — turned up exactly one leak in 31 fields:
+`dispatch_triggers_for_events` walked `died_card_snapshots.values()`
+pushing `TriggerCandidate`s, and a candidate's *position* decides where its
+ability lands on the stack, so two dying creatures with LKI triggers
+(Enrage on lethal damage, a granted "when this dies") stacked in
+`RandomState` order — different in every process. Fixed by making the field
+an `IdMap`, the insertion-ordered `Vec` newtype in `game/types.rs`; die
+order is also the order CR 603.3b wants. Everything else was keyed lookup,
+membership, or an order-independent fold — including the three sites that
+*look* risky and are not: `encode.rs` sums `block_map` into a
+`blocker_sums` map read by key, `bot.rs`'s two `block_map.keys().collect()`
+are `contains` + `len` only, and `combat.rs`'s
+`block_map.keys().for_each(want)` decides which permanents get computed,
+never what a reader sees. The `keyword_counters` `HashMap`-order defect was fixed
 in `86670250`: `KeywordCounters` is an insertion-ordered `Vec` newtype, which
 sidesteps `Keyword` having no `Ord`, and `cr_122_1b_keyword_counter_grant_
 order_is_insertion_order` pins it. The actor-sampler panic was fixed in

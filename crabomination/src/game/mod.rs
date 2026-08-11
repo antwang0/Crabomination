@@ -1772,7 +1772,7 @@ pub struct GameState {
     /// `#[serde(skip)]` because it's transient scratch — snapshots
     /// don't need to preserve mid-SBA state.
     #[serde(skip)]
-    pub died_card_snapshots: HashMap<CardId, CardInstance>,
+    pub died_card_snapshots: crate::game::types::IdMap<CardId, CardInstance>,
     /// CR 603.10 / 608.2h — last-known-information snapshots for
     /// leaves-the-battlefield triggers that read the dying object's
     /// characteristics *as they last existed on the battlefield* (e.g.
@@ -2399,7 +2399,7 @@ impl GameState {
             graveyard_play_pooled_for: None,
             controlled_by: Vec::new(),
             next_replacement_id: 1,
-            died_card_snapshots: HashMap::new(),
+            died_card_snapshots: Default::default(),
             leaves_bf_lki: HashMap::new(),
             resolving_lki_source: None,
             resolving_lki_subject: None,
@@ -15812,6 +15812,10 @@ impl GameState {
         // `DealtDamage` triggers matching a `DamageDealt` event in this batch.
         // (Other SelfSource trigger kinds — die/leave — are handled via their
         // own dedicated paths, so this is scoped to DealtDamage only.)
+        //
+        // The walk order decides where these land on the stack relative to
+        // each other, so `died_card_snapshots` is an insertion-ordered
+        // [`IdMap`](crate::game::types::IdMap), not a `HashMap` — see its doc.
         for snap in self.died_card_snapshots.values() {
             // CR 603.10a — a leaves-the-battlefield ability granted by a static
             // (Endless Whispers' "each creature has 'when this dies …'") looks

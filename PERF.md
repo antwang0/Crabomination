@@ -516,6 +516,22 @@ suite — a debug-only whole-board re-run inside the gate, plus a
 never read outside it. That second half is what makes the subset safe to
 widen later.
 
+The twenty-first pass. Base `e2d030c6` rebuilt here read
+**3,501,692,629 Ir** against the twentieth pass's recorded 3,501,374,248 —
+**0.009 % apart**, so the passes' numbers chain. Same workload and build
+as every row above.
+
+| date | change | before | after | how measured |
+|---|---|---|---|---|
+| 2026-08-11 | Payment's cost relaxation borrows and walks the board once (`716e0211`) | 3,501,692,629 Ir | 3,497,826,864 Ir (**-0.110 %**) | `try_pay_after_snapshot_mode` is 14.12 % of the profile and its first two statements are pure preamble: `relax_cost_colors_for_spell` cloned the `ManaCost` on the common path, and `spend_mana_as_any_color_for_spell` took *two* battlefield passes to decide there was nothing to relax (one for the seat-agnostic `PlayersMaySpendManaAsAnyColor`, one for the two named-spell permissions). Now `Cow::Borrowed` plus one fused walk. At the edge of what a single A/B pair resolves, but the change strictly removes a clone and a board pass, so the sign is not in question. |
+| 2026-08-11 | `ColdState`'s 15 id sets are `Vec`-backed (`1536a598`) | 3,497,826,864 Ir | 3,483,193,405 Ir (**-0.418 %**) | Found in `--tree=caller` under `RawTable::clone`, which has exactly two callers: **`Arc::clone_from_ref_in` 984,988x / 42,825,844 Ir / 1.22 %** (the `ColdState` CoW unshare, 22 tables per unshare, ~44.8 k unshares for six games) and `GameState::clone` 302,418x / 0.41 %. An empty `hashbrown` table clone still walks its control bytes. `IdSet<T>` is a `Vec` newtype carrying `HashSet`'s API for the six methods these fields use — **nothing iterates one**, so the swap is 15 type annotations and no call-site changes — and it serializes as the same sequence. The seven `HashMap` fields in the group are left: their JSON shape is an object, and changing it moves the snapshot format. |
+| | **cumulative, twenty-first pass** | **3,501,692,629 Ir** | **3,483,193,405 Ir (-0.528 %)** | callgrind on the fixed six-game workload; bench output identical on every row |
+
+**What the pass leaves behind.** The `RawTable::clone` row is *half* paid:
+15 of the 22 `ColdState` tables are gone, and the two remaining blocks —
+seven `ColdState` maps, nine `GameState` hash fields (0.41 % on its own) —
+are the same shape with a serde question attached. See candidate (1).
+
 ## Profile of record
 
 Callgrind on `profiling-fast --no-default-features` (= `release-fast` opt
@@ -696,17 +712,42 @@ and twentieth passes ranked is paid: `declare_attackers_banded`
 (741,960 Ir / 0.02 %). Do not re-open this table; the layer system's
 remaining cost is per-card `computed_permanent` and the gather itself.
 
-0. **`try_pay_after_snapshot_mode`, 507,252,955 Ir / 14.12 % — the largest
-   name in the profile that has never been on this list.** It sits just
-   above `auto_tap_for_cost_inner` (483,645,579 / 13.46 %), so most of it
-   is the auto-tap chain candidate (2) already describes from the other
-   end — but **the ~24 M between them has never been looked at**, and
-   neither has the question of how often the snapshot it takes is read.
-   That is the fourteenth pass's shape (`831054fb`, -11.38 %) applied one
-   level up: *a checkpoint is only worth its clone where something reads
-   the restore.* First probe: `--tree=caller` on it, then count how many
-   of its calls end in a rollback.
-1. **The attack search itself, `pick_attacks_scored` 51.35 % over 630
+0. **`auto_tap_for_cost_inner`'s two inner loops rebuild constants.**
+   Read on the twenty-first pass's base, unpaid, and specified:
+   (a) the generic-pip loop calls `s.redundancy(&sources)` per live source
+   *per pip*, and `sources` is a local that the loop never mutates — the
+   comment claiming it is "recomputed each iteration because tapping one
+   source changes how redundant the rest are" is **wrong**, the value is
+   constant across the loop and belongs in the table (or a parallel `Vec`)
+   built once; (b) that same loop collects a `live: Vec<&ManaSourceInfo>`
+   per pip only to `min_by_key` it — fuse the filter into the iterator;
+   (c) `avail` and `prod` are `HashMap<ManaColor, u32>` over five fixed
+   keys, i.e. an allocation plus a SipHash per cost symbol where `[u32; 5]`
+   indexed by `color_index` would do. `auto_tap_for_cost_inner` is
+   483,645,579 / 13.46 % over 8,892 calls, and `mana_source_table`'s
+   collect under it is 134,127,895 / 3.83 %.
+   ~~**`try_pay_after_snapshot_mode`, 14.12 %** — the preamble half~~ —
+   **paid** (`716e0211`, -0.110 %). What is left of that function is the
+   auto-tap chain, i.e. this item and (2). The snapshot question it also
+   asked has an answer: `snapshot_payment_state` is
+   **9,390,030 Ir / 0.27 % over 8,892 calls**, so eliding the unread
+   restore is worth at most a quarter point — not the fourteenth pass's
+   shape after all.
+1. **The `RawTable::clone` block, half paid.** `--tree=caller` on
+   `RawTable::clone` has exactly two callers, and `1536a598` took the
+   larger one's set half. Left: the **seven `ColdState` `HashMap` fields**
+   (same CoW unshare, ~44.8 k times for six games) and
+   **`GameState::clone` 302,418 table clones / 14,182,866 Ir / 0.41 %**
+   over its nine non-cold hash fields (`block_map`,
+   `combat_damage_order`, `combat_damage_assignment`, `died_card_snapshots`,
+   `leaves_bf_lki`, `names_this_resolution`, the two
+   per-player-discard maps, `players_sacrificed_this_resolution`).
+   `IdMap<K, V>` already exists for the `#[serde(skip)]` ones. **The gate
+   on the rest is serde**: a `HashMap` serializes as a JSON object and a
+   `Vec` newtype as an array of pairs, so any field that reaches a
+   snapshot needs a custom impl or a format bump. Check the field's serde
+   attribute before costing it.
+2. **The attack search itself, `pick_attacks_scored` 51.35 % over 630
    calls.** Unchanged from the seventeenth pass's framing and still the
    largest single item in the file. Every pass has made its inner loop
    cheaper and none has touched the loop. **This is a bot-quality question
@@ -714,14 +755,14 @@ remaining cost is per-card `computed_permanent` and the gather itself.
    needs a `bot_ladder` win-rate gate, not an Ir number. Cheapest first
    probe: how often does the search depart from greedy? If rarely, the
    candidates that never win are pure cost.
-2. **`would_accept`, 534,428,881 / 14.87 %**, and the auto-tap chain under
+3. **`would_accept`, 534,428,881 / 14.87 %**, and the auto-tap chain under
    it — see the eighteenth pass's items (1) and (2) below, both still live.
-3. **`pick_by_outcome`, 226,841,402 / 6.31 %, of which 225,396,844 is a
+4. **`pick_by_outcome`, 226,841,402 / 6.31 %, of which 225,396,844 is a
    single `in_place_collect`** — i.e. essentially all of it is one
    `collect()` in `bot.rs`. Never profiled at line level. Read
    `--auto=yes` on it before guessing; the eighteenth pass's candidate (1)
    is the warning that the cost is the *iterator body*, not the container.
-4. **`dispatch_triggers_for_events`, 352,489,276 / 9.81 % over ~52 k
+5. **`dispatch_triggers_for_events`, 352,489,276 / 9.81 % over ~52 k
    calls — and `c7bdd850` took only the four cheapest blocks of it.** What
    is left, measured on the same profile: **~152 M of *self* cost (4.3 %),
    of which ~99 M is `Vec` / `raw_vec` / `spec_from_iter` machinery over
@@ -735,6 +776,26 @@ remaining cost is per-card `computed_permanent` and the gather itself.
    the batch's event kinds filled in one pass, with each block gated on its
    bit — the `gated_block!` device from `52f4311a`, `debug_assertions`
    audit included.
+
+6. **The collect table, re-measured on the twenty-first pass's base** —
+   `--tree=caller` on `Vec::from_iter`, inclusive, so these are *iterator
+   body* costs (see the eighteenth pass's correction below, which is still
+   the warning that matters):
+   `cast_candidates` **168,697,972 / 4.82 %** over 7,024 calls;
+   `mana_source_table` **134,127,895 / 3.83 %** over 8,892;
+   `check_state_based_actions` **132,736,620 / 3.79 %** over 82,634;
+   `fire_step_triggers` **63,016,486 / 1.80 %** over 14,462;
+   `dispatch_triggers_for_events` 27,145,020 / 0.78 % over 356,268;
+   `fire_combat_damage_triggers` 21,934,084 / 0.63 %;
+   `pick_removal_ping` 21,684,833 / 0.62 % over 37,710;
+   `empty_mana_pools` **17,659,596 / 0.50 % over 51,088 calls** — a collect
+   per call to empty a pool, the cheapest-looking row here and the one
+   whose call count says a caller is in a loop.
+   The allocator block re-reads **~17.75 %** on this base (`_int_malloc`
+   5.24 / `_int_free` 4.33 / `malloc` 3.19 / `free` 1.93 / merge 0.86 /
+   arena 0.76 / consolidate 0.74 / unlink 0.70), `__memcpy_avx_unaligned_
+   erms` 3.25 %, `Arc::clone_from_ref_in` ~4.25 % self,
+   `gather_continuous_effects_inner` ~7.0 % self.
 
 **The profile of record is current** — retaken 2026-08-10 at `a4947da6`,
 the thirteenth pass's base. Shares quoted below without a date are from it.
