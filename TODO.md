@@ -18,9 +18,10 @@ reference and want their own triage pass):
 
 Branch `claude/modern_decks`. **Twentieth pass: four perf commits,
 -5.223 % Ir** (3,694,337,730 -> 3,501,374,248, base `3655c37c`,
-`profiling-fast --no-default-features` callgrind). Bench output
-byte-identical on every row, suite 18,837 green, workspace clippy clean.
-Rebased over a concurrent session's `9e9b4e73` (ML_NOTES only).
+`profiling-fast --no-default-features` callgrind), plus a flaky-gate fix
+and two gate regression tests. Bench output byte-identical on every row,
+suite **18,839** green, workspace clippy clean. Rebased over a concurrent
+session's `9e9b4e73` (ML_NOTES only).
 
 - **The `compute_battlefield` table is closed.** Calls **17,718 -> 5,488 ->
   310**, and the 310 are all `submit_decision` (0.02 %). The nineteenth
@@ -45,6 +46,14 @@ Rebased over a concurrent session's `9e9b4e73` (ML_NOTES only).
   the fourteenth pass's shape one level up. Then `pick_by_outcome` (6.31 %,
   essentially one `collect()`), the trigger-dispatch batch gate (9.81 %),
   and the attack search 51 % (still needs a ladder win-rate gate).
+- **A flaky gate, found and fixed** (`09257f37`). `crabomination_ml`'s
+  `muon_learns_the_synthetic_signal` failed a full-workspace run and passed
+  in isolation: at n = 100 its generalization score lands in 76-91 over 24
+  runs against a `>= 78` bar, i.e. **3 of 24 fail**. Fixed by quadrupling
+  the sample (326-358 / 400 over 20 runs) and setting the bar at 70 %.
+  **The filter, if another one shows up**: a suite failure that will not
+  reproduce alone is a distribution, so sample it 20+ times and read the
+  min before touching the threshold.
 - **Bugs**: the panic sweep's **sixth filter is done and clean** —
   `[profile.overflow]` over 17,693 bot_ladder games across all four deck
   pools plus 600 `selfplay_train` games, 0 panics. Six filters exhausted; a
