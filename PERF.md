@@ -196,6 +196,19 @@ against cube's 1,129,690 / 1,130,785 / 1,130,706 and two FAILs before.
 moved — all of them are `--decks fixed` or the six-game callgrind workload
 — but the wider pools are now usable as measurements.
 
+**Final checks at `ac8e3b50` (this run's tip), 2026-08-11 — `release-fast`,
+so the anchor is NOT refreshed and these absolutes do not chain to it.**
+Three `--bench` runs: 72.97 / 77.12 / 75.68 games/s, `host_calib_ms`
+51 / 66 / 52, i.e. the 2.80 GHz box. The three `release-fast` runs taken on
+the same box earlier in the sitting, before the hasher row, read 71.37 /
+68.37 (calib 58 / 61) plus two contended ones — directionally up and
+consistent with -0.942 % Ir, but a 4 % wall-clock delta on this box is not
+claimable and nothing is claimed from it. **The workload facts are the
+check that matters**: `decisions` **193,232** byte-identical on all three
+(an eighth consecutive anchor's worth), `turns_per_game` **26.98**,
+`stalls` 0, `determinism ok`, `peak_rss_mib` 23.9-24.6 against the
+pre-change `release-fast` runs' 24.0-24.1. Cube twice more at 1,130,728.
+
 **Cross-check at `f2fb6722` (the twenty-first pass's tip), 2026-08-11 — the
 anchor is NOT refreshed, and the reason is the spread.** Eight `--bench`
 runs in one sitting on this container: 91.49 / 94.20 / 93.00 / 93.61 /
