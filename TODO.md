@@ -16,10 +16,11 @@ reference and want their own triage pass):
 
 ## NEXT (handoff — rewrite each run, keep under 15 lines)
 
-Branch `claude/modern_decks`. **Twentieth pass: three perf commits,
--4.897 % Ir** (3,694,337,730 -> 3,513,438,110, base `3655c37c`,
+Branch `claude/modern_decks`. **Twentieth pass: four perf commits,
+-5.223 % Ir** (3,694,337,730 -> 3,501,374,248, base `3655c37c`,
 `profiling-fast --no-default-features` callgrind). Bench output
-byte-identical on every row, suite 18,837 green, clippy clean.
+byte-identical on every row, suite 18,837 green, workspace clippy clean.
+Rebased over a concurrent session's `9e9b4e73` (ML_NOTES only).
 
 - **The `compute_battlefield` table is closed.** Calls **17,718 -> 5,488 ->
   310**, and the 310 are all `submit_decision` (0.02 %). The nineteenth
@@ -30,6 +31,13 @@ byte-identical on every row, suite 18,837 green, clippy clean.
   the cheapest gate in the file and the biggest row (-2.216 %). *"One pass
   per turn" was a reason nobody looked.* New: `board_keyword_in_scope` /
   `board_keyword_matching`, both audited across the suite.
+- **The fourth row, and what it leaves.** `dispatch_triggers_for_events`'s
+  four delayed-trigger blocks scanned the event batch before asking whether
+  anything was watching (-0.343 %). **The rest of that function is the
+  bigger half and is written up as candidate (4)**: ~152 M of self cost,
+  ~99 M of it `Vec` machinery over **7 collects per dispatch**, ~52 k
+  dispatches per six games. Two named levers, the second being the
+  `gated_block!` presence mask from `52f4311a`.
 - **Next up.** PERF candidate (0) is `try_pay_after_snapshot_mode`,
   **14.12 %** — the largest name in the profile never on the list. Most of
   it is the auto-tap chain, but the ~24 M above `auto_tap_for_cost_inner`
