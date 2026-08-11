@@ -4254,7 +4254,7 @@ impl GameState {
                     let granted = self.static_granted_triggers_of(atk.id);
                     self.fire_combat_damage_triggers(
                         atk.id,
-                        EventKind::DealsCombatDamageToPlaneswalker,
+                        &[EventKind::DealsCombatDamageToPlaneswalker],
                         Target::Permanent(pw_id),
                         amount,
                         &granted,
@@ -4418,24 +4418,20 @@ impl GameState {
         self.fire_source_dealt_damage_watchers(source, damage_amount);
         self.fire_source_combat_damage_to_player_watchers(source, damage_amount);
         let granted = self.static_granted_triggers_of(source);
+        // Combat damage is damage: the combat-agnostic wordings fire too, in
+        // this order (CR 603.2 — one batch, grouped per kind).
         self.fire_combat_damage_triggers(
             source,
-            EventKind::DealsCombatDamageToPlayer,
+            &[
+                EventKind::DealsCombatDamageToPlayer,
+                EventKind::DealsDamageToPlayer,
+                EventKind::DealsCombatDamage,
+                EventKind::DealsDamage,
+            ],
             Target::Player(damaged_player),
             damage_amount,
             &granted,
         );
-        for kind in
-            [EventKind::DealsDamageToPlayer, EventKind::DealsCombatDamage, EventKind::DealsDamage]
-        {
-            self.fire_combat_damage_triggers(
-                source,
-                kind,
-                Target::Player(damaged_player),
-                damage_amount,
-                &granted,
-            );
-        }
         // CR 510 — "whenever combat damage is dealt to you" listeners fire off
         // the *recipient's* own permanents (SelfSource on a permanent the
         // damaged player controls). Risona sheds an indestructible counter.
@@ -4594,27 +4590,19 @@ impl GameState {
         damage_amount: u32,
     ) {
         let granted = self.static_granted_triggers_of(source);
+        // Combat damage is damage: the combat-agnostic wordings fire too.
         self.fire_combat_damage_triggers(
             source,
-            EventKind::DealsCombatDamageToCreature,
+            &[
+                EventKind::DealsCombatDamageToCreature,
+                EventKind::DealsDamageToCreature,
+                EventKind::DealsCombatDamage,
+                EventKind::DealsDamage,
+            ],
             Target::Permanent(damaged_creature),
             damage_amount,
             &granted,
         );
-        // Combat damage is damage: the combat-agnostic wordings fire too.
-        for kind in [
-            EventKind::DealsDamageToCreature,
-            EventKind::DealsCombatDamage,
-            EventKind::DealsDamage,
-        ] {
-            self.fire_combat_damage_triggers(
-                source,
-                kind,
-                Target::Permanent(damaged_creature),
-                damage_amount,
-                &granted,
-            );
-        }
     }
 
     /// The non-combat half of `EventKind::DealsDamageToCreature`: a permanent
@@ -4630,15 +4618,13 @@ impl GameState {
             return;
         }
         let granted = self.static_granted_triggers_of(source);
-        for kind in [EventKind::DealsDamageToCreature, EventKind::DealsDamage] {
-            self.fire_combat_damage_triggers(
-                source,
-                kind,
-                Target::Permanent(damaged_creature),
-                damage_amount,
-                &granted,
-            );
-        }
+        self.fire_combat_damage_triggers(
+            source,
+            &[EventKind::DealsDamageToCreature, EventKind::DealsDamage],
+            Target::Permanent(damaged_creature),
+            damage_amount,
+            &granted,
+        );
     }
 
     /// The non-combat, player-side half of `EventKind::DealsDamage` /
@@ -4654,15 +4640,13 @@ impl GameState {
             return;
         }
         let granted = self.static_granted_triggers_of(source);
-        for kind in [EventKind::DealsDamageToPlayer, EventKind::DealsDamage] {
-            self.fire_combat_damage_triggers(
-                source,
-                kind,
-                Target::Player(damaged_player),
-                damage_amount,
-                &granted,
-            );
-        }
+        self.fire_combat_damage_triggers(
+            source,
+            &[EventKind::DealsDamageToPlayer, EventKind::DealsDamage],
+            Target::Player(damaged_player),
+            damage_amount,
+            &granted,
+        );
     }
 
     /// Shared body for the combat-damage trigger dispatch (to a player or to a
@@ -4686,10 +4670,17 @@ impl GameState {
     /// kinds per damage event, so they build it once and pass it in rather
     /// than making each call rebuild `trigger_grant_sources` (a whole-board
     /// scan) for the same permanent.
+    ///
+    /// `kinds` is the caller's whole kind list for one damage event, for the
+    /// same reason: every walk below except the graveyard one is
+    /// kind-independent, so a per-kind call re-walked the battlefield four
+    /// times for equipment, auras, soulbond and the `YourControl` /
+    /// `AnyPlayer` dealer listeners. The pushes stay grouped per kind, in
+    /// `kinds` order, so the stack sees exactly the per-kind batches it did.
     fn fire_combat_damage_triggers(
         &mut self,
         source: CardId,
-        kind: EventKind,
+        kinds: &[EventKind],
         default_target: Target,
         damage_amount: u32,
         static_granted: &[crate::card::TriggeredAbility],
@@ -4703,37 +4694,42 @@ impl GameState {
         // (source, effect, controller, intervening-if, bind_dealer): the last
         // flag binds the damage dealer as the body's `TriggerSource` (the
         // Phase-1.5 listener pattern — Kaito's "return one of them to hand").
-        let mut triggers: Vec<(CardId, Effect, usize, Option<crate::card::Predicate>, bool)> = self
-            .battlefield
-            .iter()
-            .find(|c| c.id == source)
-            .map(|c| {
-                // Printed + statics-granted ("Slivers you control have
-                // '…combat damage…'" — Tempered/Virulent) + instance-granted
-                // (`GrantTriggeredAbility` on `granted_triggers_eot` — Summon:
-                // Primal Odin's Zantetsuken) fire alike.
-                let instance_granted: &[crate::card::TriggeredAbility] = self
-                    .granted_triggers_eot
-                    .get(&c.id)
-                    .map(Vec::as_slice)
-                    .unwrap_or(&[]);
-                c.definition
-                    .triggered_abilities
-                    .iter()
-                    .chain(static_granted.iter())
-                    .chain(instance_granted.iter())
-                    .filter(|t| {
-                        t.event.kind == kind
-                            && matches!(
-                                t.event.scope,
-                                crate::effect::EventScope::SelfSource
-                                    | crate::effect::EventScope::AnyPlayer
-                            )
-                    })
-                    .map(|t| (c.id, t.effect.clone(), c.controller, t.event.filter.clone(), false))
-                    .collect()
-            })
-            .unwrap_or_default();
+        // One bucket per requested kind; drained in order at the bottom.
+        let slot = |k: &EventKind| kinds.iter().position(|want| want == k);
+        let mut by_kind: Vec<Vec<(CardId, Effect, usize, Option<crate::card::Predicate>, bool)>> =
+            kinds.iter().map(|_| Vec::new()).collect();
+
+        if let Some(c) = self.battlefield.iter().find(|c| c.id == source) {
+            // Printed + statics-granted ("Slivers you control have
+            // '…combat damage…'" — Tempered/Virulent) + instance-granted
+            // (`GrantTriggeredAbility` on `granted_triggers_eot` — Summon:
+            // Primal Odin's Zantetsuken) fire alike.
+            let instance_granted: &[crate::card::TriggeredAbility] =
+                self.granted_triggers_eot.get(&c.id).map(Vec::as_slice).unwrap_or(&[]);
+            for t in c
+                .definition
+                .triggered_abilities
+                .iter()
+                .chain(static_granted.iter())
+                .chain(instance_granted.iter())
+            {
+                if !matches!(
+                    t.event.scope,
+                    crate::effect::EventScope::SelfSource | crate::effect::EventScope::AnyPlayer
+                ) {
+                    continue;
+                }
+                if let Some(i) = slot(&t.event.kind) {
+                    by_kind[i].push((
+                        c.id,
+                        t.effect.clone(),
+                        c.controller,
+                        t.event.filter.clone(),
+                        false,
+                    ));
+                }
+            }
+        }
 
         // Phase 1b: equipment-granted combat-damage triggers (CR 702.6e). Each
         // Equipment attached to the attacker grants its `equipped_bonus.
@@ -4751,14 +4747,13 @@ impl GameState {
                 // counters on the Equipment, so `Selector::This` must read it).
                 let trig_source = if bonus.triggers_on_equipment { eq.id } else { source };
                 for t in &bonus.triggered_abilities {
-                    if t.event.kind == kind
-                        && matches!(
-                            t.event.scope,
-                            crate::effect::EventScope::SelfSource
-                                | crate::effect::EventScope::AnyPlayer
-                        )
+                    if matches!(
+                        t.event.scope,
+                        crate::effect::EventScope::SelfSource
+                            | crate::effect::EventScope::AnyPlayer
+                    ) && let Some(i) = slot(&t.event.kind)
                     {
-                        triggers.push((
+                        by_kind[i].push((
                             trig_source,
                             t.effect.clone(),
                             atk_ctrl,
@@ -4777,10 +4772,10 @@ impl GameState {
                     continue;
                 }
                 for t in &aura.definition.triggered_abilities {
-                    if t.event.kind == kind
-                        && t.event.scope == crate::effect::EventScope::EnchantedBySource
+                    if t.event.scope == crate::effect::EventScope::EnchantedBySource
+                        && let Some(i) = slot(&t.event.kind)
                     {
-                        triggers.push((
+                        by_kind[i].push((
                             aura.id,
                             t.effect.clone(),
                             aura.controller,
@@ -4804,8 +4799,14 @@ impl GameState {
                     continue;
                 }
                 for t in &bonus.triggered_abilities {
-                    if t.event.kind == kind {
-                        triggers.push((source, t.effect.clone(), atk_ctrl, t.event.filter.clone(), false));
+                    if let Some(i) = slot(&t.event.kind) {
+                        by_kind[i].push((
+                            source,
+                            t.effect.clone(),
+                            atk_ctrl,
+                            t.event.filter.clone(),
+                            false,
+                        ));
                     }
                 }
             }
@@ -4825,10 +4826,16 @@ impl GameState {
                     continue;
                 }
                 for t in &c.definition.triggered_abilities {
-                    if t.event.kind == kind
-                        && matches!(t.event.scope, crate::effect::EventScope::YourControl)
+                    if matches!(t.event.scope, crate::effect::EventScope::YourControl)
+                        && let Some(i) = slot(&t.event.kind)
                     {
-                        triggers.push((c.id, t.effect.clone(), c.controller, t.event.filter.clone(), true));
+                        by_kind[i].push((
+                            c.id,
+                            t.effect.clone(),
+                            c.controller,
+                            t.event.filter.clone(),
+                            true,
+                        ));
                     }
                 }
             }
@@ -4840,27 +4847,32 @@ impl GameState {
         // controller. `EventSpec.dealer_filter` gates on the dealing creature;
         // the dealer's own `AnyPlayer` trigger already fired in Phase 1.
         {
-            let kind_ref = &kind;
-            let dealer_ok: Vec<(CardId, Effect, usize, Option<crate::card::Predicate>)> = self
-                .battlefield
-                .iter()
-                .filter(|c| c.id != source)
-                .flat_map(|c| {
-                    c.definition.triggered_abilities.iter().filter_map(move |t| {
-                        (t.event.kind == *kind_ref
-                            && matches!(t.event.scope, crate::effect::EventScope::AnyPlayer))
-                        .then_some((c.id, c.controller, t))
+            let dealer_ok: Vec<(usize, CardId, Effect, usize, Option<crate::card::Predicate>)> =
+                self.battlefield
+                    .iter()
+                    .filter(|c| c.id != source)
+                    .flat_map(|c| {
+                        c.definition.triggered_abilities.iter().filter_map(move |t| {
+                            matches!(t.event.scope, crate::effect::EventScope::AnyPlayer)
+                                .then(|| slot(&t.event.kind))
+                                .flatten()
+                                .map(|i| (i, c.id, c.controller, t))
+                        })
                     })
-                })
-                .filter(|(_, ctrl, t)| {
-                    t.event.dealer_filter.as_ref().is_none_or(|f| {
-                        self.evaluate_requirement_static(f, &Target::Permanent(source), *ctrl, None)
+                    .filter(|(_, _, ctrl, t)| {
+                        t.event.dealer_filter.as_ref().is_none_or(|f| {
+                            self.evaluate_requirement_static(
+                                f,
+                                &Target::Permanent(source),
+                                *ctrl,
+                                None,
+                            )
+                        })
                     })
-                })
-                .map(|(id, ctrl, t)| (id, t.effect.clone(), ctrl, t.event.filter.clone()))
-                .collect();
-            for (id, effect, ctrl, filter) in dealer_ok {
-                triggers.push((id, effect, ctrl, filter, true));
+                    .map(|(i, id, ctrl, t)| (i, id, t.effect.clone(), ctrl, t.event.filter.clone()))
+                    .collect();
+            for (i, id, effect, ctrl, filter) in dealer_ok {
+                by_kind[i].push((id, effect, ctrl, filter, true));
             }
         }
 
@@ -4873,48 +4885,54 @@ impl GameState {
         // once per sub-step even when several attackers connect
         // (`gy_combat_trigger_fired_this_step` dedupes the per-attacker
         // walks; it's cleared at the top of each damage sub-step).
+        //
+        // This is the one walk that stays per-kind: the dedupe set is read and
+        // written between kinds, so a merged walk would let one graveyard card
+        // fire for two kinds of the same damage event.
         if let Some(atk_controller) = attacker_controller {
-            let mut fired: Vec<CardId> = Vec::new();
-            for player in &self.players {
-                if player.id.0 != atk_controller {
-                    continue;
-                }
-                for gy_card in &player.graveyard {
-                    if self.gy_combat_trigger_fired_this_step.contains(&gy_card.id) {
+            for (i, kind) in kinds.iter().enumerate() {
+                let mut fired: Vec<CardId> = Vec::new();
+                for player in &self.players {
+                    if player.id.0 != atk_controller {
                         continue;
                     }
-                    for t in &gy_card.definition.triggered_abilities {
-                        if t.event.kind == kind
-                            && matches!(
-                                t.event.scope,
-                                crate::effect::EventScope::FromYourGraveyard
-                            )
-                        {
-                            triggers.push((
-                                gy_card.id,
-                                t.effect.clone(),
-                                gy_card.owner,
-                                t.event.filter.clone(),
-                                false,
-                            ));
-                            fired.push(gy_card.id);
+                    for gy_card in &player.graveyard {
+                        if self.gy_combat_trigger_fired_this_step.contains(&gy_card.id) {
+                            continue;
+                        }
+                        for t in &gy_card.definition.triggered_abilities {
+                            if t.event.kind == *kind
+                                && matches!(
+                                    t.event.scope,
+                                    crate::effect::EventScope::FromYourGraveyard
+                                )
+                            {
+                                by_kind[i].push((
+                                    gy_card.id,
+                                    t.effect.clone(),
+                                    gy_card.owner,
+                                    t.event.filter.clone(),
+                                    false,
+                                ));
+                                fired.push(gy_card.id);
+                            }
                         }
                     }
                 }
+                self.gy_combat_trigger_fired_this_step.extend(fired);
             }
-            self.gy_combat_trigger_fired_this_step.extend(fired);
         }
 
         // CR 702.46 — Cipher. A card exiled encoded on this creature offers its
         // controller a free copy whenever the creature deals combat damage to a
         // player. Reuses the Paradigm free-copy effect (mint a token copy of the
         // exiled card and free-cast it; the encoded original stays in exile).
-        if kind == EventKind::DealsCombatDamageToPlayer
+        if let Some(i) = slot(&EventKind::DealsCombatDamageToPlayer)
             && let Some(atk_ctrl) = attacker_controller
         {
             for enc in &self.exile {
                 if enc.encoded_on == Some(source) {
-                    triggers.push((enc.id, Effect::CastFreeParadigmCopy, atk_ctrl, None, false));
+                    by_kind[i].push((enc.id, Effect::CastFreeParadigmCopy, atk_ctrl, None, false));
                 }
             }
             // CR 701.54c (level 4+) — "Whenever your Ring-bearer deals combat
@@ -4922,7 +4940,7 @@ impl GameState {
             if self.players[atk_ctrl].ring_temptations >= 4
                 && self.effective_ring_bearer(atk_ctrl) == Some(source)
             {
-                triggers.push((
+                by_kind[i].push((
                     source,
                     Effect::LoseLife {
                         who: crate::effect::Selector::Player(crate::effect::PlayerRef::EachOpponent),
@@ -4942,7 +4960,9 @@ impl GameState {
         if let Target::Player(p) = default_target {
             self.trigger_event_player_scratch = Some(p);
         }
-        for (trig_source, effect, controller, filter, bind_dealer) in triggers {
+        for (trig_source, effect, controller, filter, bind_dealer) in
+            by_kind.into_iter().flatten()
+        {
             // CR 603.4 — intervening-'if' on combat-damage triggers ("whenever
             // a creature you control *with toxic* deals combat damage…" —
             // Necrogen Rotpriest). `TriggerSource` in the filter reads the
