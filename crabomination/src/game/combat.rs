@@ -1475,9 +1475,59 @@ impl GameState {
             return Err(GameError::NotYourPriority);
         }
 
-        let computed = self.compute_battlefield();
-        let cp_of = |id: CardId| computed.iter().find(|c| c.id == id);
+        // One layer pass for the whole declaration. Every consumer below is a
+        // `find(id)` on the declared blockers and their attackers, the
+        // creatures already attacking, or the blockers already declared —
+        // except the five CR 509.1 requirement loops, which ask the whole
+        // board who *has* to block. Four of them are keyed on a keyword and
+        // the fifth on `must_block`, so when no permanent can carry one, the
+        // pass covers the participants instead of the ~23-permanent board.
+        // See `board_keyword_in_scope` for why `false` is authoritative.
+        let (computed, block_requirement) = self.with_frozen_layers(|g| {
+            let requirement = g.battlefield.iter().any(|c| c.must_block.is_some())
+                || g.board_keyword_in_scope(&[
+                    Keyword::MustBlock,
+                    Keyword::MustAttackOrBlock,
+                    Keyword::MustBeBlocked,
+                    Keyword::AllMustBlock,
+                    Keyword::CantBeBlockedUnlessAllBlock,
+                ]);
+            if requirement {
+                return (g.compute_battlefield(), requirement);
+            }
+            let mut ids: Vec<CardId> = Vec::new();
+            let mut want = |id: CardId| {
+                if !ids.contains(&id) {
+                    ids.push(id);
+                }
+            };
+            for &(blocker, attacker) in &assignments {
+                want(blocker);
+                want(attacker);
+            }
+            g.attacking.iter().for_each(|a| want(a.attacker));
+            // `block_map`'s key order is a `HashMap`'s, but it only decides
+            // which permanents get computed; every reader looks up by id.
+            g.block_map.keys().for_each(|&b| want(b));
+            (g.compute_permanents(&ids), requirement)
+        });
+        // A whole-board consumer that slipped past the gate would silently
+        // read `None` / `&[]` for every permanent outside the subset and drop
+        // its restriction. Panic on it across the suite instead.
+        #[cfg(debug_assertions)]
+        let computed_ids: Vec<CardId> = computed.iter().map(|c| c.id).collect();
+        #[cfg(debug_assertions)]
+        let battlefield_ids: Vec<CardId> = self.battlefield.iter().map(|c| c.id).collect();
+        #[cfg(debug_assertions)]
+        let in_subset = |id: CardId| computed_ids.contains(&id) || !battlefield_ids.contains(&id);
+        let cp_of = |id: CardId| {
+            #[cfg(debug_assertions)]
+            debug_assert!(in_subset(id), "cp_of({id:?}) read outside the gated subset");
+            computed.iter().find(|c| c.id == id)
+        };
         let kws_of = |id: CardId| -> &[Keyword] {
+            #[cfg(debug_assertions)]
+            debug_assert!(in_subset(id), "kws_of({id:?}) read outside the gated subset");
             computed
                 .iter()
                 .find(|c| c.id == id)
@@ -2165,8 +2215,12 @@ impl GameState {
 
         // CR 509.1c — "blocks each combat if able" (`MustBlock`). A creature
         // carrying the keyword that can legally block at least one declared
-        // attacker must be assigned to block one of them.
-        for b in &self.battlefield {
+        // attacker must be assigned to block one of them. Unlike the four
+        // loops above, this one asks the computed view *before* the keyword
+        // that decides it, so it takes the gate directly.
+        let must_block_scan: &[crate::card::CardInstance] =
+            if block_requirement { &self.battlefield } else { &[] };
+        for b in must_block_scan {
             let b_is_creature = cp_of(b.id)
                 .is_some_and(|c| c.card_types.contains(&crate::card::CardType::Creature));
             if !(kws_of(b.id).contains(&Keyword::MustBlock)
