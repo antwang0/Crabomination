@@ -7,6 +7,69 @@ only stays dead while the reasoning that killed it is readable.
 
 ## Tier 13 — AI
 
+- 🔴 **Round 28 — encoder v6, and the training regression it uncovered
+  (arc open: champion-era reproduction run pending).** The plan was a
+  representation round: encoder v6 (combat-structure block — counterpart
+  P/T sums across block edges, fine combat-phase one-hots, unblocked
+  incoming power, attack-target kind; keyword-class block — haste /
+  hard-to-target / indestructible / hard-to-block / defender + exile
+  counts; `OBJ_FEATS` 45, `GLOBAL_FEATS` 43, `SHARD_VERSION` 6, legacy
+  checkpoints zero-padded at load so the champion and golden traces are
+  untouched), trained under the champion regime, control = round 20.
+  What it found instead is that **the champion regime no longer
+  reproduces at all**, and five controlled probes later the cause is
+  still not a training flag:
+
+  | run (seed 43 unless noted) | encoder | actors | learner steps | calib AUC | gang | atk-sim |
+  |---|---|---|---|---|---|---|
+  | champion re-gate (today's binary) | — | — | — | — | **51.7 %** | **54.5 %** |
+  | r28 (2 seeds) | v6 | det1 | ~8k | 0.775/0.778 | 48.3 | 50.1 |
+  | r28b ablated control (2 seeds) | v5-parity | det1 | ~8k | 0.775/0.775 | 48.7 | 50.5 |
+  | r28c-P (stale 48) | v6 | det1 | ~8k | 0.785 | 48.5 | 50.2 |
+  | r28c-D (`--actor-det 0`) | v6 | det0 | ~8k | 0.790 | 49.4 | 51.0 |
+  | r28d (`--tail-reuse 12`) | v6 | det1 | ~26k | 0.787 | 47.3 | 48.7 |
+  | r28e (det0 + tail 12) | v6 | det0 | ~26k | 0.776 | 48.4 | 49.7 |
+
+  What is established:
+
+  1. **Encoder v6 is innocent and unmeasurable at this run shape**:
+     r28 ≡ r28b to the third decimal. The representation verdict is
+     *open, not null* — it cannot be read until training is healthy.
+  2. **The measurement pipeline is stable**: the committed champion
+     re-gated on today's binary reproduces its original 51.8/54.4 to
+     within 0.1 pts. The regression lives in the trained nets.
+  3. **The binding stop was a silent one**: the post-generation tail
+     allowance (reuse/2 window-passes, hardcoded) became the stop on
+     this ~40 %-faster container — every run died at ~8.4k steps while
+     checkpoints were still setting AUC bests, and `--stop-after-stale`
+     never fired. `--tail-reuse` makes it a knob. But repairing it
+     (26k steps) did *not* repair the gates — tail-heavy training on a
+     static window scored better holdout AUC and worse play, the
+     calibration-vs-strength divergence again.
+  4. **Determinize-era training data costs ~1 pt** (28c-D) — the r25
+     honest-sims adoption silently swept the training generator along
+     with the play default; `--actor-det 0` restores it. Real, small,
+     not the missing 3-4.
+  5. **No tested combination recovers the champion.** det0 × full
+     length (28e) — the closest flag-level reconstruction of the r20
+     recipe — lands at 48.4/49.7.
+  6. Cross-era calib AUC comparisons are apples-to-oranges: `--calibrate`
+     plays the *current default* pilots, which changed at r25. Gates
+     are the only stable cross-era instrument.
+
+  The one hypothesis left standing: the champion's quality depended on
+  conditions the flags never encoded — champion-era *code* and/or the
+  old container's generation:learner interleaving (slower actors meant
+  most learner steps saw a continuously-refreshed window; on this box
+  the same flags produce a short streaming phase plus a long static
+  tail, which r28d showed is worse than fewer steps). The decisive
+  experiment is running: the r19-21 commit (`4f81029a7`) built in a
+  worktree, champion recipe verbatim, actors throttled to old-box
+  games/s, gated with today's ladder (legacy pad-on-load makes
+  cross-version gating exact). Reproduces → code drift, bisect;
+  fails → the champion needed the old box, re-baseline and retune the
+  regime for this one.
+
 - 🟡 **Smarter combat** — `server/bot.rs` blocking is heuristic (value trades,
   first-strike/deathtouch/trample/**indestructible** awareness — an
   indestructible body walls the biggest attacker for free and an indestructible
