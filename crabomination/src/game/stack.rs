@@ -4907,8 +4907,11 @@ impl GameState {
         let mut board_grew = false;
 
         // Hushbringer (CR 614): suppress creature-death triggers while a
-        // `SuppressCreatureEtbTriggers { also_dies }` static is in play.
-        let dies_suppressed = crate::game::actions::creature_dies_triggers_suppressed(self);
+        // `SuppressCreatureEtbTriggers { also_dies }` static is in play. Read
+        // only inside the death loop, so the whole-battlefield scan is gated
+        // on there being one — most SBA sweeps kill nothing.
+        let dies_suppressed =
+            !dead.is_empty() && crate::game::actions::creature_dies_triggers_suppressed(self);
 
         for id in dead {
             // CR 701.15 — regeneration shields replace destruction by
