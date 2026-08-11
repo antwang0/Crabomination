@@ -38,10 +38,22 @@ unchanged.
   decide) and `can_afford_in_state`'s five whole-board walks per call.
   Profile of record is **two rows stale**; retake before pulling anything
   under ~0.3 %.
-- **One measurement is owed and is cheap.** `stalls_by cap / stuck / draw`
-  now exists (`419d2ea6`); run `--decks all --games 300 --seed 11 --bench`
-  and read it. `cap` and `stuck` want opposite fixes. Not run here — the
-  release link was cut short by the rebase.
+- **START HERE: the cube pool is not deterministic on a fixed seed.** Three
+  identical `--bench --threads 1 --decks cube --games 300 --seed 11` runs
+  read **decisions 1,129,690 / 1,130,785 / 1,130,706** and determinism
+  ok / FAIL 1 / FAIL 5. `--decks fixed` is clean (six runs, decisions
+  193,232 identical), so it is not the harness, the loop, the threading or
+  the deck construction — it is a *card*, or a rules path only cube cards
+  reach, leaking `HashMap` order or unseeded RNG into game logic. Full
+  write-up and the bisect recipe are the P0 at the top of the robustness
+  section. **This outranks every perf item**: it makes every cube/`all`
+  measurement unreproducible, including the "~0.1 % stall rate" this file
+  treated as a stable number.
+- **The stall question is answered and needs no more work.** `stalls_by`
+  (`419d2ea6`) reads **cap 0 / stuck 0 / draw 4-6** on `--decks all
+  --games 300 --seed 11`: every undecided game is a rules draw, not a
+  simulator failure. Nothing to fix — but the count moves run to run,
+  which is the P0 above, not a stall problem.
 - **Filters.** Eleventh (`15ec11c1`) is the first that found anything:
   `stale < 8` written out six times across five files, now one
   `STALE_ROUNDS`. A **twelfth** is owed; the natural next from the same
@@ -91,6 +103,56 @@ already does the update, but its failures are silenced, so check
 target/debug/incremental` reclaims several GB without a full rebuild.
 
 ## Engine — Robustness / defects (open)
+
+### P0 — the cube pool is not deterministic on a fixed seed (found 2026-08-11)
+
+**Three identical invocations of `bot_ladder --bench --threads 1 --decks
+cube --games 300 --seed 11` did different amounts of work:**
+
+```text
+decisions  1,129,690   determinism  ok (all pairs split)
+decisions  1,130,785   determinism  FAIL — 1 of the mirrored pairs did not split
+decisions  1,130,706   determinism  FAIL — 5 of the mirrored pairs did not split
+```
+
+Single-threaded, one process each, same seed. The `decisions` count is the
+proof and needs no interpretation: the simulator played different games.
+This directly violates the standing goal ("same seed, two runs, identical
+trace") and it means **every number ever measured on the cube or `all`
+pools is unreproducible** — including the "~0.1 % stall rate" this file
+recorded as a stable figure, which reads 4, 5 or 6 draws per 5,100 games
+depending on the run.
+
+What is already ruled out:
+
+- **Not threading.** Reproduced at `--threads 1`.
+- **Not deck construction.** `cube_archetypes` / `sos_archetypes` seed
+  their own `StdRng` (`seed ^ 0xC0BE_5EED`, `seed ^ 0x0505_ACAD`), and the
+  archetype list is identical run to run.
+- **Not the game loop or the harness.** `--decks fixed` is *clean*: six
+  consecutive `--bench` runs read `decisions 193,232` **identically** and
+  `determinism ok` every time. Same binary, same functions, same seeding
+  path.
+- **Not the draws.** `MatchTally::pairs` excludes undecided pairs by
+  construction, so a draw cannot produce a non-splitting entry; the sweeps
+  and the draws are two symptoms, not one.
+
+That leaves the one thing the fixed pool does not have: **the cards.** The
+four fixed archetypes are hand-built from a small classic set; the cube
+pool is not. So the suspect is a *card* — or a rules path only cube cards
+reach — reading `HashMap`/`HashSet` iteration order, or unseeded RNG, into
+game logic. `--decks sos` read `ok` on its one run, so start with cube.
+
+**The bisect tool already exists and exits 1 on failure**: `bot_ladder
+--bench --threads 1 --decks cube --games 300 --seed <n>`. Narrow by
+archetype (`CUBE_PAIRS`), then by decklist, then reach for the golden-trace
+machinery — `trace_game` on the offending pair, twice in one process and
+once in another, diffs to the exact action. The 2026-08-11 `IdMap` /
+`CounterBag` / `KeywordCounters` fixes are the precedent for what the
+finding will look like, and the survey that found them explicitly covered
+only `GameState` / `ColdState` / `Player` fields — **not** per-card state
+or the catalog, which is where this one has to be.
+
 
 Found by profiling. Not speculative — the code is quoted.
 

@@ -166,6 +166,30 @@ here read 3,694,337,730 against the nineteenth pass's recorded
 anchors, `stalls` 0, determinism ok on all six runs, peak RSS 21.7-22.3
 against 22.1-22.5.
 
+**Cross-check at `15ec11c1` (the twenty-fifth pass's tip), 2026-08-11 —
+the anchor is NOT refreshed, and the reason is the host.** Six `--bench`
+runs: 69.49 / 57.38 / 82.70 / 91.48 / 92.25 / 91.22. `host_cpu` reads
+**2.80 GHz** and `host_calib_ms` 54 / 252 / 51 / 62 / 54 / 54 — i.e. this
+is the *older* box, not the 2.10 GHz one the committed anchor was taken
+on, so **these absolutes belong to the 66.65-67.95 block below, not to the
+95.64 above.** Runs 1-3 are container warm-up and their calibration says
+so (252 ms on run 2 is four times the rest); the settled three read 91.48 /
+92.25 / 91.22, **mean 91.65 against that host's 67.31**, over a span worth
+about -14.5 % by instruction count. Wall-clock running ahead of Ir there is
+the expected direction for gather-removal rows but the ratio is not
+claimable from four passes of drift on one box, so nothing is claimed from
+it.
+
+**What the workload facts say, which is the part that matters:**
+`turns_per_game` **26.98** on all six (a seventh consecutive anchor),
+`decisions` **193,232 byte-identical run to run**, `decisions_per_game`
+603.9, `stalls` 0 with the new `stalls_by` reading `cap 0 / stuck 0 /
+draw 0`, `determinism ok` on all six, `peak_rss_mib` 21.5-21.7 against the
+anchor's 21.7-22.3. **The `--decks fixed` bench is exactly reproducible and
+the wider pools are not** — see TODO.md's P0; that finding came out of this
+sitting and does not touch any number in this file, all of which are
+`--decks fixed` or the six-game callgrind workload.
+
 **Cross-check at `f2fb6722` (the twenty-first pass's tip), 2026-08-11 — the
 anchor is NOT refreshed, and the reason is the spread.** Eight `--bench`
 runs in one sitting on this container: 91.49 / 94.20 / 93.00 / 93.61 /
