@@ -14053,19 +14053,25 @@ impl GameState {
         // tapped creature's power (Station's charge add, CR 702.184a), in which
         // case tapping the highest-power creature is strictly better.
         // Tapped after payment succeeds.
-        let prefer_highest_tap = serde_json::to_string(&ability.effect)
-            .map(|s| s.contains("TappedForCostPower"))
-            .unwrap_or(false);
-        let auto_tap_pick = |g: &Self, candidates: &[CardId]| -> Option<CardId> {
-            if prefer_highest_tap {
-                g.auto_pick_highest_power(candidates, 1).first().copied()
-            } else {
-                g.auto_pick_lowest_power(candidates, 1).first().copied()
-            }
-        };
         let tap_other_pick: Option<CardId> = if let Some(filter) =
             ability.tap_other_filter.as_ref()
         {
+            // The `TappedForCostPower` probe is a serialize-and-substring of the
+            // whole effect tree, and it is only ever read by `auto_tap_pick`
+            // below — so it lives inside this branch. Hoisted, it ran on every
+            // activation (36,698 per six bot games, 18,340 of them auto-tap
+            // mana abilities) to answer a question only an ability with a
+            // tap-another cost asks.
+            let prefer_highest_tap = serde_json::to_string(&ability.effect)
+                .map(|s| s.contains("TappedForCostPower"))
+                .unwrap_or(false);
+            let auto_tap_pick = |g: &Self, candidates: &[CardId]| -> Option<CardId> {
+                if prefer_highest_tap {
+                    g.auto_pick_highest_power(candidates, 1).first().copied()
+                } else {
+                    g.auto_pick_lowest_power(candidates, 1).first().copied()
+                }
+            };
             let host = self.battlefield_find(card_id).and_then(|c| c.attached_to);
             let needs_host_of_source = crate::game::requirement_mentions_host_of_source(filter);
             let candidates: Vec<CardId> = self
