@@ -11054,6 +11054,20 @@ impl GameState {
     /// the total as colorless mana.
     pub fn empty_mana_pools(&mut self) {
         use crate::effect::StaticEffect;
+        // Cheap global gate before the three battlefield scans below (two of
+        // which allocate a `Vec`). The per-seat fast path in the loop skips a
+        // seat with no floating mana, no kept mana and no firebending mana
+        // *whatever* the board says, so when every seat is in that state the
+        // scans answer a question nobody goes on to ask. This runs at every
+        // step change and every resolution — 51 k times per six bot games —
+        // and the overwhelming majority have nothing to empty.
+        if self.players.iter().all(|p| {
+            p.firebending_kept_red == 0
+                && p.mana_pool.is_empty()
+                && p.kept_mana_this_turn.total() == 0
+        }) {
+            return;
+        }
         let keepers: Vec<usize> = self
             .battlefield
             .iter()
