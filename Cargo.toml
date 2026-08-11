@@ -75,6 +75,19 @@ inherits = "release-fast"
 debug = true
 split-debuginfo = "unpacked"
 
+# `release-fast` with the arithmetic checks release normally drops. The one
+# bug class TODO.md's five syntax filters cannot reach is a silent wrap at
+# game 400 k; running the actor path here turns it into a panic with a
+# backtrace instead. Not a throughput profile — the checks cost real time, so
+# no `--bench` number from here goes anywhere near PERF.md's Baseline.
+#
+#   cargo build --profile overflow -p crabomination --bin bot_ladder
+#   target/overflow/bot_ladder --a gang --b gang --games 400 --threads 3 \
+#     --seed <n> --decks all      # fixed + cube + sos, i.e. the widest pool
+[profile.overflow]
+inherits = "release-fast"
+overflow-checks = true
+
 # Optimize for size in the wasm-release profile to reduce load times and bandwidth usage on web.
 [profile.wasm-release]
 # Default to release profile values.

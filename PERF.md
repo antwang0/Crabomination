@@ -127,8 +127,44 @@ contention-immune, which makes it the better first look.
 
 ## Baseline
 
-**Anchored 2026-08-11 at `4f3e86c0`** (`release`, mimalloc — the shipped
-configuration), i.e. on the nineteenth pass's tip.
+**Anchored 2026-08-11 at `ed4c152c`** (`release`, mimalloc — the shipped
+configuration), i.e. on the twentieth pass's tip.
+
+```text
+bot_ladder --bench   release, rustc 1.95.0, 4-core VM, 3 worker threads
+                     mimalloc (the default); measured on an idle box
+host_cpu             Intel(R) Xeon(R) Processor @ 2.10GHz   <- a DIFFERENT box
+host_calib_ms        47-52 across the sitting   <- within-sitting only
+games                320
+games_per_s          94.23 / 91.94 / 93.27 / 98.47 / 99.09 / 96.81
+                     (mean 95.64, spread 7.48 %)
+games_per_s_th       30.65 - 33.03
+decisions_per_s      mean 57,748
+turns_per_game       26.98
+stalls               0 (0.00 %)
+peak_rss_mib         21.7 - 22.3
+determinism          ok (all 160 pairs split, on all 6 runs)
+```
+
+**95.64 against the 67.31 below is +42 %, and almost all of it is the
+host — this anchor is NOT a throughput claim.** The twentieth pass is worth
+**-4.897 % by instruction count**, and nothing in it can produce 42 %. The
+tell is in the fingerprint, and it is unusually clean this time: `host_cpu`
+reports a *different CPU model* (2.10 GHz against the previous anchor's
+2.80 GHz) and `host_calib_ms` **47-52 against 53-70** — a nominally slower
+part that runs this probe ~25 % faster, i.e. a different machine, not a
+quieter hour on the same one. **Absolutes across these two blocks do not
+chain**; use them only against a run on the same `host_cpu`. No paired A/B
+was taken: at -4.897 % the change sits at the edge of what this file says
+`--bench` can resolve at all, so the measurement of record is the
+callgrind number, and the Ir numbers *do* chain (the pass's base rebuilt
+here read 3,694,337,730 against the nineteenth pass's recorded
+3,694,708,603, -0.010 %). `turns_per_game` 26.98 across five consecutive
+anchors, `stalls` 0, determinism ok on all six runs, peak RSS 21.7-22.3
+against 22.1-22.5.
+
+The previous anchor, `4f3e86c0` (the nineteenth pass's tip), for the
+record:
 
 ```text
 bot_ladder --bench   release, rustc 1.95.0, 4-core VM, 3 worker threads
@@ -146,32 +182,19 @@ peak_rss_mib         22.1 - 22.5
 determinism          ok (all 160 pairs split, on all 6 runs)
 ```
 
-**67.31 against the 71.29 below is -5.6 %, and it is the host. That was
-checked, not asserted**, because -5.6 % is past the threshold this file
-sets for investigating before stopping. Four things say so, in order of
-weight.
-
-1. **A same-sitting paired A/B.** The tip's two perf commits were reverted
-   out of `combat.rs` + `game/mod.rs` (keeping `df87c2d1`), rebuilt
-   `profiling-fast --no-default-features`, and the two binaries alternated
-   `--bench` on this box: base **56.36 / 55.85 / 55.56 / 57.25 / 56.70 /
-   57.61** (mean 56.55) against tip **56.80 / 58.49 / 55.26 / 56.26 /
-   59.59 / 59.09** (mean 57.58) — **+1.82 % mean paired, 4/6 pairs
-   positive**. The tip is not slower than its own base on this machine.
-   (A seventh pair was discarded: `host_calib_ms` read **525** on it, i.e.
-   something else had the box. That is what the probe is for.)
-2. **`host_calib_ms` 53-70 here against 50-62** on the previous anchor.
-3. **Callgrind says the code does less work**: -1.968 % instructions on the
-   fixed six-game workload, deterministic, with the bench output
-   byte-identical on every row. Both changes strictly *remove* allocations,
-   so there is no cache-shaped story in which Ir falls and wall-clock rises.
-4. `turns_per_game` **26.98** unchanged across four consecutive anchors,
-   `stalls` 0, determinism ok on all six runs, peak RSS 22.1-22.5 MiB
-   against 22.0-22.2.
-
-**No wall-clock delta is claimed for this pass.** The paired +1.82 % is
-inside this box's documented noise for a 2 % change; the measurement of
-record is the callgrind number.
+**67.31 against the 71.29 below was -5.6 %, and it was the host — checked,
+not asserted**, by the method this file recommends for exactly this
+situation and which costs about fifteen minutes. The tip's two perf commits
+were reverted out of `combat.rs` + `game/mod.rs`, both sides rebuilt
+`profiling-fast --no-default-features`, and the binaries alternated
+`--bench` in one sitting: base mean **56.55** against tip **57.58**,
+**+1.82 % paired, 4/6 pairs positive**. (A seventh pair was discarded —
+`host_calib_ms` read **525**, i.e. something else had the box. That is what
+the probe is for.) Supporting: `host_calib_ms` 53-70 against 50-62 on the
+previous anchor; -1.968 % Ir with bench output byte-identical; both changes
+strictly *remove* allocations, so there is no cache-shaped story in which
+Ir falls and wall-clock rises. No wall-clock delta was claimed for that
+pass either.
 
 The previous anchor, `56986d65` (the eighteenth pass's tip), for the
 record:
