@@ -1515,7 +1515,11 @@ impl GameState {
             }
 
             // CR 509.1b — "can't block [creature type]s" (Burden of Proof).
-            if let Some(a) = self.computed_permanent(attacker_id)
+            // `cp_of`, not `computed_permanent`: nothing above mutates a layer
+            // input, so the pass taken at the top of the function already holds
+            // this card's computed view and asking for it again is a whole-game
+            // gather per assignment.
+            if let Some(a) = cp_of(attacker_id)
                 && kws_of(blocker_id).iter().any(|k| {
                     matches!(k, Keyword::CantBlockCreatureType(t) if a.subtypes.creature_types.contains(t))
                 })
@@ -1536,10 +1540,7 @@ impl GameState {
             // CR 509.1b — "can't block creatures with power equal to or
             // greater than this creature's toughness" (Ironclaw Curse).
             if kws_of(blocker_id).contains(&Keyword::CantBlockPowerAtLeastOwnToughness)
-                && let (Some(b), Some(a)) = (
-                    self.computed_permanent(blocker_id),
-                    self.computed_permanent(attacker_id),
-                )
+                && let (Some(b), Some(a)) = (cp_of(blocker_id), cp_of(attacker_id))
                 && a.power >= b.toughness
             {
                 return Err(GameError::CannotBlock(blocker_id));
@@ -2192,9 +2193,30 @@ impl GameState {
         // Flanking (CR 702.25), Bushido (CR 702.45), Rampage (CR 702.23).
         // Snapshot the +/-N deltas (same value on power and toughness)
         // before mutating so the borrow of `assignments` stays clean.
-        let computed = self.compute_battlefield();
+        // Only the assignments' own blockers and attackers are read below, so
+        // compute those instead of the whole board: the freeze scope pays one
+        // gather and one layer pass per participant, against ~23 passes for a
+        // bench board.
+        let mut ids: Vec<CardId> = Vec::new();
+        for &(b, a) in &assignments {
+            if !ids.contains(&b) {
+                ids.push(b);
+            }
+            if !ids.contains(&a) {
+                ids.push(a);
+            }
+        }
+        let computed: Vec<(CardId, Vec<Keyword>)> = self.with_frozen_layers(|g| {
+            ids.iter()
+                .map(|&id| {
+                    let kws =
+                        g.computed_permanent(id).map(|c| c.keywords.to_vec()).unwrap_or_default();
+                    (id, kws)
+                })
+                .collect()
+        });
         let kws_for = |id: CardId| -> Vec<Keyword> {
-            computed.iter().find(|c| c.id == id).map(|c| c.keywords.to_vec()).unwrap_or_default()
+            computed.iter().find(|(i, _)| *i == id).map(|(_, k)| k.clone()).unwrap_or_default()
         };
         let sum_n = |kws: &[Keyword], pick: fn(&Keyword) -> Option<i32>| -> i32 {
             kws.iter().filter_map(pick).sum()
@@ -2292,25 +2314,32 @@ impl GameState {
         // with no blockers assigned. Trigger source is the unblocked
         // attacker; consumers can read it via `Selector::TriggerSource`.
         let mut frenzy_deltas: Vec<(CardId, i32)> = Vec::new();
-        for atk in &self.attacking {
-            let blocked = self.blocker_count_of(atk.attacker) > 0;
-            if !blocked {
-                events.push(GameEvent::AttackerWentUnblocked { attacker: atk.attacker });
-                // CR 702.35 — Frenzy N: an unblocked attacker gets +N/+0.
-                // Read computed keywords so statically-granted Frenzy (Frenzy
-                // Sliver) counts too.
-                if let Some(cp) = self.computed_permanent(atk.attacker) {
-                    let fn_: i32 = cp
-                        .keywords
-                        .iter()
-                        .filter_map(|k| if let Keyword::Frenzy(x) = k { Some(*x as i32) } else { None })
-                        .sum();
-                    if fn_ > 0 {
-                        frenzy_deltas.push((atk.attacker, fn_));
+        // One gather for the whole sweep. `computed_permanent` is `&self` and
+        // this loop runs at depth 0, so unfrozen it rebuilds the full effect
+        // set once per unblocked attacker to read one keyword.
+        self.with_frozen_layers(|g| {
+            for atk in &g.attacking {
+                let blocked = g.blocker_count_of(atk.attacker) > 0;
+                if !blocked {
+                    events.push(GameEvent::AttackerWentUnblocked { attacker: atk.attacker });
+                    // CR 702.35 — Frenzy N: an unblocked attacker gets +N/+0.
+                    // Read computed keywords so statically-granted Frenzy
+                    // (Frenzy Sliver) counts too.
+                    if let Some(cp) = g.computed_permanent(atk.attacker) {
+                        let fn_: i32 = cp
+                            .keywords
+                            .iter()
+                            .filter_map(
+                                |k| if let Keyword::Frenzy(x) = k { Some(*x as i32) } else { None },
+                            )
+                            .sum();
+                        if fn_ > 0 {
+                            frenzy_deltas.push((atk.attacker, fn_));
+                        }
                     }
                 }
             }
-        }
+        });
         for (id, d) in frenzy_deltas {
             if let Some(c) = self.battlefield_find_mut(id) {
                 c.power_bonus += d;
