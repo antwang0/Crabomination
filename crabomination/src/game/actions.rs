@@ -10361,7 +10361,20 @@ impl GameState {
     /// spells like Stifle/Squelch that target stack spells/abilities;
     /// passing the casting spell's own `CardId` rejects a self-target
     /// at cast time.
+    /// The body reads the layer system several times over (Shroud,
+    /// Hexproof, the Artifact Ward keyword scan), each of which would
+    /// otherwise re-gather every continuous effect in the game; the whole
+    /// check is `&self`, so one freeze scope covers it.
     pub(crate) fn check_target_legality_with_source(
+        &self,
+        target: &Target,
+        caster: usize,
+        source_card_id: Option<CardId>,
+    ) -> Result<(), GameError> {
+        self.with_frozen_layers(|s| s.check_target_legality_inner(target, caster, source_card_id))
+    }
+
+    fn check_target_legality_inner(
         &self,
         target: &Target,
         caster: usize,
