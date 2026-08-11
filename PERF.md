@@ -968,13 +968,20 @@ remaining cost is per-card `computed_permanent` and the gather itself.
      Its body per hand card: `extra_cost_for_card_in_hand`,
      `cost_reduction_for_spell`, **a `ManaCost` clone** to append
      `colored_spell_tax_for_spell` (empty on every bench card),
-     `relax_cost_colors`, and `available_mana(state, seat)` **rebuilt per
-     card**. Two cheap levers, neither costed: make the clone a `Cow` the
-     way `7c75fb94` did for `relax_cost_colors_for_spell`; and re-cost
-     hoisting `available_mana` out of the filter — **the fourth pass's
-     no-win on exactly that is not authoritative any more**, it was
-     wall-clock on a different box at 8 G total, and callgrind would settle
-     it in one pair.
+     `relax_cost_colors`, and `available_mana(state, seat)`. **The lever is
+     not the clone and not a hoist — it is that these are five separate
+     whole-battlefield walks per call**, four of them `battlefield x
+     static_abilities` (`extra_cost_for_spell`, `cost_reduction_for_spell`,
+     `colored_spell_tax_for_spell`, `relax_cost_colors`) plus
+     `available_mana`'s producer scan. Same shape, and the same fix, as the
+     `DispatchScan` row that paid -1.118 %: one pass filling a small struct.
+     **Two levers that do *not* pay, by arithmetic, so they need no A/B:**
+     the `ManaCost` clone is ~12 k allocations, i.e. under 0.1 %; and
+     hoisting `available_mana` out of the filter cannot pay either —
+     12,114 calls over 7,024 `cast_candidates` calls is **1.72 per call**,
+     so at most 42 % of one walk is duplicated. That is also the correct
+     reading of the fourth pass's no-win on exactly that hoist: the
+     asymptotics were real, the *filter* just never reaches seven cards.
    * `affordance_probe_template` **31,110,605 / 0.97 % over 3,382**
      (9,199 each) — one library-stripped `GameState` clone per tick.
    * `pick_land_to_play` 26,629,385 / 0.83 % over 1,410;

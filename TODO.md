@@ -41,11 +41,11 @@ on every row; **18,612 tests green**, golden traces unchanged.
   dispatcher's event-kind presence mask, and **(8)**'s top two rows
   (`cast_candidates` 5.25 %, `check_state_based_actions` 4.14 %) — read
   `--auto=yes` on either first, both are real iterator-body work —
-  `cast_candidates` **is now broken down in PERF** and its cheapest lever
-  is `can_afford_in_state`'s per-hand-card `ManaCost` clone (`Cow` it, as
-  `7c75fb94` did) plus a callgrind re-cost of hoisting `available_mana`
-  out of that filter, whose fourth-pass no-win was wall-clock on another
-  box at 8 G total and does not bind.
+  `cast_candidates` **is now broken down in PERF**: its largest named
+  callee is `can_afford_in_state` (1.76 %, 12,114 calls, 4,664 Ir each),
+  which takes **five separate whole-battlefield walks per call** — the
+  `DispatchScan` shape again, and the same fix. The clone and the
+  `available_mana` hoist are ruled out there by arithmetic, not by an A/B.
   (0)/(1)/(5) are bot-quality questions wanting a ladder gate, not an Ir
   number.
 - **New filter, unswept.** The row that paid most was `.cloned()` before
