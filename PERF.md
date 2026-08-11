@@ -599,7 +599,8 @@ every row above.
 | 2026-08-11 | The SBA sweep's Hushbringer scan is gated on there being a death (`41551bcc`) | 3,256,158,471 Ir | 3,253,878,954 Ir (**-0.070 %**) | `creature_dies_triggers_suppressed` walks the battlefield x `static_abilities`, and `check_state_based_actions` ran it on all 82,634 sweeps although both reads sit inside `for id in dead`. `!dead.is_empty() && …` is exact — the value is only ever observed when the loop runs. Small because the scan inlines into the sweep and never surfaced as its own profile row; kept for that plus the invariant it states. |
 | 2026-08-11 | The trigger dispatcher takes one board scan, not four (`f28faaa0`) | 3,253,878,954 Ir | 3,217,512,298 Ir (**-1.118 %**) | Candidate (6a'), generalized. The dispatcher opened with **four** separate walks of `self.battlefield`, three of them also walking each card's `static_abilities`: `creature_dies_triggers_suppressed`, the ability-strip presence gate, `trigger_grant_sources`, `equip_granted_trigger_sources`. `dispatch_board_scan` -> `DispatchScan` fuses them, the device `stack.rs` already used for `SbaBoardScan`. `ability_strip_in_scope` splits into `ability_strip_off_battlefield` plus a caller-supplied battlefield leg. A `debug_assert!` in the fused scan cross-checks all four fields against the functions it replaces, so the whole suite audits it against drift — the same guarantee the strip gate already carried. |
 | 2026-08-11 | Spell-cast triggers walk the battlefield once (`125557eb`) | 3,217,512,298 Ir | 3,201,568,157 Ir (**-0.496 %**) | The same shape one function over, plus one of its own: `fire_spell_cast_triggers` collected `live: Vec<(CardId, usize)>` and then re-`find`-ed each id in the battlefield — **O(cards²) for nothing**, since nothing between the collect and the loop mutates. Three board walks become the one `DispatchScan`, the per-card grant lookups take the presence gates, and `stripped` is the `Vec` the gate returns instead of a `HashSet` built from it (empty on almost every board, which a slice answers with a length check). |
-| | **cumulative, twenty-fourth pass** | **3,318,705,480 Ir** | **3,201,568,157 Ir (-3.530 %)** | four rows, callgrind on the fixed six-game workload; bench output identical on every row (24 decided, 12 splits, rho -1.000), 18,612 tests green, golden traces unchanged |
+| 2026-08-11 | The combat damage step's read-only prefixes each hold one freeze scope (`56f6623f`) | 3,201,568,157 Ir | 3,177,885,139 Ir (**-0.740 %**) | Candidate (9), shape (a). The five damage-path `computed_permanent` callers are 138.5 M / 4.33 % and **each already freezes internally**, so there is no intra-call duplicate left; a blanket freeze over the damage loop is unsound because lifelink moves life totals between the reads and a `WhileCondition` static can read life. What *is* sound is each iteration's read-only prefix — every call from the first prevention probe through `scale_damage_to` is `&self` and `apply_prevention_shields` is the first `&mut self`. Three scopes: the per-(attacker, blocker) prefix (six probes + the scaling, `continue` becoming a `None` return); the strike-back gate once per attacker (`dealing_blocker_ids`' seven filters, one `damage_prevented_by_protection` per blocker, plus `attacker_takes_strike_back`); and the per-blocker strike-back prefix. Short-circuit order and every predicate unchanged. |
+| | **cumulative, twenty-fourth pass** | **3,318,705,480 Ir** | **3,177,885,139 Ir (-4.243 %)** | five rows, callgrind on the fixed six-game workload; bench output identical on every row (24 decided, 12 splits, rho -1.000), 18,612 tests green, golden traces unchanged |
 
 **What the pass leaves behind.** The largest row in five passes was not a
 gate, a memo or a representation — it was **`cloned()` sitting *before* the
@@ -620,6 +621,16 @@ worth writing even when each walk it replaces is individually invisible.**
 not appear anywhere in the profile — they inline — and the four walks
 together were still 1.118 % of the program. The count that predicts the win
 is `walks x battlefield x call count`, not any one walk's profile row.
+
+Third, from the damage-prefix row: **when every call on a hot path already
+freezes internally, the remaining duplicate gathers are *between* the
+calls, and the scope that removes them is bounded by the first `&mut self`
+call, not by the loop.** The eleventh pass's rule ("a `&mut self` path
+taking a `computed_permanent` outside a freeze scope") finds single sites;
+this is its plural form. **How to find the next one:** take a caller from
+`--tree=caller` on `computed_permanent` whose per-call cost is ~2,000+,
+read *upward* to the nearest `&mut self` call, and ask how many other
+gathering reads sit between the two.
 
 ## Profile of record
 
@@ -983,7 +994,10 @@ remaining cost is per-card `computed_permanent` and the gather itself.
    re-derive from scratch what it contains — a `_with(computed)` variant
    would be nearly free, but it pins the layer view to the step's start,
    which is arguably *more* CR 510.2-correct and is still a behaviour
-   change. Golden traces decide (b); (a) needs nothing.
+   change. Golden traces decide (b); (a) needed nothing and **is PAID**
+   (`56f6623f`, -0.740 %) — three scopes, one per prefix. (b) is all that
+   is left of this candidate, and it is a behaviour question, not a perf
+   one.
 
 **The profile of record was retaken at `125557eb`** (the twenty-fourth
 pass's tip) and every share quoted in the candidates above is from that

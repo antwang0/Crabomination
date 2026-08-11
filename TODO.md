@@ -16,8 +16,8 @@ reference and want their own triage pass):
 
 ## NEXT (handoff — rewrite each run, keep under 15 lines)
 
-Branch `claude/modern_decks`. **Twenty-fourth pass: four perf commits,
--3.530 % Ir** (3,318,705,480 -> 3,201,568,157, base `4d5fbc69`,
+Branch `claude/modern_decks`. **Twenty-fourth pass: five perf commits,
+-4.243 % Ir** (3,318,705,480 -> 3,177,885,139, base `4d5fbc69`,
 `profiling-fast --no-default-features` callgrind). Bench output identical
 on every row; **18,612 tests green**, golden traces unchanged.
 
@@ -28,16 +28,21 @@ on every row; **18,612 tests green**, golden traces unchanged.
   (`f28faaa0`, **-1.118 %**, new `DispatchScan` + `dispatch_board_scan`,
   debug cross-checked against the four it replaces); `fire_spell_cast_
   triggers` does the same and drops an O(cards²) id round-trip
-  (`125557eb`, -0.496 %).
-- **Next up.** Profile **retaken at the tip** — shares in PERF are fresh.
-  Best remaining: **(9)** the five damage-path `computed_permanent`
-  callers, 138.5 M / 4.33 %; this run established that all five already
-  freeze *internally*, so the only lever is a cross-call scope — do shape
-  (a), the strictly-`&self` prefix of one (attacker, blocker) iteration,
-  which is sound by construction; shape (b) (reuse the damage step's
-  existing `computed` slice) is a behaviour change, golden traces decide.
-  Then (6b) the dispatcher's event-kind presence mask. (0)/(1)/(5) are
-  bot-quality questions wanting a ladder gate, not an Ir number.
+  (`125557eb`, -0.496 %); the combat damage step's three read-only
+  prefixes each hold one freeze scope (`56f6623f`, -0.740 %, candidate
+  (9) shape (a)).
+- **Next up.** Profile retaken at `125557eb`; the last row moved 0.74 % of
+  it, so the shares are good to a tenth of a point. Candidate (9)'s
+  remaining half is shape **(b)** — the damage step already holds
+  `computed: &[ComputedPermanent]` and the five helpers re-derive it — but
+  that pins the layer view to the step's start, so it is a behaviour
+  question (arguably *more* CR 510.2-correct); golden traces decide, and
+  the trace update needs a one-line justification. Then **(6b)** the
+  dispatcher's event-kind presence mask, and **(8)**'s top two rows
+  (`cast_candidates` 5.25 %, `check_state_based_actions` 4.14 %) — read
+  `--auto=yes` on either first, both are real iterator-body work.
+  (0)/(1)/(5) are bot-quality questions wanting a ladder gate, not an Ir
+  number.
 - **New filter, unswept.** The row that paid most was `.cloned()` before
   the `.filter` that discards the clones. The syntactic form is clean
   workspace-wide; the semantic one ("how much of what this loop builds
@@ -49,6 +54,15 @@ on every row; **18,612 tests green**, golden traces unchanged.
   (~0.1 % on the wider pools) still wants its top cause**: `play_one_game_
   traced` ends on either `actions >= max_actions` or `stale >= 8` and
   reports neither, so the first move is to make `GameOutcome` say which.
+- **Final checks, this run.** `cargo test -p crabomination -p
+  crabomination_tests` **18,612 passed / 0 failed / 1 ignored**, golden
+  traces green, run after the last engine commit. `cargo clippy
+  --workspace --all-targets` **exit 0, zero warnings**, client included
+  (ran twice: after the four trigger rows and again after the combat row).
+  **No `--bench` anchor run**: at -4.243 % the pass is still under what
+  this box resolves by wall-clock (three back-to-back runs of one binary
+  swing 23 %), so the callgrind numbers are the measurement of record and
+  the Baseline anchor stands — same call as `c7bdd850`.
 - **Env.** No `cargo-nextest`; `cargo test -p crabomination -p
   crabomination_tests` is the gate (~25 min cold, ~40 s warm, always with
   `CARGO_INCREMENTAL=0`). Cold `profiling-fast` build ~20 min, engine-only
