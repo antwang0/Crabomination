@@ -16,8 +16,8 @@ reference and want their own triage pass):
 
 ## NEXT (handoff — rewrite each run, keep under 15 lines)
 
-Branch `claude/modern_decks`. **Twenty-first pass: four perf commits,
--1.423 % Ir** (3,501,692,629 -> 3,451,879,102, base `e2d030c6`,
+Branch `claude/modern_decks`. **Twenty-first pass: five perf commits,
+-2.218 % Ir** (3,501,692,629 -> 3,424,021,668, base `e2d030c6`,
 `profiling-fast --no-default-features` callgrind). Bench output identical
 on every row, suite **18,995** green, workspace clippy clean (client
 included — the apt deps below install cleanly here).
@@ -27,14 +27,17 @@ included — the apt deps below install cleanly here).
   (`271c7d14`, -0.418 %); `died_card_snapshots` is insertion-ordered
   (`ea8cc1fd`, -0.278 %, *and a bug fix*); `auto_tap`'s inner loops stop
   rebuilding constants (`f2fb6722`, **-0.622 %** — a comment asserting a
-  value was "recomputed each iteration because…" was simply wrong).
+  value was "recomputed each iteration because…" was simply wrong); and
+  `auto_tap` builds its source table only when it will tap (`bd3fd945`,
+  **-0.807 %**, the run's largest row).
 - **The `HashMap`-order audit TODO has been asking for is done.** All 31
   map/set fields of `GameState`/`ColdState`/`Player`; exactly one leak,
   fixed. The robustness section records the three sites that look risky
   and are not, so nobody re-runs the survey.
-- **Next up.** PERF candidate (0) is `mana_source_table`, **3.83 % over
-  8,892 calls**, rebuilt on every auto-tap even when the pool already
-  covers the cost — two probes written out. Then candidate (1), the other
+- **Next up.** PERF candidate (0) is the *memo* half of
+  `mana_source_table` — the gate took the calls that tap nothing, so
+  **re-profile before costing it**; every share on file predates
+  `bd3fd945`. Then candidate (1), the other
   half of the `RawTable::clone` block (seven `ColdState` maps + nine
   `GameState` hash fields, 0.41 %), **gated on serde**: a `HashMap` is a
   JSON object, a `Vec` newtype an array of pairs. `pick_attacks_scored`
