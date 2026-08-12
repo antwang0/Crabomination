@@ -39,12 +39,14 @@ fn bot_for(profile: &str) -> Option<Box<dyn Bot>> {
     Some(Box::new(HeuristicBot::with_weights(w)))
 }
 
-fn goal_name(g: Goal) -> &'static str {
+fn goal_name(g: Goal) -> String {
     match g {
-        Goal::WinThisTurn => "win",
-        Goal::SurviveTurn => "survive",
-        Goal::ClearOpposingCreatures => "clear",
-        Goal::TakeNoDamage => "no-damage",
+        Goal::WinThisTurn => "win".into(),
+        Goal::SurviveTurn => "survive".into(),
+        Goal::ClearOpposingCreatures => "clear".into(),
+        Goal::TakeNoDamage => "no-damage".into(),
+        Goal::WinWithin(n) => format!("win+{n}"),
+        Goal::SurviveWithin(n) => format!("live+{n}"),
     }
 }
 

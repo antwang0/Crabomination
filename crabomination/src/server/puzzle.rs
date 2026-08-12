@@ -72,6 +72,32 @@ pub enum Goal {
     ClearOpposingCreatures,
     /// Finish the turn having taken no damage at all.
     TakeNoDamage,
+    /// Win within this turn and the next `n` turns.
+    ///
+    /// Why the multi-turn goals exist: every single-turn goal is, by
+    /// construction, inside the horizon the heuristic's combat sims
+    /// already search — they simulate a full turn cycle with exact
+    /// damage math, which is why the first corpus batch certified 0/7.
+    /// A position whose right play only pays off *next* turn is outside
+    /// that horizon, and round 31's result says that is where the real
+    /// edge lives. These are the goals that can express it.
+    WinWithin(u32),
+    /// Still alive after this turn and the next `n` turns. The goal that
+    /// can ask "should you attack, or keep those creatures back to
+    /// block?" — a question no this-turn goal can pose, because the
+    /// punishment lands on the opponent's turn.
+    SurviveWithin(u32),
+}
+
+impl Goal {
+    /// How many turns past the current one a playout has to run before
+    /// this goal can be judged.
+    pub fn horizon(self) -> u32 {
+        match self {
+            Goal::WinWithin(n) | Goal::SurviveWithin(n) => n,
+            _ => 0,
+        }
+    }
 }
 
 /// A goal's verdict on a position, evaluated after a line has been played
@@ -92,6 +118,12 @@ fn goal_met(before: &GameState, after: &GameState, seat: usize, goal: Goal) -> b
         }
         Goal::TakeNoDamage => {
             after.game_over.is_none() && after.players[seat].life >= before.players[seat].life
+        }
+        Goal::WinWithin(_) => after.game_over == Some(Some(seat)),
+        // Surviving a horizon means not having lost by the end of it;
+        // winning inside the window counts as surviving it.
+        Goal::SurviveWithin(_) => {
+            after.game_over != Some(Some(1 - seat)) && after.players[seat].is_alive()
         }
     }
 }
@@ -420,12 +452,12 @@ fn synced_bot(g: &GameState) -> HeuristicBot {
 /// this position unaided, i.e. the puzzle is trivial. That is exactly the
 /// "greedy doesn't stumble into it" criterion a puzzle has to fail to be
 /// worth keeping.
-fn resolve(state: &GameState, seat: usize) -> GameState {
+fn resolve(state: &GameState, seat: usize, horizon: u32) -> GameState {
     let mut g = state.clone();
     let mut bots = playout_bots(&g);
-    let start_turn = g.turn_number;
-    let mut fuel = 400u32;
-    while fuel > 0 && !g.is_game_over() && g.turn_number == start_turn {
+    let last_turn = g.turn_number + horizon;
+    let mut fuel = 400u32 * (1 + horizon);
+    while fuel > 0 && !g.is_game_over() && g.turn_number <= last_turn {
         fuel -= 1;
         let acted = (0..2).any(|s| {
             let order = if s == 0 { seat } else { 1 - seat };
@@ -451,7 +483,7 @@ fn search(
     budget: usize,
     truncated: &mut bool,
 ) -> Option<Vec<GameAction>> {
-    if goal_met(origin, &resolve(state, seat), seat, goal) {
+    if goal_met(origin, &resolve(state, seat, goal.horizon()), seat, goal) {
         return Some(Vec::new());
     }
     if budget == 0 || state.is_game_over() {
@@ -464,9 +496,21 @@ fn search(
         if next.perform_action(a.clone()).is_err() {
             continue;
         }
+        // A combat declaration does not advance the step on its own, and
+        // an *empty* one leaves no trace at all: `attacking()` stays
+        // empty, so the enumerator offers the identical declaration at
+        // the next node and the search spins on it until the depth
+        // budget runs out. That is why declining to attack -- the whole
+        // point of a hold-back puzzle -- certified as unsolvable.
+        // `HeuristicBot` solves this with a per-combat latch on itself;
+        // the harness has no such state, so it steps past the declaration
+        // window explicitly before handing control on.
+        if matches!(a, GameAction::DeclareAttackers(_) | GameAction::DeclareBlockers(_)) {
+            advance_past_declaration(&mut next, seat);
+        }
         // Let the opponent and the engine respond, so the line is judged
         // on what actually happens rather than on the instant it resolves.
-        settle(&mut next, seat);
+        settle(&mut next, seat, goal.horizon());
         if let Some(mut rest) = search(origin, &next, seat, goal, budget - 1, truncated) {
             let mut line = vec![a];
             line.append(&mut rest);
@@ -494,12 +538,12 @@ fn search(
 /// The opponent is piloted by the default heuristic throughout, which is
 /// what makes a puzzle's answer robust rather than a scripted line —
 /// "win this turn" has to survive the opponent blocking as well as it can.
-fn settle(g: &mut GameState, seat: usize) {
+fn settle(g: &mut GameState, seat: usize, horizon: u32) {
     let opp = 1 - seat;
     let mut bots = playout_bots(g);
-    let start_turn = g.turn_number;
-    let mut fuel = 400u32;
-    while fuel > 0 && !g.is_game_over() && g.turn_number == start_turn {
+    let last_turn = g.turn_number + horizon;
+    let mut fuel = 400u32 * (1 + horizon);
+    while fuel > 0 && !g.is_game_over() && g.turn_number <= last_turn {
         fuel -= 1;
         // Pending decisions are answered by policy for whichever seat owns
         // them — including `seat`. A puzzle whose answer is a decision
@@ -514,13 +558,38 @@ fn settle(g: &mut GameState, seat: usize) {
             }
             return; // an unanswerable decision would spin the loop
         }
+        // The seat under test gets first refusal, and the order is
+        // load-bearing. `HeuristicBot` returns `Some(PassPriority)` from
+        // most branches rather than `None`, so letting the opponent act
+        // first meant this loop never stopped: it consumed the seat's
+        // own block window, the engine advanced to damage unblocked, and
+        // every multi-turn puzzle certified as unsolvable while the
+        // enumeration was perfectly correct.
+        if has_substantive_choice(g, seat) {
+            return;
+        }
         if let Some(a) = bots[opp].next_action(g, opp)
             && g.perform_action(a).is_ok()
         {
             continue;
         }
-        if has_substantive_choice(g, seat) {
+        if g.perform_action(GameAction::PassPriority).is_err() {
             return;
+        }
+    }
+}
+
+/// Pass priority until the declaration step is behind us, so a declined
+/// declaration cannot be re-offered forever.
+fn advance_past_declaration(g: &mut GameState, seat: usize) {
+    let step = g.step;
+    let mut fuel = 32u32;
+    while fuel > 0 && !g.is_game_over() && g.step == step {
+        fuel -= 1;
+        let mut opp_bot = synced_bot(g);
+        let opp = 1 - seat;
+        if opp_bot.next_action(g, opp).is_some_and(|a| g.perform_action(a).is_ok()) {
+            continue;
         }
         if g.perform_action(GameAction::PassPriority).is_err() {
             return;
@@ -543,13 +612,13 @@ fn has_substantive_choice(g: &GameState, seat: usize) -> bool {
 /// Same latch-sync as every other playout here (`playout_bots`): a bot
 /// handed a position mid-combat must not re-declare what has already
 /// been declared.
-pub fn play_with(state: &GameState, seat: usize, bot: &mut dyn Bot) -> GameState {
+pub fn play_with(state: &GameState, seat: usize, bot: &mut dyn Bot, horizon: u32) -> GameState {
     let mut g = state.clone();
     let opp = 1 - seat;
     let mut opp_bot = synced_bot(&g);
-    let start_turn = g.turn_number;
-    let mut fuel = 400u32;
-    while fuel > 0 && !g.is_game_over() && g.turn_number == start_turn {
+    let last_turn = g.turn_number + horizon;
+    let mut fuel = 400u32 * (1 + horizon);
+    while fuel > 0 && !g.is_game_over() && g.turn_number <= last_turn {
         fuel -= 1;
         if bot.next_action(&g, seat).is_some_and(|a| g.perform_action(a).is_ok()) {
             continue;
@@ -566,13 +635,26 @@ pub fn play_with(state: &GameState, seat: usize, bot: &mut dyn Bot) -> GameState
 
 /// Whether `bot` solves the position: play it out, then ask the goal.
 pub fn passes(state: &GameState, seat: usize, goal: Goal, bot: &mut dyn Bot) -> bool {
-    goal_met(state, &play_with(state, seat, bot), seat, goal)
+    goal_met(state, &play_with(state, seat, bot, goal.horizon()), seat, goal)
+}
+
+/// Test-only view of `settle`.
+#[doc(hidden)]
+pub fn debug_settle(g: &mut GameState, seat: usize, horizon: u32) {
+    settle(g, seat, horizon);
+}
+
+/// Test-only view of the autopilot playout, so a "trivial" verdict can
+/// be attributed rather than assumed.
+#[doc(hidden)]
+pub fn debug_resolve(state: &GameState, seat: usize, horizon: u32) -> GameState {
+    resolve(state, seat, horizon)
 }
 
 /// Whether the default heuristic solves it unaided — the triviality test
 /// a candidate puzzle has to fail to earn a place in the corpus.
 pub fn solved_by_default(state: &GameState, seat: usize, goal: Goal) -> bool {
-    goal_met(state, &resolve(state, seat), seat, goal)
+    goal_met(state, &resolve(state, seat, goal.horizon()), seat, goal)
 }
 
 #[cfg(test)]
@@ -707,7 +789,7 @@ mod tests {
         let id = g.add_card_to_battlefield(0, vanilla("Beater", 5, 5));
         g.clear_sickness(id);
         advance_to(&mut g, TurnStep::DeclareAttackers);
-        let solved_by_default = goal_met(&g, &resolve(&g, 0), 0, Goal::WinThisTurn);
+        let solved_by_default = goal_met(&g, &resolve(&g, 0, 0), 0, Goal::WinThisTurn);
         let depth = solve(&g, 0, Goal::WinThisTurn, 3).map(|c| c.depth);
         assert_eq!(solved_by_default, depth == Some(0));
     }
@@ -755,7 +837,7 @@ mod tests {
             .perform_action(GameAction::DeclareBlockers(Vec::new()))
             .expect("decline blocks");
         assert!(
-            !goal_met(&g, &resolve(&unblocked, 0), 0, Goal::SurviveTurn),
+            !goal_met(&g, &resolve(&unblocked, 0, 0), 0, Goal::SurviveTurn),
             "taking 3 at 3 life must not count as surviving"
         );
     }

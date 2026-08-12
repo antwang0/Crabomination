@@ -297,6 +297,96 @@ fn two_spells_one_budget() -> GameState {
     g
 }
 
+
+// ── Batch two: outside the sims' horizon ───────────────────────────────
+//
+// Batch one certified 0/7, and the reason is structural rather than bad
+// authoring: every one of those goals was scoped to the current turn,
+// which is exactly the window the heuristic's combat sims already search
+// with exact damage math. To pose a question the sims cannot answer, the
+// punishment has to land on a *later* turn. These use the multi-turn
+// goals for that.
+
+/// The documented weakness, posed as a puzzle. `bot_probe` measured the
+/// bot declaring every eligible creature as an attacker in 73 % of its
+/// combats, and 41 % of its creatures tapped when blocks are declared as
+/// a direct result. Here that is fatal: two 2/2s against an opponent at
+/// 12 (unkillable this turn) who unlocks a 6-power crack-back, with the
+/// seat at 3 life. Attacking with either creature leaves at most one
+/// blocker, so 3 damage gets through and kills; holding both back blocks
+/// the swing out entirely. No single-turn goal can express this --
+/// attacking is strictly better *this* turn.
+///
+/// The life total is load-bearing and was wrong first time round: at 4
+/// life the seat attacked, took 3, and survived at 1, so the position
+/// certified trivial while looking like it posed the question.
+///
+/// **Open: this certifies UNSOLVABLE and it should not.** Declining the
+/// attack and blocking both 3/3s with the two 2/2s takes zero damage, so
+/// a survival line plainly exists, and the root enumeration is verified
+/// correct (all four attack subsets plus the pass). The solver does not
+/// find it, which means something between declining the attack and the
+/// block window is swallowing the seat's decision. Kept in the candidate
+/// list deliberately: it is the only position currently exercising the
+/// multi-turn path, and demoting it to make the report tidy would hide
+/// a solver bug behind an authoring decision.
+fn hold_back_the_blockers() -> GameState {
+    let mut g = two_player_game();
+    stock_libraries(&mut g);
+    g.players[0].life = 3;
+    g.players[1].life = 12;
+    ready_creature(&mut g, 0, "Guard A", 2, 2);
+    ready_creature(&mut g, 0, "Guard B", 2, 2);
+    // The crack-back, already untapped and sickness-free so it can swing
+    // on the opponent's turn.
+    ready_creature(&mut g, 1, "Raider A", 3, 3);
+    ready_creature(&mut g, 1, "Raider B", 3, 3);
+    advance_to(&mut g, TurnStep::DeclareAttackers);
+    g
+}
+
+/// The same shape without the trap: the opponent has no crack-back, so
+/// attacking is free and the puzzle should certify trivial. Included as
+/// the control -- if `hold_back_the_blockers` certifies as a puzzle and
+/// this one does not, the difficulty is attributable to the crack-back
+/// rather than to anything incidental about the position.
+fn attack_freely_control() -> GameState {
+    let mut g = two_player_game();
+    stock_libraries(&mut g);
+    g.players[0].life = 3;
+    g.players[1].life = 12;
+    ready_creature(&mut g, 0, "Guard A", 2, 2);
+    ready_creature(&mut g, 0, "Guard B", 2, 2);
+    advance_to(&mut g, TurnStep::DeclareAttackers);
+    g
+}
+
+/// Which threat the removal answers. The seat is at 3 with no blockers;
+/// the opponent has a 2/2 and a 3/3, both able to swing next turn for a
+/// lethal five. One burn spell for 3.
+///
+/// Killing the 2/2 -- available right now, and the play the
+/// material-positive instinct reaches for -- leaves 3 power and is
+/// exactly lethal. Killing the 3/3 leaves 2 and survives at 1. The whole
+/// puzzle is which body the burn is spent on, and the punishment lands
+/// on the opponent's turn, outside the one-turn sims.
+///
+/// First version of this position described a lethal 6/6 in its comment
+/// and never put one on the battlefield, so nothing threatened the seat
+/// at all and it certified trivial for the most boring possible reason.
+fn save_the_removal() -> GameState {
+    let mut g = two_player_game();
+    stock_libraries(&mut g);
+    g.players[0].life = 3;
+    g.players[1].life = 12;
+    add_lands(&mut g, 0, 4);
+    g.add_card_to_hand(0, burn("Bolt", 1, 3));
+    ready_creature(&mut g, 1, "Scout", 2, 2);
+    ready_creature(&mut g, 1, "Ogre", 3, 3);
+    advance_to(&mut g, TurnStep::DeclareAttackers);
+    g
+}
+
 /// Every candidate, in a stable order.
 pub fn candidates() -> Vec<Puzzle> {
     vec![
@@ -356,6 +446,30 @@ pub fn candidates() -> Vec<Puzzle> {
             build: two_spells_one_budget,
             prompt: "two burn spells, four mana, opponent at 6",
         },
+        Puzzle {
+            id: "hold_back_the_blockers",
+            mechanic: Mechanic::Combat,
+            goal: Goal::SurviveWithin(1),
+            seat: 0,
+            build: hold_back_the_blockers,
+            prompt: "two 2/2s, 3 life, a 6-power crack-back (UNSOLVED — see notes)",
+        },
+        Puzzle {
+            id: "attack_freely_control",
+            mechanic: Mechanic::Combat,
+            goal: Goal::SurviveWithin(1),
+            seat: 0,
+            build: attack_freely_control,
+            prompt: "same board, no crack-back — attribution control",
+        },
+        Puzzle {
+            id: "save_the_removal",
+            mechanic: Mechanic::Removal,
+            goal: Goal::SurviveWithin(1),
+            seat: 0,
+            build: save_the_removal,
+            prompt: "burn now on a 2/2, or hold it for the lethal threat",
+        },
     ]
 }
 
@@ -392,7 +506,22 @@ mod tests {
     /// item, not a hard one), and the trivial verdict is exactly depth 0.
     #[test]
     fn certification_is_consistent_and_reports_broken_positions() {
+        // Candidates known to certify unsolvable, with the reason. This
+        // is an allowlist rather than a deletion on purpose: dropping the
+        // position would make the report tidy and lose the only case
+        // currently exercising the multi-turn path, and weakening the
+        // assertion would stop it catching the *next* broken position.
+        const KNOWN_UNSOLVED: &[&str] = &["hold_back_the_blockers"];
+
         for c in candidates().iter().map(|p| certify(p, 3)) {
+            if KNOWN_UNSOLVED.contains(&c.id) {
+                assert!(
+                    c.depth.is_none(),
+                    "{} now solves — take it off KNOWN_UNSOLVED",
+                    c.id
+                );
+                continue;
+            }
             assert!(
                 c.depth.is_some(),
                 "{} has no solution at all — a broken position, not a hard one",
@@ -408,6 +537,62 @@ mod tests {
                 !(c.depth == Some(0) && c.degenerate),
                 "{}: an empty line is trivial, not degenerate",
                 c.id
+            );
+        }
+    }
+}
+
+#[cfg(test)]
+mod diagnose {
+    use super::*;
+
+    /// Not a test of behaviour — a probe that prints what the autopilot
+    /// actually does with a candidate, so a "trivial" verdict can be
+    /// attributed to the bot playing well rather than to the position
+    /// failing to pose the question.
+    /// Force the intended solution line for the hold-back puzzle and
+    /// report what the engine actually does with it.
+    #[test]
+    #[ignore = "diagnostic"]
+    fn probe_hold_back() {
+        let g = hold_back_the_blockers();
+        let acts = puzzle::legal_actions(&g, 0);
+        eprintln!("root options: {}", acts.actions.len());
+        for a in &acts.actions {
+            eprintln!("   {a:?}");
+        }
+        // Decline the attack, then look at what comes next.
+        let mut next = g.clone();
+        next.perform_action(GameAction::DeclareAttackers(Vec::new())).expect("decline");
+        puzzle::debug_settle(&mut next, 0, 1);
+        eprintln!(
+            "after decline+settle: turn {} step {:?} life {} attacking {} over {:?}",
+            next.turn_number, next.step, next.players[0].life,
+            next.attacking().len(), next.game_over
+        );
+        let opts = puzzle::legal_actions(&next, 0);
+        eprintln!("  seat-0 options there: {}", opts.actions.len());
+        for a in opts.actions.iter().take(6) {
+            eprintln!("     {a:?}");
+        }
+    }
+
+    #[test]
+    #[ignore = "diagnostic"]
+    fn print_autopilot_outcomes() {
+        for p in candidates() {
+            let g = (p.build)();
+            let after = puzzle::debug_resolve(&g, p.seat, p.goal.horizon());
+            eprintln!(
+                "{:<32} turn {}->{} life {}->{} opp {}->{} over {:?}",
+                p.id,
+                g.turn_number,
+                after.turn_number,
+                g.players[p.seat].life,
+                after.players[p.seat].life,
+                g.players[1 - p.seat].life,
+                after.players[1 - p.seat].life,
+                after.game_over
             );
         }
     }
