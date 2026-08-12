@@ -178,12 +178,14 @@ record is the instruction count. Read the `calib` column before any absolute.
 | `1112e709` (22nd) | 08-11 | 3 tight then 8 idle | 90.03 (1.4 %) then **96.53** (12.5 %) | 2.80 GHz | *the tight three-run sample was the bottom of the distribution, not a regression* — a sample whose spread is smaller than the effect is the trap. Ir says the tip does 4.3 % less work |
 | `15ec11c1` (25th) | 08-11 | 6 runs; first 3 are warm-up (calib 252 on run 2) | settled 3: **91.65** | 2.80 GHz, calib 51-62 | wrong box for the 95.64 block — these belong with the 67.31 block below |
 | `ac8e3b50` (26th) | 08-11 | 3 runs, 72.97-77.12 | — | 2.80 GHz, calib 51-66 | **`release-fast`**, so the absolutes do not chain to a `release` anchor at all |
+| `247ee13d` (27th) | 08-12 | 1 run, 78.48 | — | 2.80 GHz, calib 50 | `profiling-fast`; run for the workload facts, not the wall-clock. The pass is worth -0.552 %, an order of magnitude under what `--bench` resolves here |
 
 **What every one of them agrees on, which is the part that matters**:
-`turns_per_game` **26.98** (nine consecutive anchors), `stalls` **0**,
-`determinism ok` on every run, `decisions` **193,232 byte-identical**,
-`decisions_per_game` 603.9, `peak_rss_mib` 21.4-22.3 at `release`
-(23.9-24.6 at `release-fast`).
+`turns_per_game` **26.98** (ten consecutive anchors), `stalls` **0** —
+`stalls_by` reading `cap 0 / stuck 0 / draw 0` — `determinism ok` on every
+run with all 160 pairs split and `rho -1.000`, `decisions` **193,232
+byte-identical**, `decisions_per_game` 603.9, `peak_rss_mib` 21.4-22.3 at
+`release` (20.4-24.6 at `release-fast` / `profiling-fast`).
 
 ~~**The `--decks fixed` bench is exactly reproducible and the wider pools
 are not**~~ — **fixed 2026-08-11 (`841dd40b`)**. Every pool now reproduces
