@@ -55,7 +55,7 @@ lives.
   still not been re-run since `ed4c152c`.** Client apt deps are still not
   installed by the SessionStart hook; the four-package `apt-get install`
   below fixes it in a minute.
-- **Trackers.** PERF **1.19k** (was 1.45k — Baseline's four cross-check
+- **Trackers.** PERF **1.23k** (was 1.45k — Baseline's four cross-check
   paragraphs collapsed to one table, its six historical anchor blocks to
   another with their lessons kept as bullets, and the profile-of-record
   section's three superseded tables to a pointer). TODO ~1.09k, roadmap
