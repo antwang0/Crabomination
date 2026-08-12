@@ -194,7 +194,9 @@ on a fixed seed: `--bench --threads 1 --games 300 --seed 11` reads decisions
 2 runs), `determinism ok` on all seven, against cube's 1,129,690 /
 1,130,785 / 1,130,706 and two FAILs before. `--decks all`'s stall rate is a
 stable **0.12 %** (6 draws / 5,100 games, `cap 0 / stuck 0`) where it used
-to move run to run. No number in this file moved — all of them are
+to move run to run — and **2 undecided / 10,200 games (0.02 %)** on
+`--games 600 --seed 20250808` (2026-08-12), i.e. it is rules draws at a
+seed-dependent rate and there is nothing to fix. No number in this file moved — all of them are
 `--decks fixed` or the six-game callgrind workload — but the wider pools are
 now usable as measurements.
 
@@ -376,6 +378,19 @@ that merely appears nearby.* The measurement that did pay came from reading
 what was left: `available_mana`'s cost is not the walk, it is the
 `battlefield_find` inside `granted_abilities_with`.
 
+**The pass's second measurement, which closes a direction rather than
+opening one.** Candidate (0) — half the program, untouched for six passes —
+has always carried the same first probe: *how often does the attack search
+depart from greedy?* It was run (a temporary counter on `choose_scored`'s
+index, `release-fast`, `--decks all`, 10,200 games, 110,000 searches) and
+the answer is **46 %**: greedy 54.0 %, the empty declaration 35.0 %, a
+greedy-minus-one 11.0 %. **Every candidate class pays for itself**, so there
+is no pruning row here and the entry is now explicitly a
+make-each-simulation-cheaper item. *A candidate that has sat at the top of a
+list for six passes is worth an hour of measurement before it is worth an
+hour of code* — this one cost one instrumented build and a two-minute run,
+and it redirects the largest item in the file.
+
 **Filters and devices these six passes leave behind**, the part that
 outlives the numbers:
 
@@ -509,14 +524,32 @@ remaining cost is per-card `computed_permanent` and the gather itself.
    this workload is the binary *swing with the one creature or don't*
    (1,166 = 2 x 583, the other 47 returning early on an empty greedy set).
    **That makes the "attack with nobody" candidate about half of every
-   simulation the engine runs — ~25 % of the program.** The probe is
-   therefore one counter, not a study: log `choose_scored`'s returned index
-   over a `--decks all` run and read how often index 1 (the empty
-   declaration) wins. If it rarely does, the gate to design is a cheap
-   dominance test that skips it, priced against a win-rate run. Note the
-   workload caveat before generalizing: `--decks fixed` almost never
-   presents a multi-attacker board, so the minus-one candidates this
-   profile never sees may matter on `cube` / `all`.
+   simulation the engine runs — ~25 % of the program on this workload.**
+
+   **The probe was run, 2026-08-12, and it settles the pruning question in
+   the negative.** A temporary counter on `choose_scored`'s returned index,
+   `release-fast`, `--decks all --games 600 --threads 3 --seed 20250808
+   --paired` (10,200 games, 110,000 searches, 370,348 simulations):
+
+   | outcome | count | share |
+   |---|---|---|
+   | greedy (index 0) wins | 59,383 | **54.0 %** |
+   | the empty declaration (index 1) wins | 38,532 | **35.0 %** |
+   | a greedy-minus-one wins | 12,085 | **11.0 %** |
+   | searches offering more than two candidates | 58,823 | 53.5 % |
+
+   **The search departs from greedy 46 % of the time, and "attack with
+   nobody" alone wins better than a third of all declarations** — so every
+   candidate class pays for itself and there is no dead branch to prune.
+   Among the 53.5 % of searches that offer minus-one candidates, one wins
+   ~21 % of the time. **Candidate (0) is therefore not a
+   fewer-simulations item; the only lever on it is making a simulation
+   cheaper, which is what every other entry on this list already does.**
+   Note also that `--decks fixed` under-represents the search by a factor
+   of ~1.8: **3.37 simulations per search on `all` against 1.85 on
+   `fixed`**, because the fixed archetypes rarely present a multi-attacker
+   board. Do not re-run this probe; if the bot's declaration policy
+   changes, re-run it then.
 1. **`would_accept`, 491,192,545 / 15.34 %** — the affordance probe, one
    `GameState::clone` + one `perform_action_inner` per candidate action.
    What is unexamined is the *probe count*, i.e. how many candidates the

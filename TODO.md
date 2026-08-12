@@ -27,15 +27,18 @@ the filter runs 1.13 cards per sweep, not 1.72, so there is nothing to
 hoist; the denominator was `cast_candidates`, which is not where the filter
 lives.
 
-- **Next up — candidate (0), and it is now one counter, not a study.**
-  `pick_attacks_scored` runs **1,166 sims over 630 declarations at 1.33 M Ir
-  each (0.0425 % of the program per sim)**, and on `--decks fixed` nearly
-  every one is the binary "swing with the one creature or don't", which
-  makes the *empty-attack candidate ~25 % of the program*. Log
-  `choose_scored`'s returned index over a `--decks all` run; if index 1
-  rarely wins, design the dominance skip and gate it on win rate. Then
-  candidate (11) (the `battlefield_find`-in-a-loop family the row above
-  generalizes — mechanical, cannot change behaviour) and (9)(b).
+- **Candidate (0) is measured and the pruning direction is dead.** The
+  probe ran on `--decks all` (10,200 games, 110,000 searches): the search
+  departs from greedy **46 %** of the time — greedy 54.0 %, the empty
+  declaration 35.0 %, a greedy-minus-one 11.0 % — so no candidate class is
+  dead weight. Half the program stays where it is; the only lever is making
+  one simulation cheaper (1.33 M Ir each), which is the rest of the list.
+  **So next up is candidate (11)** — the `battlefield_find`-in-a-loop
+  family the pass's row generalizes, mechanical and behaviour-proof; the
+  enumeration is already done and `creature_redirects_damage_to_controller`
+  (0.55 %) is its one warm member, though its cost is the
+  `computed_permanent` inside it, not the find. Then (9)(b) and (12)
+  `grant_scan`.
 - **Filters.** The twelfth is owed. Pass 25's suggestion still stands: *a
   predicate two callers each re-derive*. Pass 24's clone-then-narrow filter
   is still unswept semantically — `.keywords.to_vec()` inside an `.any()`
