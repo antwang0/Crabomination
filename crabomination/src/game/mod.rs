@@ -7046,8 +7046,23 @@ impl GameState {
         cost: &'a crate::mana::ManaCost,
         kind: &crate::mana::SpellKind,
     ) -> std::borrow::Cow<'a, crate::mana::ManaCost> {
+        Self::relax_cost_colors_known(self.spend_mana_as_any_color_for_spell(seat, kind), cost)
+    }
+
+    /// The relaxation itself, with the permission already answered — the one
+    /// body the three `relax_cost_colors*` forms share. Borrowed when the
+    /// permission is inactive, which is every board without a Lattice-style
+    /// effect.
+    ///
+    /// Each coloured / hybrid pip becomes one mana of any type. Phyrexian pips
+    /// keep their pay-2-life alternative and so are left for the normal
+    /// payment path.
+    pub(crate) fn relax_cost_colors_known(
+        active: bool,
+        cost: &crate::mana::ManaCost,
+    ) -> std::borrow::Cow<'_, crate::mana::ManaCost> {
         use crate::mana::ManaSymbol;
-        if !self.spend_mana_as_any_color_for_spell(seat, kind) {
+        if !active {
             return std::borrow::Cow::Borrowed(cost);
         }
         let mut relaxed = 0;
@@ -7073,27 +7088,8 @@ impl GameState {
         seat: Option<usize>,
         cost: &crate::mana::ManaCost,
     ) -> crate::mana::ManaCost {
-        use crate::mana::ManaSymbol;
-        if !self.spend_mana_as_any_color_active_for(seat) {
-            return cost.clone();
-        }
-        let mut relaxed = 0;
-        let mut symbols: Vec<ManaSymbol> = Vec::with_capacity(cost.symbols.len());
-        for s in &cost.symbols {
-            match s {
-                // Each coloured / hybrid pip becomes one mana of any type.
-                // Phyrexian pips keep their pay-2-life alternative and so are
-                // left for the normal payment path.
-                ManaSymbol::Colored(_)
-                | ManaSymbol::Hybrid(..)
-                | ManaSymbol::MonoHybrid(..) => relaxed += 1,
-                other => symbols.push(*other),
-            }
-        }
-        if relaxed > 0 {
-            symbols.push(ManaSymbol::Generic(relaxed));
-        }
-        crate::mana::ManaCost::new(symbols)
+        Self::relax_cost_colors_known(self.spend_mana_as_any_color_active_for(seat), cost)
+            .into_owned()
     }
 
     /// Short human-readable lines for the turn-scoped continuous effects that
