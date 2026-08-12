@@ -104,6 +104,14 @@ struct Args {
     record_decisions: bool,
     /// Learner steps between policy steps when `--record-decisions` is
     /// on. 1 = a policy step every value step.
+    ///
+    /// **0 means record and measure but do not train** — the control arm
+    /// this experiment needs. `val_policy` (held-out top-1 agreement) is
+    /// meaningless without a baseline from a net that never saw a policy
+    /// gradient, and an arm that simply omits `--record-decisions`
+    /// cannot supply one: it reports no `val_policy` at all. So the
+    /// honest control records the same decisions, scores the same
+    /// holdout, and trains on none of it.
     policy_every: u64,
     /// current net (see `SampleWindow::relabel_lambda`).
     lambda: f32,
@@ -341,7 +349,7 @@ fn parse_args() -> Args {
             "--bce" => a.bce = true,
             "--record-decisions" => a.record_decisions = true,
             "--policy-every" => {
-                a.policy_every = val().parse::<u64>().expect("--policy-every").max(1)
+                a.policy_every = val().parse::<u64>().expect("--policy-every")
             }
             "--lambda" => a.lambda = val().parse().expect("--lambda"),
             "--relabel-every" => {
@@ -1258,7 +1266,14 @@ fn main() {
 
     if args.record_decisions {
         crabomination::server::decision_capture::set_enabled(true);
-        eprintln!("recording decisions (policy step every {} value steps)", args.policy_every);
+        if args.policy_every == 0 {
+            eprintln!("recording decisions, MEASURING ONLY (no policy training)");
+        } else {
+            eprintln!(
+                "recording decisions (policy step every {} value steps)",
+                args.policy_every
+            );
+        }
     }
 
     let shared = Shared {
@@ -1406,7 +1421,10 @@ fn main() {
             // the pilot ranked them. Sampled from a separate window
             // because a decision is a different shape and cadence from a
             // labelled position.
-            if args.record_decisions && step.is_multiple_of(args.policy_every) {
+            if args.record_decisions
+                && args.policy_every > 0
+                && step.is_multiple_of(args.policy_every)
+            {
                 let sample: Vec<crabomination_ml::DecisionRow> = {
                     let d = shared.decisions.lock().unwrap();
                     if d.len() < 256 {
