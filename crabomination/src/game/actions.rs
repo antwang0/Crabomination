@@ -12340,7 +12340,7 @@ impl GameState {
                 out.push((i, Cow::Borrowed(a)));
             }
         }
-        let granted = self.granted_abilities_with(card_id, scan);
+        let granted = self.granted_abilities_of(card, scan);
         let gc = granted.len();
         for (j, a) in granted.into_iter().enumerate() {
             if is_mana_ability(&a.effect) {
@@ -12501,21 +12501,36 @@ impl GameState {
         card_id: CardId,
         scan: &GrantScan<'_>,
     ) -> Vec<crate::effect::ActivatedAbility> {
-        use crate::effect::{Selector, StaticEffect};
-        let tgt = Target::Permanent(card_id);
-        let mut out = Vec::new();
         // One lookup, reused by every `me`-reading block below: this is called
         // ~272 k times per six bot games and `battlefield_find` is a linear
         // scan of the whole battlefield.
         let Some(me) = self.battlefield_find(card_id) else {
             // A card outside the battlefield can still carry an instance grant
             // — Cursecloth Wrappings hands a graveyard creature card embalm.
+            let mut out = Vec::new();
             if let Some(c) = self.find_card_anywhere(card_id) {
                 out.extend(c.granted_activated_abilities.iter().cloned());
                 out.extend(c.granted_activated_eot.iter().cloned());
             }
             return out;
         };
+        self.granted_abilities_of(me, scan)
+    }
+
+    /// [`granted_abilities_with`](Self::granted_abilities_with) for a
+    /// battlefield permanent the caller already holds. The `CardId` form opens
+    /// with a `battlefield_find`, and its hot callers — `available_mana`,
+    /// `effective_mana_abilities_with`, the bot's activatable sweep — are all
+    /// already iterating the battlefield, so that scan is pure duplication.
+    pub(crate) fn granted_abilities_of(
+        &self,
+        me: &CardInstance,
+        scan: &GrantScan<'_>,
+    ) -> Vec<crate::effect::ActivatedAbility> {
+        use crate::effect::{Selector, StaticEffect};
+        let card_id = me.id;
+        let tgt = Target::Permanent(card_id);
+        let mut out = Vec::new();
         // Which of the "has the activated abilities of …" statics this
         // permanent carries, in one pass of its static abilities instead of
         // one pass per block below.

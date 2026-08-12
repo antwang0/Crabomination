@@ -5402,7 +5402,7 @@ fn usable_abilities<'a>(
         .enumerate()
         .chain(
             state
-                .granted_abilities_with(card.id, scan)
+                .granted_abilities_of(card, scan)
                 .into_iter()
                 .enumerate()
                 .map(|(i, ab)| (n + i, std::borrow::Cow::Owned(ab))),
@@ -7833,7 +7833,7 @@ fn available_mana(state: &GameState, seat: usize) -> AvailableMana {
         // Printed abilities plus anything granted to it (Cryptolith Rite
         // turning creatures into mana sources, Urza's Saga chapters), so a
         // granted mana ability doesn't read as "no mana here".
-        let granted = state.granted_abilities_with(p.id, &scan);
+        let granted = state.granted_abilities_of(p, &scan);
         let mut best = 0u32;
         for a in p.definition.activated_abilities.iter().chain(granted.iter()) {
             if !is_countable_mana_ability(a) {
