@@ -903,6 +903,29 @@ impl Trainer {
         })
     }
 
+    /// The chance rate a `policy_top1` number has to be read against:
+    /// mean 1/candidates over the same decisions.
+    ///
+    /// Reported alongside the metric because top-1 agreement is
+    /// meaningless on its own — a 0.25 against seven-way choices is a
+    /// very different result from 0.25 against three-way, and comparing
+    /// two runs whose candidate widths differ compares nothing at all.
+    /// Computed here rather than assumed from `EVAL_TOP` or `MAX_ARMS`,
+    /// because which decisions actually get recorded depends on the
+    /// pilot and the position.
+    pub fn policy_chance(rows: &[&DecisionRow]) -> f32 {
+        let mut acc = 0.0f64;
+        let mut n = 0usize;
+        for r in rows {
+            if r.successors.len() < 2 || r.chosen >= r.successors.len() {
+                continue;
+            }
+            acc += 1.0 / r.successors.len() as f64;
+            n += 1;
+        }
+        if n == 0 { f32::NAN } else { (acc / n as f64) as f32 }
+    }
+
     /// Top-1 agreement without training — the holdout counterpart.
     pub fn policy_top1(&self, rows: &[&DecisionRow]) -> CResult<f32> {
         let mut hit = 0usize;

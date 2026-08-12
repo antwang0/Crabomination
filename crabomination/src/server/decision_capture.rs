@@ -336,6 +336,46 @@ mod tests {
     /// when the measured value falls inside that band.
     #[test]
     #[ignore = "diagnostic"]
+    fn print_mcts_candidate_count_distribution() {
+        use crate::server::{Bot, MctsBot, MctsConfig};
+        let _guard = SERIAL.lock().unwrap_or_else(|e| e.into_inner());
+        let mut hist = std::collections::BTreeMap::<usize, usize>::new();
+        for seed in 0..12u64 {
+            let mut g = two_player_game();
+            for i in 0..8 {
+                g.add_card_to_hand(0, creature("X", 1 + (i % 4), 1 + ((i + seed as i32) % 4)));
+                g.add_card_to_hand(1, creature("Y", 1 + (i % 3), 2));
+            }
+            let _ = drain();
+            set_enabled(true);
+            let mut bot =
+                MctsBot::new(MctsConfig { iterations: 8, horizon_turns: 1, ..Default::default() });
+            let mut fuel = 40;
+            while fuel > 0 && !g.is_game_over() {
+                fuel -= 1;
+                let Some(a) = bot.next_action(&g, 0) else { break };
+                if g.perform_action(a).is_err() {
+                    break;
+                }
+            }
+            for d in drain() {
+                if d.values.is_some() {
+                    *hist.entry(d.successors.len()).or_default() += 1;
+                }
+            }
+            set_enabled(false);
+        }
+        let total: usize = hist.values().sum();
+        let mut chance = 0.0;
+        for (k, n) in &hist {
+            eprintln!("  MCTS {k} candidates: {n}");
+            chance += (*n as f64) / (*k as f64);
+        }
+        eprintln!("  MCTS total {total}, chance rate {:.4}", chance / total.max(1) as f64);
+    }
+
+    #[test]
+    #[ignore = "diagnostic"]
     fn print_candidate_count_distribution() {
         use crate::server::{Bot, HeuristicBot};
         let _guard = SERIAL.lock().unwrap_or_else(|e| e.into_inner());

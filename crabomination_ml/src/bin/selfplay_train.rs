@@ -1708,19 +1708,23 @@ fn checkpoint(
     // never trained on. This is the first metric in the program that
     // measures *choosing* rather than predicting -- MSE and AUC both
     // score isolated positions, and a search consumes rankings.
-    let val_policy = {
+    let (val_policy, val_policy_chance, val_policy_n) = {
         let v = shared.decisions_val.lock().unwrap();
         if v.len() < 100 {
-            f32::NAN
+            (f32::NAN, f32::NAN, 0usize)
         } else {
             let refs: Vec<&crabomination_ml::DecisionRow> = v.iter().collect();
-            trainer.policy_top1(&refs).unwrap_or(f32::NAN)
+            (
+                trainer.policy_top1(&refs).unwrap_or(f32::NAN),
+                crabomination_ml::Trainer::policy_chance(&refs),
+                refs.len(),
+            )
         }
     };
     let [policy_top1, policy_loss] = policy_ema;
     let [t_sample, t_step, t_relabel, t_deck, t_sleep] = timing.take_ms();
     let line = format!(
-        "{{\"step\":{step},\"loss_ema\":{total:.5},\"loss_win\":{win:.5},\"loss_life\":{life:.5},\"loss_len\":{len:.5},\"loss_deck\":{deck_loss:.5},\"val_n\":{val_n},\"val_win\":{val_win:.5},\"val_tgt\":{val_tgt:.5},\"val_logloss\":{val_ll:.5},\"val_auc\":{val_auc:.5},\"policy_top1\":{policy_top1:.4},\"policy_loss\":{policy_loss:.5},\"val_policy\":{val_policy:.4},\"train_n\":{train_n},\"train_raw\":{train_raw:.5},\"train_tgt\":{train_tgt:.5},\"rows_consumed\":{consumed},\"rows\":{rows},\"games\":{games},\"stalls\":{stalls},\"stalls_capped\":{stalls_capped},\"stalls_stuck\":{stalls_stuck},\"elapsed_s\":{secs:.0},\"games_per_s\":{dg:.3},\"rows_per_s\":{dr:.1},\"consumed_per_s\":{dc:.1},\"steps_per_s\":{ds:.3},\"games_per_s_cum\":{cum_g:.3},\"rows_per_s_cum\":{cum_r:.1},\"t_sample_ms\":{t_sample},\"t_step_ms\":{t_step},\"t_relabel_ms\":{t_relabel},\"t_deck_ms\":{t_deck},\"t_sleep_ms\":{t_sleep}}}\n"
+        "{{\"step\":{step},\"loss_ema\":{total:.5},\"loss_win\":{win:.5},\"loss_life\":{life:.5},\"loss_len\":{len:.5},\"loss_deck\":{deck_loss:.5},\"val_n\":{val_n},\"val_win\":{val_win:.5},\"val_tgt\":{val_tgt:.5},\"val_logloss\":{val_ll:.5},\"val_auc\":{val_auc:.5},\"policy_top1\":{policy_top1:.4},\"policy_loss\":{policy_loss:.5},\"val_policy\":{val_policy:.4},\"val_policy_chance\":{val_policy_chance:.4},\"val_policy_n\":{val_policy_n},\"train_n\":{train_n},\"train_raw\":{train_raw:.5},\"train_tgt\":{train_tgt:.5},\"rows_consumed\":{consumed},\"rows\":{rows},\"games\":{games},\"stalls\":{stalls},\"stalls_capped\":{stalls_capped},\"stalls_stuck\":{stalls_stuck},\"elapsed_s\":{secs:.0},\"games_per_s\":{dg:.3},\"rows_per_s\":{dr:.1},\"consumed_per_s\":{dc:.1},\"steps_per_s\":{ds:.3},\"games_per_s_cum\":{cum_g:.3},\"rows_per_s_cum\":{cum_r:.1},\"t_sample_ms\":{t_sample},\"t_step_ms\":{t_step},\"t_relabel_ms\":{t_relabel},\"t_deck_ms\":{t_deck},\"t_sleep_ms\":{t_sleep}}}\n"
     );
     use std::io::Write;
     let mut f = std::fs::OpenOptions::new()
