@@ -452,6 +452,11 @@ impl PlayModel {
 pub struct Trainer {
     pub varmap: VarMap,
     pub model: PlayModel,
+    /// Fit the win head with cross-entropy instead of MSE. Off by
+    /// default so every historical run stays bit-reachable; note that
+    /// with it on, `LossParts::win` is a log-loss and is not comparable
+    /// to an MSE run's number.
+    bce: bool,
     opt: Opt,
     dev: Device,
 }
@@ -594,6 +599,33 @@ pub struct LossParts {
     pub aux: f32,
 }
 
+/// Binary cross-entropy against a soft target in [0, 1].
+///
+/// Why the win head does not want MSE. The head is a sigmoid, and MSE
+/// through a sigmoid has gradient proportional to `(p − y)·p·(1 − p)`.
+/// The `p(1 − p)` factor goes to zero exactly when the net is
+/// *confidently wrong* — p near 0 with y = 1 — so the rows with the most
+/// to teach produce the weakest updates. Cross-entropy's gradient at the
+/// logit is simply `(p − y)`, with no such term.
+///
+/// Computed from the probability rather than the logit because the model
+/// already applies the sigmoid, and the two are equivalent for the
+/// gradient: `d/dlogit [−y·ln σ − (1−y)·ln(1−σ)] = σ − y` however the
+/// expression is written. The clamp only bites in saturation, where it
+/// keeps `ln 0` out of the graph.
+///
+/// Soft targets are the point, not an afterthought: at λ < 1 the fit
+/// target is a λ-return in [0, 1] rather than a 0/1 label, and BCE
+/// remains a proper scoring rule for it.
+fn binary_cross_entropy(p: &Tensor, t: &Tensor) -> CResult<Tensor> {
+    const EPS: f64 = 1e-7;
+    let p = p.clamp(EPS, 1.0 - EPS)?;
+    let ones = p.ones_like()?;
+    let pos = t.mul(&p.log()?)?;
+    let neg = ones.sub(t)?.mul(&ones.sub(&p)?.log()?)?;
+    pos.add(&neg)?.neg()?.mean_all()
+}
+
 impl Trainer {
     pub fn new(cfg: &NetConfig, lr: f64) -> CResult<Trainer> {
         // CPU unless the crate was built with the `cuda` feature AND a
@@ -603,7 +635,7 @@ impl Trainer {
         let vb = VarBuilder::from_varmap(&varmap, DType::F32, &dev);
         let model = build_model(cfg, vb)?;
         let opt = AdamW::new(varmap.all_vars(), ParamsAdamW { lr, ..Default::default() })?;
-        Ok(Trainer { varmap, model, opt: Opt::AdamW { o: opt, base_lr: lr }, dev })
+        Ok(Trainer { varmap, model, bce: false, opt: Opt::AdamW { o: opt, base_lr: lr }, dev })
     }
 
     /// [`new`](Self::new) with the Muon hybrid optimizer. Routing: a 2-D
@@ -641,7 +673,7 @@ impl Trainer {
             base_lr: p.lr,
             base_adamw_lr: p.adamw_lr,
         };
-        Ok(Trainer { varmap, model, opt: Opt::Muon(opt), dev })
+        Ok(Trainer { varmap, model, bce: false, opt: Opt::Muon(opt), dev })
     }
 
     /// Drive an lr schedule: scale all optimizer lrs to `factor` × base.
@@ -688,12 +720,24 @@ impl Trainer {
         self.train_step_with_targets(&with)
     }
 
+    /// Fit the win head with cross-entropy rather than MSE. See
+    /// [`binary_cross_entropy`] for why. Off by default: every gate on
+    /// record trained on MSE, so the old behaviour has to stay reachable
+    /// as the control arm.
+    pub fn set_bce(&mut self, on: bool) {
+        self.bce = on;
+    }
+
     /// [`train_step`](Self::train_step) fitting supplied win targets — the
     /// λ-return path (see [`SampleWindow::relabel_lambda`]).
     pub fn train_step_with_targets(&mut self, rows: &[(&TrainRow, f32)]) -> CResult<LossParts> {
         let batch = make_batch_with_targets(rows, &self.dev)?;
         let (win, life, len_p, aux_p) = self.model.forward(&batch)?;
-        let loss_win = candle_nn::loss::mse(&win, &batch.win)?;
+        let loss_win = if self.bce {
+            binary_cross_entropy(&win, &batch.win)?
+        } else {
+            candle_nn::loss::mse(&win, &batch.win)?
+        };
         let loss_life = candle_nn::loss::mse(&life, &batch.life)?;
         let loss_len = candle_nn::loss::mse(&len_p, &batch.len_t)?;
         let mut loss = loss_win
@@ -1561,6 +1605,123 @@ mod tests {
     /// End-to-end learning sanity: a synthetic signal (life lead wins,
     /// with the answer also visible through an object feature) must be
     /// learnable to well under coin-flip loss in a few hundred steps.
+        /// The closed form, checked against hand arithmetic — a loss that is
+    /// merely *plausible* is the easiest thing in a trainer to get
+    /// subtly wrong and never notice.
+    #[test]
+    fn bce_matches_the_closed_form() {
+        let dev = Device::Cpu;
+        let p = Tensor::from_vec(vec![0.25f32, 0.9], (2, 1), &dev).expect("p");
+        let t = Tensor::from_vec(vec![1.0f32, 0.0], (2, 1), &dev).expect("t");
+        let got = binary_cross_entropy(&p, &t).expect("bce").to_scalar::<f32>().expect("scalar");
+        let want = (-(0.25f32.ln()) - (1.0f32 - 0.9).ln()) / 2.0;
+        assert!((got - want).abs() < 1e-5, "got {got}, want {want}");
+    }
+
+    /// Soft targets are a supported case, not an accident: at λ < 1 the
+    /// fit target is a λ-return in [0, 1]. BCE against a soft target is
+    /// minimised when the prediction *equals* the target, which is the
+    /// property that makes it a proper scoring rule there.
+    #[test]
+    fn bce_on_a_soft_target_is_minimised_at_the_target() {
+        let dev = Device::Cpu;
+        let t = Tensor::from_vec(vec![0.7f32], (1, 1), &dev).expect("t");
+        let at = |v: f32| {
+            let p = Tensor::from_vec(vec![v], (1, 1), &dev).expect("p");
+            binary_cross_entropy(&p, &t).expect("bce").to_scalar::<f32>().expect("s")
+        };
+        let exact = at(0.7);
+        assert!(exact < at(0.6), "0.6 scored better than the target");
+        assert!(exact < at(0.8), "0.8 scored better than the target");
+    }
+
+    /// The mechanism the switch is *for*, asserted directly: where the
+    /// net is confidently wrong, MSE through a sigmoid produces a far
+    /// smaller update than cross-entropy, because its gradient carries a
+    /// `p(1 − p)` factor that vanishes in saturation. Measured as the
+    /// movement of the prediction after one step from identical weights.
+    #[test]
+    fn bce_updates_harder_than_mse_when_confidently_wrong() {
+        let cfg = small_cfg();
+        let mut rng = StdRng::seed_from_u64(7);
+        // One row, labelled the opposite of what an untrained net will
+        // say once we have driven it to a confident opinion.
+        let row = TrainRow {
+            state: random_state(&mut rng, cfg.vocab),
+            win: 1.0,
+            life_diff: 0.0,
+            game_len: 0.5,
+            traj: 0,
+            ply: 0,
+            aux: [0.0; AUX_FEATS],
+        };
+        // Drive both copies to the same confidently-wrong place by
+        // fitting the opposite label hard, then measure one step back.
+        let train_to_wrong = |bce: bool| -> (f32, f32) {
+            let mut t = Trainer::new(&cfg, 5e-2).expect("trainer");
+            let wrong = TrainRow { win: 0.0, ..row.clone() };
+            for _ in 0..300 {
+                let b: Vec<&TrainRow> = vec![&wrong; 8];
+                t.train_step(&b).expect("drive");
+            }
+            let before = t.predict_win(&row.state).expect("before");
+            t.set_bce(bce);
+            let b: Vec<&TrainRow> = vec![&row; 8];
+            t.train_step(&b).expect("one step");
+            let after = t.predict_win(&row.state).expect("after");
+            (before, after)
+        };
+        let (mse_before, mse_after) = train_to_wrong(false);
+        let (bce_before, bce_after) = train_to_wrong(true);
+        assert!(
+            mse_before < 0.1 && bce_before < 0.1,
+            "the setup failed to reach a confident wrong opinion: {mse_before} / {bce_before}"
+        );
+        assert!(
+            (bce_after - bce_before) > (mse_after - mse_before),
+            "bce should move further from a saturated wrong prediction: \
+             mse {mse_before}->{mse_after}, bce {bce_before}->{bce_after}"
+        );
+    }
+
+    /// BCE has to actually train the head, not merely have a nicer
+    /// gradient on paper — the same synthetic signal the MSE path learns.
+    #[test]
+    fn bce_learns_the_synthetic_signal() {
+        let cfg = small_cfg();
+        let mut trainer = Trainer::new(&cfg, 3e-3).expect("trainer");
+        trainer.set_bce(true);
+        let mut rng = StdRng::seed_from_u64(11);
+        let rows: Vec<TrainRow> = (0..512)
+            .map(|_| {
+                let s = random_state(&mut rng, cfg.vocab);
+                let win = if s.global[0] > s.global[1] { 1.0 } else { 0.0 };
+                TrainRow {
+                    state: s,
+                    win,
+                    life_diff: 0.0,
+                    game_len: 0.5,
+                    traj: 0,
+                    ply: 0,
+                    aux: [0.0; AUX_FEATS],
+                }
+            })
+            .collect();
+        for _ in 0..400 {
+            let batch: Vec<&TrainRow> =
+                (0..64).map(|_| &rows[rng.random_range(0..rows.len())]).collect();
+            trainer.train_step(&batch).expect("step");
+        }
+        let correct = rows
+            .iter()
+            .filter(|r| {
+                let p = trainer.predict_win(&r.state).expect("predict");
+                (p > 0.5) == (r.win > 0.5)
+            })
+            .count();
+        assert!(correct * 10 >= rows.len() * 8, "only {correct}/{} correct", rows.len());
+    }
+
     #[test]
     fn learns_a_synthetic_signal() {
         let cfg = small_cfg();

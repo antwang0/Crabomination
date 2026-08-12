@@ -86,6 +86,15 @@ struct Args {
     /// so every prior gate round is reproducible. Below 1.0 the target
     /// bootstraps through the net's estimate of the next snapshot, which
     /// trades the variance of a twenty-turn outcome for the bias of the
+    /// Fit the win head with cross-entropy instead of MSE
+    /// (`crabomination_ml::binary_cross_entropy`). MSE through a sigmoid
+    /// vanishes the gradient exactly where the net is confidently wrong;
+    /// BCE does not. Off by default so the control arm is the historical
+    /// behaviour. NOTE: with this on, `loss_win` in stats.jsonl is a
+    /// log-loss and is not comparable to an MSE run's number -- the
+    /// checkpoint's `train_raw` / `val_win` stay MSE either way and are
+    /// what to compare across arms.
+    bce: bool,
     /// current net (see `SampleWindow::relabel_lambda`).
     lambda: f32,
     /// Learner steps between recomputing the lambda-returns. They are
@@ -265,6 +274,7 @@ fn parse_args() -> Args {
         batch: 256,
         lr: 1e-3,
         reuse: 6.0,
+        bce: false,
         lambda: 1.0,
         relabel_every: 200,
         window: 250_000,
@@ -316,6 +326,7 @@ fn parse_args() -> Args {
             "--batch" => a.batch = val().parse().expect("--batch"),
             "--lr" => a.lr = val().parse().expect("--lr"),
             "--reuse" => a.reuse = val().parse().expect("--reuse"),
+            "--bce" => a.bce = true,
             "--lambda" => a.lambda = val().parse().expect("--lambda"),
             "--relabel-every" => {
                 a.relabel_every = val().parse::<u64>().expect("--relabel-every").max(1)
@@ -1100,10 +1111,11 @@ fn main() {
     } else {
         Trainer::new(&cfg, args.lr).expect("trainer init")
     };
+    trainer.set_bce(args.bce);
     let mut deck_trainer =
         DeckTrainer::new(&DeckNetConfig::standard(vocab.size()), args.lr).expect("deck trainer");
     eprintln!(
-        "learner device: {} (lambda {}, batch {}, {}, {})",
+        "learner device: {} (lambda {}, batch {}, {}, {}, win loss {})",
         trainer.device_label(),
         args.lambda,
         args.batch,
@@ -1118,7 +1130,8 @@ fn main() {
             "attention".to_string()
         } else {
             "pooled".to_string()
-        }
+        },
+        if args.bce { "bce" } else { "mse" }
     );
     std::fs::create_dir_all(&args.out).expect("create --out dir");
     let latest = args.out.join("latest.safetensors");
