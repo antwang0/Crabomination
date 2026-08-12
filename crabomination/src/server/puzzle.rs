@@ -341,6 +341,26 @@ pub struct Certificate {
     pub truncated: bool,
 }
 
+impl Certificate {
+    /// A "solution" made entirely of priority passes.
+    ///
+    /// These are real in the sense that the goal is met, and useless as
+    /// benchmark items. The heuristic's behaviour is step-sensitive, so
+    /// passing once can move the position to a window where autopilot
+    /// then finds the win — the certified line for the corpus's first
+    /// kept candidate was exactly `[PassPriority]`. That records a
+    /// timing quirk rather than a decision the bot got wrong, and it
+    /// would have entered the corpus as a finding about removal
+    /// targeting, which it is not.
+    /// An *empty* line is not degenerate, it is trivial — a different
+    /// verdict with a different meaning, so the emptiness check has to
+    /// come first or every depth-0 candidate reports as pass-only.
+    pub fn is_degenerate(&self) -> bool {
+        !self.line.is_empty()
+            && self.line.iter().all(|a| matches!(a, GameAction::PassPriority))
+    }
+}
+
 /// Depth-first search for a line achieving `goal`, shallowest first.
 ///
 /// Iterative deepening rather than plain DFS, because the *depth* of the
@@ -369,16 +389,20 @@ pub fn solve(state: &GameState, seat: usize, goal: Goal, max_depth: usize) -> Op
 /// declining blocks had them re-declared underneath it, and a lethal
 /// swing read as survived. Sync the latches to the position instead.
 fn playout_bots(g: &GameState) -> [HeuristicBot; 2] {
-    let mut bots = [HeuristicBot::new(), HeuristicBot::new()];
-    for b in &mut bots {
-        if !g.attacking().is_empty() {
-            b.note_external_declaration(g, true);
-        }
-        if g.blockers_declared() {
-            b.note_external_declaration(g, false);
-        }
+    [synced_bot(g), synced_bot(g)]
+}
+
+/// One fresh heuristic bot, latched to the combat declarations already in
+/// `g`. See [`playout_bots`] for why this is not optional.
+fn synced_bot(g: &GameState) -> HeuristicBot {
+    let mut b = HeuristicBot::new();
+    if !g.attacking().is_empty() {
+        b.note_external_declaration(g, true);
     }
-    bots
+    if g.blockers_declared() {
+        b.note_external_declaration(g, false);
+    }
+    b
 }
 
 /// Play `state` forward to the end of the turn with *both* seats on the
@@ -510,6 +534,45 @@ fn has_substantive_choice(g: &GameState, seat: usize) -> bool {
         .actions
         .iter()
         .any(|a| !matches!(a, GameAction::PassPriority))
+}
+
+/// Play the position out with `bot` piloting `seat` and the default
+/// heuristic on the other side — the scoring counterpart of [`resolve`],
+/// which uses the heuristic on both sides.
+///
+/// Same latch-sync as every other playout here (`playout_bots`): a bot
+/// handed a position mid-combat must not re-declare what has already
+/// been declared.
+pub fn play_with(state: &GameState, seat: usize, bot: &mut dyn Bot) -> GameState {
+    let mut g = state.clone();
+    let opp = 1 - seat;
+    let mut opp_bot = synced_bot(&g);
+    let start_turn = g.turn_number;
+    let mut fuel = 400u32;
+    while fuel > 0 && !g.is_game_over() && g.turn_number == start_turn {
+        fuel -= 1;
+        if bot.next_action(&g, seat).is_some_and(|a| g.perform_action(a).is_ok()) {
+            continue;
+        }
+        if opp_bot.next_action(&g, opp).is_some_and(|a| g.perform_action(a).is_ok()) {
+            continue;
+        }
+        if g.perform_action(GameAction::PassPriority).is_err() {
+            break;
+        }
+    }
+    g
+}
+
+/// Whether `bot` solves the position: play it out, then ask the goal.
+pub fn passes(state: &GameState, seat: usize, goal: Goal, bot: &mut dyn Bot) -> bool {
+    goal_met(state, &play_with(state, seat, bot), seat, goal)
+}
+
+/// Whether the default heuristic solves it unaided — the triviality test
+/// a candidate puzzle has to fail to earn a place in the corpus.
+pub fn solved_by_default(state: &GameState, seat: usize, goal: Goal) -> bool {
+    goal_met(state, &resolve(state, seat), seat, goal)
 }
 
 #[cfg(test)]
