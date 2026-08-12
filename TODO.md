@@ -16,52 +16,49 @@ reference and want their own triage pass):
 
 ## NEXT (handoff — rewrite each run, keep under 15 lines)
 
-Branch `claude/modern_decks`. **The P0 is closed and it was a bug class, not
-a site.** `841dd40b` gives the engine `crate::fxhash::HashMap` / `HashSet`
-(rustc's seedless FxHasher): every pool now reproduces on a fixed seed —
-cube 1,130,728 x3, all 2,548,986 x2, sos 684,268 x2, `determinism ok` on
-all seven — and it is **-0.942 % Ir** (3,162,657,064 -> 3,132,870,988),
-paying longer-lived candidate (6). `125108c1` fixed the sibling leak (CR
-705.1 flips read `rand::random()`; Mana Crypt is in the cube pool).
-`--decks fixed` is byte-identical at 193,232 decisions, 18,618 tests green,
-clippy clean, golden traces unchanged plus a new cube-pairing trace.
+Branch `claude/modern_decks`. **The profile of record is fresh** — retaken
+2026-08-12 at `f814a13b`, **3,132,892,846 Ir**, and PERF's table, gather
+counts and `would_accept` caller list all come from it. The pass landed one
+row, **`granted_abilities_of(&CardInstance)` (-0.552 %)**: the `CardId` form
+opened with a `battlefield_find` and its three hot callers were already
+iterating the battlefield. It also **closed candidate (8)'s
+`can_afford_in_state` item as a negative result** (+0.066 %, reverted) —
+the filter runs 1.13 cards per sweep, not 1.72, so there is nothing to
+hoist; the denominator was `cast_candidates`, which is not where the filter
+lives.
 
-- **Next up — the profile of record is three rows stale; retake first.**
-  Candidate (10) was enumerated off the tip's caller tree this run and its
-  four sites are all **cold** (24-220 calls) — that is a negative result,
-  not a to-do; the family's warm members are the damage leaves and they are
-  at their one-gather floor. So the real top of the list is candidate (0)
-  `pick_attacks_scored` (50 %) / (1) `would_accept` / (5) `pick_by_outcome`
-  — all three the same **probe-count** question, all three needing a
-  `bot_ladder` win-rate gate rather than an Ir number, and **now gateable
-  on the wide pools for the first time**, which is what the P0 bought.
-  Then (9)(b) (behaviour change, golden traces decide) and
-  `can_afford_in_state`'s five whole-board walks per call.
+- **Next up — candidate (0), and it is now one counter, not a study.**
+  `pick_attacks_scored` runs **1,166 sims over 630 declarations at 1.33 M Ir
+  each (0.0425 % of the program per sim)**, and on `--decks fixed` nearly
+  every one is the binary "swing with the one creature or don't", which
+  makes the *empty-attack candidate ~25 % of the program*. Log
+  `choose_scored`'s returned index over a `--decks all` run; if index 1
+  rarely wins, design the dominance skip and gate it on win rate. Then
+  candidate (11) (the `battlefield_find`-in-a-loop family the row above
+  generalizes — mechanical, cannot change behaviour) and (9)(b).
 - **Filters.** The twelfth is owed. Pass 25's suggestion still stands: *a
   predicate two callers each re-derive*. Pass 24's clone-then-narrow filter
   is still unswept semantically — `.keywords.to_vec()` inside an `.any()`
-  survives at `mod.rs:5721`, `actions.rs:10472`, `movement.rs:835` (all
-  small; cost before writing).
-- **Rules residue from the P0.** A hash walk deciding a game outcome is now
-  reproducible but still arbitrary. `ac8e3b50` fixed the one known site
-  (Sphinx of the Chimes binned an arbitrary qualifying name); the ~110
-  map/set locals are unswept for siblings. Low priority — none of them can
-  desynchronize a run any more.
+  survives at `mod.rs:5721`, `actions.rs:10472`, `movement.rs:835`.
+- **Rules residue from the P0.** A hash walk deciding a game outcome is
+  reproducible but still arbitrary; `ac8e3b50` fixed the one known site and
+  the ~110 map/set locals are unswept for siblings. Low priority — none of
+  them can desynchronize a run any more.
 - **Env.** No `cargo-nextest`; `cargo test -p crabomination -p
   crabomination_tests` is the gate (~25 min cold, ~45 s warm, always
-  `CARGO_INCREMENTAL=0`). `profiling-fast` cold **~13 min**, engine-only
-  ~3.5; callgrind on the six-game workload ~5. `release` (cgu 1 + thin LTO)
-  is ~22 min — budget for it before starting; it is what the `--bench`
-  anchor needs, and **the anchor has not been re-run since `ed4c152c`**.
-  Client apt deps are still not installed by the SessionStart hook; the
-  four-package `apt-get install` below fixes it in a minute.
-- **Trackers.** PERF **1.45k** (was 1.80k — passes 20-25 folded into the
-  Log index, passes 12-18's frozen candidate snapshots collapsed to a
-  pointer, the two non-restated items hoisted first), TODO ~1.09k, roadmap
+  `CARGO_INCREMENTAL=0`). `profiling-fast` cold **~12 min**, engine-only
+  ~4; callgrind on the six-game workload ~5. `release` (cgu 1 + thin LTO)
+  is ~22 min — budget for it before starting; **the `--bench` anchor has
+  still not been re-run since `ed4c152c`.** Client apt deps are still not
+  installed by the SessionStart hook; the four-package `apt-get install`
+  below fixes it in a minute.
+- **Trackers.** PERF **1.19k** (was 1.45k — Baseline's four cross-check
+  paragraphs collapsed to one table, its six historical anchor blocks to
+  another with their lessons kept as bullets, and the profile-of-record
+  section's three superseded tables to a pointer). TODO ~1.09k, roadmap
   660. PERF is still over the ~1k guidance; the next compactable block is
-  **Baseline**, which now carries five cross-check paragraphs for anchors
-  it explicitly declines to refresh — collapse four of them to one table
-  and keep the host-fingerprint reasoning.
+  the **Log**'s per-pass prose for passes 20-25, which the index above it
+  already summarizes.
 
 ## Environment note
 

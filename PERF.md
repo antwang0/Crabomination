@@ -166,300 +166,92 @@ here read 3,694,337,730 against the nineteenth pass's recorded
 anchors, `stalls` 0, determinism ok on all six runs, peak RSS 21.7-22.3
 against 22.1-22.5.
 
-**Cross-check at `15ec11c1` (the twenty-fifth pass's tip), 2026-08-11 —
-the anchor is NOT refreshed, and the reason is the host.** Six `--bench`
-runs: 69.49 / 57.38 / 82.70 / 91.48 / 92.25 / 91.22. `host_cpu` reads
-**2.80 GHz** and `host_calib_ms` 54 / 252 / 51 / 62 / 54 / 54 — i.e. this
-is the *older* box, not the 2.10 GHz one the committed anchor was taken
-on, so **these absolutes belong to the 66.65-67.95 block below, not to the
-95.64 above.** Runs 1-3 are container warm-up and their calibration says
-so (252 ms on run 2 is four times the rest); the settled three read 91.48 /
-92.25 / 91.22, **mean 91.65 against that host's 67.31**, over a span worth
-about -14.5 % by instruction count. Wall-clock running ahead of Ir there is
-the expected direction for gather-removal rows but the ratio is not
-claimable from four passes of drift on one box, so nothing is claimed from
-it.
+**Cross-checks since the anchor, none of which refreshed it.** Each was a
+`--bench` sitting on a tip later than `ed4c152c`; the anchor stands because
+every one of them is either a looser sitting than the anchor's 7.48 % spread
+or on a different `host_cpu`, and because at these margins the measurement of
+record is the instruction count. Read the `calib` column before any absolute.
 
-**What the workload facts say, which is the part that matters:**
-`turns_per_game` **26.98** on all six (a seventh consecutive anchor),
-`decisions` **193,232 byte-identical run to run**, `decisions_per_game`
-603.9, `stalls` 0 with the new `stalls_by` reading `cap 0 / stuck 0 /
-draw 0`, `determinism ok` on all six, `peak_rss_mib` 21.5-21.7 against the
-anchor's 21.7-22.3. ~~**The `--decks fixed` bench is exactly reproducible
-and the wider pools are not**~~ — **fixed 2026-08-11 (`841dd40b`)**. Every
-pool now reproduces on a fixed seed: `--bench --threads 1 --games 300
---seed 11` reads decisions **1,130,728** (cube, 3 runs), **2,548,986**
-(all, 2 runs), **684,268** (sos, 2 runs), `determinism ok` on all seven,
-against cube's 1,129,690 / 1,130,785 / 1,130,706 and two FAILs before.
-`--decks all`'s stall rate is a stable **0.12 %** (6 draws / 5,100 games,
-`cap 0 / stuck 0`) where it used to move run to run. No number in this file
-moved — all of them are `--decks fixed` or the six-game callgrind workload
-— but the wider pools are now usable as measurements.
+| tip | date | runs (games/s) | mean / spread | host_cpu, calib | why not refreshed |
+|---|---|---|---|---|---|
+| `f2fb6722` (21st) | 08-11 | 8 runs, 87.57-101.55 | 94.20, **14.8 %** | 2.80 GHz | spread is twice the anchor's and the pass is worth 1.423 %; -1.5 % vs the anchor sits inside it |
+| `1112e709` (22nd) | 08-11 | 3 tight then 8 idle | 90.03 (1.4 %) then **96.53** (12.5 %) | 2.80 GHz | *the tight three-run sample was the bottom of the distribution, not a regression* — a sample whose spread is smaller than the effect is the trap. Ir says the tip does 4.3 % less work |
+| `15ec11c1` (25th) | 08-11 | 6 runs; first 3 are warm-up (calib 252 on run 2) | settled 3: **91.65** | 2.80 GHz, calib 51-62 | wrong box for the 95.64 block — these belong with the 67.31 block below |
+| `ac8e3b50` (26th) | 08-11 | 3 runs, 72.97-77.12 | — | 2.80 GHz, calib 51-66 | **`release-fast`**, so the absolutes do not chain to a `release` anchor at all |
 
-**Final checks at `ac8e3b50` (this run's tip), 2026-08-11 — `release-fast`,
-so the anchor is NOT refreshed and these absolutes do not chain to it.**
-Three `--bench` runs: 72.97 / 77.12 / 75.68 games/s, `host_calib_ms`
-51 / 66 / 52, i.e. the 2.80 GHz box. The three `release-fast` runs taken on
-the same box earlier in the sitting, before the hasher row, read 71.37 /
-68.37 (calib 58 / 61) plus two contended ones — directionally up and
-consistent with -0.942 % Ir, but a 4 % wall-clock delta on this box is not
-claimable and nothing is claimed from it. **The workload facts are the
-check that matters**: `decisions` **193,232** byte-identical on all three
-(an eighth consecutive anchor's worth), `turns_per_game` **26.98**,
-`stalls` 0, `determinism ok`, `peak_rss_mib` 23.9-24.6 against the
-pre-change `release-fast` runs' 24.0-24.1. Cube twice more at 1,130,728.
+**What every one of them agrees on, which is the part that matters**:
+`turns_per_game` **26.98** (nine consecutive anchors), `stalls` **0**,
+`determinism ok` on every run, `decisions` **193,232 byte-identical**,
+`decisions_per_game` 603.9, `peak_rss_mib` 21.4-22.3 at `release`
+(23.9-24.6 at `release-fast`).
 
-**Cross-check at `f2fb6722` (the twenty-first pass's tip), 2026-08-11 — the
-anchor is NOT refreshed, and the reason is the spread.** Eight `--bench`
-runs in one sitting on this container: 91.49 / 94.20 / 93.00 / 93.61 /
-96.02 / 96.14 / 101.55 / 87.57, **mean 94.20, spread 14.8 %** — twice the
-committed anchor's 7.48 %, so this sitting resolves nothing at the pass's
-1.423 % and re-anchoring on it would replace a tighter measurement with a
-looser one. 94.20 against 95.64 is **-1.5 %, inside that spread**, while
-the instruction count says the tip does 1.423 % *less* work; no
-investigation is owed. The workload facts all match the anchor exactly:
-`turns_per_game` **26.98** (a sixth consecutive anchor), `stalls` **0**,
-`determinism` ok on all eight, `peak_rss_mib` 21.8-22.3 against 21.7-22.3,
-`decisions_per_game` 603.9.
+~~**The `--decks fixed` bench is exactly reproducible and the wider pools
+are not**~~ — **fixed 2026-08-11 (`841dd40b`)**. Every pool now reproduces
+on a fixed seed: `--bench --threads 1 --games 300 --seed 11` reads decisions
+**1,130,728** (cube, 3 runs), **2,548,986** (all, 2 runs), **684,268** (sos,
+2 runs), `determinism ok` on all seven, against cube's 1,129,690 /
+1,130,785 / 1,130,706 and two FAILs before. `--decks all`'s stall rate is a
+stable **0.12 %** (6 draws / 5,100 games, `cap 0 / stuck 0`) where it used
+to move run to run. No number in this file moved — all of them are
+`--decks fixed` or the six-game callgrind workload — but the wider pools are
+now usable as measurements.
 
-**Cross-check at `1112e709` (the twenty-second pass's tip), 2026-08-11 —
-the anchor is NOT refreshed, and no regression is owed.** Eleven `--bench`
-runs on this container. The first three, taken immediately after the
-`release` link finished, read 90.14 / 90.59 / 89.36 (mean 90.03, spread
-1.4 %) — which against the anchor's 95.64 is **-5.9 %**, past the noise
-band, so eight more were taken on an idle box: 95.92 / 92.99 / 90.60 /
-98.72 / 95.18 / 102.65 / 99.94 / 96.26, **mean 96.53, spread 12.5 %**.
-**96.53 against 95.64 is +0.9 %**, and across all eleven the mean is 94.76
-with a **14.0 % spread** — the same figure the twenty-first pass measured
-here. *The tight three-run sample was the bottom of the distribution, not a
-regression*: three runs is not a spread estimate on this box, and a sample
-whose spread is smaller than the effect you are testing for is the trap.
-The instruction count is the measurement of record either way and it says
-the tip does **4.3 % less work than the anchor** (3,362,421,936 against
-3,513,438,110). Re-anchoring on a 12.5 % sitting would replace a 7.48 %
-measurement with a looser one, and `host_cpu` still reads *2.80 GHz*
-against the anchor's 2.10 GHz box. Workload facts all match the anchor
-exactly: `turns_per_game` **26.98** (a seventh consecutive anchor),
-`stalls` **0**, `determinism` ok on all eleven, `decisions_per_game`
-**603.9**, `decisions` **193,232** identical run to run, `peak_rss_mib`
-21.4-22.0 against 21.7-22.3, `host_calib_ms` 45-55 against 47-52.
+**The host fingerprint can disagree with itself, and the calibration probe
+is the half to believe.** One container reported `host_cpu` *2.80 GHz* — the
+`4f3e86c0` box — while `host_calib_ms` read **46-62**, overlapping the
+2.10 GHz box's 47-52 and not the 2.80 box's own 53-70. That is why the probe
+exists: compare `host_calib_ms` before comparing absolutes, and never chain
+across two blocks whose probes don't overlap.
 
-**The host fingerprint disagrees with itself here, and the calibration
-probe is the half to believe.** `host_cpu` reads *2.80 GHz* — the
-`4f3e86c0` anchor's box, not the `ed4c152c` anchor's 2.10 GHz one — while
-`host_calib_ms` reads **46-62**, overlapping the 2.10 GHz box's 47-52 and
-not the 2.80 box's own 53-70. A container that reports the older model
-string and calibrates like the newer one is why the probe exists: compare
-`host_calib_ms` before comparing absolutes, and never chain across two
-blocks whose probes don't overlap.
+**Previous anchors, compacted to a table.** The full `--bench` blocks are in
+git (`git log -- PERF.md`); every one of them was taken on the 2.80 GHz box
+at `release` + mimalloc, 320 games, and **`turns_per_game` reads 26.98 and
+`stalls` 0 in all of them**, which is the only column that chains.
 
-The previous anchor, `4f3e86c0` (the nineteenth pass's tip), for the
-record:
+| tip | pass | games/s (mean, spread) | calib | RSS |
+|---|---|---|---|---|
+| `4f3e86c0` | 19 | 67.31 (1.95 %) | 53-70 | 22.1-22.5 |
+| `56986d65` | 18 | 71.29 (7.3 %) | 50-62 | 22.0-22.2 |
+| `6ed3dbfc` | 17 | 69.13 (6.6 %) | 49-85 | 21.8-22.4 |
+| `abb2b502` | 16 | 81.93 (9.2 %) | 45-55 | 21.7-22.2 |
+| `28629ba9` | 15 | 64.19 (7.1 %) | 52-64 | 23.3-23.8 |
+| `3e2ee6cb` | 14 | 62.48 (5.9 %) | 50-60 | 21.7-22.1 |
 
-```text
-bot_ladder --bench   release, rustc 1.95.0, 4-core VM, 3 worker threads
-                     mimalloc (the default); measured on an idle box
-host_cpu             Intel(R) Xeon(R) Processor @ 2.80GHz
-host_calib_ms        53-70 across the sitting   <- within-sitting only
-games                320
-games_per_s          66.65 / 67.67 / 66.82 / 66.92 / 67.82 / 67.95
-                     (mean 67.31, spread 1.95 %)
-games_per_s_th       22.22 - 22.65
-decisions_per_s      mean 40,641
-turns_per_game       26.98
-stalls               0 (0.00 %)
-peak_rss_mib         22.1 - 22.5
-determinism          ok (all 160 pairs split, on all 6 runs)
-```
+The lessons those six anchors were written to carry, which are the reason
+the table above is safe to compress:
 
-**67.31 against the 71.29 below was -5.6 %, and it was the host — checked,
-not asserted**, by the method this file recommends for exactly this
-situation and which costs about fifteen minutes. The tip's two perf commits
-were reverted out of `combat.rs` + `game/mod.rs`, both sides rebuilt
-`profiling-fast --no-default-features`, and the binaries alternated
-`--bench` in one sitting: base mean **56.55** against tip **57.58**,
-**+1.82 % paired, 4/6 pairs positive**. (A seventh pair was discarded —
-`host_calib_ms` read **525**, i.e. something else had the box. That is what
-the probe is for.) Supporting: `host_calib_ms` 53-70 against 50-62 on the
-previous anchor; -1.968 % Ir with bench output byte-identical; both changes
-strictly *remove* allocations, so there is no cache-shaped story in which
-Ir falls and wall-clock rises. No wall-clock delta was claimed for that
-pass either.
-
-The previous anchor, `56986d65` (the eighteenth pass's tip), for the
-record:
-
-```text
-bot_ladder --bench   release, rustc 1.95.0, 4-core VM, 3 worker threads
-                     mimalloc (the default); measured on an idle box
-host_cpu             Intel(R) Xeon(R) Processor @ 2.80GHz
-host_calib_ms        50-62 across the sitting   <- within-sitting only
-games                320
-games_per_s          72.34 / 73.14 / 68.18 / 71.04 / 71.21 / 71.80
-                     (mean 71.29, spread 7.3 %)
-games_per_s_th       22.73 - 24.38
-decisions_per_s      mean 43,046
-turns_per_game       26.98
-stalls               0 (0.00 %)
-peak_rss_mib         22.0 - 22.2
-determinism          ok (all 160 pairs split, on all 6 runs)
-```
-
-**71.29 against the 69.13 below is +3.1 %, and the pass is worth -1.155 %
-by instruction count — so most of that gap is the host, and no wall-clock
-delta is claimed.** The tell is in the probe: `host_calib_ms` reads **50-62
-here against 49-85** on the previous anchor, i.e. the same box on a
-markedly quieter sitting, and this run's spread (7.3 %) sits inside the
-documented ±8 %. The anchor is refreshed because the tip moved, not because
-the wall-clock did. What the run does establish, and what it is here for:
-**stalls 0 and determinism ok on all six runs**, `turns_per_game` 26.98
-unchanged across three consecutive anchors, and peak RSS 22.0-22.2 MiB
-against 21.8-22.4.
-
-The previous anchor, `6ed3dbfc` (the seventeenth pass's tip), for the
-record:
-
-```text
-bot_ladder --bench   release, rustc 1.95.0, 4-core VM, 3 worker threads
-                     mimalloc (the default); measured on an idle box
-host_cpu             Intel(R) Xeon(R) Processor @ 2.80GHz
-host_calib_ms        49-85 across the sitting   <- within-sitting only
-games                320
-games_per_s          70.53 / 70.76 / 66.21 / 69.68 / 68.05 / 69.57
-                     (mean 69.13, spread 6.6 %)
-games_per_s_th       22.07 - 23.59
-decisions_per_s      mean 41,746
-turns_per_game       26.98
-stalls               0 (0.00 %)
-peak_rss_mib         21.8 - 22.4
-determinism          ok (all 160 pairs split, on all 6 runs)
-```
-
-**Another container again, and 69.13 against the 81.93 recorded at
-`abb2b502` is host, not a regression** — the evidence, in order.
-(a) `host_calib_ms` reads 49-85 here against 45-55 there. (b) Every one of the pass's four changes strictly
-*removes* work, and callgrind — deterministic on a fixed workload —
-measures **-3.316 %** instructions across them with the six games' output
-byte-identical on every row. (c) The one confound worth ruling out was the
-`encode.rs` commit that landed on the branch between the pass's base and
-its tip: with `codegen-units = 1` + thin LTO a 335-line addition to the
-engine crate can move inlining crate-wide. Re-running callgrind on the
-*merged* tip read **3,817,731,167 Ir against the pass's 3,817,208,224 —
-+0.014 %**, i.e. inside the documented ~0.02 % build-to-build noise, so the
-encoder is inert for the non-net bench path and the pass's number holds on
-the merged tree. **No wall-clock delta is claimed for this pass**; the
-anchor is here for the stall / determinism / RSS record and for the next
-run's host comparison. `turns_per_game` 26.98 unchanged, `stalls` 0 and
-determinism ok on all six runs, peak RSS 21.8-22.4 MiB against 21.7-22.2.
-
-The previous anchor, `abb2b502` (the sixteenth pass's tip), for the record:
-
-```text
-bot_ladder --bench   release, rustc 1.95.0, 4-core VM, 3 worker threads
-                     mimalloc (the default); measured on an idle box
-host_cpu             Intel(R) Xeon(R) Processor @ 2.80GHz
-host_calib_ms        45-55 across the sitting   <- within-sitting only
-games                320
-games_per_s          84.74 / 85.93 / 83.64 / 81.24 / 80.56 / 81.35 / 78.71 /
-                     79.29   (mean 81.93, spread 9.2 % — take >=6 runs)
-games_per_s_th       26.24 - 28.64
-decisions_per_s      mean 49,475
-turns_per_game       26.98
-stalls               0 (0.00 %)
-peak_rss_mib         21.7 - 22.2
-determinism          ok (all 160 pairs split, on all 8 runs)
-```
-
-The previous anchor, `28629ba9` (the fifteenth pass's tip), for the record:
-
-```text
-bot_ladder --bench   release, rustc 1.95.0, 4-core VM, 3 worker threads
-                     mimalloc (the default); measured on an idle box
-host_cpu             Intel(R) Xeon(R) Processor @ 2.80GHz
-host_calib_ms        52-64 across the sitting   <- within-sitting only
-games                320
-games_per_s          65.77 / 66.18 / 66.65 / 63.82 / 63.13 / 63.28 / 62.43 /
-                     62.22   (mean 64.19, spread 7.1 % — take >=6 runs)
-games_per_s_th       20.74 - 22.22
-decisions_per_s      mean 38,760
-turns_per_game       26.98
-stalls               0 (0.00 %)
-peak_rss_mib         23.3 - 23.8
-determinism          ok (all 160 pairs split, on all 8 runs)
-```
-
-**This anchor is not a measurement of the pass and must not be subtracted
-from the one below it.** It is a different container: `host_calib_ms` reads
-52-64 here against 50-60 there, i.e. a slightly *slower* host, and the run
-reads 64.19 against 62.48 — the direction agrees with the -3.87 %
-instruction count but the magnitude means nothing. **The pass's measurement
-is the callgrind number, and deliberately only that**: -3.87 % is inside
-this box's wall-clock noise (the record below has eight alternated pairs of
-a -1.91 % change reading +0.7 %), so no wall-clock delta is claimed. What
-this run *is* good for is the rest of the row — `turns_per_game` 26.98
-unchanged, `stalls` 0, determinism ok on all eight runs, peak RSS 23.3-23.8
-MiB (up ~1.5 MiB on the previous container; not investigated, the code
-allocates strictly less).
-
-The previous anchor, `3e2ee6cb` (the fourteenth pass's tip), for the record:
-
-```text
-bot_ladder --bench   release, rustc 1.95.0, 4-core VM, 3 worker threads
-                     mimalloc (the default); measured on an idle box
-host_calib_ms        50-60 across the sitting   <- within-sitting only
-games                320
-games_per_s          62.77 / 62.82 / 62.29 / 62.59 / 59.80 / 62.62 / 63.47 /
-                     63.50   (mean 62.48, spread 5.9 % — take >=6 runs)
-decisions_per_s      mean 37732
-turns_per_game       26.98
-stalls               0 (0.00 %)
-peak_rss_mib         21.7 - 22.1
-determinism          ok (all 160 pairs split, on all 8 runs)
-```
-
-**62.48 is *lower* than the 71.52 anchor it replaces and the code is 11 %
-faster. Read this before comparing any two anchors again.** The 71.52 was
-taken on a different container (`host_calib_ms` 45-54 against 50-60 here);
-this sitting's *base* binary measures the difference directly and says the
-box, not the code, moved. The pass's own delta is a paired A/B taken in one
-sitting on this container: **52.18 -> 57.97 games/s, +11.10 % mean, 6/6
-alternated `release-fast` pairs** of `95406ebe` against `3e2ee6cb`
-(per-pair +9.81 / +9.03 / +13.70 / +14.05 / +7.69 / +12.46 %;
-`decisions_per_s` 31,511 -> 35,338, +12.1 %; `turns_per_game` 26.98 and
-`stalls` 0 on all twelve runs). **It agrees with the -11.56 % instruction
-count to half a point**, which is what a change that removes work *and*
-allocations looks like — contrast the thirteenth pass's null.
-
-**The base binary is a usable control and cost nothing.** `bl_base` read
-52.38 mean and, an hour later, 52.18 on the same box: within-sitting
-drift here was ~0.4 %, so this sitting's pairs are trustworthy and the
-71.52/62.48 gap is not drift but a different machine. **Keep the base
-binary and re-run it, rather than reasoning about `host_calib_ms` alone.**
-
-The pre-merge anchors below are compacted to their lessons; the numbers
-themselves are in git, and none of them compares to the anchor above.
-
-- **70.65 belongs to a different bench.** It predates `998b2433` making
-  `EvalWeights::default()` carry `determinize: 1`, and `--bench` runs
-  `gang` = `EvalWeights::default()`, so the *workload* changed underneath
-  it. **Read `host_calib_ms` before comparing to any older anchor.**
-  Refresh only alongside an intentional, explained change; regressions
-  beyond ~5 % get investigated before anything else lands.
+- **Consecutive anchors do not subtract.** 81.93 -> 69.13 -> 71.29 -> 67.31
+  is four containers, not four regressions; the `calib` column moves with
+  them and the instruction counts fall monotonically across the same span.
+- **A -5.6 % anchor gap was checked, not asserted, and cost fifteen
+  minutes.** At `4f3e86c0` the tip's two perf commits were reverted, both
+  sides rebuilt `profiling-fast --no-default-features`, and the binaries
+  alternated `--bench` in one sitting: base **56.55** against tip **57.58**,
+  **+1.82 % paired, 4/6 pairs positive**. (A seventh pair was discarded —
+  `host_calib_ms` read **525**, i.e. something else had the box.)
+- **Keep the base binary and re-run it rather than reasoning about
+  `host_calib_ms` alone.** At `3e2ee6cb` the base read 52.38 and, an hour
+  later, 52.18 on the same box — ~0.4 % within-sitting drift, which is what
+  made that pass's 6/6 paired **+11.10 %** trustworthy against an anchor gap
+  pointing the other way. That pass agrees with its -11.56 % instruction
+  count to half a point: the shape to expect when a change removes work *and*
+  allocations.
+- **An LTO confound is real and cheap to rule out.** With `codegen-units = 1`
+  + thin LTO a 335-line addition elsewhere in the engine crate can move
+  inlining crate-wide. Re-running callgrind on the *merged* tip at
+  `6ed3dbfc` read +0.014 % against the pass's own tip, i.e. inside build
+  noise.
+- **70.65 and everything older belong to a different bench.** They predate
+  `998b2433` making `EvalWeights::default()` carry `determinize: 1`, and
+  `--bench` runs `gang` = `EvalWeights::default()`, so the *workload* changed
+  underneath them.
 - **Absolutes do not transfer between containers, and one pass proved it
   twice.** The same engine code read 60.49 and 64.42 in two sittings on one
   box (+6.5 % of pure drift), and a second container read 55.70 on its own
   tip where the first read 55.88 on a tip with 1.0 % *fewer* instructions.
   **Quote a paired A/B measured in one sitting, never a difference of
-  anchors.** That pass's own paired deltas: callgrind -11.68 %, wall-clock
-  +9.57 % (6/6 pairs) and +10.85 % (8/8 pairs) in two sittings whose work
-  overlaps, so they don't add.
-- **The eleventh pass, end to end**: 8/8 alternated `release` + mimalloc
-  pairs in one sitting, 66.69 -> 70.65 games/s (**+5.93 %**, median paired
-  +4.31), against callgrind **-8.63 %** over the same span. The wall-clock
-  lands at about two thirds of the instruction win, which is the expected
-  shape when four of five rows remove *gathers* and one removes
-  *allocations* that mimalloc absorbs — see the `Printed<T>` row, where
-  -17.09 % Ir was worth +1.7 % at `release`.
+  anchors.**
+
 
 ## Log
 
@@ -552,6 +344,36 @@ made the same change mandatory. **Check the standing candidate list before
 designing a robustness fix** — the cheapest correct fix may already be
 costed there.
 
+**Twenty-seventh pass — a helper that re-finds a card its callers hold.**
+Base `f814a13b` rebuilt here read **3,132,892,846 Ir** against the recorded
+3,132,870,988 — **0.0007 % apart**, the tightest base rebuild in this file.
+
+| date | change | before | after | how measured |
+|---|---|---|---|---|
+| 2026-08-12 | `granted_abilities_of(&CardInstance)` beside `granted_abilities_with(CardId)` | 3,132,892,846 Ir | 3,115,598,474 Ir (**-0.552 %**) | The `CardId` form opens with a `battlefield_find`, a linear scan of the whole battlefield, and its three hot callers were all already iterating it: `available_mana`'s untapped-producer loop (63,656 of the 201,834 calls), `effective_mana_abilities_with` (which had *just* done the same find), and the bot's activatable sweep. `available_mana` **1.14 -> 0.97 %**, `effective_mana_abilities_with` 2.30 -> 2.16 %, the `granted_abilities_*` family 1.39 -> 0.81 %. Carries `relax_cost_colors_known` (three copies of the CR 609.4b relaxation loop folded into one), which is `clone()` either way and cannot move the count. |
+| | **cumulative, twenty-seventh pass** | **3,132,892,846 Ir** | **3,115,598,474 Ir (-0.552 %)** | callgrind on the fixed six-game workload |
+
+**The pass's negative result, and it is worth more than the row.**
+Candidate (8)'s largest named item — `can_afford_in_state`'s five
+whole-board walks per call — was implemented as this file prescribed (a
+`CostScan` presence gate over the four `sources x static_abilities` walks,
+plus `AvailableMana` hoisted, both built once per hand sweep) and measured
+**+0.066 %** (3,132,892,846 -> 3,134,973,100). Reverted. **The denominator
+was wrong**: the candidate divided 12,114 checks by `cast_candidates`' 7,024
+calls to get 1.72 cards per sweep, but the filter lives in
+`main_phase_action_with` and `pick_combat_trick`, not in `cast_candidates`.
+The scan built once per *sweep* ran **11,188 times against 12,702 checks —
+1.13 cards per sweep**, so there is no duplication to hoist, and the added
+`cost_scan` walk (~12 M) costs more than the gated walks saved (the four
+walks are only **0.29 %** of the program; `available_mana` is 60 % of
+`can_afford_in_state` on its own). **This is the second time this file has
+recorded a no-win on hoisting `available_mana` out of that filter** — pass 4
+measured +0.9 % wall-clock on it. *Before hoisting anything out of a loop,
+count the loop's iterations at the site you are changing, not at a function
+that merely appears nearby.* The measurement that did pay came from reading
+what was left: `available_mana`'s cost is not the walk, it is the
+`battlefield_find` inside `granted_abilities_with`.
+
 **Filters and devices these six passes leave behind**, the part that
 outlives the numbers:
 
@@ -581,209 +403,79 @@ settings + debuginfo; system allocator, because valgrind replaces malloc and
 a mimalloc build would measure the interception), 1 thread, `--a gang --b
 gang --games 6 --seed 1 --decks fixed`.
 
-**Re-taken 2026-08-11 on the twenty-fourth pass's tip `125557eb`:
-3,201,568,157 Ir.** Supersedes the twenty-second-pass table beneath it,
-which is kept only for the rows it costed that are still live.
-
-**Now three rows stale — retake before pulling anything under ~0.5 %.**
-`5d4b5402` (-0.594 %) and `841dd40b` (-0.942 %) landed after it, and the
-tip measures **3,132,870,988 Ir**; every share below reads ~2 % high, and
-the hasher row moves them unevenly — the map-heavy sites (`GameState::clone`,
-the `ColdState` unshare, `dispatch_triggers_for_events`) fell further than
-the search does. What the tip's caller tree *does* say, taken 2026-08-11:
-`computed_permanent`'s gathering callers are `damage_prevented_by_protection`
-2,036 Ir/call over 18,986, `scale_damage_to` 1,920 over 14,624,
-`damage_from_source_prevented_by_keyword` 3,507 over 4,450, `dying_snapshot`
-3,458 over 3,420, `permanent_has_keyword` **1,417** over 8,328 (down from
-2,638 — that is `5d4b5402` showing up), `blocker_can_block_attacker` 286 over
-15,368. The four candidate-(10) sites enumerated off it —
-`ability_target_has_protection` (24 calls), `auto_target_for_effect_avoiding_set_xc`
-(220), `noncombat_damage_doublers_for` (174), `can_block_any_computed_attacker`
-— are all **cold on this workload** and were not taken; the family's warm
-members are the damage leaves, and those are at their one-gather floor.
+**Re-taken 2026-08-12 on the twenty-sixth pass's tip `f814a13b`:
+3,132,892,846 Ir**, against the recorded 3,132,870,988 for `841dd40b`
+(+0.0007 %, i.e. build noise — the three commits since it are trackers and
+a rename). Supersedes the `125557eb` table.
 
 | Ir | share | site |
 |---|---|---|
-| 1,602,691,451 | 50.06 % | `pick_attacks_scored` (630 calls) — the search, still untouched |
-| 1,595,447,621 | 49.83 % | `simulate_attack_outcome_once`, under it |
-| 491,192,545 | 15.34 % | `would_accept` |
-| 431,881,315 | 13.49 % | `try_pay_after_snapshot_mode` |
-| 410,025,202 | 12.81 % | `auto_tap_for_cost_inner` |
-| 359,094,195 | 11.22 % | `resolve_combat` |
-| 311,764,753 |  9.74 % | `gather_continuous_effects_inner` (141,106 gathers) |
-| 240,615,249 |  7.52 % | `dispatch_triggers_for_events` (52,332 calls) |
-| 210,019,714 |  6.56 % | `pick_by_outcome` |
-| 179,992,085 |  5.62 % | `cast_candidates` (7,024 calls) |
-| 157,750,775 |  4.93 % | `compute_permanent` (248,654 calls) |
-| 116,895,124 |  3.65 % | `mana_source_table` (7,370 calls) |
-| 113,472,401 |  3.54 % | `check_state_based_actions` (82,634 calls) |
+| 1,559,040,146 | 49.76 % | `pick_attacks_scored` (630 calls) — the search, still untouched |
+| 1,551,726,791 | 49.53 % | `simulate_attack_outcome_once` under it, **1,166 calls** |
+| 483,682,717 | 15.44 % | `would_accept` (3,580 calls) |
+| 431,238,572 | 13.76 % | `try_pay_after_snapshot_mode` |
+| 429,356,830 | 13.70 % | `resolve_combat` |
+| 417,594,436 | 13.33 % | `computed_permanent` |
+| 409,489,573 | 13.07 % | `auto_tap_for_cost_inner` |
+| 289,831,397 |  9.25 % | `dispatch_triggers_for_events` |
+| 282,186,745 |  9.01 % | `gather_continuous_effects_inner` (127,878 gathers) |
+| 272,437,193 |  8.70 % | `check_state_based_actions` |
+| 206,021,586 |  6.58 % | `pick_by_outcome` (908 calls, all `main_phase_action_with`) |
+| 179,866,992 |  5.74 % | `cast_candidates` (7,024: 3,642 `sim_spell_action_inner` + 3,382 `main_phase_action_with`) |
+| 151,065,285 |  4.82 % | `compute_permanent` |
+| 116,831,117 |  3.73 % | `mana_source_table` |
+| 59,480,310 |  1.90 % | `can_afford_in_state` (12,702) — candidate (8)'s largest named item, **costed and closed below** |
 
-`fire_step_triggers` has left this table (2.55 % -> below threshold) and
-the collect table with it; `fire_combat_damage_triggers` left at the
-twenty-third pass. Shares rise where the denominator fell — `would_accept`
-and `try_pay_after_snapshot_mode` are unchanged in absolute Ir.
+**The number this retake adds, and it reframes candidate (0).**
+`pick_attacks_scored` runs **1,166 simulations over 630 declarations** —
+**1.85 per search**, and **1.33 M Ir per simulation, i.e. 0.0425 % of the
+whole program each**. With `gang`'s `attack_search: 6` a greedy set of two
+attackers would produce four candidates, so nearly every scored declaration
+on this workload is the binary *swing with the one creature or don't*:
+1,166 = 2 x 583, with the other 47 of the 630 returning early on an empty
+greedy set. **Half of every simulation the engine runs is therefore the
+"attack with nobody" candidate — about 25 % of the program.** Whether that
+candidate ever wins is exactly the probe candidate (0) asks for, and it is
+now one counter (`choose_scored`'s returned index) rather than a study.
 
-**Who gathers, at this tip**: `computed_permanent` 107,936 (243,439,898 /
-7.60 %), `frozen_effects` 18,916 (1.21 %), `check_state_based_actions`
-10,670 (0.67 %), `compute_permanents` 3,274, `compute_battlefield` 310 —
-**141,106 total**. The `computed_permanent` row is candidate (9).
+**Who gathers**: `computed_permanent` 94,708 (213,876,885 / 6.83 %),
+`frozen_effects` 18,916 (1.24 %), `check_state_based_actions` 10,670
+(0.68 %), `compute_permanents` 3,274 (0.24 %), `compute_battlefield` 310
+(0.02 %) — **127,878 total**, from 141,106 at `125557eb`. The
+`computed_permanent` row is candidate (9).
 
-The twentieth pass's tip `ed4c152c` read **3,513,438,110 Ir**. The layer
-system has come down hard across the nineteenth and twentieth passes and
-the top of the list has reshuffled; these supersede the seventeenth-pass
-table below, which is kept for the rows it costed that are still live.
+**`would_accept` by caller** (candidate (1) is the probe count, so this is
+the list to shorten): `main_phase_action_with` 1,980 (179,766,093 / 5.74 %),
+`pick_stack_response` 342 (1.37 %), `pick_combat_trick` 292 (1.03 %),
+`pick_land_to_play` 916 (0.75 %), `pick_removal_ping` 38,
+`pick_defensive_removal` 12.
 
-| Ir | share | site |
-|---|---|---|
-| 1,845,020,927 | 51.35 % | `pick_attacks_scored` (630 calls) — the search, still untouched |
-| 534,428,881 | 14.87 % | `would_accept` |
-| 507,575,030 | 14.13 % | `resolve_combat` |
-| 507,252,955 | 14.12 % | `try_pay_after_snapshot_mode` — **new to this file** |
-| 483,645,579 | 13.46 % | `auto_tap_for_cost_inner` |
-| 352,489,276 |  9.81 % | `dispatch_triggers_for_events` |
-| 317,061,930 |  8.83 % | `simulate_through_combat` |
-| 315,917,638 |  8.79 % | `gather_continuous_effects_inner` |
-| 226,841,402 |  6.31 % | `pick_by_outcome` (225,396,844 of it one `in_place_collect`) |
-| 209,692,860 |  5.84 % | `compute_permanent` |
-| 181,032,011 |  5.04 % | `cast_candidates` |
-| 114,869,442 |  3.20 % | `computed_permanent` |
+**`can_afford_in_state` costed at line level, 2026-08-12** — 59,480,310 /
+1.90 % over 12,702 calls (4,682 Ir each), by callee:
+`available_mana` **35,840,109 / 1.14 %** (60 % of it, and all of
+`available_mana`'s cost in the program); the four
+`sources x static_abilities` walks **9.0 M / 0.29 %** between `actions.rs`
+(5,242,114) and `mod.rs` (3,766,423, the CR 609.4b permission);
+the hand `find` in `extra_cost_for_card_in_hand` 2,650,624; `can_afford_from`
+and its two `ManaCost` clones ~7.5 M. Inside `available_mana`:
+`grant_scan` 8,155,753 over 12,702 and `granted_abilities_with` 13,603,586
+over **63,656** (five untapped permanents per call).
 
-**Who still takes a whole-board pass**: `compute_battlefield` **310 calls**
-(`submit_decision`, 0.02 %), from 17,718 three passes ago. The layer cost
-that is left is per-card `computed_permanent` and the gather.
+**The older tables — passes fifteen, seventeen, twenty and twenty-four — are
+in git** (`git log -- PERF.md`, ~150 lines). Every row in them is either
+superseded by the table above or already quoted at a fresher share in a
+candidate. Two facts from them that do not restate and are kept here:
+`compute_battlefield` went 47,808 -> 17,718 -> 310 calls across the
+nineteenth and twentieth passes and its table is closed; and the fifteenth
+pass's allocation tree (3,748,803 allocations for six games, `Arc::clone_
+from_ref_in` 802,482 of them) is the origin of the CoW-unshare theme that
+`CardInstance = Arc<CardData>` later paid at -25.6 %.
 
-The seventeenth pass's table, for the rows it costed. **Retaken 2026-08-10
-on its tip `6ed3dbfc`: 3,817,208,224 Ir.** The pass's base (`8ca7df9f`)
-rebuilt on a fresh container read 3,948,115,609 against the recorded
-sixteenth-pass figure of 3,948,056,772 — **0.0015 % apart**, so the two
-passes' numbers chain.
+The allocator block on this tip re-reads **~17.0 %** (`_int_malloc` 5.34 /
+`_int_free` 4.38 / `malloc` 3.23 / `free` 1.96 / merge 0.88 / arena 0.77 /
+consolidate 0.74 / unlink 0.73), `__memcpy_avx_unaligned_erms` 3.80 %,
+`Arc::clone_from_ref_in` ~16 % inclusive over ~1.6 M CoW unshares.
 
-The tip's shape, re-taken (inclusive, overlapping). The top of the list is
-still the `auto_tap -> activate_ability -> activate_ability_inner` chain,
-but it has come down 14.21 -> 12.67 / 9.19 -> 7.48 / 8.51 -> 6.77 and
-`would_accept` is now the largest named consumer on its own:
-
-| Ir | share | site |
-|---|---|---|
-| 542,961,849 | 14.22 % | `would_accept` — the affordance probe, 5,102 calls |
-| 483,549,248 | 12.67 % | `auto_tap_for_cost_inner` (8,892 calls) |
-| 454,701,876 | 11.91 % | `sim_spell_action_inner` (34,620 calls; **only 3,642 reach the main-phase branch, 4,424 the stack branch, 3,718 the trick branch — the other ~22.8 k bail at 35 Ir**, so the freeze scope it enters is not the cost) |
-| 325,599,331 |  8.53 % | `gather_continuous_effects_inner` |
-| 322,138,354 |  8.44 % | `dispatch_triggers_for_events` (52,332 calls, ~2,867 Ir of *self* each) |
-| 294,451,348 |  7.71 % | `compute_permanent_pass` |
-| 285,583,611 |  7.48 % | `activate_ability` (18,340 of its 18,386 calls come from auto-tap) |
-| 258,521,084 |  6.77 % | `activate_ability_inner` |
-| 180,998,747 |  4.74 % | `bot::cast_candidates` |
-| 144,304,650 |  3.78 % | `mana_source_table` (8,892) |
-| 143,779,527 |  3.77 % | `computed_permanent` |
-| 114,223,290 |  2.99 % | `check_state_based_actions` |
-
-**The one number that reframes the file**: `pick_attacks_scored` is
-**1,989,089,442 Ir / 52.11 % over 630 calls** — 3.2 M Ir per attack
-decision — and `simulate_attack_outcome_once` under it is 51.92 %. *Half
-the simulator is the bot re-playing a turn cycle per candidate attack.* It
-calls `sim_step` 34,384 times and `sim_spell_action` 34,620 times. Nothing
-in this file has ever attacked the search itself (candidate widths,
-horizon, or per-iteration cost); every pass so far has made its inner loop
-cheaper.
-
-**Who still gathers**: `computed_permanent` 109,680, `compute_battlefield`
-17,718, `check_state_based_actions` 10,670, `frozen_effects` 8,882 —
-**146,950 total**, from 165,336 at the pass's start.
-
-**The allocator is still the largest single theme and still untouched**:
-`_int_malloc` 4.97 / `_int_free` 3.98 / `malloc` 2.93 / `free` 1.77 /
-`malloc_consolidate` 0.69 / arena+merge+unlink 2.20 = **~16.5 %**, with
-`Arc::clone_from_ref_in` (the CoW unshare) another **~3.5 % self**. It has
-risen as a *share* only because the pass removed non-allocating work.
-
-The fifteenth pass's table, for the record:
-
-**4.02 G instructions for six games**, from 4.19 G at this pass's start,
-4.96 G at the fourteenth's, 5.62 G at the twelfth's, and 14.40 G eight
-passes ago on the same workload. **2,445,057 allocations**, from 3,748,803.
-
-The tip's shape, in one table (inclusive, overlapping):
-
-| Ir | share | calls | site |
-|---|---|---|---|
-| 3,094,150,259 | 76.89 % | | `perform_action_inner` |
-| 1,391,324,294 | 34.58 % | | `perform_action` |
-| 606,964,219 | 15.08 % | 5,102 | `would_accept` — the affordance probe, now the largest single named consumer that isn't the action dispatcher |
-| 581,810,215 | 14.46 % | 8,892 | `auto_tap_for_cost_inner` |
-| 526,847,459 | 13.09 % | 203,770 | `computed_permanent` — 128,066 of those gather, i.e. 37 % memo hits |
-| 394,720,976 |  9.81 % | | `dispatch_triggers_for_events` — was 11.72 % before the strip gate |
-| 361,673,091 |  8.99 % | **165,336** | `gather_continuous_effects_inner` — 243,190 gathers two passes ago |
-| 307,176,076 |  7.63 % | | `compute_permanent_pass` |
-| 286,537,425 |  7.12 % | 10,670 | `check_state_based_actions` (candidate 0.25) |
-| 267,242,117 |  6.64 % | 17,718 | `compute_battlefield` |
-| 191,166,118 |  4.75 % | 7,024 | `bot::cast_candidates` — climbing as a share; still never read at line level |
-| 144,255,177 |  3.58 % | 8,892 | `mana_source_table` |
-| 82,717,638 |  2.06 % | | `GameState::clone` |
-
-**Who still gathers**, the number that has driven four passes:
-`computed_permanent` 128,066, `compute_battlefield` 17,718,
-`check_state_based_actions` 10,670, `frozen_effects` 8,882 — **165,336
-total**, down from 243,190.
-
-Self cost, grouped (allocator block re-measured on the tip: `_int_malloc`
-4.74 / `_int_free` 3.89 / `malloc` 2.87 / `free` 1.74 / `malloc_consolidate`
-0.66 / arena+merge+unlink 2.22 = **~16.1 %**, from 19.3 % — the first pass
-where it fell as a share, because the strip gate removed 78 k gathers and
-each gather allocated):
-
-| share | site | note |
-|---|---|---|
-| 19.3 % | `_int_malloc` 5.49 / `_int_free` 4.80 / `malloc` 3.56 / `free` 2.14 / `malloc_consolidate` 0.92 / arena+merge+unlink 2.34 | **the largest single block, and it has grown as a share every pass because no row has ever attacked it head-on.** Ir over-weights it — see the allocator note above — but it is the only theme left at this size. |
-| 6.6 % | `gather_continuous_effects_inner` | `mod.rs` 150 M / `ptr::non_null` 97 M / `slice::iter` 68 M / `vec` 51 M. 516 M inclusive over 243,190 gathers = **2,123 Ir/gather** — the per-call cost the tenth pass moved and the eleventh/twelfth did not. |
-| 3.29 % | `__memcpy_avx_unaligned_erms` | 163 M |
-| 2.90 % | `Arc::clone_from_ref_in` | 109 M `ptr` + 52 M `raw_vec` + 40 M `uint_macros`. **802,482 of the program's 3.75 M allocations** sit under it — the CoW unshares deep-copying the collections inside `CardData` / `PlayerData`. |
-| 1.72 % | `compute_permanent_pass` | 86 M |
-| 1.30 % | `hashbrown RawTable::clone` | 353,862 allocations |
-| 1.21 % | `Vec::clone` | 239,240 allocations |
-| 1.07 % | `GameState::clone` | own fields only; the zone unshare is the `Arc` row above |
-| 0.47 % | `CardDefinition::printed_colors` | **removed by the ColorSet row** — kept here as the before |
-
-Inclusive, in caller terms (these overlap each other):
-
-| Ir | share | calls | site |
-|---|---|---|---|
-| 3,501,254,529 | 70.54 % | 64 k | `perform_action` |
-| 744,365,168 | 15.00 % | 8,892 | `auto_tap_for_cost_inner` — **now the largest named consumer**, and only ~1/3 of it is the tapping itself (`activate_ability` 4.55 % + 4.29 %) |
-| 706,741,290 | 14.24 % | | `computed_permanent` |
-| 534,140,634 | 10.76 % | 52 k | `dispatch_triggers_for_events` |
-| 516,339,194 | 10.40 % | 243,190 | `gather_continuous_effects_inner` |
-| 412,685,108 |  8.31 % | | `compute_permanent_pass` |
-| 359,977,808 |  7.25 % | | `drop_in_place<GameState>` — the transaction checkpoint's other half (candidate 0.5) |
-| 313,182,377 |  6.31 % | 10,670 | `check_state_based_actions` — was 11.69 % two passes ago (candidate 0.25) |
-| 297,647,165 |  6.00 % | 17,718 | `compute_battlefield` — was 13.51 %, and its call count fell 47,808 → 17,718 |
-| 244,258,164 |  4.92 % | 8,892 | `mana_source_table` |
-| 200,930,662 |  4.05 % | | `GameState::clone` |
-| 161,920,619 |  3.26 % | 67,468 | `effective_mana_abilities_with` — **removed 44.7 % of by the land-type gate row** |
-| 130,398,805 |  2.63 % | 59,378 | `permanents_with_abilities_removed` — gathers once per call to answer one bit |
-| 106,024,788 |  2.14 % | 683,248 | `CardDefinition::printed_colors` — **removed by the ColorSet row** |
-| 87,836,252 |  1.77 % | | `CardInstance::clear_end_of_turn_effects` |
-| 84,286,316 |  1.70 % | | `CardInstance::deref_mut` — the CoW unshare point |
-| 73,944,552 |  1.49 % | | `same_team` |
-
-**The allocation tree**, 3,748,803 allocations for six games by allocating
-call site: `Arc::clone_from_ref_in` **802,482 (4.60 % of the program)**;
-`RawVecInner::finish_grow` 657,705 (1.53 %) — `Vec::push` growth;
-`SpecFromIterNested::from_iter` 258,284 (1.24 %); `RawTable::clone` 353,862;
-`computed_permanent` 340,310; `GameState::clone` 264,202; `Vec::clone`
-239,240; `gather_continuous_effects_inner` 199,072.
-
-**Where the `collect()`s are**, by inlining site. **These are inclusive
-rows and the "a `Vec` materialized and thrown away" gloss they were written
-with is wrong** — see candidate (1) above, where the `Vec` machinery at the
-four largest of them is measured at 0.10 % between them. The cost is the
-iterator body, so read each row as "this much work is driven by one
-`collect`", not "this much allocation":
-`compute_battlefield` 224 M / 4.71 % over 17,718 calls (12,641 Ir each);
-`bot::cast_candidates` 169 M / 3.55 % over 7,024 calls (**24,040 Ir each**);
-`mana_source_table` 146 M / 3.07 % over 8,892; `check_state_based_actions`
-140 M / 2.95 % over **82,634 collects, i.e. 7.7 per sweep**;
-`fire_step_triggers` 63 M / 1.32 %.
 
 ## Perf candidates
 
@@ -800,14 +492,29 @@ and twentieth passes ranked is paid: `declare_attackers_banded`
 (741,960 Ir / 0.02 %). Do not re-open this table; the layer system's
 remaining cost is per-card `computed_permanent` and the gather itself.
 
-0. **`pick_attacks_scored`, 1,602,691,451 / 50.06 % over 630 calls.** The
-   largest single item in the file for five passes and still untouched; the
-   search itself, not its inner loop, which every pass since the
-   seventeenth has made cheaper. **This is a bot-quality question as much
-   as a perf one** — a narrower search is a different player, so it needs a
-   `bot_ladder` win-rate gate, not an Ir number. Cheapest first probe: how
-   often does the search depart from greedy? If rarely, the candidates that
-   never win are pure cost.
+0. **`pick_attacks_scored`, 1,559,040,146 / 49.76 % over 630 calls — and
+   the unit is now known.** The largest single item in the file for six
+   passes and still untouched; the search itself, not its inner loop, which
+   every pass since the seventeenth has made cheaper. **This is a
+   bot-quality question as much as a perf one** — a narrower search is a
+   different player, so it needs a `bot_ladder` win-rate gate, not an Ir
+   number.
+
+   *Costed 2026-08-12.* The 630 declarations run **1,166 simulations** —
+   **1.85 per search**, at **1.33 M Ir each, 0.0425 % of the program per
+   simulation**. With `gang`'s `attack_search: 6` a two-attacker greedy set
+   would produce four candidates, so nearly every scored declaration on
+   this workload is the binary *swing with the one creature or don't*
+   (1,166 = 2 x 583, the other 47 returning early on an empty greedy set).
+   **That makes the "attack with nobody" candidate about half of every
+   simulation the engine runs — ~25 % of the program.** The probe is
+   therefore one counter, not a study: log `choose_scored`'s returned index
+   over a `--decks all` run and read how often index 1 (the empty
+   declaration) wins. If it rarely does, the gate to design is a cheap
+   dominance test that skips it, priced against a win-rate run. Note the
+   workload caveat before generalizing: `--decks fixed` almost never
+   presents a multi-attacker board, so the minus-one candidates this
+   profile never sees may matter on `cube` / `all`.
 1. **`would_accept`, 491,192,545 / 15.34 %** — the affordance probe, one
    `GameState::clone` + one `perform_action_inner` per candidate action.
    What is unexamined is the *probe count*, i.e. how many candidates the
@@ -922,8 +629,17 @@ remaining cost is per-card `computed_permanent` and the gather itself.
    file rows — the 5.62 % inclusive is callees inlined into the
    `Vec::from_iter` frame, so read the annotated source, not the function
    list. Two callers, 3,382 and 3,642. By callee:
-   * `can_afford_in_state` **56,500,015 / 1.76 % over 12,114 calls
-     (4,664 Ir each)** — the hand-walk filter, and the largest named item.
+   * `can_afford_in_state` — **CLOSED 2026-08-12, negative result.** The
+     fused-scan fix this entry prescribed measured **+0.066 %** and was
+     reverted; see the twenty-seventh pass's Log block for why (1.13 cards
+     per sweep, not 1.72 — the filter is not in `cast_candidates`). What is
+     left of the item after measurement: the four static walks are **0.29 %**
+     between them, `available_mana` is **1.14 %** and was 60 % of the
+     function, and the part of `available_mana` that was real cost —
+     `granted_abilities_with`'s redundant `battlefield_find` — is **paid**
+     (`granted_abilities_of`, -0.552 %). Do not re-open. The original
+     measurement, kept because the arithmetic below is still the warning:
+     **56,500,015 / 1.76 % over 12,114 calls (4,664 Ir each)**.
      Its body per hand card: `extra_cost_for_card_in_hand`,
      `cost_reduction_for_spell`, **a `ManaCost` clone** to append
      `colored_spell_tax_for_spell` (empty on every bench card),
@@ -1019,12 +735,35 @@ remaining cost is per-card `computed_permanent` and the gather itself.
     15,368 calls is what a caller already inside someone's scope looks
     like; imitate its caller.
 
-**The profile of record was retaken at `125557eb`** (the twenty-fourth
-pass's tip) and every share quoted in the candidates above is from that
-retake, except where a candidate says otherwise. **It is now two rows
-stale**: `56f6623f` and `5d4b5402` moved the damage and targeting paths by
--1.33 % between them, so shares in (0), (1), (5) and (8) read very slightly
-low. Retake before pulling anything whose margin is under ~0.3 %.
+11. **A helper that opens with `battlefield_find` and is called from a
+    battlefield loop — the generalization of the twenty-seventh pass's
+    row.** `granted_abilities_with(card_id, scan)` was -0.552 % on its own
+    because three of its callers already held the `&CardInstance` and it
+    re-scanned the battlefield to recover it. *The search*: grep the engine
+    for `fn .*card_id: CardId` bodies whose first statement is
+    `battlefield_find` / `find_card_anywhere`, then read each caller and ask
+    whether it is inside a `battlefield.iter()`. The fix is mechanical (an
+    `_of(&CardInstance)` twin, the `CardId` form kept as a find plus
+    delegate for the off-battlefield fallback) and **cannot change
+    behaviour** — the twin is the same body with the lookup removed — so a
+    wrong guess costs a rebuild, not a bug. Same property that made
+    candidate (10) worth attacking by enumeration.
+12. **`grant_scan`, 20,282,413 / 0.65 % over ~26,000 calls (~780 Ir each)**
+    — `available_mana` 12,702, `mana_source_table` 7,370, the three
+    `pick_removal_*` ~2,080 each. It walks `battlefield x static_abilities`
+    through `active_static` and builds four `Vec`s that are empty on every
+    bench board. Same shape as candidate (2) and the same blocker: a cached
+    board flag needs invalidation at every battlefield mutation. The cheaper
+    half is the caller side — `available_mana` and `mana_source_table` are
+    both called from sweeps that could share one scan — but read the
+    twenty-seventh pass's negative result first and **count the sweeps, not
+    the calls**, before costing it.
+
+**The profile of record was retaken at `f814a13b`** (2026-08-12, the
+twenty-sixth pass's tip) and the table above it is fresh; shares quoted in
+the candidates below it are from that retake except where a candidate says
+otherwise. Candidates (0), (1), (5) and (8) were re-read on it. Anything
+still quoting the `125557eb` retake reads ~2 % high in share.
 
 Methodological notes, each learned the hard way:
 
