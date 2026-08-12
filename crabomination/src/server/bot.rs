@@ -7096,12 +7096,24 @@ pub(crate) fn determinize_hidden(g: &mut GameState, seat: usize, salt: u64) {
             // Our own library order is unknown to us too — a search that
             // plans around the card it is about to draw is cheating just
             // as much as one that reads the opponent's hand.
+            g.players[p].library.sort_by_key(|c| c.id.0);
             g.players[p].library.shuffle(&mut rng);
             continue;
         }
         let n = g.players[p].hand.len();
         let returned: Vec<_> = g.players[p].hand.drain(..).collect();
         g.players[p].library.extend(returned);
+        // Canonicalise before shuffling, and this is the whole point
+        // rather than tidiness. `shuffle` permutes the vector it is
+        // given, so its output depends on the order that vector arrived
+        // in — which is hidden information. Without the sort, redealing
+        // a position whose hidden zones were arranged differently
+        // produces a *different* guess, so "the search does not read
+        // hidden state" could not even be stated as an invariant, let
+        // alone tested. Sorting by card id makes the redeal a function
+        // of the information set: which cards are unseen, and how many
+        // of them are in hand (a public number), and nothing else.
+        g.players[p].library.sort_by_key(|c| c.id.0);
         g.players[p].library.shuffle(&mut rng);
         let split = g.players[p].library.len().saturating_sub(n);
         let redrawn: Vec<_> = g.players[p].library.split_off(split);
@@ -9843,6 +9855,104 @@ mod tests {
         assert!(mid > 0.0 && mid < 1.0, "{mid}");
         assert_eq!(ply_blend_factor(12), 0.0);
         assert_eq!(ply_blend_factor(30), 0.0);
+    }
+
+    /// End-to-end smoke test of the property determinization is for: a
+    /// determinized search must not depend on the hidden arrangement,
+    /// and permuting a library changes nothing any player is allowed to
+    /// know.
+    ///
+    /// **This test does not discriminate on its own, and the honest note
+    /// matters more than the assertion.** Removing the canonicalising
+    /// sort from `determinize_hidden` leaves it passing: on a position
+    /// this simple the bot reaches the same action whatever the redeal
+    /// guesses, so the decision is not sensitive to the thing under
+    /// test. Kept as a cheap guard against gross regressions; the actual
+    /// guard is `redeal_depends_only_on_the_information_set`, which was
+    /// verified to fail when the sort is removed.
+    #[test]
+    fn determinized_decisions_ignore_library_order() {
+        use rand::SeedableRng;
+        use rand::seq::SliceRandom;
+
+        let build = || {
+            let mut g = two_player_game();
+            for seat in 0..2 {
+                for _ in 0..12 {
+                    let id = g.add_card_to_hand(seat, catalog::grizzly_bears());
+                    if let Some(pos) = g.players[seat].hand.iter().position(|c| c.id == id) {
+                        let card = g.players[seat].hand.remove(pos);
+                        g.players[seat].library.push(card);
+                    }
+                }
+                for _ in 0..3 {
+                    g.add_card_to_hand(seat, catalog::grizzly_bears());
+                }
+            }
+            let id = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+            g.clear_sickness(id);
+            g
+        };
+
+        let decide = |g: GameState| {
+            let mut bot = HeuristicBot::with_weights(EvalWeights::determinized());
+            format!("{:?}", bot.next_action(&g, 0))
+        };
+
+        let base = build();
+        let first = decide(base.clone());
+
+        let mut permuted = base.clone();
+        let mut rng = rand::rngs::StdRng::seed_from_u64(99);
+        for p in 0..2 {
+            permuted.players[p].library.shuffle(&mut rng);
+        }
+        let second = decide(permuted);
+
+        assert_eq!(
+            first, second,
+            "a determinized search changed its mind when only hidden order moved"
+        );
+    }
+
+    /// And the redeal itself is a function of the information set, not of
+    /// how the hidden cards happened to be arranged — the mechanism the
+    /// test above rests on, checked directly so a regression names its
+    /// own cause rather than surfacing as a mysterious decision flip.
+    #[test]
+    fn redeal_depends_only_on_the_information_set() {
+        use rand::SeedableRng;
+        use rand::seq::SliceRandom;
+
+        let mut g = two_player_game();
+        for _ in 0..10 {
+            let id = g.add_card_to_hand(1, catalog::grizzly_bears());
+            if let Some(pos) = g.players[1].hand.iter().position(|c| c.id == id) {
+                let card = g.players[1].hand.remove(pos);
+                g.players[1].library.push(card);
+            }
+        }
+        for _ in 0..3 {
+            g.add_card_to_hand(1, catalog::grizzly_bears());
+        }
+
+        let mut a = g.clone();
+        determinize_hidden(&mut a, 0, 0);
+
+        let mut b = g.clone();
+        let mut rng = rand::rngs::StdRng::seed_from_u64(5);
+        b.players[1].library.shuffle(&mut rng);
+        determinize_hidden(&mut b, 0, 0);
+
+        let ids = |g: &GameState| -> Vec<u32> {
+            g.players[1].library.iter().map(|c| c.id.0).collect()
+        };
+        assert_eq!(ids(&a), ids(&b), "the redeal read the hidden arrangement");
+        assert_eq!(
+            a.players[1].hand.len(),
+            b.players[1].hand.len(),
+            "hand size is public and must be preserved"
+        );
     }
 
     use super::*;
@@ -15074,4 +15184,5 @@ mod action_sampling_tests {
         }
         set_jitter_seed(None);
     }
+
 }

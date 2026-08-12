@@ -204,172 +204,178 @@
   204. p0 PassPriority  ~~  T10 BeginCombat | life 20/14 hand 2/6 bf 7/8 gy 2/0 lib 29/26 stack 0
   205. p1 PassPriority  ~~  T10 BeginCombat | life 20/14 hand 2/6 bf 7/8 gy 2/0 lib 29/26 stack 0
   206. p0 PassPriority  ~~  T10 DeclareAttackers | life 20/14 hand 2/6 bf 7/8 gy 2/0 lib 29/26 stack 0
-  207. p1 DeclareAttackers([])  ~~  T10 DeclareAttackers | life 20/14 hand 2/6 bf 7/8 gy 2/0 lib 29/26 stack 0
+  207. p1 DeclareAttackers([Attack { attacker: CardId(59), target: Player(0) }])  ~~  T10 DeclareAttackers | life 20/14 hand 2/6 bf 7/8 gy 2/0 lib 29/26 stack 0
   208. p1 PassPriority  ~~  T10 DeclareAttackers | life 20/14 hand 2/6 bf 7/8 gy 2/0 lib 29/26 stack 0
-  209. p0 PassPriority  ~~  T10 EndCombat | life 20/14 hand 2/6 bf 7/8 gy 2/0 lib 29/26 stack 0
-  210. p1 PassPriority  ~~  T10 EndCombat | life 20/14 hand 2/6 bf 7/8 gy 2/0 lib 29/26 stack 0
-  211. p0 PassPriority  ~~  T10 PostCombatMain | life 20/14 hand 2/6 bf 7/8 gy 2/0 lib 29/26 stack 0
-  212. p1 CastSpell { card_id: CardId(67), target: None, additional_targets: [], mode: None, x_value: None }  ~~  T10 PostCombatMain | life 20/14 hand 2/5 bf 7/8 gy 2/0 lib 29/26 stack 1
-  213. p1 PassPriority  ~~  T10 PostCombatMain | life 20/14 hand 2/5 bf 7/8 gy 2/0 lib 29/26 stack 1
-  214. p0 PassPriority  ~~  T10 PostCombatMain | life 20/14 hand 2/5 bf 7/9 gy 2/0 lib 29/26 stack 0
-  215. p1 PassPriority  ~~  T10 PostCombatMain | life 20/14 hand 2/5 bf 7/9 gy 2/0 lib 29/26 stack 0
-  216. p0 PassPriority  ~~  T10 End | life 20/14 hand 2/5 bf 7/9 gy 2/0 lib 29/26 stack 0
-  217. p1 PassPriority  ~~  T10 End | life 20/14 hand 2/5 bf 7/9 gy 2/0 lib 29/26 stack 0
-  218. p0 PassPriority  ~~  T11 Upkeep | life 20/14 hand 2/5 bf 7/9 gy 2/0 lib 29/26 stack 0
-  219. p0 PassPriority  ~~  T11 Upkeep | life 20/14 hand 2/5 bf 7/9 gy 2/0 lib 29/26 stack 0
-  220. p1 PassPriority  ~~  T11 Draw | life 20/14 hand 3/5 bf 7/9 gy 2/0 lib 28/26 stack 0
-  221. p0 PassPriority  ~~  T11 Draw | life 20/14 hand 3/5 bf 7/9 gy 2/0 lib 28/26 stack 0
-  222. p1 PassPriority  ~~  T11 PreCombatMain | life 20/14 hand 3/5 bf 7/9 gy 2/0 lib 28/26 stack 0
-  223. p0 PassPriority  ~~  T11 PreCombatMain | life 20/14 hand 3/5 bf 7/9 gy 2/0 lib 28/26 stack 0
-  224. p1 PassPriority  ~~  T11 BeginCombat | life 20/14 hand 3/5 bf 7/9 gy 2/0 lib 28/26 stack 0
-  225. p0 PassPriority  ~~  T11 BeginCombat | life 20/14 hand 3/5 bf 7/9 gy 2/0 lib 28/26 stack 0
-  226. p1 PassPriority  ~~  T11 DeclareAttackers | life 20/14 hand 3/5 bf 7/9 gy 2/0 lib 28/26 stack 0
-  227. p0 DeclareAttackers([Attack { attacker: CardId(38), target: Player(1) }])  ~~  T11 DeclareAttackers | life 20/14 hand 3/5 bf 7/9 gy 2/0 lib 28/26 stack 0
-  228. p0 PassPriority  ~~  T11 DeclareAttackers | life 20/14 hand 3/5 bf 7/9 gy 2/0 lib 28/26 stack 0
-  229. p1 PassPriority  ~~  T11 DeclareBlockers | life 20/14 hand 3/5 bf 7/9 gy 2/0 lib 28/26 stack 0
-  230. p0 PassPriority  ~~  T11 DeclareBlockers | life 20/14 hand 3/5 bf 7/9 gy 2/0 lib 28/26 stack 0
-  231. p1 DeclareBlockers([])  ~~  T11 DeclareBlockers | life 20/14 hand 3/5 bf 7/9 gy 2/0 lib 28/26 stack 0
-  232. p0 PassPriority  ~~  T11 DeclareBlockers | life 20/14 hand 3/5 bf 7/9 gy 2/0 lib 28/26 stack 0
-  233. p1 PassPriority  ~~  T11 CombatDamage | life 20/9 hand 3/5 bf 7/9 gy 2/0 lib 28/26 stack 0
-  234. p0 PassPriority  ~~  T11 CombatDamage | life 20/9 hand 3/5 bf 7/9 gy 2/0 lib 28/26 stack 0
-  235. p1 PassPriority  ~~  T11 EndCombat | life 20/9 hand 3/5 bf 7/9 gy 2/0 lib 28/26 stack 0
-  236. p0 PassPriority  ~~  T11 EndCombat | life 20/9 hand 3/5 bf 7/9 gy 2/0 lib 28/26 stack 0
-  237. p1 PassPriority  ~~  T11 PostCombatMain | life 20/9 hand 3/5 bf 7/9 gy 2/0 lib 28/26 stack 0
-  238. p0 CastSpell { card_id: CardId(19), target: Some(Player(1)), additional_targets: [], mode: None, x_value: None }  ~~  T11 PostCombatMain | life 20/9 hand 2/5 bf 7/9 gy 2/0 lib 28/26 stack 2
-  239. p0 PassPriority  ~~  T11 PostCombatMain | life 20/9 hand 2/5 bf 7/9 gy 2/0 lib 28/26 stack 2
-  240. p1 PassPriority  ~~  T11 PostCombatMain | life 20/9 hand 2/5 bf 7/9 gy 2/0 lib 28/26 stack 1
-  241. p0 PassPriority  ~~  T11 PostCombatMain | life 20/9 hand 2/5 bf 7/9 gy 2/0 lib 28/26 stack 1
-  242. p1 PassPriority  ~~  T11 PostCombatMain | life 20/6 hand 2/5 bf 7/9 gy 3/0 lib 28/26 stack 0
-  243. p0 PassPriority  ~~  T11 PostCombatMain | life 20/6 hand 2/5 bf 7/9 gy 3/0 lib 28/26 stack 0
-  244. p1 PassPriority  ~~  T11 End | life 20/6 hand 2/5 bf 7/9 gy 3/0 lib 28/26 stack 0
-  245. p0 PassPriority  ~~  T11 End | life 20/6 hand 2/5 bf 7/9 gy 3/0 lib 28/26 stack 0
-  246. p1 PassPriority  ~~  T12 Upkeep | life 20/6 hand 2/5 bf 7/9 gy 3/0 lib 28/26 stack 0
-  247. p1 PassPriority  ~~  T12 Upkeep | life 20/6 hand 2/5 bf 7/9 gy 3/0 lib 28/26 stack 0
-  248. p0 PassPriority  ~~  T12 Draw | life 20/6 hand 2/6 bf 7/9 gy 3/0 lib 28/25 stack 0
-  249. p1 PassPriority  ~~  T12 Draw | life 20/6 hand 2/6 bf 7/9 gy 3/0 lib 28/25 stack 0
-  250. p0 PassPriority  ~~  T12 PreCombatMain | life 20/6 hand 2/6 bf 7/9 gy 3/0 lib 28/25 stack 0
-  251. p1 PassPriority  ~~  T12 PreCombatMain | life 20/6 hand 2/6 bf 7/9 gy 3/0 lib 28/25 stack 0
-  252. p0 PassPriority  ~~  T12 BeginCombat | life 20/6 hand 2/6 bf 7/9 gy 3/0 lib 28/25 stack 0
-  253. p1 PassPriority  ~~  T12 BeginCombat | life 20/6 hand 2/6 bf 7/9 gy 3/0 lib 28/25 stack 0
-  254. p0 PassPriority  ~~  T12 DeclareAttackers | life 20/6 hand 2/6 bf 7/9 gy 3/0 lib 28/25 stack 0
-  255. p1 DeclareAttackers([Attack { attacker: CardId(67), target: Player(0) }])  ~~  T12 DeclareAttackers | life 20/6 hand 2/6 bf 7/9 gy 3/0 lib 28/25 stack 0
-  256. p1 PassPriority  ~~  T12 DeclareAttackers | life 20/6 hand 2/6 bf 7/9 gy 3/0 lib 28/25 stack 0
-  257. p0 PassPriority  ~~  T12 DeclareBlockers | life 20/6 hand 2/6 bf 7/9 gy 3/0 lib 28/25 stack 0
-  258. p1 PassPriority  ~~  T12 DeclareBlockers | life 20/6 hand 2/6 bf 7/9 gy 3/0 lib 28/25 stack 0
-  259. p0 DeclareBlockers([])  ~~  T12 DeclareBlockers | life 20/6 hand 2/6 bf 7/9 gy 3/0 lib 28/25 stack 0
-  260. p1 PassPriority  ~~  T12 DeclareBlockers | life 20/6 hand 2/6 bf 7/9 gy 3/0 lib 28/25 stack 0
-  261. p0 PassPriority  ~~  T12 FirstStrikeDamage | life 15/11 hand 2/6 bf 7/9 gy 3/0 lib 28/25 stack 0
-  262. p1 PassPriority  ~~  T12 FirstStrikeDamage | life 15/11 hand 2/6 bf 7/9 gy 3/0 lib 28/25 stack 0
-  263. p0 PassPriority  ~~  T12 CombatDamage | life 15/11 hand 2/6 bf 7/9 gy 3/0 lib 28/25 stack 0
-  264. p1 PassPriority  ~~  T12 CombatDamage | life 15/11 hand 2/6 bf 7/9 gy 3/0 lib 28/25 stack 0
-  265. p0 PassPriority  ~~  T12 EndCombat | life 15/11 hand 2/6 bf 7/9 gy 3/0 lib 28/25 stack 0
-  266. p1 PassPriority  ~~  T12 EndCombat | life 15/11 hand 2/6 bf 7/9 gy 3/0 lib 28/25 stack 0
-  267. p0 PassPriority  ~~  T12 PostCombatMain | life 15/11 hand 2/6 bf 7/9 gy 3/0 lib 28/25 stack 0
-  268. p1 CastSpell { card_id: CardId(66), target: None, additional_targets: [], mode: None, x_value: None }  ~~  T12 PostCombatMain | life 15/11 hand 2/5 bf 7/9 gy 3/0 lib 28/25 stack 1
-  269. p1 PassPriority  ~~  T12 PostCombatMain | life 15/11 hand 2/5 bf 7/9 gy 3/0 lib 28/25 stack 1
-  270. p0 PassPriority  ~~  T12 PostCombatMain | life 15/11 hand 2/5 bf 7/10 gy 3/0 lib 28/25 stack 0
-  271. p1 PassPriority  ~~  T12 PostCombatMain | life 15/11 hand 2/5 bf 7/10 gy 3/0 lib 28/25 stack 0
-  272. p0 PassPriority  ~~  T12 End | life 15/11 hand 2/5 bf 7/10 gy 3/0 lib 28/25 stack 0
-  273. p1 PassPriority  ~~  T12 End | life 15/11 hand 2/5 bf 7/10 gy 3/0 lib 28/25 stack 0
-  274. p0 PassPriority  ~~  T13 Upkeep | life 15/11 hand 2/5 bf 7/10 gy 3/0 lib 28/25 stack 0
-  275. p0 PassPriority  ~~  T13 Upkeep | life 15/11 hand 2/5 bf 7/10 gy 3/0 lib 28/25 stack 0
-  276. p1 PassPriority  ~~  T13 Draw | life 15/11 hand 3/5 bf 7/10 gy 3/0 lib 27/25 stack 0
-  277. p0 PassPriority  ~~  T13 Draw | life 15/11 hand 3/5 bf 7/10 gy 3/0 lib 27/25 stack 0
-  278. p1 PassPriority  ~~  T13 PreCombatMain | life 15/11 hand 3/5 bf 7/10 gy 3/0 lib 27/25 stack 0
-  279. p0 CastSpell { card_id: CardId(20), target: Some(Player(1)), additional_targets: [], mode: None, x_value: None }  ~~  T13 PreCombatMain | life 15/11 hand 2/5 bf 7/10 gy 3/0 lib 27/25 stack 2
-  280. p0 PassPriority  ~~  T13 PreCombatMain | life 15/11 hand 2/5 bf 7/10 gy 3/0 lib 27/25 stack 2
-  281. p1 PassPriority  ~~  T13 PreCombatMain | life 15/11 hand 2/5 bf 7/10 gy 3/0 lib 27/25 stack 1
-  282. p0 PassPriority  ~~  T13 PreCombatMain | life 15/11 hand 2/5 bf 7/10 gy 3/0 lib 27/25 stack 1
-  283. p1 PassPriority  ~~  T13 PreCombatMain | life 15/8 hand 2/5 bf 7/10 gy 4/0 lib 27/25 stack 0
-  284. p0 PassPriority  ~~  T13 PreCombatMain | life 15/8 hand 2/5 bf 7/10 gy 4/0 lib 27/25 stack 0
-  285. p1 PassPriority  ~~  T13 BeginCombat | life 15/8 hand 2/5 bf 7/10 gy 4/0 lib 27/25 stack 0
-  286. p0 PassPriority  ~~  T13 BeginCombat | life 15/8 hand 2/5 bf 7/10 gy 4/0 lib 27/25 stack 0
-  287. p1 PassPriority  ~~  T13 DeclareAttackers | life 15/8 hand 2/5 bf 7/10 gy 4/0 lib 27/25 stack 0
-  288. p0 DeclareAttackers([Attack { attacker: CardId(38), target: Player(1) }])  ~~  T13 DeclareAttackers | life 15/8 hand 2/5 bf 7/10 gy 4/0 lib 27/25 stack 0
-  289. p0 PassPriority  ~~  T13 DeclareAttackers | life 15/8 hand 2/5 bf 7/10 gy 4/0 lib 27/25 stack 0
-  290. p1 PassPriority  ~~  T13 DeclareBlockers | life 15/8 hand 2/5 bf 7/10 gy 4/0 lib 27/25 stack 0
-  291. p0 PassPriority  ~~  T13 DeclareBlockers | life 15/8 hand 2/5 bf 7/10 gy 4/0 lib 27/25 stack 0
-  292. p1 DeclareBlockers([(CardId(66), CardId(38))])  ~~  T13 DeclareBlockers | life 15/8 hand 2/5 bf 7/10 gy 4/0 lib 27/25 stack 0
-  293. p0 PassPriority  ~~  T13 DeclareBlockers | life 15/8 hand 2/5 bf 7/10 gy 4/0 lib 27/25 stack 0
-  294. p1 PassPriority  ~~  T13 CombatDamage | life 15/8 hand 2/5 bf 6/9 gy 5/1 lib 27/25 stack 0
-  295. p0 PassPriority  ~~  T13 CombatDamage | life 15/8 hand 2/5 bf 6/9 gy 5/1 lib 27/25 stack 0
-  296. p1 PassPriority  ~~  T13 EndCombat | life 15/8 hand 2/5 bf 6/9 gy 5/1 lib 27/25 stack 0
-  297. p0 PassPriority  ~~  T13 EndCombat | life 15/8 hand 2/5 bf 6/9 gy 5/1 lib 27/25 stack 0
-  298. p1 PassPriority  ~~  T13 PostCombatMain | life 15/8 hand 2/5 bf 6/9 gy 5/1 lib 27/25 stack 0
-  299. p0 PassPriority  ~~  T13 PostCombatMain | life 15/8 hand 2/5 bf 6/9 gy 5/1 lib 27/25 stack 0
-  300. p1 PassPriority  ~~  T13 End | life 15/8 hand 2/5 bf 6/9 gy 5/1 lib 27/25 stack 0
-  301. p0 PassPriority  ~~  T13 End | life 15/8 hand 2/5 bf 6/9 gy 5/1 lib 27/25 stack 0
-  302. p1 PassPriority  ~~  T14 Upkeep | life 15/8 hand 2/5 bf 6/9 gy 5/1 lib 27/25 stack 0
-  303. p1 PassPriority  ~~  T14 Upkeep | life 15/8 hand 2/5 bf 6/9 gy 5/1 lib 27/25 stack 0
-  304. p0 PassPriority  ~~  T14 Draw | life 15/8 hand 2/6 bf 6/9 gy 5/1 lib 27/24 stack 0
-  305. p1 PassPriority  ~~  T14 Draw | life 15/8 hand 2/6 bf 6/9 gy 5/1 lib 27/24 stack 0
-  306. p0 PassPriority  ~~  T14 PreCombatMain | life 15/8 hand 2/6 bf 6/9 gy 5/1 lib 27/24 stack 0
-  307. p1 PlayLand(CardId(50))  ~~  T14 PreCombatMain | life 15/8 hand 2/5 bf 6/10 gy 5/1 lib 27/24 stack 0
-  308. p1 PassPriority  ~~  T14 PreCombatMain | life 15/8 hand 2/5 bf 6/10 gy 5/1 lib 27/24 stack 0
-  309. p0 PassPriority  ~~  T14 BeginCombat | life 15/8 hand 2/5 bf 6/10 gy 5/1 lib 27/24 stack 0
-  310. p1 PassPriority  ~~  T14 BeginCombat | life 15/8 hand 2/5 bf 6/10 gy 5/1 lib 27/24 stack 0
-  311. p0 PassPriority  ~~  T14 DeclareAttackers | life 15/8 hand 2/5 bf 6/10 gy 5/1 lib 27/24 stack 0
-  312. p1 DeclareAttackers([Attack { attacker: CardId(59), target: Player(0) }, Attack { attacker: CardId(67), target: Player(0) }])  ~~  T14 DeclareAttackers | life 15/8 hand 2/5 bf 6/10 gy 5/1 lib 27/24 stack 0
-  313. p1 PassPriority  ~~  T14 DeclareAttackers | life 15/8 hand 2/5 bf 6/10 gy 5/1 lib 27/24 stack 0
-  314. p0 PassPriority  ~~  T14 DeclareBlockers | life 15/8 hand 2/5 bf 6/10 gy 5/1 lib 27/24 stack 0
-  315. p1 PassPriority  ~~  T14 DeclareBlockers | life 15/8 hand 2/5 bf 6/10 gy 5/1 lib 27/24 stack 0
-  316. p0 DeclareBlockers([])  ~~  T14 DeclareBlockers | life 15/8 hand 2/5 bf 6/10 gy 5/1 lib 27/24 stack 0
-  317. p1 PassPriority  ~~  T14 DeclareBlockers | life 15/8 hand 2/5 bf 6/10 gy 5/1 lib 27/24 stack 0
-  318. p0 PassPriority  ~~  T14 FirstStrikeDamage | life 10/13 hand 2/5 bf 6/10 gy 5/1 lib 27/24 stack 0
-  319. p1 PassPriority  ~~  T14 FirstStrikeDamage | life 10/13 hand 2/5 bf 6/10 gy 5/1 lib 27/24 stack 0
-  320. p0 PassPriority  ~~  T14 CombatDamage | life 8/13 hand 2/5 bf 6/10 gy 5/1 lib 27/24 stack 0
-  321. p1 PassPriority  ~~  T14 CombatDamage | life 8/13 hand 2/5 bf 6/10 gy 5/1 lib 27/24 stack 0
-  322. p0 PassPriority  ~~  T14 EndCombat | life 8/13 hand 2/5 bf 6/10 gy 5/1 lib 27/24 stack 0
-  323. p1 PassPriority  ~~  T14 EndCombat | life 8/13 hand 2/5 bf 6/10 gy 5/1 lib 27/24 stack 0
-  324. p0 PassPriority  ~~  T14 PostCombatMain | life 8/13 hand 2/5 bf 6/10 gy 5/1 lib 27/24 stack 0
-  325. p1 CastSpell { card_id: CardId(65), target: None, additional_targets: [], mode: None, x_value: None }  ~~  T14 PostCombatMain | life 8/13 hand 2/4 bf 6/10 gy 5/1 lib 27/24 stack 1
-  326. p1 PassPriority  ~~  T14 PostCombatMain | life 8/13 hand 2/4 bf 6/10 gy 5/1 lib 27/24 stack 1
-  327. p0 PassPriority  ~~  T14 PostCombatMain | life 8/13 hand 2/4 bf 6/11 gy 5/1 lib 27/24 stack 0
-  328. p1 PassPriority  ~~  T14 PostCombatMain | life 8/13 hand 2/4 bf 6/11 gy 5/1 lib 27/24 stack 0
-  329. p0 PassPriority  ~~  T14 End | life 8/13 hand 2/4 bf 6/11 gy 5/1 lib 27/24 stack 0
-  330. p1 PassPriority  ~~  T14 End | life 8/13 hand 2/4 bf 6/11 gy 5/1 lib 27/24 stack 0
-  331. p0 PassPriority  ~~  T15 Upkeep | life 8/13 hand 2/4 bf 6/11 gy 5/1 lib 27/24 stack 0
-  332. p0 PassPriority  ~~  T15 Upkeep | life 8/13 hand 2/4 bf 6/11 gy 5/1 lib 27/24 stack 0
-  333. p1 PassPriority  ~~  T15 Draw | life 8/13 hand 3/4 bf 6/11 gy 5/1 lib 26/24 stack 0
-  334. p0 PassPriority  ~~  T15 Draw | life 8/13 hand 3/4 bf 6/11 gy 5/1 lib 26/24 stack 0
-  335. p1 PassPriority  ~~  T15 PreCombatMain | life 8/13 hand 3/4 bf 6/11 gy 5/1 lib 26/24 stack 0
-  336. p0 PassPriority  ~~  T15 PreCombatMain | life 8/13 hand 3/4 bf 6/11 gy 5/1 lib 26/24 stack 0
-  337. p1 PassPriority  ~~  T15 BeginCombat | life 8/13 hand 3/4 bf 6/11 gy 5/1 lib 26/24 stack 0
-  338. p0 PassPriority  ~~  T15 BeginCombat | life 8/13 hand 3/4 bf 6/11 gy 5/1 lib 26/24 stack 0
-  339. p1 PassPriority  ~~  T15 DeclareAttackers | life 8/13 hand 3/4 bf 6/11 gy 5/1 lib 26/24 stack 0
-  340. p0 DeclareAttackers([Attack { attacker: CardId(29), target: Player(1) }])  ~~  T15 DeclareAttackers | life 8/13 hand 3/4 bf 6/11 gy 5/1 lib 26/24 stack 0
-  341. p0 PassPriority  ~~  T15 DeclareAttackers | life 8/13 hand 3/4 bf 6/11 gy 5/1 lib 26/24 stack 0
-  342. p1 PassPriority  ~~  T15 DeclareBlockers | life 8/13 hand 3/4 bf 6/11 gy 5/1 lib 26/24 stack 0
-  343. p0 PassPriority  ~~  T15 DeclareBlockers | life 8/13 hand 3/4 bf 6/11 gy 5/1 lib 26/24 stack 0
-  344. p1 DeclareBlockers([(CardId(65), CardId(29))])  ~~  T15 DeclareBlockers | life 8/13 hand 3/4 bf 6/11 gy 5/1 lib 26/24 stack 0
-  345. p0 PassPriority  ~~  T15 DeclareBlockers | life 8/13 hand 3/4 bf 6/11 gy 5/1 lib 26/24 stack 0
-  346. p1 PassPriority  ~~  T15 CombatDamage | life 8/13 hand 3/4 bf 5/11 gy 6/1 lib 26/24 stack 0
-  347. p0 PassPriority  ~~  T15 CombatDamage | life 8/13 hand 3/4 bf 5/11 gy 6/1 lib 26/24 stack 0
-  348. p1 PassPriority  ~~  T15 EndCombat | life 8/13 hand 3/4 bf 5/11 gy 6/1 lib 26/24 stack 0
-  349. p0 PassPriority  ~~  T15 EndCombat | life 8/13 hand 3/4 bf 5/11 gy 6/1 lib 26/24 stack 0
-  350. p1 PassPriority  ~~  T15 PostCombatMain | life 8/13 hand 3/4 bf 5/11 gy 6/1 lib 26/24 stack 0
-  351. p0 CastSpell { card_id: CardId(39), target: None, additional_targets: [], mode: None, x_value: None }  ~~  T15 PostCombatMain | life 8/13 hand 2/4 bf 5/11 gy 6/1 lib 26/24 stack 1
-  352. p0 PassPriority  ~~  T15 PostCombatMain | life 8/13 hand 2/4 bf 5/11 gy 6/1 lib 26/24 stack 1
-  353. p1 PassPriority  ~~  T15 PostCombatMain | life 8/13 hand 2/4 bf 6/11 gy 6/1 lib 26/24 stack 0
-  354. p0 PassPriority  ~~  T15 PostCombatMain | life 8/13 hand 2/4 bf 6/11 gy 6/1 lib 26/24 stack 0
-  355. p1 PassPriority  ~~  T15 End | life 8/13 hand 2/4 bf 6/11 gy 6/1 lib 26/24 stack 0
-  356. p0 PassPriority  ~~  T15 End | life 8/13 hand 2/4 bf 6/11 gy 6/1 lib 26/24 stack 0
-  357. p1 PassPriority  ~~  T16 Upkeep | life 8/13 hand 2/4 bf 6/11 gy 6/1 lib 26/24 stack 0
-  358. p1 PassPriority  ~~  T16 Upkeep | life 8/13 hand 2/4 bf 6/11 gy 6/1 lib 26/24 stack 0
-  359. p0 PassPriority  ~~  T16 Draw | life 8/13 hand 2/5 bf 6/11 gy 6/1 lib 26/23 stack 0
-  360. p1 PassPriority  ~~  T16 Draw | life 8/13 hand 2/5 bf 6/11 gy 6/1 lib 26/23 stack 0
-  361. p0 PassPriority  ~~  T16 PreCombatMain | life 8/13 hand 2/5 bf 6/11 gy 6/1 lib 26/23 stack 0
-  362. p1 PassPriority  ~~  T16 PreCombatMain | life 8/13 hand 2/5 bf 6/11 gy 6/1 lib 26/23 stack 0
-  363. p0 PassPriority  ~~  T16 BeginCombat | life 8/13 hand 2/5 bf 6/11 gy 6/1 lib 26/23 stack 0
-  364. p1 PassPriority  ~~  T16 BeginCombat | life 8/13 hand 2/5 bf 6/11 gy 6/1 lib 26/23 stack 0
-  365. p0 PassPriority  ~~  T16 DeclareAttackers | life 8/13 hand 2/5 bf 6/11 gy 6/1 lib 26/23 stack 0
-  366. p1 DeclareAttackers([Attack { attacker: CardId(59), target: Player(0) }, Attack { attacker: CardId(67), target: Player(0) }, Attack { attacker: CardId(65), target: Player(0) }])  ~~  T16 DeclareAttackers | life 8/13 hand 2/5 bf 6/11 gy 6/1 lib 26/23 stack 0
-  367. p1 PassPriority  ~~  T16 DeclareAttackers | life 8/13 hand 2/5 bf 6/11 gy 6/1 lib 26/23 stack 0
-  368. p0 PassPriority  ~~  T16 DeclareBlockers | life 8/13 hand 2/5 bf 6/11 gy 6/1 lib 26/23 stack 0
-  369. p1 PassPriority  ~~  T16 DeclareBlockers | life 8/13 hand 2/5 bf 6/11 gy 6/1 lib 26/23 stack 0
-  370. p0 DeclareBlockers([])  ~~  T16 DeclareBlockers | life 8/13 hand 2/5 bf 6/11 gy 6/1 lib 26/23 stack 0
-  371. p1 PassPriority  ~~  T16 DeclareBlockers | life 8/13 hand 2/5 bf 6/11 gy 6/1 lib 26/23 stack 0
-  372. p0 PassPriority  ~~  T16 FirstStrikeDamage | life 3/18 hand 2/5 bf 6/11 gy 6/1 lib 26/23 stack 0
-  373. p1 PassPriority  ~~  T16 FirstStrikeDamage | life 3/18 hand 2/5 bf 6/11 gy 6/1 lib 26/23 stack 0
-  374. p0 PassPriority  ~~  T16 CombatDamage | life -3/18 hand 0/5 bf 0/11 gy 0/1 lib 0/23 stack 0
-= winner 1 turns 16 actions 374
+  209. p0 PassPriority  ~~  T10 DeclareBlockers | life 20/14 hand 2/6 bf 7/8 gy 2/0 lib 29/26 stack 0
+  210. p1 PassPriority  ~~  T10 DeclareBlockers | life 20/14 hand 2/6 bf 7/8 gy 2/0 lib 29/26 stack 0
+  211. p0 DeclareBlockers([])  ~~  T10 DeclareBlockers | life 20/14 hand 2/6 bf 7/8 gy 2/0 lib 29/26 stack 0
+  212. p1 PassPriority  ~~  T10 DeclareBlockers | life 20/14 hand 2/6 bf 7/8 gy 2/0 lib 29/26 stack 0
+  213. p0 PassPriority  ~~  T10 CombatDamage | life 18/14 hand 2/6 bf 7/8 gy 2/0 lib 29/26 stack 0
+  214. p1 PassPriority  ~~  T10 CombatDamage | life 18/14 hand 2/6 bf 7/8 gy 2/0 lib 29/26 stack 0
+  215. p0 PassPriority  ~~  T10 EndCombat | life 18/14 hand 2/6 bf 7/8 gy 2/0 lib 29/26 stack 0
+  216. p1 PassPriority  ~~  T10 EndCombat | life 18/14 hand 2/6 bf 7/8 gy 2/0 lib 29/26 stack 0
+  217. p0 PassPriority  ~~  T10 PostCombatMain | life 18/14 hand 2/6 bf 7/8 gy 2/0 lib 29/26 stack 0
+  218. p1 CastSpell { card_id: CardId(67), target: None, additional_targets: [], mode: None, x_value: None }  ~~  T10 PostCombatMain | life 18/14 hand 2/5 bf 7/8 gy 2/0 lib 29/26 stack 1
+  219. p1 PassPriority  ~~  T10 PostCombatMain | life 18/14 hand 2/5 bf 7/8 gy 2/0 lib 29/26 stack 1
+  220. p0 PassPriority  ~~  T10 PostCombatMain | life 18/14 hand 2/5 bf 7/9 gy 2/0 lib 29/26 stack 0
+  221. p1 PassPriority  ~~  T10 PostCombatMain | life 18/14 hand 2/5 bf 7/9 gy 2/0 lib 29/26 stack 0
+  222. p0 PassPriority  ~~  T10 End | life 18/14 hand 2/5 bf 7/9 gy 2/0 lib 29/26 stack 0
+  223. p1 PassPriority  ~~  T10 End | life 18/14 hand 2/5 bf 7/9 gy 2/0 lib 29/26 stack 0
+  224. p0 PassPriority  ~~  T11 Upkeep | life 18/14 hand 2/5 bf 7/9 gy 2/0 lib 29/26 stack 0
+  225. p0 PassPriority  ~~  T11 Upkeep | life 18/14 hand 2/5 bf 7/9 gy 2/0 lib 29/26 stack 0
+  226. p1 PassPriority  ~~  T11 Draw | life 18/14 hand 3/5 bf 7/9 gy 2/0 lib 28/26 stack 0
+  227. p0 PassPriority  ~~  T11 Draw | life 18/14 hand 3/5 bf 7/9 gy 2/0 lib 28/26 stack 0
+  228. p1 PassPriority  ~~  T11 PreCombatMain | life 18/14 hand 3/5 bf 7/9 gy 2/0 lib 28/26 stack 0
+  229. p0 CastSpell { card_id: CardId(19), target: Some(Player(1)), additional_targets: [], mode: None, x_value: None }  ~~  T11 PreCombatMain | life 18/14 hand 2/5 bf 7/9 gy 2/0 lib 28/26 stack 2
+  230. p0 PassPriority  ~~  T11 PreCombatMain | life 18/14 hand 2/5 bf 7/9 gy 2/0 lib 28/26 stack 2
+  231. p1 PassPriority  ~~  T11 PreCombatMain | life 18/14 hand 2/5 bf 7/9 gy 2/0 lib 28/26 stack 1
+  232. p0 PassPriority  ~~  T11 PreCombatMain | life 18/14 hand 2/5 bf 7/9 gy 2/0 lib 28/26 stack 1
+  233. p1 PassPriority  ~~  T11 PreCombatMain | life 18/11 hand 2/5 bf 7/9 gy 3/0 lib 28/26 stack 0
+  234. p0 PassPriority  ~~  T11 PreCombatMain | life 18/11 hand 2/5 bf 7/9 gy 3/0 lib 28/26 stack 0
+  235. p1 PassPriority  ~~  T11 BeginCombat | life 18/11 hand 2/5 bf 7/9 gy 3/0 lib 28/26 stack 0
+  236. p0 PassPriority  ~~  T11 BeginCombat | life 18/11 hand 2/5 bf 7/9 gy 3/0 lib 28/26 stack 0
+  237. p1 PassPriority  ~~  T11 DeclareAttackers | life 18/11 hand 2/5 bf 7/9 gy 3/0 lib 28/26 stack 0
+  238. p0 DeclareAttackers([Attack { attacker: CardId(38), target: Player(1) }])  ~~  T11 DeclareAttackers | life 18/11 hand 2/5 bf 7/9 gy 3/0 lib 28/26 stack 0
+  239. p0 PassPriority  ~~  T11 DeclareAttackers | life 18/11 hand 2/5 bf 7/9 gy 3/0 lib 28/26 stack 0
+  240. p1 PassPriority  ~~  T11 DeclareBlockers | life 18/11 hand 2/5 bf 7/9 gy 3/0 lib 28/26 stack 0
+  241. p0 PassPriority  ~~  T11 DeclareBlockers | life 18/11 hand 2/5 bf 7/9 gy 3/0 lib 28/26 stack 0
+  242. p1 DeclareBlockers([])  ~~  T11 DeclareBlockers | life 18/11 hand 2/5 bf 7/9 gy 3/0 lib 28/26 stack 0
+  243. p0 PassPriority  ~~  T11 DeclareBlockers | life 18/11 hand 2/5 bf 7/9 gy 3/0 lib 28/26 stack 0
+  244. p1 PassPriority  ~~  T11 CombatDamage | life 18/6 hand 2/5 bf 7/9 gy 3/0 lib 28/26 stack 0
+  245. p0 PassPriority  ~~  T11 CombatDamage | life 18/6 hand 2/5 bf 7/9 gy 3/0 lib 28/26 stack 0
+  246. p1 PassPriority  ~~  T11 EndCombat | life 18/6 hand 2/5 bf 7/9 gy 3/0 lib 28/26 stack 0
+  247. p0 PassPriority  ~~  T11 EndCombat | life 18/6 hand 2/5 bf 7/9 gy 3/0 lib 28/26 stack 0
+  248. p1 PassPriority  ~~  T11 PostCombatMain | life 18/6 hand 2/5 bf 7/9 gy 3/0 lib 28/26 stack 0
+  249. p0 PassPriority  ~~  T11 PostCombatMain | life 18/6 hand 2/5 bf 7/9 gy 3/0 lib 28/26 stack 0
+  250. p1 PassPriority  ~~  T11 End | life 18/6 hand 2/5 bf 7/9 gy 3/0 lib 28/26 stack 0
+  251. p0 PassPriority  ~~  T11 End | life 18/6 hand 2/5 bf 7/9 gy 3/0 lib 28/26 stack 0
+  252. p1 PassPriority  ~~  T12 Upkeep | life 18/6 hand 2/5 bf 7/9 gy 3/0 lib 28/26 stack 0
+  253. p1 PassPriority  ~~  T12 Upkeep | life 18/6 hand 2/5 bf 7/9 gy 3/0 lib 28/26 stack 0
+  254. p0 PassPriority  ~~  T12 Draw | life 18/6 hand 2/6 bf 7/9 gy 3/0 lib 28/25 stack 0
+  255. p1 PassPriority  ~~  T12 Draw | life 18/6 hand 2/6 bf 7/9 gy 3/0 lib 28/25 stack 0
+  256. p0 PassPriority  ~~  T12 PreCombatMain | life 18/6 hand 2/6 bf 7/9 gy 3/0 lib 28/25 stack 0
+  257. p1 PassPriority  ~~  T12 PreCombatMain | life 18/6 hand 2/6 bf 7/9 gy 3/0 lib 28/25 stack 0
+  258. p0 PassPriority  ~~  T12 BeginCombat | life 18/6 hand 2/6 bf 7/9 gy 3/0 lib 28/25 stack 0
+  259. p1 PassPriority  ~~  T12 BeginCombat | life 18/6 hand 2/6 bf 7/9 gy 3/0 lib 28/25 stack 0
+  260. p0 PassPriority  ~~  T12 DeclareAttackers | life 18/6 hand 2/6 bf 7/9 gy 3/0 lib 28/25 stack 0
+  261. p1 DeclareAttackers([Attack { attacker: CardId(67), target: Player(0) }])  ~~  T12 DeclareAttackers | life 18/6 hand 2/6 bf 7/9 gy 3/0 lib 28/25 stack 0
+  262. p1 PassPriority  ~~  T12 DeclareAttackers | life 18/6 hand 2/6 bf 7/9 gy 3/0 lib 28/25 stack 0
+  263. p0 PassPriority  ~~  T12 DeclareBlockers | life 18/6 hand 2/6 bf 7/9 gy 3/0 lib 28/25 stack 0
+  264. p1 PassPriority  ~~  T12 DeclareBlockers | life 18/6 hand 2/6 bf 7/9 gy 3/0 lib 28/25 stack 0
+  265. p0 DeclareBlockers([])  ~~  T12 DeclareBlockers | life 18/6 hand 2/6 bf 7/9 gy 3/0 lib 28/25 stack 0
+  266. p1 PassPriority  ~~  T12 DeclareBlockers | life 18/6 hand 2/6 bf 7/9 gy 3/0 lib 28/25 stack 0
+  267. p0 PassPriority  ~~  T12 FirstStrikeDamage | life 13/11 hand 2/6 bf 7/9 gy 3/0 lib 28/25 stack 0
+  268. p1 PassPriority  ~~  T12 FirstStrikeDamage | life 13/11 hand 2/6 bf 7/9 gy 3/0 lib 28/25 stack 0
+  269. p0 PassPriority  ~~  T12 CombatDamage | life 13/11 hand 2/6 bf 7/9 gy 3/0 lib 28/25 stack 0
+  270. p1 PassPriority  ~~  T12 CombatDamage | life 13/11 hand 2/6 bf 7/9 gy 3/0 lib 28/25 stack 0
+  271. p0 PassPriority  ~~  T12 EndCombat | life 13/11 hand 2/6 bf 7/9 gy 3/0 lib 28/25 stack 0
+  272. p1 PassPriority  ~~  T12 EndCombat | life 13/11 hand 2/6 bf 7/9 gy 3/0 lib 28/25 stack 0
+  273. p0 PassPriority  ~~  T12 PostCombatMain | life 13/11 hand 2/6 bf 7/9 gy 3/0 lib 28/25 stack 0
+  274. p1 CastSpell { card_id: CardId(66), target: None, additional_targets: [], mode: None, x_value: None }  ~~  T12 PostCombatMain | life 13/11 hand 2/5 bf 7/9 gy 3/0 lib 28/25 stack 1
+  275. p1 PassPriority  ~~  T12 PostCombatMain | life 13/11 hand 2/5 bf 7/9 gy 3/0 lib 28/25 stack 1
+  276. p0 PassPriority  ~~  T12 PostCombatMain | life 13/11 hand 2/5 bf 7/10 gy 3/0 lib 28/25 stack 0
+  277. p1 PassPriority  ~~  T12 PostCombatMain | life 13/11 hand 2/5 bf 7/10 gy 3/0 lib 28/25 stack 0
+  278. p0 PassPriority  ~~  T12 End | life 13/11 hand 2/5 bf 7/10 gy 3/0 lib 28/25 stack 0
+  279. p1 PassPriority  ~~  T12 End | life 13/11 hand 2/5 bf 7/10 gy 3/0 lib 28/25 stack 0
+  280. p0 PassPriority  ~~  T13 Upkeep | life 13/11 hand 2/5 bf 7/10 gy 3/0 lib 28/25 stack 0
+  281. p0 PassPriority  ~~  T13 Upkeep | life 13/11 hand 2/5 bf 7/10 gy 3/0 lib 28/25 stack 0
+  282. p1 PassPriority  ~~  T13 Draw | life 13/11 hand 3/5 bf 7/10 gy 3/0 lib 27/25 stack 0
+  283. p0 PassPriority  ~~  T13 Draw | life 13/11 hand 3/5 bf 7/10 gy 3/0 lib 27/25 stack 0
+  284. p1 PassPriority  ~~  T13 PreCombatMain | life 13/11 hand 3/5 bf 7/10 gy 3/0 lib 27/25 stack 0
+  285. p0 CastSpell { card_id: CardId(20), target: Some(Player(1)), additional_targets: [], mode: None, x_value: None }  ~~  T13 PreCombatMain | life 13/11 hand 2/5 bf 7/10 gy 3/0 lib 27/25 stack 2
+  286. p0 PassPriority  ~~  T13 PreCombatMain | life 13/11 hand 2/5 bf 7/10 gy 3/0 lib 27/25 stack 2
+  287. p1 PassPriority  ~~  T13 PreCombatMain | life 13/11 hand 2/5 bf 7/10 gy 3/0 lib 27/25 stack 1
+  288. p0 PassPriority  ~~  T13 PreCombatMain | life 13/11 hand 2/5 bf 7/10 gy 3/0 lib 27/25 stack 1
+  289. p1 PassPriority  ~~  T13 PreCombatMain | life 13/8 hand 2/5 bf 7/10 gy 4/0 lib 27/25 stack 0
+  290. p0 PassPriority  ~~  T13 PreCombatMain | life 13/8 hand 2/5 bf 7/10 gy 4/0 lib 27/25 stack 0
+  291. p1 PassPriority  ~~  T13 BeginCombat | life 13/8 hand 2/5 bf 7/10 gy 4/0 lib 27/25 stack 0
+  292. p0 PassPriority  ~~  T13 BeginCombat | life 13/8 hand 2/5 bf 7/10 gy 4/0 lib 27/25 stack 0
+  293. p1 PassPriority  ~~  T13 DeclareAttackers | life 13/8 hand 2/5 bf 7/10 gy 4/0 lib 27/25 stack 0
+  294. p0 DeclareAttackers([Attack { attacker: CardId(38), target: Player(1) }])  ~~  T13 DeclareAttackers | life 13/8 hand 2/5 bf 7/10 gy 4/0 lib 27/25 stack 0
+  295. p0 PassPriority  ~~  T13 DeclareAttackers | life 13/8 hand 2/5 bf 7/10 gy 4/0 lib 27/25 stack 0
+  296. p1 PassPriority  ~~  T13 DeclareBlockers | life 13/8 hand 2/5 bf 7/10 gy 4/0 lib 27/25 stack 0
+  297. p0 PassPriority  ~~  T13 DeclareBlockers | life 13/8 hand 2/5 bf 7/10 gy 4/0 lib 27/25 stack 0
+  298. p1 DeclareBlockers([(CardId(66), CardId(38))])  ~~  T13 DeclareBlockers | life 13/8 hand 2/5 bf 7/10 gy 4/0 lib 27/25 stack 0
+  299. p0 PassPriority  ~~  T13 DeclareBlockers | life 13/8 hand 2/5 bf 7/10 gy 4/0 lib 27/25 stack 0
+  300. p1 PassPriority  ~~  T13 CombatDamage | life 13/8 hand 2/5 bf 6/9 gy 5/1 lib 27/25 stack 0
+  301. p0 PassPriority  ~~  T13 CombatDamage | life 13/8 hand 2/5 bf 6/9 gy 5/1 lib 27/25 stack 0
+  302. p1 PassPriority  ~~  T13 EndCombat | life 13/8 hand 2/5 bf 6/9 gy 5/1 lib 27/25 stack 0
+  303. p0 PassPriority  ~~  T13 EndCombat | life 13/8 hand 2/5 bf 6/9 gy 5/1 lib 27/25 stack 0
+  304. p1 PassPriority  ~~  T13 PostCombatMain | life 13/8 hand 2/5 bf 6/9 gy 5/1 lib 27/25 stack 0
+  305. p0 PassPriority  ~~  T13 PostCombatMain | life 13/8 hand 2/5 bf 6/9 gy 5/1 lib 27/25 stack 0
+  306. p1 PassPriority  ~~  T13 End | life 13/8 hand 2/5 bf 6/9 gy 5/1 lib 27/25 stack 0
+  307. p0 PassPriority  ~~  T13 End | life 13/8 hand 2/5 bf 6/9 gy 5/1 lib 27/25 stack 0
+  308. p1 PassPriority  ~~  T14 Upkeep | life 13/8 hand 2/5 bf 6/9 gy 5/1 lib 27/25 stack 0
+  309. p1 PassPriority  ~~  T14 Upkeep | life 13/8 hand 2/5 bf 6/9 gy 5/1 lib 27/25 stack 0
+  310. p0 PassPriority  ~~  T14 Draw | life 13/8 hand 2/6 bf 6/9 gy 5/1 lib 27/24 stack 0
+  311. p1 PassPriority  ~~  T14 Draw | life 13/8 hand 2/6 bf 6/9 gy 5/1 lib 27/24 stack 0
+  312. p0 PassPriority  ~~  T14 PreCombatMain | life 13/8 hand 2/6 bf 6/9 gy 5/1 lib 27/24 stack 0
+  313. p1 PlayLand(CardId(50))  ~~  T14 PreCombatMain | life 13/8 hand 2/5 bf 6/10 gy 5/1 lib 27/24 stack 0
+  314. p1 PassPriority  ~~  T14 PreCombatMain | life 13/8 hand 2/5 bf 6/10 gy 5/1 lib 27/24 stack 0
+  315. p0 PassPriority  ~~  T14 BeginCombat | life 13/8 hand 2/5 bf 6/10 gy 5/1 lib 27/24 stack 0
+  316. p1 PassPriority  ~~  T14 BeginCombat | life 13/8 hand 2/5 bf 6/10 gy 5/1 lib 27/24 stack 0
+  317. p0 PassPriority  ~~  T14 DeclareAttackers | life 13/8 hand 2/5 bf 6/10 gy 5/1 lib 27/24 stack 0
+  318. p1 DeclareAttackers([Attack { attacker: CardId(59), target: Player(0) }, Attack { attacker: CardId(67), target: Player(0) }])  ~~  T14 DeclareAttackers | life 13/8 hand 2/5 bf 6/10 gy 5/1 lib 27/24 stack 0
+  319. p1 PassPriority  ~~  T14 DeclareAttackers | life 13/8 hand 2/5 bf 6/10 gy 5/1 lib 27/24 stack 0
+  320. p0 PassPriority  ~~  T14 DeclareBlockers | life 13/8 hand 2/5 bf 6/10 gy 5/1 lib 27/24 stack 0
+  321. p1 PassPriority  ~~  T14 DeclareBlockers | life 13/8 hand 2/5 bf 6/10 gy 5/1 lib 27/24 stack 0
+  322. p0 DeclareBlockers([])  ~~  T14 DeclareBlockers | life 13/8 hand 2/5 bf 6/10 gy 5/1 lib 27/24 stack 0
+  323. p1 PassPriority  ~~  T14 DeclareBlockers | life 13/8 hand 2/5 bf 6/10 gy 5/1 lib 27/24 stack 0
+  324. p0 PassPriority  ~~  T14 FirstStrikeDamage | life 8/13 hand 2/5 bf 6/10 gy 5/1 lib 27/24 stack 0
+  325. p1 PassPriority  ~~  T14 FirstStrikeDamage | life 8/13 hand 2/5 bf 6/10 gy 5/1 lib 27/24 stack 0
+  326. p0 PassPriority  ~~  T14 CombatDamage | life 6/13 hand 2/5 bf 6/10 gy 5/1 lib 27/24 stack 0
+  327. p1 PassPriority  ~~  T14 CombatDamage | life 6/13 hand 2/5 bf 6/10 gy 5/1 lib 27/24 stack 0
+  328. p0 PassPriority  ~~  T14 EndCombat | life 6/13 hand 2/5 bf 6/10 gy 5/1 lib 27/24 stack 0
+  329. p1 PassPriority  ~~  T14 EndCombat | life 6/13 hand 2/5 bf 6/10 gy 5/1 lib 27/24 stack 0
+  330. p0 PassPriority  ~~  T14 PostCombatMain | life 6/13 hand 2/5 bf 6/10 gy 5/1 lib 27/24 stack 0
+  331. p1 CastSpell { card_id: CardId(65), target: None, additional_targets: [], mode: None, x_value: None }  ~~  T14 PostCombatMain | life 6/13 hand 2/4 bf 6/10 gy 5/1 lib 27/24 stack 1
+  332. p1 PassPriority  ~~  T14 PostCombatMain | life 6/13 hand 2/4 bf 6/10 gy 5/1 lib 27/24 stack 1
+  333. p0 PassPriority  ~~  T14 PostCombatMain | life 6/13 hand 2/4 bf 6/11 gy 5/1 lib 27/24 stack 0
+  334. p1 PassPriority  ~~  T14 PostCombatMain | life 6/13 hand 2/4 bf 6/11 gy 5/1 lib 27/24 stack 0
+  335. p0 PassPriority  ~~  T14 End | life 6/13 hand 2/4 bf 6/11 gy 5/1 lib 27/24 stack 0
+  336. p1 PassPriority  ~~  T14 End | life 6/13 hand 2/4 bf 6/11 gy 5/1 lib 27/24 stack 0
+  337. p0 PassPriority  ~~  T15 Upkeep | life 6/13 hand 2/4 bf 6/11 gy 5/1 lib 27/24 stack 0
+  338. p0 PassPriority  ~~  T15 Upkeep | life 6/13 hand 2/4 bf 6/11 gy 5/1 lib 27/24 stack 0
+  339. p1 PassPriority  ~~  T15 Draw | life 6/13 hand 3/4 bf 6/11 gy 5/1 lib 26/24 stack 0
+  340. p0 PassPriority  ~~  T15 Draw | life 6/13 hand 3/4 bf 6/11 gy 5/1 lib 26/24 stack 0
+  341. p1 PassPriority  ~~  T15 PreCombatMain | life 6/13 hand 3/4 bf 6/11 gy 5/1 lib 26/24 stack 0
+  342. p0 PassPriority  ~~  T15 PreCombatMain | life 6/13 hand 3/4 bf 6/11 gy 5/1 lib 26/24 stack 0
+  343. p1 PassPriority  ~~  T15 BeginCombat | life 6/13 hand 3/4 bf 6/11 gy 5/1 lib 26/24 stack 0
+  344. p0 PassPriority  ~~  T15 BeginCombat | life 6/13 hand 3/4 bf 6/11 gy 5/1 lib 26/24 stack 0
+  345. p1 PassPriority  ~~  T15 DeclareAttackers | life 6/13 hand 3/4 bf 6/11 gy 5/1 lib 26/24 stack 0
+  346. p0 DeclareAttackers([Attack { attacker: CardId(29), target: Player(1) }])  ~~  T15 DeclareAttackers | life 6/13 hand 3/4 bf 6/11 gy 5/1 lib 26/24 stack 0
+  347. p0 PassPriority  ~~  T15 DeclareAttackers | life 6/13 hand 3/4 bf 6/11 gy 5/1 lib 26/24 stack 0
+  348. p1 PassPriority  ~~  T15 DeclareBlockers | life 6/13 hand 3/4 bf 6/11 gy 5/1 lib 26/24 stack 0
+  349. p0 PassPriority  ~~  T15 DeclareBlockers | life 6/13 hand 3/4 bf 6/11 gy 5/1 lib 26/24 stack 0
+  350. p1 DeclareBlockers([(CardId(65), CardId(29))])  ~~  T15 DeclareBlockers | life 6/13 hand 3/4 bf 6/11 gy 5/1 lib 26/24 stack 0
+  351. p0 PassPriority  ~~  T15 DeclareBlockers | life 6/13 hand 3/4 bf 6/11 gy 5/1 lib 26/24 stack 0
+  352. p1 PassPriority  ~~  T15 CombatDamage | life 6/13 hand 3/4 bf 5/11 gy 6/1 lib 26/24 stack 0
+  353. p0 PassPriority  ~~  T15 CombatDamage | life 6/13 hand 3/4 bf 5/11 gy 6/1 lib 26/24 stack 0
+  354. p1 PassPriority  ~~  T15 EndCombat | life 6/13 hand 3/4 bf 5/11 gy 6/1 lib 26/24 stack 0
+  355. p0 PassPriority  ~~  T15 EndCombat | life 6/13 hand 3/4 bf 5/11 gy 6/1 lib 26/24 stack 0
+  356. p1 PassPriority  ~~  T15 PostCombatMain | life 6/13 hand 3/4 bf 5/11 gy 6/1 lib 26/24 stack 0
+  357. p0 CastSpell { card_id: CardId(39), target: None, additional_targets: [], mode: None, x_value: None }  ~~  T15 PostCombatMain | life 6/13 hand 2/4 bf 5/11 gy 6/1 lib 26/24 stack 1
+  358. p0 PassPriority  ~~  T15 PostCombatMain | life 6/13 hand 2/4 bf 5/11 gy 6/1 lib 26/24 stack 1
+  359. p1 PassPriority  ~~  T15 PostCombatMain | life 6/13 hand 2/4 bf 6/11 gy 6/1 lib 26/24 stack 0
+  360. p0 PassPriority  ~~  T15 PostCombatMain | life 6/13 hand 2/4 bf 6/11 gy 6/1 lib 26/24 stack 0
+  361. p1 PassPriority  ~~  T15 End | life 6/13 hand 2/4 bf 6/11 gy 6/1 lib 26/24 stack 0
+  362. p0 PassPriority  ~~  T15 End | life 6/13 hand 2/4 bf 6/11 gy 6/1 lib 26/24 stack 0
+  363. p1 PassPriority  ~~  T16 Upkeep | life 6/13 hand 2/4 bf 6/11 gy 6/1 lib 26/24 stack 0
+  364. p1 PassPriority  ~~  T16 Upkeep | life 6/13 hand 2/4 bf 6/11 gy 6/1 lib 26/24 stack 0
+  365. p0 PassPriority  ~~  T16 Draw | life 6/13 hand 2/5 bf 6/11 gy 6/1 lib 26/23 stack 0
+  366. p1 PassPriority  ~~  T16 Draw | life 6/13 hand 2/5 bf 6/11 gy 6/1 lib 26/23 stack 0
+  367. p0 PassPriority  ~~  T16 PreCombatMain | life 6/13 hand 2/5 bf 6/11 gy 6/1 lib 26/23 stack 0
+  368. p1 PassPriority  ~~  T16 PreCombatMain | life 6/13 hand 2/5 bf 6/11 gy 6/1 lib 26/23 stack 0
+  369. p0 PassPriority  ~~  T16 BeginCombat | life 6/13 hand 2/5 bf 6/11 gy 6/1 lib 26/23 stack 0
+  370. p1 PassPriority  ~~  T16 BeginCombat | life 6/13 hand 2/5 bf 6/11 gy 6/1 lib 26/23 stack 0
+  371. p0 PassPriority  ~~  T16 DeclareAttackers | life 6/13 hand 2/5 bf 6/11 gy 6/1 lib 26/23 stack 0
+  372. p1 DeclareAttackers([Attack { attacker: CardId(59), target: Player(0) }, Attack { attacker: CardId(67), target: Player(0) }, Attack { attacker: CardId(65), target: Player(0) }])  ~~  T16 DeclareAttackers | life 6/13 hand 2/5 bf 6/11 gy 6/1 lib 26/23 stack 0
+  373. p1 PassPriority  ~~  T16 DeclareAttackers | life 6/13 hand 2/5 bf 6/11 gy 6/1 lib 26/23 stack 0
+  374. p0 PassPriority  ~~  T16 DeclareBlockers | life 6/13 hand 2/5 bf 6/11 gy 6/1 lib 26/23 stack 0
+  375. p1 PassPriority  ~~  T16 DeclareBlockers | life 6/13 hand 2/5 bf 6/11 gy 6/1 lib 26/23 stack 0
+  376. p0 DeclareBlockers([])  ~~  T16 DeclareBlockers | life 6/13 hand 2/5 bf 6/11 gy 6/1 lib 26/23 stack 0
+  377. p1 PassPriority  ~~  T16 DeclareBlockers | life 6/13 hand 2/5 bf 6/11 gy 6/1 lib 26/23 stack 0
+  378. p0 PassPriority  ~~  T16 FirstStrikeDamage | life 1/18 hand 2/5 bf 6/11 gy 6/1 lib 26/23 stack 0
+  379. p1 PassPriority  ~~  T16 FirstStrikeDamage | life 1/18 hand 2/5 bf 6/11 gy 6/1 lib 26/23 stack 0
+  380. p0 PassPriority  ~~  T16 CombatDamage | life -5/18 hand 0/5 bf 0/11 gy 0/1 lib 0/23 stack 0
+= winner 1 turns 16 actions 380

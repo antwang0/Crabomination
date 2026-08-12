@@ -161,11 +161,16 @@ fn different_seeds_produce_different_games() {
 // the five seeded games legitimately take different lines. Deliberate
 // behaviour change, not drift.
 const DIGESTS: &[(u64, Option<usize>, u32, usize, u64)] = &[
-    (1, Some(0), 11, 261, 0x61f3_3b6d_61d2_c691),
-    (2, Some(1), 16, 404, 0x5678_1950_8088_3a6b),
+    // Seeds 1, 2 and 5 moved when `determinize_hidden` began sorting
+    // hidden zones before redealing them (see the commit). Every winner
+    // is unchanged; only the lines differ, which is what an honest-redeal
+    // change looks like -- the searches make a different arbitrary guess,
+    // not a better or worse one. Seeds 3 and 4 are untouched.
+    (1, Some(0), 11, 281, 0x50fa_222a_007f_6675),
+    (2, Some(1), 16, 392, 0x532d_fc8c_50ea_b3fc),
     (3, Some(0), 19, 459, 0x4cab_8692_6eda_d70a),
     (4, Some(0), 13, 330, 0x3947_01c0_e7bc_f137),
-    (5, Some(0), 9, 220, 0x9e0e_bab8_ae39_2a9b),
+    (5, Some(0), 9, 223, 0x97c2_acfd_3251_1e21),
 ];
 
 #[test]
