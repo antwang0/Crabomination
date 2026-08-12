@@ -602,6 +602,7 @@ fn actor_loop(shared: &Shared, args: &Args, vocab: &Vocab, deck_judge: Option<&D
                     .map(|d| crabomination_ml::DecisionRow {
                         successors: d.successors,
                         chosen: d.chosen,
+                        values: d.values,
                     })
                     .collect();
                 if held {

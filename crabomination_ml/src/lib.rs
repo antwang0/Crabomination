@@ -455,6 +455,10 @@ impl PlayModel {
 pub struct DecisionRow {
     pub successors: Vec<EncodedState>,
     pub chosen: usize,
+    /// Per-candidate search value, when the decision came from a search.
+    /// Present for MCTS roots, absent for heuristic picks — the raw
+    /// material for distillation as opposed to imitation.
+    pub values: Option<Vec<f32>>,
 }
 
 /// Widest candidate set a policy batch will consider. The recorder hooks
@@ -1754,7 +1758,7 @@ mod tests {
                 })
                 .map(|(i, _)| i)
                 .unwrap_or(0);
-            DecisionRow { successors, chosen }
+            DecisionRow { successors, chosen, values: None }
         };
         let rows: Vec<DecisionRow> = (0..256).map(|_| make(&mut rng)).collect();
         let held: Vec<DecisionRow> = (0..128).map(|_| make(&mut rng)).collect();
@@ -1794,10 +1798,12 @@ mod tests {
         let narrow = DecisionRow {
             successors: (0..2).map(|_| random_state(&mut rng, cfg.vocab)).collect(),
             chosen: 1,
+            values: None,
         };
         let wide = DecisionRow {
             successors: (0..5).map(|_| random_state(&mut rng, cfg.vocab)).collect(),
             chosen: 3,
+            values: None,
         };
 
         // Alone, the narrow decision is a 2-way softmax.
@@ -1824,6 +1830,7 @@ mod tests {
         let single = DecisionRow {
             successors: vec![random_state(&mut rng, cfg.vocab)],
             chosen: 0,
+            values: None,
         };
         let stats = trainer.train_policy_step(&[&single]).expect("step");
         assert_eq!(stats.n, 0, "a forced move is not a policy example");

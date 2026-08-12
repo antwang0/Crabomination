@@ -70,6 +70,22 @@ pub struct CapturedDecision {
     /// is per-seat, and ply-stratified analysis needs the turn.
     pub seat: usize,
     pub turn: u32,
+    /// Per-candidate value from a *search*, aligned with `successors`,
+    /// when the decision came from one. `None` for heuristic picks.
+    ///
+    /// This is what makes distillation possible rather than mere
+    /// imitation. A one-hot target teaches the net to copy the pilot and
+    /// therefore caps it at the pilot; a search's per-candidate values
+    /// carry how much better each option looked, and the search is
+    /// stronger than the evaluator inside it. Stored raw (mean reward per
+    /// arm, in win-probability units) so the trainer picks the
+    /// temperature rather than baking one in here.
+    ///
+    /// Note this is *mean reward*, not visit counts. `MctsBot::search`
+    /// selects by highest mean, because at 64 iterations visit counts are
+    /// dominated by the one-per-arm seeding pass and carry little signal
+    /// — so means are the faithful record of what the search preferred.
+    pub values: Option<Vec<f32>>,
 }
 
 thread_local! {
@@ -97,11 +113,25 @@ pub fn enabled() -> bool {
 /// Decisions with fewer than two surviving candidates are not recorded:
 /// a forced move carries no policy signal and would just dilute the set.
 pub fn maybe(state: &GameState, seat: usize, candidates: &[GameAction], chosen: usize) {
+    maybe_valued(state, seat, candidates, chosen, None)
+}
+
+/// [`maybe`] with per-candidate search values attached. `values` must be
+/// aligned with `candidates`; it is filtered alongside them when the
+/// engine rejects one, so the alignment survives the remap.
+pub fn maybe_valued(
+    state: &GameState,
+    seat: usize,
+    candidates: &[GameAction],
+    chosen: usize,
+    values: Option<&[f32]>,
+) {
     if !ENABLED.load(Ordering::Relaxed) || state.game_over.is_some() || candidates.len() < 2 {
         return;
     }
     let vocab = super::net_eval::vocab();
     let mut successors = Vec::with_capacity(candidates.len());
+    let mut kept_values: Vec<f32> = Vec::new();
     let mut chosen_idx = None;
     for (i, a) in candidates.iter().enumerate() {
         let mut next = state.clone();
@@ -110,6 +140,11 @@ pub fn maybe(state: &GameState, seat: usize, candidates: &[GameAction], chosen: 
         }
         if i == chosen {
             chosen_idx = Some(successors.len());
+        }
+        if let Some(v) = values
+            && let Some(x) = v.get(i)
+        {
+            kept_values.push(*x);
         }
         successors.push(super::encode::encode_state(&next, seat, vocab));
     }
@@ -125,7 +160,15 @@ pub fn maybe(state: &GameState, seat: usize, candidates: &[GameAction], chosen: 
     BUF.with(|b| {
         let mut b = b.borrow_mut();
         if b.len() < CAP {
-            b.push(CapturedDecision { successors, chosen, seat, turn: state.turn_number });
+            let values = (values.is_some() && kept_values.len() == successors.len())
+                .then_some(kept_values);
+            b.push(CapturedDecision {
+                successors,
+                chosen,
+                seat,
+                turn: state.turn_number,
+                values,
+            });
         }
     });
 }
@@ -241,6 +284,49 @@ mod tests {
             assert!(d.successors.len() >= 2, "a recorded decision had no alternatives");
             assert!(d.chosen < d.successors.len(), "chosen index out of range");
             assert_eq!(d.seat, 0);
+        }
+    }
+
+    /// An MCTS-piloted game must record the *search's* root decisions,
+    /// with its per-arm values attached. Before the hook in
+    /// `MctsBot::search`, the recorder only ever saw the heuristic
+    /// fallback's picks, so an MCTS run would have measured the wrong
+    /// policy while looking like it worked.
+    #[test]
+    fn mcts_root_decisions_are_captured_with_their_values() {
+        use crate::server::{Bot, MctsBot, MctsConfig};
+        let _guard = SERIAL.lock().unwrap_or_else(|e| e.into_inner());
+
+        let mut g = two_player_game();
+        for (n, p, t) in [("A", 1, 1), ("B", 2, 2), ("C", 3, 3), ("D", 4, 4)] {
+            g.add_card_to_hand(0, creature(n, p, t));
+            g.add_card_to_hand(1, creature(n, p, t));
+        }
+        let _ = drain();
+        set_enabled(true);
+        let mut bot = MctsBot::new(MctsConfig { iterations: 8, horizon_turns: 1, ..Default::default() });
+        let mut fuel = 20;
+        while fuel > 0 && !g.is_game_over() {
+            fuel -= 1;
+            let Some(a) = bot.next_action(&g, 0) else { break };
+            if g.perform_action(a).is_err() {
+                break;
+            }
+        }
+        let got = drain();
+        set_enabled(false);
+
+        assert!(!got.is_empty(), "an MCTS-piloted game recorded no decisions");
+        let valued = got.iter().filter(|d| d.values.is_some()).count();
+        assert!(valued > 0, "no decision carried search values: {} captured", got.len());
+        for d in got.iter().filter(|d| d.values.is_some()) {
+            let v = d.values.as_ref().expect("checked");
+            assert_eq!(
+                v.len(),
+                d.successors.len(),
+                "values must stay aligned with successors after the reject remap"
+            );
+            assert!(d.chosen < d.successors.len());
         }
     }
 

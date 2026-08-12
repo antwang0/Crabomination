@@ -414,6 +414,25 @@ impl MctsBot {
                 mean(a).partial_cmp(&mean(b)).unwrap_or(std::cmp::Ordering::Equal)
             })
             .unwrap_or(0);
+        // Record the root decision with the search's per-arm means, so a
+        // policy target can be distilled from what the *search* concluded
+        // rather than from which action it happened to output. Without
+        // this hook the recorder only ever sees the heuristic fallback's
+        // picks, and an MCTS-piloted run would quietly measure the wrong
+        // policy. Arms the engine rejected are parked at NEG_INFINITY and
+        // are dropped alongside their candidates downstream.
+        if super::decision_capture::enabled() {
+            let means: Vec<f32> = (0..n)
+                .map(|i| {
+                    if visits[i] == u32::MAX {
+                        f32::NEG_INFINITY
+                    } else {
+                        (total[i] / visits[i].max(1) as f64) as f32
+                    }
+                })
+                .collect();
+            super::decision_capture::maybe_valued(state, seat, &candidates, best, Some(&means));
+        }
         candidates.into_iter().nth(best).unwrap_or(GameAction::PassPriority)
     }
 
