@@ -71,6 +71,7 @@ pub mod bot;
 pub mod encode;
 pub mod leaf_capture;
 pub mod net_eval;
+pub mod puzzle;
 pub mod lobby;
 mod replay;
 #[cfg(not(target_arch = "wasm32"))]
