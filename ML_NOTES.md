@@ -7,6 +7,51 @@ only stays dead while the reasoning that killed it is readable.
 
 ## Tier 13 — AI
 
+- 🟢 **Round 33 — the first policy training run, and the first number
+  that measures *choosing*.** The net has only ever been taught to
+  predict who wins from a position. `--record-decisions` captures the
+  pilot's candidate set (as successor states) and the pick;
+  `train_policy_step` teaches the existing win head to rank them —
+  a softmax over its logits for the successors, target = the index
+  played. No new head, no new parameters. `val_policy` is held-out top-1
+  agreement, and the control arm (`--policy-every 0`) records and scores
+  the same decisions while training on none of them.
+
+  | | val_policy | val_auc | val_win |
+  |---|---|---|---|
+  | control s43 | 0.4292 | 0.7735 | 0.19102 |
+  | policy s43 | **0.8144** | 0.7630 | 0.20386 |
+  | control s97 | 0.4338 | 0.7919 | 0.18440 |
+  | policy s97 | **0.8042** | 0.7718 | 0.19352 |
+
+  **The value net ranks the pilot's chosen candidate first about 43 % of
+  the time.** Both control seeds land within 0.005 of each other, so
+  this is a stable property and not a seed accident. Candidate sets are
+  the bot's finalist shortlist (`EVAL_TOP` = 3), so chance is between
+  0.33 and 0.5 — the evaluator every gate in this program has been built
+  on is close to *coin-flipping* on the decisions the bot actually
+  faces, while scoring AUC 0.77–0.79 on unrelated positions. AUC scores
+  predictions; a search consumes rankings; those turn out to be very
+  different things.
+
+  Policy training takes agreement to **0.80–0.81**, replicated on both
+  seeds. The cost is a small, consistent regression in the value
+  metrics: −0.010/−0.020 AUC and +0.013/+0.009 val_win. That trade is
+  what two objectives on one head look like, and whether it is worth it
+  is a ladder question this screen cannot answer.
+
+  Methodological note worth as much as the result: `val_policy` has a
+  seed spread of **0.005** against AUC's 0.023 (round 32). It is a far
+  better-powered metric, because it measures the thing the search
+  consumes rather than an average over positions no one chose.
+
+  **Not adopted.** A ranking gain that costs value calibration has to be
+  gated on play strength before it goes anywhere near the champion. Next:
+  ladder the policy-trained net as a pilot, and — the reason this was
+  built — distil MCTS visit counts instead of the heuristic's pick,
+  which is the policy-improvement operator the stacking failure has been
+  missing since round 14.
+
 - 🟡 **Round 32 — cross-entropy on the win head: a two-seed NULL, and
   the screen says why it could not have been anything else.** The
   argument is mechanistic and still stands: MSE through a sigmoid has
