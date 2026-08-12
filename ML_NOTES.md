@@ -7,6 +7,45 @@ only stays dead while the reasoning that killed it is readable.
 
 ## Tier 13 — AI
 
+- 🟡 **Round 32 — cross-entropy on the win head: a two-seed NULL, and
+  the screen says why it could not have been anything else.** The
+  argument is mechanistic and still stands: MSE through a sigmoid has
+  gradient proportional to `(p − y)·p·(1 − p)`, so rows where the net is
+  confidently wrong produce the weakest updates, while BCE's gradient at
+  the logit is `(p − y)`. A unit test confirms the gradient behaviour
+  directly — from identical weights driven to a confidently wrong
+  opinion, one BCE step moves the prediction further back than one MSE
+  step. What does not follow is an end-to-end win.
+
+  Screen scale (60 k games/cell, λ = 0.7, lr 1e-4, window 500 k, two
+  seeds, det0 actors on both arms):
+
+  | | val_auc | val_win | val_logloss |
+  |---|---|---|---|
+  | mse s43 | 0.8032 | 0.17969 | 0.53082 |
+  | bce s43 | **0.8090** | **0.17807** | **0.52615** |
+  | mse s97 | **0.7799** | **0.18931** | **0.55210** |
+  | bce s97 | 0.7774 | 0.19060 | 0.55433 |
+
+  Seed 43 favours BCE on every metric including MSE itself (the fair
+  comparison, and the one MSE is directly optimising); seed 97 reverses
+  it. Mean AUC 0.7916 vs 0.7932, **+0.0017**.
+
+  **The measurement lesson is the durable part.** Within the MSE arm
+  alone, seed variance is 0.8032 → 0.7799 = **0.023 AUC**, an order of
+  magnitude larger than the effect. No amount of *longer* running fixes
+  that; a two-cell-per-arm design cannot resolve an effect one tenth the
+  size of its own noise, and reading either seed alone would have
+  produced a confident and opposite conclusion. Resolving effects of
+  this size needs more seeds or a variance-reduction design — the same
+  lesson the antithetic paired ladder taught for win rates, now
+  restated for AUC.
+
+  `--bce` stays in-tree, default off. It costs nothing, the mechanism is
+  real, and it is the natural arm to re-run if a future change makes the
+  win head's gradient the binding constraint. Not adopted: no measured
+  win means no adoption, and one seed is not a measurement.
+
 - 🟢 **Instrumentation — the overfit readout has been unreadable since
   round 27, and fixing it explains why λ < 1 works.** `loss_win` is the
   training EMA against whatever the learner *fit* — the λ-return at
