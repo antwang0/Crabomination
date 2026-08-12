@@ -24,21 +24,47 @@ only stays dead while the reasoning that killed it is readable.
   | control s97 | 0.4338 | 0.7919 | 0.18440 |
   | policy s97 | **0.8042** | 0.7718 | 0.19352 |
 
-  **The value net ranks the pilot's chosen candidate first about 43 % of
-  the time.** Both control seeds land within 0.005 of each other, so
-  this is a stable property and not a seed accident. Candidate sets are
-  the bot's finalist shortlist (`EVAL_TOP` = 3), so chance is between
-  0.33 and 0.5 — the evaluator every gate in this program has been built
-  on is close to *coin-flipping* on the decisions the bot actually
-  faces, while scoring AUC 0.77–0.79 on unrelated positions. AUC scores
-  predictions; a search consumes rankings; those turn out to be very
-  different things.
+  **The value net agrees with the pilot's pick about 43 % of the time,
+  against a measured chance rate of 0.354.** Both control seeds land
+  within 0.005 of each other, so this is a stable property and not a
+  seed accident. The candidate-count distribution was *measured* rather
+  than assumed (87.5 % three-candidate, 12.5 % two — see
+  `print_candidate_count_distribution`), because the first write-up of
+  this entry said "chance is between 0.33 and 0.5" while the observed
+  value sat inside that band, which settles nothing.
+
+  Two things this does **not** show, both of which the first version of
+  this entry got wrong:
+
+  * The pilot here is `EvalWeights::default()` — the plain heuristic, no
+    net in the loop (the run passes no `--use-best`). So this is
+    net-vs-*heuristic* disagreement, and the heuristic's pick is not
+    ground truth. It is a different, roughly equal-strength, also
+    imperfect player. Calling the value net "close to coin-flipping"
+    smuggled in the assumption that the heuristic is right.
+  * +0.075 over chance is weak agreement, not none. The value net does
+    carry some signal about which candidate the heuristic prefers.
+
+  What it *does* show: two roughly equal players disagree on most
+  decisions, and nothing in the program had ever measured that. AUC
+  scores predictions over positions nobody chose; a search consumes
+  rankings over candidates it must choose between. The two are only
+  loosely coupled, which is why AUC 0.77–0.79 coexists with 0.43
+  agreement.
 
   Policy training takes agreement to **0.80–0.81**, replicated on both
   seeds. The cost is a small, consistent regression in the value
   metrics: −0.010/−0.020 AUC and +0.013/+0.009 val_win. That trade is
   what two objectives on one head look like, and whether it is worth it
   is a ladder question this screen cannot answer.
+
+  The clean claim is a **capability** one: the encoder and head can
+  represent a policy over candidate successors, learning it from 0.35 to
+  0.81. That is what had to be true before any of this direction was
+  worth pursuing, and it was not previously known. But the target here
+  is the heuristic's pick, so imitation caps out *at* the heuristic —
+  which is exactly why the next step is distilling search rather than
+  scaling this up.
 
   Methodological note worth as much as the result: `val_policy` has a
   seed spread of **0.005** against AUC's 0.023 (round 32). It is a far

@@ -244,6 +244,54 @@ mod tests {
         }
     }
 
+    /// Diagnostic: the candidate-count distribution, which sets the
+    /// chance rate that `val_policy` has to be read against. Asserting
+    /// "chance is somewhere between 0.33 and 0.5" is not good enough
+    /// when the measured value falls inside that band.
+    #[test]
+    #[ignore = "diagnostic"]
+    fn print_candidate_count_distribution() {
+        use crate::server::{Bot, HeuristicBot};
+        let _guard = SERIAL.lock().unwrap_or_else(|e| e.into_inner());
+        let mut hist = std::collections::BTreeMap::<usize, usize>::new();
+        for seed in 0..40u64 {
+            let mut g = two_player_game();
+            for i in 0..8 {
+                g.add_card_to_hand(0, creature("X", 1 + (i % 4), 1 + ((i + seed as i32) % 4)));
+                g.add_card_to_hand(1, creature("Y", 1 + (i % 3), 2));
+            }
+            let _ = drain();
+            set_enabled(true);
+            let mut bots = [HeuristicBot::new(), HeuristicBot::new()];
+            let mut fuel = 120;
+            while fuel > 0 && !g.is_game_over() {
+                fuel -= 1;
+                let mut acted = false;
+                for seat in 0..2 {
+                    if let Some(a) = bots[seat].next_action(&g, seat)
+                        && g.perform_action(a).is_ok()
+                    {
+                        acted = true;
+                    }
+                }
+                if !acted {
+                    break;
+                }
+            }
+            for d in drain() {
+                *hist.entry(d.successors.len()).or_default() += 1;
+            }
+            set_enabled(false);
+        }
+        let total: usize = hist.values().sum();
+        let mut chance = 0.0;
+        for (k, n) in &hist {
+            eprintln!("  {k} candidates: {n}");
+            chance += (*n as f64) / (*k as f64);
+        }
+        eprintln!("  total {total}, chance rate {:.4}", chance / total.max(1) as f64);
+    }
+
     /// A forced move carries no policy signal.
     #[test]
     fn single_candidate_decisions_are_not_recorded() {
