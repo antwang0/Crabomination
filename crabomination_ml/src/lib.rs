@@ -1038,23 +1038,12 @@ impl SampleWindow {
         }
         // A full pass covers everything, so the incremental mark advances.
         self.relabel_mark = self.pushed_total;
-        // Group row indices by trajectory, then walk each backwards.
-        let mut by_traj: HashMap<u32, Vec<usize>> = HashMap::new();
-        for (i, r) in self.rows.iter().enumerate() {
-            by_traj.entry(r.traj).or_default().push(i);
-        }
-        for idxs in by_traj.values_mut() {
-            idxs.sort_by_key(|&i| self.rows[i].ply);
-            // The last surviving row of the trajectory keeps the result:
-            // either it really is terminal, or its successors are gone and
-            // there is nothing to bootstrap through.
-            let mut carried = self.rows[*idxs.last().unwrap()].win;
-            self.targets[*idxs.last().unwrap()] = carried;
-            for w in idxs.windows(2).rev() {
-                let (t, next) = (w[0], w[1]);
-                carried = (1.0 - lambda) * preds[next] + lambda * carried;
-                self.targets[t] = carried.clamp(0.0, 1.0);
-            }
+        let fresh = {
+            let rows: Vec<&TrainRow> = self.rows.iter().collect();
+            lambda_targets(&rows, &preds, lambda)
+        };
+        for (slot, t) in self.targets.iter_mut().zip(fresh) {
+            *slot = t;
         }
     }
 
@@ -1100,19 +1089,10 @@ impl SampleWindow {
         self.relabel_mark = self.pushed_total;
         // Same backward recursion as the full pass, over suffix-relative
         // indices; targets are written at `start +` the suffix index.
-        let mut by_traj: HashMap<u32, Vec<usize>> = HashMap::new();
-        for (i, r) in suffix.iter().enumerate() {
-            by_traj.entry(r.traj).or_default().push(i);
-        }
-        for idxs in by_traj.values_mut() {
-            idxs.sort_by_key(|&i| suffix[i].ply);
-            let mut carried = suffix[*idxs.last().unwrap()].win;
-            self.targets[start + *idxs.last().unwrap()] = carried;
-            for w in idxs.windows(2).rev() {
-                let (t, next) = (w[0], w[1]);
-                carried = (1.0 - lambda) * preds[next] + lambda * carried;
-                self.targets[start + t] = carried.clamp(0.0, 1.0);
-            }
+        let fresh = lambda_targets(&suffix, &preds, lambda);
+        drop(suffix);
+        for (slot, t) in self.targets.iter_mut().skip(start).zip(fresh) {
+            *slot = t;
         }
     }
 
@@ -1120,6 +1100,48 @@ impl SampleWindow {
     pub fn targets(&self) -> &VecDeque<f32> {
         &self.targets
     }
+
+    /// `n` (row, fit target) pairs sampled uniformly with replacement, as
+    /// owned clones — for diagnostics that need to score the *training*
+    /// distribution without holding the window lock across a forward pass.
+    pub fn sample_pairs_owned<R: Rng>(&self, n: usize, rng: &mut R) -> Vec<(TrainRow, f32)> {
+        (0..n)
+            .map(|_| {
+                let i = rng.random_range(0..self.rows.len());
+                (self.rows[i].clone(), self.targets[i])
+            })
+            .collect()
+    }
+}
+
+/// The λ-return backward recursion, shared by the window's two relabel
+/// paths and by the holdout diagnostic in `selfplay_train`.
+///
+/// `preds[i]` is the current net's win probability for `rows[i]`.
+/// Trajectories are reassembled by [`TrainRow::traj`] and ordered by
+/// [`TrainRow::ply`]; each trajectory's last surviving row keeps the actual
+/// result (either it is genuinely terminal, or its successors have been
+/// evicted and there is nothing to bootstrap through), and earlier rows
+/// carry `G_t = (1 − λ)·V(s_{t+1}) + λ·G_{t+1}`.
+///
+/// Returns one target per input row, in input order.
+pub fn lambda_targets(rows: &[&TrainRow], preds: &[f32], lambda: f32) -> Vec<f32> {
+    let mut out: Vec<f32> = rows.iter().map(|r| r.win).collect();
+    let mut by_traj: HashMap<u32, Vec<usize>> = HashMap::new();
+    for (i, r) in rows.iter().enumerate() {
+        by_traj.entry(r.traj).or_default().push(i);
+    }
+    for idxs in by_traj.values_mut() {
+        idxs.sort_by_key(|&i| rows[i].ply);
+        let mut carried = rows[*idxs.last().unwrap()].win;
+        out[*idxs.last().unwrap()] = carried;
+        for w in idxs.windows(2).rev() {
+            let (t, next) = (w[0], w[1]);
+            carried = (1.0 - lambda) * preds[next] + lambda * carried;
+            out[t] = carried.clamp(0.0, 1.0);
+        }
+    }
+    out
 }
 
 /// One in-flight request to the batch eval server.
@@ -1802,6 +1824,64 @@ mod tests {
         assert!((got[1] - 0.50).abs() < 1e-6, "{got:?}");
         assert!((got[2] - 0.75).abs() < 1e-6, "{got:?}");
         assert!((got[3] - 1.00).abs() < 1e-6, "terminal keeps the result: {got:?}");
+    }
+
+    /// The diagnostic in `selfplay_train`'s checkpoint scores the holdout
+    /// against λ-targets it computes itself, because holdout rows are never
+    /// relabelled. That only means anything if the free function it calls
+    /// produces exactly what the window's relabel pass would have written.
+    #[test]
+    fn lambda_targets_matches_what_the_window_relabels_to() {
+        for lambda in [0.0f32, 0.3, 0.7, 1.0] {
+            let rows: Vec<TrainRow> = (0..4)
+                .flat_map(|t| (0..5).map(move |ply| traj_row(t, ply, (t % 2) as f32)))
+                .collect();
+            let preds: Vec<f32> = rows.iter().map(|r| 0.1 * r.ply as f32).collect();
+
+            let mut w = SampleWindow::new(64);
+            for r in &rows {
+                w.push(r.clone());
+            }
+            let by_ply = |rs: &[&TrainRow]| rs.iter().map(|r| 0.1 * r.ply as f32).collect();
+            w.relabel_lambda(lambda, by_ply);
+
+            let refs: Vec<&TrainRow> = rows.iter().collect();
+            let direct = lambda_targets(&refs, &preds, lambda);
+            let via_window: Vec<f32> = w.targets().iter().copied().collect();
+            assert_eq!(direct, via_window, "lambda {lambda}");
+        }
+    }
+
+    /// At λ = 1 the λ-target *is* the game result, so the checkpoint's
+    /// `train_tgt` and `train_raw` must coincide — the property that makes
+    /// their difference readable as bootstrap divergence at λ < 1.
+    #[test]
+    fn lambda_one_collapses_the_two_diagnostic_labels() {
+        let rows: Vec<TrainRow> = (0..6).map(|ply| traj_row(3, ply, 1.0)).collect();
+        let refs: Vec<&TrainRow> = rows.iter().collect();
+        // A net that is confidently wrong everywhere: if the targets were
+        // bootstrapped at all, they would move off the result.
+        let preds = vec![0.0f32; rows.len()];
+        let tgt = lambda_targets(&refs, &preds, 1.0);
+        assert!(tgt.iter().zip(&refs).all(|(t, r)| *t == r.win), "{tgt:?}");
+    }
+
+    /// The window sampler the diagnostic uses pairs each row with *its own*
+    /// stored target — an off-by-one here would silently report a different
+    /// row's target and make the gap meaningless.
+    #[test]
+    fn sampled_pairs_carry_their_own_targets() {
+        let mut w = SampleWindow::new(16);
+        for ply in 0..8 {
+            w.push(traj_row(2, ply, 1.0));
+        }
+        // Distinct target per row, so a mismatched pairing cannot pass.
+        w.relabel_lambda(0.0, |rows| rows.iter().map(|r| 0.1 * r.ply as f32).collect());
+        let mut rng = StdRng::seed_from_u64(11);
+        for (row, target) in w.sample_pairs_owned(64, &mut rng) {
+            let i = w.targets().iter().count() - w.len() + row.ply as usize;
+            assert_eq!(target, w.targets()[i], "ply {}", row.ply);
+        }
     }
 
     /// The incremental pass predicts and relabels only rows pushed since

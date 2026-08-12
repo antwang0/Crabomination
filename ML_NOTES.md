@@ -7,6 +7,49 @@ only stays dead while the reasoning that killed it is readable.
 
 ## Tier 13 — AI
 
+- 🟢 **Instrumentation — the overfit readout has been unreadable since
+  round 27, and fixing it explains why λ < 1 works.** `loss_win` is the
+  training EMA against whatever the learner *fit* — the λ-return at
+  λ < 1 — while `val_win` scores the holdout against the raw 0/1
+  result. The checkpoint comment asserted they were "directly
+  comparable (same MSE, different rows)", which holds only at λ = 1;
+  every champion-class run since round 27 is λ = 0.7. So the champion's
+  headline "`loss_win` 0.00926 vs `val_win` 0.18746" compared two
+  different quantities and the +0.178 was not an overfit measurement.
+
+  Each side is now scored against both labels: `train_raw` / `val_win`
+  against the result, `train_tgt` / `val_tgt` against the λ-return
+  (`lambda_targets`, factored out of the window's two relabel paths so
+  the holdout — which is never relabelled — computes exactly what the
+  window would have written). Two short verification runs, 3 000 games,
+  50 k window, ~1 000 steps:
+
+  | | train_raw | train_tgt | val_win | val_auc | honest gap |
+  |---|---|---|---|---|---|
+  | λ = 1.0 | 0.03557 | 0.03557 | 0.27251 | 0.7044 | **+0.237** |
+  | λ = 0.7 | 0.14300 | 0.01331 | 0.20113 | 0.7569 | **+0.058** |
+
+  λ = 1 collapses the two labels to the decimal, as the identity
+  requires — the control that says the wiring is right. The λ = 0.7 row
+  is the new information, and it says two things. First, **λ < 1 is
+  acting as a regulariser**: at λ = 1 the net drives training error to
+  0.036 against a holdout of 0.273 (it is memorising a 50 k window),
+  and λ = 0.7 cuts that gap four-fold while scoring the better AUC. The
+  program adopted λ = 0.7 in round 27 on gate results without a
+  mechanism; this is the mechanism. Second, **the objective is nearly
+  saturated by self-consistency**: `train_tgt` 0.013 against
+  `train_raw` 0.143 means ~91 % of what the optimiser is minimising is
+  "be smooth along a trajectory", not "predict who wins". That is how
+  TD is supposed to work, but it is also exactly the quantity that a
+  λ *schedule* toward small λ would push further, so round 34 gates
+  λ-schedule × relabel-mode as a 2×2 rather than moving one knob.
+
+  Caveat on magnitudes: 3 000-game runs at the default lr 1e-3 with a
+  50 k window overfit far harder than a 250 k-game champion run at
+  1e-4 / 500 k. The *identity* at λ = 1 and the *sign* of the λ = 0.7
+  separation are what these runs establish; the champion-scale numbers
+  come from the next full run.
+
 - 🔴 **Round 31 — MCTS combat coverage: a large, clean NEGATIVE. Combat
   declarations need the sims' precision, not the rollouts' breadth.**
   The hypothesis was coverage: the round-26/27 wins searched only

@@ -1448,15 +1448,31 @@ fn checkpoint(
     let stalls_stuck = shared.stalls_stuck.load(Ordering::Relaxed);
     let secs = start.elapsed().as_secs_f64();
     let [total, win, life, len] = loss_ema;
-    // Held-out scoring. `val_win` is directly comparable to `loss_win`
-    // (same MSE, different rows), so the gap between them *is* the
-    // overfit, visible while the run is happening instead of afterwards.
-    // `val_auc` is the one that says whether the net knows anything —
+    // Held-out scoring, against BOTH labels a row has.
+    //
+    // `loss_win` is the training EMA against whatever target the learner
+    // fit — the λ-return at λ < 1, the raw result at λ = 1. This comment
+    // used to claim `val_win` was "directly comparable to loss_win (same
+    // MSE, different rows)", which is true only at λ = 1; every
+    // champion-class run since round 27 is λ = 0.7, where the two numbers
+    // measure different things and their difference is not the overfit.
+    // So each side is now scored against both labels:
+    //
+    // * `*_raw` — MSE against the actual 0/1 game result. `val_raw` vs
+    //   `train_raw` is the honest generalisation gap.
+    // * `*_tgt` — MSE against the λ-return. `train_tgt` vs `train_raw` is
+    //   the bootstrap divergence: how much better the net fits its own
+    //   propagated opinion than it fits reality. At λ = 1 the two
+    //   coincide by construction. A run where `train_tgt` collapses
+    //   toward zero while `val_raw` and `val_auc` stall is fitting its
+    //   own bootstrap, which is the failure mode a λ schedule risks.
+    //
+    // `val_auc` remains the one that says whether the net knows anything —
     // MSE can improve while ranking does not.
-    let (val_n, val_win, val_ll, val_auc) = {
+    let (val_n, val_win, val_tgt, val_ll, val_auc) = {
         let v = shared.val.lock().unwrap();
         if v.len() < 200 {
-            (0usize, f32::NAN, f32::NAN, f32::NAN)
+            (0usize, f32::NAN, f32::NAN, f32::NAN, f32::NAN)
         } else {
             let refs: Vec<&TrainRow> = v.iter().collect();
             match trainer.predict_win_batch(&refs, 512) {
@@ -1467,16 +1483,67 @@ fn checkpoint(
                         .map(|(q, r)| (q - r.win) * (q - r.win))
                         .sum::<f32>()
                         / p.len() as f32;
+                    // The holdout is never relabelled (it is never trained
+                    // on), so its λ-targets are computed here from the same
+                    // forward pass the MSE above used — no extra cost.
+                    let tgt = crabomination_ml::lambda_targets(&refs, &p, args.lambda);
+                    let mse_tgt = p
+                        .iter()
+                        .zip(&tgt)
+                        .map(|(q, t)| (q - t) * (q - t))
+                        .sum::<f32>()
+                        / p.len() as f32;
                     let pairs: Vec<(f32, f32)> =
                         p.iter().zip(&refs).map(|(q, r)| (*q, r.win)).collect();
                     (
                         v.len(),
                         mse,
+                        mse_tgt,
                         log_loss(pairs.iter().copied()),
                         auc(pairs.iter().copied()),
                     )
                 }
-                Err(_) => (0, f32::NAN, f32::NAN, f32::NAN),
+                Err(_) => (0, f32::NAN, f32::NAN, f32::NAN, f32::NAN),
+            }
+        }
+    };
+    // The training-side mirror: a fresh sample of the window scored against
+    // its stored λ-targets and against the raw result. Seeded from `step`
+    // so a checkpoint's diagnostic is reproducible, and taken under a
+    // short lock (owned clones) so the forward pass never holds the window.
+    const DIAG_ROWS: usize = 4_096;
+    let (train_n, train_tgt, train_raw) = {
+        let sample = {
+            let w = shared.window.lock().unwrap();
+            if w.len() < 200 {
+                Vec::new()
+            } else {
+                let mut drng = StdRng::seed_from_u64(step ^ 0xD1A6_0000);
+                w.sample_pairs_owned(DIAG_ROWS.min(w.len()), &mut drng)
+            }
+        };
+        if sample.is_empty() {
+            (0usize, f32::NAN, f32::NAN)
+        } else {
+            let refs: Vec<&TrainRow> = sample.iter().map(|(r, _)| r).collect();
+            match trainer.predict_win_batch(&refs, 512) {
+                Ok(p) => {
+                    let n = p.len() as f32;
+                    let tgt = p
+                        .iter()
+                        .zip(&sample)
+                        .map(|(q, (_, t))| (q - t) * (q - t))
+                        .sum::<f32>()
+                        / n;
+                    let raw = p
+                        .iter()
+                        .zip(&refs)
+                        .map(|(q, r)| (q - r.win) * (q - r.win))
+                        .sum::<f32>()
+                        / n;
+                    (p.len(), tgt, raw)
+                }
+                Err(_) => (0, f32::NAN, f32::NAN),
             }
         }
     };
@@ -1493,7 +1560,7 @@ fn checkpoint(
     let cum_r = rows as f64 / secs.max(1e-9);
     let [t_sample, t_step, t_relabel, t_deck, t_sleep] = timing.take_ms();
     let line = format!(
-        "{{\"step\":{step},\"loss_ema\":{total:.5},\"loss_win\":{win:.5},\"loss_life\":{life:.5},\"loss_len\":{len:.5},\"loss_deck\":{deck_loss:.5},\"val_n\":{val_n},\"val_win\":{val_win:.5},\"val_logloss\":{val_ll:.5},\"val_auc\":{val_auc:.5},\"rows_consumed\":{consumed},\"rows\":{rows},\"games\":{games},\"stalls\":{stalls},\"stalls_capped\":{stalls_capped},\"stalls_stuck\":{stalls_stuck},\"elapsed_s\":{secs:.0},\"games_per_s\":{dg:.3},\"rows_per_s\":{dr:.1},\"consumed_per_s\":{dc:.1},\"steps_per_s\":{ds:.3},\"games_per_s_cum\":{cum_g:.3},\"rows_per_s_cum\":{cum_r:.1},\"t_sample_ms\":{t_sample},\"t_step_ms\":{t_step},\"t_relabel_ms\":{t_relabel},\"t_deck_ms\":{t_deck},\"t_sleep_ms\":{t_sleep}}}\n"
+        "{{\"step\":{step},\"loss_ema\":{total:.5},\"loss_win\":{win:.5},\"loss_life\":{life:.5},\"loss_len\":{len:.5},\"loss_deck\":{deck_loss:.5},\"val_n\":{val_n},\"val_win\":{val_win:.5},\"val_tgt\":{val_tgt:.5},\"val_logloss\":{val_ll:.5},\"val_auc\":{val_auc:.5},\"train_n\":{train_n},\"train_raw\":{train_raw:.5},\"train_tgt\":{train_tgt:.5},\"rows_consumed\":{consumed},\"rows\":{rows},\"games\":{games},\"stalls\":{stalls},\"stalls_capped\":{stalls_capped},\"stalls_stuck\":{stalls_stuck},\"elapsed_s\":{secs:.0},\"games_per_s\":{dg:.3},\"rows_per_s\":{dr:.1},\"consumed_per_s\":{dc:.1},\"steps_per_s\":{ds:.3},\"games_per_s_cum\":{cum_g:.3},\"rows_per_s_cum\":{cum_r:.1},\"t_sample_ms\":{t_sample},\"t_step_ms\":{t_step},\"t_relabel_ms\":{t_relabel},\"t_deck_ms\":{t_deck},\"t_sleep_ms\":{t_sleep}}}\n"
     );
     use std::io::Write;
     let mut f = std::fs::OpenOptions::new()
