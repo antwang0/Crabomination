@@ -95,6 +95,16 @@ struct Args {
     /// checkpoint's `train_raw` / `val_win` stay MSE either way and are
     /// what to compare across arms.
     bce: bool,
+    /// Record the pilot's decisions (candidate successor states + the
+    /// pick) and train the win head to rank them. See
+    /// `crabomination::server::decision_capture` and
+    /// `Trainer::train_policy_step`. Off by default; recording encodes
+    /// once per candidate rather than once per position, so it is not
+    /// free.
+    record_decisions: bool,
+    /// Learner steps between policy steps when `--record-decisions` is
+    /// on. 1 = a policy step every value step.
+    policy_every: u64,
     /// current net (see `SampleWindow::relabel_lambda`).
     lambda: f32,
     /// Learner steps between recomputing the lambda-returns. They are
@@ -275,6 +285,8 @@ fn parse_args() -> Args {
         lr: 1e-3,
         reuse: 6.0,
         bce: false,
+        record_decisions: false,
+        policy_every: 4,
         lambda: 1.0,
         relabel_every: 200,
         window: 250_000,
@@ -327,6 +339,10 @@ fn parse_args() -> Args {
             "--lr" => a.lr = val().parse().expect("--lr"),
             "--reuse" => a.reuse = val().parse().expect("--reuse"),
             "--bce" => a.bce = true,
+            "--record-decisions" => a.record_decisions = true,
+            "--policy-every" => {
+                a.policy_every = val().parse::<u64>().expect("--policy-every").max(1)
+            }
             "--lambda" => a.lambda = val().parse().expect("--lambda"),
             "--relabel-every" => {
                 a.relabel_every = val().parse::<u64>().expect("--relabel-every").max(1)
@@ -473,6 +489,13 @@ struct Shared {
     /// Every game also labels its two decklists — the build net's stream.
     /// Small (2 rows/game), so a plain capped deque suffices.
     deck_window: Mutex<std::collections::VecDeque<DeckRow>>,
+    /// Recorded decisions: candidate successor states plus the pick.
+    /// Capped deque; policy batches sample it uniformly. Separate from
+    /// `window` because a decision is a different shape and a different
+    /// cadence from a labelled position.
+    decisions: Mutex<std::collections::VecDeque<crabomination_ml::DecisionRow>>,
+    /// Held-out decisions, never trained on — the policy top-1 metric.
+    decisions_val: Mutex<Vec<crabomination_ml::DecisionRow>>,
     /// Rows ever pushed (not evicted-adjusted) — the reuse cap's basis.
     rows_pushed: AtomicU64,
     /// Next self-play game index to claim — also the per-game seed salt.
@@ -556,6 +579,39 @@ fn actor_loop(shared: &Shared, args: &Args, vocab: &Vocab, deck_judge: Option<&D
             vocab,
             if args.use_best.is_some() { args.mcts_actors } else { 0 },
         );
+        // Decisions are captured into a thread-local buffer during the
+        // game, so each actor drains its own. Split by the same
+        // trajectory-hash rule the value rows use, so a game's decisions
+        // and its positions never straddle the train/holdout boundary.
+        if args.record_decisions {
+            let captured = crabomination::server::decision_capture::drain();
+            if !captured.is_empty() {
+                const DECISION_CAP: usize = 200_000;
+                const DECISION_VAL_CAP: usize = 4_000;
+                let held = is_holdout(n as u32, args.holdout);
+                let converted: Vec<crabomination_ml::DecisionRow> = captured
+                    .into_iter()
+                    .map(|d| crabomination_ml::DecisionRow {
+                        successors: d.successors,
+                        chosen: d.chosen,
+                    })
+                    .collect();
+                if held {
+                    let mut v = shared.decisions_val.lock().unwrap();
+                    if v.len() < DECISION_VAL_CAP {
+                        v.extend(converted);
+                    }
+                } else {
+                    let mut d = shared.decisions.lock().unwrap();
+                    for row in converted {
+                        if d.len() == DECISION_CAP {
+                            d.pop_front();
+                        }
+                        d.push_back(row);
+                    }
+                }
+            }
+        }
         shared.games_done.fetch_add(1, Ordering::Relaxed);
         if rec.rows.is_empty() {
             shared.stalls.fetch_add(1, Ordering::Relaxed);
@@ -1200,10 +1256,17 @@ fn main() {
         }
     }
 
+    if args.record_decisions {
+        crabomination::server::decision_capture::set_enabled(true);
+        eprintln!("recording decisions (policy step every {} value steps)", args.policy_every);
+    }
+
     let shared = Shared {
         window: Mutex::new(SampleWindow::new(args.window)),
         val: Mutex::new(Vec::new()),
         deck_window: Mutex::new(std::collections::VecDeque::new()),
+        decisions: Mutex::new(std::collections::VecDeque::new()),
+        decisions_val: Mutex::new(Vec::new()),
         rows_pushed: AtomicU64::new(0),
         next_game: AtomicU64::new(0),
         games_done: AtomicU64::new(0),
@@ -1258,6 +1321,8 @@ fn main() {
         let mut stale = 0u64;
         let mut timing = LearnerTiming::default();
         // (samples consumed when the actors finished, tail allowance).
+        let mut policy_ema = f32::NAN;
+        let mut policy_loss_ema = f32::NAN;
         let mut tail_budget = None::<(u64, u64)>;
         let stats_path = args.out.join("stats.jsonl");
         let mut prev_interval = Interval::default();
@@ -1336,6 +1401,39 @@ fn main() {
                 *ema = if ema.is_nan() { part } else { 0.99 * *ema + 0.01 * part };
             }
 
+            // Policy steps ride alongside the value steps: the same net,
+            // taught to rank a decision's candidate successors the way
+            // the pilot ranked them. Sampled from a separate window
+            // because a decision is a different shape and cadence from a
+            // labelled position.
+            if args.record_decisions && step.is_multiple_of(args.policy_every) {
+                let sample: Vec<crabomination_ml::DecisionRow> = {
+                    let d = shared.decisions.lock().unwrap();
+                    if d.len() < 256 {
+                        Vec::new()
+                    } else {
+                        (0..args.batch.min(64))
+                            .map(|_| d[rng.random_range(0..d.len())].clone())
+                            .collect()
+                    }
+                };
+                if !sample.is_empty() {
+                    let refs: Vec<&crabomination_ml::DecisionRow> = sample.iter().collect();
+                    if let Ok(st) = trainer.train_policy_step(&refs) {
+                        policy_ema = if policy_ema.is_nan() {
+                            st.top1
+                        } else {
+                            0.99 * policy_ema + 0.01 * st.top1
+                        };
+                        policy_loss_ema = if policy_loss_ema.is_nan() {
+                            st.loss
+                        } else {
+                            0.99 * policy_loss_ema + 0.01 * st.loss
+                        };
+                    }
+                }
+            }
+
             // The deck net rides along at a quarter cadence — its stream
             // is 2 rows/game, so training it every step would just churn
             // the same rows.
@@ -1373,6 +1471,7 @@ fn main() {
                     start,
                     &stats_path,
                     &mut best_auc,
+                    [policy_ema, policy_loss_ema],
                     &mut timing,
                     &mut prev_interval,
                 );
@@ -1404,6 +1503,7 @@ fn main() {
                 start,
                 &stats_path,
                 &mut best_auc,
+                [policy_ema, policy_loss_ema],
                 &mut timing,
                 &mut prev_interval,
             );
@@ -1457,6 +1557,7 @@ fn checkpoint(
     start: Instant,
     stats_path: &std::path::Path,
     best_auc: &mut f32,
+    policy_ema: [f32; 2],
     timing: &mut LearnerTiming,
     prev: &mut Interval,
 ) -> Option<bool> {
@@ -1583,9 +1684,24 @@ fn checkpoint(
     *prev = Interval { secs, games, rows, consumed, step };
     let cum_g = games as f64 / secs.max(1e-9);
     let cum_r = rows as f64 / secs.max(1e-9);
+    // Held-out policy agreement: how often the net's top-scoring
+    // candidate is the one the pilot actually played, on decisions it was
+    // never trained on. This is the first metric in the program that
+    // measures *choosing* rather than predicting -- MSE and AUC both
+    // score isolated positions, and a search consumes rankings.
+    let val_policy = {
+        let v = shared.decisions_val.lock().unwrap();
+        if v.len() < 100 {
+            f32::NAN
+        } else {
+            let refs: Vec<&crabomination_ml::DecisionRow> = v.iter().collect();
+            trainer.policy_top1(&refs).unwrap_or(f32::NAN)
+        }
+    };
+    let [policy_top1, policy_loss] = policy_ema;
     let [t_sample, t_step, t_relabel, t_deck, t_sleep] = timing.take_ms();
     let line = format!(
-        "{{\"step\":{step},\"loss_ema\":{total:.5},\"loss_win\":{win:.5},\"loss_life\":{life:.5},\"loss_len\":{len:.5},\"loss_deck\":{deck_loss:.5},\"val_n\":{val_n},\"val_win\":{val_win:.5},\"val_tgt\":{val_tgt:.5},\"val_logloss\":{val_ll:.5},\"val_auc\":{val_auc:.5},\"train_n\":{train_n},\"train_raw\":{train_raw:.5},\"train_tgt\":{train_tgt:.5},\"rows_consumed\":{consumed},\"rows\":{rows},\"games\":{games},\"stalls\":{stalls},\"stalls_capped\":{stalls_capped},\"stalls_stuck\":{stalls_stuck},\"elapsed_s\":{secs:.0},\"games_per_s\":{dg:.3},\"rows_per_s\":{dr:.1},\"consumed_per_s\":{dc:.1},\"steps_per_s\":{ds:.3},\"games_per_s_cum\":{cum_g:.3},\"rows_per_s_cum\":{cum_r:.1},\"t_sample_ms\":{t_sample},\"t_step_ms\":{t_step},\"t_relabel_ms\":{t_relabel},\"t_deck_ms\":{t_deck},\"t_sleep_ms\":{t_sleep}}}\n"
+        "{{\"step\":{step},\"loss_ema\":{total:.5},\"loss_win\":{win:.5},\"loss_life\":{life:.5},\"loss_len\":{len:.5},\"loss_deck\":{deck_loss:.5},\"val_n\":{val_n},\"val_win\":{val_win:.5},\"val_tgt\":{val_tgt:.5},\"val_logloss\":{val_ll:.5},\"val_auc\":{val_auc:.5},\"policy_top1\":{policy_top1:.4},\"policy_loss\":{policy_loss:.5},\"val_policy\":{val_policy:.4},\"train_n\":{train_n},\"train_raw\":{train_raw:.5},\"train_tgt\":{train_tgt:.5},\"rows_consumed\":{consumed},\"rows\":{rows},\"games\":{games},\"stalls\":{stalls},\"stalls_capped\":{stalls_capped},\"stalls_stuck\":{stalls_stuck},\"elapsed_s\":{secs:.0},\"games_per_s\":{dg:.3},\"rows_per_s\":{dr:.1},\"consumed_per_s\":{dc:.1},\"steps_per_s\":{ds:.3},\"games_per_s_cum\":{cum_g:.3},\"rows_per_s_cum\":{cum_r:.1},\"t_sample_ms\":{t_sample},\"t_step_ms\":{t_step},\"t_relabel_ms\":{t_relabel},\"t_deck_ms\":{t_deck},\"t_sleep_ms\":{t_sleep}}}\n"
     );
     use std::io::Write;
     let mut f = std::fs::OpenOptions::new()
