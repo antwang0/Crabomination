@@ -9450,9 +9450,37 @@ fn pick_by_outcome(
     if let Some(t) = sampling_temp(state.turn_number) {
         let ws: Vec<i32> = evd.iter().map(|e| e.0).collect();
         let i = sample_scored_index(&ws, t);
+        capture_decision(state, seat, &evd, i);
         return evd.into_iter().nth(i).map(|(_, _, a)| a);
     }
-    evd.into_iter().max_by_key(|(ev, s, _)| (*ev, *s)).map(|(_, _, a)| a)
+    let best = evd
+        .iter()
+        .enumerate()
+        .max_by_key(|(_, (ev, s, _))| (*ev, *s))
+        .map(|(i, _)| i)?;
+    capture_decision(state, seat, &evd, best);
+    evd.into_iter().nth(best).map(|(_, _, a)| a)
+}
+
+/// Feed the finalist set and the pick to [`decision_capture`].
+///
+/// Hooked here rather than at the enumerator because this is the point
+/// where a *choice* is actually made: everything upstream is filtering,
+/// and the finalists are the set the bot genuinely weighed. That does
+/// mean the recorded candidate set is the shortlist (`EVAL_TOP`) rather
+/// than every legal action — which is the same convention AlphaZero uses
+/// when it records the search's action set rather than the rules'.
+fn capture_decision(
+    state: &GameState,
+    seat: usize,
+    evd: &[(i32, i32, GameAction)],
+    chosen: usize,
+) {
+    if !super::decision_capture::enabled() {
+        return;
+    }
+    let actions: Vec<GameAction> = evd.iter().map(|(_, _, a)| a.clone()).collect();
+    super::decision_capture::maybe(state, seat, &actions, chosen);
 }
 
 /// True when `e`'s tree contains a leaf whose apparent value REVERSES
