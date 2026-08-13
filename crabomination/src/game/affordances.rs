@@ -1,7 +1,7 @@
 //! Affordance / legality probes: which actions a seat could legally take
 //! *right now* (castable hand cards, activatable permanents, legal
 //! attackers/blockers, alt-cast modes). Each dry-runs `perform_action`
-//! against a library-stripped clone — see `affordance_probe_template`.
+//! against a `GameState` clone — see `affordance_probe_template`.
 //! Split out of `game/mod.rs` (no behavior change).
 
 use super::*;
@@ -66,25 +66,16 @@ impl GameState {
         probe.pending_decision.as_ref().is_some_and(|pd| pd.resume.is_action_replay())
     }
 
-    /// A clone of `self` with every player's library emptied, for use as a
-    /// reusable dry-run *template* by the from-hand affordance probes
-    /// ([`would_accept_on`](Self::would_accept_on)).
+    /// A clone of `self` for use as a reusable dry-run *template* by the
+    /// from-hand affordance probes ([`would_accept_on`](Self::would_accept_on)).
     ///
-    /// Why this is safe: cast / activate / play-land legality never reads
-    /// library contents. A cast validates against hand, battlefield,
-    /// graveyard (delve), and player flags, then pushes the spell to the
-    /// stack and returns — resolution (the only library-touching step, e.g.
-    /// a draw or fetch) happens on a *later* priority pass that the probe
-    /// never reaches. An empty library is not itself a game-loss (deck-out
-    /// fires only on a draw *attempt*, CR 104.3a/120.3), so clearing it
-    /// can't flip `would_accept`'s `is_ok()` outcome.
-    ///
-    /// Why it's worth it: the affordance sweep dry-runs one `perform_action`
-    /// per candidate hand card, each on a fresh `GameState` clone. The
-    /// libraries are by far the largest part of that clone (a 60-card deck
-    /// is ~53 `CardInstance`s vs. ~7 in hand). Cloning the template once and
-    /// then cheaply re-cloning the library-less template per card turns N
-    /// full-deck clones into one full clone + N light clones.
+    /// It used to empty every player's library first, back when a zone was a
+    /// plain `Vec` and the libraries were most of the clone's cost. They are
+    /// [`CowBox`](crate::cow::CowBox)es now: cloning one is a reference bump
+    /// whatever its length, so the strip bought nothing and *cost* a
+    /// `PlayerData` unshare per player per template (1.37 % of the profile).
+    /// A probe that never reaches resolution never touches a library either,
+    /// so the template now carries the real ones.
     ///
     /// `pub(crate)` so the bot's per-tick candidate sweep (`server::bot`)
     /// shares the same one-template-many-light-probes pattern.
@@ -105,13 +96,7 @@ impl GameState {
     }
 
     pub(crate) fn affordance_probe_template(&self) -> GameState {
-        let mut template = self.clone();
-        for p in &mut template.players {
-            // A fresh empty box, not `.clear()` — clearing would CoW-copy
-            // the shared library first only to drop its contents.
-            p.library = Default::default();
-        }
-        template
+        self.clone()
     }
 
     /// Dry-run `action` against a prebuilt [`affordance_probe_template`]

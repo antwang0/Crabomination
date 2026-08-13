@@ -4553,11 +4553,9 @@ fn main_phase_action_with(
     scored: bool,
     w: &EvalWeights,
 ) -> GameAction {
-    // One library-stripped probe template per tick: every candidate dry-run
-    // below re-clones this light template instead of the full state. The
-    // library is the largest part of a `GameState` clone and cast/activate/
-    // play-land legality never reads it (see `affordance_probe_template`),
-    // so this turns N full-deck clones into one + N light ones.
+    // One probe template per tick: every candidate dry-run below re-clones
+    // this template instead of rebuilding one, and a `GameState` clone is
+    // reference bumps over CoW zones (see `affordance_probe_template`).
     let probe = state.affordance_probe_template();
 
     // NOTE: the bot deliberately does *not* pre-tap its mana sources here.

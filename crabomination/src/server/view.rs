@@ -153,11 +153,11 @@ fn project_for_inner(state: &GameState, viewer: Option<usize>) -> ClientView {
         day_night: state.day_night.map(|dn| dn == crate::game::types::DayNight::Day),
         truce_active: state.truce_active(),
         combat_preview: combat_preview(state),
-        // One pass over the hand builds a single library-stripped probe
-        // template and reuses it across every affordance category, rather
-        // than each `*_hand_cards` call cloning the whole `GameState` (incl.
-        // both libraries) per candidate. Runs on every accepted action for
-        // the priority-holding seat, so it's the projection's hot path.
+        // One pass over the hand builds a single probe template and reuses
+        // it across every affordance category, rather than each
+        // `*_hand_cards` call cloning the whole `GameState` per candidate.
+        // Runs on every accepted action for the priority-holding seat, so
+        // it's the projection's hot path.
         castable_hand: affordances.castable,
         back_castable_hand: affordances.back_castable,
         prepare_castable: affordances.prepare_castable,
