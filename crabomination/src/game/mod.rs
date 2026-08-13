@@ -15718,13 +15718,28 @@ impl GameState {
             // A host that lost all abilities (Turn to Frog, "is a Swamp")
             // contributes none of its *own* triggers, but still carries its
             // attachments' equip-granted ones.
-            let mut all_triggers: Vec<(usize, &crate::card::TriggeredAbility)> = Vec::new();
-            if !stripped {
-                all_triggers.extend(card.definition.triggered_abilities.iter().enumerate());
-                all_triggers.extend(own_granted.iter().map(|t| (usize::MAX, t)));
-                all_triggers.extend(static_granted.iter().map(|t| (usize::MAX, t)));
+            //
+            // Chained slice iterators, not a `Vec`: this runs once per
+            // permanent per dispatch (945,812 times over six bench games) and
+            // most permanents carry no trigger at all, so the three `extend`s
+            // were paying reserve/set_len per card to build an empty vector.
+            let empty: &[crate::card::TriggeredAbility] = &[];
+            let printed = if stripped { empty } else { &card.definition.triggered_abilities[..] };
+            let own_granted = if stripped { empty } else { own_granted };
+            let static_granted = if stripped { empty } else { &static_granted[..] };
+            if printed.is_empty()
+                && own_granted.is_empty()
+                && static_granted.is_empty()
+                && equip_granted.is_empty()
+            {
+                continue;
             }
-            all_triggers.extend(equip_granted.iter().map(|t| (usize::MAX, t)));
+            let all_triggers = printed
+                .iter()
+                .enumerate()
+                .chain(own_granted.iter().map(|t| (usize::MAX, t)))
+                .chain(static_granted.iter().map(|t| (usize::MAX, t)))
+                .chain(equip_granted.iter().map(|t| (usize::MAX, t)));
             for (trig_idx, ta) in all_triggers {
                 // A `FromYourGraveyard`-scoped trigger functions ONLY while
                 // its card is in a graveyard (CR 603.3d zone-scoping —
