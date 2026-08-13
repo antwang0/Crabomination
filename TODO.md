@@ -16,52 +16,29 @@ reference and want their own triage pass):
 
 ## NEXT (handoff — rewrite each run, keep under 15 lines)
 
-Branch `claude/modern_decks`. **The profile of record is fresh** — retaken
-2026-08-12 at `f814a13b`, **3,132,892,846 Ir**, and PERF's table, gather
-counts and `would_accept` caller list all come from it. The pass landed one
-row, **`granted_abilities_of(&CardInstance)` (-0.552 %)**: the `CardId` form
-opened with a `battlefield_find` and its three hot callers were already
-iterating the battlefield. It also **closed candidate (8)'s
-`can_afford_in_state` item as a negative result** (+0.066 %, reverted) —
-the filter runs 1.13 cards per sweep, not 1.72, so there is nothing to
-hoist; the denominator was `cast_candidates`, which is not where the filter
-lives.
+Branch `claude/modern_decks`. **The twenty-eighth pass landed four rows for
+-7.257 % Ir** (3,116,508,803 -> 2,890,337,225 at `5034eb2f`, where the
+profile of record is now retaken). All four are one defect: **`&mut` on a
+CoW handle deep-copies, so a write that changes nothing is not free** —
+`iter_mut` sweeps, unconditional flag writes, and a library strip whose
+justification stopped being true when zones became `CowBox`es.
 
-- **Candidate (0) is measured and the pruning direction is dead.** The
-  probe ran on `--decks all` (10,200 games, 110,000 searches): the search
-  departs from greedy **46 %** of the time — greedy 54.0 %, the empty
-  declaration 35.0 %, a greedy-minus-one 11.0 % — so no candidate class is
-  dead weight. Half the program stays where it is; the only lever is making
-  one simulation cheaper (1.33 M Ir each), which is the rest of the list.
-  **So next up is candidate (11)** — the `battlefield_find`-in-a-loop
-  family the pass's row generalizes, mechanical and behaviour-proof; the
-  enumeration is already done and `creature_redirects_damage_to_controller`
-  (0.55 %) is its one warm member, though its cost is the
-  `computed_permanent` inside it, not the find. Then (9)(b) and (12)
-  `grant_scan`.
-- **Filters.** The twelfth is owed. Pass 25's suggestion still stands: *a
-  predicate two callers each re-derive*. Pass 24's clone-then-narrow filter
-  is still unswept semantically — `.keywords.to_vec()` inside an `.any()`
-  survives at `mod.rs:5721`, `actions.rs:10472`, `movement.rs:835`.
-- **Rules residue from the P0.** A hash walk deciding a game outcome is
-  reproducible but still arbitrary; `ac8e3b50` fixed the one known site and
-  the ~110 map/set locals are unswept for siblings. Low priority — none of
-  them can desynchronize a run any more.
-- **Env.** No `cargo-nextest`; `cargo test -p crabomination -p
-  crabomination_tests` is the gate (~25 min cold, ~45 s warm, always
-  `CARGO_INCREMENTAL=0`). `profiling-fast` cold **~12 min**, engine-only
-  ~4; callgrind on the six-game workload ~5. `release` (cgu 1 + thin LTO)
-  is ~22 min — budget for it before starting; **the `--bench` anchor has
-  still not been re-run since `ed4c152c`.** Client apt deps are still not
-  installed by the SessionStart hook; the four-package `apt-get install`
-  below fixes it in a minute.
-- **Trackers.** PERF **1.23k** (was 1.45k — Baseline's four cross-check
-  paragraphs collapsed to one table, its six historical anchor blocks to
-  another with their lessons kept as bullets, and the profile-of-record
-  section's three superseded tables to a pointer). TODO ~1.09k, roadmap
-  660. PERF is still over the ~1k guidance; the next compactable block is
-  the **Log**'s per-pass prose for passes 20-25, which the index above it
-  already summarizes.
+- **Pull PERF candidate (-1) first**: the same sweep that found this pass
+  (`--auto=yes`, sort the `=> …deref_mut` call lines by Ir), with two
+  survivors already costed — `&mut self.cold` 0.95 %, `remove_from_hand`
+  0.95 % (the `PlayerData` clone's own cost, i.e. a cold group for its
+  per-turn tallies). Then (11) `battlefield_find`-in-a-loop, then (9)(b).
+- **Closed:** an event-kind mask over the trigger dispatcher's triple loop
+  — `event_matches_spec` runs 1.22 times per dispatch, nothing to gate.
+- **Open, and the one number that moved the wrong way:** `peak_rss_mib`
+  21.7-22.3 -> 29.0-29.4 at `release`. See Baseline for the A/B.
+- Env: no `cargo-nextest`; `cargo test -p crabomination -p
+  crabomination_tests` is the gate — **4m26s cold build, ~30 s run, 18,121
+  tests**, much cheaper than this file used to claim. `profiling-fast`
+  engine rebuild 3m20s, callgrind ~5 min, `release` **24m11s**. Client apt
+  deps install in a minute (see below).
+- Trackers: PERF **1.3k**, over the ~1k guidance; the compactable block is
+  still the **Log**'s per-pass prose for passes 20-25.
 
 ## Environment note
 
