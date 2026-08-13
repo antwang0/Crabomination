@@ -7,6 +7,59 @@ only stays dead while the reasoning that killed it is readable.
 
 ## Tier 13 — AI
 
+- 🟢 **Round 34 step 1 — the value net ranks immediate successors
+  *worse than random* against what MCTS concludes, and improving it does
+  not help.** Headroom probe for distillation: MCTS actors (64 iters over
+  a v6 net, batched GPU eval), `--record-decisions --policy-every 0` so
+  the net is measured and never trained on the decisions.
+
+  | seed | final val_policy | chance | lift | AUC over the run |
+  |---|---|---|---|---|
+  | 43 | 0.3546 | 0.4475 | **0.79×** | 0.691 → 0.767 |
+  | 97 | 0.2953 | 0.4435 | **0.67×** | 0.643 → 0.735 |
+
+  All ten checkpoints across both seeds land below chance (lift
+  0.66–0.91×, never 1.0). At n ≈ 4 050 holdout decisions the binomial SE
+  is ~0.008, putting the finals 12 and 19 SE under — far outside noise
+  even discounting within-game correlation.
+
+  **The trend is the finding.** AUC rises steadily in both runs while
+  agreement stays flat (seed 43) or falls (seed 97, 0.404 → 0.295).
+  Getting better at predicting *who wins from here* does not make the
+  net better at ranking *which move to make*, and the two may trade off.
+  That is the sharpest evidence yet for the round-33 observation that
+  AUC and ranking are only loosely coupled — here they move in opposite
+  directions.
+
+  Below chance is a stronger claim than weak agreement, and needs a
+  mechanism. The plausible one: the net scores a successor by how good
+  the board looks *immediately*, so it prefers casting now, while the
+  rollouts often conclude that holding mana, declining a trade, or not
+  overextending is better. That is a systematic disagreement in a
+  consistent direction, which is what below-chance requires — random
+  disagreement would sit at chance.
+
+  **Two limitations, both real.** The measured net is undertrained
+  (4 000 games, AUC 0.74–0.77 against the champion's ~0.81), though the
+  cross-checkpoint trend partly answers that by showing improvement does
+  not close the gap. And MCTS's rollouts run on the *pilot* net, not the
+  training net, so some of the disagreement is two-different-nets rather
+  than search-vs-evaluator. Scoring the loaded pilot itself against the
+  same holdout would separate those and is the obvious next addition.
+
+  **What it means for step 2.** Distillation has a large, consistent,
+  and apparently learnable target: the search reaches conclusions its own
+  evaluator's immediate ranking actively contradicts. Round 33 showed
+  the net can absorb a policy target (0.35 → 0.81 on the heuristic's
+  picks); this shows the MCTS target is very different from what the
+  value objective produces on its own.
+
+  Also found: `--gpu-eval --use-best nets/champion.safetensors` has been
+  broken since encoder v6. The champion is a v5 checkpoint (trunk1
+  [512, 1060] vs [512, 1067]); `PlayNet::load` zero-pads legacy files but
+  candle's `VarMap::load` is a strict shape set and panics. The probe
+  uses a v6-native net.
+
 - 🟢 **Round 33 — the first policy training run, and the first number
   that measures *choosing*.** The net has only ever been taught to
   predict who wins from a position. `--record-decisions` captures the
