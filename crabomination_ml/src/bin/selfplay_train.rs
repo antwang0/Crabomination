@@ -1197,7 +1197,7 @@ fn main() {
     trainer.set_bce(args.bce);
     // A frozen copy of the pilot, for the `pilot_policy` reference.
     // lr 0 and never stepped: this exists only to score.
-    let pilot_trainer: Option<Trainer> = args.record_decisions.then(|| args.use_best.as_ref()).flatten().and_then(|p| {
+    let pilot_trainer: Option<Trainer> = args.record_decisions.then_some(args.use_best.as_ref()).flatten().and_then(|p| {
         let mut t = Trainer::new(&cfg, 0.0).ok()?;
         match t.load(p) {
             Ok(()) => {

@@ -393,8 +393,8 @@ mod tests {
             while fuel > 0 && !g.is_game_over() {
                 fuel -= 1;
                 let mut acted = false;
-                for seat in 0..2 {
-                    if let Some(a) = bots[seat].next_action(&g, seat)
+                for (seat, bot) in bots.iter_mut().enumerate() {
+                    if let Some(a) = bot.next_action(&g, seat)
                         && g.perform_action(a).is_ok()
                     {
                         acted = true;
