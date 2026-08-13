@@ -113,6 +113,10 @@ struct Args {
     /// honest control records the same decisions, scores the same
     /// holdout, and trains on none of it.
     policy_every: u64,
+    /// Softmax temperature for the distilled policy target. Arm values
+    /// are win probabilities, so their spread is small and this is what
+    /// decides sharp-pick vs soft-ranking.
+    policy_temp: f32,
     /// current net (see `SampleWindow::relabel_lambda`).
     lambda: f32,
     /// Learner steps between recomputing the lambda-returns. They are
@@ -295,6 +299,7 @@ fn parse_args() -> Args {
         bce: false,
         record_decisions: false,
         policy_every: 4,
+        policy_temp: 0.1,
         lambda: 1.0,
         relabel_every: 200,
         window: 250_000,
@@ -348,6 +353,7 @@ fn parse_args() -> Args {
             "--reuse" => a.reuse = val().parse().expect("--reuse"),
             "--bce" => a.bce = true,
             "--record-decisions" => a.record_decisions = true,
+            "--policy-temp" => a.policy_temp = val().parse().expect("--policy-temp"),
             "--policy-every" => {
                 a.policy_every = val().parse::<u64>().expect("--policy-every")
             }
@@ -1189,6 +1195,21 @@ fn main() {
         Trainer::new(&cfg, args.lr).expect("trainer init")
     };
     trainer.set_bce(args.bce);
+    // A frozen copy of the pilot, for the `pilot_policy` reference.
+    // lr 0 and never stepped: this exists only to score.
+    let pilot_trainer: Option<Trainer> = args.record_decisions.then(|| args.use_best.as_ref()).flatten().and_then(|p| {
+        let mut t = Trainer::new(&cfg, 0.0).ok()?;
+        match t.load(p) {
+            Ok(()) => {
+                eprintln!("pilot baseline scored from {}", p.display());
+                Some(t)
+            }
+            Err(e) => {
+                eprintln!("pilot baseline unavailable ({e}); pilot_policy will be nan");
+                None
+            }
+        }
+    });
     let mut deck_trainer =
         DeckTrainer::new(&DeckNetConfig::standard(vocab.size()), args.lr).expect("deck trainer");
     eprintln!(
@@ -1438,7 +1459,7 @@ fn main() {
                 };
                 if !sample.is_empty() {
                     let refs: Vec<&crabomination_ml::DecisionRow> = sample.iter().collect();
-                    if let Ok(st) = trainer.train_policy_step(&refs) {
+                    if let Ok(st) = trainer.train_policy_step_temp(&refs, args.policy_temp) {
                         policy_ema = if policy_ema.is_nan() {
                             st.top1
                         } else {
@@ -1491,6 +1512,7 @@ fn main() {
                     &stats_path,
                     &mut best_auc,
                     [policy_ema, policy_loss_ema],
+                    pilot_trainer.as_ref(),
                     &mut timing,
                     &mut prev_interval,
                 );
@@ -1523,6 +1545,7 @@ fn main() {
                 &stats_path,
                 &mut best_auc,
                 [policy_ema, policy_loss_ema],
+                pilot_trainer.as_ref(),
                 &mut timing,
                 &mut prev_interval,
             );
@@ -1577,6 +1600,7 @@ fn checkpoint(
     stats_path: &std::path::Path,
     best_auc: &mut f32,
     policy_ema: [f32; 2],
+    pilot: Option<&Trainer>,
     timing: &mut LearnerTiming,
     prev: &mut Interval,
 ) -> Option<bool> {
@@ -1708,6 +1732,13 @@ fn checkpoint(
     // never trained on. This is the first metric in the program that
     // measures *choosing* rather than predicting -- MSE and AUC both
     // score isolated positions, and a search consumes rankings.
+    // The pilot's own agreement with the search, measured once and
+    // cached. Round 34 could not separate "the search disagrees with its
+    // evaluator" from "these are two different nets": MCTS rolls out on
+    // the *pilot* net while `val_policy` scores the *training* net. This
+    // is the missing reference — the same holdout decisions scored by the
+    // very net the search used, so any gap between it and 1.0 is
+    // search-vs-its-own-evaluator with no net-vs-net confound.
     let (val_policy, val_policy_chance, val_policy_n) = {
         let v = shared.decisions_val.lock().unwrap();
         if v.len() < 100 {
@@ -1722,9 +1753,24 @@ fn checkpoint(
         }
     };
     let [policy_top1, policy_loss] = policy_ema;
+    // The pilot's own agreement with the search, on the same holdout.
+    // Round 34 could not separate "the search disagrees with its
+    // evaluator" from "these are two different nets": MCTS rolls out on
+    // the *pilot* net while `val_policy` scores the *training* net. This
+    // is the missing reference — scored by the very net the search used,
+    // so its distance from 1.0 is search-vs-its-own-evaluator with no
+    // net-vs-net confound.
+    let pilot_policy = match pilot {
+        Some(t) if val_policy_n > 0 => {
+            let v = shared.decisions_val.lock().unwrap();
+            let refs: Vec<&crabomination_ml::DecisionRow> = v.iter().collect();
+            t.policy_top1(&refs).unwrap_or(f32::NAN)
+        }
+        _ => f32::NAN,
+    };
     let [t_sample, t_step, t_relabel, t_deck, t_sleep] = timing.take_ms();
     let line = format!(
-        "{{\"step\":{step},\"loss_ema\":{total:.5},\"loss_win\":{win:.5},\"loss_life\":{life:.5},\"loss_len\":{len:.5},\"loss_deck\":{deck_loss:.5},\"val_n\":{val_n},\"val_win\":{val_win:.5},\"val_tgt\":{val_tgt:.5},\"val_logloss\":{val_ll:.5},\"val_auc\":{val_auc:.5},\"policy_top1\":{policy_top1:.4},\"policy_loss\":{policy_loss:.5},\"val_policy\":{val_policy:.4},\"val_policy_chance\":{val_policy_chance:.4},\"val_policy_n\":{val_policy_n},\"train_n\":{train_n},\"train_raw\":{train_raw:.5},\"train_tgt\":{train_tgt:.5},\"rows_consumed\":{consumed},\"rows\":{rows},\"games\":{games},\"stalls\":{stalls},\"stalls_capped\":{stalls_capped},\"stalls_stuck\":{stalls_stuck},\"elapsed_s\":{secs:.0},\"games_per_s\":{dg:.3},\"rows_per_s\":{dr:.1},\"consumed_per_s\":{dc:.1},\"steps_per_s\":{ds:.3},\"games_per_s_cum\":{cum_g:.3},\"rows_per_s_cum\":{cum_r:.1},\"t_sample_ms\":{t_sample},\"t_step_ms\":{t_step},\"t_relabel_ms\":{t_relabel},\"t_deck_ms\":{t_deck},\"t_sleep_ms\":{t_sleep}}}\n"
+        "{{\"step\":{step},\"loss_ema\":{total:.5},\"loss_win\":{win:.5},\"loss_life\":{life:.5},\"loss_len\":{len:.5},\"loss_deck\":{deck_loss:.5},\"val_n\":{val_n},\"val_win\":{val_win:.5},\"val_tgt\":{val_tgt:.5},\"val_logloss\":{val_ll:.5},\"val_auc\":{val_auc:.5},\"policy_top1\":{policy_top1:.4},\"policy_loss\":{policy_loss:.5},\"val_policy\":{val_policy:.4},\"val_policy_chance\":{val_policy_chance:.4},\"pilot_policy\":{pilot_policy:.4},\"val_policy_n\":{val_policy_n},\"train_n\":{train_n},\"train_raw\":{train_raw:.5},\"train_tgt\":{train_tgt:.5},\"rows_consumed\":{consumed},\"rows\":{rows},\"games\":{games},\"stalls\":{stalls},\"stalls_capped\":{stalls_capped},\"stalls_stuck\":{stalls_stuck},\"elapsed_s\":{secs:.0},\"games_per_s\":{dg:.3},\"rows_per_s\":{dr:.1},\"consumed_per_s\":{dc:.1},\"steps_per_s\":{ds:.3},\"games_per_s_cum\":{cum_g:.3},\"rows_per_s_cum\":{cum_r:.1},\"t_sample_ms\":{t_sample},\"t_step_ms\":{t_step},\"t_relabel_ms\":{t_relabel},\"t_deck_ms\":{t_deck},\"t_sleep_ms\":{t_sleep}}}\n"
     );
     use std::io::Write;
     let mut f = std::fs::OpenOptions::new()

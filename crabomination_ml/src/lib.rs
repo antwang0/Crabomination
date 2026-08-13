@@ -826,6 +826,19 @@ impl Trainer {
     /// can share a batch without the short one's padding competing for
     /// probability mass.
     pub fn train_policy_step(&mut self, rows: &[&DecisionRow]) -> CResult<PolicyStats> {
+        self.train_policy_step_temp(rows, 1.0)
+    }
+
+    /// [`train_policy_step`](Self::train_policy_step) with an explicit
+    /// softmax temperature for the distilled target. Arm values are win
+    /// probabilities in [0, 1], so their spread is small and the
+    /// temperature is what decides whether the target is a sharp pick or
+    /// a soft ranking.
+    pub fn train_policy_step_temp(
+        &mut self,
+        rows: &[&DecisionRow],
+        temp: f32,
+    ) -> CResult<PolicyStats> {
         let usable: Vec<&DecisionRow> = rows
             .iter()
             .copied()
@@ -864,7 +877,52 @@ impl Trainer {
             for _ in n..k {
                 flat.push(&r.successors[0]);
             }
-            onehot[i * k + chosen] = 1.0;
+            // Distillation when the decision carries search values,
+            // imitation when it does not.
+            //
+            // A one-hot target says only "the pilot played this", so the
+            // net can at best converge to a copy of the pilot -- which is
+            // the exact shape of the twice-null stacking result. A
+            // search's per-arm values say *how much better* each option
+            // looked, and the search is stronger than the evaluator
+            // inside it, so its distribution is a target the pilot itself
+            // does not represent. Round 34 measured how different they
+            // are: the value net's own ranking agrees with MCTS's pick
+            // below chance (0.67-0.79x).
+            match r.values.as_ref() {
+                Some(v) if v.len() >= n => {
+                    // Softmax over the arm values, restricted to the
+                    // candidates that survived. Non-finite entries (an
+                    // arm the search parked) are masked rather than
+                    // allowed to poison the row.
+                    let vals: Vec<f32> = (0..n).map(|j| v[j]).collect();
+                    let max = vals
+                        .iter()
+                        .copied()
+                        .filter(|x| x.is_finite())
+                        .fold(f32::NEG_INFINITY, f32::max);
+                    if max.is_finite() {
+                        let mut acc = 0.0f32;
+                        let mut w = vec![0f32; n];
+                        for (j, x) in vals.iter().enumerate() {
+                            if x.is_finite() {
+                                w[j] = ((x - max) / temp).exp();
+                                acc += w[j];
+                            }
+                        }
+                        if acc > 0.0 {
+                            for (j, wj) in w.iter().enumerate() {
+                                onehot[i * k + j] = wj / acc;
+                            }
+                        } else {
+                            onehot[i * k + chosen] = 1.0;
+                        }
+                    } else {
+                        onehot[i * k + chosen] = 1.0;
+                    }
+                }
+                _ => onehot[i * k + chosen] = 1.0,
+            }
         }
 
         let batch = make_state_batch(&flat, &self.dev)?;
@@ -892,7 +950,16 @@ impl Trainer {
                 .max_by(|a, b| a.1.partial_cmp(b.1).unwrap_or(std::cmp::Ordering::Equal))
                 .map(|(j, _)| j)
                 .unwrap_or(0);
-            if onehot[i * k + best] > 0.5 {
+            // The target may be soft now, so "did we pick the target's
+            // favourite" is an argmax comparison rather than a threshold.
+            let tgt_best = (0..k)
+                .max_by(|&a, &b| {
+                    onehot[i * k + a]
+                        .partial_cmp(&onehot[i * k + b])
+                        .unwrap_or(std::cmp::Ordering::Equal)
+                })
+                .unwrap_or(0);
+            if best == tgt_best {
                 hit += 1;
             }
         }
@@ -1483,6 +1550,14 @@ mod tests {
     use rand::SeedableRng;
     use rand::rngs::StdRng;
 
+    /// Training tests build CUDA trainers, and cargo runs them
+    /// concurrently. Sharing the device makes their numerics
+    /// irreproducible run to run — `policy_step_learns_to_rank_candidates`
+    /// passed alone and failed in the same suite. Serialising the tests
+    /// that actually train restores determinism; the fix is not a looser
+    /// threshold, which only hides the nondeterminism one run at a time.
+    static TRAIN_SERIAL: std::sync::Mutex<()> = std::sync::Mutex::new(());
+
     fn small_cfg() -> NetConfig {
         NetConfig { vocab: 12, emb_dim: 4, obj_hidden: 8, h1: 32, h2: 16, attn: false, aux: false, blocks: 0 }
     }
@@ -1667,6 +1742,7 @@ mod tests {
     /// end-to-end proof the hybrid step actually descends.
     #[test]
     fn muon_learns_the_synthetic_signal() {
+        let _guard = TRAIN_SERIAL.lock().unwrap_or_else(|e| e.into_inner());
         let cfg = small_cfg();
         let mut trainer = Trainer::new_muon(
             &cfg,
@@ -1762,8 +1838,85 @@ mod tests {
     /// down by sharpening a ranking it already had. So this measures
     /// top-1 agreement against a synthetic rule the net cannot know at
     /// the start, and requires it to rise well clear of chance.
+        /// Distillation must actually differ from imitation: a decision whose
+    /// search values rank a *non-played* candidate highly has to build a
+    /// target from the values, not from the recorded pick. Otherwise the
+    /// `values` field is decoration and the round is imitation under
+    /// another name.
+    ///
+    /// Asserted on the target rather than on what the net converges to.
+    /// The first version trained a small net on one row and checked which
+    /// successor it ended up liking; that passed under a filter and
+    /// failed in the full suite, because it was testing an optimisation
+    /// outcome to make a point about a target. At a sharp temperature the
+    /// distilled target collapses onto the search's favourite, so
+    /// comparing losses against known one-hots pins it down exactly —
+    /// same net, same successors, lr 0, nothing stochastic left.
+    #[test]
+    fn search_values_build_the_target_not_the_pick() {
+        let _guard = TRAIN_SERIAL.lock().unwrap_or_else(|e| e.into_inner());
+        let cfg = small_cfg();
+        let mut rng = StdRng::seed_from_u64(17);
+        let successors: Vec<EncodedState> =
+            (0..3).map(|_| random_state(&mut rng, cfg.vocab)).collect();
+
+        // lr 0: the net never moves, so every loss below is a pure
+        // readout of the target against one fixed set of predictions.
+        let mut t = Trainer::new(&cfg, 0.0).expect("trainer");
+        let loss = |t: &mut Trainer, row: &DecisionRow, temp: f32| {
+            t.train_policy_step_temp(&[row], temp).expect("step").loss
+        };
+
+        let played_0 = DecisionRow { successors: successors.clone(), chosen: 0, values: None };
+        let played_2 = DecisionRow { successors: successors.clone(), chosen: 2, values: None };
+        // The pilot played 0; the search rated 2 far higher.
+        let distil = DecisionRow {
+            successors: successors.clone(),
+            chosen: 0,
+            values: Some(vec![0.10, 0.15, 0.90]),
+        };
+
+        let l0 = loss(&mut t, &played_0, 1.0);
+        let l2 = loss(&mut t, &played_2, 1.0);
+        let ld = loss(&mut t, &distil, 0.01);
+
+        assert!(
+            (ld - l2).abs() < 1e-3,
+            "a sharp distilled target should match the search's favourite: {ld} vs {l2}"
+        );
+        assert!(
+            (ld - l0).abs() > 1e-3,
+            "the distilled target followed the recorded pick instead of the values: \
+             {ld} vs {l0}"
+        );
+    }
+
+    /// Temperature is the knob that decides sharp-pick vs soft-ranking,
+    /// and arm values are win probabilities whose spread is small — so a
+    /// temperature that is too high would flatten every target into
+    /// uniform and train nothing.
+    #[test]
+    fn temperature_controls_how_sharp_the_distilled_target_is() {
+        let cfg = small_cfg();
+        let mut rng = StdRng::seed_from_u64(23);
+        let row = DecisionRow {
+            successors: (0..3).map(|_| random_state(&mut rng, cfg.vocab)).collect(),
+            chosen: 0,
+            values: Some(vec![0.2, 0.3, 0.5]),
+        };
+        let mut t = Trainer::new(&cfg, 0.0).expect("trainer");
+        let sharp = t.train_policy_step_temp(&[&row], 0.05).expect("sharp").loss;
+        let soft = t.train_policy_step_temp(&[&row], 5.0).expect("soft").loss;
+        assert!(sharp.is_finite() && soft.is_finite());
+        assert!(
+            (sharp - soft).abs() > 1e-4,
+            "temperature had no effect on the target: {sharp} vs {soft}"
+        );
+    }
+
     #[test]
     fn policy_step_learns_to_rank_candidates() {
+        let _guard = TRAIN_SERIAL.lock().unwrap_or_else(|e| e.into_inner());
         let cfg = small_cfg();
         let mut trainer = Trainer::new(&cfg, 3e-3).expect("trainer");
         let mut rng = StdRng::seed_from_u64(31);
@@ -1936,6 +2089,7 @@ mod tests {
     /// movement of the prediction after one step from identical weights.
     #[test]
     fn bce_updates_harder_than_mse_when_confidently_wrong() {
+        let _guard = TRAIN_SERIAL.lock().unwrap_or_else(|e| e.into_inner());
         let cfg = small_cfg();
         let mut rng = StdRng::seed_from_u64(7);
         // One row, labelled the opposite of what an untrained net will
@@ -1982,6 +2136,7 @@ mod tests {
     /// gradient on paper — the same synthetic signal the MSE path learns.
     #[test]
     fn bce_learns_the_synthetic_signal() {
+        let _guard = TRAIN_SERIAL.lock().unwrap_or_else(|e| e.into_inner());
         let cfg = small_cfg();
         let mut trainer = Trainer::new(&cfg, 3e-3).expect("trainer");
         trainer.set_bce(true);
@@ -2018,6 +2173,7 @@ mod tests {
 
     #[test]
     fn learns_a_synthetic_signal() {
+        let _guard = TRAIN_SERIAL.lock().unwrap_or_else(|e| e.into_inner());
         let cfg = small_cfg();
         let mut trainer = Trainer::new(&cfg, 3e-3).expect("trainer");
         let mut rng = StdRng::seed_from_u64(11);
@@ -2184,6 +2340,7 @@ mod tests {
     /// The deck net learns a synthetic build rule (low curve wins).
     #[test]
     fn deck_net_learns_a_synthetic_signal() {
+        let _guard = TRAIN_SERIAL.lock().unwrap_or_else(|e| e.into_inner());
         let cfg = DeckNetConfig { vocab: 20, emb_dim: 8, h1: 32, h2: 16 };
         let mut trainer = DeckTrainer::new(&cfg, 3e-3).expect("deck trainer");
         let mut rng = StdRng::seed_from_u64(29);
