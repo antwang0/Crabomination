@@ -856,6 +856,12 @@ pub struct ColdState {
     pub(crate) noncombat_damage_bonus_this_turn: Vec<(usize, u32)>,
 }
 
+/// `#[serde(default)]` for a `bool` that must default to `true` on states
+/// written before its field existed.
+fn serde_true() -> bool {
+    true
+}
+
 #[derive(serde::Serialize, serde::Deserialize)]
 pub struct GameState {
     pub players: Vec<Player>,
@@ -1736,6 +1742,17 @@ pub struct GameState {
     /// Cleared at cleanup.
     #[serde(default)]
     pub damage_cant_be_prevented_this_turn: bool,
+    /// Presence gate for [`Self::clear_step_bounded_may_play`]: true while
+    /// some card anywhere carries a `MayPlayDuration::EndOfThisStep` window
+    /// (CR 702.94 miracle). Without it the step-transition sweep took
+    /// `iter_mut` over every hand, graveyard, library and exile — a CoW
+    /// unshare of both `PlayerData`s, 1.97 % of the profile — to clear a
+    /// window almost no game grants. Set by the two granters, cleared by
+    /// the sweep; a debug assertion there checks the gate never hides one.
+    /// Defaults to `true` on deserialize so a snapshot written before the
+    /// field existed still sweeps once.
+    #[serde(default = "serde_true")]
+    pub(crate) step_bounded_may_play: bool,
     /// CR 508.1/509.1d — turn-scoped combat taxes charged to the *acting*
     /// player, {N} per attacker / per blocker they declare (War Tax, War
     /// Cadence). Symmetric across seats and cleared at cleanup; the
@@ -2167,6 +2184,7 @@ impl Clone for GameState {
             creature_combat_damage_doublers: self.creature_combat_damage_doublers,
             token_minting_source: self.token_minting_source,
             damage_cant_be_prevented_this_turn: self.damage_cant_be_prevented_this_turn,
+            step_bounded_may_play: self.step_bounded_may_play,
             attack_tax_this_turn: self.attack_tax_this_turn,
             block_tax_this_turn: self.block_tax_this_turn,
             acted_on_own_turn: self.acted_on_own_turn.clone(),
@@ -2405,6 +2423,7 @@ impl GameState {
             creature_combat_damage_doublers: 0,
             token_minting_source: None,
             damage_cant_be_prevented_this_turn: false,
+            step_bounded_may_play: false,
             attack_tax_this_turn: 0,
             block_tax_this_turn: 0,
             acted_on_own_turn: Vec::new(),
@@ -14501,6 +14520,18 @@ impl GameState {
     /// offer can't be banked for a later step. The granted alt-cost shares
     /// the permission's lifetime.
     pub(crate) fn clear_step_bounded_may_play(&mut self) {
+        // `iter_mut` on a shared zone deep-copies it (see `CowBox`), so this
+        // sweep costs a full `PlayerData` unshare per player per step
+        // transition. Gate it on `step_bounded_may_play`; the debug audit
+        // fails loudly if a granter ever forgets to set the flag.
+        if !self.step_bounded_may_play {
+            debug_assert!(
+                !self.has_step_bounded_may_play(),
+                "step_bounded_may_play gate missed a live EndOfThisStep window",
+            );
+            return;
+        }
+        self.step_bounded_may_play = false;
         let clear = |c: &mut crate::card::CardInstance| {
             if matches!(
                 c.may_play_until,
@@ -14516,18 +14547,57 @@ impl GameState {
             pl.library.iter_mut().for_each(clear);
         }
         self.exile.iter_mut().for_each(clear);
+        // The sweep doesn't reach the battlefield, the stack or a command
+        // zone, and a card can carry its window out of one of those into a
+        // swept zone later — so the gate stays live until none is left
+        // anywhere, and only then do subsequent steps get the free path.
+        self.step_bounded_may_play = self.has_step_bounded_may_play();
+    }
+
+    /// Is a `MayPlayDuration::EndOfThisStep` window live in any zone? The
+    /// invariant behind `step_bounded_may_play`: read-only, and used both to
+    /// re-arm the gate after a sweep and to audit it in debug builds.
+    fn has_step_bounded_may_play(&self) -> bool {
+        let bounded = |c: &crate::card::CardInstance| {
+            matches!(
+                c.may_play_until,
+                Some(p) if p.duration == crate::card::MayPlayDuration::EndOfThisStep
+            )
+        };
+        self.players.iter().any(|pl| {
+            pl.hand.iter().any(bounded)
+                || pl.graveyard.iter().any(bounded)
+                || pl.library.iter().any(bounded)
+                || pl.command.iter().any(bounded)
+        }) || self.exile.iter().any(bounded)
+            || self.battlefield.iter().any(bounded)
+            || self.stack.iter().any(|item| match item {
+                StackItem::Spell { card, .. } => bounded(card),
+                _ => false,
+            })
     }
 
     pub(crate) fn maybe_grant_miracle(&mut self, p: usize, card_id: CardId) {
         if self.players[p].cards_drawn_this_turn != 1 {
             return;
         }
-        if let Some(card) = self.players[p].hand.iter_mut().find(|c| c.id == card_id)
-            && let Some(cost) = card.definition.miracle.clone()
-        {
+        // Read-only find first: `iter_mut` would unshare the hand (and with
+        // it the whole `PlayerData`) for every first draw of a turn, and
+        // almost no drawn card has a printed miracle cost.
+        let Some(cost) = self
+            .players[p]
+            .hand
+            .iter()
+            .find(|c| c.id == card_id)
+            .and_then(|c| c.definition.miracle.clone())
+        else {
+            return;
+        };
+        let granted_turn = self.turn_number;
+        if let Some(card) = self.players[p].hand.iter_mut().find(|c| c.id == card_id) {
             card.may_play_until = Some(crate::card::MayPlayPermission {
                 player: p,
-                granted_turn: self.turn_number,
+                granted_turn,
                 // CR 702.94 — the window is the reveal offer, not the whole
                 // turn: cleared at the next step transition.
                 duration: crate::card::MayPlayDuration::EndOfThisStep,
@@ -14535,6 +14605,7 @@ impl GameState {
                 miracle: true,
             });
             card.granted_alt_cast_cost_eot = Some(cost);
+            self.step_bounded_may_play = true;
         }
     }
 
