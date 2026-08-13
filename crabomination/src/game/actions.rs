@@ -7933,9 +7933,11 @@ impl GameState {
         }
         // Arboria — "cast a spell … during their last turn".
         self.note_acted_on_own_turn(p);
-        for (seat, pl) in self.players.iter_mut().enumerate() {
-            if seat != p {
-                pl.opponent_cast_spell_since_your_turn = true;
+        // Same CoW rule as the step-boundary reset: don't take `&mut` on a
+        // `Player` to set a flag that is already set.
+        for seat in 0..self.players.len() {
+            if seat != p && !self.players[seat].opponent_cast_spell_since_your_turn {
+                self.players[seat].opponent_cast_spell_since_your_turn = true;
             }
         }
         // Per-turn cast-name log (Grim Reminder's "cast a spell this turn with
@@ -14862,7 +14864,9 @@ impl GameState {
             // (Extraplanar Lens), distinct from the plain tap above.
             if is_mana_ability(&ability.effect) {
                 events.push(GameEvent::TappedForMana { card_id, player: p });
-                if self.battlefield_find(card_id).is_some_and(|c| c.definition.is_land()) {
+                if !self.players[p].tapped_land_for_mana_this_turn
+                    && self.battlefield_find(card_id).is_some_and(|c| c.definition.is_land())
+                {
                     self.players[p].tapped_land_for_mana_this_turn = true;
                 }
             }

@@ -357,8 +357,13 @@ impl GameState {
         self.step = next;
         // Per-step draw tallies reset at every step boundary (Orcish
         // Bowmasters' "first card drawn in the draw step" exemption).
-        for pl in &mut self.players {
-            pl.cards_drawn_this_step = 0;
+        // Only *write* when the tally is non-zero: `&mut` on a `Player`
+        // unshares the whole `PlayerData` (see `CowBox`), and a player draws
+        // in one step of the turn out of a dozen.
+        for i in 0..self.players.len() {
+            if self.players[i].cards_drawn_this_step != 0 {
+                self.players[i].cards_drawn_this_step = 0;
+            }
         }
         events.push(GameEvent::StepChanged(next));
 
