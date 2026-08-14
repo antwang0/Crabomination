@@ -1854,7 +1854,16 @@ impl GameState {
                     }
                     // Cast-time ETB-counter riders stamped on the instance
                     // (Noctis's graveyard-cast finality counter).
-                    if let Some(c) = self.battlefield.iter_mut().find(|c| c.id == card_id) {
+                    // The presence check is `&self`: the field is a `CardCold`
+                    // one and empty on every ordinary ETB, so an unguarded
+                    // `iter_mut` here would deep-copy the permanent (and its
+                    // cold group) once per permanent entering.
+                    if self
+                        .battlefield
+                        .iter()
+                        .any(|c| c.id == card_id && !c.pending_etb_counters.is_empty())
+                        && let Some(c) = self.battlefield.iter_mut().find(|c| c.id == card_id)
+                    {
                         for (kind, n) in std::mem::take(&mut c.pending_etb_counters) {
                             counter_specs.push((kind, crate::effect::Value::Const(n as i32)));
                         }

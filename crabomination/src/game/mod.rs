@@ -6793,17 +6793,22 @@ impl GameState {
         // (countered, or fizzled on an illegal target) shuffles into its
         // owner's library instead.
         if card.omen_casting {
-            
             let owner = card.owner;
             card.omen_casting = false;
-            card.spliced_effects.clear();
+            if !card.spliced_effects.is_empty() {
+                card.spliced_effects.clear();
+            }
             card.counters.clear();
             self.players[owner].library.push(card);
             self.shuffle_library(owner, events);
             return false;
         }
         // CR 702.47e — splice changes are lost when the spell leaves the stack.
-        card.spliced_effects.clear();
+        // Guarded: `spliced_effects` is a `CardCold` field and empty on every
+        // spell that was never spliced onto.
+        if !card.spliced_effects.is_empty() {
+            card.spliced_effects.clear();
+        }
         // CR 122.2 — counters don't survive the zone change (replacement
         // riders below add to the new object afterward).
         card.counters.clear();
