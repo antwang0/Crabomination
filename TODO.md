@@ -24,8 +24,11 @@ delta against any earlier baseline block is sound. Alternate A/B in one
 sitting or use callgrind.**
 
 - **Green at the tip**: suite **18,638** over 11 binaries, golden traces
-  identical, `clippy --workspace --all-targets` clean. The reentrancy fix
-  A/B'd at **+0.0045 % Ir** (one branch), so the `--bench` block stands.
+  identical, `clippy --workspace --all-targets` clean, wide pool
+  **2,548,986 / 20.99 / 6 draws / determinism ok** over 5,100 games. The
+  reentrancy fix A/B'd at **+0.0045 % Ir** (one branch); `--bench` stands.
+  **`overflow` was not re-run** — no counter, damage, mana or encoder code
+  moved this pass.
 - **Take (-5) first**, `eval.rs:3311` at **1.58 % / 15,574 gathers**. Its
   `OnceCell` serves *five* layer-4 families, so **split it per family**;
   the land-type half then gates on `rewrites_land_types`, which already
