@@ -3047,7 +3047,7 @@ impl GameState {
                 let order = self.resolve_damage_order(&default_order, &answer);
                 self.combat_damage_order.insert(bid, order);
             }
-            let order = self.combat_damage_order[&bid].clone();
+            let order = self.combat_damage_order.get(&bid).cloned().unwrap_or_default();
 
             if !self.combat_damage_assignment.contains_key(&bid) {
                 let lethals = self.combat_lethals(deathtouch, &order, computed);

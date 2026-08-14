@@ -970,12 +970,12 @@ pub struct GameState {
     /// at combat end. `#[serde(skip)]` — transient, like `pending_decision`'s
     /// resume context (a mid-combat snapshot can't resume anyway).
     #[serde(skip, default)]
-    pub(crate) combat_damage_order: HashMap<CardId, Vec<CardId>>,
+    pub(crate) combat_damage_order: crate::game::types::IdMap<CardId, Vec<CardId>>,
     /// CR 510.1c-d — the active player's chosen combat-damage assignment
     /// `(blocker, amount)` for each multi-blocker attacker. Gathered alongside
     /// `combat_damage_order`. `#[serde(skip)]` for the same reason.
     #[serde(skip, default)]
-    pub(crate) combat_damage_assignment: HashMap<CardId, Vec<(CardId, u32)>>,
+    pub(crate) combat_damage_assignment: crate::game::types::IdMap<CardId, Vec<(CardId, u32)>>,
     /// Which damage step (`FirstStrikeDamage` / `CombatDamage`) the cached
     /// combat-damage choices above belong to. Lets the gather pass reset the
     /// caches once when moving from the first-strike step to the regular step,
@@ -1456,7 +1456,7 @@ pub struct GameState {
     /// so a follow-up step can gate on "if you sacrificed a permanent this way"
     /// (Deadly Brew). Reset between independent resolutions.
     #[serde(skip)]
-    pub(crate) players_sacrificed_this_resolution: crate::fxhash::HashSet<usize>,
+    pub(crate) players_sacrificed_this_resolution: crate::game::types::IdSet<usize>,
     /// The cards sacrificed during the current resolution, read by
     /// `SelectionRequirement::NotSacrificedThisResolution` so an "another
     /// permanent card" clause can't pick back what it just ate (Deadly Brew).
@@ -1485,7 +1485,7 @@ pub struct GameState {
     /// `Effect::EachPlayerRevealTopKeepIfNamed` (Conundrum Sphinx). Reset
     /// between independent resolutions.
     #[serde(skip)]
-    pub(crate) names_this_resolution: crate::fxhash::HashMap<usize, String>,
+    pub(crate) names_this_resolution: crate::game::types::IdMap<usize, String>,
     /// Transient: which face / cast path the in-progress cast is using.
     /// Set by `cast_spell_back_face` (`Back`) and `cast_flashback`
     /// (`Flashback`); reset to `Front` after each emitted SpellCast
@@ -1840,7 +1840,7 @@ pub struct GameState {
     /// `resolving_lki_source` names the trigger currently resolving.
     /// Transient scratch — `#[serde(skip)]`.
     #[serde(skip)]
-    pub(crate) leaves_bf_lki: HashMap<CardId, CardInstance>,
+    pub(crate) leaves_bf_lki: crate::game::types::IdMap<CardId, CardInstance>,
     /// The source CardId of the leaves-battlefield trigger currently
     /// resolving, if it has a `leaves_bf_lki` snapshot. Scopes the LKI
     /// power/toughness read to that one resolution. `#[serde(skip)]`.
@@ -2312,8 +2312,8 @@ impl GameState {
             next_id: 1,
             attacking: Vec::new(),
             block_map: HashMap::default(),
-            combat_damage_order: HashMap::default(),
-            combat_damage_assignment: HashMap::default(),
+            combat_damage_order: Default::default(),
+            combat_damage_assignment: Default::default(),
             combat_damage_plan_step: None,
             blockers_declared: false,
             // Multiplayer (3+) doesn't skip the first draw — only the 2-player
@@ -2402,12 +2402,12 @@ impl GameState {
             permanents_enter_tapped_this_turn: false,
             counters_removed_this_effect: 0,
             counters_removed_as_cost: 0,
-            players_sacrificed_this_resolution: crate::fxhash::HashSet::default(),
+            players_sacrificed_this_resolution: Default::default(),
             cards_sacrificed_this_resolution: Vec::new(),
             chosen_creature_type_scratch: None,
             chosen_creature_types_scratch: Vec::new(),
             named_card_this_resolution: None,
-            names_this_resolution: HashMap::default(),
+            names_this_resolution: Default::default(),
             pending_cast_face: CastFace::Front,
             pending_cast_sacrifices: None,
             pending_cast_discards: None,
@@ -2460,7 +2460,7 @@ impl GameState {
             controlled_by: Vec::new(),
             next_replacement_id: 1,
             died_card_snapshots: Default::default(),
-            leaves_bf_lki: HashMap::default(),
+            leaves_bf_lki: Default::default(),
             resolving_lki_source: None,
             resolving_lki_subject: None,
             subgame_depth: 0,
