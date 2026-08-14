@@ -3298,13 +3298,21 @@ impl GameState {
                 // Scriptures I), an animated land, or a devotion-gated god
                 // must filter by its *computed* types, not the printed ones.
                 // Off-battlefield cards keep the printed definition.
-                let computed: Option<std::sync::Arc<crate::game::layers::ComputedPermanent>> =
-                    if self.in_layer_gather.load(std::sync::atomic::Ordering::Relaxed) {
-                        None // mid-recompute: printed types (reentrancy guard)
-                    } else {
-                        self.battlefield_find(*cid).and_then(|_| self.computed_permanent(*cid))
-                    };
-                let has_type = |t: crate::card::CardType| match &computed {
+                // Taken lazily: most arms below never look at the layer view,
+                // and this one is 40 % of the program's `computed_permanent`
+                // calls when it is taken eagerly.
+                type Computed = Option<std::sync::Arc<crate::game::layers::ComputedPermanent>>;
+                let computed_cell: std::cell::OnceCell<Computed> = std::cell::OnceCell::new();
+                let computed = || -> &Computed {
+                    computed_cell.get_or_init(|| {
+                        if self.in_layer_gather.load(std::sync::atomic::Ordering::Relaxed) {
+                            None // mid-recompute: printed types (reentrancy guard)
+                        } else {
+                            self.battlefield_find(*cid).and_then(|_| self.computed_permanent(*cid))
+                        }
+                    })
+                };
+                let has_type = |t: crate::card::CardType| match computed() {
                     Some(cp) => cp.card_types.contains(&t),
                     None => card.definition.card_types.contains(&t),
                 };
@@ -3317,28 +3325,28 @@ impl GameState {
                 // layer-4 type changes are already in `continuous_effects` —
                 // read them shallowly so a "as long as it's a Wall" gate sees a
                 // retyped permanent (CR 613.8; Mistform Wall).
-                let shallow_types = computed
-                    .is_none()
-                    .then(|| self.shallow_creature_types(*cid))
-                    .flatten();
-                let has_ctype = |ct: &crate::card::CreatureType| match (&computed, &shallow_types) {
-                    (Some(cp), _) => cp.subtypes.creature_types.contains(ct),
-                    (None, Some(types)) => types.contains(ct),
-                    (None, None) => card.definition.subtypes.creature_types.contains(ct),
+                let shallow_cell: std::cell::OnceCell<Option<Vec<crate::card::CreatureType>>> =
+                    std::cell::OnceCell::new();
+                let has_ctype = |ct: &crate::card::CreatureType| match computed() {
+                    Some(cp) => cp.subtypes.creature_types.contains(ct),
+                    None => match shallow_cell.get_or_init(|| self.shallow_creature_types(*cid)) {
+                        Some(types) => types.contains(ct),
+                        None => card.definition.subtypes.creature_types.contains(ct),
+                    },
                 };
                 // CR 613.2 layer-4 — subtypes/supertypes a permanent gained (or
                 // lost) from a continuous effect (Vraska's Treasure, Song of the
                 // Dryads' Forest, Sugar Coat's Food, the Ring-bearer's Legendary)
                 // read from the *computed* type line on the battlefield.
-                let has_atype = |a: &crate::card::ArtifactSubtype| match &computed {
+                let has_atype = |a: &crate::card::ArtifactSubtype| match computed() {
                     Some(cp) => cp.subtypes.artifact_subtypes.contains(a),
                     None => card.definition.subtypes.artifact_subtypes.contains(a),
                 };
-                let has_ltype = |lt: &crate::card::LandType| match &computed {
+                let has_ltype = |lt: &crate::card::LandType| match computed() {
                     Some(cp) => cp.subtypes.land_types.contains(lt),
                     None => card.definition.subtypes.land_types.contains(lt),
                 };
-                let has_stype = |st: &Supertype| match &computed {
+                let has_stype = |st: &Supertype| match computed() {
                     Some(cp) => cp.supertypes.contains(st),
                     None => card.definition.supertypes.contains(st),
                 };
@@ -3348,7 +3356,7 @@ impl GameState {
                     // battlefield.
                     R::Creature => {
                         has_type(CT::Creature)
-                            || (card.definition.creature_off_battlefield && computed.is_none())
+                            || (card.definition.creature_off_battlefield && computed().is_none())
                     }
                     R::Artifact => has_type(CT::Artifact),
                     R::Enchantment => has_type(CT::Enchantment),
