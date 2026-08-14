@@ -6173,10 +6173,17 @@ impl GameState {
         // the additional-cast-cost payment.
         // CR 702.32b — an "and/or" kicker cast carries its chosen option
         // indices instead of a single kicker cost.
-        let kicker_options: Vec<u8> = std::mem::take(&mut self.cast_kicker_options)
-            .into_iter()
-            .filter(|i| (*i as usize) < card.definition.kicker_options.len())
-            .collect();
+        // Guarded: `cast_kicker_options` is a `ColdState` field, so the `take`
+        // deep-copies the whole cold group — once per cast, for a list that is
+        // empty on every spell without an "and/or" kicker.
+        let kicker_options: Vec<u8> = if self.cast_kicker_options.is_empty() {
+            Vec::new()
+        } else {
+            std::mem::take(&mut self.cast_kicker_options)
+                .into_iter()
+                .filter(|i| (*i as usize) < card.definition.kicker_options.len())
+                .collect()
+        };
         let kicked = kicked
             && (card.definition.has_kicker().is_some()
                 || card.definition.kicker_action_cost.is_some()

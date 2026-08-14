@@ -16747,9 +16747,17 @@ impl GameState {
         // Filter evaluation for this batch is done — flip the queued
         // "gained life earlier this turn" flags (Leech Collector's
         // "first time each turn" gate).
-        for p in std::mem::take(&mut self.life_gain_flag_pending) {
-            if let Some(pl) = self.players.get_mut(p) {
-                pl.gained_life_earlier_this_turn = true;
+        // Guarded: `life_gain_flag_pending` is a `ColdState` field, so the
+        // `take` reaches it through `GameState::deref_mut` and deep-copies
+        // the whole cold group — once per trigger dispatch, on a list that
+        // is empty unless someone gained life this batch. The `PlayerCold`
+        // rule (PERF, twenty-ninth pass): a `clear`/`take` on a periodic
+        // path needs an `is_empty` read in front of it.
+        if !self.life_gain_flag_pending.is_empty() {
+            for p in std::mem::take(&mut self.life_gain_flag_pending) {
+                if let Some(pl) = self.players.get_mut(p) {
+                    pl.gained_life_earlier_this_turn = true;
+                }
             }
         }
         self.drain_trigger_queue(queue);

@@ -1336,13 +1336,20 @@ impl GameState {
         }
         // CR 702.22e — a declared band lasts for the rest of combat regardless
         // of later banding loss; drop members that never made it into combat.
-        self.attack_bands = bands
+        // Guarded: `attack_bands` is a `ColdState` field, so writing it
+        // deep-copies the whole cold group — once per declare-attackers, and
+        // banding is empty on every board without a bander. Compare first;
+        // the comparison is a `&self` read and takes nothing.
+        let declared: Vec<Vec<CardId>> = bands
             .into_iter()
             .map(|b| {
                 b.into_iter().filter(|m| self.attacking.iter().any(|a| a.attacker == *m)).collect()
             })
             .filter(|b: &Vec<CardId>| b.len() > 1)
             .collect();
+        if self.attack_bands != declared {
+            self.attack_bands = declared;
+        }
 
         // YourControl-scoped Attacks triggers (e.g. Battle Banner,
         // Sparring Regimen) are NOT walked here — the unified
