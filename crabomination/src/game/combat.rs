@@ -2569,8 +2569,15 @@ impl GameState {
 
         self.attacking.clear();
         self.block_map.clear();
-        self.blocked_attackers.clear();
-        self.attack_bands.clear();
+        // Both are `ColdState` fields; an unguarded `clear` on a combat
+        // boundary deep-copies the whole cold group (PERF, twenty-eighth
+        // pass's rule, restated in the thirty-third's Log block).
+        if !self.blocked_attackers.is_empty() {
+            self.blocked_attackers.clear();
+        }
+        if !self.attack_bands.is_empty() {
+            self.attack_bands.clear();
+        }
         self.clear_combat_damage_plan();
         self.blockers_declared = false;
         // CR 702.39 — provoke's "block this combat" requirement ends here.

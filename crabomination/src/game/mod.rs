@@ -14110,8 +14110,12 @@ impl GameState {
     }
 
     pub fn draw_one(&mut self, p: usize, events: &mut Vec<GameEvent>) -> bool {
-        // A revealed top only stays public while it stays on top.
-        self.library_tops_revealed.retain(|s| *s != p);
+        // A revealed top only stays public while it stays on top. Guarded:
+        // `library_tops_revealed` is a `ColdState` field and the `retain`
+        // runs on every draw, for a list that is empty on almost every board.
+        if self.library_tops_revealed.contains(&p) {
+            self.library_tops_revealed.retain(|s| *s != p);
+        }
         // CR 121.2b — a per-turn draw cap applies to *individual* card draws,
         // so it gates every draw source, not just `Effect::Draw`'s count.
         if self.draw_cap_for(p).is_some_and(|cap| self.players[p].cards_drawn_this_turn >= cap) {

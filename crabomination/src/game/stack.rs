@@ -383,10 +383,17 @@ impl GameState {
                 // CR 615 — "until your next turn" damage locks (Kiora's +1)
                 // end as the granting player's turn begins.
                 let ap = self.active_player_idx;
-                self.damage_locked_until_turn_of.retain(|(_, seat)| *seat != ap);
+                // Both fields are `ColdState` and both are empty on almost
+                // every untap step; `retain` and `iter_mut` each deep-copy the
+                // whole cold group, so ask with `&self` first.
+                if self.damage_locked_until_turn_of.iter().any(|(_, seat)| *seat == ap) {
+                    self.damage_locked_until_turn_of.retain(|(_, seat)| *seat != ap);
+                }
                 // Oracle en-Vec's mandate arms as its victim's turn begins.
-                for m in self.attack_mandates.iter_mut().filter(|m| m.seat == ap) {
-                    m.armed = true;
+                if self.attack_mandates.iter().any(|m| m.seat == ap && !m.armed) {
+                    for m in self.attack_mandates.iter_mut().filter(|m| m.seat == ap) {
+                        m.armed = true;
+                    }
                 }
                 // Arboria — the active player's "acted during their last turn"
                 // flag starts over as their new turn begins.
@@ -652,7 +659,9 @@ impl GameState {
                 self.resolution_causer = None;
                 self.spells_cast_last_turn = self.spells_cast_this_turn;
                 self.spells_cast_this_turn = 0;
-                self.last_cast_spell_colors.clear();
+                if !self.last_cast_spell_colors.is_empty() {
+                    self.last_cast_spell_colors.clear();
+                }
                 self.noncreature_spells_cast_this_turn = 0;
                 self.opponent_cast_since_your_turn &=
                     !crate::game::seat_bit(self.active_player_idx);
