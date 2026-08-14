@@ -3724,19 +3724,41 @@ impl GameState {
         // Until-end-of-turn flashback grants (SOS "Flashback") live on
         // graveyard cards, which `clear_end_of_turn_effects` above doesn't
         // reach — expire them here so the window closes at end of turn.
-        for player in &mut self.players {
-            for card in &mut player.graveyard {
-                card.granted_flashback_eot = None;
-                card.granted_harmonize_eot = None;
+        //
+        // Every write below is a `DerefMut` on a CoW handle, and this runs
+        // once per player per turn over a graveyard that only grows: reaching
+        // a card through `Player` unshares the whole `PlayerData`, `&mut
+        // player.graveyard` unshares the zone vector, and the two `= None`s
+        // deep-copy a `CardData` that already held `None`. Decide from a
+        // shared borrow whether anything is actually set, and take the `&mut`
+        // only then — the same guard `clear_end_of_turn_effects` carries.
+        for pi in 0..self.players.len() {
+            let player = &self.players[pi];
+            let stale_grants = player.graveyard.iter().any(|c| {
+                c.granted_flashback_eot.is_some() || c.granted_harmonize_eot.is_some()
+            });
+            let stale_scalars = !player.turn_spell_discounts.is_empty()
+                || player.face_down_discount_this_turn != 0
+                || player.extra_plus_one_counters_this_turn != 0
+                || player.extra_etb_p1p1_counters_this_turn != 0;
+            if !stale_grants && !stale_scalars {
+                continue;
             }
-            // "[Filter] spells cost {N} less this turn" grants end (CR 514.2).
-            if !player.turn_spell_discounts.is_empty() {
+            let player = &mut self.players[pi];
+            if stale_grants {
+                for card in &mut player.graveyard {
+                    card.granted_flashback_eot = None;
+                    card.granted_harmonize_eot = None;
+                }
+            }
+            if stale_scalars {
+                // "[Filter] spells cost {N} less this turn" grants end (CR 514.2).
                 player.turn_spell_discounts.clear();
+                player.face_down_discount_this_turn = 0;
+                // "Until end of turn" +1/+1 counter bonus (Prairie Dog) ends.
+                player.extra_plus_one_counters_this_turn = 0;
+                player.extra_etb_p1p1_counters_this_turn = 0;
             }
-            player.face_down_discount_this_turn = 0;
-            // "Until end of turn" +1/+1 counter bonus (Prairie Dog) ends.
-            player.extra_plus_one_counters_this_turn = 0;
-            player.extra_etb_p1p1_counters_this_turn = 0;
         }
         // Expire UntilEndOfTurn continuous effects from the layer system
         self.expire_end_of_turn_effects();
@@ -3780,9 +3802,16 @@ impl GameState {
         self.upkeep_steps_this_turn = 0;
         self.graveyard_from_battlefield_this_turn.clear();
         // CR 514.2 — all damage marked on permanents is removed, phased-out
-        // ones included (they're treated as nonexistent, not as gone).
-        for card in self.battlefield.iter_mut().chain(self.phased_out.iter_mut()) {
-            card.damage = 0;
+        // ones included (they're treated as nonexistent, not as gone). Decided
+        // from a shared borrow: `iter_mut` unshares both zone vectors and the
+        // write deep-copies a `CardData` that already held 0, and most turns
+        // end with nothing marked anywhere.
+        if self.battlefield.iter().chain(self.phased_out.iter()).any(|c| c.damage != 0) {
+            for card in self.battlefield.iter_mut().chain(self.phased_out.iter_mut()) {
+                if card.damage != 0 {
+                    card.damage = 0;
+                }
+            }
         }
         // Clear the per-turn "permanents gained a counter this turn"
         // tracker (used by Fractal Tender's end-step trigger). Resetting
