@@ -20247,14 +20247,19 @@ impl GameState {
         if let Some(c) = self.battlefield_find(id) {
             return Some(c);
         }
+        // Zone order is cheapest-and-likeliest first, and it is not part of
+        // the contract: a `CardId` names one instance, so at most one zone can
+        // hold it and only *which* zone we look in last is observable in
+        // instruction count. Libraries are ~55 cards against a hand's ~7 and
+        // are the zone a caller least often asks about, so they go after
+        // every small zone rather than third inside the per-seat loop —
+        // otherwise a lookup for a card on the stack walked both libraries
+        // first.
         for p in &self.players {
             if let Some(c) = p.graveyard.iter().find(|c| c.id == id) {
                 return Some(c);
             }
             if let Some(c) = p.hand.iter().find(|c| c.id == id) {
-                return Some(c);
-            }
-            if let Some(c) = p.library.iter().find(|c| c.id == id) {
                 return Some(c);
             }
             // CR 407 — the ante zone is a real zone; a card there is still
@@ -20273,13 +20278,18 @@ impl GameState {
                 return Some(card);
             }
         }
+        for p in &self.players {
+            if let Some(c) = p.library.iter().find(|c| c.id == id) {
+                return Some(c);
+            }
+        }
         None
     }
 
-    /// Mutable variant of `find_card_anywhere` — walks battlefield,
-    /// each player's hand/library/graveyard, and exile (in that order).
-    /// Used by `Effect::GrantMayPlay` to stamp `may_play_until` on a
-    /// card regardless of where the granting effect happens to find it.
+    /// Mutable variant of `find_card_anywhere`, and it walks the same zones
+    /// in the same order — libraries last. Used by `Effect::GrantMayPlay` to
+    /// stamp `may_play_until` on a card regardless of where the granting
+    /// effect happens to find it.
     pub fn find_card_anywhere_mut(
         &mut self,
         id: CardId,
@@ -20296,7 +20306,6 @@ impl GameState {
             };
             zone(0, &p.hand)
                 .or_else(|| zone(1, &p.graveyard))
-                .or_else(|| zone(2, &p.library))
                 .or_else(|| zone(3, &p.ante))
         });
         if let Some((pi, z, i)) = found {
@@ -20319,6 +20328,15 @@ impl GameState {
             {
                 return Some(card);
             }
+        }
+        // Libraries last, for the reason `find_card_anywhere` gives.
+        let lib = self
+            .players
+            .iter()
+            .enumerate()
+            .find_map(|(pi, p)| p.library.iter().position(|c| c.id == id).map(|i| (pi, i)));
+        if let Some((pi, i)) = lib {
+            return Some(&mut self.players[pi].library[i]);
         }
         None
     }
