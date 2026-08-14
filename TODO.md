@@ -16,40 +16,42 @@ reference and want their own triage pass):
 
 ## NEXT (handoff — rewrite each run, keep under 15 lines)
 
-Branch `claude/modern_decks`. **The thirtieth pass landed three rows for
--1.990 % Ir** (2,832,747,493 -> 2,776,361,994 at the merged tip
-`a4960740`), having **merged a concurrent session that pulled the same top
-candidate** — see PERF's collision note. All three rows are one shape:
-**a linear scan that visited its cases in the wrong order.** The zone scan
-looked at ~70 library cards before the stack (-0.583 %); the gather's last
-board pass tested three always-false flags per card when it could walk
-`sa_cards` (-1.250 %); `effective_mana_abilities` re-found the card its
-callers were standing on (-0.158 %).
+Branch `claude/modern_decks`. **The thirty-first pass landed three rows for
+-3.407 % Ir** (2,776,361,361 -> 2,681,771,690). Two shapes: a `&self` read
+that gathers, taken *inside a freeze scope the caller already had* (the
+combat-damage pair, -0.967 %); and **a periodic sweep writing values the
+fields already held** — `cleanup_wear_off`'s graveyard and damage sweeps,
+**-2.368 %**, `finish_cleanup`'s 72.6 M / 2.62 % of `Arc::clone_from_ref_in`
+gone to zero — plus the same thing in `do_untap` (-0.098 %).
 
-- **The wide checks are green at the merged tip** and are the number to
-  trust: `--decks all` reads `decisions` **2,548,986**, `--bench` **193,232**,
-  `turns_per_game` 26.98, stalls 0, determinism ok. The other session's
-  base-vs-tip byte-diff method (`cp` the pre-pass binary, diff `--decks all
-  --games 300 --threads 3` output) beats a recorded constant — use it.
-  `overflow` is clean **at the merged tip** — 20,400 games over seeds
-  11/12/13, no panic and no arithmetic overflow.
-- **Best next moves**, in order: PERF candidate **(11a)**, the zone-walk
-  family — `find_card_zone` / `find_card_owner` still put the libraries
-  third, and a miss counter on `find_card_anywhere` is owed before anyone
-  designs an id→zone index; then **(-1)** the CoW sweep via `--tree=caller`
-  on `Arc::make_mut`; then (11)'s unfinished enumeration.
-  **(13)/(5) the `Keyword` bitset is costed and ranked down** — ~0.6 %
-  addressable against 7,716 catalog literals; don't re-derive it.
-- **Two sessions on this branch at once is now normal.** Fetch before the
-  first commit, not just before the push: this run resolved the same
-  candidate twice and cost a re-measurement of the merged tip.
+- **Best next moves**, in order: PERF **(-1)**, the CoW sweep, with the new
+  recipe — **`--tree=caller` on `Arc::clone_from_ref_in`**, looking for a
+  function that has no business deep-copying; the standing filter is *a
+  `for … in &mut` over a zone in a turn/step-boundary function*. Then
+  **(-2)**, the `CardCold` group, which is ~**5.4 %** of the program and
+  wants a whole run — 148 fields, ~20 rare heap ones listed; do not start it
+  late. Then (11a)/(11)'s unfinished enumerations.
+- **Four rows costed this run and deliberately not taken** are written up in
+  PERF's candidates: auto-tap's activations (**9.12 %**, blocked on a
+  soundness question about freezing across a tap), `dying_snapshot`,
+  `printed_color_set`, and `compute_permanent_pass` (no single line —
+  don't re-annotate layers.rs hoping for one).
+- **A per-caller row is an attribution, not a measurement.** The untap row
+  read as a *regression* in `--tree=caller` when measured together with the
+  cleanup row, purely because a new frame moved the inliner's attribution.
+  Rebuild two changes apart before believing a tree.
+- Wide checks, **base and tip byte-identical**: `--decks all --games 300
+  --threads 3` reads **2,553,880** decisions / `turns_per_game` 21.32 /
+  2 draws (0.04 %) on *both* `a58447d9` and `76804984`; `--bench` 193,232 /
+  26.98 / 0 stalls; determinism ok on every run. **The old recorded
+  constants (2,548,986 and 6 draws) were stale** — running the base binary
+  is the only check that means anything. Fetch before the first commit.
 - Env: no `cargo-nextest`; `cargo test -p crabomination -p
   crabomination_tests` is the gate (~40 s once built). `profiling-fast`
-  engine ~7 min warm and **~2x that with a second cargo running** — 4 cores,
-  so serialize builds. Callgrind ~4 min, `overflow` ~16 min. Client apt deps
-  install in a minute (below); `cargo clippy --workspace` needs them.
-- Trackers: PERF **~1.2k** — passes 26-28 are table rows now like 20-25; the
-  last uncompacted prose is the pass 29/30 blocks, current until they age.
+  engine ~3 min warm / ~10 min after a tracker-touching rebuild; callgrind
+  ~2 min. Client apt deps install in a minute (below).
+- Trackers: PERF ~1.27k — passes 29/30 are index rows now; the only
+  uncompacted prose is pass 31, current until it ages.
 
 ## Environment note
 

@@ -72,5 +72,10 @@ web/dist/
 cg*.out
 callgrind.out.*
 # callgrind_annotate dumps — `ann.txt`, `ann.base.txt`, `tree.d.txt`, …
+# The list grew because `git add -A` committed three of them twice now
+# (`797040ba`, `3d15878b`); one name per `--tree=` / `--inclusive=` mode.
 ann*.txt
 tree*.txt
+self*.txt
+incl*.txt
+calling*.txt
