@@ -206,23 +206,35 @@ or the wrong box (`ac8e3b50` at `release-fast`, `247ee13d` at
 `profiling-fast`).
 
 **The wide-pool checks the fixed-deck anchor cannot make, re-run at
-`5034eb2f`.** `--bench --threads 1 --games 300 --seed 11 --decks all`
-(5,100 games over 17 archetypes) reads `decisions` **2,548,986
-byte-identical over two runs and identical to the value recorded at
-`841dd40b`** — so the twenty-eighth pass moved zero decisions on the full
-pool, which is a stronger behaviour proof than the four bench decks can
-give. Stall rate **6 draws / 5,100 (0.12 %)**, the recorded figure.
+`645b978d`.** The twenty-ninth pass's strongest behaviour proof is a
+**base-vs-tip diff, not a recorded constant**: the pre-pass binary
+(`797040ba`, kept from the first callgrind of the sitting) and the tip both
+run `--a gang --b gang --games 300 --threads 3 --decks all` and print
+**byte-identical output over 5,100 games across 17 archetypes** — every
+archetype's record, 2,549 paired splits, `rho -1.000`, and the same 2
+undecided in the same `cube RG` bucket. Keeping the old binary around costs
+one `cp` and answers in three minutes what a recorded decision count
+answers only if the invocation matches; do it every pass.
+
+**Correction to the recorded stall figure.** This file recorded `--decks
+all` at "6 draws / 5,100 (0.12 %)"; the command above reads **2 undecided /
+5,100 (0.039 %)** at *both* tips, so the 6 belongs to a different
+invocation (the `--bench --threads 1 --seed 11` form, whose `decisions`
+2,548,986 is the number that block is really about). Two figures for one
+pool with no invocation attached is how that happens — quote the command.
+
 Crash-freedom: the `overflow` profile (release-fast + `overflow-checks`)
-over `--games 400 --threads 3 --decks all` on three fresh seeds —
-**20,400 games, 0 undecided, no panic and no arithmetic overflow**, ~80 s
-per seed. Cheap enough to run every pass; do.
+over `--games 400 --threads 3 --decks all` on seeds 11/12/13 —
+**20,400 games, 20,392 decided, 8 undecided (0.039 %), no panic and no
+arithmetic overflow**, ~85 s per seed against a 16-minute build. Cheap
+enough to run every pass; do.
 
 **What every one of them agreed on, which is the part that matters**:
 `turns_per_game` **26.98** (now eleven consecutive anchors), `stalls`
 **0** with `stalls_by` reading `cap 0 / stuck 0 / draw 0`, `determinism
 ok` on every run with all 160 pairs split and `rho -1.000`, `decisions`
 **193,232 byte-identical**, `decisions_per_game` 603.9. All five still
-hold at `5034eb2f`.
+hold at `645b978d`.
 
 ~~**The `--decks fixed` bench is exactly reproducible and the wider pools
 are not**~~ — **fixed 2026-08-11 (`841dd40b`)**. Every pool now reproduces

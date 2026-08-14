@@ -32,11 +32,13 @@ cheaper (`PlayerCold`, fifteen heap-owning rare fields behind one `CowBox`).
   a `Keyword` bitset on `CardDefinition` pays there, in
   `permanent_has_keyword` and in `Keyword::eq` (0.50 % self) at once; then
   (11) `battlefield_find`-in-a-loop; then (9)(b).
-- **Not checked this pass, do it next:** the `--decks all` decision count
-  (2,548,986 at `841dd40b`) and the `overflow` profile (20,400 games, three
-  seeds, ~80 s/seed). Both rows here are behaviour-preserving by
-  construction and the six-game bench output is byte-identical, but neither
-  wide check was run.
+- **Wide checks are clean and the method improved**: keep the pre-pass
+  binary (one `cp` before the first callgrind) and diff base-vs-tip output
+  directly — `--decks all --games 300 --threads 3` is **byte-identical over
+  5,100 games / 17 archetypes**, which beats any recorded constant. The
+  `overflow` profile ran 20,400 games on three seeds with no panic and no
+  overflow. PERF's "6 draws / 5,100" was a mis-attributed invocation; the
+  real figure for that command is 2 undecided, at both tips.
 - Env: no `cargo-nextest`; `cargo test -p crabomination -p
   crabomination_tests` is the gate — ~4 min cold build, ~40 s run, **18,636
   tests**. `profiling-fast` engine rebuild **13 min cold / ~4 min warm**,
