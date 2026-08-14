@@ -20379,10 +20379,19 @@ impl GameState {
         None
     }
 
-    /// Look up which zone a card currently occupies. Returns `None` if
-    /// the card isn't in any visible zone (battlefield, hand, library,
-    /// graveyard, exile, stack). Used by the cast-from-zone path to
-    /// confirm the card is still in the expected zone before lifting it.
+    /// Look up which zone a card currently occupies. Returns `None` if the
+    /// card isn't in a persistent zone — battlefield, hand, graveyard, ante,
+    /// exile, library. **The stack is not one of them**: `Zone` has no stack
+    /// variant and this never looked there, whatever the old doc said. Used
+    /// by the cast-from-zone path to confirm the card is still in the
+    /// expected zone before lifting it.
+    ///
+    /// Visit order is [`find_card_anywhere`]'s, for the same reason: a
+    /// `CardId` names one object, so the order picks how long the answer
+    /// takes and never which answer comes back, and the libraries hold ~35
+    /// cards a seat against a handful everywhere else.
+    ///
+    /// [`find_card_anywhere`]: Self::find_card_anywhere
     pub(crate) fn find_card_zone(&self, id: CardId) -> Option<crate::card::Zone> {
         use crate::card::Zone;
         if self.battlefield.iter().any(|c| c.id == id) {
@@ -20395,15 +20404,17 @@ impl GameState {
             if p.graveyard.iter().any(|c| c.id == id) {
                 return Some(Zone::Graveyard);
             }
-            if p.library.iter().any(|c| c.id == id) {
-                return Some(Zone::Library);
-            }
             if p.ante.iter().any(|c| c.id == id) {
                 return Some(Zone::Ante);
             }
         }
         if self.exile.iter().any(|c| c.id == id) {
             return Some(Zone::Exile);
+        }
+        for p in &self.players {
+            if p.library.iter().any(|c| c.id == id) {
+                return Some(Zone::Library);
+            }
         }
         None
     }
@@ -20415,20 +20426,12 @@ impl GameState {
     /// to find the original owner of a target whose card has changed
     /// zones (e.g. destroyed and now in graveyard) by the time the
     /// owner-targeted effect resolves.
+    /// Visit order is [`find_card_anywhere`]'s — libraries last.
+    ///
+    /// [`find_card_anywhere`]: Self::find_card_anywhere
     pub(crate) fn find_card_owner(&self, id: CardId) -> Option<usize> {
         if let Some(c) = self.battlefield_find(id) {
             return Some(c.owner);
-        }
-        for (i, p) in self.players.iter().enumerate() {
-            if p.graveyard.iter().any(|c| c.id == id)
-                || p.hand.iter().any(|c| c.id == id)
-                || p.library.iter().any(|c| c.id == id)
-            {
-                return Some(i);
-            }
-        }
-        if self.exile.iter().any(|c| c.id == id) {
-            return self.exile.iter().find(|c| c.id == id).map(|c| c.owner);
         }
         // Stack: a spell mid-resolution is on the stack but not yet in any
         // player's persistent zone. The spell's caster is its current
@@ -20440,6 +20443,19 @@ impl GameState {
                 && card.id == id
             {
                 return Some(card.owner);
+            }
+        }
+        for (i, p) in self.players.iter().enumerate() {
+            if p.graveyard.iter().any(|c| c.id == id) || p.hand.iter().any(|c| c.id == id) {
+                return Some(i);
+            }
+        }
+        if let Some(c) = self.exile.iter().find(|c| c.id == id) {
+            return Some(c.owner);
+        }
+        for (i, p) in self.players.iter().enumerate() {
+            if p.library.iter().any(|c| c.id == id) {
+                return Some(i);
             }
         }
         None
