@@ -23,9 +23,8 @@ candidate** — see PERF's collision note. All three rows are one shape:
 **a linear scan that visited its cases in the wrong order.** The zone scan
 looked at ~70 library cards before the stack (-0.583 %); the gather's last
 board pass tested three always-false flags per card when it could walk
-`sa_cards` (-1.250 %);
-`effective_mana_abilities` re-found the card its callers were standing on
-(-0.158 %).
+`sa_cards` (-1.250 %); `effective_mana_abilities` re-found the card its
+callers were standing on (-0.158 %).
 
 - **The wide checks are green at the merged tip** and are the number to
   trust: `--decks all` reads `decisions` **2,548,986**, `--bench` **193,232**,
