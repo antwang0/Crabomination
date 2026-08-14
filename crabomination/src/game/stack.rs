@@ -2876,7 +2876,7 @@ impl GameState {
                 .any(|sa| matches!(sa.effect, StaticEffect::PermanentsDontUntap))
         }) {
             for c in self.battlefield.iter_mut().filter(|c| c.controller == p) {
-                c.summoning_sick = false;
+                c.clear_summoning_sickness();
             }
             return;
         }
@@ -3202,7 +3202,7 @@ impl GameState {
                     // clears per CR 506.4 (the turn-boundary tag, not the
                     // untap event).
                     if active {
-                        card.summoning_sick = false;
+                        card.clear_summoning_sickness();
                     }
                     continue;
                 }
@@ -3212,7 +3212,7 @@ impl GameState {
                 if card.skip_next_untap {
                     card.skip_next_untap = false;
                     if active {
-                        card.summoning_sick = false;
+                        card.clear_summoning_sickness();
                     }
                     continue;
                 }
@@ -3220,7 +3220,7 @@ impl GameState {
                 // still locks a creature.
                 if card.tapped && lock_sources.contains(&card.id) {
                     if active {
-                        card.summoning_sick = false;
+                        card.clear_summoning_sickness();
                     }
                     continue;
                 }
@@ -3230,7 +3230,7 @@ impl GameState {
                 // `attacked_last_turn` happens after this loop.
                 if card.attacked_own_turn && attack_locked.contains(&card.id) {
                     if active {
-                        card.summoning_sick = false;
+                        card.clear_summoning_sickness();
                     }
                     continue;
                 }
@@ -3238,7 +3238,7 @@ impl GameState {
                 // if it has a [kind] counter on it" (printed or granted).
                 if counter_locked.contains(&card.id) {
                     if active {
-                        card.summoning_sick = false;
+                        card.clear_summoning_sickness();
                     }
                     continue;
                 }
@@ -3247,7 +3247,7 @@ impl GameState {
                 // default `false` untaps normally.
                 if card.tapped && may_decline.contains(&card.id) {
                     if active {
-                        card.summoning_sick = false;
+                        card.clear_summoning_sickness();
                     }
                     continue;
                 }
@@ -3256,7 +3256,7 @@ impl GameState {
                 if let Some(src) = card.untap_locked_by {
                     if tapped_now_set.contains(&src) {
                         if active {
-                            card.summoning_sick = false;
+                            card.clear_summoning_sickness();
                         }
                         continue;
                     }
@@ -3265,7 +3265,7 @@ impl GameState {
                 if let Some(src) = card.untap_locked_while_present {
                     if on_battlefield.contains(&src) {
                         if active {
-                            card.summoning_sick = false;
+                            card.clear_summoning_sickness();
                         }
                         continue;
                     }
@@ -3279,7 +3279,7 @@ impl GameState {
                     let n = capped_untaps.entry((i, card.controller)).or_insert(0);
                     if *n >= untap_caps[i].1 {
                         if active {
-                            card.summoning_sick = false;
+                            card.clear_summoning_sickness();
                         }
                         continue;
                     }
@@ -3287,14 +3287,12 @@ impl GameState {
                 }
                 if card.counter_count(CounterType::Stun) > 0 {
                     card.remove_counters(CounterType::Stun, 1);
-                } else {
-                    if card.tapped {
-                        untapped_now.push(card.id);
-                    }
+                } else if card.tapped {
+                    untapped_now.push(card.id);
                     card.tapped = false;
                 }
                 if active {
-                    card.summoning_sick = false;
+                    card.clear_summoning_sickness();
                 }
             }
         }
