@@ -3724,19 +3724,38 @@ impl GameState {
         // Until-end-of-turn flashback grants (SOS "Flashback") live on
         // graveyard cards, which `clear_end_of_turn_effects` above doesn't
         // reach — expire them here so the window closes at end of turn.
+        // Every write below is a CoW unshare — `&mut player.graveyard` copies
+        // the seat, and each `&mut` reach into a card copies that card — so
+        // each is gated on the value not already being what it is set to. On
+        // a board with no grants and no discounts the whole loop is reads.
         for player in &mut self.players {
-            for card in &mut player.graveyard {
-                card.granted_flashback_eot = None;
-                card.granted_harmonize_eot = None;
+            if player
+                .graveyard
+                .iter()
+                .any(|c| c.granted_flashback_eot.is_some() || c.granted_harmonize_eot.is_some())
+            {
+                for card in &mut player.graveyard {
+                    if card.granted_flashback_eot.is_some() {
+                        card.granted_flashback_eot = None;
+                    }
+                    if card.granted_harmonize_eot.is_some() {
+                        card.granted_harmonize_eot = None;
+                    }
+                }
             }
             // "[Filter] spells cost {N} less this turn" grants end (CR 514.2).
             if !player.turn_spell_discounts.is_empty() {
                 player.turn_spell_discounts.clear();
             }
-            player.face_down_discount_this_turn = 0;
             // "Until end of turn" +1/+1 counter bonus (Prairie Dog) ends.
-            player.extra_plus_one_counters_this_turn = 0;
-            player.extra_etb_p1p1_counters_this_turn = 0;
+            if player.face_down_discount_this_turn != 0
+                || player.extra_plus_one_counters_this_turn != 0
+                || player.extra_etb_p1p1_counters_this_turn != 0
+            {
+                player.face_down_discount_this_turn = 0;
+                player.extra_plus_one_counters_this_turn = 0;
+                player.extra_etb_p1p1_counters_this_turn = 0;
+            }
         }
         // Expire UntilEndOfTurn continuous effects from the layer system
         self.expire_end_of_turn_effects();
@@ -3781,8 +3800,13 @@ impl GameState {
         self.graveyard_from_battlefield_this_turn.clear();
         // CR 514.2 — all damage marked on permanents is removed, phased-out
         // ones included (they're treated as nonexistent, not as gone).
+        // Gated: `card.damage = 0` is a `DerefMut` on the CoW handle, so
+        // writing the 0 a card already holds deep-copies it for nothing, and
+        // most permanents are undamaged at cleanup.
         for card in self.battlefield.iter_mut().chain(self.phased_out.iter_mut()) {
-            card.damage = 0;
+            if card.damage != 0 {
+                card.damage = 0;
+            }
         }
         // Clear the per-turn "permanents gained a counter this turn"
         // tracker (used by Fractal Tender's end-step trigger). Resetting
