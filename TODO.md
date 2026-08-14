@@ -32,7 +32,8 @@ board pass tested three always-false flags per card when it could walk
   `turns_per_game` 26.98, stalls 0, determinism ok. The other session's
   base-vs-tip byte-diff method (`cp` the pre-pass binary, diff `--decks all
   --games 300 --threads 3` output) beats a recorded constant — use it.
-  `overflow` (20,400 games, seeds 11/12/13) was clean on their run.
+  `overflow` is clean **at the merged tip** — 20,400 games over seeds
+  11/12/13, no panic and no arithmetic overflow.
 - **Best next moves**, in order: PERF candidate **(11a)**, the zone-walk
   family — `find_card_zone` / `find_card_owner` still put the libraries
   third, and a miss counter on `find_card_anywhere` is owed before anyone

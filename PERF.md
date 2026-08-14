@@ -222,6 +222,12 @@ and both pools were re-run after the merge, not before it.
 `--no-default-features` profiling build — not a comparison to the
 mimalloc numbers above.)
 
+**Crash-freedom at the merged tip.** The `overflow` profile (release-fast +
+`overflow-checks`) over `--a gang --b gang --games 400 --threads 3 --decks
+all` on seeds 11/12/13: **20,400 games, 20,392 decided, no panic and no
+arithmetic overflow**, 76-89 s a seed. The 8 undecided are all on seed 11
+and are rules draws, the same rate the pool's other invocations show.
+
 **The wide-pool checks the fixed-deck anchor cannot make, re-run at
 `645b978d`.** The twenty-ninth pass's strongest behaviour proof is a
 **base-vs-tip diff, not a recorded constant**: the pre-pass binary
