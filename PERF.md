@@ -936,6 +936,17 @@ remaining cost is per-card `computed_permanent` and the gather itself.
     15,368 calls is what a caller already inside someone's scope looks
     like; imitate its caller.
 
+11a. **The zone-walk family, and it is the same shape as `dbd3efeb`.**
+    Four hand-written walkers ask "where is this card": `find_card_anywhere`
+    (paid, -0.473 %), `find_card_anywhere_mut` (reordered with it),
+    `find_card_zone` and `find_card_owner`. The last two still scan each
+    seat's **library third**, before the other seat's hand and before exile;
+    `death_was_replaced` scans exile then both libraries on every dispatch.
+    **None of the three appears above the 99 % threshold on this profile**,
+    so reordering them is a consistency change, not a measured win — do it
+    as part of whatever *does* touch them, and do not claim Ir for it. Noted
+    here because a family of walkers that must agree is worth keeping in
+    step, and three of five are now out of step by cost.
 11. **A helper that opens with `battlefield_find` and is called from a
     battlefield loop — the generalization of the twenty-seventh pass's
     row.** `granted_abilities_with(card_id, scan)` was -0.552 % on its own
