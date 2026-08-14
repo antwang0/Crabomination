@@ -2876,7 +2876,9 @@ impl GameState {
                 .any(|sa| matches!(sa.effect, StaticEffect::PermanentsDontUntap))
         }) {
             for c in self.battlefield.iter_mut().filter(|c| c.controller == p) {
-                c.summoning_sick = false;
+                if c.summoning_sick {
+                    c.summoning_sick = false;
+                }
             }
             return;
         }
