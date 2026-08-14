@@ -1678,6 +1678,28 @@ pub(crate) fn ally_trigger_extra_fires(
     source: crate::card::CardId,
 ) -> usize {
     use crate::effect::StaticEffect;
+    // Presence gate. The layer read below is a whole-game gather and this
+    // runs once per trigger dispatch, on boards that almost never carry a
+    // doubler. The gate is *exact*, not an approximation: the sum below can
+    // only be non-zero when some permanent `controller` controls prints one
+    // of these five statics, which is the same set and the same seat filter
+    // the loop tests. A doubler granted by another effect would not be
+    // counted by the loop either — it reads `c.definition.static_abilities`.
+    if !state.battlefield.iter().any(|c| {
+        c.controller == controller
+            && c.definition.static_abilities.iter().any(|sa| {
+                matches!(
+                    sa.effect,
+                    StaticEffect::DoubleControllerAllyTriggers
+                        | StaticEffect::DoubleControllerTriggersOfType { .. }
+                        | StaticEffect::DoubleControllerTriggersMatching { .. }
+                        | StaticEffect::DoubleControllerLegendaryCreatureTriggers
+                        | StaticEffect::DoubleControllerPermanentTriggers
+                )
+            })
+    }) {
+        return 0;
+    }
     // The triggering source's current creature types (read live off the
     // battlefield; a source no longer in play or not `controller`'s → 0).
     let Some(cp) = state.computed_permanent(source) else { return 0 };
