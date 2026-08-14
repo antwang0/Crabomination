@@ -311,6 +311,15 @@ identical to `841dd40b`, `5034eb2f`, `645b978d` and `a4960740` — with
 `turns_per_game` 20.99, the recorded **6 draws / 5,100 (0.12 %)** and
 `determinism ok` on all 2,547 pairs.
 
+**Crash-freedom at the thirty-second pass's tip `5174acd3`.** The
+`overflow` profile over `--a gang --b gang --games 400 --threads 3 --decks
+all` on seeds **3 / 11 / 29 / 41**: **27,200 games, 27,192 decided, no
+panic and no arithmetic overflow**, 52-66 s a seed. The 8 undecided are
+all on seed 11 — the same rules draws the last two tips reported, same
+count, same seed. Two new seeds were added to the set because the pass
+rewrote `CardData`'s field layout, which is the one thing an
+overflow-checked run can catch that the suite cannot.
+
 **Crash-freedom at the thirty-first pass's merged tip `54f5981b`.** The
 `overflow` profile (release-fast + `overflow-checks`) over `--a gang --b
 gang --games 400 --threads 3 --decks all` on seeds 11/12/13: **20,400

@@ -16,59 +16,41 @@ reference and want their own triage pass):
 
 ## NEXT (handoff — rewrite each run, keep under 15 lines)
 
-Branch `claude/modern_decks`. **The thirty-first pass landed nine rows for
--7.152 % Ir across two concurrent sessions** (2,776,363,573 ->
-**2,577,862,811** at the merged tip `54f5981b`). Adding the two cumulatives
-gives -9.4 %; the merge reads -7.152 %, and **the difference is the overlap
-— unknowable without building the merge.** Two shapes: a periodic sweep
-writing values the fields already hold (`cleanup_wear_off`, `resolve_combat`'s
-provoke reset, `do_untap`'s summoning-sick clears, the turn-begin reset,
-`end_turn`'s zone sweep), and a `&self` read that gathers taken inside a
-freeze scope the caller already had (the combat-damage pair). See PERF's
-session A / session B / merged blocks.
+Branch `claude/modern_decks`. **The thirty-second pass landed PERF's top
+candidate, `CardCold`: -1.969 % Ir and +4.2 % wall-clock** (120.10 ->
+125.16 games/s, four runs a side, same host fingerprint). The candidate's
+serde blocker did not exist — `CardInstance`'s serde is a manual wire
+struct, so the 148-field split compiled with *zero* call-site changes.
 
-- **Green at the tip**: `--bench` 193,232 decisions / 26.98 turns / 0
-  stalls; wide pool 2,548,986 / 20.99 / 6 draws; determinism ok; suite
-  green; clippy clean; `overflow` clean over 20,400 games.
-- **Next is PERF (-2) `CardCold`** — ~20 rare heap fields of `CardData`'s
-  148, ~4.0 % addressable, expect ~1.2 %. **It wants a whole run; do not
-  start it late** (a `Deref`/`DerefMut` split reaching the whole engine,
-  every cold field's serde attribute to preserve). Then (11)'s unfinished
-  `_of(&CardInstance)` enumeration. **(11a) closed**; **(13)/(5) the
-  `Keyword` bitset stays ranked down**; four more costed-and-declined rows
-  (auto-tap's 9.12 %, `dying_snapshot`, `printed_color_set`,
-  `compute_permanent_pass`, `combat_damage_prevented_to_self` at 915
-  Ir/call) are in the candidates — don't re-derive any of them.
-- **The sweep recipe**: `--tree=caller` on `Arc::clone_from_ref_in` *and*
-  `Arc::make_mut`, read by the **inlining function** — every `<` row whose
-  file is `alloc/src/sync.rs` and whose function is an engine function is a
-  deep-copier, with its call count. ~1,900 Ir/call is `CardData`, ~900
-  `PlayerData`, ~30 means already unique. `game/` is swept; `server/` and
-  `effects/` are not.
-- **Quote the command with any pool constant.** `--bench --threads 1
-  --games 300 --seed 11 --decks all` = 2,548,986 / 6 draws; `--decks all
-  --games 300 --threads 3` = 2,553,880 / 2. Both current, different
-  invocations. A base-vs-tip byte-diff of a kept binary beats either.
-- **A per-caller row is an attribution, not a measurement** — rebuild two
-  changes apart before believing a `--tree`.
-- **`audit_stubs` reads 0 flagged over 21,795 cards** and is worth trusting
-  now: it read 59 and all 59 were false positives from a stale
-  `def_has_any_ability` that predated Sagas, Rooms, Sieges, `enters_as_copy`
-  and `state_trigger`. Two tests pin the carrier list. **A new mechanic that
-  adds a carrier field to `CardDefinition` must be added there** or the
-  bucket goes noisy again. `audit_incomplete` is unchanged — a long list of
-  documented per-card approximations, i.e. priority (7) work, not defects.
-- **Third collision, the largest: fetch before the first commit.** Both
-  sessions pulled the same three fixes and both wrote the `CardCold`
-  candidate.
+- **Green at the tip** `275fe4a0`: `--bench` 193,232 decisions / 26.98
+  turns / 0 stalls / 29.0-29.3 MiB; wide pool 2,548,986 / 20.99 /
+  `stalls_by cap 0 stuck 0 draw 6`; determinism ok; suite 18,637 green;
+  clippy `--workspace --all-targets` clean; `overflow` clean over 27,200
+  games on four seeds. Baseline re-anchored.
+- **Next is PERF (-1a)** — the `iter_mut().find()` half of the unshare
+  sweep, which the thirty-first pass's syntactic filter cannot match; one
+  was worth taking this run. Read the `make_mut` caller table *first*, the
+  54 syntactic hits second. **There is no second `CardCold`**: the
+  remaining `CardData` deep-copy table is 1.76 % at 838 Ir a call, and the
+  fields left hot were left hot on purpose (see (-2)).
+- **Candidate (9)'s threshold has gone stale.** "> 2,000 Ir per
+  `computed_permanent` call means the caller is gathering" was calibrated
+  when a gather cost ~2,000; all four damage-path callers now read
+  1,300-3,100 and only one is unscoped. Rank by total, not by ratio. The
+  noncombat funnel `deal_damage_to_from` was costed and is **under 0.5 %**
+  on the bench decks — do not refactor it until a wider pool moves it.
+- **Two trackers-owed items closed**: the stall attribution (all six are
+  rules draws, nothing to fix) and the twelfth filter (two hand-kept
+  pairings fused; `protection_keyword` is the one left and is
+  disproportionate). A thirteenth filter is proposed in the section.
 - Env: no `cargo-nextest`; `cargo test -p crabomination -p
   crabomination_tests` is the gate (~40 s once built, ~5 min to build).
-  `profiling-fast` engine ~3 min warm solo, ~9 min after a wide touch —
-  serialize builds, 4 cores. Callgrind ~4 min and contention-immune.
-  `overflow` ~8 min to build, ~1 min a seed. Client apt deps install in a
-  minute (below); `cargo clippy --workspace` needs them.
-- Trackers: PERF **~1.44k** — passes 29/30 are index rows; the uncompacted
-  prose is pass 31's three blocks, current until they age.
+  `profiling-fast` engine ~9 min after a wide touch, `release` ~50 min
+  cold, `overflow` ~25 min. Callgrind ~4 min and contention-immune.
+  Serialize cargo builds — one target-dir lock, 4 cores. **`rm -rf
+  target/debug/incremental` reclaims ~11 GB** and the box has ~30 GB.
+- Trackers: TODO **951** (filters 1-11 are one index table now), PERF
+  **~1.44k** — passes 29/30/31 are index rows; pass 32's prose is current.
 
 ## Environment note
 
