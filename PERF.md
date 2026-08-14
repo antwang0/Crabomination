@@ -127,9 +127,44 @@ contention-immune, which makes it the better first look.
 
 ## Baseline
 
-**Re-anchored 2026-08-14 at `35fdfce3`** (`release`, mimalloc — the shipped
-configuration), the thirty-third pass's tip. Supersedes the `76804984`
-block below, which is kept for its ratios.
+**Re-anchored 2026-08-14 at `6cc0bdc3`** (`release`, mimalloc — the shipped
+configuration), **the merged tip the thirty-third pass owed**. Supersedes
+the `35fdfce3` block below, which was measured at a commit that is not the
+tip and is kept only for its invariants.
+
+```text
+bot_ladder --bench   release, rustc 1.95.0, 4-core VM, 3 worker threads
+                     mimalloc (the default)
+host_cpu             Intel(R) Xeon(R) Processor @ 2.10GHz
+host_calib_ms        49 / 57 / 48 / 47 / 52 / 49
+games                320
+games_per_s          138.65 / 137.80 / 133.02 / 139.40 / 133.43 / 138.18
+                     (mean 136.75, spread 4.8 %)
+games_per_s_th       44.34 - 46.47
+decisions_per_s      80,325 - 84,175
+turns_per_game       26.98
+decisions            193,232 byte-identical on all six
+stalls               0 (0.00 %), stalls_by cap 0 / stuck 0 / draw 0
+peak_rss_mib         29.1 - 30.8
+determinism          ok (all 160 pairs split, on all 6 runs)
+```
+
+**Do not read 130.71 -> 136.75 as +4.6 %: the box is a different one.**
+`host_cpu` is **2.10 GHz** here against **2.80 GHz** at every earlier
+anchor in this file, so the two blocks are not the same measurement and no
+delta between them is sound — the caution at the top of this file, met for
+the first time as a *host model* change rather than a noise band. What the
+block does establish is the tip's invariants and a floor for the next
+pass's A/B, which must alternate on this box. `host_calib_ms` 47-57 is a
+tighter band than the previous anchor's 44-71, and the 4.8 % spread against
+that block's 12.0 % says so too.
+
+Every invariant is unchanged across the collision merge: `decisions`
+**193,232**, `turns_per_game` 26.98, stalls 0, `peak_rss_mib` 29.1-30.8,
+determinism ok on all six runs.
+
+**The superseded `35fdfce3` block**, the thirty-third pass's measurement,
+kept because the Log rows chain to it:
 
 ```text
 bot_ladder --bench   release, rustc 1.95.0, 4-core VM, 3 worker threads
@@ -156,13 +191,12 @@ removes whole gathers and 91-field deep copies, which cost cache lines as
 well as instructions. Every invariant is unchanged — `decisions`
 **193,232**, `turns_per_game` 26.98, stalls 0, `peak_rss_mib` 29.2-29.4.
 
-**This block was measured at `35fdfce3`, which is *not* the merged tip.**
-The concurrent session's `caa44eb2` (the pairing fusion) and `017586b1`
-landed beside it and are not in the binary these numbers describe. The
-fourth collision this file records, and the first where both sessions wrote
-the same PERF pass block and the same baseline re-anchor. **Re-measure at
-the merged tip before chaining anything to this block** — the thirty-first
-pass's lesson, unlearned and relearned.
+**This block was measured at `35fdfce3`, which is *not* the merged tip** —
+the fourth collision this file records. **Settled 2026-08-14**: the merged
+tip was measured (the block above) and the answer is that it cannot be
+compared to this one, because the box changed model underneath. The debt is
+paid in the sense that the tip now has numbers of its own; it is not paid
+in the sense of a delta, and no delta from it is available.
 
 **The host is noisier than it was at the previous anchor** — spread 12.0 %
 against 1.44 %, and `host_calib_ms` ranges 44-71 against 45-46. The three
