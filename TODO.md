@@ -51,6 +51,13 @@ session A / session B / merged blocks.
   invocations. A base-vs-tip byte-diff of a kept binary beats either.
 - **A per-caller row is an attribution, not a measurement** — rebuild two
   changes apart before believing a `--tree`.
+- **`audit_stubs` reads 0 flagged over 21,795 cards** and is worth trusting
+  now: it read 59 and all 59 were false positives from a stale
+  `def_has_any_ability` that predated Sagas, Rooms, Sieges, `enters_as_copy`
+  and `state_trigger`. Two tests pin the carrier list. **A new mechanic that
+  adds a carrier field to `CardDefinition` must be added there** or the
+  bucket goes noisy again. `audit_incomplete` is unchanged — a long list of
+  documented per-card approximations, i.e. priority (7) work, not defects.
 - **Third collision, the largest: fetch before the first commit.** Both
   sessions pulled the same three fixes and both wrote the `CardCold`
   candidate.
