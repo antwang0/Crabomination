@@ -1,0 +1,1128 @@
+--------------------------------------------------------------------------------
+Profile data file 'cg.out' (creator: callgrind-3.22.0)
+--------------------------------------------------------------------------------
+I1 cache: 
+D1 cache: 
+LL cache: 
+Timerange: Basic block 0 - 539194221
+Trigger: Program termination
+Profiled target:  target/profiling-fast/bot_ladder --a gang --b gang --games 6 --threads 1 --seed 1 --decks fixed (PID 13594, part 1)
+Events recorded:  Ir
+Events shown:     Ir
+Event sort order: Ir
+Thresholds:       95
+Include dirs:     
+User annotated:   
+Auto-annotation:  off
+
+--------------------------------------------------------------------------------
+Ir                     
+--------------------------------------------------------------------------------
+2,776,361,361 (100.0%)  PROGRAM TOTALS
+
+--------------------------------------------------------------------------------
+Ir                    file:function
+--------------------------------------------------------------------------------
+135,587,076 ( 4.88%)  ./malloc/./malloc/malloc.c:_int_malloc [/usr/lib/x86_64-linux-gnu/libc.so.6]
+120,448,367 ( 4.34%)  ./malloc/./malloc/malloc.c:_int_free [/usr/lib/x86_64-linux-gnu/libc.so.6]
+111,222,152 ( 4.01%)  ./string/../sysdeps/x86_64/multiarch/memmove-vec-unaligned-erms.S:__memcpy_avx_unaligned_erms [/usr/lib/x86_64-linux-gnu/libc.so.6]
+ 88,943,273 ( 3.20%)  ./malloc/./malloc/malloc.c:malloc [/usr/lib/x86_64-linux-gnu/libc.so.6]
+ 82,117,218 ( 2.96%)  crabomination/src/game/mod.rs:crabomination::game::GameState::gather_continuous_effects_inner [/home/user/Crabomination/target/profiling-fast/bot_ladder]
+ 54,532,256 ( 1.96%)  ./malloc/./malloc/malloc.c:free [/usr/lib/x86_64-linux-gnu/libc.so.6]
+ 45,505,856 ( 1.64%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/ptr/mod.rs:alloc::sync::Arc<T,A>::clone_from_ref_in
+ 40,861,894 ( 1.47%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/ptr/non_null.rs:crabomination::game::GameState::gather_continuous_effects_inner
+ 34,371,796 ( 1.24%)  crabomination/src/game/mod.rs:crabomination::game::GameState::dispatch_triggers_for_events [/home/user/Crabomination/target/profiling-fast/bot_ladder]
+ 30,193,328 ( 1.09%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/alloc/src/vec/mod.rs:<alloc::vec::Vec<T,A> as core::clone::Clone>::clone [/home/user/Crabomination/target/profiling-fast/bot_ladder]
+ 27,564,244 ( 0.99%)  crabomination/src/game/layers.rs:crabomination::game::layers::compute_permanent_pass [/home/user/Crabomination/target/profiling-fast/bot_ladder]
+ 26,564,694 ( 0.96%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/alloc/src/vec/mod.rs:crabomination::game::GameState::dispatch_triggers_for_events
+ 26,385,524 ( 0.95%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/alloc/src/sync.rs:alloc::sync::Arc<T,A>::make_mut [/home/user/Crabomination/target/profiling-fast/bot_ladder]
+ 24,770,086 ( 0.89%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/alloc/src/vec/spec_from_iter_nested.rs:<alloc::vec::Vec<T> as alloc::vec::spec_from_iter_nested::SpecFromIterNested<T,I>>::from_iter [/home/user/Crabomination/target/profiling-fast/bot_ladder]
+ 24,448,028 ( 0.88%)  ./malloc/./malloc/malloc.c:_int_free_merge_chunk [/usr/lib/x86_64-linux-gnu/libc.so.6]
+ 23,150,706 ( 0.83%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/slice/iter/macros.rs:crabomination::game::GameState::gather_continuous_effects_inner
+ 21,942,106 ( 0.79%)  crabomination/src/game/mod.rs:<crabomination::game::GameState as core::clone::Clone>::clone [/home/user/Crabomination/target/profiling-fast/bot_ladder]
+ 21,422,868 ( 0.77%)  ./malloc/./malloc/arena.c:free
+ 20,140,283 ( 0.73%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/slice/iter/macros.rs:<alloc::vec::Vec<T> as alloc::vec::spec_from_iter_nested::SpecFromIterNested<T,I>>::from_iter
+ 20,129,534 ( 0.73%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/alloc/src/vec/mod.rs:crabomination::game::GameState::gather_continuous_effects_inner
+ 18,906,130 ( 0.68%)  crabomination_base/src/card.rs:alloc::sync::Arc<T,A>::clone_from_ref_in
+ 18,736,932 ( 0.67%)  ./malloc/./malloc/malloc.c:unlink_chunk.isra.0 [/usr/lib/x86_64-linux-gnu/libc.so.6]
+ 17,574,318 ( 0.63%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/ptr/non_null.rs:crabomination::game::GameState::dispatch_triggers_for_events
+ 16,989,499 ( 0.61%)  ./malloc/./malloc/malloc.c:malloc_consolidate [/usr/lib/x86_64-linux-gnu/libc.so.6]
+ 16,513,384 ( 0.59%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/ptr/non_null.rs:<alloc::vec::Vec<T> as alloc::vec::spec_from_iter_nested::SpecFromIterNested<T,I>>::from_iter
+ 16,501,104 ( 0.59%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/slice/iter/macros.rs:crabomination::game::GameState::dispatch_triggers_for_events
+ 16,362,654 ( 0.59%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/option.rs:crabomination::game::GameState::gather_continuous_effects_inner
+ 16,186,726 ( 0.58%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/alloc/src/raw_vec/mod.rs:alloc::sync::Arc<T,A>::clone_from_ref_in
+ 15,161,880 ( 0.55%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/std/src/sys/alloc/unix.rs:__rustc::__rdl_alloc
+ 14,393,938 ( 0.52%)  crabomination_base/src/card.rs:<crabomination_base::card::Keyword as core::cmp::PartialEq>::eq [/home/user/Crabomination/target/profiling-fast/bot_ladder]
+ 13,839,694 ( 0.50%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/num/uint_macros.rs:alloc::sync::Arc<T,A>::clone_from_ref_in
+ 13,577,922 ( 0.49%)  crabomination/src/game/actions.rs:crabomination::game::actions::<impl crabomination::game::GameState>::activate_ability_inner [/home/user/Crabomination/target/profiling-fast/bot_ladder]
+ 13,366,162 ( 0.48%)  crabomination/src/game/stack.rs:crabomination::game::stack::<impl crabomination::game::GameState>::sba_board_scan [/home/user/Crabomination/target/profiling-fast/bot_ladder]
+ 13,352,074 ( 0.48%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/slice/iter/macros.rs:crabomination::game::effects::eval::<impl crabomination::game::GameState>::evaluate_requirement_static
+ 13,347,172 ( 0.48%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/slice/iter/macros.rs:crabomination::game::GameState::computed_permanent
+ 13,245,960 ( 0.48%)  /rust/deps/hashbrown-0.16.1/src/raw/mod.rs:<hashbrown::raw::RawTable<T,A> as core::clone::Clone>::clone [/home/user/Crabomination/target/profiling-fast/bot_ladder]
+ 12,811,054 ( 0.46%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/ptr/mod.rs:<crabomination::cow::CowBox<T> as core::ops::deref::DerefMut>::deref_mut
+ 12,788,066 ( 0.46%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/alloc/src/raw_vec/mod.rs:crabomination::game::GameState::dispatch_triggers_for_events
+ 12,489,924 ( 0.45%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/num/uint_macros.rs:<crabomination::cow::CowBox<T> as core::ops::deref::DerefMut>::deref_mut
+ 12,040,166 ( 0.43%)  crabomination/src/game/mod.rs:crabomination::game::GameState::computed_permanent [/home/user/Crabomination/target/profiling-fast/bot_ladder]
+ 11,841,472 ( 0.43%)  crabomination_base/src/effect/abilities.rs:<crabomination_base::effect::abilities::ActivatedAbility as core::clone::Clone>::clone [/home/user/Crabomination/target/profiling-fast/bot_ladder]
+ 11,720,738 ( 0.42%)  crabomination/src/game/mod.rs:crabomination::game::GameState::perform_action_inner [/home/user/Crabomination/target/profiling-fast/bot_ladder]
+ 11,528,574 ( 0.42%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/alloc/src/vec/into_iter.rs:<alloc::vec::into_iter::IntoIter<T,A> as core::ops::drop::Drop>::drop [/home/user/Crabomination/target/profiling-fast/bot_ladder]
+ 10,819,596 ( 0.39%)  crabomination/src/game/actions.rs:crabomination::game::actions::<impl crabomination::game::GameState>::granted_abilities_of [/home/user/Crabomination/target/profiling-fast/bot_ladder]
+ 10,624,886 ( 0.38%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/ptr/non_null.rs:crabomination::game::effects::eval::<impl crabomination::game::GameState>::evaluate_requirement_static
+ 10,596,132 ( 0.38%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/alloc/src/raw_vec/mod.rs:alloc::sync::Arc<T,A>::drop_slow'2
+ 10,123,754 ( 0.36%)  crabomination_base/src/card.rs:crabomination_base::card::CardDefinition::printed_color_set [/home/user/Crabomination/target/profiling-fast/bot_ladder]
+  9,725,724 ( 0.35%)  crabomination/src/game/effects/eval.rs:crabomination::game::effects::eval::<impl crabomination::game::GameState>::evaluate_requirement_static [/home/user/Crabomination/target/profiling-fast/bot_ladder]
+  9,013,526 ( 0.32%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/option.rs:alloc::sync::Arc<T,A>::clone_from_ref_in
+  8,997,532 ( 0.32%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/slice/iter/macros.rs:crabomination::game::stack::<impl crabomination::game::GameState>::check_state_based_actions
+  8,872,189 ( 0.32%)  ./malloc/./malloc/malloc.c:_int_free_maybe_consolidate [/usr/lib/x86_64-linux-gnu/libc.so.6]
+  8,765,978 ( 0.32%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/alloc/src/raw_vec/mod.rs:<crabomination::cow::CowBox<T> as core::ops::deref::DerefMut>::deref_mut
+  8,696,416 ( 0.31%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/alloc/src/raw_vec/mod.rs:alloc::raw_vec::RawVecInner<A>::finish_grow [/home/user/Crabomination/target/profiling-fast/bot_ladder]
+  8,602,296 ( 0.31%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/option.rs:<alloc::vec::Vec<T> as alloc::vec::spec_from_iter_nested::SpecFromIterNested<T,I>>::from_iter
+  8,545,254 ( 0.31%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/ptr/non_null.rs:crabomination::game::GameState::computed_permanent
+  8,277,896 ( 0.30%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/slice/iter/macros.rs:crabomination::game::GameState::find_card_anywhere
+  8,017,306 ( 0.29%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/slice/iter/macros.rs:core::ops::function::impls::<impl core::ops::function::FnMut<A> for &mut F>::call_mut
+  7,963,452 ( 0.29%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/ptr/non_null.rs:crabomination::game::GameState::dispatch_board_scan
+  7,862,856 ( 0.28%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/ptr/mod.rs:alloc::sync::Arc<T,A>::drop_slow'2
+  7,858,872 ( 0.28%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/alloc/src/vec/mod.rs:<alloc::vec::Vec<T> as alloc::vec::spec_from_iter_nested::SpecFromIterNested<T,I>>::from_iter
+  7,765,172 ( 0.28%)  crabomination/src/game/mod.rs:crabomination::game::GameState::dispatch_board_scan [/home/user/Crabomination/target/profiling-fast/bot_ladder]
+  7,707,558 ( 0.28%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/ptr/non_null.rs:crabomination::game::GameState::find_card_anywhere
+  7,645,610 ( 0.28%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/alloc/src/slice.rs:<alloc::vec::Vec<T,A> as core::clone::Clone>::clone
+  7,436,768 ( 0.27%)  ./malloc/./malloc/malloc.c:realloc [/usr/lib/x86_64-linux-gnu/libc.so.6]
+  7,250,668 ( 0.26%)  crabomination/src/game/layers.rs:crabomination::game::layers::compute_permanent [/home/user/Crabomination/target/profiling-fast/bot_ladder]
+  7,100,096 ( 0.26%)  crabomination/src/game/mod.rs:crabomination::game::GameState::same_team [/home/user/Crabomination/target/profiling-fast/bot_ladder]
+  7,084,766 ( 0.26%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/ops/function.rs:core::ops::function::impls::<impl core::ops::function::FnMut<A> for &mut F>::call_mut [/home/user/Crabomination/target/profiling-fast/bot_ladder]
+  7,018,200 ( 0.25%)  crabomination/src/game/actions.rs:crabomination::game::actions::effect_produces_color [/home/user/Crabomination/target/profiling-fast/bot_ladder]
+  6,750,792 ( 0.24%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/slice/iter/macros.rs:crabomination::game::layers::compute_permanent
+  6,719,510 ( 0.24%)  crabomination/src/game/actions.rs:crabomination::game::actions::<impl crabomination::game::GameState>::finalize_cast [/home/user/Crabomination/target/profiling-fast/bot_ladder]
+  6,540,452 ( 0.24%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/alloc/src/raw_vec/mod.rs:core::ptr::drop_in_place<crabomination::game::ColdState>
+  6,475,270 ( 0.23%)  crabomination/src/server/bot.rs:crabomination::server::bot::available_mana [/home/user/Crabomination/target/profiling-fast/bot_ladder]
+  6,441,958 ( 0.23%)  ./malloc/./malloc/malloc.c:_int_realloc [/usr/lib/x86_64-linux-gnu/libc.so.6]
+  6,399,758 ( 0.23%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/slice/iter/macros.rs:crabomination::game::GameState::scale_damage_to
+  6,127,818 ( 0.22%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/alloc/src/vec/spec_from_iter_nested.rs:<alloc::vec::Vec<T> as alloc::vec::spec_from_iter_nested::SpecFromIterNested<T,I>>::from_iter'2 [/home/user/Crabomination/target/profiling-fast/bot_ladder]
+  6,046,964 ( 0.22%)  crabomination/src/game/layers.rs:crabomination::game::layers::affected_includes_gated [/home/user/Crabomination/target/profiling-fast/bot_ladder]
+  6,033,696 ( 0.22%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/alloc/src/slice.rs:alloc::sync::Arc<T,A>::clone_from_ref_in
+  6,003,450 ( 0.22%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/alloc/src/raw_vec/mod.rs:alloc::raw_vec::RawVec<T,A>::grow_one [/home/user/Crabomination/target/profiling-fast/bot_ladder]
+  5,947,832 ( 0.21%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/alloc/src/sync.rs:alloc::sync::Arc<T,A>::clone_from_ref_in [/home/user/Crabomination/target/profiling-fast/bot_ladder]
+  5,870,702 ( 0.21%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/slice/iter/macros.rs:crabomination::game::GameState::dispatch_board_scan
+  5,785,130 ( 0.21%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/alloc/src/vec/mod.rs:alloc::sync::Arc<T,A>::clone_from_ref_in
+  5,768,486 ( 0.21%)  crabomination_base/src/card.rs:crabomination::game::GameState::computed_permanent
+  5,597,760 ( 0.20%)  crabomination/src/game/actions.rs:crabomination::game::actions::is_mana_ability::mana_compatible [/home/user/Crabomination/target/profiling-fast/bot_ladder]
+  5,586,622 ( 0.20%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/slice/iter/macros.rs:<core::slice::iter::Iter<T> as core::iter::traits::iterator::Iterator>::find_map [/home/user/Crabomination/target/profiling-fast/bot_ladder]
+  5,441,592 ( 0.20%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/sync/atomic.rs:alloc::sync::Arc<T,A>::make_mut
+  5,429,782 ( 0.20%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/num/uint_macros.rs:<alloc::vec::Vec<T,A> as core::clone::Clone>::clone
+  5,325,868 ( 0.19%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/slice/iter/macros.rs:crabomination_base::card::CardInstance::has_keyword
+  5,273,998 ( 0.19%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/alloc/src/vec/mod.rs:crabomination_base::card::CardDefinition::is_creature
+  5,261,058 ( 0.19%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/alloc/src/raw_vec/mod.rs:<alloc::vec::Vec<T,A> as core::clone::Clone>::clone
+  5,255,724 ( 0.19%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/ptr/non_null.rs:crabomination::game::combat::<impl crabomination::game::GameState>::fire_combat_damage_triggers
+  5,230,760 ( 0.19%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/alloc/src/raw_vec/mod.rs:<alloc::vec::Vec<T> as alloc::vec::spec_from_iter_nested::SpecFromIterNested<T,I>>::from_iter
+  5,212,820 ( 0.19%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/ptr/mod.rs:crabomination::game::GameState::dispatch_triggers_for_events
+  5,061,528 ( 0.18%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/alloc/src/raw_vec/mod.rs:<crabomination::game::GameState as core::clone::Clone>::clone
+  5,060,620 ( 0.18%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/slice/iter/macros.rs:<core::iter::adapters::map::Map<I,F> as core::iter::traits::iterator::Iterator>::fold
+  5,034,220 ( 0.18%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/intrinsics/mod.rs:alloc::sync::Arc<T,A>::clone_from_ref_in
+  5,012,412 ( 0.18%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/slice/iter/macros.rs:crabomination::game::actions::<impl crabomination::game::GameState>::activate_ability_inner
+  4,947,978 ( 0.18%)  crabomination/src/cow.rs:<crabomination::cow::CowBox<T> as core::ops::deref::DerefMut>::deref_mut [/home/user/Crabomination/target/profiling-fast/bot_ladder]
+  4,945,201 ( 0.18%)  ./malloc/./malloc/malloc.c:calloc [/usr/lib/x86_64-linux-gnu/libc.so.6]
+  4,936,740 ( 0.18%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/iter/adapters/map.rs:<core::iter::adapters::map::Map<I,F> as core::iter::traits::iterator::Iterator>::fold [/home/user/Crabomination/target/profiling-fast/bot_ladder]
+  4,684,766 ( 0.17%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/ptr/non_null.rs:crabomination::game::actions::<impl crabomination::game::GameState>::grant_scan
+  4,676,304 ( 0.17%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/ptr/non_null.rs:crabomination::game::GameState::scale_damage_to
+  4,659,550 ( 0.17%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/sync/atomic.rs:crabomination::game::GameState::computed_permanent
+  4,647,221 ( 0.17%)  ./malloc/./malloc/arena.c:malloc
+  4,632,012 ( 0.17%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/alloc/src/vec/mod.rs:crabomination::game::layers::compute_permanent_pass
+  4,584,142 ( 0.17%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/alloc/src/sync.rs:crabomination::game::GameState::computed_permanent
+  4,494,440 ( 0.16%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/option.rs:crabomination::game::GameState::trigger_grant_sources
+  4,493,950 ( 0.16%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/slice/iter/macros.rs:crabomination::game::combat::<impl crabomination::game::GameState>::fire_combat_damage_triggers
+  4,438,078 ( 0.16%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/ptr/non_null.rs:crabomination::game::stack::<impl crabomination::game::GameState>::check_state_based_actions
+  4,367,568 ( 0.16%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/option.rs:<crabomination_base::effect::abilities::ActivatedAbility as core::clone::Clone>::clone
+  4,196,501 ( 0.15%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/ptr/mod.rs:alloc::sync::Arc<T,A>::drop_slow
+  4,165,182 ( 0.15%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/ptr/non_null.rs:crabomination_base::card::CardDefinition::is_creature
+  4,165,182 ( 0.15%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/slice/iter/macros.rs:crabomination_base::card::CardDefinition::is_creature
+  4,147,490 ( 0.15%)  crabomination/src/game/actions.rs:crabomination::game::actions::<impl crabomination::game::GameState>::effective_mana_abilities_of [/home/user/Crabomination/target/profiling-fast/bot_ladder]
+  4,133,046 ( 0.15%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/num/uint_macros.rs:<crabomination::game::GameState as core::clone::Clone>::clone
+  4,089,560 ( 0.15%)  crabomination/src/game/actions.rs:crabomination::game::actions::<impl crabomination::game::GameState>::cast_spell_with_convoke [/home/user/Crabomination/target/profiling-fast/bot_ladder]
+  4,068,888 ( 0.15%)  crabomination_base/src/card.rs:crabomination::game::effects::eval::<impl crabomination::game::GameState>::evaluate_requirement_static
+  4,055,918 ( 0.15%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/slice/iter/macros.rs:crabomination::game::combat::<impl crabomination::game::GameState>::declare_blockers
+  4,015,342 ( 0.14%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/slice/iter/macros.rs:crabomination::game::actions::<impl crabomination::game::GameState>::cast_spell_with_convoke
+  3,996,834 ( 0.14%)  crabomination/src/game/actions.rs:crabomination::game::actions::<impl crabomination::game::GameState>::grant_scan [/home/user/Crabomination/target/profiling-fast/bot_ladder]
+  3,888,706 ( 0.14%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/slice/iter/macros.rs:crabomination::game::combat::<impl crabomination::game::GameState>::declare_attackers_banded
+  3,879,756 ( 0.14%)  crabomination/src/game/stack.rs:crabomination::game::stack::<impl crabomination::game::GameState>::check_state_based_actions [/home/user/Crabomination/target/profiling-fast/bot_ladder]
+  3,807,836 ( 0.14%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/alloc/src/vec/mod.rs:<crabomination::cow::CowBox<T> as core::ops::deref::DerefMut>::deref_mut
+  3,798,678 ( 0.14%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/slice/iter/macros.rs:crabomination_base::card::CardDefinition::printed_color_set
+  3,781,524 ( 0.14%)  crabomination/src/game/mod.rs:crabomination::game::GameState::frozen_effects [/home/user/Crabomination/target/profiling-fast/bot_ladder]
+  3,768,005 ( 0.14%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/alloc/src/sync.rs:alloc::sync::Arc<T,A>::drop_slow [/home/user/Crabomination/target/profiling-fast/bot_ladder]
+  3,738,736 ( 0.13%)  crabomination/src/game/actions.rs:crabomination::game::actions::is_mana_ability::produces_mana [/home/user/Crabomination/target/profiling-fast/bot_ladder]
+  3,675,130 ( 0.13%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/std/src/panicking.rs:crabomination::game::GameState::computed_permanent
+  3,642,048 ( 0.13%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/ptr/mut_ptr.rs:crabomination::game::layers::compute_permanent_pass
+  3,609,112 ( 0.13%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/slice/iter/macros.rs:crabomination::game::combat::<impl crabomination::game::GameState>::resolve_combat
+  3,591,358 ( 0.13%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/intrinsics/mod.rs:<crabomination::cow::CowBox<T> as core::ops::deref::DerefMut>::deref_mut
+  3,574,170 ( 0.13%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/alloc/src/slice.rs:<crabomination::cow::CowBox<T> as core::ops::deref::DerefMut>::deref_mut
+  3,569,660 ( 0.13%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/slice/iter/macros.rs:crabomination::game::effects::movement::<impl crabomination::game::GameState>::apply_prevention_shields
+  3,508,688 ( 0.13%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/slice/iter/macros.rs:crabomination::game::stack::<impl crabomination::game::GameState>::sba_board_scan
+  3,472,444 ( 0.13%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/option.rs:crabomination::game::actions::<impl crabomination::game::GameState>::grant_scan
+  3,404,218 ( 0.12%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/slice/iter/macros.rs:crabomination::game::actions::<impl crabomination::game::GameState>::grant_scan
+  3,361,608 ( 0.12%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/alloc/src/sync.rs:crabomination::game::layers::compute_permanent_pass
+  3,311,326 ( 0.12%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/ptr/non_null.rs:crabomination::game::actions::<impl crabomination::game::GameState>::activate_ability_inner
+  3,252,063 ( 0.12%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/num/uint_macros.rs:alloc::raw_vec::RawVecInner<A>::finish_grow
+  3,248,554 ( 0.12%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/ptr/mut_ptr.rs:crabomination::game::GameState::trigger_grant_sources
+  3,242,166 ( 0.12%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/slice/iter/macros.rs:crabomination::game::actions::<impl crabomination::game::GameState>::finalize_cast
+  3,219,406 ( 0.12%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/ptr/non_null.rs:<core::iter::adapters::map::Map<I,F> as core::iter::traits::iterator::Iterator>::fold
+  3,172,416 ( 0.11%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/ptr/mut_ptr.rs:crabomination::game::GameState::gather_continuous_effects_inner
+  3,167,532 ( 0.11%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/intrinsics/mod.rs:<alloc::vec::Vec<T,A> as core::clone::Clone>::clone
+  3,147,540 ( 0.11%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/alloc/src/raw_vec/mod.rs:crabomination::game::layers::compute_permanent_pass
+  3,099,844 ( 0.11%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/ptr/non_null.rs:crabomination::game::GameState::trigger_grant_sources
+  3,083,890 ( 0.11%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/ptr/non_null.rs:crabomination::game::stack::<impl crabomination::game::GameState>::fire_step_triggers
+  3,027,030 ( 0.11%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/ptr/mod.rs:<alloc::vec::into_iter::IntoIter<T,A> as core::ops::drop::Drop>::drop
+  3,004,080 ( 0.11%)  crabomination/src/game/mod.rs:<crabomination::cow::CowBox<T> as core::ops::deref::DerefMut>::deref_mut
+  3,000,636 ( 0.11%)  crabomination/src/server/bot.rs:crabomination::server::bot::cast_candidates [/home/user/Crabomination/target/profiling-fast/bot_ladder]
+  2,985,144 ( 0.11%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/iter/adapters/chain.rs:<alloc::vec::Vec<T> as alloc::vec::spec_from_iter_nested::SpecFromIterNested<T,I>>::from_iter
+  2,974,860 ( 0.11%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/slice/iter/macros.rs:crabomination::game::actions::<impl crabomination::game::GameState>::flagbearer_violation
+  2,899,942 ( 0.10%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/slice/iter/macros.rs:crabomination::game::stack::<impl crabomination::game::GameState>::fire_step_triggers
+  2,890,774 ( 0.10%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/ptr/non_null.rs:crabomination::game::actions::<impl crabomination::game::GameState>::finalize_cast
+  2,851,824 ( 0.10%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/iter/adapters/chain.rs:crabomination::game::layers::compute_permanent_pass
+  2,834,994 ( 0.10%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/alloc/src/vec/mod.rs:crabomination::game::actions::<impl crabomination::game::GameState>::granted_abilities_of
+  2,834,634 ( 0.10%)  crabomination/src/game/stack.rs:crabomination::game::stack::<impl crabomination::game::GameState>::fire_step_triggers [/home/user/Crabomination/target/profiling-fast/bot_ladder]
+  2,821,924 ( 0.10%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/alloc/src/alloc.rs:alloc::sync::Arc<T,A>::drop_slow
+  2,817,772 ( 0.10%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/option.rs:<alloc::vec::Vec<T> as alloc::vec::spec_from_iter_nested::SpecFromIterNested<T,I>>::from_iter'2
+  2,816,870 ( 0.10%)  crabomination/src/game/mod.rs:<crabomination::game::GameState::with_frozen_layers::Unfreeze as core::ops::drop::Drop>::drop [/home/user/Crabomination/target/profiling-fast/bot_ladder]
+  2,806,583 ( 0.10%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/ptr/mod.rs:<alloc::vec::Vec<T> as alloc::vec::spec_from_iter_nested::SpecFromIterNested<T,I>>::from_iter
+  2,789,432 ( 0.10%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/ptr/non_null.rs:core::ops::function::impls::<impl core::ops::function::FnMut<A> for &mut F>::call_mut
+  2,775,826 ( 0.10%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/slice/iter/macros.rs:crabomination::game::stack::<impl crabomination::game::GameState>::resolve_top_of_stack_inner
+  2,770,146 ( 0.10%)  crabomination/src/game/actions.rs:core::ops::function::impls::<impl core::ops::function::FnMut<A> for &mut F>::call_mut
+  2,762,520 ( 0.10%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/ptr/non_null.rs:crabomination::game::stack::<impl crabomination::game::GameState>::sba_board_scan
+  2,739,470 ( 0.10%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/alloc/src/raw_vec/mod.rs:crabomination::game::GameState::gather_continuous_effects_inner
+  2,735,280 ( 0.10%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/ptr/non_null.rs:crabomination::game::layers::compute_permanent
+  2,734,766 ( 0.10%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/ptr/mod.rs:core::ptr::drop_in_place<crabomination::game::GameState> [/home/user/Crabomination/target/profiling-fast/bot_ladder]
+  2,734,034 ( 0.10%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/ptr/mod.rs:core::ptr::drop_in_place<crabomination::game::layers::Printed<alloc::vec::Vec<crabomination_base::card::Keyword>>> [/home/user/Crabomination/target/profiling-fast/bot_ladder]
+  2,732,408 ( 0.10%)  crabomination/src/game/types.rs:crabomination::game::GameState::perform_action_inner
+  2,712,196 ( 0.10%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/slice/iter/macros.rs:crabomination::server::bot::pick_blocks_inner
+  2,707,171 ( 0.10%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/iter/adapters/flatten.rs:<alloc::vec::Vec<T> as alloc::vec::spec_from_iter_nested::SpecFromIterNested<T,I>>::from_iter
+  2,701,394 ( 0.10%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/ptr/non_null.rs:crabomination::game::combat::<impl crabomination::game::GameState>::declare_attackers_banded
+  2,699,032 ( 0.10%)  crabomination_base/src/effect.rs:<crabomination_base::effect::Effect as core::clone::Clone>::clone [/home/user/Crabomination/target/profiling-fast/bot_ladder]
+  2,697,662 ( 0.10%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/ptr/non_null.rs:crabomination::game::effects::movement::<impl crabomination::game::GameState>::apply_prevention_shields
+  2,688,608 ( 0.10%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/alloc/layout.rs:alloc::sync::arcinner_layout_for_value_layout
+  2,672,208 ( 0.10%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/alloc/src/boxed.rs:crabomination::game::effects::<impl crabomination::game::GameState>::run_effect
+  2,668,624 ( 0.10%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/option.rs:crabomination::game::stack::<impl crabomination::game::GameState>::sba_board_scan
+  2,656,748 ( 0.10%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/ptr/non_null.rs:<core::slice::iter::Iter<T> as core::iter::traits::iterator::Iterator>::find_map
+  2,649,116 ( 0.10%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/alloc/src/sync.rs:<crabomination::cow::CowBox<T> as core::ops::deref::DerefMut>::deref_mut
+  2,648,422 ( 0.10%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/alloc/src/vec/mod.rs:crabomination::game::GameState::dispatch_board_scan
+  2,630,342 ( 0.09%)  crabomination_base/src/effect/abilities.rs:crabomination_base::effect::abilities::ActivatedAbility::is_free [/home/user/Crabomination/target/profiling-fast/bot_ladder]
+  2,626,874 ( 0.09%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/ptr/mut_ptr.rs:crabomination::game::GameState::dispatch_triggers_for_events
+  2,577,782 ( 0.09%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/alloc/src/raw_vec/mod.rs:core::ptr::drop_in_place<crabomination::game::GameState>
+  2,568,466 ( 0.09%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/ptr/non_null.rs:crabomination::game::actions::<impl crabomination::game::GameState>::granted_abilities_of
+  2,538,330 ( 0.09%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/ptr/non_null.rs:crabomination::game::actions::<impl crabomination::game::GameState>::cast_spell_with_convoke
+  2,533,970 ( 0.09%)  crabomination/src/game/combat.rs:crabomination::game::combat::<impl crabomination::game::GameState>::declare_attackers_banded [/home/user/Crabomination/target/profiling-fast/bot_ladder]
+  2,528,458 ( 0.09%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/ptr/non_null.rs:crabomination::game::combat::<impl crabomination::game::GameState>::resolve_combat
+  2,514,720 ( 0.09%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/ptr/mut_ptr.rs:crabomination::game::actions::<impl crabomination::game::GameState>::grant_scan
+  2,505,604 ( 0.09%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/ptr/const_ptr.rs:<alloc::vec::into_iter::IntoIter<T,A> as core::ops::drop::Drop>::drop
+  2,505,242 ( 0.09%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/slice/iter/macros.rs:crabomination::game::effects::eval::<impl crabomination::game::GameState>::evaluate_requirement_static::{{closure}}
+  2,484,952 ( 0.09%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/slice/iter/macros.rs:<core::slice::iter::Iter<T> as core::iter::traits::iterator::Iterator>::any [/home/user/Crabomination/target/profiling-fast/bot_ladder]
+  2,454,062 ( 0.09%)  crabomination_base/src/card.rs:crabomination_base::card::CardInstance::has_keyword [/home/user/Crabomination/target/profiling-fast/bot_ladder]
+  2,438,746 ( 0.09%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/alloc/src/vec/mod.rs:<alloc::vec::Vec<T,A> as core::ops::drop::Drop>::drop [/home/user/Crabomination/target/profiling-fast/bot_ladder]
+  2,432,998 ( 0.09%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/ptr/mut_ptr.rs:<alloc::vec::Vec<T> as alloc::vec::spec_from_iter_nested::SpecFromIterNested<T,I>>::from_iter
+  2,387,608 ( 0.09%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/option.rs:<crabomination::game::GameState as core::clone::Clone>::clone
+  2,368,524 ( 0.09%)  crabomination/src/game/effects/mod.rs:crabomination::game::effects::<impl crabomination::game::GameState>::run_effect [/home/user/Crabomination/target/profiling-fast/bot_ladder]
+  2,363,142 ( 0.09%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/slice/iter/macros.rs:crabomination::game::actions::<impl crabomination::game::GameState>::granted_abilities_of
+  2,352,602 ( 0.08%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/option.rs:crabomination::game::actions::cost_reduction_for_spell_full
+  2,324,452 ( 0.08%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/slice/iter/macros.rs:crabomination::game::GameState::combat_damage_prevented_from
+  2,319,198 ( 0.08%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/ptr/non_null.rs:crabomination::game::layers::compute_permanent_pass
+  2,314,892 ( 0.08%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/ptr/non_null.rs:alloc::sync::Arc<T,A>::make_mut
+  2,299,794 ( 0.08%)  crabomination/src/player.rs:alloc::sync::Arc<T,A>::clone_from_ref_in
+  2,281,157 ( 0.08%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/alloc/src/alloc.rs:alloc::raw_vec::RawVecInner<A>::finish_grow
+  2,274,300 ( 0.08%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/ptr/mod.rs:core::ptr::drop_in_place<crabomination::game::layers::AffectedPermanents> [/home/user/Crabomination/target/profiling-fast/bot_ladder]
+  2,245,180 ( 0.08%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/ptr/mod.rs:core::ptr::drop_in_place<crabomination_base::effect::abilities::ActivatedAbility> [/home/user/Crabomination/target/profiling-fast/bot_ladder]
+  2,241,434 ( 0.08%)  crabomination_base/src/card.rs:crabomination::game::GameState::find_card_anywhere
+  2,226,268 ( 0.08%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/ptr/non_null.rs:crabomination::game::combat::<impl crabomination::game::GameState>::declare_blockers
+  2,219,812 ( 0.08%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/option.rs:core::option::Option<T>::or_else [/home/user/Crabomination/target/profiling-fast/bot_ladder]
+  2,217,632 ( 0.08%)  crabomination_base/src/card.rs:crabomination_base::card::CardDefinition::is_creature
+  2,189,324 ( 0.08%)  crabomination_base/src/card.rs:<crabomination_base::card::Keyword as core::clone::Clone>::clone [/home/user/Crabomination/target/profiling-fast/bot_ladder]
+  2,149,762 ( 0.08%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/iter/traits/iterator.rs:<alloc::vec::Vec<T> as alloc::vec::spec_from_iter_nested::SpecFromIterNested<T,I>>::from_iter
+  2,065,088 ( 0.07%)  crabomination/src/game/stack.rs:core::ops::function::impls::<impl core::ops::function::FnMut<A> for &mut F>::call_mut
+  2,063,626 ( 0.07%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/alloc/src/vec/mod.rs:crabomination::game::actions::<impl crabomination::game::GameState>::finalize_cast
+  2,062,860 ( 0.07%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/ptr/non_null.rs:crabomination::server::bot::pick_blocks_inner
+  2,054,140 ( 0.07%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/slice/iter/macros.rs:crabomination::game::GameState::combat_damage_prevented_to_self
+  2,045,808 ( 0.07%)  ./malloc/./malloc/arena.c:realloc
+  2,005,108 ( 0.07%)  crabomination/src/game/mod.rs:<alloc::vec::Vec<T> as alloc::vec::spec_from_iter_nested::SpecFromIterNested<T,I>>::from_iter
+  2,001,022 ( 0.07%)  crabomination_base/src/card.rs:crabomination_base::card::CardInstance::clear_end_of_turn_effects [/home/user/Crabomination/target/profiling-fast/bot_ladder]
+  1,989,676 ( 0.07%)  crabomination/src/game/combat.rs:crabomination::game::combat::<impl crabomination::game::GameState>::fire_combat_damage_triggers [/home/user/Crabomination/target/profiling-fast/bot_ladder]
+  1,974,146 ( 0.07%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/alloc/src/vec/mod.rs:<alloc::vec::Vec<T> as alloc::vec::spec_from_iter_nested::SpecFromIterNested<T,I>>::from_iter'2
+  1,969,596 ( 0.07%)  crabomination/src/server/bot.rs:crabomination::server::bot::eval_material_inner [/home/user/Crabomination/target/profiling-fast/bot_ladder]
+  1,958,108 ( 0.07%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/ptr/non_null.rs:crabomination::game::stack::<impl crabomination::game::GameState>::resolve_top_of_stack_inner
+  1,947,567 ( 0.07%)  ???:__rustc::__rust_no_alloc_shim_is_unstable_v2 [/home/user/Crabomination/target/profiling-fast/bot_ladder]
+  1,947,566 ( 0.07%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/std/src/sys/alloc/unix.rs:__rustc::__rdl_dealloc [/home/user/Crabomination/target/profiling-fast/bot_ladder]
+  1,947,566 ( 0.07%)  ???:__rustc::__rust_dealloc [/home/user/Crabomination/target/profiling-fast/bot_ladder]
+  1,925,968 ( 0.07%)  crabomination/src/server/bot.rs:crabomination::server::bot::accumulate_mana_colors [/home/user/Crabomination/target/profiling-fast/bot_ladder]
+  1,915,380 ( 0.07%)  crabomination/src/game/effects/events.rs:crabomination::game::effects::events::event_matches_spec [/home/user/Crabomination/target/profiling-fast/bot_ladder]
+  1,899,342 ( 0.07%)  crabomination/src/game/stack.rs:crabomination::game::stack::<impl crabomination::game::GameState>::pass_priority [/home/user/Crabomination/target/profiling-fast/bot_ladder]
+  1,895,235 ( 0.07%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/std/src/alloc.rs:__rustc::__rdl_alloc [/home/user/Crabomination/target/profiling-fast/bot_ladder]
+  1,895,235 ( 0.07%)  ???:__rustc::__rust_alloc [/home/user/Crabomination/target/profiling-fast/bot_ladder]
+  1,883,430 ( 0.07%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/alloc/src/vec/mod.rs:crabomination_base::card::CardDefinition::is_land
+  1,880,548 ( 0.07%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/ptr/non_null.rs:crabomination::game::actions::extra_cost_for_spell
+  1,876,676 ( 0.07%)  crabomination/src/server/bot.rs:<alloc::vec::Vec<T> as alloc::vec::spec_from_iter_nested::SpecFromIterNested<T,I>>::from_iter
+  1,871,182 ( 0.07%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/ptr/const_ptr.rs:<alloc::vec::Vec<T> as alloc::vec::spec_from_iter_nested::SpecFromIterNested<T,I>>::from_iter
+  1,862,452 ( 0.07%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/slice/iter/macros.rs:crabomination::game::GameState::board_keyword_in_scope
+  1,859,452 ( 0.07%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/ptr/mod.rs:crabomination::game::layers::compute_permanent_pass
+  1,854,680 ( 0.07%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/ptr/non_null.rs:crabomination::game::actions::<impl crabomination::game::GameState>::flagbearer_violation
+  1,835,066 ( 0.07%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/alloc/src/vec/mod.rs:crabomination::game::GameState::computed_permanent
+  1,819,498 ( 0.07%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/ptr/mod.rs:core::ptr::drop_in_place<core::result::Result<alloc::vec::Vec<crabomination::game::types::GameEvent>,crabomination::game::types::GameError>> [/home/user/Crabomination/target/profiling-fast/bot_ladder]
+  1,815,594 ( 0.07%)  crabomination/src/server/bot.rs:crabomination::server::bot::main_phase_action_with [/home/user/Crabomination/target/profiling-fast/bot_ladder]
+  1,801,138 ( 0.06%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/iter/adapters/take.rs:alloc::sync::Arc<T,A>::clone_from_ref_in
+  1,785,696 ( 0.06%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/slice/index.rs:crabomination::game::GameState::same_team
+  1,777,280 ( 0.06%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/alloc/src/vec/mod.rs:crabomination::game::stack::<impl crabomination::game::GameState>::check_state_based_actions
+  1,770,736 ( 0.06%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/slice/iter/macros.rs:crabomination::game::stack::<impl crabomination::game::GameState>::do_untap
+  1,746,012 ( 0.06%)  crabomination/src/game/actions.rs:crabomination::game::actions::<impl crabomination::game::GameState>::damping_engine_locks [/home/user/Crabomination/target/profiling-fast/bot_ladder]
+  1,742,604 ( 0.06%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/option.rs:crabomination::game::actions::<impl crabomination::game::GameState>::activate_ability_inner
+  1,742,002 ( 0.06%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/slice/iter/macros.rs:crabomination::game::actions::<impl crabomination::game::GameState>::flash_granted_for
+  1,729,350 ( 0.06%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/iter/adapters/flatten.rs:<core::iter::adapters::flatten::FlatMap<I,U,F> as core::iter::traits::iterator::Iterator>::next [/home/user/Crabomination/target/profiling-fast/bot_ladder]
+  1,723,858 ( 0.06%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/alloc/src/boxed.rs:crabomination::game::GameState::computed_permanent
+  1,721,962 ( 0.06%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/slice/iter/macros.rs:crabomination::game::GameState::permanents_with_abilities_removed
+  1,715,278 ( 0.06%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/slice/iter/macros.rs:crabomination::game::actions::<impl crabomination::game::GameState>::damping_engine_locks
+  1,712,404 ( 0.06%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/ptr/non_null.rs:crabomination::game::effects::eval::<impl crabomination::game::GameState>::evaluate_requirement_static::{{closure}}
+  1,711,390 ( 0.06%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/std/src/sys/sync/mutex/futex.rs:crabomination::game::GameState::computed_permanent
+  1,701,458 ( 0.06%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/alloc/src/vec/mod.rs:crabomination::game::actions::<impl crabomination::game::GameState>::activate_ability_inner
+  1,690,680 ( 0.06%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/ptr/non_null.rs:crabomination_base::card::CardDefinition::printed_color_set
+  1,690,384 ( 0.06%)  crabomination/src/game/stack.rs:crabomination::game::stack::<impl crabomination::game::GameState>::advance_step [/home/user/Crabomination/target/profiling-fast/bot_ladder]
+  1,686,352 ( 0.06%)  /rust/deps/hashbrown-0.16.1/src/raw/mod.rs:hashbrown::raw::RawTable<T,A>::reserve_rehash [/home/user/Crabomination/target/profiling-fast/bot_ladder]
+  1,667,136 ( 0.06%)  crabomination_base/src/effect.rs:<crabomination_base::effect::ManaPayload as core::clone::Clone>::clone [/home/user/Crabomination/target/profiling-fast/bot_ladder]
+  1,663,564 ( 0.06%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/iter/adapters/map.rs:crabomination::game::layers::compute_permanent_pass
+  1,660,008 ( 0.06%)  crabomination/src/game/effects/mod.rs:crabomination::game::effects::<impl crabomination::game::GameState>::resolve_effect [/home/user/Crabomination/target/profiling-fast/bot_ladder]
+  1,649,368 ( 0.06%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/alloc/src/slice.rs:<crabomination::game::GameState as core::clone::Clone>::clone
+  1,627,984 ( 0.06%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/slice/iter/macros.rs:crabomination::game::can_block_attacker_computed
+  1,627,096 ( 0.06%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/alloc/src/raw_vec/mod.rs:crabomination::game::actions::<impl crabomination::game::GameState>::granted_abilities_of
+  1,623,566 ( 0.06%)  crabomination/src/game/mod.rs:crabomination::game::GameState::push_ordered_trigger_candidates [/home/user/Crabomination/target/profiling-fast/bot_ladder]
+  1,619,538 ( 0.06%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/ptr/mod.rs:core::ptr::drop_in_place<crabomination_base::effect::Effect> [/home/user/Crabomination/target/profiling-fast/bot_ladder]
+  1,612,542 ( 0.06%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/slice/iter/macros.rs:crabomination_base::card::CardDefinition::spell_kind
+  1,607,588 ( 0.06%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/iter/adapters/filter.rs:<alloc::vec::Vec<T> as alloc::vec::spec_from_iter_nested::SpecFromIterNested<T,I>>::from_iter
+  1,605,608 ( 0.06%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/alloc/src/sync.rs:alloc::sync::Arc<T,A>::drop_slow'2 [/home/user/Crabomination/target/profiling-fast/bot_ladder]
+  1,595,000 ( 0.06%)  crabomination/src/server/bot.rs:crabomination::server::bot::sim_step [/home/user/Crabomination/target/profiling-fast/bot_ladder]
+  1,588,366 ( 0.06%)  crabomination/src/game/stack.rs:crabomination::game::stack::<impl crabomination::game::GameState>::do_untap [/home/user/Crabomination/target/profiling-fast/bot_ladder]
+  1,584,630 ( 0.06%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/alloc/src/raw_vec/mod.rs:alloc::sync::Arc<T,A>::drop_slow
+  1,579,564 ( 0.06%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/intrinsics/mod.rs:alloc::raw_vec::RawVecInner<A>::finish_grow
+  1,569,960 ( 0.06%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/slice/iter/macros.rs:crabomination::game::stack::<impl crabomination::game::GameState>::planar_controller
+  1,569,616 ( 0.06%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/slice/iter/macros.rs:crabomination_base::mana::ManaCost::cmc
+  1,552,262 ( 0.06%)  crabomination_base/src/card.rs:core::ops::function::impls::<impl core::ops::function::FnMut<A> for &mut F>::call_mut
+  1,546,268 ( 0.06%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/alloc/src/vec/mod.rs:crabomination::game::stack::<impl crabomination::game::GameState>::sba_board_scan
+  1,545,746 ( 0.06%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/option.rs:crabomination::game::actions::<impl crabomination::game::GameState>::finalize_cast
+  1,545,692 ( 0.06%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/intrinsics/mod.rs:<crabomination::game::GameState as core::clone::Clone>::clone
+  1,542,625 ( 0.06%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/alloc/src/raw_vec/mod.rs:alloc::raw_vec::RawVecInner<A>::reserve::do_reserve_and_handle [/home/user/Crabomination/target/profiling-fast/bot_ladder]
+  1,539,840 ( 0.06%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/slice/iter/macros.rs:crabomination::game::actions::extra_cost_for_spell
+  1,536,854 ( 0.06%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/option.rs:crabomination::game::GameState::dispatch_triggers_for_events
+  1,532,640 ( 0.06%)  crabomination_base/src/mana.rs:crabomination_base::mana::ManaPool::is_empty [/home/user/Crabomination/target/profiling-fast/bot_ladder]
+  1,519,612 ( 0.05%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/option.rs:crabomination::game::GameState::perform_action_inner
+  1,509,496 ( 0.05%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/ptr/non_null.rs:crabomination::game::actions::cost_reduction_for_spell_full
+  1,506,422 ( 0.05%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/ptr/mod.rs:core::ptr::drop_in_place<crabomination::game::ColdState> [/home/user/Crabomination/target/profiling-fast/bot_ladder]
+  1,494,512 ( 0.05%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/alloc/src/alloc.rs:alloc::sync::Arc<T,A>::drop_slow'2
+  1,492,356 ( 0.05%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/alloc/src/vec/mod.rs:crabomination::game::actions::<impl crabomination::game::GameState>::effective_mana_abilities_of
+  1,482,844 ( 0.05%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/ptr/mod.rs:core::ptr::drop_in_place<crabomination::game::types::GameEvent> [/home/user/Crabomination/target/profiling-fast/bot_ladder]
+  1,481,082 ( 0.05%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/ptr/non_null.rs:crabomination::game::GameState::board_keyword_in_scope
+  1,480,590 ( 0.05%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/slice/iter/macros.rs:crabomination::game::GameState::spend_mana_as_any_color_for_spell
+  1,477,058 ( 0.05%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/slice/iter/macros.rs:crabomination::game::actions::<impl crabomination::game::GameState>::can_player_play_land
+  1,465,296 ( 0.05%)  crabomination/src/game/mod.rs:crabomination::game::GameState::continue_trigger_ordering [/home/user/Crabomination/target/profiling-fast/bot_ladder]
+  1,459,612 ( 0.05%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/slice/iter/macros.rs:crabomination::game::layers::affected_includes_gated
+  1,455,182 ( 0.05%)  crabomination/src/game/effects/targeting.rs:crabomination::game::effects::targeting::<impl crabomination::game::GameState>::auto_targets_for_effect_all_slots_kicked [/home/user/Crabomination/target/profiling-fast/bot_ladder]
+  1,454,642 ( 0.05%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/alloc/src/alloc.rs:alloc::sync::Arc<T,A>::clone_from_ref_in
+  1,444,886 ( 0.05%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/std/src/collections/hash/map.rs:<crabomination::game::GameState as core::clone::Clone>::clone
+  1,436,112 ( 0.05%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/ptr/non_null.rs:crabomination_base::card::CardDefinition::is_land
+  1,436,112 ( 0.05%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/slice/iter/macros.rs:crabomination_base::card::CardDefinition::is_land
+  1,429,492 ( 0.05%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/ptr/mod.rs:core::ptr::drop_in_place<crabomination_base::card::Keyword> [/home/user/Crabomination/target/profiling-fast/bot_ladder]
+  1,425,072 ( 0.05%)  crabomination/src/game/mod.rs:crabomination::game::GameState::permanents_with_abilities_removed [/home/user/Crabomination/target/profiling-fast/bot_ladder]
+  1,421,622 ( 0.05%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/ptr/non_null.rs:crabomination::server::bot::cast_candidates
+  1,411,836 ( 0.05%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/sync/atomic.rs:crabomination::game::GameState::frozen_effects
+  1,389,626 ( 0.05%)  crabomination/src/game/actions.rs:crabomination::game::actions::colored_spell_tax_for_spell [/home/user/Crabomination/target/profiling-fast/bot_ladder]
+  1,388,682 ( 0.05%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/ptr/non_null.rs:crabomination::game::GameState::draw_one
+  1,376,636 ( 0.05%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/ptr/mod.rs:crabomination::game::actions::<impl crabomination::game::GameState>::finalize_cast
+  1,374,858 ( 0.05%)  crabomination/src/game/mod.rs:crabomination::game::GameState::spend_mana_as_any_color_for_spell [/home/user/Crabomination/target/profiling-fast/bot_ladder]
+  1,369,698 ( 0.05%)  crabomination/src/game/mod.rs:crabomination::game::GameState::perform_action [/home/user/Crabomination/target/profiling-fast/bot_ladder]
+  1,358,194 ( 0.05%)  crabomination/src/game/actions.rs:<alloc::vec::Vec<T> as alloc::vec::spec_from_iter_nested::SpecFromIterNested<T,I>>::from_iter
+  1,354,970 ( 0.05%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/ptr/non_null.rs:crabomination::game::actions::<impl crabomination::game::GameState>::mana_production_multiplier_for
+  1,352,368 ( 0.05%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/slice/iter/macros.rs:<alloc::vec::Vec<T> as alloc::vec::spec_from_iter_nested::SpecFromIterNested<T,I>>::from_iter'2
+  1,343,766 ( 0.05%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/alloc/src/vec/mod.rs:<crabomination::game::GameState as core::clone::Clone>::clone
+  1,339,332 ( 0.05%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/std/src/panicking.rs:crabomination::game::GameState::frozen_effects
+  1,338,096 ( 0.05%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/alloc/src/raw_vec/mod.rs:crabomination::game::stack::<impl crabomination::game::GameState>::check_state_based_actions
+  1,328,012 ( 0.05%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/slice/iter/macros.rs:crabomination::game::actions::<impl crabomination::game::GameState>::effective_mana_abilities_of
+  1,327,071 ( 0.05%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/num/uint_macros.rs:<alloc::vec::Vec<T> as alloc::vec::spec_from_iter_nested::SpecFromIterNested<T,I>>::from_iter
+  1,318,380 ( 0.05%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/mem/mod.rs:crabomination::game::GameState::dispatch_triggers_for_events
+  1,311,756 ( 0.05%)  crabomination/src/game/actions.rs:crabomination::game::actions::cost_reduction_for_spell_full [/home/user/Crabomination/target/profiling-fast/bot_ladder]
+  1,305,370 ( 0.05%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/slice/iter/macros.rs:crabomination::game::GameState::trigger_grant_sources
+  1,303,550 ( 0.05%)  crabomination/src/game/stack.rs:<alloc::vec::Vec<T> as alloc::vec::spec_from_iter_nested::SpecFromIterNested<T,I>>::from_iter
+  1,303,438 ( 0.05%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/ptr/mod.rs:crabomination::game::actions::<impl crabomination::game::GameState>::activate_ability_inner
+  1,297,542 ( 0.05%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/sync/atomic.rs:alloc::sync::Arc<T,A>::drop_slow
+  1,296,212 ( 0.05%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/option.rs:crabomination::game::effects::eval::<impl crabomination::game::GameState>::evaluate_requirement_static
+  1,290,016 ( 0.05%)  crabomination_base/src/card.rs:<core::iter::adapters::map::Map<I,F> as core::iter::traits::iterator::Iterator>::fold
+  1,288,794 ( 0.05%)  crabomination_base/src/card.rs:crabomination::game::actions::<impl crabomination::game::GameState>::activate_ability_inner
+  1,288,022 ( 0.05%)  crabomination/src/game/combat.rs:crabomination::game::combat::<impl crabomination::game::GameState>::resolve_combat [/home/user/Crabomination/target/profiling-fast/bot_ladder]
+  1,286,242 ( 0.05%)  crabomination_base/src/mana.rs:crabomination_base::mana::ManaPool::pay [/home/user/Crabomination/target/profiling-fast/bot_ladder]
+  1,282,632 ( 0.05%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/hash/sip.rs:<core::hash::sip::Hasher<S> as core::hash::Hasher>::write [/home/user/Crabomination/target/profiling-fast/bot_ladder]
+  1,282,018 ( 0.05%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/ptr/non_null.rs:<core::iter::adapters::flatten::FlatMap<I,U,F> as core::iter::traits::iterator::Iterator>::next
+  1,278,780 ( 0.05%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/iter/range.rs:crabomination::game::GameState::gather_continuous_effects_inner
+  1,271,892 ( 0.05%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/ptr/non_null.rs:crabomination_base::card::CardInstance::has_keyword
+  1,268,616 ( 0.05%)  crabomination/src/game/mod.rs:crabomination::game::GameState::spend_mana_as_any_color_for_spell::{{closure}}
+  1,267,658 ( 0.05%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/slice/iter/macros.rs:crabomination::game::GameState::all_damage_to_player_prevented
+  1,264,842 ( 0.05%)  crabomination_base/src/card.rs:crabomination::game::GameState::gather_continuous_effects_inner
+  1,263,122 ( 0.05%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/std/src/sys/alloc/unix.rs:__rustc::__rdl_realloc
+  1,257,382 ( 0.05%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/slice/iter/macros.rs:crabomination::game::GameState::relax_cost_colors
+  1,255,968 ( 0.05%)  crabomination/src/game/stack.rs:crabomination::game::stack::<impl crabomination::game::GameState>::planar_controller [/home/user/Crabomination/target/profiling-fast/bot_ladder]
+  1,255,484 ( 0.05%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/slice/iter/macros.rs:crabomination::server::bot::permanent_value
+  1,255,110 ( 0.05%)  crabomination/src/game/actions.rs:crabomination::game::actions::<impl crabomination::game::GameState>::intrinsic_land_mana_abilities_with [/home/user/Crabomination/target/profiling-fast/bot_ladder]
+  1,251,396 ( 0.05%)  crabomination/src/game/actions.rs:crabomination::game::actions::<impl crabomination::game::GameState>::auto_tap_for_cost_inner [/home/user/Crabomination/target/profiling-fast/bot_ladder]
+  1,247,328 ( 0.04%)  crabomination/src/game/mod.rs:crabomination::game::GameState::scale_damage_to [/home/user/Crabomination/target/profiling-fast/bot_ladder]
+  1,245,600 ( 0.04%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/ptr/mod.rs:core::ptr::drop_in_place<crabomination::game::layers::ComputedPermanent> [/home/user/Crabomination/target/profiling-fast/bot_ladder]
+  1,236,240 ( 0.04%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/std/src/panicking.rs:<crabomination::game::GameState::with_frozen_layers::Unfreeze as core::ops::drop::Drop>::drop
+  1,234,724 ( 0.04%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/slice/iter/macros.rs:crabomination::game::GameState::draw_one
+  1,229,276 ( 0.04%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/slice/iter/macros.rs:crabomination::game::actions::cost_reduction_for_spell_full
+  1,222,494 ( 0.04%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/iter/adapters/enumerate.rs:<alloc::vec::Vec<T> as alloc::vec::spec_from_iter_nested::SpecFromIterNested<T,I>>::from_iter
+  1,218,736 ( 0.04%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/sync/atomic.rs:<crabomination::cow::CowBox<T> as core::ops::deref::DerefMut>::deref_mut
+  1,218,082 ( 0.04%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/ptr/non_null.rs:crabomination::game::actions::colored_spell_tax_for_spell
+  1,212,504 ( 0.04%)  crabomination/src/server/bot.rs:crabomination::server::bot::sim_spell_action_inner [/home/user/Crabomination/target/profiling-fast/bot_ladder]
+  1,206,646 ( 0.04%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/slice/iter/macros.rs:core::option::Option<T>::or_else
+  1,203,920 ( 0.04%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/alloc/src/raw_vec/mod.rs:<alloc::vec::Vec<T> as alloc::vec::spec_from_iter_nested::SpecFromIterNested<T,I>>::from_iter'2
+  1,196,884 ( 0.04%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/ptr/mod.rs:<crabomination::game::GameState::with_frozen_layers::Unfreeze as core::ops::drop::Drop>::drop
+  1,190,464 ( 0.04%)  crabomination/src/team.rs:crabomination::game::GameState::same_team
+  1,187,406 ( 0.04%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/ptr/non_null.rs:crabomination::game::actions::<impl crabomination::game::GameState>::flash_granted_for
+  1,186,986 ( 0.04%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/alloc/src/vec/mod.rs:alloc::vec::Vec<T,A>::push_mut [/home/user/Crabomination/target/profiling-fast/bot_ladder]
+  1,186,112 ( 0.04%)  crabomination/src/server/bot.rs:crabomination::server::bot::simulate_attack_outcome_once [/home/user/Crabomination/target/profiling-fast/bot_ladder]
+  1,182,330 ( 0.04%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/slice/iter/macros.rs:crabomination::server::bot::main_phase_action_with
+  1,180,618 ( 0.04%)  crabomination/src/server/bot.rs:crabomination::server::bot::pick_blocks_inner [/home/user/Crabomination/target/profiling-fast/bot_ladder]
+  1,172,870 ( 0.04%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/slice/iter/macros.rs:crabomination::game::actions::colored_spell_tax_for_spell
+  1,165,896 ( 0.04%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/ptr/non_null.rs:crabomination::game::layers::affected_includes_gated
+  1,160,848 ( 0.04%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/alloc/src/vec/mod.rs:crabomination::game::GameState::perform_action_inner
+  1,158,190 ( 0.04%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/slice/iter/macros.rs:crabomination::game::effects::<impl crabomination::game::GameState>::run_effect
+  1,155,988 ( 0.04%)  crabomination/src/server/bot.rs:crabomination::server::bot::HeuristicBot::next_action_inner [/home/user/Crabomination/target/profiling-fast/bot_ladder]
+  1,155,688 ( 0.04%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/sync/atomic.rs:<crabomination::game::GameState::with_frozen_layers::Unfreeze as core::ops::drop::Drop>::drop
+  1,145,622 ( 0.04%)  crabomination/src/game/layers.rs:<alloc::vec::Vec<T> as alloc::vec::spec_from_iter_nested::SpecFromIterNested<T,I>>::from_iter
+  1,138,702 ( 0.04%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/ptr/non_null.rs:crabomination::game::stack::<impl crabomination::game::GameState>::do_untap
+  1,135,802 ( 0.04%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/slice/iter/macros.rs:<core::iter::adapters::flatten::FlatMap<I,U,F> as core::iter::traits::iterator::Iterator>::next
+  1,131,656 ( 0.04%)  crabomination/src/game/mod.rs:<core::slice::iter::Iter<T> as core::iter::traits::iterator::Iterator>::any
+  1,127,902 ( 0.04%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/ptr/non_null.rs:crabomination::server::bot::main_phase_action_with
+  1,127,034 ( 0.04%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/ptr/non_null.rs:crabomination::game::GameState::perform_action_inner
+  1,124,660 ( 0.04%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/iter/adapters/chain.rs:crabomination::game::actions::<impl crabomination::game::GameState>::finalize_cast
+  1,124,016 ( 0.04%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/option.rs:crabomination::game::actions::<impl crabomination::game::GameState>::cast_spell_with_convoke
+  1,123,118 ( 0.04%)  crabomination_base/src/mana.rs:crabomination_base::card::CardDefinition::printed_color_set
+  1,122,814 ( 0.04%)  crabomination_base/src/card.rs:crabomination_base::card::CardInstance::toughness [/home/user/Crabomination/target/profiling-fast/bot_ladder]
+  1,116,760 ( 0.04%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/ptr/mod.rs:core::ptr::drop_in_place<crabomination_base::effect::ManaPayload> [/home/user/Crabomination/target/profiling-fast/bot_ladder]
+  1,108,816 ( 0.04%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/alloc/src/raw_vec/mod.rs:crabomination_base::card::CardDefinition::is_creature [/home/user/Crabomination/target/profiling-fast/bot_ladder]
+  1,104,296 ( 0.04%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/alloc/src/vec/mod.rs:alloc::sync::Arc<T,A>::drop_slow'2
+  1,099,944 ( 0.04%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/ptr/non_null.rs:crabomination::server::bot::permanent_value
+  1,097,412 ( 0.04%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/std/src/collections/hash/map.rs:<crabomination::cow::CowBox<T> as core::ops::deref::DerefMut>::deref_mut
+  1,084,904 ( 0.04%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/slice/iter/macros.rs:crabomination::game::layers::compute_permanent_pass
+  1,078,096 ( 0.04%)  /rust/deps/hashbrown-0.16.1/src/raw/mod.rs:hashbrown::map::HashMap<K,V,S,A>::insert
+  1,074,958 ( 0.04%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/slice/iter/macros.rs:crabomination::game::GameState::graveyard_exile_redirects
+  1,074,260 ( 0.04%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/ptr/mod.rs:core::ptr::drop_in_place<crabomination::game::layers::Modification> [/home/user/Crabomination/target/profiling-fast/bot_ladder]
+  1,068,704 ( 0.04%)  crabomination/src/game/mod.rs:crabomination::game::GameState::drain_trigger_queue [/home/user/Crabomination/target/profiling-fast/bot_ladder]
+  1,061,480 ( 0.04%)  crabomination/src/game/stack.rs:crabomination::game::stack::<impl crabomination::game::GameState>::resolve_top_of_stack_inner [/home/user/Crabomination/target/profiling-fast/bot_ladder]
+  1,059,708 ( 0.04%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/ptr/non_null.rs:<core::slice::iter::Iter<T> as core::iter::traits::iterator::Iterator>::any
+  1,059,310 ( 0.04%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/ptr/non_null.rs:crabomination::game::actions::<impl crabomination::game::GameState>::can_player_play_land
+  1,055,754 ( 0.04%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/alloc/src/raw_vec/mod.rs:crabomination::game::actions::<impl crabomination::game::GameState>::activate_ability_inner
+  1,055,340 ( 0.04%)  crabomination/src/game/layers.rs:<alloc::vec::Vec<T> as alloc::vec::spec_from_iter_nested::SpecFromIterNested<T,I>>::from_iter'2
+  1,045,770 ( 0.04%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/slice/cmp.rs:crabomination_base::card::CardDefinition::printed_color_set
+  1,039,372 ( 0.04%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/alloc/src/raw_vec/mod.rs:crabomination::game::GameState::computed_permanent
+  1,020,590 ( 0.04%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/slice/iter/macros.rs:crabomination_base::card::CardDefinition::base_power
+  1,020,590 ( 0.04%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/slice/iter/macros.rs:crabomination_base::card::CardDefinition::base_toughness
+  1,018,372 ( 0.04%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/slice/iter/macros.rs:crabomination::game::stack::<impl crabomination::game::GameState>::remove_from_battlefield_to_graveyard_raw
+  1,016,612 ( 0.04%)  crabomination/src/game/mod.rs:crabomination::game::stack::<impl crabomination::game::GameState>::check_state_based_actions
+  1,016,576 ( 0.04%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/ptr/non_null.rs:core::option::Option<T>::or_else
+  1,011,900 ( 0.04%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/alloc/src/borrow.rs:core::ops::function::impls::<impl core::ops::function::FnMut<A> for &mut F>::call_mut
+  1,011,442 ( 0.04%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/alloc/src/vec/mod.rs:crabomination::game::actions::<impl crabomination::game::GameState>::grant_scan
+  1,006,684 ( 0.04%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/slice/iter/macros.rs:crabomination::game::GameState::perform_action_inner
+  1,006,610 ( 0.04%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/slice/iter/macros.rs:crabomination::game::stack::<impl crabomination::game::GameState>::pass_priority
+  1,004,464 ( 0.04%)  crabomination/src/server/bot.rs:crabomination::server::bot::permanent_value [/home/user/Crabomination/target/profiling-fast/bot_ladder]
+  1,002,362 ( 0.04%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/slice/iter/macros.rs:crabomination::server::bot::cast_candidates
+  1,000,575 ( 0.04%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/cmp.rs:alloc::raw_vec::RawVec<T,A>::grow_one
+  1,000,575 ( 0.04%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/result.rs:alloc::raw_vec::RawVec<T,A>::grow_one
+    997,280 ( 0.04%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/ptr/mod.rs:crabomination::game::GameState::computed_permanent
+    995,882 ( 0.04%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/ptr/non_null.rs:<alloc::vec::Vec<T> as alloc::vec::spec_from_iter_nested::SpecFromIterNested<T,I>>::from_iter'2
+    993,720 ( 0.04%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/std/src/sync/poison.rs:crabomination::game::GameState::computed_permanent
+    992,884 ( 0.04%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/alloc/src/vec/mod.rs:crabomination_base::card::CardDefinition::base_power
+    992,884 ( 0.04%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/alloc/src/vec/mod.rs:crabomination_base::card::CardDefinition::base_toughness
+    990,344 ( 0.04%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/alloc/src/vec/spec_extend.rs:<alloc::vec::Vec<T,A1> as alloc::vec::spec_extend::SpecExtend<T,alloc::vec::into_iter::IntoIter<T,A2>>>::spec_extend [/home/user/Crabomination/target/profiling-fast/bot_ladder]
+    983,075 ( 0.04%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/ptr/non_null.rs:alloc::sync::Arc<T,A>::drop_slow
+    981,998 ( 0.04%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/iter/adapters/chain.rs:crabomination::game::GameState::dispatch_triggers_for_events
+    975,388 ( 0.04%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/alloc/src/raw_vec/mod.rs:crabomination::game::actions::<impl crabomination::game::GameState>::finalize_cast
+    972,874 ( 0.04%)  crabomination/src/game/combat.rs:crabomination::game::combat::<impl crabomination::game::GameState>::declare_blockers [/home/user/Crabomination/target/profiling-fast/bot_ladder]
+    969,648 ( 0.03%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/ptr/const_ptr.rs:crabomination::game::actions::<impl crabomination::game::GameState>::finalize_cast
+    966,578 ( 0.03%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/ptr/mod.rs:core::ptr::drop_in_place<core::option::Option<alloc::boxed::Box<alloc::vec::Vec<crabomination_base::card::Keyword>>>> [/home/user/Crabomination/target/profiling-fast/bot_ladder]
+    965,602 ( 0.03%)  crabomination/src/game/actions.rs:crabomination::game::actions::<impl crabomination::game::GameState>::activate_ability [/home/user/Crabomination/target/profiling-fast/bot_ladder]
+    950,758 ( 0.03%)  /rust/deps/hashbrown-0.16.1/src/raw/mod.rs:core::ptr::drop_in_place<crabomination::game::GameState>
+    950,608 ( 0.03%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/sync/atomic.rs:crabomination::game::layers::compute_permanent_pass
+    945,812 ( 0.03%)  /rust/deps/hashbrown-0.16.1/src/map.rs:crabomination::game::GameState::dispatch_triggers_for_events
+    935,760 ( 0.03%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/slice/iter/macros.rs:crabomination::game::actions::effect_produces_color
+    932,460 ( 0.03%)  crabomination/src/server/bot.rs:core::ops::function::impls::<impl core::ops::function::FnMut<A> for &mut F>::call_mut
+    931,576 ( 0.03%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/alloc/src/alloc.rs:crabomination::game::GameState::computed_permanent
+    929,916 ( 0.03%)  crabomination/src/game/effects/eval.rs:crabomination::game::effects::eval::<impl crabomination::game::GameState>::evaluate_requirement_static'2 [/home/user/Crabomination/target/profiling-fast/bot_ladder]
+    923,294 ( 0.03%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/alloc/src/raw_vec/mod.rs:crabomination_base::card::CardInstance::has_keyword
+    923,294 ( 0.03%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/alloc/src/vec/mod.rs:crabomination_base::card::CardInstance::has_keyword
+    919,498 ( 0.03%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/alloc/src/vec/mod.rs:crabomination::game::stack::<impl crabomination::game::GameState>::fire_step_triggers
+    919,112 ( 0.03%)  crabomination_base/src/card.rs:crabomination_base::card::CardDefinition::spell_kind [/home/user/Crabomination/target/profiling-fast/bot_ladder]
+    916,006 ( 0.03%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/slice/iter/macros.rs:<core::iter::adapters::map::Map<I,F> as core::iter::traits::iterator::Iterator>::try_fold
+    914,332 ( 0.03%)  crabomination_base/src/mana.rs:crabomination_base::mana::ManaCost::colors [/home/user/Crabomination/target/profiling-fast/bot_ladder]
+    911,808 ( 0.03%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/slice/iter/macros.rs:crabomination::game::actions::etb_trigger_multiplier
+    909,048 ( 0.03%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/ptr/non_null.rs:crabomination::game::combat::<impl crabomination::game::GameState>::combat_participation_cap
+    907,484 ( 0.03%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/ptr/non_null.rs:<core::iter::adapters::map::Map<I,F> as core::iter::traits::iterator::Iterator>::try_fold
+    907,064 ( 0.03%)  crabomination_base/src/effect.rs:<crabomination_base::effect::PlayerRef as core::clone::Clone>::clone [/home/user/Crabomination/target/profiling-fast/bot_ladder]
+    904,554 ( 0.03%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/ptr/non_null.rs:crabomination::game::GameState::spend_mana_as_any_color_for_spell
+    898,646 ( 0.03%)  crabomination_base/src/card.rs:crabomination::game::GameState::dispatch_triggers_for_events
+    897,458 ( 0.03%)  /rust/deps/hashbrown-0.16.1/src/raw/mod.rs:<hashbrown::raw::RawTable<T,A> as core::ops::drop::Drop>::drop [/home/user/Crabomination/target/profiling-fast/bot_ladder]
+    895,146 ( 0.03%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/iter/adapters/flatten.rs:crabomination::game::GameState::gather_continuous_effects_inner
+    894,636 ( 0.03%)  crabomination_base/src/card.rs:crabomination_base::card::CardDefinition::is_land
+    893,580 ( 0.03%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/slice/iter/macros.rs:crabomination::game::GameState::name_locked_by_a_permanent
+    891,736 ( 0.03%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/iter/adapters/take.rs:<alloc::vec::Vec<T,A> as core::clone::Clone>::clone
+    878,910 ( 0.03%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/alloc/src/vec/mod.rs:crabomination::game::combat::<impl crabomination::game::GameState>::fire_combat_damage_triggers
+    868,884 ( 0.03%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/alloc/src/vec/mod.rs:crabomination::game::actions::cost_reduction_for_spell_full
+    868,524 ( 0.03%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/slice/iter/macros.rs:crabomination::game::GameState::adjust_life
+    864,864 ( 0.03%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/slice/cmp.rs:core::ops::function::impls::<impl core::ops::function::FnMut<A> for &mut F>::call_mut
+    864,718 ( 0.03%)  crabomination/src/server/bot.rs:crabomination::server::bot::pick_removal_ping [/home/user/Crabomination/target/profiling-fast/bot_ladder]
+    864,518 ( 0.03%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/ptr/mod.rs:crabomination_base::effect::abilities::ActivatedAbility::is_free
+    862,530 ( 0.03%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/slice/iter/macros.rs:crabomination::game::GameState::blocker_can_block_attacker
+    860,522 ( 0.03%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/slice/iter/macros.rs:crabomination::game::effects::eval::<impl crabomination::game::GameState>::evaluate_requirement_static'2
+    858,866 ( 0.03%)  crabomination/src/game/mod.rs:crabomination::game::GameState::with_frozen_layers'2 [/home/user/Crabomination/target/profiling-fast/bot_ladder]
+    858,540 ( 0.03%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/ptr/non_null.rs:crabomination::game::GameState::all_damage_to_player_prevented
+    857,887 ( 0.03%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/alloc/src/vec/into_iter.rs:<alloc::vec::Vec<T> as alloc::vec::spec_from_iter_nested::SpecFromIterNested<T,I>>::from_iter
+    856,894 ( 0.03%)  crabomination/src/game/effects/movement.rs:crabomination::game::effects::movement::<impl crabomination::game::GameState>::apply_prevention_shields [/home/user/Crabomination/target/profiling-fast/bot_ladder]
+    854,572 ( 0.03%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/slice/iter/macros.rs:crabomination::game::actions::<impl crabomination::game::GameState>::auto_tap_for_cost_inner
+    854,256 ( 0.03%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/alloc/src/alloc.rs:crabomination::game::GameState::gather_continuous_effects_inner
+    852,528 ( 0.03%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/alloc/src/vec/mod.rs:crabomination_base::card::CardDefinition::printed_color_set
+    850,694 ( 0.03%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/slice/iter/macros.rs:crabomination::server::bot::available_mana
+    850,560 ( 0.03%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/slice/cmp.rs:crabomination_base::card::CardInstance::has_keyword
+    848,066 ( 0.03%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/ptr/non_null.rs:crabomination::game::GameState::combat_damage_prevented_from
+    846,160 ( 0.03%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/slice/iter/macros.rs:crabomination::game::actions::<impl crabomination::game::GameState>::caster_grants_uncounterable_with_x
+    843,626 ( 0.03%)  crabomination/src/game/stack.rs:crabomination::game::stack::<impl crabomination::game::GameState>::finish_cleanup [/home/user/Crabomination/target/profiling-fast/bot_ladder]
+    842,858 ( 0.03%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/slice/iter/macros.rs:crabomination::game::actions::<impl crabomination::game::GameState>::mana_production_multiplier_for
+    842,184 ( 0.03%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/ptr/non_null.rs:crabomination::game::actions::effect_produces_color
+    839,200 ( 0.03%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/option.rs:crabomination::server::bot::available_mana
+    838,266 ( 0.03%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/ptr/non_null.rs:crabomination::game::effects::<impl crabomination::game::GameState>::run_effect
+    837,382 ( 0.03%)  ./malloc/./malloc/arena.c:calloc
+    835,734 ( 0.03%)  crabomination_base/src/effect/query.rs:crabomination_base::effect::query::<impl crabomination_base::effect::Effect>::target_filter_for_slot_in_mode_kicked::eff_find [/home/user/Crabomination/target/profiling-fast/bot_ladder]
+    835,600 ( 0.03%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/ptr/non_null.rs:crabomination::game::actions::<impl crabomination::game::GameState>::caster_grants_uncounterable_with_x
+    832,990 ( 0.03%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/ptr/non_null.rs:crabomination::game::stack::<impl crabomination::game::GameState>::remove_from_battlefield_to_graveyard_raw
+    831,644 ( 0.03%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/alloc/src/alloc.rs:<alloc::vec::Vec<T> as alloc::vec::spec_from_iter_nested::SpecFromIterNested<T,I>>::from_iter
+    829,716 ( 0.03%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/ptr/non_null.rs:crabomination::game::GameState::combat_damage_prevented_to_self
+    818,698 ( 0.03%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/ptr/mut_ptr.rs:crabomination::game::actions::<impl crabomination::game::GameState>::finalize_cast
+    818,312 ( 0.03%)  /rust/deps/hashbrown-0.16.1/src/raw/mod.rs:crabomination::game::GameState::dispatch_triggers_for_events
+    816,266 ( 0.03%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/alloc/src/vec/mod.rs:crabomination::game::GameState::trigger_grant_sources
+    815,650 ( 0.03%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/alloc/src/raw_vec/mod.rs:core::ops::function::impls::<impl core::ops::function::FnMut<A> for &mut F>::call_mut
+    810,928 ( 0.03%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/ops/function.rs:core::ops::function::FnOnce::call_once [/home/user/Crabomination/target/profiling-fast/bot_ladder]
+    807,258 ( 0.03%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/option.rs:<core::iter::adapters::flatten::FlatMap<I,U,F> as core::iter::traits::iterator::Iterator>::next
+    806,736 ( 0.03%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/option.rs:crabomination::game::stack::<impl crabomination::game::GameState>::check_state_based_actions
+    805,882 ( 0.03%)  crabomination/src/game/layers.rs:core::ops::function::FnOnce::call_once [/home/user/Crabomination/target/profiling-fast/bot_ladder]
+    800,968 ( 0.03%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/ptr/mod.rs:<alloc::vec::Vec<T,A> as core::ops::drop::Drop>::drop
+    799,502 ( 0.03%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/alloc/src/sync.rs:<crabomination::game::GameState::with_frozen_layers::Unfreeze as core::ops::drop::Drop>::drop
+    799,474 ( 0.03%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/ptr/non_null.rs:crabomination::server::bot::available_mana
+    798,972 ( 0.03%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/option.rs:crabomination::game::combat::<impl crabomination::game::GameState>::fire_combat_damage_triggers
+    798,106 ( 0.03%)  crabomination_base/src/card.rs:crabomination::game::effects::eval::<impl crabomination::game::GameState>::evaluate_requirement_static::{{closure}}
+    795,854 ( 0.03%)  crabomination/src/recommend.rs:crabomination::recommend::play_one_game_traced [/home/user/Crabomination/target/profiling-fast/bot_ladder]
+    795,590 ( 0.03%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/ptr/non_null.rs:crabomination::game::GameState::graveyard_exile_redirects
+    794,526 ( 0.03%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/ptr/non_null.rs:crabomination::game::GameState::blocker_can_block_attacker
+    792,848 ( 0.03%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/option.rs:<core::iter::adapters::map::Map<I,F> as core::iter::traits::iterator::Iterator>::try_fold
+    784,280 ( 0.03%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/sync/atomic.rs:alloc::sync::Arc<T,A>::clone_from_ref_in
+    779,190 ( 0.03%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/slice/iter/macros.rs:crabomination::game::actions::<impl crabomination::game::GameState>::randomize_single_target_on_stack
+    776,828 ( 0.03%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/cmp.rs:<core::iter::adapters::map::Map<I,F> as core::iter::traits::iterator::Iterator>::fold
+    771,914 ( 0.03%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/ptr/non_null.rs:crabomination::game::GameState::permanents_with_abilities_removed
+    767,268 ( 0.03%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/iter/adapters/filter.rs:crabomination::game::GameState::gather_continuous_effects_inner
+    766,320 ( 0.03%)  crabomination/src/game/mod.rs:crabomination::game::GameState::empty_mana_pools [/home/user/Crabomination/target/profiling-fast/bot_ladder]
+    764,954 ( 0.03%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/ptr/non_null.rs:alloc::sync::Arc<T,A>::clone_from_ref_in
+    764,380 ( 0.03%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/option.rs:crabomination::server::bot::simulate_attack_outcome_once
+    752,102 ( 0.03%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/alloc/src/raw_vec/mod.rs:<alloc::vec::into_iter::IntoIter<T,A> as core::ops::drop::Drop>::drop
+    748,304 ( 0.03%)  crabomination/src/game/mod.rs:crabomination::game::GameState::adjust_life [/home/user/Crabomination/target/profiling-fast/bot_ladder]
+    745,536 ( 0.03%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/slice/iter/macros.rs:crabomination::server::bot::accumulate_mana_colors
+    743,862 ( 0.03%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/alloc/src/vec/mod.rs:crabomination::game::actions::<impl crabomination::game::GameState>::cast_spell_with_convoke
+    743,182 ( 0.03%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/iter/adapters/flatten.rs:core::iter::adapters::flatten::and_then_or_clear [/home/user/Crabomination/target/profiling-fast/bot_ladder]
+    742,734 ( 0.03%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/ptr/mod.rs:crabomination::game::GameState::gather_continuous_effects_inner
+    742,292 ( 0.03%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/alloc/src/vec/mod.rs:crabomination::game::GameState::scale_damage_to
+    737,612 ( 0.03%)  crabomination_base/src/card.rs:crabomination::game::combat::<impl crabomination::game::GameState>::resolve_combat
+    734,388 ( 0.03%)  crabomination_base/src/mana.rs:alloc::sync::Arc<T,A>::clone_from_ref_in
+    732,270 ( 0.03%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/option.rs:crabomination_base::card::CardInstance::toughness
+    728,904 ( 0.03%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/num/uint_macros.rs:crabomination::game::GameState::scale_damage_to
+    726,966 ( 0.03%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/ptr/mut_ptr.rs:crabomination::server::bot::available_mana
+    721,784 ( 0.03%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/std/src/alloc.rs:__rustc::__rdl_realloc [/home/user/Crabomination/target/profiling-fast/bot_ladder]
+    720,466 ( 0.03%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/ptr/non_null.rs:crabomination::game::GameState::relax_cost_colors
+    714,094 ( 0.03%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/alloc/src/vec/mod.rs:crabomination::game::combat::<impl crabomination::game::GameState>::declare_attackers_banded
+    711,760 ( 0.03%)  crabomination/src/game/actions.rs:crabomination::game::actions::<impl crabomination::game::GameState>::cast_spell [/home/user/Crabomination/target/profiling-fast/bot_ladder]
+    711,272 ( 0.03%)  /rust/deps/hashbrown-0.16.1/src/map.rs:hashbrown::map::HashMap<K,V,S,A>::insert [/home/user/Crabomination/target/profiling-fast/bot_ladder]
+    709,128 ( 0.03%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/slice/iter/macros.rs:crabomination::game::GameState::spend_mana_as_any_color_for_spell::{{closure}}
+    708,976 ( 0.03%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/alloc/src/vec/into_iter.rs:crabomination::game::actions::<impl crabomination::game::GameState>::finalize_cast
+    706,912 ( 0.03%)  crabomination/src/game/layers.rs:core::ops::function::impls::<impl core::ops::function::FnMut<A> for &mut F>::call_mut
+    705,200 ( 0.03%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/ptr/mod.rs:core::ptr::drop_in_place<crabomination::game::types::GameAction> [/home/user/Crabomination/target/profiling-fast/bot_ladder]
+    705,146 ( 0.03%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/iter/adapters/enumerate.rs:<core::iter::adapters::map::Map<I,F> as core::iter::traits::iterator::Iterator>::fold
+    704,436 ( 0.03%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/alloc/src/sync.rs:core::ptr::drop_in_place<crabomination::game::GameState>
+    701,820 ( 0.03%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/alloc/src/vec/mod.rs:crabomination::game::actions::effect_produces_color
+    700,104 ( 0.03%)  crabomination/src/game/actions.rs:crabomination::game::actions::<impl crabomination::game::GameState>::flash_granted_for [/home/user/Crabomination/target/profiling-fast/bot_ladder]
+    700,031 ( 0.03%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/iter/adapters/fuse.rs:<alloc::vec::Vec<T> as alloc::vec::spec_from_iter_nested::SpecFromIterNested<T,I>>::from_iter
+    697,298 ( 0.03%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/alloc/src/raw_vec/mod.rs:crabomination::game::GameState::trigger_grant_sources
+    695,266 ( 0.03%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/ptr/non_null.rs:crabomination_base::card::CardDefinition::spell_kind
+    695,248 ( 0.03%)  crabomination/src/game/mod.rs:crabomination::game::GameState::continue_ability_resolution_x [/home/user/Crabomination/target/profiling-fast/bot_ladder]
+    693,278 ( 0.02%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/ptr/non_null.rs:crabomination::game::effects::eval::<impl crabomination::game::GameState>::evaluate_requirement_static'2
+    691,946 ( 0.02%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/ptr/non_null.rs:crabomination::game::actions::<impl crabomination::game::GameState>::effective_mana_abilities_of
+    691,432 ( 0.02%)  /rust/deps/hashbrown-0.16.1/src/control/tag.rs:hashbrown::map::HashMap<K,V,S,A>::insert
+    686,472 ( 0.02%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/alloc/src/boxed.rs:<alloc::boxed::Box<T,A> as core::clone::Clone>::clone [/home/user/Crabomination/target/profiling-fast/bot_ladder]
+    684,778 ( 0.02%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/slice/iter/macros.rs:core::iter::adapters::flatten::FlattenCompat<I,U>::iter_fold
+    684,066 ( 0.02%)  crabomination/src/game/mod.rs:crabomination::game::GameState::trigger_grant_sources [/home/user/Crabomination/target/profiling-fast/bot_ladder]
+    683,452 ( 0.02%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/slice/iter/macros.rs:crabomination_base::card::CardInstance::toughness
+    682,692 ( 0.02%)  crabomination_base/src/card.rs:<alloc::vec::Vec<T> as alloc::vec::spec_from_iter_nested::SpecFromIterNested<T,I>>::from_iter
+    680,316 ( 0.02%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/ptr/mod.rs:core::ptr::drop_in_place<[crabomination::game::types::TriggerCandidate]> [/home/user/Crabomination/target/profiling-fast/bot_ladder]
+    680,316 ( 0.02%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/ptr/non_null.rs:crabomination::game::stack::<impl crabomination::game::GameState>::planar_controller
+    680,316 ( 0.02%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/std/src/sys/alloc/unix.rs:__rustc::__rdl_alloc_zeroed
+    679,556 ( 0.02%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/ptr/non_null.rs:crabomination::game::actions::etb_trigger_multiplier
+    679,430 ( 0.02%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/slice/cmp.rs:crabomination::game::GameState::board_keyword_in_scope
+    667,240 ( 0.02%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/alloc/src/alloc.rs:crabomination::game::GameState::dispatch_triggers_for_events
+    664,120 ( 0.02%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/slice/iter/macros.rs:crabomination::game::stack::<impl crabomination::game::GameState>::advance_step
+    663,588 ( 0.02%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/option.rs:core::iter::adapters::flatten::FlattenCompat<I,U>::iter_fold
+    662,314 ( 0.02%)  crabomination/src/game/actions.rs:crabomination::game::actions::<impl crabomination::game::GameState>::activate_ability_inner::{{closure}} [/home/user/Crabomination/target/profiling-fast/bot_ladder]
+    659,724 ( 0.02%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/slice/iter/macros.rs:crabomination_base::mana::ManaCost::has_x
+    659,628 ( 0.02%)  crabomination/src/game/actions.rs:crabomination::game::actions::counter_drain_cost [/home/user/Crabomination/target/profiling-fast/bot_ladder]
+    657,834 ( 0.02%)  crabomination_base/src/card.rs:crabomination::game::stack::<impl crabomination::game::GameState>::resolve_top_of_stack_inner
+    656,812 ( 0.02%)  crabomination/src/game/effects/mod.rs:<core::slice::iter::Iter<T> as core::iter::traits::iterator::Iterator>::find_map
+    655,416 ( 0.02%)  crabomination/src/game/actions.rs:crabomination::game::actions::<impl crabomination::game::GameState>::try_pay_after_snapshot_mode [/home/user/Crabomination/target/profiling-fast/bot_ladder]
+    650,750 ( 0.02%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/alloc/src/alloc.rs:<alloc::vec::into_iter::IntoIter<T,A> as core::ops::drop::Drop>::drop
+    649,764 ( 0.02%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/ptr/non_null.rs:<crabomination::cow::CowBox<T> as core::ops::deref::DerefMut>::deref_mut
+    645,922 ( 0.02%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/ptr/mod.rs:core::ptr::drop_in_place<crabomination::game::LayerFreeze> [/home/user/Crabomination/target/profiling-fast/bot_ladder]
+    642,974 ( 0.02%)  crabomination_base/src/card.rs:crabomination_base::card::CardDefinition::base_power
+    642,974 ( 0.02%)  crabomination_base/src/card.rs:crabomination_base::card::CardDefinition::base_toughness
+    639,520 ( 0.02%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/iter/traits/accum.rs:crabomination::game::GameState::scale_damage_to
+    635,700 ( 0.02%)  crabomination/src/game/actions.rs:crabomination::game::actions::etb_trigger_multiplier [/home/user/Crabomination/target/profiling-fast/bot_ladder]
+    635,456 ( 0.02%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/ptr/non_null.rs:crabomination::game::GameState::adjust_life
+    634,714 ( 0.02%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/ptr/mod.rs:core::ptr::drop_in_place<crabomination_base::effect::PlayerRef> [/home/user/Crabomination/target/profiling-fast/bot_ladder]
+    632,100 ( 0.02%)  crabomination_base/src/card.rs:crabomination::server::bot::pick_blocks_inner
+    631,952 ( 0.02%)  crabomination_base/src/effect/query.rs:crabomination_base::effect::query::<impl crabomination_base::effect::Effect>::prefers_graveyard_target [/home/user/Crabomination/target/profiling-fast/bot_ladder]
+    631,212 ( 0.02%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/slice/index.rs:crabomination::game::GameState::gather_continuous_effects_inner
+    627,478 ( 0.02%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/ptr/mod.rs:<alloc::vec::Vec<T,A> as core::clone::Clone>::clone
+    622,590 ( 0.02%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/ptr/mod.rs:alloc::vec::Vec<T,A>::push_mut
+    620,448 ( 0.02%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/ptr/alignment.rs:alloc::sync::arcinner_layout_for_value_layout [/home/user/Crabomination/target/profiling-fast/bot_ladder]
+    620,164 ( 0.02%)  crabomination/src/game/actions.rs:crabomination::game::actions::<impl crabomination::game::GameState>::resolve_extra_mana_on_land_tap [/home/user/Crabomination/target/profiling-fast/bot_ladder]
+    617,628 ( 0.02%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/option.rs:crabomination::game::GameState::combat_damage_prevented_to_self
+    615,944 ( 0.02%)  crabomination/src/game/mod.rs:crabomination::game::GameState::damage_prevented_by_protection [/home/user/Crabomination/target/profiling-fast/bot_ladder]
+    615,612 ( 0.02%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/slice/iter/macros.rs:crabomination::game::GameState::find_card_anywhere_mut
+    613,082 ( 0.02%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/ptr/mut_ptr.rs:crabomination::game::GameState::dispatch_board_scan
+    613,068 ( 0.02%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/ptr/mod.rs:<alloc::vec::Vec<T,A1> as alloc::vec::spec_extend::SpecExtend<T,alloc::vec::into_iter::IntoIter<T,A2>>>::spec_extend
+    612,850 ( 0.02%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/ptr/mod.rs:crabomination::game::effects::eval::<impl crabomination::game::GameState>::evaluate_requirement_static
+    612,648 ( 0.02%)  crabomination/src/game/mod.rs:crabomination::game::GameState::blocker_can_block_attacker [/home/user/Crabomination/target/profiling-fast/bot_ladder]
+    612,080 ( 0.02%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/slice/iter/macros.rs:crabomination::game::actions::<impl crabomination::game::GameState>::graveyard_granted_abilities
+    609,126 ( 0.02%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/ptr/non_null.rs:crabomination::game::actions::<impl crabomination::game::GameState>::auto_tap_for_cost_inner
+    608,608 ( 0.02%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/alloc/src/vec/set_len_on_drop.rs:crabomination::game::actions::<impl crabomination::game::GameState>::granted_abilities_of
+    604,828 ( 0.02%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/slice/iter/macros.rs:crabomination::game::effects::movement::<impl crabomination::game::GameState>::damage_redirect_target
+    595,232 ( 0.02%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/alloc/src/raw_vec/mod.rs:crabomination::game::GameState::same_team
+    594,936 ( 0.02%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/option.rs:crabomination::game::GameState::combat_damage_prevented_from
+    589,760 ( 0.02%)  crabomination/src/server/bot.rs:crabomination::server::bot::pick_sacrifice_value [/home/user/Crabomination/target/profiling-fast/bot_ladder]
+    587,826 ( 0.02%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/slice/iter/macros.rs:crabomination::game::actions::<impl crabomination::game::GameState>::effective_max_hand_size
+    586,992 ( 0.02%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/alloc/src/vec/mod.rs:crabomination::game::stack::<impl crabomination::game::GameState>::do_untap
+    586,014 ( 0.02%)  crabomination/src/game/effects/eval.rs:crabomination::game::effects::eval::<impl crabomination::game::GameState>::evaluate_requirement_static::{{closure}} [/home/user/Crabomination/target/profiling-fast/bot_ladder]
+    583,310 ( 0.02%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/alloc/src/alloc.rs:<hashbrown::raw::RawTable<T,A> as core::clone::Clone>::clone
+    581,326 ( 0.02%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/intrinsics/mod.rs:<alloc::vec::Vec<T> as alloc::vec::spec_from_iter_nested::SpecFromIterNested<T,I>>::from_iter
+    581,302 ( 0.02%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/alloc/src/vec/mod.rs:alloc::vec::Vec<T,A>::retain [/home/user/Crabomination/target/profiling-fast/bot_ladder]
+    580,136 ( 0.02%)  crabomination_base/src/card.rs:crabomination::game::combat::<impl crabomination::game::GameState>::declare_attackers_banded
+    578,612 ( 0.02%)  crabomination_base/src/card.rs:<crabomination_base::card::CardInstance as core::ops::deref::DerefMut>::deref_mut [/home/user/Crabomination/target/profiling-fast/bot_ladder]
+    577,510 ( 0.02%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/slice/cmp.rs:crabomination::game::can_block_attacker_computed
+    577,258 ( 0.02%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/option.rs:crabomination::server::bot::cast_candidates
+    575,728 ( 0.02%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/intrinsics/mod.rs:crabomination::game::GameState::dispatch_triggers_for_events
+    575,546 ( 0.02%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/ptr/non_null.rs:crabomination::game::actions::apply_spell_cost_floor
+    573,116 ( 0.02%)  crabomination/src/game/combat.rs:<core::iter::adapters::flatten::FlatMap<I,U,F> as core::iter::traits::iterator::Iterator>::next
+    572,884 ( 0.02%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/ops/function.rs:<alloc::vec::Vec<T> as alloc::vec::spec_from_iter_nested::SpecFromIterNested<T,I>>::from_iter
+    565,664 ( 0.02%)  crabomination/src/game/actions.rs:crabomination::game::actions::<impl crabomination::game::GameState>::flagbearer_violation [/home/user/Crabomination/target/profiling-fast/bot_ladder]
+    564,414 ( 0.02%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/mem/maybe_uninit.rs:<alloc::vec::Vec<T,A> as core::clone::Clone>::clone
+    562,608 ( 0.02%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/alloc/src/alloc.rs:crabomination::game::GameState::perform_action_inner
+    561,996 ( 0.02%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/num/uint_macros.rs:<hashbrown::raw::RawTable<T,A> as core::clone::Clone>::clone
+    560,306 ( 0.02%)  crabomination/src/game/actions.rs:crabomination::game::actions::colored_cost_reduction_for_spell [/home/user/Crabomination/target/profiling-fast/bot_ladder]
+    558,450 ( 0.02%)  crabomination/src/game/mod.rs:crabomination::game::can_block_attacker_computed [/home/user/Crabomination/target/profiling-fast/bot_ladder]
+    553,408 ( 0.02%)  crabomination_base/src/mana.rs:<alloc::vec::Vec<T> as alloc::vec::spec_from_iter_nested::SpecFromIterNested<T,I>>::from_iter
+    552,474 ( 0.02%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/slice/iter/macros.rs:crabomination::game::actions::<impl crabomination::game::GameState>::intrinsic_land_mana_abilities_with
+    551,744 ( 0.02%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/alloc/src/sync.rs:crabomination::game::GameState::perform_action_inner
+    549,862 ( 0.02%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/alloc/src/raw_vec/mod.rs:crabomination::game::actions::<impl crabomination::game::GameState>::grant_scan
+    548,914 ( 0.02%)  crabomination_base/src/card.rs:crabomination::game::combat::<impl crabomination::game::GameState>::declare_blockers
+    548,080 ( 0.02%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/ptr/non_null.rs:crabomination::server::bot::pick_removal_ping
+    546,238 ( 0.02%)  crabomination_base/src/card.rs:crabomination_base::card::CardInstance::is_indestructible [/home/user/Crabomination/target/profiling-fast/bot_ladder]
+    546,186 ( 0.02%)  crabomination/src/server/bot.rs:crabomination::server::bot::can_afford_in_state [/home/user/Crabomination/target/profiling-fast/bot_ladder]
+    545,404 ( 0.02%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/slice/iter/macros.rs:crabomination::game::combat::<impl crabomination::game::GameState>::combat_participation_cap
+    544,758 ( 0.02%)  crabomination/src/game/actions.rs:<core::iter::adapters::map::Map<I,F> as core::iter::traits::iterator::Iterator>::fold
+    543,248 ( 0.02%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/iter/traits/iterator.rs:<alloc::vec::Vec<T> as alloc::vec::spec_from_iter_nested::SpecFromIterNested<T,I>>::from_iter'2
+    542,530 ( 0.02%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/slice/iter/macros.rs:crabomination_base::card::CardInstance::counter_count
+    539,700 ( 0.02%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/alloc/src/vec/mod.rs:crabomination_base::card::CardDefinition::is_planeswalker
+    535,806 ( 0.02%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/alloc/src/vec/in_place_collect.rs:alloc::vec::in_place_collect::from_iter_in_place [/home/user/Crabomination/target/profiling-fast/bot_ladder]
+    534,814 ( 0.02%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/ptr/mod.rs:crabomination::game::stack::<impl crabomination::game::GameState>::check_state_based_actions
+    534,436 ( 0.02%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/slice/iter/macros.rs:crabomination::game::actions::<impl crabomination::game::GameState>::cast_spell
+    534,402 ( 0.02%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/alloc/src/vec/mod.rs:crabomination::game::GameState::permanents_with_abilities_removed
+    534,378 ( 0.02%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/alloc/src/raw_vec/mod.rs:crabomination::game::actions::<impl crabomination::game::GameState>::flagbearer_violation
+    534,352 ( 0.02%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/alloc/src/vec/mod.rs:crabomination::game::GameState::drain_trigger_queue
+    532,860 ( 0.02%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/alloc/src/sync.rs:<alloc::vec::Vec<T> as alloc::vec::spec_from_iter_nested::SpecFromIterNested<T,I>>::from_iter
+    532,648 ( 0.02%)  crabomination/src/game/actions.rs:crabomination::game::actions::extra_cost_for_spell [/home/user/Crabomination/target/profiling-fast/bot_ladder]
+    529,650 ( 0.02%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/alloc/src/raw_vec/mod.rs:crabomination::game::actions::<impl crabomination::game::GameState>::cast_spell_with_convoke
+    524,596 ( 0.02%)  crabomination_base/src/effect/query.rs:crabomination_base::effect::query::<impl crabomination_base::effect::Effect>::target_filter_for_slot_in_mode_kicked::sel_find [/home/user/Crabomination/target/profiling-fast/bot_ladder]
+    524,508 ( 0.02%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/slice/iter/macros.rs:<core::iter::adapters::filter_map::FilterMap<I,F> as core::iter::traits::iterator::Iterator>::next
+    524,494 ( 0.02%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/iter/adapters/flatten.rs:core::iter::adapters::flatten::FlattenCompat<I,U>::iter_fold [/home/user/Crabomination/target/profiling-fast/bot_ladder]
+    523,884 ( 0.02%)  crabomination/src/server/bot.rs:crabomination::server::bot::pick_removal_destroy [/home/user/Crabomination/target/profiling-fast/bot_ladder]
+    523,486 ( 0.02%)  crabomination_base/src/card.rs:crabomination::game::actions::<impl crabomination::game::GameState>::finalize_cast
+    521,160 ( 0.02%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/ptr/non_null.rs:crabomination::game::GameState::name_locked_by_a_permanent
+    516,624 ( 0.02%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/slice/iter/macros.rs:crabomination::game::actions::<impl crabomination::game::GameState>::spell_granted_convoke
+    515,530 ( 0.02%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/ptr/mod.rs:core::ops::function::impls::<impl core::ops::function::FnMut<A> for &mut F>::call_mut
+    514,808 ( 0.02%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/mem/mod.rs:crabomination::game::actions::<impl crabomination::game::GameState>::activate_ability_inner
+    514,416 ( 0.02%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/ptr/non_null.rs:crabomination::game::actions::colored_cost_reduction_for_spell
+    513,338 ( 0.02%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/slice/iter/macros.rs:crabomination::game::combat::<impl crabomination::game::GameState>::deal_combat_damage_to_target
+    513,182 ( 0.02%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/alloc/src/alloc.rs:core::ptr::drop_in_place<crabomination::game::GameState>
+    512,816 ( 0.02%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/ptr/mod.rs:crabomination::server::bot::pick_removal_ping
+    511,512 ( 0.02%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/iter/adapters/enumerate.rs:crabomination::game::GameState::gather_continuous_effects_inner
+    507,860 ( 0.02%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/alloc/src/vec/mod.rs:crabomination::game::combat::<impl crabomination::game::GameState>::declare_blockers
+    505,886 ( 0.02%)  crabomination/src/server/bot.rs:crabomination::server::bot::pick_removal_sacrifice [/home/user/Crabomination/target/profiling-fast/bot_ladder]
+    505,800 ( 0.02%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/slice/iter/macros.rs:crabomination::game::actions::<impl crabomination::game::GameState>::check_target_legality_with_source
+    504,638 ( 0.02%)  crabomination_base/src/card.rs:crabomination::game::effects::movement::<impl crabomination::game::GameState>::apply_prevention_shields
+    501,332 ( 0.02%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/iter/range.rs:crabomination::game::GameState::dispatch_triggers_for_events
+    500,778 ( 0.02%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/ptr/non_null.rs:<core::iter::adapters::filter_map::FilterMap<I,F> as core::iter::traits::iterator::Iterator>::next
+    499,044 ( 0.02%)  crabomination/src/game/actions.rs:crabomination::game::actions::<impl crabomination::game::GameState>::graveyard_granted_abilities [/home/user/Crabomination/target/profiling-fast/bot_ladder]
+    497,036 ( 0.02%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/ptr/mut_ptr.rs:<core::iter::adapters::map::Map<I,F> as core::iter::traits::iterator::Iterator>::try_fold
+    495,156 ( 0.02%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/std/src/sys/sync/mutex/futex.rs:crabomination::game::GameState::frozen_effects
+    495,034 ( 0.02%)  crabomination/src/game/actions.rs:crabomination::game::actions::<impl crabomination::game::GameState>::can_player_play_land [/home/user/Crabomination/target/profiling-fast/bot_ladder]
+    494,182 ( 0.02%)  crabomination/src/game/effects/mod.rs:crabomination::game::effects::<impl crabomination::game::GameState>::run_effect::{{closure}} [/home/user/Crabomination/target/profiling-fast/bot_ladder]
+    493,566 ( 0.02%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/ptr/non_null.rs:crabomination::game::actions::<impl crabomination::game::GameState>::randomize_single_target_on_stack
+    492,544 ( 0.02%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/slice/sort/stable/mod.rs:crabomination::game::layers::compute_permanent_pass
+    490,222 ( 0.02%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/alloc/src/raw_vec/mod.rs:<core::slice::iter::Iter<T> as core::iter::traits::iterator::Iterator>::find_map
+    489,946 ( 0.02%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/alloc/src/vec/mod.rs:crabomination::game::GameState::board_keyword_in_scope
+    489,456 ( 0.02%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/slice/iter/macros.rs:crabomination::game::actions::colored_cost_reduction_for_spell
+    489,114 ( 0.02%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/ptr/mut_ptr.rs:crabomination::game::stack::<impl crabomination::game::GameState>::check_state_based_actions
+    488,180 ( 0.02%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/ptr/non_null.rs:crabomination_base::card::CardInstance::toughness
+    488,120 ( 0.02%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/slice/iter/macros.rs:crabomination::game::actions::ally_trigger_extra_fires
+    485,060 ( 0.02%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/alloc/src/raw_vec/mod.rs:crabomination::server::bot::available_mana
+    481,808 ( 0.02%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/iter/traits/accum.rs:crabomination::game::actions::<impl crabomination::game::GameState>::damping_engine_locks
+    480,982 ( 0.02%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/ptr/mod.rs:core::ptr::drop_in_place<alloc::vec::Vec<core::option::Option<crabomination_base::card::SelectionRequirement>>> [/home/user/Crabomination/target/profiling-fast/bot_ladder]
+    479,756 ( 0.02%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/slice/iter/macros.rs:crabomination::game::GameState::effective_life
+    479,708 ( 0.02%)  crabomination/src/server/bot.rs:crabomination::server::bot::pick_attacks_inner [/home/user/Crabomination/target/profiling-fast/bot_ladder]
+    479,598 ( 0.02%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/ptr/non_null.rs:crabomination::game::can_block_attacker_computed
+    478,800 ( 0.02%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/alloc/src/raw_vec/mod.rs:core::ptr::drop_in_place<crabomination::game::layers::AffectedPermanents>
+    477,114 ( 0.02%)  crabomination/src/game/actions.rs:crabomination::game::actions::<impl crabomination::game::GameState>::mana_production_multiplier_for [/home/user/Crabomination/target/profiling-fast/bot_ladder]
+    475,834 ( 0.02%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/alloc/src/vec/mod.rs:crabomination::game::GameState::find_card_anywhere
+    475,704 ( 0.02%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/iter/adapters/flatten.rs:<alloc::vec::Vec<T> as alloc::vec::spec_from_iter_nested::SpecFromIterNested<T,I>>::from_iter'2
+    475,500 ( 0.02%)  crabomination_base/src/card.rs:<core::iter::adapters::map::Map<I,F> as core::iter::traits::iterator::Iterator>::try_fold
+    475,304 ( 0.02%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/alloc/src/vec/spec_from_iter.rs:crabomination::game::layers::compute_permanent_pass
+    475,068 ( 0.02%)  crabomination/src/game/mod.rs:crabomination::game::GameState::relax_cost_colors_known [/home/user/Crabomination/target/profiling-fast/bot_ladder]
+    474,630 ( 0.02%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/ptr/mod.rs:core::ptr::drop_in_place<[(crabomination_base::card::CardId,crabomination_base::effect::Effect,usize,core::option::Option<crabomination_base::effect::Predicate>)]> [/home/user/Crabomination/target/profiling-fast/bot_ladder]
+    474,400 ( 0.02%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/ptr/non_null.rs:crabomination::game::actions::<impl crabomination::game::GameState>::apply_enters_tapped_replacement
+    474,006 ( 0.02%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/ptr/non_null.rs:crabomination::game::stack::<impl crabomination::game::GameState>::finish_cleanup
+    472,524 ( 0.02%)  crabomination/src/game/effects/mod.rs:crabomination::game::effects::<impl crabomination::game::GameState>::resolve_player [/home/user/Crabomination/target/profiling-fast/bot_ladder]
+    469,998 ( 0.02%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/slice/iter/macros.rs:crabomination::game::combat::<impl crabomination::game::GameState>::ironscale_replace
+    469,842 ( 0.02%)  crabomination/src/server/bot.rs:crabomination::server::bot::can_afford_from [/home/user/Crabomination/target/profiling-fast/bot_ladder]
+    462,916 ( 0.02%)  /rust/deps/hashbrown-0.16.1/src/raw/mod.rs:core::ptr::drop_in_place<crabomination::game::ColdState>
+    462,568 ( 0.02%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/slice/iter/macros.rs:crabomination::game::GameState::process_cumulative_upkeep
+    460,400 ( 0.02%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/alloc/src/raw_vec/mod.rs:crabomination::game::combat::<impl crabomination::game::GameState>::resolve_combat
+    460,002 ( 0.02%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/ptr/mod.rs:crabomination::game::actions::<impl crabomination::game::GameState>::effective_mana_abilities_of
+    459,370 ( 0.02%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/alloc/src/alloc.rs:crabomination::game::actions::<impl crabomination::game::GameState>::activate_ability_inner
+    458,426 ( 0.02%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/alloc/src/vec/mod.rs:crabomination::game::actions::<impl crabomination::game::GameState>::auto_tap_for_cost_inner
+    453,552 ( 0.02%)  crabomination/src/player.rs:crabomination::game::stack::<impl crabomination::game::GameState>::do_untap
+    452,978 ( 0.02%)  crabomination/src/game/mod.rs:crabomination::game::GameState::find_card_anywhere [/home/user/Crabomination/target/profiling-fast/bot_ladder]
+    451,560 ( 0.02%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/alloc/src/vec/mod.rs:<alloc::vec::Vec<T,A1> as alloc::vec::spec_extend::SpecExtend<T,alloc::vec::into_iter::IntoIter<T,A2>>>::spec_extend
+    450,812 ( 0.02%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/iter/adapters/filter.rs:<core::iter::adapters::map::Map<I,F> as core::iter::traits::iterator::Iterator>::fold
+    450,428 ( 0.02%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/alloc/src/sync.rs:core::ops::function::impls::<impl core::ops::function::FnMut<A> for &mut F>::call_mut
+    449,526 ( 0.02%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/alloc/src/sync.rs:crabomination::game::stack::<impl crabomination::game::GameState>::finish_cleanup
+    448,768 ( 0.02%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/ptr/non_null.rs:crabomination::game::stack::<impl crabomination::game::GameState>::advance_step
+    447,318 ( 0.02%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/alloc/src/raw_vec/mod.rs:crabomination_base::card::CardDefinition::is_land [/home/user/Crabomination/target/profiling-fast/bot_ladder]
+    446,816 ( 0.02%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/slice/iter/macros.rs:crabomination_base::mana::ManaPool::pay
+    446,754 ( 0.02%)  crabomination_base/src/mana.rs:crabomination::server::bot::available_mana
+    445,592 ( 0.02%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/ptr/mod.rs:crabomination::server::bot::available_mana
+    444,762 ( 0.02%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/ptr/non_null.rs:crabomination::game::effects::targeting::<impl crabomination::game::GameState>::auto_targets_for_effect_all_slots_kicked
+    444,332 ( 0.02%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/mem/maybe_uninit.rs:alloc::sync::Arc<T,A>::clone_from_ref_in
+    444,332 ( 0.02%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/slice/iter/macros.rs:alloc::sync::Arc<T,A>::clone_from_ref_in
+    443,898 ( 0.02%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/iter/traits/iterator.rs:core::iter::traits::iterator::Iterator::partition [/home/user/Crabomination/target/profiling-fast/bot_ladder]
+    442,924 ( 0.02%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/alloc/src/vec/mod.rs:crabomination_base::card::CardDefinition::spell_kind
+    440,420 ( 0.02%)  crabomination/src/game/mod.rs:crabomination::game::GameState::perform_action_inner::{{closure}} [/home/user/Crabomination/target/profiling-fast/bot_ladder]
+    439,916 ( 0.02%)  crabomination/src/game/mod.rs:crabomination::game::GameState::draw_one [/home/user/Crabomination/target/profiling-fast/bot_ladder]
+    439,586 ( 0.02%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/iter/adapters/take.rs:<crabomination::game::GameState as core::clone::Clone>::clone
+    436,826 ( 0.02%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/sync/atomic.rs:<crabomination::game::GameState as core::clone::Clone>::clone
+    433,920 ( 0.02%)  crabomination/src/server/bot.rs:crabomination::server::bot::pick_land_to_play [/home/user/Crabomination/target/profiling-fast/bot_ladder]
+    431,760 ( 0.02%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/ptr/non_null.rs:crabomination_base::card::CardDefinition::is_planeswalker
+    431,760 ( 0.02%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/slice/iter/macros.rs:crabomination_base::card::CardDefinition::is_planeswalker
+    430,436 ( 0.02%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/ptr/non_null.rs:crabomination::game::actions::<impl crabomination::game::GameState>::effective_max_hand_size
+    430,016 ( 0.02%)  crabomination_base/src/card.rs:crabomination::game::stack::<impl crabomination::game::GameState>::do_untap
+    429,534 ( 0.02%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/iter/adapters/map.rs:crabomination::game::stack::<impl crabomination::game::GameState>::check_state_based_actions
+    429,522 ( 0.02%)  crabomination/src/game/combat.rs:<alloc::vec::Vec<T> as alloc::vec::spec_from_iter_nested::SpecFromIterNested<T,I>>::from_iter
+    428,256 ( 0.02%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/slice/index.rs:crabomination::game::actions::<impl crabomination::game::GameState>::finalize_cast
+    425,636 ( 0.02%)  crabomination/src/game/types.rs:<crabomination::game::types::GameEvent as core::clone::Clone>::clone [/home/user/Crabomination/target/profiling-fast/bot_ladder]
+    425,626 ( 0.02%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/bool.rs:crabomination::game::effects::eval::<impl crabomination::game::GameState>::evaluate_requirement_static
+    424,812 ( 0.02%)  crabomination/src/game/layers.rs:crabomination::game::GameState::computed_permanent
+    424,650 ( 0.02%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/iter/traits/iterator.rs:crabomination::game::actions::<impl crabomination::game::GameState>::auto_tap_for_cost_inner
+    423,106 ( 0.02%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/slice/index.rs:crabomination::game::actions::<impl crabomination::game::GameState>::activate_ability_inner
+    422,178 ( 0.02%)  crabomination/src/game/stack.rs:crabomination::game::stack::<impl crabomination::game::GameState>::remove_from_battlefield_to_graveyard_raw [/home/user/Crabomination/target/profiling-fast/bot_ladder]
+    421,432 ( 0.02%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/alloc/src/raw_vec/mod.rs:<crabomination_base::effect::abilities::ActivatedAbility as core::clone::Clone>::clone
+    417,060 ( 0.02%)  crabomination/src/game/mod.rs:crabomination::game::combat::<impl crabomination::game::GameState>::resolve_combat
+    417,008 ( 0.02%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/alloc/src/vec/mod.rs:core::ops::function::impls::<impl core::ops::function::FnMut<A> for &mut F>::call_mut
+    414,656 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/slice/iter/macros.rs:crabomination_base::mana::ManaCost::colors
+    414,004 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/alloc/src/vec/set_len_on_drop.rs:<alloc::vec::Vec<T> as alloc::vec::spec_from_iter_nested::SpecFromIterNested<T,I>>::from_iter
+    413,550 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/result.rs:crabomination::game::GameState::perform_action_inner
+    412,080 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/std/src/sync/poison.rs:<crabomination::game::GameState::with_frozen_layers::Unfreeze as core::ops::drop::Drop>::drop
+    412,080 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/std/src/sys/sync/mutex/futex.rs:<crabomination::game::GameState::with_frozen_layers::Unfreeze as core::ops::drop::Drop>::drop
+    409,756 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/sync/atomic.rs:alloc::sync::Arc<T,A>::drop_slow'2
+    408,820 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/alloc/src/vec/mod.rs:crabomination_base::mana::ManaCost::colors
+    408,708 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/mem/mod.rs:crabomination::game::GameState::perform_action_inner
+    407,614 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/ptr/mod.rs:core::ptr::drop_in_place<alloc::vec::Vec<crabomination::game::types::GameEvent>> [/home/user/Crabomination/target/profiling-fast/bot_ladder]
+    404,224 ( 0.01%)  crabomination/src/game/actions.rs:crabomination::game::actions::<impl crabomination::game::GameState>::caster_grants_uncounterable_with_x [/home/user/Crabomination/target/profiling-fast/bot_ladder]
+    403,338 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/alloc/src/vec/mod.rs:crabomination::game::stack::<impl crabomination::game::GameState>::advance_step
+    403,164 ( 0.01%)  crabomination/src/game/mod.rs:crabomination::game::GameState::board_keyword_in_scope [/home/user/Crabomination/target/profiling-fast/bot_ladder]
+    401,562 ( 0.01%)  crabomination/src/game/mod.rs:crabomination::game::GameState::opponent_has_static [/home/user/Crabomination/target/profiling-fast/bot_ladder]
+    400,860 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/alloc/src/raw_vec/mod.rs:crabomination::game::actions::<impl crabomination::game::GameState>::effective_mana_abilities_of
+    400,422 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/alloc/src/alloc.rs:<crabomination::game::GameState as core::clone::Clone>::clone
+    398,364 ( 0.01%)  crabomination/src/game/mod.rs:crabomination::game::GameState::combat_damage_prevented_from [/home/user/Crabomination/target/profiling-fast/bot_ladder]
+    397,604 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/alloc/src/raw_vec/mod.rs:crabomination::game::effects::movement::<impl crabomination::game::GameState>::apply_prevention_shields
+    394,354 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/iter/adapters/filter.rs:crabomination::game::GameState::scale_damage_to
+    392,936 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/slice/iter/macros.rs:crabomination::server::bot::pick_attacks_inner
+    392,804 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/slice/iter.rs:crabomination::game::stack::<impl crabomination::game::GameState>::do_untap
+    390,488 ( 0.01%)  crabomination_base/src/card.rs:crabomination::game::GameState::scale_damage_to
+    390,176 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/alloc/src/raw_vec/mod.rs:crabomination::game::combat::<impl crabomination::game::GameState>::fire_combat_damage_triggers
+    389,994 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/alloc/src/raw_vec/mod.rs:crabomination::game::GameState::find_card_anywhere
+    389,890 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/alloc/src/vec/mod.rs:crabomination::game::effects::eval::<impl crabomination::game::GameState>::evaluate_requirement_static
+    385,066 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/ptr/mut_ptr.rs:crabomination::game::actions::<impl crabomination::game::GameState>::activate_ability_inner
+    384,474 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/slice/iter/macros.rs:crabomination::game::GameState::blocker_side_gates_allow_block
+    384,192 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/alloc/src/raw_vec/mod.rs:crabomination::game::actions::<impl crabomination::game::GameState>::auto_tap_for_cost_inner
+    383,634 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/cmp.rs:crabomination::game::GameState::gather_continuous_effects_inner
+    383,128 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/alloc/src/alloc.rs:<alloc::vec::Vec<T,A> as core::clone::Clone>::clone
+    382,848 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/ptr/non_null.rs:crabomination::game::actions::ally_trigger_extra_fires
+    382,000 ( 0.01%)  crabomination/src/game/mod.rs:crabomination::game::GameState::statics_granted_triggers_for [/home/user/Crabomination/target/profiling-fast/bot_ladder]
+    382,000 ( 0.01%)  crabomination/src/game/mod.rs:crabomination::game::GameState::statics_granted_triggers_with [/home/user/Crabomination/target/profiling-fast/bot_ladder]
+    381,312 ( 0.01%)  crabomination/src/game/combat.rs:crabomination::game::combat::<impl crabomination::game::GameState>::deal_combat_damage_to_target [/home/user/Crabomination/target/profiling-fast/bot_ladder]
+    379,592 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/option.rs:crabomination::game::stack::<impl crabomination::game::GameState>::finish_cleanup
+    378,536 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/alloc/src/vec/mod.rs:alloc::vec::Vec<T,A>::extend_trusted [/home/user/Crabomination/target/profiling-fast/bot_ladder]
+    377,616 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/ptr/non_null.rs:crabomination_base::card::CardDefinition::base_power
+    377,616 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/ptr/non_null.rs:crabomination_base::card::CardDefinition::base_toughness
+    377,032 ( 0.01%)  crabomination/src/game/layers.rs:crabomination::game::combat::<impl crabomination::game::GameState>::declare_attackers_banded
+    376,230 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/alloc/src/vec/mod.rs:crabomination::game::actions::extra_cost_for_spell
+    374,834 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/alloc/src/sync.rs:crabomination::game::actions::<impl crabomination::game::GameState>::activate_ability_inner
+    374,344 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/slice/iter/macros.rs:crabomination::game::actions::<impl crabomination::game::GameState>::apply_enters_tapped_replacement
+    374,108 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/../../stdarch/crates/core_arch/src/x86/sse2.rs:hashbrown::map::HashMap<K,V,S,A>::insert
+    373,500 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/option.rs:crabomination::game::GameState::computed_permanent
+    373,070 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/slice/iter/macros.rs:crabomination::server::bot::pick_blocks_inner::{{closure}}
+    371,592 ( 0.01%)  crabomination/src/server/bot.rs:crabomination::server::bot::pick_stack_response [/home/user/Crabomination/target/profiling-fast/bot_ladder]
+    371,204 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/ptr/mod.rs:core::ptr::drop_in_place<core::option::Option<core::iter::adapters::flatten::FlatMap<alloc::vec::into_iter::IntoIter<core::option::Option<usize>>,alloc::vec::Vec<crabomination::game::types::GameAction>,crabomination::server::bot::cast_candidates::{{closure}}::{{closure}}>>> [/home/user/Crabomination/target/profiling-fast/bot_ladder]
+    368,570 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/option.rs:crabomination::server::bot::HeuristicBot::next_action_inner
+    367,720 ( 0.01%)  crabomination_base/src/card.rs:crabomination_base::card::CardDefinition::ability_spend_kind [/home/user/Crabomination/target/profiling-fast/bot_ladder]
+    366,950 ( 0.01%)  crabomination/src/server/bot.rs:<core::iter::adapters::flatten::FlatMap<I,U,F> as core::iter::traits::iterator::Iterator>::next
+    365,340 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/ptr/non_null.rs:crabomination::game::actions::<impl crabomination::game::GameState>::damping_engine_locks
+    365,136 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/iter/adapters/map.rs:<core::iter::adapters::map::Map<I,F> as core::iter::traits::iterator::Iterator>::try_fold [/home/user/Crabomination/target/profiling-fast/bot_ladder]
+    364,964 ( 0.01%)  crabomination/src/game/actions.rs:crabomination::game::actions::<impl crabomination::game::GameState>::spell_granted_convoke [/home/user/Crabomination/target/profiling-fast/bot_ladder]
+    364,382 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/slice/iter/macros.rs:crabomination::game::GameState::perform_action
+    364,214 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/iter/adapters/chain.rs:<alloc::vec::Vec<T> as alloc::vec::spec_from_iter_nested::SpecFromIterNested<T,I>>::from_iter'2
+    363,974 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/sync/atomic.rs:crabomination::game::stack::<impl crabomination::game::GameState>::finish_cleanup
+    363,138 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/result.rs:alloc::sync::Arc<T,A>::clone_from_ref_in
+    361,440 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/alloc/src/sync.rs:crabomination::game::effects::eval::<impl crabomination::game::GameState>::evaluate_requirement_static
+    361,416 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/ptr/const_ptr.rs:<alloc::vec::Vec<T,A1> as alloc::vec::spec_extend::SpecExtend<T,alloc::vec::into_iter::IntoIter<T,A2>>>::spec_extend
+    357,616 ( 0.01%)  crabomination_base/src/mana.rs:crabomination::game::GameState::empty_mana_pools
+    357,056 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/iter/adapters/flatten.rs:crabomination::game::combat::<impl crabomination::game::GameState>::fire_combat_damage_triggers
+    356,482 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/iter/adapters/map.rs:crabomination::game::GameState::scale_damage_to
+    355,668 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/alloc/src/vec/mod.rs:<crabomination::game::GameState::with_frozen_layers::Unfreeze as core::ops::drop::Drop>::drop
+    354,586 ( 0.01%)  crabomination_base/src/card.rs:crabomination_base::card::CardInstance::power [/home/user/Crabomination/target/profiling-fast/bot_ladder]
+    354,432 ( 0.01%)  crabomination/src/game/mod.rs:crabomination::game::GameState::with_frozen_layers [/home/user/Crabomination/target/profiling-fast/bot_ladder]
+    353,350 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/alloc/src/vec/mod.rs:crabomination::game::combat::<impl crabomination::game::GameState>::resolve_combat
+    351,540 ( 0.01%)  crabomination/src/game/combat.rs:crabomination::game::GameState::perform_action_inner
+    350,794 ( 0.01%)  crabomination/src/game/actions.rs:crabomination::game::actions::<impl crabomination::game::GameState>::check_target_legality_with_source [/home/user/Crabomination/target/profiling-fast/bot_ladder]
+    350,128 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/ptr/non_null.rs:core::iter::adapters::flatten::FlattenCompat<I,U>::iter_fold
+    349,926 ( 0.01%)  crabomination/src/server/bot.rs:crabomination::server::bot::simulate_through_combat
+    349,334 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/slice/iter/macros.rs:crabomination_base::card::CardDefinition::ability_spend_kind
+    347,624 ( 0.01%)  crabomination/src/game/effects/mod.rs:crabomination::game::GameState::continue_ability_resolution_x
+    346,338 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/slice/iter/macros.rs:crabomination::game::actions::<impl crabomination::game::GameState>::player_cant_cast_creature_spells
+    346,302 ( 0.01%)  crabomination_base/src/card.rs:crabomination::game::GameState::all_damage_to_player_prevented
+    345,400 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/ptr/non_null.rs:crabomination::server::bot::eval_material_inner
+    345,192 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/slice/iter/macros.rs:crabomination::game::actions::<impl crabomination::game::GameState>::resolve_extra_mana_on_land_tap
+    344,498 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/sync/atomic.rs:crabomination::game::GameState::with_frozen_layers'2
+    341,092 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/alloc/src/alloc.rs:crabomination::game::layers::compute_permanent_pass
+    340,574 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/slice/iter/macros.rs:<core::iter::adapters::copied::Copied<I> as core::iter::traits::iterator::Iterator>::try_fold
+    340,406 ( 0.01%)  crabomination/src/game/actions.rs:crabomination::game::actions::<impl crabomination::game::GameState>::effective_max_hand_size [/home/user/Crabomination/target/profiling-fast/bot_ladder]
+    339,952 ( 0.01%)  crabomination/src/game/effects/targeting.rs:<core::iter::adapters::map::Map<I,F> as core::iter::traits::iterator::Iterator>::try_fold
+    338,764 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/ptr/non_null.rs:crabomination::game::actions::<impl crabomination::game::GameState>::resolve_extra_mana_on_land_tap
+    338,652 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/alloc/src/vec/mod.rs:alloc::vec::Vec<T,A>::append_elements [/home/user/Crabomination/target/profiling-fast/bot_ladder]
+    337,896 ( 0.01%)  crabomination/src/game/actions.rs:crabomination::game::actions::<impl crabomination::game::GameState>::snapshot_payment_state [/home/user/Crabomination/target/profiling-fast/bot_ladder]
+    336,824 ( 0.01%)  crabomination/src/game/mod.rs:crabomination::game::stack::<impl crabomination::game::GameState>::pass_priority
+    336,752 ( 0.01%)  crabomination/src/game/actions.rs:crabomination::game::actions::<impl crabomination::game::GameState>::apply_enters_tapped_replacement [/home/user/Crabomination/target/profiling-fast/bot_ladder]
+    336,020 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/alloc/src/sync.rs:<crabomination::game::GameState as core::clone::Clone>::clone
+    334,918 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/alloc/src/raw_vec/mod.rs:crabomination::game::combat::<impl crabomination::game::GameState>::declare_attackers_banded
+    333,706 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/alloc/src/raw_vec/mod.rs:crabomination::game::combat::<impl crabomination::game::GameState>::declare_blockers
+    333,118 ( 0.01%)  crabomination/src/game/combat.rs:crabomination::game::combat::<impl crabomination::game::GameState>::attack_block_keyword_tax [/home/user/Crabomination/target/profiling-fast/bot_ladder]
+    332,764 ( 0.01%)  /rust/deps/hashbrown-0.16.1/src/raw/mod.rs:crabomination::game::combat::<impl crabomination::game::GameState>::declare_blockers
+    331,794 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/num/uint_macros.rs:core::iter::adapters::flatten::FlattenCompat<I,U>::iter_fold
+    331,530 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/alloc/src/vec/mod.rs:<crabomination_base::effect::ManaPayload as core::clone::Clone>::clone
+    331,430 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/alloc/src/vec/spec_from_iter.rs:<alloc::vec::Vec<T> as alloc::vec::spec_from_iter::SpecFromIter<T,I>>::from_iter [/home/user/Crabomination/target/profiling-fast/bot_ladder]
+    330,104 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/std/src/sync/poison.rs:crabomination::game::GameState::frozen_effects
+    329,876 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/alloc/src/raw_vec/mod.rs:crabomination_base::card::CardDefinition::spell_kind
+    329,560 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/alloc/src/collections/vec_deque/mod.rs:<alloc::collections::vec_deque::VecDeque<T,A> as core::ops::drop::Drop>::drop [/home/user/Crabomination/target/profiling-fast/bot_ladder]
+    328,940 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/option.rs:crabomination::game::effects::<impl crabomination::game::GameState>::run_effect
+    328,492 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/ptr/mod.rs:crabomination::game::combat::<impl crabomination::game::GameState>::fire_combat_damage_triggers
+    328,300 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/ptr/const_ptr.rs:<alloc::vec::Vec<T> as alloc::vec::spec_from_iter_nested::SpecFromIterNested<T,I>>::from_iter'2
+    327,740 ( 0.01%)  crabomination/src/game/mod.rs:crabomination::game::GameState::blocker_side_gates_allow_block [/home/user/Crabomination/target/profiling-fast/bot_ladder]
+    325,220 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/slice/cmp.rs:crabomination::game::combat::<impl crabomination::game::GameState>::declare_attackers_banded
+    324,512 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/ptr/mut_ptr.rs:crabomination::server::bot::cast_candidates
+    320,684 ( 0.01%)  crabomination/src/game/mod.rs:crabomination::game::GameState::effective_life [/home/user/Crabomination/target/profiling-fast/bot_ladder]
+    319,266 ( 0.01%)  crabomination_base/src/card.rs:crabomination::game::stack::<impl crabomination::game::GameState>::check_state_based_actions
+    319,140 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/option.rs:crabomination::game::GameState::spend_mana_as_any_color_for_spell::{{closure}} [/home/user/Crabomination/target/profiling-fast/bot_ladder]
+    318,650 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/iter/adapters/chain.rs:crabomination::server::bot::pick_removal_ping
+    318,120 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/ptr/non_null.rs:crabomination::game::combat::<impl crabomination::game::GameState>::deal_combat_damage_to_target
+    318,010 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/intrinsics/mod.rs:hashbrown::map::HashMap<K,V,S,A>::insert
+    317,896 ( 0.01%)  crabomination/src/cow.rs:crabomination::game::GameState::dispatch_triggers_for_events
+    317,702 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/ptr/mod.rs:hashbrown::raw::RawTable<T,A>::reserve_rehash
+    317,482 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/slice/iter/macros.rs:crabomination::game::GameState::opponent_has_static
+    313,992 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/alloc/src/raw_vec/mod.rs:crabomination::game::stack::<impl crabomination::game::GameState>::planar_controller
+    313,992 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/mem/mod.rs:crabomination::game::GameState::push_ordered_trigger_candidates
+    313,992 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/std/src/alloc.rs:__rustc::__rdl_alloc_zeroed [/home/user/Crabomination/target/profiling-fast/bot_ladder]
+    313,476 ( 0.01%)  crabomination_base/src/card.rs:crabomination::server::bot::permanent_value
+    313,212 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/ptr/non_null.rs:crabomination_base::mana::ManaCost::has_x
+    312,870 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/option.rs:crabomination_base::card::CardInstance::power
+    311,788 ( 0.01%)  crabomination/src/server/bot.rs:crabomination::server::bot::pick_reach_burn::reach_amount [/home/user/Crabomination/target/profiling-fast/bot_ladder]
+    308,525 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/cmp.rs:alloc::raw_vec::RawVecInner<A>::reserve::do_reserve_and_handle
+    307,756 ( 0.01%)  crabomination/src/game/combat.rs:<core::iter::adapters::map::Map<I,F> as core::iter::traits::iterator::Iterator>::try_fold
+    307,634 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/alloc/src/raw_vec/mod.rs:crabomination_base::card::CardDefinition::base_power [/home/user/Crabomination/target/profiling-fast/bot_ladder]
+    307,634 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/alloc/src/raw_vec/mod.rs:crabomination_base::card::CardDefinition::base_toughness [/home/user/Crabomination/target/profiling-fast/bot_ladder]
+    306,560 ( 0.01%)  crabomination/src/game/layers.rs:crabomination::game::combat::<impl crabomination::game::GameState>::declare_blockers
+    305,692 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/alloc/src/raw_vec/mod.rs:crabomination::game::stack::<impl crabomination::game::GameState>::do_untap
+    304,848 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/alloc/src/raw_vec/mod.rs:crabomination::server::bot::can_afford_in_state
+    303,832 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/cmp.rs:core::slice::sort::shared::smallsort::insert_tail
+    303,056 ( 0.01%)  crabomination_base/src/card.rs:crabomination::game::effects::<impl crabomination::game::GameState>::run_effect
+    302,856 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/ptr/non_null.rs:crabomination::server::bot::pick_blocks_inner::{{closure}}
+    302,418 ( 0.01%)  /rust/deps/hashbrown-0.16.1/src/map.rs:<crabomination::game::GameState as core::clone::Clone>::clone
+    300,556 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/slice/iter/macros.rs:crabomination::game::GameState::chosen_type_etb_counter_specs
+    300,250 ( 0.01%)  crabomination/src/server/bot.rs:crabomination::server::bot::attacker_damage_value [/home/user/Crabomination/target/profiling-fast/bot_ladder]
+    299,628 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/slice/iter/macros.rs:crabomination::game::stack::<impl crabomination::game::GameState>::finish_cleanup
+    299,293 ( 0.01%)  ./elf/../sysdeps/x86_64/dl-machine.h:_dl_relocate_object
+    298,980 ( 0.01%)  crabomination/src/game/mod.rs:crabomination::game::GameState::chosen_type_etb_counter_specs [/home/user/Crabomination/target/profiling-fast/bot_ladder]
+    298,932 ( 0.01%)  crabomination/src/game/stack.rs:crabomination::game::stack::<impl crabomination::game::GameState>::advance_step'2 [/home/user/Crabomination/target/profiling-fast/bot_ladder]
+    297,616 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/alloc/src/vec/mod.rs:crabomination::game::GameState::same_team
+    297,616 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/ptr/non_null.rs:crabomination::game::GameState::same_team
+    296,975 ( 0.01%)  ./string/../sysdeps/x86_64/multiarch/memset-vec-unaligned-erms.S:__memset_avx2_unaligned_erms [/usr/lib/x86_64-linux-gnu/libc.so.6]
+    296,834 ( 0.01%)  crabomination/src/game/mod.rs:crabomination::game::actions::<impl crabomination::game::GameState>::finalize_cast
+    296,404 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/ptr/mod.rs:<hashbrown::raw::RawTable<T,A> as core::clone::Clone>::clone
+    295,872 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/slice/iter/macros.rs:crabomination::server::bot::simulate_attack_outcome_once
+    295,272 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/ptr/mod.rs:<crabomination::game::GameState as core::clone::Clone>::clone
+    294,966 ( 0.01%)  crabomination/src/game/mod.rs:crabomination::game::GameState::continue_spell_resolution [/home/user/Crabomination/target/profiling-fast/bot_ladder]
+    294,602 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/alloc/src/alloc.rs:core::ptr::drop_in_place<crabomination::game::ColdState>
+    293,894 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/slice/iter/macros.rs:crabomination::game::actions::<impl crabomination::game::GameState>::activate_ability_inner::{{closure}}
+    293,244 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/std/src/panicking.rs:crabomination::game::GameState::with_frozen_layers'2
+    293,168 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/option.rs:crabomination::game::actions::counter_drain_cost
+    293,142 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/alloc/src/raw_vec/mod.rs:<alloc::vec::Vec<T,A1> as alloc::vec::spec_extend::SpecExtend<T,alloc::vec::into_iter::IntoIter<T,A2>>>::spec_extend
+    292,902 ( 0.01%)  crabomination/src/server/bot.rs:crabomination::server::bot::pick_prepare_response [/home/user/Crabomination/target/profiling-fast/bot_ladder]
+    292,012 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/slice/iter/macros.rs:crabomination_base::card::CardInstance::power
+    290,746 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/slice/iter/macros.rs:crabomination::server::bot::pick_removal_ping
+    290,604 ( 0.01%)  crabomination_base/src/card.rs:core::option::Option<T>::or_else
+    290,400 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/slice/iter/macros.rs:crabomination::game::GameState::apply_soulbond_pairing
+    290,308 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/ptr/non_null.rs:core::ptr::drop_in_place<crabomination::game::GameState>
+    290,308 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/sync/atomic.rs:core::ptr::drop_in_place<crabomination::game::GameState>
+    290,262 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/alloc/src/vec/spec_from_iter_nested.rs:<alloc::vec::Vec<T> as alloc::vec::spec_from_iter::SpecFromIter<T,I>>::from_iter
+    289,552 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/slice/index.rs:crabomination::game::stack::<impl crabomination::game::GameState>::check_state_based_actions
+    287,860 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/ptr/non_null.rs:crabomination_base::card::CardInstance::can_block [/home/user/Crabomination/target/profiling-fast/bot_ladder]
+    287,860 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/slice/iter/macros.rs:crabomination_base::card::CardInstance::can_block
+    287,268 ( 0.01%)  crabomination/src/game/effects/movement.rs:crabomination::game::effects::movement::<impl crabomination::game::GameState>::on_left_battlefield [/home/user/Crabomination/target/profiling-fast/bot_ladder]
+    286,906 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/slice/index.rs:crabomination::game::stack::<impl crabomination::game::GameState>::do_untap
+    286,632 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/ptr/non_null.rs:crabomination::game::combat::<impl crabomination::game::GameState>::ironscale_replace
+    286,488 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/alloc/src/vec/mod.rs:crabomination_base::card::CardDefinition::is_aura
+    286,488 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/ptr/non_null.rs:crabomination_base::card::CardDefinition::is_aura
+    284,176 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/alloc/src/raw_vec/mod.rs:crabomination_base::card::CardDefinition::printed_color_set
+    284,100 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/option.rs:core::ops::function::impls::<impl core::ops::function::FnMut<A> for &mut F>::call_mut
+    282,948 ( 0.01%)  crabomination/src/game/mod.rs:crabomination::game::actions::<impl crabomination::game::GameState>::flash_granted_for
+    281,794 ( 0.01%)  crabomination/src/game/effects/movement.rs:crabomination::game::effects::movement::<impl crabomination::game::GameState>::damage_redirect_target [/home/user/Crabomination/target/profiling-fast/bot_ladder]
+    281,008 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/ptr/mut_ptr.rs:crabomination::game::actions::cost_reduction_for_spell_full
+    280,890 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/ptr/non_null.rs:crabomination::game::actions::<impl crabomination::game::GameState>::intrinsic_land_mana_abilities_with
+    280,252 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/alloc/src/vec/into_iter.rs:crabomination::game::layers::compute_permanent_pass
+    277,724 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/ptr/non_null.rs:alloc::sync::Arc<T,A>::drop_slow'2
+    277,670 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/alloc/src/raw_vec/mod.rs:<crabomination_base::effect::ManaPayload as core::clone::Clone>::clone
+    277,426 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/ptr/non_null.rs:crabomination::game::actions::<impl crabomination::game::GameState>::graveyard_granted_abilities
+    277,420 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/alloc/src/sync.rs:crabomination::game::GameState::frozen_effects
+    277,004 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/ptr/non_null.rs:crabomination::game::stack::<impl crabomination::game::GameState>::advance_step'2
+    276,800 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/alloc/src/sync.rs:core::ptr::drop_in_place<crabomination::game::layers::ComputedPermanent>
+    276,800 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/ptr/non_null.rs:core::ptr::drop_in_place<crabomination::game::layers::ComputedPermanent>
+    276,800 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/sync/atomic.rs:core::ptr::drop_in_place<crabomination::game::layers::ComputedPermanent>
+    275,374 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/option.rs:<crabomination::cow::CowBox<T> as core::ops::deref::DerefMut>::deref_mut
+    275,318 ( 0.01%)  crabomination/src/game/stack.rs:crabomination::game::stack::<impl crabomination::game::GameState>::place_card_at_resolved_zone [/home/user/Crabomination/target/profiling-fast/bot_ladder]
+    274,616 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/slice/iter/macros.rs:crabomination::server::bot::pick_self_pump_counter
+    274,476 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/cmp.rs:crabomination::game::GameState::dispatch_triggers_for_events
+    274,128 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/ptr/non_null.rs:crabomination::server::bot::pick_attacks_inner
+    274,024 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/ptr/non_null.rs:crabomination::game::actions::<impl crabomination::game::GameState>::check_target_legality_with_source
+    273,856 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/slice/iter.rs:crabomination::game::GameState::effective_life
+    272,850 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/alloc/src/vec/mod.rs:crabomination::game::actions::<impl crabomination::game::GameState>::intrinsic_land_mana_abilities_with
+    272,850 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/mem/maybe_dangling.rs:crabomination::game::actions::<impl crabomination::game::GameState>::effective_mana_abilities_of
+    272,292 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/alloc/src/raw_vec/mod.rs:crabomination::game::GameState::relax_cost_colors
+    270,450 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/slice/iter/macros.rs:crabomination::game::combat::<impl crabomination::game::GameState>::creature_redirects_damage_to_controller
+    269,954 ( 0.01%)  crabomination/src/game/mod.rs:crabomination::game::GameState::combat_damage_prevented_to_self [/home/user/Crabomination/target/profiling-fast/bot_ladder]
+    269,812 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/iter/traits/iterator.rs:crabomination::game::combat::<impl crabomination::game::GameState>::declare_attackers_banded
+    268,816 ( 0.01%)  crabomination/src/decision.rs:<crabomination::game::GameState as core::clone::Clone>::clone
+    268,184 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/num/uint_macros.rs:<crabomination_base::effect::abilities::ActivatedAbility as core::clone::Clone>::clone
+    267,680 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/alloc/src/vec/mod.rs:crabomination::game::stack::<impl crabomination::game::GameState>::advance_step'2
+    267,584 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/slice/iter/macros.rs:crabomination::game::combat::<impl crabomination::game::GameState>::combat_damage_computed
+    267,346 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/slice/iter/macros.rs:crabomination::server::bot::attacker_damage_value
+    266,958 ( 0.01%)  crabomination_base/src/mana.rs:crabomination_base::mana::ManaCost::reduce_generic [/home/user/Crabomination/target/profiling-fast/bot_ladder]
+    266,760 ( 0.01%)  crabomination_base/src/mana.rs:crabomination_base::mana::ManaPool::pay_for_spell [/home/user/Crabomination/target/profiling-fast/bot_ladder]
+    266,742 ( 0.01%)  crabomination/src/game/mod.rs:crabomination::game::GameState::relax_cost_colors [/home/user/Crabomination/target/profiling-fast/bot_ladder]
+    266,230 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/ptr/non_null.rs:crabomination::game::actions::<impl crabomination::game::GameState>::spell_granted_convoke
+    265,934 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/alloc/src/vec/into_iter.rs:crabomination::game::GameState::push_ordered_trigger_candidates
+    265,068 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/ptr/mut_ptr.rs:crabomination::game::actions::<impl crabomination::game::GameState>::effective_mana_abilities_of
+    264,280 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/ptr/mut_ptr.rs:<alloc::vec::Vec<T> as alloc::vec::spec_from_iter_nested::SpecFromIterNested<T,I>>::from_iter'2
+    264,012 ( 0.01%)  crabomination/src/game/layers.rs:crabomination::game::can_block_attacker_computed
+    263,938 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/slice/iter/macros.rs:crabomination::game::GameState::apply_umbra_armor
+    263,840 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/intrinsics/mod.rs:<alloc::vec::Vec<T> as alloc::vec::spec_from_iter_nested::SpecFromIterNested<T,I>>::from_iter'2
+    263,678 ( 0.01%)  crabomination/src/server/bot.rs:crabomination::server::bot::score_candidate [/home/user/Crabomination/target/profiling-fast/bot_ladder]
+    263,588 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/slice/iter/macros.rs:crabomination::game::stack::<impl crabomination::game::GameState>::advance_step'2
+    263,462 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/slice/iter/macros.rs:crabomination::game::actions::<impl crabomination::game::GameState>::push_ward_triggers_for_targets
+    263,358 ( 0.01%)  crabomination/src/game/mod.rs:crabomination::game::GameState::graveyard_exile_redirects [/home/user/Crabomination/target/profiling-fast/bot_ladder]
+    263,172 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/alloc/src/vec/mod.rs:crabomination::game::effects::<impl crabomination::game::GameState>::resolve_effect
+    263,000 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/ptr/non_null.rs:crabomination::game::GameState::draw_cap_for
+    262,528 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/slice/iter/macros.rs:crabomination::game::actions::<impl crabomination::game::GameState>::place_land_card
+    261,660 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/alloc/src/vec/mod.rs:crabomination::game::GameState::push_ordered_trigger_candidates
+    261,660 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/alloc/src/vec/mod.rs:crabomination::game::stack::<impl crabomination::game::GameState>::planar_controller
+    261,570 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/ptr/mut_ptr.rs:<core::iter::adapters::flatten::FlatMap<I,U,F> as core::iter::traits::iterator::Iterator>::next
+    260,264 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/slice/iter/macros.rs:crabomination::game::combat::<impl crabomination::game::GameState>::free_division_targets
+    259,462 ( 0.01%)  crabomination_base/src/card.rs:crabomination::game::effects::eval::<impl crabomination::game::GameState>::evaluate_requirement_static'2
+    259,232 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/slice/iter/macros.rs:crabomination::game::actions::<impl crabomination::game::GameState>::player_cant_cast_noncreature_spells
+    258,750 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/slice/sort/shared/smallsort.rs:core::slice::sort::shared::smallsort::insert_tail [/home/user/Crabomination/target/profiling-fast/bot_ladder]
+    258,262 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/slice/iter/macros.rs:crabomination::game::actions::apply_spell_cost_floor
+    256,736 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/num/uint_macros.rs:<alloc::boxed::Box<T,A> as core::clone::Clone>::clone
+    256,646 ( 0.01%)  crabomination/src/game/layers.rs:crabomination::server::bot::permanent_value
+    256,640 ( 0.01%)  crabomination/src/game/mod.rs:crabomination::game::GameState::apply_soulbond_pairing [/home/user/Crabomination/target/profiling-fast/bot_ladder]
+    256,116 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/slice/iter/macros.rs:crabomination::game::combat::<impl crabomination::game::GameState>::fire_combat_damage_to_player_triggers
+    255,938 ( 0.01%)  /rust/deps/hashbrown-0.16.1/src/control/bitmask.rs:hashbrown::map::HashMap<K,V,S,A>::insert
+    255,856 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/ptr/non_null.rs:crabomination::game::actions::<impl crabomination::game::GameState>::activate_ability_inner::{{closure}}
+    255,756 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/alloc/src/sync.rs:crabomination::game::GameState::gather_continuous_effects_inner
+    255,756 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/alloc/src/vec/spec_from_iter.rs:crabomination::game::GameState::gather_continuous_effects_inner
+    255,756 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/iter/adapters/copied.rs:<core::iter::adapters::copied::Copied<I> as core::iter::traits::iterator::Iterator>::next
+    255,756 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/slice/iter/macros.rs:<core::iter::adapters::copied::Copied<I> as core::iter::traits::iterator::Iterator>::next [/home/user/Crabomination/target/profiling-fast/bot_ladder]
+    255,756 ( 0.01%)  crabomination/src/cow.rs:crabomination::game::GameState::gather_continuous_effects_inner
+    255,364 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/ptr/const_ptr.rs:<core::iter::adapters::map::Map<I,F> as core::iter::traits::iterator::Iterator>::fold
+    255,032 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/slice/iter/macros.rs:<core::iter::adapters::chain::Chain<A,B> as core::iter::traits::iterator::Iterator>::try_fold
+    254,892 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/intrinsics/mod.rs:crabomination::game::layers::compute_permanent_pass
+    254,236 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/ptr/non_null.rs:crabomination::game::GameState::apply_soulbond_pairing
+    254,182 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/ptr/mut_ptr.rs:crabomination::game::combat::<impl crabomination::game::GameState>::declare_attackers_banded
+    254,140 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/num/uint_macros.rs:hashbrown::raw::RawTable<T,A>::reserve_rehash
+    253,768 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/ptr/mod.rs:crabomination::server::bot::pick_removal_sacrifice
+    252,126 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/alloc/src/alloc.rs:<crabomination::cow::CowBox<T> as core::ops::deref::DerefMut>::deref_mut
+    251,802 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/slice/iter/macros.rs:<core::iter::adapters::filter::Filter<I,P> as core::iter::traits::iterator::Iterator>::count
+    251,654 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/iter/adapters/map.rs:crabomination::game::effects::targeting::<impl crabomination::game::GameState>::auto_targets_for_effect_all_slots_kicked
+    251,320 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/ptr/mut_ptr.rs:<core::iter::adapters::filter_map::FilterMap<I,F> as core::iter::traits::iterator::Iterator>::next
+    250,780 ( 0.01%)  crabomination/src/game/combat.rs:crabomination::game::combat::<impl crabomination::game::GameState>::free_division_targets [/home/user/Crabomination/target/profiling-fast/bot_ladder]
+    250,704 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/iter/adapters/filter.rs:crabomination::game::actions::apply_spell_cost_floor
+    250,690 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/ptr/mut_ptr.rs:<hashbrown::raw::RawTable<T,A> as core::clone::Clone>::clone
+    250,420 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/alloc/src/vec/mod.rs:core::ptr::drop_in_place<crabomination::game::ColdState>
+    249,740 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/alloc/src/raw_vec/mod.rs:core::ptr::drop_in_place<core::result::Result<alloc::vec::Vec<crabomination::game::types::GameEvent>,crabomination::game::types::GameError>>
+    248,996 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/ptr/mut_ptr.rs:crabomination::game::GameState::computed_permanent
+    248,392 ( 0.01%)  ./malloc/./malloc/malloc.c:alloc_perturb [/usr/lib/x86_64-linux-gnu/libc.so.6]
+    247,882 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/alloc/src/alloc.rs:crabomination::game::stack::<impl crabomination::game::GameState>::check_state_based_actions
+    247,664 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/slice/index.rs:crabomination::game::GameState::dispatch_triggers_for_events
+    247,054 ( 0.01%)  crabomination_base/src/card.rs:crabomination::game::GameState::blocker_can_block_attacker
+    247,008 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/ptr/non_null.rs:crabomination::game::actions::<impl crabomination::game::GameState>::noncreature_spell_cast_locked
+    245,580 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/alloc/src/vec/set_len_on_drop.rs:<core::iter::adapters::map::Map<I,F> as core::iter::traits::iterator::Iterator>::fold
+    244,336 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/ptr/mod.rs:<alloc::boxed::Box<T,A> as core::clone::Clone>::clone
+    244,302 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/alloc/src/vec/mod.rs:crabomination::game::combat::<impl crabomination::game::GameState>::combat_participation_cap
+    242,788 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/ptr/non_null.rs:crabomination::game::effects::movement::<impl crabomination::game::GameState>::damage_redirect_target
+    242,656 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/option.rs:core::iter::adapters::flatten::and_then_or_clear
+    242,642 ( 0.01%)  crabomination_base/src/card.rs:crabomination_base::card::CardInstance::can_block
+    241,224 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/ptr/mod.rs:core::ptr::drop_in_place<alloc::vec::Vec<crabomination_base::effect::abilities::TriggeredAbility>> [/home/user/Crabomination/target/profiling-fast/bot_ladder]
+    240,964 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/ptr/mut_ptr.rs:crabomination::server::bot::pick_removal_ping
+    239,400 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/alloc/src/boxed.rs:crabomination::game::GameState::gather_continuous_effects_inner
+    239,394 ( 0.01%)  crabomination/src/server/bot.rs:crabomination::server::bot::pick_ability_counter_response [/home/user/Crabomination/target/profiling-fast/bot_ladder]
+    239,378 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/ptr/non_null.rs:crabomination::server::bot::pick_sacrifice_value
+    238,410 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/alloc/src/alloc.rs:crabomination::game::actions::<impl crabomination::game::GameState>::auto_tap_for_cost_inner
+    237,972 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/iter/adapters/filter.rs:crabomination::game::GameState::dispatch_triggers_for_events
+    237,398 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/ops/control_flow.rs:<alloc::vec::Vec<T> as alloc::vec::spec_from_iter_nested::SpecFromIterNested<T,I>>::from_iter
+    236,882 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/alloc/src/sync.rs:crabomination::game::stack::<impl crabomination::game::GameState>::check_state_based_actions
+    235,716 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/ptr/mut_ptr.rs:crabomination::game::combat::<impl crabomination::game::GameState>::fire_combat_damage_triggers
+    234,538 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/slice/iter/macros.rs:crabomination::game::effects::targeting::<impl crabomination::game::GameState>::auto_targets_for_effect_all_slots_kicked
+    234,142 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/alloc/src/vec/mod.rs:crabomination::game::stack::<impl crabomination::game::GameState>::resolve_top_of_stack_inner
+    234,008 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/slice/cmp.rs:crabomination::game::combat::<impl crabomination::game::GameState>::declare_blockers
+    233,940 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/alloc/src/raw_vec/mod.rs:crabomination::game::actions::effect_produces_color
+    233,940 ( 0.01%)  crabomination_base/src/mana.rs:crabomination::game::actions::effect_produces_color
+    233,712 ( 0.01%)  crabomination/src/game/actions.rs:crabomination::game::actions::<impl crabomination::game::GameState>::noncreature_spell_cast_locked [/home/user/Crabomination/target/profiling-fast/bot_ladder]
+    233,688 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/slice/iter/macros.rs:crabomination::game::actions::<impl crabomination::game::GameState>::player_locked_to_sorcery_timing
+    233,034 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/ptr/mod.rs:crabomination::game::combat::<impl crabomination::game::GameState>::resolve_combat
+    231,648 ( 0.01%)  crabomination/src/game/mod.rs:crabomination::game::GameState::compute_permanents [/home/user/Crabomination/target/profiling-fast/bot_ladder]
+    231,392 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/ptr/mut_ptr.rs:crabomination::game::stack::<impl crabomination::game::GameState>::fire_step_triggers
+    231,192 ( 0.01%)  crabomination_base/src/mana.rs:crabomination::game::actions::<impl crabomination::game::GameState>::try_pay_after_snapshot_mode
+    231,136 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/mem/mod.rs:crabomination::game::actions::<impl crabomination::game::GameState>::cast_spell_with_convoke
+    230,972 ( 0.01%)  crabomination/src/server/bot.rs:crabomination::server::bot::pick_token_maker [/home/user/Crabomination/target/profiling-fast/bot_ladder]
+    230,558 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/ptr/mut_ptr.rs:crabomination::server::bot::main_phase_action_with
+    230,542 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/slice/iter/macros.rs:crabomination::game::actions::<impl crabomination::game::GameState>::fire_self_etb_triggers
+    230,506 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/alloc/src/vec/mod.rs:crabomination::server::bot::cast_candidates
+    230,368 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/ptr/mod.rs:crabomination::server::bot::pick_removal_destroy
+    229,896 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/alloc/src/raw_vec/mod.rs:crabomination_base::mana::ManaPool::pay
+    229,896 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/slice/iter/macros.rs:crabomination::game::GameState::empty_mana_pools
+    229,474 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/option.rs:crabomination::server::bot::pick_blocks_inner
+    228,880 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/slice/mod.rs:crabomination::game::stack::<impl crabomination::game::GameState>::do_untap
+    228,570 ( 0.01%)  crabomination_base/src/card.rs:crabomination::game::combat::<impl crabomination::game::GameState>::fire_combat_damage_triggers
+    228,220 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/slice/cmp.rs:crabomination::game::stack::<impl crabomination::game::GameState>::check_state_based_actions
+    227,358 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/alloc/src/vec/mod.rs:crabomination_base::card::CardInstance::can_block
+    225,536 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/slice/mod.rs:<alloc::vec::Vec<T> as alloc::vec::spec_from_iter_nested::SpecFromIterNested<T,I>>::from_iter
+    225,322 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/ptr/non_null.rs:crabomination::server::bot::pick_removal_destroy
+    224,628 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/ptr/non_null.rs:crabomination::game::GameState::source_exile_draw_pile_for
+    224,340 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/slice/iter/macros.rs:crabomination::game::combat::<impl crabomination::game::GameState>::trade_counters_for_damage
+    224,070 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/iter/range.rs:crabomination::game::stack::<impl crabomination::game::GameState>::check_state_based_actions
+    223,868 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/slice/iter/macros.rs:crabomination::game::GameState::source_damage_to_color_prevented
+    223,472 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/slice/iter/macros.rs:crabomination::game::combat::<impl crabomination::game::GameState>::fire_combat_damage_to_creature_triggers
+    223,352 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/alloc/src/raw_vec/mod.rs:core::ptr::drop_in_place<crabomination_base::effect::ManaPayload>
+    223,186 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/alloc/src/raw_vec/mod.rs:crabomination::game::stack::<impl crabomination::game::GameState>::advance_step
+    222,934 ( 0.01%)  crabomination/src/game/affordances.rs:crabomination::game::affordances::<impl crabomination::game::GameState>::would_accept [/home/user/Crabomination/target/profiling-fast/bot_ladder]
+    222,694 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/ptr/mod.rs:<crabomination_base::effect::ManaPayload as core::clone::Clone>::clone
+    222,684 ( 0.01%)  /rust/deps/hashbrown-0.16.1/src/raw/mod.rs:crabomination::game::effects::<impl crabomination::game::GameState>::resolve_effect
+    222,636 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/slice/iter/macros.rs:crabomination::game::actions::<impl crabomination::game::GameState>::player_cant_cast_instants_or_sorceries
+    222,006 ( 0.01%)  /rust/deps/hashbrown-0.16.1/src/raw/mod.rs:alloc::sync::Arc<T,A>::drop_slow
+    221,822 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/slice/iter/macros.rs:crabomination::game::GameState::effective_poison
+    221,582 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/iter/traits/iterator.rs:crabomination::game::combat::<impl crabomination::game::GameState>::combat_participation_cap
+    221,370 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/alloc/src/vec/mod.rs:crabomination_base::card::CardDefinition::is_artifact
+    221,368 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/alloc/src/vec/mod.rs:alloc::sync::Arc<T,A>::drop_slow
+    221,080 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/iter/range.rs:crabomination::game::stack::<impl crabomination::game::GameState>::advance_step
+    220,724 ( 0.01%)  /rust/deps/hashbrown-0.16.1/src/raw/mod.rs:crabomination::server::bot::pick_blocks_inner
+    219,888 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/slice/iter/macros.rs:crabomination::game::GameState::combat_damage_from_matching_prevented
+    219,830 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/ptr/non_null.rs:crabomination::game::GameState::chosen_type_etb_counter_specs
+    219,614 ( 0.01%)  crabomination/src/game/types.rs:<crabomination::game::types::GameAction as core::clone::Clone>::clone [/home/user/Crabomination/target/profiling-fast/bot_ladder]
+    219,424 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/slice/iter/macros.rs:crabomination::game::GameState::damage_from_source_prevented_by_keyword
+    218,858 ( 0.01%)  crabomination/src/server/bot.rs:crabomination::server::bot::pick_self_pump_counter [/home/user/Crabomination/target/profiling-fast/bot_ladder]
+    218,832 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/slice/iter/macros.rs:crabomination_base::card::CardDefinition::crew_cost
+    218,430 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/slice/iter/macros.rs:<core::iter::adapters::chain::Chain<A,B> as core::iter::traits::iterator::Iterator>::fold
+    217,852 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/iter/traits/accum.rs:<alloc::vec::Vec<T> as alloc::vec::spec_from_iter_nested::SpecFromIterNested<T,I>>::from_iter
+    217,642 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/slice/iter/macros.rs:<alloc::vec::Vec<T> as alloc::vec::spec_from_iter::SpecFromIter<T,I>>::from_iter
+    217,216 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/ptr/mut_ptr.rs:crabomination::game::GameState::draw_cap_for
+    217,012 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/ptr/non_null.rs:crabomination_base::card::CardInstance::counter_count [/home/user/Crabomination/target/profiling-fast/bot_ladder]
+    216,182 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/sync/atomic.rs:crabomination::game::effects::eval::<impl crabomination::game::GameState>::evaluate_requirement_static
+    216,166 ( 0.01%)  crabomination_base/src/card.rs:crabomination::game::actions::<impl crabomination::game::GameState>::cast_spell_with_convoke
+    215,880 ( 0.01%)  crabomination_base/src/card.rs:crabomination_base::card::CardDefinition::is_planeswalker
+    215,564 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/alloc/src/vec/mod.rs:crabomination::game::effects::<impl crabomination::game::GameState>::run_effect
+    215,454 ( 0.01%)  crabomination/src/server/bot.rs:core::iter::adapters::flatten::and_then_or_clear
+    215,432 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/ptr/non_null.rs:crabomination::game::GameState::combat_damage_from_matching_prevented
+    215,054 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/alloc/src/vec/mod.rs:crabomination::game::stack::<impl crabomination::game::GameState>::remove_from_battlefield_to_graveyard_raw
+    215,028 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/option.rs:crabomination::game::GameState::chosen_type_etb_counter_specs
+    214,292 ( 0.01%)  crabomination/src/server/bot.rs:<crabomination::server::bot::HeuristicBot as crabomination::server::bot::Bot>::next_action [/home/user/Crabomination/target/profiling-fast/bot_ladder]
+    214,282 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/slice/iter/macros.rs:crabomination::game::GameState::dying_snapshot
+    213,830 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/ptr/mod.rs:crabomination::game::combat::<impl crabomination::game::GameState>::declare_blockers
+    213,478 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/ptr/non_null.rs:<core::iter::adapters::copied::Copied<I> as core::iter::traits::iterator::Iterator>::try_fold
+    212,990 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/slice/iter/macros.rs:crabomination::server::bot::pick_token_maker
+    212,812 ( 0.01%)  /rust/deps/hashbrown-0.16.1/src/raw/mod.rs:crabomination::game::stack::<impl crabomination::game::GameState>::check_state_based_actions
+    212,212 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/ptr/non_null.rs:crabomination::game::GameState::process_cumulative_upkeep
+    212,034 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/ptr/non_null.rs:<core::iter::adapters::chain::Chain<A,B> as core::iter::traits::iterator::Iterator>::try_fold
+    211,872 ( 0.01%)  crabomination/src/player.rs:crabomination::game::stack::<impl crabomination::game::GameState>::pass_priority
+    211,842 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/slice/iter/macros.rs:crabomination::game::GameState::clamp_damage_to_life_floor
+    211,768 ( 0.01%)  /rust/deps/hashbrown-0.16.1/src/map.rs:<crabomination::cow::CowBox<T> as core::ops::deref::DerefMut>::deref_mut
+    211,380 ( 0.01%)  crabomination/src/game/actions.rs:crabomination::game::actions::<impl crabomination::game::GameState>::pay_life_cost [/home/user/Crabomination/target/profiling-fast/bot_ladder]
+    211,058 ( 0.01%)  crabomination/src/game/layers.rs:crabomination::game::GameState::blocker_side_gates_allow_block
+    210,978 ( 0.01%)  crabomination_base/src/card.rs:crabomination::game::actions::<impl crabomination::game::GameState>::auto_tap_for_cost_inner
+    209,614 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/alloc/src/raw_vec/mod.rs:crabomination::game::GameState::perform_action_inner
+    209,368 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/slice/cmp.rs:crabomination::game::layers::compute_permanent_pass
+    209,328 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/ptr/const_ptr.rs:crabomination::game::GameState::push_ordered_trigger_candidates
+    209,328 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/std/src/collections/hash/set.rs:crabomination::game::GameState::dispatch_triggers_for_events
+    208,936 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/iter/adapters/chain.rs:<core::iter::adapters::chain::Chain<A,B> as core::iter::traits::iterator::Iterator>::try_fold [/home/user/Crabomination/target/profiling-fast/bot_ladder]
+    208,626 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/slice/iter/macros.rs:crabomination::game::GameState::damage_prevented_by_protection
+    208,516 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/alloc/src/raw_vec/mod.rs:crabomination::game::layers::affected_includes_gated
+    208,516 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/alloc/src/vec/mod.rs:crabomination::game::layers::affected_includes_gated
+    208,516 ( 0.01%)  crabomination_base/src/card.rs:crabomination::game::layers::affected_includes_gated
+    208,260 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/ptr/non_null.rs:crabomination::server::bot::pick_reach_burn
+    207,978 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/num/uint_macros.rs:crabomination::game::actions::<impl crabomination::game::GameState>::finalize_cast
+    207,878 ( 0.01%)  crabomination/src/game/mod.rs:crabomination::game::stack::<impl crabomination::game::GameState>::finish_cleanup
+    207,310 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/ptr/non_null.rs:crabomination::game::actions::<impl crabomination::game::GameState>::push_ward_triggers_for_targets
+    206,816 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/alloc/src/sync.rs:alloc::sync::arcinner_layout_for_value_layout
+    206,262 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/ptr/non_null.rs:crabomination::game::combat::<impl crabomination::game::GameState>::fire_combat_damage_to_player_triggers
+    205,710 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/option.rs:crabomination::game::actions::<impl crabomination::game::GameState>::granted_abilities_of
+    205,414 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/slice/iter/macros.rs:crabomination::game::GameState::perform_action_inner::{{closure}}
+    205,392 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/ptr/non_null.rs:crabomination::game::GameState::effective_life
+    205,324 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/ptr/non_null.rs:<core::iter::adapters::map::Map<I,F> as core::iter::traits::iterator::Iterator>::next
+    204,998 ( 0.01%)  crabomination/src/server/bot.rs:crabomination::server::bot::pick_defensive_removal [/home/user/Crabomination/target/profiling-fast/bot_ladder]
+    204,940 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/num/uint_macros.rs:crabomination::game::actions::<impl crabomination::game::GameState>::granted_abilities_of
+    204,570 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/slice/iter/macros.rs:<alloc::vec::Vec<T,A> as core::clone::Clone>::clone
+    204,398 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/slice/iter/macros.rs:crabomination::game::actions::<impl crabomination::game::GameState>::play_land_with_face
+    204,304 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/slice/mod.rs:hashbrown::rustc_entry::<impl hashbrown::map::HashMap<K,V,S,A>>::rustc_entry
+    204,294 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/intrinsics/mod.rs:<hashbrown::raw::RawTable<T,A> as core::clone::Clone>::clone
+    204,284 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/alloc/src/sync.rs:<crabomination_base::card::CardInstance as core::ops::deref::DerefMut>::deref_mut
+    203,880 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/iter/adapters/enumerate.rs:crabomination::game::GameState::dispatch_triggers_for_events
+    203,076 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/option.rs:crabomination::game::GameState::scale_damage_to
+    203,056 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/slice/index.rs:crabomination::game::actions::<impl crabomination::game::GameState>::cast_spell_with_convoke
+    202,820 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/alloc/src/vec/into_iter.rs:<alloc::vec::Vec<T,A1> as alloc::vec::spec_extend::SpecExtend<T,alloc::vec::into_iter::IntoIter<T,A2>>>::spec_extend
+    202,716 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/slice/mod.rs:core::ops::function::impls::<impl core::ops::function::FnMut<A> for &mut F>::call_mut
+    202,246 ( 0.01%)  crabomination/src/game/layers.rs:crabomination::game::actions::<impl crabomination::game::GameState>::activate_ability_inner
+    202,014 ( 0.01%)  crabomination/src/game/mod.rs:crabomination::game::actions::<impl crabomination::game::GameState>::activate_ability_inner
+    201,834 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/alloc/src/alloc.rs:crabomination::game::actions::<impl crabomination::game::GameState>::granted_abilities_of
+    201,834 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/alloc/src/sync.rs:crabomination::game::actions::<impl crabomination::game::GameState>::granted_abilities_of
+    201,612 ( 0.01%)  /rust/deps/hashbrown-0.16.1/src/set.rs:<crabomination::game::GameState as core::clone::Clone>::clone
+    201,336 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/alloc/src/vec/mod.rs:crabomination::game::GameState::graveyard_exile_redirects
+    201,222 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/ptr/non_null.rs:crabomination::game::combat::<impl crabomination::game::GameState>::fire_combat_damage_to_creature_triggers
+    200,382 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/mem/maybe_dangling.rs:crabomination::game::GameState::drain_trigger_queue
+    199,394 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/alloc/src/raw_vec/mod.rs:<core::iter::adapters::map::Map<I,F> as core::iter::traits::iterator::Iterator>::try_fold
+    199,284 ( 0.01%)  /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/iter/adapters/take.rs:<crabomination::cow::CowBox<T> as core::ops::deref::DerefMut>::deref_mut
+
