@@ -16,37 +16,37 @@ reference and want their own triage pass):
 
 ## NEXT (handoff — rewrite each run, keep under 15 lines)
 
-Branch `claude/modern_decks`. **The twenty-ninth pass landed two rows for
--1.993 % Ir** (2,890,336,504 -> 2,832,745,260 at `645b978d`, where the
-profile of record is retaken). Both are the CoW theme one level up: stop
-paying for a `PlayerData` clone where a seat's *only* write was one bit
-(the "an opponent cast a spell" seat mask), then make the clone itself
-cheaper (`PlayerCold`, fifteen heap-owning rare fields behind one `CowBox`).
+Branch `claude/modern_decks`. **The thirtieth pass landed three rows for
+-1.980 % Ir** (2,832,747,493 -> 2,776,663,732 at `005c1d33`). All three are
+one shape: **a linear scan that visited its cases in the wrong order.** The
+zone scan looked at ~70 library cards before the stack (-0.583 %); the
+gather's last board pass tested three always-false flags for every card
+when it could walk `sa_cards` (-1.250 %); `effective_mana_abilities` re-found
+the card its three callers were standing on (-0.158 %).
 
-- **Read PERF candidate (-1)'s corrections before re-sweeping.** The
-  previous handoff's two 0.95 % survivors were **one site double-counted**,
-  and `remove_from_hand` is not a candidate at all — the unshare is
-  inherited by whatever `finalize_cast` writes next. The `=> …deref_mut`
-  sort no longer resolves either; use `--tree=caller` on `Arc::make_mut`.
-- **Best next moves**, in order: (13) the gather's per-card keyword loop —
-  a `Keyword` bitset on `CardDefinition` pays there, in
-  `permanent_has_keyword` and in `Keyword::eq` (0.50 % self) at once; then
-  (11) `battlefield_find`-in-a-loop; then (9)(b).
-- **Not checked this pass, do it next:** the `--decks all` decision count
-  (2,548,986 at `841dd40b`) and the `overflow` profile (20,400 games, three
-  seeds, ~80 s/seed). Both rows here are behaviour-preserving by
-  construction and the six-game bench output is byte-identical, but neither
-  wide check was run.
+- **Both wide checks are now green at the tip**, and they were the previous
+  handoff's open item: `--decks all` reads `decisions` **2,548,986**
+  identical to `841dd40b`, 6 draws / 5,100 (0.12 %); `--bench` reads
+  **193,232**, `turns_per_game` 26.98, stalls 0, determinism ok. **Still not
+  run: the `overflow` profile** (its build was killed mid-run to free cores
+  for the measurements — budget ~15 min of build for it).
+- **Best next moves**, in order: PERF candidate **(-2)** — the same
+  wrong-order shape, with `find_card_zone` / `find_card_owner` /
+  `find_card_anywhere_mut` still putting the libraries third, plus a miss
+  counter on `find_card_anywhere` before anyone designs an id→zone index;
+  then **(-1)** the CoW sweep via `--tree=caller` on `Arc::make_mut`; then
+  (11)'s unfinished enumeration. **(13)/(5) the `Keyword` bitset is now
+  costed and ranked down** — ~0.6 % addressable against 7,716 catalog
+  literals; the arithmetic is in the candidates section, don't re-derive it.
 - Env: no `cargo-nextest`; `cargo test -p crabomination -p
-  crabomination_tests` is the gate — ~4 min cold build, ~40 s run, **18,636
-  tests**. `profiling-fast` engine rebuild **13 min cold / ~4 min warm**,
-  callgrind ~4 min, `release` ~25 min. Client apt deps install in a minute
-  (see below); **disk gets tight (~12 G free) once release + profiling-fast
-  + dev caches coexist** — `rm -rf target/debug/incremental` first.
-- Trackers: PERF is **1.13k**, down from 1.31k — the longer-lived
-  candidate list and "Closed / ruled out" are now an index. Still ~130 over
-  guidance; the next compaction target is the **Log's pass 20-28 blocks**,
-  which are the last uncompacted prose.
+  crabomination_tests` is the gate (~40 s run once built). `profiling-fast`
+  engine rebuild **7 min warm, and ~2x that if a second cargo runs at the
+  same time** — this box has 4 cores, so serialize builds rather than
+  overlapping them. Callgrind ~4 min. Client apt deps install in a minute
+  (see below) and `cargo clippy --workspace` needs them.
+- Trackers: PERF is **1.19k** — passes 26-28 are now table rows like 20-25;
+  the last uncompacted prose is the pass 29/30 blocks, which are current
+  and should stay until they are two passes old.
 
 ## Environment note
 
