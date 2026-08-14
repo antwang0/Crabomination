@@ -205,8 +205,8 @@ effect is the trap, not the reassurance**), and a run on the wrong profile
 or the wrong box (`ac8e3b50` at `release-fast`, `247ee13d` at
 `profiling-fast`).
 
-**Re-checked 2026-08-14 at the thirtieth pass's tip `005c1d33`, and it
-still does not re-anchor.** `host_calib_ms` reads **58** — the fourth
+**Re-checked 2026-08-14 at the thirtieth pass's merged tip `a4960740`, and
+it still does not re-anchor.** `host_calib_ms` reads **58-69** — the fourth
 fingerprint again, not the mid-40s box this block was taken on — so no
 absolute here is comparable. What the run proves is the invariants, and all
 of them hold at the tip: `--bench` 320 games reads `decisions` **193,232
@@ -216,7 +216,8 @@ tip — `--bench --threads 1 --games 300 --seed 11 --decks all`, 5,100 games
 over 17 archetypes — reads `decisions` **2,548,986**, identical to
 `841dd40b`, `5034eb2f` and the twenty-ninth pass's tip, with the recorded
 **6 draws / 5,100 (0.12 %)** and `determinism ok`. **The pass is worth
--1.980 % by instruction count and moved zero decisions on either pool.**
+-1.990 % by instruction count and moved zero decisions on either pool**,
+and both pools were re-run after the merge, not before it.
 (`peak_rss_mib` 20.4 on this binary is the *system* allocator — the
 `--no-default-features` profiling build — not a comparison to the
 mimalloc numbers above.)
@@ -540,7 +541,23 @@ pass's recorded 2,832,745,260 (**2,233 Ir apart, 0.00008 %**).
 | 2026-08-14 | The zone scan looks at the stack before both libraries (`8241d092`) | 2,832,747,493 Ir | 2,816,245,576 Ir (**-0.583 %**) | `find_card_anywhere` visited battlefield, then per seat graveyard / hand / library / ante, then exile, then the stack — and the cast path asks it for spells that are *on the stack* (`finalize_cast` 21,362 calls, `perform_action_inner` 37,280, `activate_ability` 18,386, `cast_spell` 7,456), so those calls walked ~35 cards a seat of library first. **Self cost 36.1 M / 1.27 % over 104,240 calls, ~65 % of it in calls that fell through everything.** A `CardId` names one object and lives in one zone (copies and tokens are minted fresh from `next_id`), so the visit order picks how long the answer takes, never which answer comes back; `duplicate_zone_id()` is a debug-only whole-state check the golden-trace games now run after every action. Self **36.1 M -> 19.6 M (-46 %)** at unchanged calls |
 | 2026-08-14 | The gather's stateful board pass walks `sa_cards` when it can (`6aee2973`) | 2,816,245,576 Ir | 2,781,048,142 Ir (**-1.250 %**) | `gather_continuous_effects_inner` ends with an *ungated* walk of the whole battlefield carrying five unrelated passes. Two read `static_abilities` and so can only emit for a card already in `sa_cards`; the other three are keyword/flag reads (unleash, living metal, suspect) that are false on almost every board. Every card paid three flag tests and two empty slice iterations for nothing — **4,985,332 + 7,477,998 + 7,477,998 Ir on three source lines** over 127,878 gathers. `any_suspected` joins the pre-scan fold; with all three bits clear the walk *is* `sa_cards`, in battlefield order, so the emitted sequence is unchanged. `&mut dyn Iterator`, not a `Box`, so choosing costs no allocation. Gather self **219.4 M / 7.75 % -> 185.9 M / 6.68 %** |
 | 2026-08-14 | An `_of(&CardInstance)` twin for `effective_mana_abilities` (`005c1d33`) | 2,781,048,142 Ir | 2,776,663,732 Ir (**-0.158 %**) | Candidate (11)'s shape at the site the twenty-seventh pass's row named and did not finish. `effective_mana_abilities_with(card_id, scan)` opened with a `battlefield_find` and all three callers ask from inside a `battlefield.iter()` — `mana_source_table_inner`, `untapped_producers_of_inner`, `untapped_relevant_source_exists_inner` — 54,570 calls each re-finding the card the loop was standing on. The `CardId` form stays as a find plus delegate. Self **13.9 M / 0.49 % -> 9.5 M / 0.34 %** |
-| | **cumulative, thirtieth pass** | **2,832,747,493 Ir** | **2,776,663,732 Ir (-1.980 %)** | callgrind on the fixed six-game workload; bench output byte-identical on every row |
+| 2026-08-14 | The merge with the concurrent session (`a4960740`) | 2,776,663,732 Ir | 2,776,361,994 Ir (**-0.011 %**) | Not a row so much as the honest tip: the merge keeps this session's zone order and adds the other's `find_card_anywhere_mut` reorder, worth **301,738 Ir**. Measured because neither session's cumulative describes the merged code |
+| | **cumulative, thirtieth pass** | **2,832,747,493 Ir** | **2,776,361,994 Ir (-1.990 %)** | callgrind on the fixed six-game workload; bench output byte-identical on every row, including the merge |
+
+**The second collision this file has recorded, and this one was on the top
+candidate.** A concurrent session pulled `find_card_anywhere` from the same
+base within the hour and landed `dbd3efeb` — libraries after every small
+zone and after the stack, **-0.473 %**. This session's `8241d092` moved the
+*stack* to second as well, because the cast path is what asks
+(`finalize_cast` 21,362 calls, `perform_action_inner` 37,280,
+`activate_ability` 18,386, `cast_spell` 7,456 all look up spells that are on
+the stack), and read **-0.583 %** from the same base. The merge keeps the
+stack-second ordering and takes their `_mut` sibling reorder, which this
+session had left alone. **Two independent measurements of the same
+candidate, 0.110 % apart, are the size of the ordering difference and not
+noise** — the first collision (twenty-fifth pass, functionally identical
+source) was 0.042 %. *Neither session's cumulative describes the merged
+tip*, which is why the row below exists.
 
 **What the pass leaves behind: the filter is the *order* of a scan, not its
 length.** Both large rows are a linear walk that was correct and visited its
@@ -664,19 +681,6 @@ consolidate 0.74 / unlink 0.73), `__memcpy_avx_unaligned_erms` 3.80 %,
 Ordered by expected value. Each run pulls the top one, attaches numbers,
 and feeds what it finds back in. Re-profile and replenish when the list
 goes thin or stale.
-
-**(-2) A `for`/`find` whose first branch is the rarest case — the
-thirtieth pass's shape, and it is cheaper to check than to profile.** Both
-of that pass's large rows were a linear walk that visited its cases in the
-wrong order, and neither was visible as an expensive function. **What is
-left of the named one**: `find_card_anywhere` is still 19.6 M / 0.70 % over
-104,240 calls after the reorder, and the residual is calls that return
-`None` — they walk every zone by construction. Costing that needs a miss
-counter (one instrumented `profiling-fast` build, a two-minute run) before
-anyone designs an id→zone index, which is the only fix and is state to
-maintain. **Where else to look**: `find_card_zone` has the same visit order
-and no stack case at all (so a stack card reads `None`); `find_card_owner`
-and `find_card_anywhere_mut` both still put the libraries third.
 
 **(-1) The CoW-unshare sweep — re-run it, but with the new recipe.** The
 twenty-eighth pass took four of these for -7.257 % and the twenty-ninth two
@@ -973,6 +977,18 @@ remaining cost is per-card `computed_permanent` and the gather itself.
     as part of whatever *does* touch them, and do not claim Ir for it. Noted
     here because a family of walkers that must agree is worth keeping in
     step, and three of five are now out of step by cost.
+
+    **What is left of the paid one, measured at the merged tip.**
+    `find_card_anywhere` is still **19.6 M / 0.70 % over 104,240 calls**
+    after the reorder, and the residual is calls that return `None` — they
+    walk every zone by construction, whatever the order. Costing that needs
+    a miss counter (one instrumented `profiling-fast` build, a two-minute
+    run) *before* anyone designs an id→zone index, which is the only fix and
+    is state to maintain on every zone move. **And the general filter this
+    family taught is worth more than the family**: a `for`/`find` whose
+    *first* branch is the rarest case is cheaper to check than to profile —
+    neither of the thirtieth pass's two large rows was visible as an
+    expensive function.
 11. **A helper that opens with `battlefield_find` and is called from a
     battlefield loop — the generalization of the twenty-seventh pass's
     row.** `granted_abilities_with(card_id, scan)` was -0.552 % on its own

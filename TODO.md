@@ -17,12 +17,13 @@ reference and want their own triage pass):
 ## NEXT (handoff — rewrite each run, keep under 15 lines)
 
 Branch `claude/modern_decks`. **The thirtieth pass landed three rows for
--1.980 % Ir** (2,832,747,493 -> 2,776,663,732), then **merged a concurrent
-session that had pulled the same top candidate** — see PERF's collision
-note. All three rows are one shape: **a linear scan that visited its cases
-in the wrong order.** The zone scan looked at ~70 library cards before the
-stack (-0.583 %); the gather's last board pass tested three always-false
-flags per card when it could walk `sa_cards` (-1.250 %);
+-1.990 % Ir** (2,832,747,493 -> 2,776,361,994 at the merged tip
+`a4960740`), having **merged a concurrent session that pulled the same top
+candidate** — see PERF's collision note. All three rows are one shape:
+**a linear scan that visited its cases in the wrong order.** The zone scan
+looked at ~70 library cards before the stack (-0.583 %); the gather's last
+board pass tested three always-false flags per card when it could walk
+`sa_cards` (-1.250 %);
 `effective_mana_abilities` re-found the card its callers were standing on
 (-0.158 %).
 
@@ -32,11 +33,11 @@ flags per card when it could walk `sa_cards` (-1.250 %);
   base-vs-tip byte-diff method (`cp` the pre-pass binary, diff `--decks all
   --games 300 --threads 3` output) beats a recorded constant — use it.
   `overflow` (20,400 games, seeds 11/12/13) was clean on their run.
-- **Best next moves**, in order: PERF candidate **(-2)** — the same
-  wrong-order shape, with `find_card_zone` / `find_card_owner` still putting
-  the libraries third, plus a miss counter on `find_card_anywhere` before
-  anyone designs an id→zone index; then **(-1)** the CoW sweep via
-  `--tree=caller` on `Arc::make_mut`; then (11)'s unfinished enumeration.
+- **Best next moves**, in order: PERF candidate **(11a)**, the zone-walk
+  family — `find_card_zone` / `find_card_owner` still put the libraries
+  third, and a miss counter on `find_card_anywhere` is owed before anyone
+  designs an id→zone index; then **(-1)** the CoW sweep via `--tree=caller`
+  on `Arc::make_mut`; then (11)'s unfinished enumeration.
   **(13)/(5) the `Keyword` bitset is costed and ranked down** — ~0.6 %
   addressable against 7,716 catalog literals; don't re-derive it.
 - **Two sessions on this branch at once is now normal.** Fetch before the
