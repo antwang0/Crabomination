@@ -349,6 +349,19 @@ pub enum AttackOption {
 /// field *out* if it turns out to be written on most actions (it would
 /// unshare the group every time); move one *in* if it is a collection only
 /// rare cards touch.
+/// Bit for one seat in a seat mask; 0 for seats past 63 (no supported format
+/// seats that many, and a shift that wide is UB).
+#[inline]
+pub(crate) fn seat_bit(seat: usize) -> u64 {
+    if seat >= 64 { 0 } else { 1u64 << seat }
+}
+
+/// Every seat of a `seats`-player game as a mask.
+#[inline]
+pub(crate) fn seat_mask(seats: usize) -> u64 {
+    if seats >= 64 { u64::MAX } else { (1u64 << seats) - 1 }
+}
+
 #[derive(Clone, Default, serde::Serialize, serde::Deserialize)]
 pub struct ColdState {
     /// CR 801.2c — the range matrix, recomputed as each turn begins so a
@@ -975,6 +988,16 @@ pub struct GameState {
     pub skip_first_draw: bool,
     /// Count of spells cast this turn (for Storm and related effects).
     pub spells_cast_this_turn: u32,
+    /// Seat mask: bit `s` is set while an opponent of seat `s` has cast a
+    /// spell since seat `s`'s last turn ended (backs
+    /// `Predicate::OpponentCastSpellSinceYourTurn`). Set on every other seat
+    /// by `finalize_cast`, cleared for the active player at cleanup. A mask
+    /// on the state rather than a `Player` flag because writing one seat's
+    /// flag deep-copies that seat's `PlayerData` through the CoW handle —
+    /// 5,800 unshares per six bench games for one bit. Seats past 63 are not
+    /// tracked; no supported format seats that many.
+    #[serde(default)]
+    pub(crate) opponent_cast_since_your_turn: u64,
     /// Count of noncreature spells cast this turn (any player), for
     /// "the first noncreature spell of a turn" (Nullstone Gargoyle). Reset at
     /// Cleanup alongside `spells_cast_this_turn`.
@@ -2056,6 +2079,7 @@ impl Clone for GameState {
             blockers_declared: self.blockers_declared,
             skip_first_draw: self.skip_first_draw,
             spells_cast_this_turn: self.spells_cast_this_turn,
+            opponent_cast_since_your_turn: self.opponent_cast_since_your_turn,
             noncreature_spells_cast_this_turn: self.noncreature_spells_cast_this_turn,
             mana_spent_on_spells_this_turn: self.mana_spent_on_spells_this_turn,
             expend_prev_total: self.expend_prev_total,
@@ -2296,6 +2320,7 @@ impl GameState {
             // starting player does.
             skip_first_draw: n <= 2,
             spells_cast_this_turn: 0,
+            opponent_cast_since_your_turn: 0,
             noncreature_spells_cast_this_turn: 0,
             mana_spent_on_spells_this_turn: 0,
             expend_prev_total: 0,

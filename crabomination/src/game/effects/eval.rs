@@ -2014,7 +2014,7 @@ impl GameState {
             Predicate::OpponentCastSpellSinceYourTurn { who } => self
                 .resolve_players(who, ctx)
                 .iter()
-                .any(|&p| self.players[p].opponent_cast_spell_since_your_turn),
+                .any(|&p| self.opponent_cast_since_your_turn & crate::game::seat_bit(p) != 0),
             Predicate::SearchedLibraryThisTurn { who } => self
                 .resolve_players(who, ctx)
                 .iter()

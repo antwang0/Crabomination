@@ -654,7 +654,8 @@ impl GameState {
                 self.spells_cast_this_turn = 0;
                 self.last_cast_spell_colors.clear();
                 self.noncreature_spells_cast_this_turn = 0;
-                self.players[self.active_player_idx].opponent_cast_spell_since_your_turn = false;
+                self.opponent_cast_since_your_turn &=
+                    !crate::game::seat_bit(self.active_player_idx);
                 for pl in &mut self.players {
                     pl.spells_cast_this_game_turn = 0;
                     pl.sorceries_cast_this_turn = 0;

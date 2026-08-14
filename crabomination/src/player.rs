@@ -196,12 +196,6 @@ pub struct PlayerData {
     /// each turn" (CR 611.2). `#[serde(default)]` for snapshot back-compat.
     #[serde(default)]
     pub spells_cast_this_game_turn: u32,
-    /// Has an opponent of this seat cast a spell since this seat's last turn
-    /// ended? Set on every other seat when a spell is cast; cleared for the
-    /// active player at cleanup. Backs
-    /// `Predicate::OpponentCastSpellSinceYourTurn`.
-    #[serde(default)]
-    pub opponent_cast_spell_since_your_turn: bool,
     /// Like `spells_cast_this_game_turn` but counting only noncreature spells
     /// (Deafening Silence's "each player can't cast more than one noncreature
     /// spell each turn"). Reset for every player at Cleanup. `#[serde(default)]`.
@@ -1073,7 +1067,6 @@ impl Player {
             attraction_deck: CowBox::default(),
             attraction_junkyard: CowBox::default(),
             planar_die_rolls_this_turn: 0,
-            opponent_cast_spell_since_your_turn: false,
             sideboard: CowBox::default(),
             commanders: Vec::new(),
             lands_played_this_turn: 0,

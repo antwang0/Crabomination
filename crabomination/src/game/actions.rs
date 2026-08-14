@@ -7933,13 +7933,11 @@ impl GameState {
         }
         // Arboria — "cast a spell … during their last turn".
         self.note_acted_on_own_turn(p);
-        // Same CoW rule as the step-boundary reset: don't take `&mut` on a
-        // `Player` to set a flag that is already set.
-        for seat in 0..self.players.len() {
-            if seat != p && !self.players[seat].opponent_cast_spell_since_your_turn {
-                self.players[seat].opponent_cast_spell_since_your_turn = true;
-            }
-        }
+        // Every other seat has now seen an opponent cast a spell. One mask
+        // write on the state; the per-`Player` flag this replaced unshared a
+        // whole `PlayerData` per cast.
+        self.opponent_cast_since_your_turn |=
+            crate::game::seat_mask(self.players.len()) & !crate::game::seat_bit(p);
         // Per-turn cast-name log (Grim Reminder's "cast a spell this turn with
         // the same name").
         self.players[p]
