@@ -16,12 +16,15 @@ reference and want their own triage pass):
 
 ## NEXT (handoff — rewrite each run, keep under 15 lines)
 
-Branch `claude/modern_decks`. **The twenty-ninth pass landed two rows for
--1.993 % Ir** (2,890,336,504 -> 2,832,745,260 at `645b978d`, where the
-profile of record is retaken). Both are the CoW theme one level up: stop
-paying for a `PlayerData` clone where a seat's *only* write was one bit
-(the "an opponent cast a spell" seat mask), then make the clone itself
-cheaper (`PlayerCold`, fifteen heap-owning rare fields behind one `CowBox`).
+Branch `claude/modern_decks`. **The twenty-ninth pass landed three rows for
+-2.456 % Ir** (2,890,336,504 -> 2,819,346,784 at `dbd3efeb`; the profile of
+record is retaken at `645b978d` and reads ~0.5 % low against the tip). Two
+are the CoW theme one level up — stop paying for a `PlayerData` clone where
+a seat's *only* write was one bit (the "an opponent cast a spell" seat
+mask), then make the clone itself cheaper (`PlayerCold`, fifteen
+heap-owning rare fields behind one `CowBox`). The third is five lines:
+`find_card_anywhere` walked both ~55-card libraries before exile and the
+stack.
 
 - **Read PERF candidate (-1)'s corrections before re-sweeping.** The
   previous handoff's two 0.95 % survivors were **one site double-counted**,

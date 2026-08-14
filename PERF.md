@@ -516,7 +516,8 @@ agreement this file has recorded).
 |---|---|---|---|---|
 | 2026-08-14 | "An opponent cast a spell" becomes a seat mask (`88c178f5`) | 2,890,336,504 Ir | 2,869,737,485 Ir (**-0.713 %**) | The twenty-eighth pass guarded this write with a read; the residual was still **14,498,464 Ir / 5,800 unshares** in `finalize_cast` plus 2,330,929 / 1,718 at cleanup, because after a *genuine* false→true flip the guard cannot help. One bool per seat is now one `u64` on the hot `GameState` — `\|=` per cast, `&= !bit` at cleanup, `& bit` on the read. `Player::deref_mut` inclusive 94,562,722 → 84,058,045; the other half of the delta is the allocator and memcpy work the clones dragged behind them |
 | 2026-08-14 | A cold group for the rarely-written tail of `PlayerData` (`645b978d`) | 2,869,737,485 Ir | 2,832,745,260 Ir (**-1.289 %**) | `PlayerData` is 158 fields and **24,852 deep clones per six games at ~3,300 Ir each**. Fifteen own heap and are written by a handful of cards or never: `name` (2,811,379 Ir of `String::clone` alone), `commanders`, `emblems`, `epic_spells`, `draft_notes`, ten per-turn registries — 12.7 M in explicit field-clone calls plus their share of the struct memcpy and malloc. Now `PlayerCold` behind one `CowBox`, the `GameState`/`ColdState` device one level down; `#[serde(flatten)]` keeps the wire format identical. `Arc::clone_from_ref_in` **380,386,491 → 249,073,124 inclusive, -34.5 %**; `_int_malloc` 175,068,200 → 163,751,005 |
-| | **cumulative, twenty-ninth pass** | **2,890,336,504 Ir** | **2,832,745,260 Ir (-1.993 %)** | callgrind on the fixed six-game workload; bench output byte-identical on both rows |
+| 2026-08-14 | `find_card_anywhere` walks the libraries last (`dbd3efeb`) | 2,832,745,260 Ir | 2,819,346,784 Ir (**-0.473 %**) | The walk was battlefield, then per seat graveyard / hand / **library** / ante, then exile, then the stack. A library is ~55 cards against a hand's ~7, so every lookup that ended on the stack, in exile, or in the second seat's hand walked both libraries first. `find_card_anywhere` self was **36,110,078 / 1.27 %** across six file attributions. Order is not part of the contract — a `CardId` names one instance, so at most one zone holds it — and the `_mut` sibling was reordered with it so the pair stays in step |
+| | **cumulative, twenty-ninth pass** | **2,890,336,504 Ir** | **2,819,346,784 Ir (-2.456 %)** | callgrind on the fixed six-game workload; bench output byte-identical on every row, and the pass as a whole diffs byte-identical against `797040ba` over 5,100 games |
 
 **What the pass corrects, and it matters for the next sweep.** The
 twenty-eighth pass's handoff listed two candidates at 0.95 % / 7,456 calls
@@ -558,8 +559,10 @@ settings + debuginfo; system allocator, because valgrind replaces malloc and
 a mimalloc build would measure the interception), 1 thread, `--a gang --b
 gang --games 6 --seed 1 --decks fixed`.
 
-**Re-taken 2026-08-14 on the twenty-ninth pass's tip `645b978d`:
-2,832,745,260 Ir.** Supersedes the `5034eb2f` table. Shares are of the
+**Re-taken 2026-08-14 at `645b978d`: 2,832,745,260 Ir.** Supersedes the
+`5034eb2f` table. The pass's third row (`dbd3efeb`) took another 0.473 %
+out of `find_card_anywhere` after this table was derived, so every share
+below reads ~0.5 % low against the tip; the ordering did not move. Shares are of the
 smaller total, so a row whose absolute Ir *fell* can still show a larger
 share — that is what a pass which only touches the rest of the program
 looks like.
