@@ -16,44 +16,33 @@ reference and want their own triage pass):
 
 ## NEXT (handoff — rewrite each run, keep under 15 lines)
 
-Branch `claude/modern_decks`. **Two passes landed and the second was
-concurrent with this file's other author.** Pass 32 `CardCold` -1.969 %;
-pass 33 four rows for **-5.235 %** (2,527,094,401 -> `35fdfce3`
-**2,394,812,950 Ir**), plus that session's SBA and pairing work. Wall-clock
-`--bench` **120.10 -> 130.71 games/s (+8.8 %)** at the merged tip's
-predecessor; **the merged tip is not re-measured and is owed.**
+Branch `claude/modern_decks`. **Pass 34 claimed no Ir**: it closed a
+crash-class bug, paid the owed baseline, and retook the profile. Tip
+`--bench` **136.75 games/s** (6 runs, spread 4.8 %) at `6cc0bdc3`; tip Ir
+**2,394,920,914**. **The box is a 2.10 GHz Xeon now, not 2.80 GHz — no
+delta against any earlier baseline block is sound. Alternate A/B in one
+sitting or use callgrind.**
 
-- **Green**: suite 18,637, golden traces identical on every row, clippy
-  `--workspace --all-targets` clean, wide pool 2,548,986 / 20.99 / 6 draws
-  / determinism ok, `overflow` clean over 27,200 games (pass-32 tip).
-- **Next is PERF (-3)**, `activate_ability_inner`'s 18,386 gathers (~2 %,
-  one per activation): a three-leg presence gate, one leg of which exists
-  (`ability_strip_off_battlefield`); write the land-type and card-type legs
-  as over-approximations with the `debug_assert` cross-check
-  `permanents_with_abilities_removed` uses. Then (-4) the eager-`let` sweep
-  and (-1a) the `iter_mut().find()` half. **The auto-tap scope is costed
-  and declined** — arithmetic in (-3); do not re-derive it.
-- **Pass 33's two levers, both re-runnable**: an expensive `let` bound
-  *above* the wide `match` that decides whether anyone wants it
-  (-2.128 %), and the twenty-eighth pass's unguarded periodic write now on
-  `ColdState` rather than a zone (-2.507 %). The `ColdState` recipe: list
-  the 91 field names, grep `mem::take(&mut self.<f>`, `.clear()`,
-  `.retain(`, `.iter_mut()`, `self.<f> = `. **A guard pays in full only
-  where the site is the call's sole cold write.**
-- **There is no second `CardCold`** (table 1.76 % at 838 Ir a call), and
-  the `make_mut` engine rows are spent (largest 0.21 %). **Candidate (9)'s
-  ">2,000 Ir means gathering" threshold is stale** — rank by total.
-- **Fetch before the first commit.** Fourth collision, and this one
-  duplicated a whole PERF pass block and a baseline re-anchor.
+- **Green**: `core_rules` 1,675 (golden traces identical), full suite and
+  clippy re-run at the tip — see the final-checks note below.
+- **Take (-5) first**, `eval.rs:3311` at **1.58 % / 15,574 gathers**. Its
+  `OnceCell` serves *five* layer-4 families, so **split it per family**;
+  the land-type half then gates on `rewrites_land_types`, which already
+  exists, for free. The card-type half's ten emitters are **enumerated in
+  PERF (-5)** — write the predicate straight from that list.
+- **(-3) is blocked on a fourth (keyword) leg** — the CR 602.5 gates read
+  the same `bf_cp`. Arithmetic in PERF; do not re-derive. **`bot.rs` is
+  closed as a candidate-(10) ground** — `next_action` freezes everything,
+  88.27 % inclusive, so 764-1,270 Ir a call is the floor, not a miss.
+- **Fetch before the first commit.** Four collisions on this file so far.
 - Env: no `cargo-nextest`; `cargo test -p crabomination -p
   crabomination_tests` is the gate (~40 s built, ~5 min cold).
-  `profiling-fast` engine ~3.5 min warm, ~9 min after a wide touch;
-  **`release` 25-50 min — start it in the background at the top of the
-  run**; `overflow` ~25 min. Callgrind ~4 min, contention-immune.
-  Serialize cargo builds — one target-dir lock, 4 cores. **`rm -rf
-  target/debug/incremental` reclaims ~11 GB.** Client apt deps (below) are
-  needed for `clippy --workspace`.
-- Trackers: TODO ~1.0k, PERF ~1.6k — passes 29-31 are index rows, 32/33
+  `profiling-fast` engine ~3.5 min warm; **`release` was ~55 min cold here
+  — start it in the background at the top of the run**; `overflow` ~25 min.
+  Callgrind ~4 min, contention-immune. Serialize cargo builds — one
+  target-dir lock, 4 cores. Client apt deps (below) are needed for
+  `clippy --workspace`.
+- Trackers: TODO ~0.97k, PERF ~1.75k — passes 29-31 are index rows, 32-34
   prose is current.
 
 ## Environment note

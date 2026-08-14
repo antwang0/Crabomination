@@ -521,6 +521,29 @@ the table above is safe to compress:
 
 ## Log
 
+### Thirty-fourth pass — a crash fix at zero Ir, and a re-profile
+
+**`73db9c64` — the layer gather's reentrancy guard, moved into
+`computed_permanent`. Ir-neutral by construction, and it is a correctness
+change, not a perf one.** The atomic load it branches on was already the
+function's first instruction; what changed is that the mid-gather arm now
+returns the printed view instead of re-entering the gather, and that arm is
+unreachable on every board the bench plays. `gather_continuous_effects`
+swaps-and-restores the flag where it used to store `false` — one
+instruction, same class. Tip total after it: **2,394,920,914 Ir**
+(`d922f8d9`, `--a gang --b gang --games 6 --threads 1 --seed 1 --decks
+fixed`). The bug it closes is a stack overflow, not a slow path — see
+TODO.md's thirteenth filter.
+
+**`d922f8d9` — the baseline re-anchored at the merged tip**, and the
+finding that the box changed CPU model (2.10 GHz against 2.80 GHz), so the
+new block does not chain to the old one. See **Baseline**.
+
+**The profile of record was retaken at this tip** and three candidates
+moved: the `computed_permanent` call-site table is new, `bot.rs` is closed
+as a hunting ground, and `eval.rs:3311` enters the list at 1.58 % as
+candidate (-5). No Ir was claimed this pass.
+
 **Passes one to nine, compacted to an index** — one line per pass. The rows'
 prose is in git; what is worth keeping is which lever each pulled, so a
 later run recognizes a lever already spent. Absolutes across these are
@@ -816,8 +839,52 @@ settings + debuginfo; system allocator, because valgrind replaces malloc and
 a mimalloc build would measure the interception), 1 thread, `--a gang --b
 gang --games 6 --seed 1 --decks fixed`.
 
-**Re-taken 2026-08-14 at `645b978d`: 2,832,745,260 Ir.** Supersedes the
-`5034eb2f` table. The pass's third row (`dbd3efeb`) took another 0.473 %
+**Re-taken 2026-08-14 at `d922f8d9`: 2,394,920,914 Ir** — the merged tip,
+15.5 % under the `645b978d` table below, which it supersedes for totals.
+The `645b978d` rows are kept because nothing since re-derived the whole
+table; read a share there as ~15 % high.
+
+**The gather, denominated at this tip.** `gather_continuous_effects_inner`
+is **219,959,552 / 9.18 % over 113,338 gathers** (1,941 Ir each), by
+caller:
+
+| Ir | share | calls | caller |
+|---|---|---|---|
+| 160,418,427 | 6.70 % | 80,168 | `computed_permanent` |
+| 33,692,152 | 1.41 % | 18,916 | `frozen_effects` |
+| 18,692,367 | 0.78 % | 10,670 | `check_state_based_actions` |
+| 6,534,184 | 0.27 % | 3,274 | `compute_permanents` |
+| 622,422 | 0.03 % | 310 | `compute_battlefield` |
+
+**And `computed_permanent` by *call site*, which is the list to work from**
+(`--auto=yes`; a site over ~1,900 Ir a call is gathering, one near 800-1,300
+is one `apply_layers_one` inside somebody's scope, i.e. the floor):
+
+| Ir | share | calls | Ir/call | site |
+|---|---|---|---|---|
+| 49,044,642 | 2.05 % | 18,386 | 2,667 | `activate_ability_inner`'s `let cp` — candidate (-3) |
+| 37,727,865 | 1.58 % | 15,574 | 2,422 | `eval.rs:3311`, the lazy layer view in `evaluate_requirement_static` — **new, and now the second row** |
+| 19,610,088 | 0.82 % | 19,742 | 993 | `permanent_value` — floor |
+| 14,227,551 | 0.59 % | 4,456 | 3,192 | `apply_prevention_shields`' CR 702.64 Absorb read |
+| 13,346,864 | 0.56 % | 16,688 | 799 | `pick_removal_sacrifice` — floor |
+| 12,213,235 | 0.51 % | 7,060 | 1,729 | `has_first_strikers` — already scoped |
+| 9,181,684 | 0.38 % | 12,010 | 764 | `attacker_damage_value` — floor |
+| 8,825,538 | 0.37 % | 4,084 | 2,161 | `pick_attacks_inner`'s Defender re-check |
+| 7,954,986 | 0.33 % | 4,462 | 1,782 | `combat.rs:2331` — already scoped |
+| 4,729,164 | 0.20 % | 1,614 | 2,929 | `push_first_targeting_counter` |
+
+**`bot.rs` is finished as a candidate-(10) hunting ground, and here is why
+so nobody re-enumerates it.** `HeuristicBot::next_action` wraps the whole
+decision in `with_frozen_layers` — it reads **88.27 % inclusive** — so every
+`pick_*` helper is already inside a scope and its `computed_permanent` calls
+cost one `apply_layers_one` per *card*, not a gather. That is what the
+764-1,270 Ir rows above are: `pick_crew_vehicle` reads **107** Ir a call
+over 11,364 calls, `pick_removal_destroy` 431 over 9,360. The gathers that
+remain in bot frames are the ones inside **probe clones** —
+`LayerFreeze::clone` resets to unfrozen by design, so `would_accept` and
+`simulate_attack_outcome_once` re-gather, and they must.
+
+The older tables below were taken at `645b978d` and before. The pass's third row (`dbd3efeb`) took another 0.473 %
 out of `find_card_anywhere` after this table was derived, so every share
 below reads ~0.5 % low against the tip; the ordering did not move. Shares are of the
 smaller total, so a row whose absolute Ir *fell* can still show a larger
@@ -909,8 +976,77 @@ Ordered by expected value. Each run pulls the top one, attaches numbers,
 and feeds what it finds back in. Re-profile and replenish when the list
 goes thin or stale.
 
+**(-5) `evaluate_requirement_static`'s lazy layer view — 37,727,865 /
+1.58 % over 15,574 gathers, the second-largest site and new to this list.**
+`eval.rs:3311`'s `OnceCell` (pass 33 made it lazy; laziness is not the
+issue, the *gather* is). **Read this before designing anything: the cell
+serves five layer-4 families, not one** — `has_type` (card types),
+`has_ctype` (creature types), `has_atype` (artifact subtypes), `has_ltype`
+(land types) and `has_stype` (supertypes) all match on it. So a presence
+gate here is the *union* of five emitter enumerations, which is why the
+obvious "gate on card-type changers" is wrong by itself.
+
+*The tractable shape, and it is a split rather than a gate.* Give each
+family its own lazy cell. Then:
+* the **land-type** half gates on `rewrites_land_types`, which **already
+  exists** (`actions.rs:190`, with its own `debug_assert` cross-check) —
+  free, today;
+* the **card-type** half gates on a `card_type_change_in_scope()` written
+  as `ability_strip_off_battlefield`'s twin. **The emitter enumeration is
+  done — ten sites in `gather_continuous_effects_inner`, each gated on a
+  printed property, so the predicate is mechanical**: `equipped_bonus.
+  set_card_types` / `.add_card_types` on an attached source (8313, 8325);
+  `attached_to.is_some() && has_reconfigure()` (8448);
+  `StaticEffect::NotCreatureWhileDevotionBelow` (8629);
+  `NonAuraEnchantmentsAreCreatures` (8679);
+  `NoncreatureArtifactsAreCreatures` (8714);
+  `SelfIsCreatureWhileCountersAtLeast` (8862); `Keyword::Impending(_)`
+  (8906); `SelfIsCreatureIf` (10010); a `station` band with `pt.is_some()`
+  (10804); `Keyword::LivingMetal` (10937) — plus a direct scan of
+  `continuous_effects` for the three `Modification`s, and the command-zone
+  / emblem arm `card_can_strip_abilities` already models. Peel the five
+  gate wrappers exactly as `static_effect_strips_abilities` does;
+* creature types, artifact subtypes and supertypes are the long tail — leave
+  them reading the gather until the first two are measured.
+
+**Cost the `debug_assert` cross-check's *test-suite* cost before landing
+it.** `permanents_with_abilities_removed`'s cross-check runs once per
+trigger dispatch; this one would run 15,574 times per six games, and the
+whole suite is a debug build.
+
+**(-3) is blocked on a *fourth* leg, and the arithmetic is here so it is
+not re-derived.** The entry below describes a three-leg gate
+(strip / card-type / land-type). It is short one leg: `bf_cp` does not stop
+at the ability lookup — the **CR 602.5 gates further down read the same
+`cp`'s *keywords*** (`CantActivateTapAbilities` when the ability is
+tap-gated, `Haste` on the summoning-sick check, `CantActivateAbilities` on
+any non-mana ability). A land tapping for mana is tap-gated, so the common
+case reaches the keyword read even with all three legs answering "no". A
+keyword-grant presence gate is **not** `RemoveAllAbilities`' six routes: it
+is every `Modification::AddKeyword` emitter (statics, `equipped_bonus.
+keywords`, level bands, station bands, keyword counters, `granted_keywords_
+eot`), and `board_keyword_matching` — the existing device — gathers on
+exactly the boards that matter, because it short-circuits on *printed*
+keywords and no bench card prints `CantActivateTapAbilities`. **Take (-5)'s
+split first**; it needs no new enumeration for its first half.
+
+**(-2b) `apply_prevention_shields`' Absorb read — 14,227,551 / 0.59 % over
+4,456 gathers (3,192 Ir each), and it is one keyword.** CR 702.64 asks
+`computed_permanent(cid).keywords` for `Absorb(n)` on every damage event
+aimed at a permanent, and the answer is `0` on every bench board. A scope
+does not help — the enclosing `&self` window (mod.rs `movement.rs`
+247-482, between the `damage_prevented_sources.retain` at 246 and the
+`battlefield_find_mut` at 483) holds exactly **one** gathering read, so a
+freeze there folds one gather into one. This wants the same keyword-grant
+gate (-3) wants, and is the cheaper place to prove it out.
+
 **(-4) The rest of the "eager view above a wide `match`" sweep — cheap,
-mechanical, and one hit already paid -2.128 %.** The thirty-third pass took
+mechanical, and one hit already paid -2.128 %.** *Two of the four named
+below were read on the 2026-08-14 retake and are **not** hits*:
+`evaluate_predicate` (eval.rs:1499) and `evaluate_value` (eval.rs:135) bind
+nothing above their `match` — every layer read is inside an arm — which is
+what the paragraph's own warning predicted. `evaluate_requirement_on_card`
+and `resolve_selector_inner` are still unread. The thirty-third pass took
 `evaluate_requirement_static`'s. The siblings are the other wide dispatchers
 that bind something expensive before the arm is known: `evaluate_predicate`
 (eval.rs:1499, 10 `computed_permanent` sites across arms),
