@@ -20324,10 +20324,10 @@ impl GameState {
         ids.windows(2).find(|w| w[0] == w[1]).map(|w| w[0])
     }
 
-    /// Mutable variant of `find_card_anywhere` — walks battlefield,
-    /// each player's hand/library/graveyard, and exile (in that order).
-    /// Used by `Effect::GrantMayPlay` to stamp `may_play_until` on a
-    /// card regardless of where the granting effect happens to find it.
+    /// Mutable variant of `find_card_anywhere`, and it walks the same zones
+    /// in the same order — libraries last. Used by `Effect::GrantMayPlay` to
+    /// stamp `may_play_until` on a card regardless of where the granting
+    /// effect happens to find it.
     pub fn find_card_anywhere_mut(
         &mut self,
         id: CardId,
@@ -20344,7 +20344,6 @@ impl GameState {
             };
             zone(0, &p.hand)
                 .or_else(|| zone(1, &p.graveyard))
-                .or_else(|| zone(2, &p.library))
                 .or_else(|| zone(3, &p.ante))
         });
         if let Some((pi, z, i)) = found {
@@ -20367,6 +20366,15 @@ impl GameState {
             {
                 return Some(card);
             }
+        }
+        // Libraries last, for the reason `find_card_anywhere` gives.
+        let lib = self
+            .players
+            .iter()
+            .enumerate()
+            .find_map(|(pi, p)| p.library.iter().position(|c| c.id == id).map(|i| (pi, i)));
+        if let Some((pi, i)) = lib {
+            return Some(&mut self.players[pi].library[i]);
         }
         None
     }

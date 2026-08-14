@@ -222,23 +222,35 @@ over 17 archetypes — reads `decisions` **2,548,986**, identical to
 mimalloc numbers above.)
 
 **The wide-pool checks the fixed-deck anchor cannot make, re-run at
-`5034eb2f`.** `--bench --threads 1 --games 300 --seed 11 --decks all`
-(5,100 games over 17 archetypes) reads `decisions` **2,548,986
-byte-identical over two runs and identical to the value recorded at
-`841dd40b`** — so the twenty-eighth pass moved zero decisions on the full
-pool, which is a stronger behaviour proof than the four bench decks can
-give. Stall rate **6 draws / 5,100 (0.12 %)**, the recorded figure.
+`645b978d`.** The twenty-ninth pass's strongest behaviour proof is a
+**base-vs-tip diff, not a recorded constant**: the pre-pass binary
+(`797040ba`, kept from the first callgrind of the sitting) and the tip both
+run `--a gang --b gang --games 300 --threads 3 --decks all` and print
+**byte-identical output over 5,100 games across 17 archetypes** — every
+archetype's record, 2,549 paired splits, `rho -1.000`, and the same 2
+undecided in the same `cube RG` bucket. Keeping the old binary around costs
+one `cp` and answers in three minutes what a recorded decision count
+answers only if the invocation matches; do it every pass.
+
+**Correction to the recorded stall figure.** This file recorded `--decks
+all` at "6 draws / 5,100 (0.12 %)"; the command above reads **2 undecided /
+5,100 (0.039 %)** at *both* tips, so the 6 belongs to a different
+invocation (the `--bench --threads 1 --seed 11` form, whose `decisions`
+2,548,986 is the number that block is really about). Two figures for one
+pool with no invocation attached is how that happens — quote the command.
+
 Crash-freedom: the `overflow` profile (release-fast + `overflow-checks`)
-over `--games 400 --threads 3 --decks all` on three fresh seeds —
-**20,400 games, 0 undecided, no panic and no arithmetic overflow**, ~80 s
-per seed. Cheap enough to run every pass; do.
+over `--games 400 --threads 3 --decks all` on seeds 11/12/13 —
+**20,400 games, 20,392 decided, 8 undecided (0.039 %), no panic and no
+arithmetic overflow**, ~85 s per seed against a 16-minute build. Cheap
+enough to run every pass; do.
 
 **What every one of them agreed on, which is the part that matters**:
 `turns_per_game` **26.98** (now eleven consecutive anchors), `stalls`
 **0** with `stalls_by` reading `cap 0 / stuck 0 / draw 0`, `determinism
 ok` on every run with all 160 pairs split and `rho -1.000`, `decisions`
 **193,232 byte-identical**, `decisions_per_game` 603.9. All five still
-hold at `5034eb2f`.
+hold at `645b978d`.
 
 ~~**The `--decks fixed` bench is exactly reproducible and the wider pools
 are not**~~ — **fixed 2026-08-11 (`841dd40b`)**. Every pool now reproduces
@@ -483,7 +495,8 @@ agreement this file has recorded).
 |---|---|---|---|---|
 | 2026-08-14 | "An opponent cast a spell" becomes a seat mask (`88c178f5`) | 2,890,336,504 Ir | 2,869,737,485 Ir (**-0.713 %**) | The twenty-eighth pass guarded this write with a read; the residual was still **14,498,464 Ir / 5,800 unshares** in `finalize_cast` plus 2,330,929 / 1,718 at cleanup, because after a *genuine* false→true flip the guard cannot help. One bool per seat is now one `u64` on the hot `GameState` — `\|=` per cast, `&= !bit` at cleanup, `& bit` on the read. `Player::deref_mut` inclusive 94,562,722 → 84,058,045; the other half of the delta is the allocator and memcpy work the clones dragged behind them |
 | 2026-08-14 | A cold group for the rarely-written tail of `PlayerData` (`645b978d`) | 2,869,737,485 Ir | 2,832,745,260 Ir (**-1.289 %**) | `PlayerData` is 158 fields and **24,852 deep clones per six games at ~3,300 Ir each**. Fifteen own heap and are written by a handful of cards or never: `name` (2,811,379 Ir of `String::clone` alone), `commanders`, `emblems`, `epic_spells`, `draft_notes`, ten per-turn registries — 12.7 M in explicit field-clone calls plus their share of the struct memcpy and malloc. Now `PlayerCold` behind one `CowBox`, the `GameState`/`ColdState` device one level down; `#[serde(flatten)]` keeps the wire format identical. `Arc::clone_from_ref_in` **380,386,491 → 249,073,124 inclusive, -34.5 %**; `_int_malloc` 175,068,200 → 163,751,005 |
-| | **cumulative, twenty-ninth pass** | **2,890,336,504 Ir** | **2,832,745,260 Ir (-1.993 %)** | callgrind on the fixed six-game workload; bench output byte-identical on both rows |
+| 2026-08-14 | `find_card_anywhere` walks the libraries last (`dbd3efeb`) | 2,832,745,260 Ir | 2,819,346,784 Ir (**-0.473 %**) | The walk was battlefield, then per seat graveyard / hand / **library** / ante, then exile, then the stack. A library is ~55 cards against a hand's ~7, so every lookup that ended on the stack, in exile, or in the second seat's hand walked both libraries first. `find_card_anywhere` self was **36,110,078 / 1.27 %** across six file attributions. Order is not part of the contract — a `CardId` names one instance, so at most one zone holds it — and the `_mut` sibling was reordered with it so the pair stays in step |
+| | **cumulative, twenty-ninth pass** | **2,890,336,504 Ir** | **2,819,346,784 Ir (-2.456 %)** | callgrind on the fixed six-game workload; bench output byte-identical on every row, and the pass as a whole diffs byte-identical against `797040ba` over 5,100 games |
 
 **What the pass corrects, and it matters for the next sweep.** The
 twenty-eighth pass's handoff listed two candidates at 0.95 % / 7,456 calls
@@ -559,8 +572,10 @@ settings + debuginfo; system allocator, because valgrind replaces malloc and
 a mimalloc build would measure the interception), 1 thread, `--a gang --b
 gang --games 6 --seed 1 --decks fixed`.
 
-**Re-taken 2026-08-14 on the twenty-ninth pass's tip `645b978d`:
-2,832,745,260 Ir.** Supersedes the `5034eb2f` table. Shares are of the
+**Re-taken 2026-08-14 at `645b978d`: 2,832,745,260 Ir.** Supersedes the
+`5034eb2f` table. The pass's third row (`dbd3efeb`) took another 0.473 %
+out of `find_card_anywhere` after this table was derived, so every share
+below reads ~0.5 % low against the tip; the ordering did not move. Shares are of the
 smaller total, so a row whose absolute Ir *fell* can still show a larger
 share — that is what a pass which only touches the rest of the program
 looks like.
@@ -947,6 +962,17 @@ remaining cost is per-card `computed_permanent` and the gather itself.
     15,368 calls is what a caller already inside someone's scope looks
     like; imitate its caller.
 
+11a. **The zone-walk family, and it is the same shape as `dbd3efeb`.**
+    Four hand-written walkers ask "where is this card": `find_card_anywhere`
+    (paid, -0.473 %), `find_card_anywhere_mut` (reordered with it),
+    `find_card_zone` and `find_card_owner`. The last two still scan each
+    seat's **library third**, before the other seat's hand and before exile;
+    `death_was_replaced` scans exile then both libraries on every dispatch.
+    **None of the three appears above the 99 % threshold on this profile**,
+    so reordering them is a consistency change, not a measured win — do it
+    as part of whatever *does* touch them, and do not claim Ir for it. Noted
+    here because a family of walkers that must agree is worth keeping in
+    step, and three of five are now out of step by cost.
 11. **A helper that opens with `battlefield_find` and is called from a
     battlefield loop — the generalization of the twenty-seventh pass's
     row.** `granted_abilities_with(card_id, scan)` was -0.552 % on its own

@@ -17,36 +17,38 @@ reference and want their own triage pass):
 ## NEXT (handoff — rewrite each run, keep under 15 lines)
 
 Branch `claude/modern_decks`. **The thirtieth pass landed three rows for
--1.980 % Ir** (2,832,747,493 -> 2,776,663,732 at `005c1d33`). All three are
-one shape: **a linear scan that visited its cases in the wrong order.** The
-zone scan looked at ~70 library cards before the stack (-0.583 %); the
-gather's last board pass tested three always-false flags for every card
-when it could walk `sa_cards` (-1.250 %); `effective_mana_abilities` re-found
-the card its three callers were standing on (-0.158 %).
+-1.980 % Ir** (2,832,747,493 -> 2,776,663,732), then **merged a concurrent
+session that had pulled the same top candidate** — see PERF's collision
+note. All three rows are one shape: **a linear scan that visited its cases
+in the wrong order.** The zone scan looked at ~70 library cards before the
+stack (-0.583 %); the gather's last board pass tested three always-false
+flags per card when it could walk `sa_cards` (-1.250 %);
+`effective_mana_abilities` re-found the card its callers were standing on
+(-0.158 %).
 
-- **Both wide checks are now green at the tip**, and they were the previous
-  handoff's open item: `--decks all` reads `decisions` **2,548,986**
-  identical to `841dd40b`, 6 draws / 5,100 (0.12 %); `--bench` reads
-  **193,232**, `turns_per_game` 26.98, stalls 0, determinism ok. **Still not
-  run: the `overflow` profile** (its build was killed mid-run to free cores
-  for the measurements — budget ~15 min of build for it).
+- **The wide checks are green at the merged tip** and are the number to
+  trust: `--decks all` reads `decisions` **2,548,986**, `--bench` **193,232**,
+  `turns_per_game` 26.98, stalls 0, determinism ok. The other session's
+  base-vs-tip byte-diff method (`cp` the pre-pass binary, diff `--decks all
+  --games 300 --threads 3` output) beats a recorded constant — use it.
+  `overflow` (20,400 games, seeds 11/12/13) was clean on their run.
 - **Best next moves**, in order: PERF candidate **(-2)** — the same
-  wrong-order shape, with `find_card_zone` / `find_card_owner` /
-  `find_card_anywhere_mut` still putting the libraries third, plus a miss
-  counter on `find_card_anywhere` before anyone designs an id→zone index;
-  then **(-1)** the CoW sweep via `--tree=caller` on `Arc::make_mut`; then
-  (11)'s unfinished enumeration. **(13)/(5) the `Keyword` bitset is now
-  costed and ranked down** — ~0.6 % addressable against 7,716 catalog
-  literals; the arithmetic is in the candidates section, don't re-derive it.
+  wrong-order shape, with `find_card_zone` / `find_card_owner` still putting
+  the libraries third, plus a miss counter on `find_card_anywhere` before
+  anyone designs an id→zone index; then **(-1)** the CoW sweep via
+  `--tree=caller` on `Arc::make_mut`; then (11)'s unfinished enumeration.
+  **(13)/(5) the `Keyword` bitset is costed and ranked down** — ~0.6 %
+  addressable against 7,716 catalog literals; don't re-derive it.
+- **Two sessions on this branch at once is now normal.** Fetch before the
+  first commit, not just before the push: this run resolved the same
+  candidate twice and cost a re-measurement of the merged tip.
 - Env: no `cargo-nextest`; `cargo test -p crabomination -p
-  crabomination_tests` is the gate (~40 s run once built). `profiling-fast`
-  engine rebuild **7 min warm, and ~2x that if a second cargo runs at the
-  same time** — this box has 4 cores, so serialize builds rather than
-  overlapping them. Callgrind ~4 min. Client apt deps install in a minute
-  (see below) and `cargo clippy --workspace` needs them.
-- Trackers: PERF is **1.19k** — passes 26-28 are now table rows like 20-25;
-  the last uncompacted prose is the pass 29/30 blocks, which are current
-  and should stay until they are two passes old.
+  crabomination_tests` is the gate (~40 s once built). `profiling-fast`
+  engine ~7 min warm and **~2x that with a second cargo running** — 4 cores,
+  so serialize builds. Callgrind ~4 min, `overflow` ~16 min. Client apt deps
+  install in a minute (below); `cargo clippy --workspace` needs them.
+- Trackers: PERF **~1.2k** — passes 26-28 are table rows now like 20-25; the
+  last uncompacted prose is the pass 29/30 blocks, current until they age.
 
 ## Environment note
 
