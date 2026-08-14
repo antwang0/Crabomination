@@ -7814,8 +7814,10 @@ impl GameState {
         let (mut any_reconfigure, mut any_impending, mut any_unleash) = (false, false, false);
         let (mut any_hexproof_unless, mut any_dynamic_pt) = (false, false);
         let (mut any_level_bands, mut any_station, mut any_living_metal) = (false, false, false);
+        let mut any_suspected = false;
         for card in self.battlefield.iter() {
             let def = &card.definition;
+            any_suspected |= card.suspected;
             if !def.static_abilities.is_empty() {
                 sa_cards.push(card);
             }
@@ -10812,11 +10814,24 @@ impl GameState {
                 }
             }
         }
-        // Not gated: this loop carries five unrelated passes, three of them
-        // (the CR 611.2 predicate gate, its sibling, and the suspect/
-        // living-metal statics) live for cards this walk is the only reach
-        // to. The two keyword scans inside it are gated instead.
-        for card in &self.battlefield {
+        // Five unrelated passes share this walk. Two of them read
+        // `static_abilities` and so can only emit for a card that is already
+        // in `sa_cards`; the other three (unleash, living metal, suspect) are
+        // pre-scan bits that are clear on almost every board. With all three
+        // clear the walk *is* `sa_cards`, in battlefield order, so the
+        // emitted sequence is unchanged and a vanilla board pays nothing.
+        // `&mut dyn Iterator` rather than a `Box`, so the choice costs no
+        // allocation on the 127,878 gathers a six-game run takes.
+        let stateful_all = any_unleash || any_living_metal || any_suspected;
+        let (mut it_all, mut it_sa);
+        let stateful_cards: &mut dyn Iterator<Item = &CardInstance> = if stateful_all {
+            it_all = self.battlefield.iter();
+            &mut it_all
+        } else {
+            it_sa = sa_cards.iter().copied();
+            &mut it_sa
+        };
+        for card in stateful_cards {
             // CR 702.98 — Unleash's second static: a creature with the
             // Unleash keyword can't block while it has a +1/+1 counter.
             // Injected as a computed `CantBlock` so the existing block-
