@@ -11627,7 +11627,7 @@ impl GameState {
             if c.controller != player || c.tapped {
                 return false;
             }
-            let mana_abilities = self.effective_mana_abilities_with(c.id, &scan);
+            let mana_abilities = self.effective_mana_abilities_of(c, &scan);
             if mana_abilities.is_empty() {
                 return false;
             }
@@ -11832,7 +11832,7 @@ impl GameState {
             .filter(|c| {
                 c.controller == player
                     && !c.tapped
-                    && self.effective_mana_abilities_with(c.id, &scan).iter().any(|(_, a)| {
+                    && self.effective_mana_abilities_of(c, &scan).iter().any(|(_, a)| {
                         effect_produces_color(&a.effect, color)
                     })
             })
@@ -11926,7 +11926,7 @@ impl GameState {
             .filter(|c| c.controller == player && !c.tapped)
             .filter(|c| !creature_only || self.permanent_is_creature(c.id))
             .filter_map(|c| {
-                let abilities = self.effective_mana_abilities_with(c.id, &scan);
+                let abilities = self.effective_mana_abilities_of(c, &scan);
                 let (first_idx, first) = abilities.first()?;
                 let mut colors = crate::mana::ColorSet::empty();
                 let mut color_idx = [0usize; 5];
@@ -12298,10 +12298,24 @@ impl GameState {
         card_id: CardId,
         scan: &GrantScan<'_>,
     ) -> Vec<(usize, std::borrow::Cow<'_, crate::effect::ActivatedAbility>)> {
-        use std::borrow::Cow;
         let Some(card) = self.battlefield_find(card_id) else {
             return vec![];
         };
+        self.effective_mana_abilities_of(card, scan)
+    }
+
+    /// [`effective_mana_abilities_with`](Self::effective_mana_abilities_with)
+    /// against a battlefield `&CardInstance` the caller already holds. Every
+    /// hot caller asks from inside a `battlefield.iter()`, so the `CardId`
+    /// form's opening `battlefield_find` re-scanned the battlefield to
+    /// recover the card the loop was already standing on.
+    pub(crate) fn effective_mana_abilities_of<'a>(
+        &'a self,
+        card: &'a crate::card::CardInstance,
+        scan: &GrantScan<'_>,
+    ) -> Vec<(usize, std::borrow::Cow<'a, crate::effect::ActivatedAbility>)> {
+        use std::borrow::Cow;
+        let card_id = card.id;
         let printed_count = card.definition.activated_abilities.len();
         // One layer read for the whole list. Both CR 305.6 checks below ask
         // the same card for the same thing — its *computed* land types — and
