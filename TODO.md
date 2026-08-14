@@ -23,8 +23,9 @@ crash-class bug, paid the owed baseline, and retook the profile. Tip
 delta against any earlier baseline block is sound. Alternate A/B in one
 sitting or use callgrind.**
 
-- **Green**: `core_rules` 1,675 (golden traces identical), full suite and
-  clippy re-run at the tip — see the final-checks note below.
+- **Green at the tip**: suite **18,638** over 11 binaries, golden traces
+  identical, `clippy --workspace --all-targets` clean. The reentrancy fix
+  A/B'd at **+0.0045 % Ir** (one branch), so the `--bench` block stands.
 - **Take (-5) first**, `eval.rs:3311` at **1.58 % / 15,574 gathers**. Its
   `OnceCell` serves *five* layer-4 families, so **split it per family**;
   the land-type half then gates on `rewrites_land_types`, which already

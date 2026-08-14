@@ -192,11 +192,16 @@ well as instructions. Every invariant is unchanged — `decisions`
 **193,232**, `turns_per_game` 26.98, stalls 0, `peak_rss_mib` 29.2-29.4.
 
 **This block was measured at `35fdfce3`, which is *not* the merged tip** —
-the fourth collision this file records. **Settled 2026-08-14**: the merged
-tip was measured (the block above) and the answer is that it cannot be
-compared to this one, because the box changed model underneath. The debt is
-paid in the sense that the tip now has numbers of its own; it is not paid
-in the sense of a delta, and no delta from it is available.
+the fourth collision this file records. **Settled 2026-08-14, and by the
+instruction count rather than by the hash.** `35fdfce3` is not reachable on
+this branch at all (`git rev-parse` fails on it), so the wall-clock block
+above it cannot be chained to and the box changed CPU model underneath in
+any case. But the *code* it describes is this tip's: the merged tip
+measures **2,394,813,677 Ir** against the pass's recorded
+**2,394,812,950**, a difference of **727 Ir in 2.4 G (0.00003 %)**. Pass
+33's `-5.235 %` therefore does describe the branch, and the collision cost
+this file a dangling hash, not a wrong number. **When a hash is in doubt,
+callgrind identifies a build; a `--bench` mean does not.**
 
 **The host is noisier than it was at the previous anchor** — spread 12.0 %
 against 1.44 %, and `host_calib_ms` ranges 44-71 against 45-46. The three
@@ -524,16 +529,18 @@ the table above is safe to compress:
 ### Thirty-fourth pass — a crash fix at zero Ir, and a re-profile
 
 **`73db9c64` — the layer gather's reentrancy guard, moved into
-`computed_permanent`. Ir-neutral by construction, and it is a correctness
-change, not a perf one.** The atomic load it branches on was already the
-function's first instruction; what changed is that the mid-gather arm now
-returns the printed view instead of re-entering the gather, and that arm is
-unreachable on every board the bench plays. `gather_continuous_effects`
-swaps-and-restores the flag where it used to store `false` — one
-instruction, same class. Tip total after it: **2,394,920,914 Ir**
-(`d922f8d9`, `--a gang --b gang --games 6 --threads 1 --seed 1 --decks
-fixed`). The bug it closes is a stack overflow, not a slow path — see
-TODO.md's thirteenth filter.
+`computed_permanent`. `2,394,813,677 -> 2,394,920,914 Ir`, i.e. `+107,237`
+/ **+0.0045 %**, and it is a correctness change, not a perf one.**
+Alternated `profiling-fast --no-default-features` builds on the fixed
+six-game workload, ~0.5 Ir per `computed_permanent` call — one branch. The
+atomic load it branches on was already the function's first instruction;
+what changed is that the mid-gather arm returns the printed view instead of
+re-entering the gather, and that arm is unreachable on every board the
+bench plays, so the cost is the test and nothing else. The bug it closes is
+a stack overflow, not a slow path — see TODO.md's thirteenth filter. The
+`--bench` block in **Baseline** was measured on the pre-fix binary; at
++0.0045 % it describes the tip too, and re-running `release` for it would
+measure the host, not the change.
 
 **`d922f8d9` — the baseline re-anchored at the merged tip**, and the
 finding that the box changed CPU model (2.10 GHz against 2.80 GHz), so the
