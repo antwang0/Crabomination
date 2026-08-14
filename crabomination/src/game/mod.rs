@@ -20243,18 +20243,30 @@ impl GameState {
         self.computed_permanent(card.id).map(|cp| cp.toughness).unwrap_or_else(|| card.toughness())
     }
 
+    /// The zone scan, cheapest-and-likeliest first. A `CardId` names one
+    /// object and lives in exactly one zone (spell copies and tokens are
+    /// minted fresh from `next_id`), so the visit order picks *how long the
+    /// answer takes*, never *which* answer comes back — and the libraries,
+    /// which hold ~35 cards a seat against a handful everywhere else, are
+    /// the last thing worth looking at rather than the third. The cast path
+    /// asks this for spells that are on the stack: those calls used to walk
+    /// both libraries first, and were ~65 % of the function's cost.
     pub fn find_card_anywhere(&self, id: CardId) -> Option<&CardInstance> {
         if let Some(c) = self.battlefield_find(id) {
             return Some(c);
+        }
+        for si in &self.stack {
+            if let crate::game::types::StackItem::Spell { card, .. } = si
+                && card.id == id
+            {
+                return Some(card);
+            }
         }
         for p in &self.players {
             if let Some(c) = p.graveyard.iter().find(|c| c.id == id) {
                 return Some(c);
             }
             if let Some(c) = p.hand.iter().find(|c| c.id == id) {
-                return Some(c);
-            }
-            if let Some(c) = p.library.iter().find(|c| c.id == id) {
                 return Some(c);
             }
             // CR 407 — the ante zone is a real zone; a card there is still
@@ -20266,14 +20278,35 @@ impl GameState {
         if let Some(c) = self.exile.iter().find(|c| c.id == id) {
             return Some(c);
         }
-        for si in &self.stack {
-            if let crate::game::types::StackItem::Spell { card, .. } = si
-                && card.id == id
-            {
-                return Some(card);
+        for p in &self.players {
+            if let Some(c) = p.library.iter().find(|c| c.id == id) {
+                return Some(c);
             }
         }
         None
+    }
+
+    /// The invariant behind [`find_card_anywhere`]'s visit order: a `CardId`
+    /// names one object, so no id is in two zones at once. Returns the first
+    /// duplicate found. Debug-only — a training run doesn't pay for it; the
+    /// golden-trace games assert it after every action, which is where a
+    /// zone move that forgets to remove would show up.
+    #[cfg(debug_assertions)]
+    pub fn duplicate_zone_id(&self) -> Option<CardId> {
+        let mut ids: Vec<CardId> = Vec::with_capacity(128);
+        ids.extend(self.battlefield.iter().map(|c| c.id));
+        ids.extend(self.exile.iter().map(|c| c.id));
+        ids.extend(self.stack.iter().filter_map(|si| match si {
+            crate::game::types::StackItem::Spell { card, .. } => Some(card.id),
+            _ => None,
+        }));
+        for p in &self.players {
+            for z in [&p.graveyard, &p.hand, &p.ante, &p.library] {
+                ids.extend(z.iter().map(|c| c.id));
+            }
+        }
+        ids.sort_unstable();
+        ids.windows(2).find(|w| w[0] == w[1]).map(|w| w[0])
     }
 
     /// Mutable variant of `find_card_anywhere` — walks battlefield,
