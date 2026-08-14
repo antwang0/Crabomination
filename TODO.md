@@ -30,15 +30,23 @@ justification stopped being true when zones became `CowBox`es.
   per-turn tallies). Then (11) `battlefield_find`-in-a-loop, then (9)(b).
 - **Closed:** an event-kind mask over the trigger dispatcher's triple loop
   — `event_matches_spec` runs 1.22 times per dispatch, nothing to gate.
-- **Open, and the one number that moved the wrong way:** `peak_rss_mib`
-  21.7-22.3 -> 29.0-29.4 at `release`. See Baseline for the A/B.
+- **Checked, all clean at `5034eb2f`:** `--decks all` reads decisions
+  **2,548,986** byte-identical over two runs *and* against the value
+  recorded at `841dd40b` — the pass moved zero decisions on the full pool;
+  the `overflow` profile ran **20,400 games over three seeds with no panic
+  and no overflow** (~80 s/seed — cheap, run it every pass). The one
+  number that moved the wrong way, `peak_rss_mib` 21.7-22.3 -> 29.0-29.4,
+  A/B'd to mimalloc-on-this-host, not the pass. See Baseline.
 - Env: no `cargo-nextest`; `cargo test -p crabomination -p
   crabomination_tests` is the gate — **4m26s cold build, ~30 s run, 18,121
   tests**, much cheaper than this file used to claim. `profiling-fast`
   engine rebuild 3m20s, callgrind ~5 min, `release` **24m11s**. Client apt
   deps install in a minute (see below).
-- Trackers: PERF **1.3k**, over the ~1k guidance; the compactable block is
-  still the **Log**'s per-pass prose for passes 20-25.
+- Trackers: PERF **1.31k** against a ~1k guidance, and the previous
+  handoff pointed at the wrong block — passes 20-25 were already an index.
+  The bulk is the **candidates' longer-lived list plus "Closed / ruled
+  out"** (~345 lines of the file's last third); compact it the way passes
+  twelve to eighteen were, keeping only what is not restated above.
 
 ## Environment note
 

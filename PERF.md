@@ -192,6 +192,18 @@ effect is the trap, not the reassurance**), and a run on the wrong profile
 or the wrong box (`ac8e3b50` at `release-fast`, `247ee13d` at
 `profiling-fast`).
 
+**The wide-pool checks the fixed-deck anchor cannot make, re-run at
+`5034eb2f`.** `--bench --threads 1 --games 300 --seed 11 --decks all`
+(5,100 games over 17 archetypes) reads `decisions` **2,548,986
+byte-identical over two runs and identical to the value recorded at
+`841dd40b`** — so the twenty-eighth pass moved zero decisions on the full
+pool, which is a stronger behaviour proof than the four bench decks can
+give. Stall rate **6 draws / 5,100 (0.12 %)**, the recorded figure.
+Crash-freedom: the `overflow` profile (release-fast + `overflow-checks`)
+over `--games 400 --threads 3 --decks all` on three fresh seeds —
+**20,400 games, 0 undecided, no panic and no arithmetic overflow**, ~80 s
+per seed. Cheap enough to run every pass; do.
+
 **What every one of them agreed on, which is the part that matters**:
 `turns_per_game` **26.98** (now eleven consecutive anchors), `stalls`
 **0** with `stalls_by` reading `cap 0 / stuck 0 / draw 0`, `determinism
@@ -594,47 +606,27 @@ and twentieth passes ranked is paid: `declare_attackers_banded`
 (741,960 Ir / 0.02 %). Do not re-open this table; the layer system's
 remaining cost is per-card `computed_permanent` and the gather itself.
 
-0. **`pick_attacks_scored`, 1,559,040,146 / 49.76 % over 630 calls — and
-   the unit is now known.** The largest single item in the file for six
-   passes and still untouched; the search itself, not its inner loop, which
-   every pass since the seventeenth has made cheaper. **This is a
-   bot-quality question as much as a perf one** — a narrower search is a
-   different player, so it needs a `bot_ladder` win-rate gate, not an Ir
-   number.
+0. **`pick_attacks_scored`, 1,475,649,076 / 51.05 % over 630 calls — half
+   the program, and *not* a pruning item.** The search itself, not its
+   inner loop, which every pass since the seventeenth has made cheaper.
+   **This is a bot-quality question as much as a perf one** — a narrower
+   search is a different player, so it needs a `bot_ladder` win-rate gate,
+   not an Ir number.
 
-   *Costed 2026-08-12.* The 630 declarations run **1,166 simulations** —
-   **1.85 per search**, at **1.33 M Ir each, 0.0425 % of the program per
-   simulation**. With `gang`'s `attack_search: 6` a two-attacker greedy set
-   would produce four candidates, so nearly every scored declaration on
-   this workload is the binary *swing with the one creature or don't*
-   (1,166 = 2 x 583, the other 47 returning early on an empty greedy set).
-   **That makes the "attack with nobody" candidate about half of every
-   simulation the engine runs — ~25 % of the program on this workload.**
-
-   **The probe was run, 2026-08-12, and it settles the pruning question in
-   the negative.** A temporary counter on `choose_scored`'s returned index,
-   `release-fast`, `--decks all --games 600 --threads 3 --seed 20250808
-   --paired` (10,200 games, 110,000 searches, 370,348 simulations):
-
-   | outcome | count | share |
-   |---|---|---|
-   | greedy (index 0) wins | 59,383 | **54.0 %** |
-   | the empty declaration (index 1) wins | 38,532 | **35.0 %** |
-   | a greedy-minus-one wins | 12,085 | **11.0 %** |
-   | searches offering more than two candidates | 58,823 | 53.5 % |
-
-   **The search departs from greedy 46 % of the time, and "attack with
-   nobody" alone wins better than a third of all declarations** — so every
-   candidate class pays for itself and there is no dead branch to prune.
-   Among the 53.5 % of searches that offer minus-one candidates, one wins
-   ~21 % of the time. **Candidate (0) is therefore not a
-   fewer-simulations item; the only lever on it is making a simulation
-   cheaper, which is what every other entry on this list already does.**
-   Note also that `--decks fixed` under-represents the search by a factor
-   of ~1.8: **3.37 simulations per search on `all` against 1.85 on
-   `fixed`**, because the fixed archetypes rarely present a multi-attacker
-   board. Do not re-run this probe; if the bot's declaration policy
-   changes, re-run it then.
+   *Costed and probed 2026-08-12; do not re-run either.* The 630
+   declarations run **1,166 simulations — 1.85 per search, 1.33 M Ir each
+   (0.0425 % of the program per simulation)**, so on this workload nearly
+   every scored declaration is the binary *swing with the one creature or
+   don't*. The pruning probe (a counter on `choose_scored`'s returned
+   index, `--decks all`, 10,200 games, 110,000 searches) reads **greedy
+   54.0 % / the empty declaration 35.0 % / a greedy-minus-one 11.0 %**:
+   the search departs from greedy **46 %** of the time and every candidate
+   class pays for itself. **So the only lever on this entry is making one
+   simulation cheaper, which is what the rest of this list does.** Note
+   `--decks fixed` under-represents the search by ~1.8x (3.37 simulations
+   per search on `all` against 1.85 on `fixed`) — the fixed archetypes
+   rarely present a multi-attacker board. Re-run the probe only if the
+   bot's declaration policy changes.
 1. **`would_accept`, 491,192,545 / 15.34 %** — the affordance probe, one
    `GameState::clone` + one `perform_action_inner` per candidate action.
    What is unexamined is the *probe count*, i.e. how many candidates the
@@ -682,19 +674,16 @@ remaining cost is per-card `computed_permanent` and the gather itself.
    `Vec` newtype as an array of pairs, so any field that reaches a
    snapshot needs a custom impl or a format bump. Check the field's serde
    attribute before costing it.
-4. **PAID (`08cbc9c3`, -1.051 %).** `fire_combat_damage_triggers` takes
-   `kinds: &[EventKind]`; the five kind-independent walks run once and
-   bucket by kind, the graveyard walk stays per-kind for its dedupe set.
-   Calls 28,564 -> 7,118. Nothing left here on this profile.
-4b. **PAID (`006d5966`, -1.885 %) — and the shape it opened is the one to
-   sweep next.** `fire_step_triggers` cloned every printed
-   `TriggeredAbility` on every permanent and then filtered on
-   `t.event.kind`. **The general filter: an iterator that clones and then
-   narrows.** The syntactic sweep is clean workspace-wide; the semantic
-   question — "how much of what this loop builds does it keep?" — is not
-   swept and wants a pass of its own over the hot trigger/candidate
-   builders (`push_ordered_trigger_candidates`,
-   `statics_granted_triggers_with`, `cast_candidates`' `flat_map`).
+4. **PAID, both legs** — `fire_combat_damage_triggers` bucketing its five
+   kind-independent walks (`08cbc9c3`, -1.051 %, calls 28,564 -> 7,118) and
+   `fire_step_triggers` no longer cloning every printed `TriggeredAbility`
+   before filtering on kind (`006d5966`, -1.885 %). Nothing left at either
+   site. **What survives is the shape**: *an iterator that clones and then
+   narrows*. The syntactic sweep is clean workspace-wide; the semantic
+   question — how much of what a loop builds does it keep — is still
+   unswept over the hot trigger/candidate builders
+   (`push_ordered_trigger_candidates`, `statics_granted_triggers_with`,
+   `cast_candidates`' `flat_map`).
 5. **`pick_by_outcome`, 210,019,714 / 6.56 %, essentially all of it one
    `collect()` in `bot.rs`.** Never profiled at line level. Read
    `--auto=yes` on it before guessing; the eighteenth pass's candidate (1)

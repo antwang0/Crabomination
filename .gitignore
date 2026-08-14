@@ -71,3 +71,6 @@ web/dist/
 # callgrind / profiling output
 cg*.out
 callgrind.out.*
+# callgrind_annotate dumps — `ann.txt`, `ann.base.txt`, `tree.d.txt`, …
+ann*.txt
+tree*.txt
