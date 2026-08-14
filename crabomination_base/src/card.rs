@@ -6987,6 +6987,20 @@ impl CardInstance {
             && self.crewed_by.is_empty()
     }
 
+    /// CR 302.1 / 506.4 — drop summoning sickness at the turn boundary.
+    ///
+    /// Guarded for the same reason [`clear_end_of_turn_effects`] is: the untap
+    /// step writes this for every permanent its controller untaps, and the flag
+    /// is already `false` for all but the ones that arrived last turn. The read
+    /// goes through `Deref`, so an unchanged permanent never unshares.
+    ///
+    /// [`clear_end_of_turn_effects`]: Self::clear_end_of_turn_effects
+    pub fn clear_summoning_sickness(&mut self) {
+        if self.summoning_sick {
+            self.summoning_sick = false;
+        }
+    }
+
     pub fn clear_end_of_turn_effects(&mut self) {
         // See `end_of_turn_effects_are_clear`: the sweep runs over every
         // battlefield and phased-out permanent each turn, and each of the

@@ -127,8 +127,47 @@ contention-immune, which makes it the better first look.
 
 ## Baseline
 
-**Re-anchored 2026-08-13 at `5034eb2f`** (`release`, mimalloc — the shipped
-configuration), the twenty-eighth pass's tip. The previous anchor
+**Re-anchored 2026-08-14 at `76804984`** (`release`, mimalloc — the shipped
+configuration), the thirty-first pass's tip. This one *does* chain to the
+`5034eb2f` block below: `host_calib_ms` reads **45-46** against its 44-48,
+the same mid-40s fingerprint, on the same `host_cpu` string.
+
+```text
+bot_ladder --bench   release, rustc 1.95.0, 4-core VM, 3 worker threads
+                     mimalloc (the default); measured on an idle box
+host_cpu             Intel(R) Xeon(R) Processor @ 2.80GHz
+host_calib_ms        45 / 45 / 46 / 46
+games                320
+games_per_s          119.49 / 121.21 / 119.62 / 120.06 (mean 120.10,
+                     spread 1.44 %)
+games_per_s_th       39.83 - 40.40
+decisions_per_s      72,152 - 73,192
+turns_per_game       26.98
+decisions            193,232 byte-identical on all four
+stalls               0 (0.00 %), stalls_by cap 0 / stuck 0 / draw 0
+peak_rss_mib         29.1 - 29.4
+determinism          ok (all 160 pairs split, on all 4 runs)
+```
+
+**115.31 -> 120.10 is +4.2 %, and it is the three passes since the old
+anchor.** Passes 29, 30 and 31 are -2.456 %, -1.990 % and -3.407 % by
+instruction count (-7.6 % compounded), so wall-clock reading +4.2 % is the
+expected under-delivery, not a surprise: `Ir` over-weights the allocation
+and representation work these passes removed. The invariants are unchanged
+— `decisions` **193,232**, `turns_per_game` 26.98, stalls 0, `peak_rss_mib`
+29.1-29.4, all identical to the old block. Compare against this block only
+when `host_calib_ms` is in the mid-40s.
+
+**The wide check, and why a recorded constant is not one.** `--decks all
+--games 300 --threads 3` reads **2,553,880** decisions, `turns_per_game`
+21.32, **2 draws (0.04 %)**, determinism ok — and the *base* binary
+(`a58447d9`, rebuilt and run in the same sitting) reads exactly the same.
+The figures this file and TODO carried, 2,548,986 and 6 draws, match
+neither and are from a superseded configuration. **Run the base binary;
+do not diff against a number.**
+
+**The superseded `5034eb2f` block.** Re-anchored 2026-08-13 (`release`,
+mimalloc), the twenty-eighth pass's tip. The previous anchor
 (`ed4c152c`, 2026-08-11) had gone seven passes stale and was on a third
 box; it is kept below the new block because its *ratios* still read.
 
@@ -400,7 +439,7 @@ byte-identical.
 | 18 | 3,812,623,112 -> 3,768,577,483 Ir (**-1.155 %**) | **A per-card question only the board can answer `yes` to is a board-level flag with a per-card call attached.** The trigger dispatcher's three per-card grant lookups ride board-level presence gates — `statics_granted_triggers_with` was 34,049,232 Ir over 945,812 calls at **36 Ir each**, walking two empty slices. *How to find the next one*: `--tree=calling` on a hot loop body, list the callees whose per-call cost is tiny and whose call count is `permanents x batches`, and ask what each answer depends on. **Plus a no-win worth not re-deriving** (`SimBases`, +0.083 %): caching `sim_start_state` across a candidate loop. *Before caching a pure function across a candidate loop, ask what fraction of its cost is work the candidates would each have done regardless* — here the two `PlayerData` unshares are paid either way, eagerly or lazily. |
 | 19 | 3,768,870,942 -> 3,694,708,603 Ir (**-1.968 %**) | **A whole-board `compute_battlefield` whose consumers are all `find(id)` lookups is a participant computation with a presence gate on whichever consumer is not.** `declare_blockers` stops re-deriving computed views it already holds (`42f59829`, -1.021 %); combat damage computes the participants, not the board (`4f3e86c0`, -1.008 % — ~23 layer passes for ~4 participants, with `butcher_orgg_divides_damage_among_defenders` as the checked gate on the one whole-board consumer). New helper `compute_permanents(&[CardId])`. **Plus `CounterBag`** (`df87c2d1`, +0.051 %) — no win, kept as a determinism fix; its empty-table conclusion is corrected by the twenty-first pass below. |
 
-Passes twenty to twenty-five, compacted to an index — same treatment as one
+Passes twenty to thirty, compacted to an index — same treatment as one
 to nineteen. The rows' prose is in git (`git log -S` on the commit hashes);
 what is kept below is the lever and the lesson. All rows are callgrind on
 `profiling-fast --no-default-features`, the fixed six-game workload, with
@@ -420,6 +459,14 @@ chain, and the spread across containers is the 0.02 % build noise.
 | 26 | 3,162,657,064 -> 3,132,870,988 Ir (**-0.942 %**) | **A determinism defect and a perf candidate can be the same item.** The engine's hash containers get a fixed hasher (`841dd40b`): `crate::fxhash` (rustc's seedless FxHasher) behind `HashMap` / `HashSet` aliases, replacing `std`'s per-map-seeded SipHash-1-3 on keys that are one or two words — `CardId`s, seat indices, `&'static str` names — where SipHash's setup dominates. Longer-lived candidate (6) sat unpulled for a dozen passes at ~1 %; what moved it was the cube pool's fixed-seed nondeterminism making the same change mandatory. **Check the standing candidate list before designing a robustness fix.** Also carries `125108c1` (coin flips off the game RNG), which cannot move this workload. Base rebuild was **0.115 %** off the recorded tip, the widest this file has seen — a different container, and the row is nine times it. |
 | 27 | 3,132,892,846 -> 3,115,598,474 Ir (**-0.552 %**) | **A helper that re-finds a card its callers hold.** `granted_abilities_of(&CardInstance)` beside `granted_abilities_with(CardId)`: the `CardId` form opened with a `battlefield_find` and its three hot callers were already iterating the battlefield — `available_mana`'s untapped-producer loop (63,656 of 201,834 calls), `effective_mana_abilities_with` (which had *just* done the same find), the bot's activatable sweep. `available_mana` **1.14 -> 0.97 %**, the `granted_abilities_*` family 1.39 -> 0.81 %. This is candidate (11)'s shape and it recurs; the base rebuild here was **0.0007 %** off, the tightest in the file. |
 | 28 | 3,116,508,803 -> 2,890,337,225 Ir (**-7.257 %**) | **The CoW unshare, read off the profile by name** — four rows, all the same defect. Trigger dispatch stops building a `Vec` per permanent (`e02767aa`, -1.250 %: three `extend`s per permanent per dispatch, 945,812 times, most producing an empty vector; 155 M self, 69 M of it `alloc::vec` + `alloc::raw_vec`). The step-bounded may-play sweep gets a presence gate (`078b8cef`, **-2.189 %**: `clear_step_bounded_may_play` took `iter_mut` over every hand, graveyard, library and exile at *every step transition* for a CR 702.94 miracle window — **61.3 M / 1.97 % on one source line**, since `iter_mut` on a `CowBox` unshares and reaching a zone through `Player` unshares the whole `PlayerData` first). The affordance probe template stops stripping libraries (`2f70affb`, **-2.024 %**: the strip's comment was true when zones were plain `Vec`s, and cost a `PlayerData` unshare per player per template once they became `CowBox`es). And three periodic writes are guarded by a read (`5034eb2f`, **-1.998 %**: `cards_drawn_this_step = 0` per player per step boundary, 57.9 M / 1.96 %; `opponent_cast_spell_since_your_turn`; `tapped_land_for_mana_this_turn`). |
+| 29 | 2,890,336,504 -> 2,819,346,784 Ir (**-2.456 %**) | **Stop paying for the clone, then make the clone cheaper.** "An opponent cast a spell" becomes a `u64` seat mask (`88c178f5`, -0.713 % — the twenty-eighth pass's read-guard cannot help a genuine false->true flip, and 14.5 M / 5,800 unshares survived it); `PlayerCold`, a `CowBox` group for the fifteen rarely-written heap fields of a 158-field `PlayerData` cloned 24,852 times per six games at ~3,300 Ir each (`645b978d`, **-1.289 %**, `Arc::clone_from_ref_in` inclusive **-34.5 %**, `#[serde(flatten)]` keeps the wire identical); `find_card_anywhere` walks the libraries last (`dbd3efeb`, -0.473 %). **Two corrections worth more than the rows.** The twenty-eighth pass's two handoff candidates were *one site double-counted* — a `=> …deref_mut` line names the *call* and the accessor's own definition line carries self cost separately; check Ir-per-call before ranking a hit, ~30 means the handle was already unique. And **a CoW unshare site is only removable when it is the seat's *only* write in that action**: `remove_from_hand` must unshare, but so must the eight `PlayerData` writes `finalize_cast` does on the next lines, each reading 30 Ir *because* it already paid. What is left on `PlayerData` is cost per clone, not clone count. |
+| 30 | 2,832,747,493 -> 2,776,361,994 Ir (**-1.990 %**) | **The filter is the *order* of a linear scan, not its length.** The zone scan looks at the stack before both libraries (`8241d092`, -0.583 % — the cast path asks `find_card_anywhere` for spells that are *on the stack*, and those calls walked ~35 library cards a seat first); the gather's last board pass walks `sa_cards` when its three flag bits are clear (`6aee2973`, **-1.250 %**); an `_of(&CardInstance)` twin for `effective_mana_abilities` (`005c1d33`, -0.158 %, candidate (11)'s shape). **Neither large row is visible as an expensive function** — `find_card_anywhere` was 1.27 % spread over six file attributions, the gather's three lines 0.18/0.26/0.26 %. *The tell is a `for`/`find` whose first branch is the rarest case, and it is cheaper to read than to profile.* **The second collision this file has recorded, and on the top candidate**: a concurrent session landed `dbd3efeb` from the same base within the hour; the two measurements sit 0.110 % apart, which is the size of the ordering difference and not noise (the twenty-fifth pass's collision, on functionally identical source, was 0.042 %). Neither session's cumulative describes the merged tip `a4960740`, which is why it was re-measured. Candidate (13)/(5), the `Keyword` bitset, was costed here and **ranked down** — the arithmetic is in the candidates section. |
+
+**Passes 29 and 30 were compacted to the two rows above on the thirty-first
+pass** (their measurement tables are in `git log -- PERF.md`). Their live
+numbers did not go with them: the `PlayerCold` field list and the
+`remove_from_hand` non-candidate are in candidate (-1), the `Keyword`
+bitset arithmetic in candidate (13), the zone-walk family in (11a).
 
 **The twenty-seventh pass's negative result, and it is worth more than the
 row.**
@@ -508,102 +555,42 @@ cost that stopped existing when zones became `CowBox`es). *A perf comment
 that explains why something is worth it is a claim with a date on it;
 re-check it against the current representation before trusting it.*
 
-**Twenty-ninth pass — the same defect one level up: stop paying for the
-clone, then make the clone cheaper.** Base `797040ba` read
-**2,890,336,504 Ir** against the twenty-eighth pass's recorded
-2,890,337,225 (**721 Ir apart, 0.00002 %** — the tracker-only commit
-between them changed nothing, and this is the tightest build-to-build
-agreement this file has recorded).
+**Thirty-first pass — a write that changes nothing, and a scope that
+already existed.** Base `a58447d9` read **2,776,361,361 Ir** against the
+thirtieth pass's recorded 2,776,361,994 (**633 Ir apart, 0.00002 %** — ties
+the tightest agreement in this file).
 
 | date | change | before | after | how measured |
 |---|---|---|---|---|
-| 2026-08-14 | "An opponent cast a spell" becomes a seat mask (`88c178f5`) | 2,890,336,504 Ir | 2,869,737,485 Ir (**-0.713 %**) | The twenty-eighth pass guarded this write with a read; the residual was still **14,498,464 Ir / 5,800 unshares** in `finalize_cast` plus 2,330,929 / 1,718 at cleanup, because after a *genuine* false→true flip the guard cannot help. One bool per seat is now one `u64` on the hot `GameState` — `\|=` per cast, `&= !bit` at cleanup, `& bit` on the read. `Player::deref_mut` inclusive 94,562,722 → 84,058,045; the other half of the delta is the allocator and memcpy work the clones dragged behind them |
-| 2026-08-14 | A cold group for the rarely-written tail of `PlayerData` (`645b978d`) | 2,869,737,485 Ir | 2,832,745,260 Ir (**-1.289 %**) | `PlayerData` is 158 fields and **24,852 deep clones per six games at ~3,300 Ir each**. Fifteen own heap and are written by a handful of cards or never: `name` (2,811,379 Ir of `String::clone` alone), `commanders`, `emblems`, `epic_spells`, `draft_notes`, ten per-turn registries — 12.7 M in explicit field-clone calls plus their share of the struct memcpy and malloc. Now `PlayerCold` behind one `CowBox`, the `GameState`/`ColdState` device one level down; `#[serde(flatten)]` keeps the wire format identical. `Arc::clone_from_ref_in` **380,386,491 → 249,073,124 inclusive, -34.5 %**; `_int_malloc` 175,068,200 → 163,751,005 |
-| 2026-08-14 | `find_card_anywhere` walks the libraries last (`dbd3efeb`) | 2,832,745,260 Ir | 2,819,346,784 Ir (**-0.473 %**) | The walk was battlefield, then per seat graveyard / hand / **library** / ante, then exile, then the stack. A library is ~55 cards against a hand's ~7, so every lookup that ended on the stack, in exile, or in the second seat's hand walked both libraries first. `find_card_anywhere` self was **36,110,078 / 1.27 %** across six file attributions. Order is not part of the contract — a `CardId` names one instance, so at most one zone holds it — and the `_mut` sibling was reordered with it so the pair stays in step |
-| | **cumulative, twenty-ninth pass** | **2,890,336,504 Ir** | **2,819,346,784 Ir (-2.456 %)** | callgrind on the fixed six-game workload; bench output byte-identical on every row, and the pass as a whole diffs byte-identical against `797040ba` over 5,100 games |
+| 2026-08-14 | The combat-damage pair takes one gather, not three (`3d15878b`) | 2,776,361,361 Ir | 2,749,500,214 Ir (**-0.967 %**) | Each (attacker, blocker) iteration already froze the layer system for its read-only prefix, dropped the scope, and then took two more whole-game gathers: `ironscale_replace`'s CR 614.9 `creature_redirects_damage_to_controller` (**15,650,898 Ir / 0.56 % over 4,450 calls, 3,517 each** — 91 % of `ironscale_replace`'s entire 17.2 M) and the CR 615 self-prevention pair, whose `damage_from_source_prevented_by_keyword` topped the `computed_permanent` caller table at **3,186 Ir over 4,450 calls**. Both are `&self`; only `apply_prevention_shields` sits between them and the scope, and it consumes shield charges and emits events without moving a layer input. Both loops now answer them inside the scope and hand `ironscale_replace` its redirect |
+| 2026-08-14 | The cleanup wear-off stops writing what is already clear (`da5b1f1c`) | 2,749,500,214 Ir | 2,684,396,951 Ir (**-2.368 %**) | The pass's largest row and the cheapest to write. `clear_end_of_turn_effects` has carried an `end_of_turn_effects_are_clear` guard since `15a9cce6`; its two siblings in the same function did not. The graveyard sweep walked every card in every graveyard once per player per turn writing two `= None`s over `None`, and the CR 514.2 damage sweep wrote `damage = 0` over every battlefield and phased-out permanent. **`--tree=caller` on `Arc::clone_from_ref_in` read `finish_cleanup` 72,631,289 Ir / 2.62 % over 36,768 calls (1,976 each) — after, 0 calls.** Graveyards only grow, so this got worse every turn of every game |
+| 2026-08-14 | The untap step stops clearing sickness that is already clear (`76804984`) | 2,684,396,951 Ir | 2,681,771,690 Ir (**-0.098 %**) | Same shape one step earlier: eleven sites write `summoning_sick = false` for every permanent their controller untaps, once per early-exit branch, and the flag is already `false` for all but last turn's arrivals. `CardInstance::clear_summoning_sickness` holds the guard in one place, like `clear_end_of_turn_effects`. Measured as its own container, not by arithmetic |
+| | **cumulative, thirty-first pass** | **2,776,361,361 Ir** | **2,681,771,690 Ir (-3.407 %)** | callgrind on the fixed six-game workload; golden traces byte-identical on every row, full suite green |
 
-**What the pass corrects, and it matters for the next sweep.** The
-twenty-eighth pass's handoff listed two candidates at 0.95 % / 7,456 calls
-— `&mut self.cold` and `remove_from_hand`. **They were one site
-double-counted.** At `797040ba` the sweep reads `remove_from_hand`
-28,073,333 / x7,456 and `GameState`'s `&mut self.cold` **232,920 / x7,764
-(30 Ir a call — it almost never clones)**. A `=> …deref_mut` line in
-`--auto=yes` output names the *call*; the accessor's own definition line
-carries self cost separately, and reading both as sites counts one unshare
-twice. Check the Ir-per-call before ranking a hit: ~30 means the handle was
-already unique.
+**What the pass leaves behind, and it is the twenty-eighth pass's filter
+with a new place to point it.** That pass found four CoW unshares by
+sorting `=> …deref_mut` call lines; this one found the largest row a
+different way, and the way generalizes: **`--tree=caller` on
+`Arc::clone_from_ref_in`, and read the caller names for a function that has
+no business deep-copying anything.** `finish_cleanup` at 2.62 % over 36,768
+calls is not a *sweep* problem — the sweep is required by CR 514.2 — it is
+that the sweep wrote values the fields already held. The three shapes the
+twenty-eighth pass listed still rank in the same order, and *periodic reset
+that writes a value the field already holds* has now paid twice, for
+-1.998 % and -2.368 %. **Where to look next: any `for … in &mut` over a
+zone, in a function that runs on a turn or step boundary.** The guard costs
+a `Deref` read; the write costs a `CardData` or `PlayerData` deep copy.
 
-**And `remove_from_hand` is not a candidate at all**, which is worth
-recording because it looks like the biggest one. Removing a card from hand
-*must* unshare — but so must the eight `PlayerData` writes `finalize_cast`
-does immediately after (`spells_cast_this_turn`, `spell_ids_cast_this_turn`,
-…), each of which reads 30 Ir on the profile precisely because
-`remove_from_hand` already paid. **Move the first write out and the second
-inherits the unshare**; the count is irreducible. The same trap kills
-`attacked_this_turn` (`creatures_attacked_this_turn` is written on the next
-line) and any scheme for hoisting the zones out of `PlayerData`. *A CoW
-unshare site is only removable when it is the seat's **only** write in that
-action* — which is exactly what made the seat mask pay. What is left on
-`PlayerData` is therefore **cost per clone, not clone count**, and that is
-the second row.
-
-**The sweep recipe needs updating too**: with `PlayerData` carrying its own
-`DerefMut`, LLVM inlines `Player::deref_mut` and the `=> …deref_mut` lines
-stop naming the expensive sites (40 sites, 3,277,866 Ir / 0.12 % between
-them at the tip). Rank unshares by `--tree=caller` on
-`alloc::sync::Arc<T,A>::make_mut` instead — 212,323,729 / 7.50 % inclusive
-at the tip, and the one leaf that still describes the whole class is
-`clone_from_ref_in` at 8.79 %.
-
-**Thirtieth pass — two linear scans that were ordered wrong, not too
-long.** Base `b82f3113` read **2,832,747,493 Ir** against the twenty-ninth
-pass's recorded 2,832,745,260 (**2,233 Ir apart, 0.00008 %**).
-
-| date | change | before | after | how measured |
-|---|---|---|---|---|
-| 2026-08-14 | The zone scan looks at the stack before both libraries (`8241d092`) | 2,832,747,493 Ir | 2,816,245,576 Ir (**-0.583 %**) | `find_card_anywhere` visited battlefield, then per seat graveyard / hand / library / ante, then exile, then the stack — and the cast path asks it for spells that are *on the stack* (`finalize_cast` 21,362 calls, `perform_action_inner` 37,280, `activate_ability` 18,386, `cast_spell` 7,456), so those calls walked ~35 cards a seat of library first. **Self cost 36.1 M / 1.27 % over 104,240 calls, ~65 % of it in calls that fell through everything.** A `CardId` names one object and lives in one zone (copies and tokens are minted fresh from `next_id`), so the visit order picks how long the answer takes, never which answer comes back; `duplicate_zone_id()` is a debug-only whole-state check the golden-trace games now run after every action. Self **36.1 M -> 19.6 M (-46 %)** at unchanged calls |
-| 2026-08-14 | The gather's stateful board pass walks `sa_cards` when it can (`6aee2973`) | 2,816,245,576 Ir | 2,781,048,142 Ir (**-1.250 %**) | `gather_continuous_effects_inner` ends with an *ungated* walk of the whole battlefield carrying five unrelated passes. Two read `static_abilities` and so can only emit for a card already in `sa_cards`; the other three are keyword/flag reads (unleash, living metal, suspect) that are false on almost every board. Every card paid three flag tests and two empty slice iterations for nothing — **4,985,332 + 7,477,998 + 7,477,998 Ir on three source lines** over 127,878 gathers. `any_suspected` joins the pre-scan fold; with all three bits clear the walk *is* `sa_cards`, in battlefield order, so the emitted sequence is unchanged. `&mut dyn Iterator`, not a `Box`, so choosing costs no allocation. Gather self **219.4 M / 7.75 % -> 185.9 M / 6.68 %** |
-| 2026-08-14 | An `_of(&CardInstance)` twin for `effective_mana_abilities` (`005c1d33`) | 2,781,048,142 Ir | 2,776,663,732 Ir (**-0.158 %**) | Candidate (11)'s shape at the site the twenty-seventh pass's row named and did not finish. `effective_mana_abilities_with(card_id, scan)` opened with a `battlefield_find` and all three callers ask from inside a `battlefield.iter()` — `mana_source_table_inner`, `untapped_producers_of_inner`, `untapped_relevant_source_exists_inner` — 54,570 calls each re-finding the card the loop was standing on. The `CardId` form stays as a find plus delegate. Self **13.9 M / 0.49 % -> 9.5 M / 0.34 %** |
-| 2026-08-14 | The merge with the concurrent session (`a4960740`) | 2,776,663,732 Ir | 2,776,361,994 Ir (**-0.011 %**) | Not a row so much as the honest tip: the merge keeps this session's zone order and adds the other's `find_card_anywhere_mut` reorder, worth **301,738 Ir**. Measured because neither session's cumulative describes the merged code |
-| | **cumulative, thirtieth pass** | **2,832,747,493 Ir** | **2,776,361,994 Ir (-1.990 %)** | callgrind on the fixed six-game workload; bench output byte-identical on every row, including the merge |
-
-**The second collision this file has recorded, and this one was on the top
-candidate.** A concurrent session pulled `find_card_anywhere` from the same
-base within the hour and landed `dbd3efeb` — libraries after every small
-zone and after the stack, **-0.473 %**. This session's `8241d092` moved the
-*stack* to second as well, because the cast path is what asks
-(`finalize_cast` 21,362 calls, `perform_action_inner` 37,280,
-`activate_ability` 18,386, `cast_spell` 7,456 all look up spells that are on
-the stack), and read **-0.583 %** from the same base. The merge keeps the
-stack-second ordering and takes their `_mut` sibling reorder, which this
-session had left alone. **Two independent measurements of the same
-candidate, 0.110 % apart, are the size of the ordering difference and not
-noise** — the first collision (twenty-fifth pass, functionally identical
-source) was 0.042 %. *Neither session's cumulative describes the merged
-tip*, which is why the row below exists.
-
-**What the pass leaves behind: the filter is the *order* of a scan, not its
-length.** Both large rows are a linear walk that was correct and visited its
-cases in the wrong order — the zone scan looking at 70 library cards before
-the stack, the gather's board pass testing three always-false flags before
-the two passes that could only fire for a card already on a short list.
-Neither shows up as an expensive function: `find_card_anywhere` was 1.27 %
-spread over six file attributions, and the gather's three lines were 0.18 %,
-0.26 % and 0.26 %. **The tell is a `for`/`find` whose *first* branch is the
-rarest case**, and it is cheaper to check than to profile: read the loop and
-ask which arm the workload actually takes.
-
-**And a candidate this pass costed and did *not* take.** Candidate (13)/(5),
-the `Keyword` bitset, was measured before being written: `Keyword::eq` is
-**14,393,938 Ir / 0.51 % self**, but it is **~1.3 M calls at 11 Ir spread
-over thirty call sites** (`printed_color_set` 209,154, `has_keyword`
-170,112, `board_keyword_in_scope` 135,886, `can_block_attacker_computed`
-115,502, then a long tail), and the gather pre-scan's keyword loop is
-0.23 %. So the whole addressable total is ~0.6 %, against a representation
-change that has to reach **7,716 `keywords: vec![…]` literals in the
-catalog** and be maintained at the ~10 runtime sites that push a keyword.
-Ranked down accordingly; the arithmetic is in the candidates section so the
-next run doesn't re-derive it.
+**And a methodological note worth more than the row.** The untap row was
+nearly mis-scored. Measured *together* with the cleanup row, the
+`--tree=caller` attribution for `do_untap` read **13,304,910 -> 39,345,229
+Ir at a lower call count** — i.e. it looked like a regression — because the
+new `clear_summoning_sickness` frame changed which file:function the
+inliner attributed the deep copies to. Splitting the two changes into two
+containers and measuring each showed the untap row is **-0.098 %**, a small
+real win. *A per-caller row is an attribution, not a measurement; when two
+changes land together and one looks wrong, rebuild them apart rather than
+reasoning about the tree.*
 
 **Thirty-first pass — the twenty-eighth pass's defect, at the five sites it
 did not reach.** Base `a58447d9` read **2,776,363,573 Ir** against the
@@ -760,49 +747,61 @@ Ordered by expected value. Each run pulls the top one, attaches numbers,
 and feeds what it finds back in. Re-profile and replenish when the list
 goes thin or stale.
 
-**(-2) `CardCold` — the `PlayerCold` device one level down, and the top
-candidate now.** The thirty-first pass stopped the *avoidable* `CardData`
-deep copies; what is left is **cost per clone**, exactly where the
-twenty-ninth pass left `PlayerData` before `645b978d` paid -1.289 % on it.
-`CardData` is **148 fields, 28 of them heap-owning `Vec`s**, and an empty
-`Vec` clone is ~22 Ir (pass 21's `IdSet` figure), so ~600 Ir of a ~1,900 Ir
-clone is copying collections that are empty on every bench board.
-**Sizing, at the thirty-first pass's tip**: sum the `<` rows under
-`--tree=caller` on `Arc::make_mut` whose *file* is
-`crabomination_base/src/card.rs` — `activate_ability_inner` 31.6 M / 1.21 %
-(18,312 calls at 1,725 Ir, one per activation, a land tapping for mana),
-`cast_spell_with_convoke` 22.3 M / 0.86 %, `declare_attackers_banded`
-10.7 M, `place_card_at_resolved_zone` 9.3 M, `do_untap` 9.2 M,
-`declare_blockers` 5.4 M, and a tail — **~105 M / 4.0 % of `CardData` deep
-copies, none of them removable** (each is a real state change). A cold
-group taking ~20 of the 28 heap fields is therefore worth ~30 % of that,
-**~1.2 %**, at the cost of one extra `Arc` clone per `CardData` clone.
-*The candidates, by "written by a handful of cards or never"*:
-`spliced_effects`, `spliced_names`, `meld_parts`, `mutate_stack`,
-`granted_activated_abilities`, `granted_activated_eot`,
-`stored_die_results`, `kicked_options`, `chosen_colors`, `saddled_by`,
-`crewed_by`, `goaded_by`, `damaged_players_this_game`,
-`damaged_permanents_this_game`, `spree_modes`, `pending_etb_counters`,
-`exhausted_abilities`, `modes_chosen`, `removed_keywords`,
-`removed_keywords_eot`. **Read the tenth pass's rule before choosing the
-membership** — widening `ColdState` to 126 fields read **+1.23 %** — and
-`#[serde(flatten)]` is what kept `PlayerCold`'s wire format identical.
-Sequence it after a determinism/behaviour run, not before one: it touches
-the type every zone holds.
+**(-2) A `CardCold` group on `CardData` — the largest single item costed on
+this profile, and the one that needs a run to itself.** `--tree=caller` on
+`Arc::make_mut` at `a58447d9`, summing the rows whose file attribution is
+`crabomination_base/src/card.rs` (`CardInstance::deref_mut` inlined into the
+caller): `resolve_combat` **55,962,640 / 2.02 % over 68,212**,
+`activate_ability_inner` **31,141,085 / 1.12 % over 18,312 (1,700 Ir
+each)**, `cast_spell_with_convoke` 21,434,296 / 0.77 % over 74,150,
+`declare_attackers_banded` 11,040,699 / 0.40 %,
+`place_card_at_resolved_zone` 9,119,601 / 0.33 %, `do_untap` 6,218,160 /
+0.22 %, `declare_blockers` 5,294,135 / 0.19 %, then a tail — **~5.4 % of the
+program is deep-copying a `CardData`**, and `Arc::clone_from_ref_in` is
+8.97 % inclusive. **Re-read at the pass's tip `62e6dd42`, after the two
+sweeps took the avoidable copies: ~105 M / 4.0 %**, `resolve_combat` down to
+2.8 M and `do_untap` to 9.2 M, `activate_ability_inner` now the largest row
+at 31.6 M / 1.21 % — and every one of those is a genuine state change, so
+4.0 % is the whole of what a cold group can address. At ~600 of ~1,900 Ir a
+clone being empty-`Vec` copies, expect **~1.2 %**. `CardData` is **148 fields, 32 of them heap-owning**;
+`PlayerCold` took the fifteen rare ones on `PlayerData` and paid. The rare
+heap fields here, from a field-by-field read: `spliced_effects` /
+`spliced_names`, `spree_modes` / `modes_chosen` / `kicked_options`,
+`stored_die_results`, `named_card` / `named_card_2`, `chosen_colors`,
+`goaded_by`, `saddled_by`, `crewed_by`, `meld_parts`, `mutate_stack`,
+`granted_activated_abilities` / `granted_activated_eot`, `removed_keywords`
+/ `removed_keywords_eot`, `once_per_turn_used`, `exhausted_abilities`,
+`pending_etb_counters`, `cast_mana_spent_by_color` — ~20 fields that are
+empty on essentially every card. **Do not widen past that**: the tenth
+pass's rule is *group size x unshare probability < sum of the individual
+clone costs*, and widening `ColdState` to 126 fields read **+1.23 %**. The
+blockers are why this wants a whole run: 148 fields means a `Deref` /
+`DerefMut` split reaching the entire engine, and every cold field's serde
+attribute has to survive (candidate (3)'s note). Do not start it late in a
+run.
 
-**(-1) The CoW-unshare sweep — the *avoidable* half is now swept, twice.**
-The twenty-eighth pass took four of these for -7.257 %, the twenty-ninth
-two more for -1.993 %, and the **thirty-first six more for -6.13 %**
-(`cleanup_wear_off` x3, `resolve_combat`'s provoke reset, `do_untap`'s nine
-`summoning_sick` sites, the turn-begin reset loop, `end_turn`'s zone
-sweep). The recipe that found the last batch is in that pass's Log block:
-`--tree=caller` on `Arc::make_mut`, sorted by the **inlining function**,
-divided by call count. **What is left on that sort is genuine state
-change** — every remaining row is ~1 deep copy per action that really
-writes the card — so the next win here is (-2), not another guard.
-The syntactic sweep of `for … in &mut <zone>` over `game/` is clean as of
-`62e6dd42`; `server/` and `effects/` were not swept the same way and a
-`--tree=caller` read is cheaper than grepping them. What is
+**(-1) The CoW-unshare sweep — re-run it, but with the new recipe.** The
+twenty-eighth pass took four of these for -7.257 %, the twenty-ninth two
+more for -1.993 %, and the thirty-first two more for -2.466 %. The
+`=> …deref_mut` sort that found the first four no longer resolves (see the
+twenty-ninth pass's Log block): `Player::deref_mut` is inlined now, and the
+40 surviving `deref_mut` call lines are 0.12 % between them. **Two sorts
+still work: `--tree=caller` on `alloc::sync::Arc<T,A>::make_mut`** (7.50 %
+inclusive at the tip), **and — the one that found the thirty-first pass's
+largest row — `--tree=caller` on `alloc::sync::Arc<T,A>::clone_from_ref_in`,
+reading the caller names for a function that has no business deep-copying
+anything.** The second is the better first look: `make_mut`'s table is
+dominated by writes that are genuinely needed, while a `clone_from_ref_in`
+caller at four figures of calls is usually a sweep writing values the fields
+already hold (`finish_cleanup`, 2.62 %, gone). **Read either table by the
+*inlining* function, not the leaf**: every `<` row whose file is
+`alloc/src/sync.rs` and whose function is an engine function names a
+function that deep-copies a CoW handle, with the call count beside it —
+~1,900 Ir a call is `CardData`, ~900 is `PlayerData`, ~30 means the handle
+was already unique and there is nothing to take. **The standing filter is a
+`for … in &mut` over a zone in a function that runs on a turn or step
+boundary**, and the syntactic sweep of those is clean under `game/` as of
+`62e6dd42`; `server/` and `effects/` were never swept the same way. What is
 already known and does not need re-deriving:
 
 * **`remove_from_hand` is not a candidate**, nor is `attacked_this_turn`,
@@ -834,6 +833,51 @@ and twentieth passes ranked is paid: `declare_attackers_banded`
 **Calls 17,718 -> 5,488 -> 310**, and the 310 are all `submit_decision`
 (741,960 Ir / 0.02 %). Do not re-open this table; the layer system's
 remaining cost is per-card `computed_permanent` and the gather itself.
+
+**Four rows costed on the thirty-first pass's base and not taken**, listed
+here rather than as numbered entries because each is one measurement short
+of being actionable. All from `a58447d9`, `--tree=caller` /
+`--tree=calling` / `--auto=yes` on the fixed six-game workload:
+
+* **Auto-tap's activations, `auto_tap_for_cost_inner` -> `activate_ability`
+  253,177,209 / 9.12 % over 18,832 calls (13,444 Ir each)** — the single
+  largest callee edge outside the search. `try_pay_after_snapshot_mode` is
+  14.84 % inclusive and `auto_tap_for_cost_inner` 14.16 %, i.e. **paying for
+  a spell is a seventh of the program** and ~2.1 land taps per payment.
+  Inside each activation, `activate_ability_inner`'s single
+  `with_frozen_layers` costs **49,055,654 / 1.77 % over 18,386 calls (2,668
+  Ir each — a gather)**, and it exists to answer three questions:
+  `lost_all_abilities`, is-a-creature, and `land_mana_lost`. **All three
+  already have presence gates** (`ability_strip_in_scope`, the layer-4
+  card-type gate `compute_battlefield_creatures` documents,
+  `rewrites_land_types`) — but every gate tests the *gathered* set, so
+  inside a scope it creates they cost exactly what they save. The lever, if
+  there is one, is a scope spanning `auto_tap_for_cost_inner`'s tapping
+  loop, and it is **unsound as written**: tapping a permanent is a layer
+  input (`UntapOnlyChosenTypeWhileUntapped` and any `WhileCondition` keyed
+  on an untapped permanent read `!c.tapped`). Cost how many of the 18,832
+  taps happen on a board carrying either before designing anything.
+* **`dying_snapshot`, 10,815,151 Ir over 3,420 calls (3,162 each — a
+  gather)**, one per death from the SBA sweep and four sacrifice paths. Its
+  `computed_permanent` exists only to notice that the computed creature
+  types differ from the printed ones, which needs a *live type-changer*;
+  `compute_permanent` already computes `has_type_changer` from
+  `Modification::SetCreatureTypes | AddCreatureType`. Same gate-needs-the-
+  gather circularity as the row above, and the callers are `&mut self`, so
+  a scope cannot wrap them.
+* **`printed_color_set`, 17,572,024 / 0.63 % over 237,652 calls (74 Ir
+  each)** — one per `compute_permanent_pass`, and a pure function of the
+  `CardDefinition`. Not memoizable *on* the definition (candidate (13)'s
+  reasoning: `Arc::make_mut(&mut card.definition)` mutates in place), so it
+  is a construction-time field or nothing — i.e. it belongs to the same
+  `CardDefinition` rework as the `Keyword` bitset, not to its own row.
+* **`compute_permanent_pass` is 134,165,234 / 4.83 % over 237,652 cards
+  (565 Ir each)** and its own annotated lines are all under 0.25 %; the cost
+  is spread across four `Printed::new` constructions, `base_power` /
+  `base_toughness` (3,341,698 each, attributed to `raw_vec`), and
+  `affected_includes_gated` (4,086,736 over 91,256). **There is no single
+  line to take here** — record it so the next run doesn't re-annotate
+  layers.rs hoping for one.
 
 0. **`pick_attacks_scored`, 1,475,649,076 / 51.05 % over 630 calls — half
    the program, and *not* a pruning item.** The search itself, not its
@@ -1081,21 +1125,22 @@ remaining cost is per-card `computed_permanent` and the gather itself.
     15,368 calls is what a caller already inside someone's scope looks
     like; imitate its caller.
 
-11a. **The zone-walk family — CLOSED for order at `1f68d1b0`.** Five
-    hand-written walkers ask "where is this card": `find_card_anywhere`
-    (paid, -0.473 %), `find_card_anywhere_mut`, `find_card_zone`,
-    `find_card_owner` and `death_was_replaced`. All five now visit
-    battlefield → small zones → stack/exile → libraries, and the three
-    that scan a push-only zone (graveyard, exile) do it back to front so a
-    just-moved card hits on the first comparison. `death_was_replaced`
-    additionally answers the unreplaced case — the overwhelming majority —
-    off the graveyards without touching a library at all. **No Ir was
-    claimed**: none of the three appears above the 99 % threshold, which is
-    why the commit rode in with the pass's measured rows. `find_card_zone`'s
-    doc also claimed the stack among its zones and its body never looked
-    there; corrected to match the body.
+11a. **The zone-walk family — the ordering half is CLOSED (`76d31eb8`,
+    `1f68d1b0`, merged).** Five hand-written walkers ask "where is this
+    card": `find_card_anywhere` (paid, -0.583 %), `find_card_anywhere_mut`,
+    `find_card_zone`, `find_card_owner` and `death_was_replaced`. All are
+    libraries-last now; the walkers that scan a *push-only* zone (graveyard,
+    exile) do it back to front, so a card that just moved there hits on the
+    first comparison, and `death_was_replaced` — a disjunction, not a search
+    — answers the unreplaced case off the graveyards without touching a
+    library at all. `find_card_owner` also stopped walking exile twice for
+    one id and looks at the stack before the seats. **No Ir claimed** on any
+    of it: none of the three reordered walkers is above the 99 % threshold.
+    `find_card_zone`'s doc claimed the stack among its zones and its body
+    never looked there; corrected to match the body. Do not re-open the
+    ordering.
 
-    **What is left of the paid one, measured at the thirtieth pass's tip.**
+    **What is left, and it is the only part of this entry still open.**
     `find_card_anywhere` is still **19.6 M / 0.70 % over 104,240 calls**
     after the reorder, and the residual is calls that return `None` — they
     walk every zone by construction, whatever the order. Costing that needs

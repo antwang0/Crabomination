@@ -16,44 +16,59 @@ reference and want their own triage pass):
 
 ## NEXT (handoff — rewrite each run, keep under 15 lines)
 
-Branch `claude/modern_decks`. **The thirty-first pass landed three rows for
--6.241 % Ir** (2,776,363,573 -> 2,603,084,794 at `62e6dd42`), all one
-shape: **a periodic sweep writing a default over a CoW handle, and an
-`iter_mut` taken to decide whether anything needed writing.** The
-twenty-eighth pass called this class closed after four rows; six more sat
-in `stack.rs`/`combat.rs` — `cleanup_wear_off` (-2.379 %), `resolve_combat`'s
-provoke reset + `do_untap`'s nine `summoning_sick` clears + the turn-begin
-reset + `end_turn`'s zone sweep (-3.753 %), then five `#[serde(skip)]` hash
-fields to `IdMap` (-0.211 % over a span that also carries candidate 11a).
+Branch `claude/modern_decks`. **The thirty-first pass landed nine rows for
+-9.4 % Ir across two concurrent sessions**, merged here and
+**re-measured at the merge** (see PERF's Log — neither session's cumulative
+describes the merged tip). Two shapes: **a periodic sweep writing values
+the fields already hold** — `cleanup_wear_off` (-2.379 / -2.368 %, both
+sessions found it), `resolve_combat`'s provoke reset, `do_untap`'s nine
+`summoning_sick` clears, the turn-begin reset, `end_turn`'s zone sweep — and
+**a `&self` read that gathers, taken inside a freeze scope the caller
+already had** (the combat-damage pair, -0.967 %). Plus five
+`#[serde(skip)]` hash fields to `IdMap`.
 
-- **Behaviour is green at the tip**: `--bench` `decisions` **193,232**,
-  `--decks all` **2,548,986** over 5,100 games, turns 26.98 / 20.99, stalls
-  0 / 6 draws, determinism ok, full suite green. `overflow` was **not**
-  re-run this pass — owed at the tip (~16 min, seeds 11/12/13).
 - **Best next move is PERF candidate (-2), `CardCold`** — the `PlayerCold`
-  device on `CardData` (148 fields, 28 heap `Vec`s). The remaining
-  `CardData` deep-copy budget is **~105 M / 4.0 %** and none of it is
-  avoidable, so it is cost-per-clone now; ~1.2 % expected, membership list
-  and the +1.23 % over-widening warning are in the candidate. Then (11)'s
-  unfinished `_of(&CardInstance)` enumeration. **(13)/(5) the `Keyword`
-  bitset stays ranked down** (~0.6 % against 7,716 catalog literals) and
-  **(11a) is closed**; don't re-derive either.
-- **The recipe that found this pass**, since the `deref_mut` sort is dead:
-  `--tree=caller` on `Arc::make_mut`, then read every `<` row whose *file*
-  is `alloc/src/sync.rs` and whose *function* is an engine function.
-  ~1,900 Ir/call is `CardData`, ~900 is `PlayerData`, ~30 means already
-  unique. `finish_cleanup` sat there at 2.62 % and is invisible everywhere
-  else.
-- **Two sessions on this branch at once is normal.** Fetch before the first
-  commit, not just before the push.
+  device on `CardData`, ~20 rare heap fields of 148. **It wants a whole run
+  and must not be started late**: a `Deref`/`DerefMut` split reaching the
+  entire engine, every cold field's serde attribute to preserve. The
+  addressable budget is **~4.0 %** at the merged tip (it read 5.4 % before
+  the sweeps took the avoidable copies); expect ~1.2 %. Then (11)'s
+  unfinished `_of(&CardInstance)` enumeration. **(11a) is closed** and
+  **(13)/(5) the `Keyword` bitset stays ranked down** (~0.6 % against 7,716
+  catalog literals) — don't re-derive either.
+- **Four rows costed and deliberately not taken** are in PERF's candidates:
+  auto-tap's activations (9.12 %, blocked on a soundness question about
+  freezing across a tap), `dying_snapshot`, `printed_color_set`,
+  `compute_permanent_pass`. Also `combat_damage_prevented_to_self` is
+  915 Ir/call, i.e. not gathering.
+- **The sweep recipe**, since the `deref_mut` sort is dead: `--tree=caller`
+  on `Arc::clone_from_ref_in` *and* on `Arc::make_mut`, read by the
+  **inlining function** — every `<` row whose file is `alloc/src/sync.rs`
+  and whose function is an engine function names a deep-copier, with its
+  call count. ~1,900 Ir/call is `CardData`, ~900 `PlayerData`, ~30 means
+  already unique. `game/` is swept clean; `server/` and `effects/` are not.
+- **Quote the command with any pool constant.** `--bench --threads 1
+  --games 300 --seed 11 --decks all` reads **2,548,986 / 6 draws**;
+  `--decks all --games 300 --threads 3` reads **2,553,880 / 2 draws**. Both
+  are current and they are different invocations, not a drift. Best check is
+  still base-vs-tip byte-diff of a kept binary.
+- **A per-caller row is an attribution, not a measurement.** The untap row
+  read as a regression in `--tree=caller` when measured with the cleanup row,
+  purely because a new frame moved the inliner's attribution. Rebuild two
+  changes apart before believing a tree.
+- **Two sessions on this branch at once is normal — this is the third
+  collision, and the largest.** Both sessions independently pulled
+  `cleanup_wear_off`, the untap sickness clears, the zone-walk family *and*
+  the `CardCold` candidate write-up. **Fetch before the first commit.**
 - Env: no `cargo-nextest`; `cargo test -p crabomination -p
   crabomination_tests` is the gate (~40 s once built, ~5 min to build).
   `profiling-fast` engine ~3 min warm solo — serialize builds, 4 cores.
   Callgrind ~4 min and contention-immune, so it can run beside a build.
+  `overflow` is **owed at the merged tip** (~16 min, seeds 11/12/13).
   Client apt deps install in a minute (below); `cargo clippy --workspace`
   needs them.
-- Trackers: PERF **~1.3k** — passes 26-28 are table rows like 20-25; the
-  uncompacted prose is now the pass 29/30/31 blocks, current until they age.
+- Trackers: PERF **~1.35k** — passes 29/30 are index rows now; the only
+  uncompacted prose is pass 31, current until it ages.
 
 ## Environment note
 

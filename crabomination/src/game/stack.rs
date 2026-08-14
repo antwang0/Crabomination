@@ -2876,9 +2876,7 @@ impl GameState {
                 .any(|sa| matches!(sa.effect, StaticEffect::PermanentsDontUntap))
         }) {
             for c in self.battlefield.iter_mut().filter(|c| c.controller == p) {
-                if c.summoning_sick {
-                    c.summoning_sick = false;
-                }
+                c.clear_summoning_sickness();
             }
             return;
         }
@@ -3198,18 +3196,13 @@ impl GameState {
                 // turn boundary (CR 302.1 / 506.4). A Seedborn-untapped
                 // permanent (controlled by another player) untaps but does not
                 // shed sickness on someone else's turn.
-                // `card.summoning_sick = false` is a `DerefMut` on the CoW
-                // handle, so writing the `false` a permanent that has been
-                // around already holds deep-copies the whole card for
-                // nothing. Read the flag once, here, and gate every one of
-                // the loop's nine clear sites on it.
-                let clear_sick = card.controller == p && card.summoning_sick;
+                let active = card.controller == p;
                 if prevented.contains(&card.id) {
                     // CR 502.3 — untap is prevented. Summoning sickness still
                     // clears per CR 506.4 (the turn-boundary tag, not the
                     // untap event).
-                    if clear_sick {
-                        card.summoning_sick = false;
+                    if active {
+                        card.clear_summoning_sickness();
                     }
                     continue;
                 }
@@ -3218,16 +3211,16 @@ impl GameState {
                 // turn. No tapped→untapped flip, so no Inspired trigger.
                 if card.skip_next_untap {
                     card.skip_next_untap = false;
-                    if clear_sick {
-                        card.summoning_sick = false;
+                    if active {
+                        card.clear_summoning_sickness();
                     }
                     continue;
                 }
                 // Entrancing Lyre — a lock source keeps itself tapped while it
                 // still locks a creature.
                 if card.tapped && lock_sources.contains(&card.id) {
-                    if clear_sick {
-                        card.summoning_sick = false;
+                    if active {
+                        card.clear_summoning_sickness();
                     }
                     continue;
                 }
@@ -3236,16 +3229,16 @@ impl GameState {
                 // holds the previous own-turn attack; the roll-over into
                 // `attacked_last_turn` happens after this loop.
                 if card.attacked_own_turn && attack_locked.contains(&card.id) {
-                    if clear_sick {
-                        card.summoning_sick = false;
+                    if active {
+                        card.clear_summoning_sickness();
                     }
                     continue;
                 }
                 // Steel Dromedary / Temporal Distortion — "doesn't untap …
                 // if it has a [kind] counter on it" (printed or granted).
                 if counter_locked.contains(&card.id) {
-                    if clear_sick {
-                        card.summoning_sick = false;
+                    if active {
+                        card.clear_summoning_sickness();
                     }
                     continue;
                 }
@@ -3253,8 +3246,8 @@ impl GameState {
                 // Guard). Asked as "leave tapped?", so a headless seat's
                 // default `false` untaps normally.
                 if card.tapped && may_decline.contains(&card.id) {
-                    if clear_sick {
-                        card.summoning_sick = false;
+                    if active {
+                        card.clear_summoning_sickness();
                     }
                     continue;
                 }
@@ -3262,8 +3255,8 @@ impl GameState {
                 // tapped on the battlefield; otherwise the lock releases.
                 if let Some(src) = card.untap_locked_by {
                     if tapped_now_set.contains(&src) {
-                        if clear_sick {
-                            card.summoning_sick = false;
+                        if active {
+                            card.clear_summoning_sickness();
                         }
                         continue;
                     }
@@ -3271,8 +3264,8 @@ impl GameState {
                 }
                 if let Some(src) = card.untap_locked_while_present {
                     if on_battlefield.contains(&src) {
-                        if clear_sick {
-                            card.summoning_sick = false;
+                        if active {
+                            card.clear_summoning_sickness();
                         }
                         continue;
                     }
@@ -3285,8 +3278,8 @@ impl GameState {
                 {
                     let n = capped_untaps.entry((i, card.controller)).or_insert(0);
                     if *n >= untap_caps[i].1 {
-                        if clear_sick {
-                            card.summoning_sick = false;
+                        if active {
+                            card.clear_summoning_sickness();
                         }
                         continue;
                     }
@@ -3294,14 +3287,12 @@ impl GameState {
                 }
                 if card.counter_count(CounterType::Stun) > 0 {
                     card.remove_counters(CounterType::Stun, 1);
-                } else {
-                    if card.tapped {
-                        untapped_now.push(card.id);
-                        card.tapped = false;
-                    }
+                } else if card.tapped {
+                    untapped_now.push(card.id);
+                    card.tapped = false;
                 }
-                if clear_sick {
-                    card.summoning_sick = false;
+                if active {
+                    card.clear_summoning_sickness();
                 }
             }
         }
@@ -3753,16 +3744,30 @@ impl GameState {
         // Until-end-of-turn flashback grants (SOS "Flashback") live on
         // graveyard cards, which `clear_end_of_turn_effects` above doesn't
         // reach — expire them here so the window closes at end of turn.
-        // Every write below is a CoW unshare — `&mut player.graveyard` copies
-        // the seat, and each `&mut` reach into a card copies that card — so
-        // each is gated on the value not already being what it is set to. On
-        // a board with no grants and no discounts the whole loop is reads.
-        for player in &mut self.players {
-            if player
-                .graveyard
-                .iter()
-                .any(|c| c.granted_flashback_eot.is_some() || c.granted_harmonize_eot.is_some())
-            {
+        //
+        // Every write below is a `DerefMut` on a CoW handle, and this runs
+        // once per player per turn over a graveyard that only grows: reaching
+        // a card through `Player` unshares the whole `PlayerData`, `&mut
+        // player.graveyard` unshares the zone vector, and the two `= None`s
+        // deep-copy a `CardData` that already held `None`. Decide from a
+        // shared borrow whether anything is actually set, and take the `&mut`
+        // only then — the same guard `clear_end_of_turn_effects` carries.
+        for pi in 0..self.players.len() {
+            let player = &self.players[pi];
+            let stale_grants = player.graveyard.iter().any(|c| {
+                c.granted_flashback_eot.is_some() || c.granted_harmonize_eot.is_some()
+            });
+            let stale_scalars = !player.turn_spell_discounts.is_empty()
+                || player.face_down_discount_this_turn != 0
+                || player.extra_plus_one_counters_this_turn != 0
+                || player.extra_etb_p1p1_counters_this_turn != 0;
+            if !stale_grants && !stale_scalars {
+                continue;
+            }
+            let player = &mut self.players[pi];
+            if stale_grants {
+                // Per card as well as per seat: one card carrying a grant
+                // must not deep-copy the fifteen beside it that do not.
                 for card in &mut player.graveyard {
                     if card.granted_flashback_eot.is_some() {
                         card.granted_flashback_eot = None;
@@ -3772,16 +3777,11 @@ impl GameState {
                     }
                 }
             }
-            // "[Filter] spells cost {N} less this turn" grants end (CR 514.2).
-            if !player.turn_spell_discounts.is_empty() {
+            if stale_scalars {
+                // "[Filter] spells cost {N} less this turn" grants end (CR 514.2).
                 player.turn_spell_discounts.clear();
-            }
-            // "Until end of turn" +1/+1 counter bonus (Prairie Dog) ends.
-            if player.face_down_discount_this_turn != 0
-                || player.extra_plus_one_counters_this_turn != 0
-                || player.extra_etb_p1p1_counters_this_turn != 0
-            {
                 player.face_down_discount_this_turn = 0;
+                // "Until end of turn" +1/+1 counter bonus (Prairie Dog) ends.
                 player.extra_plus_one_counters_this_turn = 0;
                 player.extra_etb_p1p1_counters_this_turn = 0;
             }
@@ -3828,13 +3828,15 @@ impl GameState {
         self.upkeep_steps_this_turn = 0;
         self.graveyard_from_battlefield_this_turn.clear();
         // CR 514.2 — all damage marked on permanents is removed, phased-out
-        // ones included (they're treated as nonexistent, not as gone).
-        // Gated: `card.damage = 0` is a `DerefMut` on the CoW handle, so
-        // writing the 0 a card already holds deep-copies it for nothing, and
-        // most permanents are undamaged at cleanup.
-        for card in self.battlefield.iter_mut().chain(self.phased_out.iter_mut()) {
-            if card.damage != 0 {
-                card.damage = 0;
+        // ones included (they're treated as nonexistent, not as gone). Decided
+        // from a shared borrow: `iter_mut` unshares both zone vectors and the
+        // write deep-copies a `CardData` that already held 0, and most turns
+        // end with nothing marked anywhere.
+        if self.battlefield.iter().chain(self.phased_out.iter()).any(|c| c.damage != 0) {
+            for card in self.battlefield.iter_mut().chain(self.phased_out.iter_mut()) {
+                if card.damage != 0 {
+                    card.damage = 0;
+                }
             }
         }
         // Clear the per-turn "permanents gained a counter this turn"

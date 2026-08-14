@@ -20390,15 +20390,18 @@ impl GameState {
     }
 
     /// Look up which zone a card currently occupies. Returns `None` if the
-    /// card isn't in any persistent zone (battlefield, hand, graveyard,
-    /// ante, exile, library) — a spell on the stack is *not* found here.
-    /// Used by the cast-from-zone path to confirm the card is still in the
+    /// card isn't in a persistent zone — battlefield, hand, graveyard, ante,
+    /// exile, library. **The stack is not one of them**: `Zone` has no stack
+    /// variant and this never looked there, whatever the old doc said. Used
+    /// by the cast-from-zone path to confirm the card is still in the
     /// expected zone before lifting it.
     ///
-    /// Libraries last, for the reason [`find_card_anywhere`] gives: they
-    /// hold ~35 cards a seat against a handful everywhere else, and the
-    /// one-zone invariant means the visit order picks how long the answer
-    /// takes, never which answer comes back.
+    /// Visit order is [`find_card_anywhere`]'s, for the same reason: a
+    /// `CardId` names one object, so the order picks how long the answer
+    /// takes and never which answer comes back, and the libraries hold ~35
+    /// cards a seat against a handful everywhere else. Graveyards and exile
+    /// are push-only, so they are scanned back to front — a card that just
+    /// moved there hits on the first comparison.
     ///
     /// [`find_card_anywhere`]: Self::find_card_anywhere
     pub(crate) fn find_card_zone(&self, id: CardId) -> Option<crate::card::Zone> {
@@ -20436,19 +20439,13 @@ impl GameState {
     /// zones (e.g. destroyed and now in graveyard) by the time the
     /// owner-targeted effect resolves.
     ///
-    /// Libraries last, for the reason [`find_card_anywhere`] gives.
+    /// Visit order is [`find_card_anywhere`]'s — the stack is two or three
+    /// items and is checked before the seat zones, libraries last, and the
+    /// push-only zones back to front.
     ///
     /// [`find_card_anywhere`]: Self::find_card_anywhere
     pub(crate) fn find_card_owner(&self, id: CardId) -> Option<usize> {
         if let Some(c) = self.battlefield_find(id) {
-            return Some(c.owner);
-        }
-        for (i, p) in self.players.iter().enumerate() {
-            if p.graveyard.iter().rev().any(|c| c.id == id) || p.hand.iter().any(|c| c.id == id) {
-                return Some(i);
-            }
-        }
-        if let Some(c) = self.exile.iter().rev().find(|c| c.id == id) {
             return Some(c.owner);
         }
         // Stack: a spell mid-resolution is on the stack but not yet in any
@@ -20462,6 +20459,14 @@ impl GameState {
             {
                 return Some(card.owner);
             }
+        }
+        for (i, p) in self.players.iter().enumerate() {
+            if p.graveyard.iter().rev().any(|c| c.id == id) || p.hand.iter().any(|c| c.id == id) {
+                return Some(i);
+            }
+        }
+        if let Some(c) = self.exile.iter().rev().find(|c| c.id == id) {
+            return Some(c.owner);
         }
         for (i, p) in self.players.iter().enumerate() {
             if p.library.iter().any(|c| c.id == id) {
