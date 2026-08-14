@@ -127,10 +127,60 @@ contention-immune, which makes it the better first look.
 
 ## Baseline
 
-**Re-anchored 2026-08-14 at `5174acd3`** (`release`, mimalloc — the shipped
-configuration), the thirty-second pass's tip. It chains to the `76804984`
-block below and through it to `5034eb2f`: `host_calib_ms` reads **45-46**
-against 45-46 and 44-48, the same mid-40s fingerprint, same `host_cpu`.
+**Re-anchored 2026-08-14 at `35fdfce3`** (`release`, mimalloc — the shipped
+configuration), the thirty-third pass's tip. Supersedes the `76804984`
+block below, which is kept for its ratios.
+
+```text
+bot_ladder --bench   release, rustc 1.95.0, 4-core VM, 3 worker threads
+                     mimalloc (the default)
+host_cpu             Intel(R) Xeon(R) Processor @ 2.80GHz
+host_calib_ms        71 / 45 / 44 / 53 / 48 / 51
+games                320
+games_per_s          134.50 / 136.10 / 127.81 / 132.63 / 121.53 / 131.71
+                     (mean 130.71, spread 12.0 %)
+games_per_s_th       40.51 - 45.37
+decisions_per_s      77,176 - 82,186
+turns_per_game       26.98
+decisions            193,232 byte-identical on all six
+stalls               0 (0.00 %), stalls_by cap 0 / stuck 0 / draw 0
+peak_rss_mib         29.2 - 29.4
+determinism          ok (all 160 pairs split, on all 6 runs)
+```
+
+**120.10 -> 125.16 -> 130.71 is +8.8 % across passes 32 and 33, of which
++4.4 % is pass 33.** The two are -1.969 % and -5.235 % by instruction count
+(-7.10 % compounded), so wall-clock roughly matching Ir here — rather than
+under-delivering as passes 29-31 did — is the expected shape: pass 33
+removes whole gathers and 91-field deep copies, which cost cache lines as
+well as instructions. Every invariant is unchanged — `decisions`
+**193,232**, `turns_per_game` 26.98, stalls 0, `peak_rss_mib` 29.2-29.4.
+
+**This block was measured at `35fdfce3`, which is *not* the merged tip.**
+The concurrent session's `caa44eb2` (the pairing fusion) and `017586b1`
+landed beside it and are not in the binary these numbers describe. The
+fourth collision this file records, and the first where both sessions wrote
+the same PERF pass block and the same baseline re-anchor. **Re-measure at
+the merged tip before chaining anything to this block** — the thirty-first
+pass's lesson, unlearned and relearned.
+
+**The host is noisier than it was at the previous anchor** — spread 12.0 %
+against 1.44 %, and `host_calib_ms` ranges 44-71 against 45-46. The three
+runs whose calib matches the old block's mid-40s fingerprint read 136.10 /
+127.81 / 121.53, mean 128.48, i.e. +7.0 %; the +8.8 % above is the honest
+six-run mean and the +7.0 % is the conservative floor. **Neither is a
+substitute for an alternated A/B in one sitting** — see the warning above.
+
+The wide check at this tip: `--bench --threads 1 --games 300 --seed 11
+--decks all` reads `decisions` **2,548,986** over 5,100 games and 17
+archetypes, `turns_per_game` 20.99, **6 draws (0.12 %)**, determinism ok on
+all 2,547 pairs — byte-identical to the recorded constant, which is the
+behaviour check the golden traces can't make at that scale.
+
+**The superseded `5174acd3` block**, the thirty-second pass's tip
+(`release`, mimalloc), kept because it chains to `76804984` and through it
+to `5034eb2f`: `host_calib_ms` reads **45-46** against 45-46 and 44-48, the
+same mid-40s fingerprint, same `host_cpu`.
 
 ```text
 bot_ladder --bench   release, rustc 1.95.0, 4-core VM, 3 worker threads
