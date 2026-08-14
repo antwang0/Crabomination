@@ -16,37 +16,37 @@ reference and want their own triage pass):
 
 ## NEXT (handoff — rewrite each run, keep under 15 lines)
 
-Branch `claude/modern_decks`. **The twenty-eighth pass landed four rows for
--7.257 % Ir** (3,116,508,803 -> 2,890,337,225 at `5034eb2f`, where the
-profile of record is now retaken). All four are one defect: **`&mut` on a
-CoW handle deep-copies, so a write that changes nothing is not free** —
-`iter_mut` sweeps, unconditional flag writes, and a library strip whose
-justification stopped being true when zones became `CowBox`es.
+Branch `claude/modern_decks`. **The twenty-ninth pass landed two rows for
+-1.993 % Ir** (2,890,336,504 -> 2,832,745,260 at `645b978d`, where the
+profile of record is retaken). Both are the CoW theme one level up: stop
+paying for a `PlayerData` clone where a seat's *only* write was one bit
+(the "an opponent cast a spell" seat mask), then make the clone itself
+cheaper (`PlayerCold`, fifteen heap-owning rare fields behind one `CowBox`).
 
-- **Pull PERF candidate (-1) first**: the same sweep that found this pass
-  (`--auto=yes`, sort the `=> …deref_mut` call lines by Ir), with two
-  survivors already costed — `&mut self.cold` 0.95 %, `remove_from_hand`
-  0.95 % (the `PlayerData` clone's own cost, i.e. a cold group for its
-  per-turn tallies). Then (11) `battlefield_find`-in-a-loop, then (9)(b).
-- **Closed:** an event-kind mask over the trigger dispatcher's triple loop
-  — `event_matches_spec` runs 1.22 times per dispatch, nothing to gate.
-- **Checked, all clean at `5034eb2f`:** `--decks all` reads decisions
-  **2,548,986** byte-identical over two runs *and* against the value
-  recorded at `841dd40b` — the pass moved zero decisions on the full pool;
-  the `overflow` profile ran **20,400 games over three seeds with no panic
-  and no overflow** (~80 s/seed — cheap, run it every pass). The one
-  number that moved the wrong way, `peak_rss_mib` 21.7-22.3 -> 29.0-29.4,
-  A/B'd to mimalloc-on-this-host, not the pass. See Baseline.
+- **Read PERF candidate (-1)'s corrections before re-sweeping.** The
+  previous handoff's two 0.95 % survivors were **one site double-counted**,
+  and `remove_from_hand` is not a candidate at all — the unshare is
+  inherited by whatever `finalize_cast` writes next. The `=> …deref_mut`
+  sort no longer resolves either; use `--tree=caller` on `Arc::make_mut`.
+- **Best next moves**, in order: (13) the gather's per-card keyword loop —
+  a `Keyword` bitset on `CardDefinition` pays there, in
+  `permanent_has_keyword` and in `Keyword::eq` (0.50 % self) at once; then
+  (11) `battlefield_find`-in-a-loop; then (9)(b).
+- **Not checked this pass, do it next:** the `--decks all` decision count
+  (2,548,986 at `841dd40b`) and the `overflow` profile (20,400 games, three
+  seeds, ~80 s/seed). Both rows here are behaviour-preserving by
+  construction and the six-game bench output is byte-identical, but neither
+  wide check was run.
 - Env: no `cargo-nextest`; `cargo test -p crabomination -p
-  crabomination_tests` is the gate — **4m26s cold build, ~30 s run, 18,121
-  tests**, much cheaper than this file used to claim. `profiling-fast`
-  engine rebuild 3m20s, callgrind ~5 min, `release` **24m11s**. Client apt
-  deps install in a minute (see below).
-- Trackers: PERF **1.31k** against a ~1k guidance, and the previous
-  handoff pointed at the wrong block — passes 20-25 were already an index.
-  The bulk is the **candidates' longer-lived list plus "Closed / ruled
-  out"** (~345 lines of the file's last third); compact it the way passes
-  twelve to eighteen were, keeping only what is not restated above.
+  crabomination_tests` is the gate — ~4 min cold build, ~40 s run, **18,636
+  tests**. `profiling-fast` engine rebuild **13 min cold / ~4 min warm**,
+  callgrind ~4 min, `release` ~25 min. Client apt deps install in a minute
+  (see below); **disk gets tight (~12 G free) once release + profiling-fast
+  + dev caches coexist** — `rm -rf target/debug/incremental` first.
+- Trackers: PERF is **1.13k**, down from 1.31k — the longer-lived
+  candidate list and "Closed / ruled out" are now an index. Still ~130 over
+  guidance; the next compaction target is the **Log's pass 20-28 blocks**,
+  which are the last uncompacted prose.
 
 ## Environment note
 
