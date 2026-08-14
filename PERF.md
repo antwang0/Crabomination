@@ -1040,19 +1040,18 @@ of being actionable. All from `a58447d9`, `--tree=caller` /
     15,368 calls is what a caller already inside someone's scope looks
     like; imitate its caller.
 
-11a. **The zone-walk family, and it is the same shape as `dbd3efeb`.**
-    Four hand-written walkers ask "where is this card": `find_card_anywhere`
-    (paid, -0.473 %), `find_card_anywhere_mut` (reordered with it),
-    `find_card_zone` and `find_card_owner`. The last two still scan each
-    seat's **library third**, before the other seat's hand and before exile;
-    `death_was_replaced` scans exile then both libraries on every dispatch.
-    **None of the three appears above the 99 % threshold on this profile**,
-    so reordering them is a consistency change, not a measured win — do it
-    as part of whatever *does* touch them, and do not claim Ir for it. Noted
-    here because a family of walkers that must agree is worth keeping in
-    step, and three of five are now out of step by cost.
+11a. **The zone-walk family — the ordering half is CLOSED (`76d31eb8`).**
+    Five hand-written walkers ask "where is this card": `find_card_anywhere`
+    (paid, -0.583 %), `find_card_anywhere_mut`, `find_card_zone` and
+    `find_card_owner` (all now libraries-last), and `death_was_replaced`,
+    which is a *disjunction* over exile and both libraries rather than a
+    search — it already visits the short zone first and wants no change. The
+    last two were reordered as a consistency change and **claim no Ir**;
+    `find_card_owner` also stopped walking exile twice for one id and now
+    looks at the stack before the seats, which is what its
+    `PlayerRef::OwnerOf` caller asks about. Do not re-open the ordering.
 
-    **What is left of the paid one, measured at the merged tip.**
+    **What is left, and it is the only part of this entry still open.**
     `find_card_anywhere` is still **19.6 M / 0.70 % over 104,240 calls**
     after the reorder, and the residual is calls that return `None` — they
     walk every zone by construction, whatever the order. Costing that needs

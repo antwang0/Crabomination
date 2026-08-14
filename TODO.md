@@ -30,7 +30,9 @@ gone to zero — plus the same thing in `do_untap` (-0.098 %).
   `for … in &mut` over a zone in a turn/step-boundary function*. Then
   **(-2)**, the `CardCold` group, which is ~**5.4 %** of the program and
   wants a whole run — 148 fields, ~20 rare heap ones listed; do not start it
-  late. Then (11a)/(11)'s unfinished enumerations.
+  late. **(11a)'s ordering half is closed** (`76d31eb8`, no Ir claimed); its
+  open remainder is the `find_card_anywhere` miss counter, owed before
+  anyone designs an id->zone index. Then (11)'s unfinished enumeration.
 - **Four rows costed this run and deliberately not taken** are written up in
   PERF's candidates: auto-tap's activations (**9.12 %**, blocked on a
   soundness question about freezing across a tap), `dying_snapshot`,
