@@ -178,15 +178,15 @@ fn drainable_counters(c: &CardInstance, kinds: Option<&[crate::card::CounterType
     }
 }
 
-/// Returns true if the given effect is purely a mana ability — only adds
-/// mana and uses no targets. Mana abilities resolve immediately without the stack.
 /// The three modifications that write `ComputedPermanent.subtypes.land_types`
 /// (Spreading Seas, Blood Moon, Urborg, Magical Hack). With none of them in
 /// scope a permanent's computed land types are its printed ones, which is
 /// what lets `effective_mana_abilities_with` skip the per-card layer pass.
-/// Keep in step with `layers::compute_permanent_pass` — a fourth land-type
-/// writer added there must be added here or lands stop losing their mana
-/// abilities.
+///
+/// Kept in step with `layers::compute_permanent_pass` by a `debug_assert!` at
+/// the gate, not by hand: a fourth land-type writer added there and not here
+/// fails the suite rather than silently keeping a Blood-Mooned land's mana
+/// ability.
 fn rewrites_land_types(e: &crate::game::layers::ContinuousEffect) -> bool {
     use crate::game::layers::Modification as M;
     matches!(
@@ -201,6 +201,8 @@ pub fn is_mana_ability_public(effect: &Effect) -> bool {
     is_mana_ability(effect)
 }
 
+/// True when the effect is purely a mana ability — it adds mana and uses no
+/// targets, so it resolves immediately without using the stack.
 pub(crate) fn is_mana_ability(effect: &Effect) -> bool {
     // CR 605.1a — a mana ability could add mana, isn't a loyalty ability,
     // doesn't target, and doesn't have an illegal trigger. It may still carry
@@ -12331,7 +12333,24 @@ impl GameState {
         // walk of it; outside one, `frozen_effects` returns `None` and the
         // old path stands rather than paying a gather to save a gather.
         let computed = match self.frozen_effects() {
-            Some(fx) if !fx.iter().any(rewrites_land_types) => None,
+            Some(fx) if !fx.iter().any(rewrites_land_types) => {
+                // The `ability_strip_in_scope` device: when the gate says no
+                // land-type writer is in scope, run the pass it skipped and
+                // fail if the computed type line differs from the printed
+                // one. That is what keeps `rewrites_land_types` in step with
+                // `compute_permanent_pass` — the alternative was two
+                // hand-kept lists and a comment asking for them to agree.
+                debug_assert!(
+                    {
+                        let printed: &[crate::card::LandType] =
+                            &card.definition.subtypes.land_types;
+                        self.computed_permanent(card_id)
+                            .is_none_or(|cp| &cp.subtypes.land_types[..] == printed)
+                    },
+                    "rewrites_land_types missed a modification that writes land_types"
+                );
+                None
+            }
             _ => self.computed_permanent(card_id),
         };
         let computed_land_types: &[crate::card::LandType] = match &computed {

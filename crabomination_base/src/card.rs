@@ -5615,6 +5615,53 @@ pub enum AttackBan {
     Active,
 }
 
+/// CR 514.2 — the fields Cleanup wears off a permanent, written once.
+///
+/// `CardData::clear_end_of_turn_effects` writes them and
+/// `CardData::end_of_turn_effects_are_clear` guards that write; both expand
+/// from this list, so a field cannot reach one without the other. Before
+/// that they were two hand-kept enumerations of the same set, and a field
+/// added only to the clear would have made the guard skip the sweep while
+/// the effect still mattered — silently, and only on turns where nothing
+/// else on the permanent needed clearing.
+///
+/// A new until-end-of-turn field goes here, in one of the three shapes:
+/// `scalar` (compared with `!=`, assigned), `empty` (`is_empty` / `clear`),
+/// `none` (`is_some` / `= None`).
+macro_rules! eot_wear_off {
+    ($m:ident) => {
+        $m!(scalar power_bonus, 0);
+        $m!(scalar toughness_bonus, 0);
+        $m!(scalar loyalty_uses_this_turn, 0);
+        $m!(scalar loyalty_twice_this_turn, false);
+        $m!(empty once_per_turn_used);
+        $m!(empty granted_keywords_eot);
+        $m!(empty granted_keywords_eot_ts);
+        $m!(empty granted_activated_eot);
+        $m!(empty removed_keywords_eot);
+        $m!(none granted_flashback_eot);
+        $m!(none granted_harmonize_eot);
+        $m!(none granted_alt_cast_cost_eot);
+        $m!(none granted_cast_surcharge_eot);
+        $m!(scalar dealt_deathtouch_damage, false);
+        $m!(scalar dealt_damage_this_turn, false);
+        $m!(scalar damage_dealt_to_this_turn, 0);
+        $m!(empty damaged_by_this_turn);
+        $m!(empty damage_by_source_name_this_turn);
+        $m!(empty damage_by_source_this_turn);
+        // CR 701.15g — unused regeneration shields expire at end of turn,
+        // and so does the "can't be regenerated this turn" lock.
+        $m!(scalar regeneration_shields, 0);
+        $m!(none regeneration_control_grant);
+        $m!(scalar cant_regenerate_this_turn, false);
+        $m!(scalar damage_prevention_off_eot, false);
+        // CR 702.171 — "saddled until end of turn" ends here.
+        $m!(scalar saddled, false);
+        $m!(empty saddled_by);
+        $m!(empty crewed_by);
+    };
+}
+
 /// The rarely-written, heap-owning tail of a card object: registries and
 /// cast-time riders only a handful of cards touch. Held behind one CoW
 /// handle so a `CardData` unshare — the deep copy every zone write pays —
@@ -6969,35 +7016,30 @@ impl CardInstance {
     ///
     /// Read through `Deref`, so the cleanup sweep never takes a `&mut` — and
     /// never unshares the CoW `Arc` — for a permanent with nothing to clear,
-    /// which is most of them on most turns. **Every field the clear writes
-    /// must appear here**, or it is skipped while it still matters.
+    /// which is most of them on most turns. The guard and the clear are both
+    /// expanded from [`eot_wear_off`], so a field can't reach one without the
+    /// other; adding one to the clear alone would skip the sweep while it
+    /// still mattered.
     fn end_of_turn_effects_are_clear(&self) -> bool {
-        self.power_bonus == 0
-            && self.toughness_bonus == 0
-            && self.loyalty_uses_this_turn == 0
-            && !self.loyalty_twice_this_turn
-            && self.once_per_turn_used.is_empty()
-            && self.granted_keywords_eot.is_empty()
-            && self.granted_keywords_eot_ts.is_empty()
-            && self.granted_activated_eot.is_empty()
-            && self.removed_keywords_eot.is_empty()
-            && self.granted_flashback_eot.is_none()
-            && self.granted_harmonize_eot.is_none()
-            && self.granted_alt_cast_cost_eot.is_none()
-            && self.granted_cast_surcharge_eot.is_none()
-            && !self.dealt_deathtouch_damage
-            && !self.dealt_damage_this_turn
-            && self.damage_dealt_to_this_turn == 0
-            && self.damaged_by_this_turn.is_empty()
-            && self.damage_by_source_name_this_turn.is_empty()
-            && self.damage_by_source_this_turn.is_empty()
-            && self.regeneration_shields == 0
-            && self.regeneration_control_grant.is_none()
-            && !self.cant_regenerate_this_turn
-            && !self.damage_prevention_off_eot
-            && !self.saddled
-            && self.saddled_by.is_empty()
-            && self.crewed_by.is_empty()
+        macro_rules! probe {
+            (scalar $f:ident, $v:expr) => {
+                if self.$f != $v {
+                    return false;
+                }
+            };
+            (empty $f:ident) => {
+                if !self.$f.is_empty() {
+                    return false;
+                }
+            };
+            (none $f:ident) => {
+                if self.$f.is_some() {
+                    return false;
+                }
+            };
+        }
+        eot_wear_off!(probe);
+        true
     }
 
     /// CR 302.1 / 506.4 — drop summoning sickness at the turn boundary.
@@ -7014,42 +7056,25 @@ impl CardInstance {
         }
     }
 
+    /// CR 514.2 — the Cleanup wear-off. The set is [`eot_wear_off`]; see
+    /// [`Self::end_of_turn_effects_are_clear`] for why the guard exists and
+    /// why it is generated from the same list.
     pub fn clear_end_of_turn_effects(&mut self) {
-        // See `end_of_turn_effects_are_clear`: the sweep runs over every
-        // battlefield and phased-out permanent each turn, and each of the
-        // writes below is a `DerefMut` on the CoW handle.
         if self.end_of_turn_effects_are_clear() {
             return;
         }
-        self.power_bonus = 0;
-        self.toughness_bonus = 0;
-        self.loyalty_uses_this_turn = 0;
-        self.loyalty_twice_this_turn = false;
-        self.once_per_turn_used.clear();
-        self.granted_keywords_eot.clear();
-        self.granted_keywords_eot_ts.clear();
-        self.granted_activated_eot.clear();
-        self.removed_keywords_eot.clear();
-        self.granted_flashback_eot = None;
-        self.granted_harmonize_eot = None;
-        self.granted_alt_cast_cost_eot = None;
-        self.granted_cast_surcharge_eot = None;
-        self.dealt_deathtouch_damage = false;
-        self.dealt_damage_this_turn = false;
-        self.damage_dealt_to_this_turn = 0;
-        self.damaged_by_this_turn.clear();
-        self.damage_by_source_name_this_turn.clear();
-        self.damage_by_source_this_turn.clear();
-        // CR 701.15g — unused regeneration shields expire at end of turn,
-        // and so does the "can't be regenerated this turn" lock.
-        self.regeneration_shields = 0;
-        self.regeneration_control_grant = None;
-        self.cant_regenerate_this_turn = false;
-        self.damage_prevention_off_eot = false;
-        // CR 702.171 — "saddled until end of turn" ends here.
-        self.saddled = false;
-        self.saddled_by.clear();
-        self.crewed_by.clear();
+        macro_rules! reset {
+            (scalar $f:ident, $v:expr) => {
+                self.$f = $v;
+            };
+            (empty $f:ident) => {
+                self.$f.clear();
+            };
+            (none $f:ident) => {
+                self.$f = None;
+            };
+        }
+        eot_wear_off!(reset);
     }
 
     /// The flashback cost this card can currently be cast with from a
@@ -7748,6 +7773,29 @@ mod cold_group_tests {
         a.goaded_by.push(1);
         assert!(!a.cold.shares_with(&b.cold), "the first cold write unshares");
         assert!(b.goaded_by.is_empty(), "the snapshot kept the old group");
+    }
+
+    /// The Cleanup wear-off guard and its body come from one list
+    /// ([`eot_wear_off`]); this pins that pairing end to end, one write per
+    /// shape the macro has — `scalar`, `empty`, `none`.
+    #[test]
+    fn cleanup_wears_off_each_shape_and_no_ops_on_a_clean_card() {
+        let mut a = card();
+        let b = a.clone();
+        a.clear_end_of_turn_effects();
+        assert!(a.cold.shares_with(&b.cold), "a clean card is not written");
+        assert!(a.end_of_turn_effects_are_clear());
+
+        let mut a = card();
+        a.power_bonus = 3;
+        a.granted_flashback_eot = Some(ManaCost::default());
+        a.granted_activated_eot.push(ActivatedAbility::default());
+        assert!(!a.end_of_turn_effects_are_clear());
+        a.clear_end_of_turn_effects();
+        assert_eq!(a.power_bonus, 0);
+        assert!(a.granted_flashback_eot.is_none());
+        assert!(a.granted_activated_eot.is_empty());
+        assert!(a.end_of_turn_effects_are_clear());
     }
 
     /// Every clear site that runs on a turn or zone boundary guards on
