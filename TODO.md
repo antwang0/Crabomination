@@ -16,41 +16,45 @@ reference and want their own triage pass):
 
 ## NEXT (handoff — rewrite each run, keep under 15 lines)
 
-Branch `claude/modern_decks`. **The thirty-second pass landed PERF's top
-candidate, `CardCold`: -1.969 % Ir and +4.2 % wall-clock** (120.10 ->
-125.16 games/s, four runs a side, same host fingerprint). The candidate's
-serde blocker did not exist — `CardInstance`'s serde is a manual wire
-struct, so the 148-field split compiled with *zero* call-site changes.
+Branch `claude/modern_decks`. **Two passes landed and the second was
+concurrent with this file's other author.** Pass 32 `CardCold` -1.969 %;
+pass 33 four rows for **-5.235 %** (2,527,094,401 -> `35fdfce3`
+**2,394,812,950 Ir**), plus that session's SBA and pairing work. Wall-clock
+`--bench` **120.10 -> 130.71 games/s (+8.8 %)** at the merged tip's
+predecessor; **the merged tip is not re-measured and is owed.**
 
-- **Green at the tip** `275fe4a0`: `--bench` 193,232 decisions / 26.98
-  turns / 0 stalls / 29.0-29.3 MiB; wide pool 2,548,986 / 20.99 /
-  `stalls_by cap 0 stuck 0 draw 6`; determinism ok; suite 18,637 green;
-  clippy `--workspace --all-targets` clean; `overflow` clean over 27,200
-  games on four seeds. Baseline re-anchored.
-- **Next is PERF (-1a)** — the `iter_mut().find()` half of the unshare
-  sweep, which the thirty-first pass's syntactic filter cannot match; one
-  was worth taking this run. Read the `make_mut` caller table *first*, the
-  54 syntactic hits second. **There is no second `CardCold`**: the
-  remaining `CardData` deep-copy table is 1.76 % at 838 Ir a call, and the
-  fields left hot were left hot on purpose (see (-2)).
-- **Candidate (9)'s threshold has gone stale.** "> 2,000 Ir per
-  `computed_permanent` call means the caller is gathering" was calibrated
-  when a gather cost ~2,000; all four damage-path callers now read
-  1,300-3,100 and only one is unscoped. Rank by total, not by ratio. The
-  noncombat funnel `deal_damage_to_from` was costed and is **under 0.5 %**
-  on the bench decks — do not refactor it until a wider pool moves it.
-- **Two trackers-owed items closed**: the stall attribution (all six are
-  rules draws, nothing to fix) and the twelfth filter (two hand-kept
-  pairings fused; `protection_keyword` is the one left and is
-  disproportionate). A thirteenth filter is proposed in the section.
+- **Green**: suite 18,637, golden traces identical on every row, clippy
+  `--workspace --all-targets` clean, wide pool 2,548,986 / 20.99 / 6 draws
+  / determinism ok, `overflow` clean over 27,200 games (pass-32 tip).
+- **Next is PERF (-3)**, `activate_ability_inner`'s 18,386 gathers (~2 %,
+  one per activation): a three-leg presence gate, one leg of which exists
+  (`ability_strip_off_battlefield`); write the land-type and card-type legs
+  as over-approximations with the `debug_assert` cross-check
+  `permanents_with_abilities_removed` uses. Then (-4) the eager-`let` sweep
+  and (-1a) the `iter_mut().find()` half. **The auto-tap scope is costed
+  and declined** — arithmetic in (-3); do not re-derive it.
+- **Pass 33's two levers, both re-runnable**: an expensive `let` bound
+  *above* the wide `match` that decides whether anyone wants it
+  (-2.128 %), and the twenty-eighth pass's unguarded periodic write now on
+  `ColdState` rather than a zone (-2.507 %). The `ColdState` recipe: list
+  the 91 field names, grep `mem::take(&mut self.<f>`, `.clear()`,
+  `.retain(`, `.iter_mut()`, `self.<f> = `. **A guard pays in full only
+  where the site is the call's sole cold write.**
+- **There is no second `CardCold`** (table 1.76 % at 838 Ir a call), and
+  the `make_mut` engine rows are spent (largest 0.21 %). **Candidate (9)'s
+  ">2,000 Ir means gathering" threshold is stale** — rank by total.
+- **Fetch before the first commit.** Fourth collision, and this one
+  duplicated a whole PERF pass block and a baseline re-anchor.
 - Env: no `cargo-nextest`; `cargo test -p crabomination -p
-  crabomination_tests` is the gate (~40 s once built, ~5 min to build).
-  `profiling-fast` engine ~9 min after a wide touch, `release` ~50 min
-  cold, `overflow` ~25 min. Callgrind ~4 min and contention-immune.
+  crabomination_tests` is the gate (~40 s built, ~5 min cold).
+  `profiling-fast` engine ~3.5 min warm, ~9 min after a wide touch;
+  **`release` 25-50 min — start it in the background at the top of the
+  run**; `overflow` ~25 min. Callgrind ~4 min, contention-immune.
   Serialize cargo builds — one target-dir lock, 4 cores. **`rm -rf
-  target/debug/incremental` reclaims ~11 GB** and the box has ~30 GB.
-- Trackers: TODO **951** (filters 1-11 are one index table now), PERF
-  **~1.44k** — passes 29/30/31 are index rows; pass 32's prose is current.
+  target/debug/incremental` reclaims ~11 GB.** Client apt deps (below) are
+  needed for `clippy --workspace`.
+- Trackers: TODO ~1.0k, PERF ~1.6k — passes 29-31 are index rows, 32/33
+  prose is current.
 
 ## Environment note
 

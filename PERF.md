@@ -657,6 +657,74 @@ permanent does a real allocation for the rest of the game, while cold means
 one group unshare at cast and refcount bumps after.
 
 
+**Also on the thirty-second pass, no Ir**: `39381511` moved `CowBox`
+down into `crabomination_base` (`CardData` lives there and needed it),
+and `9b0e5799` / `3e795d49` fixed `audit_stubs`' `def_has_any_ability`
+carrier list, which predated Sagas, Rooms, Sieges, `enters_as_copy` and
+`state_trigger` and was flagging 59 false positives. It reads **0 flagged
+over 21,795 cards** now, with two tests pinning the carrier list.
+
+**Thirty-third pass — two levers, one old and one new.** `5174acd3`
+2,527,094,401 -> `35fdfce3` **2,394,812,950 Ir, -5.235 %** (callgrind,
+`profiling-fast --no-default-features`, the fixed six-game workload). The
+base rebuild reads **0.00016 %** off the thirty-second pass's recorded tip,
+so the chain holds. Four rows:
+
+| commit | row | Ir |
+|---|---|---|
+| `54ab4247` | `evaluate_requirement_static`'s permanent arm takes its layer view lazily | **-2.128 %** |
+| `db7ef79f` | `ally_trigger_extra_fires` gets a presence gate | -0.528 % |
+| `4f582d8f` | three unguarded `ColdState` writes on per-action paths | **-2.507 %** |
+| `35fdfce3` | five more of the same, the tail | -0.156 % |
+
+**The new lever, and it is a *shape*, not a site: a view computed above the
+`match` that decides whether anyone wants it.** `evaluate_requirement_static`
+resolved the CR 613.2 layer-4 view before the `match req` below it, and was
+**40 % of every `computed_permanent` call in the program** — 93,612 of
+230,974 — while most arms it guards (`Tapped`, `HasColor`, `HasKeyword`, the
+block-map pair, the whole mana-value family) never read a type line. A
+`OnceCell` behind a `computed()` accessor took it to 15,574. *The search*:
+a `let` bound above a wide `match` whose right-hand side is a gather, a
+whole-board walk or a clone — the `match` is the filter and the `let` runs
+before it. **It cannot change behaviour on a `&self` path**, which is
+candidate (10)'s property, so a wrong guess costs a rebuild.
+
+**And the old lever pays again, on the group the tenth pass built rather
+than on a zone.** `GameState::deref_mut` was **114,566,801 / 4.53 %** — 91
+`ColdState` fields deep-copied — and its three largest callers were each an
+unguarded write of the value the field already held:
+`push_ordered_trigger_candidates`' `mem::take(&mut life_gain_flag_pending)`
+(52,332 x 706 Ir, once per trigger dispatch),
+`cast_spell_with_convoke`'s `mem::take(&mut cast_kicker_options)` (7,456 x
+4,543, once per cast) and `declare_attackers_banded`'s `attack_bands = …`
+(3,780 x 4,853, once per declaration). Two `is_empty` reads and one
+compare-before-write. **The syntactic sweep that finds these**: list
+`ColdState`'s field names, then grep for `mem::take(&mut self.<field>`,
+`self.<field>.clear()`, `.retain(`, `.iter_mut()` and `self.<field> = `
+— 257 sites, of which the hot ones are exactly the ones the profile names.
+
+**Why -2.507 % and not the 3.60 % the three rows sum to, and why the tail
+row is 0.156 % and not 0.7 %**: the twenty-ninth pass's arithmetic, on the
+cold group instead of the seat. A guard pays *in full* only where the site
+is the call's **sole** cold write; `resolve_combat` and `advance_step` both
+make others, so guarding one only defers the unshare to the next. That is
+the rule for costing the next one, and it is why the tail was kept rather
+than reverted — the shape is right even where the row is small.
+
+**The gather table at the tip** ("who gathers", `--tree=caller` on
+`gather_continuous_effects_inner`): `computed_permanent` 84,424,
+`frozen_effects` 18,916, `check_state_based_actions` 10,670,
+`compute_permanents` 3,274, `compute_battlefield` 310 — **117,594 total,
+9.14 %**, from 127,878. `compute_permanent_pass` 230,974 -> 209,504 calls.
+The largest remaining single gatherer is `activate_ability_inner` at
+**18,386, one per activation** (candidate (-3) below); after it the damage
+path's three (`resolve_combat` 6,682, `apply_prevention_shields` 4,456,
+`dying_snapshot` 3,420).
+
+Behaviour: suite green at every row (18,637 tests, `cargo test -p
+crabomination -p crabomination_tests`); golden traces identical throughout —
+no row in this pass touched one.
+
 ## Profile of record
 
 Callgrind on `profiling-fast --no-default-features` (= `release-fast` opt
@@ -756,6 +824,49 @@ consolidate 0.74 / unlink 0.73), `__memcpy_avx_unaligned_erms` 3.80 %,
 Ordered by expected value. Each run pulls the top one, attaches numbers,
 and feeds what it finds back in. Re-profile and replenish when the list
 goes thin or stale.
+
+**(-4) The rest of the "eager view above a wide `match`" sweep — cheap,
+mechanical, and one hit already paid -2.128 %.** The thirty-third pass took
+`evaluate_requirement_static`'s. The siblings are the other wide dispatchers
+that bind something expensive before the arm is known: `evaluate_predicate`
+(eval.rs:1499, 10 `computed_permanent` sites across arms),
+`evaluate_value` (eval.rs:135, 9, incl. a `compute_battlefield`),
+`evaluate_requirement_on_card` (4) and `resolve_selector_inner`
+(effects/mod.rs, 4). **Read each for a `let` *above* the `match`, not for
+the count** — a call inside one arm costs nothing on the other arms, and
+all four of those counts are per-arm, which is why none of them is
+automatically a hit. The enumeration script that produced the list is three
+lines of `awk` over `fn` signatures: `&self`, no `with_frozen_layers`, two
+or more layer reads. Rank by profile before writing: `evaluate_value` and
+`evaluate_predicate` do not appear on the tip's caller table at all.
+
+**(-3) `activate_ability_inner`'s gather — 18,386 of the tip's 117,594,
+~2 %, and the largest single one left.** One `with_frozen_layers` per
+activation, and its *first* computed read is a whole-game gather at 2,666
+Ir. It exists for three answers: `lost_all_abilities`, is-a-creature, and
+`land_mana_lost` (a basic's printed mana ability against its computed land
+types). **The fix is one gate with three legs, and two of the three already
+exist**: `ability_strip_off_battlefield()` + `battlefield.iter().any(
+card_can_strip_abilities)` is the strip leg, exactly as
+`permanents_with_abilities_removed` uses it; `rewrites_land_types` is the
+land-type predicate but is written against the *gathered* set, so it needs
+a printed-static twin; and the card-type leg has no cheap form yet
+(`compute_battlefield_creatures` tests `AddCardType | RemoveCardType |
+SetCardTypes` on the gathered set). **Write the two missing predicates as
+over-approximations with the `debug_assert` cross-check
+`permanents_with_abilities_removed` uses** — when the gate says "no",
+debug-only re-gather and assert the modification is absent. 18,637 tests
+run with `debug_assertions` on, which is the safety net that makes an
+over-approximation landable. Expect ~1.5-2 %.
+
+**The auto-tap scope is *not* the way in, and here is the arithmetic so it
+is not re-derived.** `auto_tap_for_cost_inner -> activate_ability` is 18,832
+calls over 8,892 payments (2.1 per payment), so a scope spanning the tapping
+loop would fold ~52 % of these gathers — but tapping is a layer input in at
+least four places inside `gather_continuous_effects_inner` (relative lines
+726, 2571, 2589-2593, and every `WhileCondition`), so the scope is unsound
+without a guard over all of them, and the guard is strictly harder than
+(-3)'s. Take (-3) first; it subsumes most of the win with an exact gate.
 
 **(-2) `CardCold` — PAID, `5174acd3`, -1.969 %.** What is left of the
 entry, so the next run does not re-derive it. The `CardData` deep-copy
