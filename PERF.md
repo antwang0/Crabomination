@@ -1024,6 +1024,21 @@ of being actionable. All from `a58447d9`, `--tree=caller` /
    — `cast_candidates` is 23,900 Ir per call of auto-targeting per hand
    candidate, `check_state_based_actions` is `compute_battlefield_creatures`
    plus the `dead` filter. Read `--auto=yes` on either before costing it.
+
+   **The SBA row, denominated at the thirty-second pass's tip — and the
+   denominator is the whole finding.** `check_state_based_actions` is
+   **10,670 calls / 151,182,228 Ir inclusive / 5.98 %**, i.e. ~14,170 Ir a
+   pass. Three separate `--tree=caller` rows read exactly **10,670**: the
+   gather (18,599,381), its own `stack.rs` self (23,915,320) and a
+   `game/mod.rs` row (469,480). **So a pass takes exactly one gather and
+   there is nothing to fold inside one** — the two layer sites in the
+   function body (the CR 603.8 flip `compute_battlefield`, the CR 704.5j
+   legend-rule `computed_permanent`) are both behind `sba_board_scan` flags
+   that are false on every bench board. The `spec_from_iter` collect row is
+   **82,634 over the same 10,670 passes = 7.74 collects a pass**,
+   129,943,199 / 5.14 %, i.e. **1,572 Ir a collect and 12,178 Ir a pass**.
+   The lever is therefore *fewer passes* or *a cheaper per-pass body*, and
+   **not** deduplicating gathers. Do not re-derive this.
    **`cast_candidates`, broken down** (`--auto=yes` + `--tree=calling`,
    twenty-fourth pass's tip). Its *own* self cost is under 0.2 % across six
    file rows — the 5.62 % inclusive is callees inlined into the
