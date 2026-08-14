@@ -127,11 +127,11 @@ a blanket rewrite** — every site spot-checked so far was already guarded by
 a preceding test (`worlds.len() > 1` before `.max().unwrap()`,
 `battlefield.push` before `find(…).unwrap()`, `writes_to_shared` before the
 two `teams` unwraps, `mayhem` set from `mayhem_cost().is_some()`). This is
-the section's only open entry; the twelve narrower filters below are what
-got run instead of the blanket rewrite, and ten of the twelve found
+the section's only open entry; the thirteen narrower filters below are what
+got run instead of the blanket rewrite, and eight of the thirteen found
 nothing, which is the result worth keeping.
 
-**The twelve filters, compacted to an index.** Each is a *shape* that fails
+**The thirteen filters, compacted to an index.** Each is a *shape* that fails
 the way a training run notices — a silent wrap at game 400 k, a loud panic,
 or a hang — swept over `game/` + `bot.rs` (some wider). The prose is in
 `git log -- TODO.md`; what is kept is what each hunted and why it is
@@ -151,11 +151,12 @@ closed, so none of them is re-derived.
 | 10 | 08-11 | The failure a training run sees as a *hang*: an unbounded `loop`/`while` whose exit condition is game state | Clean. All eight `loop {` and ~40 `while`s bounded by one of three shapes — a strictly shrinking collection, a finite effect-tree peel, or an explicit counter. The one bounded by none of the three is the top-level game loop, and its two counters are exactly what a *stall* is |
 | 11 | 08-11 | **One invariant written out by hand in more than one place** | **Found `15ec11c1`**: `stale < 8` appeared six times across five files, so the ladder's stall rate and the training actor's were never the same measurement. All six read `recommend::STALE_ROUNDS` now; no value changed. The per-context *action* budgets beside them are deliberately different and were left alone |
 | 12 | 08-14 | **A predicate two callers each re-derive** | **Found two**, `caa44eb2` — see below |
+| 13 | 08-14 | **A reentrancy guard some sites spell out by hand and a sibling does not** | **Found a stack overflow** — `in_layer_gather`, unguarded at ~a dozen computed-P/T arms the gather evaluates. See below |
 
-**A note the table would lose**: filters 1-5 and 7-10 are syntactic and
+**A note the table would lose**: filters 3-5 and 7-10 are syntactic and
 found nothing between them. Filter 6 is not syntactic — it *runs* the
-program with the checks on — and filters 2, 11 and 12 look at structure
-rather than syntax. Three of the four filters that found something are in
+program with the checks on — and filters 2, 11, 12 and 13 look at structure
+rather than syntax. Four of the five filters that found something are in
 that second group. Prefer a filter that runs the code or reads its
 structure over one that greps it.
 
@@ -194,7 +195,32 @@ Two more hits were already guarded and want no work: `requires_target` /
 walker-agreement test (`core_rules/target_walkers.rs`), and
 `ability_strip_in_scope` is the device the other two now copy.
 
-A *thirteenth* filter is owed. The natural next one: **a comment that
+**The thirteenth filter was run 2026-08-14** — *a guard that some sites
+spell out by hand and a sibling does not*. Filter 5's shape, aimed at a
+**reentrancy** guard rather than a precondition, and it **found a stack
+overflow**. `GameState::in_layer_gather` says "the continuous-effect set is
+being built; do not ask the layer system". `effective_power`,
+`effective_toughness` and `evaluate_requirement_static`'s layer-4 type
+closure each tested it by hand; the ~dozen sibling arms that read computed
+power/toughness (`PowerAtMostYourCount`,
+`ToughnessAtMostGraveyardCount`, `PowerLessThanYourGraveyardCount`,
+`PowerAtMostSourceCounters`, `PowerAtMostDraftNoteMax`, …) did not, and
+`computed_permanent` re-entered the gather from the same state — so it
+reached the same read again, without bound. Any card pairing a
+gather-evaluated filter (a `DynamicPt::…Matching` CDA, a `WhileCondition`,
+a static's affected filter — ~30 call sites in the gather) with a P/T
+requirement was **SIGABRT, not a wrong answer**. Fixed structurally: the
+guard lives in `computed_permanent`, once, and mid-gather reads take the
+printed view; the three hand-written tests are fast paths now and say so.
+`gather_continuous_effects` also **swaps and restores** the flag instead of
+clearing it, so a gather reached from inside one (`board_keyword_matching`,
+`permanents_with_abilities_removed`, the debug cross-checks) can't hand the
+outer one back unguarded — the hazard `permanents_with_abilities_removed`
+already documented but nothing enforced. Regression test:
+`core_rules::cr_rules::cr_613_a_cda_filter_reading_computed_power_does_not_recurse`
+(overflows the stack on the pre-fix engine; verified both ways).
+
+A *fourteenth* filter is owed. The natural next one: **a comment that
 states a cost or a shape** — `cow.rs`'s "any `&mut` access copies the whole
 inner value" was true and cost four passes to act on; the library-strip
 comment in the affordance probe was true when zones were plain `Vec`s and

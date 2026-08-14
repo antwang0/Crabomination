@@ -3306,7 +3306,11 @@ impl GameState {
                 let computed = || -> &Computed {
                     computed_cell.get_or_init(|| {
                         if self.in_layer_gather.load(std::sync::atomic::Ordering::Relaxed) {
-                            None // mid-recompute: printed types (reentrancy guard)
+                            // Mid-recompute: printed types. A fast path, not
+                            // the guard — `computed_permanent` enforces the
+                            // reentrancy rule for every caller and answers the
+                            // same printed view a layer pass slower.
+                            None
                         } else {
                             self.battlefield_find(*cid).and_then(|_| self.computed_permanent(*cid))
                         }

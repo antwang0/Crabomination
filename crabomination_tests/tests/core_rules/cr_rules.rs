@@ -10289,3 +10289,41 @@ fn cr_121_2a_controller_may_skip_a_draw() {
     assert!(g.draw_one(0, &mut events), "declining draws normally");
 }
 
+
+// ── CR 613 — the layer gather's reentrancy guard ────────────────────────────
+
+/// A characteristic-defining P/T whose filter reads *computed* power is
+/// evaluated while the continuous-effect set is still being gathered. Before
+/// the guard moved into `computed_permanent`, that read re-entered the gather,
+/// which reached the same read from the same state — unbounded recursion, i.e.
+/// a stack overflow rather than a wrong answer. Mid-gather computed reads now
+/// take the printed view, which is what `effective_power` and the layer-4 type
+/// filter had each been spelling out by hand.
+#[test]
+fn cr_613_a_cda_filter_reading_computed_power_does_not_recurse() {
+    use crabomination::card::{CardDefinition, CardType, DynamicPt, SelectionRequirement};
+    let mut g = two_player_game();
+    // */* = "permanents you control whose power is less than the cards in your
+    // graveyard" — a filter arm that reads the computed view.
+    let goyf = CardDefinition {
+        name: "Recursive Goyf",
+        card_types: vec![CardType::Creature],
+        power: 0,
+        toughness: 0,
+        dynamic_pt: Some(DynamicPt::PermanentsControlledMatching {
+            base_p: 0,
+            base_t: 0,
+            filter: Box::new(SelectionRequirement::PowerLessThanYourGraveyardCount),
+        }),
+        ..Default::default()
+    };
+    let id = g.add_card_to_battlefield(0, goyf);
+    g.add_card_to_graveyard(0, catalog::forest());
+    g.add_card_to_graveyard(0, catalog::forest());
+    // Printed power 0 < 2 cards in the graveyard, so the Goyf counts itself.
+    let cp = g.computed_permanent(id).expect("computed without recursing");
+    assert_eq!((cp.power, cp.toughness), (1, 1), "one matching permanent");
+    // The whole-board pass takes the same path.
+    let board = g.compute_battlefield();
+    assert_eq!(board.len(), 1, "one permanent on the board");
+}

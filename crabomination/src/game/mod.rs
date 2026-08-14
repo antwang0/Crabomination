@@ -7790,10 +7790,15 @@ impl GameState {
         // Reentrancy guard — see `in_layer_gather`. Passes below that
         // evaluate selection requirements must not recurse back into
         // `computed_permanent`.
+        // Save and restore rather than clear: a gather reached from *inside*
+        // one (`board_keyword_matching`, `permanents_with_abilities_removed`
+        // and the debug cross-checks all gather unconditionally) would
+        // otherwise hand the outer gather back with its guard cleared, and
+        // every computed read after that point would take the wrong branch.
         use std::sync::atomic::Ordering;
-        self.in_layer_gather.store(true, Ordering::Relaxed);
+        let prev = self.in_layer_gather.swap(true, Ordering::Relaxed);
         let out = self.gather_continuous_effects_inner();
-        self.in_layer_gather.store(false, Ordering::Relaxed);
+        self.in_layer_gather.store(prev, Ordering::Relaxed);
         out
     }
 
@@ -11096,12 +11101,26 @@ impl GameState {
     /// layer pass between them. `Arc` derefs, so callers read fields as
     /// before.
     pub fn computed_permanent(&self, id: CardId) -> Option<std::sync::Arc<ComputedPermanent>> {
-        // Mid-gather reads take the printed-types fallback (see
-        // `frozen_effects`), so they must neither read nor write the memo.
+        // Mid-gather reads take the printed view (`in_layer_gather`, the
+        // reentrancy guard) — the effect set is *being built*, so re-entering
+        // the gather here would rebuild it from the same state and reach this
+        // same read again, without bound. That is not hypothetical: the gather
+        // evaluates card-supplied filters through `evaluate_requirement_on_card`
+        // / `evaluate_predicate` at ~30 sites, and a dozen of their arms read
+        // computed power/toughness (`PowerAtMostYourCount`,
+        // `ToughnessAtMostGraveyardCount`, …). Two arms and both
+        // `effective_power`/`effective_toughness` each spelled the guard out by
+        // hand; the rest did not, so a card pairing a gather-evaluated filter
+        // with a P/T requirement was a stack overflow rather than a wrong
+        // answer. The guard belongs here, once, where it cannot be forgotten.
+        if self.in_layer_gather.load(std::sync::atomic::Ordering::Relaxed) {
+            let card = self.battlefield.iter().find(|c| c.id == id)?;
+            return Some(std::sync::Arc::new(crate::game::layers::apply_layers_one(card, &[])));
+        }
         // One lock covers both memos: a hit costs exactly one acquisition,
         // a miss two, and only the scope's first computed read pays three.
         let mut frozen_fx = None;
-        if !self.in_layer_gather.load(std::sync::atomic::Ordering::Relaxed) {
+        {
             let st = self.layer_freeze.lock();
             if st.depth > 0 {
                 if let Some((_, cp)) = st.perms.iter().find(|(k, _)| *k == id) {
@@ -20269,7 +20288,9 @@ impl GameState {
 
     /// CR 613 — a card's power as the layers see it, falling back to the raw
     /// instance for cards outside the battlefield (hand / graveyard filters)
-    /// and mid-gather, where recomputing would recurse (`in_layer_gather`).
+    /// and mid-gather (`in_layer_gather`). The mid-gather arm is a fast path,
+    /// not the guard: [`Self::computed_permanent`] enforces it for every
+    /// caller, and would answer the same printed view a layer pass slower.
     pub(crate) fn effective_power(&self, card: &CardInstance) -> i32 {
         if self.in_layer_gather.load(std::sync::atomic::Ordering::Relaxed) {
             return card.power();
