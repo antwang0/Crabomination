@@ -3196,12 +3196,17 @@ impl GameState {
                 // turn boundary (CR 302.1 / 506.4). A Seedborn-untapped
                 // permanent (controlled by another player) untaps but does not
                 // shed sickness on someone else's turn.
-                let active = card.controller == p;
+                // `card.summoning_sick = false` is a `DerefMut` on the CoW
+                // handle, so writing the `false` a permanent that has been
+                // around already holds deep-copies the whole card for
+                // nothing. Read the flag once, here, and gate every one of
+                // the loop's nine clear sites on it.
+                let clear_sick = card.controller == p && card.summoning_sick;
                 if prevented.contains(&card.id) {
                     // CR 502.3 — untap is prevented. Summoning sickness still
                     // clears per CR 506.4 (the turn-boundary tag, not the
                     // untap event).
-                    if active {
+                    if clear_sick {
                         card.summoning_sick = false;
                     }
                     continue;
@@ -3211,7 +3216,7 @@ impl GameState {
                 // turn. No tapped→untapped flip, so no Inspired trigger.
                 if card.skip_next_untap {
                     card.skip_next_untap = false;
-                    if active {
+                    if clear_sick {
                         card.summoning_sick = false;
                     }
                     continue;
@@ -3219,7 +3224,7 @@ impl GameState {
                 // Entrancing Lyre — a lock source keeps itself tapped while it
                 // still locks a creature.
                 if card.tapped && lock_sources.contains(&card.id) {
-                    if active {
+                    if clear_sick {
                         card.summoning_sick = false;
                     }
                     continue;
@@ -3229,7 +3234,7 @@ impl GameState {
                 // holds the previous own-turn attack; the roll-over into
                 // `attacked_last_turn` happens after this loop.
                 if card.attacked_own_turn && attack_locked.contains(&card.id) {
-                    if active {
+                    if clear_sick {
                         card.summoning_sick = false;
                     }
                     continue;
@@ -3237,7 +3242,7 @@ impl GameState {
                 // Steel Dromedary / Temporal Distortion — "doesn't untap …
                 // if it has a [kind] counter on it" (printed or granted).
                 if counter_locked.contains(&card.id) {
-                    if active {
+                    if clear_sick {
                         card.summoning_sick = false;
                     }
                     continue;
@@ -3246,7 +3251,7 @@ impl GameState {
                 // Guard). Asked as "leave tapped?", so a headless seat's
                 // default `false` untaps normally.
                 if card.tapped && may_decline.contains(&card.id) {
-                    if active {
+                    if clear_sick {
                         card.summoning_sick = false;
                     }
                     continue;
@@ -3255,7 +3260,7 @@ impl GameState {
                 // tapped on the battlefield; otherwise the lock releases.
                 if let Some(src) = card.untap_locked_by {
                     if tapped_now_set.contains(&src) {
-                        if active {
+                        if clear_sick {
                             card.summoning_sick = false;
                         }
                         continue;
@@ -3264,7 +3269,7 @@ impl GameState {
                 }
                 if let Some(src) = card.untap_locked_while_present {
                     if on_battlefield.contains(&src) {
-                        if active {
+                        if clear_sick {
                             card.summoning_sick = false;
                         }
                         continue;
@@ -3278,7 +3283,7 @@ impl GameState {
                 {
                     let n = capped_untaps.entry((i, card.controller)).or_insert(0);
                     if *n >= untap_caps[i].1 {
-                        if active {
+                        if clear_sick {
                             card.summoning_sick = false;
                         }
                         continue;
@@ -3290,10 +3295,10 @@ impl GameState {
                 } else {
                     if card.tapped {
                         untapped_now.push(card.id);
+                        card.tapped = false;
                     }
-                    card.tapped = false;
                 }
-                if active {
+                if clear_sick {
                     card.summoning_sick = false;
                 }
             }
@@ -3371,27 +3376,45 @@ impl GameState {
         // CR 701.38 — goad lasts "until your next turn." When the goader's
         // (= active player p's) turn begins, drop their goad on every
         // creature so the must-attack requirement lifts.
+        // Every write below is gated on the field not already holding the
+        // value: each is a `DerefMut` on a CoW `CardData`, i.e. a deep copy
+        // of the permanent, and on a quiet board none of these flags is set.
         for card in &mut self.battlefield {
-            card.goaded_by.retain(|&g| g != p);
+            if card.goaded_by.contains(&p) {
+                card.goaded_by.retain(|&g| g != p);
+            }
             // CR 701.35 — detain lasts "until your next turn"; lift it when the
             // detaining player's (= active player p's) turn begins.
             if card.detained_by == Some(p) {
                 card.detained_by = None;
             }
             // CR 702.142 — "attacked this turn" (Boast gate) resets each turn.
-            card.attacked_this_turn = false;
-            card.blocked_this_turn = false;
-            card.blocked_attackers_this_turn.clear();
+            if card.attacked_this_turn {
+                card.attacked_this_turn = false;
+            }
+            if card.blocked_this_turn {
+                card.blocked_this_turn = false;
+            }
+            if !card.blocked_attackers_this_turn.is_empty() {
+                card.blocked_attackers_this_turn.clear();
+            }
             if card.controller == p {
                 // "…during your last turn" rolls over as its controller's turn
                 // begins (Giant Turtle), and so does a pending Wall of Dust
                 // attack ban — armed on the previous turn, live on this one.
-                card.attacked_last_turn = card.attacked_own_turn;
-                card.attacked_own_turn = false;
-                card.attack_ban = match card.attack_ban {
-                    crate::card::AttackBan::Pending => crate::card::AttackBan::Active,
-                    _ => crate::card::AttackBan::None,
-                };
+                if card.attacked_last_turn != card.attacked_own_turn {
+                    card.attacked_last_turn = card.attacked_own_turn;
+                }
+                if card.attacked_own_turn {
+                    card.attacked_own_turn = false;
+                }
+                match card.attack_ban {
+                    crate::card::AttackBan::Pending => {
+                        card.attack_ban = crate::card::AttackBan::Active;
+                    }
+                    crate::card::AttackBan::None => {}
+                    _ => card.attack_ban = crate::card::AttackBan::None,
+                }
             }
         }
         self.players[p].lands_played_this_turn = 0;
@@ -3563,7 +3586,11 @@ impl GameState {
         // CR 609.4b — North Star's permission lasts the turn, for every seat
         // that was granted one.
         for pl in self.players.iter_mut() {
-            pl.may_spend_any_color_this_turn = false;
+            // Gated: the write unshares the seat's whole `PlayerData`, and
+            // the flag is false on every seat that was never granted one.
+            if pl.may_spend_any_color_this_turn {
+                pl.may_spend_any_color_this_turn = false;
+            }
         }
         // Reset per-spell-type tallies (instant/sorcery vs creature
         // casts). These refine `spells_cast_this_turn` for cards that
@@ -3911,7 +3938,9 @@ impl GameState {
         // CR 500.4 — "kept this turn" mana (Savage Ventmaw) expires now, so the
         // final empty of the turn actually removes it.
         for p in self.players.iter_mut() {
-            p.kept_mana_this_turn.empty();
+            if !p.kept_mana_this_turn.is_empty() {
+                p.kept_mana_this_turn.empty();
+            }
         }
         // Empty mana pools (Kruphix converts to colorless instead).
         self.empty_mana_pools();
@@ -3990,12 +4019,27 @@ impl GameState {
                 }
             }
         };
-        for c in self.battlefield.iter_mut() { sweep(c); }
-        for c in self.exile.iter_mut() { sweep(c); }
+        // Each `iter_mut` unshares the zone, and reaching one through
+        // `Player` unshares the whole `PlayerData` first — so every zone is
+        // gated on actually holding a permission. Almost none ever do; the
+        // libraries alone are ~35 cards a seat.
+        let pending = |c: &crate::card::CardInstance| c.may_play_until.is_some();
+        if self.battlefield.iter().any(pending) {
+            for c in self.battlefield.iter_mut() { sweep(c); }
+        }
+        if self.exile.iter().any(pending) {
+            for c in self.exile.iter_mut() { sweep(c); }
+        }
         for p in self.players.iter_mut() {
-            for c in p.hand.iter_mut() { sweep(c); }
-            for c in p.graveyard.iter_mut() { sweep(c); }
-            for c in p.library.iter_mut() { sweep(c); }
+            if p.hand.iter().any(pending) {
+                for c in p.hand.iter_mut() { sweep(c); }
+            }
+            if p.graveyard.iter().any(pending) {
+                for c in p.graveyard.iter_mut() { sweep(c); }
+            }
+            if p.library.iter().any(pending) {
+                for c in p.library.iter_mut() { sweep(c); }
+            }
         }
         self.give_priority_to_active();
     }

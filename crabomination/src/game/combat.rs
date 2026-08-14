@@ -2567,8 +2567,13 @@ impl GameState {
         self.clear_combat_damage_plan();
         self.blockers_declared = false;
         // CR 702.39 — provoke's "block this combat" requirement ends here.
+        // Gated: the write is a `DerefMut` on a CoW `CardData`, so clearing
+        // the `None` almost every permanent already holds deep-copied the
+        // whole battlefield once per combat.
         for c in &mut self.battlefield {
-            c.must_block = None;
+            if c.must_block.is_some() {
+                c.must_block = None;
+            }
         }
 
         events.push(GameEvent::CombatResolved);
