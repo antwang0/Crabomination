@@ -16,42 +16,34 @@ reference and want their own triage pass):
 
 ## NEXT (handoff — rewrite each run, keep under 15 lines)
 
-Branch `claude/modern_decks`. **The twenty-ninth pass landed three rows for
--2.456 % Ir** (2,890,336,504 -> 2,819,346,784 at `dbd3efeb`; the profile of
-record is retaken at `645b978d` and reads ~0.5 % low against the tip). Two
-are the CoW theme one level up — stop paying for a `PlayerData` clone where
-a seat's *only* write was one bit (the "an opponent cast a spell" seat
-mask), then make the clone itself cheaper (`PlayerCold`, fifteen
-heap-owning rare fields behind one `CowBox`). The third is five lines:
-`find_card_anywhere` walked both ~55-card libraries before exile and the
-stack.
+Branch `claude/modern_decks`. **Twenty-ninth pass: three rows, -2.456 % Ir**
+(2,890,336,504 -> 2,819,346,784 at `dbd3efeb`; the profile of record is
+retaken at `645b978d` and reads ~0.5 % low against the tip). Two are the CoW
+theme one level up — don't clone a `PlayerData` when a seat's *only* write
+is one bit (the seat mask), then make the clone cheaper (`PlayerCold`).
+The third is five lines: `find_card_anywhere` walked both ~55-card
+libraries before exile and the stack.
 
-- **Read PERF candidate (-1)'s corrections before re-sweeping.** The
-  previous handoff's two 0.95 % survivors were **one site double-counted**,
-  and `remove_from_hand` is not a candidate at all — the unshare is
-  inherited by whatever `finalize_cast` writes next. The `=> …deref_mut`
-  sort no longer resolves either; use `--tree=caller` on `Arc::make_mut`.
-- **Best next moves**, in order: (13) the gather's per-card keyword loop —
-  a `Keyword` bitset on `CardDefinition` pays there, in
-  `permanent_has_keyword` and in `Keyword::eq` (0.50 % self) at once; then
-  (11) `battlefield_find`-in-a-loop; then (9)(b).
-- **Wide checks are clean and the method improved**: keep the pre-pass
-  binary (one `cp` before the first callgrind) and diff base-vs-tip output
-  directly — `--decks all --games 300 --threads 3` is **byte-identical over
-  5,100 games / 17 archetypes**, which beats any recorded constant. The
-  `overflow` profile ran 20,400 games on three seeds with no panic and no
-  overflow. PERF's "6 draws / 5,100" was a mis-attributed invocation; the
-  real figure for that command is 2 undecided, at both tips.
+- **Read candidate (-1)'s corrections before re-sweeping.** The previous
+  handoff's two 0.95 % survivors were one site double-counted;
+  `remove_from_hand` is not a candidate (the unshare is inherited by
+  whatever `finalize_cast` writes next); and the `=> …deref_mut` sort no
+  longer resolves — use `--tree=caller` on `Arc::make_mut`.
+- **Next, in order**: (13) the gather's per-card keyword loop — a `Keyword`
+  bitset on `CardDefinition` pays there, in `permanent_has_keyword` and in
+  `Keyword::eq` at once; then (11) `battlefield_find`-in-a-loop; then (9)(b).
+- **Method**: `cp` the pre-pass binary before the first callgrind and diff
+  base-vs-tip `--decks all --games 300 --threads 3` output — byte-identical
+  over 5,100 games beats any recorded constant. Clean this pass, as is the
+  `overflow` profile (20,400 games, three seeds, no panic).
 - Env: no `cargo-nextest`; `cargo test -p crabomination -p
-  crabomination_tests` is the gate — ~4 min cold build, ~40 s run, **18,636
-  tests**. `profiling-fast` engine rebuild **13 min cold / ~4 min warm**,
-  callgrind ~4 min, `release` ~25 min. Client apt deps install in a minute
-  (see below); **disk gets tight (~12 G free) once release + profiling-fast
-  + dev caches coexist** — `rm -rf target/debug/incremental` first.
-- Trackers: PERF is **1.13k**, down from 1.31k — the longer-lived
-  candidate list and "Closed / ruled out" are now an index. Still ~130 over
-  guidance; the next compaction target is the **Log's pass 20-28 blocks**,
-  which are the last uncompacted prose.
+  crabomination_tests` is the gate (~4 min build, ~40 s, **18,636 tests**).
+  `profiling-fast` engine 13 min cold / ~4 min warm, callgrind ~4 min,
+  `release` ~25 min, `overflow` ~16 min. Client apt deps install in a
+  minute (below); **disk gets tight (~12 G) once release + profiling-fast +
+  dev caches coexist** — `rm -rf target/debug/incremental` first.
+- Trackers: PERF **1.16k** against ~1k. Next compaction target is the Log's
+  pass 20-28 blocks, the last uncompacted prose in the file.
 
 ## Environment note
 
