@@ -127,26 +127,59 @@ contention-immune, which makes it the better first look.
 
 ## Baseline
 
-**Re-anchored 2026-08-14 at `76804984`** (`release`, mimalloc — the shipped
-configuration), the thirty-first pass's tip. This one *does* chain to the
-`5034eb2f` block below: `host_calib_ms` reads **45-46** against its 44-48,
-the same mid-40s fingerprint, on the same `host_cpu` string.
+**Re-anchored 2026-08-14 at `5174acd3`** (`release`, mimalloc — the shipped
+configuration), the thirty-second pass's tip. It chains to the `76804984`
+block below and through it to `5034eb2f`: `host_calib_ms` reads **45-46**
+against 45-46 and 44-48, the same mid-40s fingerprint, same `host_cpu`.
 
 ```text
 bot_ladder --bench   release, rustc 1.95.0, 4-core VM, 3 worker threads
                      mimalloc (the default); measured on an idle box
 host_cpu             Intel(R) Xeon(R) Processor @ 2.80GHz
-host_calib_ms        45 / 45 / 46 / 46
+host_calib_ms        45 / 45 / 46 / 45
 games                320
+games_per_s          123.19 / 127.26 / 125.56 / 124.61 (mean 125.16,
+                     spread 3.25 %)
+games_per_s_th       41.06 - 42.42
+decisions_per_s      74,388 - 76,846
+turns_per_game       26.98
+decisions            193,232 byte-identical on all four
+stalls               0 (0.00 %), stalls_by cap 0 / stuck 0 / draw 0
+peak_rss_mib         29.0 - 29.3
+determinism          ok (all 160 pairs split, on all 4 runs)
+```
+
+**120.10 -> 125.16 is +4.2 %, against -1.969 % by instruction count.** The
+sign is the usual one for a representation change and the size is the
+unusual one: the thirty-second pass removed twenty-two `Vec` clones per
+`CardData` copy, most of them empty (cheap in Ir, a branch and a store) and
+some of them allocating (expensive in wall-clock, invisible in Ir under the
+system allocator that callgrind forces). Ir under-counts this pass for the
+same reason it over-counted passes 29-31. Every invariant is unchanged —
+`decisions` **193,232**, `turns_per_game` 26.98, stalls 0, `peak_rss_mib`
+29.0-29.3.
+
+**The wide-pool check at this tip, and it closes the stall item.**
+`--bench --decks all --games 300 --seed 11 --threads 3` reads `decisions`
+**2,548,986** over 5,100 games and 17 archetypes — byte-identical to every
+tip since `841dd40b` — `turns_per_game` 20.99, `peak_rss_mib` 137.8,
+determinism ok on all 2,547 pairs, and **`stalls_by cap 0 / stuck 0 /
+draw 6`**. TODO's open question was which of `cap` (budget too small) or
+`stuck` (a genuine no-legal-move fixed point) the ~0.1 % rate is; the
+answer is **neither — all six are rules draws**, so there is nothing to fix
+and the entry closes.
+
+**The superseded `76804984` block.** Re-anchored 2026-08-14 (`release`,
+mimalloc), the thirty-first pass's tip.
+
+```text
+host_calib_ms        45 / 45 / 46 / 46
 games_per_s          119.49 / 121.21 / 119.62 / 120.06 (mean 120.10,
                      spread 1.44 %)
 games_per_s_th       39.83 - 40.40
 decisions_per_s      72,152 - 73,192
-turns_per_game       26.98
-decisions            193,232 byte-identical on all four
-stalls               0 (0.00 %), stalls_by cap 0 / stuck 0 / draw 0
-peak_rss_mib         29.1 - 29.4
-determinism          ok (all 160 pairs split, on all 4 runs)
+decisions            193,232        turns_per_game 26.98
+stalls               0              peak_rss_mib   29.1 - 29.4
 ```
 
 **115.31 -> 120.10 is +4.2 %, and it is the three passes since the old
@@ -572,7 +605,7 @@ ties the tightest agreement in this file).
 | date | change | before | after | how measured |
 |---|---|---|---|---|
 | 2026-08-14 | `CardCold`, a `CowBox` group for the twenty-two rarely-written heap fields of a 148-field `CardData` (`5174acd3`) | 2,577,862,290 Ir | 2,527,098,526 Ir (**-1.969 %**) | Candidate (-2), and it came in above its **~1.2 %** estimate. The `CardData` deep-copy table — `--tree=caller` on `Arc::make_mut`, rows whose *file* is `crabomination_base/src/card.rs` — reads **~44.5 M / 1.76 %**, down from ~105 M / 4.0 %; `activate_ability_inner` is still its largest row at **15,346,614 over 18,312 (838 Ir each, was 1,700)**, `cast_spell_with_convoke` 8,157,958 over 74,150 (110), `place_card_at_resolved_zone` 4,611,978 over 3,882 (1,188). The new group's own unshares show up as `crabomination_base/src/cow.rs` rows at ~23 M / 0.91 %, and most of that is the pre-existing zone/`PlayerCold` boxes |
-| | **cumulative** | **2,577,862,290 Ir** | **2,527,098,526 Ir (-1.969 %)** | callgrind on the fixed six-game workload; golden traces byte-identical, full suite green |
+| | **cumulative** | **2,577,862,290 Ir** | **2,527,098,526 Ir (-1.969 %)** | callgrind on the fixed six-game workload; golden traces byte-identical, full suite green. Wall-clock `release` **120.10 -> 125.16 games/s (+4.2 %)**, four runs each side on one host fingerprint — see Baseline for why this pass over-delivers against Ir where the last three under-delivered |
 
 **The blocker the candidate named did not exist, and checking cost five
 minutes.** (-2) was ranked "wants a whole run, do not start it late"
