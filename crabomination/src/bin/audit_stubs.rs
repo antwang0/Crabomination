@@ -155,13 +155,16 @@ mod tests {
     use super::*;
     use crabomination::catalog;
 
+    /// A catalog card factory, named so the case table below stays readable.
+    type Factory = fn() -> CardDefinition;
+
     /// One representative per carrier family. Each of these was in the
     /// BLANK PERMANENT bucket before `def_has_any_ability` learned its
     /// field, and each is a shipped card with real text — so a regression
     /// here means the audit has started lying about the catalog again.
     #[test]
     fn blank_permanent_check_knows_every_carrier_field() {
-        let cases: &[(&str, fn() -> CardDefinition)] = &[
+        let cases: &[(&str, Factory)] = &[
             ("saga_chapters", catalog::history_of_benalia),
             ("room", catalog::bottomless_pool_locker_room),
             ("enter_modes", catalog::barrensteppe_siege),
