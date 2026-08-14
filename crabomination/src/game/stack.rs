@@ -671,7 +671,9 @@ impl GameState {
                     // CR 603.7e — unused "your next creature spell this turn"
                     // riders expire with the turn.
                     pl.pending_creature_etb_counters.clear();
-                    pl.pending_creature_etb_keywords.clear();
+                    if !pl.pending_creature_etb_keywords.is_empty() {
+                        pl.pending_creature_etb_keywords.clear();
+                    }
                     // The Chain Veil's banked activations and the
                     // "did you activate a loyalty ability" flag are per-turn.
                     pl.extra_loyalty_activations = 0;
@@ -3393,7 +3395,9 @@ impl GameState {
             }
         }
         self.players[p].lands_played_this_turn = 0;
-        self.players[p].graveyard_cast_types_this_turn.clear();
+        if !self.players[p].graveyard_cast_types_this_turn.is_empty() {
+            self.players[p].graveyard_cast_types_this_turn.clear();
+        }
         // "Protection from everything until your next turn" expires as that
         // player's turn begins (The One Ring).
         self.players[p].protected_from_everything = false;
@@ -3402,7 +3406,9 @@ impl GameState {
         self.turn_scoped_spell_taxes.retain(|t| t.controller != p);
         // "Opponents can't cast spells named X until your next turn"
         // (Academic Probation mode 0) expires as the lock owner's turn begins.
-        self.players[p].opponents_cant_cast_named.clear();
+        if !self.players[p].opponents_cant_cast_named.is_empty() {
+            self.players[p].opponents_cant_cast_named.clear();
+        }
         // Stagger damage-doubling windows expire as the registrant's turn
         // begins (Lightning, Army of One).
         self.staggered_damage_players.retain(|(_, reg)| *reg != p);
@@ -3433,6 +3439,10 @@ impl GameState {
         self.monarch_at_turn_start = self.monarch;
         // at the turn boundary (not just the active player) so a creature
         // cast on your turn reads damage dealt since this turn began.
+        //
+        // Collections in the [`PlayerCold`] group are cleared behind an
+        // `is_empty()` guard: `clear()` on an empty one still takes `&mut`,
+        // and that unshares the whole cold group for nothing.
         for pl in &mut self.players {
             pl.was_dealt_damage_this_turn = false;
             pl.damage_taken_this_turn = 0;
@@ -3449,15 +3459,21 @@ impl GameState {
             pl.prowl_any_type_this_turn = false;
             // Veil of Summer's "this turn" riders clear at the turn boundary
             // for every seat (CR 514.2 cleanup-scope grants).
-            pl.next_draw_replacements.clear();
+            if !pl.next_draw_replacements.is_empty() {
+                pl.next_draw_replacements.clear();
+            }
             // CR 901.9 — the planar-die roll surcharge resets each turn.
             pl.planar_die_rolls_this_turn = 0;
             pl.spells_uncounterable_this_turn = false;
             pl.creature_spells_uncounterable_this_turn = false;
-            pl.hexproof_from_colors_this_turn.clear();
+            if !pl.hexproof_from_colors_this_turn.is_empty() {
+                pl.hexproof_from_colors_this_turn.clear();
+            }
             pl.cast_blue_or_black_this_turn = false;
             pl.spell_casts_this_turn.clear();
-            pl.statics_ignored_this_turn.clear();
+            if !pl.statics_ignored_this_turn.is_empty() {
+                pl.statics_ignored_this_turn.clear();
+            }
             pl.cant_cast_noncreature_this_turn = false;
             pl.free_spells_from_hand_this_turn = false;
             pl.play_from_graveyard_this_turn = false;
@@ -3471,7 +3487,9 @@ impl GameState {
             pl.graveyard_ids_this_turn.clear();
             pl.descended_this_turn = false;
             pl.descend_count_this_turn = 0;
-            pl.discarded_this_turn.clear();
+            if !pl.discarded_this_turn.is_empty() {
+                pl.discarded_this_turn.clear();
+            }
             pl.permanents_sacrificed_this_turn = 0;
             pl.artifacts_sacrificed_this_turn = 0;
             // CR 702.179 — Freerunning's combat-damage gate is per-turn.
@@ -3480,11 +3498,15 @@ impl GameState {
             pl.double_your_source_damage_this_turn = false;
             // Turf Wound's land-play lock is turn-scoped.
             pl.cant_play_lands_this_turn = false;
-            pl.cant_cast_matching_this_turn.clear();
+            if !pl.cant_cast_matching_this_turn.is_empty() {
+                pl.cant_cast_matching_this_turn.clear();
+            }
             pl.cant_activate_nonmana_abilities_this_turn = false;
             pl.creature_spells_as_flash_this_turn = false;
             pl.cast_from_graveyard_top_this_turn = false;
-            pl.next_spell_uncounterable.clear();
+            if !pl.next_spell_uncounterable.is_empty() {
+                pl.next_spell_uncounterable.clear();
+            }
             // CR 700.13 — "committed a crime this turn" resets each turn.
             pl.committed_crime_this_turn = false;
             // CR 708 — "entered face down / turned face up this turn" resets.
@@ -3708,7 +3730,9 @@ impl GameState {
                 card.granted_harmonize_eot = None;
             }
             // "[Filter] spells cost {N} less this turn" grants end (CR 514.2).
-            player.turn_spell_discounts.clear();
+            if !player.turn_spell_discounts.is_empty() {
+                player.turn_spell_discounts.clear();
+            }
             player.face_down_discount_this_turn = 0;
             // "Until end of turn" +1/+1 counter bonus (Prairie Dog) ends.
             player.extra_plus_one_counters_this_turn = 0;
