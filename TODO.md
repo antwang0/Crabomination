@@ -51,7 +51,8 @@ to `IdMap`.
   already unique. `game/` is swept clean; `server/` and `effects/` are not.
 - **Behaviour at the merged tip**: `--bench` `decisions` **193,232**,
   `turns_per_game` 26.98, stalls 0; wide pool **2,548,986** / 20.99 /
-  6 draws; determinism ok on both; full suite green; clippy clean.
+  6 draws; determinism ok on both; full suite green; clippy clean;
+  `overflow` clean over 20,400 games.
 - **Quote the command with any pool constant.** `--bench --threads 1
   --games 300 --seed 11 --decks all` reads **2,548,986 / 6 draws**;
   `--decks all --games 300 --threads 3` reads **2,553,880 / 2 draws**. Both
@@ -69,7 +70,9 @@ to `IdMap`.
   crabomination_tests` is the gate (~40 s once built, ~5 min to build).
   `profiling-fast` engine ~3 min warm solo — serialize builds, 4 cores.
   Callgrind ~4 min and contention-immune, so it can run beside a build.
-  `overflow` is **owed at the merged tip** (~16 min, seeds 11/12/13).
+  `overflow` is **clean at the merged tip** — 20,400 games over seeds
+  11/12/13, 20,392 decided, no panic and no arithmetic overflow (8 min to
+  build, ~1 min a seed).
   Client apt deps install in a minute (below); `cargo clippy --workspace`
   needs them.
 - Trackers: PERF **~1.35k** — passes 29/30 are index rows now; the only

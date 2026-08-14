@@ -278,7 +278,15 @@ identical to `841dd40b`, `5034eb2f`, `645b978d` and `a4960740` — with
 `turns_per_game` 20.99, the recorded **6 draws / 5,100 (0.12 %)** and
 `determinism ok` on all 2,547 pairs.
 
-**Crash-freedom at the merged tip.** The `overflow` profile (release-fast +
+**Crash-freedom at the thirty-first pass's merged tip `54f5981b`.** The
+`overflow` profile (release-fast + `overflow-checks`) over `--a gang --b
+gang --games 400 --threads 3 --decks all` on seeds 11/12/13: **20,400
+games, 20,392 decided, no panic and no arithmetic overflow**, 50-57 s a
+seed. The 8 undecided are all on seed 11 and are the same rules draws the
+thirtieth pass's tip reported — the pass moved neither the count nor which
+seed carries them.
+
+**Crash-freedom at the thirtieth pass's merged tip.** The `overflow` profile (release-fast +
 `overflow-checks`) over `--a gang --b gang --games 400 --threads 3 --decks
 all` on seeds 11/12/13: **20,400 games, 20,392 decided, no panic and no
 arithmetic overflow**, 76-89 s a seed. The 8 undecided are all on seed 11
