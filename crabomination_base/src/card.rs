@@ -7723,3 +7723,45 @@ impl<'de> serde::Deserialize<'de> for CardInstance {
         Ok(c)
     }
 }
+
+#[cfg(test)]
+mod cold_group_tests {
+    use super::*;
+
+    fn card() -> CardInstance {
+        CardInstance::new(CardId(1), CardDefinition { name: "Test", ..Default::default() }, 0)
+    }
+
+    /// The [`CardCold`] contract, and the reason the group pays: a clone
+    /// shares it, a *read* of a cold field keeps sharing it, a hot-field
+    /// write deep-copies `CardData` but only bumps the group's refcount,
+    /// and the first cold write unshares exactly once.
+    #[test]
+    fn cold_group_unshares_only_on_write() {
+        let mut a = card();
+        let b = a.clone();
+        assert!(a.cold.shares_with(&b.cold), "clone shares the cold group");
+        assert!(a.goaded_by.is_empty() && a.named_card.is_none());
+        assert!(a.cold.shares_with(&b.cold), "a read never unshares");
+        a.tapped = true;
+        assert!(a.cold.shares_with(&b.cold), "a hot write leaves the group shared");
+        a.goaded_by.push(1);
+        assert!(!a.cold.shares_with(&b.cold), "the first cold write unshares");
+        assert!(b.goaded_by.is_empty(), "the snapshot kept the old group");
+    }
+
+    /// Every clear site that runs on a turn or zone boundary guards on
+    /// `is_empty()`; this pins the read those guards make — an untouched
+    /// card answers all of them without unsharing.
+    #[test]
+    fn a_fresh_card_reads_every_cold_collection_empty() {
+        let a = card();
+        let b = a.clone();
+        assert!(a.spliced_effects.is_empty() && a.spliced_names.is_empty());
+        assert!(a.saddled_by.is_empty() && a.crewed_by.is_empty());
+        assert!(a.granted_activated_abilities.is_empty() && a.granted_activated_eot.is_empty());
+        assert!(a.exhausted_abilities.is_empty() && a.once_per_turn_used.is_empty());
+        assert!(a.pending_etb_counters.is_empty());
+        assert!(a.cold.shares_with(&b.cold), "the guards' reads leave the group shared");
+    }
+}
