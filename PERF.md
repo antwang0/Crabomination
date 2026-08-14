@@ -555,8 +555,8 @@ cost that stopped existing when zones became `CowBox`es). *A perf comment
 that explains why something is worth it is a claim with a date on it;
 re-check it against the current representation before trusting it.*
 
-**Thirty-first pass — a write that changes nothing, and a scope that
-already existed.** Base `a58447d9` read **2,776,361,361 Ir** against the
+**Thirty-first pass, session A — a write that changes nothing, and a scope
+that already existed.** Base `a58447d9` read **2,776,361,361 Ir** against the
 thirtieth pass's recorded 2,776,361,994 (**633 Ir apart, 0.00002 %** — ties
 the tightest agreement in this file).
 
@@ -565,7 +565,7 @@ the tightest agreement in this file).
 | 2026-08-14 | The combat-damage pair takes one gather, not three (`3d15878b`) | 2,776,361,361 Ir | 2,749,500,214 Ir (**-0.967 %**) | Each (attacker, blocker) iteration already froze the layer system for its read-only prefix, dropped the scope, and then took two more whole-game gathers: `ironscale_replace`'s CR 614.9 `creature_redirects_damage_to_controller` (**15,650,898 Ir / 0.56 % over 4,450 calls, 3,517 each** — 91 % of `ironscale_replace`'s entire 17.2 M) and the CR 615 self-prevention pair, whose `damage_from_source_prevented_by_keyword` topped the `computed_permanent` caller table at **3,186 Ir over 4,450 calls**. Both are `&self`; only `apply_prevention_shields` sits between them and the scope, and it consumes shield charges and emits events without moving a layer input. Both loops now answer them inside the scope and hand `ironscale_replace` its redirect |
 | 2026-08-14 | The cleanup wear-off stops writing what is already clear (`da5b1f1c`) | 2,749,500,214 Ir | 2,684,396,951 Ir (**-2.368 %**) | The pass's largest row and the cheapest to write. `clear_end_of_turn_effects` has carried an `end_of_turn_effects_are_clear` guard since `15a9cce6`; its two siblings in the same function did not. The graveyard sweep walked every card in every graveyard once per player per turn writing two `= None`s over `None`, and the CR 514.2 damage sweep wrote `damage = 0` over every battlefield and phased-out permanent. **`--tree=caller` on `Arc::clone_from_ref_in` read `finish_cleanup` 72,631,289 Ir / 2.62 % over 36,768 calls (1,976 each) — after, 0 calls.** Graveyards only grow, so this got worse every turn of every game |
 | 2026-08-14 | The untap step stops clearing sickness that is already clear (`76804984`) | 2,684,396,951 Ir | 2,681,771,690 Ir (**-0.098 %**) | Same shape one step earlier: eleven sites write `summoning_sick = false` for every permanent their controller untaps, once per early-exit branch, and the flag is already `false` for all but last turn's arrivals. `CardInstance::clear_summoning_sickness` holds the guard in one place, like `clear_end_of_turn_effects`. Measured as its own container, not by arithmetic |
-| | **cumulative, thirty-first pass** | **2,776,361,361 Ir** | **2,681,771,690 Ir (-3.407 %)** | callgrind on the fixed six-game workload; golden traces byte-identical on every row, full suite green |
+| | **cumulative, session A** | **2,776,361,361 Ir** | **2,681,771,690 Ir (-3.407 %)** | callgrind on the fixed six-game workload; golden traces byte-identical on every row, full suite green |
 
 **What the pass leaves behind, and it is the twenty-eighth pass's filter
 with a new place to point it.** That pass found four CoW unshares by
@@ -592,8 +592,8 @@ real win. *A per-caller row is an attribution, not a measurement; when two
 changes land together and one looks wrong, rebuild them apart rather than
 reasoning about the tree.*
 
-**Thirty-first pass — the twenty-eighth pass's defect, at the five sites it
-did not reach.** Base `a58447d9` read **2,776,363,573 Ir** against the
+**Thirty-first pass, session B — the twenty-eighth pass's defect, at the
+five sites it did not reach.** Base `a58447d9` read **2,776,363,573 Ir** against the
 thirtieth pass's recorded 2,776,361,994 (**1,579 Ir apart, 0.00006 %**).
 
 | date | change | before | after | how measured |
@@ -601,7 +601,7 @@ thirtieth pass's recorded 2,776,361,994 (**1,579 Ir apart, 0.00006 %**).
 | 2026-08-14 | The cleanup sweep stops unsharing to write what is already there (`d33552e5`) | 2,776,363,573 Ir | 2,710,312,848 Ir (**-2.379 %**) | `cleanup_wear_off` ran three unconditional writes over CoW handles once a turn. `card.damage = 0` is a `DerefMut` on a `CardInstance`, i.e. a deep copy of the whole `CardData`, and almost every permanent is undamaged at cleanup: **36,768 `clone_from_ref_in` calls reached from `finish_cleanup` at ~1,976 Ir each, 72.6 M / 2.62 %**. The graveyard loop had the shape twice over — `&mut player.graveyard` unshares the seat's `PlayerData` before the loop starts, then each `granted_flashback_eot = None` deep-copies a card to write the `None` it held — and the three per-seat scalar resets below it kept the seat unshared once the loop stopped doing so. `finish_cleanup` inclusive **122.5 M / 4.41 % plus a separate 73.1 M / 2.63 %** of inlined `Arc` code, over 1,718 calls |
 | 2026-08-14 | The per-turn and per-combat card sweeps stop unsharing (`6b72c0e7`) | 2,710,312,848 Ir | 2,608,585,721 Ir (**-3.753 %**) | Five more sites of the same defect. `resolve_combat`'s provoke reset (`for c in &mut self.battlefield { c.must_block = None }`) was **68,212 `CardData` `make_mut`s, 55.5 M / 2.05 %**, and the count is exactly `4,474 combats x battlefield`; `do_untap`'s nine `summoning_sick = false` clear sites read the flag once into `clear_sick` instead (**207,272 `make_mut`s, 33.8 M / 1.25 %**) and `tapped = false` moved inside the `if card.tapped` already there; the turn-begin goad/detain/`attacked_this_turn` reset had six unconditional writes and a `retain` per permanent per turn; `end_turn`'s `may_play_until` sweep got one gate per zone (same shape as `078b8cef` — the libraries are ~35 cards a seat and reaching one through `Player` unshares the whole `PlayerData`); plus `may_spend_any_color_this_turn` / `kept_mana_this_turn` on the seats the turn-begin reset does not otherwise touch. `resolve_combat`'s card `make_mut`s **68,212 -> 23,168**, `do_untap`'s **207,272 -> 7,532** |
 | 2026-08-14 | Five transient `GameState` hash fields become `IdMap`/`IdSet` (`62e6dd42`) | 2,608,585,721 Ir | 2,603,084,794 Ir (**-0.211 %**) | Candidate (3)'s `GameState::clone` half, taking only the fields the serde gate does not apply to: `combat_damage_order`, `combat_damage_assignment`, `names_this_resolution`, `leaves_bf_lki`, `players_sacrificed_this_resolution` are all `#[serde(skip)]`. Each is empty or one-entry for almost the whole game and is cloned on every `GameState::clone` (`RawTable::clone` reads **268,816 table clones under `GameState::clone`**). `IdMap`/`IdSet` already carry the `HashMap` API the sites use, so only six initializers and one index expression needed touching. **The span also carries `1f68d1b0`** (the zone-walk reorder, candidate 11a, which claimed no Ir) **and `9ee83f5d`** (a guard in a `PermanentsDontUntap` branch no bench deck reaches, i.e. exactly zero here), so the number is for the two together |
-| | **cumulative, thirty-first pass** | **2,776,363,573 Ir** | **2,603,084,794 Ir (-6.241 %)** | callgrind on the fixed six-game workload. Behaviour: `--bench` reads `decisions` **193,232** byte-identical to Baseline, `turns_per_game` 26.98, stalls 0, determinism ok; the wide pool `--bench --threads 1 --games 300 --seed 11 --decks all` reads `decisions` **2,548,986** over 5,100 games and 17 archetypes, identical to every tip since `841dd40b`, with the recorded 6 draws and determinism ok. Full suite green |
+| | **cumulative, session B** | **2,776,363,573 Ir** | **2,603,084,794 Ir (-6.241 %)** | callgrind on the fixed six-game workload. Behaviour: `--bench` reads `decisions` **193,232** byte-identical to Baseline, `turns_per_game` 26.98, stalls 0, determinism ok; the wide pool `--bench --threads 1 --games 300 --seed 11 --decks all` reads `decisions` **2,548,986** over 5,100 games and 17 archetypes, identical to every tip since `841dd40b`, with the recorded 6 draws and determinism ok. Full suite green |
 
 **The recipe, because the twenty-ninth pass's one stopped resolving.** That
 pass retired the `=> …deref_mut` sort (`Player::deref_mut` is inlined now)
@@ -646,6 +646,47 @@ a `&mut self` call, so a scope over the pair would not be sound anyway.
 Candidate (11a)'s miss counter on `find_card_anywhere` was also not run:
 the function is 0.70 % at the tip and a perfect id→zone index cannot beat
 that, so it is ranked below the `CardCold` item the sweep turned up.
+
+**The thirty-first pass's merged tip — `54f5981b`, 2,577,862,811 Ir,
+-7.152 % from `a58447d9`. Not -9.4 %, which is what adding the two
+cumulatives gives.** The third collision this file has recorded and much
+the largest: the sessions independently pulled `cleanup_wear_off`
+(-2.368 % / -2.379 % — two measurements of the same defect, 0.011 % apart,
+which is the closest agreement two independent implementations have
+produced here), `do_untap`'s summoning-sick clears, the zone-walk family,
+*and* both wrote the `CardCold` candidate. Only the non-overlapping rows
+add: session A's combat-damage scope fold and session B's provoke reset,
+turn-begin sweep, `end_turn` zone sweep and `IdMap` conversion. **The
+difference between -9.4 % and -7.152 % is the overlap, and there is no way
+to know it without building the merge.**
+
+Three resolutions where both sides had a version, kept because each is a
+rule rather than a preference: a **named guarded helper beats a hoisted
+local** (`CardInstance::clear_summoning_sickness()` over a `clear_sick`
+binding — the guard travels with the field); a **zone-level gate and a
+per-card guard are not alternatives, they compose** (the cleanup graveyard
+loop takes A's per-seat stale check *and* B's per-card test, so one card
+carrying a grant no longer deep-copies the fifteen beside it); and a
+walker's visit order takes the **union of what each session learned about
+its callers**, not one session's list (`find_card_owner` looks at the stack
+first — two or three items — then hand/graveyard back to front, exile back
+to front, libraries last).
+
+Behaviour at the merged tip: `--bench` `decisions` **193,232**
+byte-identical, `turns_per_game` 26.98, stalls 0, determinism ok on all 160
+pairs; `--bench --threads 1 --games 300 --seed 11 --decks all` `decisions`
+**2,548,986** over 5,100 games and 17 archetypes, `turns_per_game` 20.99,
+6 draws (0.12 %), determinism ok on all 2,547 pairs. Full suite green.
+`clippy --workspace --all-targets` clean. **`overflow` was not re-run and
+is owed at this tip.**
+
+**And the two pool constants are both current — quote the command.**
+`--bench --threads 1 --games 300 --seed 11 --decks all` reads 2,548,986
+with 6 draws; `--decks all --games 300 --threads 3` reads 2,553,880 with 2.
+Session A read the second and concluded the first was stale; it is not, it
+is a different invocation. This file already carries that correction once
+(see Baseline). *The constant is not the check — a base-vs-tip byte-diff of
+a kept binary is.*
 
 ## Profile of record
 

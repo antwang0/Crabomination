@@ -17,15 +17,17 @@ reference and want their own triage pass):
 ## NEXT (handoff — rewrite each run, keep under 15 lines)
 
 Branch `claude/modern_decks`. **The thirty-first pass landed nine rows for
--9.4 % Ir across two concurrent sessions**, merged here and
-**re-measured at the merge** (see PERF's Log — neither session's cumulative
-describes the merged tip). Two shapes: **a periodic sweep writing values
-the fields already hold** — `cleanup_wear_off` (-2.379 / -2.368 %, both
-sessions found it), `resolve_combat`'s provoke reset, `do_untap`'s nine
-`summoning_sick` clears, the turn-begin reset, `end_turn`'s zone sweep — and
-**a `&self` read that gathers, taken inside a freeze scope the caller
-already had** (the combat-damage pair, -0.967 %). Plus five
-`#[serde(skip)]` hash fields to `IdMap`.
+-7.152 % Ir across two concurrent sessions** (2,776,363,573 ->
+**2,577,862,811** at the merged tip `54f5981b`). **Adding the two
+cumulatives gives -9.4 %; the merge reads -7.152 %, and the difference is
+the overlap** — there is no way to know it without building the merge.
+Two shapes: **a periodic sweep writing values the fields already hold** —
+`cleanup_wear_off` (-2.379 / -2.368 %, both sessions found it),
+`resolve_combat`'s provoke reset, `do_untap`'s nine `summoning_sick`
+clears, the turn-begin reset, `end_turn`'s zone sweep — and **a `&self`
+read that gathers, taken inside a freeze scope the caller already had**
+(the combat-damage pair, -0.967 %). Plus five `#[serde(skip)]` hash fields
+to `IdMap`.
 
 - **Best next move is PERF candidate (-2), `CardCold`** — the `PlayerCold`
   device on `CardData`, ~20 rare heap fields of 148. **It wants a whole run
@@ -47,6 +49,9 @@ already had** (the combat-damage pair, -0.967 %). Plus five
   and whose function is an engine function names a deep-copier, with its
   call count. ~1,900 Ir/call is `CardData`, ~900 `PlayerData`, ~30 means
   already unique. `game/` is swept clean; `server/` and `effects/` are not.
+- **Behaviour at the merged tip**: `--bench` `decisions` **193,232**,
+  `turns_per_game` 26.98, stalls 0; wide pool **2,548,986** / 20.99 /
+  6 draws; determinism ok on both; full suite green; clippy clean.
 - **Quote the command with any pool constant.** `--bench --threads 1
   --games 300 --seed 11 --decks all` reads **2,548,986 / 6 draws**;
   `--decks all --games 300 --threads 3` reads **2,553,880 / 2 draws**. Both
