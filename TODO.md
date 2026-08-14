@@ -16,40 +16,44 @@ reference and want their own triage pass):
 
 ## NEXT (handoff — rewrite each run, keep under 15 lines)
 
-Branch `claude/modern_decks`. **The thirtieth pass landed three rows for
--1.990 % Ir** (2,832,747,493 -> 2,776,361,994 at the merged tip
-`a4960740`), having **merged a concurrent session that pulled the same top
-candidate** — see PERF's collision note. All three rows are one shape:
-**a linear scan that visited its cases in the wrong order.** The zone scan
-looked at ~70 library cards before the stack (-0.583 %); the gather's last
-board pass tested three always-false flags per card when it could walk
-`sa_cards` (-1.250 %); `effective_mana_abilities` re-found the card its
-callers were standing on (-0.158 %).
+Branch `claude/modern_decks`. **The thirty-first pass landed three rows for
+-6.241 % Ir** (2,776,363,573 -> 2,603,084,794 at `62e6dd42`), all one
+shape: **a periodic sweep writing a default over a CoW handle, and an
+`iter_mut` taken to decide whether anything needed writing.** The
+twenty-eighth pass called this class closed after four rows; six more sat
+in `stack.rs`/`combat.rs` — `cleanup_wear_off` (-2.379 %), `resolve_combat`'s
+provoke reset + `do_untap`'s nine `summoning_sick` clears + the turn-begin
+reset + `end_turn`'s zone sweep (-3.753 %), then five `#[serde(skip)]` hash
+fields to `IdMap` (-0.211 % over a span that also carries candidate 11a).
 
-- **The wide checks are green at the merged tip** and are the number to
-  trust: `--decks all` reads `decisions` **2,548,986**, `--bench` **193,232**,
-  `turns_per_game` 26.98, stalls 0, determinism ok. The other session's
-  base-vs-tip byte-diff method (`cp` the pre-pass binary, diff `--decks all
-  --games 300 --threads 3` output) beats a recorded constant — use it.
-  `overflow` is clean **at the merged tip** — 20,400 games over seeds
-  11/12/13, no panic and no arithmetic overflow.
-- **Best next moves**, in order: PERF candidate **(11a)**, the zone-walk
-  family — `find_card_zone` / `find_card_owner` still put the libraries
-  third, and a miss counter on `find_card_anywhere` is owed before anyone
-  designs an id→zone index; then **(-1)** the CoW sweep via `--tree=caller`
-  on `Arc::make_mut`; then (11)'s unfinished enumeration.
-  **(13)/(5) the `Keyword` bitset is costed and ranked down** — ~0.6 %
-  addressable against 7,716 catalog literals; don't re-derive it.
-- **Two sessions on this branch at once is now normal.** Fetch before the
-  first commit, not just before the push: this run resolved the same
-  candidate twice and cost a re-measurement of the merged tip.
+- **Behaviour is green at the tip**: `--bench` `decisions` **193,232**,
+  `--decks all` **2,548,986** over 5,100 games, turns 26.98 / 20.99, stalls
+  0 / 6 draws, determinism ok, full suite green. `overflow` was **not**
+  re-run this pass — owed at the tip (~16 min, seeds 11/12/13).
+- **Best next move is PERF candidate (-2), `CardCold`** — the `PlayerCold`
+  device on `CardData` (148 fields, 28 heap `Vec`s). The remaining
+  `CardData` deep-copy budget is **~105 M / 4.0 %** and none of it is
+  avoidable, so it is cost-per-clone now; ~1.2 % expected, membership list
+  and the +1.23 % over-widening warning are in the candidate. Then (11)'s
+  unfinished `_of(&CardInstance)` enumeration. **(13)/(5) the `Keyword`
+  bitset stays ranked down** (~0.6 % against 7,716 catalog literals) and
+  **(11a) is closed**; don't re-derive either.
+- **The recipe that found this pass**, since the `deref_mut` sort is dead:
+  `--tree=caller` on `Arc::make_mut`, then read every `<` row whose *file*
+  is `alloc/src/sync.rs` and whose *function* is an engine function.
+  ~1,900 Ir/call is `CardData`, ~900 is `PlayerData`, ~30 means already
+  unique. `finish_cleanup` sat there at 2.62 % and is invisible everywhere
+  else.
+- **Two sessions on this branch at once is normal.** Fetch before the first
+  commit, not just before the push.
 - Env: no `cargo-nextest`; `cargo test -p crabomination -p
-  crabomination_tests` is the gate (~40 s once built). `profiling-fast`
-  engine ~7 min warm and **~2x that with a second cargo running** — 4 cores,
-  so serialize builds. Callgrind ~4 min, `overflow` ~16 min. Client apt deps
-  install in a minute (below); `cargo clippy --workspace` needs them.
-- Trackers: PERF **~1.2k** — passes 26-28 are table rows now like 20-25; the
-  last uncompacted prose is the pass 29/30 blocks, current until they age.
+  crabomination_tests` is the gate (~40 s once built, ~5 min to build).
+  `profiling-fast` engine ~3 min warm solo — serialize builds, 4 cores.
+  Callgrind ~4 min and contention-immune, so it can run beside a build.
+  Client apt deps install in a minute (below); `cargo clippy --workspace`
+  needs them.
+- Trackers: PERF **~1.3k** — passes 26-28 are table rows like 20-25; the
+  uncompacted prose is now the pass 29/30/31 blocks, current until they age.
 
 ## Environment note
 
@@ -93,44 +97,28 @@ someone wants a rules pass; none of them can desynchronize a run any more.
 
 Found by profiling. Not speculative — the code is quoted.
 
-*(No open entries. The sibling `counters` `HashMap`-order defect was fixed
-in `df87c2d1`: `CardData.counters` is now a `CounterBag`, an
-insertion-ordered `Vec` newtype, because `Effect::RemoveAnyCounter` reads
-"the first present kind" off the map and six other sites collect the kinds
-into a `Vec` and act on them in order — `RandomState` reseeds that order per
-process, so two runs on one seed could diverge.
-`cr_122_counter_bag_order_is_insertion_order` pins it. **That audit is now
-done and its one finding is fixed.** The survey — every `HashMap`/`HashSet`
-field of `GameState`, `ColdState` and `Player`, asking of each consumer
-whether it sums / maxes (safe), tests membership or counts (safe), looks up
-by key (safe), or `find`s / `collect`s / iterates into an ordered structure
-(not) — turned up exactly one leak in 31 fields:
-`dispatch_triggers_for_events` walked `died_card_snapshots.values()`
-pushing `TriggerCandidate`s, and a candidate's *position* decides where its
-ability lands on the stack, so two dying creatures with LKI triggers
-(Enrage on lethal damage, a granted "when this dies") stacked in
-`RandomState` order — different in every process. Fixed by making the field
-an `IdMap`, the insertion-ordered `Vec` newtype in `game/types.rs`; die
-order is also the order CR 603.3b wants. Everything else was keyed lookup,
-membership, or an order-independent fold — including the three sites that
-*look* risky and are not: `encode.rs` sums `block_map` into a
-`blocker_sums` map read by key, `bot.rs`'s two `block_map.keys().collect()`
-are `contains` + `len` only, and `combat.rs`'s
-`block_map.keys().for_each(want)` decides which permanents get computed,
-never what a reader sees. The `keyword_counters` `HashMap`-order defect was fixed
-in `86670250`: `KeywordCounters` is an insertion-ordered `Vec` newtype, which
-sidesteps `Keyword` having no `Ord`, and `cr_122_1b_keyword_counter_grant_
-order_is_insertion_order` pins it. The actor-sampler panic was fixed in
-`a67c5b9a`. Mirror Gallery aborting the whole SBA sweep was fixed in
-`9db8557c` — CR 704.5j's `LegendRuleDoesntApply` check sat inside the
-legend-group block and used `return Vec::new()`, so a board with one out
-skipped every later state-based action (deaths, loss conditions, the Aura
-and Equipment sweeps) and discarded the sweep's events; the game could not
-be won or lost. Regression test in `classic_sets/bok`. **The filter that
-found it: a `return` inside a `let … = { … };` initializer block**, which
-exits the whole function rather than the block. The workspace was swept for
-the class — the other nine hits are all `Err` / `let-else` guards that
-legitimately abort their function, so this was the only one.)*
+*(No open entries.* The audits that closed here are an index now; `git log
+-S` on each hash has the prose. `df87c2d1` — `CardData.counters` becomes
+the insertion-ordered `CounterBag` (`RemoveAnyCounter` read "the first
+present kind" off a `RandomState`-seeded map); `86670250` — the same for
+`KeywordCounters`; `ea8cc1fd` — `died_card_snapshots` becomes `IdMap`,
+because a `TriggerCandidate`'s position decides stack order and two LKI
+deaths stacked differently per process. **That was the survey's one leak in
+31 fields** — every `HashMap`/`HashSet` on `GameState` / `ColdState` /
+`Player`, asked of each consumer whether it sums, tests membership, looks
+up by key (all safe) or `find`s / `collect`s / iterates into an ordered
+structure (not). The three that *look* risky and are not, so nobody
+re-checks them: `encode.rs` sums `block_map` into a map read by key,
+`bot.rs`'s two `block_map.keys().collect()` are `contains` + `len`, and
+`combat.rs`'s `block_map.keys().for_each(want)` decides which permanents
+get computed, never what a reader sees. Also `a67c5b9a` (actor-sampler
+panic) and `9db8557c` (Mirror Gallery aborting the whole SBA sweep — CR
+704.5j's check used `return Vec::new()` inside a `let … = { … };`
+initializer, so one board skipped every later state-based action and the
+game could not be won or lost; regression test in `classic_sets/bok`).
+**The filter that found the last one — a `return` inside a `let … = { … };`
+initializer** — was swept workspace-wide: the other nine hits are `Err` /
+let-else guards that legitimately abort their function.)*
 
 **Open: the panic/unwrap sweep of the self-play path.** ~183
 `unwrap()`/`expect()` under `game/` + `bot.rs`. It wants **triage, not a
