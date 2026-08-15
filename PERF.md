@@ -127,6 +127,42 @@ contention-immune, which makes it the better first look.
 
 ## Baseline
 
+**NOT re-anchored at the thirty-sixth pass's tip (`b1e62b23`), and the
+reading is here because it is the file's third and sharpest demonstration
+of why.** Same `--bench`, `release` + mimalloc, three runs:
+
+```text
+games_per_s          112.09 / 109.68 / 112.60   (mean 111.46)
+games_per_s_th       36.56 - 37.53
+host_cpu             Intel(R) Xeon(R) Processor @ 2.80GHz    <- 2.10GHz at the anchor
+host_calib_ms        51 / 48 / 52                            <- 55-90 at the anchor
+decisions            193,232 byte-identical on all three
+turns_per_game       26.98
+stalls               0 (0.00 %), stalls_by cap 0 / stuck 0 / draw 0
+peak_rss_mib         29.2 - 31.0
+determinism          ok (all pairs split, on all 3 runs)
+```
+
+**That is -32 % against the 163.62 anchor, on a change that callgrind
+measures at -0.879 %.** It is the box, and this time the box says so out
+loud: `host_cpu` reports a *different processor string* and `host_calib_ms`
+reads **faster** (48-52 against 55-90) while three-thread throughput is a
+third lower — the same single-threaded-probe blind spot recorded at the
+anchor, now with the host difference visible in the CPU string too. Core
+count is 4 on both.
+
+**Every invariant is identical, and one of them is decisive**: `decisions`
+is **193,232 byte-identical**, the anchor's exact figure, so the two
+readings performed the same work. `games_per_s_th` fell uniformly by ~30 %,
+which is a per-core-speed change, not something a code change that *removes*
+20.6 M instructions can do. The callgrind base for this pass was built and
+run on **this** container and reproduced the recorded `bdc11c86` figure to
+within 3,123 Ir, so the -0.879 % is attributed on one box in one sitting.
+
+Nothing to investigate; the anchor below stands. **Do not replace it with
+111.46** — a baseline is only refreshed alongside an intentional, explained
+change to what the program does, and this is neither.
+
 **Re-anchored 2026-08-15 at `bdc11c86`** (`release`, mimalloc — the shipped
 configuration), the thirty-fifth pass's tip.
 
