@@ -2559,6 +2559,40 @@ impl std::ops::Deref for AbilityRef<'_> {
     }
 }
 
+/// How `activate_ability_inner` holds the ability it is activating for the
+/// rest of the call: a printed one as the definition's `Arc` plus its index,
+/// a synthesized one (grant, intrinsic land mana) by value.
+///
+/// The call needs `&mut self` from here on, so the ability cannot stay
+/// borrowed out of `self` — it used to be deep-cloned for that, an `Effect`
+/// and every cost field per activation. An `Arc` clone answers the same
+/// borrow question for a refcount.
+enum HeldAbility {
+    Printed(std::sync::Arc<crate::card::CardDefinition>, usize),
+    Owned(crate::effect::ActivatedAbility),
+}
+
+impl HeldAbility {
+    fn get(&self) -> &crate::effect::ActivatedAbility {
+        match self {
+            HeldAbility::Printed(def, i) => &def.activated_abilities[*i],
+            HeldAbility::Owned(a) => a,
+        }
+    }
+
+    /// The printed ability at `index` on a card in a non-battlefield zone.
+    fn printed_of(
+        card: Option<&crate::card::CardInstance>,
+        index: usize,
+    ) -> Result<Self, GameError> {
+        let card = card.ok_or(GameError::AbilityIndexOutOfBounds)?;
+        if index >= card.definition.activated_abilities.len() {
+            return Err(GameError::AbilityIndexOutOfBounds);
+        }
+        Ok(HeldAbility::Printed(std::sync::Arc::clone(&card.definition), index))
+    }
+}
+
 fn effect_produces_color(effect: &Effect, color: ManaColor) -> bool {
     match effect {
         Effect::AddMana { pool, .. } => match pool {
@@ -13168,37 +13202,42 @@ impl GameState {
                 bf_cp.as_ref().unwrap()
             }};
         }
-        let ability: crate::effect::ActivatedAbility = if source_in_gy {
+        let held: HeldAbility = if source_in_gy {
             let owner = source_owner.unwrap();
             let card = self.players[owner].graveyard.iter()
                 .find(|c| c.id == card_id)
                 .ok_or(GameError::AbilityIndexOutOfBounds)?;
             let printed_count = card.definition.activated_abilities.len();
             if ability_index < printed_count {
-                card.definition.activated_abilities[ability_index].clone()
+                HeldAbility::Printed(
+                    std::sync::Arc::clone(&card.definition),
+                    ability_index,
+                )
             } else {
                 // Static-granted graveyard abilities (Varolz's scavenge).
-                self.graveyard_granted_abilities(owner, card)
-                    .into_iter()
-                    .nth(ability_index - printed_count)
-                    .ok_or(GameError::AbilityIndexOutOfBounds)?
+                HeldAbility::Owned(
+                    self.graveyard_granted_abilities(owner, card)
+                        .into_iter()
+                        .nth(ability_index - printed_count)
+                        .ok_or(GameError::AbilityIndexOutOfBounds)?,
+                )
             }
         } else if source_in_hand {
             let owner = source_owner.unwrap();
-            self.players[owner].hand.iter()
-                .find(|c| c.id == card_id)
-                .and_then(|c| c.definition.activated_abilities.get(ability_index).cloned())
-                .ok_or(GameError::AbilityIndexOutOfBounds)?
+            HeldAbility::printed_of(
+                self.players[owner].hand.iter().find(|c| c.id == card_id),
+                ability_index,
+            )?
         } else if source_in_exile {
-            self.exile.iter()
-                .find(|c| c.id == card_id)
-                .and_then(|c| c.definition.activated_abilities.get(ability_index).cloned())
-                .ok_or(GameError::AbilityIndexOutOfBounds)?
+            HeldAbility::printed_of(
+                self.exile.iter().find(|c| c.id == card_id),
+                ability_index,
+            )?
         } else if source_in_command {
-            self.players[source_owner.unwrap()].command.iter()
-                .find(|c| c.id == card_id)
-                .and_then(|c| c.definition.activated_abilities.get(ability_index).cloned())
-                .ok_or(GameError::AbilityIndexOutOfBounds)?
+            HeldAbility::printed_of(
+                self.players[source_owner.unwrap()].command.iter().find(|c| c.id == card_id),
+                ability_index,
+            )?
         } else {
             let pos = self
                 .battlefield
@@ -13286,11 +13325,12 @@ impl GameState {
                 *creature_mana_before = Some(self.players[p].mana_pool.clone());
             }
             if ability_index < printed_count {
-                let raw = self.battlefield[pos]
-                    .definition
-                    .activated_abilities[ability_index]
-                    .clone();
-                if stripped && !is_mana_ability(&raw.effect) {
+                // The definition is behind an `Arc`, so holding it costs a
+                // refcount where cloning the ability out of it cost a deep
+                // copy of an `Effect` and every cost field — 18,386 of them
+                // per six games, nearly all a land tapping for mana.
+                let def = std::sync::Arc::clone(&self.battlefield[pos].definition);
+                if stripped && !is_mana_ability(&def.activated_abilities[ability_index].effect) {
                     return Err(GameError::AbilityIndexOutOfBounds);
                 }
                 // CR 305.6 / 612 — a basic's intrinsic mana ability follows its
@@ -13298,21 +13338,24 @@ impl GameState {
                 if land_mana_lost {
                     return Err(GameError::AbilityIndexOutOfBounds);
                 }
-                raw
+                HeldAbility::Printed(def, ability_index)
             } else if ability_index < printed_count + granted.len() {
                 let g = granted[ability_index - printed_count].clone();
                 // Stripped permanents keep granted mana abilities only.
                 if stripped && !is_mana_ability(&g.effect) {
                     return Err(GameError::AbilityIndexOutOfBounds);
                 }
-                g
+                HeldAbility::Owned(g)
             } else if ability_index < printed_count + granted.len() + intrinsic.len() {
                 // Intrinsic basic-land mana abilities survive stripping.
-                intrinsic[ability_index - printed_count - granted.len()].clone()
+                HeldAbility::Owned(
+                    intrinsic[ability_index - printed_count - granted.len()].clone(),
+                )
             } else {
                 return Err(GameError::AbilityIndexOutOfBounds);
             }
         };
+        let ability = held.get();
 
         // {X} activation costs ({X}, {T}: … — Berta, Imbraham): a
         // hand-paying activator who didn't send an X picks one via a
@@ -14607,7 +14650,7 @@ impl GameState {
 
         // Pre-flight remove-counters-from-among gate (Hopeful Initiate): the
         // matching permanents you control must together carry `count` counters.
-        if let Some((kinds, count, filter)) = counter_drain_cost(&ability) {
+        if let Some((kinds, count, filter)) = counter_drain_cost(ability) {
             let have: u32 = self
                 .battlefield
                 .iter()
@@ -15519,7 +15562,7 @@ impl GameState {
         // Remove-counters-from-among-cost (Hopeful Initiate): drain `count`
         // counters distributed across matching permanents you control. The
         // auto-picker takes them lowest-power-first (validated pre-flight).
-        if let Some((kinds, count, filter)) = counter_drain_cost(&ability) {
+        if let Some((kinds, count, filter)) = counter_drain_cost(ability) {
             let mut picks: Vec<(CardId, i32)> = self
                 .battlefield
                 .iter()
@@ -15857,9 +15900,12 @@ impl GameState {
                     count: cost_sac_count,
                     mana_value: cost_sac_mv,
                     card: cost_sac_card,
-                    body: Box::new(ability.effect),
+                    // Cloned rather than moved: `ability` is borrowed out of
+                    // `held` now. Only the non-mana path reaches here, and it
+                    // is about to put the body on the stack.
+                    body: Box::new(ability.effect.clone()),
                 },
-                None => ability.effect,
+                None => ability.effect.clone(),
             };
             // Carry the Station-tapped creature's power into resolution
             // (CR 702.184a) so `Value::TappedForCostPower` reads it.
