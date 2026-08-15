@@ -16,51 +16,47 @@ reference and want their own triage pass):
 
 ## NEXT (handoff — rewrite each run, keep under 15 lines)
 
-Branch `claude/modern_decks`. **Pass 39: `-2.255 %` Ir in three commits**,
-2,186,153,036 -> **2,136,847,762**. All three rows came off a **fresh
-profile**, not the candidates list — that list had been worked down to
-0.2-0.7 % sites while rows of **4.94 %** and **4.66 %** sat unread.
+Branch `claude/modern_decks`. **Pass 40: `-6.672 %` Ir in four commits**,
+2,136,851,050 -> **1,994,280,399**, the largest pass since the teens. All
+four rows are **allocation**, and none came off the candidates list.
 
-- **A gate that is cheap per call and asked per element is a row, and it
-  never appears as an expensive function.** The dispatcher paid ~114 Ir x
-  945,812 permanents to decide a Mountain has no trigger;
-  `effective_mana_abilities_of` paid a mutex + `Arc` clone + a walk of the
-  gathered set 54,570 times for a question about the *board*. **The sort
-  that finds these is `--auto=yes` over the hot function, reading the *call
-  counts* on its callee lines, not the Ir.**
-- **Read the file-attribution split before ranking a function.** Self cost
-  sitting in `vec/mod.rs` + `raw_vec` + `non_null` + `slice/iter` means
-  walking and allocating; every engine-source line then looks tiny and the
-  auto-annotation under-reports the function ~3x.
-- **Count a shared object's constructions, not its uses, before hoisting a
-  cost into it.** Putting the land-type gate on `GrantScan` at build time
-  read **+0.206 %** and was reverted: `granted_abilities_for` builds a fresh
-  scan *per card*, 201,834 times per six games.
-- **Take (-10) next: allocation.** 1,416,231 allocs / 1,468,562 frees in six
-  games, ~19 % in malloc/free/memcpy, `spec_from_iter_nested` **21.94 %
-  inclusive**. **Not** via `cast_candidates`' `flat_map` — both its
-  allocations were removed this run and measured **-0.049 %**, because
-  `can_afford_in_state` filters the hand before the body runs; that row and
-  `mana_source_table`'s 4.66 % are largely the same Ir under two names.
-  Attack the mana table. Then (-11), the keyword-grant walk at 1.45 %.
-- **Do not compare `--bench` absolutes across sittings — it is the box.**
-  This sitting's host was **2.10 GHz / calib 71** against the recorded tip's
-  2.80 / 45. Callgrind is the arbiter under ~5 %; it drifted **2,162 Ir**
-  against the recorded tip.
-- **Green at the tip**: suite **18,645** over 11 binaries, all five golden
-  traces identical, clippy clean, bench output byte-identical at every step,
-  `--bench` invariants byte-identical with the anchor (`decisions`
-  **193,232**, turns 26.98, stalls 0, determinism ok). **No encoding change
-  — no net needs retraining as of this tip.**
-- **Fetch before the first commit.** Six collisions on PERF.md so far.
+- **A `Cow<BigStruct>` is a `BigStruct` in every element.** `Cow` is sized
+  for the owned side, so a *borrowed* `ActivatedAbility` still cost a
+  ~600-byte allocation + memcpy per element. Two lists in the program were
+  built that way, both per permanent inside a battlefield loop:
+  `effective_mana_abilities_of` (**-0.867 %**) and `usable_abilities`
+  (**-3.990 %**, six generators over the same board every tick — the row of
+  the pass). `AbilityRef` borrows the printed side and boxes the synth one.
+  **Grep `Cow<` and `-> Vec<` on any type holding an `Effect`.**
+- **Hoisting a per-element cost to the loop head must be lazy.** The same
+  `available_mana` hoist reads **+0.350 %** eager and **-0.700 %** behind a
+  `OnceCell`: `pick_combat_trick` runs every tick and usually filters its
+  hand to nothing first. Count the loops that reach zero elements.
+- **A predicate that deep-clones** — `is_free` cloned an `ActivatedAbility`
+  per activation (**-1.252 %**). A cheap veto in front beats a rewrite and
+  keeps the drift-proof check behind it.
+- **Take (-12) next: `auto_tap_for_cost_inner`, 16.99 % inclusive**, the
+  largest engine subtree and never looked at. 242 M of it is
+  `activate_ability` over 18,340 calls; **18,832 activations are a land
+  tapping for mana**, so anything the full activation path does that a mana
+  ability cannot need is paid 18,832 times. **(-11) is corrected in PERF.md
+  and is now a poor pick** — its walks are nearly all that same land tap.
+- **Green at the tip**: suite **18,645** over 11 binaries, five golden
+  traces identical, clippy clean, `--bench` invariants byte-identical with
+  the anchor (`decisions` **193,232**, turns 26.98, stalls 0, determinism
+  ok). **No encoding change — no net needs retraining as of this tip.**
+- **First `release` reading in five passes: 153.17 games/s mean** against
+  110.34 at pass 37's tip on the same host class (calib 44-46 vs 48-51).
+  That covers passes 38-40 together (-11.1 % Ir) and cannot be split among
+  them. The 163.62 anchor is a different box and still stands apart.
 - Env: no `cargo-nextest`; `cargo test -p crabomination -p
-  crabomination_tests` is the gate (~7 min cold, ~40 s built).
-  `profiling-fast` engine **10 min cold, ~3.3 min incremental** — cheaper
-  than the ~12 min the last handoff recorded, so budget 5-6 measured
-  iterations. Callgrind ~1 min, contention-immune. Workspace clippy needs
-  the client's apt deps (see below) or it fails in `wayland-sys`.
-- Trackers: TODO ~1.0k, ROADMAP 0.66k, PERF ~2.5k after folding passes 32-34
-  to index rows. **PERF's passes 35-36 are the next fold.**
+  crabomination_tests` is the gate (~9 min cold, ~40 s built). Engine
+  `profiling-fast` rebuild **~3.3 min**, `crabomination_base` touch ~10 min,
+  `release` ~28 min. Callgrind ~3 min, contention-immune. Budget 5-6
+  measured iterations. **Fetch before the first commit** (seven PERF.md
+  collisions so far).
+- Trackers: TODO ~1.0k, ROADMAP 0.66k, PERF ~2.5k after folding passes
+  35-36 to index rows. **PERF's passes 37-38 are the next fold.**
 
 ## Environment note
 
