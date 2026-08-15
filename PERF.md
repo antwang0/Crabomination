@@ -1624,12 +1624,19 @@ claim; but a `.collect()` removed is removed under either allocator. The
 three rows to read next, in order, all from the thirty-ninth pass's profile:
 
 * **`bot::cast_candidates`, 108,744,110 / 4.97 % over 7,024 calls**, the
-  largest `.collect()` in the program. The sixteenth pass already took its
-  specialty blocks and left a note that *the next attempt belongs in the
-  plain-cast `flat_map`* — that is this row. Two allocations per candidate
-  are visible in the source without a profile: `modes: Vec<Option<usize>>`
-  is `vec![None]` for every non-modal card, and the inner `out` is a
-  one-element `vec![]` per (card, mode). Both are `iter::once`-shaped.
+  largest `.collect()` in the program — **and its allocations are not where
+  the cost is. Measured 2026-08-15 and reverted at -0.049 %.** The
+  sixteenth pass's note said *the next attempt belongs in the plain-cast
+  `flat_map`*, and the two allocations there are real (`modes:
+  Vec<Option<usize>>` is `vec![None]` for every non-modal card; the inner
+  `out` is a one-element `vec![]` per candidate). Both were removed — an
+  iterator for the first, `[Option<GameAction>; 2]` for the second — and the
+  whole thing is **-1,048,436 Ir**, because `can_afford_in_state` filters
+  the hand *before* the `flat_map` and only one to three cards reach it per
+  tick. **The 4.97 % is the filter, not the body**: `can_afford_in_state`
+  reaches `mana_source_table`, which is the 4.66 % row on the same table, so
+  the two rows are largely the same Ir counted under two names. Attack the
+  mana table; do not re-take the `flat_map`.
 * **`mana_source_table_inner`'s five-colour loop**: `effect_produces_color`
   **233,940 calls / 9,965,844 Ir**, because the loop is `for col in ALL {
   abilities.iter().find(…) }` — five passes over the abilities where one

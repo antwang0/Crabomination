@@ -38,10 +38,11 @@ profile**, not the candidates list — that list had been worked down to
   scan *per card*, 201,834 times per six games.
 - **Take (-10) next: allocation.** 1,416,231 allocs / 1,468,562 frees in six
   games, ~19 % in malloc/free/memcpy, `spec_from_iter_nested` **21.94 %
-  inclusive**. `bot::cast_candidates` is **4.97 % over 7,024** and its
-  plain-cast `flat_map` allocates a `vec![None]` and a one-element `vec![]`
-  per candidate — both `iter::once`-shaped. Then (-11), the keyword-grant
-  walk at 1.45 %.
+  inclusive**. **Not** via `cast_candidates`' `flat_map` — both its
+  allocations were removed this run and measured **-0.049 %**, because
+  `can_afford_in_state` filters the hand before the body runs; that row and
+  `mana_source_table`'s 4.66 % are largely the same Ir under two names.
+  Attack the mana table. Then (-11), the keyword-grant walk at 1.45 %.
 - **Do not compare `--bench` absolutes across sittings — it is the box.**
   This sitting's host was **2.10 GHz / calib 71** against the recorded tip's
   2.80 / 45. Callgrind is the arbiter under ~5 %; it drifted **2,162 Ir**
