@@ -50,6 +50,17 @@ five rows are **allocation**, and none came off the candidates list.
   `activate_ability_inner` cloned the whole `ActivatedAbility` per
   activation to free `self`; `CardInstance::definition` is already an
   `Arc<CardDefinition>`, so holding it costs a refcount (**-0.978 %**).
+- **Ready-to-measure, already written and checked once (2026-08-15), then
+  dropped unmeasured for lack of budget — redo it in one pass:**
+  `activate_ability_inner` calls `is_mana_ability(&ability.effect)` **13
+  times** on the same `ability` (bound once at `actions.rs` `let ability =
+  held.get();`, never rebound). It is a two-pass recursive walk of the effect
+  tree. Hoist to one `let ability_is_mana = ...;` right after that binding and
+  replace all 13 (the last one, `let is_mana_ab = ...`, becomes redundant).
+  `cargo check -p crabomination` was clean. Directly on the (-12) path — a
+  land tapping for mana reaches most of those gates and land taps are the bulk
+  of activations. **Beware a blanket `s/is_mana_ab/.../` — it eats
+  `is_mana_ability` and `is_mana_ability_public` across the workspace.**
 - **Take (-12) next: `auto_tap_for_cost_inner`, 16.99 % inclusive**, the
   largest engine subtree and never looked at. 242 M of it is
   `activate_ability` over 18,340 calls; **18,832 activations are a land
