@@ -3276,7 +3276,15 @@ impl GameState {
                     .get(&attacker)
                     .cloned()
                     .unwrap_or_default();
-                let computed = self.compute_battlefield();
+                // The same computed view the resolver reads, not the whole
+                // board: every id this branch looks up is a combat
+                // participant, and `combat_damage_computed` already falls
+                // back to the full view for the one whole-board consumer
+                // (`free_division_targets`' Butcher Orgg half). Computing the
+                // board here instead cost 16,939 Ir a call against ~4,900 for
+                // the subset, and left the decision path reading a different
+                // view from the resolver that consumes its answer.
+                let computed = self.combat_damage_computed();
                 let atk_cp = computed.iter().find(|c| c.id == attacker);
                 let deathtouch = atk_cp
                     .is_some_and(|c| c.keywords.contains(&Keyword::Deathtouch));
