@@ -131,6 +131,16 @@ contention-immune, which makes it the better first look.
 
 ## Baseline
 
+**NOT re-anchored at the thirty-ninth pass's tip, and the host says why.**
+The three commits are behaviour-preserving and sum to **-2.255 % Ir** under
+callgrind — inside the bench's noise band, and this sitting's box is not the
+one the anchor was taken on: `host_cpu` reads **2.10 GHz** against the
+recorded tip's 2.80 GHz and `host_calib_ms` **71** against 45. A `--bench`
+absolute here would measure the box. What was checked at the tip is the
+**invariants**, and they are byte-identical with the anchor — `decisions`
+**193,232**, `turns_per_game` 26.98, stalls 0, determinism ok. The block is
+in the thirty-ninth pass's **Log** entry. The anchor stands at 163.62.
+
 **NOT re-anchored at the thirty-eighth pass's tip either, and this time no
 `release` reading was taken at all.** The pass is one behaviour-preserving
 commit measured at **-2.525 % Ir** under callgrind, which is inside the
@@ -665,6 +675,101 @@ the table above is safe to compress:
 
 
 ## Log
+
+### Thirty-ninth pass — two loops stop asking a board-level question per element
+
+Cumulative: **2,186,153,036 -> 2,136,847,762 Ir, -49,305,274 / -2.255 %**, in
+three commits, behaviour-preserving (suite **18,645** green over 11 binaries,
+all five golden traces identical, clippy clean). All readings
+`profiling-fast --no-default-features`, callgrind, `--a gang --b gang --games
+6 --threads 1 --seed 1 --decks fixed`, built and run in one sitting; bench
+output byte-identical at every step. The base read **2,186,153,036** against
+the **2,186,150,874** this file recorded for `0aa1342e` — **2,162 Ir apart on
+a 2.19 G workload**.
+
+| step | before -> after | what |
+|---|---|---|
+| A | 2,186,153,036 -> 2,145,028,678 (**-1.881 %**) | the trigger dispatcher's per-card loop early-outs on a definition with no trigger |
+| B | 2,145,028,678 -> 2,149,437,144 (**+0.206 %**) | **reverted** — the same gate as B', hoisted into `grant_scan` instead |
+| B' | 2,145,028,678 -> 2,141,951,957 (**-0.143 %**) | the CR 305.6 land-type question moves to the three loops that reuse a scan |
+| C | 2,141,951,957 -> 2,136,847,762 (**-0.238 %**) | the empty dispatch stops synthesizing |
+
+**The profile picked all of these and the candidates list picked none of
+them.** That list had been worked down to sites of 0.2-0.7 %; the two rows
+taken here read **4.94 %** and **4.66 %** and had never been looked at,
+because neither is an expensive *function* — both are cheap questions asked
+in a loop. **A gate that is cheap per call and asked per element is a row,
+and it does not show up as an expensive function.** The sort that finds them
+is `--auto=yes` over the hot function and reading the **call counts** on its
+callee lines rather than the Ir: `54,570x` next to a per-table helper is the
+finding, not the 15.9 M beside it.
+
+**(A) `dispatch_triggers_for_events` was the largest engine function on the
+tip** — **~108 M self / 4.94 % over 52,332 dispatches**, inclusive
+169,290,522 / 7.74 %. Only 33.7 M of the self cost is attributed to
+`game/mod.rs`; the rest is inlined `vec/mod.rs`, `ptr/non_null.rs`,
+`slice/iter/macros.rs` and `raw_vec/mod.rs`. **Read the file-attribution
+split before ranking a function**: one whose self cost is mostly those four
+is walking and allocating, its engine-source lines will each look tiny, and
+the auto-annotation under-reports it ~3x. The per-card body ran **945,812
+times** (52,332 x ~18 permanents) and reached its four-way `is_empty()`
+`continue` having read `stripped_ids`, taken `triggered_abilities.len()`,
+built and dropped two `Vec`s and evaluated three gate branches — **~114 Ir
+per permanent** to decide that a Mountain has no triggered ability. The three
+board-level gates the loop already computes are asked once as `no_grants`;
+with two definition loads that is the whole question. Self falls to **~71 M /
+3.31 %**.
+
+**(B/B') The finding, the wrong home for it, and the rule that comes out.**
+`mana_source_table`'s `.collect()` was **101,842,310 / 4.66 % over 7,370
+calls** — the second-largest `spec_from_iter` row in the program — and the
+auto-annotation puts **15,899,355 Ir over 54,570 calls** of `frozen_effects`
+on one line of `effective_mana_abilities_of`: the `match self.frozen_effects()
+{ Some(fx) if !fx.iter().any(rewrites_land_types) => … }` that decides whether
+the card needs a layer view. A mutex, an `Arc` clone and a walk of the whole
+gathered set, once per untapped permanent per table, for an answer that is a
+property of the board.
+
+Putting it on `GrantScan` at scan-build time measured **+0.206 %** and was
+reverted. **`grant_scan()` is not a per-loop object**: `granted_abilities_for`
+is `granted_abilities_with(id, &self.grant_scan())`, a fresh scan *per card*,
+and that path runs 201,834 times per six games — so the field taxed ~27
+constructions for every one it helped. **Count a shared object's
+constructions, not its uses, before hoisting a cost into it** (this file's
+older twin of the rule is (-2b)'s "the gate's own cost is the thing to
+watch"). Filled in by the three loops that build one scan and ask it about
+many cards, the same code reads **-0.143 %**.
+
+**And the row is smaller than its line, for a reason worth keeping.**
+`frozen_effects` *gathers* on the first read in a scope, and that gather is
+inside the 15.9 M and does not go away — it moves to whichever read now
+gathers first. What a hoist off this function removes is the mutex, the clone
+and the walk on every *repeat*. **A `frozen_effects` line's Ir is not all
+removable; subtract one gather per scope before pricing it.**
+
+**(C) The empty dispatch.** `dispatch_triggers_for_events` already returned
+early on an empty batch — after synthesizing the CR 700.4 death and CR 800.4
+control-change events, folding them in, and walking the batch to decide
+whether the graveyard events needed collapsing. The synthesis `.collect()`
+alone was **13,650,937 Ir over 94,608 calls**: the chain is not free on an
+empty pair, because the filter closes over `&self` and the collect still
+builds and drops a `Vec`. The return moves up to just after the two
+`mem::take`s — all the state the call has touched by then — and the synthesis
+is skipped outright when both drained lists are empty.
+
+**Invariants at the tip**, on the `profiling-fast --no-default-features`
+binary the rows were measured on:
+
+```text
+decisions            193,232        <- byte-identical with the anchor
+turns_per_game       26.98
+stalls               0 (0.00 %), stalls_by cap 0 / stuck 0 / draw 0
+determinism          ok (all pairs split)
+games_per_s          139.35         <- NOT comparable: profiling-fast, system
+peak_rss_mib         20.8              allocator, and a different host. Neither
+host_cpu             Intel(R) Xeon(R) Processor @ 2.10GHz    goes in Baseline.
+host_calib_ms        71             <- 45 at the recorded tip: a slower box.
+```
 
 ### Thirty-eighth pass — the SBA death sweep stops computing, and the fuse device fails to generalise
 
@@ -1277,6 +1382,21 @@ settings + debuginfo; system allocator, because valgrind replaces malloc and
 a mimalloc build would measure the interception), 1 thread, `--a gang --b
 gang --games 6 --seed 1 --decks fixed`.
 
+**The thirty-ninth pass reads 2,136,847,762 Ir at its tip**, and its three
+commits move rows the tables below do not show, because both of the big ones
+are loops rather than call sites. What the next run wants from this reading:
+
+| row | at the 39th tip | note |
+|---|---|---|
+| `dispatch_triggers_for_events` self | **~71 M / 3.31 %** | was ~108 M / 4.94 %; the residue is the battlefield walk itself (`slice/iter` 13.4 M) plus a ~690 Ir per-dispatch preamble |
+| `__memcpy_avx_unaligned_erms` | 103,789,248 / **4.84 %** | the largest single row in the program |
+| `_int_free` / `_int_malloc` / `malloc` / `free` | 92.2 / 77.0 / 65.4 / 41.1 M | **~19 % in the allocator**, over **1,416,231 allocs and 1,468,562 frees** in six games. System allocator — mimalloc ships, so read it as a work count, not a wall-clock claim |
+| `spec_from_iter_nested` inclusive | **21.94 %** | the `.collect()` total. Biggest callers: `bot::cast_candidates` 108,744,110 / 4.97 % over 7,024; `actions::mana_source_table` 101,842,310 / 4.66 % over 7,370; `check_state_based_actions` 33,530,891 / 1.53 % |
+| `card_can_grant_keyword` | **~31.8 M / 1.45 %** | fully inlined; the presence gates' own walk. `card_keyword_possible` reaches it 333,914 times |
+| `effect_produces_color` | 9,965,844 over **233,940** | `mana_source_table_inner`'s five-colour loop, `5 x abilities` per source |
+| `GameState::clone` self | 21,236,464 / 0.99 % over 17,420 | `perform_action`'s surviving checkpoints, nearly all of them `sim_step`'s |
+| gathers | **53,722** | `computed_permanent` 29,780, `frozen_effects` 18,916, `compute_permanents` 3,584, SBA 1,442 |
+
 **The thirty-eighth pass reads 2,186,150,874 Ir at its tip.** Its one commit
 gates `check_state_based_actions`' death sweep, taking SBA's gathers from
 10,670 to **1,442** and all gathers from 62,950 to **53,722**;
@@ -1493,6 +1613,40 @@ goes thin or stale.
 call can happen inside one. Ir/call does not answer this — `apply_layers_one`
 alone spans ~760 to ~2,200 Ir — and two candidates picked on Ir/call alone
 measured -0.019 % and -0.015 %. Check the caller's `self` binding first.
+
+**(-10) Allocation is the program, and nothing on this list is about it.**
+**1,416,231 allocations and 1,468,562 frees in six games**; `_int_free`,
+`_int_malloc`, `malloc`, `free` and `memcpy` are **~19 %** of the tip under
+the system allocator, and `spec_from_iter_nested` is **21.94 % inclusive**.
+Read the caveat in **How to measure** first — mimalloc ships and callgrind
+forces the system allocator, so this is a *work count*, not a wall-clock
+claim; but a `.collect()` removed is removed under either allocator. The
+three rows to read next, in order, all from the thirty-ninth pass's profile:
+
+* **`bot::cast_candidates`, 108,744,110 / 4.97 % over 7,024 calls**, the
+  largest `.collect()` in the program. The sixteenth pass already took its
+  specialty blocks and left a note that *the next attempt belongs in the
+  plain-cast `flat_map`* — that is this row. Two allocations per candidate
+  are visible in the source without a profile: `modes: Vec<Option<usize>>`
+  is `vec![None]` for every non-modal card, and the inner `out` is a
+  one-element `vec![]` per (card, mode). Both are `iter::once`-shaped.
+* **`mana_source_table_inner`'s five-colour loop**: `effect_produces_color`
+  **233,940 calls / 9,965,844 Ir**, because the loop is `for col in ALL {
+  abilities.iter().find(…) }` — five passes over the abilities where one
+  pass building a `ColorSet` would do. ~80 % of the row is the shape.
+* **`check_state_based_actions`, 33,530,891 / 1.53 %** of `.collect()` after
+  the thirty-eighth pass already halved it.
+
+**(-11) `card_can_grant_keyword` — the presence gates' own walk, ~31.8 M /
+1.45 %.** Fully inlined, so it has no caller table of its own;
+`card_keyword_possible` reaches it **333,914** times. `activate_ability_inner`
+asks it up to three times per activation with three *different* predicates
+(`CantActivateTapAbilities`, `Haste`, `CantActivateAbilities`), each a fresh
+battlefield walk. **`first_strike_possible` is the device already written for
+this**: keep the cheap per-card legs per card and hoist the one board-wide
+grant scan out, with a predicate that is the union of the three. Take it
+*lazily* — a land tapping for mana reaches only the first gate, and 18,832 of
+the activations are that.
 
 **(-8b) `card_type_change_in_scope`, the gate's own residue — CLOSED, and
 it is the third measured loss for the same device.** It reads **21,776,000 Ir

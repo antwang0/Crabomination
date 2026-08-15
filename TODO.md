@@ -16,64 +16,50 @@ reference and want their own triage pass):
 
 ## NEXT (handoff — rewrite each run, keep under 15 lines)
 
-Branch `claude/modern_decks`. **Pass 38: `-2.525 %` Ir in one commit**,
-2,242,782,284 -> **2,186,150,874** — the largest single commit in six
-passes. `check_state_based_actions`' CR 704.5f/g/h death sweep is behind a
-presence gate; SBA gathers 10,670 -> **1,442**, all gathers 62,950 ->
-**53,722**, and the `.collect()`s under SBA **85.6 M / 82,634 -> 33.5 M / 64,178**.
+Branch `claude/modern_decks`. **Pass 39: `-2.255 %` Ir in three commits**,
+2,186,153,036 -> **2,136,847,762**. All three rows came off a **fresh
+profile**, not the candidates list — that list had been worked down to
+0.2-0.7 % sites while rows of **4.94 %** and **4.66 %** sat unread.
 
-- **A `compute_*` site costs gather + layer pass + collect.** (-8) was
-  ranked off its 0.83 % gather row and paid **2.53 %**. Read the
-  `spec_from_iter` caller table beside the gather table before ranking the
-  next one — that is where the layer pass and the `Vec` land.
-- **A layer-7 presence gate has to be *signed*.** "Is layer 7 live" is a
-  wash (every anthem). "Can computed toughness come out *below* instance
-  toughness" is nearly always false, because `apply_layers_one` is
-  `instance + mod_toughness` with no 7b set / 7d switch. Same trick will
-  work for a power-side gate.
-- **Enumerate a predicate by grepping the emitter, not the variant names.**
-  The first pass missed `AnthemForFilter` — it shares an emitter block with
-  `AnthemForFilterIf` and never appears near it. Grep every
-  `Layer::L7PowerTough` site and collect *every* `StaticEffect::` name in
-  the block that reaches it.
-- **(-6)'s fuse-the-walks device did not generalise — three attempts, three
-  losses.** One fused walk **+0.55 %**; one that also moved the death legs
-  inside **+1.24 %** (lands miss the fast path and pay seven counter-map
-  lookups); and hoisting `card_type_change_in_scope` into `sba_board_scan`'s
-  *already-happening* walk **+0.77 %**. The third is the one that makes the
-  rule, because no iteration was added: **a tight specialised
-  short-circuiting `any` over a `Vec` is cheaper than adding its body to a
-  loop that is already big.** Cost the body against the iteration before
-  assuming fusion pays. (-6) is still open but read (-8b) first.
-- **Take (-9) next** (`combat_damage_computed`, 0.71 %, and the surviving
-  `compute_battlefield` calls). `card_type_change_in_scope` is still 21.8 M /
-  ~1.0 % over 10,670 calls and is the biggest single row the gate left, but
-  (-8b) closes the cheap way at it: 19.3 M of it is the walk, only 2.5 M the
-  predicate, so it wants a memo/epoch or a re-framed question, not a
-  re-arrangement.
+- **A gate that is cheap per call and asked per element is a row, and it
+  never appears as an expensive function.** The dispatcher paid ~114 Ir x
+  945,812 permanents to decide a Mountain has no trigger;
+  `effective_mana_abilities_of` paid a mutex + `Arc` clone + a walk of the
+  gathered set 54,570 times for a question about the *board*. **The sort
+  that finds these is `--auto=yes` over the hot function, reading the *call
+  counts* on its callee lines, not the Ir.**
+- **Read the file-attribution split before ranking a function.** Self cost
+  sitting in `vec/mod.rs` + `raw_vec` + `non_null` + `slice/iter` means
+  walking and allocating; every engine-source line then looks tiny and the
+  auto-annotation under-reports the function ~3x.
+- **Count a shared object's constructions, not its uses, before hoisting a
+  cost into it.** Putting the land-type gate on `GrantScan` at build time
+  read **+0.206 %** and was reverted: `granted_abilities_for` builds a fresh
+  scan *per card*, 201,834 times per six games.
+- **Take (-10) next: allocation.** 1,416,231 allocs / 1,468,562 frees in six
+  games, ~19 % in malloc/free/memcpy, `spec_from_iter_nested` **21.94 %
+  inclusive**. `bot::cast_candidates` is **4.97 % over 7,024** and its
+  plain-cast `flat_map` allocates a `vec![None]` and a one-element `vec![]`
+  per candidate — both `iter::once`-shaped. Then (-11), the keyword-grant
+  walk at 1.45 %.
 - **Do not compare `--bench` absolutes across sittings — it is the box.**
-  The anchor stays at 163.62; PERF **Baseline** has the argument. Callgrind
-  is the arbiter under ~5 %, and its drift this run was **10 Ir** on a
-  rebuild of one source state and **621 Ir** against the recorded tip.
-- **Green at the tip**: suite **18,645** over 11 binaries (18,639 + this
-  pass's six CR 704.5 cases), all five golden traces identical, clippy
-  clean. Wide pool re-run at the
-  tip: `--decks all --games 200`, **3,400 games, two processes,
-  byte-identical**, 1,700 pairs all split, **0 undecided**, no panics.
-  `--bench` invariants at the tip are identical to the anchor — `decisions`
-  **193,232**, turns 26.98, stalls 0, determinism ok. **No encoding change — no net needs
-  retraining as of this tip.**
-- **Fetch before the first commit.** Six collisions on this file so far.
+  This sitting's host was **2.10 GHz / calib 71** against the recorded tip's
+  2.80 / 45. Callgrind is the arbiter under ~5 %; it drifted **2,162 Ir**
+  against the recorded tip.
+- **Green at the tip**: suite **18,645** over 11 binaries, all five golden
+  traces identical, clippy clean, bench output byte-identical at every step,
+  `--bench` invariants byte-identical with the anchor (`decisions`
+  **193,232**, turns 26.98, stalls 0, determinism ok). **No encoding change
+  — no net needs retraining as of this tip.**
+- **Fetch before the first commit.** Six collisions on PERF.md so far.
 - Env: no `cargo-nextest`; `cargo test -p crabomination -p
-  crabomination_tests` is the gate (~40 s built, ~5 min cold).
-  `profiling-fast` engine **~12 min warm** on this box (slower than the ~4
-  min recorded before); `release` **~35 min — start it in the background at
-  the top of the run**. Callgrind ~4 min, contention-immune. A second
-  `CARGO_TARGET_DIR` lets a build and a callgrind run overlap; two cargo
-  builds at once do not pay on 4 cores.
-- Trackers: TODO ~1.0k, ROADMAP 0.66k, PERF ~2.5k — passes 29-31 are index
-  rows, 32-38 prose is current. **PERF is the one to compact next**: fold
-  passes 32-34 down to index rows the way 29-31 already are.
+  crabomination_tests` is the gate (~7 min cold, ~40 s built).
+  `profiling-fast` engine **10 min cold, ~3.3 min incremental** — cheaper
+  than the ~12 min the last handoff recorded, so budget 5-6 measured
+  iterations. Callgrind ~1 min, contention-immune. Workspace clippy needs
+  the client's apt deps (see below) or it fails in `wayland-sys`.
+- Trackers: TODO ~1.0k, ROADMAP 0.66k, PERF ~2.5k after folding passes 32-34
+  to index rows. **PERF's passes 35-36 are the next fold.**
 
 ## Environment note
 
