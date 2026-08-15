@@ -56,10 +56,14 @@ subset instead of the whole board (`-0.223 %`). All gathers 73,434 ->
   workload. Callgrind is the arbiter under ~5 %, and its drift this run was
   **464 Ir on 2.28 G**.
 - **Green at the tip**: suite **18,639** over 11 binaries, all five golden
-  traces identical, `clippy --workspace --all-targets` clean, stalls 0,
-  determinism ok. **`overflow` and the wide pool were not re-run** — no
-  counter/mana/encoder code moved and no encoding changed, so no net needs
-  retraining as of this tip.
+  traces identical, `clippy --workspace --all-targets` clean, `--bench`
+  stalls 0 / determinism ok. **The wide pool was re-run this time** and it
+  is the strongest evidence the four gates are sound on cards the bench
+  decks never play: `--decks all --games 200`, **3,400 games, two processes,
+  output byte-identical** (modulo the wall-clock line), 1,699 pairs all
+  split, 2 undecided (0.06 %, rules draws), no panics. **`overflow` was not
+  re-run** — no counter/mana/encoder code moved and no encoding changed, so
+  no net needs retraining as of this tip.
 - **Fetch before the first commit.** Five collisions on this file so far.
 - Env: no `cargo-nextest`; `cargo test -p crabomination -p
   crabomination_tests` is the gate (~40 s built, ~5 min cold).
