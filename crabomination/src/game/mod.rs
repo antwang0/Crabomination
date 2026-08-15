@@ -15933,32 +15933,43 @@ impl GameState {
         // non-creature deaths (which emit no `CreatureDied`) still reach
         // "creature or artifact you control dies" triggers.
         let deaths = std::mem::take(&mut self.pending_permanent_deaths);
+        // CR 800.4 — control changes recorded at the `change_control`
+        // chokepoint since the last dispatch (Risky Move's hand-off).
+        let control_changes = std::mem::take(&mut self.pending_control_changes);
+        // Nothing to fire and nothing to synthesize. The two takes above are
+        // all the state this call has touched by here, so this leaves exactly
+        // what the `events.is_empty()` return below leaves — without the
+        // synthesis collect, the graveyard-batch count walk or the per-event
+        // match. `perform_action_inner` drains every action's event list
+        // through here, so the empty batch is a common one.
+        if events.is_empty() && deaths.is_empty() && control_changes.is_empty() {
+            return;
+        }
         // Replay the deaths' causing spell/ability over the dispatch: the
         // batch is synthesized after the resolution that killed them ended.
         if let Some(causer) = deaths.iter().find_map(|(.., causer)| *causer) {
             self.resolution_causer = Some(causer);
         }
-        // CR 800.4 — control changes recorded at the `change_control`
-        // chokepoint since the last dispatch (Risky Move's hand-off).
-        let control_changes = std::mem::take(&mut self.pending_control_changes);
-        let synthesized: Vec<GameEvent> = deaths
-            .into_iter()
-            // CR 700.4 — a death redirected away from the graveyard (Rest in
-            // Peace, void counters, Kalitas, Pulmonic Sliver) never happened;
-            // skip it, mirroring the `CreatureDied` guard below.
-            .filter(|(card_id, ..)| !self.death_was_replaced(*card_id))
-            .map(|(card_id, controller, is_creature, is_artifact, _)| GameEvent::PermanentDied {
-                card_id,
-                controller,
-                is_creature,
-                is_artifact,
-            })
-            .chain(
-                control_changes
-                    .into_iter()
-                    .map(|(card_id, from, to)| GameEvent::ControlChanged { card_id, from, to }),
-            )
-            .collect();
+        // Empty on most dispatches, and the chain is not free there: the
+        // filter closes over `&self` and the collect still builds and drops a
+        // `Vec`. 94,608 of them over six bench games.
+        let synthesized: Vec<GameEvent> = if deaths.is_empty() && control_changes.is_empty() {
+            Vec::new()
+        } else {
+            deaths
+                .into_iter()
+                // CR 700.4 — a death redirected away from the graveyard (Rest
+                // in Peace, void counters, Kalitas, Pulmonic Sliver) never
+                // happened; skip it, mirroring the `CreatureDied` guard below.
+                .filter(|(card_id, ..)| !self.death_was_replaced(*card_id))
+                .map(|(card_id, controller, is_creature, is_artifact, _)| {
+                    GameEvent::PermanentDied { card_id, controller, is_creature, is_artifact }
+                })
+                .chain(control_changes.into_iter().map(|(card_id, from, to)| {
+                    GameEvent::ControlChanged { card_id, from, to }
+                }))
+                .collect()
+        };
         let folded: Vec<GameEvent>;
         let events: &[GameEvent] = if synthesized.is_empty() {
             events
