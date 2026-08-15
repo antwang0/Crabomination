@@ -131,6 +131,30 @@ contention-immune, which makes it the better first look.
 
 ## Baseline
 
+**NOT re-anchored at the thirty-eighth pass's tip either, and this time no
+`release` reading was taken at all.** The pass is one behaviour-preserving
+commit measured at **-2.525 % Ir** under callgrind, which is inside the
+bench's noise band, and the three readings below already establish that a
+`--bench` absolute on this box cannot resolve it. What was checked at the tip
+is the **invariants**, on the `profiling-fast --no-default-features` binary
+the callgrind rows were taken on:
+
+```text
+decisions            193,232        <- byte-identical with the anchor
+turns_per_game       26.98
+stalls               0 (0.00 %), stalls_by cap 0 / stuck 0 / draw 0
+determinism          ok (all pairs split)
+games_per_s          124.04         <- NOT comparable: profiling-fast, system
+peak_rss_mib         21.0              allocator. Neither goes in this block.
+host_cpu             Intel(R) Xeon(R) Processor @ 2.80GHz
+host_calib_ms        45
+```
+
+Plus the wide pool at the tip — `--decks all --games 200`, **3,400 games over
+17 decks, two processes, output byte-identical** (modulo the wall-clock line),
+1,700 pairs all split, **0 undecided**, no panics. The anchor stands at
+163.62.
+
 **NOT re-anchored at the thirty-seventh pass's tip (`59c964dc`).** Same
 `--bench`, `release` + mimalloc, three runs, on the same container and the
 same `host_cpu` string as the thirty-sixth pass's reading below:

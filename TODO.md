@@ -59,7 +59,9 @@ presence gate; SBA gathers 10,670 -> **1,442**, all gathers 62,950 ->
   pass's six CR 704.5 cases), all five golden traces identical, clippy
   clean. Wide pool re-run at the
   tip: `--decks all --games 200`, **3,400 games, two processes,
-  byte-identical**, 1,700 pairs all split, **0 undecided**, no panics. **No encoding change — no net needs
+  byte-identical**, 1,700 pairs all split, **0 undecided**, no panics.
+  `--bench` invariants at the tip are identical to the anchor — `decisions`
+  **193,232**, turns 26.98, stalls 0, determinism ok. **No encoding change — no net needs
   retraining as of this tip.**
 - **Fetch before the first commit.** Six collisions on this file so far.
 - Env: no `cargo-nextest`; `cargo test -p crabomination -p
@@ -70,7 +72,8 @@ presence gate; SBA gathers 10,670 -> **1,442**, all gathers 62,950 ->
   `CARGO_TARGET_DIR` lets a build and a callgrind run overlap; two cargo
   builds at once do not pay on 4 cores.
 - Trackers: TODO ~1.0k, ROADMAP 0.66k, PERF ~2.5k — passes 29-31 are index
-  rows, 32-38 prose is current.
+  rows, 32-38 prose is current. **PERF is the one to compact next**: fold
+  passes 32-34 down to index rows the way 29-31 already are.
 
 ## Environment note
 
