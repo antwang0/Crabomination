@@ -2534,6 +2534,31 @@ impl GameState {
     }
 }
 
+/// A mana ability as the tap paths read it: printed ones borrowed from the
+/// card definition, synthesized ones (grants, intrinsic basic-land
+/// abilities) boxed.
+///
+/// This was a `Cow<ActivatedAbility>`, which inlines the whole struct into
+/// every element — `Effect` alone is 448 bytes — so a Forest's one-element
+/// list cost a ~600-byte allocation and memcpy, once per untapped permanent
+/// per `mana_source_table`. The synthesized side is the rare one and is the
+/// side that pays a pointer here.
+#[derive(Debug, Clone)]
+pub enum ManaAbility<'a> {
+    Printed(&'a crate::effect::ActivatedAbility),
+    Synth(Box<crate::effect::ActivatedAbility>),
+}
+
+impl std::ops::Deref for ManaAbility<'_> {
+    type Target = crate::effect::ActivatedAbility;
+    fn deref(&self) -> &Self::Target {
+        match self {
+            ManaAbility::Printed(a) => a,
+            ManaAbility::Synth(a) => a,
+        }
+    }
+}
+
 fn effect_produces_color(effect: &Effect, color: ManaColor) -> bool {
     match effect {
         Effect::AddMana { pool, .. } => match pool {
@@ -12340,14 +12365,15 @@ impl GameState {
 
     /// `(index, ability)` for every mana-producing activated ability a
     /// battlefield permanent can currently use — printed, granted, and
-    /// intrinsic basic-land — in `activate_ability`'s index order. The
+    /// intrinsic basic-land — in `activate_ability`'s index order. See
+    /// [`ManaAbility`] for why the payload is not a `Cow`. The
     /// single source of truth for the auto-tap source finders so a land
     /// whose type changed (Spreading Seas / Blood Moon / Urborg) taps for
     /// its computed colours.
     pub fn effective_mana_abilities(
         &self,
         card_id: CardId,
-    ) -> Vec<(usize, std::borrow::Cow<'_, crate::effect::ActivatedAbility>)> {
+    ) -> Vec<(usize, ManaAbility<'_>)> {
         self.effective_mana_abilities_with(card_id, &self.grant_scan())
     }
 
@@ -12358,7 +12384,7 @@ impl GameState {
         &self,
         card_id: CardId,
         scan: &GrantScan<'_>,
-    ) -> Vec<(usize, std::borrow::Cow<'_, crate::effect::ActivatedAbility>)> {
+    ) -> Vec<(usize, ManaAbility<'_>)> {
         let Some(card) = self.battlefield_find(card_id) else {
             return vec![];
         };
@@ -12374,8 +12400,7 @@ impl GameState {
         &'a self,
         card: &'a crate::card::CardInstance,
         scan: &GrantScan<'_>,
-    ) -> Vec<(usize, std::borrow::Cow<'a, crate::effect::ActivatedAbility>)> {
-        use std::borrow::Cow;
+    ) -> Vec<(usize, ManaAbility<'a>)> {
         let card_id = card.id;
         let printed_count = card.definition.activated_abilities.len();
         // One layer read for the whole list. Both CR 305.6 checks below ask
@@ -12431,26 +12456,26 @@ impl GameState {
         // read `.effect` and the cost fields. Cloning them was one
         // `ActivatedAbility` deep copy per printed mana ability per untapped
         // permanent per `auto_tap_for_cost_inner`.
-        let mut out: Vec<(usize, Cow<'_, crate::effect::ActivatedAbility>)> = Vec::new();
+        let mut out: Vec<(usize, ManaAbility<'_>)> = Vec::new();
         for (i, a) in card.definition.activated_abilities.iter().enumerate() {
             if is_mana_ability(&a.effect)
                 && !Self::printed_land_mana_ability_lost_with(card, i, computed_land_types)
             {
-                out.push((i, Cow::Borrowed(a)));
+                out.push((i, ManaAbility::Printed(a)));
             }
         }
         let granted = self.granted_abilities_of(card, scan);
         let gc = granted.len();
         for (j, a) in granted.into_iter().enumerate() {
             if is_mana_ability(&a.effect) {
-                out.push((printed_count + j, Cow::Owned(a)));
+                out.push((printed_count + j, ManaAbility::Synth(Box::new(a))));
             }
         }
         for (k, a) in Self::intrinsic_land_mana_abilities_with(card, computed_land_types)
             .into_iter()
             .enumerate()
         {
-            out.push((printed_count + gc + k, Cow::Owned(a)));
+            out.push((printed_count + gc + k, ManaAbility::Synth(Box::new(a))));
         }
         out
     }
