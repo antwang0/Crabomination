@@ -127,21 +127,28 @@ contention-immune, which makes it the better first look.
 
 ## Baseline
 
-**NOT re-anchored at the thirty-sixth pass's tip (`b1e62b23`), and the
+**NOT re-anchored at the thirty-sixth pass's tip (`898a9912`), and the
 reading is here because it is the file's third and sharpest demonstration
 of why.** Same `--bench`, `release` + mimalloc, three runs:
 
 ```text
-games_per_s          112.09 / 109.68 / 112.60   (mean 111.46)
-games_per_s_th       36.56 - 37.53
+games_per_s          111.58 / 108.32 / 111.29   (mean 110.40)
+games_per_s_th       36.11 - 37.19
 host_cpu             Intel(R) Xeon(R) Processor @ 2.80GHz    <- 2.10GHz at the anchor
-host_calib_ms        51 / 48 / 52                            <- 55-90 at the anchor
+host_calib_ms        48 / 48 / 51                            <- 55-90 at the anchor
 decisions            193,232 byte-identical on all three
 turns_per_game       26.98
 stalls               0 (0.00 %), stalls_by cap 0 / stuck 0 / draw 0
-peak_rss_mib         29.2 - 31.0
+peak_rss_mib         31.0 - 31.2
 determinism          ok (all pairs split, on all 3 runs)
 ```
+
+The pass's *first* commit read **112.09 / 109.68 / 112.60 (mean 111.46)**
+on the same box an hour earlier. The second commit is **-1.640 % in Ir** and
+the two bench means are **0.95 % apart** — a textbook instance of the rule
+above it: a sub-5 % change does not clear this bench's noise, whichever
+direction it goes. Callgrind is the arbiter; the bench's job here is the
+invariants, and they are identical across both readings.
 
 **That is -32 % against the 163.62 anchor, on a change that callgrind
 measures at -0.879 %.** It is the box, and this time the box says so out
