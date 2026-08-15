@@ -36,17 +36,21 @@ presence gate; SBA gathers 10,670 -> **1,442**, all gathers 62,950 ->
   `AnthemForFilterIf` and never appears near it. Grep every
   `Layer::L7PowerTough` site and collect *every* `StaticEffect::` name in
   the block that reaches it.
-- **(-6)'s fuse-the-walks device did not generalise, measured twice:** one
-  fused walk read **+0.55 %**, and one that also moved the death legs inside
-  read **+1.24 %** (lands miss the fast path and pay seven counter-map
-  lookups). Fuse when the per-card body dominates the iteration, not when it
-  doesn't.
-- **Take (-8b) next** — `card_type_change_in_scope` is now visible on its
-  own at **21.8 M / ~1.0 %** over 10,670 calls, **19.3 M of it slice
-  iteration**. It is *not* fusable into the gate (above), but
-  `sba_board_scan` already walks the same battlefield one block earlier and
-  `scan` is retaken after both events that can change the answer. Then (-9)
-  (`combat_damage_computed`, 0.71 %). (-6) is still open.
+- **(-6)'s fuse-the-walks device did not generalise — three attempts, three
+  losses.** One fused walk **+0.55 %**; one that also moved the death legs
+  inside **+1.24 %** (lands miss the fast path and pay seven counter-map
+  lookups); and hoisting `card_type_change_in_scope` into `sba_board_scan`'s
+  *already-happening* walk **+0.77 %**. The third is the one that makes the
+  rule, because no iteration was added: **a tight specialised
+  short-circuiting `any` over a `Vec` is cheaper than adding its body to a
+  loop that is already big.** Cost the body against the iteration before
+  assuming fusion pays. (-6) is still open but read (-8b) first.
+- **Take (-9) next** (`combat_damage_computed`, 0.71 %, and the surviving
+  `compute_battlefield` calls). `card_type_change_in_scope` is still 21.8 M /
+  ~1.0 % over 10,670 calls and is the biggest single row the gate left, but
+  (-8b) closes the cheap way at it: 19.3 M of it is the walk, only 2.5 M the
+  predicate, so it wants a memo/epoch or a re-framed question, not a
+  re-arrangement.
 - **Do not compare `--bench` absolutes across sittings — it is the box.**
   The anchor stays at 163.62; PERF **Baseline** has the argument. Callgrind
   is the arbiter under ~5 %, and its drift this run was **10 Ir** on a

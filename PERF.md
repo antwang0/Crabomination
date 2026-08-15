@@ -725,8 +725,13 @@ fuse-the-walks device does not generalise here.** The gate as shipped is
 | one fused walk | 2,203,818,568 | **+0.55 %** |
 | one fused walk, death legs inside it | 2,218,774,818 | **+1.24 %** |
 
-(All three measured before the dead-walk step, so they compare against
-2,191,706,757 rather than the tip; the step is orthogonal to the fusion.)
+(The two fused rows were measured before the dead-walk step, so they compare
+against 2,191,706,757 rather than the tip; the step is orthogonal to the
+fusion. A third attempt at the same device — hoisting
+`card_type_change_in_scope` into `sba_board_scan`'s existing walk — was
+measured against the tip and read **2,203,084,954, +0.77 %**. See (-8b): with
+three losses, the transferable rule is that a tight specialised
+short-circuiting `any` beats adding its body to a loop that is already big.)
 
 The second row has a concrete cause worth keeping: a fused walk cannot know
 `type_change` until it ends, so it asks *every* permanent the death legs —
@@ -751,15 +756,14 @@ wide pool was re-run on the tip: `--decks all --games 200`, **3,400 games
 over 17 decks, two processes, output byte-identical** (modulo the wall-clock
 line), 1,700 pairs all split, **0 undecided**, no panics.
 
-**What the gate leaves on the table, and it is the next candidate.**
-`card_type_change_in_scope` now shows up in its own right at **21,776,000 Ir
-/ ~1.0 %**, and **19.3 M of that is `slice/iter/macros.rs` and
-`ptr/non_null.rs`** — walking, not deciding. It is not fusable into the gate
-(above), but `sba_board_scan` already walks the same battlefield and every
-card's `static_abilities` one block earlier, and `scan` is retaken after the
-only two events that can change the answer (a flip at `4486`, and `4690`).
-Hoisting the bit into that existing walk is a different device from fusing
-two new ones. See (-8b).
+**What the gate leaves on the table.** `card_type_change_in_scope` now shows
+up in its own right at **21,776,000 Ir / ~1.0 % over 10,670 calls**, and
+**19.3 M of that is `slice/iter/macros.rs` and `ptr/non_null.rs`** — walking,
+not deciding. Hoisting it into `sba_board_scan`'s existing walk was tried
+this pass and **also lost, +0.77 %**, which is the third result for the same
+device and the one that makes the rule: the cost is not the extra
+iteration, it is what the body does to a loop that is already big. (-8b) has
+the full argument and what is genuinely left there.
 
 ### Thirty-seventh pass — three sites stop gathering, and two null results that reprice the table
 
@@ -1395,7 +1399,8 @@ gates `check_state_based_actions`' death sweep, taking SBA's gathers from
 `computed_permanent` caller table below is unchanged by it — the sweep is not
 a `computed_permanent` caller — but every *share* there reads ~2.3 % low
 against this tip. One new row is worth carrying: `card_type_change_in_scope`
-is now **21,776,000 / ~1.0 % over 10,670**, candidate (-8b).
+is now **21,776,000 / ~1.0 % over 10,670** — candidate (-8b), which this pass
+tried and closed as a loss.
 
 **The thirty-seventh pass read 2,242,782,905 Ir at its tip (`59c964dc`).**
 The tables below were taken one commit earlier at `7af2b489`
@@ -1604,27 +1609,39 @@ call can happen inside one. Ir/call does not answer this — `apply_layers_one`
 alone spans ~760 to ~2,200 Ir — and two candidates picked on Ir/call alone
 measured -0.019 % and -0.015 %. Check the caller's `self` binding first.
 
-**(-8b) `card_type_change_in_scope`, the gate's own residue — 21,776,000 Ir /
-~1.0 % over 10,670 calls, and 19.3 M of it is `slice/iter/macros.rs` +
-`ptr/non_null.rs`, i.e. walking rather than deciding.** The thirty-eighth
-pass's gate asks it once per SBA sweep to decide whether the non-creatures
-join the death legs. **It is not fusable into the gate — that was measured
-and lost twice, see the Log block** — but it does not need a walk of its
-own: `sba_board_scan` already iterates the same battlefield and every card's
-`static_abilities` one block earlier in the same function. Add a
-`type_change` flag to `SbaBoardScan` (`|= card_can_change_card_types(c)` in
-the existing per-card loop, plus the `continuous_effects` leg once) and have
-`creature_death_possible` read `scan.type_change`.
+**(-8b) `card_type_change_in_scope`, the gate's own residue — CLOSED, and
+it is the third measured loss for the same device.** It reads **21,776,000 Ir
+/ ~1.0 % over 10,670 calls**, and **19.3 M of that is `slice/iter/macros.rs`
++ `ptr/non_null.rs`** — walking, not deciding. So: hoist the bit into
+`sba_board_scan`, which already walks the same battlefield and every card's
+`static_abilities` one block earlier in the same function, and read
+`scan.type_change` for free. Written, suite-green (the staleness
+`debug_assert!` held over all 18,645 tests), and **+16,934,080 Ir /
++0.77 %**. Reverted.
 
-Two things to check before writing it, both of which look fine. **(a)
-Staleness**: `scan` is taken at the top and retaken after a flip (`4486`) and
-at `4690`, both above the death sweep; between `4690` and the sweep the only
-board changes are *removals* (legend rule, world rule, saga), and a removal
-can only take the answer from `true` to `false`, so a stale `true` is
-conservative-safe. Nothing adds a permanent before the sweep — Persist /
-Undying is after it, and it already sets `board_grew` and retakes. **(b)** The
-`continuous_effects` half is not battlefield-shaped, so it stays where it is
-or moves into the same one-off.
+**Three attempts, three losses, and the rule they establish.** Folding the
+gate's walks into one pass: **+0.55 %**. Folding them and the death legs:
+**+1.24 %**. Hoisting one of them into an existing walk: **+0.77 %**. The
+third is the interesting one, because it is not "one more walk" — the walk
+was already happening — so the cost has to be the *body*:
+`sba_board_scan`'s per-card loop is already large (a dozen `|=`, four nested
+`for`s over subtype vectors), and inlining `card_can_change_card_types` into
+it slows the whole scan by more than the separate specialised `any` saved.
+**A tight, specialised, short-circuiting `any` over a `Vec` is very cheap on
+this codebase — cheaper than the marginal cost of adding its body to a loop
+that is already big.** (-6) is the standing counter-example and its
+arithmetic still holds *there*, where the four walks were over
+`definition.static_abilities.is_empty()` inside a function called 18,386
+times, not 10,670. Cost the body against the iteration before assuming
+fusion pays; on the evidence here it usually does not.
+
+**What is actually left at this site**, for whoever wants the 1.0 %: not
+fusion. Either make the *answer* cheaper to reach (the predicate itself is
+only 2.5 M of the 21.8 M — the rest is the walk, so a board-level
+memo/epoch is the shape, not a re-arrangement), or drop the question:
+the gate only needs it to decide whether non-creatures join the death legs,
+and a permanent that is not a printed creature contributes nothing unless
+something animates it *and* the animation leaves it at ≤ 0 toughness.
 
 **(-8) `check_state_based_actions`' death sweep — PAID, `-2.277 %`,
 thirty-eighth pass.** All the numbers and the two devices are in the Log
