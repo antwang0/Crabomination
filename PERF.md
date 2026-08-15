@@ -570,6 +570,58 @@ the table above is safe to compress:
 
 ## Log
 
+### Thirty-sixth pass — `activate_ability_inner` stops gathering
+
+**`2,342,773,775 -> 2,322,176,278 Ir, -20,597,497 / -0.879 %`**, one commit,
+behaviour-preserving (suite 18,639 green, golden traces identical). Both
+sides `profiling-fast --no-default-features`, callgrind, `--a gang --b gang
+--games 6 --threads 1 --seed 1 --decks fixed`, built and run in one sitting.
+The base read **2,342,773,775** against the **2,342,776,898** this file
+recorded for `bdc11c86` — **3,123 Ir apart on a 2.34 G workload**, which is
+the reproducibility claim in **Profile of record** re-confirmed rather than
+assumed.
+
+**Candidate (-3), closed. Every one of its 18,386 gathers is gone.**
+
+| | base | new |
+|---|---|---|
+| `computed_permanent` -> gather | 64,042 calls | **45,656** |
+| all gathers | 97,212 | **78,826** |
+| `gather_continuous_effects_inner` self | 59,124,164 / 2.52 % | 48,506,226 / 2.09 % |
+| `activate_ability_inner`'s `let cp` | 48,957,891 / 2.09 % / 18,386 | **absent from the table** |
+
+`bf_cp` was taken eagerly at the top of the battlefield branch, and on a
+`&mut self` path that is a whole-game gather. It is now lazy, and each of
+its six consumers asks a printed-static presence gate first:
+`lost_all_abilities` behind `ability_strip_in_scope`, creature-ness behind
+the `bestowed` flag and `card_type_change_in_scope`, the CR 305.6 land-mana
+check behind `printed_land_mana_basic` (no layer read at all) and the new
+`land_type_change_in_scope`, and the three CR 602.5 keyword gates behind
+`card_keyword_possible`. The common activation — a land tapping for mana —
+answers all six off the printed line. The `ability_index >= printed_count`
+branch still needs the layer system unconditionally, so it keeps its
+`with_frozen_layers` scope and seeds the cell on the way out.
+
+**The land-type leg, the sixth and last of (-5)'s families to get a gate.**
+`land_type_change_in_scope` is the printed-static twin of
+`rewrites_land_types`: the stored `continuous_effects`, plus six statics
+(`NamedLandsNeutralized`, `BlightedLandsNeutralized`,
+`GrantAllBasicLandTypes`, `LandTypeChanger`, `LandTypeChangerWhileCounters`,
+`LandsYouControlAreChosenType`) and `equipped_bonus.set_land_types`, audited
+by a `debug_assert!` in `gather_continuous_effects` in the sound direction.
+The enumeration was **right first try** — unlike the keyword family's five
+drafts — because the family is small and entirely battlefield-resident.
+
+**-0.879 % against the entry's "expect ~1.5-2 %", and the gap is the
+lesson.** The site was 2.09 % and all of it came out, but the gates cost
+~28 M Ir back: **~1,540 Ir per activation across four battlefield walks**
+(strip, card-type, land-type, keyword-grant), run 18,386 times. That is the
+thirty-fifth pass's own warning — *measure the gate, not just the site* —
+showing up as a smaller-than-forecast win rather than as a wash, because
+each individual gate is still far cheaper than the 2,663-Ir gather it
+replaced. **Four separate walks of one list is the residue, and it is the
+next candidate (-6).**
+
 ### Thirty-fifth pass — two layer families get a presence gate
 
 Cumulative: **2,394,920,900 -> 2,342,776,898 Ir, -52,144,002 / -2.177 %**,
@@ -999,10 +1051,33 @@ settings + debuginfo; system allocator, because valgrind replaces malloc and
 a mimalloc build would measure the interception), 1 thread, `--a gang --b
 gang --games 6 --seed 1 --decks fixed`.
 
-**Re-taken 2026-08-15 at `8ff6daab`: 2,362,985,109 Ir**, the thirty-fifth
-pass's *first* commit; the tip (`bdc11c86`) is **2,342,776,898**, and the
-tables below are the `8ff6daab` read with the second commit's two rows
-patched in. Supersedes the `d922f8d9` figure (2,394,920,914) and, for
+**The thirty-sixth pass's tip reads 2,322,176,278 Ir**, and its gather half
+was re-taken directly rather than patched:
+
+| Ir | share | calls | caller |
+|---|---|---|---|
+| 86,472,254 | 3.72 % | 45,656 | `computed_permanent` |
+| 33,736,544 | 1.45 % | 18,916 | `frozen_effects` |
+| 18,715,139 | 0.81 % | 10,670 | `check_state_based_actions` |
+| 6,532,437 | 0.28 % | 3,274 | `compute_permanents` |
+| 622,422 | 0.03 % | 310 | `compute_battlefield` |
+
+**78,826 gathers**, from 97,212 at `bdc11c86` and 107,084 at `8ff6daab`.
+`gather_continuous_effects_inner` self is **48,506,226 / 2.09 %**;
+inclusive **146,078,796 / 6.29 %**. `activate_ability_inner` no longer
+appears as a `computed_permanent` caller at any threshold.
+
+**`scale_damage_to` is now the top unread site** — 25,971,484 / 1.12 % over
+14,624 calls (1,776 Ir each), followed by `resolve_combat` (~0.88 %,
+6,682). Neither has been costed for a gate. `permanent_has_keyword`
+(11,642,945 / 0.50 % / 8,328) and `dying_snapshot` (10,734,325 / 0.46 % /
+3,420) are the next two.
+
+**The older reading, kept because the Log rows chain to it.** Re-taken
+2026-08-15 at `8ff6daab`: **2,362,985,109 Ir**, the thirty-fifth
+pass's *first* commit; that pass's tip (`bdc11c86`) is **2,342,776,898**,
+and the tables below are the `8ff6daab` read with the second commit's two
+rows patched in. Supersedes the `d922f8d9` figure (2,394,920,914) and, for
 totals, the `645b978d` table further below; read a share there as ~16 %
 high. The `d922f8d9` tip re-measured on this box at **2,394,920,900**, i.e.
 14 Ir of run-to-run drift on a 2.4 G workload — the profile is that
@@ -1156,27 +1231,46 @@ Ordered by expected value. Each run pulls the top one, attaches numbers,
 and feeds what it finds back in. Re-profile and replenish when the list
 goes thin or stale.
 
-**(-5) `evaluate_requirement_static`'s lazy layer view — card-type half
-PAID (`-1.333 %`, thirty-fifth pass). What is left is the other four
-families, and it is thin.** The `OnceCell` at `eval.rs` serves five
-layer-4 families: `has_type` (card types, now gated),
-`has_ctype` (creature types), `has_atype` (artifact subtypes), `has_ltype`
-(land types) and `has_stype` (supertypes). The four ungated ones no longer
-appear on the `computed_permanent` caller table at all — the whole
-`eval.rs` row went to zero — so **their traffic is not measurable on the
-`fixed` bench and none of them is worth a predicate until a profile puts
-one back on the table.** Two facts kept so they are not re-derived:
+**(-6) Four presence gates, four walks of one list — the thirty-sixth
+pass's residue, and the arithmetic is measured, not guessed.** Closing (-3)
+removed 18,386 gathers worth ~49 M Ir and netted 20.6 M, because the gates
+that replaced them cost **~28 M Ir / ~1,540 per activation**. They are four
+separate `battlefield.iter()` passes — `ability_strip_in_scope`,
+`card_type_change_in_scope`, `land_type_change_in_scope` and
+`card_keyword_possible`'s `keyword_grant_in_scope` — over the same list,
+each mostly spent on `definition.static_abilities.is_empty()` for a board
+of vanilla creatures and basic lands. **The fix is the shape
+`gather_continuous_effects_inner` already uses on itself**: it folds eleven
+whole-board passes into one `sa_cards` walk that sets a flag per family,
+"so the emitted effect sequence is unchanged". A `PresenceBits` built in one
+walk and asked four times is the same trick one level up.
 
-* the **land-type** gate is free whenever it is wanted:
-  `rewrites_land_types` (`actions.rs:190`) is the gathered-set form and its
-  printed-static twin is six variants — `NamedLandsNeutralized`,
-  `BlightedLandsNeutralized`, `GrantAllBasicLandTypes`, `LandTypeChanger`,
-  `LandTypeChangerWhileCounters`, the `chosen_land_type` arm — plus
-  `equipped_bonus.set_land_types` on an attached source;
-* creature types, artifact subtypes and supertypes have **no cheap
-  predicate**: `AddCreatureType` / `SetCreatureTypes` alone have ~20
-  emitters, and `shallow_creature_types` already spares `has_ctype` the
-  gather on the mid-gather path.
+Two things to settle before writing it, because they decide whether it
+wins. **(a) Laziness is worth real money on this path** — a land tapping
+for mana never asks the land-type gate (`printed_land_mana_basic` returns
+`None` for a non-basic, and `is_mana_ability` skips the third CR 602.5
+gate), so a fused walk that computes every bit eagerly gives some of the
+win back; measure eager-fused against the four lazy walks rather than
+assuming. **(b) `keyword_grant_in_scope` is not battlefield-only** — it also
+walks command, emblems and graveyards, and it is `pred`-parameterized, so
+it fuses with the other three only for the battlefield leg. Start with the
+three type-family gates, which are the same walk over the same list with no
+parameter.
+
+**(-5) `evaluate_requirement_static`'s lazy layer view — CLOSED. Card-type
+half paid `-1.333 %` (thirty-fifth pass) and the land-type twin shipped in
+the thirty-sixth.** The `OnceCell` at `eval.rs` serves five layer-4
+families: `has_type` (card types, gated), `has_ctype` (creature types),
+`has_atype` (artifact subtypes), `has_ltype` (land types — the predicate now
+exists as `land_type_change_in_scope`, built for (-3)) and `has_stype`
+(supertypes). The three ungated ones no longer appear on the
+`computed_permanent` caller table at all — the whole `eval.rs` row went to
+zero — so **their traffic is not measurable on the `fixed` bench and none of
+them is worth a predicate until a profile puts one back on the table.** The
+one fact kept so it is not re-derived: creature types, artifact subtypes and
+supertypes have **no cheap predicate** — `AddCreatureType` /
+`SetCreatureTypes` alone have ~20 emitters, and `shallow_creature_types`
+already spares `has_ctype` the gather on the mid-gather path.
 
 **The device the paid half used, because the next family will want it.**
 `permanents_with_abilities_removed`'s cross-check re-gathers whenever its
@@ -1186,68 +1280,23 @@ instead — a `debug_assert!` in `gather_continuous_effects` that a gathered
 set carrying the modification implies the gate said `true`. It runs only
 where a gather already happened, and the whole suite audits it.
 
-**(-3) is blocked on a *fourth* leg, and the arithmetic is here so it is
-not re-derived.** The entry below describes a three-leg gate
-(strip / card-type / land-type). It is short one leg: `bf_cp` does not stop
-at the ability lookup — the **CR 602.5 gates further down read the same
-`cp`'s *keywords*** (`CantActivateTapAbilities` when the ability is
-tap-gated, `Haste` on the summoning-sick check, `CantActivateAbilities` on
-any non-mana ability). A land tapping for mana is tap-gated, so the common
-case reaches the keyword read even with all three legs answering "no". A
-keyword-grant presence gate is **not** `RemoveAllAbilities`' six routes: it
-is every `Modification::AddKeyword` emitter (statics, `equipped_bonus.
-keywords`, level bands, station bands, keyword counters, `granted_keywords_
-eot`). `board_keyword_matching` is **not** that device: it short-circuits
-on printed keywords / eot grants / keyword counters, and when those miss it
-*gathers*. What is wanted is a printed-static leg wedged in front of that
-gather, so `board_keyword_matching` can answer `false` without one — a
-strict improvement for its existing callers as well.
+**(-3) `activate_ability_inner`'s gather — PAID, `-0.879 %`, thirty-sixth
+pass.** All 18,386 gathers removed; the row is off the `computed_permanent`
+caller table. Four legs in the end, and each is a reusable predicate:
+`ability_strip_in_scope`, `card_type_change_in_scope`,
+`land_type_change_in_scope` (built here) and `card_keyword_possible`. What
+the entry taught, kept because (-6) is its direct descendant: **removing
+100 % of a 2.09 % site netted 0.88 %**, because four battlefield walks per
+activation is not free. See the Log block and (-6).
 
-**The keyword leg is BUILT** (`keyword_grant_in_scope` /
-`card_keyword_possible` / `card_can_grant_keyword` /
-`static_effect_grants_keyword`, thirty-fifth pass) and already spent on two
-consumers. (-3) is now short only the **land-type** leg (six variants,
-listed in (-5)) plus the lazy-`bf_cp` restructure described below. The
-enumeration prose below is kept as the record of what the leg covers.
-
-**The leg is scoped; here is the enumeration so it is not re-derived.**
-Two legs of (-3) — strip and card-type — are paid and are the worked
-examples; the land-type leg is six variants (listed in (-5)). The keyword
-leg is the big one, and the scan that sizes it is mechanical: parse
-`pub enum StaticEffect` and report the variants whose bodies mention
-`Keyword`. **23 of 471 do**, and three of them are not grants
-(`LoseKeyword`, `CantHaveKeyword`, `AllNonlandPermanentsAreLegendary`):
-
-`PumpSelfIf`, `PumpTeamIf`, `GrantPumpSelfIf`, `GrantKeyword`,
-`GrantKeywordWhileControllerControlsAtMost`, `SelfHasKeywordWhile`,
-`SelfHasKeywordWhilePredicate`, `SelfHasKeywordWhileCountersAtLeast`,
-`MatchingLandsAreCreatures`, `GainKeywordsFromExiledWith`,
-`AnthemForFilter`, `AnthemForFilterIf`, `SelfHasKeywordIf`,
-`SelfHasDraftNotedKeywords`, `GrantKeywordToChosenType`,
-`GrantKeywordToAttackers`, `GraveyardAnthem` — plus the same five gate
-wrappers, peeled as `static_effect_strips_abilities` peels them. Three are
-**unbounded** sources (the granted keyword comes from another object, so
-the predicate can only answer "yes" when the static is present):
-`GainKeywordsFromExiledWith`, `SelfHasDraftNotedKeywords`, and
-`ProtectionFromExiledWithCardTypes` (which synthesizes `Protection(color)`
-without carrying a `Keyword` field, so the scan above misses it — **the
-scan is necessary, not sufficient**).
-
-Outside the statics, the sources are: `equipped_bonus.keywords` /
-`.during_your_turn_keywords` / its host-conditional riders,
-`soulbond_bonus.keywords`, `level_bands[].keywords`, `station[].keywords`,
-the instance's `granted_keywords_eot` and `keyword_counters`, `suspected`
-(Menace + CantBlock, CR 701.60), the hexproof-unless pass, and the stored
-`continuous_effects`. **~32 `Modification::AddKeyword` sites under
-`game/`** in all; each needs its printed tell read, which is why this is a
-sitting of its own rather than a rider on another change.
-
-**Land the audit the way the thirty-fifth pass did** — a `debug_assert!` in
-`gather_continuous_effects` that every `AddKeyword(k)` in the gathered set
-implies the predicate says `true` for `k`. A cross-check *at the gate*
-would re-gather on every ask; this one runs only where a gather already
-happened, so the whole suite audits the enumeration for free. That is what
-makes an over-approximation of 32 sites landable.
+**The auto-tap scope is *not* the way in, and here is the arithmetic so it
+is not re-derived.** `auto_tap_for_cost_inner -> activate_ability` is 18,832
+calls over 8,892 payments (2.1 per payment), so a scope spanning the tapping
+loop would fold ~52 % of these gathers — but tapping is a layer input in at
+least four places inside `gather_continuous_effects_inner` (relative lines
+726, 2571, 2589-2593, and every `WhileCondition`), so the scope is unsound
+without a guard over all of them. Moot now that (-3) is paid with an exact
+gate, and kept only so the idea is not re-proposed.
 
 **(-2b) `apply_prevention_shields`' Absorb read — PAID, `-0.855 %` with
 `damage_prevented_by_protection`, thirty-fifth pass.** Both now ask
@@ -1275,40 +1324,6 @@ automatically a hit. The enumeration script that produced the list is three
 lines of `awk` over `fn` signatures: `&self`, no `with_frozen_layers`, two
 or more layer reads. Rank by profile before writing: `evaluate_value` and
 `evaluate_predicate` do not appear on the tip's caller table at all.
-
-**(-3) `activate_ability_inner`'s gather — 48,977,884 / 2.07 % over 18,386
-gathers at 2,664 Ir each, the largest single one left.** One
-`with_frozen_layers` per activation, and its *first* computed read is a
-whole-game gather. It exists for three answers: `lost_all_abilities`,
-is-a-creature, and `land_mana_lost` (a basic's printed mana ability against
-its computed land types) — and then the CR 602.5 gates below re-read the
-same `bf_cp`'s keywords, which is the fourth leg above.
-
-**Two of the four legs now exist and are named**:
-`ability_strip_off_battlefield()` + `battlefield.iter().any(
-card_can_strip_abilities)` is the strip leg, exactly as
-`permanents_with_abilities_removed` uses it; `card_type_change_in_scope()`
-is the card-type leg, paid by the thirty-fifth pass. `rewrites_land_types`
-is the land-type predicate but is written against the *gathered* set, so it
-still needs the printed-static twin listed in (-5). The keyword leg is
-above.
-
-**The shape of the fix, once the legs are there**: `bf_cp` is taken
-eagerly in the battlefield branch, so make it a lazy cell and let each
-consumer ask its own gate first — a basic land tapping for mana then
-answers `stripped` / `is_creature` / `land_mana_lost` from the printed
-line, skips gate 2 on `summoning_sick`, skips gate 3 on `is_mana_ability`,
-and only gate 1 (`CantActivateTapAbilities`) needs the keyword leg. Expect
-~1.5-2 %.
-
-**The auto-tap scope is *not* the way in, and here is the arithmetic so it
-is not re-derived.** `auto_tap_for_cost_inner -> activate_ability` is 18,832
-calls over 8,892 payments (2.1 per payment), so a scope spanning the tapping
-loop would fold ~52 % of these gathers — but tapping is a layer input in at
-least four places inside `gather_continuous_effects_inner` (relative lines
-726, 2571, 2589-2593, and every `WhileCondition`), so the scope is unsound
-without a guard over all of them, and the guard is strictly harder than
-(-3)'s. Take (-3) first; it subsumes most of the win with an exact gate.
 
 **(-2) `CardCold` — PAID, `5174acd3`, -1.969 %.** What is left of the
 entry, so the next run does not re-derive it. The `CardData` deep-copy

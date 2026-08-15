@@ -7740,6 +7740,41 @@ impl GameState {
         }) || self.battlefield.iter().any(card_can_change_card_types)
     }
 
+    /// Both legs of the ability-strip presence gate in one call, for a caller
+    /// that holds no [`GrantScan`] to read `strip_on_battlefield` off. Same
+    /// contract: `false` is authoritative, `true` only means the gather has to
+    /// run. Prefer the `scan` form where one is already built — this walks the
+    /// battlefield itself.
+    pub(crate) fn ability_strip_in_scope(&self) -> bool {
+        self.battlefield.iter().any(card_can_strip_abilities)
+            || self.ability_strip_off_battlefield()
+    }
+
+    /// The same device for the layer-4 *land-type* family: a cheap
+    /// over-approximation of "the gathered effect set can contain an
+    /// `AddLandType` / `SetLandTypes` / `ReplaceBasicLandType`", answered
+    /// without gathering. `false` is authoritative; `true` only means the
+    /// gather has to run.
+    ///
+    /// The printed-static twin of [`actions::rewrites_land_types`], which
+    /// tests the same three modifications against an already-*gathered* set
+    /// and so only serves a caller inside a freeze scope. Two routes reach
+    /// the modification: a resolved `continuous_effects` entry (Spreading
+    /// Seas, Magical Hack) and a battlefield permanent's printed shape,
+    /// folded into [`card_can_change_land_types`]. `gather_continuous_effects`
+    /// `debug_assert!`s the implication in the sound direction, so the whole
+    /// suite audits the enumeration without any caller paying a gather.
+    pub(crate) fn land_type_change_in_scope(&self) -> bool {
+        self.continuous_effects.iter().any(|e| {
+            matches!(
+                e.modification,
+                Modification::AddLandType(_)
+                    | Modification::SetLandTypes(_)
+                    | Modification::ReplaceBasicLandType(..)
+            )
+        }) || self.battlefield.iter().any(card_can_change_land_types)
+    }
+
     /// The same device for layer-6 keyword *grants*: a cheap
     /// over-approximation of "the gathered effect set can contain an
     /// `AddKeyword` matching `pred`", answered without gathering. `false` is
@@ -7929,6 +7964,16 @@ impl GameState {
                     | Modification::SetCardTypes(_)
             )) || self.card_type_change_in_scope(),
             "the card-type presence gate missed a layer-4 card-type source",
+        );
+        // The land-type presence gate's audit, same direction and same place.
+        debug_assert!(
+            !out.iter().any(|e| matches!(
+                e.modification,
+                Modification::AddLandType(_)
+                    | Modification::SetLandTypes(_)
+                    | Modification::ReplaceBasicLandType(..)
+            )) || self.land_type_change_in_scope(),
+            "the land-type presence gate missed a layer-4 land-type source",
         );
         // The keyword-grant gate's audit, same direction and same place.
         // Deduplicated first: a gather can carry a dozen `AddKeyword`s and
@@ -20929,6 +20974,53 @@ fn card_can_change_card_types(card: &CardInstance) -> bool {
     def.station.iter().any(|band| {
         band.pt.is_some() || band.statics.iter().any(static_effect_changes_card_types)
     }) || def.static_abilities.iter().any(|sa| static_effect_changes_card_types(&sa.effect))
+}
+
+/// True when `effect` can emit a layer-4 land-type modification. Twin of
+/// [`static_effect_changes_card_types`] for the land-type family; shares the
+/// gate-wrapper peel for the same reason.
+///
+/// Six variants, and the list is exhaustive against the emitters in
+/// `gather_continuous_effects_inner` and `static_effect_to_effects`: Alpine
+/// Moon and Ultima blank a land's types on their way to stripping it, and the
+/// other four write one directly. `LandsYouControlAreChosenType` is a no-op
+/// until its ETB stamps `chosen_land_type`, but the gate over-approximates
+/// rather than reading the instance — the static is the tell.
+fn static_effect_changes_land_types(effect: &crate::effect::StaticEffect) -> bool {
+    use crate::effect::StaticEffect as SE;
+    match effect {
+        SE::NamedLandsNeutralized
+        | SE::BlightedLandsNeutralized
+        | SE::GrantAllBasicLandTypes { .. }
+        | SE::LandTypeChanger { .. }
+        | SE::LandTypeChangerWhileCounters { .. }
+        | SE::LandsYouControlAreChosenType => true,
+        SE::WhileClassLevelAtLeast { inner, .. }
+        | SE::WhileYourTurn { inner }
+        | SE::WhileNotYourTurn { inner }
+        | SE::WhileCountersAtLeast { inner, .. }
+        | SE::WhileCondition { inner, .. } => static_effect_changes_land_types(inner),
+        _ => false,
+    }
+}
+
+/// True when `card`, on the battlefield, can contribute a layer-4 land-type
+/// modification to the gathered set. The printed-shape half of
+/// [`GameState::land_type_change_in_scope`]; covers the attachment route
+/// (`equipped_bonus.set_land_types`) and every static route, including
+/// CR 721.2a Station bands.
+fn card_can_change_land_types(card: &CardInstance) -> bool {
+    let def = &card.definition;
+    if card.attached_to.is_some()
+        && def.equipped_bonus.as_ref().is_some_and(|b| b.set_land_types.is_some())
+    {
+        return true;
+    }
+    def.static_abilities.iter().any(|sa| static_effect_changes_land_types(&sa.effect))
+        || def
+            .station
+            .iter()
+            .any(|band| band.statics.iter().any(static_effect_changes_land_types))
 }
 
 /// True when `effect` can emit a layer-6 `AddKeyword` matching `pred`. Twin of
