@@ -127,29 +127,30 @@ contention-immune, which makes it the better first look.
 
 ## Baseline
 
-**NOT re-anchored at the thirty-seventh pass's tip (`7af2b489`).** Same
+**NOT re-anchored at the thirty-seventh pass's tip (`59c964dc`).** Same
 `--bench`, `release` + mimalloc, three runs, on the same container and the
 same `host_cpu` string as the thirty-sixth pass's reading below:
 
 ```text
-games_per_s          110.78 / 115.09 / 112.32   (mean 112.73)
-games_per_s_th       36.93 - 38.36
+games_per_s          109.79 / 109.96 / 111.27   (mean 110.34)
+games_per_s_th       36.60 - 37.09
 host_cpu             Intel(R) Xeon(R) Processor @ 2.80GHz
-host_calib_ms        51 / 51 / 49
+host_calib_ms        51 / 49 / 48
 decisions            193,232 byte-identical on all three
 turns_per_game       26.98
 stalls               0 (0.00 %), stalls_by cap 0 / stuck 0 / draw 0
-peak_rss_mib         29.4 - 30.8
+peak_rss_mib         29.3 - 31.2
 determinism          ok (all pairs split, on all 3 runs)
 ```
 
-**+2.11 % against the pass-36 mean of 110.40 on a change callgrind measures
-at -1.590 %** — the right sign and the right rough size, but the two means
-are inside this bench's noise band either way, so it is the invariants that
-carry the check here: `decisions` is **193,232 byte-identical** with the
-anchor and with every reading below, `turns_per_game` and the stall counts
-are unchanged, and determinism passed on all three runs. Nothing to
-investigate; the anchor stands.
+**Three readings on this box now: 110.40 (pass 36's tip), 112.73
+(`7af2b489`, three commits and -1.590 % Ir later) and 110.34 (`59c964dc`,
+one more commit and -0.223 % later).** The spread is 2.2 % and the Ir moved
+-1.809 % monotonically down across it, so the bench cannot resolve this
+pass and does not try to. **What it does check is the invariants, and they
+are identical**: `decisions` is 193,232 byte-identical with the anchor and
+with every reading below, `turns_per_game` and the stall counts unchanged,
+determinism ok on all six runs. Nothing to investigate; the anchor stands.
 
 **The thirty-sixth pass's reading, kept because it is the file's third and
 sharpest demonstration of why the anchor does not move.** Same `--bench`,
@@ -639,25 +640,42 @@ the table above is safe to compress:
 
 ### Thirty-seventh pass — three sites stop gathering, and two null results that reprice the table
 
-Cumulative: **2,284,098,792 -> 2,247,783,661 Ir, -36,315,131 / -1.590 %**, in
-three commits, all behaviour-preserving (suite 18,639 green over 11 binaries,
+Cumulative: **2,284,098,792 -> 2,242,782,905 Ir, -41,315,887 / -1.809 %**, in
+four commits, all behaviour-preserving (suite 18,639 green over 11 binaries,
 all five golden traces identical, `clippy --workspace --all-targets` clean).
-All six readings `profiling-fast --no-default-features`, callgrind, `--a gang
---b gang --games 6 --threads 1 --seed 1 --decks fixed`, built and run in one
-sitting. The base read **2,284,098,792** against the **2,284,099,256** this
-file recorded for `898a9912` — **464 Ir apart on a 2.28 G workload**.
+All seven readings `profiling-fast --no-default-features`, callgrind, `--a
+gang --b gang --games 6 --threads 1 --seed 1 --decks fixed`, built and run in
+one sitting. The base read **2,284,098,792** against the **2,284,099,256**
+this file recorded for `898a9912` — **464 Ir apart on a 2.28 G workload**.
 
 | commit | before -> after | what |
 |---|---|---|
 | `4259fd5c` | 2,284,098,792 -> 2,272,775,413 (**-0.496 %**) | `dying_snapshot`'s gather, behind a new creature-type presence gate |
 | `4976e380` | 2,272,775,413 -> 2,261,967,040 (**-0.476 %**) | `has_first_strikers`' gather, behind a participant-scoped keyword gate |
 | `7af2b489` | 2,261,967,040 -> 2,247,783,661 (**-0.627 %**) | the assigns-as-unblocked read joins the damage step's one snapshot |
+| `59c964dc` | 2,247,783,661 -> 2,242,782,905 (**-0.223 %**) | the combat-decision path reads the resolver's subset, not the board |
 
 | | base | tip |
 |---|---|---|
 | `computed_permanent` -> gather | 40,264 | **29,780** |
 | all gathers | 73,434 | **62,950** |
 | `gather_continuous_effects_inner` self | 44,957,542 / 1.97 % | 37,904,168 / 1.69 % |
+
+(The three-table figures are the `7af2b489` read; the fourth commit replaces
+310 `compute_battlefield` calls with 310 `compute_permanents` ones, so the
+gather *count* is unchanged and only the per-gather layer pass shrinks.)
+
+**The combat-decision path (-0.223 %).** `apply_combat_decision_answer`'s
+CR 510.1c-d branch called `compute_battlefield()` to read one attacker's
+deathtouch, trample and power plus its blockers' toughness — **310 calls at
+16,939 Ir each, the most expensive layer read per call anywhere in the
+engine.** Every id it looks up is a combat participant, so
+`combat_damage_computed()` answers all of them and keeps the whole-board
+fallback for `free_division_targets`' Butcher Orgg half. It also closed a
+latent divergence: the decision path computed from a different view than the
+resolver that consumes the answer it caches. **This one was not found by
+Ir/call either — it was found by asking which sites take a *whole-board*
+view for a *participant-scoped* question.**
 
 **`dying_snapshot` (-0.496 %).** Its doc already claimed it "only pays the
 layer cost when a grant is actually present". That was a claim, not code —
@@ -1247,8 +1265,11 @@ settings + debuginfo; system allocator, because valgrind replaces malloc and
 a mimalloc build would measure the interception), 1 thread, `--a gang --b
 gang --games 6 --seed 1 --decks fixed`.
 
-**The thirty-seventh pass's tip (`7af2b489`) reads 2,247,783,661 Ir**, and
-its gather half was re-taken directly:
+**The thirty-seventh pass reads 2,242,782,905 Ir at its tip (`59c964dc`).**
+The tables below were taken one commit earlier at `7af2b489`
+(2,247,783,661); the fourth commit only shrinks the per-gather layer pass at
+`combat.rs:3284`, so the gather counts are the tip's and the
+`compute_battlefield` row is now 310 `compute_permanents` calls instead.
 
 | Ir | share | calls | caller |
 |---|---|---|---|
@@ -1281,7 +1302,7 @@ one inside `next_action`'s scope does not.
 | 7,956,706 | 0.35 % | 4,462 | 1,783 | `combat.rs:2334` `declare_blockers`' computed closure |
 | 7,241,323 | 0.32 % | 2,226 | 3,253 | `combat.rs:4036` `creature_redirects_damage_to_controller` |
 | 6,404,107 | 0.28 % | 2,598 | 2,465 | `combat.rs:1528` `declare_blockers`' `compute_permanents` |
-| 5,251,116 | 0.23 % | 310 | 16,939 | `combat.rs:3284` the free-divider `compute_battlefield` fallback |
+| 5,251,116 | 0.23 % | 310 | 16,939 | `combat.rs:3284` `apply_combat_decision_answer` — **PAID `59c964dc`** |
 | 4,724,245 | 0.21 % | 1,614 | 2,927 | `actions.rs:8410` a keyword read on a `&mut self` path |
 | 4,606,395 | 0.20 % | 3,680 | 1,251 | `bot.rs:6356` — scoped |
 | 4,491,342 | 0.20 % | 1,916 | 2,344 | `targeting.rs:141` the Ward scan |
@@ -1481,11 +1502,14 @@ it is taken **twice per combat** whenever the first-strike step runs, and
 question off the same board immediately before. Two shapes worth costing: hand
 the first-strike step's computed set forward to the regular step (unsound as
 written — damage is dealt in between and CR 510.2 is a fresh assignment), or
-have `advance_step`'s gate and the resolver share one scope. Also here: the
-`compute_battlefield` fallback at `combat.rs:3284` is 310 calls at **16,939 Ir
-each** for the `DividesCombatDamageAmongDefenders` free-divider case; it is
-already gated on the subset carrying that keyword, so the question is why 310
-calls survive the gate on decks that print none.
+have `advance_step`'s gate and the resolver share one scope. The
+`compute_battlefield` half of this entry is **paid** (`59c964dc`, -0.223 %):
+the 310 calls at 16,939 Ir each were `apply_combat_decision_answer` taking a
+whole-board view for a participant-scoped question, not the free-divider
+fallback. **That is the second finding this pass that Ir/call did not
+produce** — the device that did was asking which sites take a whole-board
+view to answer a question about two to six named permanents. `view.rs` (two
+sites), `bot.rs:1711`/`1752` and `eval.rs:1309` are the unread siblings.
 
 **(-7) `scale_damage_to` — PAID, `-1.640 %`, thirty-sixth pass.** One gate
 in front of the whole function; the site is off the caller table and

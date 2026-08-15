@@ -16,12 +16,14 @@ reference and want their own triage pass):
 
 ## NEXT (handoff — rewrite each run, keep under 15 lines)
 
-Branch `claude/modern_decks`. **Pass 37: `-1.590 %` Ir in three commits**,
-2,284,098,792 -> **2,247,783,661**. Three `&mut self` gathers closed:
+Branch `claude/modern_decks`. **Pass 37: `-1.809 %` Ir in four commits**,
+2,284,098,792 -> **2,242,782,905**. Three `&mut self` gathers closed —
 `dying_snapshot` behind a new creature-type presence gate (`-0.496 %`),
 `has_first_strikers` behind a participant-scoped keyword gate (`-0.476 %`),
-and CR 510.1a's assigns-as-unblocked read folded into the damage step's one
-snapshot (`-0.627 %`). All gathers 73,434 -> **62,950**.
+CR 510.1a's assigns-as-unblocked read folded into the damage step's one
+snapshot (`-0.627 %`) — plus the combat-decision path reading the resolver's
+subset instead of the whole board (`-0.223 %`). All gathers 73,434 ->
+**62,950**.
 
 - **The ranking rule changed, and this is the thing to carry.** Ir-per-call
   at a `computed_permanent` site does *not* say whether it gathers —
@@ -41,6 +43,13 @@ snapshot (`-0.627 %`). All gathers 73,434 -> **62,950**.
   the sixth. Then (-9) (`combat_damage_computed`, 0.71 %, and the 310
   surviving `compute_battlefield` calls at 16,939 Ir each). (-6) is still
   open and still smaller.
+- **A second finding device, and it produced the fourth commit when Ir/call
+  produced nothing:** ask which sites take a *whole-board* view
+  (`compute_battlefield()`) to answer a question about two to six *named*
+  permanents. `apply_combat_decision_answer` was 310 calls at **16,939 Ir
+  each** — the most expensive layer read per call in the engine — for one
+  attacker's keywords and its blockers' toughness. Unread siblings:
+  `view.rs` (two sites), `bot.rs:1711`/`1752`, `eval.rs:1309`.
 - **Do not compare `--bench` absolutes across sittings — it is the box.**
   The anchor stays at 163.62; PERF **Baseline** has the full argument, and
   the two readings recorded there are 3.7 % apart on one binary-identical
