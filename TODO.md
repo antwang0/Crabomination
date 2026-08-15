@@ -16,6 +16,17 @@ reference and want their own triage pass):
 
 ## NEXT (handoff — rewrite each run, keep under 15 lines)
 
+**FIRST COMMAND OF EVERY RUN**, before reading anything else:
+`git fetch origin claude/modern_decks && git checkout -B claude/modern_decks
+origin/claude/modern_decks`. The routine container clones **`main`**, which is
+~2,000 commits behind this branch and has none of the ML crates, `PERF.md`,
+`crabomination_tests`, or the profiling profiles. A run that starts from the
+default checkout will rebuild infrastructure that already exists here and
+rediscover bugs already fixed (2026-08-15: a whole run lost that way — it
+re-derived the seeded-RNG facade, `run_bot_match`, `bot_ladder`, golden traces,
+and the `would_accept` suspend bug that `suspended_without_completing` already
+covers). `git log --oneline -1` should show a PERF/pass commit, not a card batch.
+
 Branch `claude/modern_decks`. **Pass 40: `-7.585 %` Ir in five commits**,
 2,136,851,050 -> **1,974,770,479**, the largest pass since the teens. All
 five rows are **allocation**, and none came off the candidates list.
