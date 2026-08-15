@@ -356,7 +356,14 @@ impl GameState {
         }
         // CR 702.64 — Absorb N on the damaged creature prevents N of this
         // event's damage per instance (each instance applies separately).
-        if let EntityRef::Permanent(cid) = ent {
+        // The gate is the same shape as the protection one above it: the
+        // answer is `0` on every board with no Absorb source, and proving that
+        // was a whole-game gather per damage event aimed at a permanent.
+        if let EntityRef::Permanent(cid) = ent
+            && self.card_keyword_possible(cid, |k| {
+                matches!(k, crate::card::Keyword::Absorb(_))
+            })
+        {
             let absorbed: u32 = self
                 .computed_permanent(cid)
                 .map(|cp| {

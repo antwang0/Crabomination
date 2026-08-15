@@ -561,7 +561,52 @@ the table above is safe to compress:
 
 ## Log
 
-### Thirty-fifth pass — the card-type family gets a presence gate
+### Thirty-fifth pass — two layer families get a presence gate
+
+Cumulative: **2,394,920,900 -> 2,342,776,898 Ir, -52,144,002 / -2.177 %**,
+in two commits, both behaviour-preserving (game output byte-identical on
+the fixed workload, suite 18,639 green, golden traces identical).
+
+**The keyword-grant gate. `2,362,985,109 -> 2,342,776,898 Ir`,
+`-20,208,211` / **-0.855 %**.** Candidate (-3)'s fourth leg, built and
+spent on its two *cheap* consumers rather than on `activate_ability_inner`
+(which also needs the land-type leg and a lazy-`bf_cp` restructure).
+`damage_prevented_by_protection`'s target read went **28,921,126 / 18,986
+gathers -> 1,007,867 / 790**, and `apply_prevention_shields`' CR 702.64
+Absorb read (**14,230,429 / 4,456**) left the caller table entirely. The
+gate also wedges in front of `board_keyword_matching`'s gather, so its
+existing callers get the same negative answer without one.
+
+**The enumeration is 32 `AddKeyword` sites and the audit found four
+classes of miss before any of them could ship.** The first draft walked the
+battlefield only, and the suite's `debug_assert!` in
+`gather_continuous_effects` named each gap by keyword: **CR 114 emblems**
+(Domri Rade's double strike / trample / haste), **CR 904.8 / 315.5 face-up
+schemes and conspiracies** in the command zone (Fear My Authority's fear,
+Weight Advantage), **CR 702.109 Unleash**'s synthesized can't-block, and
+the **Incarnation cycle's `GraveyardAnthem`**, which is the gather's one
+grant read out of a *graveyard*. A fifth draft was needed for
+`ProtectionFromCardType(Creature)`: four statics grant a keyword whose
+payload they don't carry as a field, so the enum scan that sizes the work
+is **necessary and not sufficient** — those are answered "maybe". Nine
+tests, then six, then one: the audit is what made a 32-site
+over-approximation landable, and it is worth more than the enumeration.
+
+**The first version measured `+0.012 %` — no win — and the fix is the
+row.** The gate was working (the two sites' 42 M of gathers were gone) but
+cost **1,643 Ir a call**, near the gather it replaced. Two causes, both
+about the *predicate*, not the walk: `pred: &dyn Fn` put an indirect call
+on every keyword test, and each card paid two `definition.keywords`
+`contains` scans through `Keyword`'s payload-carrying `PartialEq`.
+Monomorphizing the three walkers on `impl Fn` and hoisting the three
+synthesized keywords (`Hexproof` / `CantBlock` / `Menace`) into **one**
+`pred` call at the top of `keyword_grant_in_scope` — so a predicate that
+names none of them never scans a card's keywords at all — took the walk to
+**~33 Ir a card**, and the row to -0.855 %. **A presence gate is only a win
+if the predicate is cheaper than the thing it guards; a `&dyn Fn`
+predicate over a fat enum is not.**
+
+### Thirty-fifth pass, first commit — the card-type family gets a presence gate
 
 **The requirement walker's layer-4 card-type answer stops gathering when
 nothing on the board can change a card type. `2,394,920,900 ->
@@ -1144,6 +1189,13 @@ on printed keywords / eot grants / keyword counters, and when those miss it
 gather, so `board_keyword_matching` can answer `false` without one — a
 strict improvement for its existing callers as well.
 
+**The keyword leg is BUILT** (`keyword_grant_in_scope` /
+`card_keyword_possible` / `card_can_grant_keyword` /
+`static_effect_grants_keyword`, thirty-fifth pass) and already spent on two
+consumers. (-3) is now short only the **land-type** leg (six variants,
+listed in (-5)) plus the lazy-`bf_cp` restructure described below. The
+enumeration prose below is kept as the record of what the leg covers.
+
 **The leg is scoped; here is the enumeration so it is not re-derived.**
 Two legs of (-3) — strip and card-type — are paid and are the worked
 examples; the land-type leg is six variants (listed in (-5)). The keyword
@@ -1183,15 +1235,12 @@ would re-gather on every ask; this one runs only where a gather already
 happened, so the whole suite audits the enumeration for free. That is what
 makes an over-approximation of 32 sites landable.
 
-**(-2b) `apply_prevention_shields`' Absorb read — 14,227,551 / 0.59 % over
-4,456 gathers (3,192 Ir each), and it is one keyword.** CR 702.64 asks
-`computed_permanent(cid).keywords` for `Absorb(n)` on every damage event
-aimed at a permanent, and the answer is `0` on every bench board. A scope
-does not help — the enclosing `&self` window (mod.rs `movement.rs`
-247-482, between the `damage_prevented_sources.retain` at 246 and the
-`battlefield_find_mut` at 483) holds exactly **one** gathering read, so a
-freeze there folds one gather into one. This wants the same keyword-grant
-gate (-3) wants, and is the cheaper place to prove it out.
+**(-2b) `apply_prevention_shields`' Absorb read — PAID, `-0.855 %` with
+`damage_prevented_by_protection`, thirty-fifth pass.** Both now ask
+`card_keyword_possible` before gathering. What the entry taught, kept
+because the next gate will want it: the keyword-grant predicate is the
+device, and **its own cost is the thing to watch** — the first version was
+a wash at 1,643 Ir a call. See the Log block.
 
 **(-4) The rest of the "eager view above a wide `match`" sweep — cheap,
 mechanical, and one hit already paid -2.128 %.** *Two of the four named

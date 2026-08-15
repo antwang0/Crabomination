@@ -7574,6 +7574,11 @@ impl GameState {
                 || c.keyword_counters.iter().any(|(k, n)| *n > 0 && pred(k))
         }) || match self.frozen_effects() {
             Some(fx) => granted(&fx),
+            // The legs above are positive short-circuits; when they all miss
+            // this used to gather to prove a negative. Ask the presence gate
+            // first — a board with no source that can *grant* a matching
+            // keyword cannot have one in its gathered set either.
+            None if !self.keyword_grant_in_scope(&pred) => false,
             None => granted(&self.gather_continuous_effects()),
         };
         #[cfg(debug_assertions)]
@@ -7735,6 +7740,90 @@ impl GameState {
         }) || self.battlefield.iter().any(card_can_change_card_types)
     }
 
+    /// The same device for layer-6 keyword *grants*: a cheap
+    /// over-approximation of "the gathered effect set can contain an
+    /// `AddKeyword` matching `pred`", answered without gathering. `false` is
+    /// authoritative; `true` only means the gather has to run.
+    ///
+    /// Two routes, as ever: a resolved `continuous_effects` entry, and a
+    /// battlefield permanent's printed shape folded into
+    /// [`card_can_grant_keyword`]. `gather_continuous_effects` `debug_assert!`s
+    /// the implication in the sound direction, so the whole suite audits the
+    /// enumeration without any caller paying a gather.
+    ///
+    /// Not a general "can this keyword appear" test: a permanent's own
+    /// *printed* keywords are not grants and are not scanned here, so a
+    /// per-card consumer asks its card first. The two in-place text rewrites
+    /// (`Protection` / `Landwalk` retyping) keep the keyword's shape, so a
+    /// family predicate is unaffected by them.
+    ///
+    /// The off-battlefield half is not optional and was not guessed: a
+    /// battlefield-only version tripped the audit on nine tests — CR 114
+    /// emblems (Domri Rade's double strike / trample / haste) and CR 904.8 /
+    /// 315.5 face-up schemes and conspiracies (Fear My Authority, Weight
+    /// Advantage), both of which join the gather's anthem walk.
+    pub(crate) fn keyword_grant_in_scope(&self, pred: impl Fn(&Keyword) -> bool) -> bool {
+        // Three keywords the gather synthesizes from a *printed* keyword or an
+        // instance flag rather than from a field it can be matched against —
+        // CR 701.60 Suspect's menace + can't-block, CR 702.109 Unleash's
+        // can't-block, and the hexproof-unless rewrite. Asking `pred` about
+        // them once here instead of once per card is what keeps this walk
+        // cheap: it turns the per-card `definition.keywords` scan — `Keyword`
+        // is a payload-carrying enum and its `PartialEq` is not free — into a
+        // branch no predicate takes unless it names one of the three.
+        let synth = pred(&Keyword::Hexproof) || pred(&Keyword::CantBlock) || pred(&Keyword::Menace);
+        self.continuous_effects
+            .iter()
+            .any(|e| matches!(&e.modification, Modification::AddKeyword(k) if pred(k)))
+            || self.battlefield.iter().any(|c| card_can_grant_keyword(c, &pred, synth))
+            || self.players.iter().any(|p| {
+                p.command
+                    .iter()
+                    .any(|c| {
+                        (c.definition.is_scheme() || c.command_zone_abilities_active())
+                            && card_can_grant_keyword(c, &pred, synth)
+                    })
+                    || p.emblems.iter().any(|em| {
+                        em.statics
+                            .iter()
+                            .any(|sa| static_effect_grants_keyword(&sa.effect, &pred))
+                    })
+                    // The Incarnation cycle's `GraveyardAnthem` is the gather's
+                    // one zone-special grant — read off *graveyard* cards'
+                    // printed statics. Matched by variant rather than through
+                    // `card_can_grant_keyword` so the walk stays a length check
+                    // per card on a zone that grows all game.
+                    || p.graveyard.iter().any(|c| {
+                        c.definition.static_abilities.iter().any(|sa| {
+                            matches!(&sa.effect,
+                                crate::effect::StaticEffect::GraveyardAnthem { keyword, .. }
+                                if pred(keyword))
+                        })
+                    })
+            })
+    }
+
+    /// True when the battlefield permanent `id`'s *computed* keyword set could
+    /// contain a keyword matching `pred`, answered without gathering. `false`
+    /// is authoritative (and is also the answer when `id` isn't a permanent,
+    /// which is what `computed_permanent` returns there).
+    ///
+    /// The four seeds `compute_permanent` uses, minus the gather: the card's
+    /// printed keywords, its `granted_keywords_eot`, its CR 122.1b
+    /// `keyword_counters`, and — for the layer-6 `AddKeyword` it can't see
+    /// without gathering — [`keyword_grant_in_scope`](Self::keyword_grant_in_scope).
+    pub(crate) fn card_keyword_possible(
+        &self,
+        id: CardId,
+        pred: impl Fn(&Keyword) -> bool,
+    ) -> bool {
+        let Some(c) = self.battlefield_find(id) else { return false };
+        c.definition.keywords.iter().any(&pred)
+            || c.granted_keywords_eot.iter().any(&pred)
+            || c.keyword_counters.iter().any(|(k, n)| *n > 0 && pred(k))
+            || self.keyword_grant_in_scope(pred)
+    }
+
     /// Run `f` with the gathered continuous-effect set memoized, so every
     /// `computed_permanent` / `compute_battlefield` call inside reuses one
     /// gather instead of rebuilding the full effect set per call. Sound by
@@ -7841,6 +7930,24 @@ impl GameState {
             )) || self.card_type_change_in_scope(),
             "the card-type presence gate missed a layer-4 card-type source",
         );
+        // The keyword-grant gate's audit, same direction and same place.
+        // Deduplicated first: a gather can carry a dozen `AddKeyword`s and
+        // each check is a battlefield walk.
+        #[cfg(debug_assertions)]
+        {
+            let mut seen: Vec<&Keyword> = Vec::new();
+            for e in &out {
+                if let Modification::AddKeyword(k) = &e.modification
+                    && !seen.contains(&k)
+                {
+                    seen.push(k);
+                    debug_assert!(
+                        self.keyword_grant_in_scope(|x: &Keyword| x == k),
+                        "the keyword-grant presence gate missed a source for {k:?}",
+                    );
+                }
+            }
+        }
         out
     }
 
@@ -11759,6 +11866,13 @@ impl GameState {
     }
 
     fn damage_prevented_by_protection_inner(&self, source: CardId, target: CardId) -> bool {
+        // The whole function is gated on the target carrying a protection
+        // keyword, and almost no permanent ever does — but proving that took a
+        // whole-game gather on every damage event, 1.22 % of the simulator.
+        // The presence gate answers it from printed shapes.
+        if !self.card_keyword_possible(target, Self::protection_keyword) {
+            return false;
+        }
         let Some(tgt) = self.computed_permanent(target) else { return false };
         // Everything below this reads the *source* — five `computed_permanent`
         // lookups and two `Vec` clones — and none of it can change the answer
@@ -20815,6 +20929,103 @@ fn card_can_change_card_types(card: &CardInstance) -> bool {
     def.station.iter().any(|band| {
         band.pt.is_some() || band.statics.iter().any(static_effect_changes_card_types)
     }) || def.static_abilities.iter().any(|sa| static_effect_changes_card_types(&sa.effect))
+}
+
+/// True when `effect` can emit a layer-6 `AddKeyword` matching `pred`. Twin of
+/// [`static_effect_strips_abilities`] for the keyword-grant family.
+///
+/// The variant list is mechanical, not judged: 23 of `StaticEffect`'s variants
+/// carry a `Keyword` field, three of those only *remove* one (`LoseKeyword`,
+/// `CantHaveKeyword`) or name a supertype, and four more grant a keyword they
+/// don't carry as a field — so the scan for `Keyword` in the enum is necessary
+/// and not sufficient, and those four are spelled out below.
+fn static_effect_grants_keyword(
+    effect: &crate::effect::StaticEffect,
+    pred: &impl Fn(&Keyword) -> bool,
+) -> bool {
+    use crate::effect::StaticEffect as SE;
+    let any = |kws: &[Keyword]| kws.iter().any(pred);
+    match effect {
+        SE::PumpSelfIf { keywords, .. }
+        | SE::PumpTeamIf { keywords, .. }
+        | SE::GrantPumpSelfIf { keywords, .. }
+        | SE::MatchingLandsAreCreatures { keywords, .. }
+        | SE::AnthemForFilter { keywords, .. }
+        | SE::AnthemForFilterIf { keywords, .. } => any(keywords),
+        SE::GrantKeyword { keyword, .. }
+        | SE::GrantKeywordWhileControllerControlsAtMost { keyword, .. }
+        | SE::GrantKeywordToChosenType { keyword, .. }
+        | SE::GrantKeywordToAttackers { keyword }
+        | SE::GraveyardAnthem { keyword, .. }
+        | SE::SelfHasKeywordWhile { keyword, .. }
+        | SE::SelfHasKeywordWhilePredicate { keyword, .. }
+        | SE::SelfHasKeywordWhileCountersAtLeast { keyword, .. }
+        | SE::SelfHasKeywordIf { keyword, .. } => pred(keyword),
+        // Unbounded — the granted keyword carries a payload the static does
+        // not fix (an exiled card's keywords or card types, a draft note, an
+        // ETB-chosen colour, a counter count), so the only sound answer while
+        // the static is present is "maybe". All five are rare enough that the
+        // gate still reads `false` on essentially every board.
+        SE::GainKeywordsFromExiledWith { .. }
+        | SE::SelfHasDraftNotedKeywords
+        | SE::AnnihilatorPerPlusOneCounter
+        | SE::GrantProtectionFromChosenColor { .. }
+        | SE::ProtectionFromExiledWithCardTypes
+        | SE::YouAndCreaturesProtectionFromChosenCardType => true,
+        SE::WhileClassLevelAtLeast { inner, .. }
+        | SE::WhileYourTurn { inner }
+        | SE::WhileNotYourTurn { inner }
+        | SE::WhileCountersAtLeast { inner, .. }
+        | SE::WhileCondition { inner, .. } => static_effect_grants_keyword(inner, pred),
+        _ => false,
+    }
+}
+
+/// True when `card`, on the battlefield, can contribute a layer-6 `AddKeyword`
+/// matching `pred` to the gathered set. The printed-shape half of
+/// [`GameState::keyword_grant_in_scope`]: the attachment bonuses and their CR
+/// 613 host-conditional riders, Soulbond, level and Station bands, the two
+/// instance-level self-grants the gather synthesizes (CR 701.60 Suspect's
+/// menace + can't-block, and the hexproof-unless rewrite), and every static
+/// route including Station-band statics.
+fn card_can_grant_keyword(
+    card: &CardInstance,
+    pred: &impl Fn(&Keyword) -> bool,
+    synth: bool,
+) -> bool {
+    let def = &card.definition;
+    let any = |kws: &[Keyword]| kws.iter().any(pred);
+    // `synth` is the caller's one-shot answer for the three keywords the
+    // gather makes up rather than reads out of a field (see
+    // `keyword_grant_in_scope`); when it is clear, none of the three can be
+    // what `pred` is asking about and the `keywords` scan is dead weight.
+    if synth
+        && (card.suspected
+            || def.keywords.iter().any(|k| {
+                matches!(
+                    k,
+                    Keyword::HexproofUnlessAttackingOrBlocking | Keyword::Unleash
+                )
+            }))
+    {
+        return true;
+    }
+    if let Some(b) = &def.equipped_bonus
+        && (any(&b.keywords)
+            || any(&b.during_your_turn_keywords)
+            || b.conditional.iter().any(|c| any(&c.keywords)))
+    {
+        return true;
+    }
+    if def.soulbond_bonus.as_ref().is_some_and(|b| any(&b.keywords)) {
+        return true;
+    }
+    if def.level_bands.iter().any(|b| any(&b.keywords)) {
+        return true;
+    }
+    def.station.iter().any(|b| {
+        any(&b.keywords) || b.statics.iter().any(|sa| static_effect_grants_keyword(sa, pred))
+    }) || def.static_abilities.iter().any(|sa| static_effect_grants_keyword(&sa.effect, pred))
 }
 
 /// Convert a `StaticAbility` from a source permanent into `ContinuousEffect`s.
