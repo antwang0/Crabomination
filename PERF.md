@@ -127,10 +127,52 @@ contention-immune, which makes it the better first look.
 
 ## Baseline
 
-**Re-anchored 2026-08-14 at `6cc0bdc3`** (`release`, mimalloc — the shipped
-configuration), **the merged tip the thirty-third pass owed**. Supersedes
-the `35fdfce3` block below, which was measured at a commit that is not the
-tip and is kept only for its invariants.
+**Re-anchored 2026-08-15 at `8ff6daab`** (`release`, mimalloc — the shipped
+configuration), the thirty-fifth pass's tip.
+
+```text
+bot_ladder --bench   release, rustc 1.95.0, 4-core VM, 3 worker threads
+                     mimalloc (the default)
+host_cpu             Intel(R) Xeon(R) Processor @ 2.10GHz
+host_calib_ms        53 / 57 / 66 / 62
+games                320
+games_per_s          172.91 / 170.16 / 171.80 / 164.53
+                     (mean 169.85, spread 5.1 %)
+games_per_s_th       54.84 - 57.64
+decisions_per_s      99,349 - 104,413
+turns_per_game       26.98
+decisions            193,232 byte-identical on all four
+stalls               0 (0.00 %), stalls_by cap 0 / stuck 0 / draw 0
+peak_rss_mib         29.2 - 29.5
+determinism          ok (all 160 pairs split, on all 4 runs)
+```
+
+**136.75 -> 169.85 is +24 %, and *none of it is the change*. Read this
+before quoting either number.** The pass's change is **-1.333 % Ir**, and an
+alternated `profiling-fast` A/B/A/B/A/B in one sitting read base 140.56 /
+134.46 / 140.07 against new 139.55 / 138.93 / 136.06 — **-0.13 %,
+distributions fully overlapping**, exactly what a 1.3 % change looks like
+against this bench's ~5 % noise floor. The +24 % is the *box*.
+
+**And that is a finding about the probe, not just about the box:
+`host_calib_ms` did not detect it.** It reads 53-66 here against 47-57 at
+the previous anchor — if anything *slower* — while three-thread throughput
+is a quarter higher. The probe is a **single-threaded** ALU + 4 MiB
+random-access loop, so it measures one core's speed and nothing about how
+the host schedules three workers; two containers reporting the same
+`host_cpu` string and the same calib can still differ by 24 % on the actual
+workload. The cross-check that *did* work is a configuration comparison:
+`release-fast` + **system** allocator read ~138 games/s on this box, i.e.
+*above* the committed `release` + **mimalloc** baseline of 136.75, which is
+impossible on one host — release+mimalloc is strictly the faster
+configuration. **Treat a `--bench` absolute as comparable only within one
+sitting on one container**, calib agreement included, and use the
+Log-row A/B or callgrind for anything else. A cheap improvement if this
+comes up again: have the calib probe run one pass on `--threads N` as well
+as single-threaded.
+
+**The superseded `6cc0bdc3` block**, kept because the Log rows chain to it
+and for its invariants:
 
 ```text
 bot_ladder --bench   release, rustc 1.95.0, 4-core VM, 3 worker threads
@@ -152,16 +194,9 @@ determinism          ok (all 160 pairs split, on all 6 runs)
 **Do not read 130.71 -> 136.75 as +4.6 %: the box is a different one.**
 `host_cpu` is **2.10 GHz** here against **2.80 GHz** at every earlier
 anchor in this file, so the two blocks are not the same measurement and no
-delta between them is sound — the caution at the top of this file, met for
-the first time as a *host model* change rather than a noise band. What the
-block does establish is the tip's invariants and a floor for the next
-pass's A/B, which must alternate on this box. `host_calib_ms` 47-57 is a
-tighter band than the previous anchor's 44-71, and the 4.8 % spread against
-that block's 12.0 % says so too.
-
-Every invariant is unchanged across the collision merge: `decisions`
-**193,232**, `turns_per_game` 26.98, stalls 0, `peak_rss_mib` 29.1-30.8,
-determinism ok on all six runs.
+delta between them is sound. Every invariant is unchanged across the
+collision merge: `decisions` **193,232**, `turns_per_game` 26.98, stalls 0,
+`peak_rss_mib` 29.1-30.8, determinism ok on all six runs.
 
 **The superseded `35fdfce3` block**, the thirty-third pass's measurement,
 kept because the Log rows chain to it:
@@ -576,6 +611,14 @@ rebuild; the per-binary figures are unchanged).
 printed-static leg); stubbing `card_can_change_card_types` to `false`
 fails it, verified both ways.
 
+**Wall-clock, for the record: nothing measurable, as expected.** Alternated
+`profiling-fast` A/B/A/B/A/B in one sitting — base 140.56 / 134.46 / 140.07
+against new 139.55 / 138.93 / 136.06, **-0.13 %**, distributions fully
+overlapping. A 1.3 % change cannot clear this bench's ~5 % noise floor;
+callgrind is the arbiter and the wall-clock run is only there to show
+nothing regressed. The same sitting turned up a **measurement** finding
+about `host_calib_ms` that matters more than the number — see **Baseline**.
+
 **Not taken, and why.** The candidate's other four families —
 `has_ctype` / `has_atype` / `has_ltype` / `has_stype` — still read the
 shared cell. `has_ltype`'s gate is free (`rewrites_land_types` exists) but
@@ -902,39 +945,54 @@ settings + debuginfo; system allocator, because valgrind replaces malloc and
 a mimalloc build would measure the interception), 1 thread, `--a gang --b
 gang --games 6 --seed 1 --decks fixed`.
 
-**Re-taken 2026-08-14 at `d922f8d9`: 2,394,920,914 Ir** — the merged tip,
-15.5 % under the `645b978d` table below, which it supersedes for totals.
-The `645b978d` rows are kept because nothing since re-derived the whole
-table; read a share there as ~15 % high.
+**Re-taken 2026-08-15 at `8ff6daab`: 2,362,985,109 Ir** — the thirty-fifth
+pass's tip. Supersedes the `d922f8d9` figure (2,394,920,914) and, for
+totals, the `645b978d` table further below; read a share there as ~16 %
+high. The `d922f8d9` tip re-measured on this box at **2,394,920,900**, i.e.
+14 Ir of run-to-run drift on a 2.4 G workload — the profile is that
+reproducible, and a delta of even 0.01 % is signal.
 
 **The gather, denominated at this tip.** `gather_continuous_effects_inner`
-is **219,959,552 / 9.18 % over 113,338 gathers** (1,941 Ir each), by
+is **204,357,700 / 8.65 % over 107,084 gathers** (1,908 Ir each), by
 caller:
 
 | Ir | share | calls | caller |
 |---|---|---|---|
-| 160,418,427 | 6.70 % | 80,168 | `computed_permanent` |
-| 33,692,152 | 1.41 % | 18,916 | `frozen_effects` |
-| 18,692,367 | 0.78 % | 10,670 | `check_state_based_actions` |
-| 6,534,184 | 0.27 % | 3,274 | `compute_permanents` |
+| 143,448,843 | 6.07 % | 73,914 | `computed_permanent` |
+| 33,723,701 | 1.43 % | 18,916 | `frozen_effects` |
+| 18,702,077 | 0.79 % | 10,670 | `check_state_based_actions` |
+| 6,531,360 | 0.28 % | 3,274 | `compute_permanents` |
 | 622,422 | 0.03 % | 310 | `compute_battlefield` |
 
 **And `computed_permanent` by *call site*, which is the list to work from**
-(`--auto=yes`; a site over ~1,900 Ir a call is gathering, one near 800-1,300
-is one `apply_layers_one` inside somebody's scope, i.e. the floor):
+(`--tree=caller`; a site over ~1,900 Ir a call is gathering, one near
+800-1,300 is one `apply_layers_one` inside somebody's scope, i.e. the
+floor):
 
 | Ir | share | calls | Ir/call | site |
 |---|---|---|---|---|
-| 49,044,642 | 2.05 % | 18,386 | 2,667 | `activate_ability_inner`'s `let cp` — candidate (-3) |
-| 37,727,865 | 1.58 % | 15,574 | 2,422 | `eval.rs:3311`, the lazy layer view in `evaluate_requirement_static` — **new, and now the second row** |
-| 19,610,088 | 0.82 % | 19,742 | 993 | `permanent_value` — floor |
-| 14,227,551 | 0.59 % | 4,456 | 3,192 | `apply_prevention_shields`' CR 702.64 Absorb read |
-| 13,346,864 | 0.56 % | 16,688 | 799 | `pick_removal_sacrifice` — floor |
-| 12,213,235 | 0.51 % | 7,060 | 1,729 | `has_first_strikers` — already scoped |
-| 9,181,684 | 0.38 % | 12,010 | 764 | `attacker_damage_value` — floor |
-| 8,825,538 | 0.37 % | 4,084 | 2,161 | `pick_attacks_inner`'s Defender re-check |
-| 7,954,986 | 0.33 % | 4,462 | 1,782 | `combat.rs:2331` — already scoped |
-| 4,729,164 | 0.20 % | 1,614 | 2,929 | `push_first_targeting_counter` |
+| 48,977,884 | 2.07 % | 18,386 | 2,664 | `activate_ability_inner`'s `let cp` — candidate (-3) |
+| 28,921,126 | 1.22 % | 18,986 | 1,523 | `damage_prevented_by_protection`'s target read — wants the keyword gate |
+| 25,844,342 | 1.09 % | 14,624 | 1,767 | `scale_damage_to`'s `source_cp` |
+| 20,744,735 | 0.88 % | 6,682 | 3,104 | `resolve_combat` |
+| 19,665,163 | 0.83 % | 19,742 | 996 | `permanent_value` — floor |
+| 14,230,429 | 0.60 % | 4,456 | 3,193 | `apply_prevention_shields`' CR 702.64 Absorb read |
+| 13,514,633 | 0.57 % | 16,688 | 810 | `pick_removal_sacrifice` — floor |
+| 12,212,499 | 0.52 % | 7,060 | 1,729 | `has_first_strikers` — already scoped |
+| 11,634,897 | 0.49 % | 8,328 | 1,397 | `permanent_has_keyword` |
+| 10,733,852 | 0.45 % | 3,420 | 3,138 | `dying_snapshot` |
+| 9,174,844 | 0.39 % | 12,010 | 764 | `attacker_damage_value` — floor |
+
+**`eval.rs`'s row is gone** — it read 37,727,865 / 1.58 % over 15,574
+gathers at `d922f8d9` and does not appear at all here; see the
+thirty-fifth pass's Log block.
+
+**The four rows above that a *keyword-grant presence gate* would unlock,
+added up: `activate_ability_inner` (its fourth leg),
+`damage_prevented_by_protection`, `apply_prevention_shields` and
+`permanent_has_keyword` are ~4.4 % between them.** That is the largest
+single lever left, and the enumeration it needs is costed in candidate
+(-3).
 
 **`bot.rs` is finished as a candidate-(10) hunting ground, and here is why
 so nobody re-enumerates it.** `HeuristicBot::next_action` wraps the whole
@@ -1080,12 +1138,50 @@ case reaches the keyword read even with all three legs answering "no". A
 keyword-grant presence gate is **not** `RemoveAllAbilities`' six routes: it
 is every `Modification::AddKeyword` emitter (statics, `equipped_bonus.
 keywords`, level bands, station bands, keyword counters, `granted_keywords_
-eot`), and `board_keyword_matching` — the existing device — gathers on
-exactly the boards that matter, because it short-circuits on *printed*
-keywords and no bench card prints `CantActivateTapAbilities`. (-5)'s
-card-type half is paid, and it is the worked example: three legs of this
-one — strip, card-type, land-type — now all exist as printed-static
-predicates, so what is genuinely left here is **the keyword leg alone**.
+eot`). `board_keyword_matching` is **not** that device: it short-circuits
+on printed keywords / eot grants / keyword counters, and when those miss it
+*gathers*. What is wanted is a printed-static leg wedged in front of that
+gather, so `board_keyword_matching` can answer `false` without one — a
+strict improvement for its existing callers as well.
+
+**The leg is scoped; here is the enumeration so it is not re-derived.**
+Two legs of (-3) — strip and card-type — are paid and are the worked
+examples; the land-type leg is six variants (listed in (-5)). The keyword
+leg is the big one, and the scan that sizes it is mechanical: parse
+`pub enum StaticEffect` and report the variants whose bodies mention
+`Keyword`. **23 of 471 do**, and three of them are not grants
+(`LoseKeyword`, `CantHaveKeyword`, `AllNonlandPermanentsAreLegendary`):
+
+`PumpSelfIf`, `PumpTeamIf`, `GrantPumpSelfIf`, `GrantKeyword`,
+`GrantKeywordWhileControllerControlsAtMost`, `SelfHasKeywordWhile`,
+`SelfHasKeywordWhilePredicate`, `SelfHasKeywordWhileCountersAtLeast`,
+`MatchingLandsAreCreatures`, `GainKeywordsFromExiledWith`,
+`AnthemForFilter`, `AnthemForFilterIf`, `SelfHasKeywordIf`,
+`SelfHasDraftNotedKeywords`, `GrantKeywordToChosenType`,
+`GrantKeywordToAttackers`, `GraveyardAnthem` — plus the same five gate
+wrappers, peeled as `static_effect_strips_abilities` peels them. Three are
+**unbounded** sources (the granted keyword comes from another object, so
+the predicate can only answer "yes" when the static is present):
+`GainKeywordsFromExiledWith`, `SelfHasDraftNotedKeywords`, and
+`ProtectionFromExiledWithCardTypes` (which synthesizes `Protection(color)`
+without carrying a `Keyword` field, so the scan above misses it — **the
+scan is necessary, not sufficient**).
+
+Outside the statics, the sources are: `equipped_bonus.keywords` /
+`.during_your_turn_keywords` / its host-conditional riders,
+`soulbond_bonus.keywords`, `level_bands[].keywords`, `station[].keywords`,
+the instance's `granted_keywords_eot` and `keyword_counters`, `suspected`
+(Menace + CantBlock, CR 701.60), the hexproof-unless pass, and the stored
+`continuous_effects`. **~32 `Modification::AddKeyword` sites under
+`game/`** in all; each needs its printed tell read, which is why this is a
+sitting of its own rather than a rider on another change.
+
+**Land the audit the way the thirty-fifth pass did** — a `debug_assert!` in
+`gather_continuous_effects` that every `AddKeyword(k)` in the gathered set
+implies the predicate says `true` for `k`. A cross-check *at the gate*
+would re-gather on every ask; this one runs only where a gather already
+happened, so the whole suite audits the enumeration for free. That is what
+makes an over-approximation of 32 sites landable.
 
 **(-2b) `apply_prevention_shields`' Absorb read — 14,227,551 / 0.59 % over
 4,456 gathers (3,192 Ir each), and it is one keyword.** CR 702.64 asks
@@ -1117,24 +1213,30 @@ lines of `awk` over `fn` signatures: `&self`, no `with_frozen_layers`, two
 or more layer reads. Rank by profile before writing: `evaluate_value` and
 `evaluate_predicate` do not appear on the tip's caller table at all.
 
-**(-3) `activate_ability_inner`'s gather — 18,386 of the tip's 117,594,
-~2 %, and the largest single one left.** One `with_frozen_layers` per
-activation, and its *first* computed read is a whole-game gather at 2,666
-Ir. It exists for three answers: `lost_all_abilities`, is-a-creature, and
-`land_mana_lost` (a basic's printed mana ability against its computed land
-types). **The fix is one gate with three legs, and two of the three already
-exist**: `ability_strip_off_battlefield()` + `battlefield.iter().any(
+**(-3) `activate_ability_inner`'s gather — 48,977,884 / 2.07 % over 18,386
+gathers at 2,664 Ir each, the largest single one left.** One
+`with_frozen_layers` per activation, and its *first* computed read is a
+whole-game gather. It exists for three answers: `lost_all_abilities`,
+is-a-creature, and `land_mana_lost` (a basic's printed mana ability against
+its computed land types) — and then the CR 602.5 gates below re-read the
+same `bf_cp`'s keywords, which is the fourth leg above.
+
+**Two of the four legs now exist and are named**:
+`ability_strip_off_battlefield()` + `battlefield.iter().any(
 card_can_strip_abilities)` is the strip leg, exactly as
-`permanents_with_abilities_removed` uses it; `rewrites_land_types` is the
-land-type predicate but is written against the *gathered* set, so it needs
-a printed-static twin; and the card-type leg has no cheap form yet
-(`compute_battlefield_creatures` tests `AddCardType | RemoveCardType |
-SetCardTypes` on the gathered set). **Write the two missing predicates as
-over-approximations with the `debug_assert` cross-check
-`permanents_with_abilities_removed` uses** — when the gate says "no",
-debug-only re-gather and assert the modification is absent. 18,637 tests
-run with `debug_assertions` on, which is the safety net that makes an
-over-approximation landable. Expect ~1.5-2 %.
+`permanents_with_abilities_removed` uses it; `card_type_change_in_scope()`
+is the card-type leg, paid by the thirty-fifth pass. `rewrites_land_types`
+is the land-type predicate but is written against the *gathered* set, so it
+still needs the printed-static twin listed in (-5). The keyword leg is
+above.
+
+**The shape of the fix, once the legs are there**: `bf_cp` is taken
+eagerly in the battlefield branch, so make it a lazy cell and let each
+consumer ask its own gate first — a basic land tapping for mana then
+answers `stripped` / `is_creature` / `land_mana_lost` from the printed
+line, skips gate 2 on `summoning_sick`, skips gate 3 on `is_mana_ability`,
+and only gate 1 (`CantActivateTapAbilities`) needs the keyword leg. Expect
+~1.5-2 %.
 
 **The auto-tap scope is *not* the way in, and here is the arithmetic so it
 is not re-derived.** `auto_tap_for_cost_inner -> activate_ability` is 18,832

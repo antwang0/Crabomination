@@ -16,38 +16,40 @@ reference and want their own triage pass):
 
 ## NEXT (handoff — rewrite each run, keep under 15 lines)
 
-Branch `claude/modern_decks`. **Pass 34 claimed no Ir**: it closed a
-crash-class bug, paid the owed baseline, and retook the profile. Tip
-`--bench` **136.75 games/s** (6 runs, spread 4.8 %) at `6cc0bdc3`; tip Ir
-**2,394,920,914**. **The box is a 2.10 GHz Xeon now, not 2.80 GHz — no
-delta against any earlier baseline block is sound. Alternate A/B in one
-sitting or use callgrind.**
+Branch `claude/modern_decks`. **Pass 35 paid candidate (-5)'s card-type
+half: `-1.333 %` Ir** (`8ff6daab`), 2,394,920,900 -> **2,362,985,109**.
+`evaluate_requirement_static` no longer gathers to answer a card type;
+`card_type_change_in_scope` is the gate and `gather_continuous_effects`
+audits it in the sound direction. Baseline re-anchored: **169.85 games/s**.
 
-- **Green at the tip**: suite **18,638** over 11 binaries, golden traces
-  identical, `clippy --workspace --all-targets` clean, wide pool
-  **2,548,986 / 20.99 / 6 draws / determinism ok** over 5,100 games. The
-  reentrancy fix A/B'd at **+0.0045 % Ir** (one branch); `--bench` stands.
-  **`overflow` was not re-run** — no counter, damage, mana or encoder code
-  moved this pass.
-- **Take (-5) first**, `eval.rs:3311` at **1.58 % / 15,574 gathers**. Its
-  `OnceCell` serves *five* layer-4 families, so **split it per family**;
-  the land-type half then gates on `rewrites_land_types`, which already
-  exists, for free. The card-type half's ten emitters are **enumerated in
-  PERF (-5)** — write the predicate straight from that list.
-- **(-3) is blocked on a fourth (keyword) leg** — the CR 602.5 gates read
-  the same `bf_cp`. Arithmetic in PERF; do not re-derive. **`bot.rs` is
-  closed as a candidate-(10) ground** — `next_action` freezes everything,
-  88.27 % inclusive, so 764-1,270 Ir a call is the floor, not a miss.
-- **Fetch before the first commit.** Four collisions on this file so far.
+- **Do not read 136.75 -> 169.85 as a win — it is the box.** The change
+  A/B'd at **-0.13 %** wall-clock (alternated, overlapping) and
+  `host_calib_ms` **did not detect** the host difference (it is
+  single-threaded; the bench is 3-thread). Full argument in PERF
+  **Baseline**. Compare absolutes only within one sitting.
+- **Green at the tip**: suite **18,639** over 11 binaries, golden traces
+  identical, `clippy --workspace --all-targets` clean, decisions 193,232
+  byte-identical, stalls 0. **`overflow` and the wide pool were not
+  re-run** — no counter/damage/mana/encoder code moved, and the change is
+  behaviour-preserving by construction.
+- **Take (-3) next** (`activate_ability_inner`, **2.07 % / 18,386
+  gathers**). Two of its four legs now exist (strip, card-type); the
+  land-type twin is 6 variants and the **keyword leg is the run's work** —
+  23 of 471 `StaticEffect` variants, the non-static sources and the 3
+  unbounded ones are **enumerated in PERF (-3); do not re-derive**. The
+  same leg unlocks `damage_prevented_by_protection` (1.22 %),
+  `apply_prevention_shields` (0.60 %) and `permanent_has_keyword`
+  (0.49 %) — **~4.4 % together, the largest lever left.**
+- **Fetch before the first commit.** Five collisions on this file so far.
 - Env: no `cargo-nextest`; `cargo test -p crabomination -p
   crabomination_tests` is the gate (~40 s built, ~5 min cold).
-  `profiling-fast` engine ~3.5 min warm; **`release` was ~55 min cold here
-  — start it in the background at the top of the run**; `overflow` ~25 min.
-  Callgrind ~4 min, contention-immune. Serialize cargo builds — one
-  target-dir lock, 4 cores. Client apt deps (below) are needed for
-  `clippy --workspace`.
-- Trackers: TODO ~0.97k, PERF ~1.75k — passes 29-31 are index rows, 32-34
-  prose is current.
+  `profiling-fast` engine ~3 min warm, **cold ~10 min**; `release` **~20
+  min warm / ~45 cold — start it in the background at the top of the
+  run**; `overflow` ~25 min. Callgrind ~4 min, contention-immune.
+  Serialize cargo builds — one target-dir lock, 4 cores. Client apt deps
+  (below) are needed for `clippy --workspace`.
+- Trackers: TODO ~0.97k, ROADMAP 0.66k, PERF ~1.9k — passes 29-31 are
+  index rows, 32-35 prose is current.
 
 ## Environment note
 
@@ -213,11 +215,31 @@ already documented but nothing enforced. Regression test:
 `core_rules::cr_rules::cr_613_a_cda_filter_reading_computed_power_does_not_recurse`
 (overflows the stack on the pre-fix engine; verified both ways).
 
-A *fourteenth* filter is owed. The natural next one: **a comment that
-states a cost or a shape** — `cow.rs`'s "any `&mut` access copies the whole
-inner value" was true and cost four passes to act on; the library-strip
-comment in the affordance probe was true when zones were plain `Vec`s and
-false for two years after. A perf claim in a comment has a date on it.
+**The fourteenth filter was run 2026-08-15** — *a comment that states a
+cost or a shape*. **Found one, and it was in the measuring device itself.**
+
+- `host_calib_ms`' doc comment said "compare `host_calib_ms` first; scale
+  the throughput comparison by it". That was false the day it was needed:
+  two containers reporting the same `host_cpu` and *overlapping* calib
+  (47-57 against 53-66) differed by **24 %** on `--bench`. The probe is
+  single-threaded and the bench runs three workers, so it measures nothing
+  about how the host schedules them. Corrected in place, with the
+  counter-example and the rule it implies — agreement is weak evidence,
+  disagreement is strong. See PERF **Baseline**.
+
+**The syntactic half of the filter is clean and should not be re-run.**
+Greps for present-tense cost claims (`costs nothing` / `is cheap` / `O(n`
+/ `whole-board` / `plain Vec` / `the engine has no`) over `game/`,
+`server/` and `crabomination_base/` return ~60 hits, all either
+game-semantics uses of "free"/"cheap" or *past-tense* justifications ("was
+1.45 % of the program", "was an O(n²) membership scan") that correctly
+explain why the code is shaped as it is. **The filter's yield is in
+comments that a *measurement* relies on, not in the engine's prose** —
+which is the thirteen-filter table's own lesson (structure and running
+code beat grepping) applied one more time. A *fifteenth* filter is owed;
+the natural next one is **a claim made by a tool's output rather than by
+its source** — a printed label or a stats field whose name asserts
+something the value does not support.
 
 **Stall rate — CLOSED 2026-08-14, and the answer is "nothing to fix".**
 The attribution the previous run built (`419d2ea6`: `recommend::StopReason`
