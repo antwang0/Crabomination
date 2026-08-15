@@ -16,9 +16,9 @@ reference and want their own triage pass):
 
 ## NEXT (handoff — rewrite each run, keep under 15 lines)
 
-Branch `claude/modern_decks`. **Pass 40: `-6.672 %` Ir in four commits**,
-2,136,851,050 -> **1,994,280,399**, the largest pass since the teens. All
-four rows are **allocation**, and none came off the candidates list.
+Branch `claude/modern_decks`. **Pass 40: `-7.585 %` Ir in five commits**,
+2,136,851,050 -> **1,974,770,479**, the largest pass since the teens. All
+five rows are **allocation**, and none came off the candidates list.
 
 - **A `Cow<BigStruct>` is a `BigStruct` in every element.** `Cow` is sized
   for the owned side, so a *borrowed* `ActivatedAbility` still cost a
@@ -35,6 +35,10 @@ four rows are **allocation**, and none came off the candidates list.
 - **A predicate that deep-clones** — `is_free` cloned an `ActivatedAbility`
   per activation (**-1.252 %**). A cheap veto in front beats a rewrite and
   keeps the drift-proof check behind it.
+- **A clone that exists to end a borrow wants an `Arc`, not a deep copy.**
+  `activate_ability_inner` cloned the whole `ActivatedAbility` per
+  activation to free `self`; `CardInstance::definition` is already an
+  `Arc<CardDefinition>`, so holding it costs a refcount (**-0.978 %**).
 - **Take (-12) next: `auto_tap_for_cost_inner`, 16.99 % inclusive**, the
   largest engine subtree and never looked at. 242 M of it is
   `activate_ability` over 18,340 calls; **18,832 activations are a land
@@ -45,10 +49,10 @@ four rows are **allocation**, and none came off the candidates list.
   traces identical, clippy clean, `--bench` invariants byte-identical with
   the anchor (`decisions` **193,232**, turns 26.98, stalls 0, determinism
   ok). **No encoding change — no net needs retraining as of this tip.**
-- **First `release` reading in five passes: 153.17 games/s mean** against
-  110.34 at pass 37's tip on the same host class (calib 44-46 vs 48-51).
-  That covers passes 38-40 together (-11.1 % Ir) and cannot be split among
-  them. The 163.62 anchor is a different box and still stands apart.
+- **First `release` reading in five passes: 153.17 games/s mean** (at this
+  pass's 4th commit) against 110.34 at pass 37's tip on the same host class,
+  calib 44-46 vs 48-51. Covers passes 38-40 together (-11.1 % Ir), not
+  splittable. The 163.62 anchor is a different box and stands apart.
 - Env: no `cargo-nextest`; `cargo test -p crabomination -p
   crabomination_tests` is the gate (~9 min cold, ~40 s built). Engine
   `profiling-fast` rebuild **~3.3 min**, `crabomination_base` touch ~10 min,

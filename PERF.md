@@ -131,10 +131,11 @@ contention-immune, which makes it the better first look.
 
 ## Baseline
 
-**The fortieth pass's tip is the first `release` reading in five passes, and
-this bench does resolve it.** Same `--bench`, `release` + mimalloc, three
-runs, on a box with the same `host_cpu` string as the thirty-sixth and
-thirty-seventh passes' readings below:
+**The fortieth pass is the first `release` reading in five passes, and this
+bench does resolve it.** Same `--bench`, `release` + mimalloc, three runs, on
+a box with the same `host_cpu` string as the thirty-sixth and thirty-seventh
+passes' readings below. Taken at the pass's **fourth** commit (`c185f313`);
+the fifth is a further -0.978 % Ir that this reading does not include:
 
 ```text
 games_per_s          147.22 / 153.84 / 158.44   (mean 153.17)
@@ -148,8 +149,8 @@ peak_rss_mib         27.0 - 29.0
 determinism          ok (all pairs split, on all 3 runs)
 ```
 
-**110.40 (pass 36's tip), 110.34 (pass 37's tip), 153.17 (pass 40's tip) —
-+38.8 %.** Those first two readings established a **2.2 %** spread on this
+**110.40 (pass 36's tip), 110.34 (pass 37's tip), 153.17 (pass 40's fourth
+commit) — +38.8 %.** Those first two readings established a **2.2 %** spread on this
 box class, so a 38.8 % gap is signal, not noise; `host_calib_ms` is 44-46
 against their 48-51, so a few points of it are a faster box. **What it covers
 is passes 38, 39 and 40 together** — cumulatively **-11.1 % Ir** — and it
@@ -710,10 +711,10 @@ the table above is safe to compress:
 
 ## Log
 
-### Fortieth pass — four allocation rows, and the one that was a Vec per permanent per generator
+### Fortieth pass — five allocation rows, and the one that was a Vec per permanent per generator
 
-Cumulative: **2,136,851,050 -> 1,994,280,399 Ir, -142,570,651 / -6.672 %**,
-in four commits, behaviour-preserving (suite **18,645** green over 11
+Cumulative: **2,136,851,050 -> 1,974,770,479 Ir, -162,080,571 / -7.585 %**,
+in five commits, behaviour-preserving (suite **18,645** green over 11
 binaries, all five golden traces identical, clippy clean). All readings
 `profiling-fast --no-default-features`, callgrind, `--a gang --b gang --games
 6 --threads 1 --seed 1 --decks fixed`, built and run in one sitting. The base
@@ -727,8 +728,10 @@ read **2,136,851,050** against the **2,136,847,762** this file recorded for
 | B | 2,121,883,499 -> 2,103,492,419 (**-0.867 %**) | the mana-ability list stops inlining `ActivatedAbility` per element |
 | C | 2,103,492,419 -> 2,019,566,094 (**-3.990 %**) | the bot's six ability generators stop building a `Vec` per permanent |
 | D | 2,019,566,094 -> 1,994,280,399 (**-1.252 %**) | the free-activation watchdog vetoes before it clones |
+| E | 1,994,280,399 -> 1,974,770,479 (**-0.978 %**) | activation holds the definition's `Arc` instead of cloning the ability out of it |
 
-**Allocations 1,416,250 -> 1,325,868, frees 1,468,589 -> 1,378,206**;
+**Allocations 1,416,250 -> 1,325,868, frees 1,468,589 -> 1,378,206** (at D;
+E removes more);
 `__memcpy_avx_unaligned_erms` **103,787,318 -> 67,253,217 (-35.2 %)** and the
 five allocator rows **~19 % -> ~12.5 %**. (-10) said allocation was the
 program and nothing on the list was about it; this pass is four rows of it
@@ -773,6 +776,17 @@ same code reads **-0.700 %** and the call count is **5,294**. **Before
 hoisting a per-element cost to the loop head, count the loops that reach zero
 elements** — this file's (-6) note predicted exactly this ("laziness is worth
 real money on this path") for a different site.
+
+**(E) The same question as (B)/(C), asked by the engine.**
+`activate_ability_inner` needs `&mut self` once it knows which ability is
+being activated, so the ability could not stay borrowed out of `self` and was
+deep-cloned to end the borrow — **18,386 activations**, 13,508,019 Ir in
+`ActivatedAbility::clone`, inside the 16.99 % `auto_tap_for_cost_inner`
+subtree. `CardInstance::definition` is an `Arc<CardDefinition>`, so
+`HeldAbility::Printed(Arc, index)` answers the borrow question for a
+refcount. **When a clone exists to end a borrow, look for an `Arc` already
+wrapping the thing being cloned** — the whole hot path here (every zone's
+printed abilities) is behind one.
 
 **(D) A predicate that deep-clones.** `ActivatedAbility::is_free` asked "is
 every field but the body at its default?" by cloning `self`, overwriting the
@@ -1318,7 +1332,7 @@ full. What the next run wants from this reading:
 
 | row | at the 40th tip | note |
 |---|---|---|
-| `auto_tap_for_cost_inner` inclusive | **338,843,874 / 16.99 % over 18,340** | the largest engine subtree in the program. **242,104,933 / 11.33 % of it is `activate_ability`**, 18,340 calls at ~13,200 Ir each — the taps themselves. Candidate (-12) |
+| `auto_tap_for_cost_inner` inclusive | **338,843,874 / 16.99 % over 18,340** | the largest engine subtree in the program, read at D. **242,104,933 / 11.33 % of it is `activate_ability`**, 18,340 calls at ~13,200 Ir each — the taps themselves. E takes ~20 M off it; candidate (-12) has the rest |
 | `spec_from_iter_nested` inclusive | 382,312,820 / **19.17 %** | was 21.94 %. No single caller is over 5 % any more; the list is long and flat |
 | allocator | `_int_free` 87.4 / `malloc` 60.0 / `_int_malloc` 48.8 / `free` 38.6 / arena 15.2 M | **~12.5 %** (was ~19 %), over **1,325,868 allocs and 1,378,206 frees** (was 1,416,250 / 1,468,589) |
 | `__memcpy_avx_unaligned_erms` | 67,253,217 / **3.37 %** | was 103,787,318 / 4.84 %. Callers are diffuse; the biggest is `finalize_cast` at 12.2 M over 121,206 |
