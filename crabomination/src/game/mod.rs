@@ -16148,7 +16148,21 @@ impl GameState {
         let any_static_grant = !trigger_grants.is_empty() || !self.turn_granted_triggers.is_empty();
         let any_own_grant = !self.granted_triggers_eot.is_empty();
         let any_equip_grant = !equip_grants.is_empty();
+        // The same three gates, asked once for the whole board: with no grant
+        // of any kind in play, a permanent whose definition carries neither a
+        // printed trigger nor a Station band contributes nothing, and the loop
+        // below reaches its four-way `is_empty()` `continue` having built two
+        // empty `Vec`s and read `stripped_ids` to get there. Two definition
+        // loads instead — the loop body runs 945,812 times over six bench
+        // games and most of a board is lands and vanilla creatures.
+        let no_grants = !any_static_grant && !any_own_grant && !any_equip_grant;
         for card in &self.battlefield {
+            if no_grants
+                && card.definition.triggered_abilities.is_empty()
+                && card.definition.station.is_empty()
+            {
+                continue;
+            }
             let stripped = stripped_ids.contains(&card.id);
             // Walk printed triggered abilities AND any transient
             // granted_triggers_eot for this permanent (Root Manipulation,
