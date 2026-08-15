@@ -7822,6 +7822,28 @@ impl GameState {
         }) || self.battlefield.iter().any(card_can_change_land_types)
     }
 
+    /// The same device for the layer-4 *creature*-type family: a cheap
+    /// over-approximation of "the gathered effect set can contain an
+    /// `AddCreatureType` / `SetCreatureTypes`", answered without gathering.
+    /// `false` is authoritative; `true` only means the gather has to run.
+    ///
+    /// The printed-static twin of [`shallow_creature_types`](Self::shallow_creature_types),
+    /// which reads the same two modifications off the *stored*
+    /// `continuous_effects` only. Two routes reach the modification: a
+    /// resolved `continuous_effects` entry (Artificial Evolution, the
+    /// changeling grants) and a battlefield permanent's printed shape, folded
+    /// into [`card_can_change_creature_types`]. `gather_continuous_effects`
+    /// `debug_assert!`s the implication in the sound direction, so the whole
+    /// suite audits the enumeration without any caller paying a gather.
+    pub(crate) fn creature_type_change_in_scope(&self) -> bool {
+        self.continuous_effects.iter().any(|e| {
+            matches!(
+                e.modification,
+                Modification::AddCreatureType(_) | Modification::SetCreatureTypes(_)
+            )
+        }) || self.battlefield.iter().any(card_can_change_creature_types)
+    }
+
     /// The same device for layer-6 keyword *grants*: a cheap
     /// over-approximation of "the gathered effect set can contain an
     /// `AddKeyword` matching `pred`", answered without gathering. `false` is
@@ -8021,6 +8043,15 @@ impl GameState {
                     | Modification::ReplaceBasicLandType(..)
             )) || self.land_type_change_in_scope(),
             "the land-type presence gate missed a layer-4 land-type source",
+        );
+        // The creature-type presence gate's audit, same direction and same
+        // place.
+        debug_assert!(
+            !out.iter().any(|e| matches!(
+                e.modification,
+                Modification::AddCreatureType(_) | Modification::SetCreatureTypes(_)
+            )) || self.creature_type_change_in_scope(),
+            "the creature-type presence gate missed a layer-4 creature-type source",
         );
         // The keyword-grant gate's audit, same direction and same place.
         // Deduplicated first: a gather can carry a dozen `AddKeyword`s and
@@ -11461,7 +11492,14 @@ impl GameState {
 
     pub fn dying_snapshot(&self, id: CardId) -> Option<CardInstance> {
         let mut snap = self.battlefield.iter().find(|c| c.id == id)?.clone();
-        if let Some(cp) = self.computed_permanent(id) {
+        // The doc's "only pays the layer cost when a grant is present" was a
+        // claim, not code, until the presence gate existed: the read below is
+        // a whole gather, taken once per dying permanent. `computed` can only
+        // differ from printed here through `AddCreatureType` /
+        // `SetCreatureTypes`, which is exactly what the gate answers.
+        if self.creature_type_change_in_scope()
+            && let Some(cp) = self.computed_permanent(id)
+        {
             let printed = &snap.definition.subtypes.creature_types;
             if cp.subtypes.creature_types.iter().any(|t| !printed.contains(t)) {
                 std::sync::Arc::make_mut(&mut snap.definition).subtypes.creature_types =
@@ -21110,6 +21148,53 @@ fn card_can_change_land_types(card: &CardInstance) -> bool {
             .station
             .iter()
             .any(|band| band.statics.iter().any(static_effect_changes_land_types))
+}
+
+/// True when `effect` can emit a layer-4 *creature*-type modification. Twin of
+/// [`static_effect_changes_land_types`] for the creature-type family; shares
+/// the gate-wrapper peel for the same reason.
+///
+/// Five variants, and the list is exhaustive against the `AddCreatureType` /
+/// `SetCreatureTypes` emitters in `static_effect_to_effects` and in
+/// `gather_continuous_effects_inner`'s stateful passes. `SelfIsCreatureIf` is
+/// the stateful one — it reads a live predicate, so it never routes through
+/// `static_effect_to_effects`, but the printed static is the same tell.
+fn static_effect_changes_creature_types(effect: &crate::effect::StaticEffect) -> bool {
+    use crate::effect::StaticEffect as SE;
+    match effect {
+        SE::CreaturesYouControlAreChosenType
+        | SE::MatchingAreChosenTypeToo { .. }
+        | SE::MatchingLandsAreCreatures { .. }
+        | SE::AddCreatureTypeToMatching { .. }
+        | SE::SelfIsCreatureIf { .. } => true,
+        SE::WhileClassLevelAtLeast { inner, .. }
+        | SE::WhileYourTurn { inner }
+        | SE::WhileNotYourTurn { inner }
+        | SE::WhileCountersAtLeast { inner, .. }
+        | SE::WhileCondition { inner, .. } => static_effect_changes_creature_types(inner),
+        _ => false,
+    }
+}
+
+/// True when `card`, on the battlefield, can contribute a layer-4
+/// creature-type modification to the gathered set. The printed-shape half of
+/// [`GameState::creature_type_change_in_scope`]; covers the attachment route
+/// (`equipped_bonus`' two creature-type fields) and every static route,
+/// including CR 721.2a Station bands.
+fn card_can_change_creature_types(card: &CardInstance) -> bool {
+    let def = &card.definition;
+    if card.attached_to.is_some()
+        && def.equipped_bonus.as_ref().is_some_and(|b| {
+            b.set_creature_types.is_some() || !b.add_creature_types.is_empty()
+        })
+    {
+        return true;
+    }
+    def.static_abilities.iter().any(|sa| static_effect_changes_creature_types(&sa.effect))
+        || def
+            .station
+            .iter()
+            .any(|band| band.statics.iter().any(static_effect_changes_creature_types))
 }
 
 /// True when `effect` can emit a layer-6 `AddKeyword` matching `pred`. Twin of
