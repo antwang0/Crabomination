@@ -16,47 +16,49 @@ reference and want their own triage pass):
 
 ## NEXT (handoff — rewrite each run, keep under 15 lines)
 
-Branch `claude/modern_decks`. **Pass 35: `-2.177 %` Ir in two gates**,
-2,394,920,900 -> **2,342,776,898** (`bdc11c86`). Card-type family
-(`8ff6daab`, -1.333 %) and keyword-grant family (`bdc11c86`, -0.855 %).
-Both are `ability_strip_off_battlefield`'s device: a printed-static
-presence predicate, audited by a `debug_assert!` in
-`gather_continuous_effects` in the **sound direction** (a gathered set that
-carries the modification implies the gate said yes) — that audit found
-four classes of miss (emblems, command zone, Unleash, graveyard anthems)
-before they could ship. Copy it for the next family.
+Branch `claude/modern_decks`. **Pass 36: `-0.879 %` Ir in one commit**,
+2,342,773,775 -> **2,322,176,278** (`b1e62b23`). Candidate **(-3) is
+closed** — `activate_ability_inner`'s `bf_cp` is lazy and each of its six
+consumers asks a printed-static gate first, so all **18,386** of its
+gathers are gone and it is off the `computed_permanent` caller table at any
+threshold. All gathers 97,212 -> **78,826**. The last new leg,
+`land_type_change_in_scope`, was right first try (small family, entirely
+battlefield-resident) using the same `debug_assert!`-in-the-sound-direction
+audit; copy that device for any further family.
 
-- **Do not read 136.75 -> 169.85 games/s as a win — it is the box.** The
-  first commit A/B'd at **-0.13 %** wall-clock and `host_calib_ms` **did
-  not detect** the host difference (single-threaded probe, 3-thread
-  bench). Full argument in PERF **Baseline**; compare absolutes only
-  within one sitting.
-- **A presence gate is only a win if the predicate is cheaper than what it
-  guards.** The keyword gate's first version read **+0.012 %** — it was
-  removing 42 M of gathers and spending 42 M on a `&dyn Fn` predicate over
-  a payload-carrying enum. `impl Fn` + hoisting the three synthesized
-  keywords out of the per-card loop took it to ~33 Ir a card. Measure the
-  gate, not just the site.
+- **The headline finding, and it is why (-6) exists: removing 100 % of a
+  2.09 % site netted 0.88 %.** The gates cost **~28 M Ir back, ~1,540 per
+  activation across four battlefield walks**. "Measure the gate, not just
+  the site" now has a number. (-6) is the fusion of the three type-family
+  walks into one; read its two caveats before writing it — laziness is
+  worth real money here, and `keyword_grant_in_scope` is not
+  battlefield-only so it does not fuse with the other three.
+- **Take (-7) next if you want the bigger fish**: `scale_damage_to`,
+  **1.12 % / 14,624 calls**, now the top unread site. It is a
+  *whole-function* gate, not a leg — ~25 static arms all absent on a
+  typical board, **two** un-frozen gathers (not one) and ~8 battlefield
+  walks per call. PERF (-7) has the full read, including a free
+  correctness-neutral split: `source_cp.is_none()` is only asking "is the
+  source a battlefield permanent", which needs no gather.
+- **Do not compare `--bench` absolutes across sittings — it is the box.**
+  Pass 35 saw 136.75 -> 169.85 games/s on a **-0.13 %** wall-clock change,
+  and `host_calib_ms` did not detect it (single-threaded probe, 3-thread
+  bench). Full argument in PERF **Baseline**. Callgrind is the arbiter
+  under ~5 %; its run-to-run drift here is **~3 k Ir on 2.3 G**, re-confirmed
+  this pass against the recorded base.
 - **Green at the tip**: suite **18,639** over 11 binaries, golden traces
-  identical, `clippy --workspace --all-targets` clean, decisions 193,232
-  byte-identical, stalls 0. **`overflow` and the wide pool were not
-  re-run** — no counter/damage/mana/encoder code moved.
-- **Take (-3) next** (`activate_ability_inner`, **2.07 % / 18,386
-  gathers**, now the whole top of the table). Three of its four legs
-  exist — strip, card-type, **keyword** (`card_keyword_possible`). Short
-  only the **land-type** printed twin (6 variants, listed in PERF (-5))
-  plus making `bf_cp` lazy so each consumer asks its own gate. After that,
-  `scale_damage_to` (1.10 %) and `resolve_combat` (0.88 %) are unread.
+  identical, clippy clean. **`overflow` and the wide pool were not re-run**
+  — no counter/damage/mana/encoder code moved.
 - **Fetch before the first commit.** Five collisions on this file so far.
 - Env: no `cargo-nextest`; `cargo test -p crabomination -p
   crabomination_tests` is the gate (~40 s built, ~5 min cold).
-  `profiling-fast` engine ~3 min warm, **cold ~10 min**; `release` **~20
+  `profiling-fast` engine ~4 min warm, **cold ~10 min**; `release` **~20
   min warm / ~45 cold — start it in the background at the top of the
   run**; `overflow` ~25 min. Callgrind ~4 min, contention-immune.
   Serialize cargo builds — one target-dir lock, 4 cores. Client apt deps
   (below) are needed for `clippy --workspace`.
-- Trackers: TODO ~0.97k, ROADMAP 0.66k, PERF ~1.9k — passes 29-31 are
-  index rows, 32-35 prose is current.
+- Trackers: TODO ~0.99k, ROADMAP 0.66k, PERF ~2.1k — passes 29-31 are
+  index rows, 32-36 prose is current.
 
 ## Environment note
 

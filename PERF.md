@@ -1231,6 +1231,37 @@ Ordered by expected value. Each run pulls the top one, attaches numbers,
 and feeds what it finds back in. Re-profile and replenish when the list
 goes thin or stale.
 
+**(-7) `scale_damage_to` — 25,971,484 / 1.12 % over 14,624 calls, the top
+unread site, and it is a *whole-function* gate rather than a leg.** Read
+before writing: this is not the same shape as (-3). The body is ~25
+independent `StaticEffect` arms, and on a typical board **every one of them
+is absent**, yet the function pays for all of them on every damage event:
+
+* **two** `computed_permanent` gathers, not one — `source_cp` at the top
+  (`mod.rs:5833`) and a second for the Valley Flamecaller arm near the
+  bottom. Neither is inside a freeze scope;
+* **~8 separate `battlefield.iter()` walks** — `damage_doublers`,
+  `damage_halvers`, the Sulfuric Vapors block, the `affected` block, then
+  one each for Neriv, Gratuitous Violence, Trance Kuja and Hellbent;
+* a `cp.colors.to_vec()` allocation per call, 14,624 of them.
+
+**The gate that fits is one `sa_cards`-shaped walk over the battlefield
+collecting "does any permanent carry any damage-scaling static", and an
+early return of `amount` when it says no.** That is the whole function, not
+one leg of it, which is why it is worth more than its 1.12 % — the walks
+above are its self cost and the two gathers are charged to
+`computed_permanent`.
+
+**Two traps, both visible in the source.** `source_cp` is used for exactly
+two things: the source's *computed* colours and controller, and
+`source_cp.is_none()` as an "is the source a battlefield permanent?" test.
+**That second use needs no gather at all** — `battlefield_find(s).is_none()`
+answers it — and splitting the two is a free correctness-neutral win even
+without the presence gate. The first use is a genuinely new family (layer 2
+control-change, layer 5 colour), so a *predicate* for it is a fresh
+enumeration; do not assume `card.controller` and `definition.colors` stand
+in for the computed pair.
+
 **(-6) Four presence gates, four walks of one list — the thirty-sixth
 pass's residue, and the arithmetic is measured, not guessed.** Closing (-3)
 removed 18,386 gathers worth ~49 M Ir and netted 20.6 M, because the gates
