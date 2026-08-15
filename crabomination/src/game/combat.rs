@@ -2475,6 +2475,9 @@ impl GameState {
         if self.attacking.is_empty() && self.block_map.is_empty() {
             return false;
         }
+        if !self.first_strike_possible() {
+            return false;
+        }
         self.with_frozen_layers(|g| {
             let strikes_first = |id: CardId| {
                 g.computed_permanent(id).is_some_and(|c| {
@@ -2485,6 +2488,54 @@ impl GameState {
             g.attacking.iter().any(|atk| strikes_first(atk.attacker))
                 || g.block_map.keys().any(|&id| strikes_first(id))
         })
+    }
+
+    /// Can any combat participant's *computed* keywords carry first or double
+    /// strike, answered without gathering? `false` is authoritative; `true`
+    /// only means [`has_first_strikers`](Self::has_first_strikers) has to
+    /// gather.
+    ///
+    /// [`card_keyword_possible`] per participant with its one expensive leg —
+    /// the board-wide grant scan — hoisted out of the loop, because the two
+    /// or six participants are asked about the same board. The whole step
+    /// transition rides on this: a board printing neither keyword and holding
+    /// no source that can grant one skips the first-strike damage step, and
+    /// under the old shape that skip cost a full gather plus one layer pass
+    /// per participant.
+    ///
+    /// [`card_keyword_possible`]: crate::game::GameState::card_keyword_possible
+    fn first_strike_possible(&self) -> bool {
+        let strikes =
+            |k: &Keyword| matches!(k, Keyword::FirstStrike | Keyword::DoubleStrike);
+        let printed = |id: CardId| {
+            self.battlefield_find(id).is_some_and(|c| {
+                c.definition.keywords.iter().any(strikes)
+                    || c.granted_keywords_eot.iter().any(strikes)
+                    || c.keyword_counters.iter().any(|(k, n)| *n > 0 && strikes(k))
+            })
+        };
+        let hit = self.attacking.iter().any(|atk| printed(atk.attacker))
+            || self.block_map.keys().any(|&id| printed(id))
+            || self.keyword_grant_in_scope(strikes);
+        // The gate has no shared choke point to hang an enumeration audit on,
+        // so it audits against its own outcome: when it says no, the guarded
+        // body must agree. Runs on every combat-damage step the suite plays.
+        #[cfg(debug_assertions)]
+        if !hit {
+            let computed_hit = self.with_frozen_layers(|g| {
+                let strikes_first = |id: CardId| {
+                    g.computed_permanent(id)
+                        .is_some_and(|c| c.keywords.iter().any(strikes))
+                };
+                g.attacking.iter().any(|atk| strikes_first(atk.attacker))
+                    || g.block_map.keys().any(|&id| strikes_first(id))
+            });
+            debug_assert!(
+                !computed_hit,
+                "the first-strike presence gate said no, but a participant strikes first"
+            );
+        }
+        hit
     }
 
     /// The computed views [`resolve_combat_damage_with_filter`] reads: every
