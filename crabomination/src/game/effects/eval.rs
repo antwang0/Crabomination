@@ -3266,8 +3266,8 @@ impl GameState {
                     StackItem::Spell { card, .. } if card.id == *cid => Some(&**card),
                     _ => None,
                 });
-                let card = self
-                    .battlefield_find(*cid)
+                let bf_card = self.battlefield_find(*cid);
+                let card = bf_card
                     // Dies-trigger filters (Felisa's "with a +1/+1 counter on
                     // it") read the dying object's last-known battlefield
                     // state, not the counter-stripped graveyard copy
@@ -3303,6 +3303,15 @@ impl GameState {
                 // calls when it is taken eagerly.
                 type Computed = Option<std::sync::Arc<crate::game::layers::ComputedPermanent>>;
                 let computed_cell: std::cell::OnceCell<Computed> = std::cell::OnceCell::new();
+                // `computed()` is `None` exactly when the card isn't a live
+                // battlefield permanent — `computed_permanent` returns `None`
+                // off the battlefield and takes the printed view mid-gather —
+                // so the arms that only need to know *that* ask this instead
+                // and never force the cell.
+                let computed_absent = || {
+                    bf_card.is_none()
+                        || self.in_layer_gather.load(std::sync::atomic::Ordering::Relaxed)
+                };
                 let computed = || -> &Computed {
                     computed_cell.get_or_init(|| {
                         if self.in_layer_gather.load(std::sync::atomic::Ordering::Relaxed) {
@@ -3312,13 +3321,31 @@ impl GameState {
                             // same printed view a layer pass slower.
                             None
                         } else {
-                            self.battlefield_find(*cid).and_then(|_| self.computed_permanent(*cid))
+                            bf_card.and_then(|_| self.computed_permanent(*cid))
                         }
                     })
                 };
-                let has_type = |t: crate::card::CardType| match computed() {
-                    Some(cp) => cp.card_types.contains(&t),
-                    None => card.definition.card_types.contains(&t),
+                // The card-type family is most of the requirement traffic
+                // (`Creature` / `Land` / `Nonland` / `Noncreature` / `Artifact`)
+                // and the gather behind `computed()` is ~2.7k Ir. A board with
+                // no layer-4 card-type source in scope gives the same answer
+                // from the printed line, so ask the presence gate — one
+                // battlefield walk over printed shapes — before gathering.
+                // `bestowed` (CR 702.103d) rewrites the type line without a
+                // `Modification`, so it joins the gate off the card itself.
+                let ct_gate: std::cell::OnceCell<bool> = std::cell::OnceCell::new();
+                let has_type = |t: crate::card::CardType| {
+                    let gathered = *ct_gate.get_or_init(|| {
+                        !computed_absent()
+                            && (card.bestowed || self.card_type_change_in_scope())
+                    });
+                    if !gathered {
+                        return card.definition.card_types.contains(&t);
+                    }
+                    match computed() {
+                        Some(cp) => cp.card_types.contains(&t),
+                        None => card.definition.card_types.contains(&t),
+                    }
                 };
                 // CR 613.2 layer-4 — a creature that gained a type from a
                 // continuous effect (Jenova's Mutant grant) matches by its
@@ -3360,7 +3387,7 @@ impl GameState {
                     // battlefield.
                     R::Creature => {
                         has_type(CT::Creature)
-                            || (card.definition.creature_off_battlefield && computed().is_none())
+                            || (card.definition.creature_off_battlefield && computed_absent())
                     }
                     R::Artifact => has_type(CT::Artifact),
                     R::Enchantment => has_type(CT::Enchantment),

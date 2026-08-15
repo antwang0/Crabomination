@@ -135,3 +135,42 @@ fn cr_602_5_city_of_solitude_locks_off_turn_activations() {
         .spell_cast_lock
         .off_turn_abilities_locked);
 }
+
+/// CR 613.2 — `evaluate_requirement_static`'s card-type answer is layer-aware,
+/// and its presence gate (`card_type_change_in_scope`) must see *both* routes
+/// to a layer-4 card-type modification: a resolved `continuous_effects` entry
+/// and a battlefield permanent's printed static. Drop either leg from the gate
+/// and one half of this test reads the printed type line instead.
+#[test]
+fn cr_613_2_requirement_card_types_see_both_gate_legs() {
+    use crabomination::card::SelectionRequirement as R;
+    let is_creature = |g: &GameState, id: CardId| {
+        g.evaluate_requirement_static(&R::Creature, &Target::Permanent(id), 0, None)
+    };
+
+    // Leg 1 — a resolved continuous effect (Quirion Druid's animation).
+    let mut g = two_player_game();
+    let druid = ready(&mut g, 0, catalog::quirion_druid());
+    let forest = g.add_card_to_battlefield(0, catalog::forest());
+    assert!(!is_creature(&g, forest), "a Forest is not a creature yet");
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: druid,
+        ability_index: 0,
+        target: Some(Target::Permanent(forest)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("animate the Forest");
+    drain_stack(&mut g);
+    assert!(is_creature(&g, forest), "the animated land matches R::Creature");
+
+    // Leg 2 — a printed static on a battlefield permanent (Titania's Song).
+    let mut g = two_player_game();
+    let thopter = g.add_card_to_battlefield(0, catalog::ornithopter());
+    let mine = g.add_card_to_battlefield(0, catalog::howling_mine());
+    assert!(is_creature(&g, thopter) && !is_creature(&g, mine));
+    g.add_card_to_battlefield(0, catalog::titanias_song());
+    assert!(is_creature(&g, mine), "the animated artifact matches R::Creature");
+}

@@ -526,6 +526,62 @@ the table above is safe to compress:
 
 ## Log
 
+### Thirty-fifth pass — the card-type family gets a presence gate
+
+**The requirement walker's layer-4 card-type answer stops gathering when
+nothing on the board can change a card type. `2,394,920,900 ->
+2,362,985,109 Ir`, `-31,935,791` / **-1.333 %**.** Candidate (-5), first
+half. `profiling-fast --no-default-features`, six-game fixed workload,
+callgrind; baseline re-measured on this box at `2,394,920,900` against the
+`2,394,920,914` in **Profile of record**, i.e. 14 Ir of run-to-run drift.
+Game output byte-identical (24 decided / 0 undecided, same result lines);
+suite **18,639** green, golden traces identical.
+
+What moved, from the caller table: `eval.rs`'s `OnceCell::try_init ->
+computed_permanent` row — **37,727,865 / 1.58 % over 15,574 gathers** — is
+**gone**, and `card_type_change_in_scope` costs **8,335,250 / 0.35 %** in
+its place; the rest of the delta is one duplicate `battlefield_find` per
+call, hoisted so the `computed()` cell and the "is it a live permanent"
+test share it.
+
+**The gate is `ability_strip_off_battlefield`'s device, not a new one.**
+Two routes reach an `AddCardType` / `RemoveCardType` / `SetCardTypes`: a
+resolved `continuous_effects` entry (a `Vec` scan) and a battlefield
+permanent's *printed* shape, folded into `card_can_change_card_types` —
+the two attachment routes (`equipped_bonus`' two type fields, CR 702.151c
+Reconfigure), the two type-gating keywords (CR 702.183 Impending, CR
+702.161 Living metal), a CR 721.2a Station band with printed P/T, and
+`static_effect_changes_card_types` over statics and Station-band statics
+(seven `StaticEffect` variants plus the same five gate wrappers
+`static_effect_strips_abilities` peels). `CardInstance::bestowed` is the
+one card-type rewrite with no `Modification` at all (CR 702.103d, in
+`compute_permanent_pass`), so it joins the gate off the card itself.
+
+**The audit runs in the sound direction, which costs the suite nothing.**
+`permanents_with_abilities_removed`'s cross-check re-gathers whenever its
+gate says "no", and this gate is asked 15,574 times per six games — that
+shape would have made the debug suite unusable. The implication is checked
+the other way instead: `gather_continuous_effects` `debug_assert!`s that a
+gathered set which *does* carry a card-type modification implies the gate
+said `true`. It only runs where a gather already happened, so it costs a
+gate-shaped battlefield walk on a path that was already ~2.7k Ir, and the
+whole 18,639-test suite audits the predicate. Suite wall-clock unmoved
+(`core_rules` 3.20 s before, 4.03 s after including the new test's binary
+rebuild; the per-binary figures are unchanged).
+
+**And the gate is *checked*, not assumed** — pass 13's rule, third time.
+`cr_613_2_requirement_card_types_see_both_gate_legs` drives
+`evaluate_requirement_static(R::Creature, …)` at an animated land (the
+`continuous_effects` leg) and at a Howling Mine under Titania's Song (the
+printed-static leg); stubbing `card_can_change_card_types` to `false`
+fails it, verified both ways.
+
+**Not taken, and why.** The candidate's other four families —
+`has_ctype` / `has_atype` / `has_ltype` / `has_stype` — still read the
+shared cell. `has_ltype`'s gate is free (`rewrites_land_types` exists) but
+its traffic is not on the caller table at all; the other three have no
+cheap predicate yet. See candidate (-5) for what is left.
+
 ### Thirty-fourth pass — a crash fix at zero Ir, and a re-profile
 
 **`73db9c64` — the layer gather's reentrancy guard, moved into
@@ -983,43 +1039,35 @@ Ordered by expected value. Each run pulls the top one, attaches numbers,
 and feeds what it finds back in. Re-profile and replenish when the list
 goes thin or stale.
 
-**(-5) `evaluate_requirement_static`'s lazy layer view — 37,727,865 /
-1.58 % over 15,574 gathers, the second-largest site and new to this list.**
-`eval.rs:3311`'s `OnceCell` (pass 33 made it lazy; laziness is not the
-issue, the *gather* is). **Read this before designing anything: the cell
-serves five layer-4 families, not one** — `has_type` (card types),
+**(-5) `evaluate_requirement_static`'s lazy layer view — card-type half
+PAID (`-1.333 %`, thirty-fifth pass). What is left is the other four
+families, and it is thin.** The `OnceCell` at `eval.rs` serves five
+layer-4 families: `has_type` (card types, now gated),
 `has_ctype` (creature types), `has_atype` (artifact subtypes), `has_ltype`
-(land types) and `has_stype` (supertypes) all match on it. So a presence
-gate here is the *union* of five emitter enumerations, which is why the
-obvious "gate on card-type changers" is wrong by itself.
+(land types) and `has_stype` (supertypes). The four ungated ones no longer
+appear on the `computed_permanent` caller table at all — the whole
+`eval.rs` row went to zero — so **their traffic is not measurable on the
+`fixed` bench and none of them is worth a predicate until a profile puts
+one back on the table.** Two facts kept so they are not re-derived:
 
-*The tractable shape, and it is a split rather than a gate.* Give each
-family its own lazy cell. Then:
-* the **land-type** half gates on `rewrites_land_types`, which **already
-  exists** (`actions.rs:190`, with its own `debug_assert` cross-check) —
-  free, today;
-* the **card-type** half gates on a `card_type_change_in_scope()` written
-  as `ability_strip_off_battlefield`'s twin. **The emitter enumeration is
-  done — ten sites in `gather_continuous_effects_inner`, each gated on a
-  printed property, so the predicate is mechanical**: `equipped_bonus.
-  set_card_types` / `.add_card_types` on an attached source (8313, 8325);
-  `attached_to.is_some() && has_reconfigure()` (8448);
-  `StaticEffect::NotCreatureWhileDevotionBelow` (8629);
-  `NonAuraEnchantmentsAreCreatures` (8679);
-  `NoncreatureArtifactsAreCreatures` (8714);
-  `SelfIsCreatureWhileCountersAtLeast` (8862); `Keyword::Impending(_)`
-  (8906); `SelfIsCreatureIf` (10010); a `station` band with `pt.is_some()`
-  (10804); `Keyword::LivingMetal` (10937) — plus a direct scan of
-  `continuous_effects` for the three `Modification`s, and the command-zone
-  / emblem arm `card_can_strip_abilities` already models. Peel the five
-  gate wrappers exactly as `static_effect_strips_abilities` does;
-* creature types, artifact subtypes and supertypes are the long tail — leave
-  them reading the gather until the first two are measured.
+* the **land-type** gate is free whenever it is wanted:
+  `rewrites_land_types` (`actions.rs:190`) is the gathered-set form and its
+  printed-static twin is six variants — `NamedLandsNeutralized`,
+  `BlightedLandsNeutralized`, `GrantAllBasicLandTypes`, `LandTypeChanger`,
+  `LandTypeChangerWhileCounters`, the `chosen_land_type` arm — plus
+  `equipped_bonus.set_land_types` on an attached source;
+* creature types, artifact subtypes and supertypes have **no cheap
+  predicate**: `AddCreatureType` / `SetCreatureTypes` alone have ~20
+  emitters, and `shallow_creature_types` already spares `has_ctype` the
+  gather on the mid-gather path.
 
-**Cost the `debug_assert` cross-check's *test-suite* cost before landing
-it.** `permanents_with_abilities_removed`'s cross-check runs once per
-trigger dispatch; this one would run 15,574 times per six games, and the
-whole suite is a debug build.
+**The device the paid half used, because the next family will want it.**
+`permanents_with_abilities_removed`'s cross-check re-gathers whenever its
+gate says "no", and a gate asked 15,574 times per six games cannot afford
+that in a debug suite. Check the implication in the *sound* direction
+instead — a `debug_assert!` in `gather_continuous_effects` that a gathered
+set carrying the modification implies the gate said `true`. It runs only
+where a gather already happened, and the whole suite audits it.
 
 **(-3) is blocked on a *fourth* leg, and the arithmetic is here so it is
 not re-derived.** The entry below describes a three-leg gate
@@ -1034,8 +1082,10 @@ is every `Modification::AddKeyword` emitter (statics, `equipped_bonus.
 keywords`, level bands, station bands, keyword counters, `granted_keywords_
 eot`), and `board_keyword_matching` — the existing device — gathers on
 exactly the boards that matter, because it short-circuits on *printed*
-keywords and no bench card prints `CantActivateTapAbilities`. **Take (-5)'s
-split first**; it needs no new enumeration for its first half.
+keywords and no bench card prints `CantActivateTapAbilities`. (-5)'s
+card-type half is paid, and it is the worked example: three legs of this
+one — strip, card-type, land-type — now all exist as printed-static
+predicates, so what is genuinely left here is **the keyword leg alone**.
 
 **(-2b) `apply_prevention_shields`' Absorb read — 14,227,551 / 0.59 % over
 4,456 gathers (3,192 Ir each), and it is one keyword.** CR 702.64 asks

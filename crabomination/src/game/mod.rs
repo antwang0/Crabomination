@@ -7707,6 +7707,34 @@ impl GameState {
             })
     }
 
+    /// The same device for the layer-4 *card-type* family: a cheap
+    /// over-approximation of "the gathered effect set can contain an
+    /// `AddCardType` / `RemoveCardType` / `SetCardTypes`", answered without
+    /// gathering. `false` is authoritative; `true` only means the gather has
+    /// to run.
+    ///
+    /// Two routes reach the modification: a resolved `continuous_effects`
+    /// entry (animations, `BecomeTreasure`, `LoseCardTypeUntilEot`, crew) and
+    /// a battlefield permanent's printed shape, folded into
+    /// [`card_can_change_card_types`]. `gather_continuous_effects`
+    /// `debug_assert!`s the implication in the sound direction — every gather
+    /// that *does* produce one checks that this said `true` — so the whole
+    /// suite audits the predicate without any caller paying a gather.
+    ///
+    /// Not covered on purpose: `CardInstance::bestowed`, which rewrites the
+    /// type line in `compute_permanent_pass` without a `Modification` at all.
+    /// It is a per-card flag, so a caller reads it off the card directly.
+    pub(crate) fn card_type_change_in_scope(&self) -> bool {
+        self.continuous_effects.iter().any(|e| {
+            matches!(
+                e.modification,
+                Modification::AddCardType(_)
+                    | Modification::RemoveCardType(_)
+                    | Modification::SetCardTypes(_)
+            )
+        }) || self.battlefield.iter().any(card_can_change_card_types)
+    }
+
     /// Run `f` with the gathered continuous-effect set memoized, so every
     /// `computed_permanent` / `compute_battlefield` call inside reuses one
     /// gather instead of rebuilding the full effect set per call. Sound by
@@ -7799,6 +7827,20 @@ impl GameState {
         let prev = self.in_layer_gather.swap(true, Ordering::Relaxed);
         let out = self.gather_continuous_effects_inner();
         self.in_layer_gather.store(prev, Ordering::Relaxed);
+        // The card-type presence gate's audit, run in the sound direction and
+        // in the one place where the gather already happened, so it costs a
+        // gate-shaped battlefield walk rather than a gather. A new emitter
+        // that `card_can_change_card_types` doesn't know about trips this on
+        // the first debug run that plays the card.
+        debug_assert!(
+            !out.iter().any(|e| matches!(
+                e.modification,
+                Modification::AddCardType(_)
+                    | Modification::RemoveCardType(_)
+                    | Modification::SetCardTypes(_)
+            )) || self.card_type_change_in_scope(),
+            "the card-type presence gate missed a layer-4 card-type source",
+        );
         out
     }
 
@@ -20718,6 +20760,61 @@ fn card_can_strip_abilities(card: &CardInstance) -> bool {
             .station
             .iter()
             .any(|band| band.statics.iter().any(static_effect_strips_abilities))
+}
+
+/// True when `effect` can emit a layer-4 card-type modification. Twin of
+/// [`static_effect_strips_abilities`] for the card-type family; the two share
+/// the gate-wrapper peel because `static_effect_to_effects` recurses through
+/// the same wrappers.
+fn static_effect_changes_card_types(effect: &crate::effect::StaticEffect) -> bool {
+    use crate::effect::StaticEffect as SE;
+    match effect {
+        // `static_effect_to_effects` arms.
+        SE::MatchingLandsAreCreatures { .. } | SE::AddCardTypeToMatching { .. } => true,
+        // Stateful gather passes — each reads live GameState (devotion, a
+        // counter count, a predicate), so it can't route through
+        // `static_effect_to_effects`, but the printed static is the same tell.
+        SE::NotCreatureWhileDevotionBelow { .. }
+        | SE::NonAuraEnchantmentsAreCreatures { .. }
+        | SE::NoncreatureArtifactsAreCreatures
+        | SE::SelfIsCreatureWhileCountersAtLeast { .. }
+        | SE::SelfIsCreatureIf { .. } => true,
+        SE::WhileClassLevelAtLeast { inner, .. }
+        | SE::WhileYourTurn { inner }
+        | SE::WhileNotYourTurn { inner }
+        | SE::WhileCountersAtLeast { inner, .. }
+        | SE::WhileCondition { inner, .. } => static_effect_changes_card_types(inner),
+        _ => false,
+    }
+}
+
+/// True when `card`, on the battlefield, can contribute a layer-4 card-type
+/// modification to the gathered set. The printed-shape half of
+/// [`GameState::card_type_change_in_scope`]; covers the attachment routes
+/// (`equipped_bonus`' two type fields, CR 702.151c Reconfigure), the two
+/// keywords that gate the type line (CR 702.183 Impending, CR 702.161 Living
+/// metal), a CR 721.2a Station band with printed P/T, and every static route
+/// including Station-band statics.
+fn card_can_change_card_types(card: &CardInstance) -> bool {
+    let def = &card.definition;
+    if card.attached_to.is_some()
+        && (def.has_reconfigure().is_some()
+            || def.equipped_bonus.as_ref().is_some_and(|b| {
+                b.set_card_types.is_some() || !b.add_card_types.is_empty()
+            }))
+    {
+        return true;
+    }
+    if def
+        .keywords
+        .iter()
+        .any(|k| matches!(k, Keyword::Impending(_) | Keyword::LivingMetal))
+    {
+        return true;
+    }
+    def.station.iter().any(|band| {
+        band.pt.is_some() || band.statics.iter().any(static_effect_changes_card_types)
+    }) || def.static_abilities.iter().any(|sa| static_effect_changes_card_types(&sa.effect))
 }
 
 /// Convert a `StaticAbility` from a source permanent into `ContinuousEffect`s.
