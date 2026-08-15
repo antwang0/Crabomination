@@ -127,9 +127,33 @@ contention-immune, which makes it the better first look.
 
 ## Baseline
 
-**NOT re-anchored at the thirty-sixth pass's tip (`898a9912`), and the
-reading is here because it is the file's third and sharpest demonstration
-of why.** Same `--bench`, `release` + mimalloc, three runs:
+**NOT re-anchored at the thirty-seventh pass's tip (`7af2b489`).** Same
+`--bench`, `release` + mimalloc, three runs, on the same container and the
+same `host_cpu` string as the thirty-sixth pass's reading below:
+
+```text
+games_per_s          110.78 / 115.09 / 112.32   (mean 112.73)
+games_per_s_th       36.93 - 38.36
+host_cpu             Intel(R) Xeon(R) Processor @ 2.80GHz
+host_calib_ms        51 / 51 / 49
+decisions            193,232 byte-identical on all three
+turns_per_game       26.98
+stalls               0 (0.00 %), stalls_by cap 0 / stuck 0 / draw 0
+peak_rss_mib         29.4 - 30.8
+determinism          ok (all pairs split, on all 3 runs)
+```
+
+**+2.11 % against the pass-36 mean of 110.40 on a change callgrind measures
+at -1.590 %** — the right sign and the right rough size, but the two means
+are inside this bench's noise band either way, so it is the invariants that
+carry the check here: `decisions` is **193,232 byte-identical** with the
+anchor and with every reading below, `turns_per_game` and the stall counts
+are unchanged, and determinism passed on all three runs. Nothing to
+investigate; the anchor stands.
+
+**The thirty-sixth pass's reading, kept because it is the file's third and
+sharpest demonstration of why the anchor does not move.** Same `--bench`,
+`release` + mimalloc, three runs at `898a9912`:
 
 ```text
 games_per_s          111.58 / 108.32 / 111.29   (mean 110.40)
@@ -612,6 +636,97 @@ the table above is safe to compress:
 
 
 ## Log
+
+### Thirty-seventh pass — three sites stop gathering, and two null results that reprice the table
+
+Cumulative: **2,284,098,792 -> 2,247,783,661 Ir, -36,315,131 / -1.590 %**, in
+three commits, all behaviour-preserving (suite 18,639 green over 11 binaries,
+all five golden traces identical, `clippy --workspace --all-targets` clean).
+All six readings `profiling-fast --no-default-features`, callgrind, `--a gang
+--b gang --games 6 --threads 1 --seed 1 --decks fixed`, built and run in one
+sitting. The base read **2,284,098,792** against the **2,284,099,256** this
+file recorded for `898a9912` — **464 Ir apart on a 2.28 G workload**.
+
+| commit | before -> after | what |
+|---|---|---|
+| `4259fd5c` | 2,284,098,792 -> 2,272,775,413 (**-0.496 %**) | `dying_snapshot`'s gather, behind a new creature-type presence gate |
+| `4976e380` | 2,272,775,413 -> 2,261,967,040 (**-0.476 %**) | `has_first_strikers`' gather, behind a participant-scoped keyword gate |
+| `7af2b489` | 2,261,967,040 -> 2,247,783,661 (**-0.627 %**) | the assigns-as-unblocked read joins the damage step's one snapshot |
+
+| | base | tip |
+|---|---|---|
+| `computed_permanent` -> gather | 40,264 | **29,780** |
+| all gathers | 73,434 | **62,950** |
+| `gather_continuous_effects_inner` self | 44,957,542 / 1.97 % | 37,904,168 / 1.69 % |
+
+**`dying_snapshot` (-0.496 %).** Its doc already claimed it "only pays the
+layer cost when a grant is actually present". That was a claim, not code —
+one whole gather per dying permanent, 3,420 of them for 10,764,582 Ir /
+0.47 %, and the largest layer-read site on the tip with no gate at all.
+`creature_type_change_in_scope` is the sixth member of the presence-gate
+family and the first for creature types: the stored `continuous_effects`
+carrying `AddCreatureType` / `SetCreatureTypes`, plus
+`card_can_change_creature_types` over the battlefield (the `equipped_bonus`
+attachment route and five statics — `CreaturesYouControlAreChosenType`,
+`MatchingAreChosenTypeToo`, `MatchingLandsAreCreatures`,
+`AddCreatureTypeToMatching`, `SelfIsCreatureIf`). **Exact rather than
+over-approximate for this caller**: `layers.rs` writes
+`subtypes.creature_types` from those two modifications and nothing else, so a
+gathered set without one leaves computed == printed and the guarded body is a
+no-op. Audited by the usual sound-direction `debug_assert!` in
+`gather_continuous_effects`; the enumeration was right first try.
+
+**`has_first_strikers` (-0.476 %).** `advance_step` asks it on every
+transition into the first-strike damage step, and the answer is almost always
+no — none of the four `--decks fixed` archetypes prints first or double
+strike except one Baneslayer Angel. Proving that cost 12,203,441 Ir / 0.53 %
+over 7,060 `computed_permanent` calls. `first_strike_possible` is
+`card_keyword_possible` per participant **with its one expensive leg — the
+board-wide grant scan — hoisted out of the loop**, since two to six
+participants are asked about the same board. Only 2,514 gathers came out for
+10.8 M Ir: the old shape's freeze scope already shared one gather across the
+participants, so most of the win is the per-participant `apply_layers_one`.
+Audited against its own outcome (the `scale_damage_to` device).
+
+**The assigns-as-unblocked read (-0.627 %).**
+`resolve_combat_damage_with_filter`'s per-attacker loop reads eight attacker
+keywords; seven came from `AttackerInfo`, built once off the step's snapshot,
+and the eighth — CR 510.1a `AssignsDamageAsThoughUnblocked` — took a fresh
+`computed_permanent` inside the loop on a `&mut self` path, i.e. a whole
+gather: **13,601,323 Ir / 0.60 % over 4,474 calls**. It now reads off `atk`
+like its siblings. Cheaper *and* the more faithful rule: CR 510.1 assignment
+is one turn-based action taken before CR 510.2 deals any of this loop's
+damage, so a life total the loop moves (lifelink) or a counter it adds
+(wither) must not be able to change which attackers count as blocked — which
+the old shape allowed through a `WhileCondition` static.
+
+**Two null results, and they are worth more than a fourth row.** Both were
+pulled off the `computed_permanent` call-site table on this file's own "a
+site over ~1,900 Ir a call is gathering" heuristic. Both measured nothing and
+were reverted:
+
+| candidate | measured |
+|---|---|
+| `check_target_legality_with_source`'s Shroud/Hexproof pair merged into one computed read (mod.rs `permanent_has_keyword`, 11,644,145 / 0.52 % / 8,328) | **-438,287 / -0.0195 %** |
+| `pick_attacks_scored`'s attacker filter (bot.rs:6246, 8,904,436 / 0.40 % / 4,084 at **2,180 Ir a call**) wrapped in `with_frozen_layers` | **-342,582 / -0.0152 %**, and the gather count did not move at all (29,780 both sides) |
+
+**So the heuristic is wrong, and this is the correction.** Ir-per-call at a
+`computed_permanent` site does not separate "gathers" from "one
+`apply_layers_one` over a big effect set": `apply_layers_one` alone ranges
+from ~760 to ~2,200 Ir with the card and the live effect count, and the
+per-card memo inside a freeze scope makes a repeat read for the same id
+nearly free. Only **29,780 of the ~90,000** `computed_permanent` calls on
+this tip gather at all.
+
+**The reliable test is static, not statistical: a `computed_permanent`
+reachable only from `&mut self` code always gathers**, because a freeze scope
+holds `&GameState` and no `&mut self` call can happen inside one. All three
+rows this pass are `&mut self` paths (`dying_snapshot`'s callers,
+`advance_step`, `resolve_combat_damage_with_filter`); both null results are
+`&self` paths already inside `HeuristicBot::next_action`'s 88 %-inclusive
+scope. **Rank candidates by that predicate first and by Ir/call second** —
+and the four rows this file has marked "floor" are not floors because they
+are cheap per call, they are floors because they are inside that scope.
 
 ### Thirty-sixth pass — two whole-site gates
 
@@ -1132,28 +1247,44 @@ settings + debuginfo; system allocator, because valgrind replaces malloc and
 a mimalloc build would measure the interception), 1 thread, `--a gang --b
 gang --games 6 --seed 1 --decks fixed`.
 
-**The thirty-sixth pass's tip reads 2,284,099,256 Ir**, and its gather half
-was re-taken directly rather than patched:
+**The thirty-seventh pass's tip (`7af2b489`) reads 2,247,783,661 Ir**, and
+its gather half was re-taken directly:
 
 | Ir | share | calls | caller |
 |---|---|---|---|
-| 76,185,682 | 3.34 % | 40,264 | `computed_permanent` |
-| 33,729,035 | 1.48 % | 18,916 | `frozen_effects` |
-| 18,699,320 | 0.82 % | 10,670 | `check_state_based_actions` |
-| 6,535,227 | 0.29 % | 3,274 | `compute_permanents` |
+| 55,179,840 | 2.45 % | 29,780 | `computed_permanent` |
+| 33,727,702 | 1.50 % | 18,916 | `frozen_effects` |
+| 18,704,346 | 0.83 % | 10,670 | `check_state_based_actions` |
+| 6,590,525 | 0.29 % | 3,274 | `compute_permanents` |
 | 622,422 | 0.03 % | 310 | `compute_battlefield` |
 
-**73,434 gathers**, from 78,826 after this pass's first commit, 97,212 at
-`bdc11c86` and 107,084 at `8ff6daab`.
-`gather_continuous_effects_inner` self is **44,957,542 / 1.97 %**. Neither
-`activate_ability_inner` nor `scale_damage_to` appears as a
-`computed_permanent` caller at any threshold any more.
+**62,950 gathers**, from 73,434 at `898a9912`, 97,212 at `bdc11c86` and
+107,084 at `8ff6daab`. `gather_continuous_effects_inner` self is
+**37,904,168 / 1.69 %**. `activate_ability_inner`, `scale_damage_to`,
+`dying_snapshot` and `has_first_strikers` do not appear as
+`computed_permanent` callers at any threshold any more.
 
-**`resolve_combat` is now the top unread site** (~0.88 %, 6,682 calls,
-~3,104 Ir each), then `permanent_has_keyword` (11,642,945 / 0.50 % / 8,328)
-and `dying_snapshot` (10,734,325 / 0.46 % / 3,420). None has been costed for
-a gate. Note the two rows this pass took were both **whole-site** gates;
-`resolve_combat` is the next one big enough to be worth reading that way.
+**And `computed_permanent` by call site at the tip. Read this table with
+the thirty-seventh pass's correction in hand — Ir/call does not say whether
+a site gathers, and two of these rows have been *measured* not to.** The
+static predicate does: a site reachable only from `&mut self` code gathers,
+one inside `next_action`'s scope does not.
+
+| Ir | share | calls | Ir/call | site |
+|---|---|---|---|---|
+| 19,712,777 | 0.88 % | 19,742 | 998 | `bot.rs:2525` `permanent_value` — scoped |
+| 15,918,359 | 0.71 % | 3,274 | 4,862 | `combat.rs:2573` `combat_damage_computed` — **gathers**, candidate (-9) |
+| 13,511,799 | 0.60 % | 16,688 | 809 | `bot.rs:5606` `pick_removal_sacrifice` — scoped |
+| 11,644,145 | 0.52 % | 8,328 | 1,398 | `mod.rs:20823` `permanent_has_keyword` — scoped, **measured null** |
+| 9,170,362 | 0.41 % | 12,010 | 763 | `bot.rs:1839` `attacker_damage_value` — scoped |
+| 8,904,436 | 0.40 % | 4,084 | 2,180 | `bot.rs:6246` attacker filter — scoped, **measured null** |
+| 7,956,706 | 0.35 % | 4,462 | 1,783 | `combat.rs:2334` `declare_blockers`' computed closure |
+| 7,241,323 | 0.32 % | 2,226 | 3,253 | `combat.rs:4036` `creature_redirects_damage_to_controller` |
+| 6,404,107 | 0.28 % | 2,598 | 2,465 | `combat.rs:1528` `declare_blockers`' `compute_permanents` |
+| 5,251,116 | 0.23 % | 310 | 16,939 | `combat.rs:3284` the free-divider `compute_battlefield` fallback |
+| 4,724,245 | 0.21 % | 1,614 | 2,927 | `actions.rs:8410` a keyword read on a `&mut self` path |
+| 4,606,395 | 0.20 % | 3,680 | 1,251 | `bot.rs:6356` — scoped |
+| 4,491,342 | 0.20 % | 1,916 | 2,344 | `targeting.rs:141` the Ward scan |
 
 **The older reading, kept because the Log rows chain to it.** Re-taken
 2026-08-15 at `8ff6daab`: **2,362,985,109 Ir**, the thirty-fifth
@@ -1312,6 +1443,49 @@ consolidate 0.74 / unlink 0.73), `__memcpy_avx_unaligned_erms` 3.80 %,
 Ordered by expected value. Each run pulls the top one, attaches numbers,
 and feeds what it finds back in. Re-profile and replenish when the list
 goes thin or stale.
+
+**Ranking rule, corrected by the thirty-seventh pass's two null results:** a
+`computed_permanent` site is worth a gate iff it is reachable only from
+`&mut self` code, because a freeze scope holds `&GameState` and no `&mut self`
+call can happen inside one. Ir/call does not answer this — `apply_layers_one`
+alone spans ~760 to ~2,200 Ir — and two candidates picked on Ir/call alone
+measured -0.019 % and -0.015 %. Check the caller's `self` binding first.
+
+**(-8) `check_state_based_actions`' death sweep — 18,704,346 Ir / 0.83 % over
+10,670 gathers, the largest single gather source left and the only one above
+0.5 % that is not `computed_permanent`.** One `compute_battlefield_creatures`
+per SBA sweep, and SBA runs at every priority pass. The read is real —
+CR 704.5g needs computed toughness and computed card type for every creature —
+so this is a *gate*, not a removal, and the gate has to be exact in the sound
+direction. A creature can only be dead when one of these holds: it has
+`damage > 0`, it is marked `dealt_deathtouch_damage`, its printed toughness is
+already ≤ 0, it carries -1/-1 counters, its `toughness_bonus` is negative, or a
+layer-7 P/T modification is live. **The first five are per-card instance reads
+and cost a battlefield walk; the sixth is the problem** — layer-7 is the widest
+family in the engine (every anthem, every pump, Rancor and Giant Growth are in
+the bench decks) so a `pt_change_in_scope` predicate would answer `true` on a
+large fraction of boards and the gate would be a wash there. **Measure the
+damage-only legs first**: instrument how often the five instance legs alone
+answer `false` across a `--decks fixed` run before writing the sixth. Note the
+sweep does far more than deaths (auras, equipment, loyalty, the legend rule);
+only the `compute_battlefield_creatures` call is in scope here, and its two
+siblings inside the sweep (`scan.flip_keyword`, `scan.supertype_grant`) are
+already gated.
+
+**(-9) `combat_damage_computed`'s `compute_permanents` — 15,918,359 Ir /
+0.71 % over 3,274 calls (4,862 each).** One gather plus a per-participant
+layer pass per combat-damage step, on a `&mut self` path, so it gathers every
+time. It is genuinely needed — the whole resolver reads its `computed` — but
+it is taken **twice per combat** whenever the first-strike step runs, and
+`has_first_strikers` (now gated, thirty-seventh pass) has just decided the same
+question off the same board immediately before. Two shapes worth costing: hand
+the first-strike step's computed set forward to the regular step (unsound as
+written — damage is dealt in between and CR 510.2 is a fresh assignment), or
+have `advance_step`'s gate and the resolver share one scope. Also here: the
+`compute_battlefield` fallback at `combat.rs:3284` is 310 calls at **16,939 Ir
+each** for the `DividesCombatDamageAmongDefenders` free-divider case; it is
+already gated on the subset carrying that keyword, so the question is why 310
+calls survive the gate on decks that print none.
 
 **(-7) `scale_damage_to` — PAID, `-1.640 %`, thirty-sixth pass.** One gate
 in front of the whole function; the site is off the caller table and
