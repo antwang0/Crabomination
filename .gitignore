@@ -67,6 +67,9 @@ web/dist/
 
 # Side-by-side target dir for allocator A/B builds (see PERF.md).
 /target-mi/
+# Side-by-side target dir for A/B perf builds: a second CARGO_TARGET_DIR lets
+# a `profiling-fast` build and a callgrind run overlap (see PERF.md).
+/target-probe/
 
 # callgrind / profiling output
 cg*.out

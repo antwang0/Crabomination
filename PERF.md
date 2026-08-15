@@ -29,6 +29,10 @@ CARGO_TARGET_DIR=target-mi cargo build --release -p crabomination \
 # if you need to attribute LTO'd code.)
 cargo build --profile profiling-fast -p crabomination --bin bot_ladder \
   --no-default-features
+# A second CARGO_TARGET_DIR (gitignored: /target-probe/) lets the *next*
+# candidate build while the current one runs under callgrind — callgrind is
+# single-threaded and contention-immune, so the overlap is free. Two cargo
+# builds at once is not: on 4 cores they take ~1.5x each.
 # `-p crabomination` is load-bearing. Drop it and `--no-default-features`
 # does not reach the engine crate: the binary keeps mimalloc, callgrind
 # measures mimalloc-under-valgrind instead of the system allocator, and the
@@ -637,6 +641,125 @@ the table above is safe to compress:
 
 
 ## Log
+
+### Thirty-eighth pass — the SBA death sweep stops computing, and the fuse device fails to generalise
+
+Cumulative: **2,242,782,284 -> 2,186,150,874 Ir, -56,631,410 / -2.525 %**, in
+one commit, behaviour-preserving (suite **18,645** green over 11 binaries —
+18,639 plus this pass's six — all five golden traces identical, clippy
+clean). All six readings `profiling-fast --no-default-features`, callgrind,
+`--a gang --b gang --games 6 --threads 1 --seed 1 --decks fixed`, built and
+run in one sitting. The base read **2,242,782,284** against the
+**2,242,782,905** this file recorded for `59c964dc` — **621 Ir apart on a
+2.24 G workload** — and a rebuild of one unchanged source state reproduced to
+**10 Ir**.
+
+| step | before -> after | what |
+|---|---|---|
+| gate | 2,242,782,284 -> 2,191,706,757 (**-2.277 %**) | the death sweep behind `creature_death_possible` |
+| + dead-walk | 2,191,706,757 -> 2,186,150,874 (**-0.254 %**) | a gated sweep stops walking the battlefield to build an empty `dead` |
+
+| | base | tip |
+|---|---|---|
+| SBA gathers | 10,670 | **1,442** (-86.5 %) |
+| all gathers | 62,950 | **53,722** |
+| `gather_continuous_effects_inner` self | 37,904,168 / 1.69 % | 32,765,200 / 1.50 % |
+| `.collect()`s under SBA (`spec_from_iter`) | 85,584,256 / 3.82 % over 82,634 | **33,530,891 / 1.53 % over 64,178** |
+
+**The prize was never only the gather.** (-8) costed this site at the 0.83 %
+`gather_continuous_effects_inner` row; it paid **2.28 %**, because
+`compute_battlefield_creatures` is a gather *plus* an `apply_layers_one` per
+creature *plus* the `Vec<ComputedPermanent>` those collect into. The
+`spec_from_iter` row above is the visible half of that: **-52.1 M and -18,456
+collects** on its own, against a gather row of -15.6 M.
+**Read a `compute_*` site's cost as gather + layer pass + collect, not as its
+gather row** — the gather row is what the caller table shows and it is a
+third of the truth.
+
+**Sizing it first cost one probe build and settled the design.** (-8)'s own
+instruction — instrument the five instance legs before writing the sixth —
+was the right call and the numbers were decisive: over the `fixed` workload,
+**9,228 of 10,670 sweeps (86.5 %)** have no permanent that instance reads
+can put on any death leg, and on **every one of those 9,228** the *gathered*
+set also carried no toughness-lowering layer-7 modification. The feared
+sixth leg costs nothing on this workload, so the gate is worth its exact
+form.
+
+**The layer-7 leg is signed, and that is the whole trick.** (-8) predicted a
+`pt_change_in_scope` predicate would be a wash because layer 7 is the widest
+family in the engine — every anthem, Rancor, Giant Growth. It would have
+been. `pt_reduction_in_scope` asks a narrower question: can a permanent's
+*computed* toughness come out **below** its instance toughness?
+`apply_layers_one` builds toughness as `base [+ 7b set] + mod_toughness +
+toughness_bonus + perm_toughness_bonus + counters`, and
+`CardInstance::toughness` is that same sum without `mod_toughness` — so with
+no 7b set, no 7d switch and `mod_toughness >= 0`, the instance value is a
+sound lower bound and every positive anthem on the board is free.
+`static_effect_reduces_toughness` splits the 28 emitting statics three ways:
+7b sets and `Value`-typed 7c terms answer `true`; a literal `i32` toughness
+answers `*toughness < 0`; a `per_*` literal answers `*per_toughness < 0`,
+because every emitter multiplies it by a `.count()` / `counter_count()`.
+
+**Enumerate by grepping the emitter, not by reading the variant names.** The
+first enumeration was built from "nearest preceding `StaticEffect::` above
+each `Modification::Modify…` line" and **missed `AnthemForFilter`**, which
+shares its emitter block with `AnthemForFilterIf` and so never appears
+within 200 lines of it. The enumeration that is right greps every
+`Layer::L7PowerTough` site (42 in `game/mod.rs`, 9 in `effects/mod.rs`) and
+collects *every* `StaticEffect::` name in the block that reaches it. Two
+sites are deliberately not in the predicate — Bushido pumps by
+`Keyword::Bushido(n)` with `n: u32`, Bludgeon Brawl's granted bonus has a
+literal `0` toughness — and the nine `effects/mod.rs` sites all route
+through `add_continuous_effect`, i.e. the cheap exact scan of
+`continuous_effects` already covers them.
+
+**And the null result, which is the more transferable half: (-6)'s
+fuse-the-walks device does not generalise here.** The gate as shipped is
+*three* short-circuiting `any` walks — `pt_reduction_in_scope`,
+`card_type_change_in_scope`, then the death legs — and folding them into one
+`battlefield.iter()` pass was **measured twice and lost twice**:
+
+| variant | Ir | vs shipped |
+|---|---|---|
+| three separate `any` walks (**shipped**) | 2,191,706,757 | — |
+| one fused walk | 2,203,818,568 | **+0.55 %** |
+| one fused walk, death legs inside it | 2,218,774,818 | **+1.24 %** |
+
+(All three measured before the dead-walk step, so they compare against
+2,191,706,757 rather than the tip; the step is orthogonal to the fusion.)
+
+The second row has a concrete cause worth keeping: a fused walk cannot know
+`type_change` until it ends, so it asks *every* permanent the death legs —
+and roughly half a board is lands, whose printed toughness is 0, which
+misses `card_death_possible`'s fast path and pays the **seven counter-map
+lookups** behind `CardInstance::toughness` for an answer the gate discards.
+The first row has no such cause and is simply what the box says: (-6)'s
+arithmetic came from four walks whose per-card body was
+`definition.static_abilities.is_empty()`, and a walk whose body is already
+that cheap has nothing left for fusion to recover. **Fuse when the per-card
+body dominates the iteration; do not when it doesn't, and measure which.**
+
+**Correctness evidence beyond the suite.** The predicate is an enumeration,
+so the suite's 18,645 tests audit it through the sound-direction
+`debug_assert!` in `gather_continuous_effects` (a gathered set carrying a
+toughness-lowering modification implies the gate said `true`) plus a second
+one at the sweep itself (every card the full filter kills would have been
+flagged). Six new CR 704.5 cases cover the routes directly — layer-7
+reduction with no marked damage, an animated 0/0 land, lethal-vs-one-short,
+deathtouch under lethal, and -1/-1 counters under a *positive* anthem. The
+wide pool was re-run on the tip: `--decks all --games 200`, **3,400 games
+over 17 decks, two processes, output byte-identical** (modulo the wall-clock
+line), 1,700 pairs all split, **0 undecided**, no panics.
+
+**What the gate leaves on the table, and it is the next candidate.**
+`card_type_change_in_scope` now shows up in its own right at **21,776,000 Ir
+/ ~1.0 %**, and **19.3 M of that is `slice/iter/macros.rs` and
+`ptr/non_null.rs`** — walking, not deciding. It is not fusable into the gate
+(above), but `sba_board_scan` already walks the same battlefield and every
+card's `static_abilities` one block earlier, and `scan` is retaken after the
+only two events that can change the answer (a flip at `4486`, and `4690`).
+Hoisting the bit into that existing walk is a different device from fusing
+two new ones. See (-8b).
 
 ### Thirty-seventh pass — three sites stop gathering, and two null results that reprice the table
 
@@ -1265,7 +1388,16 @@ settings + debuginfo; system allocator, because valgrind replaces malloc and
 a mimalloc build would measure the interception), 1 thread, `--a gang --b
 gang --games 6 --seed 1 --decks fixed`.
 
-**The thirty-seventh pass reads 2,242,782,905 Ir at its tip (`59c964dc`).**
+**The thirty-eighth pass reads 2,186,150,874 Ir at its tip.** Its one commit
+gates `check_state_based_actions`' death sweep, taking SBA's gathers from
+10,670 to **1,442** and all gathers from 62,950 to **53,722**;
+`gather_continuous_effects_inner` self is **32,765,200 / 1.49 %**. The
+`computed_permanent` caller table below is unchanged by it — the sweep is not
+a `computed_permanent` caller — but every *share* there reads ~2.3 % low
+against this tip. One new row is worth carrying: `card_type_change_in_scope`
+is now **21,776,000 / ~1.0 % over 10,670**, candidate (-8b).
+
+**The thirty-seventh pass read 2,242,782,905 Ir at its tip (`59c964dc`).**
 The tables below were taken one commit earlier at `7af2b489`
 (2,247,783,661); the fourth commit only shrinks the per-gather layer pass at
 `combat.rs:3284`, so the gather counts are the tip's and the
@@ -1472,26 +1604,43 @@ call can happen inside one. Ir/call does not answer this — `apply_layers_one`
 alone spans ~760 to ~2,200 Ir — and two candidates picked on Ir/call alone
 measured -0.019 % and -0.015 %. Check the caller's `self` binding first.
 
-**(-8) `check_state_based_actions`' death sweep — 18,704,346 Ir / 0.83 % over
-10,670 gathers, the largest single gather source left and the only one above
-0.5 % that is not `computed_permanent`.** One `compute_battlefield_creatures`
-per SBA sweep, and SBA runs at every priority pass. The read is real —
-CR 704.5g needs computed toughness and computed card type for every creature —
-so this is a *gate*, not a removal, and the gate has to be exact in the sound
-direction. A creature can only be dead when one of these holds: it has
-`damage > 0`, it is marked `dealt_deathtouch_damage`, its printed toughness is
-already ≤ 0, it carries -1/-1 counters, its `toughness_bonus` is negative, or a
-layer-7 P/T modification is live. **The first five are per-card instance reads
-and cost a battlefield walk; the sixth is the problem** — layer-7 is the widest
-family in the engine (every anthem, every pump, Rancor and Giant Growth are in
-the bench decks) so a `pt_change_in_scope` predicate would answer `true` on a
-large fraction of boards and the gate would be a wash there. **Measure the
-damage-only legs first**: instrument how often the five instance legs alone
-answer `false` across a `--decks fixed` run before writing the sixth. Note the
-sweep does far more than deaths (auras, equipment, loyalty, the legend rule);
-only the `compute_battlefield_creatures` call is in scope here, and its two
-siblings inside the sweep (`scan.flip_keyword`, `scan.supertype_grant`) are
-already gated.
+**(-8b) `card_type_change_in_scope`, the gate's own residue — 21,776,000 Ir /
+~1.0 % over 10,670 calls, and 19.3 M of it is `slice/iter/macros.rs` +
+`ptr/non_null.rs`, i.e. walking rather than deciding.** The thirty-eighth
+pass's gate asks it once per SBA sweep to decide whether the non-creatures
+join the death legs. **It is not fusable into the gate — that was measured
+and lost twice, see the Log block** — but it does not need a walk of its
+own: `sba_board_scan` already iterates the same battlefield and every card's
+`static_abilities` one block earlier in the same function. Add a
+`type_change` flag to `SbaBoardScan` (`|= card_can_change_card_types(c)` in
+the existing per-card loop, plus the `continuous_effects` leg once) and have
+`creature_death_possible` read `scan.type_change`.
+
+Two things to check before writing it, both of which look fine. **(a)
+Staleness**: `scan` is taken at the top and retaken after a flip (`4486`) and
+at `4690`, both above the death sweep; between `4690` and the sweep the only
+board changes are *removals* (legend rule, world rule, saga), and a removal
+can only take the answer from `true` to `false`, so a stale `true` is
+conservative-safe. Nothing adds a permanent before the sweep — Persist /
+Undying is after it, and it already sets `board_grew` and retakes. **(b)** The
+`continuous_effects` half is not battlefield-shaped, so it stays where it is
+or moves into the same one-off.
+
+**(-8) `check_state_based_actions`' death sweep — PAID, `-2.277 %`,
+thirty-eighth pass.** All the numbers and the two devices are in the Log
+block. What the entry taught, kept because both halves recur:
+**(i) a `compute_*` site costs gather + layer pass + collect** — this one was
+costed off its 0.83 % gather row and paid 2.28 %, so read the
+`spec_from_iter` caller table beside the gather table before ranking the next
+one. **(ii) A layer-7 presence gate has to be *signed* to be worth
+anything.** The entry's own prediction — that a `pt_change_in_scope`
+predicate would be a wash because every anthem is layer 7 — was correct, and
+the way past it is to ask whether computed toughness can come out *below*
+instance toughness, which every positive anthem answers `false` to for free.
+The prediction that the sixth leg needed instrumenting before the first five
+was also correct and cost one probe build: **9,228 / 10,670 sweeps (86.5 %)
+are quiet on instance reads alone, and all 9,228 are quiet on the exact
+gathered test too.**
 
 **(-9) `combat_damage_computed`'s `compute_permanents` — 15,918,359 Ir /
 0.71 % over 3,274 calls (4,862 each).** One gather plus a per-participant

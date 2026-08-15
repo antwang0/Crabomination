@@ -16,64 +16,57 @@ reference and want their own triage pass):
 
 ## NEXT (handoff — rewrite each run, keep under 15 lines)
 
-Branch `claude/modern_decks`. **Pass 37: `-1.809 %` Ir in four commits**,
-2,284,098,792 -> **2,242,782,905**. Three `&mut self` gathers closed —
-`dying_snapshot` behind a new creature-type presence gate (`-0.496 %`),
-`has_first_strikers` behind a participant-scoped keyword gate (`-0.476 %`),
-CR 510.1a's assigns-as-unblocked read folded into the damage step's one
-snapshot (`-0.627 %`) — plus the combat-decision path reading the resolver's
-subset instead of the whole board (`-0.223 %`). All gathers 73,434 ->
-**62,950**.
+Branch `claude/modern_decks`. **Pass 38: `-2.525 %` Ir in one commit**,
+2,242,782,284 -> **2,186,150,874** — the largest single commit in six
+passes. `check_state_based_actions`' CR 704.5f/g/h death sweep is behind a
+presence gate; SBA gathers 10,670 -> **1,442**, all gathers 62,950 ->
+**53,722**, and the `.collect()`s under SBA **85.6 M / 82,634 -> 33.5 M / 64,178**.
 
-- **The ranking rule changed, and this is the thing to carry.** Ir-per-call
-  at a `computed_permanent` site does *not* say whether it gathers —
-  `apply_layers_one` alone spans ~760 to ~2,200 Ir, and the per-card memo
-  makes a repeat read inside a scope nearly free. Two candidates picked off
-  the old "over ~1,900 Ir a call is gathering" heuristic measured
-  **-0.019 %** and **-0.015 %** and were reverted. **The test is static: a
-  `computed_permanent` reachable only from `&mut self` code always gathers**,
-  because a freeze scope holds `&GameState`. Check the caller's `self`
-  binding before reading the table. Only ~29,780 of ~90,000
-  `computed_permanent` calls gather at all.
-- **Take (-8) next** — `check_state_based_actions`' `compute_battlefield_creatures`,
-  **10,670 gathers / 0.83 %**, the largest source left and the only non-
-  `computed_permanent` one above 0.5 %. Read its entry first: five of the six
-  legs are cheap instance reads, the sixth (layer-7 P/T) is the whole anthem
-  family and may make the gate a wash — instrument the five before writing
-  the sixth. Then (-9) (`combat_damage_computed`, 0.71 %, and the 310
-  surviving `compute_battlefield` calls at 16,939 Ir each). (-6) is still
-  open and still smaller.
-- **A second finding device, and it produced the fourth commit when Ir/call
-  produced nothing:** ask which sites take a *whole-board* view
-  (`compute_battlefield()`) to answer a question about two to six *named*
-  permanents. `apply_combat_decision_answer` was 310 calls at **16,939 Ir
-  each** — the most expensive layer read per call in the engine — for one
-  attacker's keywords and its blockers' toughness. Unread siblings:
-  `view.rs` (two sites), `bot.rs:1711`/`1752`, `eval.rs:1309`.
+- **A `compute_*` site costs gather + layer pass + collect.** (-8) was
+  ranked off its 0.83 % gather row and paid **2.53 %**. Read the
+  `spec_from_iter` caller table beside the gather table before ranking the
+  next one — that is where the layer pass and the `Vec` land.
+- **A layer-7 presence gate has to be *signed*.** "Is layer 7 live" is a
+  wash (every anthem). "Can computed toughness come out *below* instance
+  toughness" is nearly always false, because `apply_layers_one` is
+  `instance + mod_toughness` with no 7b set / 7d switch. Same trick will
+  work for a power-side gate.
+- **Enumerate a predicate by grepping the emitter, not the variant names.**
+  The first pass missed `AnthemForFilter` — it shares an emitter block with
+  `AnthemForFilterIf` and never appears near it. Grep every
+  `Layer::L7PowerTough` site and collect *every* `StaticEffect::` name in
+  the block that reaches it.
+- **(-6)'s fuse-the-walks device did not generalise, measured twice:** one
+  fused walk read **+0.55 %**, and one that also moved the death legs inside
+  read **+1.24 %** (lands miss the fast path and pay seven counter-map
+  lookups). Fuse when the per-card body dominates the iteration, not when it
+  doesn't.
+- **Take (-8b) next** — `card_type_change_in_scope` is now visible on its
+  own at **21.8 M / ~1.0 %** over 10,670 calls, **19.3 M of it slice
+  iteration**. It is *not* fusable into the gate (above), but
+  `sba_board_scan` already walks the same battlefield one block earlier and
+  `scan` is retaken after both events that can change the answer. Then (-9)
+  (`combat_damage_computed`, 0.71 %). (-6) is still open.
 - **Do not compare `--bench` absolutes across sittings — it is the box.**
-  The anchor stays at 163.62; PERF **Baseline** has the full argument, and
-  the two readings recorded there are 3.7 % apart on one binary-identical
-  workload. Callgrind is the arbiter under ~5 %, and its drift this run was
-  **464 Ir on 2.28 G**.
-- **Green at the tip**: suite **18,639** over 11 binaries, all five golden
-  traces identical, `clippy --workspace --all-targets` clean, `--bench`
-  stalls 0 / determinism ok. **The wide pool was re-run this time** and it
-  is the strongest evidence the four gates are sound on cards the bench
-  decks never play: `--decks all --games 200`, **3,400 games, two processes,
-  output byte-identical** (modulo the wall-clock line), 1,699 pairs all
-  split, 2 undecided (0.06 %, rules draws), no panics. **`overflow` was not
-  re-run** — no counter/mana/encoder code moved and no encoding changed, so
-  no net needs retraining as of this tip.
-- **Fetch before the first commit.** Five collisions on this file so far.
+  The anchor stays at 163.62; PERF **Baseline** has the argument. Callgrind
+  is the arbiter under ~5 %, and its drift this run was **10 Ir** on a
+  rebuild of one source state and **621 Ir** against the recorded tip.
+- **Green at the tip**: suite **18,645** over 11 binaries (18,639 + this
+  pass's six CR 704.5 cases), all five golden traces identical, clippy
+  clean. Wide pool re-run at the
+  tip: `--decks all --games 200`, **3,400 games, two processes,
+  byte-identical**, 1,700 pairs all split, **0 undecided**, no panics. **No encoding change — no net needs
+  retraining as of this tip.**
+- **Fetch before the first commit.** Six collisions on this file so far.
 - Env: no `cargo-nextest`; `cargo test -p crabomination -p
   crabomination_tests` is the gate (~40 s built, ~5 min cold).
-  `profiling-fast` engine ~4 min warm, **cold ~10 min**; `release` **~35
-  min — start it in the background at the top of the run**; `overflow`
-  ~25 min. Callgrind ~4 min, contention-immune. Serialize cargo builds —
-  one target-dir lock, 4 cores. Client apt deps (below) are needed for
-  `clippy --workspace`.
-- Trackers: TODO ~1.0k, ROADMAP 0.66k, PERF ~2.3k — passes 29-31 are index
-  rows, 32-37 prose is current.
+  `profiling-fast` engine **~12 min warm** on this box (slower than the ~4
+  min recorded before); `release` **~35 min — start it in the background at
+  the top of the run**. Callgrind ~4 min, contention-immune. A second
+  `CARGO_TARGET_DIR` lets a build and a callgrind run overlap; two cargo
+  builds at once do not pay on 4 cores.
+- Trackers: TODO ~1.0k, ROADMAP 0.66k, PERF ~2.5k — passes 29-31 are index
+  rows, 32-38 prose is current.
 
 ## Environment note
 

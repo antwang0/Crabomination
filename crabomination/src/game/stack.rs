@@ -4353,6 +4353,67 @@ impl GameState {
         s
     }
 
+    /// Can the CR 704.5f/g/h death sweep kill anything on this board, answered
+    /// without a layer read? `false` is authoritative; `true` only means the
+    /// sweep has to compute.
+    ///
+    /// Two board-global bails first. Zilortha (`lethal_by_power`) measures
+    /// lethal damage against *computed power*, about which the instance lower
+    /// bound below says nothing; and a live layer-7 toughness reduction
+    /// ([`GameState::pt_reduction_in_scope`]) is exactly the case where that
+    /// lower bound stops being one. With neither in scope every permanent's
+    /// computed toughness is at or above its instance toughness, so the
+    /// per-card leg decides.
+    fn creature_death_possible(&self, scan: &SbaBoardScan) -> bool {
+        if scan.lethal_by_power || self.pt_reduction_in_scope() {
+            return true;
+        }
+        // A permanent printed without the Creature type can only be killed
+        // once something animates it — the same condition
+        // `compute_battlefield_creatures` uses to decide whether to run the
+        // layer pass over the whole board. Asked before the walk, so a land
+        // never pays `card_death_possible`'s counter-map sum for an answer
+        // that is thrown away.
+        //
+        // **Three short-circuiting `any` walks, not one fused pass**, and that
+        // is measured, not assumed: folding all three questions into a single
+        // `battlefield.iter()` — the (-6) shape — read **+0.55 %** against
+        // this, and a first version that also moved the death legs inside read
+        // **+1.24 %**. See the Log block; the fusion device does not
+        // generalise to a walk whose per-card body is already this cheap.
+        let type_change = self.card_type_change_in_scope();
+        self.battlefield
+            .iter()
+            .any(|c| (type_change || c.definition.is_creature()) && self.card_death_possible(c))
+    }
+
+    /// The per-card half of [`creature_death_possible`](Self::creature_death_possible):
+    /// instance reads only, and sound only where no layer-7 reduction is in
+    /// scope (the caller checks). One leg per rule the death filter applies —
+    /// CR 704.5f toughness ≤ 0, CR 704.5g lethal damage, CR 704.5h deathtouch,
+    /// and Shriveling Rot's "any damage destroys" for the turn.
+    fn card_death_possible(&self, c: &crate::card::CardInstance) -> bool {
+        // `CardInstance::toughness` is seven lookups into the counter map, and
+        // this runs per permanent per priority pass. An undamaged, uncountered
+        // permanent with a positive printed toughness and no negative bonus
+        // cannot be on any of the four legs, and that is most of a board — so
+        // answer those from five field reads and never build the sum.
+        if c.damage == 0
+            && c.counters.is_empty()
+            && c.toughness_bonus >= 0
+            && c.perm_toughness_bonus >= 0
+            && c.definition.base_toughness() > 0
+        {
+            return false;
+        }
+        let t = c.toughness();
+        t <= 0
+            || (c.damage > 0
+                && ((c.damage as i32) >= t
+                    || c.dealt_deathtouch_damage
+                    || self.damaged_creatures_die_this_turn))
+    }
+
     pub fn check_state_based_actions(&mut self) -> Vec<GameEvent> {
         let mut events = vec![];
 
@@ -4949,8 +5010,20 @@ impl GameState {
         // creatures can be in `dead`, and the `find(id)` misses below already
         // fall back to the printed type, so the layer pass skips the
         // permanents no card-type-changing effect can animate.
-        let computed = self.compute_battlefield_creatures();
-        let dead: Vec<CardId> = self
+        //
+        // The whole block is behind `death_possible`, because SBA runs at
+        // every priority pass and a board where nothing can die is the common
+        // case (86.5 % of sweeps on the `fixed` bench). `computed` is read
+        // only by this filter and by the `for id in dead` loop below, so a
+        // gated-out sweep leaves both empty and does nothing — which is the
+        // answer the layer pass would have given.
+        let (computed, dead): (Vec<ComputedPermanent>, Vec<CardId>) = if !self
+            .creature_death_possible(&scan)
+        {
+            (Vec::new(), Vec::new())
+        } else {
+            let computed = self.compute_battlefield_creatures();
+            let dead = self
             .battlefield
             .iter()
             .filter(|c| {
@@ -5020,6 +5093,23 @@ impl GameState {
             })
             .map(|c| c.id)
             .collect();
+            (computed, dead)
+        };
+
+        // The gate's audit, run in the sound direction and only where the
+        // layer read already happened: every card the full filter kills has to
+        // be one the gate's own disjunction would have flagged. The per-card
+        // leg is board-independent, so checking it on the boards that do
+        // compute audits the boards that don't.
+        #[cfg(debug_assertions)]
+        for id in &dead {
+            let Some(c) = self.battlefield.iter().find(|c| c.id == *id) else { continue };
+            debug_assert!(
+                scan.lethal_by_power || self.pt_reduction_in_scope() || self.card_death_possible(c),
+                "the SBA death gate would have skipped {}, which died",
+                c.definition.name,
+            );
+        }
 
         // Set when Persist/Undying puts a permanent back: the only way the
         // death loop can *add* to the board, and so the only reason the

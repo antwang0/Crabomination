@@ -7928,6 +7928,30 @@ impl GameState {
             || self.keyword_grant_in_scope(pred)
     }
 
+    /// The same device for the one layer-7 question a caller can ask without
+    /// gathering: can any permanent's *computed* toughness come out **lower**
+    /// than its instance toughness (printed + bonuses + counters)?
+    ///
+    /// `apply_layers_one` builds toughness as `base [+ 7b set] + mod_toughness
+    /// + toughness_bonus + perm_toughness_bonus + counters`, and
+    /// [`CardInstance::toughness`] is that same sum without `mod_toughness`.
+    /// So with no 7b set, no 7d switch and `mod_toughness >= 0` the computed
+    /// value is **at or above** the instance value, and a caller holding a
+    /// cheap instance lower bound can trust it. `false` is authoritative;
+    /// `true` only means the layer read has to run.
+    ///
+    /// Unlike its layer-4 siblings this one is signed: an anthem, Rancor and
+    /// Giant Growth are all layer-7 and none of them can kill, so a bare
+    /// "is layer 7 live" gate would answer `true` on most boards and be worth
+    /// nothing. `gather_continuous_effects` `debug_assert!`s the implication
+    /// in the sound direction, so the whole suite audits the enumeration.
+    pub(crate) fn pt_reduction_in_scope(&self) -> bool {
+        self.continuous_effects
+            .iter()
+            .any(|e| modification_reduces_toughness(&e.modification))
+            || self.battlefield.iter().any(card_can_reduce_toughness)
+    }
+
     /// Run `f` with the gathered continuous-effect set memoized, so every
     /// `computed_permanent` / `compute_battlefield` call inside reuses one
     /// gather instead of rebuilding the full effect set per call. Sound by
@@ -8052,6 +8076,15 @@ impl GameState {
                 Modification::AddCreatureType(_) | Modification::SetCreatureTypes(_)
             )) || self.creature_type_change_in_scope(),
             "the creature-type presence gate missed a layer-4 creature-type source",
+        );
+        // The layer-7 toughness-reduction gate's audit, same direction and
+        // same place. A new emitter whose toughness term can go negative
+        // without `card_can_reduce_toughness` knowing trips this on the first
+        // debug run that plays the card.
+        debug_assert!(
+            !out.iter().any(|e| modification_reduces_toughness(&e.modification))
+                || self.pt_reduction_in_scope(),
+            "the layer-7 presence gate missed a toughness-lowering source",
         );
         // The keyword-grant gate's audit, same direction and same place.
         // Deduplicated first: a gather can carry a dozen `AddKeyword`s and
@@ -21059,6 +21092,127 @@ fn card_can_change_card_types(card: &CardInstance) -> bool {
     def.station.iter().any(|band| {
         band.pt.is_some() || band.statics.iter().any(static_effect_changes_card_types)
     }) || def.static_abilities.iter().any(|sa| static_effect_changes_card_types(&sa.effect))
+}
+
+/// True when `m` can put a permanent's computed toughness *below* its
+/// instance toughness. The gathered-set half of
+/// [`GameState::pt_reduction_in_scope`]: every 7b set and the 7d switch can
+/// land anywhere, and a 7c modify only reduces when its toughness term is
+/// negative.
+pub(crate) fn modification_reduces_toughness(m: &Modification) -> bool {
+    match m {
+        Modification::SetPowerToughness(..)
+        | Modification::SetPowerToughnessToManaValue
+        | Modification::SetToughness(_)
+        | Modification::SwitchPowerToughness => true,
+        Modification::ModifyToughness(t) | Modification::ModifyPowerToughness(_, t) => *t < 0,
+        Modification::ModifyPtPerOwnCreatureType(_, per_t, _) => *per_t < 0,
+        _ => false,
+    }
+}
+
+/// True when `effect` can emit a layer-7 modification that lowers toughness.
+/// Twin of [`static_effect_changes_card_types`] for the P/T family; shares the
+/// gate-wrapper peel for the same reason.
+///
+/// Three groups, and the split is what makes the gate worth having. A printed
+/// **7b set** (or a `Value`-valued 7c term) can land anywhere, so it answers
+/// `true` unconditionally. A 7c term printed as a literal `i32` answers
+/// `*toughness < 0` — which is why every anthem, Rancor and Bushido on the
+/// board costs nothing. The `per_*` forms multiply that literal by a count the
+/// emitter derives from `.count()` / `counter_count()`, i.e. a non-negative
+/// factor, so the sign of the product is the sign of the literal.
+///
+/// Enumerated against every `Layer::L7PowerTough` site in
+/// `gather_continuous_effects_inner` and `static_effect_to_effects`. Two of
+/// those sites are deliberately absent: Bushido pumps by `Keyword::Bushido(n)`
+/// with `n: u32`, and Bludgeon Brawl's granted Equipment bonus has a literal
+/// `0` toughness term — neither can go negative. The layer-7 sites with no
+/// static behind them at all (`dynamic_pt`, level and Station bands,
+/// `equipped_bonus`, Soulbond) are `card_can_reduce_toughness`' job.
+fn static_effect_reduces_toughness(effect: &crate::effect::StaticEffect) -> bool {
+    use crate::effect::StaticEffect as SE;
+    match effect {
+        // Layer-7b sets, and the 7c terms whose toughness is a live `Value`.
+        SE::NonAuraEnchantmentsAreCreatures { .. }
+        | SE::NoncreatureArtifactsAreCreatures
+        | SE::SetBasePtIf { .. }
+        | SE::SetBasePtForFilter { .. }
+        | SE::SetBasePtForFilterFromValue { .. }
+        | SE::SelfBasePtFromValue { .. }
+        | SE::SetBaseToughnessForMatching { .. }
+        | SE::MatchingLandsAreCreatures { .. }
+        | SE::PumpPTByValue { .. }
+        | SE::PumpSelfByExiledWithStats => true,
+        // Layer-7c, literal toughness.
+        SE::PumpPT { toughness, .. }
+        | SE::PumpTeamIf { toughness, .. }
+        | SE::PumpSelfIf { toughness, .. }
+        | SE::GrantPumpSelfIf { toughness, .. }
+        | SE::PumpPTPerOtherOfType { toughness, .. }
+        | SE::PumpPerSharedType { toughness, .. }
+        | SE::AnthemForChosenType { toughness, .. }
+        | SE::AnthemForChosenColor { toughness, .. }
+        | SE::AnthemForFilter { toughness, .. }
+        | SE::AnthemForFilterIf { toughness, .. }
+        | SE::AnthemForColorSharedWithLibraryTop { toughness, .. } => *toughness < 0,
+        // Layer-7c, literal toughness scaled by a non-negative count.
+        SE::PumpSelfByControlledPermanents { per_toughness, .. }
+        | SE::PumpSelfByValue { per_toughness, .. }
+        | SE::PumpTeamPerAttachmentOnSource { per_toughness, .. }
+        | SE::PumpTeamByControlledPermanents { per_toughness, .. }
+        | SE::PumpPTPerOwnCreatureType { per_toughness, .. }
+        | SE::PumpPTPerCounterOnSource { per_toughness, .. } => *per_toughness < 0,
+        SE::WhileClassLevelAtLeast { inner, .. }
+        | SE::WhileYourTurn { inner }
+        | SE::WhileNotYourTurn { inner }
+        | SE::WhileCountersAtLeast { inner, .. }
+        | SE::WhileCondition { inner, .. } => static_effect_reduces_toughness(inner),
+        _ => false,
+    }
+}
+
+/// True when `card`, on the battlefield, can contribute a toughness-lowering
+/// layer-7 modification to the gathered set. The printed-shape half of
+/// [`GameState::pt_reduction_in_scope`]; covers the CR 613.4 7a
+/// characteristic-defining routes (`dynamic_pt`, level bands, CR 721.2b
+/// Station bands), the attachment route (`equipped_bonus`' five P/T fields,
+/// including its `scale` and its conditional bands), CR 702.95 Soulbond, and
+/// every static route including Station-band statics.
+fn card_can_reduce_toughness(card: &CardInstance) -> bool {
+    let def = &card.definition;
+    // 7a: a characteristic-defining formula, a level band or a Station band
+    // sets base P/T outright, so the result can be under the instance value.
+    if def.dynamic_pt.is_some() || !def.level_bands.is_empty() {
+        return true;
+    }
+    if def.station.iter().any(|band| {
+        band.pt.is_some() || band.statics.iter().any(static_effect_reduces_toughness)
+    }) {
+        return true;
+    }
+    if card.attached_to.is_some()
+        && let Some(b) = def.equipped_bonus.as_ref()
+        && (b.toughness < 0
+            || b.during_your_turn_pt.1 < 0
+            || b.conditional_pt.as_ref().is_some_and(|(_, t, _)| *t < 0)
+            || b.scale.as_ref().is_some_and(|s| s.per_toughness < 0)
+            || b.set_base_pt.is_some()
+            || b.set_base_pt_controller_life
+            || b.conditional
+                .iter()
+                .any(|c| c.toughness < 0 || c.set_base_pt.is_some()))
+    {
+        return true;
+    }
+    if card
+        .soulbond_partner
+        .is_some()
+        && def.soulbond_bonus.as_ref().is_some_and(|b| b.toughness < 0)
+    {
+        return true;
+    }
+    def.static_abilities.iter().any(|sa| static_effect_reduces_toughness(&sa.effect))
 }
 
 /// True when `effect` can change a damage amount in `scale_damage_to_inner`.
