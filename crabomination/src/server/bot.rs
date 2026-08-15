@@ -12,6 +12,7 @@ use rand::rngs::StdRng;
 use crate::card::{CardDefinition, CardId};
 use crate::decision::{AutoDecider, Decider};
 use crate::effect::{ActivatedAbility, Effect, ManaPayload};
+use crate::game::actions::AbilityRef;
 use crate::game::{Attack, AttackTarget, GameAction, GameState, Target, TurnStep};
 use crate::mana::{ManaCost, ManaPool};
 
@@ -5389,26 +5390,31 @@ fn pick_turn_face_up(state: &GameState, seat: usize) -> Option<GameAction> {
 /// The printed half is *borrowed* from `card.definition` — every caller only
 /// reads `.effect` and the cost fields, and deep-cloning the printed list per
 /// permanent per generator was 1.71 % of the program on its own. Only the
-/// grants, which are synthesized, are owned.
+/// grants, which are synthesized, are owned, and they are boxed: see
+/// [`AbilityRef`].
+///
+/// Yields rather than collects. Every caller is a `for` loop that usually
+/// breaks on the first ability it likes, and the collected `Vec` was one
+/// allocation per permanent per generator — six generators over the same
+/// battlefield.
 fn usable_abilities<'a>(
     state: &GameState,
     card: &'a crate::card::CardInstance,
     scan: &crate::game::actions::GrantScan<'_>,
-) -> Vec<(usize, std::borrow::Cow<'a, crate::effect::ActivatedAbility>)> {
+) -> impl Iterator<Item = (usize, AbilityRef<'a>)> {
     let printed = &card.definition.activated_abilities;
     let n = printed.len();
     printed
         .iter()
-        .map(std::borrow::Cow::Borrowed)
+        .map(AbilityRef::Printed)
         .enumerate()
         .chain(
             state
                 .granted_abilities_of(card, scan)
                 .into_iter()
                 .enumerate()
-                .map(|(i, ab)| (n + i, std::borrow::Cow::Owned(ab))),
+                .map(move |(i, ab)| (n + i, AbilityRef::Synth(Box::new(ab)))),
         )
-        .collect()
 }
 
 /// "{cost}: Destroy target creature" on a permanent that survives the
