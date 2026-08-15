@@ -127,41 +127,50 @@ contention-immune, which makes it the better first look.
 
 ## Baseline
 
-**Re-anchored 2026-08-15 at `8ff6daab`** (`release`, mimalloc — the shipped
+**Re-anchored 2026-08-15 at `bdc11c86`** (`release`, mimalloc — the shipped
 configuration), the thirty-fifth pass's tip.
 
 ```text
 bot_ladder --bench   release, rustc 1.95.0, 4-core VM, 3 worker threads
                      mimalloc (the default)
 host_cpu             Intel(R) Xeon(R) Processor @ 2.10GHz
-host_calib_ms        53 / 57 / 66 / 62
+host_calib_ms        76 / 56 / 90 / 55
 games                320
-games_per_s          172.91 / 170.16 / 171.80 / 164.53
-                     (mean 169.85, spread 5.1 %)
-games_per_s_th       54.84 - 57.64
-decisions_per_s      99,349 - 104,413
+games_per_s          165.87 / 168.93 / 164.04 / 155.63
+                     (mean 163.62, spread 8.5 %)
+games_per_s_th       51.88 - 56.31
 turns_per_game       26.98
 decisions            193,232 byte-identical on all four
 stalls               0 (0.00 %), stalls_by cap 0 / stuck 0 / draw 0
-peak_rss_mib         29.2 - 29.5
+peak_rss_mib         29.2 - 31.5
 determinism          ok (all 160 pairs split, on all 4 runs)
 ```
 
-**136.75 -> 169.85 is +24 %, and *none of it is the change*. Read this
-before quoting either number.** The pass's change is **-1.333 % Ir**, and an
+**The same box read `169.85` (calib 53-66) at `8ff6daab` ninety minutes
+earlier**, so this block is 3.7 % *under* the parent commit while the tip is
+0.855 % *better* in Ir. Nothing to investigate: the drop is inside the
+bench's noise band, calib moved the same way (55-90 against 53-66, and the
+8.5 % spread against 5.1 % says the host was busier), and every invariant is
+identical. Kept as two readings rather than one because the pair is the
+cleanest demonstration in this file of why a `--bench` absolute is not an
+attribution — **two sittings, one binary-identical workload, same
+container, 3.7 % apart.**
+
+**136.75 -> 163.62 is +20 %, and *none of it is the change*. Read this
+before quoting either number.** The pass's change is **-2.177 % Ir**, and an
 alternated `profiling-fast` A/B/A/B/A/B in one sitting read base 140.56 /
 134.46 / 140.07 against new 139.55 / 138.93 / 136.06 — **-0.13 %,
-distributions fully overlapping**, exactly what a 1.3 % change looks like
-against this bench's ~5 % noise floor. The +24 % is the *box*.
+distributions fully overlapping**, exactly what a 1-2 % change looks like
+against this bench's ~5 % noise floor. The gap is the *box*.
 
 **And that is a finding about the probe, not just about the box:
-`host_calib_ms` did not detect it.** It reads 53-66 here against 47-57 at
+`host_calib_ms` did not detect it.** It read 53-66 against 47-57 at
 the previous anchor — if anything *slower* — while three-thread throughput
 is a quarter higher. The probe is a **single-threaded** ALU + 4 MiB
 random-access loop, so it measures one core's speed and nothing about how
 the host schedules three workers; two containers reporting the same
-`host_cpu` string and the same calib can still differ by 24 % on the actual
-workload. The cross-check that *did* work is a configuration comparison:
+`host_cpu` string and the same calib can still differ by ~20 % on the
+actual workload. The cross-check that *did* work is a configuration comparison:
 `release-fast` + **system** allocator read ~138 games/s on this box, i.e.
 *above* the committed `release` + **mimalloc** baseline of 136.75, which is
 impossible on one host — release+mimalloc is strictly the faster
@@ -990,15 +999,18 @@ settings + debuginfo; system allocator, because valgrind replaces malloc and
 a mimalloc build would measure the interception), 1 thread, `--a gang --b
 gang --games 6 --seed 1 --decks fixed`.
 
-**Re-taken 2026-08-15 at `8ff6daab`: 2,362,985,109 Ir** — the thirty-fifth
-pass's tip. Supersedes the `d922f8d9` figure (2,394,920,914) and, for
+**Re-taken 2026-08-15 at `8ff6daab`: 2,362,985,109 Ir**, the thirty-fifth
+pass's *first* commit; the tip (`bdc11c86`) is **2,342,776,898**, and the
+tables below are the `8ff6daab` read with the second commit's two rows
+patched in. Supersedes the `d922f8d9` figure (2,394,920,914) and, for
 totals, the `645b978d` table further below; read a share there as ~16 %
 high. The `d922f8d9` tip re-measured on this box at **2,394,920,900**, i.e.
 14 Ir of run-to-run drift on a 2.4 G workload — the profile is that
 reproducible, and a delta of even 0.01 % is signal.
 
-**The gather, denominated at this tip.** `gather_continuous_effects_inner`
-is **204,357,700 / 8.65 % over 107,084 gathers** (1,908 Ir each), by
+**The gather, denominated at `8ff6daab`.** `gather_continuous_effects_inner`
+is **204,357,700 / 8.65 % over 107,084 gathers** (1,908 Ir each) there; the
+tip's second commit removes ~22,600 of those gathers, by
 caller:
 
 | Ir | share | calls | caller |
@@ -1016,28 +1028,30 @@ floor):
 
 | Ir | share | calls | Ir/call | site |
 |---|---|---|---|---|
-| 48,977,884 | 2.07 % | 18,386 | 2,664 | `activate_ability_inner`'s `let cp` — candidate (-3) |
-| 28,921,126 | 1.22 % | 18,986 | 1,523 | `damage_prevented_by_protection`'s target read — wants the keyword gate |
-| 25,844,342 | 1.09 % | 14,624 | 1,767 | `scale_damage_to`'s `source_cp` |
-| 20,744,735 | 0.88 % | 6,682 | 3,104 | `resolve_combat` |
-| 19,665,163 | 0.83 % | 19,742 | 996 | `permanent_value` — floor |
-| 14,230,429 | 0.60 % | 4,456 | 3,193 | `apply_prevention_shields`' CR 702.64 Absorb read |
-| 13,514,633 | 0.57 % | 16,688 | 810 | `pick_removal_sacrifice` — floor |
-| 12,212,499 | 0.52 % | 7,060 | 1,729 | `has_first_strikers` — already scoped |
-| 11,634,897 | 0.49 % | 8,328 | 1,397 | `permanent_has_keyword` |
-| 10,733,852 | 0.45 % | 3,420 | 3,138 | `dying_snapshot` |
-| 9,174,844 | 0.39 % | 12,010 | 764 | `attacker_damage_value` — floor |
+| 48,957,891 | 2.07 % | 18,386 | 2,663 | `activate_ability_inner`'s `let cp` — candidate (-3) |
+| 25,966,901 | 1.10 % | 14,624 | 1,776 | `scale_damage_to`'s `source_cp` |
+| ~20,700,000 | 0.88 % | 6,682 | 3,104 | `resolve_combat` |
+| ~19,600,000 | 0.83 % | 19,742 | 996 | `permanent_value` — floor |
+| ~13,500,000 | 0.57 % | 16,688 | 810 | `pick_removal_sacrifice` — floor |
+| ~12,200,000 | 0.52 % | 7,060 | 1,729 | `has_first_strikers` — already scoped |
+| 11,635,606 | 0.49 % | 8,328 | 1,397 | `permanent_has_keyword` |
+| ~10,700,000 | 0.45 % | 3,420 | 3,138 | `dying_snapshot` |
+| ~9,170,000 | 0.39 % | 12,010 | 764 | `attacker_damage_value` — floor |
+| 1,007,867 | 0.04 % | 790 | 1,276 | `damage_prevented_by_protection` — **was 28,921,126 over 18,986** |
 
-**`eval.rs`'s row is gone** — it read 37,727,865 / 1.58 % over 15,574
-gathers at `d922f8d9` and does not appear at all here; see the
-thirty-fifth pass's Log block.
+**Two rows are gone and one is a tenth of what it was.** `eval.rs`'s lazy
+layer view (37,727,865 / 1.58 % over 15,574 gathers at `d922f8d9`) and
+`apply_prevention_shields`' Absorb read (14,230,429 / 4,456) do not appear
+at all; `damage_prevented_by_protection` fell 96 %. All three are the
+thirty-fifth pass's two presence gates. Rows marked `~` were not re-read
+after the second commit — it only touched the gated paths, so they are the
+first commit's figures and are within a few thousand Ir.
 
-**The four rows above that a *keyword-grant presence gate* would unlock,
-added up: `activate_ability_inner` (its fourth leg),
-`damage_prevented_by_protection`, `apply_prevention_shields` and
-`permanent_has_keyword` are ~4.4 % between them.** That is the largest
-single lever left, and the enumeration it needs is costed in candidate
-(-3).
+**What the gates leave**: `activate_ability_inner` is now the whole top of
+the table and is short one printed-static predicate (land types, six
+variants) plus a lazy-`bf_cp` restructure — see (-3). `scale_damage_to`
+(1.10 %) and `resolve_combat` (0.88 %) are the next unread sites; neither
+has been costed for a gate.
 
 **`bot.rs` is finished as a candidate-(10) hunting ground, and here is why
 so nobody re-enumerates it.** `HeuristicBot::next_action` wraps the whole

@@ -16,30 +16,37 @@ reference and want their own triage pass):
 
 ## NEXT (handoff — rewrite each run, keep under 15 lines)
 
-Branch `claude/modern_decks`. **Pass 35 paid candidate (-5)'s card-type
-half: `-1.333 %` Ir** (`8ff6daab`), 2,394,920,900 -> **2,362,985,109**.
-`evaluate_requirement_static` no longer gathers to answer a card type;
-`card_type_change_in_scope` is the gate and `gather_continuous_effects`
-audits it in the sound direction. Baseline re-anchored: **169.85 games/s**.
+Branch `claude/modern_decks`. **Pass 35: `-2.177 %` Ir in two gates**,
+2,394,920,900 -> **2,342,776,898** (`bdc11c86`). Card-type family
+(`8ff6daab`, -1.333 %) and keyword-grant family (`bdc11c86`, -0.855 %).
+Both are `ability_strip_off_battlefield`'s device: a printed-static
+presence predicate, audited by a `debug_assert!` in
+`gather_continuous_effects` in the **sound direction** (a gathered set that
+carries the modification implies the gate said yes) — that audit found
+four classes of miss (emblems, command zone, Unleash, graveyard anthems)
+before they could ship. Copy it for the next family.
 
-- **Do not read 136.75 -> 169.85 as a win — it is the box.** The change
-  A/B'd at **-0.13 %** wall-clock (alternated, overlapping) and
-  `host_calib_ms` **did not detect** the host difference (it is
-  single-threaded; the bench is 3-thread). Full argument in PERF
-  **Baseline**. Compare absolutes only within one sitting.
+- **Do not read 136.75 -> 169.85 games/s as a win — it is the box.** The
+  first commit A/B'd at **-0.13 %** wall-clock and `host_calib_ms` **did
+  not detect** the host difference (single-threaded probe, 3-thread
+  bench). Full argument in PERF **Baseline**; compare absolutes only
+  within one sitting.
+- **A presence gate is only a win if the predicate is cheaper than what it
+  guards.** The keyword gate's first version read **+0.012 %** — it was
+  removing 42 M of gathers and spending 42 M on a `&dyn Fn` predicate over
+  a payload-carrying enum. `impl Fn` + hoisting the three synthesized
+  keywords out of the per-card loop took it to ~33 Ir a card. Measure the
+  gate, not just the site.
 - **Green at the tip**: suite **18,639** over 11 binaries, golden traces
   identical, `clippy --workspace --all-targets` clean, decisions 193,232
   byte-identical, stalls 0. **`overflow` and the wide pool were not
-  re-run** — no counter/damage/mana/encoder code moved, and the change is
-  behaviour-preserving by construction.
+  re-run** — no counter/damage/mana/encoder code moved.
 - **Take (-3) next** (`activate_ability_inner`, **2.07 % / 18,386
-  gathers**). Two of its four legs now exist (strip, card-type); the
-  land-type twin is 6 variants and the **keyword leg is the run's work** —
-  23 of 471 `StaticEffect` variants, the non-static sources and the 3
-  unbounded ones are **enumerated in PERF (-3); do not re-derive**. The
-  same leg unlocks `damage_prevented_by_protection` (1.22 %),
-  `apply_prevention_shields` (0.60 %) and `permanent_has_keyword`
-  (0.49 %) — **~4.4 % together, the largest lever left.**
+  gathers**, now the whole top of the table). Three of its four legs
+  exist — strip, card-type, **keyword** (`card_keyword_possible`). Short
+  only the **land-type** printed twin (6 variants, listed in PERF (-5))
+  plus making `bf_cp` lazy so each consumer asks its own gate. After that,
+  `scale_damage_to` (1.10 %) and `resolve_combat` (0.88 %) are unread.
 - **Fetch before the first commit.** Five collisions on this file so far.
 - Env: no `cargo-nextest`; `cargo test -p crabomination -p
   crabomination_tests` is the gate (~40 s built, ~5 min cold).
