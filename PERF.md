@@ -606,12 +606,50 @@ the table above is safe to compress:
 
 ## Log
 
-### Thirty-sixth pass — `activate_ability_inner` stops gathering
+### Thirty-sixth pass — two whole-site gates
 
-**`2,342,773,775 -> 2,322,176,278 Ir, -20,597,497 / -0.879 %`**, one commit,
-behaviour-preserving (suite 18,639 green, golden traces identical). Both
-sides `profiling-fast --no-default-features`, callgrind, `--a gang --b gang
---games 6 --threads 1 --seed 1 --decks fixed`, built and run in one sitting.
+Cumulative: **2,342,773,775 -> 2,284,099,256 Ir, -58,674,519 / -2.505 %**,
+in two commits, both behaviour-preserving (suite 18,639 green, golden
+traces identical, `clippy --workspace --all-targets` clean).
+
+**`scale_damage_to`'s whole body, behind one presence gate.
+`2,322,176,278 -> 2,284,099,256 Ir, -38,077,022` / **-1.640 %**.**
+Candidate (-7), and it beat (-3) at a fraction of the work — because the
+gate guards **the entire function** rather than one read. The site is gone:
+its `computed_permanent` caller row (25,971,484 / 1.12 % / 14,624) is off
+the table, `scale_damage_to` now totals ~1.7 M across all rows (~0.07 %),
+and **`scale_damage_to_inner` does not appear at all** — on this workload
+the body never runs.
+
+| | before | after |
+|---|---|---|
+| `computed_permanent` -> gather | 45,656 calls | **40,264** |
+| all gathers | 78,826 | **73,434** |
+| `gather_continuous_effects_inner` self | 48,506,226 / 2.09 % | 44,957,542 / 1.97 % |
+
+**Only 5,392 gathers came out, for 38 M Ir** — so most of the win was never
+the gather. It was the ~8 battlefield walks of self cost and the
+`cp.colors.to_vec()` allocation, paid 14,624 times to discover that none of
+~25 static arms applies. **That is the general lesson of this pass: gate the
+site, not the read.** (-3) removed 18,386 gathers for 20.6 M; (-7) removed
+5,392 for 38.1 M.
+
+**The audit device generalizes past the gather.** The other family
+predicates hang their `debug_assert!` on `gather_continuous_effects`, the
+one choke point they share. This gate has no such point, so it audits
+against *itself*: when `damage_scaling_in_scope` says `false`,
+`scale_damage_to` debug-runs the full body and asserts the amount comes
+back unchanged. Cheaper to write than an enumeration cross-check, strictly
+stronger (it checks the *outcome*, not the variant list), and the whole
+suite runs it on every damage event it deals. The enumeration — 22 statics
+plus four non-static routes (Overblaze, Stagger, Quest for Pure Flame,
+Equal Treatment) — was right first try under it.
+
+**`activate_ability_inner` stops gathering.
+`2,342,773,775 -> 2,322,176,278 Ir, -20,597,497` / **-0.879 %**.** One commit,
+behaviour-preserving. Both sides `profiling-fast --no-default-features`,
+callgrind, `--a gang --b gang --games 6 --threads 1 --seed 1 --decks fixed`,
+built and run in one sitting.
 The base read **2,342,773,775** against the **2,342,776,898** this file
 recorded for `bdc11c86` — **3,123 Ir apart on a 2.34 G workload**, which is
 the reproducibility claim in **Profile of record** re-confirmed rather than
@@ -1087,27 +1125,28 @@ settings + debuginfo; system allocator, because valgrind replaces malloc and
 a mimalloc build would measure the interception), 1 thread, `--a gang --b
 gang --games 6 --seed 1 --decks fixed`.
 
-**The thirty-sixth pass's tip reads 2,322,176,278 Ir**, and its gather half
+**The thirty-sixth pass's tip reads 2,284,099,256 Ir**, and its gather half
 was re-taken directly rather than patched:
 
 | Ir | share | calls | caller |
 |---|---|---|---|
-| 86,472,254 | 3.72 % | 45,656 | `computed_permanent` |
-| 33,736,544 | 1.45 % | 18,916 | `frozen_effects` |
-| 18,715,139 | 0.81 % | 10,670 | `check_state_based_actions` |
-| 6,532,437 | 0.28 % | 3,274 | `compute_permanents` |
+| 76,185,682 | 3.34 % | 40,264 | `computed_permanent` |
+| 33,729,035 | 1.48 % | 18,916 | `frozen_effects` |
+| 18,699,320 | 0.82 % | 10,670 | `check_state_based_actions` |
+| 6,535,227 | 0.29 % | 3,274 | `compute_permanents` |
 | 622,422 | 0.03 % | 310 | `compute_battlefield` |
 
-**78,826 gathers**, from 97,212 at `bdc11c86` and 107,084 at `8ff6daab`.
-`gather_continuous_effects_inner` self is **48,506,226 / 2.09 %**;
-inclusive **146,078,796 / 6.29 %**. `activate_ability_inner` no longer
-appears as a `computed_permanent` caller at any threshold.
+**73,434 gathers**, from 78,826 after this pass's first commit, 97,212 at
+`bdc11c86` and 107,084 at `8ff6daab`.
+`gather_continuous_effects_inner` self is **44,957,542 / 1.97 %**. Neither
+`activate_ability_inner` nor `scale_damage_to` appears as a
+`computed_permanent` caller at any threshold any more.
 
-**`scale_damage_to` is now the top unread site** — 25,971,484 / 1.12 % over
-14,624 calls (1,776 Ir each), followed by `resolve_combat` (~0.88 %,
-6,682). Neither has been costed for a gate. `permanent_has_keyword`
-(11,642,945 / 0.50 % / 8,328) and `dying_snapshot` (10,734,325 / 0.46 % /
-3,420) are the next two.
+**`resolve_combat` is now the top unread site** (~0.88 %, 6,682 calls,
+~3,104 Ir each), then `permanent_has_keyword` (11,642,945 / 0.50 % / 8,328)
+and `dying_snapshot` (10,734,325 / 0.46 % / 3,420). None has been costed for
+a gate. Note the two rows this pass took were both **whole-site** gates;
+`resolve_combat` is the next one big enough to be worth reading that way.
 
 **The older reading, kept because the Log rows chain to it.** Re-taken
 2026-08-15 at `8ff6daab`: **2,362,985,109 Ir**, the thirty-fifth
@@ -1267,36 +1306,23 @@ Ordered by expected value. Each run pulls the top one, attaches numbers,
 and feeds what it finds back in. Re-profile and replenish when the list
 goes thin or stale.
 
-**(-7) `scale_damage_to` — 25,971,484 / 1.12 % over 14,624 calls, the top
-unread site, and it is a *whole-function* gate rather than a leg.** Read
-before writing: this is not the same shape as (-3). The body is ~25
-independent `StaticEffect` arms, and on a typical board **every one of them
-is absent**, yet the function pays for all of them on every damage event:
+**(-7) `scale_damage_to` — PAID, `-1.640 %`, thirty-sixth pass.** One gate
+in front of the whole function; the site is off the caller table and
+`scale_damage_to_inner` never runs on the `fixed` workload. What the entry
+taught, kept because the shape recurs: **gate the site, not the read** — it
+removed a third as many gathers as (-3) for nearly twice the Ir, because
+the cost was ~8 battlefield walks and an allocation per call, not the
+gather. And a gate with no shared choke point can audit against its own
+outcome (`debug_assert_eq!` that the guarded body is a no-op) instead of
+against an enumeration.
 
-* **two** `computed_permanent` gathers, not one — `source_cp` at the top
-  (`mod.rs:5833`) and a second for the Valley Flamecaller arm near the
-  bottom. Neither is inside a freeze scope;
-* **~8 separate `battlefield.iter()` walks** — `damage_doublers`,
-  `damage_halvers`, the Sulfuric Vapors block, the `affected` block, then
-  one each for Neriv, Gratuitous Violence, Trance Kuja and Hellbent;
-* a `cp.colors.to_vec()` allocation per call, 14,624 of them.
-
-**The gate that fits is one `sa_cards`-shaped walk over the battlefield
-collecting "does any permanent carry any damage-scaling static", and an
-early return of `amount` when it says no.** That is the whole function, not
-one leg of it, which is why it is worth more than its 1.12 % — the walks
-above are its self cost and the two gathers are charged to
-`computed_permanent`.
-
-**Two traps, both visible in the source.** `source_cp` is used for exactly
-two things: the source's *computed* colours and controller, and
-`source_cp.is_none()` as an "is the source a battlefield permanent?" test.
-**That second use needs no gather at all** — `battlefield_find(s).is_none()`
-answers it — and splitting the two is a free correctness-neutral win even
-without the presence gate. The first use is a genuinely new family (layer 2
-control-change, layer 5 colour), so a *predicate* for it is a fresh
-enumeration; do not assume `card.controller` and `definition.colors` stand
-in for the computed pair.
+**What is left here, unmeasured and probably small:** `source_cp` is still
+taken eagerly *inside* the body for two uses — the source's computed colours
+and controller, and `source_cp.is_none()` as an "is the source a battlefield
+permanent?" test. The second needs no gather (`battlefield_find(s).is_none()`
+answers it); the first is a genuinely new family (layer 2 control-change,
+layer 5 colour) and would need its own enumeration. Only worth doing if a
+profile puts the body back on the table, which on this workload it is not.
 
 **(-6) Four presence gates, four walks of one list — the thirty-sixth
 pass's residue, and the arithmetic is measured, not guessed.** Closing (-3)

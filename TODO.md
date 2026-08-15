@@ -16,49 +16,51 @@ reference and want their own triage pass):
 
 ## NEXT (handoff — rewrite each run, keep under 15 lines)
 
-Branch `claude/modern_decks`. **Pass 36: `-0.879 %` Ir in one commit**,
-2,342,773,775 -> **2,322,176,278** (`b1e62b23`). Candidate **(-3) is
-closed** — `activate_ability_inner`'s `bf_cp` is lazy and each of its six
-consumers asks a printed-static gate first, so all **18,386** of its
-gathers are gone and it is off the `computed_permanent` caller table at any
-threshold. All gathers 97,212 -> **78,826**. The last new leg,
-`land_type_change_in_scope`, was right first try (small family, entirely
-battlefield-resident) using the same `debug_assert!`-in-the-sound-direction
-audit; copy that device for any further family.
+Branch `claude/modern_decks`. **Pass 36: `-2.505 %` Ir in two commits**,
+2,342,773,775 -> **2,284,099,256**. Candidates **(-3) and (-7) both
+closed**: `activate_ability_inner`'s lazy `bf_cp` behind six printed-static
+gates (`-0.879 %`, all 18,386 gathers gone) and `scale_damage_to`'s whole
+body behind one presence gate (`-1.640 %`). All gathers 97,212 ->
+**73,434**; neither site appears as a `computed_permanent` caller at any
+threshold now.
 
-- **The headline finding, and it is why (-6) exists: removing 100 % of a
-  2.09 % site netted 0.88 %.** The gates cost **~28 M Ir back, ~1,540 per
-  activation across four battlefield walks**. "Measure the gate, not just
-  the site" now has a number. (-6) is the fusion of the three type-family
-  walks into one; read its two caveats before writing it — laziness is
-  worth real money here, and `keyword_grant_in_scope` is not
-  battlefield-only so it does not fuse with the other three.
-- **Take (-7) next if you want the bigger fish**: `scale_damage_to`,
-  **1.12 % / 14,624 calls**, now the top unread site. It is a
-  *whole-function* gate, not a leg — ~25 static arms all absent on a
-  typical board, **two** un-frozen gathers (not one) and ~8 battlefield
-  walks per call. PERF (-7) has the full read, including a free
-  correctness-neutral split: `source_cp.is_none()` is only asking "is the
-  source a battlefield permanent", which needs no gather.
+- **The lesson worth carrying: gate the *site*, not the *read*.** (-3)
+  removed 18,386 gathers for 20.6 M Ir; (-7) removed 5,392 for **38.1 M**,
+  because its cost was ~8 battlefield walks and an allocation per call, not
+  the gather. Look for whole functions that are ~N absent static arms
+  before looking for another eager `computed_permanent`.
+- **And a second audit device now exists.** A gate with no shared choke
+  point can audit against its own *outcome* — `scale_damage_to`
+  `debug_assert_eq!`s that the guarded body is a no-op when the gate says
+  no. Stronger than an enumeration cross-check and cheaper to write; the
+  22-static enumeration was right first try under it. Use it wherever
+  `gather_continuous_effects` isn't the choke point.
+- **Take `resolve_combat` next** (~0.88 %, 6,682 calls, ~3,104 Ir each) —
+  the top unread site and big enough to be worth reading as a whole-site
+  gate. Then `permanent_has_keyword` (0.50 %) and `dying_snapshot`
+  (0.46 %). (-6) (fuse the three type-family gate walks, ~1,540 Ir per
+  activation) is still open but smaller; read its two caveats first.
 - **Do not compare `--bench` absolutes across sittings — it is the box.**
-  Pass 35 saw 136.75 -> 169.85 games/s on a **-0.13 %** wall-clock change,
-  and `host_calib_ms` did not detect it (single-threaded probe, 3-thread
-  bench). Full argument in PERF **Baseline**. Callgrind is the arbiter
-  under ~5 %; its run-to-run drift here is **~3 k Ir on 2.3 G**, re-confirmed
-  this pass against the recorded base.
+  This run read 111.46 games/s against a 163.62 anchor **on a different
+  `host_cpu` string**, with `decisions` 193,232 byte-identical and calib
+  reading *faster*. The anchor was deliberately not moved. Full argument in
+  PERF **Baseline**; callgrind is the arbiter under ~5 % and its drift here
+  is ~3 k Ir on 2.3 G.
 - **Green at the tip**: suite **18,639** over 11 binaries, golden traces
-  identical, clippy clean. **`overflow` and the wide pool were not re-run**
-  — no counter/damage/mana/encoder code moved.
+  identical, `clippy --workspace --all-targets` clean, stalls 0,
+  determinism ok. **`overflow` and the wide pool were not re-run** — no
+  counter/mana/encoder code moved, and the damage change is a pure gate in
+  front of unchanged arithmetic.
 - **Fetch before the first commit.** Five collisions on this file so far.
 - Env: no `cargo-nextest`; `cargo test -p crabomination -p
   crabomination_tests` is the gate (~40 s built, ~5 min cold).
-  `profiling-fast` engine ~4 min warm, **cold ~10 min**; `release` **~20
-  min warm / ~45 cold — start it in the background at the top of the
-  run**; `overflow` ~25 min. Callgrind ~4 min, contention-immune.
-  Serialize cargo builds — one target-dir lock, 4 cores. Client apt deps
-  (below) are needed for `clippy --workspace`.
-- Trackers: TODO ~0.99k, ROADMAP 0.66k, PERF ~2.1k — passes 29-31 are
-  index rows, 32-36 prose is current.
+  `profiling-fast` engine ~4 min warm, **cold ~10 min**; `release` **~35
+  min — start it in the background at the top of the run**; `overflow`
+  ~25 min. Callgrind ~4 min, contention-immune. Serialize cargo builds —
+  one target-dir lock, 4 cores. Client apt deps (below) are needed for
+  `clippy --workspace`.
+- Trackers: TODO ~1.0k, ROADMAP 0.66k, PERF ~2.1k — passes 29-31 are index
+  rows, 32-36 prose is current.
 
 ## Environment note
 

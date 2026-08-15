@@ -5812,7 +5812,54 @@ impl GameState {
             .sum()
     }
 
+    /// True when anything in the game can change a damage amount — the
+    /// presence gate for [`scale_damage_to`](Self::scale_damage_to), which is
+    /// otherwise ~25 independent `StaticEffect` arms, two un-frozen
+    /// `computed_permanent` gathers and eight battlefield walks paid on every
+    /// damage event to discover that none of them applies.
+    ///
+    /// `false` is authoritative; `true` only means the body has to run. Four
+    /// non-static routes (Overblaze's per-source list, Stagger's per-player
+    /// list, Quest for Pure Flame's per-player flag, Equal Treatment's
+    /// turn-scoped rewrite) plus every scaling static, matched through the
+    /// same gate-wrapper peel the other family predicates use — the body
+    /// matches `sa.effect` directly, so peeling here only ever makes this a
+    /// superset, which is the safe direction.
+    ///
+    /// Audited by `scale_damage_to` itself: when this says `false`, a
+    /// debug-only run of the full body must return the amount unchanged, so
+    /// the whole suite checks the enumeration on every damage event it deals.
+    pub(crate) fn damage_scaling_in_scope(&self) -> bool {
+        !self.doubled_damage_sources_this_turn.is_empty()
+            || !self.staggered_damage_players.is_empty()
+            || self.damage_becomes_this_turn.is_some()
+            || self.players.iter().any(|p| p.double_your_source_damage_this_turn)
+            || self.battlefield.iter().any(|c| {
+                c.definition
+                    .static_abilities
+                    .iter()
+                    .any(|sa| static_effect_scales_damage(&sa.effect))
+            })
+    }
+
     pub fn scale_damage_to(
+        &self,
+        source: Option<CardId>,
+        ent: crate::game::effects::EntityRef,
+        amount: u32,
+    ) -> u32 {
+        if !self.damage_scaling_in_scope() {
+            debug_assert_eq!(
+                self.scale_damage_to_inner(source, ent, amount),
+                amount,
+                "the damage-scaling presence gate missed a source",
+            );
+            return amount;
+        }
+        self.scale_damage_to_inner(source, ent, amount)
+    }
+
+    fn scale_damage_to_inner(
         &self,
         source: Option<CardId>,
         ent: crate::game::effects::EntityRef,
@@ -20974,6 +21021,48 @@ fn card_can_change_card_types(card: &CardInstance) -> bool {
     def.station.iter().any(|band| {
         band.pt.is_some() || band.statics.iter().any(static_effect_changes_card_types)
     }) || def.static_abilities.iter().any(|sa| static_effect_changes_card_types(&sa.effect))
+}
+
+/// True when `effect` can change a damage amount in `scale_damage_to_inner`.
+/// The printed-static half of [`GameState::damage_scaling_in_scope`]; one
+/// variant per arm of that function, including the two it reaches through
+/// [`GameState::damage_doublers`] and [`GameState::damage_halvers`].
+fn static_effect_scales_damage(effect: &crate::effect::StaticEffect) -> bool {
+    use crate::effect::StaticEffect as SE;
+    match effect {
+        // The two whole-board multipliers, via damage_doublers/damage_halvers.
+        SE::DoubleDamageDealt
+        | SE::HalveDamageDealt
+        // Recipient-scoped.
+        | SE::DoubleDamageToOpponents
+        | SE::DoubleDamageToEnchantedPlayer
+        | SE::HalveDamageToYou
+        | SE::ReduceDamageToYouBy(_)
+        | SE::ReduceColorDamageToYouBy { .. }
+        | SE::ReduceDamageToYourCreaturesBy(_)
+        | SE::ReduceDamageToYourMatchingCreaturesBy { .. }
+        // Source-scoped.
+        | SE::AddDamageFromColorSpells { .. }
+        | SE::ReduceSpellDamageBy { .. }
+        | SE::AddDamageToOpponents { .. }
+        | SE::AddDamageToOpponentsPerCounter { .. }
+        | SE::AddDamageFromColorToPlayers { .. }
+        | SE::YourColorSpellDamageDoubled { .. }
+        | SE::YourColorSourcesDealExtraDamage { .. }
+        | SE::DoubleDamageFromCreaturesEnteredThisTurn
+        | SE::DoubleDamageFromControlledCreatures
+        | SE::DoubleDamageFromControlledMatching { .. }
+        | SE::DoubleYourSourcesDamageWhileHellbent
+        | SE::ControlledCreatureTypesDealExtraDamage { .. }
+        // Applied last, over the doubled/halved result.
+        | SE::CapLargeDamage { .. } => true,
+        SE::WhileClassLevelAtLeast { inner, .. }
+        | SE::WhileYourTurn { inner }
+        | SE::WhileNotYourTurn { inner }
+        | SE::WhileCountersAtLeast { inner, .. }
+        | SE::WhileCondition { inner, .. } => static_effect_scales_damage(inner),
+        _ => false,
+    }
 }
 
 /// True when `effect` can emit a layer-4 land-type modification. Twin of
