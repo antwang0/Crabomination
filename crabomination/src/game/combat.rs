@@ -3347,6 +3347,8 @@ impl GameState {
                         Keyword::Toxic(n) | Keyword::Poisonous(n) => Some(*n),
                         _ => None,
                     }).sum(),
+                    assigns_as_unblocked: kws
+                        .contains(&Keyword::AssignsDamageAsThoughUnblocked),
                     // CR 510.1 — a creature with "deals no combat damage this
                     // turn" (Master of Cruelties) is skipped in both damage
                     // steps even though it's a legal attacker/blocker. CR 614.9
@@ -3418,11 +3420,15 @@ impl GameState {
             // blocked" (Predatory Focus): drop the blocker list so the whole
             // hit lands on the defending player. The blockers still deal
             // theirs, which the blocker loop below handles.
-            if self
-                .computed_permanent(atk.id)
-                .is_some_and(|cp| cp.keywords.contains(
-                    &crate::card::Keyword::AssignsDamageAsThoughUnblocked))
-            {
+            // Read off `atk`, i.e. the one snapshot this step took, like
+            // every other attacker keyword in this loop: CR 510.1 assignment
+            // is a single turn-based action taken before any of the damage
+            // below is dealt, so a life total this loop moves must not change
+            // which attackers count as blocked. A fresh `computed_permanent`
+            // here was a whole gather per attacker (13,601,323 Ir / 0.60 %
+            // over 4,474 calls) *and* the only attacker keyword read at a
+            // different game state from its siblings.
+            if atk.assigns_as_unblocked {
                 blocker_ids.clear();
                 self.blocked_attackers.retain(|id| *id != atk.id);
             }
@@ -5184,5 +5190,10 @@ struct AttackerInfo {
     has_infect: bool,
     has_wither: bool,
     toxic: u32,
+    /// CR 510.1a — "assigns its combat damage as though it weren't blocked"
+    /// (Thorn Elemental, Rhox). Read from the same snapshot as the keywords
+    /// above because CR 510.1 assignment is one turn-based action taken
+    /// before any damage is dealt.
+    assigns_as_unblocked: bool,
     should_deal: bool,
 }
