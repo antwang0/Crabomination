@@ -35,6 +35,16 @@ pub(crate) struct GrantScan<'a> {
     /// Attached permanents carrying an `equipped_bonus`, matched per card by
     /// `attached_to`.
     equipment: Vec<&'a CardInstance>,
+    /// Does anything in the *gathered* set rewrite a land type — the CR 305.6
+    /// question [`GameState::effective_mana_abilities_of`] asks before it
+    /// takes a layer view? `Some` when the scan was built inside a freeze
+    /// scope, `None` outside one (the caller then asks per card, as before).
+    ///
+    /// One walk of the effect set per scan instead of one per card. Sound
+    /// because the scan borrows `&self`: no `&mut self` call can happen while
+    /// it lives, so the gather it was built against is the gather every
+    /// reader of it sees.
+    land_types_rewritten: Option<bool>,
 }
 
 /// Skip-Ward check. Ward variants whose payment is trivially affordable
@@ -11653,7 +11663,8 @@ impl GameState {
             matches!(s, ManaSymbol::Generic(n) if *n > 0) || matches!(s, ManaSymbol::MonoHybrid(_, _))
         });
         let cost_colors = cost.colors();
-        let scan = self.grant_scan();
+        let mut scan = self.grant_scan();
+        self.scan_land_type_rewrites(&mut scan);
         self.battlefield.iter().any(|c| {
             if c.controller != player || c.tapped {
                 return false;
@@ -11857,7 +11868,8 @@ impl GameState {
     }
 
     fn untapped_producers_of_inner(&self, player: usize, color: ManaColor) -> u32 {
-        let scan = self.grant_scan();
+        let mut scan = self.grant_scan();
+        self.scan_land_type_rewrites(&mut scan);
         self.battlefield
             .iter()
             .filter(|c| {
@@ -11950,8 +11962,11 @@ impl GameState {
 
     fn mana_source_table_inner(&self, player: usize, creature_only: bool) -> Vec<ManaSourceInfo> {
         // One board-level grant scan for the whole table instead of one per
-        // untapped permanent (see `grant_scan`).
-        let scan = self.grant_scan();
+        // untapped permanent (see `grant_scan`), and with it the CR 305.6
+        // land-type question `effective_mana_abilities_of` would otherwise
+        // ask per card.
+        let mut scan = self.grant_scan();
+        self.scan_land_type_rewrites(&mut scan);
         self.battlefield
             .iter()
             .filter(|c| c.controller == player && !c.tapped)
@@ -12376,26 +12391,33 @@ impl GameState {
         // freeze scope the effect list is already gathered, so the test is a
         // walk of it; outside one, `frozen_effects` returns `None` and the
         // old path stands rather than paying a gather to save a gather.
-        let computed = match self.frozen_effects() {
-            Some(fx) if !fx.iter().any(rewrites_land_types) => {
-                // The `ability_strip_in_scope` device: when the gate says no
-                // land-type writer is in scope, run the pass it skipped and
-                // fail if the computed type line differs from the printed
-                // one. That is what keeps `rewrites_land_types` in step with
-                // `compute_permanent_pass` — the alternative was two
-                // hand-kept lists and a comment asking for them to agree.
-                debug_assert!(
-                    {
-                        let printed: &[crate::card::LandType] =
-                            &card.definition.subtypes.land_types;
-                        self.computed_permanent(card_id)
-                            .is_none_or(|cp| &cp.subtypes.land_types[..] == printed)
-                    },
-                    "rewrites_land_types missed a modification that writes land_types"
-                );
-                None
-            }
-            _ => self.computed_permanent(card_id),
+        //
+        // The scan answers it for the whole loop when it was built inside the
+        // scope (`GrantScan::land_types_rewritten`); the per-card read is the
+        // fallback for a scan built outside one.
+        let rewrites = match scan.land_types_rewritten {
+            some @ Some(_) => some,
+            None => self.frozen_effects().map(|fx| fx.iter().any(rewrites_land_types)),
+        };
+        let computed = if rewrites == Some(false) {
+            // The `ability_strip_in_scope` device: when the gate says no
+            // land-type writer is in scope, run the pass it skipped and
+            // fail if the computed type line differs from the printed
+            // one. That is what keeps `rewrites_land_types` in step with
+            // `compute_permanent_pass` — the alternative was two
+            // hand-kept lists and a comment asking for them to agree.
+            debug_assert!(
+                {
+                    let printed: &[crate::card::LandType] =
+                        &card.definition.subtypes.land_types;
+                    self.computed_permanent(card_id)
+                        .is_none_or(|cp| &cp.subtypes.land_types[..] == printed)
+                },
+                "rewrites_land_types missed a modification that writes land_types"
+            );
+            None
+        } else {
+            self.computed_permanent(card_id)
         };
         let computed_land_types: &[crate::card::LandType] = match &computed {
             // `card` came out of `battlefield_find`, so `computed_permanent`
@@ -12562,6 +12584,20 @@ impl GameState {
             }
         }
         scan
+    }
+
+    /// Fill in [`GrantScan::land_types_rewritten`] — the board-level half of
+    /// [`effective_mana_abilities_of`]'s CR 305.6 gate — for a scan that is
+    /// about to be asked about many cards.
+    ///
+    /// **Not done in [`grant_scan`](Self::grant_scan)**, and the measurement
+    /// says why: `granted_abilities_for` builds a fresh scan *per card*, so
+    /// paying the read there taxes every one of those to save the loops that
+    /// reuse a scan, and the whole thing measured **+0.206 %**. Call it from
+    /// the loop that benefits instead.
+    fn scan_land_type_rewrites(&self, scan: &mut GrantScan<'_>) {
+        scan.land_types_rewritten =
+            self.frozen_effects().map(|fx| fx.iter().any(rewrites_land_types));
     }
 
     pub fn granted_abilities_for(
