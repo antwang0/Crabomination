@@ -29,6 +29,41 @@ use crate::recommend::{
 use crate::server::bot::{Bot, EvalWeights, HeuristicBot};
 use crate::server::encode::{Vocab, encode_state};
 
+/// Whether the snapshot cadence includes combat steps.
+///
+/// Default off, which is what every run through round 39 recorded: a
+/// snapshot at each new turn, at post-combat main, and at end step. The
+/// feature census (`selfplay_train --feature-census`) showed what that
+/// costs — across 29 696 recorded positions the entire round-28 combat
+/// block (globals 36..=40, object feats 37..=39), the coarse combat
+/// one-hot (global 11), the attacking count (global 19) and the
+/// attacking/blocking flags (object feats 10, 28, 29) are non-zero in
+/// **exactly zero** rows. Combat is over by post-combat main and hasn't
+/// started at end step, so no training row has ever been a combat row.
+///
+/// Those features are live at inference time — the attack and block
+/// sims evaluate mid-combat positions — so the columns the search feeds
+/// them into never received a gradient. Turning this on adds a snapshot
+/// on entry to declare-blockers (attacks declared, blocks pending: the
+/// attack sim's leaf) and to end-of-combat (blocks declared and damage
+/// marked: the block sim's leaf), which is the only way those features
+/// can ever be trained.
+///
+/// Process-global for the reason the encoder ablation is: the recorder
+/// runs on every actor thread and the flag is set once at startup.
+static COMBAT_SNAPSHOTS: std::sync::atomic::AtomicBool =
+    std::sync::atomic::AtomicBool::new(false);
+
+/// Set the combat-snapshot cadence. See [`COMBAT_SNAPSHOTS`].
+pub fn set_combat_snapshots(on: bool) {
+    COMBAT_SNAPSHOTS.store(on, std::sync::atomic::Ordering::Relaxed);
+}
+
+/// True when the recorder is capturing combat steps.
+pub fn combat_snapshots() -> bool {
+    COMBAT_SNAPSHOTS.load(std::sync::atomic::Ordering::Relaxed)
+}
+
 /// A 6-pack SOS sealed pool, fully determined by `seed`.
 pub fn sealed_pool(seed: u64) -> Vec<CardFactory> {
     let pool = sos_draft_pool();
@@ -280,7 +315,7 @@ pub fn play_recorded_game(
     max_actions: usize,
     vocab: &Vocab,
 ) -> RecordedGame {
-    play_recorded_game_mcts(template, weights, seed, max_actions, vocab, 0)
+    play_recorded_game_mcts(template, weights, seed, max_actions, vocab, 0, false)
 }
 
 /// [`play_recorded_game`] with the seats piloted by net-evaluated MCTS
@@ -296,6 +331,7 @@ pub fn play_recorded_game_mcts(
     max_actions: usize,
     vocab: &Vocab,
     mcts_iterations: u32,
+    mcts_gumbel: bool,
 ) -> RecordedGame {
     let mut g = template.clone();
     let mut rng = StdRng::seed_from_u64(seed);
@@ -324,6 +360,7 @@ pub fn play_recorded_game_mcts(
                     iterations: mcts_iterations,
                     horizon_turns: 3,
                     weights: w,
+                    gumbel: mcts_gumbel,
                     ..crate::server::MctsConfig::default()
                 }))
             } else {
@@ -341,17 +378,36 @@ pub fn play_recorded_game_mcts(
     // targets are deltas between a seat's consecutive snapshots, so the
     // raw values have to be captured live and diffed at labelling time.
     let mut raw: Vec<[f32; 4]> = Vec::new();
+    // The opponent's held card names per snapshot, parallel to `snaps` —
+    // the belief head's target (round 39). Recorded here because only
+    // the recorder may look; the encoder never carries it.
+    let mut opp_hands: Vec<Vec<u16>> = Vec::new();
     let mut last_turn = (0u32, usize::MAX);
     let mut last_step = crate::game::TurnStep::Untap;
     let mut last_pair: Option<[crabomination_nn::EncodedState; 2]> = None;
     let (mut actions, mut stale) = (0usize, 0usize);
     while !g.is_game_over() && actions < max_actions && stale < STALE_ROUNDS {
         let new_turn = (g.turn_number, g.active_player_idx) != last_turn;
+        // The four shapes a combat passes through, each the leaf of a
+        // decision the bot actually makes: declare-attackers (nothing
+        // declared — the attack decision's own position),
+        // declare-blockers (attacks declared, blocks pending — the
+        // attack sim's leaf), first-strike/combat damage (blocks
+        // declared, damage not yet dealt — the block sim's leaf), and
+        // end-of-combat (damage marked on the survivors). `block_map`
+        // and `attacking` are torn down when combat damage resolves, so
+        // the blocking flags are only reachable at the third of these.
+        // See [`COMBAT_SNAPSHOTS`].
         let step_point = g.step != last_step
-            && matches!(
-                g.step,
-                crate::game::TurnStep::PostCombatMain | crate::game::TurnStep::End
-            );
+            && match g.step {
+                crate::game::TurnStep::PostCombatMain | crate::game::TurnStep::End => true,
+                crate::game::TurnStep::DeclareAttackers
+                | crate::game::TurnStep::DeclareBlockers
+                | crate::game::TurnStep::FirstStrikeDamage
+                | crate::game::TurnStep::CombatDamage
+                | crate::game::TurnStep::EndCombat => combat_snapshots(),
+                _ => false,
+            };
         if new_turn || step_point {
             last_turn = (g.turn_number, g.active_player_idx);
             let pair = [encode_state(&g, 0, vocab), encode_state(&g, 1, vocab)];
@@ -364,6 +420,14 @@ pub fn play_recorded_game_mcts(
                         &EvalWeights::default(),
                     ));
                     raw.push(snapshot_stats(&g, seat));
+                    opp_hands.push(
+                        g.players[1 - seat]
+                            .hand
+                            .iter()
+                            .map(|c| vocab.index_of(c.definition.name))
+                            .filter(|&i| i != 0)
+                            .collect(),
+                    );
                 }
                 last_pair = Some(pair);
             }
@@ -434,6 +498,7 @@ pub fn play_recorded_game_mcts(
                 traj: traj_base | seat as u32,
                 ply: p,
                 aux,
+                opp_hand: std::mem::take(&mut opp_hands[j]),
             }
         })
         .collect();

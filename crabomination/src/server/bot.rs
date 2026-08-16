@@ -332,6 +332,14 @@ pub struct EvalWeights {
     /// bias, while the mean over redeals approximates playing against the
     /// distribution of hands consistent with what the seat can see.
     pub determinize: u8,
+    /// Redeal hidden hands from the net's opponent-hand belief head
+    /// instead of uniformly (round 39, `determinize_hidden_belief`).
+    /// Only meaningful with `determinize > 0` and a `net_slot` whose net
+    /// carries `head_opp.*`; anything else silently keeps the uniform
+    /// redeal, which is why the profile that turns this on reports its
+    /// belief source at startup. Off by default — the uniform redeal is
+    /// the historical behaviour and every adopted profile.
+    pub belief_determinize: bool,
     /// Copied onto this seat's [`Player::smart_tap`] before the game
     /// starts: spend the most replaceable mana source for each pip
     /// instead of the first in battlefield order.
@@ -399,6 +407,7 @@ impl EvalWeights {
             mull_quality: false,
             block_gang: false,
             determinize: 0,
+            belief_determinize: false,
             smart_tap: false,
             net_quantize: 0,
         }
@@ -460,6 +469,7 @@ impl EvalWeights {
             mull_quality: false,
             block_gang: false,
             determinize: 0,
+            belief_determinize: false,
             smart_tap: false,
             net_quantize: 0,
         }
@@ -504,6 +514,7 @@ impl EvalWeights {
             mull_quality: false,
             block_gang: false,
             determinize: 0,
+            belief_determinize: false,
             smart_tap: false,
             net_quantize: 0,
         }
@@ -7121,13 +7132,100 @@ pub(crate) fn determinize_hidden(g: &mut GameState, seat: usize, salt: u64) {
     }
 }
 
+/// [`determinize_hidden`] with the opponent's hand drawn from a learned
+/// belief instead of uniformly (round 39). A hidden hand is not uniform
+/// given observed play — held-back mana, declined blocks, and what was
+/// *not* cast are all evidence — and the belief head predicts per-name
+/// hold probabilities from exactly the observable state the encoder
+/// carries, so the redeal stays a function of the information set (plus
+/// the salt and the belief, which is itself observable-determined).
+///
+/// A separate function rather than a parameter on [`determinize_hidden`]
+/// on purpose: the uniform path is exercised by every adopted profile
+/// and the golden traces, and must stay byte-identical.
+///
+/// The sampler is Efraimidis–Spirakis weighted sampling without
+/// replacement: each unseen card draws key `ln(u)/w` in canonical
+/// (sorted) order and the `hand_size` largest keys become the hand.
+/// Weights are hold-odds `p/(1−p)` with `p` clamped to [0.02, 0.98], so
+/// no card is unreachable however confident the head gets; out-of-vocab
+/// cards are neutral (p = 0.5).
+pub(crate) fn determinize_hidden_belief(
+    g: &mut GameState,
+    seat: usize,
+    salt: u64,
+    belief: &[f32],
+) {
+    use rand::seq::SliceRandom;
+    let mut rng = StdRng::seed_from_u64(
+        salt ^ ((g.turn_number as u64) << 32) ^ ((seat as u64) << 16) ^ g.step as u64,
+    );
+    let vocab = super::net_eval::vocab();
+    for p in 0..g.players.len() {
+        if p == seat {
+            g.players[p].library.sort_by_key(|c| c.id.0);
+            g.players[p].library.shuffle(&mut rng);
+            continue;
+        }
+        let n = g.players[p].hand.len();
+        let returned: Vec<_> = g.players[p].hand.drain(..).collect();
+        g.players[p].library.extend(returned);
+        g.players[p].library.sort_by_key(|c| c.id.0);
+        let mut keyed: Vec<(f64, usize)> = g.players[p]
+            .library
+            .iter()
+            .enumerate()
+            .map(|(i, c)| {
+                let idx = vocab.index_of(c.definition.name) as usize;
+                let prob = if idx == 0 {
+                    0.5
+                } else {
+                    belief.get(idx).copied().unwrap_or(0.5).clamp(0.02, 0.98) as f64
+                };
+                let w = prob / (1.0 - prob);
+                let u: f64 = rng.random_range(f64::EPSILON..1.0);
+                (u.ln() / w, i)
+            })
+            .collect();
+        keyed.sort_by(|a, b| b.0.partial_cmp(&a.0).unwrap_or(std::cmp::Ordering::Equal));
+        let hand_idx: std::collections::HashSet<usize> =
+            keyed.iter().take(n).map(|&(_, i)| i).collect();
+        let lib: Vec<_> = g.players[p].library.drain(..).collect();
+        for (i, c) in lib.into_iter().enumerate() {
+            if hand_idx.contains(&i) {
+                g.players[p].hand.push(c);
+            } else {
+                g.players[p].library.push(c);
+            }
+        }
+        g.players[p].library.shuffle(&mut rng);
+    }
+}
+
+/// The belief a redeal should use, when the profile asks for one and the
+/// slot's net can answer. `None` — flag off, empty slot, or a net with
+/// no belief head — falls back to the uniform redeal, the historical
+/// path. Computed from the pre-redeal state, which encodes identically
+/// to the post-redeal one (the encoder is observable-only), so callers
+/// may evaluate it wherever is convenient.
+pub(crate) fn hand_belief(g: &GameState, seat: usize, w: &EvalWeights) -> Option<Vec<f32>> {
+    if !w.belief_determinize || w.net_slot == 0 {
+        return None;
+    }
+    super::net_eval::opp_hand_probs(g, seat, w.net_slot)
+}
+
 /// The state a simulation should start from: the real one, or a redeal of
 /// its hidden zones. `k` indexes the redeal so an averaging caller gets
 /// different hands each time.
 fn sim_start_state(state: &GameState, seat: usize, w: &EvalWeights, k: u8) -> GameState {
     let mut g = state.clone();
     if w.determinize > 0 {
-        determinize_hidden(&mut g, seat, 0x5EED_0000 ^ k as u64);
+        if let Some(b) = hand_belief(&g, seat, w) {
+            determinize_hidden_belief(&mut g, seat, 0x5EED_0000 ^ k as u64, &b);
+        } else {
+            determinize_hidden(&mut g, seat, 0x5EED_0000 ^ k as u64);
+        }
     }
     g
 }
@@ -10052,6 +10150,63 @@ mod tests {
         // Our own hand is ours to see and must survive the redeal intact.
         assert_eq!(d.players[0].hand.len(), 1);
         assert_eq!(d.players[0].hand[0].definition.name, "Grizzly Bears");
+    }
+
+    /// The belief-weighted redeal (round 39): a strong hold-belief must
+    /// dominate which cards land in the redealt hand, public information
+    /// must survive exactly as in the uniform path, and the redeal must
+    /// stay a function of the information set — same salt and belief,
+    /// same hand.
+    #[test]
+    fn belief_redeal_respects_the_belief_and_preserves_public_information() {
+        let mut g = two_player_game();
+        for _ in 0..30 {
+            g.add_card_to_library(1, catalog::forest());
+        }
+        for _ in 0..5 {
+            g.add_card_to_library(1, catalog::island());
+        }
+        for _ in 0..5 {
+            g.add_card_to_hand(1, catalog::forest());
+        }
+        g.add_card_to_hand(0, catalog::grizzly_bears());
+        let vocab = crate::server::net_eval::vocab();
+        let island = vocab.index_of("Island") as usize;
+        let forest = vocab.index_of("Forest") as usize;
+        assert!(island != 0 && forest != 0, "the test needs in-vocab names");
+        let mut belief = vec![0.5f32; vocab.size()];
+        belief[island] = 0.95;
+        belief[forest] = 0.05;
+
+        let mut islands = 0;
+        for salt in 0..10u64 {
+            let mut d = g.clone();
+            determinize_hidden_belief(&mut d, 0, salt, &belief);
+            assert_eq!(d.players[1].hand.len(), 5, "hand size is public");
+            assert_eq!(d.players[1].hand.len() + d.players[1].library.len(), 40);
+            assert_eq!(d.players[0].hand[0].definition.name, "Grizzly Bears");
+            islands +=
+                d.players[1].hand.iter().filter(|c| c.definition.name == "Island").count();
+        }
+        // All five Islands carry 19:1 hold-odds against 0.05-odds
+        // Forests; the redealt five-card hand should be nearly all of
+        // them, every time.
+        assert!(islands >= 35, "belief must dominate the redeal: {islands}/50 islands");
+
+        let mut a = g.clone();
+        let mut b = g.clone();
+        determinize_hidden_belief(&mut a, 0, 7, &belief);
+        determinize_hidden_belief(&mut b, 0, 7, &belief);
+        let names = |g: &GameState| {
+            g.players[1].hand.iter().map(|c| c.definition.name).collect::<Vec<_>>()
+        };
+        assert_eq!(names(&a), names(&b), "same information set, same redeal");
+
+        // A neutral belief must still resample rather than freeze: the
+        // sampler with uniform odds is a (differently keyed) shuffle.
+        let mut n = g.clone();
+        determinize_hidden_belief(&mut n, 0, 11, &vec![0.5f32; vocab.size()]);
+        assert_eq!(n.players[1].hand.len(), 5);
     }
 
     /// The point of the redeal: the opponent's hand is *resampled* from

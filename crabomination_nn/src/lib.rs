@@ -123,7 +123,25 @@ pub const G_STACK_OPP: usize = 7;
 ///   hard-to-block (unblockable/shadow/fear/intimidate/skulk/
 ///   horsemanship/landwalk), defender. Mostly redundant with the card
 ///   embedding for in-vocab cards; load-bearing for tokens and grants.
-pub const OBJ_FEATS: usize = 45;
+///
+/// Feats 45..=52 are the round-40 (v7) pair of blocks. Both carry
+/// information the earlier features could not express at all, as
+/// opposed to re-describing the visible board:
+///
+/// * 45..=47 the *expiry* block. 45 damage marked, / 8 — feature 5 is
+///   `toughness − damage`, so a 4/4 with three damage and a 4/1 encoded
+///   identically, though the first is whole again at cleanup. 46/47 the
+///   power / toughness delta that expires at cleanup
+///   (`CardInstance::power_bonus`, from until-end-of-turn pumps), / 4
+///   and signed: a 5/5 off a combat trick encoded as a printed 5/5.
+/// * 48..=52 the *counter* block. Feature 34 sums every counter that
+///   isn't loyalty or prepared into one scalar, so three +1/+1, three
+///   stun and three Page counters all read 0.75. These split out the
+///   kinds a value function trades on differently: 48 +1/+1 / 4,
+///   49 −1/−1 / 4, 50 stun / 2 (the bearer's next untap is skipped),
+///   51 Page / 3, 52 Growth / 3. +1/+1 and −1/−1 reach the net through
+///   effective P/T as well; the rest had no path to it at all.
+pub const OBJ_FEATS: usize = 53;
 /// Global scalar feature count. Baked into encoded rows likewise.
 ///
 /// Globals 36..=42 are round 28: fine combat phase one-hots (36
@@ -132,15 +150,37 @@ pub const OBJ_FEATS: usize = 45;
 /// dealt", which are the states the combat sims evaluate most), 39/40
 /// unblocked attacker power aimed at self/opp, / 12, and 41/42 exile
 /// sizes self/opp, / 10.
-pub const GLOBAL_FEATS: usize = 43;
+///
+/// Globals 43..=54 are the round-40 (v7) *history* block: six
+/// turn-scoped counters, self then opponent, reset at each turn
+/// boundary. Every other global is a static snapshot, which made the
+/// encoding a pure function of the current position — and a card whose
+/// text reads what happened this turn was not merely under-described,
+/// the net could not tell whether its ability was live. The six are the
+/// ones SoS actually reads: 43/44 life gained (infusion, Foolish Fate),
+/// / 5; 45/46 instants and sorceries cast (Burrog Barrage), / 3; 47/48
+/// spells cast (storm), / 4; 49/50 creatures died, / 3; 51/52 cards
+/// that left the graveyard, / 3; 53/54 cards exiled, / 3.
+pub const GLOBAL_FEATS: usize = 55;
 
-/// v5 feature counts. Checkpoints trained before round 28 have weight
-/// matrices sized to these; [`PlayNet::load`] widens them with zero
-/// columns, which computes exactly what the old binary computed — the
-/// new features multiply into zeros. The champion (and every historical
-/// net) stays loadable, and golden traces do not move.
-const LEGACY_OBJ_FEATS: usize = 37;
-const LEGACY_GLOBAL_FEATS: usize = 36;
+/// Feature counts of earlier encoder generations, oldest first: v5
+/// (pre-round-28) and v6 (round 28 through 39). Checkpoints trained
+/// against one of these have weight matrices sized to it, and
+/// [`PlayNet::load`] widens them with zero columns rather than
+/// rejecting them, which computes exactly what the old binary computed
+/// — the new features multiply into zeros. The champion (and every
+/// historical net) stays loadable, and golden traces do not move.
+///
+/// A file must match one generation on *both* counts. Matching one and
+/// not the other is a corrupt file, not a version, and falls through to
+/// the shape check below to fail loudly.
+///
+/// Public because the trainer has to apply the same rule: `--use-best`
+/// hands a checkpoint from an earlier generation to the candle model,
+/// whose `VarMap::load` is exact-shape, so it pads by this table before
+/// setting. The two loaders disagreeing is the failure mode — a pilot
+/// that loads in the engine and not in the trainer, mid-run.
+pub const LEGACY_FEATS: [(usize, usize); 2] = [(37, 36), (45, 43)];
 
 /// Standard trainer configuration (the file's shapes win at load time).
 /// Sizes quadrupled in round 4: four gate rounds measured the small net
@@ -242,6 +282,14 @@ pub struct TrainRow {
     pub ply: u16,
     /// See [`AUX_FEATS`]. All-zero when the recorder predates them.
     pub aux: [f32; AUX_FEATS],
+    /// The *opponent's* held card names at this snapshot, as vocab
+    /// indices (round 39). Ground truth the encoder deliberately never
+    /// sees — the recorder can look, the input cannot — so a belief
+    /// head can be trained to predict it from observable state alone.
+    /// Unknown-name cards (index 0) are skipped: a name the vocabulary
+    /// cannot express is not a learnable prediction target. Duplicates
+    /// appear once per copy held.
+    pub opp_hand: Vec<u16>,
 }
 
 // ───────────────────────────── shard format ─────────────────────────────
@@ -250,7 +298,7 @@ pub struct TrainRow {
 /// `OBJ_FEATS`, `GLOBAL_FEATS`, group order, or the row layout changes —
 /// stale shards must fail loudly, not decode as garbage.
 pub const SHARD_MAGIC: [u8; 4] = *b"CRML";
-pub const SHARD_VERSION: u32 = 6;
+pub const SHARD_VERSION: u32 = 8;
 
 /// Serialize rows into a self-describing shard (little-endian throughout).
 pub fn write_shard(rows: &[TrainRow]) -> Vec<u8> {
@@ -278,6 +326,10 @@ pub fn write_shard(rows: &[TrainRow]) -> Vec<u8> {
         out.extend_from_slice(&row.ply.to_le_bytes());
         for v in row.aux {
             out.extend_from_slice(&v.to_le_bytes());
+        }
+        out.extend_from_slice(&(row.opp_hand.len() as u16).to_le_bytes());
+        for c in &row.opp_hand {
+            out.extend_from_slice(&c.to_le_bytes());
         }
     }
     out
@@ -322,7 +374,12 @@ pub fn read_shard(bytes: &[u8]) -> Option<Vec<TrainRow>> {
         for a in aux.iter_mut() {
             *a = r.f32()?;
         }
-        rows.push(TrainRow { state, win, life_diff, game_len, traj, ply, aux });
+        let oh_len = r.u16()? as usize;
+        let mut opp_hand = Vec::with_capacity(oh_len);
+        for _ in 0..oh_len {
+            opp_hand.push(r.u16()?);
+        }
+        rows.push(TrainRow { state, win, life_diff, game_len, traj, ply, aux, opp_hand });
     }
     // Trailing bytes mean the writer and reader disagree about the layout.
     if r.pos != bytes.len() {
@@ -626,6 +683,22 @@ pub struct PlayNet {
     trunk2_b: Vec<f32>,
     head_win_w: Tensor2, // [1, h2]
     head_win_b: Vec<f32>,
+    /// The policy head (`head_policy.*`, [1, h2] + [1]), present only in
+    /// weights trained with `--policy-head`. Unlike the life/length heads
+    /// this one is *consumed at inference*: its logit over a candidate's
+    /// successor state is the search's prior, so it loads all-or-nothing
+    /// like the attention tensors rather than being ignored as
+    /// training-only. Absent means the net ranks with the win head alone,
+    /// which is every checkpoint before round 37.
+    policy_w: Option<Tensor2>, // [1, h2]
+    policy_b: f32,
+    /// The opponent-hand belief head (`head_opp.*`, [vocab, h2] + [vocab]),
+    /// round 39. Consumed at inference by belief-weighted determinization
+    /// (`determinize_hidden_belief`), so it loads all-or-nothing like the
+    /// policy head. Absent means uniform redeals — every checkpoint
+    /// before round 39.
+    opp_w: Option<Tensor2>, // [vocab, h2]
+    opp_b: Vec<f32>,        // [vocab] (empty when absent)
     /// Present only in weights trained with the interaction layer. Absent
     /// means the pure deep-sets net, which stays loadable unchanged — the
     /// two architectures are distinguished by which tensors the file
@@ -727,8 +800,64 @@ impl PlayNet {
             trunk2_b: get("trunk2.bias")?.data,
             head_win_w: get("head_win.weight")?,
             head_win_b: get("head_win.bias")?.data,
+            policy_w: None,
+            policy_b: 0.0,
+            opp_w: None,
+            opp_b: Vec::new(),
             attn: None,
             tstack: None,
+        };
+
+        // The policy head is all-or-nothing for the same reason the
+        // attention tensors are: it is consumed at inference (search
+        // priors), so a file carrying half of it is a trainer/inference
+        // mismatch, not an ignorable extra.
+        let policy_present = ["head_policy.weight", "head_policy.bias"]
+            .iter()
+            .filter(|n| st.tensor(n).is_ok())
+            .count();
+        let net = match policy_present {
+            2 => {
+                let b = get("head_policy.bias")?;
+                if b.data.len() != 1 {
+                    return Err(NnError::BadTensor(
+                        "head_policy.bias",
+                        format!("{} elements, want 1", b.data.len()),
+                    ));
+                }
+                PlayNet {
+                    policy_w: Some(get("head_policy.weight")?),
+                    policy_b: b.data[0],
+                    ..net
+                }
+            }
+            0 => net,
+            _ => {
+                return Err(NnError::BadTensor(
+                    "head_policy.*",
+                    "one of weight/bias present without the other".into(),
+                ));
+            }
+        };
+
+        // The opponent-hand belief head, same all-or-nothing rule.
+        let opp_present = ["head_opp.weight", "head_opp.bias"]
+            .iter()
+            .filter(|n| st.tensor(n).is_ok())
+            .count();
+        let net = match opp_present {
+            2 => PlayNet {
+                opp_w: Some(get("head_opp.weight")?),
+                opp_b: get("head_opp.bias")?.data,
+                ..net
+            },
+            0 => net,
+            _ => {
+                return Err(NnError::BadTensor(
+                    "head_opp.*",
+                    "one of weight/bias present without the other".into(),
+                ));
+            }
         };
 
         // The interaction layer is all-or-nothing. A file carrying some of
@@ -853,16 +982,19 @@ impl PlayNet {
             net
         };
 
-        // Legacy v5 checkpoints (pre-round-28 feature counts) are widened
-        // with zero columns rather than rejected — see [`LEGACY_OBJ_FEATS`].
-        // Both pads or neither: a file matching one legacy count but not
-        // the other falls through to the shape check and fails loudly.
+        // Older-generation checkpoints are widened with zero columns
+        // rather than rejected — see [`LEGACY_FEATS`]. Both pads or
+        // neither: a file matching one legacy count but not the other
+        // falls through to the shape check and fails loudly.
         let mut net = net;
-        if net.obj_w.cols == net.emb.cols + LEGACY_OBJ_FEATS
-            && net.trunk1_w.cols == NUM_GROUPS * 2 * net.obj_w.rows + LEGACY_GLOBAL_FEATS
-        {
-            net.obj_w.pad_cols(net.emb.cols + OBJ_FEATS);
-            net.trunk1_w.pad_cols(NUM_GROUPS * 2 * net.obj_w.rows + GLOBAL_FEATS);
+        for (obj, global) in LEGACY_FEATS {
+            if net.obj_w.cols == net.emb.cols + obj
+                && net.trunk1_w.cols == NUM_GROUPS * 2 * net.obj_w.rows + global
+            {
+                net.obj_w.pad_cols(net.emb.cols + OBJ_FEATS);
+                net.trunk1_w.pad_cols(NUM_GROUPS * 2 * net.obj_w.rows + GLOBAL_FEATS);
+                break;
+            }
         }
 
         // Cross-check the shapes once here so forward() can trust them.
@@ -886,6 +1018,18 @@ impl PlayNet {
             ("trunk2.bias", net.trunk2_b.len() == net.trunk2_w.rows),
             ("head_win.weight", net.head_win_w.cols == net.trunk2_w.rows && net.head_win_w.rows == 1),
             ("head_win.bias", net.head_win_b.len() == 1),
+            (
+                "head_policy.weight",
+                net.policy_w
+                    .as_ref()
+                    .is_none_or(|w| w.cols == net.trunk2_w.rows && w.rows == 1),
+            ),
+            (
+                "head_opp.weight",
+                net.opp_w.as_ref().is_none_or(|w| {
+                    w.cols == net.trunk2_w.rows && w.rows == net.emb.rows && net.opp_b.len() == w.rows
+                }),
+            ),
         ] {
             if !ok {
                 return Err(NnError::BadTensor(name, "shape inconsistent with the rest of the net".into()));
@@ -1173,6 +1317,55 @@ impl PlayNet {
 
     /// Win probability for the seat the state was encoded for, in [0, 1].
     pub fn forward(&self, s: &EncodedState) -> f32 {
+        let t2 = self.trunk_out(s);
+        let mut logit = [0.0f32];
+        self.head_win_w.matvec(&t2, &mut logit);
+        let z = logit[0] + self.head_win_b[0];
+        1.0 / (1.0 + (-z).exp())
+    }
+
+    /// The policy head's raw logit for the seat the state was encoded for
+    /// — the search-prior score over a candidate's *successor* state.
+    /// `None` when the net carries no policy head (every pre-round-37
+    /// checkpoint), so callers fall back rather than reading garbage.
+    ///
+    /// A logit, not a probability: one state's policy score means nothing
+    /// alone — the policy is the softmax over a decision's candidate set,
+    /// and that normalisation belongs to the caller who has the set.
+    pub fn forward_policy(&self, s: &EncodedState) -> Option<f32> {
+        let w = self.policy_w.as_ref()?;
+        let t2 = self.trunk_out(s);
+        let mut out = [0.0f32];
+        w.matvec(&t2, &mut out);
+        Some(out[0] + self.policy_b)
+    }
+
+    pub fn has_policy_head(&self) -> bool {
+        self.policy_w.is_some()
+    }
+
+    /// Per-name probabilities that the *opponent* currently holds each
+    /// vocabulary card, `None` when the net carries no belief head.
+    /// Index 0 (unknown) is emitted but meaningless — the sampler treats
+    /// out-of-vocab cards as neutral.
+    pub fn forward_opp_hand(&self, s: &EncodedState) -> Option<Vec<f32>> {
+        let w = self.opp_w.as_ref()?;
+        let t2 = self.trunk_out(s);
+        let mut out = vec![0.0f32; w.rows];
+        w.matvec(&t2, &mut out);
+        for (v, b) in out.iter_mut().zip(&self.opp_b) {
+            *v = 1.0 / (1.0 + (-(*v + b)).exp());
+        }
+        Some(out)
+    }
+
+    pub fn has_opp_head(&self) -> bool {
+        self.opp_w.is_some()
+    }
+
+    /// The shared trunk: encode, interact, pool, two relu layers. Both
+    /// heads read the returned activations.
+    fn trunk_out(&self, s: &EncodedState) -> Vec<f32> {
         let h_obj = self.obj_w.rows;
         let mut trunk_in = vec![0.0f32; self.trunk1_w.cols];
 
@@ -1225,10 +1418,7 @@ impl PlayNet {
         for (v, b) in t2.iter_mut().zip(&self.trunk2_b) {
             *v = (*v + b).max(0.0);
         }
-        let mut logit = [0.0f32];
-        self.head_win_w.matvec(&t2, &mut logit);
-        let z = logit[0] + self.head_win_b[0];
-        1.0 / (1.0 + (-z).exp())
+        t2
     }
 }
 
@@ -1243,11 +1433,56 @@ impl PlayNet {
 pub trait NetEvaluator: Send + Sync {
     /// Win probability for the seat the state was encoded for, in [0, 1].
     fn eval(&self, s: EncodedState) -> f32;
+
+    /// The policy head's logit for the state, or `None` when the
+    /// evaluator's net carries no policy head. Default `None` so
+    /// evaluators that only serve win probabilities stay valid
+    /// implementations — the search falls back to its heuristic priors.
+    fn eval_policy(&self, s: EncodedState) -> Option<f32> {
+        let _ = s;
+        None
+    }
+
+    /// Whether [`eval_policy`](Self::eval_policy) can answer at all, so a
+    /// profile can report which prior it will actually run with instead
+    /// of discovering mid-game.
+    fn has_policy(&self) -> bool {
+        false
+    }
+
+    /// Per-name opponent-hand probabilities from the belief head, `None`
+    /// when the evaluator's net has no such head. Default `None`; the
+    /// determinizer falls back to the uniform redeal.
+    fn eval_opp_hand(&self, s: EncodedState) -> Option<Vec<f32>> {
+        let _ = s;
+        None
+    }
+
+    /// Whether [`eval_opp_hand`](Self::eval_opp_hand) can answer at all.
+    fn has_opp(&self) -> bool {
+        false
+    }
 }
 
 impl NetEvaluator for PlayNet {
     fn eval(&self, s: EncodedState) -> f32 {
         self.forward(&s)
+    }
+
+    fn eval_policy(&self, s: EncodedState) -> Option<f32> {
+        self.forward_policy(&s)
+    }
+
+    fn has_policy(&self) -> bool {
+        self.has_policy_head()
+    }
+
+    fn eval_opp_hand(&self, s: EncodedState) -> Option<Vec<f32>> {
+        self.forward_opp_hand(&s)
+    }
+
+    fn has_opp(&self) -> bool {
+        self.has_opp_head()
     }
 }
 
@@ -1303,6 +1538,7 @@ mod tests {
             traj: 42,
             ply: 3,
             aux: [0.1, -0.2, 0.3, 0.6],
+            opp_hand: vec![2, 5, 5],
         }
     }
 
@@ -1369,54 +1605,21 @@ mod tests {
         assert!((got2 - want2).abs() < 1e-6, "got {got2}, want {want2}");
     }
 
-    /// A v5 checkpoint — weight matrices sized to the pre-round-28
-    /// feature counts — loads by zero-padding, and the padded net cannot
-    /// see the new features: a state with every round-28 slot lit scores
-    /// exactly what the legacy arithmetic says. This is what keeps the
-    /// champion and the golden traces fixed across the encoder bump.
+    /// The policy head reads the same trunk as the win head and answers
+    /// only when its tensors are present. A file carrying half the head
+    /// is rejected: unlike the training-only aux heads, this one is
+    /// consumed at inference, so a partial set is a mismatch and not an
+    /// ignorable extra.
     #[test]
-    fn legacy_v5_checkpoint_loads_zero_padded() {
-        let legacy_trunk_in = NUM_GROUPS * 2 + LEGACY_GLOBAL_FEATS;
-        let mut obj_w = vec![0.0f32; 1 + LEGACY_OBJ_FEATS];
+    fn policy_head_loads_all_or_nothing_and_shares_the_trunk() {
+        let h_obj = 1usize;
+        let trunk_in = NUM_GROUPS * 2 * h_obj + GLOBAL_FEATS;
+        let mut obj_w = vec![0.0f32; 1 + OBJ_FEATS];
         obj_w[0] = 1.0;
         obj_w[1] = 1.0;
-        let bytes = to_safetensors(&[
+        let base: Vec<(&str, Vec<usize>, Vec<f32>)> = vec![
             ("emb.weight", vec![2, 1], vec![0.0, 2.0]),
-            ("obj.weight", vec![1, 1 + LEGACY_OBJ_FEATS], obj_w),
-            ("obj.bias", vec![1], vec![0.0]),
-            ("trunk1.weight", vec![1, legacy_trunk_in], vec![1.0; legacy_trunk_in]),
-            ("trunk1.bias", vec![1], vec![0.0]),
-            ("trunk2.weight", vec![1, 1], vec![1.0]),
-            ("trunk2.bias", vec![1], vec![0.0]),
-            ("head_win.weight", vec![1, 1], vec![1.0]),
-            ("head_win.bias", vec![1], vec![0.0]),
-        ]);
-        let net = PlayNet::load(&bytes).expect("legacy shapes load");
-
-        // Same state as `forward_matches_hand_computation`, plus every
-        // round-28 feature slot set to something loud.
-        let mut feats = [0.0; OBJ_FEATS];
-        feats[0] = 0.5;
-        for f in feats.iter_mut().skip(LEGACY_OBJ_FEATS) {
-            *f = 100.0;
-        }
-        let mut s = EncodedState::default();
-        s.groups[G_BF_SELF].push(EncodedObject { card: 1, feats });
-        s.global[3] = 0.25;
-        for gl in s.global.iter_mut().skip(LEGACY_GLOBAL_FEATS) {
-            *gl = 100.0;
-        }
-        let want = 1.0 / (1.0 + (-5.25f32).exp());
-        let got = net.forward(&s);
-        assert!((got - want).abs() < 1e-6, "got {got}, want {want}");
-
-        // Half-legacy shapes are a corrupt file, not a version: rejected.
-        let mut obj_w = vec![0.0f32; 1 + LEGACY_OBJ_FEATS];
-        obj_w[0] = 1.0;
-        let trunk_in = NUM_GROUPS * 2 + GLOBAL_FEATS;
-        let mixed = to_safetensors(&[
-            ("emb.weight", vec![2, 1], vec![0.0, 2.0]),
-            ("obj.weight", vec![1, 1 + LEGACY_OBJ_FEATS], obj_w),
+            ("obj.weight", vec![1, 1 + OBJ_FEATS], obj_w),
             ("obj.bias", vec![1], vec![0.0]),
             ("trunk1.weight", vec![1, trunk_in], vec![1.0; trunk_in]),
             ("trunk1.bias", vec![1], vec![0.0]),
@@ -1424,8 +1627,105 @@ mod tests {
             ("trunk2.bias", vec![1], vec![0.0]),
             ("head_win.weight", vec![1, 1], vec![1.0]),
             ("head_win.bias", vec![1], vec![0.0]),
-        ]);
-        assert!(PlayNet::load(&mixed).is_err(), "mixed old/new shapes must not load");
+        ];
+
+        // Without the head: no policy answer, and that is a valid net.
+        let plain = PlayNet::load(&to_safetensors(&base)).expect("headless net loads");
+        assert!(!plain.has_policy_head());
+
+        let mut with_head = base.clone();
+        with_head.push(("head_policy.weight", vec![1, 1], vec![3.0]));
+        with_head.push(("head_policy.bias", vec![1], vec![-1.0]));
+        let net = PlayNet::load(&to_safetensors(&with_head)).expect("policy net loads");
+        assert!(net.has_policy_head());
+
+        // Same state as `forward_matches_hand_computation`: t2 = 5.25.
+        let mut feats = [0.0; OBJ_FEATS];
+        feats[0] = 0.5;
+        let mut s = EncodedState::default();
+        s.groups[G_BF_SELF].push(EncodedObject { card: 1, feats });
+        s.global[3] = 0.25;
+        // Win head is untouched by the extra tensors...
+        let want_win = 1.0 / (1.0 + (-5.25f32).exp());
+        assert!((net.forward(&s) - want_win).abs() < 1e-6);
+        assert!((plain.forward(&s) - want_win).abs() < 1e-6);
+        // ...and the policy logit is w·t2 + b = 3·5.25 − 1 = 14.75.
+        let got = net.forward_policy(&s).expect("head answers");
+        assert!((got - 14.75).abs() < 1e-5, "got {got}");
+        assert_eq!(plain.forward_policy(&s), None);
+
+        // Half a head is a mismatch, not a version.
+        let mut partial = base.clone();
+        partial.push(("head_policy.weight", vec![1, 1], vec![3.0]));
+        assert!(PlayNet::load(&to_safetensors(&partial)).is_err(), "partial head must not load");
+        // A head sized to the wrong trunk is rejected too.
+        let mut wrong = base;
+        wrong.push(("head_policy.weight", vec![1, 2], vec![3.0, 3.0]));
+        wrong.push(("head_policy.bias", vec![1], vec![0.0]));
+        assert!(PlayNet::load(&to_safetensors(&wrong)).is_err(), "mis-sized head must not load");
+    }
+
+    /// A checkpoint from *any* earlier encoder generation — weight
+    /// matrices sized to that generation's feature counts — loads by
+    /// zero-padding, and the padded net cannot see the features added
+    /// since: a state with every newer slot lit scores exactly what the
+    /// legacy arithmetic says. This is what keeps the champion and the
+    /// golden traces fixed across an encoder bump, and it has to hold
+    /// for every generation in the table, not just the newest one.
+    #[test]
+    fn legacy_checkpoints_load_zero_padded() {
+        for (legacy_obj, legacy_global) in LEGACY_FEATS {
+            let legacy_trunk_in = NUM_GROUPS * 2 + legacy_global;
+            let mut obj_w = vec![0.0f32; 1 + legacy_obj];
+            obj_w[0] = 1.0;
+            obj_w[1] = 1.0;
+            let bytes = to_safetensors(&[
+                ("emb.weight", vec![2, 1], vec![0.0, 2.0]),
+                ("obj.weight", vec![1, 1 + legacy_obj], obj_w),
+                ("obj.bias", vec![1], vec![0.0]),
+                ("trunk1.weight", vec![1, legacy_trunk_in], vec![1.0; legacy_trunk_in]),
+                ("trunk1.bias", vec![1], vec![0.0]),
+                ("trunk2.weight", vec![1, 1], vec![1.0]),
+                ("trunk2.bias", vec![1], vec![0.0]),
+                ("head_win.weight", vec![1, 1], vec![1.0]),
+                ("head_win.bias", vec![1], vec![0.0]),
+            ]);
+            let net = PlayNet::load(&bytes).expect("legacy shapes load");
+
+            // Same state as `forward_matches_hand_computation`, plus every
+            // feature slot this generation never saw set to something loud.
+            let mut feats = [0.0; OBJ_FEATS];
+            feats[0] = 0.5;
+            for f in feats.iter_mut().skip(legacy_obj) {
+                *f = 100.0;
+            }
+            let mut s = EncodedState::default();
+            s.groups[G_BF_SELF].push(EncodedObject { card: 1, feats });
+            s.global[3] = 0.25;
+            for gl in s.global.iter_mut().skip(legacy_global) {
+                *gl = 100.0;
+            }
+            let want = 1.0 / (1.0 + (-5.25f32).exp());
+            let got = net.forward(&s);
+            assert!((got - want).abs() < 1e-6, "gen {legacy_obj}: got {got}, want {want}");
+
+            // Half-legacy shapes are a corrupt file, not a version: rejected.
+            let mut obj_w = vec![0.0f32; 1 + legacy_obj];
+            obj_w[0] = 1.0;
+            let trunk_in = NUM_GROUPS * 2 + GLOBAL_FEATS;
+            let mixed = to_safetensors(&[
+                ("emb.weight", vec![2, 1], vec![0.0, 2.0]),
+                ("obj.weight", vec![1, 1 + legacy_obj], obj_w),
+                ("obj.bias", vec![1], vec![0.0]),
+                ("trunk1.weight", vec![1, trunk_in], vec![1.0; trunk_in]),
+                ("trunk1.bias", vec![1], vec![0.0]),
+                ("trunk2.weight", vec![1, 1], vec![1.0]),
+                ("trunk2.bias", vec![1], vec![0.0]),
+                ("head_win.weight", vec![1, 1], vec![1.0]),
+                ("head_win.bias", vec![1], vec![0.0]),
+            ]);
+            assert!(PlayNet::load(&mixed).is_err(), "gen {legacy_obj}: mixed shapes must not load");
+        }
     }
 
     #[test]

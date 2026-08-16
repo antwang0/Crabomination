@@ -7,6 +7,621 @@ only stays dead while the reasoning that killed it is readable.
 
 ## Tier 13 — AI
 
+- 🟢 **Round 40 — the first encoder change since round 12 that isn't
+  flat, a mechanically-explained retraction of round 28f's combat
+  verdict, and a clean negative: combat rows cost the search 3 points.**
+  Pre-registered in `.ladder/run_r40_encoder_v7.sh`.
+
+  **The instrument came first, and it reshaped the round.**
+  `selfplay_train --feature-census N` (new; no net, no GPU, one
+  self-play pass) reports how often each encoder feature is non-zero in
+  recorded positions. Run before any arm was launched, on 300 games /
+  29 696 positions / 1.04 M objects under the v6 encoder and the
+  round-39 recorder:
+
+  | block | slots | non-zero rate |
+  |---|---|---|
+  | `hist` (new) | globals 43..=54 | 3.6–51.7 % of positions |
+  | `exp` (new) | object feats 45..=47 | 0.13–0.16 % of objects |
+  | `ctr` (new) | object feats 48..=52 | 0–1.6 % of objects |
+  | round-28 combat | globals 36..=40, feats 37..=39 | **0.00 %** |
+  | coarse combat phase / attackers | globals 11, 19; feat 10 | **0.00 %** |
+  | blocking / blocked | feats 28, 29 | **0.00 %** |
+
+  **Thirteen features are identically zero in every training row the
+  program has ever recorded.** The recorder snapshots at each new turn,
+  at post-combat main, and at end step: combat is over by the first and
+  hasn't begun by the second, so no training row has ever been a combat
+  row. Consequences, in order of importance:
+
+  1. **Round 28f's combat arm could not have measured anything** — it
+     trained the block against an all-zero column while its "v5-parity"
+     control ablated a block that was already blank. The two arms were
+     the same experiment. That entry now carries the caveat; its
+     keyword/exile half is unaffected and its null stands.
+  2. The columns are **live at inference** (the attack and block sims
+     evaluate mid-combat positions), so the search fed real values into
+     weights that never received a gradient.
+  3. `exp` and `ctr` did not earn their own cells at 0.16 % occupancy.
+     Two arms, not three.
+
+  **Arms.** E = full v7 (`hist`+`exp`+`ctr`), recorder unchanged.
+  C = full v7 + `--record-combat` (snapshots at declare-attackers,
+  declare-blockers, first-strike/combat damage, end-of-combat), which
+  brought every dead feature live (g36 19.0 %, g37 7.3 %, g38 18.7 %,
+  g39/40 5.5 %, g11 45.0 %). Two training seeds each, r38 cells as the
+  control, r38 recipe plus one flag.
+
+  **Pilot gates** (1000 games/archetype × sealed × 2 ladder seeds; each
+  pooled number is 4 cells / 48 k games):
+
+  | arm | vs atk-sim | vs gang | cells (atk-sim / gang) |
+  |---|---|---|---|
+  | r40 E | **53.0** | **51.5** | 53.2 52.8 53.2 52.8 / 51.6 51.2 51.7 51.5 |
+  | r40 C | **53.0** | **51.5** | 52.9 52.9 53.4 52.7 / 51.3 51.4 51.9 51.4 |
+  | r38 control | 52.5–52.85 | 51.1–51.35 | |
+  | champion | 52.7 | 51.2 | |
+
+  **Arm E is +0.3 on both gates, sign-consistent in all eight cells and
+  reproducing across training seeds (53.0/53.0, 51.4/51.6).** After
+  round 12, round 28f and four other rounds of flat inputs, that is the
+  first encoder change to move a gate at all. It is *not* an adoption
+  case: r38's own two seeds spread 0.35 / 0.25, the same size as the
+  effect, so two seeds cannot separate "+0.3" from "a good pair of
+  seeds". The honest statement is a positive that needs replication —
+  and the cheap replication is more seeds on arm E, not another block.
+
+  **Arm C adds exactly nothing to the pilot** (identical to E on both
+  gates, to 0.05). One nuance kept for the record: C matched E while its
+  500 k-row window covered ~55 % as many games, because it records
+  ~82 % more rows per game (43.9 M vs 24.1 M rows over 250 k games — the
+  census predicted +82 % and the runs delivered it). So the combat rows
+  at least repaid the coverage they cost. Not separable from both
+  effects being zero.
+
+  **Arm C's search gate is a clean negative, and the control that
+  proves it was missing from the pre-registration** — the script gated
+  only arm C here, which would have left the narrowing attributable to
+  encoder v7 as readily as to combat rows. The arm-E cells were run
+  afterwards to close that. `mcts-net-deep` vs `net`, same weights both
+  sides:
+
+  | net | pooled | cells |
+  |---|---|---|
+  | r40 C (combat rows) | **51.9** | 51.2 / 52.1 / 51.0 / 53.2 |
+  | r40 E (encoder only) | **54.75** | 55.4 / 54.7 / 53.2 / 55.7 |
+  | r38 / r39 references | 54.85 / 53.95 | |
+
+  The round-40 script only gated arm C here, which would have left "the
+  search narrowed" attributable to encoder v7 as easily as to combat
+  rows. Running the arm-E cells afterwards settles it: **arm E pools
+  54.75, landing on the r38 reference of 54.85, while arm C pools
+  51.9** — a 2.9-point loss that tracks the recorder flag and not the
+  encoder, with the two arms' pooled intervals disjoint (±~1.0 each on
+  four cells of 100 games). Since the
+  two arms are *equal as 1-ply pilots*, a narrower gap cannot mean the
+  pilot learned what the search knew — the searched player got worse.
+  Mechanism: the value head is the rollout leaf evaluator, and arm C
+  fit it to a distribution ~45 % of which is mid-combat, moving its
+  calibration on exactly the states the rollouts reach.
+
+  **Verdict.** `--record-combat` is a **negative**: it buys nothing as a
+  pilot and costs 3 points as a search evaluator. It stays in-tree,
+  default off, as the instrument that makes the combat features
+  trainable at all — and as the measured control for anyone who
+  re-proposes them. Encoder v7 is adopted as the format (information
+  superset, per-block ablation, legacy checkpoints zero-pad in *both*
+  net implementations now, 44.2 games/s against r38's 43.5–44.3, so no
+  encode cost) with a **provisional** quality claim at +0.3 that the
+  next round should try to replicate before the champion moves.
+
+  **Cross-metric lesson, worth more than the result.** Arm C posted
+  val_auc 0.8563 and val_policy 0.8855, both program records, and both
+  were noise of different kinds. The AUC is measured on the arm's *own*
+  holdout, which is ~45 % combat rows for C and 0 % for E — different
+  validation distributions, not a better net (combat positions are
+  closer to resolution and easier to call). The val_policy record was a
+  seed: arm means are 0.829 (E) vs 0.846 (C) against within-arm spreads
+  of 0.064 and 0.079. Third time a headline metric has failed to
+  convert (r33 ranking, r39 SV, now this). **Holdout AUC is not
+  comparable across arms that change what gets recorded.**
+
+  **What was built.** `--feature-census` (occupancy per feature, block
+  labelled, reads the live ablation so it also verifies a control is
+  blanking what it claims); encoder v7 — `hist` globals 43..=54,
+  `exp` feats 45..=47, `ctr` feats 48..=52, `OBJ_FEATS` 45→53,
+  `GLOBAL_FEATS` 43→55, `SHARD_VERSION` 8; the ablation API replaced
+  by a name table (`ABLATION_BLOCKS`) shared by the trainer and the
+  ladder, with unknown names an error rather than a silent no-op —
+  a typo'd control is a second copy of the arm; `--record-combat`;
+  and `Trainer::load` now zero-pads older-generation checkpoints the
+  way `PlayNet::load` always has. That last one was a latent bug the
+  bump exposed: candle's `VarMap::load` is exact-shape, so any
+  `--use-best` pilot from before an encoder bump loaded fine on the
+  ladder and killed the trainer at startup. Both loaders now pad from
+  one shared table, parity-tested.
+
+- 🔴 **Round 39 — both levers are nulls, and the belief redeal's null
+  is the cleanest measurement in the program.** Arms SV
+  (`--search-value-weight 0.25`) and OPP (`--opp-head`), each the r38
+  recipe plus one flag, two seeds, r38 cells as controls.
+
+  **Pilot gates** (1000 games/archetype × sealed × 2 ladder seeds, 4
+  cells pooled per number):
+
+  | arm | vs atk-sim | vs gang |
+  |---|---|---|
+  | r39 SV | 52.58 | 51.08 |
+  | r39 OPP | 52.65 | 51.12 |
+  | r38 control | 52.5–52.85 | 51.1–51.35 |
+  | champion | 52.7 | 51.2 |
+
+  Both arms land inside the r38 band and on the champion. Fourth
+  consecutive round in which a real capability gain fails to convert:
+  the champion is unmoved since round 22.
+
+  **SV: the value head absorbs the search's values and it changes
+  nothing.** The fit converges (`policy_sv` 0.016/0.017 weighted MSE)
+  and `val_policy` is the best on record — **0.854/0.846, spread
+  0.009**, against the r38 controls' 0.831/0.691 (spread 0.140). So
+  the term does something real and *stabilising*: the ranking metric's
+  seed lottery collapses. But `mcts-net-deep` vs `net` on these nets
+  pools **53.95**, statistically the r38 figure (54.85) — search's
+  edge over its own 1-ply pilot is untouched. Training the value head
+  on search values does not teach the pilot what the search knows.
+  Reading it against r27 (labels null at 50 k) and r38: the value
+  target is not the binding constraint at any provenance, variance, or
+  scale tried.
+
+  **OPP: the belief head learns and the redeal is worth nothing.**
+  `loss_opp` 0.098 → 0.080 (plateaued by step 14 k; a constant
+  base-rate predictor scores ≈0.135) and s43 posted **AUC 0.8308**, the
+  program record — an aux-target trunk gain, the first thing to beat
+  r38's 0.8236. The payoff gates, identical weights both sides:
+
+  | path | pooled | cells |
+  |---|---|---|
+  | sims (`bdet1` vs `det1`) | **50.10** | 50.2 / 49.9 / 50.3 / 50.0 |
+  | rollouts (`bdeep` vs `deep`) | 51.15 | 50.3 / 52.1 / 50.9 / 51.3 |
+
+  The sim path is the sharpest null the program has: four cells at
+  ±0.4 over 12 k games each, all within 0.3 of parity. The rollout
+  path's +1.15 is four cells at ±1.9 — sign-consistent, magnitude
+  unresolved, and not separable from noise at this width.
+
+  **Why the ceiling is low, and it is structural.**
+  `determinize_hidden` already redeals from the opponent's *true*
+  unseen cards — it knows their deck and only mis-sorts hand vs
+  library, so the head's entire job is picking which ~5 of ~35 known
+  cards are held. And a belief head can only learn tells its data
+  contains: these pilots make almost none (the SoS probe measured 42
+  cleanup discards per 60 games against **one** instant-timing cast;
+  `atk-hold` gated 49.4 %). "They left two Islands untapped" carries
+  little in a distribution where nobody holds up mana on purpose.
+  Whether that generalises to a human opponent who does is a question
+  a mirror ladder structurally cannot answer.
+
+  **Not adopted; both stay in-tree, default off** (`--search-value-weight`
+  0, `--opp-head` off, `mcts-net-bdeep`/`net-bdet1` as measured
+  controls). `val_policy`'s variance collapse under SV is the one
+  result worth re-using: it is cheap, and the ranking metric's seed
+  spread has been a recurring nuisance since round 33. Open, and now
+  in `TODO.md`: BCE cannot distinguish "belief is weak" from "belief
+  does not matter" — a top-k recall diagnostic against the
+  uniform-over-unseen baseline decides which, and the two answers want
+  opposite follow-ups.
+
+  **What was built** (all default off, `.ladder/run_r39_sv_belief.sh`).
+  SV: captures carry per-arm rollout counts, and the policy step gains
+  a visit-weighted MSE of the win head against the search's per-arm
+  means on the same successor batch it already forwards — one trunk
+  pass, both objectives. It *refuses Gumbel captures by construction*:
+  those values are improved-policy logits, and regressing a sigmoid
+  onto logits is a category error. OPP: shard v7 carries the
+  opponent's true held names (recorder-only — the encoder still cannot
+  see them), `head_opp.*` fits them with multi-label BCE at the
+  auxiliary weight in both net implementations (parity-tested), and
+  `determinize_hidden_belief` redeals by Efraimidis–Spirakis sampling
+  over hold-odds. The uniform redeal stays a separate untouched
+  function, so golden traces are byte-identical. A belief profile on a
+  headless net is *inert* — the ladder prints which redeal is running
+  and the run script aborts on INERT, because a cell that silently
+  gates a no-op is worse than no cell.
+
+- 🟡 **Round 38 — champion-scale distillation lands in the champion
+  band, not above it; the champion survives; the mixed fleet is a 29×
+  generation win.** The r36 live next step on the r37 footing: 250 k
+  games/seed, mixed fleet (128 MCTS-64 + 128 value actors, 256
+  threads), separate policy head, pilot = `nets_r28f_full_s43`
+  (v6 champion-class), seeds 43/97, best-on-AUC artifacts, gates
+  pre-registered in `.ladder/run_r38_champion_distill.sh`.
+
+  **The fleet, first measured at release scale: 43.5/44.3 games/s
+  cum** against the all-MCTS r35/r37 recipe's 1.5 — 29× — with the
+  learner fully fed (~91 k steps in ~95 min per seed; champion-era
+  runs got 70 k) and ~10.3 k searched games riding along per seed
+  (~200 k decisions, the deque cap). 250 k games + 90 k steps now
+  costs 1.6 h, which changes what is affordable to ask.
+
+  **Part B, adoption (1000 games/archetype × sealed × 2 ladder seeds,
+  pooled per net) — no clear, champion stays:**
+
+  | vs champion's | atk-sim 52.7 | gang 51.2 |
+  |---|---|---|
+  | r38 s43 | 52.85 | 51.35 |
+  | r38 s97 | 52.50 | 51.10 |
+
+  Both candidates land *on* the champion to within ±0.2 — inside the
+  ~±0.55 that a difference of pooled cells carries (r36) — at the top
+  of the r30 fresh-draw band (50.9–52.1 / 52.7–53.7). The
+  pre-registered r30 rule reads this as champion-band draws, not an
+  improvement: **champion-scale distillation with the separate head
+  does not push a pilot beyond the champion distribution.** With r27
+  (MCTS labels null at 50 k), r36 (+0.40/+0.48 at 20 k vs weak
+  controls), and this, the label/target-side account now spans three
+  scales and keeps landing in the same place: distillation is real but
+  small, and it does not compound into a stronger pilot at any scale
+  tried. Screen note along the way: s97 posted **val_auc 0.8236**
+  (above r18's 0.8204 own-distribution record, same caveat) while its
+  `val_policy` was the *weak* seed (0.69 vs s43's 0.83, spread 0.14
+  against r37's 0.025) — the AUC/ranking dissociation, fourth
+  appearance.
+
+  **Part C, the search question at scale — r36 replicates:**
+  `mcts-net-deep` vs `net`, same weights both sides: s43 55.5 pooled
+  (54.8/56.2), s97 54.2 (53.6/54.8). Search's margin over its own
+  1-ply pilot on these 250 k-game nets is as large as it was on the
+  20 k r35 distil nets (55.0) and larger than on the champion (52.15).
+  Sixty-four iterations remain not-removable, and the r36 coupling
+  survives the head: the pilot the gate races does not consume the
+  policy head, so nothing about a stronger trunk shrinks the search's
+  edge.
+
+  **Part D, exploratory (2 cells): gumbel vs deep with the s43 scale
+  head pools 49.3** (48.8/49.8) — the r37 null does not move with a
+  champion-scale head. Consistent with the prior being distilled from
+  UCB1's own conclusions; the genuinely different bet (gen-1: a head
+  trained on completed-Q targets from Gumbel actors) remains untried.
+
+  **Round verdict.** The program's strongest system is unchanged —
+  champion(-class) net + mcts-net-deep at inference — and the
+  distillation-for-pilot-strength thread is now bounded at three
+  scales. What the round actually bought: the mixed fleet (a 29×
+  measured generation win that makes 250 k-game experiments a
+  ~90-minute question), two more champion-class spares
+  (nets_r38_head_*), the first scale-trained policy heads, and the
+  sharpest statement yet of where the remaining headroom is — inside
+  the search, or in what the search consumes, not in the pilot's
+  weights.
+
+- 🟡 **Round 37 — the separate policy head works (ranking without the
+  value tax); the Gumbel search that consumes it is a null at 64
+  iterations.** Round 36 ended
+  with a prescription, not just a negative: distillation into the win
+  head makes the search *stronger* because the search eats the same
+  scalar as its UCB1 leaf reward, and any future attempt must break
+  that coupling — "a separate policy head the search does not consume,
+  or a search whose leaf value is frozen." This round builds the first,
+  and pairs it with the allocator that was designed for this exact
+  budget shape.
+
+  **The head.** `head_policy.*` (h2 → 1, ~257 params) over the shared
+  trunk, in both implementations: candle trains it, the engine loads it
+  all-or-nothing (like `attn.*`, because unlike the life/length heads
+  it is *consumed at inference*) and serves it through a new
+  `NetEvaluator::eval_policy` — the batched GPU collator carries it in
+  the same forward for one extra `[B,h2]×[h2,1]` matmul. Round 35's
+  distillation loss now trains this head when `--policy-head` built it;
+  the win head receives no policy gradient, which is asserted directly
+  (`policy_steps_do_not_touch_the_win_head`: `head_win.weight`
+  bit-identical across policy steps). That is the mechanism that should
+  cancel round 33's tax — the −0.010/−0.020 AUC the shared-head version
+  paid was two objectives fighting over one scalar. The shared-head
+  path stays bit-reachable as the control (no `--policy-head`), and a
+  candle↔engine parity test pins the head's logit at 1e-4.
+
+  **The search.** `MctsConfig::gumbel` (off by default; profile
+  `mcts-net-gumbel`, 64/h3, the `mcts-net-deep` shape): Sequential
+  Halving over Gumbel-perturbed prior logits, arms scored
+  `g + logit + σ(q̂)`, σ(q̂) = (c_visit + max_visits)·c_scale·q̂ at the
+  reference constants (50, 0.1) — Danihelka et al., ICLR 2022. Priors
+  are the policy head over each arm's *successor state* (what the head
+  was trained on); on a headless net the profile falls back to
+  log-softmax candidate scores and *says which one it is running* at
+  startup, because the fallback is a legitimate control arm (allocator
+  alone) but a different experiment. This is not round 29 re-run: that
+  negative fed the same scores in as a P-UCT visit bonus at temp 4,
+  which starves the arms search exists to rescue; SH visits every
+  survivor equally and halves on observed reward, with a
+  policy-improvement guarantee at small budgets. The halving plan is a
+  pure function (`sequential_halving_plan`, exact-spend at the 8×64
+  profile shape: (8,2)→(4,6)→(2,12)) with property tests; the plan is
+  the budget policy, so gumbel ignores `exploration`/`prior_weight`/
+  `early_stop`/`extend_close`.
+
+  **The target.** Gumbel roots capture *improved-policy logits*
+  (`logit + σ(q̂)`, no noise — noise is exploration, not belief;
+  unvisited arms completed by their prior), marked
+  `values_are_logits` and softmaxed at temperature 1 downstream — the
+  completed-Q construction, replacing round 35's
+  `softmax(means / 0.1)` hand-picked temperature for these rows. UCB1
+  captures are unchanged.
+
+  **Two latent defects fixed on the way, both on this exact path.**
+  (1) A truncated candidate set (`chosen ≥ POLICY_MAX_CANDIDATES`)
+  trained on the *tail window* of successors while reading `values[0..n]`
+  from the head of the array — every state paired with another arm's
+  value. Latent (main-phase menus cap at 8), live the moment
+  `--search-combat`'s uncapped block menus record; now sliced by the
+  same window, with a regression test. (2) The decision holdout hashed
+  the *game index* while row holdout hashes `traj` — two independent
+  keys, so a game's positions could train while its decisions
+  validated, and the comment claimed otherwise. Decisions now split by
+  the same `(seed << 1) | seat` hash as the rows. Consequence:
+  `val_policy` membership differs from rounds 33–35's draws — same
+  distribution, different sample; cross-round comparisons carry that
+  caveat. Also new: `--best-metric policy` publishes `best.safetensors`
+  on held-out policy agreement instead of AUC, because round 34
+  measured the two moving in *opposite directions* on one seed — a
+  distillation run selected on AUC can publish its worst ranking
+  checkpoint while reporting success.
+
+  **Pre-registered design.** Part 1: gen-0 training, r35 recipe
+  verbatim (20 k games, MCTS-64 actors over the headless
+  `nets_r33_control_s43` pilot, `--policy-every 4`) plus
+  `--policy-head --best-metric policy`, seeds 43/97 — the existing r35
+  cells are the controls (same pilot, seeds, budget). Readouts:
+  `val_policy` vs r35 distil's 0.726/0.814 (the head should match or
+  beat the shared head), `val_auc` vs r35 control's 0.7815/0.7826 (and
+  should NOT pay the shared-head tax; AUC seed spread is 0.023, read
+  the pair). Part 2: `mcts-net-gumbel` vs `mcts-net-deep`, identical
+  weights both sides (the r36 design), 100 games/archetype × sealed ×
+  two ladder seeds, on both head nets plus the headless champion (the
+  allocator-alone control). At ±2 per cell, one cell of a pair is not
+  a reading. Not queued yet, pending Part 1+2 signal: gen-1 (Gumbel
+  actors piloted by a head net, `--mcts-gumbel` — the full
+  expert-iteration loop), and a champion-scale (250 k) run.
+
+  **Part 1 result: the head carries the ranking and pays no value
+  tax.** 20 k games per seed, ~47 k steps, `best` published on
+  `val_policy`:
+
+  | | val_policy | chance | pilot_policy | val_auc |
+  |---|---|---|---|---|
+  | r37 head s43 | **0.816** | 0.452 | 0.265 | 0.7964 |
+  | r37 head s97 | **0.791** | 0.454 | 0.274 | 0.7680 |
+  | r35 shared s43 | 0.726 | 0.390 | 0.376 | 0.7945 |
+  | r35 shared s97 | 0.814 | 0.453 | 0.397 | 0.7685 |
+  | r35 control s43/s97 | 0.296 / 0.330 | — | — | 0.7815 / 0.7826 |
+
+  The separate head reaches 0.80 mean agreement with the search
+  (shared head: 0.77 — mixed per seed, higher on the mean, with the
+  holdout-redraw caveat above), while the value metrics sit exactly on
+  the control (AUC mean 0.7822 vs 0.7821; the r33 shared-head tax does
+  not appear). `pilot_policy` lands below chance in both cells — the
+  third independent replication of round 34's "the evaluator
+  contradicts its own search". The capability claim is clean: the
+  ranking objective can be carried by its own 257 parameters without
+  touching the win head.
+
+  **Part 2, first gate: a large NEGATIVE with a found mechanism — the
+  σ transform was unnormalized.** All six cells (both head nets, the
+  champion fallback, two ladder seeds each) lost hard: 29.5/28.2/29.9/
+  29.4 % for the head nets, 36.2/34.5 % for the champion control. The
+  magnitude said implementation, not method, and the reference
+  (mctx `qtransform_completed_by_mix_value`) confirmed it: completed
+  Q-values are **min-max normalized across the decision's arms to
+  [0, 1]** before the `(c_visit + max_visits)·c_scale` scaling. Ours
+  fed raw win probabilities in, and two candidate lines in one position
+  differ by a few *points* of win probability — σ gaps of ~0.3 logits
+  against Gumbel noise of stddev ~1.28. The final argmax was a noise
+  lottery over noise-selected survivors; 15–20 points down is what a
+  lottery scores. Fixed (`completed_sigma`: per-decision min-max over
+  visited arms, pinned by
+  `completed_sigma_normalizes_rewards_across_arms`), applied to both
+  the selection score and the captured improved-policy logits. The
+  first-gate numbers stand in this entry as what an unnormalized σ
+  costs, not as a verdict on Sequential Halving.
+
+  **Part 2, re-gate with the normalized σ: the fix recovers the whole
+  20 points, and lands on a null.**
+
+  | cell (gumbel vs deep) | ladder 43 | ladder 97 |
+  |---|---|---|
+  | head s43 | 49.1 % [47.1, 51.1] | 48.5 % [46.6, 50.4] |
+  | head s97 | 49.4 % [47.4, 51.4] | 48.0 % [46.1, 49.9] |
+  | champion (heuristic priors) | 49.9 % [47.9, 51.9] | 48.2 % [46.2, 50.1] |
+
+  Head nets pool to **48.75 %**, the champion control to 49.05 — all
+  six point estimates a hair under 50, no interval clearly below.
+  Sequential Halving with a learned prior neither beats nor
+  measurably loses to UCB1 at this budget: round 29's conclusion
+  ("only iterations pay; selection policy is at a local optimum the
+  defaults already occupy") survives its strongest challenger yet,
+  now with a prior that demonstrably matches the search's own ranking
+  at 0.80. **Not adopted**; `mcts-net-gumbel` stays in-tree as a
+  measured control alongside the r29 knobs, and `mcts-net-deep`
+  remains the reference searcher. Caveats that keep a door open, not
+  a claim: the head nets are 20 k-game gen-0 artifacts (a
+  champion-scale head is untrained), and a prior distilled *from*
+  UCB1's conclusions may be exactly the prior that cannot beat UCB1 —
+  a gen-1 head trained on completed-Q targets from Gumbel actors is
+  the version of this bet that is actually different, and is cheap to
+  arm now that the infra exists.
+
+  **Round verdict.** The head is the result: ranking capability at
+  0.80 with the value head untouched — the precondition round 36
+  demanded — plus the leak fix, the target-alignment fix, the
+  best-metric selection, and the mixed-fleet infra. The consumer that
+  converts it into play strength is still unfound: not as a search
+  prior at 64 iterations (this round), previously not as a shared
+  head (r33/35/36). The standing live next step is unchanged from
+  round 36 but now properly equipped: champion-scale distillation
+  (250 k games, mixed fleet, separate head, best-metric policy),
+  gated as a pilot and as MCTS's leaf evaluator.
+
+  **Infra found and fixed while the run was in flight: the MCTS-actor
+  recipe has been under-provisioned since round 34.** The r34/r35/r37
+  cells all ran the default `--actors` = cores − 2 = 22 against a
+  256-state eval batch, and 22 blocked threads cannot fill a 256 batch
+  — the `--gpu-eval` doc has warned exactly this since round 12's
+  batched-eval work ("pair with a large `--actors` (hundreds)"), and
+  round 27 measured MCTS generation at 256 threads, not 22. Symptom:
+  ~9 busy cores of 24, a mostly-idle GPU flushing near-empty batches on
+  the 1 ms timer, the learner asleep 85–86 % on the reuse throttle.
+  The in-flight r37 cells were left as-is (pre-registered, and
+  comparable to r35 only on the same recipe); the lever is recorded
+  here so the next MCTS-actor run picks it up.
+
+  Landed for that next run: **the mixed actor fleet**
+  (`--mcts-fleet N` — the KataGo playout-cap-randomization idea
+  translated to this loop). Only the first N actor threads pilot with
+  MCTS and feed the decision stream; the rest play the plain net pilot
+  for value-row volume and are excluded from capture by a thread-scoped
+  override (`decision_capture::set_thread_enabled` — a value actor's
+  picks are one-hot imitation targets that would bury the distillation
+  targets at ~50–100× the searched games rate). `stats.jsonl` now
+  carries `games_mcts` next to `games` so the mix is legible per
+  checkpoint. Default 0 = all-MCTS, the historical behaviour;
+  wiring smoke-tested (2-of-6 fleet: 11/120 games searched, decisions
+  from the search fleet only). No throughput claim yet — that number
+  comes release-built, at scale, with the actor count raised, per the
+  house perf rule.
+
+- 🔴 **Round 36 — MCTS is not removable, and distillation makes search
+  *more* valuable rather than less.** Round 35 established the
+  precondition: the net can absorb what the search concluded, going from
+  below-chance agreement to 0.73/0.81. The proposal this round gates is
+  the obvious consequence — if the net ranks candidates the way MCTS
+  does, then scoring each successor directly should reach the search's
+  strength at one eval per candidate, and 64-iteration rollouts (~50-100x
+  the per-game cost) could be retired at inference.
+
+  **Design.** The ladder has one net slot, so `mcts-net-deep` vs `net`
+  puts identical weights on both sides and each cell asks exactly one
+  question: does 64 iterations of search still add anything on top of
+  *this* net? Five conditions — champion as the era anchor, the two r35
+  controls (without which a narrowed gap could be "v6-era nets differ
+  from the champion" rather than "distillation worked"), the two r35
+  distil nets. Part 2 re-gates every net against atk-sim and gang,
+  because both Part 1 sides share the weights and MCTS consumes them as
+  the UCB1 leaf reward: a distilled net whose win head had *degraded*
+  would handicap the search side too and narrow the gap for the wrong
+  reason. 100 games/archetype for Part 1 (~480 s/cell), 1000 for Part 2
+  (~1 s/120 games, so an order of magnitude more resolution for a
+  fraction of the wall clock). 30 cells, ~252 k games.
+
+  | net | mcts-deep vs net, s43 | s97 | pooled |
+  |---|---|---|---|
+  | champion | 50.3 | 54.0 | 52.15 |
+  | ctrl43 | 53.6 | 54.1 | 53.85 |
+  | ctrl97 | 53.6 | 54.4 | 54.0 |
+  | dist43 | 55.6 | 55.2 | **55.4** |
+  | dist97 | 53.4 | 55.8 | **54.6** |
+
+  **All ten cells have MCTS ahead**, five net conditions × two ladder
+  seeds, lowest reading 50.3. There is no configuration here in which
+  scoring successors directly catches the search.
+
+  **The bet inverted.** Distillation was supposed to make search
+  redundant; the distilled nets are instead where search helps *most* —
+  distil arm 55.0 pooled against the control arm's 53.9. The mechanism is
+  the one Part 2 was built to expose: both sides share the weights, so a
+  better net is also a better leaf evaluator, and MCTS converts the
+  improvement more efficiently than direct ranking does. **You cannot
+  distil your way out of a search that eats the same net you improved.**
+  Any future attempt at this has to break that coupling — a separate
+  policy head the search does not consume, or a search whose leaf value
+  is frozen — or it will keep measuring this.
+
+  Part 2, pooled over both ladder seeds (12 k games/cell):
+
+  | net | vs atk-sim | vs gang |
+  |---|---|---|
+  | champion (250 k games) | **52.7** | **51.2** |
+  | control (pooled) | 50.8 | 49.6 |
+  | distil (pooled) | 51.2 | 50.0 |
+
+  Distillation *is* a real pilot gain — **+0.40 atk-sim / +0.48 gang**,
+  same sign in all four net×opponent comparisons — and it does not come
+  from wrecking the value head, which is what Part 2 rules out. Pilot and
+  search improved together. The split by training seed is the usual one
+  (+0.75 on s43, +0.13 on s97), and the difference between two
+  independent pooled cells carries ~±0.55, so only the s43 arm separates
+  cleanly: sign-consistent, magnitude-unreliable.
+
+  **What this does NOT close.** Every r35 net is a 20 k-game run against
+  the champion's 250 k, and all four are weaker pilots than the champion
+  — so this bounds the current artifact, not the direction. A
+  champion-scale distillation is untested and is the live next step. Do
+  not re-propose "distil the search away" at 20 k games; do not treat
+  this as having refuted it at 250 k.
+
+  **Cross-era warning, now concrete.** The round-26/27/29/31 MCTS numbers
+  predate two commits that both change what the search does: `a24b2b7c0`
+  (fixed hasher — container iteration order, hence tie-breaks and RNG
+  consumption, shift globally) and `e1788ef65` (`determinize_hidden`
+  sorts each zone by card id before shuffling, so the redeal is a
+  function of the information set; the commit says outright it is not
+  behaviour-preserving). The champion anchor pools to 52.15 today against
+  round 26's 52.95, so those *verdicts* stand — but the individual
+  figures are not comparable and should not be quoted against new runs.
+
+  **Methodological note, learned the hard way this round.** The champion
+  anchor's seed-43 cell read 50.3 against round 26's 53.4, and that was
+  read live as evidence that the determinization fix had erased the
+  search's advantage — a tidy mechanism, since the pre-fix redeal really
+  did permute a hidden arrangement. Seed 97 then came in at 54.0 and the
+  pair pooled to 52.15, reproducing. At ±2 per cell, **one cell of a pair
+  is not a reading**, and a plausible mechanism makes it easier, not
+  harder, to over-read one. Same lesson as round 32's AUC seed spread,
+  now restated on the ladder.
+
+- 🟢 **Round 35 — policy distillation from MCTS: the capability
+  replicates on both seeds, the value metrics are a wash.** Round 33
+  taught the win head to rank successors toward the *heuristic's* pick,
+  which caps at the heuristic. This trains it toward what a 64-iteration
+  search concluded, using each arm's mean reward (`2dd3ad240` records the
+  search's root decision with per-arm means; one-hot would be imitation,
+  and per-candidate values carry *how much* better each option looked).
+  Arms: `--policy-every 4` vs a `--policy-every 0` control that records
+  and scores the same decisions while training on none. 20 k games/cell
+  — MCTS actors run ~2 games/s against heuristic actors' ~235, so the
+  budget is decisions (~400 k/cell), not games.
+
+  | | val_policy | chance | pilot_policy | val_auc |
+  |---|---|---|---|---|
+  | control s43 | 0.296 | 0.438 | 0.359 | 0.7815 |
+  | distil s43 | **0.726** | 0.390 | 0.376 | 0.7945 |
+  | control s97 | 0.330 | 0.433 | 0.413 | 0.7826 |
+  | distil s97 | **0.814** | 0.453 | 0.397 | 0.7685 |
+
+  **The policy result is unambiguous**: below chance → 0.73/0.81, both
+  seeds, against a metric whose seed spread is 0.005 (round 33). The net
+  can represent and learn the search's ranking.
+
+  **`pilot_policy` closes round 34's stated limitation.** Round 34
+  measured a *training* net against decisions made by a different
+  (pilot) net, so some of the below-chance agreement could have been
+  two-nets-disagreeing rather than search-vs-its-own-evaluator. This
+  column scores the loaded pilot — the very net MCTS rolled out on — on
+  the same holdout, and it lands **below chance in all four arms**
+  (0.359/0.376/0.413/0.397 against 0.390–0.453). The round-34 finding is
+  real and confounder-free: a net's immediate ranking contradicts the
+  conclusions of a search built on that same net.
+
+  **The value metrics are a null.** AUC +0.013 on s43, −0.015 on s97,
+  mean −0.001 — inside the 0.023 seed spread round 32 measured. Reading
+  either seed alone gives a confident and opposite answer, again.
+  (`best` and `final` AUC agree to ~0.001 in all four runs; cosine decay
+  left nothing to overfit into, so the standing "score `best` not
+  `latest`" rule does not bite here.)
+
+  **Not adopted on this evidence.** A ranking gain with flat value
+  metrics is a screen result; round 36 gates it on play strength, and
+  finds it a small real pilot gain that nonetheless makes search *more*
+  valuable rather than less.
+
 - 🟢 **Round 34 step 1 — the value net ranks immediate successors
   *worse than random* against what MCTS concludes, and improving it does
   not help.** Headroom probe for distillation: MCTS actors (64 iters over
@@ -409,6 +1024,16 @@ only stays dead while the reasoning that killed it is readable.
   it. The champion stays champion (r28f arms match it on gang and
   trail ~1 pt on atk-sim — inside noise, no adoption case). Round 28
   closed.
+
+  **Caveat added in round 40, and it is a large one: the combat half of
+  this experiment could not have measured anything.** The feature
+  census showed globals 36..=40 and object feats 37..=39 are non-zero
+  in *zero* recorded training rows — the recorder never snapshots a
+  combat step — so the "v6 full" arm above trained the combat block
+  against an all-zero column and the v5-parity arm ablated a block that
+  was already blank. The two arms were the same experiment. The
+  keyword/exile half is unaffected (feats 40..=44 run 0–8 %, globals
+  41..=42 18.6 %) and its null stands. See round 40.
 
 - 🟡 **Smarter combat** — `server/bot.rs` blocking is heuristic (value trades,
   first-strike/deathtouch/trample/**indestructible** awareness — an

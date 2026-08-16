@@ -896,6 +896,101 @@ The bot taps mana rocks eagerly before knowing what it wants to cast.  A
 "plan this turn's spending first" pass before mana-ability activation would
 avoid situations where it taps a Sol Ring with nothing to cast.
 
+### Belief-head recall diagnostic (round 39 follow-up)
+The opponent-hand belief head (`head_opp`, round 39) trains and its
+redeal gates flat: sims (`bdet1` vs `det1`) 50.2 / 49.9 at ±0.4 over
+12 k games, rollouts (`bdeep` vs `deep`) 50.3 / 52.1 / 50.9 at ±1.9.
+The null is **ambiguous between two stories that want opposite
+follow-ups**, and `loss_opp` cannot tell them apart — at ~5 held names
+in a 164-name vocabulary it is dominated by the easy zeros (0.080
+against a ~0.135 constant-base-rate floor, plateaued by step 14 k).
+
+*Measure recall, not BCE*: on held-out snapshots, how often is a card
+the opponent actually holds inside the head's top-5, against the
+uniform-over-unseen baseline the determinizer already samples? The
+machinery `val_policy` uses scores exactly these rows; this is a
+diagnostic mode, not a training change, and it runs in minutes.
+
+- **Head is weak** (barely beats uniform) → the belief is the problem.
+- **Head is strong and the gate is still flat** → *consumption* is the
+  problem: more redeals per decision, or a rollout policy that uses the
+  hand at all (rollouts currently play the redealt hand with
+  `uniform_baseline()`, i.e. at random).
+
+Two structural facts to keep in view before spending another round.
+(a) The uniform baseline is stronger than it sounds — `determinize_hidden`
+redeals from the opponent's *true* unseen cards, so it already knows
+their deck and only gets hand-vs-library wrong; the head's whole job is
+sorting ~5 of ~35 known cards. (b) A belief head can only learn tells its
+training data contains, and these pilots barely make any: the SoS probe
+measured 42 cleanup discards per 60 games against **one** instant-timing
+cast, and `atk-hold` gated 49.4 %. "They left two Islands untapped"
+carries little information in a distribution where nobody holds up mana
+on purpose — which also means this direction may be capped in *this*
+format while still mattering against a human who does.
+
+### Encoder gaps — implemented as encoder v7 (round 40)
+All three are in `server/encode.rs` behind their own ablation bits
+(`hist`, `exp`, `ctr`; see `ABLATION_BLOCKS`), `SHARD_VERSION` is 8, and
+older checkpoints zero-pad at load in *both* net implementations. The
+gate is `.ladder/run_r40_encoder_v7.sh`; the verdict lives in
+`ML_NOTES.md`, not here.
+
+- **(a) Turn-scoped history** — globals 43..=54, six counters per seat
+  (life gained, instants/sorceries cast, spells cast, creatures died,
+  cards that left the graveyard, cards exiled). The block the census
+  says is real: non-zero in 3.6–51.7 % of positions.
+- **(b) Expiry** — object feats 45..=47: marked damage, and the P/T
+  delta that expires at cleanup. Occupancy 0.13–0.16 % of objects under
+  the default recorder, which is why it did not earn its own arm.
+- **(c) Counter types** — object feats 48..=52: +1/+1, −1/−1, stun,
+  Page, Growth, splitting the single scalar at feat 34. Occupancy
+  0–1.6 %.
+
+Not a gap, recorded so it is not re-proposed: **the prepared spell is
+already covered.** `prepare_spell: Option<Box<CardDefinition>>` is a
+field on `CardDefinition`, fixed per card, so the embedding carries
+which spell is inset exactly as it carries a card's other abilities;
+`f[9]` supplies the live "is prepared" state on top.
+
+### Static-anthem P/T is invisible to the encoder
+`encode_battlefield_object` reads `CardInstance::power()`, which sums
+the printed base, `power_bonus` (until-end-of-turn pumps),
+`perm_power_bonus` and the P/T counters — but *not* continuous effects
+resolved through the layer system. So an anthem's or an aura's +2/+2
+does not reach the net; the creature encodes at its unbuffed stats. The
+relation flags (feats 31/32, own/opposing attachment) say an aura is
+there, not what it does.
+
+Deliberately not fixed: the correct value needs
+`GameState::compute_battlefield`, whose effect gather is ~10 % of
+simulator instructions, and `encode_state` runs once per net eval
+inside the search. The SoS pool has five P/T-affecting statics in the
+whole set (2 `PumpTeamIf`, 2 `PumpSelfIf`, 1 `PumpPT`), so the trade is
+bad *for this format*. Revisit if the pool ever changes: a format with
+real lords would make this the largest remaining encoder hole, well
+ahead of anything in the v7 blocks.
+
+### Feature occupancy is a precondition, not an afterthought
+`selfplay_train --feature-census N` reports how often each encoder
+feature is non-zero in recorded self-play positions. It costs no GPU
+and one self-play pass, and it found that thirteen features — the whole
+round-28 combat block plus the attacking/blocking flags — are
+identically zero in every training row, because the recorder never
+snapshots a combat step. **Run it before proposing or gating any
+feature block.** A block with 0 % occupancy cannot move a gate, and a
+gate that ran anyway (round 28f) produced a null that means nothing.
+
+Open follow-ups it raises:
+- Global 36 (declare-attackers one-hot) is still 0 % without
+  `--record-combat`, and several object feats sit under 0.1 %. Worth a
+  pass to decide which dead columns should simply be removed rather
+  than carried.
+- The census reads the *recorder's* distribution. The search evaluates
+  a different one (sim leaves). A leaf-side census would say whether
+  any feature is common at inference and rare in training — the shape
+  that silently feeds live values into untrained weights.
+
 ### Multiple Difficulty Levels
 - Easy: current random bot
 - Medium: rule-based heuristics (responsive countering, threat assessment)

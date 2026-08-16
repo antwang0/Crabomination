@@ -54,6 +54,15 @@ use crate::game::{GameAction, GameState};
 
 static ENABLED: AtomicBool = AtomicBool::new(false);
 
+thread_local! {
+    /// Thread-scoped override, ANDed with the global flag. A mixed actor
+    /// fleet (round 37) records only its *search* pilots' decisions: the
+    /// value fleet's picks are one-hot imitation targets that would
+    /// flood the distillation stream at ~50–100× the searched games
+    /// rate, burying the targets the stream exists to carry.
+    static THREAD_ENABLED: std::cell::Cell<bool> = const { std::cell::Cell::new(true) };
+}
+
 /// Per-drain cap, so a pathological game cannot grow the buffer without
 /// bound. Lower than `leaf_capture`'s because each entry holds a whole
 /// candidate set rather than one state.
@@ -86,6 +95,16 @@ pub struct CapturedDecision {
     /// dominated by the one-per-arm seeding pass and carry little signal
     /// — so means are the faithful record of what the search preferred.
     pub values: Option<Vec<f32>>,
+    /// False: `values` are mean rewards in win-probability units (UCB1
+    /// roots — the trainer picks the softmax temperature). True: they are
+    /// the Gumbel search's improved-policy logits (`logit + σ(q̂)`),
+    /// already in log space, softmaxed at temperature 1 downstream.
+    pub values_are_logits: bool,
+    /// Rollouts behind each entry of `values`, aligned with
+    /// `successors` (round 39). A mean over 30 rollouts and a mean over
+    /// 2 are very different evidence, and the search-value regression
+    /// weights by this rather than pretending they are the same number.
+    pub visits: Option<Vec<u32>>,
 }
 
 thread_local! {
@@ -97,8 +116,14 @@ pub fn set_enabled(on: bool) {
     ENABLED.store(on, Ordering::Relaxed);
 }
 
+/// Turn capture on or off for *this thread* (default on). Effective only
+/// while the process flag is on — see [`THREAD_ENABLED`].
+pub fn set_thread_enabled(on: bool) {
+    THREAD_ENABLED.with(|t| t.set(on));
+}
+
 pub fn enabled() -> bool {
-    ENABLED.load(Ordering::Relaxed)
+    ENABLED.load(Ordering::Relaxed) && THREAD_ENABLED.with(|t| t.get())
 }
 
 /// Hook at a decision site: `candidates` are the actions considered and
@@ -113,25 +138,30 @@ pub fn enabled() -> bool {
 /// Decisions with fewer than two surviving candidates are not recorded:
 /// a forced move carries no policy signal and would just dilute the set.
 pub fn maybe(state: &GameState, seat: usize, candidates: &[GameAction], chosen: usize) {
-    maybe_valued(state, seat, candidates, chosen, None)
+    maybe_valued(state, seat, candidates, chosen, None, false, None)
 }
 
-/// [`maybe`] with per-candidate search values attached. `values` must be
-/// aligned with `candidates`; it is filtered alongside them when the
-/// engine rejects one, so the alignment survives the remap.
+/// [`maybe`] with per-candidate search values attached. `values` and
+/// `visits` must be aligned with `candidates`; both are filtered
+/// alongside them when the engine rejects one, so the alignment survives
+/// the remap. `values_are_logits` labels the values' scale — see
+/// [`CapturedDecision::values_are_logits`].
 pub fn maybe_valued(
     state: &GameState,
     seat: usize,
     candidates: &[GameAction],
     chosen: usize,
     values: Option<&[f32]>,
+    values_are_logits: bool,
+    visits: Option<&[u32]>,
 ) {
-    if !ENABLED.load(Ordering::Relaxed) || state.game_over.is_some() || candidates.len() < 2 {
+    if !enabled() || state.game_over.is_some() || candidates.len() < 2 {
         return;
     }
     let vocab = super::net_eval::vocab();
     let mut successors = Vec::with_capacity(candidates.len());
     let mut kept_values: Vec<f32> = Vec::new();
+    let mut kept_visits: Vec<u32> = Vec::new();
     let mut chosen_idx = None;
     for (i, a) in candidates.iter().enumerate() {
         let mut next = state.clone();
@@ -145,6 +175,11 @@ pub fn maybe_valued(
             && let Some(x) = v.get(i)
         {
             kept_values.push(*x);
+        }
+        if let Some(n) = visits
+            && let Some(x) = n.get(i)
+        {
+            kept_visits.push(*x);
         }
         successors.push(super::encode::encode_state(&next, seat, vocab));
     }
@@ -162,12 +197,16 @@ pub fn maybe_valued(
         if b.len() < CAP {
             let values = (values.is_some() && kept_values.len() == successors.len())
                 .then_some(kept_values);
+            let visits = (visits.is_some() && kept_visits.len() == successors.len())
+                .then_some(kept_visits);
             b.push(CapturedDecision {
                 successors,
                 chosen,
                 seat,
                 turn: state.turn_number,
                 values,
+                values_are_logits,
+                visits,
             });
         }
     });
@@ -326,7 +365,59 @@ mod tests {
                 d.successors.len(),
                 "values must stay aligned with successors after the reject remap"
             );
+            // Round 39: the search-value regression needs the evidence
+            // count per arm, aligned the same way, and a searched arm
+            // always has at least the seeding rollout behind it.
+            let counts = d.visits.as_ref().expect("mcts roots carry visit counts");
+            assert_eq!(counts.len(), d.successors.len(), "visits must stay aligned");
+            assert!(counts.iter().all(|&c| c > 0), "surviving arms were all rolled out");
             assert!(d.chosen < d.successors.len());
+        }
+    }
+
+    /// A Gumbel-piloted game records improved-policy logits: values
+    /// marked as logits, finite for every surviving arm (an unvisited
+    /// arm is completed by its prior, never left as a hole), aligned
+    /// with the successors.
+    #[test]
+    fn gumbel_root_decisions_carry_improved_policy_logits() {
+        use crate::server::{Bot, MctsBot, MctsConfig};
+        let _guard = SERIAL.lock().unwrap_or_else(|e| e.into_inner());
+
+        let mut g = two_player_game();
+        for (n, p, t) in [("A", 1, 1), ("B", 2, 2), ("C", 3, 3), ("D", 4, 4)] {
+            g.add_card_to_hand(0, creature(n, p, t));
+            g.add_card_to_hand(1, creature(n, p, t));
+        }
+        let _ = drain();
+        set_enabled(true);
+        let mut bot = MctsBot::new(MctsConfig {
+            iterations: 8,
+            horizon_turns: 1,
+            gumbel: true,
+            ..Default::default()
+        });
+        let mut fuel = 20;
+        while fuel > 0 && !g.is_game_over() {
+            fuel -= 1;
+            let Some(a) = bot.next_action(&g, 0) else { break };
+            if g.perform_action(a).is_err() {
+                break;
+            }
+        }
+        let got = drain();
+        set_enabled(false);
+
+        let valued: Vec<_> = got.iter().filter(|d| d.values.is_some()).collect();
+        assert!(!valued.is_empty(), "no Gumbel root decision was captured");
+        for d in valued {
+            assert!(d.values_are_logits, "gumbel captures must be marked as logits");
+            let v = d.values.as_ref().expect("checked");
+            assert_eq!(v.len(), d.successors.len(), "values must stay aligned");
+            assert!(
+                v.iter().all(|x| x.is_finite()),
+                "surviving arms must all carry a completed logit: {v:?}"
+            );
         }
     }
 
@@ -416,6 +507,24 @@ mod tests {
             chance += (*n as f64) / (*k as f64);
         }
         eprintln!("  total {total}, chance rate {:.4}", chance / total.max(1) as f64);
+    }
+
+    /// The thread override suppresses capture while the process flag is
+    /// on — the mixed-fleet contract: a value-fleet thread that forgot
+    /// to opt out would flood the stream with imitation targets.
+    #[test]
+    fn thread_override_suppresses_capture_and_restores() {
+        let _guard = SERIAL.lock().unwrap_or_else(|e| e.into_inner());
+        let (g, cands) = two_choice_state();
+        set_enabled(true);
+        set_thread_enabled(false);
+        maybe(&g, 0, &cands, 0);
+        assert!(drain().is_empty(), "thread-disabled capture must record nothing");
+        set_thread_enabled(true);
+        maybe(&g, 0, &cands, 0);
+        let got = drain();
+        set_enabled(false);
+        assert_eq!(got.len(), 1, "re-enabled thread records again");
     }
 
     /// A forced move carries no policy signal.

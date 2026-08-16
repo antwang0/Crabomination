@@ -357,6 +357,41 @@ fn parse_profile(name: &str) -> Option<Pilot> {
             weights: EvalWeights::net_eval_det1(),
             ..MctsConfig::default()
         })),
+        // Round 37: the Gumbel root search at the control's exact budget
+        // and shape — Sequential Halving over policy-head priors (or the
+        // candidate scores, on a net without the head) instead of UCB1.
+        // Gate against mcts-net-deep; both sides share the weights, so
+        // the cell isolates the allocator + prior.
+        "mcts-net-gumbel" => Some(Pilot::Mcts(MctsConfig {
+            iterations: 64,
+            horizon_turns: 3,
+            gumbel: true,
+            weights: EvalWeights::net_eval_det1(),
+            ..MctsConfig::default()
+        })),
+        // Round 39: belief-weighted determinization — the mcts-net-deep
+        // shape with rollout redeals drawn from the net's opponent-hand
+        // belief head instead of uniformly. Gate against mcts-net-deep
+        // with the same weights; on a net without the head the flag is
+        // inert and the cell measures nothing (the startup line says
+        // which is running).
+        "mcts-net-bdeep" => Some(Pilot::Mcts(MctsConfig {
+            iterations: 64,
+            horizon_turns: 3,
+            weights: {
+                let mut w = EvalWeights::net_eval_det1();
+                w.belief_determinize = true;
+                w
+            },
+            ..MctsConfig::default()
+        })),
+        // The scored pilot under the same flag: sims and planner
+        // dry-runs redeal from the belief instead of uniformly.
+        "net-bdet1" => Some(Pilot::Scored({
+            let mut w = EvalWeights::net_eval_det1();
+            w.belief_determinize = true;
+            w
+        })),
         // Round 31: search the combat declarations too — the round-26/27
         // wins came from main-phase search alone, with attacks and blocks
         // still the heuristic's. Same budget as the control so the gate
@@ -374,7 +409,7 @@ fn parse_profile(name: &str) -> Option<Pilot> {
 }
 
 /// Profile names accepted by `--a` / `--b`, for the help text and errors.
-const PROFILES: &str = "baseline, combat, holdsick, holdsick+combat, atk, atk-cheap, atk-hold, atk-sim, atk-race, atk-life, dflt-life, blk, lookahead, holdinst, mcts, mcts-heur, mcts-deep, planner, v2+combat, pretap, scaled, keywords, kw25, base, base+kw, life, power, v2, uniform, landseq, mull, gang, landseq2, mull2, race2, look1, look2, smarttap, det1, det3, net, net-det1, net-det3, net-blend, net-blend300, net-q10, net-q20, netb-q10, netb-q20, netb-ply, mcts-net, mcts-net-deep, mcts-net-128, mcts-net-256, mcts-net-h4, mcts-net-c05, mcts-net-c14, mcts-net-c20, mcts-net-prior, mcts-net-adapt, mcts-net-combat (*net* need CRAB_NET=<weights.safetensors> or the committed nets/champion.safetensors)";
+const PROFILES: &str = "baseline, combat, holdsick, holdsick+combat, atk, atk-cheap, atk-hold, atk-sim, atk-race, atk-life, dflt-life, blk, lookahead, holdinst, mcts, mcts-heur, mcts-deep, planner, v2+combat, pretap, scaled, keywords, kw25, base, base+kw, life, power, v2, uniform, landseq, mull, gang, landseq2, mull2, race2, look1, look2, smarttap, det1, det3, net, net-det1, net-det3, net-blend, net-blend300, net-q10, net-q20, netb-q10, netb-q20, netb-ply, mcts-net, mcts-net-deep, mcts-net-128, mcts-net-256, mcts-net-h4, mcts-net-c05, mcts-net-c14, mcts-net-c20, mcts-net-prior, mcts-net-adapt, mcts-net-combat, mcts-net-gumbel, mcts-net-bdeep, net-bdet1 (*net* need CRAB_NET=<weights.safetensors> or the committed nets/champion.safetensors)";
 
 /// Peak resident set size in MiB, or `None` where the OS doesn't expose it
 /// cheaply. Linux keeps the high-water mark in `/proc/self/status`, which
@@ -547,6 +582,41 @@ fn parse_args() -> Result<Args, String> {
             std::path::Path::new(&path),
         )?;
         eprintln!("loaded value net from {path}");
+        // A gumbel profile runs learned priors only if the loaded net
+        // carries the policy head; on a headless net it falls back to
+        // heuristic-score priors — a legitimate control arm, but a
+        // different experiment, so which one is running is said here
+        // rather than discovered from a null result.
+        if a_name.contains("gumbel") || b_name.contains("gumbel") {
+            let learned = crabomination::server::net_eval::slot_has_policy(
+                crabomination::server::net_eval::SLOT_BEST,
+            );
+            eprintln!(
+                "gumbel priors: {}",
+                if learned {
+                    "policy head"
+                } else {
+                    "heuristic candidate scores (net carries no policy head)"
+                }
+            );
+        }
+        // A belief profile without the belief head silently degrades to
+        // the uniform redeal, and the cell would gate a no-op.
+        if a_name.contains("bdet") || a_name.contains("bdeep")
+            || b_name.contains("bdet") || b_name.contains("bdeep")
+        {
+            let has = crabomination::server::net_eval::slot_has_opp(
+                crabomination::server::net_eval::SLOT_BEST,
+            );
+            eprintln!(
+                "belief redeal: {}",
+                if has {
+                    "opponent-hand head"
+                } else {
+                    "INERT — net carries no head_opp; this cell measures nothing"
+                }
+            );
+        }
     }
     Ok(Args {
         a,
@@ -588,22 +658,11 @@ fn main() {
     // garbage, not the ablation. The gate must encode exactly as the
     // training run did.
     if let Ok(spec) = std::env::var("CRAB_ABLATE") {
-        let off: Vec<String> =
-            spec.split(',').map(|s| s.trim().to_string()).collect();
-        for b in &off {
-            assert!(
-                matches!(b.as_str(), "lib" | "cast" | "rel" | "combat" | "kw"),
-                "CRAB_ABLATE: unknown block {b:?} (expected lib, cast, rel, combat, or kw)"
-            );
+        let off: Vec<&str> = spec.split(',').map(str::trim).collect();
+        if let Err(e) = crabomination::server::encode::set_encode_ablation_off(&off) {
+            eprintln!("CRAB_ABLATE: {e}");
+            std::process::exit(2);
         }
-        let on = |name: &str| !off.iter().any(|b| b == name);
-        crabomination::server::encode::set_encode_ablation(
-            on("lib"),
-            on("cast"),
-            on("rel"),
-            on("combat"),
-            on("kw"),
-        );
         eprintln!("encoder ablation via CRAB_ABLATE: {spec} switched off");
     }
 

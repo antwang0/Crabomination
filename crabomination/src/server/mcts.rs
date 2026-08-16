@@ -137,6 +137,34 @@ pub struct MctsConfig {
     /// one-turn simulations — which sees through *sampled* opposing
     /// combat instead of the greedy declarations the sims assume.
     pub search_combat: bool,
+    /// Gumbel root search (round 37, Danihelka et al. ICLR 2022):
+    /// replace UCB1 allocation with Sequential Halving over
+    /// Gumbel-perturbed prior logits, arms scored by
+    /// `g + logit + σ(q̂)`. Priors come from the net's policy head over
+    /// each candidate's successor state when the profile's net carries
+    /// one, else from the candidate generator's scores — the same source
+    /// round 29's P-UCT negative used, but consumed by an allocator with
+    /// a policy-improvement guarantee at small budgets instead of by a
+    /// visit bonus that starves arms.
+    ///
+    /// Why this and not another UCB knob: round 29 found every selection
+    /// lever null-to-negative and only iterations paying. Sequential
+    /// Halving is not a tuning of UCB1 — it is the allocator built for
+    /// exactly this regime (few arms, tiny budget, pick the argmax at
+    /// the end), and its improved policy `softmax(logits + σ(q̂))` is the
+    /// distillation target with the guarantee, where round 35 softmaxed
+    /// raw arm means at a hand-picked temperature.
+    ///
+    /// Ignores `exploration`, `prior_weight`, `early_stop` and
+    /// `extend_close` — the phase plan is the budget policy.
+    pub gumbel: bool,
+    /// σ(q̂) = (c_visit + max_arm_visits) · c_scale · q̂ — the transform
+    /// that puts observed rewards on the logit scale. Defaults are the
+    /// reference implementation's (mctx: `maxvisit_init` 50, value scale
+    /// 0.1); rewards here are already calibrated win probabilities, the
+    /// scale mctx assumes.
+    pub gumbel_c_visit: f64,
+    pub gumbel_c_scale: f64,
 }
 
 impl Default for MctsConfig {
@@ -153,8 +181,121 @@ impl Default for MctsConfig {
             extend_close: 1.0,
             close_margin: 0.03,
             search_combat: false,
+            gumbel: false,
+            gumbel_c_visit: 50.0,
+            gumbel_c_scale: 0.1,
         }
     }
+}
+
+/// Sequential Halving's phase plan: `(surviving arms, rollouts per arm)`
+/// per phase, spending at most `budget` rollouts in total.
+///
+/// Arm counts halve each phase down to a final pair; the per-phase spend
+/// is the remaining budget split evenly over the remaining phases, so
+/// later (narrower) phases visit each survivor more — with `arms`
+/// dividing evenly the whole budget is spent exactly. Every phase visits
+/// each survivor at least once when the budget allows; a budget too thin
+/// even for that truncates rather than overspends, because a
+/// budget-matched gate is only a gate if both sides spend what they say.
+fn sequential_halving_plan(arms: usize, budget: u32) -> Vec<(usize, u32)> {
+    if arms < 2 || budget == 0 {
+        return Vec::new();
+    }
+    let phases = usize::BITS - (arms - 1).leading_zeros(); // ceil(log2(arms))
+    let mut plan = Vec::with_capacity(phases as usize);
+    let mut remaining = budget;
+    let mut m = arms;
+    for p in 0..phases {
+        if remaining == 0 {
+            break;
+        }
+        let phases_left = phases - p;
+        let mut visits = (remaining / (phases_left * m as u32)).max(1);
+        if visits * m as u32 > remaining {
+            visits = remaining / m as u32;
+            if visits == 0 {
+                break;
+            }
+        }
+        plan.push((m, visits));
+        remaining -= visits * m as u32;
+        m = (m + 1) / 2;
+        if m < 2 {
+            m = 2;
+        }
+    }
+    // Whatever integer division left over goes to the final pair — the
+    // decision the whole search exists to sharpen.
+    if remaining >= 2
+        && let Some((m, v)) = plan.last_mut()
+    {
+        *v += remaining / *m as u32;
+    }
+    plan
+}
+
+/// The Gumbel search's value transform: σ(q̂) = (c_visit + max_visits) ·
+/// c_scale · q̂ puts an observed mean reward on the same scale as the
+/// prior logits, growing with visit depth so better-estimated rewards
+/// override the prior more.
+///
+/// `q` must be the *normalized* reward — see [`completed_sigma`]. The
+/// first gate of round 37 fed raw win probabilities in, and their
+/// across-arm spread (~0.05) made σ gaps of ~0.3 logits against Gumbel
+/// noise of stddev ~1.28: the final argmax was a noise lottery, and all
+/// six cells lost by ~15–20 points.
+fn sigma_q(q: f64, max_visits: u32, c_visit: f64, c_scale: f64) -> f64 {
+    (c_visit + max_visits as f64) * c_scale * q
+}
+
+/// Per-arm σ terms for one decision: observed mean rewards min-max
+/// normalized to [0, 1] *across the decision's visited arms* (the
+/// reference implementation's `rescale_values`), then scaled by
+/// [`sigma_q`]. Unvisited arms get 0 — they compete on their perturbed
+/// prior alone, and every live arm is visited from phase 1 whenever the
+/// budget allows.
+///
+/// The normalization is the part that makes the transform work at all:
+/// two candidate lines in one position differ by a few points of win
+/// probability, and σ has to spread *that* gap over the (c_visit +
+/// max_visits)·c_scale ≈ 5–7 logit range the procedure assumes, not the
+/// gap's raw size.
+fn completed_sigma(
+    visits: &[u32],
+    totals: &[f64],
+    c_visit: f64,
+    c_scale: f64,
+) -> Vec<f64> {
+    let n = visits.len();
+    let mut out = vec![0.0f64; n];
+    let max_v = visits.iter().copied().filter(|&v| v != u32::MAX).max().unwrap_or(0);
+    if max_v == 0 {
+        return out;
+    }
+    let q = |i: usize| totals[i] / visits[i] as f64;
+    let (mut lo, mut hi) = (f64::INFINITY, f64::NEG_INFINITY);
+    for i in 0..n {
+        if visits[i] != u32::MAX && visits[i] > 0 {
+            lo = lo.min(q(i));
+            hi = hi.max(q(i));
+        }
+    }
+    let spread = (hi - lo).max(1e-8);
+    for i in 0..n {
+        if visits[i] != u32::MAX && visits[i] > 0 {
+            out[i] = sigma_q((q(i) - lo) / spread, max_v, c_visit, c_scale);
+        }
+    }
+    out
+}
+
+/// Standard-Gumbel noise: `-ln(-ln u)`, u uniform in (0, 1). Added once
+/// per arm per decision — sampling without replacement over the prior in
+/// disguise, which is what lets a fixed deterministic procedure explore.
+fn gumbel_noise<R: RngExt>(r: &mut R) -> f64 {
+    let u: f64 = r.random_range(f64::EPSILON..1.0);
+    -(-u.ln()).ln()
 }
 
 /// Softmax with max-subtraction. `temp` in the same units as `scores`.
@@ -303,7 +444,12 @@ impl MctsBot {
         // been reading the held cards since the first MCTS experiment).
         // Salted per rollout so the bandit averages over imagined hands.
         if self.cfg.weights.determinize > 0 {
-            super::bot::determinize_hidden(&mut g, seat, 0x3C75_0000 ^ r.random::<u32>() as u64);
+            let salt = 0x3C75_0000 ^ r.random::<u32>() as u64;
+            if let Some(b) = super::bot::hand_belief(&g, seat, &self.cfg.weights) {
+                super::bot::determinize_hidden_belief(&mut g, seat, salt, &b);
+            } else {
+                super::bot::determinize_hidden(&mut g, seat, salt);
+            }
         }
         let stop_turn = g.turn_number + self.cfg.horizon_turns;
         let mut policy: Vec<HeuristicBot> = (0..g.players.len())
@@ -344,8 +490,147 @@ impl MctsBot {
         self.reward(&g, seat)
     }
 
+    /// The Gumbel root search (round 37): Sequential Halving over arms
+    /// scored by `g + logit + σ(q̂)`.
+    ///
+    /// Structure, phase by phase: validate every arm (a rejected action
+    /// is parked, as in the UCB1 path), compute one prior logit per
+    /// surviving arm, perturb each once with Gumbel noise, then run the
+    /// halving plan — every phase rolls out each survivor equally often
+    /// and keeps the better-scoring half. The final pick is the argmax of
+    /// the same score over the last survivors, which is what makes the
+    /// procedure a policy improvement even at tiny budgets: an arm only
+    /// wins by out-scoring the prior's favourite *after* its rewards have
+    /// been watched.
+    ///
+    /// Priors: the net's policy head over each candidate's successor
+    /// state when the profile's net carries one (`net_eval::policy_logit`
+    /// — the state the head was trained on), else the log-softmax of the
+    /// candidate generator's scores at `prior_temp`. The fallback keeps
+    /// the profile runnable with a headless net as its own control arm.
+    fn gumbel_search(
+        &self,
+        state: &GameState,
+        seat: usize,
+        candidates: Vec<(GameAction, i32)>,
+    ) -> GameAction {
+        let n = candidates.len();
+        let unit = self.cfg.weights.unit.max(1) as f64;
+        let scores: Vec<f64> = candidates.iter().map(|(_, s)| *s as f64 / unit).collect();
+        let candidates: Vec<GameAction> = candidates.into_iter().map(|(a, _)| a).collect();
+
+        // Validate once, keeping each successor for the prior pass.
+        let succ: Vec<Option<GameState>> = candidates
+            .iter()
+            .map(|a| {
+                let mut g = state.clone();
+                g.perform_action(a.clone()).ok().map(|_| g)
+            })
+            .collect();
+        let mut live: Vec<usize> = (0..n).filter(|&i| succ[i].is_some()).collect();
+        if live.is_empty() {
+            return GameAction::PassPriority;
+        }
+        if live.len() == 1 {
+            // Forced: nothing to search and no policy signal to record.
+            return candidates.into_iter().nth(live[0]).unwrap_or(GameAction::PassPriority);
+        }
+
+        let slot = self.cfg.weights.net_slot;
+        let use_head = slot != 0 && super::net_eval::slot_has_policy(slot);
+        let mut logits = vec![0f64; n];
+        if use_head {
+            for &i in &live {
+                if let Some(g) = &succ[i]
+                    && let Some(l) = super::net_eval::policy_logit(g, seat, slot)
+                {
+                    logits[i] = l as f64;
+                }
+            }
+        } else {
+            let p = softmax_priors(&scores, self.cfg.prior_temp);
+            for &i in &live {
+                logits[i] = p[i].max(1e-12).ln();
+            }
+        }
+
+        let mut r = rng();
+        let noise: Vec<f64> = (0..n).map(|_| gumbel_noise(&mut r)).collect();
+        let mut visits = vec![0u32; n];
+        let mut total = vec![0.0f64; n];
+        // Arms are compared on `g + logit + σ(normalized q̂)` — σ terms
+        // recomputed per phase from the visits so far ([`completed_sigma`]:
+        // rewards min-max normalized across the decision's visited arms,
+        // an unvisited arm competing on its perturbed prior alone).
+        // Survivors of a phase share a visit count, so the comparison is
+        // always on the same footing.
+        for (m, per_arm) in sequential_halving_plan(live.len(), self.cfg.iterations) {
+            let sig =
+                completed_sigma(&visits, &total, self.cfg.gumbel_c_visit, self.cfg.gumbel_c_scale);
+            live.sort_by(|&a, &b| {
+                (noise[b] + logits[b] + sig[b])
+                    .partial_cmp(&(noise[a] + logits[a] + sig[a]))
+                    .unwrap_or(std::cmp::Ordering::Equal)
+            });
+            live.truncate(m);
+            for &i in &live {
+                for _ in 0..per_arm {
+                    let mut g = state.clone();
+                    if g.perform_action(candidates[i].clone()).is_err() {
+                        break;
+                    }
+                    total[i] += self.rollout(g, seat);
+                    visits[i] += 1;
+                }
+            }
+        }
+        let sig =
+            completed_sigma(&visits, &total, self.cfg.gumbel_c_visit, self.cfg.gumbel_c_scale);
+        let best = live
+            .iter()
+            .copied()
+            .max_by(|&a, &b| {
+                (noise[a] + logits[a] + sig[a])
+                    .partial_cmp(&(noise[b] + logits[b] + sig[b]))
+                    .unwrap_or(std::cmp::Ordering::Equal)
+            })
+            .unwrap_or(live[0]);
+
+        // The distillation target is the *improved policy* — `logit +
+        // σ(normalized q̂)` per arm, no Gumbel noise (the noise is
+        // exploration, not belief). Softmaxing these downstream at
+        // temperature 1 is Danihelka et al.'s completed-Q construction,
+        // with an unvisited arm completed by its prior alone. Parked
+        // arms carry -inf and are dropped with their candidates, as in
+        // the UCB1 capture.
+        if super::decision_capture::enabled() {
+            let improved: Vec<f32> = (0..n)
+                .map(|i| {
+                    if succ[i].is_none() {
+                        f32::NEG_INFINITY
+                    } else {
+                        (logits[i] + sig[i]) as f32
+                    }
+                })
+                .collect();
+            super::decision_capture::maybe_valued(
+                state,
+                seat,
+                &candidates,
+                best,
+                Some(&improved),
+                true,
+                Some(&visits),
+            );
+        }
+        candidates.into_iter().nth(best).unwrap_or(GameAction::PassPriority)
+    }
+
     /// Run the search over scored `candidates` and return the best.
     fn search(&self, state: &GameState, seat: usize, candidates: Vec<(GameAction, i32)>) -> GameAction {
+        if self.cfg.gumbel {
+            return self.gumbel_search(state, seat, candidates);
+        }
         let n = candidates.len();
         let unit = self.cfg.weights.unit.max(1) as f64;
         let priors = softmax_priors(
@@ -431,7 +716,19 @@ impl MctsBot {
                     }
                 })
                 .collect();
-            super::decision_capture::maybe_valued(state, seat, &candidates, best, Some(&means));
+            // Parked arms report zero rollouts; they are dropped with
+            // their candidates in the capture remap regardless.
+            let counts: Vec<u32> =
+                visits.iter().map(|&v| if v == u32::MAX { 0 } else { v }).collect();
+            super::decision_capture::maybe_valued(
+                state,
+                seat,
+                &candidates,
+                best,
+                Some(&means),
+                false,
+                Some(&counts),
+            );
         }
         candidates.into_iter().nth(best).unwrap_or(GameAction::PassPriority)
     }
@@ -621,6 +918,127 @@ mod tests {
             matches!(d, Some(GameAction::DeclareAttackers(_))),
             "fallback declares when search_combat is off, got {d:?}"
         );
+    }
+
+    /// The halving plan is the budget policy, so its arithmetic is the
+    /// contract: never overspend, halve to a final pair, visit every
+    /// survivor of a phase equally and at least once.
+    #[test]
+    fn sequential_halving_plan_spends_the_budget_and_halves() {
+        // The profile shape: 8 arms, 64 rollouts — exact spend, later
+        // phases deeper.
+        assert_eq!(sequential_halving_plan(8, 64), vec![(8, 2), (4, 6), (2, 12)]);
+        assert_eq!(sequential_halving_plan(3, 64), vec![(3, 10), (2, 17)]);
+        assert_eq!(sequential_halving_plan(2, 64), vec![(2, 32)]);
+        // A budget too thin to halve visits what it can and stops.
+        assert_eq!(sequential_halving_plan(8, 8), vec![(8, 1)]);
+        // Degenerate inputs are empty plans, not panics.
+        assert!(sequential_halving_plan(1, 64).is_empty());
+        assert!(sequential_halving_plan(8, 0).is_empty());
+        // Properties across a sweep: spend ≤ budget, arm counts start at
+        // n and never increase, every phase visits each survivor ≥ once.
+        for arms in 2..=9usize {
+            for budget in [arms as u32, 24, 64, 100, 256] {
+                let plan = sequential_halving_plan(arms, budget);
+                let spend: u32 = plan.iter().map(|&(m, v)| m as u32 * v).sum();
+                assert!(spend <= budget, "{arms} arms, {budget}: spent {spend}");
+                assert_eq!(plan[0].0, arms, "first phase covers every live arm");
+                assert!(plan.windows(2).all(|w| w[1].0 < w[0].0), "arms must shrink");
+                assert!(plan.iter().all(|&(_, v)| v >= 1));
+                // With a real budget, the plan reaches the final pair and
+                // leaves at most one rollout unspent.
+                if budget >= 8 * arms as u32 {
+                    assert_eq!(plan.last().unwrap().0, 2, "{arms} arms, {budget}");
+                    assert!(budget - spend <= 1, "{arms} arms, {budget}: left {}", budget - spend);
+                }
+            }
+        }
+    }
+
+    /// σ(q̂) is what lets observed rewards override the prior: monotone
+    /// in the reward, and growing with visit depth so better-estimated
+    /// rewards speak louder.
+    #[test]
+    fn sigma_q_scales_with_reward_and_visits() {
+        assert!(sigma_q(0.8, 8, 50.0, 0.1) > sigma_q(0.4, 8, 50.0, 0.1));
+        assert!(sigma_q(0.8, 64, 50.0, 0.1) > sigma_q(0.8, 8, 50.0, 0.1));
+        assert_eq!(sigma_q(0.0, 8, 50.0, 0.1), 0.0);
+        // At the defaults and one visit, a full win-probability unit is
+        // worth ~5 logits — decisive but not prior-erasing.
+        let one = sigma_q(1.0, 1, 50.0, 0.1);
+        assert!((one - 5.1).abs() < 1e-9, "got {one}");
+    }
+
+    /// The round-37 gate-1 lesson, pinned: rewards are min-max
+    /// normalized across the decision's arms before σ, so the best and
+    /// worst *observed* arms are separated by the full (c_visit +
+    /// max_visits)·c_scale range however small their raw win-probability
+    /// gap is. Unnormalized, a 0.05 gap was ~0.3 logits against Gumbel
+    /// noise of stddev ~1.28 and the final argmax was a noise lottery —
+    /// all six gate cells lost by 15–20 points.
+    #[test]
+    fn completed_sigma_normalizes_rewards_across_arms() {
+        // Three visited arms with a tiny raw spread, one unvisited.
+        let visits = [4, 4, 4, 0];
+        let totals = [4.0 * 0.50, 4.0 * 0.52, 4.0 * 0.55, 0.0];
+        let sig = completed_sigma(&visits, &totals, 50.0, 0.1);
+        let full = (50.0 + 4.0) * 0.1;
+        assert!((sig[2] - full).abs() < 1e-6, "best arm spans the full range: {sig:?}");
+        assert!(sig[0].abs() < 1e-6, "worst arm is the floor: {sig:?}");
+        assert!(sig[1] > sig[0] && sig[1] < sig[2], "middle arm ordered: {sig:?}");
+        assert_eq!(sig[3], 0.0, "unvisited arm competes on its prior alone");
+        // All-equal rewards: no arm is favoured, and nothing divides by
+        // zero.
+        let flat = completed_sigma(&[2, 2], &[1.0, 1.0], 50.0, 0.1);
+        assert!(flat.iter().all(|s| s.abs() < 1e-6), "{flat:?}");
+        // Nothing visited: all zero.
+        assert!(completed_sigma(&[0, 0], &[0.0, 0.0], 50.0, 0.1).iter().all(|s| *s == 0.0));
+    }
+
+    /// Gumbel noise is a standard Gumbel: finite, and centred near the
+    /// Euler–Mascheroni constant (~0.577) rather than zero.
+    #[test]
+    fn gumbel_noise_is_finite_with_the_right_mean() {
+        use rand::SeedableRng;
+        let mut r = rand::rngs::StdRng::seed_from_u64(7);
+        let n = 20_000;
+        let mut sum = 0.0;
+        for _ in 0..n {
+            let g = gumbel_noise(&mut r);
+            assert!(g.is_finite());
+            sum += g;
+        }
+        let mean = sum / n as f64;
+        assert!((mean - 0.5772).abs() < 0.05, "mean {mean}");
+    }
+
+    /// The Gumbel arm returns a legal searched action from the same menus
+    /// as the UCB1 path, and the config default leaves it off.
+    #[test]
+    fn gumbel_search_plays_a_legal_main_phase_action() {
+        use crate::game::two_player_game;
+
+        let mut g = two_player_game();
+        for (n, p, t) in [("A", 1, 1), ("B", 2, 2), ("C", 3, 3)] {
+            g.add_card_to_hand(0, creature(n, p, t));
+        }
+        assert!(!MctsConfig::default().gumbel, "gumbel must be opt-in");
+        let mut bot = MctsBot::new(MctsConfig {
+            iterations: 8,
+            horizon_turns: 1,
+            gumbel: true,
+            ..MctsConfig::default()
+        });
+        let mut fuel = 30;
+        let mut acted = false;
+        while fuel > 0 && !g.is_game_over() {
+            fuel -= 1;
+            let Some(a) = bot.next_action(&g, 0) else { break };
+            if g.perform_action(a).is_ok() {
+                acted = true;
+            }
+        }
+        assert!(acted, "gumbel bot never played a legal action");
     }
 
     #[test]

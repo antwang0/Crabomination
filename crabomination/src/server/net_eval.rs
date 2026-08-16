@@ -100,6 +100,35 @@ pub fn win_prob(state: &GameState, seat: usize, slot: u8) -> Option<f32> {
     Some(net.eval(encode_state(state, seat, vocab())))
 }
 
+/// The policy head's logit for `seat` — the Gumbel search's prior score
+/// over a candidate's successor state. `None` when the slot is empty *or*
+/// its net carries no policy head; the search falls back to its heuristic
+/// priors either way.
+pub fn policy_logit(state: &GameState, seat: usize, slot: u8) -> Option<f32> {
+    let net = net_for(slot)?;
+    net.eval_policy(encode_state(state, seat, vocab()))
+}
+
+/// Whether the slot's net can answer [`policy_logit`] at all — the check
+/// a profile makes at startup so "learned priors" vs "heuristic fallback"
+/// is reported once rather than discovered mid-game.
+pub fn slot_has_policy(slot: u8) -> bool {
+    net_for(slot).is_some_and(|n| n.has_policy())
+}
+
+/// Per-name probabilities that the opponent holds each vocabulary card,
+/// from the slot net's belief head — the weighted redeal's input. `None`
+/// when the slot is empty or its net carries no belief head.
+pub fn opp_hand_probs(state: &GameState, seat: usize, slot: u8) -> Option<Vec<f32>> {
+    let net = net_for(slot)?;
+    net.eval_opp_hand(encode_state(state, seat, vocab()))
+}
+
+/// Whether the slot's net can answer [`opp_hand_probs`] at all.
+pub fn slot_has_opp(slot: u8) -> bool {
+    net_for(slot).is_some_and(|n| n.has_opp())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

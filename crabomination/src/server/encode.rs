@@ -75,29 +75,63 @@ impl Vocab {
 /// are: the encoder is called from deep inside the search and threading a
 /// config through every call site would be a worse trade than a flag set
 /// once at startup.
-static ABLATE: std::sync::atomic::AtomicU8 = std::sync::atomic::AtomicU8::new(0);
-const ABLATE_LIBRARY: u8 = 1;
-const ABLATE_CASTABILITY: u8 = 2;
-const ABLATE_RELATIONS: u8 = 4;
-const ABLATE_COMBAT: u8 = 8;
-const ABLATE_KW: u8 = 16;
+static ABLATE: std::sync::atomic::AtomicU16 = std::sync::atomic::AtomicU16::new(0);
+const ABLATE_LIBRARY: u16 = 1;
+const ABLATE_CASTABILITY: u16 = 2;
+const ABLATE_RELATIONS: u16 = 4;
+const ABLATE_COMBAT: u16 = 8;
+const ABLATE_KW: u16 = 16;
+const ABLATE_HISTORY: u16 = 32;
+const ABLATE_EXPIRY: u16 = 64;
+const ABLATE_COUNTERS: u16 = 128;
 
-/// Turn feature blocks off for an ablation run. All default on.
-/// `relations` covers the round-12 block whole: the relation flags
-/// (28..=35), the stack groups, and stack depth. `combat` is the
-/// round-28 combat-structure block (object feats 37..=39, globals
-/// 36..=40); `kw` is the round-28 keyword classes and exile counts
-/// (object feats 40..=44, globals 41..=42).
-pub fn set_encode_ablation(library: bool, castability: bool, relations: bool, combat: bool, kw: bool) {
-    let mask = if library { 0 } else { ABLATE_LIBRARY }
-        | if castability { 0 } else { ABLATE_CASTABILITY }
-        | if relations { 0 } else { ABLATE_RELATIONS }
-        | if combat { 0 } else { ABLATE_COMBAT }
-        | if kw { 0 } else { ABLATE_KW };
+/// Every ablatable block by the name the trainer and the ladder accept.
+/// One table so the two binaries can't drift on which names are legal —
+/// a mistyped block that silently ablates nothing is the failure mode
+/// this exists to prevent.
+///
+/// * `lib` / `cast` — the round-11 library group and castability block.
+/// * `rel` — the round-12 block whole: the relation flags (28..=35),
+///   the stack groups, and stack depth.
+/// * `combat` / `kw` — round 28 (v6): combat structure (object feats
+///   37..=39, globals 36..=40) and keyword classes plus exile counts
+///   (object feats 40..=44, globals 41..=42).
+/// * `hist` / `exp` / `ctr` — round 40 (v7): turn-scoped history
+///   (globals 43..=54), expiry (object feats 45..=47), and the counter
+///   split (object feats 48..=52).
+pub const ABLATION_BLOCKS: [(&str, u16); 8] = [
+    ("lib", ABLATE_LIBRARY),
+    ("cast", ABLATE_CASTABILITY),
+    ("rel", ABLATE_RELATIONS),
+    ("combat", ABLATE_COMBAT),
+    ("kw", ABLATE_KW),
+    ("hist", ABLATE_HISTORY),
+    ("exp", ABLATE_EXPIRY),
+    ("ctr", ABLATE_COUNTERS),
+];
+
+/// Turn the named feature blocks *off* for an ablation run; everything
+/// not named stays on, and an empty list is the full encoder. Replaces
+/// the whole mask, so it is idempotent and a later call can restore the
+/// default. Unknown names are an error rather than a no-op: silently
+/// ignoring a typo produces a "control" run that is really a second
+/// copy of the arm.
+pub fn set_encode_ablation_off(off: &[&str]) -> Result<(), String> {
+    let mut mask = 0u16;
+    for name in off {
+        match ABLATION_BLOCKS.iter().find(|(n, _)| n == name) {
+            Some((_, bit)) => mask |= bit,
+            None => {
+                let known: Vec<&str> = ABLATION_BLOCKS.iter().map(|(n, _)| *n).collect();
+                return Err(format!("unknown encoder block {name:?} (known: {})", known.join(", ")));
+            }
+        }
+    }
     ABLATE.store(mask, std::sync::atomic::Ordering::Relaxed);
+    Ok(())
 }
 
-fn ablated(bit: u8) -> bool {
+fn ablated(bit: u16) -> bool {
     ABLATE.load(std::sync::atomic::Ordering::Relaxed) & bit != 0
 }
 
@@ -340,7 +374,30 @@ pub fn encode_state(g: &GameState, seat: usize, vocab: &Vocab) -> EncodedState {
         gl[41] = g.exile.iter().filter(|c| c.owner == seat).count() as f32 / 10.0;
         gl[42] = g.exile.iter().filter(|c| c.owner == opp).count() as f32 / 10.0;
     }
-    const _: () = assert!(GLOBAL_FEATS == 43, "extend the fill above when adding globals");
+    if !ablated(ABLATE_HISTORY) {
+        // Turn-scoped history (round 40). Everything above is a static
+        // snapshot, which made the whole encoding a pure function of the
+        // current position — so for a card that reads what has already
+        // happened this turn, the net could not tell whether its ability
+        // was live. `Player` tracks ~90 such counters; these six are the
+        // ones the SoS pool actually reads, self then opponent.
+        //
+        // Scales are "how many before this stops mattering", not
+        // normalizations of the observed range: the predicates are
+        // thresholds (gain 3 life, cast 2 instants) and what a value
+        // function wants is where the position sits against the
+        // threshold, so saturating a little past it is the right shape.
+        for (side, p) in [(0usize, seat), (1, opp)] {
+            let pl = &g.players[p];
+            gl[43 + side] = pl.life_gained_this_turn as f32 / 5.0;
+            gl[45 + side] = pl.instants_or_sorceries_cast_this_turn as f32 / 3.0;
+            gl[47 + side] = pl.spells_cast_this_turn as f32 / 4.0;
+            gl[49 + side] = pl.creatures_died_this_turn as f32 / 3.0;
+            gl[51 + side] = pl.cards_left_graveyard_this_turn as f32 / 3.0;
+            gl[53 + side] = pl.cards_exiled_this_turn as f32 / 3.0;
+        }
+    }
+    const _: () = assert!(GLOBAL_FEATS == 55, "extend the fill above when adding globals");
 
     s
 }
@@ -638,8 +695,9 @@ fn is_hard_to_block(k: &crate::card::Keyword) -> bool {
 }
 
 /// Battlefield objects add live state on top of the printed features:
-/// effective P/T (counters and pumps included), damage marked, tapped,
-/// summoning sickness, loyalty, SOS prepared status, attacking.
+/// effective P/T net of damage, the damage itself and the part of the
+/// P/T that expires at cleanup, tapped, summoning sickness, loyalty,
+/// SOS prepared status, attacking, and counters.
 fn encode_battlefield_object(g: &GameState, c: &CardInstance, vocab: &Vocab) -> EncodedObject {
     let mut o = encode_card_object(c, vocab);
     let f = &mut o.feats;
@@ -664,6 +722,41 @@ fn encode_battlefield_object(g: &GameState, c: &CardInstance, vocab: &Vocab) -> 
             .sum();
         f[34] = special as f32 / 4.0;
     }
+    // Expiry (round 40). Features 4/5 encode the board as if nothing
+    // reverts: 5 is toughness *net of* damage, so a 4/4 with three
+    // damage read as a 4/1 though it is whole again at cleanup, and a
+    // 5/5 off a combat trick read as a printed 5/5. Both matter to
+    // exactly the decision a value function is asked for — whether a
+    // block or a burn spell kills. `power_bonus`/`toughness_bonus` are
+    // the until-end-of-turn deltas specifically; permanent pumps live
+    // in `perm_*` and are correctly invisible here.
+    if !ablated(ABLATE_EXPIRY) {
+        f[45] = c.damage as f32 / 8.0;
+        f[46] = c.power_bonus as f32 / 4.0;
+        f[47] = c.toughness_bonus as f32 / 4.0;
+    }
+    // Counter kinds (round 40). Feature 34 above sums them all into one
+    // scalar, so three +1/+1 and three stun counters encode identically
+    // — opposite facts. These split out the kinds the SoS pool puts on
+    // permanents (+1/+1 by a wide margin, then stun, Page and Growth)
+    // plus -1/-1, which the pool never uses but every other format
+    // does. The stat counters reach the net through effective P/T as
+    // well, which is the same deliberate double-encoding feature 34
+    // documents; stun, Page and Growth had no path to it at all.
+    if !ablated(ABLATE_COUNTERS) {
+        for (i, (kind, scale)) in [
+            (CounterType::PlusOnePlusOne, 4.0),
+            (CounterType::MinusOneMinusOne, 4.0),
+            (CounterType::Stun, 2.0),
+            (CounterType::Page, 3.0),
+            (CounterType::Growth, 3.0),
+        ]
+        .into_iter()
+        .enumerate()
+        {
+            f[48 + i] = c.counter_count(kind) as f32 / scale;
+        }
+    }
     o
 }
 
@@ -686,6 +779,13 @@ mod tests {
         // A panicking test poisons the lock; that failure is already
         // reported, and propagating it would mask every other test here.
         ENCODE_LOCK.lock().unwrap_or_else(|e| e.into_inner())
+    }
+
+    /// Switch the named blocks off, panicking on a name the encoder
+    /// doesn't know — inside a test an unknown block is a typo, and
+    /// swallowing it would make the assertions below pass vacuously.
+    fn off(blocks: &[&str]) {
+        set_encode_ablation_off(blocks).expect("known block names");
     }
 
     fn two_player_game() -> GameState {
@@ -899,13 +999,13 @@ mod tests {
         assert_eq!(full.groups[G_HAND_SELF][0].feats[25], 1.0);
         assert!(full.global[24 + 4] > 0.0);
 
-        set_encode_ablation(false, true, true, true, true);
+        off(&["lib"]);
         let no_lib = encode_state(&g, 0, &vocab);
         assert_eq!(no_lib.groups[G_LIB_SELF].len(), 0, "library group is empty");
         assert_eq!(no_lib.groups[G_HAND_SELF][0].feats[25], 1.0, "castability survives");
         assert!(no_lib.global[24 + 4] > 0.0);
 
-        set_encode_ablation(true, false, true, true, true);
+        off(&["cast"]);
         let no_cast = encode_state(&g, 0, &vocab);
         assert_eq!(no_cast.groups[G_LIB_SELF].len(), 1, "library survives");
         assert_eq!(no_cast.groups[G_HAND_SELF][0].feats[25], 0.0, "castable-now zeroed");
@@ -925,10 +1025,10 @@ mod tests {
             target: crate::game::types::AttackTarget::Player(1),
         });
         g.block_map.insert(crate::card::CardId(101), vec![crate::card::CardId(100)]);
-        set_encode_ablation(true, true, true, true, true);
+        off(&[]);
         let with_rel = encode_state(&g, 0, &vocab);
         assert!(with_rel.groups[G_BF_SELF].iter().any(|o| o.feats[29] == 1.0), "blocked flag on");
-        set_encode_ablation(true, true, false, true, true);
+        off(&["rel"]);
         let no_rel = encode_state(&g, 0, &vocab);
         assert!(no_rel.groups[G_BF_SELF].iter().all(|o| o.feats[29] == 0.0), "blocked flag off");
         assert_eq!(no_rel.groups[G_LIB_SELF].len(), 1, "library survives rel ablation");
@@ -941,7 +1041,7 @@ mod tests {
         g.step = TurnStep::DeclareBlockers;
         let with_combat = encode_state(&g, 0, &vocab);
         assert_eq!(with_combat.global[37], 1.0, "declare-blockers one-hot on");
-        set_encode_ablation(true, true, true, false, true);
+        off(&["combat"]);
         let no_combat = encode_state(&g, 0, &vocab);
         assert_eq!(no_combat.global[37], 0.0, "declare-blockers one-hot off");
         assert_eq!(no_combat.groups[G_LIB_SELF].len(), 1, "library survives combat ablation");
@@ -952,18 +1052,92 @@ mod tests {
 
         // The kw bit blanks the keyword classes and exile counts.
         g.exile.push(CardInstance::new(crate::card::CardId(950), catalog::grizzly_bears(), 0));
-        set_encode_ablation(true, true, true, true, true);
+        off(&[]);
         let with_kw = encode_state(&g, 0, &vocab);
         assert!((with_kw.global[41] - 1.0 / 10.0).abs() < 1e-6, "exile count on");
-        set_encode_ablation(true, true, true, true, false);
+        off(&["kw"]);
         let no_kw = encode_state(&g, 0, &vocab);
         assert_eq!(no_kw.global[41], 0.0, "exile count off");
         assert_eq!(no_kw.global[37], 1.0, "combat block survives kw ablation");
 
+        // Round 40. History is globals-only, expiry and counters are
+        // object-only, so each blanks a disjoint slice — and the
+        // combined `hist,exp,ctr` ablation is v6 parity, which is the
+        // control arm the gate actually runs.
+        g.players[0].life_gained_this_turn = 5;
+        // The fixture's battlefield is Forests, so the one creature
+        // below is unambiguous to `find` by the is-creature flag.
+        assert!(!g.battlefield.iter().any(|c| c.definition.is_creature()));
+        let mut pumped = CardInstance::new(crate::card::CardId(960), catalog::grizzly_bears(), 0);
+        pumped.controller = 0;
+        pumped.damage = 1;
+        pumped.power_bonus = 2;
+        pumped.toughness_bonus = 2;
+        pumped.add_counters(CounterType::PlusOnePlusOne, 1);
+        pumped.add_counters(CounterType::Stun, 1);
+        g.battlefield.push(pumped);
+        let find = |s: &EncodedState| {
+            s.groups[G_BF_SELF].iter().find(|o| o.feats[1] == 1.0).cloned().expect("the creature")
+        };
+
+        off(&[]);
+        let v7 = encode_state(&g, 0, &vocab);
+        assert_eq!(v7.global[43], 1.0, "5 life gained / 5");
+        let c7 = find(&v7);
+        assert!((c7.feats[45] - 1.0 / 8.0).abs() < 1e-6, "one damage marked");
+        assert!((c7.feats[46] - 2.0 / 4.0).abs() < 1e-6, "temporary +2 power");
+        assert!((c7.feats[48] - 1.0 / 4.0).abs() < 1e-6, "one +1/+1 counter");
+        assert!((c7.feats[50] - 1.0 / 2.0).abs() < 1e-6, "one stun counter");
+
+        off(&["hist"]);
+        let no_hist = encode_state(&g, 0, &vocab);
+        assert_eq!(no_hist.global[43], 0.0, "life-gained global off");
+        assert_eq!(no_hist.global[..43], v7.global[..43], "older globals untouched");
+        assert_eq!(find(&no_hist).feats, c7.feats, "object features untouched");
+
+        off(&["exp"]);
+        let no_exp = encode_state(&g, 0, &vocab);
+        let c = find(&no_exp);
+        assert_eq!([c.feats[45], c.feats[46], c.feats[47]], [0.0; 3], "expiry block off");
+        assert_eq!(c.feats[48], c7.feats[48], "counter block survives");
+        assert_eq!(no_exp.global, v7.global, "globals untouched");
+
+        off(&["ctr"]);
+        let c = find(&encode_state(&g, 0, &vocab));
+        assert_eq!(c.feats[48..53], [0.0; 5], "counter block off");
+        assert_eq!(c.feats[45], c7.feats[45], "expiry block survives");
+        assert_eq!(c.feats[34], c7.feats[34], "the round-12 counter sum survives");
+
+        // v6 parity: exactly the round-40 slots are blank and nothing
+        // else moved.
+        off(&["hist", "exp", "ctr"]);
+        let v6 = encode_state(&g, 0, &vocab);
+        assert_eq!(v6.global[..43], v7.global[..43]);
+        assert_eq!(v6.global[43..], [0.0; 12]);
+        let c6 = find(&v6);
+        assert_eq!(c6.feats[..45], c7.feats[..45]);
+        assert_eq!(c6.feats[45..], [0.0; 8]);
+
+        g.battlefield.pop();
+        g.players[0].life_gained_this_turn = 0;
         g.step = TurnStep::PreCombatMain;
         g.exile.clear();
-        set_encode_ablation(true, true, true, true, true);
+        off(&[]);
         assert_eq!(encode_state(&g, 0, &vocab), with_rel, "all on restores the full encoding");
+    }
+
+    /// An unknown block name is an error, not a no-op: a typo'd
+    /// `--ablate` would otherwise produce a "control" that is really a
+    /// second copy of the arm, and the two runs would agree for the
+    /// wrong reason.
+    #[test]
+    fn unknown_ablation_names_are_rejected() {
+        let _guard = encode_guard();
+        assert!(set_encode_ablation_off(&["combat", "nonsense"]).is_err());
+        // The rejected call must not have left a partial mask behind.
+        assert_eq!(ABLATE.load(std::sync::atomic::Ordering::Relaxed), 0);
+        assert!(set_encode_ablation_off(&["hist", "exp", "ctr"]).is_ok());
+        off(&[]);
     }
 
     /// The round-28 combat-structure block: counterpart P/T sums across

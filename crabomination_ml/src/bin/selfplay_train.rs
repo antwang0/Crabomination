@@ -24,6 +24,9 @@
 //!                [--attn] [--blocks N] [--aux] [--ablate lib,cast,rel,combat,kw]
 //!                [--muon] [--muon-lr F] [--lr-cosine STEPS]
 //!                [--sample-temp N] [--sample-turns N] [--mcts-actors N]
+//!                [--record-decisions] [--policy-every N] [--policy-temp F]
+//!                [--policy-head] [--mcts-gumbel] [--best-metric auc|policy]
+//!                [--mcts-fleet N] [--opp-head] [--search-value-weight F]
 //!                [--emb-dim N] [--obj-hidden N] [--h1 N] [--h2 N]
 //!                [--gate-builder GAMES_PER_POOL]
 //!
@@ -115,8 +118,43 @@ struct Args {
     policy_every: u64,
     /// Softmax temperature for the distilled policy target. Arm values
     /// are win probabilities, so their spread is small and this is what
-    /// decides sharp-pick vs soft-ranking.
+    /// decides sharp-pick vs soft-ranking. Ignored for Gumbel captures,
+    /// whose improved-policy logits carry their own scale.
     policy_temp: f32,
+    /// Build the separate policy head (`head_policy.*`, round 37) and
+    /// aim the ranking objective at it instead of at the win head. The
+    /// head is exported and the engine consumes it as the Gumbel
+    /// search's prior. Off is the control: the round-33 shared-win-head
+    /// path, bit-reachable. Only does anything under
+    /// `--record-decisions` with `--policy-every` > 0.
+    policy_head: bool,
+    /// Pilot the MCTS actors with the Gumbel root search (Sequential
+    /// Halving over policy-head priors) instead of UCB1 — the gen-1
+    /// loop, once a policy-headed `--use-best` exists to pilot with. On
+    /// a headless pilot the search falls back to heuristic-score priors
+    /// and says so at startup. Requires `--mcts-actors`.
+    mcts_gumbel: bool,
+    /// Which holdout metric publishes `best.safetensors`: false = AUC
+    /// (the historical rule), true (`--best-metric policy`) = held-out
+    /// top-1 policy agreement. Exists because round 34 measured AUC and
+    /// ranking moving in *opposite* directions on one seed — selecting a
+    /// distillation run's artifact on AUC can publish its worst ranking
+    /// checkpoint while the run reports success.
+    best_policy: bool,
+    /// Build and train the opponent-hand belief head (`head_opp.*`,
+    /// round 39): per-name hold probabilities fit against the recorded
+    /// truth with multi-label BCE at the auxiliary weight. Engine-
+    /// consumed (belief-weighted determinization), so exports carry it.
+    /// Off is the control.
+    opp_head: bool,
+    /// Weight of the search-value regression inside the policy step
+    /// (round 39, Reanalyze-lite): the win head pulled toward the
+    /// search's per-arm mean rewards on successor states, MSE weighted
+    /// by rollout counts. 0 (default) = off, the historical control.
+    /// UCB1 captures only — Gumbel improved-policy logits are not win
+    /// probabilities. Needs `--record-decisions` and MCTS actors to
+    /// have anything to regress against.
+    search_value_weight: f32,
     /// current net (see `SampleWindow::relabel_lambda`).
     lambda: f32,
     /// Learner steps between recomputing the lambda-returns. They are
@@ -225,6 +263,23 @@ struct Args {
     /// slower per game than heuristic actors: size `--games` from a
     /// measured probe, not hope.
     mcts_actors: u32,
+    /// Mixed actor fleet (round 37 — the KataGo playout-cap-
+    /// randomization idea translated to this loop's shape): only the
+    /// first N actor threads pilot with MCTS; the rest play the plain
+    /// net pilot and record no decisions (thread-scoped capture
+    /// override). 0 (default) = every actor is MCTS when
+    /// `--mcts-actors` is set, the historical all-or-nothing.
+    ///
+    /// The point is that the two data streams have different budgets:
+    /// policy targets need *searched* decisions (~1.5 games/s at
+    /// MCTS-64), while the value window needs volume (~50–100× that) —
+    /// and an all-MCTS fleet leaves the learner asleep ~85 % of wall
+    /// clock on the reuse throttle (r35/r37 measured). A mixed fleet
+    /// feeds both at once. Pair with a large `--actors` (hundreds):
+    /// every fleet member spends most of its time blocked in the
+    /// batched evaluator, so thread count, not core count, is what
+    /// fills batches and cores alike.
+    mcts_fleet: usize,
     /// Width overrides — the engine reads sizes from the tensor shapes,
     /// so capacity is a flag, not a format change. `--seed-emb` requires
     /// the deck net's width, so it refuses a changed `--emb-dim`.
@@ -268,8 +323,9 @@ struct Args {
     /// resumes from an existing `latest.safetensors`.
     seed_emb: Option<PathBuf>,
     /// Ablation control: comma-separated feature blocks to switch *off*
-    /// in the encoder (`lib`, `cast`). See
-    /// `crabomination::server::encode::set_encode_ablation`.
+    /// in the encoder. See
+    /// `crabomination::server::encode::ABLATION_BLOCKS` for the names;
+    /// an unrecognised one exits rather than silently ablating nothing.
     ablate: Vec<String>,
     /// Diagnostic mode: local-discrimination test over N games. See
     /// `pairwise`.
@@ -286,6 +342,16 @@ struct Args {
     /// its edge on snapshots and loses it on sim leaves would produce
     /// exactly that pattern while every other instrument reads fine.
     calibrate_leaves: Option<usize>,
+    /// Diagnostic mode: play N games and report how often each encoder
+    /// feature is non-zero in the resulting positions. See
+    /// [`feature_census`].
+    feature_census: Option<usize>,
+    /// Record snapshots at declare-blockers and end-of-combat as well as
+    /// at the turn/main/end points every run through round 39 used. See
+    /// `crabomination::selfplay::set_combat_snapshots` — without it no
+    /// training row is ever a combat row, and the combat features the
+    /// search feeds at inference time have never had a gradient.
+    record_combat: bool,
 }
 
 fn parse_args() -> Args {
@@ -300,6 +366,11 @@ fn parse_args() -> Args {
         record_decisions: false,
         policy_every: 4,
         policy_temp: 0.1,
+        policy_head: false,
+        mcts_gumbel: false,
+        best_policy: false,
+        opp_head: false,
+        search_value_weight: 0.0,
         lambda: 1.0,
         relabel_every: 200,
         window: 250_000,
@@ -320,6 +391,8 @@ fn parse_args() -> Args {
         gate_builder_v2: None,
         calibrate: None,
         calibrate_leaves: None,
+        feature_census: None,
+        record_combat: false,
         pairwise: None,
         use_deck_best: None,
         seed_emb: None,
@@ -333,6 +406,7 @@ fn parse_args() -> Args {
         sample_temp: 0,
         sample_turns: 6,
         mcts_actors: 0,
+        mcts_fleet: 0,
         emb_dim: None,
         obj_hidden: None,
         h1: None,
@@ -353,7 +427,31 @@ fn parse_args() -> Args {
             "--reuse" => a.reuse = val().parse().expect("--reuse"),
             "--bce" => a.bce = true,
             "--record-decisions" => a.record_decisions = true,
+            "--record-combat" => a.record_combat = true,
             "--policy-temp" => a.policy_temp = val().parse().expect("--policy-temp"),
+            "--policy-head" => {
+                a.policy_head = true;
+                continue; // bare flag, consumes no value
+            }
+            "--mcts-gumbel" => {
+                a.mcts_gumbel = true;
+                continue; // bare flag, consumes no value
+            }
+            "--best-metric" => {
+                let m = val();
+                a.best_policy = match m.as_str() {
+                    "policy" => true,
+                    "auc" => false,
+                    other => panic!("--best-metric: {other:?} (expected auc or policy)"),
+                };
+            }
+            "--opp-head" => {
+                a.opp_head = true;
+                continue; // bare flag, consumes no value
+            }
+            "--search-value-weight" => {
+                a.search_value_weight = val().parse().expect("--search-value-weight")
+            }
             "--policy-every" => {
                 a.policy_every = val().parse::<u64>().expect("--policy-every")
             }
@@ -378,6 +476,9 @@ fn parse_args() -> Args {
             "--calibrate" => a.calibrate = Some(val().parse().expect("--calibrate")),
             "--calibrate-leaves" => {
                 a.calibrate_leaves = Some(val().parse().expect("--calibrate-leaves"))
+            }
+            "--feature-census" => {
+                a.feature_census = Some(val().parse().expect("--feature-census"))
             }
             "--pairwise" => a.pairwise = Some(val().parse().expect("--pairwise")),
             "--use-deck-best" => a.use_deck_best = Some(PathBuf::from(val())),
@@ -421,6 +522,7 @@ fn parse_args() -> Args {
             "--sample-temp" => a.sample_temp = val().parse().expect("--sample-temp"),
             "--sample-turns" => a.sample_turns = val().parse().expect("--sample-turns"),
             "--mcts-actors" => a.mcts_actors = val().parse().expect("--mcts-actors"),
+            "--mcts-fleet" => a.mcts_fleet = val().parse().expect("--mcts-fleet"),
             "--emb-dim" => a.emb_dim = Some(val().parse().expect("--emb-dim")),
             "--obj-hidden" => a.obj_hidden = Some(val().parse().expect("--obj-hidden")),
             "--h1" => a.h1 = Some(val().parse().expect("--h1")),
@@ -454,6 +556,8 @@ fn net_config(args: &Args, vocab: usize) -> crabomination_ml::NetConfig {
     };
     cfg.aux = args.aux;
     cfg.blocks = args.blocks;
+    cfg.policy = args.policy_head;
+    cfg.opp = args.opp_head;
     assert!(
         !(cfg.attn && cfg.blocks > 0),
         "--attn and --blocks are mutually exclusive architectures"
@@ -479,6 +583,20 @@ fn net_config(args: &Args, vocab: usize) -> crabomination_ml::NetConfig {
         );
     }
     cfg
+}
+
+/// Whether a checkpoint carries the policy head. Drives the model shape
+/// used to reload other runs' artifacts (the frozen pilot, the batch
+/// eval server): candle's `VarMap::load` errors on a var the file lacks
+/// and silently ignores file tensors the model lacks, so the shape has
+/// to follow the *file*, not this run's flags — a `--policy-head` run
+/// piloted by a headless champion-class net is the normal gen-0 case.
+fn file_heads(path: &std::path::Path) -> (bool, bool) {
+    std::fs::read(path)
+        .ok()
+        .and_then(|b| crabomination_nn::PlayNet::load(&b).ok())
+        .map(|n| (n.has_policy_head(), n.has_opp_head()))
+        .unwrap_or((false, false))
 }
 
 /// True when this trajectory belongs to the held-out set. A hash of the
@@ -515,6 +633,10 @@ struct Shared {
     /// Next self-play game index to claim — also the per-game seed salt.
     next_game: AtomicU64,
     games_done: AtomicU64,
+    /// Games played by the MCTS fleet specifically. Decisions are the
+    /// binding budget of a distillation run, so the mix has to be
+    /// legible per checkpoint rather than inferred from the deque.
+    games_mcts: AtomicU64,
     stalls: AtomicU64,
     /// The two ways a stall happens, so a moving stall rate names its own
     /// cause instead of only its size. `stalls - capped - stuck` is the
@@ -530,7 +652,7 @@ struct Shared {
 
 const DECK_WINDOW_CAP: usize = 200_000;
 
-fn actor_loop(shared: &Shared, args: &Args, vocab: &Vocab, deck_judge: Option<&DeckNet>) {
+fn actor_loop(shared: &Shared, args: &Args, vocab: &Vocab, deck_judge: Option<&DeckNet>, mcts: bool) {
     loop {
         if shared.stop.load(Ordering::Relaxed) {
             break;
@@ -591,34 +713,49 @@ fn actor_loop(shared: &Shared, args: &Args, vocab: &Vocab, deck_judge: Option<&D
             salt(5),
             4_000,
             vocab,
-            if args.use_best.is_some() { args.mcts_actors } else { 0 },
+            if mcts { args.mcts_actors } else { 0 },
+            args.mcts_gumbel,
         );
+        if mcts && args.mcts_actors > 0 {
+            shared.games_mcts.fetch_add(1, Ordering::Relaxed);
+        }
         // Decisions are captured into a thread-local buffer during the
         // game, so each actor drains its own. Split by the same
-        // trajectory-hash rule the value rows use, so a game's decisions
-        // and its positions never straddle the train/holdout boundary.
+        // trajectory-hash rule the value rows use — `traj = (seed << 1) |
+        // seat`, hashed — so a seat's decisions land on the same side as
+        // that seat's positions. (Until round 37 this hashed the *game
+        // index* instead, a third key independent of both row hashes, so
+        // a game's positions could train while its decisions validated —
+        // exactly the leak the comment here claimed was impossible.)
         if args.record_decisions {
             let captured = crabomination::server::decision_capture::drain();
             if !captured.is_empty() {
                 const DECISION_CAP: usize = 200_000;
                 const DECISION_VAL_CAP: usize = 4_000;
-                let held = is_holdout(n as u32, args.holdout);
-                let converted: Vec<crabomination_ml::DecisionRow> = captured
+                let traj_base = (salt(5) as u32) << 1;
+                let converted: Vec<(bool, crabomination_ml::DecisionRow)> = captured
                     .into_iter()
-                    .map(|d| crabomination_ml::DecisionRow {
-                        successors: d.successors,
-                        chosen: d.chosen,
-                        values: d.values,
+                    .map(|d| {
+                        (
+                            is_holdout(traj_base | d.seat as u32, args.holdout),
+                            crabomination_ml::DecisionRow {
+                                successors: d.successors,
+                                chosen: d.chosen,
+                                values: d.values,
+                                values_are_logits: d.values_are_logits,
+                                visits: d.visits,
+                            },
+                        )
                     })
                     .collect();
-                if held {
-                    let mut v = shared.decisions_val.lock().unwrap();
-                    if v.len() < DECISION_VAL_CAP {
-                        v.extend(converted);
-                    }
-                } else {
-                    let mut d = shared.decisions.lock().unwrap();
-                    for row in converted {
+                let mut v = shared.decisions_val.lock().unwrap();
+                let mut d = shared.decisions.lock().unwrap();
+                for (held, row) in converted {
+                    if held {
+                        if v.len() < DECISION_VAL_CAP {
+                            v.push(row);
+                        }
+                    } else {
                         if d.len() == DECISION_CAP {
                             d.pop_front();
                         }
@@ -1138,15 +1275,21 @@ fn main() {
     // Before anything encodes: the diagnostics below must see the same
     // features the run being diagnosed was trained on.
     if !args.ablate.is_empty() {
-        crabomination::server::encode::set_encode_ablation(
-            !args.ablate.iter().any(|b| b == "lib"),
-            !args.ablate.iter().any(|b| b == "cast"),
-            !args.ablate.iter().any(|b| b == "rel"),
-            !args.ablate.iter().any(|b| b == "combat"),
-            !args.ablate.iter().any(|b| b == "kw"),
-        );
+        let off: Vec<&str> = args.ablate.iter().map(String::as_str).collect();
+        if let Err(e) = crabomination::server::encode::set_encode_ablation_off(&off) {
+            eprintln!("--ablate: {e}");
+            std::process::exit(2);
+        }
         eprintln!("encoder ablation: {} switched off", args.ablate.join(", "));
     }
+    // Same rule as the ablation above: every path that encodes — the
+    // diagnostics included — must see the cadence the run being
+    // diagnosed recorded with.
+    crabomination::selfplay::set_combat_snapshots(args.record_combat);
+    eprintln!(
+        "snapshot cadence: turn/postcombat/end{}",
+        if args.record_combat { " + declare-blockers/end-combat" } else { " (no combat rows)" }
+    );
     let vocab = Vocab::sos_sealed();
     if let Some(games) = args.gate_builder_v2 {
         gate_builder_v2(&args, games);
@@ -1166,6 +1309,10 @@ fn main() {
     }
     if args.distill_train {
         distill_train(&args, &vocab);
+        return;
+    }
+    if let Some(games) = args.feature_census {
+        feature_census(&args, &vocab, games);
         return;
     }
     if let Some(games) = args.calibrate {
@@ -1198,6 +1345,10 @@ fn main() {
     // A frozen copy of the pilot, for the `pilot_policy` reference.
     // lr 0 and never stepped: this exists only to score.
     let pilot_trainer: Option<Trainer> = args.record_decisions.then(|| args.use_best.as_ref()).flatten().and_then(|p| {
+        // The pilot's shape follows the pilot's file, not this run's
+        // architecture flags — see `file_has_policy_head`.
+        let mut cfg = cfg;
+        (cfg.policy, cfg.opp) = file_heads(p);
         let mut t = Trainer::new(&cfg, 0.0).ok()?;
         match t.load(p) {
             Ok(()) => {
@@ -1258,7 +1409,8 @@ fn main() {
     });
     if let Some(best) = &args.use_best {
         if args.gpu_eval {
-            let cfg = net_config(&args, vocab.size());
+            let mut cfg = net_config(&args, vocab.size());
+            (cfg.policy, cfg.opp) = file_heads(best);
             let client = crabomination_ml::BatchEvalServer::start(
                 &cfg,
                 best,
@@ -1292,10 +1444,32 @@ fn main() {
             eprintln!("recording decisions, MEASURING ONLY (no policy training)");
         } else {
             eprintln!(
-                "recording decisions (policy step every {} value steps)",
-                args.policy_every
+                "recording decisions (policy step every {} value steps, into {})",
+                args.policy_every,
+                if args.policy_head { "the policy head" } else { "the win head" }
             );
         }
+    }
+    if args.mcts_gumbel {
+        assert!(
+            args.mcts_actors > 0,
+            "--mcts-gumbel shapes the MCTS actors' search; it needs --mcts-actors > 0"
+        );
+        // Which prior the Gumbel actors will actually run with, said
+        // once at startup rather than discovered from a null result: a
+        // headless pilot silently falls back to heuristic-score priors,
+        // which is a legitimate control arm but a different experiment.
+        let learned = crabomination::server::net_eval::slot_has_policy(
+            crabomination::server::net_eval::SLOT_BEST,
+        );
+        eprintln!(
+            "gumbel actors: {}",
+            if learned {
+                "policy-head priors"
+            } else {
+                "heuristic-score priors (pilot carries no policy head)"
+            }
+        );
     }
 
     let shared = Shared {
@@ -1307,12 +1481,22 @@ fn main() {
         rows_pushed: AtomicU64::new(0),
         next_game: AtomicU64::new(0),
         games_done: AtomicU64::new(0),
+        games_mcts: AtomicU64::new(0),
         stalls: AtomicU64::new(0),
         stalls_capped: AtomicU64::new(0),
         stalls_stuck: AtomicU64::new(0),
         live_actors: AtomicU64::new(args.actors as u64),
         stop: AtomicBool::new(false),
     };
+    let mcts_all = args.use_best.is_some() && args.mcts_actors > 0;
+    let fleet_split = mcts_all && args.mcts_fleet > 0 && args.mcts_fleet < args.actors;
+    if fleet_split {
+        eprintln!(
+            "mixed fleet: {} mcts actors + {} value actors (decisions recorded from the mcts fleet only)",
+            args.mcts_fleet,
+            args.actors - args.mcts_fleet
+        );
+    }
     eprintln!(
         "selfplay_train: {} actors, vocab {}, window {}, batch {}, reuse cap {}x",
         args.actors,
@@ -1323,23 +1507,40 @@ fn main() {
     );
 
     let start = Instant::now();
+    // The per-thread fleet flag is a Copy the closure must own (a loop
+    // local can't outlive the scope), so the shared state is re-borrowed
+    // here for the `move` closures to capture by reference.
+    let shared_r = &shared;
+    let args_r = &args;
+    let vocab_r = &vocab;
+    let judge_r = deck_judge.as_ref();
     std::thread::scope(|scope| {
-        for _ in 0..args.actors {
+        for i in 0..args.actors {
+            let mcts_thread = mcts_all && (!fleet_split || i < args.mcts_fleet);
             // SOS games overflow the default stack (see bot_probe) — match
             // the ladder's 32 MB workers.
             std::thread::Builder::new()
                 .stack_size(32 * 1024 * 1024)
-                .spawn_scoped(scope, || {
+                .spawn_scoped(scope, move || {
                     // Data-generation exploration only: the sampling
                     // config is thread-local, so gates and calibration
                     // (different threads/processes) stay argmax.
-                    if args.sample_temp > 0 {
+                    if args_r.sample_temp > 0 {
                         crabomination::server::bot::set_action_sampling(Some((
-                            args.sample_temp,
-                            args.sample_turns,
+                            args_r.sample_temp,
+                            args_r.sample_turns,
                         )));
                     }
-                    actor_loop(&shared, &args, &vocab, deck_judge.as_ref())
+                    // In a mixed fleet only the search pilots feed the
+                    // decision stream: a value actor's picks are one-hot
+                    // imitation targets that would bury the distillation
+                    // targets at ~50-100x the games rate. Thread-local,
+                    // like the sampling config above, so nothing outside
+                    // this thread is affected.
+                    if fleet_split {
+                        crabomination::server::decision_capture::set_thread_enabled(mcts_thread);
+                    }
+                    actor_loop(shared_r, args_r, vocab_r, judge_r, mcts_thread)
                 })
                 .expect("spawn actor");
         }
@@ -1350,7 +1551,7 @@ fn main() {
         let mut step = 0u64;
         // EMAs of [total, win, life, len] — decomposed so a regime change
         // in one head (or in effective sample reuse) is visible.
-        let mut loss_ema = [f32::NAN; 4];
+        let mut loss_ema = [f32::NAN; 5];
         let mut deck_loss_ema = f32::NAN;
         // Best held-out AUC seen so far; drives `best.safetensors`.
         let mut best_auc = f32::NEG_INFINITY;
@@ -1360,6 +1561,7 @@ fn main() {
         // (samples consumed when the actors finished, tail allowance).
         let mut policy_ema = f32::NAN;
         let mut policy_loss_ema = f32::NAN;
+        let mut policy_sv_ema = f32::NAN;
         let mut tail_budget = None::<(u64, u64)>;
         let stats_path = args.out.join("stats.jsonl");
         let mut prev_interval = Interval::default();
@@ -1433,7 +1635,7 @@ fn main() {
             step += 1;
             for (ema, part) in loss_ema
                 .iter_mut()
-                .zip([loss.total, loss.win, loss.life, loss.len])
+                .zip([loss.total, loss.win, loss.life, loss.len, loss.opp])
             {
                 *ema = if ema.is_nan() { part } else { 0.99 * *ema + 0.01 * part };
             }
@@ -1459,7 +1661,11 @@ fn main() {
                 };
                 if !sample.is_empty() {
                     let refs: Vec<&crabomination_ml::DecisionRow> = sample.iter().collect();
-                    if let Ok(st) = trainer.train_policy_step_temp(&refs, args.policy_temp) {
+                    if let Ok(st) = trainer.train_policy_step_full(
+                        &refs,
+                        args.policy_temp,
+                        args.search_value_weight,
+                    ) {
                         policy_ema = if policy_ema.is_nan() {
                             st.top1
                         } else {
@@ -1469,6 +1675,11 @@ fn main() {
                             st.loss
                         } else {
                             0.99 * policy_loss_ema + 0.01 * st.loss
+                        };
+                        policy_sv_ema = if policy_sv_ema.is_nan() {
+                            st.sv
+                        } else {
+                            0.99 * policy_sv_ema + 0.01 * st.sv
                         };
                     }
                 }
@@ -1511,7 +1722,7 @@ fn main() {
                     start,
                     &stats_path,
                     &mut best_auc,
-                    [policy_ema, policy_loss_ema],
+                    [policy_ema, policy_loss_ema, policy_sv_ema],
                     pilot_trainer.as_ref(),
                     &mut timing,
                     &mut prev_interval,
@@ -1544,7 +1755,7 @@ fn main() {
                 start,
                 &stats_path,
                 &mut best_auc,
-                [policy_ema, policy_loss_ema],
+                [policy_ema, policy_loss_ema, policy_sv_ema],
                 pilot_trainer.as_ref(),
                 &mut timing,
                 &mut prev_interval,
@@ -1595,11 +1806,11 @@ fn checkpoint(
     shared: &Shared,
     step: u64,
     consumed: u64,
-    loss_ema: [f32; 4],
+    loss_ema: [f32; 5],
     start: Instant,
     stats_path: &std::path::Path,
     best_auc: &mut f32,
-    policy_ema: [f32; 2],
+    policy_ema: [f32; 3],
     pilot: Option<&Trainer>,
     timing: &mut LearnerTiming,
     prev: &mut Interval,
@@ -1611,12 +1822,13 @@ fn checkpoint(
     deck_trainer.save(&dtmp).expect("save deck checkpoint");
     std::fs::rename(&dtmp, args.out.join("deck-latest.safetensors")).expect("publish deck");
     let games = shared.games_done.load(Ordering::Relaxed);
+    let games_mcts = shared.games_mcts.load(Ordering::Relaxed);
     let rows = shared.rows_pushed.load(Ordering::Relaxed);
     let stalls = shared.stalls.load(Ordering::Relaxed);
     let stalls_capped = shared.stalls_capped.load(Ordering::Relaxed);
     let stalls_stuck = shared.stalls_stuck.load(Ordering::Relaxed);
     let secs = start.elapsed().as_secs_f64();
-    let [total, win, life, len] = loss_ema;
+    let [total, win, life, len, opp] = loss_ema;
     // Held-out scoring, against BOTH labels a row has.
     //
     // `loss_win` is the training EMA against whatever target the learner
@@ -1752,7 +1964,7 @@ fn checkpoint(
             )
         }
     };
-    let [policy_top1, policy_loss] = policy_ema;
+    let [policy_top1, policy_loss, policy_sv] = policy_ema;
     // The pilot's own agreement with the search, on the same holdout.
     // Round 34 could not separate "the search disagrees with its
     // evaluator" from "these are two different nets": MCTS rolls out on
@@ -1770,7 +1982,7 @@ fn checkpoint(
     };
     let [t_sample, t_step, t_relabel, t_deck, t_sleep] = timing.take_ms();
     let line = format!(
-        "{{\"step\":{step},\"loss_ema\":{total:.5},\"loss_win\":{win:.5},\"loss_life\":{life:.5},\"loss_len\":{len:.5},\"loss_deck\":{deck_loss:.5},\"val_n\":{val_n},\"val_win\":{val_win:.5},\"val_tgt\":{val_tgt:.5},\"val_logloss\":{val_ll:.5},\"val_auc\":{val_auc:.5},\"policy_top1\":{policy_top1:.4},\"policy_loss\":{policy_loss:.5},\"val_policy\":{val_policy:.4},\"val_policy_chance\":{val_policy_chance:.4},\"pilot_policy\":{pilot_policy:.4},\"val_policy_n\":{val_policy_n},\"train_n\":{train_n},\"train_raw\":{train_raw:.5},\"train_tgt\":{train_tgt:.5},\"rows_consumed\":{consumed},\"rows\":{rows},\"games\":{games},\"stalls\":{stalls},\"stalls_capped\":{stalls_capped},\"stalls_stuck\":{stalls_stuck},\"elapsed_s\":{secs:.0},\"games_per_s\":{dg:.3},\"rows_per_s\":{dr:.1},\"consumed_per_s\":{dc:.1},\"steps_per_s\":{ds:.3},\"games_per_s_cum\":{cum_g:.3},\"rows_per_s_cum\":{cum_r:.1},\"t_sample_ms\":{t_sample},\"t_step_ms\":{t_step},\"t_relabel_ms\":{t_relabel},\"t_deck_ms\":{t_deck},\"t_sleep_ms\":{t_sleep}}}\n"
+        "{{\"step\":{step},\"loss_ema\":{total:.5},\"loss_win\":{win:.5},\"loss_life\":{life:.5},\"loss_len\":{len:.5},\"loss_opp\":{opp:.5},\"loss_deck\":{deck_loss:.5},\"val_n\":{val_n},\"val_win\":{val_win:.5},\"val_tgt\":{val_tgt:.5},\"val_logloss\":{val_ll:.5},\"val_auc\":{val_auc:.5},\"policy_top1\":{policy_top1:.4},\"policy_loss\":{policy_loss:.5},\"policy_sv\":{policy_sv:.5},\"val_policy\":{val_policy:.4},\"val_policy_chance\":{val_policy_chance:.4},\"pilot_policy\":{pilot_policy:.4},\"val_policy_n\":{val_policy_n},\"train_n\":{train_n},\"train_raw\":{train_raw:.5},\"train_tgt\":{train_tgt:.5},\"rows_consumed\":{consumed},\"rows\":{rows},\"games\":{games},\"games_mcts\":{games_mcts},\"stalls\":{stalls},\"stalls_capped\":{stalls_capped},\"stalls_stuck\":{stalls_stuck},\"elapsed_s\":{secs:.0},\"games_per_s\":{dg:.3},\"rows_per_s\":{dr:.1},\"consumed_per_s\":{dc:.1},\"steps_per_s\":{ds:.3},\"games_per_s_cum\":{cum_g:.3},\"rows_per_s_cum\":{cum_r:.1},\"t_sample_ms\":{t_sample},\"t_step_ms\":{t_step},\"t_relabel_ms\":{t_relabel},\"t_deck_ms\":{t_deck},\"t_sleep_ms\":{t_sleep}}}\n"
     );
     use std::io::Write;
     let mut f = std::fs::OpenOptions::new()
@@ -1788,10 +2000,20 @@ fn checkpoint(
     // and every calibration before this was therefore scored on a
     // memorised checkpoint. Publishing `best.safetensors` costs one file
     // and makes those comparisons mean what they claim to.
-    let scored = val_n > 0 && val_auc.is_finite();
+    //
+    // Which holdout number "best" means is the run's stated objective:
+    // AUC by default, `val_policy` under `--best-metric policy`. Round
+    // 34 measured the two moving in opposite directions on one seed, so
+    // a distillation run selected on AUC can publish its worst *ranking*
+    // checkpoint while reporting success.
+    let (scored, metric) = if args.best_policy {
+        (val_policy_n > 0 && val_policy.is_finite(), val_policy)
+    } else {
+        (val_n > 0 && val_auc.is_finite(), val_auc)
+    };
     let mut improved = false;
-    if scored && val_auc > *best_auc {
-        *best_auc = val_auc;
+    if scored && metric > *best_auc {
+        *best_auc = metric;
         let btmp = args.out.join("best.safetensors.tmp");
         trainer.save(&btmp).expect("save best checkpoint");
         std::fs::rename(&btmp, args.out.join("best.safetensors")).expect("publish best");
@@ -1839,6 +2061,103 @@ fn checkpoint(
 /// logistic to its score (`p = sigmoid(score / t)`, `t` chosen by scan),
 /// so it is scored as the best probability forecast that evaluation can
 /// support rather than penalised for not being calibrated.
+/// How often each encoder feature is actually non-zero in the positions
+/// self-play produces, and how big it gets when it is.
+///
+/// The question a new feature block has to answer before it earns a GPU
+/// run: a feature that is zero in 99.9 % of positions cannot move a
+/// gate no matter how well-motivated it is, and the round-12 and
+/// round-28f nulls were both blocks nobody had measured the occupancy
+/// of first. Cheap — no net, no GPU, one self-play pass — and it reads
+/// the encoder as it is currently ablated, so it can also confirm that
+/// a control arm really is blanking what it claims to.
+///
+/// Object rates are per encoded object over every group; global rates
+/// are per position. Both are the denominator the trainer sees, not the
+/// denominator of "positions where the feature could apply" — a rate of
+/// 2 % on a battlefield-only feature means 2 % of *all* objects, hand
+/// and library included.
+fn feature_census(args: &Args, vocab: &Vocab, games: usize) {
+    use crabomination_nn::{GLOBAL_FEATS, OBJ_FEATS};
+
+    let mut obj_hits = [0u64; OBJ_FEATS];
+    let mut obj_sum = [0f64; OBJ_FEATS];
+    let mut gl_hits = [0u64; GLOBAL_FEATS];
+    let mut gl_sum = [0f64; GLOBAL_FEATS];
+    let (mut objects, mut positions) = (0u64, 0u64);
+    let mut rng = StdRng::seed_from_u64(args.seed ^ 0xFEA7);
+    for n in 0..games as u64 {
+        let salt =
+            |k: u64| args.seed ^ n.wrapping_mul(0x9E37_79B9_7F4A_7C15).wrapping_add(k * 0xCA1);
+        let deck_a = heuristic_sealed_build(&sealed_pool(salt(1)), salt(3));
+        let deck_b = heuristic_sealed_build(&sealed_pool(salt(2)), salt(4));
+        let template = sealed_game_template(&deck_a, &deck_b);
+        let rec = play_recorded_game(
+            &template,
+            [EvalWeights::default(), EvalWeights::default()],
+            rng.random_range(0..u64::MAX),
+            50_000,
+            vocab,
+        );
+        for row in &rec.rows {
+            positions += 1;
+            for (i, v) in row.state.global.iter().enumerate() {
+                if *v != 0.0 {
+                    gl_hits[i] += 1;
+                    gl_sum[i] += v.abs() as f64;
+                }
+            }
+            for group in &row.state.groups {
+                for o in group {
+                    objects += 1;
+                    for (i, v) in o.feats.iter().enumerate() {
+                        if *v != 0.0 {
+                            obj_hits[i] += 1;
+                            obj_sum[i] += v.abs() as f64;
+                        }
+                    }
+                }
+            }
+        }
+    }
+    if positions == 0 {
+        eprintln!("feature census: no positions recorded");
+        return;
+    }
+    // Which block each slot belongs to, so the report reads as a verdict
+    // on blocks rather than a wall of indices.
+    let obj_block = |i: usize| match i {
+        0..=11 => "base",
+        12..=19 => "keywords",
+        20..=27 => "cast",
+        28..=36 => "rel",
+        37..=39 => "combat",
+        40..=44 => "kw",
+        45..=47 => "exp",
+        _ => "ctr",
+    };
+    let gl_block = |i: usize| match i {
+        0..=23 => "base",
+        24..=35 => "cast",
+        36..=40 => "combat",
+        41..=42 => "kw",
+        _ => "hist",
+    };
+    println!("feature census over {positions} positions / {objects} objects from {games} games");
+    println!("\nglobals (rate = share of positions non-zero, mean = mean |value| when non-zero)");
+    for i in 0..GLOBAL_FEATS {
+        let rate = 100.0 * gl_hits[i] as f64 / positions as f64;
+        let mean = if gl_hits[i] > 0 { gl_sum[i] / gl_hits[i] as f64 } else { 0.0 };
+        println!("  g{i:<3} {:<7} {rate:6.2}%  {mean:.3}", gl_block(i));
+    }
+    println!("\nobject feats (rate = share of all encoded objects non-zero)");
+    for i in 0..OBJ_FEATS {
+        let rate = 100.0 * obj_hits[i] as f64 / objects as f64;
+        let mean = if obj_hits[i] > 0 { obj_sum[i] / obj_hits[i] as f64 } else { 0.0 };
+        println!("  f{i:<3} {:<8} {rate:6.2}%  {mean:.3}", obj_block(i));
+    }
+}
+
 fn calibrate(args: &Args, vocab: &Vocab, games: usize) {
     let best = args.use_best.as_ref().expect("--calibrate needs --use-best WEIGHTS");
     let cfg = net_config(args, vocab.size());
@@ -1976,6 +2295,7 @@ fn calibrate_leaves(args: &Args, vocab: &Vocab, games: usize) {
                 traj: 0,
                 ply: 0,
                 aux: [0.0; crabomination_nn::AUX_FEATS],
+                opp_hand: Vec::new(),
             })
             .collect();
         let refs: Vec<&TrainRow> = leaf_rows.iter().collect();
