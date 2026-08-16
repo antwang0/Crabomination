@@ -43,6 +43,17 @@ const HAND_TILT_X: f32 = -1.16;
 // ── Battlefield layout constants ─────────────────────────────────────────────
 
 const BF_Y: f32 = 0.02;
+/// Per-slot height ramp along a battlefield row.
+///
+/// A row wider than its column compresses below `CARD_WIDTH` (a 1v1 land
+/// row does this from eight groups on, and any row does it once its cards
+/// are tapped and rotated 90°). Two overlapping quads at the *same* Y are
+/// coplanar, and the depth buffer then flickers between them frame to
+/// frame — the "glitching, intersecting" board. Ramping Y by slot makes
+/// the overlap a clean shingle instead: strictly ordered in depth, and at
+/// one card-thickness per slot the lift is invisible from the camera's
+/// grazing angle even across a dozen slots.
+const BF_SLOT_Y_STEP: f32 = CARD_THICKNESS;
 /// Per-slot battlefield spacing. Sized to the longer axis (CARD_HEIGHT)
 /// with extra headroom so adjacent **tapped** creatures don't visually
 /// overlap — a tapped card rotates 90° and its long edge (CARD_HEIGHT)
@@ -543,16 +554,22 @@ pub fn bf_card_transform(
         base_rot
     };
 
-    Transform::from_xyz(x, BF_Y, z).with_rotation(rot)
+    Transform::from_xyz(x, BF_Y + slot as f32 * BF_SLOT_Y_STEP, z).with_rotation(rot)
 }
 
 /// True if this permanent lays out in the back row (lands + support).
-/// The front row is reserved for creatures — the cards that fight — while
-/// mana rocks, enchantments, planeswalkers, and other noncreature
-/// permanents sit alongside the lands, matching how players physically
-/// arrange busy commander boards.
+/// The front row holds the permanents that fight or get fought over —
+/// creatures *and planeswalkers* — while mana rocks, enchantments, and
+/// other noncreature permanents sit alongside the lands, matching how
+/// players physically arrange busy commander boards.
+///
+/// A planeswalker parked in the land row read as a land: it sat behind
+/// the creatures, away from the combat line it is attacked across, and it
+/// inflated the land row's group count (which is what compresses that row
+/// into an overlapping smear). Planeswalkers are permanents you point
+/// attackers and burn at, so they belong on the front line.
 pub fn in_back_row(c: &crabomination::net::PermanentView) -> bool {
-    c.is_land() || !c.is_creature()
+    c.is_land() || !(c.is_creature() || c.is_planeswalker())
 }
 
 /// Returns `(group_slot, index_in_group, total_groups)` for a back-row
@@ -628,7 +645,8 @@ pub fn back_row_group_info_from_view(
 /// nontoken permanent is its own group. Returns `(group_slot,
 /// index_in_group, total_groups)` for `card_id`, in first-appearance order
 /// — the same shape `back_row_group_info_from_view` returns for the back
-/// row. Noncreature permanents live in the back row (see [`in_back_row`]).
+/// row. Lands and noncreature, nonplaneswalker permanents live in the back
+/// row (see [`in_back_row`]).
 pub fn creature_group_info_from_view(
     battlefield: &[crabomination::net::PermanentView],
     owner: usize,
@@ -920,6 +938,26 @@ mod tests {
                 single_row,
             );
         }
+    }
+
+    #[test]
+    fn crowded_rows_shingle_instead_of_z_fighting() {
+        // Regression: eight land groups in 1v1 compress below CARD_WIDTH,
+        // so adjacent cards overlap. At a shared Y they are coplanar and
+        // the depth buffer flickers. Every slot must sit at its own height.
+        let half = board_half_for(&seat_spot(0, 0, 2), 2);
+        assert!(
+            bf_spacing_col(8, half) < CARD_WIDTH,
+            "precondition: eight back-row groups really do overlap in 1v1",
+        );
+        let ys: Vec<f32> =
+            (0..8).map(|s| bf_card_transform(0, 0, 2, s, 8, true, false).translation.y).collect();
+        for pair in ys.windows(2) {
+            assert!(pair[1] > pair[0], "slots must be strictly ordered in height: {ys:?}");
+        }
+        // The ramp is a depth tiebreak, not a visible lift: the whole row
+        // stays flat against the table.
+        assert!(ys[7] - ys[0] < 0.3, "shingle ramp must stay imperceptible, got {ys:?}");
     }
 
     #[test]

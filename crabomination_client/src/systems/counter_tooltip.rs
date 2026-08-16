@@ -1730,6 +1730,8 @@ mod tests {
             station_charges: None,
             station_next_threshold: None,
             crewed_count: 0,
+            saddle_value: 0,
+            reconfigurable: false,
             modified: false,
             can_attack_despite_defender: false,
         }

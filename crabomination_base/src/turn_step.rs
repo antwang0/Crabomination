@@ -14,9 +14,10 @@ use serde::{Deserialize, Serialize};
 /// turn boundary, where `Cleanup` precedes the next turn's `Untap` in time
 /// but sorts after it.
 #[derive(
-    Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize,
+    Debug, Clone, Copy, Default, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize,
 )]
 pub enum TurnStep {
+    #[default]
     Untap,
     Upkeep,
     Draw,

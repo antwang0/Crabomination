@@ -967,11 +967,12 @@ fn ui_player_graveyard_step_trigger_poses_card_picker_not_cursor() {
 }
 
 #[test]
-fn graveyard_etb_trigger_auto_picks_for_ui_player() {
-    // Self-ETB triggers push with an auto-picked target (stack.rs's
-    // resolve path) — a wants_ui Zealous Lorecaster controller doesn't
-    // get a picker, but the trigger must still resolve (no soft-lock,
-    // an I/S card comes back to hand).
+fn graveyard_etb_trigger_poses_card_picker_for_ui_player() {
+    // A self-ETB trigger fires off the cast path, which used to push it
+    // with an auto-picked target — the `wants_ui` controller never chose.
+    // It now routes through `drain_trigger_queue` like every other
+    // trigger, so a graveyard-targeting ETB (Zealous Lorecaster) poses the
+    // same ChooseCards modal a step trigger would, and still resolves.
     let mut g = two_player_game();
     g.players[0].wants_ui = true;
     let bolt = g.add_card_to_graveyard(0, catalog::lightning_bolt());
@@ -983,10 +984,21 @@ fn graveyard_etb_trigger_auto_picks_for_ui_player() {
         card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
     })
     .expect("Lorecaster castable");
+    g.perform_action(GameAction::PassPriority).unwrap();
+    g.perform_action(GameAction::PassPriority).unwrap();
+
+    let pending = g.pending_decision.as_ref().expect("ETB graveyard pick pending");
+    match &pending.decision {
+        crabomination::decision::Decision::ChooseCards { candidates, .. } => {
+            assert!(candidates.iter().any(|(cid, _)| *cid == bolt), "the Bolt is offered");
+        }
+        other => panic!("expected ChooseCards for a graveyard target, got {other:?}"),
+    }
+    g.submit_decision(DecisionAnswer::Cards(vec![bolt])).expect("pick resolves");
     drain_stack(&mut g);
     assert!(
         g.players[0].hand.iter().any(|c| c.id == bolt),
-        "ETB auto-returns the instant from the graveyard",
+        "ETB returns the picked instant from the graveyard",
     );
 }
 

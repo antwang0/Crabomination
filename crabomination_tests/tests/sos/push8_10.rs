@@ -1985,6 +1985,52 @@ fn emeritus_of_truce_prepare_spell_exiles_creature_and_grants_life() {
         "Owner should gain life equal to creature's power (2)");
 }
 
+// Emeritus of Truce — "target player creates a 1/1 Inkling". The ETB
+// fires off the cast path, which used to auto-target: a `wants_ui`
+// controller never got to gift the token (and the picker, once it did
+// appear, offered every permanent on the board because `CreateToken`
+// declared no player filter).
+#[test]
+fn emeritus_of_truce_etb_lets_a_ui_controller_gift_the_token() {
+    use crabomination::decision::{Decision, DecisionAnswer};
+    let mut g = two_player_game();
+    g.players[0].wants_ui = true;
+    g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::emeritus_of_truce());
+    g.players[0].mana_pool.add(Color::White, 2);
+    g.players[0].mana_pool.add_colorless(1);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("Emeritus of Truce castable for {1}{W}{W}");
+    g.perform_action(GameAction::PassPriority).unwrap();
+    g.perform_action(GameAction::PassPriority).unwrap();
+
+    let pending = g.pending_decision.as_ref().expect("ETB target pick pending");
+    match &pending.decision {
+        Decision::ChooseTarget { legal, .. } => {
+            assert_eq!(
+                legal,
+                &vec![Target::Player(0), Target::Player(1)],
+                "the token's slot targets a player — creatures must not be offered",
+            );
+        }
+        other => panic!("expected ChooseTarget, got {other:?}"),
+    }
+    // Gift it to the opponent.
+    g.submit_decision(DecisionAnswer::Target(Target::Player(1))).expect("pick accepted");
+    drain_stack(&mut g);
+
+    let inklings: Vec<_> = g
+        .battlefield
+        .iter()
+        .filter(|c| c.definition.name == "Inkling")
+        .collect();
+    assert_eq!(inklings.len(), 1, "exactly one Inkling token");
+    assert_eq!(inklings[0].controller, 1, "the gifted player creates the token");
+}
+
 // Honorbound Page // Forum's Favor — +1/+0 and flying until end of turn.
 #[test]
 fn honorbound_page_prepare_spell_pumps_and_grants_flying() {

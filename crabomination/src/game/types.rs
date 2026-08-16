@@ -1235,6 +1235,22 @@ pub struct PendingTriggerPush {
     /// resolves off-stack.
     #[serde(default)]
     pub from_mana_ability: bool,
+    /// CR 601.2b — the originating cast's X, converge count, and total mana
+    /// spent, for a trigger queued straight off a spell resolving (the
+    /// entrant's own ETB). A body reading `Value::XFromCost` /
+    /// `ConvergedValue` / `CastSpellManaSpent` needs them, and unlike the
+    /// event-dispatch path there is no permanent to read them back off yet.
+    /// All zero for every other push site, which keeps the resolve-time
+    /// fallbacks (`x_value` off the source permanent, converge/mana 0) in
+    /// place — see [`GameState::push_pending_trigger`].
+    ///
+    /// [`GameState::push_pending_trigger`]: crate::game::GameState::push_pending_trigger
+    #[serde(default)]
+    pub x_value: u32,
+    #[serde(default)]
+    pub converged_value: u32,
+    #[serde(default)]
+    pub mana_spent: u32,
 }
 
 /// Which "another permanent" activated-ability cost a suspended

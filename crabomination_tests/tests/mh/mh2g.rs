@@ -300,6 +300,9 @@ fn yusri_wants_ui_prompts_flip_count() {
     g.push_pending_trigger(
         crabomination::game::PendingTriggerPush {
             from_mana_ability: false,
+            x_value: 0,
+            converged_value: 0,
+            mana_spent: 0,
             actor: None,
             source: yusri, controller: 0, effect: eff,
             subject: None, event_amount: 0, mode: None, intervening_if: None,

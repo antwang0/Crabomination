@@ -54,6 +54,7 @@ use systems::animate::{
 };
 use systems::game_ui::{
     apply_swap_front_material, auto_advance_p0, handle_ability_menu, handle_alt_cast_buttons,
+    handle_hand_menu, spawn_hand_menu, HandMenuState,
     handle_auto_pass_toggle, handle_export_keypress, handle_game_input,
     handle_planar_die_keypress, handle_reveal_conspiracy_keypress, poll_action_buttons,
     poll_player_chip_clicks,
@@ -392,6 +393,7 @@ fn main() {
         .init_resource::<systems::decision_ui::AutoOptionalAnswers>()
         .insert_resource(systems::debug_console::DebugConsoleState::default())
         .init_resource::<game::AbilityMenuState>()
+        .init_resource::<HandMenuState>()
         .init_resource::<systems::export_prompt::ExportPromptState>()
         .init_resource::<systems::game_ui::SurrenderConfirm>()
         .insert_resource(initial_stops)
@@ -883,6 +885,15 @@ fn main() {
         .add_systems(
             Update,
             (handle_ability_menu, spawn_ability_menu)
+                .chain()
+                .after(handle_game_input)
+                .run_if(in_state(AppState::InGame)),
+        )
+        // Hand play-option menu: every way a hand card can be played, so
+        // no mechanic is shadowed by the right-click quick-play cascade.
+        .add_systems(
+            Update,
+            (handle_hand_menu, spawn_hand_menu)
                 .chain()
                 .after(handle_game_input)
                 .run_if(in_state(AppState::InGame)),

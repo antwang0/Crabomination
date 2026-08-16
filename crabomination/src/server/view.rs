@@ -1748,6 +1748,8 @@ fn project_permanent(
         equippable: card.definition.is_equipment() && card.definition.has_equip().is_some(),
         equip_token_cost: card.definition.equip_token_cost.clone(),
         crew_value: card.definition.crew_cost().unwrap_or(0),
+        saddle_value: card.definition.saddle_cost().unwrap_or(0),
+        reconfigurable: card.definition.has_reconfigure().is_some(),
         crew_power_bonus: crew_saddle_power_bonus_in(card.id, battlefield),
         saddled: card.saddled,
         crewed_count: card.crewed_by.len() as u32,
@@ -2204,7 +2206,7 @@ fn project_loyalty_abilities(
             index: i,
             loyalty_cost: a.loyalty_cost,
             x_cost: a.x_cost,
-            effect_label: ability_effect_label(&a.effect).to_string(),
+            effect_label: ability_effect_text(&a.effect),
             needs_target: cursor_needs_target(&a.effect),
         })
         .collect()
@@ -2264,7 +2266,7 @@ fn project_abilities_with_granted(
             AbilityView {
                 index: i,
                 cost_label: ability_cost_label(a),
-                effect_label: ability_effect_label(&a.effect).to_string(),
+                effect_label: ability_effect_text(&a.effect),
                 needs_target: cursor_needs_target(&a.effect),
                 is_mana: is_mana_ability(&a.effect),
                 once_per_turn_used: a.once_per_turn && card.once_per_turn_used.contains(&i),
@@ -2639,42 +2641,163 @@ fn counter_kind_label(kind: &crate::card::CounterType) -> &'static str {
     }
 }
 
+/// The mana an `AddMana` ability produces, in MTG symbol notation
+/// ("Add {W}", "Add {B} or {G}", "Add {C}{C}").
+///
+/// [`ability_effect_label`] flattens every mana ability to the bare "Add
+/// mana", which makes the two rows a dual land offers in the right-click
+/// menu indistinguishable — and picking *which* colour to tap for is the
+/// only reason to open that menu on a land. Returns `None` for payloads
+/// whose colour isn't known until activation (the player is asked then),
+/// so the caller keeps the generic wording.
+fn mana_payload_label(pool: &crate::effect::ManaPayload) -> Option<String> {
+    use crate::effect::{ManaPayload as P, Value};
+    // A constant count renders as repeated pips ("{C}{C}"); a computed one
+    // ("add {G} equal to this creature's power") can't, so it renders as
+    // "Add {G}" — the colour, which is the part the menu needs to convey.
+    let repeat = |sym: String, amount: &Value| match amount {
+        Value::Const(n) if *n >= 0 => sym.repeat((*n).min(6) as usize),
+        _ => sym,
+    };
+    let label = match pool {
+        P::Colors(colors) if !colors.is_empty() => {
+            colors.iter().map(|c| format!("{{{c}}}")).collect::<String>()
+        }
+        P::OfColor(c, amount) => repeat(format!("{{{c}}}"), amount),
+        P::OfColors(colors, _) if !colors.is_empty() => colors
+            .iter()
+            .map(|c| format!("{{{c}}}"))
+            .collect::<Vec<_>>()
+            .join(" or "),
+        P::Colorless(amount) => repeat("{C}".to_string(), amount),
+        _ => return None,
+    };
+    (!label.is_empty()).then(|| format!("Add {label}"))
+}
+
+/// The `Effect` variant name, as a sentence: `PreventNextDamageFromChosenSource`
+/// → "Prevent next damage from chosen source".
+///
+/// The last-resort label. `ability_effect_label` has a curated arm for the
+/// shapes worth phrasing by hand, but the effect vocabulary is long-tailed
+/// — hundreds of variants appear on one or two cards each — and its
+/// `_ => "Activate"` catch-all told the player nothing at all about 11.6 %
+/// of the catalog's activated abilities. A mechanically de-camel-cased
+/// variant name is not editorial prose, but it always says what the
+/// ability *is*, and it can never fall behind a newly added variant.
+/// True for a label that describes nothing — the catch-all, and the
+/// explicit "this activation's payoff is its cost" marker. Structural
+/// combinators skip past these when picking a representative child.
+fn label_is_contentless(label: &str) -> bool {
+    label == "Activate" || label == "No effect"
+}
+
+fn humanised_variant_name(effect: &Effect) -> String {
+    let debug = format!("{effect:?}");
+    let name = debug
+        .split([' ', '(', '{'])
+        .next()
+        .unwrap_or_default();
+    let mut out = String::with_capacity(name.len() + 8);
+    for (i, ch) in name.char_indices() {
+        if ch.is_ascii_uppercase() && i > 0 {
+            out.push(' ');
+            out.push(ch.to_ascii_lowercase());
+        } else {
+            out.push(ch);
+        }
+    }
+    if out.is_empty() { "Activate".to_string() } else { out }
+}
+
+/// The children of a structural combinator, whose own labels describe the
+/// ability far better than the wrapper's name does ("Seq" tells nobody
+/// anything). Mirrors the recursion `ability_effect_label` already does,
+/// but at the `String` level so a child's *humanised* label can win too.
+fn structural_children(effect: &Effect) -> Vec<&Effect> {
+    match effect {
+        Effect::Seq(steps) => steps.iter().collect(),
+        Effect::ChooseMode(modes) | Effect::ChooseN { modes, .. } => modes.iter().collect(),
+        Effect::If { then, else_, .. } => vec![then, else_],
+        Effect::MayDoElse { body, else_, .. } => vec![body, else_],
+        Effect::MayDo { body, .. }
+        | Effect::MayDoBy { body, .. }
+        | Effect::MayPay { body, .. }
+        | Effect::MayPayX { body, .. }
+        | Effect::CapTargetsAt { body, .. }
+        | Effect::CapTargetsAtX { body }
+        | Effect::TargetsExactlyX { body }
+        | Effect::OptionalTargets { body, .. }
+        | Effect::ForEach { body, .. }
+        | Effect::Repeat { body, .. }
+        | Effect::Reflexive { body } => vec![body],
+        Effect::UnlessPlayerPays { then, .. } | Effect::Process { then, .. } => vec![then],
+        _ => Vec::new(),
+    }
+}
+
+/// [`ability_effect_label`], but with the mana an `AddMana` ability makes
+/// spelled out, structural wrappers seen through, and — rather than the
+/// bare "Activate" catch-all — a de-camel-cased variant name.
+/// Used for the client-facing `effect_label`.
+fn ability_effect_text(effect: &Effect) -> String {
+    if let Effect::AddMana { pool, .. } = effect
+        && let Some(label) = mana_payload_label(pool)
+    {
+        return label;
+    }
+    let curated = ability_effect_label(effect);
+    if !label_is_contentless(curated) {
+        return curated.to_string();
+    }
+    // A wrapper the curated pass couldn't name: describe what it wraps.
+    for child in structural_children(effect) {
+        let inner = ability_effect_text(child);
+        if !label_is_contentless(&inner) {
+            return inner;
+        }
+    }
+    if matches!(effect, Effect::Noop) {
+        return curated.to_string();
+    }
+    humanised_variant_name(effect)
+}
+
 fn ability_effect_label(effect: &Effect) -> &'static str {
     match effect {
         Effect::AddMana { .. } => "Add mana",
         // Walk into structural combinators: pick the most representative
         // child for the label rather than degenerating to "Activate".
         Effect::Seq(steps) => {
-            // Pick the most representative child: skip the catch-all
-            // "Activate" placeholder, and skip a leading "Sacrifice"
-            // when there's a meaningful follow-up (Goblin Bombardment,
-            // Thud, Greater Good — sac is the cost; the payoff is the
-            // user-facing action). If the only non-trivial step is
-            // Sacrifice, fall through to that.
+            // Pick the most representative child: skip the contentless
+            // placeholders, and skip a leading "Sacrifice" when there's a
+            // meaningful follow-up (Goblin Bombardment, Thud, Greater Good
+            // — sac is the cost; the payoff is the user-facing action). If
+            // the only non-trivial step is Sacrifice, fall through to that.
             let labels: Vec<&'static str> =
                 steps.iter().map(ability_effect_label).collect();
             labels
                 .iter()
                 .copied()
-                .find(|l| *l != "Activate" && *l != "Sacrifice")
-                .or_else(|| labels.iter().copied().find(|l| *l != "Activate"))
+                .find(|l| !label_is_contentless(l) && *l != "Sacrifice")
+                .or_else(|| labels.iter().copied().find(|l| !label_is_contentless(l)))
                 .unwrap_or("Activate")
         }
         Effect::If { then, else_, .. } => {
             // Prefer the `then` branch's label — that's the active outcome
             // when the gate passes (Gemstone Caverns luck-removal etc.).
             let lt = ability_effect_label(then);
-            if lt != "Activate" { lt } else { ability_effect_label(else_) }
+            if !label_is_contentless(lt) { lt } else { ability_effect_label(else_) }
         }
         Effect::ChooseMode(modes) => modes
             .iter()
             .map(ability_effect_label)
-            .find(|l| *l != "Activate")
+            .find(|l| !label_is_contentless(l))
             .unwrap_or("Activate"),
         Effect::ChooseN { modes, .. } => modes
             .iter()
             .map(ability_effect_label)
-            .find(|l| *l != "Activate")
+            .find(|l| !label_is_contentless(l))
             .unwrap_or("Activate"),
         Effect::ForEach { body, .. } | Effect::Repeat { body, .. } => ability_effect_label(body),
         // MayDo / MayPay wrap an inner effect — surface the inner label
@@ -2888,6 +3011,61 @@ fn ability_effect_label(effect: &Effect) -> &'static str {
         Effect::KindleTheCarnage => "Discard → board burn",
         Effect::ChooseTwoColorsForSource => "Choose two colors",
         Effect::GainLifePerChosenColorOfCast => "Guild lifegain",
+        // ── Curated labels for the busiest previously-unlabelled shapes ──
+        // These 20-odd variants accounted for roughly half of the 696
+        // activated abilities that used to render as a bare "Activate".
+        Effect::BecomeCreature { .. }
+        | Effect::BecomeCreatureLosingTypes { .. }
+        | Effect::AnimateAsCreature { .. } => "Animate as a creature",
+        Effect::PreventNextDamageFromChosenSource { .. }
+        | Effect::PreventNextDamageFromSourceThisTurn { .. }
+        | Effect::PreventNextEventFromChosenSourceAnywhere { .. }
+        | Effect::PreventNextFromChosenSourceToTeam { .. } => "Prevent damage from a source",
+        Effect::PreventAllDamageFromChosenSourceThisTurn { .. }
+        | Effect::PreventAllDamageFromChosenColorThisTurn { .. }
+        | Effect::PreventAllDamageByTargetThisTurn { .. }
+        | Effect::PreventAllDamageBetweenThisTurn { .. }
+        | Effect::PreventAllCombatDamageByMatchingThisTurn { .. } => "Prevent all damage",
+        Effect::AdvanceClassLevel => "Level up",
+        Effect::PutFromHandOntoBattlefield { .. } => "Put a card onto the battlefield",
+        Effect::ExileSelfReturnTransformed => "Exile, return transformed",
+        Effect::LookPickToHand { .. } => "Look and take a card",
+        Effect::GrantProtectionFromChosenColor { .. }
+        | Effect::GrantProtectionFromColorsOf { .. } => "Grant protection",
+        Effect::BecomeChosenCreatureType { .. } => "Change creature type",
+        Effect::BecomeChosenColor { .. } | Effect::BecomeColor { .. } => "Change colour",
+        Effect::RedirectNextDamage { .. } | Effect::RedirectNextDamageTo { .. } => {
+            "Redirect damage"
+        }
+        Effect::LicidAttach { .. } => "Attach as an Aura",
+        Effect::DestroyNoRegen { .. } => "Destroy (no regeneration)",
+        Effect::ExileTopAndGrantMayPlay { .. } => "Exile top card, may play it",
+        Effect::GainControlWhileSourceTapped { .. }
+        | Effect::GainControlWhileSourceRemains { .. } => "Gain control",
+        Effect::BecomeCopyOf { .. }
+        | Effect::BecomeCopyOfFor { .. }
+        | Effect::BecomeCopyOfExiledCard { .. } => "Become a copy",
+        Effect::LandsBecomeChosenBasicType { .. } | Effect::GainLandType { .. } => {
+            "Change land type"
+        }
+        Effect::MustBlockSource { .. } => "Force a block",
+        Effect::PayEnergy { .. } => "Pay energy",
+        Effect::ReplaceYourNextDrawThisTurn { .. } => "Replace your next draw",
+        Effect::RevealAnyNumberFromHand { .. } => "Reveal cards from hand",
+        Effect::TapOrUntap { .. } => "Tap or untap",
+        Effect::AddCardTypeIndefinitely { .. } | Effect::SetCardTypesTo { .. } => {
+            "Change card types"
+        }
+        Effect::DealDamageEqualToPower { .. } => "Deal damage equal to power",
+        Effect::ExileTaggedWithSource { .. } | Effect::ExileWithSource { .. } => "Exile",
+        Effect::PhaseOut { .. } => "Phase out",
+        Effect::TapAndUntapLock { .. } => "Tap and lock down",
+        Effect::Transform { .. } => "Transform",
+        Effect::AddKeywordCounter { .. } => "Add a keyword counter",
+        // An activation whose whole point is its *cost* (Hopeful Vigil's
+        // "{2}{W}, Sacrifice this:" — the payoff rides the
+        // leaves-the-battlefield trigger). The cost label carries the story.
+        Effect::Noop => "No effect",
         _ => "Activate",
     }
 }
@@ -4071,6 +4249,85 @@ mod tests {
             ability_effect_label(&catalog::curse_of_the_werefox().effect),
             "Create attached token",
         );
+    }
+
+    #[test]
+    fn dual_land_mana_abilities_name_their_colors() {
+        use crate::effect::Value;
+        // Regression: both of Tundra's rows in the right-click menu read
+        // "{T}: Add mana", so there was no way to tell which one made {W}.
+        let tundra = catalog::tundra();
+        let labels: Vec<String> = tundra
+            .activated_abilities
+            .iter()
+            .map(|a| ability_effect_text(&a.effect))
+            .collect();
+        assert_eq!(labels, vec!["Add {W}".to_string(), "Add {U}".to_string()]);
+        // A payload whose colour is chosen at activation keeps the generic
+        // wording — there is nothing specific to promise yet.
+        let any = Effect::AddMana {
+            who: crate::effect::PlayerRef::You,
+            pool: crate::effect::ManaPayload::AnyOneColor(Value::Const(1)),
+        };
+        assert_eq!(ability_effect_text(&any), "Add mana");
+        // A fixed count renders as repeated pips (Sol Ring's "{T}: Add {C}{C}").
+        let two_c = Effect::AddMana {
+            who: crate::effect::PlayerRef::You,
+            pool: crate::effect::ManaPayload::Colorless(Value::Const(2)),
+        };
+        assert_eq!(ability_effect_text(&two_c), "Add {C}{C}");
+    }
+
+    #[test]
+    fn humanised_variant_name_reads_as_a_sentence() {
+        use crate::effect::{PlayerRef, Value};
+        assert_eq!(humanised_variant_name(&Effect::Proliferate), "Proliferate");
+        assert_eq!(
+            humanised_variant_name(&Effect::Incubate {
+                who: PlayerRef::You,
+                amount: Value::Const(1),
+            }),
+            "Incubate",
+        );
+        assert_eq!(humanised_variant_name(&Effect::EndTheTurn), "End the turn");
+    }
+
+    #[test]
+    fn no_activated_ability_renders_as_the_bare_catch_all() {
+        // Regression: `ability_effect_label`'s `_ => "Activate"` left 696 of
+        // the catalog's 6022 activated abilities (11.6 %) with a right-click
+        // menu row that said nothing about what the ability does. Curated
+        // arms cover the busiest shapes; the de-camel-cased variant name
+        // catches the long tail, including variants added after this test.
+        let mut unlabelled: Vec<&str> = Vec::new();
+        for f in crate::catalog::sets::all_factories::all_catalog_card_factories() {
+            let def = f();
+            for a in &def.activated_abilities {
+                let label = ability_effect_text(&a.effect);
+                if label == "Activate" || label.trim().is_empty() {
+                    unlabelled.push(def.name);
+                }
+            }
+        }
+        unlabelled.dedup();
+        assert!(
+            unlabelled.is_empty(),
+            "{} cards still show a contentless ability label, e.g. {:?}",
+            unlabelled.len(),
+            &unlabelled[..unlabelled.len().min(10)],
+        );
+    }
+
+    #[test]
+    fn structural_wrappers_describe_what_they_wrap() {
+        use crate::effect::Value;
+        // A `Seq` labelled "Seq" would be no better than "Activate" — the
+        // wrapper has to report its most representative child.
+        let inner = Effect::Draw { who: crate::effect::Selector::You, amount: Value::Const(1) };
+        let seq = Effect::Seq(vec![Effect::Noop, inner.clone()]);
+        assert_eq!(ability_effect_text(&seq), "Draw cards");
+        let may = Effect::MayDo { body: Box::new(inner), description: String::new() };
+        assert_eq!(ability_effect_text(&may), "Draw cards");
     }
 
     #[test]

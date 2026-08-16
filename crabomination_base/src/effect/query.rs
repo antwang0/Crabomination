@@ -91,6 +91,13 @@ fn implicit_player_for_ref_slot(
     matches!(who, PlayerRef::Target(n) if *n == slot).then_some(&IMPLICIT_PLAYER_TARGET)
 }
 
+/// Slot-agnostic sibling of [`implicit_player_for_ref_slot`]: `Some(&Player)`
+/// when a `PlayerRef` field is itself the target ("target player creates a
+/// token").
+fn implicit_player_if_bare_player_ref(who: &PlayerRef) -> Option<&'static SelectionRequirement> {
+    matches!(who, PlayerRef::Target(_)).then_some(&IMPLICIT_PLAYER_TARGET)
+}
+
 /// `Some(&Creature)` when `what` is any bare numbered target (slot-agnostic —
 /// used for the "primary" target filter).
 fn implicit_creature_if_bare_target(what: &Selector) -> Option<&'static SelectionRequirement> {
@@ -1615,6 +1622,14 @@ impl Effect {
             }
             Effect::PreventNextFromChosenSourceToTeam { to, .. } => sel_filter(to),
             Effect::ExchangeControlChoosing { with, .. } => sel_filter(with),
+            // "Target player creates a … token" (Emeritus of Truce): the
+            // only slot is a player, so the UI target picker must offer
+            // seats and *not* every permanent on the board — which is what
+            // an unclassified effect falls back to (`Any`).
+            Effect::CreateToken { who, .. }
+            | Effect::CreateTokenAttacking { who, .. }
+            | Effect::Amass { who, .. }
+            | Effect::Incubate { who, .. } => implicit_player_if_bare_player_ref(who),
             Effect::GainLife { who, .. } | Effect::LoseLife { who, .. } => sel_filter(who),
             Effect::LoseHalfLife { who, .. }
             | Effect::LoseLifePerControlled { who, .. }

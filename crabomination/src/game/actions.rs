@@ -5723,6 +5723,9 @@ impl GameState {
             self.push_pending_trigger(
                 crate::game::types::PendingTriggerPush {
                     from_mana_ability: false,
+                    x_value: 0,
+                    converged_value: 0,
+                    mana_spent: 0,
                     actor: None,
                     source: card_id,
                     controller,
@@ -11843,6 +11846,24 @@ impl GameState {
         self.auto_tap_for_cost_filtered(player, cost, false)
     }
 
+    /// `auto_tap_for_cost` restricted to `only` — the auto-tapper may use
+    /// no source outside that set. Used when the player hand-picked which
+    /// permanents to tap (the ward-cost source prompt): the *selection* is
+    /// theirs, but which of a dual land's two abilities best fits the cost
+    /// is still ordinary auto-tap work.
+    pub(crate) fn auto_tap_for_cost_only(
+        &mut self,
+        player: usize,
+        cost: &crate::mana::ManaCost,
+        only: &crate::fxhash::HashSet<CardId>,
+    ) -> Vec<GameEvent> {
+        let prev_priority = self.priority.player_with_priority;
+        self.priority.player_with_priority = player;
+        let events = self.auto_tap_for_cost_inner(player, cost, false, Some(only));
+        self.priority.player_with_priority = prev_priority;
+        events
+    }
+
     /// `auto_tap_for_cost` with a CR 106.6b source filter: when
     /// `creature_only`, only creature mana sources are tapped, so a
     /// "spend only mana produced by creatures" cast (Myr Superion) never
@@ -11855,7 +11876,7 @@ impl GameState {
     ) -> Vec<GameEvent> {
         let prev_priority = self.priority.player_with_priority;
         self.priority.player_with_priority = player;
-        let events = self.auto_tap_for_cost_inner(player, cost, creature_only);
+        let events = self.auto_tap_for_cost_inner(player, cost, creature_only, None);
         self.priority.player_with_priority = prev_priority;
         events
     }
@@ -11896,7 +11917,7 @@ impl GameState {
     /// and redundancy fields are auto-tap's business, and callers outside
     /// this module have no use for them.
     pub fn untapped_mana_colors(&self, player: usize) -> Vec<[bool; 5]> {
-        self.mana_source_table(player, false)
+        self.mana_source_table(player, false, None)
             .into_iter()
             .map(|s| {
                 let mut mask = [false; 5];
@@ -11913,11 +11934,21 @@ impl GameState {
     /// `intrinsic_land_mana_abilities`, both of which take a layer pass. One
     /// scope makes the whole table share one gather and one
     /// `ComputedPermanent` per card.
-    fn mana_source_table(&self, player: usize, creature_only: bool) -> Vec<ManaSourceInfo> {
-        self.with_frozen_layers(|g| g.mana_source_table_inner(player, creature_only))
+    fn mana_source_table(
+        &self,
+        player: usize,
+        creature_only: bool,
+        only: Option<&crate::fxhash::HashSet<CardId>>,
+    ) -> Vec<ManaSourceInfo> {
+        self.with_frozen_layers(|g| g.mana_source_table_inner(player, creature_only, only))
     }
 
-    fn mana_source_table_inner(&self, player: usize, creature_only: bool) -> Vec<ManaSourceInfo> {
+    fn mana_source_table_inner(
+        &self,
+        player: usize,
+        creature_only: bool,
+        only: Option<&crate::fxhash::HashSet<CardId>>,
+    ) -> Vec<ManaSourceInfo> {
         // One board-level grant scan for the whole table instead of one per
         // untapped permanent (see `grant_scan`).
         let scan = self.grant_scan();
@@ -11925,6 +11956,7 @@ impl GameState {
             .iter()
             .filter(|c| c.controller == player && !c.tapped)
             .filter(|c| !creature_only || self.permanent_is_creature(c.id))
+            .filter(|c| only.is_none_or(|set| set.contains(&c.id)))
             .filter_map(|c| {
                 let abilities = self.effective_mana_abilities_with(c.id, &scan);
                 let (first_idx, first) = abilities.first()?;
@@ -11954,6 +11986,7 @@ impl GameState {
         player: usize,
         cost: &crate::mana::ManaCost,
         creature_only: bool,
+        only: Option<&crate::fxhash::HashSet<CardId>>,
     ) -> Vec<GameEvent> {
         let mut events = Vec::new();
         // Off, the two selection loops below fall back to "cheapest
@@ -12075,7 +12108,7 @@ impl GameState {
 
         // Built once; the selection loops below re-check `tapped` live but
         // read colours and costs from here. See `mana_source_table`.
-        let sources = self.mana_source_table(player, creature_only);
+        let sources = self.mana_source_table(player, creature_only, only);
 
         // Tap a color-matched source for each still-needed colored pip.
         // For abilities that produce `AnyOneColor` (Black Lotus, Birds of

@@ -690,6 +690,7 @@ pub fn spawn_decision_ui(
             targeting.pending_ability_source = None;
             targeting.pending_ability_index = None;
             targeting.pending_ability_mode = None;
+            targeting.pending_ability_is_loyalty = false;
             targeting.back_face_pending = false;
             targeting.pending_decision_target = true;
             legal_targets.permanents.clear();

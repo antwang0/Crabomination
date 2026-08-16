@@ -138,6 +138,13 @@ pub struct TargetingState {
     /// targeting session opened, submitted with the eventual
     /// `GameAction::ActivateAbility`. `None` for non-modal abilities.
     pub pending_ability_mode: Option<usize>,
+    /// CR 606 — this ability-targeting session belongs to a planeswalker's
+    /// *loyalty* ability, so the pick submits
+    /// `GameAction::ActivateLoyaltyAbility` instead of `ActivateAbility`.
+    /// The source and index ride the `pending_ability_*` slots either way —
+    /// loyalty abilities live in their own list on the permanent, so the
+    /// index space is separate and the two actions must not be confused.
+    pub pending_ability_is_loyalty: bool,
     /// When `true`, the pending target picks resolve through
     /// `GameAction::CastSpellBack` instead of `CastSpell` — used for
     /// non-land MDFCs being played via their back face. The flag is
@@ -161,6 +168,10 @@ pub struct TargetingState {
     /// controlled Equipment; cleared once the equip is submitted (or
     /// cancelled). Takes precedence over the spell/ability target paths.
     pub pending_equip_source: Option<CardId>,
+    /// When `Some`, this targeting session is reconfiguring an Equipment
+    /// (CR 702.152) onto the picked creature. Like `pending_equip_source`
+    /// but submits `GameAction::Reconfigure`.
+    pub pending_reconfigure_source: Option<CardId>,
     /// When `Some`, this targeting session is casting a prepared
     /// creature's prepare spell (SOS Prepare). The picked target is
     /// submitted via `GameAction::CastPrepareSpell { creature_id, .. }`.
@@ -196,10 +207,90 @@ pub struct TargetingState {
     /// CR 702.32b — the "and/or" kicker option indices this pending cast pays
     /// for. Empty for every other cast; set from `ClientView.kicker_option_sets`.
     pub pending_kicker_options: Vec<u8>,
+    /// When `Some`, the pending cast is one of the alternative cast shapes
+    /// that share the standard `{card_id, target, …}` action — Bestow, an
+    /// Adventure half, Buyback, Bargain, Prototype, a plotted card. Set by
+    /// the hand play-option menu; the eventual submit routes through the
+    /// matching `GameAction`.
+    pub pending_cast_variant: Option<HandCastVariant>,
+    /// When `true`, the picked creature receives CR 702.77 Reinforce from
+    /// the pending hand card (`GameAction::Reinforce`), which discards it
+    /// rather than casting it.
+    pub pending_reinforce: bool,
     /// When `Some`, the pending cast taps these helpers for Convoke /
     /// Improvise / waterbend — the eventual submit routes through
     /// `CastSpellConvoke` / `CastSpellWaterbend`. Set by the helper picker.
     pub pending_helpers: Option<(Vec<CardId>, HelperMechanic)>,
+}
+
+/// An alternative cast shape whose `GameAction` takes the same
+/// `{card_id, target, additional_targets, mode, x_value}` fields as a plain
+/// `CastSpell`, so one targeting flow serves them all. Each of these had no
+/// client submit path at all before the hand play-option menu.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum HandCastVariant {
+    /// CR 702.103 — cast a creature as an Aura.
+    Bestow,
+    /// CR 715 — the Adventure (instant/sorcery) half, and the creature half
+    /// cast later from exile.
+    Adventure,
+    AdventureCreature,
+    /// CR 702.49 — recast from hand paying the Buyback cost.
+    Buyback,
+    /// CR 702.166 — pay the Bargain cost.
+    Bargain,
+    /// CR 702.161 — cast for the Prototype (smaller) cost.
+    Prototype,
+    /// CR 702.170d — cast a card plotted on an earlier turn, from exile.
+    Plotted,
+}
+
+impl HandCastVariant {
+    pub fn label(self) -> &'static str {
+        match self {
+            Self::Bestow => "Cast with Bestow (as an Aura)",
+            Self::Adventure => "Cast the Adventure half",
+            Self::AdventureCreature => "Cast the creature (from exile)",
+            Self::Buyback => "Cast with Buyback",
+            Self::Bargain => "Cast with Bargain",
+            Self::Prototype => "Cast as Prototype",
+            Self::Plotted => "Cast (plotted)",
+        }
+    }
+
+    /// The `GameAction` this variant submits for `target`.
+    pub fn action(
+        self,
+        card_id: CardId,
+        target: Option<crabomination::game::Target>,
+    ) -> crabomination::game::GameAction {
+        use crabomination::game::GameAction as A;
+        let (additional_targets, mode, x_value) = (Vec::new(), None, None);
+        match self {
+            Self::Bestow => A::CastBestow { card_id, target, additional_targets, mode, x_value },
+            Self::Adventure => {
+                A::CastAdventure { card_id, target, additional_targets, mode, x_value }
+            }
+            Self::AdventureCreature => {
+                A::CastAdventureCreature { card_id, target, additional_targets, mode, x_value }
+            }
+            Self::Buyback => {
+                A::CastSpellBuyback { card_id, target, additional_targets, mode, x_value }
+            }
+            Self::Bargain => A::CastSpellBargain {
+                card_id,
+                sacrifice: None,
+                target,
+                additional_targets,
+                mode,
+                x_value,
+            },
+            Self::Prototype => {
+                A::CastPrototype { card_id, target, additional_targets, mode, x_value }
+            }
+            Self::Plotted => A::CastPlotted { card_id, target, additional_targets, mode, x_value },
+        }
+    }
 }
 
 /// Which split-card cast shape the half-picker selected.
@@ -338,6 +429,11 @@ pub enum HelperMechanic {
     /// CR 702.47 Splice onto Arcane — `GameAction::CastSpellSpliced`. The
     /// "helpers" are Splice cards in hand rather than battlefield permanents.
     Splice,
+    /// CR 702.122 Crew — the "spell" is the Vehicle and the helpers are the
+    /// creatures being tapped to crew it (`GameAction::Crew`).
+    Crew,
+    /// CR 702.171 Saddle — the Mount and the creatures tapped to saddle it.
+    Saddle,
 }
 
 impl HelperMechanic {
@@ -346,6 +442,8 @@ impl HelperMechanic {
             Self::Convoke => "Convoke",
             Self::Waterbend => "Waterbend",
             Self::Splice => "Splice",
+            Self::Crew => "Crew",
+            Self::Saddle => "Saddle",
         }
     }
 }

@@ -9728,6 +9728,9 @@ impl GameState {
                 let mode = self.pick_trigger_mode(&room_effect, ctx.source.unwrap_or(CardId(0)), p);
                 self.drain_trigger_queue(vec![crate::game::types::PendingTriggerPush {
                     from_mana_ability: false,
+                    x_value: 0,
+                    converged_value: 0,
+                    mana_spent: 0,
                     actor: None,
                     source: ctx.source.unwrap_or(CardId(0)),
                     controller: p,
@@ -18423,10 +18426,6 @@ impl GameState {
                     else { unreachable!("filtered above") };
                 let spell_caster = *spell_caster;
 
-                // Try to auto-pay on behalf of the spell's controller. We
-                // override priority temporarily so `auto_tap_for_cost`
-                // taps that player's lands. `try_pay_with_auto_tap` rolls
-                // back the pool + tap state on payment failure.
                 let mut cost = mana_cost.clone();
                 if let Some(v) = extra_generic {
                     let x = self.evaluate_value(v, ctx).max(0) as u32;
@@ -18434,11 +18433,44 @@ impl GameState {
                         cost.symbols.push(crate::mana::ManaSymbol::Generic(x));
                     }
                 }
-                let saved_priority = self.priority.player_with_priority;
-                self.priority.player_with_priority = spell_caster;
-                let paid = self.try_pay_with_auto_tap(spell_caster, &cost).is_ok();
-                self.priority.player_with_priority = saved_priority;
+                // CR 118.3b — "unless its controller pays" is optional, and
+                // the mana comes out of *their* board. This used to auto-pay
+                // outright: a Mana Leak tapped three of the caster's lands
+                // with no prompt, so they could neither let the spell be
+                // countered nor say which lands went. A live seat is asked
+                // both; every other seat keeps the pay-if-able behaviour the
+                // bot ladder is tuned against.
+                let src = ctx.source.unwrap_or(cid);
+                let mut cursor = 0;
+                let willing = if self.seat_suspends(spell_caster) {
+                    match self.ask_seat_bool(
+                        &mut cursor,
+                        spell_caster,
+                        format!("Pay {} or this spell is countered?", cost.summary()),
+                        src,
+                        effect,
+                    ) {
+                        Some(b) => b,
+                        None => return Ok(()),
+                    }
+                } else {
+                    true
+                };
+                let picks = if willing {
+                    match self.ask_mana_sources(&mut cursor, spell_caster, &cost, src, effect) {
+                        Some(p) => p,
+                        None => return Ok(()),
+                    }
+                } else {
+                    None
+                };
+                self.clear_answer_log();
+                let paid = willing
+                    && self.pay_mana_cost_with_picks(spell_caster, &cost, picks.as_deref(), events);
 
+                // The stack can only have shifted if we suspended, and a
+                // suspend re-runs this arm from the top — so `pos` is still
+                // the warded spell.
                 if !paid
                     && let StackItem::Spell { card, .. } = self.stack.remove(pos)
                 {
@@ -18512,8 +18544,37 @@ impl GameState {
                     (None, None) => return Ok(()),
                 };
 
-                // Attempt auto-pay on the affected controller's behalf.
-                let paid = self.try_pay_ward_cost(affected_controller, cost, ctx, events);
+                // CR 702.21b — paying the ward cost is the affected
+                // player's choice, and so is *which* permanents pay it. A
+                // seat that hand-pays its mana picks the sources here
+                // instead of having its board auto-tapped; `is_spell` is
+                // rederived on resume from the stack, so nothing but the
+                // lookup key needs carrying across the suspend.
+                let picks = match Self::ward_mana_choice(cost) {
+                    Some((mc, _)) => {
+                        let mut cursor = 0;
+                        let src = ctx.source.unwrap_or(cid);
+                        match self.ask_mana_sources(
+                            &mut cursor,
+                            affected_controller,
+                            &mc,
+                            src,
+                            effect,
+                        ) {
+                            Some(p) => p,
+                            None => return Ok(()),
+                        }
+                    }
+                    None => None,
+                };
+                self.clear_answer_log();
+                let paid = self.try_pay_ward_cost_from(
+                    affected_controller,
+                    cost,
+                    ctx,
+                    events,
+                    picks.as_deref(),
+                );
 
                 if !paid {
                     let removed = self.stack.remove(pos);
@@ -18549,9 +18610,26 @@ impl GameState {
                 ) else {
                     return Ok(());
                 };
+                // Consent was already given above; now let a hand-paying
+                // seat say which sources fund it rather than auto-tapping.
+                let picks = match (wants_to_pay, Self::ward_mana_choice(cost)) {
+                    (true, Some((mc, _))) => {
+                        match self.ask_mana_sources(
+                            &mut cursor,
+                            payer,
+                            &mc,
+                            ctx.source.unwrap_or(CardId(0)),
+                            effect,
+                        ) {
+                            Some(p) => p,
+                            None => return Ok(()),
+                        }
+                    }
+                    _ => None,
+                };
                 self.clear_answer_log();
-                let paid =
-                    wants_to_pay && self.try_pay_ward_cost(payer, cost, ctx, events);
+                let paid = wants_to_pay
+                    && self.try_pay_ward_cost_from(payer, cost, ctx, events, picks.as_deref());
                 if paid {
                     if let Some(e) = if_paid {
                         self.run_effect(e, ctx, events)?;
@@ -19179,8 +19257,8 @@ impl GameState {
                 // they can (`try_pay_ward_cost` is a no-op when they can't).
                 let Some(src) = ctx.source else { return Ok(()) };
                 let p = ctx.controller;
+                let mut cursor = 0;
                 if self.seat_suspends(p) {
-                    let mut cursor = 0;
                     let Some(yes) = self.ask_seat_bool(
                         &mut cursor,
                         p,
@@ -19190,12 +19268,22 @@ impl GameState {
                     ) else {
                         return Ok(());
                     };
-                    self.clear_answer_log();
                     if !yes {
+                        self.clear_answer_log();
                         return self.run_effect(&Effect::SacrificeSource, ctx, events);
                     }
                 }
-                if !self.try_pay_ward_cost(p, cost, ctx, events) {
+                let picks = match Self::ward_mana_choice(cost) {
+                    Some((mc, _)) => {
+                        match self.ask_mana_sources(&mut cursor, p, &mc, src, effect) {
+                            Some(picks) => picks,
+                            None => return Ok(()),
+                        }
+                    }
+                    None => None,
+                };
+                self.clear_answer_log();
+                if !self.try_pay_ward_cost_from(p, cost, ctx, events, picks.as_deref()) {
                     self.run_effect(&Effect::SacrificeSource, ctx, events)?;
                 }
                 Ok(())
@@ -28943,25 +29031,14 @@ impl GameState {
             }
 
             Effect::SacrificeSourceUnlessPayManaValue => {
-                // CR 701.16 — Soul Tithe: the source's controller pays its mana
-                // value or sacrifices it. The controller keeps it if they can
-                // afford the {X} (auto-tap); the bot always pays when able.
+                // CR 701.16 — Soul Tithe: the source's controller pays its
+                // mana value or sacrifices it.
                 let Some(id) = ctx.source else { return Ok(()) };
                 let Some(card) = self.battlefield_find(id) else { return Ok(()) };
                 let p = card.controller;
                 let mv = card.definition.cost.cmc();
                 let cost = crate::mana::ManaCost::new(vec![crate::mana::generic(mv)]);
-                let paid = match self.try_pay_with_auto_tap(p, &cost) {
-                    Ok(receipt) => {
-                        events.extend(receipt.auto_events);
-                        true
-                    }
-                    Err(_) => false,
-                };
-                if !paid {
-                    self.sacrifice_one(id, p, events);
-                }
-                Ok(())
+                self.run_pay_or_sacrifice_source(id, p, &cost, ctx, events, effect)
             }
 
             Effect::SacrificeSourceUnlessPay { cost } => {
@@ -28969,17 +29046,8 @@ impl GameState {
                 let Some(id) = ctx.source else { return Ok(()) };
                 let Some(card) = self.battlefield_find(id) else { return Ok(()) };
                 let p = card.controller;
-                let paid = match self.try_pay_with_auto_tap(p, cost) {
-                    Ok(receipt) => {
-                        events.extend(receipt.auto_events);
-                        true
-                    }
-                    Err(_) => false,
-                };
-                if !paid {
-                    self.sacrifice_one(id, p, events);
-                }
-                Ok(())
+                let cost = cost.clone();
+                self.run_pay_or_sacrifice_source(id, p, &cost, ctx, events, effect)
             }
 
             Effect::ShuffleAnyNumberFromHandThenDraw { who } => {
@@ -35634,6 +35702,165 @@ impl GameState {
 }
 
 impl GameState {
+    /// The mana half of a Ward cost, if it has one: `(cost, life fallback)`.
+    /// Only these shapes involve choosing mana sources — a life or
+    /// sacrifice ward has nothing to pick.
+    fn ward_mana_choice(
+        cost: &crate::card::WardCost,
+    ) -> Option<(crate::mana::ManaCost, Option<u32>)> {
+        match cost {
+            crate::card::WardCost::Mana(mc) => Some((mc.clone(), None)),
+            crate::card::WardCost::ManaOrLife(mc, life) => Some((mc.clone(), Some(*life))),
+            _ => None,
+        }
+    }
+
+    /// Is it worth stopping the game to ask `payer` which sources pay a
+    /// cost? Only when they hand-pay their mana, only when the pool
+    /// doesn't already cover the cost (nothing to tap, so nothing to
+    /// choose), and only when they actually have sources to choose among.
+    fn mana_source_pick_is_worthwhile(&self, payer: usize, cost: &crate::mana::ManaCost) -> bool {
+        self.players
+            .get(payer)
+            .is_some_and(|p| p.manual_mana && p.mana_pool.clone().pay(cost).is_err())
+            && !self.mana_source_candidates(payer).is_empty()
+    }
+
+    /// `(id, name)` for every untapped permanent `player` controls that has
+    /// a mana ability — the pick list for the ward-cost source prompt.
+    fn mana_source_candidates(&self, player: usize) -> Vec<(CardId, String)> {
+        self.battlefield
+            .iter()
+            .filter(|c| c.controller == player && !c.tapped)
+            .filter(|c| !self.effective_mana_abilities(c.id).is_empty())
+            .map(|c| (c.id, c.definition.name.to_string()))
+            .collect()
+    }
+
+    /// "Pay {cost} or sacrifice this" (Soul Tithe, Gateway Plaza). Both
+    /// used to auto-pay with no prompt at all — unlike their
+    /// `SacrificeSourceUnlessCost` sibling, which has always asked. A live
+    /// seat is asked whether to pay and which sources to tap; every other
+    /// seat pays when able, as before.
+    #[allow(clippy::too_many_arguments)]
+    fn run_pay_or_sacrifice_source(
+        &mut self,
+        source: CardId,
+        payer: usize,
+        cost: &crate::mana::ManaCost,
+        _ctx: &EffectContext,
+        events: &mut Vec<GameEvent>,
+        effect: &Effect,
+    ) -> Result<(), GameError> {
+        let mut cursor = 0;
+        let willing = if self.seat_suspends(payer) {
+            match self.ask_seat_bool(
+                &mut cursor,
+                payer,
+                format!("Pay {} to keep this permanent?", cost.summary()),
+                source,
+                effect,
+            ) {
+                Some(b) => b,
+                None => return Ok(()),
+            }
+        } else {
+            true
+        };
+        let picks = if willing {
+            match self.ask_mana_sources(&mut cursor, payer, cost, source, effect) {
+                Some(p) => p,
+                None => return Ok(()),
+            }
+        } else {
+            None
+        };
+        self.clear_answer_log();
+        let paid =
+            willing && self.pay_mana_cost_with_picks(payer, cost, picks.as_deref(), events);
+        if !paid {
+            self.sacrifice_one(source, payer, events);
+        }
+        Ok(())
+    }
+
+    /// Ask `payer` which permanents to tap for a mana cost they are being
+    /// offered the chance to pay — the ward / "unless you pay" family.
+    ///
+    /// Replay-safe: shares [`ask_seat_bool`](Self::ask_seat_bool)'s cursor
+    /// contract, so an arm that first asks *whether* to pay can then ask
+    /// *how* without either question being re-posed. Returns `None` when
+    /// the resolution suspended for the answer, `Some(None)` when there is
+    /// nothing worth asking (the caller auto-taps as before), and
+    /// `Some(Some(picks))` for a hand-picked source set — which may be
+    /// empty, the player's way of declining to pay after all.
+    ///
+    /// [`ask_seat_bool`]: Self::ask_seat_bool
+    pub(crate) fn ask_mana_sources(
+        &mut self,
+        cursor: &mut usize,
+        payer: usize,
+        cost: &crate::mana::ManaCost,
+        source: CardId,
+        effect: &Effect,
+    ) -> Option<Option<Vec<CardId>>> {
+        if !self.mana_source_pick_is_worthwhile(payer, cost) {
+            return Some(None);
+        }
+        let candidates = self.mana_source_candidates(payer);
+        let max = candidates.len() as u32;
+        // A seat that doesn't hand-pick never reaches here, so the
+        // auto-default only matters for scripted deciders: offer them every
+        // source, which reproduces the plain auto-tap.
+        let auto_default: Vec<CardId> = candidates.iter().map(|(id, _)| *id).collect();
+        self.ask_seat_cards_logged(
+            cursor,
+            payer,
+            format!("Pay {}? Choose mana sources to tap (none = don\'t pay)", cost.summary()),
+            source,
+            candidates,
+            0,
+            max,
+            effect,
+            auto_default,
+        )
+        .map(Some)
+    }
+
+    /// Pay `cost` from `payer`, honouring a hand-picked source set.
+    /// `picks` of `None` is the historical auto-tap; `Some(set)` taps only
+    /// those permanents and then pays from whatever pool that yields, so a
+    /// source the player held back stays untapped either way.
+    fn pay_mana_cost_with_picks(
+        &mut self,
+        payer: usize,
+        cost: &crate::mana::ManaCost,
+        picks: Option<&[CardId]>,
+        events: &mut Vec<GameEvent>,
+    ) -> bool {
+        let saved_priority = self.priority.player_with_priority;
+        self.priority.player_with_priority = payer;
+        let paid = match picks {
+            None => match self.try_pay_with_auto_tap(payer, cost) {
+                Ok(receipt) => {
+                    events.extend(receipt.auto_events);
+                    true
+                }
+                Err(_) => false,
+            },
+            Some(chosen) => {
+                if !chosen.is_empty() {
+                    let allowed: crate::fxhash::HashSet<CardId> =
+                        chosen.iter().copied().collect();
+                    events.append(&mut self.auto_tap_for_cost_only(payer, cost, &allowed));
+                }
+                self.players[payer].mana_pool.pay(cost).is_ok()
+            }
+        };
+        self.priority.player_with_priority = saved_priority;
+        paid
+    }
+
     /// Auto-pay `cost` on `payer`'s behalf, returning whether it was paid.
     /// The single implementation behind every "unless [player] pays [cost]"
     /// shape — Ward (CR 702.21), rhystic taxes (`UnlessPlayerPays`) and
@@ -35646,14 +35873,26 @@ impl GameState {
         ctx: &EffectContext,
         events: &mut Vec<GameEvent>,
     ) -> bool {
+        self.try_pay_ward_cost_from(payer, cost, ctx, events, None)
+    }
+
+    /// [`try_pay_ward_cost`](Self::try_pay_ward_cost) paying the mana half
+    /// from a hand-picked source set (see [`ask_mana_sources`]).
+    ///
+    /// [`ask_mana_sources`]: Self::ask_mana_sources
+    pub(crate) fn try_pay_ward_cost_from(
+        &mut self,
+        payer: usize,
+        cost: &crate::card::WardCost,
+        ctx: &EffectContext,
+        events: &mut Vec<GameEvent>,
+        picks: Option<&[CardId]>,
+    ) -> bool {
         use crate::card::WardCost;
                 match cost {
                     WardCost::Mana(mc) => {
-                        let saved_priority = self.priority.player_with_priority;
-                        self.priority.player_with_priority = payer;
-                        let ok = self.try_pay_with_auto_tap(payer, mc).is_ok();
-                        self.priority.player_with_priority = saved_priority;
-                        ok
+                        let mc = mc.clone();
+                        self.pay_mana_cost_with_picks(payer, &mc, picks, events)
                     }
                     // "{X}" — the resolution's declared X (Excise).
                     WardCost::GenericXFromCost => self.pay_generic(payer, ctx.x_value),
@@ -35683,10 +35922,9 @@ impl GameState {
                     // Erosion — "{1} or 1 life"; take the mana half when it's
                     // available, else the life half.
                     WardCost::ManaOrLife(mc, life) => {
-                        let saved_priority = self.priority.player_with_priority;
-                        self.priority.player_with_priority = payer;
-                        let paid_mana = self.try_pay_with_auto_tap(payer, mc).is_ok();
-                        self.priority.player_with_priority = saved_priority;
+                        let mc = mc.clone();
+                        let paid_mana =
+                            self.pay_mana_cost_with_picks(payer, &mc, picks, events);
                         if paid_mana {
                             true
                         } else if self.effective_life(payer) >= *life as i32 {

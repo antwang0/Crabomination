@@ -1606,6 +1606,9 @@ impl GameState {
                     })
                     .map(move |ta| crate::game::types::PendingTriggerPush {
                         from_mana_ability: false,
+                        x_value: 0,
+                        converged_value: 0,
+                        mana_spent: 0,
                     actor: None,
                         source: c.id,
                         controller: c.controller,

@@ -6,6 +6,7 @@
 //! see the same flat namespace.
 
 mod buttons;
+pub mod hand_menu;
 mod life_graph;
 mod player_stats;
 mod popups;
@@ -17,6 +18,7 @@ pub use buttons::{
     poll_action_buttons, poll_player_chip_clicks, pulse_urgent_pass_button, sync_audit_buttons,
     update_attack_all_visibility, update_attack_button_label, update_pass_button,
 };
+pub use hand_menu::{handle_hand_menu, spawn_hand_menu, HandMenuState};
 pub use life_graph::{record_life_history, sync_life_graph, toggle_life_graph, LifeHistory};
 pub use player_stats::{
     animate_life_flash, sync_player_hud_seat, trigger_life_flash, update_mana_pips,
@@ -91,6 +93,7 @@ pub struct GameInputResources<'w> {
     pub split_cast: ResMut<'w, crate::game::SplitCastState>,
     pub spree_cast: ResMut<'w, crate::game::SpreeCastState>,
     pub helper_tap: ResMut<'w, crate::game::HelperTapState>,
+    pub hand_menu: ResMut<'w, hand_menu::HandMenuState>,
 }
 /// Process `SwapFrontMaterial` markers: walk each entity's children,
 /// find the `FrontFaceMesh` child, swap its `MeshMaterial3d` to the
@@ -3690,6 +3693,16 @@ pub fn handle_game_input(
                         cancel_targeting(&mut commands, targeting, legal_targets, &valid_targets);
                         return;
                     }
+                    // CR 702.152 — Reconfigure moves an Equipment creature
+                    // onto the clicked creature.
+                    if let Some(equipment) = targeting.pending_reconfigure_source {
+                        outbox.submit(GameAction::Reconfigure {
+                            equipment,
+                            target: Some(game_id.0),
+                        });
+                        cancel_targeting(&mut commands, targeting, legal_targets, &valid_targets);
+                        return;
+                    }
                     if is_decision {
                         // Engine-driven `ChooseTarget`: only submit when
                         // the click lands on an enumerated legal target,
@@ -3705,7 +3718,7 @@ pub fn handle_game_input(
                         return;
                     } else if is_ability_target {
                         if let (Some(src), Some(idx)) = (targeting.pending_ability_source, targeting.pending_ability_index) {
-                            outbox.submit(GameAction::ActivateAbility { card_id: src, ability_index: idx, target: Some(target), additional_targets: Vec::new(), x_value: None, mode: targeting.pending_ability_mode });
+                            outbox.submit(ability_target_action(targeting, src, idx, target));
                             cancel_targeting(&mut commands, targeting, legal_targets, &valid_targets);
                             return;
                         }
@@ -3715,6 +3728,15 @@ pub fn handle_game_input(
                             creature_id: src, target: Some(target),
                             additional_targets: vec![], mode: None, x_value: None,
                         });
+                        cancel_targeting(&mut commands, targeting, legal_targets, &valid_targets);
+                        return;
+                    } else if targeting.pending_reinforce
+                        && let Some(pending_id) = targeting.pending_card_id
+                    {
+                        // CR 702.77 — Reinforce discards the card to put
+                        // +1/+1 counters on the picked creature; it is not a
+                        // cast, so it never goes through `build_pending_cast`.
+                        outbox.submit(GameAction::Reinforce { card_id: pending_id, target });
                         cancel_targeting(&mut commands, targeting, legal_targets, &valid_targets);
                         return;
                     } else if let Some(pending_id) = targeting.pending_card_id {
@@ -3741,6 +3763,7 @@ pub fn handle_game_input(
                             targeting.pending_kicker_options.clone(),
                             targeting.pending_spree_modes.clone(),
                             targeting.pending_helpers.clone(),
+                            targeting.pending_cast_variant,
                         );
                         outbox.submit(action);
                         cancel_targeting(&mut commands, targeting, legal_targets, &valid_targets);
@@ -3760,7 +3783,7 @@ pub fn handle_game_input(
                         return;
                     } else if is_ability_target {
                         if let (Some(src), Some(idx)) = (targeting.pending_ability_source, targeting.pending_ability_index) {
-                            outbox.submit(GameAction::ActivateAbility { card_id: src, ability_index: idx, target: Some(target), additional_targets: Vec::new(), x_value: None, mode: targeting.pending_ability_mode });
+                            outbox.submit(ability_target_action(targeting, src, idx, target));
                             cancel_targeting(&mut commands, targeting, legal_targets, &valid_targets);
                             return;
                         }
@@ -3796,6 +3819,7 @@ pub fn handle_game_input(
                             targeting.pending_kicker_options.clone(),
                             targeting.pending_spree_modes.clone(),
                             targeting.pending_helpers.clone(),
+                            targeting.pending_cast_variant,
                         );
                         outbox.submit(action);
                         cancel_targeting(&mut commands, targeting, legal_targets, &valid_targets);
@@ -3865,6 +3889,7 @@ pub fn handle_game_input(
                             targeting.pending_kicker_options.clone(),
                             targeting.pending_spree_modes.clone(),
                             targeting.pending_helpers.clone(),
+                            targeting.pending_cast_variant,
                     );
                     outbox.submit(action);
                     cancel_targeting(&mut commands, targeting, legal_targets, &valid_targets);
@@ -4081,26 +4106,26 @@ pub fn handle_game_input(
                                 mode: None, x_value: None,
                             });
                         }
-                    } else if k.back_face_name.is_some()
-                        && !r.flipped_hand.flipped.insert(card_id) {
+                    } else if k.back_face_name.is_some() {
+                        if !r.flipped_hand.flipped.insert(card_id) {
                             r.flipped_hand.flipped.remove(&card_id);
+                        }
+                    } else {
+                        // No quick-play branch matched. Rather than doing
+                        // nothing — which is what Foretell, Plot, Suspend,
+                        // Bestow, Reinforce, morph and the Room doors used
+                        // to do — offer every play the engine says is legal.
+                        r.hand_menu.card_id = Some(card_id);
+                        r.hand_menu.spawn_pos = windows.single().ok()
+                            .and_then(|w| w.cursor_position())
+                            .unwrap_or(Vec2::new(400.0, 300.0));
                     }
                 }
             } else if let Some((game_id, owner)) = hovered_bf.iter().next() {
                 if owner.0 == your_seat {
                     let card_id = game_id.0;
-                    // Open the menu for non-mana activated abilities OR a
-                    // prepared preparation card's "Cast <spell>" entry
-                    // (SOS Prepare) — a vanilla prepared creature has no
-                    // abilities but still offers its spell.
                     let has_menu_entry = cv.battlefield.iter().find(|c| c.id == card_id)
-                        .is_some_and(|c| {
-                            c.abilities.iter().any(|a| !a.is_mana)
-                                || (c.prepare_spell_name.is_some()
-                                    && c.counters.iter().any(|(k, n)| {
-                                        *k == crabomination::card::CounterType::Prepared && *n > 0
-                                    }))
-                        });
+                        .is_some_and(has_ability_menu_entry);
                     if has_menu_entry {
                         menu_state.card_id = Some(card_id);
                         menu_state.spawn_pos = windows.single().ok()
@@ -4177,6 +4202,27 @@ pub fn handle_game_input(
             }
         }
 
+        // Keyboard-specific: M opens the play-option menu for the hovered
+        // hand card. Right-click still quick-plays whichever alternative
+        // its cascade prefers, so M is how a player reaches the *other*
+        // ways to play a card that has more than one.
+        if kb_menu
+            && let Some(game_id) = hovered_hand.iter().next()
+        {
+            let card_id = game_id.0;
+            let playable = cv
+                .players
+                .get(your_seat)
+                .is_some_and(|p| p.hand.iter().any(|h| h.id() == card_id))
+                && !hand_menu::hand_play_options(cv, card_id).is_empty();
+            if playable {
+                r.hand_menu.card_id = Some(card_id);
+                r.hand_menu.spawn_pos = windows.single().ok()
+                    .and_then(|w| w.cursor_position())
+                    .unwrap_or(Vec2::new(400.0, 300.0));
+            }
+        }
+
         // Keyboard-specific: M opens the ability menu for the selected
         // viewer-controlled battlefield card.
         if kb_menu
@@ -4184,16 +4230,8 @@ pub fn handle_game_input(
             && owner.0 == your_seat
         {
             let card_id = game_id.0;
-            // Same menu-entry test as the right-click path: non-mana
-            // abilities or a prepared preparation card's spell.
             let has_non_mana = cv.battlefield.iter().find(|c| c.id == card_id)
-                .is_some_and(|c| {
-                    c.abilities.iter().any(|a| !a.is_mana)
-                        || (c.prepare_spell_name.is_some()
-                            && c.counters.iter().any(|(k, n)| {
-                                *k == crabomination::card::CounterType::Prepared && *n > 0
-                            }))
-                });
+                .is_some_and(has_ability_menu_entry);
             if has_non_mana {
                 menu_state.card_id = Some(card_id);
                 // Centre on the window if there's no cursor position.
@@ -4389,6 +4427,7 @@ pub fn handle_game_input(
                         targeting.pending_ability_source = Some(card.id);
                         targeting.pending_ability_index = Some(ability.index);
                         targeting.pending_ability_mode = None;
+                        targeting.pending_ability_is_loyalty = false;
                         targeting.back_face_pending = false;
                     } else {
                         outbox.submit(GameAction::ActivateAbility {
@@ -4508,7 +4547,14 @@ fn build_pending_cast(
     kicker_options: Vec<u8>,
     spree_modes: Option<Vec<u8>>,
     helpers: Option<(Vec<CardId>, crate::game::HelperMechanic)>,
+    variant: Option<crate::game::HandCastVariant>,
 ) -> GameAction {
+    // An alternative cast shape chosen from the hand play-option menu
+    // (Bestow, an Adventure half, Buyback, ...). Exclusive with the flag
+    // soup below — the menu arms exactly one at a time.
+    if let Some(variant) = variant {
+        return variant.action(card_id, target);
+    }
     // CR 702.51 / 702.126 / 701.67 — tapped helpers ride their own cast action.
     if let Some((helpers, mechanic)) = helpers {
         return popups::helper_cast_action(mechanic, card_id, helpers, target, mode);
@@ -4564,6 +4610,52 @@ fn build_pending_cast(
     }
 }
 
+/// Does right-clicking this permanent open the ability menu? True for a
+/// non-mana activated ability, a planeswalker's loyalty abilities (CR 606
+/// — these live in their own list, and a walker often has *no* activated
+/// abilities at all, which used to leave it with no menu and so no way to
+/// be used), or a prepared preparation card's "Cast <spell>" entry (SOS
+/// Prepare — a vanilla prepared creature has no abilities but still offers
+/// its spell).
+fn has_ability_menu_entry(c: &crabomination::net::PermanentView) -> bool {
+    c.abilities.iter().any(|a| !a.is_mana)
+        || !c.loyalty_abilities.is_empty()
+        || (c.prepare_spell_name.is_some()
+            && c.counters.iter().any(|(k, n)| {
+                *k == crabomination::card::CounterType::Prepared && *n > 0
+            }))
+}
+
+/// The action an ability-targeting session submits for `target`. Loyalty
+/// abilities (CR 606) live in their own list on the permanent, with their
+/// own index space, so they route through `ActivateLoyaltyAbility` —
+/// sending index 1 of a walker's loyalty list as `ActivateAbility` would
+/// hit an unrelated activated ability, or nothing at all.
+fn ability_target_action(
+    targeting: &TargetingState,
+    source: CardId,
+    ability_index: usize,
+    target: Target,
+) -> GameAction {
+    if targeting.pending_ability_is_loyalty {
+        GameAction::ActivateLoyaltyAbility {
+            card_id: source,
+            ability_index,
+            target: Some(target),
+            x_value: None,
+        }
+    } else {
+        GameAction::ActivateAbility {
+            card_id: source,
+            ability_index,
+            target: Some(target),
+            additional_targets: Vec::new(),
+            x_value: None,
+            mode: targeting.pending_ability_mode,
+        }
+    }
+}
+
 fn cancel_targeting(
     commands: &mut Commands,
     targeting: &mut TargetingState,
@@ -4575,10 +4667,12 @@ fn cancel_targeting(
     targeting.pending_ability_source = None;
     targeting.pending_ability_index = None;
     targeting.pending_ability_mode = None;
+    targeting.pending_ability_is_loyalty = false;
     targeting.back_face_pending = false;
     targeting.pending_decision_target = false;
     targeting.pending_mode = None;
     targeting.pending_equip_source = None;
+    targeting.pending_reconfigure_source = None;
     targeting.pending_prepare_source = None;
     targeting.pending_pay_times = None;
     targeting.pending_spree_modes = None;
@@ -4588,6 +4682,8 @@ fn cancel_targeting(
     targeting.pending_kicked = false;
     targeting.pending_kicker_options.clear();
     targeting.pending_helpers = None;
+    targeting.pending_cast_variant = None;
+    targeting.pending_reinforce = false;
     legal.permanents.clear();
     legal.players.clear();
     legal.source_name.clear();

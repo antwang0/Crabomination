@@ -36,11 +36,50 @@ pub struct PrepareCastMenuItem {
     pub needs_target: bool,
 }
 
+/// A permanent action that isn't an activated ability: Crew, Saddle,
+/// Reconfigure, or unlocking a Room's door. Each had no client path at
+/// all — the tooltip said "Crew 3" and nothing could act on it.
+#[derive(Component, Clone, Copy)]
+pub struct PermanentActionMenuItem {
+    pub card_id: CardId,
+    pub action: PermanentAction,
+}
+
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum PermanentAction {
+    /// CR 702.122 / 702.171 — open the creature picker for the tap cost.
+    Crew,
+    Saddle,
+    /// CR 702.152 — attach to a creature (or unattach, with no target).
+    Reconfigure,
+    Unattach,
+    /// CR 709.5e — pay a locked door's cost at sorcery speed.
+    UnlockDoor { right: bool },
+}
+
 /// The "Turn face up" entry on a face-down permanent's menu (CR 708.7).
 /// Submits `GameAction::TurnFaceUp`.
 #[derive(Component)]
 pub struct TurnFaceUpMenuItem {
     pub card_id: CardId,
+}
+
+/// One of a planeswalker's loyalty abilities (CR 606). Submits
+/// `GameAction::ActivateLoyaltyAbility` — a separate action with its own
+/// index space, so these rows can't reuse [`AbilityMenuItem`].
+#[derive(Component)]
+pub struct LoyaltyMenuItem {
+    pub card_id: CardId,
+    pub ability_index: usize,
+    pub needs_target: bool,
+}
+
+/// A planeswalker's current loyalty — the `Loyalty` counter count.
+fn loyalty_total(pv: &crabomination::net::PermanentView) -> i32 {
+    pv.counters
+        .iter()
+        .find_map(|(k, v)| (*k == crabomination::card::CounterType::Loyalty).then_some(*v as i32))
+        .unwrap_or(0)
 }
 
 /// Spawn or despawn the floating ability context menu based on `AbilityMenuState`.
@@ -111,6 +150,59 @@ pub fn spawn_ability_menu(
             }
         })
         .collect();
+    // Non-ability permanent actions the client could never submit.
+    let mut perm_actions: Vec<(PermanentAction, String)> = Vec::new();
+    if viewer_controls {
+        if pv.crew_value > 0 {
+            perm_actions.push((PermanentAction::Crew, format!("Crew {}", pv.crew_value)));
+        }
+        if pv.saddle_value > 0 && !pv.saddled {
+            perm_actions.push((PermanentAction::Saddle, format!("Saddle {}", pv.saddle_value)));
+        }
+        if pv.reconfigurable {
+            perm_actions.push((PermanentAction::Reconfigure, "Reconfigure (attach)".into()));
+            if pv.attached_to.is_some() {
+                perm_actions.push((PermanentAction::Unattach, "Reconfigure (unattach)".into()));
+            }
+        }
+        // CR 709.5e — `room_unlockable` carries the still-locked door mask.
+        if let Some((_, doors)) = cv.room_unlockable.iter().find(|(id, _)| *id == pv.id) {
+            for (bit, right, side) in [(0b01u8, false, "left"), (0b10, true, "right")] {
+                if doors & bit != 0 {
+                    perm_actions
+                        .push((PermanentAction::UnlockDoor { right }, format!("Unlock the {side} door")));
+                }
+            }
+        }
+    }
+    // CR 606 — a planeswalker's loyalty abilities. They are not activated
+    // abilities and never appear in `pv.abilities`, so without their own
+    // rows here a planeswalker on the battlefield had no way at all to be
+    // used. Greyed out when the viewer doesn't control it, when the
+    // per-turn activation allowance is spent (CR 606.3), or when the cost
+    // would take loyalty below zero (CR 606.4).
+    let loyalty: Vec<(usize, String, bool, bool)> = pv
+        .loyalty_abilities
+        .iter()
+        .map(|a| {
+            let cost = if a.x_cost {
+                "-X".to_string()
+            } else {
+                format!("{:+}", a.loyalty_cost)
+            };
+            let out_of_uses = pv.loyalty_uses_remaining == Some(0);
+            let unaffordable = !a.x_cost && a.loyalty_cost < 0 && loyalty_total(pv) < -a.loyalty_cost;
+            let blocked = !viewer_controls || out_of_uses || unaffordable;
+            let suffix = if out_of_uses {
+                "  (no activations left)"
+            } else if unaffordable {
+                "  — not enough loyalty"
+            } else {
+                ""
+            };
+            (a.index, format!("{cost}: {}{suffix}", a.effect_label), blocked, a.needs_target)
+        })
+        .collect();
     // SOS Prepare — a prepared preparation card the viewer controls
     // offers "Cast <spell> <cost>". Greyed (but still clickable — the
     // server reports why) when the engine says the cast isn't legal
@@ -135,7 +227,14 @@ pub fn spawn_ability_menu(
         .as_ref()
         .filter(|_| viewer_controls)
         .map(|label| (format!("Turn face up {label}"), cv.turn_up_able.contains(&pv.id)));
-    if abilities.is_empty() && prepare_entry.is_none() && turn_up_entry.is_none() { return; }
+    if abilities.is_empty()
+        && loyalty.is_empty()
+        && perm_actions.is_empty()
+        && prepare_entry.is_none()
+        && turn_up_entry.is_none()
+    {
+        return;
+    }
     let card_name = pv.name.clone();
 
     let pos = menu_state.spawn_pos;
@@ -183,6 +282,49 @@ pub fn spawn_ability_menu(
                     },
                     BackgroundColor(bg),
                     AbilityMenuItem { card_id, ability_index, mode },
+                ))
+                .with_children(|b| {
+                    b.spawn((
+                        Text::new(label),
+                        ui_fonts.tf(13.0),
+                        TextColor(fg),
+                        Pickable::IGNORE,
+                    ));
+                });
+            }
+            for (action, label) in perm_actions {
+                menu.spawn((
+                    Button,
+                    Node {
+                        padding: UiRect::axes(Val::Px(10.0), Val::Px(6.0)),
+                        ..default()
+                    },
+                    BackgroundColor(theme::BUTTON_NEUTRAL_BG),
+                    PermanentActionMenuItem { card_id, action },
+                ))
+                .with_children(|b| {
+                    b.spawn((
+                        Text::new(label),
+                        ui_fonts.tf(13.0),
+                        TextColor(theme::TEXT_PRIMARY),
+                        Pickable::IGNORE,
+                    ));
+                });
+            }
+            for (ability_index, label, blocked, needs_target) in loyalty {
+                let (bg, fg) = if blocked {
+                    (theme::PANEL_BG_RAISED, theme::TEXT_MUTED)
+                } else {
+                    (theme::BUTTON_NEUTRAL_BG, theme::TEXT_PRIMARY)
+                };
+                menu.spawn((
+                    Button,
+                    Node {
+                        padding: UiRect::axes(Val::Px(10.0), Val::Px(6.0)),
+                        ..default()
+                    },
+                    BackgroundColor(bg),
+                    LoyaltyMenuItem { card_id, ability_index, needs_target },
                 ))
                 .with_children(|b| {
                     b.spawn((
@@ -253,7 +395,84 @@ pub fn handle_ability_menu(
     query: Query<(&Interaction, &AbilityMenuItem), Changed<Interaction>>,
     prepare_query: Query<(&Interaction, &PrepareCastMenuItem), Changed<Interaction>>,
     turn_up_query: Query<(&Interaction, &TurnFaceUpMenuItem), Changed<Interaction>>,
+    loyalty_query: Query<(&Interaction, &LoyaltyMenuItem), Changed<Interaction>>,
+    perm_action_query: Query<(&Interaction, &PermanentActionMenuItem), Changed<Interaction>>,
+    mut helper_tap: ResMut<crate::game::HelperTapState>,
 ) {
+    // Crew / Saddle / Reconfigure / Room doors. Crew and Saddle open the
+    // same multi-select the convoke picker uses — the cost is "tap creatures
+    // with total power N", which is a pick, not a click.
+    for (interaction, item) in &perm_action_query {
+        if *interaction != Interaction::Pressed { continue; }
+        let Some(cv) = &view.0 else { menu_state.card_id = None; continue };
+        match item.action {
+            PermanentAction::Crew | PermanentAction::Saddle => {
+                let mechanic = if item.action == PermanentAction::Crew {
+                    crate::game::HelperMechanic::Crew
+                } else {
+                    crate::game::HelperMechanic::Saddle
+                };
+                let candidates: Vec<(CardId, String)> = cv
+                    .battlefield
+                    .iter()
+                    .filter(|c| {
+                        c.controller == cv.your_seat
+                            && !c.tapped
+                            && c.id != item.card_id
+                            && c.card_types.contains(&crabomination::card::CardType::Creature)
+                    })
+                    .map(|c| (c.id, format!("{} ({}/{})", c.name, c.power, c.toughness)))
+                    .collect();
+                if !candidates.is_empty() {
+                    helper_tap.cap = None;
+                    helper_tap.selected = vec![false; candidates.len()];
+                    helper_tap.candidates = candidates;
+                    helper_tap.pending = Some((item.card_id, mechanic));
+                }
+            }
+            PermanentAction::Reconfigure => {
+                targeting.active = true;
+                targeting.pending_card_id = None;
+                targeting.pending_reconfigure_source = Some(item.card_id);
+            }
+            PermanentAction::Unattach => {
+                if let Some(ob) = &outbox {
+                    ob.submit(GameAction::Reconfigure {
+                        equipment: item.card_id,
+                        target: None,
+                    });
+                }
+            }
+            PermanentAction::UnlockDoor { right } => {
+                if let Some(ob) = &outbox {
+                    ob.submit(GameAction::UnlockRoomDoor { card_id: item.card_id, right });
+                }
+            }
+        }
+        menu_state.card_id = None;
+    }
+    // CR 606 — loyalty abilities. Targeted ones arm the same in-scene
+    // cursor activated abilities use, flagged so the eventual pick submits
+    // `ActivateLoyaltyAbility` (loyalty indices are their own space).
+    for (interaction, item) in &loyalty_query {
+        if *interaction != Interaction::Pressed { continue; }
+        if item.needs_target {
+            targeting.active = true;
+            targeting.pending_card_id = None;
+            targeting.pending_ability_source = Some(item.card_id);
+            targeting.pending_ability_index = Some(item.ability_index);
+            targeting.pending_ability_mode = None;
+            targeting.pending_ability_is_loyalty = true;
+        } else if let Some(ob) = &outbox {
+            ob.submit(GameAction::ActivateLoyaltyAbility {
+                card_id: item.card_id,
+                ability_index: item.ability_index,
+                target: None,
+                x_value: None,
+            });
+        }
+        menu_state.card_id = None;
+    }
     // CR 708.7 — unmask a face-down permanent. A special action: no stack and
     // no target, so it submits straight through.
     for (interaction, item) in &turn_up_query {
@@ -298,6 +517,7 @@ pub fn handle_ability_menu(
             targeting.pending_ability_source = Some(item.card_id);
             targeting.pending_ability_index = Some(item.ability_index);
             targeting.pending_ability_mode = item.mode;
+            targeting.pending_ability_is_loyalty = false;
         } else if let Some(ob) = &outbox {
             ob.submit(GameAction::ActivateAbility {
                 card_id: item.card_id,
@@ -1424,7 +1644,14 @@ pub fn handle_helper_tap_buttons(
             .zip(&state.selected)
             .filter_map(|((id, _), on)| on.then_some(*id))
             .collect();
-        let needs_target = view.0.as_ref().is_some_and(|cv| {
+        // Crew / Saddle act on a battlefield permanent, not a hand card:
+        // they never take a target, and must not pick up an unrelated hand
+        // card that happens to share the id space.
+        let is_cast = !matches!(
+            mechanic,
+            crate::game::HelperMechanic::Crew | crate::game::HelperMechanic::Saddle
+        );
+        let needs_target = is_cast && view.0.as_ref().is_some_and(|cv| {
             cv.players.get(cv.your_seat).is_some_and(|p| {
                 p.hand.iter().any(|h| matches!(h,
                     crabomination::net::HandCardView::Known(k)
@@ -1465,5 +1692,13 @@ pub fn helper_cast_action(
             card_id, target, additional_targets: vec![], mode, x_value: None,
             splice_cards: helpers,
         },
+        // Crew and Saddle aren't casts: the picker's "spell" is the Vehicle
+        // or Mount and its helpers are the creatures being tapped.
+        crate::game::HelperMechanic::Crew => {
+            GameAction::Crew { vehicle: card_id, crew_creatures: helpers }
+        }
+        crate::game::HelperMechanic::Saddle => {
+            GameAction::Saddle { mount: card_id, creatures: helpers }
+        }
     }
 }

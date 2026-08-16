@@ -4797,6 +4797,9 @@ impl GameState {
                 self.push_pending_trigger(
                     PendingTriggerPush {
                         from_mana_ability: false,
+                        x_value: 0,
+                        converged_value: 0,
+                        mana_spent: 0,
                         actor: None,
                         source: id,
                         controller: active,
@@ -5065,6 +5068,9 @@ impl GameState {
                 self.push_pending_trigger(
                     PendingTriggerPush {
                         from_mana_ability: false,
+                        x_value: 0,
+                        converged_value: 0,
+                        mana_spent: 0,
                         actor: None,
                         source: id,
                         controller: active,
@@ -16564,6 +16570,9 @@ impl GameState {
                         mode,
                         intervening_if: None,
                         from_mana_ability,
+                        x_value: 0,
+                        converged_value: 0,
+                        mana_spent: 0,
                     });
                 }
             } else {
@@ -16609,6 +16618,9 @@ impl GameState {
                         mode,
                         intervening_if: None,
                         from_mana_ability,
+                        x_value: 0,
+                        converged_value: 0,
+                        mana_spent: 0,
                     });
                 }
             }
@@ -16846,10 +16858,16 @@ impl GameState {
                     .filter(|(src, _)| *src == pending.source)
                     .map(|(_, t)| *t),
             );
-            let auto = self.auto_target_for_effect_avoiding_set(
+            // Converge-aware: an ETB trigger reading the cast's converge
+            // count (Sundering Archaic) must pick its target under the
+            // concrete cap. Non-cast pushes carry 0/0, which is exactly
+            // what the plain avoiding-set picker used to pass.
+            let auto = self.auto_target_for_effect_avoiding_set_xc(
                 &pending.effect,
                 pending.controller,
                 &avoid,
+                pending.x_value,
+                pending.converged_value,
             );
             if let Some(Target::Permanent(tid)) = &auto {
                 picked_this_batch.push((pending.source, *tid));
@@ -16895,6 +16913,9 @@ impl GameState {
             mode,
             intervening_if,
             from_mana_ability,
+            x_value: cast_x_value,
+            converged_value,
+            mana_spent,
         } = pending;
         // CR 603.10 — if this trigger's source just left the battlefield
         // (it's in the die-snapshot cache), stash its last-known instance
@@ -16962,14 +16983,21 @@ impl GameState {
         };
         // CR 601.2b — a trigger on a permanent reads the X stamped on it (the
         // cast's X, or a morph turn-up's — Warbreak Trumpeter), so
-        // `Value::XFromCost` in the body sees the real amount.
-        let x_value = self.battlefield_find(source).map(|c| c.cast_x_value).unwrap_or(0);
+        // `Value::XFromCost` in the body sees the real amount. A push that
+        // rode in straight off the originating cast carries its own X.
+        let x_value = if cast_x_value != 0 {
+            cast_x_value
+        } else {
+            self.battlefield_find(source).map(|c| c.cast_x_value).unwrap_or(0)
+        };
         self.stack.push(
             TriggerPush::new(source, controller, effect)
                 .target(target)
                 .additional_targets(additional)
                 .mode(mode)
                 .x_value(x_value)
+                .converged_value(converged_value)
+                .mana_spent(mana_spent)
                 .trigger_source(subject)
                 .event_amount(event_amount)
                 .trigger_player(actor)
@@ -17231,6 +17259,37 @@ impl GameState {
             .get(ability_index)
             .cloned()
             .ok_or(GameError::AbilityIndexOutOfBounds)?;
+
+        // CR 606.5 — a `-X` ability's X is chosen on activation. A
+        // hand-playing seat that didn't send one picks it via a
+        // `ChooseAmount` modal (suspend + clean replay — no loyalty has
+        // been spent yet); otherwise `x_value.unwrap_or(0)` below would
+        // silently resolve every ultimate at X = 0. Gated on
+        // [`manual_mana`] for the same reason the `{X}` cast prompt is:
+        // bot seats set `wants_ui` but always send an explicit X, and
+        // suspending on them livelocks the replay.
+        if ability.x_cost && x_value.is_none() && self.players[p].manual_mana {
+            let max = self.battlefield[pos]
+                .counter_count(crate::card::CounterType::Loyalty);
+            let source_name = self.battlefield[pos].definition.name.to_string();
+            self.pending_decision = Some(PendingDecision {
+                decision: Decision::ChooseAmount {
+                    source: card_id,
+                    max,
+                    prompt: format!("{source_name}: choose X"),
+                },
+                resume: ResumeContext::CastXPick {
+                    caster: p,
+                    action: Box::new(GameAction::ActivateLoyaltyAbility {
+                        card_id,
+                        ability_index,
+                        target,
+                        x_value: None,
+                    }),
+                },
+            });
+            return Ok(vec![]);
+        }
 
         // Off-board (graveyard / exile) targets — "return target creature
         // card from your graveyard" (Professor Dellian, Fel −2): the cursor
@@ -17888,7 +17947,8 @@ impl GameState {
                 match &mut action {
                     GameAction::CastSpell { x_value, .. }
                     | GameAction::CastPrepareSpell { x_value, .. }
-                    | GameAction::CastFlashback { x_value, .. } => *x_value = Some(n),
+                    | GameAction::CastFlashback { x_value, .. }
+                    | GameAction::ActivateLoyaltyAbility { x_value, .. } => *x_value = Some(n),
                     _ => return Err(GameError::DecisionAnswerMismatch),
                 }
                 let cast_card = action.cast_card_id();

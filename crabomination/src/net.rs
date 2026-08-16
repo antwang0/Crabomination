@@ -253,7 +253,7 @@ pub struct PlanarView {
     pub face_up: Vec<String>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct ClientView {
     pub your_seat: usize,
     pub active_player: usize,
@@ -1981,6 +1981,15 @@ pub struct PermanentView {
     /// offer the "crew" action. Populated by `project_permanent`.
     #[serde(default)]
     pub crew_value: u32,
+    /// CR 702.171 — total power needed to saddle this Mount; 0 when it
+    /// isn't a Mount. The client's crew/saddle picker needs the threshold
+    /// to tell the player when their ticked creatures are enough.
+    #[serde(default)]
+    pub saddle_value: u32,
+    /// CR 702.152 — this Equipment can be reconfigured (attach/unattach at
+    /// sorcery speed) by its controller.
+    #[serde(default)]
+    pub reconfigurable: bool,
     /// CR 702.122e/702.171 — extra power this creature contributes when
     /// crewing a Vehicle or saddling a Mount, beyond its real power
     /// (Cloudspire Captain, Deathless Pilot). 0 for the common case; lets the
@@ -2150,6 +2159,10 @@ impl PermanentView {
 
     pub fn is_creature(&self) -> bool {
         self.card_types.contains(&CardType::Creature)
+    }
+
+    pub fn is_planeswalker(&self) -> bool {
+        self.card_types.contains(&CardType::Planeswalker)
     }
 }
 

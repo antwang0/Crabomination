@@ -6040,6 +6040,234 @@ fn ward_counters_spell_when_caster_cannot_pay() {
 }
 
 #[test]
+fn ward_mana_cost_lets_a_hand_paying_caster_pick_its_sources() {
+    // Regression: the Ward body auto-tapped the affected player's board on
+    // their behalf, so a hand-paying seat watched lands they were saving
+    // get spent for them. A `manual_mana` payer now picks the sources.
+    use crabomination::decision::{Decision, DecisionAnswer};
+    let mut g = two_player_game();
+    let terror = g.add_card_to_battlefield(0, catalog::tolarian_terror()); // Ward {2}
+    g.clear_sickness(terror);
+
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    g.step = TurnStep::PreCombatMain;
+    g.players[1].manual_mana = true;
+    g.players[1].wants_ui = true;
+    let keep = g.add_card_to_battlefield(1, catalog::island());
+    let pay_a = g.add_card_to_battlefield(1, catalog::island());
+    let pay_b = g.add_card_to_battlefield(1, catalog::island());
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].mana_pool.add(Color::Red, 1);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt,
+        target: Some(Target::Permanent(terror)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("Bolt cast OK — Ward is triggered, not a cast restriction");
+    g.perform_action(GameAction::PassPriority).unwrap();
+    g.perform_action(GameAction::PassPriority).unwrap();
+
+    let pending = g.pending_decision.as_ref().expect("ward source pick pending");
+    match &pending.decision {
+        Decision::ChooseCards { candidates, min, .. } => {
+            assert_eq!(*min, 0, "declining every source is how you refuse to pay");
+            let ids: Vec<_> = candidates.iter().map(|(id, _)| *id).collect();
+            assert!(ids.contains(&keep) && ids.contains(&pay_a) && ids.contains(&pay_b));
+        }
+        other => panic!("expected ChooseCards for the ward sources, got {other:?}"),
+    }
+    g.submit_decision(DecisionAnswer::Cards(vec![pay_a, pay_b])).expect("pick accepted");
+    drain_stack(&mut g);
+
+    // Ward paid from exactly the two chosen sources: the Bolt was not
+    // countered (it marked 3 damage on the 5/5), and the land the player
+    // held back is still untapped.
+    let t = g.battlefield.iter().find(|c| c.id == terror).expect("5/5 survives 3 damage");
+    assert_eq!(t.damage, 3, "the Bolt resolved — ward was paid");
+    assert!(g.battlefield_find(pay_a).unwrap().tapped, "chosen source tapped");
+    assert!(g.battlefield_find(pay_b).unwrap().tapped, "chosen source tapped");
+    assert!(!g.battlefield_find(keep).unwrap().tapped, "unchosen source left alone");
+}
+
+#[test]
+fn ward_source_pick_declining_every_source_counters_the_spell() {
+    // CR 702.21a — the ward cost is optional. Confirming the source
+    // picker with nothing selected is how a hand-paying player refuses,
+    // and their lands stay untapped.
+    use crabomination::decision::DecisionAnswer;
+    let mut g = two_player_game();
+    let terror = g.add_card_to_battlefield(0, catalog::tolarian_terror()); // Ward {2}
+    g.clear_sickness(terror);
+
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    g.step = TurnStep::PreCombatMain;
+    g.players[1].manual_mana = true;
+    g.players[1].wants_ui = true;
+    let land = g.add_card_to_battlefield(1, catalog::island());
+    g.add_card_to_battlefield(1, catalog::island());
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].mana_pool.add(Color::Red, 1);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt,
+        target: Some(Target::Permanent(terror)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("Bolt cast OK");
+    g.perform_action(GameAction::PassPriority).unwrap();
+    g.perform_action(GameAction::PassPriority).unwrap();
+    assert!(g.pending_decision.is_some(), "ward source pick pending");
+    g.submit_decision(DecisionAnswer::Cards(vec![])).expect("refusal accepted");
+    drain_stack(&mut g);
+
+    let t = g.battlefield.iter().find(|c| c.id == terror).expect("Terror survives");
+    assert_eq!(t.damage, 0, "the Bolt was countered — ward went unpaid");
+    assert!(!g.battlefield_find(land).unwrap().tapped, "nothing tapped on a refusal");
+}
+
+#[test]
+fn mana_leak_asks_before_spending_the_casters_lands() {
+    // Regression: "counter unless its controller pays {3}" auto-paid on
+    // the caster's behalf — three Islands tapped, no prompt, no way to
+    // decline. CR 118.3b makes paying optional, and the mana is theirs.
+    use crabomination::decision::{Decision, DecisionAnswer};
+    let mut g = two_player_game();
+    g.players[0].manual_mana = true;
+    g.players[0].wants_ui = true;
+    let keep = g.add_card_to_battlefield(0, catalog::island());
+    let pay_a = g.add_card_to_battlefield(0, catalog::island());
+    let pay_b = g.add_card_to_battlefield(0, catalog::island());
+    let pay_c = g.add_card_to_battlefield(0, catalog::island());
+    let bear = g.add_card_to_hand(0, catalog::grizzly_bears());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bear, target: None, additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("Bears cast");
+
+    g.priority.player_with_priority = 1;
+    let leak = g.add_card_to_hand(1, catalog::mana_leak());
+    g.players[1].mana_pool.add(Color::Blue, 1);
+    g.players[1].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: leak,
+        target: Some(Target::Permanent(bear)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("Mana Leak cast");
+    g.perform_action(GameAction::PassPriority).unwrap();
+    g.perform_action(GameAction::PassPriority).unwrap();
+
+    // First: do you want to pay at all?
+    match &g.pending_decision.as_ref().expect("pay-or-be-countered prompt").decision {
+        Decision::OptionalTrigger { .. } => {}
+        other => panic!("expected the pay yes/no, got {other:?}"),
+    }
+    g.submit_decision(DecisionAnswer::Bool(true)).expect("agreed to pay");
+
+    // Then: which sources?
+    match &g.pending_decision.as_ref().expect("source pick prompt").decision {
+        Decision::ChooseCards { candidates, .. } => {
+            let ids: Vec<_> = candidates.iter().map(|(id, _)| *id).collect();
+            assert!(ids.contains(&keep), "every untapped source is offered");
+        }
+        other => panic!("expected the source pick, got {other:?}"),
+    }
+    g.submit_decision(DecisionAnswer::Cards(vec![pay_a, pay_b, pay_c])).expect("sources picked");
+    drain_stack(&mut g);
+
+    assert!(g.battlefield.iter().any(|c| c.id == bear), "paid — Bears resolves");
+    assert!(!g.battlefield_find(keep).unwrap().tapped, "the held-back Island is untouched");
+}
+
+#[test]
+fn mana_leak_declining_to_pay_counters_the_spell() {
+    // The other half of CR 118.3b: a player who would rather keep their
+    // mana lets the spell be countered, and nothing taps.
+    use crabomination::decision::DecisionAnswer;
+    let mut g = two_player_game();
+    g.players[0].manual_mana = true;
+    g.players[0].wants_ui = true;
+    let land = g.add_card_to_battlefield(0, catalog::island());
+    g.add_card_to_battlefield(0, catalog::island());
+    g.add_card_to_battlefield(0, catalog::island());
+    let bear = g.add_card_to_hand(0, catalog::grizzly_bears());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bear, target: None, additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("Bears cast");
+
+    g.priority.player_with_priority = 1;
+    let leak = g.add_card_to_hand(1, catalog::mana_leak());
+    g.players[1].mana_pool.add(Color::Blue, 1);
+    g.players[1].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: leak,
+        target: Some(Target::Permanent(bear)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("Mana Leak cast");
+    g.perform_action(GameAction::PassPriority).unwrap();
+    g.perform_action(GameAction::PassPriority).unwrap();
+
+    assert!(g.pending_decision.is_some(), "pay-or-be-countered prompt");
+    g.submit_decision(DecisionAnswer::Bool(false)).expect("declined to pay");
+    drain_stack(&mut g);
+
+    assert!(!g.battlefield.iter().any(|c| c.id == bear), "declined — Bears countered");
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == bear), "countered spell is binned");
+    assert!(!g.battlefield_find(land).unwrap().tapped, "nothing tapped on a refusal");
+}
+
+#[test]
+fn mana_leak_still_auto_pays_for_a_bot_seat() {
+    // The ladder is tuned against pay-if-able. Seats that don't hand-pay
+    // their mana must keep exactly the old behaviour: no prompt, auto-tap.
+    let mut g = two_player_game();
+    let bear = g.add_card_to_hand(0, catalog::grizzly_bears());
+    g.add_card_to_battlefield(0, catalog::island());
+    g.add_card_to_battlefield(0, catalog::island());
+    g.add_card_to_battlefield(0, catalog::island());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bear, target: None, additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("Bears cast");
+
+    g.priority.player_with_priority = 1;
+    let leak = g.add_card_to_hand(1, catalog::mana_leak());
+    g.players[1].mana_pool.add(Color::Blue, 1);
+    g.players[1].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: leak,
+        target: Some(Target::Permanent(bear)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("Mana Leak cast");
+    drain_stack(&mut g);
+
+    assert!(g.pending_decision.is_none(), "a bot seat is never prompted");
+    assert!(g.battlefield.iter().any(|c| c.id == bear), "auto-paid — Bears resolves");
+}
+
+#[test]
 fn ward_does_not_trigger_on_own_spells() {
     // Ward only triggers on opponents' spells. Your own spells
     // targeting your own Ward creature should resolve normally.

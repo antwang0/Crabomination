@@ -987,6 +987,9 @@ impl GameState {
                 self.push_pending_trigger(
                     PendingTriggerPush {
                         from_mana_ability: false,
+                        x_value: 0,
+                        converged_value: 0,
+                        mana_spent: 0,
                     actor: None,
                         source,
                         controller,
@@ -1002,6 +1005,9 @@ impl GameState {
             }
             queue.push(PendingTriggerPush {
                 from_mana_ability: false,
+                x_value: 0,
+                converged_value: 0,
+                mana_spent: 0,
                     actor: None,
                 source,
                 controller,
@@ -1016,6 +1022,9 @@ impl GameState {
             let mode = self.pick_trigger_mode(&effect, source, controller);
             queue.push(PendingTriggerPush {
                 from_mana_ability: false,
+                x_value: 0,
+                converged_value: 0,
+                mana_spent: 0,
                     actor: None,
                 source,
                 controller,
@@ -1095,6 +1104,9 @@ impl GameState {
             let mode = self.pick_trigger_mode(&effect, card_id, controller);
             queue.push(PendingTriggerPush {
                 from_mana_ability: false,
+                x_value: 0,
+                converged_value: 0,
+                mana_spent: 0,
                     actor: None,
                 source: card_id,
                 controller,
@@ -1144,6 +1156,9 @@ impl GameState {
                 let mode = self.pick_trigger_mode(&effect, id, seat);
                 PendingTriggerPush {
                     from_mana_ability: false,
+                    x_value: 0,
+                    converged_value: 0,
+                    mana_spent: 0,
                     actor: None,
                     source: id,
                     controller: seat,
@@ -1325,6 +1340,9 @@ impl GameState {
                 let mode = self.pick_trigger_mode(&effect, card.id, controller);
                 PendingTriggerPush {
                     from_mana_ability: false,
+                    x_value: 0,
+                    converged_value: 0,
+                    mana_spent: 0,
                     actor: None,
                     source: card.id,
                     controller,
@@ -1426,6 +1444,9 @@ impl GameState {
             let mode = self.pick_trigger_mode(&effect, card_id, controller);
             queue.push(PendingTriggerPush {
                 from_mana_ability: false,
+                x_value: 0,
+                converged_value: 0,
+                mana_spent: 0,
                     actor: None,
                 source: card_id,
                 controller,
@@ -2185,6 +2206,16 @@ impl GameState {
                         base_mult
                             + crate::game::actions::ally_trigger_extra_fires(self, caster, card_id)
                     };
+                    // Queued rather than pushed inline: `drain_trigger_queue`
+                    // is where a `wants_ui` controller gets asked to pick the
+                    // trigger's target (CR 115.1 — targets are chosen as the
+                    // ability goes on the stack, by its controller, not by
+                    // the engine). Pushing here auto-targeted unconditionally,
+                    // so *every* targeted ETB on a creature a human cast
+                    // silently aimed itself — a "target player creates a
+                    // token" gift always minted for the caster, and a
+                    // Flametongue always shot whatever the auto-picker liked.
+                    let mut etb_queue: Vec<crate::game::types::PendingTriggerPush> = Vec::new();
                     for (effect, filter) in etb_triggers {
                         // CR 603.4 — honor the trigger's intervening-`if`
                         // (`event.filter`) now that the source is on the
@@ -2220,64 +2251,29 @@ impl GameState {
                         // to one — prepare / unprepare").
                         let mode = self.pick_trigger_mode(&effect, card_id, caster);
                         // Per-copy target choice for doubled fires
-                        // (CR 603.3d): each copy prefers a target the prior
-                        // copies didn't pick, so the second Solitude exile
-                        // under Elesh Norn aims at a fresh creature.
-                        let mut avoid = vec![card_id];
+                        // (CR 603.3d) is handled by the drain, which tracks
+                        // the targets already picked for this source.
                         for _ in 0..etb_multiplier {
-                            // Converge-aware: an ETB trigger reading the
-                            // cast's converge count (Sundering Archaic)
-                            // must pick its target under the concrete cap.
-                            let auto_target = self.auto_target_for_effect_avoiding_set_xc(
-                                &effect,
-                                caster,
-                                &avoid,
+                            etb_queue.push(crate::game::types::PendingTriggerPush {
+                                from_mana_ability: false,
+                                actor: None,
+                                source: card_id,
+                                controller: caster,
+                                effect: effect.clone(),
+                                subject: Some(
+                                    crate::game::effects::EntityRef::Permanent(card_id),
+                                ),
+                                event_amount: 0,
+                                mode,
+                                intervening_if: None,
                                 x_value,
                                 converged_value,
-                            );
-                            if let Some(Target::Permanent(tid)) = &auto_target {
-                                avoid.push(*tid);
-                            }
-                            // CR 115.1c — an engine-resolved "up to N target"
-                            // ETB ability (Azorius Justiciar's detain-two)
-                            // maximizes its targets; fill slots 1.. the way the
-                            // cast path threads `additional_targets`.
-                            let additional = self.auto_extra_targets_for(
-                                &effect, card_id, caster, auto_target.clone(),
-                            );
-                            for t in &additional {
-                                if let Target::Permanent(tid) = t {
-                                    avoid.push(*tid);
-                                }
-                            }
-                            self.stack.push(
-                                TriggerPush::new(card_id, caster, effect.clone())
-                                    .target(auto_target.clone())
-                                    .additional_targets(additional)
-                                    .mode(mode)
-                                    .x_value(x_value)
-                                    .converged_value(converged_value)
-                                    .trigger_source(Some(
-                                crate::game::effects::EntityRef::Permanent(card_id),
-                            ))
-                                    .mana_spent(mana_spent)
-                                    .build(),
-                            );
-                            // CR 603 — a triggered ability that DECLARES a
-                            // target slot (printed "target …" wording) fires
-                            // "becomes the target" listeners (Tenured
-                            // Concocter), same as the cast/activated paths.
-                            if effect.requires_target()
-                                && let Some(Target::Permanent(tid)) = &auto_target
-                                && self.battlefield_find(*tid).is_some()
-                            {
-                                let evs = vec![
-                                    GameEvent::ChoseTargets { chooser: caster, object: card_id },
-                                    GameEvent::BecameTarget { target: *tid, caster, by: Some(card_id) },
-                                ];
-                                self.dispatch_triggers_for_events(&evs);
-                            }
+                                mana_spent,
+                            });
                         }
+                    }
+                    if !etb_queue.is_empty() {
+                        self.drain_trigger_queue(etb_queue);
                     }
 
                     // CR 714.2b — a Saga enters with its first lore counter;
@@ -4397,6 +4393,9 @@ impl GameState {
                 self.push_pending_trigger(
                     crate::game::types::PendingTriggerPush {
                         from_mana_ability: false,
+                        x_value: 0,
+                        converged_value: 0,
+                        mana_spent: 0,
                     actor: None,
                         source: id,
                         controller: thief,
@@ -4542,6 +4541,9 @@ impl GameState {
                 self.push_pending_trigger(
                     crate::game::types::PendingTriggerPush {
                         from_mana_ability: false,
+                        x_value: 0,
+                        converged_value: 0,
+                        mana_spent: 0,
                     actor: None,
                         source: id,
                         controller: seat,
