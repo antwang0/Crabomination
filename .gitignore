@@ -57,7 +57,20 @@ scratch_*
 # Scratch gap-analysis dumps from scripts/fin_gaps.py.
 scripts/.*_missing.json
 web/dist/
-.ladder/
+
+# Ladder scratch: gate output, logs, and calibration dumps are large,
+# regenerable, and per-machine. The run scripts are NOT scratch — every
+# ML_NOTES round entry cites one as its pre-registration, and a
+# pre-registration nobody can read afterwards is not one. Track those.
+.ladder/*
+!.ladder/run_*.sh
+
+# Training checkpoints. Each net directory is tens of megabytes of
+# weights plus a stats stream; they are run artifacts, reproducible from
+# the run script and the seed. `nets/champion.safetensors` is tracked
+# deliberately (the client and the ladder default to it) and is not
+# matched by this.
+/nets_*/
 
 # Editor / rescue leftovers. A stray 700 KB `tests/sos_old.rs.bak` sat in
 # the tree for weeks before it was noticed; keep the class out.
