@@ -483,14 +483,12 @@ fn parse_args() -> Args {
             "--pairwise" => a.pairwise = Some(val().parse().expect("--pairwise")),
             "--use-deck-best" => a.use_deck_best = Some(PathBuf::from(val())),
             "--seed-emb" => a.seed_emb = Some(PathBuf::from(val())),
+            // Names are validated once, by the encoder, when the mask is
+            // set in `main` — not here against a second copy of the list.
+            // The copy that used to live here went stale the moment the
+            // v7 blocks landed and would have rejected `hist`.
             "--ablate" => {
                 a.ablate = val().split(',').map(|s| s.trim().to_string()).collect();
-                for b in &a.ablate {
-                    assert!(
-                        matches!(b.as_str(), "lib" | "cast" | "rel" | "combat" | "kw"),
-                        "--ablate: unknown block {b:?} (expected lib, cast, rel, combat, or kw)"
-                    );
-                }
             }
             "--holdout" => a.holdout = val().parse().expect("--holdout"),
             "--stop-after-stale" => {

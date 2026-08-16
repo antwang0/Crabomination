@@ -657,13 +657,20 @@ fn main() {
     // encoder feeds live features into random weights, which measures
     // garbage, not the ablation. The gate must encode exactly as the
     // training run did.
+    // An empty or whitespace-only value means "no ablation", not "one
+    // block whose name is the empty string". Scripts that gate a mix of
+    // ablated and full nets set this to "" for the full ones, and
+    // exiting on that would fail exactly half a paired sweep.
     if let Ok(spec) = std::env::var("CRAB_ABLATE") {
-        let off: Vec<&str> = spec.split(',').map(str::trim).collect();
+        let off: Vec<&str> =
+            spec.split(',').map(str::trim).filter(|s| !s.is_empty()).collect();
         if let Err(e) = crabomination::server::encode::set_encode_ablation_off(&off) {
             eprintln!("CRAB_ABLATE: {e}");
             std::process::exit(2);
         }
-        eprintln!("encoder ablation via CRAB_ABLATE: {spec} switched off");
+        if !off.is_empty() {
+            eprintln!("encoder ablation via CRAB_ABLATE: {} switched off", off.join(", "));
+        }
     }
 
     const CUBE_PAIRS: usize = 8;

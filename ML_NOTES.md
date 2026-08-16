@@ -7,6 +7,54 @@ only stays dead while the reasoning that killed it is readable.
 
 ## Tier 13 — AI
 
+- ⏳ **Round 41 — can the design resolve round 40's +0.3?**
+  Pre-registered in `.ladder/run_r41_v7_replication.sh`; results replace
+  this entry.
+
+  Round 40 measured full v7 at 53.0 / 51.5 against the r38 band
+  (52.5–52.85 / 51.1–51.35), sign-consistent across all eight ladder
+  cells and both training seeds, with a mechanism supplied afterwards by
+  the leaf census (the `hist` block is 1.8–3.6× denser in the positions
+  the search evaluates than in the rows the trainer fits). It is still
+  not adoptable, for a reason that has nothing to do with the effect:
+  **at two seeds per arm the design cannot tell +0.3 from a lucky pair
+  of seeds**, because r38's own between-seed spread is 0.35 / 0.25.
+
+  This round changes the *design*, not the treatment — and both changes
+  are things the mixed fleet already paid for. Runs cost ~95 minutes
+  instead of most of a day, and the experiment design never re-tuned
+  around that; two-seed arms have been leaving power on the table since
+  round 38.
+
+  1. **Four training seeds per arm** (43, 97, 151, 199), not two.
+  2. **Paired.** The seed drives weight init *and* the generated games,
+     so it is the dominant nuisance variable. Each seed runs both arms
+     and the estimate is the mean of four within-pair differences, so
+     the seed's contribution differences out. The same argument as the
+     antithetic seat pairs on the ladder, applied one level up — and
+     that change bought ~4× precision when it was made there.
+
+  Control is `--ablate hist,exp,ctr`: exactly the round-40 blocks
+  zeroed, encoder byte-identical to v6, extra columns exactly dead. A
+  true parity arm rather than an approximation. Its ladder cells run
+  under `CRAB_ABLATE=hist,exp,ctr` — a net trained with a block ablated
+  has never-trained random columns for it, and gating that under the
+  full encoder measures garbage.
+
+  Decision rule fixed in advance: the mean paired difference across the
+  four seeds, with per-pair differences printed so one divergent seed is
+  visible rather than averaged away. No search gate — round 40 measured
+  v7 at 54.75 on `mcts-net-deep` vs `net` against the r38 reference of
+  54.85, so the search path is not the open question.
+
+  **Prior: raised, but this is a replication and it can fail.** Four of
+  the last five rounds produced a headline number that did not survive
+  contact with a gate, and two produced metric records that were pure
+  noise. The honest expectation is that a +0.3 with a mechanism is more
+  likely than not to be real, and that a mean paired difference near
+  zero would retire encoder v7's quality claim while leaving the format
+  in place on the round-12 precedent.
+
 - 🟢 **Round 40 — the first encoder change since round 12 that isn't
   flat, a mechanically-explained retraction of round 28f's combat
   verdict, and a clean negative: combat rows cost the search 3 points.**
