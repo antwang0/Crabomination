@@ -57,6 +57,16 @@ for seed in $SEEDS; do
     out="nets_r41_${arm}_s${seed}"
     ablate=""
     [ "$arm" = "ctrl" ] && ablate="--ablate hist,exp,ctr"
+    # Resume: a run that reached its full game count is kept, anything
+    # short is redone from scratch. Eight 95-minute runs is long enough
+    # that losing the finished ones to an interrupted sweep is the
+    # difference between re-running an hour and re-running a day. The
+    # guard reads the completion line rather than the directory, so a
+    # half-written output is never mistaken for a result.
+    if grep -q "^done: $((250000)) games" "$out/log.txt" 2>/dev/null; then
+      echo "$out already complete, skipping"
+      continue
+    fi
     rm -rf "$out"; mkdir -p "$out"
     # shellcheck disable=SC2086
     $TRAIN --attn --lambda 0.7 --seed "$seed" \
