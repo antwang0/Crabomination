@@ -2061,16 +2061,132 @@ fn checkpoint(
 /// logistic to its score (`p = sigmoid(score / t)`, `t` chosen by scan),
 /// so it is scored as the best probability forecast that evaluation can
 /// support rather than penalised for not being calibrated.
-/// How often each encoder feature is actually non-zero in the positions
-/// self-play produces, and how big it gets when it is.
+/// Per-feature occupancy over a set of encoded states.
+struct Occupancy {
+    obj_hits: Vec<u64>,
+    obj_sum: Vec<f64>,
+    gl_hits: Vec<u64>,
+    gl_sum: Vec<f64>,
+    objects: u64,
+    positions: u64,
+}
+
+impl Occupancy {
+    fn new() -> Self {
+        use crabomination_nn::{GLOBAL_FEATS, OBJ_FEATS};
+        Self {
+            obj_hits: vec![0; OBJ_FEATS],
+            obj_sum: vec![0.0; OBJ_FEATS],
+            gl_hits: vec![0; GLOBAL_FEATS],
+            gl_sum: vec![0.0; GLOBAL_FEATS],
+            objects: 0,
+            positions: 0,
+        }
+    }
+
+    fn add(&mut self, s: &crabomination_nn::EncodedState) {
+        self.positions += 1;
+        for (i, v) in s.global.iter().enumerate() {
+            if *v != 0.0 {
+                self.gl_hits[i] += 1;
+                self.gl_sum[i] += v.abs() as f64;
+            }
+        }
+        for group in &s.groups {
+            for o in group {
+                self.objects += 1;
+                for (i, v) in o.feats.iter().enumerate() {
+                    if *v != 0.0 {
+                        self.obj_hits[i] += 1;
+                        self.obj_sum[i] += v.abs() as f64;
+                    }
+                }
+            }
+        }
+    }
+
+    /// Share of positions where global `i` is non-zero, as a percentage.
+    fn gl_rate(&self, i: usize) -> f64 {
+        match self.positions {
+            0 => 0.0,
+            n => 100.0 * self.gl_hits[i] as f64 / n as f64,
+        }
+    }
+
+    /// Share of encoded objects where feature `i` is non-zero.
+    fn obj_rate(&self, i: usize) -> f64 {
+        match self.objects {
+            0 => 0.0,
+            n => 100.0 * self.obj_hits[i] as f64 / n as f64,
+        }
+    }
+
+    fn gl_mean(&self, i: usize) -> f64 {
+        match self.gl_hits[i] {
+            0 => 0.0,
+            n => self.gl_sum[i] / n as f64,
+        }
+    }
+
+    fn obj_mean(&self, i: usize) -> f64 {
+        match self.obj_hits[i] {
+            0 => 0.0,
+            n => self.obj_sum[i] / n as f64,
+        }
+    }
+}
+
+/// Which block each feature slot belongs to, so the report reads as a
+/// verdict on blocks rather than a wall of indices.
+fn obj_block(i: usize) -> &'static str {
+    match i {
+        0..=11 => "base",
+        12..=19 => "keywords",
+        20..=27 => "cast",
+        28..=36 => "rel",
+        37..=39 => "combat",
+        40..=44 => "kw",
+        45..=47 => "exp",
+        _ => "ctr",
+    }
+}
+
+fn gl_block(i: usize) -> &'static str {
+    match i {
+        0..=23 => "base",
+        24..=35 => "cast",
+        36..=40 => "combat",
+        41..=42 => "kw",
+        _ => "hist",
+    }
+}
+
+/// How often each encoder feature is actually non-zero — in the rows the
+/// trainer fits, and in the leaves the search evaluates.
 ///
 /// The question a new feature block has to answer before it earns a GPU
-/// run: a feature that is zero in 99.9 % of positions cannot move a
-/// gate no matter how well-motivated it is, and the round-12 and
-/// round-28f nulls were both blocks nobody had measured the occupancy
-/// of first. Cheap — no net, no GPU, one self-play pass — and it reads
-/// the encoder as it is currently ablated, so it can also confirm that
-/// a control arm really is blanking what it claims to.
+/// run: a feature that is zero in 99.9 % of positions cannot move a gate
+/// no matter how well-motivated it is. Round 28f gated a block that was
+/// identically zero in every training row, and round 12's additions were
+/// never occupancy-checked either. Cheap — no net, no GPU, one self-play
+/// pass — and it reads the encoder as it is currently ablated, so it can
+/// also confirm that a control arm really is blanking what it claims to.
+///
+/// The two columns are the point. **train** is the recorder's
+/// distribution, what the weights are fit to. **leaf** is the
+/// distribution of simulated positions the attack and cast searches
+/// actually evaluate (via `server::leaf_capture`, the same hooks
+/// `--calibrate-leaves` uses). A feature that is common in the leaf
+/// column and rare in the train column is being fed live values at
+/// inference by weights that never received a gradient for it — that is
+/// exactly the state round 40 found the whole combat block in, and the
+/// `!` marker flags it.
+///
+/// Round 40's other lesson applies to reading this: matching the two
+/// columns is *not* automatically good. `--record-combat` closed the
+/// combat gap and cost 3 points of search strength, because what the
+/// value head is fit to also determines its calibration. This measures
+/// the mismatch; it does not prescribe closing it.
 ///
 /// Object rates are per encoded object over every group; global rates
 /// are per position. Both are the denominator the trainer sees, not the
@@ -2080,11 +2196,11 @@ fn checkpoint(
 fn feature_census(args: &Args, vocab: &Vocab, games: usize) {
     use crabomination_nn::{GLOBAL_FEATS, OBJ_FEATS};
 
-    let mut obj_hits = [0u64; OBJ_FEATS];
-    let mut obj_sum = [0f64; OBJ_FEATS];
-    let mut gl_hits = [0u64; GLOBAL_FEATS];
-    let mut gl_sum = [0f64; GLOBAL_FEATS];
-    let (mut objects, mut positions) = (0u64, 0u64);
+    let mut train = Occupancy::new();
+    let mut leaf = Occupancy::new();
+    // Single-threaded and drained per game, which is the only way
+    // `leaf_capture`'s thread-local buffer is safe to read.
+    crabomination::server::leaf_capture::set_enabled(true);
     let mut rng = StdRng::seed_from_u64(args.seed ^ 0xFEA7);
     for n in 0..games as u64 {
         let salt =
@@ -2099,62 +2215,96 @@ fn feature_census(args: &Args, vocab: &Vocab, games: usize) {
             50_000,
             vocab,
         );
+        for (state, _, _, _) in crabomination::server::leaf_capture::drain() {
+            leaf.add(&state);
+        }
         for row in &rec.rows {
-            positions += 1;
-            for (i, v) in row.state.global.iter().enumerate() {
-                if *v != 0.0 {
-                    gl_hits[i] += 1;
-                    gl_sum[i] += v.abs() as f64;
-                }
-            }
-            for group in &row.state.groups {
-                for o in group {
-                    objects += 1;
-                    for (i, v) in o.feats.iter().enumerate() {
-                        if *v != 0.0 {
-                            obj_hits[i] += 1;
-                            obj_sum[i] += v.abs() as f64;
-                        }
-                    }
-                }
-            }
+            train.add(&row.state);
         }
     }
-    if positions == 0 {
+    crabomination::server::leaf_capture::set_enabled(false);
+    if train.positions == 0 {
         eprintln!("feature census: no positions recorded");
         return;
     }
-    // Which block each slot belongs to, so the report reads as a verdict
-    // on blocks rather than a wall of indices.
-    let obj_block = |i: usize| match i {
-        0..=11 => "base",
-        12..=19 => "keywords",
-        20..=27 => "cast",
-        28..=36 => "rel",
-        37..=39 => "combat",
-        40..=44 => "kw",
-        45..=47 => "exp",
-        _ => "ctr",
-    };
-    let gl_block = |i: usize| match i {
-        0..=23 => "base",
-        24..=35 => "cast",
-        36..=40 => "combat",
-        41..=42 => "kw",
-        _ => "hist",
-    };
-    println!("feature census over {positions} positions / {objects} objects from {games} games");
-    println!("\nglobals (rate = share of positions non-zero, mean = mean |value| when non-zero)");
-    for i in 0..GLOBAL_FEATS {
-        let rate = 100.0 * gl_hits[i] as f64 / positions as f64;
-        let mean = if gl_hits[i] > 0 { gl_sum[i] / gl_hits[i] as f64 } else { 0.0 };
-        println!("  g{i:<3} {:<7} {rate:6.2}%  {mean:.3}", gl_block(i));
+    if leaf.positions == 0 {
+        eprintln!("feature census: no leaves captured — the leaf column will read all zero");
     }
-    println!("\nobject feats (rate = share of all encoded objects non-zero)");
+
+    // A feature the search meets far more often than the trainer does.
+    // Absolute floor as well as a ratio, so a jump from 0.001 % to
+    // 0.02 % doesn't get flagged as a crisis.
+    let gap = |train_pct: f64, leaf_pct: f64| leaf_pct >= 1.0 && leaf_pct > 4.0 * train_pct.max(0.01);
+
+    println!(
+        "feature census: train {} positions / {} objects; leaves {} positions / {} objects; \
+         from {games} games",
+        train.positions, train.objects, leaf.positions, leaf.objects
+    );
+    println!("  train = the recorder's rows (what the weights are fit to)");
+    println!("  leaf  = the simulated positions the search evaluates");
+    println!("  !     = live at inference, rare or absent in training");
+
+    println!("\nglobals (share of positions non-zero; mean = mean |value| when non-zero)");
+    println!("  {:<5} {:<8} {:>8} {:>8}  {:>6}", "slot", "block", "train", "leaf", "mean");
+    for i in 0..GLOBAL_FEATS {
+        let (t, l) = (train.gl_rate(i), leaf.gl_rate(i));
+        println!(
+            "  g{i:<4} {:<8} {t:7.2}% {l:7.2}%  {:6.3} {}",
+            gl_block(i),
+            train.gl_mean(i),
+            if gap(t, l) { "!" } else { "" }
+        );
+    }
+    println!("\nobject feats (share of all encoded objects non-zero)");
+    println!("  {:<5} {:<8} {:>8} {:>8}  {:>6}", "slot", "block", "train", "leaf", "mean");
     for i in 0..OBJ_FEATS {
-        let rate = 100.0 * obj_hits[i] as f64 / objects as f64;
-        let mean = if obj_hits[i] > 0 { obj_sum[i] / obj_hits[i] as f64 } else { 0.0 };
-        println!("  f{i:<3} {:<8} {rate:6.2}%  {mean:.3}", obj_block(i));
+        let (t, l) = (train.obj_rate(i), leaf.obj_rate(i));
+        println!(
+            "  f{i:<4} {:<8} {t:7.2}% {l:7.2}%  {:6.3} {}",
+            obj_block(i),
+            train.obj_mean(i),
+            if gap(t, l) { "!" } else { "" }
+        );
+    }
+
+    // The summary the round-40 finding would have surfaced immediately.
+    let flagged: Vec<String> = (0..GLOBAL_FEATS)
+        .filter(|&i| gap(train.gl_rate(i), leaf.gl_rate(i)))
+        .map(|i| format!("g{i}"))
+        .chain(
+            (0..OBJ_FEATS)
+                .filter(|&i| gap(train.obj_rate(i), leaf.obj_rate(i)))
+                .map(|i| format!("f{i}")),
+        )
+        .collect();
+    match flagged.is_empty() {
+        true => println!("\nno feature is materially more common at inference than in training"),
+        false => println!(
+            "\n{} features are live at inference and rare in training: {}",
+            flagged.len(),
+            flagged.join(" ")
+        ),
+    }
+
+    // The `!` marker only catches never-trained features. A block that is
+    // trained but two or three times denser at the leaves is the same
+    // phenomenon at lower contrast, and it is what tells you *which way*
+    // the two distributions differ — round 40's leaves turned out to be
+    // uniformly "later in the turn, after combat" than its training rows,
+    // which no single flagged feature would have shown.
+    let mut ratios: Vec<(f64, String, f64, f64)> = (0..GLOBAL_FEATS)
+        .map(|i| (format!("g{i}"), train.gl_rate(i), leaf.gl_rate(i)))
+        .chain((0..OBJ_FEATS).map(|i| (format!("f{i}"), train.obj_rate(i), leaf.obj_rate(i))))
+        .filter(|(_, t, l)| *l >= 5.0 && *t > 0.0 && l > t)
+        .map(|(name, t, l)| (l / t, name, t, l))
+        .collect();
+    ratios.sort_by(|a, b| b.0.total_cmp(&a.0));
+    if !ratios.is_empty() {
+        println!("\ntrained features the search meets most disproportionately (leaf/train):");
+        for (r, name, t, l) in ratios.iter().take(10) {
+            println!("  {name:<5} {r:5.2}x   train {t:6.2}%  leaf {l:6.2}%");
+        }
     }
 }
 

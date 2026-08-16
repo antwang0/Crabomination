@@ -141,6 +141,64 @@ only stays dead while the reasoning that killed it is readable.
   ladder and killed the trainer at startup. Both loaders now pad from
   one shared table, parity-tested.
 
+  **Follow-up: the leaf-side census, and it explains arm E.** The census
+  now reports two columns — `train` (the recorder's rows, what the
+  weights are fit to) and `leaf` (the simulated positions the attack and
+  cast searches evaluate, via the existing `leaf_capture` hooks). 200
+  games: 19 688 training positions against 3 648 leaves.
+
+  Never-trained and live at inference:
+
+  | feature | train | leaf |
+  |---|---|---|
+  | g11 coarse combat phase | 0.00 % | **69.3 %** |
+  | g38 damage / end-combat one-hot | 0.00 % | **69.3 %** |
+  | g19 attackers | 0.00 % | 1.2 % |
+
+  **Roughly two-thirds of everything the search evaluates is a
+  post-combat-damage settled state, and the feature that says so has
+  never once been non-zero in training.** The net cannot tell a combat
+  leaf from a main-phase board; every position it ranks looks like the
+  latter. Note g36/g37 (declare-attackers/blockers) are 0 % on *both*
+  sides — `simulate_attack_outcome` runs combat to completion, so the
+  leaf is the settled state, not the mid-combat one.
+
+  The trained-but-skewed half is the more useful half. Ranked by
+  leaf/train ratio over features present in ≥5 % of leaves, **the top
+  ten are the round-40 `hist` block entire**, plus exile counts:
+
+  | feature | ratio | train → leaf |
+  |---|---|---|
+  | g49/50 creatures died | 3.6× / 3.0× | 10.5 → 37.4 % |
+  | g51/52 left graveyard | 2.7× / 1.8× | 3.5 → 9.4 % |
+  | g53 cards exiled | 2.5× | 7.5 → 19.1 % |
+  | g43/44 life gained | 2.2× / 2.0× | 6.9 → 15.0 % |
+  | g45 instants cast | 2.2× | 17.4 → 37.4 % |
+  | g47 spells cast | 1.8× | 51.9 → **95.1 %** |
+
+  **This is a mechanism for arm E's +0.3, arrived at independently.**
+  The block the recorder-side census picked as "the only one with real
+  occupancy" is also the block the search meets 2–3.6× more often than
+  the trainer does — the features aren't merely present, they are
+  present disproportionately in the states the net is actually asked to
+  rank. Consistent with the gate result rather than proof of it, but it
+  is the first mechanistic story any encoder change has had.
+
+  The whole mismatch is **one axis**: the leaves are uniformly *later in
+  the turn and after combat* than the training rows. Creatures have
+  died, spells have been cast, damage is marked, combat is over. Nothing
+  scattered about it.
+
+  **What this does not say is "close the gap".** Arm C closed the g38
+  gap and cost 3 points of search strength, and round 13 measured the
+  net's leaf AUC as *higher* than its snapshot AUC (0.84–0.85), so the
+  mismatch is not obviously hurting prediction at all. A narrower
+  experiment than arm C exists — record only the settled end-of-combat
+  state, the shape that is actually 69 % of leaves, instead of all four
+  combat steps (arm C's rows were only ~19 % that shape while diluting
+  the window by 82 %) — but it inherits arm C's warning and should not
+  be run on the strength of this table alone.
+
 - 🔴 **Round 39 — both levers are nulls, and the belief redeal's null
   is the cleanest measurement in the program.** Arms SV
   (`--search-value-weight 0.25`) and OPP (`--opp-head`), each the r38

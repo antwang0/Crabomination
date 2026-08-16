@@ -982,14 +982,21 @@ feature block.** A block with 0 % occupancy cannot move a gate, and a
 gate that ran anyway (round 28f) produced a null that means nothing.
 
 Open follow-ups it raises:
-- Global 36 (declare-attackers one-hot) is still 0 % without
-  `--record-combat`, and several object feats sit under 0.1 %. Worth a
-  pass to decide which dead columns should simply be removed rather
-  than carried.
-- The census reads the *recorder's* distribution. The search evaluates
-  a different one (sim leaves). A leaf-side census would say whether
-  any feature is common at inference and rare in training — the shape
-  that silently feeds live values into untrained weights.
+- Global 36 (declare-attackers one-hot) is 0 % on *both* sides of the
+  census and several object feats sit under 0.1 %. Worth a pass to
+  decide which dead columns should be removed rather than carried.
+
+**The leaf column is done** (`--feature-census` reports train vs leaf
+side by side, plus the features the search meets most
+disproportionately). Result in `ML_NOTES.md` round 40: two-thirds of
+what the search evaluates is a settled post-combat state whose phase
+flag has never been trained, and the whole `hist` block is 1.8–3.6×
+denser at the leaves than in training. One remaining experiment it
+suggests, with its own warning attached: record *only* the settled
+end-of-combat state rather than all four combat steps, since arm C's
+rows were only ~19 % that shape. Do not run it on the strength of the
+table alone — arm C closed this exact gap and lost 3 points of search
+strength.
 
 ### Multiple Difficulty Levels
 - Easy: current random bot
