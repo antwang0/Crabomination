@@ -237,17 +237,39 @@ impl MatchFormat {
 /// set, otherwise `<repo>/decks/sealed.txt`.
 pub fn sealed_deck_path() -> std::path::PathBuf {
     if let Ok(p) = std::env::var("CRAB_SEALED_DECK") {
-        return std::path::PathBuf::from(p);
+        let given = std::path::PathBuf::from(&p);
+        if given.exists() || given.is_absolute() {
+            return given;
+        }
+        // A relative path is resolved against the repo root as well as
+        // the working directory. `cargo run` leaves the child's cwd
+        // wherever the shell was, so `-p crabomination_client` from
+        // inside the crate directory made `decks/foo.txt` point at
+        // `crabomination_client/decks/foo.txt` — which does not exist,
+        // and the seat quietly filled with a generated deck instead.
+        if let Some(root) = repo_root() {
+            let rooted = root.join(&given);
+            if rooted.exists() {
+                return rooted;
+            }
+        }
+        return given;
     }
+    repo_root()
+        .map(|r| r.join("decks").join("sealed.txt"))
+        .unwrap_or_else(|| std::path::PathBuf::from("decks/sealed.txt"))
+}
+
+/// The workspace root, found by walking up from this crate until a
+/// `Cargo.lock` appears. `None` if the binary was moved somewhere with
+/// no workspace above it.
+fn repo_root() -> Option<std::path::PathBuf> {
     let mut dir: &std::path::Path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"));
     loop {
         if dir.join("Cargo.lock").exists() {
-            return dir.join("decks").join("sealed.txt");
+            return Some(dir.to_path_buf());
         }
-        match dir.parent() {
-            Some(p) => dir = p,
-            None => return std::path::PathBuf::from("decks/sealed.txt"),
-        }
+        dir = dir.parent()?;
     }
 }
 
@@ -264,6 +286,23 @@ fn build_sealed_state() -> GameState {
     let (opponent, opp_label) = crabomination::selfplay::random_sealed_opponent(seed);
 
     let path = sealed_deck_path();
+    // Whether the player *asked* for this specific deck. Falling back to
+    // a generated build is right for the default path (a bare checkout
+    // should still be playable) and wrong for an explicit request: the
+    // mode then plays a deck the user never chose, and the only notice
+    // is one stderr line under Bevy's startup logs. Explicit requests
+    // fail loudly instead.
+    let explicit = std::env::var_os("CRAB_SEALED_DECK").is_some();
+    let refuse = |reason: &str| -> ! {
+        eprintln!(
+            "\nsealed: cannot play {} — {reason}.\n\
+             CRAB_SEALED_DECK named this deck, so no substitute is being made.\n\
+             Note relative paths resolve against the working directory or the repo root;\n\
+             `cargo run` keeps the shell's directory, so an absolute path is safest.\n",
+            path.display()
+        );
+        std::process::exit(2)
+    };
     let player = match std::fs::read_to_string(&path) {
         Ok(text) => {
             let parse = crabomination::decklist::parse_decklist(&text);
@@ -271,6 +310,12 @@ fn build_sealed_state() -> GameState {
                 eprintln!("sealed: skipping unrecognized line {bad:?}");
             }
             if parse.main.len() < 40 {
+                if explicit {
+                    refuse(&format!(
+                        "it has {} maindeck cards and a sealed deck needs 40",
+                        parse.main.len()
+                    ));
+                }
                 eprintln!(
                     "sealed: {} has {} maindeck cards (want 40) — filling the seat with a generated deck",
                     path.display(),
@@ -283,6 +328,9 @@ fn build_sealed_state() -> GameState {
             }
         }
         Err(e) => {
+            if explicit {
+                refuse(&format!("{e}"));
+            }
             eprintln!("sealed: {} unreadable ({e}) — using a generated deck", path.display());
             crabomination::selfplay::random_sealed_opponent(seed ^ 0xF00D).0
         }
@@ -577,6 +625,7 @@ fn spawn_menu(mut commands: Commands, ui_fonts: Res<UiFonts>) {
                         format_toggle(row, &tf, MatchFormat::Modern);
                         format_toggle(row, &tf, MatchFormat::Cube);
                         format_toggle(row, &tf, MatchFormat::Sos);
+                        format_toggle(row, &tf, MatchFormat::Sealed);
                         format_toggle(row, &tf, MatchFormat::Commander);
                     });
                 });
@@ -1331,6 +1380,67 @@ pub(crate) fn menu_player_name(world: &World) -> String {
         .unwrap_or_else(|| "Player".to_string())
 }
 
+/// The champion value net, loaded once per process into `SLOT_BEST` so
+/// local bot seats can play the same profile a hosted lobby seat gets.
+///
+/// The server does this at boot; the client never did, so every local
+/// match was played by the bare `HeuristicBot` while the strongest
+/// adopted pilot sat unused in the repo. `CRAB_NET` overrides the path,
+/// matching `bot_ladder` and the server. A missing or bad file is not
+/// fatal here — unlike the server, where a bad net is a boot error, a
+/// single-player match should still start, just against the heuristic.
+fn ensure_local_net() -> bool {
+    use std::sync::OnceLock;
+    static LOADED: OnceLock<bool> = OnceLock::new();
+    *LOADED.get_or_init(|| {
+        let path = std::env::var("CRAB_NET").map(std::path::PathBuf::from).unwrap_or_else(|_| {
+            let mut dir: &std::path::Path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"));
+            loop {
+                if dir.join("Cargo.lock").exists() {
+                    return dir.join("nets").join("champion.safetensors");
+                }
+                match dir.parent() {
+                    Some(p) => dir = p,
+                    None => return std::path::PathBuf::from("nets/champion.safetensors"),
+                }
+            }
+        });
+        if !path.exists() {
+            return false;
+        }
+        match crabomination::server::net_eval::load_slot(
+            crabomination::server::net_eval::SLOT_BEST,
+            &path,
+        ) {
+            Ok(()) => {
+                eprintln!("bot: value net loaded from {}", path.display());
+                true
+            }
+            Err(e) => {
+                eprintln!("bot: {} unusable ({e}) — playing the heuristic bot", path.display());
+                false
+            }
+        }
+    })
+}
+
+/// The bot a local seat gets: net-evaluated MCTS at the adopted
+/// round-26 shape when a value net is available, the heuristic
+/// otherwise — the same rule `server::lobby::default_bot` follows, so
+/// single-player and hosted games face the same opponent.
+fn local_bot() -> Box<dyn crabomination::server::Bot> {
+    if ensure_local_net() {
+        Box::new(crabomination::server::MctsBot::new(crabomination::server::MctsConfig {
+            iterations: 64,
+            horizon_turns: 3,
+            weights: crabomination::server::EvalWeights::net_eval_det1(),
+            ..crabomination::server::MctsConfig::default()
+        }))
+    } else {
+        Box::new(HeuristicBot::new())
+    }
+}
+
 fn spawn_inprocess_bot(world: &mut World, format: MatchFormat) {
     let (server_seat, ClientChannel { tx, rx }) = seat_pair();
     let sink: SnapshotSink = Arc::new(Mutex::new(SnapshotSinkState::default()));
@@ -1361,12 +1471,25 @@ fn spawn_inprocess_bot(world: &mut World, format: MatchFormat) {
     let human_name = menu_player_name(world);
     let imported: Option<ImportedDeck> = world.remove_resource::<ImportedDeck>();
     let state = if let Some(deck) = imported {
-        // Imported decklist vs. the stock Modern bot deck.
+        // Imported decklist vs. an opponent chosen by the selected
+        // format: Sealed rolls a fresh random sealed build (the same
+        // generator the recommender's gauntlet uses — this is "how does
+        // my deck do against the field", played by hand); everything
+        // else keeps the stock Modern bot deck. Before the Sealed
+        // branch, the deck-file field and the random-sealed opponent
+        // could never meet: the field always fought `brg_combo_deck`.
+        let (opp_deck, opp_label) = if format == MatchFormat::Sealed {
+            use rand::RngExt;
+            let seed: u64 = rand::rng().random();
+            crabomination::selfplay::random_sealed_opponent(seed)
+        } else {
+            (crabomination::demo::brg_combo_deck().to_vec(), "Bot".to_string())
+        };
         crabomination::draft::build_draft_match_state(
             deck.0,
-            crabomination::demo::brg_combo_deck().to_vec(),
+            opp_deck,
             human_name.clone(),
-            "Bot".into(),
+            opp_label,
         )
     } else if let Some(decks) = drafted {
         let mut state = crabomination::draft::build_draft_match_state(
@@ -1394,7 +1517,7 @@ fn spawn_inprocess_bot(world: &mut World, format: MatchFormat) {
     let mut occupants: Vec<SeatOccupant> = Vec::with_capacity(n_seats);
     occupants.push(SeatOccupant::Human(server_seat));
     for _ in 1..n_seats {
-        occupants.push(SeatOccupant::Bot(Box::new(HeuristicBot::new())));
+        occupants.push(SeatOccupant::Bot(local_bot()));
     }
     std::thread::spawn(move || {
         run_match_full(state, occupants, vec![], Some(sink_for_match));
@@ -1617,6 +1740,110 @@ mod tests {
         );
         // The live session must be left untouched (not clobbered by a respawn).
         assert!(world.contains_resource::<NetOutbox>());
+    }
+
+    /// The local bot must be the same profile a hosted lobby seat gets.
+    /// Two things this pins, both of which silently degrade rather than
+    /// fail: the committed champion has to *resolve* from the client
+    /// crate's directory (the path walk looks for the workspace
+    /// `Cargo.lock`), and it has to actually load — `load_slot` checks
+    /// the net's vocabulary against the encoder's, so a vocab drift
+    /// would leave every single-player match on the heuristic bot with
+    /// only a line on stderr to say so.
+    #[test]
+    fn local_matches_get_the_net_bot_when_the_champion_is_present() {
+        let champion = {
+            let mut dir: &std::path::Path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"));
+            loop {
+                if dir.join("Cargo.lock").exists() {
+                    break dir.join("nets").join("champion.safetensors");
+                }
+                match dir.parent() {
+                    Some(p) => dir = p,
+                    None => break std::path::PathBuf::from("nets/champion.safetensors"),
+                }
+            }
+        };
+        if !champion.exists() {
+            // A bare checkout legitimately has no net; the fallback is
+            // the heuristic bot and that is not a failure.
+            assert!(!ensure_local_net());
+            return;
+        }
+        assert!(
+            ensure_local_net(),
+            "the committed champion at {} must load into SLOT_BEST",
+            champion.display()
+        );
+        assert!(crabomination::server::net_eval::slot_loaded(
+            crabomination::server::net_eval::SLOT_BEST
+        ));
+        // Idempotent: the OnceLock means repeated seats reuse one load.
+        assert!(ensure_local_net());
+    }
+
+    /// Sealed reads the env override when set, and otherwise resolves a
+    /// path inside the repo.
+    ///
+    /// The relative-path case is the one that bit in practice:
+    /// `cargo run -p crabomination_client` leaves the child's working
+    /// directory wherever the shell was, so running from inside the
+    /// crate made `decks/foo.txt` resolve to
+    /// `crabomination_client/decks/foo.txt` — nonexistent — and the mode
+    /// quietly played a generated deck instead of the requested one.
+    #[test]
+    fn sealed_deck_path_follows_the_env_override() {
+        // SAFETY: single-threaded within this test, and the value is
+        // restored before returning.
+        let prev = std::env::var("CRAB_SEALED_DECK").ok();
+        unsafe { std::env::set_var("CRAB_SEALED_DECK", "/tmp/crab-sealed-test.txt") };
+        assert_eq!(sealed_deck_path(), std::path::PathBuf::from("/tmp/crab-sealed-test.txt"));
+
+        // A relative path that exists under the repo root resolves
+        // there, whatever the working directory is.
+        unsafe { std::env::set_var("CRAB_SEALED_DECK", "decks/sealed.txt") };
+        let rooted = sealed_deck_path();
+        assert!(
+            rooted.is_absolute() && rooted.exists(),
+            "a repo-relative deck must resolve against the repo root, got {}",
+            rooted.display()
+        );
+
+        // A path that exists nowhere is returned as given, so the error
+        // message names what the user actually typed.
+        unsafe { std::env::set_var("CRAB_SEALED_DECK", "decks/no-such-deck-xyz.txt") };
+        assert_eq!(
+            sealed_deck_path(),
+            std::path::PathBuf::from("decks/no-such-deck-xyz.txt")
+        );
+
+        unsafe { std::env::remove_var("CRAB_SEALED_DECK") };
+        let fallback = sealed_deck_path();
+        assert!(
+            fallback.ends_with("decks/sealed.txt"),
+            "default sealed path should live in the repo, got {}",
+            fallback.display()
+        );
+        match prev {
+            Some(v) => unsafe { std::env::set_var("CRAB_SEALED_DECK", v) },
+            None => {}
+        }
+    }
+
+    /// The random sealed opponent is a real, legal-sized limited deck —
+    /// this is what the menu's Sealed branch hands the bot seat.
+    #[test]
+    fn random_sealed_opponent_builds_a_playable_deck() {
+        let (deck, label) = crabomination::selfplay::random_sealed_opponent(12_345);
+        assert_eq!(deck.len(), 40, "sealed builds are 40 cards");
+        assert!(label.starts_with("Sealed #"), "opponent label: {label}");
+        // A different seed gives a different build, or "random sealed
+        // opponent" is a fixed matchup wearing a seed.
+        let (other, _) = crabomination::selfplay::random_sealed_opponent(999);
+        let names = |d: &[crabomination::cube::CardFactory]| {
+            d.iter().map(|f| f().name).collect::<Vec<_>>()
+        };
+        assert_ne!(names(&deck), names(&other));
     }
 }
 

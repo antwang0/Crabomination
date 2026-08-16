@@ -182,6 +182,29 @@ fn main() {
         pool
     };
 
+    // `CRAB_POOL_OUT=path` writes the pool back out as a decklist and
+    // stops. With `random:SEED` that is the only way to *see* a rolled
+    // pool — the branch above prints a count, so a human had no way to
+    // read the cards it opened, let alone build from them. The file is
+    // exactly the shape `parse_decklist` reads, so it round-trips into
+    // this tool, into `--play sealed`, and into the client's deck field.
+    if let Ok(out) = std::env::var("CRAB_POOL_OUT") {
+        let mut counts: std::collections::BTreeMap<&'static str, usize> = Default::default();
+        for f in &pool {
+            *counts.entry(f().name).or_default() += 1;
+        }
+        let text: String =
+            counts.iter().map(|(name, n)| format!("{n} {name}\n")).collect();
+        match std::fs::write(&out, &text) {
+            Ok(()) => println!("pool written to {out} ({} distinct names)", counts.len()),
+            Err(e) => {
+                eprintln!("cannot write {out}: {e}");
+                std::process::exit(2);
+            }
+        }
+        return;
+    }
+
     // Instant ranking with the gate-passed build net: no simulation at
     // all, just the net's opinion of a few hundred candidate builds.
     //

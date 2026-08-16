@@ -141,6 +141,19 @@ pub fn parse_decklist(text: &str) -> DecklistParse {
             continue;
         }
         seen_cards = true;
+        // `Front // Back` is how Arena and MTGO export split, modal
+        // double-faced, and (here) prepare cards, and it is what a
+        // human copying a card's printed name writes. The catalog keys
+        // those cards by their front face alone, so try the full string
+        // first — a card genuinely *named* with a slash still wins —
+        // then fall back to the part before the separator.
+        let name: &str = match by_name.contains_key(&name.to_ascii_lowercase()) {
+            true => name,
+            false => match name.split_once("//") {
+                Some((front, _)) if !front.trim().is_empty() => front.trim(),
+                _ => name,
+            },
+        };
         match by_name.get(&name.to_ascii_lowercase()) {
             Some(&factory) => {
                 let bucket = if !factory().attraction_lights.is_empty() {
@@ -209,6 +222,35 @@ SB: 1 Grizzly Bears
         let parsed = parse_decklist("3 Definitely Not A Real Card\n2 Lightning Bolt\n");
         assert_eq!(parsed.main.len(), 2);
         assert_eq!(parsed.unknown, vec!["3x Definitely Not A Real Card".to_string()]);
+    }
+
+    /// `Front // Back` — how Arena/MTGO export split, MDFC and prepare
+    /// cards, and what a human writes when copying the printed name.
+    /// The catalog keys prepare cards by their front face, so a
+    /// hand-built sealed list full of `Studious First-Year // Rampant
+    /// Growth` lines used to resolve to *nothing*, drop under 40 cards,
+    /// and silently hand the seat a generated deck.
+    #[test]
+    fn split_and_prepare_names_resolve_to_their_front_face() {
+        let parsed = parse_decklist(
+            "1 Studious First-Year // Rampant Growth\n1 Emeritus of Ideation // Ancestral Recall\n",
+        );
+        assert!(parsed.unknown.is_empty(), "unresolved: {:?}", parsed.unknown);
+        assert_eq!(parsed.main.len(), 2);
+        assert_eq!(parsed.main[0]().name, "Studious First-Year");
+        assert_eq!(parsed.main[1]().name, "Emeritus of Ideation");
+
+        // The front-face fallback must not rescue a genuinely unknown
+        // card, or typos would silently import as something else.
+        let bogus = parse_decklist("1 Not A Card // Also Not A Card\n");
+        assert_eq!(bogus.main.len(), 0);
+        assert_eq!(bogus.unknown.len(), 1);
+
+        // A plain front-face line keeps working, and a full-line `//`
+        // comment is still a comment.
+        let plain = parse_decklist("// a comment\n1 Studious First-Year\n");
+        assert!(plain.unknown.is_empty());
+        assert_eq!(plain.main.len(), 1);
     }
 
     #[test]
