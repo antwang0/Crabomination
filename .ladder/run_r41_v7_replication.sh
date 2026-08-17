@@ -142,7 +142,15 @@ for opp in ("atk-sim", "gang"):
         mean = sum(diffs) / len(diffs)
         sd = (sum((d - mean) ** 2 for d in diffs) / (len(diffs) - 1)) ** 0.5
         se = sd / len(diffs) ** 0.5
+        # Student t, not 1.96/2.0: at four seeds the normal approximation
+        # is badly optimistic (t(3) = 3.18), and the whole point of this
+        # round is not to overstate a small effect again.
+        tcrit = {2: 12.71, 3: 4.303, 4: 3.182, 5: 2.776, 6: 2.571, 7: 2.447,
+                 8: 2.365, 9: 2.306, 10: 2.262}.get(len(diffs), 2.093)
+        half = tcrit * se
+        n_pos = sum(1 for d in diffs if d > 0)
         print(f"  mean {mean:+.2f}  sd {sd:.2f}  se {se:.2f}  "
-              f"95% approx [{mean - 2 * se:+.2f}, {mean + 2 * se:+.2f}]")
+              f"95% t [{mean - half:+.2f}, {mean + half:+.2f}]  "
+              f"({n_pos}/{len(diffs)} positive)")
 PY
 echo "round-41 complete"

@@ -7,53 +7,77 @@ only stays dead while the reasoning that killed it is readable.
 
 ## Tier 13 — AI
 
-- ⏳ **Round 41 — can the design resolve round 40's +0.3?**
-  Pre-registered in `.ladder/run_r41_v7_replication.sh`; results replace
-  this entry.
+- 🟢 **Round 41 — encoder v7 replicates. Eight of eight paired
+  differences positive, and the effect is real; the champion still does
+  not move, for a reason the round only exposed by running four seeds.**
+  Design pre-registered in `.ladder/run_r41_v7_replication.sh`: four
+  training seeds (43, 97, 151, 199), paired within seed, control =
+  `--ablate hist,exp,ctr` (byte-identical to v6), control cells gated
+  under `CRAB_ABLATE` so its never-trained columns are not fed live
+  features.
 
-  Round 40 measured full v7 at 53.0 / 51.5 against the r38 band
-  (52.5–52.85 / 51.1–51.35), sign-consistent across all eight ladder
-  cells and both training seeds, with a mechanism supplied afterwards by
-  the leaf census (the `hist` block is 1.8–3.6× denser in the positions
-  the search evaluates than in the rows the trainer fits). It is still
-  not adoptable, for a reason that has nothing to do with the effect:
-  **at two seeds per arm the design cannot tell +0.3 from a lucky pair
-  of seeds**, because r38's own between-seed spread is 0.35 / 0.25.
+  **Paired differences (v7 − control), 24 k games per cell:**
 
-  This round changes the *design*, not the treatment — and both changes
-  are things the mixed fleet already paid for. Runs cost ~95 minutes
-  instead of most of a day, and the experiment design never re-tuned
-  around that; two-seed arms have been leaving power on the table since
-  round 38.
+  | seed | atk-sim | gang |
+  |---|---|---|
+  | 43 | +0.10 | +0.30 |
+  | 97 | +0.45 | +0.30 |
+  | 151 | +0.75 | +0.70 |
+  | 199 | +0.15 | +0.45 |
+  | **mean** | **+0.36** | **+0.44** |
+  | 95 % (t, n=4) | [−0.12, +0.84] | **[+0.14, +0.74]** |
 
-  1. **Four training seeds per arm** (43, 97, 151, 199), not two.
-  2. **Paired.** The seed drives weight init *and* the generated games,
-     so it is the dominant nuisance variable. Each seed runs both arms
-     and the estimate is the mean of four within-pair differences, so
-     the seed's contribution differences out. The same argument as the
-     antithetic seat pairs on the ladder, applied one level up — and
-     that change bought ~4× precision when it was made there.
+  **All eight are positive.** Treating the four seeds as the independent
+  units (both gates share a net, so they are not two independent tests),
+  four-for-four in the same direction on both gates is p ≈ 0.004 under
+  the null. `gang`'s interval excludes zero on its own; `atk-sim`'s does
+  not, and the *t* interval is the honest one — the script originally
+  printed ±2·se, which at four seeds is badly optimistic (t(3) = 3.18),
+  and has been fixed to use *t* and to print the positive count.
 
-  Control is `--ablate hist,exp,ctr`: exactly the round-40 blocks
-  zeroed, encoder byte-identical to v6, extra columns exactly dead. A
-  true parity arm rather than an approximation. Its ladder cells run
-  under `CRAB_ABLATE=hist,exp,ctr` — a net trained with a block ablated
-  has never-trained random columns for it, and gating that under the
-  full encoder measures garbage.
+  So the round-40 reading survives: **encoder v7 is worth roughly +0.4
+  against its own parity control.** After round 12, round 28f and four
+  other flat rounds, that is the first representation change in the
+  program with a replicated effect — and the leaf census supplied its
+  mechanism in advance rather than after the fact (the `hist` block is
+  1.8–3.6× denser in the positions the search evaluates than in the rows
+  the trainer fits).
 
-  Decision rule fixed in advance: the mean paired difference across the
-  four seeds, with per-pair differences printed so one divergent seed is
-  visible rather than averaged away. No search gate — round 40 measured
-  v7 at 54.75 on `mcts-net-deep` vs `net` against the r38 reference of
-  54.85, so the search path is not the open question.
+  **And yet the champion stays, which is the part four seeds bought.**
+  Absolute pooled levels:
 
-  **Prior: raised, but this is a replication and it can fail.** Four of
-  the last five rounds produced a headline number that did not survive
-  contact with a gate, and two produced metric records that were pure
-  noise. The honest expectation is that a +0.3 with a mechanism is more
-  likely than not to be real, and that a mean paired difference near
-  zero would retire encoder v7's quality claim while leaving the format
-  in place on the round-12 precedent.
+  | | atk-sim | gang |
+  |---|---|---|
+  | r41 control (v6 parity, 4 seeds) | 52.45 | 50.90 |
+  | r41 v7 (4 seeds) | 52.81 | 51.34 |
+  | champion | 52.7 | 51.2 |
+  | r38 band (2 seeds) | 52.5–52.85 | 51.1–51.35 |
+
+  **The control ran below the r38 band on both gates.** r38 and this
+  control are the same recipe, so the four-seed mean is simply a better
+  estimate of that recipe's level than r38's two-seed band was — the
+  band was a lucky pair. Round 40 therefore measured a real +0.3 against
+  an optimistic reference, and got the right answer for partly the wrong
+  reason.
+
+  The consequence is unglamorous: v7 lifts a slightly weak cohort back
+  to roughly champion level. **+0.11 / +0.14 over the champion in
+  absolute terms is not an adoption case**, however clean the paired
+  effect is. What replicates is the *treatment*, not a champion-beating
+  net. To move the champion, v7 needs to be stacked on something else
+  that is also worth a few tenths, or run in a regime that starts higher
+  than this one did.
+
+  **Adopted:** encoder v7's quality claim, at +0.4 against parity, with
+  the format already in-tree. **Not adopted:** any champion change.
+
+  **Method notes, both of which outlive this round.** Pairing is what
+  made a +0.4 effect legible at all: the control arm alone spans 52.20
+  to 52.60 on atk-sim across seeds, so an unpaired four-seed comparison
+  would still have been swamped. And the round-38 fleet made 95-minute
+  runs possible three rounds before any experiment design used the
+  slack — two-seed arms were leaving power on the table from r38 onward.
+  Four paired seeds is the new floor for anything claiming under a point.
 
 - 🟢 **Round 40 — the first encoder change since round 12 that isn't
   flat, a mechanically-explained retraction of round 28f's combat
@@ -118,6 +142,12 @@ only stays dead while the reasoning that killed it is readable.
   effect, so two seeds cannot separate "+0.3" from "a good pair of
   seeds". The honest statement is a positive that needs replication —
   and the cheap replication is more seeds on arm E, not another block.
+
+  (Round 41 ran that replication and the effect held at +0.36 / +0.44
+  paired over four seeds. It also showed the r38 band used as the
+  reference here was a lucky two-seed pair sitting above the recipe's
+  real level, so this +0.3 was measured against an optimistic control —
+  right answer, partly wrong reason. See round 41.)
 
   **Arm C adds exactly nothing to the pilot** (identical to E on both
   gates, to 0.05). One nuance kept for the record: C matched E while its
