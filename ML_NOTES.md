@@ -7,6 +7,149 @@ only stays dead while the reasoning that killed it is readable.
 
 ## Tier 13 — AI
 
+- 🟢 **Builder v3 (2026-08-17) — quality-and-curve-aware shape ranking
+  is worth ~+3 points of deck strength, replicated on both harness
+  seeds; best-of-N selection on top adds nothing measurable; and the
+  first gate run is a kept lesson in what the unit of measurement is.**
+  Pre-registered in `.ladder/run_builder_v3_gate.sh`.
+
+  **Motivation.** `builder_v2` repaired the per-card picks
+  (`score_card_quality`) but left the *shape ranker* body-blind:
+  `static_build_score` ranks candidate color shapes with the legacy
+  pip/type/curve-bucket scorer, so a pair of individually-worse colors
+  could outrank the pair holding the bombs. And nothing anywhere
+  enforced a curve — the only signal was the flat CMC bucket bonus.
+  `static_build_score_v3` scores shapes with `score_card_quality` and a
+  soft `curve_penalty` (4/point below five early spells, 3/point above
+  six five-plus spells), behind `SimConfig::builder_v3`, default
+  **off** — the score feeds the gauntlet's shape softmax, so flipping
+  it changes every generated field including the ladder's sealed gate
+  decks (see adoption below). Separately, the client's sealed opponent
+  was one noisy sample from the builder distribution; it is now
+  `best_build_v3` — best-of-16 samples under the v3 static judge.
+
+  **The first run measured its own design instead of the builder.** At
+  the v2-gate shape (800 games × 12 pools) the two harness seeds
+  contradicted each other in *both* races — v3 single 47.4/51.8, b16
+  55.4/48.6 — each side "significant" by its own Wilson interval.
+  Games are not independent units here: each pool is one deck-pair
+  matchup and one *draw* per side from a builder distribution, and the
+  pool-level sd is ~15 points, so 12 pools carry ±6.5 no matter how
+  many games each gets. The same 9,600 games per race respent wide and
+  flat (50 games × 192 pools) resolve it; the gate binary now prints
+  the pool-level *t*-interval itself and bases its verdict on that,
+  not Wilson (`t95`, exact table — the ±2·se habit at small n is the
+  round-41 lesson restated on a new axis). Narrow-run artifacts kept
+  as `.ladder/builder_v3_gate_s{43,97}.narrow.txt`.
+
+  **Results (50 games × 192 pools per cell, pool-level 95% t):**
+
+  | race | seed 43 | seed 97 |
+  |---|---|---|
+  | v3 single vs v2 single | **52.53** [50.55, 54.51] | **53.96** [52.08, 55.84] |
+  | best-of-16 v3 vs v2 single | **53.61** [51.64, 55.59] | **52.44** [50.42, 54.45] |
+
+  All four intervals clear 50%. Pooled: the scoring change alone is
+  **+3.2** (53.24 over 384 pools), the client recipe **+3.0** (53.03).
+
+  **Selection is worth ~nothing once the scoring is right.** b16 sits
+  on top of v3-single (53.0 vs 53.2 pooled), so picking the best of
+  sixteen mild-jitter samples by the same score that built them adds
+  no strength the argmax build didn't already have — consistent with
+  round 16, where static-judged best-of-32 was the control a *learned*
+  judge beat by 10 points. If the client opponent should climb
+  further, the lever is a better judge (the deck net, or the round-16
+  trust-region climb), not more samples under this one. Best-of-16
+  stays in the client anyway: milliseconds, and it hedges the jitter
+  tail.
+
+  **Adopted:** `static_build_score_v3` + `curve_penalty` as the
+  client's sealed-opponent builder (`random_sealed_opponent_packs` →
+  `best_build_v3(pool, 16, seed)`), deterministic in the seed as
+  before. **Not adopted (yet): `builder_v3` as the default**, although
+  +3 replicated is a real adoption case — flipping it changes the
+  training field and the ladder's `sealed_archetypes` mirror decks, so
+  every recorded gate reference (champion 52.7/51.2 included) stops
+  being comparable. That flip is its own pre-registered round:
+  re-baseline the champion and gate opponents on v3 fields first, then
+  ask whether a pilot *trained* on v3 fields differs (untried; the
+  training-deck-quality question in `TODO.md`).
+
+  **What was built.** `SimConfig::builder_v3` (default off);
+  `static_build_score_v3` / `curve_penalty` (`recommend.rs`, unit
+  tests pin the composition and the penalty values);
+  `heuristic_sealed_build_v3`, `build_candidates_cfg`,
+  `static_deck_score_v3` (the v2 judge stays pinned as the control),
+  `best_build_v3` (`selfplay.rs`); `--gate-builder-v3` with
+  `CRAB_GATE_POOLS` and the pool-level verdict (`selfplay_train`).
+  Training-path outputs are byte-identical by construction —
+  `heuristic_sealed_build` and `build_candidates` are untouched.
+
+- 🟢 **Round 42 — the search is still the biggest lever by a factor of
+  six, and the client has been running at a quarter of the measured
+  best. Part B killed deliberately.** `.ladder/run_r42_search_scaling.sh`.
+
+  **The framing.** Round 41 put the best net change in the program at
+  +0.4 paired. Round 26 put the search at +4 to +5 over the same net as
+  a 1-ply pilot, and round 29 found raw iterations to be the only MCTS
+  lever that pays. Yet everything adopted — the client's `local_bot`,
+  every default profile — runs 64 iterations, while round 27 measured
+  256 at +2.0 over it. That gap was never closed, and fifteen rounds
+  went after the net instead.
+
+  **Correction to round 27, found while designing this.** That curve
+  (24→64→128→256 = 49.4→53.0→54.35→55.0 % vs the champion) used 1200
+  games per cell, which is **±2.8**. Its 128→256 step of +0.65 was well
+  inside its own noise, so "still climbing at 256" was never
+  established. Same small-n optimism round 41 caught in the r38 band;
+  two independent instances now, and the lesson is the same one.
+
+  **Part A — 256 vs 64, head to head, 48 000 games.** Head-to-head
+  rather than each-vs-pilot: it measures the difference directly
+  instead of subtracting two noisy numbers, and the antithetic seat
+  pairing applies to it.
+
+  | ladder seed | 256 vs 64 |
+  |---|---|
+  | 43 | 52.1 % [51.6, 52.5] |
+  | 97 | 52.7 % [52.3, 53.1] |
+  | **pooled** | **52.4 %** |
+
+  **+2.4 points for 4× the search**, at ±0.41 per cell — fifteen times
+  round 27's precision, and it confirms that round's implied +2.0. Six
+  times the entire encoder program's replicated yield, from a config
+  constant, with no training run.
+
+  **Cost, and the distinction that decides adoption.** Single-threaded
+  seconds per game: 64 → **33.0**, 128 → **56.8**, 256 → **121.9**,
+  512 → **249.4**. Linear in iterations (≈ 2.1 + 0.48·iters), so the
+  strength curve is logarithmic against a linear cost.
+
+  The ladder gets ~22 CPU-seconds per game at 256 because 23 concurrent
+  games batch their net evaluations together. **The client cannot do
+  that** — one game, one decision at a time — so 121.9 s/game is the
+  client-facing figure, not 22. At the tens of searched decisions in a
+  game that is ~2–3 s per decision at 256 against ~0.5–0.8 s at 64. The
+  win is real and so is the cost; this is a trade, not a free lunch.
+
+  **Part B — 512 vs 256 — started and killed at 3 h 19 m of a ~15 h
+  two-cell run.** Pre-registered as underpowered, and the cost estimate
+  turned out worse than scoped (368 s/game head-to-head). Twelve more
+  hours to produce a ±1.4 estimate of a step that is probably +0.5–1.0
+  is a bad trade, and the pre-registration said so before the machine
+  was spent. **The curve above 256 is unresolved and unaffordable at
+  this program's current precision** — resolving a +0.5 step at 512
+  would cost ~35 h per cell. Recorded as a live unknown, not as a flat
+  curve.
+
+  **What should happen next, and did not happen here.** The client
+  should not stay at 64. 128 is the unmeasured middle (~1–1.5 s per
+  decision) and is the obvious default candidate; measuring 128 vs 64
+  head-to-head costs ~2 h per cell against Part B's 7.6. Better still,
+  iterations are a natural *difficulty dial* rather than a constant —
+  the opponent already has a pack-count handicap axis, and search depth
+  is the second one.
+
 - 🟢 **Round 41 — encoder v7 replicates. Eight of eight paired
   differences positive, and the effect is real; the champion still does
   not move, for a reason the round only exposed by running four seeds.**

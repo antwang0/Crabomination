@@ -323,6 +323,24 @@ fn parse_profile(name: &str) -> Option<Pilot> {
             weights: EvalWeights::net_eval_det1(),
             ..MctsConfig::default()
         })),
+        // Round 42: above the round-27 curve. That curve stopped at 256
+        // and was still climbing (24→64→128→256 = 49.4→53.0→54.35→55.0 %
+        // vs the champion, ~+1.4 then ~+0.7 per doubling), and round 29
+        // found raw iterations to be the *only* MCTS lever that pays —
+        // so where it flattens is the one number that decides how much
+        // strength is left in the search.
+        "mcts-net-512" => Some(Pilot::Mcts(MctsConfig {
+            iterations: 512,
+            horizon_turns: 3,
+            weights: EvalWeights::net_eval_det1(),
+            ..MctsConfig::default()
+        })),
+        "mcts-net-1024" => Some(Pilot::Mcts(MctsConfig {
+            iterations: 1024,
+            horizon_turns: 3,
+            weights: EvalWeights::net_eval_det1(),
+            ..MctsConfig::default()
+        })),
         // Round 29: the search internals, one knob at a time against the
         // mcts-net-deep control (64/h3, c=1.0, no priors, fixed budget).
         // (a) The exploration constant was never tuned for rewards that
