@@ -6010,6 +6010,27 @@ fn cr_704_5c_empty_library_draw_eliminates_player() {
         "Player who drew from an empty library should be eliminated");
 }
 
+#[test]
+fn set_starting_player_seats_the_die_roll_winner() {
+    // `GameState::new` always seats player 0, which handed the human the
+    // play in every sealed game. CR 103.5 / 103.7a: the starting seat
+    // takes turn 1, opens with priority, and skips its first draw.
+    let mut g = two_player_game();
+    assert_eq!(g.starting_player, 0, "the default is seat 0");
+    g.set_starting_player(1);
+    assert_eq!(g.active_player_idx, 1);
+    assert_eq!(g.player_with_priority(), 1);
+    assert_eq!(g.starting_player, 1, "recorded for the whole game");
+    assert!(g.skip_first_draw(), "the two-player starting seat skips its draw");
+    // `starting_player` must survive the turn passing to the other seat —
+    // that is the whole reason it is separate from `active_player_idx`.
+    g.active_player_idx = 0;
+    assert_eq!(g.starting_player, 1, "still answers who was on the play");
+    // An out-of-range seat is ignored rather than panicking.
+    g.set_starting_player(9);
+    assert_eq!(g.starting_player, 1);
+}
+
 // ── Ward enforcement (CR 702.21) ─────────────────────────────────────────
 
 #[test]
@@ -6289,6 +6310,63 @@ fn ward_does_not_trigger_on_own_spells() {
     // Witch should have the pump applied.
     let w = g.computed_permanent(witch).unwrap();
     assert!(w.power > 3, "Witch should be pumped by own spell");
+}
+
+/// CR 702.21a / 606.1 — Ward fires on a spell *or ability*, and a loyalty
+/// ability is an activated ability. Regression: `activate_loyalty_ability`
+/// never pushed the Ward trigger, so Professor Dellian Fel's −3 destroyed a
+/// warded creature without paying the toll.
+#[test]
+fn ward_triggers_on_a_loyalty_ability_targeting_it() {
+    let mut g = two_player_game();
+    // Sedgemoor Witch has Ward—Pay 3 life; seat 1 can't afford it.
+    let witch = g.add_card_to_battlefield(0, catalog::sedgemoor_witch());
+    g.clear_sickness(witch);
+    let fel = g.add_card_to_battlefield(1, catalog::professor_dellian_fel());
+
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    g.players[1].life = 2; // too little for the 3-life Ward
+    g.step = TurnStep::PreCombatMain;
+    g.perform_action(GameAction::ActivateLoyaltyAbility {
+        card_id: fel,
+        ability_index: 2, // −3: destroy target creature
+        target: Some(Target::Permanent(witch)),
+        x_value: None,
+    })
+    .expect("the loyalty ability activates — Ward is a trigger, not a restriction");
+    drain_stack(&mut g);
+
+    assert!(
+        g.battlefield.iter().any(|c| c.id == witch),
+        "Ward should counter the unpaid loyalty ability",
+    );
+}
+
+/// The same ability resolves once the Ward toll is affordable — the trigger
+/// charges the controller rather than blanket-countering.
+#[test]
+fn a_paid_ward_lets_the_loyalty_ability_resolve() {
+    let mut g = two_player_game();
+    let witch = g.add_card_to_battlefield(0, catalog::sedgemoor_witch());
+    g.clear_sickness(witch);
+    let fel = g.add_card_to_battlefield(1, catalog::professor_dellian_fel());
+
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    g.step = TurnStep::PreCombatMain;
+    let life_before = g.players[1].life;
+    g.perform_action(GameAction::ActivateLoyaltyAbility {
+        card_id: fel,
+        ability_index: 2,
+        target: Some(Target::Permanent(witch)),
+        x_value: None,
+    })
+    .expect("activates");
+    drain_stack(&mut g);
+
+    assert_eq!(g.players[1].life, life_before - 3, "Ward—Pay 3 life was paid");
+    assert!(!g.battlefield.iter().any(|c| c.id == witch), "and then the −3 kills it");
 }
 
 // ── Stun counter enforcement (CR 701.48) ─────────────────────────────────
@@ -7611,4 +7689,141 @@ fn loss_cause_records_authoritative_reason() {
     g.lose_to_empty_draw(0);
     g.check_state_based_actions();
     assert_eq!(g.players[0].loss_cause, Some(LossCause::Decked));
+}
+
+/// CR 509.4 — after blockers are declared the active player receives
+/// priority *inside* the declare-blockers step, and every other player after
+/// them. The defending player must get that window to cast a combat trick
+/// before the combat damage step. Regression: the client stayed in blocker-
+/// selection mode for this second window and ate the click, so a held
+/// instant (Quandrix Charm) could not be cast after blocking.
+#[test]
+fn defender_gets_priority_to_cast_after_declaring_blocks() {
+    let mut g = two_player_game();
+    g.active_player_idx = 1;
+    g.step = TurnStep::DeclareAttackers;
+    let atk = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let blk = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(atk);
+    g.clear_sickness(blk);
+    let trick = g.add_card_to_hand(0, catalog::giant_growth());
+    g.add_card_to_battlefield(0, catalog::forest());
+    g.priority.player_with_priority = 1;
+
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: atk,
+        target: AttackTarget::Player(0),
+    }]))
+    .expect("attack");
+    while g.step != TurnStep::DeclareBlockers {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    g.perform_action(GameAction::DeclareBlockers(vec![(blk, atk)])).expect("block");
+
+    // The active player holds priority first; passing it hands the window to
+    // the defender — still in DeclareBlockers, before any damage.
+    assert_eq!(g.player_with_priority(), 1);
+    g.perform_action(GameAction::PassPriority).expect("active passes");
+    assert_eq!(g.step, TurnStep::DeclareBlockers, "still pre-damage");
+    assert_eq!(g.player_with_priority(), 0, "defender gets the response window");
+
+    // And the instant is both reported castable (drives the client's hand
+    // highlight / priority stop) and actually accepted.
+    assert!(g.castable_hand_cards(0).contains(&trick));
+    g.perform_action(GameAction::CastSpell {
+        card_id: trick,
+        target: Some(Target::Permanent(blk)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("combat trick castable after blocks are declared");
+    assert_eq!(g.stack.len(), 1, "the trick is on the stack, pre-damage");
+}
+
+/// CR 509.4 — declaring blockers restarts the priority round, so the
+/// defender gets a window before the combat damage step even when they
+/// block nothing. Regression: the client sent a bare `PassPriority` when
+/// the player declined to block. That was the round's second pass, so the
+/// engine auto-declared no blockers and advanced straight to CombatDamage —
+/// there was no window in which to cast a trick. An explicit empty
+/// declaration (what the client sends now) keeps the step alive.
+#[test]
+fn declining_to_block_still_leaves_a_pre_damage_window() {
+    let mut g = two_player_game();
+    g.active_player_idx = 1;
+    g.step = TurnStep::DeclareAttackers;
+    let atk = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(atk);
+    let trick = g.add_card_to_hand(0, catalog::giant_growth());
+    g.add_card_to_battlefield(0, catalog::forest());
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: atk,
+        target: AttackTarget::Player(0),
+    }]))
+    .expect("attack");
+    while g.step != TurnStep::DeclareBlockers {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    // The active player passes, handing the defender the blocking window.
+    g.perform_action(GameAction::PassPriority).expect("ap pass");
+    assert_eq!(g.player_with_priority(), 0);
+
+    // A bare pass here is the second pass of the round: the step ends.
+    let mut bare = g.clone();
+    bare.perform_action(GameAction::PassPriority).expect("bare pass");
+    assert_eq!(
+        bare.step,
+        TurnStep::CombatDamage,
+        "a bare pass skips the response window entirely",
+    );
+
+    // The explicit empty declaration keeps it: priority restarts with the
+    // active player, and comes back to the defender still pre-damage.
+    g.perform_action(GameAction::DeclareBlockers(vec![])).expect("declare no blocks");
+    assert!(g.blockers_declared(), "declaration recorded");
+    assert_eq!(g.step, TurnStep::DeclareBlockers);
+    assert_eq!(g.player_with_priority(), 1, "CR 509.4 — active player first");
+    g.perform_action(GameAction::PassPriority).expect("ap passes again");
+    assert_eq!(g.step, TurnStep::DeclareBlockers, "still pre-damage");
+    assert_eq!(g.player_with_priority(), 0, "the defender's window");
+
+    assert!(g.castable_hand_cards(0).contains(&trick));
+    g.perform_action(GameAction::CastSpell {
+        card_id: trick,
+        target: Some(Target::Permanent(atk)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("a trick is castable before damage even with no blocks declared");
+}
+
+/// After a real declaration priority belongs to the active player, so the
+/// pass the client used to bundle with it was rejected outright ("seat N may
+/// not act now"). The declaration alone is the whole action.
+#[test]
+fn declaring_blockers_hands_priority_to_the_active_player() {
+    let mut g = two_player_game();
+    g.active_player_idx = 1;
+    g.step = TurnStep::DeclareAttackers;
+    let atk = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let blk = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(atk);
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: atk,
+        target: AttackTarget::Player(0),
+    }]))
+    .expect("attack");
+    while g.step != TurnStep::DeclareBlockers {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    g.perform_action(GameAction::PassPriority).expect("ap pass");
+    g.perform_action(GameAction::DeclareBlockers(vec![(blk, atk)])).expect("block");
+
+    assert_eq!(g.player_with_priority(), 1, "the declaration restarts the round");
+    assert_eq!(g.priority.consecutive_passes, 0, "and resets the pass count");
 }

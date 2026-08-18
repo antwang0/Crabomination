@@ -35,6 +35,10 @@ pub struct ScryReorderButton {
 #[derive(Component)]
 pub struct DecisionConfirmButton;
 
+/// Marker for the Cancel button on a cancellable decision modal.
+#[derive(Component)]
+pub struct DecisionCancelButton;
+
 /// ← / → reorder button for the OrderTriggers modal (CR 603.3b). Moves the
 /// trigger `delta` slots in the stack-push ordering.
 #[derive(Component)]
@@ -409,6 +413,16 @@ pub fn spawn_decision_ui(
         }
         DecisionWire::Mulligan { hand, mulligans_taken, serum_powders, .. } => {
             state.spawned_for = Some(key);
+            // Whether you're on the play decides how greedy a keep is —
+            // it belongs on the mulligan screen, which is where the
+            // decision is actually made.
+            let on_the_play = cv.starting_player == cv.your_seat;
+            let starter = cv
+                .players
+                .iter()
+                .find(|p| p.seat == cv.starting_player)
+                .map(|p| p.name.clone())
+                .unwrap_or_else(|| format!("Player {}", cv.starting_player));
             spawn_mulligan_modal(
                 &mut commands,
                 &asset_server,
@@ -416,6 +430,8 @@ pub fn spawn_decision_ui(
                 hand,
                 *mulligans_taken,
                 serum_powders,
+                on_the_play,
+                &starter,
             );
         }
         DecisionWire::ChooseColor { legal, .. } => {
@@ -430,12 +446,19 @@ pub fn spawn_decision_ui(
             state.discard_selected.clear();
             state.spawned_for = Some(key);
             let title = format!("Choose {count} card(s) to discard");
-            spawn_card_picker_modal(&mut commands, &asset_server, &ui_fonts, &title, hand);
+            spawn_card_picker_modal(&mut commands, &asset_server, &ui_fonts, &title, hand, None);
         }
-        DecisionWire::ChooseCards { prompt, candidates, .. } => {
+        DecisionWire::ChooseCards { prompt, candidates, eligible, .. } => {
             state.discard_selected.clear();
             state.spawned_for = Some(key);
-            spawn_card_picker_modal(&mut commands, &asset_server, &ui_fonts, prompt, candidates);
+            spawn_card_picker_modal(
+                &mut commands,
+                &asset_server,
+                &ui_fonts,
+                prompt,
+                candidates,
+                eligible.as_deref(),
+            );
         }
         DecisionWire::OptionalTrigger { source, description } => {
             state.spawned_for = Some(key);
@@ -586,7 +609,10 @@ pub fn spawn_decision_ui(
         DecisionWire::ChooseAmount { prompt, max, .. } => {
             state.amount = 0;
             state.spawned_for = Some(key);
-            spawn_choose_amount_modal(&mut commands, &ui_fonts, prompt, *max, state.amount);
+            let cancellable = cv.pending_decision.as_ref().is_some_and(|pd| pd.cancellable);
+            spawn_choose_amount_modal(
+                &mut commands, &ui_fonts, prompt, *max, state.amount, cancellable,
+            );
         }
         DecisionWire::ChooseOption { source, prompt, options } => {
             state.spawned_for = Some(key);
@@ -679,7 +705,7 @@ pub fn spawn_decision_ui(
             state.spawned_for = Some(key);
             spawn_legend_keep_modal(&mut commands, &ui_fonts, name, duplicates);
         }
-        DecisionWire::ChooseTarget { legal, source_name, description, .. } => {
+        DecisionWire::ChooseTarget { legal, source_name, description, optional, .. } => {
             // No modal — reuse the existing in-scene targeting cursor.
             // Flipping `pending_decision_target` flags `handle_game_input`
             // to submit picks as `DecisionAnswer::Target` instead of
@@ -709,6 +735,7 @@ pub fn spawn_decision_ui(
             }
             legal_targets.source_name = source_name.clone();
             legal_targets.description = description.clone();
+            legal_targets.declinable = *optional;
         }
     }
 }
@@ -1596,6 +1623,11 @@ fn spawn_card_picker_modal(
     ui_fonts: &UiFonts,
     title: &str,
     candidates: &[(CardId, String)],
+    // `Some` restricts which candidates may be picked; the rest are shown
+    // dimmed and marked, so the player can see the whole reveal but can't
+    // mistake an illegal card for a choice (Zimone's Experiment reveals
+    // five and takes only creatures and lands).
+    eligible: Option<&[CardId]>,
 ) {
     let root = commands
         .spawn((
@@ -1650,7 +1682,8 @@ fn spawn_card_picker_modal(
                 for (card_id, name) in candidates {
                     let path = scryfall::card_asset_path(name);
                     let texture: Handle<Image> = asset_server.load(&path);
-                    row.spawn((
+                    let legal = eligible.is_none_or(|e| e.contains(card_id));
+                    let mut tile = row.spawn((
                         Button,
                         Node {
                             flex_direction: FlexDirection::Column,
@@ -1659,12 +1692,25 @@ fn spawn_card_picker_modal(
                             align_items: AlignItems::Center,
                             ..default()
                         },
-                        BackgroundColor(MODAL_TILE_BG),
-                        DiscardSelectButton { card_id: *card_id },
-                    ))
-                    .with_children(|cb| {
+                        BackgroundColor(if legal { MODAL_TILE_BG } else { theme::PANEL_BG_SUNKEN }),
+                    ));
+                    // An ineligible tile carries no select button, so a
+                    // click on it does nothing at all rather than adding a
+                    // pick the resolver would silently drop.
+                    if legal {
+                        tile.insert(DiscardSelectButton { card_id: *card_id });
+                    }
+                    tile.with_children(|cb| {
                         cb.spawn((
-                            ImageNode { image: texture, ..default() },
+                            ImageNode {
+                                image: texture,
+                                color: if legal {
+                                    Color::WHITE
+                                } else {
+                                    Color::srgba(0.45, 0.45, 0.5, 0.55)
+                                },
+                                ..default()
+                            },
                             Node {
                                 width: Val::Px(CARD_W - 12.0),
                                 height: Val::Px(CARD_H - 12.0),
@@ -1673,9 +1719,13 @@ fn spawn_card_picker_modal(
                             Pickable::IGNORE,
                         ));
                         cb.spawn((
-                            Text::new(name.clone()),
+                            Text::new(if legal {
+                                name.clone()
+                            } else {
+                                format!("{name}  (can't choose)")
+                            }),
                             ui_fonts.tf(12.0),
-                            TextColor(theme::TEXT_PRIMARY),
+                            TextColor(if legal { theme::TEXT_PRIMARY } else { theme::TEXT_MUTED }),
                             Pickable::IGNORE,
                         ));
                     });
@@ -1809,6 +1859,8 @@ fn spawn_mulligan_modal(
     _hand: &[(CardId, String)],
     mulligans_taken: usize,
     serum_powders: &[CardId],
+    on_the_play: bool,
+    starter_name: &str,
 ) {
     let root = commands.spawn((
         Node {
@@ -1847,8 +1899,17 @@ fn spawn_mulligan_modal(
         format!("Mulligan {mulligans_taken} — keep this hand?")
     };
 
+    // CR 103.7a — the player on the play skips their first draw, which is
+    // the whole reason a marginal hand plays differently from each seat.
+    let (play_line, play_color) = if on_the_play {
+        ("\u{25b6}  You are on the play (no first draw)".to_string(), theme::ACCENT_GOLD)
+    } else {
+        (format!("\u{25c0}  {starter_name} is on the play — you are on the draw"), theme::ACCENT_BLUE)
+    };
+
     commands.entity(panel).with_children(|p| {
         p.spawn((Text::new(title), ui_fonts.tf(18.0), TextColor(theme::TEXT_PRIMARY)));
+        p.spawn((Text::new(play_line), ui_fonts.tf(14.0), TextColor(play_color)));
         p.spawn(Node { flex_direction: FlexDirection::Row, column_gap: Val::Px(16.0), ..default() })
         .with_children(|btns| {
             btns.spawn((
@@ -2150,6 +2211,45 @@ pub fn handle_damage_assign_buttons(
     }
 }
 
+/// Back out of a cancellable decision — the Cancel button or Escape.
+///
+/// Only offered when the engine flags the pending decision as the input
+/// half of a cast / activation replay that hasn't paid anything
+/// (`PendingDecisionView::cancellable`). Without it, opening Divergent
+/// Equation's {X} picker with no mana was a dead end: every answer failed
+/// the replayed cast, and the failure put the same modal straight back.
+pub fn handle_decision_cancel(
+    view: Res<CurrentView>,
+    outbox: Option<Res<NetOutbox>>,
+    mut log: ResMut<GameLog>,
+    mut state: ResMut<DecisionUiState>,
+    keys: Res<bevy::input::ButtonInput<bevy::input::keyboard::KeyCode>>,
+    cancel: Query<&Interaction, (Changed<Interaction>, With<DecisionCancelButton>)>,
+) {
+    let Some(cv) = &view.0 else { return };
+    if !cv.pending_decision.as_ref().is_some_and(|pd| pd.cancellable && pd.decision.is_some()) {
+        return;
+    }
+    let clicked = cancel.iter().any(|i| *i == Interaction::Pressed);
+    if !clicked && !keys.just_pressed(bevy::input::keyboard::KeyCode::Escape) {
+        return;
+    }
+    if let Some(outbox) = &outbox {
+        outbox.submit(GameAction::SubmitDecision(DecisionAnswer::CancelAction));
+    }
+    // The modal despawns when the server's next view arrives with no
+    // pending decision; clear the working state so a later prompt of the
+    // same kind doesn't inherit these picks.
+    state.scry.clear();
+    state.search_selected = None;
+    state.put_on_library.clear();
+    state.discard_selected.clear();
+    state.modes_selected = None;
+    state.amount = 0;
+    state.divide.clear();
+    log.push("Cancelled.");
+}
+
 /// Handle the Confirm button: build the appropriate answer based on which
 /// decision is pending and submit it to the server via NetOutbox.
 pub fn handle_confirm(
@@ -2190,10 +2290,30 @@ pub fn handle_confirm(
                 if state.discard_selected.len() < *count as usize { continue; }
                 DecisionAnswer::Discard(state.discard_selected.clone())
             }
-            DecisionWire::ChooseCards { min, .. } => {
+            DecisionWire::ChooseCards { min, source, prompt, .. } => {
                 // Require at least `min` selected; the per-tile handler already
                 // caps selection at `max`.
                 if state.discard_selected.len() < *min as usize { continue; }
+                // A slot-0 target in a graveyard / exile (the engine's
+                // `CastSlot0TargetPick`): stamp the pick onto the held copies
+                // of that action, or a `ManualTapRequired` bounce re-arms it
+                // targetless and every mana tap re-poses this picker.
+                if prompt.ends_with(crabomination::decision::OFFBOARD_TARGET_PROMPT_SUFFIX)
+                    && let Some(picked) = state.discard_selected.first().copied()
+                {
+                    let target = Target::Permanent(picked);
+                    if let Some(outbox) = &outbox {
+                        outbox.patch_last_cast_target(*source, target.clone());
+                    }
+                    if let Some(pc) = pending_cast.0.as_mut()
+                        && crate::net_plugin::cast_action_card_id(&pc.action) == *source
+                        && let Some(slot) =
+                            crate::net_plugin::cast_action_target_mut(&mut pc.action)
+                        && slot.is_none()
+                    {
+                        *slot = Some(target);
+                    }
+                }
                 DecisionAnswer::Cards(state.discard_selected.clone())
             }
             DecisionWire::OrderTriggers { .. } => {
@@ -3264,6 +3384,7 @@ pub fn handle_mode_pick_buttons(
         pending.card_id = None;
         pending.card_name.clear();
         pending.modes.clear();
+        pending.prepare_source = None;
         esc_consumed.0 = true;
         return;
     }
@@ -3272,6 +3393,7 @@ pub fn handle_mode_pick_buttons(
             pending.card_id = None;
             pending.card_name.clear();
             pending.modes.clear();
+            pending.prepare_source = None;
             return;
         }
     }
@@ -3285,11 +3407,15 @@ pub fn handle_mode_pick_buttons(
         // A mode-pick decision without a card id shouldn't happen, but a
         // malformed/mismatched server decision must not panic the client.
         let Some(card_id) = pending.card_id else { continue };
+        // SOS Prepare — the pick belongs to a prepared creature's inset
+        // spell, which casts through its own action.
+        let prepare_source = pending.prepare_source;
         if needs_target {
             targeting.active = true;
-            targeting.pending_card_id = Some(card_id);
             targeting.pending_mode = Some(idx);
             targeting.back_face_pending = false;
+            targeting.pending_card_id = prepare_source.is_none().then_some(card_id);
+            targeting.pending_prepare_source = prepare_source;
             // Populate the highlight set from the chosen mode's slot-0
             // filter so the user sees rings on legal creatures (the
             // earlier path left it empty, which was the source of the
@@ -3303,6 +3429,14 @@ pub fn handle_mode_pick_buttons(
             {
                 *legal_targets = legal;
             }
+        } else if let Some(creature_id) = prepare_source {
+            outbox.submit(GameAction::CastPrepareSpell {
+                creature_id,
+                target: None,
+                additional_targets: vec![],
+                mode: Some(idx),
+                x_value: None,
+            });
         } else {
             outbox.submit(GameAction::CastSpell {
                 card_id,
@@ -3315,6 +3449,7 @@ pub fn handle_mode_pick_buttons(
         pending.card_id = None;
         pending.card_name.clear();
         pending.modes.clear();
+        pending.prepare_source = None;
         return;
     }
 }
@@ -3467,6 +3602,33 @@ fn spawn_modal_panel(commands: &mut Commands, min_width: f32) -> Entity {
         .id();
     commands.entity(root).add_child(panel);
     panel
+}
+
+/// Cancel control for a decision the engine says is abandonable (a cast or
+/// activation suspended before it paid anything — `PendingDecisionView
+/// ::cancellable`). Escape does the same thing; the button is here because
+/// a modal with no visible way out reads as a hang.
+fn spawn_cancel_button(panel: &mut ChildSpawnerCommands, ui_fonts: &UiFonts) {
+    panel
+        .spawn((
+            Button,
+            Node {
+                padding: UiRect::axes(Val::Px(20.0), Val::Px(10.0)),
+                border_radius: BorderRadius::all(theme::RADIUS_BUTTON),
+                ..default()
+            },
+            BackgroundColor(theme::BUTTON_NEUTRAL_BG),
+            HoverTint::new(theme::BUTTON_NEUTRAL_BG),
+            DecisionCancelButton,
+        ))
+        .with_children(|b| {
+            b.spawn((
+                Text::new("Cancel (Esc)"),
+                ui_fonts.tf(16.0),
+                TextColor(theme::TEXT_SECONDARY),
+                bevy::picking::Pickable::IGNORE,
+            ));
+        });
 }
 
 fn spawn_confirm_button(panel: &mut ChildSpawnerCommands, ui_fonts: &UiFonts) {
@@ -3629,6 +3791,7 @@ fn spawn_choose_amount_modal(
     prompt: &str,
     max: u32,
     value: u32,
+    cancellable: bool,
 ) {
     let panel = spawn_modal_panel(commands, 320.0);
     let prompt_owned = format!("{prompt} (0–{max})");
@@ -3683,6 +3846,9 @@ fn spawn_choose_amount_modal(
             }
         });
         spawn_confirm_button(p, ui_fonts);
+        if cancellable {
+            spawn_cancel_button(p, ui_fonts);
+        }
     });
 }
 

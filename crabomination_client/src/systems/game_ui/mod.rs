@@ -26,6 +26,7 @@ pub use player_stats::{
     update_player_stats_chips, LifeFlashTracker,
 };
 pub use popups::{
+    cancel_pickers_on_escape,
     handle_ability_menu, handle_alt_cast_buttons, handle_helper_tap_buttons,
     handle_pay_times_buttons, handle_split_cast_buttons, handle_spree_cast_buttons,
     spawn_ability_menu, spawn_alt_cast_modal, spawn_helper_tap_modal, spawn_pay_times_modal,
@@ -66,6 +67,23 @@ pub struct GameLogicSet;
 #[derive(bevy::ecs::system::SystemParam)]
 pub struct InFlightAnims<'w, 's> {
     pub gy: Query<'w, 's, &'static SendToGraveyardAnimation>,
+    /// The shared exile pile's visual — bundled here for the same reason
+    /// everything else in this struct is: the 16-parameter system cap.
+    pub exile_pile: Query<
+        'w,
+        's,
+        (
+            &'static mut Transform,
+            &'static mut Visibility,
+            &'static mut CardHoverLift,
+        ),
+        (
+            With<crate::card::ExilePile>,
+            Without<DeckPile>,
+            Without<GraveyardPile>,
+            Without<GameCardId>,
+        ),
+    >,
     pub to_hand: Query<'w, 's, (&'static GameCardId, &'static crate::card::ReturnToHandAnimation)>,
     pub hand_zoom: Res<'w, crate::card::HandZoom>,
     pub gameplay: Res<'w, crate::config::GameplayConfig>,
@@ -1476,8 +1494,9 @@ pub fn update_hint(
             } else {
                 legal_targets.description.clone()
             };
+            let skip = if legal_targets.declinable { " Esc skips it." } else { "" };
             (
-                format!("⚡ {src}: {body}. Click / Enter on a highlighted target."),
+                format!("⚡ {src}: {body}. Click / Enter on a highlighted target.{skip}"),
                 theme::ACCENT_BLUE,
                 15.0_f32,
             )
@@ -1556,8 +1575,10 @@ pub fn update_hint(
         return;
     }
     let your_seat = cv.your_seat;
-    let viewer_is_defending =
-        cv.step == TurnStep::DeclareBlockers && cv.declares_blocks(your_seat) && cv.priority == your_seat;
+    let viewer_is_defending = cv.step == TurnStep::DeclareBlockers
+        && cv.declares_blocks(your_seat)
+        && cv.priority == your_seat
+        && !blocking.declared;
     if viewer_is_defending {
         let msg = if blocking.selected_blocker.is_some() {
             "Click / Enter on an attacker to assign the block. Esc cancels.".to_string()
@@ -1594,29 +1615,40 @@ pub fn update_hint(
         apply_hint(&mut t, &mut color, &mut font, msg, theme::ACCENT_GOLD, 13.0);
         return;
     }
-    let body = match (cv.active_player == your_seat, cv.step) {
-        (true, TurnStep::PreCombatMain) | (true, TurnStep::PostCombatMain) => {
+    // Whose *move* it is is priority, not whose turn it is. Keying this on
+    // the turn player told a viewer holding priority on the opponent's turn
+    // — the whole window in which you respond to their spell — that the
+    // opponent was "thinking", while the game sat waiting on the viewer.
+    let you_have_priority = cv.priority == your_seat;
+    let body = match (you_have_priority, cv.active_player == your_seat, cv.step) {
+        (true, true, TurnStep::PreCombatMain) | (true, true, TurnStep::PostCombatMain) => {
             "Click / Enter to play. Tab,← →: select. F flip · L alt · M ability. P pass.".to_string()
         }
-        (true, TurnStep::DeclareAttackers) => {
+        (true, true, TurnStep::DeclareAttackers) => {
             "A = Attack with all eligible creatures. P = Pass (no attack).".to_string()
         }
-        (true, TurnStep::DeclareBlockers) => {
+        (true, true, TurnStep::DeclareBlockers) => {
             "Opponent is assigning blocks. P = Proceed to combat.".to_string()
         }
-        (true, _) => String::new(),
-        (false, _) => {
+        (true, true, _) => "You have priority. P to pass.".to_string(),
+        // The opponent's turn, but the viewer holds priority: this is the
+        // response window, and it is waiting on them.
+        (true, false, _) => {
+            "Your priority — respond, or P to pass.".to_string()
+        }
+        (false, ..) => {
             // Cycle 1→2→3 dots every ~0.4s so the player can tell the
             // bot is still working and the game hasn't hung. Stick on a
             // visible dot count (never zero) so the line is the same
-            // width every frame.
+            // width every frame. Named off `priority`, so it only ever
+            // shows while that seat really is the one to act.
             let phase = (time.elapsed_secs() / 0.4) as u64 % 3;
             let dots = match phase {
                 0 => ".  ",
                 1 => ".. ",
                 _ => "...",
             };
-            format!("{} is thinking{}", player_name(cv, cv.active_player), dots)
+            format!("{} is thinking{}", player_name(cv, cv.priority), dots)
         }
     };
     apply_hint(&mut t, &mut color, &mut font, body, theme::ACCENT_GOLD, 13.0);
@@ -2132,7 +2164,7 @@ pub fn sync_game_visuals(
     >,
     mut deck_pile_q: Query<
         (Entity, &DeckPile, &mut Transform, &mut CardHoverLift),
-        (Without<GameCardId>, Without<OpponentHandCard>),
+        (Without<GameCardId>, Without<OpponentHandCard>, Without<crate::card::ExilePile>),
     >,
     mut graveyard_q: Query<
         (
@@ -2142,13 +2174,13 @@ pub fn sync_game_visuals(
             &mut CardHoverLift,
             &mut MeshMaterial3d<StandardMaterial>,
         ),
-        (Without<DeckPile>, Without<GameCardId>),
+        (Without<DeckPile>, Without<GameCardId>, Without<crate::card::ExilePile>),
     >,
     opponent_hand_q: Query<
         (Entity, &OpponentHandCard, &Transform, Has<Animating>),
-        (Without<DeckPile>, Without<GraveyardPile>),
+        (Without<DeckPile>, Without<GraveyardPile>, Without<crate::card::ExilePile>),
     >,
-    inflight: InFlightAnims,
+    mut inflight: InFlightAnims,
     all_bf_entities: Query<&GameCardId, With<BattlefieldCard>>,
     all_hand_entity_ids: Query<&GameCardId, With<HandCard>>,
     // Entities currently on the stack (StackCard but not HandCard = opponent cards).
@@ -2241,6 +2273,21 @@ pub fn sync_game_visuals(
     for (_, gid, _, _, _, _) in &hand_cards {
         if gy_id_sets.get(viewer).is_some_and(|s| s.contains(&gid.0)) {
             *gy_in_flight.entry(viewer).or_default() += 1;
+        }
+    }
+
+    // The shared exile pile: one stack for the whole zone, as tall as the
+    // number of exiled cards, hidden while exile is empty.
+    for (mut transform, mut vis, mut lift) in &mut inflight.exile_pile {
+        if cv.exile.is_empty() {
+            *vis = Visibility::Hidden;
+        } else {
+            *vis = Visibility::Visible;
+            let base = crate::card::exile_position(n_seats);
+            let y = cv.exile.len() as f32 * DECK_CARD_Y_STEP + 0.01;
+            let pos = Vec3::new(base.x, y, base.z);
+            transform.translation = pos;
+            lift.base_translation = pos;
         }
     }
 
@@ -3190,6 +3237,7 @@ pub fn auto_advance_p0(
     view: Res<CurrentView>,
     mut ff: ResMut<FastForward>,
     stops: Option<Res<crate::systems::phase_bar::StopConfig>>,
+    blocking: Res<BlockingState>,
 ) {
     let Some(cv) = &view.0 else { return };
     let Some(outbox) = outbox else { return };
@@ -3262,7 +3310,15 @@ pub fn auto_advance_p0(
     // either no attacker is targeting the viewer or the viewer has no
     // creature able to block (untapped, no Defender restriction —
     // summoning-sick creatures CAN block).
-    if cv.step == TurnStep::DeclareBlockers && cv.declares_blocks(your_seat) {
+    // …but only until this seat's blocks are in. After that the step's
+    // remaining priority windows are ordinary instant-speed windows (the
+    // combat-trick slot), so fall through to the normal rules below: hold
+    // when the viewer actually has a play, auto-pass when they don't —
+    // rather than making them press P again on every attack.
+    if cv.step == TurnStep::DeclareBlockers
+        && cv.declares_blocks(your_seat)
+        && !blocking.declared
+    {
         use crabomination::card::Keyword;
         // We only get to DeclareBlockers if at least one attacker was
         // declared — but we still gate the *skip* on having a viable
@@ -3385,6 +3441,7 @@ pub fn handle_game_input(
     mouse: Res<ButtonInput<MouseButton>>,
     hovered_hand: Query<&GameCardId, (With<CardHovered>, With<HandCard>)>,
     hovered_bf: Query<(&GameCardId, &CardOwner), (With<CardHovered>, With<BattlefieldCard>)>,
+    hovered_stack: Query<&GameCardId, (With<CardHovered>, With<StackCard>, Without<HandCard>)>,
     hovered_target_zone: Query<&PlayerTargetZone, With<CardHovered>>,
     hovered_command_zone: Query<
         (&GameCardId, &crate::card::CommandZoneCard),
@@ -3441,6 +3498,19 @@ pub fn handle_game_input(
                 .map(|cv| player_name(cv, *player))
                 .unwrap_or_else(|| format!("P{player}"));
             log.push_divider(format!("──  Turn {turn} · {who}  ──"));
+            // CR 103.5 — name the die-roll winner once, at the top of the
+            // log, where the player is already looking.
+            if *turn == 1
+                && let Some(cv) = view_ref
+            {
+                let starter = player_name(cv, cv.starting_player);
+                let you = cv.starting_player == cv.your_seat;
+                log.push(if you {
+                    "You are on the play.".to_string()
+                } else {
+                    format!("{starter} is on the play — you are on the draw.")
+                });
+            }
             continue;
         }
         // Internal/no-display events format to an empty body — skip them
@@ -3469,6 +3539,13 @@ pub fn handle_game_input(
     // gameplay shortcuts and indexing `players[your_seat]` below would panic.
     if your_seat >= cv.players.len() {
         return;
+    }
+
+    // Blocking mode is a once-per-combat declaration: it ends as soon as
+    // this seat's blocks are in. Reset the flag the moment the step moves
+    // on so a second combat phase (Aggravated Assault) blocks normally.
+    if cv.step != TurnStep::DeclareBlockers {
+        blocking.declared = false;
     }
 
     // While the export-state prompt is open the dedicated prompt system
@@ -3521,7 +3598,15 @@ pub fn handle_game_input(
             || keyboard.just_pressed(KeyCode::NumpadEnter);
 
         // ── Blocking (defending against any opponent's attack) ──────────────
-        if cv.step == TurnStep::DeclareBlockers && cv.declares_blocks(your_seat) && cv.priority == your_seat {
+        // `!blocking.declared`: after the declaration is submitted the rest
+        // of the declare-blockers step is a normal priority window (CR 509.4)
+        // — falling through lets the viewer cast a combat trick before
+        // damage instead of clicks being eaten by blocker selection.
+        if cv.step == TurnStep::DeclareBlockers
+            && cv.declares_blocks(your_seat)
+            && cv.priority == your_seat
+            && !blocking.declared
+        {
             let pass = keyboard.just_pressed(KeyCode::Space) || btns.pass;
             if mouse.just_pressed(MouseButton::Right) || keyboard.just_pressed(KeyCode::Escape) {
                 blocking.selected_blocker = None;
@@ -3550,10 +3635,24 @@ pub fn handle_game_input(
             if pass {
                 let assignments = std::mem::take(&mut blocking.assignments);
                 blocking.selected_blocker = None;
-                if !assignments.is_empty() {
-                    outbox.submit(GameAction::DeclareBlockers(assignments));
-                }
-                outbox.submit(GameAction::PassPriority);
+                blocking.declared = true;
+                // Submit the declaration *only* — even when it's empty, and
+                // never bundled with a pass.
+                //
+                // CR 509.4: declaring blockers ends the declaration and
+                // restarts the priority round with the active player, so the
+                // defender gets a real window before combat damage. Two ways
+                // this used to be thrown away:
+                //   • Declining to block sent a bare `PassPriority`. That was
+                //     the second pass of the round, so the engine auto-declared
+                //     no blockers and advanced straight to CombatDamage — no
+                //     window at all. An explicit empty declaration keeps the
+                //     step alive instead.
+                //   • After a real declaration the bundled pass was sent when
+                //     priority had already moved to the active player, so the
+                //     server rejected it ("seat N may not act now") and logged
+                //     an error for a keypress the player had every right to.
+                outbox.submit(GameAction::DeclareBlockers(assignments));
             }
             return;
         }
@@ -3667,6 +3766,14 @@ pub fn handle_game_input(
                 // cancel back to normal mode.
                 if !targeting.pending_decision_target {
                     cancel_targeting(&mut commands, targeting, legal_targets, &valid_targets);
+                } else if legal_targets.declinable {
+                    // CR 601.4d — an "up to N targets" slot may be left
+                    // empty. Escape is the Skip control for it; the engine
+                    // ends target selection and finishes the cast.
+                    outbox.submit(GameAction::SubmitDecision(
+                        crabomination::decision::DecisionAnswer::DeclineTarget,
+                    ));
+                    cancel_targeting(&mut commands, targeting, legal_targets, &valid_targets);
                 } else {
                     let source = if legal_targets.source_name.is_empty() {
                         "the game".to_string()
@@ -3684,6 +3791,50 @@ pub fn handle_game_input(
                 let is_ability_target = targeting.pending_ability_source.is_some();
                 let cast_back = targeting.back_face_pending;
                 let is_decision = targeting.pending_decision_target;
+                // CR 115.4 — a spell on the stack is a legal target for a
+                // counterspell. Stack cards carry `StackCard`, not
+                // `BattlefieldCard`, so the permanent loop below never saw
+                // them and "counter target spell" had nothing to click.
+                for game_id in &hovered_stack {
+                    let target = Target::Permanent(game_id.0);
+                    if is_decision {
+                        if !legal_targets.permanents.contains(&game_id.0) {
+                            continue;
+                        }
+                        submit_decision_target(&outbox, cv, target);
+                    } else if let Some(pending_id) = targeting.pending_card_id {
+                        let legal_set_populated = !legal_targets.permanents.is_empty()
+                            || !legal_targets.players.is_empty();
+                        if legal_set_populated
+                            && !legal_targets.permanents.contains(&game_id.0)
+                        {
+                            continue;
+                        }
+                        outbox.submit(build_pending_cast(
+                            pending_id,
+                            Some(target),
+                            targeting.pending_mode,
+                            cast_back,
+                            targeting.pending_pay_times,
+                            targeting.pending_split,
+                            targeting.pending_gift,
+                            targeting.pending_omen,
+                            targeting.pending_kicked,
+                            targeting.pending_kicker_options.clone(),
+                            targeting.pending_spree_modes.clone(),
+                            targeting.pending_helpers.clone(),
+                            targeting.pending_cast_variant,
+                        ));
+                    } else if let (Some(src), Some(idx)) =
+                        (targeting.pending_ability_source, targeting.pending_ability_index)
+                    {
+                        outbox.submit(ability_target_action(targeting, src, idx, target));
+                    } else {
+                        continue;
+                    }
+                    cancel_targeting(&mut commands, targeting, legal_targets, &valid_targets);
+                    return;
+                }
                 for (game_id, _owner) in &hovered_bf {
                     let target = Target::Permanent(game_id.0);
                     // Equip (CR 702.6) takes precedence: the pending session
@@ -3711,9 +3862,7 @@ pub fn handle_game_input(
                         if !legal_targets.permanents.contains(&game_id.0) {
                             continue;
                         }
-                        outbox.submit(GameAction::SubmitDecision(
-                            crabomination::decision::DecisionAnswer::Target(target),
-                        ));
+                        submit_decision_target(&outbox, cv, target);
                         cancel_targeting(&mut commands, targeting, legal_targets, &valid_targets);
                         return;
                     } else if is_ability_target {
@@ -3726,7 +3875,7 @@ pub fn handle_game_input(
                         // SOS Prepare — targeted prepare spell cast.
                         outbox.submit(GameAction::CastPrepareSpell {
                             creature_id: src, target: Some(target),
-                            additional_targets: vec![], mode: None, x_value: None,
+                            additional_targets: vec![], mode: targeting.pending_mode, x_value: None,
                         });
                         cancel_targeting(&mut commands, targeting, legal_targets, &valid_targets);
                         return;
@@ -3776,9 +3925,7 @@ pub fn handle_game_input(
                         if !legal_targets.players.contains(&zone.0) {
                             continue;
                         }
-                        outbox.submit(GameAction::SubmitDecision(
-                            crabomination::decision::DecisionAnswer::Target(target),
-                        ));
+                        submit_decision_target(&outbox, cv, target);
                         cancel_targeting(&mut commands, targeting, legal_targets, &valid_targets);
                         return;
                     } else if is_ability_target {
@@ -3791,7 +3938,7 @@ pub fn handle_game_input(
                         // SOS Prepare — targeted prepare spell cast.
                         outbox.submit(GameAction::CastPrepareSpell {
                             creature_id: src, target: Some(target),
-                            additional_targets: vec![], mode: None, x_value: None,
+                            additional_targets: vec![], mode: targeting.pending_mode, x_value: None,
                         });
                         cancel_targeting(&mut commands, targeting, legal_targets, &valid_targets);
                         return;
@@ -3840,9 +3987,7 @@ pub fn handle_game_input(
                     if !legal_targets.players.contains(&seat) {
                         return;
                     }
-                    outbox.submit(GameAction::SubmitDecision(
-                        crabomination::decision::DecisionAnswer::Target(target),
-                    ));
+                    submit_decision_target(&outbox, cv, target);
                     cancel_targeting(&mut commands, targeting, legal_targets, &valid_targets);
                     return;
                 } else if is_ability_target {
@@ -3868,7 +4013,7 @@ pub fn handle_game_input(
                         creature_id: src,
                         target: Some(target),
                         additional_targets: vec![],
-                        mode: None,
+                        mode: targeting.pending_mode,
                         x_value: None,
                     });
                     cancel_targeting(&mut commands, targeting, legal_targets, &valid_targets);
@@ -4631,6 +4776,31 @@ fn has_ability_menu_entry(c: &crabomination::net::PermanentView) -> bool {
 /// own index space, so they route through `ActivateLoyaltyAbility` —
 /// sending index 1 of a walker's loyalty list as `ActivateAbility` would
 /// hit an unrelated activated ability, or nothing at all.
+/// Answer a `Decision::ChooseTarget` with `target`.
+///
+/// When the decision is a cast-time extra target slot (the engine's
+/// `CastExtraTargetPick` suspend for a multi-target spell such as Knockout
+/// Maneuver), the pick is also folded into the cast action the outbox is
+/// holding. The engine replays that cast server-side with the slot filled;
+/// if the replay then bounces with `ManualTapRequired`, the held action has
+/// to carry the target too, or every mana tap re-poses this same prompt.
+fn submit_decision_target(
+    outbox: &crate::net_plugin::NetOutbox,
+    cv: &crabomination::net::ClientView,
+    target: Target,
+) {
+    use crabomination::net::DecisionWire;
+    if let Some(DecisionWire::ChooseTarget { source, description, .. }) =
+        cv.pending_decision.as_ref().and_then(|pd| pd.decision.as_ref())
+        && description == crabomination::decision::EXTRA_CAST_TARGET_PROMPT
+    {
+        outbox.patch_last_cast_extra_target(*source, target.clone());
+    }
+    outbox.submit(GameAction::SubmitDecision(
+        crabomination::decision::DecisionAnswer::Target(target),
+    ));
+}
+
 fn ability_target_action(
     targeting: &TargetingState,
     source: CardId,
@@ -4688,6 +4858,7 @@ fn cancel_targeting(
     legal.players.clear();
     legal.source_name.clear();
     legal.description.clear();
+    legal.declinable = false;
     for entity in valid_targets.iter() {
         commands.entity(entity).remove::<ValidTarget>();
     }

@@ -2160,6 +2160,14 @@ impl Effect {
         }
     }
 
+    /// [`target_phrase`](Self::target_phrase) for the counter family, whose
+    /// slot is always a spell even when its filter names no noun ("target"
+    /// alone reads as a missing word in "counter target unless …").
+    fn spell_target_phrase(&self) -> String {
+        let phrase = self.target_phrase();
+        if phrase == "target" { "target spell".to_string() } else { phrase }
+    }
+
     /// Short human-readable summary of this effect's target shape, used
     /// in trigger prompts ("<source name> — exile target card from a
     /// graveyard"). Covers the common cases (Move-to-zone, Destroy,
@@ -2183,6 +2191,23 @@ impl Effect {
             }
             Effect::Destroy { .. } | Effect::DestroyAndRemember { .. } => {
                 format!("destroy {}", self.target_phrase())
+            }
+            // The counter family had no arm at all, so every "counter target
+            // spell" mode of a charm rendered blank — and the client's mode
+            // picker showed the index ("Mode 1") instead of the text.
+            Effect::CounterUnlessPaid { mana_cost, .. } => format!(
+                "counter {} unless its controller pays {}",
+                self.spell_target_phrase(),
+                mana_cost.summary(),
+            ),
+            Effect::CounterUnless { .. } => {
+                format!("counter {} unless its cost is paid", self.spell_target_phrase())
+            }
+            Effect::CounterAbility { .. } => {
+                "counter target activated or triggered ability".to_string()
+            }
+            Effect::CounterSpellOrAbility { .. } => {
+                format!("counter {} or ability", self.spell_target_phrase())
             }
             Effect::DestroyLandOfEachBasicType => {
                 "choose a land of each basic land type, then destroy those lands".into()

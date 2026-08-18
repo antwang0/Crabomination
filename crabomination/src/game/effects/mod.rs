@@ -906,8 +906,7 @@ impl GameState {
                     prompt,
                     candidates: candidates.clone(),
                     min,
-                    max,
-                };
+                    max, eligible: None };
                 // Scripted deciders answer synchronously even for wants_ui
                 // seats — tests script UI players' picks without a suspend
                 // round-trip. Only live (Auto) games suspend.
@@ -1002,7 +1001,7 @@ impl GameState {
             *cursor += 1;
             return Some(v);
         }
-        let decision = Decision::ChooseCards { source, prompt, candidates: candidates.clone(), min, max };
+        let decision = Decision::ChooseCards { source, prompt, candidates: candidates.clone(), min, max, eligible: None };
         if self.seat_suspends(seat) {
             self.suspend_signal = Some((
                 decision,
@@ -1467,6 +1466,7 @@ impl GameState {
             candidates: candidates.iter().map(|(id, n, _)| (*id, n.clone())).collect(),
             min: 1,
             max: 1,
+            eligible: None,
         });
         let source = match &answer {
             crate::decision::DecisionAnswer::Cards(picked) => picked
@@ -7998,6 +7998,7 @@ impl GameState {
                     candidates: cands,
                     min: 1,
                     max: 1,
+                    eligible: None,
                 });
                 if let DecisionAnswer::Cards(picked) = answer
                     && let Some(cid) = picked.first()
@@ -8045,6 +8046,7 @@ impl GameState {
                         candidates: cands,
                         min: 0,
                         max: take,
+                        eligible: None,
                     });
                     if let DecisionAnswer::Cards(picked) = answer {
                         for cid in picked.into_iter().take(take as usize) {
@@ -8390,8 +8392,7 @@ impl GameState {
                         prompt: "Choose a card in your hand".to_string(),
                         candidates: candidates.clone(),
                         min: 1,
-                        max: 1,
-                    }) {
+                        max: 1, eligible: None }) {
                         DecisionAnswer::Cards(v) => v
                             .into_iter()
                             .find(|id| candidates.iter().any(|(c, _)| c == id))
@@ -8648,6 +8649,7 @@ impl GameState {
                         candidates: cands,
                         min: 1,
                         max: 1,
+                        eligible: None,
                     });
                     if let DecisionAnswer::Cards(picked) = answer
                         && let Some(cid) = picked.first()
@@ -8688,6 +8690,7 @@ impl GameState {
                         candidates: cands,
                         min: want as u32,
                         max: want as u32,
+                        eligible: None,
                     });
                     if let DecisionAnswer::Cards(picked) = answer {
                         for cid in picked.iter().take(want) {
@@ -8740,6 +8743,7 @@ impl GameState {
                         candidates: cands,
                         min: 1,
                         max: 1,
+                        eligible: None,
                     });
                     if let DecisionAnswer::Cards(picked) = answer
                         && let Some(cid) = picked.first()
@@ -8785,6 +8789,7 @@ impl GameState {
                         candidates: mine.clone(),
                         min: keep as u32,
                         max: keep as u32,
+                        eligible: None,
                     });
                     let kept = match answer {
                         DecisionAnswer::Cards(picked) => picked,
@@ -8822,6 +8827,7 @@ impl GameState {
                         candidates: mine,
                         min: 1,
                         max: 1,
+                        eligible: None,
                     });
                     picks.push(match answer {
                         DecisionAnswer::Cards(picked) if !picked.is_empty() => picked[0],
@@ -8871,6 +8877,7 @@ impl GameState {
                         candidates: mine,
                         min: 1,
                         max: 1,
+                        eligible: None,
                     });
                     picks.push(match answer {
                         DecisionAnswer::Cards(picked) if !picked.is_empty() => picked[0],
@@ -9054,8 +9061,7 @@ impl GameState {
                         prompt: "Thieves' Auction: claim a card".into(),
                         candidates: candidates.clone(),
                         min: 1,
-                        max: 1,
-                    }) {
+                        max: 1, eligible: None }) {
                         DecisionAnswer::Cards(v) => {
                             v.into_iter().find(|id| candidates.iter().any(|(c, _)| c == id))
                         }
@@ -9460,8 +9466,7 @@ impl GameState {
                         prompt: "Discard a card to search for a basic land?".to_string(),
                         candidates: hand,
                         min: 0,
-                        max: 1,
-                    }) {
+                        max: 1, eligible: None }) {
                         DecisionAnswer::Cards(ids) => ids,
                         _ => vec![],
                     };
@@ -9506,8 +9511,7 @@ impl GameState {
                             prompt: format!("Discard up to {max} cards to prevent that much damage?"),
                             candidates: hand,
                             min: 0,
-                            max: cap as u32,
-                        }) {
+                            max: cap as u32, eligible: None }) {
                             DecisionAnswer::Cards(ids) => ids,
                             _ => vec![],
                         }
@@ -13264,6 +13268,7 @@ impl GameState {
                     candidates: candidates.clone(),
                     min: min_pick,
                     max: n,
+                    eligible: None,
                 });
                 let mut chosen: Vec<CardId> = match answer {
                     crate::decision::DecisionAnswer::Cards(ids) => ids
@@ -16187,8 +16192,7 @@ impl GameState {
                     prompt: "Exile any number of these".to_string(),
                     candidates: top.clone(),
                     min: 0,
-                    max: top.len() as u32,
-                }) {
+                    max: top.len() as u32, eligible: None }) {
                     DecisionAnswer::Cards(ids) if !ids.is_empty() => ids,
                     // Headless: strip the priciest nonland card, the usual
                     // reason to cast this at an opponent.
@@ -16337,8 +16341,7 @@ impl GameState {
                     prompt: "Return a permanent sharing a type?".to_string(),
                     candidates: candidates.clone(),
                     min: 0,
-                    max: 1,
-                }) {
+                    max: 1, eligible: None }) {
                     DecisionAnswer::Cards(ids) => ids.into_iter().next(),
                     _ => None,
                 };
@@ -16529,8 +16532,7 @@ impl GameState {
                     prompt: "Put a creature onto the battlefield blocking?".to_string(),
                     candidates: candidates.clone(),
                     min: 0,
-                    max: 1,
-                }) {
+                    max: 1, eligible: None }) {
                     DecisionAnswer::Cards(ids) => ids.into_iter().next(),
                     _ => None,
                 };
@@ -17220,8 +17222,7 @@ impl GameState {
                         },
                         candidates: candidates.clone(),
                         min: 1,
-                        max: 1,
-                    }) {
+                        max: 1, eligible: None }) {
                         DecisionAnswer::Cards(ids) => ids
                             .into_iter()
                             .find(|id| candidates.iter().any(|(c, _)| c == id))
@@ -18550,10 +18551,10 @@ impl GameState {
                 // instead of having its board auto-tapped; `is_spell` is
                 // rederived on resume from the stack, so nothing but the
                 // lookup key needs carrying across the suspend.
+                let mut cursor = 0;
+                let src = ctx.source.unwrap_or(cid);
                 let picks = match Self::ward_mana_choice(cost) {
                     Some((mc, _)) => {
-                        let mut cursor = 0;
-                        let src = ctx.source.unwrap_or(cid);
                         match self.ask_mana_sources(
                             &mut cursor,
                             affected_controller,
@@ -18567,6 +18568,17 @@ impl GameState {
                     }
                     None => None,
                 };
+                // …and which cards a "Ward—Discard a card" throws away.
+                let discards = match self.ask_ward_discards(
+                    &mut cursor,
+                    affected_controller,
+                    cost,
+                    src,
+                    effect,
+                ) {
+                    Some(d) => d,
+                    None => return Ok(()),
+                };
                 self.clear_answer_log();
                 let paid = self.try_pay_ward_cost_from(
                     affected_controller,
@@ -18574,6 +18586,7 @@ impl GameState {
                     ctx,
                     events,
                     picks.as_deref(),
+                    discards.as_deref(),
                 );
 
                 if !paid {
@@ -18627,9 +18640,30 @@ impl GameState {
                     }
                     _ => None,
                 };
+                let discards = if wants_to_pay {
+                    match self.ask_ward_discards(
+                        &mut cursor,
+                        payer,
+                        cost,
+                        ctx.source.unwrap_or(CardId(0)),
+                        effect,
+                    ) {
+                        Some(d) => d,
+                        None => return Ok(()),
+                    }
+                } else {
+                    None
+                };
                 self.clear_answer_log();
                 let paid = wants_to_pay
-                    && self.try_pay_ward_cost_from(payer, cost, ctx, events, picks.as_deref());
+                    && self.try_pay_ward_cost_from(
+                        payer,
+                        cost,
+                        ctx,
+                        events,
+                        picks.as_deref(),
+                        discards.as_deref(),
+                    );
                 if paid {
                     if let Some(e) = if_paid {
                         self.run_effect(e, ctx, events)?;
@@ -18980,6 +19014,7 @@ impl GameState {
                                 candidates: self.card_id_names(&candidates),
                                 min: n as u32,
                                 max: n as u32,
+                                eligible: None,
                             }
                         };
                         let rest = per_seat_continuation(&seats[i + 1..], |q| Effect::Sacrifice {
@@ -19086,6 +19121,7 @@ impl GameState {
                         candidates: candidates.clone(),
                         min: cap as u32,
                         max: cap as u32,
+                        eligible: None,
                     });
                     match answer {
                         DecisionAnswer::Cards(v) => v
@@ -19282,8 +19318,19 @@ impl GameState {
                     }
                     None => None,
                 };
+                let discards = match self.ask_ward_discards(&mut cursor, p, cost, src, effect) {
+                    Some(d) => d,
+                    None => return Ok(()),
+                };
                 self.clear_answer_log();
-                if !self.try_pay_ward_cost_from(p, cost, ctx, events, picks.as_deref()) {
+                if !self.try_pay_ward_cost_from(
+                    p,
+                    cost,
+                    ctx,
+                    events,
+                    picks.as_deref(),
+                    discards.as_deref(),
+                ) {
                     self.run_effect(&Effect::SacrificeSource, ctx, events)?;
                 }
                 Ok(())
@@ -20050,8 +20097,7 @@ impl GameState {
                     prompt: "Shuffle which cards into your library?".into(),
                     candidates: candidates.clone(),
                     min: 0,
-                    max: n.min(candidates.len()) as u32,
-                }) {
+                    max: n.min(candidates.len()) as u32, eligible: None }) {
                     DecisionAnswer::Cards(ids) if !ids.is_empty() => ids,
                     _ => {
                         let mut by_cost: Vec<CardId> = self.players[p]
@@ -20135,6 +20181,7 @@ impl GameState {
                         candidates: top.clone(),
                         min: 1,
                         max: 1,
+                        eligible: None,
                     });
                     match answer {
                         DecisionAnswer::Cards(v) if !v.is_empty() => v[0],
@@ -20914,6 +20961,7 @@ impl GameState {
                     candidates: revealed,
                     min: n_chosen as u32,
                     max: n_chosen as u32,
+                    eligible: None,
                 });
                 let mut chosen: Vec<crate::card::CardId> = match answer {
                     crate::decision::DecisionAnswer::Cards(ids) => ids
@@ -21010,6 +21058,13 @@ impl GameState {
                         // accepts anywhere from zero to N.
                         min: if *optional { 0 } else { take.min(eligible_count) as u32 },
                         max: take.min(eligible_count) as u32,
+                        // Zimone's Experiment reveals five and takes only
+                        // creatures and lands. The single-pick
+                        // `SearchLibrary` branch has always carried this;
+                        // the multi-pick branch didn't, so the client showed
+                        // five equally-selectable cards and an illegal pick
+                        // was silently dropped by the resolver.
+                        eligible: eligible.clone(),
                     }
                 } else {
                     Decision::SearchLibrary {
@@ -22284,6 +22339,7 @@ impl GameState {
                     candidates,
                     min: 0,
                     max: revealed.len() as u32,
+                    eligible: None,
                 };
                 let pending = PendingEffectState::TakeOnePerTypePending { player: p, revealed: revealed.clone() };
                 if self.players[p].wants_ui {
@@ -23179,6 +23235,7 @@ impl GameState {
                         candidates: cands,
                         min: n as u32,
                         max: n as u32,
+                        eligible: None,
                     });
                     let mut chosen: Vec<crate::card::CardId> = match answer {
                         DecisionAnswer::Cards(ids) => {
@@ -23245,6 +23302,7 @@ impl GameState {
                         candidates: cands.clone(),
                         min: 1,
                         max: 1,
+                        eligible: None,
                     });
                     let pick = match answer {
                         DecisionAnswer::Cards(ids) => {
@@ -23284,6 +23342,7 @@ impl GameState {
                         candidates: cands.clone(),
                         min: 1,
                         max: 1,
+                        eligible: None,
                     });
                     let pick = match answer {
                         DecisionAnswer::Cards(ids) => {
@@ -23338,6 +23397,7 @@ impl GameState {
                         candidates: cands.clone(),
                         min: 1,
                         max: 1,
+                        eligible: None,
                     });
                     let pick = match answer {
                         DecisionAnswer::Cards(ids) => ids.into_iter().next(),
@@ -24938,6 +24998,7 @@ impl GameState {
                     candidates: candidates.clone(),
                     min: 1,
                     max: 1,
+                    eligible: None,
                 };
                 let picked = match self.decider.decide(&decision) {
                     DecisionAnswer::Cards(ids) => ids.first().copied(),
@@ -25022,8 +25083,7 @@ impl GameState {
                         .into(),
                     candidates,
                     min: 0,
-                    max: 1,
-                }) {
+                    max: 1, eligible: None }) {
                     DecisionAnswer::Cards(picked) if !picked.is_empty() => picked[0],
                     _ => return Ok(()),
                 };
@@ -26198,6 +26258,7 @@ impl GameState {
                     candidates: candidates.clone(),
                     min: n as u32,
                     max: n as u32,
+                    eligible: None,
                 });
                 let mut picks: Vec<CardId> = match answer {
                     DecisionAnswer::Cards(ids) => {
@@ -28824,8 +28885,7 @@ impl GameState {
                     prompt: "Sacrifice any number of creatures".to_string(),
                     candidates: cands.clone(),
                     min: 0,
-                    max: cands.len() as u32,
-                }) {
+                    max: cands.len() as u32, eligible: None }) {
                     DecisionAnswer::Cards(ids) => {
                         ids.into_iter().filter(|id| cands.iter().any(|(c, _)| c == id)).collect()
                     }
@@ -28882,6 +28942,7 @@ impl GameState {
                     candidates: cands.clone(),
                     min: 1,
                     max: 1,
+                    eligible: None,
                 });
                 let picked = match answer {
                     DecisionAnswer::Cards(v) => v.into_iter().next(),
@@ -29069,8 +29130,7 @@ impl GameState {
                     prompt: "Shuffle which cards into your library?".to_string(),
                     candidates: candidates.clone(),
                     min: 0,
-                    max,
-                }) {
+                    max, eligible: None }) {
                     DecisionAnswer::Cards(ids) => ids
                         .into_iter()
                         .filter(|id| candidates.iter().any(|(c, _)| c == id))
@@ -31538,6 +31598,7 @@ impl GameState {
                     candidates: seen.clone(),
                     min: 1,
                     max: 1,
+                    eligible: None,
                 });
                 // Auto seats bury the priciest of the two.
                 let pick = match answer {
@@ -31845,6 +31906,7 @@ impl GameState {
                         candidates: cands.iter().map(|(id, _, n)| (*id, n.clone())).collect(),
                         min: 1,
                         max: 1,
+                        eligible: None,
                     });
                     match answer {
                         DecisionAnswer::Cards(ids) => ids.first().copied(),
@@ -32973,8 +33035,7 @@ impl GameState {
                             prompt: "Cast which spell without paying its mana cost?".to_string(),
                             candidates: candidates.clone(),
                             min: 0,
-                            max: 1,
-                        }) {
+                            max: 1, eligible: None }) {
                             DecisionAnswer::Cards(ids) => ids,
                             _ => Vec::new(),
                         },
@@ -33529,6 +33590,7 @@ impl GameState {
             candidates: candidates.clone(),
             min: 1,
             max: 1,
+            eligible: None,
         });
         match answer {
             DecisionAnswer::Cards(v) if !v.is_empty() => Some(v[0]),
@@ -35187,8 +35249,7 @@ impl GameState {
                         prompt: "Exchange control of which permanent?".into(),
                         candidates: cands,
                         min: 1,
-                        max: 1,
-                    }) {
+                        max: 1, eligible: None }) {
                         DecisionAnswer::Cards(ids) => {
                             ids.into_iter().find(|id| candidates.contains(id)).unwrap_or(first)
                         }
@@ -35483,6 +35544,7 @@ impl GameState {
             candidates: candidates.iter().map(|(id, n, _)| (*id, n.clone())).collect(),
             min: 0,
             max: n,
+            eligible: None,
         });
         if let DecisionAnswer::Cards(ids) = answer {
             // `single` restricts all picks to one graveyard: the first pick's
@@ -35676,8 +35738,7 @@ impl GameState {
                         prompt: "Put which card into your hand?".into(),
                         candidates: cands,
                         min: 1,
-                        max: 1,
-                    }) {
+                        max: 1, eligible: None }) {
                         DecisionAnswer::Cards(ids) => ids
                             .first()
                             .copied()
@@ -35715,6 +35776,69 @@ impl GameState {
         }
     }
 
+    /// The discard half of a Ward cost, if the payer gets to *choose* what
+    /// goes: `(optional filter, count)`. "Discard at random" and "discard
+    /// your hand" name their own cards, so neither is a choice.
+    fn ward_discard_choice(
+        cost: &crate::card::WardCost,
+    ) -> Option<(Option<crate::card::SelectionRequirement>, usize)> {
+        use crate::card::WardCost;
+        match cost {
+            WardCost::Discard(n) => Some((None, *n as usize)),
+            WardCost::DiscardMatching(f, n) => Some((Some((**f).clone()), *n as usize)),
+            _ => None,
+        }
+    }
+
+    /// CR 702.21b — the affected player pays the Ward cost, so for a
+    /// "Ward—Discard a card" they also pick *which* cards go. Returns
+    /// `Some(None)` when there is nothing to choose (a bot seat, an
+    /// unpayable cost, or a hand already exactly the right size — the
+    /// auto-pick is then the only legal payment) and `None` when the ask
+    /// suspended and the resolution must unwind.
+    ///
+    /// Picking fewer than the cost demands declines the ward, which is the
+    /// player's right (paying is optional) — the caller then counters.
+    fn ask_ward_discards(
+        &mut self,
+        cursor: &mut usize,
+        payer: usize,
+        cost: &crate::card::WardCost,
+        source: CardId,
+        effect: &Effect,
+    ) -> Option<Option<Vec<CardId>>> {
+        let Some((filter, n)) = Self::ward_discard_choice(cost) else {
+            return Some(None);
+        };
+        if n == 0 || !self.players.get(payer).is_some_and(|p| p.wants_ui) {
+            return Some(None);
+        }
+        let eligible: Vec<(CardId, String)> = self.players[payer]
+            .hand
+            .clone()
+            .iter()
+            .filter(|c| {
+                filter.as_ref().is_none_or(|f| {
+                    self.evaluate_requirement_static(f, &Target::Permanent(c.id), payer, Some(source))
+                })
+            })
+            .map(|c| (c.id, c.definition.name.to_string()))
+            .collect();
+        // Unpayable, or no freedom in how to pay it: let the auto-pick run.
+        if eligible.len() <= n {
+            return Some(None);
+        }
+        let auto_default: Vec<CardId> = eligible.iter().take(n).map(|(id, _)| *id).collect();
+        let prompt = format!(
+            "Ward — discard {n} card{}? (choose fewer to let it be countered)",
+            if n == 1 { "" } else { "s" },
+        );
+        self.ask_seat_cards_logged(
+            cursor, payer, prompt, source, eligible, 0, n as u32, effect, auto_default,
+        )
+        .map(Some)
+    }
+
     /// Is it worth stopping the game to ask `payer` which sources pay a
     /// cost? Only when they hand-pay their mana, only when the pool
     /// doesn't already cover the cost (nothing to tap, so nothing to
@@ -35726,14 +35850,34 @@ impl GameState {
             && !self.mana_source_candidates(payer).is_empty()
     }
 
-    /// `(id, name)` for every untapped permanent `player` controls that has
-    /// a mana ability — the pick list for the ward-cost source prompt.
+    /// `(id, label)` for every untapped permanent `player` controls that has
+    /// a mana ability — the pick list for a mana-cost source prompt.
+    ///
+    /// The label names what the source *produces*, not just the card: a
+    /// board of four Islands and a Birds of Paradise listed by name alone
+    /// is four identical rows and no way to tell which pays a coloured pip.
     fn mana_source_candidates(&self, player: usize) -> Vec<(CardId, String)> {
+        use crate::mana::Color;
         self.battlefield
             .iter()
             .filter(|c| c.controller == player && !c.tapped)
-            .filter(|c| !self.effective_mana_abilities(c.id).is_empty())
-            .map(|c| (c.id, c.definition.name.to_string()))
+            .filter_map(|c| {
+                let abilities = self.effective_mana_abilities(c.id);
+                if abilities.is_empty() {
+                    return None;
+                }
+                let colors: String = Color::ALL
+                    .iter()
+                    .filter(|col| {
+                        abilities.iter().any(|(_, a)| {
+                            crate::game::actions::effect_produces_color(&a.effect, **col)
+                        })
+                    })
+                    .map(|col| format!("{{{col}}}"))
+                    .collect();
+                let produces = if colors.is_empty() { "{C}".to_string() } else { colors };
+                Some((c.id, format!("{} — {produces}", c.definition.name)))
+            })
             .collect()
     }
 
@@ -35873,7 +36017,42 @@ impl GameState {
         ctx: &EffectContext,
         events: &mut Vec<GameEvent>,
     ) -> bool {
-        self.try_pay_ward_cost_from(payer, cost, ctx, events, None)
+        self.try_pay_ward_cost_from(payer, cost, ctx, events, None, None)
+    }
+
+    /// Pay a Ward discard cost with the payer's own picks. Anything short of
+    /// `n` legal cards (a decline, a stale id, one that doesn't match
+    /// `filter`) leaves the hand untouched and reports unpaid, so the caller
+    /// counters — paying is optional (CR 702.21b).
+    fn pay_ward_discards(
+        &mut self,
+        payer: usize,
+        chosen: &[CardId],
+        n: usize,
+        filter: Option<&crate::card::SelectionRequirement>,
+        events: &mut Vec<GameEvent>,
+    ) -> bool {
+        let mut legal: Vec<CardId> = Vec::new();
+        for id in chosen {
+            if legal.contains(id) || !self.players[payer].hand.iter().any(|c| c.id == *id) {
+                continue;
+            }
+            if filter.is_some_and(|f| {
+                !self.evaluate_requirement_static(f, &Target::Permanent(*id), payer, None)
+            }) {
+                continue;
+            }
+            legal.push(*id);
+        }
+        if legal.len() < n {
+            return false;
+        }
+        // Through the shared discard funnel so CardDiscarded fires and
+        // Madness applies (CR 702.35).
+        for id in legal.into_iter().take(n) {
+            self.discard_card(payer, id, events);
+        }
+        true
     }
 
     /// [`try_pay_ward_cost`](Self::try_pay_ward_cost) paying the mana half
@@ -35887,6 +36066,7 @@ impl GameState {
         ctx: &EffectContext,
         events: &mut Vec<GameEvent>,
         picks: Option<&[CardId]>,
+        discards: Option<&[CardId]>,
     ) -> bool {
         use crate::card::WardCost;
                 match cost {
@@ -35981,8 +36161,13 @@ impl GameState {
                     }
                     WardCost::DiscardMatching(filter, n) => {
                         // Body Snatcher — the discard must match `filter`, so
-                        // the auto-pay takes the first N matching cards.
+                        // the auto-pay takes the first N matching cards; a
+                        // `wants_ui` payer picked its own N.
                         let n = *n as usize;
+                        if let Some(chosen) = discards {
+                            let filter = (**filter).clone();
+                            return self.pay_ward_discards(payer, chosen, n, Some(&filter), events);
+                        }
                         let hand = self.players[payer].hand.clone();
                         let picks: Vec<CardId> = hand
                             .iter()
@@ -36008,10 +36193,14 @@ impl GameState {
                     }
                     WardCost::Discard(n) => {
                         // Ward—Discard N cards. Payable only if the
-                        // controller has ≥ N cards in hand. Auto-pay
-                        // picks the first N cards. An interactive
-                        // surface should prompt.
+                        // controller has ≥ N cards in hand. A `wants_ui`
+                        // payer named its cards in `discards` (see
+                        // `ask_ward_discards`); everyone else auto-pays
+                        // with the first N.
                         let n = *n as usize;
+                        if let Some(chosen) = discards {
+                            return self.pay_ward_discards(payer, chosen, n, None, events);
+                        }
                         if self.players[payer].hand.len() >= n {
                             // Through the shared discard funnel so
                             // CardDiscarded fires and Madness applies

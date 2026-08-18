@@ -1492,19 +1492,28 @@ pub fn exile_browser(
     keyboard: Res<ButtonInput<KeyCode>>,
     overlay_interaction: Query<&Interaction, (With<ExileBrowser>, With<Button>)>,
     chat: Res<crate::systems::chat::ChatInputState>,
+    mut state: ResMut<crate::game::ExileBrowserState>,
+    card_names: Res<crate::game::CardNames>,
 ) {
+    // Two ways in: the `V` key, and clicking the shared exile pile (which
+    // flips `state.open`). The pile is the discoverable one — a browser
+    // reachable only by knowing a keybind may as well not exist.
     let key_v = !chat.open && keyboard.just_pressed(KeyCode::KeyV);
+    if key_v {
+        state.open = !state.open;
+    }
     let close_requested = keyboard.just_pressed(KeyCode::Escape)
         || overlay_interaction
             .iter()
             .any(|i| *i == Interaction::Pressed);
-    if !existing.is_empty() && (close_requested || key_v) {
+    if !existing.is_empty() && (close_requested || !state.open) {
         for entity in &existing {
             commands.entity(entity).despawn();
         }
+        state.open = false;
         return;
     }
-    if !existing.is_empty() || !key_v {
+    if !existing.is_empty() || !state.open {
         return;
     }
     let Some(cv) = view.0.as_ref() else { return };
@@ -1548,8 +1557,14 @@ pub fn exile_browser(
             if c.encoded_on.is_some() {
                 badges.push("Cipher: encoded".to_string());
             }
-            if c.exiled_by.is_some() {
-                badges.push("Returns when exiler leaves".to_string());
+            if let Some(by) = c.exiled_by {
+                // Name the exiler where we can — "why is this card here"
+                // is the question the browser exists to answer, and a bare
+                // "returns when exiler leaves" doesn't answer it.
+                match card_names.by_id.get(&by) {
+                    Some(name) => badges.push(format!("Exiled by {name} — returns when it leaves")),
+                    None => badges.push("Returns when the exiler leaves".to_string()),
+                }
             }
             let badge = (!badges.is_empty()).then(|| badges.join(" · "));
             (c.owner, c.name.clone(), badge, c.face_down)

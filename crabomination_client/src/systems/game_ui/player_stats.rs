@@ -695,6 +695,10 @@ const PLAYER_CHIP_BORDER_IDLE: Color = Color::NONE;
 /// Active player's panel — soft gold, mirrors the crest ring's
 /// active-player ambient.
 const PLAYER_PANEL_ACTIVE: Color = Color::srgb(0.85, 0.68, 0.32);
+/// CR 117 — the seat that actually has priority, i.e. the one the game is
+/// waiting on. Distinct from (and drawn over) the turn-player border,
+/// because the two differ for the whole of every response window.
+const PLAYER_PANEL_PRIORITY: Color = Color::srgb(0.35, 0.85, 1.0);
 /// Viewer's own panel when threatened (low life or lethal-on-board) —
 /// the red warning the crest ring used to glow.
 const PLAYER_PANEL_THREAT: Color = Color::srgb(1.0, 0.30, 0.30);
@@ -804,6 +808,10 @@ pub fn update_player_chip_target_outline(
             pulsed
         } else if panel.seat == your_seat && viewer_threatened {
             PLAYER_PANEL_THREAT
+        } else if panel.seat == cv.priority {
+            // Priority outranks the turn marker: it is the seat everyone
+            // else is waiting on, and it moves several times a turn.
+            PLAYER_PANEL_PRIORITY
         } else if panel.seat == cv.active_player {
             PLAYER_PANEL_ACTIVE
         } else {
@@ -1202,6 +1210,31 @@ pub fn update_player_stats_chips(
         }
         // CR 506.2 / 509.1b — a global combat cap; surface it once, on the
         // active player's row, so neither seat plans an illegal declaration.
+        // CR 103.5 / 103.7a — who won the die roll. The seat on the play
+        // took the first turn and skipped its first draw; the difference
+        // shapes every mulligan and race decision, so name it outright
+        // rather than leaving the player to infer it from turn 1.
+        spawn_stat_chip(
+            row,
+            &ui_fonts,
+            StatChipKind::Controlled,
+            if p.seat == cv.starting_player {
+                "\u{25b6} on the play".to_string()
+            } else {
+                "\u{25c0} on the draw".to_string()
+            },
+        );
+        // CR 117.1 — say plainly who the game is waiting on. The turn
+        // marker alone was read as "it's their move", which is wrong for
+        // every response window on the active player's own turn.
+        if p.seat == cv.priority {
+            spawn_stat_chip(
+                row,
+                &ui_fonts,
+                StatChipKind::Controlled,
+                if p.seat == cv.your_seat { "→ your priority".to_string() } else { "→ priority".to_string() },
+            );
+        }
         if p.seat == cv.active_player {
             let cap = match (cv.max_attackers_per_combat, cv.max_blockers_per_combat) {
                 (Some(a), Some(b)) if a == b => Some(format!("⚔ max {a} atk/blk")),

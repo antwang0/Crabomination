@@ -58,6 +58,9 @@ pub fn enumerate_for_cast(
         // mode's text, so leave both empty here.
         source_name: String::new(),
         description: String::new(),
+        // Cast-time slot 0 is never optional; only the engine's
+        // `ChooseTarget` decisions carry an "up to N" flag.
+        declinable: false,
     };
     let ignore = viewer_hexproof_ignores(cv);
     let board = BoardCtx::new(cv);
@@ -74,6 +77,19 @@ pub fn enumerate_for_cast(
         }
         if evaluate_player(&filter, p, cv.your_seat) {
             out.players.insert(p.seat);
+        }
+    }
+    // A counterspell's slot is a *stack* item, not a permanent or player
+    // (Quandrix Charm's "counter target spell"). Without these the
+    // enumeration came back empty, the cursor lit nothing, and the click
+    // had nowhere to land.
+    if filter_can_match_spell(&filter) {
+        for item in &cv.stack {
+            if let crabomination::net::StackItemView::Known(k) = item
+                && k.kind == crabomination::net::StackItemKind::Spell
+            {
+                out.permanents.insert(k.source);
+            }
         }
     }
     for perm in &cv.battlefield {
@@ -310,4 +326,17 @@ pub fn clear(legal: &mut LegalTargets, _: CardId) {
     legal.players.clear();
     legal.source_name.clear();
     legal.description.clear();
+}
+
+/// Does this filter admit a spell on the stack? The client can't re-run the
+/// engine's stack-aware predicates, so this stays deliberately narrow:
+/// only a filter that explicitly names the stack lights stack items up.
+fn filter_can_match_spell(filter: &SelectionRequirement) -> bool {
+    match filter {
+        SelectionRequirement::IsSpellOnStack => true,
+        SelectionRequirement::And(a, b) | SelectionRequirement::Or(a, b) => {
+            filter_can_match_spell(a) || filter_can_match_spell(b)
+        }
+        _ => false,
+    }
 }

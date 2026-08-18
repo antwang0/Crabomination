@@ -161,6 +161,7 @@ mod tests {
         ClientView {
             your_seat: 0,
             active_player: 0,
+            starting_player: 0,
             priority: 0,
             step: TurnStep::PreCombatMain,
             turn: 1,

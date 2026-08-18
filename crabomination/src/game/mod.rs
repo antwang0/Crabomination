@@ -856,6 +856,20 @@ pub struct ColdState {
     pub(crate) noncombat_damage_bonus_this_turn: Vec<(usize, u32)>,
 }
 
+/// A declined optional extra-target slot (CR 601.4d — "up to N targets"),
+/// recorded against the exact cast attempt it was answered for so the
+/// prompt stays declined across the replays a hand-paying caster's cast
+/// goes through. See [`GameState::suppress_extra_target_prompts`].
+#[derive(Debug, Clone, PartialEq)]
+pub(crate) struct DeclinedExtraTargets {
+    pub caster: usize,
+    pub card_id: CardId,
+    /// Slot 0 and the extra slots already filled when the player declined.
+    /// A cast aimed somewhere else is a different decision and prompts again.
+    pub target: Option<Target>,
+    pub additional_targets: Vec<Target>,
+}
+
 #[derive(serde::Serialize, serde::Deserialize)]
 pub struct GameState {
     pub players: Vec<Player>,
@@ -900,6 +914,11 @@ pub struct GameState {
     pub step: TurnStep,
     /// Index into `players` of the player whose turn it is.
     pub active_player_idx: usize,
+    /// CR 103.5 — the seat that took the first turn. Fixed for the game;
+    /// `active_player_idx` moves every turn, so this is the only way to
+    /// answer "who was on the play" once turn 1 is over.
+    #[serde(default)]
+    pub starting_player: usize,
     pub turn_number: u32,
     /// Game-scoped randomness — every "at random" the rules ask for. Not
     /// serialized: a restored snapshot gets a fresh stream (see
@@ -1295,11 +1314,19 @@ pub struct GameState {
     /// Transient: set when a `wants_ui` caster answers an optional extra-
     /// target prompt with `DecisionAnswer::DeclineTarget`. The cast replay
     /// (`ResumeContext::CastExtraTargetPick`) re-enters `perform_action`,
-    /// and the extra-target prompt block skips this card so declining ends
-    /// target selection ("up to N targets" — targets fill left-to-right).
-    /// Cleared by the prompt block on the replay pass.
+    /// and the extra-target prompt block skips a cast matching this record
+    /// so declining ends target selection ("up to N targets" — targets fill
+    /// left-to-right).
+    ///
+    /// It matches on the whole cast shape, not just the card, because the
+    /// decline has to outlive *several* replays: a hand-paying caster's
+    /// cast bounces with `ManualTapRequired` and the client re-submits the
+    /// same action on every mana tap (see `NetOutbox::last_cast`). A
+    /// card-only flag was consumed by the first replay, so the second tap
+    /// re-posed the slot the player had just declined. Cleared once the
+    /// cast actually reaches the stack, and at every step change.
     #[serde(skip)]
-    pub(crate) suppress_extra_target_prompts: Option<CardId>,
+    pub(crate) suppress_extra_target_prompts: Option<DeclinedExtraTargets>,
     /// Transient: the `CardId`s of cards put into exile within the current
     /// effect resolution (any source zone, via `place_card_in_dest`). Powers
     /// `Selector::ExiledThisResolution` — "if you exiled a [type] card this
@@ -2021,6 +2048,7 @@ impl Clone for GameState {
             stack: self.stack.clone(),
             step: self.step,
             active_player_idx: self.active_player_idx,
+            starting_player: self.starting_player,
             turn_number: self.turn_number,
             rng: self.rng.clone(),
             truce_until_turn: self.truce_until_turn,
@@ -2097,7 +2125,7 @@ impl Clone for GameState {
             cipher_encode_pending: self.cipher_encode_pending,
             haunt_pending: self.haunt_pending.clone(),
             discarded_card_ids_this_resolution: self.discarded_card_ids_this_resolution.clone(),
-            suppress_extra_target_prompts: self.suppress_extra_target_prompts,
+            suppress_extra_target_prompts: self.suppress_extra_target_prompts.clone(),
             exiled_card_ids_this_resolution: self.exiled_card_ids_this_resolution.clone(),
             permanents_destroyed_this_resolution: self.permanents_destroyed_this_resolution,
             destroyed_this_resolution: self.destroyed_this_resolution.clone(),
@@ -2258,6 +2286,7 @@ impl GameState {
             stack: CowBox::default(),
             step: TurnStep::Untap,
             active_player_idx: 0,
+            starting_player: 0,
             turn_number: 1,
             rng: rng::GameRng::default(),
             truce_until_turn: None,
@@ -3652,6 +3681,7 @@ impl GameState {
         self.players[seat].starting_life = 40;
         self.players[seat].life = 40;
         self.active_player_idx = seat;
+        self.starting_player = seat;
         self.priority.player_with_priority = seat;
         schemes
             .into_iter()
@@ -3770,6 +3800,23 @@ impl GameState {
         )
     }
 
+    /// CR 103.5 — seat `seat` as the starting player. Call after building
+    /// the state and before the first turn: it takes the first turn, opens
+    /// with priority, and (in a two-player game) skips its first draw per
+    /// CR 103.7a.
+    ///
+    /// `GameState::new` seats player 0, which is right for a scripted test
+    /// and wrong for a real match — someone has to win the die roll.
+    pub fn set_starting_player(&mut self, seat: usize) {
+        if seat >= self.players.len() {
+            return;
+        }
+        self.active_player_idx = seat;
+        self.starting_player = seat;
+        self.priority.player_with_priority = seat;
+        self.skip_first_draw = self.players.len() <= 2;
+    }
+
     /// CR 315.5a — "You are the starting player" (Power Play). Call before
     /// the first turn: the seat claiming it becomes the active player, and a
     /// random one wins if several claim it. Also re-seats the CR 103.7a
@@ -3787,6 +3834,7 @@ impl GameState {
             .collect();
         if let Some(seat) = claimants.into_iter().choose(&mut self.rng.draw()) {
             self.active_player_idx = seat;
+            self.starting_player = seat;
             self.priority.player_with_priority = seat;
             self.skip_first_draw = self.players.len() <= 2;
         }
@@ -5273,8 +5321,7 @@ impl GameState {
                     prompt: "Sacrifice a land (Land Equilibrium)".to_string(),
                     candidates: candidates.clone(),
                     min: 1,
-                    max: 1,
-                }) {
+                    max: 1, eligible: None }) {
                     crate::decision::DecisionAnswer::Cards(v) => v.first().copied(),
                     _ => None,
                 }
@@ -12651,6 +12698,14 @@ impl GameState {
         if matches!(action, GameAction::PassPriority) && self.pass_priority_is_trivial() {
             return self.perform_action_inner(action);
         }
+        enum ActionKind {
+            SubmitDecision,
+            Other,
+        }
+        let action_kind = match action {
+            GameAction::SubmitDecision(_) => ActionKind::SubmitDecision,
+            _ => ActionKind::Other,
+        };
         let mut checkpoint = self.clone();
         let result = self.perform_action_inner(action);
         // `ManualTapRequired` is a suspension dressed as an `Err`: the
@@ -12658,8 +12713,30 @@ impl GameState {
         // mana floating for the client's pending-cast driver to finish the
         // payment. Rolling that back would break the interactive tap flow.
         if matches!(&result, Err(e) if !matches!(e, GameError::ManualTapRequired { .. })) {
+            let answered = matches!(action_kind, ActionKind::SubmitDecision);
             std::mem::swap(&mut checkpoint.decider, &mut self.decider);
             *self = checkpoint;
+            // Answering a decision must never re-pose it. The checkpoint
+            // predates the answer, so a plain restore resurrects the
+            // decision the player just answered — and if the resumed action
+            // fails every time (Divergent Equation's {X} pick with no mana
+            // to pay {U}), the modal is unkillable: every answer errors,
+            // every error puts it back. Drop it instead; the suspend points
+            // that pose these prompts have paid nothing yet, so the aborted
+            // action leaves nothing behind.
+            if answered {
+                self.pending_decision = None;
+            }
+        }
+        // A declined "up to N targets" slot is scoped to one cast attempt.
+        // The attempt ends when the cast lands (the card is no longer in the
+        // caster's hand) — everything before that is a replay of the same
+        // decision, including the `ManualTapRequired` bounces, so the record
+        // has to survive those.
+        if let Some(declined) = &self.suppress_extra_target_prompts
+            && !self.players[declined.caster].hand.iter().any(|c| c.id == declined.card_id)
+        {
+            self.suppress_extra_target_prompts = None;
         }
         result
     }
@@ -16765,17 +16842,27 @@ impl GameState {
                     .map(|p| p.wants_ui)
                     .unwrap_or(false);
             if needs && wants_ui {
-                let legal = self.enumerate_legal_targets_with_source(
+                let legal = self.enumerate_legal_targets_xc(
                     &pending.effect,
                     pending.controller,
                     Some(pending.source),
+                    pending.x_value,
+                    pending.converged_value,
                 );
-                // No legal targets → fall back to auto (which returns
-                // None) so the trigger still resolves CR-correctly as
-                // a no-op rather than blocking the game on an
-                // unanswerable picker.
+                // No legal targets → hand the trigger to the auto-picker
+                // rather than forcing `None`, so a filter the enumerator
+                // can't concretize still gets its shot; the trigger then
+                // resolves CR-correctly (targetless = no-op) rather than
+                // blocking the game on an unanswerable picker.
                 if legal.is_empty() {
-                    self.push_pending_trigger(pending, None);
+                    let auto = self.auto_target_for_effect_avoiding_set_xc(
+                        &pending.effect,
+                        pending.controller,
+                        &[pending.source],
+                        pending.x_value,
+                        pending.converged_value,
+                    );
+                    self.push_pending_trigger(pending, auto);
                     continue;
                 }
                 // The targeting cursor can only select players and
@@ -16824,6 +16911,7 @@ impl GameState {
                         candidates,
                         min: 1,
                         max: 1,
+                        eligible: None,
                     }
                 } else {
                     Decision::ChooseTarget {
@@ -17326,10 +17414,14 @@ impl GameState {
             self.pending_decision = Some(PendingDecision {
                 decision: Decision::ChooseCards {
                     source: card_id,
-                    prompt: format!("{source_name}: choose a card to target"),
+                    prompt: format!(
+                        "{source_name}{}",
+                        crate::decision::OFFBOARD_TARGET_PROMPT_SUFFIX,
+                    ),
                     candidates,
                     min: 1,
                     max: 1,
+                    eligible: None,
                 },
                 resume: ResumeContext::CastSlot0TargetPick {
                     caster: p,
@@ -17436,6 +17528,8 @@ impl GameState {
         // slots (Domri Rade's −2 "target creature you control fights another
         // target creature"); the single-target action only carries slot 0.
         let extra_targets = self.auto_extra_targets_for(&ability.effect, card_id, p, target.clone());
+        let all_targets: Vec<Target> =
+            target.iter().cloned().chain(extra_targets.iter().cloned()).collect();
         self.stack.push(
             TriggerPush::new(card_id, p, ability.effect)
                 .target(target)
@@ -17443,6 +17537,26 @@ impl GameState {
                 .x_value(x)
                 .build(),
         );
+        // CR 702.21a — Ward fires on a spell *or ability* an opponent
+        // controls, and a loyalty ability is an activated ability
+        // (CR 606.1). Pushed above the just-queued ability so the ward
+        // trigger resolves first. Without this, Professor Dellian Fel's
+        // −3 killed a warded creature for free.
+        self.push_ward_triggers_for_activated_ability_targets(p, card_id, &all_targets);
+        // CR 603.x — "whenever this becomes the target of a spell or
+        // ability" triggers, same omission as Ward.
+        let became: Vec<GameEvent> = all_targets
+            .iter()
+            .filter_map(|t| match t {
+                Target::Permanent(id) => {
+                    Some(GameEvent::BecameTarget { target: *id, caster: p, by: Some(card_id) })
+                }
+                _ => None,
+            })
+            .collect();
+        if !became.is_empty() {
+            self.dispatch_triggers_for_events(&became);
+        }
         self.give_priority_to_active();
 
         let mut sba = self.check_state_based_actions();
@@ -17586,6 +17700,18 @@ impl GameState {
             .pending_decision
             .take()
             .ok_or(GameError::NoDecisionPending)?;
+        // Backing out of a suspended cast / activation. Only the replay
+        // suspends can be abandoned: they return `Ok` without the action
+        // having happened, so dropping the decision restores the pre-action
+        // state exactly. A resolution already on the stack can't be undone,
+        // so the answer is refused (and the decision put back).
+        if matches!(answer, DecisionAnswer::CancelAction) {
+            if !pd.resume.is_action_replay() {
+                self.pending_decision = Some(pd);
+                return Err(GameError::DecisionAnswerMismatch);
+            }
+            return Ok(vec![]);
+        }
         let mut events = match pd.resume {
             ResumeContext::Spell {
                 card,
@@ -17914,18 +18040,24 @@ impl GameState {
                 };
             }
             ResumeContext::CastExtraTargetPick { caster, action } => {
-                let _ = caster;
                 let mut action = *action;
-                let GameAction::CastSpell { additional_targets, card_id, .. } = &mut action else {
+                let GameAction::CastSpell { additional_targets, card_id, target, .. } = &mut action
+                else {
                     return Err(GameError::DecisionAnswerMismatch);
                 };
                 match answer {
                     DecisionAnswer::Target(t) => additional_targets.push(t),
                     // "Up to N targets" decline: replay the cast without
                     // appending, suppressing further slot prompts so the
-                    // selection ends here.
+                    // selection ends here — and keep it suppressed for the
+                    // manual-tap replays of this same cast.
                     DecisionAnswer::DeclineTarget => {
-                        self.suppress_extra_target_prompts = Some(*card_id);
+                        self.suppress_extra_target_prompts = Some(DeclinedExtraTargets {
+                            caster,
+                            card_id: *card_id,
+                            target: target.clone(),
+                            additional_targets: additional_targets.clone(),
+                        });
                     }
                     _ => return Err(GameError::DecisionAnswerMismatch),
                 }
@@ -17970,6 +18102,7 @@ impl GameState {
                 match &mut action {
                     GameAction::CastSpell { target, .. }
                     | GameAction::CastPrepareSpell { target, .. }
+                    | GameAction::ActivateAbility { target, .. }
                     | GameAction::ActivateLoyaltyAbility { target, .. } => {
                         *target = Some(Target::Permanent(id));
                     }

@@ -4,11 +4,11 @@ use bevy::prelude::*;
 
 use super::components::{
     BackFaceMesh, Card, CardFrontTexture, CardHighlightAssets, CardHoverLift, CardMeshAssets,
-    FrontFaceMesh,
+    ExilePile, FrontFaceMesh,
     GraveyardPile, PileHovered, PlayerTargetZone,
     CARD_THICKNESS,
 };
-use super::layout::{back_face_rotation, graveyard_position};
+use super::layout::{back_face_rotation, exile_position, graveyard_position};
 use super::mesh::{card_border_mesh, card_mesh};
 use super::observers::{on_card_out, on_card_over};
 
@@ -118,6 +118,30 @@ pub fn init_shared_assets(
             .observe(on_graveyard_click);
     }
 
+    // The shared exile pile (CR 406.2 — one zone, one pile). Hidden until
+    // something is exiled; clicking it opens the exile browser, which is
+    // otherwise only reachable by knowing the `V` key.
+    {
+        let pos = exile_position(n_seats);
+        commands
+            .spawn((
+                Mesh3d(card_mesh_handle.clone()),
+                MeshMaterial3d(back_material.clone()),
+                Transform::from_translation(pos)
+                    .with_rotation(Quat::from_rotation_x(-std::f32::consts::FRAC_PI_2)),
+                Visibility::Hidden,
+                ExilePile,
+                CardHoverLift {
+                    current_lift: 0.0,
+                    target_lift: 0.0,
+                    base_translation: pos,
+                },
+            ))
+            .observe(on_pile_over)
+            .observe(on_pile_out)
+            .observe(on_exile_click);
+    }
+
     // Per-seat **player target marker** — a bare, invisible entity
     // carrying the [`PlayerTargetZone`] tag for each seat. The player's
     // visible representation is now the 2-D HUD panel (avatar / life /
@@ -192,6 +216,14 @@ fn on_pile_over(ev: On<Pointer<Over>>, mut commands: Commands) {
 
 fn on_pile_out(ev: On<Pointer<Out>>, mut commands: Commands) {
     commands.entity(ev.entity).remove::<PileHovered>();
+}
+
+/// Click on the shared exile pile toggles the exile browser.
+fn on_exile_click(
+    _ev: On<Pointer<Click>>,
+    mut browser: ResMut<crate::game::ExileBrowserState>,
+) {
+    browser.open = !browser.open;
 }
 
 /// Click on any graveyard pile toggles the browser to that pile's owner.

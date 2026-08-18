@@ -398,6 +398,7 @@ pub fn handle_ability_menu(
     loyalty_query: Query<(&Interaction, &LoyaltyMenuItem), Changed<Interaction>>,
     perm_action_query: Query<(&Interaction, &PermanentActionMenuItem), Changed<Interaction>>,
     mut helper_tap: ResMut<crate::game::HelperTapState>,
+    mut modal_cast: ResMut<crate::game::PendingModalCast>,
 ) {
     // Crew / Saddle / Reconfigure / Room doors. Crew and Saddle open the
     // same multi-select the convoke picker uses — the cost is "tap creatures
@@ -489,6 +490,33 @@ pub fn handle_ability_menu(
     // auto-taps mana or comes back with `ManualTapRequired`.
     for (interaction, item) in &prepare_query {
         if *interaction != Interaction::Pressed { continue; }
+        // CR 700.2 — a modal inset spell (Rejoinder: "tap or untap … or
+        // neither") picks its mode first. Without this the client sent
+        // `mode: None` and the engine silently resolved mode 0, so the
+        // untap and decline modes were unreachable.
+        let modal: Option<(String, Vec<(String, bool)>)> = view
+            .0
+            .as_ref()
+            .and_then(|cv| cv.battlefield.iter().find(|p| p.id == item.creature_id))
+            .filter(|pv| pv.prepare_modes.len() > 1)
+            .map(|pv| {
+                (
+                    pv.prepare_spell_name.clone().unwrap_or_else(|| pv.name.clone()),
+                    pv.prepare_modes
+                        .iter()
+                        .zip(pv.prepare_mode_needs_target.iter().chain(std::iter::repeat(&false)))
+                        .map(|(d, nt)| (d.clone(), *nt))
+                        .collect(),
+                )
+            });
+        if let Some((name, modes)) = modal {
+            modal_cast.card_id = Some(item.creature_id);
+            modal_cast.card_name = name;
+            modal_cast.modes = modes;
+            modal_cast.prepare_source = Some(item.creature_id);
+            menu_state.card_id = None;
+            continue;
+        }
         if item.needs_target {
             targeting.active = true;
             targeting.pending_card_id = None;
@@ -1701,4 +1729,33 @@ pub fn helper_cast_action(
             GameAction::Saddle { mount: card_id, creatures: helpers }
         }
     }
+}
+
+/// Esc dismisses any open cast-flow picker.
+///
+/// Each of these has a Cancel button, but a player who has just armed one
+/// by mistake reaches for Esc — and `handle_settings_toggle` now stands
+/// aside for them, so without this the key did nothing at all. One system
+/// rather than a branch in each handler, so a picker added later only has
+/// to be listed here (and in the settings-toggle guard).
+pub fn cancel_pickers_on_escape(
+    keyboard: Res<ButtonInput<KeyCode>>,
+    mut alt_cast: ResMut<crate::game::AltCastState>,
+    mut helper_tap: ResMut<crate::game::HelperTapState>,
+    mut spree_cast: ResMut<crate::game::SpreeCastState>,
+    mut split_cast: ResMut<crate::game::SplitCastState>,
+    mut pay_times: ResMut<crate::game::PayTimesState>,
+    mut ability_menu: ResMut<crate::game::AbilityMenuState>,
+    mut hand_menu: ResMut<super::hand_menu::HandMenuState>,
+) {
+    if !keyboard.just_pressed(KeyCode::Escape) {
+        return;
+    }
+    alt_cast.pending = None;
+    helper_tap.pending = None;
+    spree_cast.pending = None;
+    split_cast.pending = None;
+    pay_times.pending = None;
+    ability_menu.card_id = None;
+    hand_menu.card_id = None;
 }

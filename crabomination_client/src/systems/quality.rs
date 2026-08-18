@@ -255,6 +255,12 @@ pub fn handle_settings_toggle(
     export_prompt: Res<crate::systems::export_prompt::ExportPromptState>,
     debug_console: Res<crate::systems::debug_console::DebugConsoleState>,
     alt_cast: Res<crate::game::AltCastState>,
+    pending_mana_cast: Res<crate::net_plugin::PendingManaCast>,
+    modal_cast: Res<crate::game::PendingModalCast>,
+    helper_tap: Res<crate::game::HelperTapState>,
+    spree_cast: Res<crate::game::SpreeCastState>,
+    split_cast: Res<crate::game::SplitCastState>,
+    pay_times: Res<crate::game::PayTimesState>,
     close_btn: Query<&Interaction, (Changed<Interaction>, With<SettingsCloseButton>)>,
     mut settings: ResMut<SettingsOpen>,
     mut consumed: ResMut<EscConsumed>,
@@ -277,10 +283,23 @@ pub fn handle_settings_toggle(
     }
     // Don't open settings on top of an active modal/selection — those
     // handlers want this Esc press.
+    //
+    // The manual-mana payment window is the one that bit: a cast the engine
+    // bounced with `ManualTapRequired` is held pending while the player taps
+    // sources, and Esc is how they back out. Missing from this list, Esc
+    // popped the settings panel over the half-finished cast instead, which
+    // reads as "Esc doesn't cancel". Every picker below owns its own Esc
+    // for the same reason.
     if targeting.active
         || blocking.selected_blocker.is_some()
         || cursor.selection.is_some()
         || alt_cast.pending.is_some()
+        || pending_mana_cast.0.is_some()
+        || modal_cast.card_id.is_some()
+        || helper_tap.pending.is_some()
+        || spree_cast.pending.is_some()
+        || split_cast.pending.is_some()
+        || pay_times.pending.is_some()
     {
         return;
     }

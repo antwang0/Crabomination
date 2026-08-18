@@ -1107,6 +1107,14 @@ impl PendingDecision {
         if let crate::decision::Decision::SearchLibrary { player, .. } = &self.decision {
             return *player;
         }
+        // CR 701.8a — a player discards cards *they* choose. "Target player
+        // discards N" (Arcane Omens) therefore asks the discarding seat,
+        // not the caster; `Decision::Discard.player` always names whoever
+        // is picking. Left to the resume's owner, the caster got to choose
+        // which cards their opponent threw away.
+        if let crate::decision::Decision::Discard { player, .. } = &self.decision {
+            return *player;
+        }
         // A suspended effect usually wants its answer from the spell's caster
         // / ability's controller. The exception is a forced sacrifice (CR
         // 701.16), where the *sacrificing* player chooses — which for an Edict

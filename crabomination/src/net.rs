@@ -257,6 +257,10 @@ pub struct PlanarView {
 pub struct ClientView {
     pub your_seat: usize,
     pub active_player: usize,
+    /// CR 103.5 — the seat that took the first turn ("on the play"). Fixed
+    /// for the game, so the HUD can say who won the die roll at any point.
+    #[serde(default)]
+    pub starting_player: usize,
     pub priority: usize,
     pub step: TurnStep,
     pub turn: u32,
@@ -2110,6 +2114,14 @@ pub struct PermanentView {
     /// `CastPrepareSpell`. `false` when there is no prepare spell.
     #[serde(default)]
     pub prepare_needs_target: bool,
+    /// SOS Prepare — the inset spell's "Choose one —" modes, pre-rendered
+    /// like `KnownCard.modal_descriptions`. Empty for a non-modal spell.
+    #[serde(default)]
+    pub prepare_modes: Vec<String>,
+    /// Per-mode "does this mode take a target" flags, parallel to
+    /// [`prepare_modes`](Self::prepare_modes).
+    #[serde(default)]
+    pub prepare_mode_needs_target: Vec<bool>,
     /// CR 708.7 — pre-rendered turn-up cost for a face-down permanent the
     /// viewer controls (its Morph / Megamorph / Disguise cost, or a
     /// manifested creature card's own cost, with every surcharge and
@@ -2232,6 +2244,12 @@ pub struct PendingDecisionView {
     /// (typically: the viewer is the acting player). `None` when the viewer
     /// is a spectator who should only know that some other seat is deciding.
     pub decision: Option<DecisionWire>,
+    /// True when the decision is gathering input for a *replay* of a cast
+    /// or activation that hasn't paid anything yet, so the acting player
+    /// may back out with `DecisionAnswer::CancelAction`. `#[serde(default)]`
+    /// for snapshot back-compat.
+    #[serde(default)]
+    pub cancellable: bool,
 }
 
 // ── Wire-side mirrors of engine types with static-string fields ─────────────
@@ -2442,6 +2460,10 @@ pub enum DecisionWire {
         #[serde(default)]
         min: u32,
         max: u32,
+        /// Legal subset of `candidates`; `None` = all legal. See
+        /// [`crate::decision::Decision::ChooseCards::eligible`].
+        #[serde(default)]
+        eligible: Option<Vec<CardId>>,
     },
 }
 
@@ -2590,13 +2612,14 @@ impl From<&Decision> for DecisionWire {
                 prompt: prompt.clone(),
                 options: options.clone(),
             },
-            Decision::ChooseCards { source, prompt, candidates, min, max } => {
+            Decision::ChooseCards { source, prompt, candidates, min, max, eligible } => {
                 DecisionWire::ChooseCards {
                     source: *source,
                     prompt: prompt.clone(),
                     candidates: candidates.clone(),
                     min: *min,
                     max: *max,
+                    eligible: eligible.clone(),
                 }
             }
         }

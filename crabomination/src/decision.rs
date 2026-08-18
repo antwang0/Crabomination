@@ -38,6 +38,25 @@ pub enum ScryMode {
     Rearrange,
 }
 
+/// `Decision::ChooseTarget.description` for a cast-time *extra* target slot
+/// (slot 1+ of a multi-target spell — Knockout Maneuver's "then it deals
+/// damage to target creature an opponent controls"). The client matches on
+/// it to fold the answered target back into the cast action it is holding
+/// for manual mana payment, so a `ManualTapRequired` retry doesn't re-pose
+/// the same slot on every land tap. Shared so the two sides can't drift.
+pub const EXTRA_CAST_TARGET_PROMPT: &str = "choose an additional target";
+
+/// Tail of the `Decision::ChooseCards.prompt` posed for a slot-0 target that
+/// lives in an off-board zone ("target card in a graveyard" — Sundering
+/// Archaic's `{2}`), which the in-scene cursor can't click. The full prompt
+/// is `"<source name><this>"`. The client matches on it to fold the pick
+/// back into the action it is holding for manual mana payment: the engine
+/// replays the cast/activation server-side, so without the patch a
+/// `ManualTapRequired` retry re-poses this picker on every land tap — the
+/// UI ping-pongs between "choose a target" and "tap mana". Shared so the
+/// two sides can't drift.
+pub const OFFBOARD_TARGET_PROMPT_SUFFIX: &str = ": choose a card to target";
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum Decision {
     /// Pick a target satisfying the ability's selector.
@@ -356,6 +375,15 @@ pub enum Decision {
         min: u32,
         /// Inclusive upper bound on how many may be chosen.
         max: u32,
+        /// When `Some`, only these candidates may actually be chosen —
+        /// the rest are shown (so the player sees the whole reveal) but
+        /// are not legal picks. Zimone's Experiment reveals five cards
+        /// and takes only creatures and lands; without this the client
+        /// had no way to know which was which, and an illegal pick was
+        /// silently dropped by the resolver. `None` means every candidate
+        /// is legal.
+        #[serde(default)]
+        eligible: Option<Vec<CardId>>,
     },
 }
 
@@ -374,6 +402,14 @@ pub enum LearnChoice {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum DecisionAnswer {
     Target(Target),
+    /// Abandon the action whose *replay* this decision is gathering input
+    /// for — a cast or activation suspended before anything was paid (see
+    /// `ResumeContext::is_action_replay`). Answered by the client's Cancel
+    /// control so a player who opened, say, Divergent Equation's {X} picker
+    /// with no mana can back out instead of being stuck in a modal they
+    /// can't satisfy. Rejected for any other decision: a resolution that is
+    /// already on the stack has to finish.
+    CancelAction,
     /// Decline an optional target pick (`ChooseTarget { optional: true }` —
     /// "up to N targets"). Ends target selection for the effect.
     DeclineTarget,

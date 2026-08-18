@@ -53,7 +53,8 @@ use systems::animate::{
     AnimationSpeed,
 };
 use systems::game_ui::{
-    apply_swap_front_material, auto_advance_p0, handle_ability_menu, handle_alt_cast_buttons,
+    apply_swap_front_material, auto_advance_p0, cancel_pickers_on_escape,
+    handle_ability_menu, handle_alt_cast_buttons,
     handle_hand_menu, spawn_hand_menu, HandMenuState,
     handle_auto_pass_toggle, handle_export_keypress, handle_game_input,
     handle_planar_die_keypress, handle_reveal_conspiracy_keypress, poll_action_buttons,
@@ -94,7 +95,7 @@ use systems::ui::{
     toggle_shortcut_help, update_castable_highlights, update_dying_highlights,
     update_activatable_highlights, peek_popup, pile_tooltip, reveal_popup, RevealPopupState,
 };
-use systems::decision_ui::{spawn_decision_ui, handle_scry_toggles, handle_scry_reorder, handle_trigger_reorder, handle_damage_order_reorder, handle_damage_assign_buttons, handle_search_select, handle_put_on_library_select, handle_put_on_library_hand_click, handle_discard_select, update_put_on_library_count_text, update_put_on_library_visuals, handle_choose_color_buttons, handle_name_card_buttons, handle_learn_buttons, handle_confirm, handle_mulligan_buttons, spawn_mode_pick_ui, handle_mode_pick_buttons, handle_optional_buttons, handle_choose_modes_toggle, handle_trigger_mode_buttons, handle_amount_buttons, handle_divide_damage_buttons, handle_creature_type_buttons, handle_randomizer_buttons, handle_legend_keep_buttons, DecisionUiState};
+use systems::decision_ui::{spawn_decision_ui, handle_scry_toggles, handle_scry_reorder, handle_trigger_reorder, handle_damage_order_reorder, handle_damage_assign_buttons, handle_search_select, handle_put_on_library_select, handle_put_on_library_hand_click, handle_discard_select, update_put_on_library_count_text, update_put_on_library_visuals, handle_choose_color_buttons, handle_name_card_buttons, handle_learn_buttons, handle_confirm, handle_decision_cancel, handle_mulligan_buttons, spawn_mode_pick_ui, handle_mode_pick_buttons, handle_optional_buttons, handle_choose_modes_toggle, handle_trigger_mode_buttons, handle_amount_buttons, handle_divide_damage_buttons, handle_creature_type_buttons, handle_randomizer_buttons, handle_legend_keep_buttons, DecisionUiState};
 
 /// Marks the decorative ground plane so quality changes can update its mesh.
 #[derive(Component)]
@@ -378,6 +379,7 @@ fn main() {
         .insert_resource(FlippedHandCards::default())
         .insert_resource(CardNames::default())
         .insert_resource(GraveyardBrowserState::default())
+        .init_resource::<game::ExileBrowserState>()
         .insert_resource(RevealPopupState::default())
         .insert_resource(initial_anim_speed)
         .insert_resource(ButtonState::default())
@@ -856,7 +858,7 @@ fn main() {
                 handle_discard_select,
                 update_put_on_library_count_text,
                 update_put_on_library_visuals,
-                handle_confirm,
+                (handle_confirm, handle_decision_cancel).chain(),
                 handle_mulligan_buttons,
                 handle_choose_color_buttons,
                 handle_name_card_buttons,
@@ -886,6 +888,15 @@ fn main() {
             Update,
             (handle_ability_menu, spawn_ability_menu)
                 .chain()
+                .after(handle_game_input)
+                .run_if(in_state(AppState::InGame)),
+        )
+        // Esc closes any open cast-flow picker (see `cancel_pickers_on_escape`).
+        // After the per-picker handlers, so a click and an Esc in the same
+        // frame resolve as the click.
+        .add_systems(
+            Update,
+            cancel_pickers_on_escape
                 .after(handle_game_input)
                 .run_if(in_state(AppState::InGame)),
         )

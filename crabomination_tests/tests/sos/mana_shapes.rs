@@ -164,6 +164,40 @@ fn ui_player_must_tap_when_generic_has_a_color_choice() {
 }
 
 #[test]
+fn forced_payment_with_no_spare_sources_does_not_prompt() {
+    // Regression: Plains + Fields of Strife (R/W) + Paradox Gardens (G/U)
+    // paying Emeritus of Truce's {1}{W}{W}. Two sources can make white and
+    // the cost needs exactly two, so both must tap and the third pays the
+    // generic — one legal assignment, nothing to choose. The old check
+    // flagged a "colour choice" purely because the two white sources had
+    // different signatures, and stopped the cast for a manual tap.
+    let mut g = two_player_game();
+    g.players[0].wants_ui = true;
+    g.players[0].manual_mana = true;
+    let plains = g.add_card_to_battlefield(0, catalog::plains());
+    let strife = g.add_card_to_battlefield(0, catalog::fields_of_strife());
+    let gardens = g.add_card_to_battlefield(0, catalog::paradox_gardens());
+    // The school lands enter tapped; this board is turn-N, all untapped.
+    for id in [plains, strife, gardens] {
+        if let Some(c) = g.battlefield.iter_mut().find(|c| c.id == id) {
+            c.tapped = false;
+        }
+    }
+    let id = g.add_card_to_hand(0, catalog::emeritus_of_truce());
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("a forced payment must not stop for a manual tap");
+    assert!(
+        [plains, strife, gardens]
+            .iter()
+            .all(|l| g.battlefield.iter().find(|c| c.id == *l).unwrap().tapped),
+        "all three lands were required, so all three tapped",
+    );
+}
+
+#[test]
 fn ui_player_partial_tap_then_manual_generic_completes_cast() {
     // Full flow: forced green auto-taps the Forests, then the player taps
     // the Mountains they choose for the generic and the re-submitted cast
@@ -709,3 +743,127 @@ fn quandrix_the_proof_enters_as_6_6_flying_trample() {
 // no-target "vanilla Fractal" test was removed when the card was
 // promoted to the real `CreateTokenCopyOf` primitive.)
 
+
+/// Regression: a declined "up to N targets" slot has to survive the
+/// manual-tap replays. A hand-paying caster's cast bounces with
+/// `ManualTapRequired` and the client re-submits it on every mana tap
+/// (`NetOutbox::last_cast`); the decline used to be consumed by the first
+/// replay, so each tap re-posed the slot the player had just declined.
+#[test]
+fn a_declined_extra_target_survives_the_manual_tap_replays() {
+    use crabomination::decision::DecisionAnswer;
+    use crabomination::game::types::Target;
+    let mut g = two_player_game();
+    g.players[0].wants_ui = true;
+    g.players[0].manual_mana = true;
+    let b1 = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let b2 = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let b3 = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    // Rabid Attack is {1}{B}: black is forced onto the Swamp, but the
+    // generic pip can come from either the Mountain or the Island — a real
+    // choice, so the cast stops for a manual tap.
+    g.add_card_to_battlefield(0, catalog::swamp());
+    let mountain = g.add_card_to_battlefield(0, catalog::mountain());
+    let id = g.add_card_to_hand(0, catalog::rabid_attack());
+    g.add_card_to_battlefield(0, catalog::island());
+
+    let cast = |t: Option<Target>, extra: Vec<Target>| GameAction::CastSpell {
+        card_id: id, target: t, additional_targets: extra, mode: None, x_value: None,
+    };
+    g.perform_action(cast(Some(Target::Permanent(b1)), vec![]))
+        .expect("cast suspends on the slot-1 prompt");
+    assert!(g.pending_decision.is_some(), "slot-1 ChooseTarget pending");
+    g.submit_decision(DecisionAnswer::Target(Target::Permanent(b2)))
+        .expect("slot 1 accepted");
+    assert!(g.pending_decision.is_some(), "slot-2 prompt pending");
+    // Declining replays the cast, which now needs the manual tap.
+    let r = g.submit_decision(DecisionAnswer::DeclineTarget);
+    assert!(
+        matches!(r, Err(GameError::ManualTapRequired { .. })),
+        "the replayed cast stops for the tap, got {r:?}",
+    );
+    assert!(g.pending_decision.is_none(), "the decline was answered");
+
+    // What the client's pending-cast driver re-fires: the same action, now
+    // carrying the slot-1 pick. It must bounce on mana alone — no new
+    // prompt for the slot the player already declined.
+    let retry = g.perform_action(cast(Some(Target::Permanent(b1)), vec![Target::Permanent(b2)]));
+    assert!(
+        matches!(retry, Err(GameError::ManualTapRequired { .. })),
+        "still a pip short — but no new prompt, got {retry:?}",
+    );
+    assert!(g.pending_decision.is_none(), "the declined slot must stay declined");
+
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: mountain, ability_index: 0, target: None,
+        additional_targets: Vec::new(), x_value: None, mode: None,
+    })
+    .expect("tap the Mountain for the generic");
+    g.perform_action(cast(Some(Target::Permanent(b1)), vec![Target::Permanent(b2)]))
+        .expect("the pool now covers {1}{B}");
+    assert!(g.pending_decision.is_none(), "no prompt on the completing cast either");
+    drain_stack(&mut g);
+    assert_eq!(g.computed_permanent(b1).unwrap().power, 3, "b1 pumped");
+    assert_eq!(g.computed_permanent(b2).unwrap().power, 3, "b2 pumped");
+    assert_eq!(g.computed_permanent(b3).unwrap().power, 2, "the declined slot stayed empty");
+}
+
+/// Regression: answering a decision must never re-pose it. The {X} picker
+/// for a cast the player can't pay (Divergent Equation with no mana) failed
+/// its replayed cast, and `perform_action`'s rollback restored the pending
+/// decision along with everything else — so every answer put the same modal
+/// straight back and the player could neither cast nor cancel.
+#[test]
+fn an_unpayable_x_pick_does_not_re_pose_its_modal() {
+    use crabomination::decision::{Decision, DecisionAnswer};
+    let mut g = two_player_game();
+    g.players[0].wants_ui = true;
+    g.players[0].manual_mana = true;
+    let id = g.add_card_to_hand(0, catalog::divergent_equation());
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("the cast suspends on the X pick");
+    assert!(
+        matches!(
+            g.pending_decision.as_ref().map(|p| &p.decision),
+            Some(Decision::ChooseAmount { .. })
+        ),
+        "X picker posed",
+    );
+    let r = g.perform_action(GameAction::SubmitDecision(DecisionAnswer::Amount(0)));
+    assert!(r.is_err(), "X=0 still needs {{U}}, which the player hasn't got");
+    assert!(g.pending_decision.is_none(), "the answered modal must not come back");
+    assert!(g.players[0].hand.iter().any(|c| c.id == id), "and the spell is back in hand");
+}
+
+/// `DecisionAnswer::CancelAction` backs out of a cast suspended before it
+/// paid anything, which is what the client's Cancel button / Escape sends.
+#[test]
+fn cancel_action_abandons_a_suspended_cast() {
+    use crabomination::decision::DecisionAnswer;
+    let mut g = two_player_game();
+    g.players[0].wants_ui = true;
+    g.players[0].manual_mana = true;
+    // Enough mana to make the pick meaningful — cancelling still gets out.
+    g.add_card_to_battlefield(0, catalog::island());
+    g.add_card_to_battlefield(0, catalog::island());
+    let id = g.add_card_to_hand(0, catalog::divergent_equation());
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("suspends on the X pick");
+    assert!(g.pending_decision.is_some());
+    g.perform_action(GameAction::SubmitDecision(DecisionAnswer::CancelAction))
+        .expect("a replay suspend can be abandoned");
+
+    assert!(g.pending_decision.is_none(), "modal closed");
+    assert!(g.players[0].hand.iter().any(|c| c.id == id), "spell back in hand");
+    assert!(g.stack.is_empty(), "nothing was cast");
+    assert!(
+        g.battlefield.iter().filter(|c| c.definition.is_land()).all(|c| !c.tapped),
+        "and nothing was paid",
+    );
+}

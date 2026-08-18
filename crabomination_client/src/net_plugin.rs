@@ -47,26 +47,26 @@ pub struct NetOutbox(pub mpsc::Sender<ClientMsg>, Mutex<Option<GameAction>>);
 #[derive(Resource, Default)]
 pub struct ChatInbox(pub Vec<(usize, String, String)>);
 
-/// True for the player-initiated cast actions that go through the
-/// engine's forced-only mana payment (and can therefore come back as
-/// `ManualTapRequired`).
+/// Could the engine bounce this action back as `ManualTapRequired`?
+///
+/// Anything that pays mana on the hand-paying (`manual_mana`) path can, and
+/// the client has to hold it so the player's taps can complete it. This
+/// used to be an allowlist of cast variants, which silently went stale:
+/// every *activated* ability with a mana cost — Fields of Strife's
+/// `{2}{R}{W}, {T}: Surveil 1` — bounced and was simply dropped, so the
+/// ability could not be used at all. Inverted to a denylist of the actions
+/// that provably never pay mana, so a newly added cast or activation is
+/// covered by default rather than forgotten.
 fn is_cast_action(a: &GameAction) -> bool {
-    matches!(
+    !matches!(
         a,
-        GameAction::CastSpell { .. }
-            | GameAction::CastSpellBack { .. }
-            | GameAction::CastPrepareSpell { .. }
-            | GameAction::CastSpellDelve { .. }
-            | GameAction::CastSpellAlternative { .. }
-            | GameAction::CastFromCommandZone { .. }
-            // Graveyard recasts pay mana through the same forced-only path,
-            // so they too can bounce back as `ManualTapRequired`.
-            | GameAction::CastFlashback { .. }
-            | GameAction::CastMayhem { .. }
-            | GameAction::CastHarmonize { .. }
-            | GameAction::CastDisturb { .. }
-            | GameAction::CastRetrace { .. }
-            | GameAction::CastEscape { .. }
+        GameAction::PassPriority
+            | GameAction::SubmitDecision(_)
+            | GameAction::DeclareAttackers(_)
+            | GameAction::DeclareAttackersBanded { .. }
+            | GameAction::DeclareBlockers(_)
+            | GameAction::PlayLand { .. }
+            | GameAction::Concede
     )
 }
 
@@ -103,6 +103,55 @@ impl NetOutbox {
         }
     }
 
+    /// Append an extra cast target to the stashed last-cast (the engine's
+    /// `CastExtraTargetPick` suspend — a multi-target spell's slot 1+).
+    ///
+    /// The engine collects those slots one at a time via `ChooseTarget`
+    /// decisions, then replays the cast *server-side* with them filled in.
+    /// The client never submits that replay, so without this the stash still
+    /// holds the original one-target action: a `ManualTapRequired` bounce
+    /// re-arms from it, and every subsequent mana tap re-poses the extra
+    /// target prompt instead of completing the cast. Sibling of
+    /// [`patch_last_cast_x`](Self::patch_last_cast_x).
+    pub fn patch_last_cast_extra_target(
+        &self,
+        card_id: crabomination::card::CardId,
+        target: crabomination::game::Target,
+    ) {
+        if let Ok(mut last) = self.1.lock()
+            && let Some(action) = last.as_mut()
+            && cast_action_card_id(action) == card_id
+            && let Some(extra) = cast_action_additional_targets(action)
+        {
+            extra.push(target);
+        }
+    }
+
+    /// Fill in the slot-0 target of the stashed last-cast/activation (the
+    /// engine's `CastSlot0TargetPick` suspend — a target in a graveyard or
+    /// exile, which the in-scene cursor can't click).
+    ///
+    /// Same shape as [`patch_last_cast_extra_target`](Self::patch_last_cast_extra_target):
+    /// the engine gathers the pick through a `ChooseCards` modal and replays
+    /// the action server-side, so the held copy must learn the target too.
+    /// Otherwise a `ManualTapRequired` bounce re-arms the targetless action
+    /// and each mana tap re-poses the picker — the flip-flop between
+    /// "choose a card" and "tap mana" on Sundering Archaic's `{2}`.
+    pub fn patch_last_cast_target(
+        &self,
+        card_id: crabomination::card::CardId,
+        target: crabomination::game::Target,
+    ) {
+        if let Ok(mut last) = self.1.lock()
+            && let Some(action) = last.as_mut()
+            && cast_action_card_id(action) == card_id
+            && let Some(slot) = cast_action_target_mut(action)
+            && slot.is_none()
+        {
+            *slot = Some(target);
+        }
+    }
+
     /// Send a debug-console cheat. The server applies it to whichever
     /// seat owns this channel.
     pub fn submit_debug(&self, action: DebugAction) {
@@ -126,6 +175,38 @@ pub fn patch_cast_x(action: &mut GameAction, x: u32) {
             *x_value = Some(x);
         }
         _ => {}
+    }
+}
+
+/// The `additional_targets` list of a cast action, for the cast variants
+/// that carry one. `None` for actions with no extra target slots (playing a
+/// land, activating an ability), which the engine never suspends for a
+/// `CastExtraTargetPick`.
+fn cast_action_additional_targets(
+    action: &mut GameAction,
+) -> Option<&mut Vec<crabomination::game::Target>> {
+    match action {
+        GameAction::CastSpell { additional_targets, .. }
+        | GameAction::CastSpellBack { additional_targets, .. }
+        | GameAction::CastPrepareSpell { additional_targets, .. }
+        | GameAction::CastFlashback { additional_targets, .. } => Some(additional_targets),
+        _ => None,
+    }
+}
+
+/// The slot-0 `target` of an action that carries one — the same set the
+/// engine's `CastSlot0TargetPick` resume writes back into.
+pub(crate) fn cast_action_target_mut(
+    action: &mut GameAction,
+) -> Option<&mut Option<crabomination::game::Target>> {
+    match action {
+        GameAction::CastSpell { target, .. }
+        | GameAction::CastSpellBack { target, .. }
+        | GameAction::CastPrepareSpell { target, .. }
+        | GameAction::CastFlashback { target, .. }
+        | GameAction::ActivateAbility { target, .. }
+        | GameAction::ActivateLoyaltyAbility { target, .. } => Some(target),
+        _ => None,
     }
 }
 
@@ -312,6 +393,7 @@ pub fn poll_net(
     mut chat: ResMut<ChatInbox>,
     active_format: Option<Res<crate::systems::game_over::ActiveMatchFormat>>,
     time: Res<Time>,
+    mut blocking: ResMut<crate::game::BlockingState>,
 ) {
     let Some(inbox) = inbox else { return };
     events.0.clear();
@@ -372,6 +454,13 @@ pub fn poll_net(
                 }
             }
             ServerMsg::ActionError(e) => {
+                // A rejected block declaration (CR 509.1 — a creature that
+                // must block, an illegal pairing) has to put the player back
+                // into blocking mode; otherwise the client thinks the blocks
+                // are in and the window is gone for good.
+                if view.0.as_ref().is_some_and(|cv| cv.step == crabomination::TurnStep::DeclareBlockers) {
+                    blocking.declared = false;
+                }
                 // `ManualTapRequired`: the player has a choice of which mana
                 // to tap. Arm a pending cast that re-fires once they tap
                 // enough — rather than just dropping the action on the floor.
@@ -657,12 +746,16 @@ pub fn drive_pending_mana_cast(
 
     let card_id = cast_action_card_id(&pc.action);
     let Some(me) = cv.players.iter().find(|p| p.seat == cv.your_seat) else { return };
-    // Still castable? (in hand, the command zone, or — for flashback-style
-    // recasts — the graveyard). If not, it resolved or moved — drop the
-    // pending cast.
+    // Still playable? (in hand, the command zone, the graveyard for
+    // flashback-style recasts, or — for an activated ability — still on
+    // the battlefield). If not, it resolved or moved: drop the pending
+    // cast. Omitting the battlefield dropped every held ability
+    // activation on its first frame, so a `{2}{R}{W}, {T}` land ability
+    // could never be paid by hand.
     let present = me.hand.iter().any(|h| h.id() == card_id)
         || me.command.iter().any(|h| h.id() == card_id)
-        || me.graveyard.iter().any(|g| g.id == card_id);
+        || me.graveyard.iter().any(|g| g.id == card_id)
+        || cv.battlefield.iter().any(|c| c.id == card_id);
     if !present {
         pending.0 = None;
         return;
@@ -1223,8 +1316,152 @@ pub fn cast_action_card_id(action: &GameAction) -> crabomination::card::CardId {
         // The pending-cast tracker keys off the prepared creature — it's
         // the persistent object the re-armed cast references.
         GameAction::CastPrepareSpell { creature_id, .. } => *creature_id,
-        // Non-cast actions never arm a pending cast; return a sentinel that
+        // The alternative cast shapes reached from the hand play-option
+        // menu pay mana through the same forced-only path.
+        GameAction::CastBestow { card_id, .. }
+        | GameAction::CastAdventure { card_id, .. }
+        | GameAction::CastAdventureCreature { card_id, .. }
+        | GameAction::CastSpellBuyback { card_id, .. }
+        | GameAction::CastSpellBargain { card_id, .. }
+        | GameAction::CastPrototype { card_id, .. }
+        | GameAction::CastPlotted { card_id, .. }
+        | GameAction::CastSpellKicked { card_id, .. }
+        | GameAction::CastSpellKickers { card_id, .. }
+        | GameAction::CastGift { card_id, .. }
+        | GameAction::CastOmen { card_id, .. }
+        | GameAction::CastSplitRight { card_id, .. }
+        | GameAction::CastSplitFused { card_id, .. }
+        | GameAction::CastSpellSpree { card_id, .. }
+        | GameAction::CastSpellConvoke { card_id, .. }
+        | GameAction::CastSpellWaterbend { card_id, .. }
+        | GameAction::CastSpellSpliced { card_id, .. }
+        | GameAction::CastRoomDoor { card_id, .. } => *card_id,
+        // Activations pay mana too, and their source is the permanent on
+        // the battlefield rather than a card in hand.
+        GameAction::ActivateAbility { card_id, .. }
+        | GameAction::ActivateLoyaltyAbility { card_id, .. }
+        | GameAction::ActivateAbilityWaterbend { card_id, .. }
+        | GameAction::UnlockRoomDoor { card_id, .. }
+        | GameAction::TurnFaceUp { card_id }
+        | GameAction::TurnFaceUpForX { card_id, .. } => *card_id,
+        GameAction::Equip { equipment, .. } => *equipment,
+        GameAction::Reconfigure { equipment, .. } => *equipment,
+        // Anything else never arms a pending cast; return a sentinel that
         // won't match any real card so the pending cast clears.
         _ => crabomination::card::CardId(u32::MAX),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crabomination::card::CardId;
+
+    #[test]
+    fn actions_that_pay_mana_are_held_for_manual_tapping() {
+        // Regression: this was an allowlist of cast variants, so an
+        // activated ability with a mana cost (Fields of Strife's
+        // "{2}{R}{W}, {T}: Surveil 1") bounced with `ManualTapRequired`
+        // and was dropped — the ability could not be used at all.
+        let id = CardId(4);
+        let activate = GameAction::ActivateAbility {
+            card_id: id,
+            ability_index: 2,
+            target: None,
+            additional_targets: vec![],
+            x_value: None,
+            mode: None,
+        };
+        assert!(is_cast_action(&activate), "an activation can need manual mana");
+        assert_eq!(
+            cast_action_card_id(&activate),
+            id,
+            "the held action must name its source so the driver can find it",
+        );
+        assert!(is_cast_action(&GameAction::CastSpell {
+            card_id: id,
+            target: None,
+            additional_targets: vec![],
+            mode: None,
+            x_value: None,
+        }));
+        // Actions that provably never pay mana stay out of the way.
+        assert!(!is_cast_action(&GameAction::PassPriority));
+        assert!(!is_cast_action(&GameAction::DeclareBlockers(vec![])));
+        assert_eq!(
+            cast_action_card_id(&GameAction::PassPriority),
+            CardId(u32::MAX),
+            "a non-paying action must not match a real card",
+        );
+    }
+
+    /// Regression: a multi-target spell (Knockout Maneuver) collects slot 1
+    /// through a `ChooseTarget` decision the engine answers by replaying the
+    /// cast *server-side*. The client's held action never saw that replay, so
+    /// a `ManualTapRequired` bounce re-armed the original one-target cast and
+    /// every land tap re-posed the "choose an additional target" prompt.
+    #[test]
+    fn extra_cast_target_is_folded_into_the_held_cast() {
+        use crabomination::game::Target;
+        let (tx, _rx) = mpsc::channel();
+        let outbox = NetOutbox::new(tx);
+        let card = CardId(7);
+        outbox.submit(GameAction::CastSpell {
+            card_id: card,
+            target: Some(Target::Permanent(CardId(1))),
+            additional_targets: vec![],
+            mode: None,
+            x_value: None,
+        });
+        outbox.patch_last_cast_extra_target(card, Target::Permanent(CardId(2)));
+        // A pick for some *other* card must not land on this cast.
+        outbox.patch_last_cast_extra_target(CardId(99), Target::Player(1));
+
+        let Some(GameAction::CastSpell { target, additional_targets, .. }) = outbox.last_cast()
+        else {
+            panic!("the cast should still be held")
+        };
+        assert_eq!(target, Some(Target::Permanent(CardId(1))));
+        assert_eq!(
+            additional_targets,
+            vec![Target::Permanent(CardId(2))],
+            "the re-submitted cast carries slot 1, so the prompt isn't re-posed",
+        );
+    }
+
+    /// Regression: Sundering Archaic's `{2}: put target card in a graveyard
+    /// on the bottom of its owner's library`. The cursor can't click a
+    /// graveyard, so the client activates with no target and the engine
+    /// gathers the pick through a modal, then replays the activation itself.
+    /// The held copy stayed targetless, so each mana tap re-posed the picker
+    /// — the UI flip-flopped between choosing a card and tapping mana.
+    #[test]
+    fn an_offboard_slot0_pick_is_folded_into_the_held_activation() {
+        use crabomination::game::Target;
+        let (tx, _rx) = mpsc::channel();
+        let outbox = NetOutbox::new(tx);
+        let src = CardId(3);
+        outbox.submit(GameAction::ActivateAbility {
+            card_id: src,
+            ability_index: 0,
+            target: None,
+            additional_targets: vec![],
+            x_value: None,
+            mode: None,
+        });
+        // A pick for some other source must not land on this activation.
+        outbox.patch_last_cast_target(CardId(99), Target::Permanent(CardId(50)));
+        outbox.patch_last_cast_target(src, Target::Permanent(CardId(8)));
+        // An already-targeted action is left alone (no clobbering on retry).
+        outbox.patch_last_cast_target(src, Target::Permanent(CardId(9)));
+
+        let Some(GameAction::ActivateAbility { target, .. }) = outbox.last_cast() else {
+            panic!("the activation should still be held")
+        };
+        assert_eq!(
+            target,
+            Some(Target::Permanent(CardId(8))),
+            "the re-submitted activation carries the graveyard pick",
+        );
     }
 }

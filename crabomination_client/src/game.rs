@@ -342,6 +342,10 @@ pub struct LegalTargets {
     /// Short effect description (e.g. "exile target card from a
     /// graveyard") shown after the source name.
     pub description: String,
+    /// CR 601.4d — the engine says this pick may be declined ("up to N
+    /// targets"). Escape then answers `DecisionAnswer::DeclineTarget`
+    /// instead of reporting that the choice can't be cancelled.
+    pub declinable: bool,
 }
 
 /// State for the activated-ability context menu (right-click on P0 battlefield card).
@@ -362,6 +366,18 @@ pub struct PendingModalCast {
     pub card_id: Option<CardId>,
     pub card_name: String,
     pub modes: Vec<(String, bool)>,
+    /// SOS Prepare — when `Some`, the pick is for a prepared creature's
+    /// inset spell, so it submits `CastPrepareSpell { creature_id }`
+    /// rather than `CastSpell { card_id }`. `card_id` holds the same
+    /// creature so the modal's plumbing is otherwise unchanged.
+    pub prepare_source: Option<CardId>,
+}
+
+/// Whether the shared exile browser is open. Toggled by the `V` key and by
+/// clicking the exile pile.
+#[derive(Resource, Default)]
+pub struct ExileBrowserState {
+    pub open: bool,
 }
 
 /// State for the graveyard card browser popup.
@@ -494,6 +510,14 @@ pub struct BlockingState {
     pub selected_blocker: Option<CardId>,
     /// Confirmed (blocker_id, attacker_id) assignments to submit on Pass.
     pub assignments: Vec<(CardId, CardId)>,
+    /// True once this seat has submitted its blocks for the current combat.
+    /// CR 509.4 — after blockers are declared the active player gets
+    /// priority and then everyone else does, still inside the declare-
+    /// blockers step. That second window is an ordinary instant-speed
+    /// window (combat tricks), so the click handler must leave blocking
+    /// mode once the declaration is in. Cleared whenever the step is no
+    /// longer DeclareBlockers, so an extra combat phase blocks normally.
+    pub declared: bool,
 }
 
 /// Tracks the viewer's in-progress attack plan during the DeclareAttackers

@@ -242,6 +242,11 @@ pub struct TapAnimation {
     pub target_rotation: Quat,
 }
 
+/// The shared exile pile (CR 406.2 — exile is one zone for the whole
+/// game, so unlike the graveyard there is exactly one of these).
+#[derive(Component)]
+pub struct ExilePile;
+
 /// Marker for a graveyard pile visual entity.
 #[derive(Component)]
 pub struct GraveyardPile {

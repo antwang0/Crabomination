@@ -81,6 +81,11 @@ const DECK_X: f32 = 13.5;
 const DECK_Z: f32 = 9.5;
 const GRAVEYARD_X: f32 = 13.5;
 const GRAVEYARD_Z: f32 = 4.0;
+/// Exile is a single shared zone (CR 406.2), so it gets one pile rather
+/// than one per seat: the right-hand edge at the table's midline, between
+/// the two seats' pile strips and clear of both.
+const EXILE_X: f32 = 13.5;
+const EXILE_Z: f32 = 0.0;
 /// Command zone sits between the graveyard and the table edge,
 /// closer to the center, so the commander is always visible.
 /// Each card in the zone stacks slightly along Y for legibility.
@@ -313,6 +318,16 @@ pub fn graveyard_position(seat: usize, viewer: usize, n_seats: usize) -> Vec3 {
     }
     let spot = seat_spot(seat, viewer, n_seats);
     Vec3::new(pile_x(seat, viewer, &spot, CARD_WIDTH * 0.5), 0.0, spot.z_sign * GRAVEYARD_Z)
+}
+
+/// Bottom-card position of the shared exile pile. Exile isn't owned by a
+/// seat, so this takes no `seat` — one pile holds every exiled card and
+/// clicking it opens the browser.
+pub fn exile_position(n_seats: usize) -> Vec3 {
+    // In a pod the per-seat pile strips fan out along X, so pull the shared
+    // pile in to the widest column's outer edge rather than the 1v1 spot.
+    let x = if n_seats <= 2 { EXILE_X } else { MULTI_HALF_X - CARD_WIDTH };
+    Vec3::new(x, 0.0, EXILE_Z)
 }
 
 /// Transform for a card in `seat`'s command zone, slot `slot`. Cards

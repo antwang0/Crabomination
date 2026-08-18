@@ -358,9 +358,36 @@ impl GameState {
         controller: usize,
         source: Option<CardId>,
     ) -> Vec<Target> {
+        self.enumerate_legal_targets_xc(eff, controller, source, 0, 0)
+    }
+
+    /// [`enumerate_legal_targets_with_source`] concretizing the cast's `{X}`
+    /// and converge count, exactly as
+    /// [`auto_target_for_effect_avoiding_set_xc`] does.
+    ///
+    /// The two must agree: this list is what a `wants_ui` controller is
+    /// offered, and the picker is what everyone else gets. Left unresolved,
+    /// `ManaValueAtMostXFromCost` / `ManaValueAtMostConverged` match nothing
+    /// at enumeration time, so a UI player was told a targeted ETB had no
+    /// legal targets and it resolved as a no-op — Sundering Archaic's
+    /// converge exile silently did nothing for the human and worked for the
+    /// bot.
+    ///
+    /// [`enumerate_legal_targets_with_source`]: Self::enumerate_legal_targets_with_source
+    /// [`auto_target_for_effect_avoiding_set_xc`]: Self::auto_target_for_effect_avoiding_set_xc
+    pub fn enumerate_legal_targets_xc(
+        &self,
+        eff: &crate::effect::Effect,
+        controller: usize,
+        source: Option<CardId>,
+        x: u32,
+        converge: u32,
+    ) -> Vec<Target> {
         use crate::card::SelectionRequirement;
         let any_filter = SelectionRequirement::Any;
-        let req = eff.primary_target_filter().unwrap_or(&any_filter);
+        let req_owned =
+            eff.primary_target_filter().map(|f| f.resolve_x(x).resolve_converge(converge));
+        let req = req_owned.as_ref().unwrap_or(&any_filter);
         self.legal_targets_for_filter(req, eff.accepts_player_target(), controller, source)
     }
 

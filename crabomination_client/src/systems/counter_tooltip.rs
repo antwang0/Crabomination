@@ -1731,6 +1731,8 @@ mod tests {
             station_next_threshold: None,
             crewed_count: 0,
             saddle_value: 0,
+            prepare_modes: vec![],
+            prepare_mode_needs_target: vec![],
             reconfigurable: false,
             modified: false,
             can_attack_despite_defender: false,

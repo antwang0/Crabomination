@@ -10,7 +10,8 @@ pub use components::{
     Animating, BattlefieldCard, Card, CardBorderHighlight, CardFlipAnimation, CardFrontTexture,
     CardHighlightAssets, CardHoverLift, CardHovered, CardMeshAssets, CardOwner, CastableHighlight,
     CombatLurch, DyingHighlight,
-    CommandZoneCard, DeckCard, DeckPile, DeckShuffleAnimation, DrawCardAnimation, FlippedFace,
+    CommandZoneCard, DeckCard, DeckPile, DeckShuffleAnimation, DrawCardAnimation, ExilePile,
+    FlippedFace,
     FrontFaceMesh, GameCardId, GraveyardPile, HandCard, HandSlideAnimation, HandZoom,
     MdfcFlipAnimation, OpponentHandCard, PileHovered, PlayCardAnimation,
     PlayerTargetZone, RevealPeekAnimation,
@@ -20,6 +21,7 @@ pub use components::{
 };
 pub use layout::{
     back_face_rotation, bf_card_transform, command_zone_card_transform, deck_position,
+    exile_position,
     creature_card_transform, graveyard_position, hand_card_transform, back_row_card_transform, in_back_row,
     stack_card_transform,
 };

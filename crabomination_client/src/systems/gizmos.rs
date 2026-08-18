@@ -248,6 +248,13 @@ pub fn draw_legal_target_rings(
     legal: Res<crate::game::LegalTargets>,
     time: Res<Time>,
     bf_cards: Query<(&Transform, &GameCardId), With<BattlefieldCard>>,
+    // A counterspell's legal targets are spells on the stack, which carry
+    // `StackCard` rather than `BattlefieldCard` — ringing only the
+    // battlefield left "counter target spell" with no visible target.
+    stack_cards: Query<
+        (&Transform, &GameCardId),
+        (With<crate::card::StackCard>, Without<BattlefieldCard>),
+    >,
     mut gizmos: Gizmos<LegalTargetGizmos>,
 ) {
     // Pulse rings whenever any targeting flow has populated `legal`.
@@ -267,7 +274,7 @@ pub fn draw_legal_target_rings(
     // Pulse drives both hue brightness and the HDR glow, so the ring visibly
     // breathes light in and out as it pulses.
     let color = glow(Color::srgb(pulse, pulse * 0.88, 0.0), 3.0);
-    for (t, gid) in &bf_cards {
+    for (t, gid) in bf_cards.iter().chain(stack_cards.iter()) {
         if !legal.permanents.contains(&gid.0) {
             continue;
         }

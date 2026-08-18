@@ -54,6 +54,7 @@ fn project_for_inner(state: &GameState, viewer: Option<usize>) -> ClientView {
     ClientView {
         your_seat: viewer_seat,
         active_player: state.active_player_idx,
+        starting_player: state.starting_player,
         priority: state.player_with_priority(),
         step: state.step,
         turn: state.turn_number,
@@ -127,6 +128,7 @@ fn project_for_inner(state: &GameState, viewer: Option<usize>) -> ClientView {
                 // Only the acting player sees decision specifics; spectators
                 // see that someone is deciding but not the private contents.
                 decision: (viewer == Some(acting)).then(|| (&pd.decision).into()),
+                cancellable: pd.resume.is_action_replay(),
             }
         }),
         exile: state
@@ -1088,13 +1090,13 @@ fn known_card_in(card: &CardInstance, state: Option<&crate::game::GameState>) ->
         // Battlefield-granted typecycling (Homing Sliver's slivercycling).
         .or_else(|| state.and_then(|st| st.granted_typecycling_for(card)).map(|(c, _)| c));
     let (modal_descriptions, modal_needs_target, modal_target_optional) =
-        if let crate::effect::Effect::ChooseMode(modes) = &card.definition.effect {
-            let descs = modes.iter().map(|m| m.effect_short_text()).collect();
-            let needs = modes.iter().map(cursor_needs_target).collect();
-            let opt = modes.iter().map(|m| m.target_slot_optional(0, None)).collect();
-            (descs, needs, opt)
-        } else {
-            (Vec::new(), Vec::new(), Vec::new())
+        match modal_modes_of(&card.definition.effect) {
+            Some(modes) => (
+                modes.iter().map(mode_description).collect(),
+                modes.iter().map(cursor_needs_target).collect(),
+                modes.iter().map(|m| m.target_slot_optional(0, None)).collect(),
+            ),
+            None => (Vec::new(), Vec::new(), Vec::new()),
         };
     // The effective alt cost includes Fist of Suns' granted WUBRG (CR 118.9),
     // so the client offers the alt-cast affordance on every hand card.
@@ -1841,6 +1843,22 @@ fn project_permanent(
             .prepare_spell
             .as_ref()
             .is_some_and(|p| cursor_needs_target(&p.effect)),
+        // SOS Prepare — a modal inset spell (Rejoinder's "tap / untap /
+        // neither") needs the same mode picker a modal hand card gets.
+        prepare_modes: card
+            .definition
+            .prepare_spell
+            .as_ref()
+            .and_then(|p| modal_modes_of(&p.effect))
+            .map(|modes| modes.iter().map(mode_description).collect())
+            .unwrap_or_default(),
+        prepare_mode_needs_target: card
+            .definition
+            .prepare_spell
+            .as_ref()
+            .and_then(|p| modal_modes_of(&p.effect))
+            .map(|modes| modes.iter().map(cursor_needs_target).collect())
+            .unwrap_or_default(),
         // CR 708.7 — what it costs the viewer to unmask this permanent.
         turn_up_cost_label: (card.face_down && card.controller == viewer_seat)
             .then(|| state.turn_up_mana_cost(viewer_seat, card.id, 0))
@@ -2186,6 +2204,37 @@ fn trigger_event_label(event: &crate::card::EventSpec) -> &'static str {
 /// board. Slot-0 targets in an off-board zone (graveyard / exile — "return
 /// target card from your graveyard") are gathered by an engine-side
 /// `ChooseCards` suspend instead, so the client must submit with no target.
+/// A mode's row text in the "choose one" picker.
+///
+/// `effect_short_text` deliberately returns "" for shapes it doesn't
+/// phrase, and the client renders a blank description as its 1-indexed
+/// position — so 42 kinds of mode across the catalog read as "Mode 1",
+/// "Mode 2", telling the player nothing about what they were picking.
+/// Fall back to the ability label, which is never contentless.
+fn mode_description(effect: &Effect) -> String {
+    let short = effect.effect_short_text();
+    if short.is_empty() { ability_effect_text(effect) } else { short }
+}
+
+/// The "Choose one —" modes of a spell, if it has any.
+///
+/// A modal spell is usually a bare `Effect::ChooseMode`, but the mode block
+/// is often just the *head* of a `Seq` with an unconditional rider after it
+/// — Rejoinder is `Seq([ChooseMode([tap, untap, neither]), Draw 1])`.
+/// Matching only the bare shape left those spells with no modes on the
+/// wire, so the client never offered the choice and the engine silently
+/// resolved mode 0.
+fn modal_modes_of(effect: &crate::effect::Effect) -> Option<&[crate::effect::Effect]> {
+    match effect {
+        crate::effect::Effect::ChooseMode(modes) => Some(modes),
+        crate::effect::Effect::Seq(steps) => steps.iter().find_map(|s| match s {
+            crate::effect::Effect::ChooseMode(modes) => Some(modes.as_slice()),
+            _ => None,
+        }),
+        _ => None,
+    }
+}
+
 fn cursor_needs_target(effect: &crate::effect::Effect) -> bool {
     effect.requires_target()
         && !effect
@@ -2736,9 +2785,20 @@ fn structural_children(effect: &Effect) -> Vec<&Effect> {
     }
 }
 
+/// Replace a curated label's generic "permanent" with the noun the
+/// effect's own target filter names: Professor Dellian Fel's −3 is
+/// `Destroy { TargetFiltered(Creature) }`, and reading "Destroy permanent"
+/// under a card that says "destroy target creature" is simply wrong.
+fn specialise_target_noun(label: &'static str, effect: &Effect) -> Option<String> {
+    let stem = label.strip_suffix("permanent")?;
+    let noun = effect.primary_target_filter()?.target_noun()?;
+    (noun != "permanent").then(|| format!("{stem}{noun}"))
+}
+
 /// [`ability_effect_label`], but with the mana an `AddMana` ability makes
-/// spelled out, structural wrappers seen through, and — rather than the
-/// bare "Activate" catch-all — a de-camel-cased variant name.
+/// spelled out, a generic target noun narrowed to what the effect actually
+/// targets, structural wrappers seen through, and — rather than the bare
+/// "Activate" catch-all — a de-camel-cased variant name.
 /// Used for the client-facing `effect_label`.
 fn ability_effect_text(effect: &Effect) -> String {
     if let Effect::AddMana { pool, .. } = effect
@@ -2748,7 +2808,8 @@ fn ability_effect_text(effect: &Effect) -> String {
     }
     let curated = ability_effect_label(effect);
     if !label_is_contentless(curated) {
-        return curated.to_string();
+        return specialise_target_noun(curated, effect)
+            .unwrap_or_else(|| curated.to_string());
     }
     // A wrapper the curated pass couldn't name: describe what it wraps.
     for child in structural_children(effect) {
@@ -4757,13 +4818,90 @@ mod tests {
     /// targeting flags: The Wanderer's −2 exile and Ob Nixilis's −2 destroy
     /// arm the cursor; Tibalt's token-making −2 does not.
     #[test]
+    fn modal_prepare_spell_publishes_its_modes() {
+        // Regression: Elite Interceptor's inset Rejoinder is
+        // `Seq([ChooseMode([tap, untap, neither]), Draw 1])`. The modal
+        // projection only matched a *bare* `ChooseMode`, so the wire
+        // carried no modes, the client never offered the choice, and the
+        // engine silently resolved mode 0 — the untap and decline modes
+        // were unreachable from the UI.
+        let mut state = two_player_game();
+        let id = state.add_card_to_battlefield(0, catalog::elite_interceptor());
+        if let Some(c) = state.battlefield.iter_mut().find(|c| c.id == id) {
+            c.add_counters(crate::card::CounterType::Prepared, 1);
+        }
+        let view = project(&state, 0);
+        let pv = view.battlefield.iter().find(|p| p.id == id).expect("interceptor in view");
+        assert_eq!(pv.prepare_spell_name.as_deref(), Some("Rejoinder"));
+        assert_eq!(pv.prepare_modes.len(), 3, "tap / untap / neither");
+        assert_eq!(
+            pv.prepare_mode_needs_target,
+            vec![true, true, false],
+            "both action modes take a creature; declining takes nothing",
+        );
+        assert!(pv.prepare_needs_target, "the cursor still arms for the targeted modes");
+    }
+
+    #[test]
+    fn modal_modes_are_found_under_a_seq_rider() {
+        use crate::effect::{Effect, PlayerRef, Selector, Value};
+        let bare = Effect::ChooseMode(vec![Effect::Noop, Effect::Noop]);
+        assert_eq!(modal_modes_of(&bare).map(<[_]>::len), Some(2));
+        // The real-card shape: modes first, an unconditional rider after.
+        let wrapped = Effect::Seq(vec![
+            bare.clone(),
+            Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+        ]);
+        assert_eq!(modal_modes_of(&wrapped).map(<[_]>::len), Some(2));
+        // Not modal at all.
+        let plain = Effect::GainLife {
+            who: Selector::Player(PlayerRef::You),
+            amount: Value::Const(1),
+        };
+        assert!(modal_modes_of(&plain).is_none());
+    }
+
+    #[test]
+    fn ability_labels_name_what_they_target() {
+        // Regression: Professor Dellian Fel's −3 is "destroy target
+        // creature", but the loyalty row read "Destroy permanent" — the
+        // curated label's generic noun ignored the effect's own filter.
+        let mut state = two_player_game();
+        let fel = state.add_card_to_battlefield(0, catalog::professor_dellian_fel());
+        let view = project(&state, 0);
+        let pv = view.battlefield.iter().find(|p| p.id == fel).unwrap();
+        let minus_three = pv
+            .loyalty_abilities
+            .iter()
+            .find(|a| a.loyalty_cost == -3)
+            .expect("Dellian Fel has a −3");
+        assert_eq!(minus_three.effect_label, "Destroy creature");
+    }
+
+    #[test]
+    fn charm_modes_read_as_text_not_an_index() {
+        // Regression: `effect_short_text` had no arm for the counter
+        // family, so Quandrix Charm's first mode came across the wire
+        // blank and the client's picker rendered its 1-indexed position
+        // ("Mode 1") instead of what the mode does.
+        let charm = catalog::quandrix_charm();
+        let modes = modal_modes_of(&charm.effect).expect("modal charm");
+        let rendered: Vec<String> = modes.iter().map(mode_description).collect();
+        assert_eq!(rendered[0], "counter target spell unless its controller pays {2}");
+        assert_eq!(rendered[1], "destroy target enchantment");
+        assert!(rendered.iter().all(|d| !d.trim().is_empty()), "no mode may be blank");
+    }
+
+    #[test]
     fn war_planeswalker_loyalty_targeting_flags() {
         let mut state = two_player_game();
         let wanderer = state.add_card_to_battlefield(0, catalog::the_wanderer());
         let tibalt = state.add_card_to_battlefield(0, catalog::tibalt_rakish_instigator());
         let view = project(&state, 0);
         let w = view.battlefield.iter().find(|p| p.id == wanderer).unwrap();
-        assert_eq!(w.loyalty_abilities[0].effect_label, "Exile permanent");
+        // The label names what the ability actually targets — the printed
+        // −2 is "exile target creature", so "Exile permanent" was wrong.
+        assert_eq!(w.loyalty_abilities[0].effect_label, "Exile creature");
         assert!(w.loyalty_abilities[0].needs_target, "−2 exile targets a creature");
         let t = view.battlefield.iter().find(|p| p.id == tibalt).unwrap();
         assert_eq!(t.loyalty_abilities[0].effect_label, "Create token");

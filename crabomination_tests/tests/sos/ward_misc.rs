@@ -530,6 +530,85 @@ fn tragedy_feaster_ward_discard_counters_when_payer_cannot_discard() {
     assert_eq!(card.damage, 0, "no damage — bolt was countered");
 }
 
+/// Pass priority until the stack empties or a resolution suspends for a
+/// decision — `drain_stack` unwraps, and a suspended resolution leaves the
+/// stack loaded, so it panics on the pending answer.
+fn drain_until_decision(g: &mut GameState) {
+    while !g.stack.is_empty() && g.pending_decision.is_none() {
+        if g.perform_action(GameAction::PassPriority).is_err() {
+            break;
+        }
+    }
+}
+
+/// CR 702.21b — the affected player pays the Ward cost, so a `wants_ui`
+/// payer picks *which* card a "Ward—Discard a card" takes. Regression: the
+/// engine silently auto-discarded the first card in hand.
+#[test]
+fn tragedy_feaster_ward_discard_lets_the_payer_pick_the_card() {
+    use crabomination::decision::Decision;
+    use crabomination::game::types::Target;
+    let mut g = two_player_game();
+    g.players[1].wants_ui = true;
+    let feaster = g.add_card_to_battlefield(0, catalog::tragedy_feaster());
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    // Two spare cards, so the payer has a real choice to make.
+    let keep = g.add_card_to_hand(1, catalog::grizzly_bears());
+    let pitch = g.add_card_to_hand(1, catalog::mountain());
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt,
+        target: Some(Target::Permanent(feaster)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("Bolt castable");
+    drain_until_decision(&mut g);
+
+    let pd = g.pending_decision.as_ref().expect("the Ward discard prompts its payer");
+    assert!(matches!(pd.decision, Decision::ChooseCards { .. }), "a card pick, not an auto-discard");
+    g.perform_action(GameAction::SubmitDecision(DecisionAnswer::Cards(vec![pitch]))).unwrap();
+    drain_until_decision(&mut g);
+
+    assert!(g.players[1].graveyard.iter().any(|c| c.id == pitch), "the chosen card went");
+    assert!(g.players[1].hand.iter().any(|c| c.id == keep), "the other one stayed");
+    let card = g.battlefield.iter().find(|c| c.id == feaster).expect("Feaster is a 7/6");
+    assert_eq!(card.damage, 3, "Ward was paid, so the Bolt resolved");
+}
+
+/// Paying is optional (CR 702.21b) — picking nothing declines the Ward and
+/// the spell is countered, with the hand left intact.
+#[test]
+fn declining_the_ward_discard_counters_the_spell() {
+    use crabomination::game::types::Target;
+    let mut g = two_player_game();
+    g.players[1].wants_ui = true;
+    let feaster = g.add_card_to_battlefield(0, catalog::tragedy_feaster());
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.add_card_to_hand(1, catalog::grizzly_bears());
+    g.add_card_to_hand(1, catalog::mountain());
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt,
+        target: Some(Target::Permanent(feaster)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("Bolt castable");
+    drain_until_decision(&mut g);
+    assert!(g.pending_decision.is_some(), "the Ward discard prompts its payer");
+    g.perform_action(GameAction::SubmitDecision(DecisionAnswer::Cards(vec![]))).unwrap();
+    drain_until_decision(&mut g);
+
+    assert_eq!(g.players[1].hand.len(), 2, "declined — nothing was discarded");
+    let card = g.battlefield.iter().find(|c| c.id == feaster).expect("Feaster survives");
+    assert_eq!(card.damage, 0, "the Bolt was countered");
+}
+
 // ── modern_decks: Prismari, the Inspiration Ward—Pay 5 life enforcement ─────
 
 #[test]

@@ -2113,6 +2113,261 @@ fn elite_interceptor_rejoinder_taps_target_and_draws() {
     assert_eq!(g.players[0].hand.len(), hand_before + 1, "Rejoinder draws a card");
 }
 
+// Rejoinder's other two modes. The client used to send `mode: None` for
+// every prepare-spell cast, which the engine resolves as mode 0 — so untap
+// and "do neither" were unreachable from the UI. The wire now carries the
+// inset spell's modes (see `view::modal_prepare_spell_publishes_its_modes`);
+// these lock in what each mode does once one is actually chosen.
+#[test]
+fn elite_interceptor_rejoinder_untap_mode_untaps_the_target() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    if let Some(c) = g.battlefield.iter_mut().find(|c| c.id == bear) {
+        c.tapped = true;
+    }
+    let id = prepared_on_battlefield(&mut g, 0, catalog::elite_interceptor());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(1);
+
+    g.perform_action(GameAction::CastPrepareSpell {
+        creature_id: id,
+        target: Some(Target::Permanent(bear)),
+        additional_targets: vec![],
+        mode: Some(1),
+        x_value: None,
+    })
+    .expect("Rejoinder castable for {1}{W}");
+    drain_stack(&mut g);
+
+    assert!(!g.battlefield.iter().find(|c| c.id == bear).unwrap().tapped,
+        "mode 1 untaps the target creature");
+}
+
+#[test]
+fn elite_interceptor_rejoinder_declines_both_and_still_draws() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::lightning_bolt());
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.clear_sickness(bear);
+    let id = prepared_on_battlefield(&mut g, 0, catalog::elite_interceptor());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    let hand_before = g.players[0].hand.len();
+
+    g.perform_action(GameAction::CastPrepareSpell {
+        creature_id: id,
+        target: Some(Target::Permanent(bear)),
+        additional_targets: vec![],
+        mode: Some(2),
+        x_value: None,
+    })
+    .expect("Rejoinder castable for {1}{W}");
+    drain_stack(&mut g);
+
+    assert!(!g.battlefield.iter().find(|c| c.id == bear).unwrap().tapped,
+        "the \"may\" mode leaves the creature alone");
+    assert_eq!(g.players[0].hand.len(), hand_before + 1, "the draw is unconditional");
+}
+
+// Sundering Archaic's ETB exiles a nonland permanent with mana value at
+// most the cast's converge count. Regression: the UI target picker
+// enumerated legal targets *without* concretizing converge, so
+// `ManaValueAtMostConverged` matched nothing, the picker reported "no
+// legal targets", and the trigger resolved as a no-op — the ETB worked
+// for a bot seat and silently did nothing for a human.
+#[test]
+fn sundering_archaic_converge_etb_offers_targets_to_a_ui_player() {
+    use crabomination::decision::{Decision, DecisionAnswer};
+    for wants_ui in [false, true] {
+        let mut g = two_player_game();
+        g.players[0].wants_ui = wants_ui;
+        let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // mana value 2
+        let id = g.add_card_to_hand(0, catalog::sundering_archaic());
+        // {6} paid from three distinct colours — converge 3, so a 2-drop
+        // is under the cap.
+        g.players[0].mana_pool.add(Color::White, 2);
+        g.players[0].mana_pool.add(Color::Blue, 2);
+        g.players[0].mana_pool.add(Color::Black, 2);
+
+        g.perform_action(GameAction::CastSpell {
+            card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+        })
+        .expect("Sundering Archaic castable for {6}");
+        g.perform_action(GameAction::PassPriority).unwrap();
+        g.perform_action(GameAction::PassPriority).unwrap();
+
+        if wants_ui {
+            match &g.pending_decision.as_ref().expect("ETB target pick pending").decision {
+                Decision::ChooseTarget { legal, .. } => assert_eq!(
+                    legal,
+                    &vec![Target::Permanent(victim)],
+                    "the converge cap must be applied when enumerating, not ignored",
+                ),
+                other => panic!("expected ChooseTarget, got {other:?}"),
+            }
+            g.submit_decision(DecisionAnswer::Target(Target::Permanent(victim)))
+                .expect("pick accepted");
+        }
+        drain_stack(&mut g);
+        assert!(
+            g.exile.iter().any(|c| c.id == victim),
+            "wants_ui={wants_ui}: the converge exile must resolve for both seat kinds",
+        );
+    }
+}
+
+// Arcane Omens — "target player discards X cards". CR 701.8a: the
+// *discarding* player chooses which cards go. Regression: the suspended
+// decision was routed to the resume's owner (the caster), so the player
+// casting it got to pick their opponent's discards.
+#[test]
+fn arcane_omens_discard_is_chosen_by_the_discarding_player() {
+    let mut g = two_player_game();
+    g.players[0].wants_ui = true;
+    g.players[1].wants_ui = true;
+    for _ in 0..3 {
+        g.add_card_to_hand(1, catalog::grizzly_bears());
+    }
+    let id = g.add_card_to_hand(0, catalog::arcane_omens());
+    // {4}{B} from two colours — converge 2, so the opponent discards two.
+    g.players[0].mana_pool.add(Color::Black, 3);
+    g.players[0].mana_pool.add(Color::Blue, 2);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id,
+        target: Some(Target::Player(1)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("Arcane Omens castable for {4}{B}");
+    g.perform_action(GameAction::PassPriority).unwrap();
+    g.perform_action(GameAction::PassPriority).unwrap();
+
+    let pending = g.pending_decision.as_ref().expect("discard pick pending");
+    assert_eq!(
+        pending.acting_player(),
+        1,
+        "the opponent chooses their own discards, not the caster",
+    );
+    match &pending.decision {
+        crabomination::decision::Decision::Discard { player, count, .. } => {
+            assert_eq!(*player, 1);
+            assert_eq!(*count, 2, "converge 2 discards two");
+        }
+        other => panic!("expected Discard, got {other:?}"),
+    }
+}
+
+// Sundering Archaic's `{2}: put target card in a graveyard on the bottom
+// of its owner's library`. The target lives in a graveyard, which the
+// client's cursor can't click, so it activates with no target. The cast
+// and loyalty paths gather that pick through a `ChooseCards` modal;
+// activated abilities had no such path, so the ability was unusable.
+#[test]
+fn sundering_archaic_graveyard_ability_poses_a_card_picker() {
+    use crabomination::decision::{Decision, DecisionAnswer};
+    let mut g = two_player_game();
+    g.players[0].wants_ui = true;
+    let src = g.add_card_to_battlefield(0, catalog::sundering_archaic());
+    let victim = g.add_card_to_graveyard(1, catalog::grizzly_bears());
+    g.players[0].mana_pool.add_colorless(2);
+
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: src,
+        ability_index: 0,
+        target: None,
+        additional_targets: vec![],
+        x_value: None,
+        mode: None,
+    })
+    .expect("activation suspends for the graveyard pick");
+
+    match &g.pending_decision.as_ref().expect("graveyard pick pending").decision {
+        Decision::ChooseCards { candidates, .. } => {
+            assert!(candidates.iter().any(|(id, _)| *id == victim), "the Bears are offered");
+        }
+        other => panic!("expected ChooseCards for a graveyard target, got {other:?}"),
+    }
+    g.submit_decision(DecisionAnswer::Cards(vec![victim])).expect("pick accepted");
+    drain_stack(&mut g);
+
+    assert!(
+        !g.players[1].graveyard.iter().any(|c| c.id == victim),
+        "the picked card left the graveyard",
+    );
+    assert!(
+        g.players[1].library.last().is_some_and(|c| c.id == victim),
+        "and went to the bottom of its owner's library",
+    );
+}
+
+/// Regression: with manual mana the picked graveyard target has to survive
+/// the `ManualTapRequired` replays. The engine gathers the pick and replays
+/// the activation server-side, so the client's held action stays targetless
+/// (`NetOutbox::patch_last_cast_target` now stamps it) — and the engine must
+/// accept that re-submitted, already-targeted activation without re-posing
+/// the picker. Untreated, the UI ping-ponged between "choose a card" and
+/// "tap mana" on every land tap.
+#[test]
+fn sundering_archaic_graveyard_pick_survives_the_manual_tap_replays() {
+    use crabomination::decision::DecisionAnswer;
+    use crabomination::game::types::Target;
+    let mut g = two_player_game();
+    g.players[0].wants_ui = true;
+    g.players[0].manual_mana = true;
+    let src = g.add_card_to_battlefield(0, catalog::sundering_archaic());
+    let victim = g.add_card_to_graveyard(1, catalog::grizzly_bears());
+    // Three untapped lands for a {2} cost: which two pay is a real choice.
+    let a = g.add_card_to_battlefield(0, catalog::island());
+    let b = g.add_card_to_battlefield(0, catalog::mountain());
+    g.add_card_to_battlefield(0, catalog::forest());
+
+    let activate = |target: Option<Target>| GameAction::ActivateAbility {
+        card_id: src, ability_index: 0, target,
+        additional_targets: vec![], x_value: None, mode: None,
+    };
+    g.perform_action(activate(None)).expect("suspends for the graveyard pick");
+    assert!(g.pending_decision.is_some(), "graveyard pick pending");
+    let r = g.submit_decision(DecisionAnswer::Cards(vec![victim]));
+    assert!(
+        matches!(r, Err(crabomination::game::GameError::ManualTapRequired { .. })),
+        "the replayed activation stops for the mana tap, got {r:?}",
+    );
+    assert!(g.pending_decision.is_none(), "the pick was answered");
+
+    // The client's held action, now carrying the pick, is re-fired on every
+    // pool change. None of those retries may re-pose the card picker.
+    let picker_is_up = |g: &crabomination::game::GameState| {
+        matches!(
+            g.pending_decision.as_ref().map(|p| &p.decision),
+            Some(crabomination::decision::Decision::ChooseCards { .. })
+        )
+    };
+    for land in [a, b] {
+        g.perform_action(GameAction::ActivateAbility {
+            card_id: land, ability_index: 0, target: None,
+            additional_targets: Vec::new(), x_value: None, mode: None,
+        })
+        .expect("tap a land the player chose");
+        let _ = g.perform_action(activate(Some(Target::Permanent(victim))));
+        assert!(!picker_is_up(&g), "the graveyard pick must not be re-posed");
+        // A retry may pause on "spend your floating mana?" (CR 601.2g) —
+        // that one is a mana question, not a second target pick.
+        if g.pending_decision.is_some() {
+            // Still short after the first land — the answer bounces on
+            // mana again, which is fine; only the picker matters here.
+            let _ = g.submit_decision(crabomination::decision::DecisionAnswer::Bool(true));
+            assert!(!picker_is_up(&g), "still no second card picker");
+        }
+    }
+    drain_stack(&mut g);
+    assert!(
+        g.players[1].library.last().is_some_and(|c| c.id == victim),
+        "the picked card went to the bottom of its owner's library",
+    );
+}
+
 // Quill-Blade Laureate // Twofold Intent — +1/+0 + double strike EOT.
 #[test]
 fn quill_blade_laureate_prepare_spell_pumps_and_grants_double_strike() {
