@@ -710,6 +710,12 @@ impl SpendRestriction {
 /// restricted mana may fund.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct SpellKind {
+    /// The spell's rules text computes `ConvergedValue` (converge): the
+    /// payment path spends the generic portion across distinct colors
+    /// instead of conserving them, and the auto-tapper prefers sources
+    /// of colors not already being spent. Which mana pays a cost is the
+    /// caster's choice (CR 601.2g), so maximizing is rules-clean.
+    pub wants_converge: bool,
     /// Casting an instant or sorcery spell.
     pub instant_or_sorcery: bool,
     /// Casting an artifact spell, or activating an ability of an artifact.
@@ -1073,6 +1079,19 @@ impl ManaPool {
     ///
     /// X symbols should be replaced before calling this (via `ManaCost::with_x_value`).
     pub fn pay(&mut self, cost: &ManaCost) -> Result<PaymentSideEffects, ManaError> {
+        self.pay_generic_order(cost, false)
+    }
+
+    /// [`Self::pay`] with the generic-drain order selectable. `diverse`
+    /// spends the generic portion one-per-distinct-color first — for a
+    /// converge spell every new color drained is card text, and the
+    /// default order (colorless first, then WUBRG greedily) is exactly
+    /// the one that minimizes it. Everything else is identical.
+    pub(crate) fn pay_generic_order(
+        &mut self,
+        cost: &ManaCost,
+        diverse: bool,
+    ) -> Result<PaymentSideEffects, ManaError> {
         let mut tmp = self.clone();
         let mut side_effects = PaymentSideEffects::default();
 
@@ -1287,6 +1306,31 @@ impl ManaPool {
             // spell) might need. Any {C} pips in THIS cost were already
             // taken in pass 2.
             let mut rem = generic;
+            if diverse {
+                // Converge: one mana from each distinct color before
+                // anything else. Colors the cost's own pips already
+                // drained count toward converge regardless, so new
+                // colors go first; within that, the deepest bucket is
+                // drained first so scarce colors survive for later pips.
+                let mut pip_colors = [false; 5];
+                for sym in &cost.symbols {
+                    if let ManaSymbol::Colored(c) = sym {
+                        pip_colors[color_index(*c)] = true;
+                    }
+                }
+                let mut colors: Vec<Color> =
+                    Color::ALL.into_iter().filter(|c| tmp.amount(*c) > 0).collect();
+                colors.sort_by_key(|c| {
+                    (pip_colors[color_index(*c)], std::cmp::Reverse(tmp.amount(*c)))
+                });
+                for c in colors {
+                    if rem == 0 {
+                        break;
+                    }
+                    *tmp.slot_mut(c) -= 1;
+                    rem -= 1;
+                }
+            }
             let drain = rem.min(tmp.colorless);
             tmp.colorless -= drain;
             rem -= drain;
@@ -1372,7 +1416,7 @@ impl ManaPool {
         if spendable.iter().all(|n| *n == 0) && spendable_colorless == 0 {
             // No usable restricted mana — identical to the plain path,
             // which leaves the restricted bucket untouched.
-            return self.pay(cost);
+            return self.pay_generic_order(cost, kind.wants_converge);
         }
 
         // Fold the spendable restricted mana into a working clone's flat
@@ -1387,7 +1431,7 @@ impl ManaPool {
             work.add(c, spendable[color_index(c)]);
         }
         work.colorless += spendable_colorless;
-        let mut side_effects = work.pay(cost)?;
+        let mut side_effects = work.pay_generic_order(cost, kind.wants_converge)?;
 
         // Settle each color: restricted drains before unrestricted.
         let mut result = work.clone();

@@ -2500,7 +2500,7 @@ impl GameState {
     }
 }
 
-fn effect_produces_color(effect: &Effect, color: ManaColor) -> bool {
+pub(crate) fn effect_produces_color(effect: &Effect, color: ManaColor) -> bool {
     match effect {
         Effect::AddMana { pool, .. } => match pool {
             ManaPayload::Colors(cs) => cs.contains(&color),
@@ -3557,10 +3557,14 @@ impl GameState {
                 self.pending_decision = Some(crate::game::types::PendingDecision {
                     decision: crate::decision::Decision::ChooseCards {
                         source: card_id,
-                        prompt: format!("{source_name}: choose a card to target"),
+                        prompt: format!(
+                        "{source_name}{}",
+                        crate::decision::OFFBOARD_TARGET_PROMPT_SUFFIX,
+                    ),
                         candidates,
                         min: 1,
                         max: 1,
+                        eligible: None,
                     },
                     resume: crate::game::types::ResumeContext::CastSlot0TargetPick {
                         caster: p,
@@ -3586,15 +3590,17 @@ impl GameState {
         // printed "up to one" behavior.
         {
             let p = self.priority.player_with_priority;
-            // A `DeclineTarget` answer replays the cast with this card id
-            // stamped in the suppress scratch — consume it and skip the
-            // prompt so declining ends target selection.
-            let suppressed = if self.suppress_extra_target_prompts == Some(card_id) {
-                self.suppress_extra_target_prompts = None;
-                true
-            } else {
-                false
-            };
+            // A `DeclineTarget` answer stamps this cast's shape into the
+            // suppress scratch — skip the prompt so declining ends target
+            // selection. Matched (not consumed): a hand-paying caster's cast
+            // is replayed once per mana tap, and every one of those replays
+            // is the same declined decision.
+            let suppressed = self.suppress_extra_target_prompts.as_ref().is_some_and(|d| {
+                d.caster == self.priority.player_with_priority
+                    && d.card_id == card_id
+                    && d.target == target
+                    && d.additional_targets == additional_targets
+            });
             let slot_info = if !suppressed && target.is_some() && self.players[p].wants_ui {
                 self.find_card_anywhere(card_id).and_then(|card| {
                     // "Extra target only on your main phase" spells (Return
@@ -3653,7 +3659,7 @@ impl GameState {
                             source: card_id,
                             legal: candidates,
                             source_name,
-                            description: "choose an additional target".into(),
+                            description: crate::decision::EXTRA_CAST_TARGET_PROMPT.into(),
                         },
                         resume: crate::game::types::ResumeContext::CastExtraTargetPick {
                             caster: p,
@@ -8417,6 +8423,18 @@ impl GameState {
         self.push_ward_triggers_for_targets(activator, ability_source, &targets);
     }
 
+    /// Multi-slot sibling of [`push_ward_triggers_for_activated_ability`] —
+    /// a loyalty ability can target more than once (Domri Rade's −2 fight),
+    /// and every warded target charges its own toll.
+    pub(crate) fn push_ward_triggers_for_activated_ability_targets(
+        &mut self,
+        activator: usize,
+        ability_source: CardId,
+        targets: &[Target],
+    ) {
+        self.push_ward_triggers_for_targets(activator, ability_source, targets);
+    }
+
     /// Push pre-collected `SpellCast`/`SelfSource` triggers from the
     /// just-cast card onto the stack as `Trigger` items, so they resolve
     /// before the spell itself. Caller is responsible for collecting the
@@ -11564,7 +11582,12 @@ impl GameState {
             };
         }
 
-        let auto_events = self.auto_tap_for_cost_filtered(payer, cost, kind.creature_mana_only);
+        let auto_events = self.auto_tap_for_cost_filtered(
+            payer,
+            cost,
+            kind.creature_mana_only,
+            kind.wants_converge,
+        );
         // Snapshot the pool *after* auto-tap so `pool_before` reflects the
         // mana actually available to `pay()`. Without this, a player who
         // starts with an empty pool and auto-taps lands to cover the cost
@@ -11729,9 +11752,19 @@ impl GameState {
             if (cands.len() as u32) < *rc {
                 return false; // unaffordable for this colour
             }
-            let distinct: HashSet<&(u8, Vec<Color>)> = cands.iter().map(|i| &sigs[*i]).collect();
-            if distinct.len() > 1 {
-                color_choice = true;
+            // A choice only exists if some candidate is *held back*. With
+            // exactly as many sources as pips, every one of them taps —
+            // differing signatures don't make that a decision. Board:
+            // Plains + Fields of Strife (R/W) + Paradox Gardens (G/U)
+            // paying {1}{W}{W} has one legal assignment, and the old
+            // signature test prompted for it anyway. Mirrors the generic
+            // branch's "more sources than the cost needs" rule below.
+            if cands.len() as u32 > *rc {
+                let distinct: HashSet<&(u8, Vec<Color>)> =
+                    cands.iter().map(|i| &sigs[*i]).collect();
+                if distinct.len() > 1 {
+                    color_choice = true;
+                }
             }
             cands.sort_by_key(|i| sigs[*i].1.len()); // dedicated (shortest sig) first
             for &i in cands.iter().take(*rc as usize) {
@@ -11843,7 +11876,7 @@ impl GameState {
     }
 
     pub fn auto_tap_for_cost(&mut self, player: usize, cost: &crate::mana::ManaCost) -> Vec<GameEvent> {
-        self.auto_tap_for_cost_filtered(player, cost, false)
+        self.auto_tap_for_cost_filtered(player, cost, false, false)
     }
 
     /// `auto_tap_for_cost` restricted to `only` — the auto-tapper may use
@@ -11859,7 +11892,7 @@ impl GameState {
     ) -> Vec<GameEvent> {
         let prev_priority = self.priority.player_with_priority;
         self.priority.player_with_priority = player;
-        let events = self.auto_tap_for_cost_inner(player, cost, false, Some(only));
+        let events = self.auto_tap_for_cost_inner(player, cost, false, false, Some(only));
         self.priority.player_with_priority = prev_priority;
         events
     }
@@ -11873,10 +11906,13 @@ impl GameState {
         player: usize,
         cost: &crate::mana::ManaCost,
         creature_only: bool,
+        // Converge cast: prefer tapping sources of colors not already
+        // being spent (see `SpellKind::wants_converge`).
+        diverse: bool,
     ) -> Vec<GameEvent> {
         let prev_priority = self.priority.player_with_priority;
         self.priority.player_with_priority = player;
-        let events = self.auto_tap_for_cost_inner(player, cost, creature_only, None);
+        let events = self.auto_tap_for_cost_inner(player, cost, creature_only, diverse, None);
         self.priority.player_with_priority = prev_priority;
         events
     }
@@ -11986,6 +12022,7 @@ impl GameState {
         player: usize,
         cost: &crate::mana::ManaCost,
         creature_only: bool,
+        diverse: bool,
         only: Option<&crate::fxhash::HashSet<CardId>>,
     ) -> Vec<GameEvent> {
         let mut events = Vec::new();
@@ -12110,6 +12147,24 @@ impl GameState {
         // read colours and costs from here. See `mana_source_table`.
         let sources = self.mana_source_table(player, creature_only, only);
 
+        // Converge (`diverse`): colors already certain to be spent — the
+        // cost's own colored pips, and pool surplus the diverse generic
+        // drain in `pay_generic_order` will reach. The generic tap loop
+        // below steers toward colors NOT in this set.
+        let mut covered = [false; 5];
+        if diverse {
+            for sym in &cost.symbols {
+                if let ManaSymbol::Colored(c) = sym {
+                    covered[color_index(*c)] = true;
+                }
+            }
+            for c in ManaColor::ALL {
+                if avail[color_index(c)] > 0 {
+                    covered[color_index(c)] = true;
+                }
+            }
+        }
+
         // Tap a color-matched source for each still-needed colored pip.
         // For abilities that produce `AnyOneColor` (Black Lotus, Birds of
         // Paradise, Mox Diamond, etc.) the source's own resolver asks the
@@ -12119,6 +12174,11 @@ impl GameState {
         // default `AutoDecider` always picks White and leaves the requested
         // color unfilled.)
         for color in still_need_colors {
+            // Hybrid-resolved pips aren't `Colored` symbols in the cost,
+            // so their color joins the covered set here.
+            if diverse {
+                covered[color_index(color)] = true;
+            }
             // `controller` not `owner`: a permanent you've stolen
             // (Threaten / Mind Control) is a tap-for-mana source for
             // you, regardless of its original ownership — `sources` is
@@ -12182,18 +12242,52 @@ impl GameState {
         };
         for _ in 0..generic_to_tap {
             // Same controller-vs-owner fix as the colored-pip loop.
+            // Under `diverse`, a source that can make a color not yet
+            // being spent outranks everything (each fresh color is
+            // converge value); the fresh color rides along so the tap
+            // can script it on an any-color source, and the ability
+            // index switches to that color's half on a dual.
             let source = sources
                 .iter()
                 .enumerate()
                 .filter(|(_, s)| !self.battlefield_find(s.id).is_some_and(|c| c.tapped))
                 .map(|(i, s)| {
                     let keep = if smart { keep_by_idx[i] } else { 0 };
-                    (s.rank, std::cmp::Reverse(keep), s.id, s.first_idx)
+                    let fresh = if diverse {
+                        ManaColor::ALL
+                            .into_iter()
+                            .find(|c| s.colors.contains(*c) && !covered[color_index(*c)])
+                    } else {
+                        None
+                    };
+                    let idx = match fresh {
+                        Some(c) => s.color_idx[color_index(c)],
+                        None => s.first_idx,
+                    };
+                    (fresh.is_none(), s.rank, std::cmp::Reverse(keep), s.id, idx, fresh)
                 })
-                .min_by_key(|&(rank, keep, ..)| (rank, keep))
-                .map(|(_, _, id, idx)| (id, idx));
-            let Some((id, idx)) = source else { break };
-            if let Ok(mut evs) = self.activate_ability(id, idx, None, Vec::new(), None, None) {
+                .min_by_key(|&(stale, rank, keep, ..)| (stale, rank, keep))
+                .map(|(_, _, _, id, idx, fresh)| (id, idx, fresh));
+            let Some((id, idx, fresh)) = source else { break };
+            let result = if let Some(color) = fresh {
+                covered[color_index(color)] = true;
+                // Same scripted-decider device as the colored-pip loop:
+                // an `AnyOneColor` source must add the fresh color, not
+                // the AutoDecider's default White.
+                let scripted = crate::decision::ScriptedDecider::new([
+                    crate::decision::DecisionAnswer::Color(color),
+                ]);
+                let prev_decider = std::mem::replace(&mut self.decider, Box::new(scripted));
+                let prev_wants_ui = self.players[player].wants_ui;
+                self.players[player].wants_ui = false;
+                let r = self.activate_ability(id, idx, None, Vec::new(), None, None);
+                self.decider = prev_decider;
+                self.players[player].wants_ui = prev_wants_ui;
+                r
+            } else {
+                self.activate_ability(id, idx, None, Vec::new(), None, None)
+            };
+            if let Ok(mut evs) = result {
                 events.append(&mut evs);
             } else {
                 break;
@@ -13570,6 +13664,71 @@ impl GameState {
             }
         }
 
+        // Slot-0 targets that live in an off-board zone ("target card in a
+        // graveyard" — Sundering Archaic's `{2}`): the client's targeting
+        // cursor can only click permanents and players, so it activates
+        // with no target. The cast and loyalty paths already gather the
+        // pick through a `ChooseCards` modal; without the same here the
+        // ability resolved targetless and did nothing, so it could not be
+        // used at all.
+        if target.is_none()
+            && self.players[p].wants_ui
+            && let Some(filter) = ability
+                .effect
+                .target_filter_for_slot_in_mode(0, chosen_mode)
+                .filter(|f| f.mentions_offboard_zone())
+                .map(|f| f.resolve_x(x_value.unwrap_or(0)))
+        {
+            let candidates: Vec<(CardId, String)> = self
+                .players
+                .iter()
+                .flat_map(|pl| pl.graveyard.iter())
+                .chain(self.exile.iter())
+                .filter(|c| {
+                    c.id != card_id
+                        && self.evaluate_requirement_static(
+                            &filter,
+                            &Target::Permanent(c.id),
+                            p,
+                            Some(card_id),
+                        )
+                })
+                .map(|c| (c.id, c.definition.name.to_string()))
+                .collect();
+            if candidates.is_empty() {
+                return Err(GameError::SelectionRequirementViolated);
+            }
+            let source_name = self
+                .find_card_anywhere(card_id)
+                .map(|c| c.definition.name.to_string())
+                .unwrap_or_default();
+            self.pending_decision = Some(crate::game::types::PendingDecision {
+                decision: crate::decision::Decision::ChooseCards {
+                    source: card_id,
+                    prompt: format!(
+                        "{source_name}{}",
+                        crate::decision::OFFBOARD_TARGET_PROMPT_SUFFIX,
+                    ),
+                    candidates,
+                    min: 1,
+                    max: 1,
+                    eligible: None,
+                },
+                resume: crate::game::types::ResumeContext::CastSlot0TargetPick {
+                    caster: p,
+                    action: Box::new(GameAction::ActivateAbility {
+                        card_id,
+                        ability_index,
+                        target: None,
+                        additional_targets: additional_targets.clone(),
+                        x_value,
+                        mode: chosen_mode,
+                    }),
+                },
+            });
+            return Ok(vec![]);
+        }
+
         // Reject the activation if the chosen target has hexproof / shroud /
         // protection / Leyline-of-Sanctity-style player hexproof. Mana-only
         // and self-targeting abilities don't pass a target so they bypass.
@@ -13702,6 +13861,7 @@ impl GameState {
                         candidates: named,
                         min: 1,
                         max: 1,
+                        eligible: None,
                     },
                     resume: crate::game::types::ResumeContext::ActivateAbilityChoice {
                         activator: p,
@@ -13848,6 +14008,7 @@ impl GameState {
                         candidates: named,
                         min: count as u32,
                         max: count as u32,
+                        eligible: None,
                     },
                     resume: crate::game::types::ResumeContext::ActivateAbilityChoice {
                         activator: p,
@@ -14063,8 +14224,7 @@ impl GameState {
                             prompt: format!("{source_name}: sacrifice any number of them"),
                             candidates: named,
                             min: 0,
-                            max,
-                        },
+                            max, eligible: None },
                         resume: crate::game::types::ResumeContext::ActivateAbilityChoice {
                             activator: p,
                             card_id,

@@ -498,3 +498,38 @@ fn planeswalker_restricted_mana_funds_only_walkers() {
     assert!(pool.clone().pay_for_spell(&cost(&[g()]), &walker_kind).is_ok());
     assert!(pool.pay_for_spell(&cost(&[g()]), &bear_kind).is_err());
 }
+
+/// Converge (`SpellKind::wants_converge`): the generic drain spreads
+/// one-per-distinct-color before going deep into any bucket, so a
+/// converge cast counts every color the pool can give it. The default
+/// drain (colorless first, then WUBRG greedily) conserves colors on
+/// purpose and here counts only three.
+#[test]
+fn converge_generic_drain_maximizes_distinct_colors() {
+    let five = cost(&[ManaSymbol::Generic(5)]);
+    let fill = |pool: &mut ManaPool| {
+        pool.add(Color::White, 3);
+        pool.add(Color::Blue, 1);
+        pool.add(Color::Black, 1);
+        pool.add(Color::Green, 1);
+    };
+    let drained = |before: &ManaPool, after: &ManaPool| {
+        Color::ALL.into_iter().filter(|c| after.amount(*c) < before.amount(*c)).count()
+    };
+
+    // Default order: {5} out of {WWWUBG} goes W,W,W,U,B — three colors.
+    let mut plain = ManaPool::new();
+    fill(&mut plain);
+    let before = plain.clone();
+    plain.pay_for_spell(&five, &other_kind()).expect("payable");
+    assert_eq!(drained(&before, &plain), 3, "default drain is WUBRG-greedy");
+
+    // Converge: one from each of W,U,B,G first, then the leftover W —
+    // four colors from the same pool and cost.
+    let converge = SpellKind { wants_converge: true, ..Default::default() };
+    let mut div = ManaPool::new();
+    fill(&mut div);
+    let before = div.clone();
+    div.pay_for_spell(&five, &converge).expect("payable");
+    assert_eq!(drained(&before, &div), 4, "converge drain spreads across colors");
+}

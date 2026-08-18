@@ -1303,6 +1303,64 @@ fn rancorous_archaic_etb_with_converge_counters() {
     assert_eq!(view.toughness, 2);
 }
 
+/// The converge payment repair, pool half: a converge cast's generic
+/// portion drains one-per-distinct-color before going deep. {5} out of
+/// {W W W U B G} used to go W,W,W,U,B (converge 3) under the
+/// WUBRG-greedy default; a converge spell now takes W,U,B,G then the
+/// leftover W — converge 4.
+#[test]
+fn rancorous_archaic_converge_payment_spreads_pool_colors() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::rancorous_archaic());
+    g.players[0].mana_pool.add(Color::White, 3);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add(Color::Green, 1);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("Rancorous Archaic castable for {5}");
+    drain_stack(&mut g);
+
+    let inst = g.battlefield.iter().find(|c| c.id == id).unwrap();
+    assert_eq!(
+        inst.counter_count(CounterType::PlusOnePlusOne),
+        4,
+        "converge drain spreads across W/U/B/G instead of eating the Plains"
+    );
+}
+
+/// The converge payment repair, auto-tap half: with nothing floating, a
+/// converge cast taps toward distinct colors. Three Plains + Island +
+/// Swamp + Forest used to tap the first five in battlefield order
+/// (converge 3); the repaired tapper takes four distinct basics before
+/// doubling up — converge 4.
+#[test]
+fn rancorous_archaic_auto_tap_prefers_distinct_colors() {
+    let mut g = two_player_game();
+    for _ in 0..3 {
+        g.add_card_to_battlefield(0, catalog::plains());
+    }
+    g.add_card_to_battlefield(0, catalog::island());
+    g.add_card_to_battlefield(0, catalog::swamp());
+    g.add_card_to_battlefield(0, catalog::forest());
+    let id = g.add_card_to_hand(0, catalog::rancorous_archaic());
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("auto-tap covers {5} from six lands");
+    drain_stack(&mut g);
+
+    let inst = g.battlefield.iter().find(|c| c.id == id).unwrap();
+    assert_eq!(
+        inst.counter_count(CounterType::PlusOnePlusOne),
+        4,
+        "auto-tap reaches for W/U/B/G before the second Plains"
+    );
+}
+
 // ── Wisdom of Ages ──────────────────────────────────────────────────────────
 
 #[test]

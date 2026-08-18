@@ -3035,6 +3035,7 @@ impl SelectionRequirement {
         use SelectionRequirement as S;
         let base = match self {
             S::Player => "player",
+            S::IsSpellOnStack => "spell",
             S::Creature => "creature",
             S::Artifact => "artifact",
             S::Enchantment => "enchantment",
@@ -5218,10 +5219,39 @@ impl CardDefinition {
         self.subtypes.land_types.contains(&lt)
     }
 
+    /// Whether casting this card cares which *colors* pay for it — its
+    /// rules text computes `Value::ConvergedValue` somewhere (converge
+    /// and converge-shaped riders). Read by the payment path: a converge
+    /// cast taps and drains toward distinct colors instead of the
+    /// mana-conserving default, which was measurably incapable of
+    /// playing converge (it drained colorless-then-WUBRG-greedy, so a
+    /// converge spell routinely counted one color on a five-color board).
+    ///
+    /// Detection scans the definition's Debug rendering for the variant
+    /// name, once per card name, cached — the effect tree is a deep
+    /// recursive enum with no generic walker, and a hand-written match
+    /// over every variant would silently rot as variants are added. The
+    /// variant name is unambiguous in the rendering, and a catalog name
+    /// maps to one definition, so the cache is sound.
+    pub fn wants_converge(&self) -> bool {
+        use std::collections::HashMap;
+        use std::sync::{OnceLock, RwLock};
+        static CACHE: OnceLock<RwLock<HashMap<String, bool>>> = OnceLock::new();
+        let cache = CACHE.get_or_init(|| RwLock::new(HashMap::new()));
+        let name: &str = &self.name;
+        if let Some(&hit) = cache.read().unwrap().get(name) {
+            return hit;
+        }
+        let val = format!("{self:?}").contains("ConvergedValue");
+        cache.write().unwrap().insert(name.to_string(), val);
+        val
+    }
+
     /// Spend-restriction context for casting this card as a spell — gates
     /// which restricted mana [`crate::mana::ManaPool::pay_for_spell`] may drain.
     pub fn spell_kind(&self) -> crate::mana::SpellKind {
         crate::mana::SpellKind {
+            wants_converge: self.wants_converge(),
             instant_or_sorcery: self.is_instant() || self.is_sorcery(),
             artifact: self.is_artifact(),
             creature_types: if self.is_creature() {
