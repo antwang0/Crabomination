@@ -75,6 +75,7 @@ pub mod net_eval;
 pub mod puzzle;
 pub mod puzzle_corpus;
 pub mod lobby;
+mod decision_log;
 mod replay;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod tcp;
@@ -496,6 +497,19 @@ fn run_match_inner(
     // guard drops on any return path below.
     let _replay = replay::MatchReplay::begin(
         &state.players.iter().map(|p| p.name.clone()).collect::<Vec<_>>(),
+    );
+    // Optional human-decision shadow log (CRAB_DECISION_LOG): same RAII
+    // shape — each human action is logged beside what the heuristic bot
+    // would have done from the same position.
+    let human_seats: Vec<usize> = occupants
+        .iter()
+        .enumerate()
+        .filter(|(_, o)| matches!(o, SeatOccupant::Human(_)))
+        .map(|(i, _)| i)
+        .collect();
+    let _decision_log = decision_log::DecisionShadowLog::begin(
+        &state.players.iter().map(|p| p.name.clone()).collect::<Vec<_>>(),
+        &human_seats,
     );
 
     // Only run the pre-game mulligan when the state is genuinely at game
@@ -1199,8 +1213,13 @@ fn handle_action(
         report_error(seat, &err, seat_tx);
         return false;
     }
+    // Prepared against the pre-action state (the shadow bot needs the
+    // position the human decided in), committed only if the action
+    // applies — a rejected action was never a decision.
+    let shadow_line = decision_log::prepare(state, seat, &action);
     match state.perform_action(action) {
         Ok(events) => {
+            decision_log::commit(shadow_line);
             let wire_events: Vec<GameEventWire> = events.iter().map(Into::into).collect();
             broadcast_update(state, &wire_events, seat_tx, spectator_tx);
             true

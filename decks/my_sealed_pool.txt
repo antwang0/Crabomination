@@ -1,66 +1,80 @@
-1 Applied Geometry
-1 Arcane Omens
-1 Archaic's Agony
-1 Arnyn, Deathbloom Botanist
-3 Artistic Process
-2 Banishing Betrayal
-1 Blech, Loafing Pest
-2 Campus Composer
-1 Cauldron of Essence
-2 Chelonian Tackle
-1 Choreographed Sparks
-1 Colorstorm Stallion
-1 Daydream
-1 Decorum Dissertation
-1 Deluge Virtuoso
-1 Divergent Equation
-2 Emeritus of Ideation
-1 Environmental Scientist
-4 Fields of Strife
-1 Flow State
-2 Forest
-2 Forum Necroscribe
-2 Fractal Anomaly
-1 Growth Curve
-1 Imperious Inkmage
-2 Improvisation Capstone
-3 Informed Inkwright
-1 Inkshape Demonstrator
-2 Interjection
-1 Lecturing Scornmage
-1 Magmablood Archaic
-2 Masterful Flourish
-1 Melancholic Poet
-2 Mica, Reader of Ruins
-1 Moseo, Vein's New Dean
-1 Mountain
-1 Muse's Encouragement
-2 Nita, Forum Conciliator
-1 Noxious Newt
-2 Oracle's Restoration
-1 Paradox Gardens
-1 Paradox Surveyor
-1 Pest Mascot
-2 Plains
-1 Planar Engineering
-1 Quandrix, the Proof
-2 Rapier Wit
-1 Resonating Lute
-1 Rubble Rouser
-1 Shopkeeper's Bane
-1 Silverquill Charm
-2 Slumbering Trudge
-2 Sneering Shadewriter
-1 Soaring Stoneglider
-1 Social Snub
-1 Stand Up for Yourself
-1 Studious First-Year
-1 Suspend Aggression
-1 Tome Blast
-1 Top of the Class
-1 Traumatic Critique
-1 Unsubtle Mockery
-1 Wildgrowth Archaic
-1 Wilt in the Heat
-1 Witherbloom, the Balancer
-1 Zimone's Experiment
+1 follow the lumarets
+1 efflorescence
+1 burrog barrage
+2 zimone's experiment
+1 thornfist striker
+1 shopkeeper's bane
+1 wild hypothesis
+1 oracle's restoration
+1 environmental scientist
+1 knockout maneuver
+1 snarl song
+1 melancholic poet
+1 wander off
+1 adventurous eater
+1 send in the pest
+1 pull from the grave
+1 dissection practice
+1 lecturing scornmage
+1 poisoner's apprentice
+1 tragedy feaster
+1 feed the swarm
+1 arnyn, deathbloom botanist
+1 ad nauseam
+2 dig site inventory
+1 rehearsed debater
+1 elite interceptor
+1 stone docent
+1 rapier wit
+1 ascendant dustspeaker
+1 quill-blade laureate
+1 hop to it
+1 inkshape demonstrator
+1 soaring stoneglider
+1 emeritus of truce
+1 goblin glasswright
+1 rearing embermare
+1 rubble rouser
+1 zealous lorecaster
+1 pigment wrangler
+1 expressive firedancer
+1 strife scholar
+1 blazing firesinger
+1 bulk up
+1 hydro-channeler
+1 spellbook seeker
+1 chase inspiration
+1 procrastinate
+1 pensive professor
+1 muse's encouragement
+1 landscape painter
+1 brain freeze
+1 divergent equation
+1 emeritus of ideation
+1 blech, loafing pest
+1 professor dellian fel
+1 traumatic critique
+1 vibrant outburst
+1 abstract paintmage
+1 visionary's dance
+1 borrowed knowledge
+1 spirit mascot
+1 kirol, history buff
+1 aziza, mage tower captain
+2 fractal mascot
+1 proctor's gaze
+1 quandrix charm
+1 social snub
+1 scolding administrator
+2 inkling mascot
+1 imperious inkmage
+2 forum of amity
+2 fields of strife
+2 page, loose leaf
+1 rancorous archaic
+1 sundering archaic
+1 arcane omens
+1 dreamroot cascade
+1 paradox gardens
+1 shared roots
+1 studious first-year

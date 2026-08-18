@@ -237,27 +237,30 @@ impl MatchFormat {
 /// set, otherwise `<repo>/decks/sealed.txt`.
 pub fn sealed_deck_path() -> std::path::PathBuf {
     if let Ok(p) = std::env::var("CRAB_SEALED_DECK") {
-        let given = std::path::PathBuf::from(&p);
-        if given.exists() || given.is_absolute() {
-            return given;
-        }
-        // A relative path is resolved against the repo root as well as
-        // the working directory. `cargo run` leaves the child's cwd
-        // wherever the shell was, so `-p crabomination_client` from
-        // inside the crate directory made `decks/foo.txt` point at
-        // `crabomination_client/decks/foo.txt` — which does not exist,
-        // and the seat quietly filled with a generated deck instead.
-        if let Some(root) = repo_root() {
-            let rooted = root.join(&given);
-            if rooted.exists() {
-                return rooted;
-            }
-        }
-        return given;
+        return resolve_deck_path(std::path::PathBuf::from(&p));
     }
     repo_root()
         .map(|r| r.join("decks").join("sealed.txt"))
         .unwrap_or_else(|| std::path::PathBuf::from("decks/sealed.txt"))
+}
+
+/// A relative path is resolved against the repo root as well as
+/// the working directory. `cargo run` leaves the child's cwd
+/// wherever the shell was, so `-p crabomination_client` from
+/// inside the crate directory made `decks/foo.txt` point at
+/// `crabomination_client/decks/foo.txt` — which does not exist,
+/// and the seat quietly filled with a generated deck instead.
+fn resolve_deck_path(given: std::path::PathBuf) -> std::path::PathBuf {
+    if given.exists() || given.is_absolute() {
+        return given;
+    }
+    if let Some(root) = repo_root() {
+        let rooted = root.join(&given);
+        if rooted.exists() {
+            return rooted;
+        }
+    }
+    given
 }
 
 /// The workspace root, found by walking up from this crate until a
@@ -282,8 +285,49 @@ fn repo_root() -> Option<std::path::PathBuf> {
 /// mode always starts, with the reason on stderr.
 fn build_sealed_state() -> GameState {
     use rand::RngExt;
-    let seed: u64 = rand::rng().random();
-    let (opponent, opp_label) = crabomination::selfplay::random_sealed_opponent(seed);
+    let mut rng = rand::rng();
+    let seed: u64 = rng.random();
+    let packs = opponent_pack_count();
+    // The opponent's seat: generated (the default) unless
+    // `$CRAB_SEALED_OPP` names a decklist — set it to race two
+    // constructed decks in the client. Naming a deck is always an
+    // explicit request, so a deck that cannot be played is a hard
+    // error, never a silent substitute (same rule as CRAB_SEALED_DECK
+    // below); `--opponent-packs` is meaningless for a pinned deck and
+    // is ignored.
+    let (opponent, opp_label) = match std::env::var("CRAB_SEALED_OPP") {
+        Ok(p) => {
+            let opp_path = resolve_deck_path(std::path::PathBuf::from(&p));
+            let refuse_opp = |reason: &str| -> ! {
+                eprintln!(
+                    "\nsealed: cannot play opponent deck {} — {reason}.\n\
+                     CRAB_SEALED_OPP named this deck, so no substitute is being made.\n\
+                     Note relative paths resolve against the working directory or the repo root;\n\
+                     `cargo run` keeps the shell's directory, so an absolute path is safest.\n",
+                    opp_path.display()
+                );
+                std::process::exit(2)
+            };
+            let text = std::fs::read_to_string(&opp_path)
+                .unwrap_or_else(|e| refuse_opp(&format!("{e}")));
+            let parse = crabomination::decklist::parse_decklist(&text);
+            for bad in &parse.unknown {
+                eprintln!("sealed: opponent deck — skipping unrecognized line {bad:?}");
+            }
+            if parse.main.len() < 40 {
+                refuse_opp(&format!(
+                    "it has {} maindeck cards and a sealed deck needs 40",
+                    parse.main.len()
+                ));
+            }
+            let label = opp_path
+                .file_stem()
+                .map(|s| s.to_string_lossy().into_owned())
+                .unwrap_or_else(|| "Opponent deck".into());
+            (parse.main, label)
+        }
+        Err(_) => crabomination::selfplay::random_sealed_opponent_packs(seed, packs),
+    };
 
     let path = sealed_deck_path();
     // Whether the player *asked* for this specific deck. Falling back to
@@ -335,7 +379,43 @@ fn build_sealed_state() -> GameState {
             crabomination::selfplay::random_sealed_opponent(seed ^ 0xF00D).0
         }
     };
-    crabomination::draft::build_draft_match_state(player, opponent, "You".into(), opp_label)
+    let mut state =
+        crabomination::draft::build_draft_match_state(player, opponent, "You".into(), opp_label);
+    // CR 103.5 — someone wins the die roll. `GameState::new` always seats
+    // player 0, which handed the human the play in every sealed game.
+    let starting = if rng.random::<bool>() { 0 } else { 1 };
+    state.set_starting_player(starting);
+    eprintln!(
+        "sealed: {} on the play",
+        if starting == 0 { "you are" } else { "the opponent is" },
+    );
+    state
+}
+
+/// `--opponent-packs N` — how many boosters the bot's sealed pool is
+/// opened from. Six is a standard pool; more cards means a better 40 out
+/// of the same builder, which is the difficulty dial. Clamped to a sane
+/// range so a typo can't spend a minute generating a pool.
+fn opponent_pack_count() -> usize {
+    opponent_pack_count_from(std::env::args().skip(1))
+}
+
+const MIN_OPPONENT_PACKS: usize = 1;
+const MAX_OPPONENT_PACKS: usize = 60;
+
+fn opponent_pack_count_from(args: impl Iterator<Item = String>) -> usize {
+    args.collect::<Vec<_>>()
+        .windows(2)
+        .find_map(|w| (w[0] == "--opponent-packs").then(|| w[1].parse::<usize>().ok()))
+        .flatten()
+        .map(|n| {
+            let clamped = n.clamp(MIN_OPPONENT_PACKS, MAX_OPPONENT_PACKS);
+            if clamped != n {
+                eprintln!("sealed: --opponent-packs {n} clamped to {clamped}");
+            }
+            clamped
+        })
+        .unwrap_or(crabomination::selfplay::SEALED_PACKS)
 }
 
 /// Active text-edit field in the menu.
@@ -1713,6 +1793,35 @@ fn spawn_loaded_debug_state(world: &mut World, path: &std::path::Path) -> std::i
 
 #[cfg(test)]
 mod tests {
+
+    #[test]
+    fn opponent_packs_arg_parses_and_clamps() {
+        let args = |v: &[&str]| v.iter().map(|s| s.to_string()).collect::<Vec<_>>();
+        // Absent: a standard six-pack sealed pool.
+        assert_eq!(
+            opponent_pack_count_from(args(&["--play", "sealed"]).into_iter()),
+            crabomination::selfplay::SEALED_PACKS,
+        );
+        assert_eq!(
+            opponent_pack_count_from(args(&["--play", "sealed", "--opponent-packs", "12"]).into_iter()),
+            12,
+        );
+        // Garbage and out-of-range values must not take the mode down.
+        assert_eq!(
+            opponent_pack_count_from(args(&["--opponent-packs", "banana"]).into_iter()),
+            crabomination::selfplay::SEALED_PACKS,
+        );
+        assert_eq!(opponent_pack_count_from(args(&["--opponent-packs", "0"]).into_iter()), 1);
+        assert_eq!(
+            opponent_pack_count_from(args(&["--opponent-packs", "9999"]).into_iter()),
+            MAX_OPPONENT_PACKS,
+        );
+        // A trailing flag with no value is ignored rather than panicking.
+        assert_eq!(
+            opponent_pack_count_from(args(&["--opponent-packs"]).into_iter()),
+            crabomination::selfplay::SEALED_PACKS,
+        );
+    }
     use super::*;
     use crate::systems::game_over::ActiveMatchFormat;
 
