@@ -971,6 +971,13 @@ bad *for this format*. Revisit if the pool ever changes: a format with
 real lords would make this the largest remaining encoder hole, well
 ahead of anything in the v7 blocks.
 
+2026-08-17: the `claude/modern_decks` branch is exactly such a pool
+change. If modern decks enter the training or gating pool, this becomes
+the priority encoder item ahead of everything in "Next-round candidates"
+below except search throughput — and the ~10 % gather cost should be
+re-measured (cached per-eval `compute_battlefield`, or an encode-time
+approximation), not assumed from the SoS-era profile.
+
 ### Feature occupancy is a precondition, not an afterthought
 `selfplay_train --feature-census N` reports how often each encoder
 feature is non-zero in recorded self-play positions. It costs no GPU
@@ -997,6 +1004,74 @@ end-of-combat state rather than all four combat steps, since arm C's
 rows were only ~19 % that shape. Do not run it on the strength of the
 table alone — arm C closed this exact gap and lost 3 points of search
 strength.
+
+### Next-round candidates (2026-08-17 analysis; post-r41, r42 in flight)
+
+A prioritized reading of `ML_NOTES.md` rounds 26–41 plus round 42's cost
+data. The through-line: pilot-weight interventions are nulls at every
+scale tried, and the headroom is inside the search or in what the search
+consumes (r38's verdict). House rules apply to every item — four
+training seeds paired within seed, *t* intervals, `--feature-census`
+before any feature block, pre-registered scripts in `.ladder/`.
+
+1. **Iterations are the lever; make them affordable.** r42 Part A's
+   first ladder seed has `mcts-net-256` over `mcts-net-deep` (64) at
+   **+2.1 ±0.4 head-to-head** — ~5× the entire v7 effect, and the
+   largest resolvable strength effect since round 27. Cost is linear in
+   iterations (33.0 → 121.9 s/game serial at 64 → 256, r42 Part C), so
+   adoption is latency-gated, and the highest-leverage work is
+   search-eval throughput, not modeling — see the `PERF.md` candidate
+   ("MCTS leaf-evaluation throughput"). Every 2× there is a rung on the
+   only curve that climbs.
+2. **A separate leaf-value head the search consumes and the pilot
+   doesn't.** The census says ~two-thirds of what the search evaluates
+   is a settled post-combat state whose phase flag has never been
+   non-zero in training, and the `hist` block is 1.8–3.6× denser at the
+   leaves (that skew is v7's confirmed mechanism). Arm C proved the
+   in-place fix fails: retraining the *shared* win head on combat rows
+   moved the pilot's calibration and cost the search 2.9 points. The
+   untried cell splits the roles r37-style: recorder and `head_win`
+   untouched, a `head_leaf` trained only on settled end-of-combat rows
+   (or a leaf-matched mix), `mcts-net-deep` reads `head_leaf` while the
+   1-ply pilot keeps `head_win`. Gate: `mcts-net-deep(head_leaf)` vs
+   `mcts-net-deep(head_win)`, same trunk both sides. This *subsumes* the
+   "record only the settled state" experiment above — do not run that
+   one into the shared head.
+3. **Distill deep search into the leaf head — amortized iterations.**
+   256-iteration search conclusions as `head_leaf` targets, consumed by
+   a 64-iteration search. r36's coupling warning ("you cannot distil
+   your way out of a search that eats the same net you improved") is
+   about the pilot-vs-search gap; a separate leaf head is its own
+   prescription. The mixed fleet makes the data nearly free (~10 k
+   searched games rode along per seed in r38). Composes with item 2:
+   same head, deeper-search targets instead of game outcome.
+4. **v7 × 256 iterations, the cheap stack.** v7 replicates at +0.4 but
+   needs a partner or a higher-starting regime. Its mechanism is
+   leaf-side density, so it should express more, not less, at higher
+   iteration counts — and the r41 v7 nets already exist, so the gate is
+   ladder-only: `mcts-net-256` + v7 net vs `mcts-net-256` + champion,
+   paired ladder seeds. This is the system-adoption question r42 sets
+   up.
+
+5. **Builder v3 default flip + training-deck-quality question.** The
+   quality/curve shape ranker measured **+3.2 replicated** over v2
+   (`ML_NOTES.md` "Builder v3", 2026-08-17) — adopted in the client's
+   sealed opponent, still default-off in `SimConfig` because flipping
+   it changes the training field *and* the ladder's sealed gate decks,
+   ending comparability with every recorded reference. The follow-up
+   round: re-baseline champion and gate opponents on v3 fields, then
+   the untried ML question — does a pilot trained on stronger (v3)
+   fields play better, or is builder noise useful curriculum? Pin the
+   gate builder while the training builder varies, or the comparison
+   confounds.
+
+Not worth new rounds, per the accumulated record: pilot-weight
+interventions (capacity, labels, value targets — three scales of
+evidence), MCTS knobs other than iterations (r29), opponent modeling in
+this format (run the recall diagnostic above, then likely park the
+thread), gen-1 Gumbel completed-Q targets (the one untried Gumbel
+variant; two nulls and the prior-starvation negative make it a worse bet
+than anything above — on the list, not in the next round).
 
 ### Multiple Difficulty Levels
 - Easy: current random bot
@@ -1034,7 +1109,16 @@ without manual play.
 ### Replay / Game Log Export
 The server already collects `GameEventWire` events.  A replay file format
 (sequence of `(action, resulting_state_hash)`) would enable post-game review
-and deterministic bug reproduction.
+and deterministic bug reproduction. Partially covered: `CRAB_REPLAY_DIR`
+(`server/replay.rs`) logs the event stream per match, and
+`CRAB_DECISION_LOG` (`server/decision_log.rs`, 2026-08-18) logs every
+*human* action beside what the heuristic bot would have done from the
+same position — one JSONL line per decision with an `agree` flag and a
+disagreement tally in the footer. That second log is the bot-debugging
+instrument: sort by `agree:false` and read the disagreements (it's how
+converge-blind payment would have been caught from game data). Still
+open: a replay *viewer*, and state-hash checkpoints for deterministic
+reproduction.
 
 ### Scryfall Art Pre-fetch CLI
 `all_cube_cards()` drives the in-game prefetch, but there is no standalone CLI

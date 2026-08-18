@@ -28,7 +28,7 @@
 //!                [--policy-head] [--mcts-gumbel] [--best-metric auc|policy]
 //!                [--mcts-fleet N] [--opp-head] [--search-value-weight F]
 //!                [--emb-dim N] [--obj-hidden N] [--h1 N] [--h2 N]
-//!                [--gate-builder GAMES_PER_POOL]
+//!                [--gate-builder GAMES_PER_POOL] [--gate-builder-v3 GAMES_PER_POOL]
 //!
 //! The build net (Phase C) trains alongside the play net from the same
 //! games — every decided game labels its two decklists — and checkpoints
@@ -215,6 +215,12 @@ struct Args {
     /// against the one it replaces, same pools, same pilots, N games
     /// per pool. No net involved — this measures the builder alone.
     gate_builder_v2: Option<usize>,
+    /// Gate mode: two races against the single-sample v2 build on the
+    /// same pools — the v3 shape ranker as a single sample (isolates
+    /// the scoring change), then best-of-16 v3 (the client's sealed
+    /// opponent recipe, so the combined effect the player meets). No
+    /// net involved.
+    gate_builder_v3: Option<usize>,
     /// Fraction of trajectories held out of training and scored at every
     /// checkpoint. 0 disables.
     ///
@@ -389,6 +395,7 @@ fn parse_args() -> Args {
         distill_gen: None,
         distill_train: false,
         gate_builder_v2: None,
+        gate_builder_v3: None,
         calibrate: None,
         calibrate_leaves: None,
         feature_census: None,
@@ -536,6 +543,9 @@ fn parse_args() -> Args {
             }
             "--gate-builder-v2" => {
                 a.gate_builder_v2 = Some(val().parse().expect("--gate-builder-v2"))
+            }
+            "--gate-builder-v3" => {
+                a.gate_builder_v3 = Some(val().parse().expect("--gate-builder-v3"))
             }
             other => panic!("unknown flag {other} (see the module doc for usage)"),
         }
@@ -861,6 +871,25 @@ fn wilson(wins: u32, n: u32) -> (f64, f64) {
     let center = (p + z2 / (2.0 * n)) / denom;
     let half = (z / denom) * (p * (1.0 - p) / n + z2 / (4.0 * n * n)).sqrt();
     ((center - half).max(0.0), (center + half).min(1.0))
+}
+
+/// Two-sided 95% Student-t critical value. Exact table through 30
+/// degrees of freedom, then the standard coarse steps — the ±2·se habit
+/// at small n is exactly the overstatement round 41 had to walk back.
+fn t95(df: usize) -> f64 {
+    const TABLE: [f64; 30] = [
+        12.706, 4.303, 3.182, 2.776, 2.571, 2.447, 2.365, 2.306, 2.262, 2.228, 2.201, 2.179,
+        2.160, 2.145, 2.131, 2.120, 2.110, 2.101, 2.093, 2.086, 2.080, 2.074, 2.069, 2.064,
+        2.060, 2.056, 2.052, 2.048, 2.045, 2.042,
+    ];
+    match df {
+        0 => f64::INFINITY,
+        1..=30 => TABLE[df - 1],
+        31..=40 => 2.021,
+        41..=60 => 2.000,
+        61..=120 => 1.980,
+        _ => 1.960,
+    }
 }
 
 /// Run `per_pool` for pool indices `0..n` across up to `threads` workers,
@@ -1268,6 +1297,109 @@ fn gate_builder_v2(args: &Args, games_per_pool: usize) {
     );
 }
 
+/// Two races against the single-sample v2 build (the training field's
+/// recipe) on the same pools: the v3 shape ranker as a single sample —
+/// the scoring change alone — and best-of-16 v3, the client's sealed
+/// opponent recipe. Same pools, same pilots, same seeds; only the build
+/// differs.
+fn gate_builder_v3(args: &Args, games_per_pool: usize) {
+    use crabomination::cube::CardFactory;
+    use crabomination::recommend::{Pilot, simulate_match_games_piloted};
+    // Pool count is the axis that buys precision here, not games per
+    // pool: each side fields ONE draw from its builder distribution per
+    // pool, so pool-level spread (measured sd ~15 points at 800
+    // games/pool) dwarfs within-pool sampling noise. Twelve pools at
+    // 800 games each gave a ±6.5-point t-interval; the same 9,600 games
+    // as 192 pools × 50 give ~±2.3. Default matches the v2 gate;
+    // override with CRAB_GATE_POOLS for the wide-flat shape.
+    let pools: u64 = std::env::var("CRAB_GATE_POOLS")
+        .ok()
+        .and_then(|v| v.parse().ok())
+        .unwrap_or(12);
+    type Builder = dyn Fn(&[CardFactory], u64) -> Vec<CardFactory> + Sync;
+    let race = |title: &str, name_a: &str, build_a: &Builder| {
+        println!(
+            "builder gate: {title}, {games_per_pool} games x {pools} pools, seed {}",
+            args.seed
+        );
+        let per_pool = |i: u64| {
+            let salt = args.seed ^ i.wrapping_mul(0x9E37_79B9_7F4A_7C15).wrapping_add(0xB3111D);
+            let pool = sealed_pool(salt);
+            let a = build_a(&pool, salt ^ 1);
+            let v2 = crabomination::selfplay::heuristic_sealed_build_with(&pool, salt ^ 1, true);
+            let tally = simulate_match_games_piloted(
+                &a,
+                &v2,
+                games_per_pool,
+                [Pilot::default(), Pilot::default()],
+                4_000,
+                Some(salt ^ 2),
+            );
+            (
+                format!(
+                    "pool #{i}: {name_a} {} - {} v2 ({} n/d)",
+                    tally.wins_a, tally.wins_b, tally.undecided
+                ),
+                tally.wins_a,
+                tally.wins_b,
+                tally.undecided,
+            )
+        };
+        let (mut wins_a, mut wins_v2, mut undecided) = (0u32, 0u32, 0u32);
+        let mut pool_pcts: Vec<f64> = Vec::new();
+        for (line, a, b, nd) in parallel_pools(pools, args.actors, per_pool) {
+            println!("{line}");
+            wins_a += a;
+            wins_v2 += b;
+            undecided += nd;
+            if a + b > 0 {
+                pool_pcts.push(100.0 * a as f64 / (a + b) as f64);
+            }
+        }
+        let decided = wins_a + wins_v2;
+        let pct = 100.0 * wins_a as f64 / decided.max(1) as f64;
+        let (lo, hi) = wilson(wins_a, decided);
+        println!(
+            "TOTAL: {name_a} {wins_a} - {wins_v2} v2 ({undecided} n/d) = {pct:.1}% [{:.1}%, {:.1}%] (Wilson, games as units)",
+            lo * 100.0,
+            hi * 100.0
+        );
+        // The Wilson interval treats games as independent; they are not —
+        // each pool is one deck-pair matchup and one DRAW from each
+        // builder distribution, and that pool-level spread (sd ~15 pts)
+        // is the dominant noise. Pools are the honest unit; the verdict
+        // reads this interval, not Wilson.
+        let n = pool_pcts.len() as f64;
+        let mean = pool_pcts.iter().sum::<f64>() / n.max(1.0);
+        let sd = (pool_pcts.iter().map(|p| (p - mean).powi(2)).sum::<f64>()
+            / (n - 1.0).max(1.0))
+        .sqrt();
+        let half = t95(pool_pcts.len().saturating_sub(1)) * sd / n.max(1.0).sqrt();
+        println!(
+            "POOLS: mean {mean:.2}% over {} pools, sd {sd:.1}, 95% t-interval [{:.2}%, {:.2}%]",
+            pool_pcts.len(),
+            mean - half,
+            mean + half
+        );
+        println!(
+            "verdict: {}",
+            if mean - half > 50.0 {
+                "the candidate builds are stronger — the pool-level interval clears 50%"
+            } else if mean + half < 50.0 {
+                "the v2 builds are stronger — the pool-level interval is below 50%"
+            } else {
+                "inconclusive — the pool-level interval straddles 50%"
+            }
+        );
+    };
+    race("builder_v3 vs builder_v2 (single sample each, same seed)", "v3", &|pool, seed| {
+        crabomination::selfplay::heuristic_sealed_build_v3(pool, seed)
+    });
+    race("best-of-16 v3 (client opponent recipe) vs single-sample v2", "b16", &|pool, seed| {
+        crabomination::selfplay::best_build_v3(pool, 16, seed)
+    });
+}
+
 fn main() {
     let args = parse_args();
     // Before anything encodes: the diagnostics below must see the same
@@ -1289,6 +1421,10 @@ fn main() {
         if args.record_combat { " + declare-blockers/end-combat" } else { " (no combat rows)" }
     );
     let vocab = Vocab::sos_sealed();
+    if let Some(games) = args.gate_builder_v3 {
+        gate_builder_v3(&args, games);
+        return;
+    }
     if let Some(games) = args.gate_builder_v2 {
         gate_builder_v2(&args, games);
         return;

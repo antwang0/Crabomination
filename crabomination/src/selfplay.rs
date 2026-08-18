@@ -66,9 +66,19 @@ pub fn combat_snapshots() -> bool {
 
 /// A 6-pack SOS sealed pool, fully determined by `seed`.
 pub fn sealed_pool(seed: u64) -> Vec<CardFactory> {
+    sealed_pool_packs(seed, SEALED_PACKS)
+}
+
+/// The packs a standard sealed pool is opened from (CR 100.2b).
+pub const SEALED_PACKS: usize = 6;
+
+/// [`sealed_pool`] with the pack count chosen — a deeper pool builds a
+/// stronger deck, which is how a bot opponent is given a handicap edge
+/// without touching the builder.
+pub fn sealed_pool_packs(seed: u64, packs: usize) -> Vec<CardFactory> {
     let pool = sos_draft_pool();
     let mut rng = StdRng::seed_from_u64(seed);
-    (0..6).flat_map(|_| generate_sos_pack(&pool, &mut rng)).collect()
+    (0..packs.max(1)).flat_map(|_| generate_sos_pack(&pool, &mut rng)).collect()
 }
 
 /// The bootstrap deckbuilder: the recommender's noisy-greedy sealed build
@@ -91,18 +101,47 @@ pub fn heuristic_sealed_build_with(
     build_random_deck(pool, &cfg, &mut rng).cards
 }
 
+/// One noisy build under the v3 shape ranker (quality- and curve-aware
+/// [`crate::recommend::static_build_score_v3`]); the v2 sample above is
+/// its measurement control, raced by `selfplay_train --gate-builder-v3`.
+pub fn heuristic_sealed_build_v3(pool: &[CardFactory], seed: u64) -> Vec<CardFactory> {
+    let cfg = SimConfig { builder_v3: true, ..SimConfig::default() };
+    let mut rng = StdRng::seed_from_u64(seed);
+    build_random_deck(pool, &cfg, &mut rng).cards
+}
+
 /// A random sealed opponent: a fresh 6-pack pool, built by the same
-/// heuristic builder the training loop and recommender use. Returns the
-/// 40-card deck and a label naming the seed, so a match can be
-/// reproduced ("Sealed #12345").
-///
-/// Exists for the client's Sealed game mode — the point of that mode is
-/// to play a hand-built deck against the field the recommender races
-/// against, so the opponent has to come from the same generator.
+/// builder family the training loop and recommender use — but as its
+/// best-of-16 pick, not a single noisy sample (see
+/// [`random_sealed_opponent_packs`] for why). Returns the 40-card deck
+/// and a label naming the seed, so a match can be reproduced
+/// ("Sealed #12345").
 pub fn random_sealed_opponent(seed: u64) -> (Vec<CardFactory>, String) {
-    let pool = sealed_pool(seed);
-    let deck = heuristic_sealed_build(&pool, seed ^ 0x005E_A1ED);
-    (deck, format!("Sealed #{seed}"))
+    random_sealed_opponent_packs(seed, SEALED_PACKS)
+}
+
+/// [`random_sealed_opponent`] opening `packs` boosters instead of the
+/// standard six. The extra cards go through the same builder, so the
+/// opponent is simply choosing 40 from a deeper pool — a smooth
+/// difficulty dial rather than a different kind of deck. The label names
+/// the handicap so a match is still reproducible from what it says.
+///
+/// The deck is [`best_build_v3`] — best-of-16 noisy builds under the
+/// quality/curve judge — not the single sample the training field uses.
+/// A field member is deliberately mediocre (a room of humans); a named
+/// opponent sitting across from *you* should be that room's best
+/// builder, and one sample handed the player a free handicap on top of
+/// whatever `packs` says. Still deterministic in `seed`.
+pub fn random_sealed_opponent_packs(seed: u64, packs: usize) -> (Vec<CardFactory>, String) {
+    let packs = packs.max(1);
+    let pool = sealed_pool_packs(seed, packs);
+    let deck = best_build_v3(&pool, 16, seed ^ 0x005E_A1ED);
+    let label = if packs == SEALED_PACKS {
+        format!("Sealed #{seed}")
+    } else {
+        format!("Sealed #{seed} ({packs} packs)")
+    };
+    (deck, label)
 }
 
 /// Unshuffled two-seat template with both libraries loaded — clone per
@@ -114,14 +153,37 @@ pub fn sealed_game_template(seat0: &[CardFactory], seat1: &[CardFactory]) -> Gam
 /// `n` distinct noisy-greedy builds of the same pool — the candidate set
 /// a build judge picks from. Deterministic in `seed`.
 pub fn build_candidates(pool: &[CardFactory], n: usize, seed: u64) -> Vec<Vec<CardFactory>> {
-    let cfg = SimConfig::default();
+    build_candidates_cfg(pool, n, seed, &SimConfig::default())
+}
+
+/// [`build_candidates`] under an explicit config (the v3 candidate set
+/// differs from the default in which shapes the softmax favors).
+pub fn build_candidates_cfg(
+    pool: &[CardFactory],
+    n: usize,
+    seed: u64,
+    cfg: &SimConfig,
+) -> Vec<Vec<CardFactory>> {
     (0..n as u64)
         .map(|i| {
             let mut rng =
                 StdRng::seed_from_u64(seed ^ i.wrapping_mul(0x9E37_79B9_7F4A_7C15).wrapping_add(7));
-            build_random_deck(pool, &cfg, &mut rng).cards
+            build_random_deck(pool, cfg, &mut rng).cards
         })
         .collect()
+}
+
+/// Best of `n` noisy v3 builds under the v3 static judge — the builder's
+/// best effort at a pool without simulating a game. Deterministic in
+/// `seed`. This is the client's sealed-opponent recipe: the sampled
+/// builds are a field of humans, this is the one who kept the best of
+/// their sixteen tries.
+pub fn best_build_v3(pool: &[CardFactory], n: usize, seed: u64) -> Vec<CardFactory> {
+    let cfg = SimConfig { builder_v3: true, ..SimConfig::default() };
+    build_candidates_cfg(pool, n, seed, &cfg)
+        .into_iter()
+        .max_by_key(|d| static_deck_score_v3(d))
+        .expect("n > 0 builds")
 }
 
 /// Best of `n` candidate builds under an arbitrary judge (higher is
@@ -268,6 +330,15 @@ pub fn mutate_build(
 pub fn static_deck_score(deck: &[CardFactory]) -> i32 {
     let spells: Vec<CardFactory> = deck.iter().copied().filter(|f| !f().is_land()).collect();
     crate::recommend::static_build_score(&spells, spells.len())
+}
+
+/// [`static_deck_score`] under the v3 ranker (card quality + curve
+/// shape). Kept separate rather than replacing it: the v2 score is the
+/// pinned control judge in recorded gates, and a judge that drifts
+/// silently invalidates the comparisons built on it.
+pub fn static_deck_score_v3(deck: &[CardFactory]) -> i32 {
+    let spells: Vec<CardFactory> = deck.iter().copied().filter(|f| !f().is_land()).collect();
+    crate::recommend::static_build_score_v3(&spells, spells.len())
 }
 
 /// One finished self-play game's worth of labelled rows.
@@ -528,7 +599,46 @@ fn snapshot_stats(g: &GameState, seat: usize) -> [f32; 4] {
 
 #[cfg(test)]
 mod tests {
+
+    #[test]
+    fn extra_packs_deepen_the_pool_and_name_the_handicap() {
+        // `--opponent-packs N`: the bot chooses its 40 from a deeper pool,
+        // which is the difficulty dial. Same builder, more to pick from.
+        assert_eq!(sealed_pool_packs(7, SEALED_PACKS).len(), sealed_pool(7).len());
+        let standard = sealed_pool_packs(7, SEALED_PACKS).len();
+        let deep = sealed_pool_packs(7, SEALED_PACKS * 2).len();
+        assert_eq!(deep, standard * 2, "twice the packs is twice the cards");
+        // A pack count of zero would build from nothing; clamp to one.
+        assert!(!sealed_pool_packs(7, 0).is_empty());
+
+        // The deck is still a legal 40, and the label carries the handicap
+        // so a match remains reproducible from what it reports.
+        let (deck, label) = random_sealed_opponent_packs(7, 12);
+        assert_eq!(deck.len(), 40);
+        assert!(label.contains("12 packs"), "label names the handicap: {label}");
+        let (_, plain) = random_sealed_opponent_packs(7, SEALED_PACKS);
+        assert_eq!(plain, "Sealed #7", "a standard pool reads as before");
+    }
     use super::*;
+
+    /// The client's sealed-opponent recipe: best-of-16 under the v3
+    /// judge is a legal 40, deterministic in the seed, and actually the
+    /// argmax of its own candidate set — not one more sample.
+    #[test]
+    fn best_build_v3_is_the_argmax_of_its_candidates() {
+        let pool = sealed_pool(0xB3);
+        let best = best_build_v3(&pool, 16, 9);
+        assert_eq!(best.len(), 40);
+        let cfg = SimConfig { builder_v3: true, ..SimConfig::default() };
+        let top = build_candidates_cfg(&pool, 16, 9, &cfg)
+            .iter()
+            .map(|d| static_deck_score_v3(d))
+            .max()
+            .unwrap();
+        assert_eq!(static_deck_score_v3(&best), top, "the pick is the judge's argmax");
+        let names = |d: &[CardFactory]| d.iter().map(|f| f().name).collect::<Vec<_>>();
+        assert_eq!(names(&best), names(&best_build_v3(&pool, 16, 9)), "deterministic");
+    }
 
     /// The climb monotonically improves its judge, keeps the deck at 40
     /// with the mana base untouched, and is deterministic.

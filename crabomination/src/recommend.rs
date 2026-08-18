@@ -87,6 +87,18 @@ pub struct SimConfig {
     /// {3}{U}{U} bomb "splashed" off three Islands) and are fixed
     /// together, so they are measured together.
     pub builder_v2: bool,
+    /// The quality- and curve-aware *shape ranker*
+    /// ([`static_build_score_v3`]): candidate color shapes are ranked
+    /// with [`draft::score_card_quality`] plus a curve-shape penalty,
+    /// instead of the legacy body-blind scorer that `builder_v2` still
+    /// uses for shape choice (it only repaired the per-card picks).
+    ///
+    /// Default **off**: `static_build_score` feeds the gauntlet's shape
+    /// softmax, so flipping this changes every generated field — the
+    /// ladder's sealed gate decks included. It stays a control-selectable
+    /// flag (same rule as `builder_v2`) until the `--gate-builder-v3`
+    /// race adopts it; the client's sealed opponent opts in explicitly.
+    pub builder_v3: bool,
     /// Gauntlet seed — a run with the same (set, seed) faces the same field.
     pub seed: u64,
     /// Worker threads; 0 = available cores minus one.
@@ -135,6 +147,7 @@ impl Default for SimConfig {
             racing: true,
             racing_confidence_z: 1.96,
             builder_v2: true,
+            builder_v3: false,
             build_temperature: 1.0,
             spell_count_range: (22, 24),
             land_count_range: (16, 18),
@@ -442,6 +455,44 @@ pub(crate) fn static_build_score(main: &[CardFactory], target_spells: usize) -> 
     score
 }
 
+/// [`static_build_score`] with the two defects the v2 repair left in the
+/// *shape ranker*: per-card scores come from
+/// [`draft::score_card_quality`] (v2 fixed the picks but still ranked
+/// whole shapes body-blind, so a pair of individually-worse colors could
+/// outrank the pair holding the bombs), and a degenerate curve now costs
+/// points ([`curve_penalty`] — nothing anywhere else enforces one; the
+/// only curve signal was the flat CMC bucket bonus). Behind
+/// `SimConfig::builder_v3` so the v2 ranker stays as the measurement
+/// control; raced by `selfplay_train --gate-builder-v3`.
+pub(crate) fn static_build_score_v3(main: &[CardFactory], target_spells: usize) -> i32 {
+    let main_colors = colors_of_picks(main);
+    let mut score: i32 =
+        main.iter().map(|&f| crate::draft::score_card_quality(f, &main_colors)).sum();
+    let shortfall = target_spells.saturating_sub(main.len()) as i32;
+    score -= shortfall * 8;
+    let mut pips: Vec<i32> = Color::ALL
+        .into_iter()
+        .map(|c| main.iter().map(|&f| colored_pip_count(&f().cost, c) as i32).sum())
+        .collect();
+    pips.sort_unstable_by_key(|n| std::cmp::Reverse(*n));
+    let extra_colors = pips.iter().skip(2).filter(|n| **n > 0).count() as i32;
+    score -= extra_colors * 12;
+    score -= pips.iter().skip(2).sum::<i32>() * 6;
+    score - curve_penalty(main)
+}
+
+/// Soft curve-shape penalty on a spell list: 4 points per early spell
+/// (mana value ≤ 2) short of five, 3 per spell at five-plus mana beyond
+/// six. Magnitudes sit between a pip of color fit (6) and a spell-slot
+/// shortfall (8) on purpose — a curve hole should steer a close shape
+/// choice, not overrule card quality outright. Zero for any list that
+/// looks like a normal limited deck.
+pub(crate) fn curve_penalty(main: &[CardFactory]) -> i32 {
+    let early = main.iter().filter(|&&f| f().cost.cmc() <= 2).count() as i32;
+    let top = main.iter().filter(|&&f| f().cost.cmc() >= 5).count() as i32;
+    (5 - early).max(0) * 4 + (top - 6).max(0) * 3
+}
+
 /// Top splash-worthy cards for splashing `third` next to `pair`: any card
 /// whose colors include `third` and fit within pair+third (score ≥ the
 /// bar). Gold cards straddling the pair and the splash qualify — "U/B
@@ -653,7 +704,11 @@ fn build_shape<R: Rng>(
     let (duals, basics) =
         assemble_lands(&mut leftovers, &main, &land_colors, lands, cfg.builder_v2);
     Some(CandidateBuild {
-        static_score: static_build_score(&main, spells),
+        static_score: if cfg.builder_v3 {
+            static_build_score_v3(&main, spells)
+        } else {
+            static_build_score(&main, spells)
+        },
         label: candidate_label(colors, splash_colors),
         colors: colors.to_vec(),
         splash: splash_colors.to_vec(),
@@ -2645,6 +2700,47 @@ mod tests {
             "cheap red pips outweigh late white ones, got {split:?}",
         );
         assert_eq!(split.values().sum::<u32>(), 10);
+    }
+
+    fn five_bolts_six_angels() -> Vec<CardFactory> {
+        let mut main: Vec<CardFactory> = vec![catalog::lightning_bolt; 5];
+        for _ in 0..6 {
+            main.push(catalog::serra_angel);
+        }
+        main
+    }
+
+    /// The curve term in isolation: a normal spread pays nothing, a
+    /// top-heavy pile pays for both its missing early plays and its
+    /// excess five-plus spells.
+    #[test]
+    fn curve_penalty_prices_the_degenerate_shapes() {
+        let bolts: Vec<CardFactory> = vec![catalog::lightning_bolt; 6];
+        assert_eq!(curve_penalty(&bolts), 0, "six one-drops: early is covered, no top");
+        let angels: Vec<CardFactory> = vec![catalog::serra_angel; 23];
+        // No early spells (5 × 4) and seventeen five-drops past six (17 × 3).
+        assert_eq!(curve_penalty(&angels), 5 * 4 + 17 * 3);
+        let mixed = five_bolts_six_angels();
+        assert_eq!(curve_penalty(&mixed), 0, "five early + six top is a legal curve");
+    }
+
+    /// The v3 shape ranker sees card quality: the same spell list scores
+    /// exactly the legacy rank plus its quality sum minus its curve
+    /// penalty, so a body with evasion outranks what the legacy scorer
+    /// called its equal. Pins the composition so neither term can be
+    /// dropped silently.
+    #[test]
+    fn static_score_v3_adds_quality_and_curve() {
+        let main = five_bolts_six_angels();
+        let colors = colors_of_picks(&main);
+        let quality: i32 =
+            main.iter().map(|&f| crate::draft::card_quality(&f())).sum();
+        assert!(quality > 0, "Serra Angel's flying body must count for something");
+        assert_eq!(
+            static_build_score_v3(&main, main.len()),
+            static_build_score(&main, main.len()) + quality - curve_penalty(&main),
+            "v3 = legacy + per-card quality − curve penalty, colors {colors:?}"
+        );
     }
 
     /// `builder_v2`'s mana model: a double pip needs more than twice one

@@ -1212,6 +1212,22 @@ that outlive any one profile.
     (`RUST_MIN_STACK` in `.cargo/config.toml`, plus explicit `stack_size` on
     every worker) are still required. A robustness constraint rather than a
     throughput cost; it lives here so nobody "cleans up" the stack sizes.
+11. **MCTS leaf-evaluation throughput — the strength-conversion lever.**
+    r42 Part C measured 33.0 / 56.8 / 121.9 / 249.4 s per game serial at
+    64 / 128 / 256 / 512 iterations — linear, so every leaf pays a full
+    net eval and nothing is amortized across a search. Rounds 27/29/42
+    say raw iterations are the only search lever that pays (256 vs 64
+    head-to-head: +2.1 ±0.4 on r42's first ladder seed), and adoption of
+    higher rungs into the client is latency-gated — so a 2× here is not
+    a wall-clock nicety, it converts directly into playing strength at
+    fixed latency. Shapes to cost, cheapest first: batching leaf evals
+    (the training-side GPU collator already batches; the ladder/client
+    search path evaluates one state at a time — cost the CPU-batching
+    win before assuming it), a per-search transposition cache for
+    repeated leaf states, early adjudication of settled rollouts.
+    Anything that changes *which* states get evaluated needs a
+    `bot_ladder` win-rate gate per the round-29 house rule; pure
+    batching needs only the perf numbers and a golden-trace check.
 
 **Closed / ruled out:**
 
