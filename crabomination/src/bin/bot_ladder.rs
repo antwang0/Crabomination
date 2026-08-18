@@ -447,9 +447,17 @@ fn peak_rss_mib() -> Option<f64> {
 /// host*. Identical engine code read 12.39 games/s on one routine box and
 /// 9.64 on another — a 22 % gap that looks exactly like a regression and
 /// isn't. The committed baseline records this probe next to the throughput
-/// numbers so the next run can tell the two apart before it goes hunting.
-/// Compare `host_calib_ms` first; scale the throughput comparison by it, or
-/// re-measure both sides in one sitting (always the better answer).
+/// numbers so a moved absolute has *something* to be checked against.
+///
+/// **It is not sufficient, and 2026-08-15 is the counter-example.** Two
+/// containers reporting the same `host_cpu` and overlapping calib (47-57
+/// against 53-66, i.e. this one reading slightly *slower*) differed by
+/// **24 %** on `--bench`. This probe is single-threaded; `--bench` runs
+/// three workers, so nothing here measures how the host schedules them.
+/// Agreement is therefore weak evidence and disagreement is strong: a moved
+/// calib means a moved host, an unmoved one means nothing. **Re-measure
+/// both sides in one sitting, or use callgrind** — that is the only sound
+/// attribution, not a scaling correction against this number.
 fn host_calib_ms() -> f64 {
     // 4 MiB of u64 — past L2 on the boxes this runs on, so the loop pays
     // real memory latency the way the engine's pointer-chasing does, not

@@ -1610,8 +1610,8 @@ pub enum Predicate {
     /// end-step draw rider, Wilt in the Heat's cost reduction rider.
     CardsLeftGraveyardThisTurnAtLeast { who: PlayerRef, at_least: Value },
     /// True if an opponent of `who` has cast a spell since `who`'s last turn
-    /// ended (I Bask in Your Silent Awe's abandon check). Reads
-    /// `Player.opponent_cast_spell_since_your_turn`, cleared at `who`'s
+    /// ended (I Bask in Your Silent Awe's abandon check). Reads the
+    /// `GameState.opponent_cast_since_your_turn` seat mask, cleared at `who`'s
     /// cleanup.
     OpponentCastSpellSinceYourTurn { who: PlayerRef },
     /// CR 701.19 — true if `who` (any matching player) searched their own

@@ -35,6 +35,16 @@ pub(crate) struct GrantScan<'a> {
     /// Attached permanents carrying an `equipped_bonus`, matched per card by
     /// `attached_to`.
     equipment: Vec<&'a CardInstance>,
+    /// Does anything in the *gathered* set rewrite a land type — the CR 305.6
+    /// question [`GameState::effective_mana_abilities_of`] asks before it
+    /// takes a layer view? `Some` when the scan was built inside a freeze
+    /// scope, `None` outside one (the caller then asks per card, as before).
+    ///
+    /// One walk of the effect set per scan instead of one per card. Sound
+    /// because the scan borrows `&self`: no `&mut self` call can happen while
+    /// it lives, so the gather it was built against is the gather every
+    /// reader of it sees.
+    land_types_rewritten: Option<bool>,
 }
 
 /// Skip-Ward check. Ward variants whose payment is trivially affordable
@@ -178,15 +188,15 @@ fn drainable_counters(c: &CardInstance, kinds: Option<&[crate::card::CounterType
     }
 }
 
-/// Returns true if the given effect is purely a mana ability — only adds
-/// mana and uses no targets. Mana abilities resolve immediately without the stack.
 /// The three modifications that write `ComputedPermanent.subtypes.land_types`
 /// (Spreading Seas, Blood Moon, Urborg, Magical Hack). With none of them in
 /// scope a permanent's computed land types are its printed ones, which is
 /// what lets `effective_mana_abilities_with` skip the per-card layer pass.
-/// Keep in step with `layers::compute_permanent_pass` — a fourth land-type
-/// writer added there must be added here or lands stop losing their mana
-/// abilities.
+///
+/// Kept in step with `layers::compute_permanent_pass` by a `debug_assert!` at
+/// the gate, not by hand: a fourth land-type writer added there and not here
+/// fails the suite rather than silently keeping a Blood-Mooned land's mana
+/// ability.
 fn rewrites_land_types(e: &crate::game::layers::ContinuousEffect) -> bool {
     use crate::game::layers::Modification as M;
     matches!(
@@ -201,6 +211,8 @@ pub fn is_mana_ability_public(effect: &Effect) -> bool {
     is_mana_ability(effect)
 }
 
+/// True when the effect is purely a mana ability — it adds mana and uses no
+/// targets, so it resolves immediately without using the stack.
 pub(crate) fn is_mana_ability(effect: &Effect) -> bool {
     // CR 605.1a — a mana ability could add mana, isn't a loyalty ability,
     // doesn't target, and doesn't have an illegal trigger. It may still carry
@@ -1676,6 +1688,28 @@ pub(crate) fn ally_trigger_extra_fires(
     source: crate::card::CardId,
 ) -> usize {
     use crate::effect::StaticEffect;
+    // Presence gate. The layer read below is a whole-game gather and this
+    // runs once per trigger dispatch, on boards that almost never carry a
+    // doubler. The gate is *exact*, not an approximation: the sum below can
+    // only be non-zero when some permanent `controller` controls prints one
+    // of these five statics, which is the same set and the same seat filter
+    // the loop tests. A doubler granted by another effect would not be
+    // counted by the loop either — it reads `c.definition.static_abilities`.
+    if !state.battlefield.iter().any(|c| {
+        c.controller == controller
+            && c.definition.static_abilities.iter().any(|sa| {
+                matches!(
+                    sa.effect,
+                    StaticEffect::DoubleControllerAllyTriggers
+                        | StaticEffect::DoubleControllerTriggersOfType { .. }
+                        | StaticEffect::DoubleControllerTriggersMatching { .. }
+                        | StaticEffect::DoubleControllerLegendaryCreatureTriggers
+                        | StaticEffect::DoubleControllerPermanentTriggers
+                )
+            })
+    }) {
+        return 0;
+    }
     // The triggering source's current creature types (read live off the
     // battlefield; a source no longer in play or not `controller`'s → 0).
     let Some(cp) = state.computed_permanent(source) else { return 0 };
@@ -2497,6 +2531,65 @@ impl GameState {
                     .any(|a| is_mana_ability(&a.effect) && effect_produces_color(&a.effect, *col))
             })
             .collect()
+    }
+}
+
+/// An activated ability as the per-permanent walkers read it: printed ones
+/// borrowed from the card definition, synthesized ones (grants, intrinsic
+/// basic-land abilities) boxed.
+///
+/// This was a `Cow<ActivatedAbility>`, which inlines the whole struct into
+/// every element — `Effect` alone is 448 bytes — so a Forest's one-element
+/// list cost a ~600-byte allocation and memcpy, once per untapped permanent
+/// per `mana_source_table`. The synthesized side is the rare one and is the
+/// side that pays a pointer here.
+#[derive(Debug, Clone)]
+pub enum AbilityRef<'a> {
+    Printed(&'a crate::effect::ActivatedAbility),
+    Synth(Box<crate::effect::ActivatedAbility>),
+}
+
+impl std::ops::Deref for AbilityRef<'_> {
+    type Target = crate::effect::ActivatedAbility;
+    fn deref(&self) -> &Self::Target {
+        match self {
+            AbilityRef::Printed(a) => a,
+            AbilityRef::Synth(a) => a,
+        }
+    }
+}
+
+/// How `activate_ability_inner` holds the ability it is activating for the
+/// rest of the call: a printed one as the definition's `Arc` plus its index,
+/// a synthesized one (grant, intrinsic land mana) by value.
+///
+/// The call needs `&mut self` from here on, so the ability cannot stay
+/// borrowed out of `self` — it used to be deep-cloned for that, an `Effect`
+/// and every cost field per activation. An `Arc` clone answers the same
+/// borrow question for a refcount.
+enum HeldAbility {
+    Printed(std::sync::Arc<crate::card::CardDefinition>, usize),
+    Owned(crate::effect::ActivatedAbility),
+}
+
+impl HeldAbility {
+    fn get(&self) -> &crate::effect::ActivatedAbility {
+        match self {
+            HeldAbility::Printed(def, i) => &def.activated_abilities[*i],
+            HeldAbility::Owned(a) => a,
+        }
+    }
+
+    /// The printed ability at `index` on a card in a non-battlefield zone.
+    fn printed_of(
+        card: Option<&crate::card::CardInstance>,
+        index: usize,
+    ) -> Result<Self, GameError> {
+        let card = card.ok_or(GameError::AbilityIndexOutOfBounds)?;
+        if index >= card.definition.activated_abilities.len() {
+            return Err(GameError::AbilityIndexOutOfBounds);
+        }
+        Ok(HeldAbility::Printed(std::sync::Arc::clone(&card.definition), index))
     }
 }
 
@@ -6158,10 +6251,17 @@ impl GameState {
         // the additional-cast-cost payment.
         // CR 702.32b — an "and/or" kicker cast carries its chosen option
         // indices instead of a single kicker cost.
-        let kicker_options: Vec<u8> = std::mem::take(&mut self.cast_kicker_options)
-            .into_iter()
-            .filter(|i| (*i as usize) < card.definition.kicker_options.len())
-            .collect();
+        // Guarded: `cast_kicker_options` is a `ColdState` field, so the `take`
+        // deep-copies the whole cold group — once per cast, for a list that is
+        // empty on every spell without an "and/or" kicker.
+        let kicker_options: Vec<u8> = if self.cast_kicker_options.is_empty() {
+            Vec::new()
+        } else {
+            std::mem::take(&mut self.cast_kicker_options)
+                .into_iter()
+                .filter(|i| (*i as usize) < card.definition.kicker_options.len())
+                .collect()
+        };
         let kicked = kicked
             && (card.definition.has_kicker().is_some()
                 || card.definition.kicker_action_cost.is_some()
@@ -7942,11 +8042,11 @@ impl GameState {
         }
         // Arboria — "cast a spell … during their last turn".
         self.note_acted_on_own_turn(p);
-        for (seat, pl) in self.players.iter_mut().enumerate() {
-            if seat != p {
-                pl.opponent_cast_spell_since_your_turn = true;
-            }
-        }
+        // Every other seat has now seen an opponent cast a spell. One mask
+        // write on the state; the per-`Player` flag this replaced unshared a
+        // whole `PlayerData` per cast.
+        self.opponent_cast_since_your_turn |=
+            crate::game::seat_mask(self.players.len()) & !crate::game::seat_bit(p);
         // Per-turn cast-name log (Grim Reminder's "cast a spell this turn with
         // the same name").
         self.players[p]
@@ -11648,12 +11748,13 @@ impl GameState {
             matches!(s, ManaSymbol::Generic(n) if *n > 0) || matches!(s, ManaSymbol::MonoHybrid(_, _))
         });
         let cost_colors = cost.colors();
-        let scan = self.grant_scan();
+        let mut scan = self.grant_scan();
+        self.scan_land_type_rewrites(&mut scan);
         self.battlefield.iter().any(|c| {
             if c.controller != player || c.tapped {
                 return false;
             }
-            let mana_abilities = self.effective_mana_abilities_with(c.id, &scan);
+            let mana_abilities = self.effective_mana_abilities_of(c, &scan);
             if mana_abilities.is_empty() {
                 return false;
             }
@@ -11862,13 +11963,14 @@ impl GameState {
     }
 
     fn untapped_producers_of_inner(&self, player: usize, color: ManaColor) -> u32 {
-        let scan = self.grant_scan();
+        let mut scan = self.grant_scan();
+        self.scan_land_type_rewrites(&mut scan);
         self.battlefield
             .iter()
             .filter(|c| {
                 c.controller == player
                     && !c.tapped
-                    && self.effective_mana_abilities_with(c.id, &scan).iter().any(|(_, a)| {
+                    && self.effective_mana_abilities_of(c, &scan).iter().any(|(_, a)| {
                         effect_produces_color(&a.effect, color)
                     })
             })
@@ -11986,15 +12088,18 @@ impl GameState {
         only: Option<&crate::fxhash::HashSet<CardId>>,
     ) -> Vec<ManaSourceInfo> {
         // One board-level grant scan for the whole table instead of one per
-        // untapped permanent (see `grant_scan`).
-        let scan = self.grant_scan();
+        // untapped permanent (see `grant_scan`), and with it the CR 305.6
+        // land-type question `effective_mana_abilities_of` would otherwise
+        // ask per card.
+        let mut scan = self.grant_scan();
+        self.scan_land_type_rewrites(&mut scan);
         self.battlefield
             .iter()
             .filter(|c| c.controller == player && !c.tapped)
             .filter(|c| !creature_only || self.permanent_is_creature(c.id))
             .filter(|c| only.is_none_or(|set| set.contains(&c.id)))
             .filter_map(|c| {
-                let abilities = self.effective_mana_abilities_with(c.id, &scan);
+                let abilities = self.effective_mana_abilities_of(c, &scan);
                 let (first_idx, first) = abilities.first()?;
                 let mut colors = crate::mana::ColorSet::empty();
                 let mut color_idx = [0usize; 5];
@@ -12382,14 +12487,32 @@ impl GameState {
         index: usize,
         computed_land_types: &[crate::card::LandType],
     ) -> bool {
+        match Self::printed_land_mana_basic(card, index) {
+            Some(basic) => !computed_land_types.contains(&basic),
+            None => false,
+        }
+    }
+
+    /// The printed half of
+    /// [`printed_land_mana_ability_lost_with`](Self::printed_land_mana_ability_lost_with):
+    /// the basic land type ability `index` is the intrinsic ability *of*, or
+    /// `None` when the ability is real rules text and can't be taken away by a
+    /// type rewrite. No layer read at all — which is the point. A caller that
+    /// gets `None` here knows the answer without a computed type line, and one
+    /// that gets `Some` only needs the line when something in scope can
+    /// rewrite it (`land_type_change_in_scope`).
+    pub(crate) fn printed_land_mana_basic(
+        card: &crate::card::CardInstance,
+        index: usize,
+    ) -> Option<crate::card::LandType> {
         use crate::card::LandType;
         if !card.definition.is_land() {
-            return false;
+            return None;
         }
-        let Some(ability) = card.definition.activated_abilities.get(index) else { return false };
+        let ability = card.definition.activated_abilities.get(index)?;
         let color = match &ability.effect {
             Effect::AddMana { pool: ManaPayload::Colors(cs), .. } if cs.len() == 1 => cs[0],
-            _ => return false,
+            _ => return None,
         };
         let basic = match color {
             ManaColor::White => LandType::Plains,
@@ -12398,22 +12521,20 @@ impl GameState {
             ManaColor::Red => LandType::Mountain,
             ManaColor::Green => LandType::Forest,
         };
-        if !card.definition.subtypes.land_types.contains(&basic) {
-            return false;
-        }
-        !computed_land_types.contains(&basic)
+        card.definition.subtypes.land_types.contains(&basic).then_some(basic)
     }
 
     /// `(index, ability)` for every mana-producing activated ability a
     /// battlefield permanent can currently use — printed, granted, and
-    /// intrinsic basic-land — in `activate_ability`'s index order. The
+    /// intrinsic basic-land — in `activate_ability`'s index order. See
+    /// [`AbilityRef`] for why the payload is not a `Cow`. The
     /// single source of truth for the auto-tap source finders so a land
     /// whose type changed (Spreading Seas / Blood Moon / Urborg) taps for
     /// its computed colours.
     pub fn effective_mana_abilities(
         &self,
         card_id: CardId,
-    ) -> Vec<(usize, std::borrow::Cow<'_, crate::effect::ActivatedAbility>)> {
+    ) -> Vec<(usize, AbilityRef<'_>)> {
         self.effective_mana_abilities_with(card_id, &self.grant_scan())
     }
 
@@ -12424,11 +12545,24 @@ impl GameState {
         &self,
         card_id: CardId,
         scan: &GrantScan<'_>,
-    ) -> Vec<(usize, std::borrow::Cow<'_, crate::effect::ActivatedAbility>)> {
-        use std::borrow::Cow;
+    ) -> Vec<(usize, AbilityRef<'_>)> {
         let Some(card) = self.battlefield_find(card_id) else {
             return vec![];
         };
+        self.effective_mana_abilities_of(card, scan)
+    }
+
+    /// [`effective_mana_abilities_with`](Self::effective_mana_abilities_with)
+    /// against a battlefield `&CardInstance` the caller already holds. Every
+    /// hot caller asks from inside a `battlefield.iter()`, so the `CardId`
+    /// form's opening `battlefield_find` re-scanned the battlefield to
+    /// recover the card the loop was already standing on.
+    pub(crate) fn effective_mana_abilities_of<'a>(
+        &'a self,
+        card: &'a crate::card::CardInstance,
+        scan: &GrantScan<'_>,
+    ) -> Vec<(usize, AbilityRef<'a>)> {
+        let card_id = card.id;
         let printed_count = card.definition.activated_abilities.len();
         // One layer read for the whole list. Both CR 305.6 checks below ask
         // the same card for the same thing — its *computed* land types — and
@@ -12443,9 +12577,33 @@ impl GameState {
         // freeze scope the effect list is already gathered, so the test is a
         // walk of it; outside one, `frozen_effects` returns `None` and the
         // old path stands rather than paying a gather to save a gather.
-        let computed = match self.frozen_effects() {
-            Some(fx) if !fx.iter().any(rewrites_land_types) => None,
-            _ => self.computed_permanent(card_id),
+        //
+        // The scan answers it for the whole loop when it was built inside the
+        // scope (`GrantScan::land_types_rewritten`); the per-card read is the
+        // fallback for a scan built outside one.
+        let rewrites = match scan.land_types_rewritten {
+            some @ Some(_) => some,
+            None => self.frozen_effects().map(|fx| fx.iter().any(rewrites_land_types)),
+        };
+        let computed = if rewrites == Some(false) {
+            // The `ability_strip_in_scope` device: when the gate says no
+            // land-type writer is in scope, run the pass it skipped and
+            // fail if the computed type line differs from the printed
+            // one. That is what keeps `rewrites_land_types` in step with
+            // `compute_permanent_pass` — the alternative was two
+            // hand-kept lists and a comment asking for them to agree.
+            debug_assert!(
+                {
+                    let printed: &[crate::card::LandType] =
+                        &card.definition.subtypes.land_types;
+                    self.computed_permanent(card_id)
+                        .is_none_or(|cp| &cp.subtypes.land_types[..] == printed)
+                },
+                "rewrites_land_types missed a modification that writes land_types"
+            );
+            None
+        } else {
+            self.computed_permanent(card_id)
         };
         let computed_land_types: &[crate::card::LandType] = match &computed {
             // `card` came out of `battlefield_find`, so `computed_permanent`
@@ -12459,26 +12617,26 @@ impl GameState {
         // read `.effect` and the cost fields. Cloning them was one
         // `ActivatedAbility` deep copy per printed mana ability per untapped
         // permanent per `auto_tap_for_cost_inner`.
-        let mut out: Vec<(usize, Cow<'_, crate::effect::ActivatedAbility>)> = Vec::new();
+        let mut out: Vec<(usize, AbilityRef<'_>)> = Vec::new();
         for (i, a) in card.definition.activated_abilities.iter().enumerate() {
             if is_mana_ability(&a.effect)
                 && !Self::printed_land_mana_ability_lost_with(card, i, computed_land_types)
             {
-                out.push((i, Cow::Borrowed(a)));
+                out.push((i, AbilityRef::Printed(a)));
             }
         }
         let granted = self.granted_abilities_of(card, scan);
         let gc = granted.len();
         for (j, a) in granted.into_iter().enumerate() {
             if is_mana_ability(&a.effect) {
-                out.push((printed_count + j, Cow::Owned(a)));
+                out.push((printed_count + j, AbilityRef::Synth(Box::new(a))));
             }
         }
         for (k, a) in Self::intrinsic_land_mana_abilities_with(card, computed_land_types)
             .into_iter()
             .enumerate()
         {
-            out.push((printed_count + gc + k, Cow::Owned(a)));
+            out.push((printed_count + gc + k, AbilityRef::Synth(Box::new(a))));
         }
         out
     }
@@ -12612,6 +12770,20 @@ impl GameState {
             }
         }
         scan
+    }
+
+    /// Fill in [`GrantScan::land_types_rewritten`] — the board-level half of
+    /// [`effective_mana_abilities_of`]'s CR 305.6 gate — for a scan that is
+    /// about to be asked about many cards.
+    ///
+    /// **Not done in [`grant_scan`](Self::grant_scan)**, and the measurement
+    /// says why: `granted_abilities_for` builds a fresh scan *per card*, so
+    /// paying the read there taxes every one of those to save the loops that
+    /// reuse a scan, and the whole thing measured **+0.206 %**. Call it from
+    /// the loop that benefits instead.
+    fn scan_land_type_rewrites(&self, scan: &mut GrantScan<'_>) {
+        scan.land_types_rewritten =
+            self.frozen_effects().map(|fx| fx.iter().any(rewrites_land_types));
     }
 
     pub fn granted_abilities_for(
@@ -13131,43 +13303,68 @@ impl GameState {
             }
         };
 
-        // This card's computed view, taken once by the battlefield branch
-        // below and read again by the CR 602.5 gates further down. Nothing
-        // between the two points mutates a layer input (the one write is the
-        // `{X}` prompt, which returns), so the second read reuses this
-        // instead of taking its own whole-game gather.
-        let mut bf_cp = None;
-        let ability: crate::effect::ActivatedAbility = if source_in_gy {
+        // This card's computed view, shared by the battlefield branch below and
+        // the CR 602.5 gates further down. Nothing between the two points
+        // mutates a layer input (the one write is the `{X}` prompt, which
+        // returns), so one view serves both.
+        //
+        // *Lazy*, and that is the whole point: `Some(_)` means taken (possibly
+        // `Some(None)` — not a battlefield permanent), `None` means nobody has
+        // needed it yet. Every consumer below asks a printed-static presence
+        // gate first, so the common activation — a land tapping for mana —
+        // answers `stripped` / `is_creature` / `land_mana_lost` and all three
+        // CR 602.5 gates off the printed line and never gathers at all. Taking
+        // it eagerly was the largest single gather left in the simulator
+        // (2.07 % over 18,386 calls).
+        let mut bf_cp: Option<Option<std::sync::Arc<crate::game::layers::ComputedPermanent>>> =
+            None;
+        // Take-once accessor for `bf_cp`. A macro rather than a closure because
+        // every use site also touches `self`, and a closure capturing `&self`
+        // would freeze the `&mut self` path around it.
+        macro_rules! bf_cp {
+            () => {{
+                if bf_cp.is_none() {
+                    bf_cp = Some(self.computed_permanent(card_id));
+                }
+                bf_cp.as_ref().unwrap()
+            }};
+        }
+        let held: HeldAbility = if source_in_gy {
             let owner = source_owner.unwrap();
             let card = self.players[owner].graveyard.iter()
                 .find(|c| c.id == card_id)
                 .ok_or(GameError::AbilityIndexOutOfBounds)?;
             let printed_count = card.definition.activated_abilities.len();
             if ability_index < printed_count {
-                card.definition.activated_abilities[ability_index].clone()
+                HeldAbility::Printed(
+                    std::sync::Arc::clone(&card.definition),
+                    ability_index,
+                )
             } else {
                 // Static-granted graveyard abilities (Varolz's scavenge).
-                self.graveyard_granted_abilities(owner, card)
-                    .into_iter()
-                    .nth(ability_index - printed_count)
-                    .ok_or(GameError::AbilityIndexOutOfBounds)?
+                HeldAbility::Owned(
+                    self.graveyard_granted_abilities(owner, card)
+                        .into_iter()
+                        .nth(ability_index - printed_count)
+                        .ok_or(GameError::AbilityIndexOutOfBounds)?,
+                )
             }
         } else if source_in_hand {
             let owner = source_owner.unwrap();
-            self.players[owner].hand.iter()
-                .find(|c| c.id == card_id)
-                .and_then(|c| c.definition.activated_abilities.get(ability_index).cloned())
-                .ok_or(GameError::AbilityIndexOutOfBounds)?
+            HeldAbility::printed_of(
+                self.players[owner].hand.iter().find(|c| c.id == card_id),
+                ability_index,
+            )?
         } else if source_in_exile {
-            self.exile.iter()
-                .find(|c| c.id == card_id)
-                .and_then(|c| c.definition.activated_abilities.get(ability_index).cloned())
-                .ok_or(GameError::AbilityIndexOutOfBounds)?
+            HeldAbility::printed_of(
+                self.exile.iter().find(|c| c.id == card_id),
+                ability_index,
+            )?
         } else if source_in_command {
-            self.players[source_owner.unwrap()].command.iter()
-                .find(|c| c.id == card_id)
-                .and_then(|c| c.definition.activated_abilities.get(ability_index).cloned())
-                .ok_or(GameError::AbilityIndexOutOfBounds)?
+            HeldAbility::printed_of(
+                self.players[source_owner.unwrap()].command.iter().find(|c| c.id == card_id),
+                ability_index,
+            )?
         } else {
             let pos = self
                 .battlefield
@@ -13187,13 +13384,6 @@ impl GameState {
             // (CR 113.10b) keep their granted mana abilities but lose
             // non-mana grants.
             //
-            // Every layer read this activation needs, in one scope — this is
-            // a `&mut self` path, so without it each one re-gathers every
-            // continuous effect in the game. `creature_source` is the
-            // caller's "did a creature make this mana" flag (CR 106.12 /
-            // Cursed Totem-style restrictions); it comes off the same
-            // `ComputedPermanent` as `stripped`, and no mana has moved yet.
-            //
             // The grant/intrinsic halves are indexed only at
             // `ability_index >= printed_count`, and the printed count is a
             // definition read with no layer in it — so decide it first and
@@ -13201,47 +13391,73 @@ impl GameState {
             // activation (a land tapping for mana is index 0), and each one
             // was a whole-board `grant_scan` plus a second
             // `computed_permanent`.
+            //
+            // That rare branch is the one place here that needs the layer
+            // system unconditionally, so it keeps the one-scope shape and
+            // seeds `bf_cp` on its way out: both helpers gather, and sharing
+            // the scope with the view makes the three reads one gather. The
+            // printed-index path below takes no scope at all, because each of
+            // its three answers now has a presence gate in front of it.
             let printed_count = self.battlefield[pos].definition.activated_abilities.len();
             let want_extra = ability_index >= printed_count;
-            let (stripped, is_creature, granted, intrinsic, land_mana_lost, cp) =
-                self.with_frozen_layers(|g| {
-                    let cp = g.computed_permanent(card_id);
-                    // CR 305.6 / 612 — the same computed view answers whether a
-                    // basic's printed mana ability survived its type line, so
-                    // the check below reads it here instead of taking its own
-                    // gather (`printed_land_mana_ability_lost` did, 1.28 % of
-                    // the simulator). Cheap when the index isn't a printed
-                    // single-colour mana ability: `_with` bails on the printed
-                    // shape.
-                    let land_mana_lost = match (&cp, g.battlefield_find(card_id)) {
-                        (Some(c), Some(card)) => Self::printed_land_mana_ability_lost_with(
-                            card,
-                            ability_index,
-                            &c.subtypes.land_types,
-                        ),
-                        _ => false,
-                    };
+            let (granted, intrinsic) = if want_extra {
+                let (g_, i_, cp_) = self.with_frozen_layers(|g| {
                     (
-                        cp.as_ref().map(|c| c.lost_all_abilities).unwrap_or(false),
-                        cp.as_ref().is_some_and(|c| {
-                            c.card_types.contains(&crate::card::CardType::Creature)
-                        }),
-                        if want_extra { g.granted_abilities_for(card_id) } else { Vec::new() },
-                        if want_extra { g.intrinsic_land_mana_abilities(card_id) } else { Vec::new() },
-                        land_mana_lost,
-                        cp,
+                        g.granted_abilities_for(card_id),
+                        g.intrinsic_land_mana_abilities(card_id),
+                        g.computed_permanent(card_id),
                     )
                 });
-            bf_cp = cp;
+                bf_cp = Some(cp_);
+                (g_, i_)
+            } else {
+                (Vec::new(), Vec::new())
+            };
+            // CR 113.10b — `lost_all_abilities`, behind both legs of the
+            // ability-strip presence gate.
+            let stripped = self.ability_strip_in_scope()
+                && bf_cp!().as_ref().is_some_and(|c| c.lost_all_abilities);
+            // `creature_source` is the caller's "did a creature make this
+            // mana" flag (CR 106.12 / Cursed Totem-style restrictions). Layer 4
+            // is the only thing that can move a permanent off its printed card
+            // types, apart from the per-card `bestowed` flag that
+            // `compute_permanent_pass` applies without a `Modification` — so
+            // with neither in scope the printed type line is the computed one.
+            let is_creature = {
+                let card = &self.battlefield[pos];
+                if card.bestowed || self.card_type_change_in_scope() {
+                    bf_cp!()
+                        .as_ref()
+                        .is_some_and(|c| c.card_types.contains(&crate::card::CardType::Creature))
+                } else {
+                    card.definition.is_creature()
+                }
+            };
+            // CR 305.6 / 612 — a basic's printed `{T}: Add <color>` is the
+            // intrinsic ability of its type line, so a type rewrite takes it
+            // away. `printed_land_mana_basic` is the printed half and needs no
+            // layer read: `None` (this index is real rules text, which is most
+            // of them) settles it, and `Some` only needs the computed line when
+            // something in scope can rewrite one.
+            let land_mana_lost = match Self::printed_land_mana_basic(
+                &self.battlefield[pos],
+                ability_index,
+            ) {
+                Some(basic) if self.land_type_change_in_scope() => bf_cp!()
+                    .as_ref()
+                    .is_some_and(|c| !c.subtypes.land_types.contains(&basic)),
+                _ => false,
+            };
             if is_creature {
                 *creature_mana_before = Some(self.players[p].mana_pool.clone());
             }
             if ability_index < printed_count {
-                let raw = self.battlefield[pos]
-                    .definition
-                    .activated_abilities[ability_index]
-                    .clone();
-                if stripped && !is_mana_ability(&raw.effect) {
+                // The definition is behind an `Arc`, so holding it costs a
+                // refcount where cloning the ability out of it cost a deep
+                // copy of an `Effect` and every cost field — 18,386 of them
+                // per six games, nearly all a land tapping for mana.
+                let def = std::sync::Arc::clone(&self.battlefield[pos].definition);
+                if stripped && !is_mana_ability(&def.activated_abilities[ability_index].effect) {
                     return Err(GameError::AbilityIndexOutOfBounds);
                 }
                 // CR 305.6 / 612 — a basic's intrinsic mana ability follows its
@@ -13249,21 +13465,24 @@ impl GameState {
                 if land_mana_lost {
                     return Err(GameError::AbilityIndexOutOfBounds);
                 }
-                raw
+                HeldAbility::Printed(def, ability_index)
             } else if ability_index < printed_count + granted.len() {
                 let g = granted[ability_index - printed_count].clone();
                 // Stripped permanents keep granted mana abilities only.
                 if stripped && !is_mana_ability(&g.effect) {
                     return Err(GameError::AbilityIndexOutOfBounds);
                 }
-                g
+                HeldAbility::Owned(g)
             } else if ability_index < printed_count + granted.len() + intrinsic.len() {
                 // Intrinsic basic-land mana abilities survive stripping.
-                intrinsic[ability_index - printed_count - granted.len()].clone()
+                HeldAbility::Owned(
+                    intrinsic[ability_index - printed_count - granted.len()].clone(),
+                )
             } else {
                 return Err(GameError::AbilityIndexOutOfBounds);
             }
         };
+        let ability = held.get();
 
         // {X} activation costs ({X}, {T}: … — Berta, Imbraham): a
         // hand-paying activator who didn't send an X picks one via a
@@ -13503,26 +13722,25 @@ impl GameState {
         // The three CR 602.5 gates below all read one bit of *this* card's
         // computed view, nothing between them touches a layer input, and this
         // is a `&mut self` path — so each `computed_permanent` was its own
-        // whole-game gather. Take one, under the same conditions that decide
-        // whether any of them can fire. On the battlefield that one is
-        // `bf_cp`, already taken by the ability lookup above; each gate
-        // re-checks its own condition, so handing it a view the old gate
-        // would have skipped cannot change an answer.
+        // whole-game gather. They share `bf_cp`, which is lazy: each gate asks
+        // a presence gate for the exact bit it wants and only forces the view
+        // when the answer could be `true`. Off the battlefield the keyword
+        // gates answer `false` outright (`card_keyword_possible` starts with a
+        // `battlefield_find`), which is the same answer the old code paid a
+        // gather to get back as `None`.
         let tap_gated = ability.tap_cost || ability.untap_self_cost;
         let on_battlefield = !source_in_gy && !source_in_hand && !source_in_command;
-        let cp = if on_battlefield {
-            bf_cp
-        } else {
-            tap_gated.then(|| self.computed_permanent(card_id)).flatten()
-        };
 
         // CR 602.5 — "activated abilities with {T} in their costs can't be
         // activated" (Serra Bestiary). Read off the computed keyword set so a
         // granted restriction applies immediately.
         if tap_gated
-            && cp.as_ref().is_some_and(|cp| {
-                cp.keywords.contains(&Keyword::CantActivateTapAbilities)
+            && self.card_keyword_possible(card_id, |k| {
+                *k == Keyword::CantActivateTapAbilities
             })
+            && bf_cp!()
+                .as_ref()
+                .is_some_and(|cp| cp.keywords.contains(&Keyword::CantActivateTapAbilities))
         {
             return Err(GameError::AbilityAlreadyUsedThisTurn);
         }
@@ -13531,13 +13749,29 @@ impl GameState {
         // activated while the creature is summoning-sick, unless it has haste
         // or its controller has a Tyvar-style "as though they had haste" static.
         if tap_gated && on_battlefield {
-            let sick = self.battlefield_find(card_id).is_some_and(|c| {
-                c.summoning_sick
-                    && cp.as_ref().is_some_and(|cp| {
-                        cp.card_types.contains(&crate::card::CardType::Creature)
-                            && !cp.keywords.contains(&Keyword::Haste)
-                    })
-            });
+            // Three reads, cheapest first, each behind its own gate: the
+            // sickness flag is on the instance, creature-ness is the printed
+            // type line unless layer 4 or `bestowed` can move it, and Haste
+            // needs the view only when something in scope can grant it. A
+            // summoning-sick vanilla creature costs two battlefield walks
+            // where it used to cost a gather.
+            let mut sick = self.battlefield_find(card_id).is_some_and(|c| c.summoning_sick);
+            if sick {
+                let bestowed = self.battlefield_find(card_id).is_some_and(|c| c.bestowed);
+                sick = if bestowed || self.card_type_change_in_scope() {
+                    bf_cp!()
+                        .as_ref()
+                        .is_some_and(|c| c.card_types.contains(&crate::card::CardType::Creature))
+                } else {
+                    self.battlefield_find(card_id).is_some_and(|c| c.definition.is_creature())
+                };
+            }
+            if sick
+                && self.card_keyword_possible(card_id, |k| *k == Keyword::Haste)
+                && bf_cp!().as_ref().is_some_and(|c| c.keywords.contains(&Keyword::Haste))
+            {
+                sick = false;
+            }
             if sick {
                 let exempt = self.battlefield.iter().any(|c| {
                     c.controller == p
@@ -13559,7 +13793,10 @@ impl GameState {
         // activate its non-mana abilities. Battlefield sources only.
         if on_battlefield
             && !is_mana_ability(&ability.effect)
-            && cp.as_ref().is_some_and(|c| c.keywords.contains(&Keyword::CantActivateAbilities))
+            && self.card_keyword_possible(card_id, |k| *k == Keyword::CantActivateAbilities)
+            && bf_cp!()
+                .as_ref()
+                .is_some_and(|c| c.keywords.contains(&Keyword::CantActivateAbilities))
         {
             return Err(GameError::AbilitySuppressedByNamedCard);
         }
@@ -14606,7 +14843,7 @@ impl GameState {
 
         // Pre-flight remove-counters-from-among gate (Hopeful Initiate): the
         // matching permanents you control must together carry `count` counters.
-        if let Some((kinds, count, filter)) = counter_drain_cost(&ability) {
+        if let Some((kinds, count, filter)) = counter_drain_cost(ability) {
             let have: u32 = self
                 .battlefield
                 .iter()
@@ -15055,7 +15292,9 @@ impl GameState {
             // (Extraplanar Lens), distinct from the plain tap above.
             if is_mana_ability(&ability.effect) {
                 events.push(GameEvent::TappedForMana { card_id, player: p });
-                if self.battlefield_find(card_id).is_some_and(|c| c.definition.is_land()) {
+                if !self.players[p].tapped_land_for_mana_this_turn
+                    && self.battlefield_find(card_id).is_some_and(|c| c.definition.is_land())
+                {
                     self.players[p].tapped_land_for_mana_this_turn = true;
                 }
             }
@@ -15516,7 +15755,7 @@ impl GameState {
         // Remove-counters-from-among-cost (Hopeful Initiate): drain `count`
         // counters distributed across matching permanents you control. The
         // auto-picker takes them lowest-power-first (validated pre-flight).
-        if let Some((kinds, count, filter)) = counter_drain_cost(&ability) {
+        if let Some((kinds, count, filter)) = counter_drain_cost(ability) {
             let mut picks: Vec<(CardId, i32)> = self
                 .battlefield
                 .iter()
@@ -15854,9 +16093,12 @@ impl GameState {
                     count: cost_sac_count,
                     mana_value: cost_sac_mv,
                     card: cost_sac_card,
-                    body: Box::new(ability.effect),
+                    // Cloned rather than moved: `ability` is borrowed out of
+                    // `held` now. Only the non-mana path reaches here, and it
+                    // is about to put the body on the stack.
+                    body: Box::new(ability.effect.clone()),
                 },
-                None => ability.effect,
+                None => ability.effect.clone(),
             };
             // Carry the Station-tapped creature's power into resolution
             // (CR 702.184a) so `Value::TappedForCostPower` reads it.

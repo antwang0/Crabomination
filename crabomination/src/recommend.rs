@@ -1418,6 +1418,17 @@ fn play_one_game_traced(
             // by value; only kept when the move is accepted.
             let pending = trace.as_ref().map(|_| format!("p{s} {a:?}"));
             if g.perform_action(a).is_ok() {
+                // `find_card_anywhere` visits the zones cheapest-first, which
+                // is only order-independent while an id lives in one zone.
+                // Debug-only and traced games only — the golden traces are
+                // full bot games, so this is where a zone move that forgot to
+                // remove would surface, without taxing every simulated game.
+                #[cfg(debug_assertions)]
+                if trace.is_some()
+                    && let Some(dup) = g.duplicate_zone_id()
+                {
+                    panic!("card {dup:?} is in two zones after action {}", actions + 1);
+                }
                 if let (Some(t), Some(p)) = (trace.as_mut(), pending) {
                     t.push(format!("{:>5}. {p}  ~~  {}", t.len() + 1, trace_state(&g)));
                 }

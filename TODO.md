@@ -16,52 +16,73 @@ reference and want their own triage pass):
 
 ## NEXT (handoff — rewrite each run, keep under 15 lines)
 
-Branch `claude/modern_decks`. **The profile of record is fresh** — retaken
-2026-08-12 at `f814a13b`, **3,132,892,846 Ir**, and PERF's table, gather
-counts and `would_accept` caller list all come from it. The pass landed one
-row, **`granted_abilities_of(&CardInstance)` (-0.552 %)**: the `CardId` form
-opened with a `battlefield_find` and its three hot callers were already
-iterating the battlefield. It also **closed candidate (8)'s
-`can_afford_in_state` item as a negative result** (+0.066 %, reverted) —
-the filter runs 1.13 cards per sweep, not 1.72, so there is nothing to
-hoist; the denominator was `cast_candidates`, which is not where the filter
-lives.
+**FIRST COMMAND OF EVERY RUN**, before reading anything else:
+`git fetch origin claude/modern_decks && git checkout -B claude/modern_decks
+origin/claude/modern_decks`. The routine container clones **`main`**, which is
+~2,000 commits behind this branch and has none of the ML crates, `PERF.md`,
+`crabomination_tests`, or the profiling profiles. A run that starts from the
+default checkout will rebuild infrastructure that already exists here and
+rediscover bugs already fixed (2026-08-15: a whole run lost that way — it
+re-derived the seeded-RNG facade, `run_bot_match`, `bot_ladder`, golden traces,
+and the `would_accept` suspend bug that `suspended_without_completing` already
+covers). `git log --oneline -1` should show a PERF/pass commit, not a card batch.
 
-- **Candidate (0) is measured and the pruning direction is dead.** The
-  probe ran on `--decks all` (10,200 games, 110,000 searches): the search
-  departs from greedy **46 %** of the time — greedy 54.0 %, the empty
-  declaration 35.0 %, a greedy-minus-one 11.0 % — so no candidate class is
-  dead weight. Half the program stays where it is; the only lever is making
-  one simulation cheaper (1.33 M Ir each), which is the rest of the list.
-  **So next up is candidate (11)** — the `battlefield_find`-in-a-loop
-  family the pass's row generalizes, mechanical and behaviour-proof; the
-  enumeration is already done and `creature_redirects_damage_to_controller`
-  (0.55 %) is its one warm member, though its cost is the
-  `computed_permanent` inside it, not the find. Then (9)(b) and (12)
-  `grant_scan`.
-- **Filters.** The twelfth is owed. Pass 25's suggestion still stands: *a
-  predicate two callers each re-derive*. Pass 24's clone-then-narrow filter
-  is still unswept semantically — `.keywords.to_vec()` inside an `.any()`
-  survives at `mod.rs:5721`, `actions.rs:10472`, `movement.rs:835`.
-- **Rules residue from the P0.** A hash walk deciding a game outcome is
-  reproducible but still arbitrary; `ac8e3b50` fixed the one known site and
-  the ~110 map/set locals are unswept for siblings. Low priority — none of
-  them can desynchronize a run any more.
-- **Env.** No `cargo-nextest`; `cargo test -p crabomination -p
-  crabomination_tests` is the gate (~25 min cold, ~45 s warm, always
-  `CARGO_INCREMENTAL=0`). `profiling-fast` cold **~12 min**, engine-only
-  ~4; callgrind on the six-game workload ~5. `release` (cgu 1 + thin LTO)
-  is ~22 min — budget for it before starting; **the `--bench` anchor has
-  still not been re-run since `ed4c152c`.** Client apt deps are still not
-  installed by the SessionStart hook; the four-package `apt-get install`
-  below fixes it in a minute.
-- **Trackers.** PERF **1.23k** (was 1.45k — Baseline's four cross-check
-  paragraphs collapsed to one table, its six historical anchor blocks to
-  another with their lessons kept as bullets, and the profile-of-record
-  section's three superseded tables to a pointer). TODO ~1.09k, roadmap
-  660. PERF is still over the ~1k guidance; the next compactable block is
-  the **Log**'s per-pass prose for passes 20-25, which the index above it
-  already summarizes.
+Branch `claude/modern_decks`. **Pass 40: `-7.585 %` Ir in five commits**,
+2,136,851,050 -> **1,974,770,479**, the largest pass since the teens. All
+five rows are **allocation**, and none came off the candidates list.
+
+- **A `Cow<BigStruct>` is a `BigStruct` in every element.** `Cow` is sized
+  for the owned side, so a *borrowed* `ActivatedAbility` still cost a
+  ~600-byte allocation + memcpy per element. Two lists in the program were
+  built that way, both per permanent inside a battlefield loop:
+  `effective_mana_abilities_of` (**-0.867 %**) and `usable_abilities`
+  (**-3.990 %**, six generators over the same board every tick — the row of
+  the pass). `AbilityRef` borrows the printed side and boxes the synth one.
+  **Grep `Cow<` and `-> Vec<` on any type holding an `Effect`.**
+- **Hoisting a per-element cost to the loop head must be lazy.** The same
+  `available_mana` hoist reads **+0.350 %** eager and **-0.700 %** behind a
+  `OnceCell`: `pick_combat_trick` runs every tick and usually filters its
+  hand to nothing first. Count the loops that reach zero elements.
+- **A predicate that deep-clones** — `is_free` cloned an `ActivatedAbility`
+  per activation (**-1.252 %**). A cheap veto in front beats a rewrite and
+  keeps the drift-proof check behind it.
+- **A clone that exists to end a borrow wants an `Arc`, not a deep copy.**
+  `activate_ability_inner` cloned the whole `ActivatedAbility` per
+  activation to free `self`; `CardInstance::definition` is already an
+  `Arc<CardDefinition>`, so holding it costs a refcount (**-0.978 %**).
+- **Ready-to-measure, already written and checked once (2026-08-15), then
+  dropped unmeasured for lack of budget — redo it in one pass:**
+  `activate_ability_inner` calls `is_mana_ability(&ability.effect)` **13
+  times** on the same `ability` (bound once at `actions.rs` `let ability =
+  held.get();`, never rebound). It is a two-pass recursive walk of the effect
+  tree. Hoist to one `let ability_is_mana = ...;` right after that binding and
+  replace all 13 (the last one, `let is_mana_ab = ...`, becomes redundant).
+  `cargo check -p crabomination` was clean. Directly on the (-12) path — a
+  land tapping for mana reaches most of those gates and land taps are the bulk
+  of activations. **Beware a blanket `s/is_mana_ab/.../` — it eats
+  `is_mana_ability` and `is_mana_ability_public` across the workspace.**
+- **Take (-12) next: `auto_tap_for_cost_inner`, 16.99 % inclusive**, the
+  largest engine subtree and never looked at. 242 M of it is
+  `activate_ability` over 18,340 calls; **18,832 activations are a land
+  tapping for mana**, so anything the full activation path does that a mana
+  ability cannot need is paid 18,832 times. **(-11) is corrected in PERF.md
+  and is now a poor pick** — its walks are nearly all that same land tap.
+- **Green at the tip**: suite **18,645** over 11 binaries, five golden
+  traces identical, clippy clean, `--bench` invariants byte-identical with
+  the anchor (`decisions` **193,232**, turns 26.98, stalls 0, determinism
+  ok). **No encoding change — no net needs retraining as of this tip.**
+- **First `release` reading in five passes: 153.17 games/s mean** (at this
+  pass's 4th commit) against 110.34 at pass 37's tip on the same host class,
+  calib 44-46 vs 48-51. Covers passes 38-40 together (-11.1 % Ir), not
+  splittable. The 163.62 anchor is a different box and stands apart.
+- Env: no `cargo-nextest`; `cargo test -p crabomination -p
+  crabomination_tests` is the gate (~9 min cold, ~40 s built). Engine
+  `profiling-fast` rebuild **~3.3 min**, `crabomination_base` touch ~10 min,
+  `release` ~28 min. Callgrind ~3 min, contention-immune. Budget 5-6
+  measured iterations. **Fetch before the first commit** (seven PERF.md
+  collisions so far).
+- Trackers: TODO ~1.0k, ROADMAP 0.66k, PERF ~2.5k after folding passes
+  35-36 to index rows. **PERF's passes 37-38 are the next fold.**
 
 ## Environment note
 
@@ -105,257 +126,167 @@ someone wants a rules pass; none of them can desynchronize a run any more.
 
 Found by profiling. Not speculative — the code is quoted.
 
-*(No open entries. The sibling `counters` `HashMap`-order defect was fixed
-in `df87c2d1`: `CardData.counters` is now a `CounterBag`, an
-insertion-ordered `Vec` newtype, because `Effect::RemoveAnyCounter` reads
-"the first present kind" off the map and six other sites collect the kinds
-into a `Vec` and act on them in order — `RandomState` reseeds that order per
-process, so two runs on one seed could diverge.
-`cr_122_counter_bag_order_is_insertion_order` pins it. **That audit is now
-done and its one finding is fixed.** The survey — every `HashMap`/`HashSet`
-field of `GameState`, `ColdState` and `Player`, asking of each consumer
-whether it sums / maxes (safe), tests membership or counts (safe), looks up
-by key (safe), or `find`s / `collect`s / iterates into an ordered structure
-(not) — turned up exactly one leak in 31 fields:
-`dispatch_triggers_for_events` walked `died_card_snapshots.values()`
-pushing `TriggerCandidate`s, and a candidate's *position* decides where its
-ability lands on the stack, so two dying creatures with LKI triggers
-(Enrage on lethal damage, a granted "when this dies") stacked in
-`RandomState` order — different in every process. Fixed by making the field
-an `IdMap`, the insertion-ordered `Vec` newtype in `game/types.rs`; die
-order is also the order CR 603.3b wants. Everything else was keyed lookup,
-membership, or an order-independent fold — including the three sites that
-*look* risky and are not: `encode.rs` sums `block_map` into a
-`blocker_sums` map read by key, `bot.rs`'s two `block_map.keys().collect()`
-are `contains` + `len` only, and `combat.rs`'s
-`block_map.keys().for_each(want)` decides which permanents get computed,
-never what a reader sees. The `keyword_counters` `HashMap`-order defect was fixed
-in `86670250`: `KeywordCounters` is an insertion-ordered `Vec` newtype, which
-sidesteps `Keyword` having no `Ord`, and `cr_122_1b_keyword_counter_grant_
-order_is_insertion_order` pins it. The actor-sampler panic was fixed in
-`a67c5b9a`. Mirror Gallery aborting the whole SBA sweep was fixed in
-`9db8557c` — CR 704.5j's `LegendRuleDoesntApply` check sat inside the
-legend-group block and used `return Vec::new()`, so a board with one out
-skipped every later state-based action (deaths, loss conditions, the Aura
-and Equipment sweeps) and discarded the sweep's events; the game could not
-be won or lost. Regression test in `classic_sets/bok`. **The filter that
-found it: a `return` inside a `let … = { … };` initializer block**, which
-exits the whole function rather than the block. The workspace was swept for
-the class — the other nine hits are all `Err` / `let-else` guards that
-legitimately abort their function, so this was the only one.)*
+*(No open entries.* The audits that closed here are an index now; `git log
+-S` on each hash has the prose. `df87c2d1` — `CardData.counters` becomes
+the insertion-ordered `CounterBag` (`RemoveAnyCounter` read "the first
+present kind" off a `RandomState`-seeded map); `86670250` — the same for
+`KeywordCounters`; `ea8cc1fd` — `died_card_snapshots` becomes `IdMap`,
+because a `TriggerCandidate`'s position decides stack order and two LKI
+deaths stacked differently per process. **That was the survey's one leak in
+31 fields** — every `HashMap`/`HashSet` on `GameState` / `ColdState` /
+`Player`, asked of each consumer whether it sums, tests membership, looks
+up by key (all safe) or `find`s / `collect`s / iterates into an ordered
+structure (not). The three that *look* risky and are not, so nobody
+re-checks them: `encode.rs` sums `block_map` into a map read by key,
+`bot.rs`'s two `block_map.keys().collect()` are `contains` + `len`, and
+`combat.rs`'s `block_map.keys().for_each(want)` decides which permanents
+get computed, never what a reader sees. Also `a67c5b9a` (actor-sampler
+panic) and `9db8557c` (Mirror Gallery aborting the whole SBA sweep — CR
+704.5j's check used `return Vec::new()` inside a `let … = { … };`
+initializer, so one board skipped every later state-based action and the
+game could not be won or lost; regression test in `classic_sets/bok`).
+**The filter that found the last one — a `return` inside a `let … = { … };`
+initializer** — was swept workspace-wide: the other nine hits are `Err` /
+let-else guards that legitimately abort their function.)*
 
 **Open: the panic/unwrap sweep of the self-play path.** ~183
-`unwrap()`/`expect()` under `game/` + `bot.rs`. It wants **triage, not a
-blanket rewrite** — every site spot-checked so far was already guarded by a
-preceding test (`worlds.len() > 1` before `.max().unwrap()`,
+`unwrap()`/`expect()` under `game/` + `bot.rs`, and it wants **triage, not
+a blanket rewrite** — every site spot-checked so far was already guarded by
+a preceding test (`worlds.len() > 1` before `.max().unwrap()`,
 `battlefield.push` before `find(…).unwrap()`, `writes_to_shared` before the
-two `teams` unwraps, `mayhem` set from `mayhem_cost().is_some()`). The
-filter that actually found `a67c5b9a` is narrower and worth reusing: **a
-`debug_assert!` standing in for a runtime guard**, or a `len() - 1` / bare
-index on a slice whose emptiness the *caller* tolerates. `sample_scored_index`
-had both, on the one path only a training actor takes.
+two `teams` unwraps, `mayhem` set from `mayhem_cost().is_some()`). This is
+the section's only open entry; the thirteen narrower filters below are what
+got run instead of the blanket rewrite, and eight of the thirteen found
+nothing, which is the result worth keeping.
 
-**Both of that filter's halves were swept 2026-08-10 and are clean** — a
-negative result worth not re-deriving. The `len() - 1` half: 13 sites under
-`game/` + `bot.rs`, every one either preceded by an `is_empty()` early
-return (`apply_enters_as_choice`, `pick_trigger_mode`, the Captive Audience
-mode picker, `EscalatingThisTurn`), taken on a `const` array of five card
-types, taken right after the matching `push`, or guarded by a `first()`
-let-else. The `debug_assert!` half: only two sites remain
-(`mod.rs:3900`'s replacement-effect iteration cap, `stack.rs:5911`'s
-unsupported redirect target), and both fall through to a defined release
-behaviour rather than standing in for a guard. What is left of the item is
-the ~183 `unwrap()`/`expect()`, which still wants triage rather than a
-blanket rewrite — and a *third* filter, since these two are exhausted.
+**The thirteen filters, compacted to an index.** Each is a *shape* that fails
+the way a training run notices — a silent wrap at game 400 k, a loud panic,
+or a hang — swept over `game/` + `bot.rs` (some wider). The prose is in
+`git log -- TODO.md`; what is kept is what each hunted and why it is
+closed, so none of them is re-derived.
 
-**The third filter was run 2026-08-10 and is also clean.** Two shapes, both
-chosen because they fail *silently* in release (wrapping) and loudly in
-debug, i.e. the profile of a bug that only appears at game 400 k:
+| # | date | the shape it hunts | result |
+|---|---|---|---|
+| 1 | 08-10 | A `debug_assert!` standing in for a runtime guard, or a `len() - 1` / bare index on a slice whose emptiness the *caller* tolerates | **Found `a67c5b9a`** (`sample_scored_index`, on the one path only a training actor takes). Both halves then swept clean: 13 `len() - 1` sites all guarded; the two surviving `debug_assert!`s (`mod.rs:3900`, `stack.rs:5911`) fall through to defined release behaviour |
+| 2 | 08-10 | A `return` inside a `let … = { … };` initializer | **Found `9db8557c`** — CR 704.5j's Mirror Gallery check aborted the *whole* SBA sweep, so one board skipped every later state-based action and the game could not be won or lost. Regression test in `classic_sets/bok`. The other nine workspace hits are `Err` / let-else guards that legitimately abort |
+| 3 | 08-10 | Unsigned `len() - k` where the caller tolerates empty; a stale index across a mutation (`position()` then `battlefield[pos]`) | Clean. 16 + 53 sites; the one path that mutates in between (the equip sacrifice) re-finds by id and says why |
+| 4 | 08-10 | `evaluate_value(…) as usize` with no `.max(0)`; `power()`/`toughness()`/`life` cast to `usize` | Clean. One hit each, both already clamped (`mod.rs:20879` is `.max(1)`; `bot.rs`'s `LIFE_TENTHS[life as usize]` sits under its own two branches) |
+| 5 | 08-10 | A precondition *some* sites enforce and a sibling might not — documented `///` preconditions, and the `i.min(xs.len() - 1)` clamp family | Clean. Eight doc'd preconditions all validated or structural; all ten clamps guarded, by four different idioms |
+| 6 | 08-11 | Not syntax — **run the arithmetic**. `[profile.overflow]` (`release-fast` + `overflow-checks`) turns every silent wrap into a panic with a backtrace | Clean. `bot_ladder` 4 seeds x 4 pools = **17,693 games, 0 panics**; `selfplay_train --actors 3 --games 600` = 600 games / 56,353 rows / 0 panics. **Rerun after any change to counters, damage, mana or the encoder** — one ~9-minute build, ~1 minute a seed |
+| 7 | 08-11 | The opposite of 1-6: a `/` or `%` whose denominator is a runtime count the caller can zero (panics loudly, or goes `NaN`) | Clean. Every non-constant divisor under `game/`, `bot.rs`, `crabomination_ml/` read; seat rotation always has a seat, the rest are `.max(1)` or guarded by an `is_empty()` in the same condition |
+| 8 | 08-11 | A std collection/slice op whose runtime argument is a *length*, not an index — `split_off`/`split_at`/`copy_from_slice`, `chunks`/`step_by` with runtime `n`, `&xs[a..b]`, `Vec::remove`/`insert` | Clean. Five + two + two + ~30 sites; the ML `copy_from_slice`s copy fixed-width **arrays**, so a mismatch is a compile error, not a panic |
+| 9 | 08-11 | A comparator that is not a total order (`sort_by` panics on one; a `NaN` produces one for free) | Clean. **No `partial_cmp(…).unwrap()` in the workspace**; every float comparator is `total_cmp` or `unwrap_or(Equal)`, and the three that could see a `NaN` are in `recommend.rs`, off the self-play path |
+| 10 | 08-11 | The failure a training run sees as a *hang*: an unbounded `loop`/`while` whose exit condition is game state | Clean. All eight `loop {` and ~40 `while`s bounded by one of three shapes — a strictly shrinking collection, a finite effect-tree peel, or an explicit counter. The one bounded by none of the three is the top-level game loop, and its two counters are exactly what a *stall* is |
+| 11 | 08-11 | **One invariant written out by hand in more than one place** | **Found `15ec11c1`**: `stale < 8` appeared six times across five files, so the ladder's stall rate and the training actor's were never the same measurement. All six read `recommend::STALE_ROUNDS` now; no value changed. The per-context *action* budgets beside them are deliberately different and were left alone |
+| 12 | 08-14 | **A predicate two callers each re-derive** | **Found two**, `caa44eb2` — see below |
+| 13 | 08-14 | **A reentrancy guard some sites spell out by hand and a sibling does not** | **Found a stack overflow** — `in_layer_gather`, unguarded at ~a dozen computed-P/T arms the gather evaluates. See below |
 
-- **Unsigned `len() - k` where the caller tolerates an empty collection.**
-  16 hits under `game/` + `bot.rs`. Every one is guarded: an `is_empty()`
-  early return, a `push` on the line above (`stack.len() - 1` in
-  `CreateTokenCopyOf`), a `const` array, a `first()` let-else, or a
-  `hand.len() > max` test in the same condition (the two cleanup-discard
-  sites). `selfplay.rs:521`'s bare index is in a `#[cfg(test)]` body.
-- **A stale index across a mutation** — `position()` / `iter().position`
-  followed by `battlefield[pos]` after something that can remove a card.
-  53 index sites, and the one path that genuinely mutates in between (the
-  equip sacrifice) already re-finds by id and carries a comment saying why.
+**A note the table would lose**: filters 3-5 and 7-10 are syntactic and
+found nothing between them. Filter 6 is not syntactic — it *runs* the
+program with the checks on — and filters 2, 11, 12 and 13 look at structure
+rather than syntax. Four of the five filters that found something are in
+that second group. Prefer a filter that runs the code or reads its
+structure over one that greps it.
 
-**The fourth filter was run 2026-08-10 and is also clean.** Two shapes,
-both chosen because they wrap silently in release — a negative index or
-count that only appears at game 400 k:
+**The twelfth filter was run 2026-08-14** (`caa44eb2`) — *a predicate two
+callers each re-derive*, rather than a constant two callers each spell out.
+The search that works is not syntactic: it is **the doc comments that admit
+to the pairing**, `grep -niE "must (also )?(appear|be) (listed|added|here)|
+must list exactly|without adding it here|kept in sync|must agree|drift
+from"`. Nine hits, three of them real:
 
-- **`evaluate_value(…) as usize` without a `.max(0)`.** `Value` evaluation
-  returns `i32` and is trivially negative (a `Diff`, a `PowerOf` on a
-  -X/-X'd creature). One hit in the whole workspace, and it is `.max(1)`
-  (`mod.rs:20879`). Every other one of the ~270 sites carries `.max(0)`.
-- **`power()` / `toughness()` / `life` cast to `usize`.** One hit,
-  `bot.rs`'s `LIFE_TENTHS[life as usize]`, and the `life <= 0` and
-  `life <= MAX` branches above it are exactly the guard.
+- `CardData::clear_end_of_turn_effects` wrote 26 fields and
+  `end_of_turn_effects_are_clear` guarded that write by listing the same
+  26. **Fixed structurally**: both expand from one `eot_wear_off!` list in
+  three shapes (`scalar` / `empty` / `none`), so a field cannot reach one
+  without the other. This was the dangerous direction — a field added to
+  the clear alone makes the guard skip the sweep while the effect still
+  matters, silently, and only on turns where nothing else on the permanent
+  needs clearing.
+- `rewrites_land_types` asked in prose to be kept in step with
+  `layers::compute_permanent_pass`. **Fixed with the
+  `ability_strip_in_scope` device**: a `debug_assert!` at the gate runs the
+  layer pass it skipped and fails if the computed land-type line differs
+  from the printed one.
+- **Still open, and disproportionate to fix**:
+  `GameState::protection_keyword` must list exactly the keywords
+  `damage_prevented_by_protection_inner`'s final `match` (plus its separate
+  `ProtectionFromCreatures` check) can answer `true` for — a gate the
+  twenty-fifth pass added for speed, whose failure mode is a new protection
+  keyword silently doing nothing. The two can't share a list (the match
+  arms have distinct bodies), and the debug cross-check would need the
+  source data the gate exists to avoid computing. Worth doing when
+  something else brings that function up.
 
-**The fifth filter was run 2026-08-10 and is also clean.** It looked where
-the four before it did not — at a precondition *some* sites enforce and a
-sibling might not, rather than at the site alone. Two sweeps:
+Two more hits were already guarded and want no work: `requires_target` /
+`primary_target_filter` / `target_filter_for_slot` have a whole-catalog
+walker-agreement test (`core_rules/target_walkers.rs`), and
+`ability_strip_in_scope` is the device the other two now copy.
 
-- **Documented preconditions.** Eight `///` blocks under `game/` + `bot.rs`
-  state one ("must already be", "assumes", "must be non-empty"). Every one
-  is either validated in the body (`assign_teams` returns a typed
-  `TeamError` for each of empty / unknown / duplicate / missing seat) or
-  holds structurally. No caller-side gap.
-- **The `len() - 1` clamp family, the shape the third filter opened and did
-  not close across `effects/`.** Ten sites clamp a decider-supplied index
-  with `i.min(xs.len() - 1)`, which underflows to `usize::MAX` on an empty
-  `xs` and then indexes out of bounds. **All ten are guarded**, and by
-  three different idioms — an explicit `if xs.is_empty() { return … }`
-  (`apply_enters_as_choice`, `apply_enters_mode_choice`,
-  `EscalatingThisTurn`, `pick_trigger_mode`, and both `available`
-  builders), a pattern guard (`Some(modes) if !modes.is_empty()` in
-  `clamp_activated_mode`), a `first()` let-else (`LoseKeyword`), or a
-  `const` five-element array (the two `CardType` pickers). The precondition
-  is real and nobody forgot it.
+**The thirteenth filter was run 2026-08-14** — *a guard that some sites
+spell out by hand and a sibling does not*. Filter 5's shape, aimed at a
+**reentrancy** guard rather than a precondition, and it **found a stack
+overflow**. `GameState::in_layer_gather` says "the continuous-effect set is
+being built; do not ask the layer system". `effective_power`,
+`effective_toughness` and `evaluate_requirement_static`'s layer-4 type
+closure each tested it by hand; the ~dozen sibling arms that read computed
+power/toughness (`PowerAtMostYourCount`,
+`ToughnessAtMostGraveyardCount`, `PowerLessThanYourGraveyardCount`,
+`PowerAtMostSourceCounters`, `PowerAtMostDraftNoteMax`, …) did not, and
+`computed_permanent` re-entered the gather from the same state — so it
+reached the same read again, without bound. Any card pairing a
+gather-evaluated filter (a `DynamicPt::…Matching` CDA, a `WhileCondition`,
+a static's affected filter — ~30 call sites in the gather) with a P/T
+requirement was **SIGABRT, not a wrong answer**. Fixed structurally: the
+guard lives in `computed_permanent`, once, and mid-gather reads take the
+printed view; the three hand-written tests are fast paths now and say so.
+`gather_continuous_effects` also **swaps and restores** the flag instead of
+clearing it, so a gather reached from inside one (`board_keyword_matching`,
+`permanents_with_abilities_removed`, the debug cross-checks) can't hand the
+outer one back unguarded — the hazard `permanents_with_abilities_removed`
+already documented but nothing enforced. Regression test:
+`core_rules::cr_rules::cr_613_a_cda_filter_reading_computed_power_does_not_recurse`
+(overflows the stack on the pre-fix engine; verified both ways).
 
-**The sixth filter was run 2026-08-11 and is also clean** — the one the
-five before it pointed at, and the only one that does not pattern-match on
-syntax. `[profile.overflow]` (`release-fast` + `overflow-checks = true`,
-committed in `Cargo.toml` with the invocation in its comment) turns every
-silent wrap into a panic with a backtrace. Run:
+**The fourteenth filter was run 2026-08-15** — *a comment that states a
+cost or a shape*. **Found one, and it was in the measuring device itself.**
 
-- `bot_ladder --a gang --b gang --games 300 --threads 3`, four seeds across
-  all four deck pools (`all` x2, `sealed`, `cube`, `sos`) — **17,693 games
-  decided, 0 panics**.
-- `selfplay_train --actors 3 --games 600 --steps 60 --batch 64` — the real
-  actor path, encoder and learner included — **600 games, 56,353 rows, 0
-  panics, 0 stalls**.
+- `host_calib_ms`' doc comment said "compare `host_calib_ms` first; scale
+  the throughput comparison by it". That was false the day it was needed:
+  two containers reporting the same `host_cpu` and *overlapping* calib
+  (47-57 against 53-66) differed by **24 %** on `--bench`. The probe is
+  single-threaded and the bench runs three workers, so it measures nothing
+  about how the host schedules them. Corrected in place, with the
+  counter-example and the rule it implies — agreement is weak evidence,
+  disagreement is strong. See PERF **Baseline**.
 
-So the arithmetic is clean on ~18 k games across every pool the bench and
-the trainer touch. What is left of the item is still the ~183
-`unwrap()`/`expect()`, wanting triage rather than a blanket rewrite, and a
-*seventh* filter — the six above are exhausted. Rerun the overflow profile
-after any change to counters, damage, mana or the encoder; it costs one
-9-minute build and two minutes of games.
+**The syntactic half of the filter is clean and should not be re-run.**
+Greps for present-tense cost claims (`costs nothing` / `is cheap` / `O(n`
+/ `whole-board` / `plain Vec` / `the engine has no`) over `game/`,
+`server/` and `crabomination_base/` return ~60 hits, all either
+game-semantics uses of "free"/"cheap" or *past-tense* justifications ("was
+1.45 % of the program", "was an O(n²) membership scan") that correctly
+explain why the code is shaped as it is. **The filter's yield is in
+comments that a *measurement* relies on, not in the engine's prose** —
+which is the thirteen-filter table's own lesson (structure and running
+code beat grepping) applied one more time. A *fifteenth* filter is owed;
+the natural next one is **a claim made by a tool's output rather than by
+its source** — a printed label or a stats field whose name asserts
+something the value does not support.
 
-**The seventh filter was run 2026-08-11 and is also clean.** The six above
-all hunt a *silent* wrap; this one hunts the opposite — an integer or float
-division/modulo whose denominator is a runtime count the caller can make
-zero, which panics loudly (or goes `NaN`) rather than wrapping. Every
-`/` or `%` by a non-constant under `game/`, `bot.rs` and
-`crabomination_ml/` was read: the seat-rotation family is `% players.len()`
-and a game always has a seat; `DealDamageDividedEvenly` guards with
-`targets.is_empty()`; `DigToHandLoseLife` guards with `per > 0`; the
-Praetor's Grasp-style `order[seat % order.len()]` builds `order` with the
-controller already pushed; `max_affordable_x` clamps `x_pips` with
-`.max(1)`; the bot's race math is inside `total_raw_power > 0 && opp_clock
-> 0`; every ML rate is `.max(1)`. The one float site,
-`sample_scored_index`'s `/ temp`, is reached only from `sampling_temp`,
-which the trainer sets behind `args.sample_temp > 0`. No hit.
-
-**The eighth filter was run 2026-08-11 and is also clean.** The first six
-hunt a silent wrap and the seventh a zero denominator; this one hunts the
-*other* loud panic — a std collection or slice operation whose runtime
-argument is a length, not an index, so the third filter's bare-index sweep
-never looked at it. Four shapes, whole workspace:
-
-- **`split_off(n)` / `split_at(n)` / `copy_from_slice`.** Five `split_off`
-  sites. The four in `effects/mod.rs` (the copy-a-spell repointing) take
-  `taken.split_off(t.iter().len())` where `taken` was *initialized* from
-  `t` and only pushed to since, so `len >= n` structurally;
-  `bot.rs:7052`'s redeal is `library.len().saturating_sub(n)`. The four
-  `copy_from_slice` sites in `crabomination_ml` copy `[f32; AUX_FEATS]` /
-  `[f32; GLOBAL_FEATS]` / `[f32; OBJ_FEATS]` **arrays**, not slices, into
-  same-width windows — a length mismatch is a compile error, not a panic.
-- **`chunks(n)` / `chunks_exact(n)` / `step_by(n)` with a runtime `n`**
-  (all three panic on zero). One hit each: `make_batch`'s
-  `rows.chunks(chunk.max(1))`, and `EachPlayerSplitsAndSacrificesRandom
-  Pile`'s `step_by(n)` where `n = (*piles).max(1)`.
-- **Runtime range slicing `&xs[a..b]`.** Two sites, both in
-  `continue_trigger_ordering`'s same-controller run walk, both `i < j <=
-  rest.len()` by the loop that computed them.
-- **`Vec::remove(i)` / `insert(i, _)` with a computed index.** ~30 sites
-  under `game/` + `bot.rs`; every one is an `if let Some(pos) =
-  …position(…)` on the same collection, an index below a `len()` the loop
-  condition holds (`hybrids.remove(idx)` inside `while !hybrids.is_empty()`
-  with `unwrap_or(0)`), or a `0..greedy.len()` enumeration.
-
-No hit. The item is still the ~183 `unwrap()`/`expect()` wanting triage.
-
-**The ninth filter was run 2026-08-11 and is also clean.** The first eight
-hunt a wrap, a zero denominator, or a length-argument panic; this one hunts
-the third loud panic std can raise — **a comparator that is not a total
-order**, which `sort_by`/`sort_unstable_by` detect and panic on, and which
-a `NaN` produces for free. Every `partial_cmp` / `sort_by` /
-`sort_unstable_by` / `max_by` / `min_by` / `binary_search_by` under
-`game/`, `bot.rs`, `crabomination_ml/` and `crabomination_nn/` was read.
-There is **no `partial_cmp(…).unwrap()` in the workspace**. Every float
-comparator is either `total_cmp` (`selfplay.rs`'s argmax,
-`recommend_pool`'s ranking, `selfplay_train`'s quantile) or
-`partial_cmp(…).unwrap_or(Equal)`; the latter is only inconsistent if a
-`NaN` reaches it, and the three sites that feed one to a `sort_by` are all
-in `recommend.rs` — off the self-play path — with `win_rate()` guarded at
-`decided() == 0` and `best_delta()` built from it. Every comparator on the
-engine's own hot paths (`layers.rs`'s layer/sublayer/timestamp sort,
-`bot.rs:2871`, `view.rs:560`, `effects/mod.rs`'s five descending-index
-sorts) is integer `cmp` and total by construction.
-
-**The tenth filter was run 2026-08-11 and is also clean.** It hunts the
-failure mode a training run notices as a *hang* rather than a panic: **an
-unbounded `loop` / `while` whose exit condition is game state**. All eight
-`loop {` and ~40 non-`while let` `while` sites under `game/` and `bot.rs`
-were read. Three shapes, all bounded: a collection that strictly shrinks
-each round (every `while !library.is_empty()` / `while !pool.is_empty()` /
-`while live.len() > 1`, and the CR 616.1e draw-replacement loop, whose
-`declined` list grows monotonically and filters `applicable`); a structural
-peel that descends a finite effect tree (`active_static`'s wrapper loop,
-`pick_trigger_mode`'s `MayDo`/`CapTargetsAt` peel); or an explicit counter
-(`bot.rs`'s three sim loops carry `fuel`, the coin-flip loop a
-`wins >= 64` backstop, `subgame.rs` `MAX_ACTIONS` + `stale < 8`, the
-`source_zone` sweep a `budget`). **The one that is not bounded by any of
-the three is the top-level game loop itself** — `play_one_game_traced`'s
-`while !g.is_game_over() && actions < max_actions && stale < 8` — and it is
-bounded by its own two counters, which is exactly what a *stall* is. That
-is the open item below, not a new one.
-
-**The eleventh filter was run 2026-08-11 and is the first of the eleven
-that found something** (`15ec11c1`). It looks at neither syntax nor a
-precondition but at *duplication*: **one invariant written out by hand in
-more than one place.** `stale < 8` — the "neither bot volunteered an
-accepted action for N consecutive rounds, give the game up" fixed point —
-appeared **six times across five files**: the ladder loop
-(`recommend.rs`), the recording loop (`selfplay.rs`), the subgame loop
-(`game/subgame.rs`, shipped CR 729 rules code), the MCTS rollout
-(`server/mcts.rs`), `bot_probe`, and a bot test — plus `bot_probe`'s
-`stale >= 8` report threshold. Nothing tied them together, so **the
-ladder's stall rate and the training actor's were never the same
-measurement**, and a change to one would silently not reach the others.
-All six read `recommend::STALE_ROUNDS` now; no value changed. The
-per-context *action* budgets sitting next to them (4,000 in the training
-actor, 20,000 in `bot_probe` and the golden traces, 50,000 in the bot
-test, `MAX_ACTIONS` in the subgame) are deliberately different and were
-left alone — the filter is for a fixed point over the bots, not for every
-literal.
-
-A *twelfth* filter is owed. The natural next one, from the same family:
-**a predicate two callers each re-derive**, rather than a constant two
-callers each spell out.
-
-**Stall rate — the top cause is now askable, which was the blocker**
-(`419d2ea6`). The measurement stands: the wider pools stall at **~0.1 %** —
-`all` seed 11 5/5,100, `cube` seed 41 2/2,400, `all` seed 7 0/5,100,
-`sealed` 0/3,600, `sos` 0/1,500; `--decks fixed` reads 0 and always has,
-which is what hid it. What was missing was not games but *attribution*: the
-loop ends on either `actions >= max_actions` or `stale >= STALE_ROUNDS` and
-reported neither. `recommend::StopReason` now carries which, `GameOutcome`
-and `RecordedGame` both hold it, `bot_ladder --bench` prints a
-`stalls_by cap / stuck / draw` line beside `stalls`, and
-`selfplay_train`'s `stats.jsonl` gains `stalls_capped` / `stalls_stuck`
-next to `stalls` — so a training run that starts stalling says why in the
-same file that says how fast it is going. **Next step is a measurement,
-not a change**: `--decks all --games 300 --seed 11 --bench` (= the 5,100
-games above) and read `stalls_by`. `cap` and `stuck` want opposite fixes —
-a budget too small for a grindy pool, against a genuine no-legal-move fixed
-point — so do not guess which before the line says. Not run this session:
-the release link was cut short by a rebase onto a concurrent session.
+**Stall rate — CLOSED 2026-08-14, and the answer is "nothing to fix".**
+The attribution the previous run built (`419d2ea6`: `recommend::StopReason`
+on `GameOutcome`/`RecordedGame`, a `stalls_by cap / stuck / draw` line on
+`bot_ladder --bench`, `stalls_capped` / `stalls_stuck` in
+`selfplay_train`'s `stats.jsonl`) was finally read. **`--bench --decks all
+--games 300 --seed 11 --threads 3` at `5174acd3`: 5,100 games, 6 stalls
+(0.12 %), `stalls_by cap 0 / stuck 0 / draw 6`.** All six are rules draws,
+so neither of the two fixes the entry was holding open applies — the action
+budget is not too small for the grindy pool, and there is no no-legal-move
+fixed point. `--decks fixed` reads 0 and always has. The instrumentation
+stays: it is what makes a *future* move in this rate askable in the same
+file that reports throughput. Re-open only if `cap` or `stuck` goes
+non-zero.
 
 ## Engine — Missing Mechanics
 

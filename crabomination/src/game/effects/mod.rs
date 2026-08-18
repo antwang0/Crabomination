@@ -10963,6 +10963,7 @@ impl GameState {
                             miracle: true,
                         });
                         card.granted_alt_cast_cost_eot = Some(cost.clone());
+                        self.step_bounded_may_play = true;
                     }
                 }
                 Ok(())

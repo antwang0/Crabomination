@@ -54,8 +54,8 @@ fn run_certify() {
     let cands = candidates();
     println!("certifying {} candidates (max depth {MAX_DEPTH})\n", cands.len());
     println!(
-        "{:<32} {:<9} {:<8} {:>6}  {:<8}  {}",
-        "id", "mechanic", "goal", "depth", "verdict", "prompt"
+        "{:<32} {:<9} {:<8} {:>6}  {:<8}  prompt",
+        "id", "mechanic", "goal", "depth", "verdict"
     );
     let mut kept = 0;
     for p in &cands {

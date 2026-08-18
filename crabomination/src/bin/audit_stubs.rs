@@ -6,7 +6,13 @@
 //!      nothing.
 //!   2. Non-creature, non-land permanent (Artifact/Enchantment/
 //!      Planeswalker) with no abilities of any kind and no keywords —
-//!      a blank permanent.
+//!      a blank permanent. "No abilities" means no *carrier field* set,
+//!      not just four empty ability vectors — see `def_has_any_ability`.
+//!
+//! **Reads 0 flagged as of 2026-08-14** over 21,795 unique cards. It read
+//! 59 before that, and all 59 were false positives from a stale
+//! `def_has_any_ability`. A non-empty run is now worth reading; before,
+//! the bucket was noise that hid whatever else landed in it.
 //!
 //! Run: `cargo run -p crabomination --bin audit_stubs`
 
@@ -16,12 +22,59 @@ use crabomination::audit::resolve_effect_is_empty;
 use crabomination::card::{CardDefinition, CardType};
 use crabomination::catalog::all_known_factories;
 
+/// Does this definition give a permanent *any* text?
+///
+/// The four ability vectors plus keywords are the obvious carriers, but a
+/// permanent's rules text can live in a dedicated field instead, and every
+/// one of those is a card that reads as blank if it is not listed here. As
+/// of 2026-08-14 that was **59 of the 59 cards this audit flagged** — every
+/// Saga, Room, Siege, Case, enters-as-copy and state-triggered enchantment
+/// in the catalog — which is a broken audit, not a catalog of stubs.
+///
+/// **When a new mechanic adds a carrier field to `CardDefinition`, add it
+/// here.** `blank_permanent_check_knows_every_carrier_field` in this file
+/// pins one representative per family; a new family with no entry shows up
+/// as noise in the BLANK PERMANENT bucket rather than as a test failure, so
+/// the bucket being non-empty is the signal to re-read this list.
 fn def_has_any_ability(def: &CardDefinition) -> bool {
     !def.triggered_abilities.is_empty()
         || !def.activated_abilities.is_empty()
         || !def.static_abilities.is_empty()
         || !def.loyalty_abilities.is_empty()
         || !def.keywords.is_empty()
+        // Chapter / door / mode / band carriers: the text is a list keyed by
+        // something other than "ability kind".
+        || !def.saga_chapters.is_empty()
+        || def.room.is_some()
+        || def.case.is_some()
+        || def.enter_modes.is_some()
+        || def.enters_as_choice.is_some()
+        || !def.level_bands.is_empty()
+        || !def.station.is_empty()
+        || !def.attraction_lights.is_empty()
+        // Replacement / as-enters text.
+        || def.enters_as_copy.is_some()
+        || def.as_enters_effect.is_some()
+        || def.as_transforms_effect.is_some()
+        || def.enters_with_counters.is_some()
+        || def.opening_hand.is_some()
+        // State-triggered ability (CR 603.8) — Veiled Crocodile, Hidden
+        // Predators wake into creatures without a `TriggeredAbility`.
+        || def.state_trigger.is_some()
+        // Self-sacrifice / countdown clocks.
+        || def.sacrifice_when.is_some()
+        || def.exile_countdown.is_some()
+        || def.sacrifice_when_you_control_no_other.is_some()
+        || def.sacrifice_and_burn_when_stolen.is_some()
+        // Characteristic-defining and attachment text.
+        || def.dynamic_pt.is_some()
+        || def.equipped_bonus.is_some()
+        || def.soulbond_bonus.is_some()
+        || def.copies_top_graveyard_creature
+        || def.max_counters_of_kind.is_some()
+        // A permanent whose other face carries the text.
+        || def.back_face.is_some()
+        || def.flip_face.is_some()
 }
 
 fn classify(def: &CardDefinition) -> Option<&'static str> {
@@ -94,5 +147,56 @@ fn main() {
             last = reason;
         }
         eprintln!("  {name}  [{types}]");
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crabomination::catalog;
+
+    /// A catalog card factory, named so the case table below stays readable.
+    type Factory = fn() -> CardDefinition;
+
+    /// One representative per carrier family. Each of these was in the
+    /// BLANK PERMANENT bucket before `def_has_any_ability` learned its
+    /// field, and each is a shipped card with real text — so a regression
+    /// here means the audit has started lying about the catalog again.
+    #[test]
+    fn blank_permanent_check_knows_every_carrier_field() {
+        let cases: &[(&str, Factory)] = &[
+            ("saga_chapters", catalog::history_of_benalia),
+            ("room", catalog::bottomless_pool_locker_room),
+            ("enter_modes", catalog::barrensteppe_siege),
+            ("enters_as_copy", catalog::copy_enchantment),
+            ("state_trigger", catalog::veiled_crocodile),
+        ];
+        for (field, factory) in cases {
+            let def = factory();
+            assert!(
+                def_has_any_ability(&def),
+                "{} carries its text in `{field}` and reads as blank",
+                def.name
+            );
+            assert_eq!(
+                classify(&def),
+                None,
+                "{} is flagged as a stub but is fully implemented",
+                def.name
+            );
+        }
+    }
+
+    /// The other half of the contract: a genuinely blank permanent is still
+    /// caught. Built by hand rather than taken from the catalog, so the test
+    /// keeps meaning if every real stub is fixed.
+    #[test]
+    fn a_permanent_with_no_text_at_all_is_still_flagged() {
+        let blank = CardDefinition {
+            name: "Test Blank",
+            card_types: vec![CardType::Enchantment],
+            ..Default::default()
+        };
+        assert_eq!(classify(&blank), Some("BLANK PERMANENT (no abilities)"));
     }
 }

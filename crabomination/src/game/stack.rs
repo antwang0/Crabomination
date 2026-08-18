@@ -357,8 +357,13 @@ impl GameState {
         self.step = next;
         // Per-step draw tallies reset at every step boundary (Orcish
         // Bowmasters' "first card drawn in the draw step" exemption).
-        for pl in &mut self.players {
-            pl.cards_drawn_this_step = 0;
+        // Only *write* when the tally is non-zero: `&mut` on a `Player`
+        // unshares the whole `PlayerData` (see `CowBox`), and a player draws
+        // in one step of the turn out of a dozen.
+        for i in 0..self.players.len() {
+            if self.players[i].cards_drawn_this_step != 0 {
+                self.players[i].cards_drawn_this_step = 0;
+            }
         }
         events.push(GameEvent::StepChanged(next));
 
@@ -378,10 +383,17 @@ impl GameState {
                 // CR 615 — "until your next turn" damage locks (Kiora's +1)
                 // end as the granting player's turn begins.
                 let ap = self.active_player_idx;
-                self.damage_locked_until_turn_of.retain(|(_, seat)| *seat != ap);
+                // Both fields are `ColdState` and both are empty on almost
+                // every untap step; `retain` and `iter_mut` each deep-copy the
+                // whole cold group, so ask with `&self` first.
+                if self.damage_locked_until_turn_of.iter().any(|(_, seat)| *seat == ap) {
+                    self.damage_locked_until_turn_of.retain(|(_, seat)| *seat != ap);
+                }
                 // Oracle en-Vec's mandate arms as its victim's turn begins.
-                for m in self.attack_mandates.iter_mut().filter(|m| m.seat == ap) {
-                    m.armed = true;
+                if self.attack_mandates.iter().any(|m| m.seat == ap && !m.armed) {
+                    for m in self.attack_mandates.iter_mut().filter(|m| m.seat == ap) {
+                        m.armed = true;
+                    }
                 }
                 // Arboria — the active player's "acted during their last turn"
                 // flag starts over as their new turn begins.
@@ -647,9 +659,12 @@ impl GameState {
                 self.resolution_causer = None;
                 self.spells_cast_last_turn = self.spells_cast_this_turn;
                 self.spells_cast_this_turn = 0;
-                self.last_cast_spell_colors.clear();
+                if !self.last_cast_spell_colors.is_empty() {
+                    self.last_cast_spell_colors.clear();
+                }
                 self.noncreature_spells_cast_this_turn = 0;
-                self.players[self.active_player_idx].opponent_cast_spell_since_your_turn = false;
+                self.opponent_cast_since_your_turn &=
+                    !crate::game::seat_bit(self.active_player_idx);
                 for pl in &mut self.players {
                     pl.spells_cast_this_game_turn = 0;
                     pl.sorceries_cast_this_turn = 0;
@@ -665,7 +680,9 @@ impl GameState {
                     // CR 603.7e — unused "your next creature spell this turn"
                     // riders expire with the turn.
                     pl.pending_creature_etb_counters.clear();
-                    pl.pending_creature_etb_keywords.clear();
+                    if !pl.pending_creature_etb_keywords.is_empty() {
+                        pl.pending_creature_etb_keywords.clear();
+                    }
                     // The Chain Veil's banked activations and the
                     // "did you activate a loyalty ability" flag are per-turn.
                     pl.extra_loyalty_activations = 0;
@@ -1867,7 +1884,16 @@ impl GameState {
                     }
                     // Cast-time ETB-counter riders stamped on the instance
                     // (Noctis's graveyard-cast finality counter).
-                    if let Some(c) = self.battlefield.iter_mut().find(|c| c.id == card_id) {
+                    // The presence check is `&self`: the field is a `CardCold`
+                    // one and empty on every ordinary ETB, so an unguarded
+                    // `iter_mut` here would deep-copy the permanent (and its
+                    // cold group) once per permanent entering.
+                    if self
+                        .battlefield
+                        .iter()
+                        .any(|c| c.id == card_id && !c.pending_etb_counters.is_empty())
+                        && let Some(c) = self.battlefield.iter_mut().find(|c| c.id == card_id)
+                    {
                         for (kind, n) in std::mem::take(&mut c.pending_etb_counters) {
                             counter_specs.push((kind, crate::effect::Value::Const(n as i32)));
                         }
@@ -2864,7 +2890,7 @@ impl GameState {
                 .any(|sa| matches!(sa.effect, StaticEffect::PermanentsDontUntap))
         }) {
             for c in self.battlefield.iter_mut().filter(|c| c.controller == p) {
-                c.summoning_sick = false;
+                c.clear_summoning_sickness();
             }
             return;
         }
@@ -3190,7 +3216,7 @@ impl GameState {
                     // clears per CR 506.4 (the turn-boundary tag, not the
                     // untap event).
                     if active {
-                        card.summoning_sick = false;
+                        card.clear_summoning_sickness();
                     }
                     continue;
                 }
@@ -3200,7 +3226,7 @@ impl GameState {
                 if card.skip_next_untap {
                     card.skip_next_untap = false;
                     if active {
-                        card.summoning_sick = false;
+                        card.clear_summoning_sickness();
                     }
                     continue;
                 }
@@ -3208,7 +3234,7 @@ impl GameState {
                 // still locks a creature.
                 if card.tapped && lock_sources.contains(&card.id) {
                     if active {
-                        card.summoning_sick = false;
+                        card.clear_summoning_sickness();
                     }
                     continue;
                 }
@@ -3218,7 +3244,7 @@ impl GameState {
                 // `attacked_last_turn` happens after this loop.
                 if card.attacked_own_turn && attack_locked.contains(&card.id) {
                     if active {
-                        card.summoning_sick = false;
+                        card.clear_summoning_sickness();
                     }
                     continue;
                 }
@@ -3226,7 +3252,7 @@ impl GameState {
                 // if it has a [kind] counter on it" (printed or granted).
                 if counter_locked.contains(&card.id) {
                     if active {
-                        card.summoning_sick = false;
+                        card.clear_summoning_sickness();
                     }
                     continue;
                 }
@@ -3235,7 +3261,7 @@ impl GameState {
                 // default `false` untaps normally.
                 if card.tapped && may_decline.contains(&card.id) {
                     if active {
-                        card.summoning_sick = false;
+                        card.clear_summoning_sickness();
                     }
                     continue;
                 }
@@ -3244,7 +3270,7 @@ impl GameState {
                 if let Some(src) = card.untap_locked_by {
                     if tapped_now_set.contains(&src) {
                         if active {
-                            card.summoning_sick = false;
+                            card.clear_summoning_sickness();
                         }
                         continue;
                     }
@@ -3253,7 +3279,7 @@ impl GameState {
                 if let Some(src) = card.untap_locked_while_present {
                     if on_battlefield.contains(&src) {
                         if active {
-                            card.summoning_sick = false;
+                            card.clear_summoning_sickness();
                         }
                         continue;
                     }
@@ -3267,7 +3293,7 @@ impl GameState {
                     let n = capped_untaps.entry((i, card.controller)).or_insert(0);
                     if *n >= untap_caps[i].1 {
                         if active {
-                            card.summoning_sick = false;
+                            card.clear_summoning_sickness();
                         }
                         continue;
                     }
@@ -3275,14 +3301,12 @@ impl GameState {
                 }
                 if card.counter_count(CounterType::Stun) > 0 {
                     card.remove_counters(CounterType::Stun, 1);
-                } else {
-                    if card.tapped {
-                        untapped_now.push(card.id);
-                    }
+                } else if card.tapped {
+                    untapped_now.push(card.id);
                     card.tapped = false;
                 }
                 if active {
-                    card.summoning_sick = false;
+                    card.clear_summoning_sickness();
                 }
             }
         }
@@ -3359,31 +3383,51 @@ impl GameState {
         // CR 701.38 — goad lasts "until your next turn." When the goader's
         // (= active player p's) turn begins, drop their goad on every
         // creature so the must-attack requirement lifts.
+        // Every write below is gated on the field not already holding the
+        // value: each is a `DerefMut` on a CoW `CardData`, i.e. a deep copy
+        // of the permanent, and on a quiet board none of these flags is set.
         for card in &mut self.battlefield {
-            card.goaded_by.retain(|&g| g != p);
+            if card.goaded_by.contains(&p) {
+                card.goaded_by.retain(|&g| g != p);
+            }
             // CR 701.35 — detain lasts "until your next turn"; lift it when the
             // detaining player's (= active player p's) turn begins.
             if card.detained_by == Some(p) {
                 card.detained_by = None;
             }
             // CR 702.142 — "attacked this turn" (Boast gate) resets each turn.
-            card.attacked_this_turn = false;
-            card.blocked_this_turn = false;
-            card.blocked_attackers_this_turn.clear();
+            if card.attacked_this_turn {
+                card.attacked_this_turn = false;
+            }
+            if card.blocked_this_turn {
+                card.blocked_this_turn = false;
+            }
+            if !card.blocked_attackers_this_turn.is_empty() {
+                card.blocked_attackers_this_turn.clear();
+            }
             if card.controller == p {
                 // "…during your last turn" rolls over as its controller's turn
                 // begins (Giant Turtle), and so does a pending Wall of Dust
                 // attack ban — armed on the previous turn, live on this one.
-                card.attacked_last_turn = card.attacked_own_turn;
-                card.attacked_own_turn = false;
-                card.attack_ban = match card.attack_ban {
-                    crate::card::AttackBan::Pending => crate::card::AttackBan::Active,
-                    _ => crate::card::AttackBan::None,
-                };
+                if card.attacked_last_turn != card.attacked_own_turn {
+                    card.attacked_last_turn = card.attacked_own_turn;
+                }
+                if card.attacked_own_turn {
+                    card.attacked_own_turn = false;
+                }
+                match card.attack_ban {
+                    crate::card::AttackBan::Pending => {
+                        card.attack_ban = crate::card::AttackBan::Active;
+                    }
+                    crate::card::AttackBan::None => {}
+                    _ => card.attack_ban = crate::card::AttackBan::None,
+                }
             }
         }
         self.players[p].lands_played_this_turn = 0;
-        self.players[p].graveyard_cast_types_this_turn.clear();
+        if !self.players[p].graveyard_cast_types_this_turn.is_empty() {
+            self.players[p].graveyard_cast_types_this_turn.clear();
+        }
         // "Protection from everything until your next turn" expires as that
         // player's turn begins (The One Ring).
         self.players[p].protected_from_everything = false;
@@ -3392,7 +3436,9 @@ impl GameState {
         self.turn_scoped_spell_taxes.retain(|t| t.controller != p);
         // "Opponents can't cast spells named X until your next turn"
         // (Academic Probation mode 0) expires as the lock owner's turn begins.
-        self.players[p].opponents_cant_cast_named.clear();
+        if !self.players[p].opponents_cant_cast_named.is_empty() {
+            self.players[p].opponents_cant_cast_named.clear();
+        }
         // Stagger damage-doubling windows expire as the registrant's turn
         // begins (Lightning, Army of One).
         self.staggered_damage_players.retain(|(_, reg)| *reg != p);
@@ -3423,6 +3469,10 @@ impl GameState {
         self.monarch_at_turn_start = self.monarch;
         // at the turn boundary (not just the active player) so a creature
         // cast on your turn reads damage dealt since this turn began.
+        //
+        // Collections in the [`PlayerCold`] group are cleared behind an
+        // `is_empty()` guard: `clear()` on an empty one still takes `&mut`,
+        // and that unshares the whole cold group for nothing.
         for pl in &mut self.players {
             pl.was_dealt_damage_this_turn = false;
             pl.damage_taken_this_turn = 0;
@@ -3439,15 +3489,21 @@ impl GameState {
             pl.prowl_any_type_this_turn = false;
             // Veil of Summer's "this turn" riders clear at the turn boundary
             // for every seat (CR 514.2 cleanup-scope grants).
-            pl.next_draw_replacements.clear();
+            if !pl.next_draw_replacements.is_empty() {
+                pl.next_draw_replacements.clear();
+            }
             // CR 901.9 — the planar-die roll surcharge resets each turn.
             pl.planar_die_rolls_this_turn = 0;
             pl.spells_uncounterable_this_turn = false;
             pl.creature_spells_uncounterable_this_turn = false;
-            pl.hexproof_from_colors_this_turn.clear();
+            if !pl.hexproof_from_colors_this_turn.is_empty() {
+                pl.hexproof_from_colors_this_turn.clear();
+            }
             pl.cast_blue_or_black_this_turn = false;
             pl.spell_casts_this_turn.clear();
-            pl.statics_ignored_this_turn.clear();
+            if !pl.statics_ignored_this_turn.is_empty() {
+                pl.statics_ignored_this_turn.clear();
+            }
             pl.cant_cast_noncreature_this_turn = false;
             pl.free_spells_from_hand_this_turn = false;
             pl.play_from_graveyard_this_turn = false;
@@ -3461,7 +3517,9 @@ impl GameState {
             pl.graveyard_ids_this_turn.clear();
             pl.descended_this_turn = false;
             pl.descend_count_this_turn = 0;
-            pl.discarded_this_turn.clear();
+            if !pl.discarded_this_turn.is_empty() {
+                pl.discarded_this_turn.clear();
+            }
             pl.permanents_sacrificed_this_turn = 0;
             pl.artifacts_sacrificed_this_turn = 0;
             // CR 702.179 — Freerunning's combat-damage gate is per-turn.
@@ -3470,11 +3528,15 @@ impl GameState {
             pl.double_your_source_damage_this_turn = false;
             // Turf Wound's land-play lock is turn-scoped.
             pl.cant_play_lands_this_turn = false;
-            pl.cant_cast_matching_this_turn.clear();
+            if !pl.cant_cast_matching_this_turn.is_empty() {
+                pl.cant_cast_matching_this_turn.clear();
+            }
             pl.cant_activate_nonmana_abilities_this_turn = false;
             pl.creature_spells_as_flash_this_turn = false;
             pl.cast_from_graveyard_top_this_turn = false;
-            pl.next_spell_uncounterable.clear();
+            if !pl.next_spell_uncounterable.is_empty() {
+                pl.next_spell_uncounterable.clear();
+            }
             // CR 700.13 — "committed a crime this turn" resets each turn.
             pl.committed_crime_this_turn = false;
             // CR 708 — "entered face down / turned face up this turn" resets.
@@ -3531,7 +3593,11 @@ impl GameState {
         // CR 609.4b — North Star's permission lasts the turn, for every seat
         // that was granted one.
         for pl in self.players.iter_mut() {
-            pl.may_spend_any_color_this_turn = false;
+            // Gated: the write unshares the seat's whole `PlayerData`, and
+            // the flag is false on every seat that was never granted one.
+            if pl.may_spend_any_color_this_turn {
+                pl.may_spend_any_color_this_turn = false;
+            }
         }
         // Reset per-spell-type tallies (instant/sorcery vs creature
         // casts). These refine `spells_cast_this_turn` for cards that
@@ -3692,17 +3758,47 @@ impl GameState {
         // Until-end-of-turn flashback grants (SOS "Flashback") live on
         // graveyard cards, which `clear_end_of_turn_effects` above doesn't
         // reach — expire them here so the window closes at end of turn.
-        for player in &mut self.players {
-            for card in &mut player.graveyard {
-                card.granted_flashback_eot = None;
-                card.granted_harmonize_eot = None;
+        //
+        // Every write below is a `DerefMut` on a CoW handle, and this runs
+        // once per player per turn over a graveyard that only grows: reaching
+        // a card through `Player` unshares the whole `PlayerData`, `&mut
+        // player.graveyard` unshares the zone vector, and the two `= None`s
+        // deep-copy a `CardData` that already held `None`. Decide from a
+        // shared borrow whether anything is actually set, and take the `&mut`
+        // only then — the same guard `clear_end_of_turn_effects` carries.
+        for pi in 0..self.players.len() {
+            let player = &self.players[pi];
+            let stale_grants = player.graveyard.iter().any(|c| {
+                c.granted_flashback_eot.is_some() || c.granted_harmonize_eot.is_some()
+            });
+            let stale_scalars = !player.turn_spell_discounts.is_empty()
+                || player.face_down_discount_this_turn != 0
+                || player.extra_plus_one_counters_this_turn != 0
+                || player.extra_etb_p1p1_counters_this_turn != 0;
+            if !stale_grants && !stale_scalars {
+                continue;
             }
-            // "[Filter] spells cost {N} less this turn" grants end (CR 514.2).
-            player.turn_spell_discounts.clear();
-            player.face_down_discount_this_turn = 0;
-            // "Until end of turn" +1/+1 counter bonus (Prairie Dog) ends.
-            player.extra_plus_one_counters_this_turn = 0;
-            player.extra_etb_p1p1_counters_this_turn = 0;
+            let player = &mut self.players[pi];
+            if stale_grants {
+                // Per card as well as per seat: one card carrying a grant
+                // must not deep-copy the fifteen beside it that do not.
+                for card in &mut player.graveyard {
+                    if card.granted_flashback_eot.is_some() {
+                        card.granted_flashback_eot = None;
+                    }
+                    if card.granted_harmonize_eot.is_some() {
+                        card.granted_harmonize_eot = None;
+                    }
+                }
+            }
+            if stale_scalars {
+                // "[Filter] spells cost {N} less this turn" grants end (CR 514.2).
+                player.turn_spell_discounts.clear();
+                player.face_down_discount_this_turn = 0;
+                // "Until end of turn" +1/+1 counter bonus (Prairie Dog) ends.
+                player.extra_plus_one_counters_this_turn = 0;
+                player.extra_etb_p1p1_counters_this_turn = 0;
+            }
         }
         // Expire UntilEndOfTurn continuous effects from the layer system
         self.expire_end_of_turn_effects();
@@ -3746,9 +3842,16 @@ impl GameState {
         self.upkeep_steps_this_turn = 0;
         self.graveyard_from_battlefield_this_turn.clear();
         // CR 514.2 — all damage marked on permanents is removed, phased-out
-        // ones included (they're treated as nonexistent, not as gone).
-        for card in self.battlefield.iter_mut().chain(self.phased_out.iter_mut()) {
-            card.damage = 0;
+        // ones included (they're treated as nonexistent, not as gone). Decided
+        // from a shared borrow: `iter_mut` unshares both zone vectors and the
+        // write deep-copies a `CardData` that already held 0, and most turns
+        // end with nothing marked anywhere.
+        if self.battlefield.iter().chain(self.phased_out.iter()).any(|c| c.damage != 0) {
+            for card in self.battlefield.iter_mut().chain(self.phased_out.iter_mut()) {
+                if card.damage != 0 {
+                    card.damage = 0;
+                }
+            }
         }
         // Clear the per-turn "permanents gained a counter this turn"
         // tracker (used by Fractal Tender's end-step trigger). Resetting
@@ -3853,7 +3956,9 @@ impl GameState {
         // CR 500.4 — "kept this turn" mana (Savage Ventmaw) expires now, so the
         // final empty of the turn actually removes it.
         for p in self.players.iter_mut() {
-            p.kept_mana_this_turn.empty();
+            if !p.kept_mana_this_turn.is_empty() {
+                p.kept_mana_this_turn.empty();
+            }
         }
         // Empty mana pools (Kruphix converts to colorless instead).
         self.empty_mana_pools();
@@ -3932,12 +4037,27 @@ impl GameState {
                 }
             }
         };
-        for c in self.battlefield.iter_mut() { sweep(c); }
-        for c in self.exile.iter_mut() { sweep(c); }
+        // Each `iter_mut` unshares the zone, and reaching one through
+        // `Player` unshares the whole `PlayerData` first — so every zone is
+        // gated on actually holding a permission. Almost none ever do; the
+        // libraries alone are ~35 cards a seat.
+        let pending = |c: &crate::card::CardInstance| c.may_play_until.is_some();
+        if self.battlefield.iter().any(pending) {
+            for c in self.battlefield.iter_mut() { sweep(c); }
+        }
+        if self.exile.iter().any(pending) {
+            for c in self.exile.iter_mut() { sweep(c); }
+        }
         for p in self.players.iter_mut() {
-            for c in p.hand.iter_mut() { sweep(c); }
-            for c in p.graveyard.iter_mut() { sweep(c); }
-            for c in p.library.iter_mut() { sweep(c); }
+            if p.hand.iter().any(pending) {
+                for c in p.hand.iter_mut() { sweep(c); }
+            }
+            if p.graveyard.iter().any(pending) {
+                for c in p.graveyard.iter_mut() { sweep(c); }
+            }
+            if p.library.iter().any(pending) {
+                for c in p.library.iter_mut() { sweep(c); }
+            }
         }
         self.give_priority_to_active();
     }
@@ -4227,6 +4347,67 @@ impl GameState {
         // battlefield source.
         s.supertype_grant |= self.players.iter().any(|p| p.ring_temptations >= 1);
         s
+    }
+
+    /// Can the CR 704.5f/g/h death sweep kill anything on this board, answered
+    /// without a layer read? `false` is authoritative; `true` only means the
+    /// sweep has to compute.
+    ///
+    /// Two board-global bails first. Zilortha (`lethal_by_power`) measures
+    /// lethal damage against *computed power*, about which the instance lower
+    /// bound below says nothing; and a live layer-7 toughness reduction
+    /// ([`GameState::pt_reduction_in_scope`]) is exactly the case where that
+    /// lower bound stops being one. With neither in scope every permanent's
+    /// computed toughness is at or above its instance toughness, so the
+    /// per-card leg decides.
+    fn creature_death_possible(&self, scan: &SbaBoardScan) -> bool {
+        if scan.lethal_by_power || self.pt_reduction_in_scope() {
+            return true;
+        }
+        // A permanent printed without the Creature type can only be killed
+        // once something animates it — the same condition
+        // `compute_battlefield_creatures` uses to decide whether to run the
+        // layer pass over the whole board. Asked before the walk, so a land
+        // never pays `card_death_possible`'s counter-map sum for an answer
+        // that is thrown away.
+        //
+        // **Three short-circuiting `any` walks, not one fused pass**, and that
+        // is measured, not assumed: folding all three questions into a single
+        // `battlefield.iter()` — the (-6) shape — read **+0.55 %** against
+        // this, and a first version that also moved the death legs inside read
+        // **+1.24 %**. See the Log block; the fusion device does not
+        // generalise to a walk whose per-card body is already this cheap.
+        let type_change = self.card_type_change_in_scope();
+        self.battlefield
+            .iter()
+            .any(|c| (type_change || c.definition.is_creature()) && self.card_death_possible(c))
+    }
+
+    /// The per-card half of [`creature_death_possible`](Self::creature_death_possible):
+    /// instance reads only, and sound only where no layer-7 reduction is in
+    /// scope (the caller checks). One leg per rule the death filter applies —
+    /// CR 704.5f toughness ≤ 0, CR 704.5g lethal damage, CR 704.5h deathtouch,
+    /// and Shriveling Rot's "any damage destroys" for the turn.
+    fn card_death_possible(&self, c: &crate::card::CardInstance) -> bool {
+        // `CardInstance::toughness` is seven lookups into the counter map, and
+        // this runs per permanent per priority pass. An undamaged, uncountered
+        // permanent with a positive printed toughness and no negative bonus
+        // cannot be on any of the four legs, and that is most of a board — so
+        // answer those from five field reads and never build the sum.
+        if c.damage == 0
+            && c.counters.is_empty()
+            && c.toughness_bonus >= 0
+            && c.perm_toughness_bonus >= 0
+            && c.definition.base_toughness() > 0
+        {
+            return false;
+        }
+        let t = c.toughness();
+        t <= 0
+            || (c.damage > 0
+                && ((c.damage as i32) >= t
+                    || c.dealt_deathtouch_damage
+                    || self.damaged_creatures_die_this_turn))
     }
 
     pub fn check_state_based_actions(&mut self) -> Vec<GameEvent> {
@@ -4831,8 +5012,20 @@ impl GameState {
         // creatures can be in `dead`, and the `find(id)` misses below already
         // fall back to the printed type, so the layer pass skips the
         // permanents no card-type-changing effect can animate.
-        let computed = self.compute_battlefield_creatures();
-        let dead: Vec<CardId> = self
+        //
+        // The whole block is behind `death_possible`, because SBA runs at
+        // every priority pass and a board where nothing can die is the common
+        // case (86.5 % of sweeps on the `fixed` bench). `computed` is read
+        // only by this filter and by the `for id in dead` loop below, so a
+        // gated-out sweep leaves both empty and does nothing — which is the
+        // answer the layer pass would have given.
+        let (computed, dead): (Vec<ComputedPermanent>, Vec<CardId>) = if !self
+            .creature_death_possible(&scan)
+        {
+            (Vec::new(), Vec::new())
+        } else {
+            let computed = self.compute_battlefield_creatures();
+            let dead = self
             .battlefield
             .iter()
             .filter(|c| {
@@ -4902,6 +5095,23 @@ impl GameState {
             })
             .map(|c| c.id)
             .collect();
+            (computed, dead)
+        };
+
+        // The gate's audit, run in the sound direction and only where the
+        // layer read already happened: every card the full filter kills has to
+        // be one the gate's own disjunction would have flagged. The per-card
+        // leg is board-independent, so checking it on the boards that do
+        // compute audits the boards that don't.
+        #[cfg(debug_assertions)]
+        for id in &dead {
+            let Some(c) = self.battlefield.iter().find(|c| c.id == *id) else { continue };
+            debug_assert!(
+                scan.lethal_by_power || self.pt_reduction_in_scope() || self.card_death_possible(c),
+                "the SBA death gate would have skipped {}, which died",
+                c.definition.name,
+            );
+        }
 
         // Set when Persist/Undying puts a permanent back: the only way the
         // death loop can *add* to the board, and so the only reason the

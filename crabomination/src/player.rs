@@ -70,12 +70,109 @@ pub enum LossCause {
     Other,
 }
 
+/// The rarely-written, heap-owning tail of a seat: registries only a handful
+/// of cards touch, plus the seat's name. Held behind one CoW handle so a
+/// `PlayerData` unshare — 24,852 of them per six bench games — bumps a
+/// refcount instead of cloning fifteen collections and a `String`.
+/// `Deref`/`DerefMut` keep every `player.field` access working unchanged.
+///
+/// Membership rule, same as [`crate::game::ColdState`]: a field belongs here
+/// only if it owns heap *and* is written rarely. A per-turn `clear()` counts
+/// as a write, so the reset loops guard theirs on `is_empty()`.
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct PlayerCold {
+    pub name: String,
+    /// CardIds of cards this player has designated as Commanders
+    /// (Phase J). Populated by `GameState::seat_commanders`. Read by
+    /// the Phase M 21-commander-damage SBA via
+    /// `GameState::is_commander`. Note this is *which cards are
+    /// commanders for this player*, independent of the command zone
+    /// — a commander on the battlefield (or any other zone) is
+    /// still a commander, so the entry survives zone changes.
+    #[serde(default)]
+    pub commanders: Vec<CardId>,
+    /// CR 603.7e — pending "your next creature spell this turn enters with these
+    /// keywords" riders (Summon: Brynhildr's "Gestalt Mode" haste). Applied to
+    /// the next creature spell's permanent as it enters and cleared at cleanup.
+    /// `#[serde(default)]`.
+    #[serde(default)]
+    pub pending_creature_etb_keywords: Vec<crate::card::Keyword>,
+    /// Permanent types already cast from the graveyard this turn under a
+    /// Muldrotha-style permission (one of each per turn). Reset at untap.
+    #[serde(default)]
+    pub graveyard_cast_types_this_turn: Vec<crate::card::CardType>,
+    /// "You can't cast [filter] spells this turn" (Cease-Fire). Cleared at the
+    /// turn boundary alongside `cant_play_lands_this_turn`.
+    #[serde(default)]
+    pub cant_cast_matching_this_turn: Vec<crate::card::SelectionRequirement>,
+    /// "The next [filter] spell you cast this turn can't be countered"
+    /// (Insist, Overmaster). Consumed by the next matching cast; cleared at
+    /// end of turn.
+    #[serde(default)]
+    pub next_spell_uncounterable: Vec<crate::card::SelectionRequirement>,
+    /// CR 702.187 — ids of cards this player discarded this turn, so Mayhem
+    /// can offer a graveyard cast only for cards actually discarded this turn.
+    /// Populated in `discard_card`; cleared in `do_untap`.
+    #[serde(default)]
+    pub discarded_this_turn: crate::fxhash::HashSet<crate::card::CardId>,
+    /// "[Filter] spells you cast this turn cost {N} less" grants
+    /// (`Effect::SpellsCostLessThisTurn` — Urza, Planeswalker's +2).
+    /// Each entry applies to every matching spell for the rest of the
+    /// turn; cleared in `finish_cleanup` (CR 514.2).
+    #[serde(default)]
+    pub turn_spell_discounts: Vec<(crate::card::SelectionRequirement, u32)>,
+    /// CR 614 — queued one-shot draw replacements: "the next time you would
+    /// draw a card this turn, [effect] instead" (the Onslaught Words cycle).
+    /// Each entry is `(source, effect, x)`; `draw_one` pops the front instead
+    /// of drawing, replaying the activation's X (Aladdin's Lamp). Cleared at
+    /// the turn boundary.
+    #[serde(default)]
+    pub next_draw_replacements: Vec<(crate::card::CardId, crate::effect::Effect, u32)>,
+    /// CR 702.50 — resolved Epic spells this player controls. Each entry is
+    /// copied onto the stack at the beginning of this player's upkeep for
+    /// the rest of the game; while non-empty the player can't cast spells.
+    #[serde(default)]
+    pub epic_spells: Vec<EpicSpell>,
+    /// CR 114 — emblems this player owns. Each carries a name (for
+    /// display) and a set of triggered abilities that fire from the
+    /// command zone; emblems never leave once created. The trigger
+    /// dispatcher walks every player's emblems alongside battlefield
+    /// permanents (event-keyed kinds in `dispatch_triggers_for_events`,
+    /// step-keyed kinds in `fire_step_triggers`). Created by
+    /// `Effect::CreateEmblem` (planeswalker ultimates). `#[serde(default)]`
+    /// for snapshot back-compat.
+    #[serde(default)]
+    pub emblems: Vec<Emblem>,
+    /// Colors this player (and their permanents) have hexproof from for the
+    /// rest of the turn (Veil of Summer's "you and permanents you control
+    /// gain hexproof from blue and from black until end of turn"). Set by
+    /// `Effect::GrantHexproofFromColorThisTurn`; reset for every player at
+    /// the active player's `do_untap`. Consulted by the targeting-legality
+    /// checks. `#[serde(default)]` for snapshot back-compat.
+    #[serde(default)]
+    pub hexproof_from_colors_this_turn: Vec<crate::mana::Color>,
+    /// Card names this player's opponents can't cast until this player's next
+    /// turn (Academic Probation mode 0 — "Opponents can't cast spells with the
+    /// chosen name until your next turn"). Reset for every player at the active
+    /// player's `do_untap`; consulted by the cast-legality gate.
+    #[serde(default)]
+    pub opponents_cant_cast_named: Vec<String>,
+    /// Sources whose static effect this player has bought their way out of for
+    /// the turn (`Effect::IgnoreStaticFromSourceThisTurn` — Damping Engine).
+    /// Cleared at cleanup.
+    #[serde(default)]
+    pub statics_ignored_this_turn: Vec<crate::card::CardId>,
+    /// CR 905.2b — the notes this seat took during the draft that produced
+    /// their pool. Empty in every non-drafted game.
+    #[serde(default)]
+    pub draft_notes: crate::draft::DraftNotes,
+}
+
 /// A seat's mutable state. Reached only through [`Player`], which owns it
 /// behind an `Arc` — see that type for why.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PlayerData {
     pub id: PlayerId,
-    pub name: String,
     pub life: i32,
     /// The life total this player began the game with (CR 103.4). Set by
     /// `apply_format`; drives "N more/less than your starting life total"
@@ -144,15 +241,6 @@ pub struct PlayerData {
     /// `#[serde(default)]` for snapshot back-compat.
     #[serde(default)]
     pub sideboard: CowBox<Vec<CardInstance>>,
-    /// CardIds of cards this player has designated as Commanders
-    /// (Phase J). Populated by `GameState::seat_commanders`. Read by
-    /// the Phase M 21-commander-damage SBA via
-    /// `GameState::is_commander`. Note this is *which cards are
-    /// commanders for this player*, independent of the command zone
-    /// — a commander on the battlefield (or any other zone) is
-    /// still a commander, so the entry survives zone changes.
-    #[serde(default)]
-    pub commanders: Vec<CardId>,
     /// How many lands this player has played on their current turn.
     pub lands_played_this_turn: u32,
     /// CR 605 — this player tapped a land for mana this turn (Desolation).
@@ -196,12 +284,6 @@ pub struct PlayerData {
     /// each turn" (CR 611.2). `#[serde(default)]` for snapshot back-compat.
     #[serde(default)]
     pub spells_cast_this_game_turn: u32,
-    /// Has an opponent of this seat cast a spell since this seat's last turn
-    /// ended? Set on every other seat when a spell is cast; cleared for the
-    /// active player at cleanup. Backs
-    /// `Predicate::OpponentCastSpellSinceYourTurn`.
-    #[serde(default)]
-    pub opponent_cast_spell_since_your_turn: bool,
     /// Like `spells_cast_this_game_turn` but counting only noncreature spells
     /// (Deafening Silence's "each player can't cast more than one noncreature
     /// spell each turn"). Reset for every player at Cleanup. `#[serde(default)]`.
@@ -324,12 +406,6 @@ pub struct PlayerData {
     /// expires with the turn. `#[serde(default)]`.
     #[serde(default)]
     pub pending_creature_etb_counters: Vec<(crate::card::CounterType, u32)>,
-    /// CR 603.7e — pending "your next creature spell this turn enters with these
-    /// keywords" riders (Summon: Brynhildr's "Gestalt Mode" haste). Applied to
-    /// the next creature spell's permanent as it enters and cleared at cleanup.
-    /// `#[serde(default)]`.
-    #[serde(default)]
-    pub pending_creature_etb_keywords: Vec<crate::card::Keyword>,
     /// CR 702.139 — true if a permanent left the battlefield under this
     /// player's control so far this turn (Revolt). Set from the battlefield-
     /// removal funnels keyed off the leaving permanent's controller; reset at
@@ -364,10 +440,6 @@ pub struct PlayerData {
     /// for snapshot back-compat.
     #[serde(default)]
     pub lost_life_this_turn: bool,
-    /// Permanent types already cast from the graveyard this turn under a
-    /// Muldrotha-style permission (one of each per turn). Reset at untap.
-    #[serde(default)]
-    pub graveyard_cast_types_this_turn: Vec<crate::card::CardType>,
     /// Total life lost this turn (CR 119.3). Bumped alongside
     /// `lost_life_this_turn`, reset with it. Powers `Value::LifeLostThisTurn`
     /// (Spinerock Knoll's "an opponent lost 7 or more life" gate).
@@ -428,10 +500,6 @@ pub struct PlayerData {
     /// Consulted by `can_player_play_land`, reset at the turn boundary.
     #[serde(default)]
     pub cant_play_lands_this_turn: bool,
-    /// "You can't cast [filter] spells this turn" (Cease-Fire). Cleared at the
-    /// turn boundary alongside `cant_play_lands_this_turn`.
-    #[serde(default)]
-    pub cant_cast_matching_this_turn: Vec<crate::card::SelectionRequirement>,
     /// Abeyance — "that player can't activate abilities that aren't mana
     /// abilities" this turn. Cleared at the turn boundary.
     #[serde(default)]
@@ -444,11 +512,6 @@ pub struct PlayerData {
     /// spells from the top of your graveyard". Cleared at the turn boundary.
     #[serde(default)]
     pub cast_from_graveyard_top_this_turn: bool,
-    /// "The next [filter] spell you cast this turn can't be countered"
-    /// (Insist, Overmaster). Consumed by the next matching cast; cleared at
-    /// end of turn.
-    #[serde(default)]
-    pub next_spell_uncounterable: Vec<crate::card::SelectionRequirement>,
     /// CR 700.13 — this player has committed a crime this turn (cast a spell or
     /// activated an ability targeting an opponent / their stuff). Set when a
     /// `CommittedCrime` event fires, reset at the turn boundary. Powers
@@ -584,11 +647,6 @@ pub struct PlayerData {
     /// Bumped in `discard_card`; reset in `do_untap`.
     #[serde(default)]
     pub cards_discarded_this_turn: u32,
-    /// CR 702.187 — ids of cards this player discarded this turn, so Mayhem
-    /// can offer a graveyard cast only for cards actually discarded this turn.
-    /// Populated in `discard_card`; cleared in `do_untap`.
-    #[serde(default)]
-    pub discarded_this_turn: crate::fxhash::HashSet<crate::card::CardId>,
     /// Number of permanents this player has sacrificed so far this turn.
     /// Bumped in `dispatch_triggers_for_events` per `PermanentSacrificed`
     /// event; reset in `do_untap`. Powers "if you sacrificed a permanent
@@ -603,12 +661,6 @@ pub struct PlayerData {
     /// Furtive Courier).
     #[serde(default)]
     pub artifacts_sacrificed_this_turn: u32,
-    /// "[Filter] spells you cast this turn cost {N} less" grants
-    /// (`Effect::SpellsCostLessThisTurn` — Urza, Planeswalker's +2).
-    /// Each entry applies to every matching spell for the rest of the
-    /// turn; cleared in `finish_cleanup` (CR 514.2).
-    #[serde(default)]
-    pub turn_spell_discounts: Vec<(crate::card::SelectionRequirement, u32)>,
     /// "Face-down spells you cast this turn cost {N} less to cast" (Goblin
     /// Maskmaker). Summed into `face_down_cast_cost`; cleared in
     /// `finish_cleanup` alongside `turn_spell_discounts`.
@@ -772,13 +824,6 @@ pub struct PlayerData {
     /// per draw step.
     #[serde(default)]
     pub skip_next_draw_step: u32,
-    /// CR 614 — queued one-shot draw replacements: "the next time you would
-    /// draw a card this turn, [effect] instead" (the Onslaught Words cycle).
-    /// Each entry is `(source, effect, x)`; `draw_one` pops the front instead
-    /// of drawing, replaying the activation's X (Aladdin's Lamp). Cleared at
-    /// the turn boundary.
-    #[serde(default)]
-    pub next_draw_replacements: Vec<(crate::card::CardId, crate::effect::Effect, u32)>,
     /// CR 506 — number of this player's upcoming combat phases to skip
     /// (Stonehorn Dignitary). Consumed when their turn reaches Begin Combat,
     /// jumping straight to the postcombat main. Defaults to 0 for snapshot
@@ -831,21 +876,6 @@ pub struct PlayerData {
     /// -7 coin-flip emblem). `#[serde(default)]` for snapshot back-compat.
     #[serde(default)]
     pub extra_turns: u32,
-    /// CR 702.50 — resolved Epic spells this player controls. Each entry is
-    /// copied onto the stack at the beginning of this player's upkeep for
-    /// the rest of the game; while non-empty the player can't cast spells.
-    #[serde(default)]
-    pub epic_spells: Vec<EpicSpell>,
-    /// CR 114 — emblems this player owns. Each carries a name (for
-    /// display) and a set of triggered abilities that fire from the
-    /// command zone; emblems never leave once created. The trigger
-    /// dispatcher walks every player's emblems alongside battlefield
-    /// permanents (event-keyed kinds in `dispatch_triggers_for_events`,
-    /// step-keyed kinds in `fire_step_triggers`). Created by
-    /// `Effect::CreateEmblem` (planeswalker ultimates). `#[serde(default)]`
-    /// for snapshot back-compat.
-    #[serde(default)]
-    pub emblems: Vec<Emblem>,
     /// True while a continuous effect on the battlefield prevents this
     /// player from gaining life (CR 119.7). Set by
     /// `StaticEffect::CannotGainLife` in `compute_battlefield`'s player-
@@ -882,14 +912,6 @@ pub struct PlayerData {
     /// (Domri, Anarch of Bolas's +1). Reset alongside it at untap.
     #[serde(default)]
     pub creature_spells_uncounterable_this_turn: bool,
-    /// Colors this player (and their permanents) have hexproof from for the
-    /// rest of the turn (Veil of Summer's "you and permanents you control
-    /// gain hexproof from blue and from black until end of turn"). Set by
-    /// `Effect::GrantHexproofFromColorThisTurn`; reset for every player at
-    /// the active player's `do_untap`. Consulted by the targeting-legality
-    /// checks. `#[serde(default)]` for snapshot back-compat.
-    #[serde(default)]
-    pub hexproof_from_colors_this_turn: Vec<crate::mana::Color>,
     /// True once this player has cast a blue or black spell this turn. Set
     /// in `finalize_cast`; reset for every player at the active player's
     /// `do_untap`. Powers Veil of Summer's "draw a card if an opponent has
@@ -926,21 +948,6 @@ pub struct PlayerData {
     /// turn (CR 614.6, own cards only).
     #[serde(default)]
     pub graveyard_bound_exiled_this_turn: bool,
-    /// Card names this player's opponents can't cast until this player's next
-    /// turn (Academic Probation mode 0 — "Opponents can't cast spells with the
-    /// chosen name until your next turn"). Reset for every player at the active
-    /// player's `do_untap`; consulted by the cast-legality gate.
-    #[serde(default)]
-    pub opponents_cant_cast_named: Vec<String>,
-    /// Sources whose static effect this player has bought their way out of for
-    /// the turn (`Effect::IgnoreStaticFromSourceThisTurn` — Damping Engine).
-    /// Cleared at cleanup.
-    #[serde(default)]
-    pub statics_ignored_this_turn: Vec<crate::card::CardId>,
-    /// CR 905.2b — the notes this seat took during the draft that produced
-    /// their pool. Empty in every non-drafted game.
-    #[serde(default)]
-    pub draft_notes: crate::draft::DraftNotes,
     /// When true, decisions this player would make suspend via
     /// `pending_decision` so a UI can respond; when false, the engine calls
     /// the installed `Decider` synchronously (bot / tests).
@@ -996,6 +1003,9 @@ pub struct PlayerData {
     /// the value directly via the Thumb card body).
     #[serde(default)]
     pub coin_flip_advantage: u32,
+    /// The rarely-written tail — see [`PlayerCold`].
+    #[serde(flatten)]
+    pub cold: crate::cow::CowBox<PlayerCold>,
 }
 
 /// A seat: a copy-on-write handle around [`PlayerData`].
@@ -1009,6 +1019,23 @@ pub struct PlayerData {
 /// one seat first. Same shape as [`crate::card::CardInstance`] one level down.
 #[derive(Clone)]
 pub struct Player(std::sync::Arc<PlayerData>);
+
+/// Field access on the cold group reads like a `PlayerData` field.
+impl std::ops::Deref for PlayerData {
+    type Target = PlayerCold;
+    #[inline]
+    fn deref(&self) -> &PlayerCold {
+        &self.cold
+    }
+}
+
+/// Writing any cold field unshares the whole group once — see [`PlayerCold`].
+impl std::ops::DerefMut for PlayerData {
+    #[inline]
+    fn deref_mut(&mut self) -> &mut PlayerCold {
+        &mut self.cold
+    }
+}
 
 impl std::ops::Deref for Player {
     type Target = PlayerData;
@@ -1057,7 +1084,10 @@ impl Player {
     pub fn new(idx: usize, name: impl Into<String>) -> Self {
         Self::from(PlayerData {
             id: PlayerId(idx),
-            name: name.into(),
+            cold: crate::cow::CowBox::new(PlayerCold {
+                name: name.into(),
+                ..Default::default()
+            }),
             life: 20,
             starting_life: 20,
             mana_pool: ManaPool::new(),
@@ -1073,18 +1103,14 @@ impl Player {
             attraction_deck: CowBox::default(),
             attraction_junkyard: CowBox::default(),
             planar_die_rolls_this_turn: 0,
-            opponent_cast_spell_since_your_turn: false,
             sideboard: CowBox::default(),
-            commanders: Vec::new(),
             lands_played_this_turn: 0,
             tapped_land_for_mana_this_turn: false,
             extra_land_plays: 0,
             cant_play_lands_this_turn: false,
-            cant_cast_matching_this_turn: Vec::new(),
             cant_activate_nonmana_abilities_this_turn: false,
             creature_spells_as_flash_this_turn: false,
             cast_from_graveyard_top_this_turn: false,
-            next_spell_uncounterable: Vec::new(),
             extra_loyalty_activations: 0,
             activated_loyalty_this_turn: false,
             spells_cast_this_turn: 0,
@@ -1112,14 +1138,12 @@ impl Player {
             dungeon: None,
             dungeons_completed: 0,
             pending_creature_etb_counters: Vec::new(),
-            pending_creature_etb_keywords: Vec::new(),
             permanent_left_battlefield_this_turn: false,
             was_dealt_damage_this_turn: false,
             damage_taken_this_turn: 0,
             combat_damage_taken_this_turn: 0,
             token_copy_replacement_used_this_turn: false,
             lost_life_this_turn: false,
-            graveyard_cast_types_this_turn: Vec::new(),
             play_from_top_this_turn: false,
             cast_from_library_top_this_turn: false,
             life_lost_this_turn: 0,
@@ -1154,10 +1178,8 @@ impl Player {
             extra_etb_p1p1_counters_this_turn: 0,
             pending_is_discounts: Vec::new(),
             pending_spell_discounts: Vec::new(),
-            turn_spell_discounts: Vec::new(),
             face_down_discount_this_turn: 0,
             cards_discarded_this_turn: 0,
-            discarded_this_turn: crate::fxhash::HashSet::default(),
             permanents_sacrificed_this_turn: 0,
             artifacts_sacrificed_this_turn: 0,
             creatures_cast_this_turn: 0,
@@ -1165,7 +1187,6 @@ impl Player {
             life_locked_this_turn: false,
             spells_uncounterable_this_turn: false,
             creature_spells_uncounterable_this_turn: false,
-            hexproof_from_colors_this_turn: Vec::new(),
             hexproof_until_next_turn: false,
             cast_blue_or_black_this_turn: false,
             spell_casts_this_turn: Vec::new(),
@@ -1173,9 +1194,6 @@ impl Player {
             free_spells_from_hand_this_turn: false,
             play_from_graveyard_this_turn: false,
             graveyard_bound_exiled_this_turn: false,
-            opponents_cant_cast_named: Vec::new(),
-            statics_ignored_this_turn: Vec::new(),
-            draft_notes: crate::draft::DraftNotes::default(),
             first_spell_tax_charges: 0,
             sorceries_as_flash: false,
             poison_counters: 0,
@@ -1204,7 +1222,6 @@ impl Player {
             skip_turns: 0,
             skip_next_untap_step: 0,
             skip_next_draw_step: 0,
-            next_draw_replacements: Vec::new(),
             skip_next_combat: 0,
             lands_dont_untap_next_untap: 0,
             lands_produce_color_this_turn: None,
@@ -1214,8 +1231,6 @@ impl Player {
             creatures_dont_untap_next_untap: 0,
             firebending_kept_red: 0,
             extra_turns: 0,
-            epic_spells: Vec::new(),
-            emblems: Vec::new(),
             cannot_gain_life: false,
             wants_ui: false,
             smart_tap: false,

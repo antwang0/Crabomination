@@ -5645,6 +5645,166 @@ pub enum AttackBan {
     Active,
 }
 
+/// CR 514.2 — the fields Cleanup wears off a permanent, written once.
+///
+/// `CardData::clear_end_of_turn_effects` writes them and
+/// `CardData::end_of_turn_effects_are_clear` guards that write; both expand
+/// from this list, so a field cannot reach one without the other. Before
+/// that they were two hand-kept enumerations of the same set, and a field
+/// added only to the clear would have made the guard skip the sweep while
+/// the effect still mattered — silently, and only on turns where nothing
+/// else on the permanent needed clearing.
+///
+/// A new until-end-of-turn field goes here, in one of the three shapes:
+/// `scalar` (compared with `!=`, assigned), `empty` (`is_empty` / `clear`),
+/// `none` (`is_some` / `= None`).
+macro_rules! eot_wear_off {
+    ($m:ident) => {
+        $m!(scalar power_bonus, 0);
+        $m!(scalar toughness_bonus, 0);
+        $m!(scalar loyalty_uses_this_turn, 0);
+        $m!(scalar loyalty_twice_this_turn, false);
+        $m!(empty once_per_turn_used);
+        $m!(empty granted_keywords_eot);
+        $m!(empty granted_keywords_eot_ts);
+        $m!(empty granted_activated_eot);
+        $m!(empty removed_keywords_eot);
+        $m!(none granted_flashback_eot);
+        $m!(none granted_harmonize_eot);
+        $m!(none granted_alt_cast_cost_eot);
+        $m!(none granted_cast_surcharge_eot);
+        $m!(scalar dealt_deathtouch_damage, false);
+        $m!(scalar dealt_damage_this_turn, false);
+        $m!(scalar damage_dealt_to_this_turn, 0);
+        $m!(empty damaged_by_this_turn);
+        $m!(empty damage_by_source_name_this_turn);
+        $m!(empty damage_by_source_this_turn);
+        // CR 701.15g — unused regeneration shields expire at end of turn,
+        // and so does the "can't be regenerated this turn" lock.
+        $m!(scalar regeneration_shields, 0);
+        $m!(none regeneration_control_grant);
+        $m!(scalar cant_regenerate_this_turn, false);
+        $m!(scalar damage_prevention_off_eot, false);
+        // CR 702.171 — "saddled until end of turn" ends here.
+        $m!(scalar saddled, false);
+        $m!(empty saddled_by);
+        $m!(empty crewed_by);
+    };
+}
+
+/// The rarely-written, heap-owning tail of a card object: registries and
+/// cast-time riders only a handful of cards touch. Held behind one CoW
+/// handle so a `CardData` unshare — the deep copy every zone write pays —
+/// bumps a refcount instead of cloning twenty-two collections that are
+/// empty on essentially every card. `Deref`/`DerefMut` keep every
+/// `card.field` access working unchanged.
+///
+/// Membership rule, same as [`crate::cow::CowBox`]'s other groups: a field
+/// belongs here only if it owns heap *and* is written rarely. A per-turn or
+/// per-zone-change `clear()` counts as a write, so the sweeps that clear
+/// these guard theirs on `is_empty()`.
+#[derive(Debug, Clone, Default)]
+pub struct CardCold {
+    /// Activated abilities granted to this specific permanent by resolved
+    /// effects (`Effect::GainActivatedAbility` — Urza's Saga chapters I/II).
+    /// Cleared when the permanent leaves the battlefield (a new object,
+    /// CR 400.7). Surfaced after the printed abilities in both
+    /// `activate_ability` index space and the client view.
+    pub granted_activated_abilities: Vec<ActivatedAbility>,
+    /// "Until end of turn" sibling of `granted_activated_abilities` — cleared
+    /// by `clear_end_of_turn_effects` (Lightning Volley, Retraction Helix).
+    pub granted_activated_eot: Vec<ActivatedAbility>,
+    /// CR 601 — per-color breakdown of the mana spent paying this spell's
+    /// cost, stamped at cast time. Read by `Predicate::ManaSpentOfColorAtLeast`
+    /// (Adamant, CR 702.137) and `Predicate::CastSpellNoColoredManaSpent`
+    /// (Void Mirror). Empty for free/uncast objects.
+    pub cast_mana_spent_by_color: Vec<(crate::mana::Color, u32)>,
+    /// One-shot cast-time rider: when this spell resolves as a permanent it
+    /// enters with these counters (Noctis's graveyard-cast finality counter).
+    /// Drained at ETB by the stack resolver; empty for ordinary casts.
+    pub pending_etb_counters: Vec<(CounterType, u32)>,
+    /// CR 702.172 — Spree mode indices chosen at cast time (empty for
+    /// non-Spree spells). Stamped by `GameAction::CastSpellSpree` and read at
+    /// resolution by `Effect::Spree`.
+    pub spree_modes: Vec<u8>,
+    /// CR 702.47 — rules text gained by splicing cards onto this spell,
+    /// resolved after the main effect (each entry reads its target from the
+    /// matching `additional_targets` slot). Cleared when the spell leaves
+    /// the stack (702.47e).
+    pub spliced_effects: Vec<Effect>,
+    /// Names of the cards spliced onto this spell, parallel to
+    /// `spliced_effects` — Minamo's Meddling discards by name. Cleared with
+    /// them when the spell leaves the stack.
+    pub spliced_names: Vec<String>,
+    /// Modes this permanent has already picked for a "choose one that hasn't
+    /// been chosen" ability (Captive Audience). Persists across turns.
+    pub modes_chosen: Vec<u8>,
+    /// Indices of activated abilities flagged `once_per_turn` that have
+    /// already been used this turn. Cleared at the start of each turn by
+    /// `clean_per_turn_state`. Empty for the common case (most abilities
+    /// don't have the flag set).
+    pub once_per_turn_used: Vec<usize>,
+    /// CR 702.177 — indices of `exhaust` activated abilities already used.
+    /// Unlike `once_per_turn_used`, this is **never** cleared (once per game).
+    pub exhausted_abilities: Vec<usize>,
+    /// Keywords removed until end of turn via `Effect::LoseKeyword`
+    /// (Shadowspear's "creatures your opponents control lose hexproof and
+    /// indestructible until end of turn"). Removal beats printed/granted/
+    /// counter sources for the turn; cleared at Cleanup.
+    pub removed_keywords_eot: Vec<Keyword>,
+    /// Keywords removed indefinitely (`Duration::Permanent`) — Ageless
+    /// Sentinels' "it loses defender". Survives cleanup.
+    pub removed_keywords: Vec<Keyword>,
+    /// CR 706.8a — die results "stored" on this permanent (Centaur of
+    /// Attention). Every stored result on a card in the wild is a d6, so only
+    /// the value is noted; `Effect::RerollStoredResults` rolls the same kind
+    /// again.
+    pub stored_die_results: Vec<u8>,
+    /// CR 201.3 — a card name chosen as this permanent entered (Pithing
+    /// Needle, Phyrexian Revoker "as this enters, choose a card name").
+    /// Persistent state read by `activate_ability` to suppress non-mana
+    /// activated abilities of sources with the chosen name. `None` for the
+    /// vast majority of permanents that never name a card.
+    pub named_card: Option<String>,
+    /// CR 702.106b double agenda — the second of two secretly chosen names
+    /// (Summoner's Bond). `None` for every single-name namer.
+    pub named_card_2: Option<String>,
+    /// CR 702.32b — which of the definition's `kicker_options` were paid for
+    /// this cast (Anavolver kicked with {1}{U} only). Empty for every other
+    /// spell.
+    pub kicked_options: Vec<u8>,
+    /// Two colors chosen as this permanent entered (Tablet of the Guilds).
+    /// Empty until an `Effect::ChooseTwoColorsForSource` stamps them.
+    pub chosen_colors: Vec<crate::mana::Color>,
+    /// CR 701.38 — players who have goaded this creature. A goaded creature
+    /// attacks each combat if able and attacks a player other than a goader
+    /// if able, until that goader's next turn. Each goader's entry is
+    /// cleared when their turn begins (`do_untap`). Empty for the vast
+    /// majority of creatures. Round-trips through `CardInstanceWire` with a
+    /// `#[serde(default)]` for snapshot back-compat.
+    pub goaded_by: Vec<usize>,
+    /// CR 702.171 — the creatures that have saddled this permanent this turn
+    /// (the riders tapped by a Saddle activation). Read by
+    /// `Effect::ExileAndReturnSelfWithSaddler` for "exile it and up to one
+    /// creature that saddled it this turn" (Fortune, Loyal Steed). Cleared with
+    /// `saddled`.
+    pub saddled_by: Vec<CardId>,
+    /// CR 702.9 — the creatures that have crewed this Vehicle this turn. Read by
+    /// `Value::SourceCrewerCount` for "for each creature that crewed it this
+    /// turn" (Luxurious Locomotive). Cleared at end of turn / on leaving play.
+    pub crewed_by: Vec<CardId>,
+    /// CR 712.16 — the two component cards of a melded permanent. Non-empty
+    /// only on a melded object; when it leaves the battlefield, the parts go
+    /// to that zone instead and the melded shell ceases to exist.
+    pub meld_parts: Vec<CardInstance>,
+    /// CR 702.140 — the component cards of a merged (mutated) permanent,
+    /// top-to-bottom. Non-empty only on a mutate pile; `definition` is the
+    /// synthesized union (top card's characteristics + every card's
+    /// abilities). When the pile leaves the battlefield each component goes
+    /// to that zone as its own card.
+    pub mutate_stack: Vec<CardInstance>,
+}
+
 /// A card's mutable per-object state. Reached only through
 /// [`CardInstance`], which owns it behind an `Arc` — see that type for why.
 #[derive(Debug, Clone)]
@@ -5683,15 +5843,6 @@ pub struct CardData {
     /// creature leaves the battlefield (SBA in `stack.rs`).
     pub soulbond_partner: Option<CardId>,
     pub kicked: bool,
-    /// Activated abilities granted to this specific permanent by resolved
-    /// effects (`Effect::GainActivatedAbility` — Urza's Saga chapters I/II).
-    /// Cleared when the permanent leaves the battlefield (a new object,
-    /// CR 400.7). Surfaced after the printed abilities in both
-    /// `activate_ability` index space and the client view.
-    pub granted_activated_abilities: Vec<ActivatedAbility>,
-    /// "Until end of turn" sibling of `granted_activated_abilities` — cleared
-    /// by `clear_end_of_turn_effects` (Lightning Volley, Retraction Helix).
-    pub granted_activated_eot: Vec<ActivatedAbility>,
     /// CR 702.33c — how many times this spell's Multikicker cost was paid.
     /// Persists onto the permanent so `Value::TimesKicked` can read it
     /// (Everflowing Chalice's enters-with-counters). Defaults to 0.
@@ -5710,32 +5861,10 @@ pub struct CardData {
     /// the stack (`Value::XFromCost`, `ManaValueAtMostXFromCost` — Dune
     /// Drifter's "return an artifact/creature card with MV ≤ X"). Defaults to 0.
     pub cast_x_value: u32,
-    /// CR 601 — per-color breakdown of the mana spent paying this spell's
-    /// cost, stamped at cast time. Read by `Predicate::ManaSpentOfColorAtLeast`
-    /// (Adamant, CR 702.137) and `Predicate::CastSpellNoColoredManaSpent`
-    /// (Void Mirror). Empty for free/uncast objects.
-    pub cast_mana_spent_by_color: Vec<(crate::mana::Color, u32)>,
     /// CR 702.176 — true if this spell was cast paying its optional Bargain
     /// cost (sacrifice an artifact, enchantment, or token). Read at resolution
     /// by `Predicate::SpellWasBargained`.
     pub bargained: bool,
-    /// One-shot cast-time rider: when this spell resolves as a permanent it
-    /// enters with these counters (Noctis's graveyard-cast finality counter).
-    /// Drained at ETB by the stack resolver; empty for ordinary casts.
-    pub pending_etb_counters: Vec<(CounterType, u32)>,
-    /// CR 702.172 — Spree mode indices chosen at cast time (empty for
-    /// non-Spree spells). Stamped by `GameAction::CastSpellSpree` and read at
-    /// resolution by `Effect::Spree`.
-    pub spree_modes: Vec<u8>,
-    /// CR 702.47 — rules text gained by splicing cards onto this spell,
-    /// resolved after the main effect (each entry reads its target from the
-    /// matching `additional_targets` slot). Cleared when the spell leaves
-    /// the stack (702.47e).
-    pub spliced_effects: Vec<Effect>,
-    /// Names of the cards spliced onto this spell, parallel to
-    /// `spliced_effects` — Minamo's Meddling discards by name. Cleared with
-    /// them when the spell leaves the stack.
-    pub spliced_names: Vec<String>,
     /// CR 702.27 — true if this spell was cast paying its optional Buyback
     /// cost. On resolution the resolver returns the card to its owner's
     /// hand instead of the graveyard.
@@ -5895,9 +6024,6 @@ pub struct CardData {
     /// "whenever you cast a spell from your library" payoffs (Melek, Izzet
     /// Paragon). Cleared when the card leaves the stack.
     pub cast_from_library: bool,
-    /// Modes this permanent has already picked for a "choose one that hasn't
-    /// been chosen" ability (Captive Audience). Persists across turns.
-    pub modes_chosen: Vec<u8>,
     /// One-shot permission to cast this MDFC's **back face from the
     /// graveyard** (Pestilent Cauldron's "sacrifice, then cast Restorative
     /// Burst transformed"). Set by `Effect::GrantCastBackFromGraveyard` once
@@ -5959,14 +6085,6 @@ pub struct CardData {
     /// stamps the life lost). `Value::RememberedAmountOfSource` reads it —
     /// "gain life equal to the life you lost" (Soulgorger Orgg).
     pub remembered_amount: Option<i32>,
-    /// Indices of activated abilities flagged `once_per_turn` that have
-    /// already been used this turn. Cleared at the start of each turn by
-    /// `clean_per_turn_state`. Empty for the common case (most abilities
-    /// don't have the flag set).
-    pub once_per_turn_used: Vec<usize>,
-    /// CR 702.177 — indices of `exhaust` activated abilities already used.
-    /// Unlike `once_per_turn_used`, this is **never** cleared (once per game).
-    pub exhausted_abilities: Vec<usize>,
     /// Keywords granted with `Duration::EndOfTurn` via `Effect::GrantKeyword`.
     /// Cleared at the Cleanup step alongside `power_bonus`/`toughness_bonus`.
     /// Stored separately from `definition.keywords` so the printed-Oracle
@@ -5980,14 +6098,6 @@ pub struct CardData {
     /// snapshots) default to 0 — ordered before every tracked effect,
     /// matching the old pre-merge behavior.
     pub granted_keywords_eot_ts: Vec<u64>,
-    /// Keywords removed until end of turn via `Effect::LoseKeyword`
-    /// (Shadowspear's "creatures your opponents control lose hexproof and
-    /// indestructible until end of turn"). Removal beats printed/granted/
-    /// counter sources for the turn; cleared at Cleanup.
-    pub removed_keywords_eot: Vec<Keyword>,
-    /// Keywords removed indefinitely (`Duration::Permanent`) — Ageless
-    /// Sentinels' "it loses defender". Survives cleanup.
-    pub removed_keywords: Vec<Keyword>,
     /// CR 122.1b — Keyword counters. Each entry maps a keyword to its
     /// count; the host gets the keyword while one or more such counters
     /// are on it. Applied as a layer-6 keyword addition during
@@ -6121,11 +6231,6 @@ pub struct CardData {
     /// creature"). Unlike `exiled_by`, the card never returns — this is a
     /// pure association used by counting effects. `None` for ordinary exile.
     pub exiled_with: Option<CardId>,
-    /// CR 706.8a — die results "stored" on this permanent (Centaur of
-    /// Attention). Every stored result on a card in the wild is a d6, so only
-    /// the value is noted; `Effect::RerollStoredResults` rolls the same kind
-    /// again.
-    pub stored_die_results: Vec<u8>,
     /// CR 702.46 — Cipher. While this card is exiled "encoded on" a creature,
     /// `encoded_on` holds that creature's id. Whenever the encoded creature
     /// deals combat damage to a player, the controller may cast a free copy of
@@ -6157,34 +6262,11 @@ pub struct CardData {
     /// [filter]" (Mavinda, Students' Advocate's {8}-unless-your-creature).
     /// Shares `may_play_until`'s lifetime.
     pub granted_cast_surcharge_eot: Option<(crate::mana::ManaCost, SelectionRequirement)>,
-    /// CR 201.3 — a card name chosen as this permanent entered (Pithing
-    /// Needle, Phyrexian Revoker "as this enters, choose a card name").
-    /// Persistent state read by `activate_ability` to suppress non-mana
-    /// activated abilities of sources with the chosen name. `None` for the
-    /// vast majority of permanents that never name a card.
-    pub named_card: Option<String>,
-    /// CR 702.106b double agenda — the second of two secretly chosen names
-    /// (Summoner's Bond). `None` for every single-name namer.
-    pub named_card_2: Option<String>,
     /// A color chosen as this permanent entered (CR 614/107.4 — Coldsteel
     /// Heart, choose-a-color mana rocks). Read by `ManaPayload::
     /// ChosenColorOfSource` so a `{T}: Add the chosen color` ability taps for
     /// it. `None` until an `Effect::ChooseColorForSelf` stamps it.
     pub chosen_color: Option<crate::mana::Color>,
-    /// CR 702.32b — which of the definition's `kicker_options` were paid for
-    /// this cast (Anavolver kicked with {1}{U} only). Empty for every other
-    /// spell.
-    pub kicked_options: Vec<u8>,
-    /// Two colors chosen as this permanent entered (Tablet of the Guilds).
-    /// Empty until an `Effect::ChooseTwoColorsForSource` stamps them.
-    pub chosen_colors: Vec<crate::mana::Color>,
-    /// CR 701.38 — players who have goaded this creature. A goaded creature
-    /// attacks each combat if able and attacks a player other than a goader
-    /// if able, until that goader's next turn. Each goader's entry is
-    /// cleared when their turn begins (`do_untap`). Empty for the vast
-    /// majority of creatures. Round-trips through `CardInstanceWire` with a
-    /// `#[serde(default)]` for snapshot back-compat.
-    pub goaded_by: Vec<usize>,
     /// CR 701.31 — true once this permanent has become monstrous. Persistent
     /// (never cleared); gates the once-only `Effect::Monstrosity` counter add
     /// and any "as long as ~ is monstrous" state. Round-trips through
@@ -6226,16 +6308,6 @@ pub struct CardData {
     /// to gate "whenever this attacks while saddled" triggers. Cleared by
     /// `clear_end_of_turn_effects`.
     pub saddled: bool,
-    /// CR 702.171 — the creatures that have saddled this permanent this turn
-    /// (the riders tapped by a Saddle activation). Read by
-    /// `Effect::ExileAndReturnSelfWithSaddler` for "exile it and up to one
-    /// creature that saddled it this turn" (Fortune, Loyal Steed). Cleared with
-    /// `saddled`.
-    pub saddled_by: Vec<CardId>,
-    /// CR 702.9 — the creatures that have crewed this Vehicle this turn. Read by
-    /// `Value::SourceCrewerCount` for "for each creature that crewed it this
-    /// turn" (Luxurious Locomotive). Cleared at end of turn / on leaving play.
-    pub crewed_by: Vec<CardId>,
     /// CR 709 — which half of a split card this spell is being cast as while
     /// on the stack: `None`/`0` = left (default cast path), `1` = right
     /// (`CastSplitRight`), `2` = fused (`CastSplitFused`). Drives effect
@@ -6263,16 +6335,6 @@ pub struct CardData {
     /// planeswalker. Consumed (and cleared) when it enters, dropping the
     /// starting loyalty by this amount. 0 otherwise.
     pub compleated_life_paid: u32,
-    /// CR 712.16 — the two component cards of a melded permanent. Non-empty
-    /// only on a melded object; when it leaves the battlefield, the parts go
-    /// to that zone instead and the melded shell ceases to exist.
-    pub meld_parts: Vec<CardInstance>,
-    /// CR 702.140 — the component cards of a merged (mutated) permanent,
-    /// top-to-bottom. Non-empty only on a mutate pile; `definition` is the
-    /// synthesized union (top card's characteristics + every card's
-    /// abilities). When the pile leaves the battlefield each component goes
-    /// to that zone as its own card.
-    pub mutate_stack: Vec<CardInstance>,
     /// Set on a mutate spell on the stack: `(host id, on_top)`. On resolution
     /// the spell merges onto the host instead of entering as a new creature.
     pub mutate_onto: Option<(CardId, bool)>,
@@ -6289,6 +6351,25 @@ pub struct CardData {
     /// next-end-step sacrifice. `None` for ordinary cards/copies.
     /// Round-trips via `CardInstanceWire` with `#[serde(default)]`.
     pub resolve_riders: Option<(bool, bool)>,
+    /// The rarely-written tail — see [`CardCold`].
+    pub cold: crate::cow::CowBox<CardCold>,
+}
+
+/// Field access on the cold group reads like a `CardData` field.
+impl std::ops::Deref for CardData {
+    type Target = CardCold;
+    #[inline]
+    fn deref(&self) -> &CardCold {
+        &self.cold
+    }
+}
+
+/// Writing any cold field unshares the whole group once — see [`CardCold`].
+impl std::ops::DerefMut for CardData {
+    #[inline]
+    fn deref_mut(&mut self) -> &mut CardCold {
+        &mut self.cold
+    }
 }
 
 /// A card object: a copy-on-write handle around [`CardData`].
@@ -6391,18 +6472,11 @@ impl CardInstance {
             attached_to_player: None,
             soulbond_partner: None,
             kicked: false,
-            granted_activated_abilities: Vec::new(),
-            granted_activated_eot: Vec::new(),
             kick_count: 0,
             squad_count: 0,
             cast_mana_spent: 0,
             cast_x_value: 0,
-            cast_mana_spent_by_color: Vec::new(),
             bargained: false,
-            pending_etb_counters: Vec::new(),
-            spree_modes: Vec::new(),
-            spliced_effects: Vec::new(),
-            spliced_names: Vec::new(),
             bought_back: false,
             entwined: false,
             gift_promised: false,
@@ -6441,7 +6515,6 @@ impl CardInstance {
             cast_collected_evidence: false,
             cast_from_exile: false,
             cast_from_library: false,
-            modes_chosen: Vec::new(),
             may_cast_back_from_graveyard: false,
             chosen_creature_type: None,
             chosen_land_type: None,
@@ -6456,12 +6529,8 @@ impl CardInstance {
             chosen_permanent: None,
             chosen_player: None,
             remembered_amount: None,
-            once_per_turn_used: Vec::new(),
-            exhausted_abilities: Vec::new(),
             granted_keywords_eot: Vec::new(),
             granted_keywords_eot_ts: Vec::new(),
-            removed_keywords_eot: Vec::new(),
-            removed_keywords: Vec::new(),
             keyword_counters: KeywordCounters::default(),
             may_play_until: None,
             dealt_deathtouch_damage: false,
@@ -6490,18 +6559,12 @@ impl CardInstance {
             must_block: None,
             exiled_by: None,
             exiled_with: None,
-            stored_die_results: Vec::new(),
             encoded_on: None,
             granted_flashback_eot: None,
             granted_harmonize_eot: None,
             granted_alt_cast_cost_eot: None,
             granted_cast_surcharge_eot: None,
-            named_card: None,
-            named_card_2: None,
             chosen_color: None,
-            kicked_options: Vec::new(),
-            chosen_colors: Vec::new(),
-            goaded_by: Vec::new(),
             monstrous: false,
             sector: None,
             renowned: false,
@@ -6511,18 +6574,15 @@ impl CardInstance {
             omen_casting: false,
             cast_as_prototype: false,
             saddled: false,
-            saddled_by: Vec::new(),
-            crewed_by: Vec::new(),
             split_cast: None,
             entered_turn: None,
             battlefield_timestamp: 0,
             detained_by: None,
             compleated_life_paid: 0,
-            meld_parts: Vec::new(),
-            mutate_stack: Vec::new(),
             mutate_onto: None,
             protected_by: None,
             resolve_riders: None,
+            cold: crate::cow::CowBox::default(),
         }
         .into()
     }
@@ -6986,73 +7046,65 @@ impl CardInstance {
     ///
     /// Read through `Deref`, so the cleanup sweep never takes a `&mut` — and
     /// never unshares the CoW `Arc` — for a permanent with nothing to clear,
-    /// which is most of them on most turns. **Every field the clear writes
-    /// must appear here**, or it is skipped while it still matters.
+    /// which is most of them on most turns. The guard and the clear are both
+    /// expanded from [`eot_wear_off`], so a field can't reach one without the
+    /// other; adding one to the clear alone would skip the sweep while it
+    /// still mattered.
     fn end_of_turn_effects_are_clear(&self) -> bool {
-        self.power_bonus == 0
-            && self.toughness_bonus == 0
-            && self.loyalty_uses_this_turn == 0
-            && !self.loyalty_twice_this_turn
-            && self.once_per_turn_used.is_empty()
-            && self.granted_keywords_eot.is_empty()
-            && self.granted_keywords_eot_ts.is_empty()
-            && self.granted_activated_eot.is_empty()
-            && self.removed_keywords_eot.is_empty()
-            && self.granted_flashback_eot.is_none()
-            && self.granted_harmonize_eot.is_none()
-            && self.granted_alt_cast_cost_eot.is_none()
-            && self.granted_cast_surcharge_eot.is_none()
-            && !self.dealt_deathtouch_damage
-            && !self.dealt_damage_this_turn
-            && self.damage_dealt_to_this_turn == 0
-            && self.damaged_by_this_turn.is_empty()
-            && self.damage_by_source_name_this_turn.is_empty()
-            && self.damage_by_source_this_turn.is_empty()
-            && self.regeneration_shields == 0
-            && self.regeneration_control_grant.is_none()
-            && !self.cant_regenerate_this_turn
-            && !self.damage_prevention_off_eot
-            && !self.saddled
-            && self.saddled_by.is_empty()
-            && self.crewed_by.is_empty()
+        macro_rules! probe {
+            (scalar $f:ident, $v:expr) => {
+                if self.$f != $v {
+                    return false;
+                }
+            };
+            (empty $f:ident) => {
+                if !self.$f.is_empty() {
+                    return false;
+                }
+            };
+            (none $f:ident) => {
+                if self.$f.is_some() {
+                    return false;
+                }
+            };
+        }
+        eot_wear_off!(probe);
+        true
     }
 
+    /// CR 302.1 / 506.4 — drop summoning sickness at the turn boundary.
+    ///
+    /// Guarded for the same reason [`clear_end_of_turn_effects`] is: the untap
+    /// step writes this for every permanent its controller untaps, and the flag
+    /// is already `false` for all but the ones that arrived last turn. The read
+    /// goes through `Deref`, so an unchanged permanent never unshares.
+    ///
+    /// [`clear_end_of_turn_effects`]: Self::clear_end_of_turn_effects
+    pub fn clear_summoning_sickness(&mut self) {
+        if self.summoning_sick {
+            self.summoning_sick = false;
+        }
+    }
+
+    /// CR 514.2 — the Cleanup wear-off. The set is [`eot_wear_off`]; see
+    /// [`Self::end_of_turn_effects_are_clear`] for why the guard exists and
+    /// why it is generated from the same list.
     pub fn clear_end_of_turn_effects(&mut self) {
-        // See `end_of_turn_effects_are_clear`: the sweep runs over every
-        // battlefield and phased-out permanent each turn, and each of the
-        // writes below is a `DerefMut` on the CoW handle.
         if self.end_of_turn_effects_are_clear() {
             return;
         }
-        self.power_bonus = 0;
-        self.toughness_bonus = 0;
-        self.loyalty_uses_this_turn = 0;
-        self.loyalty_twice_this_turn = false;
-        self.once_per_turn_used.clear();
-        self.granted_keywords_eot.clear();
-        self.granted_keywords_eot_ts.clear();
-        self.granted_activated_eot.clear();
-        self.removed_keywords_eot.clear();
-        self.granted_flashback_eot = None;
-        self.granted_harmonize_eot = None;
-        self.granted_alt_cast_cost_eot = None;
-        self.granted_cast_surcharge_eot = None;
-        self.dealt_deathtouch_damage = false;
-        self.dealt_damage_this_turn = false;
-        self.damage_dealt_to_this_turn = 0;
-        self.damaged_by_this_turn.clear();
-        self.damage_by_source_name_this_turn.clear();
-        self.damage_by_source_this_turn.clear();
-        // CR 701.15g — unused regeneration shields expire at end of turn,
-        // and so does the "can't be regenerated this turn" lock.
-        self.regeneration_shields = 0;
-        self.regeneration_control_grant = None;
-        self.cant_regenerate_this_turn = false;
-        self.damage_prevention_off_eot = false;
-        // CR 702.171 — "saddled until end of turn" ends here.
-        self.saddled = false;
-        self.saddled_by.clear();
-        self.crewed_by.clear();
+        macro_rules! reset {
+            (scalar $f:ident, $v:expr) => {
+                self.$f = $v;
+            };
+            (empty $f:ident) => {
+                self.$f.clear();
+            };
+            (none $f:ident) => {
+                self.$f = None;
+            };
+        }
+        eot_wear_off!(reset);
     }
 
     /// The flashback cost this card can currently be cast with from a
@@ -7724,5 +7776,70 @@ impl<'de> serde::Deserialize<'de> for CardInstance {
         c.protected_by = wire.protected_by;
         c.resolve_riders = wire.resolve_riders;
         Ok(c)
+    }
+}
+
+#[cfg(test)]
+mod cold_group_tests {
+    use super::*;
+
+    fn card() -> CardInstance {
+        CardInstance::new(CardId(1), CardDefinition { name: "Test", ..Default::default() }, 0)
+    }
+
+    /// The [`CardCold`] contract, and the reason the group pays: a clone
+    /// shares it, a *read* of a cold field keeps sharing it, a hot-field
+    /// write deep-copies `CardData` but only bumps the group's refcount,
+    /// and the first cold write unshares exactly once.
+    #[test]
+    fn cold_group_unshares_only_on_write() {
+        let mut a = card();
+        let b = a.clone();
+        assert!(a.cold.shares_with(&b.cold), "clone shares the cold group");
+        assert!(a.goaded_by.is_empty() && a.named_card.is_none());
+        assert!(a.cold.shares_with(&b.cold), "a read never unshares");
+        a.tapped = true;
+        assert!(a.cold.shares_with(&b.cold), "a hot write leaves the group shared");
+        a.goaded_by.push(1);
+        assert!(!a.cold.shares_with(&b.cold), "the first cold write unshares");
+        assert!(b.goaded_by.is_empty(), "the snapshot kept the old group");
+    }
+
+    /// The Cleanup wear-off guard and its body come from one list
+    /// ([`eot_wear_off`]); this pins that pairing end to end, one write per
+    /// shape the macro has — `scalar`, `empty`, `none`.
+    #[test]
+    fn cleanup_wears_off_each_shape_and_no_ops_on_a_clean_card() {
+        let mut a = card();
+        let b = a.clone();
+        a.clear_end_of_turn_effects();
+        assert!(a.cold.shares_with(&b.cold), "a clean card is not written");
+        assert!(a.end_of_turn_effects_are_clear());
+
+        let mut a = card();
+        a.power_bonus = 3;
+        a.granted_flashback_eot = Some(ManaCost::default());
+        a.granted_activated_eot.push(ActivatedAbility::default());
+        assert!(!a.end_of_turn_effects_are_clear());
+        a.clear_end_of_turn_effects();
+        assert_eq!(a.power_bonus, 0);
+        assert!(a.granted_flashback_eot.is_none());
+        assert!(a.granted_activated_eot.is_empty());
+        assert!(a.end_of_turn_effects_are_clear());
+    }
+
+    /// Every clear site that runs on a turn or zone boundary guards on
+    /// `is_empty()`; this pins the read those guards make — an untouched
+    /// card answers all of them without unsharing.
+    #[test]
+    fn a_fresh_card_reads_every_cold_collection_empty() {
+        let a = card();
+        let b = a.clone();
+        assert!(a.spliced_effects.is_empty() && a.spliced_names.is_empty());
+        assert!(a.saddled_by.is_empty() && a.crewed_by.is_empty());
+        assert!(a.granted_activated_abilities.is_empty() && a.granted_activated_eot.is_empty());
+        assert!(a.exhausted_abilities.is_empty() && a.once_per_turn_used.is_empty());
+        assert!(a.pending_etb_counters.is_empty());
+        assert!(a.cold.shares_with(&b.cold), "the guards' reads leave the group shared");
     }
 }

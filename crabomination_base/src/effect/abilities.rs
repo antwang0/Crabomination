@@ -3282,6 +3282,24 @@ impl ActivatedAbility {
     /// any cost, gate or per-turn cap makes it non-free, which at worst means a
     /// loop goes undetected.
     pub fn is_free(&self) -> bool {
+        // Cheap veto before the exhaustive comparison, which deep-clones
+        // `self` — an `Effect` plus a `ManaCost`, several filters and an
+        // `Option<Predicate>` — on a path both loop watchdogs take per
+        // activation. Every field named here is at its `Default` in a free
+        // ability, so a non-default one is a `false` the full check would
+        // reach anyway: this only short-circuits, it never decides.
+        if self.tap_cost
+            || self.untap_self_cost
+            || self.sac_cost
+            || self.sorcery_speed
+            || self.once_per_turn
+            || self.life_cost > 0
+            || self.energy_cost > 0
+            || !self.mana_cost.symbols.is_empty()
+            || self.condition.is_some()
+        {
+            return false;
+        }
         let mut probe = self.clone();
         probe.effect = Self::default().effect;
         probe == Self::default()

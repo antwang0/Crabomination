@@ -12,6 +12,7 @@ use rand::rngs::StdRng;
 use crate::card::{CardDefinition, CardId};
 use crate::decision::{AutoDecider, Decider};
 use crate::effect::{ActivatedAbility, Effect, ManaPayload};
+use crate::game::actions::AbilityRef;
 use crate::game::{Attack, AttackTarget, GameAction, GameState, Target, TurnStep};
 use crate::mana::{ManaCost, ManaPool};
 
@@ -3558,6 +3559,9 @@ fn cast_candidates(
         | graveyard_specialties(state, seat)
         | if facts.prepared { spec::PREPARED } else { 0 };
     let has_repartee = facts.repartee;
+    // One producible-mana read for every affordability filter in this
+    // function — see `SweepMana`.
+    let have_mana = SweepMana::new(state, seat);
     let mut unvalidated: Vec<GameAction> = state.players[seat]
         .hand
         .iter()
@@ -3574,7 +3578,7 @@ fn cast_candidates(
         // is a `SourceGiftPromised`-gated ETB) is wasted by a plain cast; it
         // gets a `CastGift` candidate in the gift block below instead.
         .filter(|c| !(c.definition.gift.is_some() && matches!(c.definition.effect, Effect::Noop)))
-        .filter(|c| can_afford_in_state(state, seat, c, w))
+        .filter(|c| can_afford_in_state_with(state, seat, c, w, &have_mana))
         .flat_map(|c| {
             // For modal effects (ChooseMode), enumerate each mode so the
             // bot can pick (e.g.) Drown in the Loch's mode 1 (destroy
@@ -3794,7 +3798,7 @@ fn cast_candidates(
         .hand
         .iter()
         .filter(|c| c.definition.gift.is_some())
-        .filter(|c| can_afford_in_state(state, seat, c, w))
+        .filter(|c| can_afford_in_state_with(state, seat, c, w, &have_mana))
     {
         let gifted = &c.definition.gift.as_ref().unwrap().gifted_effect;
         // The ETB payoff of a permanent gift lives on the creature, not the
@@ -4564,11 +4568,9 @@ fn main_phase_action_with(
     scored: bool,
     w: &EvalWeights,
 ) -> GameAction {
-    // One library-stripped probe template per tick: every candidate dry-run
-    // below re-clones this light template instead of the full state. The
-    // library is the largest part of a `GameState` clone and cast/activate/
-    // play-land legality never reads it (see `affordance_probe_template`),
-    // so this turns N full-deck clones into one + N light ones.
+    // One probe template per tick: every candidate dry-run below re-clones
+    // this template instead of rebuilding one, and a `GameState` clone is
+    // reference bumps over CoW zones (see `affordance_probe_template`).
     let probe = state.affordance_probe_template();
 
     // NOTE: the bot deliberately does *not* pre-tap its mana sources here.
@@ -5399,26 +5401,31 @@ fn pick_turn_face_up(state: &GameState, seat: usize) -> Option<GameAction> {
 /// The printed half is *borrowed* from `card.definition` — every caller only
 /// reads `.effect` and the cost fields, and deep-cloning the printed list per
 /// permanent per generator was 1.71 % of the program on its own. Only the
-/// grants, which are synthesized, are owned.
+/// grants, which are synthesized, are owned, and they are boxed: see
+/// [`AbilityRef`].
+///
+/// Yields rather than collects. Every caller is a `for` loop that usually
+/// breaks on the first ability it likes, and the collected `Vec` was one
+/// allocation per permanent per generator — six generators over the same
+/// battlefield.
 fn usable_abilities<'a>(
     state: &GameState,
     card: &'a crate::card::CardInstance,
     scan: &crate::game::actions::GrantScan<'_>,
-) -> Vec<(usize, std::borrow::Cow<'a, crate::effect::ActivatedAbility>)> {
+) -> impl Iterator<Item = (usize, AbilityRef<'a>)> {
     let printed = &card.definition.activated_abilities;
     let n = printed.len();
     printed
         .iter()
-        .map(std::borrow::Cow::Borrowed)
+        .map(AbilityRef::Printed)
         .enumerate()
         .chain(
             state
                 .granted_abilities_of(card, scan)
                 .into_iter()
                 .enumerate()
-                .map(|(i, ab)| (n + i, std::borrow::Cow::Owned(ab))),
+                .map(move |(i, ab)| (n + i, AbilityRef::Synth(Box::new(ab)))),
         )
-        .collect()
 }
 
 /// "{cost}: Destroy target creature" on a permanent that survives the
@@ -8037,6 +8044,41 @@ pub fn can_afford_in_state(
     card: &crate::card::CardInstance,
     w: &EvalWeights,
 ) -> bool {
+    can_afford_in_state_with(state, seat, card, w, &SweepMana::new(state, seat))
+}
+
+/// One [`available_mana`] read shared across a hand sweep, paid at most once
+/// and only if some card actually reaches the affordability test.
+///
+/// The walk is the whole battlefield and its answer is the same for every
+/// card in hand, so a sweep that asks per card pays it per card. It has to
+/// stay *lazy*: `pick_combat_trick` runs on every tick and usually filters
+/// its hand down to nothing first, and an eager read there costs more than
+/// the per-card reads it saves (measured +0.35 % Ir, PERF.md pass 40).
+struct SweepMana<'a> {
+    state: &'a GameState,
+    seat: usize,
+    cell: std::cell::OnceCell<AvailableMana>,
+}
+
+impl<'a> SweepMana<'a> {
+    fn new(state: &'a GameState, seat: usize) -> Self {
+        Self { state, seat, cell: std::cell::OnceCell::new() }
+    }
+
+    fn get(&self) -> &AvailableMana {
+        self.cell.get_or_init(|| available_mana(self.state, self.seat))
+    }
+}
+
+/// `can_afford_in_state` against a sweep-shared producible-mana read.
+fn can_afford_in_state_with(
+    state: &GameState,
+    seat: usize,
+    card: &crate::card::CardInstance,
+    w: &EvalWeights,
+    have: &SweepMana<'_>,
+) -> bool {
     let extra = state.extra_cost_for_card_in_hand(seat, card.id);
     // Fold in generic cost *reductions* (Affinity, CostReduction statics,
     // graveyard-affinity) the same way the real cast path does — otherwise the
@@ -8056,7 +8098,7 @@ pub fn can_afford_in_state(
     if w.legacy_pretap {
         return can_afford_with_extra(&cost, &state.players[seat].mana_pool, extra, reduction);
     }
-    can_afford_from(&cost, &available_mana(state, seat), extra, reduction)
+    can_afford_from(&cost, have.get(), extra, reduction)
 }
 
 /// Could `printed` be paid from `have`? Two independent tests: enough
@@ -9680,11 +9722,12 @@ fn pick_combat_trick(state: &GameState, seat: usize, w: &EvalWeights) -> Option<
             _ => None,
         }
     }
+    let have_mana = SweepMana::new(state, seat);
     let tricks: Vec<(CardId, i32, i32)> = state.players[seat]
         .hand
         .iter()
         .filter(|c| is_combat_trick(&c.definition))
-        .filter(|c| can_afford_in_state(state, seat, c, w))
+        .filter(|c| can_afford_in_state_with(state, seat, c, w, &have_mana))
         .filter_map(|c| pump_amounts(&c.definition.effect).map(|(p, t)| (c.id, p, t)))
         .collect();
     if tricks.is_empty() {

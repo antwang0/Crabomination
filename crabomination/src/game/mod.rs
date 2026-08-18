@@ -349,6 +349,19 @@ pub enum AttackOption {
 /// field *out* if it turns out to be written on most actions (it would
 /// unshare the group every time); move one *in* if it is a collection only
 /// rare cards touch.
+/// Bit for one seat in a seat mask; 0 for seats past 63 (no supported format
+/// seats that many, and a shift that wide is UB).
+#[inline]
+pub(crate) fn seat_bit(seat: usize) -> u64 {
+    if seat >= 64 { 0 } else { 1u64 << seat }
+}
+
+/// Every seat of a `seats`-player game as a mask.
+#[inline]
+pub(crate) fn seat_mask(seats: usize) -> u64 {
+    if seats >= 64 { u64::MAX } else { (1u64 << seats) - 1 }
+}
+
 #[derive(Clone, Default, serde::Serialize, serde::Deserialize)]
 pub struct ColdState {
     /// CR 801.2c — the range matrix, recomputed as each turn begins so a
@@ -870,6 +883,12 @@ pub(crate) struct DeclinedExtraTargets {
     pub additional_targets: Vec<Target>,
 }
 
+/// `#[serde(default)]` for a `bool` that must default to `true` on states
+/// written before its field existed.
+fn serde_true() -> bool {
+    true
+}
+
 #[derive(serde::Serialize, serde::Deserialize)]
 pub struct GameState {
     pub players: Vec<Player>,
@@ -970,12 +989,12 @@ pub struct GameState {
     /// at combat end. `#[serde(skip)]` — transient, like `pending_decision`'s
     /// resume context (a mid-combat snapshot can't resume anyway).
     #[serde(skip, default)]
-    pub(crate) combat_damage_order: HashMap<CardId, Vec<CardId>>,
+    pub(crate) combat_damage_order: crate::game::types::IdMap<CardId, Vec<CardId>>,
     /// CR 510.1c-d — the active player's chosen combat-damage assignment
     /// `(blocker, amount)` for each multi-blocker attacker. Gathered alongside
     /// `combat_damage_order`. `#[serde(skip)]` for the same reason.
     #[serde(skip, default)]
-    pub(crate) combat_damage_assignment: HashMap<CardId, Vec<(CardId, u32)>>,
+    pub(crate) combat_damage_assignment: crate::game::types::IdMap<CardId, Vec<(CardId, u32)>>,
     /// Which damage step (`FirstStrikeDamage` / `CombatDamage`) the cached
     /// combat-damage choices above belong to. Lets the gather pass reset the
     /// caches once when moving from the first-strike step to the regular step,
@@ -988,6 +1007,16 @@ pub struct GameState {
     pub skip_first_draw: bool,
     /// Count of spells cast this turn (for Storm and related effects).
     pub spells_cast_this_turn: u32,
+    /// Seat mask: bit `s` is set while an opponent of seat `s` has cast a
+    /// spell since seat `s`'s last turn ended (backs
+    /// `Predicate::OpponentCastSpellSinceYourTurn`). Set on every other seat
+    /// by `finalize_cast`, cleared for the active player at cleanup. A mask
+    /// on the state rather than a `Player` flag because writing one seat's
+    /// flag deep-copies that seat's `PlayerData` through the CoW handle —
+    /// 5,800 unshares per six bench games for one bit. Seats past 63 are not
+    /// tracked; no supported format seats that many.
+    #[serde(default)]
+    pub(crate) opponent_cast_since_your_turn: u64,
     /// Count of noncreature spells cast this turn (any player), for
     /// "the first noncreature spell of a turn" (Nullstone Gargoyle). Reset at
     /// Cleanup alongside `spells_cast_this_turn`.
@@ -1454,7 +1483,7 @@ pub struct GameState {
     /// so a follow-up step can gate on "if you sacrificed a permanent this way"
     /// (Deadly Brew). Reset between independent resolutions.
     #[serde(skip)]
-    pub(crate) players_sacrificed_this_resolution: crate::fxhash::HashSet<usize>,
+    pub(crate) players_sacrificed_this_resolution: crate::game::types::IdSet<usize>,
     /// The cards sacrificed during the current resolution, read by
     /// `SelectionRequirement::NotSacrificedThisResolution` so an "another
     /// permanent card" clause can't pick back what it just ate (Deadly Brew).
@@ -1483,7 +1512,7 @@ pub struct GameState {
     /// `Effect::EachPlayerRevealTopKeepIfNamed` (Conundrum Sphinx). Reset
     /// between independent resolutions.
     #[serde(skip)]
-    pub(crate) names_this_resolution: crate::fxhash::HashMap<usize, String>,
+    pub(crate) names_this_resolution: crate::game::types::IdMap<usize, String>,
     /// Transient: which face / cast path the in-progress cast is using.
     /// Set by `cast_spell_back_face` (`Back`) and `cast_flashback`
     /// (`Flashback`); reset to `Front` after each emitted SpellCast
@@ -1763,6 +1792,17 @@ pub struct GameState {
     /// Cleared at cleanup.
     #[serde(default)]
     pub damage_cant_be_prevented_this_turn: bool,
+    /// Presence gate for [`Self::clear_step_bounded_may_play`]: true while
+    /// some card anywhere carries a `MayPlayDuration::EndOfThisStep` window
+    /// (CR 702.94 miracle). Without it the step-transition sweep took
+    /// `iter_mut` over every hand, graveyard, library and exile — a CoW
+    /// unshare of both `PlayerData`s, 1.97 % of the profile — to clear a
+    /// window almost no game grants. Set by the two granters, cleared by
+    /// the sweep; a debug assertion there checks the gate never hides one.
+    /// Defaults to `true` on deserialize so a snapshot written before the
+    /// field existed still sweeps once.
+    #[serde(default = "serde_true")]
+    pub(crate) step_bounded_may_play: bool,
     /// CR 508.1/509.1d — turn-scoped combat taxes charged to the *acting*
     /// player, {N} per attacker / per blocker they declare (War Tax, War
     /// Cadence). Symmetric across seats and cleared at cleanup; the
@@ -1827,7 +1867,7 @@ pub struct GameState {
     /// `resolving_lki_source` names the trigger currently resolving.
     /// Transient scratch — `#[serde(skip)]`.
     #[serde(skip)]
-    pub(crate) leaves_bf_lki: HashMap<CardId, CardInstance>,
+    pub(crate) leaves_bf_lki: crate::game::types::IdMap<CardId, CardInstance>,
     /// The source CardId of the leaves-battlefield trigger currently
     /// resolving, if it has a `leaves_bf_lki` snapshot. Scopes the LKI
     /// power/toughness read to that one resolution. `#[serde(skip)]`.
@@ -2067,6 +2107,7 @@ impl Clone for GameState {
             blockers_declared: self.blockers_declared,
             skip_first_draw: self.skip_first_draw,
             spells_cast_this_turn: self.spells_cast_this_turn,
+            opponent_cast_since_your_turn: self.opponent_cast_since_your_turn,
             noncreature_spells_cast_this_turn: self.noncreature_spells_cast_this_turn,
             mana_spent_on_spells_this_turn: self.mana_spent_on_spells_this_turn,
             expend_prev_total: self.expend_prev_total,
@@ -2195,6 +2236,7 @@ impl Clone for GameState {
             creature_combat_damage_doublers: self.creature_combat_damage_doublers,
             token_minting_source: self.token_minting_source,
             damage_cant_be_prevented_this_turn: self.damage_cant_be_prevented_this_turn,
+            step_bounded_may_play: self.step_bounded_may_play,
             attack_tax_this_turn: self.attack_tax_this_turn,
             block_tax_this_turn: self.block_tax_this_turn,
             acted_on_own_turn: self.acted_on_own_turn.clone(),
@@ -2299,14 +2341,15 @@ impl GameState {
             next_id: 1,
             attacking: Vec::new(),
             block_map: HashMap::default(),
-            combat_damage_order: HashMap::default(),
-            combat_damage_assignment: HashMap::default(),
+            combat_damage_order: Default::default(),
+            combat_damage_assignment: Default::default(),
             combat_damage_plan_step: None,
             blockers_declared: false,
             // Multiplayer (3+) doesn't skip the first draw — only the 2-player
             // starting player does.
             skip_first_draw: n <= 2,
             spells_cast_this_turn: 0,
+            opponent_cast_since_your_turn: 0,
             noncreature_spells_cast_this_turn: 0,
             mana_spent_on_spells_this_turn: 0,
             expend_prev_total: 0,
@@ -2388,12 +2431,12 @@ impl GameState {
             permanents_enter_tapped_this_turn: false,
             counters_removed_this_effect: 0,
             counters_removed_as_cost: 0,
-            players_sacrificed_this_resolution: crate::fxhash::HashSet::default(),
+            players_sacrificed_this_resolution: Default::default(),
             cards_sacrificed_this_resolution: Vec::new(),
             chosen_creature_type_scratch: None,
             chosen_creature_types_scratch: Vec::new(),
             named_card_this_resolution: None,
-            names_this_resolution: HashMap::default(),
+            names_this_resolution: Default::default(),
             pending_cast_face: CastFace::Front,
             pending_cast_sacrifices: None,
             pending_cast_discards: None,
@@ -2434,6 +2477,7 @@ impl GameState {
             creature_combat_damage_doublers: 0,
             token_minting_source: None,
             damage_cant_be_prevented_this_turn: false,
+            step_bounded_may_play: false,
             attack_tax_this_turn: 0,
             block_tax_this_turn: 0,
             acted_on_own_turn: Vec::new(),
@@ -2445,7 +2489,7 @@ impl GameState {
             controlled_by: Vec::new(),
             next_replacement_id: 1,
             died_card_snapshots: Default::default(),
-            leaves_bf_lki: HashMap::default(),
+            leaves_bf_lki: Default::default(),
             resolving_lki_source: None,
             resolving_lki_subject: None,
             subgame_depth: 0,
@@ -5821,7 +5865,54 @@ impl GameState {
             .sum()
     }
 
+    /// True when anything in the game can change a damage amount — the
+    /// presence gate for [`scale_damage_to`](Self::scale_damage_to), which is
+    /// otherwise ~25 independent `StaticEffect` arms, two un-frozen
+    /// `computed_permanent` gathers and eight battlefield walks paid on every
+    /// damage event to discover that none of them applies.
+    ///
+    /// `false` is authoritative; `true` only means the body has to run. Four
+    /// non-static routes (Overblaze's per-source list, Stagger's per-player
+    /// list, Quest for Pure Flame's per-player flag, Equal Treatment's
+    /// turn-scoped rewrite) plus every scaling static, matched through the
+    /// same gate-wrapper peel the other family predicates use — the body
+    /// matches `sa.effect` directly, so peeling here only ever makes this a
+    /// superset, which is the safe direction.
+    ///
+    /// Audited by `scale_damage_to` itself: when this says `false`, a
+    /// debug-only run of the full body must return the amount unchanged, so
+    /// the whole suite checks the enumeration on every damage event it deals.
+    pub(crate) fn damage_scaling_in_scope(&self) -> bool {
+        !self.doubled_damage_sources_this_turn.is_empty()
+            || !self.staggered_damage_players.is_empty()
+            || self.damage_becomes_this_turn.is_some()
+            || self.players.iter().any(|p| p.double_your_source_damage_this_turn)
+            || self.battlefield.iter().any(|c| {
+                c.definition
+                    .static_abilities
+                    .iter()
+                    .any(|sa| static_effect_scales_damage(&sa.effect))
+            })
+    }
+
     pub fn scale_damage_to(
+        &self,
+        source: Option<CardId>,
+        ent: crate::game::effects::EntityRef,
+        amount: u32,
+    ) -> u32 {
+        if !self.damage_scaling_in_scope() {
+            debug_assert_eq!(
+                self.scale_damage_to_inner(source, ent, amount),
+                amount,
+                "the damage-scaling presence gate missed a source",
+            );
+            return amount;
+        }
+        self.scale_damage_to_inner(source, ent, amount)
+    }
+
+    fn scale_damage_to_inner(
         &self,
         source: Option<CardId>,
         ent: crate::game::effects::EntityRef,
@@ -6802,17 +6893,22 @@ impl GameState {
         // (countered, or fizzled on an illegal target) shuffles into its
         // owner's library instead.
         if card.omen_casting {
-            
             let owner = card.owner;
             card.omen_casting = false;
-            card.spliced_effects.clear();
+            if !card.spliced_effects.is_empty() {
+                card.spliced_effects.clear();
+            }
             card.counters.clear();
             self.players[owner].library.push(card);
             self.shuffle_library(owner, events);
             return false;
         }
         // CR 702.47e — splice changes are lost when the spell leaves the stack.
-        card.spliced_effects.clear();
+        // Guarded: `spliced_effects` is a `CardCold` field and empty on every
+        // spell that was never spliced onto.
+        if !card.spliced_effects.is_empty() {
+            card.spliced_effects.clear();
+        }
         // CR 122.2 — counters don't survive the zone change (replacement
         // riders below add to the new object afterward).
         card.counters.clear();
@@ -7578,6 +7674,11 @@ impl GameState {
                 || c.keyword_counters.iter().any(|(k, n)| *n > 0 && pred(k))
         }) || match self.frozen_effects() {
             Some(fx) => granted(&fx),
+            // The legs above are positive short-circuits; when they all miss
+            // this used to gather to prove a negative. Ask the presence gate
+            // first — a board with no source that can *grant* a matching
+            // keyword cannot have one in its gathered set either.
+            None if !self.keyword_grant_in_scope(&pred) => false,
             None => granted(&self.gather_continuous_effects()),
         };
         #[cfg(debug_assertions)]
@@ -7711,6 +7812,199 @@ impl GameState {
             })
     }
 
+    /// The same device for the layer-4 *card-type* family: a cheap
+    /// over-approximation of "the gathered effect set can contain an
+    /// `AddCardType` / `RemoveCardType` / `SetCardTypes`", answered without
+    /// gathering. `false` is authoritative; `true` only means the gather has
+    /// to run.
+    ///
+    /// Two routes reach the modification: a resolved `continuous_effects`
+    /// entry (animations, `BecomeTreasure`, `LoseCardTypeUntilEot`, crew) and
+    /// a battlefield permanent's printed shape, folded into
+    /// [`card_can_change_card_types`]. `gather_continuous_effects`
+    /// `debug_assert!`s the implication in the sound direction — every gather
+    /// that *does* produce one checks that this said `true` — so the whole
+    /// suite audits the predicate without any caller paying a gather.
+    ///
+    /// Not covered on purpose: `CardInstance::bestowed`, which rewrites the
+    /// type line in `compute_permanent_pass` without a `Modification` at all.
+    /// It is a per-card flag, so a caller reads it off the card directly.
+    pub(crate) fn card_type_change_in_scope(&self) -> bool {
+        self.continuous_effects.iter().any(|e| {
+            matches!(
+                e.modification,
+                Modification::AddCardType(_)
+                    | Modification::RemoveCardType(_)
+                    | Modification::SetCardTypes(_)
+            )
+        }) || self.battlefield.iter().any(card_can_change_card_types)
+    }
+
+    /// Both legs of the ability-strip presence gate in one call, for a caller
+    /// that holds no [`GrantScan`] to read `strip_on_battlefield` off. Same
+    /// contract: `false` is authoritative, `true` only means the gather has to
+    /// run. Prefer the `scan` form where one is already built — this walks the
+    /// battlefield itself.
+    pub(crate) fn ability_strip_in_scope(&self) -> bool {
+        self.battlefield.iter().any(card_can_strip_abilities)
+            || self.ability_strip_off_battlefield()
+    }
+
+    /// The same device for the layer-4 *land-type* family: a cheap
+    /// over-approximation of "the gathered effect set can contain an
+    /// `AddLandType` / `SetLandTypes` / `ReplaceBasicLandType`", answered
+    /// without gathering. `false` is authoritative; `true` only means the
+    /// gather has to run.
+    ///
+    /// The printed-static twin of [`actions::rewrites_land_types`], which
+    /// tests the same three modifications against an already-*gathered* set
+    /// and so only serves a caller inside a freeze scope. Two routes reach
+    /// the modification: a resolved `continuous_effects` entry (Spreading
+    /// Seas, Magical Hack) and a battlefield permanent's printed shape,
+    /// folded into [`card_can_change_land_types`]. `gather_continuous_effects`
+    /// `debug_assert!`s the implication in the sound direction, so the whole
+    /// suite audits the enumeration without any caller paying a gather.
+    pub(crate) fn land_type_change_in_scope(&self) -> bool {
+        self.continuous_effects.iter().any(|e| {
+            matches!(
+                e.modification,
+                Modification::AddLandType(_)
+                    | Modification::SetLandTypes(_)
+                    | Modification::ReplaceBasicLandType(..)
+            )
+        }) || self.battlefield.iter().any(card_can_change_land_types)
+    }
+
+    /// The same device for the layer-4 *creature*-type family: a cheap
+    /// over-approximation of "the gathered effect set can contain an
+    /// `AddCreatureType` / `SetCreatureTypes`", answered without gathering.
+    /// `false` is authoritative; `true` only means the gather has to run.
+    ///
+    /// The printed-static twin of [`shallow_creature_types`](Self::shallow_creature_types),
+    /// which reads the same two modifications off the *stored*
+    /// `continuous_effects` only. Two routes reach the modification: a
+    /// resolved `continuous_effects` entry (Artificial Evolution, the
+    /// changeling grants) and a battlefield permanent's printed shape, folded
+    /// into [`card_can_change_creature_types`]. `gather_continuous_effects`
+    /// `debug_assert!`s the implication in the sound direction, so the whole
+    /// suite audits the enumeration without any caller paying a gather.
+    pub(crate) fn creature_type_change_in_scope(&self) -> bool {
+        self.continuous_effects.iter().any(|e| {
+            matches!(
+                e.modification,
+                Modification::AddCreatureType(_) | Modification::SetCreatureTypes(_)
+            )
+        }) || self.battlefield.iter().any(card_can_change_creature_types)
+    }
+
+    /// The same device for layer-6 keyword *grants*: a cheap
+    /// over-approximation of "the gathered effect set can contain an
+    /// `AddKeyword` matching `pred`", answered without gathering. `false` is
+    /// authoritative; `true` only means the gather has to run.
+    ///
+    /// Two routes, as ever: a resolved `continuous_effects` entry, and a
+    /// battlefield permanent's printed shape folded into
+    /// [`card_can_grant_keyword`]. `gather_continuous_effects` `debug_assert!`s
+    /// the implication in the sound direction, so the whole suite audits the
+    /// enumeration without any caller paying a gather.
+    ///
+    /// Not a general "can this keyword appear" test: a permanent's own
+    /// *printed* keywords are not grants and are not scanned here, so a
+    /// per-card consumer asks its card first. The two in-place text rewrites
+    /// (`Protection` / `Landwalk` retyping) keep the keyword's shape, so a
+    /// family predicate is unaffected by them.
+    ///
+    /// The off-battlefield half is not optional and was not guessed: a
+    /// battlefield-only version tripped the audit on nine tests — CR 114
+    /// emblems (Domri Rade's double strike / trample / haste) and CR 904.8 /
+    /// 315.5 face-up schemes and conspiracies (Fear My Authority, Weight
+    /// Advantage), both of which join the gather's anthem walk.
+    pub(crate) fn keyword_grant_in_scope(&self, pred: impl Fn(&Keyword) -> bool) -> bool {
+        // Three keywords the gather synthesizes from a *printed* keyword or an
+        // instance flag rather than from a field it can be matched against —
+        // CR 701.60 Suspect's menace + can't-block, CR 702.109 Unleash's
+        // can't-block, and the hexproof-unless rewrite. Asking `pred` about
+        // them once here instead of once per card is what keeps this walk
+        // cheap: it turns the per-card `definition.keywords` scan — `Keyword`
+        // is a payload-carrying enum and its `PartialEq` is not free — into a
+        // branch no predicate takes unless it names one of the three.
+        let synth = pred(&Keyword::Hexproof) || pred(&Keyword::CantBlock) || pred(&Keyword::Menace);
+        self.continuous_effects
+            .iter()
+            .any(|e| matches!(&e.modification, Modification::AddKeyword(k) if pred(k)))
+            || self.battlefield.iter().any(|c| card_can_grant_keyword(c, &pred, synth))
+            || self.players.iter().any(|p| {
+                p.command
+                    .iter()
+                    .any(|c| {
+                        (c.definition.is_scheme() || c.command_zone_abilities_active())
+                            && card_can_grant_keyword(c, &pred, synth)
+                    })
+                    || p.emblems.iter().any(|em| {
+                        em.statics
+                            .iter()
+                            .any(|sa| static_effect_grants_keyword(&sa.effect, &pred))
+                    })
+                    // The Incarnation cycle's `GraveyardAnthem` is the gather's
+                    // one zone-special grant — read off *graveyard* cards'
+                    // printed statics. Matched by variant rather than through
+                    // `card_can_grant_keyword` so the walk stays a length check
+                    // per card on a zone that grows all game.
+                    || p.graveyard.iter().any(|c| {
+                        c.definition.static_abilities.iter().any(|sa| {
+                            matches!(&sa.effect,
+                                crate::effect::StaticEffect::GraveyardAnthem { keyword, .. }
+                                if pred(keyword))
+                        })
+                    })
+            })
+    }
+
+    /// True when the battlefield permanent `id`'s *computed* keyword set could
+    /// contain a keyword matching `pred`, answered without gathering. `false`
+    /// is authoritative (and is also the answer when `id` isn't a permanent,
+    /// which is what `computed_permanent` returns there).
+    ///
+    /// The four seeds `compute_permanent` uses, minus the gather: the card's
+    /// printed keywords, its `granted_keywords_eot`, its CR 122.1b
+    /// `keyword_counters`, and — for the layer-6 `AddKeyword` it can't see
+    /// without gathering — [`keyword_grant_in_scope`](Self::keyword_grant_in_scope).
+    pub(crate) fn card_keyword_possible(
+        &self,
+        id: CardId,
+        pred: impl Fn(&Keyword) -> bool,
+    ) -> bool {
+        let Some(c) = self.battlefield_find(id) else { return false };
+        c.definition.keywords.iter().any(&pred)
+            || c.granted_keywords_eot.iter().any(&pred)
+            || c.keyword_counters.iter().any(|(k, n)| *n > 0 && pred(k))
+            || self.keyword_grant_in_scope(pred)
+    }
+
+    /// The same device for the one layer-7 question a caller can ask without
+    /// gathering: can any permanent's *computed* toughness come out **lower**
+    /// than its instance toughness (printed + bonuses + counters)?
+    ///
+    /// `apply_layers_one` builds toughness as `base [+ 7b set] + mod_toughness
+    /// + toughness_bonus + perm_toughness_bonus + counters`, and
+    /// [`CardInstance::toughness`] is that same sum without `mod_toughness`.
+    /// So with no 7b set, no 7d switch and `mod_toughness >= 0` the computed
+    /// value is **at or above** the instance value, and a caller holding a
+    /// cheap instance lower bound can trust it. `false` is authoritative;
+    /// `true` only means the layer read has to run.
+    ///
+    /// Unlike its layer-4 siblings this one is signed: an anthem, Rancor and
+    /// Giant Growth are all layer-7 and none of them can kill, so a bare
+    /// "is layer 7 live" gate would answer `true` on most boards and be worth
+    /// nothing. `gather_continuous_effects` `debug_assert!`s the implication
+    /// in the sound direction, so the whole suite audits the enumeration.
+    pub(crate) fn pt_reduction_in_scope(&self) -> bool {
+        self.continuous_effects
+            .iter()
+            .any(|e| modification_reduces_toughness(&e.modification))
+            || self.battlefield.iter().any(card_can_reduce_toughness)
+    }
+
     /// Run `f` with the gathered continuous-effect set memoized, so every
     /// `computed_permanent` / `compute_battlefield` call inside reuses one
     /// gather instead of rebuilding the full effect set per call. Sound by
@@ -7794,10 +8088,75 @@ impl GameState {
         // Reentrancy guard — see `in_layer_gather`. Passes below that
         // evaluate selection requirements must not recurse back into
         // `computed_permanent`.
+        // Save and restore rather than clear: a gather reached from *inside*
+        // one (`board_keyword_matching`, `permanents_with_abilities_removed`
+        // and the debug cross-checks all gather unconditionally) would
+        // otherwise hand the outer gather back with its guard cleared, and
+        // every computed read after that point would take the wrong branch.
         use std::sync::atomic::Ordering;
-        self.in_layer_gather.store(true, Ordering::Relaxed);
+        let prev = self.in_layer_gather.swap(true, Ordering::Relaxed);
         let out = self.gather_continuous_effects_inner();
-        self.in_layer_gather.store(false, Ordering::Relaxed);
+        self.in_layer_gather.store(prev, Ordering::Relaxed);
+        // The card-type presence gate's audit, run in the sound direction and
+        // in the one place where the gather already happened, so it costs a
+        // gate-shaped battlefield walk rather than a gather. A new emitter
+        // that `card_can_change_card_types` doesn't know about trips this on
+        // the first debug run that plays the card.
+        debug_assert!(
+            !out.iter().any(|e| matches!(
+                e.modification,
+                Modification::AddCardType(_)
+                    | Modification::RemoveCardType(_)
+                    | Modification::SetCardTypes(_)
+            )) || self.card_type_change_in_scope(),
+            "the card-type presence gate missed a layer-4 card-type source",
+        );
+        // The land-type presence gate's audit, same direction and same place.
+        debug_assert!(
+            !out.iter().any(|e| matches!(
+                e.modification,
+                Modification::AddLandType(_)
+                    | Modification::SetLandTypes(_)
+                    | Modification::ReplaceBasicLandType(..)
+            )) || self.land_type_change_in_scope(),
+            "the land-type presence gate missed a layer-4 land-type source",
+        );
+        // The creature-type presence gate's audit, same direction and same
+        // place.
+        debug_assert!(
+            !out.iter().any(|e| matches!(
+                e.modification,
+                Modification::AddCreatureType(_) | Modification::SetCreatureTypes(_)
+            )) || self.creature_type_change_in_scope(),
+            "the creature-type presence gate missed a layer-4 creature-type source",
+        );
+        // The layer-7 toughness-reduction gate's audit, same direction and
+        // same place. A new emitter whose toughness term can go negative
+        // without `card_can_reduce_toughness` knowing trips this on the first
+        // debug run that plays the card.
+        debug_assert!(
+            !out.iter().any(|e| modification_reduces_toughness(&e.modification))
+                || self.pt_reduction_in_scope(),
+            "the layer-7 presence gate missed a toughness-lowering source",
+        );
+        // The keyword-grant gate's audit, same direction and same place.
+        // Deduplicated first: a gather can carry a dozen `AddKeyword`s and
+        // each check is a battlefield walk.
+        #[cfg(debug_assertions)]
+        {
+            let mut seen: Vec<&Keyword> = Vec::new();
+            for e in &out {
+                if let Modification::AddKeyword(k) = &e.modification
+                    && !seen.contains(&k)
+                {
+                    seen.push(k);
+                    debug_assert!(
+                        self.keyword_grant_in_scope(|x: &Keyword| x == k),
+                        "the keyword-grant presence gate missed a source for {k:?}",
+                    );
+                }
+            }
+        }
         out
     }
 
@@ -7823,8 +8182,10 @@ impl GameState {
         let (mut any_reconfigure, mut any_impending, mut any_unleash) = (false, false, false);
         let (mut any_hexproof_unless, mut any_dynamic_pt) = (false, false);
         let (mut any_level_bands, mut any_station, mut any_living_metal) = (false, false, false);
+        let mut any_suspected = false;
         for card in self.battlefield.iter() {
             let def = &card.definition;
+            any_suspected |= card.suspected;
             if !def.static_abilities.is_empty() {
                 sa_cards.push(card);
             }
@@ -10821,11 +11182,24 @@ impl GameState {
                 }
             }
         }
-        // Not gated: this loop carries five unrelated passes, three of them
-        // (the CR 611.2 predicate gate, its sibling, and the suspect/
-        // living-metal statics) live for cards this walk is the only reach
-        // to. The two keyword scans inside it are gated instead.
-        for card in &self.battlefield {
+        // Five unrelated passes share this walk. Two of them read
+        // `static_abilities` and so can only emit for a card that is already
+        // in `sa_cards`; the other three (unleash, living metal, suspect) are
+        // pre-scan bits that are clear on almost every board. With all three
+        // clear the walk *is* `sa_cards`, in battlefield order, so the
+        // emitted sequence is unchanged and a vanilla board pays nothing.
+        // `&mut dyn Iterator` rather than a `Box`, so the choice costs no
+        // allocation on the 127,878 gathers a six-game run takes.
+        let stateful_all = any_unleash || any_living_metal || any_suspected;
+        let (mut it_all, mut it_sa);
+        let stateful_cards: &mut dyn Iterator<Item = &CardInstance> = if stateful_all {
+            it_all = self.battlefield.iter();
+            &mut it_all
+        } else {
+            it_sa = sa_cards.iter().copied();
+            &mut it_sa
+        };
+        for card in stateful_cards {
             // CR 702.98 — Unleash's second static: a creature with the
             // Unleash keyword can't block while it has a +1/+1 counter.
             // Injected as a computed `CantBlock` so the existing block-
@@ -11085,12 +11459,26 @@ impl GameState {
     /// layer pass between them. `Arc` derefs, so callers read fields as
     /// before.
     pub fn computed_permanent(&self, id: CardId) -> Option<std::sync::Arc<ComputedPermanent>> {
-        // Mid-gather reads take the printed-types fallback (see
-        // `frozen_effects`), so they must neither read nor write the memo.
+        // Mid-gather reads take the printed view (`in_layer_gather`, the
+        // reentrancy guard) — the effect set is *being built*, so re-entering
+        // the gather here would rebuild it from the same state and reach this
+        // same read again, without bound. That is not hypothetical: the gather
+        // evaluates card-supplied filters through `evaluate_requirement_on_card`
+        // / `evaluate_predicate` at ~30 sites, and a dozen of their arms read
+        // computed power/toughness (`PowerAtMostYourCount`,
+        // `ToughnessAtMostGraveyardCount`, …). Two arms and both
+        // `effective_power`/`effective_toughness` each spelled the guard out by
+        // hand; the rest did not, so a card pairing a gather-evaluated filter
+        // with a P/T requirement was a stack overflow rather than a wrong
+        // answer. The guard belongs here, once, where it cannot be forgotten.
+        if self.in_layer_gather.load(std::sync::atomic::Ordering::Relaxed) {
+            let card = self.battlefield.iter().find(|c| c.id == id)?;
+            return Some(std::sync::Arc::new(crate::game::layers::apply_layers_one(card, &[])));
+        }
         // One lock covers both memos: a hit costs exactly one acquisition,
         // a miss two, and only the scope's first computed read pays three.
         let mut frozen_fx = None;
-        if !self.in_layer_gather.load(std::sync::atomic::Ordering::Relaxed) {
+        {
             let st = self.layer_freeze.lock();
             if st.depth > 0 {
                 if let Some((_, cp)) = st.perms.iter().find(|(k, _)| *k == id) {
@@ -11190,7 +11578,14 @@ impl GameState {
 
     pub fn dying_snapshot(&self, id: CardId) -> Option<CardInstance> {
         let mut snap = self.battlefield.iter().find(|c| c.id == id)?.clone();
-        if let Some(cp) = self.computed_permanent(id) {
+        // The doc's "only pays the layer cost when a grant is present" was a
+        // claim, not code, until the presence gate existed: the read below is
+        // a whole gather, taken once per dying permanent. `computed` can only
+        // differ from printed here through `AddCreatureType` /
+        // `SetCreatureTypes`, which is exactly what the gate answers.
+        if self.creature_type_change_in_scope()
+            && let Some(cp) = self.computed_permanent(id)
+        {
             let printed = &snap.definition.subtypes.creature_types;
             if cp.subtypes.creature_types.iter().any(|t| !printed.contains(t)) {
                 std::sync::Arc::make_mut(&mut snap.definition).subtypes.creature_types =
@@ -11687,6 +12082,13 @@ impl GameState {
     }
 
     fn damage_prevented_by_protection_inner(&self, source: CardId, target: CardId) -> bool {
+        // The whole function is gated on the target carrying a protection
+        // keyword, and almost no permanent ever does — but proving that took a
+        // whole-game gather on every damage event, 1.22 % of the simulator.
+        // The presence gate answers it from printed shapes.
+        if !self.card_keyword_possible(target, Self::protection_keyword) {
+            return false;
+        }
         let Some(tgt) = self.computed_permanent(target) else { return false };
         // Everything below this reads the *source* — five `computed_permanent`
         // lookups and two `Vec` clones — and none of it can change the answer
@@ -14129,8 +14531,12 @@ impl GameState {
     }
 
     pub fn draw_one(&mut self, p: usize, events: &mut Vec<GameEvent>) -> bool {
-        // A revealed top only stays public while it stays on top.
-        self.library_tops_revealed.retain(|s| *s != p);
+        // A revealed top only stays public while it stays on top. Guarded:
+        // `library_tops_revealed` is a `ColdState` field and the `retain`
+        // runs on every draw, for a list that is empty on almost every board.
+        if self.library_tops_revealed.contains(&p) {
+            self.library_tops_revealed.retain(|s| *s != p);
+        }
         // CR 121.2b — a per-turn draw cap applies to *individual* card draws,
         // so it gates every draw source, not just `Effect::Draw`'s count.
         if self.draw_cap_for(p).is_some_and(|cap| self.players[p].cards_drawn_this_turn >= cap) {
@@ -14584,6 +14990,18 @@ impl GameState {
     /// offer can't be banked for a later step. The granted alt-cost shares
     /// the permission's lifetime.
     pub(crate) fn clear_step_bounded_may_play(&mut self) {
+        // `iter_mut` on a shared zone deep-copies it (see `CowBox`), so this
+        // sweep costs a full `PlayerData` unshare per player per step
+        // transition. Gate it on `step_bounded_may_play`; the debug audit
+        // fails loudly if a granter ever forgets to set the flag.
+        if !self.step_bounded_may_play {
+            debug_assert!(
+                !self.has_step_bounded_may_play(),
+                "step_bounded_may_play gate missed a live EndOfThisStep window",
+            );
+            return;
+        }
+        self.step_bounded_may_play = false;
         let clear = |c: &mut crate::card::CardInstance| {
             if matches!(
                 c.may_play_until,
@@ -14599,18 +15017,57 @@ impl GameState {
             pl.library.iter_mut().for_each(clear);
         }
         self.exile.iter_mut().for_each(clear);
+        // The sweep doesn't reach the battlefield, the stack or a command
+        // zone, and a card can carry its window out of one of those into a
+        // swept zone later — so the gate stays live until none is left
+        // anywhere, and only then do subsequent steps get the free path.
+        self.step_bounded_may_play = self.has_step_bounded_may_play();
+    }
+
+    /// Is a `MayPlayDuration::EndOfThisStep` window live in any zone? The
+    /// invariant behind `step_bounded_may_play`: read-only, and used both to
+    /// re-arm the gate after a sweep and to audit it in debug builds.
+    fn has_step_bounded_may_play(&self) -> bool {
+        let bounded = |c: &crate::card::CardInstance| {
+            matches!(
+                c.may_play_until,
+                Some(p) if p.duration == crate::card::MayPlayDuration::EndOfThisStep
+            )
+        };
+        self.players.iter().any(|pl| {
+            pl.hand.iter().any(bounded)
+                || pl.graveyard.iter().any(bounded)
+                || pl.library.iter().any(bounded)
+                || pl.command.iter().any(bounded)
+        }) || self.exile.iter().any(bounded)
+            || self.battlefield.iter().any(bounded)
+            || self.stack.iter().any(|item| match item {
+                StackItem::Spell { card, .. } => bounded(card),
+                _ => false,
+            })
     }
 
     pub(crate) fn maybe_grant_miracle(&mut self, p: usize, card_id: CardId) {
         if self.players[p].cards_drawn_this_turn != 1 {
             return;
         }
-        if let Some(card) = self.players[p].hand.iter_mut().find(|c| c.id == card_id)
-            && let Some(cost) = card.definition.miracle.clone()
-        {
+        // Read-only find first: `iter_mut` would unshare the hand (and with
+        // it the whole `PlayerData`) for every first draw of a turn, and
+        // almost no drawn card has a printed miracle cost.
+        let Some(cost) = self
+            .players[p]
+            .hand
+            .iter()
+            .find(|c| c.id == card_id)
+            .and_then(|c| c.definition.miracle.clone())
+        else {
+            return;
+        };
+        let granted_turn = self.turn_number;
+        if let Some(card) = self.players[p].hand.iter_mut().find(|c| c.id == card_id) {
             card.may_play_until = Some(crate::card::MayPlayPermission {
                 player: p,
-                granted_turn: self.turn_number,
+                granted_turn,
                 // CR 702.94 — the window is the reveal offer, not the whole
                 // turn: cleared at the next step transition.
                 duration: crate::card::MayPlayDuration::EndOfThisStep,
@@ -14618,6 +15075,7 @@ impl GameState {
                 miracle: true,
             });
             card.granted_alt_cast_cost_eot = Some(cost);
+            self.step_bounded_may_play = true;
         }
     }
 
@@ -15558,32 +16016,43 @@ impl GameState {
         // non-creature deaths (which emit no `CreatureDied`) still reach
         // "creature or artifact you control dies" triggers.
         let deaths = std::mem::take(&mut self.pending_permanent_deaths);
+        // CR 800.4 — control changes recorded at the `change_control`
+        // chokepoint since the last dispatch (Risky Move's hand-off).
+        let control_changes = std::mem::take(&mut self.pending_control_changes);
+        // Nothing to fire and nothing to synthesize. The two takes above are
+        // all the state this call has touched by here, so this leaves exactly
+        // what the `events.is_empty()` return below leaves — without the
+        // synthesis collect, the graveyard-batch count walk or the per-event
+        // match. `perform_action_inner` drains every action's event list
+        // through here, so the empty batch is a common one.
+        if events.is_empty() && deaths.is_empty() && control_changes.is_empty() {
+            return;
+        }
         // Replay the deaths' causing spell/ability over the dispatch: the
         // batch is synthesized after the resolution that killed them ended.
         if let Some(causer) = deaths.iter().find_map(|(.., causer)| *causer) {
             self.resolution_causer = Some(causer);
         }
-        // CR 800.4 — control changes recorded at the `change_control`
-        // chokepoint since the last dispatch (Risky Move's hand-off).
-        let control_changes = std::mem::take(&mut self.pending_control_changes);
-        let synthesized: Vec<GameEvent> = deaths
-            .into_iter()
-            // CR 700.4 — a death redirected away from the graveyard (Rest in
-            // Peace, void counters, Kalitas, Pulmonic Sliver) never happened;
-            // skip it, mirroring the `CreatureDied` guard below.
-            .filter(|(card_id, ..)| !self.death_was_replaced(*card_id))
-            .map(|(card_id, controller, is_creature, is_artifact, _)| GameEvent::PermanentDied {
-                card_id,
-                controller,
-                is_creature,
-                is_artifact,
-            })
-            .chain(
-                control_changes
-                    .into_iter()
-                    .map(|(card_id, from, to)| GameEvent::ControlChanged { card_id, from, to }),
-            )
-            .collect();
+        // Empty on most dispatches, and the chain is not free there: the
+        // filter closes over `&self` and the collect still builds and drops a
+        // `Vec`. 94,608 of them over six bench games.
+        let synthesized: Vec<GameEvent> = if deaths.is_empty() && control_changes.is_empty() {
+            Vec::new()
+        } else {
+            deaths
+                .into_iter()
+                // CR 700.4 — a death redirected away from the graveyard (Rest
+                // in Peace, void counters, Kalitas, Pulmonic Sliver) never
+                // happened; skip it, mirroring the `CreatureDied` guard below.
+                .filter(|(card_id, ..)| !self.death_was_replaced(*card_id))
+                .map(|(card_id, controller, is_creature, is_artifact, _)| {
+                    GameEvent::PermanentDied { card_id, controller, is_creature, is_artifact }
+                })
+                .chain(control_changes.into_iter().map(|(card_id, from, to)| {
+                    GameEvent::ControlChanged { card_id, from, to }
+                }))
+                .collect()
+        };
         let folded: Vec<GameEvent>;
         let events: &[GameEvent] = if synthesized.is_empty() {
             events
@@ -15773,7 +16242,21 @@ impl GameState {
         let any_static_grant = !trigger_grants.is_empty() || !self.turn_granted_triggers.is_empty();
         let any_own_grant = !self.granted_triggers_eot.is_empty();
         let any_equip_grant = !equip_grants.is_empty();
+        // The same three gates, asked once for the whole board: with no grant
+        // of any kind in play, a permanent whose definition carries neither a
+        // printed trigger nor a Station band contributes nothing, and the loop
+        // below reaches its four-way `is_empty()` `continue` having built two
+        // empty `Vec`s and read `stripped_ids` to get there. Two definition
+        // loads instead — the loop body runs 945,812 times over six bench
+        // games and most of a board is lands and vanilla creatures.
+        let no_grants = !any_static_grant && !any_own_grant && !any_equip_grant;
         for card in &self.battlefield {
+            if no_grants
+                && card.definition.triggered_abilities.is_empty()
+                && card.definition.station.is_empty()
+            {
+                continue;
+            }
             let stripped = stripped_ids.contains(&card.id);
             // Walk printed triggered abilities AND any transient
             // granted_triggers_eot for this permanent (Root Manipulation,
@@ -15801,13 +16284,28 @@ impl GameState {
             // A host that lost all abilities (Turn to Frog, "is a Swamp")
             // contributes none of its *own* triggers, but still carries its
             // attachments' equip-granted ones.
-            let mut all_triggers: Vec<(usize, &crate::card::TriggeredAbility)> = Vec::new();
-            if !stripped {
-                all_triggers.extend(card.definition.triggered_abilities.iter().enumerate());
-                all_triggers.extend(own_granted.iter().map(|t| (usize::MAX, t)));
-                all_triggers.extend(static_granted.iter().map(|t| (usize::MAX, t)));
+            //
+            // Chained slice iterators, not a `Vec`: this runs once per
+            // permanent per dispatch (945,812 times over six bench games) and
+            // most permanents carry no trigger at all, so the three `extend`s
+            // were paying reserve/set_len per card to build an empty vector.
+            let empty: &[crate::card::TriggeredAbility] = &[];
+            let printed = if stripped { empty } else { &card.definition.triggered_abilities[..] };
+            let own_granted = if stripped { empty } else { own_granted };
+            let static_granted = if stripped { empty } else { &static_granted[..] };
+            if printed.is_empty()
+                && own_granted.is_empty()
+                && static_granted.is_empty()
+                && equip_granted.is_empty()
+            {
+                continue;
             }
-            all_triggers.extend(equip_granted.iter().map(|t| (usize::MAX, t)));
+            let all_triggers = printed
+                .iter()
+                .enumerate()
+                .chain(own_granted.iter().map(|t| (usize::MAX, t)))
+                .chain(static_granted.iter().map(|t| (usize::MAX, t)))
+                .chain(equip_granted.iter().map(|t| (usize::MAX, t)));
             for (trig_idx, ta) in all_triggers {
                 // A `FromYourGraveyard`-scoped trigger functions ONLY while
                 // its card is in a graveyard (CR 603.3d zone-scoping —
@@ -16705,9 +17203,17 @@ impl GameState {
         // Filter evaluation for this batch is done — flip the queued
         // "gained life earlier this turn" flags (Leech Collector's
         // "first time each turn" gate).
-        for p in std::mem::take(&mut self.life_gain_flag_pending) {
-            if let Some(pl) = self.players.get_mut(p) {
-                pl.gained_life_earlier_this_turn = true;
+        // Guarded: `life_gain_flag_pending` is a `ColdState` field, so the
+        // `take` reaches it through `GameState::deref_mut` and deep-copies
+        // the whole cold group — once per trigger dispatch, on a list that
+        // is empty unless someone gained life this batch. The `PlayerCold`
+        // rule (PERF, twenty-ninth pass): a `clear`/`take` on a periodic
+        // path needs an `is_empty` read in front of it.
+        if !self.life_gain_flag_pending.is_empty() {
+            for p in std::mem::take(&mut self.life_gain_flag_pending) {
+                if let Some(pl) = self.players.get_mut(p) {
+                    pl.gained_life_earlier_this_turn = true;
+                }
             }
         }
         self.drain_trigger_queue(queue);
@@ -20069,8 +20575,18 @@ impl GameState {
     /// library-top): the card never reached a graveyard, so it never "died"
     /// and dies-watchers must not fire. Checked at dispatch time, after the
     /// removal chokepoint has resolved the redirect.
+    ///
+    /// Visit order, by the one-zone invariant: a card that *is* in a
+    /// graveyard cannot be in exile or a library, so the unreplaced case —
+    /// the overwhelming majority — answers off the graveyards without
+    /// touching ~70 library cards. Graveyards and exile are push-only, so
+    /// the card this asks about is the most recent entry: scan them back to
+    /// front and the hit is the first comparison.
     pub(crate) fn death_was_replaced(&self, card_id: CardId) -> bool {
-        self.exile.iter().any(|c| c.id == card_id)
+        if self.players.iter().any(|p| p.graveyard.iter().rev().any(|c| c.id == card_id)) {
+            return false;
+        }
+        self.exile.iter().rev().any(|c| c.id == card_id)
             || self
                 .players
                 .iter()
@@ -20309,7 +20825,9 @@ impl GameState {
 
     /// CR 613 — a card's power as the layers see it, falling back to the raw
     /// instance for cards outside the battlefield (hand / graveyard filters)
-    /// and mid-gather, where recomputing would recurse (`in_layer_gather`).
+    /// and mid-gather (`in_layer_gather`). The mid-gather arm is a fast path,
+    /// not the guard: [`Self::computed_permanent`] enforces it for every
+    /// caller, and would answer the same printed view a layer pass slower.
     pub(crate) fn effective_power(&self, card: &CardInstance) -> i32 {
         if self.in_layer_gather.load(std::sync::atomic::Ordering::Relaxed) {
             return card.power();
@@ -20325,18 +20843,30 @@ impl GameState {
         self.computed_permanent(card.id).map(|cp| cp.toughness).unwrap_or_else(|| card.toughness())
     }
 
+    /// The zone scan, cheapest-and-likeliest first. A `CardId` names one
+    /// object and lives in exactly one zone (spell copies and tokens are
+    /// minted fresh from `next_id`), so the visit order picks *how long the
+    /// answer takes*, never *which* answer comes back — and the libraries,
+    /// which hold ~35 cards a seat against a handful everywhere else, are
+    /// the last thing worth looking at rather than the third. The cast path
+    /// asks this for spells that are on the stack: those calls used to walk
+    /// both libraries first, and were ~65 % of the function's cost.
     pub fn find_card_anywhere(&self, id: CardId) -> Option<&CardInstance> {
         if let Some(c) = self.battlefield_find(id) {
             return Some(c);
+        }
+        for si in &self.stack {
+            if let crate::game::types::StackItem::Spell { card, .. } = si
+                && card.id == id
+            {
+                return Some(card);
+            }
         }
         for p in &self.players {
             if let Some(c) = p.graveyard.iter().find(|c| c.id == id) {
                 return Some(c);
             }
             if let Some(c) = p.hand.iter().find(|c| c.id == id) {
-                return Some(c);
-            }
-            if let Some(c) = p.library.iter().find(|c| c.id == id) {
                 return Some(c);
             }
             // CR 407 — the ante zone is a real zone; a card there is still
@@ -20348,20 +20878,41 @@ impl GameState {
         if let Some(c) = self.exile.iter().find(|c| c.id == id) {
             return Some(c);
         }
-        for si in &self.stack {
-            if let crate::game::types::StackItem::Spell { card, .. } = si
-                && card.id == id
-            {
-                return Some(card);
+        for p in &self.players {
+            if let Some(c) = p.library.iter().find(|c| c.id == id) {
+                return Some(c);
             }
         }
         None
     }
 
-    /// Mutable variant of `find_card_anywhere` — walks battlefield,
-    /// each player's hand/library/graveyard, and exile (in that order).
-    /// Used by `Effect::GrantMayPlay` to stamp `may_play_until` on a
-    /// card regardless of where the granting effect happens to find it.
+    /// The invariant behind [`find_card_anywhere`]'s visit order: a `CardId`
+    /// names one object, so no id is in two zones at once. Returns the first
+    /// duplicate found. Debug-only — a training run doesn't pay for it; the
+    /// golden-trace games assert it after every action, which is where a
+    /// zone move that forgets to remove would show up.
+    #[cfg(debug_assertions)]
+    pub fn duplicate_zone_id(&self) -> Option<CardId> {
+        let mut ids: Vec<CardId> = Vec::with_capacity(128);
+        ids.extend(self.battlefield.iter().map(|c| c.id));
+        ids.extend(self.exile.iter().map(|c| c.id));
+        ids.extend(self.stack.iter().filter_map(|si| match si {
+            crate::game::types::StackItem::Spell { card, .. } => Some(card.id),
+            _ => None,
+        }));
+        for p in &self.players {
+            for z in [&p.graveyard, &p.hand, &p.ante, &p.library] {
+                ids.extend(z.iter().map(|c| c.id));
+            }
+        }
+        ids.sort_unstable();
+        ids.windows(2).find(|w| w[0] == w[1]).map(|w| w[0])
+    }
+
+    /// Mutable variant of `find_card_anywhere`, and it walks the same zones
+    /// in the same order — libraries last. Used by `Effect::GrantMayPlay` to
+    /// stamp `may_play_until` on a card regardless of where the granting
+    /// effect happens to find it.
     pub fn find_card_anywhere_mut(
         &mut self,
         id: CardId,
@@ -20378,7 +20929,6 @@ impl GameState {
             };
             zone(0, &p.hand)
                 .or_else(|| zone(1, &p.graveyard))
-                .or_else(|| zone(2, &p.library))
                 .or_else(|| zone(3, &p.ante))
         });
         if let Some((pi, z, i)) = found {
@@ -20402,13 +20952,33 @@ impl GameState {
                 return Some(card);
             }
         }
+        // Libraries last, for the reason `find_card_anywhere` gives.
+        let lib = self
+            .players
+            .iter()
+            .enumerate()
+            .find_map(|(pi, p)| p.library.iter().position(|c| c.id == id).map(|i| (pi, i)));
+        if let Some((pi, i)) = lib {
+            return Some(&mut self.players[pi].library[i]);
+        }
         None
     }
 
-    /// Look up which zone a card currently occupies. Returns `None` if
-    /// the card isn't in any visible zone (battlefield, hand, library,
-    /// graveyard, exile, stack). Used by the cast-from-zone path to
-    /// confirm the card is still in the expected zone before lifting it.
+    /// Look up which zone a card currently occupies. Returns `None` if the
+    /// card isn't in a persistent zone — battlefield, hand, graveyard, ante,
+    /// exile, library. **The stack is not one of them**: `Zone` has no stack
+    /// variant and this never looked there, whatever the old doc said. Used
+    /// by the cast-from-zone path to confirm the card is still in the
+    /// expected zone before lifting it.
+    ///
+    /// Visit order is [`find_card_anywhere`]'s, for the same reason: a
+    /// `CardId` names one object, so the order picks how long the answer
+    /// takes and never which answer comes back, and the libraries hold ~35
+    /// cards a seat against a handful everywhere else. Graveyards and exile
+    /// are push-only, so they are scanned back to front — a card that just
+    /// moved there hits on the first comparison.
+    ///
+    /// [`find_card_anywhere`]: Self::find_card_anywhere
     pub(crate) fn find_card_zone(&self, id: CardId) -> Option<crate::card::Zone> {
         use crate::card::Zone;
         if self.battlefield.iter().any(|c| c.id == id) {
@@ -20418,18 +20988,20 @@ impl GameState {
             if p.hand.iter().any(|c| c.id == id) {
                 return Some(Zone::Hand);
             }
-            if p.graveyard.iter().any(|c| c.id == id) {
+            if p.graveyard.iter().rev().any(|c| c.id == id) {
                 return Some(Zone::Graveyard);
-            }
-            if p.library.iter().any(|c| c.id == id) {
-                return Some(Zone::Library);
             }
             if p.ante.iter().any(|c| c.id == id) {
                 return Some(Zone::Ante);
             }
         }
-        if self.exile.iter().any(|c| c.id == id) {
+        if self.exile.iter().rev().any(|c| c.id == id) {
             return Some(Zone::Exile);
+        }
+        for p in &self.players {
+            if p.library.iter().any(|c| c.id == id) {
+                return Some(Zone::Library);
+            }
         }
         None
     }
@@ -20441,20 +21013,15 @@ impl GameState {
     /// to find the original owner of a target whose card has changed
     /// zones (e.g. destroyed and now in graveyard) by the time the
     /// owner-targeted effect resolves.
+    ///
+    /// Visit order is [`find_card_anywhere`]'s — the stack is two or three
+    /// items and is checked before the seat zones, libraries last, and the
+    /// push-only zones back to front.
+    ///
+    /// [`find_card_anywhere`]: Self::find_card_anywhere
     pub(crate) fn find_card_owner(&self, id: CardId) -> Option<usize> {
         if let Some(c) = self.battlefield_find(id) {
             return Some(c.owner);
-        }
-        for (i, p) in self.players.iter().enumerate() {
-            if p.graveyard.iter().any(|c| c.id == id)
-                || p.hand.iter().any(|c| c.id == id)
-                || p.library.iter().any(|c| c.id == id)
-            {
-                return Some(i);
-            }
-        }
-        if self.exile.iter().any(|c| c.id == id) {
-            return self.exile.iter().find(|c| c.id == id).map(|c| c.owner);
         }
         // Stack: a spell mid-resolution is on the stack but not yet in any
         // player's persistent zone. The spell's caster is its current
@@ -20466,6 +21033,19 @@ impl GameState {
                 && card.id == id
             {
                 return Some(card.owner);
+            }
+        }
+        for (i, p) in self.players.iter().enumerate() {
+            if p.graveyard.iter().rev().any(|c| c.id == id) || p.hand.iter().any(|c| c.id == id) {
+                return Some(i);
+            }
+        }
+        if let Some(c) = self.exile.iter().rev().find(|c| c.id == id) {
+            return Some(c.owner);
+        }
+        for (i, p) in self.players.iter().enumerate() {
+            if p.library.iter().any(|c| c.id == id) {
+                return Some(i);
             }
         }
         None
@@ -20675,6 +21255,415 @@ fn card_can_strip_abilities(card: &CardInstance) -> bool {
             .station
             .iter()
             .any(|band| band.statics.iter().any(static_effect_strips_abilities))
+}
+
+/// True when `effect` can emit a layer-4 card-type modification. Twin of
+/// [`static_effect_strips_abilities`] for the card-type family; the two share
+/// the gate-wrapper peel because `static_effect_to_effects` recurses through
+/// the same wrappers.
+fn static_effect_changes_card_types(effect: &crate::effect::StaticEffect) -> bool {
+    use crate::effect::StaticEffect as SE;
+    match effect {
+        // `static_effect_to_effects` arms.
+        SE::MatchingLandsAreCreatures { .. } | SE::AddCardTypeToMatching { .. } => true,
+        // Stateful gather passes — each reads live GameState (devotion, a
+        // counter count, a predicate), so it can't route through
+        // `static_effect_to_effects`, but the printed static is the same tell.
+        SE::NotCreatureWhileDevotionBelow { .. }
+        | SE::NonAuraEnchantmentsAreCreatures { .. }
+        | SE::NoncreatureArtifactsAreCreatures
+        | SE::SelfIsCreatureWhileCountersAtLeast { .. }
+        | SE::SelfIsCreatureIf { .. } => true,
+        SE::WhileClassLevelAtLeast { inner, .. }
+        | SE::WhileYourTurn { inner }
+        | SE::WhileNotYourTurn { inner }
+        | SE::WhileCountersAtLeast { inner, .. }
+        | SE::WhileCondition { inner, .. } => static_effect_changes_card_types(inner),
+        _ => false,
+    }
+}
+
+/// True when `card`, on the battlefield, can contribute a layer-4 card-type
+/// modification to the gathered set. The printed-shape half of
+/// [`GameState::card_type_change_in_scope`]; covers the attachment routes
+/// (`equipped_bonus`' two type fields, CR 702.151c Reconfigure), the two
+/// keywords that gate the type line (CR 702.183 Impending, CR 702.161 Living
+/// metal), a CR 721.2a Station band with printed P/T, and every static route
+/// including Station-band statics.
+fn card_can_change_card_types(card: &CardInstance) -> bool {
+    let def = &card.definition;
+    if card.attached_to.is_some()
+        && (def.has_reconfigure().is_some()
+            || def.equipped_bonus.as_ref().is_some_and(|b| {
+                b.set_card_types.is_some() || !b.add_card_types.is_empty()
+            }))
+    {
+        return true;
+    }
+    if def
+        .keywords
+        .iter()
+        .any(|k| matches!(k, Keyword::Impending(_) | Keyword::LivingMetal))
+    {
+        return true;
+    }
+    def.station.iter().any(|band| {
+        band.pt.is_some() || band.statics.iter().any(static_effect_changes_card_types)
+    }) || def.static_abilities.iter().any(|sa| static_effect_changes_card_types(&sa.effect))
+}
+
+/// True when `m` can put a permanent's computed toughness *below* its
+/// instance toughness. The gathered-set half of
+/// [`GameState::pt_reduction_in_scope`]: every 7b set and the 7d switch can
+/// land anywhere, and a 7c modify only reduces when its toughness term is
+/// negative.
+pub(crate) fn modification_reduces_toughness(m: &Modification) -> bool {
+    match m {
+        Modification::SetPowerToughness(..)
+        | Modification::SetPowerToughnessToManaValue
+        | Modification::SetToughness(_)
+        | Modification::SwitchPowerToughness => true,
+        Modification::ModifyToughness(t) | Modification::ModifyPowerToughness(_, t) => *t < 0,
+        Modification::ModifyPtPerOwnCreatureType(_, per_t, _) => *per_t < 0,
+        _ => false,
+    }
+}
+
+/// True when `effect` can emit a layer-7 modification that lowers toughness.
+/// Twin of [`static_effect_changes_card_types`] for the P/T family; shares the
+/// gate-wrapper peel for the same reason.
+///
+/// Three groups, and the split is what makes the gate worth having. A printed
+/// **7b set** (or a `Value`-valued 7c term) can land anywhere, so it answers
+/// `true` unconditionally. A 7c term printed as a literal `i32` answers
+/// `*toughness < 0` — which is why every anthem, Rancor and Bushido on the
+/// board costs nothing. The `per_*` forms multiply that literal by a count the
+/// emitter derives from `.count()` / `counter_count()`, i.e. a non-negative
+/// factor, so the sign of the product is the sign of the literal.
+///
+/// Enumerated against every `Layer::L7PowerTough` site in
+/// `gather_continuous_effects_inner` and `static_effect_to_effects`. Two of
+/// those sites are deliberately absent: Bushido pumps by `Keyword::Bushido(n)`
+/// with `n: u32`, and Bludgeon Brawl's granted Equipment bonus has a literal
+/// `0` toughness term — neither can go negative. The layer-7 sites with no
+/// static behind them at all (`dynamic_pt`, level and Station bands,
+/// `equipped_bonus`, Soulbond) are `card_can_reduce_toughness`' job.
+fn static_effect_reduces_toughness(effect: &crate::effect::StaticEffect) -> bool {
+    use crate::effect::StaticEffect as SE;
+    match effect {
+        // Layer-7b sets, and the 7c terms whose toughness is a live `Value`.
+        SE::NonAuraEnchantmentsAreCreatures { .. }
+        | SE::NoncreatureArtifactsAreCreatures
+        | SE::SetBasePtIf { .. }
+        | SE::SetBasePtForFilter { .. }
+        | SE::SetBasePtForFilterFromValue { .. }
+        | SE::SelfBasePtFromValue { .. }
+        | SE::SetBaseToughnessForMatching { .. }
+        | SE::MatchingLandsAreCreatures { .. }
+        | SE::PumpPTByValue { .. }
+        | SE::PumpSelfByExiledWithStats => true,
+        // Layer-7c, literal toughness.
+        SE::PumpPT { toughness, .. }
+        | SE::PumpTeamIf { toughness, .. }
+        | SE::PumpSelfIf { toughness, .. }
+        | SE::GrantPumpSelfIf { toughness, .. }
+        | SE::PumpPTPerOtherOfType { toughness, .. }
+        | SE::PumpPerSharedType { toughness, .. }
+        | SE::AnthemForChosenType { toughness, .. }
+        | SE::AnthemForChosenColor { toughness, .. }
+        | SE::AnthemForFilter { toughness, .. }
+        | SE::AnthemForFilterIf { toughness, .. }
+        | SE::AnthemForColorSharedWithLibraryTop { toughness, .. } => *toughness < 0,
+        // Layer-7c, literal toughness scaled by a non-negative count.
+        SE::PumpSelfByControlledPermanents { per_toughness, .. }
+        | SE::PumpSelfByValue { per_toughness, .. }
+        | SE::PumpTeamPerAttachmentOnSource { per_toughness, .. }
+        | SE::PumpTeamByControlledPermanents { per_toughness, .. }
+        | SE::PumpPTPerOwnCreatureType { per_toughness, .. }
+        | SE::PumpPTPerCounterOnSource { per_toughness, .. } => *per_toughness < 0,
+        SE::WhileClassLevelAtLeast { inner, .. }
+        | SE::WhileYourTurn { inner }
+        | SE::WhileNotYourTurn { inner }
+        | SE::WhileCountersAtLeast { inner, .. }
+        | SE::WhileCondition { inner, .. } => static_effect_reduces_toughness(inner),
+        _ => false,
+    }
+}
+
+/// True when `card`, on the battlefield, can contribute a toughness-lowering
+/// layer-7 modification to the gathered set. The printed-shape half of
+/// [`GameState::pt_reduction_in_scope`]; covers the CR 613.4 7a
+/// characteristic-defining routes (`dynamic_pt`, level bands, CR 721.2b
+/// Station bands), the attachment route (`equipped_bonus`' five P/T fields,
+/// including its `scale` and its conditional bands), CR 702.95 Soulbond, and
+/// every static route including Station-band statics.
+fn card_can_reduce_toughness(card: &CardInstance) -> bool {
+    let def = &card.definition;
+    // 7a: a characteristic-defining formula, a level band or a Station band
+    // sets base P/T outright, so the result can be under the instance value.
+    if def.dynamic_pt.is_some() || !def.level_bands.is_empty() {
+        return true;
+    }
+    if def.station.iter().any(|band| {
+        band.pt.is_some() || band.statics.iter().any(static_effect_reduces_toughness)
+    }) {
+        return true;
+    }
+    if card.attached_to.is_some()
+        && let Some(b) = def.equipped_bonus.as_ref()
+        && (b.toughness < 0
+            || b.during_your_turn_pt.1 < 0
+            || b.conditional_pt.as_ref().is_some_and(|(_, t, _)| *t < 0)
+            || b.scale.as_ref().is_some_and(|s| s.per_toughness < 0)
+            || b.set_base_pt.is_some()
+            || b.set_base_pt_controller_life
+            || b.conditional
+                .iter()
+                .any(|c| c.toughness < 0 || c.set_base_pt.is_some()))
+    {
+        return true;
+    }
+    if card
+        .soulbond_partner
+        .is_some()
+        && def.soulbond_bonus.as_ref().is_some_and(|b| b.toughness < 0)
+    {
+        return true;
+    }
+    def.static_abilities.iter().any(|sa| static_effect_reduces_toughness(&sa.effect))
+}
+
+/// True when `effect` can change a damage amount in `scale_damage_to_inner`.
+/// The printed-static half of [`GameState::damage_scaling_in_scope`]; one
+/// variant per arm of that function, including the two it reaches through
+/// [`GameState::damage_doublers`] and [`GameState::damage_halvers`].
+fn static_effect_scales_damage(effect: &crate::effect::StaticEffect) -> bool {
+    use crate::effect::StaticEffect as SE;
+    match effect {
+        // The two whole-board multipliers, via damage_doublers/damage_halvers.
+        SE::DoubleDamageDealt
+        | SE::HalveDamageDealt
+        // Recipient-scoped.
+        | SE::DoubleDamageToOpponents
+        | SE::DoubleDamageToEnchantedPlayer
+        | SE::HalveDamageToYou
+        | SE::ReduceDamageToYouBy(_)
+        | SE::ReduceColorDamageToYouBy { .. }
+        | SE::ReduceDamageToYourCreaturesBy(_)
+        | SE::ReduceDamageToYourMatchingCreaturesBy { .. }
+        // Source-scoped.
+        | SE::AddDamageFromColorSpells { .. }
+        | SE::ReduceSpellDamageBy { .. }
+        | SE::AddDamageToOpponents { .. }
+        | SE::AddDamageToOpponentsPerCounter { .. }
+        | SE::AddDamageFromColorToPlayers { .. }
+        | SE::YourColorSpellDamageDoubled { .. }
+        | SE::YourColorSourcesDealExtraDamage { .. }
+        | SE::DoubleDamageFromCreaturesEnteredThisTurn
+        | SE::DoubleDamageFromControlledCreatures
+        | SE::DoubleDamageFromControlledMatching { .. }
+        | SE::DoubleYourSourcesDamageWhileHellbent
+        | SE::ControlledCreatureTypesDealExtraDamage { .. }
+        // Applied last, over the doubled/halved result.
+        | SE::CapLargeDamage { .. } => true,
+        SE::WhileClassLevelAtLeast { inner, .. }
+        | SE::WhileYourTurn { inner }
+        | SE::WhileNotYourTurn { inner }
+        | SE::WhileCountersAtLeast { inner, .. }
+        | SE::WhileCondition { inner, .. } => static_effect_scales_damage(inner),
+        _ => false,
+    }
+}
+
+/// True when `effect` can emit a layer-4 land-type modification. Twin of
+/// [`static_effect_changes_card_types`] for the land-type family; shares the
+/// gate-wrapper peel for the same reason.
+///
+/// Six variants, and the list is exhaustive against the emitters in
+/// `gather_continuous_effects_inner` and `static_effect_to_effects`: Alpine
+/// Moon and Ultima blank a land's types on their way to stripping it, and the
+/// other four write one directly. `LandsYouControlAreChosenType` is a no-op
+/// until its ETB stamps `chosen_land_type`, but the gate over-approximates
+/// rather than reading the instance — the static is the tell.
+fn static_effect_changes_land_types(effect: &crate::effect::StaticEffect) -> bool {
+    use crate::effect::StaticEffect as SE;
+    match effect {
+        SE::NamedLandsNeutralized
+        | SE::BlightedLandsNeutralized
+        | SE::GrantAllBasicLandTypes { .. }
+        | SE::LandTypeChanger { .. }
+        | SE::LandTypeChangerWhileCounters { .. }
+        | SE::LandsYouControlAreChosenType => true,
+        SE::WhileClassLevelAtLeast { inner, .. }
+        | SE::WhileYourTurn { inner }
+        | SE::WhileNotYourTurn { inner }
+        | SE::WhileCountersAtLeast { inner, .. }
+        | SE::WhileCondition { inner, .. } => static_effect_changes_land_types(inner),
+        _ => false,
+    }
+}
+
+/// True when `card`, on the battlefield, can contribute a layer-4 land-type
+/// modification to the gathered set. The printed-shape half of
+/// [`GameState::land_type_change_in_scope`]; covers the attachment route
+/// (`equipped_bonus.set_land_types`) and every static route, including
+/// CR 721.2a Station bands.
+fn card_can_change_land_types(card: &CardInstance) -> bool {
+    let def = &card.definition;
+    if card.attached_to.is_some()
+        && def.equipped_bonus.as_ref().is_some_and(|b| b.set_land_types.is_some())
+    {
+        return true;
+    }
+    def.static_abilities.iter().any(|sa| static_effect_changes_land_types(&sa.effect))
+        || def
+            .station
+            .iter()
+            .any(|band| band.statics.iter().any(static_effect_changes_land_types))
+}
+
+/// True when `effect` can emit a layer-4 *creature*-type modification. Twin of
+/// [`static_effect_changes_land_types`] for the creature-type family; shares
+/// the gate-wrapper peel for the same reason.
+///
+/// Five variants, and the list is exhaustive against the `AddCreatureType` /
+/// `SetCreatureTypes` emitters in `static_effect_to_effects` and in
+/// `gather_continuous_effects_inner`'s stateful passes. `SelfIsCreatureIf` is
+/// the stateful one — it reads a live predicate, so it never routes through
+/// `static_effect_to_effects`, but the printed static is the same tell.
+fn static_effect_changes_creature_types(effect: &crate::effect::StaticEffect) -> bool {
+    use crate::effect::StaticEffect as SE;
+    match effect {
+        SE::CreaturesYouControlAreChosenType
+        | SE::MatchingAreChosenTypeToo { .. }
+        | SE::MatchingLandsAreCreatures { .. }
+        | SE::AddCreatureTypeToMatching { .. }
+        | SE::SelfIsCreatureIf { .. } => true,
+        SE::WhileClassLevelAtLeast { inner, .. }
+        | SE::WhileYourTurn { inner }
+        | SE::WhileNotYourTurn { inner }
+        | SE::WhileCountersAtLeast { inner, .. }
+        | SE::WhileCondition { inner, .. } => static_effect_changes_creature_types(inner),
+        _ => false,
+    }
+}
+
+/// True when `card`, on the battlefield, can contribute a layer-4
+/// creature-type modification to the gathered set. The printed-shape half of
+/// [`GameState::creature_type_change_in_scope`]; covers the attachment route
+/// (`equipped_bonus`' two creature-type fields) and every static route,
+/// including CR 721.2a Station bands.
+fn card_can_change_creature_types(card: &CardInstance) -> bool {
+    let def = &card.definition;
+    if card.attached_to.is_some()
+        && def.equipped_bonus.as_ref().is_some_and(|b| {
+            b.set_creature_types.is_some() || !b.add_creature_types.is_empty()
+        })
+    {
+        return true;
+    }
+    def.static_abilities.iter().any(|sa| static_effect_changes_creature_types(&sa.effect))
+        || def
+            .station
+            .iter()
+            .any(|band| band.statics.iter().any(static_effect_changes_creature_types))
+}
+
+/// True when `effect` can emit a layer-6 `AddKeyword` matching `pred`. Twin of
+/// [`static_effect_strips_abilities`] for the keyword-grant family.
+///
+/// The variant list is mechanical, not judged: 23 of `StaticEffect`'s variants
+/// carry a `Keyword` field, three of those only *remove* one (`LoseKeyword`,
+/// `CantHaveKeyword`) or name a supertype, and four more grant a keyword they
+/// don't carry as a field — so the scan for `Keyword` in the enum is necessary
+/// and not sufficient, and those four are spelled out below.
+fn static_effect_grants_keyword(
+    effect: &crate::effect::StaticEffect,
+    pred: &impl Fn(&Keyword) -> bool,
+) -> bool {
+    use crate::effect::StaticEffect as SE;
+    let any = |kws: &[Keyword]| kws.iter().any(pred);
+    match effect {
+        SE::PumpSelfIf { keywords, .. }
+        | SE::PumpTeamIf { keywords, .. }
+        | SE::GrantPumpSelfIf { keywords, .. }
+        | SE::MatchingLandsAreCreatures { keywords, .. }
+        | SE::AnthemForFilter { keywords, .. }
+        | SE::AnthemForFilterIf { keywords, .. } => any(keywords),
+        SE::GrantKeyword { keyword, .. }
+        | SE::GrantKeywordWhileControllerControlsAtMost { keyword, .. }
+        | SE::GrantKeywordToChosenType { keyword, .. }
+        | SE::GrantKeywordToAttackers { keyword }
+        | SE::GraveyardAnthem { keyword, .. }
+        | SE::SelfHasKeywordWhile { keyword, .. }
+        | SE::SelfHasKeywordWhilePredicate { keyword, .. }
+        | SE::SelfHasKeywordWhileCountersAtLeast { keyword, .. }
+        | SE::SelfHasKeywordIf { keyword, .. } => pred(keyword),
+        // Unbounded — the granted keyword carries a payload the static does
+        // not fix (an exiled card's keywords or card types, a draft note, an
+        // ETB-chosen colour, a counter count), so the only sound answer while
+        // the static is present is "maybe". All five are rare enough that the
+        // gate still reads `false` on essentially every board.
+        SE::GainKeywordsFromExiledWith { .. }
+        | SE::SelfHasDraftNotedKeywords
+        | SE::AnnihilatorPerPlusOneCounter
+        | SE::GrantProtectionFromChosenColor { .. }
+        | SE::ProtectionFromExiledWithCardTypes
+        | SE::YouAndCreaturesProtectionFromChosenCardType => true,
+        SE::WhileClassLevelAtLeast { inner, .. }
+        | SE::WhileYourTurn { inner }
+        | SE::WhileNotYourTurn { inner }
+        | SE::WhileCountersAtLeast { inner, .. }
+        | SE::WhileCondition { inner, .. } => static_effect_grants_keyword(inner, pred),
+        _ => false,
+    }
+}
+
+/// True when `card`, on the battlefield, can contribute a layer-6 `AddKeyword`
+/// matching `pred` to the gathered set. The printed-shape half of
+/// [`GameState::keyword_grant_in_scope`]: the attachment bonuses and their CR
+/// 613 host-conditional riders, Soulbond, level and Station bands, the two
+/// instance-level self-grants the gather synthesizes (CR 701.60 Suspect's
+/// menace + can't-block, and the hexproof-unless rewrite), and every static
+/// route including Station-band statics.
+fn card_can_grant_keyword(
+    card: &CardInstance,
+    pred: &impl Fn(&Keyword) -> bool,
+    synth: bool,
+) -> bool {
+    let def = &card.definition;
+    let any = |kws: &[Keyword]| kws.iter().any(pred);
+    // `synth` is the caller's one-shot answer for the three keywords the
+    // gather makes up rather than reads out of a field (see
+    // `keyword_grant_in_scope`); when it is clear, none of the three can be
+    // what `pred` is asking about and the `keywords` scan is dead weight.
+    if synth
+        && (card.suspected
+            || def.keywords.iter().any(|k| {
+                matches!(
+                    k,
+                    Keyword::HexproofUnlessAttackingOrBlocking | Keyword::Unleash
+                )
+            }))
+    {
+        return true;
+    }
+    if let Some(b) = &def.equipped_bonus
+        && (any(&b.keywords)
+            || any(&b.during_your_turn_keywords)
+            || b.conditional.iter().any(|c| any(&c.keywords)))
+    {
+        return true;
+    }
+    if def.soulbond_bonus.as_ref().is_some_and(|b| any(&b.keywords)) {
+        return true;
+    }
+    if def.level_bands.iter().any(|b| any(&b.keywords)) {
+        return true;
+    }
+    def.station.iter().any(|b| {
+        any(&b.keywords) || b.statics.iter().any(|sa| static_effect_grants_keyword(sa, pred))
+    }) || def.static_abilities.iter().any(|sa| static_effect_grants_keyword(&sa.effect, pred))
 }
 
 /// Convert a `StaticAbility` from a source permanent into `ContinuousEffect`s.

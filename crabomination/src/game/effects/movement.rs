@@ -356,7 +356,14 @@ impl GameState {
         }
         // CR 702.64 — Absorb N on the damaged creature prevents N of this
         // event's damage per instance (each instance applies separately).
-        if let EntityRef::Permanent(cid) = ent {
+        // The gate is the same shape as the protection one above it: the
+        // answer is `0` on every board with no Absorb source, and proving that
+        // was a whole-game gather per damage event aimed at a permanent.
+        if let EntityRef::Permanent(cid) = ent
+            && self.card_keyword_possible(cid, |k| {
+                matches!(k, crate::card::Keyword::Absorb(_))
+            })
+        {
             let absorbed: u32 = self
                 .computed_permanent(cid)
                 .map(|cp| {
@@ -2065,9 +2072,13 @@ impl GameState {
             }
         };
         // CR 702.47e — a spell loses its splice changes once it leaves the
-        // stack for any reason.
-        card.spliced_effects.clear();
-        card.spliced_names.clear();
+        // stack for any reason. Guarded: both live in the `CardCold` group,
+        // and every card moved by this function would otherwise unshare it
+        // to clear two vectors that are already empty.
+        if !card.spliced_effects.is_empty() || !card.spliced_names.is_empty() {
+            card.spliced_effects.clear();
+            card.spliced_names.clear();
+        }
         // CR 712.16/712.17 — a melded permanent leaving the battlefield
         // leaves as its two component cards; the melded shell ceases to
         // exist.
@@ -2321,8 +2332,10 @@ impl GameState {
                 // CR 400.7 — a fresh object isn't saddled and remembers no
                 // riders (Fortune, Loyal Steed returning after its own blink).
                 card.saddled = false;
-                card.saddled_by.clear();
-                card.crewed_by.clear();
+                if !card.saddled_by.is_empty() || !card.crewed_by.is_empty() {
+                    card.saddled_by.clear();
+                    card.crewed_by.clear();
+                }
                 // Not a cast: reanimation / blink / put-onto-battlefield clears
                 // the "if you cast it" flag (CR 400.7 new object).
                 card.entered_by_cast = false;
@@ -2514,10 +2527,19 @@ impl GameState {
         // per-object activation limits (CR 602.5f "only once each turn",
         // CR 702.177a exhaust's "activate only once") start over.
         if let Some(c) = self.find_card_anywhere_mut(id) {
-            c.granted_activated_abilities.clear();
-            c.granted_activated_eot.clear();
-            c.exhausted_abilities.clear();
-            c.once_per_turn_used.clear();
+            // All four are `CardCold` fields; clearing unconditionally would
+            // unshare the group for every permanent that leaves the
+            // battlefield, and they are empty on nearly all of them.
+            if !c.granted_activated_abilities.is_empty()
+                || !c.granted_activated_eot.is_empty()
+                || !c.exhausted_abilities.is_empty()
+                || !c.once_per_turn_used.is_empty()
+            {
+                c.granted_activated_abilities.clear();
+                c.granted_activated_eot.clear();
+                c.exhausted_abilities.clear();
+                c.once_per_turn_used.clear();
+            }
             // …and so does how it got here: a reanimated permanent wasn't cast
             // from anywhere, so "if you didn't cast it from your hand" riders
             // see the new object (Phage the Untouchable).

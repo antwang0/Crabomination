@@ -1336,13 +1336,20 @@ impl GameState {
         }
         // CR 702.22e — a declared band lasts for the rest of combat regardless
         // of later banding loss; drop members that never made it into combat.
-        self.attack_bands = bands
+        // Guarded: `attack_bands` is a `ColdState` field, so writing it
+        // deep-copies the whole cold group — once per declare-attackers, and
+        // banding is empty on every board without a bander. Compare first;
+        // the comparison is a `&self` read and takes nothing.
+        let declared: Vec<Vec<CardId>> = bands
             .into_iter()
             .map(|b| {
                 b.into_iter().filter(|m| self.attacking.iter().any(|a| a.attacker == *m)).collect()
             })
             .filter(|b: &Vec<CardId>| b.len() > 1)
             .collect();
+        if self.attack_bands != declared {
+            self.attack_bands = declared;
+        }
 
         // YourControl-scoped Attacks triggers (e.g. Battle Banner,
         // Sparring Regimen) are NOT walked here — the unified
@@ -2468,6 +2475,9 @@ impl GameState {
         if self.attacking.is_empty() && self.block_map.is_empty() {
             return false;
         }
+        if !self.first_strike_possible() {
+            return false;
+        }
         self.with_frozen_layers(|g| {
             let strikes_first = |id: CardId| {
                 g.computed_permanent(id).is_some_and(|c| {
@@ -2478,6 +2488,54 @@ impl GameState {
             g.attacking.iter().any(|atk| strikes_first(atk.attacker))
                 || g.block_map.keys().any(|&id| strikes_first(id))
         })
+    }
+
+    /// Can any combat participant's *computed* keywords carry first or double
+    /// strike, answered without gathering? `false` is authoritative; `true`
+    /// only means [`has_first_strikers`](Self::has_first_strikers) has to
+    /// gather.
+    ///
+    /// [`card_keyword_possible`] per participant with its one expensive leg —
+    /// the board-wide grant scan — hoisted out of the loop, because the two
+    /// or six participants are asked about the same board. The whole step
+    /// transition rides on this: a board printing neither keyword and holding
+    /// no source that can grant one skips the first-strike damage step, and
+    /// under the old shape that skip cost a full gather plus one layer pass
+    /// per participant.
+    ///
+    /// [`card_keyword_possible`]: crate::game::GameState::card_keyword_possible
+    fn first_strike_possible(&self) -> bool {
+        let strikes =
+            |k: &Keyword| matches!(k, Keyword::FirstStrike | Keyword::DoubleStrike);
+        let printed = |id: CardId| {
+            self.battlefield_find(id).is_some_and(|c| {
+                c.definition.keywords.iter().any(strikes)
+                    || c.granted_keywords_eot.iter().any(strikes)
+                    || c.keyword_counters.iter().any(|(k, n)| *n > 0 && strikes(k))
+            })
+        };
+        let hit = self.attacking.iter().any(|atk| printed(atk.attacker))
+            || self.block_map.keys().any(|&id| printed(id))
+            || self.keyword_grant_in_scope(strikes);
+        // The gate has no shared choke point to hang an enumeration audit on,
+        // so it audits against its own outcome: when it says no, the guarded
+        // body must agree. Runs on every combat-damage step the suite plays.
+        #[cfg(debug_assertions)]
+        if !hit {
+            let computed_hit = self.with_frozen_layers(|g| {
+                let strikes_first = |id: CardId| {
+                    g.computed_permanent(id)
+                        .is_some_and(|c| c.keywords.iter().any(strikes))
+                };
+                g.attacking.iter().any(|atk| strikes_first(atk.attacker))
+                    || g.block_map.keys().any(|&id| strikes_first(id))
+            });
+            debug_assert!(
+                !computed_hit,
+                "the first-strike presence gate said no, but a participant strikes first"
+            );
+        }
+        hit
     }
 
     /// The computed views [`resolve_combat_damage_with_filter`] reads: every
@@ -2562,13 +2620,25 @@ impl GameState {
 
         self.attacking.clear();
         self.block_map.clear();
-        self.blocked_attackers.clear();
-        self.attack_bands.clear();
+        // Both are `ColdState` fields; an unguarded `clear` on a combat
+        // boundary deep-copies the whole cold group (PERF, twenty-eighth
+        // pass's rule, restated in the thirty-third's Log block).
+        if !self.blocked_attackers.is_empty() {
+            self.blocked_attackers.clear();
+        }
+        if !self.attack_bands.is_empty() {
+            self.attack_bands.clear();
+        }
         self.clear_combat_damage_plan();
         self.blockers_declared = false;
         // CR 702.39 — provoke's "block this combat" requirement ends here.
+        // Gated: the write is a `DerefMut` on a CoW `CardData`, so clearing
+        // the `None` almost every permanent already holds deep-copied the
+        // whole battlefield once per combat.
         for c in &mut self.battlefield {
-            c.must_block = None;
+            if c.must_block.is_some() {
+                c.must_block = None;
+            }
         }
 
         events.push(GameEvent::CombatResolved);
@@ -3042,7 +3112,7 @@ impl GameState {
                 let order = self.resolve_damage_order(&default_order, &answer);
                 self.combat_damage_order.insert(bid, order);
             }
-            let order = self.combat_damage_order[&bid].clone();
+            let order = self.combat_damage_order.get(&bid).cloned().unwrap_or_default();
 
             if !self.combat_damage_assignment.contains_key(&bid) {
                 let lethals = self.combat_lethals(deathtouch, &order, computed);
@@ -3206,7 +3276,15 @@ impl GameState {
                     .get(&attacker)
                     .cloned()
                     .unwrap_or_default();
-                let computed = self.compute_battlefield();
+                // The same computed view the resolver reads, not the whole
+                // board: every id this branch looks up is a combat
+                // participant, and `combat_damage_computed` already falls
+                // back to the full view for the one whole-board consumer
+                // (`free_division_targets`' Butcher Orgg half). Computing the
+                // board here instead cost 16,939 Ir a call against ~4,900 for
+                // the subset, and left the decision path reading a different
+                // view from the resolver that consumes its answer.
+                let computed = self.combat_damage_computed();
                 let atk_cp = computed.iter().find(|c| c.id == attacker);
                 let deathtouch = atk_cp
                     .is_some_and(|c| c.keywords.contains(&Keyword::Deathtouch));
@@ -3277,6 +3355,8 @@ impl GameState {
                         Keyword::Toxic(n) | Keyword::Poisonous(n) => Some(*n),
                         _ => None,
                     }).sum(),
+                    assigns_as_unblocked: kws
+                        .contains(&Keyword::AssignsDamageAsThoughUnblocked),
                     // CR 510.1 — a creature with "deals no combat damage this
                     // turn" (Master of Cruelties) is skipped in both damage
                     // steps even though it's a legal attacker/blocker. CR 614.9
@@ -3348,11 +3428,15 @@ impl GameState {
             // blocked" (Predatory Focus): drop the blocker list so the whole
             // hit lands on the defending player. The blockers still deal
             // theirs, which the blocker loop below handles.
-            if self
-                .computed_permanent(atk.id)
-                .is_some_and(|cp| cp.keywords.contains(
-                    &crate::card::Keyword::AssignsDamageAsThoughUnblocked))
-            {
+            // Read off `atk`, i.e. the one snapshot this step took, like
+            // every other attacker keyword in this loop: CR 510.1 assignment
+            // is a single turn-based action taken before any of the damage
+            // below is dealt, so a life total this loop moves must not change
+            // which attackers count as blocked. A fresh `computed_permanent`
+            // here was a whole gather per attacker (13,601,323 Ir / 0.60 %
+            // over 4,474 calls) *and* the only attacker keyword read at a
+            // different game state from its siblings.
+            if atk.assigns_as_unblocked {
                 blocker_ids.clear();
                 self.blocked_attackers.retain(|id| *id != atk.id);
             }
@@ -3490,10 +3574,18 @@ impl GameState {
                     // `damage_prevented_by_protection` and `scale_damage_to`
                     // both take one, and both already freeze internally, so
                     // the scope is what merges them.
-                    let Some(scaled) = self.with_frozen_layers(|g| {
+                    // The two reads after `apply_prevention_shields` — the CR
+                    // 614.9 redirect and the CR 615 self-prevention pair — are
+                    // `&self` and gather on their own, so they ride this scope
+                    // too: three gathers per pair become one. Shields consume
+                    // charges and emit events; no layer input moves between.
+                    let (scaled, redirect_to, self_prevented) = self.with_frozen_layers(|g| {
+                        let redirect_to = g.creature_redirects_damage_to_controller(blocker_id);
+                        let self_prevented = g.combat_damage_prevented_to_self(blocker_id)
+                            || g.damage_from_source_prevented_by_keyword(blocker_id, atk.id);
                         // CR 614.9 — a Maze-of-Ith'd blocker takes no combat
                         // damage. CR 615 — Emmara shields your creature tokens.
-                        if g.combat_damage_prevented_creatures.contains(&blocker_id)
+                        let scaled = if g.combat_damage_prevented_creatures.contains(&blocker_id)
                             || g.all_damage_to_creature_token_prevented(blocker_id)
                             || g.all_damage_to_your_creature_prevented(blocker_id)
                             // CR 702.16e — protection from the attacker's color
@@ -3509,14 +3601,17 @@ impl GameState {
                             // own damage to creatures of a chosen color.
                             || g.source_damage_to_color_prevented(atk.id, blocker_id)
                         {
-                            return None;
-                        }
-                        Some(g.double_creature_combat_damage(g.scale_damage_to(
-                            Some(atk.id),
-                            crate::game::effects::EntityRef::Permanent(blocker_id),
-                            assign,
-                        )))
-                    }) else {
+                            None
+                        } else {
+                            Some(g.double_creature_combat_damage(g.scale_damage_to(
+                                Some(atk.id),
+                                crate::game::effects::EntityRef::Permanent(blocker_id),
+                                assign,
+                            )))
+                        };
+                        (scaled, redirect_to, self_prevented)
+                    });
+                    let Some(scaled) = scaled else {
                         continue;
                     };
                     // CR 615 — route attacker→blocker combat damage through
@@ -3531,16 +3626,11 @@ impl GameState {
                     ) as i32;
                     // Ironscale Hydra replaces the damage with a +1/+1 counter
                     // (and so the attacker's lifelink scales off 0).
-                    let dealt = self.ironscale_replace(blocker_id, dealt, &mut events);
+                    let dealt =
+                        self.ironscale_replace(blocker_id, redirect_to, dealt, &mut events);
                     // CR 615 — a blocker that prevents all damage to itself
                     // (Wall of Denial) takes none, and grants no lifelink.
-                    let dealt = if self.combat_damage_prevented_to_self(blocker_id)
-                        || self.damage_from_source_prevented_by_keyword(blocker_id, atk.id)
-                    {
-                        0
-                    } else {
-                        dealt
-                    };
+                    let dealt = if self_prevented { 0 } else { dealt };
                     lifelink_dealt += dealt;
 
                     // Karona's Zealot — a standing turn-scoped redirect moves
@@ -3670,20 +3760,28 @@ impl GameState {
                         // Same read-only prefix as the attacker side: both
                         // calls are `&self` and `apply_prevention_shields` is
                         // the first write, so one scope holds the pair.
-                        let Some(scaled) = self.with_frozen_layers(|g| {
+                        let (scaled, redirect_to, self_prevented) = self.with_frozen_layers(|g| {
                             let power = g.blocker_damage_to(
                                 bid,
                                 atk.id,
                                 combat_damage_value(bc).max(0) as u32,
                             );
-                            (power != 0).then(|| {
+                            let scaled = (power != 0).then(|| {
                                 g.double_creature_combat_damage(g.scale_damage_to(
                                     Some(bid),
                                     crate::game::effects::EntityRef::Permanent(atk.id),
                                     power,
                                 ))
-                            })
-                        }) else {
+                            });
+                            // Same fold as the attacker side: the post-shield
+                            // reads gather on their own outside a scope.
+                            let redirect_to = g.creature_redirects_damage_to_controller(atk.id);
+                            let self_prevented = g.combat_damage_prevented_to_self(atk.id)
+                                || g.combat_damage_from_blockers_prevented(atk.id)
+                                || g.damage_from_source_prevented_by_keyword(atk.id, bid);
+                            (scaled, redirect_to, self_prevented)
+                        });
+                        let Some(scaled) = scaled else {
                             continue;
                         };
                         let dmg = self.apply_prevention_shields(
@@ -3694,18 +3792,13 @@ impl GameState {
                         );
                         // Ironscale Hydra replaces the blocker's strike-back
                         // with a +1/+1 counter (blocker's lifelink sees 0).
-                        let dmg = self.ironscale_replace(atk.id, dmg as i32, &mut events) as u32;
+                        let dmg = self
+                            .ironscale_replace(atk.id, redirect_to, dmg as i32, &mut events)
+                            as u32;
                         // CR 615 — an attacker that prevents all damage to itself,
                         // or specifically damage from its blockers (Armored
                         // Transport), takes none from this blocker (no lifelink).
-                        let dmg = if self.combat_damage_prevented_to_self(atk.id)
-                            || self.combat_damage_from_blockers_prevented(atk.id)
-                            || self.damage_from_source_prevented_by_keyword(atk.id, bid)
-                        {
-                            0
-                        } else {
-                            dmg
-                        };
+                        let dmg = if self_prevented { 0 } else { dmg };
                         if dmg == 0 {
                             continue;
                         }
@@ -3880,12 +3973,26 @@ impl GameState {
     /// damage: if it has the static and `dealt > 0`, add one +1/+1 counter,
     /// emit the event, and return 0 (the damage is prevented); otherwise
     /// return `dealt` unchanged.
-    fn ironscale_replace(&mut self, recipient: CardId, dealt: i32, events: &mut Vec<GameEvent>) -> i32 {
+    ///
+    /// `redirect_to` is [`creature_redirects_damage_to_controller`] answered by
+    /// the caller: the CR 614.9 check is the only layer read this function
+    /// needs, and outside a freeze scope it re-gathers every continuous effect
+    /// in the game. Both damage loops take it in the read-only prefix they
+    /// already freeze, so a pair pays one gather instead of two.
+    ///
+    /// [`creature_redirects_damage_to_controller`]: Self::creature_redirects_damage_to_controller
+    fn ironscale_replace(
+        &mut self,
+        recipient: CardId,
+        redirect_to: Option<usize>,
+        dealt: i32,
+        events: &mut Vec<GameEvent>,
+    ) -> i32 {
         if dealt <= 0 {
             return dealt;
         }
         // CR 614.9 — Treacherous Link redirects combat damage too.
-        if let Some(owner) = self.creature_redirects_damage_to_controller(recipient) {
+        if let Some(owner) = redirect_to {
             self.deal_damage_to_from(
                 crate::game::effects::EntityRef::Player(owner),
                 dealt as u32,
@@ -5091,5 +5198,10 @@ struct AttackerInfo {
     has_infect: bool,
     has_wither: bool,
     toxic: u32,
+    /// CR 510.1a — "assigns its combat damage as though it weren't blocked"
+    /// (Thorn Elemental, Rhox). Read from the same snapshot as the keywords
+    /// above because CR 510.1 assignment is one turn-based action taken
+    /// before any damage is dealt.
+    assigns_as_unblocked: bool,
     should_deal: bool,
 }
