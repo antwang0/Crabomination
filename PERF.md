@@ -711,6 +711,41 @@ the table above is safe to compress:
 
 ## Log
 
+### Forty-first pass — the net's forward pass was scalar (candidate 11, part 1)
+
+**mcts-net-deep 33.0 → 18.4 s/game (−44 %), mcts-net-256 121.9 → 73.0
+(−40 %)**, one change: `crabomination_nn`'s `Tensor2::matvec` (and the
+attention score dots) rewritten from a single-accumulator loop to an
+eight-accumulator body with runtime-dispatched AVX2+FMA. Strict f32
+semantics forbid LLVM from reassociating a chained dot product into SIMD
+lanes, so the old loop ran scalar on every machine; the workspace also
+builds baseline x86-64 (SSE2, no FMA), so even the vectorizable parts
+never saw the wide units. Splitting the accumulators licenses the
+reassociation, and the `#[target_feature]` wrapper (portable body
+inlined into it, wasm path untouched) gets the 8-wide FMA units.
+
+Methodology differs from every row above, deliberately: the callgrind
+bench (`--a gang --b gang`) never executes the net, so this change is
+invisible to the Ir baseline — the committed bench is untouched by
+construction. Numbers are serial wall clock in the r42 Part C harness
+(`--a <prof> --b net --decks sealed --games 4 --seed 43 --threads 1`,
+release, wall/4), against r42's same-box baselines. The split behind it,
+from the new `CRAB_MCTS_TIMING=1` instrumentation (profiling-fast, 24
+games): leaf eval was **39 %** of search wall at **635 µs/rollout**, of
+which encode was 10 µs and the forward pass the rest; after the change
+the forward reads **164 µs** (**4.3×**) and the leaf **12 %**. FP
+reassociation moves the sums by ~1 ulp-scale amounts; the candle parity
+tests (tolerance 1e-4) and the full `crabomination_ml` suite pass, and
+golden traces are identical (heuristic bots never call the net).
+
+What this buys beyond the ladder: the same forward runs in the training
+actors' self-play, the 1-ply `net` pilot, and the client's `local_bot`
+think time — every net consumer, not just MCTS. Remaining in candidate
+11: the rollout sim is now **88 %** of search wall (~1 ms/rollout, ~63
+engine actions at ~16 µs), which is the engine's own action loop —
+further leaf work (buffer reuse, blocked matvec) is bounded at ~12 %
+until the rollout side moves.
+
 ### Fortieth pass — five allocation rows, and the one that was a Vec per permanent per generator
 
 Cumulative: **2,136,851,050 -> 1,974,770,479 Ir, -162,080,571 / -7.585 %**,
@@ -2518,6 +2553,15 @@ that outlive any one profile.
     Anything that changes *which* states get evaluated needs a
     `bot_ladder` win-rate gate per the round-29 house rule; pure
     batching needs only the perf numbers and a golden-trace check.
+    **Part 1 landed (forty-first pass): the forward pass was scalar** —
+    vectorized matvec took 64-iter games −44 % and 256-iter −40 %, and
+    the leaf from 39 % of search wall to 12 %. The measured split
+    (`CRAB_MCTS_TIMING=1`) says the remaining cost is the **rollout
+    sim: 88 %**, ~63 engine actions per rollout at ~16 µs — so the next
+    rungs here are rollout-side (early adjudication of settled
+    rollouts, a cheaper rollout policy tick), which change what gets
+    evaluated and therefore gate on the ladder, or the engine action
+    loop itself (the (-12) auto-tap subtree above).
 
 **Closed / ruled out**, one line each; the reasoning is in git.
 

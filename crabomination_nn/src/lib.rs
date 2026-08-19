@@ -595,18 +595,76 @@ pub struct Tensor2 {
     pub data: Vec<f32>,
 }
 
+/// Eight-accumulator dot product. The single-accumulator loop chains
+/// every add through one register, and strict f32 semantics stop LLVM
+/// from reassociating that into SIMD lanes — so the naive form runs
+/// scalar however wide the machine is. Splitting the accumulation states
+/// the reassociation explicitly, which is what lets the autovectorizer
+/// use it. `matvec` is essentially the whole forward pass, so this
+/// function is the net's throughput.
+///
+/// `inline(always)` is load-bearing: the AVX2 wrapper below relies on
+/// this body inlining into its `#[target_feature]` scope, where LLVM
+/// recompiles it with 256-bit lanes and FMA.
+#[inline(always)]
+fn dot(a: &[f32], b: &[f32]) -> f32 {
+    const LANES: usize = 8;
+    let n = a.len().min(b.len());
+    let chunks = n / LANES;
+    let mut acc = [0.0f32; LANES];
+    for i in 0..chunks {
+        let ao = &a[i * LANES..(i + 1) * LANES];
+        let bo = &b[i * LANES..(i + 1) * LANES];
+        for l in 0..LANES {
+            acc[l] += ao[l] * bo[l];
+        }
+    }
+    let mut tail = 0.0f32;
+    for i in chunks * LANES..n {
+        tail += a[i] * b[i];
+    }
+    let mut sum = tail;
+    for v in acc {
+        sum += v;
+    }
+    sum
+}
+
+/// The same body compiled with AVX2 + FMA, picked at runtime. The
+/// baseline x86-64 target this workspace builds for is SSE2-only; the
+/// boxes it runs on are not, and the difference is 4-wide mul+add
+/// against 8-wide FMA. Safety: the caller checks the CPU features.
+#[cfg(target_arch = "x86_64")]
+#[target_feature(enable = "avx2", enable = "fma")]
+unsafe fn dot_avx2(a: &[f32], b: &[f32]) -> f32 {
+    dot(a, b)
+}
+
+/// Runtime CPU-feature dispatch for [`dot`], the check cached to a bool.
+#[inline]
+fn dot_dispatch(a: &[f32], b: &[f32]) -> f32 {
+    #[cfg(target_arch = "x86_64")]
+    {
+        use std::sync::OnceLock;
+        static AVX2: OnceLock<bool> = OnceLock::new();
+        if *AVX2.get_or_init(|| {
+            std::arch::is_x86_feature_detected!("avx2")
+                && std::arch::is_x86_feature_detected!("fma")
+        }) {
+            // SAFETY: the detected features gate the call.
+            return unsafe { dot_avx2(a, b) };
+        }
+    }
+    dot(a, b)
+}
+
 impl Tensor2 {
     /// `out = self · x` (no accumulation into prior contents).
     fn matvec(&self, x: &[f32], out: &mut [f32]) {
         debug_assert_eq!(x.len(), self.cols);
         debug_assert_eq!(out.len(), self.rows);
         for (r, o) in out.iter_mut().enumerate() {
-            let row = &self.data[r * self.cols..(r + 1) * self.cols];
-            let mut acc = 0.0f32;
-            for (w, v) in row.iter().zip(x) {
-                acc += w * v;
-            }
-            *o = acc;
+            *o = dot_dispatch(&self.data[r * self.cols..(r + 1) * self.cols], x);
         }
     }
 
@@ -1177,7 +1235,7 @@ impl PlayNet {
                 let mut max = f32::NEG_INFINITY;
                 for (j, sc) in scores.iter_mut().enumerate() {
                     let kj = &k[j * h_obj + off..j * h_obj + off + hd];
-                    let dot: f32 = qi.iter().zip(kj).map(|(x, y)| x * y).sum();
+                    let dot: f32 = dot_dispatch(qi, kj);
                     *sc = dot * scale;
                     max = max.max(*sc);
                 }
@@ -1265,7 +1323,7 @@ impl PlayNet {
                     let mut max = f32::NEG_INFINITY;
                     for (j, sc) in scores.iter_mut().enumerate() {
                         let kj = &k[j * h_obj + off..j * h_obj + off + hd];
-                        let dot: f32 = qi.iter().zip(kj).map(|(x, y)| x * y).sum();
+                        let dot: f32 = dot_dispatch(qi, kj);
                         *sc = dot * scale;
                         max = max.max(*sc);
                     }

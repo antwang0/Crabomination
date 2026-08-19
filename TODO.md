@@ -67,6 +67,13 @@ five rows are **allocation**, and none came off the candidates list.
   tapping for mana**, so anything the full activation path does that a mana
   ability cannot need is paid 18,832 times. **(-11) is corrected in PERF.md
   and is now a poor pick** — its walks are nearly all that same land tap.
+- **Landed outside the pass sequence (2026-08-19): the net's forward
+  pass was scalar.** `crabomination_nn` matvec is now eight-accumulator
+  + runtime AVX2/FMA; `mcts-net-deep` 33.0 → 18.4 s/game, `mcts-net-256`
+  121.9 → 73.0. Invisible to the callgrind bench (gang never runs the
+  net) — do not chase it there. `CRAB_MCTS_TIMING=1` prints the search's
+  wall split; the remaining 88 % is the rollout sim, i.e. the engine
+  action loop the passes above are already working.
 - **Green at the tip**: suite **18,645** over 11 binaries, five golden
   traces identical, clippy clean, `--bench` invariants byte-identical with
   the anchor (`decisions` **193,232**, turns 26.98, stalls 0, determinism
@@ -957,7 +964,11 @@ before any feature block, pre-registered scripts in `.ladder/`.
    adoption is latency-gated, and the highest-leverage work is
    search-eval throughput, not modeling — see the `PERF.md` candidate
    ("MCTS leaf-evaluation throughput"). Every 2× there is a rung on the
-   only curve that climbs.
+   only curve that climbs. **Part 1 landed 2026-08-19 (PERF.md
+   forty-first pass): vectorized matvec, 64-iter 33.0 → 18.4 s/game,
+   256-iter 121.9 → 73.0.** The remaining 88 % of search wall is the
+   rollout sim (~63 engine actions/rollout), so the next rung is
+   rollout-side and ladder-gated, or the engine's own action loop.
 2. **A separate leaf-value head the search consumes and the pilot
    doesn't.** The census says ~two-thirds of what the search evaluates
    is a settled post-combat state whose phase flag has never been
