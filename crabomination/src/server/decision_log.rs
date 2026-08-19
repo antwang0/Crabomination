@@ -36,6 +36,8 @@ struct Sink {
     human_mask: u8,
     decisions: u32,
     disagreements: u32,
+    /// The last committed dedupe key — see [`commit`].
+    last_key: Option<String>,
 }
 
 fn log_dir() -> Option<PathBuf> {
@@ -85,7 +87,7 @@ impl DecisionShadowLog {
         }
         SINK.with(|s| {
             *s.borrow_mut() =
-                Some(Sink { w, human_mask, decisions: 0, disagreements: 0 })
+                Some(Sink { w, human_mask, decisions: 0, disagreements: 0, last_key: None })
         });
         Self { active: true }
     }
@@ -117,6 +119,24 @@ impl Drop for DecisionShadowLog {
 pub(crate) struct PendingLine {
     line: String,
     agree: bool,
+    /// Dedupe key: a manual mana payer resubmits the same cast after
+    /// every tap (`ManualTapRequired` flow), and each resubmission that
+    /// applies would otherwise log as a fresh decision.
+    key: String,
+}
+
+/// "Do nothing" comes in four spellings — passing priority, an empty
+/// attack declaration (banded or not), and an empty block declaration —
+/// and the human's client and the bot pick different ones for the same
+/// intent. One equivalence class, or half the log is fake disagreement.
+fn is_noop(action: &GameAction) -> bool {
+    match action {
+        GameAction::PassPriority => true,
+        GameAction::DeclareAttackers(a) => a.is_empty(),
+        GameAction::DeclareAttackersBanded { attacks, .. } => attacks.is_empty(),
+        GameAction::DeclareBlockers(b) => b.is_empty(),
+        _ => false,
+    }
 }
 
 /// Ask the shadow bot what it would do in the human's shoes, and prepare
@@ -131,15 +151,30 @@ pub(crate) fn prepare(state: &GameState, seat: usize, action: &GameAction) -> Op
     if !armed {
         return None;
     }
+    // A bare mana-ability activation is payment mechanics, not a
+    // decision — the human taps lands by hand while the bot pays inside
+    // its cast action, so comparing the two mid-payment is noise (the
+    // first recorded game logged fourteen of these).
+    if let GameAction::ActivateAbility { card_id, ability_index, .. } = action
+        && state
+            .battlefield_find(*card_id)
+            .and_then(|c| c.definition.activated_abilities.get(*ability_index))
+            .is_some_and(|a| crate::game::actions::is_mana_ability_public(&a.effect))
+    {
+        return None;
+    }
     let mut shadow = HeuristicBot::new();
     let bot = shadow.next_action(state, seat);
     // `GameAction` doesn't derive `PartialEq`; the serde rendering is a
-    // faithful identity for comparison.
+    // faithful identity. Every spelling of "do nothing" agrees with
+    // every other.
+    let human_json = serde_json::to_string(action).unwrap_or_default();
     let agree = match &bot {
         Some(b) => {
-            serde_json::to_string(b).ok() == serde_json::to_string(action).ok()
+            serde_json::to_string(b).ok().as_deref() == Some(human_json.as_str())
+                || (is_noop(b) && is_noop(action))
         }
-        None => matches!(action, GameAction::PassPriority),
+        None => is_noop(action),
     };
     let line = serde_json::json!({
         "turn": state.turn_number,
@@ -154,14 +189,21 @@ pub(crate) fn prepare(state: &GameState, seat: usize, action: &GameAction) -> Op
         "you_raw": serde_json::to_value(action).unwrap_or(serde_json::Value::Null),
         "bot_raw": serde_json::to_value(&bot).unwrap_or(serde_json::Value::Null),
     });
-    Some(PendingLine { line: line.to_string(), agree })
+    let key = format!("{}|{:?}|{human_json}", state.turn_number, state.step);
+    Some(PendingLine { line: line.to_string(), agree, key })
 }
 
-/// Write a prepared line once the action applied.
+/// Write a prepared line once the action applied. Consecutive identical
+/// submissions (same turn, step and action — the manual-mana retry
+/// loop) count once.
 pub(crate) fn commit(pending: Option<PendingLine>) {
     let Some(p) = pending else { return };
     SINK.with(|s| {
         if let Some(sink) = s.borrow_mut().as_mut() {
+            if sink.last_key.as_deref() == Some(p.key.as_str()) {
+                return;
+            }
+            sink.last_key = Some(p.key);
             sink.decisions += 1;
             if !p.agree {
                 sink.disagreements += 1;
@@ -264,6 +306,11 @@ mod tests {
         );
         assert_eq!(describe(&state, &GameAction::PassPriority), "pass");
         assert_eq!(describe(&state, &GameAction::DeclareAttackers(vec![])), "attack with nobody");
+        // Every spelling of "do nothing" is one equivalence class.
+        assert!(is_noop(&GameAction::PassPriority));
+        assert!(is_noop(&GameAction::DeclareAttackers(vec![])));
+        assert!(is_noop(&GameAction::DeclareBlockers(vec![])));
+        assert!(!is_noop(&GameAction::Concede));
         // An id no zone knows falls back to card#N rather than panicking.
         let ghost = describe(&state, &GameAction::PlayLand(CardId(9_999_999)));
         assert!(ghost.contains("card#9999999"), "unknown id falls back: {ghost}");

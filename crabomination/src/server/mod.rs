@@ -1167,7 +1167,7 @@ fn broadcast_update(
     seat_tx: &[Option<mpsc::Sender<ServerMsg>>],
     spectator_tx: &[mpsc::Sender<ServerMsg>],
 ) {
-    replay::log_events(wire_events);
+    replay::log_events(state, wire_events);
     for (i, maybe_tx) in seat_tx.iter().enumerate() {
         if let Some(tx) = maybe_tx {
             let _ = tx.send(ServerMsg::Update {
@@ -1369,6 +1369,54 @@ mod tests {
         // Start in main phase so PlayLand is legal.
         state.step = TurnStep::PreCombatMain;
         state
+    }
+
+    /// End to end: a real bot-vs-bot match through `run_match` writes a
+    /// v2 replay — header, first-appearance card names, footer — the
+    /// shape `replay_view` narrates. The narration arms themselves are
+    /// unit-tested in the bin; this pins the recorder against a full
+    /// live match rather than hand-fed events.
+    #[test]
+    fn bot_match_records_a_narratable_replay() {
+        let _env = crate::server::replay::env_lock();
+        let dir = std::env::temp_dir().join(format!("crab-replay-e2e-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        // SAFETY: env mutation serialized by `replay::env_lock` — the
+        // other replay test's `remove_var` raced this test's `begin`.
+        unsafe { std::env::set_var("CRAB_REPLAY_DIR", &dir) };
+        let pool = crate::selfplay::sealed_pool(0xE2E);
+        let deck = crate::selfplay::heuristic_sealed_build(&pool, 1);
+        let state = crate::draft::build_draft_match_state(
+            deck.clone(),
+            deck,
+            "ReplayE2E-A".into(),
+            "ReplayE2E-B".into(),
+        );
+        run_match(
+            state,
+            vec![
+                SeatOccupant::Bot(Box::new(HeuristicBot::new())),
+                SeatOccupant::Bot(Box::new(HeuristicBot::new())),
+            ],
+        );
+        unsafe { std::env::remove_var("CRAB_REPLAY_DIR") };
+        let text = std::fs::read_dir(&dir)
+            .unwrap()
+            .filter_map(|e| std::fs::read_to_string(e.unwrap().path()).ok())
+            .find(|t| t.contains("ReplayE2E-A"))
+            .expect("the match's replay file");
+        let lines: Vec<&str> = text.lines().collect();
+        assert!(lines[0].contains("\"replay\":2"));
+        assert!(
+            lines.iter().any(|l| l.contains("\"n\":")),
+            "some batch carries a card-name table"
+        );
+        assert!(
+            lines.iter().any(|l| l.contains("SpellCast") || l.contains("LandPlayed")),
+            "a real game casts or plays something"
+        );
+        assert!(lines.last().unwrap().contains("\"end\":true"), "footer closes the file");
+        let _ = std::fs::remove_dir_all(&dir);
     }
 
     #[test]
