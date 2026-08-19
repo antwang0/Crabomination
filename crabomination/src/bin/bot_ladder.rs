@@ -367,6 +367,36 @@ fn parse_profile(name: &str) -> Option<Pilot> {
             weights: EvalWeights::net_eval_det1(),
             ..MctsConfig::default()
         })),
+        // Round 44: the horizon in the *other* direction — the
+        // value-equivalence question. The rollout sim is 88 % of search
+        // wall (PERF.md forty-first pass), so if the net can stand in
+        // for most of the rollout, iterations get several times cheaper
+        // and the r42 iterations curve becomes affordable to climb.
+        // h0 evaluates the root candidate's immediate successor: the
+        // spell is often still on the stack and determinization cannot
+        // reach an observable-info encoder, so this arm approximates
+        // the 1-ply `net` pilot and is the sweep's sanity anchor, not
+        // its hypothesis. h1 resolves the stack and one exchange first
+        // — that is the cell the round exists to measure, alone (A)
+        // and at rollout-cost-matched iterations (B, `-h1-192`).
+        "mcts-net-h0" => Some(Pilot::Mcts(MctsConfig {
+            iterations: 64,
+            horizon_turns: 0,
+            weights: EvalWeights::net_eval_det1(),
+            ..MctsConfig::default()
+        })),
+        "mcts-net-h1" => Some(Pilot::Mcts(MctsConfig {
+            iterations: 64,
+            horizon_turns: 1,
+            weights: EvalWeights::net_eval_det1(),
+            ..MctsConfig::default()
+        })),
+        "mcts-net-h1-192" => Some(Pilot::Mcts(MctsConfig {
+            iterations: 192,
+            horizon_turns: 1,
+            weights: EvalWeights::net_eval_det1(),
+            ..MctsConfig::default()
+        })),
         // Round 42: above the round-27 curve. That curve stopped at 256
         // and was still climbing (24→64→128→256 = 49.4→53.0→54.35→55.0 %
         // vs the champion, ~+1.4 then ~+0.7 per doubling), and round 29
