@@ -801,7 +801,9 @@ now counters an opponent's spell when it targets the bot's permanents /
 the bot, or costs 3+ — cheapest affordable counter first, `would_accept`
 dry-run as the final gate (so Spell Snare's MV filter etc. are honored).
 Future: respond with removal/protection instants, not just counters;
-race-aware "is this worth a card" valuation.
+race-aware "is this worth a card" valuation. Round 43: the buff 2-for-1
+(`buff_2for1`, kill the creature under the opponent's own pump) is
+built and zero-incidence in bot mirrors — human-facing, default off.
 
 ### Sacrifice Prioritisation
 ~~When forced to sacrifice, the bot always picks the first eligible
@@ -817,10 +819,12 @@ candidate is more valuable than the payoff).
 opponent's planeswalker when total attacking power can finish it off in
 one swing (push claude/modern_decks `b34a23a`). Smallest-power-first
 allocation keeps beefy attackers free to face-attack the player when the
-walker fills up. Future improvement: handle chip attacks (attacking a
-walker we can't finish but that's still threatening) and the inverse case
-where a low-loyalty walker isn't worth committing trample beaters to
-because the opp can clean up with a blocker.
+walker fills up. Round 43: the chip candidate exists (`walker_chip`, one declaration at
+the lowest-loyalty unfinishable walker, sims judge it) — zero-incidence
+in the walker-free sealed gate pools, so it stays default off on the
+strength of the recorded ten-turn-ultimate loss, not a ladder number.
+Still open: the inverse case (a low-loyalty walker not worth committing
+trample beaters to).
 
 ### Smarter Mana Rock Usage
 The bot taps mana rocks eagerly before knowing what it wants to cast.  A
@@ -1047,9 +1051,15 @@ and deterministic bug reproduction. Partially covered: `CRAB_REPLAY_DIR`
 same position — one JSONL line per decision with an `agree` flag and a
 disagreement tally in the footer. That second log is the bot-debugging
 instrument: sort by `agree:false` and read the disagreements (it's how
-converge-blind payment would have been caught from game data). Still
-open: a replay *viewer*, and state-hash checkpoints for deterministic
-reproduction.
+converge-blind payment would have been caught from game data). The
+viewer's first tier exists (2026-08-18): replay files are v2 — each
+line carries first-appearance card names, since wire events hold only
+ids and a file has no live state to resolve them — and
+`cargo run -p crabomination --bin replay_view [file] [--all]` narrates
+one as readable prose (newest file under `$CRAB_REPLAY_DIR` by
+default; `--all` includes the mana/tap noise). Still open: an in-client
+replay mode driving the real renderer with step/seek, and state-hash
+checkpoints for deterministic reproduction.
 
 ### Scryfall Art Pre-fetch CLI
 `all_cube_cards()` drives the in-game prefetch, but there is no standalone CLI

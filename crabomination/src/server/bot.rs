@@ -352,6 +352,53 @@ pub struct EvalWeights {
     ///
     /// [`Player::smart_tap`]: crate::player::PlayerData::smart_tap
     pub smart_tap: bool,
+    /// Answer an opponent's aura or pump spell aimed at their own
+    /// creature by killing the creature in response — the buff fizzles
+    /// on a vanished target and one card trades for two. Off by default
+    /// until laddered ([`buff_2for1_on`](Self::buff_2for1_on), profile
+    /// `buff2for1`).
+    pub buff_2for1: bool,
+    /// Converge-aware land drops: when the seat holds a card whose text
+    /// computes `ConvergedValue` (hand or battlefield), a land producing
+    /// a color the mana base doesn't yet make earns a bonus even when no
+    /// pip demands that color — a converge deck's first game recorded
+    /// the bot playing its third Plains where the human diversified.
+    /// Off by default until laddered
+    /// ([`converge_lands_on`](Self::converge_lands_on), profile
+    /// `convlands`).
+    pub converge_lands: bool,
+    /// Desperation chump blocks: when unblocked attackers threaten
+    /// lethal within two swings, add chump candidates to the block menu
+    /// and let the simulations judge them. Without this the menu is
+    /// built from *profitable* blocks only — a greedy pass that finds
+    /// none returns a bare "no blocks" and the sims never run, so the
+    /// bot at 5 life takes 4 to the face holding a chump (the first
+    /// recorded human game, turns 12/14, bot seat). Off by default
+    /// until laddered ([`chump_blocks_on`](Self::chump_blocks_on),
+    /// profile `chumpblocks`).
+    pub chump_blocks: bool,
+    /// Walker chip attacks: the greedy pass attacks a planeswalker only
+    /// when it can finish it, so a healthy walker sits unpressured to
+    /// its ultimate (recorded: ten turns, a lost game). The flag adds
+    /// one attack candidate — the smallest face attacker with power ≥ 2
+    /// redirected at the lowest-loyalty walker — and the simulations
+    /// judge the trade. Off by default until laddered
+    /// ([`walker_chip_on`](Self::walker_chip_on), profile `walkerchip`).
+    pub walker_chip: bool,
+    /// Non-mana activated abilities as main-phase candidates: ability
+    /// usage was a handful of hand-written classes, so Sundering
+    /// Archaic's {2} exile could never be chosen at ANY valuation —
+    /// nothing enumerated it. Two cheapest affordable activations join
+    /// the candidate list, lazily validated like the main cast block.
+    /// Off by default until laddered
+    /// ([`ability_arms_on`](Self::ability_arms_on), profile `abilarms`).
+    pub ability_arms: bool,
+    /// Reserve an MCTS root arm for a prepared-creature cast: the menu
+    /// caps at six arms by heuristic score, and the banked inset spell
+    /// is a rare, high-value class the cap can crowd out (two prepared
+    /// Ancestral Recalls sat unfired through a recorded loss). Off by
+    /// default until laddered (profile `mcts-net-prep`).
+    pub prepare_arm: bool,
     /// Quantize the net's win probability onto a grid of this many
     /// levels before the search consumes it; 0 is off (continuous).
     ///
@@ -410,6 +457,12 @@ impl EvalWeights {
             determinize: 0,
             belief_determinize: false,
             smart_tap: false,
+            buff_2for1: false,
+            converge_lands: false,
+            chump_blocks: false,
+            walker_chip: false,
+            ability_arms: false,
+            prepare_arm: false,
             net_quantize: 0,
         }
     }
@@ -472,6 +525,12 @@ impl EvalWeights {
             determinize: 0,
             belief_determinize: false,
             smart_tap: false,
+            buff_2for1: false,
+            converge_lands: false,
+            chump_blocks: false,
+            walker_chip: false,
+            ability_arms: false,
+            prepare_arm: false,
             net_quantize: 0,
         }
     }
@@ -517,6 +576,12 @@ impl EvalWeights {
             determinize: 0,
             belief_determinize: false,
             smart_tap: false,
+            buff_2for1: false,
+            converge_lands: false,
+            chump_blocks: false,
+            walker_chip: false,
+            ability_arms: false,
+            prepare_arm: false,
             net_quantize: 0,
         }
     }
@@ -904,6 +969,41 @@ impl EvalWeights {
         Self { smart_tap: true, ..Self::block_gang_search() }
     }
 
+    /// The default plus the stack 2-for-1 — kill the creature under the
+    /// opponent's own buff spell so the buff fizzles. The opt-in for
+    /// [`buff_2for1`](Self::buff_2for1); ladder as A against the default.
+    pub const fn buff_2for1_on() -> Self {
+        Self { buff_2for1: true, ..Self::block_gang_search() }
+    }
+
+    /// The default plus converge-aware land drops. The opt-in for
+    /// [`converge_lands`](Self::converge_lands); ladder as A against the
+    /// default.
+    pub const fn converge_lands_on() -> Self {
+        Self { converge_lands: true, ..Self::block_gang_search() }
+    }
+
+    /// The default plus desperation chump blocks. The opt-in for
+    /// [`chump_blocks`](Self::chump_blocks); ladder as A against the
+    /// default.
+    pub const fn chump_blocks_on() -> Self {
+        Self { chump_blocks: true, ..Self::block_gang_search() }
+    }
+
+    /// The attack-search profile plus the walker chip candidate. The
+    /// opt-in for [`walker_chip`](Self::walker_chip); ladder as A
+    /// against `atk-sim` (the same weights minus the flag).
+    pub const fn walker_chip_on() -> Self {
+        Self { walker_chip: true, ..Self::attack_search_sim() }
+    }
+
+    /// The default plus activated-ability candidates. The opt-in for
+    /// [`ability_arms`](Self::ability_arms); ladder as A against the
+    /// default.
+    pub const fn ability_arms_on() -> Self {
+        Self { ability_arms: true, ..Self::block_gang_search() }
+    }
+
     /// The default, averaging three redeals per candidate. Three times
     /// the simulation cost, and the version that actually approximates
     /// "play against the hands consistent with what I can see" rather
@@ -1165,6 +1265,7 @@ impl Default for EvalWeights {
     /// | searched attacks | 52.4 % [51.3 %, 53.5 %] | 8 000 |
     /// | spell-casting combat sims | 54.4 % [53.0 %, 55.8 %] | 4 794 |
     /// | value gang-blocks | 51.3 % [50.7 %, 51.9 %] | 28 800 |
+    /// | desperation chump blocks | 51.0 % / 50.8 % (two ladder seeds) | 24 000 |
     ///
     /// The attack search was additionally confirmed on cube decks —
     /// 53.8 % [53.0 %, 54.6 %] over 13 695 decided games — where the fixed
@@ -1198,7 +1299,15 @@ impl Default for EvalWeights {
     /// recommend_pool sims) are honest from this date and their numbers
     /// are not margin-comparable to earlier cheating-sim runs.
     fn default() -> Self {
-        Self { determinize: 1, ..Self::block_gang_search() }
+        // `chump_blocks` adopted 2026-08-19 (round 43): 51.0 / 50.8 on
+        // two ladder seeds against `gang` over 24 000 mirror sealed
+        // games, both pool-level intervals clear of 50. Found by the
+        // decision-log/replay review of recorded human games (the bot at
+        // 5 life took 4 to the face holding a chump, because the
+        // profitable-blocks-only menu never offered one). Measured on
+        // the `gang` base; determinization rides on top exactly as the
+        // adoption table's earlier layers do.
+        Self { determinize: 1, chump_blocks: true, ..Self::block_gang_search() }
     }
 }
 
@@ -1434,6 +1543,7 @@ impl HeuristicBot {
                     && let Some(a) = pick_stack_response(state, seat, &self.weights)
                         .or_else(|| pick_ability_counter_response(state, seat))
                         .or_else(|| pick_prepare_response(state, seat, &self.weights))
+                        .or_else(|| pick_buff_response(state, seat, &self.weights))
                 {
                     return Some(a);
                 }
@@ -1473,6 +1583,7 @@ impl HeuristicBot {
                 pick_stack_response(state, seat, &self.weights)
                     .or_else(|| pick_ability_counter_response(state, seat))
                     .or_else(|| pick_prepare_response(state, seat, &self.weights))
+                    .or_else(|| pick_buff_response(state, seat, &self.weights))
                     // Defender windows in the attack steps (the picker
                     // no-ops unless declared attackers are coming at us).
                     .or_else(|| {
@@ -1980,6 +2091,109 @@ fn pick_ability_counter_response(state: &GameState, seat: usize) -> Option<GameA
     None
 }
 
+/// The stack 2-for-1: an opponent's aura or targeted pump aimed at their
+/// OWN creature is an invitation — instant removal on that creature in
+/// response resolves first, the buff fizzles on a vanished target, and
+/// one card trades for two. The response chain previously knew only
+/// counters here, so the bot watched Auras resolve onto creatures it was
+/// holding the answer for. Lethality is judged against the creature's
+/// CURRENT toughness — the pump never resolves. Behind
+/// [`EvalWeights::buff_2for1`] (ladder profile `buff2for1`) until gated.
+fn pick_buff_response(state: &GameState, seat: usize, w: &EvalWeights) -> Option<GameAction> {
+    use crate::card::CardType;
+    use crate::effect::{Selector, Value};
+    use crate::game::types::StackItem;
+    if !w.buff_2for1 {
+        return None;
+    }
+    // Topmost opponent spell aimed at a creature the opponent controls,
+    // and shaped like a buff: an Aura, or a first-leaf pump.
+    fn pump_leaf(e: &Effect) -> bool {
+        match e {
+            Effect::PumpPT { what, .. } => {
+                matches!(what, Selector::Target(_) | Selector::TargetFiltered { .. })
+            }
+            Effect::Seq(v) => v.first().is_some_and(pump_leaf),
+            _ => false,
+        }
+    }
+    let (buff_cmc, victim) = state.stack.iter().rev().find_map(|si| {
+        let StackItem::Spell { card, caster, target, .. } = si else {
+            return None;
+        };
+        if *caster == seat {
+            return None;
+        }
+        let Some(Target::Permanent(id)) = target else {
+            return None;
+        };
+        let theirs = state.battlefield_find(*id).is_some_and(|c| c.controller != seat);
+        if !theirs {
+            return None;
+        }
+        let def = &card.definition;
+        (def.is_aura() || pump_leaf(&def.effect))
+            .then(|| (def.cost.cmc() as i32, *id))
+    })?;
+    // Worth a card: the creature plus the spell fizzling on it, together.
+    if permanent_value(state, victim, w) + buff_cmc * w.unit < 6 * w.unit {
+        return None;
+    }
+    for c in state.players[seat]
+        .hand
+        .iter()
+        .filter(|c| c.definition.card_types.contains(&CardType::Instant))
+    {
+        // Same first-leaf removal shapes as `pick_defensive_removal`.
+        fn removal_leaf(e: &Effect) -> Option<&Effect> {
+            match e {
+                Effect::Destroy { .. }
+                | Effect::DestroyNoRegen { .. }
+                | Effect::DealDamage { .. } => Some(e),
+                Effect::Seq(v) => v.first().and_then(removal_leaf),
+                _ => None,
+            }
+        }
+        let Some(leaf) = removal_leaf(&c.definition.effect) else { continue };
+        let answers = match leaf {
+            Effect::Destroy { what } | Effect::DestroyNoRegen { what } => {
+                matches!(what, Selector::Target(_) | Selector::TargetFiltered { .. })
+            }
+            Effect::DealDamage { to, amount } => {
+                matches!(to, Selector::Target(_) | Selector::TargetFiltered { .. })
+                    && match amount {
+                        Value::Const(n) => state.computed_permanent(victim).is_some_and(|cp| {
+                            let marked = state
+                                .battlefield_find(victim)
+                                .map(|c| c.damage as i32)
+                                .unwrap_or(0);
+                            *n >= cp.toughness - marked
+                        }),
+                        _ => false,
+                    }
+            }
+            _ => false,
+        };
+        if !answers {
+            continue;
+        }
+        let action = GameAction::CastSpell {
+            card_id: c.id,
+            target: Some(Target::Permanent(victim)),
+            additional_targets: vec![],
+            mode: None,
+            x_value: None,
+        };
+        if !ward_gate_ok(state, seat, &action) {
+            continue;
+        }
+        if state.would_accept(action.clone()) {
+            return Some(action);
+        }
+    }
+    None
+}
+
 /// Instant removal at a declared attacker, from the DEFENDER's side of
 /// combat. The response chain only ever countered spells, so a hand full
 /// of kill spells watched every alpha strike connect — the SOS college
@@ -2225,6 +2439,18 @@ fn pick_land_to_play(state: &GameState, seat: usize, w: &EvalWeights) -> Option<
     let needed: Vec<Color> =
         WUBRG.into_iter().filter(|&col| want.contains(col) && !have.contains(col)).collect();
 
+    // Converge decks value a NEW color even when no pip demands it —
+    // the payment repair maximizes colors spent, but only among the
+    // colors the mana base makes, and this chooser decides those.
+    let converge_want = w.converge_lands
+        && (state.players[seat].hand.iter().any(|c| c.definition.wants_converge())
+            || state
+                .battlefield
+                .iter()
+                .any(|c| c.controller == seat && c.definition.wants_converge()));
+    let fresh_color =
+        |out: ColorSet| WUBRG.into_iter().any(|col| out.contains(col) && !have.contains(col));
+
     if !w.land_urgency {
         let mut best: Option<(CardId, usize)> = None;
         for c in state.players[seat].hand.iter().filter(|c| c.definition.is_land()) {
@@ -2232,7 +2458,11 @@ fn pick_land_to_play(state: &GameState, seat: usize, w: &EvalWeights) -> Option<
                 continue;
             }
             let out = land_color_output(&c.definition);
-            let coverage = needed.iter().filter(|&&col| out.contains(col)).count();
+            // Doubled so pip coverage still dominates; the converge bonus
+            // only breaks ties between otherwise-equal drops. Flag off,
+            // the scale change preserves the ordering exactly.
+            let coverage = 2 * needed.iter().filter(|&&col| out.contains(col)).count()
+                + usize::from(converge_want && fresh_color(out));
             // Higher coverage wins; the first playable land is the fallback (so a
             // colorless/utility land still gets played when nothing needs fixing).
             if best.is_none_or(|(_, s)| coverage > s) {
@@ -2282,6 +2512,12 @@ fn pick_land_to_play(state: &GameState, seat: usize, w: &EvalWeights) -> Option<
         let out = land_color_output(&c.definition);
         let mut score: i32 =
             needed.iter().filter(|&&col| out.contains(col)).map(|&col| urgency(col) as i32).sum();
+        // A fresh color for converge sits below "enables a cast this
+        // turn" (4) and above the tapland penalty: fixing text beats
+        // fixing nothing, but never costs a curve play.
+        if converge_want && fresh_color(out) {
+            score += 3;
+        }
         // Untapped sources the bot already has are worth a little on
         // their own, so a second Forest still beats a dead utility land.
         if !needed.is_empty() || out != ColorSet::empty() {
@@ -4551,6 +4787,59 @@ fn cast_candidates(
     }
     });
 
+    // Non-mana activated abilities as candidates (flag): without this,
+    // ability usage is a handful of hand-written classes and everything
+    // else — Sundering Archaic's {2} exile in the recorded games — can
+    // never be chosen at any valuation. Cheap prefilter (printed,
+    // non-mana, non-X, mana value within pool + untapped lands),
+    // auto-aimed targets, lazily validated like the main block, capped
+    // at the two cheapest: this fn runs inside the attack simulations.
+    if w.ability_arms {
+        let available = state.players[seat].mana_pool.total()
+            + state
+                .battlefield
+                .iter()
+                .filter(|c| c.controller == seat && c.definition.is_land() && !c.tapped)
+                .count() as u32;
+        let mut ability_cands: Vec<(u32, GameAction)> = Vec::new();
+        for c in state.battlefield.iter().filter(|c| c.controller == seat) {
+            for (i, ab) in c.definition.activated_abilities.iter().enumerate() {
+                if crate::game::actions::is_mana_ability_public(&ab.effect)
+                    || ab.mana_cost.has_x()
+                {
+                    continue;
+                }
+                let cmc = ab.mana_cost.cmc();
+                if cmc > available {
+                    continue;
+                }
+                let (target, additional_targets) = if ab.effect.requires_target() {
+                    let (t, extras) =
+                        state.auto_targets_for_effect_all_slots(&ab.effect, seat, None);
+                    if t.is_none() {
+                        continue;
+                    }
+                    (t, extras)
+                } else {
+                    (None, vec![])
+                };
+                ability_cands.push((
+                    cmc,
+                    GameAction::ActivateAbility {
+                        card_id: c.id,
+                        ability_index: i,
+                        target,
+                        additional_targets,
+                        mode: None,
+                        x_value: None,
+                    },
+                ));
+            }
+        }
+        ability_cands.sort_by_key(|(cmc, _)| *cmc);
+        unvalidated.extend(ability_cands.into_iter().take(2).map(|(_, a)| a));
+    }
+
     let mut out: Vec<(GameAction, bool)> = Vec::with_capacity(castable.len() + unvalidated.len());
     out.extend(castable.into_iter().map(|a| (a, true)));
     out.extend(unvalidated.into_iter().map(|a| (a, false)));
@@ -6691,6 +6980,39 @@ pub(crate) fn attack_candidates_for_mcts(
             candidates.push(alt);
         }
     }
+    // Walker chip candidate (flag): the greedy pass only attacks a
+    // walker it can finish, so a healthy one sits unpressured to its
+    // ultimate. One extra declaration — the smallest attacker with
+    // power ≥ 2 redirected at the lowest-loyalty opposing walker — and
+    // the simulations judge whether taxing its loyalty beats the face
+    // damage given up.
+    if w.walker_chip
+        && !greedy.iter().any(|a| matches!(a.target, AttackTarget::Planeswalker(_)))
+        && let Some(walker) = state
+            .battlefield
+            .iter()
+            .filter(|c| {
+                c.definition.is_planeswalker()
+                    && c.controller != seat
+                    && state.players[c.controller].is_alive()
+                    && !state.permanent_cant_be_attacked(c.id)
+            })
+            .min_by_key(|c| c.counter_count(crate::card::CounterType::Loyalty))
+        && let Some(i) = greedy
+            .iter()
+            .enumerate()
+            .filter(|(_, a)| {
+                state.battlefield_find(a.attacker).map(|c| c.power()).unwrap_or(0) >= 2
+            })
+            .min_by_key(|(_, a)| {
+                state.battlefield_find(a.attacker).map(|c| c.power()).unwrap_or(0)
+            })
+            .map(|(i, _)| i)
+    {
+        let mut alt = greedy.clone();
+        alt[i].target = AttackTarget::Planeswalker(walker.id);
+        candidates.push(alt);
+    }
     candidates
 }
 
@@ -6899,7 +7221,8 @@ fn sim_spell_action_inner(g: &GameState, w: &EvalWeights) -> Option<GameAction> 
     if !g.stack.is_empty() {
         return pick_stack_response(g, p, w)
             .or_else(|| pick_ability_counter_response(g, p))
-            .or_else(|| pick_prepare_response(g, p, w));
+            .or_else(|| pick_prepare_response(g, p, w))
+            .or_else(|| pick_buff_response(g, p, w));
     }
     if g.step == TurnStep::DeclareBlockers && g.blockers_declared() {
         return pick_combat_trick(g, p, w);
@@ -6956,10 +7279,16 @@ pub(crate) fn block_candidates_for_mcts(
     w: &EvalWeights,
 ) -> Vec<Vec<(CardId, CardId)>> {
     let greedy = pick_blocks(state, seat);
-    if w.block_search == 0 || greedy.is_empty() {
+    let chumps =
+        if w.chump_blocks { chump_block_candidates(state, seat, &greedy, w) } else { Vec::new() };
+    if (w.block_search == 0 || greedy.is_empty()) && chumps.is_empty() {
         return vec![greedy];
     }
-    let mut candidates: Vec<Vec<(CardId, CardId)>> = vec![greedy.clone(), Vec::new()];
+    let mut candidates: Vec<Vec<(CardId, CardId)>> = vec![greedy.clone()];
+    if !greedy.is_empty() {
+        candidates.push(Vec::new());
+    }
+    candidates.extend(chumps);
     if greedy.len() > 1 {
         let mut order: Vec<usize> = (0..greedy.len()).collect();
         order.sort_by_key(|&i| {
@@ -6993,6 +7322,58 @@ fn pick_blocks_scored(state: &GameState, seat: usize, w: &EvalWeights) -> Vec<(C
         Some(i) => candidates.swap_remove(i),
         None => candidates.swap_remove(0),
     }
+}
+
+/// Desperation chumps: candidates the profitable-blocks-only greedy
+/// pass will never emit, generated only when the unblocked attackers
+/// pointed at this seat could kill it within two swings. The cheapest
+/// idle body chumps the biggest unblocked attacker; with two idle
+/// bodies a two-chump variant covers the two biggest. The simulations
+/// price whether the turn bought beats the cards lost — this fn only
+/// puts the option on the menu.
+fn chump_block_candidates(
+    state: &GameState,
+    seat: usize,
+    greedy: &[(CardId, CardId)],
+    w: &EvalWeights,
+) -> Vec<Vec<(CardId, CardId)>> {
+    let blocked: crate::fxhash::HashSet<CardId> = greedy.iter().map(|(_, a)| *a).collect();
+    let used: crate::fxhash::HashSet<CardId> = greedy.iter().map(|(b, _)| *b).collect();
+    let mut incoming: Vec<(CardId, i32)> = state
+        .attacking
+        .iter()
+        .filter(|a| state.defender_for(a.target) == Some(seat) && !blocked.contains(&a.attacker))
+        .filter_map(|a| {
+            state.computed_permanent(a.attacker).map(|cp| (a.attacker, cp.power.max(0)))
+        })
+        .collect();
+    let total: i32 = incoming.iter().map(|(_, p)| p).sum();
+    // Two clean swings from dead is where a chump starts buying the
+    // turn that matters; above that, the card is worth more.
+    if total <= 0 || total * 2 < state.effective_life(seat) {
+        return Vec::new();
+    }
+    incoming.sort_by_key(|&(_, p)| std::cmp::Reverse(p));
+    let mut idle: Vec<CardId> = state
+        .battlefield
+        .iter()
+        .filter(|c| c.controller == seat && bot_can_block(c) && !used.contains(&c.id))
+        .map(|c| c.id)
+        .collect();
+    idle.sort_by_key(|&id| permanent_value(state, id, w));
+    let mut out = Vec::new();
+    if let (Some(&blocker), Some(&(atk, _))) = (idle.first(), incoming.first()) {
+        let mut cand = greedy.to_vec();
+        cand.push((blocker, atk));
+        out.push(cand);
+    }
+    if idle.len() >= 2 && incoming.len() >= 2 {
+        let mut cand = greedy.to_vec();
+        cand.push((idle[0], incoming[0].0));
+        cand.push((idle[1], incoming[1].0));
+        out.push(cand);
+    }
+    out
 }
 
 /// Block assignments that add a gang onto an attacker the greedy pass
@@ -9956,6 +10337,17 @@ pub(crate) fn main_phase_candidates_for_mcts(
     // it; better to search the plausible plays properly than every play
     // badly.
     const MAX_ARMS: usize = 6;
+    // Reserve material for the prepared cast before the cap consumes the
+    // ranking — see `prepare_arm` below.
+    let best_prepared: Option<(GameAction, i32)> = w
+        .prepare_arm
+        .then(|| {
+            ranked
+                .iter()
+                .find(|(_, a, _)| matches!(a, GameAction::CastPrepareSpell { .. }))
+                .map(|(s, a, _)| (a.clone(), *s))
+        })
+        .flatten();
     let mut out = Vec::with_capacity(MAX_ARMS);
     for (s, a, ok) in ranked {
         if out.len() >= MAX_ARMS {
@@ -9964,6 +10356,19 @@ pub(crate) fn main_phase_candidates_for_mcts(
         if ok || GameState::would_accept_on(&probe, a.clone()) {
             out.push((a, s));
         }
+    }
+    // Reserve an arm for the banked inset spell (flag): a rare,
+    // high-value class the six-arm cap can crowd out — two prepared
+    // Ancestral Recalls sat unfired through a recorded loss. Costs the
+    // weakest arm, and only when the class exists and missed the cut.
+    if let Some((a, sc)) = best_prepared
+        && !out.iter().any(|(c, _)| matches!(c, GameAction::CastPrepareSpell { .. }))
+        && GameState::would_accept_on(&probe, a.clone())
+    {
+        if out.len() >= MAX_ARMS {
+            out.pop();
+        }
+        out.push((a, sc));
     }
     // A land drop is a real option and is enumerated separately.
     // `score_candidate` has no opinion on lands; two units — a solid
@@ -13832,6 +14237,158 @@ mod stack_response_tests {
             "a 2-drop bear isn't worth the counter: {action:?}");
     }
 
+    /// The prepared-cast pipeline end to end: with a Prepared counter,
+    /// blue up, and cards to draw, the bot casts the banked Ancestral
+    /// Recall, and the outcome eval prices the line above passing (it
+    /// already values a hand card at 4 — the "eval can't see card
+    /// advantage" theory died against this probe).
+    #[test]
+    fn bot_casts_the_banked_prepared_recall() {
+        let mut g = two_player_game();
+        g.priority.player_with_priority = 0;
+        g.active_player_idx = 0;
+        let em = g.add_card_to_battlefield(0, catalog::emeritus_of_ideation());
+        g.battlefield
+            .iter_mut()
+            .find(|c| c.id == em)
+            .unwrap()
+            .add_counters(crate::card::CounterType::Prepared, 1);
+        g.add_card_to_battlefield(0, catalog::island());
+        for _ in 0..5 {
+            let id = g.add_card_to_hand(0, catalog::grizzly_bears());
+            let idx = g.players[0].hand.iter().position(|c| c.id == id).unwrap();
+            let card = g.players[0].hand.remove(idx);
+            g.players[0].library.push(card);
+        }
+        let mut bot = HeuristicBot::new();
+        let a = bot.next_action(&g, 0);
+        assert!(
+            matches!(a, Some(GameAction::CastPrepareSpell { creature_id, .. }) if creature_id == em),
+            "the banked Recall fires: {a:?}"
+        );
+        let w = EvalWeights::default();
+        let cast = GameAction::CastPrepareSpell {
+            creature_id: em,
+            target: Some(crate::game::Target::Player(0)),
+            additional_targets: vec![],
+            mode: None,
+            x_value: None,
+        };
+        let cast_v = evaluate_action_outcome(&g, 0, &cast, &w).unwrap();
+        let pass_v = evaluate_action_outcome(&g, 0, &GameAction::PassPriority, &w).unwrap();
+        assert!(cast_v > pass_v, "drawing three outprices passing: {cast_v} vs {pass_v}");
+    }
+
+    /// Walker chip (flag): a 6-loyalty walker against 2+3 power can't be
+    /// finished, so the flag-off menu never aims at it; flag-on adds one
+    /// declaration redirecting the smallest attacker for the sims to
+    /// judge. The recorded loss was ten unpressured turns into an
+    /// ultimate.
+    #[test]
+    fn walker_chip_candidate_joins_the_attack_menu() {
+        let mut g = two_player_game();
+        g.step = TurnStep::DeclareAttackers;
+        g.active_player_idx = 0;
+        g.priority.player_with_priority = 0;
+        let bears = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+        let angel = g.add_card_to_battlefield(0, catalog::serra_angel());
+        for c in [bears, angel] {
+            g.battlefield.iter_mut().find(|x| x.id == c).unwrap().summoning_sick = false;
+        }
+        let walker = g.add_card_to_battlefield(1, catalog::professor_dellian_fel());
+        g.battlefield
+            .iter_mut()
+            .find(|c| c.id == walker)
+            .unwrap()
+            .add_counters(crate::card::CounterType::Loyalty, 6);
+        let chips = |w: &EvalWeights| {
+            attack_candidates_for_mcts(&g, 0, w).iter().any(|cand| {
+                cand.iter().any(|a| matches!(a.target, AttackTarget::Planeswalker(_)))
+            })
+        };
+        assert!(!chips(&EvalWeights::attack_search_sim()), "flag off: finish-only rule holds");
+        assert!(chips(&EvalWeights::walker_chip_on()), "flag on: the chip is on the menu");
+    }
+
+    /// Ability arms (flag): Sundering Archaic's {2} graveyard-exile was
+    /// unreachable at any valuation because nothing enumerated it. With
+    /// the flag, the activation joins the candidate list with an
+    /// auto-aimed target.
+    #[test]
+    fn ability_arms_enumerate_the_archaic_activation() {
+        let mut g = two_player_game();
+        g.priority.player_with_priority = 0;
+        g.active_player_idx = 0;
+        let archaic = g.add_card_to_battlefield(0, catalog::sundering_archaic());
+        g.add_card_to_battlefield(0, catalog::island());
+        g.add_card_to_battlefield(0, catalog::forest());
+        // A graveyard card for the ability to aim at.
+        let dead = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+        let idx = g.battlefield.iter().position(|c| c.id == dead).unwrap();
+        let card = g.battlefield.remove(idx);
+        g.players[1].graveyard.push(card);
+        let probe = g.affordance_probe_template();
+        let has_arm = |w: &EvalWeights| {
+            cast_candidates(&g, 0, &probe, w).iter().any(|(a, _)| {
+                matches!(a, GameAction::ActivateAbility { card_id, .. } if *card_id == archaic)
+            })
+        };
+        assert!(!has_arm(&EvalWeights::default()), "flag off: the class is invisible");
+        assert!(has_arm(&EvalWeights::ability_arms_on()), "flag on: the activation is a candidate");
+    }
+
+    #[test]
+    fn desperate_board_offers_the_chump_to_the_sims() {
+        let mut g = two_player_game();
+        g.step = TurnStep::DeclareBlockers;
+        g.active_player_idx = 1;
+        g.priority.player_with_priority = 0;
+        let angel = g.add_card_to_battlefield(1, catalog::serra_angel());
+        let bears = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+        g.attacking = vec![crate::game::types::Attack {
+            attacker: angel,
+            target: crate::game::types::AttackTarget::Player(0),
+        }];
+        g.players[0].life = 5;
+        let off = block_candidates_for_mcts(&g, 0, &EvalWeights::block_gang_search());
+        assert_eq!(off, vec![Vec::new()], "flag off: no profitable block, no menu");
+        let on = block_candidates_for_mcts(&g, 0, &EvalWeights::chump_blocks_on());
+        assert!(
+            on.contains(&vec![(bears, angel)]),
+            "flag on at 5 life: the chump is on the menu: {on:?}"
+        );
+        assert!(on.contains(&Vec::new()), "not blocking stays on the menu too");
+        g.players[0].life = 15;
+        let calm = block_candidates_for_mcts(&g, 0, &EvalWeights::chump_blocks_on());
+        assert_eq!(calm, vec![Vec::new()], "at 15 life the desperation gate holds");
+    }
+
+    /// Converge-aware land drops: holding a converge card, a land of a
+    /// color the mana base doesn't make yet beats a duplicate — even
+    /// though no pip in hand demands it. Flag off, the duplicate ties
+    /// and hand order wins, which is the recorded pre-fix behavior
+    /// (the bot playing its third Plains where the human diversified).
+    #[test]
+    fn converge_hand_prefers_a_fresh_land_color() {
+        let mut g = two_player_game();
+        g.priority.player_with_priority = 0;
+        g.active_player_idx = 0;
+        g.add_card_to_battlefield(0, catalog::plains());
+        let plains = g.add_card_to_hand(0, catalog::plains());
+        let swamp = g.add_card_to_hand(0, catalog::swamp());
+        g.add_card_to_hand(0, catalog::rancorous_archaic()); // {5}: no pip wants Swamp
+        assert_eq!(
+            pick_land_to_play(&g, 0, &EvalWeights::default()),
+            Some(plains),
+            "flag off: no pip needs anything, first playable land wins"
+        );
+        assert_eq!(
+            pick_land_to_play(&g, 0, &EvalWeights::converge_lands_on()),
+            Some(swamp),
+            "flag on: the converge card in hand makes the fresh color worth more"
+        );
+    }
+
     /// The bot plays a color-fixing land over an off-color one: with a green
     /// spell in hand and no green source, it plays the Forest, not the Mountain.
     #[test]
@@ -14582,6 +15139,44 @@ mod stack_response_tests {
         let action = pick_stack_response(&g, 0, &w).expect("clogged hand counters");
         assert!(
             matches!(action, GameAction::CastSpell { card_id, .. } if card_id == counter),
+            "got {action:?}"
+        );
+    }
+
+    /// The stack 2-for-1: the opponent's Giant Growth on their own bear
+    /// invites the Bolt in response — lethal against CURRENT toughness,
+    /// since the pump will fizzle. Off by default; the flag arms it.
+    #[test]
+    fn buff_response_kills_the_creature_under_the_pump() {
+        use crate::mana::Color;
+        let mut g = two_player_game();
+        g.active_player_idx = 1;
+        let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+        g.players[0].mana_pool.add(Color::Red, 1);
+        let bears = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+        let growth = g.add_card_to_hand(1, catalog::giant_growth());
+        g.players[1].mana_pool.add(Color::Green, 1);
+        g.priority.player_with_priority = 1;
+        g.perform_action(GameAction::CastSpell {
+            card_id: growth,
+            target: Some(Target::Permanent(bears)),
+            additional_targets: vec![],
+            mode: None,
+            x_value: None,
+        })
+        .expect("opponent pumps their own bear");
+        while g.player_with_priority() != 0 {
+            g.perform_action(GameAction::PassPriority).unwrap();
+        }
+        assert!(
+            pick_buff_response(&g, 0, &EvalWeights::default()).is_none(),
+            "off by default until laddered"
+        );
+        let action = pick_buff_response(&g, 0, &EvalWeights::buff_2for1_on())
+            .expect("the Bolt answers the bear under the Growth");
+        assert!(
+            matches!(action, GameAction::CastSpell { card_id, target: Some(Target::Permanent(t)), .. }
+                if card_id == bolt && t == bears),
             "got {action:?}"
         );
     }

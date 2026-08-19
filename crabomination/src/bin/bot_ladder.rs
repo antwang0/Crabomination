@@ -242,6 +242,25 @@ fn parse_profile(name: &str) -> Option<Pilot> {
         "look1" => Some(Pilot::Scored(EvalWeights::lookahead1_default())),
         "look2" => Some(Pilot::Scored(EvalWeights::lookahead2_default())),
         "smarttap" => Some(Pilot::Scored(EvalWeights::smart_tap_on())),
+        // The stack 2-for-1: removal in response to the opponent's own
+        // buff spell. Gate as A against `gang` (the same weights minus
+        // the flag).
+        "buff2for1" => Some(Pilot::Scored(EvalWeights::buff_2for1_on())),
+        // Converge-aware land drops (from the first recorded human game:
+        // the bot played its third Plains where the human diversified
+        // for converge). Gate as A against `gang`.
+        "convlands" => Some(Pilot::Scored(EvalWeights::converge_lands_on())),
+        // Desperation chump blocks (from the first recorded human game:
+        // the bot at 5 life took 4 to the face holding a blocker,
+        // because the profitable-blocks-only menu never offered the
+        // chump). Gate as A against `gang`.
+        "chumpblocks" => Some(Pilot::Scored(EvalWeights::chump_blocks_on())),
+        // Walker chip attacks (a recorded loss: a walker ultimated after
+        // ten unpressured turns). Gate as A against `atk-sim`.
+        "walkerchip" => Some(Pilot::Scored(EvalWeights::walker_chip_on())),
+        // Activated-ability candidates (the recorded games' unused
+        // Sundering Archaic exile). Gate as A against `gang`.
+        "abilarms" => Some(Pilot::Scored(EvalWeights::ability_arms_on())),
         "det1" => Some(Pilot::Scored(EvalWeights::determinized())),
         "det3" => Some(Pilot::Scored(EvalWeights::determinized3())),
         "net" => Some(Pilot::Scored(EvalWeights::net_eval())),
@@ -315,6 +334,31 @@ fn parse_profile(name: &str) -> Option<Pilot> {
             iterations: 256,
             horizon_turns: 3,
             weights: EvalWeights::net_eval_det1(),
+            ..MctsConfig::default()
+        })),
+        // Round-43 candidate: r42's 256-iteration strength at a
+        // client-viable average latency. Early stop ALONE — no
+        // close-call extension — is the untested half of round 29's
+        // adaptive arm (that arm bundled a 4x extension which spent
+        // ~2x and returned exactly its spend). The stop only quits
+        // once the leader's confidence bound clears every rival, so
+        // strength should hold at 256 while forced moves stop paying
+        // the full budget. Gates: parity vs mcts-net-256, margin vs
+        // mcts-net-deep, serial cost per game.
+        "mcts-net-256es" => Some(Pilot::Mcts(MctsConfig {
+            iterations: 256,
+            horizon_turns: 3,
+            early_stop: true,
+            weights: EvalWeights::net_eval_det1(),
+            ..MctsConfig::default()
+        })),
+        // Reserve a root arm for prepared casts (two banked Ancestral
+        // Recalls sat unfired through a recorded loss; the six-arm cap
+        // can crowd the class out). Gate as A against mcts-net-deep.
+        "mcts-net-prep" => Some(Pilot::Mcts(MctsConfig {
+            iterations: 64,
+            horizon_turns: 3,
+            weights: EvalWeights { prepare_arm: true, ..EvalWeights::net_eval_det1() },
             ..MctsConfig::default()
         })),
         "mcts-net-h4" => Some(Pilot::Mcts(MctsConfig {

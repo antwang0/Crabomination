@@ -167,8 +167,20 @@ const DIGESTS: &[(u64, Option<usize>, u32, usize, u64)] = &[
     // change looks like -- the searches make a different arbitrary guess,
     // not a better or worse one. Seeds 3 and 4 are untouched.
     (1, Some(0), 11, 281, 0x50fa_222a_007f_6675),
-    (2, Some(1), 16, 392, 0x532d_fc8c_50ea_b3fc),
-    (3, Some(0), 19, 459, 0x4cab_8692_6eda_d70a),
+    // Re-blessed Aug 2026 for the CR 510.4/510.5 combat-damage fix: the step
+    // loop used to skip a whole attacker/blocker pairing whenever the attacker
+    // dealt no damage in that step, so a first striker that failed to kill its
+    // blocker was never struck back. Seeds 2 and 3 now trade in combat where
+    // a first striker previously walked away, which ends both games in fewer
+    // actions (392 -> 384, 459 -> 439). Both winners and both turn counts are
+    // unchanged; seeds 1, 4 and 5 are untouched.
+    // Re-blessed 2026-08-19 for the desperation-chump-block adoption
+    // (round 43, +0.9 on the ladder): seed 2's game contains a board
+    // where a seat within two swings of dead now chumps instead of
+    // taking it. Same winner, same turn and action counts — only the
+    // digest differs, which is what a single changed block looks like.
+    (2, Some(1), 16, 384, 0x5afa_f7ec_cd95_0dcd),
+    (3, Some(0), 19, 439, 0x082b_ac63_0f2d_3f42),
     (4, Some(0), 13, 330, 0x3947_01c0_e7bc_f137),
     (5, Some(0), 9, 223, 0x97c2_acfd_3251_1e21),
 ];

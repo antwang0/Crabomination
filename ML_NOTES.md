@@ -7,6 +7,96 @@ only stays dead while the reasoning that killed it is readable.
 
 ## Tier 13 — AI
 
+- 🟢 **Round 43 (2026-08-19) — the first instrument-driven piloting
+  round: chump blocks measured +0.9 and adopted, early-stop closed as a
+  null with its mechanism, and three zero-incidence lessons about what
+  mirror ladders can and cannot see.** Pre-registered in
+  `.ladder/run_r43_piloting.sh` / `run_r43b_gates.sh`.
+
+  **The instruments came first and set the agenda.** `CRAB_DECISION_LOG`
+  (every human action logged beside what the bot would have done from
+  the same position) and the v2 replay recorder + `replay_view` narrator
+  turned four recorded human games into a defect list the ladder never
+  surfaces: the bot at 5 life taking 4 to the face holding a chump, a
+  planeswalker ultimating after ten unpressured turns, two banked
+  prepared Ancestral Recalls never cast, zero non-mana activations
+  across all games. The same recordings caught three interactive-play
+  bugs bot measurement is structurally blind to (the Forum of Amity
+  tap-cost soft-lock, the modal-castability affordance hiding Quandrix
+  Charm, decision-log noise classes) — fixed alongside, each with a
+  regression test from the recorded position.
+
+  **Part A — early stop alone, the untested half of round 29's adaptive
+  arm.** Serial cost 27.6 / 99.3 / **102.4** s per game
+  (64 / 256 / 256+stop): the stop saves *nothing*. Parity 50.1 / 50.2
+  (±0.4) vs fixed-256 and margin +2.1 / +2.5 vs 64 (reproducing round
+  42) complete the picture: the confidence-bound condition simply never
+  fires at 256 iterations' per-arm visit counts — strength identical
+  because behavior is near-identical. Closed with mechanism; the client
+  latency path remains leaf-eval batching (`PERF.md` candidate 11).
+
+  **Part B — six piloting flags, each A vs its control (same weights
+  minus the flag), mirror sealed decks:**
+
+  | flag | vs | l43 | l97 | verdict |
+  |---|---|---|---|---|
+  | chumpblocks | gang | **51.0** [50.9, 51.1] | **50.8** [50.7, 50.9] | **ADOPTED** |
+  | buff2for1 | gang | 50.0 ±0.00 | 50.0 ±0.00 | zero incidence |
+  | convlands | gang | 50.0 ±0.02 | 50.0 ±0.02 | zero incidence |
+  | walkerchip | atk-sim | 50.0 ±0.00 | 50.0 ±0.00 | zero incidence |
+  | abilarms | gang | 48.0 [47.8, 48.2] | 50.5 [50.4, 50.7] | seed-split, null-to-negative |
+  | mcts-net-prep | mcts-net-deep | 49.9 ±0.49 | 49.9 ±0.49 | null |
+
+  **Chump blocks: +0.9 replicated, and the mechanism is structural, not
+  a weight.** The block menu was built from *profitable* blocks only —
+  a greedy pass that found none returned a bare "no blocks" and the
+  simulations never ran, so no valuation could ever choose a chump.
+  The flag adds desperation candidates (unblocked damage lethal within
+  two swings) and lets the existing sims judge them. The tiny ±0.08
+  bars are the signature of a targeted fix: nearly every pair splits
+  identically and only chump-relevant games diverge. Adopted into
+  `EvalWeights::default()` (measured on the `gang` base; determinize
+  rides on top as with every earlier layer). Golden-trace seed 2
+  re-blessed: same winner, same turn and action counts, one changed
+  block. Largest adopted piloting layer since gang-blocks — and it
+  came from reading two recorded games, not from a 12 000-game sweep.
+
+  **The zero-incidence trio is a lesson, not a failure.** buff2for1
+  (kill the creature under the opponent's own pump), convlands
+  (converge-aware land drops) and walkerchip (chip an unfinishable
+  walker) all measured *exactly* 50.0 with near-zero pair divergence:
+  the triggering situations do not occur in heuristic sealed mirrors —
+  these pilots make ~one instant-speed cast per 60 games (round 39's
+  probe), two-color builds rarely diversify basics, and the gate pools
+  contain no walkers. All three stay in-tree, default off, as
+  human-facing behaviors the mirror instrument cannot price. A gate
+  that cannot refute is not a gate; the decision log is the instrument
+  of record for this class.
+
+  **abilarms is the honest failure: enumeration without judgment can be
+  worse than neither.** Generic activated-ability candidates split the
+  seeds hard (−2.0 / +0.5, both "significant" alone — the pool-level
+  clustering lesson again, twelve decks per ladder seed). Auto-aimed
+  activations firing on the sims' say-so are evidently harmful in some
+  pools. Not adopted; retry wants per-pool attribution of *which*
+  abilities fired before another cell is spent.
+
+  **mcts-net-prep: the menu-reservation theory of the banked Recalls is
+  dead** (49.9 both seeds). The probe had already killed the
+  eval-can't-see-card-advantage theory (the eval prices a hand card at
+  4 and the heuristic casts the banked Recall correctly — the recorded
+  passivity remains unexplained, now bounded to the net-pilot side).
+
+  **What was built.** The decision shadow log with noise equivalences
+  (pass ≡ empty declarations, mana taps skipped, payment retries
+  deduped); replay v2 (first-appearance card-name tables) +
+  `replay_view`; `EvalWeights` flags `chump_blocks` (adopted),
+  `buff_2for1`, `converge_lands`, `walker_chip`, `ability_arms`,
+  `prepare_arm` (default off) with ladder profiles; the Forum of Amity
+  tap-cost rollback on `ManualTapRequired`; every-mode castability
+  probing in the affordance sweep; `mcts-net-256es` kept as the
+  measured early-stop control.
+
 - 🟢 **Builder v3 (2026-08-17) — quality-and-curve-aware shape ranking
   is worth ~+3 points of deck strength, replicated on both harness
   seeds; best-of-N selection on top adds nothing measurable; and the
