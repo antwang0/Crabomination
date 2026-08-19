@@ -1675,46 +1675,12 @@ fn project_permanent(
             }
         }).unwrap_or(0),
         ward_label: card.definition.keywords.iter().find_map(|kw| {
-            use crate::card::WardCost as W;
             let crate::card::Keyword::Ward(w) = kw else { return None };
-            Some(match w {
-                // Plain generic-mana Ward is already carried by `ward_cost`.
-                W::Mana(_) => return None,
-                W::ManaAndLife(c, n) => format!("Ward—{{{}}}, pay {n} life", c.cmc()),
-                W::Life(n) => format!("Ward—pay {n} life"),
-                W::Discard(n) => format!("Ward—discard {n}"),
-                W::DiscardRandom(n) => format!("Ward—discard {n} at random"),
-                W::DiscardMatching(_, n) => format!("Ward—discard {n} matching card(s)"),
-                W::DiscardHand => "Ward—discard your hand".to_string(),
-                W::Blight(n) => format!("Ward—Blight {n}"),
-                W::CollectEvidence(n) => format!("Ward—Collect evidence {n}"),
-                W::ExileFromGraveyard(n) => format!("Ward—exile {n} card(s) from your graveyard"),
-                W::BottomFromGraveyard(n) => {
-                    format!("Ward—bottom {n} card(s) from your graveyard")
-                }
-                W::ExileTopFromGraveyardMatching(_) => {
-                    "Ward—exile the top matching card of your graveyard".to_string()
-                }
-                W::ReturnMatchingFromGraveyardToHand(_) => {
-                    "Ward—return a matching card from your graveyard".to_string()
-                }
-                W::DamageFromSource(n) => format!("Ward—take {n} damage"),
-                W::SacrificeCreature => "Ward—sacrifice a creature".to_string(),
-                W::SacrificeMatching(_) => "Ward—sacrifice a matching permanent".to_string(),
-                W::SacrificePermanents(n) => format!("Ward—sacrifice {n} permanents"),
-                W::SacrificeMatchingN(_, n) => format!("Ward—sacrifice {n} matching permanents"),
-                W::ReturnMatchingToHand(_, n) => format!("Ward—return {n} matching permanent(s)"),
-                W::GenericSourcePower => "Ward—{X} (this creature's power)".to_string(),
-                W::GenericXFromCost => "Ward—{X}".to_string(),
-                W::GenericCountersOnSource(kind) => {
-                    format!("Ward—{{X}} (this permanent's {kind:?} counters)")
-                }
-                W::LifeSourcePower => "Ward—pay life equal to this creature's power".to_string(),
-                W::RemoveCounterFromPermanent => "Ward—remove a counter from a permanent".to_string(),
-                W::ManaCostOfAttached => "Ward—pay the enchanted permanent's mana cost".to_string(),
-                W::ManaOrLife(c, n) => format!("Ward—{{{}}} or {n} life", c.cmc()),
-                W::SacrificeAttachedHost => "Ward—sacrifice the enchanted permanent".to_string(),
-            })
+            // Plain generic-mana Ward is already carried by `ward_cost`.
+            if matches!(w, crate::card::WardCost::Mana(_)) {
+                return None;
+            }
+            Some(w.label())
         }).unwrap_or_default(),
         mana_value: card.definition.cost.cmc(),
         // Computed supertypes so a continuous Legendary grant (Leyline of
@@ -2310,6 +2276,23 @@ fn project_abilities_with_granted(
                 gate_blocked = true;
                 if gate_label.is_empty() {
                     gate_label = "abilities locked".to_string();
+                }
+            }
+            // An ability whose slot-0 target lives off-board ("target card in
+            // a graveyard" — Sundering Archaic's `{2}`) is unusable when no
+            // card matches: `activate_ability` rejects it before posing the
+            // picker, so the row opened nothing and explained nothing. Grey it
+            // out on the same enumeration the picker uses.
+            if let Some(st) = state
+                && let Some(filter) = a
+                    .effect
+                    .target_filter_for_slot(0)
+                    .filter(|f| f.mentions_offboard_zone())
+                && st.offboard_target_candidates(filter, card.controller, card.id).is_empty()
+            {
+                gate_blocked = true;
+                if gate_label.is_empty() {
+                    gate_label = "a legal target".to_string();
                 }
             }
             AbilityView {
@@ -4799,6 +4782,32 @@ mod tests {
         assert_eq!(ability_effect_label(&Effect::Fateseal {
             who: PlayerRef::EachOpponent, amount: Value::Const(2) }), "Fateseal");
         assert_eq!(ability_effect_label(&Effect::Discover { n: Value::Const(3), filter: None }), "Discover");
+    }
+
+    /// An ability whose only target lives in a graveyard greys out while no
+    /// card is there to pick. `activate_ability` refuses the activation
+    /// outright in that state, so a live-looking row was a dead button
+    /// (Sundering Archaic's `{2}` — the client bug report, Aug 2026).
+    #[test]
+    fn offboard_target_ability_greys_out_with_nothing_to_pick() {
+        let mut state = two_player_game();
+        let arch = state.add_card_to_battlefield(0, catalog::sundering_archaic());
+
+        let row = |st: &crate::game::GameState| {
+            project(st, 0)
+                .battlefield
+                .iter()
+                .find(|p| p.id == arch)
+                .expect("Sundering Archaic is on the battlefield")
+                .abilities[0]
+                .clone()
+        };
+        let empty = row(&state);
+        assert!(empty.gate_blocked, "every graveyard is empty — nothing to target");
+        assert_eq!(empty.gate_label, "a legal target", "and the row says why");
+
+        state.add_card_to_graveyard(1, catalog::grizzly_bears());
+        assert!(!row(&state).gate_blocked, "a card in a graveyard makes it live again");
     }
 
     /// A variable `-X` loyalty ability surfaces with `x_cost: true` so the

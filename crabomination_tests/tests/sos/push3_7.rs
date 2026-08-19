@@ -2304,3 +2304,138 @@ fn additive_evolution_combat_pumps_friendly_creature() {
          (got total={})", total_creature_pump);
 }
 
+
+/// CR 601.2g (client bug report, Aug 2026): casting Snarl Song `{5}{G}` off
+/// five Forests and a Forum of Amity auto-tapped the Forum for **white**
+/// without asking. Converge is the whole payoff of the card — the number of
+/// distinct colours spent sizes both Fractals and the lifegain — so which
+/// half of a dual land pays is the caster's decision, not the auto-tapper's.
+///
+/// The source-choice analysis alone stays quiet here: six sources for six
+/// mana is one legal assignment. The colour choice *inside* a forced dual is
+/// the part it couldn't see.
+#[test]
+fn a_converge_cast_asks_which_half_of_a_dual_land_to_tap() {
+    let mut g = two_player_game();
+    g.players[0].manual_mana = true;
+    let song = g.add_card_to_hand(0, catalog::snarl_song());
+    let forum = g.add_card_to_battlefield(0, catalog::forum_of_amity());
+    for _ in 0..5 {
+        g.add_card_to_battlefield(0, catalog::forest());
+    }
+    for c in g.battlefield.iter_mut() {
+        c.tapped = false;
+    }
+    let cast = |g: &mut GameState| {
+        g.perform_action(GameAction::CastSpell {
+            card_id: song,
+            target: None,
+            additional_targets: vec![],
+            mode: None,
+            x_value: None,
+        })
+    };
+
+    assert!(
+        matches!(cast(&mut g), Err(GameError::ManualTapRequired { .. })),
+        "the Forum has to tap, but for which colour is the caster's call",
+    );
+    assert!(
+        !g.battlefield.iter().find(|c| c.id == forum).is_some_and(|c| c.tapped),
+        "and nothing picked a colour on the player's behalf",
+    );
+
+    // The player taps it for black (ability 1 — ability 0 is the white half),
+    // then finishes by hand. Converge counts green + black = 2.
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: forum,
+        ability_index: 1,
+        target: None,
+        additional_targets: Vec::new(),
+        x_value: None,
+        mode: None,
+    })
+    .expect("{T}: Add {B}");
+    assert_eq!(g.players[0].mana_pool.amount(Color::Black), 1, "black, as asked");
+    // The rejected cast left the *forced* `{G}` pip floating (its colour was
+    // never in question); tap whatever Forests it didn't need.
+    while let Some(forest) = g
+        .battlefield
+        .iter()
+        .find(|c| c.definition.name == "Forest" && !c.tapped)
+        .map(|c| c.id)
+    {
+        g.perform_action(GameAction::ActivateAbility {
+            card_id: forest,
+            ability_index: 0,
+            target: None,
+            additional_targets: Vec::new(),
+            x_value: None,
+            mode: None,
+        })
+        .expect("{T}: Add {G}");
+    }
+    cast(&mut g).expect("the pool now covers {5}{G}");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, 22, "converge 2 — green and black were spent");
+}
+
+/// The prompt is for a *choice*, not a shortfall: a board that simply can't
+/// afford the spell still gets the plain mana error. The first cut of the
+/// converge check answered "tap more mana" to an uncastable spell, which left
+/// the client holding a pending cast that could never complete.
+#[test]
+fn an_unaffordable_converge_cast_still_reports_a_mana_shortfall() {
+    let mut g = two_player_game();
+    g.players[0].manual_mana = true;
+    let song = g.add_card_to_hand(0, catalog::snarl_song());
+    g.add_card_to_battlefield(0, catalog::forum_of_amity());
+    for _ in 0..3 {
+        g.add_card_to_battlefield(0, catalog::forest());
+    }
+    for c in g.battlefield.iter_mut() {
+        c.tapped = false;
+    }
+    assert!(
+        matches!(
+            g.perform_action(GameAction::CastSpell {
+                card_id: song,
+                target: None,
+                additional_targets: vec![],
+                mode: None,
+                x_value: None,
+            }),
+            Err(GameError::Mana(_)),
+        ),
+        "four sources can't pay {{5}}{{G}} — that's a shortfall, not a choice",
+    );
+}
+
+/// Blast-radius guard: the dual-land colour prompt is scoped to casts whose
+/// rules text reads the colours spent. An ordinary spell doesn't care whether
+/// the Forum made white or black, so a forced tap stays silent — otherwise
+/// every dual land in every deck would prompt on every cast.
+#[test]
+fn a_plain_cast_does_not_prompt_for_a_dual_lands_colour() {
+    let mut g = two_player_game();
+    g.players[0].manual_mana = true;
+    // Grizzly Bears is {1}{G}: the Forum must tap for the generic pip.
+    let bears = g.add_card_to_hand(0, catalog::grizzly_bears());
+    let forum = g.add_card_to_battlefield(0, catalog::forum_of_amity());
+    g.add_card_to_battlefield(0, catalog::forest());
+    for c in g.battlefield.iter_mut() {
+        c.tapped = false;
+    }
+    g.perform_action(GameAction::CastSpell {
+        card_id: bears,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("no converge to serve — the auto-tapper just pays");
+    assert!(
+        g.battlefield.iter().find(|c| c.id == forum).is_some_and(|c| c.tapped),
+        "the Forum paid the generic pip without a prompt",
+    );
+}

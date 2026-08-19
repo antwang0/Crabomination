@@ -114,6 +114,77 @@ fn emeritus_of_ideation_prepare_spell_draws_three() {
 // Ancestral Recall draws for the *targeted* player, not the caster.
 // Aiming at the opponent makes them draw 3 (rarely the right play, but
 // exercises the target_filtered(Player) wiring).
+/// A mandatory "choose N cards" pick is the player's, not the engine's.
+///
+/// `Effect::MoveChosen` with `up_to: false` went straight to
+/// `decider.decide`, which for a live UI seat is the AutoDecider — so the
+/// human never saw a prompt and the first N cards in list order were exiled
+/// for them. Emeritus of Ideation's attack trigger exiles *eight* cards from
+/// your graveyard; which eight is a real decision (reported Aug 2026).
+#[test]
+fn emeritus_of_ideation_lets_you_pick_the_eight_cards_to_exile() {
+    use crabomination::decision::Decision;
+    let mut g = two_player_game();
+    g.players[0].wants_ui = true;
+    let em = g.add_card_to_battlefield(0, catalog::emeritus_of_ideation());
+    g.clear_sickness(em);
+    for _ in 0..10 {
+        g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    }
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.step = crabomination::TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: em,
+        target: AttackTarget::Player(1),
+    }]))
+    .expect("attack declared");
+    for _ in 0..3 {
+        if g.pending_decision.is_some() {
+            break;
+        }
+        let _ = g.perform_action(GameAction::PassPriority);
+    }
+
+    // "You may exile eight cards…" — the opt-in first.
+    assert!(
+        matches!(
+            g.pending_decision.as_ref().map(|p| &p.decision),
+            Some(Decision::OptionalTrigger { .. }),
+        ),
+        "the may-clause is asked first",
+    );
+    g.perform_action(GameAction::SubmitDecision(DecisionAnswer::Bool(true)))
+        .expect("opting in is legal");
+
+    // …then *which* eight, as a real modal rather than a silent auto-pick.
+    match g.pending_decision.as_ref().map(|p| &p.decision) {
+        Some(Decision::ChooseCards { candidates, min, max, .. }) => {
+            assert_eq!(candidates.len(), 10, "the whole graveyard is offered");
+            assert_eq!((*min, *max), (8, 8), "exactly eight — the printed count");
+        }
+        other => panic!("expected the eight-card pick, got {other:?}"),
+    }
+
+    // The player's choice is honoured card-for-card.
+    let all: Vec<_> = g.players[0].graveyard.iter().map(|c| c.id).collect();
+    let chosen: Vec<_> = all.iter().rev().take(8).copied().collect();
+    g.perform_action(GameAction::SubmitDecision(DecisionAnswer::Cards(chosen.clone())))
+        .expect("pick accepted");
+
+    let mut exiled: Vec<_> = g.exile.iter().map(|c| c.id).collect();
+    let mut want = chosen.clone();
+    exiled.sort();
+    want.sort();
+    assert_eq!(exiled, want, "exactly the eight the player picked were exiled");
+    assert_eq!(g.players[0].graveyard.len(), 2, "the two they kept stayed put");
+    assert_eq!(
+        g.battlefield_find(em).map(|c| c.counter_count(CounterType::Prepared)),
+        Some(1),
+        "and paying the cost prepared it",
+    );
+}
+
 #[test]
 fn emeritus_of_ideation_ancestral_recall_targets_opponent() {
     let mut g = two_player_game();

@@ -2269,7 +2269,13 @@ pub fn applied_geometry() -> CardDefinition {
                         ))),
                 ),
                 extra_creature_types: vec![crate::card::CreatureType::Fractal],
-                extra_card_types: vec![],
+                // "…it's a 0/0 Fractal *creature* in addition to its other
+                // types." Copying a noncreature permanent has to ADD the
+                // Creature card type, not just the Fractal subtype — a copied
+                // land came out a Land with a creature subtype and six +1/+1
+                // counters that couldn't attack, block, or die to SBA. Deduped
+                // by `CreateTokenCopyOf`, so copying a creature is unchanged.
+                extra_card_types: vec![CardType::Creature],
                 override_pt: Some((0, 0)),
                 override_colors: None,
                 enters_tapped: false,

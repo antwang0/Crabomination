@@ -3409,13 +3409,23 @@ impl GameState {
         let mut creature_damage: Vec<(CardId, CardId, u32)> = vec![];
 
         for atk in &attacker_infos {
-            if !atk.should_deal {
-                continue;
-            }
             // Fog (per-dealer) OR "prevent all combat damage it would deal"
             // (Azorius Ploy) both zero this attacker's outgoing damage while
             // still letting its blockers strike it back.
-            let prevent_combat_damage = self.combat_damage_prevented_for_dealer(atk.id)
+            //
+            // `!should_deal` belongs in exactly the same bucket, and used to
+            // `continue` past the whole pairing instead. CR 510.4/510.5 gate
+            // each creature's damage on *its own* keywords: a first-striking
+            // attacker deals in the first step and its ordinary blockers deal
+            // in the regular one. Skipping the pairing whenever the attacker
+            // was idle threw the blockers' half away with it, so a 3/2 first
+            // striker walked through a 4/4 blocker untouched — and the mirror
+            // case, a first-striking *blocker*, never got to strike before an
+            // ordinary attacker hit back. The strike-back half below already
+            // filters on the blocker's own keywords; it just has to be
+            // reachable.
+            let prevent_combat_damage = !atk.should_deal
+                || self.combat_damage_prevented_for_dealer(atk.id)
                 || self.combat_damage_prevented_from(atk.id);
 
             // CR 510.1c: the attacking player chose the order in which an

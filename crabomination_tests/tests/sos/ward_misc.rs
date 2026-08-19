@@ -422,6 +422,59 @@ fn applied_geometry_copies_creature_as_six_six_fractal() {
     assert_eq!(token.toughness(), 6);
 }
 
+/// "…except it's a 0/0 Fractal **creature** in addition to its other types."
+///
+/// Copying a *noncreature* permanent has to add the Creature card type, not
+/// just the Fractal subtype. A copied land came out as a plain Land carrying
+/// a creature subtype and six +1/+1 counters — a 6/6 on paper that couldn't
+/// attack, block, or die to state-based actions (reported Aug 2026).
+#[test]
+fn applied_geometry_copy_of_a_land_is_a_land_creature() {
+    use crabomination::card::{CardType, CreatureType};
+    let mut g = two_player_game();
+    let forest = g.add_card_to_battlefield(0, catalog::forest());
+    let ag = g.add_card_to_hand(0, catalog::applied_geometry());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: ag,
+        target: Some(Target::Permanent(forest)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("a land is a legal non-Aura permanent you control");
+    drain_stack(&mut g);
+
+    let token = g
+        .battlefield
+        .iter()
+        .find(|c| c.is_token && c.definition.name == "Forest")
+        .expect("the copy token was minted");
+    let id = token.id;
+    assert!(
+        token.definition.card_types.contains(&CardType::Land),
+        "it keeps the copied land type",
+    );
+    assert!(
+        token.definition.has_creature_type(CreatureType::Fractal),
+        "and gains Fractal",
+    );
+    let computed = g.computed_permanent(id).expect("token is on the battlefield");
+    assert!(
+        computed.card_types.contains(&CardType::Creature),
+        "'in addition to its other types' makes it a creature, not just a Fractal land",
+    );
+    assert_eq!(computed.power, 6, "0/0 base + six +1/+1 counters");
+    assert_eq!(computed.toughness, 6);
+    // The whole point of being a creature: it can be declared as an attacker.
+    assert!(
+        g.battlefield_find(id).is_some_and(|c| c.definition.is_creature()),
+        "a land creature, so combat and SBA apply to it",
+    );
+}
+
 #[test]
 fn colorstorm_stallion_opus_mints_copy_at_five_mana() {
     let mut g = two_player_game();

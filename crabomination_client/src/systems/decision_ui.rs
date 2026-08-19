@@ -446,11 +446,15 @@ pub fn spawn_decision_ui(
             state.discard_selected.clear();
             state.spawned_for = Some(key);
             let title = format!("Choose {count} card(s) to discard");
-            spawn_card_picker_modal(&mut commands, &asset_server, &ui_fonts, &title, hand, None);
+            // A cleanup-step discard is never abandonable (nothing to replay).
+            spawn_card_picker_modal(
+                &mut commands, &asset_server, &ui_fonts, &title, hand, None, false,
+            );
         }
         DecisionWire::ChooseCards { prompt, candidates, eligible, .. } => {
             state.discard_selected.clear();
             state.spawned_for = Some(key);
+            let cancellable = cv.pending_decision.as_ref().is_some_and(|pd| pd.cancellable);
             spawn_card_picker_modal(
                 &mut commands,
                 &asset_server,
@@ -458,6 +462,7 @@ pub fn spawn_decision_ui(
                 prompt,
                 candidates,
                 eligible.as_deref(),
+                cancellable,
             );
         }
         DecisionWire::OptionalTrigger { source, description } => {
@@ -1628,6 +1633,12 @@ fn spawn_card_picker_modal(
     // mistake an illegal card for a choice (Zimone's Experiment reveals
     // five and takes only creatures and lands).
     eligible: Option<&[CardId]>,
+    // The engine flagged this decision as the input half of a cast /
+    // activation replay that hasn't paid anything, so it can be abandoned.
+    // Sundering Archaic's `{2}` opens this picker before any mana is spent —
+    // with no visible way out, a player who changed their mind (or who has
+    // no mana to follow through) reads the modal as a hang.
+    cancellable: bool,
 ) {
     let root = commands
         .spawn((
@@ -1732,24 +1743,17 @@ fn spawn_card_picker_modal(
                 }
             });
         panel
-            .spawn((
-                Button,
-                Node {
-                    padding: UiRect::axes(Val::Px(20.0), Val::Px(10.0)),
-                    border_radius: BorderRadius::all(theme::RADIUS_BUTTON),
-                    ..default()
-                },
-                BackgroundColor(theme::BUTTON_PRIMARY_BG),
-                HoverTint::new(theme::BUTTON_PRIMARY_BG),
-                DecisionConfirmButton,
-            ))
-            .with_children(|b| {
-                b.spawn((
-                    Text::new("Confirm"),
-                    ui_fonts.tf(18.0),
-                    TextColor(theme::TEXT_PRIMARY),
-                    Pickable::IGNORE,
-                ));
+            .spawn(Node {
+                flex_direction: FlexDirection::Row,
+                column_gap: Val::Px(12.0),
+                align_items: AlignItems::Center,
+                ..default()
+            })
+            .with_children(|row| {
+                spawn_confirm_button(row, ui_fonts);
+                if cancellable {
+                    spawn_cancel_button(row, ui_fonts);
+                }
             });
     });
 }

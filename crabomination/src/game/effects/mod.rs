@@ -8136,7 +8136,6 @@ impl GameState {
             }
 
             Effect::LookTopEachPayLifeOrBin { count, life } => {
-                use crate::decision::{Decision, DecisionAnswer};
                 let n = self.evaluate_value(count, ctx).max(0) as usize;
                 let p = ctx.controller;
                 let source = ctx.source.unwrap_or(CardId(0));
@@ -18580,6 +18579,50 @@ impl GameState {
                     Some(d) => d,
                     None => return Ok(()),
                 };
+                // Both pickers above are themselves declinable — the mana
+                // source picker takes `min: 0`, the discard picker "choose
+                // fewer" — so a payer offered one has already answered CR
+                // 702.21b. A payer offered *neither* had no say at all: the
+                // cost was auto-paid on their behalf whenever it was
+                // affordable. For Ward—Pay N life that isn't a convenience
+                // but a loss — a player at exactly N life who targeted the
+                // warded permanent had N life taken with no prompt and lost
+                // the game on state-based actions. Ask them.
+                //
+                // Only a `wants_ui` seat is asked. Bots and scripted tests
+                // keep the auto-pay-if-affordable path: `AutoDecider` answers
+                // `false` to an `OptionalTrigger`, so routing them through
+                // this question would silently decline every ward and let all
+                // their targeted removal be countered.
+                if picks.is_none()
+                    && discards.is_none()
+                    && self.players.get(affected_controller).is_some_and(|p| p.wants_ui)
+                    && self.ward_cost_is_payable(affected_controller, cost, ctx)
+                {
+                    let prompt = format!(
+                        "{}: pay it? (otherwise {} is countered)",
+                        cost.label(),
+                        if is_spell { "the spell" } else { "the ability" },
+                    );
+                    match self.ask_seat_bool(&mut cursor, affected_controller, prompt, src, effect)
+                    {
+                        // Suspended for the modal — resumes through this same
+                        // arm with the answer replayed off the answer log.
+                        None => return Ok(()),
+                        Some(true) => {}
+                        Some(false) => {
+                            let removed = self.stack.remove(pos);
+                            if is_spell
+                                && let StackItem::Spell { card, caster, .. } = removed
+                            {
+                                self.countered_spell_controller = Some(caster);
+                                self.countered_spell_off_stack(*card, ctx.controller, events);
+                            }
+                            self.clear_answer_log();
+                            return Ok(());
+                        }
+                    }
+                }
                 self.clear_answer_log();
                 let paid = self.try_pay_ward_cost_from(
                     affected_controller,
@@ -19063,7 +19106,6 @@ impl GameState {
                 // decision min equals the pick count so the auto decider
                 // keeps maximizing; a UI/scripted decider may under-pick on
                 // "up to" cards.
-                use crate::decision::{Decision, DecisionAnswer};
                 let n = self.evaluate_value(count, ctx).max(0) as usize;
                 if n == 0 {
                     return Ok(());
@@ -19116,21 +19158,48 @@ impl GameState {
                     };
                     v.into_iter().filter(|id| ids.contains(id)).take(cap).collect()
                 } else {
-                    let answer = self.decider.decide(&Decision::ChooseCards {
-                        source: ctx.source.unwrap_or(CardId(0)),
-                        prompt: format!("Choose {cap} cards to move"),
-                        candidates: candidates.clone(),
-                        min: cap as u32,
-                        max: cap as u32,
-                        eligible: None,
-                    });
-                    match answer {
-                        DecisionAnswer::Cards(v) => v
-                            .into_iter()
-                            .filter(|id| ids.contains(id))
-                            .take(cap)
-                            .collect(),
-                        _ => ids.iter().copied().take(cap).collect(),
+                    // Exactly-N picks went straight to `decider.decide`, which
+                    // for a live UI seat is the AutoDecider — so a human never
+                    // saw the prompt and the first N cards in list order were
+                    // taken for them (Emeritus of Ideation's "exile eight cards
+                    // from your graveyard"). Route it through the same
+                    // suspending ask the `up_to` branch uses; a headless Auto
+                    // seat still takes the first N, which is what the
+                    // maximizing default has always done.
+                    let auto_default: Vec<CardId> = ids.iter().copied().take(cap).collect();
+                    if self.players.get(ctx.controller).is_some_and(|p| p.wants_ui)
+                        || !matches!(self.decider.kind(), crate::decision::DeciderKind::Auto)
+                    {
+                        let Some(v) = self.ask_seat_cards(
+                            ctx.controller,
+                            format!("Choose {cap} cards to move"),
+                            ctx.source.unwrap_or(CardId(0)),
+                            candidates.clone(),
+                            cap as u32,
+                            cap as u32,
+                            effect,
+                        ) else {
+                            return Ok(());
+                        };
+                        let picked: Vec<CardId> =
+                            v.into_iter().filter(|id| ids.contains(id)).take(cap).collect();
+                        // A decider that under-answers a *mandatory* pick
+                        // still has to move N cards (CR 601-style "as many as
+                        // you can"): top the selection up in list order.
+                        let mut picked = picked;
+                        if picked.len() < cap {
+                            for id in &ids {
+                                if picked.len() == cap {
+                                    break;
+                                }
+                                if !picked.contains(id) {
+                                    picked.push(*id);
+                                }
+                            }
+                        }
+                        picked
+                    } else {
+                        auto_default
                     }
                 };
                 for id in picked {
@@ -36054,6 +36123,24 @@ impl GameState {
             self.discard_card(payer, id, events);
         }
         true
+    }
+
+    /// Could `payer` actually pay this ward cost right now?
+    ///
+    /// Dry-run on a clone, so the CR 702.21b "pay it?" prompt is only put to
+    /// a player who has a real choice — asking someone to pay 3 life they
+    /// haven't got is a fake question, and answering either way ends with the
+    /// spell countered. Only reached on the `wants_ui` path, so the clone
+    /// never lands in a bot or ladder game.
+    fn ward_cost_is_payable(
+        &self,
+        payer: usize,
+        cost: &crate::card::WardCost,
+        ctx: &EffectContext,
+    ) -> bool {
+        let mut probe = self.clone();
+        let mut sink = Vec::new();
+        probe.try_pay_ward_cost_from(payer, cost, ctx, &mut sink, None, None)
     }
 
     /// [`try_pay_ward_cost`](Self::try_pay_ward_cost) paying the mana half

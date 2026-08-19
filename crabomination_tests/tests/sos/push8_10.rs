@@ -2302,6 +2302,58 @@ fn sundering_archaic_graveyard_ability_poses_a_card_picker() {
     );
 }
 
+/// Regression (client bug report, Aug 2026): the two ways the graveyard
+/// picker used to strand a player.
+///
+/// With every graveyard empty the ability has no legal target, so
+/// `activate_ability` refuses it *before* posing the modal — the ability row
+/// has to be greyed out client-side (`AbilityView::gate_blocked`) rather than
+/// silently swallowing the click. And when the picker *is* posed, nothing has
+/// been paid yet: the suspend is an action replay, which is what makes
+/// `DecisionAnswer::CancelAction` legal and the modal's Cancel button real.
+#[test]
+fn sundering_archaic_graveyard_pick_is_gated_and_cancellable() {
+    use crabomination::decision::DecisionAnswer;
+    let mut g = two_player_game();
+    g.players[0].wants_ui = true;
+    let src = g.add_card_to_battlefield(0, catalog::sundering_archaic());
+    g.players[0].mana_pool.add_colorless(2);
+    let activate = |g: &mut crabomination::game::GameState| {
+        g.perform_action(GameAction::ActivateAbility {
+            card_id: src,
+            ability_index: 0,
+            target: None,
+            additional_targets: vec![],
+            x_value: None,
+            mode: None,
+        })
+    };
+
+    assert!(
+        matches!(activate(&mut g), Err(GameError::SelectionRequirementViolated)),
+        "no card in any graveyard — refused instead of posing an empty picker",
+    );
+    assert!(g.pending_decision.is_none(), "and nothing unanswerable is left up");
+
+    let victim = g.add_card_to_graveyard(1, catalog::grizzly_bears());
+    activate(&mut g).expect("the picker is posed once there is a candidate");
+    assert!(
+        matches!(
+            g.pending_decision.as_ref().expect("pending").resume,
+            crabomination::game::ResumeContext::CastSlot0TargetPick { .. },
+        ),
+        "an action-replay suspend, so the modal may be cancelled",
+    );
+    g.submit_decision(DecisionAnswer::CancelAction).expect("backing out is legal");
+    assert!(g.pending_decision.is_none(), "the modal closes");
+    assert_eq!(g.players[0].mana_pool.total(), 2, "and the two-generic cost was never paid");
+    assert!(
+        g.players[1].graveyard.iter().any(|c| c.id == victim),
+        "the card stays put",
+    );
+    assert!(g.stack.is_empty(), "no ability went on the stack");
+}
+
 /// Regression: with manual mana the picked graveyard target has to survive
 /// the `ManualTapRequired` replays. The engine gathers the pick and replays
 /// the activation server-side, so the client's held action stays targetless
@@ -3223,3 +3275,59 @@ fn pigment_wrangler_prepare_spell_copies_next_instant_or_sorcery() {
         "Striking Palette copied the Bolt (3 + 3 damage)");
 }
 
+/// Cross-card: Practiced Scrollsmith's ETB exiles a card **from your
+/// graveyard**, which is a card leaving your graveyard — so Garrison
+/// Excavator's "whenever one or more cards leave your graveyard" sees it and
+/// mints a Spirit.
+///
+/// Reported as not firing (Aug 2026); pinned here because it does. The
+/// graveyard is filled by actually casting and resolving the card rather than
+/// injecting it, so the leaving card carries the controller a real game gives
+/// it — the field `EventScope::YourControl` reads.
+#[test]
+fn scrollsmith_exiling_from_your_graveyard_triggers_garrison_excavator() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::garrison_excavator());
+
+    // Bolt the opponent so it lands in the graveyard the honest way.
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt,
+        target: Some(Target::Player(1)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("Bolt cast");
+    drain_stack(&mut g);
+    assert!(
+        g.players[0].graveyard.iter().any(|c| c.id == bolt),
+        "the Bolt is in the graveyard",
+    );
+    let tokens_before = g.battlefield.iter().filter(|c| c.is_token).count();
+
+    let smith = g.add_card_to_hand(0, catalog::practiced_scrollsmith());
+    g.players[0].mana_pool.add(Color::Red, 2);
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: smith,
+        target: Some(Target::Permanent(bolt)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("Scrollsmith cast for {R}{R/W}{W}");
+    drain_stack(&mut g);
+
+    assert!(g.exile.iter().any(|c| c.id == bolt), "the ETB exiled the Bolt");
+    assert_eq!(
+        g.battlefield.iter().filter(|c| c.is_token).count(),
+        tokens_before + 1,
+        "the graveyard exit fed Garrison Excavator's trigger",
+    );
+    assert!(
+        g.battlefield.iter().any(|c| c.is_token && c.definition.name == "Spirit"),
+        "and the token is the printed 2/2 Spirit",
+    );
+}

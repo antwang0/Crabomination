@@ -391,6 +391,37 @@ impl GameState {
         self.legal_targets_for_filter(req, eff.accepts_player_target(), controller, source)
     }
 
+    /// The graveyard / exile cards a `wants_ui` controller may pick for an
+    /// off-board slot-0 target ("target card in a graveyard" — Sundering
+    /// Archaic's `{2}`), as `(id, name)` pairs for the `ChooseCards` modal.
+    ///
+    /// The activation path poses that modal and the view layer greys the
+    /// ability row out when this comes back empty, so both must agree on what
+    /// counts as a candidate — a row that looks live but is rejected on click
+    /// reads as a dead button.
+    pub fn offboard_target_candidates(
+        &self,
+        filter: &crate::card::SelectionRequirement,
+        controller: usize,
+        source: CardId,
+    ) -> Vec<(CardId, String)> {
+        self.players
+            .iter()
+            .flat_map(|pl| pl.graveyard.iter())
+            .chain(self.exile.iter())
+            .filter(|c| {
+                c.id != source
+                    && self.evaluate_requirement_static(
+                        filter,
+                        &Target::Permanent(c.id),
+                        controller,
+                        Some(source),
+                    )
+            })
+            .map(|c| (c.id, c.definition.name.to_string()))
+            .collect()
+    }
+
     /// Every object/player in any zone that satisfies `req` and passes the
     /// CR 115.4 legality check. The filter-level core of
     /// `enumerate_legal_targets_with_source`; a caller that already knows the

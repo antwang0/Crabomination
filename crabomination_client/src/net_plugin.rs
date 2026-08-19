@@ -394,6 +394,7 @@ pub fn poll_net(
     active_format: Option<Res<crate::systems::game_over::ActiveMatchFormat>>,
     time: Res<Time>,
     mut blocking: ResMut<crate::game::BlockingState>,
+    mut log: ResMut<crate::game::GameLog>,
 ) {
     let Some(inbox) = inbox else { return };
     events.0.clear();
@@ -488,7 +489,13 @@ pub fn poll_net(
                     // transient notice instead of a silent log line.
                     rope.fired_until = Some(time.elapsed_secs_f64() + 4.0);
                 } else {
+                    // Every other rejection used to go to stderr only, which
+                    // no player sees: clicking an uncastable spell did
+                    // nothing, gave no reason, and read as the client being
+                    // stuck (reported for Traumatic Critique `{X}{U}{R}` with
+                    // no red source). Put the engine's reason in the game log.
                     eprintln!("net: server rejected action: {e}");
+                    log.push_colored(e, crate::theme::TEXT_DANGER);
                 }
             }
             ServerMsg::MatchOver { winner } => {
@@ -773,18 +780,33 @@ pub fn drive_pending_mana_cast(
 #[derive(Component)]
 struct PendingCastBanner;
 
+/// The cost the engine is actually waiting on, lifted out of the
+/// `ManualTapRequired` message (`"Tap mana to pay {2} — …"`).
+///
+/// The banner used to re-derive the cost from the card's *printed* mana cost,
+/// which is the wrong number twice over: an activated ability pays the
+/// ability's cost, not the card's (Sundering Archaic's `{2}` ability read as
+/// its `{6}` body, so the readout still demanded `{4}` after the two lands
+/// that paid for it), and a cost-reduced / -increased cast pays neither.
+/// `GameError::ManualTapRequired` already carries `cost.summary()`, so take
+/// the authoritative string from there.
+fn hint_cost_str(hint: &str) -> Option<&str> {
+    let rest = hint.split_once("pay ")?.1;
+    // The message continues " — you have more than one way …"; the cost is
+    // everything up to that em dash (or the whole tail if the wording drifts).
+    Some(rest.split(" —").next().unwrap_or(rest).trim())
+}
+
 /// Show a top-of-screen banner while a cast is waiting on manual mana
 /// tapping, so the player knows to tap their sources (or press Escape).
 /// "{1}{U} to go" — the part of `cost` the viewer's current pool doesn't
-/// cover yet, for the manual-tap banner. Display-only approximation
-/// (hybrid/Phyrexian/snow pips count as their colored side; X as 0): the
-/// engine remains authoritative about acceptance — this just tells the
-/// player roughly what's still missing as they tap.
-fn remaining_cost_label(
-    cost: &crabomination::mana::ManaCost,
-    pool: &crabomination::mana::ManaPool,
-) -> Option<String> {
-    use crabomination::mana::{Color as MC, ManaSymbol};
+/// cover yet, for the manual-tap banner. `cost` is a `ManaCost::summary()`
+/// string (`"{1}{U}"`). Display-only approximation (hybrid/Phyrexian/snow
+/// pips count as their colored side; X as 0): the engine remains
+/// authoritative about acceptance — this just tells the player roughly
+/// what's still missing as they tap.
+fn remaining_cost_label(cost: &str, pool: &crabomination::mana::ManaPool) -> Option<String> {
+    use crabomination::mana::Color as MC;
     const COLORS: [(MC, char); 5] = [
         (MC::White, 'W'),
         (MC::Blue, 'U'),
@@ -797,20 +819,47 @@ fn remaining_cost_label(
     let other_pool = pool.total().saturating_sub(colored_total); // colorless & friends
     let mut need: Vec<(char, u32)> = Vec::new(); // colored pips still missing
     let mut generic = 0u32;
-    for sym in &cost.symbols {
-        let colored = match sym {
-            ManaSymbol::Colored(c) | ManaSymbol::Phyrexian(c) => Some(*c),
-            ManaSymbol::Hybrid(a, _) | ManaSymbol::PhyrexianHybrid(a, _) => Some(*a),
-            ManaSymbol::MonoHybrid(_, c) => Some(*c),
-            ManaSymbol::Generic(n) | ManaSymbol::Colorless(n) => {
-                generic += n;
-                None
-            }
-            ManaSymbol::Snow => {
+    // `{1}{W/U}{G/P}` → the pips between the braces, in order.
+    for sym in cost.split('}').filter_map(|t| t.split_once('{').map(|(_, sym)| sym)) {
+        // Hybrid / Phyrexian pips (`W/U`, `G/P`, `W/U/P`) count as their first
+        // colored half; `{2/W}` mono-hybrid as its colored half.
+        let head = sym.split('/').next().unwrap_or(sym);
+        let colored = match head {
+            "W" => Some(MC::White),
+            "U" => Some(MC::Blue),
+            "B" => Some(MC::Black),
+            "R" => Some(MC::Red),
+            "G" => Some(MC::Green),
+            // `{C}` colorless and `{S}` snow are one generic-ish pip each;
+            // `{X}` is announced separately and counts as 0 here.
+            "C" | "S" => {
                 generic += 1;
                 None
             }
-            ManaSymbol::X => None,
+            "X" => None,
+            // `{2/W}`: a numeric head with a colored tail is payable either
+            // way — bill it as its colored half, like the other hybrids.
+            n => match n.parse::<u32>() {
+                Ok(v) => {
+                    if let Some(tail) = sym.split('/').nth(1) {
+                        match tail {
+                            "W" => Some(MC::White),
+                            "U" => Some(MC::Blue),
+                            "B" => Some(MC::Black),
+                            "R" => Some(MC::Red),
+                            "G" => Some(MC::Green),
+                            _ => {
+                                generic += v;
+                                None
+                            }
+                        }
+                    } else {
+                        generic += v;
+                        None
+                    }
+                }
+                Err(_) => None,
+            },
         };
         if let Some(c) = colored {
             let slot = pool_left.iter_mut().find(|(pc, _)| *pc == c).expect("five colors");
@@ -848,16 +897,10 @@ fn remaining_cost_label(
 #[derive(Component)]
 struct PendingCastBannerText;
 
-fn pending_cast_banner_label(
-    pc: &PendingCast,
-    view: &CurrentView,
-    card_names: &crate::game::CardNames,
-) -> String {
+fn pending_cast_banner_label(pc: &PendingCast, view: &CurrentView) -> String {
     let remaining = view.0.as_ref().and_then(|cv| {
         let me = cv.players.iter().find(|p| p.seat == cv.your_seat)?;
-        let name = card_names.get(cast_action_card_id(&pc.action));
-        let def = crabomination::catalog::lookup_by_name(&name)?;
-        remaining_cost_label(&def.cost, &me.mana_pool)
+        remaining_cost_label(hint_cost_str(&pc.hint)?, &me.mana_pool)
     });
     match remaining {
         Some(missing) => {
@@ -872,14 +915,13 @@ fn update_pending_cast_banner(
     pending: Res<PendingManaCast>,
     fonts: Option<Res<crate::theme::UiFonts>>,
     view: Res<CurrentView>,
-    card_names: Res<crate::game::CardNames>,
     existing: Query<Entity, With<PendingCastBanner>>,
     mut text_q: Query<&mut Text, With<PendingCastBannerText>>,
 ) {
     match (&pending.0, existing.iter().next()) {
         (Some(pc), Some(_)) => {
             // Live update: the remaining-cost readout shrinks as sources tap.
-            let label = pending_cast_banner_label(pc, &view, &card_names);
+            let label = pending_cast_banner_label(pc, &view);
             for mut text in &mut text_q {
                 if text.0 != label {
                     text.0 = label.clone();
@@ -888,7 +930,7 @@ fn update_pending_cast_banner(
         }
         (Some(pc), None) => {
             let Some(fonts) = fonts else { return };
-            let label = pending_cast_banner_label(pc, &view, &card_names);
+            let label = pending_cast_banner_label(pc, &view);
             commands
                 .spawn((
                     Node {
@@ -1463,5 +1505,38 @@ mod tests {
             Some(Target::Permanent(CardId(8))),
             "the re-submitted activation carries the graveyard pick",
         );
+    }
+
+    /// Regression: the manual-tap banner counted down against the *card's*
+    /// printed cost, so an activated ability read as its body's cost —
+    /// Sundering Archaic's `{2}` ability still demanded `{4}` after the two
+    /// lands that paid for it, and the ability fired anyway. The engine's
+    /// `ManualTapRequired` message carries the cost it is actually waiting
+    /// on; read the readout off that.
+    #[test]
+    fn the_manual_tap_banner_counts_down_the_cost_the_engine_asked_for() {
+        use crabomination::mana::{Color, ManaPool};
+        let hint = "Tap mana to pay {2} — you have more than one way to pay, \
+                    so choose your sources";
+        assert_eq!(hint_cost_str(hint), Some("{2}"));
+
+        let mut pool = ManaPool::default();
+        assert_eq!(remaining_cost_label("{2}", &pool).as_deref(), Some("{2}"));
+        pool.add_colorless(1);
+        assert_eq!(remaining_cost_label("{2}", &pool).as_deref(), Some("{1}"));
+        pool.add_colorless(1);
+        assert_eq!(
+            remaining_cost_label("{2}", &pool),
+            None,
+            "two floating mana covers {{2}} — the banner stops asking",
+        );
+
+        // Colored pips are tracked per colour, and the generic remainder eats
+        // whatever colour is left over.
+        let mut pool = ManaPool::default();
+        pool.add(Color::Blue, 1);
+        assert_eq!(remaining_cost_label("{1}{U}{U}", &pool).as_deref(), Some("{1}{U}"));
+        pool.add(Color::Blue, 2);
+        assert_eq!(remaining_cost_label("{1}{U}{U}", &pool), None);
     }
 }

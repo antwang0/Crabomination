@@ -813,12 +813,22 @@ fn a_declined_extra_target_survives_the_manual_tap_replays() {
 /// its replayed cast, and `perform_action`'s rollback restored the pending
 /// decision along with everything else — so every answer put the same modal
 /// straight back and the player could neither cast nor cancel.
+///
+/// The board is one Island rather than the original empty one: the picker is
+/// no longer posed at all when a *coloured* pip is unreachable (see
+/// `the_x_picker_is_not_posed_when_a_colored_pip_is_unpayable`), so reaching
+/// the modal now needs the `{U}` covered. Overshooting X on `{X}{X}{U}` fails
+/// the replay exactly the same way, which is the invariant under test.
 #[test]
 fn an_unpayable_x_pick_does_not_re_pose_its_modal() {
     use crabomination::decision::{Decision, DecisionAnswer};
     let mut g = two_player_game();
     g.players[0].wants_ui = true;
     g.players[0].manual_mana = true;
+    g.add_card_to_battlefield(0, catalog::island());
+    for c in g.battlefield.iter_mut() {
+        c.tapped = false;
+    }
     let id = g.add_card_to_hand(0, catalog::divergent_equation());
 
     g.perform_action(GameAction::CastSpell {
@@ -832,8 +842,8 @@ fn an_unpayable_x_pick_does_not_re_pose_its_modal() {
         ),
         "X picker posed",
     );
-    let r = g.perform_action(GameAction::SubmitDecision(DecisionAnswer::Amount(0)));
-    assert!(r.is_err(), "X=0 still needs {{U}}, which the player hasn't got");
+    let r = g.perform_action(GameAction::SubmitDecision(DecisionAnswer::Amount(3)));
+    assert!(r.is_err(), "X=3 needs {{3}}{{3}}{{U}}, far past the one Island");
     assert!(g.pending_decision.is_none(), "the answered modal must not come back");
     assert!(g.players[0].hand.iter().any(|c| c.id == id), "and the spell is back in hand");
 }

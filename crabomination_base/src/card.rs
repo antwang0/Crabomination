@@ -820,6 +820,52 @@ impl WardCost {
             crate::mana::ManaSymbol::Generic(n),
         ]))
     }
+
+    /// The printed cost, for display: `"Ward—pay 3 life"`. Used by the
+    /// permanent view's `ward_label` and by the CR 702.21b "pay it?" prompt,
+    /// which has to name the price it is asking about.
+    pub fn label(&self) -> String {
+        use WardCost as W;
+        match self {
+            W::Mana(c) => format!("Ward—{}", c.summary()),
+            W::ManaAndLife(c, n) => format!("Ward—{{{}}}, pay {n} life", c.cmc()),
+            W::Life(n) => format!("Ward—pay {n} life"),
+            W::Discard(n) => format!("Ward—discard {n}"),
+            W::DiscardRandom(n) => format!("Ward—discard {n} at random"),
+            W::DiscardMatching(_, n) => format!("Ward—discard {n} matching card(s)"),
+            W::DiscardHand => "Ward—discard your hand".to_string(),
+            W::Blight(n) => format!("Ward—Blight {n}"),
+            W::CollectEvidence(n) => format!("Ward—Collect evidence {n}"),
+            W::ExileFromGraveyard(n) => format!("Ward—exile {n} card(s) from your graveyard"),
+            W::BottomFromGraveyard(n) => {
+                format!("Ward—bottom {n} card(s) from your graveyard")
+            }
+            W::ExileTopFromGraveyardMatching(_) => {
+                "Ward—exile the top matching card of your graveyard".to_string()
+            }
+            W::ReturnMatchingFromGraveyardToHand(_) => {
+                "Ward—return a matching card from your graveyard".to_string()
+            }
+            W::DamageFromSource(n) => format!("Ward—take {n} damage"),
+            W::SacrificeCreature => "Ward—sacrifice a creature".to_string(),
+            W::SacrificeMatching(_) => "Ward—sacrifice a matching permanent".to_string(),
+            W::SacrificePermanents(n) => format!("Ward—sacrifice {n} permanents"),
+            W::SacrificeMatchingN(_, n) => format!("Ward—sacrifice {n} matching permanents"),
+            W::ReturnMatchingToHand(_, n) => format!("Ward—return {n} matching permanent(s)"),
+            W::GenericSourcePower => "Ward—{X} (this creature's power)".to_string(),
+            W::GenericXFromCost => "Ward—{X}".to_string(),
+            W::GenericCountersOnSource(kind) => {
+                format!("Ward—{{X}} (this permanent's {kind:?} counters)")
+            }
+            W::LifeSourcePower => "Ward—pay life equal to this creature's power".to_string(),
+            W::RemoveCounterFromPermanent => {
+                "Ward—remove a counter from a permanent".to_string()
+            }
+            W::ManaCostOfAttached => "Ward—pay the enchanted permanent's mana cost".to_string(),
+            W::ManaOrLife(c, n) => format!("Ward—{{{}}} or {n} life", c.cmc()),
+            W::SacrificeAttachedHost => "Ward—sacrifice the enchanted permanent".to_string(),
+        }
+    }
 }
 
 /// How long a "you may play/cast that card without paying its mana cost"

@@ -1004,6 +1004,128 @@ fn first_strike_attacker_kills_regular_blocker_before_being_struck() {
     assert_eq!(knight.damage, 0, "White Knight should take 0 damage from a dead blocker");
 }
 
+/// CR 510.4/510.5 — each creature's combat damage is gated on **its own**
+/// keywords, not its opponent's.
+///
+/// The step loop skipped an entire attacker/blocker pairing whenever the
+/// attacker was idle in that step, which threw the blockers' half away with
+/// it. A first-striking attacker that failed to kill its blocker therefore
+/// walked away untouched: the blocker's regular-step damage never happened.
+///
+/// The existing first-strike tests all use a blocker that *dies* to the
+/// first-strike damage, so the pairing is empty by the regular step and the
+/// bug stayed invisible. This one survives on purpose (reported Aug 2026).
+#[test]
+fn a_first_striker_still_takes_damage_from_a_blocker_that_survives() {
+    use crabomination::card::Keyword;
+    let mut g = two_player_game();
+    // 3/2 first striker into a 4/4: 3 damage isn't lethal, so the 4/4 lives
+    // to deal 4 back in the regular step and the striker dies.
+    let mut striker = crabomination::card::CardDefinition {
+        name: "Striker",
+        card_types: vec![crabomination::card::CardType::Creature],
+        power: 3,
+        toughness: 2,
+        ..Default::default()
+    };
+    striker.keywords = vec![Keyword::FirstStrike];
+    let atk = g.add_card_to_battlefield(0, striker);
+    let blk = g.add_card_to_battlefield(
+        1,
+        crabomination::card::CardDefinition {
+            name: "Bulwark",
+            card_types: vec![crabomination::card::CardType::Creature],
+            power: 4,
+            toughness: 4,
+            ..Default::default()
+        },
+    );
+    g.clear_sickness(atk);
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: atk,
+        target: AttackTarget::Player(1),
+    }]))
+    .unwrap();
+    g.step = TurnStep::DeclareBlockers;
+    g.perform_action(GameAction::DeclareBlockers(vec![(blk, atk)])).unwrap();
+
+    g.step = TurnStep::FirstStrikeDamage;
+    g.resolve_first_strike_damage().unwrap();
+    assert_eq!(
+        g.battlefield.iter().find(|c| c.id == blk).expect("4/4 survives 3").damage,
+        3,
+        "the striker deals its damage in the first-strike step",
+    );
+    assert_eq!(
+        g.battlefield.iter().find(|c| c.id == atk).expect("striker unhurt so far").damage,
+        0,
+        "and takes nothing yet — the 4/4 has no first strike",
+    );
+
+    g.step = TurnStep::CombatDamage;
+    g.resolve_combat().unwrap();
+    assert!(
+        !g.battlefield.iter().any(|c| c.id == atk),
+        "the surviving blocker strikes back in the regular step and kills the 3/2",
+    );
+    assert!(
+        g.battlefield.iter().any(|c| c.id == blk),
+        "and the 4/4 lives through it",
+    );
+}
+
+/// The mirror of the above: a first-striking *blocker* must deal its damage
+/// in the first-strike step even though the attacker is idle there. The same
+/// skipped pairing meant an ordinary attacker traded with a first-strike
+/// blocker instead of dying to it first.
+#[test]
+fn a_first_striking_blocker_kills_a_regular_attacker_before_it_strikes() {
+    use crabomination::card::Keyword;
+    let mut g = two_player_game();
+    // 2/2 vanilla attacker into a 2/2 first-strike blocker: the blocker
+    // strikes first and the attacker never deals damage.
+    let atk = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let mut guard = crabomination::card::CardDefinition {
+        name: "Guard",
+        card_types: vec![crabomination::card::CardType::Creature],
+        power: 2,
+        toughness: 2,
+        ..Default::default()
+    };
+    guard.keywords = vec![Keyword::FirstStrike];
+    let blk = g.add_card_to_battlefield(1, guard);
+    g.clear_sickness(atk);
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: atk,
+        target: AttackTarget::Player(1),
+    }]))
+    .unwrap();
+    g.step = TurnStep::DeclareBlockers;
+    g.perform_action(GameAction::DeclareBlockers(vec![(blk, atk)])).unwrap();
+
+    g.step = TurnStep::FirstStrikeDamage;
+    g.resolve_first_strike_damage().unwrap();
+    assert!(
+        !g.battlefield.iter().any(|c| c.id == atk),
+        "the first-striking blocker kills the attacker in its own step",
+    );
+    assert_eq!(
+        g.battlefield.iter().find(|c| c.id == blk).expect("guard survives").damage,
+        0,
+        "and takes nothing back — the attacker died before the regular step",
+    );
+
+    g.step = TurnStep::CombatDamage;
+    g.resolve_combat().unwrap();
+    assert_eq!(
+        g.battlefield.iter().find(|c| c.id == blk).expect("guard still there").damage,
+        0,
+        "a dead attacker deals no regular damage",
+    );
+}
+
 #[test]
 fn vigilance_creature_does_not_tap_when_attacking() {
     let mut g = two_player_game();
@@ -6114,6 +6236,83 @@ fn ward_mana_cost_lets_a_hand_paying_caster_pick_its_sources() {
     assert!(!g.battlefield_find(keep).unwrap().tapped, "unchosen source left alone");
 }
 
+/// CR 702.21b — Ward—Pay N life asks before it takes the life.
+///
+/// A mana ward's source picker and a discard ward's card picker are both
+/// declinable, so those payers already got a say. A life ward offered no
+/// picker at all: the cost was auto-paid whenever `life >= N`. A player at
+/// exactly N life who targeted the warded permanent had all of it taken with
+/// no prompt and lost the game on state-based actions — reported against
+/// Mica, Reader of Ruins (Ward—Pay 3 life).
+#[test]
+fn ward_pay_life_asks_the_payer_before_taking_it() {
+    use crabomination::decision::{Decision, DecisionAnswer};
+    let setup = |life: i32| {
+        let mut g = two_player_game();
+        g.players[0].wants_ui = true;
+        let mica = g.add_card_to_battlefield(1, catalog::mica_reader_of_ruins());
+        let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+        g.players[0].mana_pool.add(Color::Red, 1);
+        g.players[0].life = life;
+        g.perform_action(GameAction::CastSpell {
+            card_id: bolt,
+            target: Some(Target::Permanent(mica)),
+            additional_targets: vec![],
+            mode: None,
+            x_value: None,
+        })
+        .expect("Bolt cast fine — ward is a trigger, not a cast restriction");
+        g.perform_action(GameAction::PassPriority).unwrap();
+        g.perform_action(GameAction::PassPriority).unwrap();
+        (g, mica)
+    };
+
+    // Exactly the ward cost: paying is legal (CR 119.4) and lethal.
+    let (mut g, mica) = setup(3);
+    match g.pending_decision.as_ref().map(|p| &p.decision) {
+        Some(Decision::OptionalTrigger { description, .. }) => {
+            assert!(
+                description.contains("pay 3 life"),
+                "the prompt names the price, got {description:?}",
+            );
+        }
+        other => panic!("expected the ward pay-or-not prompt, got {other:?}"),
+    }
+
+    // Declining: the Bolt is countered, and the player is alive to regret it.
+    g.perform_action(GameAction::SubmitDecision(DecisionAnswer::Bool(false)))
+        .expect("declining a ward cost is legal");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, 3, "no life taken on a refusal");
+    assert!(g.game_over.is_none(), "and the payer did not lose the game");
+    assert_eq!(
+        g.battlefield.iter().find(|c| c.id == mica).expect("Mica survives").damage,
+        0,
+        "the Bolt was countered",
+    );
+
+    // Accepting still works: the life is paid and the spell resolves.
+    let (mut g, mica) = setup(10);
+    g.perform_action(GameAction::SubmitDecision(DecisionAnswer::Bool(true)))
+        .expect("paying is legal");
+    assert_eq!(g.players[0].life, 7, "the ward cost came out of the payer's life");
+    drain_stack(&mut g);
+    assert_eq!(
+        g.battlefield.iter().find(|c| c.id == mica).expect("4/4 survives 3").damage,
+        3,
+        "the ward was paid, so the Bolt resolved",
+    );
+
+    // And accepting at exactly the cost is still allowed — CR 119.4 lets you
+    // pay all your life. It is fatal, which is precisely why the engine must
+    // not make that call on the player's behalf.
+    let (mut g, _) = setup(3);
+    g.perform_action(GameAction::SubmitDecision(DecisionAnswer::Bool(true)))
+        .expect("paying your last 3 life is a legal choice");
+    assert_eq!(g.players[0].life, 0);
+    assert_eq!(g.game_over, Some(Some(1)), "the payer loses — by their own choice");
+}
+
 #[test]
 fn ward_source_pick_declining_every_source_counters_the_spell() {
     // CR 702.21a — the ward cost is optional. Confirming the source
@@ -7433,6 +7632,138 @@ fn pay_life_amount_suspends_for_wants_ui() {
     let life_before = g.players[0].life;
     g.perform_action(GameAction::SubmitDecision(DecisionAnswer::Amount(2))).unwrap();
     assert_eq!(g.players[0].life, life_before - 2, "chosen amount of life must be paid");
+}
+
+/// The "choose X" picker's ceiling divides by the number of `{X}` pips.
+///
+/// `ManaCost::with_x_value` substitutes *every* X, so announcing X on
+/// Divergent Equation's `{X}{X}{U}` spends `2X + 1`. The ceiling was computed
+/// as "all available mana minus the fixed part" with no divisor, so seven
+/// Islands offered X up to 6 — a 13-mana cast — and everything above the real
+/// ceiling bounced off the payment path (client bug report, Aug 2026).
+#[test]
+fn the_x_picker_ceiling_accounts_for_repeated_x_pips() {
+    use crabomination::decision::Decision;
+    let offered_max = |islands: usize| -> u32 {
+        let mut g = two_player_game();
+        g.players[0].wants_ui = true;
+        g.players[0].manual_mana = true;
+        let eq = g.add_card_to_hand(0, catalog::divergent_equation());
+        for _ in 0..islands {
+            g.add_card_to_battlefield(0, catalog::island());
+        }
+        for c in g.battlefield.iter_mut() {
+            c.tapped = false;
+        }
+        let _ = g.perform_action(GameAction::CastSpell {
+            card_id: eq,
+            target: None,
+            additional_targets: vec![],
+            mode: None,
+            x_value: None,
+        });
+        match g.pending_decision.as_ref().map(|p| &p.decision) {
+            Some(Decision::ChooseAmount { max, .. }) => *max,
+            other => panic!("expected the X picker, got {other:?}"),
+        }
+    };
+    // {X}{X}{U}: n Islands pay 2X + 1, so X tops out at (n - 1) / 2.
+    assert_eq!(offered_max(3), 1, "three Islands buy X=1");
+    assert_eq!(offered_max(7), 3, "seven buy X=3, not the old X=6");
+    assert_eq!(offered_max(8), 3, "the odd mana out doesn't round X up");
+
+    // And the ceiling is exact, not merely smaller: seven mana pays X=3 but
+    // not X=4. Floating, so the only mana in play is the seven being counted.
+    let cast_with_x = |x: u32| -> bool {
+        let mut g = two_player_game();
+        g.players[0].manual_mana = true;
+        let eq = g.add_card_to_hand(0, catalog::divergent_equation());
+        g.players[0].mana_pool.add(crabomination::mana::Color::Blue, 7);
+        g.perform_action(GameAction::CastSpell {
+            card_id: eq,
+            target: None,
+            additional_targets: vec![],
+            mode: None,
+            x_value: Some(x),
+        })
+        .is_ok()
+    };
+    assert!(cast_with_x(3), "X=3 is payable — the offered ceiling is reachable");
+    assert!(!cast_with_x(4), "X=4 needs nine mana — the ceiling isn't understating it");
+}
+
+/// The "choose X" picker isn't posed for a cast that can't happen at any X.
+///
+/// Traumatic Critique is `{X}{U}{R}`. With no red source in play the `{R}`
+/// pip is unpayable, and X only ever adds generic — so every value the player
+/// picks bounces off the payment path. The engine drops the decision on that
+/// failure (so it isn't literally unkillable), but the client only logs mana
+/// errors: the modal closed, nothing happened, the card stayed in hand, and
+/// the reported experience was being stuck with no way to back out.
+///
+/// Now the cast is refused up front with the real reason. A red source in
+/// play still opens the picker — the gate tests the coloured skeleton, which
+/// is the part neither X nor a CR 601.2f cost reduction can change.
+#[test]
+fn the_x_picker_is_not_posed_when_a_colored_pip_is_unpayable() {
+    use crabomination::decision::Decision;
+    let build = |red: bool| {
+        let mut g = two_player_game();
+        g.players[0].wants_ui = true;
+        g.players[0].manual_mana = true;
+        let tc = g.add_card_to_hand(0, catalog::traumatic_critique());
+        let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+        for _ in 0..4 {
+            g.add_card_to_battlefield(0, catalog::island());
+        }
+        if red {
+            g.add_card_to_battlefield(0, catalog::mountain());
+        }
+        for c in g.battlefield.iter_mut() {
+            c.tapped = false;
+        }
+        (g, tc, victim)
+    };
+
+    let (mut g, tc, victim) = build(false);
+    let err = g.perform_action(GameAction::CastSpell {
+        card_id: tc,
+        target: Some(Target::Permanent(victim)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    });
+    assert!(
+        matches!(err, Err(GameError::Mana(_))),
+        "no red source — refused with the real mana error, got {err:?}",
+    );
+    assert!(g.pending_decision.is_none(), "and no dead-end X picker is posed");
+    assert!(
+        g.players[0].hand.iter().any(|c| c.id == tc),
+        "the card is still castable later",
+    );
+
+    // A Mountain makes {R} reachable, so the picker opens as before — and it
+    // remains cancellable, because nothing has been paid.
+    let (mut g, tc, victim) = build(true);
+    g.perform_action(GameAction::CastSpell {
+        card_id: tc,
+        target: Some(Target::Permanent(victim)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("the cast suspends for the X pick");
+    assert!(
+        matches!(
+            g.pending_decision.as_ref().map(|p| &p.decision),
+            Some(Decision::ChooseAmount { .. }),
+        ),
+        "the X picker opens once the coloured pips are reachable",
+    );
+    g.perform_action(GameAction::SubmitDecision(DecisionAnswer::CancelAction))
+        .expect("backing out of the X pick is legal");
+    assert!(g.pending_decision.is_none(), "and the modal closes");
 }
 
 /// `with_frozen_layers` memoizes the gather without changing results: a
