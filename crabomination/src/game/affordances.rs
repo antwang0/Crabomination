@@ -121,10 +121,13 @@ impl GameState {
     /// so the result already reflects timing (sorcery vs. instant speed,
     /// remaining land drops), auto-tappable mana, cost taxes, and target
     /// availability — exactly the gates the real cast would hit. Mirrors
-    /// the bot's candidate construction in `server::bot`, but only probes
-    /// each card's default mode at X = 0, so a card castable *only* in a
-    /// non-default mode (or at higher X) may be omitted — acceptable for a
-    /// visual hint.
+    /// the bot's candidate construction in `server::bot`. Modal spells
+    /// (`ChooseMode`) probe every mode until one accepts — probing only
+    /// the default mode hid Quandrix Charm from a player whose blocker
+    /// needed its third mode while modes 0/1 happened to lack targets
+    /// (recorded 2026-08-19, a lost game). X is still probed at 0 only,
+    /// so a card castable only at higher X may be omitted — acceptable
+    /// for a visual hint.
     ///
     /// Returns empty unless `caster` currently holds priority: you can't
     /// cast without it, and short-circuiting skips the per-card state
@@ -148,36 +151,49 @@ impl GameState {
         // Snapshot what each probe needs up front so the immutable borrow
         // of `self.players[caster].hand` is released before the cloning
         // probes run. The effect is cloned only for targeted non-lands.
-        let hand: Vec<(CardId, bool, Option<_>)> = self.players[caster]
+        let hand: Vec<(CardId, bool, Option<_>, usize)> = self.players[caster]
             .hand
             .iter()
             .map(|c| {
                 let is_land = c.definition.is_land();
                 let needs_target = !is_land && c.definition.effect.requires_target();
-                (c.id, is_land, needs_target.then(|| c.definition.effect.clone()))
+                let mode_count = match &c.definition.effect {
+                    crate::effect::Effect::ChooseMode(m) => m.len(),
+                    _ => 0,
+                };
+                (c.id, is_land, needs_target.then(|| c.definition.effect.clone()), mode_count)
             })
             .collect();
 
         let mut out = Vec::new();
-        for (id, is_land, targeted_effect) in &hand {
+        for (id, is_land, targeted_effect, mode_count) in &hand {
             let accepted = if *is_land {
                 Self::would_accept_on(template, GameAction::PlayLand(*id))
             } else {
-                // Auto-pick targets the way the bot does so a targeted
-                // removal spell isn't reported uncastable merely for lack
-                // of a target argument. A spell that needs a target but has
-                // no legal one stays `target: None`, which `would_accept`
-                // correctly rejects (CR 601.2c).
-                let (target, additional_targets) = match targeted_effect {
-                    Some(eff) => self.auto_targets_for_effect_all_slots(eff, caster, None),
-                    None => (None, Vec::new()),
+                // A modal spell is castable if ANY mode is (each mode has
+                // its own target pool); everything else probes the single
+                // default shape. Bounded by the printed mode count.
+                let modes: Vec<Option<usize>> = match mode_count {
+                    0 => vec![None],
+                    n => (0..*n).map(Some).collect(),
                 };
-                Self::would_accept_on(template, GameAction::CastSpell {
-                    card_id: *id,
-                    target,
-                    additional_targets,
-                    mode: None,
-                    x_value: None,
+                modes.into_iter().any(|mode| {
+                    // Auto-pick targets the way the bot does so a targeted
+                    // removal spell isn't reported uncastable merely for lack
+                    // of a target argument. A spell that needs a target but has
+                    // no legal one stays `target: None`, which `would_accept`
+                    // correctly rejects (CR 601.2c).
+                    let (target, additional_targets) = match targeted_effect {
+                        Some(eff) => self.auto_targets_for_effect_all_slots(eff, caster, mode),
+                        None => (None, Vec::new()),
+                    };
+                    Self::would_accept_on(template, GameAction::CastSpell {
+                        card_id: *id,
+                        target,
+                        additional_targets,
+                        mode,
+                        x_value: None,
+                    })
                 })
             };
             if accepted {

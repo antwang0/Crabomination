@@ -3574,6 +3574,12 @@ impl GameState {
                 && self.players[p].manual_mana
                 && let Some(card) = self.find_card_anywhere(card_id)
                 && (card.definition.cost.has_x() || card.definition.additional_cost_pay_x_life)
+                // Don't open a picker on a cast that can't happen at any X —
+                // the player answers, the replay dies on a coloured pip, and
+                // the client (which only logs mana errors) shows nothing at
+                // all. Fall through to the ordinary cast path so the
+                // rejection is the real mana error.
+                && self.x_cost_pips_are_payable(p, card, &card.definition.cost)
             {
                 // A "pay X life" additional cost with no {X} mana pip is
                 // bounded by the caster's life total (CR 119.4), not mana.
@@ -11658,17 +11664,34 @@ impl GameState {
             let mut events = if colored_only.symbols.is_empty() {
                 Vec::new()
             } else {
-                self.auto_tap_for_cost(payer, &colored_only)
+                // These pips' colours are pinned, so `diverse` is moot — but
+                // the CR 106.6b source filter is not (a "spend only creature
+                // mana" cast must not eat a land here).
+                self.auto_tap_for_cost_filtered(
+                    payer,
+                    &colored_only,
+                    kind.creature_mana_only,
+                    false,
+                )
             };
             // With the colored pips covered, does the remaining (generic)
             // part still involve a genuine choice of which source to tap?
-            if self.payment_requires_manual_choice(payer, cost) {
+            if self.payment_requires_manual_choice(payer, cost, kind) {
                 // Leave the forced colored mana floating; the player taps
                 // the ambiguous remainder, then the cast completes.
                 return Err(GameError::ManualTapRequired { cost: cost.summary() });
             }
-            // No remaining choice — finish auto-tapping and pay.
-            let mut more = self.auto_tap_for_cost(payer, cost);
+            // No remaining choice — finish auto-tapping and pay. The bot
+            // branch below passes the cast's source filter and converge
+            // preference; the human branch dropped both, so a `wants_converge`
+            // cast auto-tapped a dual land for whichever colour its first mana
+            // ability happened to list.
+            let mut more = self.auto_tap_for_cost_filtered(
+                payer,
+                cost,
+                kind.creature_mana_only,
+                kind.wants_converge,
+            );
             events.append(&mut more);
             let pool_after_auto_tap = self.players[payer].mana_pool.clone();
             return match self.players[payer].mana_pool.pay_for_spell(cost, kind) {
@@ -11782,13 +11805,29 @@ impl GameState {
     /// Only consulted on the forced-only (human) path when the pool doesn't
     /// already cover the cost; `pay()` is still the source of truth for
     /// whether the resulting tap actually pays.
-    fn payment_requires_manual_choice(&self, player: usize, cost: &crate::mana::ManaCost) -> bool {
+    fn payment_requires_manual_choice(
+        &self,
+        player: usize,
+        cost: &crate::mana::ManaCost,
+        kind: &crate::mana::SpellKind,
+    ) -> bool {
         use crate::mana::{Color, ManaSymbol};
         use crate::fxhash::{HashMap, HashSet};
         // A from-hand mana source (Elvish Spirit Guide) is invisible to the
         // auto-tapper but a real payment option — its presence alone makes
         // the payment a manual choice.
         if self.hand_mana_source_could_pay(player, cost) {
+            return true;
+        }
+        // CR 601.2g — a converge cast's payoff *is* the set of colours spent,
+        // so which half of a dual land pays is the caster's decision. The rest
+        // of this function only asks which *sources* tap; when a multi-colour
+        // source has to tap anyway, that test sees one legal assignment and
+        // stays quiet, and the auto-tapper silently picked a colour (Snarl
+        // Song `{5}{G}` off five Forests + Forum of Amity tapped the Forum for
+        // white without asking). A dual that is *not* forced to tap is already
+        // covered by the held-back-sources rules below.
+        if kind.wants_converge && self.forced_multicolor_source_exists(player, cost, kind) {
             return true;
         }
         // Hybrids keep the simpler conservative behaviour.
@@ -11896,10 +11935,69 @@ impl GameState {
         false
     }
 
+    /// Does paying `cost` require tapping a source that can make more than
+    /// one colour — i.e. is a colour choice unavoidable?
+    ///
+    /// Answered by dry-running the payment on a clone with every multi-colour
+    /// source pretend-tapped: if the cost is still payable without them, the
+    /// duals are held back and the ordinary held-back-sources analysis in
+    /// [`payment_requires_manual_choice`] governs. If it isn't, at least one
+    /// dual must tap and the caster picks its colour.
+    ///
+    /// [`payment_requires_manual_choice`]: Self::payment_requires_manual_choice
+    fn forced_multicolor_source_exists(
+        &self,
+        player: usize,
+        cost: &crate::mana::ManaCost,
+        kind: &crate::mana::SpellKind,
+    ) -> bool {
+        let duals: Vec<CardId> = self
+            .battlefield
+            .iter()
+            .filter(|c| {
+                c.controller == player
+                    && !c.tapped
+                    && source_color_signature(c).len() > 1
+            })
+            .map(|c| c.id)
+            .collect();
+        if duals.is_empty() {
+            return false;
+        }
+        // `forced_only: false` throughout — these probes ask only whether the
+        // mana is *there*, not whether the player would have had a choice
+        // about it.
+        let payable = |probe: &mut GameState| {
+            let snap = probe.snapshot_payment_state(player);
+            probe.try_pay_after_snapshot_mode(player, cost, snap, false, kind, None).is_ok()
+        };
+        // An unaffordable cost isn't a choice — it's a rejection, and the
+        // other branches here return false for it too. Without this the
+        // caller answered "tap more mana" to a spell the player can't cast
+        // at all, and the client armed a pending cast that never completes.
+        if !payable(&mut self.clone()) {
+            return false;
+        }
+        let mut probe = self.clone();
+        for id in &duals {
+            if let Some(c) = probe.battlefield.iter_mut().find(|c| c.id == *id) {
+                c.tapped = true;
+            }
+        }
+        !payable(&mut probe)
+    }
+
     /// Ceiling for the "choose X" prompt on an {X} cost: floating mana plus
-    /// one per untapped mana source, minus the cost's fixed part. Display /
-    /// clamp guidance only — the payment path remains the authority on
-    /// whether the chosen X is actually affordable.
+    /// one per untapped mana source, minus the cost's fixed part, divided by
+    /// how many `{X}` pips the cost has. Display / clamp guidance only — the
+    /// payment path remains the authority on whether the chosen X is actually
+    /// affordable.
+    ///
+    /// The divisor is what an `{X}{X}` cost needs: `with_x_value` substitutes
+    /// *every* X, so announcing X on Divergent Equation's `{X}{X}{U}` spends
+    /// `2X + 1`. Without it the picker offered X up to the full mana available
+    /// — X=6 off seven Islands, a 13-mana cast — and every value past the real
+    /// ceiling bounced off the payment path.
     fn max_prompt_x(&self, player: usize, cost: &crate::mana::ManaCost) -> u32 {
         let pool = self.players[player].mana_pool.total();
         let sources = self
@@ -11916,7 +12014,71 @@ impl GameState {
             })
             .count() as u32;
         let fixed = cost.with_x_value(0).cmc();
-        (pool + sources).saturating_sub(fixed)
+        // `.max(1)`: this is only called for costs that have an X, but a
+        // divide-by-zero here would be a panic rather than a wrong number.
+        let x_pips = cost
+            .symbols
+            .iter()
+            .filter(|s| matches!(s, crate::mana::ManaSymbol::X))
+            .count()
+            .max(1) as u32;
+        (pool + sources).saturating_sub(fixed) / x_pips
+    }
+
+    /// Could *any* announced X make this cost payable right now?
+    ///
+    /// Only the pips that no amount of X — and no cost reduction — can change
+    /// are tested: `{X}` and generic both come off the flexible part of a
+    /// cost, and CR 601.2f forbids reductions from touching a coloured pip.
+    /// So if the coloured/hybrid skeleton alone can't be paid even with a
+    /// full auto-tap, nothing about this cast is going to work, and posing
+    /// the "choose X" picker is a dead end: every value the player picks
+    /// bounces off the payment path with a mana error the client only logs.
+    /// That is the reported soft-lock — Traumatic Critique `{X}{U}{R}` with
+    /// no red source in play.
+    ///
+    /// Deliberately an *under*-approximation: a false "reachable" costs
+    /// nothing (the payment path still rejects), while a false
+    /// "unreachable" would make a castable spell uncastable. Convoke is
+    /// excluded for exactly that reason — it can pay a coloured pip by
+    /// tapping a creature of that colour, which this probe can't see.
+    fn x_cost_pips_are_payable(
+        &self,
+        player: usize,
+        card: &crate::card::CardInstance,
+        cost: &crate::mana::ManaCost,
+    ) -> bool {
+        use crate::mana::ManaSymbol;
+        if card.definition.keywords.contains(&crate::card::Keyword::Convoke) {
+            return true; // taps creatures for coloured pips — unmodellable here
+        }
+        let pips = crate::mana::ManaCost {
+            symbols: cost
+                .symbols
+                .iter()
+                .filter(|s| {
+                    !matches!(s, ManaSymbol::X | ManaSymbol::Generic(_) | ManaSymbol::Colorless(_))
+                })
+                .copied()
+                .collect(),
+        };
+        if pips.symbols.is_empty() {
+            return true;
+        }
+        let mut probe = self.clone();
+        let snap = probe.snapshot_payment_state(player);
+        // `forced_only: false` — this asks only whether the mana can be found
+        // at all, not whether the player would have had a choice about it.
+        probe
+            .try_pay_after_snapshot_mode(
+                player,
+                &pips,
+                snap,
+                false,
+                &card.definition.spell_kind(),
+                None,
+            )
+            .is_ok()
     }
 
     /// True when `player` holds a hand card with a live from-hand mana
@@ -13916,22 +14078,7 @@ impl GameState {
                 .filter(|f| f.mentions_offboard_zone())
                 .map(|f| f.resolve_x(x_value.unwrap_or(0)))
         {
-            let candidates: Vec<(CardId, String)> = self
-                .players
-                .iter()
-                .flat_map(|pl| pl.graveyard.iter())
-                .chain(self.exile.iter())
-                .filter(|c| {
-                    c.id != card_id
-                        && self.evaluate_requirement_static(
-                            &filter,
-                            &Target::Permanent(c.id),
-                            p,
-                            Some(card_id),
-                        )
-                })
-                .map(|c| (c.id, c.definition.name.to_string()))
-                .collect();
+            let candidates = self.offboard_target_candidates(&filter, p, card_id);
             if candidates.is_empty() {
                 return Err(GameError::SelectionRequirementViolated);
             }
@@ -15220,14 +15367,37 @@ impl GameState {
             let forced_only = self.players[p].manual_mana;
             // Restricted mana may fund this only per the source's spend
             // context (e.g. ArtifactOnly mana for an artifact's ability).
-            let receipt = self.try_pay_after_snapshot_mode(
+            let receipt = match self.try_pay_after_snapshot_mode(
                 p,
                 &effective_mana_cost,
                 snapshot,
                 forced_only,
                 &ability_spend_kind,
                 spend_float,
-            )?;
+            ) {
+                Ok(r) => r,
+                Err(e) => {
+                    // `ManualTapRequired` deliberately keeps eager-tapped
+                    // mana floating (the retry only taps the ambiguous
+                    // rest), so the payer's snapshot is NOT restored on
+                    // that path — but the tap-cost above was paid outside
+                    // it and must revert, or the retry can never pay {T}
+                    // again: a human answering the float-spend prompt got
+                    // permanently locked out of Forum of Amity's surveil
+                    // with the land stuck tapped (recorded 2026-08-19).
+                    if ability.tap_cost
+                        && let Some(perm) = self.battlefield.iter_mut().find(|c| c.id == card_id)
+                    {
+                        perm.tapped = false;
+                    }
+                    if ability.untap_self_cost
+                        && let Some(perm) = self.battlefield.iter_mut().find(|c| c.id == card_id)
+                    {
+                        perm.tapped = true;
+                    }
+                    return Err(e);
+                }
+            };
             activation_mana_colors =
                 spent_by_color(&receipt.pool_before, &self.players[p].mana_pool);
             self.pay_life_cost(p, receipt.side_effects.life_lost);

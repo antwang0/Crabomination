@@ -1940,3 +1940,207 @@ fn traumatic_critique_x_damage_loots() {
     assert_eq!(g.players[0].hand.len(), hand_before);
 }
 
+
+/// The recorded 2026-08-19 soft-lock: a manual-mana player activates
+/// Forum of Amity's surveil ({2}{W}{B}, {T}) with an off-color {G}
+/// floating. The CR 601.2g float-spend prompt suspends the activation;
+/// answering "yes" resumes it, pays the {T} cost, then fails with
+/// `ManualTapRequired` — and the tap-cost survived the error, so every
+/// retry died on `CardIsTapped` and the game was unrecoverable (no
+/// cancel, no continue). The tap must revert on that path; the
+/// eager-tapped floating mana stays, by design, for the retry to spend.
+#[test]
+fn forum_of_amity_float_prompt_failure_releases_the_tap() {
+    let mut g = two_player_game();
+    g.priority.player_with_priority = 0;
+    g.active_player_idx = 0;
+    g.players[0].wants_ui = true;
+    g.players[0].manual_mana = true;
+    let forum = g.add_card_to_battlefield(0, catalog::forum_of_amity());
+    g.add_card_to_battlefield(0, catalog::plains());
+    g.add_card_to_battlefield(0, catalog::swamp());
+    g.add_card_to_battlefield(0, catalog::island());
+    g.add_card_to_battlefield(0, catalog::mountain());
+    // The stuck game's shape: a floating off-color {G} from a manual tap.
+    g.players[0].mana_pool.add(Color::Green, 1);
+    let activate = GameAction::ActivateAbility {
+        card_id: forum,
+        ability_index: 2, // {2}{W}{B}, {T}: Surveil 1
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    };
+    let r = g.perform_action(activate.clone()).expect("suspends into the float prompt");
+    assert!(r.is_empty(), "suspension emits nothing");
+    assert!(
+        matches!(
+            g.pending_decision.as_ref().map(|p| &p.decision),
+            Some(crabomination::decision::Decision::OptionalTrigger { .. })
+        ),
+        "the CR 601.2g float-spend confirmation is posed"
+    );
+
+    // The client auto-answers "yes, spend the float". {G} alone cannot
+    // cover {2}{W}{B}, so the resume fails wanting manual taps…
+    let err = g
+        .perform_action(GameAction::SubmitDecision(
+            crabomination::decision::DecisionAnswer::Bool(true),
+        ))
+        .expect_err("the float cannot cover the cost");
+    assert!(format!("{err:?}").contains("ManualTapRequired"), "got {err:?}");
+    // …and the tap-cost must have been released: this was the soft-lock.
+    let tapped = g.battlefield.iter().find(|c| c.id == forum).map(|c| c.tapped);
+    assert_eq!(tapped, Some(false), "the {{T}} cost reverts on payment failure");
+
+    // The retry with the cost fully floating completes the activation.
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.perform_action(activate).expect("a covered pool activates without prompting");
+    let tapped = g.battlefield.iter().find(|c| c.id == forum).map(|c| c.tapped);
+    assert_eq!(tapped, Some(true), "the completed activation pays its tap");
+}
+
+/// The same combat-trick window, but reached by *playing* the combat rather
+/// than hand-building the board — and paying from untapped lands rather than
+/// a pre-filled pool, since mana pools empty between steps (CR 500.4).
+///
+/// This is the shape a real game presents, and it pins the three things the
+/// client's "hold priority here" decision rests on: the declare-blockers step
+/// survives the declaration (CR 509.4 restarts the priority round rather than
+/// advancing to combat damage), the defender gets a real window in it, and the
+/// charm shows up in that seat's `castable_hand` — the affordance list the
+/// client reads to decide whether to auto-pass the window.
+#[test]
+fn quandrix_charm_is_castable_in_the_declare_blockers_window() {
+    use crabomination::game::types::{Attack, AttackTarget};
+    for blocks in [true, false] {
+        let mut g = two_player_game();
+        g.players[1].wants_ui = true;
+        g.players[1].manual_mana = true;
+        let atk = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+        let blk = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+        g.clear_sickness(atk);
+        g.clear_sickness(blk);
+        let charm = g.add_card_to_hand(1, catalog::quandrix_charm());
+        // Untapped lands, empty pool — the state a defender actually enters
+        // combat in. A pre-floated pool would hide a payment-path failure.
+        let forest = g.add_card_to_battlefield(1, catalog::forest());
+        let island = g.add_card_to_battlefield(1, catalog::island());
+        for c in g.battlefield.iter_mut() {
+            c.tapped = false;
+        }
+        g.active_player_idx = 0;
+        g.priority.player_with_priority = 0;
+        g.step = TurnStep::DeclareAttackers;
+        g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+            attacker: atk,
+            target: AttackTarget::Player(1),
+        }]))
+        .expect("attack declared");
+        while g.step == TurnStep::DeclareAttackers {
+            g.perform_action(GameAction::PassPriority).expect("pass to blockers");
+        }
+        assert_eq!(g.step, TurnStep::DeclareBlockers);
+
+        // Blocking (or explicitly declining) must not end the step.
+        let assignments = if blocks { vec![(blk, atk)] } else { vec![] };
+        g.perform_action(GameAction::DeclareBlockers(assignments))
+            .expect("declaration accepted");
+        assert_eq!(
+            g.step,
+            TurnStep::DeclareBlockers,
+            "CR 509.4 — the declaration restarts the priority round, it doesn't              advance to combat damage (blocks={blocks})",
+        );
+
+        // CR 509.4 hands the round back to the active player first; the
+        // defender's window is one pass later.
+        assert_eq!(g.priority.player_with_priority, 0, "active player goes first");
+        g.perform_action(GameAction::PassPriority).expect("active player passes");
+        assert_eq!(g.step, TurnStep::DeclareBlockers, "still before damage");
+        assert_eq!(g.priority.player_with_priority, 1, "the defender's window");
+
+        // What the client reads to decide whether to auto-pass this window.
+        assert!(
+            g.compute_hand_affordances(1).castable.contains(&charm),
+            "the charm must be advertised as castable here, or the client              auto-passes the window (blocks={blocks})",
+        );
+
+        // And the cast really goes through, paid by hand from the two lands.
+        for land in [forest, island] {
+            g.perform_action(GameAction::ActivateAbility {
+                card_id: land,
+                ability_index: 0,
+                target: None,
+                additional_targets: Vec::new(),
+                x_value: None,
+                mode: None,
+            })
+            .expect("tap a land for its colour");
+        }
+        g.perform_action(GameAction::CastSpell {
+            card_id: charm,
+            target: Some(Target::Permanent(blk)),
+            additional_targets: vec![],
+            mode: Some(2),
+            x_value: None,
+        })
+        .expect("mode 2 is castable before combat damage");
+        drain_stack(&mut g);
+        let cp = g.computed_permanent(blk).expect("the creature survives the trick");
+        assert_eq!((cp.power, cp.toughness), (5, 5), "base 5/5, applied before damage");
+    }
+}
+
+/// The recorded 2026-08-19 loss: a blocking Fractal needed Quandrix
+/// Charm's third mode (base 5/5), but the client's castability hint
+/// probed only the default mode — mode 0 wants a spell on the stack and
+/// mode 1 an enchantment, so with neither around the charm read as
+/// uncastable and the block died with the answer in hand. The engine
+/// always accepted the cast; the affordance sweep now probes every mode.
+#[test]
+fn quandrix_charm_castable_hint_probes_every_mode() {
+    let mut g = two_player_game();
+    let atk = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let fractal = g.add_card_to_battlefield(
+        0,
+        crabomination::card::CardDefinition {
+            name: "Fractal",
+            card_types: vec![crabomination::card::CardType::Creature],
+            power: 3,
+            toughness: 3,
+            ..Default::default()
+        },
+    );
+    g.battlefield.iter_mut().find(|c| c.id == fractal).unwrap().is_token = true;
+    g.step = TurnStep::DeclareBlockers;
+    g.active_player_idx = 1;
+    g.attacking = vec![crabomination::game::types::Attack {
+        attacker: atk,
+        target: crabomination::game::types::AttackTarget::Player(0),
+    }];
+    g.block_map.insert(atk, vec![fractal]);
+    g.priority.player_with_priority = 0;
+    let charm = g.add_card_to_hand(0, catalog::quandrix_charm());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+
+    // The affordance layer — what the client's hand highlight reads.
+    assert!(
+        g.castable_hand_cards(0).contains(&charm),
+        "the charm is castable via mode 2 even with modes 0/1 targetless"
+    );
+    // And the cast itself buffs the blocker.
+    g.perform_action(GameAction::CastSpell {
+        card_id: charm,
+        target: Some(Target::Permanent(fractal)),
+        additional_targets: vec![],
+        mode: Some(2),
+        x_value: None,
+    })
+    .expect("mode 2 targets the blocking token");
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(fractal).unwrap();
+    assert_eq!((cp.power, cp.toughness), (5, 5), "base 5/5 until end of turn");
+}
