@@ -79,6 +79,105 @@ use rand::RngExt;
 use rand::seq::SliceRandom;
 use rand::rng;
 
+/// Wall-clock split of where search time goes, for the `PERF.md`
+/// "MCTS leaf-evaluation throughput" candidate. Free unless
+/// `CRAB_MCTS_TIMING` is set (the check is one cached bool); the ladder
+/// prints the table after a run. Wall clock rather than instruction
+/// counts because the routine image ships neither valgrind nor perf,
+/// and the question is a coarse four-way split, not a per-line
+/// attribution.
+pub mod timing {
+    use std::sync::OnceLock;
+    use std::sync::atomic::{AtomicU64, Ordering::Relaxed};
+    use std::time::Instant;
+
+    /// Cloning the root state, once per iteration.
+    pub static CLONE_NS: AtomicU64 = AtomicU64::new(0);
+    /// Applying the candidate action to the clone.
+    pub static ROOT_NS: AtomicU64 = AtomicU64::new(0);
+    /// Library shuffle + hidden-zone redeal at the top of each rollout.
+    pub static DET_NS: AtomicU64 = AtomicU64::new(0);
+    /// The rollout's play-forward loop (policy + engine actions).
+    pub static SIM_NS: AtomicU64 = AtomicU64::new(0);
+    /// Scoring the horizon state (net encode + forward, or the
+    /// heuristic material eval).
+    pub static LEAF_NS: AtomicU64 = AtomicU64::new(0);
+    /// Inside the leaf: building the encoder's feature vectors
+    /// ([`super::super::encode::encode_state`]).
+    pub static ENC_NS: AtomicU64 = AtomicU64::new(0);
+    /// Inside the leaf: the net's forward pass over the encoded state.
+    pub static FWD_NS: AtomicU64 = AtomicU64::new(0);
+    pub static ROLLOUTS: AtomicU64 = AtomicU64::new(0);
+    pub static SIM_ACTIONS: AtomicU64 = AtomicU64::new(0);
+    pub static DECISIONS: AtomicU64 = AtomicU64::new(0);
+
+    pub fn enabled() -> bool {
+        static ON: OnceLock<bool> = OnceLock::new();
+        *ON.get_or_init(|| std::env::var_os("CRAB_MCTS_TIMING").is_some())
+    }
+
+    /// Scope guard: accumulates elapsed nanos into `slot` on drop.
+    /// Inactive (and costless past the flag check) when timing is off.
+    pub struct Lap(Option<(&'static AtomicU64, Instant)>);
+
+    pub fn lap(slot: &'static AtomicU64) -> Lap {
+        Lap(enabled().then(|| (slot, Instant::now())))
+    }
+
+    impl Drop for Lap {
+        fn drop(&mut self) {
+            if let Some((slot, t0)) = self.0 {
+                slot.fetch_add(t0.elapsed().as_nanos() as u64, Relaxed);
+            }
+        }
+    }
+
+    pub fn count(slot: &'static AtomicU64, n: u64) {
+        if enabled() {
+            slot.fetch_add(n, Relaxed);
+        }
+    }
+
+    /// The table, or `None` when the flag is off or nothing ran.
+    pub fn report() -> Option<String> {
+        if !enabled() {
+            return None;
+        }
+        let rollouts = ROLLOUTS.load(Relaxed);
+        if rollouts == 0 {
+            return None;
+        }
+        let rows = [
+            ("clone", CLONE_NS.load(Relaxed)),
+            ("root action", ROOT_NS.load(Relaxed)),
+            ("determinize", DET_NS.load(Relaxed)),
+            ("rollout sim", SIM_NS.load(Relaxed)),
+            ("leaf eval", LEAF_NS.load(Relaxed)),
+        ];
+        let total: u64 = rows.iter().map(|&(_, ns)| ns).sum();
+        // The two leaf sub-segments overlap "leaf eval" and are excluded
+        // from the percentage base.
+        let subs = [("  \u{21b3} encode", ENC_NS.load(Relaxed)), ("  \u{21b3} forward", FWD_NS.load(Relaxed))];
+        let mut out = format!(
+            "mcts timing: {} decisions, {} rollouts, {} sim actions ({:.1} per rollout)\n",
+            DECISIONS.load(Relaxed),
+            rollouts,
+            SIM_ACTIONS.load(Relaxed),
+            SIM_ACTIONS.load(Relaxed) as f64 / rollouts as f64,
+        );
+        for (name, ns) in rows.iter().copied().chain(subs) {
+            out.push_str(&format!(
+                "  {name:<12} {:>9.2} ms  {:>5.1} %  ({:.0} µs/rollout)\n",
+                ns as f64 / 1e6,
+                100.0 * ns as f64 / total.max(1) as f64,
+                ns as f64 / 1e3 / rollouts as f64,
+            ));
+        }
+        out.push_str(&format!("  {:<12} {:>9.2} ms", "total", total as f64 / 1e6));
+        Some(out)
+    }
+}
+
 use crate::decision::{AutoDecider, Decider};
 use crate::game::{GameAction, GameState, TurnStep};
 use crate::recommend::STALE_ROUNDS;
@@ -220,7 +319,7 @@ fn sequential_halving_plan(arms: usize, budget: u32) -> Vec<(usize, u32)> {
         }
         plan.push((m, visits));
         remaining -= visits * m as u32;
-        m = (m + 1) / 2;
+        m = m.div_ceil(2);
         if m < 2 {
             m = 2;
         }
@@ -275,8 +374,8 @@ fn completed_sigma(
     }
     let q = |i: usize| totals[i] / visits[i] as f64;
     let (mut lo, mut hi) = (f64::INFINITY, f64::NEG_INFINITY);
-    for i in 0..n {
-        if visits[i] != u32::MAX && visits[i] > 0 {
+    for (i, &v) in visits.iter().enumerate() {
+        if v != u32::MAX && v > 0 {
             lo = lo.min(q(i));
             hi = hi.max(q(i));
         }
@@ -403,6 +502,7 @@ impl MctsBot {
     /// scores are unbounded and scale-dependent, so feeding them in raw
     /// would make the exploration constant meaningless.
     fn reward(&self, g: &GameState, seat: usize) -> f64 {
+        let _t = timing::lap(&timing::LEAF_NS);
         if let Some(over) = g.game_over {
             return match over {
                 Some(w) if w == seat => 1.0,
@@ -431,26 +531,33 @@ impl MctsBot {
 
     /// Play `g` forward to the horizon and score it.
     fn rollout(&self, mut g: GameState, seat: usize) -> f64 {
+        timing::count(&timing::ROLLOUTS, 1);
         let mut r = rng();
-        // Determinise: the real top of each library is information a search
-        // has no business exploiting.
-        for p in &mut g.players {
-            let mut lib = std::mem::take(&mut p.library);
-            lib.shuffle(&mut r);
-            p.library = lib;
-        }
-        // Under a determinizing profile the opponent's *hand* is redealt
-        // too (the library shuffle above never covered it — rollouts have
-        // been reading the held cards since the first MCTS experiment).
-        // Salted per rollout so the bandit averages over imagined hands.
-        if self.cfg.weights.determinize > 0 {
-            let salt = 0x3C75_0000 ^ r.random::<u32>() as u64;
-            if let Some(b) = super::bot::hand_belief(&g, seat, &self.cfg.weights) {
-                super::bot::determinize_hidden_belief(&mut g, seat, salt, &b);
-            } else {
-                super::bot::determinize_hidden(&mut g, seat, salt);
+        {
+            let _t = timing::lap(&timing::DET_NS);
+            // Determinise: the real top of each library is information a
+            // search has no business exploiting.
+            for p in &mut g.players {
+                let mut lib = std::mem::take(&mut p.library);
+                lib.shuffle(&mut r);
+                p.library = lib;
+            }
+            // Under a determinizing profile the opponent's *hand* is
+            // redealt too (the library shuffle above never covered it —
+            // rollouts have been reading the held cards since the first
+            // MCTS experiment). Salted per rollout so the bandit averages
+            // over imagined hands.
+            if self.cfg.weights.determinize > 0 {
+                let salt = 0x3C75_0000 ^ r.random::<u32>() as u64;
+                if let Some(b) = super::bot::hand_belief(&g, seat, &self.cfg.weights) {
+                    super::bot::determinize_hidden_belief(&mut g, seat, salt, &b);
+                } else {
+                    super::bot::determinize_hidden(&mut g, seat, salt);
+                }
             }
         }
+        let _t = timing::lap(&timing::SIM_NS);
+        let mut actions = 0u64;
         let stop_turn = g.turn_number + self.cfg.horizon_turns;
         let mut policy: Vec<HeuristicBot> = (0..g.players.len())
             .map(|_| {
@@ -470,6 +577,7 @@ impl MctsBot {
                     let pending = g.pending_decision.as_ref().unwrap();
                     AutoDecider.decide(&pending.decision)
                 };
+                actions += 1;
                 if g.perform_action(GameAction::SubmitDecision(answer)).is_err() {
                     break;
                 }
@@ -478,6 +586,7 @@ impl MctsBot {
             let mut acted = false;
             for (s, p) in policy.iter_mut().enumerate() {
                 let Some(a) = p.next_action(&g, s) else { continue };
+                actions += 1;
                 if g.perform_action(a).is_ok() {
                     acted = true;
                     if g.is_game_over() {
@@ -487,6 +596,8 @@ impl MctsBot {
             }
             if acted { stale = 0 } else { stale += 1 }
         }
+        timing::count(&timing::SIM_ACTIONS, actions);
+        drop(_t);
         self.reward(&g, seat)
     }
 
@@ -515,6 +626,7 @@ impl MctsBot {
         candidates: Vec<(GameAction, i32)>,
     ) -> GameAction {
         let n = candidates.len();
+        timing::count(&timing::DECISIONS, 1);
         let unit = self.cfg.weights.unit.max(1) as f64;
         let scores: Vec<f64> = candidates.iter().map(|(_, s)| *s as f64 / unit).collect();
         let candidates: Vec<GameAction> = candidates.into_iter().map(|(a, _)| a).collect();
@@ -575,8 +687,15 @@ impl MctsBot {
             live.truncate(m);
             for &i in &live {
                 for _ in 0..per_arm {
-                    let mut g = state.clone();
-                    if g.perform_action(candidates[i].clone()).is_err() {
+                    let mut g = {
+                        let _t = timing::lap(&timing::CLONE_NS);
+                        state.clone()
+                    };
+                    let rooted = {
+                        let _t = timing::lap(&timing::ROOT_NS);
+                        g.perform_action(candidates[i].clone())
+                    };
+                    if rooted.is_err() {
                         break;
                     }
                     total[i] += self.rollout(g, seat);
@@ -640,10 +759,18 @@ impl MctsBot {
         let candidates: Vec<GameAction> = candidates.into_iter().map(|(a, _)| a).collect();
         let mut visits = vec![0u32; n];
         let mut total = vec![0.0f64; n];
+        timing::count(&timing::DECISIONS, 1);
         // Seed every arm once so UCB1 has a finite term for each.
         for i in 0..n {
-            let mut g = state.clone();
-            if g.perform_action(candidates[i].clone()).is_err() {
+            let mut g = {
+                let _t = timing::lap(&timing::CLONE_NS);
+                state.clone()
+            };
+            let rooted = {
+                let _t = timing::lap(&timing::ROOT_NS);
+                g.perform_action(candidates[i].clone())
+            };
+            if rooted.is_err() {
                 // Rejected at the root: park it at the bottom.
                 visits[i] = u32::MAX;
                 total[i] = f64::NEG_INFINITY;
@@ -680,8 +807,15 @@ impl MctsBot {
             ) else {
                 break;
             };
-            let mut g = state.clone();
-            if g.perform_action(candidates[i].clone()).is_err() {
+            let mut g = {
+                let _t = timing::lap(&timing::CLONE_NS);
+                state.clone()
+            };
+            let rooted = {
+                let _t = timing::lap(&timing::ROOT_NS);
+                g.perform_action(candidates[i].clone())
+            };
+            if rooted.is_err() {
                 visits[i] = u32::MAX;
                 continue;
             }

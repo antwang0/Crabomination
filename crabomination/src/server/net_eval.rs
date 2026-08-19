@@ -97,7 +97,12 @@ pub fn slot_loaded(slot: u8) -> bool {
 /// (callers fall back to the heuristic).
 pub fn win_prob(state: &GameState, seat: usize, slot: u8) -> Option<f32> {
     let net = net_for(slot)?;
-    Some(net.eval(encode_state(state, seat, vocab())))
+    let enc = {
+        let _t = super::mcts::timing::lap(&super::mcts::timing::ENC_NS);
+        encode_state(state, seat, vocab())
+    };
+    let _t = super::mcts::timing::lap(&super::mcts::timing::FWD_NS);
+    Some(net.eval(enc))
 }
 
 /// The policy head's logit for `seat` — the Gumbel search's prior score

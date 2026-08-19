@@ -1096,6 +1096,9 @@ fn main() {
         )
     };
     println!("verdict: {verdict}");
+    if let Some(t) = crabomination::server::mcts::timing::report() {
+        println!("{t}");
+    }
 }
 
 // The paired-statistics tests that used to live here moved to
