@@ -599,12 +599,27 @@ fn net_config(args: &Args, vocab: usize) -> crabomination_ml::NetConfig {
 /// and silently ignores file tensors the model lacks, so the shape has
 /// to follow the *file*, not this run's flags — a `--policy-head` run
 /// piloted by a headless champion-class net is the normal gen-0 case.
-fn file_heads(path: &std::path::Path) -> (bool, bool) {
-    std::fs::read(path)
-        .ok()
-        .and_then(|b| crabomination_nn::PlayNet::load(&b).ok())
-        .map(|n| (n.has_policy_head(), n.has_opp_head()))
-        .unwrap_or((false, false))
+fn file_net_config(
+    path: &std::path::Path,
+    vocab: usize,
+) -> Option<crabomination_ml::NetConfig> {
+    let bytes = std::fs::read(path).ok()?;
+    let n = crabomination_nn::PlayNet::load(&bytes).ok()?;
+    let (emb_dim, obj_hidden, h1, h2, attn, blocks) = n.arch();
+    Some(crabomination_ml::NetConfig {
+        vocab,
+        emb_dim,
+        obj_hidden,
+        h1,
+        h2,
+        attn,
+        // Training-only head; candle's load ignores file tensors the
+        // model lacks, so an aux-trained artifact still loads.
+        aux: false,
+        blocks,
+        policy: n.has_policy_head(),
+        opp: n.has_opp_head(),
+    })
 }
 
 /// True when this trajectory belongs to the held-out set. A hash of the
@@ -1480,9 +1495,9 @@ fn main() {
     // lr 0 and never stepped: this exists only to score.
     let pilot_trainer: Option<Trainer> = args.record_decisions.then(|| args.use_best.as_ref()).flatten().and_then(|p| {
         // The pilot's shape follows the pilot's file, not this run's
-        // architecture flags — see `file_has_policy_head`.
-        let mut cfg = cfg;
-        (cfg.policy, cfg.opp) = file_heads(p);
+        // architecture flags — widths included, or a wide-learner run
+        // loses its pilot baseline (see `file_net_config`).
+        let cfg = file_net_config(p, vocab.size())?;
         let mut t = Trainer::new(&cfg, 0.0).ok()?;
         match t.load(p) {
             Ok(()) => {
@@ -1543,8 +1558,9 @@ fn main() {
     });
     if let Some(best) = &args.use_best {
         if args.gpu_eval {
-            let mut cfg = net_config(&args, vocab.size());
-            (cfg.policy, cfg.opp) = file_heads(best);
+            let cfg = file_net_config(best, vocab.size()).unwrap_or_else(|| {
+                panic!("--gpu-eval: cannot read the pilot net {}", best.display())
+            });
             let client = crabomination_ml::BatchEvalServer::start(
                 &cfg,
                 best,

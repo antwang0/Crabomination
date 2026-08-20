@@ -1417,6 +1417,24 @@ impl PlayNet {
         Some(out)
     }
 
+    /// The architecture the file actually carries — `(emb_dim,
+    /// obj_hidden, h1, h2, attn, transformer blocks)` — for callers
+    /// that must rebuild this net in another framework (the batched
+    /// eval server). The shape follows the *file*, never the caller's
+    /// run flags: a wide-learner run piloted by a standard-width
+    /// champion is the normal case, and building the server at the
+    /// run's width fails the load (round 45's first abort).
+    pub fn arch(&self) -> (usize, usize, usize, usize, bool, usize) {
+        (
+            self.emb.cols,
+            self.obj_w.rows,
+            self.trunk1_w.rows,
+            self.trunk2_w.rows,
+            self.attn.is_some(),
+            self.tstack.as_ref().map_or(0, |t| t.blocks.len()),
+        )
+    }
+
     pub fn has_opp_head(&self) -> bool {
         self.opp_w.is_some()
     }
