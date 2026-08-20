@@ -969,6 +969,11 @@ before any feature block, pre-registered scripts in `.ladder/`.
    256-iter 121.9 → 73.0.** The remaining 88 % of search wall is the
    rollout sim (~63 engine actions/rollout), so the next rung is
    rollout-side and ladder-gated, or the engine's own action loop.
+   **Round 44 closed the horizon shortcut: h1 loses 7 points to h3
+   and cost-matched 3× iterations buy back +0.3 — the shallow leaf
+   is biased, not noisy, and h0's −35 shows the net cannot score
+   unsettled states at all. Do not respend here; the census/`head_leaf`
+   direction (item 2) inherits the evidence.**
 2. **A separate leaf-value head the search consumes and the pilot
    doesn't.** The census says ~two-thirds of what the search evaluates
    is a settled post-combat state whose phase flag has never been

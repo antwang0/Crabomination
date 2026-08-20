@@ -7,6 +7,58 @@ only stays dead while the reasoning that killed it is readable.
 
 ## Tier 13 — AI
 
+- 🔴 **Round 44 (2026-08-20) — the rollout is not replaceable by a
+  shallower-but-wider search: horizon carries *bias* correction, and
+  iterations only buy variance.** The value-equivalence question
+  (MuZero's lesson inverted), made worth asking by the forty-first
+  perf pass: with the net's forward vectorized, the 3-turn rollout is
+  88 % of search wall, so a 1-turn rollout at matched cost affords 3×
+  the iterations — and iterations are the only search lever that pays
+  (r27/29/42). Pre-registered in `.ladder/run_r44_horizon.sh`; run at
+  1000 games/archetype × 12 × 2 ladder seeds per gated cell (±0.65
+  paired); same net as r42/r43 (`nets_r41_v7_s151`).
+
+  **Costs (Part C, serial, r42 convention):** h0 3.3 s/game, h1 6.2,
+  h1@192 16.8, h3@64 16.3 — the cost match for Part B is exact to 3 %.
+
+  | part | cells | pooled |
+  |---|---|---|
+  | A: h1@64 vs h3@64 | 42.5 / 43.3 | **42.9** |
+  | B: h1@192 vs h3@64 (cost-matched) | 43.1 / 43.3 | **43.2** |
+  | D: h0@64 vs h3@64 (anchor) | 15.0 | **15.0** |
+
+  **A: the two extra turns are worth ~+7** — more than double the
+  pre-registered 1–3 band. **B is the round's finding: tripling the
+  iterations bought back +0.3 of the 7.1-point gap.** If the h1 leaf
+  were an unbiased-but-noisy estimate, 192 iterations would climb the
+  r27 curve (~+2 for 1.58 doublings); it climbed nothing, so the h1
+  evaluation is systematically *biased* — the net misjudges
+  states one turn after an action in a way more samples cannot fix,
+  and the rollout's remaining turns are doing bias correction, not
+  noise reduction. r42's iteration gains live at h3 because the deep
+  leaf is nearly unbiased; iterations and horizon are not
+  interchangeable currencies.
+
+  **D is the mechanism, exposed:** h0 was pre-registered as "should
+  approximate the 1-ply `net` pilot, ≈45 %" and instead lost by 35
+  points. The 1-ply pilot's sims *settle* the state before the net
+  scores it; h0 scores the raw successor — spell still on the stack,
+  cost paid, benefit invisible — and the net reads that as pure loss,
+  so the h0 bot is punished for ever acting. Settlement is
+  load-bearing for every net consumer, which both explains the h1
+  bias (one turn settles the stack but not the exchange it started)
+  and independently corroborates the leaf-census diagnosis: the net
+  is only trustworthy on the state shapes it was trained on, and
+  moving the leaf distribution toward the training distribution (or
+  `head_leaf` toward the leaves) is the live lever, not shortening
+  the path to the leaf.
+
+  **Disposition:** value-equivalence / short-horizon direction
+  CLOSED with a replicated mechanism. `mcts-net-h0/h1/h1-192`
+  profiles stay as controls. Search cost work continues on the
+  engine action loop (PERF.md (-12)) and ladder-gated rollout
+  early-adjudication, not on horizon.
+
 - 🟢 **Round 43 (2026-08-19) — the first instrument-driven piloting
   round: chump blocks measured +0.9 and adopted, early-stop closed as a
   null with its mechanism, and three zero-incidence lessons about what
