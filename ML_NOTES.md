@@ -7,6 +7,50 @@ only stays dead while the reasoning that killed it is readable.
 
 ## Tier 13 — AI
 
+- 🔴 **Round 45 (2026-08-20) — capacity, finally fed, is a dead null:
+  2× widths under the r41 recipe move the pilot +0.01 ± 0.3.** The
+  last round-4 lever run under conditions that could answer it.
+  Round 4's "5× capacity" verdict was recorded as untested (CPU
+  learner, 0.4 visits/row); this round ran ctrl (emb 32 / obj 64 /
+  trunk 512×256, `--attn`) against cap (all doubled, ~4× params) at
+  the r41 measurement floor — four training seeds, paired within
+  seed, 250 k games each on the CUDA learner with feeding asserted
+  per run (`learner device: cuda`, ~85 % train duty, ~21 M rows
+  consumed per run; the double-width smoke held 74 % duty).
+  Pre-registered in `.ladder/run_r45_capacity.sh`.
+
+  **Pilot gates** (net vs atk-sim / gang, 1000 games/archetype × 2
+  ladder seeds per net, pooled per pair):
+
+  | opp | per-seed diffs (cap − ctrl) | mean paired diff |
+  |---|---|---|
+  | atk-sim | +0.20 / +0.15 / −0.20 / −0.10 | **+0.013 ± 0.307** |
+  | gang | −0.10 / +0.30 / −0.30 / +0.15 | **+0.012 ± 0.423** |
+
+  Every cell in the r38 band; AUC pairs net to zero (+0.0035 /
+  +0.0028 / −0.0068 / +0.0008). **This is the null round 4 could not
+  produce: with the learner demonstrably fed, parameter count is not
+  the binding constraint at 2× under this recipe.** With r27/36/38/39
+  (labels/targets closed at three scales) the account is now: neither
+  the value target nor capacity binds — what has moved the program is
+  representation (v7 +0.4, the r39 aux-head AUC record) and search
+  budget (r27/42), which is where the queued leaf-distribution round
+  aims.
+
+  Two screen-level observations, recorded not claimed: `val_policy`
+  favored cap in **all four pairs** (0.85/0.83/0.80/0.86 vs
+  0.82/0.70/0.72/0.76) — the ranking metric's fifth dissociation from
+  strength, now with a capacity flavor; and the one-seed search cells
+  read ctrl 53.1 vs cap 51.8 (±0.64 each) — suggestive that the wide
+  net is *worse* as a search leaf, unresolved at one cell and worth a
+  paired cell only if capacity ever re-opens.
+
+  Infrastructure that fell out: the batch eval server and the frozen
+  pilot scorer now derive their full architecture from the checkpoint
+  file (`PlayNet::arch()`) — the first cap run aborted on a shape
+  mismatch because widths followed the run's flags, a latent bug every
+  champion-width run had been walking past.
+
 - 🔴 **Round 44 (2026-08-20) — the rollout is not replaceable by a
   shallower-but-wider search: horizon carries *bias* correction, and
   iterations only buy variance.** The value-equivalence question

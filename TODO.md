@@ -987,7 +987,14 @@ before any feature block, pre-registered scripts in `.ladder/`.
    1-ply pilot keeps `head_win`. Gate: `mcts-net-deep(head_leaf)` vs
    `mcts-net-deep(head_win)`, same trunk both sides. This *subsumes* the
    "record only the settled state" experiment above — do not run that
-   one into the shared head.
+   one into the shared head. **Evidence upgraded twice since written:
+   r44's h0/h1 cells showed the net's error on off-distribution state
+   shapes is *bias* (iterations can't fix it, settlement is
+   load-bearing), and r45 closed capacity (+0.01 ± 0.3 at 2× fed) —
+   representation/distribution is the only training-side axis left
+   open. This is the next training round to run; a Go-Exploit-style
+   arm (seed some self-play starts from mid/post-combat snapshots) is
+   the data-side twin and belongs in the same round.**
 3. **Distill deep search into the leaf head — amortized iterations.**
    256-iteration search conclusions as `head_leaf` targets, consumed by
    a 64-iteration search. r36's coupling warning ("you cannot distil
