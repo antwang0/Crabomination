@@ -89,6 +89,13 @@ fn cr_607_2a_linked_exile_returns_only_its_own_card() {
     let p1 = g.add_card_to_battlefield(0, catalog::banisher_priest());
     g.fire_self_etb_triggers(p1, 0);
     drain_stack(&mut g);
+    // Which creature the first Priest took is the auto-targeter's call —
+    // it prefers the biggest threat, so it is not the order they were put
+    // on the battlefield. The linkage is what this test is about, so read
+    // the prisoner rather than assuming it (the assumption broke when
+    // hostile targeting learned to rank by power, 2026-08-22).
+    let first_prisoner = if g.battlefield_find(a).is_none() { a } else { b };
+    let second_prisoner = if first_prisoner == a { b } else { a };
     let p2 = g.add_card_to_battlefield(0, catalog::banisher_priest());
     g.fire_self_etb_triggers(p2, 0);
     drain_stack(&mut g);
@@ -97,8 +104,14 @@ fn cr_607_2a_linked_exile_returns_only_its_own_card() {
     let mut evs = Vec::new();
     g.destroy_permanent(p1, false, &mut evs);
     drain_stack(&mut g);
-    assert!(g.battlefield_find(a).is_some(), "the first Priest's prisoner came back");
-    assert!(g.battlefield_find(b).is_none(), "the second Priest still holds its own");
+    assert!(
+        g.battlefield_find(first_prisoner).is_some(),
+        "the first Priest's prisoner came back"
+    );
+    assert!(
+        g.battlefield_find(second_prisoner).is_none(),
+        "the second Priest still holds its own"
+    );
 }
 
 /// CR 607.2d — "the chosen color" is linked to the permanent that chose it,

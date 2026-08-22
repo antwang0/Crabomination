@@ -4765,6 +4765,38 @@ fn all_slots_walk_prefers_the_opponent_for_a_hostile_effect() {
     assert!(extra.is_empty(), "single-slot effect fills no extra slots");
 }
 
+/// Hostile auto-targeting picks the biggest threat, not whichever legal
+/// enemy body happens to sit earliest on the battlefield.
+///
+/// Regression, 2026-08-22, from `replay-1787407020-2` turn 19: the bot
+/// spent Grapple with Death on a 2/2 utility creature while a 3/3 and a
+/// five-drop stood beside it. Both auto-target walks ranked hostile
+/// candidates by side and ward only and then took the first match, so the
+/// pick was board order — i.e. the oldest creature. The friendly branch
+/// had always sorted by power; only the hostile side was arbitrary.
+#[test]
+fn hostile_auto_target_prefers_the_biggest_threat() {
+    let mut g = two_player_game();
+    // Added oldest-first, so board order alone would pick the small one.
+    let _small = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
+    let big = g.add_card_to_battlefield(1, catalog::hill_giant()); // 3/3
+    let doom = catalog::doom_blade();
+
+    // The slot walk (filtered slot 0) — what the bot's cast path uses.
+    let (slot0, _) = g.auto_targets_for_effect_all_slots(&doom.effect, 0, None);
+    assert_eq!(
+        slot0,
+        Some(Target::Permanent(big)),
+        "the slot walk must aim removal at the biggest threat"
+    );
+    // And the single-target picker, which had the same gap.
+    assert_eq!(
+        g.auto_target_for_effect(&doom.effect, 0),
+        Some(Target::Permanent(big)),
+        "so must the heuristic picker"
+    );
+}
+
 /// CR 702.21 on the slot walk: a warded hostile candidate ranks below an
 /// un-warded one, and is still chosen when it is all that is legal.
 #[test]

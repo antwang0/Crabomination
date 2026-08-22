@@ -251,8 +251,14 @@ impl GameState {
             // Sort by descending power so the strongest creature wins.
             primary_candidates.sort_by_key(|c| std::cmp::Reverse(c.1));
         } else {
-            // Hostile pick: un-warded candidates first (stable within groups).
-            primary_candidates.sort_by_key(|c| hostile_ward(c.0));
+            // Hostile pick: un-warded first, then the biggest threat.
+            // The power term was missing until 2026-08-22, so removal took
+            // whichever legal enemy body happened to sit earliest on the
+            // board — a recorded game spent Grapple with Death on a 2/2
+            // utility creature with a 3/3 and a five-drop beside it. The
+            // friendly branch above has always picked its best target;
+            // only the hostile side was arbitrary.
+            primary_candidates.sort_by_key(|c| (hostile_ward(c.0), std::cmp::Reverse(c.1)));
         }
         if let Some(&(cid, _)) = primary_candidates.first() {
             return Some(Target::Permanent(cid));
@@ -639,17 +645,26 @@ impl GameState {
                     // nothing when the opponent has no nonland permanent.
                     let optional =
                         slot >= eff.min_targets_in_mode(mode).unwrap_or(u8::MAX);
+                    // Within a rank, the biggest body wins: ranking by
+                    // side alone left removal taking whichever legal
+                    // candidate sat earliest on the board.
                     let best = self
                         .battlefield
                         .iter()
                         .filter(|c| !already_picked.contains(&c.id))
                         .filter(|c| is_legal(&Target::Permanent(c.id)))
-                        .map(|c| (rank(c.id, c.controller), c.id))
-                        .min_by_key(|&(r, _)| r);
+                        .map(|c| {
+                            let power = self
+                                .computed_permanent(c.id)
+                                .map(|cp| cp.power)
+                                .unwrap_or(c.definition.power);
+                            (rank(c.id, c.controller), -power, c.id)
+                        })
+                        .min();
                     match best {
                         // Never spend an optional slot on the wrong side.
-                        Some((2, _)) if optional => {}
-                        Some((_, id)) => found = Some(Target::Permanent(id)),
+                        Some((2, _, _)) if optional => {}
+                        Some((_, _, id)) => found = Some(Target::Permanent(id)),
                         None if optional => {}
                         None => {
                             // Mandatory slot: allow reuse of an

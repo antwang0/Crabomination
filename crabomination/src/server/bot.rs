@@ -10495,11 +10495,19 @@ fn score_candidate(state: &GameState, seat: usize, action: &GameAction, w: &Eval
 /// valuation can reach it. This re-enumerates slot 0's legal candidates
 /// and returns up to `max` variants of the same cast.
 ///
-/// Ordering is the point, not completeness: the *opposite side* from
-/// whatever was chosen comes first, because that is the failure both
-/// recorded games had (our own permanent picked for a hostile spell).
-/// Beyond that, higher-value permanents first, so a two-arm budget spends
-/// itself on the pick most likely to matter. Only slot 0 is varied —
+/// Only candidates the *effect* wants are offered (per-slot polarity, so
+/// a hostile slot considers the opponent's permanents and not ours),
+/// biggest body first. An alternate on the wrong side is an arm the
+/// search must spend rejecting, and arms are its scarcest resource.
+///
+/// This ranked "the opposite side from whatever was chosen" until
+/// 2026-08-22, generalising from two failures where the baked-in pick was
+/// our own permanent. When the baked-in pick is already correct — the
+/// common case — "opposite side" means *our own board*, so the first of
+/// two arms was spent offering the search a self-target. Observed in a
+/// recorded game where the base pick was right but aimed at the smallest
+/// enemy creature: the better target was the arm that got crowded out.
+/// Only slot 0 is varied —
 /// additional slots are the polarity classifier's job
 /// (`prefers_friendly_target_for_slot`) and varying them combinatorially
 /// would blow the arm budget the search is trying to protect.
@@ -10521,7 +10529,7 @@ fn target_arm_variants(
     let Some(req) = eff.target_filter_for_slot_in_mode_kicked(0, *mode, false) else {
         return Vec::new();
     };
-    let chosen_side = state.battlefield_find(*chosen).map(|c| c.controller);
+    let prefer_friendly = eff.prefers_friendly_target_for_slot(0, *mode);
     let mut alts: Vec<(u8, i32, CardId)> = state
         .battlefield
         .iter()
@@ -10531,14 +10539,16 @@ fn target_arm_variants(
             state.evaluate_requirement_static(req, &t, seat, None)
                 && state.check_target_legality(&t, seat).is_ok()
         })
+        // Only the side this slot actually wants. An alternate the effect
+        // does not want is an arm the search has to spend rejecting it,
+        // and the arm budget is the scarcest thing the search has.
+        .filter(|c| (c.controller == seat) == prefer_friendly)
         .map(|c| {
-            // Rank 0 = the other side from the baked-in pick.
-            let side = u8::from(Some(c.controller) == chosen_side);
             let value = state
                 .computed_permanent(c.id)
                 .map(|cp| cp.power + cp.toughness)
                 .unwrap_or(c.definition.power + c.definition.toughness);
-            (side, -value, c.id)
+            (0u8, -value, c.id)
         })
         .collect();
     alts.sort();
@@ -14589,7 +14599,7 @@ mod stack_response_tests {
     /// Built as the recorded failures were shaped — a hostile spell whose
     /// baked-in pick is the caster's own creature — and asserts the
     /// opposite-side variant is present and ordered first among the
-    /// alternates.
+
     #[test]
     fn target_arms_offer_the_other_side() {
         let mut g = two_player_game();
@@ -14612,8 +14622,38 @@ mod stack_response_tests {
                 &variants[0],
                 GameAction::CastSpell { target: Some(Target::Permanent(id)), .. } if *id == theirs
             ),
-            "the opposite side is the first alternate, got {:?}",
+            "the side the slot wants is the first alternate, got {:?}",
             variants[0]
+        );
+
+        // And when the baked-in pick is ALREADY on the right side but
+        // aimed at the smaller body, the alternates must offer the bigger
+        // enemy creature — not our own. Ranking alternates as "opposite of
+        // whatever was chosen" spent the first arm on a self-target here
+        // (recorded game, 2026-08-22: Grapple with Death on a 2/2 with a
+        // 3/3 beside it).
+        // Non-black: Doom Blade's filter excludes black creatures.
+        let bigger = g.add_card_to_battlefield(1, crate::catalog::shivan_dragon());
+        let correct_but_small = GameAction::CastSpell {
+            card_id: bolt,
+            target: Some(Target::Permanent(theirs)),
+            additional_targets: Vec::new(),
+            mode: None,
+            x_value: None,
+        };
+        let v2 = target_arm_variants(&g, 0, &correct_but_small, 2);
+        assert!(
+            matches!(
+                &v2[0],
+                GameAction::CastSpell { target: Some(Target::Permanent(id)), .. } if *id == bigger
+            ),
+            "the bigger enemy body is the first alternate, got {:?}",
+            v2[0]
+        );
+        assert!(
+            !v2.iter().any(|a| matches!(a,
+                GameAction::CastSpell { target: Some(Target::Permanent(id)), .. } if *id == own)),
+            "our own creature must not be offered for a hostile slot: {v2:?}"
         );
         // The flag is what puts them on the menu. Doom Blade is {1}{B}, so
         // the cast has to be affordable before the menu can carry it.
