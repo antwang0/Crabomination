@@ -7,6 +7,64 @@ only stays dead while the reasoning that killed it is readable.
 
 ## Tier 13 — AI
 
+- 🟢 **Round 46 (2026-08-22) — target arms replicate at +0.95 and are
+  adopted; the abilarms rehabilitation hypothesis is refuted on its own
+  pre-registered terms.** Pre-registered in
+  `.ladder/run_r46_targeting.sh`; 1000 games/archetype × 12 sealed × 2
+  ladder seeds per cell (±0.57 paired), same r41 net as r42–r45.
+
+  | part | cells | pooled | disposition |
+  |---|---|---|---|
+  | A `mcts-net-targetarms` vs `mcts-net-deep` | 50.7 / 51.2 | **50.95** | **ADOPTED** |
+  | B `impulse` vs `gang` | 50.0 / 50.0 | 50.00 | zero incidence |
+  | C `abilarms` vs `gang` (re-run) | 47.7 / 50.1 | 48.90 | negative, replicates |
+
+  **A: the search could not reject a mis-aimed spell because the right
+  aim was never on the menu.** Every cast candidate calls
+  `auto_targets_for_effect_all_slots` once and bakes that assignment
+  into the arm, so a mis-targeted spell was accept-or-reject on the
+  whole package and the correct targeting was *absent* — unreachable at
+  any valuation, net capacity or search depth. Offering up to two
+  alternative slot-0 targetings (opposite-side first) is worth **+0.95
+  over two seeds, both intervals clear of 50** — the same magnitude and
+  the same replication standard as the chump-block adoption (51.0 /
+  50.8, r43), and the second confirmation that this program's piloting
+  wins are *menu* holes rather than valuation errors. Both are
+  candidates the bot could not previously express; every valuation
+  refinement tried since round 29 has been a null.
+
+  **C refutes a hypothesis this session proposed, and the refutation is
+  the point of having pre-registered it.** Round 43 read abilarms at
+  48.0 / 50.5 and concluded "auto-aimed activations can harm". That
+  cell ran while the filtered auto-target walk had no side preference
+  at all, so it measured ability enumeration *plus* a targeting bug,
+  and the r46 script said outright that a repeat would mean the class
+  is genuinely harmful. It repeats: **48.9 against r43's 48.25, same
+  seed-split shape** (one strongly negative cell, one at parity) on a
+  fixed targeter. The r43 conclusion stands and now rests on better
+  evidence; the "it was really the targeting bug" story is dead.
+
+  **The asymmetry between A and C is the round's lesson.** Both add
+  candidates to the same capped menu, and they land 2 points apart. A
+  varies a decision the search had already judged worth making — a
+  *sibling* of a vetted arm, at the cost of one arm. C adds whole new
+  action types that displace vetted casts under a six-arm cap, on a
+  class the heuristic has no scoring competence for. Adding a line the
+  bot could not express pays when the line is a *variant of a good
+  play*; it loses when it is an unvetted new play competing for the
+  scarcest resource the search has (r42: iterations are the only lever
+  that reliably pays).
+
+  **B measured nothing, and says so.** Zero incidence on both seeds —
+  the flag never changed a game, so sealed mirrors never reached a
+  board where an impulse-draw activation was available and the hand-size
+  gate fired. Fifth zero-incidence flag in three rounds (buff2for1,
+  convlands, walkerchip, and now impulse): bot-vs-bot mirrors are
+  structurally blind to card classes the mirror decks do not contain.
+  Ark of Hunger's five idle turns are in a recorded human game, which
+  remains the only instrument that sees this class. Stays default-off,
+  justified by the replay rather than by the ladder.
+
 - 🔴 **Round 45 (2026-08-20) — capacity, finally fed, is a dead null:
   2× widths under the r41 recipe move the pilot +0.01 ± 0.3.** The
   last round-4 lever run under conditions that could answer it.

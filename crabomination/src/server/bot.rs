@@ -1049,6 +1049,14 @@ impl EvalWeights {
         Self { target_arms: true, ..Self::net_eval_det1() }
     }
 
+    /// The round-46 reproduction control: `net_eval_det1` with the
+    /// adopted [`target_arms`](Self::target_arms) switched back off, so
+    /// the gate that adopted it can be re-run against the same baseline
+    /// it was measured against (profile `mcts-net-noarms`).
+    pub const fn target_arms_off() -> Self {
+        Self { target_arms: false, ..Self::net_eval_det1() }
+    }
+
     /// The default, averaging three redeals per candidate. Three times
     /// the simulation cost, and the version that actually approximates
     /// "play against the hands consistent with what I can see" rather
@@ -1068,7 +1076,15 @@ impl EvalWeights {
     /// measurement of what the peek was worth (mirrors can't see it —
     /// both seats cheat identically).
     pub const fn net_eval_det1() -> Self {
-        Self { determinize: 1, ..Self::net_eval() }
+        // `target_arms` ADOPTED 2026-08-22 (round 46, +0.95 over two
+        // ladder seeds, 24 000 games). It lives here rather than in
+        // `Default` because it is a *search* flag — only
+        // `main_phase_candidates_for_mcts` reads it, so it is inert for
+        // every `Pilot::Scored` control — and because this is the exact
+        // base the gate measured on top of, and the profile the client's
+        // `local_bot` pilots with. `mcts-net-noarms` is the reproduction
+        // control.
+        Self { determinize: 1, target_arms: true, ..Self::net_eval() }
     }
 
     /// [`net_eval_det1`](Self::net_eval_det1) averaging three redeals per
@@ -1311,6 +1327,15 @@ impl Default for EvalWeights {
     /// | spell-casting combat sims | 54.4 % [53.0 %, 55.8 %] | 4 794 |
     /// | value gang-blocks | 51.3 % [50.7 %, 51.9 %] | 28 800 |
     /// | desperation chump blocks | 51.0 % / 50.8 % (two ladder seeds) | 24 000 |
+    ///
+    /// One adopted layer is *not* in this table because it is not in this
+    /// profile: `target_arms` (round 46, 50.7 % / 51.2 %, 24 000 games)
+    /// is a search-only flag and lives on
+    /// [`net_eval_det1`](Self::net_eval_det1), the base its gate measured
+    /// against and the one the client pilots with. Nothing here reads it —
+    /// `main_phase_candidates_for_mcts` is the only consumer — so adding
+    /// it to this table would advertise a change the heuristic bot does
+    /// not make.
     ///
     /// The attack search was additionally confirmed on cube decks —
     /// 53.8 % [53.0 %, 54.6 %] over 13 695 decided games — where the fixed
@@ -14568,8 +14593,10 @@ mod stack_response_tests {
         g.step = TurnStep::PreCombatMain;
         g.active_player_idx = 0;
         g.priority.player_with_priority = 0;
-        let off = main_phase_candidates_for_mcts(&g, 0, &EvalWeights::net_eval_det1());
-        let on = main_phase_candidates_for_mcts(&g, 0, &EvalWeights::target_arms_on());
+        // `net_eval_det1` carries the adopted flag since round 46, so the
+        // off-side control is the explicit pre-adoption profile.
+        let off = main_phase_candidates_for_mcts(&g, 0, &EvalWeights::target_arms_off());
+        let on = main_phase_candidates_for_mcts(&g, 0, &EvalWeights::net_eval_det1());
         let casts = |v: &Vec<(GameAction, i32)>| {
             v.iter().filter(|(a, _)| matches!(a, GameAction::CastSpell { .. })).count()
         };

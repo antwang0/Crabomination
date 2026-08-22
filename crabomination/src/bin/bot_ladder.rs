@@ -389,6 +389,14 @@ fn parse_profile(name: &str) -> Option<Pilot> {
         // search cannot prefer the right target at any valuation — the
         // structural shape that made chump blocks worth +0.9 in r43.
         // Gate as A against mcts-net-deep, same net both sides.
+        // The round-46 control: the pre-adoption baseline, kept so the
+        // gate that adopted target arms stays reproducible.
+        "mcts-net-noarms" => Some(Pilot::Mcts(MctsConfig {
+            iterations: 64,
+            horizon_turns: 3,
+            weights: EvalWeights::target_arms_off(),
+            ..MctsConfig::default()
+        })),
         "mcts-net-targetarms" => Some(Pilot::Mcts(MctsConfig {
             iterations: 64,
             horizon_turns: 3,

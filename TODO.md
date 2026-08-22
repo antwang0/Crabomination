@@ -974,6 +974,18 @@ before any feature block, pre-registered scripts in `.ladder/`.
    is biased, not noisy, and h0's −35 shows the net cannot score
    unsettled states at all. Do not respend here; the census/`head_leaf`
    direction (item 2) inherits the evidence.**
+1b. **Menu holes are the piloting lever; valuation refinements are not.**
+   Round 46 adopted `target_arms` (+0.95, two seeds) — the second
+   adoption in four rounds and the second whose mechanism was a
+   *missing candidate* rather than a bad score, after chump blocks
+   (+0.9, r43). Both let the search express a line it previously
+   could not. The same round's abilarms re-run went the other way
+   (48.9, replicating r43 on a fixed targeter), and the contrast is
+   the design rule: a *variant of a play the search already likes*
+   pays for its arm; an unvetted new action type displacing vetted
+   casts under the six-arm cap does not. Look for menus that cannot
+   express a line, not for weights that score one wrongly.
+
 2. **A separate leaf-value head the search consumes and the pilot
    doesn't.** The census says ~two-thirds of what the search evaluates
    is a settled post-combat state whose phase flag has never been
