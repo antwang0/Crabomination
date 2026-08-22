@@ -7,6 +7,60 @@ only stays dead while the reasoning that killed it is readable.
 
 ## Tier 13 — AI
 
+- 🟡 **Round 48 (2026-08-22) — target arms re-confirm at +1.05, but
+  fixing their ranking flaw was worth ~+0.1 and this design cannot
+  resolve it; the champion's real level is 55.2 / 53.65, not the ~52.7
+  / ~51.2 that has been quoted since round 26.** Pre-registered in
+  `.ladder/run_r48_rearm.sh`.
+
+  | part | cells | pooled |
+  |---|---|---|
+  | A `mcts-net-deep` vs `mcts-net-noarms` | 51.1 / 51.0 | **51.05** |
+  | B `net` vs `atk-sim` (reference) | 55.9 / 54.5 | **55.20** |
+  | B `net` vs `gang` (reference) | 54.1 / 53.2 | **53.65** |
+
+  **A: the adoption replicates tightly, the fix inside it does not
+  measure.** Round 46 adopted target arms at 50.95 with a flawed
+  alternate ranking — alternates ordered "opposite side from whatever
+  the auto-targeter chose", which spends an arm on a self-target
+  whenever the baked-in pick is already correct. Filtering alternates to
+  the side the slot wants reads **51.05** against the same control:
+  **+0.1 over r46, against a ±0.57 cell.** Pre-registered at +1.0 to
+  +2.0; landed at the floor of that band.
+
+  The mechanism explains the null and is worth keeping: with `max = 2`
+  alternates the flawed ranking still surfaced the *correct* target — as
+  the second arm rather than the first. So the flaw never removed the
+  right option from the menu, it only added a junk one beside it, and a
+  junk arm costs one arm of rollout budget rather than a decision. The
+  fix is still right (a wasted arm is a wasted arm, and at `max = 1` the
+  flaw would have been fatal), but "wasting the first arm on a
+  self-target" was a worse-sounding description than the ladder
+  supports. The two cells agree to 0.1, which is the tightest
+  replication in the program's piloting history and says the +1.05 is
+  real even though the delta inside it is not.
+
+  **B is a reference measurement, not a gate, and it restates the
+  program's headline number.** Round 47 found the net profiles had been
+  missing both adopted blocking layers; this is the first clean read of
+  the champion since. **`net` vs `atk-sim` 55.20 (was ~52.7) and vs
+  `gang` 53.65 (was ~51.2)** — about +2.5 on both, consistent with r47's
+  +3.2 head-to-head once win-rate compression away from 50 is allowed
+  for (the two are not the same quantity). Consequence for how this
+  program describes itself: the learned evaluator has been ~2.5 points
+  stronger than the "roughly at parity with the heuristic" framing
+  carried since round 26, and that framing was partly an artifact of the
+  handicap rather than a finding. Nothing needs re-deciding — every
+  adoption compared like with like — but **quote 55.20 / 53.65, not the
+  old band.**
+
+  **Not gated, deliberately, and the cost is recorded:** the
+  hostile-value ranking ("prefer the biggest threat") lives in the
+  engine's auto-targeter, which every profile shares, so an in-process
+  A/B would need a weights flag threaded through ~10 bot call sites or a
+  thread-local that flips engine behaviour mid-game. Justified by the
+  replay and by `hostile_auto_target_prefers_the_biggest_threat`.
+
 - 🟢 **Round 47 (2026-08-22) — the net profiles were missing both
   adopted blocking layers, and it was worth +3.2 pilot-side / +2.5 in
   the search. Every net-vs-heuristic level from round 26 to 46 is
