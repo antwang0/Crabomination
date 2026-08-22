@@ -1066,6 +1066,36 @@ impl EvalWeights {
     }
 
     pub const fn net_eval() -> Self {
+        // Derives from `block_gang_search` + `chump_blocks`, i.e. the
+        // blocking the heuristic bot actually plays, NOT from
+        // `attack_search_sim`.
+        //
+        // It branched off `attack_search_sim` until 2026-08-22, which
+        // predates both blocking adoptions, so the net profiles never
+        // received value gang-blocks (51.3 % over 28 800 games) or
+        // desperation chump blocks (51.0 / 50.8 over 24 000) — the client
+        // piloted without them, and every `net` vs `gang` gate since
+        // round 26 differed in *two* ways rather than one: evaluator and
+        // blocking. Those numbers understate the net.
+        //
+        // `determinize` is deliberately NOT inherited from `Default`: the
+        // `net` vs `net-det1` ladder is the measurement of what reading
+        // the opponent's hand was worth, and folding the redeal in here
+        // would collapse that pair. `net-preblocks` keeps the old shape
+        // for the gate.
+        Self {
+            net_slot: super::net_eval::SLOT_BEST,
+            chump_blocks: true,
+            ..Self::block_gang_search()
+        }
+    }
+
+    /// [`net_eval`](Self::net_eval) as it stood before 2026-08-22 —
+    /// branched off `attack_search_sim`, so without either adopted
+    /// blocking layer. The control for the gate that changed it
+    /// (profiles `net-preblocks` / `mcts-net-preblocks`), and the shape
+    /// every net gate from round 26 to 46 was measured in.
+    pub const fn net_eval_preblocks() -> Self {
         Self { net_slot: super::net_eval::SLOT_BEST, ..Self::attack_search_sim() }
     }
 

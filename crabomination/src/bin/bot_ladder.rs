@@ -269,6 +269,11 @@ fn parse_profile(name: &str) -> Option<Pilot> {
         "det3" => Some(Pilot::Scored(EvalWeights::determinized3())),
         "net" => Some(Pilot::Scored(EvalWeights::net_eval())),
         "net-det1" => Some(Pilot::Scored(EvalWeights::net_eval_det1())),
+        // The pre-2026-08-22 net shape: branched off `atk-sim`, so
+        // without either adopted blocking layer. The control for the
+        // rebase, and the shape every net gate from round 26 to 46 ran
+        // in.
+        "net-preblocks" => Some(Pilot::Scored(EvalWeights::net_eval_preblocks())),
         "net-det3" => Some(Pilot::Scored(EvalWeights::net_eval_det3())),
         "net-blend" => Some(Pilot::Scored(EvalWeights::net_eval_blend())),
         "net-blend300" => Some(Pilot::Scored(EvalWeights::net_eval_blend300())),
@@ -391,6 +396,17 @@ fn parse_profile(name: &str) -> Option<Pilot> {
         // Gate as A against mcts-net-deep, same net both sides.
         // The round-46 control: the pre-adoption baseline, kept so the
         // gate that adopted target arms stays reproducible.
+        // The search-side control for the blocking rebase.
+        "mcts-net-preblocks" => Some(Pilot::Mcts(MctsConfig {
+            iterations: 64,
+            horizon_turns: 3,
+            weights: EvalWeights {
+                determinize: 1,
+                target_arms: true,
+                ..EvalWeights::net_eval_preblocks()
+            },
+            ..MctsConfig::default()
+        })),
         "mcts-net-noarms" => Some(Pilot::Mcts(MctsConfig {
             iterations: 64,
             horizon_turns: 3,
