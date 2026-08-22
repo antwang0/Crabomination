@@ -124,19 +124,7 @@ impl GameState {
         // engine pays wards from a (typically empty) floating pool. Prefer
         // un-warded candidates; warded ones stay as a fallback so effects
         // never fizzle outright.
-        let hostile_ward = |cid: CardId| -> bool {
-            use crate::card::Keyword;
-            let Some(c) = self.battlefield.iter().find(|c| c.id == cid) else { return false };
-            if c.controller == controller {
-                return false;
-            }
-            self.computed_permanent(cid)
-                .map(|cp| cp.keywords.to_vec())
-                .unwrap_or_else(|| c.definition.keywords.clone())
-                .iter()
-                .any(|k| matches!(k, Keyword::Ward(w)
-                    if !crate::game::actions::ward_cost_is_trivial(w)))
-        };
+        let hostile_ward = |cid: CardId| -> bool { self.has_hostile_ward(cid, controller) };
 
         // CR 601.2c — Flagbearer: an opponent's Flagbearer must be chosen when
         // the slot can take it, so it outranks every other candidate here.
@@ -497,6 +485,24 @@ impl GameState {
     ///
     /// Used by the bot harness to drive multi-target casts without
     /// surfacing a UI prompt.
+    /// CR 702.21 — does `cid` belong to someone other than `actor` and
+    /// carry a non-trivial Ward? Targeting it gets the spell countered
+    /// unless the tax is paid, so both auto-target walks rank warded
+    /// hostile permanents below un-warded ones.
+    pub(crate) fn has_hostile_ward(&self, cid: CardId, actor: usize) -> bool {
+        use crate::card::Keyword;
+        let Some(c) = self.battlefield.iter().find(|c| c.id == cid) else { return false };
+        if c.controller == actor {
+            return false;
+        }
+        self.computed_permanent(cid)
+            .map(|cp| cp.keywords.to_vec())
+            .unwrap_or_else(|| c.definition.keywords.clone())
+            .iter()
+            .any(|k| matches!(k, Keyword::Ward(w)
+                if !crate::game::actions::ward_cost_is_trivial(w)))
+    }
+
     pub fn auto_targets_for_effect_all_slots(
         &self,
         eff: &Effect,
@@ -586,9 +592,22 @@ impl GameState {
                         .map(|c| Target::Permanent(c.id))
                         .find(|t| is_legal(t));
                 }
-                // Battlefield: walk all permanents, prefer one not already
-                // picked by slot 0 or earlier slots to avoid double-targeting
-                // when the filter is permissive.
+                // Battlefield: prefer one not already picked by slot 0 or
+                // earlier slots to avoid double-targeting when the filter is
+                // permissive.
+                //
+                // Candidates are ranked by *side* first, which this filtered
+                // path did not do until 2026-08-22: it took the first legal
+                // permanent in battlefield order, so a bare "destroy target
+                // creature" aimed at the caster's own creature whenever that
+                // creature happened to sit earlier on the board, and
+                // Proctor's Gaze bounced the bot's own body in four recorded
+                // games. The unfiltered picker
+                // (`auto_target_for_effect_avoiding_set_xc`) already ranked
+                // by side and ward; only this branch was blind. Friendly
+                // effects overwhelmingly carry a "you control" clause in the
+                // filter itself, so `is_legal` — not this ordering — is what
+                // keeps a gift on the caster's side.
                 if found.is_none() {
                     let already_picked: Vec<CardId> = std::iter::once(slot_0.clone())
                         .chain(additional.iter().cloned().map(Some))
@@ -597,24 +616,46 @@ impl GameState {
                             _ => None,
                         })
                         .collect();
-                    if let Some(c) = self
+                    let prefer_friendly = eff.prefers_friendly_target();
+                    // 0 = wanted side, un-warded; 1 = wanted side, warded;
+                    // 2 = the other side (a last resort, see `optional`).
+                    let rank = |id: CardId, ctrl: usize| -> u8 {
+                        let wanted = (ctrl == controller) == prefer_friendly;
+                        match (wanted, self.has_hostile_ward(id, controller)) {
+                            (true, false) => 0,
+                            (true, true) => 1,
+                            (false, _) => 2,
+                        }
+                    };
+                    // CR: a *mandatory* target must be chosen when any legal
+                    // one exists, even a self-damaging pick. An "up to N"
+                    // slot (`min_targets: 0`) may simply be declined — which
+                    // is what makes Proctor's Gaze fetch its land and bounce
+                    // nothing when the opponent has no nonland permanent.
+                    let optional =
+                        slot >= eff.min_targets_in_mode(mode).unwrap_or(u8::MAX);
+                    let best = self
                         .battlefield
                         .iter()
                         .filter(|c| !already_picked.contains(&c.id))
-                        .map(|c| Target::Permanent(c.id))
-                        .find(|t| is_legal(t))
-                    {
-                        found = Some(c);
-                    } else if let Some(c) = self
-                        .battlefield
-                        .iter()
-                        .map(|c| Target::Permanent(c.id))
-                        .find(|t| is_legal(t))
-                    {
-                        // Fall back to allowing reuse if nothing else
-                        // matches — better to have a target than skip
-                        // when the spell semantics allow it.
-                        found = Some(c);
+                        .filter(|c| is_legal(&Target::Permanent(c.id)))
+                        .map(|c| (rank(c.id, c.controller), c.id))
+                        .min_by_key(|&(r, _)| r);
+                    match best {
+                        // Never spend an optional slot on the wrong side.
+                        Some((2, _)) if optional => {}
+                        Some((_, id)) => found = Some(Target::Permanent(id)),
+                        None if optional => {}
+                        None => {
+                            // Mandatory slot: allow reuse of an
+                            // already-picked permanent rather than leave a
+                            // required target unfilled.
+                            found = self
+                                .battlefield
+                                .iter()
+                                .map(|c| Target::Permanent(c.id))
+                                .find(|t| is_legal(t));
+                        }
                     }
                 }
                 // Graveyard cards (e.g. an `InGraveyard` reflexive return —

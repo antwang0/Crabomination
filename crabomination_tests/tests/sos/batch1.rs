@@ -2144,3 +2144,31 @@ fn quandrix_charm_castable_hint_probes_every_mode() {
     let cp = g.computed_permanent(fractal).unwrap();
     assert_eq!((cp.power, cp.toughness), (5, 5), "base 5/5 until end of turn");
 }
+
+/// Proctor's Gaze — "return **up to one** target nonland permanent to its
+/// owner's hand, then search for a basic land" — must fetch the land and
+/// bounce *nothing* when the opponent controls no nonland permanent.
+///
+/// Regression, 2026-08-22, from four recorded games: the bot cast Gaze for
+/// the ramp and the slot walk, which had no side preference, handed the
+/// optional bounce slot the bot's own creature. Board reconstructed from
+/// `replay-1787255919-2` (Deluge Virtuoso): the opponent controlled five
+/// lands and nothing else.
+#[test]
+fn proctors_gaze_declines_the_bounce_rather_than_returning_our_own_body() {
+    let mut g = two_player_game();
+    let own = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    for l in [catalog::mountain(), catalog::forest(), catalog::forest()] {
+        g.add_card_to_battlefield(1, l);
+    }
+    let gaze = catalog::proctors_gaze();
+    let (slot0, extra) = g.auto_targets_for_effect_all_slots(&gaze.effect, 0, None);
+    assert_eq!(slot0, None, "the optional bounce is declined, not aimed at {own:?}");
+    assert!(extra.is_empty());
+
+    // And with an enemy body available it is aimed there, so declining is
+    // about the *side*, not about never bouncing at all.
+    let opp = g.add_card_to_battlefield(1, catalog::hill_giant());
+    let (slot0, _) = g.auto_targets_for_effect_all_slots(&gaze.effect, 0, None);
+    assert_eq!(slot0, Some(Target::Permanent(opp)), "bounces the opponent's creature");
+}

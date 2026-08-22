@@ -181,7 +181,15 @@ const DIGESTS: &[(u64, Option<usize>, u32, usize, u64)] = &[
     // digest differs, which is what a single changed block looks like.
     (2, Some(1), 16, 384, 0x5afa_f7ec_cd95_0dcd),
     (3, Some(0), 19, 439, 0x082b_ac63_0f2d_3f42),
-    (4, Some(0), 13, 330, 0x3947_01c0_e7bc_f137),
+    // Re-blessed 2026-08-22 for the slot-walk targeting fix: the filtered
+    // auto-target path used to take the first legal permanent in
+    // battlefield order, so Swords to Plowshares ("target creature", an
+    // unrestricted filter) picked by board position rather than by side.
+    // Seat 1 now aims it at seat 0 deterministically instead of by luck of
+    // ordering, and seed 4's game ends in two fewer actions (330 -> 328).
+    // Same winner, same turn count; seeds 1, 2, 3 and 5 are untouched,
+    // which is what a targeting fix rather than a rules change looks like.
+    (4, Some(0), 13, 328, 0xaf13_8770_d502_03cc),
     (5, Some(0), 9, 223, 0x97c2_acfd_3251_1e21),
 ];
 

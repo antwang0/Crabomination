@@ -4737,6 +4737,90 @@ fn auto_target_deprioritizes_warded_permanents() {
     assert_eq!(target, crabomination::game::Target::Permanent(warded2), "warded fallback still legal");
 }
 
+/// The *slot* walk — `auto_targets_for_effect_all_slots`, which is what the
+/// bot's cast path actually calls — must rank candidates by side exactly as
+/// the single-target picker above does.
+///
+/// Regression, 2026-08-22. Every test above this one exercises
+/// `auto_target_for_effect`, the picker used only when slot 0 carries *no*
+/// filter. Filtered slots (most removal, and every `ApplyToTargets`) went
+/// down a second walk that took the first legal permanent in battlefield
+/// order with no side or ward preference at all. Recorded games: the bot
+/// aimed removal at its own creature and so never cast it, and Proctor's
+/// Gaze bounced the bot's own body in four games.
+#[test]
+fn all_slots_walk_prefers_the_opponent_for_a_hostile_effect() {
+    let mut g = two_player_game();
+    // The caster's creature is added FIRST, so battlefield order alone
+    // would pick it.
+    let own = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let opp = g.add_card_to_battlefield(1, catalog::hill_giant());
+    let doom = catalog::doom_blade();
+    let (slot0, extra) = g.auto_targets_for_effect_all_slots(&doom.effect, 0, None);
+    assert_eq!(
+        slot0,
+        Some(Target::Permanent(opp)),
+        "the slot walk aimed removal at the caster's own creature ({own:?})"
+    );
+    assert!(extra.is_empty(), "single-slot effect fills no extra slots");
+}
+
+/// CR 702.21 on the slot walk: a warded hostile candidate ranks below an
+/// un-warded one, and is still chosen when it is all that is legal.
+#[test]
+fn all_slots_walk_deprioritizes_warded_permanents() {
+    let mut g = two_player_game();
+    let _warded = g.add_card_to_battlefield(1, catalog::patchwork_automaton()); // ward {2}
+    let plain = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let doom = catalog::doom_blade();
+    let (slot0, _) = g.auto_targets_for_effect_all_slots(&doom.effect, 0, None);
+    assert_eq!(slot0, Some(Target::Permanent(plain)), "prefers the un-warded body");
+
+    let mut g = two_player_game();
+    let only_warded = g.add_card_to_battlefield(1, catalog::patchwork_automaton());
+    let doom = catalog::doom_blade();
+    let (slot0, _) = g.auto_targets_for_effect_all_slots(&doom.effect, 0, None);
+    assert_eq!(
+        slot0,
+        Some(Target::Permanent(only_warded)),
+        "a mandatory slot still takes the warded target rather than fizzling"
+    );
+}
+
+/// An "up to N target" slot (`ApplyToTargets { min_targets: 0 }`) is
+/// declined when the only legal candidate sits on the caster's own side —
+/// the caster is never forced to spend an optional bounce on itself.
+/// A `min_targets: 1` slot, by contrast, must still be filled (CR 601.2c:
+/// a required target is chosen even when every legal choice is bad).
+#[test]
+fn an_optional_slot_declines_rather_than_targeting_our_own_side() {
+    use crabomination::card::SelectionRequirement;
+    use crabomination::effect::ZoneDest;
+    let bounce = |min_targets: u8| Effect::ApplyToTargets {
+        max_targets: 1,
+        min_targets,
+        filter: SelectionRequirement::Permanent.and(SelectionRequirement::Nonland),
+        effect: Box::new(Effect::Move {
+            what: Selector::Target(0),
+            to: ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(Selector::Target(0)))),
+        }),
+    };
+    let mut g = two_player_game();
+    let own = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    // The opponent controls a land only: no legal *nonland* candidate.
+    g.add_card_to_battlefield(1, catalog::island());
+
+    let (optional, _) = g.auto_targets_for_effect_all_slots(&bounce(0), 0, None);
+    assert_eq!(optional, None, "an up-to-one bounce declines instead of self-targeting");
+
+    let (mandatory, _) = g.auto_targets_for_effect_all_slots(&bounce(1), 0, None);
+    assert_eq!(
+        mandatory,
+        Some(Target::Permanent(own)),
+        "a required slot is still filled, even by our own permanent"
+    );
+}
+
 /// Mirror of the hostile-effect auto-target test: friendly buffs should
 /// pick the *caster's* permanent, not the opponent's. Without this, the
 /// random bot would happily pump the opp's bear with Vines of Vastwood.

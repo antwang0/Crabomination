@@ -2015,6 +2015,14 @@ impl Effect {
                 keywords.iter().any(Self::keyword_is_friendly)
             }
             Effect::AddCounter { kind, .. } => matches!(kind, CounterType::PlusOnePlusOne),
+            // "Support N" only ever wants the caster's own creatures, and
+            // a distributed +1/+1 spread (Jugan) likewise. Without these
+            // the slot walk ranks the caster's own side last and an
+            // optional support slot is declined outright.
+            Effect::SupportCounters { .. } => true,
+            Effect::DistributeCounters { counter, .. } => {
+                matches!(counter, CounterType::PlusOnePlusOne)
+            }
             // Only the sub-effects that actually surface a target slot get a
             // say: a non-targeting friendly prelude (Ordeal of Purphoros's
             // "+1/+1 counter on it") must not aim the hostile payload ("3
