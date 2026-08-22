@@ -261,6 +261,10 @@ fn parse_profile(name: &str) -> Option<Pilot> {
         // Activated-ability candidates (the recorded games' unused
         // Sundering Archaic exile). Gate as A against `gang`.
         "abilarms" => Some(Pilot::Scored(EvalWeights::ability_arms_on())),
+        // Round 46: impulse-draw activations (Ark of Hunger's mill-and-play).
+        // A whole ability class the generators never enumerated; gate as A
+        // against the `gang` control.
+        "impulse" => Some(Pilot::Scored(EvalWeights::impulse_draw_on())),
         "det1" => Some(Pilot::Scored(EvalWeights::determinized())),
         "det3" => Some(Pilot::Scored(EvalWeights::determinized3())),
         "net" => Some(Pilot::Scored(EvalWeights::net_eval())),

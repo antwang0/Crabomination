@@ -393,6 +393,15 @@ pub struct EvalWeights {
     /// Off by default until laddered
     /// ([`ability_arms_on`](Self::ability_arms_on), profile `abilarms`).
     pub ability_arms: bool,
+    /// Activate "impulse draw" abilities — mill or exile off the top and
+    /// gain permission to play the card (`Effect::GrantMayPlay`). The
+    /// ability generators are a whitelist of effect *shapes* and this one
+    /// was on none of them, so Ark of Hunger sat unused for five turns of
+    /// a recorded game while the bot topdecked with an empty hand. Only
+    /// fires with a short hand and mana to spare, so it cannot mill the
+    /// bot out for nothing. Off by default until laddered
+    /// ([`impulse_draw_on`](Self::impulse_draw_on), profile `impulse`).
+    pub impulse_draw: bool,
     /// Reserve an MCTS root arm for a prepared-creature cast: the menu
     /// caps at six arms by heuristic score, and the banked inset spell
     /// is a rare, high-value class the cap can crowd out (two prepared
@@ -462,6 +471,7 @@ impl EvalWeights {
             chump_blocks: false,
             walker_chip: false,
             ability_arms: false,
+            impulse_draw: false,
             prepare_arm: false,
             net_quantize: 0,
         }
@@ -530,6 +540,7 @@ impl EvalWeights {
             chump_blocks: false,
             walker_chip: false,
             ability_arms: false,
+            impulse_draw: false,
             prepare_arm: false,
             net_quantize: 0,
         }
@@ -581,6 +592,7 @@ impl EvalWeights {
             chump_blocks: false,
             walker_chip: false,
             ability_arms: false,
+            impulse_draw: false,
             prepare_arm: false,
             net_quantize: 0,
         }
@@ -1002,6 +1014,12 @@ impl EvalWeights {
     /// default.
     pub const fn ability_arms_on() -> Self {
         Self { ability_arms: true, ..Self::block_gang_search() }
+    }
+
+    /// [`impulse_draw`](Self::impulse_draw); ladder as A against the
+    /// `gang` control (profile `impulse`).
+    pub const fn impulse_draw_on() -> Self {
+        Self { impulse_draw: true, ..Self::block_gang_search() }
     }
 
     /// The default, averaging three redeals per candidate. Three times
@@ -5240,6 +5258,15 @@ fn main_phase_action_with(
         return action;
     }
 
+    // Same slot, the other route to a card: impulse-draw engines that mill
+    // or exile off the top and grant permission to play it (Ark of Hunger).
+    // Flag-gated until laddered.
+    if w.impulse_draw
+        && let Some(action) = pick_impulse_draw_ability(state, seat)
+    {
+        return action;
+    }
+
     // Re-arm an unprepared prepare-spell creature via an off-card "target
     // creature becomes prepared" ability (SOS: Skycoach Waypoint). The
     // counter is worth about the inset spell — see the `permanent_value`
@@ -5648,6 +5675,65 @@ fn pick_card_draw_ability(state: &GameState, seat: usize) -> Option<GameAction> 
                 target: None,
                 additional_targets: Vec::new(),
                 x_value: None, mode: None,
+            };
+            if state.would_accept(action.clone()) {
+                return Some(action);
+            }
+        }
+    }
+    None
+}
+
+/// Activate an "impulse draw" ability: one that puts a card where the bot can
+/// then play it (`GrantMayPlay` / `ExileTopAndGrantMayPlay`), typically after
+/// milling or exiling off the top. Ark of Hunger's `{T}: mill 1, you may play
+/// that card this turn` is the shape.
+///
+/// This class was invisible to the bot. [`pick_card_draw_ability`] matches a
+/// literal `Effect::Draw` and every other generator matches its own narrow
+/// shape, so an ability that manufactures card advantage by any other route
+/// was never a candidate at any valuation. Recorded game: Ark of Hunger cast
+/// on turn 19, never activated across five turns while the bot topdecked with
+/// an empty hand, then exiled.
+///
+/// Gated on having a *use* for the card — a short hand plus untapped mana —
+/// because the mill is a real cost: firing this every turn with no mana to
+/// cast what it finds just self-mills. Dry-run-gated like every other
+/// generator, so tap/mana/timing legality bottoms out in `would_accept`.
+fn pick_impulse_draw_ability(state: &GameState, seat: usize) -> Option<GameAction> {
+    if state.players[seat].hand.len() > 2 {
+        return None;
+    }
+    // Something to cast the flipped card with. Not a guarantee (the card
+    // may cost more), just a filter against milling for nothing.
+    if available_mana(state, seat).total == 0 {
+        return None;
+    }
+    fn grants_play(eff: &Effect) -> bool {
+        match eff {
+            Effect::GrantMayPlay { .. } | Effect::ExileTopAndGrantMayPlay { .. } => true,
+            Effect::Seq(v) => v.iter().any(grants_play),
+            Effect::ChooseMode(m) | Effect::ChooseN { modes: m, .. } => m.iter().any(grants_play),
+            Effect::MayDo { body, .. } | Effect::MayDoBy { body, .. } => grants_play(body),
+            _ => false,
+        }
+    }
+    let scan = state.grant_scan();
+    for card in state.battlefield.iter().filter(|c| c.controller == seat) {
+        for (idx, ab) in usable_abilities(state, card, &scan) {
+            if ab.sac_cost || ab.exile_self_cost {
+                continue; // the engine is worth more than one card
+            }
+            if !grants_play(&ab.effect) {
+                continue;
+            }
+            let action = GameAction::ActivateAbility {
+                card_id: card.id,
+                ability_index: idx,
+                target: None,
+                additional_targets: Vec::new(),
+                x_value: None,
+                mode: None,
             };
             if state.would_accept(action.clone()) {
                 return Some(action);
@@ -14313,6 +14399,37 @@ mod stack_response_tests {
     /// Ability arms (flag): Sundering Archaic's {2} graveyard-exile was
     /// unreachable at any valuation because nothing enumerated it. With
     /// the flag, the activation joins the candidate list with an
+
+    /// Ark of Hunger's `{T}: mill 1, you may play that card` — the impulse
+    /// draw shape. Recorded game: cast turn 19, never activated across five
+    /// turns while the bot topdecked with an empty hand, then exiled. The
+    /// ability generators are a whitelist of effect shapes and this one was
+    /// on none of them, so no valuation could have chosen it.
+    #[test]
+    fn impulse_draw_activates_the_ark() {
+        let mut g = two_player_game();
+        let ark = g.add_card_to_battlefield(0, crate::catalog::ark_of_hunger());
+        g.add_card_to_battlefield(0, crate::catalog::mountain());
+        for c in g.battlefield.iter_mut() {
+            c.summoning_sick = false;
+        }
+        g.step = TurnStep::PreCombatMain;
+        g.active_player_idx = 0;
+        g.priority.player_with_priority = 0;
+        // Empty hand: exactly the spot the replay was in.
+        assert!(g.players[0].hand.is_empty());
+
+        let fires = |w: &EvalWeights| {
+            let mut bot = HeuristicBot::with_weights(*w);
+            matches!(
+                bot.next_action(&g, 0),
+                Some(GameAction::ActivateAbility { card_id, .. }) if card_id == ark
+            )
+        };
+        assert!(!fires(&EvalWeights::block_gang_search()), "flag off: unchanged");
+        assert!(fires(&EvalWeights::impulse_draw_on()), "flag on: the Ark is activated");
+    }
+
     /// auto-aimed target.
     #[test]
     fn ability_arms_enumerate_the_archaic_activation() {
