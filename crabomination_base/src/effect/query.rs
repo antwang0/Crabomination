@@ -1985,6 +1985,52 @@ impl Effect {
         }
     }
 
+    /// Whose side slot `slot` wants — the per-slot answer to
+    /// [`prefers_friendly_target`](Self::prefers_friendly_target).
+    ///
+    /// A single boolean per *effect* cannot describe a spell whose slots
+    /// disagree. Homesickness is `Seq[ "target player draws two",
+    /// "tap target creature", "put a stun counter on it" ]`: slot 0 is a
+    /// gift and slots 1-2 are removal-adjacent. The whole-effect
+    /// classifier combines children with `any`, so the friendly Draw made
+    /// the entire spell read as friendly and the auto-target walk stunned
+    /// the caster's own board (observed 2026-08-22, `replay-1787357896-1`
+    /// turn 16: both stun counters on the bot's own creatures).
+    ///
+    /// The child that actually *declares* the slot decides its polarity;
+    /// `target_filter_for_slot_in_mode_kicked` already knows how to find
+    /// that child, so this reuses it rather than duplicating the walk.
+    /// When no single child owns the slot — a bare `Target(0)` payload
+    /// with no surfaced filter — the whole-effect answer stands.
+    pub fn prefers_friendly_target_for_slot(&self, slot: u8, mode: Option<usize>) -> bool {
+        fn owner_of<'a>(eff: &'a Effect, slot: u8, mode: Option<usize>) -> Option<&'a Effect> {
+            match eff {
+                Effect::Seq(v) => v.iter().find_map(|c| owner_of(c, slot, None)),
+                Effect::ChooseMode(modes) | Effect::ChooseN { modes, .. } => match mode {
+                    Some(m) => modes.get(m).and_then(|e| owner_of(e, slot, None)),
+                    None => modes.iter().find_map(|e| owner_of(e, slot, None)),
+                },
+                Effect::If { then, else_, .. } => {
+                    owner_of(then, slot, mode).or_else(|| owner_of(else_, slot, mode))
+                }
+                Effect::MayDo { body, .. }
+                | Effect::MayDoBy { body, .. }
+                | Effect::CapTargetsAtX { body }
+                | Effect::TargetsExactlyX { body }
+                | Effect::CapTargetsAt { body, .. }
+                | Effect::MayPayX { body, .. }
+                | Effect::Repeat { body, .. } => owner_of(body, slot, mode),
+                other => other
+                    .target_filter_for_slot_in_mode_kicked(slot, None, false)
+                    .is_some()
+                    .then_some(other),
+            }
+        }
+        owner_of(self, slot, mode)
+            .map(|e| e.prefers_friendly_target())
+            .unwrap_or_else(|| self.prefers_friendly_target())
+    }
+
     pub fn prefers_friendly_target(&self) -> bool {
         match self {
             Effect::PumpPT {

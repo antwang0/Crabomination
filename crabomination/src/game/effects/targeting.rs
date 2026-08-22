@@ -616,7 +616,12 @@ impl GameState {
                             _ => None,
                         })
                         .collect();
-                    let prefer_friendly = eff.prefers_friendly_target();
+                    // Per *slot*, not per effect: Homesickness is
+                    // "target player draws two" + "tap and stun target
+                    // creature", and the whole-effect classifier reads the
+                    // gift and calls the whole spell friendly, which had the
+                    // bot stunning its own board.
+                    let prefer_friendly = eff.prefers_friendly_target_for_slot(slot, mode);
                     // 0 = wanted side, un-warded; 1 = wanted side, warded;
                     // 2 = the other side (a last resort, see `optional`).
                     let rank = |id: CardId, ctrl: usize| -> u8 {

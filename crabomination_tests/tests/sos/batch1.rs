@@ -2172,3 +2172,32 @@ fn proctors_gaze_declines_the_bounce_rather_than_returning_our_own_body() {
     let (slot0, _) = g.auto_targets_for_effect_all_slots(&gaze.effect, 0, None);
     assert_eq!(slot0, Some(Target::Permanent(opp)), "bounces the opponent's creature");
 }
+
+/// Homesickness — "target player draws two cards; tap up to two target
+/// creatures and put a stun counter on each" — must draw for *us* and stun
+/// *them*. The slots disagree about whose side they want, which is the
+/// point of the test.
+///
+/// Regression, 2026-08-22, from `replay-1787357896-1` turn 16: the bot cast
+/// this and put both stun counters on its own Campus Composer and Fractal
+/// Tender. `prefers_friendly_target` answered per *effect* and combined
+/// children with `any`, so the friendly "target player draws two" made the
+/// whole spell read friendly and the walk preferred the caster's own
+/// creatures for the stun slots.
+#[test]
+fn homesickness_draws_for_us_and_stuns_them() {
+    let mut g = two_player_game();
+    let own = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let a = g.add_card_to_battlefield(1, catalog::hill_giant());
+    let b = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let hs = catalog::homesickness();
+    let (slot0, extra) = g.auto_targets_for_effect_all_slots(&hs.effect, 0, None);
+    assert_eq!(slot0, Some(Target::Player(0)), "slot 0 is a gift: we draw");
+    assert!(
+        !extra.contains(&Target::Permanent(own)),
+        "slots 1-2 are hostile: our own {own:?} must not be stunned, got {extra:?}"
+    );
+    for t in [a, b] {
+        assert!(extra.contains(&Target::Permanent(t)), "stuns the opponent's {t:?}");
+    }
+}
