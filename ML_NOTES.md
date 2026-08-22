@@ -7,6 +7,52 @@ only stays dead while the reasoning that killed it is readable.
 
 ## Tier 13 — AI
 
+- 🟢 **Round 47 (2026-08-22) — the net profiles were missing both
+  adopted blocking layers, and it was worth +3.2 pilot-side / +2.5 in
+  the search. Every net-vs-heuristic level from round 26 to 46 is
+  understated.** `net_eval` branched off `attack_search_sim`, which
+  predates both blocking adoptions, so the ladder's `net`, the champion
+  `mcts-net-deep` and the client's `local_bot` all piloted with
+  `block_gang=false`, `block_search=0`, `chump_blocks=false`. Value
+  gang-blocks was adopted at 51.3 % over 28 800 games and desperation
+  chump blocks at 51.0/50.8 over 24 000; neither ever reached the code
+  the net plays with. Found by *printing the flags per profile* rather
+  than reading the constructor chain — the chain reads plausibly and is
+  wrong. Pre-registered in `.ladder/run_r47_netblocks.sh`.
+
+  | part | cells | pooled |
+  |---|---|---|
+  | A `net` vs `net-preblocks` (pilot) | 53.7 / 52.7 | **53.20** |
+  | B `mcts-net-deep` vs `mcts-net-preblocks` (search) | 53.0 / 51.9 | **52.45** |
+
+  **Both far above the pre-registered +1 to +2**, and larger than the
+  two layers measured separately on the heuristic (+1.3 and +0.9).
+  Working hypothesis, not established here: the net evaluator judges
+  post-block boards better than the hand-written evaluator the layers
+  were fitted against, so they are worth more to it than to the profile
+  that adopted them. The search gains less than the pilot (+2.45 vs
+  +3.2), which is the pre-registered direction — rollouts already play
+  some of these blocks out — though it was NOT visible on seed 43 alone
+  (53.0, level with the pilot) and only appears pooled. A one-cell read
+  of this round would have got its own headline finding backwards.
+
+  **The consequence for the program's history is the larger result.**
+  Every `net` vs `gang` / `net` vs `atk-sim` gate from round 26 through
+  46 differed in *two* ways rather than one — evaluator AND blocking —
+  with the net side handicapped by ~2.5–3.2 points. Rankings *within*
+  each round are unaffected, because both arms of every net-vs-net cell
+  shared the deficit, which is exactly why nothing ever looked wrong.
+  What is wrong is the *levels*: the champion's ~52.7 / ~51.2 band, the
+  replacement-vs-blend spread, v7's +0.4 and r45's capacity null were
+  all measured on a handicapped net. Nothing needs re-deciding — every
+  adoption compared like with like — but no net-vs-heuristic number
+  from that era should be quoted as the net's standing strength.
+
+  **Method note worth keeping.** This was invisible for twenty rounds
+  because the constructor chain is readable and wrong: `net_eval` looks
+  like it derives from the adopted profile and does not. Print the
+  resolved flags of a profile before trusting what it inherits.
+
 - 🟢 **Round 46 (2026-08-22) — target arms replicate at +0.95 and are
   adopted; the abilarms rehabilitation hypothesis is refuted on its own
   pre-registered terms.** Pre-registered in
