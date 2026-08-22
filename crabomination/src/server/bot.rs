@@ -402,6 +402,23 @@ pub struct EvalWeights {
     /// bot out for nothing. Off by default until laddered
     /// ([`impulse_draw_on`](Self::impulse_draw_on), profile `impulse`).
     pub impulse_draw: bool,
+    /// Offer the search *alternative targetings* of the same spell, not
+    /// just the one the auto-targeter picked.
+    ///
+    /// Every cast candidate bakes in a single assignment from
+    /// `auto_targets_for_effect_all_slots`, so the search can only accept
+    /// or reject that package — the correct targeting of a spell it is
+    /// already considering is not on the menu at any valuation. That is
+    /// the same structural hole the chump-block menu had (round 43,
+    /// +0.9): not a valuation failure, a missing candidate. Recorded
+    /// games reached it twice (Proctor's Gaze bouncing our own body,
+    /// Homesickness stunning our own board); both were patched in the
+    /// heuristic classifier, but mixed-polarity cards are unbounded and
+    /// the classifier will keep having gaps the search could judge for
+    /// itself. Off by default until laddered
+    /// ([`target_arms_on`](Self::target_arms_on), profile
+    /// `mcts-net-targetarms`).
+    pub target_arms: bool,
     /// Reserve an MCTS root arm for a prepared-creature cast: the menu
     /// caps at six arms by heuristic score, and the banked inset spell
     /// is a rare, high-value class the cap can crowd out (two prepared
@@ -472,6 +489,7 @@ impl EvalWeights {
             walker_chip: false,
             ability_arms: false,
             impulse_draw: false,
+            target_arms: false,
             prepare_arm: false,
             net_quantize: 0,
         }
@@ -541,6 +559,7 @@ impl EvalWeights {
             walker_chip: false,
             ability_arms: false,
             impulse_draw: false,
+            target_arms: false,
             prepare_arm: false,
             net_quantize: 0,
         }
@@ -593,6 +612,7 @@ impl EvalWeights {
             walker_chip: false,
             ability_arms: false,
             impulse_draw: false,
+            target_arms: false,
             prepare_arm: false,
             net_quantize: 0,
         }
@@ -1020,6 +1040,13 @@ impl EvalWeights {
     /// `gang` control (profile `impulse`).
     pub const fn impulse_draw_on() -> Self {
         Self { impulse_draw: true, ..Self::block_gang_search() }
+    }
+
+    /// [`target_arms`](Self::target_arms). Search-only, so it is gated as
+    /// an MCTS profile (`mcts-net-targetarms` vs `mcts-net-deep`) rather
+    /// than against a scored control.
+    pub const fn target_arms_on() -> Self {
+        Self { target_arms: true, ..Self::net_eval_det1() }
     }
 
     /// The default, averaging three redeals per candidate. Three times
@@ -10403,6 +10430,75 @@ fn score_candidate(state: &GameState, seat: usize, action: &GameAction, w: &Eval
 // ladder difference is the *search*, not a second opinion about what is
 // castable or what a board is worth.
 
+/// Alternative primary targets for an already-built cast arm — the
+/// `target_arms` menu (see [`EvalWeights::target_arms`]).
+///
+/// The candidate generators call `auto_targets_for_effect_all_slots` once
+/// and bake its answer into the action, so the search's menu contains one
+/// targeting per spell. When the auto-targeter is wrong the correct play
+/// is not a low-scoring arm the search rejects — it is absent, and no
+/// valuation can reach it. This re-enumerates slot 0's legal candidates
+/// and returns up to `max` variants of the same cast.
+///
+/// Ordering is the point, not completeness: the *opposite side* from
+/// whatever was chosen comes first, because that is the failure both
+/// recorded games had (our own permanent picked for a hostile spell).
+/// Beyond that, higher-value permanents first, so a two-arm budget spends
+/// itself on the pick most likely to matter. Only slot 0 is varied —
+/// additional slots are the polarity classifier's job
+/// (`prefers_friendly_target_for_slot`) and varying them combinatorially
+/// would blow the arm budget the search is trying to protect.
+fn target_arm_variants(
+    state: &GameState,
+    seat: usize,
+    action: &GameAction,
+    max: usize,
+) -> Vec<GameAction> {
+    let GameAction::CastSpell { card_id, target: Some(Target::Permanent(chosen)), mode, .. } =
+        action
+    else {
+        return Vec::new();
+    };
+    let Some(card) = state.players[seat].hand.iter().find(|c| c.id == *card_id) else {
+        return Vec::new();
+    };
+    let eff = &card.definition.effect;
+    let Some(req) = eff.target_filter_for_slot_in_mode_kicked(0, *mode, false) else {
+        return Vec::new();
+    };
+    let chosen_side = state.battlefield_find(*chosen).map(|c| c.controller);
+    let mut alts: Vec<(u8, i32, CardId)> = state
+        .battlefield
+        .iter()
+        .filter(|c| c.id != *chosen)
+        .filter(|c| {
+            let t = Target::Permanent(c.id);
+            state.evaluate_requirement_static(req, &t, seat, None)
+                && state.check_target_legality(&t, seat).is_ok()
+        })
+        .map(|c| {
+            // Rank 0 = the other side from the baked-in pick.
+            let side = u8::from(Some(c.controller) == chosen_side);
+            let value = state
+                .computed_permanent(c.id)
+                .map(|cp| cp.power + cp.toughness)
+                .unwrap_or(c.definition.power + c.definition.toughness);
+            (side, -value, c.id)
+        })
+        .collect();
+    alts.sort();
+    alts.truncate(max);
+    alts.into_iter()
+        .map(|(_, _, id)| {
+            let mut v = action.clone();
+            if let GameAction::CastSpell { target, .. } = &mut v {
+                *target = Some(Target::Permanent(id));
+            }
+            v
+        })
+        .collect()
+}
+
 /// The main-phase plays worth searching from `state`, validated, each
 /// with its heuristic score (in `w.unit`s). The scores were always
 /// computed here to rank the arm cap; returning them lets the search
@@ -10456,6 +10552,32 @@ pub(crate) fn main_phase_candidates_for_mcts(
         }
         out.push((a, sc));
     }
+    // Alternative targetings of the best targeted cast (flag). Two extra
+    // arms at most, and only for the single highest-scoring targeted
+    // cast: the arm budget is the search's scarcest resource (round 42 —
+    // iterations are the only lever that pays), so this buys menu
+    // coverage of the one decision most likely to be miscast rather than
+    // fanning every spell out over its target set. Scored a hair under
+    // the arm they vary, so a tie leaves the heuristic's pick in front
+    // and the sims have to earn the swap.
+    if w.target_arms
+        && let Some((base, base_score)) = out
+            .iter()
+            .find(|(a, _)| {
+                matches!(a, GameAction::CastSpell { target: Some(Target::Permanent(_)), .. })
+            })
+            .map(|(a, s)| (a.clone(), *s))
+    {
+        for v in target_arm_variants(state, seat, &base, 2) {
+            if out.len() >= MAX_ARMS + 2 {
+                break;
+            }
+            if GameState::would_accept_on(&probe, v.clone()) {
+                out.push((v, base_score - 1));
+            }
+        }
+    }
+
     // A land drop is a real option and is enumerated separately.
     // `score_candidate` has no opinion on lands; two units — a solid
     // default play, ahead of a marginal cast, behind a strong one.
@@ -14404,6 +14526,56 @@ mod stack_response_tests {
     /// draw shape. Recorded game: cast turn 19, never activated across five
     /// turns while the bot topdecked with an empty hand, then exiled. The
     /// ability generators are a whitelist of effect shapes and this one was
+
+    /// The `target_arms` menu: the search is offered the same spell aimed
+    /// somewhere else, so a mis-aimed auto-target is a *choice* it can
+    /// reject rather than the only option on the menu.
+    ///
+    /// Built as the recorded failures were shaped — a hostile spell whose
+    /// baked-in pick is the caster's own creature — and asserts the
+    /// opposite-side variant is present and ordered first among the
+    /// alternates.
+    #[test]
+    fn target_arms_offer_the_other_side() {
+        let mut g = two_player_game();
+        let own = g.add_card_to_battlefield(0, crate::catalog::grizzly_bears());
+        let theirs = g.add_card_to_battlefield(1, crate::catalog::hill_giant());
+        // A hostile cast whose primary target has been aimed at our own
+        // creature — the shape the auto-targeter used to produce.
+        let bolt = g.add_card_to_hand(0, crate::catalog::doom_blade());
+        let mis_aimed = GameAction::CastSpell {
+            card_id: bolt,
+            target: Some(Target::Permanent(own)),
+            additional_targets: Vec::new(),
+            mode: None,
+            x_value: None,
+        };
+        let variants = target_arm_variants(&g, 0, &mis_aimed, 2);
+        assert!(!variants.is_empty(), "an alternative targeting exists and must be offered");
+        assert!(
+            matches!(
+                &variants[0],
+                GameAction::CastSpell { target: Some(Target::Permanent(id)), .. } if *id == theirs
+            ),
+            "the opposite side is the first alternate, got {:?}",
+            variants[0]
+        );
+        // The flag is what puts them on the menu. Doom Blade is {1}{B}, so
+        // the cast has to be affordable before the menu can carry it.
+        for _ in 0..2 {
+            g.add_card_to_battlefield(0, crate::catalog::swamp());
+        }
+        g.step = TurnStep::PreCombatMain;
+        g.active_player_idx = 0;
+        g.priority.player_with_priority = 0;
+        let off = main_phase_candidates_for_mcts(&g, 0, &EvalWeights::net_eval_det1());
+        let on = main_phase_candidates_for_mcts(&g, 0, &EvalWeights::target_arms_on());
+        let casts = |v: &Vec<(GameAction, i32)>| {
+            v.iter().filter(|(a, _)| matches!(a, GameAction::CastSpell { .. })).count()
+        };
+        assert!(casts(&on) > casts(&off), "flag on widens the cast menu: {} vs {}", casts(&on), casts(&off));
+    }
+
     /// on none of them, so no valuation could have chosen it.
     #[test]
     fn impulse_draw_activates_the_ark() {

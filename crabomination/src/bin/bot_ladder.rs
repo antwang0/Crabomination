@@ -383,6 +383,18 @@ fn parse_profile(name: &str) -> Option<Pilot> {
         // its hypothesis. h1 resolves the stack and one exchange first
         // — that is the cell the round exists to measure, alone (A)
         // and at rollout-cost-matched iterations (B, `-h1-192`).
+        // Round 46: alternative targetings on the search menu. The
+        // candidate generators bake in one auto-targeted assignment per
+        // spell, so a mis-aimed cast is the only arm of its kind and the
+        // search cannot prefer the right target at any valuation — the
+        // structural shape that made chump blocks worth +0.9 in r43.
+        // Gate as A against mcts-net-deep, same net both sides.
+        "mcts-net-targetarms" => Some(Pilot::Mcts(MctsConfig {
+            iterations: 64,
+            horizon_turns: 3,
+            weights: EvalWeights::target_arms_on(),
+            ..MctsConfig::default()
+        })),
         "mcts-net-h0" => Some(Pilot::Mcts(MctsConfig {
             iterations: 64,
             horizon_turns: 0,

@@ -2003,7 +2003,7 @@ impl Effect {
     /// When no single child owns the slot — a bare `Target(0)` payload
     /// with no surfaced filter — the whole-effect answer stands.
     pub fn prefers_friendly_target_for_slot(&self, slot: u8, mode: Option<usize>) -> bool {
-        fn owner_of<'a>(eff: &'a Effect, slot: u8, mode: Option<usize>) -> Option<&'a Effect> {
+        fn owner_of(eff: &Effect, slot: u8, mode: Option<usize>) -> Option<&Effect> {
             match eff {
                 Effect::Seq(v) => v.iter().find_map(|c| owner_of(c, slot, None)),
                 Effect::ChooseMode(modes) | Effect::ChooseN { modes, .. } => match mode {
