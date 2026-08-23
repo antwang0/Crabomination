@@ -273,7 +273,8 @@ impl GameState {
             // utility creature with a 3/3 and a five-drop beside it. The
             // friendly branch above has always picked its best target;
             // only the hostile side was arbitrary.
-            primary_candidates.sort_by_key(|c| (hostile_ward(c.0), std::cmp::Reverse(c.1)));
+            primary_candidates
+                .sort_by_cached_key(|c| (hostile_ward(c.0), std::cmp::Reverse(c.1)));
         }
         if let Some(&(cid, _)) = primary_candidates.first() {
             return Some(Target::Permanent(cid));

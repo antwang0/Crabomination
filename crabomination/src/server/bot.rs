@@ -2364,7 +2364,7 @@ fn pick_defensive_removal(state: &GameState, seat: usize, w: &EvalWeights) -> Op
     if attackers.is_empty() {
         return None;
     }
-    attackers.sort_by_key(|id| std::cmp::Reverse(permanent_value(state, *id, w)));
+    attackers.sort_by_cached_key(|id| std::cmp::Reverse(permanent_value(state, *id, w)));
     // First-leaf removal shapes, the same convention the counter scan
     // uses: a dedicated kill spell, not a buried rider.
     fn removal_leaf(e: &Effect) -> Option<&Effect> {
@@ -7190,7 +7190,7 @@ fn pick_attacks_inner(state: &GameState, seat: usize) -> Vec<Attack> {
     if let Some(cap) = state.combat_participation_cap(false)
         && attackers.len() > cap as usize
     {
-        attackers.sort_by_key(|id| {
+        attackers.sort_by_cached_key(|id| {
             -state.computed_permanent(*id).map(|cp| cp.power).unwrap_or(0)
         });
         attackers.truncate(cap as usize);
@@ -7255,7 +7255,7 @@ fn pick_attacks_inner(state: &GameState, seat: usize) -> Vec<Attack> {
         // when possible. (Suicide-by-blocker is still
         // not modeled here.)
         let mut budget = loyalty as i32;
-        attackers.sort_by_key(|id| {
+        attackers.sort_by_cached_key(|id| {
             state
                 .battlefield
                 .iter()
@@ -7351,7 +7351,7 @@ pub(crate) fn attack_candidates_for_mcts(
     let mut candidates: Vec<Vec<Attack>> = vec![greedy.clone(), Vec::new()];
     if greedy.len() > 1 {
         let mut order: Vec<usize> = (0..greedy.len()).collect();
-        order.sort_by_key(|&i| {
+        order.sort_by_cached_key(|&i| {
             state.battlefield_find(greedy[i].attacker).map(|c| c.toughness()).unwrap_or(0)
         });
         for &i in order.iter().take(w.attack_search as usize) {
@@ -7671,7 +7671,7 @@ pub(crate) fn block_candidates_for_mcts(
     candidates.extend(chumps);
     if greedy.len() > 1 {
         let mut order: Vec<usize> = (0..greedy.len()).collect();
-        order.sort_by_key(|&i| {
+        order.sort_by_cached_key(|&i| {
             state.battlefield_find(greedy[i].0).map(|c| c.toughness()).unwrap_or(0)
         });
         for &i in order.iter().take(w.block_search as usize) {
@@ -7740,7 +7740,7 @@ fn chump_block_candidates(
         .filter(|c| c.controller == seat && bot_can_block(c) && !used.contains(&c.id))
         .map(|c| c.id)
         .collect();
-    idle.sort_by_key(|&id| permanent_value(state, id, w));
+    idle.sort_by_cached_key(|&id| permanent_value(state, id, w));
     let mut out = Vec::new();
     if let (Some(&blocker), Some(&(atk, _))) = (idle.first(), incoming.first()) {
         let mut cand = greedy.to_vec();
@@ -7792,7 +7792,7 @@ fn gang_block_candidates(
         .iter()
         .filter(|c| c.controller == seat && bot_can_block(c) && !used.contains(&c.id))
         .collect();
-    idle.sort_by_key(|c| permanent_value(state, c.id, w));
+    idle.sort_by_cached_key(|c| permanent_value(state, c.id, w));
     if idle.len() < 2 {
         return Vec::new();
     }
@@ -7806,7 +7806,7 @@ fn gang_block_candidates(
         .filter_map(|a| state.battlefield_find(a.attacker))
         .filter(|c| c.controller != seat)
         .collect();
-    targets.sort_by_key(|c| -permanent_value(state, c.id, w));
+    targets.sort_by_cached_key(|c| -permanent_value(state, c.id, w));
 
     let mut out = Vec::new();
     for atk in targets.into_iter().take(MAX_CANDIDATES) {
@@ -9496,7 +9496,7 @@ fn best_hostile_creature_target(
         .iter()
         .filter(|c| !state.same_team(c.controller, seat) && c.definition.is_creature())
         .collect();
-    foes.sort_by_key(|c| std::cmp::Reverse(permanent_value(state, c.id, w)));
+    foes.sort_by_cached_key(|c| std::cmp::Reverse(permanent_value(state, c.id, w)));
     foes.into_iter().map(|c| Target::Permanent(c.id)).find(|t| match &filter {
         Some(f) => state.evaluate_requirement_static(f, t, seat, None),
         None => true,
@@ -9676,7 +9676,7 @@ fn beneficial_aura_host(
         .iter()
         .filter(|c| c.controller == seat && c.definition.is_creature())
         .collect();
-    hosts.sort_by_key(|c| std::cmp::Reverse(permanent_value(state, c.id, w)));
+    hosts.sort_by_cached_key(|c| std::cmp::Reverse(permanent_value(state, c.id, w)));
     hosts
         .into_iter()
         .map(|c| crate::game::Target::Permanent(c.id))
