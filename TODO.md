@@ -60,12 +60,19 @@ the same candidate was attempted from both sides this run.
   is 16.09 % and **both** of its old leads are now closed — `do_cleanup` is
   87 % one SBA sweep, and ~20 M of `do_untap` is still unattributed, so read
   its callee table rather than counting its walks.
-- **Green at the tip**: suite **18,728** over 11 binaries, golden traces
-  identical, clippy clean workspace-wide including the client. `--bench`
-  invariants byte-identical (decisions **196,220**, turns 27.53, stalls 0,
-  determinism ok) — those differ from the anchor's 193,232 / 26.98 because
-  rounds 43-47 moved them, not this pass. **No encoding change — no net needs
-  retraining as of this tip.**
+- **Green at the tip, re-verified end-of-run**: suite **18,728** passed / 0
+  failed over **20** test binaries, golden traces included; `cargo clippy
+  --workspace --all-targets` **zero warnings across all eight crates**,
+  client included (`apt-get install -y libwayland-dev libasound2-dev
+  libudev-dev libxkbcommon-dev` first — the base image lacks them and the
+  Bevy build fails on `wayland-sys` without them). `--bench` invariants
+  byte-identical over three runs (decisions **196,220**, turns 27.53, stalls
+  0, determinism ok, peak_rss 29.6-30.0) — those differ from the anchor's
+  193,232 / 26.98 because rounds 43-47 moved them, not this pass. **The
+  absolute read 121.62 games/s on this box against the previous reading's
+  161.04 at an overlapping `host_calib_ms`** — a third box the probe does not
+  discriminate; see Baseline. Callgrind is the arbiter, and it is down.
+  **No encoding change — no net needs retraining as of this tip.**
 - Env: no `cargo-nextest`; `cargo test -p crabomination -p crabomination_tests`
   is the gate. `profiling-fast` engine rebuild **~13 min cold**, `release`
   ~30 min, callgrind ~3 min and contention-immune. **`cp -al target

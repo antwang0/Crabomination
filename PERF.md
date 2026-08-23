@@ -199,6 +199,24 @@ the file's standing warning in one line: **an unpaired absolute on this box
 cannot resolve half a percent**, and the third run's calib of 52 says why.
 Quote the paired A/B.
 
+**And a third box, at the forty-third pass's tip, that neither the probe nor
+the CPU string predicts.** Same `--bench`, `release` + mimalloc, three runs:
+**121.31 / 122.83 / 120.71 (mean 121.62)**, `host_calib_ms` **48 / 51 / 53**,
+`host_cpu` `Intel(R) Xeon(R) Processor @ 2.80GHz`, `peak_rss_mib` 29.6-30.0.
+That is **-25 %** against the reading directly above, on a calib band that
+overlaps it (48-53 vs 45-52) and a *higher* clock string than the paired
+A/B's 2.10 GHz. **So `host_calib_ms` does not discriminate box class as
+finely as this file has been assuming** — it caught the half-percent question
+above, and it says nothing useful about a 25 % one. Do not read this reading
+as a regression: the same tip measures **1,911,862,094 Ir** under callgrind
+against the base's 1,918,781,907, base and tip in one sitting on one box.
+
+**What is portable is the invariant set, and it is byte-identical on all
+three boxes**: `decisions` **196,220**, `turns_per_game` **27.53**, `stalls`
+0 (cap 0 / stuck 0 / draw 0), `determinism ok` (all 160 pairs split, every
+run), `peak_rss_mib` 29.6-30.0 against the A/B's 27.5-29.8. **Check those
+first; quote the paired A/B for anything else.**
+
 Plus the wide pool at the tip — `--decks all --games 200 --paired`, **3,400
 games over 17 decks, two processes, output byte-identical** (modulo the
 wall-clock line), 1,699 pairs all split, **2 undecided (0.06 %)**, no panics.
