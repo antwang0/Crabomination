@@ -12097,21 +12097,11 @@ impl GameState {
     /// for. Kept next to it: adding a protection keyword without adding it
     /// here silently turns that protection off.
     #[inline]
+    /// Whether `kw` is a protection keyword at all — the presence gate in
+    /// [`Self::damage_prevented_by_protection_inner`]. Reads the same list the
+    /// decision does; see [`ProtectionKind`].
     fn protection_keyword(kw: &Keyword) -> bool {
-        matches!(
-            kw,
-            Keyword::Protection(_)
-                | Keyword::ProtectionFromOwnColors
-                | Keyword::ProtectionFromCreatures
-                | Keyword::ProtectionFromCreatureType(_)
-                | Keyword::ProtectionFromMatching(_)
-                | Keyword::ProtectionFromManaValueExcept(_)
-                | Keyword::ProtectionFromManaValueParity { .. }
-                | Keyword::ProtectionFromMulticolored
-                | Keyword::ProtectionFromMonocolored
-                | Keyword::ProtectionFromCardType(_)
-                | Keyword::ProtectionFromEverything
-        )
+        ProtectionKind::of(kw).is_some()
     }
 
     pub fn damage_prevented_by_protection(&self, source: CardId, target: CardId) -> bool {
@@ -12132,9 +12122,6 @@ impl GameState {
         // lookups and two `Vec` clones — and none of it can change the answer
         // unless the target carries a protection keyword. Most permanents
         // never do, so gate on the one thing that is already computed.
-        // `is_protection_keyword` must list exactly the keywords the
-        // `ProtectionFromCreatures` check and the final `match` can answer
-        // `true` for.
         if !tgt.keywords.iter().any(Self::protection_keyword) {
             return false;
         }
@@ -12146,8 +12133,6 @@ impl GameState {
                     .map(|c| c.definition.cost.colors().into_iter().collect())
                     .unwrap_or_default()
             });
-        // CR 702.16 — protection from creatures prevents all damage from a
-        // creature source (Spirit Mantle).
         let src_is_creature = self
             .computed_permanent(source)
             .map(|c| c.card_types.contains(&crate::card::CardType::Creature))
@@ -12156,9 +12141,6 @@ impl GameState {
                     .map(|c| c.definition.is_creature())
                     .unwrap_or(false)
             });
-        if src_is_creature && tgt.keywords.contains(&Keyword::ProtectionFromCreatures) {
-            return true;
-        }
         // CR 702.16e — protection from a creature type prevents damage from a
         // source of that type.
         let src_creature_types = self
@@ -12181,24 +12163,26 @@ impl GameState {
                     .map(|c| c.definition.card_types.clone())
                     .unwrap_or_default()
             });
-        tgt.keywords.iter().any(|kw| match kw {
-            Keyword::Protection(color) => src_colors.contains(color),
+        tgt.keywords.iter().filter_map(ProtectionKind::of).any(|kind| match kind {
+            ProtectionKind::Color(color) => src_colors.contains(color),
             // CR 702.16 — "protection from its colors" (Earnest Fellowship).
-            Keyword::ProtectionFromOwnColors => tgt.colors.intersects(src_colors),
-            Keyword::ProtectionFromCreatureType(ty) => src_creature_types.contains(ty),
-            Keyword::ProtectionFromMatching(f) => self.evaluate_requirement_static(
+            ProtectionKind::OwnColors => tgt.colors.intersects(src_colors),
+            // CR 702.16 — protection from creatures prevents all damage from a
+            // creature source (Spirit Mantle).
+            ProtectionKind::Creatures => src_is_creature,
+            ProtectionKind::CreatureType(ty) => src_creature_types.contains(ty),
+            ProtectionKind::Matching(f) => self.evaluate_requirement_static(
                 f,
                 &Target::Permanent(source),
                 tgt.controller,
                 None,
             ),
-            Keyword::ProtectionFromManaValueExcept(n) => src_mv != *n,
-            Keyword::ProtectionFromManaValueParity { odd } => (src_mv % 2 == 1) == *odd,
-            Keyword::ProtectionFromMulticolored => src_colors.len() >= 2,
-            Keyword::ProtectionFromMonocolored => src_colors.len() == 1,
-            Keyword::ProtectionFromCardType(t) => src_card_types.contains(t),
-            Keyword::ProtectionFromEverything => true,
-            _ => false,
+            ProtectionKind::ManaValueExcept(n) => src_mv != n,
+            ProtectionKind::ManaValueParity { odd } => (src_mv % 2 == 1) == odd,
+            ProtectionKind::Multicolored => src_colors.len() >= 2,
+            ProtectionKind::Monocolored => src_colors.len() == 1,
+            ProtectionKind::CardType(t) => src_card_types.contains(t),
+            ProtectionKind::Everything => true,
         })
     }
 
@@ -21717,6 +21701,55 @@ fn card_can_grant_keyword(
     def.station.iter().any(|b| {
         any(&b.keywords) || b.statics.iter().any(|sa| static_effect_grants_keyword(sa, pred))
     }) || def.static_abilities.iter().any(|sa| static_effect_grants_keyword(&sa.effect, pred))
+}
+
+/// CR 702.16 — the protection keywords, and the one place the list lives.
+///
+/// Both halves of [`GameState::damage_prevented_by_protection_inner`] read it:
+/// the presence gate asks only `is_some`, and the decision matches on the
+/// variants. They cannot disagree about which keywords are protection,
+/// because they are the same list — which is the point. Before this, the gate
+/// was a `matches!` that had to be kept in step with a separate `match` and a
+/// separate `ProtectionFromCreatures` check by hand, and its failure mode was
+/// a new protection keyword *silently doing nothing*: the gate would not
+/// recognise it, the function would return `false`, and the card would look
+/// implemented. Now a `Keyword::ProtectionFrom…` with no variant here is
+/// simply unimplemented, and adding a variant will not compile until the
+/// decision's `match` handles it.
+enum ProtectionKind<'a> {
+    Color(&'a crate::mana::Color),
+    OwnColors,
+    Creatures,
+    CreatureType(&'a crate::card::CreatureType),
+    Matching(&'a crate::card::SelectionRequirement),
+    ManaValueExcept(u32),
+    ManaValueParity { odd: bool },
+    Multicolored,
+    Monocolored,
+    CardType(&'a crate::card::CardType),
+    Everything,
+}
+
+impl<'a> ProtectionKind<'a> {
+    #[inline]
+    fn of(kw: &'a Keyword) -> Option<Self> {
+        Some(match kw {
+            Keyword::Protection(c) => Self::Color(c),
+            Keyword::ProtectionFromOwnColors => Self::OwnColors,
+            Keyword::ProtectionFromCreatures => Self::Creatures,
+            Keyword::ProtectionFromCreatureType(t) => Self::CreatureType(t),
+            Keyword::ProtectionFromMatching(f) => Self::Matching(f),
+            Keyword::ProtectionFromManaValueExcept(n) => Self::ManaValueExcept(*n),
+            Keyword::ProtectionFromManaValueParity { odd } => {
+                Self::ManaValueParity { odd: *odd }
+            }
+            Keyword::ProtectionFromMulticolored => Self::Multicolored,
+            Keyword::ProtectionFromMonocolored => Self::Monocolored,
+            Keyword::ProtectionFromCardType(t) => Self::CardType(t),
+            Keyword::ProtectionFromEverything => Self::Everything,
+            _ => return None,
+        })
+    }
 }
 
 /// Convert a `StaticAbility` from a source permanent into `ContinuousEffect`s.

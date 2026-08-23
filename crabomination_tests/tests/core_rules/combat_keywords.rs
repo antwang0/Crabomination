@@ -862,6 +862,42 @@ fn cr_702_16e_protection_prevents_combat_damage() {
     assert_eq!(g.battlefield_find(atk).unwrap().damage, 2, "attacker still takes the blocker's 2");
 }
 
+/// CR 702.16 — "protection from creatures": a blocker carrying it takes no
+/// combat damage from a creature attacker, and still deals its own back.
+///
+/// Pins the arm that `ProtectionKind` folded into
+/// `damage_prevented_by_protection_inner`'s match; before that it was a
+/// separate `keywords.contains` check ahead of the match, and nothing here
+/// covered it.
+#[test]
+fn cr_702_16_protection_from_creatures_prevents_combat_damage() {
+    use crabomination::card::Keyword;
+    let mut g = two_player_game();
+    let atk = g.add_card_to_battlefield(0, body("Attacker", 2, 3, vec![]));
+    let mut prot = body("Mantled", 2, 2, vec![]);
+    prot.keywords = vec![Keyword::ProtectionFromCreatures];
+    let blk = g.add_card_to_battlefield(1, prot);
+    g.clear_sickness(atk);
+
+    advance_to(&mut g, TurnStep::DeclareAttackers);
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: atk, target: AttackTarget::Player(1),
+    }])).expect("attack");
+    drain_stack(&mut g);
+    advance_to(&mut g, TurnStep::DeclareBlockers);
+    g.perform_action(GameAction::DeclareBlockers(vec![(blk, atk)])).expect("block");
+    drain_stack(&mut g);
+    advance_to(&mut g, TurnStep::PostCombatMain);
+    assert_eq!(
+        g.battlefield_find(blk).unwrap().damage, 0,
+        "protection from creatures prevents the creature attacker's damage"
+    );
+    assert_eq!(
+        g.battlefield_find(atk).unwrap().damage, 2,
+        "the protected blocker still deals its own damage"
+    );
+}
+
 // ── CR 725 The Monarch ───────────────────────────────────────────────────────
 
 #[test]

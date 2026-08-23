@@ -942,6 +942,15 @@ of the 195 fields are `Copy` and have no drop glue at all, so narrowing the
 struct buys a slice of the 458-Ir construction and nothing of the 2,324-Ir
 drop.
 
+**One behaviour-preserving change with no perf claim, recorded because the
+rule says to say so plainly.** `ProtectionKind` replaces the hand-kept
+`matches!` gate in `damage_prevented_by_protection_inner` with a list the
+gate and the decision both read (see TODO's defects section — it was that
+section's only open entry). **1,911,867,157 -> 1,911,871,594, +4,437 Ir /
++0.0002 %**: the compiler folds `ProtectionKind::of(kw).is_some()` straight
+back into the original `matches!`, which is the result the change was
+allowed to have. It is a correctness change, not a perf one.
+
 **Null result, same pass: gating the untap step's six
 `battlefield x static_abilities` walks behind one.** (-15) named them; a
 `UntapStatics::gather` pass with a bit per static, plus a
@@ -1804,6 +1813,38 @@ batches, so moving it out costs an empty-`Vec` clone (free) and buys ~1.4 M.
 move-out would trade ~2.3 M for a `Vec` clone per checkpoint — probably a
 wash, measure before taking it.
 
+**(-16) `dispatch_triggers_for_events` — 140,102,601 / 7.30 % over 70,418
+calls, and it has never had an entry here.** Found while reading the
+forty-third pass's profile, not by ranking. `perform_action_inner` drains
+every action's event list through it, ~1.6 dispatches per action at ~1,990 Ir
+each. What one dispatch does, in order: two `mem::take`s and an early return
+on an empty batch (the common case, already guarded); `dispatch_board_scan`
+(**7,913,594 self + 8,520,694 in `ptr/non_null` = ~0.85 %**, a fused
+single-pass board walk that looks hard to improve); `permanents_with_
+abilities_removed`; and then a battlefield loop that runs **945,812 times**
+over six games. The loop's fast path is already two definition loads behind a
+`no_grants` gate. **Where to start:** the function is 7.30 % inclusive against
+1.49 % self *in its main entry alone* (~3.5 % once the `slice/iter`,
+`ptr/non_null` and `vec/mod` entries for the same function are added), so most
+of it is callees — get a `--tree=calling` on it before ranking anything
+inside. The unmeasured question that would size the whole entry: **how many of
+the 70,418 dispatches produce zero candidate triggers?** If it is most of
+them, the prize is a board-level "which `EventKind`s can anything here react
+to" answer; if it is not, this is real work and the entry is closed.
+
+**(-17) `check_state_based_actions`' `.collect()`s — 55,720 calls to
+`SpecFromIterNested::from_iter` for 35,174,999 Ir / 1.84 %, over 10,670
+sweeps.** 5.2 collects per sweep. Most of the collects inside the function are
+already behind an `sba_board_scan` flag, so the 5.2 are the *unguarded* ones —
+find them before designing. Note the caveat that applies to every row in this
+family: a `from_iter` inclusive number contains the whole nested-iterator
+body, not just the allocation, so it is a *ceiling* on what a guard could
+save. The same caveat applies to the two biggest `from_iter` callers in the
+program, `bot::cast_candidates` (**103,318,517 / 5.39 %** over 7,238) and
+`auto_tap_for_cost_inner`'s `mana_source_table` (**41,282,703 / 2.16 %** over
+7,550) — those are the bot's enumeration cost re-reported, not collect
+overhead.
+
 **(-13) `perform_action`'s checkpoint — `drop_in_place<GameState>` 80,831,019
 / 4.21 % plus `GameState::clone` 41,569,486 / 2.16 %, ~6.4 % together, and the
 largest *structural* cost left. Two of its three shapes are now measured
@@ -1877,8 +1918,15 @@ pass or a side table, not a field; (ii) a board-level memo with an epoch,
 which nothing on `&self` can hold today. Do not take the fusion device; it has
 lost three times.
 
-**(-10) Allocation is still the program: 1,232,517 allocations and 1,286,325
-frees in six games, ~13.4 % of the tip.** The forty-second pass took 61 k
+**(-10) Allocation is still the program: 1,216,241 allocations and 1,269,976
+frees in six games, ~13 % of the tip — and the forty-third pass measured what
+drives a large slice of it.** `Arc::make_mut` unshares **120,004 times for
+83,959,478 Ir / 4.38 %** (~700 Ir each), and 63 % of the checkpoint's drop is
+the `Arc` glue freeing those same copies. **Most of that exists because the
+checkpoint shares every zone**, so (-13) and this entry are the same cost seen
+from two sides — take (-13) first. The per-caller breakdown below is from the
+forty-second pass's tip and the counts have moved slightly; the shapes have
+not. The forty-second pass took 61 k
 allocations off it with (E) and (F) — the same rule as the fortieth's: **ask
 what a `Vec<T>`'s `T` costs, and whether the enclosing loop runs per
 permanent, before asking how often the `Vec` is built.** By direct caller at

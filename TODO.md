@@ -209,15 +209,22 @@ from"`. Nine hits, three of them real:
   `ability_strip_in_scope` device**: a `debug_assert!` at the gate runs the
   layer pass it skipped and fails if the computed land-type line differs
   from the printed one.
-- **Still open, and disproportionate to fix**:
-  `GameState::protection_keyword` must list exactly the keywords
-  `damage_prevented_by_protection_inner`'s final `match` (plus its separate
-  `ProtectionFromCreatures` check) can answer `true` for — a gate the
-  twenty-fifth pass added for speed, whose failure mode is a new protection
-  keyword silently doing nothing. The two can't share a list (the match
-  arms have distinct bodies), and the debug cross-check would need the
-  source data the gate exists to avoid computing. Worth doing when
-  something else brings that function up.
+- **CLOSED 2026-08-23 — `GameState::protection_keyword` and
+  `damage_prevented_by_protection_inner`'s match now *are* one list.** The
+  entry used to read "disproportionate to fix: the two can't share a list
+  because the match arms have distinct bodies". They can — through a
+  `ProtectionKind` enum (`game/mod.rs`) that the arms match on instead of
+  matching on `Keyword`. `ProtectionKind::of` is the single list; the gate
+  asks `is_some()` and the decision matches the variants, so a keyword
+  cannot be in one and not the other. The separate `ProtectionFromCreatures`
+  check folded into the match as an arm, and a new variant will not compile
+  until the decision handles it. Failure mode changes from *a new protection
+  keyword silently doing nothing while looking implemented* to *not
+  implemented*. Callgrind-neutral (+4,437 Ir, +0.0002 %: the compiler folds
+  `of(kw).is_some()` back into the original `matches!`), and the folded arm
+  is pinned by `core_rules::combat_keywords::
+  cr_702_16_protection_from_creatures_prevents_combat_damage`, which nothing
+  covered before.
 
 Two more hits were already guarded and want no work: `requires_target` /
 `primary_target_filter` / `target_filter_for_slot` have a whole-catalog
