@@ -13116,6 +13116,20 @@ impl GameState {
     /// reuse a scan, and the whole thing measured **+0.206 %**. Call it from
     /// the loop that benefits instead.
     fn scan_land_type_rewrites(&self, scan: &mut GrantScan<'_>) {
+        // `mana_source_table` opens its freeze scope and this is its *first*
+        // computed read, so `frozen_effects()` pays a whole-game gather —
+        // 7,550 of them over six bench games at ~1,875 Ir — and nothing else
+        // in that scope reads the memo it fills. `land_type_change_in_scope`
+        // is the printed-static twin of `rewrites_land_types` and `false`
+        // from it is authoritative (`gather_continuous_effects`
+        // `debug_assert!`s the implication), so it settles the scan from a
+        // board walk. Where the gather has already happened
+        // (`layers_memoized`) the forty-seventh pass's rule applies in
+        // reverse and the memo read is the cheap side.
+        if !self.layers_memoized() && !self.land_type_change_in_scope() {
+            scan.land_types_rewritten = Some(false);
+            return;
+        }
         scan.land_types_rewritten =
             self.frozen_effects().map(|fx| fx.iter().any(rewrites_land_types));
     }
