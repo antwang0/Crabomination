@@ -18,106 +18,109 @@ reference and want their own triage pass):
 
 **FIRST COMMAND OF EVERY RUN:** `git fetch origin claude/modern_decks &&
 git checkout -B claude/modern_decks origin/claude/modern_decks`. The routine
-container clones **`main`**, ~2,000 commits behind and missing the ML crates,
+container clones **`main`**, ~2,200 commits behind and missing the ML crates,
 `PERF.md`, `crabomination_tests` and the profiling profiles.
 
-**Pass 46 (this run) followed pass 45 on the same branch; a concurrent
-session landed pass 45's row (E) and the planeswalker-cash-out work
-underneath it mid-run, so pass 46's Ir chain is measured against its own base
-`11792f4c` and rebased on top of theirs.** Pass 45 finished at
-`1,810,336,693 -> 1,765,005,375`, -2.504 %. Pass 46:
-`1,765,005,375 -> 1,715,304,981`, **-2.816 %** in seven commits (the first four
-were measured against their own base `11792f4c` for -1.312 % and re-read at
--1.371 % after the rebase, so the two passes' rows compose) — `spell_kind`
-built twice per cast and expensively (two `Vec`s for a colour question, a
-global `RwLock` + SipHash for one bool); a land tap deep-copying its whole
-effect tree *and* asking the board twice about statics no board has; the
-bot's affordability question allocating two `ManaCost`s per hand card; Ward
-taking a gather per opposing target; and the biggest row, the cast's cost
-pipeline asking the battlefield **six** times per cast for statics no normal
-board has (`cast_cost_scan`, one walk and six bits, -0.697 %). Every step
-`--bench`-invariant-identical.
+**Pass 47 (this run) followed pass 46 on the same branch, and a concurrent
+session landed pass 46's last commit (`cast_cost_scan`, -0.697 %) underneath
+it mid-run — so pass 47's Ir chain is measured against its own base
+`c9606062` and rebased on top of theirs.** Pass 46 finished at
+`1,765,005,375 -> 1,715,304,981`, -2.816 %. Pass 47:
+`1,727,336,594 -> 1,674,581,042`, **-3.054 %** in seven commits, every one
+`--bench`-invariant-identical (decisions **196,220**, turns 27.53, stalls 0,
+determinism ok) — a presence gate that stands in for a gather stopping where
+the gather has already run (-0.570 %); five questions asked before the thing
+that disqualifies them; the trigger dispatch tail; two `Vec`s nobody wanted.
+**Two builds were reverted and both are written up in PERF's Log** — read
+them before re-proposing either.
 
-1. **Nothing is in flight.** Round 50 read out at `5af4f687` — the
-   planeswalker cash-out fix is **+0.25 pooled, replicated, both intervals
-   excluding 50** — and its finding is the reusable one: a *rare*-card-class
-   flag is not an unmeasurable one, because exact-mirror pairs contribute no
-   variance and the few games that differ are measured to +-0.12. Run a
-   rare-class flag before writing it off.
-2. **The iteration loop is 4x faster than this file used to say.**
-   `cargo check -p crabomination` is 2m01s cold, seconds warm. An
-   **engine-only** `profiling-fast` rebuild is **3m15s**; the whole workspace
-   cold is 11m00s and the catalog (619 k lines) is most of it. So clean the
-   probe dir with `rm target-probe/profiling-fast/{bot_ladder,deps/crabomination-*,deps/libcrabomination-*,deps/bot_ladder-*}`
-   — the old `deps/*crabomination*` glob also deletes base and catalog and
-   forces the 11-minute path. Budget ~4 min per engine candidate, ~12 per
-   `crabomination_base` one.
-3. **Top perf candidate is the land tap, now read from the top.** A cast
-   costs 2.5 of them and `activate_ability` inside `auto_tap_for_cost_inner`
-   is 8.66 %. The Profile of record has the per-tap table; the biggest row is
-   `card_keyword_possible` at **1.26 % over 18,910 calls, 1,149 Ir each**, of
-   which ~830 is a board walk that gives the same answer for every tap in a
-   batch — and stamping it per batch is unsound, because a mana ability can
-   move the board between taps. Read (-11) before proposing a cache.
-4. **Then (-25) `resolve_combat`, 11.86 % over 2,694, which pass 46
-   narrowed.** Its SBA row is real deaths (27,065 Ir a sweep
-   because combat sweeps kill), and the `computed_permanent` row is
-   **diffuse** — the largest single source line in the function is 748 calls,
-   and the damage loop is already freeze-scoped in three places — so the
-   "one scope to widen" reading in the entry is wrong. Unread and unclaimed:
-   `combat_damage_computed` 4,997 Ir over 3,226, `prevent_combat_to_target`
-   3,875 over 2,682, `quality_band_assigner` 5,932 over 846.
-5. **The `cast_lock_scan` / `cast_cost_scan` device has now paid three times
-   and is not exhausted.** What is left in the cast, measured:
-   `cost_reduction_for_spell_full` 0.20 % over 7,550 and
-   `extra_cost_for_spell` 0.11 %. A seventh bit does **not** just drop in for
-   the first — it reads 16 variants over `all_static_sources` (not just the
-   battlefield) and its walk is followed by card-intrinsic contributions no
-   presence bit can gate, so it needs the walk split out of a function the
-   bot also calls 12,986 times. See (-24)'s (G) note. The rule that finds these:
-   *what does an ordinary action pay that it cannot possibly need?*
-6. **(-23)'s allocator table, which pass 46 refreshed *and* fixed.**
-   Read its opening paragraph before extracting it again — a regex over a
-   window instead of the contiguous `<` block invents rows, and pass 46 built
-   and measured a candidate on two invented ones before catching it
-   (-0.006 %, reverted). Cheapest unclaimed named row is `finalize_cast`'s
-   24,108 (3.4 per cast); `RawTable::clone` 29,428 and `Box::clone` 26,386
-   are unread.
-7. **Do not rebuild these.** The board-presence epoch ((-18), +0.49 %). The
-   `GameState` husk pool (+2.60 %). Gating `do_untap`'s six walks
-   (+0.0001 %). Narrowing `GameState`. Splitting the big engine files for
-   build time. The per-definition keyword-grant bit ((-11), ~0.3 % and
-   unsound as a cache). Fusing `card_type_change_in_scope` (three losses),
-   and note its "asked twice per activation" claim is stale — callgrind
-   reads once. Guarding `declare_blockers`' first cold write: measured, it
-   promotes the next one and buys ~1.2 M of 7.1 M. Chasing the Ward gathers:
-   the presence gate removes only a fifth of them.
-8. **Env.** No `cargo-nextest`; `cargo test -j 2 -p crabomination -p
-   crabomination_tests` is the gate. Workspace clippy needs `apt-get update &&
-   apt-get install -y libwayland-dev libasound2-dev libudev-dev
-   libxkbcommon-dev`. Callgrind ~20 s and contention-immune, so a build in
-   `target-probe` and a callgrind on `target/` overlap for free.
-9. **Green at the tip.** Suite **18,709 / 0 failed / 5
-   ignored** over 22 binaries, golden traces and the
-   same-seed replay included; `cargo clippy --workspace --all-targets` clean.
-   `--bench` invariants byte-identical across pass 46 (decisions 196,220,
-   turns 27.53, stalls 0 / cap 0 / stuck 0 / draw 0, determinism ok). Pass
-   45's wide-pool check still stands: `--decks all --games 400 --threads 3`,
-   seeds 11/12/13, **20,400 games, 20,396 decided, no panic, every one of
-   10,198 mirrored pairs split** (the 4 undecided are seed 11's rules draws).
-   **No encoding change — no net needs retraining as of this tip.** No
-   `overflow`-profile run this pass (nothing touched counters, damage, mana
-   or the encoder). Absolute games/s is not comparable across routine boxes,
-   and a `profiling-fast` games/s is not comparable to anything; quote
-   callgrind under 5 %.
-10. **Trackers.** TODO ~1.0k, ROADMAP 0.66k, PERF ~2.6k (pass 46 folded the
-   forty-second pass's prose and the 42nd/44th profile tables to indexes; the
-   forty-third's entry is the next fold). `scripts/find_data_tests.sh` reads
-   **199 pure-data tests**, 25 `[CR]`-marked and sacred; the other 174 want a
-   table-driven definition audit per set. Not a build-time item. **The
-   sixteenth filter and the panic census were both run this pass and are both
-   clean** — see the filter table; a *seventeenth* is owed and the entry names
-   two candidates.
+1. **Nothing is in flight.** Suite 18,709 / 0 failed / 5 ignored over 22
+   binaries, golden traces and the same-seed replay included; `cargo clippy
+   --workspace --all-targets` clean. **No encoding change — no net needs
+   retraining as of this tip.**
+2. **The reusable finding, and it inverts a rule this file used for nine
+   passes.** A presence gate (`card_keyword_possible`,
+   `card_type_change_in_scope`, `pt_reduction_in_scope`) is a **loss** where
+   the gather it avoids has already happened: `keyword_grant_in_scope` is
+   ~93 `card_can_grant_keyword` calls on a late-game board, more than the
+   `computed_permanent` memo lookup it stands in for. `layers_memoized()`
+   answers "a scope is open and its gather is built" without gathering.
+   **Sweep the other gates' callers for `&self` ones inside live scopes** —
+   only the protection one was done. It cuts the other way too: the land
+   tap's CR 602.5 gate runs from `&mut self` with no scope open, so there the
+   gate is still the cheap side and (3) below stands.
+3. **Top perf candidate is (-27): `computed_permanent`'s 93,570
+   `Arc<ComputedPermanent>` allocations**, the largest named allocator row
+   and unclaimed. Outside a freeze scope the `Arc` is made, read once and
+   dropped with nothing to share it. An owned-or-shared return type is the
+   shape; size the call-site churn first. Do **not** pool it — (-13)
+   measured that at +2.60 %.
+4. **Then (-26) `main_phase_action_with`, 32.97 %, never read from the
+   top.** `pick_by_outcome` is 7.08 % over **920 calls** — 130,069 Ir each.
+   Check whether the count is a search-quality decision before treating it as
+   a perf one, the way (-21) had to for the attack search.
+5. **The land tap is still the biggest single engine row.**
+   `card_keyword_possible` is 1.30 % over 18,910 calls, ~830 Ir of each a
+   board walk that gives the same answer for every tap in a batch — and
+   stamping it per batch is unsound, because a mana ability can move the
+   board between taps. Read (-11) before proposing a cache.
+6. **The `cast_lock_scan` / `cast_cost_scan` device has paid three times and
+   is not exhausted.** What is left in the cast:
+   `cost_reduction_for_spell_full` 0.20 % over 7,550 and `extra_cost_for_spell`
+   0.11 %. A seventh bit does **not** just drop in for the first — it reads
+   16 variants over `all_static_sources` (not just the battlefield) and its
+   walk is followed by card-intrinsic contributions no presence bit can gate.
+   See (-24)'s (G) note.
+7. **(-23)'s allocator table, refreshed at the pass-47 tip (974,927
+   allocations).** Read its opening paragraph before extracting it again — a
+   regex over a window instead of the contiguous `<` block invents rows.
+   Unclaimed named rows: `computed_permanent` 93,570 (that is (-27)),
+   `finalize_cast` 24,108 plus its 28,878 `grow_one`s, `RawTable::clone`
+   29,428 and `Box::clone` 26,386, both still unread.
+8. **Do not rebuild these.** Everything in pass 46's list — the board-presence
+   epoch ((-18), +0.49 %), the `GameState` husk pool (+2.60 %), gating
+   `do_untap`'s six walks (+0.0001 %), narrowing `GameState`, splitting the
+   big engine files for build time, the per-definition keyword-grant bit
+   ((-11), unsound), fusing `card_type_change_in_scope` (three losses),
+   guarding `declare_blockers`' first cold write (it promotes the next one),
+   chasing the Ward gathers — plus pass 47's two: the `LayerFreeze` depth
+   shadow (+0.027 %; **Ir undercounts atomics, so only a wall-clock A/B could
+   overturn it, and it was not run**) and a per-`CardDefinition` cached
+   bitmask for `sba_board_scan` (**unsound** — `Arc::make_mut` rewrites
+   definitions in place). And **never** skip
+   `push_ordered_trigger_candidates` on an empty batch: +7.3 % *and* a
+   correctness bug, because it owns the per-batch
+   `died_card_snapshots.clear()`. Read what a function does *after* its loop
+   before short-circuiting the loop.
+9. **Measurement gotcha pass 47 hit twice.** The 6-game ladder printout
+   (24 decided / 12 splits) did **not** change on either reverted build —
+   only `--bench`'s `decisions` and the Ir total caught them. Run
+   `./target/profiling-fast/bot_ladder --bench --threads 3` on any change
+   whose Ir moves more than its blast radius allows.
+10. **Env.** No `cargo-nextest`; `cargo test -j 2 -p crabomination -p
+   crabomination_tests` is the gate (~12 min cold). Workspace clippy needs
+   `apt-get update && apt-get install -y libwayland-dev libasound2-dev
+   libudev-dev libxkbcommon-dev` (~9 min). Cold `profiling-fast` engine build
+   14 min on this box, warm rebuild **4m20s**; callgrind ~4 min and
+   contention-immune, so a build in `target-probe` and a callgrind on
+   `target/` overlap for free. Budget ~9 min per measured candidate serial,
+   ~6 pipelined. Absolute games/s is not comparable across routine boxes and
+   a `profiling-fast` games/s is not comparable to anything; quote callgrind
+   under 5 %.
+11. **Wide-pool check.** Pass 45's still stands and was not re-run: `--decks
+   all --games 400 --threads 3`, seeds 11/12/13, **20,400 games, 20,396
+   decided, no panic, every one of 10,198 mirrored pairs split** (the 4
+   undecided are seed 11's rules draws). It is **owed again** — nothing since
+   has run it, and pass 47 touched combat, trigger dispatch and the SBA
+   sweep. No `overflow`-profile run either pass (nothing touched counters,
+   damage, mana or the encoder).
+12. **Trackers.** TODO ~1.0k, ROADMAP 0.66k, PERF ~2.9k (pass 47 folded the
+   forty-third pass's entry to an index; the forty-fourth's is the next
+   fold). `scripts/find_data_tests.sh` reads **199 pure-data tests**, 25
+   `[CR]`-marked and sacred; the other 174 want a table-driven definition
+   audit per set. Not a build-time item. A **seventeenth** filter is still
+   owed — the sixteenth and the panic census were run at pass 46 and were
+   clean.
 
 ## Environment note
 
