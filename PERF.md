@@ -66,6 +66,25 @@ callgrind_annotate --auto=no --inclusive=yes cg.sym.out       # inclusive
 python3 scripts/cg_edges.py cg.sym.out                        # self costs
 python3 scripts/cg_edges.py cg.sym.out --callers __rust_alloc # the alloc table
 python3 scripts/cg_edges.py cg.sym.out --callees finalize_cast
+# Per-source-line attribution needs the DWARF *packed into the binary*, which
+# is what `[profile.profiling-lines]` is for (cold build; it reads the same
+# total, 1,659,704,679 vs profiling-fast's 1,659,704,666, so the two inline
+# identically). Costs are self cost per line.
+cargo build --profile profiling-lines -p crabomination --bin bot_ladder \
+  --no-default-features
+RUST_MIN_STACK=33554432 valgrind --tool=callgrind --dump-instr=yes \
+  --callgrind-out-file=cg.instr.out target/profiling-lines/bot_ladder \
+  --a gang --b gang --games 6 --threads 1 --seed 1 --decks fixed
+python3 scripts/cg_lines.py cg.instr.out target/profiling-lines/bot_ladder
+python3 scripts/cg_lines.py cg.instr.out target/profiling-lines/bot_ladder \
+  --in dispatch_triggers_for_events
+# **Read the line profile for *where inside a function* the cost is, never for
+# a function total.** lld folds identical code, so `addr2line` hands back
+# whichever of the folded names it likes: the forty-eighth pass's line profile
+# put 2.4 % under `core::slice::sort::stable::drift::sort` and the edge table
+# says the program's 18,888 sorts are all `smallsort` and cost a fraction of
+# that. `cg_edges.py`'s call counts are the truth; the line profile is a
+# pointer.
 # Callers of `__rust_alloc`, ranked by *call count*, is the table that has
 # found the most: self cost lies about allocation — a function with 1.9 %
 # self can be 35 % of every malloc in the program. `cg_edges.py`'s own

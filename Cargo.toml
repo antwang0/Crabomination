@@ -75,6 +75,22 @@ inherits = "release-fast"
 debug = true
 split-debuginfo = "unpacked"
 
+# The same binary with the DWARF *packed into the executable*, for the one
+# thing `profiling-fast` cannot do here: per-source-line attribution.
+# `unpacked` puts the debug info in `.dwo` files, which neither valgrind nor
+# `addr2line` reads, so a line lookup against a `profiling-fast` binary
+# returns whatever CU the skeleton happens to point at — wrong function, wrong
+# file, confidently. Build this one when a line-level look is wanted (cold, so
+# it costs a full rebuild) and keep A/B measurement on `profiling-fast`; the
+# two inline identically, only the debug-info packaging differs.
+#
+#   cargo build --profile profiling-lines -p crabomination --bin bot_ladder \
+#     --no-default-features
+[profile.profiling-lines]
+inherits = "release-fast"
+debug = true
+split-debuginfo = "off"
+
 # `release-fast` with the arithmetic checks release normally drops. The one
 # bug class TODO.md's five syntax filters cannot reach is a silent wrap at
 # game 400 k; running the actor path here turns it into a panic with a
