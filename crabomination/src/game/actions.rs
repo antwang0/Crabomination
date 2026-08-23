@@ -2415,15 +2415,13 @@ impl crate::game::GameState {
         events: &mut Vec<GameEvent>,
     ) {
         use crate::effect::{ExtraManaKind, StaticEffect};
-        let Some(land) = self.battlefield.iter().find(|c| c.id == land_id) else { return };
-        if !land.definition.is_land() {
-            return;
-        }
         // Every land tap reaches here, and the walk below builds a `Vec` and
         // clones the turn-scoped list whether or not anything on the board
         // grants extra mana. Two presence questions answer it without
         // allocating: a short-circuiting `any` over mostly-empty
-        // `static_abilities`, and an emptiness check.
+        // `static_abilities`, and an emptiness check. **Asked before the
+        // `land_id` lookup**, which is a second whole-battlefield walk for a
+        // card nobody reads on a board with no such grant.
         if self.extra_mana_on_land_tap_this_turn.is_empty()
             && !self.battlefield.iter().any(|c| {
                 c.definition
@@ -2432,6 +2430,10 @@ impl crate::game::GameState {
                     .any(|sa| matches!(sa.effect, StaticEffect::ExtraManaOnLandTap { .. }))
             })
         {
+            return;
+        }
+        let Some(land) = self.battlefield.iter().find(|c| c.id == land_id) else { return };
+        if !land.definition.is_land() {
             return;
         }
         let land = land.clone();
@@ -6511,8 +6513,10 @@ impl GameState {
         }
 
         // CR 601.2c — an opponent's Flagbearer must be chosen if any declared
-        // slot could take it (Standard Bearer).
-        {
+        // slot could take it (Standard Bearer). Skipped outright for an
+        // untargeted spell: `flagbearer_violation` answers `false` for an
+        // empty slot list.
+        if target.is_some() || !additional_targets.is_empty() {
             let chosen: Vec<Target> =
                 target.iter().cloned().chain(additional_targets.iter().cloned()).collect();
             let slots: Vec<Option<crate::card::SelectionRequirement>> = (0..chosen.len())
@@ -14227,8 +14231,11 @@ impl GameState {
                 return Err(GameError::SelectionRequirementViolated);
             }
         }
-        // CR 601.2c — Flagbearer applies to activated abilities too.
-        {
+        // CR 601.2c — Flagbearer applies to activated abilities too. Skipped
+        // outright when nothing was targeted: `flagbearer_violation` answers
+        // `false` for an empty slot list, so the two collects below are a
+        // question with no consumer on every land tap.
+        if target.is_some() || !additional_targets.is_empty() {
             let chosen: Vec<Target> =
                 target.iter().cloned().chain(additional_targets.iter().cloned()).collect();
             let slots: Vec<Option<crate::card::SelectionRequirement>> = (0..chosen.len())
