@@ -7174,7 +7174,7 @@ impl GameState {
             }
         };
         self.pay_life_cost(p, receipt.side_effects.life_lost);
-        self.note_cast_payment_riders(&receipt, &card.definition.spell_kind());
+        self.note_cast_payment_riders(&receipt, &spell_kind);
         // "Pay X life" additional cost — paid on cast alongside the mana
         // (CR 601.2h); it stays paid if the spell is countered.
         self.pay_life_cost(p, pay_x_life);
@@ -8732,11 +8732,12 @@ impl GameState {
         apply_spell_cost_floor(self, &mut cost);
         let snapshot = self.snapshot_payment_state(p);
         let forced_only = self.players[p].manual_mana;
+        let spell_kind = card.definition.spell_kind();
         let receipt = self.try_pay_after_snapshot_mode(
-            p, &cost, snapshot, forced_only, &card.definition.spell_kind(), None,
+            p, &cost, snapshot, forced_only, &spell_kind, None,
         )?;
         self.pay_life_cost(p, receipt.side_effects.life_lost);
-        self.note_cast_payment_riders(&receipt, &card.definition.spell_kind());
+        self.note_cast_payment_riders(&receipt, &spell_kind);
         let mana_spent = receipt
             .pool_before
             .total()
@@ -8930,6 +8931,7 @@ impl GameState {
             cost.reduce_generic(fb_less);
         }
         apply_spell_cost_floor(self, &mut cost);
+        let spell_kind = card.definition.spell_kind();
         // CR 601.2g — float-spend confirmation. Nothing is mutated yet (the
         // card is still in the graveyard; additional costs unpaid), so suspend
         // cleanly and replay the whole flashback on answer.
@@ -8944,7 +8946,7 @@ impl GameState {
         if spend_float.is_none()
             && self.players[p].manual_mana
             && !cost.symbols.is_empty()
-            && self.float_spend_is_optional(p, &cost, &card.definition.spell_kind())
+            && self.float_spend_is_optional(p, &cost, &spell_kind)
         {
             let float_summary = self.protectable_float(p, &cost).summary();
             let name = card.definition.name;
@@ -8971,10 +8973,10 @@ impl GameState {
         let forced_only = self.players[p].manual_mana;
         let snapshot = self.snapshot_payment_state(p);
         let receipt = self.try_pay_after_snapshot_mode(
-            p, &cost, snapshot, forced_only, &card.definition.spell_kind(), spend_float,
+            p, &cost, snapshot, forced_only, &spell_kind, spend_float,
         )?;
         self.pay_life_cost(p, receipt.side_effects.life_lost);
-        self.note_cast_payment_riders(&receipt, &card.definition.spell_kind());
+        self.note_cast_payment_riders(&receipt, &spell_kind);
         let mana_spent = receipt
             .pool_before
             .total()
@@ -9085,11 +9087,12 @@ impl GameState {
 
         let forced_only = self.players[p].manual_mana;
         let snapshot = self.snapshot_payment_state(p);
+        let spell_kind = card.definition.spell_kind();
         let receipt = self.try_pay_after_snapshot_mode(
-            p, &cost, snapshot, forced_only, &card.definition.spell_kind(), None,
+            p, &cost, snapshot, forced_only, &spell_kind, None,
         )?;
         self.pay_life_cost(p, receipt.side_effects.life_lost);
-        self.note_cast_payment_riders(&receipt, &card.definition.spell_kind());
+        self.note_cast_payment_riders(&receipt, &spell_kind);
 
         // CR 702.180b — tap the nominated creature as the cost is paid.
         if let Some(cid) = tap_creature
@@ -10244,6 +10247,7 @@ impl GameState {
             mana_cost.reduce_by_cost(sac_cost);
         }
         apply_spell_cost_floor(self, &mut mana_cost);
+        let spell_kind = card.definition.spell_kind();
         // CR 601.2g — float-spend confirmation. The spell card is back-in-hand
         // safe to restore (nothing else is committed yet — pitch/gy-exile/
         // return happen after payment), so suspend and replay the alt cast.
@@ -10258,7 +10262,7 @@ impl GameState {
         if spend_float.is_none()
             && self.players[p].manual_mana
             && !mana_cost.symbols.is_empty()
-            && self.float_spend_is_optional(p, &mana_cost, &card.definition.spell_kind())
+            && self.float_spend_is_optional(p, &mana_cost, &spell_kind)
         {
             let float_summary = self.protectable_float(p, &mana_cost).summary();
             let name = card.definition.name;
@@ -10287,7 +10291,7 @@ impl GameState {
         let forced_only = self.players[p].manual_mana;
         let alt_snapshot = self.snapshot_payment_state(p);
         let receipt = match self.try_pay_after_snapshot_mode(
-            p, &mana_cost, alt_snapshot, forced_only, &card.definition.spell_kind(), spend_float,
+            p, &mana_cost, alt_snapshot, forced_only, &spell_kind, spend_float,
         ) {
             Ok(r) => r,
             Err(e) => {
@@ -10295,7 +10299,7 @@ impl GameState {
                 return Err(e);
             }
         };
-        self.note_cast_payment_riders(&receipt, &card.definition.spell_kind());
+        self.note_cast_payment_riders(&receipt, &spell_kind);
         self.pay_life_cost(p, receipt.side_effects.life_lost);
         let alt_mana_spent = receipt
             .pool_before
