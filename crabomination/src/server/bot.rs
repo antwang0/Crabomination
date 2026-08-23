@@ -7755,7 +7755,24 @@ fn simulate_attack_outcome_once(
 /// is missing — "that mana will be spent on something".
 fn sim_spell_action(g: &GameState, w: &EvalWeights) -> Option<GameAction> {
     // Called once per sim-loop iteration on a cloned (unfrozen) state; every
-    // candidate it ranks runs layer-aware checks.
+    // candidate it ranks runs layer-aware checks — so the body wants a freeze
+    // scope, but the question of whether there is a window to act in does not.
+    // `sim_spell_action_inner`'s three entry tests are plain field reads, and
+    // on two thirds of the iterations all three miss and the closure returns
+    // `None` having read nothing. Opening and closing a scope is not free (the
+    // `Unfreeze` drop is most of it), so the window test runs out here.
+    let p = g.player_with_priority();
+    let window = !g.stack.is_empty()
+        || (g.step == TurnStep::DeclareBlockers && g.blockers_declared())
+        || (matches!(g.step, TurnStep::PreCombatMain | TurnStep::PostCombatMain)
+            && g.active_player_idx == p);
+    if !window {
+        debug_assert!(
+            g.with_frozen_layers(|g| sim_spell_action_inner(g, w)).is_none(),
+            "sim_spell_action's window gate skipped a real action",
+        );
+        return None;
+    }
     g.with_frozen_layers(|g| sim_spell_action_inner(g, w))
 }
 
