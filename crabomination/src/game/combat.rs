@@ -67,11 +67,34 @@ impl GameState {
         })
     }
 
+    /// [`bands_with_other_qualities`](Self::bands_with_other_qualities) read
+    /// off a computed set the caller already holds. Every combat-damage caller
+    /// has one — the resolver's `combat_damage_computed` covers exactly the
+    /// attackers and declared blockers — so the band question costs a
+    /// battlefield walk instead of a gather.
+    fn bands_with_other_qualities_of(
+        &self,
+        ids: &[CardId],
+        computed: &[ComputedPermanent],
+    ) -> Vec<crate::card::SelectionRequirement> {
+        self.battlefield
+            .iter()
+            .filter(|c| ids.contains(&c.id))
+            .filter_map(|c| computed.iter().find(|p| p.id == c.id))
+            .flat_map(|c| {
+                c.keywords.iter().filter_map(|k| match k {
+                    Keyword::BandsWithOther(q) => Some((**q).clone()),
+                    _ => None,
+                })
+            })
+            .collect()
+    }
+
     /// CR 702.22j — is this set of blockers a "bands with other [quality]"
     /// band? True when at least two of them match a quality one of them bands
     /// with, which hands the damage division to the defending player.
-    fn quality_band_assigner(&self, ids: &[CardId]) -> Option<usize> {
-        let qualities = self.bands_with_other_qualities(ids);
+    fn quality_band_assigner(&self, ids: &[CardId], computed: &[ComputedPermanent]) -> Option<usize> {
+        let qualities = self.bands_with_other_qualities_of(ids, computed);
         qualities.iter().find(|q| {
             ids.iter()
                 .filter(|id| {
@@ -2968,7 +2991,7 @@ impl GameState {
                         .map(|c| c.controller)
                 })
                 // CR 702.22j — the "bands with other [quality]" arm.
-                .or_else(|| self.quality_band_assigner(&blocker_ids));
+                .or_else(|| self.quality_band_assigner(&blocker_ids, computed));
             // CR 510.1a — Defensive Formation: the defending player assigns
             // the damage of everything attacking them.
             let defending_seat = self.attacking.iter().find(|a| a.attacker == atk.id).and_then(
@@ -3090,7 +3113,7 @@ impl GameState {
                 computed
                     .iter()
                     .any(|c| c.id == *aid && c.keywords.contains(&Keyword::Banding))
-            }) || self.quality_band_assigner(&blocked).is_some();
+            }) || self.quality_band_assigner(&blocked, computed).is_some();
             let assigner = if banded { self.active_player_idx } else { bcp.controller };
             let assigner_ui = self.players[assigner].wants_ui;
             let deathtouch = bcp.keywords.contains(&Keyword::Deathtouch);
