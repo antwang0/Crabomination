@@ -25,7 +25,9 @@ at `1,715,304,981 -> 1,645,831,969`, -4.050 % in nine commits (branch across
 46+47: `1,765,005,375 -> 1,645,831,969`, **-6.752 %**); pass 48 ran beside it
 from `89f55a5c` and is rebased on top, `1,662,145,003 -> 1,643,104,718`,
 **-1.146 %** in four commits, which on the branch reads
-`1,645,831,968 -> 1,628,221,407`, **-1.070 %** — the two compose.** Both chains are measured against their own
+`1,645,831,968 -> 1,628,221,407`, **-1.070 %** — the two compose — plus a
+fifth row measured after the rebase, so the branch tip is
+**1,625,262,542**, pass 48 at **-1.250 %**.** Both chains are measured against their own
 base and both are `--bench`-invariant-identical throughout (decisions
 **196,220**, turns 27.53, stalls 0, determinism ok). **Six builds were
 reverted between them and every one is written up in PERF's Log** — read them
@@ -74,10 +76,11 @@ before re-proposing any.
    calls) is the same family and the same trap.
 7. **Top candidates.** (-26) `main_phase_action_with`, 32.98 %, never read
    from the top — but check whether `pick_by_outcome`'s 920 calls are a
-   search-quality decision first. Then (-29) `Arc::clone_from_ref_in`,
-   152,062 allocations / 3.22 % self (cheap half: `PlayerData`'s two
-   per-turn sets clone *by capacity*, so `= default()` beats `clear()`), and
-   (-30), the three `computed_permanent` callers that gather per call.
+   search-quality decision first. Then (-30), the three `computed_permanent`
+   callers that gather per call (`check_target_legality_with_source` opens
+   its own scope per call and a `.collect()` caller reaches it 1,616 times —
+   find that loop). **(-29)'s `RawTable` half is paid** by this pass's (F);
+   what is left of it is the unread `CardData` side.
    **(-27) is smaller than its entry used to say** (~0.2 %, not 0.75 %) and
    **(-28)'s main body is closed** — a `Vec` clone with headroom measured
    +0.050 %. `dispatch_triggers_for_events` is 5.28 % self and now

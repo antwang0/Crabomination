@@ -251,8 +251,9 @@ suite                18,709 passed / 0 failed / 5 ignored over 22 binaries (both
 host_cpu             Intel(R) Xeon(R) Processor @ 2.80GHz
 host_calib_ms        55-57 across every reading
 
-                     pass 47 tip (40fb5e31)   rebased tip
-I refs (callgrind)   1,645,831,968            1,628,221,407   -1.070 %
+                     pass 47 tip (40fb5e31)   branch tip
+I refs (callgrind)   1,645,831,968            1,628,221,407   -1.070 % (A-E)
+                                              1,625,262,542   -1.250 % (with F)
 decisions            196,220                  196,220         byte-identical
 turns_per_game       27.53                    27.53
 stalls / determinism 0 / ok (both)
@@ -278,12 +279,13 @@ No `games_per_s` pair is quoted: the only `--bench` runs available were taken
 between builds on a shared box, and this file's rule is to quote callgrind
 under 5 %.
 
-**Crash-freedom and determinism at the tip, widest pool.** `--a gang --b gang
---games 400 --threads 3 --decks all` (fixed + cube + sos, 17 archetypes),
-seeds 11 / 12 / 13: **20,400 games, 20,396 decided, no panic**, and all
-10,198 mirrored pairs split (`rho -1.000` on every seed). The 4 undecided are
-seed 11's rules draws — the same four passes 44 and 45 recorded, so the wide
-pool is unchanged by this pass's four commits.
+**Crash-freedom and determinism, widest pool, run twice — once at pass 48's
+own tip and once at the branch tip after (F) changed a container type.**
+`--a gang --b gang --games 400 --threads 3 --decks all` (fixed + cube + sos,
+17 archetypes), seeds 11 / 12 / 13: **20,400 games, 20,396 decided, no
+panic**, and all 10,198 mirrored pairs split (`rho -1.000` on every seed),
+byte-identical across the two runs. The 4 undecided are seed 11's rules
+draws — the same four passes 44 and 45 recorded.
 
 **Forty-seventh pass, base `c9606062` vs its own tip `3706f96f`**, both
 `profiling-fast --no-default-features`, built and run in one sitting on one
@@ -866,12 +868,15 @@ checked.
 | — | 1,643,104,718 -> 1,652,660,375 (**+0.58 %**) | **REVERTED** — a trigger-carrier bitmask out of `dispatch_board_scan`. See below |
 | — | 1,643,104,718 -> 1,643,733,422 (**+0.038 %**) | **REVERTED** — a precomputed APNAP rank table for the trigger sort |
 | — | 1,643,104,718 -> 1,643,924,923 (**+0.050 %**) | **REVERTED** — a `Vec` whose clone reserves headroom, on `stack` and two per-turn cast logs. See below |
+| F | 1,628,221,407 -> 1,625,262,542 (**-0.182 %**) | two per-turn `PlayerData` sets stop being cloned by capacity — measured *after* the rebase |
 
-**The pass sums to `1,662,145,003 -> 1,643,104,718`, -19,040,285 /
--1.146 %**, and **rebased onto pass 47's last five commits it reads
+**Rows A-E sum to `1,662,145,003 -> 1,643,104,718`, -19,040,285 / -1.146 %**
+on pass 48's own chain; **rebased onto pass 47's last five commits they read
 `1,645,831,968 -> 1,628,221,407`, -17,610,561 / -1.070 %** — the two passes
 compose, with pass 48's rows slightly smaller on the branch because pass 47's
-`Keyword::eq` pair had already removed some of what (B) and (E) reach.
+`Keyword::eq` pair had already removed some of what (B) and (E) reach. **(F)
+was measured after the rebase and takes the branch to 1,625,262,542, so the
+pass is `1,645,831,968 -> 1,625,262,542`, -20,569,426 / -1.250 %.**
 `--bench --threads 3` invariants byte-identical at every step:
 decisions **196,220**, turns_per_game 27.53, stalls 0 (cap 0 / stuck 0 /
 draw 0), determinism ok. **No encoding change; no net needs retraining as of
@@ -939,6 +944,20 @@ line profile can be another function's cost wearing its name: it put 2.4 %
 under `core::slice::sort::stable::drift::sort`, and the edge table says the
 program's sorts cost a fraction of that. Read it for *where inside a function*
 the cost is; read `cg_edges.py` for everything else.
+
+**(F) is (-29)'s cheap half, and the device was already in the file.**
+`IdSet` was written for `ColdState` because "an empty `hashbrown` table clone
+still walks its control bytes where an empty `Vec` clone allocates nothing" —
+and hashbrown clones by **capacity**, not length, so a per-turn set used once
+keeps costing a sized allocation on every clone for the rest of the game.
+`PlayerData`'s two per-turn id sets never got it. `RawTable::clone` was
+34,220 calls at ~137 Ir under the CoW unshare and two-thirds of them were
+these; `discarded_this_turn` and `graveyard_ids_this_turn` are `IdSet<CardId>`
+now, **-0.182 %**. Every consumer already used only `insert` / `contains` /
+`is_empty` / `clear`. `spells_cast_by_name_this_game` stays a map — it is
+game-long and grows, so it is data, not capacity. **The generalisation: a
+`HashSet` field that is `clear()`ed per turn is a capacity leak into every
+clone of its owner.**
 
 **The headroom clone — built, measured, +0.050 %, and it closes (-28)'s main
 body.** The program takes **224,481 `grow_one`s**, and the reasoning that
@@ -1574,7 +1593,7 @@ truncates it):
 | `GameState::clone` | 79,204 | 4,610,566 | (-13) costed narrowing and said no |
 | `gather_continuous_effects_inner` | 35,340 | 2,861,721 | |
 | `Vec::clone` | 31,068 | 3,666,933 | |
-| `RawTable::clone` | 29,428 | 1,805,423 | **read this pass**: `CardData` has no `HashMap`, so these are `PlayerData`'s three (`discarded_this_turn`, `graveyard_ids_this_turn`, `spells_cast_by_name_this_game`), cloned per unshare. hashbrown clones by *capacity*, so a per-turn set that was ever used keeps costing after `clear()` |
+| `RawTable::clone` | 29,428 | 1,805,423 | **read this pass, and two-thirds of it is PAID by (F)**: `CardData` has no `HashMap`, so these were `PlayerData`'s three; the two per-turn ones are `IdSet` now. `spells_cast_by_name_this_game` is what is left and it is real data |
 | `Box::clone` | 26,386 | 1,457,618 | 23,822 of them are one `Box` field on `GameState`, cloned per checkpoint. **Unread** |
 | `finalize_cast` | 24,108 | 2,766,997 | 3.4 per cast — (-28) |
 
@@ -1810,13 +1829,15 @@ profile's largest row inside `finalize_cast` is 331,402 Ir.
 allocation and 52,912,414 / 3.22 % of self, the largest unclaimed structural
 row.** The CoW unshare of `CardInstance` / `PlayerData`, ~6 per checkpointed
 action. Under it: `Vec::clone` 194,386 calls (mostly empty, 42 Ir each) and
-**`RawTable::clone` 34,220 at ~137 Ir**. `CardData` carries no `HashMap`, so
-those are `PlayerData`'s three (`discarded_this_turn`,
-`graveyard_ids_this_turn`, `spells_cast_by_name_this_game`) — and hashbrown
-clones by *capacity*, not length, so a per-turn set that was used once keeps
-costing a clone allocation for the rest of the game. Replacing `clear()` with
-a fresh `default()` on the two per-turn ones is the cheap half (~0.1 %); the
-other half is (-13)'s and is measured dead.
+`RawTable::clone` 34,220 at ~137 Ir. **The `RawTable` half is PAID** — the
+forty-eighth pass's (F), the two per-turn `PlayerData` sets to `IdSet`,
+-0.182 %; what is left there is `spells_cast_by_name_this_game`, which is
+game-long and is data. **The rest of the entry is (-13)'s and is measured
+dead**: the unshare itself is the checkpoint sharing every zone, `clone_from`
+lost at +2.60 % and narrowing `GameState` was costed and refused. What has
+never been read is the *`CardData` side*: which of its ~110 fields actually
+cost something in a `clone_from_ref_in`, given the `Vec::clone`s under it are
+42 Ir each and therefore mostly empty.
 
 **(-30) Three callers of `computed_permanent` pay a whole-game gather per
 call, and they are named now.** From the forty-eighth tip's caller table
