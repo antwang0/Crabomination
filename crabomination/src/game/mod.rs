@@ -5226,23 +5226,34 @@ impl GameState {
         // ticks too, not just the printed keyword.
         // Gated: the upkeep step took a whole-board layer pass every turn to
         // find a keyword almost no board carries.
-        let affected: Vec<(CardId, CumulativeUpkeepCost)> = self.with_frozen_layers(|g| {
-            if !g.board_keyword_matching(|k| matches!(k, Keyword::CumulativeUpkeep(_))) {
-                return Vec::new();
-            }
-            g.compute_battlefield()
-                .iter()
-                .filter(|c| c.controller == active)
-                // CR 702.24b — multiple instances each trigger separately, and
-                // each counts every age counter on the permanent.
-                .flat_map(|c| {
-                    c.keywords.iter().filter_map(move |k| match k {
-                        Keyword::CumulativeUpkeep(cost) => Some((c.id, cost.clone())),
-                        _ => None,
+        //
+        // The gate runs *outside* the scope, for the reason `do_untap` writes
+        // out at its own copy of this shape: inside one,
+        // `board_keyword_matching` reads `frozen_effects()`, which gathers on
+        // the scope's first computed read — so asking from in there paid the
+        // very gather the gate exists to avoid, and nothing else in the scope
+        // reads the memo when the answer is no. Outside, the gate answers off
+        // the printed/instance legs and `keyword_grant_in_scope`.
+        let upkeep_keyword_possible =
+            self.board_keyword_matching(|k| matches!(k, Keyword::CumulativeUpkeep(_)));
+        let affected: Vec<(CardId, CumulativeUpkeepCost)> = if !upkeep_keyword_possible {
+            Vec::new()
+        } else {
+            self.with_frozen_layers(|g| {
+                g.compute_battlefield()
+                    .iter()
+                    .filter(|c| c.controller == active)
+                    // CR 702.24b — multiple instances each trigger separately,
+                    // and each counts every age counter on the permanent.
+                    .flat_map(|c| {
+                        c.keywords.iter().filter_map(move |k| match k {
+                            Keyword::CumulativeUpkeep(cost) => Some((c.id, cost.clone())),
+                            _ => None,
+                        })
                     })
-                })
-                .collect()
-        });
+                    .collect()
+            })
+        };
         for (id, cost) in affected {
             if let Some(c) = self.battlefield_find_mut(id) {
                 c.add_counters(CounterType::Age, 1);
