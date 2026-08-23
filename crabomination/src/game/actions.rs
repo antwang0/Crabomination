@@ -13199,8 +13199,8 @@ impl GameState {
         // Which of the "has the activated abilities of …" statics this
         // permanent carries, in one pass of its static abilities instead of
         // one pass per block below.
-        let (mut welder, mut ooze, mut marvin, mut kraj, mut safehouse) =
-            (false, false, false, false, false);
+        let (mut welder, mut ooze, mut marvin, mut kraj, mut safehouse, mut snoop) =
+            (false, false, false, false, false, false);
         for sa in &me.definition.static_abilities {
             match sa.effect {
                 StaticEffect::HasActivatedAbilitiesOfExiledWithSelf => welder = true,
@@ -13210,6 +13210,9 @@ impl GameState {
                 }
                 StaticEffect::HasActivatedAbilitiesOfCounteredCreatures => kraj = true,
                 StaticEffect::HasActivatedAbilitiesOfGraveyardLands => safehouse = true,
+                // Conspicuous Snoop, read below off the same list — this pass
+                // is the one that already has it in cache.
+                StaticEffect::HasActivatedAbilitiesOfLibraryTop { .. } => snoop = true,
                 _ => {}
             }
         }
@@ -13346,7 +13349,7 @@ impl GameState {
         // static's filter, the source has all of that card's battlefield-
         // usable activated abilities (the top card is revealed by the
         // companion `TopOfLibraryRevealed` static).
-        {
+        if snoop {
             for sa in &me.definition.static_abilities {
                 let StaticEffect::HasActivatedAbilitiesOfLibraryTop { filter } = &sa.effect else {
                     continue;

@@ -7541,12 +7541,21 @@ impl GameState {
                     _ => false,
                 })
         };
+        // One walk of each permanent's static list, not two: the seat-agnostic
+        // `PlayersMaySpendManaAsAnyColor` arm and the two seat-scoped ones
+        // read the same `Vec`, and this runs once per payment.
         let board = self.battlefield.iter().any(|c| {
-            c.definition
-                .static_abilities
-                .iter()
-                .any(|sa| matches!(sa.effect, StaticEffect::PlayersMaySpendManaAsAnyColor))
-                || spell_permission(c)
+            let mine = seat.is_some_and(|s| c.controller == s && !c.face_down);
+            c.definition.static_abilities.iter().any(|sa| match sa.effect {
+                StaticEffect::PlayersMaySpendManaAsAnyColor => true,
+                StaticEffect::MaySpendManaAsAnyColorForNamedSpells => {
+                    mine && kind.name.is_some() && c.named_card.as_deref() == kind.name
+                }
+                StaticEffect::MaySpendManaAsAnyColorForCreaturesWithChosenMv => {
+                    mine && kind.creature && c.chosen_number == Some(kind.mana_value)
+                }
+                _ => false,
+            })
         });
         board
             || seat.is_some_and(|s| self.players[s].command.iter().any(spell_permission))
@@ -8137,14 +8146,13 @@ impl GameState {
                 .map(|c| c.id)
                 .collect()
         }
-        if let Some(fx) = self.frozen_effects() {
-            return strip(self, &fx);
-        }
-        // The gather is the whole cost here: `dispatch_triggers_for_events` is
-        // `&mut self`, so it runs unfrozen and rebuilds the full effect set
-        // once per dispatch to answer one bit that is false on every board
-        // without a strip effect. Ask the cheap presence gate first — it walks
-        // the battlefield once instead of gathering.
+        // The presence gate before *either* effect-set read. `false` is
+        // authoritative whether or not a scope is open, so a board with no
+        // strip source answers without asking `frozen_effects` — which on
+        // this path (`dispatch_triggers_for_events` is `&mut self`, so it
+        // runs unfrozen) is a mutex acquisition to be told `None`, 53,838
+        // times over six bench games. When the gate says maybe, the frozen
+        // set is still preferred over a fresh gather.
         if !(strip_on_battlefield || self.ability_strip_off_battlefield()) {
             // The cross-check gathers, so it must not run re-entrantly: a
             // gather started inside one would clear `in_layer_gather` on the
@@ -8158,6 +8166,9 @@ impl GameState {
                 "the ability-strip presence gate missed a RemoveAllAbilities source",
             );
             return Vec::new();
+        }
+        if let Some(fx) = self.frozen_effects() {
+            return strip(self, &fx);
         }
         strip(self, &self.gather_continuous_effects())
     }
