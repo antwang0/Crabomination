@@ -3085,28 +3085,50 @@ impl GameState {
         // Only a source that actually prints "you may choose not to untap
         // this" holds itself down; one without the clause (Kill Switch)
         // untaps normally and releases its lock.
-        let lock_sources: crate::fxhash::HashSet<crate::card::CardId> = self
-            .battlefield
-            .iter()
-            .filter_map(|c| c.untap_locked_by)
-            .chain(
-                self.temporary_control
-                    .iter()
-                    .filter(|tc| tc.while_source_tapped)
-                    .filter_map(|tc| tc.source),
-            )
-            .filter(|id| {
-                self.battlefield_find(*id).is_some_and(|c| {
-                    c.definition.keywords.contains(&crate::card::Keyword::MayChooseNotToUntap)
+        // The three sets below are read only by the loop's lock arms, and each
+        // arm is itself behind an instance flag no bench board ever sets. Two
+        // of them are a `HashSet` over the *whole* battlefield built per untap
+        // step; one walk decides whether any of them can be consulted at all,
+        // and an empty set answers `contains` exactly as an unbuilt one would.
+        let (any_tap_lock, any_presence_lock) = self.battlefield.iter().fold(
+            (false, false),
+            |(t, pr), c| {
+                (t || c.untap_locked_by.is_some(), pr || c.untap_locked_while_present.is_some())
+            },
+        );
+        let any_lock_source = any_tap_lock
+            || self.temporary_control.iter().any(|tc| tc.while_source_tapped);
+        let lock_sources: crate::fxhash::HashSet<crate::card::CardId> = if !any_lock_source {
+            crate::fxhash::HashSet::default()
+        } else {
+            self.battlefield
+                .iter()
+                .filter_map(|c| c.untap_locked_by)
+                .chain(
+                    self.temporary_control
+                        .iter()
+                        .filter(|tc| tc.while_source_tapped)
+                        .filter_map(|tc| tc.source),
+                )
+                .filter(|id| {
+                    self.battlefield_find(*id).is_some_and(|c| {
+                        c.definition.keywords.contains(&crate::card::Keyword::MayChooseNotToUntap)
+                    })
                 })
-            })
-            .collect();
-        let tapped_now_set: crate::fxhash::HashSet<crate::card::CardId> =
-            self.battlefield.iter().filter(|c| c.tapped).map(|c| c.id).collect();
+                .collect()
+        };
+        let tapped_now_set: crate::fxhash::HashSet<crate::card::CardId> = if !any_tap_lock {
+            crate::fxhash::HashSet::default()
+        } else {
+            self.battlefield.iter().filter(|c| c.tapped).map(|c| c.id).collect()
+        };
         // Shipbreaker Kraken — a presence-lock holds while its source is still
         // on the battlefield.
-        let on_battlefield: crate::fxhash::HashSet<crate::card::CardId> =
-            self.battlefield.iter().map(|c| c.id).collect();
+        let on_battlefield: crate::fxhash::HashSet<crate::card::CardId> = if !any_presence_lock {
+            crate::fxhash::HashSet::default()
+        } else {
+            self.battlefield.iter().map(|c| c.id).collect()
+        };
         // CR 502.3 — "Players can't untap more than one [filter] during their
         // untap steps" (Winter Moon, Imi Statue). Pre-resolve each cap's
         // matching permanents (the untap loop below borrows the battlefield
@@ -3174,18 +3196,26 @@ impl GameState {
         // were two such calls per battlefield permanent per untap step.
         // Neither lock is on a bench board, so the pass rides a presence gate
         // on the two keywords it looks for.
-        let (counter_locked, attack_locked) = self.with_frozen_layers(|g| {
+        //
+        // The presence gate runs *outside* the scope on purpose: inside one,
+        // `board_keyword_matching` reads `frozen_effects()`, which gathers on
+        // the scope's first computed read — so asking the question from in
+        // here paid the very gather the gate exists to avoid. Outside, the
+        // gate answers off the printed/instance legs and
+        // `keyword_grant_in_scope`.
+        let untap_lock_keyword_possible = self.board_keyword_matching(|k| {
+            matches!(
+                k,
+                crate::card::Keyword::DoesntUntapWhileCounter(_)
+                    | crate::card::Keyword::DoesntUntapIfAttackedLastTurn
+            )
+        });
+        let (counter_locked, attack_locked) = if !untap_lock_keyword_possible {
+            (Vec::new(), Vec::new())
+        } else {
+            self.with_frozen_layers(|g| {
             let mut counter_locked: Vec<crate::card::CardId> = Vec::new();
             let mut attack_locked: Vec<crate::card::CardId> = Vec::new();
-            if !g.board_keyword_matching(|k| {
-                matches!(
-                    k,
-                    crate::card::Keyword::DoesntUntapWhileCounter(_)
-                        | crate::card::Keyword::DoesntUntapIfAttackedLastTurn
-                )
-            }) {
-                return (counter_locked, attack_locked);
-            }
             for (c, cp) in g.battlefield.iter().zip(&g.compute_battlefield()) {
                 if cp.keywords.iter().any(|k| {
                     matches!(k, crate::card::Keyword::DoesntUntapWhileCounter(kind)
@@ -3198,7 +3228,8 @@ impl GameState {
                 }
             }
             (counter_locked, attack_locked)
-        });
+            })
+        };
         // Track which permanents actually flip tapped→untapped so we can
         // fire CR 702.108 Inspired ("becomes untapped") triggers afterward.
         let mut untapped_now: Vec<crate::card::CardId> = Vec::new();
