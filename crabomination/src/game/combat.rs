@@ -26,7 +26,7 @@ fn tap_another_filters(kws: &[Keyword]) -> Vec<crate::card::SelectionRequirement
 /// cap entirely. `SelfCanBlockAdditionalPerAttachedEquipment` (Kemba's Legion)
 /// adds one more per attached Equipment — see `max_blocks_on`.
 fn max_blocks_for(kws: &[Keyword]) -> usize {
-    if kws.contains(&Keyword::CanBlockAnyNumber) {
+    if kws.has_kw(&Keyword::CanBlockAnyNumber) {
         return usize::MAX;
     }
     1 + kws
@@ -417,7 +417,7 @@ impl GameState {
         // so a granted banding counts.
         {
             let has_banding = |id: CardId| {
-                computed.iter().any(|c| c.id == id && c.keywords.contains(&Keyword::Banding))
+                computed.iter().any(|c| c.id == id && c.keywords.has_kw(&Keyword::Banding))
             };
             for members in &bands {
                 let Some(&first) = members.first() else { continue };
@@ -519,7 +519,7 @@ impl GameState {
                 computed
                     .iter()
                     .find(|c| c.id == atk.attacker)
-                    .is_some_and(|c| c.keywords.contains(&Keyword::AttacksAlone))
+                    .is_some_and(|c| c.keywords.has_kw(&Keyword::AttacksAlone))
             })
         {
             return Err(GameError::CannotAttack(attacks[0].attacker));
@@ -529,8 +529,8 @@ impl GameState {
         // carrying CantAttackAlone makes the batch illegal.
         if attacks.len() == 1
             && computed.iter().find(|c| c.id == attacks[0].attacker).is_some_and(|c| {
-                c.keywords.contains(&Keyword::CantAttackAlone)
-                    || c.keywords.contains(&Keyword::CantAttackOrBlockAlone)
+                c.keywords.has_kw(&Keyword::CantAttackAlone)
+                    || c.keywords.has_kw(&Keyword::CantAttackOrBlockAlone)
             })
         {
             return Err(GameError::CannotAttack(attacks[0].attacker));
@@ -582,9 +582,9 @@ impl GameState {
                 let kws = computed_kw(id);
                 let able = c.definition.is_creature()
                     && !c.tapped
-                    && !kws.contains(&Keyword::Defender)
-                    && !kws.contains(&Keyword::CantAttack)
-                    && (!c.summoning_sick || kws.contains(&Keyword::Haste));
+                    && !kws.has_kw(&Keyword::Defender)
+                    && !kws.has_kw(&Keyword::CantAttack)
+                    && (!c.summoning_sick || kws.has_kw(&Keyword::Haste));
                 if able && has_legal_target && !attacks.iter().any(|a| a.attacker == id) {
                     return Err(GameError::CannotAttack(id));
                 }
@@ -596,11 +596,11 @@ impl GameState {
                 // A creature must be declared if it carries MustAttack
                 // (Juggernaut) or is goaded (CR 701.38 — "attacks each
                 // combat if able").
-                let must = computed_kw(c.id).contains(&Keyword::MustAttack)
-                    || computed_kw(c.id).contains(&Keyword::MustAttackOrBlock)
+                let must = computed_kw(c.id).has_kw(&Keyword::MustAttack)
+                    || computed_kw(c.id).has_kw(&Keyword::MustAttackOrBlock)
                     // CR 508.1d — Ekundu Cyclops only has to join an attack
                     // someone else already started.
-                    || (computed_kw(c.id).contains(&Keyword::MustAttackIfAnotherAttacks)
+                    || (computed_kw(c.id).has_kw(&Keyword::MustAttackIfAnotherAttacks)
                         && attacks.iter().any(|a| a.attacker != c.id))
                     || !c.goaded_by.is_empty();
                 if c.controller != p || !must {
@@ -609,9 +609,9 @@ impl GameState {
                 let kws = computed_kw(c.id);
                 let able = c.definition.is_creature()
                     && !c.tapped
-                    && (!kws.contains(&Keyword::Defender) || self.ignores_defender_for_attack(c))
-                    && !kws.contains(&Keyword::CantAttack)
-                    && (!c.summoning_sick || kws.contains(&Keyword::Haste));
+                    && (!kws.has_kw(&Keyword::Defender) || self.ignores_defender_for_attack(c))
+                    && !kws.has_kw(&Keyword::CantAttack)
+                    && (!c.summoning_sick || kws.has_kw(&Keyword::Haste));
                 if able && !attacks.iter().any(|atk| atk.attacker == c.id) {
                     return Err(GameError::CannotAttack(c.id));
                 }
@@ -632,9 +632,9 @@ impl GameState {
                 let kws = computed_kw(c.id);
                 let able = c.definition.is_creature()
                     && !c.tapped
-                    && (!kws.contains(&Keyword::Defender) || self.ignores_defender_for_attack(c))
-                    && !kws.contains(&Keyword::CantAttack)
-                    && (!c.summoning_sick || kws.contains(&Keyword::Haste));
+                    && (!kws.has_kw(&Keyword::Defender) || self.ignores_defender_for_attack(c))
+                    && !kws.has_kw(&Keyword::CantAttack)
+                    && (!c.summoning_sick || kws.has_kw(&Keyword::Haste));
                 if able && !attacks.iter().any(|atk| atk.attacker == c.id) {
                     return Err(GameError::CannotAttack(c.id));
                 }
@@ -689,7 +689,7 @@ impl GameState {
                 }
                 // CR 725 — Crown-Hunter Hireling: only the monarch can be
                 // attacked.
-                if computed_kw(id).contains(&Keyword::CantAttackUnlessDefenderIsMonarch)
+                if computed_kw(id).has_kw(&Keyword::CantAttackUnlessDefenderIsMonarch)
                     && self.defender_for(atk.target) != self.monarch
                 {
                     return Err(GameError::CannotAttack(id));
@@ -708,7 +708,7 @@ impl GameState {
                 }
                 // CR 508.1a — Branded Brawlers: the defender having any
                 // untapped land locks the attack.
-                if computed_kw(id).contains(&Keyword::CantAttackIfDefenderHasUntappedLand)
+                if computed_kw(id).has_kw(&Keyword::CantAttackIfDefenderHasUntappedLand)
                     && let Some(d) = self.defender_for(atk.target)
                     && self.battlefield.iter().any(|c| {
                         c.controller == d && c.definition.is_land() && !c.tapped
@@ -718,7 +718,7 @@ impl GameState {
                 }
                 // CR 508.1a — Mogg Toady: strictly more creatures than the
                 // defending player.
-                if computed_kw(id).contains(&Keyword::CantAttackUnlessMoreCreaturesThanDefender)
+                if computed_kw(id).has_kw(&Keyword::CantAttackUnlessMoreCreaturesThanDefender)
                     && let Some(d) = self.defender_for(atk.target)
                     && self.creature_count(p) <= self.creature_count(d)
                 {
@@ -758,7 +758,7 @@ impl GameState {
                     }
                 }
                 // CR 508.1a — Monstrous Hound: more lands than the defender.
-                if computed_kw(id).contains(&Keyword::CantAttackUnlessMoreLandsThanDefender)
+                if computed_kw(id).has_kw(&Keyword::CantAttackUnlessMoreLandsThanDefender)
                     && let Some(d) = self.defender_for(atk.target)
                     && self.player_tally(p, crate::card::PlayerTally::LandsControlled)
                         <= self.player_tally(d, crate::card::PlayerTally::LandsControlled)
@@ -766,7 +766,7 @@ impl GameState {
                     return Err(GameError::CannotAttack(id));
                 }
                 // "Even number of counters" gate (Sab-Sunen). Zero is even.
-                if computed_kw(id).contains(&Keyword::CantAttackOrBlockUnlessEvenCounters)
+                if computed_kw(id).has_kw(&Keyword::CantAttackOrBlockUnlessEvenCounters)
                     && let Some(c) = self.battlefield.iter().find(|c| c.id == id)
                     && c.counters.values().sum::<u32>() % 2 != 0
                 {
@@ -787,7 +787,7 @@ impl GameState {
                 // CR 508.1a — Goblin Cohort can't attack unless its controller
                 // cast a creature spell this turn.
                 let cohort_locked = kws
-                    .contains(&Keyword::CantAttackUnlessCastCreatureThisTurn)
+                    .has_kw(&Keyword::CantAttackUnlessCastCreatureThisTurn)
                     && self.players[p].creatures_cast_this_turn == 0;
                 // CR 508.1a — Hazoret-class: can't attack unless hand is small.
                 let hand_locked = kws.iter().any(|k| {
@@ -795,12 +795,12 @@ impl GameState {
                         if self.players[p].hand.len() as u32 > *n)
                 });
                 // CR 508.1a — Delirium gate (Patchwork Beastie).
-                let delirium_locked = kws.contains(&Keyword::CantAttackOrBlockUnlessDelirium)
+                let delirium_locked = kws.has_kw(&Keyword::CantAttackOrBlockUnlessDelirium)
                     && !self.delirium_active(p);
                 // CR 508.1a — "a creature died under your control this turn"
                 // gate (Bontu the Glorified).
                 let creature_died_locked =
-                    kws.contains(&Keyword::CantAttackOrBlockUnlessCreatureDiedThisTurn)
+                    kws.has_kw(&Keyword::CantAttackOrBlockUnlessCreatureDiedThisTurn)
                         && self.players[p].creatures_died_this_turn == 0;
                 // CR 508.1a — Descend N gate (The Ancient One).
                 let descend_locked = kws.iter().any(|k| {
@@ -809,7 +809,7 @@ impl GameState {
                 });
                 // CR 508.1a — city's blessing gate (Wayward Swordtooth).
                 let blessing_locked =
-                    kws.contains(&Keyword::CantAttackOrBlockUnlessCityBlessing)
+                    kws.has_kw(&Keyword::CantAttackOrBlockUnlessCityBlessing)
                         && !self.players[p].city_blessing;
                 // CR 508.1a — Glacial Crasher: needs a land of the named
                 // type on the battlefield (anyone's).
@@ -851,7 +851,7 @@ impl GameState {
                     .is_some_and(|c| c.attack_ban == crate::card::AttackBan::Active);
                 // CR 508.1a — Okk: needs a strictly bigger partner in the same
                 // declared batch (already-declared attackers count too).
-                let okk_locked = kws.contains(&Keyword::CantAttackUnlessGreaterPowerAttacks) && {
+                let okk_locked = kws.has_kw(&Keyword::CantAttackUnlessGreaterPowerAttacks) && {
                     let mine = computed
                         .iter()
                         .find(|c| c.id == id)
@@ -867,12 +867,12 @@ impl GameState {
                         })
                 };
                 let defender_locked =
-                    kws.contains(&Keyword::Defender) && !self.ignores_defender_for_attack(card);
+                    kws.has_kw(&Keyword::Defender) && !self.ignores_defender_for_attack(card);
                 let can_attack = is_creature_now
                     && !card.tapped
                     && card.detained_by.is_none()
                     && !defender_locked
-                    && !kws.contains(&Keyword::CantAttack)
+                    && !kws.has_kw(&Keyword::CantAttack)
                     && !predicate_locked
                     && !banned
                     && !cohort_locked
@@ -883,7 +883,7 @@ impl GameState {
                     && !descend_locked
                     && !blessing_locked
                     && !okk_locked
-                    && (!card.summoning_sick || kws.contains(&Keyword::Haste));
+                    && (!card.summoning_sick || kws.has_kw(&Keyword::Haste));
                 if !can_attack {
                     if card.tapped {
                         return Err(GameError::CardIsTapped(id));
@@ -891,7 +891,7 @@ impl GameState {
                     // CR 701.35 — a detained permanent can't attack.
                     if card.detained_by.is_some()
                         || defender_locked
-                        || kws.contains(&Keyword::CantAttack)
+                        || kws.has_kw(&Keyword::CantAttack)
                         || banned
                         || cohort_locked
                         || land_locked
@@ -1193,7 +1193,7 @@ impl GameState {
             // for its current controller.
             // Both of these read the cold group, whose `Deref` borrows the
             // whole state — take them before the battlefield `&mut`.
-            let decayed = computed_kw(id).contains(&Keyword::Decayed);
+            let decayed = computed_kw(id).has_kw(&Keyword::Decayed);
             let granted: Vec<crate::card::TriggeredAbility> =
                 self.granted_triggers_eot.get(&id).cloned().unwrap_or_default();
             let card = self
@@ -1201,7 +1201,7 @@ impl GameState {
                 .iter_mut()
                 .find(|c| c.id == id && c.controller == p)
                 .ok_or(GameError::CardNotOnBattlefield(id))?;
-            if !computed_kw(id).contains(&Keyword::Vigilance) {
+            if !computed_kw(id).has_kw(&Keyword::Vigilance) {
                 card.tapped = true;
                 // CR 508.1f — attacking taps the creature; surface a
                 // "becomes tapped" event so Tapped triggers fire (Magda).
@@ -1212,11 +1212,11 @@ impl GameState {
             // would have no policy and a real exert is almost always taken for
             // its bonus). The creature won't untap next untap step. Its exert
             // bonus rides its normal SelfSource Attacks trigger.
-            if computed_kw(id).contains(&Keyword::Exert) {
+            if computed_kw(id).has_kw(&Keyword::Exert) {
                 card.skip_next_untap = true;
             }
             // CR 702.121 — Melee: +1/+1 until end of turn per opponent attacked.
-            if melee_opponents > 0 && computed_kw(id).contains(&Keyword::Melee) {
+            if melee_opponents > 0 && computed_kw(id).has_kw(&Keyword::Melee) {
                 card.power_bonus += melee_opponents;
                 card.toughness_bonus += melee_opponents;
             }
@@ -1644,8 +1644,8 @@ impl GameState {
             // set so transient grants (e.g. SOS Duel Tactics's "this
             // creature can't block this turn", Postmortem Professor's
             // static restriction) take effect immediately.
-            if kws_of(blocker_id).contains(&Keyword::CantBlock)
-                || kws_of(blocker_id).contains(&Keyword::Decayed)
+            if kws_of(blocker_id).has_kw(&Keyword::CantBlock)
+                || kws_of(blocker_id).has_kw(&Keyword::Decayed)
             {
                 return Err(GameError::CannotBlock(blocker_id));
             }
@@ -1675,7 +1675,7 @@ impl GameState {
 
             // CR 509.1b — "can't block creatures with power equal to or
             // greater than this creature's toughness" (Ironclaw Curse).
-            if kws_of(blocker_id).contains(&Keyword::CantBlockPowerAtLeastOwnToughness)
+            if kws_of(blocker_id).has_kw(&Keyword::CantBlockPowerAtLeastOwnToughness)
                 && let (Some(b), Some(a)) = (cp_of(blocker_id), cp_of(attacker_id))
                 && a.power >= b.toughness
             {
@@ -1683,7 +1683,7 @@ impl GameState {
             }
 
             // CR 509.1b — Monstrous Hound: more lands than the attacker.
-            if kws_of(blocker_id).contains(&Keyword::CantBlockUnlessMoreLandsThanAttacker)
+            if kws_of(blocker_id).has_kw(&Keyword::CantBlockUnlessMoreLandsThanAttacker)
                 && let Some(a) = self.battlefield_find(attacker_id)
                 && self.player_tally(blocker.controller, crate::card::PlayerTally::LandsControlled)
                     <= self.player_tally(a.controller, crate::card::PlayerTally::LandsControlled)
@@ -1705,7 +1705,7 @@ impl GameState {
 
             // "Can't block unless it has an even number of counters on it"
             // (Sab-Sunen). Zero is even; reject an odd total counter count.
-            if kws_of(blocker_id).contains(&Keyword::CantAttackOrBlockUnlessEvenCounters)
+            if kws_of(blocker_id).has_kw(&Keyword::CantAttackOrBlockUnlessEvenCounters)
                 && blocker.counters.values().sum::<u32>() % 2 != 0
             {
                 return Err(GameError::CannotBlock(blocker_id));
@@ -1755,7 +1755,7 @@ impl GameState {
 
             // CR 509.1b — Branded Brawlers: your own untapped land locks the
             // block.
-            if kws_of(blocker_id).contains(&Keyword::CantBlockIfYouHaveUntappedLand)
+            if kws_of(blocker_id).has_kw(&Keyword::CantBlockIfYouHaveUntappedLand)
                 && self.battlefield.iter().any(|c| {
                     c.controller == blocker.controller && c.definition.is_land() && !c.tapped
                 })
@@ -1764,7 +1764,7 @@ impl GameState {
             }
             // CR 509.1b — Mogg Toady: strictly more creatures than the
             // attacker's controller.
-            if kws_of(blocker_id).contains(&Keyword::CantBlockUnlessMoreCreaturesThanAttacker)
+            if kws_of(blocker_id).has_kw(&Keyword::CantBlockUnlessMoreCreaturesThanAttacker)
                 && self.creature_count(blocker.controller)
                     <= self.creature_count(attacker.controller)
             {
@@ -1926,7 +1926,7 @@ impl GameState {
             all_blockers.extend(assignments.iter().map(|(b, _)| *b));
             if all_blockers.len() == 1 {
                 for &(blocker_id, _) in &assignments {
-                    if kws_of(blocker_id).contains(&Keyword::CantAttackOrBlockAlone) {
+                    if kws_of(blocker_id).has_kw(&Keyword::CantAttackOrBlockAlone) {
                         return Err(GameError::CannotBlock(blocker_id));
                     }
                 }
@@ -1939,7 +1939,7 @@ impl GameState {
                 computed_pow.iter().find(|c| c.id == id).map(|c| c.power).unwrap_or(0)
             };
             for &(blocker_id, _) in &assignments {
-                if kws_of(blocker_id).contains(&Keyword::CantBlockUnlessGreaterPowerBlocks) {
+                if kws_of(blocker_id).has_kw(&Keyword::CantBlockUnlessGreaterPowerBlocks) {
                     let mine = power_of(blocker_id);
                     if !all_blockers.iter().any(|&o| o != blocker_id && power_of(o) > mine) {
                         return Err(GameError::CannotBlock(blocker_id));
@@ -2013,7 +2013,7 @@ impl GameState {
         // blocks plus this batch) so incremental multi-defender submissions
         // compose, same as the CantBeBlockedExceptByN check below.
         for atk in &self.attacking {
-            let has_menace = kws_of(atk.attacker).contains(&Keyword::Menace);
+            let has_menace = kws_of(atk.attacker).has_kw(&Keyword::Menace);
             if has_menace {
                 let blocker_count = assignments
                     .iter()
@@ -2093,7 +2093,7 @@ impl GameState {
         // CR 509.1g — "can't be blocked by more than one creature" (Charging
         // Rhino). At most one blocker may be assigned (the inverse of Menace).
         for atk in &self.attacking {
-            if kws_of(atk.attacker).contains(&Keyword::CantBeBlockedByMoreThanOne) {
+            if kws_of(atk.attacker).has_kw(&Keyword::CantBeBlockedByMoreThanOne) {
                 let blocker_count = assignments
                     .iter()
                     .filter(|(_, aid)| *aid == atk.attacker)
@@ -2113,7 +2113,7 @@ impl GameState {
         // compose. Single-requirement model; full CR maximization across
         // multiple simultaneous requirements is approximated.
         for atk in &self.attacking {
-            if !kws_of(atk.attacker).contains(&Keyword::MustBeBlocked) {
+            if !kws_of(atk.attacker).has_kw(&Keyword::MustBeBlocked) {
                 continue;
             }
             let already = self.blocker_count_of(atk.attacker) > 0;
@@ -2132,7 +2132,7 @@ impl GameState {
                 cp_of(b.id).is_some_and(|c| c.card_types.contains(&crate::card::CardType::Creature))
                     && self.same_team(b.controller, defender_idx)
                     && !b.tapped
-                    && !kws_of(b.id).contains(&Keyword::CantBlock)
+                    && !kws_of(b.id).has_kw(&Keyword::CantBlock)
                     && !self.is_blocking(b.id)
                     && !assignments.iter().any(|(bid, _)| *bid == b.id)
                     && cp_of(b.id).is_some_and(|bcp| {
@@ -2150,7 +2150,7 @@ impl GameState {
         // Every idle defender creature that *can* legally block such an
         // attacker must be assigned to it in the merged block set.
         for atk in &self.attacking {
-            if !kws_of(atk.attacker).contains(&Keyword::AllMustBlock) {
+            if !kws_of(atk.attacker).has_kw(&Keyword::AllMustBlock) {
                 continue;
             }
             let Some(defender_idx) = self.defender_for(atk.target) else { continue };
@@ -2164,7 +2164,7 @@ impl GameState {
                 cp_of(b.id).is_some_and(|c| c.card_types.contains(&crate::card::CardType::Creature))
                     && self.same_team(b.controller, defender_idx)
                     && !b.tapped
-                    && !kws_of(b.id).contains(&Keyword::CantBlock)
+                    && !kws_of(b.id).has_kw(&Keyword::CantBlock)
                     && cp_of(b.id).is_some_and(|bcp| {
                         super::can_block_attacker_computed(
                             b, bcp, kws_of(atk.attacker), atk_colors, atk_power,
@@ -2191,7 +2191,7 @@ impl GameState {
                 .is_some_and(|c| c.card_types.contains(&crate::card::CardType::Creature));
             if !b_is_creature
                 || (b.tapped && !self.tapped_creatures_can_block(b.controller))
-                || kws_of(b.id).contains(&Keyword::CantBlock)
+                || kws_of(b.id).has_kw(&Keyword::CantBlock)
             {
                 continue;
             }
@@ -2217,7 +2217,7 @@ impl GameState {
         // *every* untapped defending creature able to block it must also be
         // assigned to it. Checked against the merged block set.
         for atk in &self.attacking {
-            if !kws_of(atk.attacker).contains(&Keyword::CantBeBlockedUnlessAllBlock) {
+            if !kws_of(atk.attacker).has_kw(&Keyword::CantBeBlockedUnlessAllBlock) {
                 continue;
             }
             let blocked = self.blocker_count_of(atk.attacker) > 0
@@ -2233,7 +2233,7 @@ impl GameState {
                 cp_of(b.id).is_some_and(|c| c.card_types.contains(&crate::card::CardType::Creature))
                     && self.same_team(b.controller, defender_idx)
                     && !b.tapped
-                    && !kws_of(b.id).contains(&Keyword::CantBlock)
+                    && !kws_of(b.id).has_kw(&Keyword::CantBlock)
                     && !self.blocks(b.id, atk.attacker)
                     && !assignments
                         .iter()
@@ -2259,11 +2259,11 @@ impl GameState {
         for b in must_block_scan {
             let b_is_creature = cp_of(b.id)
                 .is_some_and(|c| c.card_types.contains(&crate::card::CardType::Creature));
-            if !(kws_of(b.id).contains(&Keyword::MustBlock)
-                || kws_of(b.id).contains(&Keyword::MustAttackOrBlock))
+            if !(kws_of(b.id).has_kw(&Keyword::MustBlock)
+                || kws_of(b.id).has_kw(&Keyword::MustAttackOrBlock))
                 || !b_is_creature
                 || b.tapped
-                || kws_of(b.id).contains(&Keyword::CantBlock)
+                || kws_of(b.id).has_kw(&Keyword::CantBlock)
             {
                 continue;
             }
@@ -2369,7 +2369,7 @@ impl GameState {
             let ak = kws_for(a);
             // Flanking: nonflanking blocker shrinks once per flanking instance.
             let flank = ak.iter().filter(|k| **k == Keyword::Flanking).count() as i32;
-            if flank > 0 && !bk.contains(&Keyword::Flanking) {
+            if flank > 0 && !bk.has_kw(&Keyword::Flanking) {
                 pt_deltas.push((b, -flank));
             }
             // Bushido on the blocker (it blocks).
@@ -2503,8 +2503,8 @@ impl GameState {
         self.with_frozen_layers(|g| {
             let strikes_first = |id: CardId| {
                 g.computed_permanent(id).is_some_and(|c| {
-                    c.keywords.contains(&Keyword::FirstStrike)
-                        || c.keywords.contains(&Keyword::DoubleStrike)
+                    c.keywords.has_kw(&Keyword::FirstStrike)
+                        || c.keywords.has_kw(&Keyword::DoubleStrike)
                 })
             };
             g.attacking.iter().any(|atk| strikes_first(atk.attacker))
@@ -2592,7 +2592,7 @@ impl GameState {
             }
         }
         let subset = self.compute_permanents(&ids);
-        if subset.iter().any(|c| c.keywords.contains(&Keyword::DividesCombatDamageAmongDefenders)) {
+        if subset.iter().any(|c| c.keywords.has_kw(&Keyword::DividesCombatDamageAmongDefenders)) {
             return self.compute_battlefield();
         }
         subset
@@ -2605,7 +2605,7 @@ impl GameState {
         // gate applies to attackers (who deals?) and blockers (who strikes
         // back at the attacker?).
         let fs_or_ds = |kws: &[Keyword]| {
-            kws.contains(&Keyword::FirstStrike) || kws.contains(&Keyword::DoubleStrike)
+            kws.has_kw(&Keyword::FirstStrike) || kws.has_kw(&Keyword::DoubleStrike)
         };
         let mut events = self.resolve_combat_damage_with_filter(&computed, fs_or_ds, fs_or_ds)?;
         // Suspended on a `wants_ui` player's combat-damage choice — no damage
@@ -2626,7 +2626,7 @@ impl GameState {
         // deals damage now — i.e. anyone without first strike, plus double
         // strikers (who strike in both steps).
         let regular_or_ds = |kws: &[Keyword]| {
-            !kws.contains(&Keyword::FirstStrike) || kws.contains(&Keyword::DoubleStrike)
+            !kws.has_kw(&Keyword::FirstStrike) || kws.has_kw(&Keyword::DoubleStrike)
         };
         let mut events =
             self.resolve_combat_damage_with_filter(&computed, regular_or_ds, regular_or_ds)?;
@@ -2987,7 +2987,7 @@ impl GameState {
                 .find_map(|bid| {
                     computed
                         .iter()
-                        .find(|c| c.id == *bid && c.keywords.contains(&Keyword::Banding))
+                        .find(|c| c.id == *bid && c.keywords.has_kw(&Keyword::Banding))
                         .map(|c| c.controller)
                 })
                 // CR 702.22j — the "bands with other [quality]" arm.
@@ -3097,7 +3097,7 @@ impl GameState {
         for bid in multi_blockers {
             let Some(bcp) = computed.iter().find(|c| c.id == bid) else { continue };
             if !blocker_filter(&bcp.keywords)
-                || bcp.keywords.contains(&Keyword::DealsNoCombatDamage)
+                || bcp.keywords.has_kw(&Keyword::DealsNoCombatDamage)
                 || self.combat_damage_prevented_creatures.contains(&bid)
                 || self.assigns_no_combat_damage_this_turn.contains(&bid)
                 || self.combat_damage_prevented_for_dealer(bid)
@@ -3112,11 +3112,11 @@ impl GameState {
             let banded = blocked.iter().any(|aid| {
                 computed
                     .iter()
-                    .any(|c| c.id == *aid && c.keywords.contains(&Keyword::Banding))
+                    .any(|c| c.id == *aid && c.keywords.has_kw(&Keyword::Banding))
             }) || self.quality_band_assigner(&blocked, computed).is_some();
             let assigner = if banded { self.active_player_idx } else { bcp.controller };
             let assigner_ui = self.players[assigner].wants_ui;
-            let deathtouch = bcp.keywords.contains(&Keyword::Deathtouch);
+            let deathtouch = bcp.keywords.has_kw(&Keyword::Deathtouch);
             let total_power = combat_damage_value(bcp).max(0) as u32;
 
             if !self.combat_damage_order.contains_key(&bid) {
@@ -3203,7 +3203,7 @@ impl GameState {
     ) -> Vec<CardId> {
         let free = computed.iter().any(|c| {
             c.id == attacker
-                && c.keywords.contains(&Keyword::DividesCombatDamageAmongDefenders)
+                && c.keywords.has_kw(&Keyword::DividesCombatDamageAmongDefenders)
         });
         if !free {
             return vec![];
@@ -3312,7 +3312,7 @@ impl GameState {
                 let computed = self.combat_damage_computed();
                 let atk_cp = computed.iter().find(|c| c.id == attacker);
                 let deathtouch = atk_cp
-                    .is_some_and(|c| c.keywords.contains(&Keyword::Deathtouch));
+                    .is_some_and(|c| c.keywords.has_kw(&Keyword::Deathtouch));
                 let power = atk_cp.map(combat_damage_value).unwrap_or(0);
                 let total_power = if self.combat_damage_prevented_for_dealer(attacker) {
                     0
@@ -3321,7 +3321,7 @@ impl GameState {
                 };
                 // A multi-block blocker (CR 510.1e) has no trample outlet.
                 let trample = self.attackers_blocked_by(attacker).len() <= 1
-                    && atk_cp.is_some_and(|c| c.keywords.contains(&Keyword::Trample));
+                    && atk_cp.is_some_and(|c| c.keywords.has_kw(&Keyword::Trample));
                 let (lethals, trample) =
                     self.combat_assignment_plan(attacker, deathtouch, trample, &order, &computed);
                 let split = self.resolve_damage_assignment(total_power, &lethals, trample, answer);
@@ -3368,12 +3368,12 @@ impl GameState {
                     target: atk.target,
                     defender_player,
                     power: combat_damage_value(cp),
-                    has_trample: kws.contains(&Keyword::Trample),
-                    has_trample_over_pw: kws.contains(&Keyword::TrampleOverPlaneswalkers),
-                    has_lifelink: kws.contains(&Keyword::Lifelink),
-                    has_deathtouch: kws.contains(&Keyword::Deathtouch),
-                    has_infect: kws.contains(&Keyword::Infect),
-                    has_wither: kws.contains(&Keyword::Wither),
+                    has_trample: kws.has_kw(&Keyword::Trample),
+                    has_trample_over_pw: kws.has_kw(&Keyword::TrampleOverPlaneswalkers),
+                    has_lifelink: kws.has_kw(&Keyword::Lifelink),
+                    has_deathtouch: kws.has_kw(&Keyword::Deathtouch),
+                    has_infect: kws.has_kw(&Keyword::Infect),
+                    has_wither: kws.has_kw(&Keyword::Wither),
                     toxic: kws.iter().filter_map(|k| match k {
                         // Poisonous N (CR 702.70) folds into the same
                         // combat-damage poison rider as Toxic (CR 702.180).
@@ -3381,13 +3381,13 @@ impl GameState {
                         _ => None,
                     }).sum(),
                     assigns_as_unblocked: kws
-                        .contains(&Keyword::AssignsDamageAsThoughUnblocked),
+                        .has_kw(&Keyword::AssignsDamageAsThoughUnblocked),
                     // CR 510.1 — a creature with "deals no combat damage this
                     // turn" (Master of Cruelties) is skipped in both damage
                     // steps even though it's a legal attacker/blocker. CR 614.9
                     // — a Maze-of-Ith'd attacker deals no combat damage either.
                     should_deal: attacker_filter(kws)
-                        && !kws.contains(&Keyword::DealsNoCombatDamage)
+                        && !kws.has_kw(&Keyword::DealsNoCombatDamage)
                         // CR 615.7 chosen-source prevention (Forge-Tender,
                         // Hallow, Awe Strike) is NOT short-circuited here: the
                         // damage still has to reach `apply_prevention_shields`
@@ -3837,8 +3837,8 @@ impl GameState {
                         if dmg == 0 {
                             continue;
                         }
-                        let infect = bc.keywords.contains(&Keyword::Infect)
-                            || bc.keywords.contains(&Keyword::Wither);
+                        let infect = bc.keywords.has_kw(&Keyword::Infect)
+                            || bc.keywords.has_kw(&Keyword::Wither);
                         let hit = self.turn_damage_redirect_for(atk.id).unwrap_or(atk.id);
                         if let Some(attacker) = self.battlefield_find_mut(hit) {
                             attacker.dealt_damage_this_turn = true;
@@ -3855,7 +3855,7 @@ impl GameState {
                             } else {
                                 attacker.damage += dmg;
                                 attacker.record_damage_from(bid, dmg);
-                                if bc.keywords.contains(&Keyword::Deathtouch) {
+                                if bc.keywords.has_kw(&Keyword::Deathtouch) {
                                     attacker.dealt_deathtouch_damage = true;
                                 }
                                 events.push(GameEvent::DamageDealt {
@@ -3873,7 +3873,7 @@ impl GameState {
                         creature_damage.push((bid, atk.id, dmg));
                         // CR 702.15a — lifelink scales off damage actually
                         // dealt; credited to the blocker's controller.
-                        if bc.keywords.contains(&Keyword::Lifelink) {
+                        if bc.keywords.has_kw(&Keyword::Lifelink) {
                             let controller = self
                                 .battlefield
                                 .iter()
@@ -3947,7 +3947,7 @@ impl GameState {
     /// so it can't be declared as an attack target (The Aetherspark).
     pub(crate) fn permanent_cant_be_attacked(&self, id: CardId) -> bool {
         self.computed_permanent(id)
-            .is_some_and(|cp| cp.keywords.contains(&Keyword::CantBeAttacked))
+            .is_some_and(|cp| cp.keywords.has_kw(&Keyword::CantBeAttacked))
     }
 
     /// Apply `amount` damage from `atk` to its declared attack target. For
@@ -4076,7 +4076,7 @@ impl GameState {
         let c = self.battlefield_find(id)?;
         self.computed_permanent(id)?
             .keywords
-            .contains(&crate::card::Keyword::DamageToThisGoesToItsController)
+            .has_kw(&crate::card::Keyword::DamageToThisGoesToItsController)
             .then_some(c.controller)
     }
 
@@ -4334,7 +4334,7 @@ impl GameState {
                     // type, recorded via the controller-side any flag).
                     if let Some(c) = self.battlefield.iter().find(|c| c.id == atk.id) {
                         let ctrl = c.controller;
-                        if c.definition.keywords.contains(&Keyword::Changeling) {
+                        if c.definition.keywords.has_kw(&Keyword::Changeling) {
                             self.players[ctrl].prowl_any_type_this_turn = true;
                         }
                         let types = c.definition.subtypes.creature_types.clone();
@@ -5211,7 +5211,7 @@ impl GameState {
 /// Pony), otherwise its power (CR 510.1c). The substitution is unconditional —
 /// a 5/1 Doran-creature assigns 1.
 fn combat_damage_value(cp: &ComputedPermanent) -> i32 {
-    if cp.keywords.contains(&Keyword::AssignsCombatDamageByToughness) {
+    if cp.keywords.has_kw(&Keyword::AssignsCombatDamageByToughness) {
         cp.toughness
     } else {
         cp.power

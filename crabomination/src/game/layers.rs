@@ -17,6 +17,8 @@
 //!      7d. P/T switching
 //!      Counters (+1/+1, -1/-1) are applied after 7c per CR 613.7f.
 
+use crate::game::KeywordSlice;
+
 use crate::card::{
     CardId, CardType, CounterType, CreatureType, Keyword, LandType, SelectionRequirement, Subtypes,
     Supertype,
@@ -825,7 +827,7 @@ fn affected_includes_gated(
             });
             // CR 702.114 — Devoid CDA: colorless despite colored pips.
             let colorless_ok = !*colorless
-                || card.definition.keywords.contains(&crate::card::Keyword::Devoid)
+                || card.definition.keywords.has_kw(&crate::card::Keyword::Devoid)
                 || !card.definition.cost.symbols.iter()
                     .any(|s| matches!(s, crate::mana::ManaSymbol::Colored(_)));
             let token_ok = token.is_none_or(|want| card.is_token == want);
@@ -860,7 +862,7 @@ fn affected_includes_gated(
                     Some(types) => types.contains(ct),
                     None => card.definition.subtypes.creature_types.contains(ct),
                 };
-                typed || card.definition.keywords.contains(&Keyword::Changeling)
+                typed || card.definition.keywords.has_kw(&Keyword::Changeling)
             });
             let counter_ok = counter.is_none_or(|k| card.counter_count(k) > 0);
             ctrl_ok && type_ok && color_ok && ct_ok && counter_ok
@@ -876,7 +878,7 @@ fn affected_includes_gated(
             let has_type = match gate_types {
                 Some(types) => types.contains(creature_type),
                 None => card.definition.subtypes.creature_types.contains(creature_type),
-            } || card.definition.keywords.contains(&Keyword::Changeling);
+            } || card.definition.keywords.has_kw(&Keyword::Changeling);
             ctrl_ok && is_creature && has_type
         }
         AffectedPermanents::AllWithCounter { controller, card_types, counter, at_least } => {
@@ -1000,7 +1002,7 @@ pub(crate) fn requirement_matches_card(
         R::HasCardType(t) => def.card_types.contains(t),
         R::HasSupertype(s) => def.supertypes.contains(s),
         R::HasCreatureType(ct) => def.subtypes.creature_types.contains(ct)
-            || def.keywords.contains(&Keyword::Changeling),
+            || def.keywords.has_kw(&Keyword::Changeling),
         R::HasLandType(lt) => def.subtypes.land_types.contains(lt),
         R::HasArtifactSubtype(a) => def.subtypes.artifact_subtypes.contains(a),
         R::HasEnchantmentSubtype(e) => def.subtypes.enchantment_subtypes.contains(e),
@@ -1015,7 +1017,7 @@ pub(crate) fn requirement_matches_card(
             .any(|s| matches!(s, crate::mana::ManaSymbol::Colored(col) if col == c)),
         // CR 702.114 — Devoid is a CDA: the object is colorless regardless of
         // its (possibly colored) cost pips.
-        R::Colorless => def.keywords.contains(&crate::card::Keyword::Devoid)
+        R::Colorless => def.keywords.has_kw(&crate::card::Keyword::Devoid)
             || !def
                 .cost
                 .symbols

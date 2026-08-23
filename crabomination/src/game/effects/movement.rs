@@ -3,6 +3,8 @@
 //! `match` arms for `Effect::Move`, `Effect::Destroy`, `Effect::DealDamage`,
 //! etc.
 
+use crate::game::KeywordSlice;
+
 use super::{EffectContext, EntityRef};
 use crate::card::{CardId, CardInstance, CounterType};
 use crate::effect::{LibraryPosition, PlayerRef, ZoneDest};
@@ -1142,13 +1144,13 @@ impl GameState {
             .and_then(|s| self.computed_permanent(s))
             .map(|cp| cp.keywords.to_vec())
             .unwrap_or_default();
-        let source_has_infect = src_kws.contains(&crate::card::Keyword::Infect);
+        let source_has_infect = src_kws.has_kw(&crate::card::Keyword::Infect);
         // CR 702.80a / 702.90e — wither/infect damage to a creature lands as
         // -1/-1 counters instead of marked damage; CR 702.2c — nonzero
         // deathtouch damage flags the creature for the destroy SBA.
         let source_has_wither =
-            source_has_infect || src_kws.contains(&crate::card::Keyword::Wither);
-        let mut source_has_deathtouch = src_kws.contains(&crate::card::Keyword::Deathtouch);
+            source_has_infect || src_kws.has_kw(&crate::card::Keyword::Wither);
+        let mut source_has_deathtouch = src_kws.has_kw(&crate::card::Keyword::Deathtouch);
         // Pestilent Spirit — "instant and sorcery spells you control have
         // deathtouch." The resolving I/S caster's seat is stamped in
         // `resolve_top_of_stack`; damage from that same spell is deathtouch.
@@ -1471,7 +1473,7 @@ impl GameState {
                     // Lichenthrope — the victim itself converts damage to
                     // -1/-1 counters, whatever the source is.
                     let victim_converts = self.computed_permanent(cid).is_some_and(|cp| {
-                        cp.keywords.contains(&crate::card::Keyword::DamageBecomesMinusCounters)
+                        cp.keywords.has_kw(&crate::card::Keyword::DamageBecomesMinusCounters)
                     });
                     if let Some(c) = self.battlefield_find_mut(cid) {
                     if c.definition.is_creature() {
@@ -1688,7 +1690,7 @@ impl GameState {
         // A lifelink permanent (e.g. a ping ability from a lifelink creature).
         if let Some(src) = source
             && let Some(cp) = self.computed_permanent(src)
-            && cp.keywords.contains(&Keyword::Lifelink)
+            && cp.keywords.has_kw(&Keyword::Lifelink)
         {
             return Some(cp.controller);
         }

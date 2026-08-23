@@ -5,6 +5,8 @@
 //! These are read-only and called from the resolver match arms in
 //! `mod.rs` (and from `auto_target_for_effect_avoiding` in `targeting.rs`).
 
+use crate::game::KeywordSlice;
+
 use super::{EffectContext, EntityRef};
 use crate::card::{CardId, CardInstance, CardType, SelectionRequirement, Supertype};
 use crate::effect::{Predicate, Value};
@@ -198,7 +200,7 @@ impl GameState {
                     .filter(|c| c.controller == ctx.controller && c.definition.is_creature())
                     .filter_map(|c| self.computed_permanent(c.id))
                     .map(|cp| {
-                        let changeling = cp.keywords.contains(&Keyword::Changeling);
+                        let changeling = cp.keywords.has_kw(&Keyword::Changeling);
                         std::array::from_fn(|i| {
                             changeling || cp.subtypes.creature_types.contains(&roles[i])
                         })
@@ -653,7 +655,7 @@ impl GameState {
                     if !cp.card_types.contains(&crate::card::CardType::Creature) {
                         continue;
                     }
-                    if cp.keywords.contains(&crate::card::Keyword::Changeling) {
+                    if cp.keywords.has_kw(&crate::card::Keyword::Changeling) {
                         changelings += 1;
                         continue;
                     }
@@ -959,12 +961,12 @@ impl GameState {
                 };
                 let Some(subj) = self.find_card_anywhere(sid) else { return 0 };
                 let types = subj.definition.subtypes.creature_types.clone();
-                let wild = subj.definition.keywords.contains(&crate::card::Keyword::Changeling);
+                let wild = subj.definition.keywords.has_kw(&crate::card::Keyword::Changeling);
                 self.battlefield
                     .iter()
                     .filter(|c| c.controller == ctx.controller && c.definition.is_creature())
                     .filter(|c| {
-                        wild || c.definition.keywords.contains(&crate::card::Keyword::Changeling)
+                        wild || c.definition.keywords.has_kw(&crate::card::Keyword::Changeling)
                             || c.definition
                                 .subtypes
                                 .creature_types
@@ -1275,7 +1277,7 @@ impl GameState {
                     .filter(|id| {
                         self.find_card_anywhere(**id).is_some_and(|c| {
                             c.definition.subtypes.creature_types.contains(ct)
-                                || c.definition.keywords.contains(&crate::card::Keyword::Changeling)
+                                || c.definition.keywords.has_kw(&crate::card::Keyword::Changeling)
                         })
                     })
                     .count() as i32
@@ -3877,7 +3879,7 @@ impl GameState {
                         c.controller == controller && c.definition.name == card.definition.name
                     }),
                     // CR 702.114 — Devoid CDA: colorless despite colored pips.
-                    R::Colorless => card.definition.keywords.contains(&crate::card::Keyword::Devoid)
+                    R::Colorless => card.definition.keywords.has_kw(&crate::card::Keyword::Devoid)
                         || card.definition.cost.distinct_colors() == 0,
                     R::Monocolored => card.definition.cost.distinct_colors() == 1,
                     R::HasXInCost => card.definition.cost.has_x(),
@@ -4409,13 +4411,13 @@ impl GameState {
             // creature". Changeling matches everything (CR 702.73a).
             R::SharesCreatureTypeWithSacrificed => {
                 let mine = &card.definition.subtypes.creature_types;
-                let wild = card.definition.keywords.contains(&crate::card::Keyword::Changeling);
+                let wild = card.definition.keywords.has_kw(&crate::card::Keyword::Changeling);
                 self.sacrificed_card
                     .and_then(|id| {
                         self.died_card_snapshots.get(&id).or_else(|| self.find_card_anywhere(id))
                     })
                     .is_some_and(|s| {
-                        wild || s.definition.keywords.contains(&crate::card::Keyword::Changeling)
+                        wild || s.definition.keywords.has_kw(&crate::card::Keyword::Changeling)
                             || s.definition
                                 .subtypes
                                 .creature_types
@@ -4425,7 +4427,7 @@ impl GameState {
             }
             // Harsh Mercy — "of a type chosen this way".
             R::IsTypeChosenThisWay => {
-                card.definition.keywords.contains(&crate::card::Keyword::Changeling)
+                card.definition.keywords.has_kw(&crate::card::Keyword::Changeling)
                     || self
                         .chosen_creature_types_scratch
                         .iter()
@@ -4435,11 +4437,11 @@ impl GameState {
             // tapped this way". Changeling matches everything (CR 702.73a).
             R::SharesCreatureTypeWithTapped => {
                 let mine = &card.definition.subtypes.creature_types;
-                let wild = card.definition.keywords.contains(&crate::card::Keyword::Changeling);
+                let wild = card.definition.keywords.has_kw(&crate::card::Keyword::Changeling);
                 !self.tapped_for_cost.is_empty()
                     && self.tapped_for_cost.iter().all(|id| {
                         self.battlefield_find(*id).is_some_and(|t| {
-                            wild || t.definition.keywords.contains(&crate::card::Keyword::Changeling)
+                            wild || t.definition.keywords.has_kw(&crate::card::Keyword::Changeling)
                                 || t.definition
                                     .subtypes
                                     .creature_types
@@ -4597,7 +4599,7 @@ impl GameState {
                 c.controller == controller && c.definition.name == card.definition.name
             }),
             // CR 702.114 — Devoid CDA: colorless despite colored pips.
-            R::Colorless => card.definition.keywords.contains(&crate::card::Keyword::Devoid)
+            R::Colorless => card.definition.keywords.has_kw(&crate::card::Keyword::Devoid)
                 || card.definition.cost.distinct_colors() == 0,
             R::Monocolored => card.definition.cost.distinct_colors() == 1,
             R::HasXInCost => card.definition.cost.has_x(),

@@ -1903,7 +1903,7 @@ impl GameState {
                     if converged_value > 0
                         && self.battlefield.iter().any(|c| {
                             c.id == card_id
-                                && c.definition.keywords.contains(&crate::card::Keyword::Sunburst)
+                                && c.definition.keywords.has_kw(&crate::card::Keyword::Sunburst)
                         })
                     {
                         let kind = if is_creature_resolve {
@@ -2049,7 +2049,7 @@ impl GameState {
                     if self.day_night.is_none()
                         && self
                             .battlefield_find(card_id)
-                            .is_some_and(|c| c.definition.keywords.contains(&Keyword::Daybound))
+                            .is_some_and(|c| c.definition.keywords.has_kw(&Keyword::Daybound))
                     {
                         self.set_day_night(crate::game::types::DayNight::Day, &mut events);
                     }
@@ -2652,9 +2652,9 @@ impl GameState {
                     .iter()
                     .filter(|c| {
                         c.controller == p
-                            && c.keywords.contains(&crate::card::Keyword::Phasing)
+                            && c.keywords.has_kw(&crate::card::Keyword::Phasing)
                             // CR 702.26 — Spatial Binding pins a permanent in phase.
-                            && !c.keywords.contains(&crate::card::Keyword::CantPhaseOut)
+                            && !c.keywords.has_kw(&crate::card::Keyword::CantPhaseOut)
                     })
                     .map(|c| c.id)
                     .collect()
@@ -2736,7 +2736,7 @@ impl GameState {
     pub fn assigns_no_combat_damage(&self, card_id: crate::card::CardId) -> bool {
         self.assigns_no_combat_damage_this_turn.contains(&card_id)
             || self.computed_permanent(card_id).is_some_and(|cp| {
-                cp.keywords.contains(&crate::card::Keyword::DealsNoCombatDamage)
+                cp.keywords.has_kw(&crate::card::Keyword::DealsNoCombatDamage)
             })
     }
 
@@ -3131,7 +3131,7 @@ impl GameState {
                 )
                 .filter(|id| {
                     self.battlefield_find(*id).is_some_and(|c| {
-                        c.definition.keywords.contains(&crate::card::Keyword::MayChooseNotToUntap)
+                        c.definition.keywords.has_kw(&crate::card::Keyword::MayChooseNotToUntap)
                     })
                 })
                 .collect()
@@ -3190,7 +3190,7 @@ impl GameState {
                 .filter(|c| {
                     c.tapped
                         && untappers.contains(&c.controller)
-                        && c.definition.keywords.contains(&crate::card::Keyword::MayChooseNotToUntap)
+                        && c.definition.keywords.has_kw(&crate::card::Keyword::MayChooseNotToUntap)
                 })
                 .map(|c| (c.id, c.controller, c.definition.name))
                 .collect();
@@ -3243,7 +3243,7 @@ impl GameState {
                 }) {
                     counter_locked.push(c.id);
                 }
-                if cp.keywords.contains(&crate::card::Keyword::DoesntUntapIfAttackedLastTurn) {
+                if cp.keywords.has_kw(&crate::card::Keyword::DoesntUntapIfAttackedLastTurn) {
                     attack_locked.push(c.id);
                 }
             }
@@ -4813,8 +4813,8 @@ impl GameState {
                 self.battlefield
                     .iter()
                     .filter(|c| {
-                        c.definition.keywords.contains(&Keyword::Persist)
-                            || c.definition.keywords.contains(&Keyword::Undying)
+                        c.definition.keywords.has_kw(&Keyword::Persist)
+                            || c.definition.keywords.has_kw(&Keyword::Undying)
                     })
                     .map(|c| {
                         (
@@ -5114,7 +5114,7 @@ impl GameState {
                 // anthem — Shielded by Faith) counts, not just the printed
                 // keyword + indestructible counter on the instance.
                 let indestructible = cp
-                    .map(|cp| cp.keywords.contains(&crate::card::Keyword::Indestructible))
+                    .map(|cp| cp.keywords.has_kw(&crate::card::Keyword::Indestructible))
                     .unwrap_or(false)
                     || c.is_indestructible();
                 if indestructible {
@@ -5138,7 +5138,7 @@ impl GameState {
                 // single source's tally reaching the threshold does.
                 let needs_single_source = cp
                     .map(|cp| {
-                        cp.keywords.contains(&crate::card::Keyword::SurvivesSplitLethalDamage)
+                        cp.keywords.has_kw(&crate::card::Keyword::SurvivesSplitLethalDamage)
                     })
                     .unwrap_or(false);
                 let single_source_lethal = !needs_single_source
@@ -5295,8 +5295,8 @@ impl GameState {
                         // dying source itself fails the filter.
                         .map(|t| (c.id, t.effect.clone(), c.controller, t.event.filter.clone()))
                         .collect();
-                    let has_persist = c.definition.keywords.contains(&Keyword::Persist);
-                    let has_undying = c.definition.keywords.contains(&Keyword::Undying);
+                    let has_persist = c.definition.keywords.has_kw(&Keyword::Persist);
+                    let has_undying = c.definition.keywords.has_kw(&Keyword::Undying);
                     // CR 704.8 — read the pre-sweep pile, not the post-122.3 one.
                     let (minus, plus) = pre_sba_pm_counters.get(&c.id).copied().unwrap_or((
                         c.counter_count(crate::card::CounterType::MinusOneMinusOne),
@@ -5641,7 +5641,7 @@ impl GameState {
                         c.controller == seat
                             && c.definition
                                 .keywords
-                                .contains(&crate::card::Keyword::StartYourEngines)
+                                .has_kw(&crate::card::Keyword::StartYourEngines)
                     })
                 {
                     self.players[seat].speed = 1;
@@ -6374,8 +6374,8 @@ impl GameState {
             .find(|c| c.id == id)
             .map(|c| {
                 (
-                    c.definition.keywords.contains(&Keyword::Persist),
-                    c.definition.keywords.contains(&Keyword::Undying),
+                    c.definition.keywords.has_kw(&Keyword::Persist),
+                    c.definition.keywords.has_kw(&Keyword::Undying),
                     c.counter_count(crate::card::CounterType::MinusOneMinusOne),
                     c.counter_count(crate::card::CounterType::PlusOnePlusOne),
                     c.owner,

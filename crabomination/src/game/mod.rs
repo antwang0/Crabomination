@@ -3418,7 +3418,7 @@ impl GameState {
             .filter_map(|c| self.computed_permanent(c.id))
             .filter(|cp| cp.card_types.contains(&CardType::Creature))
         {
-            if cp.keywords.contains(&Keyword::Changeling) {
+            if cp.keywords.has_kw(&Keyword::Changeling) {
                 changelings += 1;
                 continue;
             }
@@ -4929,7 +4929,7 @@ impl GameState {
             let changeling = ec
                 .definition
                 .keywords
-                .contains(&crate::card::Keyword::Changeling);
+                .has_kw(&crate::card::Keyword::Changeling);
             for sa in &src.definition.static_abilities {
                 match &sa.effect {
                     StaticEffect::ChosenTypeEntersWithCounter { kind }
@@ -5840,7 +5840,7 @@ impl GameState {
             .filter(|c| {
                 c.owner != caster
                     && c.counter_count(CounterType::Time) > 0
-                    && c.definition.keywords.contains(&Keyword::SuspendAccelerant)
+                    && c.definition.keywords.has_kw(&Keyword::SuspendAccelerant)
             })
             .map(|c| c.id)
             .collect();
@@ -8883,7 +8883,7 @@ impl GameState {
                         .map(|c| c.definition.subtypes.creature_types.clone())
                         .unwrap_or_default();
                     let host_changeling = host.is_some_and(|c| {
-                        c.definition.keywords.contains(&crate::card::Keyword::Changeling)
+                        c.definition.keywords.has_kw(&crate::card::Keyword::Changeling)
                     });
                     self.battlefield
                         .iter()
@@ -8894,7 +8894,7 @@ impl GameState {
                                 && (host_changeling
                                     || c.definition
                                         .keywords
-                                        .contains(&crate::card::Keyword::Changeling)
+                                        .has_kw(&crate::card::Keyword::Changeling)
                                     || c.definition
                                         .subtypes
                                         .creature_types
@@ -9570,7 +9570,7 @@ impl GameState {
                 .filter(|c| c.definition.is_creature())
                 .map(|c| {
                     (c.id, &c.definition.subtypes.creature_types,
-                     c.definition.keywords.contains(&Keyword::Changeling))
+                     c.definition.keywords.has_kw(&Keyword::Changeling))
                 })
                 .collect();
             for &src in &sa_cards {
@@ -10921,7 +10921,7 @@ impl GameState {
                     let n = self.battlefield.iter().filter(|c| {
                         c.id != card.id
                             && c.definition.is_creature()
-                            && c.definition.keywords.contains(&crate::card::Keyword::Flying)
+                            && c.definition.keywords.has_kw(&crate::card::Keyword::Flying)
                     }).count() as i32;
                     (base + n, base + n)
                 }
@@ -10930,7 +10930,7 @@ impl GameState {
                         c.id != card.id
                             && c.controller == card.controller
                             && c.definition.is_creature()
-                            && c.definition.keywords.contains(&crate::card::Keyword::Flying)
+                            && c.definition.keywords.has_kw(&crate::card::Keyword::Flying)
                     }).count() as i32;
                     (base + n, base + n)
                 }
@@ -11424,7 +11424,7 @@ impl GameState {
             if !card
                 .definition
                 .keywords
-                .contains(&crate::card::Keyword::HexproofUnlessAttackingOrBlocking)
+                .has_kw(&crate::card::Keyword::HexproofUnlessAttackingOrBlocking)
             {
                 continue;
             }
@@ -11615,7 +11615,7 @@ impl GameState {
             // Injected as a computed `CantBlock` so the existing block-
             // legality enforcement (`declare_blockers`) honors it.
             if any_unleash
-                && card.definition.keywords.contains(&Keyword::Unleash)
+                && card.definition.keywords.has_kw(&Keyword::Unleash)
                 && card.counters.get(&crate::card::CounterType::PlusOnePlusOne).copied().unwrap_or(0) > 0
             {
                 all_effects.push(ContinuousEffect {
@@ -11692,7 +11692,7 @@ impl GameState {
             // CR 702.161 — Living metal: a Vehicle with this keyword is an
             // artifact creature during its controller's turn, no crew needed.
             if any_living_metal
-                && card.definition.keywords.contains(&Keyword::LivingMetal)
+                && card.definition.keywords.has_kw(&Keyword::LivingMetal)
                 && card.controller == self.active_player_idx
             {
                 all_effects.push(ContinuousEffect {
@@ -12578,7 +12578,7 @@ impl GameState {
     ) -> bool {
         let Some(aura_id) = self.battlefield.iter().find_map(|c| {
             (c.attached_to == Some(id)
-                && c.definition.keywords.contains(&Keyword::UmbraArmor))
+                && c.definition.keywords.has_kw(&Keyword::UmbraArmor))
             .then_some(c.id)
         }) else {
             return false;
@@ -13232,12 +13232,12 @@ impl GameState {
         blocker_cp: &ComputedPermanent,
     ) -> bool {
         let owner = blocker.controller;
-        if blocker_cp.keywords.contains(&Keyword::CantBlock)
-            || blocker_cp.keywords.contains(&Keyword::Decayed)
+        if blocker_cp.keywords.has_kw(&Keyword::CantBlock)
+            || blocker_cp.keywords.has_kw(&Keyword::Decayed)
         {
             return false;
         }
-        if blocker_cp.keywords.contains(&Keyword::CantAttackOrBlockUnlessEvenCounters)
+        if blocker_cp.keywords.has_kw(&Keyword::CantAttackOrBlockUnlessEvenCounters)
             && blocker.counters.values().sum::<u32>() % 2 != 0
         {
             return false;
@@ -13401,7 +13401,7 @@ impl GameState {
         }
         // CR 509.1b — Mogg Toady: strictly more creatures than the attacker's
         // controller. Attacker-dependent, so it stays here.
-        if blocker_cp.keywords.contains(&Keyword::CantBlockUnlessMoreCreaturesThanAttacker)
+        if blocker_cp.keywords.has_kw(&Keyword::CantBlockUnlessMoreCreaturesThanAttacker)
             && self.creature_count(blocker.controller) <= self.creature_count(attacker.controller)
         {
             return false;
@@ -15552,7 +15552,7 @@ impl GameState {
         if fortify.is_none()
             && self
                 .computed_permanent(target)
-                .is_some_and(|c| c.keywords.contains(&crate::card::Keyword::CantBeEquipped))
+                .is_some_and(|c| c.keywords.has_kw(&crate::card::Keyword::CantBeEquipped))
         {
             return Err(GameError::InvalidTarget);
         }
@@ -16002,7 +16002,7 @@ impl GameState {
             return;
         }
         let controller = card.controller;
-        let entered_has_soulbond = card.definition.keywords.contains(&Keyword::Soulbond);
+        let entered_has_soulbond = card.definition.keywords.has_kw(&Keyword::Soulbond);
         let partner = self
             .battlefield
             .iter()
@@ -16012,7 +16012,7 @@ impl GameState {
                     && c.definition.is_creature()
                     && c.soulbond_partner.is_none()
                     && (entered_has_soulbond
-                        || c.definition.keywords.contains(&Keyword::Soulbond))
+                        || c.definition.keywords.has_kw(&Keyword::Soulbond))
             })
             .map(|c| c.id)
             .min_by_key(|id| id.0);
@@ -20453,7 +20453,7 @@ impl GameState {
         // CR 702.50 — Epic: on resolution the caster snapshots the spell
         // (copied at each of their upkeeps) and can't cast spells for the
         // rest of the game. Copies don't carry the epic ability (702.50a).
-        if !card.is_token && card.definition.keywords.contains(&crate::card::Keyword::Epic) {
+        if !card.is_token && card.definition.keywords.has_kw(&crate::card::Keyword::Epic) {
             self.players[caster].epic_spells.push(crate::player::EpicSpell {
                 name: card.definition.name.to_string(),
                 target: target.clone(),
@@ -20503,7 +20503,7 @@ impl GameState {
         // schedule a delayed trigger at the caster's next upkeep that
         // re-runs the spell's effect with a fresh auto-target.
         if card.cast_from_hand
-            && card.definition.keywords.contains(&crate::card::Keyword::Rebound)
+            && card.definition.keywords.has_kw(&crate::card::Keyword::Rebound)
         {
             use crate::game::types::{DelayedKind, DelayedTrigger};
             let source = card.id;
@@ -21436,7 +21436,7 @@ fn event_amount(event: &GameEvent) -> u32 {
 /// layer-pass circularity of reading computed colors during the same recompute.
 fn is_colorless_by_cost(def: &crate::card::CardDefinition) -> bool {
     use crate::mana::ManaSymbol;
-    if def.keywords.contains(&crate::card::Keyword::Devoid) {
+    if def.keywords.has_kw(&crate::card::Keyword::Devoid) {
         return true;
     }
     !def.cost.symbols.iter().any(|s| {
@@ -21915,6 +21915,28 @@ fn static_effect_grants_keyword(
         | SE::WhileCountersAtLeast { inner, .. }
         | SE::WhileCondition { inner, .. } => static_effect_grants_keyword(inner, pred),
         _ => false,
+    }
+}
+
+/// `slice.contains(&Keyword::X)` without the out-of-line `Keyword::eq` call.
+///
+/// `Keyword` is a payload-carrying enum with ~200 variants, so its derived
+/// `PartialEq` is a real call — ~11 Ir an element — and it is not inlined at
+/// `-C lto=off`. Comparing discriminants first answers the *miss*, which is
+/// nearly every element of every keyword scan, in three instructions; the
+/// full `==` runs only when the tags already match, so payload variants
+/// (`Ward(n)`, `Protection(c)`) are compared exactly as `contains` did.
+/// Callgrind read `Keyword::eq` at 11,532,358 Ir / 0.68 % over ~1.09 M calls
+/// at the forty-seventh tip.
+pub(crate) trait KeywordSlice {
+    fn has_kw(&self, k: &Keyword) -> bool;
+}
+
+impl KeywordSlice for [Keyword] {
+    #[inline]
+    fn has_kw(&self, k: &Keyword) -> bool {
+        let want = std::mem::discriminant(k);
+        self.iter().any(|x| std::mem::discriminant(x) == want && x == k)
     }
 }
 
@@ -23666,47 +23688,47 @@ pub fn can_block_attacker_computed(
 ) -> bool {
     let blocker_kws = &blocker_computed.keywords;
     // Unblockable: can't be blocked at all.
-    if attacker_kws.contains(&Keyword::Unblockable) {
+    if attacker_kws.has_kw(&Keyword::Unblockable) {
         return false;
     }
     // Flying: can only be blocked by fliers or reach.
-    if attacker_kws.contains(&Keyword::Flying)
-        && !blocker_kws.contains(&Keyword::Flying)
-        && !blocker_kws.contains(&Keyword::Reach)
+    if attacker_kws.has_kw(&Keyword::Flying)
+        && !blocker_kws.has_kw(&Keyword::Flying)
+        && !blocker_kws.has_kw(&Keyword::Reach)
     {
         return false;
     }
     // Wanderlight Spirit: this blocker can block only creatures with flying.
-    if blocker_kws.contains(&Keyword::CanBlockOnlyFlying)
-        && !attacker_kws.contains(&Keyword::Flying)
+    if blocker_kws.has_kw(&Keyword::CanBlockOnlyFlying)
+        && !attacker_kws.has_kw(&Keyword::Flying)
     {
         return false;
     }
     // Horsemanship: can only be blocked by other Horsemanship creatures.
-    if attacker_kws.contains(&Keyword::Horsemanship)
-        && !blocker_kws.contains(&Keyword::Horsemanship)
+    if attacker_kws.has_kw(&Keyword::Horsemanship)
+        && !blocker_kws.has_kw(&Keyword::Horsemanship)
     {
         return false;
     }
     // Shadow: can only block/be blocked by other shadow creatures.
-    if attacker_kws.contains(&Keyword::Shadow)
-        && !blocker_kws.contains(&Keyword::Shadow)
-        && !blocker_kws.contains(&Keyword::CanBlockShadow)
+    if attacker_kws.has_kw(&Keyword::Shadow)
+        && !blocker_kws.has_kw(&Keyword::Shadow)
+        && !blocker_kws.has_kw(&Keyword::CanBlockShadow)
     {
         return false;
     }
-    if blocker_kws.contains(&Keyword::Shadow) && !attacker_kws.contains(&Keyword::Shadow) {
+    if blocker_kws.has_kw(&Keyword::Shadow) && !attacker_kws.has_kw(&Keyword::Shadow) {
         return false;
     }
     // Skulk (CR 702.72a): can't be blocked by creatures with greater power.
     // Both sides use layer-computed power (an anthem-pumped Skulk attacker
     // dodges bigger blockers correctly).
-    if attacker_kws.contains(&Keyword::Skulk) && blocker_computed.power > attacker_power {
+    if attacker_kws.has_kw(&Keyword::Skulk) && blocker_computed.power > attacker_power {
         return false;
     }
     // Formation Breaker (CR 509.1b): creatures with power less than this
     // creature's power can't block it — the inverse of Skulk.
-    if attacker_kws.contains(&Keyword::CantBeBlockedByPowerLess)
+    if attacker_kws.has_kw(&Keyword::CantBeBlockedByPowerLess)
         && blocker_computed.power < attacker_power
     {
         return false;
@@ -23748,14 +23770,14 @@ pub fn can_block_attacker_computed(
         return false;
     }
     // Spitfire Handler (CR 509.1b): the self-relative threshold.
-    if blocker_kws.contains(&Keyword::CantBlockGreaterPowerThanSelf)
+    if blocker_kws.has_kw(&Keyword::CantBlockGreaterPowerThanSelf)
         && attacker_power > blocker_computed.power
     {
         return false;
     }
     // Fear (CR 702.36): can only be blocked by artifact creatures and/or
     // black creatures.
-    if attacker_kws.contains(&Keyword::Fear) {
+    if attacker_kws.has_kw(&Keyword::Fear) {
         let blocker_is_artifact = blocker.definition.is_artifact();
         let blocker_is_black = blocker_computed.colors.contains(crate::mana::Color::Black);
         if !blocker_is_artifact && !blocker_is_black {
@@ -23767,7 +23789,7 @@ pub fn can_block_attacker_computed(
     // attacker's *computed* colors (which include hybrid / mono-hybrid
     // pips and color-setting effects, via `ComputedPermanent.colors`)
     // against the blocker's computed colors — not raw `{C}` cost pips.
-    if attacker_kws.contains(&Keyword::Intimidate) {
+    if attacker_kws.has_kw(&Keyword::Intimidate) {
         let blocker_is_artifact = blocker.definition.is_artifact();
         let shares_color = blocker_computed.colors.intersects(attacker_colors);
         if !blocker_is_artifact && !shares_color {
@@ -23886,7 +23908,7 @@ fn blocker_matches_block_filter(
         R::HasModular => computed.keywords.iter().any(|k| matches!(k, Keyword::Modular(_))),
         R::HasMutate => blocker.definition.mutate.is_some(),
         R::HasCreatureType(t) => blocker.definition.subtypes.creature_types.contains(t)
-            || computed.keywords.contains(&Keyword::Changeling),
+            || computed.keywords.has_kw(&Keyword::Changeling),
         R::HasArtifactSubtype(a) => blocker.definition.subtypes.artifact_subtypes.contains(a),
         R::PowerAtMost(n) => computed.power <= *n,
         R::PowerAtLeast(n) => computed.power >= *n,

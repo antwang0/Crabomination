@@ -1907,7 +1907,7 @@ impl crate::game::GameState {
     ) -> bool {
         // The card itself is uncounterable (Dovin's Veto, Stubborn Denial,
         // etc. — `Keyword::CantBeCountered`).
-        if card.definition.keywords.contains(&Keyword::CantBeCountered) {
+        if card.definition.keywords.has_kw(&Keyword::CantBeCountered) {
             return true;
         }
         // Turn-scoped grant — Veil of Summer's "spells your opponents
@@ -2871,7 +2871,7 @@ impl GameState {
         if !self.players[p]
             .sideboard
             .iter()
-            .any(|c| c.id == card_id && c.definition.keywords.contains(&Keyword::Companion))
+            .any(|c| c.id == card_id && c.definition.keywords.has_kw(&Keyword::Companion))
         {
             return Err(GameError::CardNotInHand(card_id));
         }
@@ -3211,7 +3211,7 @@ impl GameState {
             && self
                 .battlefield
                 .iter()
-                .any(|c| c.id == card_id && c.definition.keywords.contains(&crate::card::Keyword::StartYourEngines))
+                .any(|c| c.id == card_id && c.definition.keywords.has_kw(&crate::card::Keyword::StartYourEngines))
         {
             self.players[controller].speed = 1;
         }
@@ -4553,7 +4553,7 @@ impl GameState {
             .hand
             .iter()
             .find(|c| c.id == card_id)
-            .filter(|c| c.definition.keywords.contains(&crate::card::Keyword::Conspire))
+            .filter(|c| c.definition.keywords.has_kw(&crate::card::Keyword::Conspire))
             .map(|c| c.definition.printed_colors())
             .ok_or(GameError::CardNotInHand(card_id))?;
         // Each conspirer must be an untapped creature you control sharing a
@@ -4807,7 +4807,7 @@ impl GameState {
             .hand
             .iter()
             .find(|c| c.id == card_id)
-            .map(|c| c.definition.keywords.contains(&Keyword::Bargain))
+            .map(|c| c.definition.keywords.has_kw(&Keyword::Bargain))
             .ok_or(GameError::CardNotInHand(card_id))?;
         if !has_bargain {
             return Err(GameError::CardNotInHand(card_id));
@@ -6493,10 +6493,10 @@ impl GameState {
                 || !self.spell_granted_convoke(p, &card),
             "cast_cost_scan missed a GrantConvokeToSpells static",
         );
-        let has_convoke = card.definition.keywords.contains(&crate::card::Keyword::Convoke)
+        let has_convoke = card.definition.keywords.has_kw(&crate::card::Keyword::Convoke)
             || (cost_statics & cast_static::GRANT_CONVOKE != 0
                 && self.spell_granted_convoke(p, &card));
-        let has_improvise = card.definition.keywords.contains(&crate::card::Keyword::Improvise);
+        let has_improvise = card.definition.keywords.has_kw(&crate::card::Keyword::Improvise);
         // CR 701.67 — waterbend helpers ride the same `convoke_creatures` slot;
         // any untapped artifact or creature you control may tap to pay {1} of
         // the waterbend sub-cost. Count is clamped to the waterbend amount below.
@@ -6532,7 +6532,7 @@ impl GameState {
         // caster's graveyard. The cards aren't exiled here — only after the
         // reduced cost is paid — so a rejected cast leaves them in place.
         if !delve_cards.is_empty()
-            && !card.definition.keywords.contains(&crate::card::Keyword::Delve)
+            && !card.definition.keywords.has_kw(&crate::card::Keyword::Delve)
             && !self.controller_grants_spells_delve(p)
         {
             self.players[p].hand.push(card);
@@ -7282,7 +7282,7 @@ impl GameState {
         // CR 702.150 — Compleated: remember the life paid to Phyrexian pips so
         // the planeswalker enters with that much less loyalty.
         if receipt.side_effects.life_lost > 0
-            && card.definition.keywords.contains(&crate::card::Keyword::Compleated)
+            && card.definition.keywords.has_kw(&crate::card::Keyword::Compleated)
         {
             card.compleated_life_paid = receipt.side_effects.life_lost;
         }
@@ -8273,7 +8273,7 @@ impl GameState {
         let was_creature_spell = !card.casting_alt_half() && card.definition.is_creature();
         // CR 702.146e — casting a daybound spell while it's neither day nor
         // night makes it day as the spell is put onto the stack.
-        let casts_daybound = card.definition.keywords.contains(&Keyword::Daybound);
+        let casts_daybound = card.definition.keywords.has_kw(&Keyword::Daybound);
         // CR 702.40 — Storm: when this spell is cast, copy it for each spell
         // cast before it this turn. `spells_cast_this_turn` already includes
         // this spell (bumped above), so prior spells = count - 1. Capture the
@@ -8291,7 +8291,7 @@ impl GameState {
         let storm_copies = (card
             .definition
             .keywords
-            .contains(&Keyword::Storm)
+            .has_kw(&Keyword::Storm)
             || granted_storm)
             .then(|| {
                 (
@@ -8305,7 +8305,7 @@ impl GameState {
             .or_else(|| {
                 card.definition
                     .keywords
-                    .contains(&Keyword::Gravestorm)
+                    .has_kw(&Keyword::Gravestorm)
                     .then(|| (card.definition.clone(), self.permanents_to_graveyard_this_turn))
             })
             // "Copy it for each OTHER instant and sorcery spell you've cast
@@ -8314,7 +8314,7 @@ impl GameState {
             .or_else(|| {
                 card.definition
                     .keywords
-                    .contains(&Keyword::SpellStorm)
+                    .has_kw(&Keyword::SpellStorm)
                     .then(|| {
                         (
                             card.definition.clone(),
@@ -8643,7 +8643,7 @@ impl GameState {
                     .map(|c| c.definition.keywords.clone())
                     .unwrap_or_default()
             })
-            .contains(&Keyword::CounterFirstTargetingEachTurn);
+            .has_kw(&Keyword::CounterFirstTargetingEachTurn);
         if !has {
             return;
         }
@@ -8905,7 +8905,7 @@ impl GameState {
         // cast for its own mana cost, discarding a card as an additional
         // cost; same exile-after tail as flashback).
         let jumpstart = card.effective_flashback().is_none()
-            && card.definition.keywords.contains(&Keyword::JumpStart);
+            && card.definition.keywords.has_kw(&Keyword::JumpStart);
         // CR 702.187 — Mayhem: when the card has no flashback/jump-start but a
         // Mayhem cost, it may be cast from the graveyard for that cost only if
         // its owner discarded it this turn. Same exile-after tail as flashback.
@@ -8917,7 +8917,7 @@ impl GameState {
         let gy_cast = card.effective_flashback().is_none()
             && !jumpstart
             && !mayhem
-            && card.definition.keywords.contains(&Keyword::GraveyardCast);
+            && card.definition.keywords.has_kw(&Keyword::GraveyardCast);
         // Lier — battlefield static grants flashback (= mana cost) to I/S in
         // the graveyard when nothing else applies.
         let lier_cost = (card.effective_flashback().is_none() && !jumpstart && !mayhem && !gy_cast)
@@ -12229,7 +12229,7 @@ impl GameState {
         cost: &crate::mana::ManaCost,
     ) -> bool {
         use crate::mana::ManaSymbol;
-        if card.definition.keywords.contains(&crate::card::Keyword::Convoke) {
+        if card.definition.keywords.has_kw(&crate::card::Keyword::Convoke) {
             return true; // taps creatures for coloured pips — unmodellable here
         }
         let pips = crate::mana::ManaCost {
@@ -13012,7 +13012,7 @@ impl GameState {
     pub(crate) fn stack_has_split_second(&self) -> bool {
         self.stack.iter().any(|si| match si {
             crate::game::types::StackItem::Spell { card, .. } => {
-                card.definition.keywords.contains(&crate::card::Keyword::SplitSecond)
+                card.definition.keywords.has_kw(&crate::card::Keyword::SplitSecond)
             }
             _ => false,
         })
@@ -14127,7 +14127,7 @@ impl GameState {
             })
             && bf_cp!()
                 .as_ref()
-                .is_some_and(|cp| cp.keywords.contains(&Keyword::CantActivateTapAbilities))
+                .is_some_and(|cp| cp.keywords.has_kw(&Keyword::CantActivateTapAbilities))
         {
             return Err(GameError::AbilityAlreadyUsedThisTurn);
         }
@@ -14155,7 +14155,7 @@ impl GameState {
             }
             if sick
                 && self.card_keyword_possible(card_id, |k| *k == Keyword::Haste)
-                && bf_cp!().as_ref().is_some_and(|c| c.keywords.contains(&Keyword::Haste))
+                && bf_cp!().as_ref().is_some_and(|c| c.keywords.has_kw(&Keyword::Haste))
             {
                 sick = false;
             }
@@ -14183,7 +14183,7 @@ impl GameState {
             && self.card_keyword_possible(card_id, |k| *k == Keyword::CantActivateAbilities)
             && bf_cp!()
                 .as_ref()
-                .is_some_and(|c| c.keywords.contains(&Keyword::CantActivateAbilities))
+                .is_some_and(|c| c.keywords.has_kw(&Keyword::CantActivateAbilities))
         {
             return Err(GameError::AbilitySuppressedByNamedCard);
         }

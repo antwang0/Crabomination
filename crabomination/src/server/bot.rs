@@ -6,6 +6,8 @@
 //! state change, so a bot just needs to make *some* forward-progressing
 //! decision (including `PassPriority`) whenever it holds priority.
 
+use crate::game::KeywordSlice;
+
 use rand::{RngExt, SeedableRng, rng};
 use rand::rngs::StdRng;
 
@@ -1988,14 +1990,14 @@ fn forced_attacks(state: &GameState) -> Vec<Attack> {
             .find(|p| p.id == c.id)
             .map(|p| p.keywords.as_slice())
             .unwrap_or(&[]);
-        if !kws.contains(&Keyword::MustAttack) && c.goaded_by.is_empty() {
+        if !kws.has_kw(&Keyword::MustAttack) && c.goaded_by.is_empty() {
             continue;
         }
         let able = c.definition.is_creature()
             && !c.tapped
-            && (!kws.contains(&Keyword::Defender) || state.ignores_defender_for_attack(c))
-            && !kws.contains(&Keyword::CantAttack)
-            && (!c.summoning_sick || kws.contains(&Keyword::Haste));
+            && (!kws.has_kw(&Keyword::Defender) || state.ignores_defender_for_attack(c))
+            && !kws.has_kw(&Keyword::CantAttack)
+            && (!c.summoning_sick || kws.has_kw(&Keyword::Haste));
         if !able {
             continue;
         }
@@ -2053,7 +2055,7 @@ fn forced_blocks(state: &GameState) -> Vec<(CardId, CardId)> {
             return;
         }
         let Some(b) = state.battlefield_find(blocker_id) else { return };
-        if b.tapped || kws(blocker_id).contains(&Keyword::CantBlock) {
+        if b.tapped || kws(blocker_id).has_kw(&Keyword::CantBlock) {
             return;
         }
         if let Some(atk) = best_attacker(b) {
@@ -2066,7 +2068,7 @@ fn forced_blocks(state: &GameState) -> Vec<(CardId, CardId)> {
         .battlefield
         .iter()
         .filter(|c| {
-            kws(c.id).contains(&Keyword::MustBlock) || kws(c.id).contains(&Keyword::MustAttackOrBlock)
+            kws(c.id).has_kw(&Keyword::MustBlock) || kws(c.id).has_kw(&Keyword::MustAttackOrBlock)
         })
         .map(|c| c.id)
         .collect();
@@ -2077,8 +2079,8 @@ fn forced_blocks(state: &GameState) -> Vec<(CardId, CardId)> {
     // blocked if able": every idle defender that can block such an attacker.
     for atk in &state.attacking {
         let a_kws = kws(atk.attacker);
-        let all = a_kws.contains(&Keyword::AllMustBlock);
-        if !all && !a_kws.contains(&Keyword::MustBeBlocked) {
+        let all = a_kws.has_kw(&Keyword::AllMustBlock);
+        if !all && !a_kws.has_kw(&Keyword::MustBeBlocked) {
             continue;
         }
         let candidates: Vec<CardId> = state
@@ -2108,7 +2110,7 @@ fn forced_blocks(state: &GameState) -> Vec<(CardId, CardId)> {
 fn attacker_damage_value(state: &GameState, id: CardId) -> i32 {
     use crate::card::Keyword;
     if let Some(cp) = state.computed_permanent(id) {
-        let mut base = if cp.keywords.contains(&Keyword::AssignsCombatDamageByToughness) {
+        let mut base = if cp.keywords.has_kw(&Keyword::AssignsCombatDamageByToughness) {
             cp.toughness
         } else {
             cp.power
@@ -2116,7 +2118,7 @@ fn attacker_damage_value(state: &GameState, id: CardId) -> i32 {
         // CR 702.121 — Melee grows the attacker +1/+1 per opponent it attacks
         // this combat. In a duel that's a guaranteed +1 the moment it's
         // declared, so the planner should weigh it in.
-        if cp.keywords.contains(&Keyword::Melee) {
+        if cp.keywords.has_kw(&Keyword::Melee) {
             base += 1;
         }
         base
@@ -3172,11 +3174,11 @@ fn decide_creature_type(
     };
     for c in state.battlefield.iter().filter(|c| c.controller == seat && c.definition.is_creature()) {
         count(&c.definition.subtypes.creature_types,
-            c.definition.keywords.contains(&Keyword::Changeling), 2);
+            c.definition.keywords.has_kw(&Keyword::Changeling), 2);
     }
     for c in state.players[seat].hand.iter().filter(|c| c.definition.is_creature()) {
         count(&c.definition.subtypes.creature_types,
-            c.definition.keywords.contains(&Keyword::Changeling), 1);
+            c.definition.keywords.has_kw(&Keyword::Changeling), 1);
     }
     let best = tally.into_iter().max_by_key(|(_, n)| *n).map(|(t, _)| t);
     let choice = best
@@ -4188,7 +4190,7 @@ fn cast_candidates(
     for c in state.players[seat]
         .hand
         .iter()
-        .filter(|c| c.definition.keywords.contains(&crate::card::Keyword::Delve))
+        .filter(|c| c.definition.keywords.has_kw(&crate::card::Keyword::Delve))
     {
         let generic_pips: u32 = c
             .definition
@@ -4238,9 +4240,9 @@ fn cast_candidates(
     // so an unaffordable-even-with-help spell just doesn't make the list.
     gated_block!(mask, spec::CONVOKE, castable, {
     for c in state.players[seat].hand.iter() {
-        let convoke = c.definition.keywords.contains(&crate::card::Keyword::Convoke)
+        let convoke = c.definition.keywords.has_kw(&crate::card::Keyword::Convoke)
             || (facts.grants_convoke && state.spell_granted_convoke(seat, c));
-        let improvise = c.definition.keywords.contains(&crate::card::Keyword::Improvise);
+        let improvise = c.definition.keywords.has_kw(&crate::card::Keyword::Improvise);
         if !convoke && !improvise {
             continue;
         }
@@ -4485,7 +4487,7 @@ fn cast_candidates(
     for c in state.players[seat]
         .hand
         .iter()
-        .filter(|c| c.definition.keywords.contains(&crate::card::Keyword::Conspire))
+        .filter(|c| c.definition.keywords.has_kw(&crate::card::Keyword::Conspire))
     {
         let spell_colors = c.definition.printed_colors();
         let pair: Vec<CardId> = state
@@ -4827,8 +4829,8 @@ fn cast_candidates(
     for c in state.players[seat].graveyard.iter() {
         use crate::card::Keyword;
         let recastable = c.effective_flashback().is_some()
-            || c.definition.keywords.contains(&Keyword::JumpStart)
-            || c.definition.keywords.contains(&Keyword::GraveyardCast);
+            || c.definition.keywords.has_kw(&Keyword::JumpStart)
+            || c.definition.keywords.has_kw(&Keyword::GraveyardCast);
         if recastable {
             let (target, additional_targets) = if c.definition.effect.requires_target() {
                 let (t, extras) =
@@ -6635,9 +6637,9 @@ fn pick_equip(state: &GameState, seat: usize) -> Option<GameAction> {
         state
             .computed_permanent(c.id)
             .map(|cp| {
-                (!cp.keywords.contains(&Keyword::Defender)
+                (!cp.keywords.has_kw(&Keyword::Defender)
                     || state.ignores_defender_for_attack(c))
-                    && !cp.keywords.contains(&Keyword::CantAttack)
+                    && !cp.keywords.has_kw(&Keyword::CantAttack)
             })
             .unwrap_or(true)
     };
@@ -6928,9 +6930,9 @@ fn pick_attacks_inner(state: &GameState, seat: usize) -> Vec<Attack> {
                 && state
                     .computed_permanent(c.id)
                     .map(|cp| {
-                        (!cp.keywords.contains(&Keyword::Defender)
+                        (!cp.keywords.has_kw(&Keyword::Defender)
                             || state.ignores_defender_for_attack(c))
-                            && !cp.keywords.contains(&Keyword::CantAttack)
+                            && !cp.keywords.has_kw(&Keyword::CantAttack)
                             // CR 508.1a — "can attack only if
                             // defending player controls [X]"
                             // (Dandân). Don't declare it into a
@@ -7033,7 +7035,7 @@ fn pick_attacks_inner(state: &GameState, seat: usize) -> Vec<Attack> {
                 && c.can_block()
                 && !state
                     .computed_permanent(c.id)
-                    .is_some_and(|cp| cp.keywords.contains(&Keyword::CantBlock))
+                    .is_some_and(|cp| cp.keywords.has_kw(&Keyword::CantBlock))
         })
         .collect();
     let has_ground_deathtouch = opp_blockers
@@ -7200,7 +7202,7 @@ fn pick_attacks_inner(state: &GameState, seat: usize) -> Vec<Attack> {
     if attackers.len() == 1
         && state
             .computed_permanent(attackers[0])
-            .is_some_and(|cp| cp.keywords.contains(&Keyword::CantAttackAlone))
+            .is_some_and(|cp| cp.keywords.has_kw(&Keyword::CantAttackAlone))
     {
         attackers.clear();
     }
@@ -9475,7 +9477,7 @@ fn cast_gains_life(state: &GameState, seat: usize, a: &GameAction) -> bool {
         }
     }
     gains(&c.definition.effect)
-        || c.definition.keywords.contains(&crate::card::Keyword::Lifelink)
+        || c.definition.keywords.has_kw(&crate::card::Keyword::Lifelink)
 }
 
 /// Best hostile creature the effect's primary slot accepts — the
@@ -9971,7 +9973,7 @@ fn lifegain_sources(state: &GameState, seat: usize) -> i32 {
         }
     }
     fn card_gains_life(def: &CardDefinition) -> bool {
-        def.keywords.contains(&crate::card::Keyword::Lifelink)
+        def.keywords.has_kw(&crate::card::Keyword::Lifelink)
             || gains_life(&def.effect)
             || def.triggered_abilities.iter().any(|t| gains_life(&t.effect))
             || def.activated_abilities.iter().any(|a| gains_life(&a.effect))
@@ -10255,7 +10257,7 @@ fn castable_at_instant_speed(state: &GameState, seat: usize, action: &GameAction
         return false;
     };
     card.definition.card_types.contains(&CardType::Instant)
-        || card.definition.keywords.contains(&Keyword::Flash)
+        || card.definition.keywords.has_kw(&Keyword::Flash)
 }
 
 /// Does `action` achieve anything *this turn*, ignoring bodies that can't

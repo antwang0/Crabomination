@@ -1152,7 +1152,7 @@ impl GameState {
         };
         // CR 707 — a spell with `Keyword::CantBeCopied` is skipped.
         if let StackItem::Spell { card, .. } = &self.stack[idx]
-            && card.definition.keywords.contains(&crate::card::Keyword::CantBeCopied)
+            && card.definition.keywords.has_kw(&crate::card::Keyword::CantBeCopied)
         {
             return;
         }
@@ -1229,7 +1229,7 @@ impl GameState {
         seat: usize,
     ) {
         use crate::game::types::StackItem;
-        if snap.definition.keywords.contains(&crate::card::Keyword::CantBeCopied) {
+        if snap.definition.keywords.has_kw(&crate::card::Keyword::CantBeCopied) {
             return;
         }
         let (copy_target, copy_extra) = if snap.target.is_some() {
@@ -2091,7 +2091,7 @@ impl GameState {
         // the printed keyword / Indestructible counter on the raw instance.
         let indestructible = self
             .computed_permanent(cid)
-            .map(|cp| cp.keywords.contains(&crate::card::Keyword::Indestructible))
+            .map(|cp| cp.keywords.has_kw(&crate::card::Keyword::Indestructible))
             .unwrap_or(false)
             || self.battlefield_find(cid).map(|c| c.is_indestructible()).unwrap_or(true);
         if indestructible {
@@ -2508,7 +2508,7 @@ impl GameState {
                     .compute_battlefield()
                     .iter()
                     .filter(|c| {
-                        c.keywords.contains(&crate::card::Keyword::Phasing)
+                        c.keywords.has_kw(&crate::card::Keyword::Phasing)
                             && self.evaluate_requirement_static(
                                 filter,
                                 &Target::Permanent(c.id),
@@ -5936,7 +5936,7 @@ impl GameState {
                 let deathtouch = ctx
                     .source
                     .and_then(|s| self.computed_permanent(s))
-                    .is_some_and(|cp| cp.keywords.contains(&crate::card::Keyword::Deathtouch));
+                    .is_some_and(|cp| cp.keywords.has_kw(&crate::card::Keyword::Deathtouch));
                 let mut spill = 0u32;
                 for ent in self.resolve_selector(to, ctx) {
                     let lethal = match ent {
@@ -6053,7 +6053,7 @@ impl GameState {
                 let deathtouch = ctx
                     .source
                     .and_then(|s| self.computed_permanent(s))
-                    .is_some_and(|cp| cp.keywords.contains(&crate::card::Keyword::Deathtouch));
+                    .is_some_and(|cp| cp.keywords.has_kw(&crate::card::Keyword::Deathtouch));
                 for ent in self.resolve_selector(to, ctx) {
                     let EntityRef::Permanent(id) = ent else { continue };
                     let Some(lethal) = self.lethal_damage_needed(id, deathtouch) else { continue };
@@ -22712,7 +22712,7 @@ impl GameState {
                 if hit {
                     // Search your library for a creature card with flying → hand.
                     let flyer = self.players[ctx.controller].library.iter()
-                        .find(|c| c.definition.is_creature() && c.definition.keywords.contains(&crate::card::Keyword::Flying))
+                        .find(|c| c.definition.is_creature() && c.definition.keywords.has_kw(&crate::card::Keyword::Flying))
                         .map(|c| c.id);
                     if let Some(id) = flyer
                         && let Some(card) = Self::take_card(&mut self.players[ctx.controller].library, id) {
@@ -24298,7 +24298,7 @@ impl GameState {
                     );
                     if *decayed
                         && let Some(c) = self.battlefield_find_mut(id)
-                        && !c.definition.keywords.contains(&crate::card::Keyword::Decayed)
+                        && !c.definition.keywords.has_kw(&crate::card::Keyword::Decayed)
                     {
                         std::sync::Arc::make_mut(&mut c.definition)
                             .keywords
