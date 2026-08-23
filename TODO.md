@@ -22,74 +22,53 @@ origin/claude/modern_decks`. The routine container clones **`main`**, which is
 ~2,000 commits behind this branch and has none of the ML crates, `PERF.md`,
 `crabomination_tests`, or the profiling profiles. A run that starts from the
 default checkout will rebuild infrastructure that already exists here and
-rediscover bugs already fixed (2026-08-15: a whole run lost that way — it
-re-derived the seeded-RNG facade, `run_bot_match`, `bot_ladder`, golden traces,
-and the `would_accept` suspend bug that `suspended_without_completing` already
-covers). `git log --oneline -1` should show a PERF/pass commit, not a card batch.
+rediscover bugs already fixed. `git log --oneline -1` should show a PERF/pass
+commit or a round commit, not a card batch.
 
-Branch `claude/modern_decks`. **Pass 40: `-7.585 %` Ir in five commits**,
-2,136,851,050 -> **1,974,770,479**, the largest pass since the teens. All
-five rows are **allocation**, and none came off the candidates list.
+Branch `claude/modern_decks`. **Pass 42: `-5.480 %` Ir in seven commits**,
+2,040,144,900 -> **1,928,339,700**. Two rows are the pass and neither was on
+the candidates list.
 
-- **A `Cow<BigStruct>` is a `BigStruct` in every element.** `Cow` is sized
-  for the owned side, so a *borrowed* `ActivatedAbility` still cost a
-  ~600-byte allocation + memcpy per element. Two lists in the program were
-  built that way, both per permanent inside a battlefield loop:
-  `effective_mana_abilities_of` (**-0.867 %**) and `usable_abilities`
-  (**-3.990 %**, six generators over the same board every tick — the row of
-  the pass). `AbilityRef` borrows the printed side and boxes the synth one.
-  **Grep `Cow<` and `-> Vec<` on any type holding an `Effect`.**
-- **Hoisting a per-element cost to the loop head must be lazy.** The same
-  `available_mana` hoist reads **+0.350 %** eager and **-0.700 %** behind a
-  `OnceCell`: `pick_combat_trick` runs every tick and usually filters its
-  hand to nothing first. Count the loops that reach zero elements.
-- **A predicate that deep-clones** — `is_free` cloned an `ActivatedAbility`
-  per activation (**-1.252 %**). A cheap veto in front beats a rewrite and
-  keeps the drift-proof check behind it.
-- **A clone that exists to end a borrow wants an `Arc`, not a deep copy.**
-  `activate_ability_inner` cloned the whole `ActivatedAbility` per
-  activation to free `self`; `CardInstance::definition` is already an
-  `Arc<CardDefinition>`, so holding it costs a refcount (**-0.978 %**).
-- **Ready-to-measure, already written and checked once (2026-08-15), then
-  dropped unmeasured for lack of budget — redo it in one pass:**
-  `activate_ability_inner` calls `is_mana_ability(&ability.effect)` **13
-  times** on the same `ability` (bound once at `actions.rs` `let ability =
-  held.get();`, never rebound). It is a two-pass recursive walk of the effect
-  tree. Hoist to one `let ability_is_mana = ...;` right after that binding and
-  replace all 13 (the last one, `let is_mana_ab = ...`, becomes redundant).
-  `cargo check -p crabomination` was clean. Directly on the (-12) path — a
-  land tapping for mana reaches most of those gates and land taps are the bulk
-  of activations. **Beware a blanket `s/is_mana_ab/.../` — it eats
-  `is_mana_ability` and `is_mana_ability_public` across the workspace.**
-- **Take (-12) next: `auto_tap_for_cost_inner`, 16.99 % inclusive**, the
-  largest engine subtree and never looked at. 242 M of it is
-  `activate_ability` over 18,340 calls; **18,832 activations are a land
-  tapping for mana**, so anything the full activation path does that a mana
-  ability cannot need is paid 18,832 times. **(-11) is corrected in PERF.md
-  and is now a poor pick** — its walks are nearly all that same land tap.
-- **Landed outside the pass sequence (2026-08-19): the net's forward
-  pass was scalar.** `crabomination_nn` matvec is now eight-accumulator
-  + runtime AVX2/FMA; `mcts-net-deep` 33.0 → 18.4 s/game, `mcts-net-256`
-  121.9 → 73.0. Invisible to the callgrind bench (gang never runs the
-  net) — do not chase it there. `CRAB_MCTS_TIMING=1` prints the search's
-  wall split; the remaining 88 % is the rollout sim, i.e. the engine
-  action loop the passes above are already working.
-- **Green at the tip**: suite **18,645** over 11 binaries, five golden
-  traces identical, clippy clean, `--bench` invariants byte-identical with
-  the anchor (`decisions` **193,232**, turns 26.98, stalls 0, determinism
-  ok). **No encoding change — no net needs retraining as of this tip.**
-- **First `release` reading in five passes: 153.17 games/s mean** (at this
-  pass's 4th commit) against 110.34 at pass 37's tip on the same host class,
-  calib 44-46 vs 48-51. Covers passes 38-40 together (-11.1 % Ir), not
-  splittable. The 163.62 anchor is a different box and stands apart.
+- **A no-op write through a CoW handle is a full deep copy.** `ColdState` is
+  ~90 collections behind one `CowBox`, and `perform_action` always holds a
+  checkpoint, so the group is *always shared*: the first cold write of any
+  action deep-copies it, ~1,700 Ir. An empty `clear()`, a `retain` that keeps
+  everything, an `iter_mut` over an empty list, a `mem::take` of nothing — all
+  pay it. `activate_ability_inner` did one on **every** activation
+  (**-1.60 %**). `clear_cold!` / `retain_cold!` in `game/mod.rs` are the
+  guarded forms; **an extension trait cannot work** (`self.f.method()` fires
+  `DerefMut` before the body). `GameState::deref_mut` 2.77 % -> **0.24 %**.
+- **Guarding one cold write promotes the next.** With the no-ops guarded,
+  `finalize_cast`'s `last_cast_spell_colors` went 30 Ir -> 4,118 and became
+  1.30 % on its own; moving it out of `ColdState` (and to `ColorSet`) was
+  **-1.883 %**. **Re-read the `deref_mut` call-site table after any such
+  change** — the two survivors are listed under (-14).
+- **A presence gate asked from inside a freeze scope pays the gather it
+  exists to avoid.** `board_keyword_matching` reads `frozen_effects()`, which
+  gathers on the scope's first computed read; outside a scope it answers off
+  the presence legs. `do_untap` asked it inside `with_frozen_layers`.
+- **Next, in order.** (-13) `perform_action`'s checkpoint,
+  `drop_in_place<GameState>` **4.19 %** + clone 2.16 % — the largest
+  structural cost left, three shapes costed in PERF. (-15) `advance_step`
+  15.99 %: `do_untap` still runs six `battlefield x static_abilities` walks
+  and `do_cleanup` (~15.6 k Ir a call) has never been read. (-10) allocation
+  is still 13.4 % over **1,232,517** allocs — `finalize_cast`'s per-turn cast
+  logs are the top `grow_one` *and* `memcpy` caller.
+- **Green at the tip**: suite **18,728** over 11 binaries, golden traces
+  identical, clippy clean workspace-wide **including the client** (fixed 4
+  pre-existing warnings, one of them a mangled doc comment in `bot.rs`).
+  **No encoding change — no net needs retraining as of this tip.** `ColdState`
+  / `GameState` serde shape did change (`last_cast_spell_colors` moved and
+  retyped); nothing persists a `GameState` across versions.
 - Env: no `cargo-nextest`; `cargo test -p crabomination -p
-  crabomination_tests` is the gate (~9 min cold, ~40 s built). Engine
-  `profiling-fast` rebuild **~3.3 min**, `crabomination_base` touch ~10 min,
-  `release` ~28 min. Callgrind ~3 min, contention-immune. Budget 5-6
-  measured iterations. **Fetch before the first commit** (seven PERF.md
-  collisions so far).
-- Trackers: TODO ~1.0k, ROADMAP 0.66k, PERF ~2.5k after folding passes
-  35-36 to index rows. **PERF's passes 37-38 are the next fold.**
+  crabomination_tests` is the gate (~9 min cold, ~4 min built). Engine
+  `profiling-fast` rebuild **~2.9 min**, `crabomination_base` touch ~9 min,
+  `release` ~30 min, client clippy ~7 min. Callgrind ~3 min,
+  contention-immune. `cp -al target target-probe` warms a second target dir
+  instantly so a probe build overlaps a callgrind run. **Fetch before the
+  first commit** (eight PERF.md collisions so far; this run rebased mid-pass).
+- Trackers: TODO ~1.25k — **over the 1k line and the next fold**; ROADMAP
+  0.66k, PERF ~2.8k. **PERF's passes 37-38 are still the next fold there.**
 
 ## Environment note
 
