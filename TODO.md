@@ -24,7 +24,8 @@ container clones `main`, ~2,200 commits behind.
 at `1,715,304,981 -> 1,645,831,969`, -4.050 % in nine commits (branch across
 46+47: `1,765,005,375 -> 1,645,831,969`, **-6.752 %**); pass 48 ran beside it
 from `89f55a5c` and is rebased on top, `1,662,145,003 -> 1,643,104,718`,
-**-1.146 %** in four commits.** Both chains are measured against their own
+**-1.146 %** in four commits, which on the branch reads
+`1,645,831,968 -> 1,628,221,407`, **-1.070 %** — the two compose.** Both chains are measured against their own
 base and both are `--bench`-invariant-identical throughout (decisions
 **196,220**, turns 27.53, stalls 0, determinism ok). **Six builds were
 reverted between them and every one is written up in PERF's Log** — read them
@@ -45,10 +46,14 @@ before re-proposing any.
    the program's 967 k allocations. Line attribution needs
    `[profile.profiling-lines]` + `scripts/cg_lines.py`, and lld's identical-
    code folding makes a *function total* from it untrustworthy.
-3. **Re-read your own base.** The same commit read 1,674,581,042 on pass
-   47's container and 1,662,145,003 on pass 48's — callgrind counts libc and
-   malloc/free/memcpy are ~13 % of this program. A recorded absolute from
-   another box is a sanity check, not a baseline.
+3. **Re-read your own base — but not for the reason pass 48 first wrote
+   down.** Two containers read pass 47's tip `40fb5e31` one Ir apart
+   (1,645,831,968 / 1,645,831,969), so an absolute *does* transfer. What
+   caught pass 48 out was that the branch tip `89f55a5c` reads 1,662,145,003
+   while pass 47's Log records 1,674,581,042 for the same seven commits — the
+   Log number is its **pre-rebase** tip, and `89f55a5c` has pass 46's
+   `cast_cost_scan` underneath. On a shared branch the commit you are
+   standing on may not be the one the last pass measured.
 4. **The gate rule now has both halves, measured against each other in one
    sitting.** Swap a gather for a presence gate **only where nothing else in
    the scope reads the gather** (pass 48's (E), -0.747 %); where the scope
@@ -155,30 +160,24 @@ the same name" (Kozilek-style), which picks an arbitrary qualifying name
 rather than the cheapest. Sweep the ~110 map/set locals for siblings when
 someone wants a rules pass; none of them can desynchronize a run any more.
 
-Found by profiling. Not speculative — the code is quoted.
-
-*(No open entries.* The audits that closed here are an index now; `git log
--S` on each hash has the prose. `df87c2d1` — `CardData.counters` becomes
-the insertion-ordered `CounterBag` (`RemoveAnyCounter` read "the first
-present kind" off a `RandomState`-seeded map); `86670250` — the same for
-`KeywordCounters`; `ea8cc1fd` — `died_card_snapshots` becomes `IdMap`,
-because a `TriggerCandidate`'s position decides stack order and two LKI
-deaths stacked differently per process. **That was the survey's one leak in
-31 fields** — every `HashMap`/`HashSet` on `GameState` / `ColdState` /
-`Player`, asked of each consumer whether it sums, tests membership, looks
-up by key (all safe) or `find`s / `collect`s / iterates into an ordered
-structure (not). The three that *look* risky and are not, so nobody
-re-checks them: `encode.rs` sums `block_map` into a map read by key,
-`bot.rs`'s two `block_map.keys().collect()` are `contains` + `len`, and
-`combat.rs`'s `block_map.keys().for_each(want)` decides which permanents
-get computed, never what a reader sees. Also `a67c5b9a` (actor-sampler
-panic) and `9db8557c` (Mirror Gallery aborting the whole SBA sweep — CR
-704.5j's check used `return Vec::new()` inside a `let … = { … };`
-initializer, so one board skipped every later state-based action and the
-game could not be won or lost; regression test in `classic_sets/bok`).
-**The filter that found the last one — a `return` inside a `let … = { … };`
-initializer** — was swept workspace-wide: the other nine hits are `Err` /
-let-else guards that legitimately abort their function.)*
+*(No open entries. The audits that closed here are an index; `git log -S` on
+each hash has the prose.)* `df87c2d1` — `CardData.counters` becomes the
+insertion-ordered `CounterBag`; `86670250` — the same for `KeywordCounters`;
+`ea8cc1fd` — `died_card_snapshots` becomes `IdMap`, because a
+`TriggerCandidate`'s position decides stack order and two LKI deaths stacked
+differently per process. **That was the survey's one leak in 31 fields** —
+every `HashMap`/`HashSet` on `GameState` / `ColdState` / `Player`, asked of
+each consumer whether it sums, tests membership or looks up by key (all safe)
+or `find`s / `collect`s / iterates into an ordered structure (not). The three
+that *look* risky and are not, so nobody re-checks them: `encode.rs` sums
+`block_map` into a map read by key, `bot.rs`'s two `block_map.keys().collect()`
+are `contains` + `len`, and `combat.rs`'s `block_map.keys().for_each(want)`
+decides which permanents get computed, never what a reader sees. Also
+`a67c5b9a` (actor-sampler panic) and `9db8557c` (Mirror Gallery aborting the
+whole SBA sweep — a `return` inside a `let … = { … };` initializer, so one
+board skipped every later state-based action and the game could not be won or
+lost; regression test in `classic_sets/bok`, and the filter that found it was
+swept workspace-wide).
 
 **The panic/unwrap sweep of the self-play path — CLOSED 2026-08-23 by the
 census under filter 16, and it wanted triage, not the blanket rewrite this
@@ -316,8 +315,9 @@ tip — four passes of scope work have been taking it down), and `types.rs`'s
 `IdSet` doc claimed "`RawTable::clone` ran 984,988 times under the CoW
 unshare for 1.22 %" in the present tense when the number was the
 *justification* for `IdSet` existing (**34,220 / 0.28 %** now, and none of
-them on a `ColdState` field). Six hits between the two runs, same direction
-every time.
+them on a `ColdState` field). **Five distinct sites between the two runs** —
+both caught the mana-source one independently — and the direction is the same
+in every one.
 
 **The structural fix is a rule, not six edits, and it is in CLAUDE.md's
 Performance section:** a profile number in a code comment carries the tip it
@@ -331,18 +331,13 @@ truncation all came from. The measuring device keeps being the thing that
 lies.
 
 **Stall rate — CLOSED 2026-08-14, and the answer is "nothing to fix".**
-The attribution the previous run built (`419d2ea6`: `recommend::StopReason`
-on `GameOutcome`/`RecordedGame`, a `stalls_by cap / stuck / draw` line on
-`bot_ladder --bench`, `stalls_capped` / `stalls_stuck` in
-`selfplay_train`'s `stats.jsonl`) was finally read. **`--bench --decks all
---games 300 --seed 11 --threads 3` at `5174acd3`: 5,100 games, 6 stalls
-(0.12 %), `stalls_by cap 0 / stuck 0 / draw 6`.** All six are rules draws,
-so neither of the two fixes the entry was holding open applies — the action
-budget is not too small for the grindy pool, and there is no no-legal-move
-fixed point. `--decks fixed` reads 0 and always has. The instrumentation
-stays: it is what makes a *future* move in this rate askable in the same
-file that reports throughput. Re-open only if `cap` or `stuck` goes
-non-zero.
+`419d2ea6` put `recommend::StopReason` on the outcome and a `stalls_by cap /
+stuck / draw` line on `--bench` (and `stalls_capped` / `stalls_stuck` in
+`selfplay_train`'s `stats.jsonl`), and reading it settled the entry: `--decks
+all --games 300 --seed 11` reads 6 stalls in 5,100 games (0.12 %), **cap 0 /
+stuck 0 / draw 6** — all rules draws, so neither held-open fix applies.
+`--decks fixed` reads 0 and always has. Keep the instrumentation; re-open
+only if `cap` or `stuck` goes non-zero.
 
 ## Engine — Missing Mechanics
 

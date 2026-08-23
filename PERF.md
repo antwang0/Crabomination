@@ -235,12 +235,12 @@ it.
 `profiling-fast --no-default-features`, built and run in one sitting on one
 box.
 
+Pass 48 ran concurrently with pass 47's last five commits and is **rebased on
+top of them**, so it has two readings. Its own chain, and then the branch.
+
 ```text
-                     base (89f55a5c)          tip (1b32e4fb)
+                     base (89f55a5c)          own tip (1b32e4fb)
 I refs (callgrind)   1,662,145,003            1,643,104,718   -1.146 %
-                                              1,643,107,257   re-read at the
-                                                              docs-only tip,
-                                                              +2,539 Ir
 decisions            196,220                  196,220         byte-identical
 turns_per_game       27.53                    27.53
 stalls               0 (0.00 %), cap 0 / stuck 0 / draw 0 (both)
@@ -249,16 +249,30 @@ allocations          967,377                  949,413
 peak_rss_mib         21.5                     21.0
 suite                18,709 passed / 0 failed / 5 ignored over 22 binaries (both)
 host_cpu             Intel(R) Xeon(R) Processor @ 2.80GHz
-host_calib_ms        55-56 across every reading
+host_calib_ms        55-57 across every reading
+
+                     pass 47 tip (40fb5e31)   rebased tip
+I refs (callgrind)   1,645,831,968            1,628,221,407   -1.070 %
+decisions            196,220                  196,220         byte-identical
+turns_per_game       27.53                    27.53
+stalls / determinism 0 / ok (both)
 ```
 
-**The base did not re-read at pass 47's recorded 1,674,581,042; it read
-1,662,145,003, -0.74 %.** Same commit, same pinned toolchain (1.95.0), same
-committed `Cargo.lock` — but callgrind counts libc, and `malloc` /
-`_int_free` / `memcpy` are ~13 % of this program, so a container with a
-different glibc reads a different absolute for identical engine code. **Every
-pass must re-read its own base**; a recorded absolute from another box is a
-sanity check, not a baseline.
+**The two passes compose, and the rows read slightly *smaller* on the rebased
+branch** (-1.070 % against -1.146 %): pass 47's `Keyword::eq` pair had already
+removed some of what pass 48's (B) and (E) reach.
+
+**Two containers, one Ir apart — so an absolute *does* transfer, and the
+forty-eighth pass first concluded the opposite and was wrong.** Pass 47's tip
+`40fb5e31` reads **1,645,831,968** here against the **1,645,831,969** that
+pass recorded on its own box. The thing that misled: pass 48's base
+`89f55a5c` reads 1,662,145,003, not the 1,674,581,042 pass 47's Log records —
+because that Log number is pass 47's **pre-rebase** tip `3706f96f`, and
+`89f55a5c` is the same seven commits *after* a concurrent session landed pass
+46's `cast_cost_scan` (-0.697 %) underneath them. The gap is that commit, not
+the container. **The rule that survives is narrower and still worth having:
+re-read your own base, because on a shared branch the commit you think you
+are standing on may not be the one the last pass measured.**
 
 No `games_per_s` pair is quoted: the only `--bench` runs available were taken
 between builds on a shared box, and this file's rule is to quote callgrind
@@ -816,13 +830,15 @@ the table above is safe to compress:
 
 ### Forty-eighth pass — the profile came back, and the gate that pays is the one whose gather nobody else reads
 
-Base `89f55a5c` (pass 47's tip) re-read at **1,662,145,003**, not the
-1,674,581,042 that pass recorded — **-0.74 % of pure container**. Nothing
-changed in the binary: `rust-toolchain.toml` pins 1.95.0 and `Cargo.lock` is
-committed, but callgrind counts libc, and `malloc` / `_int_free` / `memcpy`
-are ~13 % of this program. **A recorded absolute from another routine box is
-not a base**; re-read it before the first candidate, which is what this pass
-did.
+Base `89f55a5c` (pass 47's tip as the branch stood) re-read at
+**1,662,145,003**, not the 1,674,581,042 that pass's Log records. That gap is
+**not** the container — pass 47's own final tip `40fb5e31` reads
+1,645,831,968 here against its recorded 1,645,831,969, one Ir apart. It is
+that 1,674,581,042 is pass 47's *pre-rebase* tip `3706f96f`, and `89f55a5c`
+is the same seven commits sitting on top of pass 46's `cast_cost_scan`
+(-0.697 %), landed by a concurrent session. **Re-read your own base**: on a
+shared branch the commit you are standing on may not be the one the last pass
+measured, even when the code is identical.
 
 **The first hour went on measurement, because there was none.** Valgrind
 3.22 in this image never reads `bot_ladder`'s symbol table, so every engine
@@ -852,7 +868,11 @@ checked.
 | — | 1,643,104,718 -> 1,643,924,923 (**+0.050 %**) | **REVERTED** — a `Vec` whose clone reserves headroom, on `stack` and two per-turn cast logs. See below |
 
 **The pass sums to `1,662,145,003 -> 1,643,104,718`, -19,040,285 /
--1.146 %.** `--bench --threads 3` invariants byte-identical at every step:
+-1.146 %**, and **rebased onto pass 47's last five commits it reads
+`1,645,831,968 -> 1,628,221,407`, -17,610,561 / -1.070 %** — the two passes
+compose, with pass 48's rows slightly smaller on the branch because pass 47's
+`Keyword::eq` pair had already removed some of what (B) and (E) reach.
+`--bench --threads 3` invariants byte-identical at every step:
 decisions **196,220**, turns_per_game 27.53, stalls 0 (cap 0 / stuck 0 /
 draw 0), determinism ok. **No encoding change; no net needs retraining as of
 this tip.**
@@ -1515,13 +1535,14 @@ a mimalloc build would measure the interception), 1 thread, `--a gang --b
 gang --games 6 --seed 1 --decks fixed`.
 
 **The forty-eighth pass ends at 1,643,104,718 Ir** and the table below is that
-tip (`1b32e4fb`, `cg.E.out`). **Its absolutes are not comparable to the
-forty-seventh's**, which were taken on a container whose libc read 0.74 %
-differently for identical engine code — see Baseline. Ratios and call counts
-transfer; absolutes do not. The forty-seventh's and forty-sixth's tables are
-kept below because live Log rows chain to them; the forty-fifth's was folded
-away here (its rows are two passes stale and `git log -- PERF.md` has it), as
-the forty-second's and forty-fourth's were at the 2.8 k fold.
+tip (`1b32e4fb`, `cg.E.out`). **Read it as shares, not absolutes**: it was
+taken on pass 48's *own* chain, before the rebase onto pass 47's last five
+commits, so it does not include the `Keyword::eq` pair and the branch tip
+reads **1,628,221,407**, 15 M lower. Call counts and ratios transfer. The
+forty-seventh's and forty-sixth's tables are kept below because live Log rows
+chain to them; the forty-fifth's was folded away here (its rows are two
+passes stale and `git log -- PERF.md` has it), as the forty-second's and
+forty-fourth's were at the 2.8 k fold.
 
 | row | at the 48th tip | note |
 |---|---|---|
