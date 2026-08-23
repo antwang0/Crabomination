@@ -1948,47 +1948,50 @@ impl crate::game::GameState {
         {
             return true;
         }
-        // Battlefield statics — "creature and enchantment spells you
-        // control can't be countered" (Destiny Spinner). The card is mid-cast
-        // (in no zone yet), so match the filter on the card itself.
-        for src in self.battlefield.iter().filter(|c| c.controller == caster) {
+        // The three remaining routes are all battlefield statics, and each one
+        // used to take its own whole-board `static_abilities` walk — three per
+        // cast, for mechanics almost no board has, and the third built a
+        // `Vec<SelectionRequirement>` of cloned filters to walk afterwards.
+        // One pass answers all three. The two filter tests are pure, so
+        // meeting them in board order rather than in rule order cannot change
+        // the answer.
+        //
+        // * `SpellsUncounterable` — "creature and enchantment spells you
+        //   control can't be countered" (Destiny Spinner), the caster's own
+        //   permanents only. The card is mid-cast (in no zone yet), so the
+        //   filter matches on the card itself.
+        // * `CreatureSpellsCantBeCountered` — symmetric (Leyline of
+        //   Lifeforce): any player's copy protects every player's creature
+        //   spells.
+        // * `SpellsCantBeCounteredMatching` — the filtered symmetric sibling
+        //   (Root Sliver).
+        let card_is_creature = card.definition.is_creature();
+        for src in self.battlefield.iter() {
+            let own = src.controller == caster;
             for sa in &src.definition.static_abilities {
-                if let crate::effect::StaticEffect::SpellsUncounterable { filter } = &sa.effect
-                    && self.evaluate_requirement_on_card(filter, card, caster)
-                {
-                    return true;
+                match &sa.effect {
+                    crate::effect::StaticEffect::SpellsUncounterable { filter }
+                        if own && self.evaluate_requirement_on_card(filter, card, caster) =>
+                    {
+                        return true;
+                    }
+                    crate::effect::StaticEffect::CreatureSpellsCantBeCountered
+                        if card_is_creature =>
+                    {
+                        return true;
+                    }
+                    crate::effect::StaticEffect::SpellsCantBeCounteredMatching { filter }
+                        if crate::game::layers::requirement_matches_card(
+                            filter,
+                            card,
+                            card.controller,
+                        ) =>
+                    {
+                        return true;
+                    }
+                    _ => {}
                 }
             }
-        }
-        // Symmetric "creature spells can't be countered" (Leyline of Lifeforce):
-        // any player's copy protects every player's creature spells, so scan the
-        // whole battlefield rather than just the caster's permanents.
-        if card.definition.is_creature()
-            && self.battlefield.iter().any(|c| {
-                c.definition.static_abilities.iter().any(|sa| {
-                    matches!(sa.effect, crate::effect::StaticEffect::CreatureSpellsCantBeCountered)
-                })
-            })
-        {
-            return true;
-        }
-        // The filtered sibling, also symmetric (Root Sliver).
-        let matching: Vec<crate::card::SelectionRequirement> = self
-            .battlefield
-            .iter()
-            .flat_map(|c| c.definition.static_abilities.iter())
-            .filter_map(|sa| match &sa.effect {
-                crate::effect::StaticEffect::SpellsCantBeCounteredMatching { filter } => {
-                    Some(filter.clone())
-                }
-                _ => None,
-            })
-            .collect();
-        // The spell is on the stack, so match against the card itself.
-        if matching.iter().any(|f| {
-            crate::game::layers::requirement_matches_card(f, card, card.controller)
-        }) {
-            return true;
         }
         // Cavern of Souls' "can't be countered" rider is provenance-based:
         // it rides the spent mana (`SpendRestriction::
