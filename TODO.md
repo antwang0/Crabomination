@@ -31,7 +31,8 @@ the ungated original and is `debug_assert_eq!`d against on every action.
 and three more per-action questions stopped being asked (-0.526 %):
 `flagbearer_violation`'s board walk for a targetless activation,
 `can_afford_from`'s unconditional `ManaCost` clone, and eight `is_cast()`
-matches per action. Total **-2.160 %**.
+matches per action, and two more land-tap questions with no consumer
+(-0.351 %). Total **-2.504 %**.
 
 1. **(-18) IS DEAD — read its entry before proposing anything shaped like
    it.** The board epoch was fully built (a `writes` counter on
@@ -75,7 +76,7 @@ matches per action. Total **-2.160 %**.
    libxkbcommon-dev`. **`rm target-probe/profiling-fast/{bot_ladder,deps/*crabomination*}`
    before building a candidate there** — `cp -al` hardlinks them to
    `target/`'s and rustc truncate-writes in place.
-7. **Green at the tip (`95453974`).** Suite **18,708 / 0 failed** over 22
+7. **Green at the tip (`fec179f0`).** Suite **18,708 / 0 failed** over 22
    binaries, golden traces and the same-seed replay included; `cargo clippy
    --workspace --all-targets` clean across all eight crates. `--bench`
    invariants byte-identical base vs tip (decisions 196,220, turns 27.53,

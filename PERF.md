@@ -205,23 +205,28 @@ it.
 the `--bench` invariant check, which is what this file asks for a sub-5 %
 change.** The committed `release` block below is therefore still the
 forty-fourth pass's and is unchanged. What was checked at the forty-fifth tip
-(`0ed1c847`), both binaries `profiling-fast --no-default-features` built and
-run in one sitting:
+(`fec179f0`), every binary `profiling-fast --no-default-features` and every
+reading taken in one sitting on one box:
 
 ```text
-                     base (8a384e5c)          tip (075c5654)
-I refs (callgrind)   1,810,336,693            1,771,223,775   -2.160 %
+                     base (8a384e5c)          tip (fec179f0)
+I refs (callgrind)   1,810,336,693            1,765,005,375   -2.504 %
 decisions            196,220                  196,220         byte-identical
 turns_per_game       27.53                    27.53
 stalls               0 (0.00 %), cap 0 / stuck 0 / draw 0 (both)
 determinism          ok (all pairs split, both)
-games_per_s          104.89                   110.23          profiling-fast, 1 pair
-host_cpu             Intel(R) Xeon(R) Processor @ 2.10GHz (both)
+games_per_s          104.89                   109.15 / 110.23 / 102.60
+host_cpu             Intel(R) Xeon(R) Processor @ 2.10GHz (every run)
 ```
 
-The games/s pair is a single unalternated reading on a `profiling-fast`
-binary and is quoted only because it agrees in sign; **it is not comparable to
-the `release` numbers below** and the next run should not diff against it.
+**The games/s column is three unalternated readings on `profiling-fast`
+binaries and settles nothing** — a 7 % spread across three tip readings is
+exactly the swing this file's Baseline note warns about, and none of it is
+comparable to the `release` numbers below. It is quoted only because every
+reading is above the base's. Callgrind is the arbiter for the row; the next
+run should not diff against this line. (The header of a `--bench` run now
+prints the profile it was built under, so a reading like this cannot be filed
+as a `release` one by mistake — see the fifteenth filter in TODO.md.)
 
 **The forty-fourth pass is a paired `release` A/B over six alternated pairs.**
 Both sides built `release` + mimalloc from one tree, run alternating in one
@@ -653,9 +658,10 @@ Base `8a384e5c` re-read at **1,810,336,693** (the forty-fourth pass recorded
 | B' | 1,781,215,786 -> 1,789,953,520 (**+0.490 %**) | **REVERTED** — the same memo, lock-free |
 | C | 1,781,215,786 -> 1,780,583,538 (**-0.036 %**) | `cast_candidates` stops collecting a `Vec` to hold one `None` |
 | D | 1,780,583,538 -> 1,771,223,775 (**-0.526 %**) | three questions a priority pass and a land tap answer too often |
+| E | 1,771,223,775 -> 1,765,005,375 (**-0.351 %**) | two more land-tap questions with no consumer |
 
-**The pass sums to `1,810,336,693 -> 1,771,223,775`, -39,112,918 /
--2.160 %.**
+**The pass sums to `1,810,336,693 -> 1,765,005,375`, -45,331,318 /
+-2.504 %.**
 
 **(A) `perform_action_inner`'s CR 601 gate is eleven blocks, and every one of
 them walked the whole battlefield.** Rule of Law / the scheme lock / Mana Maze
@@ -737,6 +743,16 @@ does not have.**
 * `action_lock_rejection` asked `GameAction::is_cast()` eight times per
   action, and most actions are priority passes that answer `false` to all
   eight.
+
+**(E) is the same shape at the two sites it left behind, and it is worth
+recording that the tail was not thin.** `resolve_extra_mana_on_land_tap`
+looked the land up — a whole-battlefield walk — *before* the presence gate
+pass 44 put in it; and the two CR 601.2c Flagbearer blocks built a `chosen`
+and a `slots` `Vec` before calling a function that now answers `false` for an
+empty slot list. **-6,218,400 / -0.351 % between them, on top of (D)'s
+-0.526 %.** Four rows in this class over two passes, and the class is still
+not empty — the rule remains **ask the board question before the argument
+question, and ask whether anyone wants the answer before either.**
 
 **The lesson for the file: an epoch pays only where the memoized answer costs
 much more than a call, and where the writes it counts are the writes it
@@ -1349,7 +1365,7 @@ settings + debuginfo; system allocator, because valgrind replaces malloc and
 a mimalloc build would measure the interception), 1 thread, `--a gang --b
 gang --games 6 --seed 1 --decks fixed`.
 
-**The forty-fifth pass reads 1,771,223,775 Ir at its tip.** Fresh table
+**The forty-fifth pass reads 1,765,005,375 Ir at its tip.** Fresh table
 below; the forty-fourth's and the forty-second's are kept under it because
 their Log rows chain to them, and the thirty-ninth's and fortieth's were
 dropped when their Log entries became index rows (`git log -- PERF.md` has
