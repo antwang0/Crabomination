@@ -84,6 +84,16 @@ candidate was attempted from both sides this run.
   target-probe/profiling-fast/bot_ladder` before building a candidate in it,
   or you will measure the base against itself** (cost one cycle this run).
   **Fetch before every commit.**
+- **Build time: the file-size lever is measured dead — do not split the big
+  engine files for it.** Touching `effects/mod.rs` (36,684 lines) and
+  `decklist.rs` (266) both rebuild `-p crabomination --lib` in **8.5-8.7 s**,
+  and both rebuild the test binaries in **33-41 s** with the spread not
+  ordering by size. The `--lib` number is a flat dependency-graph/codegen
+  cost; the test number is **relinking twenty integration binaries**. The
+  standing rule (binary count flat or lower, never a new top-level
+  `tests/*.rs`) is the lever that actually bears on it. See PERF's **Build
+  time** section. The `release` / `profiling-fast` rebuild is codegen-bound
+  and says nothing about this — it is unmeasured.
 - Trackers: TODO **~0.98k**, under the line — the ML narratives moved verbatim
   to `ML_NOTES.md` this run (linked from the roadmap's Tier 13), the Formats
   and Rollback shipped phases collapsed to an index. ROADMAP 0.66k, PERF

@@ -141,6 +141,43 @@ min each when two ran concurrently — budget two or three measured iterations
 per run, not ten. Callgrind on six games takes about three minutes and is
 contention-immune, which makes it the better first look.
 
+## Build time — the file-size lever is dead, measured 2026-08-23
+
+**"Oversized engine files dominate incremental rebuilds" is false on this
+codebase.** Measured directly: touch one file, rebuild, time it. `dev`,
+`CARGO_TARGET_DIR=target-probe`, warm.
+
+```text
+cargo build -p crabomination --lib        (2 runs each, after a warm-up run)
+  8.7 / 8.5 s   36,684 lines   game/effects/mod.rs      <- the biggest file
+  8.7 / 8.5 s      266 lines   decklist.rs              <- one of the smallest
+
+cargo test -p crabomination -p crabomination_tests --no-run
+ 41.1 / 33.6 s  36,684 lines   game/effects/mod.rs
+ 33.2 / 39.1 s     266 lines   decklist.rs
+        32.5 s  23,672 lines   game/mod.rs
+```
+
+**A 138x difference in file size buys nothing.** The `--lib` rebuild is a flat
+~8.6 s of dependency-graph load, metadata and codegen that the touched file's
+size does not move; the test-binary rebuild is 33-41 s of **relinking twenty
+integration binaries**, and its spread does not order by file size either (the
+266-line file was the slowest of the second round).
+
+**So: do not split `effects/mod.rs` (36.7 k lines), `game/mod.rs` (23.7 k) or
+`actions.rs` (16.5 k) for build time.** There may be other reasons to split
+them — reviewability, merge conflicts with a concurrent session — but the
+iteration loop is not one, and a mechanical move of a 34.7 k-line `impl
+GameState` block is not free of risk. The lever that *does* bear on the
+33-41 s is the one already written down: **keep the integration-binary count
+flat or lower, and never add a new top-level `tests/*.rs`.** Twenty binaries
+is what the relink costs.
+
+Not measured here, and still open: the `release` / `profiling-fast` rebuild
+(~13 min cold for the engine) is a codegen-bound build where CGU partitioning,
+not query invalidation, decides the cost. Nothing above says anything about
+it.
+
 ## Baseline
 
 **The forty-second pass is measured as a paired `release` A/B, which is what
