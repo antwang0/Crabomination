@@ -502,10 +502,6 @@ pub struct ColdState {
     /// `Selector::SeparatedPile`; set and cleared inside one resolution.
     #[serde(skip)]
     pub(crate) separated_piles: (Vec<CardId>, Vec<CardId>),
-    /// Printed colours of the most recently cast spell this turn — Mana
-    /// Maze's cast restriction. Cleared at Cleanup.
-    #[serde(default)]
-    pub(crate) last_cast_spell_colors: Vec<crate::mana::Color>,
     /// Creatures under a turn-scoped "prevent damage from spells and abilities
     /// that target this" shield (Silhouette). Cleared at cleanup.
     #[serde(default)]
@@ -1047,6 +1043,16 @@ pub struct GameState {
     /// tracked; no supported format seats that many.
     #[serde(default)]
     pub(crate) opponent_cast_since_your_turn: u64,
+    /// Printed colours of the most recently cast spell this turn — Mana
+    /// Maze's cast restriction. Cleared at Cleanup.
+    ///
+    /// On the state rather than in [`ColdState`] for the same reason as the
+    /// mask above, and measured: `finalize_cast` writes it on 6,284 of 7,172
+    /// casts, and a cold write unshares ~90 collections at ~1,700 Ir. A
+    /// `ColorSet` rather than a `Vec<Color>` so the checkpoint clone the move
+    /// adds is a byte, not an allocation.
+    #[serde(default)]
+    pub(crate) last_cast_spell_colors: crate::mana::ColorSet,
     /// Count of noncreature spells cast this turn (any player), for
     /// "the first noncreature spell of a turn" (Nullstone Gargoyle). Reset at
     /// Cleanup alongside `spells_cast_this_turn`.
@@ -2138,6 +2144,7 @@ impl Clone for GameState {
             skip_first_draw: self.skip_first_draw,
             spells_cast_this_turn: self.spells_cast_this_turn,
             opponent_cast_since_your_turn: self.opponent_cast_since_your_turn,
+            last_cast_spell_colors: self.last_cast_spell_colors,
             noncreature_spells_cast_this_turn: self.noncreature_spells_cast_this_turn,
             mana_spent_on_spells_this_turn: self.mana_spent_on_spells_this_turn,
             expend_prev_total: self.expend_prev_total,
@@ -2380,6 +2387,7 @@ impl GameState {
             skip_first_draw: n <= 2,
             spells_cast_this_turn: 0,
             opponent_cast_since_your_turn: 0,
+            last_cast_spell_colors: crate::mana::ColorSet::empty(),
             noncreature_spells_cast_this_turn: 0,
             mana_spent_on_spells_this_turn: 0,
             expend_prev_total: 0,
@@ -11913,7 +11921,7 @@ impl GameState {
     /// Mana Maze — the colours of the turn's most recently cast spell, which
     /// no player may share while such a lock is on the battlefield.
     pub fn locked_cast_colors(&self) -> Vec<crate::mana::Color> {
-        self.last_cast_spell_colors.clone()
+        self.last_cast_spell_colors.to_vec()
     }
 
     /// CR 615 — Well-Laid Plans: true when `src` and `tgt` are both creatures

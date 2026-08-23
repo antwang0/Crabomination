@@ -8040,13 +8040,7 @@ impl GameState {
         }
         self.spells_cast_this_turn += 1;
         // Mana Maze reads the turn's most recent cast (CR 601.2 restriction).
-        // Cold-group write (see `clear_cold!`): a two-colour deck casts the
-        // same colours over and over, so compare before unsharing ~90
-        // collections to store the value that is already there.
-        let cast_colors = card.definition.printed_colors();
-        if self.last_cast_spell_colors != cast_colors {
-            self.last_cast_spell_colors = cast_colors;
-        }
+        self.last_cast_spell_colors = card.definition.printed_color_set();
         self.players[p].spells_cast_this_turn += 1;
         self.players[p].spells_cast_this_game_turn += 1;
         if card.definition.card_types.contains(&crate::card::CardType::Sorcery) {

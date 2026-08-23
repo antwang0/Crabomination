@@ -659,7 +659,7 @@ impl GameState {
                 self.resolution_causer = None;
                 self.spells_cast_last_turn = self.spells_cast_this_turn;
                 self.spells_cast_this_turn = 0;
-                clear_cold!(self.last_cast_spell_colors);
+                self.last_cast_spell_colors.clear();
                 self.noncreature_spells_cast_this_turn = 0;
                 self.opponent_cast_since_your_turn &=
                     !crate::game::seat_bit(self.active_player_idx);
@@ -3901,7 +3901,10 @@ impl GameState {
         // (Owlin Shieldmage's ETB, Holy Day-style fogs) expires at
         // cleanup along with the other until-end-of-turn flags.
         self.prevent_combat_damage_this_turn = false;
-        self.prevent_combat_damage_except = None;
+        // Cold-group guard — see `clear_cold!`.
+        if self.prevent_combat_damage_except.is_some() {
+            self.prevent_combat_damage_except = None;
+        }
         clear_cold!(self.combat_damage_prevented_creatures);
         clear_cold!(self.combat_damage_prevented_to_this_turn);
         clear_cold!(self.combat_damage_prevented_by_this_turn);
