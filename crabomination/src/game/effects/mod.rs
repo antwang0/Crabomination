@@ -10113,49 +10113,61 @@ impl GameState {
                         None => state.players[p].mana_pool.add(c, mult),
                     }
                 };
+                // The three land-tap replacements below each asked "is the
+                // source a land" with its own `battlefield_find`, and two of
+                // them then took a whole-board `static_abilities` walk for a
+                // static almost no board has: 8,810,292 Ir / 0.51 % over
+                // 37,140 walks, two per land tap. One lookup and one fused
+                // walk now, and the walk only happens for a land source.
+                let (src_is_land, src_is_basic) =
+                    match ctx.source.and_then(|s| self.battlefield_find(s)) {
+                        Some(c) => (c.definition.is_land(), c.definition.is_basic()),
+                        None => (false, false),
+                    };
+                let (contaminate, pulse) = if src_is_land {
+                    let (mut contaminate, mut pulse) = (None, None);
+                    for c in self.battlefield.iter() {
+                        for sa in &c.definition.static_abilities {
+                            match sa.effect {
+                                crate::effect::StaticEffect::LandsProduceColorInstead(col)
+                                    if contaminate.is_none() =>
+                                {
+                                    contaminate = Some(col);
+                                }
+                                // Scoped to the static's controller, so an
+                                // opponent's basics are untouched; a source
+                                // with no chosen colour does not claim the
+                                // slot, matching the `find_map` this replaces.
+                                crate::effect::StaticEffect::YourBasicLandsProduceChosenColorInstead
+                                    if pulse.is_none() && c.controller == p =>
+                                {
+                                    pulse = c.chosen_color;
+                                }
+                                _ => {}
+                            }
+                        }
+                    }
+                    (contaminate, pulse)
+                } else {
+                    (None, None)
+                };
                 // Contamination — "if a land is tapped for mana, it produces
                 // [color] instead of any other type and amount." Replaces the
                 // whole payload for a land source.
-                if ctx
-                    .source
-                    .and_then(|s| self.battlefield_find(s))
-                    .is_some_and(|c| c.definition.is_land())
-                    && let Some(color) = self
-                        .battlefield
-                        .iter()
-                        .find_map(|c| {
-                            c.definition.static_abilities.iter().find_map(|sa| match sa.effect {
-                                crate::effect::StaticEffect::LandsProduceColorInstead(col) => {
-                                    Some(col)
-                                }
-                                _ => None,
-                            })
-                        })
-                        // Deep Water — the turn-scoped, controller-scoped twin.
-                        .or(self.players[p].lands_produce_color_this_turn)
+                if src_is_land
+                    // Deep Water — the turn-scoped, controller-scoped twin.
+                    && let Some(color) =
+                        contaminate.or(self.players[p].lands_produce_color_this_turn)
                 {
                     add_one(self, p, color);
                     events.push(GameEvent::ManaAdded { player: p, color, source: ctx.source });
                     return Ok(());
                 }
                 // CR 605 — Pulse of Llanowar: your *basic* lands produce the
-                // enchantment's chosen colour instead. Scoped to the static's
-                // controller, so an opponent's basics are untouched.
-                if ctx
-                    .source
-                    .and_then(|s| self.battlefield_find(s))
-                    .is_some_and(|c| c.definition.is_land() && c.definition.is_basic())
-                    && let Some(color) = self.battlefield.iter().find_map(|c| {
-                        (c.controller == p
-                            && c.definition.static_abilities.iter().any(|sa| {
-                                matches!(
-                                    sa.effect,
-                                    crate::effect::StaticEffect::YourBasicLandsProduceChosenColorInstead
-                                )
-                            }))
-                        .then_some(c.chosen_color)
-                        .flatten()
-                    })
+                // enchantment's chosen colour instead.
+                if src_is_land
+                    && src_is_basic
+                    && let Some(color) = pulse
                 {
                     add_one(self, p, color);
                     events.push(GameEvent::ManaAdded { player: p, color, source: ctx.source });
@@ -10164,10 +10176,8 @@ impl GameState {
                 // CR 614 — the turn-scoped land-tap replacements (Pale Moon,
                 // Harvest Mage). Same "instead of any other type and amount"
                 // shape as Contamination, but installed by a spell.
-                if let Some(land) = ctx.source.and_then(|s| self.battlefield_find(s))
-                    && land.definition.is_land()
-                {
-                    let basic = land.definition.is_basic();
+                if src_is_land {
+                    let basic = src_is_basic;
                     let out = self
                         .land_mana_replacements_this_turn
                         .iter()
