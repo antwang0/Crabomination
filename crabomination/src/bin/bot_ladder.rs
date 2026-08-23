@@ -560,6 +560,32 @@ fn peak_rss_mib() -> Option<f64> {
     Some(kb / 1024.0)
 }
 
+/// The build profile this binary was compiled under, read off its own path.
+///
+/// The label here used to be `if cfg!(debug_assertions) { "DEBUG" } else {
+/// "release" }` — and **that was a claim the value did not support**.
+/// `release-fast`, `profiling-fast` and `overflow` all have
+/// `debug_assertions` off and all printed "release build", while PERF.md's
+/// own rule is that a `release-fast` number never compares to a `release`
+/// one. A throughput reading filed under the wrong profile is exactly the
+/// mistake this harness exists to prevent, and it is not hypothetical: the
+/// forty-fifth pass quoted a `profiling-fast` games/s next to a `release`
+/// baseline before catching it.
+///
+/// Cargo does not hand the profile name to the crate, but it does put the
+/// binary in `target/<profile>/`, so `current_exe`'s parent directory is the
+/// answer and needs no build script. It also names `overflow` for what it is,
+/// which `cfg!(overflow_checks)` cannot — that cfg is still unstable.
+fn build_profile() -> String {
+    if cfg!(debug_assertions) {
+        return "DEBUG (numbers meaningless)".to_string();
+    }
+    std::env::current_exe()
+        .ok()
+        .and_then(|p| p.parent()?.file_name()?.to_str().map(str::to_string))
+        .unwrap_or_else(|| "optimized (profile unknown)".to_string())
+}
+
 /// Host speed probe: a fixed, deterministic mixed ALU + random-access
 /// workload, timed on one thread.
 ///
@@ -1039,7 +1065,7 @@ fn main() {
         println!("bench: {BENCH_PROFILE} mirror, {} decks, seed {}, {threads} threads, {} build",
             field.len(),
             args.seed,
-            if cfg!(debug_assertions) { "DEBUG (numbers meaningless)" } else { "release" },
+            build_profile(),
         );
         println!("  games          {}", cost.games);
         println!("  wall_s         {wall:.2}");
