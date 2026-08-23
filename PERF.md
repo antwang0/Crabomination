@@ -10,7 +10,9 @@ A number from a debug build describes `opt-level = 0`, not the code.
 ## How to measure
 
 ```text
-# throughput — the committed configuration
+# throughput — the committed configuration. The header names the profile the
+# binary was built under (read off `target/<profile>/`), so a `release-fast`
+# or `profiling-fast` reading cannot be filed as a `release` one by mistake.
 cargo run --release --bin bot_ladder -- --bench
 
 # allocator A/B — mimalloc is the default now, so the *system* allocator is
@@ -207,13 +209,13 @@ forty-fourth pass's and is unchanged. What was checked at the forty-fifth tip
 run in one sitting:
 
 ```text
-                     base (8a384e5c)          tip (ee2afb12)
-I refs (callgrind)   1,810,336,693            1,780,583,538   -1.643 %
+                     base (8a384e5c)          tip (075c5654)
+I refs (callgrind)   1,810,336,693            1,771,223,775   -2.160 %
 decisions            196,220                  196,220         byte-identical
 turns_per_game       27.53                    27.53
 stalls               0 (0.00 %), cap 0 / stuck 0 / draw 0 (both)
 determinism          ok (all pairs split, both)
-games_per_s          104.89                   109.15          profiling-fast, 1 pair
+games_per_s          104.89                   110.23          profiling-fast, 1 pair
 host_cpu             Intel(R) Xeon(R) Processor @ 2.10GHz (both)
 ```
 
@@ -650,6 +652,10 @@ Base `8a384e5c` re-read at **1,810,336,693** (the forty-fourth pass recorded
 | B | 1,781,215,786 -> 1,794,167,898 (**+0.727 %**) | **REVERTED** — (-18)'s board epoch, `Mutex` form |
 | B' | 1,781,215,786 -> 1,789,953,520 (**+0.490 %**) | **REVERTED** — the same memo, lock-free |
 | C | 1,781,215,786 -> 1,780,583,538 (**-0.036 %**) | `cast_candidates` stops collecting a `Vec` to hold one `None` |
+| D | 1,780,583,538 -> 1,771,223,775 (**-0.526 %**) | three questions a priority pass and a land tap answer too often |
+
+**The pass sums to `1,810,336,693 -> 1,771,223,775`, -39,112,918 /
+-2.160 %.**
 
 **(A) `perform_action_inner`'s CR 601 gate is eleven blocks, and every one of
 them walked the whole battlefield.** Rule of Law / the scheme lock / Mana Maze
@@ -714,6 +720,23 @@ wash, but ~25 k allocations rather than the ~50 k the shape suggests, because
 the affordability filter drops most of the hand before the block. The rule
 this pass adds to (-23): **count what survives the filters above the
 allocation before sizing it.**
+
+**(D) is the forty-fourth pass's (D) shape again, and it is not exhausted
+either: work on a path every action takes, for a case the board or the action
+does not have.**
+
+* `flagbearer_violation` ran `flagbearer_candidates` — a whole-battlefield
+  `static_abilities` walk with a `same_team` per card — before noticing that
+  CR 601.2c's "if able" clause is an `any` over the *declared slot filters*,
+  so an activation with no targets cannot violate it however the board looks.
+  **18,796 calls over six games, almost all of them a land tapping for mana**
+  (4.57 M / 0.26 %). The `is_empty()` test moved to the top; pure reorder.
+* `can_afford_from` cloned the printed `ManaCost` on **every** call (12,986,
+  with `can_afford_in_state_with` and `relax_cost_colors` allocating above
+  it) for a mutation — `reduce_generic` — that most costs never need. `Cow`.
+* `action_lock_rejection` asked `GameAction::is_cast()` eight times per
+  action, and most actions are priority passes that answer `false` to all
+  eight.
 
 **The lesson for the file: an epoch pays only where the memoized answer costs
 much more than a call, and where the writes it counts are the writes it
@@ -1326,7 +1349,7 @@ settings + debuginfo; system allocator, because valgrind replaces malloc and
 a mimalloc build would measure the interception), 1 thread, `--a gang --b
 gang --games 6 --seed 1 --decks fixed`.
 
-**The forty-fifth pass reads 1,780,583,538 Ir at its tip.** Fresh table
+**The forty-fifth pass reads 1,771,223,775 Ir at its tip.** Fresh table
 below; the forty-fourth's and the forty-second's are kept under it because
 their Log rows chain to them, and the thirty-ninth's and fortieth's were
 dropped when their Log entries became index rows (`git log -- PERF.md` has
@@ -1461,10 +1484,12 @@ free side 117,236,275 / 6.48 %.
 | `can_afford_in_state_with` / `can_afford_from` / `relax_cost_colors` | 12,986 **each** | ~2,300,000 | 0.13 |
 | `ManaCost::reduce_generic` | 7,550 | 843,761 | 0.05 |
 
-`can_afford_from` clones the printed `ManaCost` on **every** call — three
-allocations per affordability question, and the clone only exists so
-`reduce_generic` can mutate. A `Cow` there is worth ~2 M and is the cheapest
-unclaimed row on this table.
+`can_afford_from`'s three allocations per affordability question are **PAID**
+(the forty-fifth pass's (D)): the clone only existed so `reduce_generic` could
+mutate, and a `Cow` borrows on the path most costs take. What is still
+unclaimed and cheapest: `finalize_cast`'s 28,878 `grow_one`s (8.9 M) — the
+three per-turn cast logs pushed through `PlayerData`'s CoW handle — and
+`ManaPayload::clone` at 19,306.
 
 **And `grow_one`'s own callers, 224,927 growths / 39,576,235 / 2.19 %:**
 

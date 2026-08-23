@@ -27,7 +27,11 @@ eleven blocks each taking its own whole-board `static_abilities` walk, with
 six `find_card_anywhere` lookups of the cast spell between them; it is one
 walk and one lookup now, gated by a presence mask whose `u32::MAX` reading is
 the ungated original and is `debug_assert_eq!`d against on every action.
-`cast_candidates` stopped collecting a `Vec` to hold one `None`: -0.036 %.
+`cast_candidates` stopped collecting a `Vec` to hold one `None` (-0.036 %),
+and three more per-action questions stopped being asked (-0.526 %):
+`flagbearer_violation`'s board walk for a targetless activation,
+`can_afford_from`'s unconditional `ManaCost` clone, and eight `is_cast()`
+matches per action. Total **-2.160 %**.
 
 1. **(-18) IS DEAD — read its entry before proposing anything shaped like
    it.** The board epoch was fully built (a `writes` counter on
@@ -50,11 +54,14 @@ the ungated original and is `debug_assert_eq!`d against on every action.
    attempts at 69,000 Ir each, and `would_accept` is 18.65 % over 5,260
    probes at 64,200 Ir — **of which the state clone is ~3,500, so the probe
    is the cast, not the clone.** Half of it is (-12)'s `auto_tap`. See (-24).
-4. **Cheapest unclaimed row on the allocator table: `can_afford_from` clones
-   the printed `ManaCost` on every call** (12,986 x 3 allocations, ~2 M) so
-   `reduce_generic` can mutate it; a `Cow` removes two of the three. PERF's
-   (-23) now carries the whole 1,112,945-allocation caller table by *count*
-   and `grow_one`'s by count, which is what that entry asks you to rank by.
+4. **The allocator table is now in PERF (-23) by *call count*, which is what
+   that entry asks you to rank by** — plus `grow_one`'s. `can_afford_from` is
+   paid; the cheapest unclaimed rows are `finalize_cast`'s 28,878 `grow_one`s
+   (8.9 M — the three per-turn cast logs pushed through `PlayerData`'s CoW
+   handle) and the `Effect::clone` + `drop_in_place<Effect>` pair that every
+   land tap pays to own its ability's effect tree (6.2 M / 0.35 %; an
+   `Arc<CardDefinition>` + index instead of a deep clone is the shape, and it
+   is a real refactor).
 5. **Do not rebuild these.** The board-presence epoch (1). The `GameState`
    husk pool (+2.60 %). Gating `do_untap`'s six walks (+0.0001 %). Narrowing
    `GameState`. Splitting the big engine files for build time. The
@@ -68,7 +75,7 @@ the ungated original and is `debug_assert_eq!`d against on every action.
    libxkbcommon-dev`. **`rm target-probe/profiling-fast/{bot_ladder,deps/*crabomination*}`
    before building a candidate there** — `cp -al` hardlinks them to
    `target/`'s and rustc truncate-writes in place.
-7. **Green at the tip (`ee2afb12`).** Suite **18,708 / 0 failed** over 22
+7. **Green at the tip (`95453974`).** Suite **18,708 / 0 failed** over 22
    binaries, golden traces and the same-seed replay included; `cargo clippy
    --workspace --all-targets` clean across all eight crates. `--bench`
    invariants byte-identical base vs tip (decisions 196,220, turns 27.53,
@@ -158,7 +165,7 @@ the section's only open entry; the thirteen narrower filters below are what
 got run instead of the blanket rewrite, and eight of the thirteen found
 nothing, which is the result worth keeping.
 
-**The thirteen filters, compacted to an index.** Each is a *shape* that fails
+**The fifteen filters, compacted to an index.** Each is a *shape* that fails
 the way a training run notices — a silent wrap at game 400 k, a loud panic,
 or a hang — swept over `game/` + `bot.rs` (some wider). The prose is in
 `git log -- TODO.md`; what is kept is what each hunted and why it is
@@ -179,6 +186,8 @@ closed, so none of them is re-derived.
 | 11 | 08-11 | **One invariant written out by hand in more than one place** | **Found `15ec11c1`**: `stale < 8` appeared six times across five files, so the ladder's stall rate and the training actor's were never the same measurement. All six read `recommend::STALE_ROUNDS` now; no value changed. The per-context *action* budgets beside them are deliberately different and were left alone |
 | 12 | 08-14 | **A predicate two callers each re-derive** | **Found two**, `caa44eb2` — see below |
 | 13 | 08-14 | **A reentrancy guard some sites spell out by hand and a sibling does not** | **Found a stack overflow** — `in_layer_gather`, unguarded at ~a dozen computed-P/T arms the gather evaluates. See below |
+| 14 | 08-15 | **A comment that states a cost or a shape** | **Found one**, in the measuring device: `host_calib_ms`' doc claimed you could scale a throughput comparison by it. The syntactic half is clean; see below |
+| 15 | 08-23 | **A claim made by a tool's output rather than by its source** | **Found one**, in the measuring device again (`95453974`): `--bench` printed "release build" for `release-fast` / `profiling-fast` / `overflow`. See below |
 
 **A note the table would lose**: filters 3-5 and 7-10 are syntactic and
 found nothing between them. Filter 6 is not syntactic — it *runs* the
@@ -254,31 +263,46 @@ already documented but nothing enforced. Regression test:
 `core_rules::cr_rules::cr_613_a_cda_filter_reading_computed_power_does_not_recurse`
 (overflows the stack on the pre-fix engine; verified both ways).
 
-**The fourteenth filter was run 2026-08-15** — *a comment that states a
-cost or a shape*. **Found one, and it was in the measuring device itself.**
+**The fifteenth filter was run 2026-08-23** — *a claim made by a tool's
+output rather than by its source*, the one the fourteenth entry said was
+owed. **Found one, and it was in the measuring device again** (`95453974`).
 
-- `host_calib_ms`' doc comment said "compare `host_calib_ms` first; scale
-  the throughput comparison by it". That was false the day it was needed:
-  two containers reporting the same `host_cpu` and *overlapping* calib
-  (47-57 against 53-66) differed by **24 %** on `--bench`. The probe is
-  single-threaded and the bench runs three workers, so it measures nothing
-  about how the host schedules them. Corrected in place, with the
-  counter-example and the rule it implies — agreement is weak evidence,
-  disagreement is strong. See PERF **Baseline**.
+- `bot_ladder --bench`'s header printed `if cfg!(debug_assertions) { "DEBUG" }
+  else { "release" }`. **`release-fast`, `profiling-fast` and `overflow` all
+  have `debug_assertions` off and all printed "release build"**, while
+  PERF.md's own rule is that a `release-fast` number never compares to a
+  `release` one. Not hypothetical: pass 45 quoted a `profiling-fast` games/s
+  beside a `release` baseline before catching it. Cargo does not hand the
+  profile name to the crate but puts the binary in `target/<profile>/`, so
+  `current_exe`'s parent directory is the answer — and it names `overflow`
+  for what it is, which `cfg!(overflow_checks)` cannot (still unstable).
 
-**The syntactic half of the filter is clean and should not be re-run.**
-Greps for present-tense cost claims (`costs nothing` / `is cheap` / `O(n`
-/ `whole-board` / `plain Vec` / `the engine has no`) over `game/`,
-`server/` and `crabomination_base/` return ~60 hits, all either
-game-semantics uses of "free"/"cheap" or *past-tense* justifications ("was
-1.45 % of the program", "was an O(n²) membership scan") that correctly
-explain why the code is shaped as it is. **The filter's yield is in
-comments that a *measurement* relies on, not in the engine's prose** —
-which is the thirteen-filter table's own lesson (structure and running
-code beat grepping) applied one more time. A *fifteenth* filter is owed;
-the natural next one is **a claim made by a tool's output rather than by
-its source** — a printed label or a stats field whose name asserts
-something the value does not support.
+**The rest of the sweep is clean and should not be re-run.** `peak_rss_mib`
+really is `VmHWM` (a high-water mark, not a sampled RSS); `determinism ok` is
+the mirrored-pair sweep count and exits non-zero when it fails; `stalls_by
+cap / stuck / draw` is the split the stall entry below already verified;
+`selfplay_train`'s `val_auc` is a real tie-corrected Mann-Whitney AUC and
+`brier` a real Brier score. **A sixteenth filter is owed; the natural next one
+is *a default that no caller ever overrides* — a knob whose only value in
+every run is the one it was born with, which is either dead configuration or
+an experiment nobody finished.**
+
+**The fourteenth filter was run 2026-08-15** — *a comment that states a cost
+or a shape*, and it found one in the measuring device: `host_calib_ms`' doc
+claimed you could "scale the throughput comparison by it", and two containers
+with the same `host_cpu` and *overlapping* calib differed by **24 %** on
+`--bench` — the probe is single-threaded and the bench runs three workers.
+Corrected in place; agreement is weak evidence, disagreement is strong. See
+PERF **Baseline**.
+
+**The syntactic half of that filter is clean and should not be re-run.** Greps
+for present-tense cost claims (`costs nothing` / `is cheap` / `O(n` /
+`whole-board` / `plain Vec` / `the engine has no`) over `game/`, `server/` and
+`crabomination_base/` return ~60 hits, all either game-semantics uses of
+"free"/"cheap" or *past-tense* justifications that correctly explain why the
+code is shaped as it is. **Both filters' yield is in claims a *measurement*
+relies on, not in the engine's prose** — the table's own lesson (structure and
+running code beat grepping) applied twice more.
 
 **Stall rate — CLOSED 2026-08-14, and the answer is "nothing to fix".**
 The attribution the previous run built (`419d2ea6`: `recommend::StopReason`
