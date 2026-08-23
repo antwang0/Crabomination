@@ -8410,21 +8410,16 @@ impl GameState {
         // CR 702.62 suspend accelerants (Deep-Sea Kraken): an opponent's cast
         // ticks a time counter off their suspended accelerant cards.
         self.process_suspend_accelerants(p);
-        // CR 702.21: Ward triggers on each chosen target permanent the caster
-        // doesn't control. Pushed last so Ward sits on top of the caster's
-        // own SpellCast triggers (Magecraft, Prowess) — correct APNAP order
-        // since the caster is the active player and Ward belongs to a
-        // nonactive player. Ward resolves first and may counter the spell
-        // unless the caster pays the Ward cost.
-        self.push_ward_triggers_for_cast(p, card_id);
-        // BecameTarget triggers — fired through the unified dispatcher so
-        // APNAP order is correct and the trigger's `EventSpec.filter` is
-        // honored. One event per permanent target on the just-pushed
-        // spell. Used by SOS Tenured Concocter's "may draw" trigger.
-        self.dispatch_became_target_events_for_cast(p, card_id);
-        // CR 700.13 — committing a crime by targeting an opponent / their
-        // permanents / cards with this spell (Kaervek, Gisa).
-        let crime_targets: Vec<Target> = self
+        // The three hooks below — Ward, BecameTarget, crime — each used to
+        // find the just-pushed spell on the stack and clone its target slots
+        // out for themselves, three walks and three `Vec<Target>` clones per
+        // cast for one list that cannot change between them (the hooks only
+        // *push* triggers; nothing resolves until priority is given below).
+        // Read from the stack rather than from `target` / `additional_targets`
+        // above, because `randomize_single_target_on_stack` can have replaced
+        // the primary target — but read once. An empty list is also what an
+        // absent spell (countered before this hook) gave each of them.
+        let cast_targets: Vec<Target> = self
             .stack
             .iter()
             .rev()
@@ -8435,7 +8430,21 @@ impl GameState {
                 _ => None,
             })
             .unwrap_or_default();
-        self.dispatch_crime_for_targets(p, &crime_targets);
+        // CR 702.21: Ward triggers on each chosen target permanent the caster
+        // doesn't control. Pushed last so Ward sits on top of the caster's
+        // own SpellCast triggers (Magecraft, Prowess) — correct APNAP order
+        // since the caster is the active player and Ward belongs to a
+        // nonactive player. Ward resolves first and may counter the spell
+        // unless the caster pays the Ward cost.
+        self.push_ward_triggers_for_targets(p, card_id, &cast_targets);
+        // BecameTarget triggers — fired through the unified dispatcher so
+        // APNAP order is correct and the trigger's `EventSpec.filter` is
+        // honored. One event per permanent target on the just-pushed
+        // spell. Used by SOS Tenured Concocter's "may draw" trigger.
+        self.dispatch_became_target_events_for_targets(p, card_id, &cast_targets);
+        // CR 700.13 — committing a crime by targeting an opponent / their
+        // permanents / cards with this spell (Kaervek, Gisa).
+        self.dispatch_crime_for_targets(p, &cast_targets);
         self.give_priority_to_active();
     }
 
@@ -8475,36 +8484,21 @@ impl GameState {
     /// Walk the just-pushed `StackItem::Spell` and emit one
     /// `GameEvent::BecameTarget` for every permanent target slot, then
     /// dispatch the events through the unified trigger pipeline.
-    pub(crate) fn dispatch_became_target_events_for_cast(
+    pub(crate) fn dispatch_became_target_events_for_targets(
         &mut self,
         caster: usize,
         cast_card_id: CardId,
+        slots: &[Target],
     ) {
-        let (target, additional_targets): (Option<Target>, Vec<Target>) = match self
-            .stack
-            .iter()
-            .rev()
-            .find_map(|si| match si {
-                StackItem::Spell { card, target, additional_targets, .. }
-                    if card.id == cast_card_id =>
-                {
-                    Some((target.clone(), additional_targets.clone()))
-                }
-                _ => None,
-            }) {
-            Some(t) => t,
-            None => return,
-        };
-        let slots: Vec<Target> = target.into_iter().chain(additional_targets).collect();
         if slots.is_empty() {
             return;
         }
         // CR 601.2c — one "chose targets" event for the whole announcement,
         // plus the per-object `BecameTarget`s.
         let mut events = vec![GameEvent::ChoseTargets { chooser: caster, object: cast_card_id }];
-        events.extend(slots.into_iter().filter_map(|t| match t {
+        events.extend(slots.iter().filter_map(|t| match t {
             Target::Permanent(id) => {
-                Some(GameEvent::BecameTarget { target: id, caster, by: Some(cast_card_id) })
+                Some(GameEvent::BecameTarget { target: *id, caster, by: Some(cast_card_id) })
             }
             _ => None,
         }));
@@ -8516,41 +8510,11 @@ impl GameState {
     /// `Keyword::Ward(WardCost)`. Each trigger is `Effect::CounterUnless`
     /// aimed at the just-cast spell. At resolution the engine auto-pays
     /// on the spell controller's behalf if affordable; otherwise the
-    /// spell is countered.
+    /// spell is countered. Trivial Ward variants (e.g. `WardCost::Mana`
+    /// with an empty/zero cost) are skipped — a $0 pay is always affordable
+    /// and the visible outcome is identical to no Ward at all, so we save
+    /// the stack churn.
     ///
-    /// Reads slot 0 + every `additional_targets` slot off the just-pushed
-    /// `StackItem::Spell` (so this must run after `finalize_cast`'s push).
-    /// Trivial Ward variants (e.g. `WardCost::Mana` with an empty/zero
-    /// cost) are skipped — a $0 pay is always affordable and the visible
-    /// outcome is identical to no Ward at all, so we save the stack churn.
-    pub(crate) fn push_ward_triggers_for_cast(&mut self, caster: usize, cast_card_id: CardId) {
-        // Locate the just-pushed spell and pull its targets out as owned
-        // values — we can't hold an immutable borrow while we push new
-        // stack items below.
-        let (target, additional_targets): (Option<Target>, Vec<Target>) = match self
-            .stack
-            .iter()
-            .rev()
-            .find_map(|si| match si {
-                StackItem::Spell { card, target, additional_targets, .. }
-                    if card.id == cast_card_id =>
-                {
-                    Some((target.clone(), additional_targets.clone()))
-                }
-                _ => None,
-            }) {
-            Some(t) => t,
-            // Spell isn't on the stack (e.g. countered before this hook).
-            None => return,
-        };
-
-        let all_targets: Vec<Target> = target
-            .into_iter()
-            .chain(additional_targets)
-            .collect();
-        self.push_ward_triggers_for_targets(caster, cast_card_id, &all_targets);
-    }
-
     /// Shared core for Ward enforcement: walk `targets`, and for each
     /// permanent target controlled by a player other than `actor` whose
     /// `Keyword::Ward(WardCost)` is non-trivial, push a Ward trigger
