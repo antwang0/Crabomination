@@ -10720,12 +10720,17 @@ impl GameState {
         if self.truce_active() {
             return Err(GameError::TargetHasShroud(*cid));
         }
-        if self.permanent_has_keyword(*cid, &Keyword::Shroud)
-            && !self.shroud_waivers.contains(&(*cid, caster))
-        {
+        // One computed read for the three CR 613 keyword questions in this
+        // function. Each took a `computed_permanent` of its own, and outside
+        // a freeze scope that is a whole-game gather apiece — for the same
+        // card at the same game state. `None` (not a battlefield permanent)
+        // is the `false` the per-keyword helper returned.
+        let cp = self.computed_permanent(*cid);
+        let has_kw = |k: &Keyword| cp.as_ref().is_some_and(|c| c.keywords.contains(k));
+        if has_kw(&Keyword::Shroud) && !self.shroud_waivers.contains(&(*cid, caster)) {
             return Err(GameError::TargetHasShroud(*cid));
         }
-        if self.permanent_has_keyword(*cid, &Keyword::Hexproof)
+        if has_kw(&Keyword::Hexproof)
             && controller != caster
             && !self.player_ignores_creature_hexproof(caster)
         {
@@ -10743,15 +10748,13 @@ impl GameState {
         // sources". Only ability sources reach here with a `source_card_id` on
         // the battlefield; a spell's own cast gate is upstream.
         if let Some(src) = source_card_id
-            && self
-                .computed_permanent(*cid)
-                .into_iter()
-                .flat_map(|cp| cp.keywords.to_vec())
-                .any(|k| match k {
+            && cp.as_ref().is_some_and(|c| {
+                c.keywords.iter().any(|k| match k {
                     Keyword::CantBeTargetedByAbilitiesFromMatching(f) => self
-                        .evaluate_requirement_static(&f, &Target::Permanent(src), controller, Some(src)),
+                        .evaluate_requirement_static(f, &Target::Permanent(src), controller, Some(src)),
                     _ => false,
                 })
+            })
         {
             return Err(GameError::InvalidTarget);
         }
