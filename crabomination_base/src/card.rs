@@ -5187,7 +5187,7 @@ impl CardDefinition {
         })
     }
     pub fn is_instant_speed(&self) -> bool {
-        self.is_instant() || self.keywords.contains(&Keyword::Flash)
+        self.is_instant() || self.keywords.has_kw(&Keyword::Flash)
     }
 
     /// True if any activated ability could add {C} ("could produce {C}" —
@@ -5228,7 +5228,7 @@ impl CardDefinition {
         if let Some(forced) = &self.color_override {
             return forced.iter().collect();
         }
-        if self.keywords.contains(&Keyword::Devoid) {
+        if self.keywords.has_kw(&Keyword::Devoid) {
             return ColorSet::empty();
         }
         let mut colors = ColorSet::empty();
@@ -5342,14 +5342,14 @@ impl CardDefinition {
             } else {
                 Vec::new()
             },
-            changeling: creature && self.keywords.contains(&Keyword::Changeling),
+            changeling: creature && self.keywords.has_kw(&Keyword::Changeling),
             land_ability: false,
             creature,
             creature_ability: false,
             casting_nonartifact_spell: !artifact,
             activating_ability: false,
             lesson: self.subtypes.spell_subtypes.contains(&crate::card::SpellSubtype::Lesson),
-            devoid: self.keywords.contains(&Keyword::Devoid),
+            devoid: self.keywords.has_kw(&Keyword::Devoid),
             equipment: self.is_equipment(),
             colorless: colors.is_empty(),
             mana_value: self.cost.cmc(),
@@ -5469,7 +5469,7 @@ impl CardDefinition {
     /// True if this card has Retrace (CR 702.81) — castable from the
     /// graveyard for its mana cost plus discarding a land card.
     pub fn has_retrace(&self) -> bool {
-        self.keywords.contains(&Keyword::Retrace)
+        self.keywords.has_kw(&Keyword::Retrace)
     }
     /// CR 702.139 — the escape mana cost and the number of other
     /// graveyard cards that must be exiled, if this card has Escape.
@@ -5886,6 +5886,28 @@ pub struct CardCold {
     /// abilities). When the pile leaves the battlefield each component goes
     /// to that zone as its own card.
     pub mutate_stack: Vec<CardInstance>,
+}
+
+/// `slice.has_kw(&Keyword::X)` without the out-of-line `Keyword::eq` call.
+///
+/// `Keyword` is a payload-carrying enum with ~200 variants, so its derived
+/// `PartialEq` is a real call — ~11 Ir an element — and it is not inlined at
+/// `-C lto=off`. Comparing discriminants first answers the *miss*, which is
+/// nearly every element of every keyword scan, in three instructions; the
+/// full `==` runs only when the tags already match, so payload variants
+/// (`Ward(n)`, `Protection(c)`) are compared exactly as `contains` did.
+/// Callgrind read `Keyword::eq` at 11,532,358 Ir / 0.68 % over ~1.09 M calls
+/// at the forty-seventh tip.
+pub trait KeywordSlice {
+    fn has_kw(&self, k: &Keyword) -> bool;
+}
+
+impl KeywordSlice for [Keyword] {
+    #[inline]
+    fn has_kw(&self, k: &Keyword) -> bool {
+        let want = std::mem::discriminant(k);
+        self.iter().any(|x| std::mem::discriminant(x) == want && x == k)
+    }
 }
 
 /// A card's mutable per-object state. Reached only through
@@ -6757,11 +6779,11 @@ impl CardInstance {
         // Printed keyword, EOT-granted, or keyword counter (CR 122.1b)
         // all qualify. The keyword-counter check requires at least one
         // counter of the matching type to be present.
-        if self.removed_keywords_eot.contains(kw) || self.removed_keywords.contains(kw) {
+        if self.removed_keywords_eot.has_kw(kw) || self.removed_keywords.has_kw(kw) {
             return false;
         }
-        self.definition.keywords.contains(kw)
-            || self.granted_keywords_eot.contains(kw)
+        self.definition.keywords.has_kw(kw)
+            || self.granted_keywords_eot.has_kw(kw)
             || self.keyword_counters.get(kw).copied().unwrap_or(0) > 0
     }
 

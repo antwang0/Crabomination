@@ -21918,27 +21918,7 @@ fn static_effect_grants_keyword(
     }
 }
 
-/// `slice.contains(&Keyword::X)` without the out-of-line `Keyword::eq` call.
-///
-/// `Keyword` is a payload-carrying enum with ~200 variants, so its derived
-/// `PartialEq` is a real call — ~11 Ir an element — and it is not inlined at
-/// `-C lto=off`. Comparing discriminants first answers the *miss*, which is
-/// nearly every element of every keyword scan, in three instructions; the
-/// full `==` runs only when the tags already match, so payload variants
-/// (`Ward(n)`, `Protection(c)`) are compared exactly as `contains` did.
-/// Callgrind read `Keyword::eq` at 11,532,358 Ir / 0.68 % over ~1.09 M calls
-/// at the forty-seventh tip.
-pub(crate) trait KeywordSlice {
-    fn has_kw(&self, k: &Keyword) -> bool;
-}
-
-impl KeywordSlice for [Keyword] {
-    #[inline]
-    fn has_kw(&self, k: &Keyword) -> bool {
-        let want = std::mem::discriminant(k);
-        self.iter().any(|x| std::mem::discriminant(x) == want && x == k)
-    }
-}
+pub(crate) use crate::card::KeywordSlice;
 
 /// True when `card`, on the battlefield, can contribute a layer-6 `AddKeyword`
 /// matching `pred` to the gathered set. The printed-shape half of
