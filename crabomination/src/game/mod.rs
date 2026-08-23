@@ -17018,66 +17018,74 @@ impl GameState {
         // Ring-bearer becomes blocked by a creature, the blocking creature's
         // controller sacrifices it at end of combat." Level-4 combat-damage
         // drain rides the dedicated combat-damage path in `combat.rs`.
-        let mut ring_blocked_done = vec![false; self.players.len()];
-        for ev in events {
-            match ev {
-                GameEvent::AttackerDeclared(attacker) => {
-                    for seat in 0..self.players.len() {
-                        if self.players[seat].ring_temptations >= 2
-                            && self.effective_ring_bearer(seat) == Some(*attacker)
-                        {
-                            candidates.push(TriggerCandidate {
-                                from_mana_ability: false,
-                            actor: None,
-                                source: *attacker,
-                                effect: Effect::Seq(vec![
-                                    Effect::Draw {
-                                        who: crate::effect::Selector::You,
-                                        amount: crate::effect::Value::Const(1),
-                                    },
-                                    Effect::Discard {
-                                        who: crate::effect::Selector::You,
-                                        amount: crate::effect::Value::Const(1),
-                                        random: false,
-                                    },
-                                ]),
-                                controller: seat,
-                                filter: None,
-                                subject: None,
-                                event_amount: 0,
-                                triggered_by_etb: false,
-                            triggered_by_death: false,
-                            triggered_by_attack: false,
-                            });
+        //
+        // Both levels need a tempted player, and the whole block is dead
+        // without one: the `vec![false; n]` below is a zeroed allocation on
+        // *every* non-empty dispatch — 53,838 of them over six bench games —
+        // for a mechanic almost no game has in play. Gate the block, not the
+        // read (PERF, forty-third pass).
+        if self.players.iter().any(|p| p.ring_temptations >= 2) {
+            let mut ring_blocked_done = vec![false; self.players.len()];
+            for ev in events {
+                match ev {
+                    GameEvent::AttackerDeclared(attacker) => {
+                        for seat in 0..self.players.len() {
+                            if self.players[seat].ring_temptations >= 2
+                                && self.effective_ring_bearer(seat) == Some(*attacker)
+                            {
+                                candidates.push(TriggerCandidate {
+                                    from_mana_ability: false,
+                                actor: None,
+                                    source: *attacker,
+                                    effect: Effect::Seq(vec![
+                                        Effect::Draw {
+                                            who: crate::effect::Selector::You,
+                                            amount: crate::effect::Value::Const(1),
+                                        },
+                                        Effect::Discard {
+                                            who: crate::effect::Selector::You,
+                                            amount: crate::effect::Value::Const(1),
+                                            random: false,
+                                        },
+                                    ]),
+                                    controller: seat,
+                                    filter: None,
+                                    subject: None,
+                                    event_amount: 0,
+                                    triggered_by_etb: false,
+                                triggered_by_death: false,
+                                triggered_by_attack: false,
+                                });
+                            }
                         }
                     }
-                }
-                GameEvent::BlockerDeclared { attacker, .. } => {
-                    for (seat, done) in ring_blocked_done.iter_mut().enumerate() {
-                        if !*done
-                            && self.players[seat].ring_temptations >= 3
-                            && self.effective_ring_bearer(seat) == Some(*attacker)
-                        {
-                            *done = true;
-                            candidates.push(TriggerCandidate {
-                                from_mana_ability: false,
-                            actor: None,
-                                source: *attacker,
-                                effect: Effect::SacrificeAtEndOfCombat {
-                                    what: crate::effect::Selector::BlockingCreatures,
-                                },
-                                controller: seat,
-                                filter: None,
-                                subject: None,
-                                event_amount: 0,
-                                triggered_by_etb: false,
-                            triggered_by_death: false,
-                            triggered_by_attack: false,
-                            });
+                    GameEvent::BlockerDeclared { attacker, .. } => {
+                        for (seat, done) in ring_blocked_done.iter_mut().enumerate() {
+                            if !*done
+                                && self.players[seat].ring_temptations >= 3
+                                && self.effective_ring_bearer(seat) == Some(*attacker)
+                            {
+                                *done = true;
+                                candidates.push(TriggerCandidate {
+                                    from_mana_ability: false,
+                                actor: None,
+                                    source: *attacker,
+                                    effect: Effect::SacrificeAtEndOfCombat {
+                                        what: crate::effect::Selector::BlockingCreatures,
+                                    },
+                                    controller: seat,
+                                    filter: None,
+                                    subject: None,
+                                    event_amount: 0,
+                                    triggered_by_etb: false,
+                                triggered_by_death: false,
+                                triggered_by_attack: false,
+                                });
+                            }
                         }
                     }
+                    _ => {}
                 }
-                _ => {}
             }
         }
 
