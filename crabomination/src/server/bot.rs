@@ -2573,6 +2573,13 @@ fn pick_land_to_play(state: &GameState, seat: usize, w: &EvalWeights) -> Option<
     const WUBRG: [Color; 5] =
         [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green];
 
+    // Both scorers below loop over the hand's lands; with none there is
+    // nothing to score, and the mana-base walks that follow are all for the
+    // scoring. One hand walk disqualifies three board-and-hand walks.
+    if !state.players[seat].hand.iter().any(|c| c.definition.is_land()) {
+        return None;
+    }
+
     // Colors already producible from battlefield lands the bot controls.
     let have = state
         .battlefield
@@ -5391,8 +5398,11 @@ fn main_phase_action_with(
     // the same reason (the engine enforces sorcery timing, lands-
     // played-this-turn, etc.). Use the game-level helper so an
     // Exploration / Azusa-style ExtraLandPerTurn static lets the bot
-    // play a second land in the same turn (CR 305.2).
-    if state.can_player_play_land(seat)
+    // play a second land in the same turn (CR 305.2). Asked once for all
+    // three land blocks: `state` is `&GameState` and each block returns
+    // when it fires, so the answer cannot change between them.
+    let can_play_land = state.can_player_play_land(seat);
+    if can_play_land
         && let Some(land_id) = pick_land_to_play(state, seat, w)
     {
         let action = GameAction::PlayLand(land_id);
@@ -5403,7 +5413,7 @@ fn main_phase_action_with(
 
     // Crucible of Worlds / Ramunap Excavator: replay a land from the
     // graveyard if no hand land was played (CR 305 land-from-gy permission).
-    if state.can_player_play_land(seat)
+    if can_play_land
         && state.player_may_play_lands_from_graveyard(seat)
         && let Some(land) =
             state.players[seat].graveyard.iter().find(|c| c.definition.is_land())
@@ -5416,7 +5426,7 @@ fn main_phase_action_with(
 
     // Impulse exile (Light Up the Stage, Gonti Night Minister): a land the
     // seat has a may-play grant on is played from exile before it expires.
-    if state.can_player_play_land(seat)
+    if can_play_land
         && let Some(land) = state.exile.iter().find(|c| {
             c.definition.is_land() && c.may_play_until.is_some_and(|perm| perm.player == seat)
         })
