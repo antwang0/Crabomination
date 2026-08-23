@@ -4073,16 +4073,19 @@ fn cast_candidates(
             // creature) when no opp spell is on the stack to counter.
             // Falls back to `mode: None` (engine defaults to mode 0) for
             // non-modal spells.
-            let modes: Vec<Option<usize>> = match modal_mode_count(&c.definition.effect) {
-                Some(n) => (0..n).map(Some).collect(),
-                None => vec![None],
-            };
+            //
+            // A range and an `Option` per slot, not two `Vec`s: the old form
+            // collected `vec![None]` — a heap allocation — for every
+            // non-modal card in hand on every tick, and built a one-element
+            // `Vec` per candidate on top of it.
+            let modes = modal_mode_count(&c.definition.effect);
             let x_value = if x_relevant(&c.definition) {
                 Some(max_affordable_x(state, seat, c, w))
             } else {
                 None
             };
-            modes.into_iter().flat_map(move |mode| {
+            (0..modes.unwrap_or(1)).flat_map(move |i| {
+                let mode = modes.map(|_| i);
                 // Pick a target appropriate to the chosen mode (ChooseMode
                 // mode-aware filter check happens in the cast paths).
                 // Multi-target shapes (Snow Day, Homesickness, Cost of
@@ -4096,25 +4099,52 @@ fn cast_candidates(
                 // without this a Rancor walks the OPPONENT's creatures first.
                 // No friendly host at all → skip the candidate rather than
                 // let the fallback pump an opposing creature.
+                let skip: [Option<GameAction>; 2] = [None, None];
                 let (target, additional_targets) = if is_beneficial_aura(&c.definition) {
                     match beneficial_aura_host(state, seat, c, w) {
-                        Some(t) => (Some(t), vec![]),
-                        None => return vec![],
+                        Some(t) => (Some(t), Vec::new()),
+                        None => return skip.into_iter().flatten(),
                     }
                 } else if mode_effect.requires_target() {
                     let (t, extras) =
                         state.auto_targets_for_effect_all_slots(mode_effect, seat, mode);
                     if t.is_none() {
-                        return vec![];
+                        return skip.into_iter().flatten();
                     }
                     (t, extras)
                 } else {
-                    (None, vec![])
+                    (None, Vec::new())
                 };
-                let mut out = vec![GameAction::CastSpell {
+                // SOS Repartee: with a controlled payoff that wants an
+                // instant/sorcery to target a CREATURE, an "any target"
+                // spell the auto-targeter aimed at a player also gets a
+                // creature-aimed sibling candidate. The outcome eval sees
+                // the extra triggers fire when it resolves the sibling, so
+                // the swap is judged, not assumed. Decided before the
+                // primary is built so `additional_targets` is cloned only
+                // when there really are two candidates to hand it to.
+                let swap = if has_repartee
+                    && matches!(target, Some(Target::Player(_)))
+                    && {
+                        use crate::card::CardType;
+                        c.definition.card_types.contains(&CardType::Instant)
+                            || c.definition.card_types.contains(&CardType::Sorcery)
+                    } {
+                    best_hostile_creature_target(state, seat, mode_effect, w)
+                } else {
+                    None
+                };
+                let sibling = swap.map(|t| GameAction::CastSpell {
                     card_id: c.id,
-                    target: target.clone(),
+                    target: Some(t),
                     additional_targets: additional_targets.clone(),
+                    mode,
+                    x_value,
+                });
+                let primary = GameAction::CastSpell {
+                    card_id: c.id,
+                    target,
+                    additional_targets,
                     mode,
                     // For X-cost spells (Banefire, Earthquake, Wrath of the
                     // Skies, Mind Twist, Repeal, …), pump as much generic
@@ -4122,31 +4152,8 @@ fn cast_candidates(
                     // was a known dead end — Banefire dealt 0 damage, Mind
                     // Twist discarded nothing, Earthquake was a no-op.
                     x_value,
-                }];
-                // SOS Repartee: with a controlled payoff that wants an
-                // instant/sorcery to target a CREATURE, an "any target"
-                // spell the auto-targeter aimed at a player also gets a
-                // creature-aimed sibling candidate. The outcome eval sees
-                // the extra triggers fire when it resolves the sibling, so
-                // the swap is judged, not assumed.
-                if has_repartee
-                    && matches!(target, Some(Target::Player(_)))
-                    && {
-                        use crate::card::CardType;
-                        c.definition.card_types.contains(&CardType::Instant)
-                            || c.definition.card_types.contains(&CardType::Sorcery)
-                    }
-                    && let Some(swap) = best_hostile_creature_target(state, seat, mode_effect, w)
-                {
-                    out.push(GameAction::CastSpell {
-                        card_id: c.id,
-                        target: Some(swap),
-                        additional_targets,
-                        mode,
-                        x_value,
-                    });
-                }
-                out
+                };
+                [Some(primary), sibling].into_iter().flatten()
             })
         })
         .collect();
