@@ -26,16 +26,20 @@ session landed pass 46's last commit (`cast_cost_scan`, -0.697 %) underneath
 it mid-run — so pass 47's Ir chain is measured against its own base
 `c9606062` and rebased on top of theirs.** Pass 46 finished at
 `1,765,005,375 -> 1,715,304,981`, -2.816 %. Pass 47:
-`1,727,336,594 -> 1,674,581,042`, **-3.054 %** in seven commits, re-read at
-the rebased tip as **`1,715,304,981 -> 1,662,145,114`, -3.100 %** — the two
-passes compose, with the rows reading slightly *larger* on the rebased
-branch. **The branch across both: `1,765,005,375 -> 1,662,145,114`,
--5.828 %.** Every step `--bench`-invariant-identical (decisions **196,220**,
-turns 27.53, stalls 0, determinism ok) — a presence gate that stands in for a
-gather stopping where the gather has already run (-0.570 %); five questions
-asked before the thing that disqualifies them; the trigger dispatch tail; two
-`Vec`s nobody wanted. **Two builds were reverted and both are written up in
-PERF's Log** — read them before re-proposing either.
+`1,715,304,981 -> 1,645,831,969`, **-4.050 %** in nine commits. (The first
+seven were measured on their own chain against `c9606062` for -3.054 % and
+re-read at -3.100 % after the rebase, so the two passes compose — with the
+rows reading slightly *larger* on the rebased branch.) **The branch across
+both: `1,765,005,375 -> 1,645,831,969`, -6.752 %.** Every step
+`--bench`-invariant-identical (decisions **196,220**, turns 27.53, stalls 0,
+determinism ok) — a presence gate that stands in for a gather stopping where
+the gather has already run (-0.570 %); five questions asked before the thing
+that disqualifies them; the trigger dispatch tail; two `Vec`s nobody wanted;
+and the largest row of the pass, **`Keyword::eq`** — a 200-variant enum's
+derived `PartialEq` is an out-of-line call and `release-fast` has no LTO to
+inline it, so 234 `contains` sites convert to a discriminant-first `has_kw`
+(0.68 % -> 0.20 %, -0.98 % over two commits). **Two builds were reverted and
+both are written up in PERF's Log** — read them before re-proposing either.
 
 1. **Nothing is in flight.** Suite 18,709 / 0 failed / 5 ignored over 22
    binaries, golden traces and the same-seed replay included; `cargo clippy
@@ -52,16 +56,23 @@ PERF's Log** — read them before re-proposing either.
    only the protection one was done. It cuts the other way too: the land
    tap's CR 602.5 gate runs from `&mut self` with no scope open, so there the
    gate is still the cheap side and (3) below stands.
-3. **Top perf candidate is (-27): `computed_permanent`'s 93,570
-   `Arc<ComputedPermanent>` allocations**, the largest named allocator row
-   and unclaimed. Outside a freeze scope the `Arc` is made, read once and
-   dropped with nothing to share it. An owned-or-shared return type is the
-   shape; size the call-site churn first. Do **not** pool it — (-13)
-   measured that at +2.60 %.
-4. **Then (-26) `main_phase_action_with`, 32.97 %, never read from the
-   top.** `pick_by_outcome` is 7.08 % over **920 calls** — 130,069 Ir each.
-   Check whether the count is a search-quality decision before treating it as
-   a perf one, the way (-21) had to for the attack search.
+3. **Top perf candidate is (-26) `main_phase_action_with`, 33.00 %, never
+   read from the top.** `pick_by_outcome` is 7.08 % over **920 calls** —
+   130,069 Ir each. Check whether the count is a search-quality decision
+   before treating it as a perf one, the way (-21) had to for the attack
+   search. **(-27) `computed_permanent`'s 93,570 `Arc` allocations is
+   *smaller than its entry says*: only the ~25 k unscoped calls can avoid
+   the `Arc` (a frozen miss has to hand one to the memo), so it is ~0.2 %,
+   not 0.75 % — and each of those 25 k also pays a full gather that dwarfs
+   it. Corrected in PERF; do not pull it before (-26).
+4. **The `Keyword::eq` device generalises and is not exhausted.** The build
+   this file measures on has **no LTO**, so any small non-generic
+   `crabomination_base` function is an out-of-line call in every profile
+   here — but a pure `#[inline]` on it would be unmeasurable in the shipped
+   `release` (thin LTO) build, so **do not take one on an Ir number**. What
+   works is making the callee *smaller than any inliner threshold*, which is
+   what `has_kw` does. `CardDefinition::is_creature` (~0.67 % over ~950 k
+   calls) is the same family and the same trap.
 5. **Then the land tap and the cast.** `card_keyword_possible` is 1.30 %
    over 18,910 calls, ~830 Ir of each a board walk giving the same answer
    for every tap in a batch — stamping it per batch is *unsound* (a mana
@@ -106,12 +117,13 @@ PERF's Log** — read them before re-proposing either.
    ~6 pipelined. Absolute games/s is not comparable across routine boxes and
    a `profiling-fast` games/s is not comparable to anything; quote callgrind
    under 5 %.
-10. **Wide-pool check — re-run at this tip and clean.** `--a gang --b gang
-   --decks all --games 400 --threads 3`, seeds 11/12/13: **20,400 games,
-   20,396 decided, no panic, every one of 10,198 mirrored pairs split**
-   (`rho -1.000` on all three; the 4 undecided are seed 11's rules draws,
-   the same four pass 45 saw). ~55 s a seed on this box, so there is no
-   excuse to skip it. No `overflow`-profile run either pass (nothing touched
+10. **Wide-pool check — run twice at this tip and clean both times.** `--a
+   gang --b gang --decks all --games 400 --threads 3`, seeds 11/12/13:
+   **20,400 games, 20,396 decided, no panic, every one of 10,198 mirrored
+   pairs split** (`rho -1.000` on all three; the 4 undecided are seed 11's
+   rules draws, the same four pass 45 saw) — once before the `Keyword::eq`
+   pair and once after, byte-identical. ~55 s a seed on this box, so there
+   is no excuse to skip it. No `overflow`-profile run either pass (nothing touched
    counters, damage, mana or the encoder).
 11. **Trackers.** TODO **~1.07k** (pass 47 collapsed three stale "the engine
    has no X" sections — command zone / commander damage / emblems /

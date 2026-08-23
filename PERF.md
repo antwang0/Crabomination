@@ -225,12 +225,27 @@ host_cpu             Intel(R) Xeon(R) Processor @ 2.80GHz
 sitting: **`1,715,304,981 -> 1,662,145,114`, -53,159,867 / -3.100 %** — i.e.
 the seven commits take *more* off the branch after `cast_cost_scan` than they
 did before it (-52,755,552), so **the two passes' rows compose with a small
-positive interaction, not a negative one**. Invariants at the rebased tip:
-decisions 196,220, turns_per_game 27.53, stalls 0 (cap 0 / stuck 0 / draw 0),
-determinism ok; suite 18,709 / 0 / 5.
+positive interaction, not a negative one**.
 
-**The branch across passes 46 and 47: `1,765,005,375 -> 1,662,145,114`,
--102,860,261 / -5.828 %.**
+**Two further commits then landed on the rebased branch** (the `Keyword::eq`
+pair, engine then base), so the pass as a whole reads:
+
+```text
+                     base (636902ca)          tip (a98d39b0)
+I refs (callgrind)   1,715,304,981            1,645,831,969   -4.050 %
+decisions            196,220                  196,220         byte-identical
+turns_per_game       27.53                    27.53
+stalls               0 (0.00 %), cap 0 / stuck 0 / draw 0 (both)
+determinism          ok (all pairs split, both)
+suite                18,709 passed / 0 failed / 5 ignored (both)
+wide pool            20,400 games / 20,396 decided / no panic /
+                     all 10,198 mirrored pairs split (`--decks all
+                     --games 400 --threads 3`, seeds 11/12/13)
+host_cpu             Intel(R) Xeon(R) Processor @ 2.80GHz
+```
+
+**The branch across passes 46 and 47: `1,765,005,375 -> 1,645,831,969`,
+-119,173,406 / -6.752 %.**
 
 **No `games_per_s` pair is quoted for this pass and that is deliberate.**
 The only `--bench` runs available were taken with a `cargo build` or a
@@ -747,12 +762,17 @@ gang --games 6 --threads 1 --seed 1 --decks fixed`.
 | — | 1,691,072,268 -> 1,691,521,813 (**+0.027 %**) | **REVERTED** — a lock-free depth shadow on `LayerFreeze`. See below |
 | G | 1,691,072,268 -> 1,683,872,083 (**-0.426 %**) | three lists walked twice, or asked before the cheaper answer |
 | H | 1,683,872,083 -> 1,674,581,042 (**-0.552 %**) | two `Vec`s built where nothing wanted a `Vec` |
+| — | *rebase onto the concurrent session's `cast_cost_scan`*; re-read **1,715,304,981 -> 1,662,145,114, -3.100 %** | the two passes compose, and the rows read *larger* after |
+| I | 1,662,145,114 -> 1,653,032,480 (**-0.548 %**) | keyword membership tests stop calling the derived `Keyword::eq` (engine, 224 sites) |
+| J | 1,653,032,480 -> 1,645,831,969 (**-0.436 %**) | the same in `crabomination_base`, where the trait now lives |
 
-**The pass sums to `1,727,336,594 -> 1,674,581,042`, -52,755,552 /
--3.054 %** on its own chain, and **`1,715,304,981 -> 1,662,145,114`,
--53,159,867 / -3.100 %** re-read after the rebase onto the concurrent
-session's `cast_cost_scan` — the two passes compose, with the rows reading
-slightly *larger* on the rebased branch. `--bench --threads 3` invariants byte-identical at every step:
+**The pass sums to `1,715,304,981 -> 1,645,831,969`, -69,473,012 /
+-4.050 %** on the rebased branch. Its first seven commits were measured on
+their own chain against `c9606062` at `1,727,336,594 -> 1,674,581,042`,
+-52,755,552 / -3.054 %, and re-read at `1,715,304,981 -> 1,662,145,114`,
+-3.100 %, after the rebase onto the concurrent session's `cast_cost_scan` —
+the two passes compose, with the rows reading slightly *larger* on the
+rebased branch. `--bench --threads 3` invariants byte-identical at every step:
 decisions **196,220**, turns_per_game 27.53, stalls 0 (cap 0 / stuck 0 /
 draw 0), determinism ok. Suite 18,709 / 0 failed / 5 ignored. No encoding
 change; **no net needs retraining as of this tip.**
@@ -836,6 +856,28 @@ dance; `is_empty()` is two loads. The same commit takes
 `from_iter` calls** — off three hot callers whose consumers only ask
 `contains` / `len` / `is_empty`. The function's own doc had already said to
 prefer the set.
+
+**(I) and (J): the derived `PartialEq` of a 200-variant enum is a call, and
+`release-fast` has no LTO to inline it away.** `Keyword::eq` read
+**11,532,358 Ir / 0.68 % over ~1.09 M calls**, spread over twenty-five
+callers with the largest at 143,470 — no single site worth converting, all
+of them together worth 0.98 %. `[Keyword]::has_kw` compares
+`mem::discriminant` first, inline, and runs the full `==` only when the tags
+already match; a derived `PartialEq` can never return `true` across
+discriminants, so payload variants (`Ward(n)`, `Protection(c)`) compare
+exactly as `contains` did and the *miss* — nearly every element of every
+scan — costs three instructions instead of a call. 224 sites in the engine
+crate, then 10 in `crabomination_base` (`CardInstance::has_keyword` is the
+largest single caller in the program at 132,190; `printed_color_set`'s
+Devoid check is 106,792). **`Keyword::eq` ends at 3,219,922 / 0.20 %** and
+`has_kw` does not appear in the profile — it inlines everywhere. What is
+left is the tag-match cases, which have to compare payloads, and the
+map-keyed sites a slice trait cannot reach.
+
+The split into two commits is a build-time decision, not a design one: the
+engine crate rebuilds `profiling-fast` in 4m20s and `crabomination_base`
+takes 13 min because the 619 k-line catalog rebuilds behind it. **Measure
+the engine half first; it is 96 % of the sites and 56 % of the win.**
 
 **(A) The band question, twice per combat-damage batch.**
 `quality_band_assigner` (CR 509.2/510.1c's damage-order assigner and CR
@@ -1366,10 +1408,21 @@ settings + debuginfo; system allocator, because valgrind replaces malloc and
 a mimalloc build would measure the interception), 1 thread, `--a gang --b
 gang --games 6 --seed 1 --decks fixed`.
 
-**The forty-seventh pass ends at 1,674,581,042 Ir on its own chain and
-1,662,145,114 at the rebased tip `89f55a5c`.** The table below is the
-pre-rebase tip (`3706f96f`, `cg.H.out`), so its absolutes read ~12 M high
-against the branch; the shares are within a tenth of a point. The forty-sixth's and the
+**The forty-seventh pass ends at 1,645,831,969 Ir (`a98d39b0`).** The table
+below is the pass's *seventh* tip (`3706f96f`, `cg.H.out`, 1,674,581,042), so
+its absolutes read ~29 M high against the branch; the shares moved by under
+a tenth of a point except where the `Keyword::eq` pair reached them. Read at
+the final tip for comparison: `pick_attacks_scored` 855,253,773 / **51.96 %**,
+`main_phase_action_with` 543,137,204 / **33.00 %**, `cast_spell`
+457,553,907 / 27.80 %, `pass_priority` 361,907,500 / 21.99 %, `would_accept`
+283,190,480 / 17.21 %, `advance_step` 269,863,905 / 16.40 %,
+`auto_tap_for_cost_inner` 236,526,902 / 14.37 %, `resolve_combat`
+167,309,456 / 10.17 %, `activate_ability` 133,325,490 / 8.10 %,
+`dispatch_triggers_for_events` 110,716,632 / 6.73 %,
+`gather_continuous_effects_inner` 89,317,427 / 5.43 %,
+`check_state_based_actions` 73,845,459 / 4.49 %, `compute_permanent_pass`
+48,772,538 / 2.96 %, `card_can_grant_keyword` 21,777,378 / 1.32 %, and
+**`Keyword::eq` 3,219,922 / 0.20 %** (was 11,532,358 / 0.68 %). The forty-sixth's and the
 forty-fifth's are kept below because live Log rows chain to them; the
 forty-second's and forty-fourth's were dropped at the 2.8 k fold — their Log
 entries carry the rows that still matter and `git log -- PERF.md` has the
@@ -1504,6 +1557,21 @@ write that changed nothing. None of the five was on this list, and none shows
 up as an expensive function — they land in `make_mut`, `memcpy` and
 `_int_malloc`.
 
+**Ranking rule the forty-seventh pass's last two commits added, and it is
+about the *build*, not the code:** `release-fast` / `profiling-fast` have
+**no LTO**, so a small non-generic function in `crabomination_base` is an
+out-of-line call in every profile this file quotes — while the shipped
+`release` profile (`lto = "thin"`) would inline it. **That makes a pure
+`#[inline]` change unmeasurable here and possibly worthless there: do not
+take one on an Ir number.** What *is* sound is making the callee smaller
+than any inliner threshold, which is what `[Keyword]::has_kw` does — a
+three-instruction discriminant test in front of a 200-arm `match` no
+inliner would ever take. `CardDefinition::is_creature` (~11.5 M / 0.67 %
+over ~950 k calls, a `Vec<CardType>::contains`) is the same family and the
+same trap: an `#[inline]` on it would read as a win here and be nothing in
+`release`. A `CardTypeSet` bitset is the only shape that beats it and it is
+(-11)'s staleness hazard again.
+
 **Ranking rule added by the forty-seventh pass, and it is the inverse of the
 one this file has applied since the thirty-eighth:** a **presence gate is a
 loss where the gather it avoids has already happened.**
@@ -1517,10 +1585,13 @@ this. It cuts the other way too: the land tap's CR 602.5 gate runs from
 `&mut self` with no scope open, and there the gate is still the cheap side.
 
 **(-27) `computed_permanent` allocates 93,570 `Arc<ComputedPermanent>` over
-six games — the largest *named* allocator row and unclaimed.** One
-`Arc::new` per memo miss, ~7.5 M Ir on the alloc side plus the free side, and
-outside a freeze scope the `Arc` is created, read once and dropped with
-nothing to share it with. The shape to cost first: a return type that can be
+six games — the largest *named* allocator row, unclaimed, and worth
+**~0.2 %, not the 0.75 % this entry first claimed**.** One `Arc::new` per
+memo miss. The correction: a *frozen* miss has to hand its `Arc` to the
+memo, so only the **~25,358 unscoped** calls can avoid one — and each of
+those also pays a full gather (1,953 Ir) that dwarfs the ~130 Ir of
+alloc+free. Outside a freeze scope the `Arc` is created, read once and
+dropped with nothing to share it with. The shape to cost first: a return type that can be
 owned-or-shared (`Cow`-like, `Deref` to `ComputedPermanent`) so the unscoped
 path stays on the stack. It touches every caller that writes
 `.map(|c| …)` / `.is_some_and(…)` on the current `Option<Arc<…>>`, so size
