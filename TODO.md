@@ -69,9 +69,12 @@ board has (`cast_cost_scan`, one walk and six bits, -0.697 %). Every step
    3,875 over 2,682, `quality_band_assigner` 5,932 over 846.
 5. **The `cast_lock_scan` / `cast_cost_scan` device has now paid three times
    and is not exhausted.** What is left in the cast, measured:
-   `cost_reduction_for_spell_full` 0.20 % over 7,550 (walks
-   `all_static_sources`, many variants — a seventh bit needs its variants
-   enumerated) and `extra_cost_for_spell` 0.11 %. The rule that finds these:
+   `cost_reduction_for_spell_full` 0.20 % over 7,550 and
+   `extra_cost_for_spell` 0.11 %. A seventh bit does **not** just drop in for
+   the first — it reads 16 variants over `all_static_sources` (not just the
+   battlefield) and its walk is followed by card-intrinsic contributions no
+   presence bit can gate, so it needs the walk split out of a function the
+   bot also calls 12,986 times. See (-24)'s (G) note. The rule that finds these:
    *what does an ordinary action pay that it cannot possibly need?*
 6. **(-23)'s allocator table, which pass 46 refreshed *and* fixed.**
    Read its opening paragraph before extracting it again — a regex over a

@@ -809,10 +809,17 @@ Chief Engineer; Gaddock Teeg and Sanctum Prelate), so the audit is not
 vacuous — 18,709 tests green with it armed.
 
 **What is left of this class in the cast**, unclaimed and measured:
-`cost_reduction_for_spell_full` 3,532,696 / 0.20 % over 7,550 (walks
-`all_static_sources`, many variants, and fires on real boards) and
-`extra_cost_for_spell` 1,923,032 / 0.11 % (mostly card-local). The same mask
-could take a seventh bit for the first if someone enumerates its variants.
+`cost_reduction_for_spell_full` 3,532,696 / 0.20 % over 7,550 and
+`extra_cost_for_spell` 1,923,032 / 0.11 %. **A seventh bit does not just drop
+in for the first one** — checked: it reads 16 `StaticEffect` variants (plus
+`WhileClassLevelAtLeast` wrapping them, which the scan would have to set
+unconditionally) over `all_static_sources`, *not* just the battlefield, and
+its walk is followed by **card-intrinsic** contributions
+(`card.definition.affinity_filter` and friends) that no static-presence bit
+can gate. Gating it means splitting the walk out of the function, which the
+bot also calls 12,986 times through `can_afford_in_state_with`, so the split
+has to keep both callers exact. Worth ~0.19 %; do it deliberately or not at
+all.
 
 **(D) is a small row with a useful negative result.**
 `push_ward_triggers_for_targets` took a whole-game gather per opposing
