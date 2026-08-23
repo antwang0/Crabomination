@@ -22,29 +22,38 @@ container clones **`main`**, ~2,000 commits behind and missing the ML crates,
 `PERF.md`, `crabomination_tests` and the profiling profiles. `git log -1`
 should show a PERF/pass or round commit, not a card batch.
 
-Branch `claude/modern_decks`. **Pass 43 is a measurement pass**, and two
-sessions were committing to it concurrently on 2026-08-23 (one rebase, two
-PERF collisions). Tip **1,911,862,094** from base 1,918,781,907. Rows: the
-three `GameState` `HashMap`s dropped rather than cleared (**-0.192 %**;
-hashbrown clones a table by *bucket count*, so a cleared map re-allocates on
-every state clone for the rest of the game) and the `do_untap` block gate
-(**-0.168 %**). Plus one behaviour-preserving, perf-neutral commit that
-closes the defects section's only open entry (`ProtectionKind` — the
-protection gate and the protection decision are now one list, +0.0002 %).
-**Fetch and re-read PERF's Log before starting anything** — the same
-candidate was attempted from both sides this run.
+Branch `claude/modern_decks`. **Pass 43**, run by two sessions committing
+concurrently on 2026-08-23 (one rebase, three PERF collisions). Base
+1,918,781,907 -> tip **1,857,530,653**, **-3.19 %**. Rows: the three
+`GameState` `HashMap`s dropped rather than cleared (**-0.192 %**; hashbrown
+clones a table by *bucket count*, so a cleared map re-allocates on every
+state clone for the rest of the game), the `do_untap` block gate
+(**-0.168 %**), and **the round-closing pass dropping its checkpoint
+(-2.842 %)** — the pass's largest row, unlocked by the ceiling measurement
+below. Plus one perf-neutral commit closing the defects section's only open
+entry (`ProtectionKind`, +0.0002 %) and one test-suite sweep (22 per-set
+factory lists -> one tree walk). **Fetch and re-read PERF's Log before
+starting anything** — the same candidate was attempted from both sides, and
+the collision produced two of the pass's three lessons.
 
-- **Take (-13) next: it is now sized at `-5.47 %` and it is a whole pass.** A
-  probe that skipped every `perform_action` checkpoint read **1,810,396,553**
-  and **never panicked** — the restore fires *zero* times in 18,208
-  checkpointed actions. 5,750 Ir each (clone 1,194 / drop 2,324 / ~2,230 of
-  CoW unshares the checkpoint forces; 63 % of the drop is `Arc` glue freeing
-  exactly those copies). It is **not** capturable by exempting `PassPriority`:
-  `pass_priority` mutates and then propagates from `resolve_top_of_stack`, and
-  `advance_step` from `resolve_combat` / `resolve_first_strike_damage` /
-  itself. The job is the per-arm proof, each skipped arm carrying a
-  `debug_assert` that an `Err` left the serialized state untouched so the
-  18.7 k-test suite audits the claim.
+- **(-13) is sized at `-5.47 %`, `-2.842 %` of it is banked, and the method
+  that banked it is the thing to reuse.** A probe that skipped every
+  `perform_action` checkpoint read **1,810,396,553** and **never panicked** —
+  the restore fires *zero* times in 18,208 checkpointed actions, 5,750 Ir
+  each. This file first said the pass path was not capturable, reading the
+  *signatures*: `pass_priority` mutates before it propagates, `advance_step`
+  propagates from three places. **That was the wrong question, and the second
+  session's answer is the lesson**: take the transitive closure over the
+  engine's 149 `Result` functions instead. 46 are reachable from
+  `pass_priority` and only five raise at all; none of the step machinery
+  raises. The round-closing pass now skips its checkpoint (**-2.842 %**),
+  with the clone kept in debug and a `debug_assert` that an `Err` left the
+  serialized state byte-identical, so the suite audits the claim.
+  **Next: run the same closure at the other checkpointed action shapes**
+  (`CastSpell`, `ActivateAbility`, `PlayLand`, `SubmitDecision`) — roughly
+  2.6 points of the ceiling are still unbanked, and `GameState::clone` from
+  `perform_action` is down 18,208 -> 8,266 calls, so the remaining shapes are
+  what those 8,266 are.
 - **Do not rebuild these three.** The checkpoint *husk pool* (exhaustive
   `clone_from` + thread-local husks): built, green, **-100,388 allocations**,
   and **+2.60 %** — `clone_from` cannot be the bulk copy that `clone`'s
