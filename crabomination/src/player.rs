@@ -114,7 +114,7 @@ pub struct PlayerCold {
     /// can offer a graveyard cast only for cards actually discarded this turn.
     /// Populated in `discard_card`; cleared in `do_untap`.
     #[serde(default)]
-    pub discarded_this_turn: crate::fxhash::HashSet<crate::card::CardId>,
+    pub discarded_this_turn: crate::game::types::IdSet<crate::card::CardId>,
     /// "[Filter] spells you cast this turn cost {N} less" grants
     /// (`Effect::SpellsCostLessThisTurn` — Urza, Planeswalker's +2).
     /// Each entry applies to every matching spell for the rest of the
@@ -593,7 +593,7 @@ pub struct PlayerData {
     /// Backs `SelectionRequirement::PutIntoGraveyardThisTurn` (Reenact the
     /// Crime).
     #[serde(default)]
-    pub graveyard_ids_this_turn: crate::fxhash::HashSet<CardId>,
+    pub graveyard_ids_this_turn: crate::game::types::IdSet<CardId>,
     /// CR 700.11 — true if a *permanent* card was put into this player's
     /// graveyard from anywhere this turn ("you descended this turn"). Set in
     /// `send_to_graveyard`, reset at untap. Gates "if you descended this turn"
@@ -1171,7 +1171,7 @@ impl Player {
             cards_exiled_this_turn: 0,
             cards_to_graveyard_this_turn: 0,
             creature_cards_to_graveyard_this_turn: 0,
-            graveyard_ids_this_turn: crate::fxhash::HashSet::default(),
+            graveyard_ids_this_turn: Default::default(),
             instants_or_sorceries_cast_this_turn: 0,
             spells_cast_from_hand_this_turn: 0,
             extra_plus_one_counters_this_turn: 0,
