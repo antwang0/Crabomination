@@ -21,18 +21,25 @@ git checkout -B claude/modern_decks origin/claude/modern_decks`. The routine
 container clones **`main`**, ~2,000 commits behind and missing the ML crates,
 `PERF.md`, `crabomination_tests` and the profiling profiles.
 
-**Pass 45: one row banked, one tidy-up, one three-pass-old candidate killed.**
-`1,810,336,693 -> 1,780,583,538`, **-1.643 % Ir** — the CR 601 cast gate was
-eleven blocks each taking its own whole-board `static_abilities` walk, with
-six `find_card_anywhere` lookups of the cast spell between them; it is one
-walk and one lookup now, gated by a presence mask whose `u32::MAX` reading is
-the ungated original and is `debug_assert_eq!`d against on every action.
-`cast_candidates` stopped collecting a `Vec` to hold one `None` (-0.036 %),
-and three more per-action questions stopped being asked (-0.526 %):
-`flagbearer_violation`'s board walk for a targetless activation,
-`can_afford_from`'s unconditional `ManaCost` clone, and eight `is_cast()`
-matches per action, and two more land-tap questions with no consumer
-(-0.351 %). Total **-2.504 %**.
+**Pass 45: five rows banked and one three-pass-old candidate killed.**
+`1,810,336,693 -> 1,765,005,375`, **-2.504 % Ir**, in four commits, every one
+`--bench`-invariant-identical and golden-trace green:
+
+* **-1.608 %** the CR 601 cast gate was eleven blocks, each taking its own
+  whole-board `static_abilities` walk, with **six** `find_card_anywhere`
+  lookups of the cast spell between them. One `cast_lock_scan` walk and one
+  lookup now, behind a presence mask whose `u32::MAX` reading *is* the ungated
+  original and is `debug_assert_eq!`d against on every action.
+* **-0.526 %** `flagbearer_violation`'s board walk for a targetless
+  activation, `can_afford_from`'s unconditional `ManaCost` clone, and eight
+  `is_cast()` matches per action.
+* **-0.351 %** `resolve_extra_mana_on_land_tap` looked the land up before its
+  own presence gate, and the two CR 601.2c Flagbearer blocks built two `Vec`s
+  for a question with no consumer.
+* **-0.036 %** `cast_candidates` stopped collecting a `Vec` to hold one `None`.
+
+Plus the fifteenth filter's fix: `--bench` printed "release build" for three
+  profiles that are not `release` (see the filter table below).
 
 1. **(-18) IS DEAD — read its entry before proposing anything shaped like
    it.** The board epoch was fully built (a `writes` counter on
