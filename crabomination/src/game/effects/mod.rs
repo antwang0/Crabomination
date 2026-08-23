@@ -1841,8 +1841,13 @@ impl GameState {
         self.cards_revealed_this_resolution = 0;
         self.creature_cards_discarded_this_resolution = 0;
         self.greatest_discarded_mv_this_resolution = 0;
-        self.cards_discarded_per_player_this_resolution.clear();
-        self.nonland_cards_discarded_per_player_this_resolution.clear();
+        // Dropped, not cleared: a cleared `HashMap` keeps its table, and
+        // `GameState::clone` then allocates and memcpys that table on every
+        // checkpoint and probe for the rest of the game. Assigning an empty
+        // map costs two stores when it is already empty (hashbrown's `new`
+        // does not allocate) and the next discard rebuilds the table.
+        self.cards_discarded_per_player_this_resolution = Default::default();
+        self.nonland_cards_discarded_per_player_this_resolution = Default::default();
         self.discarded_card_ids_this_resolution.clear();
         self.exiled_card_ids_this_resolution.clear();
         self.permanents_destroyed_this_resolution = 0;

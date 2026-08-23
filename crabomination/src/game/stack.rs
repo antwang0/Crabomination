@@ -2506,7 +2506,8 @@ impl GameState {
         }
         // CR 724.1b — remove all attackers and blockers from combat.
         self.attacking.clear();
-        self.block_map.clear();
+        // Dropped, not cleared — see `resolve_combat`.
+        self.block_map = Default::default();
         clear_cold!(self.blocked_attackers);
         clear_cold!(self.attack_bands);
         self.blockers_declared = false;

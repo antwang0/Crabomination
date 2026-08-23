@@ -780,6 +780,46 @@ the table above is safe to compress:
 
 ## Log
 
+### Forty-third pass — a cleared collection is not an empty one
+
+Base `1032979c` re-read at **1,918,781,907** (the forty-second pass's
+1,918,782,724 on a different box; the 817 Ir is argv). All readings
+`profiling-fast --no-default-features`, callgrind, `--a gang --b gang --games
+6 --threads 1 --seed 1 --decks fixed`.
+
+| step | before -> after | what |
+|---|---|---|
+| A | 1,918,781,907 -> 1,915,090,409 (**-0.192 %**) | the three `GameState` `HashMap`s are dropped, not cleared |
+
+**(A) `HashMap::clear` keeps the table, and every later `GameState::clone`
+re-allocates it.** hashbrown clones a table with the *source's* bucket count,
+not its length, so a map that held entries once and was cleared allocates and
+memcpys a full table on every checkpoint and every probe clone for the rest
+of the game. `GameState` has exactly three: `block_map` (cleared at combat
+end, twice) and the two `*_discarded_per_player_this_resolution` maps
+(cleared per resolution). Assigning `Default::default()` instead costs two
+stores when the map is already empty — hashbrown's `new` does not allocate —
+and the next use rebuilds the table. **-16,276 allocations**, 1,232,517 ->
+1,216,241, and `RawTable::clone` 5,117,712 -> 4,688,212 Ir. The *call* count
+is unchanged at 104,310 (three per `GameState::clone`, 34,770 clones); only
+their cost moved. **The rule generalises: any `clear()` on a collection that
+a `GameState` clone reaches is a standing per-clone allocation.** `Vec` is
+exempt — `Vec::clone` allocates `len`, not `capacity`.
+
+**Null result, same pass: gating the untap step's six
+`battlefield x static_abilities` walks behind one.** (-15) named them; a
+`UntapStatics::gather` pass with a bit per static, plus a
+`StaticEffect::core()` that peels the CR 611.2 conditional wrappers through
+the same list `active_static` walks, read **+2,377 Ir / +0.0001 %**. Reverted.
+The gate walk costs what the six walks cost, because each of them
+short-circuits on `definition.static_abilities.is_empty()` for a board of
+lands and vanilla creatures — **this is (-8b)'s lesson again, on the other
+side: a specialised short-circuiting `any` is so cheap here that six of them
+are not worth one pass to replace.** `do_untap`'s 37,097,627 Ir is not in
+those walks: its self cost across every `file:function` entry is ~9 M, and
+`do_phasing` is 5.1 M of the rest. **Whoever takes (-15) next should read
+`do_untap`'s callee table first, not its walk count.**
+
 ### Forty-second pass — the cold group was being deep-copied for nothing
 
 Cumulative: **2,040,144,900 -> 1,918,782,724 Ir, -121,362,176 / -5.949 %**,

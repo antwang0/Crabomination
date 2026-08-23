@@ -2619,7 +2619,10 @@ impl GameState {
         events.append(&mut sba);
 
         self.attacking.clear();
-        self.block_map.clear();
+        // Dropped, not cleared — a cleared `HashMap` keeps its table and
+        // every later `GameState::clone` re-allocates it (see `resolve_effect`'s
+        // per-resolution reset).
+        self.block_map = Default::default();
         // Both are `ColdState` fields; an unguarded `clear` on a combat
         // boundary deep-copies the whole cold group (PERF, twenty-eighth
         // pass's rule, restated in the thirty-third's Log block).
