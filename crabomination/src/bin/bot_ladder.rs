@@ -265,6 +265,12 @@ fn parse_profile(name: &str) -> Option<Pilot> {
         // A whole ability class the generators never enumerated; gate as A
         // against the `gang` control.
         "impulse" => Some(Pilot::Scored(EvalWeights::impulse_draw_on())),
+        // Round 49: simulation-based mulligan. Mulligan is 25 % of all
+        // decisions (bot_probe) and the only high-volume one still
+        // answered by a predicate rather than by playing it out. The
+        // predicate refinement (`mull`) is a well-powered null; this is a
+        // different mechanism. Gate as A against `gang`.
+        "mullsim" => Some(Pilot::Scored(EvalWeights::mull_sim_on())),
         "det1" => Some(Pilot::Scored(EvalWeights::determinized())),
         "det3" => Some(Pilot::Scored(EvalWeights::determinized3())),
         "net" => Some(Pilot::Scored(EvalWeights::net_eval())),

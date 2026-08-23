@@ -294,6 +294,25 @@ pub struct EvalWeights {
     /// two lands, and an on-the-draw allowance — the extra card is
     /// exactly what makes a marginal hand keepable.
     pub mull_quality: bool,
+    /// Decide the mulligan by *simulating both branches* instead of by a
+    /// hand-written predicate.
+    ///
+    /// Mulligan is 25 % of every decision the bot is asked (`bot_probe
+    /// --deck sos`, 300 games) — more than double the next kind, and it
+    /// sets up the whole game. It is also the only high-volume decision
+    /// still answered by a rule that never looks past the opening hand:
+    /// modes, optional triggers and sacrifice-for-value are all judged by
+    /// playing the state forward and scoring the settled result, while
+    /// mulligan counts lands and asks whether one spell is castable.
+    ///
+    /// The predicate refinement was already tried and is a well-powered
+    /// null (`mull_quality`: 50.2 % [49.6, 50.8] over 28 800 games). This
+    /// is a different mechanism rather than a retune of that one: keep
+    /// and mulligan are each played forward and scored, so the cost of
+    /// going down a card is *measured* in the sim instead of being priced
+    /// by a hand-tuned threshold. Off by default until laddered
+    /// ([`mull_sim_on`](Self::mull_sim_on), profile `mullsim`).
+    pub mull_sim: bool,
     /// Offer gang-blocks *for value* to the block search.
     ///
     /// The greedy pass already piles blockers onto an attacker, but only
@@ -479,6 +498,7 @@ impl EvalWeights {
             net_blend_ply: false,
             land_urgency: false,
             mull_quality: false,
+            mull_sim: false,
             block_gang: false,
             determinize: 0,
             belief_determinize: false,
@@ -549,6 +569,7 @@ impl EvalWeights {
             net_blend_ply: false,
             land_urgency: false,
             mull_quality: false,
+            mull_sim: false,
             block_gang: false,
             determinize: 0,
             belief_determinize: false,
@@ -602,6 +623,7 @@ impl EvalWeights {
             net_blend_ply: false,
             land_urgency: false,
             mull_quality: false,
+            mull_sim: false,
             block_gang: false,
             determinize: 0,
             belief_determinize: false,
@@ -1040,6 +1062,11 @@ impl EvalWeights {
     /// `gang` control (profile `impulse`).
     pub const fn impulse_draw_on() -> Self {
         Self { impulse_draw: true, ..Self::block_gang_search() }
+    }
+
+    /// [`mull_sim`](Self::mull_sim); ladder as A against `gang`.
+    pub const fn mull_sim_on() -> Self {
+        Self { mull_sim: true, ..Self::block_gang_search() }
     }
 
     /// [`target_arms`](Self::target_arms). Search-only, so it is gated as
@@ -1738,7 +1765,15 @@ fn decide_pending_policy_inner(
         // Smarter mulligan than AutoDecider's blanket Keep:
         // ship hands that are flooded or screwed on lands.
         crate::decision::Decision::Mulligan { mulligans_taken, .. } => {
-            decide_mulligan(state, seat, *mulligans_taken, w)
+            // `eval_modes` off means we are inside somebody else's
+            // simulation; a nested mulligan sim there would multiply the
+            // cost of every enclosing rollout for a decision that branch
+            // barely depends on.
+            if w.mull_sim && eval_modes {
+                decide_mulligan_by_sim(state, seat, *mulligans_taken, w)
+            } else {
+                decide_mulligan(state, seat, *mulligans_taken, w)
+            }
         }
         // Unlike AutoDecider (which declines every tutor), the
         // bot actually fetches — preferring a basic land toward
@@ -3571,6 +3606,123 @@ fn accumulate_payload_colors(pool: &ManaPayload, set: &mut crate::mana::ColorSet
                     | ManaPayload::RestrictedToChosenTypePlain(inner) => {
             accumulate_payload_colors(inner, set)
         }
+    }
+}
+
+/// Play `g` forward `turns` turns with both seats on the heuristic policy,
+/// then stop. Shared by the mulligan simulation; deliberately small — the
+/// MCTS rollout in `super::mcts` does the same job with its own budget and
+/// determinisation, and duplicating its knobs here would be two policies
+/// to keep in step.
+fn play_forward(g: &mut GameState, turns: u32, w: &EvalWeights) {
+    let stop_turn = g.turn_number + turns;
+    let mut policy: Vec<HeuristicBot> =
+        (0..g.players.len()).map(|_| HeuristicBot::with_weights(*w)).collect();
+    let mut fuel = 400u32;
+    let mut stale = 0u32;
+    while !g.is_game_over() && g.turn_number < stop_turn && fuel > 0 && stale < 8 {
+        fuel -= 1;
+        if g.pending_decision.is_some() {
+            let answer = {
+                let pending = g.pending_decision.as_ref().unwrap();
+                decide_pending_policy(g, pending.acting_player(), w, &pending.decision, false)
+            };
+            if g.perform_action(GameAction::SubmitDecision(answer)).is_err() {
+                break;
+            }
+            continue;
+        }
+        let mut acted = false;
+        for (seat, p) in policy.iter_mut().enumerate() {
+            let Some(a) = p.next_action(g, seat) else { continue };
+            if g.perform_action(a).is_ok() {
+                acted = true;
+                if g.is_game_over() {
+                    break;
+                }
+            }
+        }
+        if acted { stale = 0 } else { stale += 1 }
+    }
+}
+
+/// Average settled value of answering the pending mulligan decision with
+/// `answer`, over `samples` redeals.
+///
+/// Every sample reshuffles both libraries and redeals the opponent's
+/// hidden zones first, so the sim cannot read the real top of the deck —
+/// the same determinisation rule the MCTS rollouts follow. Without it a
+/// "keep" that happens to be followed by the perfect draw would look
+/// wonderful for reasons the bot is not allowed to know.
+///
+/// The inner policy runs with `mull_sim` cleared: simulating the mulligan
+/// branch reaches another mulligan decision inside the sim, and letting
+/// that recurse would nest simulations per level.
+fn mulligan_branch_value(
+    state: &GameState,
+    seat: usize,
+    answer: &crate::decision::DecisionAnswer,
+    w: &EvalWeights,
+    samples: u32,
+    horizon: u32,
+) -> Option<i64> {
+    use rand::seq::SliceRandom;
+    let inner = EvalWeights { mull_sim: false, ..*w };
+    let mut total: i64 = 0;
+    let mut taken = 0u32;
+    for s in 0..samples {
+        let mut g = state.clone();
+        let mut rng = StdRng::seed_from_u64(0x4D55_4C4C ^ ((seat as u64) << 24) ^ s as u64);
+        for p in &mut g.players {
+            let mut lib = std::mem::take(&mut p.library);
+            lib.shuffle(&mut rng);
+            p.library = lib;
+        }
+        determinize_hidden(&mut g, seat, 0x4D55_0000 ^ s as u64);
+        if g.perform_action(GameAction::SubmitDecision(answer.clone())).is_err() {
+            continue;
+        }
+        play_forward(&mut g, horizon, &inner);
+        total += eval_material(&g, seat, &inner) as i64;
+        taken += 1;
+    }
+    (taken > 0).then(|| total / taken as i64)
+}
+
+/// The simulation-based mulligan ([`EvalWeights::mull_sim`]): play both
+/// branches forward and keep the better one.
+///
+/// The London mulligan makes this a fair comparison rather than a
+/// threshold guess — the mulligan branch redraws seven and bottoms one,
+/// and both costs (a card down, a fresh look) land inside the same sim
+/// and the same evaluator, so nothing has to be priced by hand.
+fn decide_mulligan_by_sim(
+    state: &GameState,
+    seat: usize,
+    mulligans_taken: usize,
+    w: &EvalWeights,
+) -> crate::decision::DecisionAnswer {
+    use crate::decision::DecisionAnswer;
+    // Hard floor: below this a hand is too small to be worth another look
+    // whatever the sim says, and it bounds the recursion the engine could
+    // otherwise be walked down.
+    if mulligans_taken >= 3 || state.players[seat].hand.len() <= 3 {
+        return DecisionAnswer::Keep;
+    }
+    const SAMPLES: u32 = 6;
+    const HORIZON: u32 = 4;
+    let keep = mulligan_branch_value(state, seat, &DecisionAnswer::Keep, w, SAMPLES, HORIZON);
+    let mull =
+        mulligan_branch_value(state, seat, &DecisionAnswer::TakeMulligan, w, SAMPLES, HORIZON);
+    match (keep, mull) {
+        // Ties keep: the mulligan branch has to actually beat the hand in
+        // front of us, not merely match it.
+        (Some(k), Some(m)) => {
+            if m > k { DecisionAnswer::TakeMulligan } else { DecisionAnswer::Keep }
+        }
+        // A branch that could not be simulated is not evidence; fall back
+        // to the shipped predicate rather than guessing.
+        _ => decide_mulligan(state, seat, mulligans_taken, &EvalWeights { mull_sim: false, ..*w }),
     }
 }
 
@@ -14673,6 +14825,53 @@ mod stack_response_tests {
         assert!(casts(&on) > casts(&off), "flag on widens the cast menu: {} vs {}", casts(&on), casts(&off));
     }
 
+
+    /// The simulation mulligan discriminates: three lands and a curve play
+    /// out better than seven six-drops, measured by playing both forward
+    /// rather than by counting lands.
+    ///
+    /// Built through `start_mulligan_phase` so the pending decision is the
+    /// real one. `mulligan_branch_value` answers it with `perform_action`
+    /// and returns `None` when no mulligan is pending, which is how the
+    /// first version of this test passed vacuously.
+    #[test]
+    fn mulligan_sim_prefers_the_functional_hand() {
+        use crate::decision::DecisionAnswer;
+        let w = EvalWeights::mull_sim_on();
+        let stacked = |spell: fn() -> crate::card::CardDefinition, lands: usize| {
+            let mut g = two_player_game();
+            for seat in 0..2 {
+                for _ in 0..lands {
+                    g.add_card_to_library(seat, crate::catalog::forest());
+                }
+                for _ in 0..(7 - lands) {
+                    g.add_card_to_library(seat, spell());
+                }
+                for _ in 0..20 {
+                    g.add_card_to_library(seat, crate::catalog::forest());
+                }
+            }
+            g.start_mulligan_phase();
+            g
+        };
+        let good = stacked(crate::catalog::grizzly_bears, 3);
+        let bad = stacked(crate::catalog::craw_wurm, 0);
+        let g_keep = mulligan_branch_value(&good, 0, &DecisionAnswer::Keep, &w, 4, 4);
+        let b_keep = mulligan_branch_value(&bad, 0, &DecisionAnswer::Keep, &w, 4, 4);
+        assert!(
+            g_keep.is_some() && b_keep.is_some(),
+            "both branches must actually simulate (is a mulligan pending?)"
+        );
+        assert!(
+            g_keep > b_keep,
+            "lands-and-a-curve must outplay seven six-drops: {g_keep:?} vs {b_keep:?}"
+        );
+    }
+
+    /// Ark of Hunger's `{T}: mill 1, you may play that card` — the impulse
+    /// draw shape. Recorded game: cast turn 19, never activated across five
+    /// turns while the bot topdecked with an empty hand, then exiled. The
+    /// ability generators are a whitelist of effect shapes and this one was
     /// on none of them, so no valuation could have chosen it.
     #[test]
     fn impulse_draw_activates_the_ark() {
