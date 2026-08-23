@@ -13221,6 +13221,15 @@ impl GameState {
     /// is blind to the ~78 `#[serde(skip)]` per-resolution scratch fields;
     /// those are reset by the next resolution either way.)
     ///
+    /// **It is a standing guard, not a proof, and its coverage is whatever
+    /// failing round-closing passes the suite happens to produce — today,
+    /// none.** If it ever fires, the fix belongs at the raising site, not
+    /// here: `resolve_top_of_stack_inner` pops before it resolves, so an `Err`
+    /// out of resolution has already consumed the stack item, and no restore
+    /// this function could take would make that action retryable. The
+    /// checkpoint's own answer was to put the item back and let the bot fail
+    /// on it again forever.
+    ///
     /// [`perform_action_inner`]: Self::perform_action_inner
     fn perform_action_uncheckpointed(
         &mut self,
