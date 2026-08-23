@@ -50,13 +50,28 @@ candidates list.
   exists to avoid.** `board_keyword_matching` reads `frozen_effects()`, which
   gathers on the scope's first computed read; outside a scope it answers off
   the presence legs. `do_untap` asked it inside `with_frozen_layers`.
+- **Pass 43 is in flight from a second session on this same branch** — two
+  sessions were committing to `claude/modern_decks` concurrently on
+  2026-08-23, and one rebase and one PERF conflict came out of it. Its rows so
+  far: the three `GameState` `HashMap`s dropped rather than cleared
+  (**-0.192 %**; hashbrown clones a table by *bucket count*), the `do_untap`
+  block gate (**-0.168 %**), and a refuted `GameState` husk pool
+  (**+2.60 %**). Tip **1,911,862,094**. **Fetch and re-read PERF's Log before
+  starting anything** — the same candidate was attempted from both sides.
+- **The lesson the collision produced, and it sharpens (-7).** Gating
+  `do_untap`'s six `battlefield x static_abilities` *walks* read +0.0001 % and
+  was reverted; gating the *blocks* around them — the ones that build a
+  `Vec`, a `HashSet`, a `HashMap` — read -0.168 % on two different bases.
+  **Gate the site, not the read, and the site is the block that allocates,
+  not the loop that scans.**
 - **Next, in order.** (-13) `perform_action`'s checkpoint,
   `drop_in_place<GameState>` **4.19 %** + clone 2.16 % — the largest
-  structural cost left, three shapes costed in PERF. (-15) `advance_step`
-  15.99 %: `do_untap` still runs six `battlefield x static_abilities` walks
-  and `do_cleanup` (~15.6 k Ir a call) has never been read. (-10) allocation
-  is still 13.4 % over **1,232,517** allocs — `finalize_cast`'s per-turn cast
-  logs are the top `grow_one` *and* `memcpy` caller.
+  structural cost left; the husk-pool shape is now **refuted and written up**,
+  so read that before designing. (-15) `advance_step` 15.99 %: `do_cleanup`'s
+  cost is one SBA sweep, and ~20 M of `do_untap` is still unattributed —
+  **read the callee table first**. (-10) allocation is ~13 % over **1,216,241**
+  allocs — `finalize_cast`'s per-turn cast logs are the top `grow_one` *and*
+  `memcpy` caller.
 - **Green at the tip**: suite **18,728** over 11 binaries, golden traces
   identical, clippy clean workspace-wide **including the client** (fixed 4
   pre-existing warnings, one of them a mangled doc comment in `bot.rs`).
