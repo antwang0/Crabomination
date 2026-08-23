@@ -8433,6 +8433,19 @@ impl GameState {
     /// The memoized continuous-effect set when inside a
     /// [`with_frozen_layers`](Self::with_frozen_layers) scope (gathering and
     /// caching it on first use), else `None`.
+    /// True when a freeze scope is open **and** its gather is already
+    /// memoized, so a `computed_permanent` here is a memo read rather than a
+    /// whole-game gather. A presence gate that exists only to avoid a gather
+    /// is pure loss under this and skips itself; `false` keeps the gate, so
+    /// this is only ever a cost question, never a correctness one.
+    fn layers_memoized(&self) -> bool {
+        if self.in_layer_gather.load(std::sync::atomic::Ordering::Relaxed) {
+            return false;
+        }
+        let st = self.layer_freeze.lock();
+        st.depth > 0 && st.memo.is_some()
+    }
+
     fn frozen_effects(&self) -> Option<std::sync::Arc<Vec<ContinuousEffect>>> {
         // Mid-gather reads see the printed-types fallback (`in_layer_gather`
         // reentrancy guard); don't serve or populate the memo from them.
@@ -12455,7 +12468,17 @@ impl GameState {
         // keyword, and almost no permanent ever does — but proving that took a
         // whole-game gather on every damage event, 1.22 % of the simulator.
         // The presence gate answers it from printed shapes.
-        if !self.card_keyword_possible(target, Self::protection_keyword) {
+        //
+        // Except where the gather already happened: the gate's own board walk
+        // (`keyword_grant_in_scope`, ~one `card_can_grant_keyword` per
+        // permanent) costs more than the memo read it is standing in for, and
+        // the combat resolver calls this from inside a freeze scope per
+        // attacker/blocker pair. `computed_permanent` below is the
+        // authoritative answer either way, so dropping the gate is a pure
+        // cost decision.
+        if !self.layers_memoized()
+            && !self.card_keyword_possible(target, Self::protection_keyword)
+        {
             return false;
         }
         let Some(tgt) = self.computed_permanent(target) else { return false };
