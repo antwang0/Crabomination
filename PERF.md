@@ -167,6 +167,24 @@ search changes (chump blocks, target arms, hostile targeting) own the drift.
 **196,220 / 27.53 / 0 stalls is the invariant set to compare against from
 here.**
 
+**Checked at the true tip (`1032979c`), on the `profiling-fast` binary the
+Ir rows are taken on** — the eighth commit is a measured -0.496 %, so this is
+a confirmation, not a re-anchor:
+
+```text
+decisions            196,220        <- byte-identical with the base binary
+turns_per_game       27.53
+stalls               0 (0.00 %), cap 0 / stuck 0 / draw 0
+determinism          ok (all pairs split)
+peak_rss_mib         20.5
+```
+
+Plus the wide pool at the tip — `--decks all --games 200 --paired`, **3,400
+games over 17 decks, two processes, output byte-identical** (modulo the
+wall-clock line), 1,699 pairs all split, **2 undecided (0.06 %)**, no panics.
+That is inside the 0.12 % rules-draw band `TODO.md` records for `--decks
+all`; `--decks fixed` still reads 0.
+
 **On the absolute: 163.69 is not comparable to the 153.17 below and only
 looks comparable to the 163.62 anchor by coincidence.** This box reads
 `host_cpu` 2.10 GHz with `host_calib_ms` 44-46, where the 153.17 reading was
