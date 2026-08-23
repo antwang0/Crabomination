@@ -8846,11 +8846,17 @@ fn can_afford_in_state_with(
     // chosen yet), so this stays conservative.
     let reduction = crate::game::actions::cost_reduction_for_spell(state, seat, card, None);
     // Coloured surcharges (the Leech cycle) can't ride the generic `extra`
-    // channel, so they join the printed cost before relaxation.
-    let mut printed = card.definition.cost.clone();
-    printed
-        .symbols
-        .extend(crate::game::actions::colored_spell_tax_for_spell(state, seat, card).symbols);
+    // channel, so they join the printed cost before relaxation. Borrowed when
+    // there is no surcharge, which is every board without a Leech: the clone
+    // only existed so the `extend` had somewhere to write.
+    let tax = crate::game::actions::colored_spell_tax_for_spell(state, seat, card);
+    let printed: std::borrow::Cow<'_, crate::mana::ManaCost> = if tax.symbols.is_empty() {
+        std::borrow::Cow::Borrowed(&card.definition.cost)
+    } else {
+        let mut p = card.definition.cost.clone();
+        p.symbols.extend(tax.symbols);
+        std::borrow::Cow::Owned(p)
+    };
     // Mirror the payment funnel's Lattice relaxation so the bot doesn't
     // pass on a spell whose coloured pips any mana can now cover.
     let cost = state.relax_cost_colors(&printed);

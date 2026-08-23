@@ -7550,8 +7550,16 @@ impl GameState {
     /// The cost as it must actually be paid: with a Lattice-style
     /// spend-as-any-color permission active, every coloured pip becomes generic
     /// (`{C}` pips are unaffected — CR 609.4b speaks of colours only).
-    pub fn relax_cost_colors(&self, cost: &crate::mana::ManaCost) -> crate::mana::ManaCost {
-        self.relax_cost_colors_for(None, cost)
+    ///
+    /// Borrowed when no permission is active — which is every board without a
+    /// Lattice-style effect — so the bot's per-card affordability question
+    /// costs no `Vec` clone. It ran 12,986 times over six bench games and
+    /// allocated every one.
+    pub fn relax_cost_colors<'a>(
+        &self,
+        cost: &'a crate::mana::ManaCost,
+    ) -> std::borrow::Cow<'a, crate::mana::ManaCost> {
+        Self::relax_cost_colors_known(self.spend_mana_as_any_color_active_for(None), cost)
     }
 
     /// `relax_cost_colors_for`, but consulting the name-restricted permission
