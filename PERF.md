@@ -179,6 +179,14 @@ determinism          ok (all pairs split)
 peak_rss_mib         20.5
 ```
 
+An unpaired `release` reading at the tip, taken after the whole session's
+builds had been thrashing the box: **163.48 / 158.72 / 160.92 (mean 161.04)**,
+calib 45 / 46 / 52. It is *lower* than the paired A/B's tip mean of 163.69
+even though the eighth commit removes another 0.5 % of instructions — which is
+the file's standing warning in one line: **an unpaired absolute on this box
+cannot resolve half a percent**, and the third run's calib of 52 says why.
+Quote the paired A/B.
+
 Plus the wide pool at the tip — `--decks all --games 200 --paired`, **3,400
 games over 17 decks, two processes, output byte-identical** (modulo the
 wall-clock line), 1,699 pairs all split, **2 undecided (0.06 %)**, no panics.
