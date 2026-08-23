@@ -2683,3 +2683,226 @@ only stays dead while the reasoning that killed it is readable.
   replacement, and when the two disagree about a build the simulation is
   the one to trust.
 - ⏳ **Difficulty levels**; optional **search-based AI** (MCTS over snapshots).
+
+---
+
+## Encoder and net follow-ups (moved from TODO.md, 2026-08-23)
+
+Moved verbatim out of `TODO.md`'s Bot / AI section to keep that file under
+its size line. Nothing here is edited; the "Next-round candidates" list at
+the end is still the prioritized ML backlog.
+
+### Belief-head recall diagnostic (round 39 follow-up)
+The opponent-hand belief head (`head_opp`, round 39) trains and its
+redeal gates flat: sims (`bdet1` vs `det1`) 50.2 / 49.9 at ±0.4 over
+12 k games, rollouts (`bdeep` vs `deep`) 50.3 / 52.1 / 50.9 at ±1.9.
+The null is **ambiguous between two stories that want opposite
+follow-ups**, and `loss_opp` cannot tell them apart — at ~5 held names
+in a 164-name vocabulary it is dominated by the easy zeros (0.080
+against a ~0.135 constant-base-rate floor, plateaued by step 14 k).
+
+*Measure recall, not BCE*: on held-out snapshots, how often is a card
+the opponent actually holds inside the head's top-5, against the
+uniform-over-unseen baseline the determinizer already samples? The
+machinery `val_policy` uses scores exactly these rows; this is a
+diagnostic mode, not a training change, and it runs in minutes.
+
+- **Head is weak** (barely beats uniform) → the belief is the problem.
+- **Head is strong and the gate is still flat** → *consumption* is the
+  problem: more redeals per decision, or a rollout policy that uses the
+  hand at all (rollouts currently play the redealt hand with
+  `uniform_baseline()`, i.e. at random).
+
+Two structural facts to keep in view before spending another round.
+(a) The uniform baseline is stronger than it sounds — `determinize_hidden`
+redeals from the opponent's *true* unseen cards, so it already knows
+their deck and only gets hand-vs-library wrong; the head's whole job is
+sorting ~5 of ~35 known cards. (b) A belief head can only learn tells its
+training data contains, and these pilots barely make any: the SoS probe
+measured 42 cleanup discards per 60 games against **one** instant-timing
+cast, and `atk-hold` gated 49.4 %. "They left two Islands untapped"
+carries little information in a distribution where nobody holds up mana
+on purpose — which also means this direction may be capped in *this*
+format while still mattering against a human who does.
+
+### Encoder gaps — implemented as encoder v7 (round 40)
+All three are in `server/encode.rs` behind their own ablation bits
+(`hist`, `exp`, `ctr`; see `ABLATION_BLOCKS`), `SHARD_VERSION` is 8, and
+older checkpoints zero-pad at load in *both* net implementations. The
+gate is `.ladder/run_r40_encoder_v7.sh`; the verdict lives in
+`ML_NOTES.md`, not here.
+
+- **(a) Turn-scoped history** — globals 43..=54, six counters per seat
+  (life gained, instants/sorceries cast, spells cast, creatures died,
+  cards that left the graveyard, cards exiled). The block the census
+  says is real: non-zero in 3.6–51.7 % of positions.
+- **(b) Expiry** — object feats 45..=47: marked damage, and the P/T
+  delta that expires at cleanup. Occupancy 0.13–0.16 % of objects under
+  the default recorder, which is why it did not earn its own arm.
+- **(c) Counter types** — object feats 48..=52: +1/+1, −1/−1, stun,
+  Page, Growth, splitting the single scalar at feat 34. Occupancy
+  0–1.6 %.
+
+Not a gap, recorded so it is not re-proposed: **the prepared spell is
+already covered.** `prepare_spell: Option<Box<CardDefinition>>` is a
+field on `CardDefinition`, fixed per card, so the embedding carries
+which spell is inset exactly as it carries a card's other abilities;
+`f[9]` supplies the live "is prepared" state on top.
+
+### Static-anthem P/T is invisible to the encoder
+`encode_battlefield_object` reads `CardInstance::power()`, which sums
+the printed base, `power_bonus` (until-end-of-turn pumps),
+`perm_power_bonus` and the P/T counters — but *not* continuous effects
+resolved through the layer system. So an anthem's or an aura's +2/+2
+does not reach the net; the creature encodes at its unbuffed stats. The
+relation flags (feats 31/32, own/opposing attachment) say an aura is
+there, not what it does.
+
+Deliberately not fixed: the correct value needs
+`GameState::compute_battlefield`, whose effect gather is ~10 % of
+simulator instructions, and `encode_state` runs once per net eval
+inside the search. The SoS pool has five P/T-affecting statics in the
+whole set (2 `PumpTeamIf`, 2 `PumpSelfIf`, 1 `PumpPT`), so the trade is
+bad *for this format*. Revisit if the pool ever changes: a format with
+real lords would make this the largest remaining encoder hole, well
+ahead of anything in the v7 blocks.
+
+2026-08-17: the `claude/modern_decks` branch is exactly such a pool
+change. If modern decks enter the training or gating pool, this becomes
+the priority encoder item ahead of everything in "Next-round candidates"
+below except search throughput — and the ~10 % gather cost should be
+re-measured (cached per-eval `compute_battlefield`, or an encode-time
+approximation), not assumed from the SoS-era profile.
+
+### Feature occupancy is a precondition, not an afterthought
+`selfplay_train --feature-census N` reports how often each encoder
+feature is non-zero in recorded self-play positions. It costs no GPU
+and one self-play pass, and it found that thirteen features — the whole
+round-28 combat block plus the attacking/blocking flags — are
+identically zero in every training row, because the recorder never
+snapshots a combat step. **Run it before proposing or gating any
+feature block.** A block with 0 % occupancy cannot move a gate, and a
+gate that ran anyway (round 28f) produced a null that means nothing.
+
+Open follow-ups it raises:
+- Global 36 (declare-attackers one-hot) is 0 % on *both* sides of the
+  census and several object feats sit under 0.1 %. Worth a pass to
+  decide which dead columns should be removed rather than carried.
+
+**The leaf column is done** (`--feature-census` reports train vs leaf
+side by side, plus the features the search meets most
+disproportionately). Result in `ML_NOTES.md` round 40: two-thirds of
+what the search evaluates is a settled post-combat state whose phase
+flag has never been trained, and the whole `hist` block is 1.8–3.6×
+denser at the leaves than in training. One remaining experiment it
+suggests, with its own warning attached: record *only* the settled
+end-of-combat state rather than all four combat steps, since arm C's
+rows were only ~19 % that shape. Do not run it on the strength of the
+table alone — arm C closed this exact gap and lost 3 points of search
+strength.
+
+### Next-round candidates (2026-08-17 analysis; post-r41, r42 in flight)
+
+A prioritized reading of `ML_NOTES.md` rounds 26–41 plus round 42's cost
+data. The through-line: pilot-weight interventions are nulls at every
+scale tried, and the headroom is inside the search or in what the search
+consumes (r38's verdict). House rules apply to every item — four
+training seeds paired within seed, *t* intervals, `--feature-census`
+before any feature block, pre-registered scripts in `.ladder/`.
+
+1. **Iterations are the lever; make them affordable.** r42 Part A's
+   first ladder seed has `mcts-net-256` over `mcts-net-deep` (64) at
+   **+2.1 ±0.4 head-to-head** — ~5× the entire v7 effect, and the
+   largest resolvable strength effect since round 27. Cost is linear in
+   iterations (33.0 → 121.9 s/game serial at 64 → 256, r42 Part C), so
+   adoption is latency-gated, and the highest-leverage work is
+   search-eval throughput, not modeling — see the `PERF.md` candidate
+   ("MCTS leaf-evaluation throughput"). Every 2× there is a rung on the
+   only curve that climbs. **Part 1 landed 2026-08-19 (PERF.md
+   forty-first pass): vectorized matvec, 64-iter 33.0 → 18.4 s/game,
+   256-iter 121.9 → 73.0.** The remaining 88 % of search wall is the
+   rollout sim (~63 engine actions/rollout), so the next rung is
+   rollout-side and ladder-gated, or the engine's own action loop.
+   **Round 44 closed the horizon shortcut: h1 loses 7 points to h3
+   and cost-matched 3× iterations buy back +0.3 — the shallow leaf
+   is biased, not noisy, and h0's −35 shows the net cannot score
+   unsettled states at all. Do not respend here; the census/`head_leaf`
+   direction (item 2) inherits the evidence.**
+1a. **The mulligan is closed for now — two mechanisms, both failed.**
+   `mull_quality` (a better predicate) 50.2 % over 28 800 games;
+   `mull_sim` (play both branches forward) **47.45 %**, i.e. actively
+   worse, with cost, mulligan rate, sample noise and comparison
+   fairness all ruled out (round 49). Mulligan is 25 % of all
+   decisions, so the volume argument for attacking it is real and was
+   not enough. Do not re-open without a *different* scoring signal —
+   a short-horizon material eval is the thing that failed, not the
+   idea of simulating.
+
+1b. **Menu holes are the piloting lever; valuation refinements are not.**
+   Round 46 adopted `target_arms` (+0.95, two seeds) — the second
+   adoption in four rounds and the second whose mechanism was a
+   *missing candidate* rather than a bad score, after chump blocks
+   (+0.9, r43). Both let the search express a line it previously
+   could not. The same round's abilarms re-run went the other way
+   (48.9, replicating r43 on a fixed targeter), and the contrast is
+   the design rule: a *variant of a play the search already likes*
+   pays for its arm; an unvetted new action type displacing vetted
+   casts under the six-arm cap does not. Look for menus that cannot
+   express a line, not for weights that score one wrongly.
+
+2. **A separate leaf-value head the search consumes and the pilot
+   doesn't.** The census says ~two-thirds of what the search evaluates
+   is a settled post-combat state whose phase flag has never been
+   non-zero in training, and the `hist` block is 1.8–3.6× denser at the
+   leaves (that skew is v7's confirmed mechanism). Arm C proved the
+   in-place fix fails: retraining the *shared* win head on combat rows
+   moved the pilot's calibration and cost the search 2.9 points. The
+   untried cell splits the roles r37-style: recorder and `head_win`
+   untouched, a `head_leaf` trained only on settled end-of-combat rows
+   (or a leaf-matched mix), `mcts-net-deep` reads `head_leaf` while the
+   1-ply pilot keeps `head_win`. Gate: `mcts-net-deep(head_leaf)` vs
+   `mcts-net-deep(head_win)`, same trunk both sides. This *subsumes* the
+   "record only the settled state" experiment above — do not run that
+   one into the shared head. **Evidence upgraded twice since written:
+   r44's h0/h1 cells showed the net's error on off-distribution state
+   shapes is *bias* (iterations can't fix it, settlement is
+   load-bearing), and r45 closed capacity (+0.01 ± 0.3 at 2× fed) —
+   representation/distribution is the only training-side axis left
+   open. This is the next training round to run; a Go-Exploit-style
+   arm (seed some self-play starts from mid/post-combat snapshots) is
+   the data-side twin and belongs in the same round.**
+3. **Distill deep search into the leaf head — amortized iterations.**
+   256-iteration search conclusions as `head_leaf` targets, consumed by
+   a 64-iteration search. r36's coupling warning ("you cannot distil
+   your way out of a search that eats the same net you improved") is
+   about the pilot-vs-search gap; a separate leaf head is its own
+   prescription. The mixed fleet makes the data nearly free (~10 k
+   searched games rode along per seed in r38). Composes with item 2:
+   same head, deeper-search targets instead of game outcome.
+4. **v7 × 256 iterations, the cheap stack.** v7 replicates at +0.4 but
+   needs a partner or a higher-starting regime. Its mechanism is
+   leaf-side density, so it should express more, not less, at higher
+   iteration counts — and the r41 v7 nets already exist, so the gate is
+   ladder-only: `mcts-net-256` + v7 net vs `mcts-net-256` + champion,
+   paired ladder seeds. This is the system-adoption question r42 sets
+   up.
+
+5. **Builder v3 default flip + training-deck-quality question.** The
+   quality/curve shape ranker measured **+3.2 replicated** over v2
+   (`ML_NOTES.md` "Builder v3", 2026-08-17) — adopted in the client's
+   sealed opponent, still default-off in `SimConfig` because flipping
+   it changes the training field *and* the ladder's sealed gate decks,
+   ending comparability with every recorded reference. The follow-up
+   round: re-baseline champion and gate opponents on v3 fields, then
+   the untried ML question — does a pilot trained on stronger (v3)
+   fields play better, or is builder noise useful curriculum? Pin the
+   gate builder while the training builder varies, or the comparison
+   confounds.
+
+Not worth new rounds, per the accumulated record: pilot-weight
+interventions (capacity, labels, value targets — three scales of
+evidence), MCTS knobs other than iterations (r29), opponent modeling in
+this format (run the recall diagnostic above, then likely park the
+thread), gen-1 Gumbel completed-Q targets (the one untried Gumbel
+variant; two nulls and the prior-starvation negative make it a worse bet
+than anything above — on the list, not in the next round).

@@ -556,7 +556,9 @@ Each a small targeted feature; sweep batch by batch.
 ## Tier 13 — AI
 
 Moved to `ML_NOTES.md` (size trigger): the bot/net gate history, the adopted
-profiles and the documented dead ends.
+profiles and the documented dead ends, and — since 2026-08-23 — the encoder
+and net follow-up list (belief-head recall, encoder v7, the static-anthem
+P/T hole, the feature-occupancy precondition, the next-round candidates).
 
 ## Tier 14 — Replays, analysis & observability
 

@@ -840,6 +840,31 @@ scans.** A gate that only shortens a scan of an empty `Vec` is worth nothing on
 this codebase (three losses under (-8b) and one here); a gate that skips a
 block which builds a collection is worth something every time.
 
+**The pass's largest finding is a ceiling, not a commit: `perform_action`'s
+checkpoint is worth `-5.47 %` and it is never read on the bench workload.**
+A probe binary that skips the checkpoint entirely and `panic!`s if a restore
+would have happened read **1,915,090,409 -> 1,810,396,553, -104,693,856 /
+-5.47 %** — and **exited 0**, so across six games / 24 decided matches /
+18,208 checkpointed actions, **not one `perform_action` returned an `Err`
+that the checkpoint had to roll back** (`ManualTapRequired`, which is a
+suspension rather than a failure, was exempted as it is in the real path).
+That is **5,750 Ir per checkpointed action**: clone 1,194, drop 2,324, and
+~2,230 of CoW unshares the action pays only because the checkpoint made its
+zones shared.
+
+**It is not capturable by skipping the pass path, and here is the audit so
+nobody repeats it.** `pass_priority`'s non-trivial branch mutates
+(`consecutive_passes = 0`) and then propagates from `resolve_top_of_stack`;
+`advance_step` propagates from `pass_priority` (recursively, line 449),
+`resolve_first_strike_damage` and `resolve_combat`. None of those is total,
+so "PassPriority cannot fail after mutating" is not provable from the
+signatures, and *measuring* zero failures on one workload is not a licence to
+drop a transactional guarantee that exists for the partial-mutation bug
+family. The work (-13) needs is the per-arm proof, arm by arm, with a
+`debug_assert` in each skipped arm that an `Err` left the serialized state
+untouched — the whole suite then audits the claim. **Budget it as a pass of
+its own; the prize is up to 5.47 %.**
+
 **Refuted, same pass, and it closes (-13)'s first shape: a per-thread pool of
 `GameState` husks with a hand-written `clone_from`.** `1,915,090,409 ->
 1,964,903,711`, **+49,813,302 / +2.60 %**. Reverted. What was built, because
@@ -1777,15 +1802,21 @@ dead; read the forty-third pass's Log entry before touching this.**
   fields are `Copy`, so they carry no drop glue; a resolution-scratch
   `CowBox` group would take a slice of the 458-Ir `Self { … }` line and
   nothing of the 2,324-Ir drop.
-* **Widen the no-checkpoint path — the one left, and now the only one that
-  addresses the actual cost.** 63 % of the drop (**50,619,793 / 2.64 %**) is
-  `Arc` drop glue: the zones the action deep-copied *because the checkpoint
-  made them shared*, being freed. Only not taking the checkpoint removes
-  that. The skip is currently one action shape
-  (`pass_priority_is_trivial`, 41 % of actions). Every `return Err` before
-  `perform_action_inner`'s dispatch is a pure validation guard that has
-  touched nothing; the question is which *dispatch arms* can also be proved
-  mutation-free-on-error.
+* **Widen the no-checkpoint path — the one left, the only one that addresses
+  the actual cost, and now sized: `-5.47 %`.** A probe that skipped every
+  checkpoint read **1,810,396,553** and never panicked, so the restore fires
+  **zero** times in 18,208 checkpointed actions. **5,750 Ir each**: clone
+  1,194, drop 2,324, and ~2,230 of CoW unshares the action pays only because
+  the checkpoint shares its zones — 63 % of the drop (**50,619,793 /
+  2.64 %**) is `Arc` drop glue freeing exactly those copies. The skip is
+  currently one action shape (`pass_priority_is_trivial`, 41 % of actions),
+  and it **cannot** simply be widened to all of `PassPriority`:
+  `pass_priority` mutates before propagating from `resolve_top_of_stack`,
+  and `advance_step` propagates from `resolve_first_strike_damage` /
+  `resolve_combat` / itself. The job is the per-arm proof — arm by arm, each
+  skipped arm carrying a `debug_assert` that an `Err` left the serialized
+  state untouched, so the 18.7 k-test suite audits the claim. A pass of its
+  own.
 * **The count, for whoever sizes it.** `perform_action` runs 18,208x on this
   workload against `perform_action_inner`'s 44,000+; the bot's probes
   (`would_accept`, `sim_step`) already take the un-checkpointed path, so the

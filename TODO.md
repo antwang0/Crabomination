@@ -16,88 +16,67 @@ reference and want their own triage pass):
 
 ## NEXT (handoff — rewrite each run, keep under 15 lines)
 
-**FIRST COMMAND OF EVERY RUN**, before reading anything else:
-`git fetch origin claude/modern_decks && git checkout -B claude/modern_decks
-origin/claude/modern_decks`. The routine container clones **`main`**, which is
-~2,000 commits behind this branch and has none of the ML crates, `PERF.md`,
-`crabomination_tests`, or the profiling profiles. A run that starts from the
-default checkout will rebuild infrastructure that already exists here and
-rediscover bugs already fixed. `git log --oneline -1` should show a PERF/pass
-commit or a round commit, not a card batch.
+**FIRST COMMAND OF EVERY RUN:** `git fetch origin claude/modern_decks &&
+git checkout -B claude/modern_decks origin/claude/modern_decks`. The routine
+container clones **`main`**, ~2,000 commits behind and missing the ML crates,
+`PERF.md`, `crabomination_tests` and the profiling profiles. `git log -1`
+should show a PERF/pass or round commit, not a card batch.
 
-Branch `claude/modern_decks`. **Pass 42: `-5.949 %` Ir in eight commits**,
-2,040,144,900 -> **1,918,782,724**, and **+5.56 % wall-clock** on a paired
-`release` + mimalloc A/B (155.07 -> 163.69 games/s, both sides built from one
-tree and run alternating on one box — the first paired release measurement
-this file has been able to take). Two rows are the pass and neither was on the
-candidates list.
+Branch `claude/modern_decks`. **Pass 43 is a measurement pass**, and two
+sessions were committing to it concurrently on 2026-08-23 (one rebase, two
+PERF collisions). Tip **1,911,862,094** from base 1,918,781,907. Rows: the
+three `GameState` `HashMap`s dropped rather than cleared (**-0.192 %**;
+hashbrown clones a table by *bucket count*, so a cleared map re-allocates on
+every state clone for the rest of the game) and the `do_untap` block gate
+(**-0.168 %**). **Fetch and re-read PERF's Log before starting anything** —
+the same candidate was attempted from both sides this run.
 
-- **A no-op write through a CoW handle is a full deep copy.** `ColdState` is
-  ~90 collections behind one `CowBox`, and `perform_action` always holds a
-  checkpoint, so the group is *always shared*: the first cold write of any
-  action deep-copies it, ~1,700 Ir. An empty `clear()`, a `retain` that keeps
-  everything, an `iter_mut` over an empty list, a `mem::take` of nothing — all
-  pay it. `activate_ability_inner` did one on **every** activation
-  (**-1.60 %**). `clear_cold!` / `retain_cold!` in `game/mod.rs` are the
-  guarded forms; **an extension trait cannot work** (`self.f.method()` fires
-  `DerefMut` before the body). `GameState::deref_mut` 2.77 % -> **0.24 %**.
-- **Guarding one cold write promotes the next.** With the no-ops guarded,
-  `finalize_cast`'s `last_cast_spell_colors` went 30 Ir -> 4,118 and became
-  1.30 % on its own; moving it out of `ColdState` (and to `ColorSet`) was
-  **-1.883 %**. **Re-read the `deref_mut` call-site table after any such
-  change** — the two survivors are listed under (-14).
-- **A presence gate asked from inside a freeze scope pays the gather it
-  exists to avoid.** `board_keyword_matching` reads `frozen_effects()`, which
-  gathers on the scope's first computed read; outside a scope it answers off
-  the presence legs. `do_untap` asked it inside `with_frozen_layers`.
-- **Pass 43 is in flight from a second session on this same branch** — two
-  sessions were committing to `claude/modern_decks` concurrently on
-  2026-08-23, and one rebase and one PERF conflict came out of it. Its rows so
-  far: the three `GameState` `HashMap`s dropped rather than cleared
-  (**-0.192 %**; hashbrown clones a table by *bucket count*), the `do_untap`
-  block gate (**-0.168 %**), and a refuted `GameState` husk pool
-  (**+2.60 %**). Tip **1,911,862,094**. **Fetch and re-read PERF's Log before
-  starting anything** — the same candidate was attempted from both sides.
-- **The lesson the collision produced, and it sharpens (-7).** Gating
-  `do_untap`'s six `battlefield x static_abilities` *walks* read +0.0001 % and
-  was reverted; gating the *blocks* around them — the ones that build a
-  `Vec`, a `HashSet`, a `HashMap` — read -0.168 % on two different bases.
-  **Gate the site, not the read, and the site is the block that allocates,
-  not the loop that scans.**
-- **Next, in order.** (-13) `perform_action`'s checkpoint,
-  `drop_in_place<GameState>` **4.19 %** + clone 2.16 % — the largest
-  structural cost left; the husk-pool shape is now **refuted and written up**,
-  so read that before designing. (-15) `advance_step` 15.99 %: `do_cleanup`'s
-  cost is one SBA sweep, and ~20 M of `do_untap` is still unattributed —
-  **read the callee table first**. (-10) allocation is ~13 % over **1,216,241**
-  allocs — `finalize_cast`'s per-turn cast logs are the top `grow_one` *and*
-  `memcpy` caller.
+- **Take (-13) next: it is now sized at `-5.47 %` and it is a whole pass.** A
+  probe that skipped every `perform_action` checkpoint read **1,810,396,553**
+  and **never panicked** — the restore fires *zero* times in 18,208
+  checkpointed actions. 5,750 Ir each (clone 1,194 / drop 2,324 / ~2,230 of
+  CoW unshares the checkpoint forces; 63 % of the drop is `Arc` glue freeing
+  exactly those copies). It is **not** capturable by exempting `PassPriority`:
+  `pass_priority` mutates and then propagates from `resolve_top_of_stack`, and
+  `advance_step` from `resolve_combat` / `resolve_first_strike_damage` /
+  itself. The job is the per-arm proof, each skipped arm carrying a
+  `debug_assert` that an `Err` left the serialized state untouched so the
+  18.7 k-test suite audits the claim.
+- **Do not rebuild these three.** The checkpoint *husk pool* (exhaustive
+  `clone_from` + thread-local husks): built, green, **-100,388 allocations**,
+  and **+2.60 %** — `clone_from` cannot be the bulk copy that `clone`'s
+  `Self { … }` is on a 195-field struct. Gating `do_untap`'s six
+  `battlefield x static_abilities` *walks*: **+0.0001 %**. Narrowing
+  `GameState`: 175 of its 195 fields are `Copy` and carry no drop glue at all.
+- **The lesson the collision produced, and it sharpens (-7).** Gating those
+  six walks read +0.0001 %; gating the **blocks** around them — the ones
+  building a `Vec`, a `HashSet`, a `HashMap` — read -0.168 % on two different
+  bases. **Gate the site, not the read, and the site is the block that
+  allocates, not the loop that scans.**
+- **Where the cost is**, for replenishing the list: `Arc::make_mut` unshares
+  **120,004x / 83,959,478 Ir / 4.38 %**. Allocation is 1,216,241 allocs;
+  `finish_grow` (215,649) and the `.collect()`s (187,120) lead it, and
+  `finalize_cast` is the top `grow_one` *and* `memcpy` caller. `advance_step`
+  is 16.09 % and **both** of its old leads are now closed — `do_cleanup` is
+  87 % one SBA sweep, and ~20 M of `do_untap` is still unattributed, so read
+  its callee table rather than counting its walks.
 - **Green at the tip**: suite **18,728** over 11 binaries, golden traces
-  identical, clippy clean workspace-wide **including the client** (fixed 4
-  pre-existing warnings, one of them a mangled doc comment in `bot.rs`).
-  `--bench` invariants byte-identical with the pass's *own base binary*
-  (decisions **196,220**, turns 27.53, stalls 0) — note those differ from the
-  anchor's 193,232 / 26.98, and rounds 43-47 own that drift, not this pass.
-  `--decks all --games 200 --paired`: 3,400 games, two processes,
-  byte-identical, 2 undecided (0.06 %). `audit_stubs` 0 flagged;
-  `audit_incomplete` structural 1, already triaged as not-a-gap.
-  **No encoding change — no net needs retraining as of this tip.** `ColdState`
-  / `GameState` serde shape did change (`last_cast_spell_colors` moved and
-  retyped); nothing persists a `GameState` across versions.
-- Env: no `cargo-nextest`; `cargo test -p crabomination -p
-  crabomination_tests` is the gate (~9 min cold, ~4 min built). Engine
-  `profiling-fast` rebuild **~2.9 min**, `crabomination_base` touch ~9 min,
-  `release` ~30 min, client clippy ~7 min. Callgrind ~3 min,
-  contention-immune. `cp -al target target-probe` warms a second target dir
-  instantly so a probe build overlaps a callgrind run. **Fetch before the
-  first commit** (eight PERF.md collisions so far; this run rebased mid-pass).
-- Trackers: PERF's passes 37-38 were folded to index rows this run (2,758 ->
-  2,617 with the pass added). **TODO is 1.24k and is now the fold that is
-  overdue**: the "Determinism — closed" block is ~185 lines of *closed* audit
-  history under an "(open)" heading, but it is a methodology index (the
-  thirteen filters, four of which found real bugs), not per-push changelog —
-  compact it into an index of shapes-and-results, do not delete it. ROADMAP
-  0.66k is fine.
+  identical, clippy clean workspace-wide including the client. `--bench`
+  invariants byte-identical (decisions **196,220**, turns 27.53, stalls 0,
+  determinism ok) — those differ from the anchor's 193,232 / 26.98 because
+  rounds 43-47 moved them, not this pass. **No encoding change — no net needs
+  retraining as of this tip.**
+- Env: no `cargo-nextest`; `cargo test -p crabomination -p crabomination_tests`
+  is the gate. `profiling-fast` engine rebuild **~13 min cold**, `release`
+  ~30 min, callgrind ~3 min and contention-immune. **`cp -al target
+  target-probe` hardlinks the binary that is already there — `rm
+  target-probe/profiling-fast/bot_ladder` before building a candidate in it,
+  or you will measure the base against itself** (cost one cycle this run).
+  **Fetch before every commit.**
+- Trackers: TODO **~0.98k**, under the line — the ML narratives moved verbatim
+  to `ML_NOTES.md` this run (linked from the roadmap's Tier 13), the Formats
+  and Rollback shipped phases collapsed to an index. ROADMAP 0.66k, PERF
+  ~2.8k — **PERF is the next fold.**
 
 ## Environment note
 
@@ -741,40 +720,34 @@ the cost profile is known-acceptable. Inverse ops for a ~9k-line effect
 resolver would be unmaintainable and would inherit every funnel-bypass bug
 the audit found.
 
-### Phase 0 — prerequisites
-- ⏳ **Seeded, serialized RNG.** Shuffles call thread-local `rand::rng()`
-  inline (`game/mod.rs:2462`, `4495`, `5968`, `7239`; grep for stragglers).
-  Add `GameState.rng` (e.g. `Pcg64`, serde via seed+stream state) and route
-  every random site through it — otherwise undo lets a player re-roll
-  shuffles/flips until they like the outcome, and bit-exact replay is
-  impossible. Fold in the audit-P1 coin-flip fix (`Decision::CoinFlip`
-  must draw from this RNG, not constant heads) while touching it.
-- ⏳ **Serde fidelity.** Not needed for in-memory undo (which uses `Clone`),
-  but required before any persisted history/replay: fix the audit-P1
-  `CardInstanceWire` six dropped fields + `TokenDefinition.static_abilities`,
-  and land the property-based round-trip test (see Infrastructure →
-  Snapshot Round-Trip Test).
+### Phase 0 — prerequisites — ✅ shipped
+Seeded serialized `GameState.rng` behind every "at random" the rules ask for
+(so undo cannot re-roll a shuffle and replay is bit-exact), and the
+`Decision::CoinFlip` fix that rode with it. Serde fidelity for persisted
+history is still gated on the `CardInstanceWire` dropped-fields fix and the
+round-trip property test (Infrastructure → Snapshot Round-Trip Test);
+in-memory undo uses `Clone` and does not need it.
 
-### Phase 1 — transactional `perform_action` — ✅ DONE (2026-07)
-- ✅ Checkpoint at the top of `perform_action`, restore on `Err` — for
-  EVERY action, not just human-submitted ones: `GameState`'s heavy zones
-  are now `CowBox`-wrapped (`crate::cow` — Arc + make_mut copy-on-write),
-  so the checkpoint costs reference bumps and a failing action only pays
-  for zones it touched before erroring. Affordance probes skip the
-  checkpoint via `perform_action_inner` (their state is discarded either
-  way). Regression: `cow::tests::rejected_action_restores_state_exactly`.
-- ✅ Suspension is not failure: restore happens only on `Err`, and
-  `GameError::ManualTapRequired` is exempted — it deliberately leaves
-  forced pips auto-tapped + mana floating for the client's pending-cast
-  driver (pinned by `sos::mana_shapes` tests). The restore keeps the
-  *live* decider (the checkpoint clone holds a blank one; swapping it in
-  would wipe a `ScriptedDecider` mid-script).
-- Per-call semantics: a failed resume restores to the *suspended* state,
-  not to before the original action. Full multi-step atomicity across a
-  suspend/resume chain remains future work if ever needed.
-- Keep the targeted P0 fixes anyway (validate-before-mutate is still
-  better); the transaction is the backstop that makes the *class*
-  unexploitable.
+### Phase 1 — transactional `perform_action` — ✅ shipped (2026-07)
+Checkpoint at the top of `perform_action`, restored on `Err`, for **every**
+action. The heavy zones are `CowBox`-wrapped, so the checkpoint costs
+reference bumps and a failing action pays only for the zones it touched.
+Pinned by `cow::tests::rejected_action_restores_state_exactly`. Three
+semantics worth remembering, because each was a bug first:
+- Suspension is not failure. `GameError::ManualTapRequired` is exempted —
+  it deliberately leaves forced pips tapped and mana floating for the
+  client's pending-cast driver (pinned by the `sos::mana_shapes` tests).
+- The restore keeps the **live** decider; the checkpoint clone holds a
+  blank one, and swapping that in wipes a `ScriptedDecider` mid-script.
+- A failed *resume* restores to the suspended state, not to before the
+  original action. Multi-step atomicity across a suspend/resume chain is
+  future work if it is ever needed.
+
+**Perf:** the checkpoint is the engine's largest single structural cost —
+`-5.47 %` of the whole program on the bench workload, and it is *never*
+read there (see PERF's forty-third pass and candidate (-13)). Any narrowing
+of it is a rules-correctness argument first and a perf change second.
+
 
 ### Phase 2 — engine history ring
 - ⏳ `UndoHistory { ring: VecDeque<(UndoPoint, Box<GameState>)> }` on the
@@ -846,220 +819,15 @@ The bot taps mana rocks eagerly before knowing what it wants to cast.  A
 "plan this turn's spending first" pass before mana-ability activation would
 avoid situations where it taps a Sol Ring with nothing to cast.
 
-### Belief-head recall diagnostic (round 39 follow-up)
-The opponent-hand belief head (`head_opp`, round 39) trains and its
-redeal gates flat: sims (`bdet1` vs `det1`) 50.2 / 49.9 at ±0.4 over
-12 k games, rollouts (`bdeep` vs `deep`) 50.3 / 52.1 / 50.9 at ±1.9.
-The null is **ambiguous between two stories that want opposite
-follow-ups**, and `loss_opp` cannot tell them apart — at ~5 held names
-in a 164-name vocabulary it is dominated by the easy zeros (0.080
-against a ~0.135 constant-base-rate floor, plateaued by step 14 k).
-
-*Measure recall, not BCE*: on held-out snapshots, how often is a card
-the opponent actually holds inside the head's top-5, against the
-uniform-over-unseen baseline the determinizer already samples? The
-machinery `val_policy` uses scores exactly these rows; this is a
-diagnostic mode, not a training change, and it runs in minutes.
-
-- **Head is weak** (barely beats uniform) → the belief is the problem.
-- **Head is strong and the gate is still flat** → *consumption* is the
-  problem: more redeals per decision, or a rollout policy that uses the
-  hand at all (rollouts currently play the redealt hand with
-  `uniform_baseline()`, i.e. at random).
-
-Two structural facts to keep in view before spending another round.
-(a) The uniform baseline is stronger than it sounds — `determinize_hidden`
-redeals from the opponent's *true* unseen cards, so it already knows
-their deck and only gets hand-vs-library wrong; the head's whole job is
-sorting ~5 of ~35 known cards. (b) A belief head can only learn tells its
-training data contains, and these pilots barely make any: the SoS probe
-measured 42 cleanup discards per 60 games against **one** instant-timing
-cast, and `atk-hold` gated 49.4 %. "They left two Islands untapped"
-carries little information in a distribution where nobody holds up mana
-on purpose — which also means this direction may be capped in *this*
-format while still mattering against a human who does.
-
-### Encoder gaps — implemented as encoder v7 (round 40)
-All three are in `server/encode.rs` behind their own ablation bits
-(`hist`, `exp`, `ctr`; see `ABLATION_BLOCKS`), `SHARD_VERSION` is 8, and
-older checkpoints zero-pad at load in *both* net implementations. The
-gate is `.ladder/run_r40_encoder_v7.sh`; the verdict lives in
-`ML_NOTES.md`, not here.
-
-- **(a) Turn-scoped history** — globals 43..=54, six counters per seat
-  (life gained, instants/sorceries cast, spells cast, creatures died,
-  cards that left the graveyard, cards exiled). The block the census
-  says is real: non-zero in 3.6–51.7 % of positions.
-- **(b) Expiry** — object feats 45..=47: marked damage, and the P/T
-  delta that expires at cleanup. Occupancy 0.13–0.16 % of objects under
-  the default recorder, which is why it did not earn its own arm.
-- **(c) Counter types** — object feats 48..=52: +1/+1, −1/−1, stun,
-  Page, Growth, splitting the single scalar at feat 34. Occupancy
-  0–1.6 %.
-
-Not a gap, recorded so it is not re-proposed: **the prepared spell is
-already covered.** `prepare_spell: Option<Box<CardDefinition>>` is a
-field on `CardDefinition`, fixed per card, so the embedding carries
-which spell is inset exactly as it carries a card's other abilities;
-`f[9]` supplies the live "is prepared" state on top.
-
-### Static-anthem P/T is invisible to the encoder
-`encode_battlefield_object` reads `CardInstance::power()`, which sums
-the printed base, `power_bonus` (until-end-of-turn pumps),
-`perm_power_bonus` and the P/T counters — but *not* continuous effects
-resolved through the layer system. So an anthem's or an aura's +2/+2
-does not reach the net; the creature encodes at its unbuffed stats. The
-relation flags (feats 31/32, own/opposing attachment) say an aura is
-there, not what it does.
-
-Deliberately not fixed: the correct value needs
-`GameState::compute_battlefield`, whose effect gather is ~10 % of
-simulator instructions, and `encode_state` runs once per net eval
-inside the search. The SoS pool has five P/T-affecting statics in the
-whole set (2 `PumpTeamIf`, 2 `PumpSelfIf`, 1 `PumpPT`), so the trade is
-bad *for this format*. Revisit if the pool ever changes: a format with
-real lords would make this the largest remaining encoder hole, well
-ahead of anything in the v7 blocks.
-
-2026-08-17: the `claude/modern_decks` branch is exactly such a pool
-change. If modern decks enter the training or gating pool, this becomes
-the priority encoder item ahead of everything in "Next-round candidates"
-below except search throughput — and the ~10 % gather cost should be
-re-measured (cached per-eval `compute_battlefield`, or an encode-time
-approximation), not assumed from the SoS-era profile.
-
-### Feature occupancy is a precondition, not an afterthought
-`selfplay_train --feature-census N` reports how often each encoder
-feature is non-zero in recorded self-play positions. It costs no GPU
-and one self-play pass, and it found that thirteen features — the whole
-round-28 combat block plus the attacking/blocking flags — are
-identically zero in every training row, because the recorder never
-snapshots a combat step. **Run it before proposing or gating any
-feature block.** A block with 0 % occupancy cannot move a gate, and a
-gate that ran anyway (round 28f) produced a null that means nothing.
-
-Open follow-ups it raises:
-- Global 36 (declare-attackers one-hot) is 0 % on *both* sides of the
-  census and several object feats sit under 0.1 %. Worth a pass to
-  decide which dead columns should be removed rather than carried.
-
-**The leaf column is done** (`--feature-census` reports train vs leaf
-side by side, plus the features the search meets most
-disproportionately). Result in `ML_NOTES.md` round 40: two-thirds of
-what the search evaluates is a settled post-combat state whose phase
-flag has never been trained, and the whole `hist` block is 1.8–3.6×
-denser at the leaves than in training. One remaining experiment it
-suggests, with its own warning attached: record *only* the settled
-end-of-combat state rather than all four combat steps, since arm C's
-rows were only ~19 % that shape. Do not run it on the strength of the
-table alone — arm C closed this exact gap and lost 3 points of search
-strength.
-
-### Next-round candidates (2026-08-17 analysis; post-r41, r42 in flight)
-
-A prioritized reading of `ML_NOTES.md` rounds 26–41 plus round 42's cost
-data. The through-line: pilot-weight interventions are nulls at every
-scale tried, and the headroom is inside the search or in what the search
-consumes (r38's verdict). House rules apply to every item — four
-training seeds paired within seed, *t* intervals, `--feature-census`
-before any feature block, pre-registered scripts in `.ladder/`.
-
-1. **Iterations are the lever; make them affordable.** r42 Part A's
-   first ladder seed has `mcts-net-256` over `mcts-net-deep` (64) at
-   **+2.1 ±0.4 head-to-head** — ~5× the entire v7 effect, and the
-   largest resolvable strength effect since round 27. Cost is linear in
-   iterations (33.0 → 121.9 s/game serial at 64 → 256, r42 Part C), so
-   adoption is latency-gated, and the highest-leverage work is
-   search-eval throughput, not modeling — see the `PERF.md` candidate
-   ("MCTS leaf-evaluation throughput"). Every 2× there is a rung on the
-   only curve that climbs. **Part 1 landed 2026-08-19 (PERF.md
-   forty-first pass): vectorized matvec, 64-iter 33.0 → 18.4 s/game,
-   256-iter 121.9 → 73.0.** The remaining 88 % of search wall is the
-   rollout sim (~63 engine actions/rollout), so the next rung is
-   rollout-side and ladder-gated, or the engine's own action loop.
-   **Round 44 closed the horizon shortcut: h1 loses 7 points to h3
-   and cost-matched 3× iterations buy back +0.3 — the shallow leaf
-   is biased, not noisy, and h0's −35 shows the net cannot score
-   unsettled states at all. Do not respend here; the census/`head_leaf`
-   direction (item 2) inherits the evidence.**
-1a. **The mulligan is closed for now — two mechanisms, both failed.**
-   `mull_quality` (a better predicate) 50.2 % over 28 800 games;
-   `mull_sim` (play both branches forward) **47.45 %**, i.e. actively
-   worse, with cost, mulligan rate, sample noise and comparison
-   fairness all ruled out (round 49). Mulligan is 25 % of all
-   decisions, so the volume argument for attacking it is real and was
-   not enough. Do not re-open without a *different* scoring signal —
-   a short-horizon material eval is the thing that failed, not the
-   idea of simulating.
-
-1b. **Menu holes are the piloting lever; valuation refinements are not.**
-   Round 46 adopted `target_arms` (+0.95, two seeds) — the second
-   adoption in four rounds and the second whose mechanism was a
-   *missing candidate* rather than a bad score, after chump blocks
-   (+0.9, r43). Both let the search express a line it previously
-   could not. The same round's abilarms re-run went the other way
-   (48.9, replicating r43 on a fixed targeter), and the contrast is
-   the design rule: a *variant of a play the search already likes*
-   pays for its arm; an unvetted new action type displacing vetted
-   casts under the six-arm cap does not. Look for menus that cannot
-   express a line, not for weights that score one wrongly.
-
-2. **A separate leaf-value head the search consumes and the pilot
-   doesn't.** The census says ~two-thirds of what the search evaluates
-   is a settled post-combat state whose phase flag has never been
-   non-zero in training, and the `hist` block is 1.8–3.6× denser at the
-   leaves (that skew is v7's confirmed mechanism). Arm C proved the
-   in-place fix fails: retraining the *shared* win head on combat rows
-   moved the pilot's calibration and cost the search 2.9 points. The
-   untried cell splits the roles r37-style: recorder and `head_win`
-   untouched, a `head_leaf` trained only on settled end-of-combat rows
-   (or a leaf-matched mix), `mcts-net-deep` reads `head_leaf` while the
-   1-ply pilot keeps `head_win`. Gate: `mcts-net-deep(head_leaf)` vs
-   `mcts-net-deep(head_win)`, same trunk both sides. This *subsumes* the
-   "record only the settled state" experiment above — do not run that
-   one into the shared head. **Evidence upgraded twice since written:
-   r44's h0/h1 cells showed the net's error on off-distribution state
-   shapes is *bias* (iterations can't fix it, settlement is
-   load-bearing), and r45 closed capacity (+0.01 ± 0.3 at 2× fed) —
-   representation/distribution is the only training-side axis left
-   open. This is the next training round to run; a Go-Exploit-style
-   arm (seed some self-play starts from mid/post-combat snapshots) is
-   the data-side twin and belongs in the same round.**
-3. **Distill deep search into the leaf head — amortized iterations.**
-   256-iteration search conclusions as `head_leaf` targets, consumed by
-   a 64-iteration search. r36's coupling warning ("you cannot distil
-   your way out of a search that eats the same net you improved") is
-   about the pilot-vs-search gap; a separate leaf head is its own
-   prescription. The mixed fleet makes the data nearly free (~10 k
-   searched games rode along per seed in r38). Composes with item 2:
-   same head, deeper-search targets instead of game outcome.
-4. **v7 × 256 iterations, the cheap stack.** v7 replicates at +0.4 but
-   needs a partner or a higher-starting regime. Its mechanism is
-   leaf-side density, so it should express more, not less, at higher
-   iteration counts — and the r41 v7 nets already exist, so the gate is
-   ladder-only: `mcts-net-256` + v7 net vs `mcts-net-256` + champion,
-   paired ladder seeds. This is the system-adoption question r42 sets
-   up.
-
-5. **Builder v3 default flip + training-deck-quality question.** The
-   quality/curve shape ranker measured **+3.2 replicated** over v2
-   (`ML_NOTES.md` "Builder v3", 2026-08-17) — adopted in the client's
-   sealed opponent, still default-off in `SimConfig` because flipping
-   it changes the training field *and* the ladder's sealed gate decks,
-   ending comparability with every recorded reference. The follow-up
-   round: re-baseline champion and gate opponents on v3 fields, then
-   the untried ML question — does a pilot trained on stronger (v3)
-   fields play better, or is builder noise useful curriculum? Pin the
-   gate builder while the training builder varies, or the comparison
-   confounds.
-
-Not worth new rounds, per the accumulated record: pilot-weight
-interventions (capacity, labels, value targets — three scales of
-evidence), MCTS knobs other than iterations (r29), opponent modeling in
-this format (run the recall diagnostic above, then likely park the
-thread), gen-1 Gumbel completed-Q targets (the one untried Gumbel
-variant; two nulls and the prior-starvation negative make it a worse bet
-than anything above — on the list, not in the next round).
+### Encoder / net follow-ups — moved to `ML_NOTES.md`
+The belief-head recall diagnostic, the encoder-v7 gap list, the
+static-anthem P/T hole, the feature-occupancy precondition and the
+prioritized next-round candidate list live in **`ML_NOTES.md` → "Encoder and
+net follow-ups (moved from TODO, 2026-08-23)"**, verbatim. They are long
+experiment narratives and they exist so nobody re-derives the dead ends.
+One of them is load-bearing for *this* branch: **static-anthem P/T is
+invisible to the encoder**, and a modern-decks pool is exactly the pool
+change that makes it the top encoder item.
 
 ### Multiple Difficulty Levels
 - Easy: current random bot
@@ -1138,52 +906,22 @@ shared resources for 2HG, then layer Commander-specific mechanics on
 top. The `Format` enum entries currently only affect deck validation
 and starting life; everything below is the runtime engine work.
 
-**Status legend:** ✅ done, 🟡 partial, ⏳ todo.
+**Status legend:** ✅ done, 🟡 partial, ⏳ todo. Phases **A, D, E, G, H** are
+shipped — N-player construction, multiplayer combat, APNAP priority,
+team-aware loss/game-end, and the replacement-effect framework. Git history
+carries the per-phase detail; only what is still open is listed here.
 
-#### Phase A — N-player game construction ✅
-- Engine was already N-player aware (`pass_priority` uses
-  `alive_count`, turn rotation uses `next_alive_seat`, attack target
-  validation is bounds-checked).
-
-#### Phase D — Multiplayer combat ✅
-Each attacking creature chooses a defending player or a planeswalker
-controlled by one of them; in 2HG the choice is the defending *team*
-and damage may be assigned to either teammate's creatures/planeswalkers.
-
-#### Phase E — Priority & APNAP for N players ✅
-- Note: triggers within a single declare-attackers / declare-blockers
-  batch (`game/combat.rs:50, 110`) share one controller (the active
-  player), so APNAP within those is moot. The fix is concentrated on
-  the unified dispatcher because that's the only fan-out path where
-  multiple controllers can produce simultaneous triggers from one
-  event.
-
-#### Phase F — Shared life pool & shared turns (2HG) 🟡 (shared pool ✅; shared turn / cross-team triggers ⏳)
-The 2HG-specific consumer of the teams abstraction.
-
-**Shared pool — done:**
-
-**Polish — done:**
-
-**Still ⏳ (low-impact polish):**
-- ⏳ Shared turn priority (CR 810.5) — strict "active team's primary
-  player first, can yield to teammate" ordering. Current rotation
-  is per-seat; both teammates already get priority in the
-  4-passes-to-advance loop, so this is cosmetic.
-
-#### Phase G — Team-aware loss & game end ✅
-**G-lite done** (independent of Phase F):
-
-**Shared-life half — now done via Phase F-3:**
-
-#### Phase H — Replacement-effect framework (Commander prerequisite) ✅
-- Known limitation (acceptable for Phase H scope): inline
-  `graveyard.push` / `hand.push` / `exile.push` sites outside the
-  three wired entry points bypass the resolver. Effects routed
-  through `Effect::Destroy`, `Effect::Exile`-from-battlefield, and
-  `move_card_to` all hit the wired paths; ETB-triggered direct
-  pushes are the main gap and likely don't need replacement-effect
-  coverage for Commander.
+- **Phase F — shared turns (2HG)** 🟡. Shared life pool and its polish are
+  done. ⏳ CR 810.5 shared-turn priority ("active team's primary player
+  first, may yield to teammate"): rotation is per-seat today and both
+  teammates already get priority inside the 4-passes-to-advance loop, so
+  this is cosmetic.
+- **Phase H — known limitation, accepted for the phase's scope.** Inline
+  `graveyard.push` / `hand.push` / `exile.push` sites outside the three
+  wired entry points bypass the replacement resolver. `Effect::Destroy`,
+  `Effect::Exile`-from-battlefield and `move_card_to` all hit the wired
+  paths; ETB-triggered direct pushes are the gap, and likely do not need
+  replacement coverage for Commander.
 
 #### Phase N — Polish ⏳
 - ⏳ Audit any remaining `PlayerRef::EachOpponent` / "your"/"opponent"
@@ -1242,19 +980,17 @@ were stale). See git history for the per-card details.
 
 ## Simulation throughput
 
-The recommender's dominant cost is `would_accept` dry-runs. Two
-stepping stones landed (2026-07): the bot's per-tick candidate sweep
-shares one library-stripped `affordance_probe_template` (a light clone
-per probe instead of a full one), and the main castable block validates
-*lazily* in descending score order at the pick site — a typical tick
-probes 1-3 candidates instead of the whole hand. Match-template cloning
-+ factory elimination in `simulate_match_games` was neutral — setup was
-never the bottleneck. The big lever LANDED (2026-07): the heavy zones
-(battlefield / stack / exile / per-player library / hand / graveyard /
-command / sideboard / continuous_effects) are `CowBox`-wrapped
-(`crate::cow`), so every `GameState::clone` — probes, probe templates,
-`evaluate_action_outcome`, the `perform_action` transaction checkpoint —
-is reference bumps plus only the zones the action actually mutates.
-Remaining scaling comes from the racing schedule (`racing_rounds` +
-small `games_per_pairing`) and, if ever needed, early adjudication of
-stalled games via `eval_material`.
+**`PERF.md` is the record — baseline, log, profile of record, candidates.
+Nothing here duplicates it.** What this section keeps is the one structural
+fact the rest of the file leans on: the heavy zones (battlefield / stack /
+exile / per-player library, hand, graveyard, command, sideboard /
+continuous_effects) are `CowBox`-wrapped (`crate::cow`), so a
+`GameState::clone` — probe, probe template, `evaluate_action_outcome`, the
+`perform_action` checkpoint — is reference bumps plus only the zones the
+action mutates. The sharp edge that follows from it, and the one that keeps
+producing perf rows: **any `&mut` access unshares, including an `iter_mut`
+used read-only or a write that changes nothing.**
+
+Remaining scaling levers that are *not* engine instructions: the racing
+schedule (`racing_rounds` + small `games_per_pairing`), and, if ever needed,
+early adjudication of stalled games via `eval_material`.
