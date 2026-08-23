@@ -869,6 +869,7 @@ checked.
 | — | 1,643,104,718 -> 1,643,733,422 (**+0.038 %**) | **REVERTED** — a precomputed APNAP rank table for the trigger sort |
 | — | 1,643,104,718 -> 1,643,924,923 (**+0.050 %**) | **REVERTED** — a `Vec` whose clone reserves headroom, on `stack` and two per-turn cast logs. See below |
 | F | 1,628,221,407 -> 1,625,262,542 (**-0.182 %**) | two per-turn `PlayerData` sets stop being cloned by capacity — measured *after* the rebase |
+| G | 1,625,262,542 -> 1,625,264,812 (**+0.00014 %**) | **KEPT as a structural fix, not a perf row** — the extra-cast target walk takes one freeze scope. See below |
 
 **Rows A-E sum to `1,662,145,003 -> 1,643,104,718`, -19,040,285 / -1.146 %**
 on pass 48's own chain; **rebased onto pass 47's last five commits they read
@@ -944,6 +945,20 @@ line profile can be another function's cost wearing its name: it put 2.4 %
 under `core::slice::sort::stable::drift::sort`, and the edge table says the
 program's sorts cost a fraction of that. Read it for *where inside a function*
 the cost is; read `cg_edges.py` for everything else.
+
+**(G) is kept on the rule's other arm, and the honest label matters.** The
+extra-cast target picker (`actions.rs`'s `CastExtraTargetPick` slot walk)
+filters every battlefield permanent *plus* every player through
+`check_target_legality`, which opens a freeze scope of its own per call — so
+unfrozen it re-gathers every continuous effect in the game once per
+candidate. That is the exact shape `legal_targets_for_filter`'s doc warns
+about and was fixed for. It reads **+2,270 Ir**, i.e. nothing, because the
+path is **cold on `--decks fixed`**: the bench decks essentially never cast a
+multi-target spell that needs an extra slot picked. Kept as a
+correctness/clarity change under this file's own escape clause — it is
+strictly fewer gathers on any board that reaches it, and it is one call to a
+device the sibling function already documents. **It is not a perf row and the
+pass total does not include it.**
 
 **(F) is (-29)'s cheap half, and the device was already in the file.**
 `IdSet` was written for `ColdState` because "an empty `hashbrown` table clone

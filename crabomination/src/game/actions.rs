@@ -3833,17 +3833,25 @@ impl GameState {
             if let Some((filter, source_name, optional, distinct)) = slot_info {
                 let chosen: Vec<&Target> =
                     target.iter().chain(additional_targets.iter()).collect();
-                let candidates: Vec<Target> = self
-                    .battlefield
-                    .iter()
-                    .map(|c| Target::Permanent(c.id))
-                    .chain((0..self.players.len()).map(Target::Player))
-                    .filter(|t| {
-                        (!distinct || !chosen.contains(&t))
-                            && self.evaluate_requirement_static(&filter, t, p, Some(card_id))
-                            && self.check_target_legality(t, p).is_ok()
-                    })
-                    .collect();
+                // One freeze for the whole walk, the same reason
+                // `legal_targets_for_filter` takes one: every candidate asks
+                // `evaluate_requirement_static`'s layer-4 reads and
+                // `check_target_legality`'s Shroud/Hexproof reads, and
+                // `check_target_legality` opens a scope of its own per call —
+                // so unfrozen this re-gathers every continuous effect in the
+                // game once per battlefield permanent *plus* once per player.
+                let candidates: Vec<Target> = self.with_frozen_layers(|s| {
+                    s.battlefield
+                        .iter()
+                        .map(|c| Target::Permanent(c.id))
+                        .chain((0..s.players.len()).map(Target::Player))
+                        .filter(|t| {
+                            (!distinct || !chosen.contains(&t))
+                                && s.evaluate_requirement_static(&filter, t, p, Some(card_id))
+                                && s.check_target_legality(t, p).is_ok()
+                        })
+                        .collect()
+                });
                 if !candidates.is_empty() {
                     self.pending_decision = Some(crate::game::types::PendingDecision {
                         decision: crate::decision::Decision::ChooseTarget {

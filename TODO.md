@@ -27,7 +27,10 @@ from `89f55a5c` and is rebased on top, `1,662,145,003 -> 1,643,104,718`,
 **-1.146 %** in four commits, which on the branch reads
 `1,645,831,968 -> 1,628,221,407`, **-1.070 %** — the two compose — plus a
 fifth row measured after the rebase, so the branch tip is
-**1,625,262,542**, pass 48 at **-1.250 %**.** Both chains are measured against their own
+**1,625,262,542**, pass 48 at **-1.250 %**.** One further commit is kept
+as a structural fix and is **not** in that total: the extra-cast target walk
+takes one freeze scope, a null on `--decks fixed` because the path is cold
+there. Both chains are measured against their own
 base and both are `--bench`-invariant-identical throughout (decisions
 **196,220**, turns 27.53, stalls 0, determinism ok). **Six builds were
 reverted between them and every one is written up in PERF's Log** — read them
