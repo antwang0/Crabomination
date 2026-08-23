@@ -806,6 +806,65 @@ their cost moved. **The rule generalises: any `clear()` on a collection that
 a `GameState` clone reaches is a standing per-clone allocation.** `Vec` is
 exempt — `Vec::clone` allocates `len`, not `capacity`.
 
+**Refuted, same pass, and it closes (-13)'s first shape: a per-thread pool of
+`GameState` husks with a hand-written `clone_from`.** `1,915,090,409 ->
+1,964,903,711`, **+49,813,302 / +2.60 %**. Reverted. What was built, because
+the next run should not build it again: an exhaustively-destructured
+`Clone::clone_from` over all 195 `GameState` fields (a new field fails to
+compile until handled — the pattern carries no `..`), a `Scratch` guard that
+draws a husk from a `thread_local` pool and returns it on drop, and a
+`release_shared` that drops the six `CowBox` handles and the `players` `Vec`
+into per-thread empty prototypes so an idle husk cannot make a live zone look
+shared. All three invariants held under test — `clone_from` from a dirty
+destination serializes identically to `clone`, a released husk leaves every
+zone at `handle_count() == 1`, and a rejected action still restores exactly.
+
+**The allocation saving is real and still loses.** Allocations **1,216,241 ->
+1,115,853, -100,388 (-8.3 %)** — 2.9 per `GameState::clone`, as predicted.
+The cost:
+
+```text
+                        clone/drop            pool
+Scratch::of / clone     41,569,486 (2.16 %)   70,445,322 (3.59 %)
+drop side               80,831,019 (4.21 %)   80,638,233 (4.10 %)
+  of which release_shared          —          30,725,495 (1.56 %)
+  of which drop_in_place  80,831,019          31,835,358 (1.62 %)
+```
+
+**`clone_from` costs ~834 Ir a call more than `clone`, against ~535 Ir of
+allocator work saved.** The reason is visible in the base profile and is the
+entry's one durable lesson: the hand-written `clone`'s `Self { … }` is a
+*bulk* copy — 15,924,660 Ir on that one line plus one `memcpy` per clone —
+because 175 of the 195 fields are `Copy` and contiguous. `clone_from` cannot
+be that: it must interleave a drop and a construct per field, and nothing
+merges 195 separate assignments. **On a struct this wide, `clone_from` is not
+a cheaper `clone`; it is a more expensive one that happens to allocate less.**
+
+**Where that leaves (-13), and it is a different entry now.** Split the two
+sides and the allocator is a minority shareholder in both:
+
+* **clone, 1,194 Ir:** `Self { … }` 458, its `memcpy` 289, three
+  `Vec::clone`s 106, `RawTable::clone` 135, `__rust_alloc` 178.
+* **drop, 2,324 Ir:** `sync.rs:drop_in_place<GameState>` is **50,619,793 /
+  2.64 % — 63 % of the whole drop** — and that row is `Arc` drop glue.
+
+**So the checkpoint's largest cost is not building or freeing the `GameState`.
+It is that everything the action deep-copied through a CoW handle — because
+the checkpoint made the zone shared — has to be freed when the checkpoint
+dies.** That is the same 177,500 `clone_from_ref_in` unshares (-10) lists,
+counted on the drop side. A pool cannot touch it: the checkpoint still
+shares, the action still unshares, the copy still has to go back.
+
+**Which leaves exactly one of (-13)'s three shapes standing: widen the
+no-checkpoint path.** It is the only one that removes the *sharing* rather
+than the clone. `pass_priority_is_trivial` already proves the shape works;
+the open question is unchanged — which `perform_action_inner` dispatch arms
+can be shown mutation-free on their error paths. Do not build the pool
+again, and do not cost "make `GameState` narrower" off the field count: 175
+of the 195 fields are `Copy` and have no drop glue at all, so narrowing the
+struct buys a slice of the 458-Ir construction and nothing of the 2,324-Ir
+drop.
+
 **Null result, same pass: gating the untap step's six
 `battlefield x static_abilities` walks behind one.** (-15) named them; a
 `UntapStatics::gather` pass with a bit per static, plus a
@@ -1667,25 +1726,35 @@ move-out would trade ~2.3 M for a `Vec` clone per checkpoint — probably a
 wash, measure before taking it.
 
 **(-13) `perform_action`'s checkpoint — `drop_in_place<GameState>` 80,831,019
-/ 4.19 % plus `GameState::clone` 41,569,486 / 2.16 %, ~6.4 % together, and the
-largest *structural* cost left.** Every non-trivial action clones the state so
-a rejection can be rolled back; `pass_priority_is_trivial` already skips 41 %
-of them. What is actually paid: `GameState::clone` is ~20 allocations (one per
-non-empty `Vec`/`HashMap` field) and the drop gives them all back — call it
-**~360 k of the tip's 1.23 M allocations**. Three shapes worth costing, in
-order of how contained they are:
-* **Reuse the checkpoint's buffers.** A per-thread scratch `GameState`
-  `clone_from`-ed instead of `clone`-d would recycle every Vec's capacity.
-  Rust's derived `Clone` does *not* override `clone_from`, so this needs a
-  hand-written one — big, and it has to stay in step with the field list.
-* **Widen the no-checkpoint path.** The skip is currently one action shape.
-  Every `return Err` before `perform_action_inner`'s dispatch is a pure
-  validation guard that has touched nothing; the question is which *dispatch
-  arms* can also be proved mutation-free-on-error.
-* **Count the checkpoints first.** `perform_action` runs 18,208x on this
+/ 4.21 % plus `GameState::clone` 41,569,486 / 2.16 %, ~6.4 % together, and the
+largest *structural* cost left. Two of its three shapes are now measured
+dead; read the forty-third pass's Log entry before touching this.**
+
+* **Reuse the checkpoint's buffers — REFUTED, +2.60 %.** Built in full
+  (exhaustive `clone_from`, thread-local husk pool, CoW-release on return),
+  all invariants green, **-100,388 allocations**, and it still lost by
+  49,813,302 Ir. `clone_from` on a 195-field struct costs ~834 Ir more per
+  call than `clone` does, because `clone`'s `Self { … }` is one bulk copy of
+  175 contiguous `Copy` fields and `clone_from` must interleave a drop and a
+  construct per field.
+* **Make `GameState` narrower — costed, not worth it.** 175 of the 195
+  fields are `Copy`, so they carry no drop glue; a resolution-scratch
+  `CowBox` group would take a slice of the 458-Ir `Self { … }` line and
+  nothing of the 2,324-Ir drop.
+* **Widen the no-checkpoint path — the one left, and now the only one that
+  addresses the actual cost.** 63 % of the drop (**50,619,793 / 2.64 %**) is
+  `Arc` drop glue: the zones the action deep-copied *because the checkpoint
+  made them shared*, being freed. Only not taking the checkpoint removes
+  that. The skip is currently one action shape
+  (`pass_priority_is_trivial`, 41 % of actions). Every `return Err` before
+  `perform_action_inner`'s dispatch is a pure validation guard that has
+  touched nothing; the question is which *dispatch arms* can also be proved
+  mutation-free-on-error.
+* **The count, for whoever sizes it.** `perform_action` runs 18,208x on this
   workload against `perform_action_inner`'s 44,000+; the bot's probes
   (`would_accept`, `sim_step`) already take the un-checkpointed path, so the
-  18,208 are real actions. Establish that number before designing anything.
+  18,208 are real actions. `GameState::clone` runs 34,770x in total — the
+  checkpoint is 52 % of them and the probes are the rest.
 
 **(-12) `auto_tap_for_cost_inner` — 277,149,670 Ir / 14.37 % inclusive over
 18,340 calls, still the second-largest engine subtree.** The forty-second pass
@@ -1755,15 +1824,20 @@ the tip:
   `HasActivatedAbilitiesOf*` flags, once for Conspicuous Snoop's
   `HasActivatedAbilitiesOfLibraryTop`. Fold the second into the first.
 
-**(-15) `advance_step` — 308,428,973 / 15.99 % over 22,892, the largest engine
-subtree, and the forty-second pass only scratched it.** `do_untap` came down
-25,207 -> 21,043 Ir a call and still runs **six separate
-`battlefield x static_abilities` walks** (untappers, the filtered/Endbringer
-set, Storage Matrix, the prevention set, the untap caps, the may-decline ask)
-for boards where every one of them is empty; `do_cleanup` is ~15,556 Ir a call
-and was not looked at. Both are once-per-turn, so the arithmetic is 1,764
-calls — but that is 2 % of the program between them. The device is (-7)'s:
-gate the site, not the read, and `debug_assert!` the guarded body is a no-op.
+**(-15) `advance_step` — 308,637,209 / 16.09 % over 22,892, the largest engine
+subtree. Both of the forty-second pass's leads into it are now closed and it
+needs re-profiling from the top.**
+* **The six `battlefield x static_abilities` walks in `do_untap` — gated,
+  +0.0001 %, reverted** (forty-third pass). They are not the cost; a
+  short-circuiting `any` over an empty `static_abilities` is nearly free.
+  `do_untap`'s 37,097,627 Ir is ~9 M of self across every `file:function`
+  entry, 5.1 M of `do_phasing`, and ~23 M in callees nobody has attributed.
+  **Read the callee table first.**
+* **`do_cleanup` — 27,454,488 / 1.43 %, read, and there is no easy win.**
+  `finish_cleanup` is 24,937,836 of it and `check_state_based_actions` is
+  **16,643,338 of that** — the CR 514.3a sweep, which is real work.
+  `cleanup_wear_off` is the remaining ~5 M over 1,764 calls and its ~60
+  `clear_cold!`s are already guarded.
 
 **(-8b) `card_type_change_in_scope`, the gate's own residue — CLOSED, and
 it is the third measured loss for the same device.** It reads **21,776,000 Ir
