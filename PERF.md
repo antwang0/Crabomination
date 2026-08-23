@@ -778,6 +778,12 @@ paid all of it: `find_map` from `run_effect` was **8,810,292 Ir / 0.51 % over
 row alone, because the three redundant `battlefield_find`s went with it. The
 first-match corner the `find_map` chain encoded is preserved: a Pulse source
 with no chosen colour does not claim the slot and the walk keeps looking.
+**Three rules tests cover the three arms and all three pass unchanged** —
+`usg3::contamination_makes_every_land_tap_for_black`,
+`inv_gaps5::pulse_of_llanowar_rewrites_your_basics` and
+`drk::deep_water_turns_every_land_blue_for_the_turn`, which is the coverage a
+rules-touching optimization needs beyond the golden traces (the bench decks
+contain none of these cards).
 
 **(D) is a small row with a useful negative result.**
 `push_ward_triggers_for_targets` took a whole-game gather per opposing
