@@ -7,6 +7,65 @@ only stays dead while the reasoning that killed it is readable.
 
 ## Tier 13 — AI
 
+- 🔴 **Round 49 (2026-08-23) — simulating the mulligan is 2.5 points
+  WORSE than the predicate it replaces, and it is not the horizon, not
+  the sample count and not the cost.** The second mechanism to fail on
+  this decision, and the first to fail *downward*. Pre-registered in
+  `.ladder/run_r49_mullsim.sh` at +0.5 to +1.5.
+
+  | cells | pooled | cost |
+  |---|---|---|
+  | 47.2 / 47.7 | **47.45** | 0.2 s/game both sides |
+
+  **Why it was tried.** `bot_probe --deck sos` over 300 games: Mulligan
+  is 358 of 1424 decisions — **25.1 %, more than double the next kind**
+  — and it sets up the whole game. It was also the only high-volume
+  decision still answered by a predicate that never looks past the
+  opening hand, while modes, optional triggers and sacrifice-for-value
+  are all judged by playing the state forward. `mull_sim` plays keep and
+  mulligan forward four turns over six determinised samples each and
+  takes the better, so the cost of going down a card is measured rather
+  than priced by a threshold.
+
+  **What was ruled out, in order.**
+  - *Cost*: 0.2 s/game for both profiles. Not a latency trade.
+  - *"It mulligans too eagerly"* — the first hypothesis, and wrong.
+    Mulligan decisions per game are **1.245 (gang) vs 1.28 (mullsim)**,
+    i.e. the same rate. Same volume with a worse win rate means the sim
+    is a worse *discriminator*, not a more aggressive one.
+  - *Sample noise*: verdicts were compared at 6 and 24 samples over 12
+    hands — **zero flips**, with a stable ~5.8-point branch gap. The
+    6-sample estimate is not the problem.
+  - *A rigged comparison*: both branches reach the same turn with a
+    pending-free state, so the mulligan branch is not being scored at an
+    earlier, less-developed point.
+
+  **What is left, stated as the hypothesis it is.** A four-turn horizon
+  scored with `eval_material` measures *board development*, and that is
+  a poor proxy for whether an opening hand wins games. The shipped
+  predicate — 2–5 lands plus a castable early play, with colour-screw
+  awareness — encodes real knowledge about the whole game that a short
+  material rollout does not recover. This rhymes with round 44: the
+  evaluator is unreliable on state shapes it was not built for, and
+  "turn-5 material" is not what a mulligan decision is about.
+
+  **The pair of results is the finding.** `mull_quality` (a better
+  predicate) was 50.2 % [49.6, 50.8] over 28 800 games; `mull_sim` (a
+  different mechanism entirely) is 47.45 %. Two independent attacks on
+  the highest-volume decision in the game, one null and one clearly
+  negative. **The opening-hand decision is not where this bot is losing
+  games, and the shipped predicate is better than it looks.** Both
+  flags stay default-off with their tests as documentation.
+
+  Method note: `mull_sim`'s first test passed *vacuously* —
+  `mulligan_branch_value` answers a pending decision with
+  `perform_action` and returns `None` when none is pending, and the
+  hand-built state had no mulligan pending, so both branches returned
+  nothing and the comparison was empty. The shipped test builds through
+  `start_mulligan_phase` and asserts both branches simulated before
+  comparing them. A green test is not evidence until you have checked it
+  can fail.
+
 - 🟡 **Round 48 (2026-08-22) — target arms re-confirm at +1.05, but
   fixing their ranking flaw was worth ~+0.1 and this design cannot
   resolve it; the champion's real level is 55.2 / 53.65, not the ~52.7

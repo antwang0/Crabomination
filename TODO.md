@@ -974,6 +974,16 @@ before any feature block, pre-registered scripts in `.ladder/`.
    is biased, not noisy, and h0's −35 shows the net cannot score
    unsettled states at all. Do not respend here; the census/`head_leaf`
    direction (item 2) inherits the evidence.**
+1a. **The mulligan is closed for now — two mechanisms, both failed.**
+   `mull_quality` (a better predicate) 50.2 % over 28 800 games;
+   `mull_sim` (play both branches forward) **47.45 %**, i.e. actively
+   worse, with cost, mulligan rate, sample noise and comparison
+   fairness all ruled out (round 49). Mulligan is 25 % of all
+   decisions, so the volume argument for attacking it is real and was
+   not enough. Do not re-open without a *different* scoring signal —
+   a short-horizon material eval is the thing that failed, not the
+   idea of simulating.
+
 1b. **Menu holes are the piloting lever; valuation refinements are not.**
    Round 46 adopted `target_arms` (+0.95, two seeds) — the second
    adoption in four rounds and the second whose mechanism was a

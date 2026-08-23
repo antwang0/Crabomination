@@ -470,6 +470,8 @@ fn profile_weights(name: &str) -> EvalWeights {
         "lookahead" => EvalWeights::lookahead1(),
         "holdsick+combat" => EvalWeights::hold_sick_combat(),
         "blk" => EvalWeights::block_search(),
+        "gang" => EvalWeights::block_gang_search(),
+        "mullsim" => EvalWeights::mull_sim_on(),
         other => {
             eprintln!("unknown profile {other}");
             std::process::exit(2);
