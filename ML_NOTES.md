@@ -7,6 +7,69 @@ only stays dead while the reasoning that killed it is readable.
 
 ## Tier 13 — AI
 
+- ⚪ **Round 51 (2026-08-23) — the fetch as searched arms is +0.35 and
+  UNRESOLVED; the demand-aware ranking under it is a precise ZERO. The
+  round's lesson is that a search-level flag cannot inherit the paired
+  precision a heuristic-level flag gets.** Pre-registered in
+  `.ladder/run_r51_fetch.sh`.
+
+  | part | cells | pooled | widths | pairs that diverged |
+  |---|---|---|---|---|
+  | A `fetch_arms` | 50.3 [49.7, 50.9] / 50.4 [49.8, 51.0] | 50.35 | ±0.59 / ±0.60 | 4682 / 6000 |
+  | B demand ranking | 49.9 [49.8, 50.0] / 50.0 [49.8, 50.1] | 49.95 | ±0.11 / ±0.15 | 46 / 6000 |
+
+  **The hole was real and bigger than pitched.** `Decision::SearchLibrary`
+  had never reached the MCTS menu at all: `MctsBot::next_action` falls
+  through to the heuristic on *any* pending decision, so every tutor and
+  every fetchland in this program's history was answered by
+  `decide_library_search`'s fixed ranking — and inside rollouts by
+  `AutoDecider`, which takes the **first eligible hit**. The rollouts were
+  scoring fetches worse than the bot that plays them.
+
+  **Part A does not adopt.** Both cells sit above 50 and both intervals
+  *include* it. Under the round-50 rule (adopt a sub-0.5 effect only when
+  both cells clear 50) that is not a result. Direction is consistent
+  across two seeds and the flag is left in, off by default, as
+  `mcts-net-fetcharms`.
+
+  **Why Part A is imprecise and Part B is not — this is the transferable
+  part.** Round 50 established that near-mirror antithetic pairs
+  contribute no variance, so a rare flag gets measured unusually tightly.
+  Part B inherits exactly that: 46 of 6000 pairs diverge, rho −0.985,
+  ±0.11. Part A cannot. Adding arms perturbs the search's own random
+  stream, so **4682 of 6000 pairs diverge** and the pairing collapses back
+  to the program's usual ±0.6 — the *same* underlying decision density
+  (~0.25 fetches/game), measured 5× less precisely, purely because the
+  intervention is inside the search. A flag that changes what the search
+  *does* buys precision only by running more games; a flag that changes a
+  fixed answer gets it free. Budget accordingly: sub-0.5 search-level
+  effects need ~4× the cells that a heuristic-level one does.
+
+  **Part B is a genuine zero, not an underpowered one.** At ±0.11 and
+  ±0.15 this is one of the tightest cells the program has ever run, and it
+  says the demand-aware read is worth nothing: ranking basics by unmet
+  pips in hand rather than by supply alone, and tutor hits by castability
+  before mana value, changes 46 games in 6000 and wins none of them net.
+  The supply-only heuristic was already picking the same card almost
+  always — the two reads only differ when the hand's colour demand points
+  away from the scarcest source, which sealed pools rarely produce.
+
+  **What is kept, and the honest justification.** The demand-aware ranking
+  stays on by default with `legacyfetch` as the control, and it is *not*
+  justified by measurement — it bought nothing. It is kept as a
+  consistency change: `ChooseColor` has counted pips in hand since it was
+  written and this is its sibling decision reading the same signal, plus
+  `rank_library_search` is the seam `fetch_arms` needs. Recorded here so
+  nobody later cites round 51 as evidence that it helped.
+
+  **Do not re-open the fetch on a valuation theory.** Two mechanisms tried
+  at once, and the *menu* half is the only one with a pulse. That matches
+  item 1b (menu holes pay, valuation refinements do not) — but this is the
+  first menu hole to come back unresolved rather than positive, and the
+  likely reason is the one the pre-registration named: a fetch's payoff
+  usually lands past the 3-turn horizon, so the sims price it on noise.
+  The same horizon limit killed the simulated mulligan (r49, 47.45).
+
 - 🟢 **Round 50 (2026-08-23) — the planeswalker cash-out fix is +0.25,
   replicated, and the round's real lesson is that a *rare* effect is not
   an unmeasurable one.** Pre-registered in `.ladder/run_r50_walker.sh`.
@@ -2894,6 +2957,16 @@ before any feature block, pre-registered scripts in `.ladder/`.
    50.0 ±0.00 (never fired at all), which is a different finding from
    "fires rarely and helps". **Run the rare-class flag before declaring
    it unmeasurable.**
+
+1a-ter. **A search-level flag does not inherit round 50's free precision
+   (round 51).** Same decision density (~0.25 fetches/game), two flags:
+   the heuristic-level one measured at ±0.11 (46 of 6000 pairs diverged),
+   the search-level one at ±0.60 (4682 diverged). Adding arms perturbs
+   the search's own random stream, so the antithetic mirrors break and
+   the pairing collapses. Budget ~4× the cells for a sub-0.5 effect
+   inside the search. `fetch_arms` came back +0.35 unresolved on two
+   seeds and is left in, off by default; the demand-aware ranking under
+   it is a precise **zero** and is kept only as a consistency change.
 
 1a. **The mulligan is closed for now — two mechanisms, both failed.**
    `mull_quality` (a better predicate) 50.2 % over 28 800 games;
