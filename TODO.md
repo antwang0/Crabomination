@@ -38,8 +38,12 @@ The tip lands **0.003 %** from the ceiling pass 43 measured for skipping
 1. **Finish (-13).** The ceiling is -5.47 % and **-2.842 % is banked**. The
    method is the point and it is reusable: a transitive closure over the
    engine's 149 `Result` functions, not a read of the signatures — reading
-   signatures is what made this file wrongly call it uncapturable. **But the
-   remaining 8,266 clones are the half that earns its keep**: casts,
+   signatures is what made this file wrongly call it uncapturable. The script
+   is committed — `scripts/fallibility_closure.py <fn>` — and **it has already
+   been run at the other shapes: `play_land` reaches 6 `Result` functions and
+   2 raise (but land drops are ~660 of the 8,266, so it buys nothing);
+   `submit_decision` reaches 137 and 70 raise.** **The remaining 8,266 clones
+   are the half that earns its keep**: casts,
    activations and combat declarations pay mana (or an attack tax) and *then*
    fail, which is the partial-mutation family Phase 1 exists for. Run the
    closure at `CastSpell` / `ActivateAbility` / `PlayLand` / `SubmitDecision`

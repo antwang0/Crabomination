@@ -1500,6 +1500,12 @@ dead; read the forty-third pass's Log entry before touching this.**
   skipped alongside the trivial one, for `-54,330,715`. The proof and the
   debug audit that stands in for the missing type-level one are in the
   forty-fourth pass's Log entry.
+* **The closure has now been run at the other shapes, and it says no.**
+  `scripts/fallibility_closure.py` (committed this pass, and the device that
+  made the round-closing pass provable): `play_land` reaches **6**
+  `Result` functions and **2** raise — but land drops are ~660 of the 8,266,
+  so proving it buys nothing. `submit_decision` reaches **137** and **70**
+  raise. A shape with seventy raisers is not proven arm by arm.
 * **What is left of it: 8,266 checkpointed actions, ~45 M Ir, ~2.43 %, and
   it is the half where the checkpoint earns its keep.** Casts, activations
   and combat declarations — mana paid then a target rejected,
