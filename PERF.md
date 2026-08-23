@@ -707,10 +707,11 @@ Base `11792f4c` re-read at **1,771,223,960** (the forty-fifth pass recorded
 | E | 1,740,811,994 -> 1,735,997,491 (**-0.277 %**) | the bot's affordability question stops allocating twice per card |
 | — | 1,740,811,994 -> 1,740,704,526 (**-0.006 %**) | **REVERTED** — short-circuiting `continue_trigger_ordering`'s copy, built on a misread allocator table |
 | F | 1,735,997,491 -> 1,727,337,280 (**-0.499 %**) | a land tap stops asking the board twice about statics no board has |
+| G | 1,727,337,280 -> 1,715,304,981 (**-0.697 %**) | the cast's cost pipeline takes one board walk instead of six |
 
 **The pass sums to `1,771,223,960 -> 1,747,982,407`, -23,241,553 /
--1.312 %** on its own chain, and **`1,765,005,375 -> 1,727,337,280`,
--37,668,095 / -2.134 %** on the branch with the rebase, (E) and (F)
+-1.312 %** on its own chain, and **`1,765,005,375 -> 1,715,304,981`,
+-49,700,394 / -2.816 %** on the branch with the rebase and (E), (F) and (G)
 included.
 `--bench --threads 3` invariants byte-identical at every step:
 decisions 196,220, turns_per_game 27.53, stalls 0 (cap 0 / stuck 0 / draw 0),
@@ -784,6 +785,34 @@ with no chosen colour does not claim the slot and the walk keeps looking.
 `drk::deep_water_turns_every_land_blue_for_the_turn`, which is the coverage a
 rules-touching optimization needs beyond the golden traces (the bench decks
 contain none of these cards).
+
+**(G) is `cast_lock_scan`'s device applied one stage later in the cast, and
+it is the pass's biggest row.** The forty-fifth pass fused the CR 601 *lock*
+gate; nobody had looked at the *cost* pipeline right after it, which asked
+the battlefield six separate times per cast for statics a normal board does
+not have — flash grants 4,463,964 / 0.26 %, the Trinisphere floor 1,764,036,
+the coloured tax 1,742,448, the coloured reduction 1,742,448, granted convoke
+1,276,792, the Gaddock Teeg / Sanctum Prelate lock 974,640: **11,964,328 /
+0.69 % over 7,550 casts**. One walk, six bits, **-0.697 %** — more than the
+six rows together, because the walk it replaces them with is cheaper than any
+one of them.
+
+Two things make it safe rather than clever. A bit is a **pure
+over-approximation** — the gated block still runs its own controller /
+tapped / filter tests — so a set bit costs a walk and a clear bit skips work
+that was already a no-op; every gated site carries the `debug_assert!` that
+says so, and a seventh `debug_assert_eq!` before the cost block proves the
+mask has not gone stale across the CR 601.2b cost choices. And **all six
+families are exercised by the suite** (Vernal Equinox / Shimmer Myr / Teferi,
+Time Raveler / Hypersonic Dragon; Alabaster Leech; Ragemonger; Trinisphere;
+Chief Engineer; Gaddock Teeg and Sanctum Prelate), so the audit is not
+vacuous — 18,709 tests green with it armed.
+
+**What is left of this class in the cast**, unclaimed and measured:
+`cost_reduction_for_spell_full` 3,532,696 / 0.20 % over 7,550 (walks
+`all_static_sources`, many variants, and fires on real boards) and
+`extra_cost_for_spell` 1,923,032 / 0.11 % (mostly card-local). The same mask
+could take a seventh bit for the first if someone enumerates its variants.
 
 **(D) is a small row with a useful negative result.**
 `push_ward_triggers_for_targets` took a whole-game gather per opposing

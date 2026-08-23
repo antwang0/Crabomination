@@ -26,14 +26,17 @@ session landed pass 45's row (E) and the planeswalker-cash-out work
 underneath it mid-run, so pass 46's Ir chain is measured against its own base
 `11792f4c` and rebased on top of theirs.** Pass 45 finished at
 `1,810,336,693 -> 1,765,005,375`, -2.504 %. Pass 46:
-`1,765,005,375 -> 1,727,337,280`, **-2.134 %** in six commits (the first four
+`1,765,005,375 -> 1,715,304,981`, **-2.816 %** in seven commits (the first four
 were measured against their own base `11792f4c` for -1.312 % and re-read at
 -1.371 % after the rebase, so the two passes' rows compose) — `spell_kind`
 built twice per cast and expensively (two `Vec`s for a colour question, a
 global `RwLock` + SipHash for one bool); a land tap deep-copying its whole
 effect tree *and* asking the board twice about statics no board has; the
 bot's affordability question allocating two `ManaCost`s per hand card; Ward
-taking a gather per opposing target. Every step `--bench`-invariant-identical.
+taking a gather per opposing target; and the biggest row, the cast's cost
+pipeline asking the battlefield **six** times per cast for statics no normal
+board has (`cast_cost_scan`, one walk and six bits, -0.697 %). Every step
+`--bench`-invariant-identical.
 
 1. **Nothing is in flight.** Round 50 read out at `5af4f687` — the
    planeswalker cash-out fix is **+0.25 pooled, replicated, both intervals
@@ -64,14 +67,20 @@ taking a gather per opposing target. Every step `--bench`-invariant-identical.
    "one scope to widen" reading in the entry is wrong. Unread and unclaimed:
    `combat_damage_computed` 4,997 Ir over 3,226, `prevent_combat_to_target`
    3,875 over 2,682, `quality_band_assigner` 5,932 over 846.
-5. **(-23)'s allocator table, which pass 46 refreshed *and* fixed.**
+5. **The `cast_lock_scan` / `cast_cost_scan` device has now paid three times
+   and is not exhausted.** What is left in the cast, measured:
+   `cost_reduction_for_spell_full` 0.20 % over 7,550 (walks
+   `all_static_sources`, many variants — a seventh bit needs its variants
+   enumerated) and `extra_cost_for_spell` 0.11 %. The rule that finds these:
+   *what does an ordinary action pay that it cannot possibly need?*
+6. **(-23)'s allocator table, which pass 46 refreshed *and* fixed.**
    Read its opening paragraph before extracting it again — a regex over a
    window instead of the contiguous `<` block invents rows, and pass 46 built
    and measured a candidate on two invented ones before catching it
    (-0.006 %, reverted). Cheapest unclaimed named row is `finalize_cast`'s
    24,108 (3.4 per cast); `RawTable::clone` 29,428 and `Box::clone` 26,386
    are unread.
-6. **Do not rebuild these.** The board-presence epoch ((-18), +0.49 %). The
+7. **Do not rebuild these.** The board-presence epoch ((-18), +0.49 %). The
    `GameState` husk pool (+2.60 %). Gating `do_untap`'s six walks
    (+0.0001 %). Narrowing `GameState`. Splitting the big engine files for
    build time. The per-definition keyword-grant bit ((-11), ~0.3 % and
@@ -80,12 +89,12 @@ taking a gather per opposing target. Every step `--bench`-invariant-identical.
    reads once. Guarding `declare_blockers`' first cold write: measured, it
    promotes the next one and buys ~1.2 M of 7.1 M. Chasing the Ward gathers:
    the presence gate removes only a fifth of them.
-7. **Env.** No `cargo-nextest`; `cargo test -j 2 -p crabomination -p
+8. **Env.** No `cargo-nextest`; `cargo test -j 2 -p crabomination -p
    crabomination_tests` is the gate. Workspace clippy needs `apt-get update &&
    apt-get install -y libwayland-dev libasound2-dev libudev-dev
    libxkbcommon-dev`. Callgrind ~20 s and contention-immune, so a build in
    `target-probe` and a callgrind on `target/` overlap for free.
-8. **Green at the tip.** Suite **18,709 / 0 failed / 5
+9. **Green at the tip.** Suite **18,709 / 0 failed / 5
    ignored** over 22 binaries, golden traces and the
    same-seed replay included; `cargo clippy --workspace --all-targets` clean.
    `--bench` invariants byte-identical across pass 46 (decisions 196,220,
@@ -98,7 +107,7 @@ taking a gather per opposing target. Every step `--bench`-invariant-identical.
    or the encoder). Absolute games/s is not comparable across routine boxes,
    and a `profiling-fast` games/s is not comparable to anything; quote
    callgrind under 5 %.
-9. **Trackers.** TODO ~1.0k, ROADMAP 0.66k, PERF ~2.6k (pass 46 folded the
+10. **Trackers.** TODO ~1.0k, ROADMAP 0.66k, PERF ~2.6k (pass 46 folded the
    forty-second pass's prose and the 42nd/44th profile tables to indexes; the
    forty-third's entry is the next fold). `scripts/find_data_tests.sh` reads
    **199 pure-data tests**, 25 `[CR]`-marked and sacred; the other 174 want a
