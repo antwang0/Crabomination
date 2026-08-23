@@ -29,21 +29,22 @@ structural fix kept outside that total (the extra-cast target walk takes one
 freeze scope — a null on `--decks fixed`, where the path is cold). Pass 49
 ran beside *both* and is rebased on top of them: on its own pre-rebase chain
 `1,645,831,476 -> 1,560,268,509`, **-5.198 %**, and on the branch
-**-5.4 %** in three rows. Every chain is measured against its own base and
+`1,625,264,320 -> 1,535,903,173`, **-5.498 %** in three rows. Every chain is measured against its own base and
 every one is `--bench`-invariant-identical throughout (decisions **196,220**,
 turns 27.53, stalls 0, determinism ok). **Six builds were reverted across
 them and every one is written up in PERF's Log** — read them before
 re-proposing any.
 
-1. **Nothing is in flight.** Branch tip `1,538,787,495` Ir. Pass 48
-   `1,645,831,968 -> 1,628,221,407` (-1.070 %); pass 49, rebased on it,
-   `1,628,220,915 -> 1,538,787,495` (**-5.492 %**, three commits). Suite 18,709
-   / 0 failed / 5 ignored over 22 binaries, golden traces included; workspace
-   clippy clean; `--bench` invariants byte-identical throughout (decisions
-   **196,220**, turns 27.53, stalls 0, determinism ok). Wide pool clean:
-   `--decks all --games 400 --threads 3`, seeds 11/12/13 — 20,400 games,
-   20,396 decided, no panic, all 10,198 mirrored pairs split. **No encoding
-   change; no net needs retraining as of this tip.**
+1. **Nothing is in flight. Branch tip `1,535,903,173` Ir** — pass 49 rebased
+   onto pass 48's final tip reads `1,625,264,320 -> 1,535,903,173`,
+   **-5.498 %** in three commits (its own pre-rebase chain: -5.198 %). Suite
+   18,709 / 0 failed / 5 ignored over 22 binaries at that tip, golden traces
+   included; `cargo clippy --workspace --all-targets` clean; `--bench`
+   invariants byte-identical throughout (decisions **196,220**, turns 27.53,
+   stalls 0, determinism ok). Wide pool clean at the tip: `--decks all --games
+   400`, seeds 11/12/13 — **20,400 games, 20,396 decided, no panic, all
+   10,198 mirrored pairs split**. **No encoding change; no net needs
+   retraining as of this tip.**
 2. **Pass 49's finding, and it is a way of reading a profile.** *Rank the
    tail, not the function.* A chain of narrow generators is invisible in a
    self-cost profile and in a callee table sorted by Ir; it shows up only in
@@ -329,7 +330,13 @@ the place the fifteenth filter, pass 46's retracted allocator rows and pass
 
 * **`cg_edges.py`'s program total was ~18x high**, so every share it printed
   was an order out: `total += cost` ran on every cost line, and a call-edge
-  line carries the callee's whole *inclusive* subtree. It printed
+  line carries the callee's whole *inclusive* subtree. PERF's "How to
+  measure" already *said* the total double-counts and to take the program
+  total from valgrind's `I refs:` line — but a note beside the tool does not
+  fix the tool, and nothing said that the **percentage column of every table
+  it prints** is computed from that same total. A reader ranking by the
+  column the tool actually shows them ranks upside down. **A known-wrong
+  number that a comment warns about is still a wrong number.** It printed
   28,094,793,086 for a run whose `I refs` is 1,540,962,924, and reported
   `dispatch_triggers_for_events` at **0.30 %** where it is **5.63 %** — a
   reader ranking work by that output ranks it upside down. Fixed in

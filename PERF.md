@@ -87,9 +87,12 @@ python3 scripts/cg_lines.py cg.instr.out target/profiling-lines/bot_ladder \
 # pointer.
 # Callers of `__rust_alloc`, ranked by *call count*, is the table that has
 # found the most: self cost lies about allocation — a function with 1.9 %
-# self can be 35 % of every malloc in the program. `cg_edges.py`'s own
-# "total Ir" line double-counts (edge costs are inclusive); the program total
-# comes from valgrind's own `I refs:` line.
+# self can be 35 % of every malloc in the program. `cg_edges.py`'s "total Ir"
+# line used to double-count (it summed the inclusive edge costs too) and the
+# forty-ninth pass fixed it: the total is now the self lines only, it
+# cross-checks the dump's own `totals:` line, and it prints a WARNING when the
+# two disagree. Before that fix the *shares* in every table it printed came
+# off the inflated total and read ~18x low.
 
 # behaviour preservation
 cargo test -p crabomination_tests --test core_rules golden_trace
@@ -246,25 +249,31 @@ determinism          ok (all pairs split, both)
 allocations          967,377                  926,895
 peak_rss_mib         21.9                     21.5
 
-                     pass 48 tip (bf658313)   rebased tip (A+B)   branch tip (+C)
-I refs (callgrind)   1,628,220,915 (derived)  1,540,962,924       1,538,787,495  -5.492 %
+                     branch base (04282f2e)   final rebased tip
+I refs (callgrind)   1,625,264,320 (derived)  1,535,903,173   -5.498 %
 decisions            196,220                  196,220         byte-identical
 turns_per_game       27.53                    27.53
 stalls / determinism 0 / ok (both)
-allocations          not re-read here         908,931
 peak_rss_mib         not re-read here         21.5
 suite                18,709 passed / 0 failed / 5 ignored over 22 binaries
+clippy               `--workspace --all-targets` clean
 host_cpu             Intel(R) Xeon(R) Processor @ 2.80GHz
-host_calib_ms        53-57 across every reading
+host_calib_ms        52-57 across every reading
+
+The intermediate rebased readings, for the Log rows that chain to them:
+`bf658313` (derived 1,628,220,915) -> A+B 1,540,962,924 -> C 1,538,787,495.
+Three of pass 48's commits then landed underneath and the chain was rebased
+again, which is where the final pair above comes from; **908,931**
+allocations were read at the A+B tip.
 ```
 
 **The base columns are 492 Ir below what passes 47 and 48 recorded for the
-same commits** (1,645,831,968 / 1,628,221,407): this run's
+same commits** (1,645,831,968 / 1,628,221,407 / 1,625,264,812): this run's
 `--callgrind-out-file` name is a character shorter, and argv length lands in
 the Ir total — pass 47 saw the same effect at 686 Ir. `40fb5e31` was read
 directly here (1,645,831,476, exactly 492 under pass 48's reading of it);
-`bf658313` was **not** re-read, so the second block's base is that same 492
-subtracted from pass 48's recorded 1,628,221,407. Everything measured in this
+`bf658313` and `04282f2e` were **not** re-read, so the second block's base is
+that same 492 subtracted from pass 48's recorded number for the commit. Everything measured in this
 pass used one argv throughout, so the deltas are exact and the derivation only
 affects the rebased row's third decimal. Pass 48's rule holds: the absolute
 transfers between containers, to within the argv string.
@@ -895,9 +904,10 @@ and 48's number for the same commit — argv length; see **Baseline**.)
 
 **(A) and (B) sum to `1,645,831,476 -> 1,560,268,509`, -85,562,967 /
 -5.198 %** on their own chain, and rebased onto pass 48 they read
-**`1,628,220,915 -> 1,540,962,924`, -87,257,991 / -5.359 %**. (C) was written
-after the rebase and is measured on the branch: **the branch tip is
-1,538,787,495**, so the pass is `1,628,220,915 -> 1,538,787,495`, **-5.492 %**. `--bench --threads 3` invariants byte-identical at
+`1,628,220,915 -> 1,540,962,924`, -5.359 %. (C) was written after that rebase
+(-> 1,538,787,495). Three more of pass 48's commits then landed underneath,
+so the chain was rebased a second time and re-read end to end:
+**`1,625,264,320 -> 1,535,903,173`, -89,361,147 / -5.498 %.** `--bench --threads 3` invariants byte-identical at
 every step: decisions **196,220**, turns_per_game 27.53, stalls 0
 (cap 0 / stuck 0 / draw 0), determinism ok. Suite 18,709 / 0 failed /
 5 ignored, golden traces included. **No encoding change; no net needs
@@ -1726,9 +1736,10 @@ settings + debuginfo; system allocator, because valgrind replaces malloc and
 a mimalloc build would measure the interception), 1 thread, `--a gang --b
 gang --games 6 --seed 1 --decks fixed`.
 
-**The branch ends at 1,538,787,495 Ir.** The table below is the tip one commit
-earlier (`cg.rb.out`, 1,540,962,924) — the pass's (C) moved 2.2 M of
-`frozen_effects` and nothing else, so every row here holds. The forty-eighth pass's own table is kept
+**The branch ends at 1,535,903,173 Ir.** The table below is a tip three
+commits earlier (`cg.rb.out`, 1,540,962,924) — (C) moved 2.2 M of
+`frozen_effects` and pass 48's (F)/(G) 2.9 M more, so every row here holds to
+within 5 M. The forty-eighth pass's own table is kept
 under it because its Log rows chain to it — read that one as shares, not
 absolutes: it was taken on pass 48's pre-rebase chain. The forty-seventh's and
 forty-sixth's are kept below that for the same reason; the forty-fifth's was
