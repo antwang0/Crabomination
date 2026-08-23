@@ -13433,9 +13433,23 @@ impl GameState {
         // hand when flagged `from_hand` (Spirit Guides' exile-to-pitch mana
         // abilities). We scan battlefield first; if missing, fall back to
         // graveyards then hands (any player's; ownership is verified below).
+        // The gate prelude below asks "where is this card on the battlefield"
+        // ten times, each a linear walk over ~18 `Arc`-boxed permanents whose
+        // `id` is behind a pointer. One walk answers all of them: `bf_src!`
+        // revalidates the index against `card_id` and falls back to the walk
+        // rather than lying, so a future mutation between here and a use site
+        // costs one deref, not a wrong answer.
+        let bf_pos = self.battlefield.iter().position(|c| c.id == card_id);
+        macro_rules! bf_src {
+            () => {
+                match bf_pos.and_then(|i| self.battlefield.get(i)) {
+                    Some(c) if c.id == card_id => Some(c),
+                    _ => self.battlefield.iter().find(|c| c.id == card_id),
+                }
+            };
+        }
         let (source_in_gy, source_in_hand, source_in_exile, source_in_command, source_owner) = {
-            let on_bf = self.battlefield.iter().any(|c| c.id == card_id);
-            if on_bf {
+            if bf_pos.is_some() {
                 (false, false, false, false, None)
             } else if let Some(o) = self
                 .players
@@ -13528,11 +13542,7 @@ impl GameState {
                 ability_index,
             )?
         } else {
-            let pos = self
-                .battlefield
-                .iter()
-                .position(|c| c.id == card_id)
-                .ok_or(GameError::CardNotOnBattlefield(card_id))?;
+            let pos = bf_pos.ok_or(GameError::CardNotOnBattlefield(card_id))?;
             // CR 113.10b — a permanent with all abilities stripped (Turn to
             // Frog / Mercurial Transformation) can't have its printed
             // activated abilities used. We allow mana abilities through (no
@@ -13700,7 +13710,7 @@ impl GameState {
                 self.players[source_owner.unwrap()].command.iter()
                     .find(|c| c.id == card_id).map(|c| &c.definition)
             } else {
-                self.battlefield.iter().find(|c| c.id == card_id).map(|c| &c.definition)
+                bf_src!().map(|c| &c.definition)
             };
             def.map(|d| d.ability_spend_kind()).unwrap_or_default()
         };
@@ -13729,10 +13739,7 @@ impl GameState {
                 return Err(GameError::NotYourPriority);
             }
         } else {
-            let controller = self
-                .battlefield
-                .iter()
-                .find(|c| c.id == card_id)
+            let controller = bf_src!()
                 .ok_or(GameError::CardNotOnBattlefield(card_id))?
                 .controller;
             if ability.opponents_only {
@@ -13755,7 +13762,7 @@ impl GameState {
                     .find(|c| c.id == card_id)
                     .map(|c| c.definition.name)
             } else {
-                self.battlefield.iter().find(|c| c.id == card_id).map(|c| c.definition.name)
+                bf_src!().map(|c| c.definition.name)
             };
             if let Some(name) = source_name
                 && self.battlefield.iter().any(|c| c.named_card.as_deref() == Some(name))
@@ -13790,7 +13797,7 @@ impl GameState {
                     .find(|c| c.id == card_id)
                     .is_some_and(|c| c.definition.is_artifact())
             } else {
-                self.battlefield_find(card_id).is_some_and(|c| c.definition.is_artifact())
+                bf_src!().is_some_and(|c| c.definition.is_artifact())
             };
             if src_is_artifact
                 && self.battlefield.iter().flat_map(|c| &c.definition.static_abilities).any(|sa| {
@@ -13807,7 +13814,7 @@ impl GameState {
         {
             let src_artifact_on_bf = !source_in_gy
                 && !source_in_hand
-                && self.battlefield_find(card_id).is_some_and(|c| c.definition.is_artifact());
+                && bf_src!().is_some_and(|c| c.definition.is_artifact());
             if src_artifact_on_bf
                 && self.battlefield.iter().any(|c| {
                     c.definition.static_abilities.iter().any(|sa| {
@@ -13830,7 +13837,7 @@ impl GameState {
             let active = self.active_player_idx;
             let src_is_ace = !source_in_gy
                 && !source_in_hand
-                && self.battlefield_find(card_id).is_some_and(|c| {
+                && bf_src!().is_some_and(|c| {
                     c.definition.is_artifact()
                         || c.definition.card_types.contains(&crate::card::CardType::Creature)
                         || c.definition.card_types.contains(&crate::card::CardType::Enchantment)
@@ -13857,7 +13864,7 @@ impl GameState {
         // next turn.
         if !source_in_gy
             && !source_in_hand
-            && self.battlefield_find(card_id).is_some_and(|c| c.detained_by.is_some())
+            && bf_src!().is_some_and(|c| c.detained_by.is_some())
         {
             return Err(GameError::AbilitySuppressedByNamedCard);
         }
@@ -13875,7 +13882,7 @@ impl GameState {
                     .find(|c| c.id == card_id)
                     .is_some_and(|c| c.definition.is_creature())
             } else {
-                self.battlefield_find(card_id).is_some_and(|c| c.definition.is_creature())
+                bf_src!().is_some_and(|c| c.definition.is_creature())
             };
             if src_is_creature
                 && self.battlefield.iter().flat_map(|c| &c.definition.static_abilities).any(|sa| {
@@ -13922,15 +13929,15 @@ impl GameState {
             // needs the view only when something in scope can grant it. A
             // summoning-sick vanilla creature costs two battlefield walks
             // where it used to cost a gather.
-            let mut sick = self.battlefield_find(card_id).is_some_and(|c| c.summoning_sick);
+            let mut sick = bf_src!().is_some_and(|c| c.summoning_sick);
             if sick {
-                let bestowed = self.battlefield_find(card_id).is_some_and(|c| c.bestowed);
+                let bestowed = bf_src!().is_some_and(|c| c.bestowed);
                 sick = if bestowed || self.card_type_change_in_scope() {
                     bf_cp!()
                         .as_ref()
                         .is_some_and(|c| c.card_types.contains(&crate::card::CardType::Creature))
                 } else {
-                    self.battlefield_find(card_id).is_some_and(|c| c.definition.is_creature())
+                    bf_src!().is_some_and(|c| c.definition.is_creature())
                 };
             }
             if sick
@@ -13985,11 +13992,7 @@ impl GameState {
             && !source_in_command
             && let Some(cap) = per_turn_cap
         {
-            let perm = self
-                .battlefield
-                .iter()
-                .find(|c| c.id == card_id)
-                .ok_or(GameError::CardNotOnBattlefield(card_id))?;
+            let perm = bf_src!().ok_or(GameError::CardNotOnBattlefield(card_id))?;
             let used = perm.once_per_turn_used.iter().filter(|i| **i == ability_index).count();
             if used as u32 >= cap {
                 return Err(GameError::AbilityAlreadyUsedThisTurn);
@@ -14010,11 +14013,7 @@ impl GameState {
         // per game. `exhausted_abilities` (never cleared at turn start) records
         // spent indices on the source permanent.
         if !source_in_gy && !source_in_hand && !source_in_exile && !source_in_command && (ability.exhaust || ability.activate_once) {
-            let perm = self
-                .battlefield
-                .iter()
-                .find(|c| c.id == card_id)
-                .ok_or(GameError::CardNotOnBattlefield(card_id))?;
+            let perm = bf_src!().ok_or(GameError::CardNotOnBattlefield(card_id))?;
             if perm.exhausted_abilities.contains(&ability_index) {
                 return Err(GameError::AbilityAlreadyUsedThisTurn);
             }
