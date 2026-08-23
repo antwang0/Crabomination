@@ -44,22 +44,33 @@ cargo build --profile profiling-fast -p crabomination --bin bot_ladder \
 RUST_MIN_STACK=33554432 valgrind --tool=callgrind --callgrind-out-file=cg.out \
   target/profiling-fast/bot_ladder --a gang --b gang --games 6 --threads 1 \
   --seed 1 --decks fixed
-callgrind_annotate --auto=yes --threshold=99 cg.out > ann.txt   # per-line
-# Profile the binary *in place*. `profiling-fast` sets
-# `split-debuginfo = "unpacked"`, so the DWARF lives beside the binary in
-# `target/profiling-fast/deps/`; copying `bot_ladder` elsewhere to keep a
-# base around still counts instructions correctly but annotates every frame
-# as `???:0x…`. Keep the base by `git stash`ing the source instead.
-# Read the *file:function* rows, not just function totals: a function whose
-# cost sits in slice/iter/macros.rs and ptr/non_null.rs is walking, not
-# computing, and the fix is fewer walks. That is what found this run's -9 %.
-callgrind_annotate --auto=no --threshold=95 cg.out            # self cost
-callgrind_annotate --auto=no --inclusive=yes cg.out           # inclusive
-callgrind_annotate --auto=no --tree=caller cg.out             # who calls whom
-# the one that found this run's fix: callers of `malloc`, and the call
-# counts next to each. Self cost lies about allocation — a function with
-# 1.9 % self can be 35 % of every malloc in the program.
-callgrind_annotate --auto=no --tree=caller --threshold=99 cg.out > tree.txt
+# SYMBOLS: valgrind 3.22 in this image does **not** read bot_ladder's symbol
+# table — `valgrind -v` never prints "Reading syms from …/bot_ladder", so
+# every engine frame comes out `???:0x…`. It is not the copy-the-binary
+# hazard the older note here blamed, and not `split-debuginfo`, size, or lld
+# (all three were tested at the forty-eighth pass and all three symbolize
+# fine). Put the names back before annotating; the addresses are ELF vaddrs
+# plus valgrind's PIE base 0x108000, so the symbol table resolves them.
+python3 scripts/cg_symbolize.py cg.out target/profiling-fast/bot_ladder \
+  > cg.sym.out
+callgrind_annotate --auto=no --threshold=95 cg.sym.out        # self cost
+callgrind_annotate --auto=no --inclusive=yes cg.sym.out       # inclusive
+# `--auto=yes` per-line annotation stays dead (DWARF lives in `.dwo` files
+# valgrind can't read); read function totals and call counts instead.
+#
+# For any caller/callee table, use `cg_edges.py` rather than
+# `--tree`: `callgrind_annotate --tree` truncates a caller list at its
+# threshold and silently drops rows. Its `__rust_alloc` block printed 23 k of
+# the program's 967 k allocations and omitted `finish_grow` (200,972) and
+# `finalize_cast` (24,108) entirely.
+python3 scripts/cg_edges.py cg.sym.out                        # self costs
+python3 scripts/cg_edges.py cg.sym.out --callers __rust_alloc # the alloc table
+python3 scripts/cg_edges.py cg.sym.out --callees finalize_cast
+# Callers of `__rust_alloc`, ranked by *call count*, is the table that has
+# found the most: self cost lies about allocation — a function with 1.9 %
+# self can be 35 % of every malloc in the program. `cg_edges.py`'s own
+# "total Ir" line double-counts (edge costs are inclusive); the program total
+# comes from valgrind's own `I refs:` line.
 
 # behaviour preservation
 cargo test -p crabomination_tests --test core_rules golden_trace
