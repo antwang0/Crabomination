@@ -249,8 +249,8 @@ determinism          ok (all pairs split, both)
 allocations          967,377                  926,895
 peak_rss_mib         21.9                     21.5
 
-                     branch base (04282f2e)   final rebased tip
-I refs (callgrind)   1,625,264,320 (derived)  1,535,903,173   -5.498 %
+                     branch base (04282f2e)   final tip
+I refs (callgrind)   1,625,264,320 (derived)  1,533,436,329   -5.650 %
 decisions            196,220                  196,220         byte-identical
 turns_per_game       27.53                    27.53
 stalls / determinism 0 / ok (both)
@@ -901,13 +901,16 @@ and 48's number for the same commit — argv length; see **Baseline**.)
 | A | 1,645,831,476 -> 1,565,722,561 (**-4.867 %**) | `main_phase_action_with`'s twenty-four fallback generators go behind one board-facts mask |
 | B | 1,565,722,561 -> 1,560,268,509 (**-0.348 %**) | the three land blocks ask `can_player_play_land` once; a landless hand stops `pick_land_to_play`'s mana-base walks |
 | C | 1,540,962,924 -> 1,538,787,495 (**-0.141 %**) | the upkeep's keyword gate stops gathering to prove a negative — measured on the rebased branch, after (A) and (B) |
+| D | 1,535,903,173 -> 1,533,436,329 (**-0.161 %**) | the attack sim's spell layer asks whether there is a window before opening a freeze scope — measured after the second rebase |
 
 **(A) and (B) sum to `1,645,831,476 -> 1,560,268,509`, -85,562,967 /
 -5.198 %** on their own chain, and rebased onto pass 48 they read
 `1,628,220,915 -> 1,540,962,924`, -5.359 %. (C) was written after that rebase
 (-> 1,538,787,495). Three more of pass 48's commits then landed underneath,
 so the chain was rebased a second time and re-read end to end:
-**`1,625,264,320 -> 1,535,903,173`, -89,361,147 / -5.498 %.** `--bench --threads 3` invariants byte-identical at
+`1,625,264,320 -> 1,535,903,173`, -5.498 %. (D) then took it to
+**1,533,436,329**, so the pass on the branch is
+**`1,625,264,320 -> 1,533,436,329`, -91,827,991 / -5.650 %.** `--bench --threads 3` invariants byte-identical at
 every step: decisions **196,220**, turns_per_game 27.53, stalls 0
 (cap 0 / stuck 0 / draw 0), determinism ok. Suite 18,709 / 0 failed /
 5 ignored, golden traces included. **No encoding change; no net needs
@@ -997,6 +1000,18 @@ gate's own `keyword_grant_in_scope` costs ~1.3 M of it back. **The remaining
 measured moving those and it is **+0.30 %**, because their callers go on to
 `compute_battlefield()` in the same scope. Read what else the scope does
 after the question; that is the whole rule.
+
+**(D) is the same shape as (A), one level down: the question outside, the
+work inside.** `sim_spell_action` opened a freeze scope on every one of the
+attack search's **35,430** sim-loop iterations, and on ~23,200 of them
+`sim_spell_action_inner`'s three entry tests all missed and the closure
+returned `None` having read nothing layer-aware. The tests are plain field
+reads (`stack`, `step`, `blockers_declared`, `active_player_idx`,
+`player_with_priority`), so they move outside. **A scope is not free even when
+nothing reads the memo**: the `Unfreeze` drop alone is 6,127,240 Ir of self
+across the program's ~50,000 scopes, ~122 Ir a scope, and the push/pop is
+another ~60. The debug audit is `gated_pick!`'s — run the closure anyway and
+assert it returned nothing.
 
 ### Forty-eighth pass — the profile came back, and the gate that pays is the one whose gather nobody else reads
 
@@ -1736,10 +1751,10 @@ settings + debuginfo; system allocator, because valgrind replaces malloc and
 a mimalloc build would measure the interception), 1 thread, `--a gang --b
 gang --games 6 --seed 1 --decks fixed`.
 
-**The branch ends at 1,535,903,173 Ir.** The table below is a tip three
+**The branch ends at 1,533,436,329 Ir.** The table below is a tip four
 commits earlier (`cg.rb.out`, 1,540,962,924) — (C) moved 2.2 M of
-`frozen_effects` and pass 48's (F)/(G) 2.9 M more, so every row here holds to
-within 5 M. The forty-eighth pass's own table is kept
+`frozen_effects`, (D) 2.5 M of freeze-scope machinery and pass 48's (F)/(G)
+2.9 M more, so every row here holds to within 8 M. The forty-eighth pass's own table is kept
 under it because its Log rows chain to it — read that one as shares, not
 absolutes: it was taken on pass 48's pre-rebase chain. The forty-seventh's and
 forty-sixth's are kept below that for the same reason; the forty-fifth's was

@@ -29,15 +29,15 @@ structural fix kept outside that total (the extra-cast target walk takes one
 freeze scope — a null on `--decks fixed`, where the path is cold). Pass 49
 ran beside *both* and is rebased on top of them: on its own pre-rebase chain
 `1,645,831,476 -> 1,560,268,509`, **-5.198 %**, and on the branch
-`1,625,264,320 -> 1,535,903,173`, **-5.498 %** in three rows. Every chain is measured against its own base and
+`1,625,264,320 -> 1,533,436,329`, **-5.650 %** in four rows. Every chain is measured against its own base and
 every one is `--bench`-invariant-identical throughout (decisions **196,220**,
 turns 27.53, stalls 0, determinism ok). **Six builds were reverted across
 them and every one is written up in PERF's Log** — read them before
 re-proposing any.
 
-1. **Nothing is in flight. Branch tip `1,535,903,173` Ir** — pass 49 rebased
-   onto pass 48's final tip reads `1,625,264,320 -> 1,535,903,173`,
-   **-5.498 %** in three commits (its own pre-rebase chain: -5.198 %). Suite
+1. **Nothing is in flight. Branch tip `1,533,436,329` Ir** — pass 49 rebased
+   onto pass 48's final tip reads `1,625,264,320 -> 1,533,436,329`,
+   **-5.650 %** in four commits (its own pre-rebase chain: -5.198 %). Suite
    18,709 / 0 failed / 5 ignored over 22 binaries at that tip, golden traces
    included; `cargo clippy --workspace --all-targets` clean; `--bench`
    invariants byte-identical throughout (decisions **196,220**, turns 27.53,
