@@ -26,7 +26,9 @@ session landed pass 45's row (E) and the planeswalker-cash-out work
 underneath it mid-run, so pass 46's Ir chain is measured against its own base
 `11792f4c` and rebased on top of theirs.** Pass 45 finished at
 `1,810,336,693 -> 1,765,005,375`, -2.504 %. Pass 46:
-`1,771,223,960 -> 1,747,982,407`, **-1.312 %** in four commits — `spell_kind`
+`1,771,223,960 -> 1,747,982,407`, **-1.312 %** in four commits — re-measured
+after the rebase as `1,765,005,375 -> 1,740,811,994`, **-1.371 %**, so the two
+passes' rows compose — `spell_kind`
 built twice per cast and expensively (two `Vec`s for a colour question, a
 global `RwLock` + SipHash for one bool), a land tap deep-copying its whole
 effect tree, and Ward taking a gather per opposing target. Every step
@@ -77,7 +79,8 @@ effect tree, and Ward taking a gather per opposing target. Every step
    apt-get install -y libwayland-dev libasound2-dev libudev-dev
    libxkbcommon-dev`. Callgrind ~20 s and contention-immune, so a build in
    `target-probe` and a callgrind on `target/` overlap for free.
-7. **Green at the tip.** Suite green over 22 binaries, golden traces and the
+7. **Green at the tip (`9ef418d7`).** Suite **18,709 / 0 failed / 5
+   ignored** over 22 binaries, golden traces and the
    same-seed replay included; `cargo clippy --workspace --all-targets` clean.
    `--bench` invariants byte-identical across pass 46 (decisions 196,220,
    turns 27.53, stalls 0 / cap 0 / stuck 0 / draw 0, determinism ok). Pass

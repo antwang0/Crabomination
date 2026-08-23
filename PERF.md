@@ -223,11 +223,18 @@ games_per_s          138.16                   133.08          profiling-fast, 3 
 host_cpu             Intel(R) Xeon(R) Processor @ 2.10GHz (both)
 ```
 
+**Re-measured after the rebase onto pass 45's (E)**, `9ef418d7` built and run
+the same way: **1,765,005,375 -> 1,740,811,994, -24,193,381 / -1.371 %** —
+the two passes' rows compose, with no interaction either way. `--bench
+--threads 3` at that tip: decisions 196,220, turns_per_game 27.53, stalls 0
+(cap 0 / stuck 0 / draw 0), determinism ok, games_per_s 143.36.
+
 **The games/s pair disagrees in sign with the Ir and is not evidence of
 anything.** Four unalternated single readings on a `profiling-fast` binary,
 taken minutes apart on a shared routine box while a `cargo build` was
-finishing: the steps read 138.16 / 139.14 / 135.69 / 133.08 in commit order,
-i.e. a monotone drift that tracks the box, not the code. The file's own rule
+finishing: the steps read 138.16 / 139.14 / 135.69 / 133.08 in commit order
+and then **143.36 at the rebased tip**, i.e. drift that tracks the box, not
+the code. The file's own rule
 applies — **quote callgrind for anything under 5 %**, and do not diff a
 `profiling-fast` games/s against anything.
 
@@ -696,7 +703,9 @@ Base `11792f4c` re-read at **1,771,223,960** (the forty-fifth pass recorded
 | D | 1,748,645,990 -> 1,747,982,407 (**-0.038 %**) | Ward asks the presence gate before the gather |
 
 **The pass sums to `1,771,223,960 -> 1,747,982,407`, -23,241,553 /
--1.312 %.** `--bench --threads 3` invariants byte-identical at every step:
+-1.312 %**, and after the rebase onto pass 45's (E) the same four commits
+read **1,765,005,375 -> 1,740,811,994, -1.371 %** — they compose.
+`--bench --threads 3` invariants byte-identical at every step:
 decisions 196,220, turns_per_game 27.53, stalls 0 (cap 0 / stuck 0 / draw 0),
 determinism ok. No encoding change; no net needs retraining.
 
