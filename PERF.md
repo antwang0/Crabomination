@@ -199,6 +199,28 @@ it.
 
 ## Baseline
 
+**The forty-fifth pass did not run a `release` A/B; its row is callgrind plus
+the `--bench` invariant check, which is what this file asks for a sub-5 %
+change.** The committed `release` block below is therefore still the
+forty-fourth pass's and is unchanged. What was checked at the forty-fifth tip
+(`0ed1c847`), both binaries `profiling-fast --no-default-features` built and
+run in one sitting:
+
+```text
+                     base (8a384e5c)          tip (0ed1c847)
+I refs (callgrind)   1,810,336,693            1,781,215,786   -1.608 %
+decisions            196,220                  196,220         byte-identical
+turns_per_game       27.53                    27.53
+stalls               0 (0.00 %), cap 0 / stuck 0 / draw 0 (both)
+determinism          ok (all pairs split, both)
+games_per_s          104.89                   109.15          profiling-fast, 1 pair
+host_cpu             Intel(R) Xeon(R) Processor @ 2.10GHz (both)
+```
+
+The games/s pair is a single unalternated reading on a `profiling-fast`
+binary and is quoted only because it agrees in sign; **it is not comparable to
+the `release` numbers below** and the next run should not diff against it.
+
 **The forty-fourth pass is a paired `release` A/B over six alternated pairs.**
 Both sides built `release` + mimalloc from one tree, run alternating in one
 sitting on one box. Base is `c0f4e3b6` (the pass's own base), tip is
@@ -614,6 +636,83 @@ the table above is safe to compress:
 
 
 ## Log
+
+### Forty-fifth pass — one walk answers what eleven blocks kept asking, and the board epoch is refuted
+
+Base `8a384e5c` re-read at **1,810,336,693** (the forty-fourth pass recorded
+1,810,341,507 on another box; the 4,814 Ir is argv). All readings
+`profiling-fast --no-default-features`, callgrind, `--a gang --b gang --games
+6 --threads 1 --seed 1 --decks fixed`.
+
+| step | before -> after | what |
+|---|---|---|
+| A | 1,810,336,693 -> 1,781,215,786 (**-1.608 %**) | the CR 601 cast gate takes one board walk instead of eleven |
+| B | 1,781,215,786 -> 1,794,167,898 (**+0.727 %**) | **REVERTED** — (-18)'s board epoch, `Mutex` form |
+| B' | 1,781,215,786 -> 1,789,953,520 (**+0.490 %**) | **REVERTED** — the same memo, lock-free |
+
+**(A) `perform_action_inner`'s CR 601 gate is eleven blocks, and every one of
+them walked the whole battlefield.** Rule of Law / the scheme lock / Mana Maze
+/ Cornered Market / Single Combat / Iona / Void Winnower / Lavinia / Damping
+Engine / Angelic Arbiter / City of Solitude / the two own-turn locks. Between
+them they looked the cast spell up **six times** through `find_card_anywhere`,
+which strides the battlefield, the stack and both graveyards before it reaches
+a card in hand — measured at **38,200 calls from `perform_action_inner`, which
+is exactly 5 x 7,640 cast attempts**, plus 7,640 more inside
+`name_locked_by_a_permanent`. `same_team` took **179,032 calls from the `any`
+closures** those walks run, and `damping_engine_locks` (4.84 M) asked "who is
+ahead on permanents" — `players + 1` battlefield counts — *before* asking
+whether a Damping Engine exists.
+
+`cast_lock_scan` is one battlefield walk plus one command-zone walk returning
+a `u32` of presence bits; `action_lock_rejection` gates each block on its bit
+and looks the cast card up once, only when a bit that reads it is set. **A bit
+is a pure over-approximation** — the block it gates still runs its own
+controller/team/attachment tests — so it can only skip work. Passing
+`u32::MAX` runs every block ungated, and the caller `debug_assert_eq!`s the
+two against each other, so the 18.7 k-test suite audits the mask on every
+action it exercises. `--bench` invariants byte-identical either side.
+
+**(B) THE BOARD EPOCH IS BUILT, ITS KEY IS SOUND, AND IT LOSES. Do not build
+it again.** (-18) asked for this for three passes and the design was right in
+every part except the one that matters:
+
+* `CowBox` gets a `writes: u64` bumped in `deref_mut` and in the `&mut`
+  `IntoIterator` — the only two mutation entry points, so the count is
+  complete.
+* The five `*_in_scope` presence predicates (`card_type_change`,
+  `land_type_change`, `creature_type_change`, `pt_reduction`, the battlefield
+  leg of `ability_strip`) read **nothing but** the battlefield's card
+  definitions and instance flags and the stored `continuous_effects` — no
+  `evaluate_predicate`, no `active_static`, no life total — so
+  `(battlefield.writes(), continuous_effects.writes())` is a *complete* key
+  for them. That is checked by reading four free functions, not by hoping.
+* A `debug_assert` recomputed and compared on every hit. **The whole 18,708-
+  test suite ran green with it armed**, so the key is not merely plausible.
+
+It still measured **+0.727 %** behind a `Mutex` and **+0.490 %** lock-free
+(one relaxed `AtomicU64` per slot, `#[inline]`, key packed as
+`bf<<31 | fx` shifted up one bit with the value in bit 0). Two reasons, and
+both generalise:
+
+1. **The counter is not free where the writes are.** `Arc::make_mut` runs
+   **945,272+ times** over six games and almost all of it is `CardInstance`'s
+   own handle — nothing to do with the battlefield — so every one of those
+   pays the increment for a memo that will never read it. ~3-4 M Ir before the
+   memo does anything.
+2. **A ~700 Ir predicate is too cheap to memoize behind a call.** These five
+   were *inlined* into their callers; behind a closure and a slot lookup they
+   stop being, and the hit rate is not high enough to pay that back —
+   `card_type_change_in_scope` alone is asked twice per `activate_ability_inner`
+   with a mana payment (i.e. battlefield writes) in between.
+
+**The lesson for the file: an epoch pays only where the memoized answer costs
+much more than a call, and where the writes it counts are the writes it
+cares about.** Neither held here. Both would hold for the *gather* (~1,900 Ir,
+53 k of them) — and the gather is exactly the thing whose key is **not**
+enumerable, because `gather_continuous_effects_inner` reads life totals
+(Aettir and Priwen), hand sizes (Kagemaro's Clutch), graveyard contents,
+`statics_ignored_this_turn` and `evaluate_predicate` through `active_static`'s
+`WhileCondition`. (-18) is closed both ways.
 
 ### Forty-fourth pass — the round-closing pass stops buying a restore nobody reads
 
@@ -1217,10 +1316,30 @@ settings + debuginfo; system allocator, because valgrind replaces malloc and
 a mimalloc build would measure the interception), 1 thread, `--a gang --b
 gang --games 6 --seed 1 --decks fixed`.
 
-**The forty-fourth pass reads 1,810,341,507 Ir at its tip.** Fresh table;
-the forty-second's below is kept because its Log rows chain to it, and the
-thirty-ninth's and fortieth's were dropped when their Log entries became
-index rows (`git log -- PERF.md` has them).
+**The forty-fifth pass reads 1,781,215,786 Ir at its tip.** Fresh table
+below; the forty-fourth's and the forty-second's are kept under it because
+their Log rows chain to them, and the thirty-ninth's and fortieth's were
+dropped when their Log entries became index rows (`git log -- PERF.md` has
+them).
+
+| row | at the 45th tip | note |
+|---|---|---|
+| `pick_attacks_scored` inclusive | **944,997,078 / 52.20 % over 438** | still the largest subtree. `simulate_attack_outcome_once` 937,050,956 / 51.76 % over 1,170; `sim_step` 541,605,941 / 29.92 % over 36,442. Candidate (-21) |
+| **`cast_spell` inclusive** | **526,228,783 / 29.07 % over 7,640** | **69,000 Ir per cast attempt, and it had never been read from the top.** `cast_spell_with_convoke` 523,041,911 / 28.89 %, `try_pay_after_snapshot_mode` 281,184,997 / **15.53 % over 8,656**, `auto_tap_for_cost_inner` 262,553,222 / 14.50 % over 18,340. New candidate (-24) |
+| `perform_action_inner` inclusive | 804,162,101 / **44.42 %** over 70,418 | `perform_action` reaches it 28,434x |
+| `would_accept` inclusive | 337,688,158 / **18.65 % over 5,260** | 64,200 Ir a probe, of which the `GameState` clone+drop is ~3,500. The bot's affordance filter *is* a cast |
+| `spec_from_iter_nested` inclusive | 361,876,791 / **19.99 %** | the `.collect()` total |
+| `advance_step` inclusive | 278,527,348 / 15.39 % over 22,892 | |
+| `dispatch_triggers_for_events` inclusive | 122,645,996 / **6.77 %** over 70,418 | self ~71 M / 3.9 % across its five `file:function` rows — the largest engine function left. `dispatch_board_scan` 24,561,076 over 53,838 |
+| `gather_continuous_effects_inner` incl | 92,282,090 / **5.10 %** | **48,466 gathers**: `computed_permanent` 25,736 (50,225,793 / 2.77 %), `frozen_effects` 17,702 (31,816,471 / 1.76 %), `compute_permanents` 3,594, `check_state_based_actions` 1,434 |
+| `compute_permanent_pass` | 58,542,057 / **3.23 % over 101,968** | from `compute_permanent`; 574 Ir a pass |
+| allocator | `_int_free` 69.1 M / 3.82 %, `memcpy` 58.2 / 3.21, `malloc` 50.4 / 2.78, `_int_malloc` 33.3 / 1.84, `free` 31.2 / 1.72 | ~13.4 % over **1,112,945 allocations**. See (-23)'s table |
+| `card_can_grant_keyword` | 28.3 M / 1.56 % over 648,698 | candidate (-11), demoted there |
+| `card_type_change_in_scope` | **22.1 M / 1.22 %** | ~30 k calls at ~736 Ir; two of them per `activate_ability_inner`. A memo on it is **refuted** — see the 45th pass's Log |
+| `find_card_anywhere` | ~20.2 M / 1.12 % over 45,840 | **-38,200 of those calls at the 45th tip**; the row is pre-(A) |
+| `Keyword::eq` | 12,310,142 / 0.68 % | a payload-carrying enum compared by `Vec::contains` all over. No entry yet |
+
+**The forty-fourth pass reads 1,810,341,507 Ir at its tip.**
 
 | row | at the 44th tip | note |
 |---|---|---|
@@ -1282,6 +1401,26 @@ write that changed nothing. None of the five was on this list, and none shows
 up as an expensive function — they land in `make_mut`, `memcpy` and
 `_int_malloc`.
 
+**(-24) `cast_spell` is 29.07 % of the program over 7,640 attempts — 69,000
+Ir each — and it has never been read from the top.** New at the forty-fifth
+pass; the cast gate's -1.608 % came off the *outside* of it.
+
+| row | Ir | % | calls |
+|---|---|---|---|
+| `cast_spell` inclusive | 526,228,783 | 29.07 | 7,640 |
+| -> `cast_spell_with_convoke` | 523,041,911 | 28.89 | 7,640 |
+| -> `try_pay_after_snapshot_mode` | 281,184,997 | 15.53 | 8,656 |
+| -> `auto_tap_for_cost_inner` | 262,553,222 | 14.50 | 18,340 |
+| -> `finalize_cast` | 121,353,406 | 6.70 | 7,172 |
+| `would_accept` inclusive | 337,688,158 | 18.65 | 5,260 |
+
+**Half of a cast is paying for it**, and (-12) already owns that half. What is
+new here is the denominator: 7,640 cast *attempts* for 7,172 finished casts,
+so the bot's filtering is already tight and the cost is the real payment path,
+not rejected probes. `would_accept`'s 64,200 Ir a probe is the same cast:
+the `GameState` clone and drop are ~3,500 of it, so **the probe is not the
+clone, it is the cast** — do not go after the clone.
+
 **(-23) The class the forty-fourth pass's (C) and (D) came from, and it is
 not exhausted: an allocation on a path every action takes, for a mechanic the
 board does not have.** (C) was `vec![false; 2]` 53,838 times for The Ring
@@ -1289,17 +1428,48 @@ board does not have.** (C) was `vec![false; 2]` 53,838 times for The Ring
 (-0.227 %). **How to find the next one** — `--tree=caller` on the allocator
 entries and read the *call counts*, not the Ir:
 
-| site | calls | Ir | % |
+**The whole allocator caller table at the forty-fifth tip, by call count.**
+1,112,945 allocations; `__rust_alloc` is 84,648,612 / 4.68 % inclusive and the
+free side 117,236,275 / 6.48 %.
+
+| direct caller of `__rust_alloc` | allocs | Ir | % |
 |---|---|---|---|
-| `grow_one` (all) | 224,927 | — | 2.19 |
-| `finalize_cast` growths | 28,878 | — | 0.49 |
-| `Vec::push_mut` growths | 42,354 | — | 0.31 |
-| `cast_candidates` collect | 7,238 | 103,486,676 | 5.70 |
-| `check_state_based_actions` collects | 55,720 | 34,969,729 | 1.93 |
-| `mana_source_table` collect | 7,550 | 41,082,419 | 2.26 |
-| `compute_permanent_pass` collects | 95,596 | 8,192,487 | 0.45 |
-| `declare_attackers_banded` collects | 33,950 | 8,023,922 | 0.44 |
-| `gather_continuous_effects_inner` collects | 79,228 | ~6,500,000 | 0.36 |
+| `RawVecInner::finish_grow` | 212,245 | 17,256,045 | 0.95 |
+| `Vec::from_iter` (nested) | 186,820 | 13,304,418 | 0.73 |
+| `Arc::clone_from_ref_in` | 152,062 | 15,001,917 | 0.83 |
+| `computed_permanent` | **96,544** | 7,638,352 | 0.42 |
+| `GameState::clone` | 79,204 | 4,538,793 | 0.25 |
+| `gather_continuous_effects_inner` | 40,704 | 3,311,572 | 0.18 |
+| `Vec::clone` | 38,748 | 4,229,994 | 0.23 |
+| `RawTable::clone` | 29,428 | 1,812,606 | 0.10 |
+| `Box::clone` | 26,386 | 1,458,050 | 0.08 |
+| `finalize_cast` | 24,108 | 1,711,585 | 0.09 |
+| `ManaPayload::clone` | 19,306 | 1,059,282 | 0.06 |
+| `RawTable::reserve_rehash` | 19,280 | 1,084,448 | 0.06 |
+| `frozen_effects` | 17,702 | 1,272,260 | 0.07 |
+| `Vec::from_iter` (in-place) | 16,230 | 942,347 | 0.05 |
+| `can_afford_in_state_with` / `can_afford_from` / `relax_cost_colors` | 12,986 **each** | ~2,300,000 | 0.13 |
+| `ManaCost::reduce_generic` | 7,550 | 843,761 | 0.05 |
+
+`can_afford_from` clones the printed `ManaCost` on **every** call — three
+allocations per affordability question, and the clone only exists so
+`reduce_generic` can mutate. A `Cow` there is worth ~2 M and is the cheapest
+unclaimed row on this table.
+
+**And `grow_one`'s own callers, 224,927 growths / 39,576,235 / 2.19 %:**
+
+| site | growths | Ir |
+|---|---|---|
+| `Vec::push_mut` | 42,354 | 5,684,749 |
+| `finalize_cast` | 28,878 | 8,899,235 |
+| `advance_step` | 22,892 | 2,747,040 |
+| `gather_continuous_effects_inner` | 13,730 | 4,498,998 |
+| `declare_blockers` | 13,122 | 2,142,128 |
+| `dispatch_board_scan` | 11,654 | 1,398,480 |
+| `auto_tap_for_cost_inner` | 7,550 | 886,420 |
+| `effective_mana_abilities_into` | 7,490 | 899,697 |
+| `compute_permanent_pass` | 6,338 | 2,492,443 |
+| `computed_permanent` | 5,450 | 1,270,798 |
 
 A count in the tens of thousands on a six-game workload is one per action or
 one per permanent per action; that is the tell. The Ir column lies here — a
@@ -1307,8 +1477,8 @@ one per permanent per action; that is the tell. The Ir column lies here — a
 then read the source**. `alloc_zeroed` is now zero calls; it was the cheapest
 possible find and there is only ever one of those.
 
-**(-22) The gather's caller table, kept because (-18) needs it and the
-`frozen_effects` half is not (-18)'s.** 53,806 continuous-effect gathers on
+**(-22) The gather's caller table — now the *only* live entry on the gathers,
+because (-18) is refuted and scope widening is the one route left.** 53,806 continuous-effect gathers on
 the forty-fourth pass's tip at ~1,900 Ir each, ~102 M / 5.5 %:
 
 | caller | Ir | % | gathers |
@@ -1368,70 +1538,42 @@ batches, so moving it out costs an empty-`Vec` clone (free) and buys ~1.4 M.
 move-out would trade ~2.3 M for a `Vec` clone per checkpoint — probably a
 wash, measure before taking it.
 
-**(-18) THE BOARD EPOCH — three candidates, one missing primitive, `4.44 %`
-between them, and two of the three are immune to the technique currently
-eating the first. Measured at `643330b2` (1,838,526,014) — the absolute Ir
-is what matters here; the percentages drift up as later commits shrink the
-denominator without touching these rows.**
+**(-18) THE BOARD EPOCH — BUILT, MEASURED, REFUTED (forty-fifth pass). Do
+not build it again; read the Log entry before proposing anything shaped like
+it.** The write counter on `CowBox::deref_mut`, the memo reachable from
+`&self`, the recompute-and-compare `debug_assert` — all of it was written,
+all of it was sound (the 18,708-test suite ran green with the audit armed),
+and it measured **+0.727 %** behind a `Mutex` and **+0.490 %** lock-free.
 
-```text
-                                       Ir           %      calls   at 1,857 M
-computed_permanent's unscoped gather   50,062,699   2.72 %  25,736    3.42 %
-dispatch_board_scan                    24,561,076   1.34 %  53,838    1.32 %
-permanents_with_abilities_removed       7,030,646   0.38 %  53,838    0.39 %
-                                                    4.44 %
-```
+The two reasons generalise and are the useful part:
 
-**The right-hand column is the same three rows one commit earlier, and it is
-the argument for this entry.** Widening a freeze scope (`643330b2`,
--1.024 %) took the gather row from 3.42 % to 2.72 % — 32,510 gathers down to
-25,736 — and left `dispatch_board_scan` **byte-identical at 24,561,076** and
-`permanents_with_abilities_removed` flat. **Scope widening only reaches the
-gather.** Rows two and three are not layer-gather sites at all; they are
-whole-board walks with no scope to widen, so they will still be sitting there
-at 1.72 % when the scope work runs out.
+1. **The counter is not free where the writes are.** `Arc::make_mut` runs
+   945,272+ times over six games, almost all of it `CardInstance`'s own
+   handle. Every one pays the increment for a memo that never reads it.
+2. **A ~700 Ir predicate inlined into its caller is too cheap to memoize
+   behind a call.** The hit rate does not pay back the lost inlining.
 
-Every one of them answers a question about the **board**, not about its
-caller's arguments, and every one recomputes it from scratch on each call
-because nothing readable from `&self` can say "the board has not changed
-since last time". `frozen_effects` is the existing partial answer and it
-works — inside a `with_frozen_layers` scope the gather is memoized — but a
-scope is a *lexical* device and none of these three sites is inside one.
-This file has said three times that "a board-level memo with an epoch is the
-shape, and nothing on `&self` can hold it today". **That is no longer true,
-and here is why.**
+**And the thing that *would* pay — the gather, ~1,900 Ir x 48,466 — is
+exactly the one whose key is not enumerable.** `gather_continuous_effects_inner`
+reads life totals (Aettir and Priwen's base P/T), hand sizes (Kagemaro's
+Clutch), graveyard contents, `statics_ignored_this_turn`, and
+`evaluate_predicate` through `active_static`'s `WhileCondition` at ~30 sites.
+This file said three times that "a board-level memo with an epoch is the
+shape". It is not. **The remaining route to those gathers is lexical: widen
+freeze scopes, site by site, each one measured** — the forty-fourth pass's (B)
+took 1.02 % from two of them and two more written the same day read
+-11,778 Ir, i.e. nothing.
 
-**Every board mutation already goes through one chokepoint: `CowBox`'s
-`DerefMut`.** The battlefield, `continuous_effects`, `cold` and each
-`PlayerData` are `CowBox`es; `iter_mut`, `battlefield_find_mut`, indexing —
-all of them reach `Arc::make_mut` through `deref_mut`. So a write counter on
-the handle is a complete record of writes:
-
-```rust
-pub struct CowBox<T: Clone>(Arc<T>, u64);
-fn deref_mut(&mut self) -> &mut T { self.1 += 1; Arc::make_mut(&mut self.0) }
-```
-
-The board key is then those counters plus the handful of non-`CowBox` scalars
-the layer gather reads (`active_player_idx`, `turn_number`, `step`, and
-whatever `active_static`'s wrappers touch — enumerate them, do not guess).
-A memo keyed on it, held behind `layer_freeze`'s existing `Mutex` so it is
-reachable from `&self`, is sound: an unchanged key proves no zone was
-written.
-
-**Cost of the key: one increment inside a function that is already doing
-`Arc::make_mut`.** Cost of a miss: nothing, it recomputes.
-
-**The failure mode is the dangerous one — a stale answer is a silently wrong
-rules result, not a crash** — so build it with the device this file already
-trusts: a `debug_assert` that recomputes and compares on every hit. The
-18.7 k-test suite and the golden traces then audit the key on every board
-shape they exercise, the same way the forty-third pass's checkpoint skip is
-audited by a `debug_assert` on the serialized state.
-
-**Take this after (-13) is finished, and expect it to be the pass after
-that.** It subsumes (-11)'s shape (ii), (-16)'s `dispatch_board_scan` half
-and (-9)'s "have the gate and the resolver share one scope".
+What is left of the entry's *numbers*, still unpaid and now without a plan:
+`dispatch_board_scan` 24,561,076 / 1.36 % over 53,838 and
+`permanents_with_abilities_removed` over the same 53,838 are whole-board walks
+with no scope to widen, and `card_type_change_in_scope` is 22.1 M / 1.22 %
+over ~30 k calls at ~736 Ir. **Do not reach for fusion there either** —
+(-8b) is the same site, and hoisting it into `sba_board_scan` (a walk that
+was already happening) read **+0.77 %**. Between (-8b) and this entry the
+site has now lost to fusion three times and to a memo twice; the only shape
+nobody has costed is asking it *less often* (`activate_ability_inner` asks it
+twice per activation and could ask once), which is worth at most half of it.
 
 **(-16) `dispatch_triggers_for_events` — 141,288,450 / 7.61 % at the
 forty-third pass's tip, and the entry's own open question is now answered.**
@@ -1651,10 +1793,12 @@ arithmetic still holds *there*, where the four walks were over
 times, not 10,670. Cost the body against the iteration before assuming
 fusion pays; on the evidence here it usually does not.
 
-**What is actually left at this site**, for whoever wants the 1.0 %: not
-fusion. Either make the *answer* cheaper to reach (the predicate itself is
-only 2.5 M of the 21.8 M — the rest is the walk, so a board-level
-memo/epoch is the shape, not a re-arrangement), or drop the question:
+**What is actually left at this site — and it is now less than it was.** Not
+fusion, and (forty-fifth pass) **not a memo either**: the board-level
+memo/epoch this paragraph asked for was built against exactly this predicate
+and measured **+0.490 %** lock-free; see (-18). Four losses at one site.
+The remaining shapes are: ask it less often (`activate_ability_inner` asks it
+twice per activation), or drop the question:
 the gate only needs it to decide whether non-creatures join the death legs,
 and a permanent that is not a printed creature contributes nothing unless
 something animates it *and* the animation leaves it at ≤ 0 toughness.

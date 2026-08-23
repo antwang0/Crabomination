@@ -19,88 +19,65 @@ reference and want their own triage pass):
 **FIRST COMMAND OF EVERY RUN:** `git fetch origin claude/modern_decks &&
 git checkout -B claude/modern_decks origin/claude/modern_decks`. The routine
 container clones **`main`**, ~2,000 commits behind and missing the ML crates,
-`PERF.md`, `crabomination_tests` and the profiling profiles. **Fetch again
-before every commit** — a second session committed to this branch throughout
-2026-08-23 and four rebases were needed.
+`PERF.md`, `crabomination_tests` and the profiling profiles.
 
-**Pass 44 ran from two sessions concurrently. PERF's Log is the record — this
-section carries only the decisions.** `1,911,861,368 -> 1,810,341,507`,
-**-5.310 % Ir**, and **`155.01 -> 161.43 games/s, +4.14 %`** on six alternated
-`release` + mimalloc pairs (6/6 positive; the gap to -5.31 % is the two
-allocation rows, which callgrind's system allocator over-counts). Four rows:
-the round-closing `PassPriority` drops its checkpoint (**-2.842 %**), the
-target scans take one freeze instead of one per candidate (**-1.024 %**), the
-trigger dispatcher stops allocating for a Ring nobody wears (**-1.308 %**),
-two per-action walks stop allocating for statics nobody controls (-0.227 %).
-The tip lands **0.003 %** from the ceiling pass 43 measured for skipping
-*every* checkpoint — same number, the transactional guarantee intact.
+**Pass 45: one row banked and one three-pass-old candidate killed.**
+`1,810,336,693 -> 1,781,215,786`, **-1.608 % Ir** — the CR 601 cast gate was
+eleven blocks each taking its own whole-board `static_abilities` walk, with
+six `find_card_anywhere` lookups of the cast spell between them; it is one
+walk and one lookup now, gated by a presence mask whose `u32::MAX` reading is
+the ungated original and is `debug_assert_eq!`d against on every action.
 
-1. **Finish (-13).** The ceiling is -5.47 % and **-2.842 % is banked**. The
-   method is the point and it is reusable: a transitive closure over the
-   engine's 149 `Result` functions, not a read of the signatures — reading
-   signatures is what made this file wrongly call it uncapturable. The script
-   is committed — `scripts/fallibility_closure.py <fn>` — and **it has already
-   been run at the other shapes: `play_land` reaches 6 `Result` functions and
-   2 raise (but land drops are ~660 of the 8,266, so it buys nothing);
-   `submit_decision` reaches 137 and 70 raise.** **The remaining 8,266 clones
-   are the half that earns its keep**: casts,
-   activations and combat declarations pay mana (or an attack tax) and *then*
-   fail, which is the partial-mutation family Phase 1 exists for. Run the
-   closure at `CastSpell` / `ActivateAbility` / `PlayLand` / `SubmitDecision`
-   and expect most arms to keep the checkpoint.
-2. **Then (-18), the board epoch — 4.44 %, and 1.72 % of it is immune to the
-   freeze-scope work.** PERF has the design: every board write already funnels
-   through `CowBox::deref_mut`, so a write counter there is a complete record
-   and `layer_freeze`'s `Mutex` makes it readable from `&self`. A stale answer
-   is a silently wrong rules result — build it with a recompute-and-compare
-   `debug_assert`. (-22) has the gather caller table it needs.
-3. **(-21) is the biggest unread thing in the profile: the bot's attack search
-   is 52 % of the program.** `simulate_attack_outcome_once` is 825,854 Ir per
-   candidate over 1,170 candidates; `sim_step` is 28.91 % over 35,316. Never
-   profiled from the top before this run. **(-23)** is the class rows (C)/(D)
-   came from and is not exhausted: rank the allocator caller table by *call
-   count*, not Ir — `cast_candidates` (7,238 collects, 5.70 %) leads it.
-4. **The pass's rule, now four data points:** *gate the block that allocates,
-   not the loop that scans.* A gate over a short-circuiting `any` on an empty
-   `Vec` is worth nothing here; a gate in front of a block that builds a `Vec`
-   / `HashSet` / `HashMap` pays every time — (C) was a two-byte
-   `vec![false; 2]` built 53,838 times and it was worth 1.3 %.
-5. **Do not rebuild these.** The `GameState` husk pool with a hand-written
-   `clone_from` (**+2.60 %** despite -100,388 allocations). Gating
-   `do_untap`'s six walks (**+0.0001 %**). Narrowing `GameState` (175 of 195
-   fields are `Copy`, no drop glue). **Splitting the big engine files for
-   build time** — a 36,684-line file and a 266-line one both rebuild in
-   8.5-8.7 s. The per-definition keyword-grant bit ((-11), re-costed at
-   ~0.3 % and unsound as a lazy cache — ~20 sites mutate a definition in place
-   through `Arc::make_mut(&mut c.definition)`). Two further freeze hoists
-   (bot.rs alt-targets, actions.rs `ChooseTarget`): -11,778 Ir, i.e. nothing.
-6. **Env.** No `cargo-nextest`; `cargo test -p crabomination -p
-   crabomination_tests` is the gate (~25 min). `profiling-fast` engine rebuild
-   ~3 min warm / ~10 min cold, `release` ~17-22 min, `overflow` ~8.5 min,
-   callgrind ~3 min and contention-immune. Workspace clippy needs `apt-get
-   update && apt-get install -y libwayland-dev libasound2-dev libudev-dev
-   libxkbcommon-dev` or the client fails on `wayland-sys`. **`cp -al target
-   target-probe` hardlinks the binary already there — `rm
-   target-probe/profiling-fast/bot_ladder` before building a candidate in it.**
-   `rm -rf target/debug/incremental` reclaims several GB when disk gets tight.
-7. **Green at the tip** (both sessions' work verified together): suite
-   **18,708** / 0 failed over 20 binaries, golden traces and the same-seed
-   replay included; `cargo clippy --workspace --all-targets` clean across all
-   eight crates; `--bench` invariants byte-identical (decisions 196,220, turns
-   27.53, stalls 0, determinism ok). **The base and tip `release` binaries
-   print byte-identical output over 3,400 games and 17 archetypes**
-   (`--decks all --games 200 --paired`) — a stronger behaviour proof than the
-   traces, and it covers both sessions' commits. `overflow` profile, seeds
-   11/12/13: **20,400 games, 20,396 decided, no panic, no wrap** (the 4
-   undecided are seed 11's rules draws). **No encoding change — no net needs
-   retraining as of this tip.** Absolute games/s is **not** comparable across
-   routine boxes; quote the paired A/B and let callgrind arbitrate.
-8. **Trackers.** TODO ~1.0k, ROADMAP 0.66k, **PERF folded 3.09k -> ~2.5k**
-   (Baseline's superseded anchors and the Log's passes 39-41 and 39-40 profile
-   tables to index tables). Fold the Log again past ~2.8k.
-   `scripts/find_data_tests.sh` works again and marks sacred hits `[CR]`:
-   ~174 pure-data tests remain, wanting a table-driven definition audit per
-   set. Not a build-time item — see (5).
+1. **(-18) IS DEAD — read its entry before proposing anything shaped like
+   it.** The board epoch was fully built (a `writes` counter on
+   `CowBox::deref_mut`, a lock-free per-slot memo, a recompute-and-compare
+   `debug_assert` that ran green across all 18,708 tests) and measured
+   **+0.727 %** with a `Mutex` and **+0.490 %** lock-free. Two reasons, both
+   general: `Arc::make_mut` runs 945 k times over six games and almost none
+   of it is the battlefield, so every write pays a counter no memo reads;
+   and a ~700 Ir predicate the compiler had *inlined* is too cheap to
+   memoize behind a call. The thing that would pay — the gather, 1,900 Ir x
+   48,466 — is exactly the one whose key is not enumerable.
+2. **So the gathers are a lexical problem now: widen freeze scopes, one site
+   at a time, each measured.** 25,736 of the 48,466 gathers are unscoped
+   `computed_permanent` calls (2.77 %), and they are inside the *engine*, not
+   the bot: `next_action` already holds a scope, but every `would_accept`
+   probe clones the state and `LayerFreeze::clone` is `default()`, so the
+   whole action runs unfrozen. Pass 44's (B) is the template; two sites
+   written the same day read -11,778 Ir, so measure each.
+3. **New and unread: `cast_spell` is 29.07 % of the program** over 7,640
+   attempts at 69,000 Ir each, and `would_accept` is 18.65 % over 5,260
+   probes at 64,200 Ir — **of which the state clone is ~3,500, so the probe
+   is the cast, not the clone.** Half of it is (-12)'s `auto_tap`. See (-24).
+4. **Cheapest unclaimed row on the allocator table: `can_afford_from` clones
+   the printed `ManaCost` on every call** (12,986 x 3 allocations, ~2 M) so
+   `reduce_generic` can mutate it; a `Cow` removes two of the three. PERF's
+   (-23) now carries the whole 1,112,945-allocation caller table by *count*
+   and `grow_one`'s by count, which is what that entry asks you to rank by.
+5. **Do not rebuild these.** The board-presence epoch (1). The `GameState`
+   husk pool (+2.60 %). Gating `do_untap`'s six walks (+0.0001 %). Narrowing
+   `GameState`. Splitting the big engine files for build time. The
+   per-definition keyword-grant bit ((-11), ~0.3 % and unsound as a cache).
+6. **Env.** No `cargo-nextest`; `cargo test -j 2 -p crabomination -p
+   crabomination_tests` is the gate (~20 min incl. build). `profiling-fast`
+   cold ~35 min, warm engine-only ~13 min; callgrind ~25 s and
+   contention-immune, so a build in `target-probe` and a callgrind on
+   `target/` overlap for free. Workspace clippy needs `apt-get update &&
+   apt-get install -y libwayland-dev libasound2-dev libudev-dev
+   libxkbcommon-dev`. **`rm target-probe/profiling-fast/{bot_ladder,deps/*crabomination*}`
+   before building a candidate there** — `cp -al` hardlinks them to
+   `target/`'s and rustc truncate-writes in place.
+7. **Green at the tip.** Suite **18,708 / 0 failed** over 22 binaries, golden
+   traces and the same-seed replay included. `--bench` invariants
+   byte-identical base vs tip (decisions 196,220, turns 27.53, stalls 0,
+   determinism ok). **No encoding change — no net needs retraining as of this
+   tip.** Absolute games/s is not comparable across routine boxes; quote
+   callgrind for anything under 5 %.
+8. **Trackers.** TODO ~1.0k, ROADMAP 0.66k, PERF ~2.67k (fold the Log again
+   past ~2.8k — the forty-second pass's profile table is the next thing to
+   index). `scripts/find_data_tests.sh` reads **199 pure-data tests, 25 of
+   them `[CR]`-marked and sacred**; the other 174 want a table-driven
+   definition audit per set. Not a build-time item.
 
 ## Environment note
 
