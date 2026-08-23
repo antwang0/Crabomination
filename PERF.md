@@ -228,6 +228,8 @@ the same way: **1,765,005,375 -> 1,740,811,994, -24,193,381 / -1.371 %** —
 the two passes' rows compose, with no interaction either way. `--bench
 --threads 3` at that tip: decisions 196,220, turns_per_game 27.53, stalls 0
 (cap 0 / stuck 0 / draw 0), determinism ok, games_per_s 143.36.
+**Pass 46's own (E) then takes it to 1,735,997,491**, so the branch reads
+**1,765,005,375 -> 1,735,997,491, -1.643 %** across this pass.
 
 **The games/s pair disagrees in sign with the Ir and is not evidence of
 anything.** Four unalternated single readings on a `profiling-fast` binary,
@@ -701,10 +703,13 @@ Base `11792f4c` re-read at **1,771,223,960** (the forty-fifth pass recorded
 | B | 1,761,960,002 -> 1,753,904,387 (**-0.457 %**) | a land tap stops deep-copying its ability's effect tree |
 | C | 1,753,904,387 -> 1,748,645,990 (**-0.300 %**) | `spell_kind`: one colour read, no `Vec`, no global lock |
 | D | 1,748,645,990 -> 1,747,982,407 (**-0.038 %**) | Ward asks the presence gate before the gather |
+| — | *rebase onto pass 45's (E)*; the same four commits re-read **1,765,005,375 -> 1,740,811,994, -1.371 %** | they compose |
+| E | 1,740,811,994 -> 1,735,997,491 (**-0.277 %**) | the bot's affordability question stops allocating twice per card |
+| — | 1,740,811,994 -> 1,740,704,526 (**-0.006 %**) | **REVERTED** — short-circuiting `continue_trigger_ordering`'s copy, built on a misread allocator table |
 
 **The pass sums to `1,771,223,960 -> 1,747,982,407`, -23,241,553 /
--1.312 %**, and after the rebase onto pass 45's (E) the same four commits
-read **1,765,005,375 -> 1,740,811,994, -1.371 %** — they compose.
+-1.312 %** on its own chain, and `1,765,005,375 -> 1,735,997,491`,
+**-29,007,884 / -1.643 %** on the branch with the rebase and (E) included.
 `--bench --threads 3` invariants byte-identical at every step:
 decisions 196,220, turns_per_game 27.53, stalls 0 (cap 0 / stuck 0 / draw 0),
 determinism ok. No encoding change; no net needs retraining.
@@ -749,6 +754,14 @@ resolution by reference and the only change needed was
 did with it. Three call sites. The mutation corner is unchanged too:
 `Arc::make_mut` on a card's definition mid-resolution leaves the held `Arc`
 pointing at the pre-mutation tree, exactly as the clone did.
+
+**(E) is the forty-fifth pass's (D) applied one call further out.**
+`can_afford_in_state_with` runs once per hand card per bot tick and
+allocated a `ManaCost` twice on the way in, both for mechanics the board does
+not have: `card.definition.cost.clone()` so the Leech cycle's coloured
+surcharge had somewhere to `extend` into, and `relax_cost_colors`'
+`.into_owned()` on a `Cow` that is `Borrowed` on every board without a
+Lattice. 12,986 each, 2.5 % of the program's allocations, **-0.277 %**.
 
 **(D) is a small row with a useful negative result.**
 `push_ward_triggers_for_targets` took a whole-game gather per opposing
@@ -1437,22 +1450,45 @@ free side 117,236,275 / 6.48 %.
 (the forty-fifth pass's (D)): the clone only existed so `reduce_generic` could
 mutate, and a `Cow` borrows on the path most costs take.
 
-**Refreshed at the forty-sixth tip — 1,021,777 allocations, down from
-1,112,945 — and two rows in it are new and unexplained.** By *named engine*
-caller, by call count:
+**Refreshed at the forty-sixth tip: 1,021,777 allocations, down from
+1,112,945.** How to get this table right — and the forty-sixth pass got it
+wrong first, so read this: `callgrind_annotate --tree=caller` prints a
+function's callers as `<` lines *immediately above* its `*` line, and its
+callees as `>` lines below. **Take only the contiguous `<` block directly
+above the `__rust_alloc` node.** A regex over a window instead picks up `>`
+edges belonging to neighbouring nodes and invents rows — that produced two
+plausible, entirely fictional leads ("`perform_action_inner` allocates once
+per action", "`push_ordered_trigger_candidates` allocates once per
+dispatch"). The second was built and measured before the mistake surfaced:
+short-circuiting `continue_trigger_ordering`'s copy read **-107,468 Ir /
+-0.006 %**, i.e. nothing, and was reverted. `candidates` is empty on nearly
+every dispatch, so there was never a copy to skip.
+
+The real table, `<`-block only, by call count:
 
 | direct caller of `__rust_alloc` | allocs | note |
 |---|---|---|
-| `perform_action_inner` | **70,418** | **exactly one per action, from `library/alloc/src/vec/mod.rs`, and it is not on any line the auto-annotation charges.** Not `events.extend` (both sides are empty on the common path) and not `Ok(events)`. Most likely an inlined `Vec` in `dispatch_triggers_for_events`, which has the same call count. **Locate it before designing** — an unconditional allocation per action is the largest single-count row in the program |
-| `push_ordered_trigger_candidates` | **53,838** | one per non-empty dispatch, and (-16) measured that ~97.5 % of those produce no candidate at all. The `Vec` is `continue_trigger_ordering`'s `ordered`, built by `extend_from_slice` |
-| `finalize_cast` | 24,108 | 3.4 per cast: the three per-turn cast logs plus `CastProfile.card_types`' `Vec<CardType>` clone. `CastProfile` is serialized in snapshots, so a bitset there is a wire change |
-| `cast_spell_with_convoke` | 22,650 | 3 per cast |
-| `eval_material_inner` | 19,668 | the bot's leaf eval |
-| `computed_permanent` | 96,544 | one `Arc::new(ComputedPermanent)` per memo miss |
+| `RawVecInner::finish_grow` | 212,177 | Vec growth, all callers |
+| `Arc::clone_from_ref_in` | 152,062 | the CoW unshares |
+| `Vec::from_iter` (nested) | 149,696 | the `.collect()`s |
+| `computed_permanent` | 96,166 | one `Arc::new(ComputedPermanent)` per memo miss |
+| `GameState::clone` | 79,204 | ~4 per clone — the non-`CowBox` fields. (-13) costed narrowing and said no |
+| `gather_continuous_effects_inner` | 40,408 | |
+| `Vec::clone` | 31,068 | |
+| `RawTable::clone` | 29,428 | hash maps cloned inside the state clones. **Unread** |
+| `Box::clone` | 26,386 | **Unread** |
+| `finalize_cast` | 24,108 | **3.4 per cast, and the cheapest unclaimed named row**: the three per-turn cast logs plus `CastProfile.card_types`' `Vec<CardType>` clone. The logs regrow after every `PlayerData` clone because `Vec::clone` gives capacity == len, so `clear()`ing them per turn does not help. `CastProfile` is serialized in snapshots, so a bitset there is a wire change |
+| `RawTable::reserve_rehash` | 19,280 | |
 | `frozen_effects` | 17,702 | one per freeze scope |
+| `Vec::from_iter` (in-place) | 16,230 | |
+| `relax_cost_colors` / `can_afford_in_state_with` | 12,986 **each** | **PAID** — the forty-sixth pass's (E) |
+| `auto_tap_for_cost_inner` | 9,544 | |
+| `ManaCost::reduce_generic` | 7,550 | |
+| `fire_combat_damage_triggers` | 6,530 | |
+| `compute_permanent_pass` | 6,298 | |
+| `bot::ward_gate_ok` | 4,082 | |
+| `spell_kind` | 4,248 | `creature_types.clone()`, all that is left of it after (A)/(C) |
 
-`RawVecInner::finish_grow` 212,245, `Arc::clone_from_ref_in` 152,062 and
-`Vec::from_iter` 149,736 are still the three generic rows above all of these.
 A count in the tens of thousands on a six-game workload is one per action or
 one per permanent per action; that is the tell. **Rank by call count and then
 read the source.**

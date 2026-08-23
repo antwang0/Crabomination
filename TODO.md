@@ -26,20 +26,20 @@ session landed pass 45's row (E) and the planeswalker-cash-out work
 underneath it mid-run, so pass 46's Ir chain is measured against its own base
 `11792f4c` and rebased on top of theirs.** Pass 45 finished at
 `1,810,336,693 -> 1,765,005,375`, -2.504 %. Pass 46:
-`1,771,223,960 -> 1,747,982,407`, **-1.312 %** in four commits — re-measured
-after the rebase as `1,765,005,375 -> 1,740,811,994`, **-1.371 %**, so the two
-passes' rows compose — `spell_kind`
+`1,765,005,375 -> 1,735,997,491`, **-1.643 %** in five commits (the first four
+were measured against their own base `11792f4c` for -1.312 % and re-read at
+-1.371 % after the rebase, so the two passes' rows compose) — `spell_kind`
 built twice per cast and expensively (two `Vec`s for a colour question, a
 global `RwLock` + SipHash for one bool), a land tap deep-copying its whole
 effect tree, and Ward taking a gather per opposing target. Every step
 `--bench`-invariant-identical.
 
-1. **FINISH FIRST: round 50 is armed and unread** (`0e02cd75`) — A = gang
-   (the new planeswalker cash-out read, on by default), B = walkerlegacy.
-   Its own commit pre-registers the readings: 50.0 means zero incidence and
-   measures nothing, 50.0-50.5 is low incidence and is *not* evidence
-   against, clearly below 50 means the new read is wrong. Read it before
-   starting anything else.
+1. **Nothing is in flight.** Round 50 read out at `5af4f687` — the
+   planeswalker cash-out fix is **+0.25 pooled, replicated, both intervals
+   excluding 50** — and its finding is the reusable one: a *rare*-card-class
+   flag is not an unmeasurable one, because exact-mirror pairs contribute no
+   variance and the few games that differ are measured to +-0.12. Run a
+   rare-class flag before writing it off.
 2. **The iteration loop is 4x faster than this file used to say.**
    `cargo check -p crabomination` is 2m01s cold, seconds warm. An
    **engine-only** `profiling-fast` rebuild is **3m15s**; the whole workspace
@@ -56,15 +56,13 @@ effect tree, and Ward taking a gather per opposing target. Every step
    "one scope to widen" reading in the entry is wrong. Unread and unclaimed:
    `combat_damage_computed` 4,997 Ir over 3,226, `prevent_combat_to_target`
    3,875 over 2,682, `quality_band_assigner` 5,932 over 846.
-4. **Second: the two new allocator rows in (-23).** `perform_action_inner`
-   allocates **exactly once per action** (70,418) from
-   `library/alloc/src/vec/mod.rs`, and no source line the auto-annotation
-   charges accounts for it — find it first, it is the largest single-count
-   row in the program. `push_ordered_trigger_candidates` allocates once per
-   non-empty dispatch (53,838) for a result that is empty ~97.5 % of the
-   time; the `Vec` is `continue_trigger_ordering`'s `ordered`, and
-   `extend_from_slice` deep-clones every candidate's `Effect` to build a copy
-   of a list no bot game ever reorders.
+4. **Second: (-23)'s allocator table, which pass 46 refreshed *and* fixed.**
+   Read its opening paragraph before extracting it again — a regex over a
+   window instead of the contiguous `<` block invents rows, and pass 46 built
+   and measured a candidate on two invented ones before catching it
+   (-0.006 %, reverted). Cheapest unclaimed named row is `finalize_cast`'s
+   24,108 (3.4 per cast); `RawTable::clone` 29,428 and `Box::clone` 26,386
+   are unread.
 5. **Do not rebuild these.** The board-presence epoch ((-18), +0.49 %). The
    `GameState` husk pool (+2.60 %). Gating `do_untap`'s six walks
    (+0.0001 %). Narrowing `GameState`. Splitting the big engine files for
