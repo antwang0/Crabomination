@@ -12510,7 +12510,7 @@ impl GameState {
             .map(|c| c.colors)
             .unwrap_or_else(|| {
                 self.battlefield_find(source)
-                    .map(|c| c.definition.cost.colors().into_iter().collect())
+                    .map(|c| c.definition.cost.color_set())
                     .unwrap_or_default()
             });
         let src_is_creature = self

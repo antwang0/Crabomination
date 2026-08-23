@@ -6633,7 +6633,7 @@ impl GameState {
             && let Some(target_card) = self.battlefield_find(cid)
             && target_card.controller != p
         {
-            let spell_colors = card.definition.cost.colors();
+            let spell_colors = card.definition.cost.color_set();
             // Read computed keywords so granted protection (Mother of Runes,
             // Gods Willing) is honored, not just printed protection.
             let kws = self
@@ -6773,7 +6773,7 @@ impl GameState {
         // `Keyword::HexproofFromColor` and the turn-scoped controller grant
         // (Veil of Summer's "you and permanents you control gain hexproof
         // from blue and black"). Applies to permanent and player targets.
-        let spell_colors = card.definition.cost.colors();
+        let spell_colors = card.definition.cost.color_set();
         let hexproof_violation = match target {
             Some(Target::Permanent(cid)) => self
                 .battlefield_find(cid)
@@ -8229,7 +8229,7 @@ impl GameState {
         if is_instant_or_sorcery {
             self.players[p].instants_or_sorceries_cast_this_turn += 1;
         }
-        if card.definition.cost.colors().len() >= 2 {
+        if card.definition.cost.color_set().is_multicolored() {
             self.players[p].multicolored_spells_cast_this_turn += 1;
         }
         if !card.casting_alt_half() && card.definition.is_creature() {

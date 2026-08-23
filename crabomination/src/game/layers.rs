@@ -495,20 +495,27 @@ fn compute_permanent_pass(
     // earlier one is stripped. Untracked grants (tests, legacy snapshots)
     // default to timestamp 0 — ordered first, like the old pre-merge.
     // Cleared at Cleanup via `clear_end_of_turn_effects`.
-    let eot_grants: Vec<ContinuousEffect> = card
-        .granted_keywords_eot
-        .iter()
-        .enumerate()
-        .map(|(i, kw)| ContinuousEffect {
-            timestamp: card.granted_keywords_eot_ts.get(i).copied().unwrap_or(0),
-            source: card.id,
-            affected: AffectedPermanents::Source,
-            layer: Layer::L6Ability,
-            sublayer: None,
-            duration: EffectDuration::UntilEndOfTurn,
-            modification: Modification::AddKeyword(kw.clone()),
-        })
-        .collect();
+    // Empty on nearly every permanent, and this runs once per layer pass —
+    // 99,840 of them over six bench games. `collect()` on an empty iterator
+    // allocates nothing but is still a `SpecFromIterNested::from_iter` call
+    // with its size-hint dance; the emptiness check is two loads.
+    let eot_grants: Vec<ContinuousEffect> = if card.granted_keywords_eot.is_empty() {
+        Vec::new()
+    } else {
+        card.granted_keywords_eot
+            .iter()
+            .enumerate()
+            .map(|(i, kw)| ContinuousEffect {
+                timestamp: card.granted_keywords_eot_ts.get(i).copied().unwrap_or(0),
+                source: card.id,
+                affected: AffectedPermanents::Source,
+                layer: Layer::L6Ability,
+                sublayer: None,
+                duration: EffectDuration::UntilEndOfTurn,
+                modification: Modification::AddKeyword(kw.clone()),
+            })
+            .collect()
+    };
     // CR 122.1b — keyword counters: each keyword counter type on the
     // permanent grants the named keyword while at least one counter of
     // that type is present. Applied as a layer-6 keyword addition.
