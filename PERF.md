@@ -201,10 +201,13 @@ it.
 
 ## Baseline
 
-**Forty-seventh pass, base `c9606062` vs tip `3706f96f`**, both
+**Forty-seventh pass, base `c9606062` vs its own tip `3706f96f`**, both
 `profiling-fast --no-default-features`, built and run in one sitting on one
 box. The base re-read at 1,727,336,594 against pass 46's recorded
-1,727,337,280 (686 Ir of argv).
+1,727,337,280 (686 Ir of argv). A concurrent session landed pass 46's last
+commit (`87ce4097`, `cast_cost_scan`, -0.697 %) mid-run, so this chain is
+measured against `c9606062` and **rebased on top of theirs**; the rebased
+reading is below it.
 
 ```text
                      base (c9606062)          tip (3706f96f)
@@ -217,6 +220,17 @@ allocations          1,021,777                974,927
 suite                18,709 passed / 0 failed / 5 ignored (both)
 host_cpu             Intel(R) Xeon(R) Processor @ 2.80GHz
 ```
+
+**Re-read at the rebased tip `89f55a5c`**, same binary settings, same
+sitting: **`1,715,304,981 -> 1,662,145,114`, -53,159,867 / -3.100 %** — i.e.
+the seven commits take *more* off the branch after `cast_cost_scan` than they
+did before it (-52,755,552), so **the two passes' rows compose with a small
+positive interaction, not a negative one**. Invariants at the rebased tip:
+decisions 196,220, turns_per_game 27.53, stalls 0 (cap 0 / stuck 0 / draw 0),
+determinism ok; suite 18,709 / 0 / 5.
+
+**The branch across passes 46 and 47: `1,765,005,375 -> 1,662,145,114`,
+-102,860,261 / -5.828 %.**
 
 **No `games_per_s` pair is quoted for this pass and that is deliberate.**
 The only `--bench` runs available were taken with a `cargo build` or a
@@ -735,7 +749,10 @@ gang --games 6 --threads 1 --seed 1 --decks fixed`.
 | H | 1,683,872,083 -> 1,674,581,042 (**-0.552 %**) | two `Vec`s built where nothing wanted a `Vec` |
 
 **The pass sums to `1,727,336,594 -> 1,674,581,042`, -52,755,552 /
--3.054 %.** `--bench --threads 3` invariants byte-identical at every step:
+-3.054 %** on its own chain, and **`1,715,304,981 -> 1,662,145,114`,
+-53,159,867 / -3.100 %** re-read after the rebase onto the concurrent
+session's `cast_cost_scan` — the two passes compose, with the rows reading
+slightly *larger* on the rebased branch. `--bench --threads 3` invariants byte-identical at every step:
 decisions **196,220**, turns_per_game 27.53, stalls 0 (cap 0 / stuck 0 /
 draw 0), determinism ok. Suite 18,709 / 0 failed / 5 ignored. No encoding
 change; **no net needs retraining as of this tip.**
@@ -1349,8 +1366,10 @@ settings + debuginfo; system allocator, because valgrind replaces malloc and
 a mimalloc build would measure the interception), 1 thread, `--a gang --b
 gang --games 6 --seed 1 --decks fixed`.
 
-**The forty-seventh pass ends at 1,674,581,042 Ir**, and the table below is
-that exact tip (`3706f96f`, `cg.H.out`). The forty-sixth's and the
+**The forty-seventh pass ends at 1,674,581,042 Ir on its own chain and
+1,662,145,114 at the rebased tip `89f55a5c`.** The table below is the
+pre-rebase tip (`3706f96f`, `cg.H.out`), so its absolutes read ~12 M high
+against the branch; the shares are within a tenth of a point. The forty-sixth's and the
 forty-fifth's are kept below because live Log rows chain to them; the
 forty-second's and forty-fourth's were dropped at the 2.8 k fold — their Log
 entries carry the rows that still matter and `git log -- PERF.md` has the

@@ -3534,8 +3534,10 @@ impl GameState {
         // Fast path for the layout `GameState::new` builds and every
         // non-team format keeps: one singleton team per seat, in seat
         // order. One index and one compare instead of a scan of every
-        // team's member list — `same_team` is called ~1.2 M times per six
-        // games and was 1.45 % of the program walking those `Vec`s.
+        // team's member list. Read at the forty-seventh tip: `same_team`
+        // is **319,624 calls** per six bench games and reaches `team_of`
+        // twice each, so this fast path answers ~658 k times; it was 1.45 %
+        // of the program walking those `Vec`s.
         // `assign_teams` rejects a seat appearing twice, so a hit here is
         // the same team the scan below would find; the `debug_assert` is
         // the audit.
@@ -16302,7 +16304,8 @@ impl GameState {
         }
         // Empty on most dispatches, and the chain is not free there: the
         // filter closes over `&self` and the collect still builds and drops a
-        // `Vec`. 94,608 of them over six bench games.
+        // `Vec`. **53,838** dispatches reach this line over six bench games
+        // — the ones that get past the empty-batch return above.
         let synthesized: Vec<GameEvent> = if deaths.is_empty() && control_changes.is_empty() {
             Vec::new()
         } else {

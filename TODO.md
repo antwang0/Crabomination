@@ -26,13 +26,16 @@ session landed pass 46's last commit (`cast_cost_scan`, -0.697 %) underneath
 it mid-run — so pass 47's Ir chain is measured against its own base
 `c9606062` and rebased on top of theirs.** Pass 46 finished at
 `1,765,005,375 -> 1,715,304,981`, -2.816 %. Pass 47:
-`1,727,336,594 -> 1,674,581,042`, **-3.054 %** in seven commits, every one
-`--bench`-invariant-identical (decisions **196,220**, turns 27.53, stalls 0,
-determinism ok) — a presence gate that stands in for a gather stopping where
-the gather has already run (-0.570 %); five questions asked before the thing
-that disqualifies them; the trigger dispatch tail; two `Vec`s nobody wanted.
-**Two builds were reverted and both are written up in PERF's Log** — read
-them before re-proposing either.
+`1,727,336,594 -> 1,674,581,042`, **-3.054 %** in seven commits, re-read at
+the rebased tip as **`1,715,304,981 -> 1,662,145,114`, -3.100 %** — the two
+passes compose, with the rows reading slightly *larger* on the rebased
+branch. **The branch across both: `1,765,005,375 -> 1,662,145,114`,
+-5.828 %.** Every step `--bench`-invariant-identical (decisions **196,220**,
+turns 27.53, stalls 0, determinism ok) — a presence gate that stands in for a
+gather stopping where the gather has already run (-0.570 %); five questions
+asked before the thing that disqualifies them; the trigger dispatch tail; two
+`Vec`s nobody wanted. **Two builds were reverted and both are written up in
+PERF's Log** — read them before re-proposing either.
 
 1. **Nothing is in flight.** Suite 18,709 / 0 failed / 5 ignored over 22
    binaries, golden traces and the same-seed replay included; `cargo clippy
@@ -59,25 +62,21 @@ them before re-proposing either.
    top.** `pick_by_outcome` is 7.08 % over **920 calls** — 130,069 Ir each.
    Check whether the count is a search-quality decision before treating it as
    a perf one, the way (-21) had to for the attack search.
-5. **The land tap is still the biggest single engine row.**
-   `card_keyword_possible` is 1.30 % over 18,910 calls, ~830 Ir of each a
-   board walk that gives the same answer for every tap in a batch — and
-   stamping it per batch is unsound, because a mana ability can move the
-   board between taps. Read (-11) before proposing a cache.
-6. **The `cast_lock_scan` / `cast_cost_scan` device has paid three times and
-   is not exhausted.** What is left in the cast:
-   `cost_reduction_for_spell_full` 0.20 % over 7,550 and `extra_cost_for_spell`
-   0.11 %. A seventh bit does **not** just drop in for the first — it reads
-   16 variants over `all_static_sources` (not just the battlefield) and its
-   walk is followed by card-intrinsic contributions no presence bit can gate.
-   See (-24)'s (G) note.
-7. **(-23)'s allocator table, refreshed at the pass-47 tip (974,927
+5. **Then the land tap and the cast.** `card_keyword_possible` is 1.30 %
+   over 18,910 calls, ~830 Ir of each a board walk giving the same answer
+   for every tap in a batch — stamping it per batch is *unsound* (a mana
+   ability can move the board between taps); read (-11) first. The
+   `cast_lock_scan` / `cast_cost_scan` device has paid three times and is
+   not exhausted: `cost_reduction_for_spell_full` 0.20 % over 7,550 and
+   `extra_cost_for_spell` 0.11 % are what is left, but a seventh bit does
+   **not** just drop in — see (-24)'s (G) note.
+6. **(-23)'s allocator table, refreshed at the pass-47 tip (974,927
    allocations).** Read its opening paragraph before extracting it again — a
    regex over a window instead of the contiguous `<` block invents rows.
    Unclaimed named rows: `computed_permanent` 93,570 (that is (-27)),
    `finalize_cast` 24,108 plus its 28,878 `grow_one`s, `RawTable::clone`
    29,428 and `Box::clone` 26,386, both still unread.
-8. **Do not rebuild these.** Everything in pass 46's list — the board-presence
+7. **Do not rebuild these.** Everything in pass 46's list — the board-presence
    epoch ((-18), +0.49 %), the `GameState` husk pool (+2.60 %), gating
    `do_untap`'s six walks (+0.0001 %), narrowing `GameState`, splitting the
    big engine files for build time, the per-definition keyword-grant bit
@@ -92,12 +91,12 @@ them before re-proposing either.
    correctness bug, because it owns the per-batch
    `died_card_snapshots.clear()`. Read what a function does *after* its loop
    before short-circuiting the loop.
-9. **Measurement gotcha pass 47 hit twice.** The 6-game ladder printout
+8. **Measurement gotcha pass 47 hit twice.** The 6-game ladder printout
    (24 decided / 12 splits) did **not** change on either reverted build —
    only `--bench`'s `decisions` and the Ir total caught them. Run
    `./target/profiling-fast/bot_ladder --bench --threads 3` on any change
    whose Ir moves more than its blast radius allows.
-10. **Env.** No `cargo-nextest`; `cargo test -j 2 -p crabomination -p
+9. **Env.** No `cargo-nextest`; `cargo test -j 2 -p crabomination -p
    crabomination_tests` is the gate (~12 min cold). Workspace clippy needs
    `apt-get update && apt-get install -y libwayland-dev libasound2-dev
    libudev-dev libxkbcommon-dev` (~9 min). Cold `profiling-fast` engine build
@@ -107,20 +106,25 @@ them before re-proposing either.
    ~6 pipelined. Absolute games/s is not comparable across routine boxes and
    a `profiling-fast` games/s is not comparable to anything; quote callgrind
    under 5 %.
-11. **Wide-pool check.** Pass 45's still stands and was not re-run: `--decks
-   all --games 400 --threads 3`, seeds 11/12/13, **20,400 games, 20,396
-   decided, no panic, every one of 10,198 mirrored pairs split** (the 4
-   undecided are seed 11's rules draws). It is **owed again** — nothing since
-   has run it, and pass 47 touched combat, trigger dispatch and the SBA
-   sweep. No `overflow`-profile run either pass (nothing touched counters,
-   damage, mana or the encoder).
-12. **Trackers.** TODO ~1.0k, ROADMAP 0.66k, PERF ~2.9k (pass 47 folded the
-   forty-third pass's entry to an index; the forty-fourth's is the next
-   fold). `scripts/find_data_tests.sh` reads **199 pure-data tests**, 25
+10. **Wide-pool check — re-run at this tip and clean.** `--a gang --b gang
+   --decks all --games 400 --threads 3`, seeds 11/12/13: **20,400 games,
+   20,396 decided, no panic, every one of 10,198 mirrored pairs split**
+   (`rho -1.000` on all three; the 4 undecided are seed 11's rules draws,
+   the same four pass 45 saw). ~55 s a seed on this box, so there is no
+   excuse to skip it. No `overflow`-profile run either pass (nothing touched
+   counters, damage, mana or the encoder).
+11. **Trackers.** TODO **~1.07k** (pass 47 collapsed three stale "the engine
+   has no X" sections — command zone / commander damage / emblems /
+   planeswalker attacks / crew / divided damage all ship — and closed the
+   panic-sweep entry; a little more of **Missing Mechanics** is probably
+   stale the same way, and that is the next ~70 lines), ROADMAP 0.66k,
+   PERF ~2.9k (pass 47 folded the forty-third pass's entry to an index; the
+   forty-fourth's is the next fold). `scripts/find_data_tests.sh` reads **199 pure-data tests**, 25
    `[CR]`-marked and sacred; the other 174 want a table-driven definition
-   audit per set. Not a build-time item. A **seventeenth** filter is still
-   owed — the sixteenth and the panic census were run at pass 46 and were
-   clean.
+   audit per set. Not a build-time item. The **seventeenth** filter was run
+   this pass and is **not clean — four stale call counts**, corrected in
+   place; the pattern is that a *share* survives and a *count* rots. An
+   eighteenth is owed and the entry names it.
 
 ## Environment note
 
@@ -146,13 +150,15 @@ target/debug/incremental` reclaims several GB without a full rebuild.
 The cube pool's fixed-seed nondeterminism is fixed and the whole class is
 shut: `crate::fxhash::HashMap` / `HashSet` (rustc's seedless FxHasher)
 replace `std`'s across the engine, so no map's walk order can differ
-between two runs of one seed. `--decks cube` reads decisions **1,130,728**
-identically over three runs, `all` 2,548,986 and `sos` 684,268 over two
-each, `determinism ok` on every one; `--decks fixed` is unchanged at
-193,232. `--decks all`'s stall rate is now a stable **6 draws / 5,100
-games (0.12 %)** — all rules draws, nothing to fix. A separate leak fixed
-in the same sitting (`125108c1`): CR 705.1 coin flips read
+between two runs of one seed. Same-seed decision counts are identical over
+repeated runs on every pool (`cube` 1,130,728, `all` 2,548,986, `sos`
+684,268, `fixed` 193,232), `determinism ok` on all of them, and `all`'s
+stall rate is a stable 6 rules draws / 5,100 games (0.12 %). A separate leak
+fixed in the same sitting (`125108c1`): CR 705.1 coin flips read
 `rand::random()` inside `AutoDecider`, and Mana Crypt is in the cube pool.
+**Re-checked at the forty-seventh tip**: `--decks all --games 400 --threads
+3`, seeds 11/12/13 — 20,400 games, 20,396 decided, no panic, all 10,198
+mirrored pairs split.
 
 **What is left of it, as a rules question, not a determinism one.** A map
 whose walk order picks a *game outcome* is still arbitrary, just
@@ -187,17 +193,20 @@ game could not be won or lost; regression test in `classic_sets/bok`).
 initializer** — was swept workspace-wide: the other nine hits are `Err` /
 let-else guards that legitimately abort their function.)*
 
-**Open: the panic/unwrap sweep of the self-play path.** ~183
-`unwrap()`/`expect()` under `game/` + `bot.rs`, and it wants **triage, not
-a blanket rewrite** — every site spot-checked so far was already guarded by
-a preceding test (`worlds.len() > 1` before `.max().unwrap()`,
-`battlefield.push` before `find(…).unwrap()`, `writes_to_shared` before the
-two `teams` unwraps, `mayhem` set from `mayhem_cost().is_some()`). This is
-the section's only open entry; the thirteen narrower filters below are what
-got run instead of the blanket rewrite, and eight of the thirteen found
-nothing, which is the result worth keeping.
+**The panic/unwrap sweep of the self-play path — CLOSED 2026-08-23 by the
+census under filter 16, and it wanted triage, not the blanket rewrite this
+entry used to ask for.** 84 `unwrap()` + 46 `expect(` in non-test engine
+code; drop the `lock()/read()/write().unwrap()` poison calls and **118
+sites** remain, every one reachable from self-play guarded by a preceding
+test that is usually named in a comment or the message. One dead hazard,
+not reachable from anywhere: `impl Index<&CounterType> for CounterBag`
+panics on a missing kind and has no `counters[..]` call site. **Re-run the
+census after a batch of new cards, not per run.** The seventeen narrower
+filters below are what got run instead of the rewrite, and nine of the
+seventeen found nothing — which is the result worth keeping. The section
+has **no open entries**.
 
-**The fifteen filters, compacted to an index.** Each is a *shape* that fails
+**The seventeen filters, compacted to an index.** Each is a *shape* that fails
 the way a training run notices — a silent wrap at game 400 k, a loud panic,
 or a hang — swept over `game/` + `bot.rs` (some wider). The prose is in
 `git log -- TODO.md`; what is kept is what each hunted and why it is
@@ -324,14 +333,41 @@ N" sites each behind an `is_empty()` return, `mayhem_cost().unwrap()` behind
 `counters[..]` call site anywhere. Re-run the census after a batch of new
 cards, not per run.
 
-**A seventeenth filter is owed. Two candidates, in order:** *a comment that
-names a call count or a share* — pass 46 found two stale in PERF itself
-("`activate_ability_inner` asks `card_type_change_in_scope` twice", when it
-asks once; "an `Arc<CardDefinition>` + index is a real refactor", when
-`HeldAbility::Printed` already was one, and the fix was three call sites for
--0.457 %) — and *a tool's own extraction step*, which is where the fifteenth
-filter and pass 46's retracted allocator rows both came from. The measuring
-device keeps being the thing that lies.
+**The seventeenth filter was run 2026-08-23 and is NOT clean — four hits.**
+*A comment that names a call count or a share.* Mechanically: grep `//` and
+`///` lines over `crabomination/src` and `crabomination_base/src` for a
+comma-grouped integer, a `N.N %`, or the token `Ir`; that returns 163, of
+which **44 are perf claims a reader would rank work by** (the rest are the
+bot's win-rate gate history, which is dated and self-describing). Checking
+those 44 against the forty-seventh tip's profile:
+
+* `CardDefinition::printed_color_set` — "the layer pass calls this ~1.2 M
+  times per six bench games". It is **114,562**, 99,840 of them the layer
+  pass. An order out, and the function's own 4.6 M self cost rules the claim
+  out on its face.
+* `GameState::team_of` — "`same_team` is called ~1.2 M times per six games".
+  `same_team` is **319,624** and reaches `team_of` twice each, so the fast
+  path answers ~658 k times. Roughly 2x out.
+* `dispatch_triggers_for_events`' death-synthesis chain — "94,608 of them
+  over six bench games". **53,838** dispatches reach that line.
+* `auto_tap_for_cost_inner` — "`mana_source_table`, 3.83 % of the profile
+  over 8,892 calls". The *share* is right to two decimals (3.85 %); the
+  **count** is 7,550.
+
+**The pattern in all four: the share survives and the count rots.** A share
+is re-derived every time someone reads a profile; a call count is copied
+forward from the run that first found it and nobody re-reads it, so it
+drifts every time the caller's own count moves. Corrected in place, each
+with the tip it was read at. **Caveat for whoever re-runs this:** a
+callgrind edge count *undercounts* a caller that got inlined, so only
+correct a number down when the callee has its own node and its self cost
+makes the old claim arithmetically impossible — which is why `team_of`'s
+correction is stated through `same_team`'s node rather than its own.
+
+**An eighteenth filter is owed. The remaining candidate, unchanged:** *a
+tool's own extraction step*, which is where the fifteenth filter and pass
+46's retracted allocator rows both came from. The measuring device keeps
+being the thing that lies.
 
 **Stall rate — CLOSED 2026-08-14, and the answer is "nothing to fix".**
 The attribution the previous run built (`419d2ea6`: `recommend::StopReason`
@@ -483,29 +519,13 @@ and has flying" (Dragon's Rage Channeler, Traverse the Ulvenwald-adjacent
 cards) — needs a layer-system static whose application is gated on a
 predicate. DRC isn't implemented yet pending this.
 
-### Client build CAN be verified in the web sandbox (pkg-config + linker shim)
-`crabomination_client` links Bevy, whose `wayland-sys`/`alsa-sys`/`libudev-sys`
-build scripts call `pkg-config`, and the linker then wants `.so` dev symlinks —
-the runtime `.so.N` files exist here but the `.pc` files and `.so` symlinks
-don't. Since the Bevy 0.18→0.19 bump the toolchain floor is **rustc 1.95**
-(`rustup toolchain install 1.95.0 && rustup override set 1.95.0`). Drop shims +
-symlinks in a temp dir and point both `PKG_CONFIG_PATH` and `LIBRARY_PATH` at
-it (pkgconf 1.8 rejects a `.pc` with no `Description:` field, and 0.19 added
-the `libudev` dep):
-```sh
-mkdir -p /tmp/pc && cd /tmp/pc
-for m in client cursor egl; do printf 'libdir=/usr/lib/x86_64-linux-gnu\nName: wayland-%s\nDescription: shim\nVersion: 1.22.0\nLibs: -L${libdir} -lwayland-%s\nCflags:\n' $m $m > wayland-$m.pc; done
-printf 'libdir=/usr/lib/x86_64-linux-gnu\nName: alsa\nDescription: shim\nVersion: 1.2.0\nLibs: -L${libdir} -lasound\nCflags:\n' > alsa.pc
-printf 'libdir=/usr/lib/x86_64-linux-gnu\nName: libudev\nDescription: shim\nVersion: 250\nLibs: -L${libdir} -ludev\nCflags:\n' > libudev.pc
-ln -sf /usr/lib/x86_64-linux-gnu/libwayland-client.so.0 libwayland-client.so
-ln -sf /usr/lib/x86_64-linux-gnu/libwayland-cursor.so.0 libwayland-cursor.so
-ln -sf /usr/lib/x86_64-linux-gnu/libwayland-egl.so.1 libwayland-egl.so
-ln -sf /usr/lib/x86_64-linux-gnu/libudev.so.1 libudev.so
-ln -sf /usr/lib/x86_64-linux-gnu/libasound.so.2 libasound.so
-PKG_CONFIG_PATH=/tmp/pc LIBRARY_PATH=/tmp/pc cargo clippy -p crabomination_client
-```
-Runtime/GPU verification (opening a window) still needs the local
-`verifier-client` skill — only compile-checking works headless.
+### Client build in the routine sandbox — CLOSED 2026-08-23
+The `.pc`/`.so`-shim recipe this entry carried is obsolete: the four dev
+packages install cleanly via apt in the routine container and
+`cargo clippy --workspace --all-targets` then builds `crabomination_client`
+outright. See **Environment note** at the top of this file. Runtime/GPU
+verification (opening a window) still needs the local `verifier-client`
+skill — only compile-checking works headless.
 
 ### Damage-as-(-1/-1)-counters replacement
 Soul-Scar Mage / Phyrexian Vatmother-style "if a source you control would
@@ -680,21 +700,18 @@ shoots when the graveyard has multiple matches.
 mana symbol must be paid from a snow source.  Any mana from any land currently
 satisfies a `{S}` pip.
 
-### Multiplayer / Commander Format
-- Command zone: `Zone::Command` exists but `ClientView` has no field for it;
-  the server never moves cards there.
-- Commander damage tracking (21 from the same commander = loss).
-- "Your opponents" vs. "each other player" distinctions (multiplayer targeting
-  semantics differ from 2-player).
-- Four-player free-for-all match setup in `run_match` / `build_cube_state`.
-- Commander-specific rules: color identity deck building, commander tax.
-
-### Planeswalker Interactions
-- Planeswalkers can be attacked directly — `AttackTarget::Planeswalker` is in
-  `types.rs` but the bot never chooses it and the client has no UI for it.
-- "Planeswalker redirect" rule (damage that would be dealt to a player can be
-  redirected) is unimplemented.
-- Emblems are not modelled.
+### Multiplayer / Commander / Planeswalkers — mostly SHIPPED, index only
+This entry claimed the engine had no command zone, no commander damage, no
+emblems and no planeswalker attacks. All four exist: `Player::command` with
+`command_zone_abilities_active()` and a `ClientView` field,
+`commander_damage` with a per-source tally surfaced in the view (CR 903.10a)
+and a regression test, `Player::emblems` joining the layer gather's anthem
+walk, and `AttackTarget::Planeswalker` chosen by the bot's attack search
+(`walker_chip`) and resolved by combat. **Still open, and that is all that is
+left here:** four-player free-for-all match setup in `run_match` /
+`build_cube_state`, colour-identity deck building and commander tax, the
+"your opponents" vs "each other player" multiplayer targeting split, and
+CR 118.3c planeswalker damage redirection.
 
 ### Saga Lore Counters
 ✅ Non-DFC Sagas ship via `CardDefinition.saga_chapters` + `saga_advance`
@@ -702,16 +719,14 @@ satisfies a `{S}` pip.
 History of Benalia, The Eldest Reborn. Remaining ⏳: DFC/transforming sagas
 (The Everflowing Well saga-land) and read-ahead chapter-choice variants.
 
-### Vehicle / Crew
-`CardType::Artifact` exists but there is no `CrewN` keyword or "becomes a
-creature until end of turn" mechanism.  Vehicle subtype is in `ArtifactSubtype`
-but nothing uses it.
-
-### Proper Split-Damage Distribution
-Effects like Pyrokinesis ("deals 4 damage divided as you choose among any
-number of targets") are collapsed to a single-target 4-damage hit.  A
-`DealDamageDivided { total, targets: Vec<Selector> }` effect would express
-the real card.
+### Vehicle / Crew and divided damage — SHIPPED, index only
+`GameAction::Crew` / `Saddle` are real actions with a bot picker
+(`pick_crew_vehicle`), and divided combat damage is resolved by
+`free_division_targets` + the CR 510.1c assignment path (Butcher Orgg's
+`DividesCombatDamageAmongDefenders` included). **Still open:** a
+`DealDamageDivided { total, targets }` *spell* effect — Pyrokinesis-style
+"4 damage divided as you choose among any number of targets" is still
+collapsed to a single-target hit.
 
 ### Affinity / Self-Permanent-Scaled Cost Reduction
 Witherbloom, the Balancer's "Affinity for creatures (this spell costs

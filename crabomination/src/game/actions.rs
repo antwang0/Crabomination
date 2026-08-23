@@ -12590,8 +12590,9 @@ impl GameState {
         // Nothing to tap: the two loops below are no-ops and `events` is
         // still empty, so return before building the source table. That
         // table is a layer pass per untapped permanent
-        // (`mana_source_table`, 3.83 % of the profile over 8,892 calls) and
-        // every caller whose pool already covers the cost was paying for it.
+        // (`mana_source_table`, **3.85 % of the profile over 7,550 calls** at
+        // the forty-seventh tip) and every caller whose pool already covers
+        // the cost was paying for it.
         if still_need_colors.is_empty() && generic_to_tap == 0 {
             return events;
         }
