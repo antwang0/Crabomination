@@ -16977,11 +16977,18 @@ impl GameState {
         // CR 902.5 / 901.7 — a Vanguard avatar's and a face-up plane's triggers
         // fire from the command zone. A plane's controller is the planar
         // controller (CR 901.6), not its owner.
-        let planar_controller = self.planar_controller();
+        // Lazily: `planar_controller` walks both planar decks and both
+        // command zones, and only a face-up *plane* reads it. Every dispatch
+        // paid for it — 53,838 calls over six bench games — on a pool with no
+        // Planechase cards in it at all.
+        let mut planar_controller: Option<usize> = None;
         for player in &self.players {
             for card in player.command.iter().filter(|c| c.command_zone_abilities_active()) {
-                let controller =
-                    if card.definition.is_plane() { planar_controller } else { card.owner };
+                let controller = if card.definition.is_plane() {
+                    *planar_controller.get_or_insert_with(|| self.planar_controller())
+                } else {
+                    card.owner
+                };
                 for ta in &card.definition.triggered_abilities {
                     for ev in events {
                         if is_event_hardcoded(ev, &ta.event) {
@@ -17283,9 +17290,18 @@ impl GameState {
         }
         // May suspend on a networked controller's `OrderTriggers` pick
         // (CR 603.3b) — the resume path re-enters
-        // `push_ordered_trigger_candidates` with the finished order.
-        let Some(candidates) = self.continue_trigger_ordering(Vec::new(), candidates) else {
-            return;
+        // `push_ordered_trigger_candidates` with the finished order. Nothing
+        // survived phase 1 on ~97.5 % of dispatches, and an empty run has no
+        // order to ask about. `push_ordered_trigger_candidates` is still
+        // called: it owns the life-gain flag flip and the `died_card_snapshots`
+        // clear, which are per-batch, not per-candidate.
+        let candidates = if candidates.is_empty() {
+            candidates
+        } else {
+            let Some(ordered) = self.continue_trigger_ordering(Vec::new(), candidates) else {
+                return;
+            };
+            ordered
         };
         self.push_ordered_trigger_candidates(candidates);
     }
@@ -17580,6 +17596,11 @@ impl GameState {
     /// (`submit_decision`) re-enters this function with the remaining
     /// queue once the user picks.
     pub fn drain_trigger_queue(&mut self, queue: Vec<PendingTriggerPush>) {
+        // Nothing follows the walk below, so an empty queue has no work at
+        // all — and that is the dispatch batch on ~97.5 % of dispatches.
+        if queue.is_empty() {
+            return;
+        }
         // Don't stack up multiple pending decisions — if the engine
         // already suspended on something else we can't surface a target
         // picker, so the whole batch falls back to auto-targeting (the
