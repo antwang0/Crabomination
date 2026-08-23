@@ -94,6 +94,16 @@ candidate was attempted from both sides this run.
   `tests/*.rs`) is the lever that actually bears on it. See PERF's **Build
   time** section. The `release` / `profiling-fast` rebuild is codegen-bound
   and says nothing about this — it is unmeasured.
+- **`scripts/find_data_tests.sh` was silently broken and is fixed** — it
+  scanned `crabomination/src/tests/*.rs`, a path that has not existed since
+  `crabomination_tests` was split out, so it had been returning nothing. It
+  now recurses the real tree and marks each hit `[CR]` when the doc comment
+  above it cites a rule, a ruling, a bug fix or a regression. Current
+  reading: **221 pure-data tests, 25 of them sacred, ~196 foldable** into a
+  table-driven definition audit per set (the `*_cards_are_registered` echoes
+  and the `stat_line` / `has_keyword` one-liners are the bulk). **Its
+  build-time payoff is small** — see the Build-time note above; the honest
+  reason to do it is that per-card tests should assert what is *unique*.
 - Trackers: TODO **~0.98k**, under the line — the ML narratives moved verbatim
   to `ML_NOTES.md` this run (linked from the roadmap's Tier 13), the Formats
   and Rollback shipped phases collapsed to an index. ROADMAP 0.66k, PERF
