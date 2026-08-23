@@ -5298,7 +5298,7 @@ impl CardDefinition {
         }
         let key = self.name.as_ptr() as usize;
         // Key 0 is the empty marker; a `&str`'s data pointer is never null.
-        let slot = (key.wrapping_mul(0x9E37_79B9_7F4A_7C15) >> 48) as usize & (L1 - 1);
+        let slot = ((key as u64).wrapping_mul(0x9E37_79B9_7F4A_7C15) >> 48) as usize & (L1 - 1);
         if let Some(hit) = NEAR.with(|c| {
             let c = c.borrow();
             (c[slot].0 == key).then_some(c[slot].1)
