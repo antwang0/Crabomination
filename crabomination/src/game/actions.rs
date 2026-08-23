@@ -2594,24 +2594,34 @@ impl HeldAbility {
 }
 
 pub(crate) fn effect_produces_color(effect: &Effect, color: ManaColor) -> bool {
+    effect_produced_colors(effect).contains(color)
+}
+
+/// Every colour `effect` can produce for the auto-tapper, in one walk of the
+/// effect tree. [`effect_produces_color`] is this asked one colour at a time
+/// and delegates here, so the two cannot drift; prefer this form wherever the
+/// caller wants more than one colour's answer —
+/// `mana_source_table_inner` was walking the tree five times per ability.
+pub(crate) fn effect_produced_colors(effect: &Effect) -> crate::mana::ColorSet {
+    use crate::mana::ColorSet;
     match effect {
         Effect::AddMana { pool, .. } => match pool {
-            ManaPayload::Colors(cs) => cs.contains(&color),
+            ManaPayload::Colors(cs) => cs.iter().collect(),
             ManaPayload::AnyOneColor(_)
             | ManaPayload::AnyColors(_)
             | ManaPayload::AnyColorOpponentCouldProduce
-            | ManaPayload::AnyColorYouCouldProduce => true,
+            | ManaPayload::AnyColorYouCouldProduce => ColorSet::all(),
             // Color set depends on live board state — not auto-tapped.
             ManaPayload::AnyColorAmongLegendaries
             | ManaPayload::AnyColorAmongYourPermanents
             | ManaPayload::AnyTypeTriggerSourceProduces
-            | ManaPayload::AnyTypeSacrificedLandProduces => false,
+            | ManaPayload::AnyTypeSacrificedLandProduces => ColorSet::empty(),
             // Devotion-scaled: it can make `color`, but only the controller
             // should choose to tap it (devotion may be 0). Not auto-tapped.
-            ManaPayload::DevotionOfChosenColor => false,
-            ManaPayload::OfColor(c, _) => *c == color,
-            ManaPayload::OfColors(cs, _) => cs.contains(&color),
-            ManaPayload::Colorless(_) => false,
+            ManaPayload::DevotionOfChosenColor => ColorSet::empty(),
+            ManaPayload::OfColor(c, _) => ColorSet::single(*c),
+            ManaPayload::OfColors(cs, _) => cs.iter().collect(),
+            ManaPayload::Colorless(_) => ColorSet::empty(),
             // Spend-restricted sources are not auto-tapped: their mana can
             // only fund some spells, so tapping one to "cover" a colored
             // pip could strand an otherwise-payable cast. The controller
@@ -2619,23 +2629,25 @@ pub(crate) fn effect_produces_color(effect: &Effect, color: ManaColor) -> bool {
             // and `pay_for_spell` consumes the floated mana.
             ManaPayload::Restricted(_, _)
             | ManaPayload::RestrictedToChosenType(_)
-            | ManaPayload::RestrictedToChosenTypePlain(_) => false,
+            | ManaPayload::RestrictedToChosenTypePlain(_) => ColorSet::empty(),
             // Instance-dependent (the chosen color isn't known at the
             // definition level), so it's not part of the static auto-tap
             // signature; the controller taps it deliberately.
-            ManaPayload::ChosenColorOfSource => false,
+            ManaPayload::ChosenColorOfSource => ColorSet::empty(),
             // Same for a draft-noted palette (Paliano) — it depends on the
             // seat's note table, not the printed card.
-            ManaPayload::DraftNotedColorOfSource => false,
+            ManaPayload::DraftNotedColorOfSource => ColorSet::empty(),
             // Imprinted-card colors aren't known statically (depend on the
             // exiled card), so not auto-tapped; tapped deliberately.
-            ManaPayload::ImprintedCardColor => false,
+            ManaPayload::ImprintedCardColor => ColorSet::empty(),
         },
-        Effect::Seq(steps) => steps.iter().any(|s| effect_produces_color(s, color)),
+        Effect::Seq(steps) => steps
+            .iter()
+            .fold(ColorSet::empty(), |acc, s| acc.union(effect_produced_colors(s))),
         Effect::If { then, else_, .. } => {
-            effect_produces_color(then, color) || effect_produces_color(else_, color)
+            effect_produced_colors(then).union(effect_produced_colors(else_))
         }
-        _ => false,
+        _ => ColorSet::empty(),
     }
 }
 
@@ -12267,14 +12279,18 @@ impl GameState {
             .filter_map(|c| {
                 self.effective_mana_abilities_into(c, &scan, &mut abilities);
                 let (first_idx, first) = abilities.first()?;
+                // One walk of each ability's effect tree, not one per colour:
+                // the first ability that makes a colour is the one the old
+                // `find` per colour picked, so walking abilities in order and
+                // claiming each colour once is the same table.
                 let mut colors = crate::mana::ColorSet::empty();
                 let mut color_idx = [0usize; 5];
-                for col in ManaColor::ALL {
-                    if let Some((i, _)) =
-                        abilities.iter().find(|(_, a)| effect_produces_color(&a.effect, col))
-                    {
-                        colors.insert(col);
-                        color_idx[color_index(col)] = *i;
+                for (i, a) in abilities.iter() {
+                    for col in effect_produced_colors(&a.effect).iter() {
+                        if !colors.contains(col) {
+                            colors.insert(col);
+                            color_idx[color_index(col)] = *i;
+                        }
                     }
                 }
                 Some(ManaSourceInfo {
