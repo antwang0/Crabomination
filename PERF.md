@@ -219,6 +219,13 @@ games_per_s          104.89                   109.15 / 110.23 / 102.60
 host_cpu             Intel(R) Xeon(R) Processor @ 2.10GHz (every run)
 ```
 
+**Crash-freedom and determinism at the tip, widest pool.** `--a gang --b gang
+--games 400 --threads 3 --decks all` (fixed + cube + sos, 17 archetypes),
+seeds 11 / 12 / 13: **20,400 games, 20,396 decided, no panic**, and all 10,198
+mirrored pairs split (`rho -1.000` on every seed). The 4 undecided are seed
+11's rules draws — the same four the forty-fourth pass recorded, so the wide
+pool's behaviour is unchanged by this pass as well as the fixed one.
+
 **The games/s column is three unalternated readings on `profiling-fast`
 binaries and settles nothing** — a 7 % spread across three tip readings is
 exactly the swing this file's Baseline note warns about, and none of it is

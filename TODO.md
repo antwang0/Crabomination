@@ -87,11 +87,14 @@ matches per action, and two more land-tap questions with no consumer
    binaries, golden traces and the same-seed replay included; `cargo clippy
    --workspace --all-targets` clean across all eight crates. `--bench`
    invariants byte-identical base vs tip (decisions 196,220, turns 27.53,
-   stalls 0 / cap 0 / stuck 0 / draw 0, determinism ok). **No encoding change
-   — no net needs retraining as of this tip.** No `overflow`-profile run this
-   pass (nothing touched counters, damage, mana or the encoder — TODO's
-   filter 6 says rerun after anything that does). Absolute games/s is not
-   comparable across routine boxes; quote callgrind for anything under 5 %.
+   stalls 0 / cap 0 / stuck 0 / draw 0, determinism ok). Widest pool at the
+   tip, `--decks all --games 400 --threads 3`, seeds 11/12/13: **20,400
+   games, 20,396 decided, no panic, every one of 10,198 mirrored pairs split**
+   — the 4 undecided are seed 11's rules draws, the same four pass 44
+   recorded. **No encoding change — no net needs retraining as of this tip.**
+   No `overflow`-profile run (nothing touched counters, damage, mana or the
+   encoder — filter 6 says rerun after anything that does). Absolute games/s
+   is not comparable across routine boxes; quote callgrind under 5 %.
 8. **Trackers.** TODO ~1.0k, ROADMAP 0.66k, PERF ~2.67k (fold the Log again
    past ~2.8k — the forty-second pass's profile table is the next thing to
    index). `scripts/find_data_tests.sh` reads **199 pure-data tests, 25 of
