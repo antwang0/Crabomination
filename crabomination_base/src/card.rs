@@ -5279,47 +5279,82 @@ impl CardDefinition {
     /// over every variant would silently rot as variants are added. The
     /// variant name is unambiguous in the rendering, and a catalog name
     /// maps to one definition, so the cache is sound.
+    /// Two levels, because this is asked once per cast payment on every
+    /// actor thread. L1 is a thread-local direct-mapped table keyed on the
+    /// name's *pointer* — catalog names are `&'static str`, so pointer
+    /// identity is finer than the string identity this cache has always
+    /// assumed, and it costs one multiply instead of a SipHash of the name.
+    /// L2 is the process-wide map, so the `format!` still runs at most once
+    /// per name per process; steady state never touches the lock, which used
+    /// to be an `RwLock` round-trip per cast on every thread at once.
     pub fn wants_converge(&self) -> bool {
+        use std::cell::RefCell;
         use std::collections::HashMap;
         use std::sync::{OnceLock, RwLock};
+        const L1: usize = 512;
+        thread_local! {
+            static NEAR: RefCell<[(usize, bool); L1]> =
+                const { RefCell::new([(0, false); L1]) };
+        }
+        let key = self.name.as_ptr() as usize;
+        // Key 0 is the empty marker; a `&str`'s data pointer is never null.
+        let slot = (key.wrapping_mul(0x9E37_79B9_7F4A_7C15) >> 48) as usize & (L1 - 1);
+        if let Some(hit) = NEAR.with(|c| {
+            let c = c.borrow();
+            (c[slot].0 == key).then_some(c[slot].1)
+        }) {
+            return hit;
+        }
         static CACHE: OnceLock<RwLock<HashMap<String, bool>>> = OnceLock::new();
         let cache = CACHE.get_or_init(|| RwLock::new(HashMap::new()));
         let name: &str = self.name;
-        if let Some(&hit) = cache.read().unwrap().get(name) {
-            return hit;
-        }
-        let val = format!("{self:?}").contains("ConvergedValue");
-        cache.write().unwrap().insert(name.to_string(), val);
+        let hit = cache.read().unwrap().get(name).copied();
+        let val = match hit {
+            Some(v) => v,
+            None => {
+                let v = format!("{self:?}").contains("ConvergedValue");
+                cache.write().unwrap().insert(name.to_string(), v);
+                v
+            }
+        };
+        NEAR.with(|c| c.borrow_mut()[slot] = (key, val));
         val
     }
 
     /// Spend-restriction context for casting this card as a spell — gates
     /// which restricted mana [`crate::mana::ManaPool::pay_for_spell`] may drain.
     pub fn spell_kind(&self) -> crate::mana::SpellKind {
+        // One colour read, not two `printed_colors()` calls — each of those
+        // was a `ColorSet::to_vec` allocation for a question the set answers
+        // with a mask test. Same for the three `is_creature` and two
+        // `is_artifact` `Vec::contains` walks.
+        let colors = self.printed_color_set();
+        let creature = self.is_creature();
+        let artifact = self.is_artifact();
         crate::mana::SpellKind {
             wants_converge: self.wants_converge(),
             instant_or_sorcery: self.is_instant() || self.is_sorcery(),
-            artifact: self.is_artifact(),
-            creature_types: if self.is_creature() {
+            artifact,
+            creature_types: if creature {
                 self.subtypes.creature_types.clone()
             } else {
                 Vec::new()
             },
-            changeling: self.is_creature() && self.keywords.contains(&Keyword::Changeling),
+            changeling: creature && self.keywords.contains(&Keyword::Changeling),
             land_ability: false,
-            creature: self.is_creature(),
+            creature,
             creature_ability: false,
-            casting_nonartifact_spell: !self.is_artifact(),
+            casting_nonartifact_spell: !artifact,
             activating_ability: false,
             lesson: self.subtypes.spell_subtypes.contains(&crate::card::SpellSubtype::Lesson),
             devoid: self.keywords.contains(&Keyword::Devoid),
             equipment: self.is_equipment(),
-            colorless: self.printed_colors().is_empty(),
+            colorless: colors.is_empty(),
             mana_value: self.cost.cmc(),
             has_x: self.cost.has_x(),
             omen: false,
             enchantment: self.is_enchantment(),
-            multicolored: self.printed_colors().len() >= 2,
+            multicolored: colors.len() >= 2,
             planeswalker: self.is_planeswalker(),
             legendary: self.supertypes.contains(&Supertype::Legendary),
             creature_mana_only: self.spend_only_creature_mana,
