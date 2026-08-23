@@ -26,13 +26,14 @@ session landed pass 45's row (E) and the planeswalker-cash-out work
 underneath it mid-run, so pass 46's Ir chain is measured against its own base
 `11792f4c` and rebased on top of theirs.** Pass 45 finished at
 `1,810,336,693 -> 1,765,005,375`, -2.504 %. Pass 46:
-`1,765,005,375 -> 1,735,997,491`, **-1.643 %** in five commits (the first four
+`1,765,005,375 -> 1,727,337,280`, **-2.134 %** in six commits (the first four
 were measured against their own base `11792f4c` for -1.312 % and re-read at
 -1.371 % after the rebase, so the two passes' rows compose) — `spell_kind`
 built twice per cast and expensively (two `Vec`s for a colour question, a
-global `RwLock` + SipHash for one bool), a land tap deep-copying its whole
-effect tree, and Ward taking a gather per opposing target. Every step
-`--bench`-invariant-identical.
+global `RwLock` + SipHash for one bool); a land tap deep-copying its whole
+effect tree *and* asking the board twice about statics no board has; the
+bot's affordability question allocating two `ManaCost`s per hand card; Ward
+taking a gather per opposing target. Every step `--bench`-invariant-identical.
 
 1. **Nothing is in flight.** Round 50 read out at `5af4f687` — the
    planeswalker cash-out fix is **+0.25 pooled, replicated, both intervals
@@ -48,22 +49,29 @@ effect tree, and Ward taking a gather per opposing target. Every step
    — the old `deps/*crabomination*` glob also deletes base and catalog and
    forces the 11-minute path. Budget ~4 min per engine candidate, ~12 per
    `crabomination_base` one.
-3. **Top perf candidate is (-25) `resolve_combat`, 11.86 % over 2,694, and
-   pass 46 narrowed it.** Its SBA row is real deaths (27,065 Ir a sweep
+3. **Top perf candidate is the land tap, now read from the top.** A cast
+   costs 2.5 of them and `activate_ability` inside `auto_tap_for_cost_inner`
+   is 8.66 %. The Profile of record has the per-tap table; the biggest row is
+   `card_keyword_possible` at **1.26 % over 18,910 calls, 1,149 Ir each**, of
+   which ~830 is a board walk that gives the same answer for every tap in a
+   batch — and stamping it per batch is unsound, because a mana ability can
+   move the board between taps. Read (-11) before proposing a cache.
+4. **Then (-25) `resolve_combat`, 11.86 % over 2,694, which pass 46
+   narrowed.** Its SBA row is real deaths (27,065 Ir a sweep
    because combat sweeps kill), and the `computed_permanent` row is
    **diffuse** — the largest single source line in the function is 748 calls,
    and the damage loop is already freeze-scoped in three places — so the
    "one scope to widen" reading in the entry is wrong. Unread and unclaimed:
    `combat_damage_computed` 4,997 Ir over 3,226, `prevent_combat_to_target`
    3,875 over 2,682, `quality_band_assigner` 5,932 over 846.
-4. **Second: (-23)'s allocator table, which pass 46 refreshed *and* fixed.**
+5. **(-23)'s allocator table, which pass 46 refreshed *and* fixed.**
    Read its opening paragraph before extracting it again — a regex over a
    window instead of the contiguous `<` block invents rows, and pass 46 built
    and measured a candidate on two invented ones before catching it
    (-0.006 %, reverted). Cheapest unclaimed named row is `finalize_cast`'s
    24,108 (3.4 per cast); `RawTable::clone` 29,428 and `Box::clone` 26,386
    are unread.
-5. **Do not rebuild these.** The board-presence epoch ((-18), +0.49 %). The
+6. **Do not rebuild these.** The board-presence epoch ((-18), +0.49 %). The
    `GameState` husk pool (+2.60 %). Gating `do_untap`'s six walks
    (+0.0001 %). Narrowing `GameState`. Splitting the big engine files for
    build time. The per-definition keyword-grant bit ((-11), ~0.3 % and
@@ -72,12 +80,12 @@ effect tree, and Ward taking a gather per opposing target. Every step
    reads once. Guarding `declare_blockers`' first cold write: measured, it
    promotes the next one and buys ~1.2 M of 7.1 M. Chasing the Ward gathers:
    the presence gate removes only a fifth of them.
-6. **Env.** No `cargo-nextest`; `cargo test -j 2 -p crabomination -p
+7. **Env.** No `cargo-nextest`; `cargo test -j 2 -p crabomination -p
    crabomination_tests` is the gate. Workspace clippy needs `apt-get update &&
    apt-get install -y libwayland-dev libasound2-dev libudev-dev
    libxkbcommon-dev`. Callgrind ~20 s and contention-immune, so a build in
    `target-probe` and a callgrind on `target/` overlap for free.
-7. **Green at the tip (`9ef418d7`).** Suite **18,709 / 0 failed / 5
+8. **Green at the tip.** Suite **18,709 / 0 failed / 5
    ignored** over 22 binaries, golden traces and the
    same-seed replay included; `cargo clippy --workspace --all-targets` clean.
    `--bench` invariants byte-identical across pass 46 (decisions 196,220,
@@ -90,13 +98,14 @@ effect tree, and Ward taking a gather per opposing target. Every step
    or the encoder). Absolute games/s is not comparable across routine boxes,
    and a `profiling-fast` games/s is not comparable to anything; quote
    callgrind under 5 %.
-8. **Trackers.** TODO ~1.0k, ROADMAP 0.66k, PERF ~2.6k (pass 46 folded the
+9. **Trackers.** TODO ~1.0k, ROADMAP 0.66k, PERF ~2.6k (pass 46 folded the
    forty-second pass's prose and the 42nd/44th profile tables to indexes; the
    forty-third's entry is the next fold). `scripts/find_data_tests.sh` reads
    **199 pure-data tests**, 25 `[CR]`-marked and sacred; the other 174 want a
    table-driven definition audit per set. Not a build-time item. **The
-   sixteenth filter is still owed** — *a default that no caller ever
-   overrides*.
+   sixteenth filter and the panic census were both run this pass and are both
+   clean** — see the filter table; a *seventeenth* is owed and the entry names
+   two candidates.
 
 ## Environment note
 
@@ -273,6 +282,41 @@ for present-tense cost claims (`costs nothing` / `is cheap` / `O(n` /
 code is shaped as it is. **Both filters' yield is in claims a *measurement*
 relies on, not in the engine's prose** — the table's own lesson (structure and
 running code beat grepping) applied twice more.
+
+**The sixteenth filter was run 2026-08-23 and is CLEAN in every reading it
+has** — *a default that no caller ever overrides*. Mechanically, over
+`crabomination`, `crabomination_base` and `crabomination_ml`: (i) a `bool`
+parameter every call site pins to one literal — **zero**; (ii) an
+`Option<T>` parameter every call site passes `None` — **zero**; (iii) an
+`EvalWeights` field no profile constructor ever sets away from the baseline —
+**zero of 36**; (iv) a `GameState` / `ColdState` field with no read outside
+its own definition — **zero of 196 / 91**. A looser first pass (a function
+whose call sites show only one bool *literal*, variables ignored) returns 14
+hits and every one is noise — `default_damage_split(has_trample)` reads
+"always false" only because the single literal site is the zero-power case.
+Don't re-run any of it.
+
+**And the standing panic goal was audited the same day: also clean.** 84
+`unwrap()` and 46 `expect(` in non-test engine code; drop the
+`lock()/read()/write().unwrap()` poison calls and 118 sites remain. Every one
+reachable from self-play is guarded, and almost all name the guard in a
+comment or a message: the five `back_face…unwrap()` sites each sit behind an
+`is_none()`/`has_back` check, the six `max_by_key(..).unwrap()` "look at top
+N" sites each behind an `is_empty()` return, `mayhem_cost().unwrap()` behind
+`mayhem_cost().is_some()`, `hand.first().unwrap()` behind
+`hand.is_empty() { continue }`. One dead hazard, not reachable:
+`impl Index<&CounterType> for CounterBag` panics on a missing kind and has no
+`counters[..]` call site anywhere. Re-run the census after a batch of new
+cards, not per run.
+
+**A seventeenth filter is owed. Two candidates, in order:** *a comment that
+names a call count or a share* — pass 46 found two stale in PERF itself
+("`activate_ability_inner` asks `card_type_change_in_scope` twice", when it
+asks once; "an `Arc<CardDefinition>` + index is a real refactor", when
+`HeldAbility::Printed` already was one, and the fix was three call sites for
+-0.457 %) — and *a tool's own extraction step*, which is where the fifteenth
+filter and pass 46's retracted allocator rows both came from. The measuring
+device keeps being the thing that lies.
 
 **Stall rate — CLOSED 2026-08-14, and the answer is "nothing to fix".**
 The attribution the previous run built (`419d2ea6`: `recommend::StopReason`

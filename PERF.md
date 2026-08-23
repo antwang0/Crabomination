@@ -706,10 +706,12 @@ Base `11792f4c` re-read at **1,771,223,960** (the forty-fifth pass recorded
 | — | *rebase onto pass 45's (E)*; the same four commits re-read **1,765,005,375 -> 1,740,811,994, -1.371 %** | they compose |
 | E | 1,740,811,994 -> 1,735,997,491 (**-0.277 %**) | the bot's affordability question stops allocating twice per card |
 | — | 1,740,811,994 -> 1,740,704,526 (**-0.006 %**) | **REVERTED** — short-circuiting `continue_trigger_ordering`'s copy, built on a misread allocator table |
+| F | 1,735,997,491 -> 1,727,337,280 (**-0.499 %**) | a land tap stops asking the board twice about statics no board has |
 
 **The pass sums to `1,771,223,960 -> 1,747,982,407`, -23,241,553 /
--1.312 %** on its own chain, and `1,765,005,375 -> 1,735,997,491`,
-**-29,007,884 / -1.643 %** on the branch with the rebase and (E) included.
+-1.312 %** on its own chain, and **`1,765,005,375 -> 1,727,337,280`,
+-37,668,095 / -2.134 %** on the branch with the rebase, (E) and (F)
+included.
 `--bench --threads 3` invariants byte-identical at every step:
 decisions 196,220, turns_per_game 27.53, stalls 0 (cap 0 / stuck 0 / draw 0),
 determinism ok. No encoding change; no net needs retraining.
@@ -762,6 +764,20 @@ not have: `card.definition.cost.clone()` so the Leech cycle's coloured
 surcharge had somewhere to `extend` into, and `relax_cost_colors`'
 `.into_owned()` on a `Cow` that is `Borrowed` on every board without a
 Lattice. 12,986 each, 2.5 % of the program's allocations, **-0.277 %**.
+
+**(F) is (A)'s question asked of the resolver rather than the caller, and it
+paid twice what the arithmetic said.** `Effect::AddMana`'s three land-tap
+replacement blocks — Contamination, Pulse of Llanowar, the turn-scoped Pale
+Moon family — each opened with its own
+`ctx.source.and_then(battlefield_find)` to ask "is the source a land", and
+two of them then took a whole-board `static_abilities` walk. Every land tap
+paid all of it: `find_map` from `run_effect` was **8,810,292 Ir / 0.51 % over
+37,140 calls, exactly two per tap**, with `is_land` at 37,764 and a
+`battlefield_find` apiece behind them. One source lookup and one fused walk
+(taken only for a land source) read **-0.499 %** — more than the `find_map`
+row alone, because the three redundant `battlefield_find`s went with it. The
+first-match corner the `find_map` chain encoded is preserved: a Pulse source
+with no chosen colour does not claim the slot and the walk keeps looking.
 
 **(D) is a small row with a useful negative result.**
 `push_ward_triggers_for_targets` took a whole-game gather per opposing
@@ -1282,9 +1298,10 @@ settings + debuginfo; system allocator, because valgrind replaces malloc and
 a mimalloc build would measure the interception), 1 thread, `--a gang --b
 gang --games 6 --seed 1 --decks fixed`.
 
-**The forty-sixth pass reads 1,747,982,407 Ir at its tip — measured before
-the rebase onto pass 45's (E), so the absolute totals are ~6 M high against
-the branch tip and the shares are unaffected.** Fresh table first; the forty-fifth's is kept under it because its Log rows chain to it.
+**The forty-sixth pass ends at 1,727,337,280 Ir.** The table below was taken
+at 1,747,982,407, before the rebase and before (E) and (F), so its absolute
+totals read ~20 M high against the branch tip; the shares are close, and the
+land-tap table under it is at the final tip. The forty-fifth's is kept below because its Log rows chain to it.
 The forty-second's and forty-fourth's were dropped at the 2.8 k fold — their
 Log entries carry the rows that still matter and `git log -- PERF.md` has the
 tables.
@@ -1303,6 +1320,29 @@ tables.
 | `card_can_grant_keyword` | 15.7 M self / 0.89 % over 648,698 | candidate (-11), still demoted |
 | `Keyword::eq` | 12,255,890 / 0.69 % | a payload-carrying enum compared by `Vec::contains`. ~11 Ir a call — already near the floor for a derived `PartialEq`; no entry |
 | `CardDefinition::is_creature` | 14,285,884 / 0.81 % | ~15 Ir over ~950 k calls, a `Vec<CardType>::contains`. A `CardTypeSet` bitset is the only shape that beats it and it is the (-11) staleness hazard again |
+
+**The land tap, read from the top at the 46th tip and the clearest single
+thing left.** `auto_tap_for_cost_inner` is 258,552,458 / 14.60 % over 9,034
+and `activate_ability` inside it 153,425,087 / 8.66 % over 18,830, so **a
+cast costs 2.5 land taps**. What one tap pays, after (B) and (F):
+
+| callee of `activate_ability_inner` | Ir | % | calls | Ir/call |
+|---|---|---|---|---|
+| **`card_keyword_possible`** | **21,733,120** | **1.26** | 18,910 | **1,149** |
+| `continue_ability_resolution_x` | 19,845,500 | 1.15 | 18,750 | 1,058 (was 1,671) |
+| `card_type_change_in_scope` | 9,112,636 | 0.53 | 18,864 | 483 |
+| `resolve_extra_mana_on_land_tap` | 4,111,380 | 0.24 | 18,750 | 219 |
+| `mana_production_multiplier_for` | 3,182,508 | 0.18 | 18,750 | 170 |
+| `ability_spend_kind` | 1,129,800 | 0.07 | 18,830 | 60 |
+
+`card_keyword_possible` is the CR 602.5 `CantActivateTapAbilities` gate and
+**~830 of its 1,149 Ir is `keyword_grant_in_scope`'s board walk**, which is
+the same answer for every tap in one `auto_tap_for_cost_inner` batch (2.1 of
+them). Stamping it per batch is *unsound*: a mana ability may put a counter
+on its source or sacrifice it, so the board can move between taps and a stale
+`false` would skip a real restriction. (-11) has the cache shapes and why
+they lose. The last two rows are single tight board walks at ~11 Ir a card,
+already near the floor, and fusing them needs that same unsound stamp.
 
 **The forty-fifth pass reads 1,765,005,375 Ir at its tip; the table below
 was taken at 1,771,223,775, two commits earlier.**
