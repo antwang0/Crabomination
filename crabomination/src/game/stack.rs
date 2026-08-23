@@ -387,7 +387,7 @@ impl GameState {
                 // every untap step; `retain` and `iter_mut` each deep-copy the
                 // whole cold group, so ask with `&self` first.
                 if self.damage_locked_until_turn_of.iter().any(|(_, seat)| *seat == ap) {
-                    self.damage_locked_until_turn_of.retain(|(_, seat)| *seat != ap);
+                    retain_cold!(self.damage_locked_until_turn_of, |(_, seat)| *seat != ap);
                 }
                 // Oracle en-Vec's mandate arms as its victim's turn begins.
                 if self.attack_mandates.iter().any(|m| m.seat == ap && !m.armed) {
@@ -610,7 +610,7 @@ impl GameState {
                 // that sat out is destroyed, then the mandate expires.
                 let seat = self.active_player_idx;
                 if let Some(chosen) = self.armed_attack_mandate_for(seat) {
-                    self.attack_mandates.retain(|m| !(m.seat == seat && m.armed));
+                    retain_cold!(self.attack_mandates, |m| !(m.seat == seat && m.armed));
                     for id in chosen {
                         if self
                             .battlefield_find(id)
@@ -659,9 +659,7 @@ impl GameState {
                 self.resolution_causer = None;
                 self.spells_cast_last_turn = self.spells_cast_this_turn;
                 self.spells_cast_this_turn = 0;
-                if !self.last_cast_spell_colors.is_empty() {
-                    self.last_cast_spell_colors.clear();
-                }
+                clear_cold!(self.last_cast_spell_colors);
                 self.noncreature_spells_cast_this_turn = 0;
                 self.opponent_cast_since_your_turn &=
                     !crate::game::seat_bit(self.active_player_idx);
@@ -2343,7 +2341,7 @@ impl GameState {
                     // stack item counts the same as the blanket static.
                     let granted_ll = self.spell_granted_keyword(card.id, &Keyword::Lifelink);
                     let granted_dt = self.spell_granted_keyword(card.id, &Keyword::Deathtouch);
-                    self.spell_keyword_grants.retain(|(id, _)| *id != card.id);
+                    retain_cold!(self.spell_keyword_grants, |(id, _)| *id != card.id);
                     self.resolving_spell_lifelink_seat = (is_is
                         && (granted_ll || self.controller_grants_spell_lifelink(caster)))
                     .then_some(caster);
@@ -2509,8 +2507,8 @@ impl GameState {
         // CR 724.1b — remove all attackers and blockers from combat.
         self.attacking.clear();
         self.block_map.clear();
-        self.blocked_attackers.clear();
-        self.attack_bands.clear();
+        clear_cold!(self.blocked_attackers);
+        clear_cold!(self.attack_bands);
         self.blockers_declared = false;
         // CR 724.1d — the turn skips straight to the cleanup step.
         self.step = TurnStep::End;
@@ -3433,7 +3431,7 @@ impl GameState {
         self.players[p].protected_from_everything = false;
         // "Opponents' spells cost more until your next turn" expires too
         // (Elspeth Conquers Death II).
-        self.turn_scoped_spell_taxes.retain(|t| t.controller != p);
+        retain_cold!(self.turn_scoped_spell_taxes, |t| t.controller != p);
         // "Opponents can't cast spells named X until your next turn"
         // (Academic Probation mode 0) expires as the lock owner's turn begins.
         if !self.players[p].opponents_cant_cast_named.is_empty() {
@@ -3441,7 +3439,7 @@ impl GameState {
         }
         // Stagger damage-doubling windows expire as the registrant's turn
         // begins (Lightning, Army of One).
-        self.staggered_damage_players.retain(|(_, reg)| *reg != p);
+        retain_cold!(self.staggered_damage_players, |(_, reg)| *reg != p);
         // "Until your next turn, whenever a creature attacks you…" floating
         // triggers (Tamiyo +2) expire as their controller's turn begins.
         self.delayed_triggers.retain(|dt| {
@@ -3577,7 +3575,7 @@ impl GameState {
         // powers Witherbloom "if a creature died under your control this
         // turn" end-step payoffs (Essenceknit Scholar).
         self.players[p].creatures_died_this_turn = 0;
-        self.creature_deaths_this_turn.clear();
+        clear_cold!(self.creature_deaths_this_turn);
         self.players[p].zuberas_died_this_turn = 0;
         // Reset the Revolt (CR 702.139) "permanent left the battlefield under
         // your control this turn" flag for the active player.
@@ -3745,7 +3743,7 @@ impl GameState {
     fn cleanup_wear_off(&mut self) {
         // Bubbling Muck's floating "Swamps add an extra {B}" grant is a
         // "until end of turn" effect (CR 514.2).
-        self.extra_mana_on_land_tap_this_turn.clear();
+        clear_cold!(self.extra_mana_on_land_tap_this_turn);
         // CR 514.2 — Second, the following actions happen simultaneously:
         // all damage marked on permanents is removed and all "until end of
         // turn" and "this turn" effects end.
@@ -3815,20 +3813,20 @@ impl GameState {
         ]);
         // CR 702.143b — foretold-this-turn cards become castable next turn.
         // Autumn Willow's "until end of turn" shroud waiver (CR 514.2).
-        self.shroud_waivers.clear();
-        self.abilities_locked_this_turn.clear();
-        self.foretold_this_turn.clear();
-        self.plotted_this_turn.clear();
-        self.entered_from_graveyard_this_turn.clear();
-        self.entered_from_exile_this_turn.clear();
+        clear_cold!(self.shroud_waivers);
+        clear_cold!(self.abilities_locked_this_turn);
+        clear_cold!(self.foretold_this_turn);
+        clear_cold!(self.plotted_this_turn);
+        clear_cold!(self.entered_from_graveyard_this_turn);
+        clear_cold!(self.entered_from_exile_this_turn);
         // CR 603.3d — "triggers only once each turn" abilities reset.
-        self.triggered_once_per_turn_used.clear();
-        self.per_subject_trigger_uses.clear();
+        clear_cold!(self.triggered_once_per_turn_used);
+        clear_cold!(self.per_subject_trigger_uses);
         // Single Combat — the creature/planeswalker cast lock ends at the end
         // of the registerer's first turn strictly after it was registered
         // ("until the end of your next turn").
         let (active, turn) = (self.active_player_idx, self.turn_number);
-        self.creature_pw_cast_locks.retain(|(reg, t)| !(*reg == active && turn > *t));
+        retain_cold!(self.creature_pw_cast_locks, |(reg, t)| !(*reg == active && turn > *t));
         // CR 505.1b — discard any unconsumed additional combat phases so they
         // don't bleed into the next turn (e.g. the turn ended before combat).
         self.additional_combat_phases = 0;
@@ -3840,7 +3838,7 @@ impl GameState {
         self.end_steps_this_turn = 0;
         self.additional_upkeep_steps = 0;
         self.upkeep_steps_this_turn = 0;
-        self.graveyard_from_battlefield_this_turn.clear();
+        clear_cold!(self.graveyard_from_battlefield_this_turn);
         // CR 514.2 — all damage marked on permanents is removed, phased-out
         // ones included (they're treated as nonexistent, not as gone). Decided
         // from a shared borrow: `iter_mut` unshares both zone vectors and the
@@ -3856,18 +3854,18 @@ impl GameState {
         // Clear the per-turn "permanents gained a counter this turn"
         // tracker (used by Fractal Tender's end-step trigger). Resetting
         // at cleanup is the canonical "until end of turn" scope.
-        self.permanents_gained_counter_this_turn.clear();
-        self.permanents_amplified_counter_this_turn.clear();
+        clear_cold!(self.permanents_gained_counter_this_turn);
+        clear_cold!(self.permanents_amplified_counter_this_turn);
         // CR 603-style "Nth time this turn" escalation counters reset.
-        self.ability_resolutions_this_turn.clear();
+        clear_cold!(self.ability_resolutions_this_turn);
         // Clear transient granted triggers (Rabid Attack, Root
         // Manipulation EOT-duration grants).
-        self.granted_triggers_eot.clear();
+        clear_cold!(self.granted_triggers_eot);
         // Close the "if it would die this turn, exile it instead" window
         // (Wilt in the Heat).
-        self.dies_to_exile_eot.clear();
-        self.damage_exiles_victim_eot.clear();
-        self.damage_denies_regen_eot.clear();
+        clear_cold!(self.dies_to_exile_eot);
+        clear_cold!(self.damage_exiles_victim_eot);
+        clear_cold!(self.damage_denies_regen_eot);
         // Expire event-keyed "when [card] dies this turn" delayed triggers
         // that never fired (CR 603.4 — the "this turn" window closes). A
         // watcher carrying an explicit `expires_after_turn` runs on its own
@@ -3904,53 +3902,53 @@ impl GameState {
         // cleanup along with the other until-end-of-turn flags.
         self.prevent_combat_damage_this_turn = false;
         self.prevent_combat_damage_except = None;
-        self.combat_damage_prevented_creatures.clear();
-        self.combat_damage_prevented_to_this_turn.clear();
-        self.combat_damage_prevented_by_this_turn.clear();
-        self.all_damage_prevented_by_this_turn.clear();
+        clear_cold!(self.combat_damage_prevented_creatures);
+        clear_cold!(self.combat_damage_prevented_to_this_turn);
+        clear_cold!(self.combat_damage_prevented_by_this_turn);
+        clear_cold!(self.all_damage_prevented_by_this_turn);
         self.life_gain_punish_this_turn = 0;
-        self.draws_redirected_this_turn.clear();
+        clear_cold!(self.draws_redirected_this_turn);
         self.damage_becomes_this_turn = None;
-        self.combat_damage_prevented_to_players_this_turn.clear();
-        self.auras_at_death.clear();
-        self.creature_etb_steal_this_turn.clear();
-        self.search_tax_paid_this_turn.clear();
-        self.damage_prevented_sources.clear();
-        self.land_mana_replacements_this_turn.retain(|r| r.indefinite);
-        self.targeting_damage_prevented_this_turn.clear();
-        self.colored_mana_becomes_this_turn.clear();
-        self.blocks_declared_this_turn.clear();
-        self.turn_granted_triggers.clear();
-        self.cant_block_pairs.clear();
-        self.cant_block_this_turn.clear();
-        self.attack_despite_defender_this_turn.clear();
+        clear_cold!(self.combat_damage_prevented_to_players_this_turn);
+        clear_cold!(self.auras_at_death);
+        clear_cold!(self.creature_etb_steal_this_turn);
+        clear_cold!(self.search_tax_paid_this_turn);
+        clear_cold!(self.damage_prevented_sources);
+        retain_cold!(self.land_mana_replacements_this_turn, |r| r.indefinite);
+        clear_cold!(self.targeting_damage_prevented_this_turn);
+        clear_cold!(self.colored_mana_becomes_this_turn);
+        clear_cold!(self.blocks_declared_this_turn);
+        clear_cold!(self.turn_granted_triggers);
+        clear_cold!(self.cant_block_pairs);
+        clear_cold!(self.cant_block_this_turn);
+        clear_cold!(self.attack_despite_defender_this_turn);
         // CR 615 — prevention shields and the "can't be prevented" rider
         // are "this turn" effects; they expire at cleanup too.
-        self.prevention_shields.clear();
+        clear_cold!(self.prevention_shields);
         self.damage_cant_be_prevented_this_turn = false;
         self.attack_tax_this_turn = 0;
         self.block_tax_this_turn = 0;
-        self.damage_redirect_this_turn.clear();
-        self.next_damage_redirect.clear();
-        self.turn_damage_redirect.clear();
-        self.next_combat_damage_to_controller.clear();
-        self.next_combat_damage_redirect.clear();
-        self.spell_damage_to_controller.clear();
-        self.sorcery_damage_this_turn.clear();
-        self.artifact_damage_to_players_this_turn.clear();
-        self.combat_damage_redirect_this_turn.clear();
-        self.doubled_damage_sources_this_turn.clear();
-        self.assigns_no_combat_damage_this_turn.clear();
+        clear_cold!(self.damage_redirect_this_turn);
+        clear_cold!(self.next_damage_redirect);
+        clear_cold!(self.turn_damage_redirect);
+        clear_cold!(self.next_combat_damage_to_controller);
+        clear_cold!(self.next_combat_damage_redirect);
+        clear_cold!(self.spell_damage_to_controller);
+        clear_cold!(self.sorcery_damage_this_turn);
+        clear_cold!(self.artifact_damage_to_players_this_turn);
+        clear_cold!(self.combat_damage_redirect_this_turn);
+        clear_cold!(self.doubled_damage_sources_this_turn);
+        clear_cold!(self.assigns_no_combat_damage_this_turn);
         self.creature_combat_damage_doublers = 0;
-        self.damage_sources_this_turn.clear();
-        self.noncombat_damage_bonus_this_turn.clear();
+        clear_cold!(self.damage_sources_this_turn);
+        clear_cold!(self.noncombat_damage_bonus_this_turn);
         // Desperate Gambit's unspent doubler expires with the turn.
-        self.double_next_damage_from.clear();
+        clear_cold!(self.double_next_damage_from);
         self.damaged_creatures_die_this_turn = false;
         self.creature_deaths_drain_toughness_this_turn = false;
         self.no_search_this_turn = false;
-        self.skipped_steps_this_turn.clear();
-        self.cant_attack_player_this_turn.clear();
+        clear_cold!(self.skipped_steps_this_turn);
+        clear_cold!(self.cant_attack_player_this_turn);
         self.graveyard_play_pooled_for = None;
         self.block_poison_this_turn = 0;
         // CR 500.4 — "kept this turn" mana (Savage Ventmaw) expires now, so the
@@ -5790,10 +5788,14 @@ impl GameState {
     pub(crate) fn remove_from_combat(&mut self, id: CardId) {
         self.attacking.retain(|a| a.attacker != id);
         // CR 702.22f — a creature removed from combat leaves its band.
-        for band in self.attack_bands.iter_mut() {
-            band.retain(|m| *m != id);
+        // Cold-group guard (see `clear_cold!`): `iter_mut` on an empty list is
+        // still a `DerefMut`, and banding is rare.
+        if !self.attack_bands.is_empty() {
+            for band in self.attack_bands.iter_mut() {
+                band.retain(|m| *m != id);
+            }
+            self.attack_bands.retain(|b| b.len() > 1);
         }
-        self.attack_bands.retain(|b| b.len() > 1);
         self.block_map.remove(&id);
         self.block_map.retain(|_, atks| {
             atks.retain(|a| *a != id);

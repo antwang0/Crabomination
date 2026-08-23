@@ -3041,7 +3041,7 @@ impl GameState {
                     return Ok(());
                 };
                 if let Some(src) = ctx.source {
-                    self.turn_damage_redirect.retain(|(c, _)| *c != src);
+                    retain_cold!(self.turn_damage_redirect, |(c, _)| *c != src);
                     self.turn_damage_redirect.push((src, dest));
                 }
                 Ok(())
@@ -3301,7 +3301,7 @@ impl GameState {
                     }) else {
                         continue;
                     };
-                    self.spell_damage_to_controller.retain(|(c, _)| *c != cid);
+                    retain_cold!(self.spell_damage_to_controller, |(c, _)| *c != cid);
                     self.spell_damage_to_controller.push((cid, controller));
                 }
                 Ok(())
@@ -3449,7 +3449,7 @@ impl GameState {
                 };
                 for ent in self.resolve_selector(what, ctx) {
                     if let Some(cid) = ent.as_permanent_id() {
-                        self.next_damage_redirect.retain(|(c, _)| *c != cid);
+                        retain_cold!(self.next_damage_redirect, |(c, _)| *c != cid);
                         self.next_damage_redirect.push((cid, dest));
                     }
                 }
@@ -8625,7 +8625,7 @@ impl GameState {
             // turn." A later entry for the same seat overwrites (723.1a).
             Effect::ControlPlayerNextTurn { who } => {
                 for p in self.resolve_players(who, ctx) {
-                    self.pending_player_control.retain(|(c, _)| *c != p);
+                    retain_cold!(self.pending_player_control, |(c, _)| *c != p);
                     self.pending_player_control.push((p, ctx.controller));
                 }
                 Ok(())
@@ -20595,7 +20595,7 @@ impl GameState {
             // False Dawn — record the turn-scoped recolour for this seat.
             Effect::ColoredManaBecomesThisTurn { who, color } => {
                 if let Some(p) = self.resolve_player(who, ctx) {
-                    self.colored_mana_becomes_this_turn.retain(|(s, _)| *s != p);
+                    retain_cold!(self.colored_mana_becomes_this_turn, |(s, _)| *s != p);
                     self.colored_mana_becomes_this_turn.push((p, *color));
                 }
                 Ok(())
@@ -24920,7 +24920,7 @@ impl GameState {
 
             Effect::RedirectDrawsThisTurn { from } => {
                 let Some(victim) = self.resolve_player(from, ctx) else { return Ok(()) };
-                self.draws_redirected_this_turn.retain(|(f, _)| *f != victim);
+                retain_cold!(self.draws_redirected_this_turn, |(f, _)| *f != victim);
                 self.draws_redirected_this_turn.push((victim, ctx.controller));
                 Ok(())
             }
@@ -29496,7 +29496,7 @@ impl GameState {
                 let Some(chosen) = self.choose_damage_prevention_source(filter, ctx) else {
                     return Ok(());
                 };
-                self.damage_prevented_sources.retain(|sh| sh.source != chosen);
+                retain_cold!(self.damage_prevented_sources, |sh| sh.source != chosen);
                 self.damage_prevented_sources.push(crate::game::types::PreventedSource {
                     one_instance: true,
                     to_player: Some(ctx.controller),

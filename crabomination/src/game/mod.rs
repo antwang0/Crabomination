@@ -18,6 +18,36 @@
 //!   non-active player can cast instants / activate abilities in response);
 //!   `declare_blockers` is called by whoever controls the defending creatures.
 
+/// `self.<cold field>.clear()`, behind a read that skips the no-op.
+///
+/// Every write to a [`ColdState`] field goes through `DerefMut` on the cold
+/// group's `CowBox`, and `perform_action` holds a checkpoint of the state, so
+/// the group is *always* shared: the first cold write of an action deep-copies
+/// ~90 collections (~1,700 Ir). A `clear()` on an already-empty collection pays
+/// that in full and changes nothing. Reads go through `Deref` and are free, so
+/// asking first is the whole fix. Defined before the module list so every
+/// engine submodule sees it.
+///
+/// The same trap catches `retain`, `iter_mut`, `mem::take` and a whole-field
+/// assignment of an equal value — guard those by hand with an `is_empty()`
+/// (or equality) read.
+macro_rules! clear_cold {
+    ($self:ident . $f:ident) => {
+        if !$self.$f.is_empty() {
+            $self.$f.clear();
+        }
+    };
+}
+
+/// `self.<cold field>.retain(pred)` behind the same read — see [`clear_cold`].
+macro_rules! retain_cold {
+    ($self:ident . $f:ident, $pred:expr) => {
+        if !$self.$f.is_empty() {
+            $self.$f.retain($pred);
+        }
+    };
+}
+
 // Internal engine modules. `pub` (but hidden from docs) rather than
 // `pub(crate)` so the out-of-crate test suite (`crabomination_tests`) can
 // reach items like `effects::EffectContext`; not part of the supported API.
@@ -3381,7 +3411,7 @@ impl GameState {
     /// CR 801.2c — snapshot every player's range as the turn begins.
     pub fn refresh_range_matrix(&mut self) {
         if !self.limited_range() {
-            self.range_matrix.clear();
+            clear_cold!(self.range_matrix);
             return;
         }
         let len = self.players.len();
@@ -6360,7 +6390,7 @@ impl GameState {
         // CR 723.1a — the most recently created effect wins.
         if let Some(pos) = self.pending_player_control.iter().rposition(|(c, _)| *c == seat) {
             let (_, controller) = self.pending_player_control.remove(pos);
-            self.pending_player_control.retain(|(c, _)| *c != seat);
+            retain_cold!(self.pending_player_control, |(c, _)| *c != seat);
             self.controlled_by[seat] = Some(controller);
             // CR 723.4 — the controller sees everything the controlled player
             // can see, starting with their hand.
@@ -12286,6 +12316,12 @@ impl GameState {
     /// since left the battlefield are dropped without effect (CR 800.4 —
     /// the control-changing effect simply ends).
     pub(crate) fn revert_temporary_control(&mut self, which: &[crate::effect::Duration]) {
+        // `temporary_control` is a `ColdState` field and `mem::take` is a
+        // write: taking an empty list still unshares the whole cold group
+        // against `perform_action`'s checkpoint. Read first.
+        if self.temporary_control.is_empty() {
+            return;
+        }
         let mut kept = Vec::new();
         for tc in std::mem::take(&mut self.temporary_control) {
             let on_battlefield = self.battlefield.iter().any(|c| c.id == tc.card);
@@ -12311,7 +12347,7 @@ impl GameState {
             if let Some(def) = self.temporary_copies[pos].original_def() {
                 card.definition = def;
             }
-            self.temporary_copies.retain(|tc| tc.card != card.id);
+            retain_cold!(self.temporary_copies, |tc| tc.card != card.id);
         }
     }
 
@@ -12321,6 +12357,10 @@ impl GameState {
     /// Entries whose card left the battlefield are dropped (the copy effect
     /// ended with the object).
     pub(crate) fn revert_temporary_copies(&mut self, which: &[crate::effect::Duration]) {
+        // Cold-group guard — see `revert_temporary_control`.
+        if self.temporary_copies.is_empty() {
+            return;
+        }
         let mut kept = Vec::new();
         for tc in std::mem::take(&mut self.temporary_copies).into_iter().rev() {
             if !self.battlefield.iter().any(|c| c.id == tc.card) {
@@ -12354,6 +12394,11 @@ impl GameState {
     pub fn process_attacking_token_cleanup(&mut self) -> Vec<GameEvent> {
         use crate::effect::AttackingTokenCleanup;
         let mut events = Vec::new();
+        // Cold-group guard (see `clear_cold!`): `mem::take` is a write, and
+        // most combats register no cleanup token at all.
+        if self.attacking_token_cleanup.is_empty() {
+            return events;
+        }
         for (id, kind) in std::mem::take(&mut self.attacking_token_cleanup) {
             if !self.battlefield.iter().any(|c| c.id == id) {
                 continue; // already gone (died in combat, bounced, etc.)
@@ -14407,7 +14452,7 @@ impl GameState {
         }
         self.players[p].life = 20;
         self.players[p].poison_counters = 0;
-        self.commander_damage.retain(|(victim, _), _| *victim != p);
+        retain_cold!(self.commander_damage, |(victim, _), _| *victim != p);
         true
     }
 
@@ -14535,7 +14580,7 @@ impl GameState {
         // `library_tops_revealed` is a `ColdState` field and the `retain`
         // runs on every draw, for a list that is empty on almost every board.
         if self.library_tops_revealed.contains(&p) {
-            self.library_tops_revealed.retain(|s| *s != p);
+            retain_cold!(self.library_tops_revealed, |s| *s != p);
         }
         // CR 121.2b — a per-turn draw cap applies to *individual* card draws,
         // so it gates every draw source, not just `Effect::Draw`'s count.
@@ -18163,7 +18208,7 @@ impl GameState {
         self.players[seat].library.shuffle(&mut self.rng.draw());
         // A one-shot top reveal (Aven Windreader) only covers the card that was
         // on top; a shuffle moves it.
-        self.library_tops_revealed.retain(|s| *s != seat);
+        retain_cold!(self.library_tops_revealed, |s| *s != seat);
         events.push(GameEvent::LibraryShuffled { player: seat });
     }
 

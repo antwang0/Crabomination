@@ -4154,7 +4154,7 @@ impl GameState {
             &[],
             CastFlags { kicked: true, ..Default::default() },
         );
-        self.cast_kicker_options.clear();
+        clear_cold!(self.cast_kicker_options);
         out
     }
 
@@ -8040,7 +8040,13 @@ impl GameState {
         }
         self.spells_cast_this_turn += 1;
         // Mana Maze reads the turn's most recent cast (CR 601.2 restriction).
-        self.last_cast_spell_colors = card.definition.printed_colors();
+        // Cold-group write (see `clear_cold!`): a two-colour deck casts the
+        // same colours over and over, so compare before unsharing ~90
+        // collections to store the value that is already there.
+        let cast_colors = card.definition.printed_colors();
+        if self.last_cast_spell_colors != cast_colors {
+            self.last_cast_spell_colors = cast_colors;
+        }
         self.players[p].spells_cast_this_turn += 1;
         self.players[p].spells_cast_this_game_turn += 1;
         if card.definition.card_types.contains(&crate::card::CardType::Sorcery) {
@@ -16047,7 +16053,14 @@ impl GameState {
         // Tap-N-as-cost (CR 602.5b): with tap/mana/life paid, tap each
         // pre-selected untapped permanent. Heritage Druid's "Tap three
         // untapped Elves you control" cost runs here.
-        self.tapped_for_cost = tap_n_picks.clone();
+        // `tapped_for_cost` is a `ColdState` field, so writing it unshares the
+        // whole cold group against `perform_action`'s checkpoint — 1,742 Ir
+        // for a deep copy of ~85 collections. Nearly every activation is a
+        // land tapping for mana with no tap-N cost at all, and the write it
+        // wanted was empty-to-empty. Read first (free through `Deref`).
+        if !tap_n_picks.is_empty() || !self.tapped_for_cost.is_empty() {
+            self.tapped_for_cost = tap_n_picks.clone();
+        }
         for other_cid in tap_n_picks {
             if let Some(c) = self.battlefield.iter_mut().find(|c| c.id == other_cid) {
                 c.tapped = true;
@@ -16115,7 +16128,7 @@ impl GameState {
         // `{2}{R}{W}, Exile a card from your graveyard: +1/+1 EOT`
         // (count 1), and Grim Lavamancer's `{R}, {T}, Exile two cards
         // from your graveyard` (count 2).
-        self.cost_exiled_cards.clear();
+        clear_cold!(self.cost_exiled_cards);
         for other_cid in exile_other_picks {
             if let Some(card) = Self::take_card(&mut self.players[p].graveyard, other_cid) {
                 self.exile.push(card);

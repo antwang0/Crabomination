@@ -243,7 +243,7 @@ impl GameState {
             // CR 615.8 — a "next time it would deal damage" shield expires
             // after soaking one instance.
             if shield.one_instance {
-                self.damage_prevented_sources.retain(|sh| sh.source != src);
+                retain_cold!(self.damage_prevented_sources, |sh| sh.source != src);
             }
             if amount > 0 {
                 let (to_player, to_card) = match ent {
@@ -2158,7 +2158,7 @@ impl GameState {
                 };
                 // A one-shot top reveal (Aven Windreader) only covers the card
                 // that was on top; any insertion can displace it.
-                self.library_tops_revealed.retain(|s| *s != p);
+                retain_cold!(self.library_tops_revealed, |s| *s != p);
                 match pos {
                     LibraryPosition::Top => self.players[p].library.insert(0, card),
                     LibraryPosition::Bottom => self.players[p].library.push(card),

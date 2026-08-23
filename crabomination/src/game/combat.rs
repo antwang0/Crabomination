@@ -2624,10 +2624,10 @@ impl GameState {
         // boundary deep-copies the whole cold group (PERF, twenty-eighth
         // pass's rule, restated in the thirty-third's Log block).
         if !self.blocked_attackers.is_empty() {
-            self.blocked_attackers.clear();
+            clear_cold!(self.blocked_attackers);
         }
         if !self.attack_bands.is_empty() {
-            self.attack_bands.clear();
+            clear_cold!(self.attack_bands);
         }
         self.clear_combat_damage_plan();
         self.blockers_declared = false;
@@ -3325,7 +3325,7 @@ impl GameState {
         // Each call is one combat-damage batch (first-strike and regular
         // damage are separate sub-steps): reset the "one or more creatures
         // you control deal combat damage" graveyard-trigger dedupe.
-        self.gy_combat_trigger_fired_this_step.clear();
+        clear_cold!(self.gy_combat_trigger_fired_this_step);
 
         let computed_of =
             |id: CardId| -> Option<&ComputedPermanent> { computed.iter().find(|c| c.id == id) };
@@ -3448,7 +3448,7 @@ impl GameState {
             // different game state from its siblings.
             if atk.assigns_as_unblocked {
                 blocker_ids.clear();
-                self.blocked_attackers.retain(|id| *id != atk.id);
+                retain_cold!(self.blocked_attackers, |id| *id != atk.id);
             }
             if blocker_ids.len() > 1
                 && let Some(order) = self.combat_damage_order.get(&atk.id)
@@ -5065,7 +5065,10 @@ impl GameState {
                         }
                     }
                 }
-                self.gy_combat_trigger_fired_this_step.extend(fired);
+                // Cold-group guard — see `clear_cold!`.
+                if !fired.is_empty() {
+                    self.gy_combat_trigger_fired_this_step.extend(fired);
+                }
             }
         }
 
