@@ -313,6 +313,12 @@ pub struct EvalWeights {
     /// by a hand-tuned threshold. Off by default until laddered
     /// ([`mull_sim_on`](Self::mull_sim_on), profile `mullsim`).
     pub mull_sim: bool,
+    /// Restore the pre-2026-08-23 planeswalker cash-out read: raw enemy
+    /// creature power against *current* loyalty, no blockers, no
+    /// attack-capability filter. The control for the fix, kept so the
+    /// change is measurable rather than asserted (profile
+    /// `walkerlegacy`); see the guard in `pick_loyalty_ability`.
+    pub legacy_cashout: bool,
     /// Offer gang-blocks *for value* to the block search.
     ///
     /// The greedy pass already piles blockers onto an attacker, but only
@@ -499,6 +505,7 @@ impl EvalWeights {
             land_urgency: false,
             mull_quality: false,
             mull_sim: false,
+            legacy_cashout: false,
             block_gang: false,
             determinize: 0,
             belief_determinize: false,
@@ -570,6 +577,7 @@ impl EvalWeights {
             land_urgency: false,
             mull_quality: false,
             mull_sim: false,
+            legacy_cashout: false,
             block_gang: false,
             determinize: 0,
             belief_determinize: false,
@@ -624,6 +632,7 @@ impl EvalWeights {
             land_urgency: false,
             mull_quality: false,
             mull_sim: false,
+            legacy_cashout: false,
             block_gang: false,
             determinize: 0,
             belief_determinize: false,
@@ -1067,6 +1076,11 @@ impl EvalWeights {
     /// [`mull_sim`](Self::mull_sim); ladder as A against `gang`.
     pub const fn mull_sim_on() -> Self {
         Self { mull_sim: true, ..Self::block_gang_search() }
+    }
+
+    /// [`legacy_cashout`](Self::legacy_cashout) — the pre-fix control.
+    pub const fn legacy_cashout_on() -> Self {
+        Self { legacy_cashout: true, ..Self::block_gang_search() }
     }
 
     /// [`target_arms`](Self::target_arms). Search-only, so it is gated as
@@ -6774,13 +6788,50 @@ fn pick_loyalty_ability(state: &GameState, seat: usize, w: &EvalWeights) -> Opti
         // on next combat), cash out: restrict to loyalty-SPENDING
         // abilities whenever any is affordable, and let the outcome
         // eval pick among those.
-        let threat: i32 = state
+        //
+        // The read has to be about the loyalty the walker would *have*
+        // and the damage that would actually *reach* it. Comparing raw
+        // enemy power against `current_loyalty` made any single 1/1 force
+        // a cash-out at 1 loyalty, counted creatures that cannot attack,
+        // and ignored our own blockers entirely — so past the opening
+        // turns the condition was always true and the bot never plussed a
+        // walker at all. Recorded games (2026-08-23): **zero** plus
+        // activations against eight minuses, including Ral Zarek spending
+        // its last loyalty to strip one card and die.
+        let mut incoming: Vec<i32> = state
             .battlefield
             .iter()
             .filter(|c| !state.same_team(c.controller, seat) && c.definition.is_creature())
+            // Tapped and summoning-sick both wear off before their next
+            // attack; Defender does not.
+            .filter(|c| !c.has_keyword(&crate::card::Keyword::Defender))
             .filter_map(|c| state.computed_permanent(c.id).map(|cp| cp.power.max(0)))
-            .sum();
-        if threat >= current_loyalty {
+            .collect();
+        incoming.sort_unstable_by(|a, b| b.cmp(a));
+        // Each untapped body of ours eats one attacker, biggest first.
+        // Creatures we later choose to attack with will not be back to
+        // block, so this is an optimistic read — but the term it replaces
+        // assumed *no* defenders at all.
+        let blockers = state
+            .battlefield
+            .iter()
+            .filter(|c| state.same_team(c.controller, seat) && c.definition.is_creature() && !c.tapped)
+            .count();
+        let threat: i32 = if w.legacy_cashout {
+            incoming.iter().sum()
+        } else {
+            incoming.iter().skip(blockers).sum()
+        };
+        // Plussing is only pointless if the walker dies *even after* the
+        // loyalty it would gain.
+        let best_plus = effective
+            .iter()
+            .map(|ab| ab.loyalty_cost)
+            .filter(|c| *c > 0)
+            .max()
+            .unwrap_or(0);
+        let bar = if w.legacy_cashout { current_loyalty } else { current_loyalty + best_plus };
+        if threat >= bar {
             let spending: Vec<(i32, GameAction)> = finalists
                 .iter()
                 .filter(|(_, a)| {
@@ -15642,6 +15693,59 @@ mod stack_response_tests {
         assert!(
             emblem_value(&g, 0, &draw) > emblem_value(&g, 0, &life),
             "a draw-two-per-turn emblem must out-value gain-one-per-turn"
+        );
+    }
+
+    /// A walker that survives the swing banks the plus instead of cashing
+    /// out — the case the old guard could not express.
+    ///
+    /// Regression, 2026-08-23, from `replay-1787448562-3` turn 19: Ral
+    /// Zarek at 1 loyalty spent its last point to strip one card and
+    /// died, with a `+1: Surveil 2` available. The guard compared raw
+    /// enemy power against *current* loyalty, counted creatures that
+    /// could not attack, and ignored our blockers, so any 1/1 forced a
+    /// cash-out. Across every recorded game the bot made **zero** plus
+    /// activations against eight minuses.
+    #[test]
+    fn defended_walker_banks_the_plus() {
+        use crate::card::{CardType, CounterType, LoyaltyAbility};
+        use crate::effect::shortcut::target_any;
+        use crate::effect::{Selector, Value};
+        let walker = || CardDefinition {
+            name: "Test Walker",
+            card_types: vec![CardType::Planeswalker],
+            base_loyalty: 1,
+            loyalty_abilities: vec![
+                LoyaltyAbility {
+                    x_cost: false,
+                    loyalty_cost: 1,
+                    effect: Effect::GainLife { who: Selector::You, amount: Value::Const(3) },
+                },
+                LoyaltyAbility {
+                    x_cost: false,
+                    loyalty_cost: -1,
+                    effect: Effect::DealDamage { to: target_any(), amount: Value::Const(1) },
+                },
+            ],
+            ..Default::default()
+        };
+        let w = EvalWeights::default();
+        let mut g = two_player_game();
+        let id = g.add_card_to_battlefield(0, walker());
+        // One loyalty: the old guard cashed out against any body at all.
+        let pw = g.battlefield.iter_mut().find(|c| c.id == id).unwrap();
+        let extra = 1 - pw.counter_count(CounterType::Loyalty) as i32;
+        if extra > 0 {
+            pw.add_counters(CounterType::Loyalty, extra as u32);
+        }
+        // A lone 2/2 across the table, and two untapped bodies to eat it.
+        g.add_card_to_battlefield(1, crate::catalog::grizzly_bears());
+        g.add_card_to_battlefield(0, crate::catalog::grizzly_bears());
+        g.add_card_to_battlefield(0, crate::catalog::hill_giant());
+        let action = pick_loyalty_ability(&g, 0, &w).expect("walker activates");
+        assert!(
+            matches!(action, GameAction::ActivateLoyaltyAbility { ability_index: 0, .. }),
+            "a defended walker banks the plus rather than dying for one ping, got {action:?}"
         );
     }
 

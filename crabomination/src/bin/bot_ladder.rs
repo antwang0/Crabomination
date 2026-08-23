@@ -271,6 +271,8 @@ fn parse_profile(name: &str) -> Option<Pilot> {
         // predicate refinement (`mull`) is a well-powered null; this is a
         // different mechanism. Gate as A against `gang`.
         "mullsim" => Some(Pilot::Scored(EvalWeights::mull_sim_on())),
+        // Round 50 control: the pre-fix planeswalker cash-out read.
+        "walkerlegacy" => Some(Pilot::Scored(EvalWeights::legacy_cashout_on())),
         "det1" => Some(Pilot::Scored(EvalWeights::determinized())),
         "det3" => Some(Pilot::Scored(EvalWeights::determinized3())),
         "net" => Some(Pilot::Scored(EvalWeights::net_eval())),
