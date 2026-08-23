@@ -102,6 +102,18 @@ than it is worth in a training run: this run's `Printed<T>` row measured
 how much it cut work; only a `release` run tells you what ships. Do both
 before quoting a throughput number for an allocation fix.
 
+**A number that is too good is a bug report.** (I) first read **-30.0 %**
+(1,918,782,724 -> 1,343,642,428) from a gate that was supposed to be worth a
+fraction of a percent. The cause was Rust precedence: `if !any_static || a &&
+b && c` parses as `(!any_static) || (a && b && c)`, so on a board with no
+statics the Seedborn-untapper loop pushed *every* controller and every player
+untapped everything each untap step — fewer decisions, shorter games, a third
+of the instructions. Correct, it reads -0.167 %. **Sanity-check the magnitude
+against what the change can physically remove before running the suite**, and
+check the `--bench` invariants (`decisions`, `turns_per_game`) on any change
+whose Ir moves more than its blast radius allows: they are one 2-second run
+and they fail loudly.
+
 **Sub-5 % changes need callgrind, not `--bench`.** Two runs of one binary
 here differ by more than a 2 % code change is worth, so a small win reads as
 noise however many pairs you run. `callgrind` on a fixed workload counts
@@ -881,8 +893,8 @@ those walks: its self cost across every `file:function` entry is ~9 M, and
 
 ### Forty-second pass — the cold group was being deep-copied for nothing
 
-Cumulative: **2,040,144,900 -> 1,918,782,724 Ir, -121,362,176 / -5.949 %**,
-in eight commits, behaviour-preserving (suite **18,728** green over 11
+Cumulative: **2,040,144,900 -> 1,915,584,970 Ir, -124,559,930 / -6.105 %**,
+in nine commits, behaviour-preserving (suite **18,728** green over 11
 binaries, all golden traces identical, clippy clean workspace-wide including
 the client). **Wall-clock, paired `release` + mimalloc A/B on one box:
 155.07 -> 163.69 games/s, +5.56 %** — see **Baseline**; that reading is taken
@@ -905,6 +917,7 @@ theirs, not this pass's.
 | F | 1,940,837,886 -> 1,935,547,942 (**-0.273 %**) | a cost's colours are a `ColorSet`, not a `Vec` |
 | G | 1,935,547,942 -> 1,928,339,700 (**-0.372 %**) | the untap step stops paying for locks nobody has |
 | H | 1,928,339,700 -> 1,918,782,724 (**-0.496 %**) | one walk of the effect tree answers all five colours |
+| I | 1,918,782,724 -> 1,915,584,970 (**-0.167 %**) | the untap step asks once whether any static can reach it |
 
 **(C) and (D) are the pass, and neither was on the candidates list.**
 `ColdState` is ~90 collections behind one `CowBox`, and `perform_action`
@@ -1427,10 +1440,11 @@ settings + debuginfo; system allocator, because valgrind replaces malloc and
 a mimalloc build would measure the interception), 1 thread, `--a gang --b
 gang --games 6 --seed 1 --decks fixed`.
 
-**The forty-second pass reads 1,918,782,724 Ir at its tip.** The table below
-was taken one commit earlier at `b1a95b22` (1,928,339,700); the eighth commit
-only removes `effect_produces_color`'s four redundant tree walks, so every
-share here reads ~0.5 % high and the `effect_produces_color` row is gone. What the next run wants from this reading:
+**The forty-second pass reads 1,915,584,970 Ir at its tip.** The table below
+was taken at `b1a95b22` (1,928,339,700), two commits earlier; those two remove
+`effect_produces_color`'s four redundant tree walks and five of `do_untap`'s
+static walks, so every share here reads ~0.7 % high and the
+`effect_produces_color` row is gone. What the next run wants from this reading:
 
 | row | at the 42nd tip | note |
 |---|---|---|
