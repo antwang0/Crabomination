@@ -125,18 +125,23 @@ both are written up in PERF's Log** — read them before re-proposing either.
    pair and once after, byte-identical. ~55 s a seed on this box, so there
    is no excuse to skip it. No `overflow`-profile run either pass (nothing touched
    counters, damage, mana or the encoder).
-11. **Trackers.** TODO **~1.07k** (pass 47 collapsed three stale "the engine
+11. **The pure-data-test sweep is measured and it is hygiene, not build
+   time.** `scripts/find_data_tests.sh` reads 199, 25 `[CR]`-marked and
+   sacred; the other 174 are **1,673 lines of a 374,892-line suite, 0.45 %**.
+   Folding them into a table-driven definition audit per set cannot move
+   compile time and cannot move link time at all (the binary count is what
+   drives that, and it stays flat). Do it as hygiene when an area is being
+   touched anyway; do not schedule it as a build-time item.
+12. **Trackers.** TODO **~1.07k** (pass 47 collapsed three stale "the engine
    has no X" sections — command zone / commander damage / emblems /
    planeswalker attacks / crew / divided damage all ship — and closed the
    panic-sweep entry; a little more of **Missing Mechanics** is probably
    stale the same way, and that is the next ~70 lines), ROADMAP 0.66k,
    PERF ~2.9k (pass 47 folded the forty-third pass's entry to an index; the
-   forty-fourth's is the next fold). `scripts/find_data_tests.sh` reads **199 pure-data tests**, 25
-   `[CR]`-marked and sacred; the other 174 want a table-driven definition
-   audit per set. Not a build-time item. The **seventeenth** filter was run
-   this pass and is **not clean — four stale call counts**, corrected in
-   place; the pattern is that a *share* survives and a *count* rots. An
-   eighteenth is owed and the entry names it.
+   forty-fourth's is the next fold). The **seventeenth** filter was run this
+   pass and is **not clean — four stale call counts**, corrected in place;
+   the pattern is that a *share* survives and a *count* rots. An eighteenth
+   is owed and the entry names it.
 
 ## Environment note
 
