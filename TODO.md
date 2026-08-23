@@ -22,21 +22,22 @@ container clones **`main`**, ~2,000 commits behind and missing the ML crates,
 `PERF.md`, `crabomination_tests` and the profiling profiles. `git log -1`
 should show a PERF/pass or round commit, not a card batch.
 
-Branch `claude/modern_decks`. **Pass 43**, run by two sessions committing
-concurrently on 2026-08-23 (one rebase, three PERF collisions). Base
-1,918,781,907 -> tip **1,814,461,559**, **-5.44 %**. Rows: the three
-`GameState` `HashMap`s dropped rather than cleared (**-0.192 %**; hashbrown
-clones a table by *bucket count*, so a cleared map re-allocates on every
-state clone for the rest of the game), the `do_untap` block gate
-(**-0.168 %**), **the round-closing pass dropping its checkpoint
-(-2.842 %)** — the pass's largest row, unlocked by the ceiling measurement
-below — the target scans taking one freeze instead of one per
+Branch `claude/modern_decks`. **Pass 43**, run by two sessions committing to
+it concurrently on 2026-08-23 (one rebase, three PERF collisions). Base
+**1,918,781,907**; **PERF's Log table is the running total — this line does
+not chase it**, because commits landed faster than a summary could be
+rewritten. Rows so far: the three `GameState` `HashMap`s dropped rather than
+cleared (**-0.192 %**; hashbrown clones a table by *bucket count*, so a
+cleared map re-allocates on every state clone for the rest of the game), the
+`do_untap` block gate (**-0.168 %**), **the round-closing pass dropping its
+checkpoint (-2.842 %)** — the pass's largest row, unlocked by the ceiling
+measurement below — the target scans taking one freeze instead of one per
 candidate (**-1.024 %**), and the dispatcher's per-dispatch `alloc_zeroed`
-for The Ring (**-1.308 %**). Plus one perf-neutral commit closing the defects section's only open
-entry (`ProtectionKind`, +0.0002 %) and one test-suite sweep (22 per-set
-factory lists -> one tree walk). **Fetch and re-read PERF's Log before
-starting anything** — the same candidate was attempted from both sides, and
-the collision produced two of the pass's three lessons.
+for The Ring (**-1.308 %**). Plus one perf-neutral commit closing the defects
+section's only open entry (`ProtectionKind`, +0.0002 %) and one test-suite
+sweep (22 per-set factory lists -> one tree walk). **Fetch and re-read PERF's
+Log before starting anything** — the same candidate was attempted from both
+sides, and the collision produced two of the pass's three lessons.
 
 - **(-13) is sized at `-5.47 %`, `-2.842 %` of it is banked, and the method
   that banked it is the thing to reuse.** A probe that skipped every
