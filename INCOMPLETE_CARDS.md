@@ -21,11 +21,15 @@ It has two independent passes:
    effect tree and flags *dead modes* (a `ChooseMode`/`ChooseN`/`Escalate` arm
    that resolves to `Noop`/empty) and *dead abilities* (a triggered / activated
    / loyalty ability with an empty effect). An empty arm is a bug regardless of
-   what the card "should" do.
+   what the card "should" do. **Re-run 2026-08-23: 21,795 unique cards, one
+   finding — Elite Interceptor, already triaged below as not a gap.**
+   `audit_stubs` on the same tip: 21,795 scanned, **0 flagged**.
 2. **Comment scan**: lists every `pub fn … -> CardDefinition` factory whose doc
    comment carries an approximation marker (`approximation`, `modeled as`,
-   `omitted`, `stub`, `body only`, `collapsed`, …). As of the last run: **470
-   of 8092 factories** carry such a note.
+   `omitted`, `stub`, `body only`, `collapsed`, …). As of 2026-08-23: **910 of
+   22,568 factories** across 707 catalog files carry such a note (was 470 of
+   8,092 — the catalog has roughly tripled since, and the *rate* is flat at
+   ~4 %).
 
 The tables below are a human triage of those 470 + the structural findings,
 grouped by the **missing engine primitive** so each cluster is one work-item.
