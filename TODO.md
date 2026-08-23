@@ -19,128 +19,60 @@ reference and want their own triage pass):
 **FIRST COMMAND OF EVERY RUN:** `git fetch origin claude/modern_decks &&
 git checkout -B claude/modern_decks origin/claude/modern_decks`. The routine
 container clones **`main`**, ~2,000 commits behind and missing the ML crates,
-`PERF.md`, `crabomination_tests` and the profiling profiles. `git log -1`
-should show a PERF/pass or round commit, not a card batch.
+`PERF.md`, `crabomination_tests` and the profiling profiles.
 
-Branch `claude/modern_decks`. **Pass 43**, run by two sessions committing to
-it concurrently on 2026-08-23 (one rebase, three PERF collisions). Base
-**1,918,781,907**; **PERF's Log table is the running total — this line does
-not chase it**, because commits landed faster than a summary could be
-rewritten. Rows so far: the three `GameState` `HashMap`s dropped rather than
-cleared (**-0.192 %**; hashbrown clones a table by *bucket count*, so a
-cleared map re-allocates on every state clone for the rest of the game), the
-`do_untap` block gate (**-0.168 %**), **the round-closing pass dropping its
-checkpoint (-2.842 %)** — the pass's largest row, unlocked by the ceiling
-measurement below — the target scans taking one freeze instead of one per
-candidate (**-1.024 %**), and the dispatcher's per-dispatch `alloc_zeroed`
-for The Ring (**-1.308 %**). Plus one perf-neutral commit closing the defects
-section's only open entry (`ProtectionKind`, +0.0002 %) and one test-suite
-sweep (22 per-set factory lists -> one tree walk). **Fetch and re-read PERF's
-Log before starting anything** — the same candidate was attempted from both
-sides, and the collision produced two of the pass's three lessons.
+**Pass 43** ran from two sessions concurrently (2026-08-23). **PERF's Log is
+the record — this section carries only the decisions.** Base
+**1,918,781,907**; six rows landed plus a test sweep and a defect closure.
 
-- **(-13) is sized at `-5.47 %`, `-2.842 %` of it is banked, and the method
-  that banked it is the thing to reuse.** A probe that skipped every
-  `perform_action` checkpoint read **1,810,396,553** and **never panicked** —
-  the restore fires *zero* times in 18,208 checkpointed actions, 5,750 Ir
-  each. This file first said the pass path was not capturable, reading the
-  *signatures*: `pass_priority` mutates before it propagates, `advance_step`
-  propagates from three places. **That was the wrong question, and the second
-  session's answer is the lesson**: take the transitive closure over the
-  engine's 149 `Result` functions instead. 46 are reachable from
-  `pass_priority` and only five raise at all; none of the step machinery
-  raises. The round-closing pass now skips its checkpoint (**-2.842 %**),
-  with the clone kept in debug and a `debug_assert` that an `Err` left the
-  serialized state byte-identical, so the suite audits the claim.
-  **Next: run the same closure at the other checkpointed action shapes**
-  (`CastSpell`, `ActivateAbility`, `PlayLand`, `SubmitDecision`) — roughly
-  2.6 points of the ceiling are still unbanked, and `GameState::clone` from
-  `perform_action` is down 18,208 -> 8,266 calls, so the remaining shapes are
-  what those 8,266 are.
-- **Then take (-18), the board epoch — `4.44 %` behind one missing
-  primitive, and 1.72 % of it is immune to the scope work.** Three
-  candidates recompute a *board-only* answer per call because nothing on
-  `&self` can say the board is unchanged: `computed_permanent`'s unscoped
-  gather (**2.72 %** over 25,736), `dispatch_board_scan` (**1.34 %** over
-  53,838) and `permanents_with_abilities_removed` (**0.38 %**). The
-  freeze-scope commit `643330b2` took the first from 3.42 % to 2.72 % and
-  left the other two **byte-identical** — they are whole-board walks with no
-  scope to widen, so they survive that whole line of work. This file has three times
-  said an epoch is the shape and "nothing on `&self` can hold it" — **that is
-  wrong, and PERF's (-18) says why**: every board write already funnels
-  through `CowBox::deref_mut`, so a write counter on the handle is a complete
-  record, and `layer_freeze`'s existing `Mutex` makes it reachable from
-  `&self`. Build it with a `debug_assert` that recomputes and compares on
-  every hit — a stale answer is a silently wrong rules result, so the suite
-  has to audit the key.
-- **Do not rebuild these three.** The checkpoint *husk pool* (exhaustive
-  `clone_from` + thread-local husks): built, green, **-100,388 allocations**,
-  and **+2.60 %** — `clone_from` cannot be the bulk copy that `clone`'s
-  `Self { … }` is on a 195-field struct. Gating `do_untap`'s six
-  `battlefield x static_abilities` *walks*: **+0.0001 %**. Narrowing
-  `GameState`: 175 of its 195 fields are `Copy` and carry no drop glue at all.
-- **The lesson the collision produced, and it sharpens (-7).** Gating those
-  six walks read +0.0001 %; gating the **blocks** around them — the ones
-  building a `Vec`, a `HashSet`, a `HashMap` — read -0.168 % on two different
-  bases. **Gate the site, not the read, and the site is the block that
-  allocates, not the loop that scans.**
-- **Where the cost is**, for replenishing the list: `Arc::make_mut` unshares
-  **120,004x / 83,959,478 Ir / 4.38 %**. Allocation is 1,216,241 allocs;
-  `finish_grow` (215,649) and the `.collect()`s (187,120) lead it, and
-  `finalize_cast` is the top `grow_one` *and* `memcpy` caller. `advance_step`
-  is 16.09 % and **both** of its old leads are now closed — `do_cleanup` is
-  87 % one SBA sweep, and ~20 M of `do_untap` is still unattributed, so read
-  its callee table rather than counting its walks.
-- **Green at the tip, re-verified end-of-run**: suite **18,729** passed / 0
-  failed over **20** test binaries, golden traces and the same-seed replay
-  included; `cargo clippy
-  --workspace --all-targets` **zero warnings across all eight crates**,
-  client included (`apt-get install -y libwayland-dev libasound2-dev
-  libudev-dev libxkbcommon-dev` first — the base image lacks them and the
-  Bevy build fails on `wayland-sys` without them). `--bench` invariants
-  byte-identical over three runs (decisions **196,220**, turns 27.53, stalls
-  0, determinism ok, peak_rss 29.6-30.0) — those differ from the anchor's
-  193,232 / 26.98 because rounds 43-47 moved them, not this pass. **The
-  absolute read 121.62 games/s on this box against the previous reading's
-  161.04 at an overlapping `host_calib_ms`** — a third box the probe does not
-  discriminate; see Baseline. Callgrind is the arbiter, and it is down.
-  **No encoding change — no net needs retraining as of this tip.**
-- Env: no `cargo-nextest`; `cargo test -p crabomination -p crabomination_tests`
-  is the gate. `profiling-fast` engine rebuild **~13 min cold**, `release`
-  ~30 min, callgrind ~3 min and contention-immune. **`cp -al target
-  target-probe` hardlinks the binary that is already there — `rm
-  target-probe/profiling-fast/bot_ladder` before building a candidate in it,
-  or you will measure the base against itself** (cost one cycle this run).
-  **Fetch before every commit.**
-- **Build time: the file-size lever is measured dead — do not split the big
-  engine files for it.** Touching `effects/mod.rs` (36,684 lines) and
-  `decklist.rs` (266) both rebuild `-p crabomination --lib` in **8.5-8.7 s**,
-  and both rebuild the test binaries in **33-41 s** with the spread not
-  ordering by size. The `--lib` number is a flat dependency-graph/codegen
-  cost; the test number is **relinking twenty integration binaries**. The
-  standing rule (binary count flat or lower, never a new top-level
-  `tests/*.rs`) is the lever that actually bears on it. See PERF's **Build
-  time** section. The `release` / `profiling-fast` rebuild is codegen-bound
-  and says nothing about this — it is unmeasured.
-- **`scripts/find_data_tests.sh` was silently broken and is fixed** — it
-  scanned `crabomination/src/tests/*.rs`, a path that has not existed since
-  `crabomination_tests` was split out, so it had been returning nothing. It
-  now recurses the real tree and marks each hit `[CR]` when the doc comment
-  above it cites a rule, a ruling, a bug fix or a regression. Current
-  reading before this run's sweep: 221 pure-data tests, 25 of them sacred.
-  **The `*_cards_are_registered` cluster is done** — 22 hand-kept per-set
-  factory lists deleted, replaced by
-  `catalog_registration::every_card_factory_in_the_catalog_is_registered`,
-  which walks the tree and cannot go stale (verified to fail on a planted
-  orphan). **~174 remain**, mostly `stat_line` / `has_keyword` one-liners
-  wanting a table-driven definition audit per set. **Do not justify that on
-  build time** — this sweep's -537 LOC moved the rebuild by nothing
-  measurable (see PERF's Build-time section); the reason is that a per-card
-  test should assert what is *unique*.
-- Trackers: TODO **~0.98k**, under the line — the ML narratives moved verbatim
-  to `ML_NOTES.md` this run (linked from the roadmap's Tier 13), the Formats
-  and Rollback shipped phases collapsed to an index. ROADMAP 0.66k, PERF
-  ~2.8k — **PERF is the next fold.**
+1. **Finish (-13).** The checkpoint ceiling is **-5.47 %** (probe skipped
+   every one and never panicked: the restore fires *zero* times in 18,208
+   actions). **-2.842 %** is banked on the round-closing pass. The method is
+   the point and it is reusable: a transitive closure over the engine's 149
+   `Result` functions, not a read of the signatures — reading signatures is
+   what made this file wrongly call it uncapturable. Run the same closure at
+   `CastSpell` / `ActivateAbility` / `PlayLand` / `SubmitDecision`; those are
+   the ~8,266 clones `perform_action` still takes.
+2. **Then (-18), the board epoch — 4.44 %, and 1.72 % of it is immune to the
+   freeze-scope work now eating the rest.** PERF has the design: every board
+   write already funnels through `CowBox::deref_mut`, so a write counter
+   there is a complete record and `layer_freeze`'s `Mutex` makes it readable
+   from `&self`. A stale answer is a silently wrong rules result — build it
+   with a recompute-and-compare `debug_assert`.
+3. **The pass's rule, three data points:** *gate the block that allocates,
+   not the loop that scans.* A gate over a short-circuiting `any` on an empty
+   `Vec` is worth nothing here (four losses); a gate in front of a block that
+   builds a `Vec` / `HashSet` / `HashMap` pays every time.
+4. **Do not rebuild these.** The `GameState` husk pool with a hand-written
+   `clone_from` (**+2.60 %** despite -100,388 allocations). Gating
+   `do_untap`'s six walks (**+0.0001 %**). Narrowing `GameState` (175 of 195
+   fields are `Copy`, no drop glue). **Splitting the big engine files for
+   build time** — touching a 36,684-line file and a 266-line one both rebuild
+   in 8.5-8.7 s; the test rebuild is 33-41 s of relinking twenty binaries.
+5. **Env.** No `cargo-nextest`; `cargo test -p crabomination -p
+   crabomination_tests` is the gate. `profiling-fast` engine rebuild ~13 min
+   cold, `release` ~30 min, callgrind ~3 min and contention-immune. Workspace
+   clippy needs `apt-get install -y libwayland-dev libasound2-dev libudev-dev
+   libxkbcommon-dev` or the client fails on `wayland-sys`. **`cp -al target
+   target-probe` hardlinks the binary already there — `rm
+   target-probe/profiling-fast/bot_ladder` before building a candidate in it,
+   or you measure the base against itself** (cost one cycle this run).
+   **Fetch before every commit.**
+6. **Green at the tip** (both sessions' work verified together): suite
+   **18,708** / 0 failed over 20 binaries, golden traces and the same-seed
+   replay included; clippy clean workspace-wide; `--bench` invariants
+   byte-identical (decisions 196,220, turns 27.53, stalls 0, determinism ok).
+   **No encoding change — no net needs retraining as of this tip.** Absolute
+   games/s is **not** comparable across routine boxes and `host_calib_ms`
+   does not discriminate them as finely as PERF assumed (121.62 here against
+   161.04 two hours earlier on an overlapping calib band) — check the
+   invariants, quote the paired A/B, let callgrind arbitrate.
+7. **Trackers.** TODO ~1.0k, ROADMAP 0.66k, PERF ~3.1k — **PERF is the next
+   fold.** `scripts/find_data_tests.sh` works again (it had been scanning a
+   path deleted by the tests-crate split) and marks sacred hits `[CR]`: ~174
+   pure-data tests remain after this run's sweep, wanting a table-driven
+   definition audit per set. Not a build-time item — see (4).
+
 
 ## Environment note
 
