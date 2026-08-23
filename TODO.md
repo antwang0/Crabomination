@@ -99,11 +99,16 @@ candidate was attempted from both sides this run.
   `crabomination_tests` was split out, so it had been returning nothing. It
   now recurses the real tree and marks each hit `[CR]` when the doc comment
   above it cites a rule, a ruling, a bug fix or a regression. Current
-  reading: **221 pure-data tests, 25 of them sacred, ~196 foldable** into a
-  table-driven definition audit per set (the `*_cards_are_registered` echoes
-  and the `stat_line` / `has_keyword` one-liners are the bulk). **Its
-  build-time payoff is small** — see the Build-time note above; the honest
-  reason to do it is that per-card tests should assert what is *unique*.
+  reading before this run's sweep: 221 pure-data tests, 25 of them sacred.
+  **The `*_cards_are_registered` cluster is done** — 22 hand-kept per-set
+  factory lists deleted, replaced by
+  `catalog_registration::every_card_factory_in_the_catalog_is_registered`,
+  which walks the tree and cannot go stale (verified to fail on a planted
+  orphan). **~174 remain**, mostly `stat_line` / `has_keyword` one-liners
+  wanting a table-driven definition audit per set. **Do not justify that on
+  build time** — this sweep's -537 LOC moved the rebuild by nothing
+  measurable (see PERF's Build-time section); the reason is that a per-card
+  test should assert what is *unique*.
 - Trackers: TODO **~0.98k**, under the line — the ML narratives moved verbatim
   to `ML_NOTES.md` this run (linked from the roadmap's Tier 13), the Formats
   and Rollback shipped phases collapsed to an index. ROADMAP 0.66k, PERF

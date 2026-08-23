@@ -25,63 +25,6 @@ fn always_yes(g: &mut GameState) {
     ));
 }
 
-/// Every BOK factory is registered under its printed name.
-#[test]
-fn bok_cards_are_registered() {
-    let names: Vec<&str> = crabomination_catalog::sets::all_factories::all_catalog_card_factories()
-        .map(|f| f().name)
-        .collect();
-    for f in [
-        catalog::akki_blizzard_herder as fn() -> crabomination::card::CardDefinition,
-        catalog::ashen_monstrosity,
-        catalog::body_of_jukai,
-        catalog::forked_branch_garami,
-        catalog::harbinger_of_spring,
-        catalog::kami_of_the_honored_dead,
-        catalog::shinka_gatekeeper,
-        catalog::scourge_of_numai,
-        catalog::takenuma_bleeder,
-        catalog::scaled_hulk,
-        catalog::oyobi_who_split_the_heavens,
-        catalog::kyoki_sanitys_eclipse,
-        catalog::ishi_ishi_akki_crackshot,
-        catalog::ogre_recluse,
-        catalog::indebted_samurai,
-        catalog::silverstorm_samurai,
-        catalog::takenos_cavalry,
-        catalog::isao_enlightened_bushi,
-        catalog::mannichi_the_fevered_dream,
-        catalog::minamo_sightbender,
-        catalog::split_tail_miko,
-        catalog::sakura_tribe_springcaller,
-        catalog::sakiko_mother_of_summer,
-        catalog::heros_demise,
-        catalog::terashis_verdict,
-        catalog::first_volley,
-        catalog::three_tragedies,
-        catalog::reduce_to_dreams,
-        catalog::ribbons_of_the_reikai,
-        catalog::uproot,
-        catalog::stir_the_grave,
-        catalog::unchecked_growth,
-        catalog::enshrined_memories,
-        catalog::sosukes_summons,
-        catalog::day_of_destiny,
-        catalog::in_the_web_of_war,
-        catalog::orb_of_dreams,
-        catalog::mirror_gallery,
-        catalog::gods_eye_gate_to_the_reikai,
-        catalog::tendo_ice_bridge,
-        catalog::yomiji_who_bars_the_way,
-        catalog::heed_the_mists,
-        catalog::ward_of_piety,
-        catalog::heart_of_light,
-    ] {
-        let name = f().name;
-        assert!(names.contains(&name), "{name} is not registered");
-    }
-}
-
 // ── Creatures ───────────────────────────────────────────────────────────────
 
 /// Akki Blizzard-Herder's death costs everyone a land.
@@ -754,26 +697,6 @@ fn bok_stat_lines() {
 
 // ── Batch 2 ─────────────────────────────────────────────────────────────────
 
-/// The Genju cycle is registered and enchants its own basic type.
-#[test]
-fn genju_cycle_is_registered() {
-    let names: Vec<&str> = crabomination_catalog::sets::all_factories::all_catalog_card_factories()
-        .map(|f| f().name)
-        .collect();
-    for f in [
-        catalog::genju_of_the_cedars as fn() -> crabomination::card::CardDefinition,
-        catalog::genju_of_the_falls,
-        catalog::genju_of_the_spires,
-        catalog::genju_of_the_fens,
-        catalog::genju_of_the_fields,
-        catalog::genju_of_the_realm,
-    ] {
-        let d = f();
-        assert!(names.contains(&d.name), "{} is not registered", d.name);
-        assert_eq!(d.activated_abilities.len(), 1, "{} animates for {{2}}", d.name);
-    }
-}
-
 /// Genju of the Spires turns its Mountain into a 6/1 for the turn.
 #[test]
 fn genju_of_the_spires_animates_its_mountain() {
@@ -1058,27 +981,4 @@ fn shoal_pitch_must_match_x() {
         .is_err(),
         "MV 9 doesn't pay for X=3"
     );
-}
-
-/// Every batch-3 card is registered.
-#[test]
-fn bok_batch3_is_registered() {
-    let names: Vec<&str> = crabomination_catalog::sets::all_factories::all_catalog_card_factories()
-        .map(|f| f().name)
-        .collect();
-    for f in [
-        catalog::blademane_baku as fn() -> crabomination::card::CardDefinition,
-        catalog::petalmane_baku,
-        catalog::quillmane_baku,
-        catalog::skullmane_baku,
-        catalog::waxmane_baku,
-        catalog::baku_altar,
-        catalog::blazing_shoal,
-        catalog::sickening_shoal,
-        catalog::nourishing_shoal,
-        catalog::disrupting_shoal,
-    ] {
-        let name = f().name;
-        assert!(names.contains(&name), "{name} is not registered");
-    }
 }

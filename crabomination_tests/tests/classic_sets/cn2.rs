@@ -46,24 +46,6 @@ fn swing(g: &mut GameState, id: CardId) {
     drain_stack(g);
 }
 
-/// Every CN2 factory builds and lands in the catalog.
-#[test]
-fn cn2_cards_are_registered() {
-    let names: Vec<&str> = crabomination_catalog::sets::all_factories::all_catalog_card_factories()
-        .map(|f| f().name)
-        .collect();
-    for name in [
-        "Ballot Broker",
-        "Crown-Hunter Hireling",
-        "Queen Marchesa",
-        "Throne of the High City",
-        "Splitting Slime",
-        "Selvala, Heart of the Wilds",
-    ] {
-        assert!(names.contains(&name), "{name} is missing from the catalog");
-    }
-}
-
 /// Protector of the Crown crowns you and soaks damage aimed at your face.
 #[test]
 fn protector_of_the_crown_crowns_and_soaks() {

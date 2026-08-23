@@ -31,33 +31,6 @@ fn activate(g: &mut GameState, id: CardId, idx: usize, target: Option<Target>) {
     drain_stack(g);
 }
 
-/// Every ULG factory is registered under its printed name.
-#[test]
-fn ulg_cards_are_registered() {
-    let names: Vec<&str> = crabomination_catalog::sets::all_factories::all_catalog_card_factories()
-        .map(|f| f().name)
-        .collect();
-    for f in [
-        catalog::about_face as fn() -> crabomination::card::CardDefinition,
-        catalog::beast_of_burden,
-        catalog::engineered_plague,
-        catalog::intervene,
-        catalog::iron_maiden,
-        catalog::molten_hydra,
-        catalog::multani_maro_sorcerer,
-        catalog::phyrexian_plaguelord,
-        catalog::planar_collapse,
-        catalog::purify,
-        catalog::radiant_archangel,
-        catalog::second_chance,
-        catalog::thran_lens,
-        catalog::viashino_cutthroat,
-    ] {
-        let name = f().name;
-        assert!(names.contains(&name), "{name} is not registered");
-    }
-}
-
 /// The cycling cycle all carry Cycling {2}.
 #[test]
 fn ulg_cycling_cards_carry_cycling_two() {
@@ -594,39 +567,6 @@ fn subversion_drains_on_your_upkeep() {
 }
 
 // ── Wave 2 ──────────────────────────────────────────────────────────────────
-
-/// Every wave-2 factory is registered.
-#[test]
-fn ulg_wave2_cards_are_registered() {
-    let names: Vec<&str> = crabomination_catalog::sets::all_factories::all_catalog_card_factories()
-        .map(|f| f().name)
-        .collect();
-    for f in [
-        catalog::bouncing_beebles as fn() -> crabomination::card::CardDefinition,
-        catalog::gang_of_elk,
-        catalog::last_ditch_effort,
-        catalog::multanis_presence,
-        catalog::palinchron,
-        catalog::parch,
-        catalog::pyromancy,
-        catalog::rank_and_file,
-        catalog::raven_familiar,
-        catalog::repopulate,
-        catalog::rivalry,
-        catalog::scrapheap,
-        catalog::slow_motion,
-        catalog::tethered_skirge,
-        catalog::tinker,
-        catalog::treefolk_mystic,
-        catalog::viashino_bey,
-        catalog::viashino_heretic,
-        catalog::walking_sponge,
-        catalog::weatherseed_elf,
-    ] {
-        let name = f().name;
-        assert!(names.contains(&name), "{name} is not registered");
-    }
-}
 
 /// Last-Ditch Effort converts a board into damage.
 #[test]

@@ -19,27 +19,6 @@ fn cast(g: &mut GameState, id: CardId, target: Option<Target>) {
     drain_stack(g);
 }
 
-/// Every SOK closure factory is registered under its printed name.
-#[test]
-fn sok3_cards_are_registered() {
-    let names: Vec<&str> = crabomination_catalog::sets::all_factories::all_catalog_card_factories()
-        .map(|f| f().name)
-        .collect();
-    for f in [
-        catalog::ashes_of_the_fallen as fn() -> crabomination::card::CardDefinition,
-        catalog::choice_of_damnations,
-        catalog::kaho_minamo_historian,
-        catalog::murmurs_from_beyond,
-        catalog::pains_reward,
-        catalog::pure_intentions,
-        catalog::rally_the_horde,
-        catalog::sekki_seasons_guide,
-    ] {
-        let name = f().name;
-        assert!(names.contains(&name), "{name} is not registered");
-    }
-}
-
 /// Ashes of the Fallen gives graveyard creature cards the chosen type.
 #[test]
 fn ashes_of_the_fallen_types_your_graveyard() {

@@ -24,46 +24,6 @@ fn cast(g: &mut GameState, id: CardId, target: Option<Target>) {
     drain_stack(g);
 }
 
-/// Every wave-2 BOK factory is registered under its printed name.
-#[test]
-fn bok2_cards_are_registered() {
-    let names: Vec<&str> = crabomination_catalog::sets::all_factories::all_catalog_card_factories()
-        .map(|f| f().name)
-        .collect();
-    for f in [
-        catalog::higure_the_still_wind as fn() -> crabomination::card::CardDefinition,
-        catalog::ink_eyes_servant_of_oni,
-        catalog::okiba_gang_shinobi,
-        catalog::walker_of_secret_ways,
-        catalog::jetting_glasskite,
-        catalog::shimmering_glasskite,
-        catalog::kira_great_glass_spinner,
-        catalog::horobis_whisper,
-        catalog::hundred_talon_strike,
-        catalog::torrent_of_stone,
-        catalog::roar_of_jukai,
-        catalog::veil_of_secrecy,
-        catalog::overblaze,
-        catalog::flames_of_the_blood_hand,
-        catalog::sway_of_the_stars,
-        catalog::twist_allegiance,
-        catalog::akki_raider,
-        catalog::empty_shrine_kannushi,
-        catalog::chisei_heart_of_oceans,
-        catalog::ogre_marauder,
-        catalog::shirei_shizos_caretaker,
-        catalog::iwamori_of_the_open_fist,
-        catalog::blessing_of_leeches,
-        catalog::mark_of_the_oni,
-        catalog::kumanos_blessing,
-        catalog::slumbering_tora,
-        catalog::neko_te,
-    ] {
-        let name = f().name;
-        assert!(names.contains(&name), "{name} is not registered");
-    }
-}
-
 // ── Glasskites ──────────────────────────────────────────────────────────────
 
 /// The first spell to target a Glasskite each turn is countered; the second
@@ -420,33 +380,6 @@ fn neko_te_taps_down_what_it_damages() {
 }
 
 // ── Wave 3 ──────────────────────────────────────────────────────────────────
-
-/// Every wave-3 BOK factory is registered under its printed name.
-#[test]
-fn bok2_wave3_cards_are_registered() {
-    let names: Vec<&str> = crabomination_catalog::sets::all_factories::all_catalog_card_factories()
-        .map(|f| f().name)
-        .collect();
-    for f in [
-        catalog::budoka_pupil as fn() -> crabomination::card::CardDefinition,
-        catalog::fumiko_the_lowblood,
-        catalog::kentaro_the_smiling_cat,
-        catalog::opal_eye_kondas_yojimbo,
-        catalog::toshiro_umezawa,
-        catalog::aura_barbs,
-        catalog::minamos_meddling,
-        catalog::shining_shoal,
-        catalog::mark_of_sakiko,
-        catalog::ornate_kanzashi,
-        catalog::blinding_powder,
-        catalog::shuriken,
-        catalog::clash_of_realities,
-        catalog::tomorrow_azamis_familiar,
-    ] {
-        let name = f().name;
-        assert!(names.contains(&name), "{name} is not registered");
-    }
-}
 
 /// Aura Barbs shocks each enchantment's controller and each Aura's host.
 #[test]

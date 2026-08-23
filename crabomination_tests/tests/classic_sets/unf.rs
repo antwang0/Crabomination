@@ -35,42 +35,6 @@ fn advance_to_your_main(g: &mut GameState) {
     drain_stack(g);
 }
 
-/// Every UNF factory is registered under its printed name.
-#[test]
-fn unf_cards_are_registered() {
-    let names: Vec<&str> = crabomination_catalog::sets::all_factories::all_catalog_card_factories()
-        .map(|f| f().name)
-        .collect();
-    for f in [
-        catalog::balloon_stand as fn() -> crabomination::card::CardDefinition,
-        catalog::bounce_chamber,
-        catalog::bumper_cars,
-        catalog::clown_extruder,
-        catalog::concession_stand,
-        catalog::foam_weapons_kiosk,
-        catalog::fortune_teller,
-        catalog::information_booth,
-        catalog::kiddie_coaster,
-        catalog::roller_coaster,
-        catalog::merry_go_round,
-        catalog::spinny_ride,
-        catalog::trash_bin,
-        catalog::swinging_ship,
-        catalog::lifetime_pass_holder,
-        catalog::deadbeat_attendant,
-        catalog::petting_zookeeper,
-        catalog::seasoned_buttoneer,
-        catalog::rad_rascal,
-        catalog::quick_fixer,
-        catalog::coming_attraction,
-        catalog::the_most_dangerous_gamer,
-        catalog::complaints_clerk,
-    ] {
-        let name = f().name;
-        assert!(names.contains(&name), "{name} is not registered");
-    }
-}
-
 /// CR 701.51b — opening an Attraction moves the top of the Attraction deck
 /// onto the battlefield.
 #[test]

@@ -25,52 +25,6 @@ fn cast(g: &mut GameState, id: CardId, target: Option<Target>) {
     drain_stack(g);
 }
 
-/// Every SOK factory is registered under its printed name.
-#[test]
-fn sok_cards_are_registered() {
-    let names: Vec<&str> = crabomination_catalog::sets::all_factories::all_catalog_card_factories()
-        .map(|f| f().name)
-        .collect();
-    for f in [
-        catalog::bounteous_kirin as fn() -> crabomination::card::CardDefinition,
-        catalog::celestial_kirin,
-        catalog::cloudhoof_kirin,
-        catalog::arashi_the_sky_asunder,
-        catalog::ghost_lit_nourisher,
-        catalog::briarknit_kami,
-        catalog::dreamcatcher,
-        catalog::elder_pine_of_jukai,
-        catalog::fiddlehead_kami,
-        catalog::deathmask_nezumi,
-        catalog::gnat_miser,
-        catalog::ebony_owl_netsuke,
-        catalog::gaze_of_adamaro,
-        catalog::descendant_of_soramaro,
-        catalog::death_of_a_thousand_stings,
-        catalog::aether_shockwave,
-        catalog::araba_mothrider,
-        catalog::ayumi_the_last_visitor,
-        catalog::burning_eye_zubera,
-        catalog::captive_flame,
-        catalog::cut_the_earthly_bond,
-        catalog::death_denied,
-        catalog::deathknell_kami,
-        catalog::dense_canopy,
-        catalog::dosans_oldest_chant,
-        catalog::eiganjo_free_riders,
-        catalog::feral_lightning,
-        catalog::freed_from_the_real,
-        catalog::glitterfang,
-        catalog::godos_irregulars,
-        catalog::blood_clock,
-        catalog::evermind,
-        catalog::descendant_of_masumaro,
-    ] {
-        let name = f().name;
-        assert!(names.contains(&name), "{name} is not registered");
-    }
-}
-
 /// Bounteous Kirin pays out that spell's mana value in life.
 #[test]
 fn bounteous_kirin_gains_the_spells_mana_value() {

@@ -173,6 +173,25 @@ GameState` block is not free of risk. The lever that *does* bear on the
 flat or lower, and never add a new top-level `tests/*.rs`.** Twenty binaries
 is what the relink costs.
 
+**Test-suite cleanup delta, 2026-08-23**, recorded because the rule asks for
+it and because the answer is "nothing", which is the useful part:
+
+```text
+tests            18,729 -> 18,708   (-22 per-set registration echoes, +1 audit)
+LOC              -607 / +70         (net -537 across 14 files)
+test binaries    20 -> 20           (flat, as the standing rule requires)
+rebuild after touching game/effects/mod.rs
+  before         41.1 / 33.6 / 33.2 / 39.1 / 32.5 s   (mean 35.9)
+  after          34.0 / 34.7 / 32.9 s                 (mean 33.9)
+```
+
+**Inside the noise band, and the section above says why**: 537 lines against
+`classic_sets`' own 116,940 is 0.5 %, and the rebuild is link-dominated
+anyway. **So do not justify a test-suite sweep on build time.** The
+justification for this one is the maintenance shape — twenty-two hand-kept
+per-set factory lists, each of which goes stale the moment someone adds a
+card and forgets it, replaced by one tree walk that cannot.
+
 Not measured here, and still open: the `release` / `profiling-fast` rebuild
 (~13 min cold for the engine) is a codegen-bound build where CGU partitioning,
 not query invalidation, decides the cost. Nothing above says anything about

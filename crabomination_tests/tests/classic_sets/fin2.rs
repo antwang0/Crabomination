@@ -51,30 +51,6 @@ fn cast_adventure(g: &mut GameState, id: CardId, target: Option<Target>) {
     drain_stack(g);
 }
 
-/// Every new FIN factory is registered under its printed name.
-#[test]
-fn fin2_cards_are_registered() {
-    let names: Vec<&str> = crabomination_catalog::sets::all_factories::all_catalog_card_factories()
-        .map(|f| f().name)
-        .collect();
-    for f in [
-        catalog::ishgard_the_holy_see as fn() -> crabomination::card::CardDefinition,
-        catalog::jidoor_aristocratic_capital,
-        catalog::lindblum_industrial_regency,
-        catalog::midgar_city_of_mako,
-        catalog::zanarkand_ancient_metropolis,
-        catalog::balamb_garden_seed_academy,
-        catalog::sidequest_card_collection,
-        catalog::sidequest_catch_a_fish,
-        catalog::sidequest_hunt_the_mark,
-        catalog::sidequest_play_blitzball,
-        catalog::sidequest_raise_a_chocobo,
-    ] {
-        let name = f().name;
-        assert!(names.contains(&name), "{name} is not registered");
-    }
-}
-
 // ── Town // Adventure lands (CR 715.3d) ─────────────────────────────────────
 
 /// The land half is played out of adventure exile — not cast — and it costs the

@@ -19,49 +19,6 @@ fn cast(g: &mut GameState, id: CardId, target: Option<Target>) {
     drain_stack(g);
 }
 
-/// Every SOK wave-2 factory is registered under its printed name.
-#[test]
-fn sok2_cards_are_registered() {
-    let names: Vec<&str> = crabomination_catalog::sets::all_factories::all_catalog_card_factories()
-        .map(|f| f().name)
-        .collect();
-    for f in [
-        catalog::barrel_down_sokenzan as fn() -> crabomination::card::CardDefinition,
-        catalog::charge_across_the_araba,
-        catalog::plow_through_reito,
-        catalog::sink_into_takenuma,
-        catalog::shinen_of_fears_chill,
-        catalog::shinen_of_flights_wings,
-        catalog::shinen_of_furys_fire,
-        catalog::shinen_of_lifes_roar,
-        catalog::shinen_of_stars_light,
-        catalog::jiwari_the_earth_aflame,
-        catalog::kiyomaro_first_to_stand,
-        catalog::okina_nightwatch,
-        catalog::secretkeeper,
-        catalog::descendant_of_kiyomaro,
-        catalog::kitsune_loreweaver,
-        catalog::kitsune_bonesetter,
-        catalog::locust_miser,
-        catalog::minamo_scrollkeeper,
-        catalog::trusted_advisor,
-        catalog::meishin_the_mind_cage,
-        catalog::ivory_crane_netsuke,
-        catalog::scroll_of_origins,
-        catalog::presence_of_the_wise,
-        catalog::spiraling_embers,
-        catalog::inner_fire,
-        catalog::one_with_nothing,
-        catalog::oppressive_will,
-        catalog::kagemaros_clutch,
-        catalog::rending_vines,
-        catalog::thoughts_of_ruin,
-    ] {
-        let name = f().name;
-        assert!(names.contains(&name), "{name} is not registered");
-    }
-}
-
 /// Sweep returns the Mountains and pays out twice their count.
 #[test]
 fn barrel_down_sokenzan_sweeps_mountains_for_double_damage() {
@@ -345,59 +302,6 @@ fn one_with_nothing_discards_everything() {
     assert!(g.players[0].hand.is_empty());
 }
 
-/// Every SOK wave-2 batch-2 factory is registered under its printed name.
-#[test]
-fn sok2_batch2_cards_are_registered() {
-    let names: Vec<&str> = crabomination_catalog::sets::all_factories::all_catalog_card_factories()
-        .map(|f| f().name)
-        .collect();
-    for f in [
-        catalog::haru_onna as fn() -> crabomination::card::CardDefinition,
-        catalog::kiri_onna,
-        catalog::nikko_onna,
-        catalog::yuki_onna,
-        catalog::infernal_kirin,
-        catalog::skyfire_kirin,
-        catalog::inner_chamber_guard,
-        catalog::kitsune_dawnblade,
-        catalog::iizuka_the_ruthless,
-        catalog::matsu_tribe_birdstalker,
-        catalog::kashi_tribe_elite,
-        catalog::oni_of_wild_places,
-        catalog::stampeding_serow,
-        catalog::skull_collector,
-        catalog::oboro_breezecaller,
-        catalog::oboro_envoy,
-        catalog::moonbow_illusionist,
-        catalog::oboro_palace_in_the_clouds,
-        catalog::miren_the_moaning_well,
-        catalog::manriki_gusari,
-        catalog::soratami_cloud_chariot,
-        catalog::wine_of_blood_and_iron,
-        catalog::reverence,
-        catalog::seed_the_land,
-        catalog::molting_skin,
-        catalog::razorjaw_oni,
-        catalog::raving_oni_slave,
-        catalog::reki_the_history_of_kamigawa,
-        catalog::maga_traitor_to_mortals,
-        catalog::torii_watchward,
-        catalog::kami_of_the_tended_garden,
-        catalog::moonwing_moth,
-        catalog::path_of_angers_flame,
-        catalog::sunder_from_within,
-        catalog::ideas_unbound,
-        catalog::overwhelming_intellect,
-        catalog::twincast,
-        catalog::endless_swarm,
-        catalog::akuta_born_of_ash,
-        catalog::exile_into_darkness,
-    ] {
-        let name = f().name;
-        assert!(names.contains(&name), "{name} is not registered");
-    }
-}
-
 /// Infernal Kirin strips every card sharing the spell's mana value.
 #[test]
 fn infernal_kirin_strips_the_matching_mana_value() {
@@ -611,27 +515,6 @@ fn reki_draws_on_legendary_spells() {
     assert_eq!(g.players[0].hand.len(), 1);
 }
 
-/// The Ascendant flip cycle and the splice/Zubera batch are all registered.
-#[test]
-fn sok2_batch3_cards_are_registered() {
-    let names: Vec<&str> = crabomination_catalog::sets::all_factories::all_catalog_card_factories()
-        .map(|f| f().name)
-        .collect();
-    for f in [
-        catalog::erayo_soratami_ascendant as fn() -> crabomination::card::CardDefinition,
-        catalog::homura_human_ascendant,
-        catalog::kuon_ogre_ascendant,
-        catalog::rune_tail_kitsune_ascendant,
-        catalog::sasaya_orochi_ascendant,
-        catalog::into_the_fray,
-        catalog::shifting_borders,
-        catalog::rushing_tide_zubera,
-    ] {
-        let name = f().name;
-        assert!(names.contains(&name), "{name} is not registered");
-    }
-}
-
 /// Rune-Tail flips the moment you hit 30 life, then shields your board.
 #[test]
 fn rune_tail_flips_at_thirty_life() {
@@ -733,27 +616,6 @@ fn rushing_tide_zubera_needs_four_damage() {
     g.check_state_based_actions();
     drain_stack(&mut g);
     assert_eq!(g.players[0].hand.len(), 3);
-}
-
-/// The Epic batch and the last SOK stragglers are all registered.
-#[test]
-fn sok2_batch4_cards_are_registered() {
-    let names: Vec<&str> = crabomination_catalog::sets::all_factories::all_catalog_card_factories()
-        .map(|f| f().name)
-        .collect();
-    for f in [
-        catalog::eternal_dominion as fn() -> crabomination::card::CardDefinition,
-        catalog::neverending_torment,
-        catalog::undying_flames,
-        catalog::curtain_of_light,
-        catalog::michiko_konda_truth_seeker,
-        catalog::measure_of_wickedness,
-        catalog::iname_as_one,
-        catalog::sakashima_the_impostor,
-    ] {
-        let name = f().name;
-        assert!(names.contains(&name), "{name} is not registered");
-    }
 }
 
 /// Undying Flames digs past lands and burns for the first nonland's mana value.
@@ -897,22 +759,6 @@ fn tomb_of_urami_trades_your_lands_for_a_demon() {
     assert_eq!((urami.power(), urami.toughness()), (5, 5));
 }
 
-/// The last SOK batch is registered.
-#[test]
-fn sok2_batch5_cards_are_registered() {
-    let names: Vec<&str> = crabomination_catalog::sets::all_factories::all_catalog_card_factories()
-        .map(|f| f().name)
-        .collect();
-    for f in [
-        catalog::shape_stealer as fn() -> crabomination::card::CardDefinition,
-        catalog::sokenzan_renegade,
-        catalog::tomb_of_urami,
-    ] {
-        let name = f().name;
-        assert!(names.contains(&name), "{name} is not registered");
-    }
-}
-
 /// Cowed by Wisdom taxes the host by the Aura controller's hand size.
 #[test]
 fn cowed_by_wisdom_taxes_by_your_hand() {
@@ -933,13 +779,4 @@ fn cowed_by_wisdom_taxes_by_your_hand() {
     g.players[1].mana_pool.add(Color::Green, 2);
     g.priority.player_with_priority = 1;
     assert!(g.declare_attackers(attack).is_ok());
-}
-
-/// Cowed by Wisdom is registered.
-#[test]
-fn cowed_by_wisdom_is_registered() {
-    let names: Vec<&str> = crabomination_catalog::sets::all_factories::all_catalog_card_factories()
-        .map(|f| f().name)
-        .collect();
-    assert!(names.contains(&catalog::cowed_by_wisdom().name));
 }

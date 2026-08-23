@@ -26,26 +26,6 @@ fn cast(g: &mut GameState, id: CardId, target: Option<Target>) {
     drain_stack(g);
 }
 
-/// Every EOE gap factory is registered under its printed name.
-#[test]
-fn eoe2_cards_are_registered() {
-    let names: Vec<&str> = crabomination_catalog::sets::all_factories::all_catalog_card_factories()
-        .map(|f| f().name)
-        .collect();
-    for f in [
-        catalog::chorale_of_the_void as fn() -> crabomination::card::CardDefinition,
-        catalog::famished_worldsire,
-        catalog::lightstall_inquisitor,
-        catalog::requiem_monolith,
-        catalog::sothera_the_supervoid,
-        catalog::the_dominion_bracelet,
-        catalog::moonlit_meditation,
-    ] {
-        let name = f().name;
-        assert!(names.contains(&name), "{name} is not registered");
-    }
-}
-
 /// The Aura's attack trigger reanimates out of the *defending* player's
 /// graveyard, tapped and attacking.
 #[test]

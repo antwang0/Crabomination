@@ -38,25 +38,6 @@ fn mana(g: &mut GameState, seat: usize) {
     g.players[seat].mana_pool.add_colorless(10);
 }
 
-/// Every USG factory is registered under its printed name.
-#[test]
-fn usg_cards_are_registered() {
-    let names: Vec<&str> = crabomination_catalog::sets::all_factories::all_catalog_card_factories()
-        .map(|f| f().name)
-        .collect();
-    for f in [
-        catalog::albino_troll as fn() -> crabomination::card::CardDefinition,
-        catalog::humble,
-        catalog::rewind,
-        catalog::raze,
-        catalog::sanctum_guardian,
-        catalog::goblin_offensive,
-    ] {
-        let name = f().name;
-        assert!(names.contains(&name), "{name} is not registered");
-    }
-}
-
 /// The echo cycle all carry their printed echo cost.
 #[test]
 fn usg_echo_bodies_carry_echo() {

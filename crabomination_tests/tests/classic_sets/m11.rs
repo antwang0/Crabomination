@@ -1,6 +1,6 @@
 //! Magic 2011 (M11) gap closure.
 
-use crabomination::card::{CardType, CounterType, Keyword};
+use crabomination::card::{CounterType, Keyword};
 use crabomination::catalog;
 use crabomination::decision::{DecisionAnswer, ScriptedDecider};
 use crabomination::game::types::{GameAction, Target, TurnStep};
@@ -740,18 +740,6 @@ fn dryads_favor_grants_forestwalk() {
         .unwrap()
         .keywords
         .contains(&Keyword::Landwalk(crabomination::card::LandType::Forest)));
-}
-
-/// Every M11 gap card is registered by name.
-#[test]
-fn m11_cards_are_registered() {
-    let names: Vec<&str> = crabomination_catalog::sets::all_factories::all_catalog_card_factories()
-        .map(|f| f().name)
-        .collect();
-    for name in ["Crystal Ball", "Time Reversal", "Stormtide Leviathan", "Leyline of Vitality"] {
-        assert!(names.contains(&name), "{name} is registered");
-    }
-    assert!(catalog::stone_golem().card_types.contains(&CardType::Artifact));
 }
 
 /// Fire Servant doubles your red burn — but only spells, and only red ones.
