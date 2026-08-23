@@ -13645,6 +13645,11 @@ impl GameState {
             }
         };
         let ability = held.get();
+        // `is_mana_ability` is a recursive walk of the effect tree and the
+        // gates below ask it thirteen times about the same ability. Nearly
+        // every activation on the bot path is a land tapping for mana, which
+        // reaches most of them.
+        let ability_is_mana = is_mana_ability(&ability.effect);
 
         // {X} activation costs ({X}, {T}: … — Berta, Imbraham): a
         // hand-paying activator who didn't send an X picks one via a
@@ -13744,7 +13749,7 @@ impl GameState {
         // unless they're mana abilities. The suppression is global (affects
         // every player's matching sources), so we scan the whole battlefield
         // for a `named_card` matching this source's printed name.
-        if !is_mana_ability(&ability.effect) {
+        if !ability_is_mana {
             let source_name = if source_in_gy {
                 self.players[source_owner.unwrap()].graveyard.iter()
                     .find(|c| c.id == card_id)
@@ -13760,13 +13765,13 @@ impl GameState {
         }
 
         // Hand to Hand — no non-mana activations during combat.
-        if !is_mana_ability(&ability.effect) && self.combat_spell_lock_active() {
+        if !ability_is_mana && self.combat_spell_lock_active() {
             return Err(GameError::AbilitySuppressedByNamedCard);
         }
 
         // Interdict — "that permanent's activated abilities can't be
         // activated this turn". Mana abilities are unaffected.
-        if !is_mana_ability(&ability.effect) && self.abilities_locked_this_turn.contains(&card_id) {
+        if !ability_is_mana && self.abilities_locked_this_turn.contains(&card_id) {
             return Err(GameError::AbilitySuppressedByNamedCard);
         }
 
@@ -13775,7 +13780,7 @@ impl GameState {
         // static is in play (global — affects every player). A source on the
         // battlefield is checked for its artifact type; gy/hand sources of an
         // artifact (rare) are caught the same way.
-        if !is_mana_ability(&ability.effect) {
+        if !ability_is_mana {
             let src_is_artifact = if source_in_gy {
                 self.players[source_owner.unwrap()].graveyard.iter()
                     .find(|c| c.id == card_id)
@@ -13860,7 +13865,7 @@ impl GameState {
         // Cursed Totem / Damping Matrix lock: non-mana activated abilities of
         // creatures can't be activated while a
         // `CreatureActivatedAbilitiesLocked` static is in play (global).
-        if !is_mana_ability(&ability.effect) {
+        if !ability_is_mana {
             let src_is_creature = if source_in_gy {
                 self.players[source_owner.unwrap()].graveyard.iter()
                     .find(|c| c.id == card_id)
@@ -13954,7 +13959,7 @@ impl GameState {
         // `CantActivateAbilities` (Detention Vortex's Aura grant, etc.) can't
         // activate its non-mana abilities. Battlefield sources only.
         if on_battlefield
-            && !is_mana_ability(&ability.effect)
+            && !ability_is_mana
             && self.card_keyword_possible(card_id, |k| *k == Keyword::CantActivateAbilities)
             && bf_cp!()
                 .as_ref()
@@ -14628,7 +14633,7 @@ impl GameState {
         // CR 602.5b — statics that bolt an extra "Sacrifice a [filter]" onto
         // matching permanents' activated abilities (Brutal Suppression).
         // Mana abilities are exempt, matching the other activation taxes.
-        if !is_mana_ability(&ability.effect) {
+        if !ability_is_mana {
             let taxes: Vec<crate::card::SelectionRequirement> = self
                 .battlefield
                 .iter()
@@ -15149,7 +15154,7 @@ impl GameState {
         }
         // Zirda — non-mana activated abilities cost {N} less (generic only),
         // floored at one mana of the printed cost.
-        if !is_mana_ability(&ability.effect) && !effective_mana_cost.symbols.is_empty() {
+        if !ability_is_mana && !effective_mana_cost.symbols.is_empty() {
             let total: u32 = self
                 .battlefield
                 .iter()
@@ -15248,7 +15253,7 @@ impl GameState {
         // Suppression Field — non-mana activated abilities cost {N} more,
         // for every player's activations. Tithe Taker adds the same tax but
         // only to opponents' activations on its controller's turn.
-        if !is_mana_ability(&ability.effect) {
+        if !ability_is_mana {
             let tax: u32 = self
                 .battlefield
                 .iter()
@@ -15460,7 +15465,7 @@ impl GameState {
             events.push(GameEvent::PermanentTapped { card_id, actor: None, as_attacker: false });
             // CR 605 — a mana ability's tap is also a "tapped for mana" event
             // (Extraplanar Lens), distinct from the plain tap above.
-            if is_mana_ability(&ability.effect) {
+            if ability_is_mana {
                 events.push(GameEvent::TappedForMana { card_id, player: p });
                 if !self.players[p].tapped_land_for_mana_this_turn
                     && self.battlefield_find(card_id).is_some_and(|c| c.definition.is_land())
@@ -15476,7 +15481,7 @@ impl GameState {
         // "whenever an opponent activates an ability" trigger carves them
         // out (Flamescroll Celebrant, CR 605.1), and the log skips the
         // tap-for-mana spam.
-        if !is_mana_ability(&ability.effect) {
+        if !ability_is_mana {
             events.push(GameEvent::AbilityActivated {
                 source: card_id,
                 exhaust: ability.exhaust,
@@ -15505,7 +15510,7 @@ impl GameState {
         // activation consumes exactly one watcher; pushed after the ability
         // itself lands on the stack so the copy resolves first.
         let exhaust_watchers: Vec<crate::game::types::DelayedTrigger> =
-            if ability.exhaust && !is_mana_ability(&ability.effect) {
+            if ability.exhaust && !ability_is_mana {
                 let (watchers, rest): (Vec<_>, Vec<_>) = std::mem::take(&mut self.delayed_triggers)
                     .into_iter()
                     .partition(|dt| {
@@ -16210,9 +16215,7 @@ impl GameState {
         }
 
         // Mana abilities resolve immediately (no stack, no priority reset).
-        let is_mana_ab = is_mana_ability(&ability.effect);
-
-        if is_mana_ab {
+        if ability_is_mana {
             // Carry a cost-sacrificed permanent's stats into the inline
             // resolution (resolve_effect resets the scratch) — Slobad's
             // "add {R} equal to the sacrificed artifact's mana value".
