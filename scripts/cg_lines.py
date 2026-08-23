@@ -19,6 +19,12 @@ Costs are *self* cost per line (callgrind's per-instruction counts), so a
 line that calls something shows only its own dispatch. `--in NEEDLE` keeps
 only addresses whose inline chain mentions NEEDLE, which is how to read one
 function's body when everything around it is inlined.
+
+`--dump-instr=yes` is not optional: without it the dump carries no `instr`
+subposition and this script has nothing to read. It used to print
+"0 instruction addresses, 0 Ir" and exit 0 on such a dump, which reads as
+"nothing is hot" rather than "wrong input"; it now refuses at the
+`positions:` header.
 """
 import collections
 import re
@@ -39,7 +45,17 @@ def parse_instr(path):
     cost = collections.Counter()
     addr = 0
     in_call = False
+    positions = None
     for line in open(path, errors="replace"):
+        if line.startswith("positions:"):
+            positions = line.split(":", 1)[1].split()
+            if "instr" not in positions:
+                sys.exit(
+                    f"{path}: `positions: {' '.join(positions)}` — this dump has no "
+                    "instruction subpositions, so there is nothing to annotate. "
+                    "Re-run callgrind with `--dump-instr=yes`."
+                )
+            continue
         if line.startswith("calls="):
             in_call = True
             continue
@@ -108,6 +124,8 @@ def main():
         needle = sys.argv[sys.argv.index("--in") + 1]
     cost = parse_instr(cg)
     total = sum(cost.values())
+    if total == 0:
+        sys.exit(f"{cg}: no instruction costs parsed — is this a callgrind dump?")
     print(f"# {len(cost):,} instruction addresses, {total:,} Ir")
     # Resolving every address is slow and pointless; the tail is noise.
     hot = [a for a, _ in cost.most_common(60000)]

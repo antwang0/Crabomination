@@ -15,6 +15,13 @@ block that way). This reads the dump directly, so a table is complete.
 Names match on substring, so `--callers grow_one` folds every
 monomorphization. Edge costs are inclusive of the callee's subtree, as
 callgrind records them; rank an allocation table by *calls*, not Ir.
+
+The program total is the sum of the *self* lines only. Summing every cost
+line adds each call edge's whole subtree on top and lands ~18x high, which
+is what this script did until the forty-ninth pass: it printed 28.1 G for a
+1.54 G run, so every share it reported was an order out (`dispatch_triggers
+_for_events` read 0.30 % where it is 5.5 %). The header now cross-checks the
+sum against the dump's own `totals:` line and says so when they disagree.
 """
 import collections
 import re
@@ -26,6 +33,7 @@ def parse(path):
     edge_cost = collections.Counter()
     edge_calls = collections.Counter()
     names = {}
+    declared = None
     cur = None
     pend = None
     pend_calls = 0
@@ -57,17 +65,22 @@ def parse(path):
                 cost = int(parts[1])
             except ValueError:
                 continue
-            total += cost
             if pend is not None:
+                # A call edge: `cost` is the callee's whole subtree, so it
+                # must not join the program total (see the module docstring).
                 edge_cost[(cur, pend)] += cost
                 edge_calls[(cur, pend)] += pend_calls
                 pend = None
             else:
                 self_cost[cur] += cost
+                total += cost
             continue
         if line.startswith(("fl=", "fi=", "fe=", "ob=", "cob=", "cfi=", "cfl=")):
             continue
-    return self_cost, edge_cost, edge_calls, total
+        if line.startswith("totals:"):
+            declared = int(line.split(":", 1)[1].split()[0])
+            continue
+    return self_cost, edge_cost, edge_calls, total, declared
 
 
 def fold(counter_cost, counter_calls, key_idx, needle):
@@ -87,8 +100,10 @@ def main():
     path = sys.argv[1]
     mode = sys.argv[2] if len(sys.argv) > 2 else None
     needle = sys.argv[3] if len(sys.argv) > 3 else None
-    self_cost, edge_cost, edge_calls, total = parse(path)
+    self_cost, edge_cost, edge_calls, total, declared = parse(path)
     print(f"# total Ir {total:,}")
+    if declared is not None and declared != total:
+        print(f"# WARNING: dump's own totals: line says {declared:,} — parse is incomplete")
     if mode in ("--callers", "--callees"):
         # --callers X: rows are callers (near end 0). --callees X: rows are callees.
         idx = 0 if mode == "--callers" else 1
