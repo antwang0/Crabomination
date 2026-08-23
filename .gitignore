@@ -94,4 +94,8 @@ ann*.txt
 tree*.txt
 self*.txt
 incl*.txt
+tc*.txt
+# Fourth time (`304d16bf`): the pattern list will keep losing this race, so
+# write annotate dumps to the session scratchpad, not the repo root.
+
 calling*.txt
