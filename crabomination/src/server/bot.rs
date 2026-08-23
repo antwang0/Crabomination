@@ -5126,6 +5126,215 @@ fn cast_candidates(
     out
 }
 
+/// Which of [`main_phase_action_with`]'s fallback generators a board can still
+/// produce an action for.
+///
+/// The tail below the cast block is two hand loops and twenty-two `pick_*`
+/// generators, and every one of them took its own walk of the seat's
+/// battlefield — three of them the whole library, every graveyard card, or
+/// every opposing creature's *computed* power — to ask "is there anything here
+/// for me". The answer is no for nearly all of them on nearly every tick. One
+/// walk answers all of them at once; a clear bit skips the generator outright.
+/// Bits over-approximate — each generator still applies its own filter — so a
+/// set bit costs only the walk it always paid. Same device as [`spec`] for
+/// `cast_candidates`, and [`gated_pick`] audits it the same way.
+mod sink {
+    // hand
+    pub const MORPH: u32 = 1 << 0;
+    pub const DISCARD_ACT: u32 = 1 << 1;
+    // battlefield permanents
+    pub const LOYALTY: u32 = 1 << 2;
+    pub const CREW: u32 = 1 << 3;
+    pub const SADDLE: u32 = 1 << 4;
+    pub const EQUIP: u32 = 1 << 5;
+    pub const LANDER: u32 = 1 << 6;
+    pub const FACE_DOWN: u32 = 1 << 7;
+    // graveyard
+    pub const GY_RECUR: u32 = 1 << 8;
+    // shapes of the activated abilities the seat can use right now, printed
+    // and granted (see `usable_abilities`)
+    pub const AB_ATTACH: u32 = 1 << 9;
+    pub const AB_REANIMATE: u32 = 1 << 10;
+    pub const AB_DAMAGE: u32 = 1 << 11;
+    pub const AB_REACH: u32 = 1 << 12;
+    pub const AB_DESTROY: u32 = 1 << 13;
+    pub const AB_SAC_DESTROY: u32 = 1 << 14;
+    pub const AB_TEAM_PUMP: u32 = 1 << 15;
+    pub const AB_DRAW: u32 = 1 << 16;
+    pub const AB_GRANT_PLAY: u32 = 1 << 17;
+    pub const AB_PREPARES: u32 = 1 << 18;
+    pub const AB_SAC: u32 = 1 << 19;
+    pub const AB_SELF_COUNTER: u32 = 1 << 20;
+    pub const AB_TOKEN: u32 = 1 << 21;
+    pub const AB_ENERGY: u32 = 1 << 22;
+}
+
+/// Run one gated fallback generator, returning its action when it has one.
+/// Release skips it when its bit is clear; debug runs it anyway and asserts the
+/// gate against what it actually returned, so the whole suite audits the mask
+/// on real boards rather than against a re-derived list.
+macro_rules! gated_pick {
+    ($mask:expr, $bit:expr, $call:expr) => {{
+        let gate = $mask & $bit != 0;
+        if gate || cfg!(debug_assertions) {
+            let picked = $call;
+            debug_assert!(
+                gate || picked.is_none(),
+                concat!("main_phase gate ", stringify!($bit), " skipped a real action"),
+            );
+            if gate && let Some(action) = picked {
+                return action;
+            }
+        }
+    }};
+}
+
+/// The shape bits one activated ability contributes to [`sink_facts`]. Each
+/// arm calls the same predicate its generator does, so the two cannot drift.
+fn ability_sink_bits(ab: &crate::effect::ActivatedAbility) -> u32 {
+    use crate::effect::Selector;
+    let mut m = 0;
+    if ab.sac_cost || ab.sac_other_filter.is_some() {
+        m |= sink::AB_SAC;
+    }
+    if ab.energy_cost > 0 || matches!(ab.effect, Effect::PayEnergy { .. }) {
+        m |= sink::AB_ENERGY;
+    }
+    match &ab.effect {
+        Effect::Destroy { .. } | Effect::DestroyNoRegen { .. } => {
+            m |= if ab.sac_cost { sink::AB_SAC_DESTROY } else { sink::AB_DESTROY };
+        }
+        Effect::DealDamage { .. } => m |= sink::AB_DAMAGE,
+        Effect::Draw { who: Selector::You, .. } => m |= sink::AB_DRAW,
+        Effect::PumpPT { what: Selector::EachPermanent(_), .. } => m |= sink::AB_TEAM_PUMP,
+        Effect::AddCounter { what: Selector::This, .. } => m |= sink::AB_SELF_COUNTER,
+        Effect::Attach { .. } => m |= sink::AB_ATTACH,
+        _ => {}
+    }
+    if ab.effect.is_adapt() {
+        m |= sink::AB_SELF_COUNTER;
+    }
+    if ability_makes_token(&ab.effect) {
+        m |= sink::AB_TOKEN;
+    }
+    if ability_grants_play(&ab.effect) {
+        m |= sink::AB_GRANT_PLAY;
+    }
+    if ability_prepares_target(&ab.effect) {
+        m |= sink::AB_PREPARES;
+    }
+    if ability_reach_amount(&ab.effect).is_some() {
+        m |= sink::AB_REACH;
+    }
+    if effect_reanimates_from_graveyard(&ab.effect) {
+        m |= sink::AB_REANIMATE;
+    }
+    m
+}
+
+/// One walk of the seat's hand, battlefield and graveyard for every fallback
+/// generator's entry predicate — see [`sink`].
+fn sink_facts(state: &GameState, seat: usize) -> u32 {
+    use crate::card::{ArtifactSubtype, Keyword};
+    let mut m = 0;
+    for c in state.players[seat].hand.iter() {
+        for kw in &c.definition.keywords {
+            if matches!(
+                kw,
+                Keyword::Morph(_)
+                    | Keyword::MorphCost(_)
+                    | Keyword::Megamorph(_)
+                    | Keyword::Disguise(_)
+            ) {
+                m |= sink::MORPH;
+            }
+        }
+        if c.definition.discard_activated.is_some() {
+            m |= sink::DISCARD_ACT;
+        }
+    }
+    // One grant scan for the whole tail. Six generators built their own; the
+    // gates now skip all six on a board with nothing for them.
+    let scan = state.grant_scan();
+    let mut scavenge_grant = false;
+    for c in state.battlefield.iter().filter(|c| c.controller == seat) {
+        let def = &c.definition;
+        if def.is_planeswalker() {
+            m |= sink::LOYALTY;
+        }
+        if def.crew_cost().is_some() {
+            m |= sink::CREW;
+        }
+        if def.saddle_cost().is_some() {
+            m |= sink::SADDLE;
+        }
+        if def.is_equipment() && def.has_equip().is_some() {
+            m |= sink::EQUIP;
+        }
+        if def.subtypes.artifact_subtypes.contains(&ArtifactSubtype::Lander) {
+            m |= sink::LANDER;
+        }
+        if c.face_down && c.face_up_def.is_some() {
+            m |= sink::FACE_DOWN;
+        }
+        scavenge_grant = scavenge_grant
+            || def.static_abilities.iter().any(|sa| {
+                matches!(
+                    sa.effect,
+                    crate::effect::StaticEffect::GraveyardCreaturesHaveScavenge
+                )
+            });
+        for (_, ab) in usable_abilities(state, c, &scan) {
+            m |= ability_sink_bits(&ab);
+        }
+    }
+    if state.players[seat].energy == 0 {
+        m &= !sink::AB_ENERGY;
+    }
+    for c in state.players[seat].graveyard.iter() {
+        if c.definition.activated_abilities.iter().any(|ab| ab.from_graveyard)
+            || !c.granted_activated_abilities.is_empty()
+            || !c.granted_activated_eot.is_empty()
+            || (scavenge_grant && c.definition.is_creature())
+        {
+            m |= sink::GY_RECUR;
+            break;
+        }
+    }
+    m
+}
+
+/// Cast a hand card face down for {3} (CR 702.36 Morph / 702.166 Disguise).
+fn pick_face_down_cast(state: &GameState, seat: usize, probe: &GameState) -> Option<GameAction> {
+    use crate::card::Keyword;
+    state.players[seat]
+        .hand
+        .iter()
+        .filter(|c| {
+            c.definition.keywords.iter().any(|k| {
+                matches!(
+                    k,
+                    Keyword::Morph(_)
+                        | Keyword::MorphCost(_)
+                        | Keyword::Megamorph(_)
+                        | Keyword::Disguise(_)
+                )
+            })
+        })
+        .map(|c| GameAction::CastFaceDown { card_id: c.id })
+        .find(|a| GameState::would_accept_on(probe, a.clone()))
+}
+
+/// Fire a discard-activated hand ability (Magma Opus's `{U/R}{U/R}, Discard`).
+fn pick_discard_ability(state: &GameState, seat: usize, probe: &GameState) -> Option<GameAction> {
+    state.players[seat]
+        .hand
+        .iter()
+        .filter(|c| c.definition.discard_activated.is_some())
+        .map(|c| GameAction::ActivateDiscardAbility { card_id: c.id })
+        .find(|a| GameState::would_accept_on(probe, a.clone()))
+}
+
 fn main_phase_action_with(
     state: &GameState,
     seat: usize,
@@ -5356,207 +5565,144 @@ fn main_phase_action_with(
         }
     }
 
+    // Below here the bot has no cast and no land, and every generator that
+    // follows used to take its own walk of the seat's board to ask "is there
+    // anything here for me". One walk answers all of them — see `sink`.
+    let sinks = sink_facts(state, seat);
+
     // Morph / Disguise (CR 702.36 / 702.166): cast a hand card face down for
     // {3} as a 2/2 (with ward {2} for Disguise). Reached only when no normal
     // spell candidate validated, so the bot still prefers casting cards face
     // up; `would_accept` enforces sorcery timing and the {3} payment.
-    for c in state.players[seat].hand.iter().filter(|c| {
-        c.definition.keywords.iter().any(|k| {
-            matches!(
-                k,
-                crate::card::Keyword::Morph(_)
-                    | crate::card::Keyword::MorphCost(_)
-                    | crate::card::Keyword::Megamorph(_)
-                    | crate::card::Keyword::Disguise(_)
-            )
-        })
-    }) {
-        let action = GameAction::CastFaceDown { card_id: c.id };
-        if GameState::would_accept_on(&probe, action.clone()) {
-            return action;
-        }
-    }
+    gated_pick!(sinks, sink::MORPH, pick_face_down_cast(state, seat, &probe));
 
     // Discard-activated hand abilities (Magma Opus's {U/R}{U/R}, Discard:
     // create a Treasure) — a fallback value play, reached only when the bot
     // has no spell/face-down line so it never pitches a castable card.
-    for c in state.players[seat]
-        .hand
-        .iter()
-        .filter(|c| c.definition.discard_activated.is_some())
-    {
-        let action = GameAction::ActivateDiscardAbility { card_id: c.id };
-        if GameState::would_accept_on(&probe, action.clone()) {
-            return action;
-        }
-    }
+    gated_pick!(sinks, sink::DISCARD_ACT, pick_discard_ability(state, seat, &probe));
 
     // Activate planeswalker loyalty abilities the bot controls. Pick the
     // first usable ability per walker (engine enforces sorcery timing and
     // once-per-turn). The candidate set is dry-run-gated so failed targets
     // / over-spent loyalty / opp-controlled-walker rejections drop out.
-    if let Some(action) = pick_loyalty_ability(state, seat, w) {
-        return action;
-    }
+    gated_pick!(sinks, sink::LOYALTY, pick_loyalty_ability(state, seat, w));
 
     // Crew (CR 702.122): turn an uncrewed Vehicle into an attacker by tapping
     // the bot's least-valuable untapped creatures. Dry-run-gated.
-    if let Some(action) = pick_crew(state, seat) {
-        return action;
-    }
+    gated_pick!(sinks, sink::CREW, pick_crew(state, seat));
 
     // Saddle (CR 702.171): tap the bot's least-valuable untapped creatures to
     // saddle a Mount that's about to attack, so its "attacks while saddled"
     // riders fire. Dry-run-gated.
-    if let Some(action) = pick_saddle(state, seat) {
-        return action;
-    }
+    gated_pick!(sinks, sink::SADDLE, pick_saddle(state, seat));
 
     // Equip (CR 702.6): if the bot controls an Equipment that isn't yet
     // attached to one of its creatures, and it controls a creature to wear
     // it, move the Equipment onto the biggest such creature. Dry-run-gated
     // so the equip cost / sorcery timing / target legality all bottom out
     // in `would_accept`.
-    if let Some(action) = pick_equip(state, seat) {
-        return action;
-    }
+    gated_pick!(sinks, sink::EQUIP, pick_equip(state, seat));
 
     // Activated two-slot attach (Brass Squire's "{T}: attach target Equipment
     // you control to target creature you control"). The native-equip pass
     // above only covers `Keyword::Equip`; this drives the Equipment-mover
     // creatures so the AI plays them.
-    if let Some(action) = pick_attach_ability(state, seat) {
-        return action;
-    }
+    gated_pick!(sinks, sink::AB_ATTACH, pick_attach_ability(state, seat));
 
     // Spend surplus energy on beneficial energy-payoff abilities (Bristling
     // Hydra's grow, Longtusk Cub's +1/+1, Aetherstream Leopard's
     // unblockable, …). Only pure "Pay {E}: do X" abilities with no other
     // cost are considered, so the bot can't bankrupt mana or sacrifice
     // anything. Dry-run-gated like everything else.
-    if let Some(action) = pick_energy_payoff(state, seat) {
-        return action;
-    }
+    gated_pick!(sinks, sink::AB_ENERGY, pick_energy_payoff(state, seat));
 
     // Recur value from the graveyard (Embalm CR 702.88 / Eternalize CR 702.91
     // and any "Exile this from your graveyard: …" ability) when there's spare
     // mana and nothing better to do. Dry-run-gated so cost / sorcery timing
     // bottom out in `would_accept`.
-    if let Some(action) = pick_graveyard_recursion(state, seat) {
-        return action;
-    }
+    gated_pick!(sinks, sink::GY_RECUR, pick_graveyard_recursion(state, seat));
 
     // Reanimate a creature from the graveyard via a battlefield permanent's
     // activated ability (Seedship Broodtender's sac-to-return) when there's a
     // worthwhile target. Dry-run-gated so cost / sorcery-speed timing bottom
     // out in `would_accept`.
-    if let Some(action) = pick_battlefield_reanimate(state, seat) {
-        return action;
-    }
+    gated_pick!(sinks, sink::AB_REANIMATE, pick_battlefield_reanimate(state, seat));
 
     // Crack a Lander token (CR — `{2}, {T}, Sacrifice: fetch a basic land
     // tapped`) for ramp when there's a basic still in the library and spare
     // mana. Sequenced after spell-casting so the bot only ramps when it has
     // nothing better to spend mana on. Dry-run-gated.
-    if let Some(action) = pick_crack_lander(state, seat) {
-        return action;
-    }
+    gated_pick!(sinks, sink::LANDER, pick_crack_lander(state, seat));
 
     // Fire a "{cost}: deal damage to any target" value ability (Frostwielder's
     // {T} ping, Kiku's tap-and-burn, Pain Kami-style sac burn) when it kills an
     // opposing creature outright. Dry-run-gated so cost / timing / target
     // legality bottom out in `would_accept`.
-    if let Some(action) = pick_removal_ping(state, seat) {
-        return action;
-    }
+    gated_pick!(sinks, sink::AB_DAMAGE, pick_removal_ping(state, seat));
 
     // Close the game: fire a "deal N to each opponent" / "drain N" / "each
     // opponent loses N" ability when it's lethal to a living opponent
     // (Hazoret's discard-burn, drain pingers). Lethal-only, so the bot never
     // wastes the resource. Dry-run-gated via `would_accept`.
-    if let Some(action) = pick_reach_burn(state, seat) {
-        return action;
-    }
+    gated_pick!(sinks, sink::AB_REACH, pick_reach_burn(state, seat));
 
     // Fire a "Sacrifice this: destroy target creature" ability (Pus Kami,
     // Nezumi Bone-Reader-style sac-removal) on a favorable trade — only when
     // the destroyed foe is at least as big as the creature being sacrificed.
-    if let Some(action) = pick_removal_sacrifice(state, seat) {
-        return action;
-    }
+    gated_pick!(sinks, sink::AB_SAC_DESTROY, pick_removal_sacrifice(state, seat));
 
     // Fire a repeatable "{cost}: Destroy target creature" (the Torment
     // Possessed cycle's Threshold ability, Royal Assassin-style tappers) on
     // the biggest legal foe. No trade math — the source survives.
-    if let Some(action) = pick_removal_destroy(state, seat) {
-        return action;
-    }
+    gated_pick!(sinks, sink::AB_DESTROY, pick_removal_destroy(state, seat));
 
     // Unmask a face-down threat (Morph / Megamorph / Disguise / a cloaked or
     // manifested creature card) when the turn-up cost is affordable. Dry-run-
     // gated, so the cost / timing / "manifested noncreature can't turn up"
     // rules all bottom out in `would_accept`.
-    if let Some(action) = pick_turn_face_up(state, seat) {
-        return action;
-    }
+    gated_pick!(sinks, sink::FACE_DOWN, pick_turn_face_up(state, seat));
 
     // Pump the whole team before combat damage (Bearer of Glory's
     // "{4}{W}: creatures you control get +1/+1") when the bot has two or more
     // attacking creatures — the pump pays off on the swing. Dry-run-gated.
-    if let Some(action) = pick_team_pump(state, seat) {
-        return action;
-    }
+    gated_pick!(sinks, sink::AB_TEAM_PUMP, pick_team_pump(state, seat));
 
     // As a last resort before passing, sink spare mana into a "{cost}: draw a
     // card" ability when card-starved (Bonders' Enclave, Arch of Orazca-style
     // engines). Dry-run-gated, so cost / activation conditions bottom out in
     // `would_accept`.
-    if let Some(action) = pick_card_draw_ability(state, seat) {
-        return action;
-    }
+    gated_pick!(sinks, sink::AB_DRAW, pick_card_draw_ability(state, seat));
 
     // Same slot, the other route to a card: impulse-draw engines that mill
     // or exile off the top and grant permission to play it (Ark of Hunger).
     // Flag-gated until laddered.
-    if w.impulse_draw
-        && let Some(action) = pick_impulse_draw_ability(state, seat)
-    {
-        return action;
+    if w.impulse_draw {
+        gated_pick!(sinks, sink::AB_GRANT_PLAY, pick_impulse_draw_ability(state, seat));
     }
 
     // Re-arm an unprepared prepare-spell creature via an off-card "target
     // creature becomes prepared" ability (SOS: Skycoach Waypoint). The
     // counter is worth about the inset spell — see the `permanent_value`
     // term — so this banks value on par with the draw sink above.
-    if let Some(action) = pick_reprepare(state, seat) {
-        return action;
-    }
+    gated_pick!(sinks, sink::AB_PREPARES, pick_reprepare(state, seat));
 
     // Sacrifice-for-value engines (sac a Pest: payoff), judged by the
     // resolved outcome rather than skipped for carrying a sac cost.
-    if let Some(action) = pick_sacrifice_value(state, seat, w) {
-        return action;
-    }
+    gated_pick!(sinks, sink::AB_SAC, pick_sacrifice_value(state, seat, w));
 
     // Crew an uncrewed Vehicle so it can attack this turn (Vehicles are dead
     // cards to the bot otherwise). Dry-run-gated.
-    if let Some(action) = pick_crew_vehicle(state, seat) {
-        return action;
-    }
+    gated_pick!(sinks, sink::CREW, pick_crew_vehicle(state, seat));
 
     // Sink leftover mana into a repeatable "{cost}: +1/+1 counter on this"
     // ability to grow the board (Fire Sages, Water Tribe Captain). Last resort,
     // so it never pre-empts a spell or land. Dry-run-gated.
-    if let Some(action) = pick_self_pump_counter(state, seat) {
-        return action;
-    }
+    gated_pick!(sinks, sink::AB_SELF_COUNTER, pick_self_pump_counter(state, seat));
 
     // Sink leftover mana into a "{cost}: create a token" ability to grow the
     // board (Sun Warriors' {5}: 1/1 Ally, Realm of Koh's Spirit, Jasmine Dragon).
     // Last resort, dry-run-gated.
-    if let Some(action) = pick_token_maker(state, seat) {
-        return action;
-    }
+    gated_pick!(sinks, sink::AB_TOKEN, pick_token_maker(state, seat));
 
     GameAction::PassPriority
 }
@@ -5617,18 +5763,20 @@ fn pick_sacrifice_value(state: &GameState, seat: usize, w: &EvalWeights) -> Opti
 /// prepared" ability (Skycoach Waypoint's `{3},{T}`) at the bot's best
 /// unprepared prepare-spell creature — biggest inset spell first, since
 /// that's what the counter is worth. Dry-run-gated through `would_accept`.
-fn pick_reprepare(state: &GameState, seat: usize) -> Option<GameAction> {
+fn ability_prepares_target(e: &Effect) -> bool {
     use crate::card::CounterType;
     use crate::effect::Selector;
-    fn prepares_target(e: &Effect) -> bool {
-        match e {
-            Effect::AddCounter { what, kind: CounterType::Prepared, .. } => {
-                matches!(what, Selector::Target(_) | Selector::TargetFiltered { .. })
-            }
-            Effect::Seq(v) => v.iter().any(prepares_target),
-            _ => false,
+    match e {
+        Effect::AddCounter { what, kind: CounterType::Prepared, .. } => {
+            matches!(what, Selector::Target(_) | Selector::TargetFiltered { .. })
         }
+        Effect::Seq(v) => v.iter().any(ability_prepares_target),
+        _ => false,
     }
+}
+
+fn pick_reprepare(state: &GameState, seat: usize) -> Option<GameAction> {
+    use crate::card::CounterType;
     let mut targets: Vec<&crate::card::CardInstance> = state
         .battlefield
         .iter()
@@ -5647,7 +5795,7 @@ fn pick_reprepare(state: &GameState, seat: usize) -> Option<GameAction> {
     let scan = state.grant_scan();
     for card in state.battlefield.iter().filter(|c| c.controller == seat) {
         for (idx, ab) in usable_abilities(state, card, &scan) {
-            if !prepares_target(&ab.effect) {
+            if !ability_prepares_target(&ab.effect) {
                 continue;
             }
             for t in &targets {
@@ -5672,17 +5820,18 @@ fn pick_reprepare(state: &GameState, seat: usize) -> Option<GameAction> {
 /// mana sink — grows the board when the bot has nothing better to do. Skips
 /// sacrifice-cost and once-per-game (Exhaust) abilities. Dry-run-gated through
 /// `would_accept`, so cost/timing legality bottoms out there.
-fn pick_token_maker(state: &GameState, seat: usize) -> Option<GameAction> {
-    fn makes_token(e: &Effect) -> bool {
-        match e {
-            Effect::CreateToken { .. } | Effect::CreateTokenAttacking { .. } => true,
-            Effect::Seq(steps) => steps.iter().any(makes_token),
-            _ => false,
-        }
+fn ability_makes_token(e: &Effect) -> bool {
+    match e {
+        Effect::CreateToken { .. } | Effect::CreateTokenAttacking { .. } => true,
+        Effect::Seq(steps) => steps.iter().any(ability_makes_token),
+        _ => false,
     }
+}
+
+fn pick_token_maker(state: &GameState, seat: usize) -> Option<GameAction> {
     for card in state.battlefield.iter().filter(|c| c.controller == seat) {
         for (idx, ab) in card.definition.activated_abilities.iter().enumerate() {
-            if ab.sac_cost || ab.exhaust || !makes_token(&ab.effect) {
+            if ab.sac_cost || ab.exhaust || !ability_makes_token(&ab.effect) {
                 continue;
             }
             let action = GameAction::ActivateAbility {
@@ -5802,30 +5951,31 @@ fn pick_crew_vehicle(state: &GameState, seat: usize) -> Option<GameAction> {
 /// is at or below the amount, so the bot spends the resource (mana / a discard
 /// / a tap) exclusively to win — never to chip. Dry-run-gated via
 /// `would_accept`.
-fn pick_reach_burn(state: &GameState, seat: usize) -> Option<GameAction> {
+/// Amount an ability's effect would subtract from each opponent's life, if
+/// it's an each-opponent reach effect with a fixed amount.
+fn ability_reach_amount(effect: &Effect) -> Option<i32> {
     use crate::effect::{PlayerRef, Selector, Value};
-    // Amount an ability's effect would subtract from each opponent's life, if
-    // it's an each-opponent reach effect with a fixed amount.
-    fn reach_amount(effect: &Effect) -> Option<i32> {
-        match effect {
-            Effect::DealDamage { to: Selector::Player(PlayerRef::EachOpponent), amount: Value::Const(n) }
-            | Effect::LoseLife { who: Selector::Player(PlayerRef::EachOpponent), amount: Value::Const(n) }
-            | Effect::Drain { from: Selector::Player(PlayerRef::EachOpponent), amount: Value::Const(n), .. } => {
-                Some(*n)
-            }
-            // Compound abilities (e.g. "do X; each opponent loses N") still
-            // count their each-opponent reach: sum a Seq's components, take the
-            // best mode of a modal. `would_accept` still gates legality, so a
-            // wrapped component that demands a target this call can't supply
-            // keeps the whole activation from firing.
-            Effect::Seq(parts) => {
-                let total: i32 = parts.iter().filter_map(reach_amount).sum();
-                (total > 0).then_some(total)
-            }
-            Effect::ChooseMode(modes) => modes.iter().filter_map(reach_amount).max(),
-            _ => None,
+    match effect {
+        Effect::DealDamage { to: Selector::Player(PlayerRef::EachOpponent), amount: Value::Const(n) }
+        | Effect::LoseLife { who: Selector::Player(PlayerRef::EachOpponent), amount: Value::Const(n) }
+        | Effect::Drain { from: Selector::Player(PlayerRef::EachOpponent), amount: Value::Const(n), .. } => {
+            Some(*n)
         }
+        // Compound abilities (e.g. "do X; each opponent loses N") still
+        // count their each-opponent reach: sum a Seq's components, take the
+        // best mode of a modal. `would_accept` still gates legality, so a
+        // wrapped component that demands a target this call can't supply
+        // keeps the whole activation from firing.
+        Effect::Seq(parts) => {
+            let total: i32 = parts.iter().filter_map(ability_reach_amount).sum();
+            (total > 0).then_some(total)
+        }
+        Effect::ChooseMode(modes) => modes.iter().filter_map(ability_reach_amount).max(),
+        _ => None,
     }
+}
+
+fn pick_reach_burn(state: &GameState, seat: usize) -> Option<GameAction> {
     let lethal_threshold = state
         .players
         .iter()
@@ -5835,7 +5985,7 @@ fn pick_reach_burn(state: &GameState, seat: usize) -> Option<GameAction> {
         .min()?;
     for card in state.battlefield.iter().filter(|c| c.controller == seat) {
         for (idx, ab) in card.definition.activated_abilities.iter().enumerate() {
-            let Some(amount) = reach_amount(&ab.effect) else { continue };
+            let Some(amount) = ability_reach_amount(&ab.effect) else { continue };
             if amount < lethal_threshold {
                 continue;
             }
@@ -5941,6 +6091,18 @@ fn pick_card_draw_ability(state: &GameState, seat: usize) -> Option<GameAction> 
     None
 }
 
+fn ability_grants_play(eff: &Effect) -> bool {
+    match eff {
+        Effect::GrantMayPlay { .. } | Effect::ExileTopAndGrantMayPlay { .. } => true,
+        Effect::Seq(v) => v.iter().any(ability_grants_play),
+        Effect::ChooseMode(m) | Effect::ChooseN { modes: m, .. } => {
+            m.iter().any(ability_grants_play)
+        }
+        Effect::MayDo { body, .. } | Effect::MayDoBy { body, .. } => ability_grants_play(body),
+        _ => false,
+    }
+}
+
 /// Activate an "impulse draw" ability: one that puts a card where the bot can
 /// then play it (`GrantMayPlay` / `ExileTopAndGrantMayPlay`), typically after
 /// milling or exiling off the top. Ark of Hunger's `{T}: mill 1, you may play
@@ -5966,22 +6128,13 @@ fn pick_impulse_draw_ability(state: &GameState, seat: usize) -> Option<GameActio
     if available_mana(state, seat).total == 0 {
         return None;
     }
-    fn grants_play(eff: &Effect) -> bool {
-        match eff {
-            Effect::GrantMayPlay { .. } | Effect::ExileTopAndGrantMayPlay { .. } => true,
-            Effect::Seq(v) => v.iter().any(grants_play),
-            Effect::ChooseMode(m) | Effect::ChooseN { modes: m, .. } => m.iter().any(grants_play),
-            Effect::MayDo { body, .. } | Effect::MayDoBy { body, .. } => grants_play(body),
-            _ => false,
-        }
-    }
     let scan = state.grant_scan();
     for card in state.battlefield.iter().filter(|c| c.controller == seat) {
         for (idx, ab) in usable_abilities(state, card, &scan) {
             if ab.sac_cost || ab.exile_self_cost {
                 continue; // the engine is worth more than one card
             }
-            if !grants_play(&ab.effect) {
+            if !ability_grants_play(&ab.effect) {
                 continue;
             }
             let action = GameAction::ActivateAbility {
