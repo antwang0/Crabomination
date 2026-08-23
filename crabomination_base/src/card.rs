@@ -5284,7 +5284,7 @@ impl CardDefinition {
         use std::sync::{OnceLock, RwLock};
         static CACHE: OnceLock<RwLock<HashMap<String, bool>>> = OnceLock::new();
         let cache = CACHE.get_or_init(|| RwLock::new(HashMap::new()));
-        let name: &str = &self.name;
+        let name: &str = self.name;
         if let Some(&hit) = cache.read().unwrap().get(name) {
             return hit;
         }

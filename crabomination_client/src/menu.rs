@@ -1933,9 +1933,8 @@ mod tests {
             "default sealed path should live in the repo, got {}",
             fallback.display()
         );
-        match prev {
-            Some(v) => unsafe { std::env::set_var("CRAB_SEALED_DECK", v) },
-            None => {}
+        if let Some(v) = prev {
+            unsafe { std::env::set_var("CRAB_SEALED_DECK", v) }
         }
     }
 

@@ -14735,15 +14735,6 @@ mod stack_response_tests {
         assert!(chips(&EvalWeights::walker_chip_on()), "flag on: the chip is on the menu");
     }
 
-    /// Ability arms (flag): Sundering Archaic's {2} graveyard-exile was
-    /// unreachable at any valuation because nothing enumerated it. With
-    /// the flag, the activation joins the candidate list with an
-
-    /// Ark of Hunger's `{T}: mill 1, you may play that card` — the impulse
-    /// draw shape. Recorded game: cast turn 19, never activated across five
-    /// turns while the bot topdecked with an empty hand, then exiled. The
-    /// ability generators are a whitelist of effect shapes and this one was
-
     /// The `target_arms` menu: the search is offered the same spell aimed
     /// somewhere else, so a mis-aimed auto-target is a *choice* it can
     /// reject rather than the only option on the menu.
@@ -14751,7 +14742,7 @@ mod stack_response_tests {
     /// Built as the recorded failures were shaped — a hostile spell whose
     /// baked-in pick is the caster's own creature — and asserts the
     /// opposite-side variant is present and ordered first among the
-
+    /// alternates.
     #[test]
     fn target_arms_offer_the_other_side() {
         let mut g = two_player_game();
