@@ -18,111 +18,100 @@ reference and want their own triage pass):
 
 **FIRST COMMAND OF EVERY RUN:** `git fetch origin claude/modern_decks &&
 git checkout -B claude/modern_decks origin/claude/modern_decks` — the routine
-container clones `main`, ~2,200 commits behind.
+container clones `main`, ~2,200 commits behind. **Two sessions work this
+branch concurrently; expect to rebase and re-read.**
 
-**Two sessions have been working this branch concurrently. Pass 47 finished
-at `1,715,304,981 -> 1,645,831,969`, -4.050 % in nine commits (branch across
-46+47: `1,765,005,375 -> 1,645,831,969`, **-6.752 %**); pass 48 ran beside it
-from `89f55a5c` and is rebased on top, `1,662,145,003 -> 1,643,104,718`,
-**-1.146 %** in four commits, which on the branch reads
-`1,645,831,968 -> 1,628,221,407`, **-1.070 %** — the two compose — plus a
-fifth row measured after the rebase, so the branch tip is
-**1,625,262,542**, pass 48 at **-1.250 %**.** One further commit is kept
-as a structural fix and is **not** in that total: the extra-cast target walk
-takes one freeze scope, a null on `--decks fixed` because the path is cold
-there. Both chains are measured against their own
-base and both are `--bench`-invariant-identical throughout (decisions
-**196,220**, turns 27.53, stalls 0, determinism ok). **Six builds were
-reverted between them and every one is written up in PERF's Log** — read them
-before re-proposing any.
+**Three sessions' worth of passes have landed on this branch concurrently.**
+Pass 47 finished at `1,715,304,981 -> 1,645,831,969`, -4.050 % (branch across
+46+47: **-6.752 %**). Pass 48 ran beside it and is rebased under, on the
+branch `1,645,831,968 -> 1,625,262,542`, **-1.250 %** in five rows, plus one
+structural fix kept outside that total (the extra-cast target walk takes one
+freeze scope — a null on `--decks fixed`, where the path is cold). Pass 49
+ran beside *both* and is rebased on top of them: on its own pre-rebase chain
+`1,645,831,476 -> 1,560,268,509`, **-5.198 %**, and on the branch
+**-5.4 %** in three rows. Every chain is measured against its own base and
+every one is `--bench`-invariant-identical throughout (decisions **196,220**,
+turns 27.53, stalls 0, determinism ok). **Six builds were reverted across
+them and every one is written up in PERF's Log** — read them before
+re-proposing any.
 
-1. **Nothing is in flight.** Suite 18,709 / 0 failed / 5 ignored over 22
-   binaries, golden traces and the same-seed replay included; `cargo clippy
-   --workspace --all-targets` clean. **No encoding change — no net needs
-   retraining as of this tip.** Wide pool clean at both tips: `--decks all
-   --games 400 --threads 3`, seeds 11/12/13, **20,400 games, 20,396 decided,
-   no panic, all 10,198 mirrored pairs split** (~55 s a seed, so there is no
-   excuse to skip it).
-2. **Read PERF's "How to measure" before profiling — it changed.** Valgrind
-   in this image does not read `bot_ladder`'s symbol table at all;
-   `scripts/cg_symbolize.py` puts the names back and `scripts/cg_edges.py`
-   gives complete caller/callee tables. **`callgrind_annotate --tree`
-   truncates its caller lists and drops rows silently** — it showed 23 k of
-   the program's 967 k allocations. Line attribution needs
-   `[profile.profiling-lines]` + `scripts/cg_lines.py`, and lld's identical-
-   code folding makes a *function total* from it untrustworthy.
-3. **Re-read your own base — but not for the reason pass 48 first wrote
-   down.** Two containers read pass 47's tip `40fb5e31` one Ir apart
-   (1,645,831,968 / 1,645,831,969), so an absolute *does* transfer. What
-   caught pass 48 out was that the branch tip `89f55a5c` reads 1,662,145,003
-   while pass 47's Log records 1,674,581,042 for the same seven commits — the
-   Log number is its **pre-rebase** tip, and `89f55a5c` has pass 46's
-   `cast_cost_scan` underneath. On a shared branch the commit you are
-   standing on may not be the one the last pass measured.
-4. **The gate rule now has both halves, measured against each other in one
-   sitting.** Swap a gather for a presence gate **only where nothing else in
-   the scope reads the gather** (pass 48's (E), -0.747 %); where the scope
-   goes on to `compute_battlefield()` the same swap is **+0.30 %**.
-   `layers_memoized()` is the device for "is the gather already built".
-5. **Fusing a cheap per-card question into a walk that is already happening
-   has now lost four times** ((-8b), `do_untap`, `creature_death_possible`,
-   and pass 48's trigger-carrier bitmask at +0.58 %). Removing a walk
-   outright still pays: pass 48's (B), three whole-board scans in the cast's
-   uncounterable check collapsed to one, -0.170 %.
-6. **The `Keyword::eq` device generalises and is not exhausted.** The build
-   this file measures on has **no LTO**, so any small non-generic
-   `crabomination_base` function is an out-of-line call in every profile
-   here — but a bare `#[inline]` would be unmeasurable in the shipped
-   `release` (thin LTO) build, so **do not take one on an Ir number**. What
-   works is making the callee *smaller than any inliner threshold*, which is
-   what `has_kw` does. `CardDefinition::is_creature` (~0.67 % over ~950 k
-   calls) is the same family and the same trap.
-7. **Top candidates.** (-26) `main_phase_action_with`, 32.98 %, never read
-   from the top — but check whether `pick_by_outcome`'s 920 calls are a
-   search-quality decision first. Then (-30), the three `computed_permanent`
-   callers that gather per call (`check_target_legality_with_source` opens
-   its own scope per call and a `.collect()` caller reaches it 1,616 times —
-   find that loop). **(-29)'s `RawTable` half is paid** by this pass's (F);
-   what is left of it is the unread `CardData` side.
-   **(-27) is smaller than its entry used to say** (~0.2 %, not 0.75 %) and
-   **(-28)'s main body is closed** — a `Vec` clone with headroom measured
-   +0.050 %. `dispatch_triggers_for_events` is 5.28 % self and now
-   *measured* diffuse: no line of `game/mod.rs` reaches the program's top
-   400 lines.
-8. **Do not rebuild these.** Pass 46's list — the board-presence epoch
-   ((-18), +0.49 %), the `GameState` husk pool (+2.60 %), gating `do_untap`
-   (+0.0001 %), narrowing `GameState`, splitting the big engine files for
-   build time, the per-definition keyword-grant bit ((-11), unsound), fusing
-   `card_type_change_in_scope` (three losses), guarding `declare_blockers`'
-   first cold write, chasing the Ward gathers — plus pass 47's `LayerFreeze`
-   depth shadow (+0.027 %; **only a wall-clock A/B could overturn it, and it
-   was not run**) and the `sba_board_scan` definition bitmask (**unsound**),
-   plus pass 48's four. And **never** skip
-   `push_ordered_trigger_candidates` on an empty batch: +7.3 % *and* a
-   correctness bug, because it owns the per-batch
-   `died_card_snapshots.clear()`.
-9. **Measurement gotcha, hit three times now.** The 6-game ladder printout
-   (24 decided / 12 splits) does **not** move on a change that breaks
-   something; only `--bench`'s `decisions` and the Ir total catch it. Run
+1. **Nothing is in flight.** Branch tip `1,538,787,495` Ir. Pass 48
+   `1,645,831,968 -> 1,628,221,407` (-1.070 %); pass 49, rebased on it,
+   `1,628,220,915 -> 1,538,787,495` (**-5.492 %**, three commits). Suite 18,709
+   / 0 failed / 5 ignored over 22 binaries, golden traces included; workspace
+   clippy clean; `--bench` invariants byte-identical throughout (decisions
+   **196,220**, turns 27.53, stalls 0, determinism ok). Wide pool clean:
+   `--decks all --games 400 --threads 3`, seeds 11/12/13 — 20,400 games,
+   20,396 decided, no panic, all 10,198 mirrored pairs split. **No encoding
+   change; no net needs retraining as of this tip.**
+2. **Pass 49's finding, and it is a way of reading a profile.** *Rank the
+   tail, not the function.* A chain of narrow generators is invisible in a
+   self-cost profile and in a callee table sorted by Ir; it shows up only in
+   the **call counts** — twenty-two rows at exactly 2,176 calls each, once
+   per traversal, on a board with nothing for any of them. Anywhere the code
+   reads as a fallback chain, count the rows before costing them. The device
+   is `spec` / `gated_block!`'s, and the debug audit is what makes it safe.
+3. **Top candidates. (-26) is CLOSED** — pass 49 took it, -4.867 %. Next:
+   (-31) `improves_this_turn`, 6.1 %, repeats what `pick_by_outcome` just did
+   — read its three behaviour caveats before starting. Then (-21)
+   `pick_attacks_scored`, now **54.85 %** and the only thing left of that size
+   (`sim_spell_action`'s freeze scope is 16.7 % over 35,430 iterations;
+   `sim_step`'s 4,568 *checkpointed* actions are 13.7 %). Then (-30)'s
+   gathering callers — `check_target_legality_with_source` opens its own scope
+   per call and a `.collect()` caller reaches it 1,616 times; find that loop.
+   **(-29)'s `RawTable` half is paid** by pass 48's (F); what is left is the
+   unread `CardData` side. **(-27) is ~0.2 %, not 0.75 %**, and **(-28)'s main
+   body is closed**. `cast_candidates` (3.0 % over 3,506) is the one piece of
+   `main_phase_action_with` never read from the top.
+4. **Measurement.** Read PERF's "How to measure" — pass 48 rewrote it.
+   `scripts/cg_symbolize.py` + `scripts/cg_edges.py`, never
+   `callgrind_annotate --tree` for a caller table. **`cg_edges.py`'s shares
+   were ~18x low until `ac85463f`** (the eighteenth filter) — a table read
+   before that commit ranked work upside down; re-derive anything you carried
+   forward from one. Re-read your own base: on a shared branch the commit you
+   stand on may not be the one the last pass measured, and argv length lands
+   in the Ir total (~500 Ir).
+5. **Do not rebuild these.** Every refutation is written up in PERF's **Log** —
+   the board-presence epoch, the `GameState` husk pool, gating `do_untap`,
+   narrowing `GameState`, splitting the big engine files for build time, the
+   per-definition keyword-grant bit, fusing `card_type_change_in_scope`, the
+   `LayerFreeze` depth shadow, the `sba_board_scan` definition bitmask, the
+   trigger-carrier bitmask, the APNAP rank table, the headroom-reserving
+   `Vec`, `board_keyword_matching`'s presence gate. And **never** skip
+   `push_ordered_trigger_candidates` on an empty batch (+7.3 % *and* a
+   correctness bug — it owns the per-batch `died_card_snapshots.clear()`).
+6. **The gate rule, both halves.** Swap a gather for a presence gate **only
+   where nothing else in the scope reads the gather** (pass 48's (E),
+   -0.747 %); where the scope goes on to `compute_battlefield()` the same
+   swap is **+0.30 %**. `layers_memoized()` answers "is the gather already
+   built". Fusing a cheap per-card question into a walk that already happens
+   has lost four times; removing a walk outright still pays.
+7. **The `Keyword::eq` device is not exhausted, and it has a trap.** No LTO
+   here, so any small non-generic `crabomination_base` function is an
+   out-of-line call in every profile this file quotes — but a bare
+   `#[inline]` would be unmeasurable in the shipped `release` (thin LTO)
+   build, so **do not take one on an Ir number**. What works is making the
+   callee smaller than any inliner threshold, which is what `has_kw` does.
+   `CardDefinition::is_creature` is the same family and the same trap.
+8. **Measurement gotcha, hit three times.** The 6-game ladder printout (24
+   decided / 12 splits) does **not** move on a change that breaks something;
+   only `--bench`'s `decisions` and the Ir total catch it. Run
    `./target/profiling-fast/bot_ladder --bench --threads 3` on any change
    whose Ir moves more than its blast radius allows.
-10. **Env.** No `cargo-nextest`; `cargo test -j 2 -p crabomination -p
-   crabomination_tests` is the gate (~12 min cold). Workspace clippy needs
-   `apt-get update && apt-get install -y libwayland-dev libasound2-dev
-   libudev-dev libxkbcommon-dev`. Cold `profiling-fast` engine build ~14 min,
-   warm rebuild **~4m20s**; callgrind ~4 min and contention-immune, so a
-   callgrind and a build overlap for free — two cargo builds do not. Budget
-   ~9 min per measured candidate.
-11. **The pure-data-test sweep is measured and it is hygiene, not build
-   time.** 174 non-`[CR]` tests are **1,673 lines of a 374,892-line suite,
-   0.45 %**, and the binary count (what drives link time) stays flat either
-   way. Do it when an area is being touched anyway.
-12. **Trackers.** TODO ~1.0k, ROADMAP 0.66k, PERF ~3.2k (pass 47 folded the
-   forty-third pass's Log entry, pass 48 the forty-fourth's and the
-   forty-fifth's profile table; the forty-sixth's is the next fold). More of
-   **Missing Mechanics** is probably stale the way pass 47's three "the
-   engine has no X" sections were — that is the next ~70 lines. The
-   **eighteenth** filter is owed and the Robustness section names it.
+9. **Env.** No `cargo-nextest`; `cargo test -j 2 -p crabomination -p
+   crabomination_tests` is the gate (~20 min from cold on this box).
+   Workspace clippy needs `apt-get update && apt-get install -y
+   libwayland-dev libasound2-dev libudev-dev libxkbcommon-dev`. Cold
+   `profiling-fast` engine build ~14 min, warm rebuild ~4m30s; callgrind
+   ~4 min and contention-immune. Wide-pool sweep ~55 s a seed — no excuse to
+   skip it. Quote callgrind under 5 %; a `profiling-fast` games/s compares to
+   nothing.
+10. **A nineteenth robustness filter is owed** — *a threshold or cap that
+   silently truncates a listing*. See the filter table.
+11. **Trackers.** TODO ~1.0k, ROADMAP 0.66k, PERF ~3.6k (the 45th pass's
+   profile table was folded at the 48th tip; the 46th's is the next fold when
+   its Log rows stop chaining). ENGINE_BACKLOG 4.6k and CARD_BACKLOG 4.2k are
+   the archives and still want their own triage pass.
 
 ## Environment note
 
@@ -221,6 +210,9 @@ closed, so none of them is re-derived.
 | 13 | 08-14 | **A reentrancy guard some sites spell out by hand and a sibling does not** | **Found a stack overflow** — `in_layer_gather`, unguarded at ~a dozen computed-P/T arms the gather evaluates. See below |
 | 14 | 08-15 | **A comment that states a cost or a shape** | **Found one**, in the measuring device: `host_calib_ms`' doc claimed you could scale a throughput comparison by it. The syntactic half is clean; see below |
 | 15 | 08-23 | **A claim made by a tool's output rather than by its source** | **Found one**, in the measuring device again (`95453974`): `--bench` printed "release build" for `release-fast` / `profiling-fast` / `overflow`. See below |
+| 16 | 08-23 | A default no caller ever overrides | Clean in four readings; don't re-run — see below |
+| 17 | 08-23 | **A comment that names a call count or a share** | **Found five** across two concurrent runs. The share survives, the count rots. See below |
+| 18 | 08-23 | **A tool's own extraction step** | **Found two** (`ac85463f`), both in the profiling scripts: `cg_edges.py`'s total was ~18x high, `cg_lines.py` returned a silent zero. See below |
 
 **A note the table would lose**: filters 3-5 and 7-10 are syntactic and
 found nothing between them. Filter 6 is not syntactic — it *runs* the
@@ -330,11 +322,37 @@ Performance section:** a profile number in a code comment carries the tip it
 was measured at, or it is written in the past tense as the justification for
 the shape the code already has.
 
-**An eighteenth filter is owed. The remaining candidate, unchanged:** *a
-tool's own extraction step*, which is where the fifteenth filter, pass 46's
-retracted allocator rows and pass 48's `callgrind_annotate --tree`
-truncation all came from. The measuring device keeps being the thing that
-lies.
+**The eighteenth filter was run 2026-08-23 and is NOT clean — two hits, both
+in the profiling scripts pass 48 added.** *A tool's own extraction step* —
+the place the fifteenth filter, pass 46's retracted allocator rows and pass
+48's `callgrind_annotate --tree` truncation all came from.
+
+* **`cg_edges.py`'s program total was ~18x high**, so every share it printed
+  was an order out: `total += cost` ran on every cost line, and a call-edge
+  line carries the callee's whole *inclusive* subtree. It printed
+  28,094,793,086 for a run whose `I refs` is 1,540,962,924, and reported
+  `dispatch_triggers_for_events` at **0.30 %** where it is **5.63 %** — a
+  reader ranking work by that output ranks it upside down. Fixed in
+  `ac85463f`; the total now sums self lines only and cross-checks the dump's
+  own `totals:` line, printing a WARNING on a mismatch instead of a plausible
+  number.
+* **`cg_lines.py` printed "0 instruction addresses, 0 Ir" and exited 0** on a
+  dump taken without `--dump-instr=yes` — which reads as "nothing is hot",
+  not "wrong input". It refuses at the `positions:` header now.
+
+`cg_lines.py`'s cost parse is otherwise correct (it already excludes the
+post-`calls=` line, which is exactly the mistake `cg_edges.py` made) and
+`cg_symbolize.py` already reports its own hit rate to stderr. **The rule the
+filter yields: every extraction step either agrees with a number its source
+computed itself, or refuses.** An extraction that yields nothing looks
+exactly like a measurement that found nothing.
+
+**A nineteenth filter is owed. The candidate:** *a threshold or cap that
+silently truncates a listing* — `callgrind_annotate --threshold`, this
+script's own `most_common(40)`, `--tree`'s caller block, `cg_lines`'
+`most_common(60000)`. Every one of them prints a table that looks complete.
+The standing rule (PERF's "No silent caps") is written for workflows and has
+never been applied to the tools.
 
 **Stall rate — CLOSED 2026-08-14, and the answer is "nothing to fix".**
 `419d2ea6` put `recommend::StopReason` on the outcome and a `stalls_by cap /

@@ -231,6 +231,55 @@ it.
 
 ## Baseline
 
+**Forty-ninth pass, base `40fb5e31` (pass 47's tip) vs its own tip**, both
+`profiling-fast --no-default-features`, built and run in one sitting on one
+box. It ran concurrently with pass 48 and is **rebased on top of it**, so it
+has two readings as well.
+
+```text
+                     base (40fb5e31)          own tip
+I refs (callgrind)   1,645,831,476            1,560,268,509   -5.198 %
+decisions            196,220                  196,220         byte-identical
+turns_per_game       27.53                    27.53
+stalls               0 (0.00 %), cap 0 / stuck 0 / draw 0 (both)
+determinism          ok (all pairs split, both)
+allocations          967,377                  926,895
+peak_rss_mib         21.9                     21.5
+
+                     pass 48 tip (bf658313)   rebased tip (A+B)   branch tip (+C)
+I refs (callgrind)   1,628,220,915 (derived)  1,540,962,924       1,538,787,495  -5.492 %
+decisions            196,220                  196,220         byte-identical
+turns_per_game       27.53                    27.53
+stalls / determinism 0 / ok (both)
+allocations          not re-read here         908,931
+peak_rss_mib         not re-read here         21.5
+suite                18,709 passed / 0 failed / 5 ignored over 22 binaries
+host_cpu             Intel(R) Xeon(R) Processor @ 2.80GHz
+host_calib_ms        53-57 across every reading
+```
+
+**The base columns are 492 Ir below what passes 47 and 48 recorded for the
+same commits** (1,645,831,968 / 1,628,221,407): this run's
+`--callgrind-out-file` name is a character shorter, and argv length lands in
+the Ir total — pass 47 saw the same effect at 686 Ir. `40fb5e31` was read
+directly here (1,645,831,476, exactly 492 under pass 48's reading of it);
+`bf658313` was **not** re-read, so the second block's base is that same 492
+subtracted from pass 48's recorded 1,628,221,407. Everything measured in this
+pass used one argv throughout, so the deltas are exact and the derivation only
+affects the rebased row's third decimal. Pass 48's rule holds: the absolute
+transfers between containers, to within the argv string.
+
+**The two passes compose, and this one's rows read slightly *larger* on the
+rebased branch** (-5.359 % against -5.198 %): pass 48's (E) took the
+`mana_source_table` gathers out from under the same ticks, so the tail this
+pass removes is a bigger share of what is left.
+
+**Crash-freedom and determinism at the rebased tip, widest pool.** `--a gang
+--b gang --games 400 --threads 3 --decks all`, seeds 11 / 12 / 13: **20,400
+games, 20,396 decided, no panic**, all 10,198 mirrored pairs split
+(`rho -1.000` every seed). The 4 undecided are seed 11's rules draws, the same
+four passes 44-48 recorded.
+
 **Forty-eighth pass, base `89f55a5c` vs tip `1b32e4fb`**, both
 `profiling-fast --no-default-features`, built and run in one sitting on one
 box.
@@ -829,6 +878,115 @@ the table above is safe to compress:
 
 
 ## Log
+
+### Forty-ninth pass — a chain of twenty-four narrow generators is invisible in a profile until you read the counts
+
+Ran concurrently with pass 48 and is **rebased on top of it**. Its own chain
+against pass 47's tip `40fb5e31`; then the branch. All readings
+`profiling-fast --no-default-features`, callgrind, `--a gang --b gang --games
+6 --threads 1 --seed 1 --decks fixed`. (The base reads 492 Ir below passes 47
+and 48's number for the same commit — argv length; see **Baseline**.)
+
+| step | before -> after | what |
+|---|---|---|
+| A | 1,645,831,476 -> 1,565,722,561 (**-4.867 %**) | `main_phase_action_with`'s twenty-four fallback generators go behind one board-facts mask |
+| B | 1,565,722,561 -> 1,560,268,509 (**-0.348 %**) | the three land blocks ask `can_player_play_land` once; a landless hand stops `pick_land_to_play`'s mana-base walks |
+| C | 1,540,962,924 -> 1,538,787,495 (**-0.141 %**) | the upkeep's keyword gate stops gathering to prove a negative — measured on the rebased branch, after (A) and (B) |
+
+**(A) and (B) sum to `1,645,831,476 -> 1,560,268,509`, -85,562,967 /
+-5.198 %** on their own chain, and rebased onto pass 48 they read
+**`1,628,220,915 -> 1,540,962,924`, -87,257,991 / -5.359 %**. (C) was written
+after the rebase and is measured on the branch: **the branch tip is
+1,538,787,495**, so the pass is `1,628,220,915 -> 1,538,787,495`, **-5.492 %**. `--bench --threads 3` invariants byte-identical at
+every step: decisions **196,220**, turns_per_game 27.53, stalls 0
+(cap 0 / stuck 0 / draw 0), determinism ok. Suite 18,709 / 0 failed /
+5 ignored, golden traces included. **No encoding change; no net needs
+retraining as of this tip.**
+
+**(A) is candidate (-26) read from the top, and the money was nowhere the
+entry pointed.** (-26) said to read `pick_by_outcome` first — 7.08 % over 920
+calls, 130,069 Ir each — and to check whether the count was a search-quality
+decision. It is one, and it is beside the point. `main_phase_action_with`'s
+33.00 % decomposes as `pick_by_outcome` 7.05 %, `would_accept` 6.35 %,
+**`simulate_through_combat` 5.71 % over 948 calls** (every one of them
+`improves_this_turn`'s two probes — see (-31)), `cast_candidates` 2.87 %,
+`perform_action_inner` 2.67 %, `computed_permanent` 1.19 % over 22,542 —
+and then **the tail below the cast block, which no profile had ever named,
+because every generator in it is under a tenth of a percent on its own.**
+
+The tail is two hand loops and twenty-two `pick_*` generators, reached on
+**2,176 of the 3,506 ticks** — every tick with no cast and no land. Each took
+its own walk of the seat's battlefield to ask "is there anything here for
+me", and three took much more than a walk:
+
+* `pick_sacrifice_value` opened with `eval_material` **and** `grant_scan`
+  before it knew whether a sacrifice ability existed — 11,951,510 / 0.73 %.
+* `pick_removal_ping`, `pick_removal_destroy` and `pick_removal_sacrifice`
+  each built a `foes` vector of **every opposing creature's computed power**
+  before checking for a matching ability. Three of the 22,542
+  `computed_permanent` calls per opposing creature per tick.
+* `pick_crack_lander` walked the whole **library** running
+  `IsBasicLand` per card before checking for a Lander on the board.
+* `pick_graveyard_recursion` deep-cloned `activated_abilities` for **every
+  graveyard card** every tick (`Vec::clone` 11,482 calls) and asked
+  `graveyard_granted_abilities` per card (11,482).
+* `pick_equip` ranked its own creatures by *computed* power — twice — before
+  checking for an Equipment.
+
+One walk of the hand, battlefield and graveyard now answers all of them
+(`sink_facts`), and `gated_pick!` skips a generator whose bit is clear. The
+device is `spec` / `gated_block!`'s, already in this file for
+`cast_candidates`, and so is the audit: a debug build runs the generator
+anyway and asserts it returned nothing, so the 18,709-test suite checks the
+mask against real boards instead of a re-derived list. Four nested shape
+predicates (`reach_amount`, `makes_token`, `grants_play`, `prepares_target`)
+were hoisted to module scope so the mask and the generator call one walker
+and cannot drift.
+
+`main_phase_action_with`'s direct callees, before -> after:
+
+```text
+computed_permanent            22,542 calls / 19,554,572 -> 238 / 15,044
+granted_abilities_of          74,530 /  8,102,598       -> 25,044 / 2,686,034
+grant_scan                     6,540 /  5,209,320       ->  2,442 / 2,005,684
+graveyard_granted_abilities   11,482 /  2,054,518       -> gone
+Vec::clone                    11,482 /  3,030,994       -> gone
+pick_sacrifice_value           2,176 / 11,951,510       -> gone
+pick_crew_vehicle              2,176 /  3,514,983       -> gone
+self                                    4,346,948       -> 2,876,216
+can_player_play_land (B)       9,590 /  5,600,262       ->  3,506 / 2,021,946
+```
+
+and every other tail generator with them. The mask's own cost is the residue
+in that table: 25,044 `granted_abilities_of`, one `grant_scan` per traversal
+instead of up to six, and ~19 k each of `is_planeswalker` / `crew_cost` /
+`saddle_cost` / `is_equipment` — about 4.4 M against 85 M removed.
+
+**The reusable finding: rank the tail, not the function.** A chain of narrow
+generators is invisible in a self-cost profile (none of these reaches 0.8 %)
+and invisible in a callee table sorted by Ir. It shows up only when the
+**call counts** are read: twenty-two rows, every one of them at exactly 2,176
+calls — once per traversal, on a board that had nothing for any of them. The
+forty-second pass's rule ("ask what an ordinary action pays that it cannot
+possibly need") finds these; sorting by Ir never will. **Anywhere the code
+reads as a fallback chain, count the rows before costing them.**
+
+Gating the generator is strictly better than reordering inside it, so none of
+the five expensive prologues above was reordered — the gate skips the whole
+call, prologue included.
+
+**(C) is pass 48's (E) at a third site, and the site pattern was already
+written down.** `board_keyword_matching` inside a freeze scope reads
+`frozen_effects()`, which gathers on the scope's first computed read, so the
+gate paid the gather it exists to avoid — and when it answers no, nothing else
+in that scope reads the memo. `do_untap` had been converted with a comment
+saying exactly this; `process_cumulative_upkeep` was the one site that was
+not. 1,788 gathers (3,447,071 Ir) become 1,788 `None` reads (78,672), and the
+gate's own `keyword_grant_in_scope` costs ~1.3 M of it back. **The remaining
+8,364 `board_keyword_in_scope` gathers are *not* this shape** — pass 48
+measured moving those and it is **+0.30 %**, because their callers go on to
+`compute_battlefield()` in the same scope. Read what else the scope does
+after the question; that is the whole rule.
 
 ### Forty-eighth pass — the profile came back, and the gate that pays is the one whose gather nobody else reads
 
@@ -1568,15 +1726,60 @@ settings + debuginfo; system allocator, because valgrind replaces malloc and
 a mimalloc build would measure the interception), 1 thread, `--a gang --b
 gang --games 6 --seed 1 --decks fixed`.
 
-**The forty-eighth pass ends at 1,643,104,718 Ir** and the table below is that
-tip (`1b32e4fb`, `cg.E.out`). **Read it as shares, not absolutes**: it was
-taken on pass 48's *own* chain, before the rebase onto pass 47's last five
-commits, so it does not include the `Keyword::eq` pair and the branch tip
-reads **1,628,221,407**, 15 M lower. Call counts and ratios transfer. The
-forty-seventh's and forty-sixth's tables are kept below because live Log rows
-chain to them; the forty-fifth's was folded away here (its rows are two
-passes stale and `git log -- PERF.md` has it), as the forty-second's and
-forty-fourth's were at the 2.8 k fold.
+**The branch ends at 1,538,787,495 Ir.** The table below is the tip one commit
+earlier (`cg.rb.out`, 1,540,962,924) — the pass's (C) moved 2.2 M of
+`frozen_effects` and nothing else, so every row here holds. The forty-eighth pass's own table is kept
+under it because its Log rows chain to it — read that one as shares, not
+absolutes: it was taken on pass 48's pre-rebase chain. The forty-seventh's and
+forty-sixth's are kept below that for the same reason; the forty-fifth's was
+folded away at the 48th tip, as the forty-second's and forty-fourth's were at
+the 2.8 k fold.
+
+| row | at the 49th tip | note |
+|---|---|---|
+| `pick_attacks_scored` inclusive | 845,192,380 / **54.85 %** | **the largest subtree by a distance now, and the share is up 3 points because this pass took 5 % out of everything else.** `simulate_attack_outcome_once` 837,784,800 / 54.37 % over 1,170 candidates; under it `sim_step` 30.5 % over 35,316 and `sim_spell_action`'s freeze scope 16.7 % over 35,430. Candidate (-21) |
+| `perform_action_inner` inclusive | 706,797,014 / 45.87 % over 70,418 | |
+| **`main_phase_action_with` inclusive** | **455,418,707 / 29.55 %** | was 32.98 %. `pick_by_outcome` 7.42 %, `would_accept` 6.6 %, `simulate_through_combat` 6.1 % (all `improves_this_turn` — (-31)), `cast_candidates` 3.0 %. **The tail is gone; (-26) is closed** |
+| `cast_spell` inclusive | 439,809,476 / 28.54 % | `auto_tap_for_cost_inner` 224,238,052 / **14.55 %** — (-12) |
+| `pass_priority` inclusive | 359,845,190 / 23.35 % | `advance_step` 270,052,007 / 17.52 % |
+| `would_accept` inclusive | 274,479,135 / **17.81 %** | the probe *is* a cast — do not go after the clone |
+| `resolve_combat` inclusive | 166,862,790 / 10.83 % | candidate (-25) |
+| `activate_ability` inclusive | 134,094,874 / 8.70 % | the land tap |
+| **`simulate_through_combat` inclusive** | **127,301,040 / 8.26 % over ~1,790** | 948 of those calls are `improves_this_turn`'s two probes and 842 are `score_settled_state`'s. New candidate (-31) |
+| `pick_by_outcome` inclusive | 114,355,626 / 7.42 % over 920 | search, not engine — (-26)'s closing note |
+| `finalize_cast` inclusive | 110,664,718 / 7.18 % over 7,172 | diffuse — (-28) |
+| `dispatch_triggers_for_events` incl | 110,747,151 / 7.19 % | self 5.5 %, the largest engine self row, and **measured diffuse** |
+| `computed_permanent` inclusive | 89,128,971 / **5.78 %** | **96,206 calls, down from 156,624**, of which 22,494 gather. 69,202 `Arc::new` allocations — (-27) |
+| `gather_continuous_effects_inner` incl | 73,308,172 / 4.76 % | **37,674 gathers**, down from 39,692 |
+| `check_state_based_actions` incl | 73,209,534 / 4.75 % | (-17) |
+| `compute_permanent_pass` | 39,335,473 / 2.55 % | |
+| `card_can_grant_keyword` | 21,777,378 / 1.41 % | (-11), still demoted |
+| allocator | `__rust_dealloc` 98.4 M / 6.38 %, `free` 96.5 / 6.26, `__rust_alloc` 71.3 / 4.63 | **908,931 allocations**, down from 949,413 |
+
+**The allocator caller table at the 49th tip, by call count**
+(`cg_edges.py --callers __rust_alloc`):
+
+| direct caller of `__rust_alloc` | allocs | note |
+|---|---|---|
+| `RawVecInner::finish_grow` | 208,813 | Vec growth, all callers. (-28) closed the headroom idea |
+| `Arc::clone_from_ref_in` | 152,062 | the CoW unshares — (-29) |
+| `Vec::from_iter` (nested) | 120,044 | was 126,686 |
+| `GameState::clone` | 79,204 | (-13) costed narrowing and said no |
+| `computed_permanent` | 69,202 | **was 93,570** — this pass's (A) took 24 k of them. (-27) |
+| `gather_continuous_effects_inner` | 33,976 | |
+| `RawTable::clone` | 29,428 | under the CoW unshare — (-29)'s cheap half |
+| `Vec::clone` | 29,172 | |
+| `Box::clone` | 26,386 | |
+| `finalize_cast` | 24,108 | (-28) |
+| `RawTable::reserve_rehash` | 19,280 | |
+| `Vec::from_iter` (in-place) | 17,146 | |
+| `frozen_effects` | 10,152 | **was 17,702** — pass 48's (E) |
+| `auto_tap_for_cost_inner` | 9,544 | |
+
+**The forty-eighth pass's table, kept because its Log rows chain to it.** It
+was taken at 1,643,104,718 on that pass's *own* chain (`1b32e4fb`,
+`cg.E.out`), before the rebase, so its absolutes read ~15 M high against the
+branch. Call counts and ratios transfer.
 
 | row | at the 48th tip | note |
 |---|---|---|
@@ -1748,6 +1951,24 @@ Ordered by expected value. Each run pulls the top one, attaches numbers,
 and feeds what it finds back in. Re-profile and replenish when the list
 goes thin or stale.
 
+**Ranking rule added by the forty-ninth pass, and it is about how you read
+the profile rather than about the code:** **rank the tail, not the function.**
+A chain of narrow generators — `main_phase_action_with`'s twenty-two `pick_*`
+fallbacks, and anything else shaped like one — is invisible in a self-cost
+profile (none of those reached 0.8 %) and invisible in a callee table sorted
+by Ir. It shows up only when the **call counts** are read: twenty-two rows at
+exactly 2,176 calls each, once per traversal, on a board that had nothing for
+any of them. Together they were **4.9 %**. Sorting by Ir will never find one.
+Wherever the code reads as a fallback chain, count the rows before costing
+them, and gate the whole call rather than reordering its prologue.
+
+**And the corollary that made it safe:** `spec` / `gated_block!`'s debug audit
+(run the block anyway in a debug build, assert it produced nothing) is what
+lets a mask over-approximate freely. The 18,709-test suite becomes the
+mask's proof on real boards, so a bit can be added without re-deriving the
+generator's filter by hand. `gated_pick!` is the same macro for a generator
+that returns rather than appends.
+
 **Ranking rule, corrected by the thirty-seventh pass's two null results:** a
 `computed_permanent` site is worth a gate iff it is reachable only from
 `&mut self` code, because a freeze scope holds `&GameState` and no `&mut self`
@@ -1883,7 +2104,44 @@ path stays on the stack. It touches every caller that writes
 the call-site churn before starting. **Do not** reach for a pool: (-13)
 measured the husk-pool shape at +2.60 %.
 
-**(-26) `main_phase_action_with` is 552,113,968 / 32.97 % and has never been
+**(-31) `improves_this_turn` is 948 `simulate_through_combat` calls and two
+`GameState` clones apiece — 6.1 % of the program — and its second half repeats
+what `pick_by_outcome` just did for the same action.** The forty-ninth pass
+read it and did not build it, because the reuse is not free.
+
+`main_phase_action_with`'s summon-sick / hold-instants gate calls it once per
+winning line (474 calls, 948 combat sims). The `before` half fast-forwards an
+idle clone through combat; the `after` half resolves `best`, runs it to
+quiescence and fast-forwards *that* through combat. But `pick_by_outcome` ->
+`evaluate_action_outcome` -> `evaluate_action_sequence` -> `score_settled_state`
+already did exactly that for `best`, on a clone, at depth 0, before recursing
+into follow-ups. Only the final scoring function differs
+(`eval_material` vs `eval_material_summon_sick_blind`), and both read the same
+settled state.
+
+**Three things stop it being a straight lift, and all three are behaviour, not
+plumbing.** (i) `evaluate_action_sequence` returns the max over follow-up
+sequences, so the value it hands back is not the depth-0 state's — the depth-0
+`score_settled_state` call is the one to tee off, not the return. (ii) With
+`w.determinize > 0` the outcome eval runs on a *redealt* `sim_start_state`
+while `improves_this_turn` uses the true state, so a shared score changes what
+the gate answers. (iii) `pick_by_outcome` skips the outcome eval entirely for
+`action_outcome_is_temporary` candidates, so a temporary winner has no state
+to reuse. Ceiling is about half of the 6.1 %; budget it as a search-plumbing
+pass with a determinize-on A/B and a golden-trace diff, not as a drive-by.
+
+**(-26) `main_phase_action_with` — CLOSED by the forty-ninth pass, -4.867 %.**
+The tail below the cast block was twenty-four narrow generators, all reached
+2,176 times, and gating them behind one board-facts mask was the whole entry.
+What is left of the function is search and the engine: `pick_by_outcome`
+7.42 % over 920 (a search-quality decision, as this entry suspected — the
+finalist count is `EVAL_TOP = 3` and the cost per call is the dry-run, not
+enumeration), `would_accept` 6.6 % over 2,036 lazy candidate probes,
+`improves_this_turn` 6.1 % ((-31)), `cast_candidates` 3.0 % over 3,506. **Do
+not reopen this entry as a whole**; take (-31), or take `cast_candidates`,
+which is the only piece never read from the top. The historical entry:
+
+**(-26, historical) `main_phase_action_with` is 552,113,968 / 32.97 % and has never been
 read from the top.** Second-largest bot subtree after `pick_attacks_scored`.
 Its callee table at the forty-seventh tip:
 
