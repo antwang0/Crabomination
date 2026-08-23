@@ -867,6 +867,43 @@ impl MctsBot {
         candidates.into_iter().nth(best).unwrap_or(GameAction::PassPriority)
     }
 
+    /// The round-51 fetch arms: search a pending `SearchLibrary` instead of
+    /// letting it fall through to the heuristic. Every other pending
+    /// decision still does fall through — this is the one whose answer is a
+    /// whole card and whose heuristic is a fixed ranking with no board read
+    /// past mana. `None` means "not a searched fetch tick".
+    fn fetch_search(&mut self, state: &GameState, seat: usize) -> Option<GameAction> {
+        use crate::decision::{Decision, DecisionAnswer};
+        let pending = state.pending_decision.as_ref()?;
+        if pending.acting_player() != seat || state.is_game_over() {
+            return None;
+        }
+        let Decision::SearchLibrary { candidates, eligible, .. } = &pending.decision else {
+            return None;
+        };
+        let pickable: Vec<(crate::card::CardId, String)> = match eligible {
+            Some(ok) => candidates.iter().filter(|(id, _)| ok.contains(id)).cloned().collect(),
+            None => candidates.clone(),
+        };
+        let ranked = super::bot::rank_library_search(state, seat, &pickable, &self.cfg.weights);
+        // One legal hit is not a decision.
+        if ranked.len() < 2 {
+            return None;
+        }
+        // Four arms, scored a hair apart in the heuristic's order: a tie
+        // leaves its pick in front and the sims have to earn the swap, the
+        // same convention `target_arms` uses.
+        let arms: Vec<(GameAction, i32)> = ranked
+            .into_iter()
+            .take(4)
+            .enumerate()
+            .map(|(i, id)| {
+                (GameAction::SubmitDecision(DecisionAnswer::Search(Some(id))), -(i as i32))
+            })
+            .collect();
+        Some(self.search(state, seat, arms))
+    }
+
     /// The round-31 combat arms: search the attack/block declaration when
     /// it is this seat's to make and still pending. `None` means "not a
     /// searched combat tick" and the caller falls through to the normal
@@ -937,6 +974,11 @@ impl Bot for MctsBot {
     fn next_action(&mut self, state: &GameState, seat: usize) -> Option<GameAction> {
         if self.cfg.search_combat
             && let Some(a) = self.combat_search(state, seat)
+        {
+            return Some(a);
+        }
+        if self.cfg.weights.fetch_arms
+            && let Some(a) = self.fetch_search(state, seat)
         {
             return Some(a);
         }

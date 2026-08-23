@@ -273,6 +273,8 @@ fn parse_profile(name: &str) -> Option<Pilot> {
         "mullsim" => Some(Pilot::Scored(EvalWeights::mull_sim_on())),
         // Round 50 control: the pre-fix planeswalker cash-out read.
         "walkerlegacy" => Some(Pilot::Scored(EvalWeights::legacy_cashout_on())),
+        // Round 51 control: the pre-fix library-search ranking.
+        "legacyfetch" => Some(Pilot::Scored(EvalWeights::legacy_fetch_on())),
         "det1" => Some(Pilot::Scored(EvalWeights::determinized())),
         "det3" => Some(Pilot::Scored(EvalWeights::determinized3())),
         "net" => Some(Pilot::Scored(EvalWeights::net_eval())),
@@ -427,6 +429,15 @@ fn parse_profile(name: &str) -> Option<Pilot> {
             weights: EvalWeights::target_arms_on(),
             ..MctsConfig::default()
         })),
+        // Round 51: the library-search decision as searched arms rather
+        // than a fixed heuristic answer. Gate as A against mcts-net-deep,
+        // which is `net_eval_det1` — the same weights with the flag off.
+        "mcts-net-fetcharms" => Some(Pilot::Mcts(MctsConfig {
+            iterations: 64,
+            horizon_turns: 3,
+            weights: EvalWeights::fetch_arms_on(),
+            ..MctsConfig::default()
+        })),
         "mcts-net-h0" => Some(Pilot::Mcts(MctsConfig {
             iterations: 64,
             horizon_turns: 0,
@@ -549,7 +560,7 @@ fn parse_profile(name: &str) -> Option<Pilot> {
 }
 
 /// Profile names accepted by `--a` / `--b`, for the help text and errors.
-const PROFILES: &str = "baseline, combat, holdsick, holdsick+combat, atk, atk-cheap, atk-hold, atk-sim, atk-race, atk-life, dflt-life, blk, lookahead, holdinst, mcts, mcts-heur, mcts-deep, planner, v2+combat, pretap, scaled, keywords, kw25, base, base+kw, life, power, v2, uniform, landseq, mull, gang, landseq2, mull2, race2, look1, look2, smarttap, det1, det3, net, net-det1, net-det3, net-blend, net-blend300, net-q10, net-q20, netb-q10, netb-q20, netb-ply, mcts-net, mcts-net-deep, mcts-net-128, mcts-net-256, mcts-net-h4, mcts-net-c05, mcts-net-c14, mcts-net-c20, mcts-net-prior, mcts-net-adapt, mcts-net-combat, mcts-net-gumbel, mcts-net-bdeep, net-bdet1 (*net* need CRAB_NET=<weights.safetensors> or the committed nets/champion.safetensors)";
+const PROFILES: &str = "baseline, combat, holdsick, holdsick+combat, atk, atk-cheap, atk-hold, atk-sim, atk-race, atk-life, dflt-life, blk, lookahead, holdinst, mcts, mcts-heur, mcts-deep, planner, v2+combat, pretap, scaled, keywords, kw25, base, base+kw, life, power, v2, uniform, landseq, mull, gang, landseq2, mull2, race2, look1, look2, smarttap, det1, det3, net, net-det1, net-det3, net-blend, net-blend300, net-q10, net-q20, netb-q10, netb-q20, netb-ply, mcts-net, mcts-net-deep, mcts-net-128, mcts-net-256, mcts-net-h4, mcts-net-c05, mcts-net-c14, mcts-net-c20, mcts-net-prior, mcts-net-adapt, mcts-net-combat, mcts-net-gumbel, mcts-net-bdeep, mcts-net-fetcharms, legacyfetch, net-bdet1 (*net* need CRAB_NET=<weights.safetensors> or the committed nets/champion.safetensors)";
 
 /// Peak resident set size in MiB, or `None` where the OS doesn't expose it
 /// cheaply. Linux keeps the high-water mark in `/proc/self/status`, which

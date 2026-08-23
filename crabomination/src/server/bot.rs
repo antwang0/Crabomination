@@ -508,6 +508,22 @@ pub struct EvalWeights {
     /// Ancestral Recalls sat unfired through a recorded loss). Off by
     /// default until laddered (profile `mcts-net-prep`).
     pub prepare_arm: bool,
+    /// Search the library-search decision instead of answering it with a
+    /// fixed heuristic. `Decision::SearchLibrary` never reaches the MCTS
+    /// menu at all: `MctsBot::next_action` falls through to the heuristic
+    /// whenever a decision is pending, so every tutor and every fetchland
+    /// is resolved by `decide_library_search`'s hardcoded read — supply-only
+    /// for basics, and "biggest mana value" for anything else. That is the
+    /// same missing-candidate shape as chump blocks (round 43, +0.9) and
+    /// target arms (round 46, +0.95): the right fetch is not a low-scoring
+    /// arm the search rejects, it is absent. Off by default until laddered
+    /// ([`fetch_arms_on`](Self::fetch_arms_on), profile `mcts-net-fetcharms`).
+    pub fetch_arms: bool,
+    /// The round-51 reproduction control: keep the pre-fix library-search
+    /// ranking (supply-only for basics, biggest mana value for tutor hits)
+    /// so the demand-aware read can be gated against the read it replaces.
+    pub legacy_fetch: bool,
+
     /// Quantize the net's win probability onto a grid of this many
     /// levels before the search consumes it; 0 is off (continuous).
     ///
@@ -576,6 +592,8 @@ impl EvalWeights {
             impulse_draw: false,
             target_arms: false,
             prepare_arm: false,
+            fetch_arms: false,
+            legacy_fetch: false,
             net_quantize: 0,
         }
     }
@@ -648,6 +666,8 @@ impl EvalWeights {
             impulse_draw: false,
             target_arms: false,
             prepare_arm: false,
+            fetch_arms: false,
+            legacy_fetch: false,
             net_quantize: 0,
         }
     }
@@ -703,6 +723,8 @@ impl EvalWeights {
             impulse_draw: false,
             target_arms: false,
             prepare_arm: false,
+            fetch_arms: false,
+            legacy_fetch: false,
             net_quantize: 0,
         }
     }
@@ -1146,6 +1168,18 @@ impl EvalWeights {
     /// than against a scored control.
     pub const fn target_arms_on() -> Self {
         Self { target_arms: true, ..Self::net_eval_det1() }
+    }
+
+    /// [`legacy_fetch`](Self::legacy_fetch) — the pre-fix ranking, as a
+    /// heuristic-profile control (`legacyfetch`) against `gang`.
+    pub const fn legacy_fetch_on() -> Self {
+        Self { legacy_fetch: true, ..Self::block_gang_search() }
+    }
+
+    /// [`fetch_arms`](Self::fetch_arms). Search-only, so it gates as an
+    /// MCTS profile (`mcts-net-fetcharms` vs `mcts-net-deep`).
+    pub const fn fetch_arms_on() -> Self {
+        Self { fetch_arms: true, ..Self::net_eval_det1() }
     }
 
     /// The round-46 reproduction control: `net_eval_det1` with the
@@ -1890,7 +1924,7 @@ fn decide_pending_policy_inner(
                 }
                 None => candidates.clone(),
             };
-            decide_library_search(state, seat, &pickable)
+            decide_library_search(state, seat, &pickable, w)
         }
         // Unlike AutoDecider (which declines *every* "you may"
         // trigger), the bot takes an optional trigger whose body
@@ -3299,11 +3333,39 @@ fn decide_library_search(
     state: &GameState,
     seat: usize,
     candidates: &[(crate::card::CardId, String)],
+    w: &EvalWeights,
 ) -> crate::decision::DecisionAnswer {
     use crate::decision::DecisionAnswer;
-    use crate::mana::Color;
+    DecisionAnswer::Search(rank_library_search(state, seat, candidates, w).first().copied())
+}
+
+/// The library-search picks, best first. Split out of
+/// [`decide_library_search`] so the MCTS fetch menu
+/// ([`EvalWeights::fetch_arms`]) can offer the runners-up as arms instead
+/// of only ever seeing this function's first choice.
+///
+/// Basics are ranked by **unmet demand**, not by supply alone. The old read
+/// scored a basic by "fewest existing sources among the colors it makes"
+/// and stopped there, so with a hand full of red spells and one stray green
+/// one it fetched the Forest — the colour we own least of is not the colour
+/// we most need. Its sibling `ChooseColor` has counted pips in hand since it
+/// was written; this now uses the same signal, with supply as the
+/// tiebreaker so an already-covered colour still loses to an uncovered one.
+///
+/// Non-basics (a creature/spell tutor: Fauna Shaman, Imperial Recruiter,
+/// Spellseeker) were picked by raw mana value — the biggest hit in the
+/// library regardless of whether we can ever cast it. Castability now
+/// leads: a hit inside our current land count outranks one we cannot pay
+/// for, and mana value only sorts within those groups.
+pub(crate) fn rank_library_search(
+    state: &GameState,
+    seat: usize,
+    candidates: &[(crate::card::CardId, String)],
+    w: &EvalWeights,
+) -> Vec<crate::card::CardId> {
+    use crate::mana::{Color, ManaSymbol};
     if candidates.is_empty() {
-        return DecisionAnswer::Search(None);
+        return Vec::new();
     }
     const COLORS: [Color; 5] =
         [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green];
@@ -3321,39 +3383,61 @@ fn decide_library_search(
             }
         }
     }
+    // What our hand is actually asking for, by colored pip.
+    let mut demand: crate::fxhash::HashMap<Color, usize> = crate::fxhash::HashMap::default();
+    for c in state.players[seat].hand.iter() {
+        for sym in c.definition.cost.symbols.iter() {
+            if let ManaSymbol::Colored(col) = sym {
+                *demand.entry(*col).or_insert(0) += 1;
+            }
+        }
+    }
+    let lands = state
+        .battlefield
+        .iter()
+        .filter(|c| c.controller == seat && c.definition.is_land())
+        .count() as u32;
+
     let lib = &state.players[seat].library;
-    let mut best: Option<(crate::card::CardId, usize)> = None;
+    let mut basics: Vec<(i64, u32, crate::card::CardId)> = Vec::new();
+    let mut others: Vec<(u8, std::cmp::Reverse<u32>, crate::card::CardId)> = Vec::new();
     for (id, _) in candidates {
         let Some(card) = lib.iter().find(|c| c.id == *id) else { continue };
-        if !(card.definition.is_basic() && card.definition.is_land()) {
-            continue;
-        }
-        let out = land_color_output(&card.definition);
-        // Score by the fewest existing sources among the colors it makes.
-        let score = COLORS
-            .iter()
-            .filter(|col| out.contains(**col))
-            .map(|col| sources.get(col).copied().unwrap_or(0))
-            .min()
-            .unwrap_or(usize::MAX);
-        if best.map(|(_, s)| score < s).unwrap_or(true) {
-            best = Some((*id, score));
+        let cmc = card.definition.cost.cmc();
+        if card.definition.is_basic() && card.definition.is_land() {
+            let out = land_color_output(&card.definition);
+            // Best over the colors this land makes: most-wanted first, with
+            // the supply count as the tiebreaker (negated so `sort` puts the
+            // scarcer source in front).
+            let score = COLORS
+                .iter()
+                .filter(|col| out.contains(**col))
+                .map(|col| {
+                    let want = demand.get(col).copied().unwrap_or(0) as i64;
+                    let have = sources.get(col).copied().unwrap_or(0) as i64;
+                    // Pips we cannot currently produce are the whole point;
+                    // an uncovered color is worth more than a deep one.
+                    let unmet = if have == 0 { want * 2 } else { want };
+                    if w.legacy_fetch { (0, -have) } else { (unmet, -have) }
+                })
+                .max()
+                .unwrap_or((0, 0));
+            basics.push((-score.0, (-score.1) as u32, *id));
+        } else {
+            // 0 = castable off the lands we already have, 1 = not yet.
+            let castable = if w.legacy_fetch { 0 } else { u8::from(cmc > lands) };
+            others.push((castable, std::cmp::Reverse(cmc), *id));
         }
     }
-    if let Some((id, _)) = best {
-        return DecisionAnswer::Search(Some(id));
-    }
-    // No basic land among the candidates (a creature/spell tutor): fetch the
-    // highest-mana-value hit as a reasonable "best card" proxy, falling back
-    // to the first candidate when CMCs can't be read.
-    let pick = candidates
-        .iter()
-        .max_by_key(|(id, _)| {
-            lib.iter().find(|c| c.id == *id).map(|c| c.definition.cost.cmc()).unwrap_or(0)
-        })
-        .map(|(id, _)| *id)
-        .unwrap_or(candidates[0].0);
-    DecisionAnswer::Search(Some(pick))
+    basics.sort();
+    others.sort();
+    // A basic land beats a spell hit when both are offered, preserving the
+    // long-standing "singleplayer tutors fix mana" behaviour.
+    basics
+        .into_iter()
+        .map(|(_, _, id)| id)
+        .chain(others.into_iter().map(|(_, _, id)| id))
+        .collect()
 }
 
 /// Bot heuristic for `Decision::ChooseCards`. Two cases:
@@ -14829,9 +14913,83 @@ mod tests {
         let extra_forest = g.add_card_to_library(0, catalog::forest());
         let island = g.add_card_to_library(0, catalog::island());
         let candidates = vec![(extra_forest, "Forest".into()), (island, "Island".into())];
-        let ans = decide_library_search(&g, 0, &candidates);
+        let ans = decide_library_search(&g, 0, &candidates, &EvalWeights::block_gang_search());
         assert!(matches!(ans, DecisionAnswer::Search(Some(id)) if id == island),
             "bot fetches the Island (Blue uncovered) over a third Forest");
+    }
+
+    /// Round 51: the fetch reads *demand*, not supply alone. Two Mountains
+    /// and one Forest are down and the hand is three red spells, so the
+    /// colour we own least of (green) is not the colour we need. The
+    /// pre-fix ranking took the Forest on the supply count alone; both
+    /// sides are pinned here so `legacyfetch` stays a faithful control.
+    #[test]
+    fn fetch_prefers_the_color_the_hand_is_asking_for() {
+        use crate::decision::DecisionAnswer;
+        let mut g = two_player_game();
+        g.add_card_to_battlefield(0, catalog::mountain());
+        g.add_card_to_battlefield(0, catalog::mountain());
+        g.add_card_to_battlefield(0, catalog::forest());
+        for _ in 0..3 {
+            g.add_card_to_hand(0, catalog::lightning_bolt()); // {R}
+        }
+        let forest = g.add_card_to_library(0, catalog::forest());
+        let mountain = g.add_card_to_library(0, catalog::mountain());
+        let candidates = vec![(forest, "Forest".into()), (mountain, "Mountain".into())];
+
+        let fixed = decide_library_search(&g, 0, &candidates, &EvalWeights::block_gang_search());
+        assert!(matches!(fixed, DecisionAnswer::Search(Some(id)) if id == mountain),
+            "demand-aware: three red pips in hand outrank the thin green source");
+
+        let legacy = decide_library_search(&g, 0, &candidates, &EvalWeights::legacy_fetch_on());
+        assert!(matches!(legacy, DecisionAnswer::Search(Some(id)) if id == forest),
+            "legacy control: supply-only, so it still takes the scarcer Forest");
+    }
+
+    /// Round 51: a tutor fetches something it can actually cast. With two
+    /// lands down, the MV-5 Angel is a card that sits in hand; the MV-2
+    /// body is a play. The pre-fix ranking took the biggest hit regardless.
+    #[test]
+    fn tutor_prefers_a_castable_hit_over_the_biggest_one() {
+        use crate::decision::DecisionAnswer;
+        let mut g = two_player_game();
+        g.add_card_to_battlefield(0, catalog::plains());
+        g.add_card_to_battlefield(0, catalog::plains());
+        let bears = g.add_card_to_library(0, catalog::grizzly_bears()); // MV 2
+        let angel = g.add_card_to_library(0, catalog::serra_angel());   // MV 5
+        let candidates =
+            vec![(bears, "Grizzly Bears".into()), (angel, "Serra Angel".into())];
+
+        let fixed = decide_library_search(&g, 0, &candidates, &EvalWeights::block_gang_search());
+        assert!(matches!(fixed, DecisionAnswer::Search(Some(id)) if id == bears),
+            "castability leads: the Angel is uncastable off two lands");
+
+        let legacy = decide_library_search(&g, 0, &candidates, &EvalWeights::legacy_fetch_on());
+        assert!(matches!(legacy, DecisionAnswer::Search(Some(id)) if id == angel),
+            "legacy control: biggest mana value regardless of castability");
+    }
+
+    /// Round 51: the runners-up reach the search. `rank_library_search`
+    /// exists so `fetch_arms` can offer more than the heuristic's single
+    /// pick — a ranking that collapsed to one entry would make the flag a
+    /// no-op, which is exactly how the first mulligan-sim test passed
+    /// vacuously.
+    #[test]
+    fn fetch_ranking_offers_every_legal_hit() {
+        let mut g = two_player_game();
+        g.add_card_to_battlefield(0, catalog::mountain());
+        let forest = g.add_card_to_library(0, catalog::forest());
+        let island = g.add_card_to_library(0, catalog::island());
+        let mountain = g.add_card_to_library(0, catalog::mountain());
+        let candidates = vec![
+            (forest, "Forest".into()),
+            (island, "Island".into()),
+            (mountain, "Mountain".into()),
+        ];
+        let ranked =
+            rank_library_search(&g, 0, &candidates, &EvalWeights::block_gang_search());
+        assert_eq!(ranked.len(), 3, "all three basics are arms, not just the best one");
+        assert!(ranked.contains(&mountain) && ranked.contains(&forest));
     }
 
     /// The bot's ChooseTarget heuristic votes/targets the opponent's biggest
@@ -14919,7 +15077,7 @@ mod tests {
         let mut g = two_player_game();
         let bolt = g.add_card_to_library(0, catalog::lightning_bolt());
         let candidates = vec![(bolt, "Lightning Bolt".into())];
-        let ans = decide_library_search(&g, 0, &candidates);
+        let ans = decide_library_search(&g, 0, &candidates, &EvalWeights::block_gang_search());
         assert!(matches!(ans, DecisionAnswer::Search(Some(id)) if id == bolt),
             "bot fetches the only candidate");
     }
@@ -14936,7 +15094,7 @@ mod tests {
             (bears, "Grizzly Bears".into()),
             (angel, "Serra Angel".into()),
         ];
-        let ans = decide_library_search(&g, 0, &candidates);
+        let ans = decide_library_search(&g, 0, &candidates, &EvalWeights::block_gang_search());
         assert!(matches!(ans, DecisionAnswer::Search(Some(id)) if id == angel),
             "bot fetches the higher-MV creature");
     }
