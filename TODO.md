@@ -25,9 +25,12 @@ default checkout will rebuild infrastructure that already exists here and
 rediscover bugs already fixed. `git log --oneline -1` should show a PERF/pass
 commit or a round commit, not a card batch.
 
-Branch `claude/modern_decks`. **Pass 42: `-5.480 %` Ir in seven commits**,
-2,040,144,900 -> **1,928,339,700**. Two rows are the pass and neither was on
-the candidates list.
+Branch `claude/modern_decks`. **Pass 42: `-5.949 %` Ir in eight commits**,
+2,040,144,900 -> **1,918,782,724**, and **+5.56 % wall-clock** on a paired
+`release` + mimalloc A/B (155.07 -> 163.69 games/s, both sides built from one
+tree and run alternating on one box — the first paired release measurement
+this file has been able to take). Two rows are the pass and neither was on the
+candidates list.
 
 - **A no-op write through a CoW handle is a full deep copy.** `ColdState` is
   ~90 collections behind one `CowBox`, and `perform_action` always holds a
@@ -57,6 +60,12 @@ the candidates list.
 - **Green at the tip**: suite **18,728** over 11 binaries, golden traces
   identical, clippy clean workspace-wide **including the client** (fixed 4
   pre-existing warnings, one of them a mangled doc comment in `bot.rs`).
+  `--bench` invariants byte-identical with the pass's *own base binary*
+  (decisions **196,220**, turns 27.53, stalls 0) — note those differ from the
+  anchor's 193,232 / 26.98, and rounds 43-47 own that drift, not this pass.
+  `--decks all --games 200 --paired`: 3,400 games, two processes,
+  byte-identical, 2 undecided (0.06 %). `audit_stubs` 0 flagged;
+  `audit_incomplete` structural 1, already triaged as not-a-gap.
   **No encoding change — no net needs retraining as of this tip.** `ColdState`
   / `GameState` serde shape did change (`last_cast_spell_colors` moved and
   retyped); nothing persists a `GameState` across versions.
@@ -67,8 +76,13 @@ the candidates list.
   contention-immune. `cp -al target target-probe` warms a second target dir
   instantly so a probe build overlaps a callgrind run. **Fetch before the
   first commit** (eight PERF.md collisions so far; this run rebased mid-pass).
-- Trackers: TODO ~1.25k — **over the 1k line and the next fold**; ROADMAP
-  0.66k, PERF ~2.8k. **PERF's passes 37-38 are still the next fold there.**
+- Trackers: PERF's passes 37-38 were folded to index rows this run (2,758 ->
+  2,617 with the pass added). **TODO is 1.24k and is now the fold that is
+  overdue**: the "Determinism — closed" block is ~185 lines of *closed* audit
+  history under an "(open)" heading, but it is a methodology index (the
+  thirteen filters, four of which found real bugs), not per-push changelog —
+  compact it into an index of shapes-and-results, do not delete it. ROADMAP
+  0.66k is fine.
 
 ## Environment note
 
