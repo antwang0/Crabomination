@@ -914,32 +914,31 @@ impl GameState {
             {
                 return Err(GameError::CannotAttack(atk.attacker));
             }
-            // (source id, optional attacker filter) for each live prohibition.
-            let locks: Vec<(CardId, Option<crate::card::SelectionRequirement>)> = self
+            // Each live prohibition, asked in one pass: the old form collected
+            // `(source id, cloned filter)` into a `Vec` and then ran `any` over
+            // it, i.e. one allocation and one `SelectionRequirement` clone per
+            // lock per attacker for a question that short-circuits.
+            let barred = self
                 .battlefield
                 .iter()
                 .filter(|c| c.controller == d)
                 .flat_map(|c| c.definition.static_abilities.iter().map(move |sa| (c.id, sa)))
-                .filter_map(|(id, sa)| match &sa.effect {
+                .any(|(src, sa)| match &sa.effect {
                     crate::effect::StaticEffect::CreaturesCantAttackController {
                         protect_planeswalkers,
                         filter,
                     } if !at_planeswalker || *protect_planeswalkers => {
-                        Some((id, filter.clone()))
+                        filter.as_ref().is_none_or(|f| {
+                            self.evaluate_requirement_static(
+                                f,
+                                &Target::Permanent(atk.attacker),
+                                d,
+                                Some(src),
+                            )
+                        })
                     }
-                    _ => None,
-                })
-                .collect();
-            let barred = locks.into_iter().any(|(src, filter)| {
-                filter.is_none_or(|f| {
-                    self.evaluate_requirement_static(
-                        &f,
-                        &Target::Permanent(atk.attacker),
-                        d,
-                        Some(src),
-                    )
-                })
-            });
+                    _ => false,
+                });
             if barred {
                 return Err(GameError::CannotAttack(atk.attacker));
             }

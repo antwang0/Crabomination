@@ -2414,6 +2414,21 @@ impl crate::game::GameState {
         if !land.definition.is_land() {
             return;
         }
+        // Every land tap reaches here, and the walk below builds a `Vec` and
+        // clones the turn-scoped list whether or not anything on the board
+        // grants extra mana. Two presence questions answer it without
+        // allocating: a short-circuiting `any` over mostly-empty
+        // `static_abilities`, and an emptiness check.
+        if self.extra_mana_on_land_tap_this_turn.is_empty()
+            && !self.battlefield.iter().any(|c| {
+                c.definition
+                    .static_abilities
+                    .iter()
+                    .any(|sa| matches!(sa.effect, StaticEffect::ExtraManaOnLandTap { .. }))
+            })
+        {
+            return;
+        }
         let land = land.clone();
         let grants: Vec<(crate::card::CardId, ExtraManaKind)> = self
             .battlefield
