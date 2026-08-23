@@ -8480,6 +8480,16 @@ impl GameState {
                 .find(|c| c.id == perm_id)
             {
                 Some(c) if c.controller != actor => {
+                    // A whole-game gather per opposing target, for a keyword
+                    // almost no board has: `card_keyword_possible` answers
+                    // "could this permanent's computed set carry Ward" from
+                    // printed keywords, end-of-turn grants, keyword counters
+                    // and the in-scope grant scan, with no layer pass, and
+                    // `false` is authoritative (the gather `debug_assert!`s
+                    // the implication). 1,914 gathers at ~3,040 Ir each.
+                    if !self.card_keyword_possible(perm_id, |k| matches!(k, Keyword::Ward(_))) {
+                        continue;
+                    }
                     let computed = self.computed_permanent(perm_id);
                     let cost: Option<WardCost> = computed
                         .as_ref()
