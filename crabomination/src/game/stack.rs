@@ -2881,8 +2881,22 @@ impl GameState {
             } else {
                 false
             };
+        // Six blocks below — Mist of Stagnation, the Seedborn untapper list, the
+        // filtered/Endbringer set, Storage Matrix, the prevention set's static
+        // walk and the untap caps — are each driven by a battlefield or
+        // command-zone *static ability*, and each is its own walk of the same
+        // list. One walk says whether any of them can produce anything: every
+        // producing path in all six goes through `c.definition.static_abilities`,
+        // so with no card carrying one they are all empty and the step is the
+        // flip plus the two player-scoped skips (which are `Player` counters,
+        // not statics, and stay outside the gate).
+        let any_static = self
+            .battlefield
+            .iter()
+            .chain(self.command_zone_sources())
+            .any(|c| !c.definition.static_abilities.is_empty());
         // CR 502.4 — Mist of Stagnation: nothing untaps during any untap step.
-        if self.battlefield.iter().chain(self.command_zone_sources()).any(|c| {
+        if any_static && self.battlefield.iter().chain(self.command_zone_sources()).any(|c| {
             c.definition
                 .static_abilities
                 .iter()
@@ -2896,7 +2910,8 @@ impl GameState {
         let untappers: Vec<usize> = {
             let mut u = if active_skips_untap { vec![] } else { vec![p] };
             for c in &self.battlefield {
-                if c.controller != p
+                if any_static
+                    && c.controller != p
                     && !u.contains(&c.controller)
                     && c.definition.static_abilities.iter().any(|sa| {
                         matches!(
@@ -2912,7 +2927,9 @@ impl GameState {
         };
         // CR 502.3 — the filtered sibling (Prophet of Kruphix): an off-turn
         // controller untaps only the permanents matching the static's filter.
-        let filtered_untap: crate::fxhash::HashSet<crate::card::CardId> = {
+        let filtered_untap: crate::fxhash::HashSet<crate::card::CardId> = if !any_static {
+            crate::fxhash::HashSet::default()
+        } else {
             let filters: Vec<(usize, SelectionRequirement)> = self
                 .battlefield
                 .iter()
@@ -2959,12 +2976,13 @@ impl GameState {
         // picks artifact / creature / land and untaps only that type this step.
         // The auto pick is whichever type would free the most permanents.
         let matrix_choice: crate::fxhash::HashMap<usize, crate::card::CardType> = {
-            let live = self.battlefield.iter().any(|c| {
-                !c.tapped
-                    && c.definition.static_abilities.iter().any(|sa| {
-                        matches!(sa.effect, StaticEffect::UntapOnlyChosenTypeWhileUntapped)
-                    })
-            });
+            let live = any_static
+                && self.battlefield.iter().any(|c| {
+                    !c.tapped
+                        && c.definition.static_abilities.iter().any(|sa| {
+                            matches!(sa.effect, StaticEffect::UntapOnlyChosenTypeWhileUntapped)
+                        })
+                });
             let mut out = crate::fxhash::HashMap::default();
             if live {
                 use crate::card::CardType;
@@ -3006,7 +3024,7 @@ impl GameState {
             // `EachPermanent(req)` blocks every matching permanent.
             let mut prevent_filters: Vec<SelectionRequirement> = Vec::new();
             let mut global_prevent = false;
-            for c in &self.battlefield {
+            for c in self.battlefield.iter().filter(|_| any_static) {
                 for sa in &c.definition.static_abilities {
                     match &sa.effect {
                         StaticEffect::PreventUntap {
@@ -3137,6 +3155,7 @@ impl GameState {
         let untap_caps: Vec<(crate::fxhash::HashSet<crate::card::CardId>, u32)> = self
             .battlefield
             .iter()
+            .filter(|_| any_static)
             .flat_map(|c| c.definition.static_abilities.iter().map(move |sa| (c, sa)))
             .filter_map(|(c, sa)| match self.active_static(&sa.effect, c) {
                 Some(StaticEffect::MaxOneUntapPerStep { filter }) => Some((filter, 1)),
