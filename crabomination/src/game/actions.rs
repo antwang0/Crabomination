@@ -1431,6 +1431,62 @@ pub fn cost_reduction_for_spell_full(
 /// Trinisphere floor: the largest `StaticEffect::SpellCostFloor` amount
 /// among untapped battlefield permanents (affects every player's spells).
 /// Returns 0 if none in play.
+/// Which of the cast *cost* pipeline's battlefield statics exist right now,
+/// as a bit per family, gathered in one walk.
+///
+/// Same device as [`GameState::cast_lock_scan`] one stage later in the cast:
+/// `cast_spell_with_convoke` asked the battlefield six separate times per
+/// cast — flash grants, the coloured tax, the coloured reduction, the
+/// Trinisphere floor, granted convoke and the Gaddock Teeg lock — for
+/// statics a normal board does not have, 11,950,000 Ir / 0.69 % over 7,550
+/// casts. A bit is a pure over-approximation: the block it gates still runs
+/// its own controller / tapped / filter tests unchanged, so a set bit can
+/// only cost a walk and a clear bit can only skip work that was a no-op.
+/// `debug_assert!`s at each gated site prove the skipped work *was* a no-op
+/// on every cast the suite exercises.
+pub(crate) mod cast_static {
+    /// `AnyPlayerSpellsHaveFlash` / `ControllerSpellsHaveFlash` /
+    /// `ControllerSorceriesAsFlash` (Sigarda's Aid, Vedalken Orrery, …).
+    pub const FLASH: u32 = 1 << 0;
+    /// `ColoredSpellTax` (the Leech cycle).
+    pub const COLORED_TAX: u32 = 1 << 1;
+    /// `ColoredCostReduction`.
+    pub const COLORED_REDUCTION: u32 = 1 << 2;
+    /// `SpellCostFloor` (Trinisphere).
+    pub const COST_FLOOR: u32 = 1 << 3;
+    /// `GrantConvokeToSpells`.
+    pub const GRANT_CONVOKE: u32 = 1 << 4;
+    /// `NoncreatureSpellsCantBeCastIf` / `NoncreatureSpellsWithChosenManaValueCantBeCast`
+    /// (Gaddock Teeg, Sanctum Prelate).
+    pub const NONCREATURE_LOCK: u32 = 1 << 5;
+}
+
+/// See [`cast_static`]. One battlefield walk; `u32::MAX` is the ungated
+/// reading every gated site `debug_assert!`s against.
+pub(crate) fn cast_cost_scan(state: &crate::game::GameState) -> u32 {
+    use crate::effect::StaticEffect as SE;
+    let mut m = 0u32;
+    for card in state.battlefield.iter() {
+        for sa in &card.definition.static_abilities {
+            m |= match sa.effect {
+                SE::AnyPlayerSpellsHaveFlash { .. }
+                | SE::ControllerSpellsHaveFlash { .. }
+                | SE::ControllerSorceriesAsFlash => cast_static::FLASH,
+                SE::ColoredSpellTax { .. } => cast_static::COLORED_TAX,
+                SE::ColoredCostReduction { .. } => cast_static::COLORED_REDUCTION,
+                SE::SpellCostFloor { .. } => cast_static::COST_FLOOR,
+                SE::GrantConvokeToSpells { .. } => cast_static::GRANT_CONVOKE,
+                SE::NoncreatureSpellsCantBeCastIf { .. }
+                | SE::NoncreatureSpellsWithChosenManaValueCantBeCast => {
+                    cast_static::NONCREATURE_LOCK
+                }
+                _ => 0,
+            };
+        }
+    }
+    m
+}
+
 pub(crate) fn spell_cost_floor(state: &crate::game::GameState) -> u32 {
     use crate::effect::StaticEffect;
     state
@@ -6039,6 +6095,9 @@ impl GameState {
         if !self.players[p].has_in_hand(card_id) {
             return Err(GameError::CardNotInHand(card_id));
         }
+        // One battlefield walk for the six cost-pipeline statics this
+        // function used to ask about separately — see `cast_cost_scan`.
+        let cost_statics = cast_cost_scan(self);
 
         // Meddling Mage — spells with the chosen name can't be cast.
         let spell_name = self.players[p]
@@ -6388,7 +6447,14 @@ impl GameState {
         }
 
         // Gaddock Teeg lock — high-mana-value / {X} noncreature spells can't be cast.
-        if self.noncreature_spell_cast_locked(&card.definition) {
+        debug_assert!(
+            cost_statics & cast_static::NONCREATURE_LOCK != 0
+                || !self.noncreature_spell_cast_locked(&card.definition),
+            "cast_cost_scan missed a noncreature-cast lock",
+        );
+        if cost_statics & cast_static::NONCREATURE_LOCK != 0
+            && self.noncreature_spell_cast_locked(&card.definition)
+        {
             self.players[p].hand.push(card);
             return Err(GameError::CantCastNoncreature);
         }
@@ -6422,8 +6488,14 @@ impl GameState {
         // Validate convoke/improvise helpers up-front (before any state
         // mutation). Convoke taps untapped creatures (CR 702.52); Improvise
         // taps untapped artifacts (CR 702.126); each pays {1}.
+        debug_assert!(
+            cost_statics & cast_static::GRANT_CONVOKE != 0
+                || !self.spell_granted_convoke(p, &card),
+            "cast_cost_scan missed a GrantConvokeToSpells static",
+        );
         let has_convoke = card.definition.keywords.contains(&crate::card::Keyword::Convoke)
-            || self.spell_granted_convoke(p, &card);
+            || (cost_statics & cast_static::GRANT_CONVOKE != 0
+                && self.spell_granted_convoke(p, &card));
         let has_improvise = card.definition.keywords.contains(&crate::card::Keyword::Improvise);
         // CR 701.67 — waterbend helpers ride the same `convoke_creatures` slot;
         // any untapped artifact or creature you control may tap to pay {1} of
@@ -6483,7 +6555,7 @@ impl GameState {
         // Sigarda's Aid — a battlefield static can grant flash timing to
         // matching spells (Auras + Equipment). Serpent of the Pass — a
         // card-intrinsic `SelfFlashIf` condition on the spell being cast.
-        let flash_granted = self.flash_granted_for(p, &card);
+        let flash_granted = self.flash_granted_for_with(p, &card, cost_statics);
         let must_be_sorcery_speed = !(card.definition.is_instant_speed() || flash_granted)
             || self.player_locked_to_sorcery_timing(p);
         if must_be_sorcery_speed
@@ -7032,7 +7104,22 @@ impl GameState {
         if tax > 0 {
             cost.symbols.push(crate::mana::ManaSymbol::Generic(tax));
         }
-        cost.symbols.extend(colored_spell_tax_for_spell(self, p, &card).symbols);
+        // The mask was taken before the CR 601.2b cost choices above, which can
+        // only *remove* permanents (sacrifice / exile) and so can only clear a
+        // bit; the audit below is the standing proof that it does not go stale.
+        debug_assert_eq!(
+            cost_statics & !cast_cost_scan(self),
+            0,
+            "a cast-cost static appeared after cast_cost_scan ran",
+        );
+        debug_assert!(
+            cost_statics & cast_static::COLORED_TAX != 0
+                || colored_spell_tax_for_spell(self, p, &card).symbols.is_empty(),
+            "cast_cost_scan missed a ColoredSpellTax",
+        );
+        if cost_statics & cast_static::COLORED_TAX != 0 {
+            cost.symbols.extend(colored_spell_tax_for_spell(self, p, &card).symbols);
+        }
         if let Some(extra) = self.flash_surcharge_for(p, &card) {
             cost.symbols.extend(extra.symbols.iter().cloned());
         }
@@ -7051,7 +7138,14 @@ impl GameState {
         if reduction > 0 {
             cost.reduce_generic(reduction);
         }
-        cost.reduce_by_cost(&colored_cost_reduction_for_spell(self, p, &card));
+        debug_assert!(
+            cost_statics & cast_static::COLORED_REDUCTION != 0
+                || colored_cost_reduction_for_spell(self, p, &card).symbols.is_empty(),
+            "cast_cost_scan missed a ColoredCostReduction",
+        );
+        if cost_statics & cast_static::COLORED_REDUCTION != 0 {
+            cost.reduce_by_cost(&colored_cost_reduction_for_spell(self, p, &card));
+        }
         // Colored-aware target-conditional reduction (Brush Off's "{1}{U}
         // less if it targets an instant or sorcery spell") — mandatory per
         // CR 601.2f, removed pip-by-pip.
@@ -7070,7 +7164,13 @@ impl GameState {
         }
         // Trinisphere floor (CR 117.7 / replacement-style): applied after
         // every reduction so a discounted spell still owes the minimum.
-        apply_spell_cost_floor(self, &mut cost);
+        debug_assert!(
+            cost_statics & cast_static::COST_FLOOR != 0 || spell_cost_floor(self) == 0,
+            "cast_cost_scan missed a SpellCostFloor",
+        );
+        if cost_statics & cast_static::COST_FLOOR != 0 {
+            apply_spell_cost_floor(self, &mut cost);
+        }
         // Yusri's jackpot — "you may cast spells from your hand this turn
         // without paying their mana costs" zeroes the whole cost.
         if self.players[p].free_spells_from_hand_this_turn {
@@ -11465,6 +11565,19 @@ impl GameState {
     /// (Vedalken Orrery-style taxes), or Winding Canyons' turn-scoped
     /// creature-spell permission. The six cast entry points share this.
     pub(crate) fn flash_granted_for(&self, p: usize, card: &crate::card::CardInstance) -> bool {
+        self.flash_granted_for_with(p, card, u32::MAX)
+    }
+
+    /// [`flash_granted_for`](Self::flash_granted_for) with
+    /// [`cast_cost_scan`]'s mask: the board walk is skipped when no permanent
+    /// grants flash. The card-intrinsic legs (`SelfFlashIf`, the flash
+    /// surcharge) and the turn-scoped one are not statics and always run.
+    pub(crate) fn flash_granted_for_with(
+        &self,
+        p: usize,
+        card: &crate::card::CardInstance,
+        statics: u32,
+    ) -> bool {
         let self_flash = !self.player_locked_to_sorcery_timing(p)
             && card.definition.static_abilities.iter().any(|sa| {
                 if let crate::effect::StaticEffect::SelfFlashIf { condition } = &sa.effect {
@@ -11474,8 +11587,12 @@ impl GameState {
                     false
                 }
             });
+        debug_assert!(
+            statics & cast_static::FLASH != 0 || !self.battlefield_grants_flash(p, card),
+            "cast_cost_scan missed a flash-granting static",
+        );
         self_flash
-            || self.battlefield_grants_flash(p, card)
+            || (statics & cast_static::FLASH != 0 && self.battlefield_grants_flash(p, card))
             || self.flash_surcharge_for(p, card).is_some()
             || (self.players[p].creature_spells_as_flash_this_turn
                 && card.definition.is_creature())
