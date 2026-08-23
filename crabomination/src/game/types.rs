@@ -1989,7 +1989,7 @@ pub enum PreventionTarget {
 /// back a spell that has long since left the stack.
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct CastProfile {
-    pub colors: Vec<crate::mana::Color>,
+    pub colors: crate::mana::ColorSet,
     pub card_types: Vec<crate::card::CardType>,
 }
 

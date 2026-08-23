@@ -8113,9 +8113,9 @@ impl GameState {
         // spell (color read off the printed mana cost). The full profile
         // (colors + cast half's types) backs the Trap alternative costs.
         {
-            let colors = card.definition.cost.colors();
-            if colors.contains(&crate::mana::Color::Blue)
-                || colors.contains(&crate::mana::Color::Black)
+            let colors = card.definition.cost.color_set();
+            if colors.contains(crate::mana::Color::Blue)
+                || colors.contains(crate::mana::Color::Black)
             {
                 self.players[p].cast_blue_or_black_this_turn = true;
             }
@@ -11770,7 +11770,7 @@ impl GameState {
         let flexible = cost.symbols.iter().any(|s| {
             matches!(s, ManaSymbol::Generic(n) if *n > 0) || matches!(s, ManaSymbol::MonoHybrid(_, _))
         });
-        let cost_colors = cost.colors();
+        let cost_colors = cost.color_set();
         let mut scan = self.grant_scan();
         self.scan_land_type_rewrites(&mut scan);
         // One buffer for the whole walk — see `effective_mana_abilities_into`.
@@ -11790,7 +11790,7 @@ impl GameState {
             // Otherwise the source must make a color the cost needs.
             cost_colors
                 .iter()
-                .any(|col| mana_abilities.iter().any(|(_, a)| effect_produces_color(&a.effect, *col)))
+                .any(|col| mana_abilities.iter().any(|(_, a)| effect_produces_color(&a.effect, col)))
         })
     }
 
@@ -12093,15 +12093,13 @@ impl GameState {
             matches!(s, ManaSymbol::Generic(n) if *n > 0)
                 || matches!(s, ManaSymbol::MonoHybrid(_, _))
         });
-        let cost_colors = cost.colors();
+        let cost_colors = cost.color_set();
         self.players[player].hand.iter().any(|c| {
             c.definition.activated_abilities.iter().any(|a| {
                 a.from_hand
                     && is_mana_ability(&a.effect)
                     && (flexible
-                        || cost_colors
-                            .iter()
-                            .any(|col| effect_produces_color(&a.effect, *col)))
+                        || cost_colors.iter().any(|col| effect_produces_color(&a.effect, col)))
             })
         })
     }

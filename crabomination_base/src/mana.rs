@@ -386,25 +386,23 @@ impl ManaCost {
 
     /// Returns the set of colors present in this mana cost.
     pub fn colors(&self) -> Vec<Color> {
-        let mut result = Vec::new();
+        self.color_set().to_vec()
+    }
+
+    /// The same answer as [`colors`](Self::colors) without the allocation.
+    /// Prefer it: the `Vec` form was the engine's fifth-largest source of
+    /// `RawVec::grow_one`, and every consumer only ever asks `contains` or
+    /// iterates.
+    pub fn color_set(&self) -> ColorSet {
+        let mut result = ColorSet::empty();
         for s in &self.symbols {
             match s {
-                ManaSymbol::Colored(c) | ManaSymbol::Phyrexian(c)
-                    if !result.contains(c) => {
-                        result.push(*c);
-                    }
+                ManaSymbol::Colored(c) | ManaSymbol::Phyrexian(c) => result.insert(*c),
                 ManaSymbol::Hybrid(a, b) | ManaSymbol::PhyrexianHybrid(a, b) => {
-                    if !result.contains(a) {
-                        result.push(*a);
-                    }
-                    if !result.contains(b) {
-                        result.push(*b);
-                    }
+                    result.insert(*a);
+                    result.insert(*b);
                 }
-                ManaSymbol::MonoHybrid(_, c)
-                    if !result.contains(c) => {
-                        result.push(*c);
-                    }
+                ManaSymbol::MonoHybrid(_, c) => result.insert(*c),
                 _ => {}
             }
         }

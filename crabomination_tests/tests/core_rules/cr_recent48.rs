@@ -279,7 +279,7 @@ fn new_serde_fields_survive_snapshot_roundtrip() {
     use crabomination::game::types::{CastProfile, PreventionShield, PreventionTarget, TriggerPush};
     let mut g = two_player_game();
     g.players[0].spell_casts_this_turn.push(CastProfile {
-        colors: vec![crabomination::mana::Color::Blue],
+        colors: crabomination::mana::ColorSet::single(crabomination::mana::Color::Blue),
         card_types: vec![CardType::Instant],
     });
     g.players[1].lands_entered_this_turn = 2;
