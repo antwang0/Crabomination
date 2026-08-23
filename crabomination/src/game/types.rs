@@ -12,10 +12,13 @@ use crate::mana::{Color, ManaError};
 /// carries ~20 of these behind one `CowBox`, so *every* write to any cold
 /// field deep-copies the whole group — an empty `hashbrown` table clone
 /// still walks its control bytes where an empty `Vec` clone allocates
-/// nothing. On the bench profile `RawTable::clone` ran 984,988 times under
-/// the CoW unshare for 1.22 % of the program. **Order**: `RandomState`
-/// reseeds a `HashSet`'s iteration order per process, so any consumer that
-/// iterates one leaks that reseed into game state.
+/// nothing. That is what this type bought: **before** it, `RawTable::clone`
+/// ran 984,988 times under the CoW unshare for 1.22 % of the program; at the
+/// forty-eighth pass's tip the whole program's `RawTable::clone` is 34,220
+/// calls / 0.28 %, and none of them is a `ColdState` field.
+/// **Order**: `RandomState` reseeds a `HashSet`'s iteration order per
+/// process, so any consumer that iterates one leaks that reseed into game
+/// state.
 ///
 /// These sets hold a handful of ids each, so the linear scans are cheaper
 /// than hashing. `insert` keeps set semantics (no duplicates) and returns

@@ -11599,7 +11599,9 @@ impl GameState {
         // clear the walk *is* `sa_cards`, in battlefield order, so the
         // emitted sequence is unchanged and a vanilla board pays nothing.
         // `&mut dyn Iterator` rather than a `Box`, so the choice costs no
-        // allocation on the 127,878 gathers a six-game run takes.
+        // allocation on the gathers a six-game run takes (39,692 at the
+        // forty-eighth pass's tip; it was 127,878 when this was written, and
+        // four passes of scope work have been taking it down since).
         let stateful_all = any_unleash || any_living_metal || any_suspected;
         let (mut it_all, mut it_sa);
         let stateful_cards: &mut dyn Iterator<Item = &CardInstance> = if stateful_all {

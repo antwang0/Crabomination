@@ -17,9 +17,19 @@ MTG engine (Rust) targeting full-card coverage plus ML training; Bevy client.
 `PERF.md` is the record: a committed bench baseline, a before/after row per
 optimization, and a "Perf candidates" queue. Every perf change lands with its
 numbers and how they were measured; no measured win means revert or re-justify
-as a correctness/clarity change. Golden traces
-(`crabomination_tests/tests/core_rules/golden_trace.rs`) must stay identical
-across a behaviour-preserving change — a commit that moves one says why.
+as a correctness/clarity change.
+
+**A profile number in a code comment carries the tip it was measured at**, or
+it is written in the past tense as the justification for the shape the code
+already has. A bare present-tense count goes stale the moment a later pass
+moves it and then misleads: the seventeenth robustness filter found "the
+127,878 gathers a six-game run takes" (39,692 at the forty-eighth tip) and
+"`RawTable::clone` ran 984,988 times under the CoW unshare" (34,220, and none
+of them the field the comment is on).
+
+Golden traces (`crabomination_tests/tests/core_rules/golden_trace.rs`) must
+stay identical across a behaviour-preserving change — a commit that moves one
+says why.
 
 ## Test suite conventions (`crabomination_tests`)
 

@@ -59,7 +59,7 @@ pub fn strict_proctor() -> CardDefinition {
 /// Magecraft — "Whenever you cast or copy an instant or sorcery spell, create a
 /// 1/1 black and green Pest token with 'When this token dies, you gain 1
 /// life.'" Wired via the magecraft + Pest-token shared helpers; Ward enforced
-/// by `push_ward_triggers_for_cast` (CR 702.21).
+/// by `push_ward_triggers_for_targets` (CR 702.21).
 pub fn sedgemoor_witch() -> CardDefinition {
     CardDefinition {
         name: "Sedgemoor Witch",

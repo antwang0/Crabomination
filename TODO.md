@@ -17,131 +17,101 @@ reference and want their own triage pass):
 ## NEXT (handoff — rewrite each run, keep it terse)
 
 **FIRST COMMAND OF EVERY RUN:** `git fetch origin claude/modern_decks &&
-git checkout -B claude/modern_decks origin/claude/modern_decks`. The routine
-container clones **`main`**, ~2,200 commits behind and missing the ML crates,
-`PERF.md`, `crabomination_tests` and the profiling profiles.
+git checkout -B claude/modern_decks origin/claude/modern_decks` — the routine
+container clones `main`, ~2,200 commits behind.
 
-**Pass 47 (this run) followed pass 46 on the same branch, and a concurrent
-session landed pass 46's last commit (`cast_cost_scan`, -0.697 %) underneath
-it mid-run — so pass 47's Ir chain is measured against its own base
-`c9606062` and rebased on top of theirs.** Pass 46 finished at
-`1,765,005,375 -> 1,715,304,981`, -2.816 %. Pass 47:
-`1,715,304,981 -> 1,645,831,969`, **-4.050 %** in nine commits. (The first
-seven were measured on their own chain against `c9606062` for -3.054 % and
-re-read at -3.100 % after the rebase, so the two passes compose — with the
-rows reading slightly *larger* on the rebased branch.) **The branch across
-both: `1,765,005,375 -> 1,645,831,969`, -6.752 %.** Every step
-`--bench`-invariant-identical (decisions **196,220**, turns 27.53, stalls 0,
-determinism ok) — a presence gate that stands in for a gather stopping where
-the gather has already run (-0.570 %); five questions asked before the thing
-that disqualifies them; the trigger dispatch tail; two `Vec`s nobody wanted;
-and the largest row of the pass, **`Keyword::eq`** — a 200-variant enum's
-derived `PartialEq` is an out-of-line call and `release-fast` has no LTO to
-inline it, so 234 `contains` sites convert to a discriminant-first `has_kw`
-(0.68 % -> 0.20 %, -0.98 % over two commits). **Two builds were reverted and
-both are written up in PERF's Log** — read them before re-proposing either.
+**Two sessions have been working this branch concurrently. Pass 47 finished
+at `1,715,304,981 -> 1,645,831,969`, -4.050 % in nine commits (branch across
+46+47: `1,765,005,375 -> 1,645,831,969`, **-6.752 %**); pass 48 ran beside it
+from `89f55a5c` and is rebased on top, `1,662,145,003 -> 1,643,104,718`,
+**-1.146 %** in four commits.** Both chains are measured against their own
+base and both are `--bench`-invariant-identical throughout (decisions
+**196,220**, turns 27.53, stalls 0, determinism ok). **Six builds were
+reverted between them and every one is written up in PERF's Log** — read them
+before re-proposing any.
 
 1. **Nothing is in flight.** Suite 18,709 / 0 failed / 5 ignored over 22
    binaries, golden traces and the same-seed replay included; `cargo clippy
    --workspace --all-targets` clean. **No encoding change — no net needs
-   retraining as of this tip.**
-2. **The reusable finding, and it inverts a rule this file used for nine
-   passes.** A presence gate (`card_keyword_possible`,
-   `card_type_change_in_scope`, `pt_reduction_in_scope`) is a **loss** where
-   the gather it avoids has already happened: `keyword_grant_in_scope` is
-   ~93 `card_can_grant_keyword` calls on a late-game board, more than the
-   `computed_permanent` memo lookup it stands in for. `layers_memoized()`
-   answers "a scope is open and its gather is built" without gathering.
-   **Sweep the other gates' callers for `&self` ones inside live scopes** —
-   only the protection one was done. It cuts the other way too: the land
-   tap's CR 602.5 gate runs from `&mut self` with no scope open, so there the
-   gate is still the cheap side and (3) below stands.
-3. **Top perf candidate is (-26) `main_phase_action_with`, 33.00 %, never
-   read from the top.** `pick_by_outcome` is 7.08 % over **920 calls** —
-   130,069 Ir each. Check whether the count is a search-quality decision
-   before treating it as a perf one, the way (-21) had to for the attack
-   search. **(-27) `computed_permanent`'s 93,570 `Arc` allocations is
-   *smaller than its entry says*: only the ~25 k unscoped calls can avoid
-   the `Arc` (a frozen miss has to hand one to the memo), so it is ~0.2 %,
-   not 0.75 % — and each of those 25 k also pays a full gather that dwarfs
-   it. Corrected in PERF; do not pull it before (-26).
-4. **The `Keyword::eq` device generalises and is not exhausted.** The build
+   retraining as of this tip.** Wide pool clean at both tips: `--decks all
+   --games 400 --threads 3`, seeds 11/12/13, **20,400 games, 20,396 decided,
+   no panic, all 10,198 mirrored pairs split** (~55 s a seed, so there is no
+   excuse to skip it).
+2. **Read PERF's "How to measure" before profiling — it changed.** Valgrind
+   in this image does not read `bot_ladder`'s symbol table at all;
+   `scripts/cg_symbolize.py` puts the names back and `scripts/cg_edges.py`
+   gives complete caller/callee tables. **`callgrind_annotate --tree`
+   truncates its caller lists and drops rows silently** — it showed 23 k of
+   the program's 967 k allocations. Line attribution needs
+   `[profile.profiling-lines]` + `scripts/cg_lines.py`, and lld's identical-
+   code folding makes a *function total* from it untrustworthy.
+3. **Re-read your own base.** The same commit read 1,674,581,042 on pass
+   47's container and 1,662,145,003 on pass 48's — callgrind counts libc and
+   malloc/free/memcpy are ~13 % of this program. A recorded absolute from
+   another box is a sanity check, not a baseline.
+4. **The gate rule now has both halves, measured against each other in one
+   sitting.** Swap a gather for a presence gate **only where nothing else in
+   the scope reads the gather** (pass 48's (E), -0.747 %); where the scope
+   goes on to `compute_battlefield()` the same swap is **+0.30 %**.
+   `layers_memoized()` is the device for "is the gather already built".
+5. **Fusing a cheap per-card question into a walk that is already happening
+   has now lost four times** ((-8b), `do_untap`, `creature_death_possible`,
+   and pass 48's trigger-carrier bitmask at +0.58 %). Removing a walk
+   outright still pays: pass 48's (B), three whole-board scans in the cast's
+   uncounterable check collapsed to one, -0.170 %.
+6. **The `Keyword::eq` device generalises and is not exhausted.** The build
    this file measures on has **no LTO**, so any small non-generic
    `crabomination_base` function is an out-of-line call in every profile
-   here — but a pure `#[inline]` on it would be unmeasurable in the shipped
+   here — but a bare `#[inline]` would be unmeasurable in the shipped
    `release` (thin LTO) build, so **do not take one on an Ir number**. What
    works is making the callee *smaller than any inliner threshold*, which is
    what `has_kw` does. `CardDefinition::is_creature` (~0.67 % over ~950 k
    calls) is the same family and the same trap.
-5. **Then the land tap and the cast.** `card_keyword_possible` is 1.30 %
-   over 18,910 calls, ~830 Ir of each a board walk giving the same answer
-   for every tap in a batch — stamping it per batch is *unsound* (a mana
-   ability can move the board between taps); read (-11) first. The
-   `cast_lock_scan` / `cast_cost_scan` device has paid three times and is
-   not exhausted: `cost_reduction_for_spell_full` 0.20 % over 7,550 and
-   `extra_cost_for_spell` 0.11 % are what is left, but a seventh bit does
-   **not** just drop in — see (-24)'s (G) note.
-6. **(-23)'s allocator table, refreshed at the pass-47 tip (974,927
-   allocations).** Read its opening paragraph before extracting it again — a
-   regex over a window instead of the contiguous `<` block invents rows.
-   Unclaimed named rows: `computed_permanent` 93,570 (that is (-27)),
-   `finalize_cast` 24,108 plus its 28,878 `grow_one`s, `RawTable::clone`
-   29,428 and `Box::clone` 26,386, both still unread.
-7. **Do not rebuild these.** Everything in pass 46's list — the board-presence
-   epoch ((-18), +0.49 %), the `GameState` husk pool (+2.60 %), gating
-   `do_untap`'s six walks (+0.0001 %), narrowing `GameState`, splitting the
-   big engine files for build time, the per-definition keyword-grant bit
-   ((-11), unsound), fusing `card_type_change_in_scope` (three losses),
-   guarding `declare_blockers`' first cold write (it promotes the next one),
-   chasing the Ward gathers — plus pass 47's two: the `LayerFreeze` depth
-   shadow (+0.027 %; **Ir undercounts atomics, so only a wall-clock A/B could
-   overturn it, and it was not run**) and a per-`CardDefinition` cached
-   bitmask for `sba_board_scan` (**unsound** — `Arc::make_mut` rewrites
-   definitions in place). And **never** skip
+7. **Top candidates.** (-26) `main_phase_action_with`, 32.98 %, never read
+   from the top — but check whether `pick_by_outcome`'s 920 calls are a
+   search-quality decision first. Then (-29) `Arc::clone_from_ref_in`,
+   152,062 allocations / 3.22 % self (cheap half: `PlayerData`'s two
+   per-turn sets clone *by capacity*, so `= default()` beats `clear()`), and
+   (-30), the three `computed_permanent` callers that gather per call.
+   **(-27) is smaller than its entry used to say** (~0.2 %, not 0.75 %) and
+   **(-28)'s main body is closed** — a `Vec` clone with headroom measured
+   +0.050 %. `dispatch_triggers_for_events` is 5.28 % self and now
+   *measured* diffuse: no line of `game/mod.rs` reaches the program's top
+   400 lines.
+8. **Do not rebuild these.** Pass 46's list — the board-presence epoch
+   ((-18), +0.49 %), the `GameState` husk pool (+2.60 %), gating `do_untap`
+   (+0.0001 %), narrowing `GameState`, splitting the big engine files for
+   build time, the per-definition keyword-grant bit ((-11), unsound), fusing
+   `card_type_change_in_scope` (three losses), guarding `declare_blockers`'
+   first cold write, chasing the Ward gathers — plus pass 47's `LayerFreeze`
+   depth shadow (+0.027 %; **only a wall-clock A/B could overturn it, and it
+   was not run**) and the `sba_board_scan` definition bitmask (**unsound**),
+   plus pass 48's four. And **never** skip
    `push_ordered_trigger_candidates` on an empty batch: +7.3 % *and* a
    correctness bug, because it owns the per-batch
-   `died_card_snapshots.clear()`. Read what a function does *after* its loop
-   before short-circuiting the loop.
-8. **Measurement gotcha pass 47 hit twice.** The 6-game ladder printout
-   (24 decided / 12 splits) did **not** change on either reverted build —
-   only `--bench`'s `decisions` and the Ir total caught them. Run
+   `died_card_snapshots.clear()`.
+9. **Measurement gotcha, hit three times now.** The 6-game ladder printout
+   (24 decided / 12 splits) does **not** move on a change that breaks
+   something; only `--bench`'s `decisions` and the Ir total catch it. Run
    `./target/profiling-fast/bot_ladder --bench --threads 3` on any change
    whose Ir moves more than its blast radius allows.
-9. **Env.** No `cargo-nextest`; `cargo test -j 2 -p crabomination -p
+10. **Env.** No `cargo-nextest`; `cargo test -j 2 -p crabomination -p
    crabomination_tests` is the gate (~12 min cold). Workspace clippy needs
    `apt-get update && apt-get install -y libwayland-dev libasound2-dev
-   libudev-dev libxkbcommon-dev` (~9 min). Cold `profiling-fast` engine build
-   14 min on this box, warm rebuild **4m20s**; callgrind ~4 min and
-   contention-immune, so a build in `target-probe` and a callgrind on
-   `target/` overlap for free. Budget ~9 min per measured candidate serial,
-   ~6 pipelined. Absolute games/s is not comparable across routine boxes and
-   a `profiling-fast` games/s is not comparable to anything; quote callgrind
-   under 5 %.
-10. **Wide-pool check — run twice at this tip and clean both times.** `--a
-   gang --b gang --decks all --games 400 --threads 3`, seeds 11/12/13:
-   **20,400 games, 20,396 decided, no panic, every one of 10,198 mirrored
-   pairs split** (`rho -1.000` on all three; the 4 undecided are seed 11's
-   rules draws, the same four pass 45 saw) — once before the `Keyword::eq`
-   pair and once after, byte-identical. ~55 s a seed on this box, so there
-   is no excuse to skip it. No `overflow`-profile run either pass (nothing touched
-   counters, damage, mana or the encoder).
+   libudev-dev libxkbcommon-dev`. Cold `profiling-fast` engine build ~14 min,
+   warm rebuild **~4m20s**; callgrind ~4 min and contention-immune, so a
+   callgrind and a build overlap for free — two cargo builds do not. Budget
+   ~9 min per measured candidate.
 11. **The pure-data-test sweep is measured and it is hygiene, not build
-   time.** `scripts/find_data_tests.sh` reads 199, 25 `[CR]`-marked and
-   sacred; the other 174 are **1,673 lines of a 374,892-line suite, 0.45 %**.
-   Folding them into a table-driven definition audit per set cannot move
-   compile time and cannot move link time at all (the binary count is what
-   drives that, and it stays flat). Do it as hygiene when an area is being
-   touched anyway; do not schedule it as a build-time item.
-12. **Trackers.** TODO **~1.07k** (pass 47 collapsed three stale "the engine
-   has no X" sections — command zone / commander damage / emblems /
-   planeswalker attacks / crew / divided damage all ship — and closed the
-   panic-sweep entry; a little more of **Missing Mechanics** is probably
-   stale the same way, and that is the next ~70 lines), ROADMAP 0.66k,
-   PERF ~2.9k (pass 47 folded the forty-third pass's entry to an index; the
-   forty-fourth's is the next fold). The **seventeenth** filter was run this
-   pass and is **not clean — four stale call counts**, corrected in place;
-   the pattern is that a *share* survives and a *count* rots. An eighteenth
-   is owed and the entry names it.
+   time.** 174 non-`[CR]` tests are **1,673 lines of a 374,892-line suite,
+   0.45 %**, and the binary count (what drives link time) stays flat either
+   way. Do it when an area is being touched anyway.
+12. **Trackers.** TODO ~1.0k, ROADMAP 0.66k, PERF ~3.2k (pass 47 folded the
+   forty-third pass's Log entry, pass 48 the forty-fourth's and the
+   forty-fifth's profile table; the forty-sixth's is the next fold). More of
+   **Missing Mechanics** is probably stale the way pass 47's three "the
+   engine has no X" sections were — that is the next ~70 lines. The
+   **eighteenth** filter is owed and the Robustness section names it.
 
 ## Environment note
 
@@ -254,76 +224,34 @@ rather than syntax. Four of the five filters that found something are in
 that second group. Prefer a filter that runs the code or reads its
 structure over one that greps it.
 
-**The twelfth filter was run 2026-08-14** (`caa44eb2`) — *a predicate two
-callers each re-derive*, rather than a constant two callers each spell out.
-The search that works is not syntactic: it is **the doc comments that admit
-to the pairing**, `grep -niE "must (also )?(appear|be) (listed|added|here)|
-must list exactly|without adding it here|kept in sync|must agree|drift
-from"`. Nine hits, three of them real:
+**Filters 12-14, compacted; `git log -- TODO.md` has the prose.** All three
+hunted structure rather than syntax and all three found something.
 
-- `CardData::clear_end_of_turn_effects` wrote 26 fields and
-  `end_of_turn_effects_are_clear` guarded that write by listing the same
-  26. **Fixed structurally**: both expand from one `eot_wear_off!` list in
-  three shapes (`scalar` / `empty` / `none`), so a field cannot reach one
-  without the other. This was the dangerous direction — a field added to
-  the clear alone makes the guard skip the sweep while the effect still
-  matters, silently, and only on turns where nothing else on the permanent
-  needs clearing.
-- `rewrites_land_types` asked in prose to be kept in step with
-  `layers::compute_permanent_pass`. **Fixed with the
-  `ability_strip_in_scope` device**: a `debug_assert!` at the gate runs the
-  layer pass it skipped and fails if the computed land-type line differs
-  from the printed one.
-- **CLOSED 2026-08-23 — `protection_keyword` and
-  `damage_prevented_by_protection_inner`'s match now *are* one list**, through
-  a `ProtectionKind` enum (`game/mod.rs`) the arms match on instead of matching
-  on `Keyword`. `ProtectionKind::of` is the single list; a new variant will not
-  compile until the decision handles it, so the failure mode changes from *a
-  new protection keyword silently doing nothing while looking implemented* to
-  *not implemented*. Callgrind-neutral (+4,437 Ir); the folded
-  `ProtectionFromCreatures` arm is pinned by
-  `core_rules::combat_keywords::cr_702_16_protection_from_creatures_prevents_combat_damage`,
-  which nothing covered before.
-
-Two more hits were already guarded and want no work: `requires_target` /
-`primary_target_filter` / `target_filter_for_slot` have a whole-catalog
-walker-agreement test (`core_rules/target_walkers.rs`), and
-`ability_strip_in_scope` is the device the other two now copy.
-
-**The thirteenth filter was run 2026-08-14** — *a reentrancy guard some sites
-spell out by hand and a sibling does not* — and it **found a stack overflow**.
-`GameState::in_layer_gather` says "the continuous-effect set is being built;
-do not ask the layer system". `effective_power`, `effective_toughness` and
-`evaluate_requirement_static`'s layer-4 type closure each tested it by hand;
-the ~dozen sibling arms that read computed power/toughness
-(`PowerAtMostYourCount`, `ToughnessAtMostGraveyardCount`, …) did not, so
-`computed_permanent` re-entered the gather without bound. Any card pairing a
-gather-evaluated filter (~30 call sites) with a P/T requirement was **SIGABRT,
-not a wrong answer**. Fixed structurally: the guard lives in
-`computed_permanent`, once; mid-gather reads take the printed view; and
-`gather_continuous_effects` **swaps and restores** the flag rather than
-clearing it, so a gather reached from inside one can't hand the outer one back
-unguarded. Regression test
-`core_rules::cr_rules::cr_613_a_cda_filter_reading_computed_power_does_not_recurse`
-(overflows the stack on the pre-fix engine; verified both ways).
-
-**The fourteenth filter was run 2026-08-15** — *a comment that states a cost
-or a shape*, and it found one in the measuring device: `host_calib_ms`' doc
-claimed you could "scale the throughput comparison by it", and two containers
-with the same `host_cpu` and *overlapping* calib differed by **24 %** on
-`--bench` — the probe is single-threaded and the bench runs three workers.
-Corrected in place; agreement is weak evidence, disagreement is strong. See
-PERF **Baseline**.
-
-**The syntactic half of that filter is clean and should not be re-run.** Greps
-for present-tense cost claims (`costs nothing` / `is cheap` / `O(n` /
-`whole-board` / `plain Vec` / `the engine has no`) over `game/`, `server/` and
-`crabomination_base/` return ~60 hits, all either game-semantics uses of
-"free"/"cheap" or *past-tense* justifications that correctly explain why the
-code is shaped as it is. **Both filters' yield is in claims a *measurement*
-relies on, not in the engine's prose** — the table's own lesson (structure and
-running code beat grepping) applied twice more.
-
+* **12 (`caa44eb2`) — a predicate two callers each re-derive.** The search
+  that works is not syntactic: it is `grep -niE "must (also )?(appear|be)
+  (listed|added|here)|kept in sync|must agree|drift from"`, i.e. the doc
+  comments that admit to the pairing. Nine hits, three real.
+  `CardData::clear_end_of_turn_effects` wrote 26 fields and
+  `end_of_turn_effects_are_clear` guarded that write by listing the same 26 —
+  both expand from one `eot_wear_off!` list now, so a field cannot reach one
+  without the other. `rewrites_land_types` asked in prose to be kept in step
+  with `layers::compute_permanent_pass` — now the `ability_strip_in_scope`
+  device, a `debug_assert!` at the gate that runs the layer pass it skipped
+  and fails if the computed land-type line differs from the printed one.
+* **13 — a reentrancy guard some sites spell out by hand and a sibling does
+  not.** Found a **stack overflow**: `in_layer_gather` was unguarded at ~a
+  dozen computed-P/T arms the gather itself evaluates, so a card pairing a
+  gather-evaluated filter with a P/T requirement overflowed rather than
+  answering wrong. The guard lives in `computed_permanent` now, once, where
+  it cannot be forgotten.
+* **14 — a comment that states a cost or a shape.** Found one, in the
+  measuring device: `host_calib_ms`' doc claimed you could scale a throughput
+  comparison by it, and two containers with the same `host_cpu` and
+  overlapping calib differed by **24 %** on `--bench`. **The syntactic half is
+  clean and should not be re-run** — ~60 hits for present-tense cost claims
+  over `game/`, `server/`, `crabomination_base/`, all game-semantics uses of
+  "free"/"cheap" or past-tense justifications. Both filters' yield was in
+  claims a *measurement* relies on, not in the engine's prose.
 **The sixteenth filter was run 2026-08-23 and is CLEAN in every reading it
 has** — *a default that no caller ever overrides*. Mechanically, over
 `crabomination`, `crabomination_base` and `crabomination_ml`: (i) a `bool`
@@ -381,10 +309,26 @@ correct a number down when the callee has its own node and its self cost
 makes the old claim arithmetically impossible — which is why `team_of`'s
 correction is stated through `same_team`'s node rather than its own.
 
+**Pass 48 ran the same filter concurrently and found two more, both of the
+same shape and both now corrected:** `mod.rs`'s gather-iterator note claimed
+"the 127,878 gathers a six-game run takes" (**39,692** at the forty-eighth
+tip — four passes of scope work have been taking it down), and `types.rs`'s
+`IdSet` doc claimed "`RawTable::clone` ran 984,988 times under the CoW
+unshare for 1.22 %" in the present tense when the number was the
+*justification* for `IdSet` existing (**34,220 / 0.28 %** now, and none of
+them on a `ColdState` field). Six hits between the two runs, same direction
+every time.
+
+**The structural fix is a rule, not six edits, and it is in CLAUDE.md's
+Performance section:** a profile number in a code comment carries the tip it
+was measured at, or it is written in the past tense as the justification for
+the shape the code already has.
+
 **An eighteenth filter is owed. The remaining candidate, unchanged:** *a
-tool's own extraction step*, which is where the fifteenth filter and pass
-46's retracted allocator rows both came from. The measuring device keeps
-being the thing that lies.
+tool's own extraction step*, which is where the fifteenth filter, pass 46's
+retracted allocator rows and pass 48's `callgrind_annotate --tree`
+truncation all came from. The measuring device keeps being the thing that
+lies.
 
 **Stall rate — CLOSED 2026-08-14, and the answer is "nothing to fix".**
 The attribution the previous run built (`419d2ea6`: `recommend::StopReason`

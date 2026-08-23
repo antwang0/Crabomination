@@ -8979,7 +8979,7 @@ impl GameState {
         // Validate target.
         if let Some(ref tgt) = target {
             self.check_target_legality(tgt, p)?;
-            // Ward enforcement happens via push_ward_triggers_for_cast
+            // Ward enforcement happens via push_ward_triggers_for_targets
             // after finalize_cast, not as a synchronous cost payment.
             let _ = tgt; let _ = p;
         }
@@ -11204,7 +11204,7 @@ impl GameState {
 
     // Note: `fire_ward_triggers` (the old Ward(u32) version) was removed
     // during the merge — Ward is now enforced via
-    // `push_ward_triggers_for_cast` (CR 702.21) which handles the full
+    // `push_ward_triggers_for_targets` (CR 702.21) which handles the full
     // `WardCost` enum (Mana / Life / Discard / SacrificeCreature).
 
     /// Push `SpellCast` triggered abilities (e.g. Prowess, Up the Beanstalk)
@@ -12558,8 +12558,9 @@ impl GameState {
         // still empty, so return before building the source table. That
         // table is a layer pass per untapped permanent
         // (`mana_source_table`, **3.85 % of the profile over 7,550 calls** at
-        // the forty-seventh tip) and every caller whose pool already covers
-        // the cost was paying for it.
+        // the forty-seventh tip; the forty-eighth pass's (E) took the gather
+        // off it) and every caller whose pool already covers the cost was
+        // paying for it.
         if still_need_colors.is_empty() && generic_to_tap == 0 {
             return events;
         }
@@ -14319,7 +14320,7 @@ impl GameState {
             if self.ability_target_has_protection(tgt, card_id) {
                 return Err(GameError::TargetHasProtection(card_id));
             }
-            // Ward enforcement happens via push_ward_triggers_for_cast
+            // Ward enforcement happens via push_ward_triggers_for_targets
             // after finalize_cast, not as a synchronous cost payment.
             let _ = tgt; let _ = p;
         }
