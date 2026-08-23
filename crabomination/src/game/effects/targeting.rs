@@ -82,6 +82,21 @@ impl GameState {
         x: u32,
         converge: u32,
     ) -> Option<Target> {
+        // One freeze over the whole candidate walk — see
+        // `legal_targets_for_filter`, which the picker mirrors.
+        self.with_frozen_layers(|s| {
+            s.auto_target_for_effect_avoiding_set_xc_inner(eff, controller, avoid, x, converge)
+        })
+    }
+
+    fn auto_target_for_effect_avoiding_set_xc_inner(
+        &self,
+        eff: &Effect,
+        controller: usize,
+        avoid: &[CardId],
+        x: u32,
+        converge: u32,
+    ) -> Option<Target> {
         let avoid_source = avoid.first().copied();
         // Effects with a bare `Selector::Target(0)` (e.g. Lightning Bolt's
         // "deal 3 damage to any target") have no surfaced primary filter —
@@ -420,7 +435,26 @@ impl GameState {
     /// CR 115.4 legality check. The filter-level core of
     /// `enumerate_legal_targets_with_source`; a caller that already knows the
     /// slot's own filter (CR 115.7c retargeting) uses it directly.
+    ///
+    /// The scan is `&self` and asks every candidate the same layer-aware
+    /// questions — `evaluate_requirement_static`'s layer-4 reads and
+    /// `check_target_legality`'s Shroud/Hexproof reads — so one freeze covers
+    /// the whole walk. Without it `check_target_legality` opens its own scope
+    /// per candidate and each one re-gathers every continuous effect in the
+    /// game.
     pub fn legal_targets_for_filter(
+        &self,
+        req: &crate::card::SelectionRequirement,
+        accepts_player: bool,
+        controller: usize,
+        source: Option<CardId>,
+    ) -> Vec<Target> {
+        self.with_frozen_layers(|s| {
+            s.legal_targets_for_filter_inner(req, accepts_player, controller, source)
+        })
+    }
+
+    fn legal_targets_for_filter_inner(
         &self,
         req: &crate::card::SelectionRequirement,
         accepts_player: bool,
