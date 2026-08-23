@@ -3172,10 +3172,13 @@ impl GameState {
         use crate::effect::StaticEffect;
         let caster = self.priority.player_with_priority;
         let active = self.active_player_idx;
+        // One discriminant match for the eight blocks below, not eight. Every
+        // action reaches this, and most are priority passes that answer `false`.
+        let is_cast = action.is_cast();
         // The spell being cast, looked up once for the five blocks that read
         // it (`None` for prepare spells, which don't carry the cast card in a
         // `card_id` field) — and not looked up at all when no lock needs it.
-        let cast_card = if action.is_cast()
+        let cast_card = if is_cast
             && (locks & cast_lock::ANY_CARD != 0 || !self.creature_pw_cast_locks.is_empty())
         {
             action.cast_card_id().and_then(|id| self.find_card_anywhere(id))
@@ -3187,7 +3190,7 @@ impl GameState {
         // (Rule of Law) applies to any spell; `OneNoncreatureSpellPerTurn`
         // (Deafening Silence) and `OneNonartifactSpellPerTurn` (Ethersworn
         // Canonist) only count spells of the matching type.
-        if action.is_cast() {
+        if is_cast {
             let pl = &self.players[caster];
             let is_creature =
                 cast_card.is_some_and(|c| c.definition.card_types.contains(&CardType::Creature));
@@ -3270,7 +3273,7 @@ impl GameState {
         }
         // Iona, Shield of Emeria — opponents can't cast spells of the
         // chosen color (read off the printed cost's pips).
-        if action.is_cast() && locks & cast_lock::CHOSEN_COLOR != 0 {
+        if is_cast && locks & cast_lock::CHOSEN_COLOR != 0 {
             let cast_colors: Vec<crate::mana::Color> =
                 cast_card.map(|c| c.definition.printed_colors()).unwrap_or_default();
             let locked = self.battlefield.iter().any(|c| {
@@ -3287,7 +3290,7 @@ impl GameState {
         }
         // Void Winnower — opponents can't cast spells with even mana values
         // (zero is even; read off the printed cost, X counts as 0).
-        if action.is_cast() && locks & cast_lock::EVEN_MV != 0 {
+        if is_cast && locks & cast_lock::EVEN_MV != 0 {
             let even_mv = cast_card.is_some_and(|c| c.definition.cost.cmc() % 2 == 0);
             if even_mv {
                 let locked = self.battlefield.iter().any(|c| {
@@ -3304,7 +3307,7 @@ impl GameState {
         }
         // Lavinia, Azorius Renegade — opponents can't cast noncreature spells
         // whose mana value exceeds their own land count.
-        if action.is_cast() && locks & cast_lock::ABOVE_LANDS != 0 {
+        if is_cast && locks & cast_lock::ABOVE_LANDS != 0 {
             let over_land_count = cast_card.is_some_and(|c| {
                 !c.definition.is_creature() && {
                     let lands = self
@@ -3332,7 +3335,7 @@ impl GameState {
         }
         // Damping Engine — the player ahead on permanents can't cast artifact,
         // creature or enchantment spells.
-        if action.is_cast() && locks & cast_lock::DAMPING != 0 {
+        if is_cast && locks & cast_lock::DAMPING != 0 {
             let permanent_spell = cast_card.is_some_and(|c| {
                 let d = &c.definition;
                 d.is_artifact() || d.is_creature() || d.is_enchantment()
@@ -3343,7 +3346,7 @@ impl GameState {
         }
         // Angelic Arbiter — an opponent who attacked with a creature this turn
         // can't cast spells for the rest of it.
-        if action.is_cast()
+        if is_cast
             && locks & cast_lock::ATTACKED != 0
             && self.players[caster].attacked_this_turn
             && self.opponent_has_static(caster, |e| {
@@ -3357,7 +3360,7 @@ impl GameState {
         // sibling: nobody casts off-turn, whoever controls it.
         // City of Solitude is the broader sibling: it locks activations too,
         // mana abilities included (they route through the same action).
-        if (action.is_cast() || matches!(action, GameAction::ActivateAbility { .. }))
+        if (is_cast || matches!(action, GameAction::ActivateAbility { .. }))
             && locks & cast_lock::OWN_TURN_ACT != 0
             && caster != active
             && self.battlefield.iter().any(|c| {
@@ -3369,7 +3372,7 @@ impl GameState {
         {
             return Some(GameError::SilencedThisTurn);
         }
-        if action.is_cast() && caster != active {
+        if is_cast && caster != active {
             if locks & cast_lock::OWN_TURN_CAST != 0
                 && self.battlefield.iter().any(|c| {
                     c.definition

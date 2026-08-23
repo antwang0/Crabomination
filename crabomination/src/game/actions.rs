@@ -10715,6 +10715,14 @@ impl GameState {
         chosen: &[Target],
         slot_filters: &[Option<crate::card::SelectionRequirement>],
     ) -> bool {
+        // No declared slot, no violation: the "if able" clause below is an
+        // `any` over `slot_filters`, so an activation or cast with no targets
+        // — every land tapping for mana — cannot violate this however the
+        // board looks. Asked first because `flagbearer_candidates` walks the
+        // whole battlefield's static abilities to answer its own gate.
+        if slot_filters.is_empty() {
+            return false;
+        }
         let candidates = self.flagbearer_candidates(actor);
         if candidates.is_empty() {
             return false;
