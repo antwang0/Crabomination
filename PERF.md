@@ -1450,6 +1450,36 @@ write that changed nothing. None of the five was on this list, and none shows
 up as an expensive function — they land in `make_mut`, `memcpy` and
 `_int_malloc`.
 
+**(-25) `resolve_combat` is 8.94 % of the program over **2,694 calls** —
+58,542 Ir a combat — and it holds the largest block of *unscoped* gathers
+left.** Read from the top for the first time at the forty-fifth tip. The step
+machinery above it: `advance_step` 278,483,473 / 15.78 % over 22,892, of which
+`resolve_combat` 157,712,863 / 8.94 %, `do_cleanup` 26,308,953 over 1,764
+(14,914 Ir a cleanup), `fire_step_triggers` 19,390,920 over 13,134.
+
+| callee of `resolve_combat` | Ir | % | calls |
+|---|---|---|---|
+| `check_state_based_actions` | 71,644,252 | 4.06 | 2,646 (**27,076 Ir a sweep** — combat sweeps kill, so they are ~10x an ordinary one) |
+| `deal_combat_damage_to_target` | 20,368,973 | 1.15 | 2,612 |
+| `combat_damage_computed` | 16,121,577 | 0.91 | 3,226 |
+| `fire_combat_damage_to_creature_triggers` | 14,152,432 | 0.80 | 3,806 |
+| **`computed_permanent`** | **11,968,280** | **0.68** | **3,806 at 3,144 Ir — i.e. a full gather each, outside every scope** |
+| `apply_prevention_shields` | 11,216,490 | 0.64 | 3,806 |
+| `prevent_combat_to_target` | 10,391,336 | 0.59 | 2,682 |
+| `quality_band_assigner` | 5,015,730 | 0.28 | 846 |
+| `combat_damage_prevented_to_self` | 3,322,842 | 0.19 | 3,806 |
+
+**The `computed_permanent` row is the one to take**, and it is (-22)'s
+lexical route rather than (-18)'s dead one: 3,806 gathers is one per damage
+instance, and `resolve_combat` already opens three `with_frozen_layers`
+scopes around neighbouring reads (the pair prefix at combat.rs:3594, the
+strike-back gate, the player-damage pair). The call is not a literal
+`computed_permanent` in `resolve_combat`'s own body — it is inlined from a
+helper — so **find it with `--tree=calling` on the tip binary and read the
+3,806-call edges, then decide whether it can join a scope that already
+exists**. Do not widen a scope across an `&mut self` call to get there; that
+is unsound, and `freeze_layers_push`/`pop` make it *look* possible.
+
 **(-24) `cast_spell` is 29.07 % of the program over 7,640 attempts — 69,000
 Ir each — and it has never been read from the top.** New at the forty-fifth
 pass; the cast gate's -1.608 % came off the *outside* of it.

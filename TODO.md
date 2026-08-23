@@ -51,7 +51,14 @@ matches per action, and two more land-tap questions with no consumer
    probe clones the state and `LayerFreeze::clone` is `default()`, so the
    whole action runs unfrozen. Pass 44's (B) is the template; two sites
    written the same day read -11,778 Ir, so measure each.
-3. **New and unread: `cast_spell` is 29.07 % of the program** over 7,640
+3. **Start here next run: `resolve_combat` is 8.94 % over 2,694 calls** —
+   58,542 Ir a combat, read from the top for the first time this pass — and
+   **3,806 of its `computed_permanent` calls are full gathers at 3,144 Ir,
+   one per damage instance, outside every scope**, while the function already
+   opens three `with_frozen_layers` scopes around neighbouring reads. That is
+   (-22)'s lexical route, the only one left on the gathers. New candidate
+   (-25) has the callee table. Also unread: `cast_spell` is 29.07 % of the
+   program over 7,640
    attempts at 69,000 Ir each, and `would_accept` is 18.65 % over 5,260
    probes at 64,200 Ir — **of which the state clone is ~3,500, so the probe
    is the cast, not the clone.** Half of it is (-12)'s `auto_tap`. See (-24).
@@ -217,76 +224,38 @@ from"`. Nine hits, three of them real:
   `ability_strip_in_scope` device**: a `debug_assert!` at the gate runs the
   layer pass it skipped and fails if the computed land-type line differs
   from the printed one.
-- **CLOSED 2026-08-23 — `GameState::protection_keyword` and
-  `damage_prevented_by_protection_inner`'s match now *are* one list.** The
-  entry used to read "disproportionate to fix: the two can't share a list
-  because the match arms have distinct bodies". They can — through a
-  `ProtectionKind` enum (`game/mod.rs`) that the arms match on instead of
-  matching on `Keyword`. `ProtectionKind::of` is the single list; the gate
-  asks `is_some()` and the decision matches the variants, so a keyword
-  cannot be in one and not the other. The separate `ProtectionFromCreatures`
-  check folded into the match as an arm, and a new variant will not compile
-  until the decision handles it. Failure mode changes from *a new protection
-  keyword silently doing nothing while looking implemented* to *not
-  implemented*. Callgrind-neutral (+4,437 Ir, +0.0002 %: the compiler folds
-  `of(kw).is_some()` back into the original `matches!`), and the folded arm
-  is pinned by `core_rules::combat_keywords::
-  cr_702_16_protection_from_creatures_prevents_combat_damage`, which nothing
-  covered before.
+- **CLOSED 2026-08-23 — `protection_keyword` and
+  `damage_prevented_by_protection_inner`'s match now *are* one list**, through
+  a `ProtectionKind` enum (`game/mod.rs`) the arms match on instead of matching
+  on `Keyword`. `ProtectionKind::of` is the single list; a new variant will not
+  compile until the decision handles it, so the failure mode changes from *a
+  new protection keyword silently doing nothing while looking implemented* to
+  *not implemented*. Callgrind-neutral (+4,437 Ir); the folded
+  `ProtectionFromCreatures` arm is pinned by
+  `core_rules::combat_keywords::cr_702_16_protection_from_creatures_prevents_combat_damage`,
+  which nothing covered before.
 
 Two more hits were already guarded and want no work: `requires_target` /
 `primary_target_filter` / `target_filter_for_slot` have a whole-catalog
 walker-agreement test (`core_rules/target_walkers.rs`), and
 `ability_strip_in_scope` is the device the other two now copy.
 
-**The thirteenth filter was run 2026-08-14** — *a guard that some sites
-spell out by hand and a sibling does not*. Filter 5's shape, aimed at a
-**reentrancy** guard rather than a precondition, and it **found a stack
-overflow**. `GameState::in_layer_gather` says "the continuous-effect set is
-being built; do not ask the layer system". `effective_power`,
-`effective_toughness` and `evaluate_requirement_static`'s layer-4 type
-closure each tested it by hand; the ~dozen sibling arms that read computed
-power/toughness (`PowerAtMostYourCount`,
-`ToughnessAtMostGraveyardCount`, `PowerLessThanYourGraveyardCount`,
-`PowerAtMostSourceCounters`, `PowerAtMostDraftNoteMax`, …) did not, and
-`computed_permanent` re-entered the gather from the same state — so it
-reached the same read again, without bound. Any card pairing a
-gather-evaluated filter (a `DynamicPt::…Matching` CDA, a `WhileCondition`,
-a static's affected filter — ~30 call sites in the gather) with a P/T
-requirement was **SIGABRT, not a wrong answer**. Fixed structurally: the
-guard lives in `computed_permanent`, once, and mid-gather reads take the
-printed view; the three hand-written tests are fast paths now and say so.
-`gather_continuous_effects` also **swaps and restores** the flag instead of
-clearing it, so a gather reached from inside one (`board_keyword_matching`,
-`permanents_with_abilities_removed`, the debug cross-checks) can't hand the
-outer one back unguarded — the hazard `permanents_with_abilities_removed`
-already documented but nothing enforced. Regression test:
+**The thirteenth filter was run 2026-08-14** — *a reentrancy guard some sites
+spell out by hand and a sibling does not* — and it **found a stack overflow**.
+`GameState::in_layer_gather` says "the continuous-effect set is being built;
+do not ask the layer system". `effective_power`, `effective_toughness` and
+`evaluate_requirement_static`'s layer-4 type closure each tested it by hand;
+the ~dozen sibling arms that read computed power/toughness
+(`PowerAtMostYourCount`, `ToughnessAtMostGraveyardCount`, …) did not, so
+`computed_permanent` re-entered the gather without bound. Any card pairing a
+gather-evaluated filter (~30 call sites) with a P/T requirement was **SIGABRT,
+not a wrong answer**. Fixed structurally: the guard lives in
+`computed_permanent`, once; mid-gather reads take the printed view; and
+`gather_continuous_effects` **swaps and restores** the flag rather than
+clearing it, so a gather reached from inside one can't hand the outer one back
+unguarded. Regression test
 `core_rules::cr_rules::cr_613_a_cda_filter_reading_computed_power_does_not_recurse`
 (overflows the stack on the pre-fix engine; verified both ways).
-
-**The fifteenth filter was run 2026-08-23** — *a claim made by a tool's
-output rather than by its source*, the one the fourteenth entry said was
-owed. **Found one, and it was in the measuring device again** (`95453974`).
-
-- `bot_ladder --bench`'s header printed `if cfg!(debug_assertions) { "DEBUG" }
-  else { "release" }`. **`release-fast`, `profiling-fast` and `overflow` all
-  have `debug_assertions` off and all printed "release build"**, while
-  PERF.md's own rule is that a `release-fast` number never compares to a
-  `release` one. Not hypothetical: pass 45 quoted a `profiling-fast` games/s
-  beside a `release` baseline before catching it. Cargo does not hand the
-  profile name to the crate but puts the binary in `target/<profile>/`, so
-  `current_exe`'s parent directory is the answer — and it names `overflow`
-  for what it is, which `cfg!(overflow_checks)` cannot (still unstable).
-
-**The rest of the sweep is clean and should not be re-run.** `peak_rss_mib`
-really is `VmHWM` (a high-water mark, not a sampled RSS); `determinism ok` is
-the mirrored-pair sweep count and exits non-zero when it fails; `stalls_by
-cap / stuck / draw` is the split the stall entry below already verified;
-`selfplay_train`'s `val_auc` is a real tie-corrected Mann-Whitney AUC and
-`brier` a real Brier score. **A sixteenth filter is owed; the natural next one
-is *a default that no caller ever overrides* — a knob whose only value in
-every run is the one it was born with, which is either dead configuration or
-an experiment nobody finished.**
 
 **The fourteenth filter was run 2026-08-15** — *a comment that states a cost
 or a shape*, and it found one in the measuring device: `host_calib_ms`' doc
