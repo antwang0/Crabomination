@@ -28,8 +28,11 @@ PERF collisions). Tip **1,911,862,094** from base 1,918,781,907. Rows: the
 three `GameState` `HashMap`s dropped rather than cleared (**-0.192 %**;
 hashbrown clones a table by *bucket count*, so a cleared map re-allocates on
 every state clone for the rest of the game) and the `do_untap` block gate
-(**-0.168 %**). **Fetch and re-read PERF's Log before starting anything** —
-the same candidate was attempted from both sides this run.
+(**-0.168 %**). Plus one behaviour-preserving, perf-neutral commit that
+closes the defects section's only open entry (`ProtectionKind` — the
+protection gate and the protection decision are now one list, +0.0002 %).
+**Fetch and re-read PERF's Log before starting anything** — the same
+candidate was attempted from both sides this run.
 
 - **Take (-13) next: it is now sized at `-5.47 %` and it is a whole pass.** A
   probe that skipped every `perform_action` checkpoint read **1,810,396,553**
@@ -60,8 +63,9 @@ the same candidate was attempted from both sides this run.
   is 16.09 % and **both** of its old leads are now closed — `do_cleanup` is
   87 % one SBA sweep, and ~20 M of `do_untap` is still unattributed, so read
   its callee table rather than counting its walks.
-- **Green at the tip, re-verified end-of-run**: suite **18,728** passed / 0
-  failed over **20** test binaries, golden traces included; `cargo clippy
+- **Green at the tip, re-verified end-of-run**: suite **18,729** passed / 0
+  failed over **20** test binaries, golden traces and the same-seed replay
+  included; `cargo clippy
   --workspace --all-targets` **zero warnings across all eight crates**,
   client included (`apt-get install -y libwayland-dev libasound2-dev
   libudev-dev libxkbcommon-dev` first — the base image lacks them and the
