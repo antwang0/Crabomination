@@ -13110,6 +13110,11 @@ impl GameState {
     /// so a failing action only ever pays for the zones it touched before
     /// erroring.
     ///
+    /// The two priority-pass shapes are exempt and pay nothing; the guarantee
+    /// they give instead is that they cannot leave a partial mutation to
+    /// restore, audited on every failing action the suite exercises. See
+    /// [`perform_action_uncheckpointed`](Self::perform_action_uncheckpointed).
+    ///
     /// Suspension is NOT failure: a mid-action `pending_decision` /
     /// `suspend_signal` exit returns `Ok` and keeps its partial state for
     /// the resume path. And the *live* decider survives a restore — the
@@ -13134,8 +13139,17 @@ impl GameState {
         // takes — and the checkpoint is not just its own clone and drop: it
         // shares every CoW zone, so the action's first write to one deep-
         // copies it.
-        if matches!(action, GameAction::PassPriority) && self.pass_priority_is_trivial() {
-            return self.perform_action_inner(action);
+        if matches!(action, GameAction::PassPriority) {
+            if self.pass_priority_is_trivial() {
+                return self.perform_action_inner(action);
+            }
+            // The round-closing pass — resolve the top of the stack, or
+            // advance the step — is the other half, and it is the *expensive*
+            // half: it is the pass that writes. See
+            // `perform_action_uncheckpointed` for why it needs no restore.
+            let result = self.perform_action_uncheckpointed(action);
+            self.clear_stale_target_suppression();
+            return result;
         }
         enum ActionKind {
             SubmitDecision,
@@ -13167,15 +13181,62 @@ impl GameState {
                 self.pending_decision = None;
             }
         }
-        // A declined "up to N targets" slot is scoped to one cast attempt.
-        // The attempt ends when the cast lands (the card is no longer in the
-        // caster's hand) — everything before that is a replay of the same
-        // decision, including the `ManualTapRequired` bounces, so the record
-        // has to survive those.
+        self.clear_stale_target_suppression();
+        result
+    }
+
+    /// A declined "up to N targets" slot is scoped to one cast attempt. The
+    /// attempt ends when the cast lands (the card is no longer in the caster's
+    /// hand) — everything before that is a replay of the same decision,
+    /// including the `ManualTapRequired` bounces, so the record has to survive
+    /// those.
+    fn clear_stale_target_suppression(&mut self) {
         if let Some(declined) = &self.suppress_extra_target_prompts
             && !self.players[declined.caster].hand.iter().any(|c| c.id == declined.card_id)
         {
             self.suppress_extra_target_prompts = None;
+        }
+    }
+
+    /// [`perform_action_inner`] with no transaction checkpoint, for the action
+    /// shapes whose `Err` cannot leave a partial mutation behind.
+    ///
+    /// The round-closing `PassPriority` is one. Its whole fallible surface is
+    /// six `Result` functions deep — `resolve_top_of_stack` →
+    /// `resolve_top_of_stack_inner` → `continue_spell_resolution` /
+    /// `continue_trigger_resolution_with_source` → `run_effect`, plus
+    /// `advance_step`'s own recursion into `pass_priority` — and none of the
+    /// step machinery (`advance_step`, `do_untap`, `do_cleanup`,
+    /// `resolve_combat`, `resolve_first_strike_damage`) raises at all. What is
+    /// left raises only when an engine invariant is already broken:
+    /// `ModeOutOfBounds`, `DecisionAnswerMismatch`, a resolution-time
+    /// `check_target_legality_inner`, `cast_card_for_free` on a card that has
+    /// moved. A restore does not repair any of those — the bot passes again,
+    /// fails again, and the game stalls instead of continuing — so the
+    /// checkpoint buys a different bug, not a fix.
+    ///
+    /// Debug builds keep the clone and assert the claim: on `Err`, the
+    /// serialized state must be byte-identical to the pre-action one, so the
+    /// functional suite audits every failing action it exercises. (The audit
+    /// is blind to the ~78 `#[serde(skip)]` per-resolution scratch fields;
+    /// those are reset by the next resolution either way.)
+    ///
+    /// [`perform_action_inner`]: Self::perform_action_inner
+    fn perform_action_uncheckpointed(
+        &mut self,
+        action: GameAction,
+    ) -> Result<Vec<GameEvent>, GameError> {
+        #[cfg(debug_assertions)]
+        let before = self.clone();
+        let result = self.perform_action_inner(action);
+        #[cfg(debug_assertions)]
+        if let Err(e) = &result {
+            let (a, b) =
+                (serde_json::to_string(&before).ok(), serde_json::to_string(&*self).ok());
+            assert!(
+                a.is_some() && a == b,
+                "uncheckpointed action left a partial mutation behind ({e:?})"
+            );
         }
         result
     }

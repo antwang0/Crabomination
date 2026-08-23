@@ -866,6 +866,62 @@ the table above is safe to compress:
 
 ## Log
 
+### Forty-fourth pass — the round-closing pass stops buying a restore nobody reads
+
+Base `c0f4e3b6` re-read at **1,911,861,368** (the forty-third pass recorded
+1,911,862,094 on another box; the 726 Ir is argv). All readings
+`profiling-fast --no-default-features`, callgrind, `--a gang --b gang --games
+6 --threads 1 --seed 1 --decks fixed`.
+
+| step | before -> after | what |
+|---|---|---|
+| A | 1,911,861,368 -> 1,857,530,653 (**-2.842 %**) | the round-closing `PassPriority` skips the transaction checkpoint |
+
+**(A) is half of (-13)'s `-5.47 %` ceiling, and it is the half that was
+provable.** `GameState::clone` from `perform_action` drops **18,208 -> 8,266
+calls**, so the round-closing pass was **9,942 of the 18,208 checkpointed
+actions (55 %)** at **5,465 Ir each** — inside the 5,750 the forty-third pass
+measured for the whole population.
+
+**The forty-third pass's audit said this was not provable from the
+signatures, and it was reading the wrong signatures.** Its objection is
+sound about `pass_priority` itself — the non-trivial branch writes
+`consecutive_passes = 0` and then propagates — but the question is not
+whether the branch mutates before it can fail; it is whether anything
+downstream of it *ever* fails. A transitive closure over the engine's 149
+`Result`-returning functions says **46** are reachable from `pass_priority`
+and exactly **five** of those raise at all:
+
+* `run_effect` — `ModeOutOfBounds`, two `DecisionAnswerMismatch`
+* `apply_pending_effect_answer` — 43 `DecisionAnswerMismatch`
+* `check_target_legality_inner` — `InvalidTarget` / hexproof / shroud
+* `cast_card_for_free` — `CardNotInHand`
+* `try_pay_after_snapshot_mode` — `ManualTapRequired`, `Mana`
+
+None of the step machinery raises: `advance_step`, `do_untap`, `do_cleanup`,
+`resolve_combat`, `resolve_first_strike_damage` and
+`resolve_combat_damage_with_filter` have **zero** `Err` sites between them
+(combat.rs's 82 all live in `declare_blockers` / `declare_attackers_banded`,
+which are actions, not steps), and the whole `effects/` tree has **one**
+(`effects/mod.rs:5011`). Every survivor raises only where an engine
+invariant is already broken, and a restore repairs none of them — the bot
+passes again, fails again, and the game stalls instead of continuing. The
+checkpoint was buying a different bug, not a fix.
+
+**What replaces it is an audit, not an argument.** Debug builds keep the
+clone and assert that an `Err` left the serialized state byte-identical, so
+the 18.7 k-test suite checks the claim on every failing pass it exercises.
+Release pays nothing. The audit is blind to the ~78 `#[serde(skip)]`
+per-resolution scratch fields; those are reset by the next resolution either
+way.
+
+**What is left of (-13): 8,266 checkpointed actions, ~45 M Ir, ~2.43 % — and
+it is the half where the checkpoint earns its keep.** Those are casts,
+activations and combat declarations: mana paid then a target rejected,
+`declare_attackers` failing mid-loop. That is the partial-mutation family
+Phase 1 was built for. Do not take it without a per-arm proof that reads as
+well as this one.
+
 ### Forty-third pass — a cleared collection is not an empty one
 
 Base `1032979c` re-read at **1,918,781,907** (the forty-second pass's
@@ -1917,26 +1973,30 @@ dead; read the forty-third pass's Log entry before touching this.**
   fields are `Copy`, so they carry no drop glue; a resolution-scratch
   `CowBox` group would take a slice of the 458-Ir `Self { … }` line and
   nothing of the 2,324-Ir drop.
-* **Widen the no-checkpoint path — the one left, the only one that addresses
-  the actual cost, and now sized: `-5.47 %`.** A probe that skipped every
-  checkpoint read **1,810,396,553** and never panicked, so the restore fires
-  **zero** times in 18,208 checkpointed actions. **5,750 Ir each**: clone
-  1,194, drop 2,324, and ~2,230 of CoW unshares the action pays only because
-  the checkpoint shares its zones — 63 % of the drop (**50,619,793 /
-  2.64 %**) is `Arc` drop glue freeing exactly those copies. The skip is
-  currently one action shape (`pass_priority_is_trivial`, 41 % of actions),
-  and it **cannot** simply be widened to all of `PassPriority`:
-  `pass_priority` mutates before propagating from `resolve_top_of_stack`,
-  and `advance_step` propagates from `resolve_first_strike_damage` /
-  `resolve_combat` / itself. The job is the per-arm proof — arm by arm, each
-  skipped arm carrying a `debug_assert` that an `Err` left the serialized
-  state untouched, so the 18.7 k-test suite audits the claim. A pass of its
-  own.
-* **The count, for whoever sizes it.** `perform_action` runs 18,208x on this
-  workload against `perform_action_inner`'s 44,000+; the bot's probes
-  (`would_accept`, `sim_step`) already take the un-checkpointed path, so the
-  18,208 are real actions. `GameState::clone` runs 34,770x in total — the
-  checkpoint is 52 % of them and the probes are the rest.
+* **Widen the no-checkpoint path — HALF PAID, `-2.842 %`, forty-fourth
+  pass.** The whole shape was sized at `-5.47 %` by a probe that skipped
+  every checkpoint (**1,810,396,553**, never panicked): the restore fires
+  **zero** times in 18,208 checkpointed actions, at **5,750 Ir each** —
+  clone 1,194, drop 2,324, and ~2,230 of CoW unshares the action pays only
+  because the checkpoint shares its zones (63 % of the drop, **50,619,793 /
+  2.64 %**, is `Arc` drop glue freeing exactly those copies). The
+  round-closing `PassPriority` — **9,942 actions, 55 % of them** — is now
+  skipped alongside the trivial one, for `-54,330,715`. The proof and the
+  debug audit that stands in for the missing type-level one are in the
+  forty-fourth pass's Log entry.
+* **What is left of it: 8,266 checkpointed actions, ~45 M Ir, ~2.43 %, and
+  it is the half where the checkpoint earns its keep.** Casts, activations
+  and combat declarations — mana paid then a target rejected,
+  `declare_attackers` failing mid-loop — i.e. the partial-mutation family
+  Phase 1 exists for. `declare_blockers` and `declare_attackers_banded`
+  hold 82 of the engine's `Err` sites between them. A per-arm proof here
+  has to read as well as the pass one did; measuring zero failures on one
+  workload does not.
+* **The count, for whoever sizes it.** `perform_action` ran 18,208x on this
+  workload before the pass and 8,266x after, against
+  `perform_action_inner`'s 70,418; the bot's probes (`would_accept`,
+  `sim_step`) already take the un-checkpointed path, so those are real
+  actions.
 
 **(-12) `auto_tap_for_cost_inner` — 277,149,670 Ir / 14.37 % inclusive over
 18,340 calls, still the second-largest engine subtree.** The forty-second pass
