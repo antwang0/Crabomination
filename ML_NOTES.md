@@ -7,6 +7,53 @@ only stays dead while the reasoning that killed it is readable.
 
 ## Tier 13 — AI
 
+- 🟢 **Round 50 (2026-08-23) — the planeswalker cash-out fix is +0.25,
+  replicated, and the round's real lesson is that a *rare* effect is not
+  an unmeasurable one.** Pre-registered in `.ladder/run_r50_walker.sh`.
+
+  | cells | pooled | interval widths |
+  |---|---|---|
+  | 50.3 [50.1, 50.5] / 50.2 [50.1, 50.3] | **50.25** | **±0.21 / ±0.12** |
+
+  **The fix.** `pick_loyalty_ability`'s guard restricted the bot to
+  loyalty-SPENDING abilities whenever total enemy creature power met
+  *current* loyalty. That fired essentially always past the opening
+  turns, so the bot dumped loyalty the turn a walker landed and let it
+  die: **zero plus activations against eight minuses** across every
+  recorded human game, including Ral Zarek spending its last point to
+  strip one card and die with a `+1` available. The read now counts only
+  creatures that could actually attack, subtracts our untapped blockers,
+  and compares against the loyalty the walker would have *after* its
+  best plus.
+
+  **My pre-registered reading of this band was wrong, and the error is
+  worth more than the result.** The script called 50.0–50.5
+  "underpowered by the deck field, not evidence against", assuming a
+  rare class could not be resolved. Both cells' intervals *exclude* 50,
+  so it is resolved: small, real, replicated. The reason is a property
+  of the paired design nobody here had exploited: **when most antithetic
+  pairs are exact mirrors they contribute no variance, so the few games
+  that differ are measured with unusual precision.** ±0.21 and ±0.12
+  against this program's usual ±0.57. The zero-incidence games are not
+  wasted — they are perfect controls.
+
+  **This splits a class the program had lumped together.** The five
+  earlier "zero incidence" flags (buff2for1, convlands, walkerchip,
+  impulse, …) returned **exactly 50.0 at ±0.00** — the flag never
+  changed a single game. This one returned 50.25 with tight bounds: it
+  fires rarely and helps when it does. Those are different findings and
+  the ladder distinguishes them cleanly. **Do not write off a
+  rare-card-class flag as unmeasurable before running it** — if it fires
+  at all, the paired ladder will resolve it; if it returns a hard 50.0
+  ±0.00, that is a genuine statement that the field never reached the
+  situation.
+
+  The fix is unflagged and on by default (it is a correctness-class
+  repair of a guard that was wrong three ways at once); `walkerlegacy`
+  stays as the reproduction control, and the two regression tests —
+  `defended_walker_banks_the_plus` and the pre-existing
+  `doomed_walker_cashes_out` — pin both sides of the read.
+
 - 🔴 **Round 49 (2026-08-23) — simulating the mulligan is 2.5 points
   WORSE than the predicate it replaces, and it is not the horizon, not
   the sample count and not the cost.** The second mechanism to fail on
@@ -2828,6 +2875,17 @@ before any feature block, pre-registered scripts in `.ladder/`.
    is biased, not noisy, and h0's −35 shows the net cannot score
    unsettled states at all. Do not respend here; the census/`head_leaf`
    direction (item 2) inherits the evidence.**
+1a-bis. **A rare effect is not an unmeasurable one (round 50).** The
+   walker cash-out fix reads +0.25 with both cells' intervals clearing
+   50, at **±0.21 / ±0.12** against the usual ±0.57 — when most
+   antithetic pairs are exact mirrors they add no variance, so the few
+   differing games are measured precisely. The zero-incidence games are
+   perfect controls, not waste. This splits a class we had lumped
+   together: the five earlier "zero incidence" flags returned *exactly*
+   50.0 ±0.00 (never fired at all), which is a different finding from
+   "fires rarely and helps". **Run the rare-class flag before declaring
+   it unmeasurable.**
+
 1a. **The mulligan is closed for now — two mechanisms, both failed.**
    `mull_quality` (a better predicate) 50.2 % over 28 800 games;
    `mull_sim` (play both branches forward) **47.45 %**, i.e. actively
