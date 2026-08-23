@@ -11773,11 +11773,13 @@ impl GameState {
         let cost_colors = cost.colors();
         let mut scan = self.grant_scan();
         self.scan_land_type_rewrites(&mut scan);
+        // One buffer for the whole walk — see `effective_mana_abilities_into`.
+        let mut mana_abilities = Vec::new();
         self.battlefield.iter().any(|c| {
             if c.controller != player || c.tapped {
                 return false;
             }
-            let mana_abilities = self.effective_mana_abilities_of(c, &scan);
+            self.effective_mana_abilities_into(c, &scan, &mut mana_abilities);
             if mana_abilities.is_empty() {
                 return false;
             }
@@ -12127,14 +12129,16 @@ impl GameState {
     fn untapped_producers_of_inner(&self, player: usize, color: ManaColor) -> u32 {
         let mut scan = self.grant_scan();
         self.scan_land_type_rewrites(&mut scan);
+        // One buffer for the whole walk — see `effective_mana_abilities_into`.
+        let mut abilities = Vec::new();
         self.battlefield
             .iter()
             .filter(|c| {
-                c.controller == player
-                    && !c.tapped
-                    && self.effective_mana_abilities_of(c, &scan).iter().any(|(_, a)| {
-                        effect_produces_color(&a.effect, color)
-                    })
+                if c.controller != player || c.tapped {
+                    return false;
+                }
+                self.effective_mana_abilities_into(c, &scan, &mut abilities);
+                abilities.iter().any(|(_, a)| effect_produces_color(&a.effect, color))
             })
             .count() as u32
     }
@@ -12255,13 +12259,15 @@ impl GameState {
         // ask per card.
         let mut scan = self.grant_scan();
         self.scan_land_type_rewrites(&mut scan);
+        // One buffer for the whole walk — see `effective_mana_abilities_into`.
+        let mut abilities = Vec::new();
         self.battlefield
             .iter()
             .filter(|c| c.controller == player && !c.tapped)
             .filter(|c| !creature_only || self.permanent_is_creature(c.id))
             .filter(|c| only.is_none_or(|set| set.contains(&c.id)))
             .filter_map(|c| {
-                let abilities = self.effective_mana_abilities_of(c, &scan);
+                self.effective_mana_abilities_into(c, &scan, &mut abilities);
                 let (first_idx, first) = abilities.first()?;
                 let mut colors = crate::mana::ColorSet::empty();
                 let mut color_idx = [0usize; 5];
@@ -12724,6 +12730,26 @@ impl GameState {
         card: &'a crate::card::CardInstance,
         scan: &GrantScan<'_>,
     ) -> Vec<(usize, AbilityRef<'a>)> {
+        let mut out = Vec::new();
+        self.effective_mana_abilities_into(card, scan, &mut out);
+        out
+    }
+
+    /// [`effective_mana_abilities_of`](Self::effective_mana_abilities_of) into
+    /// a caller-owned buffer. Every hot caller asks this once per untapped
+    /// permanent from inside a `battlefield.iter()`, and the owning form built
+    /// (and dropped) a `Vec` per permanent per call — 47,798 allocations over
+    /// six bench games for a list that is one element wide on a basic land.
+    /// One buffer hoisted to the loop head is the same list at one allocation
+    /// per loop; every element borrows from `&'a self`, so reusing it across
+    /// cards is sound.
+    pub(crate) fn effective_mana_abilities_into<'a>(
+        &'a self,
+        card: &'a crate::card::CardInstance,
+        scan: &GrantScan<'_>,
+        out: &mut Vec<(usize, AbilityRef<'a>)>,
+    ) {
+        out.clear();
         let card_id = card.id;
         let printed_count = card.definition.activated_abilities.len();
         // One layer read for the whole list. Both CR 305.6 checks below ask
@@ -12779,7 +12805,6 @@ impl GameState {
         // read `.effect` and the cost fields. Cloning them was one
         // `ActivatedAbility` deep copy per printed mana ability per untapped
         // permanent per `auto_tap_for_cost_inner`.
-        let mut out: Vec<(usize, AbilityRef<'_>)> = Vec::new();
         for (i, a) in card.definition.activated_abilities.iter().enumerate() {
             if is_mana_ability(&a.effect)
                 && !Self::printed_land_mana_ability_lost_with(card, i, computed_land_types)
@@ -12800,7 +12825,6 @@ impl GameState {
         {
             out.push((printed_count + gc + k, AbilityRef::Synth(Box::new(a))));
         }
-        out
     }
 
     /// CR 702.61a — true while any spell on the stack has split second.
