@@ -207,8 +207,8 @@ forty-fourth pass's and is unchanged. What was checked at the forty-fifth tip
 run in one sitting:
 
 ```text
-                     base (8a384e5c)          tip (0ed1c847)
-I refs (callgrind)   1,810,336,693            1,781,215,786   -1.608 %
+                     base (8a384e5c)          tip (ee2afb12)
+I refs (callgrind)   1,810,336,693            1,780,583,538   -1.643 %
 decisions            196,220                  196,220         byte-identical
 turns_per_game       27.53                    27.53
 stalls               0 (0.00 %), cap 0 / stuck 0 / draw 0 (both)
@@ -649,6 +649,7 @@ Base `8a384e5c` re-read at **1,810,336,693** (the forty-fourth pass recorded
 | A | 1,810,336,693 -> 1,781,215,786 (**-1.608 %**) | the CR 601 cast gate takes one board walk instead of eleven |
 | B | 1,781,215,786 -> 1,794,167,898 (**+0.727 %**) | **REVERTED** — (-18)'s board epoch, `Mutex` form |
 | B' | 1,781,215,786 -> 1,789,953,520 (**+0.490 %**) | **REVERTED** — the same memo, lock-free |
+| C | 1,781,215,786 -> 1,780,583,538 (**-0.036 %**) | `cast_candidates` stops collecting a `Vec` to hold one `None` |
 
 **(A) `perform_action_inner`'s CR 601 gate is eleven blocks, and every one of
 them walked the whole battlefield.** Rule of Law / the scheme lock / Mana Maze
@@ -704,6 +705,15 @@ both generalise:
    stop being, and the hit rate is not high enough to pay that back —
    `card_type_change_in_scope` alone is asked twice per `activate_ability_inner`
    with a mana payment (i.e. battlefield writes) in between.
+
+**(C) is small and is reported as small.** The modal-mode enumeration built
+`vec![None]` per non-modal hand card and a one-element `Vec` per candidate;
+both are gone, and `additional_targets` is cloned only when the Repartee
+sibling actually exists. It reads **-632,248 Ir** — an exact count, not a
+wash, but ~25 k allocations rather than the ~50 k the shape suggests, because
+the affordability filter drops most of the hand before the block. The rule
+this pass adds to (-23): **count what survives the filters above the
+allocation before sizing it.**
 
 **The lesson for the file: an epoch pays only where the memoized answer costs
 much more than a call, and where the writes it counts are the writes it
@@ -1316,7 +1326,7 @@ settings + debuginfo; system allocator, because valgrind replaces malloc and
 a mimalloc build would measure the interception), 1 thread, `--a gang --b
 gang --games 6 --seed 1 --decks fixed`.
 
-**The forty-fifth pass reads 1,781,215,786 Ir at its tip.** Fresh table
+**The forty-fifth pass reads 1,780,583,538 Ir at its tip.** Fresh table
 below; the forty-fourth's and the forty-second's are kept under it because
 their Log rows chain to them, and the thirty-ninth's and fortieth's were
 dropped when their Log entries became index rows (`git log -- PERF.md` has

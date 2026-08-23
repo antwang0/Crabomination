@@ -21,12 +21,13 @@ git checkout -B claude/modern_decks origin/claude/modern_decks`. The routine
 container clones **`main`**, ~2,000 commits behind and missing the ML crates,
 `PERF.md`, `crabomination_tests` and the profiling profiles.
 
-**Pass 45: one row banked and one three-pass-old candidate killed.**
-`1,810,336,693 -> 1,781,215,786`, **-1.608 % Ir** — the CR 601 cast gate was
+**Pass 45: one row banked, one tidy-up, one three-pass-old candidate killed.**
+`1,810,336,693 -> 1,780,583,538`, **-1.643 % Ir** — the CR 601 cast gate was
 eleven blocks each taking its own whole-board `static_abilities` walk, with
 six `find_card_anywhere` lookups of the cast spell between them; it is one
 walk and one lookup now, gated by a presence mask whose `u32::MAX` reading is
 the ungated original and is `debug_assert_eq!`d against on every action.
+`cast_candidates` stopped collecting a `Vec` to hold one `None`: -0.036 %.
 
 1. **(-18) IS DEAD — read its entry before proposing anything shaped like
    it.** The board epoch was fully built (a `writes` counter on
@@ -67,12 +68,15 @@ the ungated original and is `debug_assert_eq!`d against on every action.
    libxkbcommon-dev`. **`rm target-probe/profiling-fast/{bot_ladder,deps/*crabomination*}`
    before building a candidate there** — `cp -al` hardlinks them to
    `target/`'s and rustc truncate-writes in place.
-7. **Green at the tip.** Suite **18,708 / 0 failed** over 22 binaries, golden
-   traces and the same-seed replay included. `--bench` invariants
-   byte-identical base vs tip (decisions 196,220, turns 27.53, stalls 0,
-   determinism ok). **No encoding change — no net needs retraining as of this
-   tip.** Absolute games/s is not comparable across routine boxes; quote
-   callgrind for anything under 5 %.
+7. **Green at the tip (`ee2afb12`).** Suite **18,708 / 0 failed** over 22
+   binaries, golden traces and the same-seed replay included; `cargo clippy
+   --workspace --all-targets` clean across all eight crates. `--bench`
+   invariants byte-identical base vs tip (decisions 196,220, turns 27.53,
+   stalls 0 / cap 0 / stuck 0 / draw 0, determinism ok). **No encoding change
+   — no net needs retraining as of this tip.** No `overflow`-profile run this
+   pass (nothing touched counters, damage, mana or the encoder — TODO's
+   filter 6 says rerun after anything that does). Absolute games/s is not
+   comparable across routine boxes; quote callgrind for anything under 5 %.
 8. **Trackers.** TODO ~1.0k, ROADMAP 0.66k, PERF ~2.67k (fold the Log again
    past ~2.8k — the forty-second pass's profile table is the next thing to
    index). `scripts/find_data_tests.sh` reads **199 pure-data tests, 25 of
