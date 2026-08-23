@@ -206,6 +206,40 @@ pub(crate) struct DispatchScan<'a> {
     pub equip_grants: Vec<(CardId, &'a [crate::card::TriggeredAbility])>,
 }
 
+/// One bit per cast-time lock static, as produced by
+/// [`GameState::cast_lock_scan`] and consumed by `perform_action_inner`'s
+/// CR 601 gate. `ANY_CARD` names the locks that need the cast spell's own
+/// characteristics; with all of them clear the gate never looks the card up.
+pub(crate) mod cast_lock {
+    /// Rule of Law / Arcane Laboratory / Deafening Silence / Ethersworn Canonist.
+    pub const ONE_SPELL: u32 = 1 << 0;
+    /// A face-up scheme's `OpponentsOneSpellPerTurn` (command zone).
+    pub const SCHEME: u32 = 1 << 1;
+    /// Mana Maze.
+    pub const MANA_MAZE: u32 = 1 << 2;
+    /// Cornered Market.
+    pub const NAME: u32 = 1 << 3;
+    /// Iona, Shield of Emeria.
+    pub const CHOSEN_COLOR: u32 = 1 << 4;
+    /// Void Winnower.
+    pub const EVEN_MV: u32 = 1 << 5;
+    /// Lavinia, Azorius Renegade.
+    pub const ABOVE_LANDS: u32 = 1 << 6;
+    /// Damping Engine.
+    pub const DAMPING: u32 = 1 << 7;
+    /// Angelic Arbiter.
+    pub const ATTACKED: u32 = 1 << 8;
+    /// City of Solitude / Voice of Victory / Dosan the Falling Leaf.
+    pub const OWN_TURN_ACT: u32 = 1 << 9;
+    /// `PlayersCastOnlyOnOwnTurn`.
+    pub const OWN_TURN_CAST: u32 = 1 << 10;
+    /// `OpponentsCantCast/ActDuringYourTurn`.
+    pub const DURING_YOUR_TURN: u32 = 1 << 11;
+    /// The locks whose gate reads the cast spell's characteristics.
+    pub const ANY_CARD: u32 =
+        ONE_SPELL | MANA_MAZE | NAME | CHOSEN_COLOR | EVEN_MV | ABOVE_LANDS | DAMPING;
+}
+
 /// Interior-mutable memo for [`GameState::with_frozen_layers`]: the gathered
 /// continuous-effect set, shared via `Arc` so per-permanent layer passes
 /// don't re-clone it. `Mutex` (not `RefCell`) keeps `GameState: Sync` for the
@@ -3067,6 +3101,302 @@ impl GameState {
             "dispatch_board_scan drifted from the four walks it fuses",
         );
         scan
+    }
+
+    /// Which cast-time lock statics exist anywhere right now, as a bit per
+    /// lock, gathered in one battlefield (plus command-zone) walk.
+    ///
+    /// `perform_action_inner`'s CR 601 gate is eleven separate blocks, and
+    /// each took its own whole-board `static_abilities` walk — plus, between
+    /// them, six `find_card_anywhere` lookups of the spell being cast — for
+    /// locks that no board in a normal game has. Every block is gated on its
+    /// own bit now, and with the whole mask clear the cast card is never
+    /// looked up at all. Same device as [`dispatch_board_scan`](Self::dispatch_board_scan);
+    /// a bit is a pure over-approximation (the block it gates still runs its
+    /// own controller/team/attachment tests unchanged), so it can only skip
+    /// work, never change an answer.
+    pub(crate) fn cast_lock_scan(&self) -> u32 {
+        use crate::effect::StaticEffect as SE;
+        let mut m = 0u32;
+        for card in self.battlefield.iter() {
+            for sa in &card.definition.static_abilities {
+                m |= match sa.effect {
+                    SE::OneSpellPerTurn
+                    | SE::EnchantedPlayerOneSpellPerTurn
+                    | SE::OneNoncreatureSpellPerTurn
+                    | SE::OneNonartifactSpellPerTurn => cast_lock::ONE_SPELL,
+                    SE::CantCastSharingColorWithLastCastSpell => cast_lock::MANA_MAZE,
+                    SE::NoSpellOrNonbasicLandSharingAPermanentName => cast_lock::NAME,
+                    SE::OpponentsCantCastChosenColor => cast_lock::CHOSEN_COLOR,
+                    SE::OpponentsCantCastEvenMv => cast_lock::EVEN_MV,
+                    SE::OpponentsCantCastNoncreatureAboveLandCount => cast_lock::ABOVE_LANDS,
+                    SE::MostPermanentsCantPlay => cast_lock::DAMPING,
+                    SE::OpponentsWhoAttackedCantCast => cast_lock::ATTACKED,
+                    SE::PlayersActOnlyOnTheirOwnTurn => cast_lock::OWN_TURN_ACT,
+                    SE::PlayersCastOnlyOnOwnTurn => cast_lock::OWN_TURN_CAST,
+                    SE::OpponentsCantCastDuringYourTurn | SE::OpponentsCantActDuringYourTurn => {
+                        cast_lock::DURING_YOUR_TURN
+                    }
+                    _ => 0,
+                };
+            }
+        }
+        // CR 904.8 — a face-up scheme's opponents-only spell lock functions
+        // from the command zone, so that one wants its own walk.
+        for p in &self.players {
+            if p.command.iter().any(|c| {
+                c.definition.is_scheme()
+                    && c.definition
+                        .static_abilities
+                        .iter()
+                        .any(|sa| matches!(sa.effect, SE::OpponentsOneSpellPerTurn))
+            }) {
+                m |= cast_lock::SCHEME;
+                break;
+            }
+        }
+        m
+    }
+
+    /// The CR 601 cast-time lock gate — and the CR 702.61 split-second gate
+    /// that sits among the locks, kept in place so the error a doubly-locked
+    /// action reports is the one it always reported. `Some(e)` rejects.
+    ///
+    /// `locks` is [`cast_lock_scan`](Self::cast_lock_scan)'s mask: a block
+    /// runs only when its bit is set, so a board with none of these statics
+    /// pays one battlefield walk instead of eleven and never looks the cast
+    /// spell up. `u32::MAX` runs every block ungated, which is what the
+    /// caller's debug audit compares against — so the functional suite checks
+    /// the mask on every action it exercises.
+    fn action_lock_rejection(&self, action: &GameAction, locks: u32) -> Option<GameError> {
+        use crate::effect::StaticEffect;
+        let caster = self.priority.player_with_priority;
+        let active = self.active_player_idx;
+        // The spell being cast, looked up once for the five blocks that read
+        // it (`None` for prepare spells, which don't carry the cast card in a
+        // `card_id` field) — and not looked up at all when no lock needs it.
+        let cast_card = if action.is_cast()
+            && (locks & cast_lock::ANY_CARD != 0 || !self.creature_pw_cast_locks.is_empty())
+        {
+            action.cast_card_id().and_then(|id| self.find_card_anywhere(id))
+        } else {
+            None
+        };
+        // Rule of Law-style one-spell-per-turn locks — gated here so every
+        // Cast* variant is covered at once. The plain `OneSpellPerTurn` lock
+        // (Rule of Law) applies to any spell; `OneNoncreatureSpellPerTurn`
+        // (Deafening Silence) and `OneNonartifactSpellPerTurn` (Ethersworn
+        // Canonist) only count spells of the matching type.
+        if action.is_cast() {
+            let pl = &self.players[caster];
+            let is_creature =
+                cast_card.is_some_and(|c| c.definition.card_types.contains(&CardType::Creature));
+            let is_artifact =
+                cast_card.is_some_and(|c| c.definition.card_types.contains(&CardType::Artifact));
+            let blocked = locks & cast_lock::ONE_SPELL != 0
+                && self.battlefield.iter().any(|c| {
+                    c.definition.static_abilities.iter().any(|sa| match sa.effect {
+                        StaticEffect::OneSpellPerTurn => pl.spells_cast_this_game_turn >= 1,
+                        StaticEffect::EnchantedPlayerOneSpellPerTurn => {
+                            c.attached_to_player == Some(caster)
+                                && pl.spells_cast_this_game_turn >= 1
+                        }
+                        StaticEffect::OneNoncreatureSpellPerTurn => {
+                            !is_creature && pl.noncreature_spells_cast_this_game_turn >= 1
+                        }
+                        StaticEffect::OneNonartifactSpellPerTurn => {
+                            !is_artifact && pl.nonartifact_spells_cast_this_game_turn >= 1
+                        }
+                        _ => false,
+                    })
+                });
+            // CR 904.8 — a face-up scheme's statics function from the command
+            // zone, so the opponents-only spell lock is scanned there.
+            let scheme_locked = locks & cast_lock::SCHEME != 0
+                && pl.spells_cast_this_game_turn >= 1
+                && self.players.iter().enumerate().any(|(seat, owner)| {
+                    seat != caster
+                        && owner.command.iter().any(|c| {
+                            c.definition.is_scheme()
+                                && c.definition.static_abilities.iter().any(|sa| {
+                                    matches!(sa.effect, StaticEffect::OpponentsOneSpellPerTurn)
+                                })
+                        })
+                });
+            if blocked || scheme_locked {
+                return Some(GameError::SpellLimitReached);
+            }
+            // Mana Maze — no spell may share a colour with the turn's last
+            // cast. Vacuous while nothing has been cast this turn.
+            if locks & cast_lock::MANA_MAZE != 0
+                && !self.last_cast_spell_colors.is_empty()
+                && self.battlefield.iter().any(|c| {
+                    c.definition.static_abilities.iter().any(|sa| {
+                        matches!(sa.effect, StaticEffect::CantCastSharingColorWithLastCastSpell)
+                    })
+                })
+                && cast_card.is_some_and(|c| {
+                    c.definition
+                        .printed_colors()
+                        .iter()
+                        .any(|k| self.last_cast_spell_colors.contains(k))
+                })
+            {
+                return Some(GameError::SpellLimitReached);
+            }
+            // Cornered Market — no spell may share a nontoken permanent's name.
+            if locks & cast_lock::NAME != 0
+                && self.name_locked_by_a_permanent(action.cast_card_id())
+            {
+                return Some(GameError::SpellLimitReached);
+            }
+            // Single Combat — while any lock is active, no player may cast a
+            // creature or planeswalker spell (CR 601 cast restriction).
+            if !self.creature_pw_cast_locks.is_empty()
+                && cast_card.is_some_and(|c| {
+                    c.definition.card_types.contains(&CardType::Creature)
+                        || c.definition.card_types.contains(&CardType::Planeswalker)
+                })
+            {
+                return Some(GameError::SpellLimitReached);
+            }
+        }
+        // CR 702.61 — split second: while such a spell is on the stack no
+        // player may cast spells or activate non-mana abilities. Special
+        // actions (land drops, foretell, plot, turning face up, suspend…)
+        // and triggered abilities are unaffected (702.61b).
+        if self.stack_has_split_second() && self.split_second_blocks(action) {
+            return Some(GameError::SplitSecondLock);
+        }
+        // Iona, Shield of Emeria — opponents can't cast spells of the
+        // chosen color (read off the printed cost's pips).
+        if action.is_cast() && locks & cast_lock::CHOSEN_COLOR != 0 {
+            let cast_colors: Vec<crate::mana::Color> =
+                cast_card.map(|c| c.definition.printed_colors()).unwrap_or_default();
+            let locked = self.battlefield.iter().any(|c| {
+                !self.same_team(c.controller, caster)
+                    && c.chosen_color.is_some_and(|col| cast_colors.contains(&col))
+                    && c.definition
+                        .static_abilities
+                        .iter()
+                        .any(|sa| matches!(sa.effect, StaticEffect::OpponentsCantCastChosenColor))
+            });
+            if locked {
+                return Some(GameError::SilencedThisTurn);
+            }
+        }
+        // Void Winnower — opponents can't cast spells with even mana values
+        // (zero is even; read off the printed cost, X counts as 0).
+        if action.is_cast() && locks & cast_lock::EVEN_MV != 0 {
+            let even_mv = cast_card.is_some_and(|c| c.definition.cost.cmc() % 2 == 0);
+            if even_mv {
+                let locked = self.battlefield.iter().any(|c| {
+                    !self.same_team(c.controller, caster)
+                        && c.definition
+                            .static_abilities
+                            .iter()
+                            .any(|sa| matches!(sa.effect, StaticEffect::OpponentsCantCastEvenMv))
+                });
+                if locked {
+                    return Some(GameError::SilencedThisTurn);
+                }
+            }
+        }
+        // Lavinia, Azorius Renegade — opponents can't cast noncreature spells
+        // whose mana value exceeds their own land count.
+        if action.is_cast() && locks & cast_lock::ABOVE_LANDS != 0 {
+            let over_land_count = cast_card.is_some_and(|c| {
+                !c.definition.is_creature() && {
+                    let lands = self
+                        .battlefield
+                        .iter()
+                        .filter(|p| p.controller == caster && p.definition.is_land())
+                        .count() as u32;
+                    c.definition.cost.cmc() > lands
+                }
+            });
+            if over_land_count {
+                let locked = self.battlefield.iter().any(|c| {
+                    !self.same_team(c.controller, caster)
+                        && c.definition.static_abilities.iter().any(|sa| {
+                            matches!(
+                                sa.effect,
+                                StaticEffect::OpponentsCantCastNoncreatureAboveLandCount
+                            )
+                        })
+                });
+                if locked {
+                    return Some(GameError::SilencedThisTurn);
+                }
+            }
+        }
+        // Damping Engine — the player ahead on permanents can't cast artifact,
+        // creature or enchantment spells.
+        if action.is_cast() && locks & cast_lock::DAMPING != 0 {
+            let permanent_spell = cast_card.is_some_and(|c| {
+                let d = &c.definition;
+                d.is_artifact() || d.is_creature() || d.is_enchantment()
+            });
+            if permanent_spell && self.damping_engine_locks(caster) {
+                return Some(GameError::SilencedThisTurn);
+            }
+        }
+        // Angelic Arbiter — an opponent who attacked with a creature this turn
+        // can't cast spells for the rest of it.
+        if action.is_cast()
+            && locks & cast_lock::ATTACKED != 0
+            && self.players[caster].attacked_this_turn
+            && self.opponent_has_static(caster, |e| {
+                matches!(e, StaticEffect::OpponentsWhoAttackedCantCast)
+            })
+        {
+            return Some(GameError::SilencedThisTurn);
+        }
+        // Voice of Victory — the active player's opponents can't cast spells
+        // during that player's turn. Dosan the Falling Leaf is the symmetric
+        // sibling: nobody casts off-turn, whoever controls it.
+        // City of Solitude is the broader sibling: it locks activations too,
+        // mana abilities included (they route through the same action).
+        if (action.is_cast() || matches!(action, GameAction::ActivateAbility { .. }))
+            && locks & cast_lock::OWN_TURN_ACT != 0
+            && caster != active
+            && self.battlefield.iter().any(|c| {
+                c.definition
+                    .static_abilities
+                    .iter()
+                    .any(|sa| matches!(sa.effect, StaticEffect::PlayersActOnlyOnTheirOwnTurn))
+            })
+        {
+            return Some(GameError::SilencedThisTurn);
+        }
+        if action.is_cast() && caster != active {
+            if locks & cast_lock::OWN_TURN_CAST != 0
+                && self.battlefield.iter().any(|c| {
+                    c.definition
+                        .static_abilities
+                        .iter()
+                        .any(|sa| matches!(sa.effect, StaticEffect::PlayersCastOnlyOnOwnTurn))
+                })
+            {
+                return Some(GameError::SilencedThisTurn);
+            }
+            let locked = locks & cast_lock::DURING_YOUR_TURN != 0
+                && !self.same_team(caster, active)
+                && self.battlefield.iter().any(|c| {
+                    c.controller == active
+                        && c.definition.static_abilities.iter().any(|sa| {
+                            matches!(
+                                sa.effect,
+                                StaticEffect::OpponentsCantCastDuringYourTurn
+                                    | StaticEffect::OpponentsCantActDuringYourTurn
+                            )
+                        })
+                });
+            if locked {
+                return Some(GameError::SilencedThisTurn);
+            }
+        }
+        None
     }
 
     /// The largest number of `seat`'s creatures sharing one creature type
@@ -13286,247 +13616,27 @@ impl GameState {
         {
             return Err(GameError::EpicLocked);
         }
-        // Rule of Law-style one-spell-per-turn locks — gated here so every
-        // Cast* variant is covered at once. The plain `OneSpellPerTurn` lock
-        // (Rule of Law) applies to any spell; `OneNoncreatureSpellPerTurn`
-        // (Deafening Silence) and `OneNonartifactSpellPerTurn` (Ethersworn
-        // Canonist) only count spells of the matching type.
-        if action.is_cast() {
-            use crate::effect::StaticEffect;
-            let pl = &self.players[self.priority.player_with_priority];
-            // The card types of the spell being cast (None for prepare spells,
-            // which don't carry the cast card in a `card_id` field).
-            let cast_types = action
-                .cast_card_id()
-                .and_then(|id| self.find_card_anywhere(id))
-                .map(|c| c.definition.card_types.clone());
-            let is_creature =
-                cast_types.as_ref().is_some_and(|t| t.contains(&CardType::Creature));
-            let is_artifact =
-                cast_types.as_ref().is_some_and(|t| t.contains(&CardType::Artifact));
-            let blocked = self.battlefield.iter().any(|c| {
-                c.definition.static_abilities.iter().any(|sa| match sa.effect {
-                    StaticEffect::OneSpellPerTurn => pl.spells_cast_this_game_turn >= 1,
-                    StaticEffect::EnchantedPlayerOneSpellPerTurn => {
-                        c.attached_to_player == Some(self.priority.player_with_priority)
-                            && pl.spells_cast_this_game_turn >= 1
-                    }
-                    StaticEffect::OneNoncreatureSpellPerTurn => {
-                        !is_creature && pl.noncreature_spells_cast_this_game_turn >= 1
-                    }
-                    StaticEffect::OneNonartifactSpellPerTurn => {
-                        !is_artifact && pl.nonartifact_spells_cast_this_game_turn >= 1
-                    }
-                    _ => false,
-                })
-            });
-            // CR 904.8 — a face-up scheme's statics function from the command
-            // zone, so the opponents-only spell lock is scanned there.
-            let caster = self.priority.player_with_priority;
-            let scheme_locked = pl.spells_cast_this_game_turn >= 1
-                && self.players.iter().enumerate().any(|(seat, owner)| {
-                    seat != caster
-                        && owner.command.iter().any(|c| {
-                            c.definition.is_scheme()
-                                && c.definition.static_abilities.iter().any(|sa| {
-                                    matches!(
-                                        sa.effect,
-                                        StaticEffect::OpponentsOneSpellPerTurn
-                                    )
-                                })
-                        })
-                });
-            if blocked || scheme_locked {
-                return Err(GameError::SpellLimitReached);
-            }
-            // Mana Maze — no spell may share a colour with the turn's last
-            // cast. Vacuous while nothing has been cast this turn.
-            if !self.last_cast_spell_colors.is_empty()
-                && self.battlefield.iter().any(|c| {
-                    c.definition.static_abilities.iter().any(|sa| {
-                        matches!(sa.effect, StaticEffect::CantCastSharingColorWithLastCastSpell)
-                    })
-                })
-                && action
-                    .cast_card_id()
-                    .and_then(|id| self.find_card_anywhere(id))
-                    .is_some_and(|c| {
-                        c.definition
-                            .printed_colors()
-                            .iter()
-                            .any(|k| self.last_cast_spell_colors.contains(k))
-                    })
-            {
-                return Err(GameError::SpellLimitReached);
-            }
-            // Cornered Market — no spell may share a nontoken permanent's name.
-            if self.name_locked_by_a_permanent(action.cast_card_id()) {
-                return Err(GameError::SpellLimitReached);
-            }
-            // Single Combat — while any lock is active, no player may cast a
-            // creature or planeswalker spell (CR 601 cast restriction).
-            if !self.creature_pw_cast_locks.is_empty()
-                && cast_types.as_ref().is_some_and(|t| {
-                    t.contains(&CardType::Creature) || t.contains(&CardType::Planeswalker)
-                })
-            {
-                return Err(GameError::SpellLimitReached);
-            }
-        }
-        // CR 702.61 — split second: while such a spell is on the stack no
-        // player may cast spells or activate non-mana abilities. Special
-        // actions (land drops, foretell, plot, turning face up, suspend…)
-        // and triggered abilities are unaffected (702.61b).
-        if self.stack_has_split_second() && self.split_second_blocks(&action) {
-            return Err(GameError::SplitSecondLock);
-        }
-        // Iona, Shield of Emeria — opponents can't cast spells of the
-        // chosen color (read off the printed cost's pips).
-        if action.is_cast() {
-            let caster = self.priority.player_with_priority;
-            let cast_colors: Vec<crate::mana::Color> = action
-                .cast_card_id()
-                .and_then(|id| self.find_card_anywhere(id))
-                .map(|c| c.definition.printed_colors())
-                .unwrap_or_default();
-            let locked = self.battlefield.iter().any(|c| {
-                !self.same_team(c.controller, caster)
-                    && c.chosen_color.is_some_and(|col| cast_colors.contains(&col))
-                    && c.definition.static_abilities.iter().any(|sa| {
-                        matches!(
-                            sa.effect,
-                            crate::effect::StaticEffect::OpponentsCantCastChosenColor
-                        )
-                    })
-            });
-            if locked {
-                return Err(GameError::SilencedThisTurn);
-            }
-        }
-        // Void Winnower — opponents can't cast spells with even mana values
-        // (zero is even; read off the printed cost, X counts as 0).
-        if action.is_cast() {
-            let caster = self.priority.player_with_priority;
-            let even_mv = action
-                .cast_card_id()
-                .and_then(|id| self.find_card_anywhere(id))
-                .is_some_and(|c| c.definition.cost.cmc() % 2 == 0);
-            if even_mv {
-                let locked = self.battlefield.iter().any(|c| {
-                    !self.same_team(c.controller, caster)
-                        && c.definition.static_abilities.iter().any(|sa| {
-                            matches!(
-                                sa.effect,
-                                crate::effect::StaticEffect::OpponentsCantCastEvenMv
-                            )
-                        })
-                });
-                if locked {
-                    return Err(GameError::SilencedThisTurn);
-                }
-            }
-        }
-        // Lavinia, Azorius Renegade — opponents can't cast noncreature spells
-        // whose mana value exceeds their own land count.
-        if action.is_cast() {
-            let caster = self.priority.player_with_priority;
-            let over_land_count = action
-                .cast_card_id()
-                .and_then(|id| self.find_card_anywhere(id))
-                .is_some_and(|c| {
-                    !c.definition.is_creature() && {
-                        let lands = self
-                            .battlefield
-                            .iter()
-                            .filter(|p| p.controller == caster && p.definition.is_land())
-                            .count() as u32;
-                        c.definition.cost.cmc() > lands
-                    }
-                });
-            if over_land_count {
-                let locked = self.battlefield.iter().any(|c| {
-                    !self.same_team(c.controller, caster)
-                        && c.definition.static_abilities.iter().any(|sa| {
-                            matches!(
-                                sa.effect,
-                                crate::effect::StaticEffect::OpponentsCantCastNoncreatureAboveLandCount
-                            )
-                        })
-                });
-                if locked {
-                    return Err(GameError::SilencedThisTurn);
-                }
-            }
-        }
-        // Damping Engine — the player ahead on permanents can't cast artifact,
-        // creature or enchantment spells.
-        if action.is_cast() {
-            let caster = self.priority.player_with_priority;
-            let permanent_spell = action
-                .cast_card_id()
-                .and_then(|id| self.find_card_anywhere(id))
-                .is_some_and(|c| {
-                    let d = &c.definition;
-                    d.is_artifact() || d.is_creature() || d.is_enchantment()
-                });
-            if permanent_spell && self.damping_engine_locks(caster) {
-                return Err(GameError::SilencedThisTurn);
-            }
-        }
-        // Angelic Arbiter — an opponent who attacked with a creature this turn
-        // can't cast spells for the rest of it.
-        if action.is_cast() {
-            let caster = self.priority.player_with_priority;
-            if self.players[caster].attacked_this_turn
-                && self.opponent_has_static(caster, |e| {
-                    matches!(e, crate::effect::StaticEffect::OpponentsWhoAttackedCantCast)
-                })
-            {
-                return Err(GameError::SilencedThisTurn);
-            }
-        }
-        // Voice of Victory — the active player's opponents can't cast spells
-        // during that player's turn. Dosan the Falling Leaf is the symmetric
-        // sibling: nobody casts off-turn, whoever controls it.
-        // City of Solitude is the broader sibling: it locks activations too,
-        // mana abilities included (they route through the same action).
-        if (action.is_cast() || matches!(action, GameAction::ActivateAbility { .. }))
-            && self.priority.player_with_priority != self.active_player_idx
-            && self.battlefield.iter().any(|c| {
-                c.definition.static_abilities.iter().any(|sa| {
-                    matches!(sa.effect, crate::effect::StaticEffect::PlayersActOnlyOnTheirOwnTurn)
-                })
-            })
-        {
-            return Err(GameError::SilencedThisTurn);
-        }
-        if action.is_cast() {
-            let caster = self.priority.player_with_priority;
-            let active = self.active_player_idx;
-            if caster != active
-                && self.battlefield.iter().any(|c| {
-                    c.definition.static_abilities.iter().any(|sa| {
-                        matches!(sa.effect, crate::effect::StaticEffect::PlayersCastOnlyOnOwnTurn)
-                    })
-                })
-            {
-                return Err(GameError::SilencedThisTurn);
-            }
-            let locked = caster != active
-                && !self.same_team(caster, active)
-                && self.battlefield.iter().any(|c| {
-                    c.controller == active
-                        && c.definition.static_abilities.iter().any(|sa| {
-                            matches!(
-                                sa.effect,
-                                crate::effect::StaticEffect::OpponentsCantCastDuringYourTurn
-                                    | crate::effect::StaticEffect::OpponentsCantActDuringYourTurn
-                            )
-                        })
-                });
-            if locked {
-                return Err(GameError::SilencedThisTurn);
-            }
+        // Every CR 601 cast-time lock — and the split-second gate that sits
+        // among them — behind one battlefield walk. The gate was eleven
+        // blocks, each taking its own whole-board `static_abilities` walk,
+        // with six `find_card_anywhere` lookups of the cast spell between
+        // them, for locks a normal board never has. See `cast_lock_scan`.
+        let locks = if action.is_cast() || matches!(action, GameAction::ActivateAbility { .. }) {
+            self.cast_lock_scan()
+        } else {
+            0
+        };
+        let rejected = self.action_lock_rejection(&action, locks);
+        // The mask's audit: with every bit forced on the gate is the ungated
+        // original, so the functional suite checks the mask on every action
+        // it exercises.
+        debug_assert_eq!(
+            rejected.as_ref().map(std::mem::discriminant),
+            self.action_lock_rejection(&action, u32::MAX).as_ref().map(std::mem::discriminant),
+            "cast_lock_scan skipped a lock that rejects this action",
+        );
+        if let Some(e) = rejected {
+            return Err(e);
         }
         let events = match action {
             GameAction::PlayLand(id) => self.play_land(id),

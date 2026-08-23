@@ -2141,20 +2141,25 @@ impl crate::game::GameState {
     /// permanents than each other player and a Damping Engine they haven't
     /// bought out of this turn is on the battlefield.
     pub(crate) fn damping_engine_locks(&self, player: usize) -> bool {
-        let count = |seat: usize| {
-            self.battlefield.iter().filter(|c| c.controller == seat).count()
-        };
-        let mine = count(player);
-        if (0..self.players.len()).any(|s| s != player && count(s) >= mine) {
-            return false;
-        }
-        self.battlefield.iter().any(|c| {
+        // Presence first: the counts are `players + 1` whole-battlefield
+        // walks and the Engine is on no board in a normal game, so asking
+        // "who is ahead" before "is there an Engine" pays for a question
+        // with no consumer. `&&` is pure on both sides; same answer.
+        let engine = self.battlefield.iter().any(|c| {
             c.definition
                 .static_abilities
                 .iter()
                 .any(|sa| matches!(sa.effect, crate::effect::StaticEffect::MostPermanentsCantPlay))
                 && !self.players[player].statics_ignored_this_turn.contains(&c.id)
-        })
+        });
+        if !engine {
+            return false;
+        }
+        let count = |seat: usize| {
+            self.battlefield.iter().filter(|c| c.controller == seat).count()
+        };
+        let mine = count(player);
+        !(0..self.players.len()).any(|s| s != player && count(s) >= mine)
     }
 
     /// CR 402.2 — `player`'s effective maximum hand size, honoring any
