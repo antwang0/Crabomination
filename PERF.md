@@ -1925,24 +1925,97 @@ batches, so moving it out costs an empty-`Vec` clone (free) and buys ~1.4 M.
 move-out would trade ~2.3 M for a `Vec` clone per checkpoint — probably a
 wash, measure before taking it.
 
-**(-16) `dispatch_triggers_for_events` — 140,102,601 / 7.30 % over 70,418
-calls, and it has never had an entry here.** Found while reading the
-forty-third pass's profile, not by ranking. `perform_action_inner` drains
-every action's event list through it, ~1.6 dispatches per action at ~1,990 Ir
-each. What one dispatch does, in order: two `mem::take`s and an early return
-on an empty batch (the common case, already guarded); `dispatch_board_scan`
-(**7,913,594 self + 8,520,694 in `ptr/non_null` = ~0.85 %**, a fused
-single-pass board walk that looks hard to improve); `permanents_with_
-abilities_removed`; and then a battlefield loop that runs **945,812 times**
-over six games. The loop's fast path is already two definition loads behind a
-`no_grants` gate. **Where to start:** the function is 7.30 % inclusive against
-1.49 % self *in its main entry alone* (~3.5 % once the `slice/iter`,
-`ptr/non_null` and `vec/mod` entries for the same function are added), so most
-of it is callees — get a `--tree=calling` on it before ranking anything
-inside. The unmeasured question that would size the whole entry: **how many of
-the 70,418 dispatches produce zero candidate triggers?** If it is most of
-them, the prize is a board-level "which `EventKind`s can anything here react
-to" answer; if it is not, this is real work and the entry is closed.
+**(-18) THE BOARD EPOCH — three candidates, one missing primitive, `4.44 %`
+between them, and two of the three are immune to the technique currently
+eating the first. Measured at `643330b2` (1,838,526,014) — the absolute Ir
+is what matters here; the percentages drift up as later commits shrink the
+denominator without touching these rows.**
+
+```text
+                                       Ir           %      calls   at 1,857 M
+computed_permanent's unscoped gather   50,062,699   2.72 %  25,736    3.42 %
+dispatch_board_scan                    24,561,076   1.34 %  53,838    1.32 %
+permanents_with_abilities_removed       7,030,646   0.38 %  53,838    0.39 %
+                                                    4.44 %
+```
+
+**The right-hand column is the same three rows one commit earlier, and it is
+the argument for this entry.** Widening a freeze scope (`643330b2`,
+-1.024 %) took the gather row from 3.42 % to 2.72 % — 32,510 gathers down to
+25,736 — and left `dispatch_board_scan` **byte-identical at 24,561,076** and
+`permanents_with_abilities_removed` flat. **Scope widening only reaches the
+gather.** Rows two and three are not layer-gather sites at all; they are
+whole-board walks with no scope to widen, so they will still be sitting there
+at 1.72 % when the scope work runs out.
+
+Every one of them answers a question about the **board**, not about its
+caller's arguments, and every one recomputes it from scratch on each call
+because nothing readable from `&self` can say "the board has not changed
+since last time". `frozen_effects` is the existing partial answer and it
+works — inside a `with_frozen_layers` scope the gather is memoized — but a
+scope is a *lexical* device and none of these three sites is inside one.
+This file has said three times that "a board-level memo with an epoch is the
+shape, and nothing on `&self` can hold it today". **That is no longer true,
+and here is why.**
+
+**Every board mutation already goes through one chokepoint: `CowBox`'s
+`DerefMut`.** The battlefield, `continuous_effects`, `cold` and each
+`PlayerData` are `CowBox`es; `iter_mut`, `battlefield_find_mut`, indexing —
+all of them reach `Arc::make_mut` through `deref_mut`. So a write counter on
+the handle is a complete record of writes:
+
+```rust
+pub struct CowBox<T: Clone>(Arc<T>, u64);
+fn deref_mut(&mut self) -> &mut T { self.1 += 1; Arc::make_mut(&mut self.0) }
+```
+
+The board key is then those counters plus the handful of non-`CowBox` scalars
+the layer gather reads (`active_player_idx`, `turn_number`, `step`, and
+whatever `active_static`'s wrappers touch — enumerate them, do not guess).
+A memo keyed on it, held behind `layer_freeze`'s existing `Mutex` so it is
+reachable from `&self`, is sound: an unchanged key proves no zone was
+written.
+
+**Cost of the key: one increment inside a function that is already doing
+`Arc::make_mut`.** Cost of a miss: nothing, it recomputes.
+
+**The failure mode is the dangerous one — a stale answer is a silently wrong
+rules result, not a crash** — so build it with the device this file already
+trusts: a `debug_assert` that recomputes and compares on every hit. The
+18.7 k-test suite and the golden traces then audit the key on every board
+shape they exercise, the same way the forty-third pass's checkpoint skip is
+audited by a `debug_assert` on the serialized state.
+
+**Take this after (-13) is finished, and expect it to be the pass after
+that.** It subsumes (-11)'s shape (ii), (-16)'s `dispatch_board_scan` half
+and (-9)'s "have the gate and the resolver share one scope".
+
+**(-16) `dispatch_triggers_for_events` — 141,288,450 / 7.61 % at the
+forty-third pass's tip, and the entry's own open question is now answered.**
+`perform_action_inner` drains every action's event list through it; **53,838
+dispatches get past the empty-batch early return**. The question this entry
+asked was how many of those produce a candidate trigger. **Almost none:
+phase 2 (`push_ordered_trigger_candidates`) costs 1,726,302 Ir self and
+~2.5 M inclusive over the whole run**, and its per-candidate work runs on the
+order of **1,300 times** — so **~97.5 % of full dispatches walk the whole
+board and produce nothing.**
+
+Where the 7.61 % sits, measured:
+* `dispatch_board_scan` **24,561,076 / 1.32 %** over 53,838 (456 Ir a call) —
+  board-only, event-independent, and therefore **(-18)'s**, not this entry's.
+* `permanents_with_abilities_removed` **7,160,454 / 0.39 %** over 53,838 —
+  same, also **(-18)'s**.
+* `event_matches_spec` 2,915,040 over 97,168; `apply_soulbond_pairing`
+  1,440,654 over 4,060.
+* The rest is the function's own walking, spread across its `slice/iter`,
+  `ptr/non_null` and `vec/mod` entries. Its in-body lines are all under 1 M
+  Ir — no single line is the cost.
+
+**So the tractable 1.71 % of this entry moved to (-18), and what is left here
+is a diffuse walk with no hot line.** Do not gate the battlefield loop on an
+`EventKind` presence mask: building the mask is the same
+`battlefield x triggered_abilities` walk the loop's fast path already does,
+which is the forty-third pass's `do_untap` null result exactly.
 
 **(-17) `check_state_based_actions`' `.collect()`s — 55,720 calls to
 `SpecFromIterNested::from_iter` for 35,174,999 Ir / 1.84 %, over 10,670

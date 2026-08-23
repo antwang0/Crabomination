@@ -24,13 +24,15 @@ should show a PERF/pass or round commit, not a card batch.
 
 Branch `claude/modern_decks`. **Pass 43**, run by two sessions committing
 concurrently on 2026-08-23 (one rebase, three PERF collisions). Base
-1,918,781,907 -> tip **1,857,530,653**, **-3.19 %**. Rows: the three
+1,918,781,907 -> tip **1,814,461,559**, **-5.44 %**. Rows: the three
 `GameState` `HashMap`s dropped rather than cleared (**-0.192 %**; hashbrown
 clones a table by *bucket count*, so a cleared map re-allocates on every
 state clone for the rest of the game), the `do_untap` block gate
-(**-0.168 %**), and **the round-closing pass dropping its checkpoint
+(**-0.168 %**), **the round-closing pass dropping its checkpoint
 (-2.842 %)** — the pass's largest row, unlocked by the ceiling measurement
-below. Plus one perf-neutral commit closing the defects section's only open
+below — the target scans taking one freeze instead of one per
+candidate (**-1.024 %**), and the dispatcher's per-dispatch `alloc_zeroed`
+for The Ring (**-1.308 %**). Plus one perf-neutral commit closing the defects section's only open
 entry (`ProtectionKind`, +0.0002 %) and one test-suite sweep (22 per-set
 factory lists -> one tree walk). **Fetch and re-read PERF's Log before
 starting anything** — the same candidate was attempted from both sides, and
@@ -54,6 +56,22 @@ the collision produced two of the pass's three lessons.
   2.6 points of the ceiling are still unbanked, and `GameState::clone` from
   `perform_action` is down 18,208 -> 8,266 calls, so the remaining shapes are
   what those 8,266 are.
+- **Then take (-18), the board epoch — `4.44 %` behind one missing
+  primitive, and 1.72 % of it is immune to the scope work.** Three
+  candidates recompute a *board-only* answer per call because nothing on
+  `&self` can say the board is unchanged: `computed_permanent`'s unscoped
+  gather (**2.72 %** over 25,736), `dispatch_board_scan` (**1.34 %** over
+  53,838) and `permanents_with_abilities_removed` (**0.38 %**). The
+  freeze-scope commit `643330b2` took the first from 3.42 % to 2.72 % and
+  left the other two **byte-identical** — they are whole-board walks with no
+  scope to widen, so they survive that whole line of work. This file has three times
+  said an epoch is the shape and "nothing on `&self` can hold it" — **that is
+  wrong, and PERF's (-18) says why**: every board write already funnels
+  through `CowBox::deref_mut`, so a write counter on the handle is a complete
+  record, and `layer_freeze`'s existing `Mutex` makes it reachable from
+  `&self`. Build it with a `debug_assert` that recomputes and compares on
+  every hit — a stale answer is a silently wrong rules result, so the suite
+  has to audit the key.
 - **Do not rebuild these three.** The checkpoint *husk pool* (exhaustive
   `clone_from` + thread-local husks): built, green, **-100,388 allocations**,
   and **+2.60 %** — `clone_from` cannot be the bulk copy that `clone`'s
