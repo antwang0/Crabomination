@@ -4214,15 +4214,16 @@ impl GameState {
         // when no sculptor is out and nothing carries a designation.
         let mut sculptors: Vec<usize> = Vec::new();
         let mut any_sector = false;
-        let mut any_unassigned = false;
         for c in &self.battlefield {
-            if c.definition.keywords.contains(&Keyword::SpaceSculptor)
-                && !sculptors.contains(&c.controller)
+            // The seat test first: `sculptors` is empty on every board that
+            // has no Space Sculptor, so it costs a length check, while the
+            // keyword test is a `Keyword::eq` call per printed keyword.
+            if !sculptors.contains(&c.controller)
+                && c.definition.keywords.iter().any(|k| matches!(k, Keyword::SpaceSculptor))
             {
                 sculptors.push(c.controller);
             }
             any_sector |= c.sector.is_some();
-            any_unassigned |= c.sector.is_none() && c.definition.is_creature();
         }
         if sculptors.is_empty() {
             if any_sector {
@@ -4232,7 +4233,15 @@ impl GameState {
             }
             return;
         }
-        if !any_unassigned {
+        // Only a board that actually has a sculptor needs to know whether
+        // anything is unassigned — this was a `CardDefinition::is_creature`
+        // per permanent per SBA sweep, 167,024 calls over six bench games,
+        // on boards that can never reach the assignment below.
+        if !self
+            .battlefield
+            .iter()
+            .any(|c| c.sector.is_none() && c.definition.is_creature())
+        {
             return;
         }
         // Opponents of a sculptor's controller assign first (CR 702.158c).

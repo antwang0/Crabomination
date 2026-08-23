@@ -5708,15 +5708,20 @@ impl GameState {
         let watchers: Vec<CardId> = self
             .battlefield
             .iter()
+            // The static first: `lands()` is a whole-battlefield walk and
+            // this ran one per permanent, so a land drop cost a quadratic
+            // sweep of the board to find a card almost no deck plays. The
+            // count comparison still reads `mine`, taken once before any
+            // sacrifice, so the answer is unchanged.
             .filter(|c| {
                 c.controller != p
-                    && mine > lands(self, c.controller)
                     && c.definition.static_abilities.iter().any(|sa| {
                         matches!(
                             self.active_static(&sa.effect, c),
                             Some(StaticEffect::OpponentLandsEnterThenSacrifice)
                         )
                     })
+                    && mine > lands(self, c.controller)
             })
             .map(|c| c.id)
             .collect();

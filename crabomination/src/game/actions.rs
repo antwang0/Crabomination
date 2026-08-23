@@ -13363,7 +13363,12 @@ impl GameState {
         // Agatha's Soul Cauldron — a creature you control with a +1/+1
         // counter has all activated abilities of creature cards exiled
         // with any Cauldron its controller controls.
-        if me.definition.is_creature()
+        // The counter bag first: `auto_tap_for_cost_inner` asks this per
+        // untapped permanent per tap batch and most permanents carry no
+        // counter at all, so an empty-bag check answers before
+        // `is_creature`'s `Vec<CardType>` walk runs.
+        if !me.counters.is_empty()
+            && me.definition.is_creature()
             && me.counter_count(crate::card::CounterType::PlusOnePlusOne) > 0
         {
             let cauldrons: Vec<CardId> = self
