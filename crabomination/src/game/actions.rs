@@ -16302,17 +16302,25 @@ impl GameState {
             // Carry a cost-sacrificed permanent's stats into the inline
             // resolution (resolve_effect resets the scratch) — Slobad's
             // "add {R} equal to the sacrificed artifact's mana value".
-            let effect = match cost_sac_pt {
-                Some((power, toughness)) => Effect::WithSacrificedPt {
-                    power,
-                    total_power: cost_sac_total_power,
-                    toughness,
-                    count: cost_sac_count,
-                    mana_value: cost_sac_mv,
-                    card: cost_sac_card,
-                    body: Box::new(ability.effect.clone()),
-                },
-                None => ability.effect.clone(),
+            // Borrowed, not cloned: `ability` comes out of `held`, which owns
+            // an `Arc<CardDefinition>` of its own, so the effect tree outlives
+            // the `&mut self` resolution without a deep copy. Every land tap
+            // paid that copy and its drop (6.2 M Ir / 0.35 % over 18,774).
+            let sac_wrapper;
+            let effect: &Effect = match cost_sac_pt {
+                Some((power, toughness)) => {
+                    sac_wrapper = Effect::WithSacrificedPt {
+                        power,
+                        total_power: cost_sac_total_power,
+                        toughness,
+                        count: cost_sac_count,
+                        mana_value: cost_sac_mv,
+                        card: cost_sac_card,
+                        body: Box::new(ability.effect.clone()),
+                    };
+                    &sac_wrapper
+                }
+                None => &ability.effect,
             };
             // CR 701.10f / 614.5 — "tap a permanent for mana" multipliers
             // (Mana Reflection ×2, Nyxbloom Ancient ×3). Stamp the transient

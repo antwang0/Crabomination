@@ -14449,7 +14449,7 @@ impl GameState {
         self.players[seat].mana_pool.pay(&cost).map_err(GameError::Mana)?;
         let mut events = vec![];
         self.discard_card(seat, card_id, &mut events);
-        events.extend(self.continue_ability_resolution(card_id, seat, effect, None)?);
+        events.extend(self.continue_ability_resolution(card_id, seat, &effect, None)?);
         Ok(events)
     }
 
@@ -18507,7 +18507,7 @@ impl GameState {
             } => {
                 let mut evs = self.apply_pending_effect_answer(in_progress, &answer)?;
                 let mut more = self.continue_ability_resolution(
-                    source, controller, remaining, target,
+                    source, controller, &remaining, target,
                 )?;
                 evs.append(&mut more);
                 evs
@@ -20745,7 +20745,7 @@ impl GameState {
         &mut self,
         source: CardId,
         controller: usize,
-        effect: crate::effect::Effect,
+        effect: &crate::effect::Effect,
         target: Option<Target>,
     ) -> Result<Vec<GameEvent>, GameError> {
         self.continue_ability_resolution_x(source, controller, effect, target, 0)
@@ -20759,13 +20759,13 @@ impl GameState {
         &mut self,
         source: CardId,
         controller: usize,
-        effect: crate::effect::Effect,
+        effect: &crate::effect::Effect,
         target: Option<Target>,
         x_value: u32,
     ) -> Result<Vec<GameEvent>, GameError> {
         let mut ctx = EffectContext::for_ability(source, controller, target.clone());
         ctx.x_value = x_value;
-        let events = self.resolve_effect(&effect, &ctx)?;
+        let events = self.resolve_effect(effect, &ctx)?;
         if let Some((decision, in_progress, remaining)) = self.suspend_signal.take() {
             self.pending_decision = Some(PendingDecision {
                 decision,
