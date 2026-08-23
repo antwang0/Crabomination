@@ -802,6 +802,7 @@ Base `1032979c` re-read at **1,918,781,907** (the forty-second pass's
 | step | before -> after | what |
 |---|---|---|
 | A | 1,918,781,907 -> 1,915,090,409 (**-0.192 %**) | the three `GameState` `HashMap`s are dropped, not cleared |
+| B | 1,915,082,326 -> 1,911,862,094 (**-0.168 %**) | the untap step asks once whether any static can reach it |
 
 **(A) `HashMap::clear` keeps the table, and every later `GameState::clone`
 re-allocates it.** hashbrown clones a table with the *source's* bucket count,
@@ -817,6 +818,27 @@ is unchanged at 104,310 (three per `GameState::clone`, 34,770 clones); only
 their cost moved. **The rule generalises: any `clear()` on a collection that
 a `GameState` clone reaches is a standing per-clone allocation.** `Vec` is
 exempt — `Vec::clone` allocates `len`, not `capacity`.
+
+**(B) the same idea as this pass's own refuted `do_untap` gate, and the
+difference between them is the whole lesson.** The refutation above reads
+"the six `battlefield x static_abilities` walks are not the cost; a
+short-circuiting `any` over an empty `static_abilities` is nearly free" — and
+that is exactly right about the *walks*. What (B) removes is not the walks but
+the **blocks around them**: `filtered_untap` builds a `Vec` of filters and a
+`HashSet`, `matrix_choice` builds a `HashMap`, `untap_caps` builds a
+`Vec<(HashSet, u32)>` through a `flat_map`, and the Mist-of-Stagnation and
+Seedborn passes each set up an iterator chain. One `any_static` bit computed
+once, hoisting `if !any_static { Default::default() }` in front of each block,
+reads **-3,220,232 / -0.168 %** — measured base-and-tip in one sitting on this
+pass's own base (which re-reads 1,915,082,326 against the 1,915,090,409 above,
+8,083 Ir of argv/sitting drift), and again at **-3,197,754 / -0.167 %** on the
+forty-second pass's tip before the rebase. Two bases, the same answer.
+
+**So (-7)'s rule survives one more test and gets sharper: gate the *site*, not
+the read — and "the site" is the block that allocates, not the loop that
+scans.** A gate that only shortens a scan of an empty `Vec` is worth nothing on
+this codebase (three losses under (-8b) and one here); a gate that skips a
+block which builds a collection is worth something every time.
 
 **Refuted, same pass, and it closes (-13)'s first shape: a per-thread pool of
 `GameState` husks with a hand-written `clone_from`.** `1,915,090,409 ->
@@ -893,8 +915,8 @@ those walks: its self cost across every `file:function` entry is ~9 M, and
 
 ### Forty-second pass — the cold group was being deep-copied for nothing
 
-Cumulative: **2,040,144,900 -> 1,915,584,970 Ir, -124,559,930 / -6.105 %**,
-in nine commits, behaviour-preserving (suite **18,728** green over 11
+Cumulative: **2,040,144,900 -> 1,918,782,724 Ir, -121,362,176 / -5.949 %**,
+in eight commits, behaviour-preserving (suite **18,728** green over 11
 binaries, all golden traces identical, clippy clean workspace-wide including
 the client). **Wall-clock, paired `release` + mimalloc A/B on one box:
 155.07 -> 163.69 games/s, +5.56 %** — see **Baseline**; that reading is taken
@@ -917,7 +939,6 @@ theirs, not this pass's.
 | F | 1,940,837,886 -> 1,935,547,942 (**-0.273 %**) | a cost's colours are a `ColorSet`, not a `Vec` |
 | G | 1,935,547,942 -> 1,928,339,700 (**-0.372 %**) | the untap step stops paying for locks nobody has |
 | H | 1,928,339,700 -> 1,918,782,724 (**-0.496 %**) | one walk of the effect tree answers all five colours |
-| I | 1,918,782,724 -> 1,915,584,970 (**-0.167 %**) | the untap step asks once whether any static can reach it |
 
 **(C) and (D) are the pass, and neither was on the candidates list.**
 `ColdState` is ~90 collections behind one `CowBox`, and `perform_action`
@@ -1440,7 +1461,8 @@ settings + debuginfo; system allocator, because valgrind replaces malloc and
 a mimalloc build would measure the interception), 1 thread, `--a gang --b
 gang --games 6 --seed 1 --decks fixed`.
 
-**The forty-second pass reads 1,915,584,970 Ir at its tip.** The table below
+**The forty-second pass reads 1,918,782,724 Ir at its tip, and the
+forty-third's second commit takes it to 1,911,862,094.** The table below
 was taken at `b1a95b22` (1,928,339,700), two commits earlier; those two remove
 `effect_produces_color`'s four redundant tree walks and five of `do_untap`'s
 static walks, so every share here reads ~0.7 % high and the
@@ -1841,11 +1863,14 @@ the tip:
 **(-15) `advance_step` — 308,637,209 / 16.09 % over 22,892, the largest engine
 subtree. Both of the forty-second pass's leads into it are now closed and it
 needs re-profiling from the top.**
-* **The six `battlefield x static_abilities` walks in `do_untap` — gated,
-  +0.0001 %, reverted** (forty-third pass). They are not the cost; a
-  short-circuiting `any` over an empty `static_abilities` is nearly free.
-  `do_untap`'s 37,097,627 Ir is ~9 M of self across every `file:function`
-  entry, 5.1 M of `do_phasing`, and ~23 M in callees nobody has attributed.
+* **The `do_untap` gate — two implementations, two answers, and the second one
+  PAID `-0.168 %`** (forty-third pass, rows in the Log). Gating the *walks*
+  read +0.0001 % and was reverted: a short-circuiting `any` over an empty
+  `static_abilities` is nearly free. Gating the *blocks* that build
+  collections around them — `filtered_untap`'s `Vec` + `HashSet`,
+  `matrix_choice`'s `HashMap`, `untap_caps`'s `flat_map` — landed.
+  `do_untap`'s remaining ~34 M is ~9 M of self across every `file:function`
+  entry, 5.1 M of `do_phasing`, and ~20 M in callees nobody has attributed.
   **Read the callee table first.**
 * **`do_cleanup` — 27,454,488 / 1.43 %, read, and there is no easy win.**
   `finish_cleanup` is 24,937,836 of it and `check_state_based_actions` is
