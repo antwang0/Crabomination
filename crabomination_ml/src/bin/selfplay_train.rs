@@ -2451,7 +2451,15 @@ fn feature_census(args: &Args, vocab: &Vocab, games: usize) {
         .collect();
     ratios.sort_by(|a, b| b.0.total_cmp(&a.0));
     if !ratios.is_empty() {
-        println!("\ntrained features the search meets most disproportionately (leaf/train):");
+        // "top 10 of 47" and "top 10 of 10" are different diagnoses of the same
+        // printed table: one says the skew is concentrated, the other that it is
+        // everywhere. Name the denominator.
+        println!(
+            "\ntrained features the search meets most disproportionately \
+             (leaf/train) — top {} of {}:",
+            ratios.len().min(10),
+            ratios.len(),
+        );
         for (r, name, t, l) in ratios.iter().take(10) {
             println!("  {name:<5} {r:5.2}x   train {t:6.2}%  leaf {l:6.2}%");
         }

@@ -249,7 +249,12 @@ fn main() {
             (!pinned, std::cmp::Reverse(c.static_score))
         });
     }
-    println!("\ntop candidates by static score{}:", if pins.is_empty() { "" } else { " (pins first)" });
+    println!(
+        "\ntop {} of {} candidates by static score{}:",
+        cap.max(10).min(candidates.len()),
+        candidates.len(),
+        if pins.is_empty() { "" } else { " (pins first)" },
+    );
     for c in candidates.iter().take(cap.max(10)) {
         println!("  {:>10}  score {:>4}  ({} spells)", c.label, c.static_score, c.main.len());
     }

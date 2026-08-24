@@ -203,7 +203,7 @@ closed, so none of them is re-derived.
 | 16 | 08-23 | A default no caller ever overrides | Clean in four readings; don't re-run — see below |
 | 17 | 08-23 | **A comment that names a call count or a share** | **Found five** across two concurrent runs. The share survives, the count rots. See below |
 | 18 | 08-23 | **A tool's own extraction step** | **Found two** (`ac85463f`), both in the profiling scripts: `cg_edges.py`'s total was ~18x high, `cg_lines.py` returned a silent zero. See below |
-| 19 | 08-24 | **A threshold or cap that silently truncates a listing** | **Found three** (`4107e017`), the same two scripts: top-40/45 tables and a 60 k-address resolution cap, all printed as if complete. See below |
+| 19 | 08-24 | **A threshold or cap that silently truncates a listing** | **Found seven** across two concurrent runs — `cg_edges.py`'s three tables and `cg_lines.py`'s two caps (`4107e017`), plus `cg_symbolize.py`'s recommended `--threshold` and three ranked report tables in `bot_probe` / `selfplay_train` / `recommend_pool`. See below |
 
 **A note the table would lose**: filters 3-5 and 7-10 are syntactic and
 found nothing between them. Filter 6 is not syntactic — it *runs* the
@@ -344,9 +344,9 @@ filter yields: every extraction step either agrees with a number its source
 computed itself, or refuses.** An extraction that yields nothing looks
 exactly like a measurement that found nothing.
 
-**The nineteenth filter was run 2026-08-24 and is NOT clean — three hits, all
-in the same two scripts.** *A threshold or cap that silently truncates a
-listing.* `cg_edges.py` printed its caller/callee tables at `most_common(40)`
+**The nineteenth filter was run 2026-08-24 and is NOT clean — seven hits
+across two concurrent runs, three of them in the same two scripts.** *A
+threshold or cap that silently truncates a listing.* `cg_edges.py` printed its caller/callee tables at `most_common(40)`
 and its self-cost table at `most_common(45)`; `cg_lines.py` resolved only
 `most_common(60000)` addresses and printed `most_common(45)` lines. Every one
 stopped at its limit and read as finished — the shape behind pass 48's two
@@ -357,6 +357,34 @@ calls that went with them (`4107e017`).
 self-cost table's top 45 rows are 68.5 % of the program, and 1,150 rows hold
 the other 31.5 %.** A profile that diffuse is why pass 49's wins came from
 counting call rows rather than ranking by self cost.
+
+**A second run swept the same filter concurrently and found four more, none of
+them in those two scripts.** The tools were where both runs looked first
+because filters 15, 17 and 18 all landed there; the rest of the yield was in
+output a human ranks work by.
+
+* **`cg_edges.py`'s docstring contradicted its own printer**, and that is the
+  sharpest form of this shape: "`--tree` truncates caller lists at its
+  threshold … This reads the dump directly, so a table is complete" sat above
+  `most_common(40)`. The parse is complete; the print was not. The sentence
+  now says which half it means, and `--rows N` (`0` = all) lifts the cap for
+  the one reader who went looking for the tail.
+* **`cg_symbolize.py`'s docstring recommended `callgrind_annotate
+  --threshold=95` / `--threshold=99`** — the exact truncation `cg_edges.py`
+  exists to escape, offered from the file a reader hits *first*. Replaced with
+  the `cg_edges.py` invocations and the reason.
+* **Three ranked report tables named no denominator**: `bot_probe`'s "what the
+  bot kept proposing while wedged" (top 12) and its combat-shape table (top
+  10), `selfplay_train`'s leaf/train ratio table (top 10), and
+  `recommend_pool`'s static-score table. "Top 10 of 47" and "top 10 of 10" are
+  different diagnoses of the same printed rows.
+
+**What the filter did *not* find, and the distinction is worth keeping.** The
+engine's own `take`/`truncate` caps — `w.attack_search`, `w.block_search`,
+`MAX_CANDIDATES`, `MAX_FOLLOW_UPS`, convoke's `cap` — are named
+search-quality decisions with doc comments, not silent truncations of a
+listing someone reads, and filter 8 already swept that syntax for panic
+safety. **The whole yield was in output a human ranks work by.**
 
 **A twentieth filter is owed. The candidate:** *a default that only one caller
 ever exercises* — the inverse of the sixteenth, which asked for defaults no

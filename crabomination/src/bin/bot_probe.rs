@@ -20,6 +20,12 @@
 
 use std::collections::BTreeMap;
 
+/// Row caps on the two ranked tables this binary prints. Both listings name
+/// the population they were drawn from, so a capped table cannot be read as a
+/// complete one — the nineteenth robustness filter's rule.
+const STUCK_ROWS: usize = 12;
+const SHAPE_ROWS: usize = 10;
+
 use crabomination::card::CardDefinition;
 use crabomination::cube::{CardFactory, cube_deck, random_color_pair};
 use crabomination::game::{GameAction, GameState};
@@ -640,10 +646,17 @@ fn report(decks: &str, c: &Counts, profile: &str) {
         println!("  stuck at {k:<28} {v:>5}");
     }
     if !c.stuck_actions.is_empty() {
-        println!("  what the bot kept proposing while wedged:");
         let mut v: Vec<_> = c.stuck_actions.iter().collect();
         v.sort_by_key(|(_, n)| std::cmp::Reverse(**n));
-        for (k, n) in v.iter().take(12) {
+        // Say the denominator. A "top 12" that does not name the population it
+        // was drawn from reads as the whole of it — and the whole of it is the
+        // question a wedged bot is being asked.
+        println!(
+            "  what the bot kept proposing while wedged (top {} of {}):",
+            v.len().min(STUCK_ROWS),
+            v.len(),
+        );
+        for (k, n) in v.iter().take(STUCK_ROWS) {
             println!("    {k:<70} {n:>6}");
         }
     }
@@ -732,11 +745,19 @@ fn report(decks: &str, c: &Counts, profile: &str) {
         c.attack_combats_all_in,
         pct(c.attack_combats_all_in, c.attack_combats),
     );
-    println!("\n  top shapes (attackers x blockers available):");
     let mut shapes: Vec<_> = c.combat_shapes.iter().collect();
     shapes.sort_by_key(|(_, n)| std::cmp::Reverse(**n));
-    for &(&(atk, blk), &n) in shapes.iter().take(10) {
+    println!(
+        "\n  top shapes (attackers x blockers available) — {} of {}:",
+        shapes.len().min(SHAPE_ROWS),
+        shapes.len(),
+    );
+    for &(&(atk, blk), &n) in shapes.iter().take(SHAPE_ROWS) {
         println!("    {atk} x {blk:<3} {n:>6}  {:>5.1}%", pct(n, c.combats));
+    }
+    let tail: usize = shapes.iter().skip(SHAPE_ROWS).map(|(_, n)| **n).sum();
+    if tail > 0 {
+        println!("    … rest      {tail:>6}  {:>5.1}%", pct(tail, c.combats));
     }
 
     println!("\nactions by step and kind:");

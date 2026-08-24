@@ -11,12 +11,20 @@ picking the bias that lands the most addresses inside a `FUNC` symbol.
 
     python3 scripts/cg_symbolize.py cg.out target/profiling-fast/bot_ladder \
         > cg.sym.out
-    callgrind_annotate --auto=no --threshold=95 cg.sym.out
-    callgrind_annotate --auto=no --tree=caller --threshold=99 cg.sym.out
+    python3 scripts/cg_edges.py cg.sym.out                # self costs
+    python3 scripts/cg_edges.py cg.sym.out --callers __rust_alloc
 
 Line-level (`--auto=yes`) annotation still needs DWARF valgrind can read and
 is not restored by this. Function totals, call counts and `--tree=caller` /
 `--tree=calling` all work.
+
+**Read a caller or callee table with `cg_edges.py`, not `callgrind_annotate
+--tree`.** `--tree`'s `--threshold` drops rows out of the middle of a caller
+block without saying so — that is how the forty-eighth pass lost `finish_grow`
+(200,972 allocations) and `finalize_cast` (24,108) out of `__rust_alloc`'s
+callers and read 23 k of the program's 967 k. The `--threshold=95` /
+`--threshold=99` invocations this docstring used to recommend are that same
+silent truncation, which is why they are gone from it.
 """
 import bisect
 import re

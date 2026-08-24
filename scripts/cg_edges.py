@@ -11,10 +11,18 @@ block that way). This reads the dump directly, so a table is complete.
     python3 scripts/cg_edges.py cg.sym.out                # top self costs
     python3 scripts/cg_edges.py cg.sym.out --callers __rust_alloc
     python3 scripts/cg_edges.py cg.sym.out --callees finalize_cast
+    python3 scripts/cg_edges.py cg.sym.out --callers __rust_alloc --rows 0
 
 Names match on substring, so `--callers grow_one` folds every
 monomorphization. Edge costs are inclusive of the callee's subtree, as
 callgrind records them; rank an allocation table by *calls*, not Ir.
+
+The *parse* is complete; the *printed table* is capped at `--rows` (default
+40, `0` for all) and `show` says what the cap left out. The docstring's own
+"so a table is complete" above is about the parse and used to read as a claim
+about the print — which is the same failure as the `--tree` truncation this
+script was written to escape, and is what the nineteenth robustness filter
+found here.
 
 The program total is the sum of the *self* lines only. Summing every cost
 line adds each call edge's whole subtree on top and lands ~18x high, which
@@ -118,10 +126,25 @@ def show(rows, total, fmt, limit=40):
 def main():
     if len(sys.argv) < 2:
         sys.exit(__doc__)
-    path = sys.argv[1]
-    mode = sys.argv[2] if len(sys.argv) > 2 else None
-    needle = sys.argv[3] if len(sys.argv) > 3 else None
+    argv = sys.argv[1:]
+    # `--rows 0` prints the whole ranked list. A cap that cannot be lifted
+    # still hides its tail from the one reader who went looking for it.
+    rows = None
+    if "--rows" in argv:
+        i = argv.index("--rows")
+        rows = int(argv[i + 1])
+        del argv[i : i + 2]
+    path = argv[0]
+    mode = argv[1] if len(argv) > 1 else None
+    needle = argv[2] if len(argv) > 2 else None
     self_cost, edge_cost, edge_calls, total, declared = parse(path)
+
+    def cap(default):
+        """The row limit for one table: `--rows` if given, else its default."""
+        if rows is None:
+            return default
+        return len(self_cost) + len(edge_cost) if rows == 0 else rows
+
     print(f"# total Ir {total:,}")
     if declared is not None and declared != total:
         print(f"# WARNING: dump's own totals: line says {declared:,} — parse is incomplete")
@@ -135,6 +158,7 @@ def main():
             calls.most_common(),
             sum(calls.values()),
             lambda name, c: f"{c:>9,} {cost[name]:>14,}  {name[:110]}",
+            limit=cap(40),
         )
     elif mode == "--inclusive":
         inc = collections.Counter()
@@ -145,13 +169,14 @@ def main():
             inc.most_common(),
             None,
             lambda name, v: f"{v:>14,} ({100 * v / total:5.2f}%)  {name[:110]}",
+            limit=cap(40),
         )
     else:
         show(
             self_cost.most_common(),
             total,
             lambda name, v: f"{v:>14,} ({100 * v / total:5.2f}%)  {name[:110]}",
-            limit=45,
+            limit=cap(45),
         )
 
 

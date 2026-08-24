@@ -66,6 +66,11 @@ callgrind_annotate --auto=no --inclusive=yes cg.sym.out       # inclusive
 python3 scripts/cg_edges.py cg.sym.out                        # self costs
 python3 scripts/cg_edges.py cg.sym.out --callers __rust_alloc # the alloc table
 python3 scripts/cg_edges.py cg.sym.out --callees finalize_cast
+python3 scripts/cg_edges.py cg.sym.out --callers __rust_alloc --rows 0  # all
+# **A listing that caps its rows says what it dropped, and `--rows N` (`0` =
+# no cap) lifts the cap.** Until the fiftieth pass neither was true, under a
+# docstring that promised a *complete* table — the `--tree` truncation above
+# wearing the fix's clothes. Nineteenth robustness filter; see TODO.
 # Per-source-line attribution needs the DWARF *packed into the binary*, which
 # is what `[profile.profiling-lines]` is for (cold build; it reads the same
 # total, 1,659,704,679 vs profiling-fast's 1,659,704,666, so the two inline
