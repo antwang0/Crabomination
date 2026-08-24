@@ -11351,6 +11351,16 @@ impl GameState {
         // `statics_granted_triggers_with` is per-card, so it stays per-card.
         let any_static_grant = !trigger_grants.is_empty() || !self.turn_granted_triggers.is_empty();
         let any_equip_grant = !equip_grants.is_empty();
+        // CR 613 — the grant filters read the computed type line, so an
+        // unfrozen walk re-gathers per (permanent, grant). Same device and
+        // same proof as `dispatch_triggers_for_events` (`36e998aa`): the loop
+        // holds a shared borrow of `self.battlefield` throughout, so no
+        // `&mut self` call can happen inside it. 3.05 % of `--decks cube` at
+        // `fdac88df`'s tip.
+        let freeze = any_static_grant || any_equip_grant;
+        if freeze {
+            self.freeze_layers_push();
+        }
         for c in self.battlefield.iter() {
             if stripped.contains(&c.id) {
                 continue;
@@ -11376,6 +11386,9 @@ impl GameState {
                     candidates.push((cid, c_controller, t.effect, t.event.filter, usize::MAX, false));
                 }
             }
+        }
+        if freeze {
+            self.freeze_layers_pop();
         }
         // CR 902.5 — a Vanguard avatar's cast trigger fires from the command
         // zone (Serra Angel Avatar's "whenever you cast a spell, gain 2 life").
