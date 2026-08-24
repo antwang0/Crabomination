@@ -807,6 +807,20 @@ impl GameState {
         let any_static_grant = !trigger_grants.is_empty() || !self.turn_granted_triggers.is_empty();
         let mut candidates: Vec<(CardId, Effect, usize, Option<crate::card::Predicate>)> =
             Vec::new();
+        // CR 613 — `statics_granted_triggers_with` evaluates each grant's
+        // `SelectionRequirement` against this permanent, and the requirement
+        // reads the *computed* type line: outside a freeze scope that is a
+        // whole-game continuous-effect gather per (permanent, grant) pair.
+        // This walk is the second-largest consumer of that path on the
+        // sealed/cube pools — 21.7 % of the program on `--decks cube` at the
+        // dispatcher's own fix — and, like the dispatcher's, the loop holds a
+        // shared borrow of `self.battlefield` throughout, so no `&mut self`
+        // call can happen inside it. Gated on the same `any_static_grant`
+        // fact the per-card branch reads, so a board that grants nothing pays
+        // nothing. See `dispatch_triggers_for_events` for the measurements.
+        if any_static_grant {
+            self.freeze_layers_push();
+        }
         for c in self.battlefield.iter() {
             // Printed triggers plus statics-granted ones (Kataki's "All
             // artifacts have '…upkeep…'"), both firing off `c`. Filter on the
@@ -825,6 +839,9 @@ impl GameState {
                     }
                 }
             }
+        }
+        if any_static_grant {
+            self.freeze_layers_pop();
         }
         // CR 702.6e / 303.4 — step triggers granted to a permanent by an
         // attached Aura/Equipment's `equipped_bonus` fire as though printed on
