@@ -21,11 +21,16 @@ claude/modern_decks origin/claude/modern_decks` — the container clones `main`,
 ~2,200 commits behind. **Sessions run this branch concurrently: expect to
 rebase mid-run and re-read your numbers afterwards.**
 
-1. **Nothing is in flight. Tip `1,314,421,002` Ir.** Pass 50 reads
-   `1,531,246,782 -> 1,314,421,002`, **-14.160 %** in five commits (A -6.958,
-   B -2.022, C -4.703, D -0.875, E -0.316); pass 49 under it -5.785 %. Suite
-   18,712 / 0 / 5 over 22 binaries, traces unchanged, clippy clean, `--bench`
-   invariants byte-identical (196,220 / 27.53 / 0 stalls / determinism ok).
+1. **Nothing is in flight. Re-read at `1,314,288,098` Ir** at `03ab571d`
+   (pass 50's tip plus pass 49's three; the three commits above it are
+   comment-only). Pass 50's own reading of its tip was 1,314,421,002, and the
+   133 k gap is not accounted for by anything in between — **re-read your own
+   base**.
+   Pass 50 reads `1,531,246,782 -> 1,314,421,002`, **-14.160 %** in five
+   commits (A -6.958, B -2.022, C -4.703, D -0.875, E -0.316); pass 49 under
+   it -5.785 %. Suite **18,712 / 0 / 5** over 22 binaries, traces unchanged,
+   `cargo clippy --workspace --all-targets` clean, `--bench` invariants
+   byte-identical (196,220 / 27.53 / 0 stalls / determinism ok, peak RSS 21.6).
    **No net needs retraining.**
 2. **A determinism bug the wide-pool sweep could not see is FIXED
    (`c6898506`), and the sweep recipe changes because of it.** `restart_game`
