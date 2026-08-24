@@ -1346,12 +1346,17 @@ pub fn gitaxian_anatomist() -> CardDefinition {
         },
         power: 2,
         toughness: 5,
-        triggered_abilities: vec![etb(Effect::Seq(vec![
-            Effect::Tap {
-                what: Selector::This,
-            },
-            Effect::Proliferate,
-        ]))],
+        // "you **may** tap it. If you do, proliferate." — one choice covers
+        // both halves, which is what "if you do" means.
+        triggered_abilities: vec![etb(Effect::MayDo {
+            description: "Tap Gitaxian Anatomist and proliferate?".into(),
+            body: Box::new(Effect::Seq(vec![
+                Effect::Tap {
+                    what: Selector::This,
+                },
+                Effect::Proliferate,
+            ])),
+        })],
         ..Default::default()
     }
 }

@@ -5519,8 +5519,13 @@ pub fn trygon_predator() -> CardDefinition {
         keywords: vec![Keyword::Flying],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
-            effect: Effect::Destroy {
-                what: target_filtered(R::Artifact.or(R::Enchantment).and(R::ControlledByOpponent)),
+            effect: Effect::MayDo {
+                description: "Destroy target artifact or enchantment that player controls?".into(),
+                body: Box::new(Effect::Destroy {
+                    what: target_filtered(
+                        R::Artifact.or(R::Enchantment).and(R::ControlledByOpponent),
+                    ),
+                }),
             },
         }],
         ..Default::default()

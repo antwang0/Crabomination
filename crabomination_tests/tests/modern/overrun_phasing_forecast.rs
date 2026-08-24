@@ -55,9 +55,32 @@ fn triumph_of_the_hordes_grants_infect_and_trample() {
 }
 
 /// Aura Shards destroys an artifact/enchantment whenever a creature you control
-/// enters.
+/// enters — when its controller takes the printed "you may".
 #[test]
 fn aura_shards_destroys_artifact_on_creature_etb() {
+    let (mut g, stone) = aura_shards_board();
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    drain_stack(&mut g);
+    assert!(!g.battlefield.iter().any(|c| c.id == stone),
+        "creature ETB triggers Aura Shards to destroy the opponent's artifact");
+}
+
+/// …and declining leaves it alone. The printed text is "you **may** destroy
+/// target artifact or enchantment", and the may is the only out on a board
+/// where the sole legal target is your own permanent — a trigger's targets are
+/// mandatory once it triggers.
+#[test]
+fn aura_shards_may_be_declined() {
+    let (mut g, stone) = aura_shards_board();
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(false)]));
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.id == stone),
+        "declining the optional trigger leaves the artifact on the battlefield");
+}
+
+/// Aura Shards out, an opposing artifact, and a creature cast to trigger it —
+/// left on the stack so the caller can answer the trigger.
+fn aura_shards_board() -> (crabomination::game::GameState, crabomination::card::CardId) {
     let mut g = two_player_game();
     g.add_card_to_battlefield(0, catalog::aura_shards());
     let stone = g.add_card_to_battlefield(1, catalog::mind_stone()); // opponent's artifact
@@ -67,9 +90,7 @@ fn aura_shards_destroys_artifact_on_creature_etb() {
     g.perform_action(GameAction::CastSpell {
         card_id: bear, target: None, additional_targets: vec![], mode: None, x_value: None,
     }).expect("cast a creature under Aura Shards");
-    drain_stack(&mut g);
-    assert!(!g.battlefield.iter().any(|c| c.id == stone),
-        "creature ETB triggers Aura Shards to destroy the opponent's artifact");
+    (g, stone)
 }
 
 /// Avenger of Zendikar makes a Plant per land on ETB, then landfall pumps every

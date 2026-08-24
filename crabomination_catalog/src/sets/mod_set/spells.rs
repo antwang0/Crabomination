@@ -283,10 +283,13 @@ pub fn aura_shards() -> CardDefinition {
                     what: Selector::TriggerSource,
                     filter: SelectionRequirement::Creature,
                 }),
-            effect: Effect::Destroy {
-                what: target_filtered(
-                    SelectionRequirement::Artifact.or(SelectionRequirement::Enchantment),
-                ),
+            effect: Effect::MayDo {
+                description: "Destroy target artifact or enchantment?".into(),
+                body: Box::new(Effect::Destroy {
+                    what: target_filtered(
+                        SelectionRequirement::Artifact.or(SelectionRequirement::Enchantment),
+                    ),
+                }),
             },
         }],
         ..Default::default()

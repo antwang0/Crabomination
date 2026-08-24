@@ -767,10 +767,26 @@ fn vindictive_flamestoker_oil_on_noncreature_cast() {
 fn gitaxian_anatomist_taps_and_proliferates() {
     let mut g = two_player_game();
     g.players[1].poison_counters = 1;
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
     let ga = g.move_card_to_battlefield_for_test(0, catalog::gitaxian_anatomist());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
     drain_stack(&mut g);
     assert!(g.battlefield.iter().find(|c| c.id == ga).unwrap().tapped, "tapped itself");
     assert_eq!(g.players[1].poison_counters, 2, "proliferated opponent poison");
+}
+
+/// "you **may** tap it. If you do, proliferate." — one choice covers both
+/// halves, so declining leaves it untapped *and* proliferates nothing.
+#[test]
+fn gitaxian_anatomist_tap_and_proliferate_are_one_optional_choice() {
+    let mut g = two_player_game();
+    g.players[1].poison_counters = 1;
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    let ga = g.move_card_to_battlefield_for_test(0, catalog::gitaxian_anatomist());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(false)]));
+    drain_stack(&mut g);
+    assert!(!g.battlefield.iter().find(|c| c.id == ga).unwrap().tapped, "declined, so untapped");
+    assert_eq!(g.players[1].poison_counters, 1, "and nothing proliferated");
 }
 
 /// Basilica Shepherd mints two Mite tokens on entry.

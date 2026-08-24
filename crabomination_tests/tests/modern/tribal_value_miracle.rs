@@ -1004,10 +1004,37 @@ fn noxious_gearhulk_etb_destroys_and_gains_life() {
     let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
     let id = g.add_card_to_battlefield(0, catalog::noxious_gearhulk());
     let life = g.players[0].life;
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
     g.fire_self_etb_triggers(id, 0);
     drain_stack(&mut g);
     assert!(!g.battlefield.iter().any(|c| c.id == bear), "destroyed the creature");
     assert_eq!(g.players[0].life, life + 2, "gained life equal to its toughness");
+}
+
+/// "you **may** destroy **another** target creature" — both riders. Declining
+/// leaves the board alone, and the Gearhulk is never a legal target for its own
+/// trigger.
+#[test]
+fn noxious_gearhulk_destroy_is_optional_and_never_hits_itself() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_battlefield(0, catalog::noxious_gearhulk());
+    let life = g.players[0].life;
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(false)]));
+    g.fire_self_etb_triggers(id, 0);
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.id == bear), "declined, so the creature survives");
+    assert!(g.battlefield.iter().any(|c| c.id == id), "and so does the Gearhulk");
+    assert_eq!(g.players[0].life, life, "no life gained without a destroy");
+
+    // With nothing else on the board the trigger has no legal target at all —
+    // "another" excludes the source, so it cannot eat itself.
+    let mut g2 = two_player_game();
+    let solo = g2.add_card_to_battlefield(0, catalog::noxious_gearhulk());
+    g2.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    g2.fire_self_etb_triggers(solo, 0);
+    drain_stack(&mut g2);
+    assert!(g2.battlefield.iter().any(|c| c.id == solo), "the Gearhulk is not its own target");
 }
 
 #[test]

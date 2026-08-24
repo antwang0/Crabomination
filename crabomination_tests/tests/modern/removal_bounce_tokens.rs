@@ -717,9 +717,27 @@ fn reclamation_sage_etb_destroys_artifact() {
     g.perform_action(GameAction::CastSpell {
         card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
     }).expect("Reclamation Sage castable for {2}{G}");
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
     drain_stack(&mut g);
     assert!(!g.battlefield.iter().any(|c| c.id == stone),
         "Mind Stone should be destroyed by Sage's ETB");
+}
+
+/// "you **may** destroy target artifact or enchantment" — declining leaves it.
+#[test]
+fn reclamation_sage_etb_destroy_is_optional() {
+    let mut g = two_player_game();
+    let stone = g.add_card_to_battlefield(1, catalog::mind_stone());
+    let id = g.add_card_to_hand(0, catalog::reclamation_sage());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Reclamation Sage castable for {2}{G}");
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(false)]));
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.id == stone),
+        "declining the optional trigger leaves the Mind Stone alone");
 }
 
 /// Acidic Slime is a 2/2 Deathtouch and its ETB hits a land.

@@ -799,9 +799,26 @@ fn trygon_predator_destroys_artifact_on_combat_damage() {
     let ctx = crabomination::game::effects::EffectContext::for_trigger(
         trygon, 0, Some(Target::Permanent(art)), 0,
     );
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
     g.resolve_effect(&trig, &ctx).unwrap();
     drain_stack(&mut g);
     assert!(g.battlefield_find(art).is_none(), "Trygon destroyed the opponent's artifact");
+}
+
+/// …and the printed "you may" can be declined.
+#[test]
+fn trygon_predator_may_decline_the_destroy() {
+    let mut g = two_player_game();
+    let trygon = g.add_card_to_battlefield(0, catalog::trygon_predator());
+    let art = g.add_card_to_battlefield(1, catalog::null_rod());
+    let trig = catalog::trygon_predator().triggered_abilities[0].effect.clone();
+    let ctx = crabomination::game::effects::EffectContext::for_trigger(
+        trygon, 0, Some(Target::Permanent(art)), 0,
+    );
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(false)]));
+    g.resolve_effect(&trig, &ctx).unwrap();
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(art).is_some(), "declined, so the artifact survives");
 }
 
 /// Restless Fortress animates 1/4 and drains 2 from the defender on attack.

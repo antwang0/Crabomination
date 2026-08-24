@@ -255,8 +255,25 @@ Tasigur (Splice / Delve).
 - **Conditional-gate flattening** (~12): a printed "if/may" condition dropped,
   effect fires unconditionally (Silverquill Standardbearer, Lorehold Crackleflame,
   Witherbloom Mortislide, Witherbloom Apprentice, …).
-- **Optional "may pay" → mandatory** (~10): Witherbloom Pestcaster ({B}{G}),
-  Aura Shards, Leonin Snarecaster, Heated Argument, Pursue the Past, …
+- **Optional "may" → mandatory — now has an auditor, and it is bigger than
+  ~10.** `scripts/audit_dropped_may.py` diffs every catalog definition against
+  the offline Scryfall cache and flags the ones whose oracle says "you may"
+  and whose definition carries no optional primitive: **344 of 10,851 cards
+  checked** (4,144 synthesized `(b###)` names are skipped — they have no
+  oracle to be wrong against, which is why the hand-written list above was
+  ten). Reminder text and "…rather than pay this spell's mana cost" are
+  filtered out; the residue still contains false positives where the engine
+  models the choice elsewhere, so read the oracle before fixing one.
+  **The cluster where declining actually matters is "you may destroy /
+  sacrifice / tap"** — an effect that can hurt its own controller, and a
+  trigger's targets are mandatory once it triggers, so the "may" is the only
+  out. Eight of those were fixed at the fifty-fourth pass (Aura Shards,
+  Reclamation Sage, Manglehorn, Noxious Gearhulk — which also could target
+  itself despite "another" — Trygon Predator, Leonin Snarecaster, Choking
+  Tethers' cycling trigger, Gitaxian Anatomist); each has a decline test.
+  What is left of that cluster is the "tap **or** untap" modals (Bounding
+  Krasis, Pestermite, Chain Stasis, Thassa's Ire, Sword of the Paruns), which
+  need mode choice, not just a `MayDo`.
 - **"each opponent" instead of "target/defending player"** (multiplayer drift):
   Hellrider, Bojuka Bog, Tormod's Crypt, Barbed Servitor, Lorehold Apprentice, …
 - **Per-N counting flattened to a constant**: Witherbloom per-creature-milled

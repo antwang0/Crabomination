@@ -113,8 +113,11 @@ pub fn leonin_snarecaster() -> CardDefinition {
         },
         power: 2,
         toughness: 1,
-        triggered_abilities: vec![etb(Effect::Tap {
-            what: target_filtered(SelectionRequirement::Creature),
+        triggered_abilities: vec![etb(Effect::MayDo {
+            description: "Tap target creature?".into(),
+            body: Box::new(Effect::Tap {
+                what: target_filtered(SelectionRequirement::Creature),
+            }),
         })],
         ..Default::default()
     }

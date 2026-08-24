@@ -1874,7 +1874,10 @@ pub fn choking_tethers() -> CardDefinition {
             filter: R::Creature,
             effect: Box::new(Effect::Tap { what: Selector::Target(0) }),
         },
-        triggered_abilities: vec![on_cycle(Effect::Tap { what: target_filtered(R::Creature) })],
+        triggered_abilities: vec![on_cycle(Effect::MayDo {
+            description: "Tap target creature?".into(),
+            body: Box::new(Effect::Tap { what: target_filtered(R::Creature) }),
+        })],
         ..Default::default()
     }
 }

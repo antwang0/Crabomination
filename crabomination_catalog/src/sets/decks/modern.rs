@@ -3851,10 +3851,13 @@ pub fn reclamation_sage() -> CardDefinition {
         toughness: 1,
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-            effect: Effect::Destroy {
-                what: target_filtered(
-                    SelectionRequirement::Artifact.or(SelectionRequirement::Enchantment),
-                ),
+            effect: Effect::MayDo {
+                description: "Destroy target artifact or enchantment?".into(),
+                body: Box::new(Effect::Destroy {
+                    what: target_filtered(
+                        SelectionRequirement::Artifact.or(SelectionRequirement::Enchantment),
+                    ),
+                }),
             },
         }],
         ..Default::default()
@@ -38919,19 +38922,31 @@ pub fn noxious_gearhulk() -> CardDefinition {
         power: 5,
         toughness: 4,
         keywords: vec![Keyword::Menace],
-        // "You may destroy target creature; if you do, gain life = its
-        // toughness." The target is bound to slot 0 by the Destroy selector;
-        // GainLife reads its toughness before it leaves. (The "may" collapses
-        // to mandatory — there is always a legal creature target in practice.)
-        triggered_abilities: vec![etb(Effect::Seq(vec![
-            Effect::GainLife {
-                who: Selector::You,
-                amount: Value::ToughnessOf(Box::new(Selector::Target(0))),
-            },
-            Effect::Destroy {
-                what: target_filtered(SelectionRequirement::Creature),
-            },
-        ]))],
+        // "You may destroy **another** target creature; if you do, gain life
+        // equal to its toughness." The target is bound to slot 0 by the
+        // Destroy selector; GainLife reads its toughness before it leaves,
+        // which is why it is sequenced first.
+        //
+        // Two things the older shape dropped: the "may" (a board where the
+        // only other creature is yours forced you to kill it — a trigger's
+        // targets are mandatory once it triggers, so the "may" was the only
+        // out), and "another", which let it target itself.
+        triggered_abilities: vec![etb(Effect::MayDo {
+            description: "Destroy another target creature and gain life equal to its toughness?"
+                .into(),
+            body: Box::new(Effect::Seq(vec![
+                Effect::GainLife {
+                    who: Selector::You,
+                    amount: Value::ToughnessOf(Box::new(Selector::Target(0))),
+                },
+                Effect::Destroy {
+                    what: target_filtered(
+                        SelectionRequirement::Creature
+                            .and(SelectionRequirement::OtherThanSource),
+                    ),
+                },
+            ])),
+        })],
         ..Default::default()
     }
 }

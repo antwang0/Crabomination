@@ -297,8 +297,25 @@ fn leonin_snarecaster_etb_taps_a_creature() {
     g.perform_action(GameAction::CastSpell {
         card_id: id, target: Some(Target::Permanent(bear)), additional_targets: vec![], mode: None, x_value: None,
     }).expect("Leonin Snarecaster castable");
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
     drain_stack(&mut g);
     assert!(g.battlefield_find(bear).unwrap().tapped, "ETB taps the target creature");
+}
+
+/// "you **may** tap target creature" — declining leaves it untapped.
+#[test]
+fn leonin_snarecaster_etb_tap_is_optional() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::leonin_snarecaster());
+    g.players[0].mana_pool.add_colorless(1);
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(bear)), additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Leonin Snarecaster castable");
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(false)]));
+    drain_stack(&mut g);
+    assert!(!g.battlefield_find(bear).unwrap().tapped, "declined, so the creature stays untapped");
 }
 
 #[test]

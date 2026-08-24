@@ -106,7 +106,12 @@ pub fn manglehorn() -> CardDefinition {
         },
         power: 2,
         toughness: 2,
-        triggered_abilities: vec![etb(destroy_artifact_target())],
+        // "you **may** destroy target artifact" — Uktabi Orangutan and Ingot
+        // Chewer, which share the helper, are printed mandatory.
+        triggered_abilities: vec![etb(Effect::MayDo {
+            description: "Destroy target artifact?".into(),
+            body: Box::new(destroy_artifact_target()),
+        })],
         static_abilities: vec![StaticAbility {
             description: "Artifacts your opponents control enter the battlefield tapped.",
             effect: StaticEffect::EntersTapped {
