@@ -898,6 +898,85 @@ the table above is safe to compress:
 
 ## Log
 
+### Fiftieth pass — the dry run *is* the action, and the simulator was paying for it twice
+
+Base `e7b3b3d4` (pass 49's tip), read directly at **1,531,246,782** — eleven Ir
+under pass 49's recorded 1,531,246,793, which is argv length again (this run's
+`--callgrind-out-file` name is a character shorter; see **Baseline**). All
+readings `profiling-fast --no-default-features`, callgrind, `--a gang --b gang
+--games 6 --threads 1 --seed 1 --decks fixed`. Rebased onto pass 50's
+concurrent run (`4107e017`, `49fce1ff`) after measuring; those two commits
+touch only `scripts/*.py` and the trackers, so both numbers stand unrederived.
+
+| step | before -> after | what |
+|---|---|---|
+| A | 1,531,246,782 -> 1,424,690,649 (**-6.958 %**) | the attack/block sims adopt the state their own dry run produced instead of re-running the cast |
+
+**The class, and it is the largest one this file has named.**
+`would_accept_on` clones the state and runs the action **to completion** —
+5,260 calls, `perform_action_inner` 242,970,273 Ir under them, **15.87 % of
+the program** — and then drops the result. Every caller then performs the
+identical action on a state equal to the one the probe started from. The
+simulator was paying for two casts per simulated cast.
+
+Where the 5,260 probes were, at the base tip:
+
+| caller | probes | Ir | owns its state? |
+|---|---|---|---|
+| `main_phase_action_with` | 2,036 | 101,010,033 | no — the action goes to the driver through `Bot::next_action` |
+| `sim_spell_action_inner` | 1,552 | 116,543,666 | **yes** — the attack sim's own throwaway clone |
+| `pick_land_to_play` | 934 | 12,335,382 | no |
+| `pick_stack_response` | 440 | 26,844,876 | mixed (sim + real) |
+| `pick_combat_trick` | 290 | 16,640,512 | mixed |
+
+(A) takes the second row. `GameState::accept_on` is `would_accept_on`'s body
+returning `Some(probe)` instead of `true` — plus the trailing
+`clear_stale_target_suppression` that `perform_action` does and
+`perform_action_inner` does not, so the state handed back is what a
+checkpointed action would have left. `would_accept_on` delegates to it, so
+there is one body, not two. `sim_spell_action` returns `SimSpell::Advanced`
+with that state and the two sim loops assign it to `g` and `continue` instead
+of calling `sim_step`.
+
+**Why the states are equal, which is the whole argument.** The probe is
+`g.clone()` then `perform_action_inner(a)`; `sim_step` was `g.clone()` (the
+checkpoint) then `perform_action_inner(a)` on `g`. `Clone` reconstructs three
+fields rather than copying them — `decider` fresh-by-kind, `in_layer_gather`
+false, `layer_freeze` unfrozen — and all three already hold for the sim's `g`,
+because `sim_start_state` built it by cloning too and the freeze scope
+`sim_spell_action` opens is popped before the loop resumes. The fourth
+difference was real and is paid for explicitly: `perform_action` ends with
+`clear_stale_target_suppression`, so `accept_on` does.
+
+Measured, and it is exactly the predicted removal:
+
+```text
+sim_step -> perform_action    4,568 calls / 209,220,325  ->  3,100 / 102,091,809
+sim_spell_action_inner probes 1,552 / 116,543,666        ->  1,552 / 111,211,472
+main_phase_action_with probes 2,036 / 101,010,033        ->  2,036 /  95,706,307
+```
+
+1,468 fewer checkpointed casts, 107,128,516 Ir off that one edge against
+106,556,133 off the program. The two probe rows each came down ~5 M as well:
+the accepted candidate no longer needs `a.clone()` to survive the probe.
+`--bench --threads 3` invariants byte-identical: decisions **196,220**,
+turns_per_game 27.53, stalls 0 (cap 0 / stuck 0 / draw 0), determinism ok.
+
+**What is left of the class, and why each row was not taken.**
+`main_phase_action_with`'s 2,036 and `pick_land_to_play`'s 934 hand their
+action to the game driver across the `Bot::next_action` boundary; adopting
+there means the *driver's* state, whose decider is live, and
+`perform_action`'s own doc says why swapping a fresh-by-kind decider in
+would wipe a `ScriptedDecider` mid-script. `pick_stack_response` and
+`pick_combat_trick` are shared by the sim and the real path — ~80 % and
+~94 % of their probes are the sim's, so ~620 adoptions / ~2 % are there for
+whoever threads the state out of a picker the real path also calls. And one
+level further in: `evaluate_action_sequence` clones and re-runs the finalist
+`main_phase_action_with` had *just* probed (842 evaluations, 62,218,246 Ir of
+`perform_action_inner` under them), which is the same reuse gated on
+`w.determinize == 0` — the redealt `sim_start_state` is a different state, so
+a determinized profile has nothing to lift.
+
 ### Forty-ninth pass — a chain of twenty-four narrow generators is invisible in a profile until you read the counts
 
 Ran concurrently with pass 48 and is **rebased on top of it**. Its own chain

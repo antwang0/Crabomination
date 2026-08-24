@@ -7731,9 +7731,17 @@ fn simulate_attack_outcome_once(
                     None => GameAction::PassPriority,
                 }
             }
-            _ if w.attack_sim_spells => {
-                sim_spell_action(&g, w).unwrap_or(GameAction::PassPriority)
-            }
+            _ if w.attack_sim_spells => match sim_spell_action(&g, w) {
+                // The spell layer's dry run already resolved this cast on a
+                // clone of exactly this state; adopt it rather than run the
+                // same cast a second time through `sim_step`.
+                Some(SimSpell::Advanced(next)) => {
+                    g = *next;
+                    continue;
+                }
+                Some(SimSpell::Perform(a)) => a,
+                None => GameAction::PassPriority,
+            },
             _ => GameAction::PassPriority,
         };
         if !sim_step(&mut g, action) {
@@ -7753,7 +7761,25 @@ fn simulate_attack_outcome_once(
 /// would multiply clone-and-resolve work per candidate, and a
 /// deterministic greedy stand-in carries exactly the information the sim
 /// is missing — "that mana will be spent on something".
-fn sim_spell_action(g: &GameState, w: &EvalWeights) -> Option<GameAction> {
+/// What [`sim_spell_action`] decided, and whether it already did it.
+///
+/// The main-phase branch validates a candidate with a dry run that *is* the
+/// cast — clone the state, run the action to completion, throw it away — and
+/// the sim loop then ran the same cast a second time through [`sim_step`], on
+/// a state equal to the one the probe started from. `Advanced` hands the
+/// probe's own result back so the simulator pays for one cast per simulated
+/// cast rather than two.
+enum SimSpell {
+    /// [`GameState::accept_on`] already produced this state; adopt it.
+    /// Boxed so the enum stays pointer-sized on the far commoner other arm.
+    Advanced(Box<GameState>),
+    /// Nothing was run — a candidate `cast_candidates` had already validated,
+    /// or an action from a picker the real-game path shares. The caller
+    /// performs it.
+    Perform(GameAction),
+}
+
+fn sim_spell_action(g: &GameState, w: &EvalWeights) -> Option<SimSpell> {
     // Called once per sim-loop iteration on a cloned (unfrozen) state; every
     // candidate it ranks runs layer-aware checks — so the body wants a freeze
     // scope, but the question of whether there is a window to act in does not.
@@ -7776,16 +7802,17 @@ fn sim_spell_action(g: &GameState, w: &EvalWeights) -> Option<GameAction> {
     g.with_frozen_layers(|g| sim_spell_action_inner(g, w))
 }
 
-fn sim_spell_action_inner(g: &GameState, w: &EvalWeights) -> Option<GameAction> {
+fn sim_spell_action_inner(g: &GameState, w: &EvalWeights) -> Option<SimSpell> {
     let p = g.player_with_priority();
     if !g.stack.is_empty() {
         return pick_stack_response(g, p, w)
             .or_else(|| pick_ability_counter_response(g, p))
             .or_else(|| pick_prepare_response(g, p, w))
-            .or_else(|| pick_buff_response(g, p, w));
+            .or_else(|| pick_buff_response(g, p, w))
+            .map(SimSpell::Perform);
     }
     if g.step == TurnStep::DeclareBlockers && g.blockers_declared() {
-        return pick_combat_trick(g, p, w);
+        return pick_combat_trick(g, p, w).map(SimSpell::Perform);
     }
     if matches!(g.step, TurnStep::PreCombatMain | TurnStep::PostCombatMain)
         && g.active_player_idx == p
@@ -7797,8 +7824,14 @@ fn sim_spell_action_inner(g: &GameState, w: &EvalWeights) -> Option<GameAction> 
             .collect();
         ranked.sort_by_key(|(s, _, _)| std::cmp::Reverse(*s));
         for (_, a, ok) in ranked {
-            if ok || GameState::would_accept_on(&probe, a.clone()) {
-                return Some(a);
+            // A pre-validated candidate never ran, so there is nothing to
+            // adopt. Everything else is dry-run here; keeping that run's state
+            // is what stops the sim casting the same spell twice.
+            if ok {
+                return Some(SimSpell::Perform(a));
+            }
+            if let Some(next) = GameState::accept_on(&probe, a) {
+                return Some(SimSpell::Advanced(Box::new(next)));
             }
         }
     }
@@ -8226,10 +8259,15 @@ fn simulate_block_outcome_once(
         // Under `attack_sim_spells` the combat window is live: tricks and
         // responses fire for whichever seat holds priority, so a block
         // that only works until the attacker pumps is scored as such.
-        let action = if w.attack_sim_spells {
-            sim_spell_action(&g, w).unwrap_or(GameAction::PassPriority)
-        } else {
-            GameAction::PassPriority
+        let action = match w.attack_sim_spells.then(|| sim_spell_action(&g, w)).flatten() {
+            // See the same arm in `simulate_attack_outcome_once`: the dry run
+            // that validated this cast already produced the state it leads to.
+            Some(SimSpell::Advanced(next)) => {
+                g = *next;
+                continue;
+            }
+            Some(SimSpell::Perform(a)) => a,
+            None => GameAction::PassPriority,
         };
         if !sim_step(&mut g, action) {
             return None;

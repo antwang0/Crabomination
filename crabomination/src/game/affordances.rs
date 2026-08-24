@@ -107,10 +107,36 @@ impl GameState {
     ///
     /// [`affordance_probe_template`]: Self::affordance_probe_template
     pub(crate) fn would_accept_on(template: &GameState, action: GameAction) -> bool {
+        Self::accept_on(template, action).is_some()
+    }
+
+    /// [`would_accept_on`](Self::would_accept_on) that hands back the state the
+    /// accepted action produced, instead of dropping it.
+    ///
+    /// **The probe *is* the action.** It clones the template and runs the
+    /// action to completion — 46,192 Ir a call over six bench games, 15.9 % of
+    /// the profile across all callers — and then throws the result away so the
+    /// caller can run the identical action a second time on the identical
+    /// state. A caller that owns its state can adopt this instead and pay for
+    /// one execution rather than two; the attack and block simulations do,
+    /// on their own throwaway clone.
+    ///
+    /// The state returned is what [`perform_action`](Self::perform_action)
+    /// would have left behind: same `Clone` (so the same fresh-by-kind decider
+    /// and unfrozen `LayerFreeze` a checkpointed action's caller already sees),
+    /// same `perform_action_inner`, and the same trailing
+    /// `clear_stale_target_suppression`. What it does *not* carry is the
+    /// checkpoint, so only adopt it where a rejected action would have been
+    /// abandoned rather than restored.
+    pub(crate) fn accept_on(template: &GameState, action: GameAction) -> Option<GameState> {
         let mut probe = template.clone();
         let acting = template.priority.player_with_priority;
         let ok = probe.perform_action_inner(action).is_ok();
-        ok && !template.suspended_without_completing(&probe, acting)
+        if !ok || template.suspended_without_completing(&probe, acting) {
+            return None;
+        }
+        probe.clear_stale_target_suppression();
+        Some(probe)
     }
 
     /// CardIds in `caster`'s hand they could begin casting (or play, for
