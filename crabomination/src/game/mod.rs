@@ -16603,6 +16603,34 @@ impl GameState {
         // loads instead — the loop body runs 945,812 times over six bench
         // games and most of a board is lands and vanilla creatures.
         let no_grants = !any_static_grant && !any_own_grant && !any_equip_grant;
+        // CR 613 — the grant filters and event filters below read the
+        // *computed* type line, so each (permanent, grant) pair can force a
+        // `computed_permanent`, and outside a freeze scope that is a
+        // whole-game continuous-effect gather apiece. On the sealed-cube
+        // pool `selfplay_train` plays, `statics_granted_triggers_with`
+        // reaches **59.6 %** of the simulator through exactly that path —
+        // the vanilla `--decks fixed` archetypes carry no
+        // `GrantTriggeredAbility` static at all, which is why the committed
+        // bench never saw it. One scope over the walk shares a single gather
+        // across every question it asks.
+        //
+        // Sound by construction: the loop holds a shared borrow of
+        // `self.battlefield` throughout, so no `&mut self` call can happen
+        // inside it — which is exactly the invariant a freeze scope needs.
+        // Hand-rolled push/pop rather than `with_frozen_layers`, as
+        // `resolve_selector` does: the closure form costs ~0.9 % here,
+        // because every one of the loop's captured locals then goes through
+        // the closure environment.
+        //
+        // Gated on the same `no_grants` fact the loop's fast path reads: with
+        // no grant of any kind in play the per-card grant lookups don't run,
+        // nothing else in the walk asks the layer view more than once, and
+        // the two lock pairs per dispatch are pure cost (+0.30 % on
+        // `--decks fixed`, which is exactly that board).
+        let freeze = !no_grants;
+        if freeze {
+            self.freeze_layers_push();
+        }
         for card in &self.battlefield {
             if no_grants
                 && card.definition.triggered_abilities.is_empty()
@@ -16871,6 +16899,9 @@ impl GameState {
                     }
                 }
             }
+        }
+        if freeze {
+            self.freeze_layers_pop();
         }
         for key in once_fired_this_batch.drain() {
             self.triggered_once_per_turn_used.insert(key);
