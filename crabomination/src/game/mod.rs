@@ -17411,10 +17411,8 @@ impl GameState {
                         self.fire_life_gained_watchers(*player, *amount);
                     }
                 }
-                GameEvent::CardPutIntoGraveyard { player, .. } => {
-                    if has_delayed_triggers {
-                        self.fire_opponent_graveyard_watchers(*player);
-                    }
+                GameEvent::CardPutIntoGraveyard { player, .. } if has_delayed_triggers => {
+                    self.fire_opponent_graveyard_watchers(*player);
                 }
                 _ => {}
             }

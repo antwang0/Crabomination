@@ -1196,9 +1196,7 @@ impl GameState {
                 })
                 .collect()
         };
-        for (atk, (static_granted, equip_granted)) in
-            attacks.into_iter().zip(attacker_grants.into_iter())
-        {
+        for (atk, (static_granted, equip_granted)) in attacks.into_iter().zip(attacker_grants) {
             let id = atk.attacker;
             // Validated above — commit only. Filter by *controller*, not
             // *owner*: a stolen creature (Threaten / Mind Control) attacks
