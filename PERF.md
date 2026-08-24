@@ -295,11 +295,12 @@ across `Bot::next_action` and their effects only compose there:
 state IS the action, hand it out.
 
 **Crash-freedom and determinism at the tip, widest pool.** `--a gang --b
-gang --games 400 --threads 3 --decks all`, seed 11: **6,800 games, 6,796
-decided, no panic**, all 3,398 mirrored pairs split (`rho -1.000`). The 4
-undecided are the same seed-11 rules draws passes 44-51 recorded. The
-wide-pool sweep across 13 seeds × threads 1/2/3 (per filter-21's fix) is
-owed and unrun.
+gang --games 400 --threads 3 --decks all`, seeds 11 / 12 / 13: **20,400
+games, 20,396 decided, no panic**, all 10,198 mirrored pairs split
+(`rho -1.000` every seed). The 4 undecided are seed 11's rules draws,
+the same four passes 44-51 recorded. The wider sweep across 13 seeds ×
+threads 1/2/3 (per filter-21's fix) is still owed for the definitive
+crash-freedom claim; this run's is three seeds at one thread count.
 
 **No net needs retraining.** No encoding, pool, `TrainRow`,
 `EncodedState`, or `Vocab` change is in this pass.
