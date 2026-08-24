@@ -40,7 +40,12 @@ numbers.**
    net proved `--use-deck-best` works end to end at **91.7 %** of the
    unjudged rate (83.4 % last pass). What is missing is a *good* deck net —
    the seven committed ones predate the freeze and `vocab_fit` refuses them.
-6. **Housekeeping.** TODO 0.9k, PERF 4.8k (47th folded; 45th/46th next).
+6. **Cards: `scripts/audit_dropped_may.py` is new and has 344 open findings**
+   (10,851 checked against the offline Scryfall cache; synthesized `(b###)`
+   names skipped). Ten were fixed this pass — the "may destroy / sacrifice /
+   tap" cluster, where being forced hurts. Read the oracle before fixing one;
+   the residue still has false positives.
+7. **Housekeeping.** TODO 0.9k, PERF 4.8k (47th folded; 45th/46th next).
    ENGINE_BACKLOG 4.9k / CARD_BACKLOG 4.2k still want a triage pass.
 
 ## Standing rules for a perf pass

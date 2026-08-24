@@ -3343,7 +3343,18 @@ pub enum Effect {
     /// The `AutoDecider` answers `false` (skip) by default; tests can
     /// override via `ScriptedDecider::new([DecisionAnswer::Bool(true)])`.
     /// This matches MTG rules: any "you may" defaults to "no" unless the
-    /// controller actively chooses to do it.
+    /// controller actively chooses to do it. The bot is not the
+    /// `AutoDecider` here — `decide_pending_policy` takes an optional
+    /// trigger whose body is pure upside and declines one that imposes a
+    /// self-cost, so wrapping a beneficial effect in `MayDo` does not turn
+    /// it off under bot play.
+    ///
+    /// **The yes/no is asked before the body's target selector runs**, which
+    /// is what a `ScriptedDecider` in a test has to match: a targeted body
+    /// wants `[Bool(true), Target(…)]` and not the other way round. Answering
+    /// in the wrong order does not error — the `Target` answer lands on the
+    /// yes/no prompt, reads as "no", and the test sees a silently skipped
+    /// effect.
     ///
     /// `description` is a `String` (rather than `&'static str`) because
     /// `Effect` derives `Deserialize` and serde requires owned data when
