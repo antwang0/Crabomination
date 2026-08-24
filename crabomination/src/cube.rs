@@ -31,6 +31,46 @@ use crate::player::Player;
 
 pub type CardFactory = fn() -> CardDefinition;
 
+thread_local! {
+    static DEF_CACHE: std::cell::RefCell<HashMap<usize, std::sync::Arc<CardDefinition>>> =
+        std::cell::RefCell::new(HashMap::default());
+}
+
+/// The definition a [`CardFactory`] builds, constructed once per thread.
+///
+/// A factory is `fn() -> CardDefinition` and every call materialises the
+/// whole thing — several `Vec`s, an effect tree, a mana cost — so a caller
+/// that only wants the card's name or mana value pays a full construction
+/// and a full drop for it. The deck builders call one per
+/// (pick x candidate x colour shape): `bot_ladder --decks sealed --games 1`
+/// plays **no games at all** and still runs **2,910,408,580 Ir** building
+/// its twelve decks, **43.3 % of it `__memcpy`** and 4.9 % dropping the
+/// definitions again — against ~48 M Ir for an actual sealed game.
+/// `selfplay_train`'s actors build two pools and two decks *per game*, so
+/// that ratio is the actor loop's, not the ladder's.
+///
+/// Keyed by the function pointer. Two factories the linker folds to one
+/// address have identical machine code and therefore build identical
+/// definitions, so a fold is not observable here.
+///
+/// The cache holds a reference forever, so every `Arc::make_mut` on a
+/// definition handed out from here clones first — a game can never write
+/// through to the cached copy. Callers that need an owned value still call
+/// the factory.
+pub fn card_def(f: CardFactory) -> std::sync::Arc<CardDefinition> {
+    DEF_CACHE.with(|c| {
+        if let Some(d) = c.borrow().get(&(f as usize)) {
+            return std::sync::Arc::clone(d);
+        }
+        // Built outside the borrow: a factory is pure, but re-entering the
+        // cache while it is borrowed would panic rather than deadlock, and
+        // that is not a failure mode worth leaving open.
+        let built = std::sync::Arc::new(f());
+        c.borrow_mut().insert(f as usize, std::sync::Arc::clone(&built));
+        built
+    })
+}
+
 const COPY_CAP: u32 = 4;
 const BASICS_PER_COLOR: usize = 11;
 const COLORLESS_COUNT: usize = 4;
@@ -3187,7 +3227,7 @@ mod tests {
     #[test]
     fn all_cube_cards_includes_basics_and_representative_color_picks() {
         let names: Vec<&'static str> =
-            all_cube_cards().into_iter().map(|f| f().name).collect();
+            all_cube_cards().into_iter().map(|f| crate::cube::card_def(f).name).collect();
         // Five basics (one of each color).
         for basic in ["Plains", "Island", "Swamp", "Mountain", "Forest"] {
             assert!(names.contains(&basic), "missing basic: {basic}");

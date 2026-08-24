@@ -229,14 +229,14 @@ pub fn hill_climb_build_by<F: FnMut(&[CardFactory]) -> f64>(
     // swaps are accepted within a pass.
     let mut avail: BTreeMap<&'static str, (CardFactory, i32)> = BTreeMap::new();
     for f in pool {
-        let d = f();
+        let d = crate::cube::card_def(*f);
         if d.is_land() {
             continue;
         }
         avail.entry(d.name).or_insert((*f, 0)).1 += 1;
     }
     for f in &deck {
-        if let Some(e) = avail.get_mut(f().name) {
+        if let Some(e) = avail.get_mut(crate::cube::card_def(*f).name) {
             e.1 -= 1;
         }
     }
@@ -294,13 +294,13 @@ pub fn mutate_build(
     let mut rng = StdRng::seed_from_u64(seed);
     let mut avail: BTreeMap<&'static str, (CardFactory, i32)> = BTreeMap::new();
     for f in pool {
-        let d = f();
+        let d = crate::cube::card_def(*f);
         if !d.is_land() {
             avail.entry(d.name).or_insert((*f, 0)).1 += 1;
         }
     }
     for f in &deck {
-        if let Some(e) = avail.get_mut(f().name) {
+        if let Some(e) = avail.get_mut(crate::cube::card_def(*f).name) {
             e.1 -= 1;
         }
     }
@@ -328,7 +328,7 @@ pub fn mutate_build(
 /// (`static_build_score` scores the spell picks; lands are filtered out
 /// and no shortfall applies to a completed 40-card build.)
 pub fn static_deck_score(deck: &[CardFactory]) -> i32 {
-    let spells: Vec<CardFactory> = deck.iter().copied().filter(|f| !f().is_land()).collect();
+    let spells: Vec<CardFactory> = deck.iter().copied().filter(|f| !crate::cube::card_def(*f).is_land()).collect();
     crate::recommend::static_build_score(&spells, spells.len())
 }
 
@@ -337,7 +337,7 @@ pub fn static_deck_score(deck: &[CardFactory]) -> i32 {
 /// pinned control judge in recorded gates, and a judge that drifts
 /// silently invalidates the comparisons built on it.
 pub fn static_deck_score_v3(deck: &[CardFactory]) -> i32 {
-    let spells: Vec<CardFactory> = deck.iter().copied().filter(|f| !f().is_land()).collect();
+    let spells: Vec<CardFactory> = deck.iter().copied().filter(|f| !crate::cube::card_def(*f).is_land()).collect();
     crate::recommend::static_build_score_v3(&spells, spells.len())
 }
 

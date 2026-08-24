@@ -335,7 +335,7 @@ pub fn suggest_main_deck_in_colors<R: Rng>(
     quality: bool,
 ) -> (Vec<CardFactory>, Vec<CardFactory>) {
     let allowed = |f: CardFactory| -> bool {
-        let def = f();
+        let def = crate::cube::card_def(f);
         // Lands never occupy spell slots in the sealed builder —
         // `assemble_lands` owns the land base. (High jitter used to
         // promote off-color duals into the 22-24 spell main.)
@@ -363,7 +363,7 @@ pub fn suggest_main_deck_in_colors<R: Rng>(
             let jitter = if noise > 0 { rng.random_range(-noise..=noise) } else { 0 };
             // Lands never take spell slots — they're assigned by
             // `assemble_lands`; the fixing bonus is for rocks/fetchers.
-            let def = f();
+            let def = crate::cube::card_def(f);
             let fix = if fixing_bonus > 0
                 && !def.card_types.contains(&crate::card::CardType::Land)
                 && is_fixing_card(&def)
@@ -442,7 +442,7 @@ pub(crate) fn static_build_score(main: &[CardFactory], target_spells: usize) -> 
     score -= shortfall * 8;
     let mut pips: Vec<i32> = Color::ALL
         .into_iter()
-        .map(|c| main.iter().map(|&f| colored_pip_count(&f().cost, c) as i32).sum())
+        .map(|c| main.iter().map(|&f| colored_pip_count(&crate::cube::card_def(f).cost, c) as i32).sum())
         .collect();
     pips.sort_unstable_by_key(|n| std::cmp::Reverse(*n));
     // Basics-only fixing makes each color beyond the second expensive:
@@ -472,7 +472,7 @@ pub(crate) fn static_build_score_v3(main: &[CardFactory], target_spells: usize) 
     score -= shortfall * 8;
     let mut pips: Vec<i32> = Color::ALL
         .into_iter()
-        .map(|c| main.iter().map(|&f| colored_pip_count(&f().cost, c) as i32).sum())
+        .map(|c| main.iter().map(|&f| colored_pip_count(&crate::cube::card_def(f).cost, c) as i32).sum())
         .collect();
     pips.sort_unstable_by_key(|n| std::cmp::Reverse(*n));
     let extra_colors = pips.iter().skip(2).filter(|n| **n > 0).count() as i32;
@@ -488,8 +488,8 @@ pub(crate) fn static_build_score_v3(main: &[CardFactory], target_spells: usize) 
 /// choice, not overrule card quality outright. Zero for any list that
 /// looks like a normal limited deck.
 pub(crate) fn curve_penalty(main: &[CardFactory]) -> i32 {
-    let early = main.iter().filter(|&&f| f().cost.cmc() <= 2).count() as i32;
-    let top = main.iter().filter(|&&f| f().cost.cmc() >= 5).count() as i32;
+    let early = main.iter().filter(|&&f| crate::cube::card_def(f).cost.cmc() <= 2).count() as i32;
+    let top = main.iter().filter(|&&f| crate::cube::card_def(f).cost.cmc() >= 5).count() as i32;
     (5 - early).max(0) * 4 + (top - 6).max(0) * 3
 }
 
@@ -503,7 +503,7 @@ fn splash_cards(pool: &[CardFactory], pair: &[Color], third: Color, cfg: &SimCon
     let mut hits: Vec<(CardFactory, i32)> = pool
         .iter()
         .filter(|&&f| {
-            let def = f();
+            let def = crate::cube::card_def(f);
             let cs = colors_of_cost(&def.cost);
             if !(cs.contains(&third) && cs.iter().all(|c| *c == third || pair.contains(c))) {
                 return false;
@@ -546,7 +546,7 @@ fn basic_split(
             let w = main
                 .iter()
                 .map(|&f| {
-                    let def = f();
+                    let def = crate::cube::card_def(f);
                     let pips = colored_pip_count(&def.cost, c);
                     // Casting {U}{U} on curve needs roughly half again
                     // the sources {U} does, not the same — a linear pip
@@ -628,7 +628,7 @@ fn assemble_lands(
         if duals.len() >= total as usize {
             return true;
         }
-        let def = f();
+        let def = crate::cube::card_def(f);
         if !def.card_types.contains(&CardType::Land) {
             return true;
         }
@@ -694,7 +694,7 @@ fn build_shape<R: Rng>(
     // Land colors: main colors plus any splash color actually present.
     let mut land_colors = colors.to_vec();
     for &c in splash_colors {
-        if main.iter().any(|&f| colors_of_cost(&f().cost).contains(&c)) {
+        if main.iter().any(|&f| colors_of_cost(&crate::cube::card_def(f).cost).contains(&c)) {
             land_colors.push(c);
         }
     }
@@ -1826,12 +1826,12 @@ pub fn per_card_attribution(
 ) -> Vec<CardAttribution> {
     let all_names: crate::fxhash::HashSet<&'static str> = samples
         .iter()
-        .flat_map(|(c, _)| c.main.iter().chain(c.duals.iter()).map(|&f| f().name))
+        .flat_map(|(c, _)| c.main.iter().chain(c.duals.iter()).map(|&f| crate::cube::card_def(f).name))
         .collect();
     let mut per: HashMap<&'static str, (Vec<f64>, Vec<f64>)> = HashMap::default();
     for (c, wr) in samples {
         let in_deck: crate::fxhash::HashSet<&'static str> =
-            c.main.iter().chain(c.duals.iter()).map(|&f| f().name).collect();
+            c.main.iter().chain(c.duals.iter()).map(|&f| crate::cube::card_def(f).name).collect();
         for name in &all_names {
             let e = per.entry(name).or_default();
             if in_deck.contains(name) { e.0.push(*wr) } else { e.1.push(*wr) }
@@ -1865,7 +1865,7 @@ pub fn per_card_attribution(
                 let (mut si, mut so) = (Vec::new(), Vec::new());
                 for (c, wr) in group {
                     let plays =
-                        c.main.iter().chain(c.duals.iter()).any(|&f| f().name == name);
+                        c.main.iter().chain(c.duals.iter()).any(|&f| crate::cube::card_def(f).name == name);
                     if plays { si.push(*wr) } else { so.push(*wr) }
                 }
                 if si.len() < min_side || so.len() < min_side {
@@ -1917,7 +1917,7 @@ pub fn per_card_attribution_within(
             c.main
                 .iter()
                 .chain(c.duals.iter())
-                .any(|&f| f().name.eq_ignore_ascii_case(anchor))
+                .any(|&f| crate::cube::card_def(f).name.eq_ignore_ascii_case(anchor))
         })
         .map(|(c, w)| (*c, *w))
         .collect();
@@ -1940,7 +1940,7 @@ fn swap_child(parent: &CandidateBuild, out_idx: usize, in_card: CardFactory, lab
     // its basics; one swapped in needs a source).
     let mut land_colors = child.colors.clone();
     for &c in &child.splash {
-        if child.main.iter().any(|&f| colors_of_cost(&f().cost).contains(&c)) {
+        if child.main.iter().any(|&f| colors_of_cost(&crate::cube::card_def(f).cost).contains(&c)) {
             land_colors.push(c);
         }
     }
@@ -2147,7 +2147,7 @@ impl Session {
             // Which cards may come in: bench nonlands whose colors fit the
             // build, honoring the copy cap.
             let legal_in = |f: CardFactory, main: &[CardFactory]| -> bool {
-                let def = f();
+                let def = crate::cube::card_def(f);
                 if def.card_types.contains(&crate::card::CardType::Land) {
                     return false;
                 }
@@ -2163,7 +2163,7 @@ impl Session {
                 samples.iter().map(|(c, w)| (c, *w)).collect();
             let attribution = per_card_attribution(&refs, 3);
             let delta_of = |f: CardFactory| -> f64 {
-                attribution.iter().find(|a| a.name == f().name).map(|a| a.delta()).unwrap_or(0.0)
+                attribution.iter().find(|a| a.name == crate::cube::card_def(f).name).map(|a| a.delta()).unwrap_or(0.0)
             };
             // Candidate swaps: every (weak in-deck, strong bench) pair ranked
             // by expected gain, then seeded random swaps to keep exploring
@@ -2619,7 +2619,7 @@ mod tests {
     fn gauntlet_is_seed_deterministic() {
         let cfg = SimConfig { gauntlet_size: 3, ..Default::default() };
         let names = |g: &[GauntletDeck]| -> Vec<Vec<&'static str>> {
-            g.iter().map(|d| d.cards.iter().map(|&f| f().name).collect()).collect()
+            g.iter().map(|d| d.cards.iter().map(|&f| crate::cube::card_def(f).name).collect()).collect()
         };
         let a = generate_gauntlet(&cfg);
         let b = generate_gauntlet(&cfg);
@@ -2694,7 +2694,7 @@ mod tests {
         let v0 = &refined.candidates[0];
         assert_eq!(v0.label, winner.label, "variant 0 keeps the plain shape label");
         let names = |b: &CandidateBuild| -> Vec<&'static str> {
-            let mut n: Vec<&'static str> = b.deck().iter().map(|&f| f().name).collect();
+            let mut n: Vec<&'static str> = b.deck().iter().map(|&f| crate::cube::card_def(f).name).collect();
             n.sort_unstable();
             n
         };
@@ -2758,7 +2758,7 @@ mod tests {
         let main = five_bolts_six_angels();
         let colors = colors_of_picks(&main);
         let quality: i32 =
-            main.iter().map(|&f| crate::draft::card_quality(&f())).sum();
+            main.iter().map(|&f| crate::draft::card_quality(&crate::cube::card_def(f))).sum();
         assert!(quality > 0, "Serra Angel's flying body must count for something");
         assert_eq!(
             static_build_score_v3(&main, main.len()),

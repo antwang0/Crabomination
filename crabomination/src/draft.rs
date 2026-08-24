@@ -180,7 +180,7 @@ pub fn generate_sos_pack<R: Rng>(pool: &[CardFactory], rng: &mut R) -> Vec<CardF
         if guests.contains(&i) {
             continue;
         }
-        let def = factory();
+        let def = crate::cube::card_def(*factory);
         by_bucket.entry(sos_bucket_of(&def)).or_default().push(i);
     }
     let mut used: crate::fxhash::HashSet<usize> = crate::fxhash::HashSet::default();
@@ -355,14 +355,14 @@ pub(crate) fn score_card_quality(
     factory: CardFactory,
     seat_colors: &HashMap<Color, u32>,
 ) -> i32 {
-    score_card_with_colors(factory, seat_colors) + card_quality(&factory())
+    score_card_with_colors(factory, seat_colors) + card_quality(&crate::cube::card_def(factory))
 }
 
 pub(crate) fn score_card_with_colors(
     factory: CardFactory,
     seat_colors: &HashMap<Color, u32>,
 ) -> i32 {
-    let def = factory();
+    let def = crate::cube::card_def(factory);
     let mut score: i32 = 0;
 
     // ── Color fit (the dominant signal once you have ~5 picks) ──
@@ -451,7 +451,7 @@ pub fn bot_pick(pack: &[CardFactory], seat_picks_so_far: &[CardFactory]) -> Opti
     let mut best_cmc = 0u32;
     for (i, factory) in pack.iter().enumerate() {
         let score = score_card_for_seat(*factory, seat_picks_so_far);
-        let cmc = factory().cost.cmc();
+        let cmc = crate::cube::card_def(*factory).cost.cmc();
         let better = score > best_score || (score == best_score && cmc > best_cmc);
         if better {
             best_idx = i;
@@ -469,7 +469,7 @@ pub fn bot_pick(pack: &[CardFactory], seat_picks_so_far: &[CardFactory]) -> Opti
 pub fn colors_of_picks(picks: &[CardFactory]) -> HashMap<Color, u32> {
     let mut totals: HashMap<Color, u32> = HashMap::default();
     for factory in picks {
-        let def = factory();
+        let def = crate::cube::card_def(*factory);
         for c in colors_of_cost(&def.cost) {
             *totals.entry(c).or_insert(0) += colored_pip_count(&def.cost, c);
         }
@@ -532,7 +532,7 @@ pub fn suggest_main_deck(picks: &[CardFactory], target_spells: usize) -> (Vec<Ca
     let mut on_color: Vec<(CardFactory, i32)> = Vec::new();
     let mut other: Vec<CardFactory> = Vec::new();
     for &factory in picks {
-        let card_colors = colors_of_cost(&factory().cost);
+        let card_colors = colors_of_cost(&crate::cube::card_def(factory).cost);
         let on = card_colors.is_empty()
             || card_colors.iter().all(|c| colors.contains(c));
         if on {
@@ -603,7 +603,7 @@ pub fn suggest_basic_split(main_deck: &[CardFactory], colors: [Color; 2], total_
         weights.insert(c, 0);
     }
     for factory in main_deck {
-        let def = factory();
+        let def = crate::cube::card_def(*factory);
         for &c in &colors {
             let n = colored_pip_count(&def.cost, c);
             if n > 0 {
@@ -740,7 +740,7 @@ pub fn draft_pool() -> Vec<CardFactory> {
     all_cube_cards()
         .into_iter()
         .filter(|f| {
-            let name = f().name;
+            let name = crate::cube::card_def(*f).name;
             !FICTIONAL_CARD_NAMES.iter().any(|x| x.eq_ignore_ascii_case(name))
         })
         .collect()
@@ -755,7 +755,7 @@ pub fn sos_draft_pool() -> Vec<CardFactory> {
     crate::sos_mode::all_sos_cards()
         .into_iter()
         .filter(|f| {
-            let name = f().name;
+            let name = crate::cube::card_def(*f).name;
             !FICTIONAL_CARD_NAMES.iter().any(|x| x.eq_ignore_ascii_case(name))
         })
         .collect()
@@ -1015,7 +1015,7 @@ impl DraftPod {
 
     /// How many copies of `name` are in `seat`'s pool.
     pub fn owns(&self, seat: usize, name: &str) -> usize {
-        self.picks[seat].iter().filter(|f| f().name == name).count()
+        self.picks[seat].iter().filter(|f| crate::cube::card_def(**f).name == name).count()
     }
 
     /// Draft actions `seat` may legally take beyond the plain `Take`,
@@ -1160,7 +1160,7 @@ impl DraftPod {
                 let librarian = self
                     .picks[seat]
                     .iter()
-                    .position(|f| f().name == COGWORK_LIBRARIAN);
+                    .position(|f| crate::cube::card_def(*f).name == COGWORK_LIBRARIAN);
                 let Some(pos) = librarian else {
                     return self.apply(seat, PickAction::Take(a));
                 };
@@ -1464,7 +1464,7 @@ mod tests {
         let pool = draft_pool();
         // None of the fictional names should appear in the draft pool.
         for f in &pool {
-            let name = f().name;
+            let name = crate::cube::card_def(*f).name;
             assert!(
                 !FICTIONAL_CARD_NAMES.iter().any(|x| x.eq_ignore_ascii_case(name)),
                 "fictional card {name:?} leaked into the draft pool"
@@ -1581,7 +1581,7 @@ mod tests {
         for _ in 0..n {
             let pack = generate_sos_pack(&pool, &mut rng);
             for f in &pack {
-                let def = f();
+                let def = crate::cube::card_def(*f);
                 *bucket_totals.entry(sos_bucket_of(&def)).or_insert(0) += 1;
             }
         }
