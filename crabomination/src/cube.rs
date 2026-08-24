@@ -61,8 +61,9 @@ thread_local! {
 /// definitions, so a fold is not observable here.
 ///
 /// **The cached definition is leaked**, so this hands back a plain
-/// `&'static CardDefinition` and a lookup is a hash probe and nothing else —
-/// no refcount traffic, no borrow escaping the cell. The bound is one
+/// `&'static CardDefinition` — no refcount traffic, no borrow escaping the
+/// cell — and a hit answers out of [`DefFront`] without touching the map at
+/// all. The bound is one
 /// definition per distinct factory *actually asked for*, which is the size
 /// of the pool in play (a sealed pool is ~90 cards, the cube 309), not the
 /// 22.5 k-factory catalog; the deck builders are the only callers. An `Arc`
@@ -72,6 +73,65 @@ thread_local! {
 /// sound: a caller that needs an owned, mutable definition still calls the
 /// factory.
 pub fn card_def(f: CardFactory) -> &'static CardDefinition {
+    let key = f as usize;
+    let slot = front_slot(key);
+    DEF_FRONT.with(|fr| {
+        if fr.keys[slot].get() == key
+            && let Some(d) = fr.defs[slot].get()
+        {
+            return d;
+        }
+        let d = card_def_uncached(f);
+        fr.keys[slot].set(key);
+        fr.defs[slot].set(Some(d));
+        d
+    })
+}
+
+/// Direct-mapped front cache for [`card_def`], one per thread.
+///
+/// The `HashMap` behind it is the authority and stays; what this removes is
+/// the probe. At the fifty-fourth pass's base the `LocalKey::with` family —
+/// the TLS access, the `RefCell` borrow and hashbrown's SIMD probe — was
+/// **20.8 % of a twelve-deck sealed build** over 487,071 lookups, ~40 Ir
+/// apiece, and two earlier attempts (a `const`-initialised TLS, dropping the
+/// `Arc` for a leaked `&'static`) had already taken everything around it.
+///
+/// A hit is a multiply, a shift, an array load and a compare. A slot holds
+/// one factory, so two factories that land on the same slot evict each other
+/// — with 4,096 slots against the ~90 (sealed) to ~309 (cube) distinct
+/// factories a pool asks for, that is a few keys, and they fall through to
+/// the map rather than rebuilding a definition. Key 0 means empty: a `fn`
+/// pointer is never null.
+struct DefFront {
+    keys: [std::cell::Cell<usize>; FRONT_SLOTS],
+    defs: [std::cell::Cell<Option<&'static CardDefinition>>; FRONT_SLOTS],
+}
+
+const FRONT_BITS: u32 = 12;
+const FRONT_SLOTS: usize = 1 << FRONT_BITS;
+
+/// Fibonacci multiply-shift over the function pointer. The low bits of a
+/// `fn` address carry the alignment and nothing else, so they cannot index
+/// the table on their own.
+fn front_slot(key: usize) -> usize {
+    ((key as u64).wrapping_mul(0x9E37_79B9_7F4A_7C15) >> (64 - FRONT_BITS)) as usize
+        & (FRONT_SLOTS - 1)
+}
+
+thread_local! {
+    static DEF_FRONT: DefFront = const {
+        DefFront {
+            keys: [const { std::cell::Cell::new(0) }; FRONT_SLOTS],
+            defs: [const { std::cell::Cell::new(None) }; FRONT_SLOTS],
+        }
+    };
+}
+
+/// [`card_def`]'s slow path: the per-thread map, and the factory call on a
+/// first ask.
+#[cold]
+fn card_def_uncached(f: CardFactory) -> &'static CardDefinition {
     DEF_CACHE.with(|c| {
         if let Some(d) = c.borrow().get(&(f as usize)) {
             return *d;
