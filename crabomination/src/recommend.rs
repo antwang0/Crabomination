@@ -775,6 +775,27 @@ pub(crate) fn build_random_deck<R: Rng>(pulls: &[CardFactory], cfg: &SimConfig, 
     // A field that only ever builds pairs never bombs back at splash-shaped
     // candidates — inflating their measured win rates.
     let shapes = enumerate_candidates(pulls, cfg);
+    build_random_deck_from(&shapes, pulls, cfg, rng)
+}
+
+/// [`build_random_deck`] with the shape lattice already enumerated.
+///
+/// `enumerate_candidates(pulls, cfg)` runs one `build_shape` per shape —
+/// ~26 of them — and is **deterministic in `(pulls, cfg)`**: its own rng is
+/// `StdRng::seed_from_u64(cfg.seed)` and `noise = 0` means it never draws
+/// from it. So a caller building *n* random decks from one pool
+/// (`selfplay::build_candidates`, which `best_build_by` runs at n = 32 per
+/// side per game under `selfplay_train --use-deck-best`, and
+/// `recommend_pool` at n = 512) was re-deriving the identical lattice every
+/// time: n x 26 `build_shape` calls where 26 + n do. Everything that varies
+/// per candidate — the softmax roll, the spell/land split, the pick jitter —
+/// is downstream of the lattice and reads only `rng`.
+pub(crate) fn build_random_deck_from<R: Rng>(
+    shapes: &[CandidateBuild],
+    pulls: &[CardFactory],
+    cfg: &SimConfig,
+    rng: &mut R,
+) -> GauntletDeck {
     let t = cfg.build_temperature.max(0.0);
     // Honest field: weight shape choice by the actual static-score gaps
     // (softmax over the top 5) instead of flat rank weights — a pool whose

@@ -164,13 +164,39 @@ pub fn build_candidates_cfg(
     seed: u64,
     cfg: &SimConfig,
 ) -> Vec<Vec<CardFactory>> {
-    (0..n as u64)
+    // The shape lattice is deterministic in `(pool, cfg)` — see
+    // `build_random_deck_from` — so enumerate it once for all `n`
+    // candidates instead of per candidate. At `best_build_by`'s n = 32
+    // (what `selfplay_train --use-deck-best` runs per side per game) that
+    // is 32 x ~26 `build_shape` calls replaced by ~26 + 32.
+    let shapes = crate::recommend::enumerate_candidates(pool, cfg);
+    let out: Vec<Vec<CardFactory>> = (0..n as u64)
         .map(|i| {
             let mut rng =
                 StdRng::seed_from_u64(seed ^ i.wrapping_mul(0x9E37_79B9_7F4A_7C15).wrapping_add(7));
-            build_random_deck(pool, cfg, &mut rng).cards
+            crate::recommend::build_random_deck_from(&shapes, pool, cfg, &mut rng).cards
         })
-        .collect()
+        .collect();
+    // The hoist is sound only while `enumerate_candidates` is a pure
+    // function of `(pool, cfg)`. Re-derived after the loop and compared, in
+    // debug builds only: a later change that gives it hidden state — or that
+    // lets a candidate build perturb it — then fails the suite
+    // (`best_build_v3_is_the_argmax_of_its_candidates` runs this at n = 16)
+    // instead of silently changing every judged build in training.
+    debug_assert!(
+        {
+            let again = crate::recommend::enumerate_candidates(pool, cfg);
+            again.len() == shapes.len()
+                && again.iter().zip(&shapes).all(|(a, b)| {
+                    a.static_score == b.static_score
+                        && a.main.len() == b.main.len()
+                        && a.main.iter().zip(&b.main).all(|(x, y)| *x as usize == *y as usize)
+                })
+        },
+        "enumerate_candidates is no longer a pure function of (pool, cfg); \
+         build_candidates_cfg hoists it out of the candidate loop",
+    );
+    out
 }
 
 /// Best of `n` noisy v3 builds under the v3 static judge — the builder's
