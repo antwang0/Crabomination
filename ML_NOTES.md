@@ -2498,7 +2498,16 @@ only stays dead while the reasoning that killed it is readable.
 - 🟡 **Build net has a consumer** (`selfplay_train --use-deck-best`). The
   deck net cleared the house bar twice (61.7 %, 60.7 %) and nothing read
   the result back: every training game was still played with heuristic
-  builds. Actors can now judge best-of-32 candidates with it.
+  builds. Actors can now judge best-of-32 candidates with it. **Unusable
+  until a deck net is retrained**, and the reason is worth keeping: the
+  embedding index used to be a card's position in the *sorted SOS pool*, so
+  the eleven cards added since those nets were trained shifted every later
+  row and retired all seven of them. Frozen at the fifty-fourth pass
+  (`server::vocab_snapshot`) so it cannot recur, but a net from before the
+  freeze cannot be recovered — nothing can say which card its rows meant.
+  Judged builds also became affordable at the fifty-third and fifty-fourth
+  passes (1.2 -> 83.2 games/s, and deck construction -68.8 % on top), so the
+  retrain is the only thing left in the way.
 - 🟡 **Sealed builder repaired** (`SimConfig::builder_v2`, the previous
   builder kept as the control) — three defects found together while
   investigating why a pool's bomb never appeared in a build: the card

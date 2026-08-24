@@ -36,10 +36,12 @@ rebase mid-run and re-read your numbers afterwards.**
    walker (**cube pool only**); **(-39)** is largely closed — what is left of
    the build is `score_card_with_colors` 12.3 % (one attempt already refuted)
    and the allocator ~11 %.
-4. **Open defect, and it is the top one:** every committed deck net fails to
-   load. `Vocab::sos_sealed()` assigns indices in *sorted* order over the SOS
-   pool, so a card addition shifts every later index and retires every net.
-   See "ML — defects found 2026-08-24" for the frozen-snapshot fix.
+4. **The vocab defect is closed for the future** (`server::vocab_snapshot`
+   freezes the index assignment; `pad_vocab` widens a shorter net). **The
+   seven committed deck nets are still dead** — they predate the freeze, so
+   padding them would mean the wrong cards, and `vocab_fit` refuses by name.
+   `--use-deck-best` needs one deck net trained at the current vocab; that
+   is a training run, not a code change, and it is the top ML item.
 5. **Housekeeping.** TODO 0.9k (the closed robustness record moved to
    ENGINE_BACKLOG), PERF 4.8k (47th-pass entry folded; the 45th and 46th are
    next). ENGINE_BACKLOG 4.9k / CARD_BACKLOG 4.2k still want a triage pass.
@@ -172,59 +174,40 @@ tracked on `--bench` (`stalls_by cap / stuck / draw` — re-open only if `cap`
 or `stuck` goes non-zero).
 
 
-## ML — defects found 2026-08-24 (open)
+## ML — defects (index)
 
-### Every committed deck net fails to load: `--use-deck-best` is dead
+### Every committed deck net fails to load — FIXED for the future, not for those nets
 
-`selfplay_train --use-deck-best <any of the seven committed
-`*/deck-latest.safetensors`>` panics at startup on
-`deck net vocab != encoder vocab — left: 153 right: 164`. The play net
-(`nets/champion.safetensors`) loads fine at 164, so only the deck nets are
-stale. ML_NOTES lists "Build net has a consumer" as 🟡 shipped — it is
-shipped and unusable until a deck net is retrained.
+**What it was.** `Vocab::sos_sealed()` derived its embedding indices from
+`draft::sos_draft_pool()` in *sorted-name* order, so adding one card to the
+SOS set shifted the index of every card sorting after it and silently
+retired every net trained before it. It surfaced as
+`deck net vocab != encoder vocab — left: 153 right: 164`: all seven
+committed `*/deck-latest.safetensors` are eleven cards behind.
 
-**The structural cause, and it is bigger than this one net.**
-`Vocab::sos_sealed()` (`server/encode.rs`) is built from
-`draft::sos_draft_pool()`, i.e. **the vocabulary is a function of the SOS
-card list**. Adding one card to the SOS set grows `Vocab::size()` and
-retires every net trained before it — the embedding table's row count no
-longer matches. The 153 -> 164 gap is eleven SOS cards added since those
-deck nets were trained. So the standing "encoding/pool caution" understates
-the hazard: it is not only a deliberate `TrainRow` / `EncodedState` change
-that invalidates nets, **a card addition does it too**, silently, and the
-failure only surfaces when someone tries to load the net.
+**The fix (fifty-fourth pass).** `server::vocab_snapshot::VOCAB_SNAPSHOT`
+freezes the assignment — a name owns `position + 1` whether or not it is
+still in the pool, and a pool name outside the snapshot is appended after it
+in sorted order. So a card addition *or removal* grows the table at the end
+and never moves an index a net depends on. `PlayNet` / `DeckNet::pad_vocab`
+zero-extend a shorter table (and the vocabulary-sized opponent head), and
+`vocab_fit` decides whether that is allowed.
 
-Options: (a) retrain the deck net (a training run, not a code change); (c)
-have the loader say *which* cards moved rather than only the two counts —
-**done**, `check_deck_net_vocab` names the cause. (b) "size the embedding off
-a fixed upper bound" **does not work on its own** and the fifty-fourth pass
-reading is what rules it out: the indices are assigned in *sorted name*
-order, so inserting one card shifts every later index. A bigger table with
-shifted rows is worse than a hard failure.
+**What is deliberately *not* fixed, and it is the interesting half.** A net
+whose vocabulary is smaller than `FROZEN_VOCAB_SIZE` (164) predates the
+freeze, so nothing can say which card each of its rows meant — padding it
+would load cleanly and mean the wrong cards, which is worse than the loud
+failure. `vocab_fit` refuses those by name. **The seven committed deck nets
+are in that bucket and still need retraining**; `--use-deck-best` stays dead
+until one is trained. The snapshot was seeded from the then-current sorted
+order, so `nets/champion.safetensors` (164) is unaffected and **no net needs
+retraining because of this change**.
 
-**(e) The fix that makes the class go away, not started.** Freeze the index
-assignment in a committed snapshot list and let the pool append after it:
-
-- `const VOCAB_SNAPSHOT: [&str; N]` — the names in the order their indices
-  were assigned. `Vocab::sos_sealed()` maps the snapshot in order to 1..,
-  then any pool name *not* in the snapshot to the next free indices in
-  sorted order. A name in the snapshot keeps its index whether or not it is
-  still in the pool, so a card addition *or removal* grows the table at the
-  end and never moves an index a trained net depends on.
-- Seed the snapshot from today's `Vocab::sos_sealed()` order, which is
-  today's sorted order — so `nets/champion.safetensors` (164, currently
-  loading fine) is unaffected and **nothing needs retraining for this
-  change**. The seven 153-row deck nets stay dead; eleven cards were
-  inserted mid-order before the snapshot and their rows cannot be recovered.
-- Then the loaders zero-pad: accept `net.vocab_size() <= vocab.size()` and
-  extend `emb` (and the vocab-sized auxiliary head, `lib.rs`'s
-  `w.rows == net.emb.rows` check) with zero rows. `PlayNet::load` already
-  has the precedent — `obj_w.pad_cols` does this for feature growth.
-- **While there, fix a latent wrong-answer:** the forward passes clamp an
-  out-of-range card index with `(card as usize).min(self.emb.rows - 1)`,
-  which maps every unknown card to *the last card's* embedding rather than
-  to index 0, the reserved unknown slot. It is unreachable today only
-  because the hard size check rejects the net first.
+**Also fixed while there:** both forward passes clamped an out-of-range card
+index with `.min(emb.rows - 1)`, mapping an unknown card to *the last card's*
+embedding rather than to index 0, the reserved unknown slot. Unreachable
+before only because the hard size check rejected the net first; reachable the
+moment padding exists.
 
 ## Engine — Missing Mechanics
 

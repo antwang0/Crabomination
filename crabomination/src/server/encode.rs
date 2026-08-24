@@ -28,23 +28,46 @@ use crate::game::{GameState, TurnStep};
 use crate::mana::ManaCost;
 
 /// Card-name → embedding-index table. Index 0 is reserved for unknown
-/// names; real cards are indexed 1.. in sorted-name order, so the mapping
-/// is stable as long as the set list is (and the trainer's embedding table
-/// is sized off [`Vocab::size`], so the two stay in lockstep).
+/// names.
+///
+/// **Indices come from [`crate::server::vocab_snapshot::VOCAB_SNAPSHOT`],
+/// not from the pool.** They used to be the pool's sorted-name order, which
+/// made every trained net a hostage to the card list: adding one SOS card
+/// shifted the index of every card sorting after it, and the seven
+/// committed deck nets are dead of exactly that. A snapshot name owns its
+/// index whether or not it is still in the pool; a pool name outside the
+/// snapshot is appended after it in sorted order. So the table only ever
+/// grows at the end, and a net trained against a shorter one can be
+/// zero-padded rather than retired.
 pub struct Vocab {
     map: HashMap<&'static str, u16>,
 }
 
 impl Vocab {
     /// The SOS sealed universe: every card in the draftable pool plus the
-    /// five basic lands the sealed builder adds.
+    /// five basic lands the sealed builder adds, indexed against the frozen
+    /// snapshot.
     pub fn sos_sealed() -> Vocab {
-        let mut names: std::collections::BTreeSet<&'static str> =
-            crate::draft::sos_draft_pool().iter().map(|f| f().name).collect();
-        for basic in ["Plains", "Island", "Swamp", "Mountain", "Forest"] {
-            names.insert(basic);
+        let mut map: HashMap<&'static str, u16> = HashMap::default();
+        for (i, name) in crate::server::vocab_snapshot::VOCAB_SNAPSHOT.iter().enumerate() {
+            // The snapshot is generated, so a duplicate in it would be a
+            // silent aliasing of two cards onto one embedding row.
+            debug_assert!(!map.contains_key(name), "duplicate snapshot name {name}");
+            map.insert(name, (i + 1) as u16);
         }
-        let map = names.into_iter().zip(1u16..).collect();
+        let mut fresh: std::collections::BTreeSet<&'static str> = crate::draft::sos_draft_pool()
+            .iter()
+            .map(|f| f().name)
+            .filter(|n| !map.contains_key(n))
+            .collect();
+        for basic in ["Plains", "Island", "Swamp", "Mountain", "Forest"] {
+            if !map.contains_key(basic) {
+                fresh.insert(basic);
+            }
+        }
+        for (next, name) in (map.len() as u16 + 1..).zip(fresh) {
+            map.insert(name, next);
+        }
         Vocab { map }
     }
 
@@ -795,6 +818,49 @@ mod tests {
         g
     }
 
+    /// The frozen-index contract, which is what keeps a trained net loadable
+    /// across a card addition: a snapshot name owns `position + 1` and a
+    /// pool name outside the snapshot lands strictly after all of them.
+    ///
+    /// This is a regression test for the defect that killed all seven
+    /// committed deck nets — indices derived from the sorted pool, so one
+    /// inserted card shifted every later row.
+    #[test]
+    fn vocab_indices_come_from_the_frozen_snapshot() {
+        use crate::server::vocab_snapshot::VOCAB_SNAPSHOT;
+        let v = Vocab::sos_sealed();
+        for (i, name) in VOCAB_SNAPSHOT.iter().enumerate() {
+            assert_eq!(
+                v.index_of(name),
+                (i + 1) as u16,
+                "{name} moved off its frozen index — every net trained against \
+                 it now means a different card"
+            );
+        }
+        assert!(v.size() > VOCAB_SNAPSHOT.len());
+        // Anything the pool has that the snapshot does not sits after it,
+        // and nothing collides.
+        let mut seen: std::collections::BTreeSet<u16> = std::collections::BTreeSet::new();
+        for f in crate::draft::sos_draft_pool() {
+            let idx = v.index_of(f().name);
+            assert_ne!(idx, 0, "pool card missing from vocab");
+            assert!(seen.insert(idx) || idx <= VOCAB_SNAPSHOT.len() as u16);
+        }
+        for basic in ["Plains", "Island", "Swamp", "Mountain", "Forest"] {
+            assert_ne!(v.index_of(basic), 0, "{basic} missing from vocab");
+        }
+    }
+
+    /// The snapshot itself: no duplicate name, because two entries with the
+    /// same name would alias two cards onto one embedding row and the later
+    /// one would win silently.
+    #[test]
+    fn vocab_snapshot_has_no_duplicates() {
+        use crate::server::vocab_snapshot::VOCAB_SNAPSHOT;
+        let uniq: std::collections::BTreeSet<&str> = VOCAB_SNAPSHOT.iter().copied().collect();
+        assert_eq!(uniq.len(), VOCAB_SNAPSHOT.len(), "duplicate name in VOCAB_SNAPSHOT");
+    }
+
     #[test]
     fn sos_vocab_is_substantial_and_stable() {
         let v = Vocab::sos_sealed();
@@ -1329,3 +1395,5 @@ mod tests {
         assert!(!affordable(&cost, &[w, colourless, colourless]));
     }
 }
+
+

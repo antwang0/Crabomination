@@ -506,6 +506,27 @@ impl DeckNet {
         self.emb.rows
     }
 
+    /// Grow the embedding table to `new_vocab` rows, zero-filling the ones
+    /// this net never saw.
+    ///
+    /// Sound because card names own a frozen embedding index
+    /// (`server::vocab_snapshot`): a vocabulary only ever grows at the end,
+    /// so every row this net has still means the card it was trained on.
+    /// Before that guarantee existed, indices were the sorted pool's order
+    /// and one added card shifted them all — which is why the seven
+    /// committed deck nets are unloadable rather than merely short.
+    /// Narrowing is not possible and is rejected.
+    pub fn pad_vocab(&mut self, new_vocab: usize) -> Result<(), NnError> {
+        if new_vocab < self.emb.rows {
+            return Err(NnError::BadTensor(
+                "emb.weight",
+                format!("net vocab {} is larger than the encoder's {new_vocab}", self.emb.rows),
+            ));
+        }
+        self.emb.pad_rows(new_vocab);
+        Ok(())
+    }
+
     pub fn load(bytes: &[u8]) -> Result<DeckNet, NnError> {
         let st = safetensors::SafeTensors::deserialize(bytes)
             .map_err(|e| NnError::BadFile(e.to_string()))?;
@@ -547,7 +568,10 @@ impl DeckNet {
         let (mean, max) = rest.split_at_mut(d);
         max.fill(f32::NEG_INFINITY);
         for &card in cards {
-            let c = (card as usize).min(self.emb.rows - 1);
+            // Out of range means "a card this net was not trained on", and
+            // index 0 is the reserved unknown slot. Clamping to the *last*
+            // row instead would hand it some unrelated card's embedding.
+            let c = if (card as usize) < self.emb.rows { card as usize } else { 0 };
             let row = &self.emb.data[c * d..(c + 1) * d];
             for ((s, r), mx) in sum.iter_mut().zip(row).zip(max.iter_mut()) {
                 *s += r;
@@ -682,6 +706,19 @@ impl Tensor2 {
         }
         self.cols = new_cols;
         self.data = data;
+    }
+
+    /// Extend to `new_rows` by appending zero rows at the bottom.
+    ///
+    /// The one caller is the vocabulary: card names own a frozen index
+    /// (`server::vocab_snapshot`), so a vocabulary only ever grows at the
+    /// end and a net trained against a shorter one is correct on every row
+    /// it has. A card it never saw embeds as zeros, which is what index 0 —
+    /// the reserved unknown slot — does for an off-set card anyway.
+    pub fn pad_rows(&mut self, new_rows: usize) {
+        debug_assert!(new_rows >= self.rows);
+        self.data.resize(new_rows * self.cols, 0.0);
+        self.rows = new_rows;
     }
 }
 
@@ -835,9 +872,27 @@ fn layer_norm_row(x: &[f32], w: &[f32], b: &[f32], out: &mut [f32]) {
 
 impl PlayNet {
     /// Vocabulary size the embedding table was trained with. The encoder's
-    /// vocab must match or indices silently mean the wrong cards.
+    /// vocab must be this or larger — see [`PlayNet::pad_vocab`].
     pub fn vocab_size(&self) -> usize {
         self.emb.rows
+    }
+
+    /// Grow the embedding table (and the vocabulary-sized opponent-card
+    /// head that shadows it) to `new_vocab` rows. See
+    /// [`DeckNet::pad_vocab`] for why zero-filling is sound.
+    pub fn pad_vocab(&mut self, new_vocab: usize) -> Result<(), NnError> {
+        if new_vocab < self.emb.rows {
+            return Err(NnError::BadTensor(
+                "emb.weight",
+                format!("net vocab {} is larger than the encoder's {new_vocab}", self.emb.rows),
+            ));
+        }
+        self.emb.pad_rows(new_vocab);
+        if let Some(w) = &mut self.opp_w {
+            w.pad_rows(new_vocab);
+            self.opp_b.resize(new_vocab, 0.0);
+        }
+        Ok(())
     }
 
     /// Parse a safetensors byte buffer (see the module doc for the tensor
@@ -1166,7 +1221,10 @@ impl PlayNet {
         let mut i = 0;
         for (gi, group) in s.groups.iter().enumerate() {
             for o in group {
-                let card = (o.card as usize).min(self.emb.rows - 1);
+                // See `DeckNet::forward`: out of range is the unknown slot,
+                // not the last row.
+                let card =
+                    if (o.card as usize) < self.emb.rows { o.card as usize } else { 0 };
                 x[..emb_dim].copy_from_slice(&self.emb.data[card * emb_dim..(card + 1) * emb_dim]);
                 x[emb_dim..].copy_from_slice(&o.feats);
                 self.obj_w.matvec(&x, &mut hs[i * h_obj..(i + 1) * h_obj]);
@@ -1679,6 +1737,66 @@ mod tests {
         let want2 = 1.0 / (1.0 + (-4.75f32).exp());
         let got2 = net.forward(&s);
         assert!((got2 - want2).abs() < 1e-6, "got {got2}, want {want2}");
+    }
+
+    /// Padding the vocabulary preserves every prediction the net could
+    /// already make, and a card the net never saw embeds as the unknown
+    /// slot does — zeros.
+    ///
+    /// This is the loadability half of the defect that killed the committed
+    /// deck nets. The soundness half lives in `server::vocab_snapshot`: a
+    /// row only keeps its meaning because a card name owns a frozen index.
+    #[test]
+    fn padding_the_vocabulary_leaves_the_old_rows_alone() {
+        let h_obj = 1usize;
+        let trunk_in = NUM_GROUPS * 2 * h_obj + GLOBAL_FEATS;
+        let mut obj_w = vec![0.0f32; 1 + OBJ_FEATS];
+        obj_w[0] = 1.0;
+        obj_w[1] = 1.0;
+        let bytes = to_safetensors(&[
+            ("emb.weight", vec![2, 1], vec![0.0, 2.0]),
+            ("obj.weight", vec![1, 1 + OBJ_FEATS], obj_w),
+            ("obj.bias", vec![1], vec![0.0]),
+            ("trunk1.weight", vec![1, trunk_in], vec![1.0; trunk_in]),
+            ("trunk1.bias", vec![1], vec![0.0]),
+            ("trunk2.weight", vec![1, 1], vec![1.0]),
+            ("trunk2.bias", vec![1], vec![0.0]),
+            ("head_win.weight", vec![1, 1], vec![1.0]),
+            ("head_win.bias", vec![1], vec![0.0]),
+        ]);
+        let mut net = PlayNet::load(&bytes).expect("loads");
+
+        let mut feats = [0.0; OBJ_FEATS];
+        feats[0] = 0.5;
+        let mut s = EncodedState::default();
+        s.groups[G_BF_SELF].push(EncodedObject { card: 1, feats });
+        s.global[3] = 0.25;
+        let before = net.forward(&s);
+
+        net.pad_vocab(5).expect("widening is allowed");
+        assert_eq!(net.vocab_size(), 5);
+        assert!((net.forward(&s) - before).abs() < 1e-9, "a known card moved");
+
+        // Card 4 is one of the new rows: zero embedding, so it scores
+        // exactly as card 0 (the reserved unknown slot) does.
+        let mut unknown = EncodedState::default();
+        unknown.global[3] = 0.25;
+        unknown.groups[G_BF_SELF].push(EncodedObject { card: 4, feats });
+        let mut slot_zero = EncodedState::default();
+        slot_zero.global[3] = 0.25;
+        slot_zero.groups[G_BF_SELF].push(EncodedObject { card: 0, feats });
+        assert!((net.forward(&unknown) - net.forward(&slot_zero)).abs() < 1e-9);
+
+        // An index past the table is the unknown slot too, not the last
+        // row — the clamp used to hand it some unrelated card's embedding.
+        let mut past = EncodedState::default();
+        past.global[3] = 0.25;
+        past.groups[G_BF_SELF].push(EncodedObject { card: 99, feats });
+        assert!((net.forward(&past) - net.forward(&slot_zero)).abs() < 1e-9);
+
+        // Narrowing is refused: the encoder would have no index for the
+        // rows the net carries.
+        assert!(net.pad_vocab(3).is_err());
     }
 
     /// The policy head reads the same trunk as the win head and answers

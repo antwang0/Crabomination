@@ -685,17 +685,22 @@ const DECK_WINDOW_CAP: usize = 200_000;
 /// `draft::sos_draft_pool()`, so **adding a card to the SOS set grows the
 /// vocabulary and retires every net trained before it**. The message says
 /// so, because the two counts on their own read as corruption.
-fn check_deck_net_vocab(net: &DeckNet, vocab: &Vocab, path: &std::path::Path) {
+fn check_deck_net_vocab(net: &mut DeckNet, vocab: &Vocab, path: &std::path::Path) {
     let (have, want) = (net.vocab_size(), vocab.size());
-    assert!(
-        have == want,
-        "{}: deck net was trained against a vocabulary of {have} names, the encoder now has \
-         {want}. `Vocab::sos_sealed()` is derived from `draft::sos_draft_pool()`, so every \
-         card added to the SOS set retires the nets trained before it — this checkpoint needs \
-         retraining, it is not corrupt. (The play net is sized the same way and has the same \
-         property.)",
-        path.display(),
-    );
+    if let Err(e) = crabomination::server::vocab_snapshot::vocab_fit(have, want) {
+        panic!("{}: {e}", path.display());
+    }
+    if let Err(e) = net.pad_vocab(want) {
+        panic!("{}: {e:?}", path.display());
+    }
+    if have < want {
+        eprintln!(
+            "{}: deck net trained at vocab {have}, encoder is {want} — padded the {} newer \
+             cards to a zero embedding. They score as unknown until the net is retrained.",
+            path.display(),
+            want - have,
+        );
+    }
 }
 
 fn actor_loop(shared: &Shared, args: &Args, vocab: &Vocab, deck_judge: Option<&DeckNet>, mcts: bool) {
@@ -975,8 +980,8 @@ fn gate_builder(args: &Args, vocab: &Vocab, games_per_pool: usize) {
     let path = args.out.join("deck-latest.safetensors");
     let bytes = std::fs::read(&path)
         .unwrap_or_else(|e| panic!("{}: {e} (train a deck net first)", path.display()));
-    let net = DeckNet::load(&bytes).expect("deck net loads");
-    check_deck_net_vocab(&net, vocab, &path);
+    let mut net = DeckNet::load(&bytes).expect("deck net loads");
+    check_deck_net_vocab(&mut net, vocab, &path);
     const POOLS: u64 = 12;
     const CANDS: usize = 32;
     println!(
@@ -1047,8 +1052,8 @@ fn distill_gen(args: &Args, vocab: &Vocab, n_decks: usize) {
     let path = args.out.join("deck-latest.safetensors");
     let bytes = std::fs::read(&path)
         .unwrap_or_else(|e| panic!("{}: {e} (need a deck net for the search variants)", path.display()));
-    let net = DeckNet::load(&bytes).expect("deck net loads");
-    check_deck_net_vocab(&net, vocab, &path);
+    let mut net = DeckNet::load(&bytes).expect("deck net loads");
+    check_deck_net_vocab(&mut net, vocab, &path);
     const FIELD: u64 = 20;
     const GAMES_PER_FIELD_DECK: usize = 12; // 240 games per labelled deck
     let field: Vec<Vec<CardFactory>> = (0..FIELD)
@@ -1204,8 +1209,8 @@ fn gate_builder_hc(args: &Args, vocab: &Vocab, games_per_pool: usize) {
     let path = args.out.join("deck-latest.safetensors");
     let bytes = std::fs::read(&path)
         .unwrap_or_else(|e| panic!("{}: {e} (train a deck net first)", path.display()));
-    let net = DeckNet::load(&bytes).expect("deck net loads");
-    check_deck_net_vocab(&net, vocab, &path);
+    let mut net = DeckNet::load(&bytes).expect("deck net loads");
+    check_deck_net_vocab(&mut net, vocab, &path);
     const POOLS: u64 = 12;
     const CANDS: usize = 32;
     const PASSES: usize = 6;
@@ -1574,8 +1579,8 @@ fn main() {
     // The gate-passed build net, if the run wants its decks judged.
     let deck_judge: Option<DeckNet> = args.use_deck_best.as_ref().map(|p| {
         let bytes = std::fs::read(p).unwrap_or_else(|e| panic!("{}: {e}", p.display()));
-        let net = DeckNet::load(&bytes).expect("deck net loads");
-        check_deck_net_vocab(&net, &vocab, p);
+        let mut net = DeckNet::load(&bytes).expect("deck net loads");
+        check_deck_net_vocab(&mut net, &vocab, p);
         eprintln!("actors build decks with the net from {}", p.display());
         net
     });

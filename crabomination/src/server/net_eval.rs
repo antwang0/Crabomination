@@ -58,15 +58,15 @@ pub fn set_slot(slot: u8, net: Option<Arc<dyn NetEvaluator>>) {
 /// wrong cards.
 pub fn load_slot(slot: u8, path: &std::path::Path) -> Result<(), String> {
     let bytes = std::fs::read(path).map_err(|e| format!("{}: {e}", path.display()))?;
-    let net = PlayNet::load(&bytes).map_err(|e| format!("{}: {e}", path.display()))?;
-    if net.vocab_size() != vocab().size() {
-        return Err(format!(
-            "{}: net vocab {} != encoder vocab {}",
-            path.display(),
-            net.vocab_size(),
-            vocab().size()
-        ));
-    }
+    let mut net = PlayNet::load(&bytes).map_err(|e| format!("{}: {e}", path.display()))?;
+    // A net trained against a shorter, post-freeze vocabulary is loadable:
+    // card names own a frozen embedding index (`server::vocab_snapshot`),
+    // so the table only grows at the end and a card this net never saw
+    // embeds as zeros. Anything older, or longer, is refused.
+    crate::server::vocab_snapshot::vocab_fit(net.vocab_size(), vocab().size())
+        .map_err(|e| format!("{}: {e}", path.display()))?;
+    net.pad_vocab(vocab().size())
+        .map_err(|e| format!("{}: {e:?}", path.display()))?;
     set_slot(slot, Some(Arc::new(net)));
     Ok(())
 }

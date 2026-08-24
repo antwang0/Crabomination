@@ -372,20 +372,21 @@ fn net_rank(pool: &[crabomination::cube::CardFactory], seed: u64) {
         eprintln!("cannot read {path}: {e}");
         std::process::exit(2);
     });
-    let net = crabomination_nn::DeckNet::load(&bytes).unwrap_or_else(|e| {
+    let mut net = crabomination_nn::DeckNet::load(&bytes).unwrap_or_else(|e| {
         eprintln!("{path}: {e:?}");
         std::process::exit(2);
     });
     let vocab = Vocab::sos_sealed();
-    if net.vocab_size() != vocab.size() {
-        eprintln!(
-            "deck net vocab {} != encoder vocab {} — the net was trained against a \
-             different card set and its indices mean the wrong cards",
-            net.vocab_size(),
-            vocab.size()
-        );
+    // Shorter is fine when the net postdates the index freeze — see
+    // `server::vocab_snapshot`. Older or longer is refused.
+    if let Err(e) =
+        crabomination::server::vocab_snapshot::vocab_fit(net.vocab_size(), vocab.size())
+            .and_then(|()| net.pad_vocab(vocab.size()).map_err(|e| format!("{e:?}")))
+    {
+        eprintln!("{path}: {e}");
         std::process::exit(2);
     }
+    let net = net;
 
     const CANDS: usize = 512;
     let started = std::time::Instant::now();
