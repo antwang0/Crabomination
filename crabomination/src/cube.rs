@@ -34,9 +34,8 @@ pub type CardFactory = fn() -> CardDefinition;
 thread_local! {
     // `const`-initialized so the access is a bare TLS read rather than a
     // lazy-init check on every lookup: `card_def` is called 487,071 times
-    // in one twelve-deck sealed build and `LocalKey::with` was 18.2 % of
-    // what that build costs.
-    static DEF_CACHE: std::cell::RefCell<HashMap<usize, std::sync::Arc<CardDefinition>>> =
+    // in one twelve-deck sealed build.
+    static DEF_CACHE: std::cell::RefCell<HashMap<usize, &'static CardDefinition>> =
         const {
             std::cell::RefCell::new(std::collections::HashMap::with_hasher(
                 std::hash::BuildHasherDefault::new(),
@@ -61,20 +60,27 @@ thread_local! {
 /// address have identical machine code and therefore build identical
 /// definitions, so a fold is not observable here.
 ///
-/// The cache holds a reference forever, so every `Arc::make_mut` on a
-/// definition handed out from here clones first — a game can never write
-/// through to the cached copy. Callers that need an owned value still call
-/// the factory.
-pub fn card_def(f: CardFactory) -> std::sync::Arc<CardDefinition> {
+/// **The cached definition is leaked**, so this hands back a plain
+/// `&'static CardDefinition` and a lookup is a hash probe and nothing else —
+/// no refcount traffic, no borrow escaping the cell. The bound is one
+/// definition per distinct factory *actually asked for*, which is the size
+/// of the pool in play (a sealed pool is ~90 cards, the cube 309), not the
+/// 22.5 k-factory catalog; the deck builders are the only callers. An `Arc`
+/// here cost ~10 Ir of atomic per lookup over 487,071 lookups a build.
+///
+/// Every consumer is read-only, which is what makes a shared `&'static`
+/// sound: a caller that needs an owned, mutable definition still calls the
+/// factory.
+pub fn card_def(f: CardFactory) -> &'static CardDefinition {
     DEF_CACHE.with(|c| {
         if let Some(d) = c.borrow().get(&(f as usize)) {
-            return std::sync::Arc::clone(d);
+            return *d;
         }
         // Built outside the borrow: a factory is pure, but re-entering the
         // cache while it is borrowed would panic rather than deadlock, and
         // that is not a failure mode worth leaving open.
-        let built = std::sync::Arc::new(f());
-        c.borrow_mut().insert(f as usize, std::sync::Arc::clone(&built));
+        let built: &'static CardDefinition = Box::leak(Box::new(f()));
+        c.borrow_mut().insert(f as usize, built);
         built
     })
 }
