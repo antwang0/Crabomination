@@ -505,7 +505,7 @@ fn splash_cards(pool: &[CardFactory], pair: &[Color], third: Color, cfg: &SimCon
         .filter(|&&f| {
             let def = crate::cube::card_def(f);
             let cs = colors_of_cost(&def.cost);
-            if !(cs.contains(&third) && cs.iter().all(|c| c == third || pair.contains(&c))) {
+            if !(cs.contains(third) && cs.iter().all(|c| c == third || pair.contains(&c))) {
                 return false;
             }
             // A splash is a handful of off-color sources, so it can only
@@ -694,7 +694,7 @@ fn build_shape<R: Rng>(
     // Land colors: main colors plus any splash color actually present.
     let mut land_colors = colors.to_vec();
     for &c in splash_colors {
-        if main.iter().any(|&f| colors_of_cost(&crate::cube::card_def(f).cost).contains(&c)) {
+        if main.iter().any(|&f| colors_of_cost(&crate::cube::card_def(f).cost).contains(c)) {
             land_colors.push(c);
         }
     }
@@ -1940,7 +1940,7 @@ fn swap_child(parent: &CandidateBuild, out_idx: usize, in_card: CardFactory, lab
     // its basics; one swapped in needs a source).
     let mut land_colors = child.colors.clone();
     for &c in &child.splash {
-        if child.main.iter().any(|&f| colors_of_cost(&crate::cube::card_def(f).cost).contains(&c)) {
+        if child.main.iter().any(|&f| colors_of_cost(&crate::cube::card_def(f).cost).contains(c)) {
             land_colors.push(c);
         }
     }

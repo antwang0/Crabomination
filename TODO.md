@@ -21,31 +21,45 @@ claude/modern_decks origin/claude/modern_decks` — the container clones `main`,
 ~2,200 commits behind. **Sessions run this branch concurrently: expect to
 rebase mid-run and re-read your numbers afterwards.**
 
-1. **Tip `1,265,410,851` Ir unchanged (pass 52).** This run's only commit is
-   `1c304384`, an opt-in bench-harness guard **off the throughput path**, so
-   no engine Ir moved. `--bench` byte-identical (196,220 dec / 27.53 turns /
-   0 stalls, 3 threads). **No net retrain.**
-2. **Filter 23 (thread-count determinism) DONE (`1c304384`).**
-   `CRAB_THREAD_CHECK` replays the identical `--bench` workload at a
-   contrasting thread count via the factored `run_jobs` and asserts the
-   order-independent outcome; clean 3 vs 1. **Still owed:**
-   `perform_action`'s partial-mutation restore audit fires only on the
-   suite's failing round-closing passes (today none) and is debug-only —
-   self-play never exercises it. Extending it to the checkpointed path is
-   the next measuring-device move.
-3. **Bench perf still diffuse; no cheap lever** (Profile of record current at
-   the tip: dispatch self 5.26 %, `evaluate_requirement_static` (-35), gather
-   4.12 %, ~20 % allocator/CoW churn). Re-profile before assuming a lever.
-   **The file-split build lever is MEASURED DEAD** (PERF "Build time").
-4. **Housekeeping.** TODO compacted (filters 15-21 folded to the index; git
-   log has the prose) — now ~1.0k. PERF still 4.2k: the 46th-pass profile
-   table is the next fold. Actor scaling linear to 4 cores; silent on 8+.
+1. **`--decks fixed` is not the simulator.** Pass 53's two biggest finds were
+   invisible on the bench: the per-card grant walk (49 % of a *cube* game) and
+   deck construction (96 % of a deck build; a `selfplay_train` actor builds
+   two decks a game). Read PERF's **"Which pool a change moves"** before
+   ranking anything. Tip: fixed 1,258,304,569 / cube 4,048,597,048 / sos
+   1,767,928,050 / sealed 3,600,052,980 / deck-build 118,357,325.
+2. **`selfplay_train` throughput 26.1 -> 85.6 games/s** (release-fast,
+   mimalloc, 3 actors, alternated). **No net retrain** — decks per seed are
+   byte-identical, ladder output diffs exactly.
+3. **Top candidates now: (-39)** the deck builder's residual 118 M (27 % of it
+   is `card_def`'s own lookup — the fix is resolving a pool's definitions once
+   into a `Vec<Arc<CardDefinition>>`, ~4 % of actor work); **(-38)**
+   `battlefield_find` 4.03 %, of which `all_damage_to_player_prevented` is
+   four lines of pure redundancy; **(-37)** the four ungated `computed()` arms
+   in the requirement walker (cube-only, size it there).
+4. **Housekeeping.** TODO ~1.0k. PERF 4.6k — the 46th-pass profile table is
+   folded, the 47th's is next. ENGINE_BACKLOG 4.6k / CARD_BACKLOG 4.2k still
+   want a triage pass.
 
 ## Standing rules for a perf pass
 
 Durable, not per-run. Every refutation named here is written up in **PERF**'s
 Log with its numbers; read the entry before re-proposing any of them.
 
+- **Ask which pool the change lives on** (pass 53, and it is the rule that
+  found the two largest costs in the simulator). `--decks fixed` carries no
+  `GrantTriggeredAbility` static and builds its decks once, so the per-card
+  grant walk and the whole deck builder are dead on the bench. A change to
+  statics / grants / layers / the requirement walker gets a `--decks cube`
+  reading too; a change under `draft.rs` / `recommend.rs` / `selfplay.rs`
+  gets `--decks sealed --games 1`, which plays no games and so isolates deck
+  construction exactly. PERF's "Which pool a change moves" has the recipes.
+- **The freeze scope that pays is the one around a loop whose borrow already
+  proves it** (pass 53). Three per-card grant walks each hold a shared borrow
+  of `self.battlefield` for their whole body, so no `&mut self` call can
+  happen inside — which is exactly the freeze-scope invariant, checked by the
+  compiler rather than by hand. Bare `freeze_layers_push`/`pop`, not
+  `with_frozen_layers` (the closure costs ~0.9 % because the loop's locals go
+  through its environment), gated on a fact the loop already computes.
 - **Rank the tail, not the function** (pass 49). A chain of narrow generators
   is invisible in a self-cost profile and in a callee table sorted by Ir; it
   shows up only in the **call counts** — twenty-two rows at exactly 2,176
@@ -100,10 +114,10 @@ Log with its numbers; read the entry before re-proposing any of them.
   build ~14 min, warm rebuild ~4m30s; callgrind ~4 min and contention-immune.
   Wide-pool sweep ~55 s a seed — no excuse to skip it. Quote callgrind under
   5 %; a `profiling-fast` games/s compares to nothing.
-- **Trackers.** TODO ~1.0k, ROADMAP 0.66k, PERF ~3.6k (the 45th pass's profile
-  table was folded at the 48th tip; the 46th's is the next fold when its Log
-  rows stop chaining). ENGINE_BACKLOG 4.6k and CARD_BACKLOG 4.2k are the
-  archives and still want their own triage pass.
+- **Trackers.** TODO ~1.0k, ROADMAP 0.66k, PERF ~4.6k (the 45th pass's profile
+  table was folded at the 48th tip and the 46th's at the 53rd; the 47th's is
+  the next fold). ENGINE_BACKLOG 4.6k and CARD_BACKLOG 4.2k are the archives
+  and still want their own triage pass.
 
 ## Environment note
 
@@ -1038,6 +1052,15 @@ action mutates. The sharp edge that follows from it, and the one that keeps
 producing perf rows: **any `&mut` access unshares, including an `iter_mut`
 used read-only or a write that changes nothing.**
 
+**The second structural fact, added 2026-08-24: an actor's per-game work is
+not all simulation.** `selfplay_train`'s `actor_loop` calls `sealed_pool`
+twice and `heuristic_sealed_build` twice **per game** — 32 candidate builds
+a side under `--deck-judge` — and until pass 53 that was ~485 M Ir a game
+against ~48 M for the game itself. `cube::card_def` memoizes
+`CardFactory -> CardDefinition` and it is now ~20 M. Measure deck work with
+`bot_ladder --decks sealed --games 1`, which plays no games at all.
+
 Remaining scaling levers that are *not* engine instructions: the racing
-schedule (`racing_rounds` + small `games_per_pairing`), and, if ever needed,
-early adjudication of stalled games via `eval_material`.
+schedule (`racing_rounds` + small `games_per_pairing`); the deck builder's
+own residual ((-39) in PERF); and, if ever needed, early adjudication of
+stalled games via `eval_material`.

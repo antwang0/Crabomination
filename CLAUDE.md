@@ -27,6 +27,16 @@ moves it and then misleads: the seventeenth robustness filter found "the
 "`RawTable::clone` ran 984,988 times under the CoW unshare" (34,220, and none
 of them the field the comment is on).
 
+**A number is about a pool, not about the engine.** `--bench` measures
+`--decks fixed`, which carries no `GrantTriggeredAbility` static and builds
+its decks once — so the per-card grant walk (49 % of a cube game) and the
+whole deck builder (a `selfplay_train` actor builds two decks per game) are
+invisible there. A change to statics / grants / layers / the requirement
+walker gets a `--decks cube` reading too; a change under `draft.rs` /
+`recommend.rs` / `selfplay.rs` gets `--decks sealed --games 1`, which plays
+no games and so isolates deck construction. See PERF's "Which pool a change
+moves".
+
 Golden traces (`crabomination_tests/tests/core_rules/golden_trace.rs`) must
 stay identical across a behaviour-preserving change — a commit that moves one
 says why.

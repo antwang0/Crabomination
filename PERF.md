@@ -203,6 +203,62 @@ min each when two ran concurrently — budget two or three measured iterations
 per run, not ten. Callgrind on six games takes about three minutes and is
 contention-immune, which makes it the better first look.
 
+## Which pool a change moves — read this before ranking anything
+
+**Added at the fifty-third pass, which found a 32 % row and a 46 % row that
+`--bench` cannot see at all.** Every Log row before that pass measures
+`--decks fixed`: four hand-built vanilla archetypes. That pool is a fine
+*game-loop* proxy — the sealed-game profile below is the same shape to
+within a point — but it is blind in two directions, and both of them are
+where the simulator's largest costs turned out to be.
+
+**1. `fixed` carries no `GrantTriggeredAbility` static.** So `no_grants` is
+true on every board, `statics_granted_triggers_with` is never called, and
+the whole per-card grant path — which evaluates a `SelectionRequirement`
+against every battlefield permanent and reads the *computed* type line to
+do it — is dead code on the bench. On `--decks cube` that path reached
+**59.6 % of the program** and `gather_continuous_effects_inner` was
+**32.51 %** against `fixed`'s 4.12 %. Three freeze scopes took the cube
+pool from 7.95 G to 4.05 G (**-49.1 %**) and moved `fixed` by +0.11 %.
+
+**2. `--bench` builds its decks once; a training actor builds two per
+game.** `bot_ladder --decks sealed --games 1` plays *no games* (paired needs
+two per archetype) and still ran **2,910,408,580 Ir** — twelve sealed pools
+and twelve heuristic builds at 242.5 M apiece, against **48.4 M for an
+actual sealed game**. `selfplay_train`'s `actor_loop` calls `sealed_pool`
+twice and `build` twice *per game*, so that was ~485 M Ir of deck building
+per 48 M Ir of simulation. The bench amortises it over 80 games an
+archetype and never sees it.
+
+**The rule.** A change to statics, grants, layers or the requirement walker
+gets a `--decks cube` reading as well as a `fixed` one. A change anywhere in
+`draft.rs` / `recommend.rs` / `selfplay.rs` gets `--decks sealed --games 1`,
+which isolates deck construction exactly. `fixed` stays the committed bench
+because it is reproducible, cheap and *is* representative of the game loop
+— it is the pool the Log's absolutes are comparable across — but it is not
+the whole simulator.
+
+```text
+# the four pools, same config, at the fifty-third tip
+for d in fixed cube sos sealed; do
+  RUST_MIN_STACK=33554432 valgrind --tool=callgrind --callgrind-out-file=cg.$d.out \
+    target/profiling-fast/bot_ladder --a gang --b gang --games 6 --threads 1 \
+    --seed 1 --decks $d
+done
+# deck construction alone (0 games played, all setup):
+target/profiling-fast/bot_ladder --a gang --b gang --games 1 --threads 1 \
+  --seed 1 --decks sealed
+# the training loop itself, shipped allocator, for a wall-clock number:
+cargo build --profile release-fast -p crabomination_ml --bin selfplay_train
+target/release-fast/selfplay_train --actors 3 --games 120 --steps 1 --seed 7 --out /tmp/x
+```
+
+**And the one that has to be a wall-clock number.** The deck-builder fix is
+allocation-shaped, and callgrind runs the system allocator, so its Ir
+overstates what ships. Measured on the real loop with mimalloc,
+`--actors 3 --games 120 --steps 1 --seed 7`, alternated A/B/A/B:
+**26.1 / 25.0 games/s before, 85.6 / 85.6 after — 3.28x.**
+
 ## Build time — the file-size lever is dead, measured 2026-08-23
 
 **"Oversized engine files dominate incremental rebuilds" is false on this
@@ -260,6 +316,87 @@ not query invalidation, decides the cost. Nothing above says anything about
 it.
 
 ## Baseline
+
+**Fifty-third pass, base `d37f31d8` (pass 52's tip) vs its own tip
+`1ba3e76b`**, both `profiling-fast --no-default-features`, built and run in
+one sitting on one box. Six commits, two classes: **the requirement walker
+takes the permanent its caller is holding**, and **the per-card grant walks
+run under one freeze scope** — plus the pass's separate finding, that
+**deck construction was five games' worth of work per deck**.
+
+**This block reads four pools, not one.** See "Which pool a change moves":
+the two largest wins are invisible on `--decks fixed`, which is why they
+survived fifty-two passes.
+
+```text
+                     base (d37f31d8)     tip (1ba3e76b)
+I refs, --decks fixed    1,265,405,219   1,258,304,569   -0.561 %
+I refs, --decks cube     7,962,354,254   4,048,596,760  -49.153 %
+I refs, --decks sos      1,771,650,597   1,767,928,692   -0.210 %
+I refs, --decks sealed   6,408,608,519   3,599,906,549  -43.830 %
+deck build alone         2,915,219,820     118,457,567  -95.937 %
+  (--decks sealed --games 1: 0 games played, all setup)
+
+decisions                196,220         196,220        byte-identical
+turns_per_game           27.53           27.53
+stalls                   0 (0.00 %), cap 0 / stuck 0 / draw 0 (both)
+determinism              ok (all pairs split, both)
+peak_rss_mib             21.8            21.9
+ladder output            `--decks cube` / `sos` / `sealed` full printout
+                         diffs identically base vs tip
+suite                    18,712 passed / 0 failed / 5 ignored over 22 binaries
+golden traces            all unchanged
+clippy                   `--workspace --all-targets` clean
+rustc                    1.95.0 (59807616e 2026-04-14)
+host_cpu                 Intel(R) Xeon(R) Processor @ 2.80GHz, 4 cores
+host_calib_ms            55-57 across every reading
+```
+
+**Crash-freedom and determinism at the tip, widest pool.** `--a gang --b
+gang --decks all`, seeds 11/12/13 x threads 1/3, 200 games an archetype,
+`CRAB_PAIR_SWEEPS=1`, `release-fast`: every cell **3,400 decided, 0
+undecided, no panic, all 1,700 mirrored pairs split** — 20,400 games and
+10,200 pairs across the grid, no seed or thread count producing a sweep.
+Plus `--decks sealed` (the deck builder's own pool, which `--decks all`
+does not include) at seeds 11/12: 2,400 decided, 0 undecided, all 1,200
+pairs split each. `CRAB_THREAD_CHECK=1 --bench` reads **`thread_determinism
+ok (3 vs 1 threads identical)`**. And the `[profile.overflow]` run that
+turns a silent wrap into a panic (TODO filter 6): `--decks sealed` 1,200
+games and `--decks all` 1,700 games at 3 threads, **0 panics** — re-run
+here because the deck builder is new code on the actor path.
+
+**The wall-clock number, and it is the one that matters for training.**
+The deck-builder fix is allocation-shaped, so its Ir overstates what ships;
+measured on the real loop with the shipped allocator (`release-fast`,
+mimalloc), `selfplay_train --actors 3 --games 120 --steps 1 --seed 7`,
+alternated A/B/A/B in one sitting:
+
+```text
+              run 1     run 2
+base          26.1/s    25.0/s
+tip           85.6/s    85.6/s          3.28x on best-of-two
+rows          11,826 / 11,796           11,760 / 11,850
+```
+
+(The row counts vary by ~0.5 % *within* a binary as well as across — the
+per-row sampling reads a counter shared across actor threads, so it follows
+the interleaving. Game outcomes do not: the ladder diff above is exact.)
+
+Per commit, `--decks fixed` unless the row says otherwise:
+
+| step | before -> after | what |
+|---|---|---|
+| A `9bf2ae2e` | 1,265,402,214 -> 1,257,273,358 (**-0.642 %**) | `evaluate_requirement_static_on` — the walker takes the permanent instead of re-finding it; `eval.rs:3271` was 1.72 % of the program on its own |
+| B `3d29f9c4` | 1,257,273,358 -> 1,257,275,539 (+2,181, dead) | the same at eighteen more walks; **cube** 7,954,621,442 -> 7,954,622,012, -0.078 % |
+| C `36e998aa` | cube 7,954,622,012 -> 5,100,118,347 (**-35.88 %**) | freeze scope over `dispatch_triggers_for_events`' phase-1 board walk; fixed +0.081 % |
+| D `fdac88df` | cube 5,100,118,347 -> 4,174,033,023 (**-18.16 %**) | the same over `fire_step_triggers`; fixed +0.027 % |
+| E `67809f9f` | deck build 2,910,408,580 -> 176,120,671 (**-93.95 %**) | `cube::card_def` memoizes `CardFactory` -> `CardDefinition`; sealed -42.78 % |
+| F `16f03d27` | deck build 176,120,671 -> 118,357,325 (**-32.80 %**) | `const` TLS + `colors_of_cost` returns a `ColorSet`; sealed -1.58 % |
+| G `1ba3e76b` | cube 4,172,623,506 -> 4,048,597,048 (**-2.97 %**) | the third grant walk, `fire_spell_cast_triggers`; fixed +0.007 % |
+
+**No net needs retraining.** No encoding, pool, `TrainRow`, `EncodedState`
+or `Vocab` change is in this pass, and the decks a seed builds are
+byte-identical — only the cost of building them moved.
 
 **Fifty-second pass, base `b906be3b` (pass 51's tip) vs its own tip**, both
 `profiling-fast --no-default-features`, built and run in one sitting on one
@@ -1023,6 +1160,118 @@ the table above is safe to compress:
 
 
 ## Log
+
+### Fifty-third pass — the bench's own pool cannot see the two largest costs in the simulator
+
+Six commits, two classes, and the pass's real finding is the measuring
+device: **`--decks fixed` is blind to the grant/layer path and to deck
+construction, and those were 49 % of a cube game and 96 % of a deck build.**
+Read "Which pool a change moves" above before ranking anything from a
+`fixed` profile again.
+
+**(A) `9bf2ae2e` — the requirement walker re-finds a permanent its caller is
+holding. `fixed` -0.642 %.** `evaluate_requirement_static`'s
+`Target::Permanent` branch opens by locating the object; the battlefield leg
+of that is a linear `battlefield_find`, and **that one source line
+(`eval.rs:3271`) is 18,188,014 Ir / 1.72 % of the program** — the second
+largest line in the whole profile. `battlefield_find` altogether is
+**4.03 %** and has never appeared as a function row, because it always
+inlines. The callers that dominate it are *walking the battlefield* when
+they ask: `auto_targets_for_effect_all_slots` is 113,726 of the 182,016
+calls and its candidate loop is
+`battlefield.iter().filter(|c| is_legal(&Target::Permanent(c.id)))`.
+`evaluate_requirement_static_on(req, card, ..)` takes the permanent; the
+shared body threads it as a hint that stands in for the walk, a mismatched
+id falls back to the walk, and a `debug_assert` in the wrapper checks the
+hint really is the battlefield permanent it names.
+
+**(B) `3d29f9c4` — the same conversion at eighteen more walks, and it is
+bench-dead.** `fixed` +2,181 Ir (nothing), `cube` **-0.078 %**. The vanilla
+archetypes reach almost none of those selectors. Kept on the cube number
+and on the fact that a hint compare cannot cost more than the walk it
+replaces — and recorded here so nobody re-derives it.
+
+**(C) `36e998aa` + `fdac88df` + `1ba3e76b` — three per-card grant walks, one
+freeze scope each. `cube` -49.10 %, `fixed` +0.11 %.** The class:
+`statics_granted_triggers_with(card, grants)` evaluates each grant's
+`SelectionRequirement` against `card`, the requirement reads the *computed*
+type line (CR 613), and outside a freeze scope every such read re-gathers
+the whole game's continuous effects. Three loops do it per battlefield
+permanent — `dispatch_triggers_for_events`' phase 1 (59.6 % of the cube
+program inclusive), `fire_step_triggers` (21.7 %), `fire_spell_cast_
+triggers` (3.05 %). Each already holds a shared borrow of
+`self.battlefield` for its whole body, **so the borrow checker has already
+proved no `&mut self` call happens inside it**, which is exactly the
+invariant a freeze scope needs.
+
+Three forms were measured on the first one and the choice matters:
+
+| form | fixed | cube |
+|---|---|---|
+| `with_frozen_layers` closure | +0.945 % | -35.64 % |
+| bare `freeze_layers_push`/`pop`, ungated | +0.303 % | -35.84 % |
+| **bare push/pop, gated on the loop's own `no_grants`** | **+0.081 %** | **-35.884 %** |
+
+The closure costs ~0.9 % because every captured local in the loop then goes
+through the closure environment; the gate takes the two lock pairs per
+dispatch off the board that cannot use them. **This is the first win the
+scope-widening route ((-22)) has produced at this size, and it is only
+visible on a pool with grants in it.** Gathers on cube fell 469,116 ->
+187,220 at the first commit alone.
+
+**Left alone on purpose**: `combat.rs`'s `static_granted_triggers_of` and
+`stack.rs`'s ETB gather each ask about *one* card, so a scope there buys one
+gather and pays for one — the forty-seventh pass's rule in its other
+direction.
+
+**(D) `67809f9f` — a deck build costs five games, and 43 % of it is memcpy.
+Deck construction -93.95 %, `--decks sealed` -42.78 %, the real training
+loop 26.1 -> 85.6 games/s.** `CardFactory` is `fn() -> CardDefinition` and
+every call materialises the whole thing — several `Vec`s, an effect tree, a
+mana cost — so a caller that wants the card's *name* pays a full
+construction and a full drop for it. The deck builders call one per
+(pick x candidate x colour shape).
+
+The measurement that names it: **`bot_ladder --decks sealed --games 1` plays
+no games at all and still runs 2,910,408,580 Ir.** That is twelve sealed
+pools and twelve heuristic builds, 242.5 M apiece, against 48.4 M for a
+sealed game; its own profile is 43.31 % `__memcpy`, 4.92 %
+`drop_in_place<CardDefinition>` and ~22 % allocator. The ladder amortises it
+over six games an archetype; `selfplay_train`'s `actor_loop` does not — it
+calls `sealed_pool` twice and `build` twice **per game** (and 32 candidate
+builds a side under `--deck-judge`).
+
+`cube::card_def(f)` memoizes the construction per thread, keyed by the
+function pointer: two factories the linker folds to one address have
+identical machine code and so build identical definitions, which makes a
+fold unobservable. It returns `Arc<CardDefinition>` and the cache holds a
+reference forever, so every `Arc::make_mut` on one clones first and a game
+can never write through to the cached copy.
+
+**(E) `16f03d27` — the residual: a colour list that allocates and a lazy TLS
+check. Deck construction -32.80 % on top of (D).** `LocalKey::with` was
+18.23 % of what was left (487,071 `card_def` calls in one twelve-deck build,
+each doing a lazy-init check) and `Vec::from_iter` 12.84 % —
+`colors_of_cost` returned a `Vec<Color>`, i.e. an allocation per pool card
+per colour shape, 253,333 of them. `const`-initialized `thread_local!` and
+`ColorSet`. Across (D) and (E): **242.5 M -> 9.9 M Ir per pool+build, 24.5x.**
+
+**What is left of the deck builder, for whoever takes it next**: 118 M for
+twelve builds, of which `LocalKey::with` is still **27 %** — the memo's own
+hash lookup, 66 Ir a call over 487,071 calls. The structural answer is for
+the builder to resolve a pool's definitions **once** into a
+`Vec<Arc<CardDefinition>>` and index it, rather than looking each up by
+function pointer; that is a signature change across `draft.rs` /
+`recommend.rs` and was not attempted here. It is worth ~4 % of an actor's
+per-game work, not more.
+
+**Behaviour, all six commits.** `--bench` byte-identical at every step
+(196,220 decisions, 27.53 turns/game, 0 stalls, determinism ok); the full
+`--decks cube` / `--decks sos` / `--decks sealed` ladder output at the tip
+diffs **identically** against the pass base, so the decks a seed builds and
+the games they play are unchanged; suite 18,712 passed / 0 failed / 5
+ignored over 22 binaries at each commit. **No net needs retraining** — no
+encoding, pool, `TrainRow`, `EncodedState` or `Vocab` change is in the pass.
 
 ### Fifty-second pass — the picker adopts on its own side, and the driver was where the second run was
 
@@ -2201,8 +2450,44 @@ settings + debuginfo; system allocator, because valgrind replaces malloc and
 a mimalloc build would measure the interception), 1 thread, `--a gang --b
 gang --games 6 --seed 1 --decks fixed`.
 
-**The branch ends at 1,265,410,851 Ir**, read directly at the fifty-second
-tip. Top self-cost rows at that reading:
+### The four pools at the fifty-third tip (`1ba3e76b`)
+
+Same binary, same config (`--a gang --b gang --games 6 --threads 1 --seed 1`),
+one pool each. **A game costs about the same on every pool** — 52.4 M
+(`fixed`), 84.3 M (`cube`), 58.9 M (`sos`), 49.2 M (`sealed`, measured over
+240 games so the deck build amortises out) — and the *shapes* differ only
+where the pool's cards do. Read the row that matches what your change
+touches.
+
+| row | fixed 1,258,304,569 | cube 4,048,597,048 | sealed (240 games) 11,810,935,584 |
+|---|---|---|---|
+| `dispatch_triggers_for_events` | **5.29 %** | 3.91 % | 5.56 % |
+| `gather_continuous_effects_inner` | 4.14 % | **7.99 %** | 5.88 % |
+| `__memcpy` | 4.13 % | 4.75 % | 3.97 % |
+| `Vec::from_iter` | 3.45 % | 3.09 % | 3.21 % |
+| `Arc::clone_from_ref_in` | 3.17 % | 2.41 % | 3.01 % |
+| `check_state_based_actions` | 2.30 % | — | 2.61 % |
+| `evaluate_requirement_static` | 1.94 % | 2.70 % | 1.19 %* |
+| `computed_permanent` | 1.32 % | **4.14 %** | 1.46 % |
+| `compute_permanent_pass` | 1.38 % | **2.97 %** | 1.43 % |
+| `sba_board_scan` | 1.66 % | — | 1.77 % |
+| allocator (`malloc`+`free`+`_int_*`) | ~10.7 % | ~13.1 % | ~12.1 % |
+
+\* the `'2` monomorphization only; the two split differently per pool.
+
+**The conclusion worth keeping: `fixed` is a sound proxy for the game loop
+and a useless one for the layer path.** The sealed pool — what
+`selfplay_train` actually plays — is within a point of `fixed` on every row.
+The cube pool is the outlier, and it is the outlier in exactly one place:
+`computed_permanent` + `compute_permanent_pass` + the gather are **15.1 %**
+there against 6.8 % on `fixed`, because cube boards carry the layer-4 and
+grant statics the hand-built archetypes do not. That is what is left of
+the cube gap after the three freeze scopes took it from 32.5 % to 8.0 %.
+
+**The branch ends at 1,258,304,569 Ir on `--decks fixed`** at the
+fifty-third tip; the pass-52 table below was read at 1,265,410,851 and every
+row holds to within 0.6 % (the pass's `fixed` delta). Top self-cost rows at
+that reading:
 
 | row | Ir | % | note |
 |---|---|---|---|
@@ -2437,47 +2722,27 @@ the final tip for comparison: `pick_attacks_scored` 855,253,773 / **51.96 %**,
 | `auto_tap_for_cost_inner` | 9,544 | |
 | `ManaCost::reduce_generic` | 7,550 | |
 
-**The forty-sixth pass's table, kept because its Log rows chain to it.** It
-was taken at 1,747,982,407, before that pass's rebase and its (E) and (F),
-so its absolute totals read ~20 M high against that pass's own tip.
+**The forty-sixth pass's profile table is folded** (fifty-third pass): its
+Log rows have stopped chaining and every number a live candidate needs is
+carried by that candidate. It was taken at 1,747,982,407, so its absolutes
+read ~20 M high against that pass's own tip; `git log -- PERF.md` at
+`fdac88df^` has it in full. What it established and where that lives now:
+`pass_priority` 21.32 % and `resolve_combat` 11.86 % read from the top for
+the first time (**(-25)**), the 2,646 combat SBA sweeps at 27,065 Ir each
+(**(-17)**), `declare_blockers`' one `ColdState` unshare per declaration
+(**(-14)**), and the land tap's callee table — `card_keyword_possible`
+1,149 Ir a call over 18,910, `continue_ability_resolution_x` 1,058,
+`card_type_change_in_scope` 483 — which **(-12)** carries.
 
-| row | at the 46th tip | note |
-|---|---|---|
-| `pick_attacks_scored` inclusive | 933,660,486 / **53.41 %** over 438 | still the largest subtree; the share rises because the pass took Ir out of everything else |
-| **`pass_priority` inclusive** | **372,797,017 / 21.32 % over 54,838** | **never read from the top before.** `advance_step` 278,506,111 / 15.93 % over 22,892; `resolve_top_of_stack` 87,249,005 / 4.99 % over 4,250 |
-| **`resolve_combat` inclusive** | **207,359,376 / 11.86 % over 2,694** | **never read from the top before**; `advance_step` reaches it for 157,757,454 / 9.03 %. Candidate (-25) |
-| `cast_spell` inclusive | ~500 M / 28.6 % over 7,640 | (A)/(B)/(C) came off it; `try_pay_after_snapshot_mode` -> `auto_tap_for_cost_inner` 258,552,458 / 14.60 % over 9,034 is what is left, and it is (-12) |
-| `check_state_based_actions` incl | ~76 M / 4.3 % | **71,617,813 / 4.10 % of it is the 2,646 sweeps `resolve_combat` runs** — 27,065 Ir each, deaths included. The other ~8,000 sweeps are nearly free |
-| `declare_blockers` inclusive | **70,486,638 / 4.03 % over 2,706** | 26,050 Ir a call; 7,088,925 of it is one `ColdState` unshare per block declaration. **Guarding it promotes the next write** — see the 46th pass's Log |
-| `dispatch_triggers_for_events` incl | 122,652,705 / **7.01 %** over 70,418 | self ~71 M / 4 % across its five `file:function` rows — still the largest engine function |
-| `gather_continuous_effects_inner` incl | ~92 M / 5.2 % | **48,466 gathers**, unchanged: `computed_permanent` 25,736, `frozen_effects` 17,702, `compute_permanents` 3,594 |
-| allocator | `_int_free` 66.9 M / 3.78 %, `memcpy` 58.4 / 3.30, `malloc` 48.7 / 2.75, `_int_malloc` 33.1 / 1.87, `free` 30.1 / 1.70 | ~13.4 % over **1,021,777 allocations** (was 1,112,945). See (-23)'s refreshed table |
-| `card_can_grant_keyword` | 15.7 M self / 0.89 % over 648,698 | candidate (-11), still demoted |
-| `Keyword::eq` | 12,255,890 / 0.69 % | a payload-carrying enum compared by `Vec::contains`. ~11 Ir a call — already near the floor for a derived `PartialEq`; no entry |
-| `CardDefinition::is_creature` | 14,285,884 / 0.81 % | ~15 Ir over ~950 k calls, a `Vec<CardType>::contains`. A `CardTypeSet` bitset is the only shape that beats it and it is the (-11) staleness hazard again |
+**The one argument from it that is not a number, kept because it is a
+refutation.** ~830 of `card_keyword_possible`'s 1,149 Ir is
+`keyword_grant_in_scope`'s board walk, and that is the same answer for every
+tap in one `auto_tap_for_cost_inner` batch (2.1 of them). **Stamping it per
+batch is unsound**: a mana ability may put a counter on its source or
+sacrifice it, so the board can move between taps and a stale `false` would
+skip a real restriction. (-11) has the cache shapes and why they lose.
 
-**The land tap, read from the top at the 46th tip and the clearest single
-thing left.** `auto_tap_for_cost_inner` is 258,552,458 / 14.60 % over 9,034
-and `activate_ability` inside it 153,425,087 / 8.66 % over 18,830, so **a
-cast costs 2.5 land taps**. What one tap pays, after (B) and (F):
-
-| callee of `activate_ability_inner` | Ir | % | calls | Ir/call |
-|---|---|---|---|---|
-| **`card_keyword_possible`** | **21,733,120** | **1.26** | 18,910 | **1,149** |
-| `continue_ability_resolution_x` | 19,845,500 | 1.15 | 18,750 | 1,058 (was 1,671) |
-| `card_type_change_in_scope` | 9,112,636 | 0.53 | 18,864 | 483 |
-| `resolve_extra_mana_on_land_tap` | 4,111,380 | 0.24 | 18,750 | 219 |
-| `mana_production_multiplier_for` | 3,182,508 | 0.18 | 18,750 | 170 |
-| `ability_spend_kind` | 1,129,800 | 0.07 | 18,830 | 60 |
-
-`card_keyword_possible` is the CR 602.5 `CantActivateTapAbilities` gate and
-**~830 of its 1,149 Ir is `keyword_grant_in_scope`'s board walk**, which is
-the same answer for every tap in one `auto_tap_for_cost_inner` batch (2.1 of
-them). Stamping it per batch is *unsound*: a mana ability may put a counter
-on its source or sacrifice it, so the board can move between taps and a stale
-`false` would skip a real restriction. (-11) has the cache shapes and why
-they lose. The last two rows are single tight board walks at ~11 Ir a card,
-already near the floor, and fusing them needs that same unsound stamp.
+**The forty-seventh pass's table is the next fold.**
 
 **The forty-fifth's, the forty-fourth's and the forty-second's profile tables
 were folded away** (the last two at the 2.8 k mark, the forty-fifth's at the
@@ -2490,6 +2755,83 @@ chains to; the full tables are in `git log -- PERF.md` at `36592fd8`,
 Ordered by expected value. Each run pulls the top one, attaches numbers,
 and feeds what it finds back in. Re-profile and replenish when the list
 goes thin or stale.
+
+**Ranking rule added by the fifty-third pass, and it is about the workload,
+not the code: ask which pool the change lives on before you cost it.** Two
+of that pass's finds were larger than anything in this list and neither was
+visible on the bench — the per-card grant walk (49 % of a cube game) and
+deck construction (96 % of a deck build, and a training actor builds two
+decks a game). "Which pool a change moves" at the top of this file is the
+device; the short version is that `--decks fixed` carries no
+`GrantTriggeredAbility` static and builds its decks once.
+
+**(-39) THE DECK BUILDER — 118 M Ir for twelve pools + twelve builds after
+the fifty-third pass took it from 2.91 G, and it is still ~29 % of what a
+`selfplay_train` actor does per game.** Two builds and two pools a game at
+~9.9 M each, against ~48 M for the game. What is left, by self cost of
+`--decks sealed --games 1`:
+
+| row | Ir | % | note |
+|---|---|---|---|
+| `LocalKey::with` | 31,965,647 | **27.0** | `card_def`'s own lookup: 487,071 calls at 66 Ir. The `const` TLS init did not move it, so this is the `HashMap` probe + `RefCell` + `Arc` bump, not the lazy check |
+| `colors_of_picks` | 14,271,427 | 12.1 | 1,732 calls at 8,240 Ir — walks every pick and asks `card_def` per pick (110,053 of the 487,071) |
+| `build_shape` | 9,957,982 | 8.4 | 86,714 `card_def` calls of its own, mostly the `land_colors` loop |
+| `score_card_with_colors` | 9,918,390 | 8.4 | 44,849 calls |
+| `Map::fold'2` | 6,504,225 | 5.5 | |
+
+**The structural answer, not attempted**: have the builder resolve a pool's
+definitions **once** into a `Vec<Arc<CardDefinition>>` and index it, rather
+than looking each one up by function pointer at every read. That is a
+signature change through `draft.rs` / `recommend.rs` (`&[CardFactory]` ->
+`&[(CardFactory, Arc<CardDefinition>)]` or an index type) and it is worth
+about **4 % of an actor's per-game work** — size it against that before
+starting. Do **not** reach for a global (non-thread-local) cache: a
+`Mutex`/`RwLock` on the path 487,071 times a build is the wrong trade, and
+a `OnceLock` per factory is not expressible over a `fn` pointer.
+
+**(-38) `battlefield_find` is 4.03 % of the program and has never had an
+entry, because it never appears as a function row — it always inlines.**
+`self.battlefield.iter().find(|c| c.id == id)`, 556 call sites. The
+fifty-third pass took the largest one (`eval.rs:3271`, 1.72 % alone) by
+handing the permanent in; the rest of the table, from `cg_lines.py` at that
+pass's base:
+
+| call site | Ir | % |
+|---|---|---|
+| `evaluate_requirement_static` (`eval.rs:3271`) | 18,008,634 | 1.71 — **PAID** (`9bf2ae2e`) |
+| `find_card_anywhere`'s first leg (`mod.rs:21269`) | 3,614,532 | 0.34 |
+| `all_damage_to_player_prevented` (`mod.rs:12212`) | 2,230,452 | 0.21 |
+| `auto_tap_for_cost_inner`'s source table (`actions.rs:12626`) | 1,621,360 | 0.15 |
+| `bot::permanent_value` (`bot.rs:3003`) | 1,527,960 | 0.14 |
+| `pick_blocks_inner` (`bot.rs:8937` / `8702`) | 1,050,364 | 0.10 |
+
+**`all_damage_to_player_prevented` is the cheapest one and it is pure
+redundancy**: it collects `Vec<CardId>` from a battlefield walk and then
+re-finds each id on the battlefield, inside a single `&self` method where
+there was never a borrow to dodge. One walk, no `Vec`. ~0.2 % plus an
+allocation per call, and it is four lines.
+
+`bot::permanent_value(state, id, w)` and the rest are candidate (11)'s
+shape — a helper that opens with `battlefield_find` and is called from a
+battlefield loop. **The structural fix that would take all of them at once
+was costed and refused**: putting the `CardId` in the `CardInstance` handle
+(so the scan reads a dense array instead of chasing an `Arc` per element)
+buys ~20 % of the scan's Ir but doubles the handle to 16 bytes, and
+`Vec<CardInstance>` is cloned on every `GameState` clone and every CoW
+unshare. Do not take it on the Ir alone.
+
+**(-37) The requirement walker's `computed()` is forced by four arms that
+have no presence gate**, and on the cube pool it is the whole of
+`computed_permanent`'s 4.14 % + `compute_permanent_pass`'s 2.97 %.
+`has_type` is gated on `card_type_change_in_scope()`; `has_ctype`,
+`has_atype`, `has_ltype` and `has_stype` call `computed()` unconditionally.
+Two of the four gates already exist and are already audited by the gather's
+own `debug_assert`s (`creature_type_change_in_scope`,
+`land_type_change_in_scope`); the artifact-subtype and supertype families
+would need new `card_can_*` predicates and new audit arms. **Size it on the
+cube pool, not on `fixed`** — `card_type_change_in_scope` is called only
+13,052 times there against 413,844 forced `computed()`s, so the ungated
+arms are where the traffic is. Not attempted at the fifty-third pass.
 
 **Ranking rule added by the fiftieth pass, and it found 13 % in one sitting:
 ask what is done *twice*.** Not "what is expensive" and not "what is called
@@ -2576,7 +2918,13 @@ possible target for every slot, against the slot's `SelectionRequirement`. A
 card offering three modes pays three whole enumerations, and the requirement
 differs per mode, so there is nothing to share between them.
 
-**(-35) `evaluate_requirement_static` — 182,532 calls, 33,530,088 self /
+**(-35) HALF PAID (`9bf2ae2e`). The 269 Ir this entry told its taker to look
+at was mostly one line: `eval.rs:3271`'s `battlefield_find`, 18,188,014 Ir /
+1.72 % of the program, 46 % of the function's own cost.** Handing the
+permanent in took `fixed` -0.642 %. What is left is the enumeration, which
+is the bot's job, and the four ungated `computed()` arms — see (-37).
+
+**(-35, historical) `evaluate_requirement_static` — 182,532 calls, 33,530,088 self /
 2.52 %, the largest non-allocator self row after
 `dispatch_triggers_for_events`.** Callers: the target walk 113,726, a
 `Map::try_fold` 30,374, its own recursion 28,000 (two arities), the cast's
@@ -3024,7 +3372,25 @@ one per permanent per action; that is the tell. The Ir column lies here — a
 then read the source**. `alloc_zeroed` is now zero calls; it was the cheapest
 possible find and there is only ever one of those.
 
-**(-22) The gather's caller table — now the *only* live entry on the gathers,
+**(-22) SCOPE WIDENING PAID, AND LARGE — the fifty-third pass took
+`--decks cube` from 7.95 G to 4.05 G (-49.1 %) with three scopes, and the
+gather there fell from 32.51 % to 7.99 %.** This entry has said since the
+forty-fourth pass that "widening scopes is what reaches those" and it was
+right; what it could not say was *where*, because the three loops that
+mattered (`dispatch_triggers_for_events`' phase 1, `fire_step_triggers`,
+`fire_spell_cast_triggers`) are **dead on `--decks fixed`**. The device that
+made them safe is not a new one: each already holds a shared borrow of
+`self.battlefield` for its whole body, so the borrow checker has proved no
+`&mut self` call happens inside. **Look for that shape before proposing
+anything else here.** Use bare `freeze_layers_push`/`pop`, not
+`with_frozen_layers` (the closure costs ~0.9 % because the loop's locals go
+through its environment), and gate it on a fact the loop already computes.
+
+**The caller table below is the forty-fourth tip's `fixed` reading** and is
+kept for its shape; the live numbers are the four-pool table in "Profile of
+record".
+
+**(-22, historical) The gather's caller table — the *only* live entry on the gathers,
 because (-18) is refuted and scope widening is the one route left.** 53,806 continuous-effect gathers on
 the forty-fourth pass's tip at ~1,900 Ir each, ~102 M / 5.5 %:
 
@@ -3105,6 +3471,14 @@ batches, so moving it out costs an empty-`Vec` clone (free) and buys ~1.4 M.
 move-out would trade ~2.3 M for a `Vec` clone per checkpoint — probably a
 wash, measure before taking it.
 
+**Re-asked at the fifty-third pass and still refused.** The epoch's payoff
+side is eight times bigger on the cube pool than on the `fixed` one it was
+refuted against — but both of the refutation's reasons are workload-
+independent (the counter is not free where the writes are; a ~700 Ir
+predicate inlined into its caller is too cheap to memoize behind a call),
+and the scope-widening route took 49 % of that pool without any new state.
+Take the remaining scopes first.
+
 **(-18) THE BOARD EPOCH — BUILT, MEASURED, REFUTED (forty-fifth pass). Do
 not build it again; read the Log entry before proposing anything shaped like
 it.** The write counter on `CowBox::deref_mut`, the memo reachable from
@@ -3143,7 +3517,15 @@ the claim that `activate_ability_inner` asks it twice per activation is stale
 — callgrind at the forty-sixth tip reads 18,864 calls over 18,830
 activations, i.e. once, and one call site is left in that function.
 
-**(-16) `dispatch_triggers_for_events` — 141,288,450 / 7.61 % at the
+**(-16) PARTLY PAID (`36e998aa`): the phase-1 board walk runs under a freeze
+scope now, which is worth nothing on `fixed` (5.29 % self, unchanged) and
+took the function from 59.6 % to 3.91 % *inclusive* on `--decks cube`. The
+diffuse `fixed` cost this entry describes is what is left, and it is still
+diffuse — the fifty-third pass's line profile puts its largest single engine
+line at 3,288,498 Ir / 0.31 % (`mod.rs:16621`, the per-card static-grant
+branch test).**
+
+**(-16, historical) `dispatch_triggers_for_events` — 141,288,450 / 7.61 % at the
 forty-third pass's tip, and the entry's own open question is now answered.**
 `perform_action_inner` drains every action's event list through it; **53,838
 dispatches get past the empty-batch early return**. The question this entry

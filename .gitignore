@@ -99,3 +99,8 @@ tc*.txt
 # write annotate dumps to the session scratchpad, not the repo root.
 
 calling*.txt
+
+# callgrind dumps and their symbolized copies (see PERF.md "How to measure")
+cg.*.out
+cg.*.sym
+cg.out
