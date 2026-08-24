@@ -271,9 +271,21 @@ Tasigur (Splice / Delve).
   Reclamation Sage, Manglehorn, Noxious Gearhulk — which also could target
   itself despite "another" — Trygon Predator, Leonin Snarecaster, Choking
   Tethers' cycling trigger, Gitaxian Anatomist); each has a decline test.
-  What is left of that cluster is the "tap **or** untap" modals (Bounding
-  Krasis, Pestermite, Chain Stasis, Thassa's Ire, Sword of the Paruns), which
-  need mode choice, not just a `MayDo`.
+  Bounding Krasis and Pestermite followed (`Effect::TapOrUntap` inside a
+  `MayDo`; Pestermite also carried a `SkipNextUntap` rider it does not
+  print), and Chain Stasis / Thassa's Ire / Sword of the Paruns already had
+  the primitive.
+
+  **The inverse audit was run and is not worth repeating: noise-dominated.**
+  Definitions that are optional where the oracle has no "may" come back 37
+  strong and almost all of them are name aliasing — a transform back face or
+  a token whose `name:` field matches a *different* real card ("Ghostly
+  Castigator", "Vildin-Pack Alpha", "Merfolk", "Spirit"), so the lookup finds
+  the wrong oracle. The two genuine-looking ones checked (Coalition Relic,
+  Hullbreaker Horror) were not defects: Hullbreaker's `MayDo` models "choose
+  up to one", which really is optional. Any future name-keyed audit against
+  the cache has to reject a definition whose `name:` is a back face or a
+  token before it can say anything.
 - **"each opponent" instead of "target/defending player"** (multiplayer drift):
   Hellrider, Bojuka Bog, Tormod's Crypt, Barbed Servitor, Lorehold Apprentice, …
 - **Per-N counting flattened to a constant**: Witherbloom per-creature-milled
