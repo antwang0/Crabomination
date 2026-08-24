@@ -7,6 +7,37 @@ only stays dead while the reasoning that killed it is readable.
 
 ## Tier 13 — AI
 
+- 🟢 **Deck-net re-gate (2026-08-24) — the fifth and sixth gates land on
+  the historical band, and the committed-artifact defect closes without a
+  retrain.** All seven committed `deck-latest` checkpoints were vocab 153
+  against a live 164 (TODO "ML — defects found 2026-08-24"), which killed
+  `--use-deck-best` and every deck-net consumer. But the deck stream rides
+  along in every `selfplay_train` run, so the r41/r45 directories already
+  held current-vocab deck nets. Two were gated, pre-registered in
+  `.ladder/run_deck_regate.sh` (800 games × 12 pools per cell, ladder
+  seeds 43/97, static judge as control — the round-11 re-gate shape):
+
+  | artifact | seed 43 | seed 97 | pooled |
+  |---|---|---|---|
+  | nets_r45_ctrl_s43/deck-latest | 59.6 [58.6, 60.5] | 61.1 [60.2, 62.1] | 60.3 |
+  | nets_r41_v7_s43/deck-latest | 59.7 [58.7, 60.7] | 61.5 [60.6, 62.5] | 60.6 |
+
+  Six independent gates now (61.7 / 60.7 / 60.0 / 61.8 / 60.3 / 60.6):
+  the deck net remains the program's one stable result, and the band
+  survives training eras it was never re-measured under. The two
+  artifacts are a statistical tie (0.3 pooled apart against ±1 cells), so
+  the pick is by provenance, not by number: the r45 net — the newest
+  champion-class run — is committed as **`nets/deck-champion.safetensors`**,
+  reviving `--use-deck-best`, `--gate-builder-hc` and `--distill-gen`.
+  Worth noting: the ladder-seed split (both nets ≈59.6 on seed 43, ≈61.3
+  on seed 97) tracks the seed's pool field, not the net — pool-level
+  clustering, the builder-v3 lesson restated. The structural hazard was
+  closed separately by the fifty-fourth pass's `VOCAB_SNAPSHOT` freeze
+  (see "The deck-net vocabulary freeze" below): names own frozen indices
+  and the table only grows at the end, so a card addition no longer
+  retires nets. This artifact is at the frozen size (164) and loads under
+  `vocab_fit`.
+
 - ⚪ **Round 51 (2026-08-23) — the fetch as searched arms is +0.35 and
   UNRESOLVED; the demand-aware ranking under it is a precise ZERO. The
   round's lesson is that a search-level flag cannot inherit the paired

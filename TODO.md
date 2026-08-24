@@ -31,6 +31,7 @@ not a lock:** fetch before starting a candidate, and **push the code commit
 before the tracker prose** — passes 68/69 and 71/72 each duplicated a whole
 commit that a fetch would have shown.
 
+<<<<<<< HEAD
 1. **Perf queue = PERF's candidates.** (-54) the sim's transaction checkpoint
    (~0.93 % of `cube`; needs a *failure count* first, not a profile); (-53)
    the cost-static bitmask (0.52 %, costs ~30 variants of enumeration);
@@ -130,6 +131,12 @@ commit that a fetch would have shown.
    This section was 315 lines before the seventy-sixth pass compacted it;
    everything it dropped is in "Standing rules" below, PERF's Log/candidates,
    or ENGINE_BACKLOG.
+8. **Deck net revived (2026-08-24):** `nets/deck-champion.safetensors` — the
+   r45 run's ride-along deck net, gated **60.3 % pooled** over 19,200 games
+   vs the static judge (`.ladder/run_deck_regate.sh`), so `--use-deck-best`
+   has a committed judge again. Post-freeze size (164 rows), loads under
+   `vocab_fit`. Write-up in ML_NOTES ("Deck-net re-gate") and the defect
+   index below.
 
 ## Standing rules for a perf pass
 
@@ -466,7 +473,8 @@ or `stuck` goes non-zero).
 
 ### Every committed deck net fails to load — FIXED for the future, not for those nets
 
-**Still open, and it is a training run, not code.** `VOCAB_SNAPSHOT` froze
+**The code half is the fifty-fourth pass's freeze; the artifact half
+closed 2026-08-24 (next paragraph).** `VOCAB_SNAPSHOT` froze
 the embedding index at the fifty-fourth pass, `pad_vocab` zero-extends a
 shorter table and `--use-deck-best` runs end to end at 91.7 % of the unjudged
 rate. The seven committed `*/deck-latest.safetensors` predate the freeze, so
@@ -475,6 +483,20 @@ by name and they need retraining. `nets/champion.safetensors` is unaffected.
 **The full write-up — what the bug was, what the fix does, what is
 deliberately not fixed and why, and the out-of-range clamp found alongside it
 — moved verbatim to `ML_NOTES.md` at the fifty-seventh pass.**
+
+**Resolved 2026-08-24 for the artifact, not the class.** No retrain was
+needed: the deck stream rides along in every `selfplay_train` run, so the
+recent run directories already hold vocab-164 deck nets. Two were re-gated
+at the round-11 shape (`.ladder/run_deck_regate.sh`, 800 games × 12 pools
+per cell, seeds 43/97): `nets_r45_ctrl_s43` 59.6/61.1, `nets_r41_v7_s43`
+59.7/61.5 — pooled 60.3/60.6, a statistical tie on the historical 60–62
+band. The r45 artifact (newest champion-class run) is committed as
+`nets/deck-champion.safetensors`; `--use-deck-best`, `--gate-builder-hc`
+and `--distill-gen` are live again. No retraining "for those nets" was
+ever needed — the run directories held current-vocab spares all along.
+The structural class is closed by the freeze above; this artifact is at
+the frozen size (164), so `vocab_fit` accepts it and future card
+additions only pad it.
 
 ## Engine — Missing Mechanics
 
