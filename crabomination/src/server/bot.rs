@@ -10208,18 +10208,29 @@ enum CombatSim {
 /// at: the game is over, the turn is already past combat damage, or the
 /// active player has no creature that could attack. Forge guards the same
 /// way, because the state copy is the expensive part.
-fn simulate_through_combat(g: &mut GameState, fuel: &mut u32, w: &EvalWeights) -> CombatSim {
+/// The `Skipped` precondition of [`simulate_through_combat`], hoisted so a
+/// caller can ask it *before* cloning the state it would hand over.
+///
+/// A `Skipped` walk leaves `g` byte-identical, so a caller that clones only to
+/// simulate and then score can score the original instead. The two callers
+/// that do this ([`score_settled_state`] and [`improves_this_turn`]'s idle
+/// baseline) ask through here rather than restating the test, so the
+/// precondition cannot drift from the walk it guards.
+fn combat_sim_skips(g: &GameState) -> bool {
     if g.is_game_over() || g.step >= TurnStep::CombatDamage {
-        return CombatSim::Skipped;
+        return true;
     }
     let attacker_seat = g.active_player_idx;
-    let could_attack = g.battlefield.iter().any(|c| {
+    !g.battlefield.iter().any(|c| {
         c.controller == attacker_seat
             && c.definition.is_creature()
             && !c.tapped
             && (!c.summoning_sick || c.has_keyword(&crate::card::Keyword::Haste))
-    });
-    if !could_attack {
+    })
+}
+
+fn simulate_through_combat(g: &mut GameState, fuel: &mut u32, w: &EvalWeights) -> CombatSim {
+    if combat_sim_skips(g) {
         return CombatSim::Skipped;
     }
     let turn = g.turn_number;
@@ -10365,6 +10376,14 @@ fn score_settled_state(g: &GameState, seat: usize, w: &EvalWeights) -> Option<i3
     // the moment it resolves -- see `simulate_through_combat`. Its own fuel
     // budget: combat is a long way through the step machine (two
     // declarations plus a priority round per step, before triggers).
+    // A skipped walk leaves the clone byte-identical to `g`, so there was
+    // nothing to clone for: score `g` itself. Most settled states reach here
+    // with no untapped unsick creature, or already past combat damage.
+    if combat_sim_skips(g) {
+        let v = eval_material(g, seat, w);
+        super::leaf_capture::maybe(g, seat, v);
+        return Some(v);
+    }
     let mut sim = g.clone();
     let mut combat_fuel = 256u32;
     match simulate_through_combat(&mut sim, &mut combat_fuel, w) {
@@ -10467,7 +10486,11 @@ fn improves_this_turn(
     // making the gate fire almost never. Forge avoids this by routing both
     // sides through the same `getScoreForGameState`, which fast-forwards
     // combat itself.
-    let before = if w.combat_aware {
+    // Same clone-for-nothing as `score_settled_state`: a walk that skips leaves
+    // `idle` byte-identical to `state`. An *incomplete* walk does not — the
+    // probe deliberately scores the torn state — so only the skip case can
+    // take the shortcut, which is what `combat_sim_skips` answers.
+    let before = if w.combat_aware && !combat_sim_skips(state) {
         let mut idle = state.clone();
         let mut idle_fuel = 256u32;
         let _ = simulate_through_combat(&mut idle, &mut idle_fuel, w);
