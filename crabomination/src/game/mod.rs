@@ -261,11 +261,33 @@ struct LayerFreezeState {
     /// Short — one entry per permanent actually asked about — so a linear
     /// scan beats hashing. Cleared with `memo`.
     perms: Vec<(CardId, std::sync::Arc<crate::game::layers::ComputedPermanent>)>,
+    /// The layer-4 card-type presence gate for this scope, by the same
+    /// argument as `memo`: `card_type_change_in_scope` is two whole-collection
+    /// walks whose inputs (`continuous_effects`, `battlefield`) cannot change
+    /// while frozen, so the second ask is the first answer. It is asked ~5
+    /// times per target enumeration by `evaluate_requirement_static`'s
+    /// card-type gate — 15,096 of its 34,906 calls over six bench games.
+    /// Cleared with `memo`.
+    type_change: Option<bool>,
 }
 
 impl LayerFreeze {
     fn lock(&self) -> std::sync::MutexGuard<'_, LayerFreezeState> {
         self.0.lock().unwrap_or_else(|e| e.into_inner())
+    }
+}
+
+impl LayerFreezeState {
+    /// Everything memoized for the lifetime of one *outermost* scope, dropped
+    /// in one place so a field added to the state cannot survive a scope by
+    /// being forgotten at one of the two exits. `with_frozen_layers`' guard
+    /// and `freeze_layers_pop` both come here; adding `type_change` to only
+    /// the first is what made a stale card-type gate outlive its scope and
+    /// broke Sarkhan the Masterless.
+    fn end_of_scope(&mut self) {
+        self.memo = None;
+        self.perms.clear();
+        self.type_change = None;
     }
 }
 
@@ -8238,6 +8260,34 @@ impl GameState {
     /// type line in `compute_permanent_pass` without a `Modification` at all.
     /// It is a per-card flag, so a caller reads it off the card directly.
     pub(crate) fn card_type_change_in_scope(&self) -> bool {
+        // Memoized per freeze scope — see `LayerFreezeState::type_change`.
+        // Outside one (`&mut self` callers: the land tap's CR 602.5 gate, the
+        // SBA sweep) the lock is a handful of instructions and the walks run
+        // as before.
+        let frozen = {
+            let st = self.layer_freeze.lock();
+            if st.depth > 0 {
+                if let Some(v) = st.type_change {
+                    return v;
+                }
+                true
+            } else {
+                false
+            }
+        };
+        let answer = self.card_type_change_unscoped();
+        if frozen {
+            self.layer_freeze.lock().type_change = Some(answer);
+        }
+        answer
+    }
+
+    /// [`card_type_change_in_scope`](Self::card_type_change_in_scope) for a
+    /// caller that holds `&mut self` and is therefore *provably* outside every
+    /// freeze scope — `with_frozen_layers` borrows `&self` for the closure, so
+    /// no `&mut self` call can happen inside one. Skips the lock and the memo
+    /// slot, which such a caller can never read and never fills.
+    pub(crate) fn card_type_change_unscoped(&self) -> bool {
         self.continuous_effects.iter().any(|e| {
             matches!(
                 e.modification,
@@ -8432,8 +8482,7 @@ impl GameState {
                 let mut st = self.0.layer_freeze.lock();
                 st.depth -= 1;
                 if st.depth == 0 {
-                    st.memo = None;
-                    st.perms.clear();
+                    st.end_of_scope();
                 }
             }
         }
@@ -8454,8 +8503,7 @@ impl GameState {
         let mut st = self.layer_freeze.lock();
         st.depth -= 1;
         if st.depth == 0 {
-            st.memo = None;
-            st.perms.clear();
+            st.end_of_scope();
         }
     }
 

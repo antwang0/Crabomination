@@ -261,7 +261,7 @@ the trackers, so both columns stand unrederived.
 
 ```text
                      base (e7b3b3d4)          tip
-I refs (callgrind)   1,531,246,782            1,318,590,025   -13.887 %
+I refs (callgrind)   1,531,246,782            1,314,421,002   -14.160 %
 decisions            196,220                  196,220         byte-identical
 turns_per_game       27.53                    27.53
 stalls               0 (0.00 %), cap 0 / stuck 0 / draw 0 (both)
@@ -962,7 +962,8 @@ touch only `scripts/*.py` and the trackers, so both numbers stand unrederived.
 | B | 1,424,690,649 -> 1,395,881,928 (**-2.022 %**) | the two validating pickers the sim shares with the real path hand their probe's state out too |
 | C | 1,395,881,928 -> 1,330,233,580 (**-4.703 %**) | the finalist carries its probe's state to the outcome eval and the summon-sick gate |
 | — | 1,330,233,580 -> 1,330,231,550 | a clippy `collapsible_if` on (C)'s loyalty-finalist filter; 2,030 Ir, not a fourth optimization |
-| D | 1,330,231,550 -> **1,318,590,025** (**-0.875 %**) | the probe template is built on first use, and the last consumer that forced it every tick goes behind a mask bit |
+| D | 1,330,231,550 -> 1,318,590,025 (**-0.875 %**) | the probe template is built on first use, and the last consumer that forced it every tick goes behind a mask bit |
+| E | 1,318,590,025 -> **1,314,421,002** (**-0.316 %**) | the layer-4 card-type presence gate joins the freeze scope's memo |
 
 **The class, and it is the largest one this file has named.**
 `would_accept_on` clones the state and runs the action **to completion** —
@@ -1069,8 +1070,32 @@ falls **22,184 -> 17,808**: 4,376 clones and their drops, ~12.8 M, against
 rides `gated_block!`'s debug audit, so the 18,709-test suite proves it against
 real boards rather than a re-derived list.
 
-**The pass on the branch: `1,531,246,782 -> 1,318,590,025`, -212,656,757 /
--13.887 %.**
+**(E) puts a third field in `LayerFreezeState`, on the argument the other two
+already stand on.** `card_type_change_in_scope` is two whole-collection walks
+(`continuous_effects`, then `battlefield`) at ~559 Ir, called **34,906** times,
+15,096 of them from `evaluate_requirement_static`'s card-type gate — ~5 asks
+per target enumeration, all with the same answer, because nothing it reads can
+change while a scope is frozen. Memoized beside `memo` and `perms` it costs
+254 Ir a call there. The other two callers (`activate_ability_inner`,
+`check_state_based_actions`) are `&mut self` and therefore *provably* outside
+every scope — a freeze scope borrows `&self` for its closure — so they take a
+new `card_type_change_unscoped` and pay neither the lock nor the memo slot they
+could never read. Without that split the pass reads -0.277 %; with it,
+-0.316 %.
+
+**The suite caught a real bug in it, and the bug is filter 11's shape.**
+There are *two* scope exits — `with_frozen_layers`' `Unfreeze` guard and
+`freeze_layers_pop` — and the first version added the new field's clear to
+only one. A `freeze_layers_push`/`pop` scope therefore leaked a stale
+card-type gate into the next scope, and
+`war::sarkhan_masterless_animates_and_pings` failed: Sarkhan animates
+planeswalkers, so the gate's answer is the whole card. Both exits call one
+`LayerFreezeState::end_of_scope` now, so a fourth field cannot survive a scope
+by being forgotten at one of them. **The correct version is 468 K Ir *more*
+expensive than the broken one** — the stale memo was skipping walks it owed.
+
+**The pass on the branch: `1,531,246,782 -> 1,314,421,002`, -216,825,780 /
+-14.160 %.**
 
 **What is left of the class, and why each row was not taken.**
 `main_phase_action_with`'s 2,036 probes and `pick_land_to_play`'s 934 hand
@@ -1991,7 +2016,7 @@ settings + debuginfo; system allocator, because valgrind replaces malloc and
 a mimalloc build would measure the interception), 1 thread, `--a gang --b
 gang --games 6 --seed 1 --decks fixed`.
 
-**The branch ends at 1,318,590,025 Ir**, read directly at the fiftieth tip.
+**The branch ends at 1,314,421,002 Ir**, read directly at the fiftieth tip.
 The table below was taken at 1,330,233,580, before (D) and a clippy
 `collapsible_if` on (C)'s diff — (D) moved 4,376 `GameState` clones and the
 Splice sweep, so every row here holds to within ~12 M.

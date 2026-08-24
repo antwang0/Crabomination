@@ -21,9 +21,9 @@ claude/modern_decks origin/claude/modern_decks` — the container clones `main`,
 ~2,200 commits behind. **Sessions run this branch concurrently: expect to
 rebase mid-run and re-read your numbers afterwards.**
 
-1. **Nothing is in flight. Branch tip `1,318,590,025` Ir.** Pass 50 reads
-   `1,531,246,782 -> 1,318,590,025`, **-13.887 %** in four commits (A -6.958,
-   B -2.022, C -4.703, D -0.875); pass 49 under it -5.785 %. Suite 18,709 / 0 / 5 over
+1. **Nothing is in flight. Branch tip `1,314,421,002` Ir.** Pass 50 reads
+   `1,531,246,782 -> 1,314,421,002`, **-14.160 %** in five commits (A -6.958,
+   B -2.022, C -4.703, D -0.875, E -0.316); pass 49 under it -5.785 %. Suite 18,709 / 0 / 5 over
    22 binaries, golden traces unchanged; workspace clippy clean; `--bench`
    invariants byte-identical throughout (decisions **196,220**, turns 27.53,
    stalls 0, determinism ok); wide pool clean (20,400 games, 20,396 decided,

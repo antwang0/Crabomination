@@ -13800,7 +13800,7 @@ impl GameState {
             // with neither in scope the printed type line is the computed one.
             let is_creature = {
                 let card = &self.battlefield[pos];
-                if card.bestowed || self.card_type_change_in_scope() {
+                if card.bestowed || self.card_type_change_unscoped() {
                     bf_cp!()
                         .as_ref()
                         .is_some_and(|c| c.card_types.contains(&crate::card::CardType::Creature))
@@ -14135,7 +14135,7 @@ impl GameState {
             let mut sick = bf_src!().is_some_and(|c| c.summoning_sick);
             if sick {
                 let bestowed = bf_src!().is_some_and(|c| c.bestowed);
-                sick = if bestowed || self.card_type_change_in_scope() {
+                sick = if bestowed || self.card_type_change_unscoped() {
                     bf_cp!()
                         .as_ref()
                         .is_some_and(|c| c.card_types.contains(&crate::card::CardType::Creature))

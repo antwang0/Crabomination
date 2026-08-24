@@ -4438,7 +4438,9 @@ impl GameState {
         // this, and a first version that also moved the death legs inside read
         // **+1.24 %**. See the Log block; the fusion device does not
         // generalise to a walk whose per-card body is already this cheap.
-        let type_change = self.card_type_change_in_scope();
+        // `check_state_based_actions` is the only caller and it is
+        // `&mut self`, so this is provably outside every freeze scope.
+        let type_change = self.card_type_change_unscoped();
         self.battlefield
             .iter()
             .any(|c| (type_change || c.definition.is_creature()) && self.card_death_possible(c))
