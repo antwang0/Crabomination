@@ -318,7 +318,7 @@ it.
 ## Baseline
 
 **Fifty-third pass, base `d37f31d8` (pass 52's tip) vs its own tip
-`867de7bb`**, both `profiling-fast --no-default-features`, built and run in
+`ae938ac3`**, both `profiling-fast --no-default-features`, built and run in
 one sitting on one box. Nine commits, three classes: **the requirement walker and its
 family take the permanent the caller is holding**, **the per-card grant
 walks run under one freeze scope**, and **deck construction stops
@@ -330,12 +330,12 @@ the two largest wins are invisible on `--decks fixed`, which is why they
 survived fifty-two passes.
 
 ```text
-                     base (d37f31d8)     tip (867de7bb)
-I refs, --decks fixed    1,265,405,219   1,250,411,872   -1.185 %
-I refs, --decks cube     7,962,354,254   4,026,159,406  -49.436 %
-I refs, --decks sos      1,771,650,597   1,760,194,418   -0.647 %
-I refs, --decks sealed   6,408,608,519   3,572,358,157  -44.257 %
-deck build alone         2,915,219,820     111,936,472  -96.160 %
+                     base (d37f31d8)     tip (ae938ac3)
+I refs, --decks fixed    1,265,405,219   1,250,409,741   -1.185 %
+I refs, --decks cube     7,962,354,254   4,026,141,796  -49.436 %
+I refs, --decks sos      1,771,650,597   1,760,202,906   -0.646 %
+I refs, --decks sealed   6,408,608,519   3,572,196,844  -44.259 %
+deck build alone         2,915,219,820     111,759,384  -96.166 %
   (--decks sealed --games 1: 0 games played, all setup)
 
 decisions                196,220         196,220        byte-identical
@@ -375,11 +375,14 @@ mimalloc), `selfplay_train --actors 3 --games 120 --steps 1 --seed 7`,
 alternated A/B/A/B in one sitting:
 
 ```text
---actors 3 --games 900 --steps 1 --seed 7
-              run 1     run 2
+--actors 3 --games 900 --steps 1 --seed 7          (heuristic builder)
 base          25.6/s    26.1/s
-tip           92.6/s    88.5/s          3.55x on best-of-two
-rows          87,762 / 88,139           87,944 / 87,661
+tip           92.6/s    99.8/s          3.82x on best-of-two
+
+--actors 3 --games 150 --steps 1 --seed 7 --use-deck-best <net>
+base           1.2/s     1.2/s
+tip           83.2/s    83.2/s          69x — deck building was 95 %
+                                        of a judged actor's work
 ```
 
 (The row counts vary by ~0.5 % *within* a binary as well as across — the
@@ -399,6 +402,7 @@ Per commit, `--decks fixed` unless the row says otherwise:
 | G `1ba3e76b` | cube 4,172,623,506 -> 4,048,597,048 (**-2.97 %**) | the third grant walk, `fire_spell_cast_triggers`; fixed +0.007 % |
 | H `4a951123` | 1,258,304,569 -> 1,250,618,001 (**-0.611 %**) | `all_damage_to_player_prevented` walked the board once per controlled permanent; `bot::permanent_value` re-found the card `eval_material_inner` was holding. Every pool: sealed -0.568 %, cube -0.524 %, sos -0.424 % |
 | I `867de7bb` | deck build 118,457,567 -> 111,936,472 (**-5.51 %**) | `card_def` hands back a leaked `&'static` — the `Arc` was an atomic pair per lookup over 487,071 lookups a build |
+| J `d1b4081f` | judged training loop 25.8 -> 83.2 games/s (**3.22x**) | `build_candidates_cfg` enumerated the same deterministic shape lattice per candidate; hoisted, ~26n `build_shape` calls become ~26 + n. No engine Ir moves (n = 1 everywhere the ladder measures) |
 
 **No net needs retraining.** No encoding, pool, `TrainRow`, `EncodedState`
 or `Vocab` change is in this pass, and the decks a seed builds are

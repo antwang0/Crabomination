@@ -25,8 +25,8 @@ rebase mid-run and re-read your numbers afterwards.**
    invisible on the bench: the per-card grant walk (49 % of a *cube* game) and
    deck construction (96 % of a deck build; a `selfplay_train` actor builds
    two decks a game). Read PERF's **"Which pool a change moves"** before
-   ranking anything. Tip: fixed 1,250,411,872 / cube 4,026,159,406 / sos
-   1,760,194,418 / sealed 3,572,358,157 / deck-build 111,936,472.
+   ranking anything. Tip: fixed 1,250,409,741 / cube 4,026,141,796 / sos
+   1,760,202,906 / sealed 3,572,196,844 / deck-build 111,759,384.
 2. **`selfplay_train` throughput: unjudged 26.1 -> 99.8 games/s; judged
    (`--use-deck-best`) 1.2 -> 83.2, i.e. 69x** (release-fast, mimalloc, 3
    actors, alternated). Deck building was 95 % of a judged actor's work.
