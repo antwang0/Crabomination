@@ -250,7 +250,7 @@ allocations          967,377                  926,895
 peak_rss_mib         21.9                     21.5
 
                      branch base (04282f2e)   final tip
-I refs (callgrind)   1,625,264,320 (derived)  1,533,436,329   -5.650 %
+I refs (callgrind)   1,625,264,320 (derived)  1,531,246,793   -5.785 %
 decisions            196,220                  196,220         byte-identical
 turns_per_game       27.53                    27.53
 stalls / determinism 0 / ok (both)
@@ -902,15 +902,16 @@ and 48's number for the same commit — argv length; see **Baseline**.)
 | B | 1,565,722,561 -> 1,560,268,509 (**-0.348 %**) | the three land blocks ask `can_player_play_land` once; a landless hand stops `pick_land_to_play`'s mana-base walks |
 | C | 1,540,962,924 -> 1,538,787,495 (**-0.141 %**) | the upkeep's keyword gate stops gathering to prove a negative — measured on the rebased branch, after (A) and (B) |
 | D | 1,535,903,173 -> 1,533,436,329 (**-0.161 %**) | the attack sim's spell layer asks whether there is a window before opening a freeze scope — measured after the second rebase |
+| E | 1,533,436,329 -> 1,531,246,793 (**-0.143 %**) | two clones taken only to hand a combat walk that skips the state it was given |
 
 **(A) and (B) sum to `1,645,831,476 -> 1,560,268,509`, -85,562,967 /
 -5.198 %** on their own chain, and rebased onto pass 48 they read
 `1,628,220,915 -> 1,540,962,924`, -5.359 %. (C) was written after that rebase
 (-> 1,538,787,495). Three more of pass 48's commits then landed underneath,
 so the chain was rebased a second time and re-read end to end:
-`1,625,264,320 -> 1,535,903,173`, -5.498 %. (D) then took it to
-**1,533,436,329**, so the pass on the branch is
-**`1,625,264,320 -> 1,533,436,329`, -91,827,991 / -5.650 %.** `--bench --threads 3` invariants byte-identical at
+`1,625,264,320 -> 1,535,903,173`, -5.498 %. (D) and (E) then took it to
+**1,531,246,793**, so the pass on the branch is
+**`1,625,264,320 -> 1,531,246,793`, -94,017,527 / -5.785 %.** `--bench --threads 3` invariants byte-identical at
 every step: decisions **196,220**, turns_per_game 27.53, stalls 0
 (cap 0 / stuck 0 / draw 0), determinism ok. Suite 18,709 / 0 failed /
 5 ignored, golden traces included. **No encoding change; no net needs
@@ -1012,6 +1013,47 @@ nothing reads the memo**: the `Unfreeze` drop alone is 6,127,240 Ir of self
 across the program's ~50,000 scopes, ~122 Ir a scope, and the push/pop is
 another ~60. The debug audit is `gated_pick!`'s — run the closure anyway and
 assert it returned nothing.
+
+**(E) is the same question a third time — what does this cost when the answer
+is "nothing to do"?** `simulate_through_combat` returns `Skipped`, leaving its
+state byte-identical, on a board that is over, already past combat damage, or
+has no untapped unsick creature for the active seat. Both callers that clone
+*only* in order to simulate-then-score were paying for the clone anyway.
+`combat_sim_skips` is now the walk's own early-out, hoisted so the guard and
+the walk cannot drift, and **only the skip case takes the shortcut** — an
+`Incomplete` walk really has mutated the state and the `before` probe
+deliberately scores that torn board.
+
+**(-31) was read from the top this pass and is REFUTED on cost — do not build
+it.** The idea was that `improves_this_turn`'s "after" half repeats the clone,
+dry-run and combat walk `pick_by_outcome` had just done for the same winner.
+The call counts say how little of it is actually reusable:
+
+```text
+pick_by_outcome                920 calls
+evaluate_action_outcome        842      \
+evaluate_action_sequence       842       > all equal, so every finalist that
+score_settled_state            842      /  was evaluated ran the full path
+action_outcome_is_temporary    842      -- and none was pinned to baseline
+follow_up_candidates             0      -- `gang` has lookahead 0; the
+                                           sequence recursion is dead here
+improves_this_turn             474
+```
+
+**842 evaluated finalists across 920 calls, with `EVAL_TOP = 3`, means at
+least 499 of those calls returned at `finalists.len() <= 1` and evaluated
+nothing at all.** So on more than half the ticks that reach it there is no
+prior evaluation of the winner to reuse — `improves_this_turn` *is* the only
+clone-and-resolve the bot does there. Against that, the lift needs a second
+score threaded out of a recursive evaluator's depth-0 rung and a full
+fallback for `w.determinize > 0` (where the outcome eval runs on a redealt
+state and the gate's answer would change). Ceiling ~1.5 % for high call-site
+churn.
+
+**What the reading does say, and it is a strength question, not a perf one:**
+the `hold_sick` / `hold_instants` gate costs about 6 % of simulator throughput
+and on most of its firings is more expensive than the pick it gates. Whether
+it earns that belongs in a `bot_ladder` A/B, not in this file.
 
 ### Forty-eighth pass — the profile came back, and the gate that pays is the one whose gather nobody else reads
 
@@ -1751,10 +1793,10 @@ settings + debuginfo; system allocator, because valgrind replaces malloc and
 a mimalloc build would measure the interception), 1 thread, `--a gang --b
 gang --games 6 --seed 1 --decks fixed`.
 
-**The branch ends at 1,533,436,329 Ir.** The table below is a tip four
+**The branch ends at 1,531,246,793 Ir.** The table below is a tip five
 commits earlier (`cg.rb.out`, 1,540,962,924) — (C) moved 2.2 M of
-`frozen_effects`, (D) 2.5 M of freeze-scope machinery and pass 48's (F)/(G)
-2.9 M more, so every row here holds to within 8 M. The forty-eighth pass's own table is kept
+`frozen_effects`, (D) 2.5 M of freeze-scope machinery, (E) 2.2 M of clones
+and pass 48's (F)/(G) 2.9 M more, so every row here holds to within 10 M. The forty-eighth pass's own table is kept
 under it because its Log rows chain to it — read that one as shares, not
 absolutes: it was taken on pass 48's pre-rebase chain. The forty-seventh's and
 forty-sixth's are kept below that for the same reason; the forty-fifth's was
@@ -2130,10 +2172,13 @@ path stays on the stack. It touches every caller that writes
 the call-site churn before starting. **Do not** reach for a pool: (-13)
 measured the husk-pool shape at +2.60 %.
 
-**(-31) `improves_this_turn` is 948 `simulate_through_combat` calls and two
-`GameState` clones apiece — 6.1 % of the program — and its second half repeats
-what `pick_by_outcome` just did for the same action.** The forty-ninth pass
-read it and did not build it, because the reuse is not free.
+**(-31) `improves_this_turn` — READ FROM THE TOP AND REFUTED ON COST by the
+forty-ninth pass. Do not build the reuse; see that pass's Log entry for the
+call counts.** 842 evaluated finalists across 920 `pick_by_outcome` calls
+means at least 499 of them evaluate nothing, so on more than half the ticks
+that reach it there is no prior evaluation of the winner to lift. What is
+left of the entry is the strength question — the gate costs ~6 % of simulator
+throughput — and the analysis below, kept because it is the map of the path.
 
 `main_phase_action_with`'s summon-sick / hold-instants gate calls it once per
 winning line (474 calls, 948 combat sims). The `before` half fast-forwards an

@@ -29,15 +29,15 @@ structural fix kept outside that total (the extra-cast target walk takes one
 freeze scope — a null on `--decks fixed`, where the path is cold). Pass 49
 ran beside *both* and is rebased on top of them: on its own pre-rebase chain
 `1,645,831,476 -> 1,560,268,509`, **-5.198 %**, and on the branch
-`1,625,264,320 -> 1,533,436,329`, **-5.650 %** in four rows. Every chain is measured against its own base and
+`1,625,264,320 -> 1,531,246,793`, **-5.785 %** in five rows. Every chain is measured against its own base and
 every one is `--bench`-invariant-identical throughout (decisions **196,220**,
 turns 27.53, stalls 0, determinism ok). **Six builds were reverted across
 them and every one is written up in PERF's Log** — read them before
 re-proposing any.
 
-1. **Nothing is in flight. Branch tip `1,533,436,329` Ir** — pass 49 rebased
-   onto pass 48's final tip reads `1,625,264,320 -> 1,533,436,329`,
-   **-5.650 %** in four commits (its own pre-rebase chain: -5.198 %). Suite
+1. **Nothing is in flight. Branch tip `1,531,246,793` Ir** — pass 49 rebased
+   onto pass 48's final tip reads `1,625,264,320 -> 1,531,246,793`,
+   **-5.785 %** in five commits (its own pre-rebase chain: -5.198 %). Suite
    18,709 / 0 failed / 5 ignored over 22 binaries at that tip, golden traces
    included; `cargo clippy --workspace --all-targets` clean; `--bench`
    invariants byte-identical throughout (decisions **196,220**, turns 27.53,
@@ -46,18 +46,27 @@ re-proposing any.
    10,198 mirrored pairs split**. **No encoding change; no net needs
    retraining as of this tip.**
 2. **Pass 49's finding, and it is a way of reading a profile.** *Rank the
-   tail, not the function.* A chain of narrow generators is invisible in a
+   tail, not the function*, and *ask what a tick pays when the answer is
+   "nothing to do"* — four of its five rows are that question at a different
+   level (a twenty-two-generator fallback chain, three land blocks, a gate
+   that gathered to prove a negative, a freeze scope opened for a closure that
+   returns immediately, two clones handed to a walk that skips).
+   *Rank the tail, not the function:* A chain of narrow generators is invisible in a
    self-cost profile and in a callee table sorted by Ir; it shows up only in
    the **call counts** — twenty-two rows at exactly 2,176 calls each, once
    per traversal, on a board with nothing for any of them. Anywhere the code
    reads as a fallback chain, count the rows before costing them. The device
    is `spec` / `gated_block!`'s, and the debug audit is what makes it safe.
-3. **Top candidates. (-26) is CLOSED** — pass 49 took it, -4.867 %. Next:
-   (-31) `improves_this_turn`, 6.1 %, repeats what `pick_by_outcome` just did
-   — read its three behaviour caveats before starting. Then (-21)
+3. **Top candidates. (-26) is CLOSED** (pass 49, -4.867 %) and **(-31) is
+   REFUTED on cost** — 842 evaluated finalists across 920 `pick_by_outcome`
+   calls means at least 499 of them evaluate nothing, so there is no prior
+   evaluation of `improves_this_turn`'s winner to lift on most ticks; read
+   that pass's Log before re-proposing it. Next: (-21)
    `pick_attacks_scored`, now **54.85 %** and the only thing left of that size
-   (`sim_spell_action`'s freeze scope is 16.7 % over 35,430 iterations;
-   `sim_step`'s 4,568 *checkpointed* actions are 13.7 %). Then (-30)'s
+   — `sim_step`'s 31,874 uncheckpointed passes are 17.9 % and its 4,568
+   *checkpointed* actions 13.7 %, so the lever there is the engine's
+   per-priority cost, not the candidate count (which is 1.8 a decision).
+   Then (-30)'s
    gathering callers — `check_target_legality_with_source` opens its own scope
    per call and a `.collect()` caller reaches it 1,616 times; find that loop.
    **(-29)'s `RawTable` half is paid** by pass 48's (F); what is left is the
