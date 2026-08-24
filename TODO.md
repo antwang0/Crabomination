@@ -371,6 +371,34 @@ counts here. **The rule: a determinism check is only as wide as the parameter
 it varies; a harness that measures at one thread count should be able to prove
 the count does not matter.**
 
+## ML — defects found 2026-08-24 (open)
+
+### Every committed deck net fails to load: `--use-deck-best` is dead
+
+`selfplay_train --use-deck-best <any of the seven committed
+`*/deck-latest.safetensors`>` panics at startup on
+`deck net vocab != encoder vocab — left: 153 right: 164`. The play net
+(`nets/champion.safetensors`) loads fine at 164, so only the deck nets are
+stale. ML_NOTES lists "Build net has a consumer" as 🟡 shipped — it is
+shipped and unusable until a deck net is retrained.
+
+**The structural cause, and it is bigger than this one net.**
+`Vocab::sos_sealed()` (`server/encode.rs`) is built from
+`draft::sos_draft_pool()`, i.e. **the vocabulary is a function of the SOS
+card list**. Adding one card to the SOS set grows `Vocab::size()` and
+retires every net trained before it — the embedding table's row count no
+longer matches. The 153 -> 164 gap is eleven SOS cards added since those
+deck nets were trained. So the standing "encoding/pool caution" understates
+the hazard: it is not only a deliberate `TrainRow` / `EncodedState` change
+that invalidates nets, **a card addition does it too**, silently, and the
+failure only surfaces when someone tries to load the net.
+
+Options, none taken here: (a) retrain the deck net (a training run, not a
+code change); (b) size the embedding table off a *fixed* upper bound and
+index into it, so the vocab can grow without changing the row count; (c) at
+minimum, have the loader say *which* cards moved rather than only the two
+counts. (b) is the one that makes the class go away.
+
 ## Engine — Missing Mechanics
 
 ### Replacement Effects

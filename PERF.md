@@ -2804,6 +2804,16 @@ the fifty-third pass took it from 2.91 G, and it is still ~28 % of what a
 | `score_card_with_colors` | 9,918,390 | 8.4 | 44,849 calls |
 | `Map::fold'2` | 6,504,225 | 5.5 | |
 
+**And it is 32x this under `--use-deck-best`, which is a shipped, gate-passed
+option.** `heuristic_sealed_build` is *one* `build_random_deck`;
+`best_build_by(pool, DECK_CANDS = 32, ..)` is thirty-two of them, per side,
+per game. Derived from the per-build number (not measured end-to-end — every
+committed deck net fails to load, see TODO's ML defects): **~558 M Ir of deck
+building per game against ~48 M of game, i.e. ~92 % of the actor's work**,
+where before the fifty-third pass it was ~14.5 G, i.e. **99.7 %**. Whoever
+sizes further work here should size it against *that* configuration, not the
+heuristic one.
+
 **The structural answer, not attempted**: have the builder resolve a pool's
 definitions **once** into a `Vec<Arc<CardDefinition>>` and index it, rather
 than looking each one up by function pointer at every read. That is a

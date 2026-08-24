@@ -675,6 +675,29 @@ struct Shared {
 
 const DECK_WINDOW_CAP: usize = 200_000;
 
+/// The one place a stored deck net is checked against the live encoder.
+///
+/// Four call sites spelled this out as a bare `assert_eq!` on two integers,
+/// which is a hard failure with no diagnosis — and it is a failure the
+/// repository is currently *in*: all seven committed `deck-latest`
+/// checkpoints are 153 against a live vocab of 164. The cause is
+/// structural, not a bug in the net: `Vocab::sos_sealed()` is built from
+/// `draft::sos_draft_pool()`, so **adding a card to the SOS set grows the
+/// vocabulary and retires every net trained before it**. The message says
+/// so, because the two counts on their own read as corruption.
+fn check_deck_net_vocab(net: &DeckNet, vocab: &Vocab, path: &std::path::Path) {
+    let (have, want) = (net.vocab_size(), vocab.size());
+    assert!(
+        have == want,
+        "{}: deck net was trained against a vocabulary of {have} names, the encoder now has \
+         {want}. `Vocab::sos_sealed()` is derived from `draft::sos_draft_pool()`, so every \
+         card added to the SOS set retires the nets trained before it — this checkpoint needs \
+         retraining, it is not corrupt. (The play net is sized the same way and has the same \
+         property.)",
+        path.display(),
+    );
+}
+
 fn actor_loop(shared: &Shared, args: &Args, vocab: &Vocab, deck_judge: Option<&DeckNet>, mcts: bool) {
     loop {
         if shared.stop.load(Ordering::Relaxed) {
@@ -953,7 +976,7 @@ fn gate_builder(args: &Args, vocab: &Vocab, games_per_pool: usize) {
     let bytes = std::fs::read(&path)
         .unwrap_or_else(|e| panic!("{}: {e} (train a deck net first)", path.display()));
     let net = DeckNet::load(&bytes).expect("deck net loads");
-    assert_eq!(net.vocab_size(), vocab.size(), "deck net vocab != encoder vocab");
+    check_deck_net_vocab(&net, vocab, &path);
     const POOLS: u64 = 12;
     const CANDS: usize = 32;
     println!(
@@ -1025,7 +1048,7 @@ fn distill_gen(args: &Args, vocab: &Vocab, n_decks: usize) {
     let bytes = std::fs::read(&path)
         .unwrap_or_else(|e| panic!("{}: {e} (need a deck net for the search variants)", path.display()));
     let net = DeckNet::load(&bytes).expect("deck net loads");
-    assert_eq!(net.vocab_size(), vocab.size(), "deck net vocab != encoder vocab");
+    check_deck_net_vocab(&net, vocab, &path);
     const FIELD: u64 = 20;
     const GAMES_PER_FIELD_DECK: usize = 12; // 240 games per labelled deck
     let field: Vec<Vec<CardFactory>> = (0..FIELD)
@@ -1182,7 +1205,7 @@ fn gate_builder_hc(args: &Args, vocab: &Vocab, games_per_pool: usize) {
     let bytes = std::fs::read(&path)
         .unwrap_or_else(|e| panic!("{}: {e} (train a deck net first)", path.display()));
     let net = DeckNet::load(&bytes).expect("deck net loads");
-    assert_eq!(net.vocab_size(), vocab.size(), "deck net vocab != encoder vocab");
+    check_deck_net_vocab(&net, vocab, &path);
     const POOLS: u64 = 12;
     const CANDS: usize = 32;
     const PASSES: usize = 6;
@@ -1552,7 +1575,7 @@ fn main() {
     let deck_judge: Option<DeckNet> = args.use_deck_best.as_ref().map(|p| {
         let bytes = std::fs::read(p).unwrap_or_else(|e| panic!("{}: {e}", p.display()));
         let net = DeckNet::load(&bytes).expect("deck net loads");
-        assert_eq!(net.vocab_size(), vocab.size(), "deck net vocab != encoder vocab");
+        check_deck_net_vocab(&net, &vocab, p);
         eprintln!("actors build decks with the net from {}", p.display());
         net
     });
