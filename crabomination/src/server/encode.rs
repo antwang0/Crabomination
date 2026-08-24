@@ -851,6 +851,37 @@ mod tests {
         }
     }
 
+    /// A card added to the SOS set has to be written into the snapshot.
+    ///
+    /// The self-assigning fallback keeps the build working, but the index it
+    /// hands out is sorted order over the *unsnapshotted* names — so a
+    /// second addition reshuffles it and a net trained in between means the
+    /// wrong card. That is the original defect, one generation later, and
+    /// two card additions is the whole distance to it. Fail here instead,
+    /// where the fix is one line.
+    #[test]
+    fn vocab_covers_the_sos_pool() {
+        use crate::server::vocab_snapshot::VOCAB_SNAPSHOT;
+        let frozen: std::collections::BTreeSet<&str> = VOCAB_SNAPSHOT.iter().copied().collect();
+        let v = Vocab::sos_sealed();
+        let mut missing: Vec<(u16, &str)> = crate::draft::sos_draft_pool()
+            .iter()
+            .map(|f| f().name)
+            .chain(["Plains", "Island", "Swamp", "Mountain", "Forest"])
+            .filter(|n| !frozen.contains(n))
+            .map(|n| (v.index_of(n), n))
+            .collect();
+        missing.sort_unstable();
+        missing.dedup();
+        assert!(
+            missing.is_empty(),
+            "these SOS names have no frozen index: {:?}\n\
+             Append them to `server/vocab_snapshot.rs` in that order, at the END of the array \
+             — index k is the embedding row every trained net learned for that card.",
+            missing.iter().map(|(_, n)| *n).collect::<Vec<_>>(),
+        );
+    }
+
     /// The snapshot itself: no duplicate name, because two entries with the
     /// same name would alias two cards onto one embedding row and the later
     /// one would win silently.

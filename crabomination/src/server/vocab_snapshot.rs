@@ -17,11 +17,15 @@
 //! smaller vocabulary can be zero-padded up to the current one instead of
 //! being retired.
 //!
-//! **Do not reorder, remove, or edit an entry.** Appending is the only safe
-//! edit, and it is not necessary: a new pool card assigns itself. Refresh
-//! the snapshot (append the names that assigned themselves, in the order
-//! `Vocab::sos_sealed()` gives them) only as tidying, and only in a commit
-//! that changes nothing else.
+//! **Do not reorder, remove, or edit an entry. Appending is the only safe
+//! edit, and it is required, not tidying.** A pool card outside the
+//! snapshot assigns itself an index so the build keeps working, but that
+//! index is provisional: it comes from sorted order over the *unsnapshotted*
+//! names, so a second card addition reshuffles it and reintroduces exactly
+//! the defect this file closes, one generation later. Two additions is all
+//! it takes. `encode`'s `vocab_covers_the_sos_pool` fails while any pool
+//! name is unsnapshotted and prints the names to append — at the end of the
+//! array, in the order `Vocab::sos_sealed()` gives them.
 //!
 //! Seeded 2026-08-24 from the then-current `Vocab::sos_sealed()`, which was
 //! the sorted pool plus the five basics — so the seed *is* the mapping that
