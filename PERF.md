@@ -1086,21 +1086,24 @@ another 524 `perform_action` calls.
 **The pass on the branch: `1,314,289,790 -> 1,265,410,851`, -48,878,939 /
 -3.719 %.**
 
-**What is left of the class and why each row was not taken.** The
-pre-validated `cast_candidates` finalists (from the ~30 `castable.push`
-blocks with a `would_accept_on` gate) discard state at build time and
-carry `ok=true` back with no state. In the finalist loop, `ok=true`
-finalists get `settled: None`; the winner from `pick_by_outcome` had
-`settled: None` zero times in the six bench games measured, so the
-post-hoc `accept_on` never fired. Capturing state there requires
-changing `cast_candidates`' return from `Vec<(GameAction, bool)>` to
-`Vec<(GameAction, Option<Box<GameState>>)>` and updating each block's
-`would_accept_on(...)` to `accept_on(...).map(Box::new)`. Four call
-sites (`main_phase_action_with`, `sim_spell_action_inner`,
-`follow_up_candidates`, `main_phase_candidates_for_mcts`) plus every
-block would change; the upside is up to ~1,520 more adoptions × ~63 K Ir
-= ~95 M / ~7.2 % if every pre-validated winner reaches the driver on the
-adoption path. Budget as a `cast_candidates`-refactor pass of its own.
+**What is left of the class, and why the obvious next step is bench-dead.**
+The pre-validated `cast_candidates` finalists (from the ~30 `castable.push`
+blocks with a `would_accept_on` gate) discard state at build time and carry
+`ok=true` back with no state; in the finalist loop `ok=true` finalists get
+`settled: None`. Capturing them means changing `cast_candidates`' return
+from `Vec<(GameAction, bool)>` to `Vec<(GameAction, Option<Box<GameState>>)>`
+(swap each block's `would_accept_on` — which is already `accept_on(...)
+.is_some()`, so the state is *already built and dropped* — to
+`accept_on(...).map(Box::new)`) across four call sites. **But on `--decks
+fixed` this gains nothing, checked by construction:** the archetype decks
+are vanilla (bolt/shock/bears/drakes), so every `castable.push` block —
+delve, kicker, prototype, split, alt-cost, splice, gy-recast, gift, spree,
+impulse — has no card to fire on, `castable` is empty, and every candidate
+goes through `unvalidated`/lazy, so the scored winner already carries
+`settled: Some`. The pre-validated-winner count on the fixed bench is **0**.
+The refactor's ceiling (~1,520 adoptions × ~63 K Ir ≈ 7 %) is real only on
+`all`/`cube`/`sos`, which are not the throughput bench. Do not run it for
+the fixed-Ir number.
 
 ### Fiftieth pass — the dry run *is* the action, and the simulator was paying for it twice
 
@@ -2494,11 +2497,14 @@ pass-52's chain. The 1,040 driver `perform_action` calls skipped there
 came off `main_phase_action_with`'s finalist, `pick_stack_response`,
 `pick_combat_trick`, the three `pick_land_to_play` blocks and
 `legacy_pretap`.** What is left is the pre-validated finalists whose
-state `cast_candidates` discards at build time — they win rarely enough
-in `pick_by_outcome` that a post-hoc `accept_on` measured a dead 0
-additional probes on the bench pool. The path to capture them is the
-`cast_candidates` refactor described in pass 52's Log; budget it as its
-own pass. The doc's earlier concern about `ScriptedDecider` survival is
+state `cast_candidates` discards at build time — and on `--decks fixed`
+they **never win**: the vanilla archetype decks reach none of the
+specialty-cast `castable` blocks, so `castable` is empty and every scored
+winner is already lazily probed with `settled: Some` (see the Log's "what
+is left" note). The `cast_candidates` refactor that would capture them is
+therefore bench-dead for the fixed-Ir number; its ~7 % ceiling is real
+only on `all`/`cube`/`sos`. Budget it only if the goal is those pools.
+The doc's earlier concern about `ScriptedDecider` survival is
 moot: `DeciderKind` derives `Clone` and `ScriptedDecider::kind()`
 carries `answers` + `asked` verbatim, so `state.decider.kind().into_boxed()`
 reconstructs the queue at the same position. Server / interactive

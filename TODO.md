@@ -41,17 +41,27 @@ rebase mid-run and re-read your numbers afterwards.**
    **`ScriptedDecider` survives a clone**: `DeciderKind::Scripted` carries
    `answers` + `asked` verbatim, `into_boxed` reconstructs. The doc that
    used to say otherwise was pre-`kind()`.
-3. **Best next moves.** The `cast_candidates` refactor — change return from
-   `Vec<(GameAction, bool)>` to `Vec<(GameAction, Option<Box<GameState>>)>`
-   and swap each of the ~30 `would_accept_on` blocks to `accept_on(...)
-   .map(Box::new)`. Pre-validated (`ok=true`) finalists then carry state
-   too, and the winner (which is usually pre-validated on the bench pool)
-   gets adopted. Budget as its own pass; up to ~7 % if the ceiling holds.
-   Then `dispatch_triggers_for_events` (still 5.26 % self after (B); the
-   rest is diffuse across the per-card walk), (-35) `evaluate_requirement_static`
-   (2.65 % self / 182 K calls; 269 Ir/call), (-33) `trigger_grant_sources`
-   in the fire_combat_damage_* callers (analogous hoist to (B)'s
-   declare_attackers one), and `resolve_combat` at 55,816 Ir a combat.
+3. **Best next moves — and the top one is bench-DEAD, checked this pass.**
+   The `cast_candidates` refactor (carry `Option<Box<GameState>>` for the
+   eagerly-validated `castable` blocks so pre-validated winners adopt too)
+   gains **~0 on `--decks fixed`**: the archetype decks are vanilla
+   (bolt/shock/bears/drakes), so `castable` — populated only by the
+   specialty-cast blocks (delve, kicker, prototype, split, alt-cost,
+   splice, gy-recast, gift, spree, impulse) — is empty, every candidate is
+   `unvalidated`/lazy, and the winner already carries `settled: Some`. Its
+   ceiling only exists on `all`/`cube`/`sos`, which is not the throughput
+   bench. **Do not run it for the fixed-Ir number.** Genuine bench levers
+   left are all engine-diffuse: `dispatch_triggers_for_events` (5.26 % self
+   after (B), spread across the per-card phase-1 walk), (-35)
+   `evaluate_requirement_static` (2.65 % self / 182 K calls, 269 Ir/call —
+   the bot's target enumeration, not obviously reducible), and
+   `resolve_combat` (55,816 Ir a combat, (-25) reads it diffuse). **(-33)'s
+   `trigger_grant_sources` hoist into the `fire_combat_damage_*` callers is
+   sized and NOT worth it**: the grant list borrows `&self` and the firing
+   is `&mut self`, so it can't be held across the loop; owning it (a clone
+   per combat) costs about what the per-source rebuild does, and the gang
+   bench has ~1 attacker per declaration so even the declare_attackers hoist
+   (`bee52a09`) barely moved on this pool.
 4. **A twenty-third robustness filter is owed.** 22 audited "state the
    harness installs that a rules path can reset" and found `restart_game`'s
    RNG drop (fixed) + `snapshot.rs`'s wrong claim. Candidates for 23: the
