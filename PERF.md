@@ -286,11 +286,22 @@ this pass compares to one from that pass** — see the note under **How to
 measure**. Ir transfers between containers to within the argv string, which is
 why the Log rows are quoted in Ir and nothing else.
 
-**Crash-freedom and determinism at the tip, widest pool.** `--a gang --b gang
---games 400 --threads 3 --decks all`, seeds 11 / 12 / 13: **20,400 games,
-20,396 decided, no panic**, all 10,198 mirrored pairs split (`rho -1.000`
-every seed). The 4 undecided are seed 11's rules draws, the same four passes
-44-49 recorded.
+**Crash-freedom and determinism at the tip, widest pool — and the recipe
+changed after the fiftieth pass, because the old one could not see a
+determinism bug that had been on the branch the whole time.** It was three
+seeds at one thread count; it is now **thirteen seeds across `--threads
+1/2/3`**, and the number to read is the **sweep count**, not just the panic
+count: in a `gang`-vs-`gang` mirror the two games of a pair are one game with
+the seats relabelled, so a single sweep is a bug. `CRAB_PAIR_SWEEPS=1` names
+the offending pair and prints the seed that replays it.
+
+`--a gang --b gang --games 400 --decks all`, seeds 11-23: **88,400 games,
+88,382 decided, no panic**, and **all 42,391 mirrored pairs split**. The
+undecided are rules draws, the same ones passes 44-50 recorded. What the old
+recipe missed: `restart_game` (CR 727) rebuilt the state with
+`GameState::new`, whose `GameRng` is `from_entropy`, so a seeded game that
+*restarted* stopped replaying — fixed in `c6898506`, written up as TODO's
+twenty-first robustness filter.
 
 **Forty-ninth pass, base `40fb5e31` (pass 47's tip) vs its own tip**, both
 `profiling-fast --no-default-features`, built and run in one sitting on one
