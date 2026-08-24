@@ -4645,3 +4645,242 @@ extra-mana pick (smart defaults, no agency); legend-keep is a smart
 default — the client's ChooseLegendToKeep modal still needs an engine
 suspension to ever fire; single-stash constraint limits multi-ui-player
 loops (EachPlayer shuffles) to one suspension per resolution.
+
+## Engine — Robustness / defects: the closed audits and the twenty-three filters
+
+*Moved verbatim from `TODO.md` at the fifty-fourth pass, when that file passed
+the ~1k-line trigger. **No open entries** — this is the record of what each
+sweep hunted and why it is closed, kept so nobody re-derives one.*
+
+### Robustness filters (the determinism entry itself closed 2026-08-11, `841dd40b`)
+
+The cube pool's fixed-seed nondeterminism is fixed and the whole class is
+shut: `crate::fxhash::HashMap` / `HashSet` (rustc's seedless FxHasher)
+replace `std`'s across the engine, so no map's walk order can differ
+between two runs of one seed. Same-seed decision counts are identical over
+repeated runs on every pool (`cube` 1,130,728, `all` 2,548,986, `sos`
+684,268, `fixed` 193,232), `determinism ok` on all of them, and `all`'s
+stall rate is a stable 6 rules draws / 5,100 games (0.12 %). A separate leak
+fixed in the same sitting (`125108c1`): CR 705.1 coin flips read
+`rand::random()` inside `AutoDecider`, and Mana Crypt is in the cube pool.
+**Re-checked at the forty-seventh tip**: `--decks all --games 400 --threads
+3`, seeds 11/12/13 — 20,400 games, 20,396 decided, no panic, all 10,198
+mirrored pairs split.
+
+**What is left of it, as a rules question, not a determinism one.** A map
+whose walk order picks a *game outcome* is still arbitrary, just
+reproducibly so. Known site: `actions.rs`'s discard-cost gate does
+`by_name.values().find(|ids| ids.len() >= count)` for "discard N cards with
+the same name" (Kozilek-style), which picks an arbitrary qualifying name
+rather than the cheapest. Sweep the ~110 map/set locals for siblings when
+someone wants a rules pass; none of them can desynchronize a run any more.
+
+*(No open entries. The audits that closed here are an index; `git log -S` on
+each hash has the prose.)* `df87c2d1` — `CardData.counters` becomes the
+insertion-ordered `CounterBag`; `86670250` — the same for `KeywordCounters`;
+`ea8cc1fd` — `died_card_snapshots` becomes `IdMap`, because a
+`TriggerCandidate`'s position decides stack order and two LKI deaths stacked
+differently per process. **That was the survey's one leak in 31 fields** —
+every `HashMap`/`HashSet` on `GameState` / `ColdState` / `Player`, asked of
+each consumer whether it sums, tests membership or looks up by key (all safe)
+or `find`s / `collect`s / iterates into an ordered structure (not). The three
+that *look* risky and are not, so nobody re-checks them: `encode.rs` sums
+`block_map` into a map read by key, `bot.rs`'s two `block_map.keys().collect()`
+are `contains` + `len`, and `combat.rs`'s `block_map.keys().for_each(want)`
+decides which permanents get computed, never what a reader sees. Also
+`a67c5b9a` (actor-sampler panic) and `9db8557c` (Mirror Gallery aborting the
+whole SBA sweep — a `return` inside a `let … = { … };` initializer, so one
+board skipped every later state-based action and the game could not be won or
+lost; regression test in `classic_sets/bok`, and the filter that found it was
+swept workspace-wide).
+
+**The panic/unwrap sweep of the self-play path — CLOSED 2026-08-23 by the
+census under filter 16 (written up below): it wanted triage, not the blanket
+rewrite this entry used to ask for, and came back clean.** The narrower
+filters below are what got run instead, and nine of them found nothing —
+which is the result worth keeping. The section has **no open entries**.
+
+**The seventeen filters, compacted to an index.** Each is a *shape* that fails
+the way a training run notices — a silent wrap at game 400 k, a loud panic,
+or a hang — swept over `game/` + `bot.rs` (some wider). The prose is in
+`git log -- TODO.md`; what is kept is what each hunted and why it is
+closed, so none of them is re-derived.
+
+| # | date | the shape it hunts | result |
+|---|---|---|---|
+| 1 | 08-10 | A `debug_assert!` standing in for a runtime guard, or a `len() - 1` / bare index on a slice whose emptiness the *caller* tolerates | **Found `a67c5b9a`** (`sample_scored_index`, on the one path only a training actor takes). Both halves then swept clean: 13 `len() - 1` sites all guarded; the two surviving `debug_assert!`s (`mod.rs:3900`, `stack.rs:5911`) fall through to defined release behaviour |
+| 2 | 08-10 | A `return` inside a `let … = { … };` initializer | **Found `9db8557c`** — CR 704.5j's Mirror Gallery check aborted the *whole* SBA sweep, so one board skipped every later state-based action and the game could not be won or lost. Regression test in `classic_sets/bok`. The other nine workspace hits are `Err` / let-else guards that legitimately abort |
+| 3 | 08-10 | Unsigned `len() - k` where the caller tolerates empty; a stale index across a mutation (`position()` then `battlefield[pos]`) | Clean. 16 + 53 sites; the one path that mutates in between (the equip sacrifice) re-finds by id and says why |
+| 4 | 08-10 | `evaluate_value(…) as usize` with no `.max(0)`; `power()`/`toughness()`/`life` cast to `usize` | Clean. One hit each, both already clamped (`mod.rs:20879` is `.max(1)`; `bot.rs`'s `LIFE_TENTHS[life as usize]` sits under its own two branches) |
+| 5 | 08-10 | A precondition *some* sites enforce and a sibling might not — documented `///` preconditions, and the `i.min(xs.len() - 1)` clamp family | Clean. Eight doc'd preconditions all validated or structural; all ten clamps guarded, by four different idioms |
+| 6 | 08-11 | Not syntax — **run the arithmetic**. `[profile.overflow]` (`release-fast` + `overflow-checks`) turns every silent wrap into a panic with a backtrace | Clean. `bot_ladder` 4 seeds x 4 pools = **17,693 games, 0 panics**; `selfplay_train --actors 3 --games 600` = 600 games / 56,353 rows / 0 panics. **Rerun after any change to counters, damage, mana or the encoder** — one ~9-minute build, ~1 minute a seed |
+| 7 | 08-11 | The opposite of 1-6: a `/` or `%` whose denominator is a runtime count the caller can zero (panics loudly, or goes `NaN`) | Clean. Every non-constant divisor under `game/`, `bot.rs`, `crabomination_ml/` read; seat rotation always has a seat, the rest are `.max(1)` or guarded by an `is_empty()` in the same condition |
+| 8 | 08-11 | A std collection/slice op whose runtime argument is a *length*, not an index — `split_off`/`split_at`/`copy_from_slice`, `chunks`/`step_by` with runtime `n`, `&xs[a..b]`, `Vec::remove`/`insert` | Clean. Five + two + two + ~30 sites; the ML `copy_from_slice`s copy fixed-width **arrays**, so a mismatch is a compile error, not a panic |
+| 9 | 08-11 | A comparator that is not a total order (`sort_by` panics on one; a `NaN` produces one for free) | Clean. **No `partial_cmp(…).unwrap()` in the workspace**; every float comparator is `total_cmp` or `unwrap_or(Equal)`, and the three that could see a `NaN` are in `recommend.rs`, off the self-play path |
+| 10 | 08-11 | The failure a training run sees as a *hang*: an unbounded `loop`/`while` whose exit condition is game state | Clean. All eight `loop {` and ~40 `while`s bounded by one of three shapes — a strictly shrinking collection, a finite effect-tree peel, or an explicit counter. The one bounded by none of the three is the top-level game loop, and its two counters are exactly what a *stall* is |
+| 11 | 08-11 | **One invariant written out by hand in more than one place** | **Found `15ec11c1`**: `stale < 8` appeared six times across five files, so the ladder's stall rate and the training actor's were never the same measurement. All six read `recommend::STALE_ROUNDS` now; no value changed. The per-context *action* budgets beside them are deliberately different and were left alone |
+| 12 | 08-14 | **A predicate two callers each re-derive** | **Found two**, `caa44eb2` — see below |
+| 13 | 08-14 | **A reentrancy guard some sites spell out by hand and a sibling does not** | **Found a stack overflow** — `in_layer_gather`, unguarded at ~a dozen computed-P/T arms the gather evaluates. See below |
+| 14 | 08-15 | **A comment that states a cost or a shape** | **Found one**, in the measuring device: `host_calib_ms`' doc claimed you could scale a throughput comparison by it. The syntactic half is clean; see below |
+| 15 | 08-23 | **A claim made by a tool's output rather than by its source** | **Found one**, in the measuring device again (`95453974`): `--bench` printed "release build" for `release-fast` / `profiling-fast` / `overflow`. See below |
+| 16 | 08-23 | A default no caller ever overrides | Clean in four readings; don't re-run — see below |
+| 17 | 08-23 | **A comment that names a call count or a share** | **Found five** across two concurrent runs. The share survives, the count rots. See below |
+| 18 | 08-23 | **A tool's own extraction step** | **Found two** (`ac85463f`), both in the profiling scripts: `cg_edges.py`'s total was ~18x high, `cg_lines.py` returned a silent zero. See below |
+| 18b | 08-24 | filter 18 re-run on `cg_lines.py` (**a tool's own extraction step**) | **Found two more.** It folded every mapped object's addresses (libc, ld.so, libm — 16.5 % of the run) in with the binary's and hardcoded the PIE bias. 36 % of the run resolved to `??` and the rest to the wrong symbols; `Effect::clone` read 2.65 % against the 0.5 % its call edges account for. See below |
+| 20 | 08-24 | **A default that only one caller ever exercises** (the inverse of the sixteenth) | **Nearly clean — one hit.** 14 of 36 `EvalWeights` knobs have exactly one overriding profile; ten of those profiles carry an on/off test, four do not, and three of the four are correctly untested (a scoring weight, a historical control, a net-dependent blend). The fourth, `smart_tap`, was real engine behaviour with no test; it has one now. See below |
+| 21 | 08-24 | **An invariant checked at one point in its parameter space** | **Found a determinism bug** (`c6898506`). The wide-pool sweep had only ever run three seeds at one thread count; ten more seeds across `--threads 1/2/3` produced a self-mirror pair that did not split. `restart_game` (CR 727) rebuilt the state with `GameState::new`, whose `GameRng` is `from_entropy`. See below |
+| 22 | 08-24 | **State the harness installs that a rules path can reset** | **Three sites, one real.** `restart_game` dropped the seeded `rng`, the live `decider` and two pilot flags (fixed, filter 21's bug). `play_subgame` already forks the stream and is correct. `GameState::rng` is `#[serde(skip)]` deliberately — but this module's summary claimed a `GameState` round-trip was bit-exact, which it is not; the claim is corrected, the field is not |
+| 19 | 08-24 | **A threshold or cap that silently truncates a listing** | **Found seven** across two concurrent runs — `cg_edges.py`'s three tables and `cg_lines.py`'s two caps (`4107e017`), plus `cg_symbolize.py`'s recommended `--threshold` and three ranked report tables in `bot_probe` / `selfplay_train` / `recommend_pool`. See below |
+| 23 | 08-24 | **An invariant checked at one thread count** (filter 21's shape, at the measuring device) | **Guard added, clean (`1c304384`).** The `--bench` self-mirror determinism check ran at one thread count and the decision count was never asserted invariant across counts, yet the aggregate is a commutative sum over seed-fixed jobs. `CRAB_THREAD_CHECK` replays the identical workload at a contrasting count and asserts the order-independent outcome matches; `run_jobs` factored so the loop is not written twice (filter 11). Clean at the tip (196,220 dec, 3 vs 1 threads). See below |
+
+**A note the table would lose**: filters 3-5 and 7-10 are syntactic and
+found nothing between them. Filter 6 is not syntactic — it *runs* the
+program with the checks on — and filters 2, 11, 12 and 13 look at structure
+rather than syntax. Four of the five filters that found something are in
+that second group. Prefer a filter that runs the code or reads its
+structure over one that greps it.
+
+**Filters 12-14, compacted; `git log -- TODO.md` has the prose.** All three
+hunted structure rather than syntax and all three found something.
+
+* **12 (`caa44eb2`) — a predicate two callers each re-derive.** The search
+  that works is not syntactic: it is `grep -niE "must (also )?(appear|be)
+  (listed|added|here)|kept in sync|must agree|drift from"`, i.e. the doc
+  comments that admit to the pairing. Nine hits, three real.
+  `CardData::clear_end_of_turn_effects` wrote 26 fields and
+  `end_of_turn_effects_are_clear` guarded that write by listing the same 26 —
+  both expand from one `eot_wear_off!` list now, so a field cannot reach one
+  without the other. `rewrites_land_types` asked in prose to be kept in step
+  with `layers::compute_permanent_pass` — now the `ability_strip_in_scope`
+  device, a `debug_assert!` at the gate that runs the layer pass it skipped
+  and fails if the computed land-type line differs from the printed one.
+* **13 — a reentrancy guard some sites spell out by hand and a sibling does
+  not.** Found a **stack overflow**: `in_layer_gather` was unguarded at ~a
+  dozen computed-P/T arms the gather itself evaluates, so a card pairing a
+  gather-evaluated filter with a P/T requirement overflowed rather than
+  answering wrong. The guard lives in `computed_permanent` now, once, where
+  it cannot be forgotten.
+* **14 — a comment that states a cost or a shape.** Found one, in the
+  measuring device: `host_calib_ms`' doc claimed you could scale a throughput
+  comparison by it, and two containers with the same `host_cpu` and
+  overlapping calib differed by **24 %** on `--bench`. **The syntactic half is
+  clean and should not be re-run** — ~60 hits for present-tense cost claims
+  over `game/`, `server/`, `crabomination_base/`, all game-semantics uses of
+  "free"/"cheap" or past-tense justifications. Both filters' yield was in
+  claims a *measurement* relies on, not in the engine's prose.
+**Sixteenth (2026-08-23) — a default no caller overrides — CLEAN in four
+readings, don't re-run:** zero bool params pinned to one literal, zero
+`Option<T>` always-`None`, zero of 36 `EvalWeights` fields, zero of 196/91
+`GameState`/`ColdState` fields never read. The loose bool-literal pass
+returns 14, all noise (`default_damage_split(has_trample)` etc.).
+
+**Standing panic goal, audited the same day — CLEAN.** 118 non-poison
+`unwrap`/`expect` in engine code; every self-play-reachable one is guarded
+and names its guard (`back_face…` behind `has_back`, `max_by_key().unwrap()`
+behind `is_empty()`, …). One dead hazard, not reachable:
+`Index<&CounterType> for CounterBag` panics on a missing kind and has no call
+site. Re-run the census after a batch of new cards, not per run.
+
+**Seventeenth (2026-08-23) — a comment naming a call count or a share — four
+hits (plus two from pass 48), all corrected in place:** `printed_color_set`,
+`team_of`, dispatch's death-synthesis chain, `auto_tap_for_cost_inner`'s mana
+table, `mod.rs`'s gather-iterator note, `types.rs`'s `IdSet` doc. **The rule:
+the share survives, the count rots** — a share is re-derived on every profile
+read; a call count is copied forward and drifts as its caller's count moves.
+Caveat: a callgrind edge count *undercounts* an inlined caller, so only
+correct a number down when the callee's own node makes the old claim
+arithmetically impossible (why `team_of`'s correction is stated through
+`same_team`'s node).
+
+**Twenty-first (2026-08-24) — an invariant checked at one point in its
+parameter space — NOT clean, a determinism bug 49 passes of wide-pool sweeps
+had missed.** The sweep (`--decks all --games 400 --threads 3`, seeds
+11/12/13) had never run on another seed or thread count; ten more seeds found
+a self-mirror pair that did **not** split. Cause: `GameState::restart_game`
+(CR 727) rebuilds with `GameState::new` and copies back `next_id`/
+`attack_option`/`teams` but not **`rng`** (nor `decider`/`smart_tap`/
+`wants_ui`), and `GameState::new` installs `from_entropy`, so a restarted game
+stopped being a function of its seed. Fixed `c6898506`; the regression test
+replays the exact pair on eight threads. **Two things worth keeping:** the
+thread count was a red herring (it only changed how often the halves drew the
+same entropy) — *the parameter that exposes a bug is not always the one that
+causes it*; and `CRAB_PAIR_SWEEPS=1` naming the offending pair + its replay
+seed turned "somewhere in 68,000 games" into a 1.2-second test. The structural
+fix is the CLAUDE.md rule: a profile number in a comment carries the tip it
+was measured at, or is past-tense justification for the shape already there.
+
+**Eighteenth (2026-08-23) — a tool's own extraction step — NOT clean, two
+hits in the profiling scripts (`ac85463f`).** `cg_edges.py`'s program total
+ran ~18x high (it summed each call-edge's whole *inclusive* subtree), so
+every share was an order out — it read `dispatch_triggers_for_events` at
+**0.30 %** where it is 5.63 %; PERF's note that the total double-counts did
+not fix the percentage column the tool actually prints. `cg_lines.py`
+printed "0 Ir, exit 0" on a dump without `--dump-instr=yes` — nothing-is-hot,
+not wrong-input. **The rule: every extraction step either agrees with a
+number its source computed itself, or refuses** — an extraction that yields
+nothing looks exactly like a measurement that found nothing.
+
+**Nineteenth (2026-08-24) — a cap that silently truncates a listing — NOT
+clean, seven hits (`4107e017`, `17d0a5e1`).** Both profiling scripts capped
+their tables (`most_common(40/45/60000)`) and read as finished at the cap;
+`cg_edges.py`'s docstring promised a complete table above one;
+`cg_symbolize.py` recommended the `callgrind_annotate --threshold` truncation
+`cg_edges.py` exists to escape; three ranked reports named no denominator.
+Each reports the rows and Ir it dropped now (`--rows 0` lifts the cap). It did
+NOT flag the engine's own named search caps (`attack_search`,
+`MAX_CANDIDATES`, …). **Filter 18 re-run on `cg_lines.py` found two more:** it
+folded every mapped object's addresses in with the binary's and hardcoded a
+`0x108000` bias (`Effect::clone` read 2.65 % against its 0.5 % call edges); it
+keeps one object and auto-detects the bias now, and PERF's `drift::sort` row
+blamed on lld ICF is probably this bug. **The self-cost table's top 45 rows
+are 68.5 % of the program, 1,150 rows hold the rest** — why pass 49 counted
+call rows rather than ranking by self cost.
+
+**Twentieth (2026-08-24) — a default only one caller exercises, the inverse
+of the sixteenth — NEARLY clean, one hit.** Of `EvalWeights`, 14 fields have
+exactly one overriding profile; ten carry an on/off unit test beside their
+`bot_ladder` pilot name ("flag off: the class is invisible / flag on: the
+activation is a candidate"). **Three of the four that don't are correctly
+untested:** `power_emphasis_only` is a scoring *weight* (`power: 15`), so
+the question it asks is a ladder question; `legacy_cashout_on` is the
+*historical* planeswalker rule kept as a control, and the shipped behaviour is
+what a test should pin; `net_eval_blend_ply` needs a loaded net. **The fourth
+was a real gap.** `smart_tap` routes through `PlayerData::smart_tap` into
+`auto_tap_for_cost_inner`'s source choice, where it makes a coloured pip spend
+the *least flexible* source — the engine's own comment says "a Swamp pays {B}
+before a Dimir dual does" — and nothing tested it.
+`core_rules::game::smart_tap_spends_the_narrowest_colour_source_first` does
+now: same board both ways, and the two arms assert opposite outcomes, so it
+cannot pass vacuously.
+
+**The rule it yields:** an opt-in flag in this codebase is expected to carry
+both a ladder pilot name *and* an on/off test, and the ten that do are what
+make the four that don't findable. A flag whose question is a *measurement*
+(a weight, a control, a net) is the documented exception — say so at the
+flag, so the next sweep does not re-derive it.
+
+**Stall rate — CLOSED 2026-08-14, and the answer is "nothing to fix".**
+`419d2ea6` put `recommend::StopReason` on the outcome and a `stalls_by cap /
+stuck / draw` line on `--bench` (and `stalls_capped` / `stalls_stuck` in
+`selfplay_train`'s `stats.jsonl`), and reading it settled the entry: `--decks
+all --games 300 --seed 11` reads 6 stalls in 5,100 games (0.12 %), **cap 0 /
+stuck 0 / draw 6** — all rules draws, so neither held-open fix applies.
+`--decks fixed` reads 0 and always has. Keep the instrumentation; re-open
+only if `cap` or `stuck` goes non-zero.
+
+**Twenty-third (2026-08-24, `1c304384`) — an invariant checked at one thread
+count, at the measuring device — guard added, clean.** The `--bench` self-mirror
+determinism check (every mirrored pair must split) ran only at the one thread
+count a bench invocation uses, and the decision count was never asserted
+invariant across counts — yet every job is fixed by its `--seed`-derived
+stream and the aggregate is a commutative sum over jobs, so it *must* be
+independent of how many workers pull them. `CRAB_THREAD_CHECK` replays the
+identical workload at a contrasting thread count and asserts the
+order-independent outcome (SimCost fields + per-archetype win tallies + sorted
+pairs) matches; the chunked job loop is factored into `run_jobs` so the two
+runs share one loop, not a second drifting copy (filter 11). Clean at the tip
+(1 vs 2). This is the cheap in-process form of filter 21's wide seed x thread
+sweep — the class where `restart_game` drew from OS entropy diverges the two
+counts here. **The rule: a determinism check is only as wide as the parameter
+it varies; a harness that measures at one thread count should be able to prove
+the count does not matter.**

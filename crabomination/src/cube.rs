@@ -33,8 +33,9 @@ pub type CardFactory = fn() -> CardDefinition;
 
 thread_local! {
     // `const`-initialized so the access is a bare TLS read rather than a
-    // lazy-init check on every lookup: `card_def` is called 487,071 times
-    // in one twelve-deck sealed build.
+    // lazy-init check. Since `DefFront` went in front of it (fifty-fourth
+    // pass) this is reached once per distinct factory rather than on every
+    // lookup, so the initialisation is now the larger half of its cost.
     static DEF_CACHE: std::cell::RefCell<HashMap<usize, &'static CardBrief>> =
         const {
             std::cell::RefCell::new(std::collections::HashMap::with_hasher(
@@ -47,14 +48,15 @@ thread_local! {
 ///
 /// A factory is `fn() -> CardDefinition` and every call materialises the
 /// whole thing — several `Vec`s, an effect tree, a mana cost — so a caller
-/// that only wants the card's name or mana value pays a full construction
-/// and a full drop for it. The deck builders call one per
-/// (pick x candidate x colour shape): `bot_ladder --decks sealed --games 1`
-/// plays **no games at all** and still runs **2,910,408,580 Ir** building
-/// its twelve decks, **43.3 % of it `__memcpy`** and 4.9 % dropping the
-/// definitions again — against ~48 M Ir for an actual sealed game.
-/// `selfplay_train`'s actors build two pools and two decks *per game*, so
-/// that ratio is the actor loop's, not the ladder's.
+/// that only wants the card's name or mana value would pay a full
+/// construction and a full drop for it. The deck builders ask one per
+/// (pick x candidate x colour shape), which is why the memo exists at all:
+/// `bot_ladder --decks sealed --games 1` plays **no games** and, before it,
+/// ran 2,910,408,580 Ir building its twelve decks, 43.3 % of that
+/// `__memcpy`. That workload is 34.9 M at the fifty-fourth tip, against
+/// ~48 M for an actual sealed game — and `selfplay_train`'s actors build two
+/// pools and two decks *per game*, so the ratio is the actor loop's, not the
+/// ladder's.
 ///
 /// Keyed by the function pointer. Two factories the linker folds to one
 /// address have identical machine code and therefore build identical
@@ -63,11 +65,11 @@ thread_local! {
 /// **The cached definition is leaked**, so this hands back a plain
 /// `&'static CardDefinition` — no refcount traffic, no borrow escaping the
 /// cell — and a hit answers out of [`DefFront`] without touching the map at
-/// all. The bound is one
-/// definition per distinct factory *actually asked for*, which is the size
-/// of the pool in play (a sealed pool is ~90 cards, the cube 309), not the
-/// 22.5 k-factory catalog; the deck builders are the only callers. An `Arc`
-/// here cost ~10 Ir of atomic per lookup over 487,071 lookups a build.
+/// all. The bound is one definition per distinct factory *actually asked
+/// for*, which is the size of the pool in play (a sealed pool is ~90 cards,
+/// the cube 309), not the 22.5 k-factory catalog; the deck builders are the
+/// only callers. An `Arc` here cost ~10 Ir of atomic per lookup, over the
+/// 487,071 lookups a twelve-deck build took at the fifty-third tip.
 ///
 /// Every consumer is read-only, which is what makes a shared `&'static`
 /// sound: a caller that needs an owned, mutable definition still calls the

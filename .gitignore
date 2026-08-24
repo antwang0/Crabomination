@@ -83,6 +83,10 @@ web/dist/
 # Side-by-side target dir for A/B perf builds: a second CARGO_TARGET_DIR lets
 # a `profiling-fast` build and a callgrind run overlap (see PERF.md).
 /target-probe/
+# Side-by-side target dir for `cargo check` / `cargo test` while `target/`
+# is locked by a long release build — cargo takes a whole-directory lock, so
+# a second dir is the only way to keep iterating during one.
+/target-check/
 
 # callgrind / profiling output
 cg*.out

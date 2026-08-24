@@ -327,7 +327,123 @@ it.
 
 ## Baseline
 
-**Fifty-third pass, base `d37f31d8` (pass 52's tip) vs its own tip
+**Fifty-fourth pass, base `4369a0d6` (pass 53's tip) vs its own tip
+`ec138369`.** Seven commits, one class: **deck construction stops
+re-deriving what a memoized definition already answers.** Ir readings
+`profiling-fast --no-default-features`, callgrind, one thread, `--a gang --b
+gang --games 6 --seed 1` unless the row says otherwise.
+
+```text
+                          base (4369a0d6)   tip (ec138369)
+I refs, --decks fixed       1,250,405,745   1,252,028,493   +0.130 %
+I refs, --decks cube        4,026,141,796*  4,029,576,776   +0.085 %
+I refs, --decks sos         1,760,202,906*  1,761,263,341   +0.060 %
+I refs, --decks sealed      3,572,196,844*  3,500,588,107   -2.005 %
+deck build alone              111,755,559      34,859,310  -68.81 %
+  (--decks sealed --games 1: 0 games played, all setup)
+```
+
+\* the base `cube` / `sos` / `sealed` figures are the fifty-third pass's own
+tip readings carried forward. This pass's base *is* that tip, and its `fixed`
+re-read 1,250,405,745 against the recorded 1,250,409,741 — 3,996 Ir of argv,
+the offset every pass sees.
+
+**The three pools that get *slower* are code layout and not a regression in
+anything they run.** `fixed`, `cube` and `sos` build their decks from hand
+lists or the cube recipe and reach none of the code this pass touched; the
+drift is spread across the commits (+0.076 %, +0.066 % and four readings
+under 0.02 %) rather than concentrated in one, and no commit's own `fixed`
+delta was over 0.08 %.
+
+**The wall-clock number, and it is the one that matters for training.** The
+deck-builder work is allocation-shaped, so callgrind's system allocator
+overstates it; measured on the shipped `release` build with mimalloc, 30
+invocations of `--decks sealed --games 1` (which plays no games), minus the
+0.113 s process-startup floor measured the same way with `--decks fixed`:
+
+```text
+                base binary   tip binary
+30 x deck build   0.458 s       0.163 s     2.81x
+```
+
+**And the number that decides whether any of it matters: the training loop.**
+`selfplay_train --actors 3 --games 3000 --steps 1 --seed 7`, both binaries
+`release-fast` + mimalloc, alternated A/B/A/B/A/B in one sitting, plus an
+earlier `--games 900` pair the same way:
+
+```text
+base   117.3 / 156.5 / 136.7 / 129.1 / 156.5 games/s      best 156.5
+tip    169.8 / 169.6 / 165.6 / 152.5 / 167.2 games/s      best 169.8   +8.5 %
+rows/s 15,163 -> 16,498 at the two best readings
+```
+
+**+8.5 % on best-of-five, and it is well under the ~19 % the Ir predicted.**
+That gap is this file's own caveat and it is worth stating plainly: the
+builder's cost is allocation-shaped, callgrind runs the *system* allocator,
+and mimalloc — which is what ships — had already absorbed a good part of what
+the Ir attributes to the change. Note also the spread: base reads 129.1 to
+156.5 on the identical binary minutes apart while the tip reads 152.5 to
+169.8, so take the best of each pair rather than the mean, and do not quote a
+single run of this workload.
+
+**`--bench`, the committed throughput configuration** (`release` + mimalloc,
+3 threads), both binaries alternated A/B/A/B in one sitting, best of two:
+
+```text
+                 base            tip
+games_per_s      264.71          264.79          flat, and it must be:
+decisions        196,220         196,220         `--bench` is --decks fixed,
+turns_per_game   27.53           27.53           which builds no deck
+stalls           0 (0.00 %), cap 0 / stuck 0 / draw 0 (both)
+determinism      ok (all pairs split, both)
+peak_rss_mib     31.3            30.2
+ladder output    all four pools' full printout (20 games, seed 1) diffs
+                 identically base vs tip — the strongest behaviour check
+                 here, because it covers the decks a seed builds and not
+                 just the games they play
+suite            18,809 passed / 0 failed / 5 ignored over 31 binaries
+golden traces    all unchanged
+clippy           `--workspace --all-targets` clean (client included)
+rustc            1.95.0 (59807616e 2026-04-14)
+host_cpu         Intel(R) Xeon(R) Processor @ 2.10GHz, 4 cores
+host_calib_ms    56-70 across the readings
+```
+
+**Crash-freedom and determinism at the tip.** `release`, `--a gang --b gang
+--games 200 --threads 3`, seeds 11/12/13 x `--decks all` and `--decks sealed`
+(the deck builder's own pool, which `--decks all` does not include): every
+cell **decided, 0 undecided, no panic, all pairs split** — 17,400 games and
+8,700 pairs. `CRAB_THREAD_CHECK=1 --bench` reads **`thread_determinism ok
+(3 vs 1 threads identical)`**. And the `[profile.overflow]` run that turns a
+silent wrap into a panic, re-run here because the deck builder is the code
+that moved: `--decks sealed` 2,400 games and `--decks all` 3,400 games at 3
+threads, **0 panics**. The `selfplay_train` A/B above is a further ~19,500
+actor games at the tip with no stall and no panic.
+
+**The front cache's memory cost, since it is a new per-thread allocation.**
+4,096 slots x (8-byte key + 8-byte pointer) = 64 KiB per thread, in `.tbss`
+— zero image cost, and `peak_rss_mib` moved 31.3 -> 30.2 at three threads,
+i.e. inside the noise.
+
+**No net needs retraining.** No encoding, pool, `TrainRow`, `EncodedState`
+or `Vocab` change is in this pass, and every pool's ladder output is
+byte-identical — only the cost of building the decks moved.
+
+Per commit, `--decks sealed --games 1` (the deck build in isolation), with
+each commit's `--decks fixed` reading beside it:
+
+| step | deck build, before -> after | fixed | what |
+|---|---|---|---|
+| A `3c154e8d` | 111,755,559 -> 104,842,406 (**-6.186 %**) | +2,194 | `colors_of_picks` returns `ColorCounts` (`[u32; 5]`) instead of a `HashMap<Color, u32>` |
+| B `5489b9fa` | 104,842,406 -> 94,866,008 (**-9.516 %**) | +0.006 % | both shape rankers read the pip totals they already hold instead of five more walks of the spell list |
+| C `b10fdebd` | 94,866,008 -> 70,513,288 (**-25.67 %**) | -0.005 % | a 4,096-slot direct-mapped front cache in front of `card_def`'s map probe |
+| D `5ca71f05` | 70,513,288 -> 65,341,053 (**-7.335 %**) | +0.076 % | `pip_counts` walks a cost once instead of once per colour in it |
+| E `9cc1175c` | 65,341,053 -> 43,588,088 (**-33.29 %**) | -0.014 % | `CardBrief`: the per-definition derived facts (pips, cmc, type flags, quality, the fixing walk) memoized with the definition |
+| F `735e365d` | 43,588,088 -> 37,942,385 (**-12.95 %**) | +0.066 % | the builder's four piles are `with_capacity`, not grown a doubling at a time |
+| G `ec138369` | 37,942,385 -> 34,861,499 (**-8.12 %**) | -0.0003 % | `land_produced_colors` is a `ColorSet` on the brief, not a `Vec` per land per shape |
+| — | 34,861,499 -> 35,864,023 (**+2.88 %**) | — | **REVERTED** — iterating `ColorCounts` by zipping rather than indexing. See the Log |
+
+**Fifty-third pass, base `d37f31d8`, base `d37f31d8` (pass 52's tip) vs its own tip
 `ae938ac3`**, both `profiling-fast --no-default-features`, built and run in
 one sitting on one box. Nine commits, three classes: **the requirement walker and its
 family take the permanent the caller is holding**, **the per-card grant
@@ -1190,6 +1306,98 @@ the table above is safe to compress:
 
 ## Log
 
+### Fifty-fourth pass — deck construction, read from the top for the first time
+
+Seven commits, one workload: `--decks sealed --games 1`, which plays no games
+and so is deck construction and nothing else. **111,755,559 -> 34,861,499
+Ir, -68.80 %.** A `selfplay_train` actor builds two pools and two decks per
+game, so this is ~18.6 M of per-game work becoming ~5.8 M against ~48 M for
+the game itself: **~19 % off an actor's per-game total**, and none of it is
+visible on `--bench`.
+
+The pass's device is the fifty-third's ranking rule applied one level down:
+**a definition is memoized, but everything read off it is not.** Four of the
+seven commits are that — pip counts, mana value, card types, card quality,
+the fixing walk and the land's produced colours were all re-derived at every
+read, per (pick x candidate x colour shape).
+
+**(A) `3c154e8d` — `colors_of_picks` returned a `HashMap<Color, u32>`.
+-6.186 %.** An allocation per scored pile and a hash probe per pip read in
+the scorer's inner loop, 12.1 % of the build on its own. `ColorCounts` is
+`[u32; 5]`, WUBRG-indexed, `Copy`. It also takes a `HashMap` iteration order
+out of `top_two_colors`' tie-break (bucket order -> WUBRG); the one- and
+zero-colour fallbacks were already "first WUBRG colour that is not the
+primary", so only exact ties move, and no pool's ladder output does.
+
+**(B) `5489b9fa` — both shape rankers rebuild the pip totals they hold.
+-9.516 %.** `static_build_score` opens with `colors_of_picks(main)` and then
+walks `main` five more times, once per colour with a `card_def` and a
+`colored_pip_count` per card, to rebuild the same five numbers for the
+consistency penalty. A colour absent from a cost contributes zero pips to
+it, so the two sums are equal by construction. ~115 lookups and five list
+walks off every ranked shape, and `enumerate_candidates` ranks 26 a build.
+
+**(C) `b10fdebd` — `card_def`'s map probe was 20.8 % of the build.
+-25.67 %, the pass's largest.** 487,071 lookups at ~40 Ir: TLS access,
+`RefCell` borrow, hashbrown SIMD scan. Two earlier passes took everything
+*around* the probe (a `const` TLS at `16f03d27`, a leaked `&'static` at
+`867de7bb`) and neither moved it, which is what said the probe itself was
+the cost. A **4,096-slot direct-mapped front cache** of `Cell<usize>` keys
+and `Cell<Option<&'static _>>` values: a hit is a multiply-shift, an array
+load and a compare. The map stays the authority, so a slot collision costs a
+probe and not a rebuilt definition; a pool asks for ~90 (sealed) to ~309
+(cube) distinct factories against 4,096 slots. Key 0 is the empty slot — a
+`fn` pointer is never null — so the hit path has no `unwrap`.
+
+**(D) `5ca71f05` — a two-colour card's cost was walked three times to count
+its pips. -7.335 %.** `colored_pip_count` answers for one colour, so a
+caller wanting the distribution asks `colors_of_cost` for the set (one walk)
+and then walks the cost again per colour in it. `pip_counts` walks the
+symbols once.
+
+**(E) `9cc1175c` — the derived-facts memo. -33.29 %, and it is the shape to
+copy.** `CardBrief` holds, per factory: the pip distribution, the mana
+value, three card-type flags, `card_quality`, `is_fixing_card`. The front
+cache holds it instead of the bare definition and `card_def` is
+`card_brief(f).def`. It is sound for the same reason the definition memo is
+— a leaked definition is never mutated and every field is a pure function of
+it. What it removes is not one row but a class: `card_types` is a
+`Vec<CardType>` the scorer scans four times a card, `cmc` and the pips each
+walk the cost, `card_quality` walks the keyword list, and `is_fixing_card`
+walks the whole effect tree.
+
+**(F) `735e365d` — the builder's four piles grew a doubling at a time.
+-12.95 %.** `build_shape` was the largest `RawVec::grow_one` caller in the
+build: 11,281 growths over 312 calls, 4.73 M inclusive, 10.9 %. They are all
+in `suggest_main_deck_in_colors`, whose piles partition sets whose sizes are
+known before the loop. Not the `GrowVec` shape refuted at the forty-eighth
+pass (+0.050 %): nothing here is cloned per checkpoint.
+
+**(G) `ec138369` — `land_produced_colors` allocated a `Vec<Color>` per land
+per shape. -8.12 %.** The caller does a `filter().count()` and a `len()` on
+it. It is a `ColorSet` now and a `CardBrief` field.
+
+**REFUTED, and do not rebuild it: iterating `ColorCounts` by zipping the
+array instead of indexing it, +2.88 %** (34,861,499 -> 35,864,023). The
+reasoning was that `Color::ALL.into_iter().map(|c| (c, self.get(c)))`
+re-derives an index from the discriminant per element and leaves a bounds
+check the scorer's inner loop pays five times a card, and `index_range.rs`
+was 1.49 % under `score_card_with_colors`. `zip(self.0)` copies the
+twenty-byte array into the iterator at every `iter()` call, and `is_empty`
+as an array compare loses the short-circuit. Reverted.
+
+**What is left of the build, at 34.9 M.** `score_card_with_colors` 12.3 %
+(44,849 calls at ~74 Ir, and the refutation above is what a first attempt on
+it costs), the allocator family ~11 %, `build_shape`'s residual ~12 %,
+`generate_sos_pack` ~4 % (pool generation, not the builder — its
+`guests.contains(&i)` is a linear scan per pool card over a list it built a
+`HashSet` for and dropped).
+
+**The `--decks fixed` drift across the pass is +0.13 %** (1,250,405,745 ->
+1,252,028,493). `fixed` builds its four hand-written decks once and reaches
+none of this code; the movement is code layout, and it is spread over the
+commits rather than concentrated in one.
+
 ### Fifty-third pass — the bench's own pool cannot see the two largest costs in the simulator
 
 Ten commits, three classes, and the pass's real finding is the measuring
@@ -1945,148 +2153,45 @@ program by source line, *no line in `game/mod.rs` reaches the top 400* except
 `next_alive_seat`'s two at 2.8 M. There is no hot line to take. Its callees
 are (-18)'s and are refuted. Stop reading it from the top.
 
-### Forty-seventh pass — a gate that stands in for a gather stops paying once the gather has run, and five questions asked before the thing that disqualifies them
+### Forty-seventh pass — a gate that stands in for a gather stops paying once the gather has run — *folded*
 
-Base `c9606062` (pass 46's tip) re-read at **1,727,336,594** against its
-recorded 1,727,337,280 — 686 Ir of argv, the same offset pass 46 saw. All
-readings `profiling-fast --no-default-features`, callgrind, `--a gang --b
-gang --games 6 --threads 1 --seed 1 --decks fixed`.
+Base `c9606062` at **1,727,336,594**; the pass sums to `1,715,304,981 ->
+1,645,831,969` on the rebased branch, **-4.050 %** over ten commits.
+`git log -- PERF.md` at the fifty-fourth pass's parent has the full entry,
+its step table and its profile table. What still matters:
 
-| step | before -> after | what |
-|---|---|---|
-| A | 1,727,336,594 -> 1,722,456,308 (**-0.283 %**) | the band question reads the combat resolver's computed set instead of opening its own freeze scope |
-| B | 1,722,456,308 -> 1,712,633,349 (**-0.570 %**) | the protection presence gate skips itself when the gather it stands in for is already memoized |
-| C | 1,712,633,349 -> 1,702,189,462 (**-0.610 %**) | three rare-mechanic questions asked before the thing that disqualifies them |
-| D | 1,702,189,462 -> 1,700,771,411 (**-0.083 %**) | the target check asks the layer system once per card, not three times |
-| — | 1,700,771,411 -> 1,825,126,685 (**+7.3 %**) | **REVERTED** — skipping `push_ordered_trigger_candidates` on an empty batch. See below; the side effect is real |
-| E | 1,700,771,411 -> 1,691,072,268 (**-0.570 %**) | two things every trigger dispatch paid for with nothing to dispatch |
-| — | 1,691,072,268 -> 1,691,521,813 (**+0.027 %**) | **REVERTED** — a lock-free depth shadow on `LayerFreeze`. See below |
-| G | 1,691,072,268 -> 1,683,872,083 (**-0.426 %**) | three lists walked twice, or asked before the cheaper answer |
-| H | 1,683,872,083 -> 1,674,581,042 (**-0.552 %**) | two `Vec`s built where nothing wanted a `Vec` |
-| — | *rebase onto the concurrent session's `cast_cost_scan`*; re-read **1,715,304,981 -> 1,662,145,114, -3.100 %** | the two passes compose, and the rows read *larger* after |
-| I | 1,662,145,114 -> 1,653,032,480 (**-0.548 %**) | keyword membership tests stop calling the derived `Keyword::eq` (engine, 224 sites) |
-| J | 1,653,032,480 -> 1,645,831,969 (**-0.436 %**) | the same in `crabomination_base`, where the trait now lives |
-
-**The pass sums to `1,715,304,981 -> 1,645,831,969`, -69,473,012 /
--4.050 %** on the rebased branch. Its first seven commits were measured on
-their own chain against `c9606062` at `1,727,336,594 -> 1,674,581,042`,
--52,755,552 / -3.054 %, and re-read at `1,715,304,981 -> 1,662,145,114`,
--3.100 %, after the rebase onto the concurrent session's `cast_cost_scan` —
-the two passes compose, with the rows reading slightly *larger* on the
-rebased branch. `--bench --threads 3` invariants byte-identical at every step:
-decisions **196,220**, turns_per_game 27.53, stalls 0 (cap 0 / stuck 0 /
-draw 0), determinism ok. Suite 18,709 / 0 failed / 5 ignored. No encoding
-change; **no net needs retraining as of this tip.**
-
-**(B) is the reusable finding, and it inverts a rule this file has been
-applying since the thirty-eighth pass.** A presence gate
-(`card_keyword_possible`, `card_type_change_in_scope`, `pt_reduction_in_scope`)
-exists to answer "can the gathered set contain X" *without gathering* — and
-that is a win exactly when the alternative is a gather. It is a **loss when
-the gather has already happened**: `keyword_grant_in_scope`'s board walk is
-one `card_can_grant_keyword` per permanent per command-zone card per
-graveyard card, which callgrind read at **297,674 calls / 10,436,812 Ir /
-0.60 % from `damage_prevented_by_protection` alone** — ~93 calls per gate on
-the late-game boards where combat happens — while the `computed_permanent`
-it is standing in for is a memo lookup inside a live scope. `layers_memoized()`
-answers "a scope is open and its gather is built" without gathering, and the
-gate skips itself when it is true. The authoritative read below it is
-unchanged either way, so this only ever moves cost. **The other presence
-gates are not automatically the same trade** — the land tap's
-`CantActivateTapAbilities` gate runs from `&mut self` with no scope open,
-where the gate is still the cheap side.
-
-**The +7.3 % that (E) nearly shipped, because it is the shape of the next
-bug.** `dispatch_triggers_for_events` ends with
-`continue_trigger_ordering` -> `push_ordered_trigger_candidates`, and on
-~97.5 % of the 53,838 dispatches the candidate list is empty, so the obvious
-change is to skip both. `push_ordered_trigger_candidates` is not a
-pure per-candidate function: after its loop it flips the CR 603.4 life-gain
-flags and calls `self.died_card_snapshots.clear()`, which are per-*batch*.
-Skipping it leaves the die-snapshot cache growing for the whole game — a
-correctness bug (stale LKI entries reachable from later trigger resolution)
-that announced itself as **+124,355,274 Ir**, with the 6-game ladder still
-reporting 24 decided / 12 splits. What ships instead bails inside
-`drain_trigger_queue` and around `continue_trigger_ordering`, leaving the
-call itself in place. **Read what a function does after its loop before
-short-circuiting the loop.**
-
-**The `LayerFreeze` depth shadow — built, measured, +0.027 %, reverted.**
-`frozen_effects` takes the state mutex 61,010 times over six games to be told
-`depth == 0`, `computed_permanent` more, and `layers_memoized` once per
-protection question; an `AtomicU32` mirror of `depth`, written under the same
-mutex and read `Relaxed`, lets every unfrozen read answer without an
-acquisition. It was correct (suite green, invariants identical) and it did
-not pay: an uncontended `std::sync::Mutex` acquire is a handful of
-instructions, so the `Relaxed` load added to the frozen paths and the two
-stores per scope enter/exit cost slightly more than the acquires it removed.
-**The caveat, for whoever wants to reopen it:** Ir undercounts a
-lock-prefixed instruction badly, so a *wall-clock* A/B could still read the
-other way — roughly 100 k acquires removed over six games, ~25 cycles each.
-That measurement was not run, and it is the only thing that could overturn
-this row. Do not rebuild it on the Ir number alone.
-
-**(C) and (G) are the forty-second pass's ranking rule, six more times.**
-Ask what an ordinary action pays that it cannot possibly need:
-
-* `assign_sectors` runs at the top of every SBA sweep and computed
-  `any_unassigned` — a `CardDefinition::is_creature` per permanent,
-  **167,024 calls / 2,561,084 Ir** — in the same pass that looks for a Space
-  Sculptor. Only a board with one can use the answer.
-* `granted_abilities_of`'s Agatha's Soul Cauldron gate led with
-  `is_creature()` and only then asked for a +1/+1 counter: **185,324 calls /
-  2,862,530 Ir**, and an empty counter bag disqualifies almost all of them
-  for three instructions.
-* `apply_land_equilibrium` ran a whole-battlefield land count *per
-  permanent* before testing for the static that makes the count matter —
-  a quadratic sweep per land drop for a card almost no deck plays.
-* `permanents_with_abilities_removed` asked `frozen_effects()` before its
-  presence gate, on a path (`&mut self`) where the answer is always `None`.
-* `granted_abilities_of` walked one card's `static_abilities` twice — once
-  for the five "has the activated abilities of …" flags, once for
-  Conspicuous Snoop — 92,232 calls from the mana-source enumeration.
-* `spend_mana_as_any_color_for_spell`, one call per payment, walked each
-  permanent's static list twice for the same three arms.
-
-**(H): `compute_permanent_pass` was the program's largest `from_iter`
-caller at 94,840 calls, and the list it collects is empty.** Every layer
-pass built `Vec<ContinuousEffect>` out of `granted_keywords_eot`. An empty
-`collect()` allocates nothing, but it is still a call with a size-hint
-dance; `is_empty()` is two loads. The same commit takes
-`ManaCost::colors()` — `color_set().to_vec()`, **18,022 of the program's
-`from_iter` calls** — off three hot callers whose consumers only ask
-`contains` / `len` / `is_empty`. The function's own doc had already said to
-prefer the set.
-
-**(I) and (J): the derived `PartialEq` of a 200-variant enum is a call, and
-`release-fast` has no LTO to inline it away.** `Keyword::eq` read
-**11,532,358 Ir / 0.68 % over ~1.09 M calls**, spread over twenty-five
-callers with the largest at 143,470 — no single site worth converting, all
-of them together worth 0.98 %. `[Keyword]::has_kw` compares
-`mem::discriminant` first, inline, and runs the full `==` only when the tags
-already match; a derived `PartialEq` can never return `true` across
-discriminants, so payload variants (`Ward(n)`, `Protection(c)`) compare
-exactly as `contains` did and the *miss* — nearly every element of every
-scan — costs three instructions instead of a call. 224 sites in the engine
-crate, then 10 in `crabomination_base` (`CardInstance::has_keyword` is the
-largest single caller in the program at 132,190; `printed_color_set`'s
-Devoid check is 106,792). **`Keyword::eq` ends at 3,219,922 / 0.20 %** and
-`has_kw` does not appear in the profile — it inlines everywhere. What is
-left is the tag-match cases, which have to compare payloads, and the
-map-keyed sites a slice trait cannot reach.
-
-The split into two commits is a build-time decision, not a design one: the
-engine crate rebuilds `profiling-fast` in 4m20s and `crabomination_base`
-takes 13 min because the 619 k-line catalog rebuilds behind it. **Measure
-the engine half first; it is 96 % of the sites and 56 % of the win.**
-
-**(A) The band question, twice per combat-damage batch.**
-`quality_band_assigner` (CR 509.2/510.1c's damage-order assigner and CR
-702.22k's strike-back one) opened a `with_frozen_layers` scope of its own to
-read `BandsWithOther` off the members' computed keywords — 5,017,771 Ir /
-0.29 % over 846 calls, i.e. a full gather each. Both call sites already hold
-`combat_damage_computed`'s slice, which covers exactly the attackers and the
-declared blockers.
+* **(B) -0.570 % is the reusable finding and it inverts a rule this file had
+  been applying since the thirty-eighth pass.** A presence gate is a *loss*
+  where the gather it stands in for has already happened; `layers_memoized()`
+  answers "has it" without gathering. The forty-eighth pass supplied the
+  clause that makes it usable — the question is not "has the gather
+  happened" but "does anyone else in this scope read it". Both halves are
+  written up in the candidates section's ranking rules.
+* **(I) and (J) -0.984 % together — the derived `PartialEq` of a
+  200-variant enum is an out-of-line call**, 11,532,358 Ir / 0.68 % over
+  ~1.09 M calls across 224 sites. `[Keyword]::has_kw` is a three-instruction
+  discriminant test in front of the `match`. **The trap that goes with it:**
+  `release-fast` / `profiling-fast` have no LTO, so a bare `#[inline]` on a
+  small `crabomination_base` function reads as a win here and is nothing in
+  the shipped `release` build — what works is making the callee smaller than
+  any inliner threshold.
+* **(A) -0.283 %, (C) -0.610 %, (D) -0.083 %, (E) -0.570 %, (G) -0.426 %,
+  (H) -0.552 %** — the forty-second pass's ranking rule (what does an
+  ordinary action pay that it cannot possibly need) applied eight more
+  times: a band question with its own freeze scope, three rare-mechanic
+  questions asked before the thing that disqualifies them, a target check
+  asking the layer system three times per card, two things every trigger
+  dispatch paid for with nothing to dispatch, three lists walked twice, and
+  two `Vec`s built where nothing wanted a `Vec`.
+* **Two REFUTATIONS from this pass are load-bearing and are repeated in the
+  candidates section: never skip `push_ordered_trigger_candidates` on an
+  empty batch (+7.3 % *and* a correctness bug — it owns the per-batch
+  `died_card_snapshots.clear()`), and the lock-free depth shadow on
+  `LayerFreeze` (+0.027 %; Ir undercounts a lock prefix, so only a
+  wall-clock A/B could overturn it, and that was never run).
+* `--bench --threads 3` invariants byte-identical at every step: decisions
+  196,220, turns 27.53, stalls 0, determinism ok. Suite 18,709 / 0 failed.
+  No encoding change.
 
 
 ### Forty-sixth pass — the cast pays for its spell kind three times, and a land tap deep-copies its own effect tree
@@ -2832,49 +2937,36 @@ decks a game). "Which pool a change moves" at the top of this file is the
 device; the short version is that `--decks fixed` carries no
 `GrantTriggeredAbility` static and builds its decks once.
 
-**(-39) THE DECK BUILDER — 112 M Ir for twelve pools + twelve builds after
-the fifty-third pass took it from 2.91 G, and it is still ~28 % of what a
-`selfplay_train` actor does per game.** Two builds and two pools a game at
-~9.3 M each, against ~48 M for the game. What is left, by self cost of
-`--decks sealed --games 1`:
+**(-39) THE DECK BUILDER — LARGELY PAID at the fifty-fourth pass: 111.8 M
+-> 34.9 M Ir for twelve pools + twelve builds, -68.80 %.** It was ~28 % of
+what a `selfplay_train` actor does per game and is now ~11 %. Read that
+pass's Log entry before proposing anything here; the device was "a
+definition is memoized, but everything read off it is not", and `CardBrief`
+is where a new derived fact belongs.
 
-| row | Ir | % | note |
-|---|---|---|---|
-| `LocalKey::with` | ~25,400,000 | **~22** | `card_def`'s own lookup: 487,071 calls. Neither the `const` TLS init nor dropping the `Arc` for a leaked `&'static` moved it much, so what is left is the `HashMap` probe itself |
-| `colors_of_picks` | 14,271,427 | 12.1 | 1,732 calls at 8,240 Ir — walks every pick and asks `card_def` per pick (110,053 of the 487,071) |
-| `build_shape` | 9,957,982 | 8.4 | 86,714 `card_def` calls of its own, mostly the `land_colors` loop |
-| `score_card_with_colors` | 9,918,390 | 8.4 | 44,849 calls |
-| `Map::fold'2` | 6,504,225 | 5.5 | |
+**The structural answer this entry used to propose — resolving a pool's
+definitions once into a `Vec<Arc<CardDefinition>>` and indexing it, a
+signature change through `draft.rs` / `recommend.rs` — is superseded and
+should not be started.** The 4,096-slot direct-mapped front cache
+(`b10fdebd`) took the same 20.8 % without touching a signature, and the
+derived-facts memo (`9cc1175c`) took the re-derivation the index change
+would not have.
 
-**The `--use-deck-best` configuration is CLOSED, and it was the worst of
-them.** `best_build_by(pool, 32, ..)` runs thirty-two `build_random_deck`s
-per side per game, and each one opened by re-deriving the *same*
-deterministic shape lattice (`enumerate_candidates`, ~26 `build_shape`
-calls). Measured end to end on the real loop — a throwaway deck net trained
-at the current vocab makes it runnable, which no committed one is (see
-TODO's ML defects) — `--actors 3 --games 150 --steps 1 --seed 7`,
-`release-fast` + mimalloc, alternated:
+What is left, by self cost of `--decks sealed --games 1` at 34,861,499:
 
-```text
-pass base d37f31d8        1.2 / 1.2 games/s
-after the definition memo 25.8 / 25.8      (67809f9f + 16f03d27 + 867de7bb)
-after the lattice hoist   83.2 / 83.2      (d1b4081f)   -> 69x from base
-unjudged path, same tip   99.8            for scale
-```
+| row | % | note |
+|---|---|---|
+| `score_card_with_colors` | **12.3** | 44,849 calls at ~74 Ir. One attempt on it is already refuted (+2.88 %, see the Log) |
+| `build_shape` residual | ~12 | diffuse: the filter chains and the `CandidateBuild` clones |
+| allocator family | ~11 | `_int_malloc` 5.4, `_int_free` 2.9, `malloc` 2.1 |
+| `__memcpy` | 6.1 | 163 of the calls are the definitions being built once, 8,242 Ir each |
+| `generate_sos_pack` | ~4 | **pool generation, not the builder.** `guests.contains(&i)` is a linear scan per pool card over a list it built a `HashSet` for and then dropped — the cheapest thing left on this workload |
 
-Best-of-32 now costs about what it should — the judged path is within 20 %
-of the unjudged one, where it was 20x slower. **What is left below is the
-unjudged number**, and it is the one to size further work against.
-
-**The structural answer, not attempted**: have the builder resolve a pool's
-definitions **once** into a `Vec<Arc<CardDefinition>>` and index it, rather
-than looking each one up by function pointer at every read. That is a
-signature change through `draft.rs` / `recommend.rs` (`&[CardFactory]` ->
-`&[(CardFactory, Arc<CardDefinition>)]` or an index type) and it is worth
-about **4 % of an actor's per-game work** — size it against that before
-starting. Do **not** reach for a global (non-thread-local) cache: a
-`Mutex`/`RwLock` on the path 487,071 times a build is the wrong trade, and
-a `OnceLock` per factory is not expressible over a `fn` pointer.
+**The `--use-deck-best` configuration stays CLOSED** — see the fifty-third
+pass. `best_build_by(pool, 32, ..)` runs thirty-two `build_random_deck`s per
+side per game; that pass's lattice hoist took the judged path from 1.2 to
+83.2 games/s against 99.8 for the unjudged one, and every build the fifty-
+fourth pass made cheaper is inside it.
 
 **(-38) `battlefield_find` is 4.03 % of the program and has never had an
 entry, because it never appears as a function row — it always inlines.**
@@ -2893,18 +2985,19 @@ pass's base:
 |---|---|---|
 | `evaluate_requirement_static` (`eval.rs:3271`) | 18,008,634 | 1.71 — **PAID** (`9bf2ae2e`) |
 | `find_card_anywhere`'s first leg (`mod.rs:21269`) | 3,614,532 | 0.34 |
-| `all_damage_to_player_prevented` (`mod.rs:12212`) | 2,230,452 | 0.21 |
+| `all_damage_to_player_prevented` (`mod.rs:12212`) | 2,230,452 | 0.21 — **PAID** (`4a951123`) |
 | `auto_tap_for_cost_inner`'s source table (`actions.rs:12626`) | 1,621,360 | 0.15 |
-| `bot::permanent_value` (`bot.rs:3003`) | 1,527,960 | 0.14 |
+| `bot::permanent_value` (`bot.rs:3003`) | 1,527,960 | 0.14 — **PAID** (`4a951123`, `permanent_value_with`) |
 | `pick_blocks_inner` (`bot.rs:8937` / `8702`) | 1,050,364 | 0.10 |
 
-**`all_damage_to_player_prevented` is the cheapest one and it is pure
-redundancy**: it collects `Vec<CardId>` from a battlefield walk and then
-re-finds each id on the battlefield, inside a single `&self` method where
-there was never a borrow to dodge. One walk, no `Vec`. ~0.2 % plus an
-allocation per call, and it is four lines.
+**Two of those five rows are already paid** and the table above kept
+claiming them: `all_damage_to_player_prevented` and `bot::permanent_value`
+both came off at `4a951123` (the fifty-third pass's (H), -0.611 % on
+`fixed`). What is genuinely unclaimed is `find_card_anywhere`'s first leg,
+`auto_tap_for_cost_inner`'s source table and `pick_blocks_inner` — 0.59 %
+between them.
 
-`bot::permanent_value(state, id, w)` and the rest are candidate (11)'s
+The rest are candidate (11)'s
 shape — a helper that opens with `battlefield_find` and is called from a
 battlefield loop. **The structural fix that would take all of them at once
 was costed and refused**: putting the `CardId` in the `CardInstance` handle
