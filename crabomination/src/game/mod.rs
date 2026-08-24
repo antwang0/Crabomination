@@ -12202,18 +12202,15 @@ impl GameState {
         if self.damage_cant_be_prevented_this_turn {
             return false;
         }
-        let ids: Vec<CardId> = self
-            .battlefield
-            .iter()
-            .filter(|c| c.controller == player)
-            .map(|c| c.id)
-            .collect();
-        ids.into_iter().any(|id| {
-            let Some(c) = self.battlefield_find(id) else { return false };
+        // One walk. This used to collect the controlled ids into a `Vec` and
+        // then `battlefield_find` each one back — a whole-battlefield scan per
+        // controlled permanent, plus the allocation — inside a method that is
+        // `&self` throughout and so never had a borrow to dodge.
+        self.battlefield.iter().filter(|c| c.controller == player).any(|c| {
             c.definition
                 .static_abilities
                 .iter()
-                .any(|sa| self.blanket_player_shield_active(&sa.effect, id, player))
+                .any(|sa| self.blanket_player_shield_active(&sa.effect, c.id, player))
         })
     }
 

@@ -2998,9 +2998,22 @@ fn self_life_loss(eff: &Effect) -> i32 {
 /// plus a loyalty term for planeswalkers and a small legendary premium. When
 /// the profile enables it, a keyword term (see [`keyword_value`]) too.
 fn permanent_value(state: &GameState, id: crate::card::CardId, w: &EvalWeights) -> i32 {
+    permanent_value_with(state, id, state.battlefield_find(id), w)
+}
+
+/// [`permanent_value`] with the permanent already in hand — the caller that
+/// dominates it (`eval_material_inner`) is walking the battlefield when it
+/// asks, and the `id` form re-finds the card with a linear scan. Candidate
+/// (11)'s shape; `battlefield_find` is 4.03 % of the simulator across its
+/// call sites and this is the largest of the bot's.
+fn permanent_value_with(
+    state: &GameState,
+    id: crate::card::CardId,
+    inst: Option<&crate::card::CardInstance>,
+    w: &EvalWeights,
+) -> i32 {
     use crate::card::{CardType, CounterType, Supertype};
     let Some(c) = state.computed_permanent(id) else { return 0 };
-    let inst = state.battlefield_find(id);
     let mut v = inst.map(|c| c.definition.cost.cmc() as i32).unwrap_or(0) * w.cmc;
     if c.card_types.contains(&CardType::Creature) {
         v += w.creature_base + c.power.max(0) * w.power + c.toughness.max(0) * w.toughness;
@@ -10231,7 +10244,7 @@ fn eval_material_inner(
         let pv = if c.definition.is_land() {
             2 * w.unit
         } else {
-            let mut pv = permanent_value(state, c.id, w);
+            let mut pv = permanent_value_with(state, c.id, Some(c), w);
             // Loyalty is a spendable RESOURCE, not material: counting it
             // here made every plus ability self-rewarding (+2 loyalty
             // read as +6 material for free) and every ultimate
