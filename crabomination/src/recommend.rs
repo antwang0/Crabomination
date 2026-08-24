@@ -431,6 +431,21 @@ pub(crate) fn is_fixing_card(def: &crate::card::CardDefinition) -> bool {
         || def.triggered_abilities.iter().any(|t| searches_land(&t.effect))
 }
 
+/// The five colors' pip totals, heaviest first.
+///
+/// `colors_of_picks` already summed exactly these — a color absent from a
+/// cost contributes zero pips to it — so both shape rankers used to walk
+/// their whole spell list five more times, with a `card_def` lookup per
+/// card per color, to rebuild a number they were holding.
+fn sorted_pip_totals(totals: &crate::draft::ColorCounts) -> [i32; 5] {
+    let mut pips = [0i32; 5];
+    for (i, (_, n)) in totals.iter().enumerate() {
+        pips[i] = n as i32;
+    }
+    pips.sort_unstable_by_key(|n| std::cmp::Reverse(*n));
+    pips
+}
+
 /// Cheap build rank: summed card scores, minus a shortfall penalty when
 /// the pool can't fill the target spell count in these colors, minus a
 /// consistency penalty on colored pips beyond the two heaviest colors
@@ -440,11 +455,7 @@ pub(crate) fn static_build_score(main: &[CardFactory], target_spells: usize) -> 
     let mut score: i32 = main.iter().map(|&f| score_card_with_colors(f, &main_colors)).sum();
     let shortfall = target_spells.saturating_sub(main.len()) as i32;
     score -= shortfall * 8;
-    let mut pips: Vec<i32> = Color::ALL
-        .into_iter()
-        .map(|c| main.iter().map(|&f| colored_pip_count(&crate::cube::card_def(f).cost, c) as i32).sum())
-        .collect();
-    pips.sort_unstable_by_key(|n| std::cmp::Reverse(*n));
+    let pips = sorted_pip_totals(&main_colors);
     // Basics-only fixing makes each color beyond the second expensive:
     // a flat cost per extra color plus a steep per-pip cost. Without the
     // flat term, an 82-card pool's marginal card-quality gains rank the
@@ -470,11 +481,7 @@ pub(crate) fn static_build_score_v3(main: &[CardFactory], target_spells: usize) 
         main.iter().map(|&f| crate::draft::score_card_quality(f, &main_colors)).sum();
     let shortfall = target_spells.saturating_sub(main.len()) as i32;
     score -= shortfall * 8;
-    let mut pips: Vec<i32> = Color::ALL
-        .into_iter()
-        .map(|c| main.iter().map(|&f| colored_pip_count(&crate::cube::card_def(f).cost, c) as i32).sum())
-        .collect();
-    pips.sort_unstable_by_key(|n| std::cmp::Reverse(*n));
+    let pips = sorted_pip_totals(&main_colors);
     let extra_colors = pips.iter().skip(2).filter(|n| **n > 0).count() as i32;
     score -= extra_colors * 12;
     score -= pips.iter().skip(2).sum::<i32>() * 6;
