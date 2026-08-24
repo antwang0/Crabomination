@@ -270,6 +270,7 @@ turns_per_game       27.94                    27.94
 stalls               0 (0.00 %), cap 0 / stuck 0 / draw 0 (both)
 determinism          ok (all pairs split, both)
 peak_rss_mib         21.6                     21.8
+suite                18,712 passed / 0 failed / 0 ignored over 22 binaries
 golden traces        all 7 unchanged
 clippy               `--workspace --all-targets` clean
 host_cpu             Intel(R) Xeon(R) Processor @ 2.10GHz
