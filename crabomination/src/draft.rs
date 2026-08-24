@@ -366,8 +366,12 @@ pub(crate) fn score_card_with_colors(
     let mut score: i32 = 0;
 
     // ── Color fit (the dominant signal once you have ~5 picks) ──
-    let card_colors = colors_of_cost(&def.cost);
-    if card_colors.is_empty() {
+    // One pass over the symbols. Both branches below want per-color pip
+    // counts, and asking `colors_of_cost` for the set and then
+    // `colored_pip_count` per color in it walked the same cost up to three
+    // times for a two-color card.
+    let card_pips = pip_counts(&def.cost);
+    if card_pips.is_empty() {
         // Colorless / artifact / generic-only NONLAND cards: slot into any
         // deck. Priced just under a single on-color pip (+6) — the old +2
         // made "castable everywhere" function as a penalty, so no colorless
@@ -384,20 +388,19 @@ pub(crate) fn score_card_with_colors(
         // seat's colors. Treat each colored pip as a small positive
         // signal so a {1}{G} bear still beats a colorless {1}
         // artifact at first pick.
-        let pips: u32 = card_colors
-            .iter()
-            .map(|c| colored_pip_count(&def.cost, c))
-            .sum();
+        let pips: u32 = card_pips.iter().map(|(_, n)| n).sum();
         score += (pips as i32) * 2;
     } else {
         let mut on_color_pips = 0i32;
         let mut off_color_pips = 0i32;
-        for c in card_colors {
-            let pips = colored_pip_count(&def.cost, c) as i32;
+        for (c, n) in card_pips.iter() {
+            if n == 0 {
+                continue;
+            }
             if seat_colors.get(c) > 0 {
-                on_color_pips += pips;
+                on_color_pips += n as i32;
             } else {
-                off_color_pips += pips;
+                off_color_pips += n as i32;
             }
         }
         // Each on-color pip is +6 (strong enough to dominate the curve
@@ -512,12 +515,35 @@ impl ColorCounts {
 pub fn colors_of_picks(picks: &[CardFactory]) -> ColorCounts {
     let mut totals = ColorCounts::default();
     for factory in picks {
-        let def = crate::cube::card_def(*factory);
-        for c in colors_of_cost(&def.cost) {
-            totals.add(c, colored_pip_count(&def.cost, c));
-        }
+        add_pip_counts(&crate::cube::card_def(*factory).cost, &mut totals);
     }
     totals
+}
+
+/// This cost's colored pips per color, in one pass over the symbols.
+///
+/// Same rule [`colored_pip_count`] applies — hybrid pips count for both
+/// halves, Phyrexian for their colored half — but that function is asked one
+/// color at a time, so the callers that want the whole distribution used to
+/// walk the cost once for the [`colors_of_cost`] set and then once more per
+/// color in it.
+pub(crate) fn pip_counts(cost: &crate::mana::ManaCost) -> ColorCounts {
+    let mut totals = ColorCounts::default();
+    add_pip_counts(cost, &mut totals);
+    totals
+}
+
+fn add_pip_counts(cost: &crate::mana::ManaCost, totals: &mut ColorCounts) {
+    for sym in &cost.symbols {
+        match sym {
+            ManaSymbol::Colored(c) | ManaSymbol::Phyrexian(c) => totals.add(*c, 1),
+            ManaSymbol::Hybrid(a, b) => {
+                totals.add(*a, 1);
+                totals.add(*b, 1);
+            }
+            _ => {}
+        }
+    }
 }
 
 /// Distinct colors referenced by a card's printed cost (colored,
