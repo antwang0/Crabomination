@@ -1640,7 +1640,11 @@ impl HeuristicBot {
                 } else if state.blockers_declared() && state.stack.is_empty() {
                     // Post-block priority: a held pump trick that flips a
                     // fight one of our blockers is losing.
-                    Some(pick_combat_trick(state, seat, &self.weights).unwrap_or(GameAction::PassPriority))
+                    Some(
+                        pick_combat_trick(state, seat, &self.weights)
+                            .map(Picked::action)
+                            .unwrap_or(GameAction::PassPriority),
+                    )
                 } else {
                     Some(GameAction::PassPriority)
                 }
@@ -1650,7 +1654,11 @@ impl HeuristicBot {
             TurnStep::DeclareBlockers
                 if is_active && state.blockers_declared() && state.stack.is_empty() =>
             {
-                Some(pick_combat_trick(state, seat, &self.weights).unwrap_or(GameAction::PassPriority))
+                Some(
+                    pick_combat_trick(state, seat, &self.weights)
+                        .map(Picked::action)
+                        .unwrap_or(GameAction::PassPriority),
+                )
             }
             // Master Warcraft on an opponent's turn: we choose *their*
             // attackers, so declare only the creatures that must attack.
@@ -1684,6 +1692,7 @@ impl HeuristicBot {
                 // falls through to the enumerator as before.
                 if !state.stack.is_empty()
                     && let Some(a) = pick_stack_response(state, seat, &self.weights)
+                        .map(Picked::action)
                         .or_else(|| pick_ability_counter_response(state, seat))
                         .or_else(|| pick_prepare_response(state, seat, &self.weights))
                         .or_else(|| pick_buff_response(state, seat, &self.weights))
@@ -1724,6 +1733,7 @@ impl HeuristicBot {
             }
             _ => Some(
                 pick_stack_response(state, seat, &self.weights)
+                    .map(Picked::action)
                     .or_else(|| pick_ability_counter_response(state, seat))
                     .or_else(|| pick_prepare_response(state, seat, &self.weights))
                     .or_else(|| pick_buff_response(state, seat, &self.weights))
@@ -2132,7 +2142,7 @@ fn attacker_damage_value(state: &GameState, id: CardId) -> i32 {
 /// bot itself, or it's expensive), cast a counterspell from hand at it.
 /// The `would_accept` dry-run is the final gate (timing, mana via
 /// auto-tap, per-counter target filters like Spell Snare's MV gate).
-fn pick_stack_response(state: &GameState, seat: usize, w: &EvalWeights) -> Option<GameAction> {
+fn pick_stack_response(state: &GameState, seat: usize, w: &EvalWeights) -> Option<Picked> {
     use crate::game::types::StackItem;
     let (spell_id, threat) = state.stack.iter().rev().find_map(|si| {
         let StackItem::Spell { card, caster, target, uncounterable, .. } = si else {
@@ -2200,8 +2210,8 @@ fn pick_stack_response(state: &GameState, seat: usize, w: &EvalWeights) -> Optio
             mode: None,
             x_value: None,
         };
-        if state.would_accept(action.clone()) {
-            return Some(action);
+        if let Some(next) = state.accept(action.clone()) {
+            return Some(Picked::Probed(action, Box::new(next)));
         }
     }
     None
@@ -7735,11 +7745,11 @@ fn simulate_attack_outcome_once(
                 // The spell layer's dry run already resolved this cast on a
                 // clone of exactly this state; adopt it rather than run the
                 // same cast a second time through `sim_step`.
-                Some(SimSpell::Advanced(next)) => {
+                Some(Picked::Probed(_, next)) => {
                     g = *next;
                     continue;
                 }
-                Some(SimSpell::Perform(a)) => a,
+                Some(Picked::Plain(a)) => a,
                 None => GameAction::PassPriority,
             },
             _ => GameAction::PassPriority,
@@ -7761,25 +7771,38 @@ fn simulate_attack_outcome_once(
 /// would multiply clone-and-resolve work per candidate, and a
 /// deterministic greedy stand-in carries exactly the information the sim
 /// is missing — "that mana will be spent on something".
-/// What [`sim_spell_action`] decided, and whether it already did it.
+/// An action a picker chose, and — when a dry run validated it — the state
+/// that run produced.
 ///
-/// The main-phase branch validates a candidate with a dry run that *is* the
-/// cast — clone the state, run the action to completion, throw it away — and
-/// the sim loop then ran the same cast a second time through [`sim_step`], on
-/// a state equal to the one the probe started from. `Advanced` hands the
-/// probe's own result back so the simulator pays for one cast per simulated
-/// cast rather than two.
-enum SimSpell {
-    /// [`GameState::accept_on`] already produced this state; adopt it.
-    /// Boxed so the enum stays pointer-sized on the far commoner other arm.
-    Advanced(Box<GameState>),
-    /// Nothing was run — a candidate `cast_candidates` had already validated,
-    /// or an action from a picker the real-game path shares. The caller
-    /// performs it.
-    Perform(GameAction),
+/// A validating picker's dry run *is* the action: it clones the state and runs
+/// the action to completion, then throws the result away so somebody can run
+/// the identical action a second time on a state equal to the one the probe
+/// started from. A caller that **owns** its state (the attack and block
+/// simulations, on their own throwaway clone) adopts `Probed`'s state and pays
+/// for one execution. A caller whose action crosses the
+/// [`Bot::next_action`](Bot::next_action) boundary drops it and returns the
+/// action: the driver's state is the authoritative one, and its decider is
+/// live where a clone's is fresh-by-kind.
+enum Picked {
+    /// [`GameState::accept`] / [`accept_on`](GameState::accept_on) ran this
+    /// action on a clone, and this is what it produced. Boxed so the enum
+    /// stays small on the far commoner other arm.
+    Probed(GameAction, Box<GameState>),
+    /// Chosen without a dry run of its own — pre-validated by
+    /// `cast_candidates`, or from a picker that does not probe.
+    Plain(GameAction),
 }
 
-fn sim_spell_action(g: &GameState, w: &EvalWeights) -> Option<SimSpell> {
+impl Picked {
+    /// The action, discarding any state its probe produced.
+    fn action(self) -> GameAction {
+        match self {
+            Picked::Probed(a, _) | Picked::Plain(a) => a,
+        }
+    }
+}
+
+fn sim_spell_action(g: &GameState, w: &EvalWeights) -> Option<Picked> {
     // Called once per sim-loop iteration on a cloned (unfrozen) state; every
     // candidate it ranks runs layer-aware checks — so the body wants a freeze
     // scope, but the question of whether there is a window to act in does not.
@@ -7802,17 +7825,16 @@ fn sim_spell_action(g: &GameState, w: &EvalWeights) -> Option<SimSpell> {
     g.with_frozen_layers(|g| sim_spell_action_inner(g, w))
 }
 
-fn sim_spell_action_inner(g: &GameState, w: &EvalWeights) -> Option<SimSpell> {
+fn sim_spell_action_inner(g: &GameState, w: &EvalWeights) -> Option<Picked> {
     let p = g.player_with_priority();
     if !g.stack.is_empty() {
         return pick_stack_response(g, p, w)
-            .or_else(|| pick_ability_counter_response(g, p))
-            .or_else(|| pick_prepare_response(g, p, w))
-            .or_else(|| pick_buff_response(g, p, w))
-            .map(SimSpell::Perform);
+            .or_else(|| pick_ability_counter_response(g, p).map(Picked::Plain))
+            .or_else(|| pick_prepare_response(g, p, w).map(Picked::Plain))
+            .or_else(|| pick_buff_response(g, p, w).map(Picked::Plain));
     }
     if g.step == TurnStep::DeclareBlockers && g.blockers_declared() {
-        return pick_combat_trick(g, p, w).map(SimSpell::Perform);
+        return pick_combat_trick(g, p, w);
     }
     if matches!(g.step, TurnStep::PreCombatMain | TurnStep::PostCombatMain)
         && g.active_player_idx == p
@@ -7828,10 +7850,10 @@ fn sim_spell_action_inner(g: &GameState, w: &EvalWeights) -> Option<SimSpell> {
             // adopt. Everything else is dry-run here; keeping that run's state
             // is what stops the sim casting the same spell twice.
             if ok {
-                return Some(SimSpell::Perform(a));
+                return Some(Picked::Plain(a));
             }
-            if let Some(next) = GameState::accept_on(&probe, a) {
-                return Some(SimSpell::Advanced(Box::new(next)));
+            if let Some(next) = GameState::accept_on(&probe, a.clone()) {
+                return Some(Picked::Probed(a, Box::new(next)));
             }
         }
     }
@@ -8262,11 +8284,11 @@ fn simulate_block_outcome_once(
         let action = match w.attack_sim_spells.then(|| sim_spell_action(&g, w)).flatten() {
             // See the same arm in `simulate_attack_outcome_once`: the dry run
             // that validated this cast already produced the state it leads to.
-            Some(SimSpell::Advanced(next)) => {
+            Some(Picked::Probed(_, next)) => {
                 g = *next;
                 continue;
             }
-            Some(SimSpell::Perform(a)) => a,
+            Some(Picked::Plain(a)) => a,
             None => GameAction::PassPriority,
         };
         if !sim_step(&mut g, action) {
@@ -10716,7 +10738,7 @@ fn is_combat_trick(def: &CardDefinition) -> bool {
 /// Covers both sides of combat (our blocked attacker on our turn, our
 /// blocker on theirs). Constant pumps only; dynamic amounts are skipped
 /// rather than mis-valued.
-fn pick_combat_trick(state: &GameState, seat: usize, w: &EvalWeights) -> Option<GameAction> {
+fn pick_combat_trick(state: &GameState, seat: usize, w: &EvalWeights) -> Option<Picked> {
     use crate::effect::{Duration, Selector, Value};
     fn pump_amounts(e: &Effect) -> Option<(i32, i32)> {
         match e {
@@ -10792,8 +10814,8 @@ fn pick_combat_trick(state: &GameState, seat: usize, w: &EvalWeights) -> Option<
                 mode: None,
                 x_value: None,
             };
-            if state.would_accept(action.clone()) {
-                return Some(action);
+            if let Some(next) = state.accept(action.clone()) {
+                return Some(Picked::Probed(action, Box::new(next)));
             }
         }
     }
@@ -16080,7 +16102,8 @@ mod stack_response_tests {
         for _ in 0..5 {
             g.add_card_to_hand(0, catalog::forest());
         }
-        let action = pick_stack_response(&g, 0, &w).expect("clogged hand counters");
+        let action =
+            pick_stack_response(&g, 0, &w).expect("clogged hand counters").action();
         assert!(
             matches!(action, GameAction::CastSpell { card_id, .. } if card_id == counter),
             "got {action:?}"

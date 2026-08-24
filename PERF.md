@@ -962,16 +962,32 @@ the accepted candidate no longer needs `a.clone()` to survive the probe.
 `--bench --threads 3` invariants byte-identical: decisions **196,220**,
 turns_per_game 27.53, stalls 0 (cap 0 / stuck 0 / draw 0), determinism ok.
 
+**(B) is the same trade in the two pickers the sim shares with the real
+path.** `pick_stack_response` and `pick_combat_trick` probe with
+`state.would_accept(a)` and return only the action; ~80 % and ~94 % of those
+probes are the sim's. Both now return `Picked` — `Probed(action, state)` when
+a dry run validated it, `Plain(action)` when nothing ran — and `Picked::action`
+is how the four real-game call sites drop the state they must not adopt.
+`GameState::accept` is `accept_on` against `self`, so there is still one body.
+`sim_step -> perform_action` falls again, 3,100 calls / 102,091,809 Ir to
+**2,636 / 72,020,298**: 464 more casts run once instead of twice, at ~64,800
+Ir each. The `a.clone()` that (A) had removed comes back — `Probed` carries
+the action for the real path — and costs ~75 Ir on 1,552 candidates, i.e.
+nothing against the 30 M removed. Invariants byte-identical again; traces
+unchanged.
+
+**The pass on the branch: `1,531,246,782 -> 1,395,881,928`, -135,364,854 /
+-8.840 %.**
+
 **What is left of the class, and why each row was not taken.**
-`main_phase_action_with`'s 2,036 and `pick_land_to_play`'s 934 hand their
-action to the game driver across the `Bot::next_action` boundary; adopting
-there means the *driver's* state, whose decider is live, and
+`main_phase_action_with`'s 2,036 probes and `pick_land_to_play`'s 934 hand
+their action to the game driver across the `Bot::next_action` boundary;
+adopting there means the *driver's* state, whose decider is live, and
 `perform_action`'s own doc says why swapping a fresh-by-kind decider in
-would wipe a `ScriptedDecider` mid-script. `pick_stack_response` and
-`pick_combat_trick` are shared by the sim and the real path — ~80 % and
-~94 % of their probes are the sim's, so ~620 adoptions / ~2 % are there for
-whoever threads the state out of a picker the real path also calls. And one
-level further in: `evaluate_action_sequence` clones and re-runs the finalist
+would wipe a `ScriptedDecider` mid-script. That is the biggest row left in
+the class — **95,709,009 Ir, 6.9 % of the tip** — and it wants the bot API to
+carry a state, not just an action. One level further in:
+`evaluate_action_sequence` clones and re-runs the finalist
 `main_phase_action_with` had *just* probed (842 evaluations, 62,218,246 Ir of
 `perform_action_inner` under them), which is the same reuse gated on
 `w.determinize == 0` — the redealt `sim_start_state` is a different state, so

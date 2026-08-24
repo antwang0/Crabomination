@@ -37,10 +37,16 @@ impl GameState {
         //
         // `perform_action_inner`: the probe is discarded either way, so
         // the transactional checkpoint would be pure waste here.
-        let mut probe = self.clone();
-        let acting = self.priority.player_with_priority;
-        let ok = probe.perform_action_inner(action).is_ok();
-        ok && !self.suspended_without_completing(&probe, acting)
+        self.accept(action).is_some()
+    }
+
+    /// [`would_accept`](Self::would_accept) that hands back the state the
+    /// accepted action produced — the `&self` form of
+    /// [`accept_on`](Self::accept_on), and the same bargain: the probe *is*
+    /// the action, so a caller that owns its state can adopt this rather than
+    /// run the same action a second time.
+    pub(crate) fn accept(&self, action: GameAction) -> Option<GameState> {
+        Self::accept_on(self, action)
     }
 
     /// Whether `probe` came back `Ok` only because the action *suspended*
