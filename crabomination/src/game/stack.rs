@@ -2660,11 +2660,22 @@ impl GameState {
         // `CantPhaseOut` only ever shrinks the set, so the presence gate on
         // Phasing alone is exact — and it is `false` on nearly every board,
         // which is the whole-board layer pass this step used to take per turn.
-        let mut to_phase_out: crate::fxhash::HashSet<crate::card::CardId> =
+        //
+        // The gate runs *outside* the scope, for the reason `do_untap` and
+        // `process_cumulative_upkeep` write out at their own copies of this
+        // shape: inside one, `board_keyword_in_scope` reads
+        // `frozen_effects()`, which gathers on the scope's first computed
+        // read — so asking from in there paid the very gather the gate
+        // exists to avoid, and when the answer is no *nothing else in the
+        // scope reads the memo*. That last clause is what separates this
+        // site from `declare_attackers_banded` / `declare_blockers`, where
+        // the same hoist is a loss (forty-eighth pass, +0.30 %) because a
+        // `compute_permanents` runs afterwards either way.
+        let phasing_possible = self.board_keyword_in_scope(&[crate::card::Keyword::Phasing]);
+        let mut to_phase_out: crate::fxhash::HashSet<crate::card::CardId> = if !phasing_possible {
+            crate::fxhash::HashSet::default()
+        } else {
             self.with_frozen_layers(|g| {
-                if !g.board_keyword_in_scope(&[crate::card::Keyword::Phasing]) {
-                    return crate::fxhash::HashSet::default();
-                }
                 g.compute_battlefield()
                     .iter()
                     .filter(|c| {
@@ -2675,7 +2686,8 @@ impl GameState {
                     })
                     .map(|c| c.id)
                     .collect()
-            });
+            })
+        };
         if !to_phase_out.is_empty() {
             let attached: Vec<crate::card::CardId> = self
                 .battlefield
