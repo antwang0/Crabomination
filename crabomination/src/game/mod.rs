@@ -8621,8 +8621,6 @@ impl GameState {
     }
 
     fn gather_continuous_effects_inner(&self) -> Vec<ContinuousEffect> {
-        // Include static-ability effects from permanents currently on the battlefield.
-        let mut all_effects: Vec<ContinuousEffect> = (*self.continuous_effects).clone();
         // Most passes below are gated on `definition.static_abilities`, and a
         // typical board is vanilla creatures and basic lands. Filter once so
         // those passes walk the handful of cards that can contribute instead
@@ -8666,6 +8664,22 @@ impl GameState {
                 }
             }
         }
+        // Include static-ability effects from permanents currently on the
+        // battlefield.
+        //
+        // Sized off the walk above rather than cloned: `Vec::clone` hands back
+        // `capacity == len`, so the first static ability pushed reallocated
+        // and memcpy'd the resolved set — 10,040 `grow_one` calls over 32,002
+        // gathers, 3.53 M Ir / 0.28 % at the fifty-fourth tip. `sa_cards` is
+        // where every further push comes from, so its length is a lower bound
+        // on them and **zero on a vanilla board**, where the reserve costs
+        // nothing. A blanket `+ battlefield.len()` headroom instead of this
+        // measured **+1.54 %**: a bigger allocation on every one of the 32,002
+        // gathers is a worse trade than the 10,040 growths it removes.
+        let base = &*self.continuous_effects;
+        let mut all_effects: Vec<ContinuousEffect> =
+            Vec::with_capacity(base.len() + sa_cards.len());
+        all_effects.extend_from_slice(base);
         // Bludgeon Brawl's pass calls `brawl_equip_mv` per battlefield card,
         // and that helper re-scans the whole board's static abilities looking
         // for `ArtifactsAreEquipment` — O(cards²) on every gather for a card
