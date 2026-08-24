@@ -2998,21 +2998,11 @@ impl GameState {
     /// a +1/+1 counter on equipped creature"). The `triggers_on_equipment`
     /// (Jitte-style) abilities fire off the Equipment via the dedicated
     /// combat-damage hook, so they're excluded to avoid double-firing.
-    pub(crate) fn equip_granted_triggers_for(
-        &self,
-        card: &CardInstance,
-    ) -> Vec<crate::card::TriggeredAbility> {
-        self.equip_granted_triggers_with(card, &self.equip_granted_trigger_sources())
-    }
-
     /// The battlefield attachments that hand their `equipped_bonus` triggered
-    /// abilities to their host, as `(host_id, abilities)`. Hoisted out of
-    /// [`equip_granted_triggers_for`] for the same reason as
-    /// [`trigger_grant_sources`]: the dispatcher asks once per battlefield
-    /// permanent and each ask re-scanned the whole battlefield.
-    ///
-    /// [`equip_granted_triggers_for`]: Self::equip_granted_triggers_for
-    /// [`trigger_grant_sources`]: Self::trigger_grant_sources
+    /// abilities to their host, as `(host_id, abilities)`. Hoisted so a caller
+    /// asking about every battlefield permanent — the trigger dispatcher does,
+    /// once per event batch — walks the battlefield once instead of once per
+    /// permanent.
     pub(crate) fn equip_granted_trigger_sources(
         &self,
     ) -> Vec<(CardId, &[crate::card::TriggeredAbility])> {
@@ -3027,9 +3017,10 @@ impl GameState {
             .collect()
     }
 
-    /// [`equip_granted_triggers_for`] against a prebuilt attachment list.
+    /// The equipment-granted triggered abilities on `card`, against a
+    /// prebuilt attachment list (see [`equip_granted_trigger_sources`]).
     ///
-    /// [`equip_granted_triggers_for`]: Self::equip_granted_triggers_for
+    /// [`equip_granted_trigger_sources`]: Self::equip_granted_trigger_sources
     pub(crate) fn equip_granted_triggers_with(
         &self,
         card: &CardInstance,
@@ -16972,28 +16963,38 @@ impl GameState {
         // `event_matches_spec`'s SelfSource id-check confines this to the
         // card actually exiled in this batch, so already-exiled cards don't
         // re-fire.
-        for card in &self.exile {
-            for ta in &card.definition.triggered_abilities {
-                if ta.event.kind != crate::effect::EventKind::CardExiled
-                    || ta.event.scope != crate::effect::EventScope::SelfSource
-                {
-                    continue;
-                }
-                for ev in events {
-                    if crate::game::effects::event_matches_spec(self, ev, &ta.event, card) {
-                        candidates.push(TriggerCandidate {
-                            from_mana_ability: false,
-                            actor: None,
-                            source: card.id,
-                            effect: ta.effect.clone(),
-                            controller: card.controller,
-                            filter: ta.event.filter.clone(),
-                            subject: crate::game::effects::event_subject(ev, &ta.event.kind),
-                            event_amount: self.event_amount_for(ev),
-                            triggered_by_etb: false,
-                            triggered_by_death: false,
-                            triggered_by_attack: false,
-                        });
+        //
+        // Presence-gated on `PermanentExiled` in the batch (see
+        // `event_matches_spec`'s mapping — `EventKind::CardExiled` matches
+        // `GameEvent::PermanentExiled` only). With no exile event, the
+        // per-card walk of exile is dead: every exile card iterated, every
+        // definition's `triggered_abilities` walked, only to be filtered
+        // out by the kind check. Most bench dispatches have no exile event
+        // at all.
+        if events.iter().any(|e| matches!(e, GameEvent::PermanentExiled { .. })) {
+            for card in &self.exile {
+                for ta in &card.definition.triggered_abilities {
+                    if ta.event.kind != crate::effect::EventKind::CardExiled
+                        || ta.event.scope != crate::effect::EventScope::SelfSource
+                    {
+                        continue;
+                    }
+                    for ev in events {
+                        if crate::game::effects::event_matches_spec(self, ev, &ta.event, card) {
+                            candidates.push(TriggerCandidate {
+                                from_mana_ability: false,
+                                actor: None,
+                                source: card.id,
+                                effect: ta.effect.clone(),
+                                controller: card.controller,
+                                filter: ta.event.filter.clone(),
+                                subject: crate::game::effects::event_subject(ev, &ta.event.kind),
+                                event_amount: self.event_amount_for(ev),
+                                triggered_by_etb: false,
+                                triggered_by_death: false,
+                                triggered_by_attack: false,
+                            });
+                        }
                     }
                 }
             }
@@ -17128,33 +17129,48 @@ impl GameState {
         // triggers: the card has already been moved to hand by the time the
         // event dispatches, so it fires from there (Golgari Brownscale's "gain
         // 2 life when this is put into your hand from your graveyard").
-        for player in &self.players {
-            for card in &player.hand {
-                for ta in &card.definition.triggered_abilities {
-                    if !matches!(ta.event.kind, crate::effect::EventKind::PutIntoHandFromGraveyard)
-                        || !matches!(ta.event.scope, crate::effect::EventScope::SelfSource)
-                    {
-                        continue;
-                    }
-                    for ev in events {
-                        if is_event_hardcoded(ev, &ta.event) {
+        //
+        // Presence-gated on the event kind for the same reason as the exile
+        // walk above: nothing else can match, so most dispatches have no
+        // reason to walk every hand.
+        if events
+            .iter()
+            .any(|e| matches!(e, GameEvent::CardPutIntoHandFromGraveyard { .. }))
+        {
+            for player in &self.players {
+                for card in &player.hand {
+                    for ta in &card.definition.triggered_abilities {
+                        if !matches!(
+                            ta.event.kind,
+                            crate::effect::EventKind::PutIntoHandFromGraveyard
+                        ) || !matches!(ta.event.scope, crate::effect::EventScope::SelfSource)
+                        {
                             continue;
                         }
-                        if crate::game::effects::event_matches_spec(self, ev, &ta.event, card) {
-                            candidates.push(TriggerCandidate {
-                                from_mana_ability: false,
-                            actor: None,
-                                source: card.id,
-                                effect: ta.effect.clone(),
-                                controller: card.owner,
-                                filter: ta.event.filter.clone(),
-                                subject: crate::game::effects::event_subject(ev, &ta.event.kind),
-                                event_amount: self.event_amount_for(ev),
-                                triggered_by_etb: false,
-                                triggered_by_death: false,
-                                triggered_by_attack: false,
-                            });
-                            break;
+                        for ev in events {
+                            if is_event_hardcoded(ev, &ta.event) {
+                                continue;
+                            }
+                            if crate::game::effects::event_matches_spec(self, ev, &ta.event, card)
+                            {
+                                candidates.push(TriggerCandidate {
+                                    from_mana_ability: false,
+                                    actor: None,
+                                    source: card.id,
+                                    effect: ta.effect.clone(),
+                                    controller: card.owner,
+                                    filter: ta.event.filter.clone(),
+                                    subject: crate::game::effects::event_subject(
+                                        ev,
+                                        &ta.event.kind,
+                                    ),
+                                    event_amount: self.event_amount_for(ev),
+                                    triggered_by_etb: false,
+                                    triggered_by_death: false,
+                                    triggered_by_attack: false,
+                                });
+                                break;
+                            }
                         }
                     }
                 }
@@ -17368,30 +17384,39 @@ impl GameState {
         // so AutoDecider/bot games (and the bulk of the test suite) are
         // untouched; AutoDecider would keep the default order anyway.
         candidates.sort_by_key(|c| apnap_rank(c.controller));
-        // Queue the "gained life earlier this turn" flag flips for this
-        // batch's LifeGained recipients — applied AFTER filter evaluation
-        // in `push_ordered_trigger_candidates`, so "first time each turn"
+        // Three per-event lookups, one walk. Each of them keys on one narrow
+        // slice of the batch — LifeGained (flag flip + Vizkopa's delayed
+        // watchers), CardPutIntoGraveyard (Duskmantle's) — and the two
+        // delayed-trigger halves are dead on any dispatch that has no
+        // delayed trigger registered at all: `fire_life_gained_watchers`
+        // and `fire_opponent_graveyard_watchers` both collect over an empty
+        // `delayed_triggers`, which allocates a `Vec` per LifeGained /
+        // CardPutIntoGraveyard event whose only purpose is to be dropped.
+        // Ask the presence gate once and then walk `events` a single time.
+        //
+        // The flag flip owns the "gained life earlier this turn" record and
+        // is applied AFTER filter evaluation in
+        // `push_ordered_trigger_candidates`, so "first time each turn"
         // filters in this very batch still see the pre-batch state.
+        //
+        // CR 603.4 — "until end of turn, whenever …" delayed triggers.
+        let has_delayed_triggers = !self.delayed_triggers.is_empty();
         for ev in events {
-            if let GameEvent::LifeGained { player, .. } = ev
-                && !self.life_gain_flag_pending.contains(player)
-            {
-                self.life_gain_flag_pending.push(*player);
-            }
-        }
-        // CR 603.4 — "until end of turn, whenever you gain life" delayed
-        // triggers (Vizkopa Guildmage). Fire per LifeGained event for a watcher
-        // whose controller is the recipient; the amount rides in for the body.
-        for ev in events {
-            if let GameEvent::LifeGained { player, amount } = ev {
-                self.fire_life_gained_watchers(*player, *amount);
-            }
-        }
-        // CR 603.4 — "whenever a card is put into an opponent's graveyard this
-        // turn" delayed triggers (Duskmantle Guildmage).
-        for ev in events {
-            if let GameEvent::CardPutIntoGraveyard { player, .. } = ev {
-                self.fire_opponent_graveyard_watchers(*player);
+            match ev {
+                GameEvent::LifeGained { player, amount } => {
+                    if !self.life_gain_flag_pending.contains(player) {
+                        self.life_gain_flag_pending.push(*player);
+                    }
+                    if has_delayed_triggers {
+                        self.fire_life_gained_watchers(*player, *amount);
+                    }
+                }
+                GameEvent::CardPutIntoGraveyard { player, .. } => {
+                    if has_delayed_triggers {
+                        self.fire_opponent_graveyard_watchers(*player);
+                    }
+                }
+                _ => {}
             }
         }
         // May suspend on a networked controller's `OrderTriggers` pick
