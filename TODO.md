@@ -38,8 +38,13 @@ log before opening a NEXT item.
    (`server::vocab_snapshot`), post-freeze nets pad, and a throwaway net
    proved `--use-deck-best` works end to end at **91.7 %** of the unjudged
    rate. What is missing is a *good* deck net.
-5. **Cards: `scripts/audit_dropped_may.py`, 344 open findings** (10,851
-   checked). Read the oracle before fixing one; false positives remain.
+5. **Cards: `scripts/audit_dropped_may.py`, 349 open findings** (11,094
+   checked against the offline Scryfall cache; synthesized `(b###)` names
+   skipped). **Thirteen were fixed at pass 54** — the "may destroy /
+   sacrifice / tap" cluster, where being forced hurts, plus three cards
+   missing the whole ability. Read the oracle before fixing one; false
+   positives remain, and the audit is a body-stub finder as much as an
+   optionality one.
 6. **Housekeeping.** TODO 0.9k, PERF 5.1k — the Baseline section is now 1.0k
    holding four passes' blocks; folding the oldest two is the next fold, and
    the 45th/46th Log entries after that. ENGINE_BACKLOG 4.9k /

@@ -258,8 +258,8 @@ Tasigur (Splice / Delve).
 - **Optional "may" → mandatory — now has an auditor, and it is bigger than
   ~10.** `scripts/audit_dropped_may.py` diffs every catalog definition against
   the offline Scryfall cache and flags the ones whose oracle says "you may"
-  and whose definition carries no optional primitive: **344 of 10,851 cards
-  checked** (4,144 synthesized `(b###)` names are skipped — they have no
+  and whose definition carries no optional primitive: **349 of 11,094 cards
+  checked** (3,901 synthesized `(b###)` names are skipped — they have no
   oracle to be wrong against, which is why the hand-written list above was
   ten). Reminder text and "…rather than pay this spell's mana cost" are
   filtered out; the residue still contains false positives where the engine

@@ -61,8 +61,23 @@ ORACLE_SKIP = (
 ORACLE_SKIP_CONTAINS = ("rather than pay",)
 
 
+def slug(name):
+    """"Pestilent Cauldron" -> "pestilent_cauldron", the factory-name shape."""
+    return re.sub(r"[^a-z0-9]+", "_", name.lower()).strip("_")
+
+
 def defs_in(path):
-    """(fn_name, card_name, body) for every `pub fn … -> CardDefinition`."""
+    """(fn_name, card_name, body, path) for every `pub fn … -> CardDefinition`.
+
+    A factory body often holds **several** `name:` literals — a transform back
+    face, a token it mints, a `let` for the other half of an MDFC — and the
+    first one is not reliably the card's. Taking it blind is how a name-keyed
+    audit ends up scoring `pestilent_cauldron` against Restorative Burst's
+    oracle. Prefer the literal whose slug matches the function name, which is
+    this catalog's naming convention; fall back to the first only when none
+    does, and say so by yielding it anyway (the caller's cache lookup is the
+    second filter).
+    """
     src = open(path, encoding="utf-8").read()
     for m in re.finditer(r"pub fn (\w+)\(\) -> CardDefinition \{", src):
         start = m.end() - 1
@@ -76,9 +91,12 @@ def defs_in(path):
                     break
             i += 1
         body = src[start : i + 1]
-        nm = re.search(r'name:\s*"([^"]+)"', body)
-        if nm:
-            yield m.group(1), nm.group(1), body, path
+        names = re.findall(r'name:\s*"([^"]+)"', body)
+        if not names:
+            continue
+        fn = m.group(1)
+        own = next((n for n in names if slug(n) == fn), None)
+        yield fn, own or names[0], body, path
 
 
 def main():
