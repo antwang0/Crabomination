@@ -7538,7 +7538,7 @@ impl GameState {
             A::SacrificePermanent { filter, count } => {
                 let matching = self.battlefield.iter().filter(|c| {
                     c.controller == p
-                        && self.evaluate_requirement_static(filter, &Target::Permanent(c.id), p, None)
+                        && self.evaluate_requirement_static_on(filter, c, p, None)
                 }).count();
                 matching >= *count as usize
             }
@@ -7565,7 +7565,7 @@ impl GameState {
             A::ReturnToHand { filter, count, .. } => {
                 let matching = self.battlefield.iter().filter(|c| {
                     c.controller == p
-                        && self.evaluate_requirement_static(filter, &Target::Permanent(c.id), p, None)
+                        && self.evaluate_requirement_static_on(filter, c, p, None)
                 }).count();
                 matching >= *count as usize
             }
@@ -7597,7 +7597,7 @@ impl GameState {
                 let matching = self.battlefield.iter().filter(|c| {
                     c.controller == p
                         && !c.tapped
-                        && self.evaluate_requirement_static(filter, &Target::Permanent(c.id), p, None)
+                        && self.evaluate_requirement_static_on(filter, c, p, None)
                 }).count();
                 matching >= *count as usize
             }
@@ -7606,7 +7606,7 @@ impl GameState {
             A::ExilePermanent { filter, count } => {
                 let matching = self.battlefield.iter().filter(|c| {
                     c.controller == p
-                        && self.evaluate_requirement_static(filter, &Target::Permanent(c.id), p, None)
+                        && self.evaluate_requirement_static_on(filter, c, p, None)
                 }).count();
                 matching >= *count as usize
             }
@@ -15205,7 +15205,7 @@ impl GameState {
                 .battlefield
                 .iter()
                 .filter(|c| c.controller == p)
-                .filter(|c| self.evaluate_requirement_static(&filter, &Target::Permanent(c.id), p, Some(card_id)))
+                .filter(|c| self.evaluate_requirement_static_on(&filter, c, p, Some(card_id)))
                 .map(|c| drainable_counters(c, kinds.as_deref()))
                 .sum();
             if have < count {
@@ -15221,7 +15221,7 @@ impl GameState {
                 .battlefield
                 .iter()
                 .filter(|c| c.controller == p)
-                .filter(|c| self.evaluate_requirement_static(filter, &Target::Permanent(c.id), p, Some(card_id)))
+                .filter(|c| self.evaluate_requirement_static_on(filter, c, p, Some(card_id)))
                 .map(|c| c.counter_count(*kind))
                 .sum();
             if want == 0 || have < want {
@@ -16140,7 +16140,7 @@ impl GameState {
                 .battlefield
                 .iter()
                 .filter(|c| c.controller == p && drainable_counters(c, kinds.as_deref()) > 0)
-                .filter(|c| self.evaluate_requirement_static(&filter, &Target::Permanent(c.id), p, Some(card_id)))
+                .filter(|c| self.evaluate_requirement_static_on(&filter, c, p, Some(card_id)))
                 .map(|c| (c.id, c.power()))
                 .collect();
             // Weakest first, but the source itself last: an ability whose body
@@ -16174,7 +16174,7 @@ impl GameState {
                 .battlefield
                 .iter()
                 .filter(|c| c.controller == p && c.counter_count(kind) > 0)
-                .filter(|c| self.evaluate_requirement_static(&filter, &Target::Permanent(c.id), p, Some(card_id)))
+                .filter(|c| self.evaluate_requirement_static_on(&filter, c, p, Some(card_id)))
                 .map(|c| (c.id, c.power()))
                 .collect();
             picks.sort_by_key(|(cid, pw)| (*cid == card_id, *pw));

@@ -13265,7 +13265,7 @@ impl GameState {
                 let candidates: Vec<(CardId, String)> = self
                     .battlefield
                     .iter()
-                    .filter(|c| self.evaluate_requirement_static(filter, &Target::Permanent(c.id), p, ctx.source))
+                    .filter(|c| self.evaluate_requirement_static_on(filter, c, p, ctx.source))
                     .map(|c| (c.id, c.definition.name.to_string()))
                     .collect();
                 if candidates.is_empty() { return Ok(()); }
@@ -25976,7 +25976,7 @@ impl GameState {
                     .iter()
                     .find(|c| {
                         c.controller == p
-                            && self.evaluate_requirement_static(filter, &Target::Permanent(c.id), p, ctx.source)
+                            && self.evaluate_requirement_static_on(filter, c, p, ctx.source)
                     })
                     .map(|c| (c.id, c.power(), c.toughness(), c.definition.cost.cmc()));
                 if let Some((cid, power, toughness, mv)) = candidate {
@@ -26032,7 +26032,7 @@ impl GameState {
                     .battlefield
                     .iter()
                     .filter(|c| c.controller == p
-                        && self.evaluate_requirement_static(filter, &Target::Permanent(c.id), p, ctx.source))
+                        && self.evaluate_requirement_static_on(filter, c, p, ctx.source))
                     .map(|c| (c.id, c.is_token, c.definition.cost.cmc(), c.power()))
                     .collect::<Vec<_>>()
                     .into_iter()
@@ -29919,7 +29919,7 @@ impl GameState {
                     .iter()
                     .filter(|c| c.controller == p)
                     .filter(|c| {
-                        self.evaluate_requirement_static(filter, &Target::Permanent(c.id), p, src)
+                        self.evaluate_requirement_static_on(filter, c, p, src)
                     })
                     .max_by_key(|c| self.computed_permanent(c.id).map(|cp| cp.power).unwrap_or(0))
                     .map(|c| c.id);
@@ -34237,7 +34237,7 @@ impl GameState {
                 let filter = filter.resolve_x(ctx.x_value);
                 self.battlefield
                     .iter()
-                    .filter(|c| self.evaluate_requirement_static(&filter, &Target::Permanent(c.id), ctx.controller, ctx.source))
+                    .filter(|c| self.evaluate_requirement_static_on(&filter, c, ctx.controller, ctx.source))
                     .map(|c| EntityRef::Permanent(c.id))
                     .collect()
             }
@@ -34255,7 +34255,7 @@ impl GameState {
                 self.battlefield
                     .iter()
                     .filter(|c| !chosen.contains(&c.id))
-                    .filter(|c| self.evaluate_requirement_static(&filter, &Target::Permanent(c.id), ctx.controller, ctx.source))
+                    .filter(|c| self.evaluate_requirement_static_on(&filter, c, ctx.controller, ctx.source))
                     .map(|c| EntityRef::Permanent(c.id))
                     .collect()
             }
@@ -34265,7 +34265,7 @@ impl GameState {
                 self.battlefield
                     .iter()
                     .filter(|c| c.controller == p)
-                    .filter(|c| self.evaluate_requirement_static(filter, &Target::Permanent(c.id), ctx.controller, ctx.source))
+                    .filter(|c| self.evaluate_requirement_static_on(filter, c, ctx.controller, ctx.source))
                     .map(|c| EntityRef::Permanent(c.id))
                     .collect()
             }
@@ -34275,7 +34275,7 @@ impl GameState {
                 self.battlefield
                     .iter()
                     .filter(|c| c.owner == p)
-                    .filter(|c| self.evaluate_requirement_static(filter, &Target::Permanent(c.id), ctx.controller, ctx.source))
+                    .filter(|c| self.evaluate_requirement_static_on(filter, c, ctx.controller, ctx.source))
                     .map(|c| EntityRef::Permanent(c.id))
                     .collect()
             }
@@ -34342,7 +34342,7 @@ impl GameState {
                 .iter()
                 .filter(|c| {
                     c.controller == ctx.controller
-                        && self.evaluate_requirement_static(filter, &Target::Permanent(c.id), ctx.controller, ctx.source)
+                        && self.evaluate_requirement_static_on(filter, c, ctx.controller, ctx.source)
                 })
                 .max_by_key(|c| c.power())
                 .map(|c| EntityRef::Permanent(c.id))
@@ -35110,7 +35110,7 @@ impl GameState {
             ZoneRef::Battlefield => self
                 .battlefield
                 .iter()
-                .filter(|c| self.evaluate_requirement_static(filter, &Target::Permanent(c.id), ctx.controller, ctx.source))
+                .filter(|c| self.evaluate_requirement_static_on(filter, c, ctx.controller, ctx.source))
                 .map(|c| EntityRef::Permanent(c.id))
                 .collect(),
             ZoneRef::Stack => self
