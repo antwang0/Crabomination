@@ -19339,10 +19339,15 @@ pub fn pelakka_wurm() -> CardDefinition {
     }
 }
 
-/// Springbloom Druid — {2}{G} Creature — Human Druid. 2/2. "When this
-/// creature enters, search your library for up to two basic land cards,
-/// put them onto the battlefield tapped, then shuffle." Two basic-land
-/// searches into play tapped.
+/// Springbloom Druid — {2}{G} 1/1 Elf Druid. "When this creature enters, you
+/// **may sacrifice a land**. If you do, search your library for up to two
+/// basic land cards, put them onto the battlefield tapped, then shuffle."
+///
+/// The sacrifice was missing outright, which made this free two-land ramp
+/// rather than a fixer that costs its own land — and the doc comment asserted
+/// the wrong oracle *and* the wrong body (2/2). `MaySacrifice` is the "you may
+/// sacrifice X; if you do, Y" primitive, and it gates itself on owning a
+/// match, so a landless board is never offered the choice.
 pub fn springbloom_druid() -> CardDefinition {
     use crate::card::{EventKind, EventScope, EventSpec, SelectionRequirement, TriggeredAbility};
     use crate::effect::ZoneDest;
@@ -19366,7 +19371,13 @@ pub fn springbloom_druid() -> CardDefinition {
         toughness: 1,
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-            effect: Effect::Seq(vec![fetch(), fetch()]),
+            effect: Effect::MaySacrifice {
+                description: "Sacrifice a land to search for two basic lands?".into(),
+                filter: SelectionRequirement::Land,
+                count: Value::ONE,
+                then: Box::new(Effect::Seq(vec![fetch(), fetch()])),
+                else_: None,
+            },
         }],
         ..Default::default()
     }

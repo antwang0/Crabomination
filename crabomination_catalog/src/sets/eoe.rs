@@ -933,6 +933,24 @@ pub fn tidal_terror() -> CardDefinition {
         power: 5,
         toughness: 6,
         keywords: vec![Keyword::Landcycling(cost(&[generic(2)]), LandType::Island)],
+        // "Whenever this creature attacks, you may tap two other untapped
+        // creatures you control. If you do, this creature can't be blocked this
+        // turn." The whole trigger was missing — the card was a vanilla 5/6
+        // with Islandcycling. `MayTap` is the reflexive tap-cost primitive and
+        // gates itself on owning two untapped matches.
+        triggered_abilities: vec![crate::effect::shortcut::on_attack(Effect::MayTap {
+            description: "Tap two other creatures to make Tidal Terror unblockable?".into(),
+            filter: crate::card::SelectionRequirement::Creature
+                .and(crate::card::SelectionRequirement::ControlledByYou)
+                .and(crate::card::SelectionRequirement::OtherThanSource),
+            count: Value::Const(2),
+            then: Box::new(Effect::GrantKeyword {
+                what: Selector::This,
+                keyword: Keyword::Unblockable,
+                duration: Duration::EndOfTurn,
+            }),
+            else_: None,
+        })],
         ..Default::default()
     }
 }

@@ -1134,6 +1134,68 @@ mod recent {
         assert_eq!(food, 2, "two Food tokens");
     }
 
+    /// Bristlebud Farmer's attack trigger: "you may sacrifice a Food. If you
+    /// do, mill three cards. You may put a permanent card from among them into
+    /// your hand." The attack half was missing until the fifty-fourth pass,
+    /// which left the ETB Foods with nothing to feed.
+    #[test]
+    fn bristlebud_farmer_attack_eats_a_food_to_mill_and_take_a_permanent() {
+        use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+        use crabomination::game::types::{Attack, AttackTarget};
+        let mut g = two_player_game();
+        let farmer = g.move_card_to_battlefield_for_test(0, catalog::bristlebud_farmer());
+        drain_stack(&mut g);
+        g.clear_sickness(farmer);
+        let foods = g.battlefield.iter().filter(|c| c.controller == 0
+            && c.definition.name == "Food").count();
+        assert_eq!(foods, 2, "the ETB minted the Foods this trigger eats");
+        for _ in 0..3 {
+            g.add_card_to_library(0, catalog::grizzly_bears());
+        }
+        let hand_before = g.players[0].hand.len();
+        let gy_before = g.players[0].graveyard.len();
+        g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+        g.step = TurnStep::DeclareAttackers;
+        g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+            attacker: farmer,
+            target: AttackTarget::Player(1),
+        }]))
+        .unwrap();
+        drain_stack(&mut g);
+        let foods_after = g.battlefield.iter().filter(|c| c.controller == 0
+            && c.definition.name == "Food").count();
+        assert_eq!(foods_after, 1, "one Food was sacrificed for the trigger");
+        assert!(g.players[0].graveyard.len() > gy_before, "and three cards were milled");
+        assert_eq!(g.players[0].hand.len(), hand_before + 1, "a permanent came back to hand");
+    }
+
+    /// …and declining keeps the Food and mills nothing.
+    #[test]
+    fn bristlebud_farmer_attack_trigger_is_optional() {
+        use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+        use crabomination::game::types::{Attack, AttackTarget};
+        let mut g = two_player_game();
+        let farmer = g.move_card_to_battlefield_for_test(0, catalog::bristlebud_farmer());
+        drain_stack(&mut g);
+        g.clear_sickness(farmer);
+        for _ in 0..3 {
+            g.add_card_to_library(0, catalog::grizzly_bears());
+        }
+        let gy_before = g.players[0].graveyard.len();
+        g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(false)]));
+        g.step = TurnStep::DeclareAttackers;
+        g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+            attacker: farmer,
+            target: AttackTarget::Player(1),
+        }]))
+        .unwrap();
+        drain_stack(&mut g);
+        let foods_after = g.battlefield.iter().filter(|c| c.controller == 0
+            && c.definition.name == "Food").count();
+        assert_eq!(foods_after, 2, "declined, so both Foods stay");
+        assert_eq!(g.players[0].graveyard.len(), gy_before, "and nothing was milled");
+    }
+
     /// Outcaster Greenblade tutors a basic land to hand on ETB.
     #[test]
     fn outcaster_greenblade_fetches_a_basic() {

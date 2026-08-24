@@ -736,8 +736,11 @@ fn springbloom_druid_etb_fetches_two_basics_tapped() {
     let id = g.add_card_to_hand(0, catalog::springbloom_druid());
     g.players[0].mana_pool.add_colorless(2);
     g.players[0].mana_pool.add(Color::Green, 1);
-    // Script the two tutor picks (AutoDecider declines searches by default).
+    // A land to feed the sacrifice, then the yes and the two tutor picks
+    // (AutoDecider declines both optional triggers and searches).
+    let food = g.add_card_to_battlefield(0, catalog::forest());
     g.decider = Box::new(ScriptedDecider::new([
+        DecisionAnswer::Bool(true),
         DecisionAnswer::Search(Some(f1)),
         DecisionAnswer::Search(Some(f2)),
     ]));
@@ -745,11 +748,39 @@ fn springbloom_druid_etb_fetches_two_basics_tapped() {
         card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
     }).expect("Springbloom Druid castable");
     drain_stack(&mut g);
+    assert!(!g.battlefield.iter().any(|c| c.id == food), "the sacrifice is a real cost");
     let tapped_lands = g.battlefield.iter()
         .filter(|c| c.controller == 0 && c.definition.is_land() && c.tapped).count();
     let lands_after = g.battlefield.iter().filter(|c| c.controller == 0 && c.definition.is_land()).count();
-    assert_eq!(lands_after - lands_before, 2, "two basics entered the battlefield");
+    // `lands_before` was taken before the Forest this test feeds to the
+    // sacrifice: +1 fed, +2 fetched, -1 sacrificed.
+    assert_eq!(lands_after - lands_before, 2, "two basics in, one land out");
     assert!(tapped_lands >= 2, "the fetched basics entered tapped");
+}
+
+/// "you **may** sacrifice a land. **If you do**, search…" — declining keeps the
+/// land and fetches nothing. Without this the card was free two-land ramp.
+#[test]
+fn springbloom_druid_fetch_costs_a_land() {
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::forest());
+    g.add_card_to_library(0, catalog::forest());
+    let keep = g.add_card_to_battlefield(0, catalog::forest());
+    let lands_before = g.battlefield.iter()
+        .filter(|c| c.controller == 0 && c.definition.is_land()).count();
+    let id = g.add_card_to_hand(0, catalog::springbloom_druid());
+    g.players[0].mana_pool.add_colorless(2);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(false)]));
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Springbloom Druid castable");
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.id == keep), "declined, so the land stays");
+    let lands_after = g.battlefield.iter()
+        .filter(|c| c.controller == 0 && c.definition.is_land()).count();
+    assert_eq!(lands_after, lands_before, "and nothing was fetched");
 }
 
 #[test]

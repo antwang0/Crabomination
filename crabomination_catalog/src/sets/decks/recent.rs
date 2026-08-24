@@ -5006,11 +5006,30 @@ pub fn bristlebud_farmer() -> CardDefinition {
         power: 5,
         toughness: 5,
         keywords: vec![Keyword::Trample],
-        triggered_abilities: vec![etb(Effect::CreateToken {
-            who: PlayerRef::You,
-            count: Value::Const(2),
-            definition: Box::new(crabomination_base::tokens::food_token()),
-        })],
+        triggered_abilities: vec![
+            etb(Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(2),
+                definition: Box::new(crabomination_base::tokens::food_token()),
+            }),
+            // "Whenever this creature attacks, you may sacrifice a Food. If you
+            // do, mill three cards. You may put a permanent card from among
+            // them into your hand." The attack half was missing, which left the
+            // ETB Foods with nothing to feed.
+            crate::effect::shortcut::on_attack(Effect::MaySacrifice {
+                description: "Sacrifice a Food to mill three and take a permanent?".into(),
+                filter: crate::card::SelectionRequirement::HasArtifactSubtype(
+                    crate::card::ArtifactSubtype::Food,
+                ),
+                count: Value::ONE,
+                then: Box::new(Effect::MillThenToHand {
+                    amount: Value::Const(3),
+                    filter: crate::card::SelectionRequirement::Permanent,
+                    otherwise: None,
+                }),
+                else_: None,
+            }),
+        ],
         ..Default::default()
     }
 }

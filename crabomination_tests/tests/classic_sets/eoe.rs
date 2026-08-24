@@ -3141,3 +3141,58 @@ fn kavaron_band_robot_and_team_haste() {
     assert_eq!(cp.power, 3, "team +1/+0 → 3 power");
     assert!(cp.keywords.contains(&Keyword::Haste), "team gained haste");
 }
+
+/// Tidal Terror's attack trigger: "you may tap two other untapped creatures
+/// you control. If you do, this creature can't be blocked this turn." The
+/// whole trigger was missing until the fifty-fourth pass — the card was a
+/// vanilla 5/6 with Islandcycling.
+#[test]
+fn tidal_terror_taps_two_to_become_unblockable() {
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    use crabomination::game::types::{Attack, AttackTarget};
+    let mut g = two_player_game();
+    let terror = g.add_card_to_battlefield(0, catalog::tidal_terror());
+    let a = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let b = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(terror);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: terror,
+        target: AttackTarget::Player(1),
+    }]))
+    .unwrap();
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(a).unwrap().tapped && g.battlefield_find(b).unwrap().tapped,
+        "both other creatures tapped for the cost");
+    assert!(
+        g.computed_permanent(terror).unwrap().keywords.contains(&Keyword::Unblockable),
+        "and Tidal Terror is unblockable this turn"
+    );
+}
+
+/// …and the printed "you may" is real: declining taps nothing and grants
+/// nothing.
+#[test]
+fn tidal_terror_tap_cost_is_optional() {
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    use crabomination::game::types::{Attack, AttackTarget};
+    let mut g = two_player_game();
+    let terror = g.add_card_to_battlefield(0, catalog::tidal_terror());
+    let a = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(terror);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(false)]));
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: terror,
+        target: AttackTarget::Player(1),
+    }]))
+    .unwrap();
+    drain_stack(&mut g);
+    assert!(!g.battlefield_find(a).unwrap().tapped, "declined, so nothing tapped");
+    assert!(
+        !g.computed_permanent(terror).unwrap().keywords.contains(&Keyword::Unblockable),
+        "and no unblockable grant"
+    );
+}
