@@ -413,30 +413,37 @@ single run of this workload.
 3 threads), both binaries alternated A/B/A/B in one sitting, best of two:
 
 ```text
-                 base            tip
-games_per_s      264.71          264.79          flat, and it must be:
-decisions        196,220         196,220         `--bench` is --decks fixed,
-turns_per_game   27.53           27.53           which builds no deck
-stalls           0 (0.00 %), cap 0 / stuck 0 / draw 0 (both)
-determinism      ok (all pairs split, both)
-peak_rss_mib     31.3            30.2
+                 base            deck-builder tip   final tip
+games_per_s      264.71          264.79             269.41
+decisions        196,220         196,220            196,220   byte-identical
+turns_per_game   27.53           27.53              27.53
+stalls           0 (0.00 %), cap 0 / stuck 0 / draw 0 (all three)
+determinism      ok (all pairs split); CRAB_THREAD_CHECK ok (3 vs 1)
+peak_rss_mib     31.3            30.2               30.3
 ladder output    all four pools' full printout (20 games, seed 1) diffs
                  identically base vs tip — the strongest behaviour check
                  here, because it covers the decks a seed builds and not
                  just the games they play
-suite            18,809 passed / 0 failed / 5 ignored over 31 binaries
+suite            18,815 passed / 0 failed / 5 ignored over 31 binaries
 golden traces    all unchanged
 clippy           `--workspace --all-targets` clean (client included)
 rustc            1.95.0 (59807616e 2026-04-14)
 host_cpu         Intel(R) Xeon(R) Processor @ 2.10GHz, 4 cores
-host_calib_ms    56-70 across the readings
+host_calib_ms    53-70 across the readings
 ```
+
+**Read the `--bench` column as flat and nothing else.** `--bench` is
+`--decks fixed`, which builds no deck, so the seven deck-builder commits
+cannot move it and did not (264.71 -> 264.79). The final +1.8 % is the two
+engine commits plus host drift, and this file's own note two sections down
+says a `--bench` absolute has read 3.7 % apart on one binary in one
+container ninety minutes apart. The Ir column is the attribution.
 
 **Crash-freedom and determinism at the tip.** `release`, `--a gang --b gang
 --games 200 --threads 3`, seeds 11/12/13 x `--decks all` and `--decks sealed`
 (the deck builder's own pool, which `--decks all` does not include): every
 cell **decided, 0 undecided, no panic, all pairs split** — 17,400 games and
-8,700 pairs. `CRAB_THREAD_CHECK=1 --bench` reads **`thread_determinism ok
+8,700 pairs, and the grid was re-run unchanged at the final tip. `CRAB_THREAD_CHECK=1 --bench` reads **`thread_determinism ok
 (3 vs 1 threads identical)`**. And the `[profile.overflow]` run that turns a
 silent wrap into a panic, re-run here because the deck builder is the code
 that moved: `--decks sealed` 2,400 games and `--decks all` 3,400 games at 3
