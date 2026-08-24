@@ -400,6 +400,28 @@ tip    169.8 / 169.6 / 165.6 / 152.5 / 167.2 games/s      best 169.8   +8.5 %
 rows/s 15,163 -> 16,498 at the two best readings
 ```
 
+**And the judged builder, which is where the deck work compounds.**
+`--use-deck-best` runs `best_build_by(pool, 32, ..)` — thirty-two
+`build_random_deck`s per side per game — so every commit above pays
+thirty-two times over on that path. It was untestable at the pass's start
+(no committed deck net loads; see TODO's ML section), so a throwaway one was
+trained at the current vocabulary to run it, which also **verifies the
+vocabulary freeze end to end**: a net trained after the freeze loads, pads
+and drives the actors.
+
+```text
+--actors 3 --steps 1 --seed 7, release-fast + mimalloc, alternated,
+best of four (two pairs at --games 600, two at --games 1200)
+  judged (--use-deck-best)   132.9 / 146.2 / 148.9 / 135.3   best 148.9
+  unjudged, same sitting     152.6 / 155.9 / 158.3 / 162.3   best 162.3
+  judged / unjudged                                          91.7 %
+```
+
+**The judged path is within 8 % of the unjudged one**, where the fifty-third
+pass left it at 83.4 % (83.2 against 99.8 on a different box — the *ratio* is
+what carries across hosts, not the absolutes). 0 stalls in ~7,600 judged
+actor games.
+
 **+8.5 % on best-of-five, and it is well under the ~19 % the Ir predicted.**
 That gap is this file's own caveat and it is worth stating plainly: the
 builder's cost is allocation-shaped, callgrind runs the *system* allocator,

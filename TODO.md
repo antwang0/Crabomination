@@ -189,6 +189,16 @@ and never moves an index a net depends on. `PlayNet` / `DeckNet::pad_vocab`
 zero-extend a shorter table (and the vocabulary-sized opponent head), and
 `vocab_fit` decides whether that is allowed.
 
+**Verified end to end at the fifty-fourth pass.** A throwaway deck net
+trained at the current vocabulary (`selfplay_train --actors 3 --games 4000
+--steps 30`, 30 steps, val AUC 0.62 — not committed, it is far too
+undertrained to be a judge) loads, pads and drives `--use-deck-best`: ~7,600
+judged actor games, 0 stalls. So the loader path is not the thing standing
+in the way; a *good* deck net is. The judged path now runs at **91.7 %** of
+the unjudged rate (148.9 vs 162.3 games/s, best of four alternated), against
+83.4 % at the fifty-third pass — best-of-32 building is where the deck-builder
+work compounds thirty-two-fold.
+
 **What is deliberately *not* fixed, and it is the interesting half.** A net
 whose vocabulary is smaller than `FROZEN_VOCAB_SIZE` (164) predates the
 freeze, so nothing can say which card each of its rows meant — padding it
