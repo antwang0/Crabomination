@@ -2258,6 +2258,35 @@ adopting only when both agree. Server, ML and the scripted-decider tests are
 all in scope; this is a pass of its own, not a drive-by. `pick_land_to_play`'s
 934 probes (11.2 M) ride along on the same change and nothing else does.
 
+**(-33) `trigger_grant_sources` — 29,448 whole-board grant walks, 14,134,170
+Ir / 1.06 %, all of it self, and this is the first pass that could see it.**
+The fixed `cg_lines.py` (see **How to measure**) puts the cost inside it at
+`option.rs` 4.32 M (the `active_static` peel per static ability), the slice
+iteration 7.2 M across `mod.rs`/`mut_ptr.rs`/`non_null.rs`, and `out.push`
+0.24 M — i.e. **530,064 battlefield-source visits looking for a
+`GrantTriggeredAbility` static that the bench boards do not have.** Callers:
+`fire_step_triggers` 14,898 (already hoisted — one walk per call, gated per
+card, and it is called once per step) and `statics_granted_triggers_for`
+14,550, which is the *per-card shim* and rebuilds the whole list every time.
+
+**The shim's five callers never took the `_with` form its own doc was written
+for** ("so a caller asking about every battlefield permanent peels and
+resolves the grants once instead of once per card"):
+`declare_attackers_banded` 3,960, `fire_combat_damage_to_creature_triggers`
+3,826, `fire_combat_damage_to_player_triggers` 2,694,
+`resolve_top_of_stack_inner` 2,276, `fire_self_etb_triggers` 1,784. Only the
+first three are in a loop with anything to hoist to — an attacker loop and a
+damage event — so **hoisting is worth ~6,000 of the 29,448 walks, ~2.9 M,
+~0.22 %**, and it means threading a grant list through the combat damage
+path. Size it before starting.
+
+**What will *not* work here, and the file has the measurements:** there is no
+cheap presence gate, because the gate is the walk — most sources have no
+static abilities at all, so the full walk already skips them and a pre-pass
+costs the same. A board-level memo with an epoch is (-18), refuted at
++0.727 %. Fusing the question into a walk that already happens is the device
+that has now lost four times.
+
 **Ranking rule added by the forty-ninth pass, and it is about how you read
 the profile rather than about the code:** **rank the tail, not the function.**
 A chain of narrow generators — `main_phase_action_with`'s twenty-two `pick_*`

@@ -33,22 +33,32 @@ rebase mid-run and re-read your numbers afterwards.**
    `would_accept`'s dry run *is* the action, and every caller then performed
    the same action again. It is invisible as a hot function; the tell is a
    validate-then-do pair.
-3. **Best next moves.** **(-32)** is the last row of that class and the
-   biggest single one left: `main_phase_action_with`'s 2,036 probes, 7.2 % of
-   the tip, blocked on `Bot::next_action` not carrying a state and on the live
-   decider — budget it as its own pass with the server and the
-   scripted-decider tests in scope. Otherwise: `dispatch_triggers_for_events`
-   is the **largest self-cost row in the program** (74,482,294 / 5.60 %,
-   ~1,383 Ir of self per working dispatch) and **has never been read per
-   source line** — that needs a `profiling-lines` build. Then `resolve_combat`
-   at 55,816 Ir a combat, and `cast_candidates` (7.93 %, never read from the
-   top).
-4. **A twentieth robustness filter is owed:** *a default that only one caller
+3. **`cg_lines.py` works now, and did not before.** It was annotating libc /
+   ld.so / libm addresses against this binary's DWARF and hardcoding the PIE
+   bias: 36 % of the run read `??` and the rest was attributed to whatever
+   symbol sat at the wrong offset (`Effect::clone` 2.65 % against the 0.5 %
+   its call edges give it). Fixed — one object, auto-detected bias, hit rate
+   printed, refuses below half. **A `profiling-lines` build is a ~40-minute
+   cold build; budget for it, and cross-check any row against
+   `cg_edges.py`'s call counts before ranking work by it.**
+4. **Best next moves.** **(-32)** is the last row of the duplicated-work class
+   and the biggest single one left: `main_phase_action_with`'s 2,036 probes,
+   7.2 % of the tip, blocked on `Bot::next_action` not carrying a state and on
+   the driver's live decider — its own pass, with the server and the
+   scripted-decider tests in scope. Then `dispatch_triggers_for_events` (the
+   largest self-cost row, 74,482,294 / 5.60 %, ~1,383 Ir of self per working
+   dispatch — now readable per line), **(-33)** `trigger_grant_sources`
+   (29,448 whole-board walks, 1.06 %, ~0.22 % of it hoistable),
+   `resolve_combat` at 55,816 Ir a combat, and `cast_candidates` (7.93 %,
+   never read from the top).
+5. **A twentieth robustness filter is owed:** *a default that only one caller
    ever exercises* (the inverse of the sixteenth). Filters 18 and 19 both
-   found real hits in the profiling scripts — see the filter table.
-5. **Owed housekeeping:** PERF is 3.9k and the **forty-sixth pass's profile
+   found real hits in the profiling scripts, and re-running 18 on
+   `cg_lines.py` found two more — the measuring devices are where this keeps
+   paying.
+6. **Owed housekeeping:** PERF is 4.0k and the **forty-sixth pass's profile
    table is the next fold** (its Log rows have stopped chaining); TODO is
-   1.09k and the compaction to reach for is the filter write-ups 12-19, which
+   1.1k and the compaction to reach for is the filter write-ups 12-19, which
    the index table above already summarises. The
    actor-scaling sweep in the candidates' seed list has still never been run;
    it needs a `release`/`release-fast` build (mimalloc), because allocator
