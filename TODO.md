@@ -23,8 +23,8 @@ numbers.**
 
 1. **Pass 54: deck builder 111.8 M -> 34.5 M Ir (-69.1 %), 2.81x wall clock
    on construction, `selfplay_train` 156.5 -> 169.8 games/s (+8.5 %).** Tip:
-   fixed 1,248,410,451 / cube 4,012,096,941 / sos 1,760,445,728 / sealed
-   3,497,168,270 / deck-build 34,511,759 (`--decks sealed --games 1`).
+   fixed 1,248,408,061 / cube 4,012,096,941 / sos 1,760,445,728 / sealed
+   3,497,168,270 / deck-build 34,509,612 (`--decks sealed --games 1`).
 2. **Use `scripts/cg_contexts.py` (over `valgrind --separate-callers=3`)
    before proposing any freeze scope** — it ranks a hot function's calls by
    calling context, which no one-level table can. It found two commits and

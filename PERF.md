@@ -341,7 +341,7 @@ it.
 ## Baseline
 
 **Fifty-fourth pass, base `4369a0d6` (pass 53's tip) vs its own tip
-`1ade0e84`.** Nine commits in two classes: **deck construction stops
+`e1cbc390`.** Nine commits in two classes: **deck construction stops
 re-deriving what a memoized definition already answers** (seven), and **two
 gathers that nobody read** (two, found with a measuring device this pass
 added — see `scripts/cg_contexts.py`). Ir readings `profiling-fast
@@ -349,14 +349,22 @@ added — see `scripts/cg_contexts.py`). Ir readings `profiling-fast
 --seed 1` unless the row says otherwise.
 
 ```text
-                          base (4369a0d6)   tip (1ade0e84)
-I refs, --decks fixed       1,250,405,745   1,248,410,451   -0.160 %
+                          base (4369a0d6)   tip (e1cbc390)
+I refs, --decks fixed       1,250,405,745   1,248,408,061   -0.160 %
 I refs, --decks cube        4,026,141,796*  4,012,096,941   -0.349 %
 I refs, --decks sos         1,760,202,906*  1,760,445,728   +0.014 %
 I refs, --decks sealed      3,572,196,844*  3,497,168,270   -2.101 %
-deck build alone              111,755,559      34,511,759  -69.12 %
+deck build alone              111,755,559      34,509,612  -69.12 %
   (--decks sealed --games 1: 0 games played, all setup)
 ```
+
+**Re-read after a rebase onto a concurrent session's three vocabulary-loader
+commits** (`796427ab`, `e8f5dbad`, `b36ba8f2`, which sit between this pass's
+`457b3864` and its two engine commits). `fixed` moved 1,248,410,451 ->
+1,248,408,061 and the deck build 34,511,759 -> 34,509,612 — 2,390 and 2,147
+Ir, i.e. nothing, which is what a change confined to the net loaders should
+do. The `cube` / `sos` / `sealed` rows above were read on the pre-rebase tip
+and are not re-read; the `fixed` pair is what says they did not move.
 
 \* the base `cube` / `sos` / `sealed` figures are the fifty-third pass's own
 tip readings carried forward. This pass's base *is* that tip, and its `fixed`
@@ -465,8 +473,8 @@ re-read at **1,252,225,395** — +0.016 % on `ec138369`, layout again:
 | step | fixed, before -> after | what |
 |---|---|---|
 | — | 1,252,225,395 -> 1,252,445,508 (**+0.018 %**) | **REVERTED** — a freeze scope around `eval_material_inner`'s board walk. Zero gathers removed; see the Log |
-| I `39c807ae` | 1,252,225,395 -> 1,250,520,577 (**-0.136 %**) | `do_phasing`'s presence gate asked from inside its own freeze scope, so it gathered the effect set it exists to avoid |
-| J `1ade0e84` | 1,250,520,577 -> 1,248,410,451 (**-0.169 %**) | the gather's own buffer was a `Vec::clone` (`capacity == len`) and reallocated on its first static ability |
+| I `25438a8b` | 1,252,225,395 -> 1,250,520,577 (**-0.136 %**) | `do_phasing`'s presence gate asked from inside its own freeze scope, so it gathered the effect set it exists to avoid |
+| J `e1cbc390` | 1,250,520,577 -> 1,248,410,451 (**-0.169 %**) | the gather's own buffer was a `Vec::clone` (`capacity == len`) and reallocated on its first static ability |
 
 **Fifty-third pass, base `d37f31d8`, base `d37f31d8` (pass 52's tip) vs its own tip
 `ae938ac3`**, both `profiling-fast --no-default-features`, built and run in
@@ -1412,7 +1420,7 @@ was 1.49 % under `score_card_with_colors`. `zip(self.0)` copies the
 twenty-byte array into the iterator at every `iter()` call, and `is_empty`
 as an array compare loses the short-circuit. Reverted.
 
-**(H) `39c807ae` — the phasing gate gathered the effect set it exists to
+**(H) `25438a8b` — the phasing gate gathered the effect set it exists to
 avoid. `fixed` -0.136 %.** `do_phasing` opens a freeze scope and asks
 `board_keyword_in_scope` whether any permanent can carry Phasing — a gate
 whose whole point is to skip the whole-board layer pass on the ~every board
@@ -1427,7 +1435,7 @@ that makes it a win here and a loss at `declare_attackers_banded` /
 scope reads the memo"**: those two run a `compute_permanents` afterwards
 either way. Gathers under `frozen_effects` 8,364 -> 6,600.
 
-**(I) `1ade0e84` — the gather's own buffer reallocated on its first static
+**(I) `e1cbc390` — the gather's own buffer reallocated on its first static
 ability. `fixed` -0.169 %.** `gather_continuous_effects_inner` opened with
 `(*self.continuous_effects).clone()`, and `Vec::clone` hands back
 `capacity == len`: 10,040 `grow_one` calls over 32,002 gathers, 3.53 M Ir.
