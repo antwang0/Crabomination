@@ -21,64 +21,30 @@ claude/modern_decks origin/claude/modern_decks` — the container clones `main`,
 ~2,200 commits behind. **Sessions run this branch concurrently: expect to
 rebase mid-run and re-read your numbers afterwards.**
 
-1. **Nothing is in flight. Tip `1,265,410,851` Ir.** Pass 52 reads
-   `1,314,289,790 -> 1,265,410,851`, **-3.719 %** in four commits: A -2.637 %
-   (finalist adopt), B -0.362 % (dispatch dead-work), C -0.752 % (picker
-   adopts). Base is 787 Ir under pass 51's recorded head (argv length; my
-   `--callgrind-out-file` name is shorter). `--bench` byte-identical:
-   198,810 decisions / 27.94 turns / 0 stalls / determinism ok. Wide pool
-   (seed 11, `--decks all --threads 3 --games 400`): 6,800 / 6,796 decided /
-   0 panic / all 3,398 pairs split. Golden traces all 7 unchanged; clippy
-   `--workspace --all-targets` clean. **No net needs retraining.**
-2. **The class this pass is in is pass 50's second half: `Bot::next_action`
-   was where the driver ran the same action a second time on the state the
-   picker's probe had already produced.** New trait method
-   `Bot::next_action_settled -> Option<BotStep>` with `settled:
-   Option<Box<GameState>>`. The self-play driver in `play_one_game_traced`
-   adopts settled via `g = *settled`; the plain `next_action` shim keeps
-   every existing caller unchanged — the server needs `perform_action`'s
-   event list to broadcast, so adopting is scoped to the throughput driver.
-   **`ScriptedDecider` survives a clone**: `DeciderKind::Scripted` carries
-   `answers` + `asked` verbatim, `into_boxed` reconstructs. The doc that
-   used to say otherwise was pre-`kind()`.
-3. **Best next moves — and the top one is bench-DEAD, checked this pass.**
-   The `cast_candidates` refactor (carry `Option<Box<GameState>>` for the
-   eagerly-validated `castable` blocks so pre-validated winners adopt too)
-   gains **~0 on `--decks fixed`**: the archetype decks are vanilla
-   (bolt/shock/bears/drakes), so `castable` — populated only by the
-   specialty-cast blocks (delve, kicker, prototype, split, alt-cost,
-   splice, gy-recast, gift, spree, impulse) — is empty, every candidate is
-   `unvalidated`/lazy, and the winner already carries `settled: Some`. Its
-   ceiling only exists on `all`/`cube`/`sos`, which is not the throughput
-   bench. **Do not run it for the fixed-Ir number.** Genuine bench levers
-   left are all engine-diffuse: `dispatch_triggers_for_events` (5.26 % self
-   after (B), spread across the per-card phase-1 walk), (-35)
-   `evaluate_requirement_static` (2.65 % self / 182 K calls, 269 Ir/call —
-   the bot's target enumeration, not obviously reducible), and
-   `resolve_combat` (55,816 Ir a combat, (-25) reads it diffuse). **(-33)'s
-   `trigger_grant_sources` hoist into the `fire_combat_damage_*` callers is
-   sized and NOT worth it**: the grant list borrows `&self` and the firing
-   is `&mut self`, so it can't be held across the loop; owning it (a clone
-   per combat) costs about what the per-source rebuild does, and the gang
-   bench has ~1 attacker per declaration so even the declare_attackers hoist
-   (`bee52a09`) barely moved on this pool.
-4. **The wide-pool determinism sweep is now RUN and clean** — seeds 11-15
-   × `--threads 1/2/3`, the full 15-cell grid, 25,500 pairs all split, no
-   panic, no sweep (see PERF's crash-freedom note). That is the sweep
-   filter 21's fix demanded. **A twenty-third robustness filter is still
-   owed**: 22 audited "state the harness installs that a rules path can
-   reset" (`restart_game`'s RNG drop + `snapshot.rs`'s wrong claim).
-   Candidates for 23: the *measuring devices* vein (18, 19, 20 all landed
-   there) is not exhausted; `perform_action`'s checkpoint restore audit is
-   only ever exercised on the failing actions the suite trips (an invariant
-   checked at one point in its parameter space — the filter-21 shape), and
-   the `--bench` decision-count invariant is only checked at one thread
-   count even though the determinism grid above now varies it.
-5. **Owed housekeeping.** PERF 4.1k — the forty-sixth pass's profile table
-   is still the next fold. TODO 1.16k — filter write-ups 12-20 remain the
-   compaction. Actor scaling is closed to 4 cores (linear); says nothing
-   about 8+. The `cast_candidates` refactor above is what unlocks the rest
-   of the `next_action_settled` class.
+1. **Nothing in flight. Tip `1,265,410,851` Ir** (pass 52, -3.719 %:
+   finalist adopt -2.637, dispatch dead-work -0.362, picker adopt -0.752).
+   `--bench` byte-identical (198,810 dec / 27.94 turns / 0 stalls). Suite
+   18,712/0. Traces 7/7. Clippy clean. **No net retrain.**
+2. **`next_action_settled` closed the pass-50 class's last row**: the
+   picker's dry-run state IS the action, so the self-play driver adopts it
+   (`g = *settled`) instead of re-running. Scoped to the throughput driver;
+   server keeps the plain `next_action` (needs `perform_action`'s events).
+   `ScriptedDecider` survives the clone (`DeciderKind` round-trips the queue).
+3. **Bench perf is into diffuse territory; no cheap lever left.** The
+   `cast_candidates` state-carry refactor is **bench-DEAD** (fixed decks are
+   vanilla → `castable` empty → 0 pre-validated winners; helps only
+   all/cube/sos — see PERF (-32)). (-33)'s combat-damage grant hoist is
+   sized and NOT worth it (borrow conflict; ~1 attacker/decl on gang). What
+   remains is engine-diffuse: dispatch self 5.26 %, `evaluate_requirement_static`
+   (-35), `resolve_combat` (-25). Re-profile before assuming a lever exists.
+4. **Determinism sweep RUN & clean** (seeds 11-15 × threads 1/2/3, 25,500
+   pairs, all split — PERF). **Filter 23 owed**: `perform_action`'s restore
+   audit is only hit on the suite's failing actions; the `--bench`
+   decision-count invariant is checked at one thread count. Measuring-devices
+   vein (18/19/20) not exhausted.
+5. **Housekeeping.** PERF 4.2k — the 46th-pass profile table is the next
+   fold. TODO — filter write-ups 12-20 are the compaction. Actor scaling
+   closed to 4 cores (linear); says nothing about 8+.
 
 ## Standing rules for a perf pass
 
