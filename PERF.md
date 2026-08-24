@@ -244,6 +244,45 @@ it.
 
 ## Baseline
 
+**Fiftieth pass, base `e7b3b3d4` (pass 49's tip) vs its own tip**, both
+`profiling-fast --no-default-features`, built and run in one sitting on one
+box. Rebased onto the concurrent run of the same pass (`4107e017`,
+`49fce1ff`) after measuring; those two commits touch only `scripts/*.py` and
+the trackers, so both columns stand unrederived.
+
+```text
+                     base (e7b3b3d4)          tip
+I refs (callgrind)   1,531,246,782            1,330,231,550   -13.128 %
+decisions            196,220                  196,220         byte-identical
+turns_per_game       27.53                    27.53
+stalls               0 (0.00 %), cap 0 / stuck 0 / draw 0 (both)
+determinism          ok (all pairs split, both)
+allocations          not re-read              773,131
+peak_rss_mib         21.6                     22.5
+suite                18,709 passed / 0 failed / 5 ignored over 22 binaries
+golden traces        all 5 unchanged
+clippy               `--workspace --all-targets` clean
+host_cpu             Intel(R) Xeon(R) Processor @ 2.10GHz
+host_calib_ms        47-49 across every reading
+```
+
+**The base column is 11 Ir under pass 49's recorded 1,531,246,793 for the same
+commit** — argv length again (this run's `--callgrind-out-file` name is a
+character shorter; pass 49 saw 492 Ir of the same effect and pass 47 686). The
+base was read *directly* here, so the delta is exact.
+
+**This box is not pass 49's.** `host_cpu` reads 2.10 GHz against that pass's
+2.80 GHz and `host_calib_ms` 47-49 against 52-57, so **no `games_per_s` from
+this pass compares to one from that pass** — see the note under **How to
+measure**. Ir transfers between containers to within the argv string, which is
+why the Log rows are quoted in Ir and nothing else.
+
+**Crash-freedom and determinism at the tip, widest pool.** `--a gang --b gang
+--games 400 --threads 3 --decks all`, seeds 11 / 12 / 13: **20,400 games,
+20,396 decided, no panic**, all 10,198 mirrored pairs split (`rho -1.000`
+every seed). The 4 undecided are seed 11's rules draws, the same four passes
+44-49 recorded.
+
 **Forty-ninth pass, base `40fb5e31` (pass 47's tip) vs its own tip**, both
 `profiling-fast --no-default-features`, built and run in one sitting on one
 box. It ran concurrently with pass 48 and is **rebased on top of it**, so it
@@ -913,6 +952,7 @@ touch only `scripts/*.py` and the trackers, so both numbers stand unrederived.
 | A | 1,531,246,782 -> 1,424,690,649 (**-6.958 %**) | the attack/block sims adopt the state their own dry run produced instead of re-running the cast |
 | B | 1,424,690,649 -> 1,395,881,928 (**-2.022 %**) | the two validating pickers the sim shares with the real path hand their probe's state out too |
 | C | 1,395,881,928 -> 1,330,233,580 (**-4.703 %**) | the finalist carries its probe's state to the outcome eval and the summon-sick gate |
+| — | 1,330,233,580 -> **1,330,231,550** | a clippy `collapsible_if` on (C)'s loyalty-finalist filter; 2,030 Ir, and the tip the baseline quotes |
 
 **The class, and it is the largest one this file has named.**
 `would_accept_on` clones the state and runs the action **to completion** —
@@ -1005,8 +1045,9 @@ left it set. That record is scoped to one cast attempt and the attempt ends
 when the cast lands — its own doc says so — so clearing it after a completed
 cast is the correct half of the pair. Golden traces unchanged either way.
 
-**The pass on the branch: `1,531,246,782 -> 1,330,233,580`, -201,013,202 /
--13.128 %.**
+**The pass on the branch: `1,531,246,782 -> 1,330,231,550`, -201,015,232 /
+-13.128 %.** (The last 2,030 of that is the clippy fix on (C)'s own diff, not
+a fourth optimization.)
 
 **What is left of the class, and why each row was not taken.**
 `main_phase_action_with`'s 2,036 probes and `pick_land_to_play`'s 934 hand
@@ -1927,15 +1968,42 @@ settings + debuginfo; system allocator, because valgrind replaces malloc and
 a mimalloc build would measure the interception), 1 thread, `--a gang --b
 gang --games 6 --seed 1 --decks fixed`.
 
-**The branch ends at 1,531,246,793 Ir.** The table below is a tip five
-commits earlier (`cg.rb.out`, 1,540,962,924) — (C) moved 2.2 M of
-`frozen_effects`, (D) 2.5 M of freeze-scope machinery, (E) 2.2 M of clones
-and pass 48's (F)/(G) 2.9 M more, so every row here holds to within 10 M. The forty-eighth pass's own table is kept
-under it because its Log rows chain to it — read that one as shares, not
-absolutes: it was taken on pass 48's pre-rebase chain. The forty-seventh's and
-forty-sixth's are kept below that for the same reason; the forty-fifth's was
+**The branch ends at 1,330,231,550 Ir**, read directly at the fiftieth tip.
+The table below was taken 2,030 Ir above it, before a clippy `collapsible_if`
+on the same commit's diff — every row holds.
+
+| row at the 50th tip | Ir | % | note |
+|---|---|---|---|
+| `pick_attacks_scored` | 706,842,699 | **53.14** | still the largest subtree; `simulate_attack_outcome_once` 699,394,707 / 52.58 % over 1,170 candidates. Candidate (-21) |
+| `perform_action_inner` | 927,821,672 | 69.75 | 68,356 calls. By caller: `sim_step` 31,874 / 278.8 M, `perform_action` 26,502 / 291.4 M, **`accept_on` 5,260 / 243.3 M**, `simulate_attack_outcome_once` 1,622 / 63.3 M, `evaluate_action_sequence` 1,756 / 22.2 M, `main_phase_action_with` 1,040 / 14.7 M |
+| `main_phase_action_with` | 386,602,637 | 29.06 | `pick_by_outcome` 920, `accept_on` 2,036 / 95.7 M (the class's last row — see the Log), `simulate_through_combat` 804 |
+| `pass_priority` | 364,163,549 | 27.38 | -> `advance_step` 22,892 / 267.6 M, `resolve_top_of_stack` 4,250 / 89.6 M |
+| `sim_step` | 356,610,293 | 26.81 | 31,874 `PassPriority` / 278.8 M **+ 2,636 checkpointed / 72.0 M** (was 4,568 / 209.2 M before this pass) |
+| `advance_step` | 267,564,235 | 20.11 | **11,688 Ir a step advance.** `resolve_combat` 2,694 / 150.4 M, its own recursion 1,764 / 42.1 M, `do_untap` 1,764 / 31.8 M, `do_cleanup` 1,764 / 25.7 M, `fire_step_triggers` 14,898 / 21.7 M |
+| `accept_on` | 260,534,785 | 19.59 | the dry-run probes. 5,260 calls; only `main_phase_action_with`'s 2,036 and `pick_land_to_play`'s 934 are still followed by a second execution |
+| `cast_spell` | 251,144,642 | 18.88 | `try_pay_after_snapshot_mode` 137.8 M, `auto_tap_for_cost_inner` 127.2 M — (-12) |
+| `sim_spell_action_inner` | 226,453,098 | 17.02 | `accept_on` 1,552, `cast_candidates` 3,732, `pick_stack_response` 4,656, `pick_combat_trick` 3,842 |
+| `resolve_combat` | 195,218,265 | 14.68 | 2,694 calls at **55,816 Ir each** — the largest engine row, and (-25) reads it as diffuse |
+| `check_state_based_actions` | 125,389,731 | 9.43 | |
+| `dispatch_triggers_for_events` | 116,921,949 | 8.79 | **the largest self-cost row in the program at 74,482,294 / 5.60 %.** 90,750 calls, 53,838 past the empty-batch return, so ~1,383 Ir of *self* per working dispatch. (-16) read it at the 43rd tip and called it diffuse; nobody has read it per source line |
+| `cast_candidates` | 105,425,302 | 7.93 | 7,238 calls; never read from the top |
+
+Self cost, same tip: `dispatch_triggers_for_events` 74,482,294 / 5.60 %,
+`__memcpy` 52,606,496 / 3.95 %, `gather_continuous_effects_inner` 52,514,806 /
+3.95 %, `_int_free` 48,958,844 / 3.68 %, `from_iter` 45,014,132 / 3.38 %,
+`Arc::clone_from_ref_in` 42,918,920 / 3.23 %, `malloc` 36,078,832 / 2.71 %,
+`evaluate_requirement_static` 33,530,088 / 2.52 %. **773,131 allocations**
+(926,895 at pass 49's own tip). The top 24 self rows are 53.6 % of the
+program and 1,170 rows hold the rest — see the note above the `__rust_alloc`
+recipe.
+
+**The forty-ninth tip's table is kept below** because its Log rows chain to
+it; it was taken five commits before that pass ended (`cg.rb.out`,
+1,540,962,924) and every row holds to within 10 M of 1,531,246,793. The
+forty-eighth's, forty-seventh's and forty-sixth's are kept under that for the
+same reason — read those as shares, not absolutes. The forty-fifth's was
 folded away at the 48th tip, as the forty-second's and forty-fourth's were at
-the 2.8 k fold.
+the 2.8 k fold; **the forty-sixth's is the next fold.**
 
 | row | at the 49th tip | note |
 |---|---|---|
@@ -2152,6 +2220,34 @@ chains to; the full tables are in `git log -- PERF.md` at `36592fd8`,
 Ordered by expected value. Each run pulls the top one, attaches numbers,
 and feeds what it finds back in. Re-profile and replenish when the list
 goes thin or stale.
+
+**Ranking rule added by the fiftieth pass, and it found 13 % in one sitting:
+ask what is done *twice*.** Not "what is expensive" and not "what is called
+often" — what does the program compute, throw away, and then compute again?
+`would_accept`'s dry run *is* the action: it clones the state and runs the
+action to completion, and every caller then ran the identical action on a
+state equal to the one the probe started from. Three commits took that
+duplication out of the simulator, the shared pickers and the finalist
+evaluators for **-13.128 %**, and none of it shows up as a hot function —
+`accept_on` is a thin wrapper, and the work it repeats is spread over
+`cast_spell`, `auto_tap_for_cost_inner` and `finalize_cast`, where it looks
+like ordinary casting. **The tell is a validate-then-do pair**: a
+`would_accept` / `is_ok()` probe followed by the same action being performed.
+Grep for those pairs before ranking functions.
+
+**(-32) The last row of that class, and the only one left that is worth more
+than a percent: `main_phase_action_with`'s 2,036 probes, ~95.7 M Ir, 7.2 % of
+the tip.** The bot probes a finalist, the driver then performs it. Adopting
+the probe's state there means handing it across `Bot::next_action`, and the
+blocker is the decider: `GameState::clone` rebuilds one *fresh by kind*, and
+`perform_action` swaps the live one back on every restore precisely so a
+`ScriptedDecider` survives a rejected action. So it is sound only for a
+stateless decider, which self-play always has and the interactive server does
+not. **Shape to cost first:** a `Decider` predicate ("does `kind().into_boxed()`
+reproduce me?"), an optional settled state on the bot's return, and the driver
+adopting only when both agree. Server, ML and the scripted-decider tests are
+all in scope; this is a pass of its own, not a drive-by. `pick_land_to_play`'s
+934 probes (11.2 M) ride along on the same change and nothing else does.
 
 **Ranking rule added by the forty-ninth pass, and it is about how you read
 the profile rather than about the code:** **rank the tail, not the function.**
@@ -2583,9 +2679,17 @@ what reaches those — the forty-fourth pass's (B) took 1.02 % from two of them
 -11,778 Ir together, i.e. nothing, on `--decks fixed`.
 
 
-**(-21) The bot's attack search is 52 % of the program, and it is the largest
-single subtree in the profile.** Never profiled from the top before; these are
-the tip's numbers.
+**(-21) The bot's attack search is 53 % of the program, and it is the largest
+single subtree in the profile.** **Refreshed at the fiftieth tip
+(1,330,233,580):** `pick_attacks_scored` **706,842,699 / 53.14 %** over 438
+calls; `simulate_attack_outcome_once` 699,394,707 / 52.58 % over 1,170
+candidates = **597,773 Ir per candidate**, down from 825,854 — the fiftieth
+pass took a whole cast out of every simulated cast, and this is where most of
+it came from. `sim_step` is now **31,874 passes / 278,835,203 (21.0 %) plus
+2,636 checkpointed actions / 72,020,298**, where it was 4,568 / 209,220,325.
+**What is left under it is the engine's per-step cost**: `advance_step` at
+11,688 Ir a step, of which `resolve_combat` is 55,816 Ir a combat. The
+numbers below are the forty-ninth tip's and are kept for the shape.
 
 * `pick_attacks_scored` **974,200,078 / 52.45 %** inclusive over 438 calls
 * -> `simulate_attack_outcome_once` **966,249,395 / 52.02 % over 1,170

@@ -7023,16 +7023,14 @@ fn pick_loyalty_ability(state: &GameState, seat: usize, w: &EvalWeights) -> Opti
             .max()
             .unwrap_or(0);
         let bar = if w.legacy_cashout { current_loyalty } else { current_loyalty + best_plus };
-        if threat >= bar {
-            if finalists.iter().any(|f| {
-                matches!(&f.action, GameAction::ActivateLoyaltyAbility { ability_index, .. }
-                    if effective.get(*ability_index).is_some_and(|ab| ab.loyalty_cost < 0))
-            }) {
-                finalists.retain(|f| {
-                    matches!(&f.action, GameAction::ActivateLoyaltyAbility { ability_index, .. }
-                        if effective.get(*ability_index).is_some_and(|ab| ab.loyalty_cost < 0))
-                });
-            }
+        // One predicate, asked twice: "is there a spending line at all" and
+        // then "keep only those". Written out once so the two cannot drift.
+        let spends = |f: &Finalist| {
+            matches!(&f.action, GameAction::ActivateLoyaltyAbility { ability_index, .. }
+                if effective.get(*ability_index).is_some_and(|ab| ab.loyalty_cost < 0))
+        };
+        if threat >= bar && finalists.iter().any(spends) {
+            finalists.retain(spends);
         }
         if let Some(best) = pick_by_outcome(state, seat, finalists, w) {
             return Some(best.action);

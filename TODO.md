@@ -21,19 +21,41 @@ claude/modern_decks origin/claude/modern_decks` — the container clones `main`,
 ~2,200 commits behind. **Sessions run this branch concurrently: expect to
 rebase mid-run and re-read your numbers afterwards.**
 
-1. **Nothing is in flight. Branch tip `1,531,246,793` Ir.** Pass 49 reads
-   `1,625,264,320 -> 1,531,246,793`, **-5.785 %** in five commits; pass 48
-   under it -1.250 %; pass 47 under that -4.050 %. Suite 18,709 / 0 / 5 over
-   22 binaries, golden traces included; workspace clippy clean; `--bench`
+1. **Nothing is in flight. Branch tip `1,330,231,550` Ir.** Pass 50 reads
+   `1,531,246,782 -> 1,330,233,580`, **-13.128 %** in three commits (A -6.958,
+   B -2.022, C -4.703); pass 49 under it -5.785 %. Suite 18,709 / 0 / 5 over
+   22 binaries, golden traces unchanged; workspace clippy clean; `--bench`
    invariants byte-identical throughout (decisions **196,220**, turns 27.53,
    stalls 0, determinism ok); wide pool clean (20,400 games, 20,396 decided,
    no panic, all 10,198 pairs split). **No net needs retraining.**
-2. **Best next moves.** (-21) `pick_attacks_scored` is **54.85 %** and the
-   only thing left of that size — the lever is the engine's per-priority cost
-   (`sim_step`'s 31,874 passes are 17.9 %), not the candidate count (1.8 a
-   decision). Then (-30)'s gathering callers, then `cast_candidates` (3.0 %,
-   never read from the top). **(-26) is closed and (-31) refuted this pass.**
-3. **Read `## Standing rules for a perf pass` below before profiling** —
+2. **Read PERF's new ranking rule before profiling: ask what is done
+   *twice*.** All three of this pass's commits are one class —
+   `would_accept`'s dry run *is* the action, and every caller then performed
+   the same action again. It is invisible as a hot function; the tell is a
+   validate-then-do pair.
+3. **Best next moves.** **(-32)** is the last row of that class and the
+   biggest single one left: `main_phase_action_with`'s 2,036 probes, 7.2 % of
+   the tip, blocked on `Bot::next_action` not carrying a state and on the live
+   decider — budget it as its own pass with the server and the
+   scripted-decider tests in scope. Otherwise: `dispatch_triggers_for_events`
+   is the **largest self-cost row in the program** (74,482,294 / 5.60 %,
+   ~1,383 Ir of self per working dispatch) and **has never been read per
+   source line** — that needs a `profiling-lines` build. Then `resolve_combat`
+   at 55,816 Ir a combat, and `cast_candidates` (7.93 %, never read from the
+   top).
+4. **A twentieth robustness filter is owed:** *a default that only one caller
+   ever exercises* (the inverse of the sixteenth). Filters 18 and 19 both
+   found real hits in the profiling scripts — see the filter table.
+5. **Owed housekeeping:** PERF is 3.9k and the **forty-sixth pass's profile
+   table is the next fold** (its Log rows have stopped chaining); TODO is
+   1.09k and the compaction to reach for is the filter write-ups 12-19, which
+   the index table above already summarises. The
+   actor-scaling sweep in the candidates' seed list has still never been run;
+   it needs a `release`/`release-fast` build (mimalloc), because allocator
+   contention is the thing it would find and callgrind's system-allocator
+   build cannot see it.
+
+## Standing rules for a perf pass` below before profiling** —
    especially the do-not-rebuild list and the `cg_edges.py` share bug.
 4. **A twentieth robustness filter is owed:** *a default that only one caller
    ever exercises* (the inverse of the sixteenth). Filters 18 and 19 both
@@ -358,33 +380,24 @@ self-cost table's top 45 rows are 68.5 % of the program, and 1,150 rows hold
 the other 31.5 %.** A profile that diffuse is why pass 49's wins came from
 counting call rows rather than ranking by self cost.
 
-**A second run swept the same filter concurrently and found four more, none of
-them in those two scripts.** The tools were where both runs looked first
-because filters 15, 17 and 18 all landed there; the rest of the yield was in
-output a human ranks work by.
+**A second run swept it concurrently and found four more outside those two
+files** (`17d0a5e1`): `cg_edges.py`'s **docstring contradicted its own
+printer** — "reads the dump directly, so a table is complete" sat above
+`most_common(40)`, and the parse was complete where the print never was
+(`--rows N`, `0` = all, now lifts the cap); `cg_symbolize.py`'s docstring
+**recommended `callgrind_annotate --threshold=95/99`**, the exact truncation
+`cg_edges.py` exists to escape, from the file a reader hits *first*; and
+three ranked report tables named no denominator (`bot_probe`'s wedged-action
+and combat-shape tops, `selfplay_train`'s leaf/train ratios,
+`recommend_pool`'s static scores).
 
-* **`cg_edges.py`'s docstring contradicted its own printer**, and that is the
-  sharpest form of this shape: "`--tree` truncates caller lists at its
-  threshold … This reads the dump directly, so a table is complete" sat above
-  `most_common(40)`. The parse is complete; the print was not. The sentence
-  now says which half it means, and `--rows N` (`0` = all) lifts the cap for
-  the one reader who went looking for the tail.
-* **`cg_symbolize.py`'s docstring recommended `callgrind_annotate
-  --threshold=95` / `--threshold=99`** — the exact truncation `cg_edges.py`
-  exists to escape, offered from the file a reader hits *first*. Replaced with
-  the `cg_edges.py` invocations and the reason.
-* **Three ranked report tables named no denominator**: `bot_probe`'s "what the
-  bot kept proposing while wedged" (top 12) and its combat-shape table (top
-  10), `selfplay_train`'s leaf/train ratio table (top 10), and
-  `recommend_pool`'s static-score table. "Top 10 of 47" and "top 10 of 10" are
-  different diagnoses of the same printed rows.
-
-**What the filter did *not* find, and the distinction is worth keeping.** The
-engine's own `take`/`truncate` caps — `w.attack_search`, `w.block_search`,
+**What it did *not* find, and the distinction is worth keeping.** The
+engine's own `take`/`truncate` caps — `attack_search`, `block_search`,
 `MAX_CANDIDATES`, `MAX_FOLLOW_UPS`, convoke's `cap` — are named
 search-quality decisions with doc comments, not silent truncations of a
 listing someone reads, and filter 8 already swept that syntax for panic
-safety. **The whole yield was in output a human ranks work by.**
+safety. **Across both runs the whole yield was in output a human ranks work
+by** — the third filter running to land in the measuring device.
 
 **A twentieth filter is owed. The candidate:** *a default that only one caller
 ever exercises* — the inverse of the sixteenth, which asked for defaults no
