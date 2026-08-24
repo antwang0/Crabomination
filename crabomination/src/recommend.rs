@@ -355,8 +355,11 @@ pub fn suggest_main_deck_in_colors<R: Rng>(
         2 => 1,
         _ => 3,
     };
-    let mut scored: Vec<(CardFactory, i32)> = Vec::new();
-    let mut off: Vec<CardFactory> = Vec::new();
+    // Pre-sized: `scored` and `off` partition `picks` between them, and the
+    // two output piles partition `scored`. Growing them a doubling at a time
+    // was the largest single caller of `RawVec::grow_one` in the build.
+    let mut scored: Vec<(CardFactory, i32)> = Vec::with_capacity(picks.len());
+    let mut off: Vec<CardFactory> = Vec::with_capacity(picks.len());
     for &f in picks {
         if allowed(f) {
             let jitter = if noise > 0 { rng.random_range(-noise..=noise) } else { 0 };
@@ -379,9 +382,10 @@ pub fn suggest_main_deck_in_colors<R: Rng>(
         }
     }
     scored.sort_by_key(|(_, s)| std::cmp::Reverse(*s));
-    let mut counts: HashMap<usize, u32> = HashMap::default();
-    let mut main = Vec::new();
-    let mut leftovers = Vec::new();
+    let mut counts: HashMap<usize, u32> =
+        HashMap::with_capacity_and_hasher(scored.len(), Default::default());
+    let mut main = Vec::with_capacity(target_spells);
+    let mut leftovers = Vec::with_capacity(picks.len());
     for (f, _) in scored {
         let count = counts.entry(f as usize).or_insert(0);
         if main.len() < target_spells && *count < COPY_CAP {
@@ -693,7 +697,8 @@ fn build_shape<R: Rng>(
         return None;
     }
     // Land colors: main colors plus any splash color actually present.
-    let mut land_colors = colors.to_vec();
+    let mut land_colors = Vec::with_capacity(colors.len() + splash_colors.len());
+    land_colors.extend_from_slice(colors);
     for &c in splash_colors {
         if main.iter().any(|&f| crate::cube::card_brief(f).pips.get(c) > 0) {
             land_colors.push(c);
