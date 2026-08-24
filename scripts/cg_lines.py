@@ -20,6 +20,10 @@ line that calls something shows only its own dispatch. `--in NEEDLE` keeps
 only addresses whose inline chain mentions NEEDLE, which is how to read one
 function's body when everything around it is inlined.
 
+Both listings say what they left out: the 60,000-address resolution cap and
+the 45-row print are reported with the Ir they dropped, so a table that stops
+at its limit cannot read as a complete one.
+
 `--dump-instr=yes` is not optional: without it the dump carries no `instr`
 subposition and this script has nothing to read. It used to print
 "0 instruction addresses, 0 Ir" and exit 0 on such a dump, which reads as
@@ -127,8 +131,17 @@ def main():
     if total == 0:
         sys.exit(f"{cg}: no instruction costs parsed — is this a callgrind dump?")
     print(f"# {len(cost):,} instruction addresses, {total:,} Ir")
-    # Resolving every address is slow and pointless; the tail is noise.
-    hot = [a for a, _ in cost.most_common(60000)]
+    # Resolving every address is slow and pointless; the tail is noise. Say how
+    # much of the program the cap left behind rather than implying it is all
+    # here — the nineteenth robustness filter's rule for every capped listing.
+    ranked = cost.most_common()
+    hot = [a for a, _ in ranked[:60000]]
+    dropped = sum(v for _, v in ranked[60000:])
+    if dropped:
+        print(
+            f"# cap: {len(ranked) - 60000:,} colder addresses unresolved, "
+            f"{dropped:,} Ir ({100 * dropped / total:.1f}%)"
+        )
     frames = resolve(binary, hot)
     lines = collections.Counter()
     for a in hot:
@@ -143,9 +156,17 @@ def main():
         loc = (fr[0][1] or "??").replace("/rustc/", "rustc:").split("/")[-1]
         lines[f"{loc:<28} {func[:88]}"] += cost[a]
     shown = sum(lines.values())
-    print(f"# {shown:,} Ir shown ({100 * shown / max(total, 1):.1f}%)")
-    for name, v in lines.most_common(45):
+    print(f"# {shown:,} Ir grouped ({100 * shown / max(total, 1):.1f}% of the run)")
+    ranked_lines = lines.most_common()
+    for name, v in ranked_lines[:45]:
         print(f"{v:>12,} ({100 * v / total:5.2f}%)  {name}")
+    rest = ranked_lines[45:]
+    if rest:
+        rest_ir = sum(v for _, v in rest)
+        print(
+            f"# ... {len(rest):,} more lines not shown, {rest_ir:,} Ir between "
+            f"them ({100 * rest_ir / total:.2f}%)"
+        )
 
 
 if __name__ == "__main__":

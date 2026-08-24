@@ -94,6 +94,27 @@ def fold(counter_cost, counter_calls, key_idx, needle):
     return cost, calls
 
 
+def show(rows, total, fmt, limit=40):
+    """Print at most `limit` rows and say what was left out.
+
+    A table that stops at its limit without saying so reads as complete, which
+    is the failure that cost the forty-eighth pass two fictional allocator
+    leads (`callgrind_annotate --tree` truncating its caller block). PERF's
+    "no silent caps" rule is written for workflows; the nineteenth robustness
+    filter extended it to the tools.
+    """
+    for i, (name, v) in enumerate(rows):
+        if i >= limit:
+            rest = rows[limit:]
+            print(
+                f"# ... {len(rest):,} more rows not shown, "
+                f"{sum(x[1] for x in rest):,} between them"
+                f"{f' ({100 * sum(x[1] for x in rest) / total:.2f}%)' if total else ''}"
+            )
+            return
+        print(fmt(name, v))
+
+
 def main():
     if len(sys.argv) < 2:
         sys.exit(__doc__)
@@ -109,18 +130,29 @@ def main():
         idx = 0 if mode == "--callers" else 1
         cost, calls = fold(edge_cost, edge_calls, idx, needle)
         print(f"# {mode[2:]} of *{needle}*: {sum(calls.values()):,} calls")
-        for name, c in calls.most_common(40):
-            print(f"{c:>9,} {cost[name]:>14,}  {name[:110]}")
+        # Ranked by *calls*, so the "rows not shown" tally counts calls too.
+        show(
+            calls.most_common(),
+            sum(calls.values()),
+            lambda name, c: f"{c:>9,} {cost[name]:>14,}  {name[:110]}",
+        )
     elif mode == "--inclusive":
         inc = collections.Counter()
         for (caller, callee), v in edge_cost.items():
             if needle is None or needle in callee:
                 inc[callee] += v
-        for name, v in inc.most_common(40):
-            print(f"{v:>14,} ({100 * v / total:5.2f}%)  {name[:110]}")
+        show(
+            inc.most_common(),
+            None,
+            lambda name, v: f"{v:>14,} ({100 * v / total:5.2f}%)  {name[:110]}",
+        )
     else:
-        for name, v in self_cost.most_common(45):
-            print(f"{v:>14,} ({100 * v / total:5.2f}%)  {name[:110]}")
+        show(
+            self_cost.most_common(),
+            total,
+            lambda name, v: f"{v:>14,} ({100 * v / total:5.2f}%)  {name[:110]}",
+            limit=45,
+        )
 
 
 if __name__ == "__main__":
