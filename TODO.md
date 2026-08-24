@@ -21,52 +21,32 @@ claude/modern_decks origin/claude/modern_decks` — the container clones `main`,
 ~2,200 commits behind. **Sessions run this branch concurrently: expect to
 rebase mid-run and re-read your numbers afterwards.**
 
-1. **Nothing is in flight. Branch tip `1,314,421,002` Ir.** Pass 50 reads
+1. **Nothing is in flight. Tip `1,314,421,002` Ir.** Pass 50 reads
    `1,531,246,782 -> 1,314,421,002`, **-14.160 %** in five commits (A -6.958,
-   B -2.022, C -4.703, D -0.875, E -0.316); pass 49 under it -5.785 %. Suite 18,710 / 0 / 5 over
-   22 binaries, golden traces unchanged; workspace clippy clean; `--bench`
-   invariants byte-identical throughout (decisions **196,220**, turns 27.53,
-   stalls 0, determinism ok); wide pool clean (20,400 games, 20,396 decided,
-   no panic, all 10,198 pairs split). **No net needs retraining.**
-2. **Read PERF's new ranking rule before profiling: ask what is done
-   *twice*.** All three of this pass's commits are one class —
-   `would_accept`'s dry run *is* the action, and every caller then performed
-   the same action again. It is invisible as a hot function; the tell is a
+   B -2.022, C -4.703, D -0.875, E -0.316). Suite 18,710 / 0 / 5 over 22
+   binaries, traces unchanged, clippy clean, `--bench` invariants
+   byte-identical (196,220 / 27.53 / 0 stalls / determinism ok), wide pool
+   clean (20,400 games, no panic, all 10,198 pairs split). **No net needs
+   retraining.**
+2. **Read PERF's new ranking rule first: *ask what is done twice*.** All five
+   rows are one class — `would_accept`'s dry run **is** the action, and the
+   caller then performed it again. Invisible as a hot function; the tell is a
    validate-then-do pair.
-3. **`cg_lines.py` works now, and did not before.** It was annotating libc /
-   ld.so / libm addresses against this binary's DWARF and hardcoding the PIE
-   bias: 36 % of the run read `??` and the rest was attributed to whatever
-   symbol sat at the wrong offset (`Effect::clone` 2.65 % against the 0.5 %
-   its call edges give it). Fixed — one object, auto-detected bias, hit rate
-   printed, refuses below half. **A `profiling-lines` build is a ~40-minute
-   cold build; budget for it, and cross-check any row against
-   `cg_edges.py`'s call counts before ranking work by it.**
-4. **Best next moves.** **(-32)** is the last row of the duplicated-work class
-   and the biggest single one left: `main_phase_action_with`'s 2,036 probes,
-   7.2 % of the tip, blocked on `Bot::next_action` not carrying a state and on
-   the driver's live decider — its own pass, with the server and the
-   scripted-decider tests in scope. Then `dispatch_triggers_for_events` (the
-   largest self-cost row, 74,482,294 / 5.60 %, ~1,383 Ir of self per working
-   dispatch — now readable per line), **(-33)** `trigger_grant_sources`
-   (29,448 whole-board walks, 1.06 %, ~0.22 % of it hoistable),
-   `resolve_combat` at 55,816 Ir a combat, and **(-35)**
-   `evaluate_requirement_static` (2.52 % self over 182,532 calls — the largest
-   non-allocator self row after the dispatcher). **`cast_candidates` is no
-   longer an open item:** read from the top this pass, it is 7.93 % and 7.09 %
-   of that is one `.collect()`, whose cost is the target walk's 38.7
-   requirement evaluations per targeted candidate — see (-34).
-5. **A twenty-first robustness filter is owed.** 20 ran this pass and is
-   nearly clean (one hit: `smart_tap` had no test). Filters 18, 19 and the
-   re-run of 18 all found real hits in the profiling scripts — **the measuring
-   devices are where this keeps paying**, so aim the next one there.
-6. **Owed housekeeping:** PERF is 4.0k and the **forty-sixth pass's profile
-   table is the next fold** (its Log rows have stopped chaining); TODO is
-   1.1k and the compaction to reach for is the filter write-ups 12-19, which
-   the index table above already summarises. The
-   actor-scaling sweep in the candidates' seed list has still never been run;
-   it needs a `release`/`release-fast` build (mimalloc), because allocator
-   contention is the thing it would find and callgrind's system-allocator
-   build cannot see it.
+3. **`cg_lines.py` works now and did not before** — it annotated libc against
+   this binary's DWARF and hardcoded the PIE bias. Cross-check any line row
+   against `cg_edges.py`'s call counts; a `profiling-lines` build is ~40 min.
+4. **Best next moves.** (-32), the class's last row: `main_phase_action_with`'s
+   2,036 probes, 7.2 %, blocked on `Bot::next_action` carrying only an action
+   and on the driver's live decider — its own pass. Then
+   `dispatch_triggers_for_events` (5.60 % self, now readable per line), (-35)
+   `evaluate_requirement_static` (2.52 % self / 182,532 calls), (-33), and
+   `resolve_combat` at 55,816 Ir a combat. **`cast_candidates` is closed** —
+   see (-34).
+5. **A twenty-first robustness filter is owed.** 18, 19, 20 and the re-run of
+   18 all landed in the *measuring devices*; aim the next one there too.
+6. **Owed housekeeping.** PERF 4.0k — the forty-sixth pass's profile table is
+   the next fold. TODO 1.14k — the filter write-ups 12-20 are the compaction.
+   The actor-scaling sweep in the seed list has still never been run.
 
 ## Standing rules for a perf pass` below before profiling** —
    especially the do-not-rebuild list and the `cg_edges.py` share bug.
