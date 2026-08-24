@@ -49,8 +49,12 @@ rebase mid-run and re-read your numbers afterwards.**
    largest self-cost row, 74,482,294 / 5.60 %, ~1,383 Ir of self per working
    dispatch — now readable per line), **(-33)** `trigger_grant_sources`
    (29,448 whole-board walks, 1.06 %, ~0.22 % of it hoistable),
-   `resolve_combat` at 55,816 Ir a combat, and `cast_candidates` (7.93 %,
-   never read from the top).
+   `resolve_combat` at 55,816 Ir a combat, and **(-35)**
+   `evaluate_requirement_static` (2.52 % self over 182,532 calls — the largest
+   non-allocator self row after the dispatcher). **`cast_candidates` is no
+   longer an open item:** read from the top this pass, it is 7.93 % and 7.09 %
+   of that is one `.collect()`, whose cost is the target walk's 38.7
+   requirement evaluations per targeted candidate — see (-34).
 5. **A twentieth robustness filter is owed:** *a default that only one caller
    ever exercises* (the inverse of the sixteenth). Filters 18 and 19 both
    found real hits in the profiling scripts, and re-running 18 on

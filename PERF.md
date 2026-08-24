@@ -2273,6 +2273,38 @@ adopting only when both agree. Server, ML and the scripted-decider tests are
 all in scope; this is a pass of its own, not a drive-by. `pick_land_to_play`'s
 934 probes (11.2 M) ride along on the same change and nothing else does.
 
+**(-34) `cast_candidates` READ FROM THE TOP at the fiftieth tip, and the
+answer is one function.** The entry that said "3.0 %, never read from the top"
+is closed: `cast_candidates` is **105,425,302 / 7.93 % over 7,238 calls**, and
+**93,499,518 of it (7.09 %) is the single `.collect()` that builds the plain-cast
+candidate list** — 12,917 Ir a call. Inside that collect, by caller edge:
+
+| row | calls | Ir | % | Ir/call |
+|---|---|---|---|---|
+| `auto_targets_for_effect_all_slots` | 2,942 | 54,523,024 | **4.13** | **18,533** |
+| `can_afford_in_state_with` | 12,986 | 31,754,663 | 2.41 | 2,445 |
+
+Neither is redundant work: the target walk runs 0.41 times per
+`cast_candidates` call (only targeted candidates reach it) and the
+affordability check 1.8 times (the five hand filters drop the rest first).
+**The cost is inside the target walk**, and it is one row —
+`evaluate_requirement_static` **113,726 calls / 30,595,070 / 2.32 % at 269 Ir
+each, i.e. 38.7 requirement evaluations per targeted candidate**: every
+possible target for every slot, against the slot's `SelectionRequirement`. A
+card offering three modes pays three whole enumerations, and the requirement
+differs per mode, so there is nothing to share between them.
+
+**(-35) `evaluate_requirement_static` — 182,532 calls, 33,530,088 self /
+2.52 %, the largest non-allocator self row after
+`dispatch_triggers_for_events`.** Callers: the target walk 113,726, a
+`Map::try_fold` 30,374, its own recursion 28,000 (two arities), the cast's
+own closure 1,426. Its callees say the lazy shape is already in place — two
+`OnceCell`s per call, `try_init` firing on only **15,562 of the 182,532**
+(8.5 %) for 8,834,020 + 9,536,344 of closure. Both cells are keyed to the
+*target* being tested, so they cannot be hoisted out of the per-target loop
+above them. **Whoever takes this should look at the 269 Ir, not the count:**
+the count is the enumeration and the enumeration is the bot's job.
+
 **(-33) `trigger_grant_sources` — 29,448 whole-board grant walks, 14,134,170
 Ir / 1.06 %, all of it self, and this is the first pass that could see it.**
 The fixed `cg_lines.py` (see **How to measure**) puts the cost inside it at
@@ -2492,8 +2524,8 @@ What is left of the function is search and the engine: `pick_by_outcome`
 finalist count is `EVAL_TOP = 3` and the cost per call is the dry-run, not
 enumeration), `would_accept` 6.6 % over 2,036 lazy candidate probes,
 `improves_this_turn` 6.1 % ((-31)), `cast_candidates` 3.0 % over 3,506. **Do
-not reopen this entry as a whole**; take (-31), or take `cast_candidates`,
-which is the only piece never read from the top. The historical entry:
+not reopen this entry as a whole**; (-31) is refuted and `cast_candidates` was
+read from the top at the fiftieth tip — see (-34). The historical entry:
 
 **(-26, historical) `main_phase_action_with` is 552,113,968 / 32.97 % and has never been
 read from the top.** Second-largest bot subtree after `pick_attacks_scored`.
