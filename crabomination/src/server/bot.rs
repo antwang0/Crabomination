@@ -5536,7 +5536,7 @@ fn main_phase_action_with(
                 ranked.sort_by_key(|&(s, _, _)| std::cmp::Reverse(s));
             }
             const EVAL_TOP: usize = 3;
-            let mut finalists: Vec<(i32, GameAction)> = Vec::new();
+            let mut finalists: Vec<Finalist> = Vec::new();
             for (s, a, ok) in ranked {
                 if finalists.len() >= EVAL_TOP {
                     break;
@@ -5544,8 +5544,14 @@ fn main_phase_action_with(
                 if has_magecraft && !finalists.is_empty() && !is_is_spell(&a) {
                     break;
                 }
-                if ok || GameState::would_accept_on(&probe, a.clone()) {
-                    finalists.push((s, a));
+                if ok {
+                    finalists.push(Finalist { score: s, action: a, settled: None });
+                } else if let Some(g) = GameState::accept_on(&probe, a.clone()) {
+                    finalists.push(Finalist {
+                        score: s,
+                        action: a,
+                        settled: Some(Box::new(g)),
+                    });
                 }
             }
             if let Some(best) = pick_by_outcome(state, seat, finalists, w) {
@@ -5571,16 +5577,25 @@ fn main_phase_action_with(
                 // where there is a later to wait for.
                 let gate = own_main
                     && ((w.hold_sick && state.step == TurnStep::PreCombatMain)
-                        || (w.hold_instants && castable_at_instant_speed(state, seat, &best)));
-                if gate && !improves_this_turn(state, seat, &best, w) {
+                        || (w.hold_instants
+                            && castable_at_instant_speed(state, seat, &best.action)));
+                if gate
+                    && !improves_this_turn(
+                        state,
+                        seat,
+                        &best.action,
+                        best.settled.as_deref(),
+                        w,
+                    )
+                {
                     return GameAction::PassPriority;
                 }
                 // SOS Converge: float a missing color first so the cast
                 // counts it — see `pick_converge_prefloat`.
-                if let Some(tap) = pick_converge_prefloat(state, seat, &best) {
+                if let Some(tap) = pick_converge_prefloat(state, seat, &best.action) {
                     return tap;
                 }
-                return best;
+                return best.action;
             }
         }
     }
@@ -5766,10 +5781,8 @@ fn pick_sacrifice_value(state: &GameState, seat: usize, w: &EvalWeights) -> Opti
             if !ward_gate_ok(state, seat, &action) {
                 continue;
             }
-            if !state.would_accept(action.clone()) {
-                continue;
-            }
-            if let Some(ev) = evaluate_action_outcome(state, seat, &action, w)
+            let Some(settled) = state.accept(action.clone()) else { continue };
+            if let Some(ev) = evaluate_action_outcome(state, seat, &action, Some(&settled), w)
                 && ev > baseline
             {
                 return Some(action);
@@ -6927,7 +6940,7 @@ fn pick_loyalty_ability(state: &GameState, seat: usize, w: &EvalWeights) -> Opti
         let current_loyalty =
             card.counter_count(crate::card::CounterType::Loyalty) as i32;
         let effective = crate::game::effective_loyalty_abilities(card, &state.battlefield);
-        let mut finalists: Vec<(i32, GameAction)> = Vec::new();
+        let mut finalists: Vec<Finalist> = Vec::new();
         for (idx, ability) in effective.iter().enumerate() {
             if current_loyalty + ability.loyalty_cost < 0 {
                 continue;
@@ -6951,8 +6964,12 @@ fn pick_loyalty_ability(state: &GameState, seat: usize, w: &EvalWeights) -> Opti
                 target,
                 x_value,
             };
-            if state.would_accept(action.clone()) {
-                finalists.push((score_candidate(state, seat, &action, w), action));
+            if let Some(g) = state.accept(action.clone()) {
+                finalists.push(Finalist {
+                    score: score_candidate(state, seat, &action, w),
+                    action,
+                    settled: Some(Box::new(g)),
+                });
             }
         }
         // A walker the board kills before its next activation banks
@@ -7007,20 +7024,18 @@ fn pick_loyalty_ability(state: &GameState, seat: usize, w: &EvalWeights) -> Opti
             .unwrap_or(0);
         let bar = if w.legacy_cashout { current_loyalty } else { current_loyalty + best_plus };
         if threat >= bar {
-            let spending: Vec<(i32, GameAction)> = finalists
-                .iter()
-                .filter(|(_, a)| {
-                    matches!(a, GameAction::ActivateLoyaltyAbility { ability_index, .. }
+            if finalists.iter().any(|f| {
+                matches!(&f.action, GameAction::ActivateLoyaltyAbility { ability_index, .. }
+                    if effective.get(*ability_index).is_some_and(|ab| ab.loyalty_cost < 0))
+            }) {
+                finalists.retain(|f| {
+                    matches!(&f.action, GameAction::ActivateLoyaltyAbility { ability_index, .. }
                         if effective.get(*ability_index).is_some_and(|ab| ab.loyalty_cost < 0))
-                })
-                .cloned()
-                .collect();
-            if !spending.is_empty() {
-                finalists = spending;
+                });
             }
         }
         if let Some(best) = pick_by_outcome(state, seat, finalists, w) {
-            return Some(best);
+            return Some(best.action);
         }
     }
     None
@@ -7800,6 +7815,23 @@ impl Picked {
             Picked::Probed(a, _) | Picked::Plain(a) => a,
         }
     }
+}
+
+/// A validated candidate on its way to [`pick_by_outcome`], carrying the state
+/// its validating dry run produced.
+///
+/// [`Picked`]'s bargain one level up. Every consumer of a finalist —
+/// [`evaluate_action_sequence`] and [`improves_this_turn`] — opens by cloning
+/// the *pre-action* state and running the action again, which is the run the
+/// validating probe already did. `settled` is that run's result, so those two
+/// clone it instead (~2,200 Ir) rather than repeat a cast (~46,000). `None`
+/// means the candidate reached here without a probe of its own — a
+/// `cast_candidates` block that validated it eagerly, or a caller with no
+/// state to give — and the consumer does its own run as before.
+struct Finalist {
+    score: i32,
+    action: GameAction,
+    settled: Option<Box<GameState>>,
 }
 
 fn sim_spell_action(g: &GameState, w: &EvalWeights) -> Option<Picked> {
@@ -10356,6 +10388,7 @@ fn evaluate_action_outcome(
     state: &GameState,
     seat: usize,
     action: &GameAction,
+    settled: Option<&GameState>,
     w: &EvalWeights,
 ) -> Option<i32> {
     // Under determinization the planner's dry-runs must not read the true
@@ -10367,10 +10400,13 @@ fn evaluate_action_outcome(
     // The recursion inside `evaluate_action_sequence` must NOT re-redeal:
     // it continues a line through cards the sim already drew.
     if w.determinize > 0 {
+        // The redeal makes `settled` the wrong state: it was produced from the
+        // true hidden zones, and this line has to be judged against the same
+        // redeal as every other finalist.
         let g = sim_start_state(state, seat, w, 0);
-        return evaluate_action_sequence(&g, seat, action, w, w.lookahead);
+        return evaluate_action_sequence(&g, seat, action, None, w, w.lookahead);
     }
-    evaluate_action_sequence(state, seat, action, w, w.lookahead)
+    evaluate_action_sequence(state, seat, action, settled, w, w.lookahead)
 }
 
 /// Score of the best *sequence* of up to `depth + 1` plays that starts with
@@ -10390,11 +10426,21 @@ fn evaluate_action_sequence(
     state: &GameState,
     seat: usize,
     action: &GameAction,
+    settled: Option<&GameState>,
     w: &EvalWeights,
     depth: u8,
 ) -> Option<i32> {
-    let mut g = state.clone();
-    dry_run(&mut g, action.clone()).ok()?;
+    // `settled` is `state` with `action` already run on it, handed over by the
+    // probe that validated the candidate — see [`Finalist`]. Cloning it is the
+    // same two lines below minus the cast.
+    let mut g = match settled {
+        Some(g) => g.clone(),
+        None => {
+            let mut g = state.clone();
+            dry_run(&mut g, action.clone()).ok()?;
+            g
+        }
+    };
     let mut fuel = 64u32;
     loop {
         if g.is_game_over() {
@@ -10417,7 +10463,7 @@ fn evaluate_action_sequence(
     let mut best = score_settled_state(&g, seat, w)?;
     if depth > 0 {
         for follow in follow_up_candidates(&g, seat, w) {
-            if let Some(v) = evaluate_action_sequence(&g, seat, &follow, w, depth - 1) {
+            if let Some(v) = evaluate_action_sequence(&g, seat, &follow, None, w, depth - 1) {
                 best = best.max(v);
             }
         }
@@ -10537,6 +10583,7 @@ fn improves_this_turn(
     state: &GameState,
     seat: usize,
     action: &GameAction,
+    settled: Option<&GameState>,
     w: &EvalWeights,
 ) -> bool {
     // The baseline has to be measured the same way the outcome is. With
@@ -10558,10 +10605,18 @@ fn improves_this_turn(
     } else {
         eval_material_summon_sick_blind(state, seat, w)
     };
-    let mut g = state.clone();
-    if dry_run(&mut g, action.clone()).is_err() {
-        return true;
-    }
+    // Same reuse as `evaluate_action_sequence`: the probe that validated this
+    // action already ran it on a clone of `state`.
+    let mut g = match settled {
+        Some(g) => g.clone(),
+        None => {
+            let mut g = state.clone();
+            if dry_run(&mut g, action.clone()).is_err() {
+                return true;
+            }
+            g
+        }
+    };
     let mut fuel = 64u32;
     while !g.is_game_over() {
         if g.pending_decision.is_some() {
@@ -10592,34 +10647,36 @@ fn improves_this_turn(
     eval_material_summon_sick_blind(&g, seat, w) > before
 }
 
-/// Final pick among the validated finalists `(jittered static score,
-/// action)`: resolve each candidate's outcome and take the best resulting
-/// state, static score breaking ties and ordering candidates whose outcome
-/// probe bailed. A lone finalist skips the outcome clones entirely.
+/// Final pick among the validated [`Finalist`]s: resolve each candidate's
+/// outcome and take the best resulting state, static score breaking ties and
+/// ordering candidates whose outcome probe bailed. A lone finalist skips the
+/// outcome clones entirely. The winner comes back whole, so the summon-sick
+/// gate downstream inherits its `settled` state too.
 fn pick_by_outcome(
     state: &GameState,
     seat: usize,
-    finalists: Vec<(i32, GameAction)>,
+    finalists: Vec<Finalist>,
     w: &EvalWeights,
-) -> Option<GameAction> {
+) -> Option<Finalist> {
     if finalists.len() <= 1 {
-        return finalists.into_iter().next().map(|(_, a)| a);
+        return finalists.into_iter().next();
     }
     let baseline = eval_material(state, seat, w);
-    let evd: Vec<(i32, i32, GameAction)> = finalists
+    let evd: Vec<(i32, Finalist)> = finalists
         .into_iter()
-        .map(|(s, a)| {
+        .map(|f| {
             // Known-temporary casts (bounce, until-EOT stat changes) are
             // pinned to the baseline: the post-resolution snapshot can't
             // see the effect reversing, so evaluating it would sell a
             // bounce as removal. They win only on static score against
             // other no-eval-gain lines.
-            let ev = if action_outcome_is_temporary(state, &a) {
+            let ev = if action_outcome_is_temporary(state, &f.action) {
                 baseline
             } else {
-                evaluate_action_outcome(state, seat, &a, w).unwrap_or(baseline)
+                evaluate_action_outcome(state, seat, &f.action, f.settled.as_deref(), w)
+                    .unwrap_or(baseline)
             };
-            (ev, s, a)
+            (ev, f)
         })
         .collect();
     // Actor-side exploration: sample finalists by outcome score. The
@@ -10629,15 +10686,15 @@ fn pick_by_outcome(
         let ws: Vec<i32> = evd.iter().map(|e| e.0).collect();
         let i = sample_scored_index(&ws, t);
         capture_decision(state, seat, &evd, i);
-        return evd.into_iter().nth(i).map(|(_, _, a)| a);
+        return evd.into_iter().nth(i).map(|(_, f)| f);
     }
     let best = evd
         .iter()
         .enumerate()
-        .max_by_key(|(_, (ev, s, _))| (*ev, *s))
+        .max_by_key(|(_, (ev, f))| (*ev, f.score))
         .map(|(i, _)| i)?;
     capture_decision(state, seat, &evd, best);
-    evd.into_iter().nth(best).map(|(_, _, a)| a)
+    evd.into_iter().nth(best).map(|(_, f)| f)
 }
 
 /// Feed the finalist set and the pick to [`decision_capture`].
@@ -10648,16 +10705,11 @@ fn pick_by_outcome(
 /// mean the recorded candidate set is the shortlist (`EVAL_TOP`) rather
 /// than every legal action — which is the same convention AlphaZero uses
 /// when it records the search's action set rather than the rules'.
-fn capture_decision(
-    state: &GameState,
-    seat: usize,
-    evd: &[(i32, i32, GameAction)],
-    chosen: usize,
-) {
+fn capture_decision(state: &GameState, seat: usize, evd: &[(i32, Finalist)], chosen: usize) {
     if !super::decision_capture::enabled() {
         return;
     }
-    let actions: Vec<GameAction> = evd.iter().map(|(_, _, a)| a.clone()).collect();
+    let actions: Vec<GameAction> = evd.iter().map(|(_, f)| f.action.clone()).collect();
     super::decision_capture::maybe(state, seat, &actions, chosen);
 }
 
@@ -14496,9 +14548,9 @@ mod tests {
         };
         // Craw Wurm costs {4}{G}{G} — too much here; use the mana we have.
         let _ = wurm;
-        let one_bear = evaluate_action_sequence(&g, 0, &cast(bear_a), &w, 0)
+        let one_bear = evaluate_action_sequence(&g, 0, &cast(bear_a), None, &w, 0)
             .expect("single-play score");
-        let bear_then_bear = evaluate_action_sequence(&g, 0, &cast(bear_a), &w, 1)
+        let bear_then_bear = evaluate_action_sequence(&g, 0, &cast(bear_a), None, &w, 1)
             .expect("two-play score");
         assert!(
             bear_then_bear > one_bear,
@@ -14558,7 +14610,7 @@ mod tests {
         };
         // The body is all it does, and it can't attack -- no progress today.
         assert!(
-            !improves_this_turn(&g, 0, &cast, &w),
+            !improves_this_turn(&g, 0, &cast, None, &w),
             "a vanilla creature achieves nothing on the turn it lands",
         );
         // So the gated bot passes in the first main...
@@ -14604,7 +14656,7 @@ mod tests {
             x_value: None,
         };
         assert!(
-            improves_this_turn(&g, 0, &cast, &w),
+            improves_this_turn(&g, 0, &cast, None, &w),
             "a haste creature is progress the turn it lands",
         );
     }
@@ -15036,8 +15088,8 @@ mod stack_response_tests {
             mode: None,
             x_value: None,
         };
-        let cast_v = evaluate_action_outcome(&g, 0, &cast, &w).unwrap();
-        let pass_v = evaluate_action_outcome(&g, 0, &GameAction::PassPriority, &w).unwrap();
+        let cast_v = evaluate_action_outcome(&g, 0, &cast, None, &w).unwrap();
+        let pass_v = evaluate_action_outcome(&g, 0, &GameAction::PassPriority, None, &w).unwrap();
         assert!(cast_v > pass_v, "drawing three outprices passing: {cast_v} vs {pass_v}");
     }
 

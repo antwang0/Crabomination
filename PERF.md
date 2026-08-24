@@ -911,6 +911,8 @@ touch only `scripts/*.py` and the trackers, so both numbers stand unrederived.
 | step | before -> after | what |
 |---|---|---|
 | A | 1,531,246,782 -> 1,424,690,649 (**-6.958 %**) | the attack/block sims adopt the state their own dry run produced instead of re-running the cast |
+| B | 1,424,690,649 -> 1,395,881,928 (**-2.022 %**) | the two validating pickers the sim shares with the real path hand their probe's state out too |
+| C | 1,395,881,928 -> 1,330,233,580 (**-4.703 %**) | the finalist carries its probe's state to the outcome eval and the summon-sick gate |
 
 **The class, and it is the largest one this file has named.**
 `would_accept_on` clones the state and runs the action **to completion** —
@@ -976,22 +978,49 @@ the action for the real path — and costs ~75 Ir on 1,552 candidates, i.e.
 nothing against the 30 M removed. Invariants byte-identical again; traces
 unchanged.
 
-**The pass on the branch: `1,531,246,782 -> 1,395,881,928`, -135,364,854 /
--8.840 %.**
+**(C) is the same trade a level up, and it is where the class stops being
+about the simulator.** `main_phase_action_with` probes up to `EVAL_TOP = 3`
+finalists with `accept_on`, and then the winner is run **twice more** on a
+clone of the same state: once by `evaluate_action_sequence` (`state.clone()`
+then `dry_run(action)`) and once by `improves_this_turn` (the same two lines).
+A `Finalist` now carries `settled` — its probe's result — and both consumers
+clone *that* instead. Both edges came off exactly:
+
+```text
+evaluate_action_sequence -> perform_action_inner  2,598 / 62,218,246 -> 1,756 / 22,156,413
+main_phase_action_with   -> perform_action_inner  1,514 / 42,673,732 -> 1,040 / 14,712,770
+```
+
+-842 and -474 calls, 68.0 M off the two edges against 65.6 M off the program:
+the 1,316 `settled` clones are the ~2.9 M difference, at ~2,200 Ir against a
+~46,000 Ir cast. `evaluate_action_outcome` ignores `settled` when
+`w.determinize > 0` — the redeal makes it the wrong state, and every finalist
+has to be judged against the same one — so a determinized profile keeps the
+old path.
+
+**One field differs, and it is the reused state that is right.** `accept_on`
+ends with `clear_stale_target_suppression`, which `dry_run` does not, so the
+reused state has `suppress_extra_target_prompts` cleared where the old path
+left it set. That record is scoped to one cast attempt and the attempt ends
+when the cast lands — its own doc says so — so clearing it after a completed
+cast is the correct half of the pair. Golden traces unchanged either way.
+
+**The pass on the branch: `1,531,246,782 -> 1,330,233,580`, -201,013,202 /
+-13.128 %.**
 
 **What is left of the class, and why each row was not taken.**
 `main_phase_action_with`'s 2,036 probes and `pick_land_to_play`'s 934 hand
 their action to the game driver across the `Bot::next_action` boundary;
 adopting there means the *driver's* state, whose decider is live, and
 `perform_action`'s own doc says why swapping a fresh-by-kind decider in
-would wipe a `ScriptedDecider` mid-script. That is the biggest row left in
-the class — **95,709,009 Ir, 6.9 % of the tip** — and it wants the bot API to
-carry a state, not just an action. One level further in:
-`evaluate_action_sequence` clones and re-runs the finalist
-`main_phase_action_with` had *just* probed (842 evaluations, 62,218,246 Ir of
-`perform_action_inner` under them), which is the same reuse gated on
-`w.determinize == 0` — the redealt `sim_start_state` is a different state, so
-a determinized profile has nothing to lift.
+would wipe a `ScriptedDecider` mid-script. **That is the last row of the class
+and the biggest single one left in the profile — 2,036 probes, ~95.7 M Ir,
+7.2 % of the tip** — and it wants `Bot::next_action` to be able to hand the
+driver a state, not just an action. It is not another commit in this shape:
+the driver's decider is *live*, `GameState::clone` rebuilds one fresh-by-kind,
+and `perform_action` swaps the live one back on every restore precisely so a
+`ScriptedDecider` survives. Budget it as a `Decider`-trait change with the
+server and the scripted-decider tests in scope.
 
 ### Forty-ninth pass — a chain of twenty-four narrow generators is invisible in a profile until you read the counts
 
