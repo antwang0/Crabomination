@@ -60,14 +60,16 @@ rebase mid-run and re-read your numbers afterwards.**
    `evaluate_requirement_static` (2.52 % self / 182,532 calls), (-33), and
    `resolve_combat` at 55,816 Ir a combat. **`cast_candidates` is closed** —
    see (-34).
-6. **A twenty-second robustness filter is owed, and filter 21's bug names its
-   shape:** *state the harness installs that a rules path can reset*.
-   `restart_game`'s `*self = GameState::new(...)` dropped the seeded `rng`,
-   the live `decider` and two per-seat pilot flags, all of which are
-   simulator configuration rather than rules state. Anywhere the engine
-   rebuilds or replaces a whole struct, ask what the caller had put in it.
-   (18, 19, 20 all landed in the *measuring devices*; that vein is not
-   exhausted either.)
+6. **Filters 21 and 22 are run; a twenty-third is owed.** 22 (*state the
+   harness installs that a rules path can reset*) audited all three sites
+   that rebuild a whole `GameState`: `restart_game` was the bug, `play_subgame`
+   already forks the stream, and the `#[serde(skip)]` on `rng` is deliberate —
+   but `snapshot.rs` claimed a `GameState` round-trip was bit-exact, which it
+   is not, and **no serialized position replays a game; only the seed does.**
+   Candidates for 23: the *measuring devices* vein (18, 19, 20 all landed
+   there) is not exhausted, and neither is filter 21's — *an invariant checked
+   at one point in its parameter space* found a bug on its first run, and the
+   `--bench` invariants are themselves checked at one thread count.
 7. **Owed housekeeping.** PERF 4.0k — the forty-sixth pass's profile table is
    the next fold. TODO 1.14k — the filter write-ups 12-20 are the compaction.
    **Actor scaling is measured and closed** — linear to 4 cores (98.4 %
@@ -240,6 +242,7 @@ closed, so none of them is re-derived.
 | 18b | 08-24 | filter 18 re-run on `cg_lines.py` (**a tool's own extraction step**) | **Found two more.** It folded every mapped object's addresses (libc, ld.so, libm — 16.5 % of the run) in with the binary's and hardcoded the PIE bias. 36 % of the run resolved to `??` and the rest to the wrong symbols; `Effect::clone` read 2.65 % against the 0.5 % its call edges account for. See below |
 | 20 | 08-24 | **A default that only one caller ever exercises** (the inverse of the sixteenth) | **Nearly clean — one hit.** 14 of 36 `EvalWeights` knobs have exactly one overriding profile; ten of those profiles carry an on/off test, four do not, and three of the four are correctly untested (a scoring weight, a historical control, a net-dependent blend). The fourth, `smart_tap`, was real engine behaviour with no test; it has one now. See below |
 | 21 | 08-24 | **An invariant checked at one point in its parameter space** | **Found a determinism bug** (`c6898506`). The wide-pool sweep had only ever run three seeds at one thread count; ten more seeds across `--threads 1/2/3` produced a self-mirror pair that did not split. `restart_game` (CR 727) rebuilt the state with `GameState::new`, whose `GameRng` is `from_entropy`. See below |
+| 22 | 08-24 | **State the harness installs that a rules path can reset** | **Three sites, one real.** `restart_game` dropped the seeded `rng`, the live `decider` and two pilot flags (fixed, filter 21's bug). `play_subgame` already forks the stream and is correct. `GameState::rng` is `#[serde(skip)]` deliberately — but this module's summary claimed a `GameState` round-trip was bit-exact, which it is not; the claim is corrected, the field is not |
 | 19 | 08-24 | **A threshold or cap that silently truncates a listing** | **Found seven** across two concurrent runs — `cg_edges.py`'s three tables and `cg_lines.py`'s two caps (`4107e017`), plus `cg_symbolize.py`'s recommended `--threshold` and three ranked report tables in `bot_probe` / `selfplay_train` / `recommend_pool`. See below |
 
 **A note the table would lose**: filters 3-5 and 7-10 are syntactic and

@@ -12,9 +12,19 @@
 //! - **`GameSnapshot`** — schema-stable, slightly lossy (drops
 //!   trigger-stack items, transient fields). Use when the export
 //!   should round-trip across engine versions.
-//! - **Direct `GameState`** — fully lossless including triggers,
+//! - **Direct `GameState`** — lossless for the rules state: triggers,
 //!   delayed triggers, continuous effects, pending decision, decider
-//!   state. Use when bit-exact replay matters.
+//!   state. Use when the *position* has to come back exactly.
+//!
+//! **Neither format replays a game bit-exactly on its own**, and the reason
+//! is one field: `GameState::rng` is `#[serde(skip)]`, so a restored state
+//! gets a fresh stream and the next "at random" the rules ask for diverges.
+//! Bit-exact replay is a property of the **seed**, carried out of band —
+//! `recommend::play_one_game`'s `shuffle_rng`, `bot_ladder`'s `--seed`,
+//! `selfplay_train`'s logged seeds — not of a serialized position. Said here
+//! because this module's own summary used to claim otherwise, and because
+//! the crash-at-game-400,000 workflow the RNG exists for depends on knowing
+//! which of the two to reach for.
 //!
 //! # `GameSnapshot` fidelity
 //!
