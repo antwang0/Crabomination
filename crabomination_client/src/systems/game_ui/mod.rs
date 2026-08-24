@@ -1500,9 +1500,20 @@ pub fn update_hint(
                 theme::ACCENT_BLUE,
                 15.0_f32,
             )
-        } else {
+        } else if legal_targets.description.is_empty() {
             (
                 "Click / Enter on a target. Tab,← → select. Esc cancels.".to_string(),
+                theme::ACCENT_GOLD,
+                13.0_f32,
+            )
+        } else {
+            // Cast-time slot 0, named: "Together as One: draw cards" tells the
+            // player which half of a multi-target spell they are aiming.
+            (
+                format!(
+                    "🎯 {}: {}. Click / Enter on a target. Tab,← → select. Esc cancels.",
+                    legal_targets.source_name, legal_targets.description,
+                ),
                 theme::ACCENT_GOLD,
                 13.0_f32,
             )
@@ -4784,15 +4795,19 @@ fn has_ability_menu_entry(c: &crabomination::net::PermanentView) -> bool {
 /// holding. The engine replays that cast server-side with the slot filled;
 /// if the replay then bounces with `ManualTapRequired`, the held action has
 /// to carry the target too, or every mana tap re-poses this same prompt.
+///
+/// Keyed on the decision's `extra_cast_slot` flag. It used to compare
+/// `description` against `EXTRA_CAST_TARGET_PROMPT`, so the fold-back went
+/// silent the moment that prompt started naming the slot it asks about —
+/// and Vibrant Outburst went back to re-prompting on every mana tap.
 fn submit_decision_target(
     outbox: &crate::net_plugin::NetOutbox,
     cv: &crabomination::net::ClientView,
     target: Target,
 ) {
     use crabomination::net::DecisionWire;
-    if let Some(DecisionWire::ChooseTarget { source, description, .. }) =
+    if let Some(DecisionWire::ChooseTarget { source, extra_cast_slot: true, .. }) =
         cv.pending_decision.as_ref().and_then(|pd| pd.decision.as_ref())
-        && description == crabomination::decision::EXTRA_CAST_TARGET_PROMPT
     {
         outbox.patch_last_cast_extra_target(*source, target.clone());
     }

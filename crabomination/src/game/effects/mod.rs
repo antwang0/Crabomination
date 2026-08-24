@@ -755,6 +755,7 @@ impl GameState {
             let asked = self.vote_controller_this_turn.unwrap_or(seat);
             let answer = self.decider.decide(&crate::decision::Decision::ChooseTarget {
                 optional: false,
+                extra_cast_slot: false,
                 source: ctx.source.unwrap_or(CardId(0)),
                 legal: legal.clone(),
                 source_name: ctx.source_name.unwrap_or("").to_string(),
@@ -1330,6 +1331,7 @@ impl GameState {
         };
         let answer = self.decider.decide(&Decision::ChooseTarget {
             optional: false,
+            extra_cast_slot: false,
             source,
             legal: legal.clone(),
             source_name: name.to_string(),
@@ -1397,6 +1399,7 @@ impl GameState {
         legal.sort_by_key(|t| mine(t) != friendly);
         let answer = self.decider.decide(&Decision::ChooseTarget {
             optional: false,
+            extra_cast_slot: false,
             source: match original {
                 Some(Target::Permanent(c)) => *c,
                 _ => crate::card::CardId(0),
@@ -11791,6 +11794,7 @@ impl GameState {
                         let picked = match self.decider.decide(
                             &crate::decision::Decision::ChooseTarget {
                                 optional: false,
+                                extra_cast_slot: false,
                                 source,
                                 legal: legal.clone(),
                                 source_name: ctx.source_name.unwrap_or("").to_string(),
@@ -14970,6 +14974,7 @@ impl GameState {
                 } else {
                     let answer = self.decider.decide(&Decision::ChooseTarget {
                         optional: false,
+                        extra_cast_slot: false,
                         source: ctx.source.unwrap_or(CardId(0)),
                         legal: candidates.iter().map(|id| Target::Permanent(*id)).collect(),
                         source_name: ctx.source_name.unwrap_or("").to_string(),
@@ -16505,6 +16510,7 @@ impl GameState {
                     source_name: "Reroute".to_string(),
                     description: "Retarget the ability".to_string(),
                     optional: false,
+                    extra_cast_slot: false,
                 }) {
                     DecisionAnswer::Target(t) if legal.contains(&t) => t,
                     _ => legal[0].clone(),
@@ -16544,6 +16550,7 @@ impl GameState {
                         source_name: "Reroute".to_string(),
                         description: format!("Retarget slot {}", slot + 1),
                         optional: false,
+                        extra_cast_slot: false,
                     }) {
                         DecisionAnswer::Target(t) if options.contains(&t) => t,
                         _ => options[0].clone(),
@@ -19096,6 +19103,7 @@ impl GameState {
                         let decision = if n == 1 {
                             crate::decision::Decision::ChooseTarget {
                                 optional: false,
+                                extra_cast_slot: false,
                                 source,
                                 legal: candidates.iter().map(|id| Target::Permanent(*id)).collect(),
                                 source_name: ctx.source_name.unwrap_or("").to_string(),
@@ -19580,6 +19588,7 @@ impl GameState {
                         tied.iter().map(|id| Target::Permanent(*id)).collect();
                     let decision = crate::decision::Decision::ChooseTarget {
                         optional: false,
+                        extra_cast_slot: false,
                         source: source_id.unwrap_or(crate::card::CardId(0)),
                         legal: options,
                         source_name: ctx.source_name.unwrap_or("").to_string(),
@@ -20948,6 +20957,7 @@ impl GameState {
                 } else {
                     let answer = self.decider.decide(&Decision::ChooseTarget {
                         optional: false,
+                        extra_cast_slot: false,
                         source: ctx.source.unwrap_or(CardId(0)),
                         legal: candidates.iter().map(|id| Target::Permanent(*id)).collect(),
                         source_name: ctx.source_name.unwrap_or("").to_string(),
@@ -29405,6 +29415,7 @@ impl GameState {
                     source_name: String::new(),
                     description: "Choose a target for the opponent's damage".to_string(),
                     optional: false,
+                    extra_cast_slot: false,
                 }) {
                     crate::decision::DecisionAnswer::Target(t) if candidates.contains(&t) => t,
                     _ => pick,
@@ -31586,12 +31597,28 @@ impl GameState {
             }
 
             Effect::AtEndOfCombat { body } => {
+                // A body that reads `PlayerRef::DefendingPlayer` can't resolve
+                // it at fire time — `resolve_combat` has already cleared the
+                // attack record — so it falls through to the stamped
+                // `Target::Player` (see `resolve_player`). Capture the
+                // defender *now*, while combat is live, instead of relying on
+                // one arriving by accident: Basalt Golem's "sacrifice the
+                // creature blocking it, its controller creates a Wall" used to
+                // work only because every trigger was handed a stray
+                // auto-target. Gated on the body taking no target of its own,
+                // so nothing that reads `Selector::Target(0)` can pick this up.
+                let defender = ctx.targets.first().cloned().or_else(|| {
+                    (!body.requires_target())
+                        .then(|| self.resolve_player(&PlayerRef::DefendingPlayer, ctx))
+                        .flatten()
+                        .map(Target::Player)
+                });
                 self.delayed_triggers.push(crate::game::types::DelayedTrigger {
                     controller: ctx.controller,
                     source: ctx.source.unwrap_or(CardId(0)),
                     kind: DelayedKind::EndOfCombat,
                     effect: (**body).clone(),
-                    target: ctx.targets.first().cloned(),
+                    target: defender,
                     bound_token: None,
                     // Carry the triggering object so a body that reads
                     // `Selector::TriggerSource` still sees it at end of combat

@@ -1830,6 +1830,14 @@ impl GameState {
                     // This permanent entered because its spell was cast (CR
                     // 400.7 new object) — powers "if you cast it" ETB gates.
                     card.entered_by_cast = true;
+                    // CR 302.6 — and being a new object means it is summoning
+                    // sick again. `CardInstance::new` arms the flag, so a card
+                    // cast from a fresh draw was fine; a card that had already
+                    // been on the battlefield kept the *cleared* flag through
+                    // its bounce and came back able to attack the turn it was
+                    // recast. The zone-change path (`Effect::Move` into play)
+                    // already re-arms it the same way; the cast path did not.
+                    card.summoning_sick = card.definition.is_creature();
                     self.battlefield.push(card);
                     if let Some((grant_haste, sacrifice_eot)) = resolve_riders {
                         if grant_haste {

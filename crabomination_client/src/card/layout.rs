@@ -489,8 +489,32 @@ fn bf_spacing_col(total: usize, half: f32) -> f32 {
 /// into a second row instead — tighter than this and cards read as a
 /// single overlapped smear (a card is `CARD_WIDTH` = 3.0 wide).
 const MIN_WRAP_SPACING: f32 = CARD_WIDTH * 1.15;
-/// Z step between wrapped front-row rows, toward the table centre.
-const ROW_WRAP_DZ: f32 = CARD_HEIGHT * 1.1;
+/// Innermost z a battlefield row centre may take: half a card off the table
+/// centre, so the row's near edge stops exactly at z = 0.
+///
+/// Rows are mirrored per seat (`spot.z_sign`), so anything that crosses the
+/// centre line lands in the *opponent's* half — and when both players wrap,
+/// the two inner rows occupy the same volume. The old fixed
+/// `ROW_WRAP_DZ = CARD_HEIGHT * 1.1` put the second row's centre at
+/// z = −1.11 and its near edge at −3.21, more than three units into enemy
+/// territory. Reported as boards overlapping "especially when both players
+/// have a lot of creatures".
+const BF_ROW_MIN_Z: f32 = CARD_HEIGHT * 0.5;
+
+/// Z step between wrapped front rows, chosen so `rows` rows fit between
+/// [`BF_CREATURE_Z`] and [`BF_ROW_MIN_Z`] — on the owner's side of the table,
+/// and clear of the land row behind them.
+///
+/// The band is only about half a card deep, so wrapped rows *shingle* rather
+/// than clear one another. That is the same trade the per-slot Y ramp already
+/// makes for a compressed row (see [`BF_SLOT_Y_STEP`]): a strictly-ordered
+/// overlap reads far better than two boards fighting for the same space.
+fn row_wrap_dz(rows: usize) -> f32 {
+    if rows <= 1 {
+        return 0.0;
+    }
+    (BF_CREATURE_Z - BF_ROW_MIN_Z).max(0.0) / (rows as f32 - 1.0)
+}
 /// Wrapped rows are capped at two; past that the rows compress again —
 /// a third row would cross into the opposite edge's territory.
 const MAX_WRAP_ROWS: usize = 2;
@@ -546,8 +570,20 @@ pub fn bf_card_transform(
     };
 
     let (x, row_z) = if back_row {
-        let offset = slot as f32 - (total as f32 - 1.0) / 2.0;
-        (x_base + offset * bf_spacing_col(total, half), BF_LAND_Z)
+        // The back row used to compress without limit: eight land groups in
+        // 1v1 already sat 2.91 apart against a 3.0-wide card, and twenty sat
+        // 1.07 apart — an unreadable smear. It wraps on the same
+        // `MIN_WRAP_SPACING` rule as the front row, stepping *outward* (away
+        // from the table centre) so it never reaches into the creature band.
+        let (rows, per_row) = front_row_shape(total, half);
+        let row = (slot / per_row.max(1)).min(rows - 1);
+        let col = slot - row * per_row;
+        let row_count = if row + 1 == rows { total - row * per_row } else { per_row };
+        let offset = col as f32 - (row_count as f32 - 1.0) / 2.0;
+        (
+            x_base + offset * bf_spacing_col(row_count, half),
+            BF_LAND_Z + row as f32 * row_wrap_dz(rows),
+        )
     } else {
         let (rows, per_row) = front_row_shape(total, half);
         let row = (slot / per_row.max(1)).min(rows - 1);
@@ -557,7 +593,7 @@ pub fn bf_card_transform(
         let offset = col as f32 - (row_count as f32 - 1.0) / 2.0;
         (
             x_base + offset * bf_spacing_col(row_count, half),
-            BF_CREATURE_Z - row as f32 * ROW_WRAP_DZ,
+            BF_CREATURE_Z - row as f32 * row_wrap_dz(rows),
         )
     };
     let z = spot.z_sign * row_z;
@@ -738,9 +774,10 @@ pub fn seat_board_outline(seat: usize, viewer: usize, n_seats: usize) -> (Vec3, 
     } else {
         spot.board_center
     };
-    // From just past the wrapped front row out to the far side of the land
-    // row (the wrap row can cross slightly past the table centre).
-    let z_near = spot.z_sign * (BF_CREATURE_Z - ROW_WRAP_DZ * 0.5 - CARD_HEIGHT * 0.5);
+    // From the innermost a wrapped front row may reach out to the far side
+    // of the land row. `BF_ROW_MIN_Z` is that inner bound by construction, so
+    // the outline now stops at the table centre instead of reaching across it.
+    let z_near = spot.z_sign * (BF_ROW_MIN_Z - CARD_HEIGHT * 0.5);
     let z_far = spot.z_sign * (BF_LAND_Z + CARD_HEIGHT * 0.5 + 0.4);
     (
         Vec3::new(x_base - half, 0.0, z_near.min(z_far)),
@@ -975,12 +1012,69 @@ mod tests {
         assert!(ys[7] - ys[0] < 0.3, "shingle ramp must stay imperceptible, got {ys:?}");
     }
 
+    /// The back row wraps outward rather than compressing without limit.
+    ///
+    /// It used to stay on one z line whatever the count: eight land groups in
+    /// 1v1 already sat 2.91 apart against a 3.0-wide card, and twenty sat 1.07
+    /// apart — the "overlapping permanents" report. It now wraps on the same
+    /// `MIN_WRAP_SPACING` rule as the front row, and steps *away* from the
+    /// table centre so it never reaches into the creature band.
     #[test]
-    fn back_row_never_wraps() {
-        for slot in 0..12 {
-            let t = bf_card_transform(1, 0, 4, slot, 12, true, false);
-            let spot = seat_spot(1, 0, 4);
-            assert!((t.translation.z - spot.z_sign * BF_LAND_Z).abs() < 1e-4);
+    fn back_row_wraps_outward_instead_of_smearing() {
+        // Small rows keep the historical single-line geometry.
+        for slot in 0..6 {
+            let t = bf_card_transform(0, 0, 2, slot, 6, true, false);
+            assert!((t.translation.z - BF_LAND_Z).abs() < 1e-4, "6 groups stay on one line");
+        }
+
+        // A count that used to smear now forms two rows with readable gaps.
+        let total = 10;
+        let xs: Vec<f32> = (0..total)
+            .map(|s| bf_card_transform(0, 0, 2, s, total, true, false).translation.x)
+            .collect();
+        let mut rows: Vec<f32> = (0..total)
+            .map(|s| bf_card_transform(0, 0, 2, s, total, true, false).translation.z)
+            .collect();
+        rows.sort_by(f32::total_cmp);
+        rows.dedup_by(|a, b| (*a - *b).abs() < 1e-3);
+        assert_eq!(rows.len(), 2, "10 land groups wrap, got rows {rows:?}");
+        assert!(
+            (xs[1] - xs[0]).abs() >= CARD_WIDTH,
+            "and the wrapped rows are wide enough to read: {:.2} vs card width {CARD_WIDTH}",
+            (xs[1] - xs[0]).abs(),
+        );
+        // Outward: every land row is at or beyond the historical land line,
+        // so the wrap can never collide with the creatures in front of it.
+        for z in &rows {
+            assert!(*z >= BF_LAND_Z - 1e-4, "land rows step away from centre, got {rows:?}");
+        }
+    }
+
+    /// No battlefield row may cross the table centre.
+    ///
+    /// Rows are mirrored per seat, so a row that crosses z = 0 lands in the
+    /// opponent's half — and when both players wrap, the two inner rows fight
+    /// for the same volume. The old fixed wrap step put the second creature
+    /// row's near edge at z = −3.21, three units deep into enemy territory:
+    /// the boards visibly intersected once both sides had seven-plus groups.
+    #[test]
+    fn wrapped_rows_stay_on_their_own_side_of_the_table() {
+        let half_depth = CARD_HEIGHT * 0.5;
+        for total in 1..=24usize {
+            for back_row in [false, true] {
+                for seat in 0..2 {
+                    for slot in 0..total {
+                        let t = bf_card_transform(seat, 0, 2, slot, total, back_row, false);
+                        let sign = if seat == 0 { 1.0 } else { -1.0 };
+                        let near_edge = sign * t.translation.z - half_depth;
+                        assert!(
+                            near_edge >= -1e-4,
+                            "seat {seat} slot {slot}/{total} (back={back_row}) reaches \
+                             {near_edge:.3} past the table centre",
+                        );
+                    }
+                }
+            }
         }
     }
 

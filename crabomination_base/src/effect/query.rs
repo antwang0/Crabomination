@@ -212,7 +212,16 @@ impl Effect {
                 | Value::LibrarySizeOf(p)
                 | Value::PlayerSpeed(p)
                 | Value::PermanentCountControlledBy(p)
+                // Same shape as `PermanentCountControlledBy` with a filter
+                // riding along (Honorable Scout's "2 life for each black or
+                // red creature *target opponent* controls"). The filter can't
+                // hold a target; the player ref can.
+                | Value::PermanentCountControlledByMatching(p, _)
                 | Value::CreatureCountControlledBy(p) => player_has_target(p),
+                // "…for each Island *target opponent* controls" (Carpet of
+                // Flowers): the target hides in the counted selector.
+                Value::CountMatching { sel, .. } => sel_has_target(sel),
+                Value::TotalManaValueOf(s) => sel_has_target(s),
                 Value::Sum(vs) => vs.iter().any(value_has_target),
                 Value::Diff(a, b) | Value::Times(a, b) | Value::Min(a, b) | Value::Max(a, b) => {
                     value_has_target(a) || value_has_target(b)
@@ -2258,6 +2267,52 @@ impl Effect {
     fn spell_target_phrase(&self) -> String {
         let phrase = self.target_phrase();
         if phrase == "target" { "target spell".to_string() } else { phrase }
+    }
+
+    /// Human-readable text for the *one slot* `slot`, for a multi-target
+    /// spell's per-slot prompt.
+    ///
+    /// [`effect_short_text`](Self::effect_short_text) describes the whole
+    /// effect and, walking into a `Seq`, always reports the first informative
+    /// child — so both halves of Together as One's "target player draws X,
+    /// [this] deals X damage to any target" read as the draw. This finds the
+    /// child that actually declares `slot` and describes that child instead,
+    /// so the prompt can say which part of the spell it is asking about.
+    ///
+    /// `None` when no child declares the slot, or when the child it finds has
+    /// no phrasing worth showing; callers fall back to their generic prompt.
+    pub fn target_slot_text(&self, slot: u8, mode: Option<usize>) -> Option<String> {
+        // A child that declares the slot is a better answer than `self`, so
+        // recurse first and only describe `self` as the leaf case.
+        let children: &[Effect] = match self {
+            Effect::Seq(v) => v,
+            Effect::ChooseMode(modes) => match mode.and_then(|m| modes.get(m)) {
+                Some(m) => return m.target_slot_text(slot, mode),
+                // No mode chosen yet: any mode declaring the slot will do.
+                None => modes,
+            },
+            Effect::If { then, else_, .. } => {
+                return then
+                    .target_slot_text(slot, mode)
+                    .or_else(|| else_.target_slot_text(slot, mode));
+            }
+            Effect::MayDo { body, .. } => return body.target_slot_text(slot, mode),
+            _ => &[],
+        };
+        for child in children {
+            if let Some(text) = child.target_slot_text(slot, mode) {
+                return Some(text);
+            }
+        }
+        if children.is_empty()
+            && self.target_filter_for_slot_in_mode(slot, mode).is_some()
+        {
+            let text = self.effect_short_text();
+            if !text.is_empty() {
+                return Some(text);
+            }
+        }
+        None
     }
 
     /// Short human-readable summary of this effect's target shape, used

@@ -503,7 +503,17 @@ fn main() {
                 auto_advance_p0.in_set(GameLogicSet),
                 handle_game_input.in_set(GameLogicSet).after(auto_advance_p0),
             )
-                .after(poll_action_buttons)
+                // Ordering against `poll_action_buttons` alone was not enough:
+                // `.chain()` orders the two pollers against each other, but
+                // left `poll_player_chip_clicks` and `handle_game_input`
+                // mutually unordered. `poll_action_buttons` *clears* the chip
+                // slot and `poll_player_chip_clicks` *fills* it, so on any
+                // frame the scheduler ran the input system before the fill,
+                // the click was read as `None` and dropped — clicking a
+                // player's HUD box to target them did nothing. That box is the
+                // only mouse affordance for a player target (the 3-D disc is
+                // gone), so this took player targeting with it.
+                .after(poll_player_chip_clicks)
                 .run_if(in_state(AppState::InGame)),
         )
         // Visual sync (after game logic)

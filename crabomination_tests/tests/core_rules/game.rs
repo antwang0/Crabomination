@@ -6740,6 +6740,64 @@ fn ward_triggers_on_a_loyalty_ability_targeting_it() {
     );
 }
 
+/// CR 702.21a — "a spell **or ability**" covers *triggered* abilities too.
+///
+/// The cast and activated-ability paths both pushed the Ward trigger; the
+/// triggered-ability path never did, so a targeted ETB walked past Ward for
+/// free (reported against Sundering Archaic's converge exile hitting a
+/// Ward {2} permanent, Aug 2026). The "becomes the target" listeners were
+/// already wired here — only the ward toll was missing.
+#[test]
+fn ward_triggers_on_a_triggered_ability_targeting_it() {
+    use crabomination::card::{Keyword, WardCost};
+    // Sundering Archaic: "when this enters, exile target nonland permanent an
+    // opponent controls with mana value <= the number of colors of mana
+    // spent." Paid with W+U+B+3 generic, converge is 3, so the MV-2 bear is
+    // a legal target.
+    let converge_cast = |extra_colorless: u32| {
+        let mut g = two_player_game();
+        let mut warded = catalog::grizzly_bears();
+        warded.keywords.push(Keyword::Ward(WardCost::generic(2)));
+        let bear = g.add_card_to_battlefield(1, warded);
+        let archaic = g.add_card_to_hand(0, catalog::sundering_archaic());
+        g.players[0].mana_pool.add(Color::White, 1);
+        g.players[0].mana_pool.add(Color::Blue, 1);
+        g.players[0].mana_pool.add(Color::Black, 1);
+        g.players[0].mana_pool.add_colorless(3 + extra_colorless);
+        g.perform_action(GameAction::CastSpell {
+            card_id: archaic,
+            target: None,
+            additional_targets: vec![],
+            mode: None,
+            x_value: None,
+        })
+        .expect("Sundering Archaic castable for {6}");
+        drain_stack(&mut g);
+        (g, bear)
+    };
+
+    // Every last mana went into the body, so the {2} toll goes unpaid and the
+    // ETB is countered.
+    let (g, bear) = converge_cast(0);
+    assert!(
+        g.battlefield.iter().any(|c| c.id == bear),
+        "an unpaid Ward counters the triggered ability",
+    );
+    assert!(!g.exile.iter().any(|c| c.id == bear), "so nothing is exiled");
+
+    // Two mana spare: the toll is charged and the exile goes through.
+    let (g, bear) = converge_cast(2);
+    assert!(
+        g.exile.iter().any(|c| c.id == bear),
+        "a paid Ward lets the triggered ability resolve",
+    );
+    assert_eq!(
+        g.players[0].mana_pool.total(),
+        0,
+        "and the toll really came out of the pool",
+    );
+}
+
 /// The same ability resolves once the Ward toll is affordable — the trigger
 /// charges the controller rather than blanket-countering.
 #[test]
@@ -7964,6 +8022,57 @@ fn the_x_picker_is_not_posed_when_a_colored_pip_is_unpayable() {
     assert!(g.pending_decision.is_none(), "and the modal closes");
 }
 
+/// An untargeted trigger must not carry a target onto the stack.
+///
+/// The dispatcher called the auto-target picker for *every* trigger, gated
+/// only on `wants_ui` for the prompt. The picker falls back to a bare `Any`
+/// filter when an effect surfaces no target filter, and the legal-target walk
+/// lists players first — so a surveil / scry / "draw a card" trigger came back
+/// with `Some(Target::Player(..))` and rode onto the stack as a target the
+/// ability never had. The client draws an arrow for whatever a stack item
+/// carries, which is why bookkeeping triggers appeared to point at a player
+/// (reported Aug 2026).
+#[test]
+fn an_untargeted_trigger_carries_no_target() {
+    use crabomination::effect::{Effect, PlayerRef, Selector, Value};
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.add_card_to_battlefield(1, catalog::grizzly_bears());
+
+    for (label, effect) in [
+        ("surveil", Effect::Surveil { who: PlayerRef::You, amount: Value::Const(1) }),
+        ("scry", Effect::Scry { who: PlayerRef::You, amount: Value::Const(1) }),
+        ("draw", Effect::Draw { who: Selector::You, amount: Value::Const(1) }),
+        ("gain life", Effect::GainLife { who: Selector::You, amount: Value::Const(2) }),
+    ] {
+        assert!(!effect.requires_target(), "{label} takes no target");
+        assert_eq!(
+            g.auto_target_for_effect(&effect, 0),
+            Some(crabomination::game::Target::Player(1)),
+            "{label}: the picker itself still falls back to a player — the fix \
+             is that the dispatcher no longer asks it",
+        );
+    }
+}
+
+/// `requires_target` has to see a target that hides inside a counted `Value`.
+///
+/// Both shapes below were reported as targetless, so a `wants_ui` controller
+/// was never prompted for them and the ability only worked because the
+/// dispatcher handed every trigger a stray auto-target. Closing the
+/// untargeted-trigger hole above exposed them.
+#[test]
+fn requires_target_sees_targets_inside_counted_values() {
+    for name in ["Carpet of Flowers", "Honorable Scout"] {
+        let def = catalog::lookup_by_name(name).expect("card in the catalog");
+        let trig = &def.triggered_abilities[0].effect;
+        assert!(
+            trig.requires_target(),
+            "{name} counts permanents a *target* player controls, so it targets",
+        );
+    }
+}
+
 /// `with_frozen_layers` memoizes the gather without changing results: a
 /// board with an anthem + granted keywords computes identically inside and
 /// outside a freeze scope, and the memo clears when the scope exits.
@@ -8379,5 +8488,79 @@ fn wants_converge_sees_both_spellings_of_converge() {
     assert!(
         !catalog::grizzly_bears().wants_converge(),
         "a vanilla creature does not, or every cast pays the converge funnel"
+    );
+}
+
+
+/// CR 302.6 / 400.7 — a creature bounced and recast is a **new object**, so it
+/// is summoning sick again and can't attack the turn it comes back.
+///
+/// `CardInstance::new` arms the flag, so a creature cast from a fresh draw was
+/// always correct. But the permanent-spell resolution path never *re-armed*
+/// it, and a bounced instance keeps its identity: it carried the cleared flag
+/// through hand and came back able to attack immediately. Caught in a replay —
+/// a Garrison Excavator (Menace, no haste) bounced on turn 12, recast on turn
+/// 13, and attacked on turn 13.
+///
+/// The `Effect::Move`-into-play path already re-armed it the same way; only
+/// the cast path was missing it.
+#[test]
+fn a_bounced_creature_is_summoning_sick_again_when_recast() {
+    let mut g = two_player_game();
+    // Garrison Excavator: {3}{R} 3/4, Menace, no haste — the replay's card.
+    let exc = g.add_card_to_battlefield(0, catalog::garrison_excavator());
+    g.clear_sickness(exc);
+    assert!(
+        g.battlefield_find(exc).is_some_and(|c| c.can_attack()),
+        "it has been around a turn, so it may attack",
+    );
+
+    // Bounce it with a real spell rather than moving it by hand.
+    let bounce = g.add_card_to_hand(1, catalog::unsummon());
+    g.players[1].mana_pool.add(Color::Blue, 1);
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bounce,
+        target: Some(Target::Permanent(exc)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("Unsummon castable for {U}");
+    drain_stack(&mut g);
+    assert!(
+        g.players[0].hand.iter().any(|c| c.id == exc),
+        "the Excavator is back in hand",
+    );
+
+    // Recast it: same instance, new object.
+    g.priority.player_with_priority = 0;
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: exc,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("recast for {3}{R}");
+    drain_stack(&mut g);
+
+    let back = g.battlefield_find(exc).expect("back on the battlefield");
+    assert!(back.summoning_sick, "a new object is summoning sick (CR 302.6)");
+    assert!(!back.can_attack(), "so it cannot attack the turn it was recast");
+
+    // And the declaration is actually refused, not merely discouraged.
+    g.step = TurnStep::DeclareAttackers;
+    assert!(
+        g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+            attacker: exc,
+            target: AttackTarget::Player(1),
+        }]))
+        .is_err(),
+        "declaring it as an attacker is illegal",
     );
 }

@@ -687,6 +687,58 @@ impl GameState {
             .collect()
     }
 
+    /// Cards **outside** the caster's hand carrying a live `may_play_until`
+    /// permission that they could play right now, via
+    /// `GameAction::CastFromZoneWithoutPaying`.
+    ///
+    /// `Effect::GrantMayPlay` stamps the permission on the card wherever it
+    /// sits — exile for Suspend Aggression's two exiled cards, a graveyard for
+    /// Practiced Scrollsmith's target — and the cast action honours it. But
+    /// nothing published the set, so no UI could offer the play: the exile
+    /// browser showed a "May play (you)" badge over a card with no way to
+    /// cast it. The hand-resident permissions (miracle, Omniscience) already
+    /// have their own lists; this one covers the rest.
+    ///
+    /// Same `would_accept` dry-run as every other affordance, so it is
+    /// priority-, timing- and cost-gated: a sorcery here is absent outside
+    /// your main phase, and a card you can't pay for is absent entirely.
+    pub fn may_play_castable(&self, caster: usize) -> Vec<CardId> {
+        if self.player_with_priority() != caster {
+            return Vec::new();
+        }
+        self.may_play_castable_on(&self.affordance_probe_template(), caster)
+    }
+
+    fn may_play_castable_on(&self, template: &GameState, caster: usize) -> Vec<CardId> {
+        let candidates: Vec<(CardId, Option<Effect>)> = self
+            .exile
+            .iter()
+            .chain(self.players.iter().flat_map(|p| p.graveyard.iter()))
+            .filter(|c| c.may_play_until.is_some_and(|perm| perm.player == caster))
+            .map(|c| {
+                let eff = &c.definition.effect;
+                (c.id, eff.requires_target().then(|| eff.clone()))
+            })
+            .collect();
+        candidates
+            .iter()
+            .filter(|(id, targeted)| {
+                let (target, additional_targets) = match targeted {
+                    Some(eff) => self.auto_targets_for_effect_all_slots(eff, caster, None),
+                    None => (None, Vec::new()),
+                };
+                Self::would_accept_on(template, GameAction::CastFromZoneWithoutPaying {
+                    card_id: *id,
+                    target,
+                    additional_targets,
+                    mode: None,
+                    x_value: None,
+                })
+            })
+            .map(|(id, _)| *id)
+            .collect()
+    }
+
     /// CardIds in the caster's hand they could cast right now paying the
     /// optional Buyback cost (CR 702.27). Mirrors `kickable_hand_cards`.
     pub fn buyback_hand_cards(&self, caster: usize) -> Vec<CardId> {
@@ -1538,6 +1590,7 @@ impl GameState {
             convokable: self.convokable_hand_cards_on(&template, seat),
             miracle: self.miracle_hand_cards(seat),
             free_castable: self.free_castable_hand_cards_on(&template, seat),
+            may_play_castable: self.may_play_castable_on(&template, seat),
             activatable_permanents: self.activatable_permanents_on(&template, seat),
             hand_activatable: self.hand_activatable_cards(seat),
             morphable: self.morphable_hand_cards_on(&template, seat),

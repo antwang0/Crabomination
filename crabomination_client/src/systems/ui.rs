@@ -56,6 +56,13 @@ pub enum GraveyardRecast {
     Retrace,
     /// Escape with this many other graveyard cards to exile (auto-picked).
     Escape(u32),
+    /// A live "you may play this" permission on a card in exile or a
+    /// graveyard (Suspend Aggression's two exiled cards, Practiced
+    /// Scrollsmith's exiled graveyard card). Submits
+    /// `CastFromZoneWithoutPaying`, which charges whatever the permission
+    /// says — the card's own cost for these two, free for an Omniscience-
+    /// style grant.
+    MayPlay,
 }
 
 /// Marker for the live name tooltip rendered above the graveyard
@@ -1518,8 +1525,12 @@ pub fn exile_browser(
     }
     let Some(cv) = view.0.as_ref() else { return };
 
-    // (owner, display name, badge, face_down) per exiled card.
-    let entries: Vec<(usize, String, Option<String>, bool)> = cv
+    // (owner, display name, badge, face_down, may-play id) per exiled card.
+    // The last slot is `Some` only when the engine says the viewer could
+    // play it *right now* (`may_play_castable` is the same `would_accept`
+    // dry-run as every other affordance), so the tile is clickable exactly
+    // when the click would be accepted.
+    let entries: Vec<(usize, String, Option<String>, bool, Option<crabomination::card::CardId>)> = cv
         .exile
         .iter()
         .map(|c| {
@@ -1566,8 +1577,12 @@ pub fn exile_browser(
                     None => badges.push("Returns when the exiler leaves".to_string()),
                 }
             }
+            let castable_now = cv.may_play_castable.contains(&c.id);
+            if castable_now {
+                badges.push("Click to play".to_string());
+            }
             let badge = (!badges.is_empty()).then(|| badges.join(" · "));
-            (c.owner, c.name.clone(), badge, c.face_down)
+            (c.owner, c.name.clone(), badge, c.face_down, castable_now.then_some(c.id))
         })
         .collect();
     // Owner sections: the viewer first, then the remaining seats in order —
@@ -1661,7 +1676,7 @@ pub fn exile_browser(
                         Pickable::IGNORE,
                     ))
                     .with_children(|grid| {
-                        for (_, name, badge, face_down) in section {
+                        for (_, name, badge, face_down, may_play) in section {
                         let tile_children = |tile: &mut ChildSpawnerCommands| {
                             if !face_down {
                                 let texture: Handle<Image> =
@@ -1714,7 +1729,10 @@ pub fn exile_browser(
                                 height: Val::Px(BROWSER_CARD_HEIGHT),
                                 ..default()
                             },
-                            GraveyardCardItem { name: name.clone(), recast: None },
+                            GraveyardCardItem {
+                                name: name.clone(),
+                                recast: may_play.map(|id| (id, GraveyardRecast::MayPlay)),
+                            },
                         ))
                         .with_children(tile_children);
                     }
@@ -1877,6 +1895,7 @@ pub fn pile_tooltip(
 pub fn graveyard_recast_click(
     items: Query<(&Interaction, &GraveyardCardItem), Changed<Interaction>>,
     mut state: ResMut<GraveyardBrowserState>,
+    mut exile_state: ResMut<crate::game::ExileBrowserState>,
     view: Res<CurrentView>,
     outbox: Option<Res<crate::net_plugin::NetOutbox>>,
 ) {
@@ -1907,6 +1926,10 @@ pub fn graveyard_recast_click(
                 card_id: *card_id, target: None, additional_targets: vec![],
                 mode: None, x_value: None,
             },
+            GraveyardRecast::MayPlay => GameAction::CastFromZoneWithoutPaying {
+                card_id: *card_id, target: None, additional_targets: vec![],
+                mode: None, x_value: None,
+            },
             GraveyardRecast::Escape(n) => {
                 // Auto-pick the first N *other* cards of the viewer's
                 // graveyard as the exile payment.
@@ -1929,7 +1952,10 @@ pub fn graveyard_recast_click(
             }
         };
         outbox.submit(action);
+        // Tiles are shared between the two browsers, so close both — the
+        // click came from whichever one is open.
         state.open = false;
+        exile_state.open = false;
     }
 }
 

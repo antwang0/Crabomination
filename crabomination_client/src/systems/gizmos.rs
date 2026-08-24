@@ -298,9 +298,22 @@ pub fn draw_blocking_gizmos(
     mut gizmos: Gizmos<BlockingGizmos>,
 ) {
     let Some(cv) = &view.0 else { return };
-    // Active player is some opponent (any non-viewer seat) declaring attackers
-    // we may need to block.
-    if cv.step != TurnStep::DeclareBlockers || !cv.declares_blocks(cv.your_seat) { return; }
+    // Declared blocks are drawn for *every* seat, for as long as combat lasts.
+    // Previously the whole system bailed unless the viewer was the defender in
+    // the Declare Blockers step, and it drew only `blocking.assignments` — the
+    // client's own in-progress selection, which the pass handler drains the
+    // moment blocks are submitted. So the attacker never saw who was blocking
+    // what, and the defender lost the picture exactly when it mattered: the
+    // combat-trick window and the damage step. `blocking_attackers` is the
+    // server's declared assignment and is on the wire for every permanent.
+    let in_combat = matches!(
+        cv.step,
+        TurnStep::DeclareBlockers | TurnStep::FirstStrikeDamage | TurnStep::CombatDamage
+    );
+    if !in_combat {
+        return;
+    }
+    let picking_blocks = cv.step == TurnStep::DeclareBlockers && cv.declares_blocks(cv.your_seat);
 
     let mut positions: HashMap<CardId, Vec3> = HashMap::new();
     for (transform, gid, _) in &bf_cards {
@@ -308,6 +321,24 @@ pub fn draw_blocking_gizmos(
     }
 
     let attacking: Vec<CardId> = cv.battlefield.iter().filter(|p| p.attacking).map(|p| p.id).collect();
+
+    // Declared blocks, straight from the server. One arrow per (blocker,
+    // attacker) pair, so a multi-block blocker fans out to each attacker it
+    // was assigned to and a gang block shows every arm.
+    let declared = glow(Color::srgb(0.15, 0.85, 1.0), CUE_GLOW);
+    for perm in &cv.battlefield {
+        let Some(&b_pos) = positions.get(&perm.id) else { continue };
+        for atk in &perm.blocking_attackers {
+            if let Some(&a_pos) = positions.get(atk) {
+                gizmos.arrow(b_pos, a_pos, declared).with_tip_length(0.6);
+                draw_diamond(&mut gizmos, b_pos, 0.9, declared);
+            }
+        }
+    }
+
+    if !picking_blocks {
+        return;
+    }
 
     for &attacker_id in &attacking {
         let is_blocked = blocking.assignments.iter().any(|(_, a)| *a == attacker_id);

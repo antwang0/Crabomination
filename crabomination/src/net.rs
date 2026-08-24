@@ -443,6 +443,15 @@ pub struct ClientView {
     /// right now. `#[serde(default)]` for snapshot back-compat.
     #[serde(default)]
     pub free_castable_hand: Vec<CardId>,
+    /// CardIds in exile or a graveyard carrying a live "you may play this"
+    /// permission for the viewer that are playable right now, via
+    /// `GameAction::CastFromZoneWithoutPaying` (Suspend Aggression's two
+    /// exiled cards, Practiced Scrollsmith's exiled graveyard card). The
+    /// permission itself is reported per-card by `may_play_recipient`; this
+    /// is the subset the engine would accept *now*. `#[serde(default)]` for
+    /// snapshot back-compat.
+    #[serde(default)]
+    pub may_play_castable: Vec<CardId>,
     /// CardIds in the viewer's hand with Bargain they could cast right now
     /// (CR 702.176), so the client can offer a "sacrifice for Bargain?"
     /// toggle. `#[serde(default)]` for snapshot back-compat.
@@ -2279,6 +2288,14 @@ pub enum DecisionWire {
         /// `DecisionAnswer::DeclineTarget`.
         #[serde(default)]
         optional: bool,
+        /// True for the cast-time extra-slot suspend of a multi-target spell
+        /// (`ResumeContext::CastExtraTargetPick`). The client folds the answer
+        /// into the cast action it is holding for manual mana payment; without
+        /// that, a `ManualTapRequired` bounce re-poses this prompt on every
+        /// mana tap. Structural rather than a match on `description`, which
+        /// broke the moment the prompt learned to name its slot.
+        #[serde(default)]
+        extra_cast_slot: bool,
     },
     ChooseMode {
         source: CardId,
@@ -2470,15 +2487,21 @@ pub enum DecisionWire {
 impl From<&Decision> for DecisionWire {
     fn from(d: &Decision) -> Self {
         match d {
-            Decision::ChooseTarget { source, legal, source_name, description, optional } => {
-                DecisionWire::ChooseTarget {
-                    source: *source,
-                    legal: legal.clone(),
-                    source_name: source_name.clone(),
-                    description: description.clone(),
-                    optional: *optional,
-                }
-            }
+            Decision::ChooseTarget {
+                source,
+                legal,
+                source_name,
+                description,
+                optional,
+                extra_cast_slot,
+            } => DecisionWire::ChooseTarget {
+                source: *source,
+                legal: legal.clone(),
+                source_name: source_name.clone(),
+                description: description.clone(),
+                optional: *optional,
+                extra_cast_slot: *extra_cast_slot,
+            },
             Decision::ChooseMode { source, num_modes, mode_texts } => DecisionWire::ChooseMode {
                 source: *source,
                 num_modes: *num_modes,

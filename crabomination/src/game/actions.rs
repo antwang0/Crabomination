@@ -3944,6 +3944,18 @@ impl GameState {
                             (
                                 f.resolve_x(x_value.unwrap_or(0)),
                                 card.definition.name.to_string(),
+                                // Which *part* of the spell this slot feeds.
+                                // A bare "choose an additional target" leaves a
+                                // two-slot spell unreadable: Together as One
+                                // asks for a player to draw X and then for any
+                                // target to take X, and both prompts read the
+                                // same.
+                                card.definition
+                                    .effect
+                                    .target_slot_text(slot, mode)
+                                    .unwrap_or_else(|| {
+                                        crate::decision::EXTRA_CAST_TARGET_PROMPT.to_string()
+                                    }),
                                 // "Up to N targets" slots past the printed
                                 // minimum may be declined.
                                 card.definition.effect.target_slot_optional_x(
@@ -3963,7 +3975,7 @@ impl GameState {
             } else {
                 None
             };
-            if let Some((filter, source_name, optional, distinct)) = slot_info {
+            if let Some((filter, source_name, slot_text, optional, distinct)) = slot_info {
                 let chosen: Vec<&Target> =
                     target.iter().chain(additional_targets.iter()).collect();
                 // One freeze for the whole walk, the same reason
@@ -3992,7 +4004,11 @@ impl GameState {
                             source: card_id,
                             legal: candidates,
                             source_name,
-                            description: crate::decision::EXTRA_CAST_TARGET_PROMPT.into(),
+                            description: slot_text,
+                            // The cast-time extra slot: the client folds the
+                            // answer into the cast it is holding for manual
+                            // mana payment.
+                            extra_cast_slot: true,
                         },
                         resume: crate::game::types::ResumeContext::CastExtraTargetPick {
                             caster: p,
@@ -6396,6 +6412,7 @@ impl GameState {
                                         legal,
                                         source_name: name.clone(),
                                         description: "choose a permanent to sacrifice".into(),
+                                        extra_cast_slot: false,
                                     },
                                     resume: crate::game::types::ResumeContext::CastAdditionalCost {
                                         caster: p,
@@ -6435,6 +6452,7 @@ impl GameState {
                                         legal,
                                         source_name: name.clone(),
                                         description: "choose a permanent to exile".into(),
+                                        extra_cast_slot: false,
                                     },
                                     resume: crate::game::types::ResumeContext::CastAdditionalCost {
                                         caster: p,
@@ -15007,6 +15025,7 @@ impl GameState {
                         legal: candidates.iter().map(|id| Target::Permanent(*id)).collect(),
                         source_name,
                         description: "choose a permanent to sacrifice (cost)".into(),
+                        extra_cast_slot: false,
                     },
                     resume: crate::game::types::ResumeContext::ActivateAbilityChoice {
                         activator: p,
@@ -15180,6 +15199,7 @@ impl GameState {
                         legal: candidates.iter().map(|id| Target::Permanent(*id)).collect(),
                         source_name,
                         description: "choose a permanent to tap (cost)".into(),
+                        extra_cast_slot: false,
                     },
                     resume: crate::game::types::ResumeContext::ActivateAbilityChoice {
                         activator: p,
@@ -15749,9 +15769,24 @@ impl GameState {
         // legal, and the failed replay is rolled back with the decision
         // restored. Latent rather than observed only because the bot stopped
         // floating mana when it stopped pre-tapping its board.
+        //
+        // …and only when the activation could still go through. The {T} / {Q}
+        // gate is forty lines below, so an *already tapped* source got the
+        // modal anyway: answering it replayed the activation, which died on
+        // `CardIsTapped`, and the client re-posed the same modal on the next
+        // retry. Recorded 2026-08-20 as "stuck paying for fields of strife" —
+        // both copies tapped, {W}{W} floating, and a prompt that would not go
+        // away. Mirrors the tap-cost branch's own conditions so the two agree
+        // on what "payable" means.
+        let self_tap_cost_payable = {
+            let on_bf = self.battlefield_find(card_id);
+            (!ability.tap_cost || on_bf.is_some_and(|c| !c.tapped))
+                && (!ability.untap_self_cost || on_bf.is_some_and(|c| c.tapped))
+        };
         if spend_float.is_none()
             && self.players[p].manual_mana
             && !effective_mana_cost.symbols.is_empty()
+            && self_tap_cost_payable
             && self.float_spend_is_optional(p, &effective_mana_cost, &ability_spend_kind)
         {
             let float_summary = self.protectable_float(p, &effective_mana_cost).summary();

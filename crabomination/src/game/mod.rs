@@ -440,6 +440,11 @@ pub struct HandAffordances {
     /// Unraveler) lets the seat cast without paying their mana cost right
     /// now, via `GameAction::CastFromZoneWithoutPaying`.
     pub free_castable: Vec<CardId>,
+    /// Cards in exile / a graveyard carrying a live `may_play_until`
+    /// permission for this seat that are playable right now, via
+    /// `GameAction::CastFromZoneWithoutPaying` (Suspend Aggression's two
+    /// exiled cards, Practiced Scrollsmith's exiled graveyard card).
+    pub may_play_castable: Vec<CardId>,
     pub activatable_permanents: Vec<CardId>,
     /// Hand cards carrying at least one `from_hand` activated ability (Talon
     /// Gates of Madara's `{4}: put this onto the battlefield`, the Spirit
@@ -7236,6 +7241,15 @@ impl GameState {
             }
             c.definition = std::sync::Arc::new(def);
         }
+        // CR 614.1c — the token's own printed "enters with N counters". Read
+        // *after* `apply_enters_as_copy` so a copy token uses the copied
+        // card's spec, which is the whole point: a token copy of a permanent
+        // that enters with counters enters with them too. Every other entry
+        // path applies this (the land drop through this same helper, the
+        // spell and move paths inline it); the token mint was the one that
+        // skipped it, so a copy of Emeritus of Ideation came down *unprepared*
+        // and a copied Hangarback Walker came down a bare 0/0.
+        self.apply_printed_etb_counters(id, events);
         // CR 122.1 — Metallic Mimic / Cathars' Crusade / Arlinn-style typed
         // ETB counters apply to minted tokens too (they enter as normal
         // creatures). Skipped while counters are locked (Solemnity).
@@ -18559,6 +18573,7 @@ impl GameState {
                         // Moderator's ETB) may be declined — the trigger
                         // then resolves targetless as a no-op.
                         optional: pending.effect.target_slot_optional(0, None),
+                        extra_cast_slot: false,
                         source: pending.source,
                         legal: clickable,
                         source_name,
@@ -18590,13 +18605,27 @@ impl GameState {
             // count (Sundering Archaic) must pick its target under the
             // concrete cap. Non-cast pushes carry 0/0, which is exactly
             // what the plain avoiding-set picker used to pass.
-            let auto = self.auto_target_for_effect_avoiding_set_xc(
-                &pending.effect,
-                pending.controller,
-                &avoid,
-                pending.x_value,
-                pending.converged_value,
-            );
+            // Only when the ability actually takes a target. The picker falls
+            // back to a bare `Any` filter when an effect surfaces no target
+            // filter, and `legal_targets_for_filter` lists players first — so
+            // an untargeted trigger (surveil, scry, "draw a card", "gain 2
+            // life") came back with `Some(Player(..))` and rode onto the stack
+            // as a target the ability never had. The client draws an arrow for
+            // whatever the stack item carries, which is the reported "surveil
+            // triggers point at a player for some reason". `needs` is the same
+            // predicate the `wants_ui` branch above uses to decide whether to
+            // prompt, so gating on it makes the two paths agree.
+            let auto = needs
+                .then(|| {
+                    self.auto_target_for_effect_avoiding_set_xc(
+                        &pending.effect,
+                        pending.controller,
+                        &avoid,
+                        pending.x_value,
+                        pending.converged_value,
+                    )
+                })
+                .flatten();
             if let Some(Target::Permanent(tid)) = &auto {
                 picked_this_batch.push((pending.source, *tid));
             }
@@ -18747,6 +18776,16 @@ impl GameState {
                 _ => None,
             }));
             self.dispatch_triggers_for_events(&became);
+            // CR 702.21a — Ward triggers on "becomes the target of a spell or
+            // ability an opponent controls", and a *triggered* ability is an
+            // ability. The cast and activated-ability paths both charge the
+            // toll; this one never did, so Sundering Archaic's ETB exiled a
+            // Ward {2} permanent for free. Pushed last so the ward sits on top
+            // of the stack and resolves before the ability it taxes, matching
+            // the cast path. `push_ward_triggers_for_targets` skips permanents
+            // the actor controls, so a trigger aimed at your own board is
+            // untouched.
+            self.push_ward_triggers_for_targets(controller, source, &target_slots);
         }
     }
 

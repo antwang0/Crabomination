@@ -63,6 +63,11 @@ enum KbRow {
     OppCreatures,
     MyCreatures,
     MyLands,
+    /// The viewer's own seat. Spells that target a player often want *you*
+    /// ("target player draws X" — Together as One), and without this row the
+    /// keyboard cursor could reach every seat except your own: the hint says
+    /// "Tab, ← → select", and Tab simply never landed on you.
+    MyPlayer,
     MyHand,
 }
 
@@ -116,6 +121,15 @@ fn build_rows(cv: &crabomination::net::ClientView) -> Vec<(KbRow, Vec<KbSelectio
         .filter(|p| p.seat != viewer)
         .map(|p| KbSelection::PlayerZone(p.seat))
         .collect();
+    // …and the viewer's own seat, on its own row nearest them. It sits
+    // between your lands and your hand, mirroring where your HUD panel is
+    // relative to the board.
+    let my_player: Vec<KbSelection> = cv
+        .players
+        .iter()
+        .filter(|p| p.seat == viewer)
+        .map(|p| KbSelection::PlayerZone(p.seat))
+        .collect();
 
     let rows = [
         (KbRow::OppLands, opp_lands),
@@ -123,6 +137,7 @@ fn build_rows(cv: &crabomination::net::ClientView) -> Vec<(KbRow, Vec<KbSelectio
         (KbRow::OppCreatures, opp_creatures),
         (KbRow::MyCreatures, my_creatures),
         (KbRow::MyLands, my_lands),
+        (KbRow::MyPlayer, my_player),
         (KbRow::MyHand, my_hand),
     ];
     // Preserve all rows (even empty ones) so the row-index used by W/S
@@ -369,5 +384,51 @@ pub fn sync_kb_hover_marker(
         if has_hovered.get(e).is_err() {
             commands.entity(e).insert(crate::card::CardHovered);
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// The keyboard cursor must be able to reach the viewer's own seat.
+    ///
+    /// "Target player draws X" (Together as One) is usually aimed at yourself,
+    /// but the row table only ever built an *opponent* player row — the seat
+    /// list was filtered with `p.seat != viewer` and nothing put the viewer
+    /// back. The targeting hint tells the player to select with Tab and the
+    /// arrows, and no amount of stepping could land on their own seat
+    /// (reported Aug 2026).
+    #[test]
+    fn the_keyboard_cursor_can_reach_the_viewers_own_seat() {
+        let mut g = crabomination::game::two_player_game();
+        g.add_card_to_battlefield(0, crabomination::catalog::grizzly_bears());
+        g.add_card_to_battlefield(1, crabomination::catalog::grizzly_bears());
+        let cv = crabomination::server::view::project(&g, 0);
+        let rows = build_rows(&cv);
+
+        let reachable: Vec<usize> = rows
+            .iter()
+            .flat_map(|(_, list)| list.iter())
+            .filter_map(|s| match s {
+                KbSelection::PlayerZone(seat) => Some(*seat),
+                _ => None,
+            })
+            .collect();
+        assert!(
+            reachable.contains(&cv.your_seat),
+            "the viewer's own seat is selectable, got {reachable:?}",
+        );
+        assert!(
+            reachable.contains(&1),
+            "and opponents still are, got {reachable:?}",
+        );
+
+        // Each seat appears exactly once, so stepping doesn't stall on a
+        // duplicate entry.
+        let mut seen = reachable.clone();
+        seen.sort_unstable();
+        seen.dedup();
+        assert_eq!(seen.len(), reachable.len(), "no seat is listed twice");
     }
 }

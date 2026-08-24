@@ -52,12 +52,14 @@ pub fn enumerate_for_cast(
         // empty (no legal target), the highlight must not fall back to
         // "highlight everything".
         enumerated: true,
-        // Source name + description are surfaced separately for engine-
-        // driven `Decision::ChooseTarget`; cast-time targeting drives
-        // the prompt off the hand card's KnownCard.name + the picked
-        // mode's text, so leave both empty here.
-        source_name: String::new(),
-        description: String::new(),
+        // Slot 0's own prompt. This used to be left empty with a note that
+        // the caller would build the text, but nothing ever did: the hint
+        // read a bare "Click / Enter on a target", so a multi-slot spell gave
+        // no clue which half you were aiming. Together as One asks for a
+        // player to draw X and then for any target to take X, and the first
+        // pick said nothing at all.
+        source_name: card_name.to_string(),
+        description: def.effect.target_slot_text(0, mode).unwrap_or_default(),
         // Cast-time slot 0 is never optional; only the engine's
         // `ChooseTarget` decisions carry an "up to N" flag.
         declinable: false,

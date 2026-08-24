@@ -1943,6 +1943,93 @@ fn traumatic_critique_x_damage_loots() {
 
 /// The recorded 2026-08-19 soft-lock: a manual-mana player activates
 /// Forum of Amity's surveil ({2}{W}{B}, {T}) with an off-color {G}
+/// The recorded 2026-08-20 export, "stuck paying for fields of strife": both
+/// copies tapped, `{W}{W}` floating, and a float-spend prompt that would not
+/// go away.
+///
+/// The CR 601.2g prompt is posed forty lines before the `{T}` / `{Q}` gate, so
+/// an *already tapped* source got the modal anyway. Answering it replayed the
+/// activation, which died on `CardIsTapped`; the client re-armed and
+/// re-submitted, which re-posed the same modal. Nothing the player could do
+/// broke the cycle — the sibling test below covers the other half of that
+/// export (the tap surviving a failed payment).
+///
+/// The prompt is now gated on the self-tap cost actually being payable, so a
+/// tapped source is refused up front with the honest error.
+#[test]
+fn fields_of_strife_surveil_on_a_tapped_source_refuses_instead_of_prompting() {
+    let mut g = two_player_game();
+    g.players[0].wants_ui = true;
+    g.players[0].manual_mana = true;
+    let strife = g.add_card_to_battlefield(0, catalog::fields_of_strife());
+    // Untapped sources so the float-spend question is live, plus the excess
+    // white float that makes it "optional" (one {W} pays the pip, the other
+    // would be swept into the generic).
+    for _ in 0..4 {
+        g.add_card_to_battlefield(0, catalog::plains());
+    }
+    g.add_card_to_battlefield(0, catalog::mountain());
+    for c in g.battlefield.iter_mut() {
+        c.tapped = false;
+    }
+    g.players[0].mana_pool.add(Color::White, 2);
+
+    let surveil = |g: &mut GameState| {
+        g.perform_action(GameAction::ActivateAbility {
+            card_id: strife,
+            ability_index: 2, // {2}{R}{W}, {T}: Surveil 1
+            target: None,
+            additional_targets: Vec::new(),
+            x_value: None,
+            mode: None,
+        })
+    };
+
+    // Healthy board: the prompt is a real question and is posed.
+    surveil(&mut g).expect("the activation suspends for the float-spend choice");
+    assert!(
+        matches!(
+            g.pending_decision.as_ref().map(|p| &p.decision),
+            Some(crabomination::decision::Decision::OptionalTrigger { .. }),
+        ),
+        "an untapped source with spendable float still asks",
+    );
+    // (Answering it either completes the activation or bounces for manual
+    // tapping — either is fine here; what matters is that it was asked.)
+    let _ = g.perform_action(GameAction::SubmitDecision(DecisionAnswer::Bool(true)));
+
+    // Same board, but the land is already tapped — it paid for mana, or an
+    // earlier attempt consumed it. The activation can never pay its {T}, so
+    // there is nothing to ask about: refuse with the real error.
+    let mut g = two_player_game();
+    g.players[0].wants_ui = true;
+    g.players[0].manual_mana = true;
+    let strife = g.add_card_to_battlefield(0, catalog::fields_of_strife());
+    for _ in 0..4 {
+        g.add_card_to_battlefield(0, catalog::plains());
+    }
+    g.add_card_to_battlefield(0, catalog::mountain());
+    for c in g.battlefield.iter_mut() {
+        c.tapped = false;
+    }
+    g.players[0].mana_pool.add(Color::White, 2);
+    g.battlefield.iter_mut().find(|c| c.id == strife).unwrap().tapped = true;
+
+    assert!(
+        matches!(surveil(&mut g), Err(GameError::CardIsTapped(id)) if id == strife),
+        "a tapped source is refused up front, not asked about",
+    );
+    assert!(
+        g.pending_decision.is_none(),
+        "and no unanswerable prompt is left behind",
+    );
+    assert_eq!(
+        g.players[0].mana_pool.total(),
+        2,
+        "the refusal costs the player nothing",
+    );
+}
+
 /// floating. The CR 601.2g float-spend prompt suspends the activation;
 /// answering "yes" resumes it, pays the {T} cost, then fails with
 /// `ManualTapRequired` — and the tap-cost survived the error, so every
@@ -2200,4 +2287,129 @@ fn homesickness_draws_for_us_and_stuns_them() {
     for t in [a, b] {
         assert!(extra.contains(&Target::Permanent(t)), "stuns the opponent's {t:?}");
     }
+}
+
+/// Regression: the client identifies the cast-time extra-target suspend so it
+/// can fold the pick into the cast it is holding for manual mana payment.
+/// Without that fold, a `ManualTapRequired` bounce re-arms a cast still
+/// missing slot 1 and every mana tap re-poses the prompt.
+///
+/// It used to identify it by string-comparing the prompt against
+/// `EXTRA_CAST_TARGET_PROMPT` — so teaching the prompt to name its slot broke
+/// the match silently and Vibrant Outburst started asking for its tap target
+/// again after paying. The decision now carries a structural
+/// `extra_cast_slot` flag instead, which no prompt rewording can break.
+#[test]
+fn the_extra_cast_target_prompt_is_flagged_structurally() {
+    use crabomination::decision::Decision;
+    let mut g = two_player_game();
+    g.players[0].wants_ui = true;
+    let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let tapme = g.add_card_to_battlefield(1, catalog::shivan_dragon());
+    // Vibrant Outburst — "3 damage to any target. Tap up to one target
+    // creature." Slot 0 is the burn, slot 1 the optional tap.
+    let id = g.add_card_to_hand(0, catalog::vibrant_outburst());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id,
+        target: Some(Target::Permanent(victim)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("Vibrant Outburst castable for {U}{R}");
+
+    match g.pending_decision.as_ref().map(|p| &p.decision) {
+        Some(Decision::ChooseTarget { extra_cast_slot, description, .. }) => {
+            assert!(
+                *extra_cast_slot,
+                "the cast-time extra slot is flagged, so the client folds the answer \
+                 into the held cast instead of re-prompting after payment",
+            );
+            assert_ne!(
+                description,
+                crabomination::decision::EXTRA_CAST_TARGET_PROMPT,
+                "and the prompt is free to name its slot without breaking that",
+            );
+        }
+        other => panic!("expected the slot-1 target prompt, got {other:?}"),
+    }
+
+    // Every other ChooseTarget stays unflagged.
+    g.perform_action(GameAction::SubmitDecision(DecisionAnswer::Target(
+        Target::Permanent(tapme),
+    )))
+    .expect("slot 1 accepted");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(victim).is_none(), "the 2/2 took 3 damage");
+    assert!(
+        g.battlefield_find(tapme).is_some_and(|c| c.tapped),
+        "and the second target was tapped",
+    );
+}
+
+/// A multi-target spell's prompts have to say *which part* each slot feeds.
+///
+/// Together as One is "target player draws X, this deals X damage to any
+/// target, and you gain X life". Both picks are made through separate prompts
+/// and both used to read the same: the cast-time cursor showed a bare "Click
+/// on a target" and the engine's extra-target suspend said "choose an
+/// additional target". With a player legal for *both* slots there was no way
+/// to tell which half you were aiming (reported Aug 2026).
+#[test]
+fn together_as_one_names_the_part_each_target_slot_feeds() {
+    use crabomination::decision::Decision;
+    let def = catalog::together_as_one();
+    // The per-slot text distinguishes the two halves.
+    assert_eq!(
+        def.effect.target_slot_text(0, None).as_deref(),
+        Some("draw cards"),
+        "slot 0 is the draw half",
+    );
+    assert_eq!(
+        def.effect.target_slot_text(1, None).as_deref(),
+        Some("deal damage to target"),
+        "slot 1 is the burn half",
+    );
+
+    // And the engine's slot-1 prompt carries it instead of the generic text.
+    let mut g = two_player_game();
+    g.players[0].wants_ui = true;
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::together_as_one());
+    for _ in 0..10 {
+        g.add_card_to_library(0, catalog::island());
+    }
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id,
+        target: Some(Target::Player(0)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("Together as One castable for {6}");
+    match g.pending_decision.as_ref().map(|p| &p.decision) {
+        Some(Decision::ChooseTarget { description, source_name, .. }) => {
+            assert_eq!(source_name, "Together as One");
+            assert_eq!(
+                description, "deal damage to target",
+                "the second prompt names the burn half, not \"an additional target\"",
+            );
+        }
+        other => panic!("expected the slot-1 target prompt, got {other:?}"),
+    }
+
+    // The cast still resolves correctly: converge 3 → draw 3, 3 damage, 3 life.
+    g.perform_action(GameAction::SubmitDecision(DecisionAnswer::Target(
+        Target::Permanent(bear),
+    )))
+    .expect("slot 1 accepted");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, 23, "converge 3 → gain 3");
+    assert!(g.battlefield_find(bear).is_none(), "the 2/2 took 3 damage");
 }

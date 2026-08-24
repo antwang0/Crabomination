@@ -80,6 +80,17 @@ pub enum Decision {
         /// for the effect (targets fill left-to-right).
         #[serde(default)]
         optional: bool,
+        /// True for the cast-time extra-slot suspend (`CastExtraTargetPick`)
+        /// of a multi-target spell. The client folds the answer into the cast
+        /// action it is holding for manual mana payment, or a
+        /// `ManualTapRequired` bounce re-poses this prompt on every tap.
+        ///
+        /// A structural flag, not a prose match: this used to be identified by
+        /// comparing `description` against `EXTRA_CAST_TARGET_PROMPT`, which
+        /// silently stopped matching the moment the prompt learned to name the
+        /// slot it was asking about.
+        #[serde(default)]
+        extra_cast_slot: bool,
     },
 
     /// Pick a mode index from a modal spell or trigger (e.g. Command suite,

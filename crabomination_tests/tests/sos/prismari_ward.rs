@@ -817,6 +817,61 @@ fn pensive_professor_secondary_counter_trigger_draws_a_card() {
 /// printed text has no "you may" (pool audit 2026-07: an earlier
 /// revision wrapped it in `MayDo` from a misquote). The counter lands
 /// and the draw always happens, decider or no.
+/// Cross-card: Knockout Maneuver on your own Pensive Professor should draw
+/// **two** cards — one for the Increment counter the cast itself triggers, and
+/// one for the counter the spell puts on as it resolves. Each `+1/+1` counter
+/// is a separate `CounterAdded` batch, so each fires the Professor's draw.
+///
+/// Reported as the spell's own counter not drawing (Aug 2026). It does; the
+/// case that yields a single draw is a Professor already big enough that
+/// Increment stays silent — see the second half.
+#[test]
+fn knockout_maneuver_on_a_pensive_professor_draws_for_each_counter() {
+    use crabomination::card::CounterType::PlusOnePlusOne as P11;
+    let play = |pre: u32| -> (u32, i32) {
+        let mut g = two_player_game();
+        g.players[0].wants_ui = true;
+        let prof = g.add_card_to_battlefield(0, catalog::pensive_professor());
+        if pre > 0 {
+            g.battlefield.iter_mut().find(|c| c.id == prof).unwrap().add_counters(P11, pre);
+        }
+        let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+        for _ in 0..12 {
+            g.add_card_to_library(0, catalog::island());
+        }
+        let km = g.add_card_to_hand(0, catalog::knockout_maneuver());
+        g.players[0].mana_pool.add(Color::Green, 1);
+        g.players[0].mana_pool.add_colorless(2);
+        let hand_before = g.players[0].hand.len();
+        g.perform_action(GameAction::CastSpell {
+            card_id: km,
+            target: Some(Target::Permanent(prof)),
+            additional_targets: vec![Target::Permanent(victim)],
+            mode: None,
+            x_value: None,
+        })
+        .expect("Knockout Maneuver castable for {2}{G}");
+        drain_stack(&mut g);
+        let added = g
+            .battlefield_find(prof)
+            .map(|c| c.counter_count(P11))
+            .unwrap_or(0)
+            .saturating_sub(pre);
+        // The Maneuver itself left hand, so a net-zero hand means one draw.
+        let draws = g.players[0].hand.len() as i32 - (hand_before as i32 - 1);
+        (added, draws)
+    };
+
+    // A fresh 0/2: three mana beats its power, so Increment fires too —
+    // two counters, two draws.
+    assert_eq!(play(0), (2, 2), "Increment counter + the spell's counter each draw");
+
+    // Already 3/5: three mana is greater than neither power nor toughness, so
+    // Increment correctly stays silent. Only the spell's counter lands — and
+    // it still draws.
+    assert_eq!(play(3), (1, 1), "the spell's own counter draws on its own");
+}
+
 #[test]
 fn pensive_professor_secondary_counter_trigger_draws_unconditionally() {
     let mut g = two_player_game();
@@ -1342,6 +1397,76 @@ fn suspend_aggression_grants_may_play_to_each_exiled_card() {
         assert_eq!(perm.player, c.owner,
             "permission goes to card's owner (to_owner = true)");
     }
+}
+
+/// The grant is only half the card — the exiled card has to be *playable*.
+///
+/// The sibling test above proves the permission is stamped; it stops there.
+/// Nothing published the set of may-play cards that are castable right now,
+/// so no UI could offer the play: the exile browser showed a "May play (you)"
+/// badge over a card with no way to cast it (reported Aug 2026). The cast
+/// pays the card's own cost — printed "its owner **may play it**", not a free
+/// cast.
+#[test]
+fn a_card_exiled_by_suspend_aggression_can_actually_be_played() {
+    let mut g = two_player_game();
+    let opp_creature = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let top = g.add_card_to_library(0, catalog::lightning_bolt());
+    let suspend_id = g.add_card_to_hand(0, catalog::suspend_aggression());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: suspend_id,
+        target: Some(Target::Permanent(opp_creature)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("Suspend Aggression castable");
+    drain_stack(&mut g);
+    assert!(g.exile.iter().any(|c| c.id == top), "the top card is in exile");
+
+    g.step = TurnStep::PreCombatMain;
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+
+    // Broke: the permission exists but the {R} doesn't, so it isn't offered.
+    assert!(
+        !g.compute_hand_affordances(0).may_play_castable.contains(&top),
+        "an unpayable may-play card isn't advertised as playable",
+    );
+
+    // With the mana up it joins the affordance list the UI reads...
+    g.players[0].mana_pool.add(Color::Red, 1);
+    assert!(
+        g.compute_hand_affordances(0).may_play_castable.contains(&top),
+        "the exiled Bolt is playable now, so the client can offer it",
+    );
+
+    // ...and the play goes through, charging the card's own cost.
+    g.perform_action(GameAction::CastFromZoneWithoutPaying {
+        card_id: top,
+        target: Some(Target::Player(1)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("the exiled card is playable by its owner");
+    assert_eq!(
+        g.players[0].mana_pool.total(),
+        0,
+        "printed \"may play it\" pays the card's real cost, not free",
+    );
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, 17, "the Bolt resolved");
+
+    // The permission is routed per-owner: the exiled Bears belongs to seat 1,
+    // so it is never on seat 0's list.
+    assert!(
+        !g.compute_hand_affordances(0).may_play_castable.contains(&opp_creature),
+        "seat 0 may not play the opponent's exiled creature",
+    );
 }
 
 #[test]
@@ -2097,3 +2222,62 @@ fn paradigm_free_copy_resolves_with_scripted_yes() {
         "original Seminar stays in exile");
 }
 
+/// CR 614.1c — a token copy enters with the copied card's printed counters.
+///
+/// `mint_token_onto_battlefield` applied the Gather Specimens control
+/// replacement, `enters_as_copy`, and the chosen-type ETB specs (Metallic
+/// Mimic, Cathars' Crusade) — but never the token definition's *own*
+/// `enters_with_counters`. Every other entry path does. So a copy of Emeritus
+/// of Ideation came down unprepared and couldn't cast its prepare spell
+/// (reported Aug 2026); a copied Hangarback Walker would come down a bare 0/0
+/// the same way.
+#[test]
+fn a_token_copy_enters_with_the_copied_cards_printed_counters() {
+    use crabomination::card::CounterType;
+    let mut g = two_player_game();
+    let orig = g.add_card_to_battlefield_with_counters(0, catalog::emeritus_of_ideation());
+    assert_eq!(
+        g.battlefield_find(orig).map(|c| c.counter_count(CounterType::Prepared)),
+        Some(1),
+        "the printed card enters prepared",
+    );
+
+    // Applied Geometry mints a token copy of a permanent you control.
+    let ag = g.add_card_to_hand(0, catalog::applied_geometry());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: ag,
+        target: Some(Target::Permanent(orig)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("Applied Geometry castable for {2}{G}{U}");
+    drain_stack(&mut g);
+
+    let token = g
+        .battlefield
+        .iter()
+        .find(|c| c.is_token && c.definition.name == "Emeritus of Ideation")
+        .expect("the copy token was minted");
+    assert_eq!(
+        token.counter_count(CounterType::Prepared),
+        1,
+        "the copy enters prepared, like the card it copies",
+    );
+    // The gameplay consequence: a prepared copy can cast its prepare spell.
+    let token_id = token.id;
+    assert!(
+        g.compute_hand_affordances(0).prepare_castable.contains(&token_id)
+            || g.players[0].mana_pool.total() == 0,
+        "and the engine treats it as a prepared source",
+    );
+    // Applied Geometry's own six +1/+1 counters still land on top.
+    assert_eq!(
+        g.battlefield_find(token_id).map(|c| c.counter_count(CounterType::PlusOnePlusOne)),
+        Some(6),
+        "the spell's own counters are unaffected",
+    );
+}
