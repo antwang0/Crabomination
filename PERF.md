@@ -15,6 +15,14 @@ A number from a debug build describes `opt-level = 0`, not the code.
 # or `profiling-fast` reading cannot be filed as a `release` one by mistake.
 cargo run --release --bin bot_ladder -- --bench
 
+# determinism across thread counts (opt-in; doubles the run, so off the
+# throughput reading above). Replays the identical --bench workload at a
+# contrasting thread count and asserts the order-independent outcome matches
+# — the aggregate is a sum over seed-fixed jobs, so it must. Clean at the
+# pass-52 tip: `thread_determinism ok (3 vs 1 threads identical)`. See TODO
+# filter 23 (`1c304384`).
+CRAB_THREAD_CHECK=1 cargo run --release --bin bot_ladder -- --bench
+
 # allocator A/B — mimalloc is the default now, so the *system* allocator is
 # the opt-in side. A feature change on the engine crate is a full rebuild, so
 # the variants need separate caches; /target-mi/ is gitignored.
