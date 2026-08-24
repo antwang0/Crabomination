@@ -17,34 +17,30 @@ reference and want their own triage pass):
 ## NEXT (handoff — rewrite each run, keep it terse)
 
 **FIRST COMMAND:** `git fetch origin claude/modern_decks && git checkout -B
-claude/modern_decks origin/claude/modern_decks` — the container clones `main`,
-~2,300 commits behind. **Sessions run this branch concurrently: expect to
-rebase mid-run and re-read your numbers afterwards.**
+claude/modern_decks origin/claude/modern_decks` — the container clones `main`.
+**Sessions run this branch concurrently: expect to rebase and re-read your
+numbers.**
 
-1. **Pass 54 took the deck builder: 111.8 M -> 34.9 M Ir (-68.8 %), 2.81x
-   wall clock on construction, +8.5 % on `selfplay_train` throughput
-   (156.5 -> 169.8 games/s, best-of-five).** Tip Ir: fixed 1,252,028,493 /
-   cube 4,029,576,776 / sos 1,761,263,341 / sealed 3,500,588,107 /
-   deck-build 34,859,310 (`--decks sealed --games 1`).
-2. **The +8.5 % against a ~19 % Ir prediction is the lesson.** Callgrind runs
-   the system allocator; mimalloc ships. For allocation-shaped work, get the
-   `selfplay_train` number before sizing the next one — and alternate, the
-   base binary read 129.1 to 156.5 minutes apart.
-3. **Candidates: (-38)** `battlefield_find`'s three genuinely unclaimed sites
-   (0.59 % together — two rows in that table were stale and are now marked
-   PAID); **(-37)** the four ungated `computed()` arms in the requirement
-   walker (**cube pool only**); **(-39)** is largely closed — what is left of
-   the build is `score_card_with_colors` 12.3 % (one attempt already refuted)
-   and the allocator ~11 %.
-4. **The vocab defect is closed for the future** (`server::vocab_snapshot`
-   freezes the index assignment; `pad_vocab` widens a shorter net). **The
-   seven committed deck nets are still dead** — they predate the freeze, so
-   padding them would mean the wrong cards, and `vocab_fit` refuses by name.
-   `--use-deck-best` needs one deck net trained at the current vocab; that
-   is a training run, not a code change, and it is the top ML item.
-5. **Housekeeping.** TODO 0.9k (the closed robustness record moved to
-   ENGINE_BACKLOG), PERF 4.8k (47th-pass entry folded; the 45th and 46th are
-   next). ENGINE_BACKLOG 4.9k / CARD_BACKLOG 4.2k still want a triage pass.
+1. **Pass 54: deck builder 111.8 M -> 34.5 M Ir (-69.1 %), 2.81x wall clock
+   on construction, `selfplay_train` 156.5 -> 169.8 games/s (+8.5 %).** Tip:
+   fixed 1,248,410,451 / cube 4,012,096,941 / sos 1,760,445,728 / sealed
+   3,497,168,270 / deck-build 34,511,759 (`--decks sealed --games 1`).
+2. **Use `scripts/cg_contexts.py` (over `valgrind --separate-callers=3`)
+   before proposing any freeze scope** — it ranks a hot function's calls by
+   calling context, which no one-level table can. It found two commits and
+   refuted a third. Open: 20,374 of `computed_permanent`'s 93,918 calls
+   gather (3.2 %), most one-per-scope.
+3. **+8.5 % against a ~19 % Ir prediction:** callgrind runs the system
+   allocator, mimalloc ships. Allocation-shaped work gets a `selfplay_train`
+   reading, alternated — the base binary read 129.1 to 156.5 minutes apart.
+4. **Candidates:** (-38) `battlefield_find`'s three unclaimed sites (0.59 %);
+   (-37) the ungated `computed()` arms (**cube only**); (-39) largely closed.
+5. **Top ML item is a training run, not code:** the vocab index is frozen
+   (`server::vocab_snapshot`) and shorter nets now pad, but the seven
+   committed deck nets predate the freeze and `vocab_fit` refuses them, so
+   `--use-deck-best` needs one deck net trained at the current vocab.
+6. **Housekeeping.** TODO 0.9k, PERF 4.8k (47th folded; 45th/46th next).
+   ENGINE_BACKLOG 4.9k / CARD_BACKLOG 4.2k still want a triage pass.
 
 ## Standing rules for a perf pass
 
@@ -737,14 +733,29 @@ change that makes it the top encoder item.
 
 ## Infrastructure / Dev
 
-### Engine Test Coverage
-Current test density is low outside `effects.rs` and card-specific unit tests.
-Priority gaps:
-- **Combat module** (`game/combat.rs`) has zero standalone tests.
-- **Layer system** (`game/layers.rs`) — continuous effects, P/T ordering,
-  timestamp tracking — has no dedicated tests.
-- **Stack resolution ordering** — no tests for multi-item LIFO resolution,
-  replacement effects, or trigger ordering.
+### Engine test coverage — the old gap list is stale, and the real finding is a ratio
+
+The three "priority gaps" this section listed (combat, the layer system,
+stack ordering) all closed without anyone striking them out: `core_rules`
+alone carries 75 combat tests in `combat_keywords.rs`, 57 that cite CR 613 /
+layer ordering / timestamps, and `golden_trace.rs` compares whole games
+action-for-action, which is the only thing that catches a reordered
+iteration. Checked and removed at the fifty-fourth pass rather than left to
+be re-derived.
+
+**What is open is the pure-data sweep, and it is smaller than it looks.**
+`scripts/find_data_tests.sh` finds **174 non-sacred pure-data tests** (plus
+25 marked `[CR]`, which are sacred) across 62 files — asserts that only echo
+`CardDefinition` shape, the largest cluster being `stx/part_23.rs` (19),
+`modern/lands_equipment_vehicles.rs` (11), `core_rules/format.rs` (11) and
+`classic_sets/rna.rs` (11). Folding them into one table-driven audit per set
+is the standing rule.
+
+**Do not justify it on build time.** 174 tests at ~8 lines is ~1,400 of the
+suite's **375,047** lines — 0.37 % — and PERF's "Build time" section already
+measured a 537-line cleanup as inside the noise band, because the rebuild is
+dominated by relinking the integration binaries. The justification, if a run
+takes it, is maintenance shape only.
 
 ### Snapshot Round-Trip Test
 `GameSnapshot` and `GameState` serialisation exist.  Add a property-based test

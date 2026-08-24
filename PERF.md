@@ -76,6 +76,19 @@ python3 scripts/cg_sites.py cg.instr.out target-probe/profiling-lines/bot_ladder
 # so a scan's per-element loads land in `slice::iter`'s frames instead. The
 # two sites it found at 0.35 % between them measured -0.611 % when removed.
 
+# whose calls those are, three frames up. A one-level caller table ranks by
+# the immediate caller, which for `gather_continuous_effects_inner` is
+# `computed_permanent` and says nothing. `--separate-callers=N` gives one
+# entry per calling context; `cg_contexts.py` sums them. It costs no run time
+# and roughly doubles the dump. The fifty-fourth pass spent a build and a
+# callgrind run on a scope that removed zero gathers before adding this.
+RUST_MIN_STACK=33554432 valgrind --tool=callgrind --separate-callers=3 \
+  --callgrind-out-file=cg.sc.out target-probe/profiling-fast/bot_ladder \
+  --a gang --b gang --games 6 --threads 1 --seed 1 --decks fixed
+python3 scripts/cg_symbolize.py cg.sc.out \
+  target-probe/profiling-fast/bot_ladder > cg.sc.sym.out
+python3 scripts/cg_contexts.py cg.sc.sym.out gather_continuous_effects_inner
+
 # For any caller/callee table, use `cg_edges.py` rather than
 # `--tree`: `callgrind_annotate --tree` truncates a caller list at its
 # threshold and silently drops rows. Its `__rust_alloc` block printed 23 k of
@@ -328,18 +341,20 @@ it.
 ## Baseline
 
 **Fifty-fourth pass, base `4369a0d6` (pass 53's tip) vs its own tip
-`ec138369`.** Seven commits, one class: **deck construction stops
-re-deriving what a memoized definition already answers.** Ir readings
-`profiling-fast --no-default-features`, callgrind, one thread, `--a gang --b
-gang --games 6 --seed 1` unless the row says otherwise.
+`1ade0e84`.** Nine commits in two classes: **deck construction stops
+re-deriving what a memoized definition already answers** (seven), and **two
+gathers that nobody read** (two, found with a measuring device this pass
+added — see `scripts/cg_contexts.py`). Ir readings `profiling-fast
+--no-default-features`, callgrind, one thread, `--a gang --b gang --games 6
+--seed 1` unless the row says otherwise.
 
 ```text
-                          base (4369a0d6)   tip (ec138369)
-I refs, --decks fixed       1,250,405,745   1,252,028,493   +0.130 %
-I refs, --decks cube        4,026,141,796*  4,029,576,776   +0.085 %
-I refs, --decks sos         1,760,202,906*  1,761,263,341   +0.060 %
-I refs, --decks sealed      3,572,196,844*  3,500,588,107   -2.005 %
-deck build alone              111,755,559      34,859,310  -68.81 %
+                          base (4369a0d6)   tip (1ade0e84)
+I refs, --decks fixed       1,250,405,745   1,248,410,451   -0.160 %
+I refs, --decks cube        4,026,141,796*  4,012,096,941   -0.349 %
+I refs, --decks sos         1,760,202,906*  1,760,445,728   +0.014 %
+I refs, --decks sealed      3,572,196,844*  3,497,168,270   -2.101 %
+deck build alone              111,755,559      34,511,759  -69.12 %
   (--decks sealed --games 1: 0 games played, all setup)
 ```
 
@@ -348,12 +363,12 @@ tip readings carried forward. This pass's base *is* that tip, and its `fixed`
 re-read 1,250,405,745 against the recorded 1,250,409,741 — 3,996 Ir of argv,
 the offset every pass sees.
 
-**The three pools that get *slower* are code layout and not a regression in
-anything they run.** `fixed`, `cube` and `sos` build their decks from hand
-lists or the cube recipe and reach none of the code this pass touched; the
-drift is spread across the commits (+0.076 %, +0.066 % and four readings
-under 0.02 %) rather than concentrated in one, and no commit's own `fixed`
-delta was over 0.08 %.
+**The deck-builder commits move the three non-sealed pools by code layout
+alone** — `fixed`, `cube` and `sos` build their decks from hand lists or the
+cube recipe and reach none of that code — and at the seventh commit that
+drift had accumulated to +0.13 % on `fixed`. The last two commits are engine
+work and take it back past zero. Read the per-commit table for which is
+which; no single deck-builder commit's own `fixed` delta was over 0.08 %.
 
 **The wall-clock number, and it is the one that matters for training.** The
 deck-builder work is allocation-shaped, so callgrind's system allocator
@@ -442,6 +457,16 @@ each commit's `--decks fixed` reading beside it:
 | F `735e365d` | 43,588,088 -> 37,942,385 (**-12.95 %**) | +0.066 % | the builder's four piles are `with_capacity`, not grown a doubling at a time |
 | G `ec138369` | 37,942,385 -> 34,861,499 (**-8.12 %**) | -0.0003 % | `land_produced_colors` is a `ColorSet` on the brief, not a `Vec` per land per shape |
 | — | 34,861,499 -> 35,864,023 (**+2.88 %**) | — | **REVERTED** — iterating `ColorCounts` by zipping rather than indexing. See the Log |
+
+And the two engine commits, measured on `--decks fixed` (the deck build is
+not what they touch). Their base is `457b3864`, the vocab-freeze commit,
+re-read at **1,252,225,395** — +0.016 % on `ec138369`, layout again:
+
+| step | fixed, before -> after | what |
+|---|---|---|
+| — | 1,252,225,395 -> 1,252,445,508 (**+0.018 %**) | **REVERTED** — a freeze scope around `eval_material_inner`'s board walk. Zero gathers removed; see the Log |
+| I `39c807ae` | 1,252,225,395 -> 1,250,520,577 (**-0.136 %**) | `do_phasing`'s presence gate asked from inside its own freeze scope, so it gathered the effect set it exists to avoid |
+| J `1ade0e84` | 1,250,520,577 -> 1,248,410,451 (**-0.169 %**) | the gather's own buffer was a `Vec::clone` (`capacity == len`) and reallocated on its first static ability |
 
 **Fifty-third pass, base `d37f31d8`, base `d37f31d8` (pass 52's tip) vs its own tip
 `ae938ac3`**, both `profiling-fast --no-default-features`, built and run in
@@ -1308,9 +1333,10 @@ the table above is safe to compress:
 
 ### Fifty-fourth pass — deck construction, read from the top for the first time
 
-Seven commits, one workload: `--decks sealed --games 1`, which plays no games
-and so is deck construction and nothing else. **111,755,559 -> 34,861,499
-Ir, -68.80 %.** A `selfplay_train` actor builds two pools and two decks per
+Nine commits. Seven on one workload: `--decks sealed --games 1`, which plays
+no games and so is deck construction and nothing else, **111,755,559 ->
+34,511,759 Ir, -69.12 %**; then two on the engine, from a measuring device
+the first seven made necessary (see **THE DEVICE** below). A `selfplay_train` actor builds two pools and two decks per
 game, so this is ~18.6 M of per-game work becoming ~5.8 M against ~48 M for
 the game itself: **~19 % off an actor's per-game total**, and none of it is
 visible on `--bench`.
@@ -1385,6 +1411,42 @@ check the scorer's inner loop pays five times a card, and `index_range.rs`
 was 1.49 % under `score_card_with_colors`. `zip(self.0)` copies the
 twenty-byte array into the iterator at every `iter()` call, and `is_empty`
 as an array compare loses the short-circuit. Reverted.
+
+**(H) `39c807ae` — the phasing gate gathered the effect set it exists to
+avoid. `fixed` -0.136 %.** `do_phasing` opens a freeze scope and asks
+`board_keyword_in_scope` whether any permanent can carry Phasing — a gate
+whose whole point is to skip the whole-board layer pass on the ~every board
+that has none. Inside a scope that gate reads `frozen_effects()`, which
+**gathers** on the scope's first computed read, so the step paid a full
+gather every turn to prove a negative and then read nothing else from the
+memo it had just built. Hoisted outside the scope, where `frozen_effects()`
+is `None` and `keyword_grant_in_scope` answers off printed shapes — the
+shape `do_untap` and `process_cumulative_upkeep` already use. **The clause
+that makes it a win here and a loss at `declare_attackers_banded` /
+`declare_blockers` (+0.30 %, forty-eighth pass) is "nothing else in the
+scope reads the memo"**: those two run a `compute_permanents` afterwards
+either way. Gathers under `frozen_effects` 8,364 -> 6,600.
+
+**(I) `1ade0e84` — the gather's own buffer reallocated on its first static
+ability. `fixed` -0.169 %.** `gather_continuous_effects_inner` opened with
+`(*self.continuous_effects).clone()`, and `Vec::clone` hands back
+`capacity == len`: 10,040 `grow_one` calls over 32,002 gathers, 3.53 M Ir.
+The `sa_cards` walk moves above the buffer so the buffer can be sized off
+it — `sa_cards` is where every further push comes from, and it is empty on a
+vanilla board. **A blanket `+ battlefield.len()` headroom instead measured
++1.54 %**, which is the forty-eighth pass's `GrowVec` refutation again: the
+reserve has to be where the pushes are, not where the clone is.
+
+**THE DEVICE, and it is the reusable part of this pass:
+`scripts/cg_contexts.py` over `valgrind --separate-callers=N`.** A one-level
+caller table says `computed_permanent` called
+`gather_continuous_effects_inner` 20,374 times and stops at the level where
+every caller looks alike. `--separate-callers=3` gives one entry per calling
+context, so the 33,766 gathers rank by *whose they are*: `do_phasing` was
+1,764 of them and nothing else in this file could have said so. It costs no
+run time and roughly doubles the dump. The same table over `__memcpy` puts
+16 % of the program's 417,679 copies in one context (`finalize_cast` under
+the cast path), which is where (-28) should be re-read from.
 
 **REFUTED after the pass's own commits, and it corrects a ranking rule this
 file has been quoting since the forty-eighth: a freeze scope around
