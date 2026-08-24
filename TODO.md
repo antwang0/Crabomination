@@ -16,112 +16,91 @@ reference and want their own triage pass):
 
 ## NEXT (handoff — rewrite each run, keep it terse)
 
-**FIRST COMMAND OF EVERY RUN:** `git fetch origin claude/modern_decks &&
-git checkout -B claude/modern_decks origin/claude/modern_decks` — the routine
-container clones `main`, ~2,200 commits behind. **Two sessions work this
-branch concurrently; expect to rebase and re-read.**
+**FIRST COMMAND:** `git fetch origin claude/modern_decks && git checkout -B
+claude/modern_decks origin/claude/modern_decks` — the container clones `main`,
+~2,200 commits behind. **Sessions run this branch concurrently: expect to
+rebase mid-run and re-read your numbers afterwards.**
 
-**Three sessions' worth of passes have landed on this branch concurrently.**
-Pass 47 finished at `1,715,304,981 -> 1,645,831,969`, -4.050 % (branch across
-46+47: **-6.752 %**). Pass 48 ran beside it and is rebased under, on the
-branch `1,645,831,968 -> 1,625,262,542`, **-1.250 %** in five rows, plus one
-structural fix kept outside that total (the extra-cast target walk takes one
-freeze scope — a null on `--decks fixed`, where the path is cold). Pass 49
-ran beside *both* and is rebased on top of them: on its own pre-rebase chain
-`1,645,831,476 -> 1,560,268,509`, **-5.198 %**, and on the branch
-`1,625,264,320 -> 1,531,246,793`, **-5.785 %** in five rows. Every chain is measured against its own base and
-every one is `--bench`-invariant-identical throughout (decisions **196,220**,
-turns 27.53, stalls 0, determinism ok). **Six builds were reverted across
-them and every one is written up in PERF's Log** — read them before
-re-proposing any.
-
-1. **Nothing is in flight. Branch tip `1,531,246,793` Ir** — pass 49 rebased
-   onto pass 48's final tip reads `1,625,264,320 -> 1,531,246,793`,
-   **-5.785 %** in five commits (its own pre-rebase chain: -5.198 %). Suite
-   18,709 / 0 failed / 5 ignored over 22 binaries at that tip, golden traces
-   included; `cargo clippy --workspace --all-targets` clean; `--bench`
+1. **Nothing is in flight. Branch tip `1,531,246,793` Ir.** Pass 49 reads
+   `1,625,264,320 -> 1,531,246,793`, **-5.785 %** in five commits; pass 48
+   under it -1.250 %; pass 47 under that -4.050 %. Suite 18,709 / 0 / 5 over
+   22 binaries, golden traces included; workspace clippy clean; `--bench`
    invariants byte-identical throughout (decisions **196,220**, turns 27.53,
-   stalls 0, determinism ok). Wide pool clean at the tip: `--decks all --games
-   400`, seeds 11/12/13 — **20,400 games, 20,396 decided, no panic, all
-   10,198 mirrored pairs split**. **No encoding change; no net needs
-   retraining as of this tip.**
-2. **Pass 49's finding, and it is a way of reading a profile.** *Rank the
-   tail, not the function*, and *ask what a tick pays when the answer is
-   "nothing to do"* — four of its five rows are that question at a different
-   level (a twenty-two-generator fallback chain, three land blocks, a gate
-   that gathered to prove a negative, a freeze scope opened for a closure that
-   returns immediately, two clones handed to a walk that skips).
-   *Rank the tail, not the function:* A chain of narrow generators is invisible in a
-   self-cost profile and in a callee table sorted by Ir; it shows up only in
-   the **call counts** — twenty-two rows at exactly 2,176 calls each, once
-   per traversal, on a board with nothing for any of them. Anywhere the code
-   reads as a fallback chain, count the rows before costing them. The device
-   is `spec` / `gated_block!`'s, and the debug audit is what makes it safe.
-3. **Top candidates. (-26) is CLOSED** (pass 49, -4.867 %) and **(-31) is
-   REFUTED on cost** — 842 evaluated finalists across 920 `pick_by_outcome`
-   calls means at least 499 of them evaluate nothing, so there is no prior
-   evaluation of `improves_this_turn`'s winner to lift on most ticks; read
-   that pass's Log before re-proposing it. Next: (-21)
-   `pick_attacks_scored`, now **54.85 %** and the only thing left of that size
-   — `sim_step`'s 31,874 uncheckpointed passes are 17.9 % and its 4,568
-   *checkpointed* actions 13.7 %, so the lever there is the engine's
-   per-priority cost, not the candidate count (which is 1.8 a decision).
-   Then (-30)'s
-   gathering callers — `check_target_legality_with_source` opens its own scope
-   per call and a `.collect()` caller reaches it 1,616 times; find that loop.
-   **(-29)'s `RawTable` half is paid** by pass 48's (F); what is left is the
-   unread `CardData` side. **(-27) is ~0.2 %, not 0.75 %**, and **(-28)'s main
-   body is closed**. `cast_candidates` (3.0 % over 3,506) is the one piece of
-   `main_phase_action_with` never read from the top.
-4. **Measurement.** Read PERF's "How to measure" — pass 48 rewrote it.
-   `scripts/cg_symbolize.py` + `scripts/cg_edges.py`, never
-   `callgrind_annotate --tree` for a caller table. **`cg_edges.py`'s shares
-   were ~18x low until `ac85463f`** (the eighteenth filter) — a table read
-   before that commit ranked work upside down; re-derive anything you carried
-   forward from one. Re-read your own base: on a shared branch the commit you
-   stand on may not be the one the last pass measured, and argv length lands
-   in the Ir total (~500 Ir).
-5. **Do not rebuild these.** Every refutation is written up in PERF's **Log** —
-   the board-presence epoch, the `GameState` husk pool, gating `do_untap`,
-   narrowing `GameState`, splitting the big engine files for build time, the
-   per-definition keyword-grant bit, fusing `card_type_change_in_scope`, the
-   `LayerFreeze` depth shadow, the `sba_board_scan` definition bitmask, the
-   trigger-carrier bitmask, the APNAP rank table, the headroom-reserving
-   `Vec`, `board_keyword_matching`'s presence gate. And **never** skip
-   `push_ordered_trigger_candidates` on an empty batch (+7.3 % *and* a
-   correctness bug — it owns the per-batch `died_card_snapshots.clear()`).
-6. **The gate rule, both halves.** Swap a gather for a presence gate **only
-   where nothing else in the scope reads the gather** (pass 48's (E),
-   -0.747 %); where the scope goes on to `compute_battlefield()` the same
-   swap is **+0.30 %**. `layers_memoized()` answers "is the gather already
-   built". Fusing a cheap per-card question into a walk that already happens
-   has lost four times; removing a walk outright still pays.
-7. **The `Keyword::eq` device is not exhausted, and it has a trap.** No LTO
-   here, so any small non-generic `crabomination_base` function is an
-   out-of-line call in every profile this file quotes — but a bare
-   `#[inline]` would be unmeasurable in the shipped `release` (thin LTO)
-   build, so **do not take one on an Ir number**. What works is making the
-   callee smaller than any inliner threshold, which is what `has_kw` does.
-   `CardDefinition::is_creature` is the same family and the same trap.
-8. **Measurement gotcha, hit three times.** The 6-game ladder printout (24
-   decided / 12 splits) does **not** move on a change that breaks something;
-   only `--bench`'s `decisions` and the Ir total catch it. Run
-   `./target/profiling-fast/bot_ladder --bench --threads 3` on any change
-   whose Ir moves more than its blast radius allows.
-9. **Env.** No `cargo-nextest`; `cargo test -j 2 -p crabomination -p
-   crabomination_tests` is the gate (~20 min from cold on this box).
-   Workspace clippy needs `apt-get update && apt-get install -y
-   libwayland-dev libasound2-dev libudev-dev libxkbcommon-dev`. Cold
-   `profiling-fast` engine build ~14 min, warm rebuild ~4m30s; callgrind
-   ~4 min and contention-immune. Wide-pool sweep ~55 s a seed — no excuse to
-   skip it. Quote callgrind under 5 %; a `profiling-fast` games/s compares to
-   nothing.
-10. **A nineteenth robustness filter is owed** — *a threshold or cap that
+   stalls 0, determinism ok); wide pool clean (20,400 games, 20,396 decided,
+   no panic, all 10,198 pairs split). **No net needs retraining.**
+2. **Best next moves.** (-21) `pick_attacks_scored` is **54.85 %** and the
+   only thing left of that size — the lever is the engine's per-priority cost
+   (`sim_step`'s 31,874 passes are 17.9 %), not the candidate count (1.8 a
+   decision). Then (-30)'s gathering callers, then `cast_candidates` (3.0 %,
+   never read from the top). **(-26) is closed and (-31) refuted this pass.**
+3. **Read `## Standing rules for a perf pass` below before profiling** —
+   especially the do-not-rebuild list and the `cg_edges.py` share bug.
+4. **A nineteenth robustness filter is owed:** *a threshold or cap that
    silently truncates a listing*. See the filter table.
-11. **Trackers.** TODO ~1.0k, ROADMAP 0.66k, PERF ~3.6k (the 45th pass's
-   profile table was folded at the 48th tip; the 46th's is the next fold when
-   its Log rows stop chaining). ENGINE_BACKLOG 4.6k and CARD_BACKLOG 4.2k are
-   the archives and still want their own triage pass.
+
+## Standing rules for a perf pass
+
+Durable, not per-run. Every refutation named here is written up in **PERF**'s
+Log with its numbers; read the entry before re-proposing any of them.
+
+- **Rank the tail, not the function** (pass 49). A chain of narrow generators
+  is invisible in a self-cost profile and in a callee table sorted by Ir; it
+  shows up only in the **call counts** — twenty-two rows at exactly 2,176
+  calls each, once per traversal, on a board with nothing for any of them,
+  4.9 % together. Wherever the code reads as a fallback chain, count the rows
+  before costing them. The device is `spec` / `gated_block!`'s and the debug
+  audit is what makes a mask safe to over-approximate.
+- **Ask what a tick pays when the answer is "nothing to do."** Four of pass
+  49's five rows are that question at a different level: a
+  twenty-two-generator fallback chain, three land blocks asking the same
+  question, a gate that gathered to prove a negative, a freeze scope opened
+  for a closure that returns immediately, two clones handed to a walk that
+  skips.
+- **The gate rule, both halves.** Swap a gather for a presence gate **only
+  where nothing else in the scope reads the gather** (pass 48's (E),
+  -0.747 %); where the scope goes on to `compute_battlefield()` the same swap
+  is **+0.30 %**. `layers_memoized()` answers "is the gather already built".
+  Fusing a cheap per-card question into a walk that already happens has lost
+  four times; removing a walk outright still pays.
+- **The `Keyword::eq` device is not exhausted, and it has a trap.** No LTO
+  here, so any small non-generic `crabomination_base` function is an
+  out-of-line call in every profile this file quotes — but a bare `#[inline]`
+  would be unmeasurable in the shipped `release` (thin LTO) build, so **do not
+  take one on an Ir number**. What works is making the callee smaller than any
+  inliner threshold, which is what `has_kw` does.
+  `CardDefinition::is_creature` is the same family and the same trap.
+- **Measurement.** Read PERF's "How to measure" — pass 48 rewrote it.
+  `scripts/cg_symbolize.py` + `scripts/cg_edges.py`, never
+  `callgrind_annotate --tree` for a caller table. **`cg_edges.py`'s shares
+  were ~18x low until `ac85463f`** — a table read before that commit ranked
+  work upside down; re-derive anything carried forward from one. Re-read your
+  own base: on a shared branch the commit you stand on may not be the one the
+  last pass measured, and argv length lands in the Ir total (~500 Ir).
+- **Measurement gotcha, hit three times.** The 6-game ladder printout (24
+  decided / 12 splits) does **not** move on a change that breaks something;
+  only `--bench`'s `decisions` and the Ir total catch it. Run
+  `./target/profiling-fast/bot_ladder --bench --threads 3` on any change whose
+  Ir moves more than its blast radius allows.
+- **Do not rebuild these.** The board-presence epoch, the `GameState` husk
+  pool, gating `do_untap`, narrowing `GameState`, splitting the big engine
+  files for build time, the per-definition keyword-grant bit, fusing
+  `card_type_change_in_scope`, the `LayerFreeze` depth shadow, the
+  `sba_board_scan` definition bitmask, the trigger-carrier bitmask, the APNAP
+  rank table, the headroom-reserving `Vec`, `board_keyword_matching`'s
+  presence gate, and (-31)'s `improves_this_turn` reuse. And **never** skip
+  `push_ordered_trigger_candidates` on an empty batch (+7.3 % *and* a
+  correctness bug — it owns the per-batch `died_card_snapshots.clear()`).
+- **Env.** No `cargo-nextest`; `cargo test -j 2 -p crabomination -p
+  crabomination_tests` is the gate (~20 min from cold on this box). Workspace
+  clippy needs `apt-get update && apt-get install -y libwayland-dev
+  libasound2-dev libudev-dev libxkbcommon-dev`. Cold `profiling-fast` engine
+  build ~14 min, warm rebuild ~4m30s; callgrind ~4 min and contention-immune.
+  Wide-pool sweep ~55 s a seed — no excuse to skip it. Quote callgrind under
+  5 %; a `profiling-fast` games/s compares to nothing.
+- **Trackers.** TODO ~1.0k, ROADMAP 0.66k, PERF ~3.6k (the 45th pass's profile
+  table was folded at the 48th tip; the 46th's is the next fold when its Log
+  rows stop chaining). ENGINE_BACKLOG 4.6k and CARD_BACKLOG 4.2k are the
+  archives and still want their own triage pass.
 
 ## Environment note
 
@@ -142,7 +121,7 @@ target/debug/incremental` reclaims several GB without a full rebuild.
 
 ## Engine — Robustness / defects (open)
 
-### Determinism — closed 2026-08-11 (`841dd40b`)
+### Robustness filters (the determinism entry itself closed 2026-08-11, `841dd40b`)
 
 The cube pool's fixed-seed nondeterminism is fixed and the whole class is
 shut: `crate::fxhash::HashMap` / `HashSet` (rustc's seedless FxHasher)
@@ -516,12 +495,10 @@ cards) — needs a layer-system static whose application is gated on a
 predicate. DRC isn't implemented yet pending this.
 
 ### Client build in the routine sandbox — CLOSED 2026-08-23
-The `.pc`/`.so`-shim recipe this entry carried is obsolete: the four dev
-packages install cleanly via apt in the routine container and
-`cargo clippy --workspace --all-targets` then builds `crabomination_client`
-outright. See **Environment note** at the top of this file. Runtime/GPU
-verification (opening a window) still needs the local `verifier-client`
-skill — only compile-checking works headless.
+The four dev packages install via apt and `cargo clippy --workspace
+--all-targets` then builds `crabomination_client` outright (**Environment
+note**, top of file). Runtime/GPU verification still needs the local
+`verifier-client` skill; only compile-checking works headless.
 
 ### Damage-as-(-1/-1)-counters replacement
 Soul-Scar Mage / Phyrexian Vatmother-style "if a source you control would
@@ -796,20 +773,15 @@ the cost profile is known-acceptable. Inverse ops for a ~9k-line effect
 resolver would be unmaintainable and would inherit every funnel-bypass bug
 the audit found.
 
-### Phase 0 — prerequisites — ✅ shipped
-Seeded serialized `GameState.rng` behind every "at random" the rules ask for
-(so undo cannot re-roll a shuffle and replay is bit-exact), and the
-`Decision::CoinFlip` fix that rode with it. Serde fidelity for persisted
-history is still gated on the `CardInstanceWire` dropped-fields fix and the
-round-trip property test (Infrastructure → Snapshot Round-Trip Test);
-in-memory undo uses `Clone` and does not need it.
-
-### Phase 1 — transactional `perform_action` — ✅ shipped (2026-07)
-Checkpoint at the top of `perform_action`, restored on `Err`, for **every**
-action. The heavy zones are `CowBox`-wrapped, so the checkpoint costs
-reference bumps and a failing action pays only for the zones it touched.
-Pinned by `cow::tests::rejected_action_restores_state_exactly`. Three
-semantics worth remembering, because each was a bug first:
+### Phases 0 and 1 — ✅ shipped
+Seeded serialized `GameState.rng` behind every "at random" (so undo cannot
+re-roll a shuffle and replay is bit-exact); persisted-history serde fidelity
+is still gated on the `CardInstanceWire` dropped-fields fix and the round-trip
+property test (Infrastructure → Snapshot Round-Trip Test), which in-memory
+undo does not need. Then a checkpoint at the top of `perform_action`, restored
+on `Err`, for **every** action, pinned by
+`cow::tests::rejected_action_restores_state_exactly`. Three semantics worth
+remembering, because each was a bug first:
 - Suspension is not failure. `GameError::ManualTapRequired` is exempted —
   it deliberately leaves forced pips tapped and mana floating for the
   client's pending-cast driver (pinned by the `sos::mana_shapes` tests).
