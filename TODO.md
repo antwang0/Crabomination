@@ -27,12 +27,14 @@ rebase mid-run and re-read your numbers afterwards.**
    two decks a game). Read PERF's **"Which pool a change moves"** before
    ranking anything. Tip: fixed 1,250,411,872 / cube 4,026,159,406 / sos
    1,760,194,418 / sealed 3,572,358,157 / deck-build 111,936,472.
-2. **`selfplay_train` throughput 26.1 -> 92.6 games/s, 3.55x** (release-fast,
-   mimalloc, 3 actors, 900 games, alternated). **No net retrain** — decks per
-   seed are byte-identical, ladder output diffs exactly.
+2. **`selfplay_train` throughput: unjudged 26.1 -> 99.8 games/s; judged
+   (`--use-deck-best`) 1.2 -> 83.2, i.e. 69x** (release-fast, mimalloc, 3
+   actors, alternated). Deck building was 95 % of a judged actor's work.
+   **No net retrain** — decks per seed are byte-identical, ladder output
+   diffs exactly on all four pools.
 3. **Top candidates now: (-39)** the deck builder's residual 112 M (~22 % of it
    is `card_def`'s own lookup — the fix is resolving a pool's definitions once
-   into a `Vec<Arc<CardDefinition>>`, ~4 % of actor work); **(-38)**
+   and indexing it); **(-38)**
    `battlefield_find` 4.03 %, of which `all_damage_to_player_prevented` is
    four lines of pure redundancy; **(-37)** the four ungated `computed()` arms
    in the requirement walker (cube-only, size it there).

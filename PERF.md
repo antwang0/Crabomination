@@ -1169,7 +1169,7 @@ the table above is safe to compress:
 
 ### Fifty-third pass — the bench's own pool cannot see the two largest costs in the simulator
 
-Nine commits, three classes, and the pass's real finding is the measuring
+Ten commits, three classes, and the pass's real finding is the measuring
 device: **`--decks fixed` is blind to the grant/layer path and to deck
 construction, and those were 49 % of a cube game and 96 % of a deck build.**
 Read "Which pool a change moves" above before ranking anything from a
@@ -1269,6 +1269,25 @@ so the `Arc` was buying nothing and costing an atomic pair per lookup over
 *actually asked for* — the pool in play, not the 22.5 k catalog, because the
 deck builders are the only callers.
 
+**(H) `d1b4081f` — the judged builder enumerated the same shape lattice
+thirty-two times. The judged training loop 25.8 -> 83.2 games/s, and 1.2 ->
+83.2 from the pass base — 69x.** `build_random_deck` opens with
+`enumerate_candidates(pulls, cfg)` (~26 `build_shape` calls) and uses it only
+to pick one shape by softmax; `build_candidates_cfg` calls it `n` times on the
+identical pool, and it is **deterministic in `(pulls, cfg)`** — its rng is
+seeded from `cfg.seed` and `noise = 0` means the lattice never varies. At
+`--use-deck-best`'s n = 32 per side per game (and `recommend_pool`'s 512),
+~26n `build_shape` calls become ~26 + n. The soundness condition is a
+`debug_assert` that re-derives the lattice after the loop and compares, so a
+later change giving `enumerate_candidates` hidden state fails the suite rather
+than changing every judged build silently.
+
+**And the reason this took fifty-three passes to find: it is invisible on
+every workload this file measures.** `--decks fixed` never builds a deck per
+game; `--decks sealed` builds one (n = 1, where the hoist is a no-op); the
+`--use-deck-best` path needs a deck net, and every committed one fails to
+load. It cost one throwaway 20-step training run to make it measurable.
+
 **(G) `4a951123` — two helpers that re-find a permanent the caller already
 walked past. `fixed` -0.611 %, and every pool moves** (sealed -0.568 %, cube
 -0.524 %, sos -0.424 %). `all_damage_to_player_prevented` collected the
@@ -1290,7 +1309,7 @@ function pointer; that is a signature change across `draft.rs` /
 `recommend.rs` and was not attempted here. It is worth ~4 % of an actor's
 per-game work, not more.
 
-**Behaviour, all nine commits.** `--bench` byte-identical at every step
+**Behaviour, all ten commits.** `--bench` byte-identical at every step
 (196,220 decisions, 27.53 turns/game, 0 stalls, determinism ok); the full
 `--decks cube` / `--decks sos` / `--decks sealed` ladder output at the tip
 diffs **identically** against the pass base, so the decks a seed builds and
@@ -2804,15 +2823,25 @@ the fifty-third pass took it from 2.91 G, and it is still ~28 % of what a
 | `score_card_with_colors` | 9,918,390 | 8.4 | 44,849 calls |
 | `Map::fold'2` | 6,504,225 | 5.5 | |
 
-**And it is 32x this under `--use-deck-best`, which is a shipped, gate-passed
-option.** `heuristic_sealed_build` is *one* `build_random_deck`;
-`best_build_by(pool, DECK_CANDS = 32, ..)` is thirty-two of them, per side,
-per game. Derived from the per-build number (not measured end-to-end — every
-committed deck net fails to load, see TODO's ML defects): **~558 M Ir of deck
-building per game against ~48 M of game, i.e. ~92 % of the actor's work**,
-where before the fifty-third pass it was ~14.5 G, i.e. **99.7 %**. Whoever
-sizes further work here should size it against *that* configuration, not the
-heuristic one.
+**The `--use-deck-best` configuration is CLOSED, and it was the worst of
+them.** `best_build_by(pool, 32, ..)` runs thirty-two `build_random_deck`s
+per side per game, and each one opened by re-deriving the *same*
+deterministic shape lattice (`enumerate_candidates`, ~26 `build_shape`
+calls). Measured end to end on the real loop — a throwaway deck net trained
+at the current vocab makes it runnable, which no committed one is (see
+TODO's ML defects) — `--actors 3 --games 150 --steps 1 --seed 7`,
+`release-fast` + mimalloc, alternated:
+
+```text
+pass base d37f31d8        1.2 / 1.2 games/s
+after the definition memo 25.8 / 25.8      (67809f9f + 16f03d27 + 867de7bb)
+after the lattice hoist   83.2 / 83.2      (d1b4081f)   -> 69x from base
+unjudged path, same tip   99.8            for scale
+```
+
+Best-of-32 now costs about what it should — the judged path is within 20 %
+of the unjudged one, where it was 20x slower. **What is left below is the
+unjudged number**, and it is the one to size further work against.
 
 **The structural answer, not attempted**: have the builder resolve a pool's
 definitions **once** into a `Vec<Arc<CardDefinition>>` and index it, rather
