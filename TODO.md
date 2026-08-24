@@ -55,11 +55,10 @@ rebase mid-run and re-read your numbers afterwards.**
    longer an open item:** read from the top this pass, it is 7.93 % and 7.09 %
    of that is one `.collect()`, whose cost is the target walk's 38.7
    requirement evaluations per targeted candidate — see (-34).
-5. **A twentieth robustness filter is owed:** *a default that only one caller
-   ever exercises* (the inverse of the sixteenth). Filters 18 and 19 both
-   found real hits in the profiling scripts, and re-running 18 on
-   `cg_lines.py` found two more — the measuring devices are where this keeps
-   paying.
+5. **A twenty-first robustness filter is owed.** 20 ran this pass and is
+   nearly clean (one hit: `smart_tap` had no test). Filters 18, 19 and the
+   re-run of 18 all found real hits in the profiling scripts — **the measuring
+   devices are where this keeps paying**, so aim the next one there.
 6. **Owed housekeeping:** PERF is 4.0k and the **forty-sixth pass's profile
    table is the next fold** (its Log rows have stopped chaining); TODO is
    1.1k and the compaction to reach for is the filter write-ups 12-19, which
@@ -240,6 +239,7 @@ closed, so none of them is re-derived.
 | 17 | 08-23 | **A comment that names a call count or a share** | **Found five** across two concurrent runs. The share survives, the count rots. See below |
 | 18 | 08-23 | **A tool's own extraction step** | **Found two** (`ac85463f`), both in the profiling scripts: `cg_edges.py`'s total was ~18x high, `cg_lines.py` returned a silent zero. See below |
 | 18b | 08-24 | filter 18 re-run on `cg_lines.py` (**a tool's own extraction step**) | **Found two more.** It folded every mapped object's addresses (libc, ld.so, libm — 16.5 % of the run) in with the binary's and hardcoded the PIE bias. 36 % of the run resolved to `??` and the rest to the wrong symbols; `Effect::clone` read 2.65 % against the 0.5 % its call edges account for. See below |
+| 20 | 08-24 | **A default that only one caller ever exercises** (the inverse of the sixteenth) | **Nearly clean — one hit.** 14 of 36 `EvalWeights` knobs have exactly one overriding profile; ten of those profiles carry an on/off test, four do not, and three of the four are correctly untested (a scoring weight, a historical control, a net-dependent blend). The fourth, `smart_tap`, was real engine behaviour with no test; it has one now. See below |
 | 19 | 08-24 | **A threshold or cap that silently truncates a listing** | **Found seven** across two concurrent runs — `cg_edges.py`'s three tables and `cg_lines.py`'s two caps (`4107e017`), plus `cg_symbolize.py`'s recommended `--threshold` and three ranked report tables in `bot_probe` / `selfplay_train` / `recommend_pool`. See below |
 
 **A note the table would lose**: filters 3-5 and 7-10 are syntactic and
@@ -427,11 +427,40 @@ listing someone reads, and filter 8 already swept that syntax for panic
 safety. **Across both runs the whole yield was in output a human ranks work
 by** — the third filter running to land in the measuring device.
 
-**A twentieth filter is owed. The candidate:** *a default that only one caller
-ever exercises* — the inverse of the sixteenth, which asked for defaults no
-caller overrides. A parameter or profile field with exactly one non-default
-caller is either a dead knob or an untested path, and both are worth knowing
-about before the next `EvalWeights` sweep.
+**The twentieth filter was run 2026-08-24 and is NEARLY clean — one hit.**
+*A default that only one caller ever exercises*, the inverse of the sixteenth.
+Mechanically over `EvalWeights`: parse `baseline`'s 36 field literals, parse
+every one of the 59 named profile constructors, and keep the fields exactly
+one of them sets to a different value. (`v2` and `scaled_control` are
+alternative *baselines* — they set all 36 — so they are excluded, which is the
+step that makes the question answerable at all.)
+
+**14 fields have exactly one overriding profile.** Ten of those profiles are
+exercised by a unit test as well as by a `bot_ladder` pilot name —
+`impulse_draw_on`, `converge_lands_on`, `buff_2for1_on`, `ability_arms_on`,
+`walker_chip_on`, `mull_sim_on`, `creature_base_only`, `legacy_mana` and the
+two search flags — and the tests read "flag off: the class is invisible /
+flag on: the activation is a candidate". That convention is what makes the
+four exceptions legible.
+
+**Three of the four are correctly untested**, and saying so is most of this
+filter's value: `power_emphasis_only` is a scoring *weight* (`power: 15`), so
+the question it asks is a ladder question; `legacy_cashout_on` is the
+*historical* planeswalker rule kept as a control, and the shipped behaviour is
+what a test should pin; `net_eval_blend_ply` needs a loaded net. **The fourth
+was a real gap.** `smart_tap` routes through `PlayerData::smart_tap` into
+`auto_tap_for_cost_inner`'s source choice, where it makes a coloured pip spend
+the *least flexible* source — the engine's own comment says "a Swamp pays {B}
+before a Dimir dual does" — and nothing tested it.
+`core_rules::game::smart_tap_spends_the_narrowest_colour_source_first` does
+now: same board both ways, and the two arms assert opposite outcomes, so it
+cannot pass vacuously.
+
+**The rule it yields:** an opt-in flag in this codebase is expected to carry
+both a ladder pilot name *and* an on/off test, and the ten that do are what
+make the four that don't findable. A flag whose question is a *measurement*
+(a weight, a control, a net) is the documented exception — say so at the
+flag, so the next sweep does not re-derive it.
 
 **Stall rate — CLOSED 2026-08-14, and the answer is "nothing to fix".**
 `419d2ea6` put `recommend::StopReason` on the outcome and a `stalls_by cap /

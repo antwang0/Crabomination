@@ -1346,6 +1346,46 @@ fn one_u_spell() -> crabomination::card::CardDefinition {
     spell
 }
 
+/// `smart_tap` spends the *least flexible* colour source for a pip.
+///
+/// The engine's own comment states the rule — "a Swamp pays {B} before a Dimir
+/// dual does, leaving the dual free for whichever colour comes up next" — and
+/// the flag had no test: it reaches the engine through `PlayerData::smart_tap`
+/// and its only caller was `EvalWeights::smart_tap_on`, a `bot_ladder` pilot
+/// name. Found by the twentieth robustness filter (*a default only one caller
+/// ever exercises*); see TODO's filter table.
+///
+/// Off — the ladder control — the pip takes the first colour-matching source
+/// and strands the basic. On, breadth breaks the tie between two free sources.
+#[test]
+fn smart_tap_spends_the_narrowest_colour_source_first() {
+    use crabomination::mana::{ManaCost, ManaSymbol};
+    fn u_spell() -> crabomination::card::CardDefinition {
+        let mut spell = catalog::grizzly_bears();
+        spell.cost = ManaCost { symbols: vec![ManaSymbol::Colored(Color::Blue)] };
+        spell
+    }
+    for smart in [false, true] {
+        let mut g = two_player_game();
+        // The dual enters first, so battlefield order picks it while the flag
+        // is off — which is the behaviour the flag exists to change.
+        let dual = g.add_card_to_battlefield(0, catalog::tundra());
+        let basic = g.add_card_to_battlefield(0, catalog::island());
+        g.players[0].smart_tap = smart;
+        let id = g.add_card_to_hand(0, u_spell());
+        cast(&mut g, id);
+        assert!(g.battlefield.iter().any(|c| c.id == id), "smart={smart}: the spell resolved");
+        let tapped = |cid| g.battlefield.iter().find(|c| c.id == cid).is_some_and(|c| c.tapped);
+        if smart {
+            assert!(tapped(basic), "smart_tap on: the Island pays the pip");
+            assert!(!tapped(dual), "smart_tap on: the dual stays up for a later colour");
+        } else {
+            assert!(tapped(dual), "control: the first colour-matching source pays");
+            assert!(!tapped(basic), "control: the basic is left stranded");
+        }
+    }
+}
+
 #[test]
 fn cast_one_u_with_dual_and_basic_auto_taps_correctly() {
     let mut g = two_player_game();
