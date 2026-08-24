@@ -225,6 +225,7 @@ closed, so none of them is re-derived.
 | 16 | 08-23 | A default no caller ever overrides | Clean in four readings; don't re-run — see below |
 | 17 | 08-23 | **A comment that names a call count or a share** | **Found five** across two concurrent runs. The share survives, the count rots. See below |
 | 18 | 08-23 | **A tool's own extraction step** | **Found two** (`ac85463f`), both in the profiling scripts: `cg_edges.py`'s total was ~18x high, `cg_lines.py` returned a silent zero. See below |
+| 18b | 08-24 | filter 18 re-run on `cg_lines.py` (**a tool's own extraction step**) | **Found two more.** It folded every mapped object's addresses (libc, ld.so, libm — 16.5 % of the run) in with the binary's and hardcoded the PIE bias. 36 % of the run resolved to `??` and the rest to the wrong symbols; `Effect::clone` read 2.65 % against the 0.5 % its call edges account for. See below |
 | 19 | 08-24 | **A threshold or cap that silently truncates a listing** | **Found seven** across two concurrent runs — `cg_edges.py`'s three tables and `cg_lines.py`'s two caps (`4107e017`), plus `cg_symbolize.py`'s recommended `--threshold` and three ranked report tables in `bot_probe` / `selfplay_train` / `recommend_pool`. See below |
 
 **A note the table would lose**: filters 3-5 and 7-10 are syntactic and
@@ -380,8 +381,21 @@ self-cost table's top 45 rows are 68.5 % of the program, and 1,150 rows hold
 the other 31.5 %.** A profile that diffuse is why pass 49's wins came from
 counting call rows rather than ranking by self cost.
 
-**A second run swept it concurrently and found four more outside those two
-files** (`17d0a5e1`): `cg_edges.py`'s **docstring contradicted its own
+**Filter 18 was re-run on `cg_lines.py` the same day and is NOT clean — two
+more, and they are why the line profile had never been trusted.** It summed
+the instruction addresses of *every* object the process mapped and resolved
+them against the annotated binary's DWARF, and it hardcoded a `0x108000` load
+bias where the `profiling-lines` binary needs `0`. The output looked like a
+profile: 36 % under `??` and `Effect::clone` at 35,279,138 Ir / 2.65 %, which
+`cg_edges.py`'s call edges put at 2,890 calls and 0.5 M. **The rule that
+catches this is the eighteenth's own** — agree with a number the source
+computed, or refuse — so it now keeps one object, auto-detects the bias,
+prints the hit rate, and exits when fewer than half the hot addresses land in
+a symbol or when the dump names a different binary. PERF's note blaming lld
+identical-code folding for a bogus `drift::sort` row is probably this bug.
+
+**A second run swept filter 19 concurrently and found four more outside those
+two files** (`17d0a5e1`): `cg_edges.py`'s **docstring contradicted its own
 printer** — "reads the dump directly, so a table is complete" sat above
 `most_common(40)`, and the parse was complete where the print never was
 (`--rows N`, `0` = all, now lifts the cap); `cg_symbolize.py`'s docstring

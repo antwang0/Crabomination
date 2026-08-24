@@ -83,13 +83,22 @@ RUST_MIN_STACK=33554432 valgrind --tool=callgrind --dump-instr=yes \
 python3 scripts/cg_lines.py cg.instr.out target/profiling-lines/bot_ladder
 python3 scripts/cg_lines.py cg.instr.out target/profiling-lines/bot_ladder \
   --in dispatch_triggers_for_events
-# **Read the line profile for *where inside a function* the cost is, never for
-# a function total.** lld folds identical code, so `addr2line` hands back
-# whichever of the folded names it likes: the forty-eighth pass's line profile
-# put 2.4 % under `core::slice::sort::stable::drift::sort` and the edge table
-# says the program's 18,888 sorts are all `smallsort` and cost a fraction of
-# that. `cg_edges.py`'s call counts are the truth; the line profile is a
-# pointer.
+# **The line profile was wrong until the fiftieth pass, and it was wrong in a
+# way that looked right.** `cg_lines.py` summed the instruction addresses of
+# *every* object the process mapped — libc, ld.so, libm, libgcc, valgrind's
+# preloads, 16.5 % of the run — and resolved them against this binary's DWARF,
+# and it hardcoded a `0x108000` load bias where the `profiling-lines` binary
+# needs `0`. 36 % of the run came out `??` and the rest was attributed to
+# whichever Rust symbol sat at the wrong offset: `Effect::clone` read
+# **35,279,138 / 2.65 %** where its own call edges are 2,890 calls and
+# **0.5 M**. The forty-eighth pass's `drift::sort` row, blamed here on lld's
+# identical-code folding, is more likely the same bug. It now keeps only the
+# annotated binary's object, auto-detects the bias, prints the hit rate
+# (400/400 at bias 0) and refuses below half — including when you hand it a
+# dump taken from a *different* binary, which used to annotate happily.
+# **Cross-check any line-profile row against `cg_edges.py`'s call counts
+# before ranking work by it.** The counts are the truth; the lines are a
+# pointer to where inside a function the cost sits, never to a function total.
 # Every listing `cg_edges.py` prints says what it truncated (the nineteenth
 # robustness filter) — and the first thing that reports is that **the top 45
 # self-cost rows are 68.5 % of the program and 1,150 rows hold the rest**. A
