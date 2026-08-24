@@ -605,6 +605,14 @@ fn file_net_config(
 ) -> Option<crabomination_ml::NetConfig> {
     let bytes = std::fs::read(path).ok()?;
     let n = crabomination_nn::PlayNet::load(&bytes).ok()?;
+    // The choke point for every trainer-side load of an external play net,
+    // so the vocabulary rule lives here: `Trainer::load` pads a short
+    // embedding table on trust, and a pre-freeze net is exactly the file
+    // that must not be padded.
+    if let Err(e) = crabomination::server::vocab_snapshot::vocab_fit(n.vocab_size(), vocab) {
+        eprintln!("{}: {e}", path.display());
+        return None;
+    }
     let (emb_dim, obj_hidden, h1, h2, attn, blocks) = n.arch();
     Some(crabomination_ml::NetConfig {
         vocab,

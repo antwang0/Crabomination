@@ -1329,19 +1329,28 @@ impl Trainer {
 
     /// Resume from a previous export.
     ///
-    /// Shapes must match the config with one exception, and it is the
-    /// one the engine's loader already makes: a checkpoint trained
-    /// against an earlier encoder generation has narrower `obj.weight`
-    /// and `trunk1.weight`, and is widened with zero columns rather
-    /// than rejected (see [`crabomination_nn::LEGACY_FEATS`]). The
-    /// padded weights compute exactly what the old binary computed,
-    /// because the features they were never trained on multiply into
-    /// zeros.
+    /// Shapes must match the config with two exceptions, and both are ones
+    /// the engine's loader already makes:
     ///
-    /// Without this the two loaders disagree across an encoder bump:
-    /// `PlayNet::load` accepts the old champion and `VarMap::load`
-    /// refuses it, so `--use-best` with any pre-bump pilot dies at
-    /// startup while the same file plays fine on the ladder.
+    /// - **Feature axis.** A checkpoint trained against an earlier encoder
+    ///   generation has narrower `obj.weight` and `trunk1.weight`, and is
+    ///   widened with zero *columns* (see
+    ///   [`crabomination_nn::LEGACY_FEATS`]). The padded weights compute
+    ///   exactly what the old binary computed, because the features they
+    ///   were never trained on multiply into zeros.
+    /// - **Vocabulary axis.** A checkpoint from before some cards were
+    ///   appended to the frozen vocabulary snapshot has a shorter
+    ///   `emb.weight` (and belief head), and is extended with zero *rows*
+    ///   — sound only because the snapshot freezes each index, so row *k*
+    ///   still names the card it was trained on. `PlayNet::pad_vocab` is
+    ///   the same operation on the inference side.
+    ///
+    /// Without these the two loaders disagree: `PlayNet::load` accepts the
+    /// old champion and `VarMap::load` refuses it, so `--use-best` with any
+    /// pre-bump pilot dies at startup while the same file plays fine on the
+    /// ladder. Rejecting a *pre-freeze* net is the caller's job
+    /// (`vocab_snapshot::vocab_fit`, which `file_net_config` runs) — here a
+    /// short table is padded on trust.
     pub fn load(&mut self, path: &std::path::Path) -> CResult<()> {
         let loaded = candle_core::safetensors::load(path, &self.dev)?;
         let data = self.varmap.data().lock().unwrap();
@@ -1351,17 +1360,26 @@ impl Trainer {
             })?;
             let want = var.dims();
             let have = src.dims();
-            // Widen on the feature axis only, and only from a known
-            // generation: anything else is a mismatch `set` should
-            // report as one.
-            let pad = (want.len() == 2 && have.len() == 2 && want[0] == have[0])
+            // Which axis, if any, this tensor is allowed to grow on.
+            // Anything else is a mismatch `set` should report as one.
+            let feature_pad = (want.len() == 2 && have.len() == 2 && want[0] == have[0])
                 .then(|| want[1].checked_sub(have[1]))
                 .flatten()
-                .filter(|_| matches!(name.as_str(), "obj.weight" | "trunk1.weight"));
-            match pad {
-                Some(n) if n > 0 => {
+                .filter(|n| *n > 0 && matches!(name.as_str(), "obj.weight" | "trunk1.weight"));
+            let vocab_pad = matches!(name.as_str(), "emb.weight" | "head_opp.weight" | "head_opp.bias")
+                .then(|| want[0].checked_sub(have[0]))
+                .flatten()
+                .filter(|n| *n > 0 && want[1..] == have[1..]);
+            match (feature_pad, vocab_pad) {
+                (Some(n), _) => {
                     let zeros = Tensor::zeros((want[0], n), src.dtype(), &self.dev)?;
                     var.set(&Tensor::cat(&[src, &zeros], 1)?)?;
+                }
+                (None, Some(n)) => {
+                    let mut shape = want.to_vec();
+                    shape[0] = n;
+                    let zeros = Tensor::zeros(shape, src.dtype(), &self.dev)?;
+                    var.set(&Tensor::cat(&[src, &zeros], 0)?)?;
                 }
                 _ => var.set(src)?,
             }
@@ -1396,18 +1414,26 @@ impl Trainer {
         })?;
         let data = self.varmap.data().lock().unwrap();
         let dst = data.get("emb.weight").expect("play model always has emb.weight");
-        if dst.dims() != src.dims() {
-            // Almost always a vocabulary that moved under one of the two
-            // nets. Silently seeding a truncated or misaligned table would
-            // scramble card identity, so refuse.
+        let (want, have) = (dst.dims(), src.dims());
+        // A deck net from the frozen-snapshot era is right about every row
+        // it has, so a short table seeds the rows it knows and leaves the
+        // rest at their initial values — the seed is an initialisation, not
+        // a contract. Anything else (a pre-freeze table, whose indices name
+        // different cards, or a different embedding width) is refused:
+        // silently seeding a misaligned table scrambles card identity.
+        let seedable = have[1..] == want[1..]
+            && crabomination::server::vocab_snapshot::vocab_fit(have[0], want[0]).is_ok();
+        if !seedable {
             return Err(candle_core::Error::Msg(format!(
-                "embedding shape mismatch: deck net {:?} vs play net {:?} — retrain the deck \
-                 net against the current vocabulary",
-                src.dims(),
-                dst.dims()
+                "embedding shape mismatch: deck net {have:?} vs play net {want:?} — retrain the \
+                 deck net against the current vocabulary"
             )));
         }
-        dst.set(src)
+        if have[0] == want[0] {
+            return dst.set(src);
+        }
+        let tail = dst.as_tensor().narrow(0, have[0], want[0] - have[0])?;
+        dst.set(&Tensor::cat(&[src, &tail], 0)?)
     }
 }
 
@@ -2099,6 +2125,61 @@ mod tests {
                     "gen {legacy_obj} state {i}: engine {got} vs candle {want}"
                 );
             }
+        }
+    }
+
+    /// The vocabulary-axis twin of the test above. A checkpoint from
+    /// before some cards were appended to the frozen snapshot loads into
+    /// the trainer, and the trainer's padded model agrees with the
+    /// engine's `pad_vocab`ed one — the same file goes to both in a
+    /// `--use-best` run, so a disagreement here is the bug the freeze
+    /// exists to remove.
+    #[test]
+    fn short_vocab_checkpoints_load_zero_padded_in_the_trainer() {
+        use crabomination_nn::to_safetensors;
+        let cfg = NetConfig { opp: true, ..small_cfg() };
+        // The file is four cards short of the live vocabulary.
+        let (old_v, e, d) = (cfg.vocab - 4, cfg.emb_dim, cfg.obj_hidden);
+        let trunk_in = NUM_GROUPS * 2 * d + GLOBAL_FEATS;
+        let t = |n: usize, k: u64| -> Vec<f32> {
+            (0..n).map(|i| ((i as u64 * 2654435761 + k) % 97) as f32 / 97.0 - 0.5).collect()
+        };
+        let bytes = to_safetensors(&[
+            ("emb.weight", vec![old_v, e], t(old_v * e, 1)),
+            ("obj.weight", vec![d, e + OBJ_FEATS], t(d * (e + OBJ_FEATS), 2)),
+            ("obj.bias", vec![d], t(d, 3)),
+            ("trunk1.weight", vec![cfg.h1, trunk_in], t(cfg.h1 * trunk_in, 4)),
+            ("trunk1.bias", vec![cfg.h1], t(cfg.h1, 5)),
+            ("trunk2.weight", vec![cfg.h2, cfg.h1], t(cfg.h2 * cfg.h1, 6)),
+            ("trunk2.bias", vec![cfg.h2], t(cfg.h2, 7)),
+            ("head_win.weight", vec![1, cfg.h2], t(cfg.h2, 8)),
+            ("head_win.bias", vec![1], vec![0.1]),
+            ("head_life.weight", vec![1, cfg.h2], t(cfg.h2, 9)),
+            ("head_life.bias", vec![1], vec![0.0]),
+            ("head_len.weight", vec![1, cfg.h2], t(cfg.h2, 10)),
+            ("head_len.bias", vec![1], vec![0.0]),
+            ("head_opp.weight", vec![old_v, cfg.h2], t(old_v * cfg.h2, 12)),
+            ("head_opp.bias", vec![old_v], t(old_v, 13)),
+        ]);
+        let path = std::env::temp_dir()
+            .join(format!("crab_shortvocab_{}.safetensors", std::process::id()));
+        std::fs::write(&path, &bytes).expect("write");
+        let mut trainer = Trainer::new(&cfg, 1e-3).expect("trainer");
+        trainer.load(&path).expect("short-vocab checkpoint loads into the trainer");
+        let _ = std::fs::remove_file(&path);
+        let mut net = PlayNet::load(&bytes).expect("engine loads it too");
+        assert_eq!(net.vocab_size(), old_v);
+        net.pad_vocab(cfg.vocab).expect("post-freeze table pads");
+        assert_eq!(net.vocab_size(), cfg.vocab);
+
+        let mut rng = StdRng::seed_from_u64(97);
+        for i in 0..6 {
+            // Indices span the padded range: the cards the file never saw
+            // must read as the zero rows on both sides, not as garbage.
+            let s = random_state(&mut rng, cfg.vocab);
+            let want = trainer.predict_win(&s).expect("candle win");
+            let got = net.forward(&s);
+            assert!((got - want).abs() < 1e-4, "state {i}: engine {got} vs candle {want}");
         }
     }
 
