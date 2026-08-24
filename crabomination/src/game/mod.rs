@@ -8176,7 +8176,7 @@ impl GameState {
         // authoritative whether or not a scope is open, so a board with no
         // strip source answers without asking `frozen_effects` — which on
         // this path (`dispatch_triggers_for_events` is `&mut self`, so it
-        // runs unfrozen) is a mutex acquisition to be told `None`, 53,838
+        // runs unfrozen) is a mutex acquisition to be told `None`, 43,754
         // times over six bench games. When the gate says maybe, the frozen
         // set is still preferred over a fresh gather.
         if !(strip_on_battlefield || self.ability_strip_off_battlefield()) {
@@ -16398,8 +16398,10 @@ impl GameState {
         }
         // Empty on most dispatches, and the chain is not free there: the
         // filter closes over `&self` and the collect still builds and drops a
-        // `Vec`. **53,838** dispatches reach this line over six bench games
-        // — the ones that get past the empty-batch return above.
+        // `Vec`. **43,754** dispatches reach this line over six bench games
+        // at the fifty-fourth tip — the ones that get past the empty-batch
+        // return above. (It read 53,838 when the gate was written; the count
+        // is the workload's, not the gate's, and it moves.)
         let synthesized: Vec<GameEvent> = if deaths.is_empty() && control_changes.is_empty() {
             Vec::new()
         } else {
@@ -17128,8 +17130,8 @@ impl GameState {
         // controller (CR 901.6), not its owner.
         // Lazily: `planar_controller` walks both planar decks and both
         // command zones, and only a face-up *plane* reads it. Every dispatch
-        // paid for it — 53,838 calls over six bench games — on a pool with no
-        // Planechase cards in it at all.
+        // paid for it — 43,754 calls over six bench games at the fifty-fourth
+        // tip — on a pool with no Planechase cards in it at all.
         let mut planar_controller: Option<usize> = None;
         for player in &self.players {
             for card in player.command.iter().filter(|c| c.command_zone_abilities_active()) {
@@ -17350,9 +17352,9 @@ impl GameState {
         //
         // Both levels need a tempted player, and the whole block is dead
         // without one: the `vec![false; n]` below is a zeroed allocation on
-        // *every* non-empty dispatch — 53,838 of them over six bench games —
-        // for a mechanic almost no game has in play. Gate the block, not the
-        // read (PERF, forty-third pass).
+        // *every* non-empty dispatch — 43,754 of them over six bench games at
+        // the fifty-fourth tip — for a mechanic almost no game has in play.
+        // Gate the block, not the read (PERF, forty-third pass).
         if self.players.iter().any(|p| p.ring_temptations >= 2) {
             let mut ring_blocked_done = vec![false; self.players.len()];
             for ev in events {

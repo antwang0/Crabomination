@@ -206,14 +206,33 @@ Note: Silverquill Penkeeper/Wordweaver and Witherbloom Necromancer above are
 | Spell Queller ✓ | modern.rs:15114 | counters instead of exile-until-LTB (opponent can't recast) |
 | Generous Gift ✓ | modern.rs:8226 | victim gets no 3/3 Elephant (strictly stronger) |
 
-### Other notable HIGH (doc-derived — confirm)
-Veil of Summer (✅ now wires the draw gate + uncounterable + lifegain-lock;
-only the hexproof-from-blue/black rider remains) · Approach of the Second Sun
-(✅ wins via `WinGame` — doc was stale) · ~~Heroic Intervention~~ ✅ (code
-already granted **both** hexproof + indestructible — only the in-code comment was
-stale; test now proves granted hexproof blocks opponent targeting) ·
-Fractal Tender (both triggers omitted) ·
-Pestilent Cauldron / Wandering Archaic (back faces).
+### Other notable HIGH — **all closed; every remaining entry here was stale**
+
+Re-checked against the code at the fifty-fourth pass, which is what this
+file's own "doc comments lie" caveat exists for. The four that still read as
+open were all shipped, three of them with tests already in the suite:
+
+- **Veil of Summer** — the hexproof rider is wired.
+  `Effect::GrantHexproofFromColorThisTurn` fills
+  `PlayerData::hexproof_from_colors_this_turn`, which the targeting-legality
+  checks read **for the player and their permanents** (`actions.rs`
+  10976-11042). Tests `veil_of_summer_draws_when_opponent_cast_blue_or_black`,
+  `veil_of_summer_grants_hexproof_from_blue_and_black`.
+- **Fractal Tender** — both triggers are wired: `increment_self_plus_one`
+  and the end-step Fractal on `Predicate::SourceGainedCounterThisTurn`.
+  Tests `fractal_tender_end_step_mints_fractal_when_gained_counter` and
+  `…_skips_when_no_counter_gained` (the second is what makes the first
+  non-vacuous).
+- **Pestilent Cauldron / Wandering Archaic** — both back faces are real
+  `back_face` definitions (Restorative Burst, Explore the Vastlands), not
+  comments. Tests `*_back_*_castable_from_hand` for each, plus
+  `explore_the_vastlands_digs_both_players_and_gains_three`.
+- **Approach of the Second Sun** and **Heroic Intervention** were already
+  marked stale here.
+
+The tier has no open entries. A future run adding one should say which
+audit pass found it (`audit_incomplete --structural-only` is the
+authoritative one, and it came back with a single triaged finding).
 
 ### Fixed this run (protection / keyword / copy primitives)
 Sublime Epiphany (CounterAbility + CreateTokenCopyOf modes) · Qasali Pridemage
