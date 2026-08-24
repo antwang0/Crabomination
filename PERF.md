@@ -85,6 +85,11 @@ python3 scripts/cg_lines.py cg.instr.out target/profiling-lines/bot_ladder \
 # says the program's 18,888 sorts are all `smallsort` and cost a fraction of
 # that. `cg_edges.py`'s call counts are the truth; the line profile is a
 # pointer.
+# Every listing `cg_edges.py` prints says what it truncated (the nineteenth
+# robustness filter) — and the first thing that reports is that **the top 45
+# self-cost rows are 68.5 % of the program and 1,150 rows hold the rest**. A
+# profile that diffuse is why the forty-ninth pass's wins came from counting
+# call rows, not from ranking by self cost.
 # Callers of `__rust_alloc`, ranked by *call count*, is the table that has
 # found the most: self cost lies about allocation — a function with 1.9 %
 # self can be 35 % of every malloc in the program. `cg_edges.py`'s "total Ir"

@@ -35,8 +35,9 @@ rebase mid-run and re-read your numbers afterwards.**
    never read from the top). **(-26) is closed and (-31) refuted this pass.**
 3. **Read `## Standing rules for a perf pass` below before profiling** —
    especially the do-not-rebuild list and the `cg_edges.py` share bug.
-4. **A nineteenth robustness filter is owed:** *a threshold or cap that
-   silently truncates a listing*. See the filter table.
+4. **A twentieth robustness filter is owed:** *a default that only one caller
+   ever exercises* (the inverse of the sixteenth). Filters 18 and 19 both
+   found real hits in the profiling scripts — see the filter table.
 
 ## Standing rules for a perf pass
 
@@ -202,6 +203,7 @@ closed, so none of them is re-derived.
 | 16 | 08-23 | A default no caller ever overrides | Clean in four readings; don't re-run — see below |
 | 17 | 08-23 | **A comment that names a call count or a share** | **Found five** across two concurrent runs. The share survives, the count rots. See below |
 | 18 | 08-23 | **A tool's own extraction step** | **Found two** (`ac85463f`), both in the profiling scripts: `cg_edges.py`'s total was ~18x high, `cg_lines.py` returned a silent zero. See below |
+| 19 | 08-24 | **A threshold or cap that silently truncates a listing** | **Found three** (`4107e017`), the same two scripts: top-40/45 tables and a 60 k-address resolution cap, all printed as if complete. See below |
 
 **A note the table would lose**: filters 3-5 and 7-10 are syntactic and
 found nothing between them. Filter 6 is not syntactic — it *runs* the
@@ -342,12 +344,25 @@ filter yields: every extraction step either agrees with a number its source
 computed itself, or refuses.** An extraction that yields nothing looks
 exactly like a measurement that found nothing.
 
-**A nineteenth filter is owed. The candidate:** *a threshold or cap that
-silently truncates a listing* — `callgrind_annotate --threshold`, this
-script's own `most_common(40)`, `--tree`'s caller block, `cg_lines`'
-`most_common(60000)`. Every one of them prints a table that looks complete.
-The standing rule (PERF's "No silent caps") is written for workflows and has
-never been applied to the tools.
+**The nineteenth filter was run 2026-08-24 and is NOT clean — three hits, all
+in the same two scripts.** *A threshold or cap that silently truncates a
+listing.* `cg_edges.py` printed its caller/callee tables at `most_common(40)`
+and its self-cost table at `most_common(45)`; `cg_lines.py` resolved only
+`most_common(60000)` addresses and printed `most_common(45)` lines. Every one
+stopped at its limit and read as finished — the shape behind pass 48's two
+fictional allocator leads. Each now reports the rows it dropped and the Ir or
+calls that went with them (`4107e017`).
+
+**The first thing that fell out of the fix is worth having on its own: the
+self-cost table's top 45 rows are 68.5 % of the program, and 1,150 rows hold
+the other 31.5 %.** A profile that diffuse is why pass 49's wins came from
+counting call rows rather than ranking by self cost.
+
+**A twentieth filter is owed. The candidate:** *a default that only one caller
+ever exercises* — the inverse of the sixteenth, which asked for defaults no
+caller overrides. A parameter or profile field with exactly one non-default
+caller is either a dead knob or an untested path, and both are worth knowing
+about before the next `EvalWeights` sweep.
 
 **Stall rate — CLOSED 2026-08-14, and the answer is "nothing to fix".**
 `419d2ea6` put `recommend::StopReason` on the outcome and a `stalls_by cap /
