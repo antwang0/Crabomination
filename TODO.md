@@ -62,7 +62,8 @@ rebase mid-run and re-read your numbers afterwards.**
    exhausted either.)
 7. **Owed housekeeping.** PERF 4.0k — the forty-sixth pass's profile table is
    the next fold. TODO 1.14k — the filter write-ups 12-20 are the compaction.
-   The actor-scaling sweep in the seed list has still never been run.
+   **Actor scaling is measured and closed** — linear to 4 cores (98.4 %
+   at `--threads 4`, mimalloc); see PERF. It says nothing about 8+ actors.
 
 ## Standing rules for a perf pass
 

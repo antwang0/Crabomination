@@ -2298,6 +2298,36 @@ adopting only when both agree. Server, ML and the scripted-decider tests are
 all in scope; this is a pass of its own, not a drive-by. `pick_land_to_play`'s
 934 probes (11.2 M) ride along on the same change and nothing else does.
 
+**ACTOR SCALING — measured 2026-08-24, and it is CLOSED at the scale this box
+can test.** The seed list has asked for "games/sec at 1, half, full actor
+counts — find contention if sublinear" since the candidates section was
+written, and nobody had run it. `release-fast` (mimalloc — the shipped
+allocator, which is the point: allocator contention is what a scaling sweep
+exists to find, and callgrind's system-allocator build cannot see it),
+`--a gang --b gang --games 400 --decks all --seed 11` = 6,800 games a run,
+thread counts alternated 1/2/4/4/2/1 in one sitting so host drift moves both
+ends. Best of two per count:
+
+```text
+threads   wall     games/s   per-thread   speedup   efficiency
+  1      100.4 s     67.7       67.7        1.00x      100 %
+  2       50.8 s    133.9       66.9        1.976x    98.8 %
+  4       25.5 s    266.7       66.7        3.937x    98.4 %
+host: Intel(R) Xeon(R) @ 2.10GHz, 4 cores, host_calib_ms 46
+```
+
+**Linear to the core count — there is no contention to find here.** What the
+sweep also shows is why it wants the alternating order: the two one-thread
+runs read 100.4 s and 112.6 s, a **12 % spread** on the same binary minutes
+apart, while the two four-thread runs differed by 0.8 %. The long runs drift
+more, so take the best of each pair, not the mean.
+
+**What this does not answer**, and the next run should not read it as if it
+did: four cores is the whole range this box has. A training host running 8,
+16 or 32 `selfplay_train` actors is asking a different question, and this
+sweep says nothing about it beyond "the game loop itself is not the shared
+resource". Re-run it on the box that matters before sizing an actor count.
+
 **(-34) `cast_candidates` READ FROM THE TOP at the fiftieth tip, and the
 answer is one function.** The entry that said "3.0 %, never read from the top"
 is closed: `cast_candidates` is **105,425,302 / 7.93 % over 7,238 calls**, and
