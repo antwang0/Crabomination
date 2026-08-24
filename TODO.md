@@ -36,9 +36,10 @@ numbers.**
 4. **Candidates:** (-38) `battlefield_find`'s three unclaimed sites (0.59 %);
    (-37) the ungated `computed()` arms (**cube only**); (-39) largely closed.
 5. **Top ML item is a training run, not code:** the vocab index is frozen
-   (`server::vocab_snapshot`) and shorter nets now pad, but the seven
-   committed deck nets predate the freeze and `vocab_fit` refuses them, so
-   `--use-deck-best` needs one deck net trained at the current vocab.
+   (`server::vocab_snapshot`), shorter post-freeze nets pad, and a throwaway
+   net proved `--use-deck-best` works end to end at **91.7 %** of the
+   unjudged rate (83.4 % last pass). What is missing is a *good* deck net —
+   the seven committed ones predate the freeze and `vocab_fit` refuses them.
 6. **Housekeeping.** TODO 0.9k, PERF 4.8k (47th folded; 45th/46th next).
    ENGINE_BACKLOG 4.9k / CARD_BACKLOG 4.2k still want a triage pass.
 
