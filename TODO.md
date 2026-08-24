@@ -23,36 +23,46 @@ rebase mid-run and re-read your numbers afterwards.**
 
 1. **Nothing is in flight. Tip `1,314,421,002` Ir.** Pass 50 reads
    `1,531,246,782 -> 1,314,421,002`, **-14.160 %** in five commits (A -6.958,
-   B -2.022, C -4.703, D -0.875, E -0.316). Suite 18,710 / 0 / 5 over 22
-   binaries, traces unchanged, clippy clean, `--bench` invariants
-   byte-identical (196,220 / 27.53 / 0 stalls / determinism ok), wide pool
-   clean (20,400 games, no panic, all 10,198 pairs split). **No net needs
-   retraining.**
-2. **Read PERF's new ranking rule first: *ask what is done twice*.** All five
+   B -2.022, C -4.703, D -0.875, E -0.316); pass 49 under it -5.785 %. Suite
+   18,712 / 0 / 5 over 22 binaries, traces unchanged, clippy clean, `--bench`
+   invariants byte-identical (196,220 / 27.53 / 0 stalls / determinism ok).
+   **No net needs retraining.**
+2. **A determinism bug the wide-pool sweep could not see is FIXED
+   (`c6898506`), and the sweep recipe changes because of it.** `restart_game`
+   (CR 727) rebuilt the state with `GameState::new`, whose `GameRng` is
+   `from_entropy` — so every game that *restarted* stopped being a function of
+   its seed, and the antithetic pairing broke on exactly those games. It hid
+   for 49 passes because the sweep only ever ran **three seeds at one thread
+   count**. **Run it as thirteen seeds across `--threads 1/2/3`**, and read
+   the sweep count, not just the panic count: in a `gang`-vs-`gang` mirror
+   every pair must split, so one sweep is a bug. `CRAB_PAIR_SWEEPS=1` names
+   the offending pair and prints the seed that replays it. Post-fix: 88,400
+   games, 88,382 decided, no panic, **all 42,391 pairs split**.
+3. **Read PERF's new ranking rule first: *ask what is done twice*.** All five
    rows are one class — `would_accept`'s dry run **is** the action, and the
    caller then performed it again. Invisible as a hot function; the tell is a
    validate-then-do pair.
-3. **`cg_lines.py` works now and did not before** — it annotated libc against
+4. **`cg_lines.py` works now and did not before** — it annotated libc against
    this binary's DWARF and hardcoded the PIE bias. Cross-check any line row
    against `cg_edges.py`'s call counts; a `profiling-lines` build is ~40 min.
-4. **Best next moves.** (-32), the class's last row: `main_phase_action_with`'s
+5. **Best next moves.** (-32), the class's last row: `main_phase_action_with`'s
    2,036 probes, 7.2 %, blocked on `Bot::next_action` carrying only an action
    and on the driver's live decider — its own pass. Then
    `dispatch_triggers_for_events` (5.60 % self, now readable per line), (-35)
    `evaluate_requirement_static` (2.52 % self / 182,532 calls), (-33), and
    `resolve_combat` at 55,816 Ir a combat. **`cast_candidates` is closed** —
    see (-34).
-5. **A twenty-first robustness filter is owed.** 18, 19, 20 and the re-run of
-   18 all landed in the *measuring devices*; aim the next one there too.
-6. **Owed housekeeping.** PERF 4.0k — the forty-sixth pass's profile table is
+6. **A twenty-second robustness filter is owed, and filter 21's bug names its
+   shape:** *state the harness installs that a rules path can reset*.
+   `restart_game`'s `*self = GameState::new(...)` dropped the seeded `rng`,
+   the live `decider` and two per-seat pilot flags, all of which are
+   simulator configuration rather than rules state. Anywhere the engine
+   rebuilds or replaces a whole struct, ask what the caller had put in it.
+   (18, 19, 20 all landed in the *measuring devices*; that vein is not
+   exhausted either.)
+7. **Owed housekeeping.** PERF 4.0k — the forty-sixth pass's profile table is
    the next fold. TODO 1.14k — the filter write-ups 12-20 are the compaction.
    The actor-scaling sweep in the seed list has still never been run.
-
-## Standing rules for a perf pass` below before profiling** —
-   especially the do-not-rebuild list and the `cg_edges.py` share bug.
-4. **A twentieth robustness filter is owed:** *a default that only one caller
-   ever exercises* (the inverse of the sixteenth). Filters 18 and 19 both
-   found real hits in the profiling scripts — see the filter table.
 
 ## Standing rules for a perf pass
 
@@ -220,6 +230,7 @@ closed, so none of them is re-derived.
 | 18 | 08-23 | **A tool's own extraction step** | **Found two** (`ac85463f`), both in the profiling scripts: `cg_edges.py`'s total was ~18x high, `cg_lines.py` returned a silent zero. See below |
 | 18b | 08-24 | filter 18 re-run on `cg_lines.py` (**a tool's own extraction step**) | **Found two more.** It folded every mapped object's addresses (libc, ld.so, libm — 16.5 % of the run) in with the binary's and hardcoded the PIE bias. 36 % of the run resolved to `??` and the rest to the wrong symbols; `Effect::clone` read 2.65 % against the 0.5 % its call edges account for. See below |
 | 20 | 08-24 | **A default that only one caller ever exercises** (the inverse of the sixteenth) | **Nearly clean — one hit.** 14 of 36 `EvalWeights` knobs have exactly one overriding profile; ten of those profiles carry an on/off test, four do not, and three of the four are correctly untested (a scoring weight, a historical control, a net-dependent blend). The fourth, `smart_tap`, was real engine behaviour with no test; it has one now. See below |
+| 21 | 08-24 | **An invariant checked at one point in its parameter space** | **Found a determinism bug** (`c6898506`). The wide-pool sweep had only ever run three seeds at one thread count; ten more seeds across `--threads 1/2/3` produced a self-mirror pair that did not split. `restart_game` (CR 727) rebuilt the state with `GameState::new`, whose `GameRng` is `from_entropy`. See below |
 | 19 | 08-24 | **A threshold or cap that silently truncates a listing** | **Found seven** across two concurrent runs — `cg_edges.py`'s three tables and `cg_lines.py`'s two caps (`4107e017`), plus `cg_symbolize.py`'s recommended `--threshold` and three ranked report tables in `bot_probe` / `selfplay_train` / `recommend_pool`. See below |
 
 **A note the table would lose**: filters 3-5 and 7-10 are syntactic and
@@ -324,6 +335,32 @@ unshare for 1.22 %" in the present tense when the number was the
 them on a `ColdState` field). **Five distinct sites between the two runs** —
 both caught the mana-source one independently — and the direction is the same
 in every one.
+
+**The twenty-first filter was run 2026-08-24 and is NOT clean — it found a
+determinism bug the suite, the golden traces and forty-nine passes of
+wide-pool sweeps had all missed.** *An invariant checked at one point in its
+parameter space.* The wide-pool sweep is `--decks all --games 400 --threads 3`
+on seeds 11/12/13, and it had never been run on another seed or another thread
+count. Ten more seeds found a self-mirror pair that did **not** split — which
+the pairing's own contract forbids, since a pair's two games are one game with
+the seats relabelled.
+
+The cause: `GameState::restart_game` (CR 727) rebuilds the state with
+`*self = GameState::new(players)` and copies back `next_id`, `attack_option`
+and `teams` — but not **`rng`**, and `GameState::new` installs
+`GameRng::default()`, which is `from_entropy`. Every game that *restarted*
+therefore stopped being a function of its seed from that point on.
+`decider`, `smart_tap` and `wants_ui` were dropped the same way and are
+carried back too. Fixed in `c6898506`; the regression test replays the exact
+pair on eight threads.
+
+**Two things worth keeping from the hunt.** The thread count was a red
+herring — it only changed how often a pair's two halves happened to draw the
+same entropy — so *the parameter that exposed a bug is not always the
+parameter that causes it*. And the tool that made it tractable was five
+minutes of work: `CRAB_PAIR_SWEEPS=1` on `bot_ladder` names the offending pair
+and prints the seed that replays it, which turned "somewhere in 68,000 games"
+into a 1.2-second test.
 
 **The structural fix is a rule, not six edits, and it is in CLAUDE.md's
 Performance section:** a profile number in a code comment carries the tip it
