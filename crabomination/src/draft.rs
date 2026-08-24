@@ -353,14 +353,14 @@ pub(crate) fn card_quality(def: &crate::card::CardDefinition) -> i32 {
 /// scorer is kept intact as the measurement control.
 pub(crate) fn score_card_quality(
     factory: CardFactory,
-    seat_colors: &HashMap<Color, u32>,
+    seat_colors: &ColorCounts,
 ) -> i32 {
     score_card_with_colors(factory, seat_colors) + card_quality(crate::cube::card_def(factory))
 }
 
 pub(crate) fn score_card_with_colors(
     factory: CardFactory,
-    seat_colors: &HashMap<Color, u32>,
+    seat_colors: &ColorCounts,
 ) -> i32 {
     let def = crate::cube::card_def(factory);
     let mut score: i32 = 0;
@@ -394,7 +394,7 @@ pub(crate) fn score_card_with_colors(
         let mut off_color_pips = 0i32;
         for c in card_colors {
             let pips = colored_pip_count(&def.cost, c) as i32;
-            if seat_colors.get(&c).copied().unwrap_or(0) > 0 {
+            if seat_colors.get(c) > 0 {
                 on_color_pips += pips;
             } else {
                 off_color_pips += pips;
@@ -462,16 +462,59 @@ pub fn bot_pick(pack: &[CardFactory], seat_picks_so_far: &[CardFactory]) -> Opti
     Some(best_idx)
 }
 
+/// Colored-pip totals per color, WUBRG-indexed.
+///
+/// Was a `HashMap<Color, u32>`. The sealed builder computes one per scored
+/// pile and then reads it once per pip per scored card, so the map cost an
+/// allocation per pile plus a hash probe per read — 12.1 % of a twelve-deck
+/// build sat in `colors_of_picks` alone at the fifty-third tip. Five `u32`s
+/// answer both for free, and the WUBRG layout takes a `HashMap` iteration
+/// order out of [`top_two_colors`]' tie-break.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct ColorCounts([u32; 5]);
+
+impl ColorCounts {
+    const fn idx(c: Color) -> usize {
+        match c {
+            Color::White => 0,
+            Color::Blue => 1,
+            Color::Black => 2,
+            Color::Red => 3,
+            Color::Green => 4,
+        }
+    }
+
+    pub fn get(&self, c: Color) -> u32 {
+        self.0[Self::idx(c)]
+    }
+
+    pub fn add(&mut self, c: Color, n: u32) {
+        self.0[Self::idx(c)] += n;
+    }
+
+    /// True when no pick contributed a colored pip. Matches the old
+    /// `HashMap::is_empty`: every entry it held was ≥ 1, because a color
+    /// only reached it via a symbol that referenced it.
+    pub fn is_empty(&self) -> bool {
+        self.0.iter().all(|n| *n == 0)
+    }
+
+    /// Every color with its total, in WUBRG order — including zeros.
+    pub fn iter(&self) -> impl Iterator<Item = (Color, u32)> + '_ {
+        Color::ALL.into_iter().map(|c| (c, self.get(c)))
+    }
+}
+
 /// Distribution of colored pips across a seat's picks, used by
 /// `score_card_for_seat` to detect which colors the seat is committed
 /// to. Lands and colorless cards don't contribute (they don't signal
 /// color preference).
-pub fn colors_of_picks(picks: &[CardFactory]) -> HashMap<Color, u32> {
-    let mut totals: HashMap<Color, u32> = HashMap::default();
+pub fn colors_of_picks(picks: &[CardFactory]) -> ColorCounts {
+    let mut totals = ColorCounts::default();
     for factory in picks {
         let def = crate::cube::card_def(*factory);
         for c in colors_of_cost(&def.cost) {
-            *totals.entry(c).or_insert(0) += colored_pip_count(&def.cost, c);
+            totals.add(c, colored_pip_count(&def.cost, c));
         }
     }
     totals
@@ -568,9 +611,13 @@ pub fn suggest_main_deck(picks: &[CardFactory], target_spells: usize) -> (Vec<Ca
 /// Two strongest colors in `picks`, by total colored-pip weight.
 /// Falls back to (W, U) if the seat has fewer than two colors
 /// represented (e.g. a pile of all-colorless cards).
+///
+/// Ties break in WUBRG order. They used to break in `HashMap` bucket
+/// order, which is deterministic for a fixed hasher but is not a fact
+/// about the picks.
 pub fn top_two_colors(picks: &[CardFactory]) -> [Color; 2] {
     let totals = colors_of_picks(picks);
-    let mut v: Vec<(Color, u32)> = totals.into_iter().collect();
+    let mut v: Vec<(Color, u32)> = totals.iter().collect();
     v.sort_by_key(|(_, weight)| std::cmp::Reverse(*weight));
     let primary = v.first().map(|(c, _)| *c).unwrap_or(Color::White);
     let secondary = v
@@ -1256,7 +1303,7 @@ impl DraftPod {
             let pick = Color::ALL
                 .into_iter()
                 .filter(|c| !chosen.contains(c))
-                .max_by_key(|c| weights.get(c).copied().unwrap_or(0))
+                .max_by_key(|c| weights.get(*c))
                 .expect("five colors, at most two chosen");
             chosen.push(pick);
         }
