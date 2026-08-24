@@ -683,17 +683,15 @@ struct Shared {
 
 const DECK_WINDOW_CAP: usize = 200_000;
 
-/// The one place a stored deck net is checked against the live encoder.
+/// The one place a stored deck net is read — the play net has `load_slot`,
+/// and this is its counterpart. Four call sites repeated read + load +
+/// check, which is how they came to disagree on the diagnosis.
 ///
-/// Four call sites spelled this out as a bare `assert_eq!` on two integers,
-/// which is a hard failure with no diagnosis — and it is a failure the
-/// repository is currently *in*: all seven committed `deck-latest`
-/// checkpoints are 153 against a live vocab of 164. The cause is
-/// structural, not a bug in the net: `Vocab::sos_sealed()` is built from
-/// `draft::sos_draft_pool()`, so **adding a card to the SOS set grows the
-/// vocabulary and retires every net trained before it**. The message says
-/// so, because the two counts on their own read as corruption.
-fn check_deck_net_vocab(net: &mut DeckNet, vocab: &Vocab, path: &std::path::Path) {
+/// `why` is what the caller wanted the net for; it goes in the message
+/// when the file is missing.
+fn load_deck_net(path: &std::path::Path, vocab: &Vocab, why: &str) -> DeckNet {
+    let bytes = std::fs::read(path).unwrap_or_else(|e| panic!("{}: {e} ({why})", path.display()));
+    let mut net = DeckNet::load(&bytes).unwrap_or_else(|e| panic!("{}: {e:?}", path.display()));
     let (have, want) = (net.vocab_size(), vocab.size());
     if let Err(e) = crabomination::server::vocab_snapshot::vocab_fit(have, want) {
         panic!("{}: {e}", path.display());
@@ -709,6 +707,7 @@ fn check_deck_net_vocab(net: &mut DeckNet, vocab: &Vocab, path: &std::path::Path
             want - have,
         );
     }
+    net
 }
 
 fn actor_loop(shared: &Shared, args: &Args, vocab: &Vocab, deck_judge: Option<&DeckNet>, mcts: bool) {
@@ -986,10 +985,7 @@ fn parallel_pools<T: Send>(
 fn gate_builder(args: &Args, vocab: &Vocab, games_per_pool: usize) {
     use crabomination::recommend::{Pilot, simulate_match_games_piloted};
     let path = args.out.join("deck-latest.safetensors");
-    let bytes = std::fs::read(&path)
-        .unwrap_or_else(|e| panic!("{}: {e} (train a deck net first)", path.display()));
-    let mut net = DeckNet::load(&bytes).expect("deck net loads");
-    check_deck_net_vocab(&mut net, vocab, &path);
+    let net = load_deck_net(&path, vocab, "train a deck net first");
     const POOLS: u64 = 12;
     const CANDS: usize = 32;
     println!(
@@ -1058,10 +1054,7 @@ fn distill_gen(args: &Args, vocab: &Vocab, n_decks: usize) {
     use crabomination::cube::CardFactory;
     use crabomination::recommend::{Pilot, simulate_match_games_piloted};
     let path = args.out.join("deck-latest.safetensors");
-    let bytes = std::fs::read(&path)
-        .unwrap_or_else(|e| panic!("{}: {e} (need a deck net for the search variants)", path.display()));
-    let mut net = DeckNet::load(&bytes).expect("deck net loads");
-    check_deck_net_vocab(&mut net, vocab, &path);
+    let net = load_deck_net(&path, vocab, "need a deck net for the search variants");
     const FIELD: u64 = 20;
     const GAMES_PER_FIELD_DECK: usize = 12; // 240 games per labelled deck
     let field: Vec<Vec<CardFactory>> = (0..FIELD)
@@ -1215,10 +1208,7 @@ fn distill_train(args: &Args, vocab: &Vocab) {
 fn gate_builder_hc(args: &Args, vocab: &Vocab, games_per_pool: usize) {
     use crabomination::recommend::{Pilot, simulate_match_games_piloted};
     let path = args.out.join("deck-latest.safetensors");
-    let bytes = std::fs::read(&path)
-        .unwrap_or_else(|e| panic!("{}: {e} (train a deck net first)", path.display()));
-    let mut net = DeckNet::load(&bytes).expect("deck net loads");
-    check_deck_net_vocab(&mut net, vocab, &path);
+    let net = load_deck_net(&path, vocab, "train a deck net first");
     const POOLS: u64 = 12;
     const CANDS: usize = 32;
     const PASSES: usize = 6;
@@ -1586,9 +1576,7 @@ fn main() {
     }
     // The gate-passed build net, if the run wants its decks judged.
     let deck_judge: Option<DeckNet> = args.use_deck_best.as_ref().map(|p| {
-        let bytes = std::fs::read(p).unwrap_or_else(|e| panic!("{}: {e}", p.display()));
-        let mut net = DeckNet::load(&bytes).expect("deck net loads");
-        check_deck_net_vocab(&mut net, &vocab, p);
+        let net = load_deck_net(p, &vocab, "the deck judge for --use-deck-best");
         eprintln!("actors build decks with the net from {}", p.display());
         net
     });
