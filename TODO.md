@@ -25,12 +25,12 @@ rebase mid-run and re-read your numbers afterwards.**
    invisible on the bench: the per-card grant walk (49 % of a *cube* game) and
    deck construction (96 % of a deck build; a `selfplay_train` actor builds
    two decks a game). Read PERF's **"Which pool a change moves"** before
-   ranking anything. Tip: fixed 1,258,304,569 / cube 4,048,597,048 / sos
-   1,767,928,050 / sealed 3,600,052,980 / deck-build 118,357,325.
-2. **`selfplay_train` throughput 26.1 -> 85.6 games/s** (release-fast,
-   mimalloc, 3 actors, alternated). **No net retrain** — decks per seed are
-   byte-identical, ladder output diffs exactly.
-3. **Top candidates now: (-39)** the deck builder's residual 118 M (27 % of it
+   ranking anything. Tip: fixed 1,250,411,872 / cube 4,026,159,406 / sos
+   1,760,194,418 / sealed 3,572,358,157 / deck-build 111,936,472.
+2. **`selfplay_train` throughput 26.1 -> 92.6 games/s, 3.55x** (release-fast,
+   mimalloc, 3 actors, 900 games, alternated). **No net retrain** — decks per
+   seed are byte-identical, ladder output diffs exactly.
+3. **Top candidates now: (-39)** the deck builder's residual 112 M (~22 % of it
    is `card_def`'s own lookup — the fix is resolving a pool's definitions once
    into a `Vec<Arc<CardDefinition>>`, ~4 % of actor work); **(-38)**
    `battlefield_find` 4.03 %, of which `all_damage_to_player_prevented` is

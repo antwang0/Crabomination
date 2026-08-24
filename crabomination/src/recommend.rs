@@ -366,7 +366,7 @@ pub fn suggest_main_deck_in_colors<R: Rng>(
             let def = crate::cube::card_def(f);
             let fix = if fixing_bonus > 0
                 && !def.card_types.contains(&crate::card::CardType::Land)
-                && is_fixing_card(&def)
+                && is_fixing_card(def)
             {
                 fixing_bonus
             } else {
@@ -632,7 +632,7 @@ fn assemble_lands(
         if !def.card_types.contains(&CardType::Land) {
             return true;
         }
-        let produced = land_produced_colors(&def);
+        let produced = land_produced_colors(def);
         let on_color = produced.iter().filter(|c| colors.contains(c)).count();
         if on_color >= 2 && on_color == produced.len() {
             duals.push(f);
@@ -2758,7 +2758,7 @@ mod tests {
         let main = five_bolts_six_angels();
         let colors = colors_of_picks(&main);
         let quality: i32 =
-            main.iter().map(|&f| crate::draft::card_quality(&crate::cube::card_def(f))).sum();
+            main.iter().map(|&f| crate::draft::card_quality(crate::cube::card_def(f))).sum();
         assert!(quality > 0, "Serra Angel's flying body must count for something");
         assert_eq!(
             static_build_score_v3(&main, main.len()),

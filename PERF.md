@@ -318,23 +318,24 @@ it.
 ## Baseline
 
 **Fifty-third pass, base `d37f31d8` (pass 52's tip) vs its own tip
-`1ba3e76b`**, both `profiling-fast --no-default-features`, built and run in
-one sitting on one box. Six commits, two classes: **the requirement walker
-takes the permanent its caller is holding**, and **the per-card grant walks
-run under one freeze scope** — plus the pass's separate finding, that
-**deck construction was five games' worth of work per deck**.
+`867de7bb`**, both `profiling-fast --no-default-features`, built and run in
+one sitting on one box. Nine commits, three classes: **the requirement walker and its
+family take the permanent the caller is holding**, **the per-card grant
+walks run under one freeze scope**, and **deck construction stops
+rebuilding a `CardDefinition` per property read** — it was five games'
+worth of work per deck.
 
 **This block reads four pools, not one.** See "Which pool a change moves":
 the two largest wins are invisible on `--decks fixed`, which is why they
 survived fifty-two passes.
 
 ```text
-                     base (d37f31d8)     tip (1ba3e76b)
-I refs, --decks fixed    1,265,405,219   1,258,304,569   -0.561 %
-I refs, --decks cube     7,962,354,254   4,048,596,760  -49.153 %
-I refs, --decks sos      1,771,650,597   1,767,928,692   -0.210 %
-I refs, --decks sealed   6,408,608,519   3,599,906,549  -43.830 %
-deck build alone         2,915,219,820     118,457,567  -95.937 %
+                     base (d37f31d8)     tip (867de7bb)
+I refs, --decks fixed    1,265,405,219   1,250,411,872   -1.185 %
+I refs, --decks cube     7,962,354,254   4,026,159,406  -49.436 %
+I refs, --decks sos      1,771,650,597   1,760,194,418   -0.647 %
+I refs, --decks sealed   6,408,608,519   3,572,358,157  -44.257 %
+deck build alone         2,915,219,820     111,936,472  -96.160 %
   (--decks sealed --games 1: 0 games played, all setup)
 
 decisions                196,220         196,220        byte-identical
@@ -342,8 +343,10 @@ turns_per_game           27.53           27.53
 stalls                   0 (0.00 %), cap 0 / stuck 0 / draw 0 (both)
 determinism              ok (all pairs split, both)
 peak_rss_mib             21.8            21.9
-ladder output            `--decks cube` / `sos` / `sealed` full printout
-                         diffs identically base vs tip
+ladder output            all four pools' full printout diffs identically
+                         base vs tip (the strongest behaviour check here:
+                         it covers the decks a seed builds, not just the
+                         games they play)
 suite                    18,712 passed / 0 failed / 5 ignored over 22 binaries
 golden traces            all unchanged
 clippy                   `--workspace --all-targets` clean
@@ -372,10 +375,11 @@ mimalloc), `selfplay_train --actors 3 --games 120 --steps 1 --seed 7`,
 alternated A/B/A/B in one sitting:
 
 ```text
+--actors 3 --games 900 --steps 1 --seed 7
               run 1     run 2
-base          26.1/s    25.0/s
-tip           85.6/s    85.6/s          3.28x on best-of-two
-rows          11,826 / 11,796           11,760 / 11,850
+base          25.6/s    26.1/s
+tip           92.6/s    88.5/s          3.55x on best-of-two
+rows          87,762 / 88,139           87,944 / 87,661
 ```
 
 (The row counts vary by ~0.5 % *within* a binary as well as across — the
@@ -393,6 +397,8 @@ Per commit, `--decks fixed` unless the row says otherwise:
 | E `67809f9f` | deck build 2,910,408,580 -> 176,120,671 (**-93.95 %**) | `cube::card_def` memoizes `CardFactory` -> `CardDefinition`; sealed -42.78 % |
 | F `16f03d27` | deck build 176,120,671 -> 118,357,325 (**-32.80 %**) | `const` TLS + `colors_of_cost` returns a `ColorSet`; sealed -1.58 % |
 | G `1ba3e76b` | cube 4,172,623,506 -> 4,048,597,048 (**-2.97 %**) | the third grant walk, `fire_spell_cast_triggers`; fixed +0.007 % |
+| H `4a951123` | 1,258,304,569 -> 1,250,618,001 (**-0.611 %**) | `all_damage_to_player_prevented` walked the board once per controlled permanent; `bot::permanent_value` re-found the card `eval_material_inner` was holding. Every pool: sealed -0.568 %, cube -0.524 %, sos -0.424 % |
+| I `867de7bb` | deck build 118,457,567 -> 111,936,472 (**-5.51 %**) | `card_def` hands back a leaked `&'static` — the `Arc` was an atomic pair per lookup over 487,071 lookups a build |
 
 **No net needs retraining.** No encoding, pool, `TrainRow`, `EncodedState`
 or `Vocab` change is in this pass, and the decks a seed builds are
@@ -1163,7 +1169,7 @@ the table above is safe to compress:
 
 ### Fifty-third pass — the bench's own pool cannot see the two largest costs in the simulator
 
-Six commits, two classes, and the pass's real finding is the measuring
+Nine commits, three classes, and the pass's real finding is the measuring
 device: **`--decks fixed` is blind to the grant/layer path and to deck
 construction, and those were 49 % of a cube game and 96 % of a deck build.**
 Read "Which pool a change moves" above before ranking anything from a
@@ -1256,16 +1262,35 @@ each doing a lazy-init check) and `Vec::from_iter` 12.84 % —
 per colour shape, 253,333 of them. `const`-initialized `thread_local!` and
 `ColorSet`. Across (D) and (E): **242.5 M -> 9.9 M Ir per pool+build, 24.5x.**
 
-**What is left of the deck builder, for whoever takes it next**: 118 M for
-twelve builds, of which `LocalKey::with` is still **27 %** — the memo's own
-hash lookup, 66 Ir a call over 487,071 calls. The structural answer is for
+**(F2) `867de7bb` — the memo hands back a leaked `&'static`, not an `Arc`.
+Deck construction -5.51 % again.** The cached definition is already immortal,
+so the `Arc` was buying nothing and costing an atomic pair per lookup over
+487,071 lookups a build. The bound on leaking is one definition per factory
+*actually asked for* — the pool in play, not the 22.5 k catalog, because the
+deck builders are the only callers.
+
+**(G) `4a951123` — two helpers that re-find a permanent the caller already
+walked past. `fixed` -0.611 %, and every pool moves** (sealed -0.568 %, cube
+-0.524 %, sos -0.424 %). `all_damage_to_player_prevented` collected the
+controlled ids into a `Vec` and then `battlefield_find`'d each one back,
+inside a method that is `&self` throughout; `bot::permanent_value` opens with
+`battlefield_find` and `eval_material_inner` — 31,666 of its 34,892 calls —
+asks it from inside `for c in &state.battlefield`. **The delta is bigger than
+the two line rows predicted (0.35 %), because the line profile charges each
+site only its *own* instructions: the scan's loads and the `Arc` deref per
+element land in `slice::iter`'s rows.** Read a `battlefield_find` row as a
+floor, not an estimate.
+
+**What is left of the deck builder, for whoever takes it next**: 112 M for
+twelve builds, of which the memo's own lookup is still ~25 M — a hash probe
+per read over 487,071 reads a build. The structural answer is for
 the builder to resolve a pool's definitions **once** into a
 `Vec<Arc<CardDefinition>>` and index it, rather than looking each up by
 function pointer; that is a signature change across `draft.rs` /
 `recommend.rs` and was not attempted here. It is worth ~4 % of an actor's
 per-game work, not more.
 
-**Behaviour, all six commits.** `--bench` byte-identical at every step
+**Behaviour, all nine commits.** `--bench` byte-identical at every step
 (196,220 decisions, 27.53 turns/game, 0 stalls, determinism ok); the full
 `--decks cube` / `--decks sos` / `--decks sealed` ladder output at the tip
 diffs **identically** against the pass base, so the decks a seed builds and
@@ -2765,15 +2790,15 @@ decks a game). "Which pool a change moves" at the top of this file is the
 device; the short version is that `--decks fixed` carries no
 `GrantTriggeredAbility` static and builds its decks once.
 
-**(-39) THE DECK BUILDER — 118 M Ir for twelve pools + twelve builds after
-the fifty-third pass took it from 2.91 G, and it is still ~29 % of what a
+**(-39) THE DECK BUILDER — 112 M Ir for twelve pools + twelve builds after
+the fifty-third pass took it from 2.91 G, and it is still ~28 % of what a
 `selfplay_train` actor does per game.** Two builds and two pools a game at
-~9.9 M each, against ~48 M for the game. What is left, by self cost of
+~9.3 M each, against ~48 M for the game. What is left, by self cost of
 `--decks sealed --games 1`:
 
 | row | Ir | % | note |
 |---|---|---|---|
-| `LocalKey::with` | 31,965,647 | **27.0** | `card_def`'s own lookup: 487,071 calls at 66 Ir. The `const` TLS init did not move it, so this is the `HashMap` probe + `RefCell` + `Arc` bump, not the lazy check |
+| `LocalKey::with` | ~25,400,000 | **~22** | `card_def`'s own lookup: 487,071 calls. Neither the `const` TLS init nor dropping the `Arc` for a leaked `&'static` moved it much, so what is left is the `HashMap` probe itself |
 | `colors_of_picks` | 14,271,427 | 12.1 | 1,732 calls at 8,240 Ir — walks every pick and asks `card_def` per pick (110,053 of the 487,071) |
 | `build_shape` | 9,957,982 | 8.4 | 86,714 `card_def` calls of its own, mostly the `land_colors` loop |
 | `score_card_with_colors` | 9,918,390 | 8.4 | 44,849 calls |

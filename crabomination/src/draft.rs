@@ -181,7 +181,7 @@ pub fn generate_sos_pack<R: Rng>(pool: &[CardFactory], rng: &mut R) -> Vec<CardF
             continue;
         }
         let def = crate::cube::card_def(*factory);
-        by_bucket.entry(sos_bucket_of(&def)).or_default().push(i);
+        by_bucket.entry(sos_bucket_of(def)).or_default().push(i);
     }
     let mut used: crate::fxhash::HashSet<usize> = crate::fxhash::HashSet::default();
     let mut pack: Vec<CardFactory> = Vec::with_capacity(PACK_SIZE);
@@ -355,7 +355,7 @@ pub(crate) fn score_card_quality(
     factory: CardFactory,
     seat_colors: &HashMap<Color, u32>,
 ) -> i32 {
-    score_card_with_colors(factory, seat_colors) + card_quality(&crate::cube::card_def(factory))
+    score_card_with_colors(factory, seat_colors) + card_quality(crate::cube::card_def(factory))
 }
 
 pub(crate) fn score_card_with_colors(
@@ -1579,7 +1579,7 @@ mod tests {
             let pack = generate_sos_pack(&pool, &mut rng);
             for f in &pack {
                 let def = crate::cube::card_def(*f);
-                *bucket_totals.entry(sos_bucket_of(&def)).or_insert(0) += 1;
+                *bucket_totals.entry(sos_bucket_of(def)).or_insert(0) += 1;
             }
         }
         // Each mono-color quota is 2 per pack × 100 packs = 200, but
