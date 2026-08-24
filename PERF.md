@@ -1386,6 +1386,26 @@ was 1.49 % under `score_card_with_colors`. `zip(self.0)` copies the
 twenty-byte array into the iterator at every `iter()` call, and `is_empty`
 as an array compare loses the short-circuit. Reverted.
 
+**REFUTED after the pass's own commits, and it corrects a ranking rule this
+file has been quoting since the forty-eighth: a freeze scope around
+`eval_material_inner`'s board walk, +0.018 % and zero gathers removed.**
+`computed_permanent`'s caller table said `bot::permanent_value_with` was
+13,792 calls at **1,476 Ir each**, and the rule reads "Ir/call is the tell —
+~2,000 is a gather, ~300 a memo hit", so that looked like a walk paying a
+whole-game gather per permanent. It is not: `eval_material` already runs
+inside an outer scope, and `gather_continuous_effects_inner`'s call count is
+**33,766 before and 33,766 after** — byte-identical. What the 1,476 buys is
+`apply_layers_one` per permanent, which a memo hit does not avoid (this file
+already records that it "spans ~760 to ~2,200 Ir").
+
+**So the tell is unreliable and the count is not.** Before costing a freeze
+scope, read `cg_edges.py --callers gather_continuous_effects_inner` and
+check the total actually moves; a high Ir/call can be a memo hit plus a
+layer pass just as easily as a gather. At the fifty-fourth tip 20,374 of
+`computed_permanent`'s 93,918 calls gather, for 40,374,824 Ir / 3.22 %, and
+which callers those 20,374 belong to is **not answerable from a one-level
+caller table** — that is the open question this entry leaves.
+
 **What is left of the build, at 34.9 M.** `score_card_with_colors` 12.3 %
 (44,849 calls at ~74 Ir, and the refutation above is what a first attempt on
 it costs), the allocator family ~11 %, `build_shape`'s residual ~12 %,
