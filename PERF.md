@@ -340,7 +340,85 @@ it.
 
 ## Baseline
 
-**Fifty-fourth pass, base `4369a0d6` (pass 53's tip) vs its own tip
+**Fifty-fifth pass, base `bf4917a5` (pass 54's tip) vs its own tip
+`f22eb02d`.** One commit: **the requirement walker's subtype arms stop
+gathering where the printed line answers.** Ir readings `profiling-fast
+--no-default-features`, callgrind, one thread, `--a gang --b gang --games 6
+--seed 1` unless the row says otherwise.
+
+```text
+                          base (bf4917a5)   tip (f22eb02d)
+I refs, --decks cube        4,012,095,058   3,332,029,985  -16.95 %
+I refs, --decks fixed       1,248,407,927   1,249,622,086   +0.097 %
+I refs, --decks sos         1,760,442,504   1,761,529,321   +0.062 %
+I refs, --decks sealed      3,497,162,303   3,500,013,528   +0.082 %
+deck build alone               34,506,869      34,859,382   +1.02 %
+  (--decks sealed --games 1: 0 games played, all setup)
+```
+
+**The deck-build row is layout, and the profile says so rather than the
+usual hand-wave.** `creature_type_change_in_scope` and
+`land_type_change_in_scope` do not appear in that dump at all — the deck
+builder never reaches the requirement walker — and the whole +352,513 sits
+in `LocalKey::with` (207 attributed calls before, 4,850 after), i.e. the
+`card_def` front cache inlining differently under a bigger binary. Check
+the callee before blaming a row like this; here it cost one `cg_edges.py`
+run to rule out.
+
+```text
+decisions        196,220 -> 196,220        byte-identical
+turns_per_game   27.53   -> 27.53
+stalls           0 (0.00 %), cap 0 / stuck 0 / draw 0 (both)
+determinism      ok (all pairs split, both)
+suite            18,716 passed / 0 failed / 5 ignored over 22 binaries
+golden traces    all unchanged
+clippy           `--workspace --all-targets` clean
+rustc            1.95.0 (59807616e 2026-04-14)
+host_cpu         Intel(R) Xeon(R) Processor @ 2.10GHz, 4 cores
+```
+
+**Wall clock, and it is a third of the Ir.** `release-fast` + mimalloc, 600
+games / 1 thread / seed 1, best-of-three alternated A/B/A/B/A/B:
+
+```text
+              base      tip
+--decks cube  55.49 s   51.72 s   -6.8 %
+--decks sos   31.99 s   31.30 s   (inside the drift; +0.062 % in Ir)
+```
+
+The gap is the pass-54 caveat again: a sixth of the Ir saved is the
+allocator family, callgrind runs the *system* allocator, and mimalloc ships.
+Quote both numbers or neither.
+
+**`--bench`, the committed throughput configuration** (`release` + mimalloc,
+3 threads), three readings at the tip:
+
+```text
+games_per_s      263.60 / 270.56 / 255.92   best 270.56  (pass 54 tip: 269.41)
+decisions        196,220 on all three
+turns_per_game   27.53
+peak_rss_mib     30.2 / 30.1 / 28.3
+host_calib_ms    65 / 68 / 65
+```
+
+**Flat, and it has to be.** `--bench` is `--decks fixed`, +0.097 % in Ir; the
+5.7 % spread across three back-to-back runs of *one* binary is this file's
+standing warning about `--bench` absolutes, restated. No base binary was
+built at `release` for this pass — the Ir column is the attribution and the
+release-fast pair above is the wall-clock claim.
+
+**Crash-freedom and determinism at the tip.** `release`, `--a gang --b gang
+--games 200 --threads 3 --decks all`, seeds 11/12/13: every cell **3,400
+decided, 0 undecided, no panic, all 1,700 pairs split** — 10,200 games and
+5,100 pairs. `CRAB_THREAD_CHECK=1 --bench` reads **`thread_determinism ok
+(3 vs 1 threads identical)`**.
+
+**No net needs retraining.** No encoding, pool, `TrainRow`, `EncodedState`
+or `Vocab` change is in this pass.
+
+### The fifty-fourth pass's baseline
+
+**Base `4369a0d6` (pass 53's tip) vs its own tip
 `e1cbc390`.** Nine commits in two classes: **deck construction stops
 re-deriving what a memoized definition already answers** (seven), and **two
 gathers that nobody read** (two, found with a measuring device this pass
@@ -1370,13 +1448,26 @@ the table above is safe to compress:
 
 ### Fifty-fifth pass — the requirement walker's subtype arms stop gathering
 
-One commit, one workload boundary: **`--decks cube` 4,030,238,529 ->
-3,348,336,142 Ir, -16.92 %**, against `fixed` +0.097 % and `sos` +0.058 %.
+One commit, base `bf4917a5`, one workload boundary:
+
+```text
+                  base (bf4917a5)   tip (f22eb02d)
+--decks cube        4,012,095,058    3,332,029,985   -16.95 %
+--decks fixed       1,248,407,927    1,249,622,086    +0.097 %
+--decks sos         1,760,442,504    1,761,529,321    +0.062 %
+computed_permanent        680,960          267,116     calls
+```
+
 Wall clock, `release-fast` + mimalloc, 600 games / 1 thread / seed 1,
 best-of-three alternated: cube **55.49 s -> 51.72 s, -6.8 %**; sos 31.99 ->
 31.30 (-2.2 %, inside the drift); `--bench` 248.90 -> 255.08 games/s.
-`decisions` 196,220 both sides, every ladder outcome identical, suite 18,716
-passed / 0 failed / 5 ignored.
+`decisions` 196,220 and `turns_per_game` 27.53 both sides, every ladder
+outcome identical, suite 18,716 passed / 0 failed / 5 ignored.
+
+**The Ir readings were taken twice**, once at `66304712` and again after a
+rebase onto `bf4917a5` — the concurrent session moved the base under this
+pass mid-flight. The deltas are the same to two decimal places (-16.92 vs
+-16.95), which is the useful part: the win does not depend on that base.
 
 **Candidate (-37), and the number it was ranked on was low.** The entry
 sized the four ungated `computed()` arms at `computed_permanent`'s 4.14 % +
@@ -1399,7 +1490,9 @@ pair off the *stored* set — so with none in scope, printed is computed.
 `computed_permanent` drops 680,960 -> 267,116 calls; the savings land as
 `gather_continuous_effects_inner` -118.5 M, `compute_permanent_pass` -74.8 M,
 `affected_includes_gated` -34.5 M, `compute_permanent` -25.6 M and
--160 M across the allocator family.
+-160 M across the allocator family (the `66304712` reading; the split is the
+same after the rebase). **A sixth of that is allocator**, so read the wall
+clock — -16.9 % Ir is -6.8 % with mimalloc, the pass-54 caveat again.
 
 **Two things the pass got wrong first, and both are general.**
 
