@@ -2103,8 +2103,13 @@ pub fn augur_of_bolas() -> CardDefinition {
     }
 }
 
-/// Pestermite — {2}{U}, 2/1 Faerie with Flash and Flying. ETB: you may tap
-/// target permanent. It doesn't untap during its controller's next untap step.
+/// Pestermite — {2}{U}, 2/1 Faerie with Flash and Flying. "When this creature
+/// enters, you may tap **or untap** target permanent."
+///
+/// Both riders were wrong before: the mode choice was collapsed to Tap, and a
+/// `SkipNextUntap` was attached that the card does not print at all — that is
+/// Sower of Temptation's neighbourhood, not Pestermite's, and it made the
+/// card strictly stronger than the real one.
 pub fn pestermite() -> CardDefinition {
     CardDefinition {
         name: "Pestermite",
@@ -2119,14 +2124,12 @@ pub fn pestermite() -> CardDefinition {
         keywords: vec![Keyword::Flash, Keyword::Flying],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-            effect: Effect::Seq(vec![
-                Effect::Tap {
+            effect: Effect::MayDo {
+                description: "Tap or untap target permanent?".into(),
+                body: Box::new(Effect::TapOrUntap {
                     what: target_filtered(SelectionRequirement::Permanent),
-                },
-                Effect::SkipNextUntap {
-                    what: Selector::Target(0),
-                },
-            ]),
+                }),
+            },
         }],
         ..Default::default()
     }

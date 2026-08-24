@@ -35654,8 +35654,14 @@ pub fn bounding_krasis() -> CardDefinition {
         power: 3,
         toughness: 3,
         keywords: vec![Keyword::Flash],
-        triggered_abilities: vec![etb(Effect::Tap {
-            what: target_filtered(SelectionRequirement::Creature),
+        // "you may tap **or untap** target creature" — the mode was collapsed
+        // to Tap, which cost the untap half (a Krasis flashed in on your own
+        // turn untaps a blocker's worth of mana or a summoning-sick attacker).
+        triggered_abilities: vec![etb(Effect::MayDo {
+            description: "Tap or untap target creature?".into(),
+            body: Box::new(Effect::TapOrUntap {
+                what: target_filtered(SelectionRequirement::Creature),
+            }),
         })],
         ..Default::default()
     }

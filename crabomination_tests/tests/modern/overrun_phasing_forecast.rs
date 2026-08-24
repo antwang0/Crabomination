@@ -1987,18 +1987,33 @@ fn metallic_mimic_chosen_type_enters_with_extra_counter() {
     );
 }
 
-/// Bounding Krasis taps a target creature on ETB.
+/// Bounding Krasis taps **or untaps** a target creature on ETB — the printed
+/// mode choice, which the old shape collapsed to Tap.
 #[test]
-fn bounding_krasis_taps_a_creature() {
-    let mut g = two_player_game();
-    let foe = g.add_card_to_battlefield(1, catalog::grizzly_bears());
-    let id = g.add_card_to_battlefield(0, catalog::bounding_krasis());
-    g.decider = Box::new(crabomination::decision::ScriptedDecider::new([
-        crabomination::decision::DecisionAnswer::Target(crabomination::game::Target::Permanent(foe)),
-    ]));
-    g.fire_self_etb_triggers(id, 0);
-    drain_stack(&mut g);
-    assert!(g.battlefield_find(foe).unwrap().tapped, "target creature tapped");
+fn bounding_krasis_taps_or_untaps_a_creature() {
+    for start_tapped in [false, true] {
+        let mut g = two_player_game();
+        let foe = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+        if start_tapped {
+            g.battlefield_find_mut(foe).unwrap().tapped = true;
+        }
+        let id = g.add_card_to_battlefield(0, catalog::bounding_krasis());
+        // The `MayDo` is asked at resolution, *before* the body's target
+        // selector runs — so the yes/no comes first and the target second.
+        g.decider = Box::new(crabomination::decision::ScriptedDecider::new([
+            crabomination::decision::DecisionAnswer::Bool(true),
+            crabomination::decision::DecisionAnswer::Target(
+                crabomination::game::Target::Permanent(foe),
+            ),
+        ]));
+        g.fire_self_etb_triggers(id, 0);
+        drain_stack(&mut g);
+        assert_eq!(
+            g.battlefield_find(foe).unwrap().tapped,
+            !start_tapped,
+            "the mode flips (start_tapped {start_tapped})"
+        );
+    }
 }
 
 /// Charming Prince mode 2 gains 3 life.

@@ -37,7 +37,7 @@ CACHE = os.path.join(ROOT, "scripts", ".scryfall_cache.json")
 OPTIONAL = (
     "MayDo", "MayDoBy", "MayDoElse", "MayPay", "MayTap", "MayDiscard",
     "MayCast", "MayPayOrElse", "MayReveal", "MaySacrifice", "Optional",
-    "ChooseMode", "ChooseN", "Escalate", "may_", "_may",
+    "ChooseMode", "ChooseN", "Escalate", "TapOrUntap", "may_", "_may",
 )
 
 # "you may" phrasings that are not a resolution choice the effect tree owns.

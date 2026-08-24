@@ -1109,8 +1109,36 @@ fn augur_of_bolas_filters_to_spells_and_bottoms_rest() {
         "the rest went to the bottom, got {bottom2:?}");
 }
 
+/// "you may tap **or untap** target permanent" — an untapped target taps, a
+/// tapped one untaps, and Pestermite prints no skip-untap rider at all.
 #[test]
-fn pestermite_taps_a_permanent_on_etb() {
+fn pestermite_taps_or_untaps_a_permanent_on_etb() {
+    for start_tapped in [false, true] {
+        let mut g = two_player_game();
+        let land = g.add_card_to_battlefield(1, catalog::island());
+        if start_tapped {
+            g.battlefield_find_mut(land).unwrap().tapped = true;
+        }
+        let id = g.add_card_to_hand(0, catalog::pestermite());
+        g.players[0].mana_pool.add(Color::Blue, 1);
+        g.players[0].mana_pool.add_colorless(2);
+        g.perform_action(GameAction::CastSpell {
+            card_id: id, target: Some(Target::Permanent(land)), additional_targets: vec![],
+            mode: None, x_value: None,
+        }).expect("castable");
+        g.decider = Box::new(crabomination::decision::ScriptedDecider::new([
+            crabomination::decision::DecisionAnswer::Bool(true),
+        ]));
+        drain_stack(&mut g);
+        let tgt = g.battlefield.iter().find(|c| c.id == land).unwrap();
+        assert_eq!(tgt.tapped, !start_tapped, "the mode flips (start_tapped {start_tapped})");
+        assert!(!tgt.skip_next_untap, "Pestermite prints no skip-untap rider");
+    }
+}
+
+/// …and the printed "you may" can be declined.
+#[test]
+fn pestermite_etb_is_optional() {
     let mut g = two_player_game();
     let land = g.add_card_to_battlefield(1, catalog::island());
     let id = g.add_card_to_hand(0, catalog::pestermite());
@@ -1120,10 +1148,11 @@ fn pestermite_taps_a_permanent_on_etb() {
         card_id: id, target: Some(Target::Permanent(land)), additional_targets: vec![],
         mode: None, x_value: None,
     }).expect("castable");
+    g.decider = Box::new(crabomination::decision::ScriptedDecider::new([
+        crabomination::decision::DecisionAnswer::Bool(false),
+    ]));
     drain_stack(&mut g);
-    let tgt = g.battlefield.iter().find(|c| c.id == land).unwrap();
-    assert!(tgt.tapped, "Pestermite tapped it");
-    assert!(tgt.skip_next_untap, "the tapped permanent won't untap next untap step");
+    assert!(!g.battlefield.iter().find(|c| c.id == land).unwrap().tapped, "declined");
 }
 
 #[test]
