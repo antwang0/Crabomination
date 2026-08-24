@@ -22,15 +22,18 @@ claude/modern_decks origin/claude/modern_decks` — the container clones `main`,
 rebase mid-run and re-read your numbers afterwards.**
 
 1. **Nothing is in flight. Re-read at `1,314,288,098` Ir** at `03ab571d`
-   (pass 50's tip plus pass 49's three; the three commits above it are
-   comment-only). Pass 50's own reading of its tip was 1,314,421,002, and the
-   133 k gap is not accounted for by anything in between — **re-read your own
-   base**.
-   Pass 50 reads `1,531,246,782 -> 1,314,421,002`, **-14.160 %** in five
-   commits (A -6.958, B -2.022, C -4.703, D -0.875, E -0.316); pass 49 under
-   it -5.785 %. Suite **18,712 / 0 / 5** over 22 binaries, traces unchanged,
-   `cargo clippy --workspace --all-targets` clean, `--bench` invariants
-   byte-identical (196,220 / 27.53 / 0 stalls / determinism ok, peak RSS 21.6).
+   (pass 50's tip plus pass 49's three; everything above it is comment- or
+   tracker-only, and a reading at the head gives 1,314,290,577 — argv length).
+   Pass 50's own chain ended at **1,314,421,002**, so the branch lost a
+   further **133 k across the rebase** onto `2e48c7a8` / `11116ea2` /
+   `c6898506`. That is *not* work: `--bench`'s invariants are byte-identical
+   across it (196,220 / 27.53 / 0 stalls / determinism ok), and none of the
+   three is on the bench path — `restart_game` needs a Karn ultimate — so it
+   is code layout. **Re-read your own base anyway; that is how this was
+   caught.** Pass 50 reads `1,531,246,782 -> 1,314,288,098`, **-14.168 %** in
+   five commits (A -6.958, B -2.022, C -4.703, D -0.875, E -0.316); pass 49
+   under it -5.785 %. Suite **18,712 / 0 / 5** over 22 binaries, traces
+   unchanged, `cargo clippy --workspace --all-targets` clean, peak RSS 21.6.
    **No net needs retraining.**
 2. **A determinism bug the wide-pool sweep could not see is FIXED
    (`c6898506`), and the sweep recipe changes because of it.** `restart_game`

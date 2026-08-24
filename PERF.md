@@ -261,7 +261,7 @@ the trackers, so both columns stand unrederived.
 
 ```text
                      base (e7b3b3d4)          tip
-I refs (callgrind)   1,531,246,782            1,314,421,002   -14.160 %
+I refs (callgrind)   1,531,246,782            1,314,288,098   -14.168 %
 decisions            196,220                  196,220         byte-identical
 turns_per_game       27.53                    27.53
 stalls               0 (0.00 %), cap 0 / stuck 0 / draw 0 (both)
@@ -1105,8 +1105,20 @@ planeswalkers, so the gate's answer is the whole card. Both exits call one
 by being forgotten at one of them. **The correct version is 468 K Ir *more*
 expensive than the broken one** — the stale memo was skipping walks it owed.
 
-**The pass on the branch: `1,531,246,782 -> 1,314,421,002`, -216,825,780 /
--14.160 %.**
+**The pass on the branch: `1,531,246,782 -> 1,314,288,098`, -216,958,684 /
+-14.168 %.** The (A)-(E) chain above was measured on this pass's own commits
+and ends at **1,314,421,002**; the branch was then rebased onto the concurrent
+run's three (`2e48c7a8`, `11116ea2`, `c6898506` — a threaded replay test, the
+`CRAB_PAIR_SWEEPS` reporter, and the `restart_game` RNG fix) and re-read at
+**1,314,288,098** at `03ab571d` (a reading at the head gives 1,314,290,577;
+the 2,479 between them is argv length). **The 133 k is not work.** `--bench`'s
+invariants are byte-identical across the rebase — same 196,220 decisions, same
+27.53 turns — so the program did the same things; and none of the three
+commits is on the bench path, `restart_game` needing a Karn ultimate to run at
+all. What is left is code layout, which is what a 33-line addition to
+`game/mod.rs` moves. **The rule this exercises is the standing one: re-read
+your own base.** A pass that had carried 1,314,421,002 forward as its base
+would have booked 133 k of layout as its first win.
 
 **What is left of the class, and why each row was not taken.**
 `main_phase_action_with`'s 2,036 probes and `pick_land_to_play`'s 934 hand
@@ -2027,7 +2039,7 @@ settings + debuginfo; system allocator, because valgrind replaces malloc and
 a mimalloc build would measure the interception), 1 thread, `--a gang --b
 gang --games 6 --seed 1 --decks fixed`.
 
-**The branch ends at 1,314,421,002 Ir**, read directly at the fiftieth tip.
+**The branch ends at 1,314,288,098 Ir**, read directly at the fiftieth tip.
 The table below was taken at 1,330,233,580, before (D) and a clippy
 `collapsible_if` on (C)'s diff — (D) moved 4,376 `GameState` clones and the
 Splice sweep, so every row here holds to within ~12 M.
