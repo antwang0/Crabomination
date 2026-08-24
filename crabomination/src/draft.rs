@@ -386,13 +386,13 @@ pub(crate) fn score_card_with_colors(
         // artifact at first pick.
         let pips: u32 = card_colors
             .iter()
-            .map(|c| colored_pip_count(&def.cost, *c))
+            .map(|c| colored_pip_count(&def.cost, c))
             .sum();
         score += (pips as i32) * 2;
     } else {
         let mut on_color_pips = 0i32;
         let mut off_color_pips = 0i32;
-        for &c in &card_colors {
+        for c in card_colors {
             let pips = colored_pip_count(&def.cost, c) as i32;
             if seat_colors.get(&c).copied().unwrap_or(0) > 0 {
                 on_color_pips += pips;
@@ -479,29 +479,26 @@ pub fn colors_of_picks(picks: &[CardFactory]) -> HashMap<Color, u32> {
 
 /// Distinct colors referenced by a card's printed cost (colored,
 /// hybrid, or Phyrexian pips).
-pub(crate) fn colors_of_cost(cost: &crate::mana::ManaCost) -> Vec<Color> {
-    let mut seen = [false; 5];
-    let idx = |c: Color| match c {
-        Color::White => 0,
-        Color::Blue => 1,
-        Color::Black => 2,
-        Color::Red => 3,
-        Color::Green => 4,
-    };
+///
+/// A [`ColorSet`], not a `Vec<Color>`: the deck builders call this per pool
+/// card per colour shape and the vector was an allocation apiece —
+/// 253,333 of them, 22.6 M Ir / 12.8 % of what a sealed deck build costs
+/// after the definition memo (`67809f9f`). `ColorSet` reads the same at
+/// every call site (`contains`, `is_empty`, `for c in ..`) and walks in
+/// WUBRG order, which is the order the `Vec` had.
+pub(crate) fn colors_of_cost(cost: &crate::mana::ManaCost) -> crate::mana::ColorSet {
+    let mut seen = crate::mana::ColorSet::empty();
     for sym in &cost.symbols {
         match sym {
-            ManaSymbol::Colored(c) | ManaSymbol::Phyrexian(c) => seen[idx(*c)] = true,
+            ManaSymbol::Colored(c) | ManaSymbol::Phyrexian(c) => seen.insert(*c),
             ManaSymbol::Hybrid(a, b) => {
-                seen[idx(*a)] = true;
-                seen[idx(*b)] = true;
+                seen.insert(*a);
+                seen.insert(*b);
             }
             _ => {}
         }
     }
-    Color::ALL
-        .into_iter()
-        .filter(|c| seen[idx(*c)])
-        .collect()
+    seen
 }
 
 /// Count of colored pips of the given color on this cost. Hybrid pips
@@ -534,7 +531,7 @@ pub fn suggest_main_deck(picks: &[CardFactory], target_spells: usize) -> (Vec<Ca
     for &factory in picks {
         let card_colors = colors_of_cost(&crate::cube::card_def(factory).cost);
         let on = card_colors.is_empty()
-            || card_colors.iter().all(|c| colors.contains(c));
+            || card_colors.iter().all(|c| colors.contains(&c));
         if on {
             let s = score_card_for_seat(factory, picks);
             on_color.push((factory, s));

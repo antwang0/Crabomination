@@ -344,7 +344,7 @@ pub fn suggest_main_deck_in_colors<R: Rng>(
         }
         let card_colors = colors_of_cost(&def.cost);
         card_colors.is_empty()
-            || card_colors.iter().all(|c| colors.contains(c))
+            || card_colors.iter().all(|c| colors.contains(&c))
             || splash.iter().any(|s| *s as usize == f as usize)
     };
     // Hoisted: pip totals over the pile are invariant while scoring it.
@@ -505,7 +505,7 @@ fn splash_cards(pool: &[CardFactory], pair: &[Color], third: Color, cfg: &SimCon
         .filter(|&&f| {
             let def = crate::cube::card_def(f);
             let cs = colors_of_cost(&def.cost);
-            if !(cs.contains(&third) && cs.iter().all(|c| *c == third || pair.contains(c))) {
+            if !(cs.contains(&third) && cs.iter().all(|c| c == third || pair.contains(&c))) {
                 return false;
             }
             // A splash is a handful of off-color sources, so it can only
@@ -2155,7 +2155,7 @@ impl Session {
                 let fits = cs.is_empty()
                     || cs
                         .iter()
-                        .all(|c| incumbent.colors.contains(c) || incumbent.splash.contains(c));
+                        .all(|c| incumbent.colors.contains(&c) || incumbent.splash.contains(&c));
                 fits && (main.iter().filter(|&&m| m as usize == f as usize).count() as u32)
                     < COPY_CAP
             };
