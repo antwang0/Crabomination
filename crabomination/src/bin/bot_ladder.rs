@@ -816,78 +816,13 @@ struct Row {
     pairs: Vec<i8>,
 }
 
-fn main() {
-    let args = match parse_args() {
-        Ok(a) => a,
-        Err(e) => {
-            eprintln!("error: {e}\ntry --help");
-            std::process::exit(2);
-        }
-    };
-
-    // Encoder ablation, mirroring selfplay_train's --ablate. A net
-    // trained with a block ablated has *never-trained* (random-init)
-    // weight columns for those features — gating it under the full
-    // encoder feeds live features into random weights, which measures
-    // garbage, not the ablation. The gate must encode exactly as the
-    // training run did.
-    // An empty or whitespace-only value means "no ablation", not "one
-    // block whose name is the empty string". Scripts that gate a mix of
-    // ablated and full nets set this to "" for the full ones, and
-    // exiting on that would fail exactly half a paired sweep.
-    if let Ok(spec) = std::env::var("CRAB_ABLATE") {
-        let off: Vec<&str> =
-            spec.split(',').map(str::trim).filter(|s| !s.is_empty()).collect();
-        if let Err(e) = crabomination::server::encode::set_encode_ablation_off(&off) {
-            eprintln!("CRAB_ABLATE: {e}");
-            std::process::exit(2);
-        }
-        if !off.is_empty() {
-            eprintln!("encoder ablation via CRAB_ABLATE: {} switched off", off.join(", "));
-        }
-    }
-
-    const CUBE_PAIRS: usize = 8;
-    let field: Vec<Archetype> = match args.deck_set.as_str() {
-        "fixed" => archetypes(),
-        "cube" => cube_archetypes(args.seed, CUBE_PAIRS),
-        "sos" => sos_archetypes(args.seed),
-        "both" => {
-            let mut f = archetypes();
-            f.extend(cube_archetypes(args.seed, CUBE_PAIRS));
-            f
-        }
-        "all" => {
-            let mut f = archetypes();
-            f.extend(cube_archetypes(args.seed, CUBE_PAIRS));
-            f.extend(sos_archetypes(args.seed));
-            f
-        }
-        "sealed" => sealed_archetypes(args.seed, 12),
-        other => {
-            eprintln!("unknown --decks {other}; expected fixed, cube, sos, sealed, both or all");
-            std::process::exit(2);
-        }
-    };
-    let threads = if args.threads > 0 {
-        args.threads
-    } else {
-        std::thread::available_parallelism()
-            .map(|n| n.get().saturating_sub(1).max(1))
-            .unwrap_or(1)
-    };
-
-    println!(
-        "ladder: {} (A) vs {} (B) — {} games x {} {} decks on {threads} threads, seed {}{}",
-        args.a_name,
-        args.b_name,
-        args.games,
-        field.len(),
-        args.deck_set,
-        args.seed,
-        if args.paired { " (paired)" } else { " (unpaired)" },
-    );
-
+/// Build the chunked job queue for `field` and run it on `threads` workers,
+/// returning the summed cost and per-archetype rows. Factored out of `main`
+/// so `CRAB_THREAD_CHECK` can replay the identical workload at a second thread
+/// count and assert the aggregate is unchanged — one job-loop, one measured
+/// invariant (see filter 11: a rule spelled out twice drifts). `quiet`
+/// suppresses the idle-worker note on the replay pass.
+fn run_jobs(field: &[Archetype], args: &Args, threads: usize, quiet: bool) -> (SimCost, Vec<Row>) {
     // Split each archetype's games into chunks and hand them to a shared
     // job queue, so a slow archetype doesn't leave cores idle at the end.
     //
@@ -903,7 +838,7 @@ fn main() {
         seed: u64,
     }
     let per_arch = if args.paired { args.games / 2 } else { args.games };
-    if args.paired && args.games % 2 == 1 {
+    if args.paired && args.games % 2 == 1 && !quiet {
         eprintln!("note: --games is odd; playing {} pairs ({} games) per archetype", per_arch, per_arch * 2);
     }
     let mut jobs = Vec::new();
@@ -928,7 +863,7 @@ fn main() {
     // silently runs min(N, jobs) workers. That reads as "scaling flattens at
     // 4 threads" in a measurement, when what actually happened is that the
     // run only ever had 4 chunks of work. Say so.
-    if jobs.len() < threads {
+    if jobs.len() < threads && !quiet {
         eprintln!(
             "note: only {} job chunk(s) for {threads} threads — {} worker(s) will idle. \
              Raise --games (chunks = decks x ceil(games/{}) ) before reading this as scaling.",
@@ -952,7 +887,6 @@ fn main() {
             })
             .collect(),
     );
-    let started = std::time::Instant::now();
 
     std::thread::scope(|s| {
         for _ in 0..threads {
@@ -1029,8 +963,111 @@ fn main() {
         }
     });
 
-    let rows = rows.into_inner().unwrap();
-    let cost = cost.into_inner().unwrap();
+    (cost.into_inner().unwrap(), rows.into_inner().unwrap())
+}
+
+/// Whether two runs of the same workload produced the same outcome, ignoring
+/// order. Worker scheduling permutes which chunk finishes first (so a row's
+/// pairs arrive in a different order, and even two runs at the same thread
+/// count differ that way), so the pair lists are sorted before comparison;
+/// the `SimCost` fields and per-archetype win tallies are already sums and
+/// order-free.
+fn outcomes_match(a: (&SimCost, &[Row]), b: (&SimCost, &[Row])) -> bool {
+    let (ca, ra) = a;
+    let (cb, rb) = b;
+    let cost_eq = (ca.games, ca.decisions, ca.turns, ca.action_capped, ca.no_legal_move, ca.draws)
+        == (cb.games, cb.decisions, cb.turns, cb.action_capped, cb.no_legal_move, cb.draws);
+    if !cost_eq || ra.len() != rb.len() {
+        return false;
+    }
+    ra.iter().zip(rb).all(|(x, y)| {
+        if (x.wins_a, x.wins_b, x.undecided) != (y.wins_a, y.wins_b, y.undecided) {
+            return false;
+        }
+        let (mut px, mut py) = (x.pairs.clone(), y.pairs.clone());
+        px.sort_unstable();
+        py.sort_unstable();
+        px == py
+    })
+}
+
+fn main() {
+    let args = match parse_args() {
+        Ok(a) => a,
+        Err(e) => {
+            eprintln!("error: {e}\ntry --help");
+            std::process::exit(2);
+        }
+    };
+
+    // Encoder ablation, mirroring selfplay_train's --ablate. A net
+    // trained with a block ablated has *never-trained* (random-init)
+    // weight columns for those features — gating it under the full
+    // encoder feeds live features into random weights, which measures
+    // garbage, not the ablation. The gate must encode exactly as the
+    // training run did.
+    // An empty or whitespace-only value means "no ablation", not "one
+    // block whose name is the empty string". Scripts that gate a mix of
+    // ablated and full nets set this to "" for the full ones, and
+    // exiting on that would fail exactly half a paired sweep.
+    if let Ok(spec) = std::env::var("CRAB_ABLATE") {
+        let off: Vec<&str> =
+            spec.split(',').map(str::trim).filter(|s| !s.is_empty()).collect();
+        if let Err(e) = crabomination::server::encode::set_encode_ablation_off(&off) {
+            eprintln!("CRAB_ABLATE: {e}");
+            std::process::exit(2);
+        }
+        if !off.is_empty() {
+            eprintln!("encoder ablation via CRAB_ABLATE: {} switched off", off.join(", "));
+        }
+    }
+
+    const CUBE_PAIRS: usize = 8;
+    let field: Vec<Archetype> = match args.deck_set.as_str() {
+        "fixed" => archetypes(),
+        "cube" => cube_archetypes(args.seed, CUBE_PAIRS),
+        "sos" => sos_archetypes(args.seed),
+        "both" => {
+            let mut f = archetypes();
+            f.extend(cube_archetypes(args.seed, CUBE_PAIRS));
+            f
+        }
+        "all" => {
+            let mut f = archetypes();
+            f.extend(cube_archetypes(args.seed, CUBE_PAIRS));
+            f.extend(sos_archetypes(args.seed));
+            f
+        }
+        "sealed" => sealed_archetypes(args.seed, 12),
+        other => {
+            eprintln!("unknown --decks {other}; expected fixed, cube, sos, sealed, both or all");
+            std::process::exit(2);
+        }
+    };
+    let threads = if args.threads > 0 {
+        args.threads
+    } else {
+        std::thread::available_parallelism()
+            .map(|n| n.get().saturating_sub(1).max(1))
+            .unwrap_or(1)
+    };
+
+    println!(
+        "ladder: {} (A) vs {} (B) — {} games x {} {} decks on {threads} threads, seed {}{}",
+        args.a_name,
+        args.b_name,
+        args.games,
+        field.len(),
+        args.deck_set,
+        args.seed,
+        if args.paired { " (paired)" } else { " (unpaired)" },
+    );
+
+    // The chunked job queue and its worker pool live in `run_jobs` so the
+    // opt-in thread-determinism guard below can replay the identical workload
+    // without a second, drifting copy of the loop.
+    let started = std::time::Instant::now();
+    let (cost, rows) = run_jobs(&field, &args, threads, false);
     const Z: f64 = 1.96;
     println!();
     println!(
@@ -1229,6 +1266,32 @@ fn main() {
     println!("verdict: {verdict}");
     if let Some(t) = crabomination::server::mcts::timing::report() {
         println!("{t}");
+    }
+
+    // Thread-scheduling determinism guard (opt-in via `CRAB_THREAD_CHECK`;
+    // deliberately off the throughput path so it never perturbs a bench
+    // reading — it doubles the run). A fixed `--seed` fully determines every
+    // job, and the aggregate is a commutative sum over jobs, so the tallies
+    // must not depend on how many workers pull them. Replay the identical
+    // workload at a contrasting thread count and assert the order-independent
+    // fingerprint matches. This is the cheap in-process form of the wide
+    // seed x thread sweep: any per-process RNG or global mutable state
+    // leaking across threads (the filter-21 class — `restart_game` drawing
+    // from OS entropy) diverges the two counts here.
+    if std::env::var_os("CRAB_THREAD_CHECK").is_some() {
+        let alt = if threads <= 1 { 2 } else { 1 };
+        let (alt_cost, alt_rows) = run_jobs(&field, &args, alt, true);
+        if outcomes_match((&cost, &rows), (&alt_cost, &alt_rows)) {
+            println!("  thread_determinism ok ({threads} vs {alt} threads identical)");
+        } else {
+            println!(
+                "  thread_determinism FAIL — {threads}-thread and {alt}-thread runs diverge \
+                 (seed {}, {} decks)",
+                args.seed,
+                field.len(),
+            );
+            std::process::exit(1);
+        }
     }
 }
 
