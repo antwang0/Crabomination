@@ -295,13 +295,19 @@ across `Bot::next_action` and their effects only compose there:
 -3.719 %**, and every step is one thing: the picker probes the action, its
 state IS the action, hand it out.
 
-**Crash-freedom and determinism at the tip, widest pool.** `--a gang --b
-gang --games 400 --threads 3 --decks all`, seeds 11 / 12 / 13: **20,400
-games, 20,396 decided, no panic**, all 10,198 mirrored pairs split
-(`rho -1.000` every seed). The 4 undecided are seed 11's rules draws,
-the same four passes 44-51 recorded. The wider sweep across 13 seeds ×
-threads 1/2/3 (per filter-21's fix) is still owed for the definitive
-crash-freedom claim; this run's is three seeds at one thread count.
+**Crash-freedom and determinism at the tip, widest pool — the wide sweep
+filter 21's fix demanded, run this pass.** `--a gang --b gang --decks all`,
+**seeds 11-15 × `--threads 1/2/3`, the full 15-cell grid** (200
+games/archetype, `CRAB_PAIR_SWEEPS=1`): every cell **3,400 decided, 0
+undecided, no panic, all 1,700 pairs split** — **25,500 mirrored pairs
+across the grid, every one split, no thread count or seed produces a
+sweep.** Plus seeds 11/12/13 at 400 games/threads 3 (another 10,200
+pairs; there the 4 seed-11 rules draws show, the same four passes 44-51
+recorded — they need >200 games/archetype to sample). This is the sweep
+the filter-21 fix (`c6898506`, `restart_game`'s entropy RNG) said was
+owed: varying thread count *and* seed, reading the sweep count not the
+panic count. It is clean, so no HashMap/HashSet iteration order or
+thread interleaving leaks into game logic at this tip.
 
 **No net needs retraining.** No encoding, pool, `TrainRow`,
 `EncodedState`, or `Vocab` change is in this pass.

@@ -62,16 +62,18 @@ rebase mid-run and re-read your numbers afterwards.**
    per combat) costs about what the per-source rebuild does, and the gang
    bench has ~1 attacker per declaration so even the declare_attackers hoist
    (`bee52a09`) barely moved on this pool.
-4. **A twenty-third robustness filter is owed.** 22 audited "state the
-   harness installs that a rules path can reset" and found `restart_game`'s
-   RNG drop (fixed) + `snapshot.rs`'s wrong claim. Candidates for 23: the
-   *measuring devices* vein (18, 19, 20 all landed there) is not exhausted;
-   filter 21's *an invariant checked at one point in its parameter space*
-   found a bug on its first run, and the wide-pool sweep across 13 seeds ×
-   `--threads 1/2/3` (post-filter-21) has still never been run in one
-   sitting from a new box — the 4 undecided seed-11 games are stable, but
-   the sweep itself is owed. Also: `perform_action`'s checkpoint restore
-   audit is only ever exercised on the failing actions the suite trips.
+4. **The wide-pool determinism sweep is now RUN and clean** — seeds 11-15
+   × `--threads 1/2/3`, the full 15-cell grid, 25,500 pairs all split, no
+   panic, no sweep (see PERF's crash-freedom note). That is the sweep
+   filter 21's fix demanded. **A twenty-third robustness filter is still
+   owed**: 22 audited "state the harness installs that a rules path can
+   reset" (`restart_game`'s RNG drop + `snapshot.rs`'s wrong claim).
+   Candidates for 23: the *measuring devices* vein (18, 19, 20 all landed
+   there) is not exhausted; `perform_action`'s checkpoint restore audit is
+   only ever exercised on the failing actions the suite trips (an invariant
+   checked at one point in its parameter space — the filter-21 shape), and
+   the `--bench` decision-count invariant is only checked at one thread
+   count even though the determinism grid above now varies it.
 5. **Owed housekeeping.** PERF 4.1k — the forty-sixth pass's profile table
    is still the next fold. TODO 1.16k — filter write-ups 12-20 remain the
    compaction. Actor scaling is closed to 4 cores (linear); says nothing
