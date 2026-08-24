@@ -21,26 +21,22 @@ claude/modern_decks origin/claude/modern_decks` — the container clones `main`,
 ~2,200 commits behind. **Sessions run this branch concurrently: expect to
 rebase mid-run and re-read your numbers afterwards.**
 
-1. **`--decks fixed` is not the simulator.** Pass 53's two biggest finds were
-   invisible on the bench: the per-card grant walk (49 % of a *cube* game) and
-   deck construction (96 % of a deck build; a `selfplay_train` actor builds
-   two decks a game). Read PERF's **"Which pool a change moves"** before
-   ranking anything. Tip: fixed 1,250,409,741 / cube 4,026,141,796 / sos
-   1,760,202,906 / sealed 3,572,196,844 / deck-build 111,759,384.
-2. **`selfplay_train` throughput: unjudged 26.1 -> 99.8 games/s; judged
-   (`--use-deck-best`) 1.2 -> 83.2, i.e. 69x** (release-fast, mimalloc, 3
-   actors, alternated). Deck building was 95 % of a judged actor's work.
-   **No net retrain** — decks per seed are byte-identical, ladder output
-   diffs exactly on all four pools.
-3. **Top candidates now: (-39)** the deck builder's residual 112 M (~22 % of it
-   is `card_def`'s own lookup — the fix is resolving a pool's definitions once
-   and indexing it); **(-38)**
-   `battlefield_find` 4.03 %, of which `all_damage_to_player_prevented` is
-   four lines of pure redundancy; **(-37)** the four ungated `computed()` arms
-   in the requirement walker (cube-only, size it there).
-4. **Housekeeping.** TODO ~1.0k. PERF 4.6k — the 46th-pass profile table is
-   folded, the 47th's is next. ENGINE_BACKLOG 4.6k / CARD_BACKLOG 4.2k still
-   want a triage pass.
+1. **`--decks fixed` is not the simulator**, and pass 53's two biggest finds
+   were invisible on it. Read PERF's **"Which pool a change moves"** first.
+   Tip: fixed 1,250,409,741 / cube 4,026,141,796 / sos 1,760,202,906 /
+   sealed 3,572,196,844 / deck-build 111,759,384 (`--decks sealed --games 1`).
+2. **`selfplay_train`: unjudged 26.1 -> 99.8 games/s, judged
+   (`--use-deck-best`) 1.2 -> 83.2 (69x).** No net retrain — decks per seed
+   are byte-identical and all four pools' ladder output diffs exactly.
+3. **Candidates: (-39)** deck-builder residual 112 M, ~22 % of it `card_def`'s
+   hash lookup (fix: resolve a pool's defs once, index them); **(-38)**
+   `battlefield_find` 2.40 % on sealed, use `scripts/cg_sites.py`; **(-37)**
+   the four ungated `computed()` arms in the requirement walker (cube only).
+4. **Open defect:** every committed deck net fails to load — `Vocab` is
+   derived from the SOS card list, so a card addition retires every net. See
+   "ML — defects found 2026-08-24".
+5. **Housekeeping.** TODO ~1.1k, PERF 4.7k (46th-pass table folded, 47th's
+   next). ENGINE_BACKLOG 4.6k / CARD_BACKLOG 4.2k still want a triage pass.
 
 ## Standing rules for a perf pass
 
