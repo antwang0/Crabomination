@@ -378,6 +378,15 @@ turns a silent wrap into a panic (TODO filter 6): `--decks sealed` 1,200
 games and `--decks all` 1,700 games at 3 threads, **0 panics** — re-run
 here because the deck builder is new code on the actor path.
 
+**A soak on the training loop itself**, which is where the pass's new code
+lives (a thread-local leaked definition cache, a hoisted shape lattice) and
+which the ladder does not exercise: `selfplay_train --actors 3`, tip binary,
+`release-fast` + mimalloc — **6,000 heuristic games** (112.1 games/s,
+579,500 rows) and **4,000 judged best-of-32 games** (88.1 games/s, 380,907
+rows), **0 stalls and no panic in either**, plus 17,000 `--decks all`
+ladder games at 3 threads with all 8,500 pairs split. ~27,000 games at the
+tip, clean.
+
 **The wall-clock number, and it is the one that matters for training.**
 The deck-builder fix is allocation-shaped, so its Ir overstates what ships;
 measured on the real loop with the shipped allocator (`release-fast`,
