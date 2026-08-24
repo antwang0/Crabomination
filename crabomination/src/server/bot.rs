@@ -1686,12 +1686,14 @@ impl HeuristicBot {
                     Some(BotStep::plain(GameAction::DeclareBlockers(blocks)))
                 } else if state.blockers_declared() && state.stack.is_empty() {
                     // Post-block priority: a held pump trick that flips a
-                    // fight one of our blockers is losing.
-                    Some(BotStep::plain(
+                    // fight one of our blockers is losing. `pick_combat_trick`
+                    // dry-runs the trick to gate it, so `Probed` carries the
+                    // state the driver would otherwise re-run.
+                    Some(
                         pick_combat_trick(state, seat, &self.weights)
-                            .map(Picked::action)
-                            .unwrap_or(GameAction::PassPriority),
-                    ))
+                            .map(Picked::into_step)
+                            .unwrap_or_else(|| BotStep::plain(GameAction::PassPriority)),
+                    )
                 } else {
                     Some(BotStep::plain(GameAction::PassPriority))
                 }
@@ -1701,11 +1703,11 @@ impl HeuristicBot {
             TurnStep::DeclareBlockers
                 if is_active && state.blockers_declared() && state.stack.is_empty() =>
             {
-                Some(BotStep::plain(
+                Some(
                     pick_combat_trick(state, seat, &self.weights)
-                        .map(Picked::action)
-                        .unwrap_or(GameAction::PassPriority),
-                ))
+                        .map(Picked::into_step)
+                        .unwrap_or_else(|| BotStep::plain(GameAction::PassPriority)),
+                )
             }
             // Master Warcraft on an opponent's turn: we choose *their*
             // attackers, so declare only the creatures that must attack.
@@ -1737,14 +1739,22 @@ impl HeuristicBot {
                 // spell before its body dies). Both pickers ignore the
                 // bot's own spells-in-flight, so a stack we put there
                 // falls through to the enumerator as before.
-                if !state.stack.is_empty()
-                    && let Some(a) = pick_stack_response(state, seat, &self.weights)
-                        .map(Picked::action)
-                        .or_else(|| pick_ability_counter_response(state, seat))
+                // `pick_stack_response` is the one branch that dry-runs its
+                // pick, so its `Probed` state is what the driver would
+                // re-run. The remaining branches (`pick_ability_counter_response`,
+                // `pick_prepare_response`, `pick_buff_response`) return only
+                // an action, so their outputs stay `Plain`. Try the settled
+                // path first; fall through to the plain chain otherwise.
+                if !state.stack.is_empty() {
+                    if let Some(picked) = pick_stack_response(state, seat, &self.weights) {
+                        return Some(picked.into_step());
+                    }
+                    if let Some(a) = pick_ability_counter_response(state, seat)
                         .or_else(|| pick_prepare_response(state, seat, &self.weights))
                         .or_else(|| pick_buff_response(state, seat, &self.weights))
-                {
-                    return Some(BotStep::plain(a));
+                    {
+                        return Some(BotStep::plain(a));
+                    }
                 }
                 // CR 116.2j — the agenda is already named, so turning it face
                 // up is pure upside; do it at the first opportunity.
@@ -1778,10 +1788,14 @@ impl HeuristicBot {
             TurnStep::End if !is_active && state.stack.is_empty() => {
                 Some(main_phase_action_with(state, seat, self.scored, &self.weights))
             }
-            _ => Some(BotStep::plain(
-                pick_stack_response(state, seat, &self.weights)
-                    .map(Picked::action)
-                    .or_else(|| pick_ability_counter_response(state, seat))
+            _ => {
+                // Same shape as the main-phase stack window above: only
+                // `pick_stack_response` carries a dry-run state; the rest
+                // fall back through the `Plain` chain to a plain action.
+                if let Some(picked) = pick_stack_response(state, seat, &self.weights) {
+                    return Some(picked.into_step());
+                }
+                let action = pick_ability_counter_response(state, seat)
                     .or_else(|| pick_prepare_response(state, seat, &self.weights))
                     .or_else(|| pick_buff_response(state, seat, &self.weights))
                     // Defender windows in the attack steps (the picker
@@ -1793,8 +1807,9 @@ impl HeuristicBot {
                             None
                         }
                     })
-                    .unwrap_or(GameAction::PassPriority),
-            )),
+                    .unwrap_or(GameAction::PassPriority);
+                Some(BotStep::plain(action))
+            }
         }
     }
 }
@@ -5465,8 +5480,8 @@ fn main_phase_action_with(
             x_value: None,
             mode: None,
         };
-        if GameState::would_accept_on(probe_of(&probe, state), action.clone()) {
-            return BotStep::plain(action);
+        if let Some(g) = GameState::accept_on(probe_of(&probe, state), action.clone()) {
+            return BotStep { action, settled: Some(Box::new(g)) };
         }
     }
 
@@ -5480,13 +5495,17 @@ fn main_phase_action_with(
     // play a second land in the same turn (CR 305.2). Asked once for all
     // three land blocks: `state` is `&GameState` and each block returns
     // when it fires, so the answer cannot change between them.
+    // The land-play probes below are `would_accept_on` — the dry-run's state
+    // is the same one a successful `perform_action(action)` on the driver
+    // produces. `accept_on` keeps it; the driver adopts it and skips its own
+    // execution (see `Bot::next_action_settled`).
     let can_play_land = state.can_player_play_land(seat);
     if can_play_land
         && let Some(land_id) = pick_land_to_play(state, seat, w)
     {
         let action = GameAction::PlayLand(land_id);
-        if GameState::would_accept_on(probe_of(&probe, state), action.clone()) {
-            return BotStep::plain(action);
+        if let Some(g) = GameState::accept_on(probe_of(&probe, state), action.clone()) {
+            return BotStep { action, settled: Some(Box::new(g)) };
         }
     }
 
@@ -5498,8 +5517,8 @@ fn main_phase_action_with(
             state.players[seat].graveyard.iter().find(|c| c.definition.is_land())
     {
         let action = GameAction::PlayLandFromGraveyard(land.id);
-        if GameState::would_accept_on(probe_of(&probe, state), action.clone()) {
-            return BotStep::plain(action);
+        if let Some(g) = GameState::accept_on(probe_of(&probe, state), action.clone()) {
+            return BotStep { action, settled: Some(Box::new(g)) };
         }
     }
 
@@ -5511,8 +5530,8 @@ fn main_phase_action_with(
         })
     {
         let action = GameAction::PlayLand(land.id);
-        if GameState::would_accept_on(probe_of(&probe, state), action.clone()) {
-            return BotStep::plain(action);
+        if let Some(g) = GameState::accept_on(probe_of(&probe, state), action.clone()) {
+            return BotStep { action, settled: Some(Box::new(g)) };
         }
     }
 
@@ -5667,13 +5686,13 @@ fn main_phase_action_with(
                     return BotStep::plain(tap);
                 }
                 // The bargain the whole enum is here for: the finalist was
-                // validated by a `would_accept_on` dry-run, whose *state*
-                // (see [`GameState::accept_on`]) is what a successful
-                // `perform_action(best.action)` on the driver would produce.
-                // A driver that owns its state adopts `settled` and skips
-                // running the same action a second time. When the finalist
-                // arrived pre-validated (no dry-run), `settled` is `None`
-                // and the driver runs the action normally.
+                // validated by an `accept_on` dry-run, whose *state* is what
+                // a successful `perform_action(best.action)` on the driver
+                // would produce. A driver that owns its state adopts
+                // `settled` and skips running the same action a second time.
+                // When the finalist arrived pre-validated (no dry-run),
+                // `settled` is `None` and the driver runs the action
+                // normally.
                 return BotStep {
                     action: best.action,
                     settled: best.settled,
@@ -7890,9 +7909,19 @@ enum Picked {
 
 impl Picked {
     /// The action, discarding any state its probe produced.
+    #[cfg(test)]
     fn action(self) -> GameAction {
         match self {
             Picked::Probed(a, _) | Picked::Plain(a) => a,
+        }
+    }
+
+    /// The picker's action together with its dry-run state (`Probed`) or
+    /// none (`Plain`), packaged for [`Bot::next_action_settled`].
+    fn into_step(self) -> BotStep {
+        match self {
+            Picked::Probed(action, settled) => BotStep { action, settled: Some(settled) },
+            Picked::Plain(action) => BotStep::plain(action),
         }
     }
 }
