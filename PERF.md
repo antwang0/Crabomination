@@ -66,6 +66,16 @@ callgrind_annotate --auto=no --inclusive=yes cg.sym.out       # inclusive
 # `--auto=yes` per-line annotation stays dead (DWARF lives in `.dwo` files
 # valgrind can't read); read function totals and call counts instead.
 #
+# what an *inlined* function costs, and where. `cg_edges.py` ranks functions
+# and `cg_lines.py` ranks lines; neither sees a small always-inlined function,
+# which has no row and no line of its own — `battlefield_find` is 556 call
+# sites and was 4.03 % of the simulator, unread for fifty-two passes.
+python3 scripts/cg_sites.py cg.instr.out target-probe/profiling-lines/bot_ladder \
+    battlefield_find
+# Its number is a FLOOR: each address is charged only its own instructions,
+# so a scan's per-element loads land in `slice::iter`'s frames instead. The
+# two sites it found at 0.35 % between them measured -0.611 % when removed.
+
 # For any caller/callee table, use `cg_edges.py` rather than
 # `--tree`: `callgrind_annotate --tree` truncates a caller list at its
 # threshold and silently drops rows. Its `__rust_alloc` block printed 23 k of
@@ -2859,7 +2869,13 @@ a `OnceLock` per factory is not expressible over a `fn` pointer.
 
 **(-38) `battlefield_find` is 4.03 % of the program and has never had an
 entry, because it never appears as a function row — it always inlines.**
-`self.battlefield.iter().find(|c| c.id == id)`, 556 call sites. The
+`self.battlefield.iter().find(|c| c.id == id)`, 556 call sites.
+**`scripts/cg_sites.py` is the tool that finds this shape** (added with the
+entry): it groups hot addresses by the frame just outside the needle, i.e.
+by call site, and it is the only one of the three scripts that can see a
+function with no row and no line of its own. At the fifty-third tip the same
+table on `--decks sealed` reads 2.40 %, still the largest unnamed structural
+cost. The
 fifty-third pass took the largest one (`eval.rs:3271`, 1.72 % alone) by
 handing the permanent in; the rest of the table, from `cg_lines.py` at that
 pass's base:
