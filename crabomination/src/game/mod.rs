@@ -13016,7 +13016,23 @@ impl GameState {
 
         // A fresh state carries only what survives a restart: seat identity,
         // starting life, commander designations and the outside-the-game
-        // sideboard. Everything else resets to a game-start baseline.
+        // sideboard. Everything else *of the rules* resets to a game-start
+        // baseline.
+        //
+        // What must **not** reset is the harness's own configuration, which is
+        // not rules state and which `GameState::new` / `Player::new` would
+        // silently replace with a default. `rng` is the one that bites: a
+        // fresh `GameRng` is `from_entropy`, so a seeded game that restarts
+        // stopped replaying from the restart onward — the deal after it was
+        // drawn from OS entropy. That made a `--seed`ed ladder run
+        // irreproducible, broke the antithetic pairing on exactly those games
+        // (a self-mirror pair whose two halves are the same game relabelled
+        // stopped splitting), and it only showed up under concurrency, where
+        // the entropy differed between the pair's two halves. The decider and
+        // the two per-seat pilot flags are the same class: a restart must not
+        // change who answers decisions or how a seat taps.
+        let carried: Vec<(bool, bool)> =
+            self.players.iter().map(|p| (p.smart_tap, p.wants_ui)).collect();
         let players: Vec<crate::player::Player> = self
             .players
             .iter()
@@ -13033,10 +13049,25 @@ impl GameState {
         let next_id = self.next_id;
         let attack_option = self.attack_option;
         let teams = self.teams.clone();
+        // The stream's *position*, so the restart's own shuffles continue it
+        // rather than starting a new one — the same contract `Clone` states.
+        let rng = self.rng.clone();
+        let decider = std::mem::replace(
+            &mut self.decider,
+            Box::new(crate::decision::AutoDecider),
+        );
         *self = GameState::new(players);
         self.next_id = next_id;
         self.attack_option = attack_option;
         self.teams = teams;
+        self.rng = rng;
+        self.decider = decider;
+        for (i, (smart_tap, wants_ui)) in carried.into_iter().enumerate() {
+            if let Some(p) = self.players.get_mut(i) {
+                p.smart_tap = smart_tap;
+                p.wants_ui = wants_ui;
+            }
+        }
 
         // Every collected card returns as a brand-new object in its owner's
         // library; the deck is then shuffled (CR 103.2).

@@ -192,6 +192,68 @@ fn the_same_seed_replays_identically_across_threads() {
     }
 }
 
+/// The ladder pair that used to break its own mirror, replayed concurrently.
+///
+/// `bot_ladder --a gang --b gang --decks all --games 400 --seed 21` reported a
+/// self-mirror pair that did *not* split — a pair whose two halves are the
+/// same game with the seats relabelled. `CRAB_PAIR_SWEEPS=1` named it:
+/// archetype "cube RW" (the seed-21 cube pool's third pair), job seed
+/// 25769803807, pair 5, pair seed **1663341901257141384**. At `--threads 1` it
+/// always split; at 2 and 3 it flipped, in both directions, run to run.
+///
+/// The cause was `GameState::restart_game` (CR 727): it rebuilds the state
+/// with `GameState::new`, whose `GameRng` is `from_entropy`, so a seeded game
+/// that restarts drew its post-restart deal from OS entropy. This game
+/// restarts, which is why it and only it broke. Sequential replays could not
+/// see it because both halves of a pair then drew from the same entropy
+/// stream in the same order often enough to agree.
+#[test]
+fn the_ladder_pair_that_breaks_its_mirror() {
+    use crabomination::cube::{cube_deck, random_color_pair};
+    use rand::SeedableRng;
+    const PAIR_SEED: u64 = 1_663_341_901_257_141_384;
+    // `bot_ladder::cube_archetypes(21, 8)`, third entry.
+    let deck = {
+        let mut r = rand::rngs::StdRng::seed_from_u64(21 ^ 0xC0BE_5EED);
+        let mut d = Vec::new();
+        for _ in 0..3 {
+            let colors = random_color_pair(&mut r);
+            d = cube_deck(colors, &mut r);
+        }
+        d
+    };
+    let traces: Vec<_> = std::thread::scope(|s| {
+        let handles: Vec<_> = (0..8)
+            .map(|_| {
+                let deck = &deck;
+                s.spawn(move || {
+                    [
+                        trace_game(deck, deck, PAIR_SEED, 50_000),
+                        trace_game(deck, deck, PAIR_SEED, 50_000),
+                    ]
+                })
+            })
+            .collect();
+        handles.into_iter().flat_map(|h| h.join().unwrap()).collect()
+    });
+    let first = &traces[0];
+    for (i, t) in traces.iter().enumerate().skip(1) {
+        if t.digest() != first.digest() {
+            let at = first.lines.iter().zip(&t.lines).position(|(x, y)| x != y);
+            panic!(
+                "replay {i} diverged; first divergence at {at:?}:\n  run 0: {:?}\n  \
+                 run {i}: {:?}\n  (winners {:?} vs {:?}, turns {} vs {})",
+                at.and_then(|j| first.lines.get(j)),
+                at.and_then(|j| t.lines.get(j)),
+                first.winner,
+                t.winner,
+                first.turns,
+                t.turns,
+            );
+        }
+    }
+}
+
 /// A different seed has to produce a different game — otherwise the two
 /// tests above would pass on an engine that ignores its seed entirely.
 #[test]
