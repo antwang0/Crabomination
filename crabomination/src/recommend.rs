@@ -597,23 +597,23 @@ fn basic_split(
 
 /// Colors a land taps for — the union of its `AddMana` ability payloads
 /// (an any-color payload counts as all five).
-fn land_produced_colors(def: &crate::card::CardDefinition) -> Vec<Color> {
+pub(crate) fn land_produced_colors(def: &crate::card::CardDefinition) -> crate::mana::ColorSet {
     use crate::effect::{Effect, ManaPayload};
-    let mut seen = [false; 5];
+    let mut seen = crate::mana::ColorSet::empty();
     for ab in &def.activated_abilities {
         if let Effect::AddMana { pool, .. } = &ab.effect {
             match pool {
                 ManaPayload::Colors(cs) => {
                     for c in cs {
-                        seen[*c as usize] = true;
+                        seen.insert(*c);
                     }
                 }
-                ManaPayload::AnyOneColor(_) => seen = [true; 5],
+                ManaPayload::AnyOneColor(_) => seen = crate::mana::ColorSet::all(),
                 _ => {}
             }
         }
     }
-    Color::ALL.into_iter().filter(|c| seen[*c as usize]).collect()
+    seen
 }
 
 /// Split `total` land slots between on-color duals from the pool and
@@ -637,8 +637,8 @@ fn assemble_lands(
         if !brief.is_land {
             return true;
         }
-        let produced = land_produced_colors(brief.def);
-        let on_color = produced.iter().filter(|c| colors.contains(c)).count();
+        let produced = brief.produces;
+        let on_color = produced.iter().filter(|c| colors.contains(c)).count() as u32;
         if on_color >= 2 && on_color == produced.len() {
             duals.push(f);
             false

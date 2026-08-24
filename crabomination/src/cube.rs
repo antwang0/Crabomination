@@ -98,6 +98,10 @@ pub struct CardBrief {
     pub quality: i32,
     /// [`crate::recommend::is_fixing_card`].
     pub is_fixing: bool,
+    /// The colors this card's activated abilities can tap for —
+    /// [`crate::recommend::land_produced_colors`], which used to hand back
+    /// a freshly allocated `Vec<Color>` per land examined.
+    pub produces: crate::mana::ColorSet,
 }
 
 impl CardBrief {
@@ -113,6 +117,7 @@ impl CardBrief {
                 || def.card_types.contains(&CardType::Sorcery),
             quality: crate::draft::card_quality(def),
             is_fixing: crate::recommend::is_fixing_card(def),
+            produces: crate::recommend::land_produced_colors(def),
         }
     }
 }
