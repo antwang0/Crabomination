@@ -7843,7 +7843,8 @@ impl Picked {
 /// [`evaluate_action_sequence`] and [`improves_this_turn`] — opens by cloning
 /// the *pre-action* state and running the action again, which is the run the
 /// validating probe already did. `settled` is that run's result, so those two
-/// clone it instead (~2,200 Ir) rather than repeat a cast (~46,000). `None`
+/// clone it instead — a clone was ~2,200 Ir against a cast's ~46,000 when this
+/// was measured (the fiftieth pass's (C)). `None`
 /// means the candidate reached here without a probe of its own — a
 /// `cast_candidates` block that validated it eagerly, or a caller with no
 /// state to give — and the consumer does its own run as before.

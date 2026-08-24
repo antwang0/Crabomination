@@ -264,10 +264,10 @@ struct LayerFreezeState {
     /// The layer-4 card-type presence gate for this scope, by the same
     /// argument as `memo`: `card_type_change_in_scope` is two whole-collection
     /// walks whose inputs (`continuous_effects`, `battlefield`) cannot change
-    /// while frozen, so the second ask is the first answer. It is asked ~5
-    /// times per target enumeration by `evaluate_requirement_static`'s
-    /// card-type gate — 15,096 of its 34,906 calls over six bench games.
-    /// Cleared with `memo`.
+    /// while frozen, so the second ask is the first answer. The shape it
+    /// exists for: at the fiftieth pass's (D) tip, `evaluate_requirement_static`'s
+    /// card-type gate made 15,096 of the walk's 34,906 calls, ~5 per target
+    /// enumeration and every one the same answer. Cleared with `memo`.
     type_change: Option<bool>,
 }
 

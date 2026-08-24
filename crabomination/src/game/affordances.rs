@@ -120,12 +120,12 @@ impl GameState {
     /// accepted action produced, instead of dropping it.
     ///
     /// **The probe *is* the action.** It clones the template and runs the
-    /// action to completion — 46,192 Ir a call over six bench games, 15.9 % of
-    /// the profile across all callers — and then throws the result away so the
-    /// caller can run the identical action a second time on the identical
-    /// state. A caller that owns its state can adopt this instead and pay for
-    /// one execution rather than two; the attack and block simulations do,
-    /// on their own throwaway clone.
+    /// action to completion, and the callers then ran the identical action a
+    /// second time on an identical state — which at the fiftieth pass's base
+    /// (`e7b3b3d4`) was 46,192 Ir a call and 15.9 % of the profile across all
+    /// of them. That is why this exists: a caller that owns its state adopts
+    /// the probe and pays for one execution rather than two, as the attack and
+    /// block simulations do on their own throwaway clone.
     ///
     /// The state returned is what [`perform_action`](Self::perform_action)
     /// would have left behind: same `Clone` (so the same fresh-by-kind decider
