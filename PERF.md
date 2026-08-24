@@ -253,6 +253,57 @@ it.
 
 ## Baseline
 
+**Fifty-second pass, base `b906be3b` (pass 51's tip) vs its own tip**, both
+`profiling-fast --no-default-features`, built and run in one sitting on one
+box. Four commits, one class: **the pickers that dry-run their picks hand
+the state out**, so the driver adopts it instead of running the same action
+a second time. The class started at pass 50 (finalist adopt) and this pass
+takes it across the picker paths; the dispatch and combat commits are dead-
+work cleanups on the same box for the same reason (once you cut a hot row,
+the walks under it show up).
+
+```text
+                     base (b906be3b)          tip
+I refs (callgrind)   1,314,290,577            1,265,410,851   -3.716 %
+decisions            198,810                  198,810         byte-identical
+turns_per_game       27.94                    27.94
+stalls               0 (0.00 %), cap 0 / stuck 0 / draw 0 (both)
+determinism          ok (all pairs split, both)
+peak_rss_mib         21.6                     21.8
+golden traces        all 7 unchanged
+clippy               `--workspace --all-targets` clean
+host_cpu             Intel(R) Xeon(R) Processor @ 2.10GHz
+host_calib_ms        48-52 across every reading
+```
+
+**Base 1,314,290,577 is pass 51's rebased-head reading**; my callgrind at
+the same commit before starting reads **1,314,289,790**, 787 Ir under it on
+argv length (the `cg.base.out` name against pass 51's longer path). All
+readings in this block use the same argv, so the delta stands.
+
+Four commits, all measured together at the tip because each threads state
+across `Bot::next_action` and their effects only compose there:
+
+| step | before -> after | what |
+|---|---|---|
+| A | 1,314,289,790 -> 1,279,629,727 (**-2.637 %**) | `main_phase_action_with`'s finalist path (`accept_on` finalists that already had `settled: Some`) — the driver adopts the probe's state instead of running the action a second time; skips 516 driver `perform_action` calls |
+| B | 1,279,629,727 -> 1,274,999,328 (**-0.362 %**) | dispatch dead-work: fuse the three `for ev in events` tail loops + gate the delayed-trigger halves; presence-gate the exile and hand walks; hoist `declare_attackers_banded`'s two grant scans |
+| C | 1,274,999,328 -> 1,265,410,851 (**-0.752 %**) | picker adopts: `pick_stack_response`, `pick_combat_trick`, `pick_land_to_play` (from hand, graveyard, and impulse-exile) and `legacy_pretap` all thread `Probed`'s state through to `BotStep`; the driver skips a further 524 `perform_action` calls |
+
+**The pass on the branch: `1,314,289,790 -> 1,265,410,851`, -48,878,939 /
+-3.719 %**, and every step is one thing: the picker probes the action, its
+state IS the action, hand it out.
+
+**Crash-freedom and determinism at the tip, widest pool.** `--a gang --b
+gang --games 400 --threads 3 --decks all`, seed 11: **6,800 games, 6,796
+decided, no panic**, all 3,398 mirrored pairs split (`rho -1.000`). The 4
+undecided are the same seed-11 rules draws passes 44-51 recorded. The
+wide-pool sweep across 13 seeds × threads 1/2/3 (per filter-21's fix) is
+owed and unrun.
+
+**No net needs retraining.** No encoding, pool, `TrainRow`,
+`EncodedState`, or `Vocab` change is in this pass.
+
 **Fiftieth pass, base `e7b3b3d4` (pass 49's tip) vs its own tip**, both
 `profiling-fast --no-default-features`, built and run in one sitting on one
 box. Rebased onto the concurrent run of the same pass (`4107e017`,
@@ -956,6 +1007,98 @@ the table above is safe to compress:
 
 
 ## Log
+
+### Fifty-second pass — the picker adopts on its own side, and the driver was where the second run was
+
+Base `b906be3b` (pass 51's tip), read directly at **1,314,289,790** — 787
+Ir under pass 51's recorded 1,314,290,577 for the same commit (argv
+length again; my `--callgrind-out-file` name is shorter). All readings
+`profiling-fast --no-default-features`, callgrind, `--a gang --b gang
+--games 6 --threads 1 --seed 1 --decks fixed`. Same recipe as pass 50.
+
+| step | before -> after | what |
+|---|---|---|
+| A | 1,314,289,790 -> 1,279,629,727 (**-2.637 %**) | `Bot::next_action_settled` — `main_phase_action_with`'s finalist path hands out the `settled` state its `accept_on` produced; the self-play driver adopts it via `g = *settled` instead of running the same action a second time |
+| B | 1,279,629,727 -> 1,274,999,328 (**-0.362 %**) | dispatch dead-work: fuse three `for ev in events` tail loops + gate the delayed-trigger halves on `!self.delayed_triggers.is_empty()`, presence-gate the exile walk on `PermanentExiled` and the hand walk on `CardPutIntoHandFromGraveyard`, hoist `declare_attackers_banded`'s `trigger_grant_sources` + `equip_granted_trigger_sources` out of the attacker loop |
+| C | 1,274,999,328 -> 1,265,410,851 (**-0.752 %**) | picker adopts: `pick_stack_response`, `pick_combat_trick`, `pick_land_to_play` (from hand, graveyard, and the impulse-exile land) and `legacy_pretap` thread `Probed`'s state through to `BotStep` |
+
+**The class this pass sits in is pass 50's, and this is the second half of
+it: `Bot::next_action` was where the state was thrown away.** Pass 50
+adopted at the finalist level *inside* `main_phase_action_with` and at
+the sim boundary. It said the last row was blocked on the driver's live
+decider — that adopting across the driver "means handing it across
+`Bot::next_action` and the blocker is the decider". It is not.
+
+`Clone for GameState` reconstructs `decider` through
+`self.decider.kind().into_boxed()`, and `DeciderKind` is Serde — for
+`AutoDecider` (stateless) and `ScriptedDecider` (Vec<DecisionAnswer> +
+Vec<Decision>) both, the clone preserves the answer queue exactly. So
+adopting the probe's state, whose decider was cloned via `kind()`,
+replaces the driver's live decider with a *different box holding the same
+queue state at the same position*. The doc comment saying otherwise was
+older than the `ScriptedDecider` `kind()` override. The self-play driver
+is `AutoDecider` and never sees any of this either way; the interactive
+server keeps calling `next_action` (plain form) and never adopts, so its
+`perform_action` still runs and its event list still broadcasts. The
+adoption is scoped to the driver in `play_one_game_traced` that owns its
+state and discards events.
+
+**(A) is where 516 of the 2,036 finalist probes came off the driver.**
+Pass 50's Log recorded 2,036 `accept_on` calls from `main_phase_action_with`
+and said the driver then re-ran them; my measurement here:
+`GameState::perform_action` from `sim_step` unchanged (this is `sim_step`
+itself, not the finalist), while the driver's edge (`perform_action` from
+its own name) drops from 26,502 / 291.6 M to 25,986 / 259.1 M — 516
+skipped calls at ~63 K Ir each = 32.5 M off the program. The other 1,520
+probes are losing finalists whose `settled` is dropped in
+`pick_by_outcome` and pre-validated (`ok=true`) winners that reached the
+return with `settled: None` — a post-hoc `accept_on` for the second class
+was tried and measured a dead lift (0 additional `accept_on` calls; every
+reachable winner had `settled: Some`). Both are for a future pass that
+either probes lazily or threads `Option<Box<GameState>>` through
+`cast_candidates`.
+
+**(B) is four gates and one hoist.** All read as one thing — the caller
+of `dispatch_triggers_for_events` and `declare_attackers_banded` on a
+board that has nothing to say wants the walk to notice. The three tail
+loops in dispatch each iterated `events` once looking for one narrow
+kind; the exile/hand walks each walked their zone's cards to gate on
+`triggered_abilities` that never matched their one event kind; the
+attacker loop did the whole battlefield's `trigger_grant_sources` scan
+per attacker where its answer is the same for all. The delayed-trigger
+side of the fusion is a presence gate: `fire_life_gained_watchers` and
+`fire_opponent_graveyard_watchers` both `collect()` an empty
+`delayed_triggers.filter()` on every matching event, which is one
+allocation-and-drop for nothing.
+
+**(C) is what falls out once `Bot::next_action_settled` exists.** The
+`Picked` enum already carried `Probed(GameAction, Box<GameState>)` — the
+sim adopts it — but every pass through `Bot::next_action`'s consumers
+called `.map(Picked::action)` on it, dropping the state. Now they call
+`.map(Picked::into_step)`. `pick_stack_response`, `pick_combat_trick`
+and the ones with an inline `would_accept_on` (`pick_land_to_play`, the
+graveyard replay, Impulse-exile PlayLand and `legacy_pretap`) switch to
+`accept_on` — same probe, different return — and the driver skips
+another 524 `perform_action` calls.
+
+**The pass on the branch: `1,314,289,790 -> 1,265,410,851`, -48,878,939 /
+-3.719 %.**
+
+**What is left of the class and why each row was not taken.** The
+pre-validated `cast_candidates` finalists (from the ~30 `castable.push`
+blocks with a `would_accept_on` gate) discard state at build time and
+carry `ok=true` back with no state. In the finalist loop, `ok=true`
+finalists get `settled: None`; the winner from `pick_by_outcome` had
+`settled: None` zero times in the six bench games measured, so the
+post-hoc `accept_on` never fired. Capturing state there requires
+changing `cast_candidates`' return from `Vec<(GameAction, bool)>` to
+`Vec<(GameAction, Option<Box<GameState>>)>` and updating each block's
+`would_accept_on(...)` to `accept_on(...).map(Box::new)`. Four call
+sites (`main_phase_action_with`, `sim_spell_action_inner`,
+`follow_up_candidates`, `main_phase_candidates_for_mcts`) plus every
+block would change; the upside is up to ~1,520 more adoptions × ~63 K Ir
+= ~95 M / ~7.2 % if every pre-validated winner reaches the driver on the
+adoption path. Budget as a `cast_candidates`-refactor pass of its own.
 
 ### Fiftieth pass — the dry run *is* the action, and the simulator was paying for it twice
 
@@ -2039,7 +2182,43 @@ settings + debuginfo; system allocator, because valgrind replaces malloc and
 a mimalloc build would measure the interception), 1 thread, `--a gang --b
 gang --games 6 --seed 1 --decks fixed`.
 
-**The branch ends at 1,314,288,098 Ir**, read directly at the fiftieth tip.
+**The branch ends at 1,265,410,851 Ir**, read directly at the fifty-second
+tip. Top self-cost rows at that reading:
+
+| row | Ir | % | note |
+|---|---|---|---|
+| `dispatch_triggers_for_events` | 66,550,642 | **5.26** | down from 5.60 % — pass 52's (B) took the three tail-loop walks + gates off it, but its cost is diffuse across the phase-1 walk. **(-16), still the largest self-cost row** |
+| `gather_continuous_effects_inner` | 52,105,052 | 4.12 | |
+| `__memcpy` | 51,953,975 | 4.11 | |
+| `_int_free` | 46,160,262 | 3.65 | |
+| `Vec::from_iter` | 43,392,008 | 3.43 | |
+| `Arc::clone_from_ref_in` | 39,906,990 | 3.15 | -3.9 M vs pass 50 tip (fewer CoW unshares on the adopted paths). (-29) |
+| `malloc` | 33,983,716 | 2.69 | |
+| `evaluate_requirement_static` | 33,494,274 | 2.65 | unchanged. (-35), the largest non-allocator self row after dispatch |
+| `check_state_based_actions` | 28,964,498 | 2.29 | (-17) |
+| `_int_malloc` | 26,560,235 | 2.10 | |
+| `GameState::clone` | 21,641,360 | 1.71 | -1.3 M vs pass 50 tip |
+| `Arc::make_mut` | 21,151,274 | 1.67 | |
+| `sba_board_scan` | 20,935,578 | 1.65 | |
+| `dispatch_board_scan` | 20,561,286 | 1.62 | |
+
+Perform-action edges at the pass 52 tip, by caller:
+
+| caller | calls | Ir |
+|---|---|---|
+| `sim_step` | 31,874 | 276,884,388 |
+| `perform_action` (driver) | 25,462 | 248,720,738 (was 26,502 / 291.6 M at pass 51's tip — **1,040 skipped** by adoption) |
+| `accept_on` | 5,260 | 242,457,976 (unchanged count — same probes, different return type) |
+| `evaluate_action_sequence` | 1,756 | 22,004,817 |
+| `simulate_attack_outcome_once` | 1,622 | 63,230,581 |
+| `main_phase_action_with` (via finalist) | 1,040 | 14,635,882 (was 1,514 / 42.7 M at pass 49 tip) |
+| `simulate_block_outcome_once` | 302 | 14,120,666 |
+
+The pass 50 table below is kept for its Log rows; the numbers hold to within
+~50 M against this pass's tip, which is enough for candidate ranking. The
+pass-50 tip row and the fifty-second Log's step tables carry the exact
+totals for their commits.
+
 The table below was taken at 1,330,233,580, before (D) and a clippy
 `collapsible_if` on (C)'s diff — (D) moved 4,376 `GameState` clones and the
 Splice sweep, so every row here holds to within ~12 M.
@@ -2307,19 +2486,22 @@ like ordinary casting. **The tell is a validate-then-do pair**: a
 `would_accept` / `is_ok()` probe followed by the same action being performed.
 Grep for those pairs before ranking functions.
 
-**(-32) The last row of that class, and the only one left that is worth more
-than a percent: `main_phase_action_with`'s 2,036 probes, ~95.7 M Ir, 7.2 % of
-the tip.** The bot probes a finalist, the driver then performs it. Adopting
-the probe's state there means handing it across `Bot::next_action`, and the
-blocker is the decider: `GameState::clone` rebuilds one *fresh by kind*, and
-`perform_action` swaps the live one back on every restore precisely so a
-`ScriptedDecider` survives a rejected action. So it is sound only for a
-stateless decider, which self-play always has and the interactive server does
-not. **Shape to cost first:** a `Decider` predicate ("does `kind().into_boxed()`
-reproduce me?"), an optional settled state on the bot's return, and the driver
-adopting only when both agree. Server, ML and the scripted-decider tests are
-all in scope; this is a pass of its own, not a drive-by. `pick_land_to_play`'s
-934 probes (11.2 M) ride along on the same change and nothing else does.
+**(-32) LARGELY CLOSED by pass 52 (`Bot::next_action_settled` +
+`.map(Picked::into_step)` + land-play adopts), for -3.72 % across
+pass-52's chain. The 1,040 driver `perform_action` calls skipped there
+came off `main_phase_action_with`'s finalist, `pick_stack_response`,
+`pick_combat_trick`, the three `pick_land_to_play` blocks and
+`legacy_pretap`.** What is left is the pre-validated finalists whose
+state `cast_candidates` discards at build time — they win rarely enough
+in `pick_by_outcome` that a post-hoc `accept_on` measured a dead 0
+additional probes on the bench pool. The path to capture them is the
+`cast_candidates` refactor described in pass 52's Log; budget it as its
+own pass. The doc's earlier concern about `ScriptedDecider` survival is
+moot: `DeciderKind` derives `Clone` and `ScriptedDecider::kind()`
+carries `answers` + `asked` verbatim, so `state.decider.kind().into_boxed()`
+reconstructs the queue at the same position. Server / interactive
+callers keep calling `next_action` (plain form) precisely so their
+`perform_action` result — the event list they broadcast — is not lost.
 
 **ACTOR SCALING — measured 2026-08-24, and it is CLOSED at the scale this box
 can test.** The seed list has asked for "games/sec at 1, half, full actor

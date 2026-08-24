@@ -21,59 +21,52 @@ claude/modern_decks origin/claude/modern_decks` — the container clones `main`,
 ~2,200 commits behind. **Sessions run this branch concurrently: expect to
 rebase mid-run and re-read your numbers afterwards.**
 
-1. **Nothing is in flight. Re-read at `1,314,288,098` Ir** at `03ab571d`
-   (pass 50's tip plus pass 49's three; everything above it is comment- or
-   tracker-only, and a reading at the head gives 1,314,290,577 — argv length).
-   Pass 50's own chain ended at **1,314,421,002**, so the branch lost a
-   further **133 k across the rebase** onto `2e48c7a8` / `11116ea2` /
-   `c6898506`. That is *not* work: `--bench`'s invariants are byte-identical
-   across it (196,220 / 27.53 / 0 stalls / determinism ok), and none of the
-   three is on the bench path — `restart_game` needs a Karn ultimate — so it
-   is code layout. **Re-read your own base anyway; that is how this was
-   caught.** Pass 50 reads `1,531,246,782 -> 1,314,288,098`, **-14.168 %** in
-   five commits (A -6.958, B -2.022, C -4.703, D -0.875, E -0.316); pass 49
-   under it -5.785 %. Suite **18,712 / 0 / 5** over 22 binaries, traces
-   unchanged, `cargo clippy --workspace --all-targets` clean, peak RSS 21.6.
-   **No net needs retraining.**
-2. **A determinism bug the wide-pool sweep could not see is FIXED
-   (`c6898506`), and the sweep recipe changes because of it.** `restart_game`
-   (CR 727) rebuilt the state with `GameState::new`, whose `GameRng` is
-   `from_entropy` — so every game that *restarted* stopped being a function of
-   its seed, and the antithetic pairing broke on exactly those games. It hid
-   for 49 passes because the sweep only ever ran **three seeds at one thread
-   count**. **Run it as thirteen seeds across `--threads 1/2/3`**, and read
-   the sweep count, not just the panic count: in a `gang`-vs-`gang` mirror
-   every pair must split, so one sweep is a bug. `CRAB_PAIR_SWEEPS=1` names
-   the offending pair and prints the seed that replays it. Post-fix: 88,400
-   games, 88,382 decided, no panic, **all 42,391 pairs split**.
-3. **Read PERF's new ranking rule first: *ask what is done twice*.** All five
-   rows are one class — `would_accept`'s dry run **is** the action, and the
-   caller then performed it again. Invisible as a hot function; the tell is a
-   validate-then-do pair.
-4. **`cg_lines.py` works now and did not before** — it annotated libc against
-   this binary's DWARF and hardcoded the PIE bias. Cross-check any line row
-   against `cg_edges.py`'s call counts; a `profiling-lines` build is ~40 min.
-5. **Best next moves.** (-32), the class's last row: `main_phase_action_with`'s
-   2,036 probes, 7.2 %, blocked on `Bot::next_action` carrying only an action
-   and on the driver's live decider — its own pass. Then
-   `dispatch_triggers_for_events` (5.60 % self, now readable per line), (-35)
-   `evaluate_requirement_static` (2.52 % self / 182,532 calls), (-33), and
-   `resolve_combat` at 55,816 Ir a combat. **`cast_candidates` is closed** —
-   see (-34).
-6. **Filters 21 and 22 are run; a twenty-third is owed.** 22 (*state the
-   harness installs that a rules path can reset*) audited all three sites
-   that rebuild a whole `GameState`: `restart_game` was the bug, `play_subgame`
-   already forks the stream, and the `#[serde(skip)]` on `rng` is deliberate —
-   but `snapshot.rs` claimed a `GameState` round-trip was bit-exact, which it
-   is not, and **no serialized position replays a game; only the seed does.**
-   Candidates for 23: the *measuring devices* vein (18, 19, 20 all landed
-   there) is not exhausted, and neither is filter 21's — *an invariant checked
-   at one point in its parameter space* found a bug on its first run, and the
-   `--bench` invariants are themselves checked at one thread count.
-7. **Owed housekeeping.** PERF 4.0k — the forty-sixth pass's profile table is
-   the next fold. TODO 1.14k — the filter write-ups 12-20 are the compaction.
-   **Actor scaling is measured and closed** — linear to 4 cores (98.4 %
-   at `--threads 4`, mimalloc); see PERF. It says nothing about 8+ actors.
+1. **Nothing is in flight. Tip `1,265,410,851` Ir.** Pass 52 reads
+   `1,314,289,790 -> 1,265,410,851`, **-3.719 %** in four commits: A -2.637 %
+   (finalist adopt), B -0.362 % (dispatch dead-work), C -0.752 % (picker
+   adopts). Base is 787 Ir under pass 51's recorded head (argv length; my
+   `--callgrind-out-file` name is shorter). `--bench` byte-identical:
+   198,810 decisions / 27.94 turns / 0 stalls / determinism ok. Wide pool
+   (seed 11, `--decks all --threads 3 --games 400`): 6,800 / 6,796 decided /
+   0 panic / all 3,398 pairs split. Golden traces all 7 unchanged; clippy
+   `--workspace --all-targets` clean. **No net needs retraining.**
+2. **The class this pass is in is pass 50's second half: `Bot::next_action`
+   was where the driver ran the same action a second time on the state the
+   picker's probe had already produced.** New trait method
+   `Bot::next_action_settled -> Option<BotStep>` with `settled:
+   Option<Box<GameState>>`. The self-play driver in `play_one_game_traced`
+   adopts settled via `g = *settled`; the plain `next_action` shim keeps
+   every existing caller unchanged — the server needs `perform_action`'s
+   event list to broadcast, so adopting is scoped to the throughput driver.
+   **`ScriptedDecider` survives a clone**: `DeciderKind::Scripted` carries
+   `answers` + `asked` verbatim, `into_boxed` reconstructs. The doc that
+   used to say otherwise was pre-`kind()`.
+3. **Best next moves.** The `cast_candidates` refactor — change return from
+   `Vec<(GameAction, bool)>` to `Vec<(GameAction, Option<Box<GameState>>)>`
+   and swap each of the ~30 `would_accept_on` blocks to `accept_on(...)
+   .map(Box::new)`. Pre-validated (`ok=true`) finalists then carry state
+   too, and the winner (which is usually pre-validated on the bench pool)
+   gets adopted. Budget as its own pass; up to ~7 % if the ceiling holds.
+   Then `dispatch_triggers_for_events` (still 5.26 % self after (B); the
+   rest is diffuse across the per-card walk), (-35) `evaluate_requirement_static`
+   (2.65 % self / 182 K calls; 269 Ir/call), (-33) `trigger_grant_sources`
+   in the fire_combat_damage_* callers (analogous hoist to (B)'s
+   declare_attackers one), and `resolve_combat` at 55,816 Ir a combat.
+4. **A twenty-third robustness filter is owed.** 22 audited "state the
+   harness installs that a rules path can reset" and found `restart_game`'s
+   RNG drop (fixed) + `snapshot.rs`'s wrong claim. Candidates for 23: the
+   *measuring devices* vein (18, 19, 20 all landed there) is not exhausted;
+   filter 21's *an invariant checked at one point in its parameter space*
+   found a bug on its first run, and the wide-pool sweep across 13 seeds ×
+   `--threads 1/2/3` (post-filter-21) has still never been run in one
+   sitting from a new box — the 4 undecided seed-11 games are stable, but
+   the sweep itself is owed. Also: `perform_action`'s checkpoint restore
+   audit is only ever exercised on the failing actions the suite trips.
+5. **Owed housekeeping.** PERF 4.1k — the forty-sixth pass's profile table
+   is still the next fold. TODO 1.16k — filter write-ups 12-20 remain the
+   compaction. Actor scaling is closed to 4 cores (linear); says nothing
+   about 8+. The `cast_candidates` refactor above is what unlocks the rest
+   of the `next_action_settled` class.
 
 ## Standing rules for a perf pass
 
