@@ -1166,28 +1166,40 @@ impl GameState {
             }
             seats.len() as i32
         };
-        for atk in attacks {
+        // Statics-granted triggers ("Slivers you control have '…attacks…'" —
+        // Thorncaster) and equipment-granted triggers (CR 702.6e — "whenever
+        // equipped creature attacks, …") both come off whole-board scans —
+        // `trigger_grant_sources` and `equip_granted_trigger_sources`. The
+        // scans' answer is the same for every attacker in this batch, so
+        // walk the board once here rather than per attacker inside the loop
+        // below. Consumed by value in the main loop so its `&mut self`
+        // borrow of `battlefield.iter_mut()` is unblocked.
+        let attacker_grants: Vec<(
+            Vec<crate::card::TriggeredAbility>,
+            Vec<crate::card::TriggeredAbility>,
+        )> = {
+            let trigger_grants = self.trigger_grant_sources();
+            let equip_grants = self.equip_granted_trigger_sources();
+            attacks
+                .iter()
+                .map(|atk| {
+                    self.battlefield
+                        .iter()
+                        .find(|c| c.id == atk.attacker)
+                        .map(|c| {
+                            (
+                                self.statics_granted_triggers_with(c, &trigger_grants),
+                                self.equip_granted_triggers_with(c, &equip_grants),
+                            )
+                        })
+                        .unwrap_or_default()
+                })
+                .collect()
+        };
+        for (atk, (static_granted, equip_granted)) in
+            attacks.into_iter().zip(attacker_grants.into_iter())
+        {
             let id = atk.attacker;
-            // Statics-granted triggers ("Slivers you control have
-            // '…attacks…'" — Thorncaster) fire as though printed. Gathered
-            // before the mutable borrow below.
-            let static_granted = self
-                .battlefield
-                .iter()
-                .find(|c| c.id == id)
-                .map(|c| self.statics_granted_triggers_for(c))
-                .unwrap_or_default();
-            // Equipment-granted Attacks triggers (CR 702.6e) — e.g. "whenever
-            // equipped creature attacks, …". These fire off the creature, so
-            // gather them here alongside the printed/static SelfSource set
-            // (the general dispatch hardcodes-skips SelfSource Attacks to avoid
-            // double-firing, so equip grants must be picked up on this path).
-            let equip_granted = self
-                .battlefield
-                .iter()
-                .find(|c| c.id == id)
-                .map(|c| self.equip_granted_triggers_for(c))
-                .unwrap_or_default();
             // Validated above — commit only. Filter by *controller*, not
             // *owner*: a stolen creature (Threaten / Mind Control) attacks
             // for its current controller.
