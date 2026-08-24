@@ -268,7 +268,7 @@ stalls               0 (0.00 %), cap 0 / stuck 0 / draw 0 (both)
 determinism          ok (all pairs split, both)
 allocations          not re-read              755,521
 peak_rss_mib         21.6                     22.5
-suite                18,709 passed / 0 failed / 5 ignored over 22 binaries
+suite                18,710 passed / 0 failed / 5 ignored over 22 binaries
 golden traces        all 5 unchanged
 clippy               `--workspace --all-targets` clean
 host_cpu             Intel(R) Xeon(R) Processor @ 2.10GHz
