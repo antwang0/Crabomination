@@ -142,6 +142,56 @@ fn the_same_seed_replays_identically() {
     assert_eq!(a.turns, b.turns);
 }
 
+/// The same seed replayed on several threads *at once*.
+///
+/// The two tests above replay sequentially on one thread, so neither can see
+/// a divergence that only appears when games run **concurrently** — a global
+/// cache filled in a different order, a thread-local carried across games, an
+/// allocator address that leaks into a key. A ladder run at `--threads 2`
+/// flipping one game's winner that `--threads 1` gets right is exactly that
+/// shape, and it is invisible to a sequential replay.
+///
+/// Deliberately runs more threads than a small box has cores, so the workers
+/// interleave rather than each getting a quiet core.
+#[test]
+fn the_same_seed_replays_identically_across_threads() {
+    use crabomination::mana::Color;
+    use rand::SeedableRng;
+    let mut r = rand::rngs::StdRng::seed_from_u64(0xC0BE_5EED);
+    let a = crabomination::cube::cube_deck([Color::Red, Color::White], &mut r);
+    let b = crabomination::cube::cube_deck([Color::White, Color::Blue], &mut r);
+    let traces: Vec<_> = std::thread::scope(|s| {
+        let handles: Vec<_> = (0..8)
+            .map(|_| {
+                let (a, b) = (&a, &b);
+                s.spawn(move || {
+                    // Two games per worker, so a stream carried from one game
+                    // into the next on the same thread also shows up.
+                    [
+                        trace_game(a, b, 21, MAX_ACTIONS),
+                        trace_game(a, b, 21, MAX_ACTIONS),
+                    ]
+                })
+            })
+            .collect();
+        handles.into_iter().flat_map(|h| h.join().unwrap()).collect()
+    });
+    let first = &traces[0];
+    for (i, t) in traces.iter().enumerate().skip(1) {
+        if t.digest() != first.digest() {
+            let at = first.lines.iter().zip(&t.lines).position(|(x, y)| x != y);
+            panic!(
+                "replay {i} diverged from replay 0 under concurrency; first divergence at \
+                 {at:?}:\n  run 0: {:?}\n  run {i}: {:?}\n  (winners {:?} vs {:?})",
+                at.and_then(|j| first.lines.get(j)),
+                at.and_then(|j| t.lines.get(j)),
+                first.winner,
+                t.winner,
+            );
+        }
+    }
+}
+
 /// A different seed has to produce a different game — otherwise the two
 /// tests above would pass on an engine that ignores its seed entirely.
 #[test]
