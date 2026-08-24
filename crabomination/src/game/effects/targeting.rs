@@ -1,7 +1,7 @@
 //! Auto-target picker for effects that the engine resolves without explicit
 //! user input (ETB triggers, attack triggers, bot-driven casts).
 
-use crate::card::CardId;
+use crate::card::{CardId, CardInstance};
 use crate::effect::Effect;
 use crate::game::{GameState, Target};
 
@@ -134,6 +134,14 @@ impl GameState {
             self.evaluate_requirement_static(req, t, controller, avoid_source)
                 && self.check_target_legality(t, controller).is_ok()
         };
+        // The battlefield form of the same question. Every walk below already
+        // holds the permanent, and the plain form re-finds it by id —
+        // `evaluate_requirement_static`'s own `battlefield_find` is 1.7 % of
+        // simulator instructions on its own (pass 53).
+        let is_legal_bf = |c: &CardInstance| -> bool {
+            self.evaluate_requirement_static_on(req, c, controller, avoid_source)
+                && self.check_target_legality(&Target::Permanent(c.id), controller).is_ok()
+        };
         // CR 702.21 — a hostile permanent with a non-trivial Ward gets the
         // targeting spell/ability countered unless the actor pays, and the
         // engine pays wards from a (typically empty) floating pool. Prefer
@@ -251,7 +259,7 @@ impl GameState {
                 .iter()
                 .filter(|c| c.controller == p)
                 .filter(|c| !is_avoided(c.id))
-                .filter(|c| is_legal(&Target::Permanent(c.id)))
+                .filter(|c| is_legal_bf(c))
                 .map(|c| {
                     let power = self
                         .computed_permanent(c.id)
@@ -285,8 +293,8 @@ impl GameState {
                 .iter()
                 .filter(|c| !is_avoided(c.id))
                 .filter(|c| pass_warded || !hostile_ward(c.id))
+                .find(|c| is_legal_bf(c))
                 .map(|c| Target::Permanent(c.id))
-                .find(|t| is_legal(t))
             {
                 return Some(t);
             }
@@ -297,16 +305,16 @@ impl GameState {
             .battlefield
             .iter()
             .filter(|c| c.controller == primary_player)
+            .find(|c| is_legal_bf(c))
             .map(|c| Target::Permanent(c.id))
-            .find(|t| is_legal(t))
         {
             return Some(t);
         }
         if let Some(t) = self
             .battlefield
             .iter()
+            .find(|c| is_legal_bf(c))
             .map(|c| Target::Permanent(c.id))
-            .find(|t| is_legal(t))
         {
             return Some(t);
         }
@@ -466,6 +474,13 @@ impl GameState {
             self.evaluate_requirement_static(req, t, controller, source)
                 && self.check_target_legality(t, controller).is_ok()
         };
+        // See `auto_target_for_effect_avoiding_set_xc_inner` — the
+        // battlefield walk hands the permanent over rather than making
+        // `evaluate_requirement_static` re-find it.
+        let is_legal_bf = |c: &CardInstance| -> bool {
+            self.evaluate_requirement_static_on(req, c, controller, source)
+                && self.check_target_legality(&Target::Permanent(c.id), controller).is_ok()
+        };
 
         let mut out: Vec<Target> = Vec::new();
         if accepts_player {
@@ -480,9 +495,8 @@ impl GameState {
             }
         }
         for c in &self.battlefield {
-            let t = Target::Permanent(c.id);
-            if is_legal(&t) {
-                out.push(t);
+            if is_legal_bf(c) {
+                out.push(Target::Permanent(c.id));
             }
         }
         // Graveyards: walk controller's first for graveyard-friendly
@@ -610,6 +624,12 @@ impl GameState {
                 self.evaluate_requirement_static(&req, t, controller, source)
                     && self.check_target_legality(t, controller).is_ok()
             };
+            // The battlefield candidate walk below already holds each
+            // permanent; hand it over instead of re-finding it by id.
+            let is_legal_bf = |c: &CardInstance| -> bool {
+                self.evaluate_requirement_static_on(&req, c, controller, source)
+                    && self.check_target_legality(&Target::Permanent(c.id), controller).is_ok()
+            };
             let pick = {
                 // Player slots: try controller first (caster-friendly),
                 // then opponent.
@@ -687,7 +707,7 @@ impl GameState {
                         .battlefield
                         .iter()
                         .filter(|c| !already_picked.contains(&c.id))
-                        .filter(|c| is_legal(&Target::Permanent(c.id)))
+                        .filter(|c| is_legal_bf(c))
                         .map(|c| {
                             let power = self
                                 .computed_permanent(c.id)
@@ -708,8 +728,8 @@ impl GameState {
                             found = self
                                 .battlefield
                                 .iter()
-                                .map(|c| Target::Permanent(c.id))
-                                .find(|t| is_legal(t));
+                                .find(|c| is_legal_bf(c))
+                                .map(|c| Target::Permanent(c.id));
                         }
                     }
                 }

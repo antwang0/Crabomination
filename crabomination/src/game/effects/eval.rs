@@ -3064,6 +3064,64 @@ impl GameState {
         controller: usize,
         source: Option<CardId>,
     ) -> bool {
+        self.evaluate_requirement_static_hinted(req, target, controller, source, None)
+    }
+
+    /// Same question with the battlefield permanent already in hand.
+    ///
+    /// Every `Target::Permanent` arm below opens by locating the object, and
+    /// the located-on-the-battlefield case is a linear `battlefield_find`.
+    /// The callers that dominate the traffic are *walking the battlefield*
+    /// when they ask — `auto_targets_for_effect_all_slots`' candidate loop,
+    /// the counting filters — so they hand the permanent over instead of
+    /// making this re-find it by id.
+    pub fn evaluate_requirement_static_on(
+        &self,
+        req: &SelectionRequirement,
+        card: &CardInstance,
+        controller: usize,
+        source: Option<CardId>,
+    ) -> bool {
+        // The hint is only equivalent to the walk if `card` *is* the
+        // battlefield permanent with that id — a graveyard or hand card
+        // handed in here would take the battlefield branch (and the layer
+        // view with it). Debug-only, so the 18.7k-test suite is the proof.
+        debug_assert!(
+            self.battlefield_find(card.id).is_some_and(|c| std::ptr::eq(&**c, &**card)),
+            "evaluate_requirement_static_on: hint is not the battlefield permanent it names",
+        );
+        self.evaluate_requirement_static_hinted(
+            req,
+            &Target::Permanent(card.id),
+            controller,
+            source,
+            Some(card),
+        )
+    }
+
+    /// The hint stands in for `battlefield_find` only when it names the id
+    /// being asked about; a mismatch falls back to the walk, so a wrong hint
+    /// costs nothing but the compare.
+    #[inline]
+    fn bf_hint_or_find<'a>(
+        &'a self,
+        cid: CardId,
+        hint: Option<&'a CardInstance>,
+    ) -> Option<&'a CardInstance> {
+        match hint {
+            Some(c) if c.id == cid => Some(c),
+            _ => self.battlefield_find(cid),
+        }
+    }
+
+    fn evaluate_requirement_static_hinted<'a>(
+        &'a self,
+        req: &SelectionRequirement,
+        target: &Target,
+        controller: usize,
+        source: Option<CardId>,
+        hint: Option<&'a CardInstance>,
+    ) -> bool {
         use SelectionRequirement as R;
         match req {
             R::Any => true,
@@ -3088,11 +3146,11 @@ impl GameState {
                 };
                 diff >= *by as i64
             }
-            R::And(a, b) => self.evaluate_requirement_static(a, target, controller, source)
-                && self.evaluate_requirement_static(b, target, controller, source),
-            R::Or(a, b) => self.evaluate_requirement_static(a, target, controller, source)
-                || self.evaluate_requirement_static(b, target, controller, source),
-            R::Not(inner) => !self.evaluate_requirement_static(inner, target, controller, source),
+            R::And(a, b) => self.evaluate_requirement_static_hinted(a, target, controller, source, hint)
+                && self.evaluate_requirement_static_hinted(b, target, controller, source, hint),
+            R::Or(a, b) => self.evaluate_requirement_static_hinted(a, target, controller, source, hint)
+                || self.evaluate_requirement_static_hinted(b, target, controller, source, hint),
+            R::Not(inner) => !self.evaluate_requirement_static_hinted(inner, target, controller, source, hint),
             R::ControlledByYou => match target {
                 // A `Target::Permanent` can also address a spell on the stack
                 // (a "copy target spell you control" ability); its caster is
@@ -3101,7 +3159,7 @@ impl GameState {
                 // graveyard source), fall back to the CR 603.10 last-known
                 // controller in `died_card_snapshots`.
                 Target::Permanent(cid) => self
-                    .battlefield_find(*cid)
+                    .bf_hint_or_find(*cid, hint)
                     .map(|c| c.controller)
                     .or_else(|| self.stack_spell_caster(*cid))
                     .or_else(|| self.died_card_snapshots.get(cid).map(|c| c.controller))
@@ -3115,7 +3173,7 @@ impl GameState {
             R::SameControllerAsTargetSlot(slot) => {
                 let ctrl_of = |t: &Target| match t {
                     Target::Permanent(cid) => self
-                        .battlefield_find(*cid)
+                        .bf_hint_or_find(*cid, hint)
                         .map(|c| c.controller)
                         .or_else(|| self.stack_spell_caster(*cid)),
                     Target::Player(p) => Some(*p),
@@ -3131,13 +3189,13 @@ impl GameState {
                 if self.players.get(*p).is_some_and(|pl| pl.sorceries_cast_this_turn > 0)),
             R::ControlledByActivePlayer => match target {
                 Target::Permanent(cid) => {
-                    self.battlefield_find(*cid).is_some_and(|c| c.controller == self.active_player_idx)
+                    self.bf_hint_or_find(*cid, hint).is_some_and(|c| c.controller == self.active_player_idx)
                 }
                 Target::Player(p) => *p == self.active_player_idx,
             },
             R::ControlledByOpponent => match target {
                 Target::Permanent(cid) => self
-                    .battlefield_find(*cid)
+                    .bf_hint_or_find(*cid, hint)
                     .map(|c| c.controller)
                     .or_else(|| self.stack_spell_caster(*cid))
                     .map(|ctrl| !self.same_team(ctrl, controller))
@@ -3148,7 +3206,7 @@ impl GameState {
                 let Some(who) = self.trigger_event_player_scratch else { return false };
                 match target {
                     Target::Permanent(cid) => self
-                        .battlefield_find(*cid)
+                        .bf_hint_or_find(*cid, hint)
                         .map(|c| c.controller)
                         .or_else(|| self.stack_spell_caster(*cid))
                         // CR 108.4 — a card in a hidden/terminal zone has no
@@ -3209,7 +3267,7 @@ impl GameState {
                 // controller, so read it directly.
                 let owner = match target {
                     Target::Permanent(cid) => {
-                        self.battlefield_find(*cid).map(|c| c.controller).unwrap_or(controller)
+                        self.bf_hint_or_find(*cid, hint).map(|c| c.controller).unwrap_or(controller)
                     }
                     Target::Player(p) => *p,
                 };
@@ -3223,7 +3281,7 @@ impl GameState {
             R::ControllerDrewAtLeastThisTurn(n) => {
                 let owner = match target {
                     Target::Permanent(cid) => {
-                        self.battlefield_find(*cid).map(|c| c.controller).unwrap_or(controller)
+                        self.bf_hint_or_find(*cid, hint).map(|c| c.controller).unwrap_or(controller)
                     }
                     Target::Player(p) => *p,
                 };
@@ -3232,7 +3290,7 @@ impl GameState {
             R::ControllerSacrificedArtifactThisTurn => {
                 let owner = match target {
                     Target::Permanent(cid) => {
-                        self.battlefield_find(*cid).map(|c| c.controller).unwrap_or(controller)
+                        self.bf_hint_or_find(*cid, hint).map(|c| c.controller).unwrap_or(controller)
                     }
                     Target::Player(p) => *p,
                 };
@@ -3241,7 +3299,7 @@ impl GameState {
             R::ControllersTurn => {
                 let owner = match target {
                     Target::Permanent(cid) => {
-                        self.battlefield_find(*cid).map(|c| c.controller).unwrap_or(controller)
+                        self.bf_hint_or_find(*cid, hint).map(|c| c.controller).unwrap_or(controller)
                     }
                     Target::Player(p) => *p,
                 };
@@ -3250,7 +3308,7 @@ impl GameState {
             R::ControllerCorrupted => {
                 let owner = match target {
                     Target::Permanent(cid) => {
-                        self.battlefield_find(*cid).map(|c| c.controller).unwrap_or(controller)
+                        self.bf_hint_or_find(*cid, hint).map(|c| c.controller).unwrap_or(controller)
                     }
                     Target::Player(p) => *p,
                 };
@@ -3268,7 +3326,7 @@ impl GameState {
                     StackItem::Spell { card, .. } if card.id == *cid => Some(&**card),
                     _ => None,
                 });
-                let bf_card = self.battlefield_find(*cid);
+                let bf_card = self.bf_hint_or_find(*cid, hint);
                 let card = bf_card
                     // Dies-trigger filters (Felisa's "with a +1/+1 counter on
                     // it") read the dying object's last-known battlefield
@@ -3938,10 +3996,10 @@ impl GameState {
                     R::HasGreatestManaValueAmongControlled(inner) => {
                         // Candidate must be a battlefield permanent that
                         // matches the inner filter.
-                        let Some(cand) = self.battlefield_find(*cid) else {
+                        let Some(cand) = self.bf_hint_or_find(*cid, hint) else {
                             return false;
                         };
-                        if !self.evaluate_requirement_static(inner, target, controller, source) {
+                        if !self.evaluate_requirement_static_hinted(inner, target, controller, source, hint) {
                             return false;
                         }
                         let cand_mv = cand.definition.cost.cmc();
@@ -3951,9 +4009,9 @@ impl GameState {
                         !self.battlefield.iter().any(|other| {
                             other.controller == cand_ctrl
                                 && other.id != *cid
-                                && self.evaluate_requirement_static(
+                                && self.evaluate_requirement_static_on(
                                     inner,
-                                    &Target::Permanent(other.id),
+                                    other,
                                     controller,
                                     source,
                                 )
@@ -3964,10 +4022,10 @@ impl GameState {
                     // power among [filter] they control" (Professor Onyx −3).
                     // Ties pass permissively; battlefield-only.
                     R::HasGreatestPowerAmongControlled(inner) => {
-                        let Some(cand) = self.battlefield_find(*cid) else {
+                        let Some(cand) = self.bf_hint_or_find(*cid, hint) else {
                             return false;
                         };
-                        if !self.evaluate_requirement_static(inner, target, controller, source) {
+                        if !self.evaluate_requirement_static_hinted(inner, target, controller, source, hint) {
                             return false;
                         }
                         let cand_pow = cand.power();
@@ -3975,9 +4033,9 @@ impl GameState {
                         !self.battlefield.iter().any(|other| {
                             other.controller == cand_ctrl
                                 && other.id != *cid
-                                && self.evaluate_requirement_static(
+                                && self.evaluate_requirement_static_on(
                                     inner,
-                                    &Target::Permanent(other.id),
+                                    other,
                                     controller,
                                     source,
                                 )
@@ -3985,7 +4043,7 @@ impl GameState {
                         })
                     }
                     R::HasGreatestPowerAmongAllCreatures => {
-                        let Some(cand) = self.battlefield_find(*cid) else { return false };
+                        let Some(cand) = self.bf_hint_or_find(*cid, hint) else { return false };
                         if !cand.definition.is_creature() {
                             return false;
                         }
@@ -4009,9 +4067,9 @@ impl GameState {
                             .battlefield
                             .iter()
                             .filter(|c| {
-                                self.evaluate_requirement_static(
+                                self.evaluate_requirement_static_on(
                                     inner,
-                                    &Target::Permanent(c.id),
+                                    c,
                                     controller,
                                     source,
                                 )
