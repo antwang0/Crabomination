@@ -40,7 +40,7 @@ use rand::{Rng, RngExt, SeedableRng};
 
 use crate::cube::CardFactory;
 use crate::draft::{
-    COPY_CAP, colored_pip_count, colors_of_cost, colors_of_picks, generate_sos_pack,
+    COPY_CAP, colors_of_cost, colors_of_picks, generate_sos_pack,
     score_card_with_colors, sos_draft_pool,
 };
 use crate::game::GameState;
@@ -335,16 +335,15 @@ pub fn suggest_main_deck_in_colors<R: Rng>(
     quality: bool,
 ) -> (Vec<CardFactory>, Vec<CardFactory>) {
     let allowed = |f: CardFactory| -> bool {
-        let def = crate::cube::card_def(f);
+        let brief = crate::cube::card_brief(f);
         // Lands never occupy spell slots in the sealed builder —
         // `assemble_lands` owns the land base. (High jitter used to
         // promote off-color duals into the 22-24 spell main.)
-        if def.card_types.contains(&crate::card::CardType::Land) {
+        if brief.is_land {
             return false;
         }
-        let card_colors = colors_of_cost(&def.cost);
-        card_colors.is_empty()
-            || card_colors.iter().all(|c| colors.contains(&c))
+        brief.pips.is_empty()
+            || brief.pips.colors().all(|c| colors.contains(&c))
             || splash.iter().any(|s| *s as usize == f as usize)
     };
     // Hoisted: pip totals over the pile are invariant while scoring it.
@@ -363,11 +362,8 @@ pub fn suggest_main_deck_in_colors<R: Rng>(
             let jitter = if noise > 0 { rng.random_range(-noise..=noise) } else { 0 };
             // Lands never take spell slots — they're assigned by
             // `assemble_lands`; the fixing bonus is for rocks/fetchers.
-            let def = crate::cube::card_def(f);
-            let fix = if fixing_bonus > 0
-                && !def.card_types.contains(&crate::card::CardType::Land)
-                && is_fixing_card(def)
-            {
+            let brief = crate::cube::card_brief(f);
+            let fix = if fixing_bonus > 0 && !brief.is_land && brief.is_fixing {
                 fixing_bonus
             } else {
                 0
@@ -495,8 +491,8 @@ pub(crate) fn static_build_score_v3(main: &[CardFactory], target_spells: usize) 
 /// choice, not overrule card quality outright. Zero for any list that
 /// looks like a normal limited deck.
 pub(crate) fn curve_penalty(main: &[CardFactory]) -> i32 {
-    let early = main.iter().filter(|&&f| crate::cube::card_def(f).cost.cmc() <= 2).count() as i32;
-    let top = main.iter().filter(|&&f| crate::cube::card_def(f).cost.cmc() >= 5).count() as i32;
+    let early = main.iter().filter(|&&f| crate::cube::card_brief(f).cmc <= 2).count() as i32;
+    let top = main.iter().filter(|&&f| crate::cube::card_brief(f).cmc >= 5).count() as i32;
     (5 - early).max(0) * 4 + (top - 6).max(0) * 3
 }
 
@@ -510,16 +506,15 @@ fn splash_cards(pool: &[CardFactory], pair: &[Color], third: Color, cfg: &SimCon
     let mut hits: Vec<(CardFactory, i32)> = pool
         .iter()
         .filter(|&&f| {
-            let def = crate::cube::card_def(f);
-            let cs = colors_of_cost(&def.cost);
-            if !(cs.contains(third) && cs.iter().all(|c| c == third || pair.contains(&c))) {
+            let pips = &crate::cube::card_brief(f).pips;
+            if !(pips.get(third) > 0 && pips.colors().all(|c| c == third || pair.contains(&c))) {
                 return false;
             }
             // A splash is a handful of off-color sources, so it can only
             // support ONE colored pip. Without this the builder splashed
             // {3}{U}{U} Emeritus of Ideation off three Islands — a card
             // it then measurably failed to cast.
-            !cfg.builder_v2 || colored_pip_count(&def.cost, third) <= 1
+            !cfg.builder_v2 || pips.get(third) <= 1
         })
         .map(|&f| {
             let s = if cfg.builder_v2 {
@@ -553,15 +548,15 @@ fn basic_split(
             let w = main
                 .iter()
                 .map(|&f| {
-                    let def = crate::cube::card_def(f);
-                    let pips = colored_pip_count(&def.cost, c);
+                    let brief = crate::cube::card_brief(f);
+                    let pips = brief.pips.get(c);
                     // Casting {U}{U} on curve needs roughly half again
                     // the sources {U} does, not the same — a linear pip
                     // count under-serves every double-pip card in the
                     // deck. Squaring is the cheap standing-in for the
                     // hypergeometric answer.
                     let demand = if squared_pips { pips * pips } else { pips };
-                    demand * 7u32.saturating_sub(def.cost.cmc()).max(1)
+                    demand * 7u32.saturating_sub(brief.cmc).max(1)
                 })
                 .sum();
             (c, w)
@@ -629,17 +624,16 @@ fn assemble_lands(
     total: u32,
     squared_pips: bool,
 ) -> (Vec<CardFactory>, HashMap<Color, u32>) {
-    use crate::card::CardType;
     let mut duals: Vec<CardFactory> = Vec::new();
     leftovers.retain(|&f| {
         if duals.len() >= total as usize {
             return true;
         }
-        let def = crate::cube::card_def(f);
-        if !def.card_types.contains(&CardType::Land) {
+        let brief = crate::cube::card_brief(f);
+        if !brief.is_land {
             return true;
         }
-        let produced = land_produced_colors(def);
+        let produced = land_produced_colors(brief.def);
         let on_color = produced.iter().filter(|c| colors.contains(c)).count();
         if on_color >= 2 && on_color == produced.len() {
             duals.push(f);
@@ -701,7 +695,7 @@ fn build_shape<R: Rng>(
     // Land colors: main colors plus any splash color actually present.
     let mut land_colors = colors.to_vec();
     for &c in splash_colors {
-        if main.iter().any(|&f| colors_of_cost(&crate::cube::card_def(f).cost).contains(c)) {
+        if main.iter().any(|&f| crate::cube::card_brief(f).pips.get(c) > 0) {
             land_colors.push(c);
         }
     }

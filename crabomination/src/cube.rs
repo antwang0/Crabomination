@@ -35,7 +35,7 @@ thread_local! {
     // `const`-initialized so the access is a bare TLS read rather than a
     // lazy-init check on every lookup: `card_def` is called 487,071 times
     // in one twelve-deck sealed build.
-    static DEF_CACHE: std::cell::RefCell<HashMap<usize, &'static CardDefinition>> =
+    static DEF_CACHE: std::cell::RefCell<HashMap<usize, &'static CardBrief>> =
         const {
             std::cell::RefCell::new(std::collections::HashMap::with_hasher(
                 std::hash::BuildHasherDefault::new(),
@@ -73,6 +73,52 @@ thread_local! {
 /// sound: a caller that needs an owned, mutable definition still calls the
 /// factory.
 pub fn card_def(f: CardFactory) -> &'static CardDefinition {
+    card_brief(f).def
+}
+
+/// The per-definition facts the deck builders read, derived once per factory
+/// alongside the definition itself.
+///
+/// Every field is a pure function of the `CardDefinition`, and a definition
+/// here is leaked and never mutated, so this is a memo and not a cache with
+/// a staleness problem. What it removes is the re-derivation, which the
+/// builders pay per (pick x candidate x colour shape): `card_types` is a
+/// `Vec<CardType>` that four `contains` calls scan per scored card, `cmc`
+/// and the pip counts each walk the mana cost, `card_quality` walks the
+/// keyword list and `is_fixing_card` walks the whole effect tree.
+pub struct CardBrief {
+    pub def: &'static CardDefinition,
+    /// Colored pips per colour — [`crate::draft::pip_counts`].
+    pub pips: crate::draft::ColorCounts,
+    pub cmc: u32,
+    pub is_land: bool,
+    pub is_creature: bool,
+    pub is_instant_or_sorcery: bool,
+    /// [`crate::draft::card_quality`].
+    pub quality: i32,
+    /// [`crate::recommend::is_fixing_card`].
+    pub is_fixing: bool,
+}
+
+impl CardBrief {
+    fn of(def: &'static CardDefinition) -> CardBrief {
+        use crate::card::CardType;
+        CardBrief {
+            def,
+            pips: crate::draft::pip_counts(&def.cost),
+            cmc: def.cost.cmc(),
+            is_land: def.card_types.contains(&CardType::Land),
+            is_creature: def.card_types.contains(&CardType::Creature),
+            is_instant_or_sorcery: def.card_types.contains(&CardType::Instant)
+                || def.card_types.contains(&CardType::Sorcery),
+            quality: crate::draft::card_quality(def),
+            is_fixing: crate::recommend::is_fixing_card(def),
+        }
+    }
+}
+
+/// [`card_def`]'s memo, with the derived facts attached. See [`CardBrief`].
+pub fn card_brief(f: CardFactory) -> &'static CardBrief {
     let key = f as usize;
     let slot = front_slot(key);
     DEF_FRONT.with(|fr| {
@@ -81,7 +127,7 @@ pub fn card_def(f: CardFactory) -> &'static CardDefinition {
         {
             return d;
         }
-        let d = card_def_uncached(f);
+        let d = card_brief_uncached(f);
         fr.keys[slot].set(key);
         fr.defs[slot].set(Some(d));
         d
@@ -105,7 +151,7 @@ pub fn card_def(f: CardFactory) -> &'static CardDefinition {
 /// pointer is never null.
 struct DefFront {
     keys: [std::cell::Cell<usize>; FRONT_SLOTS],
-    defs: [std::cell::Cell<Option<&'static CardDefinition>>; FRONT_SLOTS],
+    defs: [std::cell::Cell<Option<&'static CardBrief>>; FRONT_SLOTS],
 }
 
 const FRONT_BITS: u32 = 12;
@@ -128,20 +174,22 @@ thread_local! {
     };
 }
 
-/// [`card_def`]'s slow path: the per-thread map, and the factory call on a
+/// [`card_brief`]'s slow path: the per-thread map, and the factory call on a
 /// first ask.
 #[cold]
-fn card_def_uncached(f: CardFactory) -> &'static CardDefinition {
+fn card_brief_uncached(f: CardFactory) -> &'static CardBrief {
     DEF_CACHE.with(|c| {
         if let Some(d) = c.borrow().get(&(f as usize)) {
             return *d;
         }
         // Built outside the borrow: a factory is pure, but re-entering the
         // cache while it is borrowed would panic rather than deadlock, and
-        // that is not a failure mode worth leaving open.
+        // that is not a failure mode worth leaving open. `CardBrief::of`
+        // calls back into `draft` / `recommend`, which is the same hazard.
         let built: &'static CardDefinition = Box::leak(Box::new(f()));
-        c.borrow_mut().insert(f as usize, built);
-        built
+        let brief: &'static CardBrief = Box::leak(Box::new(CardBrief::of(built)));
+        c.borrow_mut().insert(f as usize, brief);
+        brief
     })
 }
 

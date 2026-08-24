@@ -27,7 +27,7 @@ use crate::fxhash::HashMap;
 use rand::{Rng, RngExt};
 use rand::seq::SliceRandom;
 
-use crate::card::{CardType, CreatureType, Keyword};
+use crate::card::{CreatureType, Keyword};
 use crate::cube::{CardFactory, all_cube_cards};
 use crate::game::GameState;
 use crate::mana::{Color, ManaSymbol};
@@ -355,22 +355,21 @@ pub(crate) fn score_card_quality(
     factory: CardFactory,
     seat_colors: &ColorCounts,
 ) -> i32 {
-    score_card_with_colors(factory, seat_colors) + card_quality(crate::cube::card_def(factory))
+    score_card_with_colors(factory, seat_colors) + crate::cube::card_brief(factory).quality
 }
 
 pub(crate) fn score_card_with_colors(
     factory: CardFactory,
     seat_colors: &ColorCounts,
 ) -> i32 {
-    let def = crate::cube::card_def(factory);
+    let brief = crate::cube::card_brief(factory);
     let mut score: i32 = 0;
 
     // ── Color fit (the dominant signal once you have ~5 picks) ──
-    // One pass over the symbols. Both branches below want per-color pip
-    // counts, and asking `colors_of_cost` for the set and then
-    // `colored_pip_count` per color in it walked the same cost up to three
-    // times for a two-color card.
-    let card_pips = pip_counts(&def.cost);
+    // The pip distribution, the card types and the mana value are all read
+    // off the memo: they are pure functions of the definition, and this
+    // function is called per (pick x candidate x colour shape).
+    let card_pips = &brief.pips;
     if card_pips.is_empty() {
         // Colorless / artifact / generic-only NONLAND cards: slot into any
         // deck. Priced just under a single on-color pip (+6) — the old +2
@@ -379,7 +378,7 @@ pub(crate) fn score_card_with_colors(
         // Lands are excluded: they'd sneak into SPELL slots on this bonus
         // (the sealed builder assigns lands separately in assemble_lands),
         // producing accidental 18-land/21-spell decks.
-        if !def.card_types.contains(&CardType::Land) {
+        if !brief.is_land {
             score += 5;
         }
     } else if seat_colors.is_empty() {
@@ -412,21 +411,20 @@ pub(crate) fn score_card_with_colors(
     }
 
     // ── Card-type weight ──
-    if def.card_types.contains(&CardType::Creature) {
+    if brief.is_creature {
         score += 3;
     }
-    if def.card_types.contains(&CardType::Instant) || def.card_types.contains(&CardType::Sorcery) {
+    if brief.is_instant_or_sorcery {
         score += 2;
     }
-    if def.card_types.contains(&CardType::Land) {
+    if brief.is_land {
         // Non-basic lands are fine fixing but aren't a high pick
         // priority — basics get added by the deck-builder.
         score += 1;
     }
 
     // ── Mana-value (curve) weight ──
-    let cmc = def.cost.cmc();
-    score += match cmc {
+    score += match brief.cmc {
         0 => 0,
         1 => 1,
         2..=4 => 3,
@@ -454,7 +452,7 @@ pub fn bot_pick(pack: &[CardFactory], seat_picks_so_far: &[CardFactory]) -> Opti
     let mut best_cmc = 0u32;
     for (i, factory) in pack.iter().enumerate() {
         let score = score_card_for_seat(*factory, seat_picks_so_far);
-        let cmc = crate::cube::card_def(*factory).cost.cmc();
+        let cmc = crate::cube::card_brief(*factory).cmc;
         let better = score > best_score || (score == best_score && cmc > best_cmc);
         if better {
             best_idx = i;
@@ -506,6 +504,19 @@ impl ColorCounts {
     pub fn iter(&self) -> impl Iterator<Item = (Color, u32)> + '_ {
         Color::ALL.into_iter().map(|c| (c, self.get(c)))
     }
+
+    /// The colors with at least one pip, in WUBRG order — what
+    /// [`colors_of_cost`] returns for the same cost.
+    pub fn colors(&self) -> impl Iterator<Item = Color> + '_ {
+        self.iter().filter(|(_, n)| *n > 0).map(|(c, _)| c)
+    }
+
+    /// Sum another distribution into this one.
+    pub fn add_all(&mut self, other: &ColorCounts) {
+        for (i, n) in other.0.iter().enumerate() {
+            self.0[i] += n;
+        }
+    }
 }
 
 /// Distribution of colored pips across a seat's picks, used by
@@ -515,7 +526,7 @@ impl ColorCounts {
 pub fn colors_of_picks(picks: &[CardFactory]) -> ColorCounts {
     let mut totals = ColorCounts::default();
     for factory in picks {
-        add_pip_counts(&crate::cube::card_def(*factory).cost, &mut totals);
+        totals.add_all(&crate::cube::card_brief(*factory).pips);
     }
     totals
 }
