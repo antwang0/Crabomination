@@ -3902,6 +3902,7 @@ mod spec {
     pub const SPLIT: u32 = 1 << 12;
     pub const BACK: u32 = 1 << 13;
     pub const ALT_COST: u32 = 1 << 14;
+    pub const SPLICE: u32 = 1 << 19;
     // battlefield
     pub const PREPARED: u32 = 1 << 18;
     // graveyard
@@ -3911,6 +3912,19 @@ mod spec {
     /// The one graveyard loop that carries flashback, disturb, mayhem,
     /// harmonize and the `from_graveyard` activated abilities.
     pub const GY_LOOP: u32 = GY_RECAST;
+}
+
+/// The dry-run template, built the first time something actually needs it.
+///
+/// Every use of it is inside a gated block or a conditional, and on most ticks
+/// none of them fires — so `affordance_probe_template`'s `GameState` clone was
+/// built and dropped for nothing. `sim_spell_action_inner` alone took 3,732 of
+/// them per six bench games and probed on at most 1,552.
+type ProbeCell = std::cell::OnceCell<GameState>;
+
+/// `cell`, cloning `state` into it on first use. See [`ProbeCell`].
+fn probe_of<'a>(cell: &'a ProbeCell, state: &GameState) -> &'a GameState {
+    cell.get_or_init(|| state.affordance_probe_template())
 }
 
 /// Run one gated specialty block. Release skips it when its bit is clear;
@@ -3977,6 +3991,7 @@ fn hand_specialties(state: &GameState, seat: usize, facts: &BoardFacts) -> u32 {
                 Keyword::Conspire => spec::CONSPIRE,
                 Keyword::Kicker(_) | Keyword::Offspring(_) => spec::KICKER,
                 Keyword::Multikicker(_) => spec::MULTIKICKER,
+                Keyword::Splice(..) => spec::SPLICE,
                 _ => 0,
             };
         }
@@ -4061,7 +4076,7 @@ fn graveyard_specialties(state: &GameState, seat: usize) -> u32 {
 fn cast_candidates(
     state: &GameState,
     seat: usize,
-    probe: &GameState,
+    probe: &ProbeCell,
     w: &EvalWeights,
 ) -> Vec<(GameAction, bool)> {
     // Build list of castable non-land spells. Affordability + target
@@ -4243,7 +4258,7 @@ fn cast_candidates(
             x_value: None,
             delve_cards,
         };
-        if GameState::would_accept_on(probe, action.clone()) {
+        if GameState::would_accept_on(probe_of(probe, state), action.clone()) {
             castable.push(action);
         }
     }
@@ -4306,7 +4321,7 @@ fn cast_candidates(
                 x_value: None,
                 convoke_creatures: ranked[..n].to_vec(),
             };
-            if GameState::would_accept_on(probe, action.clone()) {
+            if GameState::would_accept_on(probe_of(probe, state), action.clone()) {
                 castable.push(action);
                 break;
             }
@@ -4350,7 +4365,7 @@ fn cast_candidates(
             mode: None,
             x_value: None,
         };
-        if GameState::would_accept_on(probe, action.clone()) {
+        if GameState::would_accept_on(probe_of(probe, state), action.clone()) {
             castable.push(action);
         }
     }
@@ -4401,7 +4416,7 @@ fn cast_candidates(
         }
         for picks in candidates {
             let Some(action) = pick(picks) else { continue };
-            if GameState::would_accept_on(probe, action.clone()) {
+            if GameState::would_accept_on(probe_of(probe, state), action.clone()) {
                 castable.push(action);
             }
         }
@@ -4443,7 +4458,7 @@ fn cast_candidates(
             mode: None,
             x_value,
         };
-        if GameState::would_accept_on(probe, action.clone()) {
+        if GameState::would_accept_on(probe_of(probe, state), action.clone()) {
             castable.push(action);
         }
     }
@@ -4459,8 +4474,13 @@ fn cast_candidates(
     // and `cast_candidates` runs inside the attack simulations, so that waste
     // was multiplied per simulated priority pass. Same result: the sweep's
     // `spliceable` field *is* this call, and it is empty off-priority.
+    // Gated like every other specialty block: the sweep it calls is a hand
+    // walk that returns empty unless a card in hand has Splice, and it was the
+    // one consumer of the probe template that ran on every tick — which is
+    // what kept the template from being lazy.
+    gated_block!(mask, spec::SPLICE, castable, {
     let spliceable = if state.player_with_priority() == seat {
-        state.spliceable_hand_cards_on(probe, seat)
+        state.spliceable_hand_cards_on(probe_of(probe, state), seat)
     } else {
         Vec::new()
     };
@@ -4490,10 +4510,11 @@ fn cast_candidates(
             mode: None,
             x_value: None,
         };
-        if GameState::would_accept_on(probe, action.clone()) {
+        if GameState::would_accept_on(probe_of(probe, state), action.clone()) {
             castable.push(action);
         }
     }
+    });
 
     // Conspire (CR 702.78): for any hand card with `Keyword::Conspire`, tap
     // the first two untapped creatures sharing a color with it to copy the
@@ -4543,7 +4564,7 @@ fn cast_candidates(
             mode: None,
             x_value: None,
         };
-        if GameState::would_accept_on(probe, action.clone()) {
+        if GameState::would_accept_on(probe_of(probe, state), action.clone()) {
             // Prefer conspiring over the plain cast of the same card — the
             // extra copy is value the bot's spell eval doesn't otherwise see.
             let cid = c.id;
@@ -4584,7 +4605,7 @@ fn cast_candidates(
             mode: None,
             x_value: None,
         };
-        if GameState::would_accept_on(probe, action.clone()) {
+        if GameState::would_accept_on(probe_of(probe, state), action.clone()) {
             // Offspring (CR 702.166) is pure upside — a free 1/1 token copy
             // with no downside beyond the mana. When affordable, prefer it
             // over the plain cast of the same card (mirrors Conspire above).
@@ -4630,7 +4651,7 @@ fn cast_candidates(
                 mode: None,
                 x_value: None,
             };
-            if GameState::would_accept_on(probe, action.clone()) {
+            if GameState::would_accept_on(probe_of(probe, state), action.clone()) {
                 best = Some(action);
                 break;
             }
@@ -4671,7 +4692,7 @@ fn cast_candidates(
                 mode: None,
                 x_value: None,
             };
-            if GameState::would_accept_on(probe, action.clone()) {
+            if GameState::would_accept_on(probe_of(probe, state), action.clone()) {
                 castable.push(action);
                 break;
             }
@@ -4704,7 +4725,7 @@ fn cast_candidates(
             mode: None,
             x_value: None,
         };
-        if GameState::would_accept_on(probe, action.clone()) {
+        if GameState::would_accept_on(probe_of(probe, state), action.clone()) {
             castable.push(action);
         }
     }
@@ -4733,7 +4754,7 @@ fn cast_candidates(
             mode: None,
             x_value: None,
         };
-        if GameState::would_accept_on(probe, action.clone()) {
+        if GameState::would_accept_on(probe_of(probe, state), action.clone()) {
             castable.push(action);
         }
     }
@@ -4760,7 +4781,7 @@ fn cast_candidates(
             mode: None,
             x_value: None,
         };
-        if GameState::would_accept_on(probe, action.clone()) {
+        if GameState::would_accept_on(probe_of(probe, state), action.clone()) {
             castable.push(action);
         }
     }
@@ -4781,7 +4802,7 @@ fn cast_candidates(
             mode: None,
             x_value: None,
         };
-        if GameState::would_accept_on(probe, action.clone()) {
+        if GameState::would_accept_on(probe_of(probe, state), action.clone()) {
             castable.push(action);
         }
     }
@@ -4809,7 +4830,7 @@ fn cast_candidates(
         let action = GameAction::CastSplitRight {
             card_id: c.id, target, additional_targets, mode: None, x_value: None,
         };
-        if GameState::would_accept_on(probe, action.clone()) {
+        if GameState::would_accept_on(probe_of(probe, state), action.clone()) {
             castable.push(action);
         }
     }
@@ -4833,7 +4854,7 @@ fn cast_candidates(
         let action = GameAction::CastAftermath {
             card_id: c.id, target, additional_targets, mode: None, x_value: None,
         };
-        if GameState::would_accept_on(probe, action.clone()) {
+        if GameState::would_accept_on(probe_of(probe, state), action.clone()) {
             castable.push(action);
         }
     }
@@ -4862,7 +4883,7 @@ fn cast_candidates(
             let action = GameAction::CastFlashback {
                 card_id: c.id, target, additional_targets, mode: None, x_value: None,
             };
-            if GameState::would_accept_on(probe, action.clone()) {
+            if GameState::would_accept_on(probe_of(probe, state), action.clone()) {
                 castable.push(action);
             }
         }
@@ -4883,7 +4904,7 @@ fn cast_candidates(
                 let action = GameAction::CastDisturb {
                     card_id: c.id, target, additional_targets,
                 };
-                if GameState::would_accept_on(probe, action.clone()) {
+                if GameState::would_accept_on(probe_of(probe, state), action.clone()) {
                     castable.push(action);
                 }
             }
@@ -4905,7 +4926,7 @@ fn cast_candidates(
             let action = GameAction::CastMayhem {
                 card_id: c.id, target, additional_targets, mode: None, x_value: None,
             };
-            if GameState::would_accept_on(probe, action.clone()) {
+            if GameState::would_accept_on(probe_of(probe, state), action.clone()) {
                 castable.push(action);
             }
         }
@@ -4926,7 +4947,7 @@ fn cast_candidates(
             let action = GameAction::CastHarmonize {
                 card_id: c.id, tap_creature: None, target, additional_targets, mode: None, x_value: None,
             };
-            if GameState::would_accept_on(probe, action.clone()) {
+            if GameState::would_accept_on(probe_of(probe, state), action.clone()) {
                 castable.push(action);
             }
         }
@@ -4950,7 +4971,7 @@ fn cast_candidates(
             let action = GameAction::ActivateAbility {
                 card_id: c.id, ability_index: idx, target, additional_targets, x_value: None, mode: None,
             };
-            if GameState::would_accept_on(probe, action.clone()) {
+            if GameState::would_accept_on(probe_of(probe, state), action.clone()) {
                 castable.push(action);
             }
         }
@@ -4992,7 +5013,7 @@ fn cast_candidates(
             mode: None,
             x_value: None,
         };
-        if GameState::would_accept_on(probe, action.clone()) {
+        if GameState::would_accept_on(probe_of(probe, state), action.clone()) {
             castable.push(action);
         }
     }
@@ -5026,7 +5047,7 @@ fn cast_candidates(
         } else {
             continue;
         };
-        if GameState::would_accept_on(probe, action.clone()) {
+        if GameState::would_accept_on(probe_of(probe, state), action.clone()) {
             castable.push(action);
         }
     }
@@ -5073,7 +5094,7 @@ fn cast_candidates(
             mode: None,
             x_value: None,
         };
-        if GameState::would_accept_on(probe, action.clone()) {
+        if GameState::would_accept_on(probe_of(probe, state), action.clone()) {
             castable.push(action);
         }
     }
@@ -5361,7 +5382,7 @@ fn main_phase_action_with(
     // One probe template per tick: every candidate dry-run below re-clones
     // this template instead of rebuilding one, and a `GameState` clone is
     // reference bumps over CoW zones (see `affordance_probe_template`).
-    let probe = state.affordance_probe_template();
+    let probe = ProbeCell::new();
 
     // NOTE: the bot deliberately does *not* pre-tap its mana sources here.
     //
@@ -5396,7 +5417,7 @@ fn main_phase_action_with(
             x_value: None,
             mode: None,
         };
-        if GameState::would_accept_on(&probe, action.clone()) {
+        if GameState::would_accept_on(probe_of(&probe, state), action.clone()) {
             return action;
         }
     }
@@ -5416,7 +5437,7 @@ fn main_phase_action_with(
         && let Some(land_id) = pick_land_to_play(state, seat, w)
     {
         let action = GameAction::PlayLand(land_id);
-        if GameState::would_accept_on(&probe, action.clone()) {
+        if GameState::would_accept_on(probe_of(&probe, state), action.clone()) {
             return action;
         }
     }
@@ -5429,7 +5450,7 @@ fn main_phase_action_with(
             state.players[seat].graveyard.iter().find(|c| c.definition.is_land())
     {
         let action = GameAction::PlayLandFromGraveyard(land.id);
-        if GameState::would_accept_on(&probe, action.clone()) {
+        if GameState::would_accept_on(probe_of(&probe, state), action.clone()) {
             return action;
         }
     }
@@ -5442,7 +5463,7 @@ fn main_phase_action_with(
         })
     {
         let action = GameAction::PlayLand(land.id);
-        if GameState::would_accept_on(&probe, action.clone()) {
+        if GameState::would_accept_on(probe_of(&probe, state), action.clone()) {
             return action;
         }
     }
@@ -5466,7 +5487,7 @@ fn main_phase_action_with(
             // behavior) and sample.
             let valid: Vec<GameAction> = pool
                 .into_iter()
-                .filter(|(a, ok)| *ok || GameState::would_accept_on(&probe, a.clone()))
+                .filter(|(a, ok)| *ok || GameState::would_accept_on(probe_of(&probe, state), a.clone()))
                 .map(|(a, _)| a)
                 .collect();
             if !valid.is_empty() {
@@ -5546,7 +5567,7 @@ fn main_phase_action_with(
                 }
                 if ok {
                     finalists.push(Finalist { score: s, action: a, settled: None });
-                } else if let Some(g) = GameState::accept_on(&probe, a.clone()) {
+                } else if let Some(g) = GameState::accept_on(probe_of(&probe, state), a.clone()) {
                     finalists.push(Finalist {
                         score: s,
                         action: a,
@@ -5609,12 +5630,12 @@ fn main_phase_action_with(
     // {3} as a 2/2 (with ward {2} for Disguise). Reached only when no normal
     // spell candidate validated, so the bot still prefers casting cards face
     // up; `would_accept` enforces sorcery timing and the {3} payment.
-    gated_pick!(sinks, sink::MORPH, pick_face_down_cast(state, seat, &probe));
+    gated_pick!(sinks, sink::MORPH, pick_face_down_cast(state, seat, probe_of(&probe, state)));
 
     // Discard-activated hand abilities (Magma Opus's {U/R}{U/R}, Discard:
     // create a Treasure) — a fallback value play, reached only when the bot
     // has no spell/face-down line so it never pitches a castable card.
-    gated_pick!(sinks, sink::DISCARD_ACT, pick_discard_ability(state, seat, &probe));
+    gated_pick!(sinks, sink::DISCARD_ACT, pick_discard_ability(state, seat, probe_of(&probe, state)));
 
     // Activate planeswalker loyalty abilities the bot controls. Pick the
     // first usable ability per walker (engine enforces sorcery timing and
@@ -7869,7 +7890,7 @@ fn sim_spell_action_inner(g: &GameState, w: &EvalWeights) -> Option<Picked> {
     if matches!(g.step, TurnStep::PreCombatMain | TurnStep::PostCombatMain)
         && g.active_player_idx == p
     {
-        let probe = g.affordance_probe_template();
+        let probe = ProbeCell::new();
         let mut ranked: Vec<(i32, GameAction, bool)> = cast_candidates(g, p, &probe, w)
             .into_iter()
             .map(|(a, ok)| (score_candidate(g, p, &a, w), a, ok))
@@ -7882,7 +7903,7 @@ fn sim_spell_action_inner(g: &GameState, w: &EvalWeights) -> Option<Picked> {
             if ok {
                 return Some(Picked::Plain(a));
             }
-            if let Some(next) = GameState::accept_on(&probe, a.clone()) {
+            if let Some(next) = GameState::accept_on(probe_of(&probe, g), a.clone()) {
                 return Some(Picked::Probed(a, Box::new(next)));
             }
         }
@@ -10526,7 +10547,7 @@ fn follow_up_candidates(g: &GameState, seat: usize, w: &EvalWeights) -> Vec<Game
     {
         return Vec::new();
     }
-    let probe = g.affordance_probe_template();
+    let probe = ProbeCell::new();
     let mut ranked: Vec<(i32, GameAction, bool)> = cast_candidates(g, seat, &probe, w)
         .into_iter()
         .map(|(a, ok)| (score_candidate(g, seat, &a, w), a, ok))
@@ -10537,7 +10558,7 @@ fn follow_up_candidates(g: &GameState, seat: usize, w: &EvalWeights) -> Vec<Game
         if out.len() >= MAX_FOLLOW_UPS {
             break;
         }
-        if ok || GameState::would_accept_on(&probe, a.clone()) {
+        if ok || GameState::would_accept_on(probe_of(&probe, g), a.clone()) {
             out.push(a);
         }
     }
@@ -11112,7 +11133,7 @@ pub(crate) fn main_phase_candidates_for_mcts(
     seat: usize,
     w: &EvalWeights,
 ) -> Vec<(GameAction, i32)> {
-    let probe = state.affordance_probe_template();
+    let probe = ProbeCell::new();
     let mut ranked: Vec<(i32, GameAction, bool)> = cast_candidates(state, seat, &probe, w)
         .into_iter()
         .map(|(a, ok)| (score_candidate(state, seat, &a, w), a, ok))
@@ -11139,7 +11160,7 @@ pub(crate) fn main_phase_candidates_for_mcts(
         if out.len() >= MAX_ARMS {
             break;
         }
-        if ok || GameState::would_accept_on(&probe, a.clone()) {
+        if ok || GameState::would_accept_on(probe_of(&probe, state), a.clone()) {
             out.push((a, s));
         }
     }
@@ -11149,7 +11170,7 @@ pub(crate) fn main_phase_candidates_for_mcts(
     // weakest arm, and only when the class exists and missed the cut.
     if let Some((a, sc)) = best_prepared
         && !out.iter().any(|(c, _)| matches!(c, GameAction::CastPrepareSpell { .. }))
-        && GameState::would_accept_on(&probe, a.clone())
+        && GameState::would_accept_on(probe_of(&probe, state), a.clone())
     {
         if out.len() >= MAX_ARMS {
             out.pop();
@@ -11176,7 +11197,7 @@ pub(crate) fn main_phase_candidates_for_mcts(
             if out.len() >= MAX_ARMS + 2 {
                 break;
             }
-            if GameState::would_accept_on(&probe, v.clone()) {
+            if GameState::would_accept_on(probe_of(&probe, state), v.clone()) {
                 out.push((v, base_score - 1));
             }
         }
@@ -11189,7 +11210,7 @@ pub(crate) fn main_phase_candidates_for_mcts(
         && let Some(land) = pick_land_to_play(state, seat, w)
     {
         let action = GameAction::PlayLand(land);
-        if GameState::would_accept_on(&probe, action.clone()) {
+        if GameState::would_accept_on(probe_of(&probe, state), action.clone()) {
             out.push((action, 2 * w.unit));
         }
     }
@@ -15290,7 +15311,7 @@ mod stack_response_tests {
         let idx = g.battlefield.iter().position(|c| c.id == dead).unwrap();
         let card = g.battlefield.remove(idx);
         g.players[1].graveyard.push(card);
-        let probe = g.affordance_probe_template();
+        let probe = ProbeCell::new();
         let has_arm = |w: &EvalWeights| {
             cast_candidates(&g, 0, &probe, w).iter().any(|(a, _)| {
                 matches!(a, GameAction::ActivateAbility { card_id, .. } if *card_id == archaic)

@@ -261,12 +261,12 @@ the trackers, so both columns stand unrederived.
 
 ```text
                      base (e7b3b3d4)          tip
-I refs (callgrind)   1,531,246,782            1,330,231,550   -13.128 %
+I refs (callgrind)   1,531,246,782            1,318,590,025   -13.887 %
 decisions            196,220                  196,220         byte-identical
 turns_per_game       27.53                    27.53
 stalls               0 (0.00 %), cap 0 / stuck 0 / draw 0 (both)
 determinism          ok (all pairs split, both)
-allocations          not re-read              773,131
+allocations          not re-read              755,521
 peak_rss_mib         21.6                     22.5
 suite                18,709 passed / 0 failed / 5 ignored over 22 binaries
 golden traces        all 5 unchanged
@@ -961,7 +961,8 @@ touch only `scripts/*.py` and the trackers, so both numbers stand unrederived.
 | A | 1,531,246,782 -> 1,424,690,649 (**-6.958 %**) | the attack/block sims adopt the state their own dry run produced instead of re-running the cast |
 | B | 1,424,690,649 -> 1,395,881,928 (**-2.022 %**) | the two validating pickers the sim shares with the real path hand their probe's state out too |
 | C | 1,395,881,928 -> 1,330,233,580 (**-4.703 %**) | the finalist carries its probe's state to the outcome eval and the summon-sick gate |
-| — | 1,330,233,580 -> **1,330,231,550** | a clippy `collapsible_if` on (C)'s loyalty-finalist filter; 2,030 Ir, and the tip the baseline quotes |
+| — | 1,330,233,580 -> 1,330,231,550 | a clippy `collapsible_if` on (C)'s loyalty-finalist filter; 2,030 Ir, not a fourth optimization |
+| D | 1,330,231,550 -> **1,318,590,025** (**-0.875 %**) | the probe template is built on first use, and the last consumer that forced it every tick goes behind a mask bit |
 
 **The class, and it is the largest one this file has named.**
 `would_accept_on` clones the state and runs the action **to completion** —
@@ -1054,9 +1055,22 @@ left it set. That record is scoped to one cast attempt and the attempt ends
 when the cast lands — its own doc says so — so clearing it after a completed
 cast is the correct half of the pair. Golden traces unchanged either way.
 
-**The pass on the branch: `1,531,246,782 -> 1,330,231,550`, -201,015,232 /
--13.128 %.** (The last 2,030 of that is the clippy fix on (C)'s own diff, not
-a fourth optimization.)
+**(D) is what the class leaves behind: a tick paying for a probe it does not
+use.** `affordance_probe_template` is a whole `GameState` clone, and every use
+of it sits inside a gated block or a conditional — but it was built eagerly at
+the top of `cast_candidates`' two hot callers, 7,238 times over six bench
+games, and `sim_spell_action_inner` probed on at most 1,552 of its 3,732.
+One consumer kept it honest: the Splice sweep ran on **every** tick, so the
+template could never be lazy. It is a `gated_block!` on a new `spec::SPLICE`
+bit now — 7,238 calls to `spliceable_hand_cards_on` become **0** — and the
+template is a `OnceCell` filled by `probe_of` on first use. `GameState::clone`
+falls **22,184 -> 17,808**: 4,376 clones and their drops, ~12.8 M, against
+11.6 M off the program (the cell's own check is the difference). The mask
+rides `gated_block!`'s debug audit, so the 18,709-test suite proves it against
+real boards rather than a re-derived list.
+
+**The pass on the branch: `1,531,246,782 -> 1,318,590,025`, -212,656,757 /
+-13.887 %.**
 
 **What is left of the class, and why each row was not taken.**
 `main_phase_action_with`'s 2,036 probes and `pick_land_to_play`'s 934 hand
@@ -1977,9 +1991,10 @@ settings + debuginfo; system allocator, because valgrind replaces malloc and
 a mimalloc build would measure the interception), 1 thread, `--a gang --b
 gang --games 6 --seed 1 --decks fixed`.
 
-**The branch ends at 1,330,231,550 Ir**, read directly at the fiftieth tip.
-The table below was taken 2,030 Ir above it, before a clippy `collapsible_if`
-on the same commit's diff — every row holds.
+**The branch ends at 1,318,590,025 Ir**, read directly at the fiftieth tip.
+The table below was taken at 1,330,233,580, before (D) and a clippy
+`collapsible_if` on (C)'s diff — (D) moved 4,376 `GameState` clones and the
+Splice sweep, so every row here holds to within ~12 M.
 
 | row at the 50th tip | Ir | % | note |
 |---|---|---|---|
