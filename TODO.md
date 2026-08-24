@@ -21,30 +21,25 @@ claude/modern_decks origin/claude/modern_decks` — the container clones `main`,
 ~2,200 commits behind. **Sessions run this branch concurrently: expect to
 rebase mid-run and re-read your numbers afterwards.**
 
-1. **Nothing in flight. Tip `1,265,410,851` Ir** (pass 52, -3.719 %:
-   finalist adopt -2.637, dispatch dead-work -0.362, picker adopt -0.752).
-   `--bench` byte-identical (198,810 dec / 27.94 turns / 0 stalls). Suite
-   18,712/0. Traces 7/7. Clippy clean. **No net retrain.**
-2. **`next_action_settled` closed the pass-50 class's last row**: the
-   picker's dry-run state IS the action, so the self-play driver adopts it
-   (`g = *settled`) instead of re-running. Scoped to the throughput driver;
-   server keeps the plain `next_action` (needs `perform_action`'s events).
-   `ScriptedDecider` survives the clone (`DeciderKind` round-trips the queue).
-3. **Bench perf is into diffuse territory; no cheap lever left.** The
-   `cast_candidates` state-carry refactor is **bench-DEAD** (fixed decks are
-   vanilla → `castable` empty → 0 pre-validated winners; helps only
-   all/cube/sos — see PERF (-32)). (-33)'s combat-damage grant hoist is
-   sized and NOT worth it (borrow conflict; ~1 attacker/decl on gang). What
-   remains is engine-diffuse: dispatch self 5.26 %, `evaluate_requirement_static`
-   (-35), `resolve_combat` (-25). Re-profile before assuming a lever exists.
-4. **Determinism sweep RUN & clean** (seeds 11-15 × threads 1/2/3, 25,500
-   pairs, all split — PERF). **Filter 23 owed**: `perform_action`'s restore
-   audit is only hit on the suite's failing actions; the `--bench`
-   decision-count invariant is checked at one thread count. Measuring-devices
-   vein (18/19/20) not exhausted.
-5. **Housekeeping.** PERF 4.2k — the 46th-pass profile table is the next
-   fold. TODO — filter write-ups 12-20 are the compaction. Actor scaling
-   closed to 4 cores (linear); says nothing about 8+.
+1. **Tip `1,265,410,851` Ir unchanged (pass 52).** This run's only commit is
+   `1c304384`, an opt-in bench-harness guard **off the throughput path**, so
+   no engine Ir moved. `--bench` byte-identical (196,220 dec / 27.53 turns /
+   0 stalls, 3 threads). **No net retrain.**
+2. **Filter 23 (thread-count determinism) DONE (`1c304384`).**
+   `CRAB_THREAD_CHECK` replays the identical `--bench` workload at a
+   contrasting thread count via the factored `run_jobs` and asserts the
+   order-independent outcome; clean 3 vs 1. **Still owed:**
+   `perform_action`'s partial-mutation restore audit fires only on the
+   suite's failing round-closing passes (today none) and is debug-only —
+   self-play never exercises it. Extending it to the checkpointed path is
+   the next measuring-device move.
+3. **Bench perf still diffuse; no cheap lever** (Profile of record current at
+   the tip: dispatch self 5.26 %, `evaluate_requirement_static` (-35), gather
+   4.12 %, ~20 % allocator/CoW churn). Re-profile before assuming a lever.
+   **The file-split build lever is MEASURED DEAD** (PERF "Build time").
+4. **Housekeeping.** TODO compacted (filters 15-21 folded to the index; git
+   log has the prose) — now ~1.0k. PERF still 4.2k: the 46th-pass profile
+   table is the next fold. Actor scaling linear to 4 cores; silent on 8+.
 
 ## Standing rules for a perf pass
 
@@ -172,17 +167,10 @@ lost; regression test in `classic_sets/bok`, and the filter that found it was
 swept workspace-wide).
 
 **The panic/unwrap sweep of the self-play path — CLOSED 2026-08-23 by the
-census under filter 16, and it wanted triage, not the blanket rewrite this
-entry used to ask for.** 84 `unwrap()` + 46 `expect(` in non-test engine
-code; drop the `lock()/read()/write().unwrap()` poison calls and **118
-sites** remain, every one reachable from self-play guarded by a preceding
-test that is usually named in a comment or the message. One dead hazard,
-not reachable from anywhere: `impl Index<&CounterType> for CounterBag`
-panics on a missing kind and has no `counters[..]` call site. **Re-run the
-census after a batch of new cards, not per run.** The seventeen narrower
-filters below are what got run instead of the rewrite, and nine of the
-seventeen found nothing — which is the result worth keeping. The section
-has **no open entries**.
+census under filter 16 (written up below): it wanted triage, not the blanket
+rewrite this entry used to ask for, and came back clean.** The narrower
+filters below are what got run instead, and nine of them found nothing —
+which is the result worth keeping. The section has **no open entries**.
 
 **The seventeen filters, compacted to an index.** Each is a *shape* that fails
 the way a training run notices — a silent wrap at game 400 k, a loud panic,
@@ -215,6 +203,7 @@ closed, so none of them is re-derived.
 | 21 | 08-24 | **An invariant checked at one point in its parameter space** | **Found a determinism bug** (`c6898506`). The wide-pool sweep had only ever run three seeds at one thread count; ten more seeds across `--threads 1/2/3` produced a self-mirror pair that did not split. `restart_game` (CR 727) rebuilt the state with `GameState::new`, whose `GameRng` is `from_entropy`. See below |
 | 22 | 08-24 | **State the harness installs that a rules path can reset** | **Three sites, one real.** `restart_game` dropped the seeded `rng`, the live `decider` and two pilot flags (fixed, filter 21's bug). `play_subgame` already forks the stream and is correct. `GameState::rng` is `#[serde(skip)]` deliberately — but this module's summary claimed a `GameState` round-trip was bit-exact, which it is not; the claim is corrected, the field is not |
 | 19 | 08-24 | **A threshold or cap that silently truncates a listing** | **Found seven** across two concurrent runs — `cg_edges.py`'s three tables and `cg_lines.py`'s two caps (`4107e017`), plus `cg_symbolize.py`'s recommended `--threshold` and three ranked report tables in `bot_probe` / `selfplay_train` / `recommend_pool`. See below |
+| 23 | 08-24 | **An invariant checked at one thread count** (filter 21's shape, at the measuring device) | **Guard added, clean (`1c304384`).** The `--bench` self-mirror determinism check ran at one thread count and the decision count was never asserted invariant across counts, yet the aggregate is a commutative sum over seed-fixed jobs. `CRAB_THREAD_CHECK` replays the identical workload at a contrasting count and asserts the order-independent outcome matches; `run_jobs` factored so the loop is not written twice (filter 11). Clean at the tip (196,220 dec, 3 vs 1 threads). See below |
 
 **A note the table would lose**: filters 3-5 and 7-10 are syntactic and
 found nothing between them. Filter 6 is not syntactic — it *runs* the
@@ -251,200 +240,80 @@ hunted structure rather than syntax and all three found something.
   over `game/`, `server/`, `crabomination_base/`, all game-semantics uses of
   "free"/"cheap" or past-tense justifications. Both filters' yield was in
   claims a *measurement* relies on, not in the engine's prose.
-**The sixteenth filter was run 2026-08-23 and is CLEAN in every reading it
-has** — *a default that no caller ever overrides*. Mechanically, over
-`crabomination`, `crabomination_base` and `crabomination_ml`: (i) a `bool`
-parameter every call site pins to one literal — **zero**; (ii) an
-`Option<T>` parameter every call site passes `None` — **zero**; (iii) an
-`EvalWeights` field no profile constructor ever sets away from the baseline —
-**zero of 36**; (iv) a `GameState` / `ColdState` field with no read outside
-its own definition — **zero of 196 / 91**. A looser first pass (a function
-whose call sites show only one bool *literal*, variables ignored) returns 14
-hits and every one is noise — `default_damage_split(has_trample)` reads
-"always false" only because the single literal site is the zero-power case.
-Don't re-run any of it.
+**Sixteenth (2026-08-23) — a default no caller overrides — CLEAN in four
+readings, don't re-run:** zero bool params pinned to one literal, zero
+`Option<T>` always-`None`, zero of 36 `EvalWeights` fields, zero of 196/91
+`GameState`/`ColdState` fields never read. The loose bool-literal pass
+returns 14, all noise (`default_damage_split(has_trample)` etc.).
 
-**And the standing panic goal was audited the same day: also clean.** 84
-`unwrap()` and 46 `expect(` in non-test engine code; drop the
-`lock()/read()/write().unwrap()` poison calls and 118 sites remain. Every one
-reachable from self-play is guarded, and almost all name the guard in a
-comment or a message: the five `back_face…unwrap()` sites each sit behind an
-`is_none()`/`has_back` check, the six `max_by_key(..).unwrap()` "look at top
-N" sites each behind an `is_empty()` return, `mayhem_cost().unwrap()` behind
-`mayhem_cost().is_some()`, `hand.first().unwrap()` behind
-`hand.is_empty() { continue }`. One dead hazard, not reachable:
-`impl Index<&CounterType> for CounterBag` panics on a missing kind and has no
-`counters[..]` call site anywhere. Re-run the census after a batch of new
-cards, not per run.
+**Standing panic goal, audited the same day — CLEAN.** 118 non-poison
+`unwrap`/`expect` in engine code; every self-play-reachable one is guarded
+and names its guard (`back_face…` behind `has_back`, `max_by_key().unwrap()`
+behind `is_empty()`, …). One dead hazard, not reachable:
+`Index<&CounterType> for CounterBag` panics on a missing kind and has no call
+site. Re-run the census after a batch of new cards, not per run.
 
-**The seventeenth filter was run 2026-08-23 and is NOT clean — four hits.**
-*A comment that names a call count or a share.* Mechanically: grep `//` and
-`///` lines over `crabomination/src` and `crabomination_base/src` for a
-comma-grouped integer, a `N.N %`, or the token `Ir`; that returns 163, of
-which **44 are perf claims a reader would rank work by** (the rest are the
-bot's win-rate gate history, which is dated and self-describing). Checking
-those 44 against the forty-seventh tip's profile:
+**Seventeenth (2026-08-23) — a comment naming a call count or a share — four
+hits (plus two from pass 48), all corrected in place:** `printed_color_set`,
+`team_of`, dispatch's death-synthesis chain, `auto_tap_for_cost_inner`'s mana
+table, `mod.rs`'s gather-iterator note, `types.rs`'s `IdSet` doc. **The rule:
+the share survives, the count rots** — a share is re-derived on every profile
+read; a call count is copied forward and drifts as its caller's count moves.
+Caveat: a callgrind edge count *undercounts* an inlined caller, so only
+correct a number down when the callee's own node makes the old claim
+arithmetically impossible (why `team_of`'s correction is stated through
+`same_team`'s node).
 
-* `CardDefinition::printed_color_set` — "the layer pass calls this ~1.2 M
-  times per six bench games". It is **114,562**, 99,840 of them the layer
-  pass. An order out, and the function's own 4.6 M self cost rules the claim
-  out on its face.
-* `GameState::team_of` — "`same_team` is called ~1.2 M times per six games".
-  `same_team` is **319,624** and reaches `team_of` twice each, so the fast
-  path answers ~658 k times. Roughly 2x out.
-* `dispatch_triggers_for_events`' death-synthesis chain — "94,608 of them
-  over six bench games". **53,838** dispatches reach that line.
-* `auto_tap_for_cost_inner` — "`mana_source_table`, 3.83 % of the profile
-  over 8,892 calls". The *share* is right to two decimals (3.85 %); the
-  **count** is 7,550.
+**Twenty-first (2026-08-24) — an invariant checked at one point in its
+parameter space — NOT clean, a determinism bug 49 passes of wide-pool sweeps
+had missed.** The sweep (`--decks all --games 400 --threads 3`, seeds
+11/12/13) had never run on another seed or thread count; ten more seeds found
+a self-mirror pair that did **not** split. Cause: `GameState::restart_game`
+(CR 727) rebuilds with `GameState::new` and copies back `next_id`/
+`attack_option`/`teams` but not **`rng`** (nor `decider`/`smart_tap`/
+`wants_ui`), and `GameState::new` installs `from_entropy`, so a restarted game
+stopped being a function of its seed. Fixed `c6898506`; the regression test
+replays the exact pair on eight threads. **Two things worth keeping:** the
+thread count was a red herring (it only changed how often the halves drew the
+same entropy) — *the parameter that exposes a bug is not always the one that
+causes it*; and `CRAB_PAIR_SWEEPS=1` naming the offending pair + its replay
+seed turned "somewhere in 68,000 games" into a 1.2-second test. The structural
+fix is the CLAUDE.md rule: a profile number in a comment carries the tip it
+was measured at, or is past-tense justification for the shape already there.
 
-**The pattern in all four: the share survives and the count rots.** A share
-is re-derived every time someone reads a profile; a call count is copied
-forward from the run that first found it and nobody re-reads it, so it
-drifts every time the caller's own count moves. Corrected in place, each
-with the tip it was read at. **Caveat for whoever re-runs this:** a
-callgrind edge count *undercounts* a caller that got inlined, so only
-correct a number down when the callee has its own node and its self cost
-makes the old claim arithmetically impossible — which is why `team_of`'s
-correction is stated through `same_team`'s node rather than its own.
+**Eighteenth (2026-08-23) — a tool's own extraction step — NOT clean, two
+hits in the profiling scripts (`ac85463f`).** `cg_edges.py`'s program total
+ran ~18x high (it summed each call-edge's whole *inclusive* subtree), so
+every share was an order out — it read `dispatch_triggers_for_events` at
+**0.30 %** where it is 5.63 %; PERF's note that the total double-counts did
+not fix the percentage column the tool actually prints. `cg_lines.py`
+printed "0 Ir, exit 0" on a dump without `--dump-instr=yes` — nothing-is-hot,
+not wrong-input. **The rule: every extraction step either agrees with a
+number its source computed itself, or refuses** — an extraction that yields
+nothing looks exactly like a measurement that found nothing.
 
-**Pass 48 ran the same filter concurrently and found two more, both of the
-same shape and both now corrected:** `mod.rs`'s gather-iterator note claimed
-"the 127,878 gathers a six-game run takes" (**39,692** at the forty-eighth
-tip — four passes of scope work have been taking it down), and `types.rs`'s
-`IdSet` doc claimed "`RawTable::clone` ran 984,988 times under the CoW
-unshare for 1.22 %" in the present tense when the number was the
-*justification* for `IdSet` existing (**34,220 / 0.28 %** now, and none of
-them on a `ColdState` field). **Five distinct sites between the two runs** —
-both caught the mana-source one independently — and the direction is the same
-in every one.
+**Nineteenth (2026-08-24) — a cap that silently truncates a listing — NOT
+clean, seven hits (`4107e017`, `17d0a5e1`).** Both profiling scripts capped
+their tables (`most_common(40/45/60000)`) and read as finished at the cap;
+`cg_edges.py`'s docstring promised a complete table above one;
+`cg_symbolize.py` recommended the `callgrind_annotate --threshold` truncation
+`cg_edges.py` exists to escape; three ranked reports named no denominator.
+Each reports the rows and Ir it dropped now (`--rows 0` lifts the cap). It did
+NOT flag the engine's own named search caps (`attack_search`,
+`MAX_CANDIDATES`, …). **Filter 18 re-run on `cg_lines.py` found two more:** it
+folded every mapped object's addresses in with the binary's and hardcoded a
+`0x108000` bias (`Effect::clone` read 2.65 % against its 0.5 % call edges); it
+keeps one object and auto-detects the bias now, and PERF's `drift::sort` row
+blamed on lld ICF is probably this bug. **The self-cost table's top 45 rows
+are 68.5 % of the program, 1,150 rows hold the rest** — why pass 49 counted
+call rows rather than ranking by self cost.
 
-**The twenty-first filter was run 2026-08-24 and is NOT clean — it found a
-determinism bug the suite, the golden traces and forty-nine passes of
-wide-pool sweeps had all missed.** *An invariant checked at one point in its
-parameter space.* The wide-pool sweep is `--decks all --games 400 --threads 3`
-on seeds 11/12/13, and it had never been run on another seed or another thread
-count. Ten more seeds found a self-mirror pair that did **not** split — which
-the pairing's own contract forbids, since a pair's two games are one game with
-the seats relabelled.
-
-The cause: `GameState::restart_game` (CR 727) rebuilds the state with
-`*self = GameState::new(players)` and copies back `next_id`, `attack_option`
-and `teams` — but not **`rng`**, and `GameState::new` installs
-`GameRng::default()`, which is `from_entropy`. Every game that *restarted*
-therefore stopped being a function of its seed from that point on.
-`decider`, `smart_tap` and `wants_ui` were dropped the same way and are
-carried back too. Fixed in `c6898506`; the regression test replays the exact
-pair on eight threads.
-
-**Two things worth keeping from the hunt.** The thread count was a red
-herring — it only changed how often a pair's two halves happened to draw the
-same entropy — so *the parameter that exposed a bug is not always the
-parameter that causes it*. And the tool that made it tractable was five
-minutes of work: `CRAB_PAIR_SWEEPS=1` on `bot_ladder` names the offending pair
-and prints the seed that replays it, which turned "somewhere in 68,000 games"
-into a 1.2-second test.
-
-**The structural fix is a rule, not six edits, and it is in CLAUDE.md's
-Performance section:** a profile number in a code comment carries the tip it
-was measured at, or it is written in the past tense as the justification for
-the shape the code already has.
-
-**The eighteenth filter was run 2026-08-23 and is NOT clean — two hits, both
-in the profiling scripts pass 48 added.** *A tool's own extraction step* —
-the place the fifteenth filter, pass 46's retracted allocator rows and pass
-48's `callgrind_annotate --tree` truncation all came from.
-
-* **`cg_edges.py`'s program total was ~18x high**, so every share it printed
-  was an order out: `total += cost` ran on every cost line, and a call-edge
-  line carries the callee's whole *inclusive* subtree. PERF's "How to
-  measure" already *said* the total double-counts and to take the program
-  total from valgrind's `I refs:` line — but a note beside the tool does not
-  fix the tool, and nothing said that the **percentage column of every table
-  it prints** is computed from that same total. A reader ranking by the
-  column the tool actually shows them ranks upside down. **A known-wrong
-  number that a comment warns about is still a wrong number.** It printed
-  28,094,793,086 for a run whose `I refs` is 1,540,962,924, and reported
-  `dispatch_triggers_for_events` at **0.30 %** where it is **5.63 %** — a
-  reader ranking work by that output ranks it upside down. Fixed in
-  `ac85463f`; the total now sums self lines only and cross-checks the dump's
-  own `totals:` line, printing a WARNING on a mismatch instead of a plausible
-  number.
-* **`cg_lines.py` printed "0 instruction addresses, 0 Ir" and exited 0** on a
-  dump taken without `--dump-instr=yes` — which reads as "nothing is hot",
-  not "wrong input". It refuses at the `positions:` header now.
-
-`cg_lines.py`'s cost parse is otherwise correct (it already excludes the
-post-`calls=` line, which is exactly the mistake `cg_edges.py` made) and
-`cg_symbolize.py` already reports its own hit rate to stderr. **The rule the
-filter yields: every extraction step either agrees with a number its source
-computed itself, or refuses.** An extraction that yields nothing looks
-exactly like a measurement that found nothing.
-
-**The nineteenth filter was run 2026-08-24 and is NOT clean — seven hits
-across two concurrent runs, three of them in the same two scripts.** *A
-threshold or cap that silently truncates a listing.* `cg_edges.py` printed its caller/callee tables at `most_common(40)`
-and its self-cost table at `most_common(45)`; `cg_lines.py` resolved only
-`most_common(60000)` addresses and printed `most_common(45)` lines. Every one
-stopped at its limit and read as finished — the shape behind pass 48's two
-fictional allocator leads. Each now reports the rows it dropped and the Ir or
-calls that went with them (`4107e017`).
-
-**The first thing that fell out of the fix is worth having on its own: the
-self-cost table's top 45 rows are 68.5 % of the program, and 1,150 rows hold
-the other 31.5 %.** A profile that diffuse is why pass 49's wins came from
-counting call rows rather than ranking by self cost.
-
-**Filter 18 was re-run on `cg_lines.py` the same day and is NOT clean — two
-more, and they are why the line profile had never been trusted.** It summed
-the instruction addresses of *every* object the process mapped and resolved
-them against the annotated binary's DWARF, and it hardcoded a `0x108000` load
-bias where the `profiling-lines` binary needs `0`. The output looked like a
-profile: 36 % under `??` and `Effect::clone` at 35,279,138 Ir / 2.65 %, which
-`cg_edges.py`'s call edges put at 2,890 calls and 0.5 M. **The rule that
-catches this is the eighteenth's own** — agree with a number the source
-computed, or refuse — so it now keeps one object, auto-detects the bias,
-prints the hit rate, and exits when fewer than half the hot addresses land in
-a symbol or when the dump names a different binary. PERF's note blaming lld
-identical-code folding for a bogus `drift::sort` row is probably this bug.
-
-**A second run swept filter 19 concurrently and found four more outside those
-two files** (`17d0a5e1`): `cg_edges.py`'s **docstring contradicted its own
-printer** — "reads the dump directly, so a table is complete" sat above
-`most_common(40)`, and the parse was complete where the print never was
-(`--rows N`, `0` = all, now lifts the cap); `cg_symbolize.py`'s docstring
-**recommended `callgrind_annotate --threshold=95/99`**, the exact truncation
-`cg_edges.py` exists to escape, from the file a reader hits *first*; and
-three ranked report tables named no denominator (`bot_probe`'s wedged-action
-and combat-shape tops, `selfplay_train`'s leaf/train ratios,
-`recommend_pool`'s static scores).
-
-**What it did *not* find, and the distinction is worth keeping.** The
-engine's own `take`/`truncate` caps — `attack_search`, `block_search`,
-`MAX_CANDIDATES`, `MAX_FOLLOW_UPS`, convoke's `cap` — are named
-search-quality decisions with doc comments, not silent truncations of a
-listing someone reads, and filter 8 already swept that syntax for panic
-safety. **Across both runs the whole yield was in output a human ranks work
-by** — the third filter running to land in the measuring device.
-
-**The twentieth filter was run 2026-08-24 and is NEARLY clean — one hit.**
-*A default that only one caller ever exercises*, the inverse of the sixteenth.
-Mechanically over `EvalWeights`: parse `baseline`'s 36 field literals, parse
-every one of the 59 named profile constructors, and keep the fields exactly
-one of them sets to a different value. (`v2` and `scaled_control` are
-alternative *baselines* — they set all 36 — so they are excluded, which is the
-step that makes the question answerable at all.)
-
-**14 fields have exactly one overriding profile.** Ten of those profiles are
-exercised by a unit test as well as by a `bot_ladder` pilot name —
-`impulse_draw_on`, `converge_lands_on`, `buff_2for1_on`, `ability_arms_on`,
-`walker_chip_on`, `mull_sim_on`, `creature_base_only`, `legacy_mana` and the
-two search flags — and the tests read "flag off: the class is invisible /
-flag on: the activation is a candidate". That convention is what makes the
-four exceptions legible.
-
-**Three of the four are correctly untested**, and saying so is most of this
-filter's value: `power_emphasis_only` is a scoring *weight* (`power: 15`), so
+**Twentieth (2026-08-24) — a default only one caller exercises, the inverse
+of the sixteenth — NEARLY clean, one hit.** Of `EvalWeights`, 14 fields have
+exactly one overriding profile; ten carry an on/off unit test beside their
+`bot_ladder` pilot name ("flag off: the class is invisible / flag on: the
+activation is a candidate"). **Three of the four that don't are correctly
+untested:** `power_emphasis_only` is a scoring *weight* (`power: 15`), so
 the question it asks is a ladder question; `legacy_cashout_on` is the
 *historical* planeswalker rule kept as a control, and the shipped behaviour is
 what a test should pin; `net_eval_blend_ply` needs a loaded net. **The fourth
@@ -470,6 +339,23 @@ all --games 300 --seed 11` reads 6 stalls in 5,100 games (0.12 %), **cap 0 /
 stuck 0 / draw 6** — all rules draws, so neither held-open fix applies.
 `--decks fixed` reads 0 and always has. Keep the instrumentation; re-open
 only if `cap` or `stuck` goes non-zero.
+
+**Twenty-third (2026-08-24, `1c304384`) — an invariant checked at one thread
+count, at the measuring device — guard added, clean.** The `--bench` self-mirror
+determinism check (every mirrored pair must split) ran only at the one thread
+count a bench invocation uses, and the decision count was never asserted
+invariant across counts — yet every job is fixed by its `--seed`-derived
+stream and the aggregate is a commutative sum over jobs, so it *must* be
+independent of how many workers pull them. `CRAB_THREAD_CHECK` replays the
+identical workload at a contrasting thread count and asserts the
+order-independent outcome (SimCost fields + per-archetype win tallies + sorted
+pairs) matches; the chunked job loop is factored into `run_jobs` so the two
+runs share one loop, not a second drifting copy (filter 11). Clean at the tip
+(1 vs 2). This is the cheap in-process form of filter 21's wide seed x thread
+sweep — the class where `restart_game` drew from OS entropy diverges the two
+counts here. **The rule: a determinism check is only as wide as the parameter
+it varies; a harness that measures at one thread count should be able to prove
+the count does not matter.**
 
 ## Engine — Missing Mechanics
 
