@@ -1368,6 +1368,77 @@ the table above is safe to compress:
 
 ## Log
 
+### Fifty-fifth pass — the requirement walker's subtype arms stop gathering
+
+One commit, one workload boundary: **`--decks cube` 4,030,238,529 ->
+3,348,336,142 Ir, -16.92 %**, against `fixed` +0.097 % and `sos` +0.058 %.
+Wall clock, `release-fast` + mimalloc, 600 games / 1 thread / seed 1,
+best-of-three alternated: cube **55.49 s -> 51.72 s, -6.8 %**; sos 31.99 ->
+31.30 (-2.2 %, inside the drift); `--bench` 248.90 -> 255.08 games/s.
+`decisions` 196,220 both sides, every ladder outcome identical, suite 18,716
+passed / 0 failed / 5 ignored.
+
+**Candidate (-37), and the number it was ranked on was low.** The entry
+sized the four ungated `computed()` arms at `computed_permanent`'s 4.14 % +
+`compute_permanent_pass`'s 2.97 %. Read from the top instead —
+`cg_edges.py --callers computed_permanent` — the requirement walker's
+`OnceCell::try_init` is **413,844 calls / 605,927,621 Ir inclusive, 15.03 %
+of the cube run**, against the card-type gate's 13,052 walks. Self cost
+undercounts a lazy cell by everything under it.
+
+`has_ctype` and `has_ltype` now ask
+`creature_type_change_in_scope()` / `land_type_change_in_scope()` before
+forcing the cell, the way `has_type` has asked `card_type_change_in_scope()`
+since pass 50. Both predicates already existed and are already audited by
+`gather_continuous_effects`' `debug_assert!`s in the sound direction, so the
+gates cost no new enumeration to trust: `AddCreatureType` / `SetCreatureTypes`
+are the only two modifications that write `subtypes.creature_types`,
+`AddLandType` / `SetLandTypes` / `ReplaceBasicLandType` the only three that
+write `subtypes.land_types`, and `shallow_creature_types` reads the first
+pair off the *stored* set — so with none in scope, printed is computed.
+`computed_permanent` drops 680,960 -> 267,116 calls; the savings land as
+`gather_continuous_effects_inner` -118.5 M, `compute_permanent_pass` -74.8 M,
+`affected_includes_gated` -34.5 M, `compute_permanent` -25.6 M and
+-160 M across the allocator family.
+
+**Two things the pass got wrong first, and both are general.**
+
+**A gate the caller memoizes per scope is not free when the caller is a
+`OnceCell`.** The first shape wrapped each gate in its own
+`std::cell::OnceCell<bool>`, mirroring `ct_gate`. That cost **+1.24 M Ir on
+`fixed`** for nothing: `evaluate_requirement_static` evaluates *one* `req`,
+its match arms are exclusive, and a composite requirement recurses into a
+fresh frame — so each gate runs at most once per call and the cell is two
+constructions and a branch that never pay. `ct_gate` is in the same position
+and has been since pass 50. Removing the cells took the whole change from
+-16.62 % to **-16.92 %** on cube and halved the `fixed` cost.
+
+**Asking the cheap question first lost.** `computed()` answers `None` for
+free when the card is not a live battlefield permanent, so gating on
+`!computed_absent()` before the walk looks strictly better. Measured
+**+0.066 % cube / +0.024 % fixed / +0.018 % sos** against the ungated form —
+the extra atomic load costs more than the gate it skips, because inside a
+freeze scope the gate is a memo hit at **69 Ir** (410,900 calls /
+28,299,420). Reverted. The gate is only expensive *outside* a scope, where
+it reads 356 Ir, and that is where the residual `fixed` cost is.
+
+**Why `fixed` and `sos` pay at all.** On both pools the gate answers *true*
+— those boards do carry a creature-type source — so the walk runs and
+`computed()` still follows. +1.05 M creature gate + 0.49 M land gate,
+against -0.84 M of `dying_snapshot`'s avoided gathers. The candidates list
+called (-37) "cube pool only" and that reading is confirmed, in both
+directions.
+
+**Left for the taker: the other two arms.** `has_atype` and `has_stype` are
+still ungated, and unlike the pair above they need new predicates —
+`SetArtifactSubtypes` / `AddArtifactSubtype` fold into a battlefield-shape
+scan (Bludgeon Brawl's `brawl_equip_mv`, `equipped_bonus.set_artifact_types`,
+the `AddCardType`-with-subtype static), and `AddSupertype` has only two
+emitters and neither is a card's printed shape (the all-nonland-legendary
+block and `ring_temptations >= 1`). Size them before writing them: they were
+inside the 413,844 the pair above already took, so what is *left* is
+unmeasured and probably small.
+
 ### Fifty-fourth pass — deck construction, read from the top for the first time
 
 Nine commits. Seven on one workload: `--decks sealed --games 1`, which plays
@@ -3125,18 +3196,22 @@ buys ~20 % of the scan's Ir but doubles the handle to 16 bytes, and
 `Vec<CardInstance>` is cloned on every `GameState` clone and every CoW
 unshare. Do not take it on the Ir alone.
 
-**(-37) The requirement walker's `computed()` is forced by four arms that
-have no presence gate**, and on the cube pool it is the whole of
-`computed_permanent`'s 4.14 % + `compute_permanent_pass`'s 2.97 %.
-`has_type` is gated on `card_type_change_in_scope()`; `has_ctype`,
-`has_atype`, `has_ltype` and `has_stype` call `computed()` unconditionally.
-Two of the four gates already exist and are already audited by the gather's
-own `debug_assert`s (`creature_type_change_in_scope`,
-`land_type_change_in_scope`); the artifact-subtype and supertype families
-would need new `card_can_*` predicates and new audit arms. **Size it on the
-cube pool, not on `fixed`** — `card_type_change_in_scope` is called only
-13,052 times there against 413,844 forced `computed()`s, so the ungated
-arms are where the traffic is. Not attempted at the fifty-third pass.
+**(-37) MOSTLY PAID at the fifty-fifth pass: `--decks cube` -16.92 %, and
+the entry had sized it at half that.** `has_ctype` and `has_ltype` now ask
+the two presence gates that already existed;
+`computed_permanent` went 680,960 -> 267,116 calls. Read that pass's Log
+entry before touching the rest — it also records the two shapes that lost
+(a `OnceCell` around a gate that runs once, and gating on
+`!computed_absent()` first).
+
+What is left is **`has_atype` and `has_stype`, both still ungated and both
+needing a new predicate**: `SetArtifactSubtypes` / `AddArtifactSubtype` fold
+into a battlefield-shape scan (Bludgeon Brawl's `brawl_equip_mv`,
+`equipped_bonus.set_artifact_types`, the `AddCardType`-with-subtype static),
+and `AddSupertype` has two emitters, neither a printed card shape (the
+all-nonland-legendary block and `ring_temptations >= 1`). **Size before
+writing**: the 413,844 forced `computed()`s the entry quoted were taken by
+the pair above, so the residual is unmeasured and probably small.
 
 **Ranking rule added by the fiftieth pass, and it found 13 % in one sitting:
 ask what is done *twice*.** Not "what is expensive" and not "what is called

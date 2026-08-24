@@ -261,14 +261,27 @@ struct LayerFreezeState {
     /// Short — one entry per permanent actually asked about — so a linear
     /// scan beats hashing. Cleared with `memo`.
     perms: Vec<(CardId, std::sync::Arc<crate::game::layers::ComputedPermanent>)>,
-    /// The layer-4 card-type presence gate for this scope, by the same
-    /// argument as `memo`: `card_type_change_in_scope` is two whole-collection
-    /// walks whose inputs (`continuous_effects`, `battlefield`) cannot change
-    /// while frozen, so the second ask is the first answer. The shape it
-    /// exists for: at the fiftieth pass's (D) tip, `evaluate_requirement_static`'s
-    /// card-type gate made 15,096 of the walk's 34,906 calls, ~5 per target
+    /// The layer-4 type-family presence gates for this scope, by the same
+    /// argument as `memo`: each is two whole-collection walks whose inputs
+    /// (`continuous_effects`, `battlefield`) cannot change while frozen, so
+    /// the second ask is the first answer. The shape it exists for: at the
+    /// fiftieth pass's (D) tip, `evaluate_requirement_static`'s card-type
+    /// gate made 15,096 of the walk's 34,906 calls, ~5 per target
     /// enumeration and every one the same answer. Cleared with `memo`.
-    type_change: Option<bool>,
+    gates: [Option<bool>; TypeGate::COUNT],
+}
+
+/// The layer-4 type families with a presence gate, and the slot each one
+/// memoizes into inside a freeze scope.
+#[derive(Clone, Copy)]
+pub(crate) enum TypeGate {
+    Card = 0,
+    Creature = 1,
+    Land = 2,
+}
+
+impl TypeGate {
+    const COUNT: usize = 3;
 }
 
 impl LayerFreeze {
@@ -281,13 +294,14 @@ impl LayerFreezeState {
     /// Everything memoized for the lifetime of one *outermost* scope, dropped
     /// in one place so a field added to the state cannot survive a scope by
     /// being forgotten at one of the two exits. `with_frozen_layers`' guard
-    /// and `freeze_layers_pop` both come here; adding `type_change` to only
-    /// the first is what made a stale card-type gate outlive its scope and
-    /// broke Sarkhan the Masterless.
+    /// and `freeze_layers_pop` both come here; adding the card-type gate to
+    /// only the first is what made a stale gate outlive its scope and broke
+    /// Sarkhan the Masterless. `gates` is an array for the same reason — a
+    /// family added to it cannot be forgotten here.
     fn end_of_scope(&mut self) {
         self.memo = None;
         self.perms.clear();
-        self.type_change = None;
+        self.gates = [None; TypeGate::COUNT];
     }
 }
 
@@ -8251,14 +8265,22 @@ impl GameState {
     /// type line in `compute_permanent_pass` without a `Modification` at all.
     /// It is a per-card flag, so a caller reads it off the card directly.
     pub(crate) fn card_type_change_in_scope(&self) -> bool {
-        // Memoized per freeze scope — see `LayerFreezeState::type_change`.
-        // Outside one (`&mut self` callers: the land tap's CR 602.5 gate, the
-        // SBA sweep) the lock is a handful of instructions and the walks run
-        // as before.
+        self.type_gate(TypeGate::Card, || self.card_type_change_unscoped())
+    }
+
+    /// One presence gate's answer, memoized per freeze scope — see
+    /// [`LayerFreezeState::gates`]. Outside a scope (`&mut self` callers: the
+    /// land tap's CR 602.5 gate, the SBA sweep) the lock is a handful of
+    /// instructions and `walk` runs as before.
+    ///
+    /// The gates share this because they share the argument: nothing `walk`
+    /// reads can change while frozen. A family that does not hold that
+    /// property does not belong in [`TypeGate`].
+    fn type_gate(&self, gate: TypeGate, walk: impl FnOnce() -> bool) -> bool {
         let frozen = {
             let st = self.layer_freeze.lock();
             if st.depth > 0 {
-                if let Some(v) = st.type_change {
+                if let Some(v) = st.gates[gate as usize] {
                     return v;
                 }
                 true
@@ -8266,9 +8288,9 @@ impl GameState {
                 false
             }
         };
-        let answer = self.card_type_change_unscoped();
+        let answer = walk();
         if frozen {
-            self.layer_freeze.lock().type_change = Some(answer);
+            self.layer_freeze.lock().gates[gate as usize] = Some(answer);
         }
         answer
     }
@@ -8314,14 +8336,16 @@ impl GameState {
     /// `debug_assert!`s the implication in the sound direction, so the whole
     /// suite audits the enumeration without any caller paying a gather.
     pub(crate) fn land_type_change_in_scope(&self) -> bool {
-        self.continuous_effects.iter().any(|e| {
-            matches!(
-                e.modification,
-                Modification::AddLandType(_)
-                    | Modification::SetLandTypes(_)
-                    | Modification::ReplaceBasicLandType(..)
-            )
-        }) || self.battlefield.iter().any(card_can_change_land_types)
+        self.type_gate(TypeGate::Land, || {
+            self.continuous_effects.iter().any(|e| {
+                matches!(
+                    e.modification,
+                    Modification::AddLandType(_)
+                        | Modification::SetLandTypes(_)
+                        | Modification::ReplaceBasicLandType(..)
+                )
+            }) || self.battlefield.iter().any(card_can_change_land_types)
+        })
     }
 
     /// The same device for the layer-4 *creature*-type family: a cheap
@@ -8338,12 +8362,14 @@ impl GameState {
     /// `debug_assert!`s the implication in the sound direction, so the whole
     /// suite audits the enumeration without any caller paying a gather.
     pub(crate) fn creature_type_change_in_scope(&self) -> bool {
-        self.continuous_effects.iter().any(|e| {
-            matches!(
-                e.modification,
-                Modification::AddCreatureType(_) | Modification::SetCreatureTypes(_)
-            )
-        }) || self.battlefield.iter().any(card_can_change_creature_types)
+        self.type_gate(TypeGate::Creature, || {
+            self.continuous_effects.iter().any(|e| {
+                matches!(
+                    e.modification,
+                    Modification::AddCreatureType(_) | Modification::SetCreatureTypes(_)
+                )
+            }) || self.battlefield.iter().any(card_can_change_creature_types)
+        })
     }
 
     /// The same device for layer-6 keyword *grants*: a cheap

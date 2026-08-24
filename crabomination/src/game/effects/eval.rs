@@ -3416,14 +3416,35 @@ impl GameState {
                 // layer-4 type changes are already in `continuous_effects` —
                 // read them shallowly so a "as long as it's a Wall" gate sees a
                 // retyped permanent (CR 613.8; Mistform Wall).
+                // Presence-gated like `has_type`, and this arm is where the
+                // traffic was: at the fifty-fifth pass's base the subtype
+                // arms forced 413,844 of a cube run's 680,960
+                // `computed_permanent` calls against the card-type gate's
+                // 13,052 walks. `AddCreatureType` / `SetCreatureTypes` are the
+                // only two modifications that write `subtypes.creature_types`,
+                // and `shallow_creature_types` reads those same two off the
+                // stored set, so with neither in scope all three paths give
+                // the printed line.
+                //
+                // No `OnceCell` around the gate, unlike `ct_gate`: one call
+                // evaluates one `req`, the arms are exclusive and a composite
+                // requirement recurses into a fresh frame, so the gate runs at
+                // most once and the cell was pure overhead (+1.24 M on
+                // `fixed` when it was one).
                 let shallow_cell: std::cell::OnceCell<Option<Vec<crate::card::CreatureType>>> =
                     std::cell::OnceCell::new();
-                let has_ctype = |ct: &crate::card::CreatureType| match computed() {
-                    Some(cp) => cp.subtypes.creature_types.contains(ct),
-                    None => match shallow_cell.get_or_init(|| self.shallow_creature_types(*cid)) {
-                        Some(types) => types.contains(ct),
-                        None => card.definition.subtypes.creature_types.contains(ct),
-                    },
+                let has_ctype = |ct: &crate::card::CreatureType| {
+                    if !self.creature_type_change_in_scope() {
+                        return card.definition.subtypes.creature_types.contains(ct);
+                    }
+                    match computed() {
+                        Some(cp) => cp.subtypes.creature_types.contains(ct),
+                        None => match shallow_cell.get_or_init(|| self.shallow_creature_types(*cid))
+                        {
+                            Some(types) => types.contains(ct),
+                            None => card.definition.subtypes.creature_types.contains(ct),
+                        },
+                    }
                 };
                 // CR 613.2 layer-4 — subtypes/supertypes a permanent gained (or
                 // lost) from a continuous effect (Vraska's Treasure, Song of the
@@ -3433,9 +3454,17 @@ impl GameState {
                     Some(cp) => cp.subtypes.artifact_subtypes.contains(a),
                     None => card.definition.subtypes.artifact_subtypes.contains(a),
                 };
-                let has_ltype = |lt: &crate::card::LandType| match computed() {
-                    Some(cp) => cp.subtypes.land_types.contains(lt),
-                    None => card.definition.subtypes.land_types.contains(lt),
+                // Same gate, same argument: `AddLandType` / `SetLandTypes` /
+                // `ReplaceBasicLandType` are the only three modifications that
+                // write `subtypes.land_types`.
+                let has_ltype = |lt: &crate::card::LandType| {
+                    if !self.land_type_change_in_scope() {
+                        return card.definition.subtypes.land_types.contains(lt);
+                    }
+                    match computed() {
+                        Some(cp) => cp.subtypes.land_types.contains(lt),
+                        None => card.definition.subtypes.land_types.contains(lt),
+                    }
                 };
                 let has_stype = |st: &Supertype| match computed() {
                     Some(cp) => cp.supertypes.contains(st),
