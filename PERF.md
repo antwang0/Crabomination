@@ -341,13 +341,13 @@ it.
 ## Baseline
 
 **Fifty-fifth pass, base `bf4917a5` (pass 54's tip) vs its own tip
-`f22eb02d`.** One commit: **the requirement walker's subtype arms stop
+`8779aa9f`.** One commit: **the requirement walker's subtype arms stop
 gathering where the printed line answers.** Ir readings `profiling-fast
 --no-default-features`, callgrind, one thread, `--a gang --b gang --games 6
 --seed 1` unless the row says otherwise.
 
 ```text
-                          base (bf4917a5)   tip (f22eb02d)
+                          base (bf4917a5)   tip (8779aa9f)
 I refs, --decks cube        4,012,095,058   3,332,029,985  -16.95 %
 I refs, --decks fixed       1,248,407,927   1,249,622,086   +0.097 %
 I refs, --decks sos         1,760,442,504   1,761,529,321   +0.062 %
@@ -1451,7 +1451,7 @@ the table above is safe to compress:
 One commit, base `bf4917a5`, one workload boundary:
 
 ```text
-                  base (bf4917a5)   tip (f22eb02d)
+                  base (bf4917a5)   tip (8779aa9f)
 --decks cube        4,012,095,058    3,332,029,985   -16.95 %
 --decks fixed       1,248,407,927    1,249,622,086    +0.097 %
 --decks sos         1,760,442,504    1,761,529,321    +0.062 %

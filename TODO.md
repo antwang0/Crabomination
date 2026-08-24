@@ -19,34 +19,31 @@ reference and want their own triage pass):
 **FIRST COMMAND:** `git fetch origin claude/modern_decks && git checkout -B
 claude/modern_decks origin/claude/modern_decks` — the container clones `main`.
 **Sessions run this branch concurrently: expect to rebase and re-read your
-numbers.**
+numbers.** Two ran this pass and both started the same vocab fix; check the
+log before opening a NEXT item.
 
-1. **Pass 54: deck builder 111.8 M -> 34.5 M Ir (-69.1 %), 2.81x wall clock
-   on construction, `selfplay_train` 156.5 -> 169.8 games/s (+8.5 %).** Tip:
-   fixed 1,248,408,061 / cube 4,012,096,941 / sos 1,760,445,728 / sealed
-   3,497,168,270 / deck-build 34,509,612 (`--decks sealed --games 1`).
-2. **Use `scripts/cg_contexts.py` (over `valgrind --separate-callers=3`)
-   before proposing any freeze scope** — it ranks a hot function's calls by
-   calling context, which no one-level table can. It found two commits and
-   refuted a third. Open: 20,374 of `computed_permanent`'s 93,918 calls
-   gather (3.2 %), most one-per-scope.
-3. **+8.5 % against a ~19 % Ir prediction:** callgrind runs the system
-   allocator, mimalloc ships. Allocation-shaped work gets a `selfplay_train`
-   reading, alternated — the base binary read 129.1 to 156.5 minutes apart.
-4. **Candidates:** (-38) `battlefield_find`'s three unclaimed sites (0.59 %);
-   (-37) the ungated `computed()` arms (**cube only**); (-39) largely closed.
-5. **Top ML item is a training run, not code:** the vocab index is frozen
-   (`server::vocab_snapshot`), shorter post-freeze nets pad, and a throwaway
-   net proved `--use-deck-best` works end to end at **91.7 %** of the
-   unjudged rate (83.4 % last pass). What is missing is a *good* deck net —
-   the seven committed ones predate the freeze and `vocab_fit` refuses them.
-6. **Cards: `scripts/audit_dropped_may.py` is new and has 344 open findings**
-   (10,851 checked against the offline Scryfall cache; synthesized `(b###)`
-   names skipped). Ten were fixed this pass — the "may destroy / sacrifice /
-   tap" cluster, where being forced hurts. Read the oracle before fixing one;
-   the residue still has false positives.
-7. **Housekeeping.** TODO 0.9k, PERF 4.8k (47th folded; 45th/46th next).
-   ENGINE_BACKLOG 4.9k / CARD_BACKLOG 4.2k still want a triage pass.
+1. **Pass 55 took (-37): `--decks cube` 4,012 M -> 3,332 M Ir (-16.95 %),
+   -6.8 % wall clock; `fixed` +0.097 %, `sos` +0.062 %.** Tip (`8779aa9f`):
+   fixed 1,249,622,086 / cube 3,332,029,985 / sos 1,761,529,321 / sealed
+   3,500,013,528 / deck-build 34,859,382 (`--decks sealed --games 1`).
+2. **Rank a lazy cell by its inclusive cost.** (-37) was sized at 7.1 % off
+   self cost and was 15.03 % — `cg_edges.py --callers computed_permanent`,
+   not the self table. And do not wrap a gate in a `OnceCell` that runs once
+   (+1.24 M), or gate on `!computed_absent()` first (+0.066 %): both lost.
+3. **Candidates:** (-38) `battlefield_find`'s three unclaimed sites (0.59 %);
+   (-37)'s residue is `has_atype` / `has_stype`, both needing a **new**
+   predicate and both **unsized** — measure before writing. `cg_contexts.py`
+   still has 20,374 gathering `computed_permanent` calls open (3.2 %).
+4. **Top ML item is a training run, not code:** the vocab index is frozen
+   (`server::vocab_snapshot`), post-freeze nets pad, and a throwaway net
+   proved `--use-deck-best` works end to end at **91.7 %** of the unjudged
+   rate. What is missing is a *good* deck net.
+5. **Cards: `scripts/audit_dropped_may.py`, 344 open findings** (10,851
+   checked). Read the oracle before fixing one; false positives remain.
+6. **Housekeeping.** TODO 0.9k, PERF 5.1k — the Baseline section is now 1.0k
+   holding four passes' blocks; folding the oldest two is the next fold, and
+   the 45th/46th Log entries after that. ENGINE_BACKLOG 4.9k /
+   CARD_BACKLOG 4.2k still want a triage pass.
 
 ## Standing rules for a perf pass
 
@@ -95,6 +92,19 @@ Log with its numbers; read the entry before re-proposing any of them.
   question, a gate that gathered to prove a negative, a freeze scope opened
   for a closure that returns immediately, two clones handed to a walk that
   skips.
+- **Rank a lazy cell by what is under it, not by its own row** (pass 55, and
+  it was 16.9 % of the cube pool). Candidate (-37) was sized at
+  `computed_permanent`'s 4.14 % + `compute_permanent_pass`'s 2.97 % — self
+  cost. Read from the top, the requirement walker's `OnceCell::try_init` is
+  **413,844 calls / 605,927,621 Ir inclusive, 15.03 %**. `cg_edges.py
+  --callers <callee>` is the table; the self table cannot see a cell.
+- **Two shapes that look like wins and are not** (pass 55, both measured and
+  reverted). A `OnceCell` around a presence gate that runs *once* per call
+  is two constructions and a branch that never pay (+1.24 M on `fixed`) —
+  `evaluate_requirement_static` evaluates one `req` and its arms are
+  exclusive. And asking the cheap question first — `!computed_absent()`
+  before the gate — is **+0.066 %**, because inside a freeze scope the gate
+  is a memo hit at 69 Ir and the atomic load is not free.
 - **The gate rule, both halves.** Swap a gather for a presence gate **only
   where nothing else in the scope reads the gather** (pass 48's (E),
   -0.747 %); where the scope goes on to `compute_battlefield()` the same swap
@@ -136,10 +146,12 @@ Log with its numbers; read the entry before re-proposing any of them.
   build ~14 min, warm rebuild ~4m30s; callgrind ~4 min and contention-immune.
   Wide-pool sweep ~55 s a seed — no excuse to skip it. Quote callgrind under
   5 %; a `profiling-fast` games/s compares to nothing.
-- **Trackers.** TODO ~1.0k, ROADMAP 0.66k, PERF ~4.6k (the 45th pass's profile
-  table was folded at the 48th tip and the 46th's at the 53rd; the 47th's is
-  the next fold). ENGINE_BACKLOG 4.6k and CARD_BACKLOG 4.2k are the archives
-  and still want their own triage pass.
+- **Trackers.** TODO ~0.94k, ROADMAP 0.66k, PERF ~5.1k (the 45th pass's
+  profile table was folded at the 48th tip and the 46th's at the 53rd; the
+  47th's is the next fold, and **Baseline is now 1.0k holding four passes'
+  blocks** — the oldest two are the cheapest fold left).
+  ENGINE_BACKLOG 4.9k and CARD_BACKLOG 4.2k are the archives and still want
+  their own triage pass.
 
 ## Environment note
 
