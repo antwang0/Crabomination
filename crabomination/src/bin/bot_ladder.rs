@@ -977,6 +977,33 @@ fn main() {
                                 50_000,
                                 job.seed,
                             );
+                            // `CRAB_PAIR_SWEEPS=1`: name every pair that did
+                            // *not* split. In a self-mirror the two games of a
+                            // pair are one game with the seats relabelled, so a
+                            // sweep is a determinism failure, and the aggregate
+                            // row only says one happened — not which. `pairs`
+                            // holds `score.signum()`, so any non-zero entry is
+                            // a sweep. The pair seed printed here is the one
+                            // `simulate_match_pairs_piloted` derives, so it
+                            // replays the exact game.
+                            if std::env::var_os("CRAB_PAIR_SWEEPS").is_some() {
+                                for (k, sc) in t.pairs.iter().enumerate() {
+                                    if *sc != 0 {
+                                        eprintln!(
+                                            "sweep: arch {:?} job_seed {} pair {} \
+                                             pair_seed {} score {}",
+                                            field[job.arch].name,
+                                            job.seed,
+                                            k,
+                                            job.seed.wrapping_add(
+                                                (k as u64)
+                                                    .wrapping_mul(0x9E37_79B9_7F4A_7C15)
+                                            ),
+                                            sc,
+                                        );
+                                    }
+                                }
+                            }
                             (t.wins_a, t.wins_b, t.undecided, t.pairs, t.cost)
                         } else {
                             let t = simulate_match_games_piloted(
