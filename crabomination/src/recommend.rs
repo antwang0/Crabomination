@@ -1413,11 +1413,24 @@ fn play_one_game_traced(
     while !g.is_game_over() && actions < max_actions && stale < STALE_ROUNDS {
         let mut any = false;
         for (s, bot) in bots.iter_mut().enumerate() {
-            let Some(a) = bot.next_action(&g, s) else { continue };
+            let Some(step) = bot.next_action_settled(&g, s) else { continue };
+            let crate::server::bot::BotStep { action, settled } = step;
             // Formatted before the move, because `perform_action` takes it
             // by value; only kept when the move is accepted.
-            let pending = trace.as_ref().map(|_| format!("p{s} {a:?}"));
-            if g.perform_action(a).is_ok() {
+            let pending = trace.as_ref().map(|_| format!("p{s} {action:?}"));
+            // A `settled` state is the finalist's dry-run result — the same
+            // state a successful `perform_action(action)` on `g` would have
+            // produced (see `GameState::accept_on`). This driver *owns* `g`,
+            // so we adopt the probe's state instead of running the same
+            // action a second time. Self-play discards events, so nothing
+            // here needs a `Vec<GameEvent>` back.
+            let ok = if let Some(settled) = settled {
+                g = *settled;
+                true
+            } else {
+                g.perform_action(action).is_ok()
+            };
+            if ok {
                 // `find_card_anywhere` visits the zones cheapest-first, which
                 // is only order-independent while an id lives in one zone.
                 // Debug-only and traced games only — the golden traces are

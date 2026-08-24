@@ -145,6 +145,46 @@ pub trait Bot: Send {
     /// to act right now (no priority, waiting on an opponent decision, game
     /// already over, etc.).
     fn next_action(&mut self, state: &GameState, seat: usize) -> Option<GameAction>;
+
+    /// Extended [`next_action`] that MAY hand the caller the state the action
+    /// would produce, in addition to the action itself. A picker that
+    /// dry-ran the action already *is* the action (see
+    /// [`GameState::accept_on`](crate::game::GameState::accept_on)), and the
+    /// pattern the driver runs — "call `bot.next_action(&g, s)`, then
+    /// `g.perform_action(a)`" — costs one execution of the same action every
+    /// time the picker probed it. A driver that owns its state adopts
+    /// [`BotStep::settled`] instead of re-running.
+    ///
+    /// Default: no settled state; the caller must run the action itself.
+    /// Bots that produce a settled state under `main_phase_action_with`'s
+    /// finalist path (see [`HeuristicBot`]) override to hand it out.
+    ///
+    /// **Server / interactive callers** should NOT adopt: `perform_action`
+    /// returns the event list the server broadcasts, and adopting `settled`
+    /// hands back no events. Self-play drivers (which discard events) are
+    /// the intended audience.
+    fn next_action_settled(&mut self, state: &GameState, seat: usize) -> Option<BotStep> {
+        self.next_action(state, seat).map(BotStep::plain)
+    }
+}
+
+/// A bot's step, with an optional settled state — the pre-committed result of
+/// dry-running the action. See [`Bot::next_action_settled`].
+pub struct BotStep {
+    pub action: GameAction,
+    pub settled: Option<Box<GameState>>,
+}
+
+impl BotStep {
+    /// No settled state — the caller must run the action itself.
+    pub fn plain(action: GameAction) -> Self {
+        Self { action, settled: None }
+    }
+
+    /// Discard any settled state.
+    pub fn into_action(self) -> GameAction {
+        self.action
+    }
 }
 
 /// Tunable weights for the bot's board evaluation, so a change to how the
@@ -1561,12 +1601,19 @@ impl Bot for HeuristicBot {
     /// probes and combat sims: those clone the state, and `LayerFreeze`
     /// clones as unfrozen precisely because the clone gets mutated.
     fn next_action(&mut self, state: &GameState, seat: usize) -> Option<GameAction> {
+        self.next_action_settled(state, seat).map(BotStep::into_action)
+    }
+
+    /// Return the finalist's dry-run settled state to the driver, so a
+    /// self-play caller adopts it instead of paying for a second execution
+    /// of the same action (see [`Bot::next_action_settled`]).
+    fn next_action_settled(&mut self, state: &GameState, seat: usize) -> Option<BotStep> {
         state.with_frozen_layers(|state| self.next_action_inner(state, seat))
     }
 }
 
 impl HeuristicBot {
-    fn next_action_inner(&mut self, state: &GameState, seat: usize) -> Option<GameAction> {
+    fn next_action_inner(&mut self, state: &GameState, seat: usize) -> Option<BotStep> {
         if state.is_game_over() {
             return None;
         }
@@ -1597,13 +1644,13 @@ impl HeuristicBot {
                     let yes = state.effective_life(seat) - life_committed - mv > 10;
                     self.reveal_commit =
                         if yes { Some((*source, cards + 1, life_committed + mv)) } else { None };
-                    return Some(GameAction::SubmitDecision(
+                    return Some(BotStep::plain(GameAction::SubmitDecision(
                         crate::decision::DecisionAnswer::Bool(yes),
-                    ));
+                    )));
                 }
                 let answer =
                     decide_pending_policy(state, seat, &self.weights, &pending.decision, true);
-                return Some(GameAction::SubmitDecision(answer));
+                return Some(BotStep::plain(GameAction::SubmitDecision(answer)));
             }
             return None;
         }
@@ -1624,7 +1671,7 @@ impl HeuristicBot {
                     if !is_active
                         && let Some(a) = pick_defensive_removal(state, seat, &self.weights)
                     {
-                        return Some(a);
+                        return Some(BotStep::plain(a));
                     }
                     self.blocks_declared = true;
                     // On our own turn we're choosing the *defender's* blocks
@@ -1636,17 +1683,17 @@ impl HeuristicBot {
                     } else {
                         pick_blocks_scored(state, seat, &self.weights)
                     };
-                    Some(GameAction::DeclareBlockers(blocks))
+                    Some(BotStep::plain(GameAction::DeclareBlockers(blocks)))
                 } else if state.blockers_declared() && state.stack.is_empty() {
                     // Post-block priority: a held pump trick that flips a
                     // fight one of our blockers is losing.
-                    Some(
+                    Some(BotStep::plain(
                         pick_combat_trick(state, seat, &self.weights)
                             .map(Picked::action)
                             .unwrap_or(GameAction::PassPriority),
-                    )
+                    ))
                 } else {
-                    Some(GameAction::PassPriority)
+                    Some(BotStep::plain(GameAction::PassPriority))
                 }
             }
             // Active side of the same window: blocks are in, stack is
@@ -1654,32 +1701,32 @@ impl HeuristicBot {
             TurnStep::DeclareBlockers
                 if is_active && state.blockers_declared() && state.stack.is_empty() =>
             {
-                Some(
+                Some(BotStep::plain(
                     pick_combat_trick(state, seat, &self.weights)
                         .map(Picked::action)
                         .unwrap_or(GameAction::PassPriority),
-                )
+                ))
             }
             // Master Warcraft on an opponent's turn: we choose *their*
             // attackers, so declare only the creatures that must attack.
             TurnStep::DeclareAttackers if !is_active && state.attack_declarer() == seat => {
                 if !self.attackers_declared {
                     self.attackers_declared = true;
-                    Some(GameAction::DeclareAttackers(forced_attacks(state)))
+                    Some(BotStep::plain(GameAction::DeclareAttackers(forced_attacks(state))))
                 } else {
-                    Some(GameAction::PassPriority)
+                    Some(BotStep::plain(GameAction::PassPriority))
                 }
             }
             TurnStep::DeclareAttackers if is_active && state.attack_declarer() == seat => {
                 if !self.attackers_declared {
                     self.attackers_declared = true;
-                    Some(GameAction::DeclareAttackers(pick_attacks_scored(
+                    Some(BotStep::plain(GameAction::DeclareAttackers(pick_attacks_scored(
                         state,
                         seat,
                         &self.weights,
-                    )))
+                    ))))
                 } else {
-                    Some(GameAction::PassPriority)
+                    Some(BotStep::plain(GameAction::PassPriority))
                 }
             }
             TurnStep::PreCombatMain | TurnStep::PostCombatMain if is_active => {
@@ -1697,7 +1744,7 @@ impl HeuristicBot {
                         .or_else(|| pick_prepare_response(state, seat, &self.weights))
                         .or_else(|| pick_buff_response(state, seat, &self.weights))
                 {
-                    return Some(a);
+                    return Some(BotStep::plain(a));
                 }
                 // CR 116.2j — the agenda is already named, so turning it face
                 // up is pure upside; do it at the first opportunity.
@@ -1706,7 +1753,7 @@ impl HeuristicBot {
                     .iter()
                     .find(|c| c.face_down && c.definition.is_conspiracy())
                 {
-                    return Some(GameAction::RevealConspiracy { card_id: c.id });
+                    return Some(BotStep::plain(GameAction::RevealConspiracy { card_id: c.id }));
                 }
                 // CR 901.9 — take the turn's one free planar-die roll before
                 // spending mana. Later rolls cost {N} and compete with real
@@ -1717,7 +1764,7 @@ impl HeuristicBot {
                     && !state.players[seat].planar_deck.is_empty()
                     && !state.face_up_planes().is_empty()
                 {
-                    return Some(GameAction::RollPlanarDie);
+                    return Some(BotStep::plain(GameAction::RollPlanarDie));
                 }
                 Some(main_phase_action_with(state, seat, self.scored, &self.weights))
             }
@@ -1731,7 +1778,7 @@ impl HeuristicBot {
             TurnStep::End if !is_active && state.stack.is_empty() => {
                 Some(main_phase_action_with(state, seat, self.scored, &self.weights))
             }
-            _ => Some(
+            _ => Some(BotStep::plain(
                 pick_stack_response(state, seat, &self.weights)
                     .map(Picked::action)
                     .or_else(|| pick_ability_counter_response(state, seat))
@@ -1747,7 +1794,7 @@ impl HeuristicBot {
                         }
                     })
                     .unwrap_or(GameAction::PassPriority),
-            ),
+            )),
         }
     }
 }
@@ -3857,8 +3904,9 @@ fn decide_mulligan(
 }
 
 #[cfg(test)]
+#[cfg(test)]
 fn main_phase_action(state: &GameState, seat: usize) -> GameAction {
-    main_phase_action_with(state, seat, true, &EvalWeights::default())
+    main_phase_action_with(state, seat, true, &EvalWeights::default()).action
 }
 
 /// Every cast / activation the bot would consider from `state` this tick,
@@ -5221,7 +5269,7 @@ macro_rules! gated_pick {
                 concat!("main_phase gate ", stringify!($bit), " skipped a real action"),
             );
             if gate && let Some(action) = picked {
-                return action;
+                return BotStep::plain(action);
             }
         }
     }};
@@ -5378,7 +5426,7 @@ fn main_phase_action_with(
     seat: usize,
     scored: bool,
     w: &EvalWeights,
-) -> GameAction {
+) -> BotStep {
     // One probe template per tick: every candidate dry-run below re-clones
     // this template instead of rebuilding one, and a `GameState` clone is
     // reference bumps over CoW zones (see `affordance_probe_template`).
@@ -5418,7 +5466,7 @@ fn main_phase_action_with(
             mode: None,
         };
         if GameState::would_accept_on(probe_of(&probe, state), action.clone()) {
-            return action;
+            return BotStep::plain(action);
         }
     }
 
@@ -5438,7 +5486,7 @@ fn main_phase_action_with(
     {
         let action = GameAction::PlayLand(land_id);
         if GameState::would_accept_on(probe_of(&probe, state), action.clone()) {
-            return action;
+            return BotStep::plain(action);
         }
     }
 
@@ -5451,7 +5499,7 @@ fn main_phase_action_with(
     {
         let action = GameAction::PlayLandFromGraveyard(land.id);
         if GameState::would_accept_on(probe_of(&probe, state), action.clone()) {
-            return action;
+            return BotStep::plain(action);
         }
     }
 
@@ -5464,7 +5512,7 @@ fn main_phase_action_with(
     {
         let action = GameAction::PlayLand(land.id);
         if GameState::would_accept_on(probe_of(&probe, state), action.clone()) {
-            return action;
+            return BotStep::plain(action);
         }
     }
 
@@ -5497,7 +5545,7 @@ fn main_phase_action_with(
                     Vec::new()
                 };
                 let pick = if only_is.is_empty() { &valid } else { &only_is };
-                return pick[jitter_below(pick.len())].clone();
+                return BotStep::plain(pick[jitter_below(pick.len())].clone());
             }
         } else {
             // Scored pick: rank by static score (+ jitter so exact ties
@@ -5609,14 +5657,27 @@ fn main_phase_action_with(
                         w,
                     )
                 {
-                    return GameAction::PassPriority;
+                    return BotStep::plain(GameAction::PassPriority);
                 }
                 // SOS Converge: float a missing color first so the cast
-                // counts it — see `pick_converge_prefloat`.
+                // counts it — see `pick_converge_prefloat`. A prefloat tap
+                // must run before the cast, so we drop the settled state
+                // (the tap invalidates the cast's dry-run).
                 if let Some(tap) = pick_converge_prefloat(state, seat, &best.action) {
-                    return tap;
+                    return BotStep::plain(tap);
                 }
-                return best.action;
+                // The bargain the whole enum is here for: the finalist was
+                // validated by a `would_accept_on` dry-run, whose *state*
+                // (see [`GameState::accept_on`]) is what a successful
+                // `perform_action(best.action)` on the driver would produce.
+                // A driver that owns its state adopts `settled` and skips
+                // running the same action a second time. When the finalist
+                // arrived pre-validated (no dry-run), `settled` is `None`
+                // and the driver runs the action normally.
+                return BotStep {
+                    action: best.action,
+                    settled: best.settled,
+                };
             }
         }
     }
@@ -5760,7 +5821,7 @@ fn main_phase_action_with(
     // Last resort, dry-run-gated.
     gated_pick!(sinks, sink::AB_TOKEN, pick_token_maker(state, seat));
 
-    GameAction::PassPriority
+    BotStep::plain(GameAction::PassPriority)
 }
 
 /// Activate a sacrifice-cost ability when the RESOLVED outcome beats
