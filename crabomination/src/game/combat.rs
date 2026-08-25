@@ -2402,8 +2402,8 @@ impl GameState {
                 })
                 .collect()
         });
-        let kws_for = |id: CardId| -> Vec<Keyword> {
-            computed.iter().find(|(i, _)| *i == id).map(|(_, k)| k.clone()).unwrap_or_default()
+        let kws_for = |id: CardId| -> &[Keyword] {
+            computed.iter().find(|(i, _)| *i == id).map_or(&[][..], |(_, k)| k)
         };
         let sum_n = |kws: &[Keyword], pick: fn(&Keyword) -> Option<i32>| -> i32 {
             kws.iter().filter_map(pick).sum()

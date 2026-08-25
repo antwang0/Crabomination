@@ -8951,16 +8951,15 @@ fn pick_blocks_inner(state: &GameState, seat: usize) -> Vec<(CardId, CardId)> {
         if c.has_keyword(&Keyword::CanBlockAnyNumber) {
             return usize::MAX;
         }
-        state
-            .computed_permanent(id)
-            .map(|cp| cp.keywords.to_vec())
-            .unwrap_or_default()
-            .iter()
-            .filter_map(|k| match k {
-                Keyword::CanBlockAdditional(n) => Some(*n as usize),
-                _ => None,
-            })
-            .sum()
+        state.computed_permanent(id).map_or(0, |cp| {
+            cp.keywords
+                .iter()
+                .filter_map(|k| match k {
+                    Keyword::CanBlockAdditional(n) => Some(*n as usize),
+                    _ => None,
+                })
+                .sum()
+        })
     };
     // Seed from every legal blocker with spare capacity, not just the ones the
     // scoring loop already assigned: a 0/N `CanBlockAnyNumber` wall kills
@@ -9315,15 +9314,15 @@ fn ward_tax(state: &GameState, id: CardId, actor: usize) -> Option<crate::card::
     if state.same_team(c.controller, actor) {
         return None;
     }
-    state
-        .computed_permanent(id)
-        .map(|cp| cp.keywords.to_vec())
-        .unwrap_or_else(|| c.definition.keywords.clone())
-        .iter()
-        .find_map(|k| match k {
-            Keyword::Ward(w) if !crate::game::actions::ward_cost_is_trivial(w) => Some(w.clone()),
-            _ => None,
-        })
+    let cp = state.computed_permanent(id);
+    let kws: &[Keyword] = match &cp {
+        Some(cp) => &cp.keywords,
+        None => &c.definition.keywords,
+    };
+    kws.iter().find_map(|k| match k {
+        Keyword::Ward(w) if !crate::game::actions::ward_cost_is_trivial(w) => Some(w.clone()),
+        _ => None,
+    })
 }
 
 /// Whether the bot could actually pay `tax` on top of `besides` — the

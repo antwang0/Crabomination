@@ -550,12 +550,13 @@ impl GameState {
         if c.controller == actor {
             return false;
         }
-        self.computed_permanent(cid)
-            .map(|cp| cp.keywords.to_vec())
-            .unwrap_or_else(|| c.definition.keywords.clone())
-            .iter()
-            .any(|k| matches!(k, Keyword::Ward(w)
-                if !crate::game::actions::ward_cost_is_trivial(w)))
+        let cp = self.computed_permanent(cid);
+        let kws: &[Keyword] = match &cp {
+            Some(cp) => &cp.keywords,
+            None => &c.definition.keywords,
+        };
+        kws.iter().any(|k| matches!(k, Keyword::Ward(w)
+            if !crate::game::actions::ward_cost_is_trivial(w)))
     }
 
     pub fn auto_targets_for_effect_all_slots(

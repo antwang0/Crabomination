@@ -838,13 +838,13 @@ impl GameState {
         // "Prevent all damage that would be dealt to this by [filter] sources"
         // (Argothian Treefolk / Pixies, Artifact Ward's host).
         if let (EntityRef::Permanent(tgt), Some(src)) = (ent, source)
-            && self
-                .computed_permanent(tgt)
-                .into_iter()
-                .flat_map(|cp| cp.keywords.to_vec())
+            && let cp = self.computed_permanent(tgt)
+            && cp
+                .iter()
+                .flat_map(|cp| cp.keywords.iter())
                 .any(|k| match k {
                     crate::card::Keyword::PreventDamageFromMatching(f) => self
-                        .evaluate_requirement_static(&f, &crate::game::types::Target::Permanent(src), self.battlefield_find(tgt).map_or(0, |c| c.controller), Some(src)),
+                        .evaluate_requirement_static(f, &crate::game::types::Target::Permanent(src), self.battlefield_find(tgt).map_or(0, |c| c.controller), Some(src)),
                     _ => false,
                 })
         {
@@ -1140,10 +1140,9 @@ impl GameState {
         // equal to that damage. We check the source's effective
         // keywords via `computed_permanent` so layered grants (e.g.
         // Triumph of the Hordes-style anthems) are honored.
-        let src_kws: Vec<crate::card::Keyword> = source
-            .and_then(|s| self.computed_permanent(s))
-            .map(|cp| cp.keywords.to_vec())
-            .unwrap_or_default();
+        let src_cp = source.and_then(|s| self.computed_permanent(s));
+        let src_kws: &[crate::card::Keyword] =
+            src_cp.as_ref().map_or(&[], |cp| &cp.keywords);
         let source_has_infect = src_kws.has_kw(&crate::card::Keyword::Infect);
         // CR 702.80a / 702.90e — wither/infect damage to a creature lands as
         // -1/-1 counters instead of marked damage; CR 702.2c — nonzero

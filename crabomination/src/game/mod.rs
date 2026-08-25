@@ -6313,13 +6313,13 @@ impl GameState {
             return false;
         }
         let controller = self.battlefield_find(tgt).map_or(0, |c| c.controller);
-        self.computed_permanent(tgt)
-            .into_iter()
-            .flat_map(|cp| cp.keywords.to_vec())
+        let cp = self.computed_permanent(tgt);
+        cp.iter()
+            .flat_map(|cp| cp.keywords.iter())
             .any(|k| match k {
                 crate::card::Keyword::PreventDamageFromMatching(f) => self
                     .evaluate_requirement_static(
-                        &f,
+                        f,
                         &crate::game::types::Target::Permanent(src),
                         controller,
                         Some(src),

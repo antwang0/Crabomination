@@ -6653,11 +6653,12 @@ impl GameState {
             let spell_colors = card.definition.cost.color_set();
             // Read computed keywords so granted protection (Mother of Runes,
             // Gods Willing) is honored, not just printed protection.
-            let kws = self
-                .computed_permanent(cid)
-                .map(|cp| cp.keywords.to_vec())
-                .unwrap_or_else(|| target_card.definition.keywords.clone());
-            for kw in &kws {
+            let cp = self.computed_permanent(cid);
+            let kws: &[Keyword] = match &cp {
+                Some(cp) => &cp.keywords,
+                None => &target_card.definition.keywords,
+            };
+            for kw in kws {
                 if let Keyword::Protection(prot_color) = kw
                     && spell_colors.contains(prot_color)
                 {
@@ -6797,10 +6798,12 @@ impl GameState {
                 .filter(|tc| tc.controller != p)
                 .is_some_and(|tc| {
                     let controller = tc.controller;
-                    let printed = self
-                        .computed_permanent(cid)
-                        .map(|cp| cp.keywords.to_vec())
-                        .unwrap_or_else(|| tc.definition.keywords.clone())
+                    let cp = self.computed_permanent(cid);
+                    let kws: &[Keyword] = match &cp {
+                        Some(cp) => &cp.keywords,
+                        None => &tc.definition.keywords,
+                    };
+                    let printed = kws
                         .iter()
                         .any(|kw| match kw {
                             Keyword::HexproofFromColor(c) => spell_colors.contains(c),
@@ -8616,15 +8619,13 @@ impl GameState {
         let Some(controller) = self.battlefield_find(perm_id).map(|c| c.controller) else {
             return;
         };
-        let has = self
-            .computed_permanent(perm_id)
-            .map(|cp| cp.keywords.to_vec())
-            .unwrap_or_else(|| {
-                self.battlefield_find(perm_id)
-                    .map(|c| c.definition.keywords.clone())
-                    .unwrap_or_default()
-            })
-            .has_kw(&Keyword::CounterFirstTargetingEachTurn);
+        let cp = self.computed_permanent(perm_id);
+        let has = match &cp {
+            Some(cp) => cp.keywords.has_kw(&Keyword::CounterFirstTargetingEachTurn),
+            None => self.battlefield_find(perm_id).is_some_and(|c| {
+                c.definition.keywords.has_kw(&Keyword::CounterFirstTargetingEachTurn)
+            }),
+        };
         if !has {
             return;
         }

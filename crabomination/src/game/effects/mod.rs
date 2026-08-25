@@ -14056,11 +14056,10 @@ impl GameState {
                 let indefinite = matches!(duration, Duration::Permanent);
                 for ent in self.resolve_selector(what, ctx) {
                     let Some(cid) = ent.as_permanent_id() else { continue };
-                    let walks: Vec<crate::card::Keyword> = self
-                        .computed_permanent(cid)
-                        .map(|cp| cp.keywords.to_vec())
-                        .unwrap_or_default()
-                        .into_iter()
+                    let cp = self.computed_permanent(cid);
+                    let walks: Vec<crate::card::Keyword> = cp
+                        .iter()
+                        .flat_map(|cp| cp.keywords.iter())
                         .filter(|k| {
                             matches!(
                                 k,
@@ -14069,6 +14068,7 @@ impl GameState {
                                     | crate::card::Keyword::DomainLandwalk
                             )
                         })
+                        .cloned()
                         .collect();
                     let Some(c) = self.battlefield_find_mut(cid) else { continue };
                     let list = if indefinite {

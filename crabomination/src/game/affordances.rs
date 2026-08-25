@@ -358,10 +358,11 @@ impl GameState {
                 // Honor layer-granted Defender / can't-attack and the
                 // per-defender attack restriction (Dandân) so the client's
                 // highlight matches what `declare_attackers` will accept.
-                let kws = self
-                    .computed_permanent(c.id)
-                    .map(|cp| cp.keywords.to_vec())
-                    .unwrap_or_else(|| c.definition.keywords.clone());
+                let cp = self.computed_permanent(c.id);
+                let kws: &[Keyword] = match &cp {
+                    Some(cp) => &cp.keywords,
+                    None => &c.definition.keywords,
+                };
                 if (kws.contains(&Keyword::Defender) && !self.ignores_defender_for_attack(c))
                     || kws.contains(&Keyword::CantAttack)
                 {
