@@ -207,6 +207,42 @@ check the `--bench` invariants (`decisions`, `turns_per_game`) on any change
 whose Ir moves more than its blast radius allows: they are one 2-second run
 and they fail loudly.
 
+**A six-game callgrind run charges one whole-catalog build to the game loop,
+and on `sos` that is 6.8 % of the total.** `card_registry::name_index()`
+builds its `OnceLock` by *calling all 22,568 catalog factories* — a full
+`CardDefinition` built and dropped apiece — to read their names. It is one
+`OnceLock::initialize` edge, **104,687,400 Ir**, hanging off whichever
+`lookup_by_name` happens to run first.
+
+Which pool pays it, read off the dumps at the sixty-first tip
+(`cg_edges.py --callees lookup_by_name`):
+
+| pool | `lookup_by_name` calls | index build |
+|---|---|---|
+| sos | 85 | 104,687,400 (**6.8 %** of the run) |
+| cube | 0 | — |
+| fixed | 0 | — |
+
+So the three pools' totals are **not comparable to each other** at the
+hundred-million level, and an `sos` total sits ~104 M above what its game
+loop costs. It is not a deck-building path — `sos` reaches it from
+`apply_pending_effect_answer`, validating the name a decider returned to a
+`NameCard` decision — so *whether* a pool pays it is "did a card that names
+a card resolve", not anything about the pool's construction.
+
+**Never rank a candidate against a share of an `sos` six-game total without
+subtracting it.** A change worth 50 M Ir reads 3.2 % of the run and is 3.5 %
+of the simulator. The sixty-first pass found this by asking why
+`lookup_by_name` had a hundred-million-Ir inclusive row on one call.
+
+**And then it does not matter.** It is one-time per process, so a training
+actor playing thousands of games amortizes it to ~0.001 %, and a test binary
+that resolves any name pays it once — tens of milliseconds against a 27 s
+suite. Recorded
+as candidate (-46) at that honest size — a measurement artefact first and a
+throughput item barely at all — so that nobody reads the 6.8 % as a
+simulator cost and spends a pass on it.
+
 **When you do want a clock number, use `scripts/ab_wall.py` and run its null
 control.** It is the loop every pass has hand-rolled — alternate two binaries,
 quote best-of — with the two things that loop was missing. It runs an **ABBA**
@@ -2085,6 +2121,77 @@ the table above is safe to compress:
 
 
 ## Log
+
+### Sixty-second pass — the suggestion asked a global index about a card it was holding
+
+This session's line, run concurrently with the sixty-first pass below; its
+four commits are under neither column here. One commit, `718a66f8`, base
+`b370d69e`. `profiling-fast --no-default-features`, callgrind, 1 thread,
+`--a gang --b gang --games 6 --seed 1`.
+
+| pool | before | after | delta |
+|---|---|---|---|
+| sos | 1,547,629,927 | 1,543,297,150 | **-0.280 %** |
+| cube | 2,797,004,247 | 2,797,723,828 | +0.026 % |
+| fixed | 1,193,591,244 | 1,193,886,624 | +0.025 % |
+
+**Under the ~5 % rule that is flat, and the commit says so.** It lands as a
+correctness/clarity change; the row is here because the *reading* that
+produced it is worth more than the delta.
+
+`NameCard`'s CR 201.4a namespace filter ranks suggestions out of a
+battlefield slice or the controller's library, then — to answer "is this a
+*land* card name?" — took each name it had just produced and looked it back
+up in `card_registry::lookup_by_name`, and deep-cloned what came back into a
+scratch `CardInstance`. Every one of those names belongs to a card the
+function is already holding. It now keeps the `Vec<&CardInstance>` the
+ranking was built from and tests the definition the name came from.
+`definition_matches_requirement` takes `impl Into<Arc<_>>` instead of
+`&CardDefinition`, so the caller hands over a refcount rather than a full
+copy of an 8,232-byte struct and every `Vec` in it.
+
+**The find was in the caller table, and it is a shape worth repeating: an
+inclusive row that is enormous on a tiny call count.** `lookup_by_name` was
+156 calls and ~105 M Ir on `sos`, which is not a hot function — it is a
+function standing in front of a one-time `OnceLock` that builds a
+`CardDefinition` for all 22,568 catalog factories to read their names.
+
+```text
+callers of lookup_by_name, --decks sos
+before   114  105,337,826  <suggestion filter's try_fold>   <- built the index
+          42      155,380  apply_pending_effect_answer
+after     42  104,880,417  apply_pending_effect_answer      <- builds it now
+```
+
+**Which is the honest half of the result: the index build did not go away,
+it moved.** The answer path validates a name a *decider* returned, which
+need not be a card in any zone, so it still needs the registry. The
+suggestion path no longer reaches for it. Ir moved by the deep clones only,
+which is what -0.280 % is.
+
+That 104.7 M is now written up twice — as a measurement caution in **How to
+measure** (it is **6.8 % of a six-game `sos` total** and **0 % of `cube` and
+`fixed`**, so those totals are not comparable to each other at the
+hundred-million level) and as candidate **(-46)**, ranked deliberately low:
+it is one-time per process, so a training actor amortizes it to ~0.001 %.
+**A cost that is 6.8 % of the measurement and 0.001 % of the workload is a
+measurement bug, not a perf candidate**, and the entry says so in its own
+title so the next pass does not spend itself on it.
+
+Slightly more correct at the edges, too: a battlefield permanent that is a
+copy of something else, or a card with no registry entry, used to fail the
+lookup and have its suggestion silently dropped. Ladder printouts identical
+on all three pools; suite 18,735 passed / 0 failed / 5 ignored; golden
+traces unchanged; `--bench` decisions 196,220, turns 27.53, 0 stalls,
+determinism ok, peak RSS 18.3 MiB.
+
+**Read the sixty-first pass below before taking anything from this one's
+profile block.** It landed four commits against the same
+`SpecFromIterNested` rows this pass's TODO block was about to send the next
+reader at, and its device — rank `--callers SpecFromIterNested` by *calls*,
+then ask whether each collect can be non-empty on the bench pools — is the
+better first look. The two lines were measured against different bases and
+neither total includes the other.
 
 ### Sixty-first pass — what does the answer cost when it is "no"?
 
@@ -4540,6 +4647,34 @@ and `RawVec::grow_one` rows is the same question asked of a different
 allocation shape. `finish_grow` is 11,680,360 / 0.73 % on `sos` and
 `Vec::clone` 12,902,527 / 0.81 %, and neither has ever had a caller table in
 this file.
+
+**(-46) `name_index()` BUILDS 22,568 `CardDefinition`s TO READ 22,568
+STRINGS — 104,687,400 Ir. RANKED LOW ON PURPOSE; READ THE SIZING BEFORE
+TAKING IT.** `card_registry::name_index()`'s `OnceLock` calls every catalog
+factory, keeps `def.name` (and the MDFC back face's), and drops the
+definition. That is the whole cost: one edge, 104.7 M Ir, **6.8 % of a
+six-game `--decks sos` run** and 0 % of `cube` and `fixed` (call tables in
+**How to measure**).
+
+**It is one-time per process, and that is the entry.** A `selfplay_train`
+actor plays thousands of games on one process, so 104.7 M is ~0.001 % of it;
+a test binary that resolves any name pays it once, tens of milliseconds
+against a 27 s suite. The 6.8 % is a *measurement* artefact — it inflates every short `sos`
+callgrind total — not a throughput one. **Do not take this ahead of anything
+in the game loop.**
+
+The fix, if a pass ever wants it cheaply: the names are known at build time,
+so `crabomination_catalog` can emit a `&[(&'static str, CardFactory)]`
+alongside `all_known_factories` and the index becomes a map build over a
+static slice. That is codegen work in the catalog crate for a startup
+number, which is why it sits here rather than getting done. A narrower
+half-measure — have `apply_pending_effect_answer` resolve a `NameCard`
+answer against the same pool the suggestions were ranked from before falling
+back to the registry (the sixty-first pass did exactly this for the
+*suggestion* side) — would keep bot self-play off the index entirely, but it
+only moves *when* the build happens for anything that names an off-board
+card, so measure that it removes the edge rather than assuming it.
+
 **(-44) `__memcpy` IS 5.55 % OF `sos` AND THE ALLOCATOR FAMILY 12.7 %, AND
 NEITHER HAS EVER HAD A CALLER TABLE READ BY Ir/CALL.** The sixtieth pass took
 `__memcpy` from 7.80 % to 5.55 % with one commit, and the way it found the row

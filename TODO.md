@@ -22,11 +22,16 @@ claude/modern_decks origin/claude/modern_decks` — the container clones `main`.
 top candidate, re-read the base after every rebase, and budget two callgrind
 rounds per commit.**
 
-1. **Two sessions ran passes 59-61 concurrently; both are in PERF's Log.**
+1. **Two sessions ran passes 59-62 concurrently; both lines are in PERF's
+   Log.**
    Pass 60 (`6344adf6` + `ba15f249`): `sos` **-3.46 %**, `fixed` -2.16 %,
    peak RSS 21.9 -> 17.7 MiB. Pass 61, the other session: `fixed`
    **-0.984 %**, `sos` -0.862 %, `cube` -0.879 % — measured at base
-   `ba15f249`, so `6344adf6` is under neither of its columns.
+   `ba15f249`, so `6344adf6` is under neither of its columns. Pass 62, this
+   session, one commit `718a66f8` and **flat** (`sos` -0.280 %, `cube`
+   +0.026 %, `fixed` +0.025 %), landed as correctness/clarity: `NameCard`'s
+   namespace filter stopped asking a global index about names it already
+   held.
 2. **Two devices, both cheap to re-run, both found their pass's biggest
    commit.** (a) Read a caller table's **Ir/call** column: an allocation far
    above the family mean is an allocation of something big (`__memcpy` ->
@@ -37,18 +42,30 @@ rounds per commit.**
 3. **Top candidate is still (-43), the CoW clone cost** — 80.9 M Ir, ~5 % of
    `sos`, paying side unread. **The bind-once half is done; don't grind it.**
    Then (-44) (`__memcpy`/allocator) and (-45) (the cost of asking).
+   **(-46) is deliberately last and should stay there** — see 6.
 4. **Refuted this pass, do not re-take:** a presence bit belongs in
    `sba_board_scan` only when the question has no early exit of its own
    (+0.29 % on `fixed`; third loss for the fusion device in
    `creature_death_possible` alone). And a collect whose drain touches `self`
    is load-bearing — check that line before trying to remove one.
-5. **Sized and unclaimed:** `mint_token_onto_battlefield` + 
-   `definition_matches_requirement` under `CardInstance::new` (~0.6 % together,
-   don't start one alone); pass 57's gate placement, ~0.25 % of `fixed` Ir =
-   ~0.1 % of clock, a 2,000-line re-indent — tidy, not a number.
-6. **Clock numbers go through `scripts/ab_wall.py` with its null control.**
-   Eight blocks resolve **+/-2 % and nothing finer**; Ir over-reads by ~2x.
-7. **Housekeeping.** TODO ~1.0k, PERF 6.7k (52nd/53rd Baseline folded; 55th/
+5. **Sized and unclaimed:** `mint_token_onto_battlefield`, 370 calls /
+   6,644,250 Ir (**0.43 %** of `sos`), still builds and copies a whole
+   `CardDefinition` per token — wants a value-keyed memo, not worth a pass
+   alone. Its sibling `definition_matches_requirement` is **closed** by
+   `718a66f8` (takes `impl Into<Arc<_>>`; the deep clone is gone). Pass 57's
+   gate placement is ~0.25 % of `fixed` Ir = ~0.1 % of clock for a 2,000-line
+   re-indent — tidy, not a number.
+6. **Two measurement cautions before you rank anything.** (a) Clock numbers
+   go through `scripts/ab_wall.py` with its null control; eight blocks
+   resolve **+/-2 % and nothing finer**, and Ir over-reads by ~2x. (b)
+   `name_index()` builds 22,568 `CardDefinition`s to read their names —
+   104.7 M Ir, **6.8 % of a six-game `sos` total and 0 % of `cube` and
+   `fixed`**. **Subtract it before quoting an `sos` share**, and note the
+   three pools' totals are not comparable to each other at that scale. It is
+   candidate (-46), ranked last on purpose: one-time per process, so
+   ~0.001 % of a training actor. **A cost that is 6.8 % of the measurement
+   and 0.001 % of the workload is not a perf candidate.**
+7. **Housekeeping.** TODO ~1.05k, PERF 6.8k (52nd/53rd Baseline folded; 55th/
    56th and the 47th/48th Log entries fold next). Suite is **14 test binaries
    / 18,736 tests**, not the "22" older blocks quote; incremental test rebuild
    19.3 s. ENGINE_BACKLOG 4.9k / CARD_BACKLOG 4.2k want triage.
